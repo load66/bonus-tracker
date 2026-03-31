@@ -351,12 +351,7 @@ function getNotifs(e){
     else if(dsc<=7)n.push({t:'Close safe in '+dsc+'d',c:'urgent'});
     else if(dsc<=30)n.push({t:'Close safe in '+dsc+'d',c:'warn'});
   }
-  // DD reminder (if opened but no bonusRecd within 60 days)
-  if(e.opened&&!e.closed&&!e.bonusRecd){
-    const daysSinceOpen=dB(e.opened,td());
-    if(daysSinceOpen>=75)n.push({t:'Check bonus status!',c:'urgent'});
-    else if(daysSinceOpen>=45)n.push({t:'Bonus deadline approaching',c:'warn'});
-  }
+
   // Churn countdown close
   if(s==='WAITING TO CHURN!'){
     const dl=daysLeft(e);
@@ -506,7 +501,10 @@ function analyzeTC(text){
   return Object.keys(r).length>1?r:null;
 }
 
+let _scrollPos=0;
 function R(){
+  const scrollEl=document.querySelector('.scroll');
+  if(scrollEl)_scrollPos=scrollEl.scrollTop;
   const sorted=sortE(entries);
   const working=sorted.filter(e=>status(e)==='WORKING').length;
   const churning=sorted.filter(e=>status(e)==='WAITING TO CHURN!'||status(e)==='TIME TO CHURN!').length;
@@ -533,6 +531,7 @@ function R(){
   if(modal)h+=rModal();
   if(cfm)h+=rConfirm();
   document.getElementById('app').innerHTML=h;
+  const ns=document.querySelector('.scroll');if(ns)ns.scrollTop=_scrollPos;
 }
 
 function rTracker(sorted){
