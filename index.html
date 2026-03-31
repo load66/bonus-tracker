@@ -176,6 +176,46 @@ html,body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;back
 .br-text{font-size:11px;font-weight:600;color:#92400E;flex:1}
 .backup-remind.ok .br-text{color:#065F46}
 .br-btn{padding:6px 12px;border-radius:8px;border:none;font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;background:rgba(0,0,0,.1);color:inherit;flex-shrink:0}
+
+/* ─── CHECKLIST ─── */
+.ck-list{margin-top:8px;padding:0;list-style:none}
+.ck-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+.ck-item:last-child{border-bottom:none}
+.ck-box{width:20px;height:20px;border-radius:6px;border:2px solid var(--border);background:var(--bg);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:.15s}
+.ck-box.done{background:var(--green);border-color:var(--green);color:#fff}
+.ck-box svg{width:12px;height:12px;stroke:#fff;fill:none;stroke-width:3}
+.ck-text{flex:1;color:var(--text);font-weight:500}
+.ck-text.done{text-decoration:line-through;color:var(--light)}
+.ck-add{display:flex;gap:6px;margin-top:6px}
+.ck-add input{flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--rs);font-family:inherit;font-size:13px;background:var(--bg);outline:none}
+.ck-add button{padding:8px 14px;border-radius:var(--rs);border:none;background:var(--accent);color:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer}
+
+/* ─── DEADLINE ─── */
+.deadline{display:flex;align-items:center;gap:6px;padding:6px 10px;background:#FEF3C7;border-radius:8px;margin-top:6px;font-size:11px;font-weight:600;color:#92400E}
+.deadline.urgent{background:#FEE2E2;color:#991B1B}
+.deadline.ok{background:#D1FAE5;color:#065F46}
+
+/* ─── EFFORT SCORE ─── */
+.effort{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700}
+.effort.easy{background:#D1FAE5;color:#065F46}
+.effort.med{background:#FEF3C7;color:#92400E}
+.effort.hard{background:#FEE2E2;color:#991B1B}
+
+/* ─── SUGGESTION CARD ─── */
+.sug-card{background:linear-gradient(135deg,#EFF6FF,#DBEAFE);border-radius:var(--r);padding:14px;margin-bottom:8px;border:1px solid #BFDBFE}
+.sug-card .sug-title{font-size:13px;font-weight:700;color:#1E40AF}
+.sug-card .sug-sub{font-size:11px;color:#3B82F6;margin-top:2px}
+.sug-card .sug-reason{font-size:10px;color:var(--muted);margin-top:4px}
+
+/* ─── REFERRAL ─── */
+.ref-badge{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:8px;font-size:10px;font-weight:700;background:#F3E8FF;color:#7C3AED}
+
+/* ─── FEED ─── */
+.feed-card{background:var(--card);border-radius:var(--r);padding:12px 14px;margin-bottom:6px;border:1px solid var(--border);cursor:pointer}
+.feed-card:active{transform:scale(.985)}
+.feed-title{font-size:12px;font-weight:600;color:var(--accent);line-height:1.3}
+.feed-date{font-size:10px;color:var(--light);margin-top:2px}
+.feed-loading{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 </style>
 </head>
 <body>
@@ -398,6 +438,123 @@ function setLastBackup(){try{localStorage.setItem(BK_KEY,td())}catch{}}
 function daysSinceBackup(){const lb=getLastBackup();return lb?dB(lb,td()):999}
 let showTemplates=false;
 
+
+// ═══════════════════════════════════
+// CHECKLIST
+// ═══════════════════════════════════
+function toggleCheck(entryId,idx){
+  entries=entries.map(e=>{
+    if(e.id===entryId&&e.checklist){
+      e.checklist[idx].done=!e.checklist[idx].done;
+    }
+    return e;
+  });
+  sv(SK,entries);R();
+}
+function addCheckItem(entryId){
+  const inp=document.getElementById('ck_'+entryId);
+  if(!inp||!inp.value.trim())return;
+  entries=entries.map(e=>{
+    if(e.id===entryId){
+      if(!e.checklist)e.checklist=[];
+      e.checklist.push({text:inp.value.trim(),done:false});
+    }
+    return e;
+  });
+  sv(SK,entries);R();
+}
+function removeCheckItem(entryId,idx){
+  entries=entries.map(e=>{
+    if(e.id===entryId&&e.checklist){e.checklist.splice(idx,1)}
+    return e;
+  });
+  sv(SK,entries);R();
+}
+
+// ═══════════════════════════════════
+// DEADLINE COUNTDOWN
+// ═══════════════════════════════════
+function reqDeadline(e){
+  if(!e.opened||!e.reqDays)return null;
+  return addD(e.opened,parseInt(e.reqDays));
+}
+function daysToDeadline(e){
+  const dl=reqDeadline(e);
+  if(!dl)return null;
+  return Math.floor((new Date(dl+'T00:00:00')-new Date(td()+'T00:00:00'))/864e5);
+}
+
+// ═══════════════════════════════════
+// EFFORT SCORE
+// ═══════════════════════════════════
+function effortScore(e){
+  if(!e.bonus||e.bonus<=0)return null;
+  let hassle=1;
+  if(e.notes){
+    const n=e.notes.toLowerCase();
+    if(n.includes('debit'))hassle+=1;
+    if(n.includes('dd')||n.includes('direct deposit'))hassle+=1;
+    if(n.includes('balance'))hassle+=1;
+    if(n.includes('branch')||n.includes('in-person'))hassle+=2;
+    if(e.minHoldDays&&e.minHoldDays>=180)hassle+=1;
+    if(e.earlyCloseFee&&e.earlyCloseFee>0)hassle+=1;
+  }
+  const score=Math.round(e.bonus/hassle);
+  return{score,level:score>=200?'easy':score>=100?'med':'hard',label:score>=200?'Easy $':score>=100?'Medium':'High effort'};
+}
+
+// ═══════════════════════════════════
+// NEXT BONUS SUGGESTIONS
+// ═══════════════════════════════════
+function getSuggestions(){
+  const sug=[];
+  const churned=entries.filter(e=>e.closed&&e.churn);
+  churned.forEach(e=>{
+    const dl=daysLeft(e);
+    if(dl!==null&&dl<=0){
+      sug.push({bank:e.bank,reason:'Churn cooldown expired! Ready to re-open.',bonus:e.bonus});
+    }else if(dl!==null&&dl<=30){
+      sug.push({bank:e.bank,reason:'Cooldown expires in '+dl+' days. Start planning.',bonus:e.bonus});
+    }
+  });
+  // Add banks from templates not currently tracked
+  const active=new Set(entries.filter(e=>!e.closed||daysLeft(e)>0).map(e=>e.bank.toLowerCase()));
+  TEMPLATES.forEach(t=>{
+    if(!active.has(t.bank.toLowerCase())&&!churned.some(e=>e.bank.toLowerCase()===t.bank.toLowerCase()&&daysLeft(e)>0)){
+      const already=entries.some(e=>e.bank.toLowerCase()===t.bank.toLowerCase());
+      if(!already)sug.push({bank:t.bank,reason:'Not yet churned. '+fM(t.bonus)+' bonus available.',bonus:t.bonus});
+    }
+  });
+  return sug.slice(0,5);
+}
+
+// ═══════════════════════════════════
+// LIVE FEED
+// ═══════════════════════════════════
+let feedItems=null,feedLoading=false,feedError=false;
+function loadFeed(){
+  if(feedLoading||feedItems)return;
+  feedLoading=true;R();
+  fetch('https://api.allorigins.win/get?url='+encodeURIComponent('https://www.doctorofcredit.com/category/bank-account-bonuses/feed/'))
+    .then(r=>r.json())
+    .then(d=>{
+      const parser=new DOMParser();
+      const xml=parser.parseFromString(d.contents,'text/xml');
+      const items=xml.querySelectorAll('item');
+      feedItems=[];
+      items.forEach((item,i)=>{
+        if(i>=15)return;
+        feedItems.push({
+          title:item.querySelector('title')?.textContent||'',
+          link:item.querySelector('link')?.textContent||'',
+          date:item.querySelector('pubDate')?.textContent||''
+        });
+      });
+      feedLoading=false;R();
+    })
+    .catch(()=>{feedError=true;feedLoading=false;R()});
+}
+
 let analyzerText='',analyzerResult=null,showAnalyzer=false;
 
 function analyzeTC(text){
@@ -599,6 +756,36 @@ function rTracker(sorted){
     }
     h+=`</div>`;
   });
+  // Next bonus suggestions
+  const sugs=getSuggestions();
+  if(sugs.length){
+    h+=`<div class="sec" style="margin-top:16px">\u{1F4A1} Suggested Next Bonuses</div>`;
+    sugs.forEach(s=>{
+      h+=`<div class="sug-card"><div class="sug-title">${esc(s.bank)}</div>${s.bonus?`<div class="sug-sub">${fM(s.bonus)} potential</div>`:''}
+      <div class="sug-reason">${esc(s.reason)}</div></div>`;
+    });
+  }
+
+  // Live feed
+  h+=`<div class="sec" style="margin-top:16px">\u{1F4E1} Latest Bank Bonuses</div>`;
+  if(!feedItems&&!feedLoading&&!feedError){
+    h+=`<button class="analyze-btn" style="background:linear-gradient(135deg,#0EA5E9,#0284C7)" onclick="loadFeed()">\u{1F4E1} Load Latest from Doctor of Credit</button>`;
+  }else if(feedLoading){
+    h+=`<div class="feed-loading">\u23F3 Loading feed...</div>`;
+  }else if(feedError||!feedItems){
+    h+=`<div style="margin-bottom:8px">`;
+    h+=`<a href="https://www.doctorofcredit.com/best-bank-account-bonuses/" target="_blank" rel="noopener" style="text-decoration:none"><div class="feed-card"><div class="feed-title">\u{1F517} Best Bank Bonuses (Updated Monthly)</div><div class="feed-date">doctorofcredit.com</div></div></a>`;
+    h+=`<a href="https://www.doctorofcredit.com/a-list-of-churnable-bank-account-bonuses/" target="_blank" rel="noopener" style="text-decoration:none"><div class="feed-card"><div class="feed-title">\u{1F517} Churnable Bonuses List</div><div class="feed-date">doctorofcredit.com</div></div></a>`;
+    h+=`<a href="https://www.bankrewards.io" target="_blank" rel="noopener" style="text-decoration:none"><div class="feed-card"><div class="feed-title">\u{1F517} BankRewards.io \u2014 Search Bonuses by State</div><div class="feed-date">bankrewards.io</div></div></a>`;
+    h+=`</div>`;
+  }else{
+    feedItems.forEach(f=>{
+      const d=f.date?new Date(f.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'' ;
+      h+=`<a href="${f.link}" target="_blank" rel="noopener" style="text-decoration:none"><div class="feed-card"><div class="feed-title">${esc(f.title)}</div><div class="feed-date">${d}</div></div></a>`;
+    });
+    h+=`<a href="https://www.bankrewards.io" target="_blank" rel="noopener" style="text-decoration:none"><div class="feed-card" style="border-color:#BFDBFE;background:#EFF6FF"><div class="feed-title">\u{1F517} BankRewards.io \u2014 Search by State</div><div class="feed-date">bankrewards.io</div></div></a>`;
+  }
+
   return h;
 }
 
@@ -813,9 +1000,9 @@ function openEdit(id){const e=entries.find(x=>x.id===id);if(e)modal={...e,_edit:
 function saveEntry(){
   const bank=(document.getElementById('f_bank').value||'').trim();
   if(!bank){alert('Bank name required');return}
-  const d={bank,bonus:parseInt(document.getElementById('f_bonus').value)||0,churn:document.getElementById('f_churn').value,opened:document.getElementById('f_opened').value,closed:document.getElementById('f_closed').value,bonusRecd:document.getElementById('f_bonusRecd').value,reqMet:document.getElementById('f_reqMet').value,notes:document.getElementById('f_notes').value,minHoldDays:parseInt(document.getElementById('f_minHold').value)||0,earlyCloseFee:parseInt(document.getElementById('f_closeFee').value)||0,dataPoint:document.getElementById('f_dp').value};
-  if(modal._edit){entries=entries.map(e=>e.id===modal.id?{...e,...d}:e)}
-  else{const taken=new Set(entries.map(e=>e.id));d.id=genId(bank,taken);entries.push(d)}
+  const d={bank,bonus:parseInt(document.getElementById('f_bonus').value)||0,churn:document.getElementById('f_churn').value,opened:document.getElementById('f_opened').value,closed:document.getElementById('f_closed').value,bonusRecd:document.getElementById('f_bonusRecd').value,reqMet:document.getElementById('f_reqMet').value,notes:document.getElementById('f_notes').value,minHoldDays:parseInt(document.getElementById('f_minHold').value)||0,earlyCloseFee:parseInt(document.getElementById('f_closeFee').value)||0,reqDays:parseInt(document.getElementById('f_reqDays').value)||0,referralBonus:parseInt(document.getElementById('f_referral').value)||0,dataPoint:document.getElementById('f_dp').value};
+  if(modal._edit){entries=entries.map(e=>e.id===modal.id?{...e,...d,checklist:e.checklist||[]}:e)}
+  else{const taken=new Set(entries.map(e=>e.id));d.id=genId(bank,taken);d.checklist=[];entries.push(d)}
   entries=sortE(entries);sv(SK,entries);modal=null;R();
 }
 
