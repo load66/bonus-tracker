@@ -133,6 +133,12 @@ html,body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;back
 .az-textarea{width:100%;min-height:180px;padding:12px;border:1.5px solid var(--border);border-radius:var(--rs);font-family:inherit;font-size:13px;color:var(--text);background:var(--bg);outline:none;resize:vertical;line-height:1.5}
 .az-textarea:focus{border-color:var(--accent)}
 .az-textarea::placeholder{color:var(--light)}
+
+.backup-bar{display:flex;gap:6px;margin-bottom:10px}
+.bk-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:10px;border-radius:var(--rs);border:none;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;transition:.1s}
+.bk-btn:active{transform:scale(.96)}
+.bk-export{background:#EFF6FF;color:var(--accent)}
+.bk-import{background:#ECFDF5;color:var(--emerald)}
 </style>
 </head>
 <body>
@@ -410,7 +416,8 @@ function R(){
 function rTracker(sorted){
   const q=search.toLowerCase();
   const f=q?sorted.filter(e=>e.bank.toLowerCase().includes(q)):sorted;
-  let h=`<input class="sinput" type="text" placeholder="Search banks..." value="${esc(search)}" oninput="search=this.value;R()">`;
+  let h=`<div class="backup-bar"><button class="bk-btn bk-export" onclick="event.stopPropagation();exportBackup()">\u{1F4E4} Export Backup</button><button class="bk-btn bk-import" onclick="event.stopPropagation();importBackup()">\u{1F4E5} Import Backup</button></div>`;
+  h+=`<input class="sinput" type="text" placeholder="Search banks..." value="${esc(search)}" oninput="search=this.value;R()">`;
   h+=`<button class="analyze-btn" onclick="showAnalyzer=true;R()">\u{1F9E0} Paste Terms & Conditions to Analyze</button>`;
   if(showAnalyzer)h+=rAnalyzer();
   if(!f.length)return h+`<div class="empty"><div class="em">\u{1F4ED}</div><p>No entries. Tap + to add.</p></div>`;
@@ -658,6 +665,43 @@ function closeAcct(id){
     entries=entries.map(x=>x.id===id?{...x,closed:td()}:x);
     entries=sortE(entries);sv(SK,entries);cfm=null;expanded=null;R();
   }};R();
+}
+
+
+// ═══════════════════════════════════
+// BACKUP & RESTORE
+// ═══════════════════════════════════
+function exportBackup(){
+  const data={entries,version:'v4',exported:new Date().toISOString()};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const d=new Date().toISOString().split('T')[0];
+  a.href=url;a.download='BonusTracker_Backup_'+d+'.json';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importBackup(){
+  const input=document.createElement('input');
+  input.type='file';input.accept='.json';
+  input.onchange=function(e){
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=function(ev){
+      try{
+        const data=JSON.parse(ev.target.result);
+        if(data.entries&&Array.isArray(data.entries)){
+          entries=sortE(data.entries);
+          sv(SK,entries);
+          cfm={title:'Restore Complete',msg:data.entries.length+' entries restored from backup ('+fD(data.exported?.split('T')[0]||'')+').',green:true,action:()=>{cfm=null;R()}};
+          R();
+        }else{alert('Invalid backup file')}
+      }catch{alert('Could not read backup file')}
+    };
+    reader.readAsText(file);
+  };
+  input.click();
 }
 
 entries=sortE(entries);R();
