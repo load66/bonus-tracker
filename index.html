@@ -139,6 +139,43 @@ html,body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;back
 .bk-btn:active{transform:scale(.96)}
 .bk-export{background:#EFF6FF;color:var(--accent)}
 .bk-import{background:#ECFDF5;color:var(--emerald)}
+
+/* ─── URGENCY BORDERS ─── */
+.card.urg-green{border-left:4px solid var(--green)}
+.card.urg-yellow{border-left:4px solid var(--amber)}
+.card.urg-red{border-left:4px solid var(--red)}
+.card.urg-blue{border-left:4px solid var(--accent)}
+
+/* ─── NOTIFICATION BADGES ─── */
+.notif{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:8px;font-size:10px;font-weight:700;margin-top:4px;margin-right:4px}
+.notif.urgent{background:#FEE2E2;color:#991B1B}
+.notif.warn{background:#FEF3C7;color:#92400E}
+.notif.info{background:#DBEAFE;color:#1E40AF}
+.notif.good{background:#D1FAE5;color:#065F46}
+
+/* ─── CHART ─── */
+.chart-wrap{background:var(--card);border-radius:var(--r);padding:16px;margin-bottom:12px;border:1px solid var(--border)}
+.chart-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px}
+.chart-bars{display:flex;align-items:flex-end;gap:3px;height:100px;padding-top:8px}
+.chart-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px}
+.chart-bar{width:100%;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--sky),var(--accent));min-height:2px;transition:height .3s}
+.chart-lbl{font-size:8px;color:var(--light);font-weight:600}
+.chart-val{font-size:8px;color:var(--text);font-weight:700}
+
+/* ─── TEMPLATES ─── */
+.tmpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
+.tmpl-btn{background:var(--card);border:1.5px solid var(--border);border-radius:var(--rs);padding:10px;cursor:pointer;font-family:inherit;text-align:left;transition:.12s}
+.tmpl-btn:active{transform:scale(.96);border-color:var(--accent)}
+.tmpl-name{font-size:12px;font-weight:700;color:var(--text)}
+.tmpl-bonus{font-size:11px;color:var(--accent);font-weight:600;margin-top:2px}
+.tmpl-req{font-size:9px;color:var(--muted);margin-top:1px}
+
+/* ─── BACKUP REMINDER ─── */
+.backup-remind{background:linear-gradient(135deg,#FEF3C7,#FDE68A);border-radius:var(--rs);padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.backup-remind.ok{background:linear-gradient(135deg,#D1FAE5,#A7F3D0)}
+.br-text{font-size:11px;font-weight:600;color:#92400E;flex:1}
+.backup-remind.ok .br-text{color:#065F46}
+.br-btn{padding:6px 12px;border-radius:8px;border:none;font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;background:rgba(0,0,0,.1);color:inherit;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -281,6 +318,91 @@ info:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-
 // ═══════════════════════════════════
 // T&C ANALYZER
 // ═══════════════════════════════════
+
+// ═══════════════════════════════════
+// QUICK-ADD TEMPLATES
+// ═══════════════════════════════════
+const TEMPLATES=[
+{bank:"Chase",bonus:300,churn:"2",notes:"$1,000 DD within 90 days. $12/mo fee waived w/ $500 DD.",minHoldDays:90,earlyCloseFee:0,dataPoint:"Fidelity/Robinhood/Schwab ACH works as DD"},
+{bank:"Chase Biz",bonus:500,churn:"2",notes:"$2,000 deposit within 20 biz days. $15/mo fee waived w/ $2,000 bal.",minHoldDays:0,earlyCloseFee:0,dataPoint:"$2,000 deposit within 20 business days"},
+{bank:"Bank of America",bonus:300,churn:"1",notes:"$2,000-$10,000 DD within 90 days (tiered). $12/mo fee waived w/ $250 DD.",minHoldDays:0,earlyCloseFee:0,dataPoint:"Fidelity ACH works as DD"},
+{bank:"Wells Fargo",bonus:325,churn:"1",notes:"$1,000+ DD within 90 days. $10/mo fee waived w/ $500 DD.",minHoldDays:0,earlyCloseFee:0,dataPoint:"Employer DD recommended"},
+{bank:"U.S. Bank",bonus:450,churn:"1",notes:"$8,000+ DD within 90 days for max tier. $6.95/mo fee waived w/ $1,000 DD. No early close fee.",minHoldDays:0,earlyCloseFee:0,dataPoint:"Robinhood/Fidelity ACH works as DD"},
+{bank:"Citi",bonus:300,churn:"1",notes:"Tiered DD bonus. $12/mo fee. Highly offer-specific.",minHoldDays:0,earlyCloseFee:0,dataPoint:"ACH generally works as DD"},
+{bank:"PNC",bonus:400,churn:"2",notes:"$5,000 DD for top tier. Virtual Wallet. $7-25/mo by tier.",minHoldDays:0,earlyCloseFee:0,dataPoint:"Fidelity ACH works as DD"},
+{bank:"Simmons Bank",bonus:450,churn:"1",notes:"$150x3 cycles. $1,000 DD + 7 debit txns per cycle. Simply Checking = $0 fee. MO available.",minHoldDays:0,earlyCloseFee:0,dataPoint:"$1,000 DD + 7 debit txns per cycle"},
+{bank:"Equity Bank",bonus:400,churn:"180",notes:"Must open checking+savings. $1,000 DD + debit activation within 45 days. $400 clawback <180d. MO available.",minHoldDays:180,earlyCloseFee:400,dataPoint:"$1,000 DD + activate debit + 1 txn"},
+{bank:"Regions",bonus:450,churn:"1",notes:"$1,000 DD + 10 debit txns within 90 days. $25 fee if closed <180d. MO available.",minHoldDays:180,earlyCloseFee:25,dataPoint:"$1,000 DD + 10 debit transactions"},
+{bank:"BMO",bonus:600,churn:"1",notes:"$5,000+ DD within 90 days. CC funding available. Nationwide.",minHoldDays:0,earlyCloseFee:0,dataPoint:"ACH works as DD + CC funding"},
+{bank:"Capital One 360",bonus:250,churn:"1",notes:"Two $500+ DD within 75 days. $0 fee. NOT churnable anymore.",minHoldDays:0,earlyCloseFee:0,dataPoint:"No longer churnable (2025+)"}
+];
+
+// ═══════════════════════════════════
+// NOTIFICATIONS / BADGES
+// ═══════════════════════════════════
+function getNotifs(e){
+  const n=[];
+  const s=status(e);
+  if(s==='TIME TO CHURN!')n.push({t:'Ready to churn!',c:'good'});
+  // Early close timer
+  const dsc=daysUntilSafe(e);
+  if(!e.closed&&dsc!==null){
+    if(dsc===0)n.push({t:'\u2705 Safe to close',c:'good'});
+    else if(dsc<=7)n.push({t:'Close safe in '+dsc+'d',c:'urgent'});
+    else if(dsc<=30)n.push({t:'Close safe in '+dsc+'d',c:'warn'});
+  }
+  // DD reminder (if opened but no bonusRecd within 60 days)
+  if(e.opened&&!e.closed&&!e.bonusRecd){
+    const daysSinceOpen=dB(e.opened,td());
+    if(daysSinceOpen>=75)n.push({t:'Check bonus status!',c:'urgent'});
+    else if(daysSinceOpen>=45)n.push({t:'Bonus deadline approaching',c:'warn'});
+  }
+  // Churn countdown close
+  if(s==='WAITING TO CHURN!'){
+    const dl=daysLeft(e);
+    if(dl!==null&&dl<=30&&dl>0)n.push({t:'Churn in '+dl+' days',c:'warn'});
+  }
+  return n;
+}
+
+function getUrgency(e){
+  const s=status(e);
+  if(s==='TIME TO CHURN!')return'red';
+  const dsc=daysUntilSafe(e);
+  if(!e.closed&&dsc!==null&&dsc<=7)return'red';
+  if(!e.closed&&dsc!==null&&dsc<=30)return'yellow';
+  if(s==='WAITING TO CHURN!'){const dl=daysLeft(e);if(dl!==null&&dl<=30)return'yellow'}
+  if(s==='WORKING')return'blue';
+  return'green';
+}
+
+// ═══════════════════════════════════
+// CHART DATA
+// ═══════════════════════════════════
+function chartData(){
+  const thisYr=new Date().getFullYear();
+  const months=[];
+  for(let m=0;m<12;m++){
+    const label=['J','F','M','A','M','J','J','A','S','O','N','D'][m];
+    const total=entries.filter(e=>{
+      if(!e.closed||!e.bonus||e.bonus<=0)return false;
+      const d=new Date(e.closed+'T00:00:00');
+      return d.getFullYear()===dashYear&&d.getMonth()===m;
+    }).reduce((s,e)=>s+(e.bonus||0),0);
+    months.push({label,total});
+  }
+  return months;
+}
+
+// ═══════════════════════════════════
+// AUTO-BACKUP REMINDER
+// ═══════════════════════════════════
+const BK_KEY='bt_last_backup';
+function getLastBackup(){try{return localStorage.getItem(BK_KEY)||''}catch{return''}}
+function setLastBackup(){try{localStorage.setItem(BK_KEY,td())}catch{}}
+function daysSinceBackup(){const lb=getLastBackup();return lb?dB(lb,td()):999}
+let showTemplates=false;
+
 let analyzerText='',analyzerResult=null,showAnalyzer=false;
 
 function analyzeTC(text){
@@ -416,7 +538,33 @@ function R(){
 function rTracker(sorted){
   const q=search.toLowerCase();
   const f=q?sorted.filter(e=>e.bank.toLowerCase().includes(q)):sorted;
-  let h=`<div class="backup-bar"><button class="bk-btn bk-export" onclick="event.stopPropagation();exportBackup()">\u{1F4E4} Export Backup</button><button class="bk-btn bk-import" onclick="event.stopPropagation();importBackup()">\u{1F4E5} Import Backup</button></div>`;
+  // Auto-backup reminder
+  let h='';
+  const bkDays=daysSinceBackup();
+  if(bkDays>=7){
+    h+=`<div class="backup-remind"><div class="br-text">\u{26A0}\uFE0F ${bkDays>=999?'Never backed up':'Last backup '+bkDays+'d ago'} \u2014 tap to save</div><button class="br-btn" onclick="exportBackup()">\u{1F4E4} Backup Now</button></div>`;
+  }
+
+  // Chart
+  const cd=chartData();const maxC=Math.max(...cd.map(c=>c.total),1);
+  h+=`<div class="chart-wrap"><div class="chart-title">\u{1F4CA} ${dashYear} Earnings by Month</div><div class="chart-bars">`;
+  cd.forEach(c=>{const pct=c.total?Math.max(4,Math.round(c.total/maxC*90)):2;
+    h+=`<div class="chart-col"><div class="chart-val">${c.total?fM(c.total):''}</div><div class="chart-bar" style="height:${pct}%"></div><div class="chart-lbl">${c.label}</div></div>`;
+  });
+  h+=`</div></div>`;
+
+  // Quick actions row
+  h+=`<div class="backup-bar"><button class="bk-btn bk-export" onclick="exportBackup()">\u{1F4E4} Backup</button><button class="bk-btn bk-import" onclick="importBackup()">\u{1F4E5} Restore</button><button class="bk-btn" style="background:#F3E8FF;color:#7C3AED" onclick="showTemplates=!showTemplates;R()">\u{26A1} Quick Add</button></div>`;
+
+  // Templates
+  if(showTemplates){
+    h+=`<div class="sec">Quick-Add Templates</div><div class="tmpl-grid">`;
+    TEMPLATES.forEach((t,i)=>{
+      h+=`<button class="tmpl-btn" onclick="addFromTemplate(${i})"><div class="tmpl-name">${esc(t.bank)}</div><div class="tmpl-bonus">${fM(t.bonus)}</div><div class="tmpl-req">${esc(t.dataPoint||'').substring(0,40)}</div></button>`;
+    });
+    h+=`</div>`;
+  }
+
   h+=`<input class="sinput" type="text" placeholder="Search banks..." value="${esc(search)}" oninput="search=this.value;R()">`;
   h+=`<button class="analyze-btn" onclick="showAnalyzer=true;R()">\u{1F9E0} Paste Terms & Conditions to Analyze</button>`;
   if(showAnalyzer)h+=rAnalyzer();
@@ -424,9 +572,11 @@ function rTracker(sorted){
   f.forEach(e=>{
     const s=status(e),isX=expanded===e.id,nr=nextReopen(e),dl=daysLeft(e),el=elapsed(e),dsc=daysUntilSafe(e),pg=holdProg(e);
     const cls=s==='WORKING'?'working':s==='TIME TO CHURN!'?'churn':'waiting';
-    h+=`<div class="card"><div class="card-head" onclick="expanded=expanded==='${e.id}'?null:'${e.id}';R()">`;
+    const urg=getUrgency(e);const notifs=getNotifs(e);
+    h+=`<div class="card urg-${urg}"><div class="card-head" onclick="expanded=expanded==='${e.id}'?null:'${e.id}';R()">`;
     h+=`<div class="card-top"><div class="card-bank">${esc(e.bank)}</div><div class="card-id">${esc(e.id)}</div></div>`;
     h+=`<span class="badge ${cls}">${esc(s)}</span>`;
+    if(notifs.length){h+=`<div style="display:flex;flex-wrap:wrap;gap:2px">`;notifs.forEach(n=>{h+=`<span class="notif ${n.c}">${esc(n.t)}</span>`});h+=`</div>`}
     h+=`<div class="card-grid">`;
     if(e.bonus)h+=`<div class="cf"><div class="k">Bonus</div><div class="v money">${fM(e.bonus)}</div></div>`;
     if(e.opened&&!e.closed)h+=`<div class="cf"><div class="k">Opened</div><div class="v">${fD(e.opened)}</div></div>`;
@@ -644,6 +794,20 @@ function rModal(){
 
 function rConfirm(){return`<div class="cbg" onclick="cfm=null;R()"><div class="cbox" onclick="event.stopPropagation()"><h3>${cfm.title}</h3><p>${cfm.msg}</p><div class="crow"><button class="c-cancel" onclick="cfm=null;R()">Cancel</button><button class="${cfm.green?'c-green':'c-red'}" onclick="cfm.action()">${cfm.green?'Confirm':'Delete'}</button></div></div></div>`}
 
+
+function addFromTemplate(idx){
+  const t=TEMPLATES[idx];
+  const taken=new Set(entries.map(e=>e.id));
+  modal={
+    bank:t.bank,bonus:t.bonus,churn:t.churn,
+    opened:td(),closed:'',bonusRecd:'',reqMet:'',
+    notes:t.notes||'',minHoldDays:t.minHoldDays||0,
+    earlyCloseFee:t.earlyCloseFee||0,dataPoint:t.dataPoint||''
+  };
+  showTemplates=false;
+  R();
+}
+
 function openAdd(){modal={bank:'',bonus:'',churn:'',opened:'',closed:'',bonusRecd:'',reqMet:'',notes:'',minHoldDays:'',earlyCloseFee:'',dataPoint:''};R()}
 function openEdit(id){const e=entries.find(x=>x.id===id);if(e)modal={...e,_edit:true};R()}
 
@@ -680,6 +844,7 @@ function exportBackup(){
   a.href=url;a.download='BonusTracker_Backup_'+d+'.json';
   document.body.appendChild(a);a.click();document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  setLastBackup();
 }
 
 function importBackup(){
