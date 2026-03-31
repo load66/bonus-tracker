@@ -150,7 +150,7 @@ const fM=n=>'$'+(n||0).toLocaleString();
 const esc=s=>{const d=document.createElement('div');d.textContent=s;return d.innerHTML};
 
 function nextReopen(e){if(!e.closed||!e.churn)return'';return e.churn==='180'?addD(e.closed,180):addM(e.closed,parseInt(e.churn)*12)}
-function daysLeft(e){const nr=nextReopen(e);return nr?Math.max(0,dB(td(),nr)+10):null}
+function daysLeft(e){const nr=nextReopen(e);if(!nr)return null;const diff=Math.floor((new Date(nr+'T00:00:00')-new Date(td()+'T00:00:00'))/864e5);return Math.max(0,diff+10)}
 function elapsed(e){return e.bonusRecd?dB(e.bonusRecd,td()):null}
 function status(e){if(!e.bank)return'';if(e.closed){const dl=daysLeft(e);return dl===0?'TIME TO CHURN!':'WAITING TO CHURN!';}return'WORKING'}
 function sPri(s){return s==='WORKING'?1:s==='TIME TO CHURN!'?2:s==='WAITING TO CHURN!'?3:99}
