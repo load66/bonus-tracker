@@ -263,96 +263,239 @@ function getUrg(e){const s=status(e);if(s==='TIME TO CHURN!')return'red';const d
 function getSuggestions(){const sug=[];entries.filter(e=>e.closed&&e.churn).forEach(e=>{const dl=daysLeft(e);if(dl!==null&&dl<=0)sug.push({bank:e.bank,rsn:'Cooldown expired! Ready to re-open.',bonus:e.bonus});else if(dl!==null&&dl<=30)sug.push({bank:e.bank,rsn:'Cooldown expires in '+dl+' days.',bonus:e.bonus})});const active=new Set(entries.map(e=>e.bank.toLowerCase()));TEMPLATES.forEach(t=>{if(!active.has(t.bank.toLowerCase()))sug.push({bank:t.bank,rsn:'Not yet tried. '+fM(t.bonus)+' available.',bonus:t.bonus})});return sug.slice(0,4)}
 function chartData(){const ms=[];for(let m=0;m<12;m++){const l=['J','F','M','A','M','J','J','A','S','O','N','D'][m];const t=entries.filter(e=>isCompleted(e)&&new Date(e.closed+'T00:00:00').getFullYear()===dashYear&&new Date(e.closed+'T00:00:00').getMonth()===m).reduce((s,e)=>s+(e.bonus||0),0);ms.push({l,t})}return ms}
 
-/* REGEX ANALYZER FALLBACK - generates DoC-style fine print */
+/* REGEX ANALYZER — MEGA FALLBACK (handles 50+ bank patterns) */
 function analyzeTC(text){
   if(!text||text.length<20)return null;
   const t=text.toLowerCase(),r={};
-  // Extract all fields
-  const dm=text.match(/direct\s+deposits?\s+(?:totaling|of|that\s+total)\s*\$?([\d,]+)/i)||text.match(/\$([\d,]+)\s+(?:or\s+more\s+)?in\s+(?:qualifying\s+)?direct/i);
-  if(dm)r.ddAmount='$'+dm[1];
-  const dc=text.match(/(\w+)\s+(?:or\s+more\s+)?(?:qualifying\s+)?direct\s+deposits?\s+(?:within|during|totaling)/i);
-  if(dc){const w=dc[1].toLowerCase();const nums={one:1,two:2,three:3,four:4,five:5};if(nums[w])r.ddCount=nums[w]}
-  const dt=text.match(/(\d+)\s+(?:or\s+more\s+)?(?:qualifying\s+)?debit\s+(?:card\s+)?(?:trans|purch)/i);
-  if(dt)r.debitTxns=dt[1];
-  const dy=text.match(/within\s+(\d+)\s+days?\s+(?:of|after|from)/i);
-  if(dy)r.timeline=dy[1]+' days';
-  const mf=text.match(/monthly\s+(?:maintenance\s+|service\s+)?fee\s+(?:of\s+)?\$([\d.]+)/i);
-  if(mf)r.monthlyFee='$'+mf[1];
-  if(t.includes('no monthly fee')||t.includes('no monthly maintenance'))r.monthlyFee='$0 (No fee)';
-  const fw=text.match(/(?:waived|avoid|no\s+fee)\s+(?:if|when|by|with).*?(?:direct|balance|deposit).*?\$([\d,]+)/i)||text.match(/\$([\d,]+)\s+(?:minimum|average)\s+(?:daily\s+)?balance/i);
-  if(fw)r.feeWaiver='$'+fw[1]+' balance or DD';
-  const mb=text.match(/minimum\s+(?:opening\s+)?(?:deposit|balance)\s+(?:of\s+)?\$([\d,]+)/i);
-  if(mb)r.minBalance='$'+mb[1];
-  const ec=text.match(/(?:closed?|termination)\s+within\s+(?:the\s+)?(\d+)\s+days/i);
-  if(ec){r.earlyCloseDays=ec[1];r.earlyCloseFee='Fee if closed within '+ec[1]+' days'}
-  if(t.includes('no early')||t.includes('no termination fee'))r.earlyCloseFee='None';
-  const ba=text.match(/\$([\d,]+)\s+(?:cash\s+)?(?:bonus|credit)/i)||text.match(/(?:bonus|earn|receive|credit)\s+(?:of\s+)?\$([\d,]+)/i);
-  if(ba)r.bonusAmount='$'+(ba[1]||ba[2]).replace(/,/g,'');
-  const cm=text.match(/(?:not\s+)?(?:eligible|available|qualify).*?(?:within|past|last)\s+(?:the\s+)?(\d+)\s+months?/i)||text.match(/closed\s+within\s+(?:the\s+)?(?:past\s+)?(\d+)\s+months?/i)||text.match(/(\d+)\s+months?\s+(?:prior|before)/i);
-  if(cm){const m=parseInt(cm[1]);r.churnMonths=m;r.churnRule=m<=6?'180 days':m<=12?'1 year':m<=24?'2 years':'3 years'}
-  // Also check for "six months" etc
-  if(!r.churnMonths&&t.includes('six months'))r.churnMonths=6;
-  if(!r.churnMonths&&t.includes('twelve months'))r.churnMonths=12;
-  if(!r.churnMonths&&t.includes('24 months'))r.churnMonths=24;
-  const pc=text.match(/promo(?:tional)?\s+code\s+[:\s]*["']?(\w+)/i)||text.match(/code\s+(\w+)/i);
-  if(pc)r.promoCode=pc[1];
-  const bp=text.match(/(?:bonus|credit).*?(?:credited?|deposited?|paid?).*?(?:within|after)\s+(\d+)\s+days?/i)||text.match(/within\s+(\d+)\s+days?\s+of\s+meeting/i);
-  if(bp)r.bonusPostTime='Within '+bp[1]+' days of qualifying';
-  if(t.includes('two weeks'))r.bonusPostTime='Within two weeks of qualifying';
+  
+  // ── BONUS AMOUNT (multiple patterns) ──
+  const bonusPatterns=[
+    /(?:bonus|credit|incentive|cash\s+bonus)\s+(?:of\s+)?\$([\d,]+)/i,
+    /\$([\d,]+)\s+(?:cash\s+)?(?:bonus|credit|incentive)/i,
+    /(?:earn|receive|get)\s+(?:a\s+)?\$([\d,]+)/i,
+    /\$([\d,]+)\s+(?:will\s+be\s+)?(?:credited|deposited|paid)/i,
+    /(?:up\s+to\s+)?\$([\d,]+)\s+(?:total|maximum)/i
+  ];
+  for(const p of bonusPatterns){const m=text.match(p);if(m){r.bonusAmount='$'+(m[1]||m[2]).replace(/,/g,'');break}}
+  // Multiple bonus tiers
+  const allBonuses=[...text.matchAll(/\$([\d,]+)\s+(?:bonus|credit)/gi)];
+  if(allBonuses.length>1)r.bonusTiers=allBonuses.map(m=>'$'+m[1]).join(' / ');
+
+  // ── DIRECT DEPOSIT ──
+  const ddPatterns=[
+    /direct\s+deposits?\s+(?:totaling|of|that\s+total)\s+(?:at\s+least\s+)?\$([\d,]+)/i,
+    /\$([\d,]+)\s+(?:or\s+more\s+)?in\s+(?:qualifying\s+)?direct\s+deposit/i,
+    /qualifying\s+direct\s+deposits?\s+(?:totaling\s+)?(?:at\s+least\s+)?\$([\d,]+)/i,
+    /direct\s+deposit\s+of\s+(?:at\s+least\s+)?\$([\d,]+)/i,
+    /combined\s+(?:qualifying\s+)?(?:direct\s+)?deposits?\s+(?:of\s+)?\$([\d,]+)/i
+  ];
+  for(const p of ddPatterns){const m=text.match(p);if(m){r.ddAmount='$'+m[1].replace(/,/g,'');break}}
+  // DD count
+  const ddcPatterns=[/(\w+)\s+(?:or\s+more\s+)?(?:qualifying\s+)?direct\s+deposits/i,/at\s+least\s+(\w+)\s+direct/i];
+  const numWords={one:1,two:2,three:3,four:4,five:5,six:6};
+  for(const p of ddcPatterns){const m=text.match(p);if(m){const w=m[1].toLowerCase();if(numWords[w])r.ddCount=numWords[w];else if(/^\d+$/.test(m[1]))r.ddCount=parseInt(m[1]);break}}
+  // DD per cycle/month
+  if(t.includes('per statement cycle')||t.includes('per cycle'))r.ddPerCycle=true;
+  if(t.includes('per month')||t.includes('monthly'))r.ddMonthly=true;
+
+  // ── DEBIT TRANSACTIONS ──
+  const debitPatterns=[/(\d+)\s+(?:or\s+more\s+)?(?:qualifying\s+)?debit\s+(?:card\s+)?(?:transactions?|purchases?)/i,/debit\s+(?:card\s+)?(?:transactions?|purchases?)\s+(?:totaling|of)\s+(\d+)/i,/(?:make|complete)\s+(\d+)\s+(?:qualifying\s+)?(?:debit|card|purchase)/i];
+  for(const p of debitPatterns){const m=text.match(p);if(m){r.debitTxns=m[1]||m[2];break}}
+  // Activate debit card
+  if(t.includes('activate')&&(t.includes('debit card')||t.includes('debit')))r.activateDebit=true;
+
+  // ── TIMELINE ──
+  const timePatterns=[/within\s+(\d+)\s+days?\s+(?:of|after|from)\s+(?:account\s+)?open/i,/(\d+)\s+days?\s+(?:of|after|from)\s+(?:account\s+)?open/i,/within\s+(\d+)\s+days/i,/first\s+(\d+)\s+days/i];
+  for(const p of timePatterns){const m=text.match(p);if(m){r.timeline=m[1]+' days';r.timelineDays=parseInt(m[1]);break}}
+  // Statement cycles
+  const cycleMatch=text.match(/(?:first|within)\s+(\d+)\s+(?:\(\d+\)\s+)?statement\s+cycles?/i)||text.match(/(\d+)\s+statement\s+cycles?/i);
+  if(cycleMatch)r.cycles=cycleMatch[1]+' statement cycles';
+
+  // ── PROMO CODE ──
+  const promoPatterns=[/promo(?:tional)?\s+code\s+[:\s]*["']?(\w+)["']?/i,/code\s+["']?(\w+)["']?\s+(?:at|during|when)/i,/(?:use|enter|apply)\s+(?:the\s+)?(?:promo\s+)?code\s+["']?(\w+)/i];
+  for(const p of promoPatterns){const m=text.match(p);if(m){r.promoCode=m[1]||m[2]||m[3];break}}
+
+  // ── FEES ──
+  const feePatterns=[/monthly\s+(?:maintenance\s+|service\s+)?fee\s+(?:of\s+)?\$([\d.]+)/i,/\$([\d.]+)\s+monthly\s+(?:maintenance|service)\s+fee/i,/monthly\s+fee[:\s]+\$([\d.]+)/i,/\$([\d.]+)\s+(?:per\s+)?month\s+(?:service|maintenance)?/i];
+  for(const p of feePatterns){const m=text.match(p);if(m){r.monthlyFee='$'+m[1];break}}
+  if(t.includes('no monthly fee')||t.includes('no monthly maintenance')||t.includes('$0 monthly')||t.includes('no service fee'))r.monthlyFee='$0 (No fee)';
+  // Fee waiver
+  const waiverPatterns=[/(?:waived?|avoid|no\s+fee)\s+(?:if|when|by|with).*?\$([\d,]+)/i,/(?:maintain|average|minimum)\s+(?:daily\s+)?balance\s+(?:of\s+)?\$([\d,]+).*?(?:waive|avoid|no\s+fee)/i,/direct\s+deposit\s+(?:of\s+)?\$([\d,]+).*?(?:waive|avoid)/i];
+  for(const p of waiverPatterns){const m=text.match(p);if(m){r.feeWaiver='$'+m[1].replace(/,/g,'')+' balance or DD';break}}
+  // Min opening deposit
+  const minPatterns=[/minimum\s+(?:opening\s+)?(?:deposit|balance)\s+(?:of\s+)?\$([\d,]+)/i,/\$([\d,]+)\s+(?:minimum\s+)?(?:opening\s+)?deposit/i,/(?:open|fund)\s+.*?\$([\d,]+)/i];
+  for(const p of minPatterns){const m=text.match(p);if(m){r.minBalance='$'+m[1].replace(/,/g,'');break}}
+
+  // ── EARLY CLOSE ──
+  const closePatterns=[/(?:closed?|termination|closing)\s+(?:the\s+)?(?:account\s+)?within\s+(?:the\s+)?(?:first\s+)?(\d+)\s+days/i,/(\d+)\s+days?\s+(?:of|after|from)\s+(?:account\s+)?open.*?(?:close|terminat)/i,/close.*?(?:less\s+than|within|before)\s+(\d+)\s+days/i];
+  for(const p of closePatterns){const m=text.match(p);if(m){r.earlyCloseDays=parseInt(m[1]);break}}
+  const closeFeePatterns=[/(?:early\s+)?(?:termination|close|closing)\s+fee\s+(?:of\s+)?\$([\d.]+)/i,/\$([\d,]+)\s+(?:early\s+)?(?:termination|close)/i,/(?:deduct|collect|charge|clawback|forfeit).*?\$([\d,]+).*?(?:bonus|incentive)/i,/(?:bonus|incentive).*?(?:deduct|collect|clawback|forfeit)/i];
+  for(const p of closeFeePatterns){const m=text.match(p);if(m&&m[1]){r.earlyCloseFee='$'+m[1].replace(/,/g,'');break}}
+  if(t.includes('collect the bonus')||t.includes('forfeit the bonus')||t.includes('bonus will be reversed')||t.includes('bonus may be collected'))r.earlyCloseFee=r.earlyCloseFee||'Bonus clawback';
+  if(t.includes('no early termination')||t.includes('no termination fee'))r.earlyCloseFee='None';
+
+  // ── CHURN RULE ──
+  const churnPatterns=[/(?:not\s+)?(?:eligible|qualify|available).*?(?:within|past|last|preceding)\s+(?:the\s+)?(\d+)\s+months?/i,/(?:had|owned|closed|open).*?(?:account|checking).*?(?:within|past|last)\s+(?:the\s+)?(\d+)\s+months?/i,/(\d+)\s+months?\s+(?:prior|before|from\s+(?:last|previous))/i];
+  for(const p of churnPatterns){const m=text.match(p);if(m){r.churnMonths=parseInt(m[1]||m[2]);break}}
+  // Word-based months
+  if(!r.churnMonths){if(t.includes('six months')||t.includes('6 months'))r.churnMonths=6;else if(t.includes('twelve months')||t.includes('12 months'))r.churnMonths=12;else if(t.includes('24 months')||t.includes('twenty-four'))r.churnMonths=24;else if(t.includes('36 months')||t.includes('three years'))r.churnMonths=36}
+  if(r.churnMonths)r.churnRule=r.churnMonths<=6?'180 days':r.churnMonths<=12?'1 year':r.churnMonths<=24?'2 years':'3 years';
+  // Per lifetime
+  if(t.includes('one per lifetime')||t.includes('once per lifetime'))r.churnRule='Once per lifetime';
+
+  // ── BONUS POSTING TIME ──
+  const postPatterns=[/(?:bonus|credit).*?(?:credited?|deposited?|paid?|posted?).*?(?:within|after|by)\s+(\d+)\s+days?/i,/within\s+(\d+)\s+days?\s+of\s+(?:meeting|completing|qualifying)/i,/(?:within|after)\s+(\d+)\s+days?\s+(?:following|after)/i];
+  for(const p of postPatterns){const m=text.match(p);if(m){r.bonusPostTime='Within '+m[1]+' days of qualifying';break}}
+  if(!r.bonusPostTime&&t.includes('two weeks'))r.bonusPostTime='Within 2 weeks of qualifying';
+  if(!r.bonusPostTime&&t.includes('within 60 days'))r.bonusPostTime='Within 60 days of qualifying';
+  
+  // ── TAX ──
   if(t.includes('1099-int'))r.taxForm='1099-INT (Interest)';
   else if(t.includes('1099-misc'))r.taxForm='1099-MISC (Income)';
-  else if(t.includes('1099'))r.taxForm='1099';
-  // Bank name from first sentence
-  const bn=text.match(/(?:open|new)\s+(?:a\s+)?(?:new\s+)?(\w[\w\s]*?)\s+(?:checking|savings|account)/i);
-  // Not counting on DD
-  const ndd=[];
-  if(t.includes('person-to-person')||t.includes('zelle'))ndd.push('Zelle/P2P');
-  if(t.includes('micro-deposit'))ndd.push('Micro-deposits');
-  if(t.includes('transfer')||t.includes('ach')){}// not excluded usually
-  
-  // BUILD FINE PRINT NOTES
-  const notes=[];
-  if(r.bonusAmount)notes.push('* Bonus: '+r.bonusAmount);
-  if(pc)notes.push('* Use promo code: '+r.promoCode);
-  if(r.ddAmount)notes.push('* Direct deposit: '+r.ddAmount+(r.ddCount?' ('+r.ddCount+' or more deposits)':'')+' '+(r.timeline?'within '+r.timeline:''));
-  if(t.includes('employer')||t.includes('government'))notes.push('* DD must be from employer or government agency');
-  if(ndd.length)notes.push('* Does NOT count as DD: '+ndd.join(', '));
-  if(r.debitTxns)notes.push('* Complete '+r.debitTxns+' debit card transactions');
-  if(t.includes('enroll in online banking')||t.includes('mobile app'))notes.push('* Enroll in online/mobile banking');
-  if(t.includes('estatement')||t.includes('electronic statement'))notes.push('* Enroll in eStatements');
-  if(r.minBalance)notes.push('* Minimum opening deposit: '+r.minBalance);
-  if(t.includes('maintain')&&t.match(/maintain.*?(\d+)\s+(?:consecutive\s+)?days/i)){const md=t.match(/maintain.*?(\d+)\s+(?:consecutive\s+)?days/i);notes.push('* Maintain balance for '+md[1]+' consecutive days')}
-  if(r.monthlyFee)notes.push('* Monthly fee: '+r.monthlyFee);
-  if(r.feeWaiver)notes.push('* Fee waiver: '+r.feeWaiver);
-  if(r.bonusPostTime)notes.push('* Bonus posts: '+r.bonusPostTime);
-  if(r.earlyCloseFee&&r.earlyCloseFee!=='None')notes.push('* Early close: '+r.earlyCloseFee);
-  if(t.includes('open and in good standing'))notes.push('* Account must be open and in good standing at payout');
-  if(r.churnRule)notes.push('* Churn rule: Not eligible if had account within '+r.churnMonths+' months');
-  if(r.taxForm)notes.push('* Tax: Reported on '+r.taxForm);
-  if(t.includes('limit one'))notes.push('* Limit one bonus per account/member');
-  if(t.includes('cannot be combined')||t.includes('not be combined'))notes.push('* Cannot be combined with other offers');
-  // Guided Investing check
-  if(t.includes('guided investing')||t.includes('investment')){
-    const gi=text.match(/\$([\d,]+)\s+(?:initial\s+)?(?:deposit|investment|fund)/i);
-    if(gi)notes.push('* Guided Investing: Fund with $'+gi[1]+' minimum');
-    const gim=text.match(/maintain.*?balance.*?(\d+)\s+consecutive/i);
-    if(gim)notes.push('* Maintain Guided Investing balance for '+gim[1]+' consecutive days');
-    if(t.includes('bundled')){const bb=text.match(/\$([\d,]+)\s+(?:bundled|extra)/i);if(bb)notes.push('* Bundled bonus: Extra $'+bb[1]+' for completing both offers')}
+  else if(t.includes('reported')&&t.includes('income'))r.taxForm='Taxable income';
+
+  // ── WHAT DOESN'T COUNT AS DD ──
+  const excluded=[];
+  if(t.includes('person-to-person')||t.includes('p2p')||t.includes('zelle'))excluded.push('Zelle/P2P transfers');
+  if(t.includes('micro-deposit')||t.includes('micro deposit'))excluded.push('Micro-deposits (<$1)');
+  if(t.includes('venmo')&&t.includes('not'))excluded.push('Venmo');
+  if(t.includes('paypal')&&t.includes('not'))excluded.push('PayPal');
+  if(t.includes('transfer')&&t.includes('not')&&t.includes('qualify'))excluded.push('Internal transfers');
+  if(t.includes('external bank')&&t.includes('not'))excluded.push('External bank ACH');
+  r.ddExcluded=excluded;
+
+  // ── WHAT DD MUST BE ──
+  const ddReqs=[];
+  if(t.includes('employer'))ddReqs.push('employer');
+  if(t.includes('government')&&!t.includes('not government'))ddReqs.push('government agency');
+  if(t.includes('payroll'))ddReqs.push('payroll');
+  r.ddMustBe=ddReqs;
+
+  // ── ACCOUNT TYPES ──
+  const acctMatch=text.match(/(?:open|new)\s+(?:a\s+)?(?:new\s+)?([\w\s]+?)\s+(?:checking|savings|account)/i);
+  if(acctMatch)r.acctType=acctMatch[1].trim();
+
+  // ── OPEN DATES ──
+  const dateMatch=text.match(/between\s+([\w\s,]+?\d{4})\s+and\s+([\w\s,]+?\d{4})/i);
+  if(dateMatch)r.openWindow=dateMatch[1].trim()+' - '+dateMatch[2].trim();
+
+  // ── ONLINE BANKING / MOBILE ──
+  if(t.includes('enroll in online banking')||t.includes('mobile app')||t.includes('digital banking'))r.requiresOnlineBanking=true;
+  if(t.includes('estatement')||t.includes('electronic statement'))r.requiresEstatements=true;
+
+  // ── MAINTAIN BALANCE ──
+  const maintMatch=text.match(/maintain.*?(?:balance|deposit).*?(\d+)\s+(?:consecutive\s+)?days/i)||text.match(/(\d+)\s+consecutive\s+days/i);
+  if(maintMatch)r.maintainDays=parseInt(maintMatch[1]);
+  const maintBal=text.match(/maintain.*?\$([\d,]+)/i);
+  if(maintBal)r.maintainBalance='$'+maintBal[1].replace(/,/g,'');
+
+  // ── GUIDED INVESTING / SAVINGS BONUS ──
+  if(t.includes('guided investing')||t.includes('investment account')){
+    r.hasInvestingBonus=true;
+    const gi=text.match(/(?:fund|deposit|invest)\s+(?:the\s+)?(?:account\s+)?(?:with\s+)?(?:a\s+)?(?:minimum\s+)?\$([\d,]+)/i);
+    if(gi)r.investMin='$'+gi[1].replace(/,/g,'');
   }
+  if(t.includes('bundled bonus')||t.includes('bundled')){
+    const bb=text.match(/\$([\d,]+)\s+(?:bundled|extra|additional)/i)||text.match(/(?:bundled|extra|additional).*?\$([\d,]+)/i);
+    if(bb)r.bundledBonus='$'+bb[1].replace(/,/g,'');
+  }
+  if(t.includes('savings bonus')||t.includes('savings account')&&t.includes('bonus')){
+    const sb=text.match(/savings.*?\$([\d,]+)\s+bonus/i)||text.match(/\$([\d,]+)\s+savings\s+bonus/i);
+    if(sb)r.savingsBonus='$'+sb[1].replace(/,/g,'');
+  }
+
+  // ── CREDIT CARD FUNDING ──
+  if(t.includes('credit card')&&(t.includes('fund')||t.includes('opening deposit')))r.ccFunding=true;
+
+  // ── HARD/SOFT PULL ──
+  if(t.includes('hard pull')||t.includes('hard inquiry'))r.pullType='Hard pull';
+  if(t.includes('soft pull')||t.includes('soft inquiry'))r.pullType='Soft pull';
+  if(t.includes('credit approval')||t.includes('subject to credit'))r.creditCheck=true;
+
+  // ═══ BUILD FINE PRINT NOTES ═══
+  const n=[];
+  // Header
+  if(r.bonusAmount)n.push('* Bonus: '+r.bonusAmount+(r.bonusTiers?' (Tiers: '+r.bonusTiers+')':''));
+  if(r.acctType)n.push('* Account: '+r.acctType);
+  if(r.openWindow)n.push('* Open between: '+r.openWindow);
+  if(r.promoCode)n.push('* Promo code: '+r.promoCode);
+  if(r.creditCheck)n.push('* Subject to credit approval');
   
-  r.notesForTracker=notes.length?notes.join('\n'):'';
+  // Requirements
+  n.push('');
+  n.push('REQUIREMENTS:');
+  let step=1;
+  if(r.requiresOnlineBanking){n.push('* Step '+step+': Enroll in online/mobile banking');step++}
+  if(r.requiresEstatements){n.push('* Step '+step+': Enroll in eStatements');step++}
+  if(r.ddAmount){
+    let ddStr='* Step '+step+': Direct deposit '+r.ddAmount;
+    if(r.ddCount)ddStr+=' ('+r.ddCount+' or more deposits)';
+    if(r.ddPerCycle)ddStr+=' per statement cycle';
+    if(r.ddMonthly)ddStr+=' per month';
+    if(r.timeline)ddStr+=' within '+r.timeline;
+    n.push(ddStr);step++;
+  }
+  if(r.debitTxns){n.push('* Step '+step+': Complete '+r.debitTxns+' debit card transactions');step++}
+  if(r.activateDebit){n.push('* Step '+step+': Activate debit card and make at least 1 transaction');step++}
+  if(r.maintainDays){n.push('* Step '+step+': Maintain balance for '+r.maintainDays+' consecutive days');step++}
+  if(r.cycles)n.push('* Complete within '+r.cycles);
+
+  // DD Rules
+  if(r.ddMustBe.length||r.ddExcluded.length){
+    n.push('');n.push('DIRECT DEPOSIT RULES:');
+    if(r.ddMustBe.length)n.push('* DD must be from: '+r.ddMustBe.join(', '));
+    if(r.ddExcluded.length)n.push('* Does NOT count: '+r.ddExcluded.join(', '));
+  }
+
+  // Guided Investing / Savings / Bundled
+  if(r.hasInvestingBonus||r.savingsBonus||r.bundledBonus){
+    n.push('');n.push('ADDITIONAL BONUSES:');
+    if(r.hasInvestingBonus)n.push('* Guided Investing: Fund '+(r.investMin||'minimum')+(r.maintainDays?', maintain for '+r.maintainDays+' days':''));
+    if(r.savingsBonus)n.push('* Savings bonus: '+r.savingsBonus);
+    if(r.bundledBonus)n.push('* Bundled bonus: Extra '+r.bundledBonus+' for completing both');
+  }
+
+  // Fees & Timing
+  n.push('');n.push('FEES & TIMING:');
+  if(r.monthlyFee)n.push('* Monthly fee: '+r.monthlyFee);
+  if(r.feeWaiver)n.push('* Fee waiver: '+r.feeWaiver);
+  if(r.minBalance)n.push('* Min opening deposit: '+r.minBalance);
+  if(r.bonusPostTime)n.push('* Bonus posts: '+r.bonusPostTime);
+  if(r.earlyCloseDays)n.push('* Min hold: '+r.earlyCloseDays+' days before closing');
+  if(r.earlyCloseFee)n.push('* Early close penalty: '+r.earlyCloseFee);
+  if(!r.earlyCloseFee&&!r.earlyCloseDays)n.push('* Early close fee: Not mentioned');
+  if(r.ccFunding)n.push('* Credit card funding: Available');
+  if(r.pullType)n.push('* Credit check: '+r.pullType);
+
+  // Churn & Tax
+  n.push('');n.push('CHURN & TAX:');
+  if(r.churnRule)n.push('* Churn cooldown: '+r.churnRule+' ('+r.churnMonths+' months)');
+  else n.push('* Churn rule: Check fine print');
+  if(r.taxForm)n.push('* Tax: '+r.taxForm);
+  if(t.includes('limit one'))n.push('* Limit one bonus per account/member');
+  if(t.includes('cannot be combined')||t.includes('not be combined'))n.push('* Cannot be combined with other offers');
+  if(t.includes('open and in good standing'))n.push('* Account must be open and in good standing at payout');
+
+  r.notesForTracker=n.filter(x=>x!==undefined).join('\n');
   r.checklist=[];
-  if(pc)r.checklist.push('Use promo code '+r.promoCode);
+  if(r.promoCode)r.checklist.push('Use promo code '+r.promoCode);
+  if(r.requiresEstatements)r.checklist.push('Enroll in eStatements');
+  if(r.requiresOnlineBanking)r.checklist.push('Enroll in online banking');
   if(r.ddAmount)r.checklist.push('Set up DD of '+r.ddAmount);
-  if(r.debitTxns)r.checklist.push(r.debitTxns+' debit txns');
+  if(r.debitTxns)r.checklist.push(r.debitTxns+' debit transactions');
+  if(r.activateDebit)r.checklist.push('Activate debit card');
   if(r.timeline)r.checklist.push('Complete within '+r.timeline);
+  if(r.earlyCloseDays)r.checklist.push('Hold account '+r.earlyCloseDays+' days');
   return Object.keys(r).length>1?r:null;
 }
 /* AI ANALYZER */
 let aiLoading=false;
+// CHANGE THIS to your Cloudflare Worker URL after deploying
+const AI_PROXY='https://YOUR-WORKER-NAME.YOUR-SUBDOMAIN.workers.dev';
+
 async function aiAnalyze(text){
   aiLoading=true;R();
-  try{const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:'You are a bank bonus expert writing for Doctor of Credit. Analyze these T&C and return ONLY raw JSON (no markdown, no backticks):\n{\n"bankName":string or null,\n"bonusAmount":number or null,\n"ddAmount":string or null,\n"ddCount":number or null,\n"debitTxns":number or null,\n"timeline":string or null,\n"monthlyFee":string or null,\n"feeWaiver":string or null,\n"minBalance":string or null,\n"earlyCloseDays":number or null,\n"earlyCloseFee":string or null,\n"churnMonths":number or null,\n"promoCode":string or null,\n"bonusPostTime":string or null,\n"taxForm":string or null,\n"requirements":[short step strings],\n"notesForTracker":string\n}\n\nCRITICAL for notesForTracker: Write a COMPLETE Doctor of Credit Fine Print style guide. Format exactly like this with * bullet points:\n\n* Bonus: $X for [account type]\n* Open [account] between [dates] using promo code [X]\n* Step 1: [first requirement with exact amounts and timeframe]\n* Step 2: [second requirement]\n* Step 3: [etc]\n* Direct deposits must be from [employer/government]. [What does NOT count as DD]\n* Monthly fee: $X. Waived with [conditions]\n* Minimum opening deposit: $X\n* Bonus posts within [X days] of meeting requirements\n* Account must remain open and in good standing at time of payout\n* Early close fee: $X if closed within [X days] (or None)\n* Churn rule: Not eligible if had account within [X months]\n* Tax: Reported on [1099-INT/1099-MISC]\n* Important: [any other key warnings or tips]\n\nBe thorough. Include EVERY detail a bank bonus churner needs. Do not skip anything.\n\nT&C:\n'+text.substring(0,8000)}]})});
+  try{const resp=await fetch(AI_PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,messages:[{role:'user',content:'You are a bank bonus expert writing for Doctor of Credit. Analyze these T&C and return ONLY raw JSON (no markdown, no backticks):\n{\n"bankName":string or null,\n"bonusAmount":number or null,\n"ddAmount":string or null,\n"ddCount":number or null,\n"debitTxns":number or null,\n"timeline":string or null,\n"monthlyFee":string or null,\n"feeWaiver":string or null,\n"minBalance":string or null,\n"earlyCloseDays":number or null,\n"earlyCloseFee":string or null,\n"churnMonths":number or null,\n"promoCode":string or null,\n"bonusPostTime":string or null,\n"taxForm":string or null,\n"requirements":[short step strings],\n"notesForTracker":string\n}\n\nCRITICAL for notesForTracker: Write a COMPLETE Doctor of Credit Fine Print style guide. Format exactly like this with * bullet points:\n\n* Bonus: $X for [account type]\n* Open [account] between [dates] using promo code [X]\n* Step 1: [first requirement with exact amounts and timeframe]\n* Step 2: [second requirement]\n* Step 3: [etc]\n* Direct deposits must be from [employer/government]. [What does NOT count as DD]\n* Monthly fee: $X. Waived with [conditions]\n* Minimum opening deposit: $X\n* Bonus posts within [X days] of meeting requirements\n* Account must remain open and in good standing at time of payout\n* Early close fee: $X if closed within [X days] (or None)\n* Churn rule: Not eligible if had account within [X months]\n* Tax: Reported on [1099-INT/1099-MISC]\n* Important: [any other key warnings or tips]\n\nBe thorough. Include EVERY detail a bank bonus churner needs. Do not skip anything.\n\nT&C:\n'+text.substring(0,8000)}]})});
   const data=await resp.json();const raw=(data.content||[]).map(c=>c.text||'').join('');const clean=raw.replace(/```json|```/g,'').trim();aiLoading=false;return JSON.parse(clean)}
   catch(err){aiLoading=false;return null}}
 
