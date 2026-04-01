@@ -620,28 +620,31 @@ async function aiAnalyzeTC(text){
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514',
         max_tokens:1000,
-        messages:[{role:'user',content:`Analyze these bank bonus terms and conditions. Extract ONLY the following as JSON (no markdown, no backticks, just raw JSON):
+        messages:[{role:'user',content:`You are a bank bonus expert. Analyze these terms & conditions and extract as JSON (no markdown, no backticks, just raw JSON):
+
 {
-  "bonusAmount": number or null,
-  "ddAmount": string or null (e.g. "$1,000"),
-  "ddCount": number or null,
+  "bankName": string or null,
+  "bonusAmount": number or null (total possible bonus),
+  "ddAmount": string or null (e.g. "$2,500"),
+  "ddCount": number or null (how many deposits needed),
+  "ddType": string or null (what counts as DD - employer only? ACH?),
   "debitTxns": number or null,
   "timeline": string or null (e.g. "90 days"),
   "monthlyFee": string or null,
   "feeWaiver": string or null,
-  "minBalance": string or null,
+  "minBalance": string or null (minimum opening deposit),
   "earlyCloseDays": number or null,
   "earlyCloseFee": string or null,
-  "churnMonths": number or null,
+  "churnMonths": number or null (cooldown before eligible again),
   "promoCode": string or null,
-  "bonusPostTime": string or null,
+  "bonusPostTime": string or null (when bonus posts after qualifying),
   "taxForm": string or null,
-  "requirements": [list of requirement strings],
-  "bankName": string or null
+  "requirements": [short list of each step needed],
+  "notesForTracker": string (Write a Doctor of Credit-style summary with ALL key info a churner needs. Include: step-by-step what to do, exact amounts, exact timelines, what does NOT count as DD, how long to maintain deposits, when bonus posts, any fees or penalties, churn eligibility rule, tax info. Use bullet format with * for each point. Be thorough but concise.)
 }
 
 Terms & Conditions:
-${text.substring(0,6000)}`}]
+${text.substring(0,8000)}`}]
       })
     });
     const data=await resp.json();
@@ -752,7 +755,10 @@ async function runInlineAnalyze(){
       const f=document.getElementById('f_dp');
       if(f&&!f.value)f.value=[ai.ddAmount?'DD '+ai.ddAmount:'',ai.debitTxns?ai.debitTxns+' debit txns':''].filter(Boolean).join(' + ');
     }
-    if(ai.requirements){
+    if(ai.notesForTracker){
+      const f=document.getElementById('f_notes');
+      if(f)f.value=ai.notesForTracker;
+    }else if(ai.requirements){
       const f=document.getElementById('f_notes');
       if(f&&!f.value)f.value=ai.requirements.join(' / ');
     }
@@ -967,7 +973,7 @@ function rTracker(sorted){
       h+=`<div class="card-exp">`;
       if(e.dataPoint)h+=`<div style="margin-bottom:6px"><span class="tag free">\u{1F4CB} ${esc(e.dataPoint)}</span></div>`;
       if(e.notes)h+=`<div class="card-notes">${esc(e.notes)}</div>`;
-      h+=`<div class="card-btns"><button class="cbtn edit" onclick="event.stopPropagation();openEdit('${e.id}')">\u270F\uFE0F Edit</button>${!e.closed&&!e.bonusRecd?`<button class="cbtn rcv" onclick="event.stopPropagation();openReceive('${e.id}')">\u{1F389} Received</button>`:''}${!e.closed?`<button class="cbtn cls" onclick="event.stopPropagation();closeAcct('${e.id}')">\u{1F512} Close</button>`:''}<button class="cbtn del" onclick="event.stopPropagation();delEntry('${e.id}')">\u{1F5D1} Delete</button></div></div>`;
+      h+=`<div class="card-btns"><button class="cbtn edit" onclick="event.stopPropagation();openEdit('${e.id}')">\u270F\uFE0F Edit</button>${(!e.closed&&(!e.bonusRecd||e.bonusRecd===''))?`<button class="cbtn rcv" onclick="event.stopPropagation();openReceive('${e.id}')">\u{1F389} Received</button>`:''}${!e.closed?`<button class="cbtn cls" onclick="event.stopPropagation();closeAcct('${e.id}')">\u{1F512} Close</button>`:''}<button class="cbtn del" onclick="event.stopPropagation();delEntry('${e.id}')">\u{1F5D1} Delete</button></div></div>`;
     }
     h+=`</div>`;
   });
@@ -1093,7 +1099,8 @@ function rTips(){
       if(r.earlyCloseFee&&r.earlyCloseFee!=='None'&&r.earlyCloseFee!=='$0')tags.push('Close fee: '+r.earlyCloseFee);
       if(r.promoCode)tags.push('Code: '+r.promoCode);
       if(tags.length){h+=`<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px">`;tags.forEach(t=>{h+=`<span class="tag fee">${esc(t)}</span>`});h+=`</div>`}
-      if(r.requirements&&r.requirements.length){h+=`<div style="margin-top:4px;font-size:10px;color:var(--muted);line-height:1.5">${r.requirements.map(x=>esc(x)).join(' \u00B7 ')}</div>`}
+      if(r.notesForTracker){h+=`<div style="margin-top:6px;font-size:10px;color:var(--text);line-height:1.5;white-space:pre-wrap;background:var(--bg);padding:8px;border-radius:8px">${esc(r.notesForTracker)}</div>`}
+      else if(r.requirements&&r.requirements.length){h+=`<div style="margin-top:4px;font-size:10px;color:var(--muted);line-height:1.5">${r.requirements.map(x=>esc(x)).join(' \u00B7 ')}</div>`}
       h+=`</div></div>`;
     });
   }
@@ -1161,8 +1168,14 @@ function rAnalyzer(){
       h+=`</div>`;
     }
 
+    if(r.notesForTracker){
+      h+=`<div class="az-section"><h4>\u{1F4D1} Full Summary (saved to Notes)</h4><div style="font-size:11px;color:var(--text);line-height:1.6;white-space:pre-wrap">${esc(r.notesForTracker)}</div></div>`;
+    }
+    if(r.ddType){
+      h+=`<div class="az-section"><h4>\u{1F4CB} DD Info</h4><div style="font-size:12px">${esc(r.ddType)}</div></div>`;
+    }
     if(r.checklist&&r.checklist.length){
-      h+=`<div class="az-section"><h4>\u{1F4CB} Your Checklist</h4><ul class="az-checklist">`;
+      h+=`<div class="az-section"><h4>\u2705 Requirements Steps</h4><ul class="az-checklist">`;
       r.checklist.forEach(c=>{h+=`<li>${esc(c)}</li>`});
       h+=`</ul></div>`;
     }
@@ -1199,9 +1212,11 @@ async function runAnalyzer(){
     if(ai.bonusPostTime)analyzerResult.bonusPostTime=ai.bonusPostTime;
     if(ai.taxForm)analyzerResult.taxForm=ai.taxForm;
     if(ai.requirements)analyzerResult.checklist=ai.requirements;
+    if(ai.notesForTracker)analyzerResult.notesForTracker=ai.notesForTracker;
+    if(ai.ddType)analyzerResult.ddType=ai.ddType;
     if(ai.bankName)analyzerResult.bankName=ai.bankName;
     // Save to bank reqs
-    if(ai.bankName)saveBankReq(ai.bankName,ai);
+    if(ai.bankName)saveBankReq(ai.bankName,{...ai,notesForTracker:ai.notesForTracker||''});
   }else{
     // Fallback to regex
     analyzerResult=analyzeTC(analyzerText);
@@ -1214,11 +1229,11 @@ function fillFromAnalysis(){
   if(!analyzerResult)return;
   const r=analyzerResult;
   modal={
-    bank:'',
+    bank:r.bankName||'',
     bonus:r.bonusAmount?parseInt(r.bonusAmount.replace(/[$,]/g,'')):0,
     churn:r.churnRule==='1 year'?'1':r.churnRule==='2 years'?'2':r.churnRule==='3 years'?'3':r.churnRule==='180 days'?'180':'',
     opened:'',closed:'',bonusRecd:'',reqMet:'',
-    notes:[r.ddAmount?'DD: '+r.ddAmount:'',r.debitTxns?r.debitTxns+' debit txns':'',r.timeline?'Within '+r.timeline:'',r.earlyCloseDays?'Hold '+r.earlyCloseDays:'',r.monthlyFee?'Fee: '+r.monthlyFee:'',r.promoCode?'Code: '+r.promoCode:''].filter(Boolean).join(' / '),
+    notes:r.notesForTracker||[r.ddAmount?'DD: '+r.ddAmount:'',r.debitTxns?r.debitTxns+' debit txns':'',r.timeline?'Within '+r.timeline:'',r.earlyCloseDays?'Hold '+r.earlyCloseDays:'',r.monthlyFee?'Fee: '+r.monthlyFee:'',r.promoCode?'Code: '+r.promoCode:''].filter(Boolean).join(' / '),
     minHoldDays:r.earlyCloseDays?parseInt(r.earlyCloseDays):0,
     earlyCloseFee:r.earlyCloseFee&&r.earlyCloseFee!=='None'?parseInt(r.earlyCloseFee.replace(/[$,]/g,''))||0:0,
     dataPoint:[r.ddAmount?'DD '+r.ddAmount:'',r.debitTxns?r.debitTxns+' debit txns':''].filter(Boolean).join(' + ')
@@ -1322,7 +1337,7 @@ function rModal(){
   <div class="sec" style="margin:8px 0 6px">\u23F1 Early Close Protection</div>
   <div class="frow"><div class="fg"><label>Min Hold Days</label><input id="f_minHold" type="number" inputmode="numeric" value="${e.minHoldDays||''}" placeholder="180"><div class="fg-hint">Days before safe to close</div></div><div class="fg"><label>Early Close Fee</label><input id="f_closeFee" type="number" inputmode="numeric" value="${e.earlyCloseFee||''}" placeholder="25"></div></div>
   <div class="fg"><label>Notes</label><textarea id="f_notes" rows="3">${esc(e.notes||'')}</textarea></div>
-    <div style="margin-bottom:10px"><button type="button" style="width:100%;padding:10px;border-radius:var(--rs);border:1.5px dashed var(--accent);background:transparent;font-family:inherit;font-size:12px;font-weight:600;color:var(--accent);cursor:pointer" onclick="showInlineAZ=!showInlineAZ;R()">\u{1F9E0} ${showInlineAZ?'Hide':'Paste T&C to Auto-fill'}</button></div>
+    <div style="margin-bottom:10px"><button type="button" style="width:100%;padding:10px;border-radius:var(--rs);border:1.5px dashed var(--accent);background:transparent;font-family:inherit;font-size:12px;font-weight:600;color:var(--accent);cursor:pointer" onclick="saveFormToModal();showInlineAZ=!showInlineAZ;R()">\u{1F9E0} ${showInlineAZ?'Hide':'Paste T&C to Auto-fill'}</button></div>
     ${showInlineAZ?`<div class="az-inline"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Paste the bank's terms & conditions below. AI will extract and auto-fill the fields above.</div><textarea id="inline_tc" class="az-textarea" placeholder="Paste T&C here..." style="min-height:100px"></textarea>${inlineAnalyzing?'<div style="text-align:center;padding:8px;font-size:11px;color:var(--muted)"><span class="spin"></span> AI analyzing...</div>':'<button onclick="event.preventDefault();runInlineAnalyze()">\u{1F9E0} Analyze & Auto-fill</button>'}${inlineResult?'<div style="margin-top:6px;font-size:11px;color:var(--green);font-weight:600">\u2705 Fields auto-filled from analysis</div>':''}</div>`:''}
   <button class="btn-pri" onclick="saveEntry()">\u{1F4BE} ${e._edit?'Save Changes':'Add Entry'}</button><button class="btn-sec" onclick="modal=null;R()">Cancel</button></div></div>`;
 }
@@ -1345,6 +1360,17 @@ function addFromTemplate(idx){
 
 function openAdd(){modal={bank:'',bonus:'',churn:'',opened:'',closed:'',bonusRecd:'',reqMet:'',notes:'',minHoldDays:'',earlyCloseFee:'',dataPoint:''};R()}
 function openEdit(id){const e=entries.find(x=>x.id===id);if(e)modal={...e,_edit:true};R()}
+
+
+function saveFormToModal(){
+  if(!modal)return;
+  const g=id=>document.getElementById(id)?.value||'';
+  modal.bank=g('f_bank');modal.bonus=parseInt(g('f_bonus'))||0;modal.churn=g('f_churn');
+  modal.opened=g('f_opened');modal.closed=g('f_closed');modal.bonusRecd=g('f_bonusRecd');
+  modal.reqMet=g('f_reqMet');modal.notes=g('f_notes');modal.dataPoint=g('f_dp');
+  modal.minHoldDays=parseInt(g('f_minHold'))||0;modal.earlyCloseFee=parseInt(g('f_closeFee'))||0;
+  modal.reqDays=parseInt(g('f_reqDays'))||0;modal.referralBonus=parseInt(g('f_referral'))||0;
+}
 
 function saveEntry(){
   const bank=(document.getElementById('f_bank').value||'').trim();
