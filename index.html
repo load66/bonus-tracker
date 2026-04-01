@@ -216,6 +216,21 @@ html,body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;back
 .feed-title{font-size:12px;font-weight:600;color:var(--accent);line-height:1.3}
 .feed-date{font-size:10px;color:var(--light);margin-top:2px}
 .feed-loading{text-align:center;padding:20px;color:var(--muted);font-size:12px}
+
+.dd-prompt{background:var(--card);border-radius:var(--r);padding:20px;max-width:340px;width:100%;text-align:left}
+.dd-prompt h3{font-size:16px;font-weight:700;margin-bottom:4px}
+.dd-prompt .sub{font-size:12px;color:var(--muted);margin-bottom:12px}
+.dd-input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-family:inherit;font-size:14px;color:var(--text);background:var(--bg);outline:none;margin-bottom:6px}
+.dd-input:focus{border-color:var(--accent)}
+.dd-hint{font-size:10px;color:var(--light);margin-bottom:10px}
+.dd-chips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+.dd-chip{padding:5px 10px;border-radius:16px;font-size:11px;font-weight:600;border:1.5px solid var(--border);background:var(--bg);cursor:pointer;font-family:inherit;transition:.12s}
+.dd-chip:active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.dd-chip.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
+.dd-btns{display:flex;gap:8px;margin-top:8px}
+.dd-btns button{flex:1;padding:12px;border-radius:var(--rs);border:none;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.dd-skip{background:var(--bg);color:var(--muted)}
+.dd-save{background:var(--green);color:#fff}
 </style>
 </head>
 <body>
@@ -555,6 +570,25 @@ function loadFeed(){
     .catch(()=>{feedError=true;feedLoading=false;R()});
 }
 
+
+// ═══════════════════════════════════
+// DD METHOD TRACKING
+// ═══════════════════════════════════
+const DD_KEY='bt_dd_methods';
+function loadDDMethods(){try{const v=localStorage.getItem(DD_KEY);return v?JSON.parse(v):[]}catch{return[]}}
+function saveDDMethods(m){try{localStorage.setItem(DD_KEY,JSON.stringify(m))}catch{}}
+function addDDMethod(bank,method,bonus,closedDate){
+  const methods=loadDDMethods();
+  methods.push({bank,method,bonus:bonus||0,date:closedDate||td(),added:td()});
+  saveDDMethods(methods);
+}
+function getDDMethodsForBank(bankName){
+  const methods=loadDDMethods();
+  const bn=bankName.toLowerCase();
+  return methods.filter(m=>m.bank.toLowerCase()===bn);
+}
+let ddPrompt=null; // {entryId, bank, bonus, closedDate}
+
 let analyzerText='',analyzerResult=null,showAnalyzer=false;
 
 function analyzeTC(text){
@@ -687,6 +721,7 @@ function R(){
   h+=`<div class="tabs">${['tracker','tax','tips','phone','rules'].map((t,i)=>`<button class="tb${tab===t?' on':''}" onclick="tab='${t}';search='';R()">${[ICO.grid,ICO.doc,ICO.tips,ICO.phone,ICO.info][i]}<span>${['Tracker','Tax','Tips','Phone','Rules'][i]}</span></button>`).join('')}</div>`;
   if(modal)h+=rModal();
   if(cfm)h+=rConfirm();
+  if(ddPrompt)h+=rDDPrompt();
   document.getElementById('app').innerHTML=h;
   const ns=document.querySelector('.scroll');if(ns)ns.scrollTop=_scrollPos;
 }
@@ -823,13 +858,42 @@ function exportCSV(yr){
 function rTips(){
   let h='';
   // Personal data points from tracker
-  const myDPs=entries.filter(e=>e.dataPoint&&e.bank);
-  if(myDPs.length){
-    h+=`<div class="sec">\u{1F4CC} Your Data Points</div>`;
-    h+=`<div style="font-size:11px;color:var(--muted);margin-bottom:10px">What worked for YOUR bonuses \u2014 pulled from your tracker</div>`;
-    myDPs.forEach(e=>{
-      const s=status(e);
-      h+=`<div class="rcard"><div style="width:100%"><div class="rcard-top"><div class="nm">${esc(e.bank)}</div><div class="rt">${e.bonus?`<div class="ph">${fM(e.bonus)}</div>`:''}</div></div><div style="margin-top:4px"><span class="tag free">${esc(e.dataPoint)}</span>${isCompleted(e)?'<span class="tag yes">\u2705 Confirmed</span>':''}</div></div></div>`;
+  // Stacked DD methods from closures
+  const allDD=loadDDMethods();
+  const bankGroups={};
+  allDD.forEach(m=>{
+    const key=m.bank;
+    if(!bankGroups[key])bankGroups[key]={bank:key,methods:[],totalBonus:0};
+    bankGroups[key].methods.push(m);
+    bankGroups[key].totalBonus+=m.bonus||0;
+  });
+  // Also include dataPoint entries from tracker
+  entries.filter(e=>e.dataPoint&&e.bank).forEach(e=>{
+    const key=e.bank;
+    if(!bankGroups[key])bankGroups[key]={bank:key,methods:[],totalBonus:0};
+    // Only add if not already from DD methods
+    const exists=bankGroups[key].methods.some(m=>m.method===e.dataPoint);
+    if(!exists)bankGroups[key].methods.push({bank:e.bank,method:e.dataPoint,bonus:e.bonus||0,date:e.closed||e.opened||'',source:'tracker'});
+  });
+
+  const bankList=Object.values(bankGroups).sort((a,b)=>b.totalBonus-a.totalBonus);
+
+  if(bankList.length){
+    h+=`<div class="sec">\u{1F4CC} Your Confirmed Data Points</div>`;
+    h+=`<div style="font-size:11px;color:var(--muted);margin-bottom:10px">What worked for YOUR bonuses \u2014 stacked from every churn</div>`;
+    bankList.forEach(bg=>{
+      h+=`<div class="rcard"><div style="width:100%"><div class="rcard-top"><div class="nm">${esc(bg.bank)}</div><div class="rt"><div class="ph">${fM(bg.totalBonus)} earned</div><div class="ph2">${bg.methods.length} data point${bg.methods.length>1?'s':''}</div></div></div>`;
+      h+=`<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:3px">`;
+      bg.methods.forEach(m=>{
+        h+=`<span class="tag yes">${esc(m.method)}</span>`;
+      });
+      h+=`</div>`;
+      // Show dates
+      h+=`<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:8px">`;
+      bg.methods.forEach(m=>{
+        if(m.date)h+=`<span style="font-size:9px;color:var(--light)">${esc(m.method)} \u2014 ${fD(m.date)}</span>`;
+      });
+      h+=`</div></div></div>`;
     });
   }
 
@@ -935,6 +999,27 @@ function fillFromAnalysis(){
   R();
 }
 
+
+function rDDPrompt(){
+  if(!ddPrompt)return'';
+  const p=ddPrompt;
+  const commonMethods=['Employer DD','Robinhood ACH','Fidelity ACH','Schwab ACH','Venmo DD','PayPal DD','Melio Bill Pay','Chime ACH','Cash App DD','Ally ACH','Marcus ACH','No DD Required','Debit Card Only','Balance Only'];
+  let h=`<div class="cbg" onclick="skipDDPrompt()"><div class="dd-prompt" onclick="event.stopPropagation()">`;
+  h+=`<h3>\u{1F4CB} What triggered the bonus?</h3>`;
+  h+=`<div class="sub">What DD method(s) did you use for ${esc(p.bank)}? This helps for future churns. Optional \u2014 tap Skip to close without saving.</div>`;
+  h+=`<div class="dd-chips">`;
+  commonMethods.forEach(m=>{
+    const sel=p.selectedMethods.includes(m)?' sel':'';
+    h+=`<button class="dd-chip${sel}" onclick="event.stopPropagation();toggleDDChip('${esc(m)}')">${esc(m)}</button>`;
+  });
+  h+=`</div>`;
+  h+=`<input class="dd-input" id="dd_custom" placeholder="Other method(s), comma separated..." onclick="event.stopPropagation()">`;
+  h+=`<div class="dd-hint">e.g. "SoFi ACH, $500 bill pay"</div>`;
+  h+=`<div class="dd-btns"><button class="dd-skip" onclick="skipDDPrompt()">Skip</button><button class="dd-save" onclick="submitDDMethods()">\u{1F4BE} Save Data Points</button></div>`;
+  h+=`</div></div>`;
+  return h;
+}
+
 function rPhones(){
   let h=`<div class="sec">Customer Service Numbers</div><input class="sinput" type="text" placeholder="Search..." oninput="this.dataset.q=this.value;R()" id="ps">`;
   const q=(document.getElementById('ps')||{}).value||'';
@@ -1013,16 +1098,43 @@ function closeAcct(id){
   let w='';if(dsc!==null&&dsc>0&&e.earlyCloseFee>0)w=`\n\n\u26A0\uFE0F ${dsc}d remain. Close now = ${fM(e.earlyCloseFee)} fee!`;
   cfm={title:'Close Account',msg:`Close ${e.bank}?${w}`,green:dsc===null||dsc===0,action:()=>{
     entries=entries.map(x=>x.id===id?{...x,closed:td()}:x);
-    entries=sortE(entries);sv(SK,entries);cfm=null;expanded=null;R();
+    entries=sortE(entries);sv(SK,entries);cfm=null;expanded=null;
+    // Trigger DD method prompt
+    ddPrompt={entryId:id,bank:e.bank,bonus:e.bonus,closedDate:td(),selectedMethods:[],custom:''};
+    R();
   }};R();
 }
+
+function submitDDMethods(){
+  if(!ddPrompt)return;
+  const custom=document.getElementById('dd_custom')?.value?.trim()||'';
+  const all=[...ddPrompt.selectedMethods];
+  if(custom){custom.split(',').forEach(c=>{const t=c.trim();if(t)all.push(t)})}
+  all.forEach(method=>{
+    addDDMethod(ddPrompt.bank,method,ddPrompt.bonus,ddPrompt.closedDate);
+  });
+  ddPrompt=null;R();
+}
+
+function skipDDPrompt(){
+  ddPrompt=null;R();
+}
+
+function toggleDDChip(method){
+  if(!ddPrompt)return;
+  const idx=ddPrompt.selectedMethods.indexOf(method);
+  if(idx>=0)ddPrompt.selectedMethods.splice(idx,1);
+  else ddPrompt.selectedMethods.push(method);
+  R();
+}
+
 
 
 // ═══════════════════════════════════
 // BACKUP & RESTORE
 // ═══════════════════════════════════
 function exportBackup(){
-  const data={entries,version:'v4',exported:new Date().toISOString()};
+  const data={entries,ddMethods:loadDDMethods(),version:'v5',exported:new Date().toISOString()};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
@@ -1045,6 +1157,7 @@ function importBackup(){
         if(data.entries&&Array.isArray(data.entries)){
           entries=sortE(data.entries);
           sv(SK,entries);
+          if(data.ddMethods)saveDDMethods(data.ddMethods);
           cfm={title:'Restore Complete',msg:data.entries.length+' entries restored from backup ('+fD(data.exported?.split('T')[0]||'')+').',green:true,action:()=>{cfm=null;R()}};
           R();
         }else{alert('Invalid backup file')}
