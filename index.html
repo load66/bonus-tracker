@@ -216,6 +216,21 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .tc-body .hl-section{display:block;color:var(--accent);font-weight:800;font-size:10px;letter-spacing:.5px;margin-top:8px;margin-bottom:2px;text-transform:uppercase}
 .tc-body .hl-good{color:#059669;font-weight:600}
 .tc-body .hl-fee{color:#DC2626;font-weight:600}
+
+.undo-bar{position:fixed;bottom:calc(62px + var(--safe-b));left:12px;right:72px;background:var(--navy);color:#fff;border-radius:12px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;z-index:95;box-shadow:0 4px 20px rgba(0,0,0,.3);font-size:12px;font-weight:600;animation:slideUp .2s}
+.undo-bar button{padding:6px 14px;border-radius:8px;border:none;background:#EF4444;color:#fff;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer}
+.call-btn{width:34px;height:34px;border-radius:10px;border:none;background:#ECFDF5;color:#059669;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.call-btn:active{transform:scale(.9)}
+.close-modal{background:#fff;border-radius:16px;padding:20px;max-width:360px;width:100%;text-align:left}
+.close-modal h3{font-size:16px;font-weight:700;margin-bottom:10px}
+.close-modal .sub{font-size:12px;color:var(--sub);margin-bottom:12px;line-height:1.4}
+.close-modal label{font-size:11px;font-weight:600;color:var(--sub);display:block;margin-bottom:3px;margin-top:10px}
+.close-modal input,.close-modal select{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:var(--bg);outline:none}
+.close-modal input:focus{border-color:var(--accent)}
+.bonus-row{display:flex;gap:6px;margin-top:6px}
+.bonus-opt{flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;text-align:center}
+.bonus-opt.sel{border-color:var(--accent);background:#EFF6FF;color:var(--accent)}
+.bonus-opt:active{transform:scale(.96)}
 </style>
 </head>
 <body>
@@ -535,6 +550,31 @@ let showAnalyzer=false,analyzerText='',analyzerResult=null;
 let showInlineAZ=false,inlineResult=null;
 let ddPrompt=null,rcvPrompt=null,showTemplates=false;
 let feedItems=null,feedLoading=false;
+
+let undoState=null,undoTimer=null;
+let closePrompt=null; // {entryId,bank,bonus,step:'date'|'bonus'|'dp',closeDate,gotFull:true,actualBonus:0,dp:''}
+
+function findPhone(bank){
+  const bn=bank.toLowerCase();
+  for(const [b,p,bz] of PHONES){if(bn.includes(b.toLowerCase().split(' ')[0])||b.toLowerCase().includes(bn.split(' ')[0]))return p}
+  return null;
+}
+
+function callBank(id){
+  const e=entries.find(x=>x.id===id);if(!e)return;
+  const phone=findPhone(e.bank);
+  if(phone)window.location.href='tel:'+phone.replace(/[^0-9+]/g,'');
+  else{cfm={title:'No Number Found',msg:'No phone number found for '+e.bank+'. Check the Phone tab.',green:true,action:()=>{cfm=null;R()}};R()}
+}
+
+function undoClose(){
+  if(!undoState)return;
+  entries=entries.map(e=>e.id===undoState.id?{...undoState}:e);
+  entries=sortE(entries);sv(SK,entries);
+  undoState=null;if(undoTimer)clearTimeout(undoTimer);
+  R();
+}
+
 let _sp=0;
 /* ICONS */
 const I={grid:'<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',doc:'<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',tips:'<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>',phone:'<svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>',info:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'};
@@ -599,6 +639,8 @@ function R(){
   if(cfm)h+=rCfm();
   if(ddPrompt)h+=rDD();
   if(rcvPrompt)h+=rRcv();
+  if(closePrompt)h+=rClose();
+  if(undoState)h+='<div class="undo-bar"><span>Closed '+esc(undoState.bank)+'</span><button onclick="undoClose()">Undo</button></div>';
   document.getElementById('app').innerHTML=h;
   const ns=document.querySelector('.scroll');if(ns)ns.scrollTop=_sp;
 }
@@ -639,9 +681,12 @@ function rTracker(sorted){
     if(dl!==null&&s!=='WORKING')h+='<span class="card-stat"><em>'+dl+'d</em> left</span>';
     h+='</div></div>';
     // Right side - bonus amount
-    h+='<div class="card-right">';
+    h+='<div class="card-right" style="display:flex;align-items:center;gap:6px">';
+    h+='<div>';
     if(e.bonus)h+='<div class="card-bonus">'+fM(e.bonus)+'</div>';
     h+='<div class="card-id">'+esc(e.id)+'</div>';
+    h+='</div>';
+    if(!e.closed&&findPhone(e.bank))h+='<button class="call-btn" onclick="event.stopPropagation();callBank(\x27'+e.id+'\x27)" title="Call bank">\uD83D\uDCDE</button>';
     h+='</div></div>';
     // Countdown pill
     if(countdown){
@@ -750,6 +795,38 @@ function rTips(){
   return h;
 }
 /* ═══ PHONE ═══ */
+
+function rClose(){
+  if(!closePrompt)return'';
+  const p=closePrompt;
+  let h='<div class="cbg" onclick="cancelClose()"><div class="close-modal" onclick="event.stopPropagation()">';
+  
+  if(p.step==='date'){
+    h+='<h3>\uD83D\uDD12 Close '+esc(p.bank)+'</h3>';
+    h+='<div class="sub">When did you close (or plan to close) this account?</div>';
+    h+='<label>Close Date</label><input type="date" id="cp_date" value="'+p.closeDate+'">';
+    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">Next \u2192</button></div>';
+  
+  }else if(p.step==='bonus'){
+    h+='<h3>\uD83D\uDCB0 Did you get the full bonus?</h3>';
+    h+='<div class="sub">'+esc(p.bank)+' \u2014 expected '+fM(p.bonus)+'</div>';
+    h+='<div class="bonus-row"><button class="bonus-opt'+(p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=true;closePrompt.actualBonus=closePrompt.bonus;R()">Yes \u2014 '+fM(p.bonus)+'</button><button class="bonus-opt'+(!p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=false;R()">No \u2014 partial/none</button></div>';
+    if(!p.gotFull){h+='<label>How much did you actually get?</label><input type="number" inputmode="numeric" id="cp_amt" value="'+(p.actualBonus||0)+'" placeholder="0">'}
+    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-g" onclick="closeNext()">Next \u2192</button></div>';
+  
+  }else if(p.step==='dp'){
+    h+='<h3>\uD83D\uDCCB What triggered the bonus?</h3>';
+    h+='<div class="sub">What DD method or action triggered '+esc(p.bank)+'\'s bonus? (Optional)</div>';
+    h+='<div class="dd-chips" style="margin-bottom:8px">';
+    ['Employer DD','Robinhood ACH','Fidelity ACH','Schwab ACH','Venmo DD','Melio Bill Pay','No DD needed','Debit only'].forEach(m=>{
+      h+='<button class="dd-chip" onclick="document.getElementById(\'cp_dp\').value=\''+m+'\'">'+m+'</button>';
+    });
+    h+='</div>';
+    h+='<input id="cp_dp" value="'+esc(p.dp)+'" placeholder="e.g. $1,000 DD via Robinhood ACH" onclick="event.stopPropagation()">';
+    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">\u2705 Close Account</button></div>';
+  }
+  h+='</div></div>';return h;
+}
 function rPhone(){let h='<div class="sec">Customer Service</div>';PHONES.forEach(([b,p,bz])=>{h+='<div class="rcard"><div class="rcard-row"><div class="nm">'+esc(b)+'</div><div style="text-align:right"><a href="tel:'+p+'" style="text-decoration:none"><div class="ph">'+p+'</div></a>'+(bz?'<div class="ph2">'+bz+'</div>':'')+'</div></div></div>'});return h}
 /* ═══ RULES ═══ */
 function rRules(){let h='<div class="sec">Churn Rules \u2014 MO + Nationwide</div><input class="sinput" placeholder="Search..." oninput="this.dataset.q=this.value;R()" id="rs">';
@@ -873,13 +950,65 @@ function resetAllData(){
 }
 function delEntry(id){const e=entries.find(x=>x.id===id);cfm={title:'Delete',msg:'Remove '+e.bank+'?',action:()=>{entries=entries.filter(x=>x.id!==id);sv(SK,entries);cfm=null;expanded=null;R()}};R()}
 function closeAcct(id){
-  const e=entries.find(x=>x.id===id),dsc=daysUntilSafe(e);
-  let w='';if(dsc!==null&&dsc>0&&e.earlyCloseFee>0)w='\n\n\u26A0 '+dsc+'d remain. Close now = '+fM(e.earlyCloseFee)+' fee!';
-  cfm={title:'Close Account',msg:'Close '+e.bank+'?'+w,green:dsc===null||dsc===0,action:()=>{
-    entries=entries.map(x=>x.id===id?{...x,closed:td()}:x);entries=sortE(entries);sv(SK,entries);cfm=null;expanded=null;
-    ddPrompt={entryId:id,bank:e.bank,bonus:e.bonus,sel:[],custom:''};R();
-  }};R();
+  const e=entries.find(x=>x.id===id);if(!e)return;
+  const dsc=daysUntilSafe(e);
+  // Early close warning
+  if(dsc!==null&&dsc>0&&e.earlyCloseFee>0){
+    cfm={title:'\u26A0\uFE0F Early Close Warning',msg:dsc+' days remain on hold period. Closing now means '+fM(e.earlyCloseFee)+' fee! Are you sure?',action:()=>{cfm=null;startCloseFlow(id)},green:false};R();return;
+  }
+  startCloseFlow(id);
 }
+function startCloseFlow(id){
+  const e=entries.find(x=>x.id===id);if(!e)return;
+  closePrompt={entryId:id,bank:e.bank,bonus:e.bonus||0,step:'date',closeDate:td(),gotFull:true,actualBonus:e.bonus||0,dp:''};
+  R();
+}
+function closeNext(){
+  const p=closePrompt;if(!p)return;
+  if(p.step==='date'){
+    const d=document.getElementById('cp_date');if(d)p.closeDate=d.value;
+    p.step='bonus';R();
+  }else if(p.step==='bonus'){
+    if(!p.gotFull){const v=document.getElementById('cp_amt');if(v)p.actualBonus=parseInt(v.value)||0}
+    p.step='dp';R();
+  }else if(p.step==='dp'){
+    const dp=document.getElementById('cp_dp');if(dp)p.dp=dp.value.trim();
+    finishClose();
+  }
+}
+function closeBack(){
+  const p=closePrompt;if(!p)return;
+  if(p.step==='dp')p.step='bonus';
+  else if(p.step==='bonus')p.step='date';
+  R();
+}
+function finishClose(){
+  const p=closePrompt;if(!p)return;
+  const e=entries.find(x=>x.id===p.entryId);
+  // Save undo state
+  undoState={...e};if(undoTimer)clearTimeout(undoTimer);
+  undoTimer=setTimeout(()=>{undoState=null;R()},15000);
+  // Update entry
+  entries=entries.map(x=>{
+    if(x.id===p.entryId){
+      x.closed=p.closeDate;
+      x.bonus=p.actualBonus;
+      if(!x.bonusRecd&&p.actualBonus>0)x.bonusRecd=p.closeDate;
+      if(p.dp)x.dataPoint=p.dp;
+    }
+    return x;
+  });
+  // Save DD method if provided
+  if(p.dp)addDD(p.bank,p.dp,p.actualBonus,p.closeDate);
+  // Save to reqs
+  const e2=entries.find(x=>x.id===p.entryId);
+  if(e2)saveReq(e2.bank,{bonus:e2.bonus,notes:e2.notes,dataPoint:e2.dataPoint});
+  
+  entries=sortE(entries);sv(SK,entries);
+  closePrompt=null;expanded=null;R();
+}
+function cancelClose(){closePrompt=null;R()}
+
 function addFromTpl(i){const t=TEMPLATES[i];modal={bank:t.bank,bonus:t.bonus,churn:t.churn,opened:td(),closed:'',bonusRecd:'',reqMet:'',notes:t.notes||'',minHoldDays:t.minHoldDays||0,earlyCloseFee:t.earlyCloseFee||0,dataPoint:t.dataPoint||'',reqDays:t.reqDays||0,referralBonus:0,checklist:[],plannedClose:''};showTemplates=false;R()}
 
 /* Checklist */
