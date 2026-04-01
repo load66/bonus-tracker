@@ -248,6 +248,54 @@ html,body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;back
 .az-inline{margin-top:8px;padding:10px;background:var(--bg);border-radius:var(--rs);border:1px dashed var(--border)}
 .az-inline textarea{width:100%;min-height:100px;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;color:var(--text);background:var(--card);outline:none;resize:vertical}
 .az-inline button{margin-top:6px;padding:8px 14px;border-radius:8px;border:none;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff}
+
+/* ─── MODERNIZED DESIGN ─── */
+.modal{background:linear-gradient(180deg,#FAFBFE 0%,#F1F3F9 100%);border-radius:24px 24px 0 0;padding:16px 20px calc(24px + var(--safe-b))}
+.modal-bar{width:36px;height:5px;background:#D1D5DB;border-radius:3px;margin:0 auto 14px}
+.modal-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-hdr h2{font-size:19px;font-weight:800;color:var(--navy);letter-spacing:-.3px}
+.modal-id{font-size:11px;color:var(--light);font-weight:600;background:rgba(0,0,0,.05);padding:3px 8px;border-radius:6px}
+.modal-section{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;margin:14px 0 6px;padding-top:10px;border-top:1px solid var(--border)}
+.fg label{font-size:11px;font-weight:600;color:var(--slate);margin-bottom:4px}
+.fg input,.fg select,.fg textarea{background:#FFF;border:1.5px solid #E2E8F0;border-radius:var(--rs);padding:11px 14px;font-size:15px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.fg textarea{font-size:13px;line-height:1.5}
+
+.date-wrap{display:flex;gap:4px;align-items:center}
+.date-wrap input{flex:1}
+.date-clear{width:32px;height:42px;border-radius:var(--rs);border:1.5px solid #E2E8F0;background:#FFF;color:var(--red);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.12s}
+.date-clear:active{background:#FEE2E2}
+
+.modal-btns{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.btn-pri{border-radius:var(--r);font-size:16px;padding:15px;background:linear-gradient(135deg,#2563EB,#1E40AF);box-shadow:0 4px 14px rgba(37,99,235,.3)}
+.btn-sec{border-radius:var(--r);padding:12px}
+.btn-danger{width:100%;padding:10px;background:transparent;border:1.5px solid var(--red);color:var(--red);border-radius:var(--r);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.btn-danger:active{background:#FEE2E2}
+
+.tc-toggle{width:100%;padding:11px;border-radius:var(--rs);border:1.5px dashed var(--accent);background:rgba(37,99,235,.04);font-family:inherit;font-size:12px;font-weight:600;color:var(--accent);cursor:pointer;transition:.12s}
+.tc-toggle:active{background:rgba(37,99,235,.1)}
+.az-go{width:100%;margin-top:6px;padding:10px;border-radius:8px;border:none;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff}
+
+/* ─── CARD MODERNIZATION ─── */
+.card{border-radius:18px;border:none;box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.03)}
+.card-head{padding:16px 18px 12px}
+.card-bank{font-size:15px;font-weight:800;letter-spacing:-.2px}
+.card-id{background:rgba(0,0,0,.04);border-radius:8px;padding:3px 8px;font-size:9px;font-weight:700;color:var(--light)}
+.badge{border-radius:8px;padding:4px 10px;font-size:10px}
+.card-exp{padding:0 18px 16px}
+
+/* ─── HEADER MODERNIZATION ─── */
+.hdr{background:linear-gradient(160deg,#070B16 0%,#0F1B3D 50%,#162040 100%);padding:max(env(safe-area-inset-top),16px) 20px 0}
+.stats{background:linear-gradient(160deg,#070B16,#0F1B3D,#162040);padding:0 14px 12px}
+.yr-total{background:linear-gradient(160deg,#070B16,#0F1B3D,#162040);padding:0 14px 14px}
+.st{border-radius:14px;padding:12px 6px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06)}
+.st .n{font-size:22px}
+
+.pill{border-radius:14px}
+.fab{border-radius:16px;width:52px;height:52px;box-shadow:0 6px 24px rgba(37,99,235,.5)}
+
+/* ─── TAB BAR GLASS ─── */
+.tabs{background:rgba(255,255,255,.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);padding:6px 0 max(var(--safe-b),8px)}
 </style>
 </head>
 <body>
@@ -1327,21 +1375,59 @@ function rRules(){
 
 function rModal(){
   const e=modal;
-  return`<div class="overlay" onclick="modal=null;R()"><div class="modal" onclick="event.stopPropagation()"><div class="modal-bar"></div><h2>${e._edit?'Edit':'Add'} Bank Entry</h2>
-  <div class="fg"><label>Bank Name *</label><input id="f_bank" value="${esc(e.bank||'')}"></div>
-  <div class="frow"><div class="fg"><label>Bonus $</label><input id="f_bonus" type="number" inputmode="numeric" value="${e.bonus||''}"></div>
-  <div class="fg"><label>Churn Rule</label><select id="f_churn"><option value="">Select</option><option value="1"${e.churn==='1'?' selected':''}>1 Year</option><option value="2"${e.churn==='2'?' selected':''}>2 Years</option><option value="3"${e.churn==='3'?' selected':''}>3 Years</option><option value="180"${e.churn==='180'?' selected':''}>180 Days</option></select></div></div>
-  <div class="frow"><div class="fg"><label>Date Opened</label><input id="f_opened" type="date" value="${e.opened||''}"></div><div class="fg"><label>Date Closed</label><input id="f_closed" type="date" value="${e.closed||''}"></div></div>
-  <div class="frow"><div class="fg"><label>Bonus Rec'd Date</label><input id="f_bonusRecd" type="date" value="${e.bonusRecd||''}"><div class="fg-hint">When bonus posted to account</div></div><div class="fg"><label>Req Met Date</label><input id="f_reqMet" type="date" value="${e.reqMet||''}"></div></div>
-  <div class="fg"><label>Data Point (What Triggered Bonus)</label><input id="f_dp" value="${esc(e.dataPoint||'')}" placeholder="e.g. $1,000 DD via employer"><div class="fg-hint">Helps for churning same bank later</div></div>
-  <div class="sec" style="margin:8px 0 6px">\u23F1 Early Close Protection</div>
-  <div class="frow"><div class="fg"><label>Min Hold Days</label><input id="f_minHold" type="number" inputmode="numeric" value="${e.minHoldDays||''}" placeholder="180"><div class="fg-hint">Days before safe to close</div></div><div class="fg"><label>Early Close Fee</label><input id="f_closeFee" type="number" inputmode="numeric" value="${e.earlyCloseFee||''}" placeholder="25"></div></div>
-  <div class="fg"><label>Notes</label><textarea id="f_notes" rows="3">${esc(e.notes||'')}</textarea></div>
-    <div style="margin-bottom:10px"><button type="button" style="width:100%;padding:10px;border-radius:var(--rs);border:1.5px dashed var(--accent);background:transparent;font-family:inherit;font-size:12px;font-weight:600;color:var(--accent);cursor:pointer" onclick="saveFormToModal();showInlineAZ=!showInlineAZ;R()">\u{1F9E0} ${showInlineAZ?'Hide':'Paste T&C to Auto-fill'}</button></div>
-    ${showInlineAZ?`<div class="az-inline"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Paste the bank's terms & conditions below. AI will extract and auto-fill the fields above.</div><textarea id="inline_tc" class="az-textarea" placeholder="Paste T&C here..." style="min-height:100px"></textarea>${inlineAnalyzing?'<div style="text-align:center;padding:8px;font-size:11px;color:var(--muted)"><span class="spin"></span> AI analyzing...</div>':'<button onclick="event.preventDefault();runInlineAnalyze()">\u{1F9E0} Analyze & Auto-fill</button>'}${inlineResult?'<div style="margin-top:6px;font-size:11px;color:var(--green);font-weight:600">\u2705 Fields auto-filled from analysis</div>':''}</div>`:''}
-  <button class="btn-pri" onclick="saveEntry()">\u{1F4BE} ${e._edit?'Save Changes':'Add Entry'}</button><button class="btn-sec" onclick="modal=null;R()">Cancel</button></div></div>`;
+  let h='<div class="overlay" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()">';
+  h+='<div class="modal-bar"></div>';
+  h+='<div class="modal-hdr"><h2>'+(e._edit?'Edit':'New')+' Bank Entry</h2>'+(e._edit?'<span class="modal-id">'+esc(e.id||'')+'</span>':'')+'</div>';
+
+  const oi=k=>' oninput="modal[\''+k+'\']=this.value" ';
+  const on=k=>' oninput="modal[\''+k+'\']=parseInt(this.value)||0" ';
+
+  h+='<div class="fg"><label>Bank Name *</label><input id="f_bank" value="'+esc(e.bank||'')+'"'+oi('bank')+'placeholder="e.g. Chase, PNC"></div>';
+  h+='<div class="modal-section">Bonus Details</div>';
+  h+='<div class="frow"><div class="fg"><label>Bonus $</label><input id="f_bonus" type="number" inputmode="numeric" value="'+(e.bonus||'')+'"'+on('bonus')+'placeholder="300"></div>';
+  h+='<div class="fg"><label>Churn Rule</label><select id="f_churn" onchange="modal.churn=this.value"><option value="">Select</option><option value="1"'+(e.churn==='1'?' selected':'')+'>1 Year</option><option value="2"'+(e.churn==='2'?' selected':'')+'>2 Years</option><option value="3"'+(e.churn==='3'?' selected':'')+'>3 Years</option><option value="180"'+(e.churn==='180'?' selected':'')+'>180 Days</option></select></div></div>';
+
+  h+='<div class="modal-section">Dates</div>';
+  const dateField=(label,id,key,val)=>'<div class="fg"><label>'+label+'</label><div class="date-wrap"><input id="'+id+'" type="date" value="'+(val||'')+'"'+oi(key)+'><button class="date-clear" type="button" onclick="modal.'+key+'=\'\';document.getElementById(\''+id+'\').value=\'\'">\u2715</button></div></div>';
+  h+='<div class="frow">'+dateField('Opened','f_opened','opened',e.opened)+dateField('Closed','f_closed','closed',e.closed)+'</div>';
+  h+='<div class="frow">'+dateField('Bonus Received','f_bonusRecd','bonusRecd',e.bonusRecd)+dateField('Req Met','f_reqMet','reqMet',e.reqMet)+'</div>';
+
+  h+='<div class="modal-section">Data Point</div>';
+  h+='<div class="fg"><label>What Triggered Bonus</label><input id="f_dp" value="'+esc(e.dataPoint||'')+'"'+oi('dataPoint')+'placeholder="e.g. Robinhood ACH, $1,000 DD"></div>';
+
+  h+='<div class="modal-section">Timers & Fees</div>';
+  h+='<div class="frow"><div class="fg"><label>Req Deadline (days)</label><input id="f_reqDays" type="number" inputmode="numeric" value="'+(e.reqDays||'')+'"'+on('reqDays')+'placeholder="90"></div>';
+  h+='<div class="fg"><label>Min Hold Days</label><input id="f_minHold" type="number" inputmode="numeric" value="'+(e.minHoldDays||'')+'"'+on('minHoldDays')+'placeholder="180"></div></div>';
+  h+='<div class="frow"><div class="fg"><label>Early Close Fee</label><input id="f_closeFee" type="number" inputmode="numeric" value="'+(e.earlyCloseFee||'')+'"'+on('earlyCloseFee')+'placeholder="25"></div>';
+  h+='<div class="fg"><label>Referral Bonus</label><input id="f_referral" type="number" inputmode="numeric" value="'+(e.referralBonus||'')+'"'+on('referralBonus')+'placeholder="50"></div></div>';
+
+  h+='<div class="modal-section">Notes</div>';
+  h+='<div class="fg"><textarea id="f_notes" rows="4"'+oi('notes')+'placeholder="DD requirements, fees, how to complete bonus...">'+esc(e.notes||'')+'</textarea></div>';
+
+  h+='<div style="margin-bottom:10px"><button type="button" class="tc-toggle" onclick="saveFormToModal();showInlineAZ=!showInlineAZ;R()">\u{1F9E0} '+(showInlineAZ?'Hide T&C Analyzer':'Paste T&C to Auto-fill')+'</button></div>';
+  if(showInlineAZ){
+    h+='<div class="az-inline"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Paste terms & conditions. AI extracts and fills fields above.</div>';
+    h+='<textarea id="inline_tc" class="az-textarea" placeholder="Paste T&C here..." style="min-height:100px"></textarea>';
+    if(inlineAnalyzing)h+='<div style="text-align:center;padding:10px"><span class="spin"></span> AI analyzing...</div>';
+    else h+='<button class="az-go" onclick="event.preventDefault();runInlineAnalyze()">\u{1F9E0} Analyze & Auto-fill</button>';
+    if(inlineResult)h+='<div style="margin-top:6px;font-size:11px;color:var(--green);font-weight:600">\u2705 Fields auto-filled!</div>';
+    h+='</div>';
+  }
+  h+='<div class="modal-btns"><button class="btn-pri" onclick="saveEntry()">\u{1F4BE} '+(e._edit?'Save Changes':'Add Entry')+'</button>';
+  h+='<button class="btn-sec" onclick="closeModal()">Cancel</button>';
+  if(e._edit)h+='<button class="btn-danger" onclick="clearAllFields()">Clear All Fields</button>';
+  h+='</div></div></div>';
+  return h;
 }
 
+function clearAllFields(){
+  if(!modal)return;
+  ['bonus','churn','opened','closed','bonusRecd','reqMet','dataPoint','notes'].forEach(function(k){modal[k]=''});
+  ['reqDays','minHoldDays','earlyCloseFee','referralBonus'].forEach(function(k){modal[k]=0});
+  modal.bonus=0;R();
+}
+
+\n
 function rConfirm(){return`<div class="cbg" onclick="cfm=null;R()"><div class="cbox" onclick="event.stopPropagation()"><h3>${cfm.title}</h3><p>${cfm.msg}</p><div class="crow"><button class="c-cancel" onclick="cfm=null;R()">Cancel</button><button class="${cfm.green?'c-green':'c-red'}" onclick="cfm.action()">${cfm.green?'Confirm':'Delete'}</button></div></div></div>`}
 
 
@@ -1373,12 +1459,14 @@ function saveFormToModal(){
 }
 
 function saveEntry(){
-  const bank=(document.getElementById('f_bank').value||'').trim();
+  // Read from modal object (synced via oninput handlers)
+  saveFormToModal();
+  const bank=(modal.bank||'').trim();
   if(!bank){alert('Bank name required');return}
-  const d={bank,bonus:parseInt(document.getElementById('f_bonus').value)||0,churn:document.getElementById('f_churn').value,opened:document.getElementById('f_opened').value,closed:document.getElementById('f_closed').value,bonusRecd:document.getElementById('f_bonusRecd').value,reqMet:document.getElementById('f_reqMet').value,notes:document.getElementById('f_notes').value,minHoldDays:parseInt(document.getElementById('f_minHold').value)||0,earlyCloseFee:parseInt(document.getElementById('f_closeFee').value)||0,reqDays:parseInt(document.getElementById('f_reqDays').value)||0,referralBonus:parseInt(document.getElementById('f_referral').value)||0,dataPoint:document.getElementById('f_dp').value};
+  const d={bank,bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',minHoldDays:modal.minHoldDays||0,earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||''};
   if(modal._edit){entries=entries.map(e=>e.id===modal.id?{...e,...d,checklist:e.checklist||[]}:e)}
   else{const taken=new Set(entries.map(e=>e.id));d.id=genId(bank,taken);d.checklist=[];entries.push(d)}
-  entries=sortE(entries);sv(SK,entries);modal=null;R();
+  entries=sortE(entries);sv(SK,entries);modal=null;showInlineAZ=false;inlineResult=null;R();
 }
 
 function delEntry(id){const e=entries.find(x=>x.id===id);cfm={title:'Delete',msg:`Remove ${e.bank}?`,action:()=>{entries=entries.filter(x=>x.id!==id);sv(SK,entries);cfm=null;expanded=null;R()}};R()}
