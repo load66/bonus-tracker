@@ -496,23 +496,7 @@ function analyzeTC(text){
 
 
 /* DEFAULT DATA */
-const DEF=[
-{id:"CO0",bank:"Community America CU",bonusRecd:"2025-12-29",reqMet:"",churn:"1",opened:"2025-12-29",closed:"",bonus:500,notes:"Funded $1,075 / WAITING $2,500 DD / GUIDED - 90 consecutive days.",minHoldDays:90,earlyCloseFee:0,dataPoint:"$2,500 DD + Guided Investing",reqDays:90,referralBonus:0,checklist:[],plannedClose:""},
-{id:"SI0",bank:"Simmons Bank",bonusRecd:"",reqMet:"",churn:"1",opened:"2026-02-04",closed:"",bonus:500,notes:"$1,000 DD + 7 debit txns per cycle. Up to $450 ($150x3). No monthly fee.",minHoldDays:0,earlyCloseFee:0,dataPoint:"$1,000 DD + 7 debit txns/cycle",reqDays:120,referralBonus:0,checklist:[],plannedClose:""},
-{id:"RE0",bank:"Regions Bank",bonusRecd:"2026-02-27",reqMet:"2026-03-09",churn:"1",opened:"2026-02-27",closed:"",bonus:450,notes:"10 debit txns / $1,000 DD within 90 days / $25 fee <180 days",minHoldDays:180,earlyCloseFee:25,dataPoint:"$1,000 DD + 10 debit txns",reqDays:90,referralBonus:0,checklist:[],plannedClose:""},
-{id:"EQ0",bank:"Equity Bank",bonusRecd:"",reqMet:"",churn:"180",opened:"2026-03-09",closed:"",bonus:400,notes:"Must open checking+savings. $1,000 DD + debit activation within 45 days. $400 clawback <180d.",minHoldDays:180,earlyCloseFee:400,dataPoint:"$1,000 DD + activate debit + 1 txn",reqDays:45,referralBonus:0,checklist:[],plannedClose:""},
-{id:"US2",bank:"US Bank Biz",bonusRecd:"2025-03-25",reqMet:"",churn:"1",opened:"2025-12-09",closed:"2025-03-25",bonus:400,notes:"",minHoldDays:0,earlyCloseFee:0,dataPoint:"$3,000 deposit",reqDays:0,referralBonus:0,checklist:[],plannedClose:""},
-{id:"ET0",bank:"E-Trade",bonusRecd:"2025-04-30",reqMet:"",churn:"1",opened:"",closed:"2025-04-30",bonus:250,notes:"",minHoldDays:0,earlyCloseFee:0,dataPoint:"Funded account",reqDays:0,referralBonus:0,checklist:[],plannedClose:""},
-{id:"CH1",bank:"Chase Biz",bonusRecd:"",reqMet:"",churn:"2",opened:"",closed:"2025-05-10",bonus:0,notes:"",minHoldDays:0,earlyCloseFee:0,dataPoint:"",reqDays:0,referralBonus:0,checklist:[],plannedClose:""},
-{id:"WE1",bank:"Wells Fargo",bonusRecd:"",reqMet:"",churn:"1",opened:"",closed:"2025-08-01",bonus:0,notes:"",minHoldDays:0,earlyCloseFee:0,dataPoint:"",reqDays:0,referralBonus:0,checklist:[],plannedClose:""},
-{id:"CI0",bank:"Citi Bank",bonusRecd:"2025-08-08",reqMet:"",churn:"1",opened:"",closed:"2025-08-08",bonus:325,notes:"",minHoldDays:0,earlyCloseFee:0,dataPoint:"DD triggered bonus",reqDays:0,referralBonus:0,checklist:[],plannedClose:""},
-{id:"CE0",bank:"Central Bank",bonusRecd:"2025-11-19",reqMet:"",churn:"2",opened:"",closed:"2025-11-19",bonus:300,notes:"",minHoldDays:0,earlyCloseFee:0,dataPoint:"$3,000 balance",reqDays:0,referralBonus:0,checklist:[],plannedClose:""},
-{id:"US1",bank:"US Bank",bonusRecd:"2025-12-25",reqMet:"",churn:"1",opened:"",closed:"2025-12-25",bonus:450,notes:"$1,500 DD w/ MF - RH works",minHoldDays:0,earlyCloseFee:0,dataPoint:"$1,500 DD via Robinhood ACH",reqDays:0,referralBonus:0,checklist:[],plannedClose:""},
-{id:"CH0",bank:"Chase",bonusRecd:"",reqMet:"",churn:"2",opened:"",closed:"2025-01-01",bonus:0,notes:"",minHoldDays:0,earlyCloseFee:0,dataPoint:"",reqDays:0,referralBonus:0,checklist:[],plannedClose:""},
-{id:"BA0",bank:"Bank of America",bonusRecd:"2026-01-16",reqMet:"",churn:"1",opened:"",closed:"2026-01-16",bonus:500,notes:"$250 DD w/ MF - Fidelity works",minHoldDays:0,earlyCloseFee:0,dataPoint:"$250 DD via Fidelity ACH",reqDays:0,referralBonus:0,checklist:[],plannedClose:""},
-{id:"WE0",bank:"Wells Fargo Biz",bonusRecd:"2026-02-27",reqMet:"",churn:"1",opened:"2025-12-22",closed:"2026-02-27",bonus:400,notes:"$500 DB w/ MF - $2,500 funded",minHoldDays:0,earlyCloseFee:0,dataPoint:"$500 debit via MF + $2,500 funded",reqDays:0,referralBonus:0,checklist:[],plannedClose:""},
-{id:"PN0",bank:"PNC",bonusRecd:"2025-05-01",reqMet:"",churn:"2",opened:"",closed:"2025-05-01",bonus:400,notes:"",minHoldDays:0,earlyCloseFee:0,dataPoint:"$5,000 DD",reqDays:0,referralBonus:0,checklist:[],plannedClose:""}
-];
+const DEF=[];
 const TEMPLATES=[
 {bank:"Chase",bonus:300,churn:"2",notes:"$1,000 DD within 90 days. $12/mo waived w/ $500 DD.",minHoldDays:90,earlyCloseFee:0,dataPoint:"Fidelity/Robinhood ACH works",reqDays:90},
 {bank:"Chase Biz",bonus:500,churn:"2",notes:"$2,000 deposit within 20 biz days.",minHoldDays:0,earlyCloseFee:0,dataPoint:"$2,000 deposit",reqDays:60},
@@ -595,14 +579,14 @@ function rTracker(sorted){
   cd.forEach(c=>{const p=c.t?Math.max(5,Math.round(c.t/mx*90)):1;h+='<div class="chart-col"><div class="chart-bar" style="height:'+p+'%"></div><div class="chart-cl">'+c.l+'</div></div>'});
   h+='</div></div>';
   // Quick bar
-  h+='<div class="qbar"><button class="qbtn" style="background:#EFF6FF;color:#2563EB" onclick="exportBackup()">\uD83D\uDCE4 Backup</button><button class="qbtn" style="background:#ECFDF5;color:#059669" onclick="importBackup()">\uD83D\uDCE5 Restore</button><button class="qbtn" style="background:#F3E8FF;color:#7C3AED" onclick="showTemplates=!showTemplates;R()">\u26A1 Quick Add</button></div>';
+  h+='<div class="qbar"><button class="qbtn" style="background:#EFF6FF;color:#2563EB" onclick="exportBackup()">\uD83D\uDCE4 Backup</button><button class="qbtn" style="background:#ECFDF5;color:#059669" onclick="importBackup()">\uD83D\uDCE5 Restore</button><button class="qbtn" style="background:#F3E8FF;color:#7C3AED" onclick="showTemplates=!showTemplates;R()">\u26A1 Quick Add</button><button class="qbtn" style="background:#FEF2F2;color:#EF4444" onclick="resetAllData()">\uD83D\uDDD1 Reset</button></div>';
   // Templates
   if(showTemplates){h+='<div class="sec">Quick-Add Templates</div><div class="tgrid">';TEMPLATES.forEach((t,i)=>{h+='<button class="tbtn" onclick="addFromTpl('+i+')"><div class="nm">'+esc(t.bank)+'</div><div class="bn">'+fM(t.bonus)+'</div></button>'});h+='</div>'}
   // Search + Analyzer
   h+='<input class="sinput" type="text" placeholder="Search banks..." value="'+esc(search)+'" oninput="search=this.value;R()">';
   h+='<button class="tc-btn" onclick="showAnalyzer=!showAnalyzer;R()">\uD83E\uDDE0 '+(showAnalyzer?'Hide':'Paste T&C to Analyze')+'</button>';
   if(showAnalyzer)h+=rAnalyzer();
-  if(!f.length)return h+'<div class="empty"><div class="em">\uD83D\uDCED</div><p>No entries. Tap + to add.</p></div>';
+  if(!f.length)return h+'<div class="empty"><div class="em">\uD83D\uDCED</div><p>No entries yet.</p><p style="margin-top:6px;font-size:11px">Tap <strong>+</strong> to add a bank, <strong>\u26A1 Quick Add</strong> for templates, or <strong>\uD83D\uDCE5 Restore</strong> to import a backup.</p></div>';
   // Cards
   f.forEach(e=>{
     const s=status(e),isX=expanded===e.id,nr=nextReopen(e),dl=daysLeft(e);
@@ -833,6 +817,14 @@ function saveEntry(){
   if(modal._edit){entries=entries.map(e=>e.id===modal.id?{...e,...d,checklist:e.checklist||[]}:e)}
   else{const taken=new Set(entries.map(e=>e.id));d.id=genId(bank,taken);d.checklist=[];entries.push(d)}
   entries=sortE(entries);sv(SK,entries);closeModal();
+}
+
+function resetAllData(){
+  cfm={title:'Reset All Data',msg:'This will delete ALL your entries, data points, and saved requirements. Your backup file (if exported) is not affected. Continue?',action:()=>{
+    entries=[];sv(SK,[]);
+    try{localStorage.removeItem(DD_KEY);localStorage.removeItem(REQ_KEY);localStorage.removeItem(BK_KEY)}catch{}
+    cfm=null;expanded=null;R();
+  }};R();
 }
 function delEntry(id){const e=entries.find(x=>x.id===id);cfm={title:'Delete',msg:'Remove '+e.bank+'?',action:()=>{entries=entries.filter(x=>x.id!==id);sv(SK,entries);cfm=null;expanded=null;R()}};R()}
 function closeAcct(id){
