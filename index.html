@@ -642,6 +642,7 @@ function rTracker(sorted){
         h+='</ul><div class="ck-add"><input id="ck_'+e.id+'" placeholder="Add step..." onclick="event.stopPropagation()" onkeydown="if(event.key===\'Enter\'){event.stopPropagation();addCk(\''+e.id+'\')}"><button onclick="event.stopPropagation();addCk(\''+e.id+'\')">+</button></div>';
       }
       if(e.notes)h+='<div class="card-notes" style="white-space:pre-wrap;font-size:12px;line-height:1.6">'+esc(e.notes)+'</div>';
+      if(e.analyzedTC)h+='<div style="margin-top:6px;padding:10px;background:#F8FAFC;border-radius:10px;border:1px solid #E2E8F0"><div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">T&C Analysis</div><div style="white-space:pre-wrap;font-size:11px;line-height:1.6;color:var(--text)">'+esc(e.analyzedTC)+'</div></div>';
       // Action buttons
       h+='<div class="card-btns"><button class="cbtn edit" onclick="event.stopPropagation();openEdit(\''+e.id+'\')">\u270F\uFE0F Edit</button>';
       if(!e.closed&&(!e.bonusRecd||e.bonusRecd===''))h+='<button class="cbtn rcv" onclick="event.stopPropagation();openRcv(\''+e.id+'\')">\uD83C\uDF89 Received</button>';
@@ -739,10 +740,16 @@ function rModal(){
   const df=(lbl,id,k,v)=>'<div class="fg"><label>'+lbl+'</label><div class="date-wrap"><input type="date" value="'+(v||'')+'"'+oi(k)+'><button class="date-clr" type="button" onclick="modal.'+k+'=\'\';this.previousElementSibling.value=\'\'">\u2715</button></div></div>';
   h+='<div class="frow">'+df('Opened','fo','opened',e.opened)+df('Closed','fc','closed',e.closed)+'</div>';
   h+='<div class="frow">'+df('Bonus Received','fb','bonusRecd',e.bonusRecd)+df('Req Met','fr','reqMet',e.reqMet)+'</div>';
-  h+='<div class="m-sec">Notes & Requirements</div>';
-  h+='<div style="font-size:11px;color:var(--muted);margin-bottom:4px">Use the T&C Analyzer below to auto-fill, or type manually.</div>';
-  h+='<div class="fg"><textarea rows="8" style="font-size:13px;line-height:1.6;min-height:150px"'+oi('notes')+'placeholder="Paste T&C analysis here or type requirements...\n\n* Step 1: Open account with promo code\n* Step 2: Set up $1,000 DD within 90 days\n* Step 3: Complete 10 debit transactions\n...">'+esc(e.notes||'')+'</textarea></div>';
+  h+='<div class="m-sec">Your Notes</div>';
+  h+='<div style="font-size:10px;color:var(--muted);margin-bottom:3px">Your personal notes — never overwritten by analyzer</div>';
+  h+='<div class="fg"><textarea rows="3" style="font-size:13px;line-height:1.5;min-height:60px"'+oi('notes')+'placeholder="Your personal notes, tips, reminders...">'+esc(e.notes||'')+'</textarea></div>';
   // Inline T&C analyzer
+  // Analyzed T&C section (read-only display + editable)
+  if(modal.analyzedTC){
+    h+='<div class="m-sec">Analyzed T&C Summary</div>';
+    h+='<div style="font-size:10px;color:var(--muted);margin-bottom:3px">Auto-generated from T&C analyzer — re-analyze to update</div>';
+    h+='<div class="fg"><textarea rows="6" style="font-size:12px;line-height:1.6;min-height:120px;background:#F8FAFC;border:1.5px solid #E2E8F0"'+' oninput="modal.analyzedTC=this.value" '+'placeholder="Analyzed T&C will appear here...">'+esc(modal.analyzedTC)+'</textarea></div>';
+  }
   h+='<button type="button" class="tc-btn" onclick="showInlineAZ=!showInlineAZ;R()">\uD83E\uDDE0 '+(showInlineAZ?'Hide T&C Analyzer':'Paste T&C to Auto-fill')+'</button>';
   if(showInlineAZ){h+='<div class="az-area"><textarea id="inline_tc" placeholder="Paste T&C here..."></textarea>'+('<button class="az-go" onclick="event.preventDefault();runInlineAnalyze()">Analyze & Auto-fill</button>')+(inlineResult?'<div style="margin-top:4px;font-size:10px;color:var(--green);font-weight:600">\u2705 Auto-filled!</div>':'')+'</div>'}
   h+='<button class="btn-p" onclick="saveEntry()">\uD83D\uDCBE '+(e._edit?'Save Changes':'Add Entry')+'</button>';
@@ -807,13 +814,13 @@ function rAnalyzer(){
   h+='</div>';return h;
 }
 /* ═══ ACTIONS ═══ */
-function openAdd(){modal={bank:'',bonus:0,churn:'',opened:'',closed:'',bonusRecd:'',reqMet:'',notes:'',minHoldDays:0,earlyCloseFee:0,dataPoint:'',reqDays:0,referralBonus:0,checklist:[],plannedClose:''};R()}
-function openEdit(id){const e=entries.find(x=>x.id===id);if(e){modal={...e,_edit:true};showInlineAZ=false;inlineResult=null;R()}}
+function openAdd(){modal={bank:'',bonus:0,churn:'',opened:'',closed:'',bonusRecd:'',reqMet:'',notes:'',analyzedTC:'',minHoldDays:0,earlyCloseFee:0,dataPoint:'',reqDays:0,referralBonus:0,checklist:[],plannedClose:''};R()}
+function openEdit(id){const e=entries.find(x=>x.id===id);if(e){modal={...e,analyzedTC:e.analyzedTC||'',_edit:true};showInlineAZ=false;inlineResult=null;R()}}
 function closeModal(){modal=null;showInlineAZ=false;inlineResult=null;R()}
 function clearFields(){if(!modal)return;['bonus','churn','opened','closed','bonusRecd','reqMet','dataPoint','notes'].forEach(k=>{modal[k]=''});['reqDays','minHoldDays','earlyCloseFee','referralBonus'].forEach(k=>{modal[k]=0});modal.bonus=0;R()}
 function saveEntry(){
   const bank=(modal.bank||'').trim();if(!bank){alert('Bank name required');return}
-  const d={bank,bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',minHoldDays:modal.minHoldDays||0,earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',plannedClose:modal.plannedClose||''};
+  const d={bank,bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',plannedClose:modal.plannedClose||''};
   if(modal._edit){entries=entries.map(e=>e.id===modal.id?{...e,...d,checklist:e.checklist||[]}:e)}
   else{const taken=new Set(entries.map(e=>e.id));d.id=genId(bank,taken);d.checklist=[];entries.push(d)}
   entries=sortE(entries);sv(SK,entries);closeModal();
@@ -877,7 +884,9 @@ function runInlineAnalyze(){
   const el=document.getElementById('inline_tc');if(!el||el.value.length<20){alert('Paste more T&C text');return}
   inlineResult=analyzeTC(el.value);
   if(inlineResult){
-    if(inlineResult.notesForTracker)modal.notes=inlineResult.notesForTracker;
+    // Write to analyzedTC (never touches user's personal notes)
+    if(inlineResult.notesForTracker)modal.analyzedTC=inlineResult.notesForTracker;
+    // Auto-fill other fields
     if(inlineResult.bonusAmount&&!modal.bonus)modal.bonus=parseInt(String(inlineResult.bonusAmount).replace(/[$,]/g,''))||0;
     if(inlineResult.churnMonths&&!modal.churn)modal.churn=inlineResult.churnMonths<=6?'180':inlineResult.churnMonths<=12?'1':inlineResult.churnMonths<=24?'2':'3';
     if(inlineResult.earlyCloseDays)modal.minHoldDays=parseInt(inlineResult.earlyCloseDays)||0;
@@ -885,7 +894,8 @@ function runInlineAnalyze(){
     if(inlineResult.ddAmount||inlineResult.debitTxns)modal.dataPoint=[inlineResult.ddAmount?'DD '+inlineResult.ddAmount:'',inlineResult.debitTxns?inlineResult.debitTxns+' debit txns':''].filter(Boolean).join(' + ');
     if(inlineResult.promoCode&&!modal.dataPoint)modal.dataPoint='Promo: '+inlineResult.promoCode;
     if(inlineResult.timelineDays)modal.reqDays=inlineResult.timelineDays;
-  }else{alert('Could not extract data. Paste more of the T&C.')}
+    if(inlineResult.bankName&&!modal.bank)modal.bank=inlineResult.bankName;
+  }else{alert('Could not extract data. Paste more of the full T&C.')}
   R();
 }
 function fillFromAI(){
@@ -893,7 +903,7 @@ function fillFromAI(){
   modal={bank:r.bankName||'',bonus:typeof r.bonusAmount==='number'?r.bonusAmount:parseInt(String(r.bonusAmount||'').replace(/[$,]/g,''))||0,
   churn:r.churnMonths?(r.churnMonths<=6?'180':r.churnMonths<=12?'1':r.churnMonths<=24?'2':'3'):'',
   opened:'',closed:'',bonusRecd:'',reqMet:'',
-  notes:r.notesForTracker||(r.checklist?'* '+r.checklist.join('\n* '):''),
+  notes:'',analyzedTC:r.notesForTracker||(r.checklist?'* '+r.checklist.join('\n* '):''),
   minHoldDays:typeof r.earlyCloseDays==='number'?r.earlyCloseDays:parseInt(String(r.earlyCloseDays||''))||0,
   earlyCloseFee:parseInt(String(r.earlyCloseFee||'').replace(/[$,]/g,''))||0,
   dataPoint:[r.ddAmount?'DD '+r.ddAmount:'',r.debitTxns?r.debitTxns+' debit txns':''].filter(Boolean).join(' + '),
