@@ -231,6 +231,23 @@ html,body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;back
 .dd-btns button{flex:1;padding:12px;border-radius:var(--rs);border:none;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer}
 .dd-skip{background:var(--bg);color:var(--muted)}
 .dd-save{background:var(--green);color:#fff}
+
+.ai-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:8px;font-size:9px;font-weight:700;background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff}
+.az-loading{text-align:center;padding:20px;color:var(--muted)}
+.az-loading .spin{display:inline-block;width:20px;height:20px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.cbtn.rcv{background:#EDE9FE;color:#7C3AED}
+.rcv-modal{background:var(--card);border-radius:var(--r);padding:20px;max-width:340px;width:100%;text-align:left}
+.rcv-modal h3{font-size:16px;font-weight:700;margin-bottom:4px}
+.rcv-modal .sub{font-size:12px;color:var(--muted);margin-bottom:12px}
+.wait-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}
+.wait-btn{padding:12px;border-radius:var(--rs);border:1.5px solid var(--border);background:var(--bg);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:center;transition:.12s}
+.wait-btn:active{transform:scale(.96)}
+.wait-btn.sel{border-color:var(--accent);background:#EFF6FF;color:var(--accent)}
+.wait-btn .sm{font-size:10px;color:var(--muted);margin-top:2px;font-weight:400}
+.az-inline{margin-top:8px;padding:10px;background:var(--bg);border-radius:var(--rs);border:1px dashed var(--border)}
+.az-inline textarea{width:100%;min-height:100px;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;color:var(--text);background:var(--card);outline:none;resize:vertical}
+.az-inline button{margin-top:6px;padding:8px 14px;border-radius:8px;border:none;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff}
 </style>
 </head>
 <body>
@@ -589,6 +606,168 @@ function getDDMethodsForBank(bankName){
 }
 let ddPrompt=null; // {entryId, bank, bonus, closedDate}
 
+
+// ═══════════════════════════════════
+// AI-POWERED T&C ANALYZER
+// ═══════════════════════════════════
+let aiAnalyzing=false;
+async function aiAnalyzeTC(text){
+  aiAnalyzing=true;R();
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{role:'user',content:`Analyze these bank bonus terms and conditions. Extract ONLY the following as JSON (no markdown, no backticks, just raw JSON):
+{
+  "bonusAmount": number or null,
+  "ddAmount": string or null (e.g. "$1,000"),
+  "ddCount": number or null,
+  "debitTxns": number or null,
+  "timeline": string or null (e.g. "90 days"),
+  "monthlyFee": string or null,
+  "feeWaiver": string or null,
+  "minBalance": string or null,
+  "earlyCloseDays": number or null,
+  "earlyCloseFee": string or null,
+  "churnMonths": number or null,
+  "promoCode": string or null,
+  "bonusPostTime": string or null,
+  "taxForm": string or null,
+  "requirements": [list of requirement strings],
+  "bankName": string or null
+}
+
+Terms & Conditions:
+${text.substring(0,6000)}`}]
+      })
+    });
+    const data=await resp.json();
+    const raw=data.content?.map(c=>c.text||'').join('')||'';
+    const clean=raw.replace(/```json|```/g,'').trim();
+    const parsed=JSON.parse(clean);
+    aiAnalyzing=false;
+    return parsed;
+  }catch(err){
+    aiAnalyzing=false;
+    return null;
+  }
+}
+
+// ═══════════════════════════════════
+// REQUIREMENTS STORAGE (Tips)
+// ═══════════════════════════════════
+const REQ_KEY='bt_bank_reqs';
+function loadBankReqs(){try{const v=localStorage.getItem(REQ_KEY);return v?JSON.parse(v):{}}catch{return{}}}
+function saveBankReqs(r){try{localStorage.setItem(REQ_KEY,JSON.stringify(r))}catch{}}
+function saveBankReq(bank,data){
+  const reqs=loadBankReqs();
+  reqs[bank.toLowerCase()]={bank,...data,updated:td()};
+  saveBankReqs(reqs);
+}
+
+// ═══════════════════════════════════
+// QUICK RECEIVE BONUS
+// ═══════════════════════════════════
+let rcvPrompt=null; // {entryId,bank,step:'date'|'wait',bonusDate:'',waitDays:0}
+
+function openReceive(id){
+  const e=entries.find(x=>x.id===id);
+  if(!e)return;
+  rcvPrompt={entryId:id,bank:e.bank,step:'date',bonusDate:td(),waitDays:0};
+  R();
+}
+
+function rcvSetDate(){
+  const d=document.getElementById('rcv_date')?.value;
+  if(d)rcvPrompt.bonusDate=d;
+  rcvPrompt.step='wait';
+  R();
+}
+
+function rcvSetWait(days){
+  rcvPrompt.waitDays=days;
+  R();
+}
+
+function rcvSubmit(){
+  if(!rcvPrompt)return;
+  const p=rcvPrompt;
+  // Update entry with bonus received date
+  entries=entries.map(e=>{
+    if(e.id===p.entryId){
+      e.bonusRecd=p.bonusDate;
+      // Save requirements to tips
+      saveBankReq(e.bank,{
+        bonus:e.bonus,ddAmount:e.dataPoint||'',notes:e.notes||'',
+        churn:e.churn,earlyCloseFee:e.earlyCloseFee,minHoldDays:e.minHoldDays
+      });
+    }
+    return e;
+  });
+
+  // If user chose to close now (0 days)
+  if(p.waitDays===0){
+    // Will trigger DD prompt after
+    const e=entries.find(x=>x.id===p.entryId);
+    entries=entries.map(x=>x.id===p.entryId?{...x,closed:td()}:x);
+    entries=sortE(entries);sv(SK,entries);
+    rcvPrompt=null;
+    ddPrompt={entryId:p.entryId,bank:p.bank,bonus:e?.bonus||0,closedDate:td(),selectedMethods:[],custom:''};
+    R();
+    return;
+  }
+
+  // If user chose to wait, just save
+  entries=sortE(entries);sv(SK,entries);
+  rcvPrompt=null;R();
+}
+
+function rcvSkip(){rcvPrompt=null;R()}
+
+// ═══════════════════════════════════
+// INLINE ANALYZER (inside edit modal)
+// ═══════════════════════════════════
+let inlineAnalyzing=false,inlineResult=null,showInlineAZ=false;
+
+async function runInlineAnalyze(){
+  const txt=document.getElementById('inline_tc')?.value;
+  if(!txt||txt.length<20){alert('Paste more text');return}
+  inlineAnalyzing=true;R();
+
+  const ai=await aiAnalyzeTC(txt);
+  if(ai){
+    inlineResult=ai;
+    // Auto-fill form fields
+    if(ai.bonusAmount){const f=document.getElementById('f_bonus');if(f&&!f.value)f.value=ai.bonusAmount}
+    if(ai.churnMonths){
+      const f=document.getElementById('f_churn');
+      if(f){f.value=ai.churnMonths<=6?'180':ai.churnMonths<=12?'1':ai.churnMonths<=24?'2':'3'}
+    }
+    if(ai.earlyCloseDays){const f=document.getElementById('f_minHold');if(f&&!f.value)f.value=ai.earlyCloseDays}
+    if(ai.earlyCloseFee){const f=document.getElementById('f_closeFee');if(f&&!f.value)f.value=parseInt(String(ai.earlyCloseFee).replace(/[$,]/g,''))||0}
+    if(ai.ddAmount||ai.debitTxns){
+      const f=document.getElementById('f_dp');
+      if(f&&!f.value)f.value=[ai.ddAmount?'DD '+ai.ddAmount:'',ai.debitTxns?ai.debitTxns+' debit txns':''].filter(Boolean).join(' + ');
+    }
+    if(ai.requirements){
+      const f=document.getElementById('f_notes');
+      if(f&&!f.value)f.value=ai.requirements.join(' / ');
+    }
+    if(ai.timeline){const f=document.getElementById('f_reqDays');if(f&&!f.value)f.value=parseInt(ai.timeline)||0}
+    if(ai.promoCode){
+      const f=document.getElementById('f_notes');
+      if(f)f.value=(f.value?f.value+' / ':'')+'Promo: '+ai.promoCode;
+    }
+  }else{
+    // Fallback to regex analyzer
+    inlineResult=analyzeTC(txt);
+  }
+  inlineAnalyzing=false;R();
+}
+
 let analyzerText='',analyzerResult=null,showAnalyzer=false;
 
 function analyzeTC(text){
@@ -722,6 +901,7 @@ function R(){
   if(modal)h+=rModal();
   if(cfm)h+=rConfirm();
   if(ddPrompt)h+=rDDPrompt();
+  if(rcvPrompt)h+=rRcvPrompt();
   document.getElementById('app').innerHTML=h;
   const ns=document.querySelector('.scroll');if(ns)ns.scrollTop=_scrollPos;
 }
@@ -787,7 +967,7 @@ function rTracker(sorted){
       h+=`<div class="card-exp">`;
       if(e.dataPoint)h+=`<div style="margin-bottom:6px"><span class="tag free">\u{1F4CB} ${esc(e.dataPoint)}</span></div>`;
       if(e.notes)h+=`<div class="card-notes">${esc(e.notes)}</div>`;
-      h+=`<div class="card-btns"><button class="cbtn edit" onclick="event.stopPropagation();openEdit('${e.id}')">\u270F\uFE0F Edit</button>${!e.closed?`<button class="cbtn cls" onclick="event.stopPropagation();closeAcct('${e.id}')">\u{1F512} Close</button>`:''}<button class="cbtn del" onclick="event.stopPropagation();delEntry('${e.id}')">\u{1F5D1} Delete</button></div></div>`;
+      h+=`<div class="card-btns"><button class="cbtn edit" onclick="event.stopPropagation();openEdit('${e.id}')">\u270F\uFE0F Edit</button>${!e.closed&&!e.bonusRecd?`<button class="cbtn rcv" onclick="event.stopPropagation();openReceive('${e.id}')">\u{1F389} Received</button>`:''}${!e.closed?`<button class="cbtn cls" onclick="event.stopPropagation();closeAcct('${e.id}')">\u{1F512} Close</button>`:''}<button class="cbtn del" onclick="event.stopPropagation();delEntry('${e.id}')">\u{1F5D1} Delete</button></div></div>`;
     }
     h+=`</div>`;
   });
@@ -897,6 +1077,27 @@ function rTips(){
     });
   }
 
+  // Saved bank requirements from T&C analysis
+  const bankReqs=loadBankReqs();
+  const reqList=Object.values(bankReqs).sort((a,b)=>(b.bonus||0)-(a.bonus||0));
+  if(reqList.length){
+    h+=`<div class="sec" style="margin-top:18px">\u{1F4D1} Saved Bonus Requirements</div>`;
+    h+=`<div style="font-size:11px;color:var(--muted);margin-bottom:10px">From T&C analysis \u2014 overwrites on re-churn</div>`;
+    reqList.forEach(r=>{
+      h+=`<div class="rcard"><div style="width:100%"><div class="rcard-top"><div class="nm">${esc(r.bank||r.bankName||'')}</div><div class="rt">${r.bonus?`<div class="ph">${fM(typeof r.bonus==='number'?r.bonus:parseInt(String(r.bonus).replace(/[$,]/g,''))||0)}</div>`:''}<div class="ph2">Updated ${fD(r.updated)}</div></div></div>`;
+      const tags=[];
+      if(r.ddAmount)tags.push('DD: '+r.ddAmount);
+      if(r.debitTxns)tags.push(r.debitTxns+' debit txns');
+      if(r.timeline)tags.push('Within '+r.timeline);
+      if(r.monthlyFee)tags.push('Fee: '+r.monthlyFee);
+      if(r.earlyCloseFee&&r.earlyCloseFee!=='None'&&r.earlyCloseFee!=='$0')tags.push('Close fee: '+r.earlyCloseFee);
+      if(r.promoCode)tags.push('Code: '+r.promoCode);
+      if(tags.length){h+=`<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px">`;tags.forEach(t=>{h+=`<span class="tag fee">${esc(t)}</span>`});h+=`</div>`}
+      if(r.requirements&&r.requirements.length){h+=`<div style="margin-top:4px;font-size:10px;color:var(--muted);line-height:1.5">${r.requirements.map(x=>esc(x)).join(' \u00B7 ')}</div>`}
+      h+=`</div></div>`;
+    });
+  }
+
   // Community data points
   h+=`<div class="sec" style="margin-top:18px">\u{1F30D} Community Data Points</div>`;
   h+=`<div style="font-size:11px;color:var(--muted);margin-bottom:10px">What works for DD \u2014 sourced from Doctor of Credit + Reddit</div>`;
@@ -921,11 +1122,11 @@ function rTips(){
 
 function rAnalyzer(){
   let h=`<div class="az-result" style="margin-bottom:12px;border:2px solid var(--accent)">
-    <h3>\u{1F9E0} T&C Analyzer</h3>
+    <h3>\u{1F9E0} T&C Analyzer <span class="ai-badge">AI-Powered</span></h3>
     <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Paste the full terms & conditions below. The analyzer will extract bonus requirements, fees, timelines, and more.</div>
     <textarea class="az-textarea" id="az_input" placeholder="Paste terms & conditions here...\n\nExample: Eligible Customers who open a new checking account and complete qualifying activities will receive a cash bonus of $300 credited to the Account. You must complete two or more direct deposits within 90 days totaling $1,000...">${esc(analyzerText)}</textarea>
     <div style="display:flex;gap:6px;margin-top:8px">
-      <button class="analyze-btn" style="flex:1;margin:0" onclick="runAnalyzer()">\u{1F50D} Analyze</button>
+      <button class="analyze-btn" style="flex:1;margin:0" onclick="runAnalyzer()">${aiAnalyzing?'<span class="spin" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:4px"></span> Analyzing...':'\u{1F50D} AI Analyze'}</button>
       <button class="btn-sec" style="flex:0;margin:0;padding:10px 16px" onclick="showAnalyzer=false;analyzerText='';analyzerResult=null;R()">Close</button>
     </div>`;
 
@@ -973,12 +1174,39 @@ function rAnalyzer(){
   return h;
 }
 
-function runAnalyzer(){
+async function runAnalyzer(){
   const el=document.getElementById('az_input');
   if(!el)return;
   analyzerText=el.value;
-  analyzerResult=analyzeTC(analyzerText);
-  if(!analyzerResult)alert('Could not extract enough data. Try pasting more of the terms & conditions.');
+  if(!analyzerText||analyzerText.length<20){alert('Paste more text');return}
+
+  // Try AI first
+  const ai=await aiAnalyzeTC(analyzerText);
+  if(ai){
+    analyzerResult={};
+    if(ai.bonusAmount)analyzerResult.bonusAmount='$'+ai.bonusAmount;
+    if(ai.ddAmount)analyzerResult.ddAmount=ai.ddAmount;
+    if(ai.ddCount)analyzerResult.ddCount=ai.ddCount;
+    if(ai.debitTxns)analyzerResult.debitTxns=ai.debitTxns;
+    if(ai.timeline)analyzerResult.timeline=ai.timeline;
+    if(ai.monthlyFee)analyzerResult.monthlyFee=ai.monthlyFee;
+    if(ai.feeWaiver)analyzerResult.feeWaiver=ai.feeWaiver;
+    if(ai.minBalance)analyzerResult.minBalance=ai.minBalance;
+    if(ai.earlyCloseDays)analyzerResult.earlyCloseDays=ai.earlyCloseDays+' days';
+    if(ai.earlyCloseFee)analyzerResult.earlyCloseFee=ai.earlyCloseFee;
+    if(ai.churnMonths){analyzerResult.churnMonths=ai.churnMonths;analyzerResult.churnRule=ai.churnMonths<=6?'180 days':ai.churnMonths<=12?'1 year':ai.churnMonths<=24?'2 years':'3 years'}
+    if(ai.promoCode)analyzerResult.promoCode=ai.promoCode;
+    if(ai.bonusPostTime)analyzerResult.bonusPostTime=ai.bonusPostTime;
+    if(ai.taxForm)analyzerResult.taxForm=ai.taxForm;
+    if(ai.requirements)analyzerResult.checklist=ai.requirements;
+    if(ai.bankName)analyzerResult.bankName=ai.bankName;
+    // Save to bank reqs
+    if(ai.bankName)saveBankReq(ai.bankName,ai);
+  }else{
+    // Fallback to regex
+    analyzerResult=analyzeTC(analyzerText);
+  }
+  if(!analyzerResult||Object.keys(analyzerResult).length<2)alert('Could not extract enough data.');
   R();
 }
 
@@ -999,6 +1227,40 @@ function fillFromAnalysis(){
   R();
 }
 
+
+
+function rRcvPrompt(){
+  if(!rcvPrompt)return'';
+  const p=rcvPrompt;
+  let h=`<div class="cbg" onclick="rcvSkip()"><div class="rcv-modal" onclick="event.stopPropagation()">`;
+
+  if(p.step==='date'){
+    h+=`<h3>\u{1F389} Bonus Received!</h3>`;
+    h+=`<div class="sub">When did ${esc(p.bank)} post the bonus to your account?</div>`;
+    h+=`<input class="dd-input" id="rcv_date" type="date" value="${p.bonusDate}">`;
+    h+=`<div class="dd-btns"><button class="dd-skip" onclick="rcvSkip()">Cancel</button><button class="dd-save" onclick="rcvSetDate()">Next \u2192</button></div>`;
+  }else{
+    h+=`<h3>\u23F0 Close or Wait?</h3>`;
+    h+=`<div class="sub">When do you want to close ${esc(p.bank)}? Waiting builds a good relationship with the bank for future churns.</div>`;
+    h+=`<div class="wait-grid">`;
+    const opts=[
+      {d:0,label:'Close Now',sub:'Immediate'},
+      {d:15,label:'15 Days',sub:'Quick hold'},
+      {d:30,label:'30 Days',sub:'Standard'},
+      {d:45,label:'45 Days',sub:'Safe bet'},
+      {d:90,label:'90 Days',sub:'Recommended'},
+      {d:185,label:'185 Days',sub:'Max relationship'}
+    ];
+    opts.forEach(o=>{
+      h+=`<button class="wait-btn${p.waitDays===o.d?' sel':''}" onclick="rcvSetWait(${o.d})"><div>${o.label}</div><div class="sm">${o.sub}</div></button>`;
+    });
+    h+=`</div>`;
+    if(p.waitDays>0)h+=`<div style="font-size:11px;color:var(--muted);text-align:center;margin:6px 0">Reminder: close after ${fD(addD(p.bonusDate,p.waitDays))}</div>`;
+    h+=`<div class="dd-btns"><button class="dd-skip" onclick="rcvPrompt.step='date';R()">Back</button><button class="dd-save" onclick="rcvSubmit()">\u2705 Confirm</button></div>`;
+  }
+  h+=`</div></div>`;
+  return h;
+}
 
 function rDDPrompt(){
   if(!ddPrompt)return'';
@@ -1060,6 +1322,8 @@ function rModal(){
   <div class="sec" style="margin:8px 0 6px">\u23F1 Early Close Protection</div>
   <div class="frow"><div class="fg"><label>Min Hold Days</label><input id="f_minHold" type="number" inputmode="numeric" value="${e.minHoldDays||''}" placeholder="180"><div class="fg-hint">Days before safe to close</div></div><div class="fg"><label>Early Close Fee</label><input id="f_closeFee" type="number" inputmode="numeric" value="${e.earlyCloseFee||''}" placeholder="25"></div></div>
   <div class="fg"><label>Notes</label><textarea id="f_notes" rows="3">${esc(e.notes||'')}</textarea></div>
+    <div style="margin-bottom:10px"><button type="button" style="width:100%;padding:10px;border-radius:var(--rs);border:1.5px dashed var(--accent);background:transparent;font-family:inherit;font-size:12px;font-weight:600;color:var(--accent);cursor:pointer" onclick="showInlineAZ=!showInlineAZ;R()">\u{1F9E0} ${showInlineAZ?'Hide':'Paste T&C to Auto-fill'}</button></div>
+    ${showInlineAZ?`<div class="az-inline"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Paste the bank's terms & conditions below. AI will extract and auto-fill the fields above.</div><textarea id="inline_tc" class="az-textarea" placeholder="Paste T&C here..." style="min-height:100px"></textarea>${inlineAnalyzing?'<div style="text-align:center;padding:8px;font-size:11px;color:var(--muted)"><span class="spin"></span> AI analyzing...</div>':'<button onclick="event.preventDefault();runInlineAnalyze()">\u{1F9E0} Analyze & Auto-fill</button>'}${inlineResult?'<div style="margin-top:6px;font-size:11px;color:var(--green);font-weight:600">\u2705 Fields auto-filled from analysis</div>':''}</div>`:''}
   <button class="btn-pri" onclick="saveEntry()">\u{1F4BE} ${e._edit?'Save Changes':'Add Entry'}</button><button class="btn-sec" onclick="modal=null;R()">Cancel</button></div></div>`;
 }
 
@@ -1134,7 +1398,7 @@ function toggleDDChip(method){
 // BACKUP & RESTORE
 // ═══════════════════════════════════
 function exportBackup(){
-  const data={entries,ddMethods:loadDDMethods(),version:'v5',exported:new Date().toISOString()};
+  const data={entries,ddMethods:loadDDMethods(),bankReqs:loadBankReqs(),version:'v6',exported:new Date().toISOString()};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
@@ -1158,6 +1422,7 @@ function importBackup(){
           entries=sortE(data.entries);
           sv(SK,entries);
           if(data.ddMethods)saveDDMethods(data.ddMethods);
+          if(data.bankReqs)saveBankReqs(data.bankReqs);
           cfm={title:'Restore Complete',msg:data.entries.length+' entries restored from backup ('+fD(data.exported?.split('T')[0]||'')+').',green:true,action:()=>{cfm=null;R()}};
           R();
         }else{alert('Invalid backup file')}
