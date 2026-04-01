@@ -19,7 +19,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 /* HEADER */
 .hdr{background:linear-gradient(145deg,#070B16,#0F1B3D);padding:max(env(safe-area-inset-top),12px) 16px 0;flex-shrink:0}
 .hdr-row{display:flex;justify-content:space-between;align-items:center}
-.hdr h1{font-size:17px;font-weight:800;color:#fff}.hdr h1 em{font-style:normal;color:var(--sky)}
+.hdr h1{font-size:18px;font-weight:800;color:#fff}.hdr h1 em{font-style:normal;color:var(--sky)}
 .hdr-sub{font-size:9px;color:#64748B;padding:1px 0 8px;letter-spacing:.6px}
 .yr-pills{display:flex;gap:4px}
 .yr-btn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:#94A3B8;padding:3px 10px;border-radius:14px;font-family:inherit;font-size:10px;font-weight:600;cursor:pointer}
@@ -28,10 +28,10 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 /* STATS */
 .stats{display:flex;gap:5px;padding:0 12px 8px;background:linear-gradient(145deg,#070B16,#0F1B3D);flex-shrink:0}
 .st{flex:1;background:rgba(255,255,255,.04);border-radius:10px;padding:8px 4px;text-align:center;border:1px solid rgba(255,255,255,.05)}
-.st .n{font-size:18px;font-weight:800;line-height:1}.st .l{font-size:7px;color:#94A3B8;text-transform:uppercase;letter-spacing:.7px;margin-top:2px;font-weight:700}
+.st .n{font-size:20px;font-weight:800;line-height:1}.st .l{font-size:7px;color:#94A3B8;text-transform:uppercase;letter-spacing:.7px;margin-top:2px;font-weight:700}
 .st:nth-child(1) .n{color:#60A5FA}.st:nth-child(2) .n{color:#FBBF24}.st:nth-child(3) .n{color:#F87171}.st:nth-child(4) .n{color:#34D399}
 .yr-bar{background:linear-gradient(145deg,#070B16,#0F1B3D);padding:0 16px 10px;flex-shrink:0}
-.yr-amt{font-size:24px;font-weight:800;color:var(--sky)}.yr-lbl{font-size:9px;color:#64748B}
+.yr-amt{font-size:26px;font-weight:800;color:var(--sky)}.yr-lbl{font-size:9px;color:#64748B}
 
 /* SCROLL */
 .scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:8px 12px 110px;overscroll-behavior:contain}
@@ -39,7 +39,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 /* TABS */
 .tabs{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:4px 0 max(var(--safe-b),5px);z-index:100}
 .tb{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 2px;background:none;border:none;cursor:pointer;font-family:inherit}
-.tb svg{width:20px;height:20px;stroke:var(--muted);fill:none;stroke-width:1.8}.tb span{font-size:8px;font-weight:600;color:var(--muted)}
+.tb svg{width:20px;height:20px;stroke:var(--muted);fill:none;stroke-width:1.8}.tb span{font-size:9px;font-weight:600;color:var(--muted)}
 .tb.on svg{stroke:var(--accent)}.tb.on span{color:var(--accent);font-weight:700}
 
 /* FAB */
@@ -52,18 +52,18 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .card-h{padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:10px}
 .card-h:active{background:rgba(0,0,0,.02)}
 .card-left{flex:1;min-width:0}
-.card-name{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-name{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card-row{display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap}
-.badge{padding:2px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:.2px}
+.badge{padding:3px 9px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.2px}
 .badge.w{background:#DBEAFE;color:#1E40AF}.badge.wt{background:#D1FAE5;color:#065F46}.badge.ch{background:#DC2626;color:#fff}
-.card-stat{font-size:11px;font-weight:600;color:var(--sub)}
+.card-stat{font-size:12px;font-weight:600;color:var(--sub)}
 .card-stat em{font-style:normal;color:var(--accent)}
 .card-right{text-align:right;flex-shrink:0}
-.card-bonus{font-size:16px;font-weight:800;color:var(--accent)}
+.card-bonus{font-size:18px;font-weight:800;color:var(--accent)}
 .card-id{font-size:9px;color:var(--muted);margin-top:2px}
 
 /* COUNTDOWN PILL */
-.cd-pill{display:flex;align-items:center;gap:5px;padding:6px 10px;margin:0 14px 8px;border-radius:10px;font-size:11px;font-weight:700}
+.cd-pill{display:flex;align-items:center;gap:6px;padding:8px 12px;margin:0 14px 8px;border-radius:10px;font-size:12px;font-weight:700}
 .cd-pill .icon{font-size:14px}.cd-pill .days{margin-left:auto}
 .cd-pill.blue{background:#EFF6FF;color:#1E40AF}.cd-pill.amber{background:#FEF3C7;color:#92400E}.cd-pill.red{background:#FEE2E2;color:#991B1B}.cd-pill.green{background:#ECFDF5;color:#065F46}
 .cd-prog{height:3px;margin:0 14px 4px;border-radius:2px;background:#E2E8F0;overflow:hidden}
@@ -72,9 +72,9 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 /* EXPANDED */
 .card-exp{padding:0 14px 12px}
 .card-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px 10px;margin-bottom:8px}
-.cf{padding:4px 0}.cf .k{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;font-weight:700}.cf .v{font-size:11px;font-weight:600;color:var(--text)}
+.cf{padding:4px 0}.cf .k{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;font-weight:700}.cf .v{font-size:12px;font-weight:600;color:var(--text)}
 .cf .v.ok{color:var(--green)}.cf .v.warn{color:var(--red)}.cf .v.money{color:var(--accent)}
-.card-notes{font-size:11px;color:var(--sub);line-height:1.5;padding:6px 0;border-top:1px solid var(--border)}
+.card-notes{font-size:12px;color:var(--sub);line-height:1.5;padding:6px 0;border-top:1px solid var(--border)}
 .card-btns{display:flex;gap:5px;padding-top:8px}
 .cbtn{flex:1;padding:9px;border-radius:10px;border:none;font-family:inherit;font-size:10px;font-weight:700;cursor:pointer}
 .cbtn:active{transform:scale(.95)}
@@ -82,7 +82,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 
 /* CHECKLIST */
 .ck{list-style:none;padding:0;margin:6px 0}
-.ck li{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px}
+.ck li{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
 .ck li:last-child{border:none}
 .ckb{width:18px;height:18px;border-radius:5px;border:2px solid var(--border);background:var(--bg);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .ckb.dn{background:var(--green);border-color:var(--green)}.ckb.dn::after{content:'✓';color:#fff;font-size:10px;font-weight:800}
@@ -105,8 +105,8 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .m-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .m-hdr h2{font-size:17px;font-weight:800}.m-id{font-size:10px;color:var(--muted);background:var(--bg);padding:2px 8px;border-radius:6px}
 .m-sec{font-size:9px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.7px;margin:12px 0 5px;padding-top:8px;border-top:1px solid var(--border)}
-.fg{margin-bottom:8px}.fg label{font-size:10px;font-weight:600;color:var(--sub);display:block;margin-bottom:2px}
-.fg input,.fg select,.fg textarea{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;color:var(--text);background:#fff;outline:none;-webkit-appearance:none}
+.fg{margin-bottom:8px}.fg label{font-size:11px;font-weight:600;color:var(--sub);display:block;margin-bottom:2px}
+.fg input,.fg select,.fg textarea{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:16px;color:var(--text);background:#fff;outline:none;-webkit-appearance:none}
 .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.08)}
 .fg textarea{font-size:12px;line-height:1.5;resize:vertical;min-height:60px}
 .fg select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
@@ -176,7 +176,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .tag.y{background:#D1FAE5;color:#065F46}.tag.n{background:#FEE2E2;color:#991B1B}.tag.f{background:#FEF3C7;color:#92400E}.tag.b{background:#DBEAFE;color:#1E40AF}.tag.m{background:#EDE9FE;color:#5B21B6}
 
 /* TAX */
-.sec{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin:12px 0 6px}
+.sec{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin:12px 0 6px}
 .ybar{display:flex;gap:4px;overflow-x:auto;padding:2px 0 8px;-webkit-overflow-scrolling:touch}
 .ypill{flex-shrink:0;padding:4px 10px;border-radius:14px;font-size:10px;font-weight:600;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-family:inherit}
 .ypill.on{background:var(--navy);color:#fff;border-color:var(--navy)}
@@ -269,7 +269,7 @@ function analyzeTC(text){if(!text||text.length<20)return null;const t=text.toLow
 let aiLoading=false;
 async function aiAnalyze(text){
   aiLoading=true;R();
-  try{const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:'Analyze these bank bonus T&C. Return ONLY raw JSON (no markdown/backticks):\n{"bankName":string,"bonusAmount":number,"ddAmount":string,"ddCount":number,"debitTxns":number,"timeline":string,"monthlyFee":string,"feeWaiver":string,"minBalance":string,"earlyCloseDays":number,"earlyCloseFee":string,"churnMonths":number,"promoCode":string,"bonusPostTime":string,"taxForm":string,"requirements":[strings],"notesForTracker":string}\nFor notesForTracker write a Doctor of Credit style summary with ALL key info: steps, amounts, timelines, what does NOT count as DD, fees, penalties, churn rule. Use * bullets.\n\nT&C:\n'+text.substring(0,8000)}]})});
+  try{const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:'You are a bank bonus expert writing for Doctor of Credit. Analyze these T&C and return ONLY raw JSON (no markdown, no backticks):\n{\n"bankName":string or null,\n"bonusAmount":number or null,\n"ddAmount":string or null,\n"ddCount":number or null,\n"debitTxns":number or null,\n"timeline":string or null,\n"monthlyFee":string or null,\n"feeWaiver":string or null,\n"minBalance":string or null,\n"earlyCloseDays":number or null,\n"earlyCloseFee":string or null,\n"churnMonths":number or null,\n"promoCode":string or null,\n"bonusPostTime":string or null,\n"taxForm":string or null,\n"requirements":[short step strings],\n"notesForTracker":string\n}\n\nCRITICAL for notesForTracker: Write a COMPLETE Doctor of Credit Fine Print style guide. Format exactly like this with * bullet points:\n\n* Bonus: $X for [account type]\n* Open [account] between [dates] using promo code [X]\n* Step 1: [first requirement with exact amounts and timeframe]\n* Step 2: [second requirement]\n* Step 3: [etc]\n* Direct deposits must be from [employer/government]. [What does NOT count as DD]\n* Monthly fee: $X. Waived with [conditions]\n* Minimum opening deposit: $X\n* Bonus posts within [X days] of meeting requirements\n* Account must remain open and in good standing at time of payout\n* Early close fee: $X if closed within [X days] (or None)\n* Churn rule: Not eligible if had account within [X months]\n* Tax: Reported on [1099-INT/1099-MISC]\n* Important: [any other key warnings or tips]\n\nBe thorough. Include EVERY detail a bank bonus churner needs. Do not skip anything.\n\nT&C:\n'+text.substring(0,8000)}]})});
   const data=await resp.json();const raw=(data.content||[]).map(c=>c.text||'').join('');const clean=raw.replace(/```json|```/g,'').trim();aiLoading=false;return JSON.parse(clean)}
   catch(err){aiLoading=false;return null}}
 
@@ -428,14 +428,14 @@ function rTracker(sorted){
       if(eff)h+='<div class="cf"><div class="k">Effort</div><div class="v"><span class="effort '+eff.level+'">'+eff.label+'</span></div></div>';
       if(e.referralBonus)h+='<div class="cf"><div class="k">Referral</div><div class="v"><span class="ref-b">+'+fM(e.referralBonus)+'</span></div></div>';
       h+='</div>';
-      if(e.dataPoint)h+='<div style="margin:4px 0"><span class="tag b">\uD83D\uDCCB '+esc(e.dataPoint)+'</span></div>';
+      
       // Checklist
       if(!e.closed){
         h+='<div class="sec" style="margin-top:6px">Checklist</div><ul class="ck">';
         if(e.checklist&&e.checklist.length){e.checklist.forEach((c,ci)=>{h+='<li><div class="ckb'+(c.done?' dn':'')+'" onclick="event.stopPropagation();toggleCk(\''+e.id+'\','+ci+')"></div><span class="ck-text'+(c.done?' dn':'')+'">'+esc(c.text)+'</span><span class="ck-del" onclick="event.stopPropagation();rmCk(\''+e.id+'\','+ci+')">\u2715</span></li>'})}
         h+='</ul><div class="ck-add"><input id="ck_'+e.id+'" placeholder="Add step..." onclick="event.stopPropagation()" onkeydown="if(event.key===\'Enter\'){event.stopPropagation();addCk(\''+e.id+'\')}"><button onclick="event.stopPropagation();addCk(\''+e.id+'\')">+</button></div>';
       }
-      if(e.notes)h+='<div class="card-notes">'+esc(e.notes)+'</div>';
+      if(e.notes)h+='<div class="card-notes" style="white-space:pre-wrap;font-size:12px;line-height:1.6">'+esc(e.notes)+'</div>';
       // Action buttons
       h+='<div class="card-btns"><button class="cbtn edit" onclick="event.stopPropagation();openEdit(\''+e.id+'\')">\u270F\uFE0F Edit</button>';
       if(!e.closed&&(!e.bonusRecd||e.bonusRecd===''))h+='<button class="cbtn rcv" onclick="event.stopPropagation();openRcv(\''+e.id+'\')">\uD83C\uDF89 Received</button>';
@@ -533,15 +533,9 @@ function rModal(){
   const df=(lbl,id,k,v)=>'<div class="fg"><label>'+lbl+'</label><div class="date-wrap"><input type="date" value="'+(v||'')+'"'+oi(k)+'><button class="date-clr" type="button" onclick="modal.'+k+'=\'\';this.previousElementSibling.value=\'\'">\u2715</button></div></div>';
   h+='<div class="frow">'+df('Opened','fo','opened',e.opened)+df('Closed','fc','closed',e.closed)+'</div>';
   h+='<div class="frow">'+df('Bonus Received','fb','bonusRecd',e.bonusRecd)+df('Req Met','fr','reqMet',e.reqMet)+'</div>';
-  h+='<div class="m-sec">Data Point</div>';
-  h+='<div class="fg"><label>What Triggered Bonus</label><input value="'+esc(e.dataPoint||'')+'"'+oi('dataPoint')+'placeholder="e.g. Robinhood ACH"></div>';
-  h+='<div class="m-sec">Timers & Fees</div>';
-  h+='<div class="frow"><div class="fg"><label>Req Deadline (d)</label><input type="number" inputmode="numeric" value="'+(e.reqDays||'')+'"'+on('reqDays')+'placeholder="90"></div>';
-  h+='<div class="fg"><label>Min Hold (d)</label><input type="number" inputmode="numeric" value="'+(e.minHoldDays||'')+'"'+on('minHoldDays')+'placeholder="180"></div></div>';
-  h+='<div class="frow"><div class="fg"><label>Close Fee $</label><input type="number" inputmode="numeric" value="'+(e.earlyCloseFee||'')+'"'+on('earlyCloseFee')+'placeholder="25"></div>';
-  h+='<div class="fg"><label>Referral $</label><input type="number" inputmode="numeric" value="'+(e.referralBonus||'')+'"'+on('referralBonus')+'placeholder="50"></div></div>';
-  h+='<div class="m-sec">Notes</div>';
-  h+='<div class="fg"><textarea rows="3"'+oi('notes')+'placeholder="DD requirements, fees, tips...">'+esc(e.notes||'')+'</textarea></div>';
+  h+='<div class="m-sec">Notes & Requirements</div>';
+  h+='<div style="font-size:11px;color:var(--muted);margin-bottom:4px">Use the T&C Analyzer below to auto-fill, or type manually.</div>';
+  h+='<div class="fg"><textarea rows="8" style="font-size:13px;line-height:1.6;min-height:150px"'+oi('notes')+'placeholder="Paste T&C analysis here or type requirements...\n\n* Step 1: Open account with promo code\n* Step 2: Set up $1,000 DD within 90 days\n* Step 3: Complete 10 debit transactions\n...">'+esc(e.notes||'')+'</textarea></div>';
   // Inline T&C analyzer
   h+='<button type="button" class="tc-btn" onclick="showInlineAZ=!showInlineAZ;R()">\uD83E\uDDE0 '+(showInlineAZ?'Hide T&C Analyzer':'Paste T&C to Auto-fill')+'</button>';
   if(showInlineAZ){h+='<div class="az-area"><textarea id="inline_tc" placeholder="Paste T&C here..."></textarea>'+(inlineLoading?'<div style="text-align:center;padding:8px"><span class="spin"></span> Analyzing...</div>':'<button class="az-go" onclick="event.preventDefault();runInlineAI()">Analyze & Auto-fill</button>')+(inlineResult?'<div style="margin-top:4px;font-size:10px;color:var(--green);font-weight:600">\u2705 Auto-filled!</div>':'')+'</div>'}
@@ -593,7 +587,7 @@ function rAnalyzer(){
     if(r.earlyCloseFee)h+='<div><strong>Close Fee:</strong> '+r.earlyCloseFee+'</div>';
     if(r.promoCode)h+='<div><strong>Promo:</strong> '+r.promoCode+'</div>';
     if(r.churnRule)h+='<div><strong>Churn:</strong> '+r.churnRule+' ('+r.churnMonths+'mo)</div>';
-    if(r.notesForTracker)h+='<div style="margin-top:6px;padding:8px;background:var(--bg);border-radius:8px;white-space:pre-wrap;font-size:10px">'+esc(r.notesForTracker)+'</div>';
+    if(r.notesForTracker)h+='<div style="margin-top:8px;padding:10px;background:var(--bg);border-radius:10px;white-space:pre-wrap;font-size:12px;line-height:1.7;color:var(--text)">'+esc(r.notesForTracker)+'</div>';
     if(r.checklist&&r.checklist.length){h+='<div style="margin-top:4px;font-weight:700">Steps:</div>';r.checklist.forEach(c=>{h+='<div>\u2022 '+esc(c)+'</div>'})}
     h+='<button class="btn-p" style="margin-top:6px;font-size:12px;padding:10px" onclick="fillFromAI()">\u2B07 Auto-fill New Entry</button>';
     h+='</div>';
@@ -664,7 +658,18 @@ async function runInlineAI(){
   const el=document.getElementById('inline_tc');if(!el||el.value.length<20){alert('Paste more text');return}
   inlineLoading=true;R();
   const ai=await aiAnalyze(el.value);inlineLoading=false;
-  if(ai){inlineResult=ai;if(ai.bonusAmount&&!modal.bonus)modal.bonus=ai.bonusAmount;if(ai.churnMonths&&!modal.churn)modal.churn=ai.churnMonths<=6?'180':ai.churnMonths<=12?'1':ai.churnMonths<=24?'2':'3';if(ai.earlyCloseDays&&!modal.minHoldDays)modal.minHoldDays=ai.earlyCloseDays;if(ai.earlyCloseFee&&!modal.earlyCloseFee)modal.earlyCloseFee=parseInt(String(ai.earlyCloseFee).replace(/[$,]/g,''))||0;if(ai.ddAmount||ai.debitTxns)if(!modal.dataPoint)modal.dataPoint=[ai.ddAmount?'DD '+ai.ddAmount:'',ai.debitTxns?ai.debitTxns+' debit txns':''].filter(Boolean).join(' + ');if(ai.notesForTracker)modal.notes=ai.notesForTracker;else if(ai.requirements&&!modal.notes)modal.notes=ai.requirements.join(' / ');if(ai.timeline&&!modal.reqDays)modal.reqDays=parseInt(ai.timeline)||0;if(ai.promoCode)modal.notes=(modal.notes||'')+(modal.notes?'\nPromo: ':'Promo: ')+ai.promoCode;if(ai.bankName&&!modal.bank)modal.bank=ai.bankName}
+  if(ai){inlineResult=ai;
+    if(ai.bonusAmount&&!modal.bonus)modal.bonus=ai.bonusAmount;
+    if(ai.churnMonths&&!modal.churn)modal.churn=ai.churnMonths<=6?'180':ai.churnMonths<=12?'1':ai.churnMonths<=24?'2':'3';
+    if(ai.bankName&&!modal.bank)modal.bank=ai.bankName;
+    // Hidden fields auto-set from analysis
+    if(ai.earlyCloseDays)modal.minHoldDays=ai.earlyCloseDays;
+    if(ai.earlyCloseFee)modal.earlyCloseFee=parseInt(String(ai.earlyCloseFee).replace(/[$,]/g,''))||0;
+    if(ai.timeline)modal.reqDays=parseInt(ai.timeline)||0;
+    if(ai.ddAmount||ai.debitTxns)modal.dataPoint=[ai.ddAmount?'DD '+ai.ddAmount:'',ai.debitTxns?ai.debitTxns+' debit txns':''].filter(Boolean).join(' + ');
+    // Notes gets the full fine print
+    if(ai.notesForTracker)modal.notes=ai.notesForTracker;
+    else if(ai.requirements)modal.notes=ai.requirements.join('\n* ')}
   else{inlineResult=analyzeTC(el.value)}
   R();
 }
@@ -673,7 +678,7 @@ function fillFromAI(){
   modal={bank:r.bankName||'',bonus:typeof r.bonusAmount==='number'?r.bonusAmount:parseInt(String(r.bonusAmount||'').replace(/[$,]/g,''))||0,
   churn:r.churnMonths?(r.churnMonths<=6?'180':r.churnMonths<=12?'1':r.churnMonths<=24?'2':'3'):'',
   opened:'',closed:'',bonusRecd:'',reqMet:'',
-  notes:r.notesForTracker||(r.checklist?r.checklist.join(' / '):''),
+  notes:r.notesForTracker||(r.checklist?'* '+r.checklist.join('\n* '):''),
   minHoldDays:typeof r.earlyCloseDays==='number'?r.earlyCloseDays:parseInt(String(r.earlyCloseDays||''))||0,
   earlyCloseFee:parseInt(String(r.earlyCloseFee||'').replace(/[$,]/g,''))||0,
   dataPoint:[r.ddAmount?'DD '+r.ddAmount:'',r.debitTxns?r.debitTxns+' debit txns':''].filter(Boolean).join(' + '),
