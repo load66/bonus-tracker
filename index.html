@@ -412,6 +412,10 @@ function analyzeTC(text){
   if(t.includes('soft pull')||t.includes('soft inquiry'))r.pullType='Soft pull';
   if(t.includes('credit approval')||t.includes('subject to credit'))r.creditCheck=true;
 
+  // ── BANK NAME ──
+  const bnPatterns=[/(\w[\w\s&.']+?)\s+(?:credit union|bank|financial)/i,/(?:open|new)\s+(?:a\s+)?(?:new\s+)?([\w\s]+?)\s+(?:checking|savings)/i];
+  for(const p of bnPatterns){const m=text.match(p);if(m){const name=(m[1]||m[2]||'').trim();if(name.length>2&&name.length<40)r.bankName=name;break}}
+  
   // ═══ BUILD FINE PRINT NOTES ═══
   const n=[];
   // Header
@@ -489,15 +493,7 @@ function analyzeTC(text){
   return Object.keys(r).length>1?r:null;
 }
 /* AI ANALYZER */
-let aiLoading=false;
-// CHANGE THIS to your Cloudflare Worker URL after deploying
-const AI_PROXY='https://YOUR-WORKER-NAME.YOUR-SUBDOMAIN.workers.dev';
 
-async function aiAnalyze(text){
-  aiLoading=true;R();
-  try{const resp=await fetch(AI_PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,messages:[{role:'user',content:'You are a bank bonus expert writing for Doctor of Credit. Analyze these T&C and return ONLY raw JSON (no markdown, no backticks):\n{\n"bankName":string or null,\n"bonusAmount":number or null,\n"ddAmount":string or null,\n"ddCount":number or null,\n"debitTxns":number or null,\n"timeline":string or null,\n"monthlyFee":string or null,\n"feeWaiver":string or null,\n"minBalance":string or null,\n"earlyCloseDays":number or null,\n"earlyCloseFee":string or null,\n"churnMonths":number or null,\n"promoCode":string or null,\n"bonusPostTime":string or null,\n"taxForm":string or null,\n"requirements":[short step strings],\n"notesForTracker":string\n}\n\nCRITICAL for notesForTracker: Write a COMPLETE Doctor of Credit Fine Print style guide. Format exactly like this with * bullet points:\n\n* Bonus: $X for [account type]\n* Open [account] between [dates] using promo code [X]\n* Step 1: [first requirement with exact amounts and timeframe]\n* Step 2: [second requirement]\n* Step 3: [etc]\n* Direct deposits must be from [employer/government]. [What does NOT count as DD]\n* Monthly fee: $X. Waived with [conditions]\n* Minimum opening deposit: $X\n* Bonus posts within [X days] of meeting requirements\n* Account must remain open and in good standing at time of payout\n* Early close fee: $X if closed within [X days] (or None)\n* Churn rule: Not eligible if had account within [X months]\n* Tax: Reported on [1099-INT/1099-MISC]\n* Important: [any other key warnings or tips]\n\nBe thorough. Include EVERY detail a bank bonus churner needs. Do not skip anything.\n\nT&C:\n'+text.substring(0,8000)}]})});
-  const data=await resp.json();const raw=(data.content||[]).map(c=>c.text||'').join('');const clean=raw.replace(/```json|```/g,'').trim();aiLoading=false;return JSON.parse(clean)}
-  catch(err){aiLoading=false;return null}}
 
 /* DEFAULT DATA */
 const DEF=[
@@ -540,7 +536,7 @@ const DOC_LINKS=[["DD Methods Master List","https://www.doctorofcredit.com/knowl
 let entries=ld(SK,DEF),tab='tracker',expanded=null,modal=null,cfm=null,search='';
 let dashYear=new Date().getFullYear(),taxYear=new Date().getFullYear();
 let showAnalyzer=false,analyzerText='',analyzerResult=null;
-let showInlineAZ=false,inlineResult=null,inlineLoading=false;
+let showInlineAZ=false,inlineResult=null;
 let ddPrompt=null,rcvPrompt=null,showTemplates=false;
 let feedItems=null,feedLoading=false;
 let _sp=0;
@@ -764,7 +760,7 @@ function rModal(){
   h+='<div class="fg"><textarea rows="8" style="font-size:13px;line-height:1.6;min-height:150px"'+oi('notes')+'placeholder="Paste T&C analysis here or type requirements...\n\n* Step 1: Open account with promo code\n* Step 2: Set up $1,000 DD within 90 days\n* Step 3: Complete 10 debit transactions\n...">'+esc(e.notes||'')+'</textarea></div>';
   // Inline T&C analyzer
   h+='<button type="button" class="tc-btn" onclick="showInlineAZ=!showInlineAZ;R()">\uD83E\uDDE0 '+(showInlineAZ?'Hide T&C Analyzer':'Paste T&C to Auto-fill')+'</button>';
-  if(showInlineAZ){h+='<div class="az-area"><textarea id="inline_tc" placeholder="Paste T&C here..."></textarea>'+(inlineLoading?'<div style="text-align:center;padding:8px"><span class="spin"></span> Analyzing...</div>':'<button class="az-go" onclick="event.preventDefault();runInlineAI()">Analyze & Auto-fill</button>')+(inlineResult?'<div style="margin-top:4px;font-size:10px;color:var(--green);font-weight:600">\u2705 Auto-filled!</div>':'')+'</div>'}
+  if(showInlineAZ){h+='<div class="az-area"><textarea id="inline_tc" placeholder="Paste T&C here..."></textarea>'+('<button class="az-go" onclick="event.preventDefault();runInlineAnalyze()">Analyze & Auto-fill</button>')+(inlineResult?'<div style="margin-top:4px;font-size:10px;color:var(--green);font-weight:600">\u2705 Auto-filled!</div>':'')+'</div>'}
   h+='<button class="btn-p" onclick="saveEntry()">\uD83D\uDCBE '+(e._edit?'Save Changes':'Add Entry')+'</button>';
   h+='<button class="btn-s" onclick="closeModal()">Cancel</button>';
   if(e._edit)h+='<button class="btn-d" onclick="clearFields()">Clear All Fields</button>';
@@ -799,9 +795,9 @@ function rRcv(){
 /* ANALYZER */
 function rAnalyzer(){
   let h='<div style="background:var(--card);border-radius:12px;padding:12px;margin-bottom:8px;border:1px solid var(--border)">';
-  h+='<div style="font-size:12px;font-weight:700;margin-bottom:6px">\uD83E\uDDE0 T&C Analyzer <span style="font-size:9px;padding:1px 6px;border-radius:4px;background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff;font-weight:700">AI</span></div>';
+  h+='<div style="font-size:12px;font-weight:700;margin-bottom:6px">\uD83D\uDD0D T&C Analyzer</div>';
   h+='<textarea class="fg" id="az_input" style="width:100%;min-height:120px;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:11px;outline:none;resize:vertical" placeholder="Paste full terms & conditions here...">'+esc(analyzerText)+'</textarea>';
-  h+='<div style="display:flex;gap:4px;margin-top:4px"><button class="az-go" style="flex:1" onclick="runMainAI()">'+(aiLoading?'<span class="spin"></span> Analyzing...':'Analyze')+'</button><button class="btn-s" style="flex:0;margin:0;padding:8px 12px" onclick="showAnalyzer=false;analyzerText=\'\';analyzerResult=null;R()">Close</button></div>';
+  h+='<div style="display:flex;gap:4px;margin-top:4px"><button class="az-go" style="flex:1" onclick="runMainAnalyze()">Analyze</button><button class="btn-s" style="flex:0;margin:0;padding:8px 12px" onclick="showAnalyzer=false;analyzerText=\'\';analyzerResult=null;R()">Close</button></div>';
   if(analyzerResult){
     const r=analyzerResult;
     h+='<div style="margin-top:8px">';
@@ -877,39 +873,27 @@ function rcvSubmit(){
 function skipRcv(){rcvPrompt=null;R()}
 
 /* Analyzer */
-async function runMainAI(){
+function runMainAnalyze(){
   const el=document.getElementById('az_input');if(!el)return;analyzerText=el.value;
-  if(!analyzerText||analyzerText.length<20){alert('Paste more text');return}
-  const ai=await aiAnalyze(analyzerText);
-  if(ai){analyzerResult={...ai};if(ai.churnMonths){analyzerResult.churnRule=ai.churnMonths<=6?'180 days':ai.churnMonths<=12?'1 year':ai.churnMonths<=24?'2 years':'3 years'}if(ai.bankName)saveReq(ai.bankName,ai)}
-  else{analyzerResult=analyzeTC(analyzerText)}
-  if(!analyzerResult||Object.keys(analyzerResult).length<2)alert('Could not extract enough data. Try pasting more of the terms.');
+  if(!analyzerText||analyzerText.length<20){alert('Paste more T&C text');return}
+  analyzerResult=analyzeTC(analyzerText);
+  if(analyzerResult&&analyzerResult.bankName)saveReq(analyzerResult.bankName||analyzerResult.acctType||'Unknown',analyzerResult);
+  if(!analyzerResult||Object.keys(analyzerResult).length<2)alert('Could not extract enough data. Try pasting more of the full terms & conditions.');
   R();
 }
-async function runInlineAI(){
-  const el=document.getElementById('inline_tc');if(!el||el.value.length<20){alert('Paste more text');return}
-  inlineLoading=true;R();
-  const ai=await aiAnalyze(el.value);inlineLoading=false;
-  if(ai){inlineResult=ai;
-    if(ai.bonusAmount&&!modal.bonus)modal.bonus=ai.bonusAmount;
-    if(ai.churnMonths&&!modal.churn)modal.churn=ai.churnMonths<=6?'180':ai.churnMonths<=12?'1':ai.churnMonths<=24?'2':'3';
-    if(ai.bankName&&!modal.bank)modal.bank=ai.bankName;
-    // Hidden fields auto-set from analysis
-    if(ai.earlyCloseDays)modal.minHoldDays=ai.earlyCloseDays;
-    if(ai.earlyCloseFee)modal.earlyCloseFee=parseInt(String(ai.earlyCloseFee).replace(/[$,]/g,''))||0;
-    if(ai.timeline)modal.reqDays=parseInt(ai.timeline)||0;
-    if(ai.ddAmount||ai.debitTxns)modal.dataPoint=[ai.ddAmount?'DD '+ai.ddAmount:'',ai.debitTxns?ai.debitTxns+' debit txns':''].filter(Boolean).join(' + ');
-    // Notes gets the full fine print
-    if(ai.notesForTracker)modal.notes=ai.notesForTracker;
-    else if(ai.requirements)modal.notes=ai.requirements.join('\n* ')}
-  else{inlineResult=analyzeTC(el.value);
-    if(inlineResult&&inlineResult.notesForTracker)modal.notes=inlineResult.notesForTracker;
-    if(inlineResult&&inlineResult.bonusAmount&&!modal.bonus)modal.bonus=parseInt(String(inlineResult.bonusAmount).replace(/[$,]/g,''))||0;
-    if(inlineResult&&inlineResult.churnMonths&&!modal.churn)modal.churn=inlineResult.churnMonths<=6?'180':inlineResult.churnMonths<=12?'1':inlineResult.churnMonths<=24?'2':'3';
-    if(inlineResult&&inlineResult.earlyCloseDays)modal.minHoldDays=parseInt(inlineResult.earlyCloseDays)||0;
-    if(inlineResult&&inlineResult.promoCode)modal.dataPoint='Promo: '+inlineResult.promoCode;
-    if(inlineResult&&inlineResult.timeline)modal.reqDays=parseInt(inlineResult.timeline)||0;
-  }
+function runInlineAnalyze(){
+  const el=document.getElementById('inline_tc');if(!el||el.value.length<20){alert('Paste more T&C text');return}
+  inlineResult=analyzeTC(el.value);
+  if(inlineResult){
+    if(inlineResult.notesForTracker)modal.notes=inlineResult.notesForTracker;
+    if(inlineResult.bonusAmount&&!modal.bonus)modal.bonus=parseInt(String(inlineResult.bonusAmount).replace(/[$,]/g,''))||0;
+    if(inlineResult.churnMonths&&!modal.churn)modal.churn=inlineResult.churnMonths<=6?'180':inlineResult.churnMonths<=12?'1':inlineResult.churnMonths<=24?'2':'3';
+    if(inlineResult.earlyCloseDays)modal.minHoldDays=parseInt(inlineResult.earlyCloseDays)||0;
+    if(inlineResult.earlyCloseFee)modal.earlyCloseFee=parseInt(String(inlineResult.earlyCloseFee).replace(/[$,]/g,''))||0;
+    if(inlineResult.ddAmount||inlineResult.debitTxns)modal.dataPoint=[inlineResult.ddAmount?'DD '+inlineResult.ddAmount:'',inlineResult.debitTxns?inlineResult.debitTxns+' debit txns':''].filter(Boolean).join(' + ');
+    if(inlineResult.promoCode&&!modal.dataPoint)modal.dataPoint='Promo: '+inlineResult.promoCode;
+    if(inlineResult.timelineDays)modal.reqDays=inlineResult.timelineDays;
+  }else{alert('Could not extract data. Paste more of the T&C.')}
   R();
 }
 function fillFromAI(){
