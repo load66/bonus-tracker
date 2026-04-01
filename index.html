@@ -32,7 +32,7 @@ html,body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;back
 .yr-total{background:linear-gradient(135deg,#0A0F1E,#162040);padding:0 14px 12px;flex-shrink:0}
 .yr-total .amt{font-size:26px;font-weight:800;color:var(--sky)}
 .yr-total .lbl{font-size:10px;color:#64748B;font-weight:500;margin-top:1px}
-.scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:10px 14px 110px;-webkit-overflow-scrolling:touch}
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:10px 14px 120px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .tabs{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:5px 0 max(var(--safe-b),6px);z-index:100}
 .tb{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 2px;background:none;border:none;cursor:pointer;font-family:inherit}
 .tb svg{width:21px;height:21px;stroke:var(--muted);fill:none;stroke-width:1.8;transition:.15s}
@@ -52,7 +52,7 @@ html,body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;back
 .card-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px 12px;margin-top:8px}
 .cf .k{font-size:9px;color:var(--light);text-transform:uppercase;letter-spacing:.4px;font-weight:600}
 .cf .v{font-size:12px;font-weight:600}.cf .v.money{color:var(--accent)}.cf .v.ok{color:var(--green)}.cf .v.warn{color:var(--red)}.cf .v.amb{color:var(--amber)}
-.ect{margin:0 16px;padding:10px 14px;background:linear-gradient(135deg,#FEF3C7,#FDE68A);border-radius:var(--rs);margin-bottom:4px}
+.ect{margin:0 16px 6px;padding:10px 14px;background:linear-gradient(135deg,#FEF3C7,#FDE68A);border-radius:var(--rs);margin-bottom:4px}
 .ect.safe{background:linear-gradient(135deg,#D1FAE5,#A7F3D0)}
 .ect-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
 .ect-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#92400E}
@@ -1075,7 +1075,7 @@ function rTracker(sorted){
     if(e.closed)h+=`<div class="cf"><div class="k">Closed</div><div class="v">${fD(e.closed)}</div></div>`;
     if(e.bonusRecd)h+=`<div class="cf"><div class="k">Received</div><div class="v ok">${fD(e.bonusRecd)}</div></div>`;
     if(isCompleted(e))h+=`<div class="cf"><div class="k">Tax Status</div><div class="v ok">\u2705 Complete</div></div>`;
-    h+=`</div></div></div>`;
+    h+=`</div>`;
     // Early close timer
     if(!e.closed&&e.opened&&e.minHoldDays>0&&dsc!==null){
       const safe=dsc===0,pc=safe?'ok':dsc<=14?'dg':'wr';
