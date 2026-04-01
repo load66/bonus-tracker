@@ -1427,7 +1427,6 @@ function clearAllFields(){
   modal.bonus=0;R();
 }
 
-\n
 function rConfirm(){return`<div class="cbg" onclick="cfm=null;R()"><div class="cbox" onclick="event.stopPropagation()"><h3>${cfm.title}</h3><p>${cfm.msg}</p><div class="crow"><button class="c-cancel" onclick="cfm=null;R()">Cancel</button><button class="${cfm.green?'c-green':'c-red'}" onclick="cfm.action()">${cfm.green?'Confirm':'Delete'}</button></div></div></div>`}
 
 
