@@ -296,6 +296,16 @@ html,body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;back
 
 /* ─── TAB BAR GLASS ─── */
 .tabs{background:rgba(255,255,255,.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);padding:6px 0 max(var(--safe-b),8px)}
+
+.cd-timer{display:flex;align-items:center;gap:8px;padding:10px 14px;margin:4px 16px 2px;border-radius:12px;background:linear-gradient(135deg,rgba(0,0,0,.03),rgba(0,0,0,.06))}
+.cd-icon{font-size:18px;flex-shrink:0}
+.cd-info{flex:1}
+.cd-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;opacity:.7}
+.cd-main{font-size:14px;font-weight:800;line-height:1.2}
+.cd-date{font-size:10px;opacity:.6;margin-top:1px}
+.cd-ring{width:36px;height:36px;flex-shrink:0;position:relative}
+.cd-ring svg{transform:rotate(-90deg)}
+.cd-ring-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800}
 </style>
 </head>
 <body>
@@ -771,7 +781,11 @@ function rcvSubmit(){
     return;
   }
 
-  // If user chose to wait, just save
+  // If user chose to wait, save with planned close date
+  if(p.waitDays>0){
+    const pc=addD(p.bonusDate,p.waitDays);
+    entries=entries.map(x=>x.id===p.entryId?{...x,plannedClose:pc}:x);
+  }
   entries=sortE(entries);sv(SK,entries);
   rcvPrompt=null;R();
 }
@@ -820,6 +834,40 @@ async function runInlineAnalyze(){
     inlineResult=analyzeTC(txt);
   }
   inlineAnalyzing=false;R();
+}
+
+
+// ═══════════════════════════════════
+// UNIVERSAL COUNTDOWN
+// ═══════════════════════════════════
+function getCountdown(e){
+  const s=status(e);
+  // WORKING + no bonus received: countdown to requirement deadline
+  if(s==='WORKING'&&!e.bonusRecd&&e.opened&&e.reqDays){
+    const dl=reqDeadline(e);
+    const d=daysToDeadline(e);
+    if(d!==null)return{label:'Req deadline',days:d,date:dl,color:d<=7?'#EF4444':d<=21?'#F59E0B':'#3B82F6',icon:'\u23F0'};
+  }
+  // WORKING + bonus received + planned close date: countdown to close
+  if(s==='WORKING'&&e.bonusRecd&&e.plannedClose){
+    const d=Math.floor((new Date(e.plannedClose+'T00:00:00')-new Date(td()+'T00:00:00'))/864e5);
+    if(d>0)return{label:'Close account',days:d,date:e.plannedClose,color:d<=3?'#EF4444':d<=7?'#F59E0B':'#10B981',icon:'\u{1F512}'};
+    if(d<=0)return{label:'Ready to close!',days:0,date:e.plannedClose,color:'#10B981',icon:'\u2705'};
+  }
+  // WORKING + early close timer active
+  if(s==='WORKING'&&!e.closed&&e.opened&&e.minHoldDays>0){
+    const dsc=daysUntilSafe(e);
+    if(dsc!==null&&dsc>0)return{label:'Safe to close',days:dsc,date:safeCloseDate(e),color:dsc<=14?'#EF4444':dsc<=30?'#F59E0B':'#3B82F6',icon:'\u{1F6E1}\uFE0F'};
+  }
+  // WAITING TO CHURN: countdown to reopen
+  if(s==='WAITING TO CHURN!'){
+    const dl=daysLeft(e);
+    const nr=nextReopen(e);
+    if(dl!==null&&dl>0)return{label:'Churn ready',days:dl,date:nr,color:dl<=30?'#F59E0B':'#3B82F6',icon:'\u{1F504}'};
+  }
+  // TIME TO CHURN: ready
+  if(s==='TIME TO CHURN!')return{label:'Ready now!',days:0,date:'',color:'#10B981',icon:'\u{1F525}'};
+  return null;
 }
 
 let analyzerText='',analyzerResult=null,showAnalyzer=false;
@@ -1002,7 +1050,23 @@ function rTracker(sorted){
     h+=`<div class="card-top"><div class="card-bank">${esc(e.bank)}</div><div class="card-id">${esc(e.id)}</div></div>`;
     h+=`<span class="badge ${cls}">${esc(s)}</span>`;
     if(notifs.length){h+=`<div style="display:flex;flex-wrap:wrap;gap:2px">`;notifs.forEach(n=>{h+=`<span class="notif ${n.c}">${esc(n.t)}</span>`});h+=`</div>`}
-    h+=`<div class="card-grid">`;
+    h+=`</div>`;
+    // Countdown timer
+    const cd=getCountdown(e);
+    if(cd){
+      const maxDays=cd.days>365?cd.days:Math.max(cd.days,1);
+      const pct=cd.days<=0?100:Math.max(5,100-Math.round(cd.days/Math.max(maxDays,1)*100));
+      const r=14,circ=2*Math.PI*r,offset=circ*(1-pct/100);
+      h+=`<div class="cd-timer" style="color:${cd.color}">`;
+      h+=`<div class="cd-icon">${cd.icon}</div>`;
+      h+=`<div class="cd-info"><div class="cd-label">${cd.label}</div>`;
+      h+=`<div class="cd-main">${cd.days===0?(cd.label.includes('Ready')||cd.label.includes('now')?'GO!':'Today'):(cd.days+'d remaining')}</div>`;
+      if(cd.date)h+=`<div class="cd-date">${fD(cd.date)}</div>`;
+      h+=`</div>`;
+      h+=`<div class="cd-ring"><svg width="36" height="36"><circle cx="18" cy="18" r="${r}" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="3"/><circle cx="18" cy="18" r="${r}" fill="none" stroke="${cd.color}" stroke-width="3" stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${offset}"/></svg><div class="cd-ring-text" style="color:${cd.color}">${cd.days<=0?'✓':cd.days}</div></div>`;
+      h+=`</div>`;
+    }
+    h+=`<div class="card-head" style="padding-top:4px" onclick="expanded=expanded==='${e.id}'?null:'${e.id}';R()"><div class="card-grid">`;
     if(e.bonus)h+=`<div class="cf"><div class="k">Bonus</div><div class="v money">${fM(e.bonus)}</div></div>`;
     if(e.opened&&!e.closed)h+=`<div class="cf"><div class="k">Opened</div><div class="v">${fD(e.opened)}</div></div>`;
     if(dl!==null)h+=`<div class="cf"><div class="k">Days Left</div><div class="v${dl===0?' ok':dl<=30?' warn':''}">${dl}</div></div>`;
@@ -1011,7 +1075,7 @@ function rTracker(sorted){
     if(e.closed)h+=`<div class="cf"><div class="k">Closed</div><div class="v">${fD(e.closed)}</div></div>`;
     if(e.bonusRecd)h+=`<div class="cf"><div class="k">Received</div><div class="v ok">${fD(e.bonusRecd)}</div></div>`;
     if(isCompleted(e))h+=`<div class="cf"><div class="k">Tax Status</div><div class="v ok">\u2705 Complete</div></div>`;
-    h+=`</div></div>`;
+    h+=`</div></div></div>`;
     // Early close timer
     if(!e.closed&&e.opened&&e.minHoldDays>0&&dsc!==null){
       const safe=dsc===0,pc=safe?'ok':dsc<=14?'dg':'wr';
@@ -1420,6 +1484,8 @@ function rModal(){
   return h;
 }
 
+
+function closeModal(){modal=null;showInlineAZ=false;inlineResult=null;R()}
 function clearAllFields(){
   if(!modal)return;
   ['bonus','churn','opened','closed','bonusRecd','reqMet','dataPoint','notes'].forEach(function(k){modal[k]=''});
