@@ -22,7 +22,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .hdr h1{font-size:18px;font-weight:800;color:#fff}.hdr h1 em{font-style:normal;color:var(--sky)}
 .hdr-sub{font-size:9px;color:#64748B;padding:1px 0 8px;letter-spacing:.6px}
 .yr-pills{display:flex;gap:4px}
-.yr-btn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:#94A3B8;padding:3px 10px;border-radius:14px;font-family:inherit;font-size:10px;font-weight:600;cursor:pointer}
+.yr-btn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:#94A3B8;padding:3px 10px;border-radius:14px;font-family:inherit;font-size:10px;font-weight:600;cursor:pointer;transition:all .15s}
 .yr-btn.on{background:var(--sky);color:var(--navy);border-color:var(--sky)}
 
 /* STATS */
@@ -38,21 +38,28 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 
 /* TABS */
 .tabs{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:4px 0 max(var(--safe-b),5px);z-index:100}
-.tb{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 2px;background:none;border:none;cursor:pointer;font-family:inherit}
+.tb{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 2px;background:none;border:none;cursor:pointer;font-family:inherit;transition:all .15s}
 .tb svg{width:20px;height:20px;stroke:var(--muted);fill:none;stroke-width:1.8}.tb span{font-size:9px;font-weight:600;color:var(--muted)}
 .tb.on svg{stroke:var(--accent)}.tb.on span{color:var(--accent);font-weight:700}
 
 /* FAB */
-.fab{position:fixed;bottom:calc(58px + var(--safe-b));right:14px;width:48px;height:48px;border-radius:14px;background:var(--accent);color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(37,99,235,.4);z-index:90;display:flex;align-items:center;justify-content:center}
+.fab{position:fixed;bottom:calc(58px + var(--safe-b));right:14px;width:48px;height:48px;border-radius:14px;background:var(--accent);color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(37,99,235,.4);z-index:90;display:flex;align-items:center;justify-content:center;transition:transform .15s}
 .fab:active{transform:scale(.9)}
 
+/* BANK LOGO */
+.blogo{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;font-size:13px;color:#fff;letter-spacing:-.3px;position:relative;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.blogo::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.2),transparent);pointer-events:none}
+.blogo.sm{width:28px;height:28px;border-radius:7px;font-size:10px;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.blogo-img{width:100%;height:100%;object-fit:contain;padding:4px}
+
 /* CARD */
-.card{background:var(--card);border-radius:14px;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.04);overflow:hidden;border-left:4px solid transparent}
+.card{background:var(--card);border-radius:14px;margin-bottom:6px;box-shadow:0 1px 4px rgba(0,0,0,.05),0 0 0 1px rgba(0,0,0,.03);overflow:hidden;border-left:4px solid transparent;transition:box-shadow .2s,transform .15s}
+.card:active{transform:scale(.995)}
 .card.u-blue{border-left-color:var(--accent)}.card.u-yellow{border-left-color:var(--amber)}.card.u-red{border-left-color:var(--red)}.card.u-green{border-left-color:var(--green)}
 .card-h{padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:10px}
 .card-h:active{background:rgba(0,0,0,.02)}
 .card-left{flex:1;min-width:0}
-.card-name{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-name{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card-row{display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap}
 .badge{padding:3px 9px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.2px}
 .badge.w{background:#DBEAFE;color:#1E40AF}.badge.wt{background:#D1FAE5;color:#065F46}.badge.ch{background:#DC2626;color:#fff}
@@ -76,7 +83,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .cf .v.ok{color:var(--green)}.cf .v.warn{color:var(--red)}.cf .v.money{color:var(--accent)}
 .card-notes{font-size:12px;color:var(--sub);line-height:1.5;padding:6px 0;border-top:1px solid var(--border)}
 .card-btns{display:flex;gap:5px;padding-top:8px}
-.cbtn{flex:1;padding:9px;border-radius:10px;border:none;font-family:inherit;font-size:10px;font-weight:700;cursor:pointer}
+.cbtn{flex:1;padding:9px;border-radius:10px;border:none;font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;transition:transform .1s}
 .cbtn:active{transform:scale(.95)}
 .cbtn.edit{background:#EFF6FF;color:var(--accent)}.cbtn.del{background:#FEF2F2;color:var(--red)}.cbtn.cls{background:#ECFDF5;color:#059669}.cbtn.rcv{background:#F3E8FF;color:#7C3AED}
 
@@ -84,7 +91,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .ck{list-style:none;padding:0;margin:6px 0}
 .ck li{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
 .ck li:last-child{border:none}
-.ckb{width:18px;height:18px;border-radius:5px;border:2px solid var(--border);background:var(--bg);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.ckb{width:18px;height:18px;border-radius:5px;border:2px solid var(--border);background:var(--bg);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .ckb.dn{background:var(--green);border-color:var(--green)}.ckb.dn::after{content:'✓';color:#fff;font-size:10px;font-weight:800}
 .ck-text{flex:1}.ck-text.dn{text-decoration:line-through;color:var(--muted)}
 .ck-del{color:var(--red);font-size:10px;cursor:pointer;padding:2px 4px}
@@ -106,17 +113,18 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .m-hdr h2{font-size:17px;font-weight:800}.m-id{font-size:10px;color:var(--muted);background:var(--bg);padding:2px 8px;border-radius:6px}
 .m-sec{font-size:9px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.7px;margin:12px 0 5px;padding-top:8px;border-top:1px solid var(--border)}
 .fg{margin-bottom:8px}.fg label{font-size:11px;font-weight:600;color:var(--sub);display:block;margin-bottom:2px}
-.fg input,.fg select,.fg textarea{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:16px;color:var(--text);background:#fff;outline:none;-webkit-appearance:none}
+.fg input,.fg select,.fg textarea{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:16px;color:var(--text);background:#fff;outline:none;-webkit-appearance:none;transition:border-color .15s,box-shadow .15s}
 .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.08)}
 .fg textarea{font-size:12px;line-height:1.5;resize:vertical;min-height:60px}
 .fg select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
 .frow{display:flex;gap:6px}.frow .fg{flex:1}
 .date-wrap{display:flex;gap:3px}.date-wrap input{flex:1}.date-clr{width:30px;height:40px;border-radius:8px;border:1.5px solid var(--border);background:#fff;color:var(--red);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.btn-p{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;margin-top:6px}
+.btn-p{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;margin-top:6px;transition:transform .1s}
 .btn-p:active{transform:scale(.97)}
 .btn-s{width:100%;padding:10px;background:var(--bg);color:var(--muted);border:none;border-radius:10px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;margin-top:4px}
 .btn-d{width:100%;padding:9px;background:transparent;border:1.5px solid var(--red);color:var(--red);border-radius:10px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;margin-top:4px}
-.tc-btn{width:100%;padding:10px;border-radius:10px;border:1.5px dashed var(--accent);background:transparent;font-family:inherit;font-size:11px;font-weight:600;color:var(--accent);cursor:pointer;margin-bottom:8px}
+.tc-btn{width:100%;padding:10px;border-radius:10px;border:1.5px dashed var(--accent);background:transparent;font-family:inherit;font-size:11px;font-weight:600;color:var(--accent);cursor:pointer;margin-bottom:8px;transition:background .15s}
+.tc-btn:active{background:#EFF6FF}
 .az-area{padding:10px;background:var(--bg);border-radius:10px;border:1px solid var(--border);margin-bottom:8px}
 .az-area textarea{min-height:80px;font-size:11px}
 .az-go{width:100%;margin-top:4px;padding:9px;border-radius:8px;border:none;background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer}
@@ -132,7 +140,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .dd-box{background:#fff;border-radius:var(--r);padding:20px;max-width:340px;width:100%;text-align:left}
 .dd-box h3{font-size:15px;font-weight:700;margin-bottom:3px}.dd-box .sub{font-size:11px;color:var(--sub);margin-bottom:10px}
 .dd-chips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
-.dd-chip{padding:4px 10px;border-radius:14px;font-size:10px;font-weight:600;border:1.5px solid var(--border);background:var(--bg);cursor:pointer;font-family:inherit}
+.dd-chip{padding:4px 10px;border-radius:14px;font-size:10px;font-weight:600;border:1.5px solid var(--border);background:var(--bg);cursor:pointer;font-family:inherit;transition:all .15s}
 .dd-chip.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
 .dd-input{width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:13px;background:var(--bg);outline:none;margin-bottom:8px}
 
@@ -140,7 +148,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .rcv-box{background:#fff;border-radius:var(--r);padding:20px;max-width:340px;width:100%;text-align:left}
 .rcv-box h3{font-size:15px;font-weight:700;margin-bottom:3px}.rcv-box .sub{font-size:11px;color:var(--sub);margin-bottom:10px}
 .wait-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin:8px 0}
-.wait-btn{padding:10px 4px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;text-align:center}
+.wait-btn{padding:10px 4px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s}
 .wait-btn.sel{border-color:var(--accent);background:#EFF6FF;color:var(--accent)}
 .wait-btn .sm{font-size:8px;color:var(--muted);margin-top:1px}
 
@@ -149,7 +157,7 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 
 /* QUICK ACTIONS */
 .qbar{display:flex;gap:4px;margin-bottom:6px}
-.qbtn{flex:1;padding:8px 4px;border-radius:10px;border:none;font-family:inherit;font-size:9px;font-weight:700;cursor:pointer;text-align:center}
+.qbtn{flex:1;padding:8px 4px;border-radius:10px;border:none;font-family:inherit;font-size:9px;font-weight:700;cursor:pointer;text-align:center;transition:transform .1s}
 .qbtn:active{transform:scale(.96)}
 
 /* CHART */
@@ -162,8 +170,9 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 
 /* TEMPLATE GRID */
 .tgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px}
-.tbtn{background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:8px;cursor:pointer;font-family:inherit;text-align:left}
+.tbtn{background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:8px;cursor:pointer;font-family:inherit;text-align:left;display:flex;align-items:center;gap:8px;transition:all .15s}
 .tbtn:active{transform:scale(.97);border-color:var(--accent)}
+.tbtn .t-info{flex:1;min-width:0}
 .tbtn .nm{font-size:11px;font-weight:700}.tbtn .bn{font-size:10px;color:var(--accent);font-weight:600;margin-top:1px}
 
 /* REFERENCE */
@@ -178,22 +187,24 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 /* TAX */
 .sec{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin:12px 0 6px}
 .ybar{display:flex;gap:4px;overflow-x:auto;padding:2px 0 8px;-webkit-overflow-scrolling:touch}
-.ypill{flex-shrink:0;padding:4px 10px;border-radius:14px;font-size:10px;font-weight:600;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-family:inherit}
+.ypill{flex-shrink:0;padding:4px 10px;border-radius:14px;font-size:10px;font-weight:600;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-family:inherit;transition:all .15s}
 .ypill.on{background:var(--navy);color:#fff;border-color:var(--navy)}
 .ytotal{font-size:24px;font-weight:800;color:var(--accent)}
 .ysub{font-size:10px;color:var(--muted);margin-bottom:10px}
 .tax-c{background:var(--card);border-radius:12px;padding:10px 12px;margin-bottom:4px;border:1px solid var(--border)}
 .tax-top{display:flex;justify-content:space-between;align-items:center}
-.tax-bank{font-size:12px;font-weight:700}.tax-amt{font-size:13px;font-weight:700;color:var(--accent)}
+.tax-bank{font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px}
+.tax-amt{font-size:13px;font-weight:700;color:var(--accent)}
 .tax-dates{display:flex;gap:10px;margin-top:2px}.tax-dates span{font-size:10px;color:var(--muted)}
 .export-btn{width:100%;padding:10px;background:linear-gradient(135deg,#059669,#047857);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;margin:8px 0}
 
 /* FEED */
-.feed-c{background:var(--card);border-radius:12px;padding:10px 12px;margin-bottom:4px;border:1px solid var(--border);cursor:pointer;text-decoration:none;display:block}
+.feed-c{background:var(--card);border-radius:12px;padding:10px 12px;margin-bottom:4px;border:1px solid var(--border);cursor:pointer;text-decoration:none;display:block;transition:transform .1s}
 .feed-c:active{transform:scale(.985)}
 .feed-t{font-size:11px;font-weight:600;color:var(--accent);line-height:1.3}
 .feed-d{font-size:9px;color:var(--muted);margin-top:1px}
-.sug-c{background:linear-gradient(135deg,#EFF6FF,#DBEAFE);border-radius:12px;padding:10px 12px;margin-bottom:4px;border:1px solid #BFDBFE}
+.sug-c{background:linear-gradient(135deg,#EFF6FF,#DBEAFE);border-radius:12px;padding:10px 12px;margin-bottom:4px;border:1px solid #BFDBFE;display:flex;align-items:center;gap:10px}
+.sug-c .s-info{flex:1}
 .sug-c .nm{font-size:12px;font-weight:700;color:#1E40AF}.sug-c .sub{font-size:10px;color:#3B82F6}.sug-c .rsn{font-size:9px;color:var(--muted);margin-top:2px}
 
 .empty{text-align:center;padding:30px 16px;color:var(--muted)}.empty .em{font-size:32px;margin-bottom:8px}.empty p{font-size:12px}
@@ -219,7 +230,8 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 
 .undo-bar{position:fixed;bottom:calc(62px + var(--safe-b));left:12px;right:72px;background:var(--navy);color:#fff;border-radius:12px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;z-index:95;box-shadow:0 4px 20px rgba(0,0,0,.3);font-size:12px;font-weight:600;animation:slideUp .2s}
 .undo-bar button{padding:6px 14px;border-radius:8px;border:none;background:#EF4444;color:#fff;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer}
-.call-btn{width:34px;height:34px;border-radius:10px;border:none;background:#ECFDF5;color:#059669;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.call-btn{width:34px;height:34px;border-radius:10px;border:none;background:#ECFDF5;color:#059669;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .1s}
 .call-btn:active{transform:scale(.9)}
 .close-modal{background:#fff;border-radius:16px;padding:20px;max-width:360px;width:100%;text-align:left}
 .close-modal h3{font-size:16px;font-weight:700;margin-bottom:10px}
@@ -228,9 +240,25 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .close-modal input,.close-modal select{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:var(--bg);outline:none}
 .close-modal input:focus{border-color:var(--accent)}
 .bonus-row{display:flex;gap:6px;margin-top:6px}
-.bonus-opt{flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;text-align:center}
+.bonus-opt{flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s}
 .bonus-opt.sel{border-color:var(--accent);background:#EFF6FF;color:var(--accent)}
 .bonus-opt:active{transform:scale(.96)}
+
+/* OVERWRITE PROMPT */
+.ow-box{background:#fff;border-radius:var(--r);padding:20px;max-width:360px;width:100%;text-align:left}
+.ow-box h3{font-size:16px;font-weight:700;margin-bottom:4px}
+.ow-box .sub{font-size:12px;color:var(--sub);margin-bottom:14px;line-height:1.4}
+.ow-existing{padding:10px;background:var(--bg);border-radius:10px;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.ow-existing .ow-info{flex:1}
+.ow-existing .nm{font-size:13px;font-weight:700}
+.ow-existing .det{font-size:10px;color:var(--muted);margin-top:2px}
+.ow-existing .amt{font-size:15px;font-weight:800;color:var(--accent)}
+
+/* PHONE TAB LOGOS */
+.ph-card{background:var(--card);border-radius:12px;padding:10px 12px;margin-bottom:4px;border:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.ph-links{display:flex;gap:6px;margin-top:6px;flex:1}
+.ph-link{flex:1;padding:8px;border-radius:8px;text-align:center;text-decoration:none;display:block}
+.ph-link .phl{font-size:9px;font-weight:700;color:var(--muted)}.ph-link .phn{font-size:12px;font-weight:600}
 </style>
 </head>
 <body>
@@ -261,6 +289,61 @@ function getLastBk(){try{return localStorage.getItem(BK_KEY)||''}catch{return''}
 function setLastBk(){try{localStorage.setItem(BK_KEY,td())}catch{}}
 function daysSinceBk(){const lb=getLastBk();return lb?Math.max(0,dB(lb,td())):999}
 
+/* ═══ BANK BRANDS ═══ */
+const BANK_BRANDS={
+  'chase':       {bg:'#0C4DA2',fg:'#fff',abbr:'CH',icon:'🏦'},
+  'chase biz':   {bg:'#0C4DA2',fg:'#fff',abbr:'CB',icon:'🏢'},
+  'bank of america':{bg:'#C41230',fg:'#fff',abbr:'BA',icon:'🏦'},
+  'wells fargo':  {bg:'#D71E28',fg:'#fff',abbr:'WF',icon:'🏦'},
+  'u.s. bank':    {bg:'#0D2C54',fg:'#fff',abbr:'US',icon:'🏦'},
+  'u.s. bank biz':{bg:'#0D2C54',fg:'#fff',abbr:'UB',icon:'🏢'},
+  'citi':         {bg:'#003DA5',fg:'#fff',abbr:'CI',icon:'🏦'},
+  'citibank':     {bg:'#003DA5',fg:'#fff',abbr:'CI',icon:'🏦'},
+  'pnc':          {bg:'#F58220',fg:'#fff',abbr:'PN',icon:'🏦'},
+  'simmons bank': {bg:'#1B365D',fg:'#fff',abbr:'SM',icon:'🏦'},
+  'equity bank':  {bg:'#004C2F',fg:'#fff',abbr:'EQ',icon:'🏦'},
+  'regions':      {bg:'#007A33',fg:'#fff',abbr:'RG',icon:'🏦'},
+  'bmo':          {bg:'#0075BE',fg:'#fff',abbr:'BM',icon:'🏦'},
+  'capital one':  {bg:'#004879',fg:'#fff',abbr:'C1',icon:'🏦'},
+  'td bank':      {bg:'#34A853',fg:'#fff',abbr:'TD',icon:'🏦'},
+  'huntington':   {bg:'#005F3B',fg:'#fff',abbr:'HN',icon:'🏦'},
+  'fifth third':  {bg:'#003D4C',fg:'#fff',abbr:'5T',icon:'🏦'},
+  'central bank': {bg:'#1A3A6B',fg:'#fff',abbr:'CB',icon:'🏦'},
+  'community america':{bg:'#0054A6',fg:'#fff',abbr:'CA',icon:'🏦'},
+  'ally':         {bg:'#6B2D8B',fg:'#fff',abbr:'AL',icon:'🏦'},
+  'ally bank':    {bg:'#6B2D8B',fg:'#fff',abbr:'AL',icon:'🏦'},
+  'citizens':     {bg:'#006747',fg:'#fff',abbr:'CZ',icon:'🏦'},
+  'comerica':     {bg:'#00703C',fg:'#fff',abbr:'CM',icon:'🏦'},
+  'e-trade':      {bg:'#6633CC',fg:'#fff',abbr:'ET',icon:'📈'},
+  'keybank':      {bg:'#C4122E',fg:'#fff',abbr:'KB',icon:'🏦'},
+  'm&t bank':     {bg:'#003366',fg:'#fff',abbr:'MT',icon:'🏦'},
+  'navy federal': {bg:'#003B71',fg:'#fff',abbr:'NF',icon:'⚓'},
+  'santander':    {bg:'#EC0000',fg:'#fff',abbr:'SN',icon:'🏦'},
+  'truist':       {bg:'#5C068C',fg:'#fff',abbr:'TR',icon:'🏦'},
+  'vantage cu':   {bg:'#005A9C',fg:'#fff',abbr:'VT',icon:'🏦'},
+  'schwab':       {bg:'#00A0DF',fg:'#fff',abbr:'SC',icon:'📈'},
+  'discover':     {bg:'#FF6000',fg:'#fff',abbr:'DS',icon:'🏦'},
+  'sofi':         {bg:'#62D2A2',fg:'#fff',abbr:'SF',icon:'🏦'},
+  'marcus':       {bg:'#003DA5',fg:'#fff',abbr:'GS',icon:'🏦'},
+  'us bank':      {bg:'#0D2C54',fg:'#fff',abbr:'US',icon:'🏦'},
+  'us bank biz':  {bg:'#0D2C54',fg:'#fff',abbr:'UB',icon:'🏢'},
+};
+function getBrand(name){
+  const n=(name||'').toLowerCase().trim();
+  if(BANK_BRANDS[n])return BANK_BRANDS[n];
+  for(const[k,v]of Object.entries(BANK_BRANDS)){if(n.includes(k)||k.includes(n))return v}
+  // Generate color from name hash
+  let h=0;for(let i=0;i<n.length;i++){h=n.charCodeAt(i)+((h<<5)-h)}
+  const hue=Math.abs(h)%360;
+  const a=(name||'X').toUpperCase().replace(/[^A-Z]/g,'');
+  return{bg:`hsl(${hue},55%,38%)`,fg:'#fff',abbr:(a[0]||'?')+(a[1]||''),icon:'🏦'};
+}
+function bankLogo(name,sm){
+  const b=getBrand(name);
+  const cls=sm?'blogo sm':'blogo';
+  return `<div class="${cls}" style="background:${b.bg};color:${b.fg}"><span>${esc(b.abbr)}</span></div>`;
+}
+
 /* CALC */
 function nextReopen(e){if(!e.closed||!e.churn)return'';return e.churn==='180'?addD(e.closed,180):addM(e.closed,parseInt(e.churn)*12)}
 function daysLeft(e){const nr=nextReopen(e);if(!nr)return null;const diff=dB(td(),nr);return Math.max(0,diff+10)}
@@ -290,98 +373,62 @@ function getUrg(e){const s=status(e);if(s==='TIME TO CHURN!')return'red';const d
 function getSuggestions(){const sug=[];entries.filter(e=>e.closed&&e.churn).forEach(e=>{const dl=daysLeft(e);if(dl!==null&&dl<=0)sug.push({bank:e.bank,rsn:'Cooldown expired! Ready to re-open.',bonus:e.bonus});else if(dl!==null&&dl<=30)sug.push({bank:e.bank,rsn:'Cooldown expires in '+dl+' days.',bonus:e.bonus})});const active=new Set(entries.map(e=>e.bank.toLowerCase()));TEMPLATES.forEach(t=>{if(!active.has(t.bank.toLowerCase()))sug.push({bank:t.bank,rsn:'Not yet tried. '+fM(t.bonus)+' available.',bonus:t.bonus})});return sug.slice(0,4)}
 function chartData(){const ms=[];for(let m=0;m<12;m++){const l=['J','F','M','A','M','J','J','A','S','O','N','D'][m];const t=entries.filter(e=>isCompleted(e)&&new Date(e.closed+'T00:00:00').getFullYear()===dashYear&&new Date(e.closed+'T00:00:00').getMonth()===m).reduce((s,e)=>s+(e.bonus||0),0);ms.push({l,t})}return ms}
 
+/* ═══ FIND EXISTING ENTRY BY BANK NAME ═══ */
+function findExistingByBank(bankName){
+  if(!bankName)return null;
+  const n=bankName.toLowerCase().trim();
+  return entries.find(e=>(e.bank||'').toLowerCase().trim()===n)||null;
+}
+
 /* REGEX ANALYZER — MEGA FALLBACK (handles 50+ bank patterns) */
 function analyzeTC(text){
   if(!text||text.length<20)return null;
   const t=text.toLowerCase(),r={};
-  
-  // ── BONUS AMOUNT (multiple patterns) ──
-  const bonusPatterns=[
-    /(?:bonus|credit|incentive|cash\s+bonus)\s+(?:of\s+)?\$([\d,]+)/i,
-    /\$([\d,]+)\s+(?:cash\s+)?(?:bonus|credit|incentive)/i,
-    /(?:earn|receive|get)\s+(?:a\s+)?\$([\d,]+)/i,
-    /\$([\d,]+)\s+(?:will\s+be\s+)?(?:credited|deposited|paid)/i,
-    /(?:up\s+to\s+)?\$([\d,]+)\s+(?:total|maximum)/i
-  ];
+  const bonusPatterns=[/(?:bonus|credit|incentive|cash\s+bonus)\s+(?:of\s+)?\$([\d,]+)/i,/\$([\d,]+)\s+(?:cash\s+)?(?:bonus|credit|incentive)/i,/(?:earn|receive|get)\s+(?:a\s+)?\$([\d,]+)/i,/\$([\d,]+)\s+(?:will\s+be\s+)?(?:credited|deposited|paid)/i,/(?:up\s+to\s+)?\$([\d,]+)\s+(?:total|maximum)/i];
   for(const p of bonusPatterns){const m=text.match(p);if(m){r.bonusAmount='$'+(m[1]||m[2]).replace(/,/g,'');break}}
-  // Multiple bonus tiers
   const allBonuses=[...text.matchAll(/\$([\d,]+)\s+(?:bonus|credit)/gi)];
   if(allBonuses.length>1)r.bonusTiers=allBonuses.map(m=>'$'+m[1]).join(' / ');
-
-  // ── DIRECT DEPOSIT ──
-  const ddPatterns=[
-    /direct\s+deposits?\s+(?:totaling|of|that\s+total)\s+(?:at\s+least\s+)?\$([\d,]+)/i,
-    /\$([\d,]+)\s+(?:or\s+more\s+)?in\s+(?:qualifying\s+)?direct\s+deposit/i,
-    /qualifying\s+direct\s+deposits?\s+(?:totaling\s+)?(?:at\s+least\s+)?\$([\d,]+)/i,
-    /direct\s+deposit\s+of\s+(?:at\s+least\s+)?\$([\d,]+)/i,
-    /combined\s+(?:qualifying\s+)?(?:direct\s+)?deposits?\s+(?:of\s+)?\$([\d,]+)/i
-  ];
+  const ddPatterns=[/direct\s+deposits?\s+(?:totaling|of|that\s+total)\s+(?:at\s+least\s+)?\$([\d,]+)/i,/\$([\d,]+)\s+(?:or\s+more\s+)?in\s+(?:qualifying\s+)?direct\s+deposit/i,/qualifying\s+direct\s+deposits?\s+(?:totaling\s+)?(?:at\s+least\s+)?\$([\d,]+)/i,/direct\s+deposit\s+of\s+(?:at\s+least\s+)?\$([\d,]+)/i,/combined\s+(?:qualifying\s+)?(?:direct\s+)?deposits?\s+(?:of\s+)?\$([\d,]+)/i];
   for(const p of ddPatterns){const m=text.match(p);if(m){r.ddAmount='$'+m[1].replace(/,/g,'');break}}
-  // DD count
   const ddcPatterns=[/(\w+)\s+(?:or\s+more\s+)?(?:qualifying\s+)?direct\s+deposits/i,/at\s+least\s+(\w+)\s+direct/i];
   const numWords={one:1,two:2,three:3,four:4,five:5,six:6};
   for(const p of ddcPatterns){const m=text.match(p);if(m){const w=m[1].toLowerCase();if(numWords[w])r.ddCount=numWords[w];else if(/^\d+$/.test(m[1]))r.ddCount=parseInt(m[1]);break}}
-  // DD per cycle/month
   if(t.includes('per statement cycle')||t.includes('per cycle'))r.ddPerCycle=true;
   if(t.includes('per month')||t.includes('monthly'))r.ddMonthly=true;
-
-  // ── DEBIT TRANSACTIONS ──
   const debitPatterns=[/(\d+)\s+(?:or\s+more\s+)?(?:qualifying\s+)?debit\s+(?:card\s+)?(?:transactions?|purchases?)/i,/debit\s+(?:card\s+)?(?:transactions?|purchases?)\s+(?:totaling|of)\s+(\d+)/i,/(?:make|complete)\s+(\d+)\s+(?:qualifying\s+)?(?:debit|card|purchase)/i];
   for(const p of debitPatterns){const m=text.match(p);if(m){r.debitTxns=m[1]||m[2];break}}
-  // Activate debit card
   if(t.includes('activate')&&(t.includes('debit card')||t.includes('debit')))r.activateDebit=true;
-
-  // ── TIMELINE ──
   const timePatterns=[/within\s+(\d+)\s+days?\s+(?:of|after|from)\s+(?:account\s+)?open/i,/(\d+)\s+days?\s+(?:of|after|from)\s+(?:account\s+)?open/i,/within\s+(\d+)\s+days/i,/first\s+(\d+)\s+days/i];
   for(const p of timePatterns){const m=text.match(p);if(m){r.timeline=m[1]+' days';r.timelineDays=parseInt(m[1]);break}}
-  // Statement cycles
   const cycleMatch=text.match(/(?:first|within)\s+(\d+)\s+(?:\(\d+\)\s+)?statement\s+cycles?/i)||text.match(/(\d+)\s+statement\s+cycles?/i);
   if(cycleMatch)r.cycles=cycleMatch[1]+' statement cycles';
-
-  // ── PROMO CODE ──
   const promoPatterns=[/promo(?:tional)?\s+code\s+[:\s]*["']?(\w+)["']?/i,/code\s+["']?(\w+)["']?\s+(?:at|during|when)/i,/(?:use|enter|apply)\s+(?:the\s+)?(?:promo\s+)?code\s+["']?(\w+)/i];
   for(const p of promoPatterns){const m=text.match(p);if(m){r.promoCode=m[1]||m[2]||m[3];break}}
-
-  // ── FEES ──
   const feePatterns=[/monthly\s+(?:maintenance\s+|service\s+)?fee\s+(?:of\s+)?\$([\d.]+)/i,/\$([\d.]+)\s+monthly\s+(?:maintenance|service)\s+fee/i,/monthly\s+fee[:\s]+\$([\d.]+)/i,/\$([\d.]+)\s+(?:per\s+)?month\s+(?:service|maintenance)?/i];
   for(const p of feePatterns){const m=text.match(p);if(m){r.monthlyFee='$'+m[1];break}}
   if(t.includes('no monthly fee')||t.includes('no monthly maintenance')||t.includes('$0 monthly')||t.includes('no service fee'))r.monthlyFee='$0 (No fee)';
-  // Fee waiver
   const waiverPatterns=[/(?:waived?|avoid|no\s+fee)\s+(?:if|when|by|with).*?\$([\d,]+)/i,/(?:maintain|average|minimum)\s+(?:daily\s+)?balance\s+(?:of\s+)?\$([\d,]+).*?(?:waive|avoid|no\s+fee)/i,/direct\s+deposit\s+(?:of\s+)?\$([\d,]+).*?(?:waive|avoid)/i];
   for(const p of waiverPatterns){const m=text.match(p);if(m){r.feeWaiver='$'+m[1].replace(/,/g,'')+' balance or DD';break}}
-  // Min opening deposit
   const minPatterns=[/minimum\s+(?:opening\s+)?(?:deposit|balance)\s+(?:of\s+)?\$([\d,]+)/i,/\$([\d,]+)\s+(?:minimum\s+)?(?:opening\s+)?deposit/i,/(?:open|fund)\s+.*?\$([\d,]+)/i];
   for(const p of minPatterns){const m=text.match(p);if(m){r.minBalance='$'+m[1].replace(/,/g,'');break}}
-
-  // ── EARLY CLOSE ──
   const closePatterns=[/(?:closed?|termination|closing)\s+(?:the\s+)?(?:account\s+)?within\s+(?:the\s+)?(?:first\s+)?(\d+)\s+days/i,/(\d+)\s+days?\s+(?:of|after|from)\s+(?:account\s+)?open.*?(?:close|terminat)/i,/close.*?(?:less\s+than|within|before)\s+(\d+)\s+days/i];
   for(const p of closePatterns){const m=text.match(p);if(m){r.earlyCloseDays=parseInt(m[1]);break}}
   const closeFeePatterns=[/(?:early\s+)?(?:termination|close|closing)\s+fee\s+(?:of\s+)?\$([\d.]+)/i,/\$([\d,]+)\s+(?:early\s+)?(?:termination|close)/i,/(?:deduct|collect|charge|clawback|forfeit).*?\$([\d,]+).*?(?:bonus|incentive)/i,/(?:bonus|incentive).*?(?:deduct|collect|clawback|forfeit)/i];
   for(const p of closeFeePatterns){const m=text.match(p);if(m&&m[1]){r.earlyCloseFee='$'+m[1].replace(/,/g,'');break}}
   if(t.includes('collect the bonus')||t.includes('forfeit the bonus')||t.includes('bonus will be reversed')||t.includes('bonus may be collected'))r.earlyCloseFee=r.earlyCloseFee||'Bonus clawback';
   if(t.includes('no early termination')||t.includes('no termination fee'))r.earlyCloseFee='None';
-
-  // ── CHURN RULE ──
   const churnPatterns=[/(?:not\s+)?(?:eligible|qualify|available).*?(?:within|past|last|preceding)\s+(?:the\s+)?(\d+)\s+months?/i,/(?:had|owned|closed|open).*?(?:account|checking).*?(?:within|past|last)\s+(?:the\s+)?(\d+)\s+months?/i,/(\d+)\s+months?\s+(?:prior|before|from\s+(?:last|previous))/i];
   for(const p of churnPatterns){const m=text.match(p);if(m){r.churnMonths=parseInt(m[1]||m[2]);break}}
-  // Word-based months
   if(!r.churnMonths){if(t.includes('six months')||t.includes('6 months'))r.churnMonths=6;else if(t.includes('twelve months')||t.includes('12 months'))r.churnMonths=12;else if(t.includes('24 months')||t.includes('twenty-four'))r.churnMonths=24;else if(t.includes('36 months')||t.includes('three years'))r.churnMonths=36}
   if(r.churnMonths)r.churnRule=r.churnMonths<=6?'180 days':r.churnMonths<=12?'1 year':r.churnMonths<=24?'2 years':'3 years';
-  // Per lifetime
   if(t.includes('one per lifetime')||t.includes('once per lifetime'))r.churnRule='Once per lifetime';
-
-  // ── BONUS POSTING TIME ──
   const postPatterns=[/(?:bonus|credit).*?(?:credited?|deposited?|paid?|posted?).*?(?:within|after|by)\s+(\d+)\s+days?/i,/within\s+(\d+)\s+days?\s+of\s+(?:meeting|completing|qualifying)/i,/(?:within|after)\s+(\d+)\s+days?\s+(?:following|after)/i];
   for(const p of postPatterns){const m=text.match(p);if(m){r.bonusPostTime='Within '+m[1]+' days of qualifying';break}}
   if(!r.bonusPostTime&&t.includes('two weeks'))r.bonusPostTime='Within 2 weeks of qualifying';
   if(!r.bonusPostTime&&t.includes('within 60 days'))r.bonusPostTime='Within 60 days of qualifying';
-  
-  // ── TAX ──
   if(t.includes('1099-int'))r.taxForm='1099-INT (Interest)';
   else if(t.includes('1099-misc'))r.taxForm='1099-MISC (Income)';
   else if(t.includes('reported')&&t.includes('income'))r.taxForm='Taxable income';
-
-  // ── WHAT DOESN'T COUNT AS DD ──
   const excluded=[];
   if(t.includes('person-to-person')||t.includes('p2p')||t.includes('zelle'))excluded.push('Zelle/P2P transfers');
   if(t.includes('micro-deposit')||t.includes('micro deposit'))excluded.push('Micro-deposits (<$1)');
@@ -390,103 +437,47 @@ function analyzeTC(text){
   if(t.includes('transfer')&&t.includes('not')&&t.includes('qualify'))excluded.push('Internal transfers');
   if(t.includes('external bank')&&t.includes('not'))excluded.push('External bank ACH');
   r.ddExcluded=excluded;
-
-  // ── WHAT DD MUST BE ──
   const ddReqs=[];
   if(t.includes('employer'))ddReqs.push('employer');
   if(t.includes('government')&&!t.includes('not government'))ddReqs.push('government agency');
   if(t.includes('payroll'))ddReqs.push('payroll');
   r.ddMustBe=ddReqs;
-
-  // ── ACCOUNT TYPES ──
   const acctMatch=text.match(/(?:open|new)\s+(?:a\s+)?(?:new\s+)?([\w\s]+?)\s+(?:checking|savings|account)/i);
   if(acctMatch)r.acctType=acctMatch[1].trim();
-
-  // ── OPEN DATES ──
   const dateMatch=text.match(/between\s+([\w\s,]+?\d{4})\s+and\s+([\w\s,]+?\d{4})/i);
   if(dateMatch)r.openWindow=dateMatch[1].trim()+' - '+dateMatch[2].trim();
-
-  // ── ONLINE BANKING / MOBILE ──
   if(t.includes('enroll in online banking')||t.includes('mobile app')||t.includes('digital banking'))r.requiresOnlineBanking=true;
   if(t.includes('estatement')||t.includes('electronic statement'))r.requiresEstatements=true;
-
-  // ── MAINTAIN BALANCE ──
   const maintMatch=text.match(/maintain.*?(?:balance|deposit).*?(\d+)\s+(?:consecutive\s+)?days/i)||text.match(/(\d+)\s+consecutive\s+days/i);
   if(maintMatch)r.maintainDays=parseInt(maintMatch[1]);
   const maintBal=text.match(/maintain.*?\$([\d,]+)/i);
   if(maintBal)r.maintainBalance='$'+maintBal[1].replace(/,/g,'');
-
-  // ── GUIDED INVESTING / SAVINGS BONUS ──
-  if(t.includes('guided investing')||t.includes('investment account')){
-    r.hasInvestingBonus=true;
-    const gi=text.match(/(?:fund|deposit|invest)\s+(?:the\s+)?(?:account\s+)?(?:with\s+)?(?:a\s+)?(?:minimum\s+)?\$([\d,]+)/i);
-    if(gi)r.investMin='$'+gi[1].replace(/,/g,'');
-  }
-  if(t.includes('bundled bonus')||t.includes('bundled')){
-    const bb=text.match(/\$([\d,]+)\s+(?:bundled|extra|additional)/i)||text.match(/(?:bundled|extra|additional).*?\$([\d,]+)/i);
-    if(bb)r.bundledBonus='$'+bb[1].replace(/,/g,'');
-  }
-  if(t.includes('savings bonus')||t.includes('savings account')&&t.includes('bonus')){
-    const sb=text.match(/savings.*?\$([\d,]+)\s+bonus/i)||text.match(/\$([\d,]+)\s+savings\s+bonus/i);
-    if(sb)r.savingsBonus='$'+sb[1].replace(/,/g,'');
-  }
-
-  // ── CREDIT CARD FUNDING ──
+  if(t.includes('guided investing')||t.includes('investment account')){r.hasInvestingBonus=true;const gi=text.match(/(?:fund|deposit|invest)\s+(?:the\s+)?(?:account\s+)?(?:with\s+)?(?:a\s+)?(?:minimum\s+)?\$([\d,]+)/i);if(gi)r.investMin='$'+gi[1].replace(/,/g,'')}
+  if(t.includes('bundled bonus')||t.includes('bundled')){const bb=text.match(/\$([\d,]+)\s+(?:bundled|extra|additional)/i)||text.match(/(?:bundled|extra|additional).*?\$([\d,]+)/i);if(bb)r.bundledBonus='$'+bb[1].replace(/,/g,'')}
+  if(t.includes('savings bonus')||t.includes('savings account')&&t.includes('bonus')){const sb=text.match(/savings.*?\$([\d,]+)\s+bonus/i)||text.match(/\$([\d,]+)\s+savings\s+bonus/i);if(sb)r.savingsBonus='$'+sb[1].replace(/,/g,'')}
   if(t.includes('credit card')&&(t.includes('fund')||t.includes('opening deposit')))r.ccFunding=true;
-
-  // ── HARD/SOFT PULL ──
   if(t.includes('hard pull')||t.includes('hard inquiry'))r.pullType='Hard pull';
   if(t.includes('soft pull')||t.includes('soft inquiry'))r.pullType='Soft pull';
   if(t.includes('credit approval')||t.includes('subject to credit'))r.creditCheck=true;
-
-  // ── BANK NAME ──
   const bnPatterns=[/(\w[\w\s&.']+?)\s+(?:credit union|bank|financial)/i,/(?:open|new)\s+(?:a\s+)?(?:new\s+)?([\w\s]+?)\s+(?:checking|savings)/i];
   for(const p of bnPatterns){const m=text.match(p);if(m){const name=(m[1]||m[2]||'').trim();if(name.length>2&&name.length<40)r.bankName=name;break}}
-  
-  // ═══ BUILD FINE PRINT NOTES ═══
   const n=[];
-  // Header
   if(r.bonusAmount)n.push('* Bonus: '+r.bonusAmount+(r.bonusTiers?' (Tiers: '+r.bonusTiers+')':''));
   if(r.acctType)n.push('* Account: '+r.acctType);
   if(r.openWindow)n.push('* Open between: '+r.openWindow);
   if(r.promoCode)n.push('* Promo code: '+r.promoCode);
   if(r.creditCheck)n.push('* Subject to credit approval');
-  
-  // Requirements
-  n.push('');
-  n.push('REQUIREMENTS:');
+  n.push('');n.push('REQUIREMENTS:');
   let step=1;
   if(r.requiresOnlineBanking){n.push('* Step '+step+': Enroll in online/mobile banking');step++}
   if(r.requiresEstatements){n.push('* Step '+step+': Enroll in eStatements');step++}
-  if(r.ddAmount){
-    let ddStr='* Step '+step+': Direct deposit '+r.ddAmount;
-    if(r.ddCount)ddStr+=' ('+r.ddCount+' or more deposits)';
-    if(r.ddPerCycle)ddStr+=' per statement cycle';
-    if(r.ddMonthly)ddStr+=' per month';
-    if(r.timeline)ddStr+=' within '+r.timeline;
-    n.push(ddStr);step++;
-  }
+  if(r.ddAmount){let ddStr='* Step '+step+': Direct deposit '+r.ddAmount;if(r.ddCount)ddStr+=' ('+r.ddCount+' or more deposits)';if(r.ddPerCycle)ddStr+=' per statement cycle';if(r.ddMonthly)ddStr+=' per month';if(r.timeline)ddStr+=' within '+r.timeline;n.push(ddStr);step++}
   if(r.debitTxns){n.push('* Step '+step+': Complete '+r.debitTxns+' debit card transactions');step++}
   if(r.activateDebit){n.push('* Step '+step+': Activate debit card and make at least 1 transaction');step++}
   if(r.maintainDays){n.push('* Step '+step+': Maintain balance for '+r.maintainDays+' consecutive days');step++}
   if(r.cycles)n.push('* Complete within '+r.cycles);
-
-  // DD Rules
-  if(r.ddMustBe.length||r.ddExcluded.length){
-    n.push('');n.push('DIRECT DEPOSIT RULES:');
-    if(r.ddMustBe.length)n.push('* DD must be from: '+r.ddMustBe.join(', '));
-    if(r.ddExcluded.length)n.push('* Does NOT count: '+r.ddExcluded.join(', '));
-  }
-
-  // Guided Investing / Savings / Bundled
-  if(r.hasInvestingBonus||r.savingsBonus||r.bundledBonus){
-    n.push('');n.push('ADDITIONAL BONUSES:');
-    if(r.hasInvestingBonus)n.push('* Guided Investing: Fund '+(r.investMin||'minimum')+(r.maintainDays?', maintain for '+r.maintainDays+' days':''));
-    if(r.savingsBonus)n.push('* Savings bonus: '+r.savingsBonus);
-    if(r.bundledBonus)n.push('* Bundled bonus: Extra '+r.bundledBonus+' for completing both');
-  }
-
-  // Fees & Timing
+  if(r.ddMustBe.length||r.ddExcluded.length){n.push('');n.push('DIRECT DEPOSIT RULES:');if(r.ddMustBe.length)n.push('* DD must be from: '+r.ddMustBe.join(', '));if(r.ddExcluded.length)n.push('* Does NOT count: '+r.ddExcluded.join(', '))}
+  if(r.hasInvestingBonus||r.savingsBonus||r.bundledBonus){n.push('');n.push('ADDITIONAL BONUSES:');if(r.hasInvestingBonus)n.push('* Guided Investing: Fund '+(r.investMin||'minimum')+(r.maintainDays?', maintain for '+r.maintainDays+' days':''));if(r.savingsBonus)n.push('* Savings bonus: '+r.savingsBonus);if(r.bundledBonus)n.push('* Bundled bonus: Extra '+r.bundledBonus+' for completing both')}
   n.push('');n.push('FEES & TIMING:');
   if(r.monthlyFee)n.push('* Monthly fee: '+r.monthlyFee);
   if(r.feeWaiver)n.push('* Fee waiver: '+r.feeWaiver);
@@ -497,8 +488,6 @@ function analyzeTC(text){
   if(!r.earlyCloseFee&&!r.earlyCloseDays)n.push('* Early close fee: Not mentioned');
   if(r.ccFunding)n.push('* Credit card funding: Available');
   if(r.pullType)n.push('* Credit check: '+r.pullType);
-
-  // Churn & Tax
   n.push('');n.push('CHURN & TAX:');
   if(r.churnRule)n.push('* Churn cooldown: '+r.churnRule+' ('+r.churnMonths+' months)');
   else n.push('* Churn rule: Check fine print');
@@ -506,7 +495,6 @@ function analyzeTC(text){
   if(t.includes('limit one'))n.push('* Limit one bonus per account/member');
   if(t.includes('cannot be combined')||t.includes('not be combined'))n.push('* Cannot be combined with other offers');
   if(t.includes('open and in good standing'))n.push('* Account must be open and in good standing at payout');
-
   r.notesForTracker=n.filter(x=>x!==undefined).join('\n');
   r.checklist=[];
   if(r.promoCode)r.checklist.push('Use promo code '+r.promoCode);
@@ -519,8 +507,6 @@ function analyzeTC(text){
   if(r.earlyCloseDays)r.checklist.push('Hold account '+r.earlyCloseDays+' days');
   return Object.keys(r).length>1?r:null;
 }
-/* AI ANALYZER */
-
 
 /* DEFAULT DATA */
 const DEF=[];
@@ -577,9 +563,9 @@ let showAnalyzer=false,analyzerText='',analyzerResult=null;
 let showInlineAZ=false,inlineResult=null;
 let ddPrompt=null,rcvPrompt=null,showTemplates=false;
 let feedItems=null,feedLoading=false;
-
 let undoState=null,undoTimer=null;
-let closePrompt=null; // {entryId,bank,bonus,step:'date'|'bonus'|'dp',closeDate,gotFull:true,actualBonus:0,dp:''}
+let closePrompt=null;
+let overwritePrompt=null; // {newData:{...}, existingEntry:{...}}
 
 function findPhone(bank,eid){
   if(eid){const ee=entries.find(x=>x.id===eid);if(ee&&ee.phoneNum)return ee.phoneNum}
@@ -587,59 +573,28 @@ function findPhone(bank,eid){
   const isBiz=bn.includes('biz')||bn.includes('business');
   for(const [b,p,bz] of PHONES){
     const bl=b.toLowerCase();
-    // Match by first word or contains
-    if(bn.includes(bl.split(' ')[0])||bl.includes(bn.split(' ')[0])||bn.includes(bl)){
-      return isBiz?(bz||p):p;
-    }
+    if(bn.includes(bl.split(' ')[0])||bl.includes(bn.split(' ')[0])||bn.includes(bl)){return isBiz?(bz||p):p}
   }
   return null;
 }
-function findPhoneLabel(bank){
-  const bn=bank.toLowerCase();
-  return(bn.includes('biz')||bn.includes('business'))?'Business':'Personal';
-}
-
-function callBank(id){
-  const e=entries.find(x=>x.id===id);if(!e)return;
-  const phone=findPhone(e.bank,id);
-  if(phone)window.location.href='tel:'+phone.replace(/[^0-9+]/g,'');
-  else{cfm={title:'No Number Found',msg:'No phone number found for '+e.bank+'. Check the Phone tab.',green:true,action:()=>{cfm=null;R()}};R()}
-}
-
-function undoClose(){
-  if(!undoState)return;
-  entries=entries.map(e=>e.id===undoState.id?{...undoState}:e);
-  entries=sortE(entries);sv(SK,entries);
-  undoState=null;if(undoTimer)clearTimeout(undoTimer);
-  R();
-}
+function findPhoneLabel(bank){const bn=bank.toLowerCase();return(bn.includes('biz')||bn.includes('business'))?'Business':'Personal'}
+function callBank(id){const e=entries.find(x=>x.id===id);if(!e)return;const phone=findPhone(e.bank,id);if(phone)window.location.href='tel:'+phone.replace(/[^0-9+]/g,'');else{cfm={title:'No Number Found',msg:'No phone number found for '+e.bank+'. Check the Phone tab.',green:true,action:()=>{cfm=null;R()}};R()}}
+function undoClose(){if(!undoState)return;entries=entries.map(e=>e.id===undoState.id?{...undoState}:e);entries=sortE(entries);sv(SK,entries);undoState=null;if(undoTimer)clearTimeout(undoTimer);R()}
 
 let _sp=0;
-/* ICONS */
 const I={grid:'<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',doc:'<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',tips:'<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>',phone:'<svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>',info:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'};
 
-
 function highlightTC(text){
-  if(!text)return'';
-  let h=esc(text);
-  // Section headers
+  if(!text)return'';let h=esc(text);
   h=h.replace(/^(REQUIREMENTS:|DIRECT DEPOSIT RULES:|ADDITIONAL BONUSES:|FEES &amp; TIMING:|CHURN &amp; TAX:)/gm,'<span class="hl-section">$1</span>');
-  // Step numbers
   h=h.replace(/\* (Step \d+:)/g,'* <span class="hl-step">$1</span>');
-  // Dollar amounts
   h=h.replace(/(\$[\d,]+(?:\.\d+)?)/g,'<span class="hl-money">$1</span>');
-  // Day/time amounts
   h=h.replace(/(\d+\s+(?:days?|months?|weeks?|consecutive\s+days|statement\s+cycles?))/gi,'<span class="hl-days">$1</span>');
   h=h.replace(/(within\s+\d+\s+\w+)/gi,'<span class="hl-days">$1</span>');
-  // Warnings - NOT, don't, do not
   h=h.replace(/(NOT count|does NOT|do not qualify|not eligible|cannot be combined|not be combined|ineligible)/gi,'<span class="hl-warn">$1</span>');
-  // Fees & penalties
   h=h.replace(/(clawback|penalty|early close|termination fee|fee if closed)/gi,'<span class="hl-fee">$1</span>');
-  // Promo codes (uppercase words after "code")
   h=h.replace(/(?:code[:\s]+)([A-Z0-9]{3,})/g,'code: <span class="hl-code">$1</span>');
-  // Good things
   h=h.replace(/(\$0 \(No fee\)|No fee|None|Safe anytime|free checking)/gi,'<span class="hl-good">$1</span>');
-  // Zelle/P2P
   h=h.replace(/(Zelle|P2P|Micro-deposits?|person-to-person)/gi,'<span class="hl-warn">$1</span>');
   return h;
 }
@@ -654,14 +609,10 @@ function R(){
   const yr=completedYrTotal(dashYear);
   const thisYr=new Date().getFullYear();
   let h='';
-  // Header
   h+='<div class="hdr"><div class="hdr-row"><div><h1>\uD83D\uDCB0 <em>Bonus</em>Tracker</h1></div><div class="yr-pills">';
   [thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});
   h+='</div></div><div class="hdr-sub">TRACK \u00B7 CHURN \u00B7 REPEAT</div></div>';
-  // Stats + year total (tracker only)
-  if(tab==='tracker'){
-    h+='<div class="stats"><div class="st"><div class="n">'+wk+'</div><div class="l">Active</div></div><div class="st"><div class="n">'+ch+'</div><div class="l">Churning</div></div><div class="st"><div class="n">'+rd+'</div><div class="l">Ready</div></div><div class="st"><div class="n">'+fM(yr)+'</div><div class="l">'+dashYear+'</div></div></div>';
-  }
+  if(tab==='tracker'){h+='<div class="stats"><div class="st"><div class="n">'+wk+'</div><div class="l">Active</div></div><div class="st"><div class="n">'+ch+'</div><div class="l">Churning</div></div><div class="st"><div class="n">'+rd+'</div><div class="l">Ready</div></div><div class="st"><div class="n">'+fM(yr)+'</div><div class="l">'+dashYear+'</div></div></div>'}
   h+='<div class="scroll">';
   if(tab==='tracker')h+=rTracker(sorted);
   else if(tab==='tax')h+=rTax();
@@ -670,7 +621,6 @@ function R(){
   else if(tab==='rules')h+=rRules();
   h+='</div>';
   if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';
-  // Tabs
   h+='<div class="tabs">';
   ['tracker','tax','tips','phone','rules'].forEach((t,i)=>{h+='<button class="tb'+(tab===t?' on':'')+'" onclick="tab=\''+t+'\';search=\'\';R()">'+[I.grid,I.doc,I.tips,I.phone,I.info][i]+'<span>'+['Tracker','Tax','Tips','Phone','Rules'][i]+'</span></button>'});
   h+='</div>';
@@ -679,6 +629,7 @@ function R(){
   if(ddPrompt)h+=rDD();
   if(rcvPrompt)h+=rRcv();
   if(closePrompt)h+=rClose();
+  if(overwritePrompt)h+=rOverwrite();
   if(undoState)h+='<div class="undo-bar"><span>Closed '+esc(undoState.bank)+'</span><button onclick="undoClose()">Undo</button></div>';
   document.getElementById('app').innerHTML=h;
   const ns=document.querySelector('.scroll');if(ns)ns.scrollTop=_sp;
@@ -689,37 +640,30 @@ function rTracker(sorted){
   const q=search.toLowerCase();
   const f=q?sorted.filter(e=>(e.bank||'').toLowerCase().includes(q)):sorted;
   let h='';
-  // Backup reminder
   const bkd=daysSinceBk();
   if(bkd>=7)h+='<div class="bk-remind">\u26A0 '+(bkd>=999?'Never backed up':'Backup '+bkd+'d ago')+' <button onclick="exportBackup()">\uD83D\uDCE4 Backup</button></div>';
-  // Chart
   const cd=chartData();const mx=Math.max(...cd.map(c=>c.t),1);
   h+='<div class="chart"><div class="chart-t">\uD83D\uDCCA '+dashYear+' Monthly Earnings</div><div class="chart-bars">';
   cd.forEach(c=>{const p=c.t?Math.max(5,Math.round(c.t/mx*90)):1;h+='<div class="chart-col"><div class="chart-bar" style="height:'+p+'%"></div><div class="chart-cl">'+c.l+'</div></div>'});
   h+='</div></div>';
-  // Quick bar
   h+='<div class="qbar"><button class="qbtn" style="background:#EFF6FF;color:#2563EB" onclick="exportBackup()">\uD83D\uDCE4 Backup</button><button class="qbtn" style="background:#ECFDF5;color:#059669" onclick="importBackup()">\uD83D\uDCE5 Restore</button><button class="qbtn" style="background:#F3E8FF;color:#7C3AED" onclick="showTemplates=!showTemplates;R()">\u26A1 Quick Add</button><button class="qbtn" style="background:#FEF2F2;color:#EF4444" onclick="resetAllData()">\uD83D\uDDD1 Reset</button></div>';
-  // Templates
-  if(showTemplates){h+='<div class="sec">Quick-Add Templates</div><div class="tgrid">';TEMPLATES.forEach((t,i)=>{h+='<button class="tbtn" onclick="addFromTpl('+i+')"><div class="nm">'+esc(t.bank)+'</div><div class="bn">'+fM(t.bonus)+'</div></button>'});h+='</div>'}
-  // Search + Analyzer
+  if(showTemplates){h+='<div class="sec">Quick-Add Templates</div><div class="tgrid">';TEMPLATES.forEach((t,i)=>{h+='<button class="tbtn" onclick="addFromTpl('+i+')">'+bankLogo(t.bank,true)+'<div class="t-info"><div class="nm">'+esc(t.bank)+'</div><div class="bn">'+fM(t.bonus)+'</div></div></button>'});h+='</div>'}
   h+='<input class="sinput" type="text" placeholder="Search banks..." value="'+esc(search)+'" oninput="search=this.value;R()">';
   h+='<button class="tc-btn" onclick="showAnalyzer=!showAnalyzer;R()">\uD83E\uDDE0 '+(showAnalyzer?'Hide':'Paste T&C to Analyze')+'</button>';
   if(showAnalyzer)h+=rAnalyzer();
   if(!f.length)return h+'<div class="empty"><div class="em">\uD83D\uDCED</div><p>No entries yet.</p><p style="margin-top:6px;font-size:11px">Tap <strong>+</strong> to add a bank, <strong>\u26A1 Quick Add</strong> for templates, or <strong>\uD83D\uDCE5 Restore</strong> to import a backup.</p></div>';
-  // Cards
   f.forEach(e=>{
     const s=status(e),isX=expanded===e.id,nr=nextReopen(e),dl=daysLeft(e);
     const urg=getUrg(e),countdown=getCountdown(e);
     const bcls=s==='WORKING'?'w':s==='TIME TO CHURN!'?'ch':'wt';
     h+='<div class="card u-'+urg+'">';
-    // Compact header - always visible
     h+='<div class="card-h" onclick="expanded=expanded===\''+e.id+'\'?null:\''+e.id+'\';R()">';
+    h+=bankLogo(e.bank);
     h+='<div class="card-left"><div class="card-name">'+esc(e.bank)+'</div>';
     h+='<div class="card-row"><span class="badge '+bcls+'">'+esc(s)+'</span>';
     if(e.churn)h+='<span class="card-stat">'+({1:'1yr',2:'2yr',3:'3yr',180:'180d'}[e.churn]||e.churn)+'</span>';
     if(dl!==null&&s!=='WORKING')h+='<span class="card-stat"><em>'+dl+'d</em> left</span>';
     h+='</div></div>';
-    // Right side - bonus amount
     h+='<div class="card-right" style="display:flex;align-items:center;gap:6px">';
     h+='<div>';
     if(e.bonus)h+='<div class="card-bonus">'+fM(e.bonus)+'</div>';
@@ -727,24 +671,20 @@ function rTracker(sorted){
     h+='</div>';
     if(!e.closed&&findPhone(e.bank,e.id))h+='<button class="call-btn" onclick="event.stopPropagation();callBank(\x27'+e.id+'\x27)" title="Call '+findPhoneLabel(e.bank)+'">\uD83D\uDCDE</button>';
     h+='</div></div>';
-    // Countdown pill
     if(countdown){
       const prog=countdown.days>0&&countdown.lbl.includes('Safe')?holdProg(e):null;
       h+='<div class="cd-pill '+countdown.cls+'"><span class="icon">'+countdown.icon+'</span> '+countdown.lbl;
       h+='<span class="days">'+(countdown.days===0?'GO!':countdown.days+'d')+' \u2022 '+fD(countdown.date)+'</span></div>';
       if(prog!==null)h+='<div class="cd-prog"><div style="width:'+Math.round(prog*100)+'%;background:'+({red:'#EF4444',amber:'#F59E0B',green:'#10B981',blue:'#3B82F6'}[countdown.cls]||'#3B82F6')+'"></div></div>';
     }
-    // Early close timer (if different from countdown)
     if(!e.closed&&e.opened&&e.minHoldDays>0&&e.earlyCloseFee>0&&(!countdown||!countdown.lbl.includes('Safe'))){
       const dsc=daysUntilSafe(e),safe=dsc===0;
       h+='<div class="ect'+(safe?' safe':'')+'"><div class="ect-row"><span>\u23F1 '+(safe?'Safe to close':'Hold '+dsc+'d more')+'</span><span>'+(safe?'\u2705':''+dsc+'d')+'</span></div>';
       if(e.earlyCloseFee)h+='<div class="ect-fee">'+(safe?'No fee':'Close now = '+fM(e.earlyCloseFee)+' fee')+'</div>';
       h+='</div>';
     }
-    // Expanded detail
     if(isX){
       h+='<div class="card-exp">';
-      // Grid of details
       h+='<div class="card-grid">';
       if(e.opened)h+='<div class="cf"><div class="k">Opened</div><div class="v">'+fD(e.opened)+'</div></div>';
       if(e.closed)h+='<div class="cf"><div class="k">Closed</div><div class="v">'+fD(e.closed)+'</div></div>';
@@ -756,8 +696,6 @@ function rTracker(sorted){
       if(eff)h+='<div class="cf"><div class="k">Effort</div><div class="v"><span class="effort '+eff.level+'">'+eff.label+'</span></div></div>';
       if(e.referralBonus)h+='<div class="cf"><div class="k">Referral</div><div class="v"><span class="ref-b">+'+fM(e.referralBonus)+'</span></div></div>';
       h+='</div>';
-      
-      // Checklist
       if(!e.closed){
         h+='<div class="sec" style="margin-top:6px">Checklist</div><ul class="ck">';
         if(e.checklist&&e.checklist.length){e.checklist.forEach((c,ci)=>{h+='<li><div class="ckb'+(c.done?' dn':'')+'" onclick="event.stopPropagation();toggleCk(\''+e.id+'\','+ci+')"></div><span class="ck-text'+(c.done?' dn':'')+'">'+esc(c.text)+'</span><span class="ck-del" onclick="event.stopPropagation();rmCk(\''+e.id+'\','+ci+')">\u2715</span></li>'})}
@@ -765,7 +703,6 @@ function rTracker(sorted){
       }
       if(e.notes)h+='<div class="card-notes" style="white-space:pre-wrap;font-size:12px;line-height:1.6">'+esc(e.notes)+'</div>';
       if(e.analyzedTC)h+='<div class="tc-box"><div class="tc-label">T&C Analysis</div><div class="tc-body">'+highlightTC(e.analyzedTC)+'</div></div>';
-      // Action buttons
       h+='<div class="card-btns"><button class="cbtn edit" onclick="event.stopPropagation();openEdit(\''+e.id+'\')">\u270F\uFE0F Edit</button>';
       if(!e.closed&&(!e.bonusRecd||e.bonusRecd===''))h+='<button class="cbtn rcv" onclick="event.stopPropagation();openRcv(\''+e.id+'\')">\uD83C\uDF89 Received</button>';
       if(!e.closed)h+='<button class="cbtn cls" onclick="event.stopPropagation();closeAcct(\''+e.id+'\')">\uD83D\uDD12 Close</button>';
@@ -774,10 +711,8 @@ function rTracker(sorted){
     }
     h+='</div>';
   });
-  // Suggestions
   const sug=getSuggestions();
-  if(sug.length){h+='<div class="sec">\uD83D\uDCA1 Suggested Next</div>';sug.forEach(s=>{h+='<div class="sug-c"><div class="nm">'+esc(s.bank)+'</div>'+(s.bonus?'<div class="sub">'+fM(s.bonus)+'</div>':'')+'<div class="rsn">'+esc(s.rsn)+'</div></div>'})}
-  // Feed
+  if(sug.length){h+='<div class="sec">\uD83D\uDCA1 Suggested Next</div>';sug.forEach(s=>{h+='<div class="sug-c">'+bankLogo(s.bank,true)+'<div class="s-info"><div class="nm">'+esc(s.bank)+'</div>'+(s.bonus?'<div class="sub">'+fM(s.bonus)+'</div>':'')+'<div class="rsn">'+esc(s.rsn)+'</div></div></div>'})}
   h+='<div class="sec">\uD83D\uDCE1 Latest Bonuses</div>';
   if(!feedItems&&!feedLoading)h+='<button class="tc-btn" style="border-style:solid;background:#EFF6FF" onclick="loadFeed()">\uD83D\uDCE1 Load from Doctor of Credit</button>';
   else if(feedLoading)h+='<div class="empty"><span class="spin"></span></div>';
@@ -785,6 +720,7 @@ function rTracker(sorted){
   else{DOC_LINKS.forEach(([t,u])=>{h+='<a href="'+u+'" target="_blank" rel="noopener" class="feed-c"><div class="feed-t">\uD83D\uDD17 '+esc(t)+'</div></a>'})}
   return h;
 }
+
 /* ═══ TAX ═══ */
 function rTax(){
   const yrs=[];for(let y=2025;y<=2040;y++)yrs.push(y);
@@ -796,24 +732,23 @@ function rTax(){
   h+='</div><div class="ytotal">'+fM(yrA)+'</div><div class="ysub">'+taxYear+' \u2014 '+yrE.length+' closed bonus'+(yrE.length!==1?'es':'')+'</div>';
   if(yrE.length)h+='<button class="export-btn" onclick="exportCSV('+taxYear+')">\uD83D\uDCE5 Export '+taxYear+' CSV</button>';
   if(!yrE.length)return h+'<div class="empty"><div class="em">\uD83D\uDCCB</div><p>No completed bonuses in '+taxYear+'</p></div>';
-  yrE.forEach(e=>{h+='<div class="tax-c"><div class="tax-top"><div class="tax-bank">'+esc(e.bank)+'</div><div class="tax-amt">'+fM(e.bonus)+'</div></div><div class="tax-dates">'+(e.opened?'<span>Open: '+fD(e.opened)+'</span>':'')+'<span>Closed: '+fD(e.closed)+'</span></div></div>'});
+  yrE.forEach(e=>{h+='<div class="tax-c"><div class="tax-top"><div class="tax-bank">'+bankLogo(e.bank,true)+' '+esc(e.bank)+'</div><div class="tax-amt">'+fM(e.bonus)+'</div></div><div class="tax-dates">'+(e.opened?'<span>Open: '+fD(e.opened)+'</span>':'')+'<span>Closed: '+fD(e.closed)+'</span></div></div>'});
   h+='<div class="sec" style="margin-top:16px">All-Time</div><div class="ytotal">'+fM(allA)+'</div>';
   return h;
 }
+
 /* ═══ TIPS ═══ */
 function rTips(){
   let h='';
   const allMethods=loadDD();const reqs=loadReqs();
-  // Personal confirmed DPs
   const groups={};
   allMethods.forEach(m=>{const k=m.bank;if(!groups[k])groups[k]={bank:k,methods:[],total:0};groups[k].methods.push(m);groups[k].total+=m.bonus||0});
   entries.filter(e=>e.dataPoint).forEach(e=>{const k=e.bank;if(!groups[k])groups[k]={bank:k,methods:[],total:0};if(!groups[k].methods.some(m=>m.method===e.dataPoint))groups[k].methods.push({bank:e.bank,method:e.dataPoint,bonus:e.bonus||0,date:e.closed||''})});
   const gl=Object.values(groups).sort((a,b)=>b.total-a.total);
   if(gl.length){
     h+='<div class="sec">\uD83D\uDCCC Your Confirmed Data Points</div>';
-    gl.forEach(g=>{h+='<div class="rcard"><div style="width:100%"><div class="rcard-row"><div class="nm">'+esc(g.bank)+'</div><div class="ph">'+fM(g.total)+'</div></div><div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:2px">';g.methods.forEach(m=>{h+='<span class="tag y">'+esc(m.method)+'</span>'});h+='</div></div></div>'});
+    gl.forEach(g=>{h+='<div class="rcard" style="display:flex;align-items:center;gap:10px">'+bankLogo(g.bank,true)+'<div style="flex:1;min-width:0"><div class="rcard-row"><div class="nm">'+esc(g.bank)+'</div><div class="ph">'+fM(g.total)+'</div></div><div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:2px">';g.methods.forEach(m=>{h+='<span class="tag y">'+esc(m.method)+'</span>'});h+='</div></div></div>'});
   }
-  // Saved reqs from T&C analysis
   const rl=Object.values(reqs).sort((a,b)=>(b.bonus||0)-(a.bonus||0));
   if(rl.length){
     h+='<div class="sec">\uD83D\uDCD1 Saved Requirements</div>';
@@ -822,77 +757,70 @@ function rTips(){
     else if(r.requirements)h+='<div class="sub" style="margin-top:4px">'+r.requirements.map(x=>esc(x)).join(' \u00B7 ')+'</div>';
     h+='</div></div>'});
   }
-  // Community DPs
   h+='<div class="sec">\uD83C\uDF0D Community Data Points</div><input class="sinput" placeholder="Search..." oninput="this.dataset.q=this.value;R()" id="tps">';
   const tq=(document.getElementById('tps')||{}).value||'';
   const fl=tq?DATA_POINTS.filter(d=>d[0].toLowerCase().includes(tq.toLowerCase())||d[1].toLowerCase().includes(tq.toLowerCase())):DATA_POINTS;
   let cb='';fl.forEach(([bank,method,result,link])=>{
-    if(bank!==cb){cb=bank;h+='<div style="font-size:11px;font-weight:700;margin:8px 0 3px">'+esc(bank)+'</div>'}
+    if(bank!==cb){cb=bank;h+='<div style="font-size:11px;font-weight:700;margin:8px 0 3px;display:flex;align-items:center;gap:6px">'+bankLogo(bank,true)+' '+esc(bank)+'</div>'}
     h+='<div class="rcard" style="padding:8px 10px"><div class="rcard-row"><span style="font-size:11px;font-weight:600">'+esc(method)+'</span><span class="tag '+(result.includes('Works')||result.includes('Safe')?'y':'f')+'">'+esc(result)+'</span></div>'+(link?'<a href="'+link+'" target="_blank" style="font-size:9px;color:var(--accent)">Source</a>':'')+'</div>'});
   h+='<div class="sec">\uD83D\uDCDA Resources</div>';
   DOC_LINKS.forEach(([t,u])=>{h+='<a href="'+u+'" target="_blank" rel="noopener" class="feed-c"><div class="feed-t">\uD83D\uDD17 '+esc(t)+'</div></a>'});
   return h;
 }
-/* ═══ PHONE ═══ */
 
-function rClose(){
-  if(!closePrompt)return'';
-  const p=closePrompt;
-  let h='<div class="cbg" onclick="cancelClose()"><div class="close-modal" onclick="event.stopPropagation()">';
-  
-  if(p.step==='date'){
-    h+='<h3>\uD83D\uDD12 Close '+esc(p.bank)+'</h3>';
-    h+='<div class="sub">When did you close (or plan to close) this account?</div>';
-    h+='<label>Close Date</label><input type="date" id="cp_date" value="'+p.closeDate+'">';
-    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">Next \u2192</button></div>';
-  
-  }else if(p.step==='bonus'){
-    h+='<h3>\uD83D\uDCB0 Did you get the full bonus?</h3>';
-    h+='<div class="sub">'+esc(p.bank)+' \u2014 expected '+fM(p.bonus)+'</div>';
-    h+='<div class="bonus-row"><button class="bonus-opt'+(p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=true;closePrompt.actualBonus=closePrompt.bonus;R()">Yes \u2014 '+fM(p.bonus)+'</button><button class="bonus-opt'+(!p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=false;R()">No \u2014 partial/none</button></div>';
-    if(!p.gotFull){h+='<label>How much did you actually get?</label><input type="number" inputmode="numeric" id="cp_amt" value="'+(p.actualBonus||0)+'" placeholder="0">'}
-    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-g" onclick="closeNext()">Next \u2192</button></div>';
-  
-  }else if(p.step==='dp'){
-    h+='<h3>\uD83D\uDCCB What triggered the bonus?</h3>';
-    h+='<div class="sub">What DD method or action triggered '+esc(p.bank)+'\'s bonus? (Optional)</div>';
-    h+='<div class="dd-chips" style="margin-bottom:8px">';
-    ['Employer DD','Robinhood ACH','Fidelity ACH','Schwab ACH','Venmo DD','Melio Bill Pay','No DD needed','Debit only'].forEach(m=>{
-      h+='<button class="dd-chip" onclick="document.getElementById(\'cp_dp\').value=\''+m+'\'">'+m+'</button>';
-    });
-    h+='</div>';
-    h+='<input id="cp_dp" value="'+esc(p.dp)+'" placeholder="e.g. $1,000 DD via Robinhood ACH" onclick="event.stopPropagation()">';
-    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">\u2705 Close Account</button></div>';
-  }
-  h+='</div></div>';return h;
-}
+/* ═══ PHONE ═══ */
 function rPhone(){
   let h='<div class="sec">Customer Service Numbers</div>';
   h+='<input class="sinput" placeholder="Search banks..." oninput="this.dataset.q=this.value;R()" id="phs">';
   const pq=(document.getElementById('phs')||{}).value||'';
   const pf=pq?PHONES.filter(p=>p[0].toLowerCase().includes(pq.toLowerCase())):PHONES;
   pf.forEach(([b,p,bz])=>{
-    h+='<div class="rcard"><div style="width:100%"><div class="rcard-row"><div class="nm">'+esc(b)+'</div></div>';
-    h+='<div style="display:flex;gap:8px;margin-top:6px">';
-    h+='<a href="tel:'+p+'" style="text-decoration:none;flex:1;padding:8px;background:#EFF6FF;border-radius:8px;text-align:center"><div style="font-size:9px;font-weight:700;color:var(--muted)">PERSONAL</div><div style="font-size:12px;font-weight:600;color:var(--accent)">'+p+'</div></a>';
-    if(bz&&bz!==p)h+='<a href="tel:'+bz+'" style="text-decoration:none;flex:1;padding:8px;background:#F3E8FF;border-radius:8px;text-align:center"><div style="font-size:9px;font-weight:700;color:var(--muted)">BUSINESS</div><div style="font-size:12px;font-weight:600;color:#7C3AED">'+bz+'</div></a>';
-    else if(bz)h+='<div style="flex:1;padding:8px;background:#ECFDF5;border-radius:8px;text-align:center"><div style="font-size:9px;font-weight:700;color:var(--muted)">SAME #</div><div style="font-size:12px;font-weight:600;color:var(--green)">'+bz+'</div></div>';
+    h+='<div class="ph-card">'+bankLogo(b,false)+'<div style="flex:1"><div style="font-size:13px;font-weight:700;margin-bottom:6px">'+esc(b)+'</div>';
+    h+='<div class="ph-links">';
+    h+='<a href="tel:'+p+'" class="ph-link" style="background:#EFF6FF"><div class="phl">PERSONAL</div><div class="phn" style="color:var(--accent)">'+p+'</div></a>';
+    if(bz&&bz!==p)h+='<a href="tel:'+bz+'" class="ph-link" style="background:#F3E8FF"><div class="phl">BUSINESS</div><div class="phn" style="color:#7C3AED">'+bz+'</div></a>';
+    else if(bz)h+='<div class="ph-link" style="background:#ECFDF5"><div class="phl">SAME #</div><div class="phn" style="color:var(--green)">'+bz+'</div></div>';
     h+='</div></div></div>';
   });
   return h;
 }
+
+/* ═══ CLOSE PROMPT ═══ */
+function rClose(){
+  if(!closePrompt)return'';const p=closePrompt;
+  let h='<div class="cbg" onclick="cancelClose()"><div class="close-modal" onclick="event.stopPropagation()">';
+  if(p.step==='date'){
+    h+='<h3>\uD83D\uDD12 Close '+esc(p.bank)+'</h3><div class="sub">When did you close (or plan to close) this account?</div>';
+    h+='<label>Close Date</label><input type="date" id="cp_date" value="'+p.closeDate+'">';
+    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">Next \u2192</button></div>';
+  }else if(p.step==='bonus'){
+    h+='<h3>\uD83D\uDCB0 Did you get the full bonus?</h3><div class="sub">'+esc(p.bank)+' \u2014 expected '+fM(p.bonus)+'</div>';
+    h+='<div class="bonus-row"><button class="bonus-opt'+(p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=true;closePrompt.actualBonus=closePrompt.bonus;R()">Yes \u2014 '+fM(p.bonus)+'</button><button class="bonus-opt'+(!p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=false;R()">No \u2014 partial/none</button></div>';
+    if(!p.gotFull){h+='<label>How much did you actually get?</label><input type="number" inputmode="numeric" id="cp_amt" value="'+(p.actualBonus||0)+'" placeholder="0">'}
+    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-g" onclick="closeNext()">Next \u2192</button></div>';
+  }else if(p.step==='dp'){
+    h+='<h3>\uD83D\uDCCB What triggered the bonus?</h3><div class="sub">What DD method or action triggered '+esc(p.bank)+'\'s bonus? (Optional)</div>';
+    h+='<div class="dd-chips" style="margin-bottom:8px">';
+    ['Employer DD','Robinhood ACH','Fidelity ACH','Schwab ACH','Venmo DD','Melio Bill Pay','No DD needed','Debit only'].forEach(m=>{h+='<button class="dd-chip" onclick="document.getElementById(\'cp_dp\').value=\''+m+'\'">'+m+'</button>'});
+    h+='</div><input id="cp_dp" value="'+esc(p.dp)+'" placeholder="e.g. $1,000 DD via Robinhood ACH" onclick="event.stopPropagation()">';
+    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">\u2705 Close Account</button></div>';
+  }
+  h+='</div></div>';return h;
+}
+
 /* ═══ RULES ═══ */
 function rRules(){let h='<div class="sec">Churn Rules \u2014 MO + Nationwide</div><input class="sinput" placeholder="Search..." oninput="this.dataset.q=this.value;R()" id="rs">';
   const q=(document.getElementById('rs')||{}).value||'';
   const fl=q?RULES.filter(r=>r[0].toLowerCase().includes(q.toLowerCase())):RULES;
   fl.forEach(([bank,rule,mo,churnable,moAvail,closeFee,maint,notes])=>{
-    h+='<div class="rcard"><div style="width:100%"><div class="rcard-row"><div class="nm">'+esc(bank)+'</div><div style="text-align:right"><div class="ph">'+esc(rule)+'</div><div class="ph2">'+mo+'mo</div></div></div><div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:2px">';
+    h+='<div class="rcard" style="display:flex;align-items:flex-start;gap:10px">'+bankLogo(bank,false)+'<div style="flex:1"><div class="rcard-row"><div class="nm">'+esc(bank)+'</div><div style="text-align:right"><div class="ph">'+esc(rule)+'</div><div class="ph2">'+mo+'mo</div></div></div><div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:2px">';
     h+=churnable?'<span class="tag y">\u2705 Churnable</span>':'<span class="tag n">\u274C Not Churnable</span>';
     if(moAvail)h+='<span class="tag m">\uD83D\uDCCD MO</span>';
     if(closeFee&&closeFee!=='None')h+='<span class="tag f">\u26A0 '+esc(closeFee)+'</span>';
     h+='<span class="tag '+(maint.includes('$0')||maint.includes('free')?'b':'f')+'">'+esc(maint)+'</span>';
     h+='</div>';if(notes)h+='<div class="sub">'+esc(notes)+'</div>';
     h+='</div></div>'});return h}
+
 /* ═══ MODAL ═══ */
 function rModal(){
   const e=modal;
@@ -912,22 +840,19 @@ function rModal(){
   h+='<div class="m-sec">Your Notes</div>';
   h+='<div style="font-size:10px;color:var(--muted);margin-bottom:3px">Your personal notes — never overwritten by analyzer</div>';
   h+='<div class="fg"><textarea rows="3" style="font-size:13px;line-height:1.5;min-height:60px"'+oi('notes')+'placeholder="Your personal notes, tips, reminders...">'+esc(e.notes||'')+'</textarea></div>';
-  // Inline T&C analyzer
-  // Analyzed T&C section (read-only display + editable)
   if(modal.analyzedTC){
     h+='<div class="m-sec">Analyzed T&C Summary</div>';
     h+='<div style="font-size:10px;color:var(--muted);margin-bottom:3px">Auto-generated from T&C analyzer — re-analyze to update</div>';
-    h+='<div class="fg"><textarea rows="6" style="font-size:12px;line-height:1.6;min-height:120px;background:#F8FAFC;border:1.5px solid #E2E8F0"'+' oninput="modal.analyzedTC=this.value" '+'placeholder="Analyzed T&C will appear here...">'+esc(modal.analyzedTC)+'</textarea></div>';
+    h+='<div class="fg"><textarea rows="6" style="font-size:12px;line-height:1.6;min-height:120px;background:#F8FAFC;border:1.5px solid #E2E8F0" oninput="modal.analyzedTC=this.value" placeholder="Analyzed T&C will appear here...">'+esc(modal.analyzedTC)+'</textarea></div>';
   }
   h+='<button type="button" class="tc-btn" onclick="showInlineAZ=!showInlineAZ;R()">\uD83E\uDDE0 '+(showInlineAZ?'Hide T&C Analyzer':'Paste T&C to Auto-fill')+'</button>';
-  if(showInlineAZ){h+='<div class="az-area"><textarea id="inline_tc" placeholder="Paste T&C here..."></textarea>'+('<button class="az-go" onclick="event.preventDefault();runInlineAnalyze()">Analyze & Auto-fill</button>')+(inlineResult?'<div style="margin-top:4px;font-size:10px;color:var(--green);font-weight:600">\u2705 Auto-filled!</div>':'')+'</div>'}
+  if(showInlineAZ){h+='<div class="az-area"><textarea id="inline_tc" placeholder="Paste T&C here..."></textarea><button class="az-go" onclick="event.preventDefault();runInlineAnalyze()">Analyze & Auto-fill</button>'+(inlineResult?'<div style="margin-top:4px;font-size:10px;color:var(--green);font-weight:600">\u2705 Auto-filled!</div>':'')+'</div>'}
   h+='<button class="btn-p" onclick="saveEntry()">\uD83D\uDCBE '+(e._edit?'Save Changes':'Add Entry')+'</button>';
   h+='<button class="btn-s" onclick="closeModal()">Cancel</button>';
   if(e._edit)h+='<button class="btn-d" onclick="clearFields()">Clear All Fields</button>';
   h+='</div></div>';return h;
 }
 function rCfm(){return'<div class="cbg" onclick="cfm=null;R()"><div class="cbox" onclick="event.stopPropagation()"><h3>'+cfm.title+'</h3><p>'+cfm.msg+'</p><div class="crow"><button class="c-c" onclick="cfm=null;R()">Cancel</button><button class="'+(cfm.green?'c-g':'c-r')+'" onclick="cfm.action()">'+(cfm.green?'Confirm':'Delete')+'</button></div></div></div>'}
-/* DD PROMPT */
 function rDD(){
   const p=ddPrompt;const common=['Employer DD','Robinhood ACH','Fidelity ACH','Schwab ACH','Venmo DD','PayPal DD','Melio Bill Pay','Cash App DD','No DD Required','Debit Card Only'];
   let h='<div class="cbg" onclick="skipDD()"><div class="dd-box" onclick="event.stopPropagation()"><h3>\uD83D\uDCCB What triggered the bonus?</h3><div class="sub">Select DD method(s) for '+esc(p.bank)+'. Optional \u2014 tap Skip to close without saving.</div><div class="dd-chips">';
@@ -935,7 +860,6 @@ function rDD(){
   h+='</div><input class="dd-input" id="dd_custom" placeholder="Other methods, comma separated..." onclick="event.stopPropagation()">';
   h+='<div class="crow"><button class="c-c" onclick="skipDD()">Skip</button><button class="c-g" onclick="submitDD()">\uD83D\uDCBE Save</button></div></div></div>';return h;
 }
-/* RCV PROMPT */
 function rRcv(){
   const p=rcvPrompt;let h='<div class="cbg" onclick="skipRcv()"><div class="rcv-box" onclick="event.stopPropagation()">';
   if(p.step==='date'){
@@ -952,6 +876,28 @@ function rRcv(){
   }
   h+='</div></div>';return h;
 }
+
+/* ═══ OVERWRITE PROMPT ═══ */
+function rOverwrite(){
+  if(!overwritePrompt)return'';
+  const p=overwritePrompt;
+  const ex=p.existingEntry;
+  const s=status(ex);
+  let h='<div class="cbg" onclick="overwritePrompt=null;R()"><div class="ow-box" onclick="event.stopPropagation()">';
+  h+='<h3>\uD83D\uDD04 Existing Entry Found</h3>';
+  h+='<div class="sub"><strong>'+esc(p.newData.bank)+'</strong> already exists in your tracker. Do you want to overwrite it for a new churn cycle?</div>';
+  h+='<div class="ow-existing">'+bankLogo(ex.bank)+'<div class="ow-info"><div class="nm">'+esc(ex.bank)+'</div><div class="det">'+esc(s)+' \u00B7 ID: '+esc(ex.id)+'</div>';
+  if(ex.opened)h+='<div class="det">Opened: '+fD(ex.opened)+'</div>';
+  if(ex.closed)h+='<div class="det">Closed: '+fD(ex.closed)+'</div>';
+  h+='</div><div class="amt">'+fM(ex.bonus)+'</div></div>';
+  h+='<div style="display:flex;flex-direction:column;gap:6px">';
+  h+='<button class="c-g" style="width:100%;padding:12px;border-radius:10px;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer" onclick="doOverwrite()">\uD83D\uDD04 Overwrite & Start New Churn</button>';
+  h+='<button style="width:100%;padding:12px;border-radius:10px;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;background:#EFF6FF;color:var(--accent)" onclick="doAddNew()">+ Add as Separate Entry</button>';
+  h+='<button class="c-c" style="width:100%;padding:10px;border-radius:10px;border:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer" onclick="overwritePrompt=null;R()">Cancel</button>';
+  h+='</div></div></div>';
+  return h;
+}
+
 /* ANALYZER */
 function rAnalyzer(){
   let h='<div style="background:var(--card);border-radius:12px;padding:12px;margin-bottom:8px;border:1px solid var(--border)">';
@@ -961,11 +907,8 @@ function rAnalyzer(){
   if(analyzerResult){
     const r=analyzerResult;
     h+='<div style="margin-top:8px">';
-    // Show fine print summary as primary content
-    if(r.notesForTracker){
-      h+='<div class="tc-box" style="padding:12px;border-radius:12px"><div class="tc-body" style="font-size:13px;line-height:1.8">'+highlightTC(r.notesForTracker)+'</div></div>';
-    }else{
-      // Fallback: show individual fields
+    if(r.notesForTracker){h+='<div class="tc-box" style="padding:12px;border-radius:12px"><div class="tc-body" style="font-size:13px;line-height:1.8">'+highlightTC(r.notesForTracker)+'</div></div>'}
+    else{
       h+='<div style="padding:12px;background:var(--bg);border-radius:12px;font-size:13px;line-height:1.8">';
       if(r.bonusAmount)h+='<div>* Bonus: '+esc(r.bonusAmount)+'</div>';
       if(r.ddAmount)h+='<div>* DD: '+esc(r.ddAmount)+(r.ddCount?' (x'+r.ddCount+')':'')+'</div>';
@@ -982,92 +925,75 @@ function rAnalyzer(){
   }
   h+='</div>';return h;
 }
+
 /* ═══ ACTIONS ═══ */
 function openAdd(){modal={bank:'',bonus:0,churn:'',opened:'',closed:'',bonusRecd:'',reqMet:'',notes:'',analyzedTC:'',minHoldDays:0,earlyCloseFee:0,dataPoint:'',reqDays:0,referralBonus:0,checklist:[],plannedClose:'',phoneNum:''};R()}
 function openEdit(id){const e=entries.find(x=>x.id===id);if(e){modal={...e,analyzedTC:e.analyzedTC||'',_edit:true};showInlineAZ=false;inlineResult=null;R()}}
 function closeModal(){modal=null;showInlineAZ=false;inlineResult=null;R()}
 function clearFields(){if(!modal)return;['bonus','churn','opened','closed','bonusRecd','reqMet','dataPoint','notes'].forEach(k=>{modal[k]=''});['reqDays','minHoldDays','earlyCloseFee','referralBonus'].forEach(k=>{modal[k]=0});modal.bonus=0;R()}
+
 function saveEntry(){
   const bank=(modal.bank||'').trim();if(!bank){alert('Bank name required');return}
   const d={bank,bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',plannedClose:modal.plannedClose||'',phoneNum:modal.phoneNum||''};
-  if(modal._edit){entries=entries.map(e=>e.id===modal.id?{...e,...d,checklist:e.checklist||[]}:e)}
-  else{const taken=new Set(entries.map(e=>e.id));d.id=genId(bank,taken);d.checklist=[];entries.push(d)}
+  if(modal._edit){
+    entries=entries.map(e=>e.id===modal.id?{...e,...d,checklist:e.checklist||[]}:e);
+  } else {
+    // Check for existing bank with same name
+    const existing=findExistingByBank(bank);
+    if(existing){
+      // Show overwrite prompt
+      overwritePrompt={newData:d,existingEntry:existing};
+      closeModal();
+      R();return;
+    }
+    const taken=new Set(entries.map(e=>e.id));d.id=genId(bank,taken);d.checklist=[];entries.push(d);
+  }
   entries=sortE(entries);sv(SK,entries);closeModal();
 }
 
-function resetAllData(){
-  cfm={title:'\u26A0\uFE0F Reset All Data',msg:'This will permanently delete ALL entries, data points, and saved requirements.\n\nYour exported backup file is not affected.',action:()=>{
-    cfm={title:'\u{1F6A8} Are you absolutely sure?',msg:'Type RESET to confirm. This cannot be undone.',action:()=>{
-      entries=[];sv(SK,[]);
-      try{localStorage.removeItem(DD_KEY);localStorage.removeItem(REQ_KEY);localStorage.removeItem(BK_KEY)}catch{}
-      cfm=null;expanded=null;R();
-    }};R();
-  }};R();
-}
-function delEntry(id){const e=entries.find(x=>x.id===id);cfm={title:'\u{1F5D1} Delete Entry',msg:'Remove '+e.bank+'?\n\nThis cannot be undone.',action:()=>{
-  cfm={title:'Confirm Delete',msg:'Are you sure you want to delete '+e.bank+'?',action:()=>{entries=entries.filter(x=>x.id!==id);sv(SK,entries);cfm=null;expanded=null;R()}};R();
-}};R()}
-function closeAcct(id){
-  const e=entries.find(x=>x.id===id);if(!e)return;
-  const dsc=daysUntilSafe(e);
-  // Early close warning
-  if(dsc!==null&&dsc>0&&e.earlyCloseFee>0){
-    cfm={title:'\u26A0\uFE0F Early Close Warning',msg:dsc+' days remain on hold period. Closing now means '+fM(e.earlyCloseFee)+' fee! Are you sure?',action:()=>{cfm=null;startCloseFlow(id)},green:false};R();return;
-  }
-  startCloseFlow(id);
-}
-function startCloseFlow(id){
-  const e=entries.find(x=>x.id===id);if(!e)return;
-  closePrompt={entryId:id,bank:e.bank,bonus:e.bonus||0,step:'date',closeDate:td(),gotFull:true,actualBonus:e.bonus||0,dp:''};
-  R();
-}
-function closeNext(){
-  const p=closePrompt;if(!p)return;
-  if(p.step==='date'){
-    const d=document.getElementById('cp_date');if(d)p.closeDate=d.value;
-    p.step='bonus';R();
-  }else if(p.step==='bonus'){
-    if(!p.gotFull){const v=document.getElementById('cp_amt');if(v)p.actualBonus=parseInt(v.value)||0}
-    p.step='dp';R();
-  }else if(p.step==='dp'){
-    const dp=document.getElementById('cp_dp');if(dp)p.dp=dp.value.trim();
-    finishClose();
-  }
-}
-function closeBack(){
-  const p=closePrompt;if(!p)return;
-  if(p.step==='dp')p.step='bonus';
-  else if(p.step==='bonus')p.step='date';
-  R();
-}
-function finishClose(){
-  const p=closePrompt;if(!p)return;
-  const e=entries.find(x=>x.id===p.entryId);
-  // Save undo state
-  undoState={...e};if(undoTimer)clearTimeout(undoTimer);
-  undoTimer=setTimeout(()=>{undoState=null;R()},15000);
-  // Update entry
-  entries=entries.map(x=>{
-    if(x.id===p.entryId){
-      x.closed=p.closeDate;
-      x.bonus=p.actualBonus;
-      if(!x.bonusRecd&&p.actualBonus>0)x.bonusRecd=p.closeDate;
-      if(p.dp)x.dataPoint=p.dp;
+function doOverwrite(){
+  if(!overwritePrompt)return;
+  const p=overwritePrompt;
+  const d=p.newData;
+  // Overwrite existing entry, keeping its ID
+  entries=entries.map(e=>{
+    if(e.id===p.existingEntry.id){
+      return{...e,bank:d.bank,bonus:d.bonus,churn:d.churn,opened:d.opened||td(),closed:'',bonusRecd:'',reqMet:'',notes:d.notes,analyzedTC:d.analyzedTC,minHoldDays:d.minHoldDays,earlyCloseFee:d.earlyCloseFee,reqDays:d.reqDays,referralBonus:d.referralBonus||0,dataPoint:d.dataPoint,plannedClose:'',phoneNum:d.phoneNum||e.phoneNum||'',checklist:[]};
     }
-    return x;
+    return e;
   });
-  // Save DD method if provided
-  if(p.dp)addDD(p.bank,p.dp,p.actualBonus,p.closeDate);
-  // Save to reqs
-  const e2=entries.find(x=>x.id===p.entryId);
-  if(e2)saveReq(e2.bank,{bonus:e2.bonus,notes:e2.notes,dataPoint:e2.dataPoint});
-  
   entries=sortE(entries);sv(SK,entries);
-  closePrompt=null;expanded=null;R();
+  overwritePrompt=null;expanded=p.existingEntry.id;R();
 }
+function doAddNew(){
+  if(!overwritePrompt)return;
+  const d=overwritePrompt.newData;
+  const taken=new Set(entries.map(e=>e.id));
+  d.id=genId(d.bank,taken);d.checklist=[];
+  entries.push(d);entries=sortE(entries);sv(SK,entries);
+  overwritePrompt=null;R();
+}
+
+function resetAllData(){cfm={title:'\u26A0\uFE0F Reset All Data',msg:'This will permanently delete ALL entries, data points, and saved requirements.\n\nYour exported backup file is not affected.',action:()=>{cfm={title:'\u{1F6A8} Are you absolutely sure?',msg:'Type RESET to confirm. This cannot be undone.',action:()=>{entries=[];sv(SK,[]);try{localStorage.removeItem(DD_KEY);localStorage.removeItem(REQ_KEY);localStorage.removeItem(BK_KEY)}catch{}cfm=null;expanded=null;R()}};R()}};R()}
+function delEntry(id){const e=entries.find(x=>x.id===id);cfm={title:'\u{1F5D1} Delete Entry',msg:'Remove '+e.bank+'?\n\nThis cannot be undone.',action:()=>{cfm={title:'Confirm Delete',msg:'Are you sure you want to delete '+e.bank+'?',action:()=>{entries=entries.filter(x=>x.id!==id);sv(SK,entries);cfm=null;expanded=null;R()}};R()}};R()}
+function closeAcct(id){const e=entries.find(x=>x.id===id);if(!e)return;const dsc=daysUntilSafe(e);if(dsc!==null&&dsc>0&&e.earlyCloseFee>0){cfm={title:'\u26A0\uFE0F Early Close Warning',msg:dsc+' days remain on hold period. Closing now means '+fM(e.earlyCloseFee)+' fee! Are you sure?',action:()=>{cfm=null;startCloseFlow(id)},green:false};R();return}startCloseFlow(id)}
+function startCloseFlow(id){const e=entries.find(x=>x.id===id);if(!e)return;closePrompt={entryId:id,bank:e.bank,bonus:e.bonus||0,step:'date',closeDate:td(),gotFull:true,actualBonus:e.bonus||0,dp:''};R()}
+function closeNext(){const p=closePrompt;if(!p)return;if(p.step==='date'){const d=document.getElementById('cp_date');if(d)p.closeDate=d.value;p.step='bonus';R()}else if(p.step==='bonus'){if(!p.gotFull){const v=document.getElementById('cp_amt');if(v)p.actualBonus=parseInt(v.value)||0}p.step='dp';R()}else if(p.step==='dp'){const dp=document.getElementById('cp_dp');if(dp)p.dp=dp.value.trim();finishClose()}}
+function closeBack(){const p=closePrompt;if(!p)return;if(p.step==='dp')p.step='bonus';else if(p.step==='bonus')p.step='date';R()}
+function finishClose(){const p=closePrompt;if(!p)return;const e=entries.find(x=>x.id===p.entryId);undoState={...e};if(undoTimer)clearTimeout(undoTimer);undoTimer=setTimeout(()=>{undoState=null;R()},15000);entries=entries.map(x=>{if(x.id===p.entryId){x.closed=p.closeDate;x.bonus=p.actualBonus;if(!x.bonusRecd&&p.actualBonus>0)x.bonusRecd=p.closeDate;if(p.dp)x.dataPoint=p.dp}return x});if(p.dp)addDD(p.bank,p.dp,p.actualBonus,p.closeDate);const e2=entries.find(x=>x.id===p.entryId);if(e2)saveReq(e2.bank,{bonus:e2.bonus,notes:e2.notes,dataPoint:e2.dataPoint});entries=sortE(entries);sv(SK,entries);closePrompt=null;expanded=null;R()}
 function cancelClose(){closePrompt=null;R()}
 
-function addFromTpl(i){const t=TEMPLATES[i];modal={bank:t.bank,bonus:t.bonus,churn:t.churn,opened:td(),closed:'',bonusRecd:'',reqMet:'',notes:t.notes||'',minHoldDays:t.minHoldDays||0,earlyCloseFee:t.earlyCloseFee||0,dataPoint:t.dataPoint||'',reqDays:t.reqDays||0,referralBonus:0,checklist:[],plannedClose:''};showTemplates=false;R()}
+function addFromTpl(i){
+  const t=TEMPLATES[i];
+  // Check for existing
+  const existing=findExistingByBank(t.bank);
+  const newData={bank:t.bank,bonus:t.bonus,churn:t.churn,opened:td(),closed:'',bonusRecd:'',reqMet:'',notes:t.notes||'',analyzedTC:'',minHoldDays:t.minHoldDays||0,earlyCloseFee:t.earlyCloseFee||0,dataPoint:t.dataPoint||'',reqDays:t.reqDays||0,referralBonus:0,plannedClose:'',phoneNum:''};
+  if(existing){
+    overwritePrompt={newData,existingEntry:existing};
+    showTemplates=false;R();return;
+  }
+  modal=newData;modal.checklist=[];showTemplates=false;R();
+}
 
 /* Checklist */
 function toggleCk(id,i){entries=entries.map(e=>{if(e.id===id&&e.checklist)e.checklist[i].done=!e.checklist[i].done;return e});sv(SK,entries);R()}
@@ -1082,84 +1008,42 @@ function skipDD(){ddPrompt=null;R()}
 /* Receive */
 function openRcv(id){const e=entries.find(x=>x.id===id);rcvPrompt={entryId:id,bank:e.bank,step:'date',date:td(),wait:0};R()}
 function rcvNext(){const d=document.getElementById('rcv_date');if(d)rcvPrompt.date=d.value;rcvPrompt.step='wait';R()}
-function rcvSubmit(){
-  const p=rcvPrompt;
-  entries=entries.map(e=>{if(e.id===p.entryId){e.bonusRecd=p.date;saveReq(e.bank,{bonus:e.bonus,notes:e.notes,dataPoint:e.dataPoint})}return e});
-  if(p.wait===0){
-    const e=entries.find(x=>x.id===p.entryId);
-    entries=entries.map(x=>x.id===p.entryId?{...x,closed:td()}:x);
-    entries=sortE(entries);sv(SK,entries);rcvPrompt=null;
-    ddPrompt={entryId:p.entryId,bank:p.bank,bonus:e?e.bonus:0,sel:[],custom:''};R();return;
-  }
-  if(p.wait>0)entries=entries.map(x=>x.id===p.entryId?{...x,plannedClose:addD(p.date,p.wait)}:x);
-  entries=sortE(entries);sv(SK,entries);rcvPrompt=null;R();
-}
+function rcvSubmit(){const p=rcvPrompt;entries=entries.map(e=>{if(e.id===p.entryId){e.bonusRecd=p.date;saveReq(e.bank,{bonus:e.bonus,notes:e.notes,dataPoint:e.dataPoint})}return e});if(p.wait===0){const e=entries.find(x=>x.id===p.entryId);entries=entries.map(x=>x.id===p.entryId?{...x,closed:td()}:x);entries=sortE(entries);sv(SK,entries);rcvPrompt=null;ddPrompt={entryId:p.entryId,bank:p.bank,bonus:e?e.bonus:0,sel:[],custom:''};R();return}if(p.wait>0)entries=entries.map(x=>x.id===p.entryId?{...x,plannedClose:addD(p.date,p.wait)}:x);entries=sortE(entries);sv(SK,entries);rcvPrompt=null;R()}
 function skipRcv(){rcvPrompt=null;R()}
 
 /* Analyzer */
-function runMainAnalyze(){
-  const el=document.getElementById('az_input');if(!el)return;analyzerText=el.value;
-  if(!analyzerText||analyzerText.length<20){alert('Paste more T&C text');return}
-  analyzerResult=analyzeTC(analyzerText);
-  if(analyzerResult&&analyzerResult.bankName)saveReq(analyzerResult.bankName||analyzerResult.acctType||'Unknown',analyzerResult);
-  if(!analyzerResult||Object.keys(analyzerResult).length<2)alert('Could not extract enough data. Try pasting more of the full terms & conditions.');
-  R();
-}
-function runInlineAnalyze(){
-  const el=document.getElementById('inline_tc');if(!el||el.value.length<20){alert('Paste more T&C text');return}
-  inlineResult=analyzeTC(el.value);
-  if(inlineResult){
-    // Write to analyzedTC (never touches user's personal notes)
-    if(inlineResult.notesForTracker)modal.analyzedTC=inlineResult.notesForTracker;
-    // Auto-fill other fields
-    if(inlineResult.bonusAmount&&!modal.bonus)modal.bonus=parseInt(String(inlineResult.bonusAmount).replace(/[$,]/g,''))||0;
-    if(inlineResult.churnMonths&&!modal.churn)modal.churn=inlineResult.churnMonths<=6?'180':inlineResult.churnMonths<=12?'1':inlineResult.churnMonths<=24?'2':'3';
-    if(inlineResult.earlyCloseDays)modal.minHoldDays=parseInt(inlineResult.earlyCloseDays)||0;
-    if(inlineResult.earlyCloseFee)modal.earlyCloseFee=parseInt(String(inlineResult.earlyCloseFee).replace(/[$,]/g,''))||0;
-    if(inlineResult.ddAmount||inlineResult.debitTxns)modal.dataPoint=[inlineResult.ddAmount?'DD '+inlineResult.ddAmount:'',inlineResult.debitTxns?inlineResult.debitTxns+' debit txns':''].filter(Boolean).join(' + ');
-    if(inlineResult.promoCode&&!modal.dataPoint)modal.dataPoint='Promo: '+inlineResult.promoCode;
-    if(inlineResult.timelineDays)modal.reqDays=inlineResult.timelineDays;
-    if(inlineResult.bankName&&!modal.bank)modal.bank=inlineResult.bankName;
-  }else{alert('Could not extract data. Paste more of the full T&C.')}
-  R();
-}
+function runMainAnalyze(){const el=document.getElementById('az_input');if(!el)return;analyzerText=el.value;if(!analyzerText||analyzerText.length<20){alert('Paste more T&C text');return}analyzerResult=analyzeTC(analyzerText);if(analyzerResult&&analyzerResult.bankName)saveReq(analyzerResult.bankName||analyzerResult.acctType||'Unknown',analyzerResult);if(!analyzerResult||Object.keys(analyzerResult).length<2)alert('Could not extract enough data. Try pasting more of the full terms & conditions.');R()}
+function runInlineAnalyze(){const el=document.getElementById('inline_tc');if(!el||el.value.length<20){alert('Paste more T&C text');return}inlineResult=analyzeTC(el.value);if(inlineResult){if(inlineResult.notesForTracker)modal.analyzedTC=inlineResult.notesForTracker;if(inlineResult.bonusAmount&&!modal.bonus)modal.bonus=parseInt(String(inlineResult.bonusAmount).replace(/[$,]/g,''))||0;if(inlineResult.churnMonths&&!modal.churn)modal.churn=inlineResult.churnMonths<=6?'180':inlineResult.churnMonths<=12?'1':inlineResult.churnMonths<=24?'2':'3';if(inlineResult.earlyCloseDays)modal.minHoldDays=parseInt(inlineResult.earlyCloseDays)||0;if(inlineResult.earlyCloseFee)modal.earlyCloseFee=parseInt(String(inlineResult.earlyCloseFee).replace(/[$,]/g,''))||0;if(inlineResult.ddAmount||inlineResult.debitTxns)modal.dataPoint=[inlineResult.ddAmount?'DD '+inlineResult.ddAmount:'',inlineResult.debitTxns?inlineResult.debitTxns+' debit txns':''].filter(Boolean).join(' + ');if(inlineResult.promoCode&&!modal.dataPoint)modal.dataPoint='Promo: '+inlineResult.promoCode;if(inlineResult.timelineDays)modal.reqDays=inlineResult.timelineDays;if(inlineResult.bankName&&!modal.bank)modal.bank=inlineResult.bankName}else{alert('Could not extract data. Paste more of the full T&C.')}R()}
+
 function fillFromAI(){
   if(!analyzerResult)return;const r=analyzerResult;
-  modal={bank:r.bankName||'',bonus:typeof r.bonusAmount==='number'?r.bonusAmount:parseInt(String(r.bonusAmount||'').replace(/[$,]/g,''))||0,
+  const newData={bank:r.bankName||'',bonus:typeof r.bonusAmount==='number'?r.bonusAmount:parseInt(String(r.bonusAmount||'').replace(/[$,]/g,''))||0,
   churn:r.churnMonths?(r.churnMonths<=6?'180':r.churnMonths<=12?'1':r.churnMonths<=24?'2':'3'):'',
   opened:'',closed:'',bonusRecd:'',reqMet:'',
   notes:'',analyzedTC:r.notesForTracker||(r.checklist?'* '+r.checklist.join('\n* '):''),
   minHoldDays:typeof r.earlyCloseDays==='number'?r.earlyCloseDays:parseInt(String(r.earlyCloseDays||''))||0,
   earlyCloseFee:parseInt(String(r.earlyCloseFee||'').replace(/[$,]/g,''))||0,
   dataPoint:[r.ddAmount?'DD '+r.ddAmount:'',r.debitTxns?r.debitTxns+' debit txns':''].filter(Boolean).join(' + '),
-  reqDays:parseInt(String(r.timeline||''))||0,referralBonus:0,checklist:[],plannedClose:''};
+  reqDays:parseInt(String(r.timeline||''))||0,referralBonus:0,plannedClose:'',phoneNum:''};
+  
+  // Check for existing bank
+  const existing=findExistingByBank(newData.bank);
+  if(existing){
+    overwritePrompt={newData,existingEntry:existing};
+    showAnalyzer=false;analyzerText='';analyzerResult=null;
+    R();return;
+  }
+  
+  modal={...newData,checklist:[]};
   showAnalyzer=false;analyzerText='';analyzerResult=null;R();
 }
 
 /* Export/Import */
-function exportBackup(){
-  const data={entries,ddMethods:loadDD(),bankReqs:loadReqs(),version:'v6',exported:new Date().toISOString()};
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download='BonusTracker_Backup_'+td()+'.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);setLastBk();
-}
-function importBackup(){
-  const inp=document.createElement('input');inp.type='file';inp.accept='.json';
-  inp.onchange=function(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=function(e){try{const d=JSON.parse(e.target.result);if(d.entries){entries=sortE(d.entries);sv(SK,entries);if(d.ddMethods)saveDD(d.ddMethods);if(d.bankReqs)saveReqs(d.bankReqs);cfm={title:'Restored',msg:d.entries.length+' entries loaded.',green:true,action:()=>{cfm=null;R()}};R()}}catch{alert('Invalid file')}};r.readAsText(f)};inp.click();
-}
-function exportCSV(yr){
-  const yrE=entries.filter(e=>isCompleted(e)&&new Date(e.closed+'T00:00:00').getFullYear()===yr);if(!yrE.length)return;
-  let csv='Bank,Bonus,Received,Opened,Closed,Data Point\n';
-  yrE.forEach(e=>{csv+='"'+e.bank+'",'+e.bonus+',"'+fD(e.bonusRecd)+'","'+fD(e.opened)+'","'+fD(e.closed)+'","'+(e.dataPoint||'').replace(/"/g,"'")+'"\n'});
-  csv+='\nTotal,'+yrE.reduce((s,e)=>s+(e.bonus||0),0)+'\n';
-  const blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='BonusTracker_'+yr+'.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
-}
+function exportBackup(){const data={entries,ddMethods:loadDD(),bankReqs:loadReqs(),version:'v6',exported:new Date().toISOString()};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='BonusTracker_Backup_'+td()+'.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);setLastBk()}
+function importBackup(){const inp=document.createElement('input');inp.type='file';inp.accept='.json';inp.onchange=function(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=function(e){try{const d=JSON.parse(e.target.result);if(d.entries){entries=sortE(d.entries);sv(SK,entries);if(d.ddMethods)saveDD(d.ddMethods);if(d.bankReqs)saveReqs(d.bankReqs);cfm={title:'Restored',msg:d.entries.length+' entries loaded.',green:true,action:()=>{cfm=null;R()}};R()}}catch{alert('Invalid file')}};r.readAsText(f)};inp.click()}
+function exportCSV(yr){const yrE=entries.filter(e=>isCompleted(e)&&new Date(e.closed+'T00:00:00').getFullYear()===yr);if(!yrE.length)return;let csv='Bank,Bonus,Received,Opened,Closed,Data Point\n';yrE.forEach(e=>{csv+='"'+e.bank+'",'+e.bonus+',"'+fD(e.bonusRecd)+'","'+fD(e.opened)+'","'+fD(e.closed)+'","'+(e.dataPoint||'').replace(/"/g,"'")+'"\n'});csv+='\nTotal,'+yrE.reduce((s,e)=>s+(e.bonus||0),0)+'\n';const blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='BonusTracker_'+yr+'.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
 /* Feed */
-function loadFeed(){
-  feedLoading=true;R();
-  fetch('https://api.allorigins.win/get?url='+encodeURIComponent('https://www.doctorofcredit.com/category/bank-account-bonuses/feed/'))
-  .then(r=>r.json()).then(d=>{const p=new DOMParser(),x=p.parseFromString(d.contents,'text/xml'),items=x.querySelectorAll('item');feedItems=[];items.forEach((it,i)=>{if(i>=12)return;feedItems.push({title:it.querySelector('title')?.textContent||'',link:it.querySelector('link')?.textContent||'',date:it.querySelector('pubDate')?.textContent||''})});feedLoading=false;R()})
-  .catch(()=>{feedItems=null;feedLoading=false;R()});
-}
+function loadFeed(){feedLoading=true;R();fetch('https://api.allorigins.win/get?url='+encodeURIComponent('https://www.doctorofcredit.com/category/bank-account-bonuses/feed/')).then(r=>r.json()).then(d=>{const p=new DOMParser(),x=p.parseFromString(d.contents,'text/xml'),items=x.querySelectorAll('item');feedItems=[];items.forEach((it,i)=>{if(i>=12)return;feedItems.push({title:it.querySelector('title')?.textContent||'',link:it.querySelector('link')?.textContent||'',date:it.querySelector('pubDate')?.textContent||''})});feedLoading=false;R()}).catch(()=>{feedItems=null;feedLoading=false;R()})}
 
 /* INIT */
 entries=sortE(entries);R();
