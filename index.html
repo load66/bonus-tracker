@@ -538,7 +538,34 @@ const TEMPLATES=[
 {bank:"BMO",bonus:600,churn:"1",notes:"$5k+ DD within 90d. CC funding avail.",minHoldDays:0,earlyCloseFee:0,dataPoint:"ACH works + CC funding",reqDays:90},
 {bank:"Capital One",bonus:250,churn:"1",notes:"2x$500 DD. $0 fee. NOT churnable anymore.",minHoldDays:0,earlyCloseFee:0,dataPoint:"No longer churnable",reqDays:75}
 ];
-const PHONES=[["Ally Bank","1-877-247-2559",""],["Bank of America","800-432-1000","888-287-4637"],["BMO (US)","1-888-340-2265","1-888-340-2265"],["Capital One","1-877-383-4802","1-888-755-2172"],["Chase","1-800-935-9935","1-800-242-7338"],["Citibank","1-800-374-9700","1-877-528-0990"],["Citizens","1-888-500-1478","1-888-307-4568"],["Comerica","1-800-266-3742","1-800-266-3742"],["Community America","816-656-4700",""],["Equity Bank","1-844-611-0777",""],["Huntington","1-800-480-2265","1-800-480-2001"],["KeyBank","1-800-539-2968","1-888-539-4249"],["M&T Bank","1-800-724-2440","1-800-724-6070"],["Navy Federal","1-888-842-6328","1-888-842-6328"],["PNC","1-888-762-2265","1-877-287-2654"],["Regions","1-800-734-4667","1-800-787-3905"],["Santander","1-877-768-2265","1-800-493-8219"],["Simmons Bank","1-866-246-2400",""],["TD Bank","1-888-751-9000","1-800-450-7318"],["Truist","1-844-487-8478","1-877-495-1044"],["U.S. Bank","1-800-872-2657","800-673-3555"],["Wells Fargo","1-800-869-3557","1-800-225-5935"],["Fifth Third","1-800-972-3030","1-877-534-2264"]];
+const PHONES=[
+["Ally Bank","1-877-247-2559","1-877-247-2559"],
+["Bank of America","1-800-432-1000","1-888-287-4637"],
+["BMO (US)","1-888-340-2265","1-888-340-2265"],
+["Capital One","1-877-383-4802","1-888-755-2172"],
+["Central Bank","1-800-876-5500","1-800-876-5500"],
+["Chase","1-800-935-9935","1-800-242-7338"],
+["Citibank","1-800-374-9700","1-800-945-4000"],
+["Citizens","1-888-500-1478","1-888-307-4568"],
+["Comerica","1-800-266-3742","1-800-266-3742"],
+["Community America CU","816-656-4700","816-656-4700"],
+["E-Trade","1-800-387-2331","1-800-387-2331"],
+["Equity Bank","1-844-611-0777","1-844-611-0777"],
+["Fifth Third","1-800-972-3030","1-877-534-2264"],
+["Huntington","1-800-480-2265","1-800-480-2001"],
+["KeyBank","1-800-539-2968","1-888-539-4249"],
+["M&T Bank","1-800-724-2440","1-800-724-6070"],
+["Navy Federal","1-888-842-6328","1-888-842-6328"],
+["PNC","1-888-762-2265","1-877-287-2654"],
+["Regions","1-800-734-4667","1-800-787-3905"],
+["Santander","1-877-768-2265","1-800-493-8219"],
+["Simmons Bank","1-866-246-2400","1-866-246-2400"],
+["TD Bank","1-888-751-9000","1-800-450-7318"],
+["Truist","1-844-487-8478","1-877-495-1044"],
+["U.S. Bank","1-800-872-2657","1-800-673-3555"],
+["Vantage CU","314-298-0055","314-298-0055"],
+["Wells Fargo","1-800-869-3557","1-800-225-5935"]
+];
 const RULES=[["Chase","2yr",24,true,true,"None","$12/mo waived $500 DD","2yr from enrollment; 90d close rule"],["Bank of America","1yr",12,true,true,"None","$12/mo waived $250 DD","Tiered $100-$500"],["Wells Fargo","1yr",12,true,true,"None","$10/mo waived $500 DD",""],["U.S. Bank","1yr",12,true,true,"None","$6.95/mo waived $1k DD","No early close fee"],["Citi","1yr",12,true,true,"None","$12/mo waived $1k DD","Offer-specific"],["Simmons Bank","1yr",12,true,true,"None","$0 (Simply Checking)","$150x3 cycles. MO/AR/KS/OK/TN/TX"],["Equity Bank","180d",6,true,true,"$400 clawback","$10/mo waived $2k bal","Must open checking+savings. MO/KS/AR/OK"],["Regions","1yr",12,true,true,"$25 <180d","$8/mo waived $500 DD","10 debit txns. MO available"],["PNC","2yr",24,true,true,"None","$7-25/mo by tier","Tiered $100-$400"],["Central Bank","2yr",24,true,true,"None","$0 free checking","MO/KS/OK/IL"],["Community America","1yr",12,true,true,"None","$0 free checking","KC metro. Guided Investing bonus"],["TD Bank","3yr",36,false,false,"None","$15-25/mo","Many once-per-lifetime"],["Huntington","1yr",12,true,false,"None","$0 (Asterisk Free)","24mo rolling limit"],["BMO","1yr",12,true,true,"None","$5-25/mo","CC funding avail. Nationwide"],["Fifth Third","2yr",24,true,true,"None","$11/mo waived $500 DD","AL/FL/GA/IL/IN/KY/MI/NC/OH/TN"],["Capital One","1yr",12,false,true,"None","$0 free","Not churnable anymore"]];
 const DATA_POINTS=[["Chase","Fidelity ACH","Works as DD","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/#Chase"],["Chase","Robinhood ACH","Works","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/#Chase"],["Chase","Schwab ACH","Works",""],["Bank of America","Fidelity ACH","Works","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/#Bank_of_America"],["Bank of America","Robinhood ACH","Works",""],["U.S. Bank","Robinhood ACH","Works","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/#US_Bank"],["U.S. Bank","Fidelity ACH","Works",""],["U.S. Bank","No early close fee","Safe anytime","https://www.doctorofcredit.com/u-s-bank-450-100-checking-bonus/"],["Wells Fargo","Employer DD only","ACH may fail","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/#Wells_Fargo"],["Citi","ACH transfers","Generally works","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/#Citibank"],["PNC","Fidelity ACH","Works","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/#PNC"],["Simmons Bank","$1k DD + 7 debit","Per cycle, up to 3","https://www.doctorofcredit.com/ar-tx-tn-ok-mo-ks-simmons-bank-300-checking-bonus/"],["Equity Bank","$1k DD + debit activation","Within 45 days","https://www.doctorofcredit.com/ks-mo-ar-ok-ne-equity-bank-400-checking-bonus/"],["Equity Bank","$400 clawback <180d","Wait 180 days!",""],["Regions","$1k DD + 10 debit txns","Within 90 days",""],["Capital One","Not churnable (2025+)","Skip for churning","https://www.doctorofcredit.com/a-list-of-churnable-bank-account-bonuses/"],["BMO","ACH works + CC funding","Nationwide","https://www.doctorofcredit.com/bmo-harris-500-checking-bonus/"]];
 const DOC_LINKS=[["DD Methods Master List","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/"],["Churnable Bonuses","https://www.doctorofcredit.com/a-list-of-churnable-bank-account-bonuses/"],["Best Current Bonuses","https://www.doctorofcredit.com/best-bank-account-bonuses/"],["CC Funding List","https://www.doctorofcredit.com/bank-accounts/bank-accounts-that-can-be-funded-with-a-credit-card/"],["BankRewards.io","https://www.bankrewards.io"]];
@@ -554,15 +581,27 @@ let feedItems=null,feedLoading=false;
 let undoState=null,undoTimer=null;
 let closePrompt=null; // {entryId,bank,bonus,step:'date'|'bonus'|'dp',closeDate,gotFull:true,actualBonus:0,dp:''}
 
-function findPhone(bank){
+function findPhone(bank,eid){
+  if(eid){const ee=entries.find(x=>x.id===eid);if(ee&&ee.phoneNum)return ee.phoneNum}
   const bn=bank.toLowerCase();
-  for(const [b,p,bz] of PHONES){if(bn.includes(b.toLowerCase().split(' ')[0])||b.toLowerCase().includes(bn.split(' ')[0]))return p}
+  const isBiz=bn.includes('biz')||bn.includes('business');
+  for(const [b,p,bz] of PHONES){
+    const bl=b.toLowerCase();
+    // Match by first word or contains
+    if(bn.includes(bl.split(' ')[0])||bl.includes(bn.split(' ')[0])||bn.includes(bl)){
+      return isBiz?(bz||p):p;
+    }
+  }
   return null;
+}
+function findPhoneLabel(bank){
+  const bn=bank.toLowerCase();
+  return(bn.includes('biz')||bn.includes('business'))?'Business':'Personal';
 }
 
 function callBank(id){
   const e=entries.find(x=>x.id===id);if(!e)return;
-  const phone=findPhone(e.bank);
+  const phone=findPhone(e.bank,id);
   if(phone)window.location.href='tel:'+phone.replace(/[^0-9+]/g,'');
   else{cfm={title:'No Number Found',msg:'No phone number found for '+e.bank+'. Check the Phone tab.',green:true,action:()=>{cfm=null;R()}};R()}
 }
@@ -686,7 +725,7 @@ function rTracker(sorted){
     if(e.bonus)h+='<div class="card-bonus">'+fM(e.bonus)+'</div>';
     h+='<div class="card-id">'+esc(e.id)+'</div>';
     h+='</div>';
-    if(!e.closed&&findPhone(e.bank))h+='<button class="call-btn" onclick="event.stopPropagation();callBank(\x27'+e.id+'\x27)" title="Call bank">\uD83D\uDCDE</button>';
+    if(!e.closed&&findPhone(e.bank,e.id))h+='<button class="call-btn" onclick="event.stopPropagation();callBank(\x27'+e.id+'\x27)" title="Call '+findPhoneLabel(e.bank)+'">\uD83D\uDCDE</button>';
     h+='</div></div>';
     // Countdown pill
     if(countdown){
@@ -827,7 +866,21 @@ function rClose(){
   }
   h+='</div></div>';return h;
 }
-function rPhone(){let h='<div class="sec">Customer Service</div>';PHONES.forEach(([b,p,bz])=>{h+='<div class="rcard"><div class="rcard-row"><div class="nm">'+esc(b)+'</div><div style="text-align:right"><a href="tel:'+p+'" style="text-decoration:none"><div class="ph">'+p+'</div></a>'+(bz?'<div class="ph2">'+bz+'</div>':'')+'</div></div></div>'});return h}
+function rPhone(){
+  let h='<div class="sec">Customer Service Numbers</div>';
+  h+='<input class="sinput" placeholder="Search banks..." oninput="this.dataset.q=this.value;R()" id="phs">';
+  const pq=(document.getElementById('phs')||{}).value||'';
+  const pf=pq?PHONES.filter(p=>p[0].toLowerCase().includes(pq.toLowerCase())):PHONES;
+  pf.forEach(([b,p,bz])=>{
+    h+='<div class="rcard"><div style="width:100%"><div class="rcard-row"><div class="nm">'+esc(b)+'</div></div>';
+    h+='<div style="display:flex;gap:8px;margin-top:6px">';
+    h+='<a href="tel:'+p+'" style="text-decoration:none;flex:1;padding:8px;background:#EFF6FF;border-radius:8px;text-align:center"><div style="font-size:9px;font-weight:700;color:var(--muted)">PERSONAL</div><div style="font-size:12px;font-weight:600;color:var(--accent)">'+p+'</div></a>';
+    if(bz&&bz!==p)h+='<a href="tel:'+bz+'" style="text-decoration:none;flex:1;padding:8px;background:#F3E8FF;border-radius:8px;text-align:center"><div style="font-size:9px;font-weight:700;color:var(--muted)">BUSINESS</div><div style="font-size:12px;font-weight:600;color:#7C3AED">'+bz+'</div></a>';
+    else if(bz)h+='<div style="flex:1;padding:8px;background:#ECFDF5;border-radius:8px;text-align:center"><div style="font-size:9px;font-weight:700;color:var(--muted)">SAME #</div><div style="font-size:12px;font-weight:600;color:var(--green)">'+bz+'</div></div>';
+    h+='</div></div></div>';
+  });
+  return h;
+}
 /* ═══ RULES ═══ */
 function rRules(){let h='<div class="sec">Churn Rules \u2014 MO + Nationwide</div><input class="sinput" placeholder="Search..." oninput="this.dataset.q=this.value;R()" id="rs">';
   const q=(document.getElementById('rs')||{}).value||'';
@@ -851,6 +904,7 @@ function rModal(){
   h+='<div class="m-sec">Bonus</div>';
   h+='<div class="frow"><div class="fg"><label>Amount $</label><input type="number" inputmode="numeric" value="'+(e.bonus||'')+'"'+on('bonus')+'placeholder="300"></div>';
   h+='<div class="fg"><label>Churn Rule</label><select onchange="modal.churn=this.value"><option value="">Select</option><option value="1"'+(e.churn==='1'?' selected':'')+'>1 Year</option><option value="2"'+(e.churn==='2'?' selected':'')+'>2 Years</option><option value="3"'+(e.churn==='3'?' selected':'')+'>3 Years</option><option value="180"'+(e.churn==='180'?' selected':'')+'>180 Days</option></select></div></div>';
+  h+='<div class="fg"><label>Phone # (for quick call)</label><input value="'+esc(e.phoneNum||'')+'" oninput="modal.phoneNum=this.value" placeholder="e.g. 1-800-935-9935"></div>';
   h+='<div class="m-sec">Dates</div>';
   const df=(lbl,id,k,v)=>'<div class="fg"><label>'+lbl+'</label><div class="date-wrap"><input type="date" value="'+(v||'')+'"'+oi(k)+'><button class="date-clr" type="button" onclick="modal.'+k+'=\'\';this.previousElementSibling.value=\'\'">\u2715</button></div></div>';
   h+='<div class="frow">'+df('Opened','fo','opened',e.opened)+df('Closed','fc','closed',e.closed)+'</div>';
@@ -929,26 +983,30 @@ function rAnalyzer(){
   h+='</div>';return h;
 }
 /* ═══ ACTIONS ═══ */
-function openAdd(){modal={bank:'',bonus:0,churn:'',opened:'',closed:'',bonusRecd:'',reqMet:'',notes:'',analyzedTC:'',minHoldDays:0,earlyCloseFee:0,dataPoint:'',reqDays:0,referralBonus:0,checklist:[],plannedClose:''};R()}
+function openAdd(){modal={bank:'',bonus:0,churn:'',opened:'',closed:'',bonusRecd:'',reqMet:'',notes:'',analyzedTC:'',minHoldDays:0,earlyCloseFee:0,dataPoint:'',reqDays:0,referralBonus:0,checklist:[],plannedClose:'',phoneNum:''};R()}
 function openEdit(id){const e=entries.find(x=>x.id===id);if(e){modal={...e,analyzedTC:e.analyzedTC||'',_edit:true};showInlineAZ=false;inlineResult=null;R()}}
 function closeModal(){modal=null;showInlineAZ=false;inlineResult=null;R()}
 function clearFields(){if(!modal)return;['bonus','churn','opened','closed','bonusRecd','reqMet','dataPoint','notes'].forEach(k=>{modal[k]=''});['reqDays','minHoldDays','earlyCloseFee','referralBonus'].forEach(k=>{modal[k]=0});modal.bonus=0;R()}
 function saveEntry(){
   const bank=(modal.bank||'').trim();if(!bank){alert('Bank name required');return}
-  const d={bank,bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',plannedClose:modal.plannedClose||''};
+  const d={bank,bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',plannedClose:modal.plannedClose||'',phoneNum:modal.phoneNum||''};
   if(modal._edit){entries=entries.map(e=>e.id===modal.id?{...e,...d,checklist:e.checklist||[]}:e)}
   else{const taken=new Set(entries.map(e=>e.id));d.id=genId(bank,taken);d.checklist=[];entries.push(d)}
   entries=sortE(entries);sv(SK,entries);closeModal();
 }
 
 function resetAllData(){
-  cfm={title:'Reset All Data',msg:'This will delete ALL your entries, data points, and saved requirements. Your backup file (if exported) is not affected. Continue?',action:()=>{
-    entries=[];sv(SK,[]);
-    try{localStorage.removeItem(DD_KEY);localStorage.removeItem(REQ_KEY);localStorage.removeItem(BK_KEY)}catch{}
-    cfm=null;expanded=null;R();
+  cfm={title:'\u26A0\uFE0F Reset All Data',msg:'This will permanently delete ALL entries, data points, and saved requirements.\n\nYour exported backup file is not affected.',action:()=>{
+    cfm={title:'\u{1F6A8} Are you absolutely sure?',msg:'Type RESET to confirm. This cannot be undone.',action:()=>{
+      entries=[];sv(SK,[]);
+      try{localStorage.removeItem(DD_KEY);localStorage.removeItem(REQ_KEY);localStorage.removeItem(BK_KEY)}catch{}
+      cfm=null;expanded=null;R();
+    }};R();
   }};R();
 }
-function delEntry(id){const e=entries.find(x=>x.id===id);cfm={title:'Delete',msg:'Remove '+e.bank+'?',action:()=>{entries=entries.filter(x=>x.id!==id);sv(SK,entries);cfm=null;expanded=null;R()}};R()}
+function delEntry(id){const e=entries.find(x=>x.id===id);cfm={title:'\u{1F5D1} Delete Entry',msg:'Remove '+e.bank+'?\n\nThis cannot be undone.',action:()=>{
+  cfm={title:'Confirm Delete',msg:'Are you sure you want to delete '+e.bank+'?',action:()=>{entries=entries.filter(x=>x.id!==id);sv(SK,entries);cfm=null;expanded=null;R()}};R();
+}};R()}
 function closeAcct(id){
   const e=entries.find(x=>x.id===id);if(!e)return;
   const dsc=daysUntilSafe(e);
