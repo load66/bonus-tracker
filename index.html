@@ -15,8 +15,6 @@
 :root{--bg:#F0F2F7;--card:#FFF;--navy:#0A0F1E;--dk:#161B2E;--accent:#2563EB;--sky:#38BDF8;--green:#10B981;--red:#EF4444;--amber:#F59E0B;--text:#0F172A;--sub:#475569;--muted:#94A3B8;--border:#E2E8F0;--r:16px;--rs:12px;--safe-b:env(safe-area-inset-bottom,0px)}
 html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100%;overflow:hidden;-webkit-font-smoothing:antialiased}
 .app{display:flex;flex-direction:column;height:100dvh}
-
-/* HEADER */
 .hdr{background:linear-gradient(145deg,#070B16,#0F1B3D);padding:max(env(safe-area-inset-top),12px) 16px 0;flex-shrink:0}
 .hdr-row{display:flex;justify-content:space-between;align-items:center}
 .hdr h1{font-size:18px;font-weight:800;color:#fff}.hdr h1 em{font-style:normal;color:var(--sky)}
@@ -24,35 +22,23 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .yr-pills{display:flex;gap:4px}
 .yr-btn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:#94A3B8;padding:3px 10px;border-radius:14px;font-family:inherit;font-size:10px;font-weight:600;cursor:pointer;transition:all .15s}
 .yr-btn.on{background:var(--sky);color:var(--navy);border-color:var(--sky)}
-
-/* STATS */
 .stats{display:flex;gap:5px;padding:0 12px 8px;background:linear-gradient(145deg,#070B16,#0F1B3D);flex-shrink:0}
 .st{flex:1;background:rgba(255,255,255,.04);border-radius:10px;padding:8px 4px;text-align:center;border:1px solid rgba(255,255,255,.05)}
 .st .n{font-size:20px;font-weight:800;line-height:1}.st .l{font-size:7px;color:#94A3B8;text-transform:uppercase;letter-spacing:.7px;margin-top:2px;font-weight:700}
 .st:nth-child(1) .n{color:#60A5FA}.st:nth-child(2) .n{color:#FBBF24}.st:nth-child(3) .n{color:#F87171}.st:nth-child(4) .n{color:#34D399}
 .yr-bar{background:linear-gradient(145deg,#070B16,#0F1B3D);padding:0 16px 10px;flex-shrink:0}
 .yr-amt{font-size:26px;font-weight:800;color:var(--sky)}.yr-lbl{font-size:9px;color:#64748B}
-
-/* SCROLL */
 .scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:8px 12px 110px;overscroll-behavior:contain}
-
-/* TABS */
 .tabs{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:4px 0 max(var(--safe-b),5px);z-index:100}
 .tb{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 2px;background:none;border:none;cursor:pointer;font-family:inherit;transition:all .15s}
 .tb svg{width:20px;height:20px;stroke:var(--muted);fill:none;stroke-width:1.8}.tb span{font-size:9px;font-weight:600;color:var(--muted)}
 .tb.on svg{stroke:var(--accent)}.tb.on span{color:var(--accent);font-weight:700}
-
-/* FAB */
 .fab{position:fixed;bottom:calc(58px + var(--safe-b));right:14px;width:48px;height:48px;border-radius:14px;background:var(--accent);color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(37,99,235,.4);z-index:90;display:flex;align-items:center;justify-content:center;transition:transform .15s}
 .fab:active{transform:scale(.9)}
-
-/* BANK LOGO */
 .blogo{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;font-size:13px;color:#fff;letter-spacing:-.3px;position:relative;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.12)}
 .blogo::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.2),transparent);pointer-events:none}
 .blogo.sm{width:28px;height:28px;border-radius:7px;font-size:10px;box-shadow:0 1px 4px rgba(0,0,0,.1)}
 .blogo-img{width:100%;height:100%;object-fit:contain;padding:4px}
-
-/* CARD */
 .card{background:var(--card);border-radius:14px;margin-bottom:6px;box-shadow:0 1px 4px rgba(0,0,0,.05),0 0 0 1px rgba(0,0,0,.03);overflow:hidden;border-left:4px solid transparent;transition:box-shadow .2s,transform .15s}
 .card:active{transform:scale(.995)}
 .card.u-blue{border-left-color:var(--accent)}.card.u-yellow{border-left-color:var(--amber)}.card.u-red{border-left-color:var(--red)}.card.u-green{border-left-color:var(--green)}
@@ -63,20 +49,17 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .card-row{display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap}
 .badge{padding:3px 9px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.2px}
 .badge.w{background:#DBEAFE;color:#1E40AF}.badge.wt{background:#D1FAE5;color:#065F46}.badge.ch{background:#DC2626;color:#fff}
+.badge.stc{background:#D1FAE5;color:#065F46}
 .card-stat{font-size:12px;font-weight:600;color:var(--sub)}
 .card-stat em{font-style:normal;color:var(--accent)}
 .card-right{text-align:right;flex-shrink:0}
 .card-bonus{font-size:18px;font-weight:800;color:var(--accent)}
 .card-id{font-size:9px;color:var(--muted);margin-top:2px}
-
-/* COUNTDOWN PILL */
 .cd-pill{display:flex;align-items:center;gap:6px;padding:8px 12px;margin:0 14px 8px;border-radius:10px;font-size:12px;font-weight:700}
 .cd-pill .icon{font-size:14px}.cd-pill .days{margin-left:auto}
 .cd-pill.blue{background:#EFF6FF;color:#1E40AF}.cd-pill.amber{background:#FEF3C7;color:#92400E}.cd-pill.red{background:#FEE2E2;color:#991B1B}.cd-pill.green{background:#ECFDF5;color:#065F46}
 .cd-prog{height:3px;margin:0 14px 4px;border-radius:2px;background:#E2E8F0;overflow:hidden}
 .cd-prog div{height:100%;border-radius:2px}
-
-/* EXPANDED */
 .card-exp{padding:0 14px 12px}
 .card-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px 10px;margin-bottom:8px}
 .cf{padding:4px 0}.cf .k{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;font-weight:700}.cf .v{font-size:12px;font-weight:600;color:var(--text)}
@@ -86,8 +69,6 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .cbtn{flex:1;padding:9px;border-radius:10px;border:none;font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;transition:transform .1s}
 .cbtn:active{transform:scale(.95)}
 .cbtn.edit{background:#EFF6FF;color:var(--accent)}.cbtn.del{background:#FEF2F2;color:var(--red)}.cbtn.cls{background:#ECFDF5;color:#059669}.cbtn.rcv{background:#F3E8FF;color:#7C3AED}
-
-/* CHECKLIST */
 .ck{list-style:none;padding:0;margin:6px 0}
 .ck li{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
 .ck li:last-child{border:none}
@@ -98,14 +79,10 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .ck-add{display:flex;gap:4px;margin-top:4px}
 .ck-add input{flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;background:var(--bg);outline:none}
 .ck-add button{padding:7px 12px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer}
-
-/* ECT */
 .ect{margin:0 14px 6px;padding:8px 12px;border-radius:10px;background:linear-gradient(135deg,#FEF3C7,#FDE68A)}
 .ect.safe{background:linear-gradient(135deg,#D1FAE5,#A7F3D0)}
 .ect-row{display:flex;justify-content:space-between;align-items:center;font-size:10px;font-weight:700}
 .ect-fee{font-size:9px;color:#92400E;margin-top:2px}.ect.safe .ect-fee{color:#065F46}
-
-/* MODAL */
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);z-index:200;display:flex;align-items:flex-end;justify-content:center}
 .modal{background:#FAFBFE;border-radius:20px 20px 0 0;padding:14px 18px calc(20px + var(--safe-b));width:100%;max-width:500px;max-height:88dvh;overflow-y:auto}
 .m-bar{width:32px;height:4px;background:#CBD5E1;border-radius:4px;margin:0 auto 12px}
@@ -128,54 +105,38 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .az-area{padding:10px;background:var(--bg);border-radius:10px;border:1px solid var(--border);margin-bottom:8px}
 .az-area textarea{min-height:80px;font-size:11px}
 .az-go{width:100%;margin-top:4px;padding:9px;border-radius:8px;border:none;background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer}
-
-/* CONFIRM/PROMPT */
 .cbg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:center;justify-content:center;padding:16px}
 .cbox{background:#fff;border-radius:var(--r);padding:20px;max-width:320px;width:100%;text-align:center}
 .cbox h3{font-size:15px;font-weight:700;margin-bottom:4px}.cbox p{font-size:12px;color:var(--sub);margin-bottom:14px;line-height:1.4}
 .crow{display:flex;gap:6px}.crow button{flex:1;padding:11px;border-radius:10px;border:none;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
 .c-c{background:var(--bg);color:var(--text)}.c-r{background:var(--red);color:#fff}.c-g{background:var(--green);color:#fff}
-
-/* DD PROMPT */
 .dd-box{background:#fff;border-radius:var(--r);padding:20px;max-width:340px;width:100%;text-align:left}
 .dd-box h3{font-size:15px;font-weight:700;margin-bottom:3px}.dd-box .sub{font-size:11px;color:var(--sub);margin-bottom:10px}
 .dd-chips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
 .dd-chip{padding:4px 10px;border-radius:14px;font-size:10px;font-weight:600;border:1.5px solid var(--border);background:var(--bg);cursor:pointer;font-family:inherit;transition:all .15s}
 .dd-chip.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
 .dd-input{width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:13px;background:var(--bg);outline:none;margin-bottom:8px}
-
-/* RCV PROMPT */
 .rcv-box{background:#fff;border-radius:var(--r);padding:20px;max-width:340px;width:100%;text-align:left}
 .rcv-box h3{font-size:15px;font-weight:700;margin-bottom:3px}.rcv-box .sub{font-size:11px;color:var(--sub);margin-bottom:10px}
 .wait-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin:8px 0}
 .wait-btn{padding:10px 4px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s}
 .wait-btn.sel{border-color:var(--accent);background:#EFF6FF;color:var(--accent)}
 .wait-btn .sm{font-size:8px;color:var(--muted);margin-top:1px}
-
-/* SEARCH */
 .sinput{width:100%;padding:8px 10px 8px 30px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:13px;color:var(--text);background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat 9px center;outline:none;margin-bottom:6px}
-
-/* QUICK ACTIONS */
 .qbar{display:flex;gap:4px;margin-bottom:6px}
 .qbtn{flex:1;padding:8px 4px;border-radius:10px;border:none;font-family:inherit;font-size:9px;font-weight:700;cursor:pointer;text-align:center;transition:transform .1s}
 .qbtn:active{transform:scale(.96)}
-
-/* CHART */
 .chart{background:var(--card);border-radius:14px;padding:12px;margin-bottom:8px;border:1px solid var(--border)}
 .chart-t{font-size:11px;font-weight:700;margin-bottom:6px}
 .chart-bars{display:flex;align-items:flex-end;gap:2px;height:60px}
 .chart-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px}
 .chart-bar{width:100%;border-radius:3px 3px 0 0;background:linear-gradient(180deg,var(--sky),var(--accent));min-height:1px}
 .chart-cl{font-size:7px;color:var(--muted);font-weight:600}
-
-/* TEMPLATE GRID */
 .tgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px}
 .tbtn{background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:8px;cursor:pointer;font-family:inherit;text-align:left;display:flex;align-items:center;gap:8px;transition:all .15s}
 .tbtn:active{transform:scale(.97);border-color:var(--accent)}
 .tbtn .t-info{flex:1;min-width:0}
 .tbtn .nm{font-size:11px;font-weight:700}.tbtn .bn{font-size:10px;color:var(--accent);font-weight:600;margin-top:1px}
-
-/* REFERENCE */
 .rcard{background:var(--card);border-radius:12px;padding:10px 12px;margin-bottom:4px;border:1px solid var(--border)}
 .rcard-row{display:flex;justify-content:space-between;align-items:center}
 .rcard .nm{font-size:12px;font-weight:600}.rcard .sub{font-size:10px;color:var(--muted);margin-top:1px;line-height:1.3}
@@ -183,8 +144,6 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .rcard .ph2{font-size:10px;color:var(--muted)}
 .tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:8px;font-weight:700;margin:2px 1px 0}
 .tag.y{background:#D1FAE5;color:#065F46}.tag.n{background:#FEE2E2;color:#991B1B}.tag.f{background:#FEF3C7;color:#92400E}.tag.b{background:#DBEAFE;color:#1E40AF}.tag.m{background:#EDE9FE;color:#5B21B6}
-
-/* TAX */
 .sec{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin:12px 0 6px}
 .ybar{display:flex;gap:4px;overflow-x:auto;padding:2px 0 8px;-webkit-overflow-scrolling:touch}
 .ypill{flex-shrink:0;padding:4px 10px;border-radius:14px;font-size:10px;font-weight:600;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-family:inherit;transition:all .15s}
@@ -197,8 +156,6 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .tax-amt{font-size:13px;font-weight:700;color:var(--accent)}
 .tax-dates{display:flex;gap:10px;margin-top:2px}.tax-dates span{font-size:10px;color:var(--muted)}
 .export-btn{width:100%;padding:10px;background:linear-gradient(135deg,#059669,#047857);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;margin:8px 0}
-
-/* FEED */
 .feed-c{background:var(--card);border-radius:12px;padding:10px 12px;margin-bottom:4px;border:1px solid var(--border);cursor:pointer;text-decoration:none;display:block;transition:transform .1s}
 .feed-c:active{transform:scale(.985)}
 .feed-t{font-size:11px;font-weight:600;color:var(--accent);line-height:1.3}
@@ -206,7 +163,6 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .sug-c{background:linear-gradient(135deg,#EFF6FF,#DBEAFE);border-radius:12px;padding:10px 12px;margin-bottom:4px;border:1px solid #BFDBFE;display:flex;align-items:center;gap:10px}
 .sug-c .s-info{flex:1}
 .sug-c .nm{font-size:12px;font-weight:700;color:#1E40AF}.sug-c .sub{font-size:10px;color:#3B82F6}.sug-c .rsn{font-size:9px;color:var(--muted);margin-top:2px}
-
 .empty{text-align:center;padding:30px 16px;color:var(--muted)}.empty .em{font-size:32px;margin-bottom:8px}.empty p{font-size:12px}
 .bk-remind{padding:8px 12px;border-radius:10px;background:#FEF3C7;display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:10px;font-weight:600;color:#92400E}
 .bk-remind button{padding:5px 10px;border-radius:6px;border:none;background:rgba(0,0,0,.1);font-family:inherit;font-size:9px;font-weight:700;cursor:pointer;margin-left:auto;flex-shrink:0}
@@ -215,7 +171,6 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .spin{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .5s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .ref-b{font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;background:#F3E8FF;color:#7C3AED;display:inline-block}
-
 .tc-box{margin-top:6px;padding:10px;background:#F8FAFC;border-radius:10px;border:1px solid #E2E8F0}
 .tc-label{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
 .tc-body{white-space:pre-wrap;font-size:11px;line-height:1.7;color:var(--text)}
@@ -227,7 +182,6 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .tc-body .hl-section{display:block;color:var(--accent);font-weight:800;font-size:10px;letter-spacing:.5px;margin-top:8px;margin-bottom:2px;text-transform:uppercase}
 .tc-body .hl-good{color:#059669;font-weight:600}
 .tc-body .hl-fee{color:#DC2626;font-weight:600}
-
 .undo-bar{position:fixed;bottom:calc(62px + var(--safe-b));left:12px;right:72px;background:var(--navy);color:#fff;border-radius:12px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;z-index:95;box-shadow:0 4px 20px rgba(0,0,0,.3);font-size:12px;font-weight:600;animation:slideUp .2s}
 .undo-bar button{padding:6px 14px;border-radius:8px;border:none;background:#EF4444;color:#fff;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer}
 @keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
@@ -243,8 +197,6 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .bonus-opt{flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s}
 .bonus-opt.sel{border-color:var(--accent);background:#EFF6FF;color:var(--accent)}
 .bonus-opt:active{transform:scale(.96)}
-
-/* OVERWRITE PROMPT */
 .ow-box{background:#fff;border-radius:var(--r);padding:20px;max-width:360px;width:100%;text-align:left}
 .ow-box h3{font-size:16px;font-weight:700;margin-bottom:4px}
 .ow-box .sub{font-size:12px;color:var(--sub);margin-bottom:14px;line-height:1.4}
@@ -253,8 +205,23 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .ow-existing .nm{font-size:13px;font-weight:700}
 .ow-existing .det{font-size:10px;color:var(--muted);margin-top:2px}
 .ow-existing .amt{font-size:15px;font-weight:800;color:var(--accent)}
-
-/* PHONE TAB LOGOS */
+/* FEE CHECK PROMPT */
+.fee-box{background:#fff;border-radius:var(--r);padding:20px;max-width:360px;width:100%;text-align:left}
+.fee-box h3{font-size:16px;font-weight:700;margin-bottom:4px}
+.fee-box .sub{font-size:12px;color:var(--sub);margin-bottom:14px;line-height:1.4}
+.fee-choice{display:flex;gap:8px;margin-bottom:12px}
+.fee-choice button{flex:1;padding:14px 8px;border-radius:12px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:center;transition:all .15s}
+.fee-choice button:active{transform:scale(.96)}
+.fee-choice .fee-yes{border-color:var(--amber);color:#92400E;background:#FEF3C7}
+.fee-choice .fee-no{border-color:var(--green);color:#065F46;background:#ECFDF5}
+.fee-months-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin:8px 0}
+.fee-mo-btn{padding:12px 4px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s}
+.fee-mo-btn.sel{border-color:var(--accent);background:#EFF6FF;color:var(--accent)}
+.fee-mo-btn:active{transform:scale(.96)}
+.fee-mo-btn .sm{font-size:9px;color:var(--muted);display:block;margin-top:2px}
+.fee-preview{padding:10px;background:#FEF3C7;border-radius:10px;margin:10px 0;text-align:center}
+.fee-preview .fp-date{font-size:14px;font-weight:700;color:#92400E}
+.fee-preview .fp-days{font-size:11px;color:#92400E;margin-top:2px}
 .ph-card{background:var(--card);border-radius:12px;padding:10px 12px;margin-bottom:4px;border:1px solid var(--border);display:flex;align-items:center;gap:10px}
 .ph-links{display:flex;gap:6px;margin-top:6px;flex:1}
 .ph-link{flex:1;padding:8px;border-radius:8px;text-align:center;text-decoration:none;display:block}
@@ -264,7 +231,6 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 <body>
 <div class="app" id="app"></div>
 <script>
-/* STORAGE */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup';
 const ld=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}};
 const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
@@ -275,288 +241,54 @@ const addD=(d,n)=>{const dt=new Date(d+'T00:00:00');dt.setDate(dt.getDate()+n);r
 const fD=d=>{if(!d)return'\u2014';return new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})};
 const fM=n=>'$'+(n||0).toLocaleString();
 const esc=s=>{const d=document.createElement('div');d.textContent=s;return d.innerHTML};
-
-/* DD Methods */
-function loadDD(){return ld(DD_KEY,[])}
-function saveDD(m){sv(DD_KEY,m)}
-function addDD(bank,method,bonus,date){const m=loadDD();m.push({bank,method,bonus:bonus||0,date:date||td()});saveDD(m)}
-/* Bank Reqs */
-function loadReqs(){return ld(REQ_KEY,{})}
-function saveReqs(r){sv(REQ_KEY,r)}
-function saveReq(bank,data){const r=loadReqs();r[bank.toLowerCase()]={bank,...data,updated:td()};saveReqs(r)}
-/* Backup */
-function getLastBk(){try{return localStorage.getItem(BK_KEY)||''}catch{return''}}
-function setLastBk(){try{localStorage.setItem(BK_KEY,td())}catch{}}
-function daysSinceBk(){const lb=getLastBk();return lb?Math.max(0,dB(lb,td())):999}
-
-/* ═══ BANK BRANDS ═══ */
-const BANK_BRANDS={
-  'chase':       {bg:'#0C4DA2',fg:'#fff',abbr:'CH',icon:'🏦'},
-  'chase biz':   {bg:'#0C4DA2',fg:'#fff',abbr:'CB',icon:'🏢'},
-  'bank of america':{bg:'#C41230',fg:'#fff',abbr:'BA',icon:'🏦'},
-  'wells fargo':  {bg:'#D71E28',fg:'#fff',abbr:'WF',icon:'🏦'},
-  'u.s. bank':    {bg:'#0D2C54',fg:'#fff',abbr:'US',icon:'🏦'},
-  'u.s. bank biz':{bg:'#0D2C54',fg:'#fff',abbr:'UB',icon:'🏢'},
-  'citi':         {bg:'#003DA5',fg:'#fff',abbr:'CI',icon:'🏦'},
-  'citibank':     {bg:'#003DA5',fg:'#fff',abbr:'CI',icon:'🏦'},
-  'pnc':          {bg:'#F58220',fg:'#fff',abbr:'PN',icon:'🏦'},
-  'simmons bank': {bg:'#1B365D',fg:'#fff',abbr:'SM',icon:'🏦'},
-  'equity bank':  {bg:'#004C2F',fg:'#fff',abbr:'EQ',icon:'🏦'},
-  'regions':      {bg:'#007A33',fg:'#fff',abbr:'RG',icon:'🏦'},
-  'bmo':          {bg:'#0075BE',fg:'#fff',abbr:'BM',icon:'🏦'},
-  'capital one':  {bg:'#004879',fg:'#fff',abbr:'C1',icon:'🏦'},
-  'td bank':      {bg:'#34A853',fg:'#fff',abbr:'TD',icon:'🏦'},
-  'huntington':   {bg:'#005F3B',fg:'#fff',abbr:'HN',icon:'🏦'},
-  'fifth third':  {bg:'#003D4C',fg:'#fff',abbr:'5T',icon:'🏦'},
-  'central bank': {bg:'#1A3A6B',fg:'#fff',abbr:'CB',icon:'🏦'},
-  'community america':{bg:'#0054A6',fg:'#fff',abbr:'CA',icon:'🏦'},
-  'ally':         {bg:'#6B2D8B',fg:'#fff',abbr:'AL',icon:'🏦'},
-  'ally bank':    {bg:'#6B2D8B',fg:'#fff',abbr:'AL',icon:'🏦'},
-  'citizens':     {bg:'#006747',fg:'#fff',abbr:'CZ',icon:'🏦'},
-  'comerica':     {bg:'#00703C',fg:'#fff',abbr:'CM',icon:'🏦'},
-  'e-trade':      {bg:'#6633CC',fg:'#fff',abbr:'ET',icon:'📈'},
-  'keybank':      {bg:'#C4122E',fg:'#fff',abbr:'KB',icon:'🏦'},
-  'm&t bank':     {bg:'#003366',fg:'#fff',abbr:'MT',icon:'🏦'},
-  'navy federal': {bg:'#003B71',fg:'#fff',abbr:'NF',icon:'⚓'},
-  'santander':    {bg:'#EC0000',fg:'#fff',abbr:'SN',icon:'🏦'},
-  'truist':       {bg:'#5C068C',fg:'#fff',abbr:'TR',icon:'🏦'},
-  'vantage cu':   {bg:'#005A9C',fg:'#fff',abbr:'VT',icon:'🏦'},
-  'schwab':       {bg:'#00A0DF',fg:'#fff',abbr:'SC',icon:'📈'},
-  'discover':     {bg:'#FF6000',fg:'#fff',abbr:'DS',icon:'🏦'},
-  'sofi':         {bg:'#62D2A2',fg:'#fff',abbr:'SF',icon:'🏦'},
-  'marcus':       {bg:'#003DA5',fg:'#fff',abbr:'GS',icon:'🏦'},
-  'us bank':      {bg:'#0D2C54',fg:'#fff',abbr:'US',icon:'🏦'},
-  'us bank biz':  {bg:'#0D2C54',fg:'#fff',abbr:'UB',icon:'🏢'},
-};
-function getBrand(name){
-  const n=(name||'').toLowerCase().trim();
-  if(BANK_BRANDS[n])return BANK_BRANDS[n];
-  for(const[k,v]of Object.entries(BANK_BRANDS)){if(n.includes(k)||k.includes(n))return v}
-  // Generate color from name hash
-  let h=0;for(let i=0;i<n.length;i++){h=n.charCodeAt(i)+((h<<5)-h)}
-  const hue=Math.abs(h)%360;
-  const a=(name||'X').toUpperCase().replace(/[^A-Z]/g,'');
-  return{bg:`hsl(${hue},55%,38%)`,fg:'#fff',abbr:(a[0]||'?')+(a[1]||''),icon:'🏦'};
-}
-function bankLogo(name,sm){
-  const b=getBrand(name);
-  const cls=sm?'blogo sm':'blogo';
-  return `<div class="${cls}" style="background:${b.bg};color:${b.fg}"><span>${esc(b.abbr)}</span></div>`;
-}
-
-/* CALC */
+function loadDD(){return ld(DD_KEY,[])}function saveDD(m){sv(DD_KEY,m)}function addDD(bank,method,bonus,date){const m=loadDD();m.push({bank,method,bonus:bonus||0,date:date||td()});saveDD(m)}
+function loadReqs(){return ld(REQ_KEY,{})}function saveReqs(r){sv(REQ_KEY,r)}function saveReq(bank,data){const r=loadReqs();r[bank.toLowerCase()]={bank,...data,updated:td()};saveReqs(r)}
+function getLastBk(){try{return localStorage.getItem(BK_KEY)||''}catch{return''}}function setLastBk(){try{localStorage.setItem(BK_KEY,td())}catch{}}function daysSinceBk(){const lb=getLastBk();return lb?Math.max(0,dB(lb,td())):999}
+const BANK_BRANDS={'chase':{bg:'#0C4DA2',fg:'#fff',abbr:'CH',icon:'🏦'},'chase biz':{bg:'#0C4DA2',fg:'#fff',abbr:'CB',icon:'🏢'},'bank of america':{bg:'#C41230',fg:'#fff',abbr:'BA',icon:'🏦'},'wells fargo':{bg:'#D71E28',fg:'#fff',abbr:'WF',icon:'🏦'},'u.s. bank':{bg:'#0D2C54',fg:'#fff',abbr:'US',icon:'🏦'},'u.s. bank biz':{bg:'#0D2C54',fg:'#fff',abbr:'UB',icon:'🏢'},'citi':{bg:'#003DA5',fg:'#fff',abbr:'CI',icon:'🏦'},'citibank':{bg:'#003DA5',fg:'#fff',abbr:'CI',icon:'🏦'},'pnc':{bg:'#F58220',fg:'#fff',abbr:'PN',icon:'🏦'},'simmons bank':{bg:'#1B365D',fg:'#fff',abbr:'SM',icon:'🏦'},'equity bank':{bg:'#004C2F',fg:'#fff',abbr:'EQ',icon:'🏦'},'regions':{bg:'#007A33',fg:'#fff',abbr:'RG',icon:'🏦'},'bmo':{bg:'#0075BE',fg:'#fff',abbr:'BM',icon:'🏦'},'capital one':{bg:'#004879',fg:'#fff',abbr:'C1',icon:'🏦'},'td bank':{bg:'#34A853',fg:'#fff',abbr:'TD',icon:'🏦'},'huntington':{bg:'#005F3B',fg:'#fff',abbr:'HN',icon:'🏦'},'fifth third':{bg:'#003D4C',fg:'#fff',abbr:'5T',icon:'🏦'},'central bank':{bg:'#1A3A6B',fg:'#fff',abbr:'CB',icon:'🏦'},'community america':{bg:'#0054A6',fg:'#fff',abbr:'CA',icon:'🏦'},'ally':{bg:'#6B2D8B',fg:'#fff',abbr:'AL',icon:'🏦'},'ally bank':{bg:'#6B2D8B',fg:'#fff',abbr:'AL',icon:'🏦'},'citizens':{bg:'#006747',fg:'#fff',abbr:'CZ',icon:'🏦'},'comerica':{bg:'#00703C',fg:'#fff',abbr:'CM',icon:'🏦'},'e-trade':{bg:'#6633CC',fg:'#fff',abbr:'ET',icon:'📈'},'keybank':{bg:'#C4122E',fg:'#fff',abbr:'KB',icon:'🏦'},'m&t bank':{bg:'#003366',fg:'#fff',abbr:'MT',icon:'🏦'},'navy federal':{bg:'#003B71',fg:'#fff',abbr:'NF',icon:'⚓'},'santander':{bg:'#EC0000',fg:'#fff',abbr:'SN',icon:'🏦'},'truist':{bg:'#5C068C',fg:'#fff',abbr:'TR',icon:'🏦'},'vantage cu':{bg:'#005A9C',fg:'#fff',abbr:'VT',icon:'🏦'},'schwab':{bg:'#00A0DF',fg:'#fff',abbr:'SC',icon:'📈'},'discover':{bg:'#FF6000',fg:'#fff',abbr:'DS',icon:'🏦'},'sofi':{bg:'#62D2A2',fg:'#fff',abbr:'SF',icon:'🏦'},'marcus':{bg:'#003DA5',fg:'#fff',abbr:'GS',icon:'🏦'},'us bank':{bg:'#0D2C54',fg:'#fff',abbr:'US',icon:'🏦'},'us bank biz':{bg:'#0D2C54',fg:'#fff',abbr:'UB',icon:'🏢'}};
+function getBrand(name){const n=(name||'').toLowerCase().trim();if(BANK_BRANDS[n])return BANK_BRANDS[n];for(const[k,v]of Object.entries(BANK_BRANDS)){if(n.includes(k)||k.includes(n))return v}let h=0;for(let i=0;i<n.length;i++){h=n.charCodeAt(i)+((h<<5)-h)}const hue=Math.abs(h)%360;const a=(name||'X').toUpperCase().replace(/[^A-Z]/g,'');return{bg:`hsl(${hue},55%,38%)`,fg:'#fff',abbr:(a[0]||'?')+(a[1]||''),icon:'🏦'}}
+function bankLogo(name,sm){const b=getBrand(name);const cls=sm?'blogo sm':'blogo';return`<div class="${cls}" style="background:${b.bg};color:${b.fg}"><span>${esc(b.abbr)}</span></div>`}
 function nextReopen(e){if(!e.closed||!e.churn)return'';return e.churn==='180'?addD(e.closed,180):addM(e.closed,parseInt(e.churn)*12)}
 function daysLeft(e){const nr=nextReopen(e);if(!nr)return null;const diff=dB(td(),nr);return Math.max(0,diff+10)}
 function elapsed(e){return e.bonusRecd?Math.max(0,dB(e.bonusRecd,td())):null}
-function status(e){if(!e.bank)return'';if(e.closed){return daysLeft(e)===0?'TIME TO CHURN!':'WAITING TO CHURN!';}return'WORKING'}
-function sPri(s){return s==='WORKING'?1:s==='TIME TO CHURN!'?2:s==='WAITING TO CHURN!'?3:99}
-function sortE(a){return[...a].sort((x,y)=>{const px=sPri(status(x)),py=sPri(status(y));if(px!==py)return px-py;return(daysLeft(x)??999999)-(daysLeft(y)??999999)})}
-function isCompleted(e){return e.closed&&e.bonus>0}
-function completedYrTotal(yr){return entries.filter(e=>isCompleted(e)&&new Date(e.closed+'T00:00:00').getFullYear()===yr).reduce((s,e)=>s+(e.bonus||0),0)}
 function safeCloseDate(e){return(e.opened&&e.minHoldDays>0)?addD(e.opened,e.minHoldDays):null}
 function daysUntilSafe(e){const s=safeCloseDate(e);return s?Math.max(0,dB(td(),s)):null}
 function holdProg(e){return(e.opened&&e.minHoldDays>0)?Math.min(1,Math.max(0,dB(e.opened,td()))/e.minHoldDays):null}
 function reqDeadline(e){return(e.opened&&e.reqDays>0)?addD(e.opened,e.reqDays):null}
 function daysToDeadline(e){const d=reqDeadline(e);return d?dB(td(),d):null}
+function status(e){
+  if(!e.bank)return'';
+  if(e.closed){return daysLeft(e)===0?'TIME TO CHURN!':'WAITING TO CHURN!';}
+  // Safe to close: either user confirmed no fee, or hold timer expired
+  if(e.feeChecked)return'SAFE TO CLOSE';
+  if(e.minHoldDays>0&&e.opened){const dsc=daysUntilSafe(e);if(dsc!==null&&dsc<=0)return'SAFE TO CLOSE';}
+  return'WORKING';
+}
+function sPri(s){return s==='WORKING'?1:s==='SAFE TO CLOSE'?1.5:s==='TIME TO CHURN!'?2:s==='WAITING TO CHURN!'?3:99}
+function sortE(a){return[...a].sort((x,y)=>{const px=sPri(status(x)),py=sPri(status(y));if(px!==py)return px-py;return(daysLeft(x)??999999)-(daysLeft(y)??999999)})}
+function isCompleted(e){return e.closed&&e.bonus>0}
+function completedYrTotal(yr){return entries.filter(e=>isCompleted(e)&&new Date(e.closed+'T00:00:00').getFullYear()===yr).reduce((s,e)=>s+(e.bonus||0),0)}
 function genId(bank,taken){const L=bank.toUpperCase().replace(/[^A-Z]/g,'');const a=L[0]||'X',b=L[1]||'X';for(let d=0;d<=9;d++){const c=a+b+d;if(!taken.has(c))return c;}return a+b+Math.floor(Math.random()*10)}
 function effortScore(e){if(!e.bonus)return null;let h=1;const n=(e.notes||'').toLowerCase();if(n.includes('debit'))h++;if(n.includes('dd')||n.includes('direct'))h++;if(n.includes('balance'))h++;if(n.includes('branch'))h+=2;if(e.minHoldDays>=180)h++;if(e.earlyCloseFee>0)h++;const sc=Math.round(e.bonus/h);return{score:sc,level:sc>=200?'easy':sc>=100?'med':'hard',label:sc>=200?'Easy':sc>=100?'Medium':'Hard'}}
 function getCountdown(e){
   const s=status(e);
-  if(s==='WORKING'&&!e.bonusRecd&&e.opened&&e.reqDays>0){const d=daysToDeadline(e);if(d!==null)return{lbl:'Req deadline',days:d,date:reqDeadline(e),cls:d<=7?'red':d<=21?'amber':'blue',icon:'\u23F0'}}
-  if(s==='WORKING'&&e.bonusRecd&&e.plannedClose){const d=dB(td(),e.plannedClose);if(d>0)return{lbl:'Close account',days:d,date:e.plannedClose,cls:d<=3?'red':d<=7?'amber':'green',icon:'\uD83D\uDD12'};return{lbl:'Ready to close!',days:0,date:e.plannedClose,cls:'green',icon:'\u2705'}}
-  if(s==='WORKING'&&e.opened&&e.minHoldDays>0){const d=daysUntilSafe(e);if(d!==null&&d>0)return{lbl:'Safe to close',days:d,date:safeCloseDate(e),cls:d<=14?'red':d<=30?'amber':'blue',icon:'\uD83D\uDEE1\uFE0F'}}
+  if((s==='WORKING'||s==='SAFE TO CLOSE')&&!e.bonusRecd&&e.opened&&e.reqDays>0){const d=daysToDeadline(e);if(d!==null)return{lbl:'Req deadline',days:d,date:reqDeadline(e),cls:d<=7?'red':d<=21?'amber':'blue',icon:'\u23F0'}}
+  if((s==='WORKING'||s==='SAFE TO CLOSE')&&e.bonusRecd&&e.plannedClose){const d=dB(td(),e.plannedClose);if(d>0)return{lbl:'Close account',days:d,date:e.plannedClose,cls:d<=3?'red':d<=7?'amber':'green',icon:'\uD83D\uDD12'};return{lbl:'Ready to close!',days:0,date:e.plannedClose,cls:'green',icon:'\u2705'}}
+  if(s==='WORKING'&&e.opened&&e.minHoldDays>0&&!e.feeChecked){const d=daysUntilSafe(e);if(d!==null&&d>0)return{lbl:'Safe to close',days:d,date:safeCloseDate(e),cls:d<=14?'red':d<=30?'amber':'blue',icon:'\uD83D\uDEE1\uFE0F'}}
+  if(s==='SAFE TO CLOSE')return{lbl:'Safe to close!',days:0,date:'',cls:'green',icon:'\u2705'};
   if(s==='WAITING TO CHURN!'){const dl=daysLeft(e);const nr=nextReopen(e);if(dl>0)return{lbl:'Churn ready',days:dl,date:nr,cls:dl<=30?'amber':'blue',icon:'\uD83D\uDD04'}}
   if(s==='TIME TO CHURN!')return{lbl:'Ready now!',days:0,date:'',cls:'green',icon:'\uD83D\uDD25'};
   return null}
-function getNotifs(e){const n=[];const s=status(e);if(s==='TIME TO CHURN!')n.push({t:'Ready to churn!',c:'green'});const dsc=daysUntilSafe(e);if(!e.closed&&dsc!==null){if(dsc===0)n.push({t:'Safe to close',c:'green'});else if(dsc<=7)n.push({t:'Close safe in '+dsc+'d',c:'red'})}if(s==='WAITING TO CHURN!'){const dl=daysLeft(e);if(dl!==null&&dl<=30&&dl>0)n.push({t:'Churn in '+dl+'d',c:'amber'})}return n}
-function getUrg(e){const s=status(e);if(s==='TIME TO CHURN!')return'red';const dsc=daysUntilSafe(e);if(!e.closed&&dsc!==null&&dsc<=7)return'red';if(!e.closed&&dsc!==null&&dsc<=30)return'yellow';if(s==='WAITING TO CHURN!'){const dl=daysLeft(e);if(dl!==null&&dl<=30)return'yellow'}if(s==='WORKING')return'blue';return'green'}
+function getUrg(e){const s=status(e);if(s==='TIME TO CHURN!')return'red';if(s==='SAFE TO CLOSE')return'green';const dsc=daysUntilSafe(e);if(!e.closed&&dsc!==null&&dsc<=7)return'red';if(!e.closed&&dsc!==null&&dsc<=30)return'yellow';if(s==='WAITING TO CHURN!'){const dl=daysLeft(e);if(dl!==null&&dl<=30)return'yellow'}if(s==='WORKING')return'blue';return'green'}
 function getSuggestions(){const sug=[];entries.filter(e=>e.closed&&e.churn).forEach(e=>{const dl=daysLeft(e);if(dl!==null&&dl<=0)sug.push({bank:e.bank,rsn:'Cooldown expired! Ready to re-open.',bonus:e.bonus});else if(dl!==null&&dl<=30)sug.push({bank:e.bank,rsn:'Cooldown expires in '+dl+' days.',bonus:e.bonus})});const active=new Set(entries.map(e=>e.bank.toLowerCase()));TEMPLATES.forEach(t=>{if(!active.has(t.bank.toLowerCase()))sug.push({bank:t.bank,rsn:'Not yet tried. '+fM(t.bonus)+' available.',bonus:t.bonus})});return sug.slice(0,4)}
 function chartData(){const ms=[];for(let m=0;m<12;m++){const l=['J','F','M','A','M','J','J','A','S','O','N','D'][m];const t=entries.filter(e=>isCompleted(e)&&new Date(e.closed+'T00:00:00').getFullYear()===dashYear&&new Date(e.closed+'T00:00:00').getMonth()===m).reduce((s,e)=>s+(e.bonus||0),0);ms.push({l,t})}return ms}
-
-/* ═══ FIND EXISTING ENTRY BY BANK NAME ═══ */
-function findExistingByBank(bankName){
-  if(!bankName)return null;
-  const n=bankName.toLowerCase().trim();
-  return entries.find(e=>(e.bank||'').toLowerCase().trim()===n)||null;
-}
-
-/* REGEX ANALYZER — MEGA FALLBACK (handles 50+ bank patterns) */
-function analyzeTC(text){
-  if(!text||text.length<20)return null;
-  const t=text.toLowerCase(),r={};
-  const bonusPatterns=[/(?:bonus|credit|incentive|cash\s+bonus)\s+(?:of\s+)?\$([\d,]+)/i,/\$([\d,]+)\s+(?:cash\s+)?(?:bonus|credit|incentive)/i,/(?:earn|receive|get)\s+(?:a\s+)?\$([\d,]+)/i,/\$([\d,]+)\s+(?:will\s+be\s+)?(?:credited|deposited|paid)/i,/(?:up\s+to\s+)?\$([\d,]+)\s+(?:total|maximum)/i];
-  for(const p of bonusPatterns){const m=text.match(p);if(m){r.bonusAmount='$'+(m[1]||m[2]).replace(/,/g,'');break}}
-  const allBonuses=[...text.matchAll(/\$([\d,]+)\s+(?:bonus|credit)/gi)];
-  if(allBonuses.length>1)r.bonusTiers=allBonuses.map(m=>'$'+m[1]).join(' / ');
-  const ddPatterns=[/direct\s+deposits?\s+(?:totaling|of|that\s+total)\s+(?:at\s+least\s+)?\$([\d,]+)/i,/\$([\d,]+)\s+(?:or\s+more\s+)?in\s+(?:qualifying\s+)?direct\s+deposit/i,/qualifying\s+direct\s+deposits?\s+(?:totaling\s+)?(?:at\s+least\s+)?\$([\d,]+)/i,/direct\s+deposit\s+of\s+(?:at\s+least\s+)?\$([\d,]+)/i,/combined\s+(?:qualifying\s+)?(?:direct\s+)?deposits?\s+(?:of\s+)?\$([\d,]+)/i];
-  for(const p of ddPatterns){const m=text.match(p);if(m){r.ddAmount='$'+m[1].replace(/,/g,'');break}}
-  const ddcPatterns=[/(\w+)\s+(?:or\s+more\s+)?(?:qualifying\s+)?direct\s+deposits/i,/at\s+least\s+(\w+)\s+direct/i];
-  const numWords={one:1,two:2,three:3,four:4,five:5,six:6};
-  for(const p of ddcPatterns){const m=text.match(p);if(m){const w=m[1].toLowerCase();if(numWords[w])r.ddCount=numWords[w];else if(/^\d+$/.test(m[1]))r.ddCount=parseInt(m[1]);break}}
-  if(t.includes('per statement cycle')||t.includes('per cycle'))r.ddPerCycle=true;
-  if(t.includes('per month')||t.includes('monthly'))r.ddMonthly=true;
-  const debitPatterns=[/(\d+)\s+(?:or\s+more\s+)?(?:qualifying\s+)?debit\s+(?:card\s+)?(?:transactions?|purchases?)/i,/debit\s+(?:card\s+)?(?:transactions?|purchases?)\s+(?:totaling|of)\s+(\d+)/i,/(?:make|complete)\s+(\d+)\s+(?:qualifying\s+)?(?:debit|card|purchase)/i];
-  for(const p of debitPatterns){const m=text.match(p);if(m){r.debitTxns=m[1]||m[2];break}}
-  if(t.includes('activate')&&(t.includes('debit card')||t.includes('debit')))r.activateDebit=true;
-  const timePatterns=[/within\s+(\d+)\s+days?\s+(?:of|after|from)\s+(?:account\s+)?open/i,/(\d+)\s+days?\s+(?:of|after|from)\s+(?:account\s+)?open/i,/within\s+(\d+)\s+days/i,/first\s+(\d+)\s+days/i];
-  for(const p of timePatterns){const m=text.match(p);if(m){r.timeline=m[1]+' days';r.timelineDays=parseInt(m[1]);break}}
-  const cycleMatch=text.match(/(?:first|within)\s+(\d+)\s+(?:\(\d+\)\s+)?statement\s+cycles?/i)||text.match(/(\d+)\s+statement\s+cycles?/i);
-  if(cycleMatch)r.cycles=cycleMatch[1]+' statement cycles';
-  const promoPatterns=[/promo(?:tional)?\s+code\s+[:\s]*["']?(\w+)["']?/i,/code\s+["']?(\w+)["']?\s+(?:at|during|when)/i,/(?:use|enter|apply)\s+(?:the\s+)?(?:promo\s+)?code\s+["']?(\w+)/i];
-  for(const p of promoPatterns){const m=text.match(p);if(m){r.promoCode=m[1]||m[2]||m[3];break}}
-  const feePatterns=[/monthly\s+(?:maintenance\s+|service\s+)?fee\s+(?:of\s+)?\$([\d.]+)/i,/\$([\d.]+)\s+monthly\s+(?:maintenance|service)\s+fee/i,/monthly\s+fee[:\s]+\$([\d.]+)/i,/\$([\d.]+)\s+(?:per\s+)?month\s+(?:service|maintenance)?/i];
-  for(const p of feePatterns){const m=text.match(p);if(m){r.monthlyFee='$'+m[1];break}}
-  if(t.includes('no monthly fee')||t.includes('no monthly maintenance')||t.includes('$0 monthly')||t.includes('no service fee'))r.monthlyFee='$0 (No fee)';
-  const waiverPatterns=[/(?:waived?|avoid|no\s+fee)\s+(?:if|when|by|with).*?\$([\d,]+)/i,/(?:maintain|average|minimum)\s+(?:daily\s+)?balance\s+(?:of\s+)?\$([\d,]+).*?(?:waive|avoid|no\s+fee)/i,/direct\s+deposit\s+(?:of\s+)?\$([\d,]+).*?(?:waive|avoid)/i];
-  for(const p of waiverPatterns){const m=text.match(p);if(m){r.feeWaiver='$'+m[1].replace(/,/g,'')+' balance or DD';break}}
-  const minPatterns=[/minimum\s+(?:opening\s+)?(?:deposit|balance)\s+(?:of\s+)?\$([\d,]+)/i,/\$([\d,]+)\s+(?:minimum\s+)?(?:opening\s+)?deposit/i,/(?:open|fund)\s+.*?\$([\d,]+)/i];
-  for(const p of minPatterns){const m=text.match(p);if(m){r.minBalance='$'+m[1].replace(/,/g,'');break}}
-  const closePatterns=[/(?:closed?|termination|closing)\s+(?:the\s+)?(?:account\s+)?within\s+(?:the\s+)?(?:first\s+)?(\d+)\s+days/i,/(\d+)\s+days?\s+(?:of|after|from)\s+(?:account\s+)?open.*?(?:close|terminat)/i,/close.*?(?:less\s+than|within|before)\s+(\d+)\s+days/i];
-  for(const p of closePatterns){const m=text.match(p);if(m){r.earlyCloseDays=parseInt(m[1]);break}}
-  const closeFeePatterns=[/(?:early\s+)?(?:termination|close|closing)\s+fee\s+(?:of\s+)?\$([\d.]+)/i,/\$([\d,]+)\s+(?:early\s+)?(?:termination|close)/i,/(?:deduct|collect|charge|clawback|forfeit).*?\$([\d,]+).*?(?:bonus|incentive)/i,/(?:bonus|incentive).*?(?:deduct|collect|clawback|forfeit)/i];
-  for(const p of closeFeePatterns){const m=text.match(p);if(m&&m[1]){r.earlyCloseFee='$'+m[1].replace(/,/g,'');break}}
-  if(t.includes('collect the bonus')||t.includes('forfeit the bonus')||t.includes('bonus will be reversed')||t.includes('bonus may be collected'))r.earlyCloseFee=r.earlyCloseFee||'Bonus clawback';
-  if(t.includes('no early termination')||t.includes('no termination fee'))r.earlyCloseFee='None';
-  const churnPatterns=[/(?:not\s+)?(?:eligible|qualify|available).*?(?:within|past|last|preceding)\s+(?:the\s+)?(\d+)\s+months?/i,/(?:had|owned|closed|open).*?(?:account|checking).*?(?:within|past|last)\s+(?:the\s+)?(\d+)\s+months?/i,/(\d+)\s+months?\s+(?:prior|before|from\s+(?:last|previous))/i];
-  for(const p of churnPatterns){const m=text.match(p);if(m){r.churnMonths=parseInt(m[1]||m[2]);break}}
-  if(!r.churnMonths){if(t.includes('six months')||t.includes('6 months'))r.churnMonths=6;else if(t.includes('twelve months')||t.includes('12 months'))r.churnMonths=12;else if(t.includes('24 months')||t.includes('twenty-four'))r.churnMonths=24;else if(t.includes('36 months')||t.includes('three years'))r.churnMonths=36}
-  if(r.churnMonths)r.churnRule=r.churnMonths<=6?'180 days':r.churnMonths<=12?'1 year':r.churnMonths<=24?'2 years':'3 years';
-  if(t.includes('one per lifetime')||t.includes('once per lifetime'))r.churnRule='Once per lifetime';
-  const postPatterns=[/(?:bonus|credit).*?(?:credited?|deposited?|paid?|posted?).*?(?:within|after|by)\s+(\d+)\s+days?/i,/within\s+(\d+)\s+days?\s+of\s+(?:meeting|completing|qualifying)/i,/(?:within|after)\s+(\d+)\s+days?\s+(?:following|after)/i];
-  for(const p of postPatterns){const m=text.match(p);if(m){r.bonusPostTime='Within '+m[1]+' days of qualifying';break}}
-  if(!r.bonusPostTime&&t.includes('two weeks'))r.bonusPostTime='Within 2 weeks of qualifying';
-  if(!r.bonusPostTime&&t.includes('within 60 days'))r.bonusPostTime='Within 60 days of qualifying';
-  if(t.includes('1099-int'))r.taxForm='1099-INT (Interest)';
-  else if(t.includes('1099-misc'))r.taxForm='1099-MISC (Income)';
-  else if(t.includes('reported')&&t.includes('income'))r.taxForm='Taxable income';
-  const excluded=[];
-  if(t.includes('person-to-person')||t.includes('p2p')||t.includes('zelle'))excluded.push('Zelle/P2P transfers');
-  if(t.includes('micro-deposit')||t.includes('micro deposit'))excluded.push('Micro-deposits (<$1)');
-  if(t.includes('venmo')&&t.includes('not'))excluded.push('Venmo');
-  if(t.includes('paypal')&&t.includes('not'))excluded.push('PayPal');
-  if(t.includes('transfer')&&t.includes('not')&&t.includes('qualify'))excluded.push('Internal transfers');
-  if(t.includes('external bank')&&t.includes('not'))excluded.push('External bank ACH');
-  r.ddExcluded=excluded;
-  const ddReqs=[];
-  if(t.includes('employer'))ddReqs.push('employer');
-  if(t.includes('government')&&!t.includes('not government'))ddReqs.push('government agency');
-  if(t.includes('payroll'))ddReqs.push('payroll');
-  r.ddMustBe=ddReqs;
-  const acctMatch=text.match(/(?:open|new)\s+(?:a\s+)?(?:new\s+)?([\w\s]+?)\s+(?:checking|savings|account)/i);
-  if(acctMatch)r.acctType=acctMatch[1].trim();
-  const dateMatch=text.match(/between\s+([\w\s,]+?\d{4})\s+and\s+([\w\s,]+?\d{4})/i);
-  if(dateMatch)r.openWindow=dateMatch[1].trim()+' - '+dateMatch[2].trim();
-  if(t.includes('enroll in online banking')||t.includes('mobile app')||t.includes('digital banking'))r.requiresOnlineBanking=true;
-  if(t.includes('estatement')||t.includes('electronic statement'))r.requiresEstatements=true;
-  const maintMatch=text.match(/maintain.*?(?:balance|deposit).*?(\d+)\s+(?:consecutive\s+)?days/i)||text.match(/(\d+)\s+consecutive\s+days/i);
-  if(maintMatch)r.maintainDays=parseInt(maintMatch[1]);
-  const maintBal=text.match(/maintain.*?\$([\d,]+)/i);
-  if(maintBal)r.maintainBalance='$'+maintBal[1].replace(/,/g,'');
-  if(t.includes('guided investing')||t.includes('investment account')){r.hasInvestingBonus=true;const gi=text.match(/(?:fund|deposit|invest)\s+(?:the\s+)?(?:account\s+)?(?:with\s+)?(?:a\s+)?(?:minimum\s+)?\$([\d,]+)/i);if(gi)r.investMin='$'+gi[1].replace(/,/g,'')}
-  if(t.includes('bundled bonus')||t.includes('bundled')){const bb=text.match(/\$([\d,]+)\s+(?:bundled|extra|additional)/i)||text.match(/(?:bundled|extra|additional).*?\$([\d,]+)/i);if(bb)r.bundledBonus='$'+bb[1].replace(/,/g,'')}
-  if(t.includes('savings bonus')||t.includes('savings account')&&t.includes('bonus')){const sb=text.match(/savings.*?\$([\d,]+)\s+bonus/i)||text.match(/\$([\d,]+)\s+savings\s+bonus/i);if(sb)r.savingsBonus='$'+sb[1].replace(/,/g,'')}
-  if(t.includes('credit card')&&(t.includes('fund')||t.includes('opening deposit')))r.ccFunding=true;
-  if(t.includes('hard pull')||t.includes('hard inquiry'))r.pullType='Hard pull';
-  if(t.includes('soft pull')||t.includes('soft inquiry'))r.pullType='Soft pull';
-  if(t.includes('credit approval')||t.includes('subject to credit'))r.creditCheck=true;
-  const bnPatterns=[/(\w[\w\s&.']+?)\s+(?:credit union|bank|financial)/i,/(?:open|new)\s+(?:a\s+)?(?:new\s+)?([\w\s]+?)\s+(?:checking|savings)/i];
-  for(const p of bnPatterns){const m=text.match(p);if(m){const name=(m[1]||m[2]||'').trim();if(name.length>2&&name.length<40)r.bankName=name;break}}
-  const n=[];
-  if(r.bonusAmount)n.push('* Bonus: '+r.bonusAmount+(r.bonusTiers?' (Tiers: '+r.bonusTiers+')':''));
-  if(r.acctType)n.push('* Account: '+r.acctType);
-  if(r.openWindow)n.push('* Open between: '+r.openWindow);
-  if(r.promoCode)n.push('* Promo code: '+r.promoCode);
-  if(r.creditCheck)n.push('* Subject to credit approval');
-  n.push('');n.push('REQUIREMENTS:');
-  let step=1;
-  if(r.requiresOnlineBanking){n.push('* Step '+step+': Enroll in online/mobile banking');step++}
-  if(r.requiresEstatements){n.push('* Step '+step+': Enroll in eStatements');step++}
-  if(r.ddAmount){let ddStr='* Step '+step+': Direct deposit '+r.ddAmount;if(r.ddCount)ddStr+=' ('+r.ddCount+' or more deposits)';if(r.ddPerCycle)ddStr+=' per statement cycle';if(r.ddMonthly)ddStr+=' per month';if(r.timeline)ddStr+=' within '+r.timeline;n.push(ddStr);step++}
-  if(r.debitTxns){n.push('* Step '+step+': Complete '+r.debitTxns+' debit card transactions');step++}
-  if(r.activateDebit){n.push('* Step '+step+': Activate debit card and make at least 1 transaction');step++}
-  if(r.maintainDays){n.push('* Step '+step+': Maintain balance for '+r.maintainDays+' consecutive days');step++}
-  if(r.cycles)n.push('* Complete within '+r.cycles);
-  if(r.ddMustBe.length||r.ddExcluded.length){n.push('');n.push('DIRECT DEPOSIT RULES:');if(r.ddMustBe.length)n.push('* DD must be from: '+r.ddMustBe.join(', '));if(r.ddExcluded.length)n.push('* Does NOT count: '+r.ddExcluded.join(', '))}
-  if(r.hasInvestingBonus||r.savingsBonus||r.bundledBonus){n.push('');n.push('ADDITIONAL BONUSES:');if(r.hasInvestingBonus)n.push('* Guided Investing: Fund '+(r.investMin||'minimum')+(r.maintainDays?', maintain for '+r.maintainDays+' days':''));if(r.savingsBonus)n.push('* Savings bonus: '+r.savingsBonus);if(r.bundledBonus)n.push('* Bundled bonus: Extra '+r.bundledBonus+' for completing both')}
-  n.push('');n.push('FEES & TIMING:');
-  if(r.monthlyFee)n.push('* Monthly fee: '+r.monthlyFee);
-  if(r.feeWaiver)n.push('* Fee waiver: '+r.feeWaiver);
-  if(r.minBalance)n.push('* Min opening deposit: '+r.minBalance);
-  if(r.bonusPostTime)n.push('* Bonus posts: '+r.bonusPostTime);
-  if(r.earlyCloseDays)n.push('* Min hold: '+r.earlyCloseDays+' days before closing');
-  if(r.earlyCloseFee)n.push('* Early close penalty: '+r.earlyCloseFee);
-  if(!r.earlyCloseFee&&!r.earlyCloseDays)n.push('* Early close fee: Not mentioned');
-  if(r.ccFunding)n.push('* Credit card funding: Available');
-  if(r.pullType)n.push('* Credit check: '+r.pullType);
-  n.push('');n.push('CHURN & TAX:');
-  if(r.churnRule)n.push('* Churn cooldown: '+r.churnRule+' ('+r.churnMonths+' months)');
-  else n.push('* Churn rule: Check fine print');
-  if(r.taxForm)n.push('* Tax: '+r.taxForm);
-  if(t.includes('limit one'))n.push('* Limit one bonus per account/member');
-  if(t.includes('cannot be combined')||t.includes('not be combined'))n.push('* Cannot be combined with other offers');
-  if(t.includes('open and in good standing'))n.push('* Account must be open and in good standing at payout');
-  r.notesForTracker=n.filter(x=>x!==undefined).join('\n');
-  r.checklist=[];
-  if(r.promoCode)r.checklist.push('Use promo code '+r.promoCode);
-  if(r.requiresEstatements)r.checklist.push('Enroll in eStatements');
-  if(r.requiresOnlineBanking)r.checklist.push('Enroll in online banking');
-  if(r.ddAmount)r.checklist.push('Set up DD of '+r.ddAmount);
-  if(r.debitTxns)r.checklist.push(r.debitTxns+' debit transactions');
-  if(r.activateDebit)r.checklist.push('Activate debit card');
-  if(r.timeline)r.checklist.push('Complete within '+r.timeline);
-  if(r.earlyCloseDays)r.checklist.push('Hold account '+r.earlyCloseDays+' days');
-  return Object.keys(r).length>1?r:null;
-}
-
-/* DEFAULT DATA */
+function findExistingByBank(bankName){if(!bankName)return null;const n=bankName.toLowerCase().trim();return entries.find(e=>(e.bank||'').toLowerCase().trim()===n)||null}
+function analyzeTC(text){if(!text||text.length<20)return null;const t=text.toLowerCase(),r={};const bonusPatterns=[/(?:bonus|credit|incentive|cash\s+bonus)\s+(?:of\s+)?\$([\d,]+)/i,/\$([\d,]+)\s+(?:cash\s+)?(?:bonus|credit|incentive)/i,/(?:earn|receive|get)\s+(?:a\s+)?\$([\d,]+)/i,/\$([\d,]+)\s+(?:will\s+be\s+)?(?:credited|deposited|paid)/i,/(?:up\s+to\s+)?\$([\d,]+)\s+(?:total|maximum)/i];for(const p of bonusPatterns){const m=text.match(p);if(m){r.bonusAmount='$'+(m[1]||m[2]).replace(/,/g,'');break}}const allBonuses=[...text.matchAll(/\$([\d,]+)\s+(?:bonus|credit)/gi)];if(allBonuses.length>1)r.bonusTiers=allBonuses.map(m=>'$'+m[1]).join(' / ');const ddPatterns=[/direct\s+deposits?\s+(?:totaling|of|that\s+total)\s+(?:at\s+least\s+)?\$([\d,]+)/i,/\$([\d,]+)\s+(?:or\s+more\s+)?in\s+(?:qualifying\s+)?direct\s+deposit/i,/qualifying\s+direct\s+deposits?\s+(?:totaling\s+)?(?:at\s+least\s+)?\$([\d,]+)/i,/direct\s+deposit\s+of\s+(?:at\s+least\s+)?\$([\d,]+)/i,/combined\s+(?:qualifying\s+)?(?:direct\s+)?deposits?\s+(?:of\s+)?\$([\d,]+)/i];for(const p of ddPatterns){const m=text.match(p);if(m){r.ddAmount='$'+m[1].replace(/,/g,'');break}}const ddcPatterns=[/(\w+)\s+(?:or\s+more\s+)?(?:qualifying\s+)?direct\s+deposits/i,/at\s+least\s+(\w+)\s+direct/i];const numWords={one:1,two:2,three:3,four:4,five:5,six:6};for(const p of ddcPatterns){const m=text.match(p);if(m){const w=m[1].toLowerCase();if(numWords[w])r.ddCount=numWords[w];else if(/^\d+$/.test(m[1]))r.ddCount=parseInt(m[1]);break}}if(t.includes('per statement cycle')||t.includes('per cycle'))r.ddPerCycle=true;if(t.includes('per month')||t.includes('monthly'))r.ddMonthly=true;const debitPatterns=[/(\d+)\s+(?:or\s+more\s+)?(?:qualifying\s+)?debit\s+(?:card\s+)?(?:transactions?|purchases?)/i,/debit\s+(?:card\s+)?(?:transactions?|purchases?)\s+(?:totaling|of)\s+(\d+)/i,/(?:make|complete)\s+(\d+)\s+(?:qualifying\s+)?(?:debit|card|purchase)/i];for(const p of debitPatterns){const m=text.match(p);if(m){r.debitTxns=m[1]||m[2];break}}if(t.includes('activate')&&(t.includes('debit card')||t.includes('debit')))r.activateDebit=true;const timePatterns=[/within\s+(\d+)\s+days?\s+(?:of|after|from)\s+(?:account\s+)?open/i,/(\d+)\s+days?\s+(?:of|after|from)\s+(?:account\s+)?open/i,/within\s+(\d+)\s+days/i,/first\s+(\d+)\s+days/i];for(const p of timePatterns){const m=text.match(p);if(m){r.timeline=m[1]+' days';r.timelineDays=parseInt(m[1]);break}}const cycleMatch=text.match(/(?:first|within)\s+(\d+)\s+(?:\(\d+\)\s+)?statement\s+cycles?/i)||text.match(/(\d+)\s+statement\s+cycles?/i);if(cycleMatch)r.cycles=cycleMatch[1]+' statement cycles';const promoPatterns=[/promo(?:tional)?\s+code\s+[:\s]*["']?(\w+)["']?/i,/code\s+["']?(\w+)["']?\s+(?:at|during|when)/i,/(?:use|enter|apply)\s+(?:the\s+)?(?:promo\s+)?code\s+["']?(\w+)/i];for(const p of promoPatterns){const m=text.match(p);if(m){r.promoCode=m[1]||m[2]||m[3];break}}const feePatterns=[/monthly\s+(?:maintenance\s+|service\s+)?fee\s+(?:of\s+)?\$([\d.]+)/i,/\$([\d.]+)\s+monthly\s+(?:maintenance|service)\s+fee/i,/monthly\s+fee[:\s]+\$([\d.]+)/i,/\$([\d.]+)\s+(?:per\s+)?month\s+(?:service|maintenance)?/i];for(const p of feePatterns){const m=text.match(p);if(m){r.monthlyFee='$'+m[1];break}}if(t.includes('no monthly fee')||t.includes('no monthly maintenance')||t.includes('$0 monthly')||t.includes('no service fee'))r.monthlyFee='$0 (No fee)';const waiverPatterns=[/(?:waived?|avoid|no\s+fee)\s+(?:if|when|by|with).*?\$([\d,]+)/i,/(?:maintain|average|minimum)\s+(?:daily\s+)?balance\s+(?:of\s+)?\$([\d,]+).*?(?:waive|avoid|no\s+fee)/i,/direct\s+deposit\s+(?:of\s+)?\$([\d,]+).*?(?:waive|avoid)/i];for(const p of waiverPatterns){const m=text.match(p);if(m){r.feeWaiver='$'+m[1].replace(/,/g,'')+' balance or DD';break}}const minPatterns=[/minimum\s+(?:opening\s+)?(?:deposit|balance)\s+(?:of\s+)?\$([\d,]+)/i,/\$([\d,]+)\s+(?:minimum\s+)?(?:opening\s+)?deposit/i,/(?:open|fund)\s+.*?\$([\d,]+)/i];for(const p of minPatterns){const m=text.match(p);if(m){r.minBalance='$'+m[1].replace(/,/g,'');break}}const closePatterns=[/(?:closed?|termination|closing)\s+(?:the\s+)?(?:account\s+)?within\s+(?:the\s+)?(?:first\s+)?(\d+)\s+days/i,/(\d+)\s+days?\s+(?:of|after|from)\s+(?:account\s+)?open.*?(?:close|terminat)/i,/close.*?(?:less\s+than|within|before)\s+(\d+)\s+days/i];for(const p of closePatterns){const m=text.match(p);if(m){r.earlyCloseDays=parseInt(m[1]);break}}const closeFeePatterns=[/(?:early\s+)?(?:termination|close|closing)\s+fee\s+(?:of\s+)?\$([\d.]+)/i,/\$([\d,]+)\s+(?:early\s+)?(?:termination|close)/i,/(?:deduct|collect|charge|clawback|forfeit).*?\$([\d,]+).*?(?:bonus|incentive)/i,/(?:bonus|incentive).*?(?:deduct|collect|clawback|forfeit)/i];for(const p of closeFeePatterns){const m=text.match(p);if(m&&m[1]){r.earlyCloseFee='$'+m[1].replace(/,/g,'');break}}if(t.includes('collect the bonus')||t.includes('forfeit the bonus')||t.includes('bonus will be reversed')||t.includes('bonus may be collected'))r.earlyCloseFee=r.earlyCloseFee||'Bonus clawback';if(t.includes('no early termination')||t.includes('no termination fee'))r.earlyCloseFee='None';const churnPatterns=[/(?:not\s+)?(?:eligible|qualify|available).*?(?:within|past|last|preceding)\s+(?:the\s+)?(\d+)\s+months?/i,/(?:had|owned|closed|open).*?(?:account|checking).*?(?:within|past|last)\s+(?:the\s+)?(\d+)\s+months?/i,/(\d+)\s+months?\s+(?:prior|before|from\s+(?:last|previous))/i];for(const p of churnPatterns){const m=text.match(p);if(m){r.churnMonths=parseInt(m[1]||m[2]);break}}if(!r.churnMonths){if(t.includes('six months')||t.includes('6 months'))r.churnMonths=6;else if(t.includes('twelve months')||t.includes('12 months'))r.churnMonths=12;else if(t.includes('24 months')||t.includes('twenty-four'))r.churnMonths=24;else if(t.includes('36 months')||t.includes('three years'))r.churnMonths=36}if(r.churnMonths)r.churnRule=r.churnMonths<=6?'180 days':r.churnMonths<=12?'1 year':r.churnMonths<=24?'2 years':'3 years';if(t.includes('one per lifetime')||t.includes('once per lifetime'))r.churnRule='Once per lifetime';const postPatterns=[/(?:bonus|credit).*?(?:credited?|deposited?|paid?|posted?).*?(?:within|after|by)\s+(\d+)\s+days?/i,/within\s+(\d+)\s+days?\s+of\s+(?:meeting|completing|qualifying)/i,/(?:within|after)\s+(\d+)\s+days?\s+(?:following|after)/i];for(const p of postPatterns){const m=text.match(p);if(m){r.bonusPostTime='Within '+m[1]+' days of qualifying';break}}if(!r.bonusPostTime&&t.includes('two weeks'))r.bonusPostTime='Within 2 weeks of qualifying';if(!r.bonusPostTime&&t.includes('within 60 days'))r.bonusPostTime='Within 60 days of qualifying';if(t.includes('1099-int'))r.taxForm='1099-INT (Interest)';else if(t.includes('1099-misc'))r.taxForm='1099-MISC (Income)';else if(t.includes('reported')&&t.includes('income'))r.taxForm='Taxable income';const excluded=[];if(t.includes('person-to-person')||t.includes('p2p')||t.includes('zelle'))excluded.push('Zelle/P2P transfers');if(t.includes('micro-deposit')||t.includes('micro deposit'))excluded.push('Micro-deposits (<$1)');if(t.includes('venmo')&&t.includes('not'))excluded.push('Venmo');if(t.includes('paypal')&&t.includes('not'))excluded.push('PayPal');if(t.includes('transfer')&&t.includes('not')&&t.includes('qualify'))excluded.push('Internal transfers');if(t.includes('external bank')&&t.includes('not'))excluded.push('External bank ACH');r.ddExcluded=excluded;const ddReqs=[];if(t.includes('employer'))ddReqs.push('employer');if(t.includes('government')&&!t.includes('not government'))ddReqs.push('government agency');if(t.includes('payroll'))ddReqs.push('payroll');r.ddMustBe=ddReqs;const acctMatch=text.match(/(?:open|new)\s+(?:a\s+)?(?:new\s+)?([\w\s]+?)\s+(?:checking|savings|account)/i);if(acctMatch)r.acctType=acctMatch[1].trim();const dateMatch=text.match(/between\s+([\w\s,]+?\d{4})\s+and\s+([\w\s,]+?\d{4})/i);if(dateMatch)r.openWindow=dateMatch[1].trim()+' - '+dateMatch[2].trim();if(t.includes('enroll in online banking')||t.includes('mobile app')||t.includes('digital banking'))r.requiresOnlineBanking=true;if(t.includes('estatement')||t.includes('electronic statement'))r.requiresEstatements=true;const maintMatch=text.match(/maintain.*?(?:balance|deposit).*?(\d+)\s+(?:consecutive\s+)?days/i)||text.match(/(\d+)\s+consecutive\s+days/i);if(maintMatch)r.maintainDays=parseInt(maintMatch[1]);const maintBal=text.match(/maintain.*?\$([\d,]+)/i);if(maintBal)r.maintainBalance='$'+maintBal[1].replace(/,/g,'');if(t.includes('guided investing')||t.includes('investment account')){r.hasInvestingBonus=true;const gi=text.match(/(?:fund|deposit|invest)\s+(?:the\s+)?(?:account\s+)?(?:with\s+)?(?:a\s+)?(?:minimum\s+)?\$([\d,]+)/i);if(gi)r.investMin='$'+gi[1].replace(/,/g,'')}if(t.includes('bundled bonus')||t.includes('bundled')){const bb=text.match(/\$([\d,]+)\s+(?:bundled|extra|additional)/i)||text.match(/(?:bundled|extra|additional).*?\$([\d,]+)/i);if(bb)r.bundledBonus='$'+bb[1].replace(/,/g,'')}if(t.includes('savings bonus')||t.includes('savings account')&&t.includes('bonus')){const sb=text.match(/savings.*?\$([\d,]+)\s+bonus/i)||text.match(/\$([\d,]+)\s+savings\s+bonus/i);if(sb)r.savingsBonus='$'+sb[1].replace(/,/g,'')}if(t.includes('credit card')&&(t.includes('fund')||t.includes('opening deposit')))r.ccFunding=true;if(t.includes('hard pull')||t.includes('hard inquiry'))r.pullType='Hard pull';if(t.includes('soft pull')||t.includes('soft inquiry'))r.pullType='Soft pull';if(t.includes('credit approval')||t.includes('subject to credit'))r.creditCheck=true;const bnPatterns=[/(\w[\w\s&.']+?)\s+(?:credit union|bank|financial)/i,/(?:open|new)\s+(?:a\s+)?(?:new\s+)?([\w\s]+?)\s+(?:checking|savings)/i];for(const p of bnPatterns){const m=text.match(p);if(m){const name=(m[1]||m[2]||'').trim();if(name.length>2&&name.length<40)r.bankName=name;break}}const n=[];if(r.bonusAmount)n.push('* Bonus: '+r.bonusAmount+(r.bonusTiers?' (Tiers: '+r.bonusTiers+')':''));if(r.acctType)n.push('* Account: '+r.acctType);if(r.openWindow)n.push('* Open between: '+r.openWindow);if(r.promoCode)n.push('* Promo code: '+r.promoCode);if(r.creditCheck)n.push('* Subject to credit approval');n.push('');n.push('REQUIREMENTS:');let step=1;if(r.requiresOnlineBanking){n.push('* Step '+step+': Enroll in online/mobile banking');step++}if(r.requiresEstatements){n.push('* Step '+step+': Enroll in eStatements');step++}if(r.ddAmount){let ddStr='* Step '+step+': Direct deposit '+r.ddAmount;if(r.ddCount)ddStr+=' ('+r.ddCount+' or more deposits)';if(r.ddPerCycle)ddStr+=' per statement cycle';if(r.ddMonthly)ddStr+=' per month';if(r.timeline)ddStr+=' within '+r.timeline;n.push(ddStr);step++}if(r.debitTxns){n.push('* Step '+step+': Complete '+r.debitTxns+' debit card transactions');step++}if(r.activateDebit){n.push('* Step '+step+': Activate debit card and make at least 1 transaction');step++}if(r.maintainDays){n.push('* Step '+step+': Maintain balance for '+r.maintainDays+' consecutive days');step++}if(r.cycles)n.push('* Complete within '+r.cycles);if(r.ddMustBe.length||r.ddExcluded.length){n.push('');n.push('DIRECT DEPOSIT RULES:');if(r.ddMustBe.length)n.push('* DD must be from: '+r.ddMustBe.join(', '));if(r.ddExcluded.length)n.push('* Does NOT count: '+r.ddExcluded.join(', '))}if(r.hasInvestingBonus||r.savingsBonus||r.bundledBonus){n.push('');n.push('ADDITIONAL BONUSES:');if(r.hasInvestingBonus)n.push('* Guided Investing: Fund '+(r.investMin||'minimum')+(r.maintainDays?', maintain for '+r.maintainDays+' days':''));if(r.savingsBonus)n.push('* Savings bonus: '+r.savingsBonus);if(r.bundledBonus)n.push('* Bundled bonus: Extra '+r.bundledBonus+' for completing both')}n.push('');n.push('FEES & TIMING:');if(r.monthlyFee)n.push('* Monthly fee: '+r.monthlyFee);if(r.feeWaiver)n.push('* Fee waiver: '+r.feeWaiver);if(r.minBalance)n.push('* Min opening deposit: '+r.minBalance);if(r.bonusPostTime)n.push('* Bonus posts: '+r.bonusPostTime);if(r.earlyCloseDays)n.push('* Min hold: '+r.earlyCloseDays+' days before closing');if(r.earlyCloseFee)n.push('* Early close penalty: '+r.earlyCloseFee);if(!r.earlyCloseFee&&!r.earlyCloseDays)n.push('* Early close fee: Not mentioned');if(r.ccFunding)n.push('* Credit card funding: Available');if(r.pullType)n.push('* Credit check: '+r.pullType);n.push('');n.push('CHURN & TAX:');if(r.churnRule)n.push('* Churn cooldown: '+r.churnRule+' ('+r.churnMonths+' months)');else n.push('* Churn rule: Check fine print');if(r.taxForm)n.push('* Tax: '+r.taxForm);if(t.includes('limit one'))n.push('* Limit one bonus per account/member');if(t.includes('cannot be combined')||t.includes('not be combined'))n.push('* Cannot be combined with other offers');if(t.includes('open and in good standing'))n.push('* Account must be open and in good standing at payout');r.notesForTracker=n.filter(x=>x!==undefined).join('\n');r.checklist=[];if(r.promoCode)r.checklist.push('Use promo code '+r.promoCode);if(r.requiresEstatements)r.checklist.push('Enroll in eStatements');if(r.requiresOnlineBanking)r.checklist.push('Enroll in online banking');if(r.ddAmount)r.checklist.push('Set up DD of '+r.ddAmount);if(r.debitTxns)r.checklist.push(r.debitTxns+' debit transactions');if(r.activateDebit)r.checklist.push('Activate debit card');if(r.timeline)r.checklist.push('Complete within '+r.timeline);if(r.earlyCloseDays)r.checklist.push('Hold account '+r.earlyCloseDays+' days');return Object.keys(r).length>1?r:null}
 const DEF=[];
-const TEMPLATES=[
-{bank:"Chase",bonus:300,churn:"2",notes:"$1,000 DD within 90 days. $12/mo waived w/ $500 DD.",minHoldDays:90,earlyCloseFee:0,dataPoint:"Fidelity/Robinhood ACH works",reqDays:90},
-{bank:"Chase Biz",bonus:500,churn:"2",notes:"$2,000 deposit within 20 biz days.",minHoldDays:0,earlyCloseFee:0,dataPoint:"$2,000 deposit",reqDays:60},
-{bank:"Bank of America",bonus:300,churn:"1",notes:"$2,000+ DD within 90 days. $12/mo waived w/ $250 DD.",minHoldDays:0,earlyCloseFee:0,dataPoint:"Fidelity ACH works",reqDays:90},
-{bank:"Wells Fargo",bonus:325,churn:"1",notes:"$1,000+ DD within 90 days. $10/mo waived w/ $500 DD.",minHoldDays:0,earlyCloseFee:0,dataPoint:"Employer DD recommended",reqDays:90},
-{bank:"U.S. Bank",bonus:450,churn:"1",notes:"$8,000+ DD within 90 days. No early close fee.",minHoldDays:0,earlyCloseFee:0,dataPoint:"Robinhood/Fidelity ACH works",reqDays:90},
-{bank:"Citi",bonus:300,churn:"1",notes:"Tiered DD. $12/mo fee.",minHoldDays:0,earlyCloseFee:0,dataPoint:"ACH generally works",reqDays:90},
-{bank:"PNC",bonus:400,churn:"2",notes:"$5,000 DD. $7-25/mo by tier.",minHoldDays:0,earlyCloseFee:0,dataPoint:"Fidelity ACH works",reqDays:60},
-{bank:"Simmons Bank",bonus:450,churn:"1",notes:"$150x3 cycles. $1k DD + 7 debit txns. $0 fee. MO avail.",minHoldDays:0,earlyCloseFee:0,dataPoint:"$1k DD + 7 debit txns",reqDays:120},
-{bank:"Equity Bank",bonus:400,churn:"180",notes:"Checking+savings. $1k DD + debit. $400 clawback <180d.",minHoldDays:180,earlyCloseFee:400,dataPoint:"$1k DD + activate debit",reqDays:45},
-{bank:"Regions",bonus:450,churn:"1",notes:"$1k DD + 10 debit. $25 fee <180d. MO avail.",minHoldDays:180,earlyCloseFee:25,dataPoint:"$1k DD + 10 debit txns",reqDays:90},
-{bank:"BMO",bonus:600,churn:"1",notes:"$5k+ DD within 90d. CC funding avail.",minHoldDays:0,earlyCloseFee:0,dataPoint:"ACH works + CC funding",reqDays:90},
-{bank:"Capital One",bonus:250,churn:"1",notes:"2x$500 DD. $0 fee. NOT churnable anymore.",minHoldDays:0,earlyCloseFee:0,dataPoint:"No longer churnable",reqDays:75}
-];
-const PHONES=[
-["Ally Bank","1-877-247-2559","1-877-247-2559"],
-["Bank of America","1-800-432-1000","1-888-287-4637"],
-["BMO (US)","1-888-340-2265","1-888-340-2265"],
-["Capital One","1-877-383-4802","1-888-755-2172"],
-["Central Bank","1-800-876-5500","1-800-876-5500"],
-["Chase","1-800-935-9935","1-800-242-7338"],
-["Citibank","1-800-374-9700","1-800-945-4000"],
-["Citizens","1-888-500-1478","1-888-307-4568"],
-["Comerica","1-800-266-3742","1-800-266-3742"],
-["Community America CU","816-656-4700","816-656-4700"],
-["E-Trade","1-800-387-2331","1-800-387-2331"],
-["Equity Bank","1-844-611-0777","1-844-611-0777"],
-["Fifth Third","1-800-972-3030","1-877-534-2264"],
-["Huntington","1-800-480-2265","1-800-480-2001"],
-["KeyBank","1-800-539-2968","1-888-539-4249"],
-["M&T Bank","1-800-724-2440","1-800-724-6070"],
-["Navy Federal","1-888-842-6328","1-888-842-6328"],
-["PNC","1-888-762-2265","1-877-287-2654"],
-["Regions","1-800-734-4667","1-800-787-3905"],
-["Santander","1-877-768-2265","1-800-493-8219"],
-["Simmons Bank","1-866-246-2400","1-866-246-2400"],
-["TD Bank","1-888-751-9000","1-800-450-7318"],
-["Truist","1-844-487-8478","1-877-495-1044"],
-["U.S. Bank","1-800-872-2657","1-800-673-3555"],
-["Vantage CU","314-298-0055","314-298-0055"],
-["Wells Fargo","1-800-869-3557","1-800-225-5935"]
-];
+const TEMPLATES=[{bank:"Chase",bonus:300,churn:"2",notes:"$1,000 DD within 90 days. $12/mo waived w/ $500 DD.",minHoldDays:90,earlyCloseFee:0,dataPoint:"Fidelity/Robinhood ACH works",reqDays:90},{bank:"Chase Biz",bonus:500,churn:"2",notes:"$2,000 deposit within 20 biz days.",minHoldDays:0,earlyCloseFee:0,dataPoint:"$2,000 deposit",reqDays:60},{bank:"Bank of America",bonus:300,churn:"1",notes:"$2,000+ DD within 90 days. $12/mo waived w/ $250 DD.",minHoldDays:0,earlyCloseFee:0,dataPoint:"Fidelity ACH works",reqDays:90},{bank:"Wells Fargo",bonus:325,churn:"1",notes:"$1,000+ DD within 90 days. $10/mo waived w/ $500 DD.",minHoldDays:0,earlyCloseFee:0,dataPoint:"Employer DD recommended",reqDays:90},{bank:"U.S. Bank",bonus:450,churn:"1",notes:"$8,000+ DD within 90 days. No early close fee.",minHoldDays:0,earlyCloseFee:0,dataPoint:"Robinhood/Fidelity ACH works",reqDays:90},{bank:"Citi",bonus:300,churn:"1",notes:"Tiered DD. $12/mo fee.",minHoldDays:0,earlyCloseFee:0,dataPoint:"ACH generally works",reqDays:90},{bank:"PNC",bonus:400,churn:"2",notes:"$5,000 DD. $7-25/mo by tier.",minHoldDays:0,earlyCloseFee:0,dataPoint:"Fidelity ACH works",reqDays:60},{bank:"Simmons Bank",bonus:450,churn:"1",notes:"$150x3 cycles. $1k DD + 7 debit txns. $0 fee. MO avail.",minHoldDays:0,earlyCloseFee:0,dataPoint:"$1k DD + 7 debit txns",reqDays:120},{bank:"Equity Bank",bonus:400,churn:"180",notes:"Checking+savings. $1k DD + debit. $400 clawback <180d.",minHoldDays:180,earlyCloseFee:400,dataPoint:"$1k DD + activate debit",reqDays:45},{bank:"Regions",bonus:450,churn:"1",notes:"$1k DD + 10 debit. $25 fee <180d. MO avail.",minHoldDays:180,earlyCloseFee:25,dataPoint:"$1k DD + 10 debit txns",reqDays:90},{bank:"BMO",bonus:600,churn:"1",notes:"$5k+ DD within 90d. CC funding avail.",minHoldDays:0,earlyCloseFee:0,dataPoint:"ACH works + CC funding",reqDays:90},{bank:"Capital One",bonus:250,churn:"1",notes:"2x$500 DD. $0 fee. NOT churnable anymore.",minHoldDays:0,earlyCloseFee:0,dataPoint:"No longer churnable",reqDays:75}];
+const PHONES=[["Ally Bank","1-877-247-2559","1-877-247-2559"],["Bank of America","1-800-432-1000","1-888-287-4637"],["BMO (US)","1-888-340-2265","1-888-340-2265"],["Capital One","1-877-383-4802","1-888-755-2172"],["Central Bank","1-800-876-5500","1-800-876-5500"],["Chase","1-800-935-9935","1-800-242-7338"],["Citibank","1-800-374-9700","1-800-945-4000"],["Citizens","1-888-500-1478","1-888-307-4568"],["Comerica","1-800-266-3742","1-800-266-3742"],["Community America CU","816-656-4700","816-656-4700"],["E-Trade","1-800-387-2331","1-800-387-2331"],["Equity Bank","1-844-611-0777","1-844-611-0777"],["Fifth Third","1-800-972-3030","1-877-534-2264"],["Huntington","1-800-480-2265","1-800-480-2001"],["KeyBank","1-800-539-2968","1-888-539-4249"],["M&T Bank","1-800-724-2440","1-800-724-6070"],["Navy Federal","1-888-842-6328","1-888-842-6328"],["PNC","1-888-762-2265","1-877-287-2654"],["Regions","1-800-734-4667","1-800-787-3905"],["Santander","1-877-768-2265","1-800-493-8219"],["Simmons Bank","1-866-246-2400","1-866-246-2400"],["TD Bank","1-888-751-9000","1-800-450-7318"],["Truist","1-844-487-8478","1-877-495-1044"],["U.S. Bank","1-800-872-2657","1-800-673-3555"],["Vantage CU","314-298-0055","314-298-0055"],["Wells Fargo","1-800-869-3557","1-800-225-5935"]];
 const RULES=[["Chase","2yr",24,true,true,"None","$12/mo waived $500 DD","2yr from enrollment; 90d close rule"],["Bank of America","1yr",12,true,true,"None","$12/mo waived $250 DD","Tiered $100-$500"],["Wells Fargo","1yr",12,true,true,"None","$10/mo waived $500 DD",""],["U.S. Bank","1yr",12,true,true,"None","$6.95/mo waived $1k DD","No early close fee"],["Citi","1yr",12,true,true,"None","$12/mo waived $1k DD","Offer-specific"],["Simmons Bank","1yr",12,true,true,"None","$0 (Simply Checking)","$150x3 cycles. MO/AR/KS/OK/TN/TX"],["Equity Bank","180d",6,true,true,"$400 clawback","$10/mo waived $2k bal","Must open checking+savings. MO/KS/AR/OK"],["Regions","1yr",12,true,true,"$25 <180d","$8/mo waived $500 DD","10 debit txns. MO available"],["PNC","2yr",24,true,true,"None","$7-25/mo by tier","Tiered $100-$400"],["Central Bank","2yr",24,true,true,"None","$0 free checking","MO/KS/OK/IL"],["Community America","1yr",12,true,true,"None","$0 free checking","KC metro. Guided Investing bonus"],["TD Bank","3yr",36,false,false,"None","$15-25/mo","Many once-per-lifetime"],["Huntington","1yr",12,true,false,"None","$0 (Asterisk Free)","24mo rolling limit"],["BMO","1yr",12,true,true,"None","$5-25/mo","CC funding avail. Nationwide"],["Fifth Third","2yr",24,true,true,"None","$11/mo waived $500 DD","AL/FL/GA/IL/IN/KY/MI/NC/OH/TN"],["Capital One","1yr",12,false,true,"None","$0 free","Not churnable anymore"]];
 const DATA_POINTS=[["Chase","Fidelity ACH","Works as DD","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/#Chase"],["Chase","Robinhood ACH","Works","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/#Chase"],["Chase","Schwab ACH","Works",""],["Bank of America","Fidelity ACH","Works","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/#Bank_of_America"],["Bank of America","Robinhood ACH","Works",""],["U.S. Bank","Robinhood ACH","Works","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/#US_Bank"],["U.S. Bank","Fidelity ACH","Works",""],["U.S. Bank","No early close fee","Safe anytime","https://www.doctorofcredit.com/u-s-bank-450-100-checking-bonus/"],["Wells Fargo","Employer DD only","ACH may fail","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/#Wells_Fargo"],["Citi","ACH transfers","Generally works","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/#Citibank"],["PNC","Fidelity ACH","Works","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/#PNC"],["Simmons Bank","$1k DD + 7 debit","Per cycle, up to 3","https://www.doctorofcredit.com/ar-tx-tn-ok-mo-ks-simmons-bank-300-checking-bonus/"],["Equity Bank","$1k DD + debit activation","Within 45 days","https://www.doctorofcredit.com/ks-mo-ar-ok-ne-equity-bank-400-checking-bonus/"],["Equity Bank","$400 clawback <180d","Wait 180 days!",""],["Regions","$1k DD + 10 debit txns","Within 90 days",""],["Capital One","Not churnable (2025+)","Skip for churning","https://www.doctorofcredit.com/a-list-of-churnable-bank-account-bonuses/"],["BMO","ACH works + CC funding","Nationwide","https://www.doctorofcredit.com/bmo-harris-500-checking-bonus/"]];
 const DOC_LINKS=[["DD Methods Master List","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/"],["Churnable Bonuses","https://www.doctorofcredit.com/a-list-of-churnable-bank-account-bonuses/"],["Best Current Bonuses","https://www.doctorofcredit.com/best-bank-account-bonuses/"],["CC Funding List","https://www.doctorofcredit.com/bank-accounts/bank-accounts-that-can-be-funded-with-a-credit-card/"],["BankRewards.io","https://www.bankrewards.io"]];
-
-/* STATE */
 let entries=ld(SK,DEF),tab='tracker',expanded=null,modal=null,cfm=null,search='';
 let dashYear=new Date().getFullYear(),taxYear=new Date().getFullYear();
 let showAnalyzer=false,analyzerText='',analyzerResult=null;
@@ -565,487 +297,65 @@ let ddPrompt=null,rcvPrompt=null,showTemplates=false;
 let feedItems=null,feedLoading=false;
 let undoState=null,undoTimer=null;
 let closePrompt=null;
-let overwritePrompt=null; // {newData:{...}, existingEntry:{...}}
-
-function findPhone(bank,eid){
-  if(eid){const ee=entries.find(x=>x.id===eid);if(ee&&ee.phoneNum)return ee.phoneNum}
-  const bn=bank.toLowerCase();
-  const isBiz=bn.includes('biz')||bn.includes('business');
-  for(const [b,p,bz] of PHONES){
-    const bl=b.toLowerCase();
-    if(bn.includes(bl.split(' ')[0])||bl.includes(bn.split(' ')[0])||bn.includes(bl)){return isBiz?(bz||p):p}
-  }
-  return null;
-}
+let overwritePrompt=null;
+let feeCheckPrompt=null;
+function findPhone(bank,eid){if(eid){const ee=entries.find(x=>x.id===eid);if(ee&&ee.phoneNum)return ee.phoneNum}const bn=bank.toLowerCase();const isBiz=bn.includes('biz')||bn.includes('business');for(const[b,p,bz]of PHONES){const bl=b.toLowerCase();if(bn.includes(bl.split(' ')[0])||bl.includes(bn.split(' ')[0])||bn.includes(bl)){return isBiz?(bz||p):p}}return null}
 function findPhoneLabel(bank){const bn=bank.toLowerCase();return(bn.includes('biz')||bn.includes('business'))?'Business':'Personal'}
 function callBank(id){const e=entries.find(x=>x.id===id);if(!e)return;const phone=findPhone(e.bank,id);if(phone)window.location.href='tel:'+phone.replace(/[^0-9+]/g,'');else{cfm={title:'No Number Found',msg:'No phone number found for '+e.bank+'. Check the Phone tab.',green:true,action:()=>{cfm=null;R()}};R()}}
 function undoClose(){if(!undoState)return;entries=entries.map(e=>e.id===undoState.id?{...undoState}:e);entries=sortE(entries);sv(SK,entries);undoState=null;if(undoTimer)clearTimeout(undoTimer);R()}
-
 let _sp=0;
 const I={grid:'<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',doc:'<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',tips:'<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>',phone:'<svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>',info:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'};
-
-function highlightTC(text){
-  if(!text)return'';let h=esc(text);
-  h=h.replace(/^(REQUIREMENTS:|DIRECT DEPOSIT RULES:|ADDITIONAL BONUSES:|FEES &amp; TIMING:|CHURN &amp; TAX:)/gm,'<span class="hl-section">$1</span>');
-  h=h.replace(/\* (Step \d+:)/g,'* <span class="hl-step">$1</span>');
-  h=h.replace(/(\$[\d,]+(?:\.\d+)?)/g,'<span class="hl-money">$1</span>');
-  h=h.replace(/(\d+\s+(?:days?|months?|weeks?|consecutive\s+days|statement\s+cycles?))/gi,'<span class="hl-days">$1</span>');
-  h=h.replace(/(within\s+\d+\s+\w+)/gi,'<span class="hl-days">$1</span>');
-  h=h.replace(/(NOT count|does NOT|do not qualify|not eligible|cannot be combined|not be combined|ineligible)/gi,'<span class="hl-warn">$1</span>');
-  h=h.replace(/(clawback|penalty|early close|termination fee|fee if closed)/gi,'<span class="hl-fee">$1</span>');
-  h=h.replace(/(?:code[:\s]+)([A-Z0-9]{3,})/g,'code: <span class="hl-code">$1</span>');
-  h=h.replace(/(\$0 \(No fee\)|No fee|None|Safe anytime|free checking)/gi,'<span class="hl-good">$1</span>');
-  h=h.replace(/(Zelle|P2P|Micro-deposits?|person-to-person)/gi,'<span class="hl-warn">$1</span>');
-  return h;
-}
-
-/* ═══ RENDER ═══ */
-function R(){
-  const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;
-  const sorted=sortE(entries);
-  const wk=sorted.filter(e=>status(e)==='WORKING').length;
-  const ch=sorted.filter(e=>status(e)==='WAITING TO CHURN!'||status(e)==='TIME TO CHURN!').length;
-  const rd=sorted.filter(e=>status(e)==='TIME TO CHURN!').length;
-  const yr=completedYrTotal(dashYear);
-  const thisYr=new Date().getFullYear();
-  let h='';
-  h+='<div class="hdr"><div class="hdr-row"><div><h1>\uD83D\uDCB0 <em>Bonus</em>Tracker</h1></div><div class="yr-pills">';
-  [thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});
-  h+='</div></div><div class="hdr-sub">TRACK \u00B7 CHURN \u00B7 REPEAT</div></div>';
-  if(tab==='tracker'){h+='<div class="stats"><div class="st"><div class="n">'+wk+'</div><div class="l">Active</div></div><div class="st"><div class="n">'+ch+'</div><div class="l">Churning</div></div><div class="st"><div class="n">'+rd+'</div><div class="l">Ready</div></div><div class="st"><div class="n">'+fM(yr)+'</div><div class="l">'+dashYear+'</div></div></div>'}
-  h+='<div class="scroll">';
-  if(tab==='tracker')h+=rTracker(sorted);
-  else if(tab==='tax')h+=rTax();
-  else if(tab==='tips')h+=rTips();
-  else if(tab==='phone')h+=rPhone();
-  else if(tab==='rules')h+=rRules();
-  h+='</div>';
-  if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';
-  h+='<div class="tabs">';
-  ['tracker','tax','tips','phone','rules'].forEach((t,i)=>{h+='<button class="tb'+(tab===t?' on':'')+'" onclick="tab=\''+t+'\';search=\'\';R()">'+[I.grid,I.doc,I.tips,I.phone,I.info][i]+'<span>'+['Tracker','Tax','Tips','Phone','Rules'][i]+'</span></button>'});
-  h+='</div>';
-  if(modal)h+=rModal();
-  if(cfm)h+=rCfm();
-  if(ddPrompt)h+=rDD();
-  if(rcvPrompt)h+=rRcv();
-  if(closePrompt)h+=rClose();
-  if(overwritePrompt)h+=rOverwrite();
-  if(undoState)h+='<div class="undo-bar"><span>Closed '+esc(undoState.bank)+'</span><button onclick="undoClose()">Undo</button></div>';
-  document.getElementById('app').innerHTML=h;
-  const ns=document.querySelector('.scroll');if(ns)ns.scrollTop=_sp;
-}
-
-/* ═══ TRACKER ═══ */
-function rTracker(sorted){
-  const q=search.toLowerCase();
-  const f=q?sorted.filter(e=>(e.bank||'').toLowerCase().includes(q)):sorted;
-  let h='';
-  const bkd=daysSinceBk();
-  if(bkd>=7)h+='<div class="bk-remind">\u26A0 '+(bkd>=999?'Never backed up':'Backup '+bkd+'d ago')+' <button onclick="exportBackup()">\uD83D\uDCE4 Backup</button></div>';
-  const cd=chartData();const mx=Math.max(...cd.map(c=>c.t),1);
-  h+='<div class="chart"><div class="chart-t">\uD83D\uDCCA '+dashYear+' Monthly Earnings</div><div class="chart-bars">';
-  cd.forEach(c=>{const p=c.t?Math.max(5,Math.round(c.t/mx*90)):1;h+='<div class="chart-col"><div class="chart-bar" style="height:'+p+'%"></div><div class="chart-cl">'+c.l+'</div></div>'});
-  h+='</div></div>';
-  h+='<div class="qbar"><button class="qbtn" style="background:#EFF6FF;color:#2563EB" onclick="exportBackup()">\uD83D\uDCE4 Backup</button><button class="qbtn" style="background:#ECFDF5;color:#059669" onclick="importBackup()">\uD83D\uDCE5 Restore</button><button class="qbtn" style="background:#F3E8FF;color:#7C3AED" onclick="showTemplates=!showTemplates;R()">\u26A1 Quick Add</button><button class="qbtn" style="background:#FEF2F2;color:#EF4444" onclick="resetAllData()">\uD83D\uDDD1 Reset</button></div>';
-  if(showTemplates){h+='<div class="sec">Quick-Add Templates</div><div class="tgrid">';TEMPLATES.forEach((t,i)=>{h+='<button class="tbtn" onclick="addFromTpl('+i+')">'+bankLogo(t.bank,true)+'<div class="t-info"><div class="nm">'+esc(t.bank)+'</div><div class="bn">'+fM(t.bonus)+'</div></div></button>'});h+='</div>'}
-  h+='<input class="sinput" type="text" placeholder="Search banks..." value="'+esc(search)+'" oninput="search=this.value;R()">';
-  h+='<button class="tc-btn" onclick="showAnalyzer=!showAnalyzer;R()">\uD83E\uDDE0 '+(showAnalyzer?'Hide':'Paste T&C to Analyze')+'</button>';
-  if(showAnalyzer)h+=rAnalyzer();
-  if(!f.length)return h+'<div class="empty"><div class="em">\uD83D\uDCED</div><p>No entries yet.</p><p style="margin-top:6px;font-size:11px">Tap <strong>+</strong> to add a bank, <strong>\u26A1 Quick Add</strong> for templates, or <strong>\uD83D\uDCE5 Restore</strong> to import a backup.</p></div>';
-  f.forEach(e=>{
-    const s=status(e),isX=expanded===e.id,nr=nextReopen(e),dl=daysLeft(e);
-    const urg=getUrg(e),countdown=getCountdown(e);
-    const bcls=s==='WORKING'?'w':s==='TIME TO CHURN!'?'ch':'wt';
-    h+='<div class="card u-'+urg+'">';
-    h+='<div class="card-h" onclick="expanded=expanded===\''+e.id+'\'?null:\''+e.id+'\';R()">';
-    h+=bankLogo(e.bank);
-    h+='<div class="card-left"><div class="card-name">'+esc(e.bank)+'</div>';
-    h+='<div class="card-row"><span class="badge '+bcls+'">'+esc(s)+'</span>';
-    if(e.churn)h+='<span class="card-stat">'+({1:'1yr',2:'2yr',3:'3yr',180:'180d'}[e.churn]||e.churn)+'</span>';
-    if(dl!==null&&s!=='WORKING')h+='<span class="card-stat"><em>'+dl+'d</em> left</span>';
-    h+='</div></div>';
-    h+='<div class="card-right" style="display:flex;align-items:center;gap:6px">';
-    h+='<div>';
-    if(e.bonus)h+='<div class="card-bonus">'+fM(e.bonus)+'</div>';
-    h+='<div class="card-id">'+esc(e.id)+'</div>';
-    h+='</div>';
-    if(!e.closed&&findPhone(e.bank,e.id))h+='<button class="call-btn" onclick="event.stopPropagation();callBank(\x27'+e.id+'\x27)" title="Call '+findPhoneLabel(e.bank)+'">\uD83D\uDCDE</button>';
-    h+='</div></div>';
-    if(countdown){
-      const prog=countdown.days>0&&countdown.lbl.includes('Safe')?holdProg(e):null;
-      h+='<div class="cd-pill '+countdown.cls+'"><span class="icon">'+countdown.icon+'</span> '+countdown.lbl;
-      h+='<span class="days">'+(countdown.days===0?'GO!':countdown.days+'d')+' \u2022 '+fD(countdown.date)+'</span></div>';
-      if(prog!==null)h+='<div class="cd-prog"><div style="width:'+Math.round(prog*100)+'%;background:'+({red:'#EF4444',amber:'#F59E0B',green:'#10B981',blue:'#3B82F6'}[countdown.cls]||'#3B82F6')+'"></div></div>';
-    }
-    if(!e.closed&&e.opened&&e.minHoldDays>0&&e.earlyCloseFee>0&&(!countdown||!countdown.lbl.includes('Safe'))){
-      const dsc=daysUntilSafe(e),safe=dsc===0;
-      h+='<div class="ect'+(safe?' safe':'')+'"><div class="ect-row"><span>\u23F1 '+(safe?'Safe to close':'Hold '+dsc+'d more')+'</span><span>'+(safe?'\u2705':''+dsc+'d')+'</span></div>';
-      if(e.earlyCloseFee)h+='<div class="ect-fee">'+(safe?'No fee':'Close now = '+fM(e.earlyCloseFee)+' fee')+'</div>';
-      h+='</div>';
-    }
-    if(isX){
-      h+='<div class="card-exp">';
-      h+='<div class="card-grid">';
-      if(e.opened)h+='<div class="cf"><div class="k">Opened</div><div class="v">'+fD(e.opened)+'</div></div>';
-      if(e.closed)h+='<div class="cf"><div class="k">Closed</div><div class="v">'+fD(e.closed)+'</div></div>';
-      if(e.bonusRecd)h+='<div class="cf"><div class="k">Received</div><div class="v ok">'+fD(e.bonusRecd)+'</div></div>';
-      if(nr)h+='<div class="cf"><div class="k">Reopen</div><div class="v">'+fD(nr)+'</div></div>';
-      if(e.reqMet)h+='<div class="cf"><div class="k">Req Met</div><div class="v">'+fD(e.reqMet)+'</div></div>';
-      if(isCompleted(e))h+='<div class="cf"><div class="k">Tax</div><div class="v ok">\u2705 Done</div></div>';
-      const eff=effortScore(e);
-      if(eff)h+='<div class="cf"><div class="k">Effort</div><div class="v"><span class="effort '+eff.level+'">'+eff.label+'</span></div></div>';
-      if(e.referralBonus)h+='<div class="cf"><div class="k">Referral</div><div class="v"><span class="ref-b">+'+fM(e.referralBonus)+'</span></div></div>';
-      h+='</div>';
-      if(!e.closed){
-        h+='<div class="sec" style="margin-top:6px">Checklist</div><ul class="ck">';
-        if(e.checklist&&e.checklist.length){e.checklist.forEach((c,ci)=>{h+='<li><div class="ckb'+(c.done?' dn':'')+'" onclick="event.stopPropagation();toggleCk(\''+e.id+'\','+ci+')"></div><span class="ck-text'+(c.done?' dn':'')+'">'+esc(c.text)+'</span><span class="ck-del" onclick="event.stopPropagation();rmCk(\''+e.id+'\','+ci+')">\u2715</span></li>'})}
-        h+='</ul><div class="ck-add"><input id="ck_'+e.id+'" placeholder="Add step..." onclick="event.stopPropagation()" onkeydown="if(event.key===\'Enter\'){event.stopPropagation();addCk(\''+e.id+'\')}"><button onclick="event.stopPropagation();addCk(\''+e.id+'\')">+</button></div>';
-      }
-      if(e.notes)h+='<div class="card-notes" style="white-space:pre-wrap;font-size:12px;line-height:1.6">'+esc(e.notes)+'</div>';
-      if(e.analyzedTC)h+='<div class="tc-box"><div class="tc-label">T&C Analysis</div><div class="tc-body">'+highlightTC(e.analyzedTC)+'</div></div>';
-      h+='<div class="card-btns"><button class="cbtn edit" onclick="event.stopPropagation();openEdit(\''+e.id+'\')">\u270F\uFE0F Edit</button>';
-      if(!e.closed&&(!e.bonusRecd||e.bonusRecd===''))h+='<button class="cbtn rcv" onclick="event.stopPropagation();openRcv(\''+e.id+'\')">\uD83C\uDF89 Received</button>';
-      if(!e.closed)h+='<button class="cbtn cls" onclick="event.stopPropagation();closeAcct(\''+e.id+'\')">\uD83D\uDD12 Close</button>';
-      h+='<button class="cbtn del" onclick="event.stopPropagation();delEntry(\''+e.id+'\')">\uD83D\uDDD1 Delete</button></div>';
-      h+='</div>';
-    }
-    h+='</div>';
-  });
-  const sug=getSuggestions();
-  if(sug.length){h+='<div class="sec">\uD83D\uDCA1 Suggested Next</div>';sug.forEach(s=>{h+='<div class="sug-c">'+bankLogo(s.bank,true)+'<div class="s-info"><div class="nm">'+esc(s.bank)+'</div>'+(s.bonus?'<div class="sub">'+fM(s.bonus)+'</div>':'')+'<div class="rsn">'+esc(s.rsn)+'</div></div></div>'})}
-  h+='<div class="sec">\uD83D\uDCE1 Latest Bonuses</div>';
-  if(!feedItems&&!feedLoading)h+='<button class="tc-btn" style="border-style:solid;background:#EFF6FF" onclick="loadFeed()">\uD83D\uDCE1 Load from Doctor of Credit</button>';
-  else if(feedLoading)h+='<div class="empty"><span class="spin"></span></div>';
-  else if(feedItems){feedItems.forEach(f=>{const d=f.date?new Date(f.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';h+='<a href="'+f.link+'" target="_blank" rel="noopener" class="feed-c"><div class="feed-t">'+esc(f.title)+'</div><div class="feed-d">'+d+'</div></a>'})}
-  else{DOC_LINKS.forEach(([t,u])=>{h+='<a href="'+u+'" target="_blank" rel="noopener" class="feed-c"><div class="feed-t">\uD83D\uDD17 '+esc(t)+'</div></a>'})}
-  return h;
-}
-
-/* ═══ TAX ═══ */
-function rTax(){
-  const yrs=[];for(let y=2025;y<=2040;y++)yrs.push(y);
-  const yrE=entries.filter(e=>isCompleted(e)&&new Date(e.closed+'T00:00:00').getFullYear()===taxYear);
-  const yrA=yrE.reduce((s,e)=>s+(e.bonus||0),0);
-  const allA=entries.filter(e=>isCompleted(e)).reduce((s,e)=>s+(e.bonus||0),0);
-  let h='<div class="sec">Tax Year</div><div class="ybar">';
-  yrs.forEach(y=>{const a=completedYrTotal(y);h+='<button class="ypill'+(taxYear===y?' on':'')+'" onclick="taxYear='+y+';R()">'+y+(a?' \u00B7 '+fM(a):'')+'</button>'});
-  h+='</div><div class="ytotal">'+fM(yrA)+'</div><div class="ysub">'+taxYear+' \u2014 '+yrE.length+' closed bonus'+(yrE.length!==1?'es':'')+'</div>';
-  if(yrE.length)h+='<button class="export-btn" onclick="exportCSV('+taxYear+')">\uD83D\uDCE5 Export '+taxYear+' CSV</button>';
-  if(!yrE.length)return h+'<div class="empty"><div class="em">\uD83D\uDCCB</div><p>No completed bonuses in '+taxYear+'</p></div>';
-  yrE.forEach(e=>{h+='<div class="tax-c"><div class="tax-top"><div class="tax-bank">'+bankLogo(e.bank,true)+' '+esc(e.bank)+'</div><div class="tax-amt">'+fM(e.bonus)+'</div></div><div class="tax-dates">'+(e.opened?'<span>Open: '+fD(e.opened)+'</span>':'')+'<span>Closed: '+fD(e.closed)+'</span></div></div>'});
-  h+='<div class="sec" style="margin-top:16px">All-Time</div><div class="ytotal">'+fM(allA)+'</div>';
-  return h;
-}
-
-/* ═══ TIPS ═══ */
-function rTips(){
-  let h='';
-  const allMethods=loadDD();const reqs=loadReqs();
-  const groups={};
-  allMethods.forEach(m=>{const k=m.bank;if(!groups[k])groups[k]={bank:k,methods:[],total:0};groups[k].methods.push(m);groups[k].total+=m.bonus||0});
-  entries.filter(e=>e.dataPoint).forEach(e=>{const k=e.bank;if(!groups[k])groups[k]={bank:k,methods:[],total:0};if(!groups[k].methods.some(m=>m.method===e.dataPoint))groups[k].methods.push({bank:e.bank,method:e.dataPoint,bonus:e.bonus||0,date:e.closed||''})});
-  const gl=Object.values(groups).sort((a,b)=>b.total-a.total);
-  if(gl.length){
-    h+='<div class="sec">\uD83D\uDCCC Your Confirmed Data Points</div>';
-    gl.forEach(g=>{h+='<div class="rcard" style="display:flex;align-items:center;gap:10px">'+bankLogo(g.bank,true)+'<div style="flex:1;min-width:0"><div class="rcard-row"><div class="nm">'+esc(g.bank)+'</div><div class="ph">'+fM(g.total)+'</div></div><div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:2px">';g.methods.forEach(m=>{h+='<span class="tag y">'+esc(m.method)+'</span>'});h+='</div></div></div>'});
-  }
-  const rl=Object.values(reqs).sort((a,b)=>(b.bonus||0)-(a.bonus||0));
-  if(rl.length){
-    h+='<div class="sec">\uD83D\uDCD1 Saved Requirements</div>';
-    rl.forEach(r=>{h+='<div class="rcard"><div style="width:100%"><div class="rcard-row"><div class="nm">'+esc(r.bank||r.bankName||'')+'</div><div class="ph">'+fD(r.updated)+'</div></div>';
-    if(r.notesForTracker)h+='<div class="sub" style="white-space:pre-wrap;margin-top:4px">'+esc(r.notesForTracker)+'</div>';
-    else if(r.requirements)h+='<div class="sub" style="margin-top:4px">'+r.requirements.map(x=>esc(x)).join(' \u00B7 ')+'</div>';
-    h+='</div></div>'});
-  }
-  h+='<div class="sec">\uD83C\uDF0D Community Data Points</div><input class="sinput" placeholder="Search..." oninput="this.dataset.q=this.value;R()" id="tps">';
-  const tq=(document.getElementById('tps')||{}).value||'';
-  const fl=tq?DATA_POINTS.filter(d=>d[0].toLowerCase().includes(tq.toLowerCase())||d[1].toLowerCase().includes(tq.toLowerCase())):DATA_POINTS;
-  let cb='';fl.forEach(([bank,method,result,link])=>{
-    if(bank!==cb){cb=bank;h+='<div style="font-size:11px;font-weight:700;margin:8px 0 3px;display:flex;align-items:center;gap:6px">'+bankLogo(bank,true)+' '+esc(bank)+'</div>'}
-    h+='<div class="rcard" style="padding:8px 10px"><div class="rcard-row"><span style="font-size:11px;font-weight:600">'+esc(method)+'</span><span class="tag '+(result.includes('Works')||result.includes('Safe')?'y':'f')+'">'+esc(result)+'</span></div>'+(link?'<a href="'+link+'" target="_blank" style="font-size:9px;color:var(--accent)">Source</a>':'')+'</div>'});
-  h+='<div class="sec">\uD83D\uDCDA Resources</div>';
-  DOC_LINKS.forEach(([t,u])=>{h+='<a href="'+u+'" target="_blank" rel="noopener" class="feed-c"><div class="feed-t">\uD83D\uDD17 '+esc(t)+'</div></a>'});
-  return h;
-}
-
-/* ═══ PHONE ═══ */
-function rPhone(){
-  let h='<div class="sec">Customer Service Numbers</div>';
-  h+='<input class="sinput" placeholder="Search banks..." oninput="this.dataset.q=this.value;R()" id="phs">';
-  const pq=(document.getElementById('phs')||{}).value||'';
-  const pf=pq?PHONES.filter(p=>p[0].toLowerCase().includes(pq.toLowerCase())):PHONES;
-  pf.forEach(([b,p,bz])=>{
-    h+='<div class="ph-card">'+bankLogo(b,false)+'<div style="flex:1"><div style="font-size:13px;font-weight:700;margin-bottom:6px">'+esc(b)+'</div>';
-    h+='<div class="ph-links">';
-    h+='<a href="tel:'+p+'" class="ph-link" style="background:#EFF6FF"><div class="phl">PERSONAL</div><div class="phn" style="color:var(--accent)">'+p+'</div></a>';
-    if(bz&&bz!==p)h+='<a href="tel:'+bz+'" class="ph-link" style="background:#F3E8FF"><div class="phl">BUSINESS</div><div class="phn" style="color:#7C3AED">'+bz+'</div></a>';
-    else if(bz)h+='<div class="ph-link" style="background:#ECFDF5"><div class="phl">SAME #</div><div class="phn" style="color:var(--green)">'+bz+'</div></div>';
-    h+='</div></div></div>';
-  });
-  return h;
-}
-
-/* ═══ CLOSE PROMPT ═══ */
-function rClose(){
-  if(!closePrompt)return'';const p=closePrompt;
-  let h='<div class="cbg" onclick="cancelClose()"><div class="close-modal" onclick="event.stopPropagation()">';
-  if(p.step==='date'){
-    h+='<h3>\uD83D\uDD12 Close '+esc(p.bank)+'</h3><div class="sub">When did you close (or plan to close) this account?</div>';
-    h+='<label>Close Date</label><input type="date" id="cp_date" value="'+p.closeDate+'">';
-    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">Next \u2192</button></div>';
-  }else if(p.step==='bonus'){
-    h+='<h3>\uD83D\uDCB0 Did you get the full bonus?</h3><div class="sub">'+esc(p.bank)+' \u2014 expected '+fM(p.bonus)+'</div>';
-    h+='<div class="bonus-row"><button class="bonus-opt'+(p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=true;closePrompt.actualBonus=closePrompt.bonus;R()">Yes \u2014 '+fM(p.bonus)+'</button><button class="bonus-opt'+(!p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=false;R()">No \u2014 partial/none</button></div>';
-    if(!p.gotFull){h+='<label>How much did you actually get?</label><input type="number" inputmode="numeric" id="cp_amt" value="'+(p.actualBonus||0)+'" placeholder="0">'}
-    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-g" onclick="closeNext()">Next \u2192</button></div>';
-  }else if(p.step==='dp'){
-    h+='<h3>\uD83D\uDCCB What triggered the bonus?</h3><div class="sub">What DD method or action triggered '+esc(p.bank)+'\'s bonus? (Optional)</div>';
-    h+='<div class="dd-chips" style="margin-bottom:8px">';
-    ['Employer DD','Robinhood ACH','Fidelity ACH','Schwab ACH','Venmo DD','Melio Bill Pay','No DD needed','Debit only'].forEach(m=>{h+='<button class="dd-chip" onclick="document.getElementById(\'cp_dp\').value=\''+m+'\'">'+m+'</button>'});
-    h+='</div><input id="cp_dp" value="'+esc(p.dp)+'" placeholder="e.g. $1,000 DD via Robinhood ACH" onclick="event.stopPropagation()">';
-    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">\u2705 Close Account</button></div>';
-  }
-  h+='</div></div>';return h;
-}
-
-/* ═══ RULES ═══ */
-function rRules(){let h='<div class="sec">Churn Rules \u2014 MO + Nationwide</div><input class="sinput" placeholder="Search..." oninput="this.dataset.q=this.value;R()" id="rs">';
-  const q=(document.getElementById('rs')||{}).value||'';
-  const fl=q?RULES.filter(r=>r[0].toLowerCase().includes(q.toLowerCase())):RULES;
-  fl.forEach(([bank,rule,mo,churnable,moAvail,closeFee,maint,notes])=>{
-    h+='<div class="rcard" style="display:flex;align-items:flex-start;gap:10px">'+bankLogo(bank,false)+'<div style="flex:1"><div class="rcard-row"><div class="nm">'+esc(bank)+'</div><div style="text-align:right"><div class="ph">'+esc(rule)+'</div><div class="ph2">'+mo+'mo</div></div></div><div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:2px">';
-    h+=churnable?'<span class="tag y">\u2705 Churnable</span>':'<span class="tag n">\u274C Not Churnable</span>';
-    if(moAvail)h+='<span class="tag m">\uD83D\uDCCD MO</span>';
-    if(closeFee&&closeFee!=='None')h+='<span class="tag f">\u26A0 '+esc(closeFee)+'</span>';
-    h+='<span class="tag '+(maint.includes('$0')||maint.includes('free')?'b':'f')+'">'+esc(maint)+'</span>';
-    h+='</div>';if(notes)h+='<div class="sub">'+esc(notes)+'</div>';
-    h+='</div></div>'});return h}
-
-/* ═══ MODAL ═══ */
-function rModal(){
-  const e=modal;
-  const oi=k=>' oninput="modal[\''+k+'\']=this.value" ';
-  const on=k=>' oninput="modal[\''+k+'\']=parseInt(this.value)||0" ';
-  let h='<div class="ov" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()">';
-  h+='<div class="m-bar"></div><div class="m-hdr"><h2>'+(e._edit?'Edit':'New')+' Entry</h2>'+(e._edit?'<span class="m-id">'+esc(e.id||'')+'</span>':'')+'</div>';
-  h+='<div class="fg"><label>Bank Name *</label><input value="'+esc(e.bank||'')+'"'+oi('bank')+'placeholder="e.g. Chase"></div>';
-  h+='<div class="m-sec">Bonus</div>';
-  h+='<div class="frow"><div class="fg"><label>Amount $</label><input type="number" inputmode="numeric" value="'+(e.bonus||'')+'"'+on('bonus')+'placeholder="300"></div>';
-  h+='<div class="fg"><label>Churn Rule</label><select onchange="modal.churn=this.value"><option value="">Select</option><option value="1"'+(e.churn==='1'?' selected':'')+'>1 Year</option><option value="2"'+(e.churn==='2'?' selected':'')+'>2 Years</option><option value="3"'+(e.churn==='3'?' selected':'')+'>3 Years</option><option value="180"'+(e.churn==='180'?' selected':'')+'>180 Days</option></select></div></div>';
-  h+='<div class="fg"><label>Phone # (for quick call)</label><input value="'+esc(e.phoneNum||'')+'" oninput="modal.phoneNum=this.value" placeholder="e.g. 1-800-935-9935"></div>';
-  h+='<div class="m-sec">Dates</div>';
-  const df=(lbl,id,k,v)=>'<div class="fg"><label>'+lbl+'</label><div class="date-wrap"><input type="date" value="'+(v||'')+'"'+oi(k)+'><button class="date-clr" type="button" onclick="modal.'+k+'=\'\';this.previousElementSibling.value=\'\'">\u2715</button></div></div>';
-  h+='<div class="frow">'+df('Opened','fo','opened',e.opened)+df('Closed','fc','closed',e.closed)+'</div>';
-  h+='<div class="frow">'+df('Bonus Received','fb','bonusRecd',e.bonusRecd)+df('Req Met','fr','reqMet',e.reqMet)+'</div>';
-  h+='<div class="m-sec">Your Notes</div>';
-  h+='<div style="font-size:10px;color:var(--muted);margin-bottom:3px">Your personal notes — never overwritten by analyzer</div>';
-  h+='<div class="fg"><textarea rows="3" style="font-size:13px;line-height:1.5;min-height:60px"'+oi('notes')+'placeholder="Your personal notes, tips, reminders...">'+esc(e.notes||'')+'</textarea></div>';
-  if(modal.analyzedTC){
-    h+='<div class="m-sec">Analyzed T&C Summary</div>';
-    h+='<div style="font-size:10px;color:var(--muted);margin-bottom:3px">Auto-generated from T&C analyzer — re-analyze to update</div>';
-    h+='<div class="fg"><textarea rows="6" style="font-size:12px;line-height:1.6;min-height:120px;background:#F8FAFC;border:1.5px solid #E2E8F0" oninput="modal.analyzedTC=this.value" placeholder="Analyzed T&C will appear here...">'+esc(modal.analyzedTC)+'</textarea></div>';
-  }
-  h+='<button type="button" class="tc-btn" onclick="showInlineAZ=!showInlineAZ;R()">\uD83E\uDDE0 '+(showInlineAZ?'Hide T&C Analyzer':'Paste T&C to Auto-fill')+'</button>';
-  if(showInlineAZ){h+='<div class="az-area"><textarea id="inline_tc" placeholder="Paste T&C here..."></textarea><button class="az-go" onclick="event.preventDefault();runInlineAnalyze()">Analyze & Auto-fill</button>'+(inlineResult?'<div style="margin-top:4px;font-size:10px;color:var(--green);font-weight:600">\u2705 Auto-filled!</div>':'')+'</div>'}
-  h+='<button class="btn-p" onclick="saveEntry()">\uD83D\uDCBE '+(e._edit?'Save Changes':'Add Entry')+'</button>';
-  h+='<button class="btn-s" onclick="closeModal()">Cancel</button>';
-  if(e._edit)h+='<button class="btn-d" onclick="clearFields()">Clear All Fields</button>';
-  h+='</div></div>';return h;
-}
+function highlightTC(text){if(!text)return'';let h=esc(text);h=h.replace(/^(REQUIREMENTS:|DIRECT DEPOSIT RULES:|ADDITIONAL BONUSES:|FEES &amp; TIMING:|CHURN &amp; TAX:)/gm,'<span class="hl-section">$1</span>');h=h.replace(/\* (Step \d+:)/g,'* <span class="hl-step">$1</span>');h=h.replace(/(\$[\d,]+(?:\.\d+)?)/g,'<span class="hl-money">$1</span>');h=h.replace(/(\d+\s+(?:days?|months?|weeks?|consecutive\s+days|statement\s+cycles?))/gi,'<span class="hl-days">$1</span>');h=h.replace(/(within\s+\d+\s+\w+)/gi,'<span class="hl-days">$1</span>');h=h.replace(/(NOT count|does NOT|do not qualify|not eligible|cannot be combined|not be combined|ineligible)/gi,'<span class="hl-warn">$1</span>');h=h.replace(/(clawback|penalty|early close|termination fee|fee if closed)/gi,'<span class="hl-fee">$1</span>');h=h.replace(/(?:code[:\s]+)([A-Z0-9]{3,})/g,'code: <span class="hl-code">$1</span>');h=h.replace(/(\$0 \(No fee\)|No fee|None|Safe anytime|free checking)/gi,'<span class="hl-good">$1</span>');h=h.replace(/(Zelle|P2P|Micro-deposits?|person-to-person)/gi,'<span class="hl-warn">$1</span>');return h}
+function R(){const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;const sorted=sortE(entries);const wk=sorted.filter(e=>{const s=status(e);return s==='WORKING'||s==='SAFE TO CLOSE'}).length;const ch=sorted.filter(e=>status(e)==='WAITING TO CHURN!'||status(e)==='TIME TO CHURN!').length;const rd=sorted.filter(e=>status(e)==='TIME TO CHURN!').length;const yr=completedYrTotal(dashYear);const thisYr=new Date().getFullYear();let h='';h+='<div class="hdr"><div class="hdr-row"><div><h1>\uD83D\uDCB0 <em>Bonus</em>Tracker</h1></div><div class="yr-pills">';[thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});h+='</div></div><div class="hdr-sub">TRACK \u00B7 CHURN \u00B7 REPEAT</div></div>';if(tab==='tracker'){h+='<div class="stats"><div class="st"><div class="n">'+wk+'</div><div class="l">Active</div></div><div class="st"><div class="n">'+ch+'</div><div class="l">Churning</div></div><div class="st"><div class="n">'+rd+'</div><div class="l">Ready</div></div><div class="st"><div class="n">'+fM(yr)+'</div><div class="l">'+dashYear+'</div></div></div>'}h+='<div class="scroll">';if(tab==='tracker')h+=rTracker(sorted);else if(tab==='tax')h+=rTax();else if(tab==='tips')h+=rTips();else if(tab==='phone')h+=rPhone();else if(tab==='rules')h+=rRules();h+='</div>';if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';h+='<div class="tabs">';['tracker','tax','tips','phone','rules'].forEach((t,i)=>{h+='<button class="tb'+(tab===t?' on':'')+'" onclick="tab=\''+t+'\';search=\'\';R()">'+[I.grid,I.doc,I.tips,I.phone,I.info][i]+'<span>'+['Tracker','Tax','Tips','Phone','Rules'][i]+'</span></button>'});h+='</div>';if(modal)h+=rModal();if(cfm)h+=rCfm();if(ddPrompt)h+=rDD();if(rcvPrompt)h+=rRcv();if(closePrompt)h+=rClose();if(overwritePrompt)h+=rOverwrite();if(feeCheckPrompt)h+=rFeeCheck();if(undoState)h+='<div class="undo-bar"><span>Closed '+esc(undoState.bank)+'</span><button onclick="undoClose()">Undo</button></div>';document.getElementById('app').innerHTML=h;const ns=document.querySelector('.scroll');if(ns)ns.scrollTop=_sp}
+function rTracker(sorted){const q=search.toLowerCase();const f=q?sorted.filter(e=>(e.bank||'').toLowerCase().includes(q)):sorted;let h='';const bkd=daysSinceBk();if(bkd>=7)h+='<div class="bk-remind">\u26A0 '+(bkd>=999?'Never backed up':'Backup '+bkd+'d ago')+' <button onclick="exportBackup()">\uD83D\uDCE4 Backup</button></div>';const cd=chartData();const mx=Math.max(...cd.map(c=>c.t),1);h+='<div class="chart"><div class="chart-t">\uD83D\uDCCA '+dashYear+' Monthly Earnings</div><div class="chart-bars">';cd.forEach(c=>{const p=c.t?Math.max(5,Math.round(c.t/mx*90)):1;h+='<div class="chart-col"><div class="chart-bar" style="height:'+p+'%"></div><div class="chart-cl">'+c.l+'</div></div>'});h+='</div></div>';h+='<div class="qbar"><button class="qbtn" style="background:#EFF6FF;color:#2563EB" onclick="exportBackup()">\uD83D\uDCE4 Backup</button><button class="qbtn" style="background:#ECFDF5;color:#059669" onclick="importBackup()">\uD83D\uDCE5 Restore</button><button class="qbtn" style="background:#F3E8FF;color:#7C3AED" onclick="showTemplates=!showTemplates;R()">\u26A1 Quick Add</button><button class="qbtn" style="background:#FEF2F2;color:#EF4444" onclick="resetAllData()">\uD83D\uDDD1 Reset</button></div>';if(showTemplates){h+='<div class="sec">Quick-Add Templates</div><div class="tgrid">';TEMPLATES.forEach((t,i)=>{h+='<button class="tbtn" onclick="addFromTpl('+i+')">'+bankLogo(t.bank,true)+'<div class="t-info"><div class="nm">'+esc(t.bank)+'</div><div class="bn">'+fM(t.bonus)+'</div></div></button>'});h+='</div>'}h+='<input class="sinput" type="text" placeholder="Search banks..." value="'+esc(search)+'" oninput="search=this.value;R()">';h+='<button class="tc-btn" onclick="showAnalyzer=!showAnalyzer;R()">\uD83E\uDDE0 '+(showAnalyzer?'Hide':'Paste T&C to Analyze')+'</button>';if(showAnalyzer)h+=rAnalyzer();if(!f.length)return h+'<div class="empty"><div class="em">\uD83D\uDCED</div><p>No entries yet.</p><p style="margin-top:6px;font-size:11px">Tap <strong>+</strong> to add a bank, <strong>\u26A1 Quick Add</strong> for templates, or <strong>\uD83D\uDCE5 Restore</strong> to import a backup.</p></div>';f.forEach(e=>{const s=status(e),isX=expanded===e.id,nr=nextReopen(e),dl=daysLeft(e);const urg=getUrg(e),countdown=getCountdown(e);const bcls=s==='WORKING'?'w':s==='SAFE TO CLOSE'?'stc':s==='TIME TO CHURN!'?'ch':'wt';h+='<div class="card u-'+urg+'">';h+='<div class="card-h" onclick="expanded=expanded===\''+e.id+'\'?null:\''+e.id+'\';R()">';h+=bankLogo(e.bank);h+='<div class="card-left"><div class="card-name">'+esc(e.bank)+'</div>';h+='<div class="card-row"><span class="badge '+bcls+'">'+esc(s)+'</span>';if(e.churn)h+='<span class="card-stat">'+({1:'1yr',2:'2yr',3:'3yr',180:'180d'}[e.churn]||e.churn)+'</span>';if(dl!==null&&s!=='WORKING'&&s!=='SAFE TO CLOSE')h+='<span class="card-stat"><em>'+dl+'d</em> left</span>';h+='</div></div>';h+='<div class="card-right" style="display:flex;align-items:center;gap:6px">';h+='<div>';if(e.bonus)h+='<div class="card-bonus">'+fM(e.bonus)+'</div>';h+='<div class="card-id">'+esc(e.id)+'</div>';h+='</div>';if(!e.closed&&findPhone(e.bank,e.id))h+='<button class="call-btn" onclick="event.stopPropagation();callBank(\x27'+e.id+'\x27)" title="Call '+findPhoneLabel(e.bank)+'">\uD83D\uDCDE</button>';h+='</div></div>';if(countdown){const prog=countdown.days>0&&countdown.lbl==='Safe to close'?holdProg(e):null;h+='<div class="cd-pill '+countdown.cls+'"><span class="icon">'+countdown.icon+'</span> '+countdown.lbl;h+='<span class="days">'+(countdown.days===0?'GO!':countdown.days+'d')+' \u2022 '+fD(countdown.date)+'</span></div>';if(prog!==null)h+='<div class="cd-prog"><div style="width:'+Math.round(prog*100)+'%;background:'+({red:'#EF4444',amber:'#F59E0B',green:'#10B981',blue:'#3B82F6'}[countdown.cls]||'#3B82F6')+'"></div></div>'}if(!e.closed&&e.opened&&e.minHoldDays>0&&e.earlyCloseFee>0&&!e.feeChecked){const dsc=daysUntilSafe(e),safe=dsc===0;if(!countdown||countdown.lbl!=='Safe to close'){h+='<div class="ect'+(safe?' safe':'')+'"><div class="ect-row"><span>\u23F1 '+(safe?'Safe to close':'Hold '+dsc+'d more')+'</span><span>'+(safe?'\u2705':''+dsc+'d')+'</span></div>';if(e.earlyCloseFee)h+='<div class="ect-fee">'+(safe?'No fee':'Close now = '+fM(e.earlyCloseFee)+' fee')+'</div>';h+='</div>'}}if(isX){h+='<div class="card-exp">';h+='<div class="card-grid">';if(e.opened)h+='<div class="cf"><div class="k">Opened</div><div class="v">'+fD(e.opened)+'</div></div>';if(e.closed)h+='<div class="cf"><div class="k">Closed</div><div class="v">'+fD(e.closed)+'</div></div>';if(e.bonusRecd)h+='<div class="cf"><div class="k">Received</div><div class="v ok">'+fD(e.bonusRecd)+'</div></div>';if(nr)h+='<div class="cf"><div class="k">Reopen</div><div class="v">'+fD(nr)+'</div></div>';if(e.reqMet)h+='<div class="cf"><div class="k">Req Met</div><div class="v">'+fD(e.reqMet)+'</div></div>';if(isCompleted(e))h+='<div class="cf"><div class="k">Tax</div><div class="v ok">\u2705 Done</div></div>';const eff=effortScore(e);if(eff)h+='<div class="cf"><div class="k">Effort</div><div class="v"><span class="effort '+eff.level+'">'+eff.label+'</span></div></div>';if(e.referralBonus)h+='<div class="cf"><div class="k">Referral</div><div class="v"><span class="ref-b">+'+fM(e.referralBonus)+'</span></div></div>';if(e.minHoldDays>0&&!e.closed){const scd=safeCloseDate(e);h+='<div class="cf"><div class="k">Hold Until</div><div class="v'+(daysUntilSafe(e)<=0?' ok':' warn')+'">'+fD(scd)+'</div></div>'}if(e.earlyCloseFee>0&&!e.closed)h+='<div class="cf"><div class="k">Close Fee</div><div class="v warn">'+fM(e.earlyCloseFee)+'</div></div>';h+='</div>';if(!e.closed){h+='<div class="sec" style="margin-top:6px">Checklist</div><ul class="ck">';if(e.checklist&&e.checklist.length){e.checklist.forEach((c,ci)=>{h+='<li><div class="ckb'+(c.done?' dn':'')+'" onclick="event.stopPropagation();toggleCk(\''+e.id+'\','+ci+')"></div><span class="ck-text'+(c.done?' dn':'')+'">'+esc(c.text)+'</span><span class="ck-del" onclick="event.stopPropagation();rmCk(\''+e.id+'\','+ci+')">\u2715</span></li>'})}h+='</ul><div class="ck-add"><input id="ck_'+e.id+'" placeholder="Add step..." onclick="event.stopPropagation()" onkeydown="if(event.key===\'Enter\'){event.stopPropagation();addCk(\''+e.id+'\')}"><button onclick="event.stopPropagation();addCk(\''+e.id+'\')">+</button></div>'}if(e.notes)h+='<div class="card-notes" style="white-space:pre-wrap;font-size:12px;line-height:1.6">'+esc(e.notes)+'</div>';if(e.analyzedTC)h+='<div class="tc-box"><div class="tc-label">T&C Analysis</div><div class="tc-body">'+highlightTC(e.analyzedTC)+'</div></div>';h+='<div class="card-btns"><button class="cbtn edit" onclick="event.stopPropagation();openEdit(\''+e.id+'\')">\u270F\uFE0F Edit</button>';if(!e.closed&&(!e.bonusRecd||e.bonusRecd===''))h+='<button class="cbtn rcv" onclick="event.stopPropagation();openRcv(\''+e.id+'\')">\uD83C\uDF89 Received</button>';if(!e.closed)h+='<button class="cbtn cls" onclick="event.stopPropagation();closeAcct(\''+e.id+'\')">\uD83D\uDD12 Close</button>';h+='<button class="cbtn del" onclick="event.stopPropagation();delEntry(\''+e.id+'\')">\uD83D\uDDD1 Delete</button></div>';h+='</div>'}h+='</div>'});const sug=getSuggestions();if(sug.length){h+='<div class="sec">\uD83D\uDCA1 Suggested Next</div>';sug.forEach(s=>{h+='<div class="sug-c">'+bankLogo(s.bank,true)+'<div class="s-info"><div class="nm">'+esc(s.bank)+'</div>'+(s.bonus?'<div class="sub">'+fM(s.bonus)+'</div>':'')+'<div class="rsn">'+esc(s.rsn)+'</div></div></div>'})}h+='<div class="sec">\uD83D\uDCE1 Latest Bonuses</div>';if(!feedItems&&!feedLoading)h+='<button class="tc-btn" style="border-style:solid;background:#EFF6FF" onclick="loadFeed()">\uD83D\uDCE1 Load from Doctor of Credit</button>';else if(feedLoading)h+='<div class="empty"><span class="spin"></span></div>';else if(feedItems){feedItems.forEach(f=>{const d=f.date?new Date(f.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';h+='<a href="'+f.link+'" target="_blank" rel="noopener" class="feed-c"><div class="feed-t">'+esc(f.title)+'</div><div class="feed-d">'+d+'</div></a>'})}else{DOC_LINKS.forEach(([t,u])=>{h+='<a href="'+u+'" target="_blank" rel="noopener" class="feed-c"><div class="feed-t">\uD83D\uDD17 '+esc(t)+'</div></a>'})}return h}
+function rTax(){const yrs=[];for(let y=2025;y<=2040;y++)yrs.push(y);const yrE=entries.filter(e=>isCompleted(e)&&new Date(e.closed+'T00:00:00').getFullYear()===taxYear);const yrA=yrE.reduce((s,e)=>s+(e.bonus||0),0);const allA=entries.filter(e=>isCompleted(e)).reduce((s,e)=>s+(e.bonus||0),0);let h='<div class="sec">Tax Year</div><div class="ybar">';yrs.forEach(y=>{const a=completedYrTotal(y);h+='<button class="ypill'+(taxYear===y?' on':'')+'" onclick="taxYear='+y+';R()">'+y+(a?' \u00B7 '+fM(a):'')+'</button>'});h+='</div><div class="ytotal">'+fM(yrA)+'</div><div class="ysub">'+taxYear+' \u2014 '+yrE.length+' closed bonus'+(yrE.length!==1?'es':'')+'</div>';if(yrE.length)h+='<button class="export-btn" onclick="exportCSV('+taxYear+')">\uD83D\uDCE5 Export '+taxYear+' CSV</button>';if(!yrE.length)return h+'<div class="empty"><div class="em">\uD83D\uDCCB</div><p>No completed bonuses in '+taxYear+'</p></div>';yrE.forEach(e=>{h+='<div class="tax-c"><div class="tax-top"><div class="tax-bank">'+bankLogo(e.bank,true)+' '+esc(e.bank)+'</div><div class="tax-amt">'+fM(e.bonus)+'</div></div><div class="tax-dates">'+(e.opened?'<span>Open: '+fD(e.opened)+'</span>':'')+'<span>Closed: '+fD(e.closed)+'</span></div></div>'});h+='<div class="sec" style="margin-top:16px">All-Time</div><div class="ytotal">'+fM(allA)+'</div>';return h}
+function rTips(){let h='';const allMethods=loadDD();const reqs=loadReqs();const groups={};allMethods.forEach(m=>{const k=m.bank;if(!groups[k])groups[k]={bank:k,methods:[],total:0};groups[k].methods.push(m);groups[k].total+=m.bonus||0});entries.filter(e=>e.dataPoint).forEach(e=>{const k=e.bank;if(!groups[k])groups[k]={bank:k,methods:[],total:0};if(!groups[k].methods.some(m=>m.method===e.dataPoint))groups[k].methods.push({bank:e.bank,method:e.dataPoint,bonus:e.bonus||0,date:e.closed||''})});const gl=Object.values(groups).sort((a,b)=>b.total-a.total);if(gl.length){h+='<div class="sec">\uD83D\uDCCC Your Confirmed Data Points</div>';gl.forEach(g=>{h+='<div class="rcard" style="display:flex;align-items:center;gap:10px">'+bankLogo(g.bank,true)+'<div style="flex:1;min-width:0"><div class="rcard-row"><div class="nm">'+esc(g.bank)+'</div><div class="ph">'+fM(g.total)+'</div></div><div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:2px">';g.methods.forEach(m=>{h+='<span class="tag y">'+esc(m.method)+'</span>'});h+='</div></div></div>'})}const rl=Object.values(reqs).sort((a,b)=>(b.bonus||0)-(a.bonus||0));if(rl.length){h+='<div class="sec">\uD83D\uDCD1 Saved Requirements</div>';rl.forEach(r=>{h+='<div class="rcard"><div style="width:100%"><div class="rcard-row"><div class="nm">'+esc(r.bank||r.bankName||'')+'</div><div class="ph">'+fD(r.updated)+'</div></div>';if(r.notesForTracker)h+='<div class="sub" style="white-space:pre-wrap;margin-top:4px">'+esc(r.notesForTracker)+'</div>';else if(r.requirements)h+='<div class="sub" style="margin-top:4px">'+r.requirements.map(x=>esc(x)).join(' \u00B7 ')+'</div>';h+='</div></div>'})}h+='<div class="sec">\uD83C\uDF0D Community Data Points</div><input class="sinput" placeholder="Search..." oninput="this.dataset.q=this.value;R()" id="tps">';const tq=(document.getElementById('tps')||{}).value||'';const fl=tq?DATA_POINTS.filter(d=>d[0].toLowerCase().includes(tq.toLowerCase())||d[1].toLowerCase().includes(tq.toLowerCase())):DATA_POINTS;let cb='';fl.forEach(([bank,method,result,link])=>{if(bank!==cb){cb=bank;h+='<div style="font-size:11px;font-weight:700;margin:8px 0 3px;display:flex;align-items:center;gap:6px">'+bankLogo(bank,true)+' '+esc(bank)+'</div>'}h+='<div class="rcard" style="padding:8px 10px"><div class="rcard-row"><span style="font-size:11px;font-weight:600">'+esc(method)+'</span><span class="tag '+(result.includes('Works')||result.includes('Safe')?'y':'f')+'">'+esc(result)+'</span></div>'+(link?'<a href="'+link+'" target="_blank" style="font-size:9px;color:var(--accent)">Source</a>':'')+'</div>'});h+='<div class="sec">\uD83D\uDCDA Resources</div>';DOC_LINKS.forEach(([t,u])=>{h+='<a href="'+u+'" target="_blank" rel="noopener" class="feed-c"><div class="feed-t">\uD83D\uDD17 '+esc(t)+'</div></a>'});return h}
+function rPhone(){let h='<div class="sec">Customer Service Numbers</div>';h+='<input class="sinput" placeholder="Search banks..." oninput="this.dataset.q=this.value;R()" id="phs">';const pq=(document.getElementById('phs')||{}).value||'';const pf=pq?PHONES.filter(p=>p[0].toLowerCase().includes(pq.toLowerCase())):PHONES;pf.forEach(([b,p,bz])=>{h+='<div class="ph-card">'+bankLogo(b,false)+'<div style="flex:1"><div style="font-size:13px;font-weight:700;margin-bottom:6px">'+esc(b)+'</div>';h+='<div class="ph-links">';h+='<a href="tel:'+p+'" class="ph-link" style="background:#EFF6FF"><div class="phl">PERSONAL</div><div class="phn" style="color:var(--accent)">'+p+'</div></a>';if(bz&&bz!==p)h+='<a href="tel:'+bz+'" class="ph-link" style="background:#F3E8FF"><div class="phl">BUSINESS</div><div class="phn" style="color:#7C3AED">'+bz+'</div></a>';else if(bz)h+='<div class="ph-link" style="background:#ECFDF5"><div class="phl">SAME #</div><div class="phn" style="color:var(--green)">'+bz+'</div></div>';h+='</div></div></div>'});return h}
+function rRules(){let h='<div class="sec">Churn Rules \u2014 MO + Nationwide</div><input class="sinput" placeholder="Search..." oninput="this.dataset.q=this.value;R()" id="rs">';const q=(document.getElementById('rs')||{}).value||'';const fl=q?RULES.filter(r=>r[0].toLowerCase().includes(q.toLowerCase())):RULES;fl.forEach(([bank,rule,mo,churnable,moAvail,closeFee,maint,notes])=>{h+='<div class="rcard" style="display:flex;align-items:flex-start;gap:10px">'+bankLogo(bank,false)+'<div style="flex:1"><div class="rcard-row"><div class="nm">'+esc(bank)+'</div><div style="text-align:right"><div class="ph">'+esc(rule)+'</div><div class="ph2">'+mo+'mo</div></div></div><div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:2px">';h+=churnable?'<span class="tag y">\u2705 Churnable</span>':'<span class="tag n">\u274C Not Churnable</span>';if(moAvail)h+='<span class="tag m">\uD83D\uDCCD MO</span>';if(closeFee&&closeFee!=='None')h+='<span class="tag f">\u26A0 '+esc(closeFee)+'</span>';h+='<span class="tag '+(maint.includes('$0')||maint.includes('free')?'b':'f')+'">'+esc(maint)+'</span>';h+='</div>';if(notes)h+='<div class="sub">'+esc(notes)+'</div>';h+='</div></div>'});return h}
+function rClose(){if(!closePrompt)return'';const p=closePrompt;let h='<div class="cbg" onclick="cancelClose()"><div class="close-modal" onclick="event.stopPropagation()">';if(p.step==='date'){h+='<h3>\uD83D\uDD12 Close '+esc(p.bank)+'</h3><div class="sub">When did you close (or plan to close) this account?</div>';h+='<label>Close Date</label><input type="date" id="cp_date" value="'+p.closeDate+'">';h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">Next \u2192</button></div>'}else if(p.step==='bonus'){h+='<h3>\uD83D\uDCB0 Did you get the full bonus?</h3><div class="sub">'+esc(p.bank)+' \u2014 expected '+fM(p.bonus)+'</div>';h+='<div class="bonus-row"><button class="bonus-opt'+(p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=true;closePrompt.actualBonus=closePrompt.bonus;R()">Yes \u2014 '+fM(p.bonus)+'</button><button class="bonus-opt'+(!p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=false;R()">No \u2014 partial/none</button></div>';if(!p.gotFull){h+='<label>How much did you actually get?</label><input type="number" inputmode="numeric" id="cp_amt" value="'+(p.actualBonus||0)+'" placeholder="0">'}h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-g" onclick="closeNext()">Next \u2192</button></div>'}else if(p.step==='dp'){h+='<h3>\uD83D\uDCCB What triggered the bonus?</h3><div class="sub">What DD method or action triggered '+esc(p.bank)+'\'s bonus? (Optional)</div>';h+='<div class="dd-chips" style="margin-bottom:8px">';['Employer DD','Robinhood ACH','Fidelity ACH','Schwab ACH','Venmo DD','Melio Bill Pay','No DD needed','Debit only'].forEach(m=>{h+='<button class="dd-chip" onclick="document.getElementById(\'cp_dp\').value=\''+m+'\'">'+m+'</button>'});h+='</div><input id="cp_dp" value="'+esc(p.dp)+'" placeholder="e.g. $1,000 DD via Robinhood ACH" onclick="event.stopPropagation()">';h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">\u2705 Close Account</button></div>'}h+='</div></div>';return h}
+function rFeeCheck(){if(!feeCheckPrompt)return'';const p=feeCheckPrompt;const e=entries.find(x=>x.id===p.entryId);let h='<div class="cbg" onclick="feeCheckCancel()"><div class="fee-box" onclick="event.stopPropagation()">';if(p.step==='ask'){h+='<h3>\uD83D\uDEE1\uFE0F Early Closure Fee?</h3>';h+='<div class="sub">Does <strong>'+esc(p.bank)+'</strong> charge a fee for closing the account early?</div>';h+='<div class="fee-choice">';h+='<button class="fee-yes" onclick="feeCheckPrompt.step=\'months\';R()">\u26A0\uFE0F Yes</button>';h+='<button class="fee-no" onclick="feeCheckSkip()">\u2705 No fee / Skip</button>';h+='</div>';h+='<div style="font-size:10px;color:var(--muted);text-align:center">Skip if no early closure fee \u2014 account will be marked safe to close</div>'}else if(p.step==='months'){h+='<h3>\u23F0 How long to wait?</h3>';h+='<div class="sub">How many months from account opening must you wait to avoid the fee?</div>';h+='<div class="fee-months-grid">';[3,6,9,12,18,24].forEach(m=>{const safeDate=e&&e.opened?addM(e.opened,m):'';const daysAway=safeDate?Math.max(0,dB(td(),safeDate)):0;h+='<button class="fee-mo-btn'+(p.months===m?' sel':'')+'" onclick="feeCheckPrompt.months='+m+';R()">'+m+' mo';if(safeDate&&e.opened)h+='<span class="sm">'+daysAway+'d left</span>';h+='</button>'});h+='</div>';h+='<div style="display:flex;gap:6px;margin-top:8px;align-items:center"><span style="font-size:12px;color:var(--sub);font-weight:600;white-space:nowrap">Custom:</span><input type="number" inputmode="numeric" id="fcp_custom" value="'+(p.months||'')+'" placeholder="months" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:var(--bg);outline:none" onchange="feeCheckPrompt.months=parseInt(this.value)||6;R()"><span style="font-size:12px;color:var(--sub);font-weight:600">months</span></div>';h+='<div style="display:flex;gap:6px;margin-top:10px;align-items:center"><label style="font-size:11px;font-weight:600;color:var(--sub);white-space:nowrap">Fee amount $</label><input type="number" inputmode="numeric" id="fcp_fee" value="'+(p.feeAmount||'')+'" placeholder="e.g. 25" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:var(--bg);outline:none" onchange="feeCheckPrompt.feeAmount=parseInt(this.value)||0"></div>';if(e&&e.opened&&p.months>0){const safeDate=addM(e.opened,p.months);const daysAway=Math.max(0,dB(td(),safeDate));h+='<div class="fee-preview"><div class="fp-date">\uD83D\uDCC5 Safe to close: '+fD(safeDate)+'</div><div class="fp-days">'+(daysAway>0?daysAway+' days from now':'\u2705 Already past!')+'</div></div>'}else if(!e||!e.opened){h+='<div class="fee-preview"><div class="fp-date" style="color:var(--red)">\u26A0\uFE0F No open date set</div><div class="fp-days">Timer starts when you add an open date</div></div>'}h+='<div style="display:flex;gap:6px;margin-top:10px">';h+='<button class="c-c" onclick="feeCheckPrompt.step=\'ask\';R()">Back</button>';h+='<button class="c-g" onclick="feeCheckSave()">\u23F0 Set Timer</button>';h+='</div>'}h+='</div></div>';return h}
+function rModal(){const e=modal;const oi=k=>' oninput="modal[\''+k+'\']=this.value" ';const on=k=>' oninput="modal[\''+k+'\']=parseInt(this.value)||0" ';let h='<div class="ov" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()">';h+='<div class="m-bar"></div><div class="m-hdr"><h2>'+(e._edit?'Edit':'New')+' Entry</h2>'+(e._edit?'<span class="m-id">'+esc(e.id||'')+'</span>':'')+'</div>';h+='<div class="fg"><label>Bank Name *</label><input value="'+esc(e.bank||'')+'"'+oi('bank')+'placeholder="e.g. Chase"></div>';h+='<div class="m-sec">Bonus</div>';h+='<div class="frow"><div class="fg"><label>Amount $</label><input type="number" inputmode="numeric" value="'+(e.bonus||'')+'"'+on('bonus')+'placeholder="300"></div>';h+='<div class="fg"><label>Churn Rule</label><select onchange="modal.churn=this.value"><option value="">Select</option><option value="1"'+(e.churn==='1'?' selected':'')+'>1 Year</option><option value="2"'+(e.churn==='2'?' selected':'')+'>2 Years</option><option value="3"'+(e.churn==='3'?' selected':'')+'>3 Years</option><option value="180"'+(e.churn==='180'?' selected':'')+'>180 Days</option></select></div></div>';h+='<div class="fg"><label>Phone # (for quick call)</label><input value="'+esc(e.phoneNum||'')+'" oninput="modal.phoneNum=this.value" placeholder="e.g. 1-800-935-9935"></div>';h+='<div class="m-sec">Dates</div>';const df=(lbl,id,k,v)=>'<div class="fg"><label>'+lbl+'</label><div class="date-wrap"><input type="date" value="'+(v||'')+'"'+oi(k)+'><button class="date-clr" type="button" onclick="modal.'+k+'=\'\';this.previousElementSibling.value=\'\'">\u2715</button></div></div>';h+='<div class="frow">'+df('Opened','fo','opened',e.opened)+df('Closed','fc','closed',e.closed)+'</div>';h+='<div class="frow">'+df('Bonus Received','fb','bonusRecd',e.bonusRecd)+df('Req Met','fr','reqMet',e.reqMet)+'</div>';h+='<div class="m-sec">Your Notes</div>';h+='<div style="font-size:10px;color:var(--muted);margin-bottom:3px">Your personal notes — never overwritten by analyzer</div>';h+='<div class="fg"><textarea rows="3" style="font-size:13px;line-height:1.5;min-height:60px"'+oi('notes')+'placeholder="Your personal notes, tips, reminders...">'+esc(e.notes||'')+'</textarea></div>';if(modal.analyzedTC){h+='<div class="m-sec">Analyzed T&C Summary</div>';h+='<div style="font-size:10px;color:var(--muted);margin-bottom:3px">Auto-generated from T&C analyzer — re-analyze to update</div>';h+='<div class="fg"><textarea rows="6" style="font-size:12px;line-height:1.6;min-height:120px;background:#F8FAFC;border:1.5px solid #E2E8F0" oninput="modal.analyzedTC=this.value" placeholder="Analyzed T&C will appear here...">'+esc(modal.analyzedTC)+'</textarea></div>'}h+='<button type="button" class="tc-btn" onclick="showInlineAZ=!showInlineAZ;R()">\uD83E\uDDE0 '+(showInlineAZ?'Hide T&C Analyzer':'Paste T&C to Auto-fill')+'</button>';if(showInlineAZ){h+='<div class="az-area"><textarea id="inline_tc" placeholder="Paste T&C here..."></textarea><button class="az-go" onclick="event.preventDefault();runInlineAnalyze()">Analyze & Auto-fill</button>'+(inlineResult?'<div style="margin-top:4px;font-size:10px;color:var(--green);font-weight:600">\u2705 Auto-filled!</div>':'')+'</div>'}h+='<button class="btn-p" onclick="saveEntry()">\uD83D\uDCBE '+(e._edit?'Save Changes':'Add Entry')+'</button>';h+='<button class="btn-s" onclick="closeModal()">Cancel</button>';if(e._edit)h+='<button class="btn-d" onclick="clearFields()">Clear All Fields</button>';h+='</div></div>';return h}
 function rCfm(){return'<div class="cbg" onclick="cfm=null;R()"><div class="cbox" onclick="event.stopPropagation()"><h3>'+cfm.title+'</h3><p>'+cfm.msg+'</p><div class="crow"><button class="c-c" onclick="cfm=null;R()">Cancel</button><button class="'+(cfm.green?'c-g':'c-r')+'" onclick="cfm.action()">'+(cfm.green?'Confirm':'Delete')+'</button></div></div></div>'}
-function rDD(){
-  const p=ddPrompt;const common=['Employer DD','Robinhood ACH','Fidelity ACH','Schwab ACH','Venmo DD','PayPal DD','Melio Bill Pay','Cash App DD','No DD Required','Debit Card Only'];
-  let h='<div class="cbg" onclick="skipDD()"><div class="dd-box" onclick="event.stopPropagation()"><h3>\uD83D\uDCCB What triggered the bonus?</h3><div class="sub">Select DD method(s) for '+esc(p.bank)+'. Optional \u2014 tap Skip to close without saving.</div><div class="dd-chips">';
-  common.forEach(m=>{h+='<button class="dd-chip'+(p.sel.includes(m)?' sel':'')+'" onclick="event.stopPropagation();toggleDDChip(\''+esc(m)+'\')">'+esc(m)+'</button>'});
-  h+='</div><input class="dd-input" id="dd_custom" placeholder="Other methods, comma separated..." onclick="event.stopPropagation()">';
-  h+='<div class="crow"><button class="c-c" onclick="skipDD()">Skip</button><button class="c-g" onclick="submitDD()">\uD83D\uDCBE Save</button></div></div></div>';return h;
-}
-function rRcv(){
-  const p=rcvPrompt;let h='<div class="cbg" onclick="skipRcv()"><div class="rcv-box" onclick="event.stopPropagation()">';
-  if(p.step==='date'){
-    h+='<h3>\uD83C\uDF89 Bonus Received!</h3><div class="sub">When did '+esc(p.bank)+' post the bonus?</div>';
-    h+='<input class="dd-input" type="date" id="rcv_date" value="'+p.date+'" onclick="event.stopPropagation()">';
-    h+='<div class="crow"><button class="c-c" onclick="skipRcv()">Cancel</button><button class="c-g" onclick="rcvNext()">Next \u2192</button></div>';
-  }else{
-    h+='<h3>\u23F0 Close or Wait?</h3><div class="sub">Waiting builds bank relationship for future churns.</div>';
-    h+='<div class="wait-grid">';
-    [{d:0,l:'Now'},{d:15,l:'15d'},{d:30,l:'30d'},{d:45,l:'45d'},{d:90,l:'90d'},{d:185,l:'185d'}].forEach(o=>{h+='<button class="wait-btn'+(p.wait===o.d?' sel':'')+'" onclick="event.stopPropagation();rcvPrompt.wait='+o.d+';R()">'+o.l+'</button>'});
-    h+='</div>';
-    if(p.wait>0)h+='<div style="text-align:center;font-size:10px;color:var(--muted);margin:4px 0">Close after '+fD(addD(p.date,p.wait))+'</div>';
-    h+='<div class="crow"><button class="c-c" onclick="rcvPrompt.step=\'date\';R()">Back</button><button class="c-g" onclick="rcvSubmit()">\u2705 Confirm</button></div>';
-  }
-  h+='</div></div>';return h;
-}
-
-/* ═══ OVERWRITE PROMPT ═══ */
-function rOverwrite(){
-  if(!overwritePrompt)return'';
-  const p=overwritePrompt;
-  const ex=p.existingEntry;
-  const s=status(ex);
-  let h='<div class="cbg" onclick="overwritePrompt=null;R()"><div class="ow-box" onclick="event.stopPropagation()">';
-  h+='<h3>\uD83D\uDD04 Existing Entry Found</h3>';
-  h+='<div class="sub"><strong>'+esc(p.newData.bank)+'</strong> already exists in your tracker. Do you want to overwrite it for a new churn cycle?</div>';
-  h+='<div class="ow-existing">'+bankLogo(ex.bank)+'<div class="ow-info"><div class="nm">'+esc(ex.bank)+'</div><div class="det">'+esc(s)+' \u00B7 ID: '+esc(ex.id)+'</div>';
-  if(ex.opened)h+='<div class="det">Opened: '+fD(ex.opened)+'</div>';
-  if(ex.closed)h+='<div class="det">Closed: '+fD(ex.closed)+'</div>';
-  h+='</div><div class="amt">'+fM(ex.bonus)+'</div></div>';
-  h+='<div style="display:flex;flex-direction:column;gap:6px">';
-  h+='<button class="c-g" style="width:100%;padding:12px;border-radius:10px;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer" onclick="doOverwrite()">\uD83D\uDD04 Overwrite & Start New Churn</button>';
-  h+='<button style="width:100%;padding:12px;border-radius:10px;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;background:#EFF6FF;color:var(--accent)" onclick="doAddNew()">+ Add as Separate Entry</button>';
-  h+='<button class="c-c" style="width:100%;padding:10px;border-radius:10px;border:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer" onclick="overwritePrompt=null;R()">Cancel</button>';
-  h+='</div></div></div>';
-  return h;
-}
-
-/* ANALYZER */
-function rAnalyzer(){
-  let h='<div style="background:var(--card);border-radius:12px;padding:12px;margin-bottom:8px;border:1px solid var(--border)">';
-  h+='<div style="font-size:12px;font-weight:700;margin-bottom:6px">\uD83D\uDD0D T&C Analyzer</div>';
-  h+='<textarea class="fg" id="az_input" style="width:100%;min-height:120px;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:11px;outline:none;resize:vertical" placeholder="Paste full terms & conditions here...">'+esc(analyzerText)+'</textarea>';
-  h+='<div style="display:flex;gap:4px;margin-top:4px"><button class="az-go" style="flex:1" onclick="runMainAnalyze()">Analyze</button><button class="btn-s" style="flex:0;margin:0;padding:8px 12px" onclick="showAnalyzer=false;analyzerText=\'\';analyzerResult=null;R()">Close</button></div>';
-  if(analyzerResult){
-    const r=analyzerResult;
-    h+='<div style="margin-top:8px">';
-    if(r.notesForTracker){h+='<div class="tc-box" style="padding:12px;border-radius:12px"><div class="tc-body" style="font-size:13px;line-height:1.8">'+highlightTC(r.notesForTracker)+'</div></div>'}
-    else{
-      h+='<div style="padding:12px;background:var(--bg);border-radius:12px;font-size:13px;line-height:1.8">';
-      if(r.bonusAmount)h+='<div>* Bonus: '+esc(r.bonusAmount)+'</div>';
-      if(r.ddAmount)h+='<div>* DD: '+esc(r.ddAmount)+(r.ddCount?' (x'+r.ddCount+')':'')+'</div>';
-      if(r.debitTxns)h+='<div>* Debit Txns: '+esc(r.debitTxns)+'</div>';
-      if(r.timeline)h+='<div>* Timeline: '+esc(r.timeline)+'</div>';
-      if(r.monthlyFee)h+='<div>* Monthly Fee: '+esc(r.monthlyFee)+'</div>';
-      if(r.promoCode)h+='<div>* Promo: '+esc(r.promoCode)+'</div>';
-      if(r.churnRule)h+='<div>* Churn: '+esc(r.churnRule)+'</div>';
-      if(r.earlyCloseFee)h+='<div>* Close Fee: '+esc(r.earlyCloseFee)+'</div>';
-      h+='</div>';
-    }
-    h+='<button class="btn-p" style="margin-top:8px;font-size:13px;padding:12px" onclick="fillFromAI()">\u2B07 Auto-fill New Entry</button>';
-    h+='</div>';
-  }
-  h+='</div>';return h;
-}
-
-/* ═══ ACTIONS ═══ */
-function openAdd(){modal={bank:'',bonus:0,churn:'',opened:'',closed:'',bonusRecd:'',reqMet:'',notes:'',analyzedTC:'',minHoldDays:0,earlyCloseFee:0,dataPoint:'',reqDays:0,referralBonus:0,checklist:[],plannedClose:'',phoneNum:''};R()}
+function rDD(){const p=ddPrompt;const common=['Employer DD','Robinhood ACH','Fidelity ACH','Schwab ACH','Venmo DD','PayPal DD','Melio Bill Pay','Cash App DD','No DD Required','Debit Card Only'];let h='<div class="cbg" onclick="skipDD()"><div class="dd-box" onclick="event.stopPropagation()"><h3>\uD83D\uDCCB What triggered the bonus?</h3><div class="sub">Select DD method(s) for '+esc(p.bank)+'. Optional \u2014 tap Skip to close without saving.</div><div class="dd-chips">';common.forEach(m=>{h+='<button class="dd-chip'+(p.sel.includes(m)?' sel':'')+'" onclick="event.stopPropagation();toggleDDChip(\''+esc(m)+'\')">'+esc(m)+'</button>'});h+='</div><input class="dd-input" id="dd_custom" placeholder="Other methods, comma separated..." onclick="event.stopPropagation()">';h+='<div class="crow"><button class="c-c" onclick="skipDD()">Skip</button><button class="c-g" onclick="submitDD()">\uD83D\uDCBE Save</button></div></div></div>';return h}
+function rRcv(){const p=rcvPrompt;let h='<div class="cbg" onclick="skipRcv()"><div class="rcv-box" onclick="event.stopPropagation()">';if(p.step==='date'){h+='<h3>\uD83C\uDF89 Bonus Received!</h3><div class="sub">When did '+esc(p.bank)+' post the bonus?</div>';h+='<input class="dd-input" type="date" id="rcv_date" value="'+p.date+'" onclick="event.stopPropagation()">';h+='<div class="crow"><button class="c-c" onclick="skipRcv()">Cancel</button><button class="c-g" onclick="rcvNext()">Next \u2192</button></div>'}else{h+='<h3>\u23F0 Close or Wait?</h3><div class="sub">Waiting builds bank relationship for future churns.</div>';h+='<div class="wait-grid">';[{d:0,l:'Now'},{d:15,l:'15d'},{d:30,l:'30d'},{d:45,l:'45d'},{d:90,l:'90d'},{d:185,l:'185d'}].forEach(o=>{h+='<button class="wait-btn'+(p.wait===o.d?' sel':'')+'" onclick="event.stopPropagation();rcvPrompt.wait='+o.d+';R()">'+o.l+'</button>'});h+='</div>';if(p.wait>0)h+='<div style="text-align:center;font-size:10px;color:var(--muted);margin:4px 0">Close after '+fD(addD(p.date,p.wait))+'</div>';h+='<div class="crow"><button class="c-c" onclick="rcvPrompt.step=\'date\';R()">Back</button><button class="c-g" onclick="rcvSubmit()">\u2705 Confirm</button></div>'}h+='</div></div>';return h}
+function rOverwrite(){if(!overwritePrompt)return'';const p=overwritePrompt;const ex=p.existingEntry;const s=status(ex);let h='<div class="cbg" onclick="overwritePrompt=null;R()"><div class="ow-box" onclick="event.stopPropagation()">';h+='<h3>\uD83D\uDD04 Existing Entry Found</h3>';h+='<div class="sub"><strong>'+esc(p.newData.bank)+'</strong> already exists in your tracker. Do you want to overwrite it for a new churn cycle?</div>';h+='<div class="ow-existing">'+bankLogo(ex.bank)+'<div class="ow-info"><div class="nm">'+esc(ex.bank)+'</div><div class="det">'+esc(s)+' \u00B7 ID: '+esc(ex.id)+'</div>';if(ex.opened)h+='<div class="det">Opened: '+fD(ex.opened)+'</div>';if(ex.closed)h+='<div class="det">Closed: '+fD(ex.closed)+'</div>';h+='</div><div class="amt">'+fM(ex.bonus)+'</div></div>';h+='<div style="display:flex;flex-direction:column;gap:6px">';h+='<button class="c-g" style="width:100%;padding:12px;border-radius:10px;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer" onclick="doOverwrite()">\uD83D\uDD04 Overwrite & Start New Churn</button>';h+='<button style="width:100%;padding:12px;border-radius:10px;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;background:#EFF6FF;color:var(--accent)" onclick="doAddNew()">+ Add as Separate Entry</button>';h+='<button class="c-c" style="width:100%;padding:10px;border-radius:10px;border:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer" onclick="overwritePrompt=null;R()">Cancel</button>';h+='</div></div></div>';return h}
+function rAnalyzer(){let h='<div style="background:var(--card);border-radius:12px;padding:12px;margin-bottom:8px;border:1px solid var(--border)">';h+='<div style="font-size:12px;font-weight:700;margin-bottom:6px">\uD83D\uDD0D T&C Analyzer</div>';h+='<textarea class="fg" id="az_input" style="width:100%;min-height:120px;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:11px;outline:none;resize:vertical" placeholder="Paste full terms & conditions here...">'+esc(analyzerText)+'</textarea>';h+='<div style="display:flex;gap:4px;margin-top:4px"><button class="az-go" style="flex:1" onclick="runMainAnalyze()">Analyze</button><button class="btn-s" style="flex:0;margin:0;padding:8px 12px" onclick="showAnalyzer=false;analyzerText=\'\';analyzerResult=null;R()">Close</button></div>';if(analyzerResult){const r=analyzerResult;h+='<div style="margin-top:8px">';if(r.notesForTracker){h+='<div class="tc-box" style="padding:12px;border-radius:12px"><div class="tc-body" style="font-size:13px;line-height:1.8">'+highlightTC(r.notesForTracker)+'</div></div>'}else{h+='<div style="padding:12px;background:var(--bg);border-radius:12px;font-size:13px;line-height:1.8">';if(r.bonusAmount)h+='<div>* Bonus: '+esc(r.bonusAmount)+'</div>';if(r.ddAmount)h+='<div>* DD: '+esc(r.ddAmount)+(r.ddCount?' (x'+r.ddCount+')':'')+'</div>';if(r.debitTxns)h+='<div>* Debit Txns: '+esc(r.debitTxns)+'</div>';if(r.timeline)h+='<div>* Timeline: '+esc(r.timeline)+'</div>';if(r.monthlyFee)h+='<div>* Monthly Fee: '+esc(r.monthlyFee)+'</div>';if(r.promoCode)h+='<div>* Promo: '+esc(r.promoCode)+'</div>';if(r.churnRule)h+='<div>* Churn: '+esc(r.churnRule)+'</div>';if(r.earlyCloseFee)h+='<div>* Close Fee: '+esc(r.earlyCloseFee)+'</div>';h+='</div>'}h+='<button class="btn-p" style="margin-top:8px;font-size:13px;padding:12px" onclick="fillFromAI()">\u2B07 Auto-fill New Entry</button>';h+='</div>'}h+='</div>';return h}
+function openAdd(){modal={bank:'',bonus:0,churn:'',opened:'',closed:'',bonusRecd:'',reqMet:'',notes:'',analyzedTC:'',minHoldDays:0,earlyCloseFee:0,dataPoint:'',reqDays:0,referralBonus:0,checklist:[],plannedClose:'',phoneNum:'',feeChecked:false};R()}
 function openEdit(id){const e=entries.find(x=>x.id===id);if(e){modal={...e,analyzedTC:e.analyzedTC||'',_edit:true};showInlineAZ=false;inlineResult=null;R()}}
 function closeModal(){modal=null;showInlineAZ=false;inlineResult=null;R()}
-function clearFields(){if(!modal)return;['bonus','churn','opened','closed','bonusRecd','reqMet','dataPoint','notes'].forEach(k=>{modal[k]=''});['reqDays','minHoldDays','earlyCloseFee','referralBonus'].forEach(k=>{modal[k]=0});modal.bonus=0;R()}
-
-function saveEntry(){
-  const bank=(modal.bank||'').trim();if(!bank){alert('Bank name required');return}
-  const d={bank,bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',plannedClose:modal.plannedClose||'',phoneNum:modal.phoneNum||''};
-  if(modal._edit){
-    entries=entries.map(e=>e.id===modal.id?{...e,...d,checklist:e.checklist||[]}:e);
-  } else {
-    // Check for existing bank with same name
-    const existing=findExistingByBank(bank);
-    if(existing){
-      // Show overwrite prompt
-      overwritePrompt={newData:d,existingEntry:existing};
-      closeModal();
-      R();return;
-    }
-    const taken=new Set(entries.map(e=>e.id));d.id=genId(bank,taken);d.checklist=[];entries.push(d);
-  }
-  entries=sortE(entries);sv(SK,entries);closeModal();
-}
-
-function doOverwrite(){
-  if(!overwritePrompt)return;
-  const p=overwritePrompt;
-  const d=p.newData;
-  // Overwrite existing entry, keeping its ID
-  entries=entries.map(e=>{
-    if(e.id===p.existingEntry.id){
-      return{...e,bank:d.bank,bonus:d.bonus,churn:d.churn,opened:d.opened||td(),closed:'',bonusRecd:'',reqMet:'',notes:d.notes,analyzedTC:d.analyzedTC,minHoldDays:d.minHoldDays,earlyCloseFee:d.earlyCloseFee,reqDays:d.reqDays,referralBonus:d.referralBonus||0,dataPoint:d.dataPoint,plannedClose:'',phoneNum:d.phoneNum||e.phoneNum||'',checklist:[]};
-    }
-    return e;
-  });
-  entries=sortE(entries);sv(SK,entries);
-  overwritePrompt=null;expanded=p.existingEntry.id;R();
-}
-function doAddNew(){
-  if(!overwritePrompt)return;
-  const d=overwritePrompt.newData;
-  const taken=new Set(entries.map(e=>e.id));
-  d.id=genId(d.bank,taken);d.checklist=[];
-  entries.push(d);entries=sortE(entries);sv(SK,entries);
-  overwritePrompt=null;R();
-}
-
+function clearFields(){if(!modal)return;['bonus','churn','opened','closed','bonusRecd','reqMet','dataPoint','notes'].forEach(k=>{modal[k]=''});['reqDays','minHoldDays','earlyCloseFee','referralBonus'].forEach(k=>{modal[k]=0});modal.bonus=0;modal.feeChecked=false;R()}
+function saveEntry(){const bank=(modal.bank||'').trim();if(!bank){alert('Bank name required');return}const d={bank,bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',plannedClose:modal.plannedClose||'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false};if(modal._edit){entries=entries.map(e=>e.id===modal.id?{...e,...d,checklist:e.checklist||[]}:e)}else{const existing=findExistingByBank(bank);if(existing){overwritePrompt={newData:d,existingEntry:existing};closeModal();R();return}const taken=new Set(entries.map(e=>e.id));d.id=genId(bank,taken);d.checklist=[];entries.push(d)}entries=sortE(entries);sv(SK,entries);closeModal()}
+function doOverwrite(){if(!overwritePrompt)return;const p=overwritePrompt;const d=p.newData;entries=entries.map(e=>{if(e.id===p.existingEntry.id){return{...e,bank:d.bank,bonus:d.bonus,churn:d.churn,opened:d.opened||td(),closed:'',bonusRecd:'',reqMet:'',notes:d.notes,analyzedTC:d.analyzedTC,minHoldDays:d.minHoldDays,earlyCloseFee:d.earlyCloseFee,reqDays:d.reqDays,referralBonus:d.referralBonus||0,dataPoint:d.dataPoint,plannedClose:'',phoneNum:d.phoneNum||e.phoneNum||'',checklist:[],feeChecked:false}}return e});entries=sortE(entries);sv(SK,entries);overwritePrompt=null;expanded=p.existingEntry.id;R()}
+function doAddNew(){if(!overwritePrompt)return;const d=overwritePrompt.newData;const taken=new Set(entries.map(e=>e.id));d.id=genId(d.bank,taken);d.checklist=[];d.feeChecked=false;entries.push(d);entries=sortE(entries);sv(SK,entries);overwritePrompt=null;R()}
 function resetAllData(){cfm={title:'\u26A0\uFE0F Reset All Data',msg:'This will permanently delete ALL entries, data points, and saved requirements.\n\nYour exported backup file is not affected.',action:()=>{cfm={title:'\u{1F6A8} Are you absolutely sure?',msg:'Type RESET to confirm. This cannot be undone.',action:()=>{entries=[];sv(SK,[]);try{localStorage.removeItem(DD_KEY);localStorage.removeItem(REQ_KEY);localStorage.removeItem(BK_KEY)}catch{}cfm=null;expanded=null;R()}};R()}};R()}
 function delEntry(id){const e=entries.find(x=>x.id===id);cfm={title:'\u{1F5D1} Delete Entry',msg:'Remove '+e.bank+'?\n\nThis cannot be undone.',action:()=>{cfm={title:'Confirm Delete',msg:'Are you sure you want to delete '+e.bank+'?',action:()=>{entries=entries.filter(x=>x.id!==id);sv(SK,entries);cfm=null;expanded=null;R()}};R()}};R()}
-function closeAcct(id){const e=entries.find(x=>x.id===id);if(!e)return;const dsc=daysUntilSafe(e);if(dsc!==null&&dsc>0&&e.earlyCloseFee>0){cfm={title:'\u26A0\uFE0F Early Close Warning',msg:dsc+' days remain on hold period. Closing now means '+fM(e.earlyCloseFee)+' fee! Are you sure?',action:()=>{cfm=null;startCloseFlow(id)},green:false};R();return}startCloseFlow(id)}
+function closeAcct(id){const e=entries.find(x=>x.id===id);if(!e)return;const s=status(e);if(e.feeChecked||s==='SAFE TO CLOSE'){startCloseFlow(id);return}if(e.minHoldDays>0){const dsc=daysUntilSafe(e);if(dsc!==null&&dsc>0&&e.earlyCloseFee>0){cfm={title:'\u26A0\uFE0F Early Close Warning',msg:dsc+' days remain on hold period. Closing now means '+fM(e.earlyCloseFee)+' fee!\n\nClose anyway?',action:()=>{cfm=null;startCloseFlow(id)},green:false};R();return}startCloseFlow(id);return}feeCheckPrompt={entryId:id,bank:e.bank,step:'ask',months:6,feeAmount:0};R()}
+function feeCheckSkip(){if(!feeCheckPrompt)return;const id=feeCheckPrompt.entryId;entries=entries.map(e=>{if(e.id===id){e.feeChecked=true}return e});entries=sortE(entries);sv(SK,entries);feeCheckPrompt=null;startCloseFlow(id)}
+function feeCheckSave(){if(!feeCheckPrompt)return;const p=feeCheckPrompt;const id=p.entryId;const months=p.months||6;const feeAmt=p.feeAmount||0;entries=entries.map(e=>{if(e.id===id){if(e.opened){const safeDate=addM(e.opened,months);e.minHoldDays=dB(e.opened,safeDate)}else{e.minHoldDays=months*30}e.earlyCloseFee=feeAmt;e.feeChecked=false}return e});entries=sortE(entries);sv(SK,entries);feeCheckPrompt=null;const e=entries.find(x=>x.id===id);if(e){const dsc=daysUntilSafe(e);if(dsc!==null&&dsc<=0){cfm={title:'\u2705 Already Safe!',msg:e.bank+' hold period has already passed. You can close anytime!',green:true,action:()=>{cfm=null;R()}};R();return}}R()}
+function feeCheckCancel(){feeCheckPrompt=null;R()}
 function startCloseFlow(id){const e=entries.find(x=>x.id===id);if(!e)return;closePrompt={entryId:id,bank:e.bank,bonus:e.bonus||0,step:'date',closeDate:td(),gotFull:true,actualBonus:e.bonus||0,dp:''};R()}
 function closeNext(){const p=closePrompt;if(!p)return;if(p.step==='date'){const d=document.getElementById('cp_date');if(d)p.closeDate=d.value;p.step='bonus';R()}else if(p.step==='bonus'){if(!p.gotFull){const v=document.getElementById('cp_amt');if(v)p.actualBonus=parseInt(v.value)||0}p.step='dp';R()}else if(p.step==='dp'){const dp=document.getElementById('cp_dp');if(dp)p.dp=dp.value.trim();finishClose()}}
 function closeBack(){const p=closePrompt;if(!p)return;if(p.step==='dp')p.step='bonus';else if(p.step==='bonus')p.step='date';R()}
-function finishClose(){const p=closePrompt;if(!p)return;const e=entries.find(x=>x.id===p.entryId);undoState={...e};if(undoTimer)clearTimeout(undoTimer);undoTimer=setTimeout(()=>{undoState=null;R()},15000);entries=entries.map(x=>{if(x.id===p.entryId){x.closed=p.closeDate;x.bonus=p.actualBonus;if(!x.bonusRecd&&p.actualBonus>0)x.bonusRecd=p.closeDate;if(p.dp)x.dataPoint=p.dp}return x});if(p.dp)addDD(p.bank,p.dp,p.actualBonus,p.closeDate);const e2=entries.find(x=>x.id===p.entryId);if(e2)saveReq(e2.bank,{bonus:e2.bonus,notes:e2.notes,dataPoint:e2.dataPoint});entries=sortE(entries);sv(SK,entries);closePrompt=null;expanded=null;R()}
+function finishClose(){const p=closePrompt;if(!p)return;const e=entries.find(x=>x.id===p.entryId);undoState={...e};if(undoTimer)clearTimeout(undoTimer);undoTimer=setTimeout(()=>{undoState=null;R()},15000);entries=entries.map(x=>{if(x.id===p.entryId){x.closed=p.closeDate;x.bonus=p.actualBonus;if(!x.bonusRecd&&p.actualBonus>0)x.bonusRecd=p.closeDate;if(p.dp)x.dataPoint=p.dp;x.feeChecked=true}return x});if(p.dp)addDD(p.bank,p.dp,p.actualBonus,p.closeDate);const e2=entries.find(x=>x.id===p.entryId);if(e2)saveReq(e2.bank,{bonus:e2.bonus,notes:e2.notes,dataPoint:e2.dataPoint});entries=sortE(entries);sv(SK,entries);closePrompt=null;expanded=null;R()}
 function cancelClose(){closePrompt=null;R()}
-
-function addFromTpl(i){
-  const t=TEMPLATES[i];
-  // Check for existing
-  const existing=findExistingByBank(t.bank);
-  const newData={bank:t.bank,bonus:t.bonus,churn:t.churn,opened:td(),closed:'',bonusRecd:'',reqMet:'',notes:t.notes||'',analyzedTC:'',minHoldDays:t.minHoldDays||0,earlyCloseFee:t.earlyCloseFee||0,dataPoint:t.dataPoint||'',reqDays:t.reqDays||0,referralBonus:0,plannedClose:'',phoneNum:''};
-  if(existing){
-    overwritePrompt={newData,existingEntry:existing};
-    showTemplates=false;R();return;
-  }
-  modal=newData;modal.checklist=[];showTemplates=false;R();
-}
-
-/* Checklist */
+function addFromTpl(i){const t=TEMPLATES[i];const existing=findExistingByBank(t.bank);const newData={bank:t.bank,bonus:t.bonus,churn:t.churn,opened:td(),closed:'',bonusRecd:'',reqMet:'',notes:t.notes||'',analyzedTC:'',minHoldDays:t.minHoldDays||0,earlyCloseFee:t.earlyCloseFee||0,dataPoint:t.dataPoint||'',reqDays:t.reqDays||0,referralBonus:0,plannedClose:'',phoneNum:'',feeChecked:false};if(existing){overwritePrompt={newData,existingEntry:existing};showTemplates=false;R();return}modal=newData;modal.checklist=[];showTemplates=false;R()}
 function toggleCk(id,i){entries=entries.map(e=>{if(e.id===id&&e.checklist)e.checklist[i].done=!e.checklist[i].done;return e});sv(SK,entries);R()}
 function addCk(id){const inp=document.getElementById('ck_'+id);if(!inp||!inp.value.trim())return;entries=entries.map(e=>{if(e.id===id){if(!e.checklist)e.checklist=[];e.checklist.push({text:inp.value.trim(),done:false})}return e});sv(SK,entries);R()}
 function rmCk(id,i){entries=entries.map(e=>{if(e.id===id&&e.checklist)e.checklist.splice(i,1);return e});sv(SK,entries);R()}
-
-/* DD Prompt */
 function toggleDDChip(m){if(!ddPrompt)return;const i=ddPrompt.sel.indexOf(m);if(i>=0)ddPrompt.sel.splice(i,1);else ddPrompt.sel.push(m);R()}
 function submitDD(){if(!ddPrompt)return;const c=document.getElementById('dd_custom');const all=[...ddPrompt.sel];if(c&&c.value)c.value.split(',').forEach(x=>{const t=x.trim();if(t)all.push(t)});all.forEach(m=>addDD(ddPrompt.bank,m,ddPrompt.bonus,td()));ddPrompt=null;R()}
 function skipDD(){ddPrompt=null;R()}
-
-/* Receive */
 function openRcv(id){const e=entries.find(x=>x.id===id);rcvPrompt={entryId:id,bank:e.bank,step:'date',date:td(),wait:0};R()}
 function rcvNext(){const d=document.getElementById('rcv_date');if(d)rcvPrompt.date=d.value;rcvPrompt.step='wait';R()}
 function rcvSubmit(){const p=rcvPrompt;entries=entries.map(e=>{if(e.id===p.entryId){e.bonusRecd=p.date;saveReq(e.bank,{bonus:e.bonus,notes:e.notes,dataPoint:e.dataPoint})}return e});if(p.wait===0){const e=entries.find(x=>x.id===p.entryId);entries=entries.map(x=>x.id===p.entryId?{...x,closed:td()}:x);entries=sortE(entries);sv(SK,entries);rcvPrompt=null;ddPrompt={entryId:p.entryId,bank:p.bank,bonus:e?e.bonus:0,sel:[],custom:''};R();return}if(p.wait>0)entries=entries.map(x=>x.id===p.entryId?{...x,plannedClose:addD(p.date,p.wait)}:x);entries=sortE(entries);sv(SK,entries);rcvPrompt=null;R()}
 function skipRcv(){rcvPrompt=null;R()}
-
-/* Analyzer */
 function runMainAnalyze(){const el=document.getElementById('az_input');if(!el)return;analyzerText=el.value;if(!analyzerText||analyzerText.length<20){alert('Paste more T&C text');return}analyzerResult=analyzeTC(analyzerText);if(analyzerResult&&analyzerResult.bankName)saveReq(analyzerResult.bankName||analyzerResult.acctType||'Unknown',analyzerResult);if(!analyzerResult||Object.keys(analyzerResult).length<2)alert('Could not extract enough data. Try pasting more of the full terms & conditions.');R()}
 function runInlineAnalyze(){const el=document.getElementById('inline_tc');if(!el||el.value.length<20){alert('Paste more T&C text');return}inlineResult=analyzeTC(el.value);if(inlineResult){if(inlineResult.notesForTracker)modal.analyzedTC=inlineResult.notesForTracker;if(inlineResult.bonusAmount&&!modal.bonus)modal.bonus=parseInt(String(inlineResult.bonusAmount).replace(/[$,]/g,''))||0;if(inlineResult.churnMonths&&!modal.churn)modal.churn=inlineResult.churnMonths<=6?'180':inlineResult.churnMonths<=12?'1':inlineResult.churnMonths<=24?'2':'3';if(inlineResult.earlyCloseDays)modal.minHoldDays=parseInt(inlineResult.earlyCloseDays)||0;if(inlineResult.earlyCloseFee)modal.earlyCloseFee=parseInt(String(inlineResult.earlyCloseFee).replace(/[$,]/g,''))||0;if(inlineResult.ddAmount||inlineResult.debitTxns)modal.dataPoint=[inlineResult.ddAmount?'DD '+inlineResult.ddAmount:'',inlineResult.debitTxns?inlineResult.debitTxns+' debit txns':''].filter(Boolean).join(' + ');if(inlineResult.promoCode&&!modal.dataPoint)modal.dataPoint='Promo: '+inlineResult.promoCode;if(inlineResult.timelineDays)modal.reqDays=inlineResult.timelineDays;if(inlineResult.bankName&&!modal.bank)modal.bank=inlineResult.bankName}else{alert('Could not extract data. Paste more of the full T&C.')}R()}
-
-function fillFromAI(){
-  if(!analyzerResult)return;const r=analyzerResult;
-  const newData={bank:r.bankName||'',bonus:typeof r.bonusAmount==='number'?r.bonusAmount:parseInt(String(r.bonusAmount||'').replace(/[$,]/g,''))||0,
-  churn:r.churnMonths?(r.churnMonths<=6?'180':r.churnMonths<=12?'1':r.churnMonths<=24?'2':'3'):'',
-  opened:'',closed:'',bonusRecd:'',reqMet:'',
-  notes:'',analyzedTC:r.notesForTracker||(r.checklist?'* '+r.checklist.join('\n* '):''),
-  minHoldDays:typeof r.earlyCloseDays==='number'?r.earlyCloseDays:parseInt(String(r.earlyCloseDays||''))||0,
-  earlyCloseFee:parseInt(String(r.earlyCloseFee||'').replace(/[$,]/g,''))||0,
-  dataPoint:[r.ddAmount?'DD '+r.ddAmount:'',r.debitTxns?r.debitTxns+' debit txns':''].filter(Boolean).join(' + '),
-  reqDays:parseInt(String(r.timeline||''))||0,referralBonus:0,plannedClose:'',phoneNum:''};
-  
-  // Check for existing bank
-  const existing=findExistingByBank(newData.bank);
-  if(existing){
-    overwritePrompt={newData,existingEntry:existing};
-    showAnalyzer=false;analyzerText='';analyzerResult=null;
-    R();return;
-  }
-  
-  modal={...newData,checklist:[]};
-  showAnalyzer=false;analyzerText='';analyzerResult=null;R();
-}
-
-/* Export/Import */
+function fillFromAI(){if(!analyzerResult)return;const r=analyzerResult;const newData={bank:r.bankName||'',bonus:typeof r.bonusAmount==='number'?r.bonusAmount:parseInt(String(r.bonusAmount||'').replace(/[$,]/g,''))||0,churn:r.churnMonths?(r.churnMonths<=6?'180':r.churnMonths<=12?'1':r.churnMonths<=24?'2':'3'):'',opened:'',closed:'',bonusRecd:'',reqMet:'',notes:'',analyzedTC:r.notesForTracker||(r.checklist?'* '+r.checklist.join('\n* '):''),minHoldDays:typeof r.earlyCloseDays==='number'?r.earlyCloseDays:parseInt(String(r.earlyCloseDays||''))||0,earlyCloseFee:parseInt(String(r.earlyCloseFee||'').replace(/[$,]/g,''))||0,dataPoint:[r.ddAmount?'DD '+r.ddAmount:'',r.debitTxns?r.debitTxns+' debit txns':''].filter(Boolean).join(' + '),reqDays:parseInt(String(r.timeline||''))||0,referralBonus:0,plannedClose:'',phoneNum:'',feeChecked:false};const existing=findExistingByBank(newData.bank);if(existing){overwritePrompt={newData,existingEntry:existing};showAnalyzer=false;analyzerText='';analyzerResult=null;R();return}modal={...newData,checklist:[]};showAnalyzer=false;analyzerText='';analyzerResult=null;R()}
 function exportBackup(){const data={entries,ddMethods:loadDD(),bankReqs:loadReqs(),version:'v6',exported:new Date().toISOString()};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='BonusTracker_Backup_'+td()+'.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);setLastBk()}
 function importBackup(){const inp=document.createElement('input');inp.type='file';inp.accept='.json';inp.onchange=function(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=function(e){try{const d=JSON.parse(e.target.result);if(d.entries){entries=sortE(d.entries);sv(SK,entries);if(d.ddMethods)saveDD(d.ddMethods);if(d.bankReqs)saveReqs(d.bankReqs);cfm={title:'Restored',msg:d.entries.length+' entries loaded.',green:true,action:()=>{cfm=null;R()}};R()}}catch{alert('Invalid file')}};r.readAsText(f)};inp.click()}
 function exportCSV(yr){const yrE=entries.filter(e=>isCompleted(e)&&new Date(e.closed+'T00:00:00').getFullYear()===yr);if(!yrE.length)return;let csv='Bank,Bonus,Received,Opened,Closed,Data Point\n';yrE.forEach(e=>{csv+='"'+e.bank+'",'+e.bonus+',"'+fD(e.bonusRecd)+'","'+fD(e.opened)+'","'+fD(e.closed)+'","'+(e.dataPoint||'').replace(/"/g,"'")+'"\n'});csv+='\nTotal,'+yrE.reduce((s,e)=>s+(e.bonus||0),0)+'\n';const blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='BonusTracker_'+yr+'.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
-/* Feed */
 function loadFeed(){feedLoading=true;R();fetch('https://api.allorigins.win/get?url='+encodeURIComponent('https://www.doctorofcredit.com/category/bank-account-bonuses/feed/')).then(r=>r.json()).then(d=>{const p=new DOMParser(),x=p.parseFromString(d.contents,'text/xml'),items=x.querySelectorAll('item');feedItems=[];items.forEach((it,i)=>{if(i>=12)return;feedItems.push({title:it.querySelector('title')?.textContent||'',link:it.querySelector('link')?.textContent||'',date:it.querySelector('pubDate')?.textContent||''})});feedLoading=false;R()}).catch(()=>{feedItems=null;feedLoading=false;R()})}
-
-/* INIT */
 entries=sortE(entries);R();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
 </script>
