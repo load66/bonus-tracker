@@ -855,7 +855,45 @@ const PHONES=[["Ally Bank","1-877-247-2559","1-877-247-2559"],["Bank of America"
 const RULES=[["Chase","2yr",24,true,true,"None","$12/mo waived $500 DD","2yr from enrollment; 90d close rule"],["Bank of America","1yr",12,true,true,"None","$12/mo waived $250 DD","Tiered $100-$500"],["Wells Fargo","1yr",12,true,true,"None","$10/mo waived $500 DD",""],["U.S. Bank","1yr",12,true,true,"None","$6.95/mo waived $1k DD","No early close fee"],["Citi","1yr",12,true,true,"None","$12/mo waived $1k DD","Offer-specific"],["Simmons Bank","1yr",12,true,true,"None","$0 (Simply Checking)","$150x3 cycles. MO/AR/KS/OK/TN/TX"],["Equity Bank","180d",6,true,true,"$400 clawback","$10/mo waived $2k bal","Must open checking+savings. MO/KS/AR/OK"],["Regions","1yr",12,true,true,"$25 <180d","$8/mo waived $500 DD","10 debit txns. MO available"],["PNC","2yr",24,true,true,"None","$7-25/mo by tier","Tiered $100-$400"],["Central Bank","2yr",24,true,true,"None","$0 free checking","MO/KS/OK/IL"],["Community America","1yr",12,true,true,"None","$0 free checking","KC metro. Guided Investing bonus"],["TD Bank","3yr",36,false,false,"None","$15-25/mo","Many once-per-lifetime"],["Huntington","1yr",12,true,false,"None","$0 (Asterisk Free)","24mo rolling limit"],["BMO","1yr",12,true,true,"None","$5-25/mo","CC funding avail. Nationwide"],["Fifth Third","2yr",24,true,true,"None","$11/mo waived $500 DD","AL/FL/GA/IL/IN/KY/MI/NC/OH/TN"],["Capital One","1yr",12,false,true,"None","$0 free","Not churnable anymore"]];
 const DATA_POINTS=[["Chase","Fidelity ACH","Works as DD","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/#Chase"],["Chase","Robinhood ACH","Works","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/#Chase"],["Chase","Schwab ACH","Works",""],["Bank of America","Fidelity ACH","Works","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/#Bank_of_America"],["Bank of America","Robinhood ACH","Works",""],["U.S. Bank","Robinhood ACH","Works","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/#US_Bank"],["U.S. Bank","Fidelity ACH","Works",""],["U.S. Bank","No early close fee","Safe anytime","https://www.doctorofcredit.com/u-s-bank-450-100-checking-bonus/"],["Wells Fargo","Employer DD only","ACH may fail","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/#Wells_Fargo"],["Citi","ACH transfers","Generally works","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/#Citibank"],["PNC","Fidelity ACH","Works","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/#PNC"],["Simmons Bank","$1k DD + 7 debit","Per cycle, up to 3","https://www.doctorofcredit.com/ar-tx-tn-ok-mo-ks-simmons-bank-300-checking-bonus/"],["Equity Bank","$1k DD + debit activation","Within 45 days","https://www.doctorofcredit.com/ks-mo-ar-ok-ne-equity-bank-400-checking-bonus/"],["Equity Bank","$400 clawback <180d","Wait 180 days!",""],["Regions","$1k DD + 10 debit txns","Within 90 days",""],["Capital One","Not churnable (2025+)","Skip for churning","https://www.doctorofcredit.com/a-list-of-churnable-bank-account-bonuses/"],["BMO","ACH works + CC funding","Nationwide","https://www.doctorofcredit.com/bmo-harris-500-checking-bonus/"]];
 const DOC_LINKS=[["DD Methods Master List","https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/"],["Churnable Bonuses","https://www.doctorofcredit.com/a-list-of-churnable-bank-account-bonuses/"],["Best Current Bonuses","https://www.doctorofcredit.com/best-bank-account-bonuses/"],["CC Funding List","https://www.doctorofcredit.com/bank-accounts/bank-accounts-that-can-be-funded-with-a-credit-card/"],["BankRewards.io","https://www.bankrewards.io"]];
+/* One-time ID repair: safely upgrades legacy/incorrect IDs to the smart
+   short format based on each entry's current bank name and type. Only the
+   id field is touched; all user data remains intact. */
+function repairEntryIds(list){
+  const src=Array.isArray(list)?list:[];
+  const used=new Set();
+  const seqByKey={};
+  let changed=false;
+  const repaired=src.map((entry,idx)=>{
+    const e={...entry};
+    const bank=e.bank||'';
+    const key=bankKey(bank||('Bank '+(idx+1)));
+    const prefix=bankCode(bank||'Bank')+'-'+bankTypeCode(bank)+'-';
+    const rawId=String(e.id||'').toUpperCase().trim();
+    const smart=/^[A-Z0-9]{3}-[PB]-\d{2}$/;
+    if(smart.test(rawId)&&rawId.startsWith(prefix)&&!used.has(rawId)){
+      used.add(rawId);
+      seqByKey[key]=Math.max(seqByKey[key]||0,parseInt(rawId.slice(-2),10)||0);
+      e.id=rawId;
+      return e;
+    }
+    let next=Math.max((seqByKey[key]||0)+1,1);
+    let fixed=prefix+String(next).padStart(2,'0');
+    while(used.has(fixed)){
+      next++;
+      fixed=prefix+String(next).padStart(2,'0');
+    }
+    seqByKey[key]=next;
+    used.add(fixed);
+    if(e.id!==fixed)changed=true;
+    e.id=fixed;
+    return e;
+  });
+  return{items:repaired,changed};
+}
 let entries=ld(SK,DEF),tab='tracker',expanded=null,modal=null,cfm=null,search='';
+const __idRepair=repairEntryIds(entries);
+entries=__idRepair.items;
+if(__idRepair.changed)sv(SK,entries);
 let dashYear=new Date().getFullYear(),taxYear=new Date().getFullYear();
 let showAnalyzer=false,analyzerText='',analyzerResult=null,analyzerIsBiz=false;
 let showInlineAZ=false,inlineResult=null;
