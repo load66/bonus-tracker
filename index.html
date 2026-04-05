@@ -276,7 +276,8 @@ function status(e){
 function statusBadgeClass(s){return s==='WORKING'?'w':s==='WAITING TO CLOSE'?'waitclose':s==='WAITING TO CHURN'?'waitchurn':s==='READY TO CHURN'?'ready':'stc'}
 function cardSupport(e){
   const s=status(e);
-  if(s==='WAITING TO CLOSE'||s==='WAITING TO CHURN'){const d=waitingDays(e);return d!==null&&d>0?d+'d left':''}
+  if(s==='WAITING TO CLOSE'){const d=waitingDays(e);const feeNote=e.earlyCloseFee>0?' • fee if closed early':'';return d!==null&&d>0?d+'d left'+feeNote:(feeNote?feeNote.slice(3):'')}
+  if(s==='WAITING TO CHURN'){const d=waitingDays(e);return d!==null&&d>0?d+'d left':''}
   if(s==='READY TO CHURN')return'Ready now';
   if(s==='WORKING'){
     if(e.opened&&e.reqDays>0&&!e.bonusRecd){const d=daysToDeadline(e);if(d!==null&&d>=0)return d+'d to req deadline'}
