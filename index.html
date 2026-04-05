@@ -227,6 +227,24 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .ph-links{display:flex;gap:6px;margin-top:6px;flex:1}
 .ph-link{flex:1;padding:8px;border-radius:8px;text-align:center;text-decoration:none;display:block}
 .ph-link .phl{font-size:9px;font-weight:700;color:var(--muted)}.ph-link .phn{font-size:12px;font-weight:600}
+
+/* icon rendering fix */
+.qbar{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+.qbtn,.tc-btn,.cbtn{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.qbtn svg,.tc-btn svg,.tb svg,.badge svg,.cbtn svg,.call-btn svg{
+  width:18px;
+  height:18px;
+  min-width:18px;
+  min-height:18px;
+  display:block;
+  flex-shrink:0;
+  stroke:currentColor;
+  fill:none;
+  stroke-width:2;
+}
+.badge{display:inline-flex;align-items:center;gap:6px}
+.call-btn{display:flex;align-items:center;justify-content:center}
+
 </style>
 </head>
 <body>
