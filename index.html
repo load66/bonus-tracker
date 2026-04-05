@@ -304,7 +304,7 @@ function getCountdown(e){
 function getUrg(e){const s=status(e);if(s==='TIME TO CHURN!')return'red';if(s==='SAFE TO CLOSE')return'green';if(s==='3-DAY BUFFER')return'yellow';const dsc=daysUntilSafe(e);if(!e.closed&&dsc!==null&&dsc<=7)return'red';if(!e.closed&&dsc!==null&&dsc<=30)return'yellow';if(s==='WAITING TO CHURN!'){const dl=daysLeft(e);if(dl!==null&&dl<=30)return'yellow'}if(s==='WORKING')return'blue';return'green'}
 function getSuggestions(){const sug=[];entries.filter(e=>e.closed&&e.churn).forEach(e=>{const dl=daysLeft(e);if(dl!==null&&dl<=0)sug.push({bank:e.bank,rsn:'Cooldown expired! Ready to re-open.',bonus:e.bonus});else if(dl!==null&&dl<=30)sug.push({bank:e.bank,rsn:'Cooldown expires in '+dl+' days.',bonus:e.bonus})});const active=new Set(entries.map(e=>e.bank.toLowerCase()));TEMPLATES.forEach(t=>{if(!active.has(t.bank.toLowerCase()))sug.push({bank:t.bank,rsn:'Not yet tried. '+fM(t.bonus)+' available.',bonus:t.bonus})});return sug.slice(0,4)}
 function chartData(){const ms=[];for(let m=0;m<12;m++){const l=['J','F','M','A','M','J','J','A','S','O','N','D'][m];const t=entries.filter(e=>isCompleted(e)&&new Date(e.closed+'T00:00:00').getFullYear()===dashYear&&new Date(e.closed+'T00:00:00').getMonth()===m).reduce((s,e)=>s+(e.bonus||0),0);ms.push({l,t})}return ms}
-function normalizeBankFamily(name){let n=(name||'').toLowerCase().trim();n=n.replace(/[®.]/g,'');n=n.replace(/\bbiz\b|\bbusiness\b/g,'');n=n.replace(/\bchecking\b|\bsavings\b|\baccount\b/g,'');n=n.replace(/\s+/g,' ').trim();n=n.replace(/^us bank$/,'u.s. bank');return n}
+function normalizeBankFamily(name){let n=(name||'').toLowerCase().trim();n=n.replace(/[®'.]/g,'');n=n.replace(/&/g,' and ');n=n.replace(/\bbiz\b|\bbusiness\b/g,'');n=n.replace(/\bchecking\b|\bsavings\b|\baccount\b|\baccounts\b/g,'');n=n.replace(/\bessentials\b|\bpreferred\b|\bcomplete\b|\badvantage\b|\beveryday\b|\bpremier\b|\bplus\b|\bbasic\b|\belite\b|\bselect\b|\bsmartly\b/g,'');n=n.replace(/\s+/g,' ').trim();if(/\bu\s*s\s*bank\b/.test(n))return'u.s. bank';if(/\bbank of america\b|\bbofa\b|\bboa\b/.test(n))return'bank of america';if(/\bwells\s*fargo\b/.test(n))return'wells fargo';if(/\bcapital\s*one\b/.test(n))return'capital one';if(/\bfifth\s*third\b|\b53\b/.test(n))return'fifth third';if(/\bciti(?:bank)?\b/.test(n))return'citibank';if(/\bcommunity\s*america\b/.test(n))return'community america';if(/\bnavy\s*federal\b/.test(n))return'navy federal';if(/\btd\s*bank\b/.test(n))return'td bank';return n}
 function bankTypeCode(name){return(/\bbiz\b|\bbusiness\b/i.test(name||''))?'B':'P'}
 function bankCode(name){const family=normalizeBankFamily(name);const overrides={'u.s. bank':'USB','bank of america':'BOA','wells fargo':'WFB','capital one':'CAP','fifth third':'FTH','u.s bank':'USB'};if(overrides[family])return overrides[family];const words=family.replace(/[^a-z0-9 ]/g,'').split(' ').filter(Boolean).filter(w=>!['bank','credit','union','financial'].includes(w));if(!words.length)return'BNK';if(words.length===1)return words[0].slice(0,3).toUpperCase().padEnd(3,'X');return (words[0][0]+(words[1]?.[0]||'')+(words[2]?.[0]||words[1]?.[1]||'')).toUpperCase().padEnd(3,'X').slice(0,3)}
 function bankKey(name){return bankCode(name)+'|'+bankTypeCode(name)}
@@ -314,7 +314,12 @@ function bankKey(name){return bankCode(name)+'|'+bankTypeCode(name)}
 function getBankMatches(bankName){
   if(!bankName)return[];
   const key=bankKey(bankName);
-  return entries.filter(e=>bankKey(e.bank)===key);
+  const family=normalizeBankFamily(bankName);
+  return entries.filter(e=>{
+    const eKey=bankKey(e.bank);
+    const eFamily=normalizeBankFamily(e.bank);
+    return eKey===key||eFamily===family||eFamily.includes(family)||family.includes(eFamily);
+  });
 }
 function isActiveEntry(e){return!!(e&&e.bank&&!e.closed)}
 function entryRecencyDate(e){return e?.closed||e?.opened||''}
