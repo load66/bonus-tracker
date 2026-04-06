@@ -611,6 +611,145 @@ function tcKnownBankName(text){
 }
 function tcInferChurnRule(months){if(!months)return'';return months<=6?'180 days':months<=12?'1 year':months<=24?'2 years':'3 years'}
 
+
+function tcPushUnique(arr, value){
+  if(!arr) return;
+  if(value===undefined || value===null || value==='') return;
+  if(!arr.includes(value)) arr.push(value);
+}
+
+function tcFindFirstSegment(segments, regex){
+  return (segments||[]).find(s => regex.test(s)) || '';
+}
+
+function tcAddEvidence(r, label, segment, weight=4){
+  if(!r.evidence) r.evidence=[];
+  if(!segment) return;
+  const entry = `${label}: ${segment}`;
+  if(!r.evidence.includes(entry)) r.evidence.push(entry);
+  r.hybridScore = (r.hybridScore || 0) + weight;
+}
+
+const HYBRID_PROMO_PATTERNS = [
+  {
+    id:'ach-either-or',
+    label:'ACH either/or',
+    test:(t)=>/at least one direct deposit or direct debit/i.test(t) && /(ach|automated clearing house)/i.test(t),
+    apply:(r,ctx)=>{
+      tcPushUnique(r.offerTags,'ACH either/or');
+      tcPushUnique(r.qualifyingPaths,'1 ACH direct deposit OR 1 ACH direct debit');
+      r.achDirectDebitAllowed = true;
+      tcAddEvidence(r,'ACH either/or', tcFindFirstSegment(ctx.segments,/direct deposit or direct debit/i), 8);
+    }
+  },
+  {
+    id:'direct-deposit',
+    label:'Direct deposit',
+    test:(t)=>/direct deposit/i.test(t),
+    apply:(r,ctx)=>{
+      tcPushUnique(r.offerTags,'Direct deposit');
+      tcAddEvidence(r,'Direct deposit', tcFindFirstSegment(ctx.segments,/direct deposit/i), 4);
+    }
+  },
+  {
+    id:'new-money-hold',
+    label:'New money + hold',
+    test:(t)=>/new money/i.test(t) || (/maintain/i.test(t) && /balance/i.test(t)),
+    apply:(r,ctx)=>{
+      tcPushUnique(r.offerTags,'New money / hold');
+      tcAddEvidence(r,'Funding / hold', tcFindFirstSegment(ctx.segments,/new money|maintain.*balance|balance.*maintain/i), 6);
+    }
+  },
+  {
+    id:'multi-cycle',
+    label:'Statement cycles',
+    test:(t)=>/statement cycle/i.test(t),
+    apply:(r,ctx)=>{
+      tcPushUnique(r.offerTags,'Statement-cycle rules');
+      tcAddEvidence(r,'Statement cycle', tcFindFirstSegment(ctx.segments,/statement cycle/i), 5);
+    }
+  },
+  {
+    id:'debit-spend',
+    label:'Debit / purchase activity',
+    test:(t)=>/debit card|purchases?|transactions?/i.test(t),
+    apply:(r,ctx)=>{
+      tcPushUnique(r.offerTags,'Debit / spend activity');
+      tcAddEvidence(r,'Debit / activity', tcFindFirstSegment(ctx.segments,/debit card|purchases?|transactions?/i), 4);
+    }
+  },
+  {
+    id:'business',
+    label:'Business checking',
+    test:(t)=>/business checking|business account|small business/i.test(t),
+    apply:(r,ctx)=>{
+      tcPushUnique(r.offerTags,'Business bonus');
+      tcAddEvidence(r,'Business', tcFindFirstSegment(ctx.segments,/business checking|business account|small business/i), 5);
+    }
+  },
+  {
+    id:'bundle',
+    label:'Bundle / multiple products',
+    test:(t)=>/checking and savings|checking \+ savings|bundle|bundled|roundup/i.test(t),
+    apply:(r,ctx)=>{
+      tcPushUnique(r.offerTags,'Bundled / multi-product');
+      tcAddEvidence(r,'Bundle', tcFindFirstSegment(ctx.segments,/checking and savings|bundle|bundled|roundup/i), 5);
+    }
+  },
+  {
+    id:'positive-balance-gate',
+    label:'Positive balance / active gate',
+    test:(t)=>/positive balance|active and .* bonus payment|good standing/i.test(t),
+    apply:(r,ctx)=>{
+      tcPushUnique(r.offerTags,'Positive balance / active gate');
+      tcAddEvidence(r,'Balance gate', tcFindFirstSegment(ctx.segments,/positive balance|active and .* bonus payment|good standing/i), 5);
+    }
+  },
+  {
+    id:'fee-waiver',
+    label:'Fee waiver logic',
+    test:(t)=>/waive|waived|monthly maintenance fee|service fee/i.test(t),
+    apply:(r,ctx)=>{
+      tcPushUnique(r.offerTags,'Fee waiver logic');
+      tcAddEvidence(r,'Fee waiver', tcFindFirstSegment(ctx.segments,/waive|waived|monthly maintenance fee|service fee/i), 3);
+    }
+  }
+];
+
+function tcApplyHybridPatterns(r, normalized, segments){
+  if(!r.offerTags) r.offerTags=[];
+  if(!r.evidence) r.evidence=[];
+  r.hybridScore = r.hybridScore || 0;
+  const t = normalized.toLowerCase();
+
+  HYBRID_PROMO_PATTERNS.forEach(p=>{
+    try{
+      if(p.test(t, segments, r)) p.apply(r, {t, segments, r});
+    }catch(_err){}
+  });
+
+  if(r.bonusAmount) r.hybridScore += 10;
+  if(r.timeline || r.timelineDays) r.hybridScore += 6;
+  if(r.earlyCloseFee || r.earlyCloseDays) r.hybridScore += 4;
+  if(r.churnMonths || r.priorBonusIneligible) r.hybridScore += 4;
+  if(r.statementCycleCutoff) r.hybridScore += 4;
+  if(r.minDaysOpen || r.mustBePositiveAtQualEnd || r.mustBePositiveAtPayout) r.hybridScore += 6;
+  if(r.openBy || r.openWindow) r.hybridScore += 3;
+  if(r.monthlyFee) r.hybridScore += 2;
+
+  if(r.hybridScore >= 40) r.hybridConfidence='High';
+  else if(r.hybridScore >= 24) r.hybridConfidence='Medium';
+  else r.hybridConfidence='Low';
+
+  if(!r.reviewFlags) r.reviewFlags=[];
+  if(!r.bonusAmount) tcPushUnique(r.reviewFlags, 'Bonus amount not clearly extracted.');
+  if(!r.timeline && !r.timelineDays) tcPushUnique(r.reviewFlags, 'Qualification deadline not clearly extracted.');
+  if(r.qualifyingPaths?.length===0 && !r.ddAmount && !r.newMoneyAmount && !r.activityCount && !r.debitTxns) {
+    tcPushUnique(r.reviewFlags, 'Qualification path is unclear — review manually.');
+  }
+  if(r.ddAmount && r.newMoneyAmount) tcPushUnique(r.reviewFlags, 'Contains both direct-deposit and funding/new-money rules.');
+}
+
 function tcSplitOfferSections(text){
   const normalized = normalizeTCText(text);
   const parts = normalized
@@ -674,6 +813,10 @@ function analyzeTCSection(text){
   r.eligibilityNotes=[];
   r.payoutConditions=[];
   r.restrictionNotes=[];
+  r.offerTags=[];
+  r.evidence=[];
+  r.hybridScore=0;
+  r.hybridConfidence='Low';
 
   /* ---------- core promo fields ---------- */
   r.bankName=tcKnownBankName(normalized)||undefined;
@@ -916,10 +1059,14 @@ function analyzeTCSection(text){
   if(r.ddAmount&&r.newMoneyAmount)review.push('Promo has both direct deposit and funding-style requirements — check notes summary.');
   if(r.bonusTiers&&!r.bonusAmount)review.push('Tiered bonus detected — confirm which tier you want to track.');
   if(review.length)r.reviewFlags=review;
+
+  tcApplyHybridPatterns(r, normalized, segments);
   /* ---------- tracker-ready notes ---------- */
   const n=[];
 
   n.push('TRACKER SUMMARY:');
+  n.push(`* Hybrid confidence: ${r.hybridConfidence}`);
+  if(r.offerTags?.length)n.push(`* Detected patterns: ${r.offerTags.join(', ')}`);
   if(r.bonusAmount)n.push(`* Offer: ${r.bonusAmount}${r.acctType ? ' — ' + r.acctType : ''}`);
   if(r.openBy)n.push(`* Open by: ${r.openBy}`);
   else if(r.openWindow)n.push(`* Open window: ${r.openWindow}`);
@@ -977,6 +1124,12 @@ function analyzeTCSection(text){
   if(r.taxForm)n.push(`* Tax: ${r.taxForm}`);
   if(!r.currentCustomerIneligible && !r.churnMonths && !r.priorBonusIneligible)n.push('* No clear churn restriction detected');
   if(/cannot be combined|not be combined/.test(t))n.push('* Cannot be combined with other offers');
+
+  if(r.evidence?.length){
+    n.push('');
+    n.push('EVIDENCE SNAPSHOT:');
+    r.evidence.slice(0,5).forEach(ev=>n.push(`* ${ev}`));
+  }
 
   if(r.reviewFlags&&r.reviewFlags.length){
     n.push('');
