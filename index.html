@@ -1064,76 +1064,80 @@ function analyzeTCSection(text){
   /* ---------- tracker-ready notes ---------- */
   const n=[];
 
-  n.push('TRACKER SUMMARY:');
-  n.push(`* Hybrid confidence: ${r.hybridConfidence}`);
-  if(r.offerTags?.length)n.push(`* Detected patterns: ${r.offerTags.join(', ')}`);
-  if(r.bonusAmount)n.push(`* Offer: ${r.bonusAmount}${r.acctType ? ' — ' + r.acctType : ''}`);
+  n.push('SIMPLE TERMS:');
+  if(r.bonusAmount)n.push(`* Bonus: ${r.bonusAmount}`);
+  if(r.acctType)n.push(`* Account: ${r.acctType}`);
   if(r.openBy)n.push(`* Open by: ${r.openBy}`);
   else if(r.openWindow)n.push(`* Open window: ${r.openWindow}`);
-  if(r.residency)n.push(`* Residency: ${r.residency}`);
-  if(r.limitOneBonus)n.push('* Limit: one bonus per customer/account');
-  if(r.primaryOwnerOnly)n.push('* Paid to: primary owner only');
-
-  n.push('');
-  n.push('QUALIFY BY:');
-  if(r.qualifyingPaths?.length){
-    r.qualifyingPaths.forEach(x=>n.push(`* ${x}`));
-  }else{
-    if(r.ddAmount){
-      let ddStr=`* Direct deposit: ${r.ddAmount}`;
-      if(r.ddCount)ddStr+=` (${r.ddCount}+ deposits)`;
-      n.push(ddStr);
-    }
-    if(r.debitTxns)n.push(`* Debit card transactions: ${r.debitTxns}`);
-    if(r.activityCount)n.push(`* Other qualifying activity: ${r.activityCount} transaction(s)`);
-  }
-  if(r.timeline)n.push(`* Complete within: ${r.timeline}`);
-  if(r.statementCycleCutoff)n.push(`* Cutoff: ${r.statementCycleCutoff}`);
-  if(r.minOpeningDeposit)n.push(`* Opening deposit: ${r.minOpeningDeposit}`);
-
-  n.push('');
-  n.push('WHAT COUNTS:');
-  if(r.ddExamples?.length)n.push(`* Direct deposit examples: ${r.ddExamples.join(', ')}`);
-  if(r.directDebitExamples?.length)n.push(`* ACH direct debit examples: ${r.directDebitExamples.join(', ')}`);
-  if(r.ddExcluded?.length)n.push(`* Does NOT count as DD: ${r.ddExcluded.join(', ')}`);
-  if(!r.ddExamples?.length && !r.directDebitExamples?.length && !r.ddExcluded?.length)n.push('* Not clearly specified');
-
-  n.push('');
-  n.push('ACCOUNT MUST STAY:');
-  if(r.minDaysOpen)n.push(`* Open at least: ${r.minDaysOpen} days`);
-  if(r.mustBePositiveAtQualEnd)n.push('* Positive balance at end of qualifying period');
-  if(r.accountActiveAtPayout)n.push('* Account must still be active at payout');
-  if(r.mustBePositiveAtPayout)n.push('* Positive balance required at payout');
-  if(!r.minDaysOpen && !r.mustBePositiveAtQualEnd && !r.accountActiveAtPayout && !r.mustBePositiveAtPayout)n.push('* No extra account-state condition detected');
-
-  n.push('');
-  n.push('FEES & PAYOUT:');
   n.push(`* Monthly fee: ${r.monthlyFee || 'Not clearly stated in pasted T&C'}`);
   if(r.feeWaiver)n.push(`* Fee waiver: ${r.feeWaiver}`);
-  if(r.bonusPostTime)n.push(`* Bonus timing: ${r.bonusPostTime}`);
-  if(r.earlyCloseFee || r.earlyCloseDays)n.push(`* Early close: ${r.earlyCloseFee || 'Fee applies'}${r.earlyCloseDays ? ` if closed within ${r.earlyCloseDays} days` : ''}`);
-  else n.push('* Early close: Not mentioned');
-  if(r.transactionsMustPost)n.push('* Transactions must post/settle to count');
-  if(r.offerMutable)n.push('* Offer may be modified or withdrawn anytime');
+  if(r.bonusPostTime)n.push(`* Bonus posts: ${r.bonusPostTime}`);
+  if(r.earlyCloseFee || r.earlyCloseDays)n.push(`* Early close fee: ${r.earlyCloseFee || 'Fee applies'}${r.earlyCloseDays ? ` if closed within ${r.earlyCloseDays} days` : ''}`);
+  else n.push('* Early close fee: Not mentioned');
+  if(r.residency)n.push(`* Availability: ${r.residency}`);
+
+  n.push('');
+  n.push('HOW TO EARN THE BONUS:');
+  let step=1;
+  if(r.minOpeningDeposit)n.push(`* ${step++}. Open the account with ${r.minOpeningDeposit}`);
+  else n.push(`* ${step++}. Open the required account`);
+
+  if(r.qualifyingPaths?.length){
+    r.qualifyingPaths.forEach(path=>n.push(`* ${step++}. ${path}`));
+  }else{
+    if(r.ddAmount){
+      let ddStr=`* ${step++}. Make direct deposit${r.ddAmount ? ' of ' + r.ddAmount : ''}`;
+      if(r.ddCount)ddStr+=` (${r.ddCount}+ deposits)`;
+      if(r.ddPerCycle)ddStr+=' per statement cycle';
+      if(r.ddMonthly)ddStr+=' per month';
+      n.push(ddStr);
+    }
+    if(r.newMoneyAmount){
+      let nm=`* ${step++}. Deposit ${r.newMoneyAmount} of new money`;
+      if(r.newMoneyDays)nm+=` within ${r.newMoneyDays} days`;
+      n.push(nm);
+    }
+    if(r.maintainBalance || r.maintainDays){
+      let mb=`* ${step++}. Maintain ${r.maintainBalance || 'the required balance'}`;
+      if(r.maintainDays)mb+=` for ${r.maintainDays} days`;
+      n.push(mb);
+    }
+    if(r.activityCount){
+      let act=`* ${step++}. Complete ${r.activityCount} qualifying transactions`;
+      if(r.activityDays)act+=` within ${r.activityDays} days`;
+      n.push(act);
+    }
+    if(r.debitTxns)n.push(`* ${step++}. Complete ${r.debitTxns} debit card transactions`);
+  }
+
+  if(r.timeline)n.push(`* ${step++}. Finish requirements within ${r.timeline}`);
+  if(r.statementCycleCutoff)n.push(`* ${step++}. Transactions must post/settle by the statement-cycle cutoff`);
+  if(r.minDaysOpen)n.push(`* ${step++}. Keep the account open at least ${r.minDaysOpen} days`);
+  if(r.mustBePositiveAtQualEnd)n.push(`* ${step++}. Have a positive balance at the end of the qualifying period`);
+  if(r.accountActiveAtPayout)n.push(`* ${step++}. Keep the account active until bonus payout`);
+  if(r.mustBePositiveAtPayout)n.push(`* ${step++}. Have a positive balance when the bonus is paid`);
+
+  n.push('');
+  n.push('WHAT COUNTS / WHAT DOES NOT:');
+  if(r.ddExamples?.length)n.push(`* Direct deposit examples: ${r.ddExamples.join(', ')}`);
+  if(r.directDebitExamples?.length)n.push(`* ACH debit examples: ${r.directDebitExamples.join(', ')}`);
+  if(r.ddExcluded?.length)n.push(`* Does not count: ${r.ddExcluded.join(', ')}`);
+  if(!r.ddExamples?.length && !r.directDebitExamples?.length && !r.ddExcluded?.length)n.push('* Not clearly stated');
 
   n.push('');
   n.push('ELIGIBILITY / CHURN:');
-  if(r.currentCustomerIneligible)n.push('* Current checking customers not eligible');
-  if(r.churnMonths)n.push(`* Prior closure cooldown: ${r.churnMonths} months`);
-  if(r.priorBonusIneligible)n.push('* Prior new-account bonus recipients not eligible');
-  if(r.taxForm)n.push(`* Tax: ${r.taxForm}`);
-  if(!r.currentCustomerIneligible && !r.churnMonths && !r.priorBonusIneligible)n.push('* No clear churn restriction detected');
+  if(r.currentCustomerIneligible)n.push('* Current customers may not be eligible');
+  if(r.churnMonths)n.push(`* Prior closure restriction: ${r.churnMonths} months`);
+  if(r.priorBonusIneligible)n.push('* Previous bonus recipients are not eligible');
+  if(r.limitOneBonus)n.push('* Limit one bonus per customer/account');
+  if(r.primaryOwnerOnly)n.push('* Bonus paid to primary owner');
   if(/cannot be combined|not be combined/.test(t))n.push('* Cannot be combined with other offers');
+  if(r.taxForm)n.push(`* Tax form / tax note: ${r.taxForm}`);
+  if(!r.currentCustomerIneligible && !r.churnMonths && !r.priorBonusIneligible && !r.limitOneBonus)n.push('* No clear restriction extracted');
 
-  if(r.evidence?.length){
+  if(r.reviewFlags?.length){
     n.push('');
-    n.push('EVIDENCE SNAPSHOT:');
-    r.evidence.slice(0,5).forEach(ev=>n.push(`* ${ev}`));
-  }
-
-  if(r.reviewFlags&&r.reviewFlags.length){
-    n.push('');
-    n.push('REVIEW:');
+    n.push('REVIEW / WEIRD WORDING:');
     r.reviewFlags.forEach(x=>n.push(`* ${x}`));
   }
 
@@ -1145,6 +1149,12 @@ function analyzeTCSection(text){
       const amt=offer.bonusAmount ? ` — ${offer.bonusAmount}` : '';
       n.push(`* ${label}${amt}`);
     });
+  }
+
+  if(r.hybridConfidence==='Low'){
+    n.push('');
+    n.push('ANALYZER NOTE:');
+    n.push('* Confidence is low on this one. Double-check the pasted terms manually.');
   }
 
   r.notesForTracker=n.filter(Boolean).join('\n');
