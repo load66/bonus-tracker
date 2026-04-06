@@ -269,10 +269,12 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 @media (max-width:600px){.st .n{font-size:20px !important}.st .l{font-size:8px !important}}
 
 /* safari-browser-bottom-optimization */
-@media (max-width:700px){.tabs{left:10px;right:10px;bottom:8px !important;border:1px solid #E6EAF2;border-radius:24px;box-shadow:0 12px 28px rgba(15,23,42,.10);padding:6px 0 8px !important}.fab{bottom:78px !important}.scroll{padding-bottom:135px !important}}
+@media (max-width:700px){.tabs{left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 72px) !important;border:1px solid #E6EAF2;border-radius:24px;box-shadow:0 12px 28px rgba(15,23,42,.10);padding:6px 0 8px !important}.fab{bottom:calc(env(safe-area-inset-bottom) + 142px) !important}.scroll{padding-bottom:200px !important}}
 
-/* full-width-mobile-fit */
-html,body,.app{max-width:100%;overflow-x:hidden}@media (max-width:700px){.hdr{padding-left:8px !important;padding-right:8px !important}.scroll{padding-left:8px !important;padding-right:8px !important}.tabs{left:0 !important;right:0 !important;border-left:none !important;border-right:none !important;border-radius:0 !important}.hero,.chart,.card,.qbtn,.sinput,.tc-btn,.feed-c,.sug-c,.tax-c,.rcard,.ph-card{max-width:100%}}
+
+/* split suggested-next panels */
+.sug-split{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}.sug-panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:8px;box-shadow:0 1px 4px rgba(0,0,0,.04)}.sug-panel-h{font-size:9px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;padding:0 2px}.sug-panel .sug-c{margin-bottom:6px}.sug-panel .sug-c:last-child{margin-bottom:0}.sug-empty{font-size:10px;color:var(--muted);padding:10px 6px;line-height:1.4}@media (max-width:430px){.sug-split{gap:6px}.sug-panel{padding:7px;border-radius:12px}.sug-panel-h{font-size:8px}.sug-panel .sug-c{padding:8px 9px}.sug-empty{font-size:9px;padding:8px 4px}}
+
 </style>
 </head>
 <body>
@@ -334,7 +336,8 @@ function getCountdown(e){
   if(s==='TIME TO CHURN!')return{lbl:'Ready now!',days:0,date:'',cls:'green',icon:'\uD83D\uDD25'};
   return null}
 function getUrg(e){const s=status(e);if(s==='TIME TO CHURN!')return'red';if(s==='SAFE TO CLOSE')return'green';if(s==='3-DAY BUFFER')return'yellow';const dsc=daysUntilSafe(e);if(!e.closed&&dsc!==null&&dsc<=7)return'red';if(!e.closed&&dsc!==null&&dsc<=30)return'yellow';if(s==='WAITING TO CHURN!'){const dl=daysLeft(e);if(dl!==null&&dl<=30)return'yellow'}if(s==='WORKING')return'blue';return'green'}
-function getSuggestions(){const sug=[];entries.forEach(e=>{if(!e||!e.bank)return;const st=status(e);let pri=99,days=999999,rsn='';if(st==='TIME TO CHURN!'){pri=0;days=0;rsn='Ready to churn now.'}else if(st==='WAITING TO CHURN!'){const dl=daysLeft(e);if(dl!==null){pri=1;days=dl;rsn=dl+'d until churn.'}}else if(st==='SAFE TO CLOSE'){pri=2;days=0;rsn=e.bonusRecd?'Safe to close now.':'Safe to close — review before closing.'}else if(st==='3-DAY BUFFER'){const d=daysUntilSafe(e);if(d!==null){pri=3;days=d;rsn=d+'d left in close buffer.'}}else if(!e.closed&&!e.bonusRecd&&e.opened&&e.reqDays>0){const d=daysToDeadline(e);if(d!==null&&d<=45){pri=4;days=Math.max(0,d);rsn=d<0?'Requirement deadline passed.':d+'d to requirement deadline.'}}if(pri===99&&!e.closed&&e.opened&&e.minHoldDays>0&&!e.feeChecked){const d=daysUntilSafe(e);if(d!==null&&d<=45){pri=5;days=Math.max(0,d);rsn=d<=0?'Safe to close now.':d+'d until safe to close.'}}if(pri<99)sug.push({bank:e.bank,bonus:e.bonus||0,rsn,pri,days})});return sug.sort((a,b)=>a.pri-b.pri||a.days-b.days||(b.bonus||0)-(a.bonus||0)||a.bank.localeCompare(b.bank)).slice(0,5)}
+function getAttentionSuggestions(){const sug=[];entries.forEach(e=>{if(!e||!e.bank)return;const st=status(e);let pri=99,days=999999,rsn='';if(!e.closed&&!e.bonusRecd&&e.opened&&e.reqDays>0){const d=daysToDeadline(e);if(d!==null){pri=d<0?0:1;days=Math.abs(d);rsn=d<0?'Requirement deadline passed.':d===0?'Requirement deadline is today.':d+'d to requirement deadline.'}}else if(!e.closed&&e.bonusRecd&&e.plannedClose){const d=dB(td(),e.plannedClose);pri=d<=0?2:3;days=Math.abs(d);rsn=d<=0?'Planned close is due.':d+'d to planned close.'}else if(st==='SAFE TO CLOSE'){pri=4;days=0;rsn='Safe to close now.'}else if(st==='3-DAY BUFFER'){const d=daysUntilSafe(e);if(d!==null){pri=5;days=Math.abs(d);rsn=d+'d left in close buffer.'}}else if(!e.closed&&e.opened&&e.minHoldDays>0&&!e.feeChecked){const d=daysUntilSafe(e);if(d!==null){pri=d<=0?4:6;days=Math.abs(d);rsn=d<=0?'Safe to close now.':d+'d until safe to close.'}}if(pri<99)sug.push({bank:e.bank,bonus:e.bonus||0,rsn,pri,days})});return sug.sort((a,b)=>a.pri-b.pri||a.days-b.days||(b.bonus||0)-(a.bonus||0)||a.bank.localeCompare(b.bank)).slice(0,4)}
+function getChurnSuggestions(){const sug=[];entries.forEach(e=>{if(!e||!e.bank||!e.closed||!e.churn)return;const st=status(e);if(st==='TIME TO CHURN!'){sug.push({bank:e.bank,bonus:e.bonus||0,rsn:'Ready to churn now.',days:0})}else if(st==='WAITING TO CHURN!'){const dl=daysLeft(e);if(dl!==null)sug.push({bank:e.bank,bonus:e.bonus||0,rsn:dl+'d until churn.',days:dl})}});return sug.sort((a,b)=>a.days-b.days||(b.bonus||0)-(a.bonus||0)||a.bank.localeCompare(b.bank)).slice(0,4)}
 function chartData(){const ms=[];for(let m=0;m<12;m++){const l=['J','F','M','A','M','J','J','A','S','O','N','D'][m];const t=entries.filter(e=>isCompleted(e)&&new Date(e.closed+'T00:00:00').getFullYear()===dashYear&&new Date(e.closed+'T00:00:00').getMonth()===m).reduce((s,e)=>s+(e.bonus||0),0);ms.push({l,t})}return ms}
 function normalizeBankFamily(name){let n=(name||'').toLowerCase().trim();n=n.replace(/[®'.]/g,'');n=n.replace(/&/g,' and ');n=n.replace(/\bbiz\b|\bbusiness\b/g,'');n=n.replace(/\bchecking\b|\bsavings\b|\baccount\b|\baccounts\b/g,'');n=n.replace(/\bessentials\b|\bpreferred\b|\bcomplete\b|\badvantage\b|\beveryday\b|\bpremier\b|\bplus\b|\bbasic\b|\belite\b|\bselect\b|\bsmartly\b/g,'');n=n.replace(/\s+/g,' ').trim();if(/\bu\s*s\s*bank\b/.test(n))return'u.s. bank';if(/\bbank of america\b|\bbofa\b|\bboa\b/.test(n))return'bank of america';if(/\bwells\s*fargo\b/.test(n))return'wells fargo';if(/\bcapital\s*one\b/.test(n))return'capital one';if(/\bfifth\s*third\b|\b53\b/.test(n))return'fifth third';if(/\bciti(?:bank)?\b/.test(n))return'citibank';if(/\bcommunity\s*america\b/.test(n))return'community america';if(/\bnavy\s*federal\b/.test(n))return'navy federal';if(/\btd\s*bank\b/.test(n))return'td bank';return n}
 function bankTypeCode(name){return(/\bbiz\b|\bbusiness\b/i.test(name||''))?'B':'P'}
@@ -1053,16 +1056,14 @@ function rTracker(sorted){
     h += '</div>';
   });
 
-  const sug=getSuggestions();
-  if(sug.length){
+  const attentionSug=getAttentionSuggestions();
+  const churnSug=getChurnSuggestions();
+  if(attentionSug.length||churnSug.length){
     h += '<div class="sec">Suggested next</div>';
-    sug.forEach(s=>{
-      h += `<div class="sug-c">${bankLogo(s.bank,true)}<div class="s-info"><div class="nm">${esc(s.bank)}</div>${s.bonus?`<div class="sub">${fM(s.bonus)}</div>`:''}<div class="rsn">${esc(s.rsn)}</div></div></div>`;
-    });
-  }
-
-  if(!sug.length){
-    h += '<div class="empty" style="padding:18px 10px"><p>No banks need urgent attention right now.</p></div>';
+    h += '<div class="sug-split">';
+    h += '<div class="sug-panel"><div class="sug-panel-h">Needs attention</div>'+(attentionSug.length?attentionSug.map(s=>`<div class="sug-c">${bankLogo(s.bank,true)}<div class="s-info"><div class="nm">${esc(s.bank)}</div>${s.bonus?`<div class="sub">${fM(s.bonus)}</div>`:''}<div class="rsn">${esc(s.rsn)}</div></div></div>`).join(''):'<div class="sug-empty">No urgent items.</div>')+'</div>';
+    h += '<div class="sug-panel"><div class="sug-panel-h">Least days to churn</div>'+(churnSug.length?churnSug.map(s=>`<div class="sug-c">${bankLogo(s.bank,true)}<div class="s-info"><div class="nm">${esc(s.bank)}</div>${s.bonus?`<div class="sub">${fM(s.bonus)}</div>`:''}<div class="rsn">${esc(s.rsn)}</div></div></div>`).join(''):'<div class="sug-empty">Nothing cooling down yet.</div>')+'</div>';
+    h += '</div>';
   }
 
   return h;
