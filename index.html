@@ -267,12 +267,6 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 
 /* stat-type-tweak */
 @media (max-width:600px){.st .n{font-size:20px !important}.st .l{font-size:8px !important}}
-
-/* safari-browser-bottom-optimization */
-@media (max-width:700px){.tabs{left:10px;right:10px;bottom:8px !important;border:1px solid #E6EAF2;border-radius:24px;box-shadow:0 12px 28px rgba(15,23,42,.10);padding:6px 0 8px !important}.fab{bottom:78px !important}.scroll{padding-bottom:135px !important}}
-
-/* full-width-mobile-fit */
-html,body,.app{max-width:100%;overflow-x:hidden}@media (max-width:700px){.hdr{padding-left:8px !important;padding-right:8px !important}.scroll{padding-left:8px !important;padding-right:8px !important}.tabs{left:0 !important;right:0 !important;border-left:none !important;border-right:none !important;border-radius:0 !important}.hero,.chart,.card,.qbtn,.sinput,.tc-btn,.feed-c,.sug-c,.tax-c,.rcard,.ph-card{max-width:100%}}
 </style>
 </head>
 <body>
@@ -334,7 +328,46 @@ function getCountdown(e){
   if(s==='TIME TO CHURN!')return{lbl:'Ready now!',days:0,date:'',cls:'green',icon:'\uD83D\uDD25'};
   return null}
 function getUrg(e){const s=status(e);if(s==='TIME TO CHURN!')return'red';if(s==='SAFE TO CLOSE')return'green';if(s==='3-DAY BUFFER')return'yellow';const dsc=daysUntilSafe(e);if(!e.closed&&dsc!==null&&dsc<=7)return'red';if(!e.closed&&dsc!==null&&dsc<=30)return'yellow';if(s==='WAITING TO CHURN!'){const dl=daysLeft(e);if(dl!==null&&dl<=30)return'yellow'}if(s==='WORKING')return'blue';return'green'}
-function getSuggestions(){const sug=[];entries.filter(e=>e.closed&&e.churn).forEach(e=>{const dl=daysLeft(e);if(dl!==null&&dl<=0)sug.push({bank:e.bank,rsn:'Cooldown expired! Ready to re-open.',bonus:e.bonus});else if(dl!==null&&dl<=30)sug.push({bank:e.bank,rsn:'Cooldown expires in '+dl+' days.',bonus:e.bonus})});const active=new Set(entries.map(e=>e.bank.toLowerCase()));TEMPLATES.forEach(t=>{if(!active.has(t.bank.toLowerCase()))sug.push({bank:t.bank,rsn:'Not yet tried. '+fM(t.bonus)+' available.',bonus:t.bonus})});return sug.slice(0,4)}
+function getSuggestions(){
+  const sug=[];
+  const seen=new Set();
+  const add=(bank,bonus,rsn,tag)=>{const key=bankKey(bank);if(seen.has(key))return;seen.add(key);sug.push({bank,bonus,rsn,tag})};
+
+  entries.filter(e=>e.closed&&e.churn).sort((a,b)=>(b.bonus||0)-(a.bonus||0)).forEach(e=>{
+    const dl=daysLeft(e);
+    if(dl!==null&&dl<=0) add(e.bank,e.bonus,'Cooldown done. Ready to reopen now.','READY NOW');
+  });
+
+  entries.filter(e=>e.closed&&e.churn).sort((a,b)=>(daysLeft(a)??999)-(daysLeft(b)??999)||((b.bonus||0)-(a.bonus||0))).forEach(e=>{
+    const dl=daysLeft(e);
+    if(dl!==null&&dl>0&&dl<=30) add(e.bank,e.bonus,'Cooldown ends in '+dl+' days.','SOON');
+  });
+
+  entries.filter(e=>!e.closed&&e.bonusRecd&&(status(e)==='SAFE TO CLOSE'||status(e)==='3-DAY BUFFER')).sort((a,b)=>(daysUntilSafe(a)??0)-(daysUntilSafe(b)??0)).forEach(e=>{
+    const s=status(e);
+    if(s==='SAFE TO CLOSE') add(e.bank,e.bonus,'Safe to close and lock in the bonus.','CLOSE OK');
+    else add(e.bank,e.bonus,'Close in '+(daysUntilSafe(e)??0)+' days to avoid the fee.','CLOSE SOON');
+  });
+
+  const existingKeys=new Set(entries.map(e=>bankKey(e.bank)));
+  TEMPLATES
+    .filter(t=>!existingKeys.has(bankKey(t.bank)))
+    .map(t=>({
+      ...t,
+      score:(t.bonus||0)
+        + ((t.churn==='1'||t.churn==='180')?120:0)
+        + ((t.earlyCloseFee||0)===0?50:0)
+        + ((t.minHoldDays||0)<=90?35:0)
+        + ((t.reqDays||0)&&t.reqDays<=60?20:0)
+    }))
+    .sort((a,b)=>b.score-a.score||((b.bonus||0)-(a.bonus||0)))
+    .forEach(t=>{
+      const tag=(t.bonus||0)>=500?'HIGH BONUS':((t.churn==='1'||t.churn==='180')?'EASY NEXT':'UNTRIED');
+      add(t.bank,t.bonus,'Strong untried option based on bonus and churn.',''+tag);
+    });
+
+  return sug.slice(0,4)
+}
 function chartData(){const ms=[];for(let m=0;m<12;m++){const l=['J','F','M','A','M','J','J','A','S','O','N','D'][m];const t=entries.filter(e=>isCompleted(e)&&new Date(e.closed+'T00:00:00').getFullYear()===dashYear&&new Date(e.closed+'T00:00:00').getMonth()===m).reduce((s,e)=>s+(e.bonus||0),0);ms.push({l,t})}return ms}
 function normalizeBankFamily(name){let n=(name||'').toLowerCase().trim();n=n.replace(/[®'.]/g,'');n=n.replace(/&/g,' and ');n=n.replace(/\bbiz\b|\bbusiness\b/g,'');n=n.replace(/\bchecking\b|\bsavings\b|\baccount\b|\baccounts\b/g,'');n=n.replace(/\bessentials\b|\bpreferred\b|\bcomplete\b|\badvantage\b|\beveryday\b|\bpremier\b|\bplus\b|\bbasic\b|\belite\b|\bselect\b|\bsmartly\b/g,'');n=n.replace(/\s+/g,' ').trim();if(/\bu\s*s\s*bank\b/.test(n))return'u.s. bank';if(/\bbank of america\b|\bbofa\b|\bboa\b/.test(n))return'bank of america';if(/\bwells\s*fargo\b/.test(n))return'wells fargo';if(/\bcapital\s*one\b/.test(n))return'capital one';if(/\bfifth\s*third\b|\b53\b/.test(n))return'fifth third';if(/\bciti(?:bank)?\b/.test(n))return'citibank';if(/\bcommunity\s*america\b/.test(n))return'community america';if(/\bnavy\s*federal\b/.test(n))return'navy federal';if(/\btd\s*bank\b/.test(n))return'td bank';return n}
 function bankTypeCode(name){return(/\bbiz\b|\bbusiness\b/i.test(name||''))?'B':'P'}
@@ -1057,20 +1090,8 @@ function rTracker(sorted){
   if(sug.length){
     h += '<div class="sec">Suggested next</div>';
     sug.forEach(s=>{
-      h += `<div class="sug-c">${bankLogo(s.bank,true)}<div class="s-info"><div class="nm">${esc(s.bank)}</div>${s.bonus?`<div class="sub">${fM(s.bonus)}</div>`:''}<div class="rsn">${esc(s.rsn)}</div></div></div>`;
+      h += `<div class="sug-c">${bankLogo(s.bank,true)}<div class="s-info"><div class="nm">${esc(s.bank)}</div>${s.bonus?`<div class="sub">${fM(s.bonus)}${s.tag?` • ${esc(s.tag)}`:''}</div>`:''}<div class="rsn">${esc(s.rsn)}</div></div></div>`;
     });
-  }
-
-  h += '<div class="sec">Latest bonuses</div>';
-  if(!feedItems&&!feedLoading) h += `<button class="tc-btn" style="border-style:solid;background:#EFF6FF" onclick="loadFeed()">${I.feed}<span>Load from Doctor of Credit</span></button>`;
-  else if(feedLoading) h += '<div class="empty"><span class="spin"></span></div>';
-  else if(feedItems){
-    feedItems.forEach(f=>{
-      const d=f.date?new Date(f.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
-      h += `<a href="${f.link}" target="_blank" rel="noopener" class="feed-c"><div class="feed-t">${esc(f.title)}</div><div class="feed-d">${d}</div></a>`;
-    });
-  }else{
-    DOC_LINKS.forEach(([t,u])=>{ h += `<a href="${u}" target="_blank" rel="noopener" class="feed-c"><div class="feed-t">${esc(t)}</div></a>`; });
   }
 
   return h;
@@ -1143,12 +1164,12 @@ function formatAnalyzedBankName(name,isBiz){let bank=(name||'').trim();if(!bank)
 function openEdit(id){const e=entries.find(x=>x.id===id);if(e){modal={...e,analyzedTC:e.analyzedTC||'',_edit:true};showInlineAZ=false;inlineResult=null;R()}}
 function closeModal(){modal=null;showInlineAZ=false;inlineResult=null;R()}
 function clearFields(){if(!modal)return;['bonus','churn','opened','closed','bonusRecd','reqMet','dataPoint','notes'].forEach(k=>{modal[k]=''});['reqDays','minHoldDays','earlyCloseFee','referralBonus'].forEach(k=>{modal[k]=0});modal.bonus=0;modal.feeChecked=false;R()}
-function saveEntry(){const bank=(modal.bank||'').trim();if(!bank){alert('Bank name required');return}const d={bank,bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',plannedClose:modal.plannedClose||'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false};if(modal._edit){entries=entries.map(e=>e.id===modal.id?{...e,...d,checklist:e.checklist||[]}:e)}else{if(!modal._skipDuplicateCheck){const existing=findExistingByBank(bank);if(existing){overwritePrompt=makeDuplicatePrompt(d,existing,'manual');closeModal();R();return}}const taken=new Set(entries.map(e=>e.id));d.id=genId(bank,taken);d.checklist=[];entries.push(d)}entries=sortE(entries);sv(SK,entries);closeModal()}
-function chooseMatch(id){if(!matchPickerPrompt)return;const picked=matchPickerPrompt.matches.find(m=>m.id===id);if(!picked)return;const d=matchPickerPrompt.newData||{};const ok=window.confirm('Delete '+picked.bank+' ('+picked.id+') and create a new analyzer entry instead?');if(!ok)return;entries=entries.filter(e=>e.id!==picked.id);sv(SK,entries);matchPickerPrompt=null;modal={...d,checklist:[],_skipDuplicateCheck:true};tab='tracker';search='';expanded=null;R()}
-function skipMatchPickerToNew(){if(!matchPickerPrompt)return;modal={...matchPickerPrompt.newData,checklist:[],_skipDuplicateCheck:true};matchPickerPrompt=null;tab='tracker';search='';R()}
+function saveEntry(){const bank=(modal.bank||'').trim();if(!bank){alert('Bank name required');return}const d={bank,bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',plannedClose:modal.plannedClose||'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false};if(modal._edit){entries=entries.map(e=>e.id===modal.id?{...e,...d,checklist:e.checklist||[]}:e)}else{const existing=findExistingByBank(bank);if(existing){overwritePrompt=makeDuplicatePrompt(d,existing,'manual');closeModal();R();return}const taken=new Set(entries.map(e=>e.id));d.id=genId(bank,taken);d.checklist=[];entries.push(d)}entries=sortE(entries);sv(SK,entries);closeModal()}
+function chooseMatch(id){if(!matchPickerPrompt)return;const picked=matchPickerPrompt.matches.find(m=>m.id===id);if(!picked)return;overwritePrompt=makeDuplicatePrompt(matchPickerPrompt.newData,picked,'analyzer');matchPickerPrompt=null;R()}
+function skipMatchPickerToNew(){if(!matchPickerPrompt)return;modal={...matchPickerPrompt.newData,checklist:[]};matchPickerPrompt=null;tab='tracker';search='';R()}
 function doOpenExisting(){if(!overwritePrompt||!overwritePrompt.existingEntry)return;const p=overwritePrompt;const ex={...p.existingEntry};if(p.source==='analyzer'){modal={...ex,analyzedTC:p.newData.analyzedTC||ex.analyzedTC||'',_edit:true};overwritePrompt=null;expanded=ex.id;tab='tracker';search='';R();return}expanded=ex.id;overwritePrompt=null;tab='tracker';search='';R()}
 function doOverwrite(){if(!overwritePrompt)return;const p=overwritePrompt;const d=p.newData;entries=entries.map(e=>{if(e.id===p.existingEntry.id){return{...e,bank:d.bank,bonus:d.bonus,churn:d.churn,opened:d.opened||td(),closed:'',bonusRecd:'',reqMet:'',notes:d.notes,analyzedTC:d.analyzedTC,minHoldDays:d.minHoldDays,earlyCloseFee:d.earlyCloseFee,reqDays:d.reqDays,referralBonus:d.referralBonus||0,dataPoint:d.dataPoint,plannedClose:'',phoneNum:d.phoneNum||e.phoneNum||'',checklist:[],feeChecked:false}}return e});entries=sortE(entries);sv(SK,entries);overwritePrompt=null;expanded=p.existingEntry.id;R()}
-function doAddNew(){if(!overwritePrompt)return;const p=overwritePrompt;const d={...p.newData};if(p.source==='analyzer'){modal={...d,checklist:[],_skipDuplicateCheck:true};overwritePrompt=null;tab='tracker';search='';R();return}const taken=new Set(entries.map(e=>e.id));d.id=genId(d.bank,taken);d.checklist=[];d.feeChecked=false;entries.push(d);entries=sortE(entries);sv(SK,entries);overwritePrompt=null;R()}
+function doAddNew(){if(!overwritePrompt)return;const p=overwritePrompt;const d={...p.newData};if(p.source==='analyzer'){modal={...d,checklist:[]};overwritePrompt=null;tab='tracker';search='';R();return}const taken=new Set(entries.map(e=>e.id));d.id=genId(d.bank,taken);d.checklist=[];d.feeChecked=false;entries.push(d);entries=sortE(entries);sv(SK,entries);overwritePrompt=null;R()}
 function resetAllData(){cfm={title:'\u26A0\uFE0F Reset All Data',msg:'This will permanently delete ALL entries, data points, and saved requirements.\n\nYour exported backup file is not affected.',action:()=>{cfm={title:'\u{1F6A8} Are you absolutely sure?',msg:'Type RESET to confirm. This cannot be undone.',action:()=>{entries=[];sv(SK,[]);try{localStorage.removeItem(DD_KEY);localStorage.removeItem(REQ_KEY);localStorage.removeItem(BK_KEY)}catch{}cfm=null;expanded=null;R()}};R()}};R()}
 function delEntry(id){const e=entries.find(x=>x.id===id);cfm={title:'\u{1F5D1} Delete Entry',msg:'Remove '+e.bank+'?\n\nThis cannot be undone.',action:()=>{cfm={title:'Confirm Delete',msg:'Are you sure you want to delete '+e.bank+'?',action:()=>{entries=entries.filter(x=>x.id!==id);sv(SK,entries);cfm=null;expanded=null;R()}};R()}};R()}
 function closeAcct(id){const e=entries.find(x=>x.id===id);if(!e)return;feeCheckPrompt={entryId:id,bank:e.bank,step:'ask',months:e.minHoldDays>0?Math.round(e.minHoldDays/30):6,feeAmount:e.earlyCloseFee||0};R()}
