@@ -256,17 +256,26 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 .card-logo-col{display:flex;flex-direction:column;align-items:flex-start;gap:8px;flex-shrink:0;width:64px}.card-mini-chip{display:inline-flex;align-items:center;justify-content:center;min-width:44px;padding:6px 10px;border-radius:999px;font-size:10px;font-weight:900;letter-spacing:.7px;color:#fff;box-shadow:0 8px 16px rgba(15,23,42,.18);border:1px solid rgba(255,255,255,.22)}.card-mini-chip.c1{background:linear-gradient(135deg,#149c5a,#0d6d40)}.card-mini-chip.c2{background:linear-gradient(135deg,#3f83f8,#265dd9)}.card-mini-chip.c3{background:linear-gradient(135deg,#f59e0b,#d97706)}.card-mini-chip.c180{background:linear-gradient(135deg,#8b5cf6,#6d28d9)}
 @media (max-width:430px){.hdr{padding:max(env(safe-area-inset-top),7px) 11px 9px}.hdr h1{font-size:15px}.hdr-sub{font-size:6.5px;letter-spacing:1.2px}.yr-btn{padding:6px 11px;font-size:8.5px}.hero{margin-top:8px;padding:11px 11px;border-radius:18px}.hero-kicker{font-size:8px;letter-spacing:1.5px}.hero-value{font-size:22px}.hero-note{font-size:9px;margin-top:5px}.hero-chip{font-size:11px;padding:9px 13px}.stats{gap:5px;margin-top:8px}.st{min-height:58px;padding:9px 7px;border-radius:15px}.st .n{font-size:17px}.st .l{font-size:6.5px;letter-spacing:1.4px;margin-top:5px}.scroll{padding:9px 11px 104px}.qbar{gap:7px;margin-bottom:9px}.qbtn{padding:11px 13px;border-radius:13px;min-height:58px}.qbtn span{font-size:9.5px}.sinput{height:48px;border-radius:15px;margin-bottom:9px}.tc-btn{height:52px;border-radius:16px;font-size:12px}.sec{font-size:9.5px;letter-spacing:1.8px;margin:10px 2px 7px}.card{border-radius:20px}.card-h{padding:12px 12px 10px;gap:12px}.card-logo-col{width:54px;gap:7px}.blogo{width:46px;height:46px;border-radius:14px;font-size:20px}.card-mini-chip{min-width:39px;padding:5px 9px;font-size:9.5px;box-shadow:0 6px 12px rgba(15,23,42,.16)}.card-name{font-size:14px}.card-row{margin-top:4px}.card-bonus{font-size:17px}.card-id{font-size:9px}.card-subline{font-size:10px;margin-top:4px}.call-btn{width:42px;height:42px;border-radius:13px}.fab{width:52px;height:52px;border-radius:16px;right:14px;bottom:calc(68px + var(--safe-b))}.tb{padding:7px 2px 8px}.tb span{font-size:9.5px}}
 
+/* ultra-compact-top */
+@media (max-width:430px){.hdr{padding:max(env(safe-area-inset-top),6px) 10px 8px}.hdr-row{align-items:center}.hdr h1{font-size:14px}.hdr-sub{font-size:6px;letter-spacing:1.1px;margin-top:1px}.yr-btn{padding:6px 10px;font-size:8px}.hero{margin-top:8px;padding:10px 11px;border-radius:18px}.hero-kicker{font-size:7.5px;letter-spacing:1.4px}.hero-value{font-size:21px}.hero-note{font-size:8.6px;margin-top:4px}.hero-chip{padding:8px 12px;font-size:11px}.stats{gap:5px;margin-top:8px}.st{min-height:54px;padding:8px 7px;border-radius:14px}.st .n{font-size:16px}.st .l{font-size:6px;letter-spacing:1.3px;margin-top:4px}.qbar{gap:8px;margin-bottom:8px}.qbtn{min-height:54px;padding:10px 12px;border-radius:14px;justify-content:center;gap:8px;box-shadow:0 6px 14px rgba(15,23,42,.04)}.qbtn span{font-size:9px}.qbtn svg{width:19px;height:19px}.sinput{height:46px;border-radius:14px}.tc-btn{height:50px;border-radius:15px;font-size:12px}}
+
+/* one-inch-stats */
+.stats .st{height:1in;min-height:1in} @media (max-width:430px){.stats .st{height:1in;min-height:1in}}
+
+/* compact-dashboard-final */
+@media (max-width:430px){.hdr{padding:max(env(safe-area-inset-top),5px) 10px 7px}.hero{margin-top:7px;padding:9px 10px;border-radius:16px}.hero-kicker{font-size:7px;letter-spacing:1.2px}.hero-value{font-size:20px}.hero-note{font-size:8px;line-height:1.25;margin-top:3px}.hero-chip{padding:7px 11px;font-size:10px}.stats{gap:4px;margin-top:6px}.stats .st{height:68px !important;min-height:68px !important;border-radius:13px;padding:7px 7px}.st .n{font-size:15px}.st .l{font-size:6px;letter-spacing:1.1px;margin-top:3px}.scroll{padding-top:8px}}
+
 /* compact-dashboard-strong */
-@media (max-width:600px){.hdr{padding:max(env(safe-area-inset-top),4px) 10px 6px !important}.hdr h1{font-size:13px !important}.hdr-sub{font-size:5.5px !important;letter-spacing:1px !important}.yr-pills{gap:4px !important}.yr-btn{padding:5px 10px !important;font-size:8px !important}.hero{margin-top:6px !important;padding:8px 10px !important;border-radius:15px !important}.hero-kicker{font-size:6.8px !important;letter-spacing:1px !important}.hero-value{font-size:18px !important}.hero-note{font-size:7.4px !important;line-height:1.2 !important;margin-top:2px !important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hero-chip{padding:6px 10px !important;font-size:10px !important;border-radius:999px !important}.stats{gap:4px !important;margin-top:6px !important}.stats .st{height:58px !important;min-height:58px !important;border-radius:12px !important;padding:6px 6px !important}.scroll{padding-top:7px !important}}
+@media (max-width:600px){.hdr{padding:max(env(safe-area-inset-top),4px) 10px 6px !important}.hdr h1{font-size:13px !important}.hdr-sub{font-size:5.5px !important;letter-spacing:1px !important}.yr-pills{gap:4px !important}.yr-btn{padding:5px 10px !important;font-size:8px !important}.hero{margin-top:6px !important;padding:8px 10px !important;border-radius:15px !important}.hero-kicker{font-size:6.8px !important;letter-spacing:1px !important}.hero-value{font-size:18px !important}.hero-note{font-size:7.4px !important;line-height:1.2 !important;margin-top:2px !important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hero-chip{padding:6px 10px !important;font-size:10px !important;border-radius:999px !important}.stats{gap:4px !important;margin-top:6px !important}.stats .st{height:58px !important;min-height:58px !important;border-radius:12px !important;padding:6px 6px !important}.st .n{font-size:14px !important}.st .l{font-size:5.5px !important;letter-spacing:1px !important;margin-top:2px !important}.scroll{padding-top:7px !important}}
 
 /* overview-tighten */
 @media (max-width:700px){.qbar{gap:7px !important;margin-bottom:7px !important}.qbtn{min-height:50px !important;padding:9px 12px !important;border-radius:13px !important}.qbtn span{font-size:9px !important}.qbtn svg{width:18px !important;height:18px !important}.sinput{height:44px !important;border-radius:13px !important;margin-bottom:8px !important}.tc-btn{height:48px !important;border-radius:15px !important;font-size:11.5px !important}.sec{margin:9px 2px 6px !important;font-size:9px !important;letter-spacing:1.7px !important}.card{border-radius:18px !important}.card-h{padding:10px 11px 9px !important;gap:10px !important}.card-logo-col{width:50px !important;gap:6px !important}.blogo{width:42px !important;height:42px !important;border-radius:13px !important;font-size:18px !important}.card-mini-chip{min-width:36px !important;padding:4px 8px !important;font-size:9px !important}.card-name{font-size:13px !important}.card-bonus{font-size:16px !important}.card-id{font-size:8px !important}.card-row{margin-top:3px !important}.card-subline{font-size:9px !important;margin-top:3px !important}.call-btn{width:40px !important;height:40px !important;border-radius:12px !important}.fab{width:50px !important;height:50px !important;border-radius:16px !important}.scroll{padding-bottom:100px !important}}
 
-/* single-row-actions */
-@media (max-width:700px){.qbar{grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:6px !important}.qbtn{min-height:48px !important;padding:8px 8px !important;flex-direction:column;justify-content:center;gap:4px !important;text-align:center}.qbtn span{font-size:8px !important;line-height:1.1}.qbtn svg{width:17px !important;height:17px !important}}
-
 /* stat-type-tweak */
-@media (max-width:600px){.st .n{font-size:20px !important}.st .l{font-size:8px !important}}
+@media (max-width:600px){.st .n{font-size:16px !important}.st .l{font-size:7px !important}}
+
+/* smart-suggestion-panels */
+.sg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px}.sg-panel{background:#fff;border:1px solid #D9E4F5;border-radius:18px;padding:10px 10px;box-shadow:0 6px 18px rgba(15,23,42,.03)}.sg-head{font-size:10px;font-weight:900;letter-spacing:1.4px;text-transform:uppercase;color:#7F8CA6;margin-bottom:8px}.sg-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #EEF3FB}.sg-row:last-child{border-bottom:none;padding-bottom:0}.sg-meta{flex:1;min-width:0}.sg-name{font-size:12px;font-weight:800;color:#1C3FAA;line-height:1.2}.sg-sub{font-size:9px;color:#7F8CA6;margin-top:2px;line-height:1.25}.sg-pill{font-size:8px;font-weight:900;padding:4px 7px;border-radius:999px;background:#EEF4FF;color:#2E6AE7;white-space:nowrap}.sg-empty{font-size:10px;color:#94A3B8;padding:8px 0}.sg-panel .blogo.sm{width:30px;height:30px;border-radius:9px;font-size:11px}@media (max-width:700px){.sg-grid{gap:8px}.sg-panel{padding:9px 8px;border-radius:16px}.sg-head{font-size:9px;letter-spacing:1.1px}.sg-row{gap:7px;padding:7px 0}.sg-name{font-size:11px}.sg-sub{font-size:8.5px}.sg-pill{font-size:7px;padding:3px 6px}}
 </style>
 </head>
 <body>
@@ -328,46 +337,10 @@ function getCountdown(e){
   if(s==='TIME TO CHURN!')return{lbl:'Ready now!',days:0,date:'',cls:'green',icon:'\uD83D\uDD25'};
   return null}
 function getUrg(e){const s=status(e);if(s==='TIME TO CHURN!')return'red';if(s==='SAFE TO CLOSE')return'green';if(s==='3-DAY BUFFER')return'yellow';const dsc=daysUntilSafe(e);if(!e.closed&&dsc!==null&&dsc<=7)return'red';if(!e.closed&&dsc!==null&&dsc<=30)return'yellow';if(s==='WAITING TO CHURN!'){const dl=daysLeft(e);if(dl!==null&&dl<=30)return'yellow'}if(s==='WORKING')return'blue';return'green'}
-function getSuggestions(){
-  const sug=[];
-  const seen=new Set();
-  const add=(bank,bonus,rsn,tag)=>{const key=bankKey(bank);if(seen.has(key))return;seen.add(key);sug.push({bank,bonus,rsn,tag})};
-
-  entries.filter(e=>e.closed&&e.churn).sort((a,b)=>(b.bonus||0)-(a.bonus||0)).forEach(e=>{
-    const dl=daysLeft(e);
-    if(dl!==null&&dl<=0) add(e.bank,e.bonus,'Cooldown done. Ready to reopen now.','READY NOW');
-  });
-
-  entries.filter(e=>e.closed&&e.churn).sort((a,b)=>(daysLeft(a)??999)-(daysLeft(b)??999)||((b.bonus||0)-(a.bonus||0))).forEach(e=>{
-    const dl=daysLeft(e);
-    if(dl!==null&&dl>0&&dl<=30) add(e.bank,e.bonus,'Cooldown ends in '+dl+' days.','SOON');
-  });
-
-  entries.filter(e=>!e.closed&&e.bonusRecd&&(status(e)==='SAFE TO CLOSE'||status(e)==='3-DAY BUFFER')).sort((a,b)=>(daysUntilSafe(a)??0)-(daysUntilSafe(b)??0)).forEach(e=>{
-    const s=status(e);
-    if(s==='SAFE TO CLOSE') add(e.bank,e.bonus,'Safe to close and lock in the bonus.','CLOSE OK');
-    else add(e.bank,e.bonus,'Close in '+(daysUntilSafe(e)??0)+' days to avoid the fee.','CLOSE SOON');
-  });
-
-  const existingKeys=new Set(entries.map(e=>bankKey(e.bank)));
-  TEMPLATES
-    .filter(t=>!existingKeys.has(bankKey(t.bank)))
-    .map(t=>({
-      ...t,
-      score:(t.bonus||0)
-        + ((t.churn==='1'||t.churn==='180')?120:0)
-        + ((t.earlyCloseFee||0)===0?50:0)
-        + ((t.minHoldDays||0)<=90?35:0)
-        + ((t.reqDays||0)&&t.reqDays<=60?20:0)
-    }))
-    .sort((a,b)=>b.score-a.score||((b.bonus||0)-(a.bonus||0)))
-    .forEach(t=>{
-      const tag=(t.bonus||0)>=500?'HIGH BONUS':((t.churn==='1'||t.churn==='180')?'EASY NEXT':'UNTRIED');
-      add(t.bank,t.bonus,'Strong untried option based on bonus and churn.',''+tag);
-    });
-
-  return sug.slice(0,4)
-}
+function getRuleMeta(bank){const fam=normalizeBankFamily(bank);for(const [rb,rule,months,churnable,moAvail,closeFee,maint,notes] of RULES){const rf=normalizeBankFamily(rb);if(bankKey(rb)===bankKey(bank)||rf===fam||rf.includes(fam)||fam.includes(rf))return{rule,months,churnable,moAvail,closeFee,maint,notes}}return null}
+function getEligibleSuggestions(){const existingKeys=new Set(entries.map(e=>bankKey(e.bank)));return TEMPLATES.filter(t=>!existingKeys.has(bankKey(t.bank))).map(t=>({...t,meta:getRuleMeta(t.bank)})).filter(t=>t.meta&&t.meta.churnable&&t.meta.moAvail).sort((a,b)=>(b.bonus||0)-(a.bonus||0)||((a.churn==='1'||a.churn==='180')?-1:1)).slice(0,4).map(t=>({bank:t.bank,bonus:t.bonus,label:(t.bonus||0)>=500?'HIGH BONUS':'ELIGIBLE',rsn:'Churnable and available in Missouri.'}))}
+function getAttentionSuggestions(){const raw=[];entries.forEach(e=>{const dl=daysLeft(e);if(e.closed&&e.churn&&dl!==null)raw.push({bank:e.bank,bonus:e.bonus,label:dl<=0?'READY NOW':dl+'D',rsn:dl<=0?'Ready to churn now.':'Least churn days on your list.',sort:dl<=0?-1:dl});else if(!e.closed&&e.bonusRecd&&(status(e)==='SAFE TO CLOSE'||status(e)==='3-DAY BUFFER')){const dsc=daysUntilSafe(e)??0;raw.push({bank:e.bank,bonus:e.bonus,label:status(e)==='SAFE TO CLOSE'?'CLOSE OK':dsc+'D',rsn:status(e)==='SAFE TO CLOSE'?'Safe to close now.':'Close attention needed soon.',sort:dsc+0.5})}else if(!e.closed&&!e.bonusRecd&&daysToDeadline(e)!==null&&daysToDeadline(e)<=45){const dd=Math.max(0,daysToDeadline(e));raw.push({bank:e.bank,bonus:e.bonus,label:dd===0?'DUE':dd+'D',rsn:'Requirement deadline coming up.',sort:dd+1})}});const seen=new Set();return raw.sort((a,b)=>a.sort-b.sort||((b.bonus||0)-(a.bonus||0))).filter(x=>{const k=bankKey(x.bank);if(seen.has(k))return false;seen.add(k);return true}).slice(0,4)}
+function getSuggestions(){return getEligibleSuggestions()}
 function chartData(){const ms=[];for(let m=0;m<12;m++){const l=['J','F','M','A','M','J','J','A','S','O','N','D'][m];const t=entries.filter(e=>isCompleted(e)&&new Date(e.closed+'T00:00:00').getFullYear()===dashYear&&new Date(e.closed+'T00:00:00').getMonth()===m).reduce((s,e)=>s+(e.bonus||0),0);ms.push({l,t})}return ms}
 function normalizeBankFamily(name){let n=(name||'').toLowerCase().trim();n=n.replace(/[®'.]/g,'');n=n.replace(/&/g,' and ');n=n.replace(/\bbiz\b|\bbusiness\b/g,'');n=n.replace(/\bchecking\b|\bsavings\b|\baccount\b|\baccounts\b/g,'');n=n.replace(/\bessentials\b|\bpreferred\b|\bcomplete\b|\badvantage\b|\beveryday\b|\bpremier\b|\bplus\b|\bbasic\b|\belite\b|\bselect\b|\bsmartly\b/g,'');n=n.replace(/\s+/g,' ').trim();if(/\bu\s*s\s*bank\b/.test(n))return'u.s. bank';if(/\bbank of america\b|\bbofa\b|\bboa\b/.test(n))return'bank of america';if(/\bwells\s*fargo\b/.test(n))return'wells fargo';if(/\bcapital\s*one\b/.test(n))return'capital one';if(/\bfifth\s*third\b|\b53\b/.test(n))return'fifth third';if(/\bciti(?:bank)?\b/.test(n))return'citibank';if(/\bcommunity\s*america\b/.test(n))return'community america';if(/\bnavy\s*federal\b/.test(n))return'navy federal';if(/\btd\s*bank\b/.test(n))return'td bank';return n}
 function bankTypeCode(name){return(/\bbiz\b|\bbusiness\b/i.test(name||''))?'B':'P'}
@@ -1086,12 +1059,16 @@ function rTracker(sorted){
     h += '</div>';
   });
 
-  const sug=getSuggestions();
-  if(sug.length){
-    h += '<div class="sec">Suggested next</div>';
-    sug.forEach(s=>{
-      h += `<div class="sug-c">${bankLogo(s.bank,true)}<div class="s-info"><div class="nm">${esc(s.bank)}</div>${s.bonus?`<div class="sub">${fM(s.bonus)}${s.tag?` • ${esc(s.tag)}`:''}</div>`:''}<div class="rsn">${esc(s.rsn)}</div></div></div>`;
-    });
+  const eligibleSug=getEligibleSuggestions();
+  const attentionSug=getAttentionSuggestions();
+  if(eligibleSug.length||attentionSug.length){
+    h += '<div class="sec">Smart suggestions</div><div class="sg-grid">';
+    h += '<div class="sg-panel"><div class="sg-head">Next eligible bonus</div>';
+    if(eligibleSug.length){eligibleSug.forEach(s=>{h += `<div class="sg-row">${bankLogo(s.bank,true)}<div class="sg-meta"><div class="sg-name">${esc(s.bank)}</div><div class="sg-sub">${esc(s.rsn)}</div></div><span class="sg-pill">${esc(s.label)}</span></div>`})}else h += '<div class="sg-empty">No Missouri churnable untried bonuses found.</div>';
+    h += '</div>';
+    h += '<div class="sg-panel"><div class="sg-head">Needs attention</div>';
+    if(attentionSug.length){attentionSug.forEach(s=>{h += `<div class="sg-row">${bankLogo(s.bank,true)}<div class="sg-meta"><div class="sg-name">${esc(s.bank)}</div><div class="sg-sub">${esc(s.rsn)}</div></div><span class="sg-pill">${esc(s.label)}</span></div>`})}else h += '<div class="sg-empty">No urgent banks right now.</div>';
+    h += '</div></div>';
   }
 
   return h;
