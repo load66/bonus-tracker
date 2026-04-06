@@ -334,7 +334,7 @@ function getCountdown(e){
   if(s==='TIME TO CHURN!')return{lbl:'Ready now!',days:0,date:'',cls:'green',icon:'\uD83D\uDD25'};
   return null}
 function getUrg(e){const s=status(e);if(s==='TIME TO CHURN!')return'red';if(s==='SAFE TO CLOSE')return'green';if(s==='3-DAY BUFFER')return'yellow';const dsc=daysUntilSafe(e);if(!e.closed&&dsc!==null&&dsc<=7)return'red';if(!e.closed&&dsc!==null&&dsc<=30)return'yellow';if(s==='WAITING TO CHURN!'){const dl=daysLeft(e);if(dl!==null&&dl<=30)return'yellow'}if(s==='WORKING')return'blue';return'green'}
-function getSuggestions(){const sug=[];entries.filter(e=>e.closed&&e.churn).forEach(e=>{const dl=daysLeft(e);if(dl!==null&&dl<=0)sug.push({bank:e.bank,rsn:'Cooldown expired! Ready to re-open.',bonus:e.bonus});else if(dl!==null&&dl<=30)sug.push({bank:e.bank,rsn:'Cooldown expires in '+dl+' days.',bonus:e.bonus})});const active=new Set(entries.map(e=>e.bank.toLowerCase()));TEMPLATES.forEach(t=>{if(!active.has(t.bank.toLowerCase()))sug.push({bank:t.bank,rsn:'Not yet tried. '+fM(t.bonus)+' available.',bonus:t.bonus})});return sug.slice(0,4)}
+function getSuggestions(){const sug=[];entries.forEach(e=>{if(!e||!e.bank)return;const st=status(e);let pri=99,days=999999,rsn='';if(st==='TIME TO CHURN!'){pri=0;days=0;rsn='Ready to churn now.'}else if(st==='WAITING TO CHURN!'){const dl=daysLeft(e);if(dl!==null){pri=1;days=dl;rsn=dl+'d until churn.'}}else if(st==='SAFE TO CLOSE'){pri=2;days=0;rsn=e.bonusRecd?'Safe to close now.':'Safe to close — review before closing.'}else if(st==='3-DAY BUFFER'){const d=daysUntilSafe(e);if(d!==null){pri=3;days=d;rsn=d+'d left in close buffer.'}}else if(!e.closed&&!e.bonusRecd&&e.opened&&e.reqDays>0){const d=daysToDeadline(e);if(d!==null&&d<=45){pri=4;days=Math.max(0,d);rsn=d<0?'Requirement deadline passed.':d+'d to requirement deadline.'}}if(pri===99&&!e.closed&&e.opened&&e.minHoldDays>0&&!e.feeChecked){const d=daysUntilSafe(e);if(d!==null&&d<=45){pri=5;days=Math.max(0,d);rsn=d<=0?'Safe to close now.':d+'d until safe to close.'}}if(pri<99)sug.push({bank:e.bank,bonus:e.bonus||0,rsn,pri,days})});return sug.sort((a,b)=>a.pri-b.pri||a.days-b.days||(b.bonus||0)-(a.bonus||0)||a.bank.localeCompare(b.bank)).slice(0,5)}
 function chartData(){const ms=[];for(let m=0;m<12;m++){const l=['J','F','M','A','M','J','J','A','S','O','N','D'][m];const t=entries.filter(e=>isCompleted(e)&&new Date(e.closed+'T00:00:00').getFullYear()===dashYear&&new Date(e.closed+'T00:00:00').getMonth()===m).reduce((s,e)=>s+(e.bonus||0),0);ms.push({l,t})}return ms}
 function normalizeBankFamily(name){let n=(name||'').toLowerCase().trim();n=n.replace(/[®'.]/g,'');n=n.replace(/&/g,' and ');n=n.replace(/\bbiz\b|\bbusiness\b/g,'');n=n.replace(/\bchecking\b|\bsavings\b|\baccount\b|\baccounts\b/g,'');n=n.replace(/\bessentials\b|\bpreferred\b|\bcomplete\b|\badvantage\b|\beveryday\b|\bpremier\b|\bplus\b|\bbasic\b|\belite\b|\bselect\b|\bsmartly\b/g,'');n=n.replace(/\s+/g,' ').trim();if(/\bu\s*s\s*bank\b/.test(n))return'u.s. bank';if(/\bbank of america\b|\bbofa\b|\bboa\b/.test(n))return'bank of america';if(/\bwells\s*fargo\b/.test(n))return'wells fargo';if(/\bcapital\s*one\b/.test(n))return'capital one';if(/\bfifth\s*third\b|\b53\b/.test(n))return'fifth third';if(/\bciti(?:bank)?\b/.test(n))return'citibank';if(/\bcommunity\s*america\b/.test(n))return'community america';if(/\bnavy\s*federal\b/.test(n))return'navy federal';if(/\btd\s*bank\b/.test(n))return'td bank';return n}
 function bankTypeCode(name){return(/\bbiz\b|\bbusiness\b/i.test(name||''))?'B':'P'}
@@ -1061,16 +1061,8 @@ function rTracker(sorted){
     });
   }
 
-  h += '<div class="sec">Latest bonuses</div>';
-  if(!feedItems&&!feedLoading) h += `<button class="tc-btn" style="border-style:solid;background:#EFF6FF" onclick="loadFeed()">${I.feed}<span>Load from Doctor of Credit</span></button>`;
-  else if(feedLoading) h += '<div class="empty"><span class="spin"></span></div>';
-  else if(feedItems){
-    feedItems.forEach(f=>{
-      const d=f.date?new Date(f.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
-      h += `<a href="${f.link}" target="_blank" rel="noopener" class="feed-c"><div class="feed-t">${esc(f.title)}</div><div class="feed-d">${d}</div></a>`;
-    });
-  }else{
-    DOC_LINKS.forEach(([t,u])=>{ h += `<a href="${u}" target="_blank" rel="noopener" class="feed-c"><div class="feed-t">${esc(t)}</div></a>`; });
+  if(!sug.length){
+    h += '<div class="empty" style="padding:18px 10px"><p>No banks need urgent attention right now.</p></div>';
   }
 
   return h;
