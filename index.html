@@ -610,7 +610,51 @@ function tcKnownBankName(text){
   return m?m[1].trim():''
 }
 function tcInferChurnRule(months){if(!months)return'';return months<=6?'180 days':months<=12?'1 year':months<=24?'2 years':'3 years'}
+
+function tcSplitOfferSections(text){
+  const normalized = normalizeTCText(text);
+  const parts = normalized
+    .split(/(?:^|\n)(?=\d+\s*[A-Z])/m)
+    .map(s => s.trim())
+    .filter(Boolean);
+  return parts.length ? parts : [normalized];
+}
+
+function tcChoosePrimaryOffer(results){
+  if(!results.length) return null;
+  const checking = results.find(r =>
+    /checking/i.test(r?.acctType || '') ||
+    /checking/i.test(r?.sectionTitle || '') ||
+    /checking/i.test(r?.rawSection || '')
+  );
+  if(checking) return checking;
+  return [...results].sort((a,b)=>{
+    const av = parseFloat(String(a?.bonusAmount || '').replace(/[^\d.]/g,'')) || 0;
+    const bv = parseFloat(String(b?.bonusAmount || '').replace(/[^\d.]/g,'')) || 0;
+    return bv-av;
+  })[0] || null;
+}
+
 function analyzeTC(text){
+  if(!text||text.length<20)return null;
+  const sections = tcSplitOfferSections(text);
+  const results = sections
+    .map(sec => analyzeTCSection(sec))
+    .filter(Boolean);
+  if(!results.length) return null;
+  const primary = tcChoosePrimaryOffer(results);
+  if(!primary) return null;
+  primary.allOffers = results.map(r => ({
+    sectionTitle: r.sectionTitle || r.acctType || r.bankName || 'Offer',
+    bonusAmount: r.bonusAmount || '',
+    acctType: r.acctType || '',
+    notesForTracker: r.notesForTracker || ''
+  }));
+  return primary;
+}
+
+function analyzeTCSection(text){
+
   if(!text||text.length<20)return null;
 
   // Normalize pasted T&C first so regex works on cleaner text.
@@ -619,6 +663,17 @@ function analyzeTC(text){
   const segments=tcSegments(normalized);
   const r={};
   const review=[];
+
+  r.rawSection=normalized;
+  const titleHit=normalized.match(/^\d+\s*([^\n:]+)(?::|$)/m);
+  if(titleHit) r.sectionTitle=titleHit[1].trim();
+
+  r.qualifyingPaths=[];
+  r.ddExamples=[];
+  r.directDebitExamples=[];
+  r.eligibilityNotes=[];
+  r.payoutConditions=[];
+  r.restrictionNotes=[];
 
   /* ---------- core promo fields ---------- */
   r.bankName=tcKnownBankName(normalized)||undefined;
@@ -641,6 +696,38 @@ function analyzeTC(text){
     {pattern:/(?:use|enter|apply)\s+(?:the\s+)?(?:promo\s+)?code.*?\b([A-Z0-9-]{4,})\b/i,value:m=>m[1],base:17}
   ],{keywords:['promo code','code','campaign','variant'],negativeKeywords:['1099','tax']});
   if(promoHit)r.promoCode=promoHit.value;
+
+  // Offer section / open-by / qualifying-period signals
+  const openByHit=tcPickBest(segments,[
+    {pattern:/open .* by ([A-Z][a-z]+ \d{1,2}, \d{4})/i,value:m=>m[1].trim(),base:24},
+    {pattern:/by ([A-Z][a-z]+ \d{1,2}, \d{4}) to qualify/i,value:m=>m[1].trim(),base:20}
+  ],{keywords:['open','by','qualify']});
+  if(openByHit)r.openBy=openByHit.value;
+
+  const qualPeriodHit=tcPickBest(segments,[
+    {pattern:/within (\d+)\s+calendar\s+days? of account opening/i,value:m=>parseInt(m[1],10),base:24},
+    {pattern:/all requirements must be completed within the (\d+)-day/i,value:m=>parseInt(m[1],10),base:22},
+    {pattern:/within (\d+)\s+calendar\s+days?/i,value:m=>parseInt(m[1],10),base:14}
+  ],{keywords:['qualifying period','calendar days','account opening']});
+  if(qualPeriodHit){
+    r.qualifyingPeriodDays=qualPeriodHit.value;
+    r.timelineDays=r.timelineDays||qualPeriodHit.value;
+    r.timeline=r.timeline||(`${qualPeriodHit.value} days`);
+  }
+
+  // ACH either/or path (important for offers like Guaranty)
+  if(/at least one direct deposit or direct debit/i.test(t) && /(automated clearing house|ach)/i.test(t)){
+    r.qualifyingPaths.push('1 ACH direct deposit OR 1 ACH direct debit');
+    r.achDirectDebitAllowed=true;
+    r.ddOrDebitCount=1;
+  }
+  if(/paycheck/i.test(t))r.ddExamples.push('Paycheck');
+  if(/pension/i.test(t))r.ddExamples.push('Pension');
+  if(/government benefits?/i.test(t))r.ddExamples.push('Government benefits');
+  if(/car payment/i.test(t))r.directDebitExamples.push('Car payment');
+  if(/mortgage/i.test(t))r.directDebitExamples.push('Mortgage');
+  if(/rent payment|\brent\b/i.test(t))r.directDebitExamples.push('Rent');
+  if(/household bill/i.test(t))r.directDebitExamples.push('Household bill');
 
   /* ---------- opening deposit / funding / balance / activity ---------- */
   const openingDepositHit=tcPickBest(segments,[
@@ -721,7 +808,7 @@ function analyzeTC(text){
     {pattern:/\$([\d.]+)\s+monthly\s+(?:maintenance|service)\s+fee/i,value:m=>'$'+m[1],base:18},
     {pattern:/\$([\d.]+)\s+(?:per\s+)?month\s+(?:service|maintenance)?/i,value:m=>'$'+m[1],base:14}
   ],{keywords:['monthly fee','maintenance fee','service fee'],negativeKeywords:['termination fee','early close']});
-  if(monthlyFeeNone)r.monthlyFee='$0 (No fee)';else if(monthlyFeeHit)r.monthlyFee=monthlyFeeHit.value;
+  if(monthlyFeeNone)r.monthlyFee='$0 (No fee)';else if(monthlyFeeHit)r.monthlyFee=monthlyFeeHit.value;else if(/fees could reduce earnings/i.test(t))r.monthlyFee='Not clearly stated in pasted T&C';
   const waiverHit=tcPickBest(segments,[
     {pattern:/(?:waived?|avoid|no\s+fee)\s+(?:if|when|by|with).*?\$([\d,]+)/i,value:m=>tcMoney(m[1])+' balance or DD',base:18},
     {pattern:/(?:maintain|average|minimum)\s+(?:daily\s+)?balance\s+(?:of\s+)?\$([\d,]+).*?(?:waive|avoid|no\s+fee)/i,value:m=>tcMoney(m[1])+' balance or DD',base:20},
@@ -756,6 +843,13 @@ function analyzeTC(text){
   if(/limit\s*:?\s*one\s+bonus\s+per\s+(?:business|entity|customer|account|member)|limit one bonus/.test(t))r.limitOneBonus=true;
   if(/account must.*remain open|remain open/.test(t))r.mustRemainOpen=true;
   if(/good standing/.test(t))r.requiresGoodStanding=true;
+  if(/missouri resident/i.test(t))r.residency='Missouri residents only';
+  if(/current .* consumer checking accountholders .* not eligible/i.test(t))r.currentCustomerIneligible=true;
+  if(/paid to the primary owner/i.test(t))r.primaryOwnerOnly=true;
+  if(/previously received a new account bonus .* not eligible/i.test(t)){
+    r.priorBonusIneligible=true;
+    r.eligibilityNotes.push('Previous new-account bonus recipients are not eligible');
+  }
 
   /* ---------- payout / tax ---------- */
   const bonusPostHit=tcPickBest(segments,[
@@ -764,6 +858,16 @@ function analyzeTC(text){
     {pattern:/within\s+(\d+)\s+days?\s+of\s+(?:meeting|completing|qualifying)/i,value:m=>'Within '+m[1]+' days of qualifying',base:18}
   ],{keywords:['bonus','paid','posted','credited','qualifications'],negativeKeywords:['opening']});
   if(bonusPostHit)r.bonusPostTime=bonusPostHit.value;
+  const payoutHoldHit=tcPickBest(segments,[
+    {pattern:/open for at least (\d+)\s+calendar\s+days/i,value:m=>parseInt(m[1],10),base:24},
+    {pattern:/account must also be open for at least (\d+)/i,value:m=>parseInt(m[1],10),base:22}
+  ],{keywords:['open','at least','calendar days']});
+  if(payoutHoldHit)r.minDaysOpen=payoutHoldHit.value;
+  if(/positive balance at the end of the .*qualifying period/i.test(t))r.mustBePositiveAtQualEnd=true;
+  if(/active and has a positive balance at the time of the bonus payment/i.test(t)){
+    r.accountActiveAtPayout=true;
+    r.mustBePositiveAtPayout=true;
+  }
   if(/1099-int/.test(t))r.taxForm='1099-INT (Interest)';else if(/1099-misc/.test(t))r.taxForm='1099-MISC (Income)';else if(/reported.*income|bonus is taxable|taxable/.test(t))r.taxForm='Taxable income';
 
   /* ---------- exclusions / restrictions ---------- */
@@ -782,7 +886,8 @@ function analyzeTC(text){
   if(/government/.test(t)&&!/not government/.test(t))ddReqs.push('government agency');
   if(/payroll/.test(t))ddReqs.push('payroll');
   r.ddMustBe=ddReqs;
-  if(/transactions?\s+must\s+post|not pending/.test(t))r.transactionsMustPost=true;
+  if(/transactions?\s+must\s+post|posted and settled|not pending/.test(t))r.transactionsMustPost=true;
+  if(/last business day of the statement cycle/i.test(t))r.statementCycleCutoff='Must post and settle by the last business day of the statement cycle';
   if(/balance drops below requirement.*disqualif/.test(t))r.balanceDropDisqualifies=true;
   if(/modify or withdraw offer anytime|withdraw offer anytime/.test(t))r.offerMutable=true;
 
@@ -811,73 +916,83 @@ function analyzeTC(text){
   if(r.ddAmount&&r.newMoneyAmount)review.push('Promo has both direct deposit and funding-style requirements — check notes summary.');
   if(r.bonusTiers&&!r.bonusAmount)review.push('Tiered bonus detected — confirm which tier you want to track.');
   if(review.length)r.reviewFlags=review;
-
   /* ---------- tracker-ready notes ---------- */
   const n=[];
-  if(r.bonusAmount)n.push('* Bonus: '+r.bonusAmount+(r.bonusTiers?' (Tiers: '+r.bonusTiers+')':''));
-  if(r.acctType)n.push('* Account: '+r.acctType);
-  if(r.openWindow)n.push('* Open between: '+r.openWindow);
-  if(r.promoCode)n.push('* Promo code: '+r.promoCode);
-  if(r.creditCheck)n.push('* Subject to credit approval');
-  n.push('');
-  n.push('REQUIREMENTS:');
-  let step=1;
-  if(r.requiresOnlineBanking){n.push('* Step '+step+': Enroll in online/mobile banking');step++}
-  if(r.requiresEstatements){n.push('* Step '+step+': Enroll in eStatements');step++}
-  if(r.ddAmount){let ddStr='* Step '+step+': Direct deposit '+r.ddAmount;if(r.ddCount)ddStr+=' ('+r.ddCount+' or more deposits)';if(r.ddPerCycle)ddStr+=' per statement cycle';if(r.ddMonthly)ddStr+=' per month';if(r.timeline)ddStr+=' within '+r.timeline;n.push(ddStr);step++}
-  if(r.newMoneyAmount){let nm='* Step '+step+': Deposit '+r.newMoneyAmount+' of new money';if(r.newMoneyDays)nm+=' within '+r.newMoneyDays+' days';n.push(nm);step++}
-  if(r.maintainBalance||r.maintainDays){let mb='* Step '+step+': Maintain '+(r.maintainBalance||'required balance');if(r.maintainDays)mb+=' for '+r.maintainDays+' days';n.push(mb);step++}
-  if(r.activityCount){let act='* Step '+step+': Complete '+r.activityCount+' qualifying transactions';if(r.activityDays)act+=' within '+r.activityDays+' days';n.push(act);step++}
-  if(r.debitTxns){n.push('* Step '+step+': Complete '+r.debitTxns+' debit card transactions');step++}
-  if(r.activateDebit){n.push('* Step '+step+': Activate debit card and make at least 1 transaction');step++}
-  if(r.qualifyingTxnTypes&&r.qualifyingTxnTypes.length)n.push('* Qualifying transactions: '+r.qualifyingTxnTypes.join(', '));
-  if(r.cycles)n.push('* Complete within '+r.cycles);
-  if(r.minOpeningDeposit)n.push('* Minimum opening deposit: '+r.minOpeningDeposit);
 
-  if(r.ddAmount||r.ddMustBe.length){
-    n.push('');
-    n.push('DIRECT DEPOSIT RULES:');
-    if(r.ddMustBe.length)n.push('* DD must be from: '+r.ddMustBe.join(', '));
-    if(r.ddExcluded.length)n.push('* Does NOT count: '+r.ddExcluded.join(', '))
-  }else if(r.ddExcluded.length){
-    n.push('');
-    n.push('RESTRICTIONS:');
-    n.push('* Exclusions: '+r.ddExcluded.join(', '))
-  }
-
-  if(r.hasInvestingBonus||r.savingsBonus||r.bundledBonus){
-    n.push('');
-    n.push('ADDITIONAL BONUSES:');
-    if(r.hasInvestingBonus)n.push('* Guided Investing: Fund '+(r.investMin||'minimum')+(r.maintainDays?', maintain for '+r.maintainDays+' days':''));
-    if(r.savingsBonus)n.push('* Savings bonus: '+r.savingsBonus);
-    if(r.bundledBonus)n.push('* Bundled bonus: Extra '+r.bundledBonus+' for completing both')
-  }
+  n.push('TRACKER SUMMARY:');
+  if(r.bonusAmount)n.push(`* Offer: ${r.bonusAmount}${r.acctType ? ' — ' + r.acctType : ''}`);
+  if(r.openBy)n.push(`* Open by: ${r.openBy}`);
+  else if(r.openWindow)n.push(`* Open window: ${r.openWindow}`);
+  if(r.residency)n.push(`* Residency: ${r.residency}`);
+  if(r.limitOneBonus)n.push('* Limit: one bonus per customer/account');
+  if(r.primaryOwnerOnly)n.push('* Paid to: primary owner only');
 
   n.push('');
-  n.push('FEES & TIMING:');
-  if(r.monthlyFee)n.push('* Monthly fee: '+r.monthlyFee);
-  if(r.feeWaiver)n.push('* Fee waiver: '+r.feeWaiver);
-  if(r.bonusPostTime)n.push('* Bonus posts: '+r.bonusPostTime);
-  if(r.earlyCloseDays)n.push('* Min hold: '+r.earlyCloseDays+' days before closing');
-  if(r.earlyCloseFee)n.push('* Early close penalty: '+r.earlyCloseFee);
-  if(!r.earlyCloseFee&&!r.earlyCloseDays)n.push('* Early close fee: Not mentioned');
-  if(r.ccFunding)n.push('* Credit card funding: Available');
-  if(r.pullType)n.push('* Credit check: '+r.pullType);
-  if(r.transactionsMustPost)n.push('* Transactions must post (not pending) to count');
+  n.push('QUALIFY BY:');
+  if(r.qualifyingPaths?.length){
+    r.qualifyingPaths.forEach(x=>n.push(`* ${x}`));
+  }else{
+    if(r.ddAmount){
+      let ddStr=`* Direct deposit: ${r.ddAmount}`;
+      if(r.ddCount)ddStr+=` (${r.ddCount}+ deposits)`;
+      n.push(ddStr);
+    }
+    if(r.debitTxns)n.push(`* Debit card transactions: ${r.debitTxns}`);
+    if(r.activityCount)n.push(`* Other qualifying activity: ${r.activityCount} transaction(s)`);
+  }
+  if(r.timeline)n.push(`* Complete within: ${r.timeline}`);
+  if(r.statementCycleCutoff)n.push(`* Cutoff: ${r.statementCycleCutoff}`);
+  if(r.minOpeningDeposit)n.push(`* Opening deposit: ${r.minOpeningDeposit}`);
+
+  n.push('');
+  n.push('WHAT COUNTS:');
+  if(r.ddExamples?.length)n.push(`* Direct deposit examples: ${r.ddExamples.join(', ')}`);
+  if(r.directDebitExamples?.length)n.push(`* ACH direct debit examples: ${r.directDebitExamples.join(', ')}`);
+  if(r.ddExcluded?.length)n.push(`* Does NOT count as DD: ${r.ddExcluded.join(', ')}`);
+  if(!r.ddExamples?.length && !r.directDebitExamples?.length && !r.ddExcluded?.length)n.push('* Not clearly specified');
+
+  n.push('');
+  n.push('ACCOUNT MUST STAY:');
+  if(r.minDaysOpen)n.push(`* Open at least: ${r.minDaysOpen} days`);
+  if(r.mustBePositiveAtQualEnd)n.push('* Positive balance at end of qualifying period');
+  if(r.accountActiveAtPayout)n.push('* Account must still be active at payout');
+  if(r.mustBePositiveAtPayout)n.push('* Positive balance required at payout');
+  if(!r.minDaysOpen && !r.mustBePositiveAtQualEnd && !r.accountActiveAtPayout && !r.mustBePositiveAtPayout)n.push('* No extra account-state condition detected');
+
+  n.push('');
+  n.push('FEES & PAYOUT:');
+  n.push(`* Monthly fee: ${r.monthlyFee || 'Not clearly stated in pasted T&C'}`);
+  if(r.feeWaiver)n.push(`* Fee waiver: ${r.feeWaiver}`);
+  if(r.bonusPostTime)n.push(`* Bonus timing: ${r.bonusPostTime}`);
+  if(r.earlyCloseFee || r.earlyCloseDays)n.push(`* Early close: ${r.earlyCloseFee || 'Fee applies'}${r.earlyCloseDays ? ` if closed within ${r.earlyCloseDays} days` : ''}`);
+  else n.push('* Early close: Not mentioned');
+  if(r.transactionsMustPost)n.push('* Transactions must post/settle to count');
   if(r.offerMutable)n.push('* Offer may be modified or withdrawn anytime');
 
   n.push('');
-  n.push('CHURN & TAX:');
-  if(r.churnRule==='Once per lifetime')n.push('* Churn cooldown: Once per lifetime');
-  else if(r.churnRule)n.push('* Churn cooldown: '+r.churnRule+(r.churnMonths?' ('+r.churnMonths+' months)':''));
-  else n.push('* Churn rule: Check fine print');
-  if(r.taxForm)n.push('* Tax: '+r.taxForm);
-  if(r.limitOneBonus)n.push('* Limit one bonus per business/entity');
-  if(r.mustRemainOpen)n.push('* Account must remain open for payout');
-  if(r.requiresGoodStanding)n.push('* Account must be in good standing at payout');
-  if(r.balanceDropDisqualifies)n.push('* Falling below balance requirement may disqualify bonus');
+  n.push('ELIGIBILITY / CHURN:');
+  if(r.currentCustomerIneligible)n.push('* Current checking customers not eligible');
+  if(r.churnMonths)n.push(`* Prior closure cooldown: ${r.churnMonths} months`);
+  if(r.priorBonusIneligible)n.push('* Prior new-account bonus recipients not eligible');
+  if(r.taxForm)n.push(`* Tax: ${r.taxForm}`);
+  if(!r.currentCustomerIneligible && !r.churnMonths && !r.priorBonusIneligible)n.push('* No clear churn restriction detected');
   if(/cannot be combined|not be combined/.test(t))n.push('* Cannot be combined with other offers');
-  if(r.reviewFlags&&r.reviewFlags.length){n.push('');n.push('REVIEW:');r.reviewFlags.forEach(x=>n.push('* '+x))}
+
+  if(r.reviewFlags&&r.reviewFlags.length){
+    n.push('');
+    n.push('REVIEW:');
+    r.reviewFlags.forEach(x=>n.push(`* ${x}`));
+  }
+
+  if(r.allOffers?.length>1){
+    n.push('');
+    n.push('OTHER OFFERS FOUND IN SAME PASTE:');
+    r.allOffers.forEach((offer,idx)=>{
+      const label=offer.sectionTitle || offer.acctType || `Offer ${idx+1}`;
+      const amt=offer.bonusAmount ? ` — ${offer.bonusAmount}` : '';
+      n.push(`* ${label}${amt}`);
+    });
+  }
 
   r.notesForTracker=n.filter(Boolean).join('\n');
 
@@ -1164,8 +1279,8 @@ function rcvSubmit(){const p=rcvPrompt;if(!p)return;const d=document.getElementB
 function clearRcv(){const p=rcvPrompt;if(!p)return;entries=entries.map(e=>{if(e.id===p.entryId){e.bonusRecd='';e.plannedClose=''}return e});entries=sortE(entries);sv(SK,entries);rcvPrompt=null;R()}
 function skipRcv(){rcvPrompt=null;R()}
 function runMainAnalyze(){const el=document.getElementById('az_input');if(!el)return;analyzerText=el.value;if(!analyzerText||analyzerText.length<20){alert('Paste more T&C text');return}analyzerResult=analyzeTC(analyzerText);analyzerIsBiz=/\bbusiness\b/i.test(analyzerText)||/\bbusiness\b/i.test((analyzerResult&&analyzerResult.acctType)||'')||/\bbusiness\b/i.test((analyzerResult&&analyzerResult.bankName)||'');if(analyzerResult&&analyzerResult.bankName)saveReq(formatAnalyzedBankName(analyzerResult.bankName||analyzerResult.acctType||'Unknown',analyzerIsBiz),analyzerResult);if(!analyzerResult||Object.keys(analyzerResult).length<2)alert('Could not extract enough data. Try pasting more of the full terms & conditions.');R()}
-function runInlineAnalyze(){const el=document.getElementById('inline_tc');if(!el||el.value.length<20){alert('Paste more T&C text');return}inlineResult=analyzeTC(el.value);if(inlineResult){if(inlineResult.notesForTracker)modal.analyzedTC=inlineResult.notesForTracker;if(inlineResult.bonusAmount&&!modal.bonus)modal.bonus=parseInt(String(inlineResult.bonusAmount).replace(/[$,]/g,''))||0;if(inlineResult.churnMonths&&!modal.churn)modal.churn=inlineResult.churnMonths<=6?'180':inlineResult.churnMonths<=12?'1':inlineResult.churnMonths<=24?'2':'3';if(inlineResult.earlyCloseDays)modal.minHoldDays=parseInt(inlineResult.earlyCloseDays)||0;if(inlineResult.earlyCloseFee)modal.earlyCloseFee=parseInt(String(inlineResult.earlyCloseFee).replace(/[$,]/g,''))||0;if(inlineResult.ddAmount||inlineResult.debitTxns)modal.dataPoint=[inlineResult.ddAmount?'DD '+inlineResult.ddAmount:'',inlineResult.debitTxns?inlineResult.debitTxns+' debit txns':''].filter(Boolean).join(' + ');if(inlineResult.promoCode&&!modal.dataPoint)modal.dataPoint='Promo: '+inlineResult.promoCode;if(inlineResult.timelineDays)modal.reqDays=inlineResult.timelineDays;if(inlineResult.bankName&&!modal.bank)modal.bank=inlineResult.bankName}else{alert('Could not extract data. Paste more of the full T&C.')}R()}
-function fillFromAI(){if(!analyzerResult)return;const r=analyzerResult;const finalBank=formatAnalyzedBankName(r.bankName||'',analyzerIsBiz);const newData={bank:finalBank,bonus:typeof r.bonusAmount==='number'?r.bonusAmount:parseInt(String(r.bonusAmount||'').replace(/[$,]/g,''))||0,churn:r.churnMonths?(r.churnMonths<=6?'180':r.churnMonths<=12?'1':r.churnMonths<=24?'2':'3'):'',opened:'',closed:'',bonusRecd:'',reqMet:'',notes:'',analyzedTC:r.notesForTracker||(r.checklist?'* '+r.checklist.join('\n* '):''),minHoldDays:typeof r.earlyCloseDays==='number'?r.earlyCloseDays:parseInt(String(r.earlyCloseDays||''))||0,earlyCloseFee:parseInt(String(r.earlyCloseFee||'').replace(/[$,]/g,''))||0,dataPoint:[r.ddAmount?'DD '+r.ddAmount:'',r.debitTxns?r.debitTxns+' debit txns':''].filter(Boolean).join(' + '),reqDays:parseInt(String(r.timeline||''))||0,referralBonus:0,plannedClose:'',phoneNum:'',feeChecked:false};const matches=sortMatchChoices(newData.bank,getBankMatches(newData.bank));if(matches.length){matchPickerPrompt={newData,matches};showAnalyzer=false;analyzerText='';analyzerResult=null;analyzerIsBiz=false;R();return}modal={...newData,checklist:[]};showAnalyzer=false;analyzerText='';analyzerResult=null;analyzerIsBiz=false;R()}
+function runInlineAnalyze(){const el=document.getElementById('inline_tc');if(!el||el.value.length<20){alert('Paste more T&C text');return}inlineResult=analyzeTC(el.value);if(inlineResult){if(inlineResult.notesForTracker)modal.analyzedTC=inlineResult.notesForTracker;if(inlineResult.bonusAmount&&!modal.bonus)modal.bonus=parseInt(String(inlineResult.bonusAmount).replace(/[$,]/g,''))||0;if(inlineResult.churnMonths&&!modal.churn)modal.churn=inlineResult.churnMonths<=6?'180':inlineResult.churnMonths<=12?'1':inlineResult.churnMonths<=24?'2':'3';if(inlineResult.earlyCloseDays)modal.minHoldDays=parseInt(inlineResult.earlyCloseDays)||0;if(inlineResult.earlyCloseFee)modal.earlyCloseFee=parseInt(String(inlineResult.earlyCloseFee).replace(/[$,]/g,''))||0;if(inlineResult.ddAmount||inlineResult.debitTxns)modal.dataPoint=[inlineResult.ddAmount?'DD '+inlineResult.ddAmount:'',inlineResult.debitTxns?inlineResult.debitTxns+' debit txns':''].filter(Boolean).join(' + ');if(inlineResult.promoCode&&!modal.dataPoint)modal.dataPoint='Promo: '+inlineResult.promoCode;if(inlineResult.timelineDays)modal.reqDays=inlineResult.timelineDays;if(inlineResult.minDaysOpen&&!modal.minHoldDays)modal.minHoldDays=inlineResult.minDaysOpen;if(inlineResult.openBy&&!modal.notes)modal.notes='Open by: '+inlineResult.openBy;if(inlineResult.bankName&&!modal.bank)modal.bank=inlineResult.bankName}else{alert('Could not extract data. Paste more of the full T&C.')}R()}
+function fillFromAI(){if(!analyzerResult)return;const r=analyzerResult;const finalBank=formatAnalyzedBankName(r.bankName||'',analyzerIsBiz);const newData={bank:finalBank,bonus:typeof r.bonusAmount==='number'?r.bonusAmount:parseInt(String(r.bonusAmount||'').replace(/[$,]/g,''))||0,churn:r.churnMonths?(r.churnMonths<=6?'180':r.churnMonths<=12?'1':r.churnMonths<=24?'2':'3'):'',opened:'',closed:'',bonusRecd:'',reqMet:'',notes:'',analyzedTC:r.notesForTracker||(r.checklist?'* '+r.checklist.join('\n* '):''),minHoldDays:typeof r.earlyCloseDays==='number'?r.earlyCloseDays:(typeof r.minDaysOpen==='number'?r.minDaysOpen:parseInt(String(r.earlyCloseDays||r.minDaysOpen||''))||0),earlyCloseFee:parseInt(String(r.earlyCloseFee||'').replace(/[$,]/g,''))||0,dataPoint:[r.ddAmount?'DD '+r.ddAmount:'',r.debitTxns?r.debitTxns+' debit txns':''].filter(Boolean).join(' + '),reqDays:parseInt(String(r.timeline||''))||0,referralBonus:0,plannedClose:'',phoneNum:'',feeChecked:false};const matches=sortMatchChoices(newData.bank,getBankMatches(newData.bank));if(matches.length){matchPickerPrompt={newData,matches};showAnalyzer=false;analyzerText='';analyzerResult=null;analyzerIsBiz=false;R();return}modal={...newData,checklist:[]};showAnalyzer=false;analyzerText='';analyzerResult=null;analyzerIsBiz=false;R()}
 function exportBackup(){const data={entries,ddMethods:loadDD(),bankReqs:loadReqs(),version:'v6',exported:new Date().toISOString()};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='BonusTracker_Backup_'+td()+'.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);setLastBk()}
 function importBackup(){const inp=document.createElement('input');inp.type='file';inp.accept='.json';inp.onchange=function(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=function(e){try{const d=JSON.parse(e.target.result);if(d.entries){entries=sortE(d.entries);sv(SK,entries);if(d.ddMethods)saveDD(d.ddMethods);if(d.bankReqs)saveReqs(d.bankReqs);cfm={title:'Restored',msg:d.entries.length+' entries loaded.',green:true,action:()=>{cfm=null;R()}};R()}}catch{alert('Invalid file')}};r.readAsText(f)};inp.click()}
 function exportCSV(yr){const yrE=taxEntriesForYear(yr);let csv='Bank,Bonus,Received,Opened,Closed,Data Point\n';yrE.forEach(e=>{csv+='"'+e.bank+'",'+e.bonus+',"'+fD(e.bonusRecd)+'","'+fD(e.opened)+'","'+fD(e.closed)+'","'+(e.dataPoint||'').replace(/"/g,"'")+'"\n'});csv+='\nTotal,'+yrE.reduce((s,e)=>s+(e.bonus||0),0)+'\n';const blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='BonusTracker_'+yr+'.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
