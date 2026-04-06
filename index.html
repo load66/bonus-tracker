@@ -1071,7 +1071,7 @@ function analyzeTCSection(text){
   else if(r.openWindow)n.push(`* Open window: ${r.openWindow}`);
   n.push(`* Monthly fee: ${r.monthlyFee || 'Not clearly stated in pasted T&C'}`);
   if(r.feeWaiver)n.push(`* Fee waiver: ${r.feeWaiver}`);
-  if(r.bonusPostTime)n.push(`* Bonus posts: ${r.bonusPostTime}`);
+  if(r.bonusPostTime){let bp=`* Bonus posts: ${r.bonusPostTime}`; if(r.mustRemainOpen || r.requiresGoodStanding) bp += ' (account must remain open' + (r.requiresGoodStanding ? ' and in good standing' : '') + ')'; n.push(bp);}
   if(r.earlyCloseFee || r.earlyCloseDays)n.push(`* Early close fee: ${r.earlyCloseFee || 'Fee applies'}${r.earlyCloseDays ? ` if closed within ${r.earlyCloseDays} days` : ''}`);
   else n.push('* Early close fee: Not mentioned');
   if(r.residency)n.push(`* Availability: ${r.residency}`);
@@ -1079,6 +1079,7 @@ function analyzeTCSection(text){
   n.push('');
   n.push('HOW TO EARN THE BONUS:');
   let step=1;
+  const hasDetailedDaySteps = !!(r.newMoneyDays || r.maintainDays || r.activityDays);
   if(r.minOpeningDeposit)n.push(`* ${step++}. Open the account with ${r.minOpeningDeposit}`);
   else n.push(`* ${step++}. Open the required account`);
 
@@ -1110,8 +1111,10 @@ function analyzeTCSection(text){
     if(r.debitTxns)n.push(`* ${step++}. Complete ${r.debitTxns} debit card transactions`);
   }
 
-  if(r.timeline)n.push(`* ${step++}. Finish requirements within ${r.timeline}`);
+  if(r.timeline && !hasDetailedDaySteps)n.push(`* ${step++}. Finish requirements within ${r.timeline}`);
   if(r.statementCycleCutoff)n.push(`* ${step++}. Transactions must post/settle by the statement-cycle cutoff`);
+  if(r.mustRemainOpen && !r.accountActiveAtPayout)n.push(`* ${step++}. Keep the account open until bonus payout`);
+  if(r.requiresGoodStanding && !r.accountActiveAtPayout)n.push(`* ${step++}. Keep the account in good standing`);
   if(r.minDaysOpen)n.push(`* ${step++}. Keep the account open at least ${r.minDaysOpen} days`);
   if(r.mustBePositiveAtQualEnd)n.push(`* ${step++}. Have a positive balance at the end of the qualifying period`);
   if(r.accountActiveAtPayout)n.push(`* ${step++}. Keep the account active until bonus payout`);
@@ -1119,6 +1122,7 @@ function analyzeTCSection(text){
 
   n.push('');
   n.push('WHAT COUNTS / WHAT DOES NOT:');
+  if(r.qualifyingTxnTypes?.length)n.push(`* Qualifying transactions: ${r.qualifyingTxnTypes.join(', ')}`);
   if(r.ddExamples?.length)n.push(`* Direct deposit examples: ${r.ddExamples.join(', ')}`);
   if(r.directDebitExamples?.length)n.push(`* ACH debit examples: ${r.directDebitExamples.join(', ')}`);
   if(r.ddExcluded?.length)n.push(`* Does not count: ${r.ddExcluded.join(', ')}`);
@@ -1126,10 +1130,10 @@ function analyzeTCSection(text){
 
   n.push('');
   n.push('ELIGIBILITY / CHURN:');
-  if(r.currentCustomerIneligible)n.push('* Current customers may not be eligible');
+  if(r.currentCustomerIneligible)n.push('* Current business checking customers are not eligible');
   if(r.churnMonths)n.push(`* Prior closure restriction: ${r.churnMonths} months`);
   if(r.priorBonusIneligible)n.push('* Previous bonus recipients are not eligible');
-  if(r.limitOneBonus)n.push('* Limit one bonus per customer/account');
+  if(r.limitOneBonus)n.push(`* Limit one bonus per ${/business/i.test(r.acctType||r.bankName||r.sectionTitle||'') ? 'business/entity' : 'customer/account'}`);
   if(r.primaryOwnerOnly)n.push('* Bonus paid to primary owner');
   if(/cannot be combined|not be combined/.test(t))n.push('* Cannot be combined with other offers');
   if(r.taxForm)n.push(`* Tax form / tax note: ${r.taxForm}`);
