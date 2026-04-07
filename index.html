@@ -272,6 +272,22 @@ html,body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:
 /* split suggested-next panels */
 .sug-split{display:grid;grid-template-columns:1fr 1fr;gap:8px}.sug-panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:8px;box-shadow:0 1px 4px rgba(0,0,0,.04)}.sug-panel-h{font-size:9px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;padding:0 2px}.sug-panel .sug-c{margin-bottom:6px}.sug-panel .sug-c:last-child{margin-bottom:0}.sug-empty{font-size:10px;color:var(--muted);padding:10px 6px;line-height:1.4}@media (max-width:430px){.sug-split{gap:6px}.sug-panel{padding:7px;border-radius:12px}.sug-panel-h{font-size:8px}.sug-panel .sug-c{padding:8px 9px}.sug-empty{font-size:9px;padding:8px 4px}}
 
+
+/* mini-countdown-timer-cleanup */
+.tm{list-style:none;padding:0;margin:6px 0}
+.tm li{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+.tm li:last-child{border:none}
+.tm-main{flex:1;min-width:0}
+.tm-title{font-size:12px;font-weight:600;color:var(--text);line-height:1.35}
+.tm-title.dn{text-decoration:line-through;color:var(--muted)}
+.tm-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.tm-pill{display:inline-flex;align-items:center;justify-content:center;min-width:74px;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:800;line-height:1}
+.tm-pill.green{background:#D1FAE5;color:#065F46}.tm-pill.amber{background:#FEF3C7;color:#92400E}.tm-pill.red{background:#FEE2E2;color:#991B1B}.tm-pill.gray{background:#E2E8F0;color:#475569}
+.tm-add{display:grid;grid-template-columns:minmax(0,1fr) 150px 88px 84px;gap:6px;margin-top:8px;align-items:center}
+.tm-add input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:13px;background:var(--bg);outline:none}
+.tm-add button{width:100%;min-width:0;min-height:42px;padding:0 12px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;grid-column:auto;justify-self:stretch;margin-top:0}
+@media (max-width:700px){.tm-add{grid-template-columns:1fr 1fr 92px;grid-template-areas:"text text text" "start days add"}.tm-add input:first-child{grid-area:text}.tm-add input:nth-child(2){grid-area:start}.tm-add input:nth-child(3){grid-area:days}.tm-add button{grid-area:add}}
+
 </style>
 </head>
 <body>
@@ -1051,7 +1067,7 @@ function rTracker(sorted){
             h += `<li><div class="ckb${c.done?' dn':''}" onclick="event.stopPropagation();toggleCk('${e.id}',${ci})"></div><span class="ck-text${c.done?' dn':''}">${esc(c.text)}</span><span class="ck-del" onclick="event.stopPropagation();rmCk('${e.id}',${ci})">×</span></li>`;
           });
         }
-        h += `</ul><div class="ck-add"><input id="ck_${e.id}" placeholder="Add step..." onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.stopPropagation();addCk('${e.id}')}" /><button onclick="event.stopPropagation();addCk('${e.id}')">Add</button></div>`;h += '<div class="sec" style="margin-top:8px">Mini Countdown Timers</div><ul class="tm">';const __timers=sortCustomTimers(e.customTimers||[]);if(__timers.length){__timers.forEach((t,ti)=>{const meta=timerCountdownMeta(t);h += `<li><div class="ckb${t.done?' dn':''}" onclick="event.stopPropagation();toggleTimer('${e.id}',${ti})"></div><div class="tm-main"><div class="tm-title${t.done?' dn':''}">${esc(t.text||'Timer')}</div><div class="tm-sub">${timerMetaLine(t)}</div></div><span class="tm-pill ${meta.cls}">${esc(meta.text)}</span><span class="ck-del" onclick="event.stopPropagation();rmTimer('${e.id}',${ti})">×</span></li>`;});}else{h += '<li><div class="tm-main"><div class="tm-sub">Add a custom due date for bank-specific requirements.</div></div></li>';}h += `</ul><div class="tm-add"><input id="tm_txt_${e.id}" placeholder="e.g. Use debit card once" onclick="event.stopPropagation()"><input id="tm_start_${e.id}" type="date" onclick="event.stopPropagation()"><input id="tm_days_${e.id}" type="number" inputmode="numeric" min="1" placeholder="Days" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.stopPropagation();addTimer('${e.id}')}"><button onclick="event.stopPropagation();addTimer('${e.id}')">Add</button></div>`;
+        h += `</ul><div class="ck-add"><input id="ck_${e.id}" placeholder="Add step..." onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.stopPropagation();addCk('${e.id}')}" /><button onclick="event.stopPropagation();addCk('${e.id}')">Add</button></div>`;h += '<div class="sec" style="margin-top:8px">Mini Countdown Timers</div><ul class="tm">';const __timers=sortCustomTimers(e.customTimers||[]);if(__timers.length){__timers.forEach((t,ti)=>{const meta=timerCountdownMeta(t);h += `<li><div class="ckb${t.done?' dn':''}" onclick="event.stopPropagation();toggleTimer('${e.id}',${ti})"></div><div class="tm-main"><div class="tm-title${t.done?' dn':''}">${esc(t.text||'Timer')}</div><div class="tm-sub">${timerMetaLine(t)}</div></div><span class="tm-pill ${meta.cls}">${esc(meta.text)}</span><span class="ck-del" onclick="event.stopPropagation();rmTimer('${e.id}',${ti})">×</span></li>`;});}h += `</ul><div class="tm-add"><input id="tm_txt_${e.id}" placeholder="e.g. Use debit card once" onclick="event.stopPropagation()"><input id="tm_start_${e.id}" type="date" onclick="event.stopPropagation()"><input id="tm_days_${e.id}" type="number" inputmode="numeric" min="1" placeholder="Days" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.stopPropagation();addTimer('${e.id}')}"><button onclick="event.stopPropagation();addTimer('${e.id}')">Add</button></div>`;
       }
 
       if(e.notes) h += `<div class="card-notes" style="white-space:pre-wrap;font-size:12px;line-height:1.6">${esc(e.notes)}</div>`;
