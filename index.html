@@ -1318,7 +1318,7 @@ function rTracker(sorted){
             h += `<li><div class="ckb${c.done?' dn':''}" onclick="event.stopPropagation();toggleCk('${e.id}',${ci})"></div><span class="ck-text${c.done?' dn':''}">${esc(c.text)}</span><span class="ck-del" onclick="event.stopPropagation();rmCk('${e.id}',${ci})">×</span></li>`;
           });
         }
-        h += `</ul><div class="ck-add"><input id="ck_${e.id}" placeholder="Add step..." onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.stopPropagation();addCk('${e.id}')}" /><button onclick="event.stopPropagation();addCk('${e.id}')">Add Timer</button></div>`;
+        h += `</ul><div class="ck-add"><input id="ck_${e.id}" placeholder="Add step..." onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.stopPropagation();addCk('${e.id}')}" /><button onclick="event.stopPropagation();addCk('${e.id}')">Add</button></div>`;
         h += '<div class="sec" style="margin-top:8px">Mini Countdown Timers</div><ul class="tm">';
         const __timers=sortCustomTimers(e.customTimers||[]);
         if(__timers.length){
@@ -1326,7 +1326,7 @@ function rTracker(sorted){
         }else{
           h += '<li><div class="tm-main"><div class="tm-sub">Add a custom due date for bank-specific requirements.</div></div></li>';
         }
-        h += `</ul><div class="tm-add"><input id="tm_txt_${e.id}" placeholder="e.g. Use debit card once" onclick="event.stopPropagation()"><input id="tm_start_${e.id}" type="date" onclick="event.stopPropagation()"><input id="tm_days_${e.id}" type="number" inputmode="numeric" min="1" placeholder="Days" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.stopPropagation();addTimer('${e.id}')}"><button onclick="event.stopPropagation();addTimer('${e.id}')">Add Timer</button></div>`;
+        h += `</ul><div class="tm-add"><input id="tm_txt_${e.id}" placeholder="e.g. Use debit card once" onclick="event.stopPropagation()"><input id="tm_start_${e.id}" type="date" onclick="event.stopPropagation()"><input id="tm_days_${e.id}" type="number" inputmode="numeric" min="1" placeholder="Days" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.stopPropagation();addTimer('${e.id}')}"><button style="grid-column:1 / -1;width:100%;min-height:42px;display:block;margin-top:2px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:12px;font-weight:800" onclick="event.stopPropagation();addTimer('${e.id}')">Add Timer</button></div>`;
       }
 
       if(e.notes) h += `<div class="card-notes" style="white-space:pre-wrap;font-size:12px;line-height:1.6">${esc(e.notes)}</div>`;
