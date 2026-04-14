@@ -1656,7 +1656,7 @@ function rTracker(sorted){
         const __timerEditId=inlineStateFor(e.id).timerEdit||'';
         const __editTimer=__timers.find(t=>t.id===__timerEditId)||null;
         if(__timers.length){
-          __timers.forEach((t)=>{const meta=timerCountdownMeta(t);h += `<li><div class="ckb${t.done?' dn':''}" onclick="toggleTimer('${e.id}','${t.id||''}')"></div><div class="tm-main"><div class="tm-title${t.done?' dn':''}">${esc(t.text||'Timer')}</div><div class="tm-sub">${timerMetaLine(t)}</div></div><span class="tm-pill ${meta.cls}">${esc(meta.text)}</span><button type="button" class="tm-edit-btn" onclick="openTimerEditor('${e.id}','${t.id||''}')">Edit</button><span class="ck-del" onclick="rmTimer('${e.id}','${t.id||''}')">×</span></li>`;});
+          __timers.forEach((t)=>{const meta=timerCountdownMeta(t);h += `<li><div class="ckb${t.done?' dn':''}" onclick="toggleTimer('${e.id}','${t.id||''}')"></div><div class="tm-main"><div class="tm-title${t.done?' dn':''}">${esc(t.text||'Timer')}</div><div class="tm-sub">${timerMetaLine(t)}</div></div><span class="tm-pill ${meta.cls}">${esc(meta.text)}</span><button type="button" class="tm-edit-btn" onclick="inlineStateFor('${e.id}').timer=true;inlineStateFor('${e.id}').timerEdit='${t.id||''}';R();setTimeout(()=>{const el=document.getElementById('tm_txt_${e.id}');if(el){el.focus();if(el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'center'});}},0)">Edit</button><span class="ck-del" onclick="rmTimer('${e.id}','${t.id||''}')">×</span></li>`;});
         }else{
           h += '<li><div class="tm-main"><div class="tm-sub">Add a custom due date for bank-specific requirements.</div></div></li>';
         }
