@@ -1,6 +1,6 @@
-/* ✅ Version 2.4.7 Newest update: Makes Auto-fill New Entry create a tracker entry from the current T&C analyzer result. */
+/* ✅ Version 2.4.8 Newest update: Auto-fill New Entry now adds analyzer-based mini timers and auto-creates opened-date timers. */
 (function(){
-  const VER = '2.4.7';
+  const VER = '2.4.8';
   const qsa = (sel, root=document) => Array.from(root.querySelectorAll(sel));
   const clean = v => String(v || '').replace(/\s+/g, ' ').trim();
   const money = n => '$' + Number(n || 0).toLocaleString();
@@ -11,6 +11,24 @@
       .filter(v => /bonus|qualifying|direct deposit|monthly service fee|monthly account fee|offer|promo/i.test(v));
     values.sort((a,b) => b.length - a.length);
     return values[0] || '';
+  }
+
+  function timerLocalId(){
+    try { if (typeof timerId === 'function') return timerId(); } catch {}
+    return 'tm_' + Math.random().toString(36).slice(2,8) + Date.now().toString(36).slice(-4);
+  }
+
+  function addDaysIso(start, days){
+    try { if (typeof timerDueFromStart === 'function') return timerDueFromStart(start, days); } catch {}
+    try { if (typeof addD === 'function') return addD(start, days); } catch {}
+    const d = new Date(String(start) + 'T00:00:00');
+    d.setDate(d.getDate() + (parseInt(days,10) || 0));
+    return d.toISOString().split('T')[0];
+  }
+
+  function makeTimer(text, date, startDate='', daysRequired=0){
+    const raw = { id:timerLocalId(), text, startDate:startDate || '', daysRequired:Number(daysRequired || 0), date:date || '', done:false };
+    try { return typeof normalizeTimer === 'function' ? normalizeTimer(raw) : raw; } catch { return raw; }
   }
 
   function inferBankName(raw){
@@ -58,6 +76,12 @@
     return lines.join('\n');
   }
 
+  function buildInitialTimers(r){
+    const timers = [];
+    if (r.openBy) timers.push(makeTimer('Promo/open-by deadline', r.openBy));
+    return timers;
+  }
+
   function buildEntry(r, raw){
     const bank = r.bank || inferBankName(raw);
     return {
@@ -75,7 +99,7 @@
       earlyCloseFee: 0,
       feeChecked: false,
       plannedClose: '',
-      customTimers: [],
+      customTimers: buildInitialTimers(r),
       monthlyFeeYNText: r.fee ? `Yes — ${money(r.fee)} monthly fee` : 'Not clearly stated in pasted T&C',
       promoCodeText: r.code || '',
       avoidMonthlyFeeText: (r.waivers || []).join('\n'),
@@ -85,6 +109,35 @@
       expirationDateText: r.openBy ? (typeof fD === 'function' ? fD(r.openBy) : r.openBy) : '',
       requiredDaysText: r.reqDays ? String(r.reqDays) : ''
     };
+  }
+
+  function sameTimer(t, name){ return clean(t?.text).toLowerCase() === clean(name).toLowerCase(); }
+
+  function ensureAutoTimers(){
+    try {
+      if (!Array.isArray(entries)) return false;
+      let changed = false;
+      entries.forEach(e => {
+        if (!e || !e.bank || !e.opened) return;
+        const timers = Array.isArray(e.customTimers) ? e.customTimers : [];
+        const reqDays = parseInt(e.reqDays || e.requiredDaysText || 0, 10) || 0;
+        if (reqDays > 0 && !timers.some(t => sameTimer(t, 'Bonus requirement deadline'))) {
+          timers.push(makeTimer('Bonus requirement deadline', addDaysIso(e.opened, reqDays), e.opened, reqDays));
+          changed = true;
+        }
+        const payoutText = String(e.completeBonusText || e.notes || e.earlyTerminationFeeText || '');
+        if (/120/i.test(payoutText) && !timers.some(t => sameTimer(t, 'Expected bonus payout check'))) {
+          timers.push(makeTimer('Expected bonus payout check', addDaysIso(e.opened, 120), e.opened, 120));
+          changed = true;
+        }
+        e.customTimers = timers;
+      });
+      if (changed && typeof sv === 'function' && typeof SK !== 'undefined') sv(SK, entries);
+      return changed;
+    } catch (err) {
+      console.warn('[tc-autofill-action] auto timer sync skipped', err);
+      return false;
+    }
   }
 
   function autoFillNewEntry(){
@@ -120,7 +173,8 @@
         });
       }
       if (typeof R === 'function') R();
-      setTimeout(() => alert('New entry created for ' + entry.bank + '. Review the fields before opening/applying.'), 80);
+      const timerCount = entry.customTimers.length;
+      setTimeout(() => alert('New entry created for ' + entry.bank + (timerCount ? ` with ${timerCount} mini timer.` : '. Add Opened Date later to auto-create requirement timers.') + ' Review the fields before opening/applying.'), 80);
     } catch (err) {
       alert('Could not create the entry. Refresh and try again.');
       console.error('[tc-autofill-action]', err);
@@ -137,8 +191,18 @@
     }
   }, true);
 
+  const baseR = typeof R === 'function' ? R : null;
+  if (baseR) {
+    window.R = R = function(){
+      baseR();
+      setTimeout(ensureAutoTimers, 0);
+    };
+  }
+  setTimeout(ensureAutoTimers, 500);
+
   window.tcAutoFillNewEntry = autoFillNewEntry;
+  window.tcEnsureAutoTimers = ensureAutoTimers;
   const st = document.createElement('style');
-  st.textContent = `.app-version::after{content:' · AutoFill';opacity:.78}`;
+  st.textContent = `.app-version::after{content:' · AutoTimers';opacity:.78}`;
   document.head.appendChild(st);
 })();
