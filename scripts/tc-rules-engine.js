@@ -1,6 +1,6 @@
-/* ✅ Version 2.4.3 Newest update: Smarter strict T&C rules engine for DD-only offers, account-type rules, exclusions, fee waivers, and payout timing. */
+/* ✅ Version 2.4.4 Newest update: Fix mobile visual glitch by safely replacing only the Simple Terms card and hiding stray raw T&C preview blocks. */
 (function(){
-  const VER = '2.4.3';
+  const VER = '2.4.4';
 
   function escHtml(s){
     if (typeof esc === 'function') return esc(String(s ?? ''));
@@ -134,7 +134,7 @@
     return { raw, bonus, openBy, promoCode, accountType, reqMoney, reqDays, ddCount, fundedDays, counts:uniq(counts), notCounts:uniq(notCounts), payoutDays, payoutText, payoutSent, monthlyFee, waivers:uniq(waivers), priorMonths, cannotCombine, tax, earlyClose, hasClearPath, feeWithMoney, ddRequirementSent };
   }
 
-  function termsHtml(r){
+  function termsBodyHtml(r){
     const lines = [];
     lines.push('<div class="tc-label">SIMPLE TERMS:</div>');
     if (r.bonus) lines.push(`* Bonus: <span class="hl-money">${moneyFmt(r.bonus)}</span>`);
@@ -175,7 +175,7 @@
     lines.push('<span class="hl-section">REVIEW:</span>');
     if (r.hasClearPath) lines.push('* Qualification path is clear from pasted T&C. Verify promo code and exact account type before applying.');
     else lines.push('* Qualification path needs manual review.');
-    return `<div class="tc-box"><div class="tc-body">${lines.join('\n')}</div></div>`;
+    return `<div class="tc-body">${lines.join('\n')}</div>`;
   }
 
   function getLongestTermsText(){
@@ -185,18 +185,43 @@
     return withTerms[0] || '';
   }
 
+  function findSimpleTermsCard(){
+    const nodes = [...document.querySelectorAll('.tc-box,.az-area,.card')].filter(el => {
+      if (el.querySelector('textarea,input,select')) return false;
+      const t = el.textContent || '';
+      if (t.length > 4500) return false;
+      return t.includes('SIMPLE TERMS') && (t.includes('HOW TO EARN') || t.includes('WHAT COUNTS'));
+    });
+    return nodes.sort((a,b)=>(a.textContent||'').length-(b.textContent||'').length)[0] || null;
+  }
+
+  function hideRawPreviewBlocks(){
+    [...document.querySelectorAll('.tc-box,.az-area,.card')].forEach(el => {
+      if (el.querySelector('textarea,input,select')) return;
+      if (el.dataset.strictRawHidden === VER) return;
+      const t = el.textContent || '';
+      const looksRaw = t.length > 900 && /Here are the details|Direct Deposit Definition|Bonus Payment|ADDITIONAL TERMS AND CONDITIONS|OFFER RULES FOR ALL PARTICIPANTS/i.test(t) && !/SIMPLE TERMS/i.test(t);
+      if (looksRaw) {
+        el.dataset.strictRawHidden = VER;
+        el.style.display = 'none';
+      }
+    });
+  }
+
   function replaceSimpleTerms(){
     const raw = getLongestTermsText();
     if (!raw || raw.length < 200) return false;
-    const r = parseRules(raw);
-    const candidates = [...document.querySelectorAll('.tc-box,.card,.az-area,div')].filter(el => {
-      const t = el.textContent || '';
-      return t.includes('SIMPLE TERMS') && (t.includes('WHAT COUNTS') || t.includes('HOW TO EARN')) && (t.includes('ELIGIBILITY') || t.includes('REVIEW'));
-    });
-    const box = candidates.sort((a,b)=>(a.textContent||'').length-(b.textContent||'').length)[0];
+    hideRawPreviewBlocks();
+    const box = findSimpleTermsCard();
     if (!box || box.dataset.strictRulesApplied === VER) return false;
+    const r = parseRules(raw);
     box.dataset.strictRulesApplied = VER;
-    box.outerHTML = termsHtml(r);
+    box.classList.add('tc-strict-card');
+    box.style.height = 'auto';
+    box.style.maxHeight = 'none';
+    box.style.minHeight = '0';
+    box.style.overflow = 'visible';
+    box.innerHTML = termsBodyHtml(r);
     return true;
   }
 
@@ -222,6 +247,6 @@
   window.tcStrictReplaceSimpleTerms = replaceSimpleTerms;
 
   const st = document.createElement('style');
-  st.textContent = `.app-version::after{content:' · T&C Strict';opacity:.78}`;
+  st.textContent = `.app-version::after{content:' · T&C Strict';opacity:.78}.tc-strict-card{height:auto!important;max-height:none!important;min-height:0!important;overflow:visible!important}`;
   document.head.appendChild(st);
 })();
