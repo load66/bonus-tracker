@@ -1,6 +1,6 @@
-/* ✅ Version 2.7.5 Newest update: Polished Bonus Timeline dates + final field consistency for Auto-fill, Manual New Entry, and Edit Entry. */
+/* ✅ Version 2.7.6 Newest update: Crash-safe field handling. No live MutationObserver rewriting during scroll. */
 (function(){
-  const VER = '2.7.5';
+  const VER = '2.7.6';
   const qsa = (sel, root=document) => Array.from(root.querySelectorAll(sel));
   const clean = v => String(v || '').replace(/\s+/g, ' ').trim();
   const money = n => '$' + Number(n || 0).toLocaleString();
@@ -8,11 +8,6 @@
     const m = String(v || '').replace(/[$,\s]/g,'').match(/-?\d+(?:\.\d+)?/);
     const n = m ? parseFloat(m[0]) : 0;
     return Number.isFinite(n) ? n : 0;
-  };
-  const esc = v => {
-    const d = document.createElement('div');
-    d.textContent = String(v ?? '');
-    return d.innerHTML;
   };
 
   function addDaysIso(start, days){
@@ -33,17 +28,17 @@
   function getVal(id){ return document.getElementById(id)?.value || ''; }
   function getNum(id){ return num(getVal(id)); }
   function checked(id){ return !!document.getElementById(id)?.checked; }
+  function rawTerms(){
+    const values = qsa('textarea').map(a => a.value || '').filter(v => /bonus|qualifying|direct deposit|monthly service fee|monthly account fee|offer|promo|checking/i.test(v));
+    values.sort((a,b)=>b.length-a.length);
+    return values[0] || '';
+  }
   function inferHoldDays(){
     const payout = clean(getVal('tcr_payout'));
     const explicit = parseInt(getVal('tcr_holddays'),10) || 0;
     if (explicit) return explicit;
     if (/120/.test(payout)) return 120;
     return 0;
-  }
-  function rawTerms(){
-    const values = qsa('textarea').map(a => a.value || '').filter(v => /bonus|qualifying|direct deposit|monthly service fee|monthly account fee|offer|promo|checking/i.test(v));
-    values.sort((a,b)=>b.length-a.length);
-    return values[0] || '';
   }
   function pretty(iso){
     if (!iso) return '';
@@ -97,87 +92,21 @@
     return timers;
   }
 
-  function polishAutoFillReview(root=document){
-    const sheet = root.querySelector('.tcr-sheet');
+  function ensureHiddenCompatFields(){
+    const sheet = document.querySelector('.tcr-sheet');
     if (!sheet || !sheet.textContent.includes('Auto-fill New Entry')) return;
-    sheet.querySelectorAll('.tcr-version').forEach(v => v.textContent = 'v' + VER);
-
-    const monthly = document.getElementById('tcr_fee');
-    const risk = document.getElementById('tcr_risk');
-    if (monthly) {
-      const lab = monthly.closest('.tcr-field')?.querySelector('label');
-      if (lab) lab.textContent = 'Monthly Fee $';
-      monthly.setAttribute('inputmode','decimal');
-      monthly.setAttribute('min','0');
-    }
-    if (risk) {
-      const lab = risk.closest('.tcr-field')?.querySelector('label');
-      if (lab) lab.textContent = 'Early Close / Payout Risk Notes';
-    }
-    if (!document.getElementById('tcr_earlyfee') && monthly) {
-      monthly.closest('.tcr-grid')?.insertAdjacentHTML('beforeend', `<div class="tcr-field"><label>Early Termination Fee $</label><input id="tcr_earlyfee" type="number" inputmode="decimal" min="0" step="1" value="0"><small>Number only. Use 0 if none or not mentioned.</small></div>`);
-    }
+    if (!document.getElementById('tcr_earlyfee')) sheet.insertAdjacentHTML('beforeend','<input id="tcr_earlyfee" type="hidden" value="0">');
     if (!document.getElementById('tcr_holddays')) {
-      const reqDaysEl = document.getElementById('tcr_req_days');
       const payout = clean(getVal('tcr_payout'));
       const defaultHold = /120/.test(payout) ? 120 : '';
-      reqDaysEl?.closest('.tcr-grid')?.insertAdjacentHTML('beforeend', `<div class="tcr-field"><label>Hold Until Days</label><input id="tcr_holddays" type="number" inputmode="numeric" min="0" step="1" value="${defaultHold}"><small>Minimum days to keep account open before closing. Separate from Churn Rule.</small></div>`);
+      sheet.insertAdjacentHTML('beforeend',`<input id="tcr_holddays" type="hidden" value="${defaultHold}">`);
     }
-  }
-
-  function polishManualTimeline(root=document){
-    const sheet = root.querySelector('.manual-review-sheet');
-    if (!sheet || sheet.dataset.timelinePolished === '1') return;
-    const opened = document.getElementById('mer_opened');
-    const reqMet = document.getElementById('mer_reqmet');
-    const bonusRecd = document.getElementById('mer_bonusrecd');
-    const closed = document.getElementById('mer_closed');
-    if (!opened || !reqMet || !bonusRecd || !closed) return;
-
-    sheet.dataset.timelinePolished = '1';
-    sheet.querySelectorAll('.tcr-version').forEach(v => v.textContent = 'v' + VER);
-
-    const fields = [
-      { id:'mer_opened', icon:'🚀', label:'Opened Date', hint:'Starts requirement, hold-until, and mini timer calculations.' },
-      { id:'mer_reqmet', icon:'✅', label:'Requirements Met Date', hint:'Date you completed the bonus requirements.' },
-      { id:'mer_bonusrecd', icon:'💰', label:'Bonus Received Date', hint:'Confirms payout and helps tax/year totals.' },
-      { id:'mer_closed', icon:'🔒', label:'Closed Date', hint:'Starts the churn countdown using Churn Rule.' }
-    ];
-
-    const timeline = document.createElement('section');
-    timeline.className = 'tcr-section bonus-timeline-section';
-    timeline.innerHTML = `<div class="tcr-section-head"><h4>3. Bonus Timeline</h4><p>Opened starts timers. Closed starts the churn countdown.</p></div><div class="bonus-timeline-grid"></div>`;
-    const grid = timeline.querySelector('.bonus-timeline-grid');
-
-    fields.forEach(meta => {
-      const input = document.getElementById(meta.id);
-      const field = input?.closest('.tcr-field');
-      if (!field) return;
-      const lab = field.querySelector('label');
-      if (lab) lab.textContent = meta.label;
-      field.querySelectorAll('small').forEach(s => s.remove());
-      field.insertAdjacentHTML('beforeend', `<small>${esc(meta.hint)}</small>`);
-      const item = document.createElement('div');
-      item.className = 'timeline-item';
-      item.innerHTML = `<div class="timeline-icon">${meta.icon}</div>`;
-      item.appendChild(field);
-      grid.appendChild(item);
-    });
-
-    const reqSection = document.getElementById('mer_reqdays')?.closest('.tcr-section');
-    reqSection?.insertAdjacentElement('afterend', timeline);
-
-    const sections = qsa('.tcr-section', sheet);
-    sections.forEach(sec => {
-      const h = sec.querySelector('h4');
-      if (!h) return;
-      h.textContent = h.textContent.replace(/^3\. Fees & Risk/i, '4. Fees & Risk').replace(/^4\. Your Notes/i, '5. Your Notes');
-    });
   }
 
   function createReviewedEntry(){
     const sheet = document.querySelector('.tcr-sheet');
     if (!sheet || !sheet.textContent.includes('Auto-fill New Entry')) return false;
+    ensureHiddenCompatFields();
     const raw = rawTerms();
     let parsed = {};
     try { if (typeof tcStrictAnalyze === 'function') parsed = tcStrictAnalyze(raw); } catch {}
@@ -197,21 +126,10 @@
     if (holdDays) notesParts.push('Hold until: ' + holdDays + ' days after opening before closing.');
 
     const entry = {
-      id: newRecordId(bank),
-      bank,
-      bonus,
-      churn: parsed.prior ? 1 : '',
-      opened: clean(getVal('tcr_opened')),
-      bonusRecd: '',
-      closed: '',
-      dataPoint: clean(getVal('tcr_counts')),
-      notes: notesParts.join('\n'),
-      reqDays,
-      minHoldDays: holdDays,
-      earlyCloseFee: earlyFee,
-      feeChecked: false,
-      plannedClose: '',
-      customTimers: buildTimers(),
+      id: newRecordId(bank), bank, bonus, churn: parsed.prior ? 1 : '',
+      opened: clean(getVal('tcr_opened')), bonusRecd: '', closed: '', dataPoint: clean(getVal('tcr_counts')),
+      notes: notesParts.join('\n'), reqDays, minHoldDays: holdDays, earlyCloseFee: earlyFee,
+      feeChecked: false, plannedClose: '', customTimers: buildTimers(),
       monthlyFeeYNText: getNum('tcr_fee') ? `Yes — ${money(getNum('tcr_fee'))} monthly fee` : 'Not clearly stated in pasted T&C',
       promoCodeText: clean(getVal('tcr_promo')),
       avoidMonthlyFeeText: clean(getVal('tcr_waivers')),
@@ -226,20 +144,10 @@
       entries.unshift(entry);
       if (typeof sv === 'function' && typeof SK !== 'undefined') sv(SK, entries);
       if (typeof saveReq === 'function') saveReq(entry.bank, {
-        bank: entry.bank,
-        bonus: entry.bonus,
-        reqDays: entry.reqDays,
-        minHoldDays: entry.minHoldDays,
-        earlyCloseFee: entry.earlyCloseFee,
-        monthlyFeeYNText: entry.monthlyFeeYNText,
-        promoCodeText: entry.promoCodeText,
-        avoidMonthlyFeeText: entry.avoidMonthlyFeeText,
-        completeBonusText: entry.completeBonusText,
-        earlyTerminationFeeText: entry.earlyTerminationFeeText,
-        eligibilityText: entry.eligibilityText,
-        expirationDateText: entry.expirationDateText,
-        requiredDaysText: entry.requiredDaysText,
-        dataPoint: entry.dataPoint
+        bank: entry.bank, bonus: entry.bonus, reqDays: entry.reqDays, minHoldDays: entry.minHoldDays, earlyCloseFee: entry.earlyCloseFee,
+        monthlyFeeYNText: entry.monthlyFeeYNText, promoCodeText: entry.promoCodeText, avoidMonthlyFeeText: entry.avoidMonthlyFeeText,
+        completeBonusText: entry.completeBonusText, earlyTerminationFeeText: entry.earlyTerminationFeeText,
+        eligibilityText: entry.eligibilityText, expirationDateText: entry.expirationDateText, requiredDaysText: entry.requiredDaysText, dataPoint: entry.dataPoint
       });
       document.getElementById('tc_review_overlay')?.remove();
       if (typeof R === 'function') R();
@@ -251,40 +159,19 @@
     return true;
   }
 
-  function polishAll(){
-    polishAutoFillReview(document);
-    polishManualTimeline(document);
-  }
-
   document.addEventListener('click', e => {
     const btn = e.target.closest('button');
     if (!btn) return;
     if (/Create Entry \+ Timers/i.test(btn.textContent || '') && document.querySelector('.tcr-sheet')?.textContent.includes('Auto-fill New Entry')) {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      createReviewedEntry();
-      return;
+      e.preventDefault(); e.stopImmediatePropagation(); createReviewedEntry(); return;
     }
-    setTimeout(polishAll, 60);
-    setTimeout(polishAll, 300);
+    setTimeout(ensureHiddenCompatFields, 120);
   }, true);
-
-  new MutationObserver(() => setTimeout(polishAll, 50)).observe(document.documentElement, {childList:true, subtree:true});
-  setTimeout(polishAll, 700);
 
   if (!document.getElementById('field_polish_patch_style')) {
     const st = document.createElement('style');
     st.id = 'field_polish_patch_style';
-    st.textContent = `
-      .app-version::after{content:' · Polished';opacity:.78}
-      .manual-record-pill{display:inline-flex;align-items:center;gap:4px;margin:0 0 8px 2px;padding:6px 9px;border-radius:999px;background:#EEF2FF;color:#475569;font-size:10px;font-weight:900;letter-spacing:.5px}
-      .bonus-timeline-section{background:linear-gradient(180deg,#FFFFFF 0%,#F8FBFF 100%)!important;border-color:#D8E7FF!important}
-      .bonus-timeline-grid{display:grid;grid-template-columns:1fr;gap:10px;position:relative}
-      .timeline-item{display:grid;grid-template-columns:38px 1fr;gap:10px;align-items:flex-start;padding:10px;border:1px solid #E2E8F0;border-radius:16px;background:#fff;box-shadow:0 6px 14px rgba(15,23,42,.035)}
-      .timeline-icon{width:34px;height:34px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:#EFF6FF;border:1px solid #BFDBFE;font-size:16px;margin-top:23px}
-      .timeline-item .tcr-field{margin:0!important}.timeline-item .tcr-field input{background:#F8FAFC!important}.timeline-item small{color:#64748B!important;font-size:10px!important;line-height:1.35!important}
-      @media(min-width:520px){.bonus-timeline-grid{grid-template-columns:1fr 1fr}.timeline-item{grid-template-columns:34px 1fr}.timeline-icon{width:30px;height:30px;font-size:14px}}
-    `;
+    st.textContent = `.app-version::after{content:' · Safe';opacity:.78}.manual-record-pill{display:inline-flex;align-items:center;gap:4px;margin:0 0 8px 2px;padding:6px 9px;border-radius:999px;background:#EEF2FF;color:#475569;font-size:10px;font-weight:900;letter-spacing:.5px}`;
     document.head.appendChild(st);
   }
 })();
