@@ -1,6 +1,6 @@
-/* ✅ Version 2.6.2 Newest update: Stable UI verification patch for Analyzer Pro, Auto-fill Review, Manual Entry Pro, and smoke checks. */
+/* ✅ Version 2.7.0 Newest update: Fixed Auto-fill Review scroll jump + stable bottom action bar + Manual Review support. */
 (function(){
-  const VER = '2.6.2';
+  const VER = '2.7.0';
   const qsa = (sel, root=document) => Array.from(root.querySelectorAll(sel));
   const clean = v => String(v || '').replace(/\s+/g, ' ').trim();
 
@@ -119,22 +119,22 @@
     return true;
   }
 
-  function growTextareas(root=document){
-    root.querySelectorAll('.tcr-field textarea').forEach(t => {
-      t.style.height = 'auto';
-      t.style.overflow = 'hidden';
-      t.style.height = Math.max(132, t.scrollHeight + 4) + 'px';
-    });
+  function normalizeReview(root=document){
     root.querySelectorAll('.tcr-version').forEach(v => { v.textContent = 'v' + VER; });
+    root.querySelectorAll('.tcr-field textarea').forEach(t => {
+      t.style.height = '';
+      t.style.overflowY = 'auto';
+      t.style.resize = 'vertical';
+    });
+    const sheet = root.querySelector('.tcr-sheet');
+    if (sheet) sheet.classList.add('tcr-stable-sheet');
+    const actions = root.querySelector('.tcr-actions');
+    if (actions) actions.classList.add('tcr-fixed-actions');
   }
 
   function entriesReady(){
     try { return Array.isArray(entries); } catch { return Array.isArray(window.entries); }
   }
-
-  document.addEventListener('input', e => {
-    if (e.target && e.target.matches('.tcr-field textarea')) growTextareas(document);
-  }, true);
 
   document.addEventListener('click', e => {
     const btn = e.target.closest('button');
@@ -143,9 +143,11 @@
       setTimeout(strictFillManual, 250);
       setTimeout(strictFillManual, 800);
     }
+    setTimeout(normalizeReview, 80);
+    setTimeout(normalizeReview, 400);
   }, true);
 
-  new MutationObserver(() => setTimeout(growTextareas, 40)).observe(document.documentElement, {childList:true, subtree:true});
+  new MutationObserver(() => setTimeout(normalizeReview, 40)).observe(document.documentElement, {childList:true, subtree:true});
 
   window.btSmokeCheck = function(){
     return {
@@ -157,6 +159,7 @@
       strictAnalyzerReady: typeof tcStrictAnalyze === 'function',
       autoFillReviewReady: typeof tcOpenAutoFillReview === 'function' && typeof tcCreateReviewedEntry === 'function',
       manualProReady: typeof manualEntryProFillFromAnalyzer === 'function',
+      manualReviewReady: typeof openManualEntryReview === 'function',
       timersReady: typeof normalizeTimer === 'function' || typeof timerId === 'function',
       manualSheetVisible: !!findManualSheet()
     };
@@ -170,25 +173,28 @@
       .app-version::after{content:' · Stable';opacity:.78}
       .tca-box .tm-pill{min-width:8px!important;width:8px!important;height:8px!important;padding:0!important;border-radius:999px!important;font-size:0!important;overflow:hidden!important;vertical-align:middle!important;margin-left:4px!important;display:inline-block!important}
       .tca-box .tm-pill::before{content:'';display:block;width:8px;height:8px;border-radius:999px}.tca-box .tm-pill.green::before{background:#10B981}.tca-box .tm-pill.amber::before{background:#F59E0B}.tca-box .tm-pill.red::before{background:#EF4444}
+      .tcr-bg{align-items:flex-end!important;overflow:hidden!important}
+      .tcr-stable-sheet{position:relative!important;display:flex!important;flex-direction:column!important;max-height:calc(100dvh - max(env(safe-area-inset-top,0px),8px))!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))!important;scroll-padding-bottom:120px!important}
+      .tcr-fixed-actions{position:fixed!important;left:12px!important;right:12px!important;bottom:calc(8px + env(safe-area-inset-bottom,0px))!important;z-index:999!important;display:flex!important;gap:10px!important;margin:0!important;padding:10px 0!important;background:linear-gradient(180deg,rgba(248,250,252,0),rgba(248,250,252,.98) 30%,#F8FAFC)!important;box-shadow:none!important;max-width:496px!important;margin-left:auto!important;margin-right:auto!important}
+      .tcr-fixed-actions button{min-height:56px!important;font-size:13px!important;border-radius:16px!important;flex:1!important}
       @media(max-width:700px){
-        .tcr-sheet{max-width:100%!important;max-height:calc(100dvh - max(env(safe-area-inset-top,0px),8px))!important;padding:9px 12px calc(18px + env(safe-area-inset-bottom,0px))!important;border-radius:22px 22px 0 0!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important}
+        .tcr-sheet{max-width:100%!important;border-radius:22px 22px 0 0!important;padding:9px 12px calc(96px + env(safe-area-inset-bottom,0px))!important}
         .tcr-grid{grid-template-columns:1fr!important;gap:8px!important}
         .tcr-summary{grid-template-columns:1fr 1fr!important;gap:7px!important}
         .tcr-field,.tcr-field.wide{grid-column:1/-1!important;margin-bottom:9px!important}
-        .tcr-field input,.tcr-field textarea{font-size:16px!important;min-height:52px!important;line-height:1.35!important;white-space:normal!important;text-overflow:clip!important;overflow:visible!important}
-        .tcr-field textarea{min-height:132px!important;max-height:none!important;overflow:hidden!important;resize:none!important}
+        .tcr-field input,.tcr-field textarea,.tcr-field select{font-size:16px!important;min-height:52px!important;line-height:1.35!important;white-space:normal!important;text-overflow:clip!important;overflow:visible!important}
+        .tcr-field textarea{min-height:132px!important;max-height:220px!important;overflow-y:auto!important;resize:vertical!important}
         .tcr-section{border-radius:18px!important;padding:12px!important;margin:10px 0!important}
         .tcr-hero{border-radius:20px!important;padding:13px!important}
         .tcr-hero h3{font-size:18px!important}
         .tcr-hero p{font-size:11px!important}
         .tcr-chip b{font-size:12px!important}
         .tcr-timer-row{align-items:flex-start!important}
-        .tcr-actions{position:static!important;bottom:auto!important;z-index:auto!important;margin:14px 0 8px!important;padding:0!important;background:transparent!important;display:flex!important;gap:10px!important;box-shadow:none!important}
-        .tcr-actions button{min-height:56px!important;font-size:13px!important;border-radius:16px!important}
+        .manual-review-sheet{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))!important}
       }
     `;
     document.head.appendChild(st);
   }
 
-  setTimeout(growTextareas, 700);
+  setTimeout(normalizeReview, 700);
 })();
