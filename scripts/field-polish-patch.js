@@ -1,6 +1,6 @@
-/* ✅ Version 2.7.4 Newest update: Final field polish for Auto-fill + Manual/Edit forms. */
+/* ✅ Version 2.7.5 Newest update: Polished Bonus Timeline dates + final field consistency for Auto-fill, Manual New Entry, and Edit Entry. */
 (function(){
-  const VER = '2.7.4';
+  const VER = '2.7.5';
   const qsa = (sel, root=document) => Array.from(root.querySelectorAll(sel));
   const clean = v => String(v || '').replace(/\s+/g, ' ').trim();
   const money = n => '$' + Number(n || 0).toLocaleString();
@@ -125,6 +125,56 @@
     }
   }
 
+  function polishManualTimeline(root=document){
+    const sheet = root.querySelector('.manual-review-sheet');
+    if (!sheet || sheet.dataset.timelinePolished === '1') return;
+    const opened = document.getElementById('mer_opened');
+    const reqMet = document.getElementById('mer_reqmet');
+    const bonusRecd = document.getElementById('mer_bonusrecd');
+    const closed = document.getElementById('mer_closed');
+    if (!opened || !reqMet || !bonusRecd || !closed) return;
+
+    sheet.dataset.timelinePolished = '1';
+    sheet.querySelectorAll('.tcr-version').forEach(v => v.textContent = 'v' + VER);
+
+    const fields = [
+      { id:'mer_opened', icon:'🚀', label:'Opened Date', hint:'Starts requirement, hold-until, and mini timer calculations.' },
+      { id:'mer_reqmet', icon:'✅', label:'Requirements Met Date', hint:'Date you completed the bonus requirements.' },
+      { id:'mer_bonusrecd', icon:'💰', label:'Bonus Received Date', hint:'Confirms payout and helps tax/year totals.' },
+      { id:'mer_closed', icon:'🔒', label:'Closed Date', hint:'Starts the churn countdown using Churn Rule.' }
+    ];
+
+    const timeline = document.createElement('section');
+    timeline.className = 'tcr-section bonus-timeline-section';
+    timeline.innerHTML = `<div class="tcr-section-head"><h4>3. Bonus Timeline</h4><p>Opened starts timers. Closed starts the churn countdown.</p></div><div class="bonus-timeline-grid"></div>`;
+    const grid = timeline.querySelector('.bonus-timeline-grid');
+
+    fields.forEach(meta => {
+      const input = document.getElementById(meta.id);
+      const field = input?.closest('.tcr-field');
+      if (!field) return;
+      const lab = field.querySelector('label');
+      if (lab) lab.textContent = meta.label;
+      field.querySelectorAll('small').forEach(s => s.remove());
+      field.insertAdjacentHTML('beforeend', `<small>${esc(meta.hint)}</small>`);
+      const item = document.createElement('div');
+      item.className = 'timeline-item';
+      item.innerHTML = `<div class="timeline-icon">${meta.icon}</div>`;
+      item.appendChild(field);
+      grid.appendChild(item);
+    });
+
+    const reqSection = document.getElementById('mer_reqdays')?.closest('.tcr-section');
+    reqSection?.insertAdjacentElement('afterend', timeline);
+
+    const sections = qsa('.tcr-section', sheet);
+    sections.forEach(sec => {
+      const h = sec.querySelector('h4');
+      if (!h) return;
+      h.textContent = h.textContent.replace(/^3\. Fees & Risk/i, '4. Fees & Risk').replace(/^4\. Your Notes/i, '5. Your Notes');
+    });
+  }
+
   function createReviewedEntry(){
     const sheet = document.querySelector('.tcr-sheet');
     if (!sheet || !sheet.textContent.includes('Auto-fill New Entry')) return false;
@@ -201,6 +251,11 @@
     return true;
   }
 
+  function polishAll(){
+    polishAutoFillReview(document);
+    polishManualTimeline(document);
+  }
+
   document.addEventListener('click', e => {
     const btn = e.target.closest('button');
     if (!btn) return;
@@ -210,17 +265,26 @@
       createReviewedEntry();
       return;
     }
-    setTimeout(polishAutoFillReview, 60);
-    setTimeout(polishAutoFillReview, 300);
+    setTimeout(polishAll, 60);
+    setTimeout(polishAll, 300);
   }, true);
 
-  new MutationObserver(() => setTimeout(polishAutoFillReview, 50)).observe(document.documentElement, {childList:true, subtree:true});
-  setTimeout(polishAutoFillReview, 700);
+  new MutationObserver(() => setTimeout(polishAll, 50)).observe(document.documentElement, {childList:true, subtree:true});
+  setTimeout(polishAll, 700);
 
   if (!document.getElementById('field_polish_patch_style')) {
     const st = document.createElement('style');
     st.id = 'field_polish_patch_style';
-    st.textContent = `.app-version::after{content:' · Polished';opacity:.78}.manual-record-pill{display:inline-flex;align-items:center;gap:4px;margin:0 0 8px 2px;padding:6px 9px;border-radius:999px;background:#EEF2FF;color:#475569;font-size:10px;font-weight:900;letter-spacing:.5px}`;
+    st.textContent = `
+      .app-version::after{content:' · Polished';opacity:.78}
+      .manual-record-pill{display:inline-flex;align-items:center;gap:4px;margin:0 0 8px 2px;padding:6px 9px;border-radius:999px;background:#EEF2FF;color:#475569;font-size:10px;font-weight:900;letter-spacing:.5px}
+      .bonus-timeline-section{background:linear-gradient(180deg,#FFFFFF 0%,#F8FBFF 100%)!important;border-color:#D8E7FF!important}
+      .bonus-timeline-grid{display:grid;grid-template-columns:1fr;gap:10px;position:relative}
+      .timeline-item{display:grid;grid-template-columns:38px 1fr;gap:10px;align-items:flex-start;padding:10px;border:1px solid #E2E8F0;border-radius:16px;background:#fff;box-shadow:0 6px 14px rgba(15,23,42,.035)}
+      .timeline-icon{width:34px;height:34px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:#EFF6FF;border:1px solid #BFDBFE;font-size:16px;margin-top:23px}
+      .timeline-item .tcr-field{margin:0!important}.timeline-item .tcr-field input{background:#F8FAFC!important}.timeline-item small{color:#64748B!important;font-size:10px!important;line-height:1.35!important}
+      @media(min-width:520px){.bonus-timeline-grid{grid-template-columns:1fr 1fr}.timeline-item{grid-template-columns:34px 1fr}.timeline-icon{width:30px;height:30px;font-size:14px}}
+    `;
     document.head.appendChild(st);
   }
 })();
