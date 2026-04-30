@@ -1,6 +1,6 @@
-/* ✅ Version 2.7.6 Newest update: Crash-safe field handling. No live MutationObserver rewriting during scroll. */
+/* ✅ Version 2.7.9 Newest update: Rename promo date label to Promo Expiration / Open-by Date with crash-safe one-time polish. */
 (function(){
-  const VER = '2.7.6';
+  const VER = '2.7.9';
   const qsa = (sel, root=document) => Array.from(root.querySelectorAll(sel));
   const clean = v => String(v || '').replace(/\s+/g, ' ').trim();
   const money = n => '$' + Number(n || 0).toLocaleString();
@@ -82,7 +82,7 @@
     const raw = rawTerms();
     let parsed = {};
     try { if (typeof tcStrictAnalyze === 'function') parsed = tcStrictAnalyze(raw); } catch {}
-    if (checked('tcr_timer_promo') && parsed.openBy) timers.push(makeTimer('Promo/open-by deadline', parsed.openBy));
+    if (checked('tcr_timer_promo') && parsed.openBy) timers.push(makeTimer('Promo expiration / open-by deadline', parsed.openBy));
     const reqDays = parseInt(getVal('tcr_req_days'), 10) || 0;
     const fundedDays = parseInt(getVal('tcr_funded_days'), 10) || 0;
     const holdDays = inferHoldDays();
@@ -92,9 +92,21 @@
     return timers;
   }
 
+  function renamePromoDateLabel(){
+    const sheet = document.querySelector('.tcr-sheet');
+    if (!sheet || !sheet.textContent.includes('Auto-fill New Entry')) return;
+    const openBy = document.getElementById('tcr_openby');
+    const label = openBy?.closest('.tcr-field')?.querySelector('label');
+    if (label) label.textContent = 'Promo Expiration / Open-by Date';
+    qsa('.tcr-timer-row b', sheet).forEach(b => {
+      if (/promo\/open-by deadline/i.test(b.textContent || '')) b.textContent = 'Promo expiration / open-by deadline';
+    });
+  }
+
   function ensureHiddenCompatFields(){
     const sheet = document.querySelector('.tcr-sheet');
     if (!sheet || !sheet.textContent.includes('Auto-fill New Entry')) return;
+    renamePromoDateLabel();
     if (!document.getElementById('tcr_earlyfee')) sheet.insertAdjacentHTML('beforeend','<input id="tcr_earlyfee" type="hidden" value="0">');
     if (!document.getElementById('tcr_holddays')) {
       const payout = clean(getVal('tcr_payout'));
@@ -166,6 +178,7 @@
       e.preventDefault(); e.stopImmediatePropagation(); createReviewedEntry(); return;
     }
     setTimeout(ensureHiddenCompatFields, 120);
+    setTimeout(renamePromoDateLabel, 320);
   }, true);
 
   if (!document.getElementById('field_polish_patch_style')) {
