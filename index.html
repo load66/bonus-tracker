@@ -10,19 +10,35 @@
 <link rel="apple-touch-icon" href="./icon.svg">
 <title>Bank Bonus Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=2.5.0">
+<link rel="stylesheet" href="./style.css?v=2.5.1">
 <style>
 .app-version{position:fixed;top:calc(env(safe-area-inset-top,0px) + 3px);left:50%;transform:translateX(-50%);z-index:160;padding:2px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(15,23,42,.46);color:rgba(255,255,255,.82);font-family:'DM Sans',system-ui,sans-serif;font-size:9px;font-weight:800;letter-spacing:.8px;line-height:1.2;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);pointer-events:none}
 .tca-box .tm-pill{min-width:8px!important;width:8px;height:8px;padding:0!important;border-radius:999px!important;font-size:0!important;overflow:hidden;vertical-align:middle;margin-left:4px}.tca-box .tm-pill::before{content:'';display:block;width:8px;height:8px;border-radius:999px}.tca-box .tm-pill.green::before{background:#10B981}.tca-box .tm-pill.amber::before{background:#F59E0B}.tca-box .tm-pill.red::before{background:#EF4444}
+@media(max-width:700px){
+  .tcr-sheet{max-width:100%!important;max-height:calc(100dvh - max(env(safe-area-inset-top,0px),8px))!important;padding:9px 12px calc(98px + env(safe-area-inset-bottom,0px))!important;border-radius:22px 22px 0 0!important}
+  .tcr-grid{grid-template-columns:1fr!important;gap:8px!important}
+  .tcr-summary{grid-template-columns:1fr 1fr!important;gap:7px!important}
+  .tcr-field,.tcr-field.wide{grid-column:1/-1!important;margin-bottom:9px!important}
+  .tcr-field input,.tcr-field textarea{font-size:16px!important;min-height:52px!important;line-height:1.35!important;white-space:normal!important;text-overflow:clip!important;overflow:visible!important}
+  .tcr-field textarea{min-height:104px!important;max-height:none!important;overflow:auto!important}
+  .tcr-section{border-radius:18px!important;padding:12px!important;margin:10px 0!important}
+  .tcr-hero{border-radius:20px!important;padding:13px!important}
+  .tcr-hero h3{font-size:18px!important}
+  .tcr-hero p{font-size:11px!important}
+  .tcr-chip b{font-size:12px!important}
+  .tcr-timer-row{align-items:flex-start!important}
+  .tcr-actions{position:sticky!important;bottom:0!important;z-index:20!important;margin:8px -2px 0!important;padding:18px 0 max(8px,env(safe-area-inset-bottom,0px))!important;background:linear-gradient(180deg,rgba(248,250,252,0),#F8FAFC 26%,#F8FAFC)!important}
+  .tcr-actions button{min-height:56px!important;font-size:13px!important;border-radius:16px!important}
+}
 </style>
 </head>
 <body>
-<div class="app-version">v2.5.0</div>
+<div class="app-version">v2.5.1</div>
 <div class="app" id="app"></div>
-<script src="./app.js?v=2.5.0"></script>
-<script src="./scripts/timers.js?v=2.5.0"></script>
-<script src="./scripts/tc-analyzer-pro.js?v=2.5.0"></script>
-<script src="./scripts/tc-rules-engine.js?v=2.5.0"></script>
-<script src="./scripts/tc-autofill-action.js?v=2.5.0"></script>
+<script src="./app.js?v=2.5.1"></script>
+<script src="./scripts/timers.js?v=2.5.1"></script>
+<script src="./scripts/tc-analyzer-pro.js?v=2.5.1"></script>
+<script src="./scripts/tc-rules-engine.js?v=2.5.1"></script>
+<script src="./scripts/tc-autofill-action.js?v=2.5.1"></script>
 </body>
 </html>
