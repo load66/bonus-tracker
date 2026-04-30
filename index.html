@@ -10,61 +10,21 @@
 <link rel="apple-touch-icon" href="./icon.svg">
 <title>Bank Bonus Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=2.8.3">
+<link rel="stylesheet" href="./style.css?v=2.8.4">
 <style>
 .app-version{position:fixed;top:calc(env(safe-area-inset-top,0px) + 3px);left:50%;transform:translateX(-50%);z-index:160;padding:2px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(15,23,42,.46);color:rgba(255,255,255,.82);font-family:'DM Sans',system-ui,sans-serif;font-size:9px;font-weight:800;letter-spacing:.8px;line-height:1.2;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);pointer-events:none}
 </style>
 </head>
 <body>
-<div class="app-version">v2.8.3</div>
+<div class="app-version">v2.8.4</div>
 <div class="app" id="app"></div>
-<script src="./app.js?v=2.8.3"></script>
-<script src="./scripts/timers.js?v=2.8.3"></script>
-<script src="./scripts/tc-analyzer-pro.js?v=2.8.3"></script>
-<script src="./scripts/tc-rules-engine.js?v=2.8.3"></script>
-<script src="./scripts/tc-autofill-action.js?v=2.8.3"></script>
-<script src="./scripts/ui-stability-patch.js?v=2.8.3"></script>
-<script src="./scripts/field-polish-patch.js?v=2.8.3"></script>
-<script src="./scripts/tc-source-vault.js?v=2.8.3"></script>
-<script>
-/* v2.8.3: lightweight Save T&C Source button for Analyzer Pro */
-(function(){
-  const VER='2.8.3';
-  const VAULT_KEY='bt_tc_source_v1';
-  const MIN_LEN=350;
-  const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
-  const norm=v=>clean(v).toLowerCase();
-  const now=()=>new Date().toISOString();
-  function isGenerated(raw){const s=norm(raw);return !s||/^created from t&c analyzer/i.test(raw)||/does not count:/i.test(raw)&&/hold until:/i.test(raw)||/analyzer summary|source snippet/i.test(raw);}
-  function isTerms(raw){const s=clean(raw);if(s.length<MIN_LEN||isGenerated(raw))return false;let score=0;[/to be eligible/i,/offer is/i,/offer rules/i,/you must/i,/direct deposits?/i,/qualifying/i,/monthly.*fee/i,/we will deposit/i,/not eligible/i,/cannot be combined/i].forEach(r=>{if(r.test(s))score++;});return score>=3;}
-  function getVault(){try{return JSON.parse(localStorage.getItem(VAULT_KEY)||'{"byId":{},"byBank":{},"last":null}');}catch{return {byId:{},byBank:{},last:null};}}
-  function setVault(v){try{localStorage.setItem(VAULT_KEY,JSON.stringify(v));}catch(e){alert('Could not save T&C source. Storage may be full.');}}
-  function getModal(){try{return typeof modal!=='undefined'&&modal?modal:null;}catch{return null;}}
-  function getBank(){const m=getModal();if(clean(m&&m.bank))return clean(m.bank);for(const lab of Array.from(document.querySelectorAll('label'))){if(!/bank/i.test(lab.textContent||''))continue;const box=lab.closest('.fg')||lab.parentElement;const input=box&&box.querySelector('input,textarea,select');if(input&&clean(input.value))return clean(input.value);}return '';}
-  function getId(){const m=getModal();return clean((m&&m.id)||(m&&m.recordId)||'');}
-  function findEntry(id,bank){try{if(!Array.isArray(entries))return null;if(id){const e=entries.find(x=>clean(x.id).toUpperCase()===id.toUpperCase());if(e)return e;}if(bank){const b=norm(bank);return entries.find(x=>norm(x.bank)===b)||null;}}catch{}return null;}
-  window.tcSaveSourceNow=function(){
-    const ta=document.getElementById('tca_raw');
-    const raw=ta&&ta.value?ta.value.trim():'';
-    if(!isTerms(raw)){alert('Paste the original full T&C first. I will not save short text, analyzer summaries, or notes as the source.');return false;}
-    const bank=getBank();const id=getId();const rec={raw,bank,id,updatedAt:now(),analyzerVersion:VER,reason:'manual-save-button'};
-    const entry=findEntry(id,bank);
-    if(entry){entry.tcSourceTerms=raw;entry.tncSourceText=raw;entry.tcSourceUpdatedAt=rec.updatedAt;entry.tcAnalyzerVersion=VER;try{if(typeof sv==='function'&&typeof SK!=='undefined')sv(SK,entries);}catch{}}
-    const m=getModal();if(m){m.tcSourceTerms=raw;m.tncSourceText=raw;m.tcSourceUpdatedAt=rec.updatedAt;m.tcAnalyzerVersion=VER;}
-    const vault=getVault();vault.last=rec;if(id) vault.byId[id]=rec;if(bank) vault.byBank[norm(bank)]=rec;setVault(vault);window.__btLastTcSource=rec;
-    alert('T&C source saved for '+(bank||'this entry')+'.');return true;
-  };
-  function injectSaveButton(){
-    const box=document.querySelector('#tca_overlay .tca-box');const ta=document.getElementById('tca_raw');if(!box||!ta||box.querySelector('#tc_save_source_btn'))return;
-    const firstRow=Array.from(box.querySelectorAll('.crow')).find(r=>r.textContent.includes('Analyze'));
-    if(!firstRow)return;
-    const btn=document.createElement('button');btn.id='tc_save_source_btn';btn.className='c-c';btn.type='button';btn.textContent='💾 Save T&C Source';btn.style.cssText='margin-top:8px;width:100%;min-height:46px;border-radius:14px;font-weight:800';btn.onclick=function(e){e.preventDefault();e.stopPropagation();window.tcSaveSourceNow();};
-    firstRow.insertAdjacentElement('afterend',btn);
-  }
-  function wrap(){if(window.__saveSourceWrapped)return;const old=window.tcOpenPro;if(typeof old==='function'){window.__saveSourceWrapped=true;window.tcOpenPro=function(){const out=old.apply(this,arguments);setTimeout(injectSaveButton,150);setTimeout(injectSaveButton,500);return out;};}}
-  document.addEventListener('click',()=>setTimeout(injectSaveButton,180),true);
-  setTimeout(wrap,400);setTimeout(wrap,1200);
-})();
-</script>
+<script src="./app.js?v=2.8.4"></script>
+<script src="./scripts/timers.js?v=2.8.4"></script>
+<script src="./scripts/tc-analyzer-pro.js?v=2.8.4"></script>
+<script src="./scripts/tc-rules-engine.js?v=2.8.4"></script>
+<script src="./scripts/tc-autofill-action.js?v=2.8.4"></script>
+<script src="./scripts/ui-stability-patch.js?v=2.8.4"></script>
+<script src="./scripts/field-polish-patch.js?v=2.8.4"></script>
+<script src="./scripts/tc-source-vault.js?v=2.8.4"></script>
 </body>
 </html>
