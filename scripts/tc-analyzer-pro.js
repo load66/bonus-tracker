@@ -1,6 +1,6 @@
-/* ✅ Version 2.4 Newest update: T&C Analyzer Pro with confidence checks, tier detection, source snippets, action plan, and timer suggestions. */
+/* ✅ Version 2.8.0 Newest update: T&C Analyzer Pro extraction fix for promo code, promo expiration/open-by date, and monthly fee vs waiver. */
 (function(){
-  const TCA_VERSION = '2.4';
+  const TCA_VERSION = '2.8.0';
   const state = { open:false, raw:'', result:null, selectedTier:0, lastCopied:false };
 
   function safeEsc(v){
@@ -98,21 +98,35 @@
     return '';
   }
 
+  function prettyDate(iso){
+    try { return typeof fD === 'function' ? fD(iso) : new Date(iso+'T00:00:00').toLocaleDateString(); }
+    catch { return iso; }
+  }
+
+  function isDisclosureDateSentence(s){
+    return /\bas of\b|APY|Annual Percentage Yield|ratesheet|rate sheet|current interest rate|StockBrokers|U\.S\. News|award|recognized|competitor/i.test(s||'');
+  }
+
   function extractExpiration(text, sentences){
-    const candidates = findSentences(sentences, [/expire/i,/expires/i,/expiration/i,/offer ends/i,/apply by/i,/enroll by/i,/open.*by/i,/by \d{1,2}[\/\-]/i,/by (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i]);
+    const candidates = findSentences(sentences, [
+      /open(?:ing)?\s+.*\bby\b/i,
+      /apply\s+.*\bby\b/i,
+      /enroll\s+.*\bby\b/i,
+      /offer\s+(?:ends|expires|valid through|available through)/i,
+      /expires?\b/i,
+      /expiration\b/i,
+      /promo(?:tion)?\s+(?:ends|expires)/i,
+      /by (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i,
+      /by \d{1,2}[\/\-]\d{1,2}[\/\-]20\d{2}/i
+    ]).filter(s => !isDisclosureDateSentence(s));
+
     for (const s of candidates) {
       const iso = parseDateToIso(s);
       if (iso) return { value:iso, display:prettyDate(iso), source:s, confidence:'High' };
       const q = s.match(/\bQ([1-4])\s*(20\d{2})\b/i);
       if (q) return { value:`Q${q[1]} ${q[2]}`, display:`Q${q[1]} ${q[2]}`, source:s, confidence:'Medium' };
     }
-    const iso = parseDateToIso(text);
-    return iso ? { value:iso, display:prettyDate(iso), source:firstSentence(sentences,[new RegExp(iso.slice(0,4))]) || '', confidence:'Medium' } : null;
-  }
-
-  function prettyDate(iso){
-    try { return typeof fD === 'function' ? fD(iso) : new Date(iso+'T00:00:00').toLocaleDateString(); }
-    catch { return iso; }
+    return null;
   }
 
   function bestBonus(sentences){
@@ -148,21 +162,58 @@
   }
 
   function extractPromoCode(sentences){
-    const s = firstSentence(sentences, [/promo/i,/promotion code/i,/coupon code/i,/offer code/i,/code/i]);
-    if (!s) return null;
-    const m = s.match(/(?:promo(?:tion)?|coupon|offer)\s*code\s*(?:is|:|=)?\s*([A-Z0-9][A-Z0-9\-]{2,})/i) || s.match(/\b([A-Z]{2,}[A-Z0-9\-]{2,})\b/);
-    return m ? { value:m[1].toUpperCase(), source:s, confidence:'Medium' } : { value:'Mentioned — review required', source:s, confidence:'Low' };
+    const bad = /^(OBTAINED|THROUGH|INTENDED|SINGLE|ONLY|VALID|REQUIRED|WHEN|TIME|ACCOUNT|OPENING|OFFER|CODE|PROMOTIONAL|PROMOTION|PARTNERS|APPLY|MUST)$/i;
+    const picks = [];
+    const codeish = c => /^[A-Z0-9][A-Z0-9-]{2,}$/.test(c||'') && /\d/.test(c||'') && !bad.test(c||'');
+    const promoSentences = findSentences(sentences, [/promo/i,/promotion code/i,/promotional code/i,/coupon code/i,/offer code/i]);
+
+    for (const s of promoSentences) {
+      let m;
+      const patterns = [
+        /(?:apply|use|using|enter|provide)\s+(?:your\s+)?(?:valid\s+)?promo(?:tional)?\s+code\s+([A-Z0-9][A-Z0-9-]{2,})/ig,
+        /(?:apply|use|using|enter|provide)\s+(?:code|offer\s+code|coupon\s+code)\s+([A-Z0-9][A-Z0-9-]{2,})/ig,
+        /promo(?:tional)?\s+code\s*(?:is|:|=)?\s+([A-Z0-9][A-Z0-9-]{2,})/ig,
+        /coupon\s+code\s*(?:is|:|=)?\s+([A-Z0-9][A-Z0-9-]{2,})/ig,
+        /offer\s+code\s*(?:is|:|=)?\s+([A-Z0-9][A-Z0-9-]{2,})/ig
+      ];
+      for (const re of patterns) {
+        while ((m = re.exec(s))) {
+          const c = String(m[1]||'').toUpperCase();
+          if (codeish(c)) picks.push({ value:c, source:s, confidence:'High' });
+        }
+      }
+      if (/promo|code/i.test(s)) {
+        const tokens = s.match(/\b[A-Z][A-Z0-9-]{3,}\b/g) || [];
+        tokens.forEach(t => { const c=t.toUpperCase(); if (codeish(c)) picks.push({ value:c, source:s, confidence:'Medium' }); });
+      }
+    }
+    const exact = picks.find(x => x.confidence === 'High') || picks[picks.length-1];
+    if (exact) return exact;
+    const mentioned = promoSentences.find(s => /promo(?:tional)?\s+code|offer\s+code|coupon\s+code/i.test(s));
+    return mentioned ? { value:'Mentioned — review required', source:mentioned, confidence:'Low' } : null;
   }
 
   function extractFee(sentences){
-    const s = firstSentence(sentences, [/monthly.*fee/i,/service.*fee/i,/maintenance.*fee/i,/monthly maintenance/i]);
-    if (!s) return null;
-    const m = moneyMentions(s).sort((a,b)=>b.value-a.value)[0];
-    return { value:m ? `${m.text} monthly fee` : 'Monthly fee mentioned — review required', source:s, confidence:m?'High':'Low' };
+    const matches = findSentences(sentences, [/monthly.*fee/i,/service.*fee/i,/maintenance.*fee/i,/monthly maintenance/i,/monthly account fee/i]);
+    if (!matches.length) return null;
+    const scored = [];
+    matches.forEach(s => {
+      const amounts = moneyMentions(s).filter(m => m.value >= 1 && m.value < 100);
+      amounts.forEach(m => {
+        let score = 0;
+        if (/monthly account fee|monthly service fee|monthly maintenance fee|monthly fee/i.test(s)) score += 3;
+        if (/\bwaiv|avoid|minimum|balance|deposit/i.test(s)) score -= 1;
+        if (/\$\s*15\b|\$15\b/i.test(m.text)) score += 1;
+        scored.push({ value:`${m.text} monthly fee`, amount:m.value, source:s, confidence:'High', score });
+      });
+    });
+    if (scored.length) return scored.sort((a,b)=>b.score-a.score || b.amount-a.amount)[0];
+    const s = matches[0];
+    return { value:'Monthly fee mentioned — review required', source:s, confidence:'Low' };
   }
 
   function extractAvoidFee(sentences){
-    const matches = findSentences(sentences, [/waive/i,/avoid/i,/monthly.*fee/i,/minimum balance/i,/direct deposit/i,/electronic deposit/i,/maintain/i]).filter(s => /waive|avoid|monthly.*fee|minimum balance/i.test(s));
+    const matches = findSentences(sentences, [/waive/i,/waived/i,/avoid/i,/monthly.*fee/i,/minimum balance/i,/direct deposit/i,/electronic deposit/i,/maintain/i]).filter(s => /waive|waived|avoid|monthly.*fee|minimum balance|qualifying electronic deposits/i.test(s));
     if (!matches.length) return null;
     return { value:matches.slice(0,3).join('\n'), source:matches[0], confidence:'Medium' };
   }
@@ -184,7 +235,7 @@
     const matches = findSentences(sentences, [/close/i,/closed/i,/closure/i,/early termination/i,/forfeit/i,/deduct/i,/charge/i,/fee/i]).filter(s => /close|closure|termination|forfeit|deduct|fee/i.test(s));
     if (!matches.length) return null;
     const s = matches[0];
-    const m = moneyMentions(s).sort((a,b)=>b.value-a.value)[0];
+    const m = moneyMentions(s).filter(x=>x.value>=1&&x.value<250).sort((a,b)=>b.value-a.value)[0];
     const days = dayMentions(s).sort((a,b)=>b.days-a.days)[0];
     return { value:matches.slice(0,4).join('\n'), fee:m?.value || 0, days:days?.days || 0, source:s, confidence:'Medium' };
   }
@@ -221,7 +272,8 @@
   function buildActionPlan(res){
     const steps = [];
     steps.push('1. Open the account and save the opened date in the tracker.');
-    if (res.promoCode?.value) steps.push(`2. Use promo code: ${res.promoCode.value}.`);
+    if (res.promoCode?.value && !/review required/i.test(res.promoCode.value)) steps.push(`2. Use promo code: ${res.promoCode.value}.`);
+    else if (res.promoCode?.value) steps.push('2. Promo code is mentioned, but exact code needs review.');
     const dd = res.directDeposit;
     if (dd?.amount) steps.push(`3. Complete qualifying direct deposits totaling ${fmtMoney(dd.amount)}${dd.days?` within ${dd.days} days`:''}.`);
     else if (res.completeBonus?.value) steps.push('3. Complete the listed bonus requirements from the analyzer.');
@@ -236,7 +288,7 @@
     const opened = m?.opened || '';
     const out = [];
     if (res.expiration?.value && /^20\d{2}-\d{2}-\d{2}$/.test(res.expiration.value)) {
-      out.push({kind:'due', text:'Promo expiration / last day to apply', date:res.expiration.value, startDate:'', daysRequired:0, source:res.expiration.source});
+      out.push({kind:'due', text:'Promo expiration / open-by deadline', date:res.expiration.value, startDate:'', daysRequired:0, source:res.expiration.source});
     }
     if (opened && res.reqDays) out.push({kind:'days', text:'Bonus requirement deadline', startDate:opened, daysRequired:res.reqDays, date:addDaysIso(opened,res.reqDays), source:res.reqSource});
     if (opened && res.holdDays) out.push({kind:'days', text:'Required hold period ends', startDate:opened, daysRequired:res.holdDays, date:addDaysIso(opened,res.holdDays), source:res.holdSource});
@@ -277,7 +329,7 @@
     };
     if (tiers.length) res.reviewFlags.push('Tiered bonus detected — choose the target tier before applying.');
     if (!res.earlyClose) res.reviewFlags.push('Early closure/clawback terms were not clearly found. Review manually.');
-    if (!res.expiration) res.reviewFlags.push('Expiration date was not clearly found.');
+    if (!res.expiration) res.reviewFlags.push('Promo expiration/open-by date was not clearly found.');
     if (!res.directDeposit && /direct deposit|payroll|ACH/i.test(clean)) res.reviewFlags.push('Direct deposit language found, but amount/deadline may need review.');
     res.actionPlan = buildActionPlan(res);
     res.suggestedTimers = makeTimers(res);
@@ -293,7 +345,7 @@
     h += `<div class="crow"><button class="c-c" onclick="tcClosePro()">Close</button><button class="c-g" onclick="tcRunPro()">Analyze</button></div>`;
     if (res) {
       h += `<div class="tc-box" style="margin-top:12px"><div class="tc-label">Analyzer Summary</div>`;
-      h += `<div class="tc-body">Bonus: <b>${safeEsc(res.selectedBonus?fmtMoney(res.selectedBonus):'Review')}</b> ${confidenceBadge(res.selectedBonus?'High':'Low')}\nReq days: <b>${safeEsc(res.reqDays||'Review')}</b> · Hold days: <b>${safeEsc(res.holdDays||'Review')}</b>\nExpiration: <b>${safeEsc(res.expiration?.display || res.expiration?.value || 'Review')}</b></div></div>`;
+      h += `<div class="tc-body">Bonus: <b>${safeEsc(res.selectedBonus?fmtMoney(res.selectedBonus):'Review')}</b> ${confidenceBadge(res.selectedBonus?'High':'Low')}\nReq days: <b>${safeEsc(res.reqDays||'Review')}</b> · Hold days: <b>${safeEsc(res.holdDays||'Review')}</b>\nPromo expiration/open-by: <b>${safeEsc(res.expiration?.display || res.expiration?.value || 'Review')}</b></div></div>`;
 
       if (res.tiers.length) {
         h += `<div class="tc-box"><div class="tc-label">Tiered Bonus Detected</div><select id="tca_tier" class="dd-input" onchange="tcSelectTier(this.value)">`;
@@ -303,7 +355,7 @@
 
       h += fieldCard('Bonus Amount', res.selectedBonus ? fmtMoney(res.selectedBonus) : '', res.bonusSource, res.selectedBonus?'High':'Low');
       h += fieldCard('Promo Code', res.promoCode?.value || '', res.promoCode?.source || '', res.promoCode?.confidence || 'Low');
-      h += fieldCard('Expiration Date', res.expiration?.display || res.expiration?.value || '', res.expiration?.source || '', res.expiration?.confidence || 'Low');
+      h += fieldCard('Promo Expiration / Open-by Date', res.expiration?.display || res.expiration?.value || '', res.expiration?.source || '', res.expiration?.confidence || 'Low');
       h += fieldCard('Monthly Fee', res.monthlyFee?.value || '', res.monthlyFee?.source || '', res.monthlyFee?.confidence || 'Low');
       h += fieldCard('How to Avoid Monthly Fee', res.avoidFee?.value || '', res.avoidFee?.source || '', res.avoidFee?.confidence || 'Low');
       h += fieldCard('How to Complete Bonus', res.completeBonus?.value || '', res.completeBonus?.source || '', res.completeBonus?.confidence || 'Low');
@@ -379,7 +431,7 @@
     const m = getActiveModal();
     if (!m) return false;
     if (res.selectedBonus) m.bonus = res.selectedBonus;
-    if (res.promoCode?.value) m.promoCodeText = res.promoCode.value;
+    if (res.promoCode?.value && !/review required/i.test(res.promoCode.value)) m.promoCodeText = res.promoCode.value;
     if (res.monthlyFee?.value) m.monthlyFeeYNText = res.monthlyFee.value;
     if (res.avoidFee?.value) m.avoidMonthlyFeeText = res.avoidFee.value;
     if (res.completeBonus?.value) m.completeBonusText = res.completeBonus.value;
@@ -426,13 +478,13 @@
     if (!res) return;
     applyToModalObject(res);
     setModalValueByLabel(['bonus'], res.selectedBonus || '');
-    setModalValueByLabel(['promo'], res.promoCode?.value || '');
+    setModalValueByLabel(['promo'], (res.promoCode?.value && !/review required/i.test(res.promoCode.value)) ? res.promoCode.value : '');
     setModalValueByLabel(['monthly fee'], res.monthlyFee?.value || '');
     setModalValueByLabel(['avoid'], res.avoidFee?.value || '');
     setModalValueByLabel(['complete'], res.completeBonus?.value || '');
     setModalValueByLabel(['early termination','termination'], res.earlyClose?.value || '');
     setModalValueByLabel(['eligibility','churn'], res.eligibility?.value || '');
-    setModalValueByLabel(['expiration'], res.expiration?.display || res.expiration?.value || '');
+    setModalValueByLabel(['expiration','open-by'], res.expiration?.display || res.expiration?.value || '');
     setModalValueByLabel(['how many days','required days','req days'], res.reqDays || '');
     alert('Analyzer fields applied. Review them, then tap Save on the bank entry.');
     state.open = false;
