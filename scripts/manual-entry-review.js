@@ -1,6 +1,6 @@
-/* ✅ Version 2.7.2 Newest update: Crash-safe New/Edit Entry Review form. Prevents re-converting the modal overlay after Edit opens. */
+/* ✅ Version 2.7.3 Newest update: Early Termination Fee is number-only; Close Fee Countdown renamed to Hold Until Days. */
 (function(){
-  const VER = '2.7.2';
+  const VER = '2.7.3';
   const qsa = (sel, root=document) => Array.from(root.querySelectorAll(sel));
   const clean = v => String(v || '').replace(/\s+/g, ' ').trim();
   const html = v => {
@@ -71,8 +71,13 @@
     return f ? (f.value || '') : '';
   }
 
+  function numberOnly(v){
+    const n = parseFloat(String(v || '').replace(/[$,\s]/g, '').match(/-?\d+(?:\.\d+)?/)?.[0] || '');
+    return Number.isFinite(n) ? n : 0;
+  }
+
   function getVal(id){ return document.getElementById(id)?.value || ''; }
-  function getNum(id){ return parseFloat(String(getVal(id)).replace(/[$,\s]/g, '')) || 0; }
+  function getNum(id){ return numberOnly(getVal(id)); }
   function safeDate(id){ return clean(getVal(id)); }
 
   function normalizeChurn(v){
@@ -131,6 +136,8 @@
     let e = {};
     try { if (activeIndex >= 0) e = entries[activeIndex] || {}; } catch {}
     activeOriginal = e && e.id ? { ...e } : null;
+    const nativeEarly = nativeValue(sheet, ['early termination fee']);
+    const nativeHold = nativeValue(sheet, ['hold until days', 'close fee countdown']);
     return {
       id: e.id || recordIdFromText(sheet) || '',
       bank: e.bank || nativeValue(sheet, ['bank name']),
@@ -140,8 +147,8 @@
       promo: e.promoCodeText || nativeValue(sheet, ['promo code']),
       waivers: e.avoidMonthlyFeeText || nativeValue(sheet, ['avoid the monthly fee']),
       complete: e.completeBonusText || nativeValue(sheet, ['complete the bonus']),
-      earlyFee: e.earlyTerminationFeeText || nativeValue(sheet, ['early termination fee']),
-      closeFeeCountdown: e.minHoldDays || nativeValue(sheet, ['close fee countdown']),
+      earlyFee: e.earlyCloseFee ?? numberOnly(nativeEarly),
+      holdDays: e.minHoldDays || numberOnly(nativeHold),
       eligibility: e.eligibilityText || nativeValue(sheet, ['eligibility']),
       reqDays: e.reqDays || e.requiredDaysText || nativeValue(sheet, ['how many days', 'required to complete']),
       opened: e.opened || nativeValue(sheet, ['opened']),
@@ -159,7 +166,7 @@
   }
 
   function field(label, id, value = '', type = 'text', hint = ''){
-    return `<div class="tcr-field"><label>${html(label)}</label><input id="${id}" type="${type}" value="${html(value || '')}" ${type === 'number' ? 'inputmode="decimal"' : ''}>${hint ? `<small>${html(hint)}</small>` : ''}</div>`;
+    return `<div class="tcr-field"><label>${html(label)}</label><input id="${id}" type="${type}" value="${html(value || '')}" ${type === 'number' ? 'inputmode="decimal" min="0" step="1"' : ''}>${hint ? `<small>${html(hint)}</small>` : ''}</div>`;
   }
 
   function area(label, id, value = '', rows = 4, hint = ''){
@@ -225,17 +232,17 @@
       ${section('2. Requirements', 'Use these fields for the requirement countdown and future reference.',
         '<div class="tcr-grid">' +
         field('Requirement Days', 'mer_reqdays', d.reqDays, 'number') +
-        field('Close Fee Countdown', 'mer_closefee', d.closeFeeCountdown, 'number') +
+        field('Hold Until Days', 'mer_holddays', d.holdDays, 'number', 'Minimum days to keep the account open before closing. This is separate from Churn Rule.') +
         field('Opened Date', 'mer_opened', d.opened, 'date') +
         field('Req Met Date', 'mer_reqmet', d.reqMet, 'date') +
         field('Bonus Received', 'mer_bonusrecd', d.bonusRecd, 'date') +
         field('Closed Date', 'mer_closed', d.closed, 'date') +
         '</div>' +
         area('How to Complete Bonus', 'mer_complete', d.complete, 5))}
-      ${section('3. Fees & Risk', 'Monthly fees, fee waivers, early close risk, and eligibility.',
+      ${section('3. Fees & Risk', 'Monthly fees, fee waivers, numeric early termination fee, and eligibility.',
         '<div class="tcr-grid">' +
         field('Monthly Fee (Yes / No)', 'mer_monthly', d.monthlyFee, 'text') +
-        field('Early Termination Fee', 'mer_earlyfee', d.earlyFee, 'text') +
+        field('Early Termination Fee $', 'mer_earlyfee', d.earlyFee, 'number', 'Number only. Use 0 if none or not mentioned.') +
         '</div>' +
         area('How to Avoid Monthly Fee', 'mer_waivers', d.waivers, 3) +
         area('Eligibility / Churn', 'mer_eligibility', d.eligibility, 4))}
@@ -251,6 +258,7 @@
   function buildEntryPayload(existing){
     const bank = clean(getVal('mer_bank'));
     const churn = normalizeChurn(getVal('mer_churn'));
+    const earlyFee = getNum('mer_earlyfee');
     const id = existing?.id || (() => {
       try { return typeof genId === 'function' ? genId(bank, new Set((entries || []).map(e => e.id))) : ('BNK-P-' + Date.now().toString().slice(-6)); }
       catch { return 'BNK-P-' + Date.now().toString().slice(-6); }
@@ -269,8 +277,8 @@
       dataPoint: existing?.dataPoint || '',
       notes: clean(getVal('mer_notes')),
       reqDays: parseInt(getVal('mer_reqdays'), 10) || 0,
-      minHoldDays: parseInt(getVal('mer_closefee'), 10) || 0,
-      earlyCloseFee: existing?.earlyCloseFee || 0,
+      minHoldDays: parseInt(getVal('mer_holddays'), 10) || 0,
+      earlyCloseFee: earlyFee,
       feeChecked: existing?.feeChecked || false,
       plannedClose: existing?.plannedClose || '',
       customTimers: Array.isArray(existing?.customTimers) ? existing.customTimers : [],
@@ -278,7 +286,7 @@
       promoCodeText: clean(getVal('mer_promo')),
       avoidMonthlyFeeText: clean(getVal('mer_waivers')),
       completeBonusText: clean(getVal('mer_complete')),
-      earlyTerminationFeeText: clean(getVal('mer_earlyfee')),
+      earlyTerminationFeeText: earlyFee ? String(earlyFee) : '0',
       eligibilityText: clean(getVal('mer_eligibility')),
       expirationDateText: existing?.expirationDateText || '',
       requiredDaysText: clean(getVal('mer_reqdays'))
@@ -310,7 +318,7 @@
       if (typeof refreshSavedReqFromEntry === 'function') refreshSavedReqFromEntry(e);
       if (typeof sv === 'function' && typeof SK !== 'undefined') sv(SK, entries);
       if (typeof saveReq === 'function') saveReq(e.bank, {
-        bank:e.bank, bonus:e.bonus, churn:e.churn, reqDays:e.reqDays, minHoldDays:e.minHoldDays,
+        bank:e.bank, bonus:e.bonus, churn:e.churn, reqDays:e.reqDays, minHoldDays:e.minHoldDays, earlyCloseFee:e.earlyCloseFee,
         monthlyFeeYNText:e.monthlyFeeYNText, promoCodeText:e.promoCodeText, avoidMonthlyFeeText:e.avoidMonthlyFeeText,
         completeBonusText:e.completeBonusText, earlyTerminationFeeText:e.earlyTerminationFeeText,
         eligibilityText:e.eligibilityText, requiredDaysText:e.requiredDaysText
