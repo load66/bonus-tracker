@@ -1,6 +1,6 @@
-/* ✅ Version 2.6.1 Newest update: UI stability patch for Auto-fill Review + Manual Entry Pro smoke checks. */
+/* ✅ Version 2.6.2 Newest update: Stable UI verification patch for Analyzer Pro, Auto-fill Review, Manual Entry Pro, and smoke checks. */
 (function(){
-  const VER = '2.6.1';
+  const VER = '2.6.2';
   const qsa = (sel, root=document) => Array.from(root.querySelectorAll(sel));
   const clean = v => String(v || '').replace(/\s+/g, ' ').trim();
 
@@ -128,6 +128,10 @@
     root.querySelectorAll('.tcr-version').forEach(v => { v.textContent = 'v' + VER; });
   }
 
+  function entriesReady(){
+    try { return Array.isArray(entries); } catch { return Array.isArray(window.entries); }
+  }
+
   document.addEventListener('input', e => {
     if (e.target && e.target.matches('.tcr-field textarea')) growTextareas(document);
   }, true);
@@ -141,16 +145,14 @@
     }
   }, true);
 
-  new MutationObserver(() => setTimeout(() => {
-    growTextareas(document);
-  }, 40)).observe(document.documentElement, {childList:true, subtree:true});
+  new MutationObserver(() => setTimeout(growTextareas, 40)).observe(document.documentElement, {childList:true, subtree:true});
 
   window.btSmokeCheck = function(){
     return {
       version: VER,
       appRoot: !!document.getElementById('app'),
       storageReady: typeof sv === 'function' && typeof SK !== 'undefined',
-      entriesReady: Array.isArray(window.entries || entries),
+      entriesReady: entriesReady(),
       renderReady: typeof R === 'function',
       strictAnalyzerReady: typeof tcStrictAnalyze === 'function',
       autoFillReviewReady: typeof tcOpenAutoFillReview === 'function' && typeof tcCreateReviewedEntry === 'function',
@@ -166,6 +168,8 @@
     st.id = 'ui_stability_patch_style';
     st.textContent = `
       .app-version::after{content:' · Stable';opacity:.78}
+      .tca-box .tm-pill{min-width:8px!important;width:8px!important;height:8px!important;padding:0!important;border-radius:999px!important;font-size:0!important;overflow:hidden!important;vertical-align:middle!important;margin-left:4px!important;display:inline-block!important}
+      .tca-box .tm-pill::before{content:'';display:block;width:8px;height:8px;border-radius:999px}.tca-box .tm-pill.green::before{background:#10B981}.tca-box .tm-pill.amber::before{background:#F59E0B}.tca-box .tm-pill.red::before{background:#EF4444}
       @media(max-width:700px){
         .tcr-sheet{max-width:100%!important;max-height:calc(100dvh - max(env(safe-area-inset-top,0px),8px))!important;padding:9px 12px calc(18px + env(safe-area-inset-bottom,0px))!important;border-radius:22px 22px 0 0!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important}
         .tcr-grid{grid-template-columns:1fr!important;gap:8px!important}
