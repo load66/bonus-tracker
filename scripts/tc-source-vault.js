@@ -1,6 +1,6 @@
-/* ✅ Version 2.8.2 Newest update: T&C Source Vault now saves ONLY real Analyzer Pro source text, not generated notes. */
+/* ✅ Version 2.8.4 Newest update: T&C Source Vault adds organized Save T&C Source button inside Analyzer Pro. */
 (function(){
-  const VER = '2.8.2';
+  const VER = '2.8.4';
   const VAULT_KEY = 'bt_tc_source_v1';
   const MIN_LEN = 350;
 
@@ -17,7 +17,7 @@
 
   function setVault(vault){
     try { localStorage.setItem(VAULT_KEY, JSON.stringify(vault)); }
-    catch (err) { console.warn('[tc-source-vault] localStorage full/skipped', err); }
+    catch (err) { console.warn('[tc-source-vault] localStorage full/skipped', err); alert('Could not save T&C source. Storage may be full.'); }
   }
 
   function getModal(){ try { return typeof modal !== 'undefined' && modal ? modal : null; } catch { return null; } }
@@ -26,40 +26,15 @@
   function isGeneratedSummary(raw){
     const s = clean(raw).toLowerCase();
     if (!s) return true;
-    const summarySignals = [
-      /^created from t&c analyzer/i,
-      /does not count:/i,
-      /hold until:/i,
-      /payout: after day/i,
-      /review all fields before/i,
-      /source snippet/i,
-      /analyzer summary/i
-    ];
-    return summarySignals.some(re => re.test(raw)) ||
-      (s.includes('does not count:') && s.includes('payout:') && s.length < 1200);
+    const summarySignals = [/^created from t&c analyzer/i,/does not count:/i,/hold until:/i,/payout: after day/i,/review all fields before/i,/source snippet/i,/analyzer summary/i];
+    return summarySignals.some(re => re.test(raw)) || (s.includes('does not count:') && s.includes('payout:') && s.length < 1200);
   }
 
   function isLikelyFullTerms(raw){
     const s = clean(raw);
     if (s.length < MIN_LEN) return false;
     if (isGeneratedSummary(raw)) return false;
-    const tests = [
-      /to be eligible/i,
-      /offer is/i,
-      /offer valid/i,
-      /offer rules/i,
-      /terms and conditions/i,
-      /additional terms/i,
-      /to receive (?:the )?\$?\d+/i,
-      /you must/i,
-      /direct deposits?/i,
-      /qualifying/i,
-      /monthly (?:service|account|maintenance)?\s*fee/i,
-      /we will deposit/i,
-      /cash bonuses? are treated as income/i,
-      /cannot be combined/i,
-      /not eligible/i
-    ];
+    const tests = [/to be eligible/i,/offer is/i,/offer valid/i,/offer rules/i,/terms and conditions/i,/additional terms/i,/to receive (?:the )?\$?\d+/i,/you must/i,/direct deposits?/i,/qualifying/i,/monthly (?:service|account|maintenance)?\s*fee/i,/we will deposit/i,/cash bonuses? are treated as income/i,/cannot be combined/i,/not eligible/i];
     const score = tests.reduce((n,re)=>n+(re.test(s)?1:0),0);
     return score >= 3;
   }
@@ -111,7 +86,6 @@
   function persistSource(raw, reason='manual'){
     raw = String(raw || '').trim();
     if (!isLikelyFullTerms(raw)) return false;
-
     const ctx = context();
     const rec = { raw, updatedAt: nowIso(), analyzerVersion: VER, bank: ctx.bank || '', id: ctx.id || '', reason };
 
@@ -146,14 +120,11 @@
 
   function lookupSource(){
     const ctx = context();
-
     const direct = sourceFields(ctx.modal);
     if (direct) return { raw:direct, from:'modal' };
-
     const entry = getEntryByContext(ctx);
     const entryRaw = sourceFields(entry);
     if (entryRaw) return { raw:entryRaw, from:'entry' };
-
     const vault = getVault();
     if (ctx.id && isLikelyFullTerms(vault.byId[ctx.id]?.raw)) return { raw:vault.byId[ctx.id].raw, from:'vault-id' };
     if (ctx.bank && isLikelyFullTerms(vault.byBank[normBank(ctx.bank)]?.raw)) return { raw:vault.byBank[normBank(ctx.bank)].raw, from:'vault-bank' };
@@ -164,22 +135,16 @@
   function preloadAnalyzer(){
     const ta = document.getElementById('tca_raw');
     if (!ta) return;
-
     const current = ta.value || '';
-    if (isLikelyFullTerms(current)) {
-      persistSource(current, 'open-current');
-      return;
-    }
-
+    if (isLikelyFullTerms(current)) { persistSource(current, 'open-current'); return; }
     const found = lookupSource();
     if (!found?.raw) {
       if (isGeneratedSummary(current)) {
         ta.value = '';
-        ta.placeholder = 'Paste the original full T&C here. After v2.8.2, it will be saved as hidden source for this bank.';
+        ta.placeholder = 'Paste the original full T&C here. It will be saved as hidden source for this bank.';
       }
       return;
     }
-
     ta.value = found.raw;
     ta.dispatchEvent(new Event('input', { bubbles:true }));
     setTimeout(() => { try { if (typeof tcRunPro === 'function') tcRunPro(); } catch {} }, 80);
@@ -196,7 +161,6 @@
       newest.tncSourceText = rec.raw;
       newest.tcSourceUpdatedAt = nowIso();
       newest.tcAnalyzerVersion = VER;
-
       const vault = getVault();
       const fixed = { ...rec, id: clean(newest.id || rec.id || ''), bank: clean(newest.bank || rec.bank || ''), updatedAt: newest.tcSourceUpdatedAt, reason:'created-entry' };
       vault.last = fixed;
@@ -207,15 +171,47 @@
     } catch (err) { console.warn('[tc-source-vault] patch latest skipped', err); }
   }
 
+  window.tcSaveSourceNow = function(){
+    const raw = readAnalyzerRaw();
+    if (!raw) {
+      alert('Paste the original full T&C first. I will not save short text, analyzer summaries, or notes as the source.');
+      return false;
+    }
+    const ok = persistSource(raw, 'manual-save-button');
+    if (ok) {
+      const ctx = context();
+      alert('T&C source saved for ' + (ctx.bank || 'this entry') + '.');
+    }
+    return ok;
+  };
+
+  function injectSaveButton(){
+    const box = document.querySelector('#tca_overlay .tca-box');
+    const ta = document.getElementById('tca_raw');
+    if (!box || !ta || box.querySelector('#tc_save_source_btn')) return;
+    const firstRow = Array.from(box.querySelectorAll('.crow')).find(r => /Analyze/i.test(r.textContent || ''));
+    if (!firstRow) return;
+    const btn = document.createElement('button');
+    btn.id = 'tc_save_source_btn';
+    btn.className = 'c-c';
+    btn.type = 'button';
+    btn.textContent = '💾 Save T&C Source';
+    btn.style.cssText = 'margin-top:8px;width:100%;min-height:46px;border-radius:14px;font-weight:800';
+    btn.onclick = function(e){ e.preventDefault(); e.stopPropagation(); window.tcSaveSourceNow(); };
+    firstRow.insertAdjacentElement('afterend', btn);
+  }
+
   function wrapGlobals(){
-    if (window.__tcSourceVaultWrappedV282) return;
-    window.__tcSourceVaultWrappedV282 = true;
+    if (window.__tcSourceVaultWrappedV284) return;
+    window.__tcSourceVaultWrappedV284 = true;
 
     const oldOpen = window.tcOpenPro;
     if (typeof oldOpen === 'function') {
       window.tcOpenPro = function(){
         const out = oldOpen.apply(this, arguments);
         setTimeout(preloadAnalyzer, 100);
+        setTimeout(injectSaveButton, 150);
+        setTimeout(injectSaveButton, 500);
         return out;
       };
     }
@@ -225,7 +221,9 @@
       window.tcRunPro = function(){
         const raw = readAnalyzerRaw();
         if (raw) persistSource(raw, 'analyze');
-        return oldRun.apply(this, arguments);
+        const out = oldRun.apply(this, arguments);
+        setTimeout(injectSaveButton, 120);
+        return out;
       };
     }
 
@@ -253,12 +251,8 @@
   }
 
   document.addEventListener('paste', e => {
-    const target = e.target;
-    if (!target || target.id !== 'tca_raw') return;
-    setTimeout(() => {
-      const raw = readAnalyzerRaw();
-      if (raw) persistSource(raw, 'paste');
-    }, 80);
+    if (e.target?.id !== 'tca_raw') return;
+    setTimeout(() => { const raw = readAnalyzerRaw(); if (raw) persistSource(raw, 'paste'); }, 80);
   }, true);
 
   document.addEventListener('input', e => {
@@ -275,12 +269,17 @@
       const raw = readAnalyzerRaw();
       if (raw) persistSource(raw, 'button-' + txt.slice(0,24));
       setTimeout(patchLatestEntryFromPending, 250);
+      setTimeout(injectSaveButton, 180);
     }
-    if (/Open T&C Analyzer Pro/i.test(txt)) setTimeout(preloadAnalyzer, 140);
+    if (/Open T&C Analyzer Pro/i.test(txt)) {
+      setTimeout(preloadAnalyzer, 140);
+      setTimeout(injectSaveButton, 180);
+    }
   }, true);
 
   setTimeout(wrapGlobals, 250);
   setTimeout(wrapGlobals, 900);
+  setTimeout(injectSaveButton, 1200);
 
   window.tcGetSavedSource = function(){ return lookupSource(); };
   window.tcSourceVaultStatus = function(){
