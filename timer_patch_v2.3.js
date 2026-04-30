@@ -1,33 +1,33 @@
 /* ✅ Version 2.3 Newest update: Clean mini timer picker for Due Date vs Start Date + Days timers. */
 (function(){
-  const baseInlineStateFor = window.inlineStateFor;
-  const baseToggleInlineForm = window.toggleInlineForm;
-  const baseR = window.R;
+  const baseInlineStateFor = inlineStateFor;
+  const baseToggleInlineForm = toggleInlineForm;
+  const baseR = R;
 
   window.timerChoicePrompt = null;
 
-  window.inlineStateFor = function(id){
-    const st = baseInlineStateFor ? baseInlineStateFor(id) : (window.inlineUiState[id] ||= {});
+  window.inlineStateFor = inlineStateFor = function(id){
+    const st = baseInlineStateFor ? baseInlineStateFor(id) : (inlineUiState[id] ||= {});
     if (!('timerKind' in st)) st.timerKind = 'due';
     return st;
   };
 
   window.openTimerTypePrompt = function(id){
-    const entry = (window.entries || []).find(e => e.id === id);
+    const entry = (entries || []).find(e => e.id === id);
     if (!entry) return;
     window.timerChoicePrompt = { entryId:id, bank:entry.bank || '' };
-    window.R();
+    R();
   };
 
   window.closeTimerTypePrompt = function(){
     window.timerChoicePrompt = null;
-    window.R();
+    R();
   };
 
   window.chooseTimerType = function(kind){
     if (!window.timerChoicePrompt) return;
     const id = window.timerChoicePrompt.entryId;
-    const st = window.inlineStateFor(id);
+    const st = inlineStateFor(id);
     st.timerKind = kind === 'days' ? 'days' : 'due';
     st.timerEdit = null;
     window.timerChoicePrompt = null;
@@ -36,7 +36,7 @@
     window.__skipTimerPrompt = false;
   };
 
-  window.toggleInlineForm = function(id, type, force){
+  window.toggleInlineForm = toggleInlineForm = function(id, type, force){
     if (type === 'timer' && force === true && !window.__skipTimerPrompt) {
       window.openTimerTypePrompt(id);
       return;
@@ -59,7 +59,7 @@
   function decorateTimerForms(){
     document.querySelectorAll('[id^="tm_txt_"]').forEach(txt => {
       const id = txt.id.replace('tm_txt_', '');
-      const st = window.inlineStateFor(id);
+      const st = inlineStateFor(id);
       const kind = st.timerKind === 'days' ? 'days' : 'due';
       const wrap = txt.closest('.inline-form');
       const row = txt.closest('.tm-add');
@@ -87,18 +87,18 @@
     });
   }
 
-  window.R = function(){
+  window.R = R = function(){
     baseR();
     const app = document.getElementById('app');
     if (app && window.timerChoicePrompt) app.insertAdjacentHTML('beforeend', window.rTimerChoicePrompt());
     decorateTimerForms();
   };
 
-  window.upsertTimer = function(id){
+  window.upsertTimer = upsertTimer = function(id){
     const txt = document.getElementById('tm_txt_' + id);
     const st = document.getElementById('tm_start_' + id);
     const ds = document.getElementById('tm_days_' + id);
-    const ui = window.inlineStateFor(id);
+    const ui = inlineStateFor(id);
     const kind = ui.timerKind === 'days' ? 'days' : 'due';
     const days = kind === 'days' ? (parseInt(ds?.value, 10) || 0) : 0;
     if (!txt || !st || !txt.value.trim() || !st.value) {
@@ -110,41 +110,41 @@
       return;
     }
     const editId = ui.timerEdit || '';
-    const due = days > 0 ? window.timerDueFromStart(st.value, days) : st.value;
-    window.entries = window.entries.map(e => {
+    const due = days > 0 ? timerDueFromStart(st.value, days) : st.value;
+    entries = entries.map(e => {
       if (e.id === id) {
-        const timers = window.normalizeTimerList(e.customTimers);
+        const timers = normalizeTimerList(e.customTimers);
         const idx = timers.findIndex(t => t.id === editId);
-        const next = window.normalizeTimer({ id:idx >= 0 ? timers[idx].id : window.timerId(), text:txt.value.trim(), startDate:days > 0 ? st.value : '', daysRequired:days, date:due, done:idx >= 0 ? !!timers[idx].done : false });
+        const next = normalizeTimer({ id:idx >= 0 ? timers[idx].id : timerId(), text:txt.value.trim(), startDate:days > 0 ? st.value : '', daysRequired:days, date:due, done:idx >= 0 ? !!timers[idx].done : false });
         if (idx >= 0) timers[idx] = next; else timers.push(next);
         e.customTimers = timers;
       }
       return e;
     });
-    window.sv(window.SK, window.entries);
+    sv(SK, entries);
     ui.timerEdit = null;
     window.__skipTimerPrompt = true;
     baseToggleInlineForm(id, 'timer', false);
     window.__skipTimerPrompt = false;
   };
 
-  window.openTimerEditor = function(id, timerId){
-    const entry = (window.entries || []).find(e => e.id === id);
+  window.openTimerEditor = openTimerEditor = function(id, timerIdValue){
+    const entry = (entries || []).find(e => e.id === id);
     if (!entry) return;
-    const timer = window.normalizeTimerList(entry.customTimers).find(t => t.id === timerId);
+    const timer = normalizeTimerList(entry.customTimers).find(t => t.id === timerIdValue);
     if (!timer) return;
-    window.timerEditModal = { entryId:id, timerId:timer.id, text:timer.text || '', mode:timer.daysRequired > 0 ? 'days' : 'due', startDate:(timer.daysRequired > 0 ? timer.startDate : timer.date) || '', daysRequired:timer.daysRequired ? String(timer.daysRequired) : '' };
-    window.R();
+    timerEditModal = { entryId:id, timerId:timer.id, text:timer.text || '', mode:timer.daysRequired > 0 ? 'days' : 'due', startDate:(timer.daysRequired > 0 ? timer.startDate : timer.date) || '', daysRequired:timer.daysRequired ? String(timer.daysRequired) : '' };
+    R();
   };
 
   window.switchTimerEditMode = function(mode){
-    if (!window.timerEditModal) return;
-    window.timerEditModal.mode = mode === 'days' ? 'days' : 'due';
-    window.R();
+    if (!timerEditModal) return;
+    timerEditModal.mode = mode === 'days' ? 'days' : 'due';
+    R();
   };
 
-  window.saveTimerEditor = function(){
-    const p = window.timerEditModal;
+  window.saveTimerEditor = saveTimerEditor = function(){
+    const p = timerEditModal;
     if (!p) return;
     const txt = (document.getElementById('tem_text')?.value || '').trim();
     const start = (document.getElementById('tem_start')?.value || '').trim();
@@ -152,49 +152,49 @@
     const days = p.mode === 'days' ? (parseInt(rawDays, 10) || 0) : 0;
     if (!txt || !start) { alert('Add a description and a date.'); return; }
     if (p.mode === 'days' && days <= 0) { alert('Add the number of days for a Start Date + Days timer.'); return; }
-    const due = days > 0 ? window.timerDueFromStart(start, days) : start;
-    const updated = window.normalizeTimer({ id:p.timerId, text:txt, startDate:days > 0 ? start : '', daysRequired:days, date:due, done:false });
-    window.entries = window.entries.map(e => {
+    const due = days > 0 ? timerDueFromStart(start, days) : start;
+    const updated = normalizeTimer({ id:p.timerId, text:txt, startDate:days > 0 ? start : '', daysRequired:days, date:due, done:false });
+    entries = entries.map(e => {
       if (e.id === p.entryId) {
-        const timers = window.normalizeTimerList(e.customTimers);
+        const timers = normalizeTimerList(e.customTimers);
         const idx = timers.findIndex(t => t.id === p.timerId);
         if (idx >= 0) { updated.done = !!timers[idx].done; timers[idx] = updated; }
         e.customTimers = timers;
       }
       return e;
     });
-    window.sv(window.SK, window.entries);
-    window.timerEditModal = null;
-    window.R();
+    sv(SK, entries);
+    timerEditModal = null;
+    R();
   };
 
-  window.rTimerEdit = function(){
-    if (!window.timerEditModal) return '';
-    const p = window.timerEditModal;
+  window.rTimerEdit = rTimerEdit = function(){
+    if (!timerEditModal) return '';
+    const p = timerEditModal;
     const isDays = p.mode === 'days';
     let h = '<div class="cbg" onclick="closeTimerEditor()"><div class="dd-box" onclick="event.stopPropagation()">';
     h += '<h3>Edit countdown timer</h3>';
     h += '<div class="sub">Keep it as an exact due date, or switch to start date + days.</div>';
     h += '<div class="dd-chips"><button class="dd-chip ' + (!isDays ? 'sel' : '') + '" onclick="switchTimerEditMode(\'due\')">Due Date</button><button class="dd-chip ' + (isDays ? 'sel' : '') + '" onclick="switchTimerEditMode(\'days\')">Start + Days</button></div>';
-    h += '<div class="fg"><label>Description</label><input id="tem_text" value="' + window.esc(p.text || '') + '" placeholder="e.g. Deposit deadline"></div>';
+    h += '<div class="fg"><label>Description</label><input id="tem_text" value="' + esc(p.text || '') + '" placeholder="e.g. Deposit deadline"></div>';
     if (isDays) {
-      h += '<div class="frow"><div class="fg"><label>Start date</label><input id="tem_start" type="date" value="' + window.esc(p.startDate || '') + '"></div><div class="fg"><label>Days</label><input id="tem_days" type="number" inputmode="numeric" min="1" value="' + window.esc(String(p.daysRequired || '')) + '" placeholder="60"></div></div>';
+      h += '<div class="frow"><div class="fg"><label>Start date</label><input id="tem_start" type="date" value="' + esc(p.startDate || '') + '"></div><div class="fg"><label>Days</label><input id="tem_days" type="number" inputmode="numeric" min="1" value="' + esc(String(p.daysRequired || '')) + '" placeholder="60"></div></div>';
     } else {
-      h += '<div class="fg"><label>Due date</label><input id="tem_start" type="date" value="' + window.esc(p.startDate || '') + '"><input id="tem_days" type="hidden" value=""></div>';
+      h += '<div class="fg"><label>Due date</label><input id="tem_start" type="date" value="' + esc(p.startDate || '') + '"><input id="tem_days" type="hidden" value=""></div>';
     }
     h += '<div class="crow"><button class="c-c" onclick="closeTimerEditor()">Cancel</button><button class="c-g" onclick="saveTimerEditor()">Save</button></div>';
     h += '</div></div>';
     return h;
   };
 
-  window.timerMetaLine = function(t){
+  window.timerMetaLine = timerMetaLine = function(t){
     const due = t?.date || '';
     const start = t?.startDate || '';
     const days = parseInt(t?.daysRequired || 0, 10) || 0;
-    if (start && days && due) return 'Start + Days: ' + window.fD(start) + ' • ' + days + 'd • Due: ' + window.fD(due);
-    if (due) return 'Due Date: ' + window.fD(due);
+    if (start && days && due) return 'Start + Days: ' + fD(start) + ' • ' + days + 'd • Due: ' + fD(due);
+    if (due) return 'Due Date: ' + fD(due);
     return 'No date set';
   };
 
-  if (document.getElementById('app')) window.R();
+  R();
 })();
