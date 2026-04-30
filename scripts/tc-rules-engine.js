@@ -1,6 +1,6 @@
-/* ✅ Version 2.4.2 Newest update: Strict T&C rules engine for counts vs does-not-count, fee waivers, payout timing, and cleaner Simple Terms. */
+/* ✅ Version 2.4.3 Newest update: Smarter strict T&C rules engine for DD-only offers, account-type rules, exclusions, fee waivers, and payout timing. */
 (function(){
-  const VER = '2.4.2';
+  const VER = '2.4.3';
 
   function escHtml(s){
     if (typeof esc === 'function') return esc(String(s ?? ''));
@@ -17,6 +17,8 @@
   function dayMentions(s){ const out=[]; String(s||'').replace(/(\d{1,4})\s*(calendar\s*)?(day|days)/gi,(m,n)=>{out.push(parseInt(n,10));return m}); return out.filter(Boolean); }
   function first(re, list){ return list.find(s=>re.test(s)) || ''; }
   function all(re, list){ return list.filter(s=>re.test(s)); }
+  function uniq(arr){ return [...new Set((arr||[]).filter(Boolean))]; }
+  function hasNeg(s){ return /do not|does not|not considered|not constitute|not regular|includes but is not limited to|cannot|excludes|not eligible/i.test(s||''); }
 
   function parseDate(raw){
     const s = clean(raw).replace(/,/g,' ');
@@ -36,74 +38,120 @@
     catch { return iso; }
   }
 
+  function parseCountWord(raw){
+    const s = String(raw||'').toLowerCase();
+    if (/at least\s+two|first\s+two|\btwo\s+direct deposits|\b2\s+direct deposits/.test(s)) return 2;
+    const m = s.match(/at least\s+(\d+)\s+direct deposits|receive\s+(\d+)\s+direct deposits/);
+    return m ? parseInt(m[1]||m[2],10) : 0;
+  }
+
+  function parseAccountType(raw){
+    const text = String(raw||'');
+    if (/Checking or Max-Rate Checking|Checking OR Max-Rate Checking|Checking Account OR Max-Rate Checking/i.test(text)) {
+      return 'Checking OR Max-Rate Checking — open one only; do not enroll both';
+    }
+    if (/consumer checking/i.test(text)) return 'consumer checking';
+    if (/business checking/i.test(text)) return 'business checking';
+    if (/checking/i.test(text)) return 'checking';
+    return 'account type needs review';
+  }
+
+  function parsePromoCode(raw){
+    const s = String(raw||'');
+    const m = s.match(/promo(?:tional)?\s+code\s+([A-Z0-9][A-Z0-9\-]{2,})/i) || s.match(/code\s+([A-Z0-9][A-Z0-9\-]{2,})\s+at the time/i);
+    return m ? m[1].toUpperCase() : '';
+  }
+
   function parseRules(text){
     const raw = String(text||'');
-    const lower = raw.toLowerCase();
     const sents = sentenceList(raw);
     const bonusSent = first(/\$\s*[\d,]+.*bonus|bonus.*\$\s*[\d,]+/i, sents);
     const bonus = moneyMentions(bonusSent).filter(x=>x.value>=25).sort((a,b)=>b.value-a.value)[0]?.value || 0;
-    const openBySent = first(/by .*20\d{2}|open.*by|opening.*by|offer.*by|expires|expiration|offer ends/i, sents);
-    const openBy = parseDate(openBySent || raw);
 
-    const ddSents = all(/qualifying electronic deposit|direct deposit|ACH|RTP|FedNow|Original Credit Transaction|salary|government benefit/i, sents);
-    const reqSent = first(/receive.*\$|\$.*qualifying|within .*day|qualification period/i, ddSents.concat(sents));
-    const reqMoney = moneyMentions(reqSent).filter(x=>x.value>=100).sort((a,b)=>b.value-a.value)[0]?.value || 0;
-    const reqDays = dayMentions(reqSent).sort((a,b)=>b-a)[0] || dayMentions(first(/within .*day|qualification period/i,sents)).sort((a,b)=>b-a)[0] || 0;
+    const openBySent = first(/open.*by .*20\d{2}|opening.*by .*20\d{2}|offer.*by .*20\d{2}|expires .*20\d{2}|expiration .*20\d{2}|offer ends .*20\d{2}/i, sents);
+    const openBy = openBySent ? parseDate(openBySent) : '';
+    const promoCode = parsePromoCode(raw);
+    const accountType = parseAccountType(raw);
+
+    const ddRequirementSent = first(/at least two Direct Deposits|two Direct Deposits|2 Direct Deposits|Direct Deposits each of|receipt of at least two Direct Deposits/i, sents)
+      || first(/receive.*\$|\$.*qualifying|within .*day|qualification period/i, sents);
+    const reqMoney = moneyMentions(ddRequirementSent).filter(x=>x.value>=100).sort((a,b)=>b.value-a.value)[0]?.value || 0;
+    const reqDays = dayMentions(ddRequirementSent).sort((a,b)=>b-a)[0] || dayMentions(first(/within .*day|qualification period|funded within .*day/i,sents)).sort((a,b)=>b-a)[0] || 0;
+    const ddCount = parseCountWord(ddRequirementSent || raw);
+    const fundedDays = dayMentions(first(/funded within .*day|must be funded within .*day/i, sents)).sort((a,b)=>b-a)[0] || 0;
+
+    const positiveDefSents = all(/Direct Deposit means|qualifying electronic deposit is|regular recurring deposit of income|salary|pension|government payments|social security|employer|payroll|benefits provider|ACH Network|Automated Clearing House|Original Credit Transaction|FedNow|RTP/i, sents).filter(s=>!hasNeg(s));
+    const positiveText = positiveDefSents.join(' ');
 
     const counts = [];
-    if (/automated clearing house|\bach\b/i.test(raw)) counts.push('ACH direct deposit');
-    if (/RTP|real-time payment|FedNow/i.test(raw)) counts.push('RTP/FedNow instant payment');
-    if (/Visa|Mastercard|Original Credit Transaction|debit card/i.test(raw)) counts.push('Eligible debit-card network electronic credit / OCT');
-    if (!counts.length && /direct deposit/i.test(raw)) counts.push('Qualifying direct deposit');
+    if (/regular recurring deposit of income/i.test(positiveText)) counts.push('Regular recurring income direct deposit');
+    if (/ACH Network|Automated Clearing House|\bACH\b/i.test(positiveText)) counts.push('ACH direct deposit');
+    if (/salary|pension|government payments|social security|employer|payroll|benefits provider|government agency/i.test(positiveText)) counts.push('Salary, pension, Social Security/government benefits, employer/payroll/benefits provider income');
+    if (/RTP|real-time payment|FedNow/i.test(positiveText)) counts.push('RTP/FedNow instant payment');
+    if (/Visa|Mastercard|Original Credit Transaction|debit card/i.test(positiveText)) counts.push('Eligible debit-card network electronic credit / OCT');
+    if (!counts.length && /direct deposit/i.test(raw)) counts.push('Qualifying direct deposit — verify definition');
 
     const notCounts = [];
-    const addNo = (label, re) => { if (re.test(raw) && !notCounts.includes(label)) notCounts.push(label); };
-    addNo('Account-to-account transfers', /transfers from one account to another|one account to another|internal transfer/i);
-    addNo('Mobile deposits', /mobile deposit/i);
-    addNo('Zelle', /Zelle/i);
-    addNo('Branch deposits', /branch/i);
-    addNo('ATM deposits', /ATM/i);
+    const exclusionText = all(/do not constitute|not considered|includes but is not limited to|This includes|For this offer.*not|Transfers from|not from an employer|not regular recurring/i, sents).join(' ') || raw;
+    const addNo = (label, re) => { if (re.test(exclusionText) && !notCounts.includes(label)) notCounts.push(label); };
+    addNo('Incoming wires', /incoming wires|\bwires\b|wire transfer/i);
+    addNo('Check deposits', /check deposits/i);
+    addNo('Mobile check deposits / mobile deposits', /mobile check deposits|mobile deposits|mobile deposit/i);
+    addNo('P2P transfers, including PayPal/Venmo', /person to person|P2P|PayPal|Venmo/i);
+    addNo('Merchant transactions, including PayPal/Stripe/Square', /merchant transactions|Stripe|Square/i);
+    addNo('Zelle incoming payments', /Zelle/i);
+    addNo('RTP network transactions', /Real-Time Payment network transactions|RTP network transactions/i);
+    addNo('Transfer Money transactions', /Transfer Money transactions/i);
+    addNo('E*TRADE website/mobile app transfers', /E\*TRADE|Morgan Stanley.*mobile app/i);
+    addNo('Internal Morgan Stanley / brokerage transfers', /internal transfers|brokerage account|Morgan Stanley Smith Barney/i);
+    addNo('Deposit account-to-account transfers', /deposit account to deposit account|transfers from one account to another|one account to another/i);
+    addNo('Online, bank, or brokerage transfers not from employer/government', /online transfers|bank transfers|brokerage transfers|not from an employer or the government/i);
+    addNo('Branch deposits', /branch deposits|made at a branch/i);
+    addNo('ATM deposits', /ATM deposits|made at an ATM/i);
     addNo('Pending Early Pay Day deposit until posted', /Early Pay Day.*pending|pending.*Early Pay Day/i);
-    addNo('P2P transfers', /P2P|peer[- ]to[- ]peer/i);
 
-    const payoutSent = first(/within .*calendar days|deposit the bonus|bonus into your new account|attempt to deposit/i, sents);
-    const payoutDays = /bonus|deposit the bonus|attempt/i.test(payoutSent) ? (dayMentions(payoutSent).sort((a,b)=>b-a)[0] || 0) : 0;
+    const payoutSent = first(/120th day|processed.*30 days|up to 30 days|within .*calendar days|deposit the bonus|bonus into your account|attempt to deposit/i, sents);
+    const payoutDays = /120th day/i.test(payoutSent) ? 120 : (/up to 30 days|processed.*30 days|within 30/i.test(payoutSent) ? 30 : (dayMentions(payoutSent).sort((a,b)=>b-a)[0] || 0));
+    const payoutText = /120th day/i.test(payoutSent) ? 'after day 90 assessment; deposited on or about day 120 if qualified' : (payoutDays ? `within ${payoutDays} days after requirements are met/assessed` : 'payout timing needs review');
 
-    const feeSent = first(/monthly service fee|monthly maintenance fee|service fee/i, sents);
-    const monthlyFee = moneyMentions(feeSent).filter(x=>x.value>=1 && x.value<100).sort((a,b)=>b.value-a.value)[0]?.value || 0;
+    const feeSents = all(/monthly account fee|monthly service fee|monthly maintenance fee|service fee|monthly fee/i, sents);
+    const feeWithMoney = feeSents.find(s=>moneyMentions(s).some(x=>x.value>=1&&x.value<100)) || '';
+    const monthlyFee = moneyMentions(feeWithMoney).filter(x=>x.value>=1 && x.value<100).sort((a,b)=>b.value-a.value)[0]?.value || 0;
 
-    const waiverSents = all(/minimum daily balance|qualifying deposit balances|investment balances|\$500|17 to 24|avoid.*monthly|waived|fee can be avoided/i, sents);
     const waivers = [];
+    if (/\$\s*5,?000.*average monthly balance|average monthly balance.*\$\s*5,?000/i.test(raw)) waivers.push('$5,000 average monthly balance in Max-Rate Checking');
     if (/\$\s*1,?500.*minimum daily balance|minimum daily balance.*\$\s*1,?500/i.test(raw)) waivers.push('$1,500 minimum daily balance');
-    if (/\$\s*5,?000.*qualifying deposit balances|investment balances/i.test(raw)) waivers.push('$5,000+ qualifying linked deposit/investment balances');
+    if (/\$\s*5,?000.*qualifying deposit balances|investment balances/i.test(raw) && !waivers.some(w=>w.includes('average monthly'))) waivers.push('$5,000+ qualifying linked deposit/investment balances');
     if (/\$\s*500.*qualifying electronic deposit|qualifying electronic deposits.*\$\s*500/i.test(raw)) waivers.push('$500+ total qualifying electronic deposits');
     if (/17\s*to\s*24|17-24|age of 25/i.test(raw)) waivers.push('Primary owner age 17–24');
 
-    const eligSents = all(/new consumer checking|new customer|not available|received a bonus|past \d+ months|employees|non-resident aliens|Private Bank|limit one bonus/i, sents);
-    const priorMonths = (first(/received a bonus.*past \d+ months|past \d+ months.*bonus/i, sents).match(/past\s+(\d+)\s+months/i)||[])[1] || '';
-    const cannotCombine = /cannot be combined/i.test(raw);
-    const tax = /tax|tax authorities|income/i.test(raw);
+    const priorMonths = (first(/within the last \d+ months|past \d+ months|received a bonus.*\d+ months|had owned.*\d+ months/i, sents).match(/(?:last|past)\s+(\d+)\s+months|within\s+the\s+last\s+(\d+)\s+months/i)||[])[1] || (first(/within the last \d+ months|past \d+ months|received a bonus.*\d+ months|had owned.*\d+ months/i, sents).match(/(?:last|past)\s+(\d+)\s+months|within\s+the\s+last\s+(\d+)\s+months/i)||[])[2] || '';
+    const cannotCombine = /cannot be combined|only be enrolled in one/i.test(raw);
+    const tax = /1099|tax|tax authorities|income|backup withholding|Form W-9/i.test(raw);
+    const earlyClose = first(/must keep your account open|closed.*prior|not eligible for the bonus|close or restrict|decline|reverse|rescind|good standing|restricted or closed/i, sents);
+    const hasClearPath = !!(bonus && reqMoney && reqDays && counts.length && ddCount);
 
-    const earlyClose = first(/close or restrict|decline or reverse|reverse any bonus|bonus abuse|must stay open|stay open through/i, sents);
-    const hasClearPath = !!(bonus && reqMoney && reqDays && counts.length);
-
-    return { raw, bonus, openBy, reqMoney, reqDays, counts, notCounts, payoutDays, payoutSent, monthlyFee, waivers, eligibility:eligSents.slice(0,6), priorMonths, cannotCombine, tax, earlyClose, hasClearPath, feeSent, reqSent, waiverSents };
+    return { raw, bonus, openBy, promoCode, accountType, reqMoney, reqDays, ddCount, fundedDays, counts:uniq(counts), notCounts:uniq(notCounts), payoutDays, payoutText, payoutSent, monthlyFee, waivers:uniq(waivers), priorMonths, cannotCombine, tax, earlyClose, hasClearPath, feeWithMoney, ddRequirementSent };
   }
 
   function termsHtml(r){
     const lines = [];
     lines.push('<div class="tc-label">SIMPLE TERMS:</div>');
     if (r.bonus) lines.push(`* Bonus: <span class="hl-money">${moneyFmt(r.bonus)}</span>`);
-    lines.push('* Account: consumer checking');
+    lines.push(`* Account: ${escHtml(r.accountType)}`);
+    if (r.promoCode) lines.push(`* Promo code: <span class="hl-code">${escHtml(r.promoCode)}</span>`);
     lines.push(`* Monthly fee: ${r.monthlyFee ? `<span class="hl-fee">${moneyFmt(r.monthlyFee)}</span>` : 'Not clearly stated in pasted T&C'}`);
-    lines.push(`* Early close / clawback: ${r.earlyClose ? 'Account must stay open until bonus is deposited; promo abuse may cause bonus reversal/restriction.' : 'Not clearly stated'}`);
+    if (r.waivers.length) lines.push(`* Fee waiver: ${escHtml(r.waivers[0])}`);
+    lines.push(`* Early close / payout risk: ${r.earlyClose ? 'Keep account open and in good standing until bonus payout; closing/restriction before payout can forfeit bonus.' : 'Not clearly stated'}`);
     lines.push('');
     lines.push('<span class="hl-section">HOW TO EARN THE BONUS:</span>');
-    if (r.openBy) lines.push(`* 1. Open by <span class="hl-days">${prettyDate(r.openBy)}</span> using the bonus offer code.`);
-    else lines.push('* 1. Open the required account and use the bonus offer code if provided.');
-    if (r.reqMoney || r.reqDays) lines.push(`* 2. Receive ${r.reqMoney?`<span class="hl-money">${moneyFmt(r.reqMoney)}+</span> `:''}in qualifying electronic deposits${r.reqDays?` within <span class="hl-days">${r.reqDays} calendar days</span> of account opening`:''}.`);
-    if (r.payoutDays) lines.push(`* 3. Bonus pays within <span class="hl-days">${r.payoutDays} calendar days</span> after requirements are met.`);
-    lines.push('* 4. Keep the account open through bonus payout.');
+    if (r.openBy) lines.push(`* 1. Open by <span class="hl-days">${prettyDate(r.openBy)}</span>${r.promoCode?` using promo code <span class="hl-code">${escHtml(r.promoCode)}</span>`:' using the bonus offer code'}.`);
+    else lines.push(`* 1. Open one eligible account${r.promoCode?` using promo code <span class="hl-code">${escHtml(r.promoCode)}</span>`:' and apply the promo code if required'}.`);
+    if (r.fundedDays) lines.push(`* 2. Fund the account within <span class="hl-days">${r.fundedDays} days</span> to keep it open.`);
+    const reqLineNum = r.fundedDays ? 3 : 2;
+    if (r.reqMoney || r.reqDays || r.ddCount) lines.push(`* ${reqLineNum}. Receive ${r.ddCount?`at least <span class="hl-days">${r.ddCount}</span> `:''}qualifying Direct Deposits${r.reqMoney?` of <span class="hl-money">${moneyFmt(r.reqMoney)}+</span> each`:''}${r.reqDays?` within <span class="hl-days">${r.reqDays} days</span> of account opening`:''}.`);
+    lines.push(`* ${reqLineNum+1}. Bonus payout: ${escHtml(r.payoutText)}.`);
+    lines.push(`* ${reqLineNum+2}. Keep account open and in good standing until payout.`);
     lines.push('');
     lines.push('<span class="hl-section">WHAT COUNTS:</span>');
     (r.counts.length ? r.counts : ['Review qualifying deposit wording manually']).forEach(x=>lines.push(`* ${escHtml(x)}`));
@@ -112,28 +160,27 @@
     (r.notCounts.length ? r.notCounts : ['Not clearly listed']).forEach(x=>lines.push(`* <span class="hl-warn">${escHtml(x)}</span>`));
     if (r.waivers.length) {
       lines.push('');
-      lines.push('<span class="hl-section">MONTHLY FEE CAN BE AVOIDED WITH ONE:</span>');
+      lines.push('<span class="hl-section">MONTHLY FEE CAN BE AVOIDED WITH:</span>');
       r.waivers.forEach(x=>lines.push(`* ${escHtml(x)}`));
     }
     lines.push('');
     lines.push('<span class="hl-section">ELIGIBILITY / CHURN:</span>');
-    lines.push('* New consumer checking customers only.');
-    if (r.priorMonths) lines.push(`* Not available if you received a Wells Fargo consumer checking bonus within the past <span class="hl-days">${r.priorMonths} months</span>.`);
-    if (/employees/i.test(r.raw)) lines.push('* Wells Fargo employees are not eligible.');
-    if (/non-resident aliens|W-8/i.test(r.raw)) lines.push('* Non-resident aliens / W-8 signers are not eligible.');
-    if (/Private Bank/i.test(r.raw)) lines.push('* Private Bank deposit accounts are not eligible.');
-    if (r.cannotCombine) lines.push('* <span class="hl-warn">Cannot be combined</span> with other consumer deposit offers.');
-    if (r.tax) lines.push('* Bonus may be reported as taxable income.');
+    if (/individual and jointly owned|joint account/i.test(r.raw)) lines.push('* Individual or joint Checking / Max-Rate Checking account allowed; primary account holder is bonus-eligible.');
+    if (r.priorMonths) lines.push(`* Not eligible if you owned/co-owned the same checking product within the last <span class="hl-days">${r.priorMonths} months</span>.`);
+    if (/non-U\.S\. residents|non-U.S. residents/i.test(r.raw)) lines.push('* Non-U.S. residents are not eligible.');
+    if (r.cannotCombine) lines.push('* <span class="hl-warn">Cannot be combined</span> with other checking offers / only one checking offer at a time.');
+    if (/gaming|abuse|misuse/i.test(r.raw)) lines.push('* Promo abuse/gaming can disqualify bonus payout.');
+    if (r.tax) lines.push('* Bonus is taxable and may be reported on Form 1099.');
     lines.push('');
     lines.push('<span class="hl-section">REVIEW:</span>');
-    if (r.hasClearPath) lines.push('* Qualification path is clear from pasted T&C. Verify offer code and account type before applying.');
+    if (r.hasClearPath) lines.push('* Qualification path is clear from pasted T&C. Verify promo code and exact account type before applying.');
     else lines.push('* Qualification path needs manual review.');
     return `<div class="tc-box"><div class="tc-body">${lines.join('\n')}</div></div>`;
   }
 
   function getLongestTermsText(){
     const areas = [...document.querySelectorAll('textarea')];
-    const withTerms = areas.map(a=>a.value||'').filter(v=>/bonus|qualifying|direct deposit|monthly service fee|offer/i.test(v));
+    const withTerms = areas.map(a=>a.value||'').filter(v=>/bonus|qualifying|direct deposit|monthly service fee|monthly account fee|offer|promo/i.test(v));
     withTerms.sort((a,b)=>b.length-a.length);
     return withTerms[0] || '';
   }
@@ -144,7 +191,7 @@
     const r = parseRules(raw);
     const candidates = [...document.querySelectorAll('.tc-box,.card,.az-area,div')].filter(el => {
       const t = el.textContent || '';
-      return t.includes('SIMPLE TERMS') && t.includes('WHAT COUNTS') && t.includes('REVIEW');
+      return t.includes('SIMPLE TERMS') && (t.includes('WHAT COUNTS') || t.includes('HOW TO EARN')) && (t.includes('ELIGIBILITY') || t.includes('REVIEW'));
     });
     const box = candidates.sort((a,b)=>(a.textContent||'').length-(b.textContent||'').length)[0];
     if (!box || box.dataset.strictRulesApplied === VER) return false;
@@ -157,6 +204,7 @@
     setTimeout(replaceSimpleTerms, 80);
     setTimeout(replaceSimpleTerms, 350);
     setTimeout(replaceSimpleTerms, 900);
+    setTimeout(replaceSimpleTerms, 1500);
   }
 
   document.addEventListener('click', e => {
