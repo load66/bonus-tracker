@@ -1,8 +1,18 @@
-/* ✅ Version 3.0.8 Newest update: Analyzer profile registry adds PNC Virtual Wallet as saved reusable profile. */
+/* ✅ Version 3.0.9 Newest update: Analyzer profile registry adds Regions LifeGreen Checking as saved reusable profile. */
 (function(){
-  const VER='3.0.8';
+  const VER='3.0.9';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
+    {
+      id:'regions-lifegreen-personal-checking',
+      bank:'Regions Bank',
+      product:'LifeGreen personal checking',
+      type:'personal checking',
+      status:'saved',
+      signals:[/Regions/i,/LifeGreen|personal Regions checking/i,/Qualifying ACH direct deposits|Register before you open/i],
+      requirements:'Register before opening + $1,000+ qualifying ACH direct deposits within 90 days',
+      note:'Saved profile: Regions LifeGreen personal checking ACH direct deposit bonus. Bonus amount may need review if not included in pasted T&C.'
+    },
     {
       id:'pnc-virtual-wallet-consumer-checking',
       bank:'PNC',
