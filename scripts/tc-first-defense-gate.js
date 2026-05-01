@@ -1,6 +1,6 @@
-/* ✅ Version 2.14.0 Newest update: First Defense Gate forces weird-wording normalization before every analyzer path. No copy/paste hopping. */
+/* ✅ Version 2.15.2 Newest update: Current pasted T&C is always first priority. Saved source vault is fallback only. */
 (function(){
-  const VER='2.14.0';
+  const VER='2.15.2';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const MIN_SOURCE=180;
 
@@ -10,20 +10,29 @@
     return /bonus|offer|eligible|qualifying|direct deposit|checking|monthly fee|terms|conditions|promo/i.test(s);
   }
 
+  function pageTextareaSource(){
+    const areas=Array.from(document.querySelectorAll('textarea'))
+      .filter(a=>a.id!=='tca_raw')
+      .map(a=>a.value||'')
+      .filter(isTerms)
+      .sort((a,b)=>b.length-a.length);
+    return areas[0]||'';
+  }
+
+  function savedSource(){
+    try{return window.tcGetSavedSource?.()?.raw||window.__btLastTcSource?.raw||'';}catch{return'';}
+  }
+
   function sourceFromScreen(){
     const tca=document.getElementById('tca_raw')?.value||'';
     if(isTerms(tca))return {raw:tca,from:'analyzer-box'};
 
-    try{
-      const saved=window.tcGetSavedSource?.()?.raw||window.__btLastTcSource?.raw||'';
-      if(isTerms(saved))return {raw:saved,from:'saved-source-vault'};
-    }catch{}
+    const page=pageTextareaSource();
+    if(isTerms(page))return {raw:page,from:'current-page-textarea'};
 
-    const areas=Array.from(document.querySelectorAll('textarea'))
-      .map(a=>a.value||'')
-      .filter(isTerms)
-      .sort((a,b)=>b.length-a.length);
-    if(areas[0])return {raw:areas[0],from:'page-textarea'};
+    const saved=savedSource();
+    if(isTerms(saved))return {raw:saved,from:'saved-source-vault-fallback'};
+
     return {raw:'',from:'none'};
   }
 
@@ -94,6 +103,7 @@
         result.firstDefenseApplied=true;
         result.firstDefenseChanged=fd.changed;
         result.firstDefenseVersion=VER;
+        result.sourcePriority=window.__tcFirstDefenseLast?.source||'';
       }
       return result;
     };
