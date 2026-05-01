@@ -1,8 +1,18 @@
-/* ✅ Version 3.0.6 Newest update: Analyzer profile registry adds Capital One Business Checking as saved reusable profile. */
+/* ✅ Version 3.0.7 Newest update: Analyzer profile registry adds Bank of America Business Advantage Banking as saved reusable profile. */
 (function(){
-  const VER='3.0.6';
+  const VER='3.0.7';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
+    {
+      id:'bank-of-america-business-advantage-banking',
+      bank:'Bank of America',
+      product:'Business Advantage Banking',
+      type:'business checking',
+      status:'saved',
+      signals:[/Bank of America|BofA/i,/Business Advantage Banking|Business Advantage Relationship Banking|Business Advantage Fundamentals/i,/Maintenance Period|Balance Requirement|\$400 or \$750/i],
+      requirements:'Tiered new money deposit by day 30 + daily balance hold from day 31 through day 90',
+      note:'Saved profile: Bank of America Business Advantage Banking $400/$750 new money + maintenance period bonus.'
+    },
     {
       id:'capital-one-business-checking-sboffer500',
       bank:'Capital One',
