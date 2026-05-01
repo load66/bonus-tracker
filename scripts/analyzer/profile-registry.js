@@ -1,8 +1,18 @@
-/* ✅ Version 3.0.10 Newest update: Analyzer profile registry adds Equity Bank Bloom as saved reusable profile. */
+/* ✅ Version 3.0.11 Newest update: Analyzer profile registry adds Busey Bank personal checking as saved reusable profile. */
 (function(){
-  const VER='3.0.10';
+  const VER='3.0.11';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
+    {
+      id:'busey-bank-personal-checking-levelup',
+      bank:'Busey Bank',
+      product:'Foundation Checking / Pillar Banking',
+      type:'personal checking',
+      status:'saved',
+      signals:[/Busey Bank|Busey/i,/Foundation Checking|Pillar Banking|LEVELUP1|LEVELUP2/i,/Busey Debit Mastercard|tiered credit/i],
+      requirements:'Promo code + online banking + 3 debit transactions + tiered DD within 90 days',
+      note:'Saved profile: Busey Bank Foundation Checking / Pillar Banking tiered direct deposit bonus.'
+    },
     {
       id:'equity-bank-bloom-checking-savings',
       bank:'Equity Bank',
