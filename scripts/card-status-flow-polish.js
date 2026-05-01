@@ -1,6 +1,6 @@
-/* ✅ Version 3.3.4 Newest update: Card status flow polish — Requirement Deadline wording + hide Effort. */
+/* ✅ Version 3.3.5 Newest update: Fix repeated card text loop. Requirement Deadline wording is now idempotent. */
 (function(){
-  const VER='3.3.4';
+  const VER='3.3.5';
 
   function badge(){
     const b=document.querySelector('.app-version');
@@ -20,7 +20,7 @@
     for(let i=0;p&&i<9;i++,p=p.parentElement){
       const txt=clean(p.textContent);
       const r=p.getBoundingClientRect?.();
-      if(r&&r.width>220&&r.height>100&&/\$\d/.test(txt)&&/(OPENED|Opened|RECEIVED|Received|REQ MET|Req Met|HOLD UNTIL|Hold Until)/.test(txt))return p;
+      if(r&&r.width>220&&r.height>100&&/\$\d/.test(txt)&&/(OPENED|Opened|RECEIVED|Received|REQ MET|Req Met|HOLD UNTIL|Hold Until|Working|Countdown Active|Requirement Deadline)/.test(txt))return p;
     }
     return null;
   }
@@ -30,20 +30,20 @@
       if(!t)return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
     }});
-    const nodes=[];
-    let n;
+    const nodes=[]; let n;
     while((n=walker.nextNode()))nodes.push(n);
     return nodes;
   }
   function setTextNode(n,value){
-    if(clean(n.nodeValue)!==value)n.nodeValue=n.nodeValue.replace(clean(n.nodeValue),value);
+    if(clean(n.nodeValue)!==value)n.nodeValue=value;
   }
 
   function cardPhase(card){
-    const t=clean(card.textContent).toLowerCase();
+    const t=clean(card?.textContent||'').toLowerCase();
     if(/ready to churn|time to churn/.test(t))return 'readyChurn';
     if(/cooling down|churn eligible|days? left to churn/.test(t))return 'cooldown';
-    if(/early closure fee|close fee countdown|safe close|hold until/.test(t))return 'hold';
+    if(/early closure fee|close fee countdown|safe close|hold until|hold \/ do not close/.test(t))return 'hold';
+    if(/waiting for bonus/.test(t))return 'waitingBonus';
     if(/received/.test(t)&&/req met/.test(t))return 'waitingOrHold';
     if(/req met/.test(t)&&!/received/.test(t))return 'waitingBonus';
     return 'working';
@@ -64,26 +64,39 @@
     });
   }
 
+  function normalizeRepeatedText(t){
+    t=clean(t);
+    const day=t.match(/\b(\d+d)\s+left\b/i)?.[1];
+    if(!day)return t;
+    if(/to finish bonus/i.test(t))return `${day} left to finish bonus`;
+    if(/before safe close/i.test(t))return `${day} left before safe close`;
+    return t;
+  }
+
   function polishTimerLine(){
     leafTextNodes(document.body).forEach(n=>{
       let t=clean(n.nodeValue);
       if(!/\b\d+d left\b/i.test(t))return;
+
+      // Safety cleanup from the bad v3.3.4 loop.
+      const cleaned=normalizeRepeatedText(t);
+      if(cleaned!==t){ setTextNode(n,cleaned); return; }
+
+      // Already polished. Do not touch again.
+      if(/left to finish bonus|left before safe close|left until churn|to requirement deadline|churn eligible/i.test(t))return;
+
       const card=closestCard(n.parentElement);
       const all=clean(card?.textContent||'').toLowerCase();
-      if(/early closure fee/i.test(t)||/early closure fee/.test(all)){
-        const m=t.match(/(\d+d)\s*left/i);
-        if(m)setTextNode(n,`${m[1]} left before safe close`);
+      const m=t.match(/(\d+d)\s*left\b/i);
+      if(!m)return;
+
+      if(/early closure fee|close fee countdown|hold until/.test(all) || /early closure fee/i.test(t)){
+        setTextNode(n,`${m[1]} left before safe close`);
         return;
       }
-      if(/requirement deadline/i.test(t))return;
-      if(/churn/i.test(t))return;
-      if(/to requirement deadline/i.test(t))return;
-      const m=t.match(/(\d+d)\s*left\s*:?\s*(.*)$/i);
-      if(m){
-        const detail=clean(m[2]);
-        const next=detail?`${m[1]} left to finish bonus: ${detail}`:`${m[1]} left to finish bonus`;
-        setTextNode(n,next);
-      }
+
+      // Keep it short and stable. Details stay in checklist/timer notes, not repeated in the card line.
+      setTextNode(n,`${m[1]} left to finish bonus`);
     });
   }
 
@@ -99,13 +112,14 @@
         const t=clean(block.textContent);
         const r=block.getBoundingClientRect?.();
         if(!r)continue;
-        if(/\bEFFORT\b/i.test(t)&&/(Easy|Medium|Hard|Low|High)/i.test(t)&&r.width<260&&r.height<120){
+        if(/\bEFFORT\b/i.test(t)&&/(Easy|Medium|Hard|Low|High)/i.test(t)&&r.width<300&&r.height<140){
           block.style.display='none';
           block.setAttribute('data-bt-hidden-effort','1');
           return;
         }
       }
       label.style.display='none';
+      label.setAttribute('data-bt-hidden-effort','1');
       let sib=label.nextElementSibling;
       if(sib&&/^(Easy|Medium|Hard|Low|High)$/i.test(clean(sib.textContent))){
         sib.style.display='none';
@@ -118,18 +132,23 @@
     if(document.getElementById('bt_card_status_flow_style'))return;
     const st=document.createElement('style');
     st.id='bt_card_status_flow_style';
-    st.textContent=`
-      [data-bt-hidden-effort="1"]{display:none!important;}
-    `;
+    st.textContent=`[data-bt-hidden-effort="1"]{display:none!important;}`;
     document.head.appendChild(st);
   }
 
+  let running=false;
   function apply(){
-    badge();
-    addStyle();
-    replaceCountdownWording();
-    polishTimerLine();
-    hideEffortBlocks();
+    if(running)return;
+    running=true;
+    try{
+      badge();
+      addStyle();
+      replaceCountdownWording();
+      polishTimerLine();
+      hideEffortBlocks();
+    }finally{
+      setTimeout(()=>{running=false;},50);
+    }
   }
 
   window.btCardStatusFlowPolishVersion=VER;
@@ -139,7 +158,7 @@
   setTimeout(apply,700);
   setTimeout(apply,1600);
   setTimeout(apply,3000);
-  setInterval(apply,1200);
+  setInterval(apply,1800);
   const obs=new MutationObserver(()=>setTimeout(apply,0));
   setTimeout(()=>{try{obs.observe(document.body,{childList:true,subtree:true,characterData:true})}catch{}},300);
 })();
