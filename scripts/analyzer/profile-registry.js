@@ -1,8 +1,18 @@
-/* ✅ Version 3.0.5 Newest update: Analyzer profile registry adds BMO Business Checking as saved reusable profile. */
+/* ✅ Version 3.0.6 Newest update: Analyzer profile registry adds Capital One Business Checking as saved reusable profile. */
 (function(){
-  const VER='3.0.5';
+  const VER='3.0.6';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
+    {
+      id:'capital-one-business-checking-sboffer500',
+      bank:'Capital One',
+      product:'Basic or Enhanced Business Checking',
+      type:'business checking',
+      status:'saved',
+      signals:[/Capital One/i,/SBOFFER500|Basic or Enhanced checking|Basic Checking|Enhanced Checking/i,/10 qualifying electronic transactions|minimum end-of-day balance/i],
+      requirements:'$5,000 external deposit by day 30 + 60-day balance hold within 90 days + 10 electronic transactions',
+      note:'Saved profile: Capital One Basic/Enhanced Business Checking SBOFFER500 bonus.'
+    },
     {
       id:'bmo-business-checking-tiered-hold',
       bank:'BMO',
