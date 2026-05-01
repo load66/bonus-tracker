@@ -1,6 +1,6 @@
-/* ✅ Version 3.3.8 Newest update: Lock visible app badge to source-rendered bank Actions menu release. */
+/* ✅ Version 3.3.9 Newest update: Lock visible app badge to compact bank Actions menu release. */
 (function(){
-  const VER='3.3.8';
+  const VER='3.3.9';
   function lockBadge(){
     const b=document.querySelector('.app-version');
     if(b && b.textContent!=='v'+VER) b.textContent='v'+VER;
