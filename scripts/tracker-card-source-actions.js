@@ -1,14 +1,6 @@
-/* ✅ Version 3.3.9 Newest update: Compact source-rendered per-bank Actions menu. No DOM scanning or overlay patching. */
+/* Compact source-rendered per-bank Actions menu. Version display is controlled only by index.html. */
 (function(){
-  const VER='3.3.9';
-
   window.__btBankActionPrompt=window.__btBankActionPrompt||null;
-
-  function lockSourceActionsBadge(){
-    const b=document.querySelector('.app-version');
-    if(b)b.textContent='v'+VER;
-    window.btVisibleAppVersion=VER;
-  }
 
   function ensureBankActionCompactStyle(){
     if(document.getElementById('bt_source_bank_actions_compact_style'))return;
@@ -210,12 +202,11 @@ function rTracker(sorted){
   return h + rBankActions();
 }
 
-  window.btSourceBankActionsVersion=VER;
   window.openBankActions=openBankActions;
   window.closeBankActions=closeBankActions;
   window.runBankAction=runBankAction;
   window.rBankActions=rBankActions;
   window.rTracker=rTracker;
 
-  setTimeout(()=>{try{lockSourceActionsBadge();ensureBankActionCompactStyle();R();}catch(e){console.error('Bank Actions source renderer failed',e);}},0);
+  setTimeout(()=>{try{ensureBankActionCompactStyle();R();}catch(e){console.error('Bank Actions source renderer failed',e);}},0);
 })();
