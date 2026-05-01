@@ -1,6 +1,6 @@
-/* ✅ Version 3.3.7 Newest update: Roll back broken per-bank Actions folder and restore clicks. */
+/* ✅ Version 3.3.8 Newest update: Lock visible app badge to source-rendered bank Actions menu release. */
 (function(){
-  const VER='3.3.7';
+  const VER='3.3.8';
   function lockBadge(){
     const b=document.querySelector('.app-version');
     if(b && b.textContent!=='v'+VER) b.textContent='v'+VER;
