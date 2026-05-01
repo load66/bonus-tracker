@@ -1,8 +1,18 @@
-/* ✅ Version 3.0.7 Newest update: Analyzer profile registry adds Bank of America Business Advantage Banking as saved reusable profile. */
+/* ✅ Version 3.0.8 Newest update: Analyzer profile registry adds PNC Virtual Wallet as saved reusable profile. */
 (function(){
-  const VER='3.0.7';
+  const VER='3.0.8';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
+    {
+      id:'pnc-virtual-wallet-consumer-checking',
+      bank:'PNC',
+      product:'Virtual Wallet / Virtual Wallet with Performance Select',
+      type:'personal checking',
+      status:'saved',
+      signals:[/\bPNC\b|PNC Bank/i,/Virtual Wallet|Performance Select/i,/CREDITS CHECK REWARD|Spend account|qualifying direct deposit/i],
+      requirements:'Tiered qualifying direct deposit within 60 days; $100 for $500+ DD or $400 for $5,000+ DD',
+      note:'Saved profile: PNC Virtual Wallet consumer checking tiered direct deposit reward.'
+    },
     {
       id:'bank-of-america-business-advantage-banking',
       bank:'Bank of America',
