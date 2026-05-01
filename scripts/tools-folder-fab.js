@@ -1,6 +1,6 @@
-/* ✅ Version 3.2.4 Newest update: Non-invasive Tools folder so Edit/checklist/mini timer buttons keep working. */
+/* ✅ Version 3.3.1 Newest update: Stable non-invasive Tools folder. No global click interception. */
 (function(){
-  const VER='3.2.4';
+  const VER='3.3.1';
   let nativePlus=null;
   let nativePlusHidden=false;
 
@@ -30,9 +30,7 @@
       if(txt!=='+'&&!/quick add|add entry|new entry/.test(aria))return false;
       if(!isVisible(el))return false;
       const r=el.getBoundingClientRect();
-      const nearBottom=r.top>window.innerHeight*0.45;
-      const rightSide=r.left>window.innerWidth*0.55;
-      return nearBottom&&rightSide&&isFixedish(el);
+      return r.top>window.innerHeight*0.45&&r.left>window.innerWidth*0.55&&isFixedish(el);
     }).sort((a,b)=>{
       const ar=a.getBoundingClientRect(), br=b.getBoundingClientRect();
       return (br.width*br.height)-(ar.width*ar.height);
@@ -56,10 +54,7 @@
     `;
   }
 
-  function closeMenu(){
-    document.getElementById('bt_tools_folder_menu')?.setAttribute('hidden','');
-    document.getElementById('bt_tools_backdrop')?.remove();
-  }
+  function closeMenu(){document.getElementById('bt_tools_folder_menu')?.setAttribute('hidden','');document.getElementById('bt_tools_backdrop')?.remove();}
   function toggleMenu(){
     ensureMenu();
     const m=document.getElementById('bt_tools_folder_menu');
@@ -67,34 +62,26 @@
     if(m.hasAttribute('hidden')){
       document.getElementById('bt_tools_backdrop')?.remove();
       const bd=document.createElement('div');
-      bd.id='bt_tools_backdrop';
-      bd.className='bt-tools-backdrop';
-      bd.onclick=closeMenu;
+      bd.id='bt_tools_backdrop';bd.className='bt-tools-backdrop';bd.onclick=closeMenu;
       document.body.appendChild(bd);
       m.removeAttribute('hidden');
     }else closeMenu();
   }
   function openTC(){closeMenu(); if(typeof window.tcV32OpenLearningInbox==='function')window.tcV32OpenLearningInbox(); else document.getElementById('v32_inbox_btn')?.click();}
   function openProfiles(){closeMenu(); if(typeof window.tcV31OpenProfileLibrary==='function')window.tcV31OpenProfileLibrary(); else document.getElementById('v31_profile_btn')?.click();}
-  function runSelfTest(){
-    closeMenu();
-    if(typeof window.tcV31OpenProfileLibrary==='function')window.tcV31OpenProfileLibrary();
-    setTimeout(()=>{ if(typeof window.tcV31RunAndShowSelfTest==='function')window.tcV31RunAndShowSelfTest(); },180);
-  }
+  function runSelfTest(){closeMenu(); if(typeof window.tcV31OpenProfileLibrary==='function')window.tcV31OpenProfileLibrary(); setTimeout(()=>{ if(typeof window.tcV31RunAndShowSelfTest==='function')window.tcV31RunAndShowSelfTest(); },180);}
   function quickAdd(){
     closeMenu();
     const plus=findNativePlus();
     if(plus){
-      plus.classList.remove('bt-native-plus-hidden');
-      nativePlusHidden=false;
-      try{plus.click();}catch(e){}
+      plus.classList.remove('bt-native-plus-hidden');nativePlusHidden=false;
+      try{plus.click();}catch{}
       setTimeout(hideNativePlus,600);
       return;
     }
     const quick=Array.from(document.querySelectorAll('button,[role="button"],a')).find(el=>/quick add|add entry|new entry/i.test((el.textContent||'')+' '+(el.getAttribute('aria-label')||''))&&isVisible(el));
     if(quick)quick.click();
   }
-
   function ensureMenu(){
     if(document.getElementById('bt_tools_folder_menu'))return;
     const m=document.createElement('div');m.id='bt_tools_folder_menu';m.setAttribute('hidden','');
@@ -107,21 +94,9 @@
     `;
     document.body.appendChild(m);
   }
-  function ensureButton(){
-    if(document.getElementById('bt_tools_folder_btn'))return;
-    const b=document.createElement('button');b.id='bt_tools_folder_btn';b.type='button';b.innerHTML='<span class="ico">＋</span><span class="lbl">Tools</span>';b.onclick=toggleMenu;document.body.appendChild(b);
-  }
-  function hideNativePlus(){
-    const plus=findNativePlus();
-    if(plus){
-      plus.classList.add('bt-native-plus-hidden');
-      nativePlusHidden=true;
-    }
-  }
-  function cleanupBackdrops(){
-    const m=document.getElementById('bt_tools_folder_menu');
-    if(!m||m.hasAttribute('hidden')) document.getElementById('bt_tools_backdrop')?.remove();
-  }
+  function ensureButton(){if(document.getElementById('bt_tools_folder_btn'))return;const b=document.createElement('button');b.id='bt_tools_folder_btn';b.type='button';b.innerHTML='<span class="ico">＋</span><span class="lbl">Tools</span>';b.onclick=toggleMenu;document.body.appendChild(b);}
+  function hideNativePlus(){const plus=findNativePlus();if(plus){plus.classList.add('bt-native-plus-hidden');nativePlusHidden=true;}}
+  function cleanupBackdrops(){const m=document.getElementById('bt_tools_folder_menu');if(!m||m.hasAttribute('hidden'))document.getElementById('bt_tools_backdrop')?.remove();}
   function boot(){addStyle();ensureButton();ensureMenu();hideNativePlus();cleanupBackdrops();}
 
   window.btToolsFolderVersion=VER;
