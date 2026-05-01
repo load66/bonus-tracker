@@ -1,50 +1,13 @@
-/* ✅ Version 3.3.1 Newest update: Stable non-invasive Tools folder. No global click interception. */
+/* ✅ Version 3.3.12 Newest update: Source-clean Tools folder — native + is hidden immediately and Quick Add calls openAdd directly. */
 (function(){
-  const VER='3.3.1';
-  let nativePlus=null;
-  let nativePlusHidden=false;
-
-  const isVisible=el=>{
-    if(!el||!el.getBoundingClientRect)return false;
-    const r=el.getBoundingClientRect();
-    const s=getComputedStyle(el);
-    return r.width>20&&r.height>20&&s.display!=='none'&&s.visibility!=='hidden'&&Number(s.opacity||1)>0;
-  };
-  const isFixedish=el=>{
-    let n=el;
-    for(let i=0;n&&i<5;i++,n=n.parentElement){
-      const p=getComputedStyle(n).position;
-      if(p==='fixed'||p==='sticky')return true;
-    }
-    return false;
-  };
-  function findNativePlus(){
-    if(nativePlus&&document.body.contains(nativePlus))return nativePlus;
-    const nodes=Array.from(document.querySelectorAll('button,a,[role="button"]'));
-    const candidates=nodes.filter(el=>{
-      const txt=(el.textContent||'').trim();
-      const aria=(el.getAttribute('aria-label')||el.getAttribute('title')||'').toLowerCase();
-      if(el.id==='bt_tools_folder_btn')return false;
-      if(el.closest('#bt_tools_folder_menu'))return false;
-      if(el.closest('.bottom-nav,.tabbar,.nav,.tabs'))return false;
-      if(txt!=='+'&&!/quick add|add entry|new entry/.test(aria))return false;
-      if(!isVisible(el))return false;
-      const r=el.getBoundingClientRect();
-      return r.top>window.innerHeight*0.45&&r.left>window.innerWidth*0.55&&isFixedish(el);
-    }).sort((a,b)=>{
-      const ar=a.getBoundingClientRect(), br=b.getBoundingClientRect();
-      return (br.width*br.height)-(ar.width*ar.height);
-    });
-    nativePlus=candidates[0]||null;
-    return nativePlus;
-  }
+  const VER='3.3.12';
 
   function addStyle(){
     let st=document.getElementById('bt_tools_folder_style');
     if(!st){st=document.createElement('style');st.id='bt_tools_folder_style';document.head.appendChild(st);}
     st.textContent=`
       #v32_inbox_btn,#v31_profile_btn{display:none!important;pointer-events:none!important;}
-      .bt-native-plus-hidden{opacity:0!important;pointer-events:none!important;transform:scale(.65)!important;}
+      .fab{display:none!important;opacity:0!important;pointer-events:none!important;transform:scale(.65)!important;}
       #bt_tools_backdrop[hidden],#bt_tools_folder_menu[hidden]{display:none!important;pointer-events:none!important;}
       #bt_tools_folder_btn{position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);z-index:245;border:0;border-radius:24px;width:76px;height:56px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 14px 34px rgba(37,99,235,.34);font:900 12px 'DM Sans',system-ui;letter-spacing:.2px;display:flex;align-items:center;justify-content:center;gap:3px;flex-direction:column;-webkit-tap-highlight-color:transparent;}
       #bt_tools_folder_btn .ico{font-size:21px;line-height:18px}#bt_tools_folder_btn .lbl{font-size:11px;line-height:12px}
@@ -72,15 +35,8 @@
   function runSelfTest(){closeMenu(); if(typeof window.tcV31OpenProfileLibrary==='function')window.tcV31OpenProfileLibrary(); setTimeout(()=>{ if(typeof window.tcV31RunAndShowSelfTest==='function')window.tcV31RunAndShowSelfTest(); },180);}
   function quickAdd(){
     closeMenu();
-    const plus=findNativePlus();
-    if(plus){
-      plus.classList.remove('bt-native-plus-hidden');nativePlusHidden=false;
-      try{plus.click();}catch{}
-      setTimeout(hideNativePlus,600);
-      return;
-    }
-    const quick=Array.from(document.querySelectorAll('button,[role="button"],a')).find(el=>/quick add|add entry|new entry/i.test((el.textContent||'')+' '+(el.getAttribute('aria-label')||''))&&isVisible(el));
-    if(quick)quick.click();
+    if(typeof window.openAdd==='function'){window.openAdd();return;}
+    try{if(typeof openAdd==='function'){openAdd();return;}}catch{}
   }
   function ensureMenu(){
     if(document.getElementById('bt_tools_folder_menu'))return;
@@ -95,9 +51,8 @@
     document.body.appendChild(m);
   }
   function ensureButton(){if(document.getElementById('bt_tools_folder_btn'))return;const b=document.createElement('button');b.id='bt_tools_folder_btn';b.type='button';b.innerHTML='<span class="ico">＋</span><span class="lbl">Tools</span>';b.onclick=toggleMenu;document.body.appendChild(b);}
-  function hideNativePlus(){const plus=findNativePlus();if(plus){plus.classList.add('bt-native-plus-hidden');nativePlusHidden=true;}}
   function cleanupBackdrops(){const m=document.getElementById('bt_tools_folder_menu');if(!m||m.hasAttribute('hidden'))document.getElementById('bt_tools_backdrop')?.remove();}
-  function boot(){addStyle();ensureButton();ensureMenu();hideNativePlus();cleanupBackdrops();}
+  function boot(){addStyle();ensureButton();ensureMenu();cleanupBackdrops();}
 
   window.btToolsFolderVersion=VER;
   window.btToolsFolderClose=closeMenu;
@@ -105,7 +60,8 @@
   window.btToolsOpenTC=openTC;
   window.btToolsOpenProfiles=openProfiles;
   window.btToolsRunSelfTest=runSelfTest;
-  window.btToolsButtonHealthCheck=function(){cleanupBackdrops();return {version:VER,menuOpen:!document.getElementById('bt_tools_folder_menu')?.hasAttribute('hidden'),nativePlusHidden,backdrop:!!document.getElementById('bt_tools_backdrop')}};
+  window.btToolsFolderApply=boot;
+  window.btToolsButtonHealthCheck=function(){cleanupBackdrops();return {version:VER,menuOpen:!document.getElementById('bt_tools_folder_menu')?.hasAttribute('hidden'),backdrop:!!document.getElementById('bt_tools_backdrop')}};
 
-  setTimeout(boot,300);setTimeout(boot,1000);setTimeout(boot,2500);setInterval(boot,3500);
+  setTimeout(boot,0);setTimeout(boot,100);setTimeout(boot,500);setTimeout(boot,1200);setInterval(boot,2500);
 })();
