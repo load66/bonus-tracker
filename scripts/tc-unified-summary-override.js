@@ -1,23 +1,28 @@
-/* ✅ Version 2.15.1 Newest update: Visible Simple T&C summary now renders from live tcUnifiedAnalyze() so bank profiles/chart fixes actually show. */
+/* ✅ Version 2.15.2 Newest update: Visible summary uses current pasted T&C first; saved source vault is fallback only. */
 (function(){
-  const VER='2.15.1';
+  const VER='2.15.2';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const esc=v=>{if(typeof window.esc==='function')return window.esc(String(v??''));const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML;};
   const money=n=>'$'+Number(n||0).toLocaleString();
   const pretty=d=>{try{return typeof fD==='function'?fD(d):new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}catch{return d||''}};
+  function isTerms(v){return String(v||'').length>200&&/bonus|qualifying|direct deposit|monthly service fee|monthly account fee|offer|promo|checking|terms|conditions/i.test(v||'');}
 
   function rawText(){
     const direct=document.getElementById('tca_raw')?.value||'';
-    if(direct.length>200)return direct;
+    if(isTerms(direct))return direct;
+
+    const page=Array.from(document.querySelectorAll('textarea'))
+      .filter(a=>a.id!=='tca_raw')
+      .map(a=>a.value||'')
+      .filter(isTerms)
+      .sort((a,b)=>b.length-a.length)[0]||'';
+    if(isTerms(page))return page;
+
     try{
       const saved=window.tcGetSavedSource?.()?.raw||window.__btLastTcSource?.raw||'';
-      if(saved.length>200)return saved;
+      if(isTerms(saved))return saved;
     }catch{}
-    const v=Array.from(document.querySelectorAll('textarea'))
-      .map(a=>a.value||'')
-      .filter(v=>/bonus|qualifying|direct deposit|monthly service fee|monthly account fee|offer|promo|checking|terms|conditions/i.test(v));
-    v.sort((a,b)=>b.length-a.length);
-    return v[0]||'';
+    return '';
   }
   function card(){
     return Array.from(document.querySelectorAll('.tc-box,.az-area,.card'))
@@ -73,6 +78,7 @@
     box.dataset.unifiedSummary=VER;
     box.dataset.unifiedEngine=result.version||'';
     box.dataset.bankProfile=result.bankProfilesVersion||'';
+    box.dataset.sourcePriority=result.sourcePriority||'';
     box.classList.add('tc-strict-card');
     box.style.height='auto';box.style.maxHeight='none';box.style.minHeight='0';box.style.overflow='visible';
     box.innerHTML=linesFromResult(result);
