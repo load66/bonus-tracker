@@ -1,6 +1,6 @@
-/* ✅ Version 3.2.5 Newest update: Restore edit modal rendering + migrate legacy timer/checklist IDs. */
+/* ✅ Version 3.3.1 Newest update: Stable edit actions + legacy timer/checklist ID migration. No version badge control. */
 (function(){
-  const VER='3.2.5';
+  const VER='3.3.1';
   const KEY=(typeof SK==='string'&&SK)||'bt_e_v4';
 
   function app(){return document.getElementById('app')||document.body;}
@@ -10,11 +10,6 @@
   function setStateNull(name){try{window[name]=null}catch{};try{eval(name+'=null')}catch{}}
   function cleanStr(v){return String(v==null?'':v).trim();}
   function makeId(prefix, entryId, i){return prefix+'_'+String(entryId||'entry').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,24)+'_'+Date.now().toString(36)+'_'+i+'_'+Math.random().toString(36).slice(2,7);}
-
-  function bumpBadge(){
-    const b=document.querySelector('.app-version');
-    if(b)b.textContent='v'+VER;
-  }
 
   function normalizeTimerLocal(t, entryId, i){
     const x=(t&&typeof t==='object')?{...t}:{text:cleanStr(t)};
@@ -59,36 +54,24 @@
     }
     return changed;
   }
-
   function injectHtmlOnce(html, markerId, inputIds){
     if(!html||typeof html!=='string')return false;
     if(document.getElementById(markerId)||hasVisibleModalInput(inputIds))return false;
-    const wrap=document.createElement('div');
-    wrap.id=markerId;
-    wrap.dataset.editActionsFix='true';
-    wrap.innerHTML=html;
-    app().appendChild(wrap);
-    return true;
+    const wrap=document.createElement('div');wrap.id=markerId;wrap.dataset.editActionsFix='true';wrap.innerHTML=html;app().appendChild(wrap);return true;
   }
-
   function renderTimerEditorIfNeeded(){
-    const exists=stateExists('timerEditModal');
-    if(!exists)return false;
-    const html=safeCall(window.rTimerEdit);
-    return injectHtmlOnce(html,'bt_timer_edit_render_fix',['tem_text','tem_start']);
+    if(!stateExists('timerEditModal'))return false;
+    return injectHtmlOnce(safeCall(window.rTimerEdit),'bt_timer_edit_render_fix',['tem_text','tem_start']);
   }
-
   function renderChecklistEditorIfNeeded(){
-    const maybe=['checklistEditModal','checkEditModal','checklistEditor','checklistEdit','stepEditModal'];
-    if(!maybe.some(stateExists))return false;
+    const states=['checklistEditModal','checkEditModal','checklistEditor','checklistEdit','stepEditModal'];
+    if(!states.some(stateExists))return false;
     const renderers=['rChecklistEdit','rChecklistEditor','renderChecklistEdit','renderChecklistEditor','rCheckEdit','rStepEdit'];
     for(const name of renderers){
-      const html=safeCall(window[name]);
-      if(injectHtmlOnce(html,'bt_checklist_edit_render_fix',['cem_text','che_text','chk_text','cl_text','step_text']))return true;
+      if(injectHtmlOnce(safeCall(window[name]),'bt_checklist_edit_render_fix',['cem_text','che_text','chk_text','cl_text','step_text']))return true;
     }
     return false;
   }
-
   function cleanupMarkers(){
     const tm=document.getElementById('bt_timer_edit_render_fix');
     if(tm&&!stateExists('timerEditModal'))tm.remove();
@@ -96,26 +79,16 @@
     const checklistOpen=['checklistEditModal','checkEditModal','checklistEditor','checklistEdit','stepEditModal'].some(stateExists);
     if(cm&&!checklistOpen)cm.remove();
   }
-
   function patchCloseFns(){
     if(typeof window.closeTimerEditor!=='function'){
-      window.closeTimerEditor=function(){
-        setStateNull('timerEditModal');
-        document.getElementById('bt_timer_edit_render_fix')?.remove();
-        try{R()}catch{}
-      };
+      window.closeTimerEditor=function(){setStateNull('timerEditModal');document.getElementById('bt_timer_edit_render_fix')?.remove();try{R()}catch{}};
     }
     ['closeChecklistEditor','closeChecklistEdit','closeCheckEditor','closeStepEditor'].forEach(name=>{
       if(typeof window[name]!=='function'){
-        window[name]=function(){
-          ['checklistEditModal','checkEditModal','checklistEditor','checklistEdit','stepEditModal'].forEach(setStateNull);
-          document.getElementById('bt_checklist_edit_render_fix')?.remove();
-          try{R()}catch{}
-        };
+        window[name]=function(){['checklistEditModal','checkEditModal','checklistEditor','checklistEdit','stepEditModal'].forEach(setStateNull);document.getElementById('bt_checklist_edit_render_fix')?.remove();try{R()}catch{}};
       }
     });
   }
-
   function patchTimerEditorFallback(){
     if(window.__btLegacyTimerEditorPatched||typeof window.openTimerEditor!=='function')return;
     const base=window.openTimerEditor;
@@ -140,19 +113,16 @@
     try{openTimerEditor=window.openTimerEditor}catch{}
     window.__btLegacyTimerEditorPatched=true;
   }
-
   function patchR(){
-    if(window.__btEditActionsRPatched)return;
-    if(typeof window.R!=='function')return;
+    if(window.__btEditActionsRPatched||typeof window.R!=='function')return;
     const baseR=window.R;
     window.R=function(){
       const out=baseR.apply(this,arguments);
-      setTimeout(()=>{patchCloseFns();cleanupMarkers();renderTimerEditorIfNeeded();renderChecklistEditorIfNeeded();bumpBadge();},0);
+      setTimeout(()=>{patchCloseFns();cleanupMarkers();renderTimerEditorIfNeeded();renderChecklistEditorIfNeeded();},0);
       return out;
     };
     window.__btEditActionsRPatched=true;
   }
-
   function observeEditClicks(){
     if(window.__btEditActionsClickObserved)return;
     document.addEventListener('click',function(e){
@@ -167,19 +137,11 @@
     },false);
     window.__btEditActionsClickObserved=true;
   }
-
-  function boot(){bumpBadge();migrateLegacyIds();patchTimerEditorFallback();patchCloseFns();patchR();observeEditClicks();cleanupMarkers();renderTimerEditorIfNeeded();renderChecklistEditorIfNeeded();}
+  function boot(){migrateLegacyIds();patchTimerEditorFallback();patchCloseFns();patchR();observeEditClicks();cleanupMarkers();renderTimerEditorIfNeeded();renderChecklistEditorIfNeeded();}
 
   window.btEditActionsRenderFixVersion=VER;
-  window.btEditActionsHealthCheck=function(){
-    const changed=migrateLegacyIds();
-    boot();
-    return {version:VER,changed,timerModal:stateExists('timerEditModal'),timerInput:!!document.getElementById('tem_text'),checklistModal:['checklistEditModal','checkEditModal','checklistEditor','checklistEdit','stepEditModal'].some(stateExists),patchedR:!!window.__btEditActionsRPatched,legacyPatch:!!window.__btLegacyTimerEditorPatched};
-  };
+  window.btEditActionsHealthCheck=function(){const changed=migrateLegacyIds();boot();return {version:VER,changed,timerModal:stateExists('timerEditModal'),timerInput:!!document.getElementById('tem_text'),checklistModal:['checklistEditModal','checkEditModal','checklistEditor','checklistEdit','stepEditModal'].some(stateExists),patchedR:!!window.__btEditActionsRPatched,legacyPatch:!!window.__btLegacyTimerEditorPatched};};
   window.btLegacyItemIdMigrationRun=function(){const changed=migrateLegacyIds();if(changed){try{R()}catch{}}return {version:VER,changed};};
 
-  setTimeout(boot,250);
-  setTimeout(boot,1000);
-  setTimeout(boot,2500);
-  setInterval(boot,2500);
+  setTimeout(boot,250);setTimeout(boot,1000);setTimeout(boot,2500);setInterval(boot,2500);
 })();
