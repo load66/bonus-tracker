@@ -1,6 +1,6 @@
-/* ✅ Version 3.3.0 Newest update: Lock visible app badge to latest loaded release after all patches finish loading. */
+/* ✅ Version 3.3.1 Newest update: Lock visible app badge to latest cleaned release after all patches finish loading. */
 (function(){
-  const VER='3.3.0';
+  const VER='3.3.1';
   function lockBadge(){
     const b=document.querySelector('.app-version');
     if(b && b.textContent!=='v'+VER) b.textContent='v'+VER;
