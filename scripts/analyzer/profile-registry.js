@@ -1,8 +1,18 @@
-/* ✅ Version 3.0.4 Newest update: Analyzer profile registry. Shows whether a pasted bank sample is already covered by saved rules. */
+/* ✅ Version 3.0.5 Newest update: Analyzer profile registry adds BMO Business Checking as saved reusable profile. */
 (function(){
-  const VER='3.0.4';
+  const VER='3.0.5';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
+    {
+      id:'bmo-business-checking-tiered-hold',
+      bank:'BMO',
+      product:'Digital/Simple/Premium/Elite Business Checking',
+      type:'business checking',
+      status:'saved',
+      signals:[/\bBMO\b/i,/Business Checking/i,/Day 30|Day 31 to Day 90|Day 31 through Day 90/i],
+      requirements:'Tiered Day 30 balance check + Day 31–90 hold',
+      note:'Saved profile: BMO Business Checking tiered Day 30 + Day 31–90 balance hold bonus.'
+    },
     {
       id:'chase-business-complete-checking',
       bank:'Chase',
