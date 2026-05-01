@@ -1,13 +1,6 @@
-/* ✅ Version 3.3.3 Newest update: Remove Health tab and stop all Health-related UI. Keep Tracker, Tax, Datapoints, Phone. */
+/* Remove Health tab and stop all Health-related UI. Version display is controlled only by index.html. */
 (function(){
-  const VER='3.3.3';
   const KEEP=['tracker','tax','datapoints','phone'];
-
-  function badge(){
-    const b=document.querySelector('.app-version');
-    if(b)b.textContent='v'+VER;
-    window.btVisibleAppVersion=VER;
-  }
 
   function txt(el){return String(el?.textContent||el?.value||el?.getAttribute?.('aria-label')||el?.getAttribute?.('title')||'').trim().toLowerCase();}
 
@@ -71,14 +64,12 @@
   }
 
   function apply(){
-    badge();
     removeHealthLayers();
     removeHealthTabButtons();
     keepOnlyMainTabs();
     cleanupOldHealthScreen();
   }
 
-  window.btRemoveHealthTabVersion=VER;
   window.btRemoveHealthTabApply=apply;
 
   setTimeout(apply,100);
