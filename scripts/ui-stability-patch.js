@@ -1,6 +1,6 @@
-/* ✅ Version 2.7.6 Newest update: Safari crash-safe UI patch. No live modal rewriting, no fixed action footer. */
+/* ✅ Version 3.3.1 Newest update: Safari crash-safe UI patch. No badge edits, no live modal rewriting, no fixed action footer. */
 (function(){
-  const VER = '2.7.6';
+  const VER = '3.3.1';
 
   function entriesReady(){
     try { return Array.isArray(entries); } catch { return Array.isArray(window.entries); }
@@ -23,7 +23,6 @@
     const st = document.createElement('style');
     st.id = 'ui_stability_patch_style';
     st.textContent = `
-      .app-version::after{content:' · Safe';opacity:.78}
       .tca-box .tm-pill{min-width:8px!important;width:8px!important;height:8px!important;padding:0!important;border-radius:999px!important;font-size:0!important;overflow:hidden!important;vertical-align:middle!important;margin-left:4px!important;display:inline-block!important}
       .tca-box .tm-pill::before{content:'';display:block;width:8px;height:8px;border-radius:999px}.tca-box .tm-pill.green::before{background:#10B981}.tca-box .tm-pill.amber::before{background:#F59E0B}.tca-box .tm-pill.red::before{background:#EF4444}
       .tcr-bg{align-items:flex-end!important;overflow:hidden!important}
