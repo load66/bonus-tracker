@@ -1,6 +1,6 @@
-/* ✅ Version 3.3.5 Newest update: Lock visible app badge to fixed card status flow release after all patches finish loading. */
+/* ✅ Version 3.3.6 Newest update: Lock visible app badge to per-bank Actions folder release after all patches finish loading. */
 (function(){
-  const VER='3.3.5';
+  const VER='3.3.6';
   function lockBadge(){
     const b=document.querySelector('.app-version');
     if(b && b.textContent!=='v'+VER) b.textContent='v'+VER;
