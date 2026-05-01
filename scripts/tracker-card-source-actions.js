@@ -1,6 +1,6 @@
-/* ✅ Version 3.3.8 Newest update: Source-rendered per-bank Actions menu. No DOM scanning or overlay patching. */
+/* ✅ Version 3.3.9 Newest update: Compact source-rendered per-bank Actions menu. No DOM scanning or overlay patching. */
 (function(){
-  const VER='3.3.8';
+  const VER='3.3.9';
 
   window.__btBankActionPrompt=window.__btBankActionPrompt||null;
 
@@ -8,6 +8,34 @@
     const b=document.querySelector('.app-version');
     if(b)b.textContent='v'+VER;
     window.btVisibleAppVersion=VER;
+  }
+
+  function ensureBankActionCompactStyle(){
+    if(document.getElementById('bt_source_bank_actions_compact_style'))return;
+    const st=document.createElement('style');
+    st.id='bt_source_bank_actions_compact_style';
+    st.textContent=`
+      .bt-ba-compact{padding:10px 14px calc(12px + var(--safe-b))!important;max-height:72dvh!important;overflow-y:auto!important;border-radius:18px 18px 0 0!important;}
+      .bt-ba-compact .m-bar{margin-bottom:8px!important;height:4px!important;width:34px!important;}
+      .bt-ba-compact .m-hdr{margin-bottom:8px!important;}
+      .bt-ba-compact .m-hdr h2{font-size:15px!important;line-height:1.1!important;}
+      .bt-ba-identity{display:flex;align-items:center;gap:8px;margin:4px 0 8px;padding:6px 8px;border-radius:12px;background:#F8FAFC;border:1px solid #E2E8F0;}
+      .bt-ba-identity .blogo{width:30px!important;height:30px!important;border-radius:9px!important;font-size:11px!important;}
+      .bt-ba-identity .card-name{font-size:13px!important;line-height:1.1!important;}
+      .bt-ba-status{font-size:9px!important;color:#64748B;font-weight:900;letter-spacing:.3px;margin-top:1px;text-transform:uppercase;}
+      .bt-ba-list{display:grid;grid-template-columns:1fr;gap:6px;}
+      .bt-ba-mini{width:100%;border:0;border-radius:12px;background:#F8FAFC;color:#0F172A;padding:8px 10px;font-family:'DM Sans',system-ui,sans-serif;text-align:left;box-shadow:inset 0 0 0 1px #E2E8F0;display:flex;align-items:center;gap:8px;min-height:46px;cursor:pointer;}
+      .bt-ba-mini:active{transform:scale(.985);}
+      .bt-ba-mini .ico{width:24px;height:24px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:#EFF6FF;font-size:14px;flex-shrink:0;}
+      .bt-ba-mini b{display:block;font-size:12px;line-height:1.05;color:inherit;}
+      .bt-ba-mini small{display:block;margin-top:2px;font-size:9px;line-height:1.15;color:#94A3B8;font-weight:700;}
+      .bt-ba-mini.danger{background:#FEF2F2;color:#DC2626;box-shadow:inset 0 0 0 1px #FECACA;}
+      .bt-ba-mini.danger .ico{background:#FEE2E2;}
+      .bt-ba-mini.cancel{justify-content:center;text-align:center;background:#E2E8F0;color:#334155;min-height:40px;}
+      .bt-ba-mini.cancel .ico{display:none;}
+      @media(min-width:520px){.bt-ba-compact{max-width:420px!important;border-radius:18px!important;padding-bottom:14px!important}.bt-ba-list{grid-template-columns:1fr 1fr}.bt-ba-mini.danger,.bt-ba-mini.cancel{grid-column:1/-1}}
+    `;
+    document.head.appendChild(st);
   }
 
 function openBankActions(id){
@@ -44,23 +72,24 @@ function runBankAction(id,action){
   R();
 }
 function bankActionSheetButton(id,action,icon,title,sub,danger=false){
-  const cls=danger?'btn-d':'btn-s';
-  return `<button class="${cls}" onclick="event.stopPropagation();runBankAction('${id}','${action}')"><span style="display:block;font-size:13px;font-weight:800;color:inherit">${icon} ${esc(title)}</span>${sub?`<span style="display:block;margin-top:2px;font-size:10px;font-weight:600;color:var(--muted);line-height:1.3">${esc(sub)}</span>`:''}</button>`;
+  return `<button class="bt-ba-mini ${danger?'danger':''}" onclick="event.stopPropagation();runBankAction('${id}','${action}')"><span class="ico">${icon}</span><span><b>${esc(title)}</b>${sub?`<small>${esc(sub)}</small>`:''}</span></button>`;
 }
 function rBankActions(){
   const e=entries.find(x=>x.id===window.__btBankActionPrompt);
   if(!e)return'';
-  let h='<div class="ov" onclick="closeBankActions()"><div class="modal" onclick="event.stopPropagation()">';
+  ensureBankActionCompactStyle();
+  let h='<div class="ov" onclick="closeBankActions()"><div class="modal bt-ba-compact" onclick="event.stopPropagation()">';
   h+='<div class="m-bar"></div><div class="m-hdr"><h2>Bank Actions</h2><span class="m-id">'+esc(getEntryDisplayId(e)||e.id||'')+'</span></div>';
-  h+='<div class="card-row" style="margin-bottom:10px">'+bankLogo(e.bank,true)+'<div><div class="card-name">'+esc(e.bank)+'</div><div class="card-subline">'+esc(status(e)||'')+'</div></div></div>';
-  h+=bankActionSheetButton(e.id,'edit','✏️','Edit Bank','Change bank details, dates, bonus, rules, and notes');
-  if(!e.closed)h+=bankActionSheetButton(e.id,'received','🎁',e.bonusRecd?'Update Received':'Mark Bonus Received','Enter or update the bonus received date');
-  if(!e.closed)h+=bankActionSheetButton(e.id,'close','🔒','Close Account','Record closed date and move it into churn cooldown');
-  if(!e.closed)h+=bankActionSheetButton(e.id,'checklist','✅','Add Checklist Step','Add a new requirement task for this bank');
-  if(!e.closed)h+=bankActionSheetButton(e.id,'timer','⏱️','Add Mini Timer','Add a custom countdown for bank-specific requirements');
-  h+=bankActionSheetButton(e.id,'delete','🗑️','Delete Bank','Remove this tracker entry',true);
-  h+='<button class="btn-s" onclick="event.stopPropagation();closeBankActions()">Cancel</button>';
-  h+='</div></div>';
+  h+='<div class="bt-ba-identity">'+bankLogo(e.bank,true)+'<div><div class="card-name">'+esc(e.bank)+'</div><div class="bt-ba-status">'+esc(status(e)||'')+'</div></div></div>';
+  h+='<div class="bt-ba-list">';
+  h+=bankActionSheetButton(e.id,'edit','✏️','Edit Bank','Details, dates, bonus, rules');
+  if(!e.closed)h+=bankActionSheetButton(e.id,'received','🎁',e.bonusRecd?'Update Received':'Mark Received','Bonus received date');
+  if(!e.closed)h+=bankActionSheetButton(e.id,'close','🔒','Close Account','Record closed date');
+  if(!e.closed)h+=bankActionSheetButton(e.id,'checklist','✅','Add Checklist','New requirement step');
+  if(!e.closed)h+=bankActionSheetButton(e.id,'timer','⏱️','Add Timer','Custom countdown');
+  h+=bankActionSheetButton(e.id,'delete','🗑️','Delete Bank','Remove tracker entry',true);
+  h+='<button class="bt-ba-mini cancel" onclick="event.stopPropagation();closeBankActions()"><span><b>Cancel</b></span></button>';
+  h+='</div></div></div>';
   return h;
 }
 
@@ -188,5 +217,5 @@ function rTracker(sorted){
   window.rBankActions=rBankActions;
   window.rTracker=rTracker;
 
-  setTimeout(()=>{try{lockSourceActionsBadge();R();}catch(e){console.error('Bank Actions source renderer failed',e);}},0);
+  setTimeout(()=>{try{lockSourceActionsBadge();ensureBankActionCompactStyle();R();}catch(e){console.error('Bank Actions source renderer failed',e);}},0);
 })();
