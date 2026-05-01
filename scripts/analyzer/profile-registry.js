@@ -1,8 +1,18 @@
-/* ✅ Version 3.0.9 Newest update: Analyzer profile registry adds Regions LifeGreen Checking as saved reusable profile. */
+/* ✅ Version 3.0.10 Newest update: Analyzer profile registry adds Equity Bank Bloom as saved reusable profile. */
 (function(){
-  const VER='3.0.9';
+  const VER='3.0.10';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
+    {
+      id:'equity-bank-bloom-checking-savings',
+      bank:'Equity Bank',
+      product:'Bloom checking + savings combo',
+      type:'personal checking + savings',
+      status:'saved',
+      signals:[/Equity Bank|Equity Bancshares/i,/Bloom Bonus|Bloom/i,/checking and savings|new checking and savings|Enter Promotional Code/i],
+      requirements:'Open/fund checking+savings combo + $1,000 DD + debit card use within 45 days',
+      note:'Saved profile: Equity Bank Bloom checking + savings combo bonus. Bonus amount may need review if not included in pasted T&C.'
+    },
     {
       id:'regions-lifegreen-personal-checking',
       bank:'Regions Bank',
