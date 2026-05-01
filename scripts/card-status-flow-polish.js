@@ -1,13 +1,5 @@
-/* ✅ Version 3.3.5 Newest update: Fix repeated card text loop. Requirement Deadline wording is now idempotent. */
+/* Card status flow polish — Requirement Deadline wording + hide Effort. Version display is controlled only by index.html. */
 (function(){
-  const VER='3.3.5';
-
-  function badge(){
-    const b=document.querySelector('.app-version');
-    if(b)b.textContent='v'+VER;
-    window.btVisibleAppVersion=VER;
-  }
-
   function clean(v){return String(v||'').replace(/\s+/g,' ').trim();}
   function isVisible(el){
     if(!el||!el.getBoundingClientRect)return false;
@@ -77,25 +69,17 @@
     leafTextNodes(document.body).forEach(n=>{
       let t=clean(n.nodeValue);
       if(!/\b\d+d left\b/i.test(t))return;
-
-      // Safety cleanup from the bad v3.3.4 loop.
       const cleaned=normalizeRepeatedText(t);
       if(cleaned!==t){ setTextNode(n,cleaned); return; }
-
-      // Already polished. Do not touch again.
       if(/left to finish bonus|left before safe close|left until churn|to requirement deadline|churn eligible/i.test(t))return;
-
       const card=closestCard(n.parentElement);
       const all=clean(card?.textContent||'').toLowerCase();
       const m=t.match(/(\d+d)\s*left\b/i);
       if(!m)return;
-
       if(/early closure fee|close fee countdown|hold until/.test(all) || /early closure fee/i.test(t)){
         setTextNode(n,`${m[1]} left before safe close`);
         return;
       }
-
-      // Keep it short and stable. Details stay in checklist/timer notes, not repeated in the card line.
       setTextNode(n,`${m[1]} left to finish bonus`);
     });
   }
@@ -141,7 +125,6 @@
     if(running)return;
     running=true;
     try{
-      badge();
       addStyle();
       replaceCountdownWording();
       polishTimerLine();
@@ -151,7 +134,6 @@
     }
   }
 
-  window.btCardStatusFlowPolishVersion=VER;
   window.btCardStatusFlowPolishApply=apply;
 
   setTimeout(apply,150);
