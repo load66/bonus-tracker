@@ -1,11 +1,11 @@
 /*
  * filename: scripts/ui-stability-patch.js
- * version: 3.3.1
- * purpose: Safari crash-safe UI patch. No badge edits, no live modal rewriting, no fixed action footer.
- * last-touched: unknown
+ * version: 3.3.16
+ * purpose: Safari crash-safe UI patch and v3-aware smoke check.
+ * last-touched: 2026-05-02
  */
 (function(){
-  const VER = '3.3.1';
+  const VER = '3.3.16';
 
   function entriesReady(){
     try { return Array.isArray(entries); } catch { return Array.isArray(window.entries); }
@@ -18,9 +18,13 @@
       storageReady: typeof sv === 'function' && typeof SK !== 'undefined',
       entriesReady: entriesReady(),
       renderReady: typeof R === 'function',
-      strictAnalyzerReady: typeof tcStrictAnalyze === 'function',
-      autoFillReviewReady: typeof tcOpenAutoFillReview === 'function' && typeof tcCreateReviewedEntry === 'function',
-      manualReviewReady: typeof openManualEntryReview === 'function'
+      analyzerEngineReady: typeof tcV3Analyze === 'function' || typeof tcStrictAnalyze === 'function',
+      analyzerProReady: typeof tcOpenPro === 'function' && typeof tcRunPro === 'function' && typeof tcApplyPro === 'function',
+      analyzerTimerReady: typeof tcCreateTimers === 'function' || typeof tcV3CreateTimers === 'function',
+      analyzerSourceReady: typeof tcV3ResolveSource === 'function' && typeof tcV3SaveSourceForCurrentEntry === 'function',
+      profileLibraryReady: typeof tcV31OpenProfileLibrary === 'function' || typeof tcV32OpenLearningInbox === 'function',
+      bankActionsReady: typeof openBankActions === 'function' && typeof runBankAction === 'function',
+      timerModalReady: typeof openTimerEditor === 'function' && typeof saveTimerEditor === 'function'
     };
   };
 
