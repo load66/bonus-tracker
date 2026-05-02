@@ -1,11 +1,11 @@
 /*
  * filename: scripts/analyzer/profile-registry.js
- * version: 3.0.11
- * purpose: Analyzer profile registry adds Busey Bank personal checking as saved reusable profile.
- * last-touched: unknown
+ * version: 3.3.23
+ * purpose: Analyzer profile registry for reusable saved bank bonus profiles, including Chase Total Checking.
+ * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.0.11';
+  const VER='3.3.23';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
     {
@@ -79,12 +79,22 @@
       note:'Saved profile: BMO Business Checking tiered Day 30 + Day 31–90 balance hold bonus.'
     },
     {
+      id:'chase-total-checking-personal',
+      bank:'Chase',
+      product:'Chase Total Checking',
+      type:'personal checking',
+      status:'saved-flexible-coupon',
+      signals:[/Chase Total Checking/i,/direct deposits totaling \$[\d,]+ or more/i,/within 90 days of coupon enrollment/i,/new Chase Total Checking account/i],
+      requirements:'Coupon-specific direct deposit amount within 90 days; payout typically within 15 days after requirements are completed',
+      note:'Saved profile: Chase Total Checking personal checking. Coupon bonus and DD amount can vary, so review/correct those fields after Auto-Fill.'
+    },
+    {
       id:'chase-business-complete-checking',
       bank:'Chase',
       product:'Business Complete Checking',
       type:'business checking',
       status:'saved',
-      signals:[/Chase Business Complete Checking/i,/business checking offer/i,/JPMorgan Chase/i],
+      signals:[/Chase Business Complete Checking/i,/business checking offer/i,/JPMorgan Chase/i,/5 qualifying transactions|five qualifying transactions/i],
       requirements:'New money funding + 60-day hold + 5 qualifying transactions',
       note:'Saved profile: Chase Business Complete Checking business bonus.'
     },
