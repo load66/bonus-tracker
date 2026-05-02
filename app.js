@@ -1,87 +1,658 @@
 /* ✅ Version 2.0 Newest update: Removed Profile tab + added Data Health and safer backup/close guardrails. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
-const ld=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}};
-const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
+
+const ld=(k,d)=>{
+  try{
+    const v=localStorage.getItem(k);
+    return v?JSON.parse(v):d
+  }
+  catch{
+    return d
+  }
+  
+};
+
+const sv=(k,v)=>{
+  try{
+    localStorage.setItem(k,JSON.stringify(v))
+  }
+  catch{
+    
+  }
+  
+};
+
 const td=()=>new Date().toISOString().split('T')[0];
+
 const dB=(a,b)=>Math.floor((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/864e5);
-const addM=(d,m)=>{const dt=new Date(d+'T00:00:00');dt.setMonth(dt.getMonth()+m);return dt.toISOString().split('T')[0]};
-const addD=(d,n)=>{const dt=new Date(d+'T00:00:00');dt.setDate(dt.getDate()+n);return dt.toISOString().split('T')[0]};
-const fD=d=>{if(!d)return'\u2014';return new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})};
+
+const addM=(d,m)=>{
+  const dt=new Date(d+'T00:00:00');
+  dt.setMonth(dt.getMonth()+m);
+  return dt.toISOString().split('T')[0]
+};
+
+const addD=(d,n)=>{
+  const dt=new Date(d+'T00:00:00');
+  dt.setDate(dt.getDate()+n);
+  return dt.toISOString().split('T')[0]
+};
+
+const fD=d=>{
+  if(!d)return'\u2014';
+  return new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+};
+
 const fM=n=>'$'+(n||0).toLocaleString();
-const esc=s=>{const d=document.createElement('div');d.textContent=s;return d.innerHTML};
-function dpId(){return 'udp_'+Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-6)}
-function normalizeUserDatapoint(row){const x=(row&&typeof row==='object')?{...row}:{};const bank=String(x.bank||'').trim();const method=String(x.method||x.text||'').trim();const note=String(x.note||x.notes||'').trim();const createdAt=x.createdAt||x.date||td();const updatedAt=x.updatedAt||createdAt;const lastConfirmedAt=x.lastConfirmedAt||x.date||createdAt;return{id:String(x.id||dpId()),bank,method,note,createdAt,updatedAt,lastConfirmedAt,entryId:String(x.entryId||''),source:'user-confirmed'}}
-function loadUserDatapoints(){const direct=ld(DP_USER_KEY,null);if(Array.isArray(direct)&&direct.length)return direct.map(normalizeUserDatapoint).filter(x=>x.bank&&x.method);const legacy=ld(DD_KEY,[]);if(Array.isArray(legacy)&&legacy.length){const migrated=legacy.map(normalizeUserDatapoint).filter(x=>x.bank&&x.method);sv(DP_USER_KEY,migrated);return migrated}return[]}
-function saveUserDatapoints(rows){const clean=(rows||[]).map(normalizeUserDatapoint).filter(x=>x.bank&&x.method);sv(DP_USER_KEY,clean);try{localStorage.setItem(DD_KEY,JSON.stringify(clean.map(x=>({id:x.id,bank:x.bank,method:x.method,bonus:0,date:x.lastConfirmedAt||x.updatedAt||x.createdAt,note:x.note||'',entryId:x.entryId||''}))))}catch{}}
-function loadDD(){return loadUserDatapoints().map(x=>({id:x.id,bank:x.bank,method:x.method,bonus:0,date:x.lastConfirmedAt||x.updatedAt||x.createdAt,note:x.note||'',entryId:x.entryId||''}))}
-function saveDD(rows){saveUserDatapoints((rows||[]).map(r=>({id:r.id,bank:r.bank,method:r.method,note:r.note||r.notes||'',date:r.date||td(),entryId:r.entryId||''})))}
-function addDD(bank,method,bonus,date,meta={}){const bankName=String(bank||'').trim();const methodName=String(method||'').trim();if(!bankName||!methodName)return;const rows=loadUserDatapoints();const sig=(bankName+'|'+methodName).toLowerCase();const idx=rows.findIndex(r=>(String(r.bank||'').trim()+'|'+String(r.method||'').trim()).toLowerCase()===sig);if(idx>=0){rows[idx].note=String(meta.note||rows[idx].note||'').trim();rows[idx].lastConfirmedAt=date||rows[idx].lastConfirmedAt||td();rows[idx].updatedAt=td();if(meta.entryId)rows[idx].entryId=meta.entryId}else{rows.unshift(normalizeUserDatapoint({bank:bankName,method:methodName,note:meta.note||'',date:date||td(),entryId:meta.entryId||''}))}saveUserDatapoints(rows)}
-function loadReqs(){return ld(REQ_KEY,{})}function saveReqs(r){sv(REQ_KEY,r)}function saveReq(bank,data){const r=loadReqs();r[bank.toLowerCase()]={bank,...data,updated:td()};saveReqs(r)}
 
-function loadProfileEvents(){return ld(PROFILE_EVT_KEY,[]).map(x=>({id:String(x.id||('evt_'+Math.random().toString(36).slice(2,8))),bank:String(x.bank||'').trim(),entryId:String(x.entryId||''),type:String(x.type||'').trim(),date:String(x.date||''),label:String(x.label||'').trim(),createdAt:String(x.createdAt||td())})).filter(x=>x.bank&&x.type)}
-function saveProfileEvents(rows){sv(PROFILE_EVT_KEY,(rows||[]).map(x=>({id:String(x.id||('evt_'+Math.random().toString(36).slice(2,8))),bank:String(x.bank||'').trim(),entryId:String(x.entryId||''),type:String(x.type||'').trim(),date:String(x.date||''),label:String(x.label||'').trim(),createdAt:String(x.createdAt||td())})).filter(x=>x.bank&&x.type))}
-function setProfileEvent(bank,entryId,type,date,label){if(!bank||!entryId||!type)return;let rows=loadProfileEvents().filter(x=>!(x.entryId===String(entryId)&&x.type===type));if(date)rows.unshift({id:'evt_'+Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-5),bank:String(bank).trim(),entryId:String(entryId),type,date,label:String(label||'').trim(),createdAt:td()});saveProfileEvents(rows)}
-function syncProfileEventsFromEntry(e){if(!e||!e.id||!e.bank)return;setProfileEvent(e.bank,e.id,'opened',e.opened,'Account opened');setProfileEvent(e.bank,e.id,'reqMet',e.reqMet,'Requirements met');setProfileEvent(e.bank,e.id,'bonusReceived',e.bonusRecd,(e.bonus||0)?('Bonus received · '+fM(e.bonus)):'Bonus received');setProfileEvent(e.bank,e.id,'closed',e.closed,'Account closed')}
-function getProfileEventsForBank(bank){const key=bankKey(bank);return loadProfileEvents().filter(x=>bankKey(x.bank)===key).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.createdAt||'').localeCompare(a.createdAt||''))}
-function entryReqSnapshot(e){if(!e||!e.bank)return null;const snap={bank:e.bank};['bonus','notes','dataPoint','churn','reqDays','monthlyFeeYNText','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText','eligibilityText','expirationDateText','requiredDaysText','minHoldDays','earlyCloseFee'].forEach(k=>{const v=e[k];if(v!==undefined&&v!==null&&v!=='')snap[k]=v});return snap}
-function refreshSavedReqFromEntry(e){const snap=entryReqSnapshot(e);if(!snap||!snap.bank)return;const current=profileReqForBank(snap.bank)||{};saveReq(snap.bank,{...current,...snap,lastProfileRefreshAt:td(),sourceEntryId:e.id||''})}
-function bankMemoryFor(bank){if(!bank)return null;const matches=sortMatchChoices(bank,getBankMatches(bank));const req=profileReqForBank(bank)||{};const worked=loadUserDatapoints().filter(x=>bankKey(x.bank)===bankKey(bank)&&!profileMethodFailed((x.note||'')+' '+(x.method||'')));const methodCount={};worked.forEach(x=>{const key=String(x.method||'').trim();if(key)methodCount[key]=(methodCount[key]||0)+1});const bestMethod=Object.entries(methodCount).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))[0]?.[0]||matches.find(x=>x.dataPoint)?.dataPoint||req.dataPoint||'';const latest=[...matches].sort((a,b)=>(profileTimelineDate(b)||'').localeCompare(profileTimelineDate(a)||''))[0]||null;const latestSuccess=[...matches].filter(e=>taxReady(e)).sort((a,b)=>(profileTimelineDate(b)||'').localeCompare(profileTimelineDate(a)||''))[0]||latest;return{churn:latestSuccess?.churn||latest?.churn||'',bonus:latestSuccess?.bonus||req.bonus||0,dataPoint:bestMethod,reqDays:latestSuccess?.reqDays||latest?.reqDays||req.reqDays||0,minHoldDays:latestSuccess?.minHoldDays||latest?.minHoldDays||req.minHoldDays||0,earlyCloseFee:latestSuccess?.earlyCloseFee||latest?.earlyCloseFee||req.earlyCloseFee||0,monthlyFeeYNText:latestSuccess?.monthlyFeeYNText||latest?.monthlyFeeYNText||req.monthlyFeeYNText||'',promoCodeText:latestSuccess?.promoCodeText||latest?.promoCodeText||req.promoCodeText||'',avoidMonthlyFeeText:latestSuccess?.avoidMonthlyFeeText||latest?.avoidMonthlyFeeText||req.avoidMonthlyFeeText||'',completeBonusText:latestSuccess?.completeBonusText||latest?.completeBonusText||req.completeBonusText||'',earlyTerminationFeeText:latestSuccess?.earlyTerminationFeeText||latest?.earlyTerminationFeeText||req.earlyTerminationFeeText||'',eligibilityText:latestSuccess?.eligibilityText||latest?.eligibilityText||req.eligibilityText||'',expirationDateText:latestSuccess?.expirationDateText||latest?.expirationDateText||req.expirationDateText||'',requiredDaysText:latestSuccess?.requiredDaysText||latest?.requiredDaysText||req.requiredDaysText||''}}
-function applyModalBankMemory(){if(!modal||modal._edit)return;const mem=bankMemoryFor(modal.bank||'');if(!mem)return;['churn','dataPoint','monthlyFeeYNText','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText','eligibilityText','expirationDateText','requiredDaysText'].forEach(k=>{if(!modal[k]&&mem[k])modal[k]=mem[k]});if(!(modal.reqDays>0)&&mem.reqDays)modal.reqDays=mem.reqDays;if(!(modal.minHoldDays>0)&&mem.minHoldDays)modal.minHoldDays=mem.minHoldDays;if(!(modal.earlyCloseFee>0)&&mem.earlyCloseFee)modal.earlyCloseFee=mem.earlyCloseFee;if(!(modal.bonus>0)&&mem.bonus)modal.bonus=mem.bonus;R()}
-function profileIntelligence(group){const entries=(group?.entries||[]);const completed=entries.filter(e=>isEarnedBonus(e));const avg=(arr)=>arr.length?Math.round(arr.reduce((s,v)=>s+v,0)/arr.length):null;const toReceive=completed.filter(e=>e.opened&&e.bonusRecd).map(e=>Math.max(0,dB(e.opened,e.bonusRecd)));const receiveToClose=completed.filter(e=>e.bonusRecd&&e.closed).map(e=>Math.max(0,dB(e.bonusRecd,e.closed)));const methodStats={};loadUserDatapoints().filter(x=>bankKey(x.bank)===group.key&&!profileMethodFailed((x.note||'')+' '+(x.method||''))).forEach(x=>{const k=String(x.method||'').trim();if(k)methodStats[k]=(methodStats[k]||0)+1});const bestMethod=Object.entries(methodStats).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))[0]?.[0]||'';const churnCounts={};entries.forEach(e=>{if(e.churn)churnCounts[e.churn]=(churnCounts[e.churn]||0)+1});const topChurn=Object.entries(churnCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';const latestRuleEntry=[...entries].sort((a,b)=>(profileTimelineDate(b)||'').localeCompare(profileTimelineDate(a)||''))[0]||null;const lastChurn=latestRuleEntry?.churn||'';const lastReceived=[...entries].filter(e=>e.bonusRecd).sort((a,b)=>(b.bonusRecd||'').localeCompare(a.bonusRecd||''))[0]||null;return{bestMethod,avgToReceive:avg(toReceive),avgReceiveToClose:avg(receiveToClose),topChurn,lastChurn,successCount:completed.length,lastSuccess:completed.sort((a,b)=>(profileTimelineDate(b)||'').localeCompare(profileTimelineDate(a)||''))[0]||null,lastReceived,lastEntry:latestRuleEntry}}
+const esc=s=>{
+  const d=document.createElement('div');
+  d.textContent=s;
+  return d.innerHTML
+};
 
-function getLastBk(){try{return localStorage.getItem(BK_KEY)||''}catch{return''}}function setLastBk(){try{localStorage.setItem(BK_KEY,td())}catch{}}function daysSinceBk(){const lb=getLastBk();return lb?Math.max(0,dB(lb,td())):999}
-const BANK_BRANDS={'chase':{bg:'#0C4DA2',fg:'#fff',abbr:'CH',icon:'🏦'},'chase biz':{bg:'#0C4DA2',fg:'#fff',abbr:'CB',icon:'🏢'},'bank of america':{bg:'#C41230',fg:'#fff',abbr:'BA',icon:'🏦'},'wells fargo':{bg:'#D71E28',fg:'#fff',abbr:'WF',icon:'🏦'},'u.s. bank':{bg:'#0D2C54',fg:'#fff',abbr:'US',icon:'🏦'},'u.s. bank biz':{bg:'#0D2C54',fg:'#fff',abbr:'UB',icon:'🏢'},'citi':{bg:'#003DA5',fg:'#fff',abbr:'CI',icon:'🏦'},'citibank':{bg:'#003DA5',fg:'#fff',abbr:'CI',icon:'🏦'},'pnc':{bg:'#F58220',fg:'#fff',abbr:'PN',icon:'🏦'},'simmons bank':{bg:'#1B365D',fg:'#fff',abbr:'SM',icon:'🏦'},'equity bank':{bg:'#004C2F',fg:'#fff',abbr:'EQ',icon:'🏦'},'regions':{bg:'#007A33',fg:'#fff',abbr:'RG',icon:'🏦'},'bmo':{bg:'#0075BE',fg:'#fff',abbr:'BM',icon:'🏦'},'capital one':{bg:'#004879',fg:'#fff',abbr:'C1',icon:'🏦'},'td bank':{bg:'#34A853',fg:'#fff',abbr:'TD',icon:'🏦'},'huntington':{bg:'#005F3B',fg:'#fff',abbr:'HN',icon:'🏦'},'fifth third':{bg:'#003D4C',fg:'#fff',abbr:'5T',icon:'🏦'},'central bank':{bg:'#1A3A6B',fg:'#fff',abbr:'CB',icon:'🏦'},'community america':{bg:'#0054A6',fg:'#fff',abbr:'CA',icon:'🏦'},'ally':{bg:'#6B2D8B',fg:'#fff',abbr:'AL',icon:'🏦'},'ally bank':{bg:'#6B2D8B',fg:'#fff',abbr:'AL',icon:'🏦'},'citizens':{bg:'#006747',fg:'#fff',abbr:'CZ',icon:'🏦'},'comerica':{bg:'#00703C',fg:'#fff',abbr:'CM',icon:'🏦'},'e-trade':{bg:'#6633CC',fg:'#fff',abbr:'ET',icon:'📈'},'keybank':{bg:'#C4122E',fg:'#fff',abbr:'KB',icon:'🏦'},'m&t bank':{bg:'#003366',fg:'#fff',abbr:'MT',icon:'🏦'},'navy federal':{bg:'#003B71',fg:'#fff',abbr:'NF',icon:'⚓'},'santander':{bg:'#EC0000',fg:'#fff',abbr:'SN',icon:'🏦'},'truist':{bg:'#5C068C',fg:'#fff',abbr:'TR',icon:'🏦'},'vantage cu':{bg:'#005A9C',fg:'#fff',abbr:'VT',icon:'🏦'},'schwab':{bg:'#00A0DF',fg:'#fff',abbr:'SC',icon:'📈'},'discover':{bg:'#FF6000',fg:'#fff',abbr:'DS',icon:'🏦'},'sofi':{bg:'#62D2A2',fg:'#fff',abbr:'SF',icon:'🏦'},'marcus':{bg:'#003DA5',fg:'#fff',abbr:'GS',icon:'🏦'},'us bank':{bg:'#0D2C54',fg:'#fff',abbr:'US',icon:'🏦'},'us bank biz':{bg:'#0D2C54',fg:'#fff',abbr:'UB',icon:'🏢'}};
-function getBrand(name){const n=(name||'').toLowerCase().trim();if(BANK_BRANDS[n])return BANK_BRANDS[n];for(const[k,v]of Object.entries(BANK_BRANDS)){if(n.includes(k)||k.includes(n))return v}let h=0;for(let i=0;i<n.length;i++){h=n.charCodeAt(i)+((h<<5)-h)}const hue=Math.abs(h)%360;const a=(name||'X').toUpperCase().replace(/[^A-Z]/g,'');return{bg:`hsl(${hue},55%,38%)`,fg:'#fff',abbr:(a[0]||'?')+(a[1]||''),icon:'🏦'}}
-function bankLogo(name,sm){const b=getBrand(name);const cls=sm?'blogo sm':'blogo';return`<div class="${cls}" style="background:${b.bg};color:${b.fg}"><span>${esc(b.abbr)}</span></div>`}
-function churnTagHtml(bank,churn){const map={1:'1YR',2:'2YR',3:'3YR',180:'180D'};const label=map[churn]||String(churn||'').toUpperCase();const cls=String(churn)==='180'?'c180':('c'+String(churn||'1'));return '<span class="card-mini-chip '+cls+'">'+esc(label)+'</span>'}
-function nextReopen(e){if(!e.closed||!e.churn)return'';return e.churn==='180'?addD(e.closed,180):addM(e.closed,parseInt(e.churn)*12)}
-function daysLeft(e){const nr=nextReopen(e);if(!nr)return null;const diff=dB(td(),nr);return Math.max(0,diff+10)}
-function elapsed(e){return e.bonusRecd?Math.max(0,dB(e.bonusRecd,td())):null}
-const BUFFER_DAYS=3;
-function rawSafeDate(e){return(e.opened&&e.minHoldDays>0)?addD(e.opened,e.minHoldDays):null}
-function safeCloseDate(e){return(e.opened&&e.minHoldDays>0)?addD(e.opened,e.minHoldDays+BUFFER_DAYS):null}
-function daysUntilSafe(e){const s=safeCloseDate(e);return s?Math.max(0,dB(td(),s)):null}
-function closeFeeCountdownMeta(e){const d=daysUntilSafe(e);if(d===null)return{cls:'amber',text:'Set date'};if(d<=0)return{cls:'green',text:'Safe'};return{cls:d<=14?'red':d<=30?'amber':'blue',text:d+'d'}}
-function isInBuffer(e){if(!e.opened||e.minHoldDays<=0||e.closed||e.feeChecked)return false;const raw=rawSafeDate(e);const buff=safeCloseDate(e);if(!raw||!buff)return false;return dB(td(),raw)<=0&&dB(td(),buff)>0}
-function holdProg(e){return(e.opened&&e.minHoldDays>0)?Math.min(1,Math.max(0,dB(e.opened,td()))/(e.minHoldDays+BUFFER_DAYS)):null}
-function reqDeadline(e){return(e.opened&&e.reqDays>0)?addD(e.opened,e.reqDays):null}
-function daysToDeadline(e){const d=reqDeadline(e);return d?dB(td(),d):null}
-function nextActiveTimer(e){const timers=sortCustomTimers((e?.customTimers||[]).filter(t=>!t.done&&t.date));return timers[0]||null}
-function status(e){
-  if(!e.bank)return'';
-  if(e.closed){return daysLeft(e)===0?'TIME TO CHURN!':'WAITING TO CHURN!';}
-  const activeTimer=nextActiveTimer(e);
-  if(activeTimer)return'CUSTOM TIMER';
-  if(e.feeChecked)return'SAFE TO CLOSE';
-  if(e.minHoldDays>0&&e.opened){if(isInBuffer(e))return'3-DAY BUFFER';const dsc=daysUntilSafe(e);if(dsc!==null&&dsc<=0)return'SAFE TO CLOSE';}
-  return'WORKING';
+function dpId(){
+  return 'udp_'+Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-6)
 }
-function sPri(s){return s==='WORKING'?1:s==='CUSTOM TIMER'?1.2:s==='3-DAY BUFFER'?1.3:s==='SAFE TO CLOSE'?1.5:s==='TIME TO CHURN!'?2:s==='WAITING TO CHURN!'?3:99}
-function sortE(a){return[...a].sort((x,y)=>{const px=sPri(status(x)),py=sPri(status(y));if(px!==py)return px-py;return(daysLeft(x)??999999)-(daysLeft(y)??999999)})}
-function taxReady(e){return !!(e&&e.bonusRecd&&e.closed&&(e.bonus||0)>0)}
-function taxYearOf(e){return e&&e.bonusRecd?new Date(e.bonusRecd+'T00:00:00').getFullYear():null}
-function taxEntriesForYear(yr){return entries.filter(e=>taxReady(e)&&taxYearOf(e)===yr&&e.bonusRecd<=td())}
-function isEarnedBonus(e){return !!(e&&e.bonusRecd&&(e.bonus||0)>0)}
-function isCompleted(e){return taxReady(e)}
-function completedYrTotal(yr){return taxEntriesForYear(yr).reduce((s,e)=>s+(e.bonus||0),0)}
-function genId(bank,taken){const used=taken instanceof Set?taken:new Set();const prefix=bankCode(bank)+'-'+bankTypeCode(bank)+'-';let max=0;entries.forEach(e=>{const id=String(e&&e.id||'').toUpperCase();if(!isOfficialEntryId(id))return;if(id.startsWith(prefix)){const num=parseInt(id.slice(prefix.length),10);if(!isNaN(num))max=Math.max(max,num)}});let next=max+1;let candidate=prefix+String(next).padStart(2,'0');while(used.has(candidate)){next++;candidate=prefix+String(next).padStart(2,'0')}return candidate}
-function effortScore(e){if(!e.bonus)return null;let h=1;const n=(e.notes||'').toLowerCase();if(n.includes('debit'))h++;if(n.includes('dd')||n.includes('direct'))h++;if(n.includes('balance'))h++;if(n.includes('branch'))h+=2;if(e.minHoldDays>=180)h++;if(e.earlyCloseFee>0)h++;const sc=Math.round(e.bonus/h);return{score:sc,level:sc>=200?'easy':sc>=100?'med':'hard',label:sc>=200?'Easy':sc>=100?'Medium':'Hard'}}
+
+function normalizeUserDatapoint(row){
+  const x=(row&&typeof row==='object')?{
+    ...row
+  }
+  :{
+    
+  };
+  const bank=String(x.bank||'').trim();
+  const method=String(x.method||x.text||'').trim();
+  const note=String(x.note||x.notes||'').trim();
+  const createdAt=x.createdAt||x.date||td();
+  const updatedAt=x.updatedAt||createdAt;
+  const lastConfirmedAt=x.lastConfirmedAt||x.date||createdAt;
+  return{
+    id:String(x.id||dpId()),bank,method,note,createdAt,updatedAt,lastConfirmedAt,entryId:String(x.entryId||''),source:'user-confirmed'
+  }
+  
+}
+
+function loadUserDatapoints(){
+  const direct=ld(DP_USER_KEY,null);
+  if(Array.isArray(direct)&&direct.length)return direct.map(normalizeUserDatapoint).filter(x=>x.bank&&x.method);
+  const legacy=ld(DD_KEY,[]);
+  if(Array.isArray(legacy)&&legacy.length){
+    const migrated=legacy.map(normalizeUserDatapoint).filter(x=>x.bank&&x.method);
+    sv(DP_USER_KEY,migrated);
+    return migrated
+  }
+  return[]
+}
+
+function saveUserDatapoints(rows){
+  const clean=(rows||[]).map(normalizeUserDatapoint).filter(x=>x.bank&&x.method);
+  sv(DP_USER_KEY,clean);
+  try{
+    localStorage.setItem(DD_KEY,JSON.stringify(clean.map(x=>({id:x.id,bank:x.bank,method:x.method,bonus:0,date:x.lastConfirmedAt||x.updatedAt||x.createdAt,note:x.note||'',entryId:x.entryId||''}))))
+  }
+  catch{
+    
+  }
+  
+}
+
+function loadDD(){
+  return loadUserDatapoints().map(x=>({id:x.id,bank:x.bank,method:x.method,bonus:0,date:x.lastConfirmedAt||x.updatedAt||x.createdAt,note:x.note||'',entryId:x.entryId||''}))
+}
+
+function saveDD(rows){
+  saveUserDatapoints((rows||[]).map(r=>({id:r.id,bank:r.bank,method:r.method,note:r.note||r.notes||'',date:r.date||td(),entryId:r.entryId||''})))
+}
+
+function addDD(bank,method,bonus,date,meta={}){
+  const bankName=String(bank||'').trim();
+  const methodName=String(method||'').trim();
+  if(!bankName||!methodName)return;
+  const rows=loadUserDatapoints();
+  const sig=(bankName+'|'+methodName).toLowerCase();
+  const idx=rows.findIndex(r=>(String(r.bank||'').trim()+'|'+String(r.method||'').trim()).toLowerCase()===sig);
+  if(idx>=0){
+    rows[idx].note=String(meta.note||rows[idx].note||'').trim();
+    rows[idx].lastConfirmedAt=date||rows[idx].lastConfirmedAt||td();
+    rows[idx].updatedAt=td();
+    if(meta.entryId)rows[idx].entryId=meta.entryId
+  }
+  else{
+    rows.unshift(normalizeUserDatapoint({bank:bankName,method:methodName,note:meta.note||'',date:date||td(),entryId:meta.entryId||''}))
+  }
+  saveUserDatapoints(rows)
+}
+
+function loadReqs(){
+  return ld(REQ_KEY,{})
+}
+function saveReqs(r){
+  sv(REQ_KEY,r)
+}
+function saveReq(bank,data){
+  const r=loadReqs();
+  r[bank.toLowerCase()]={
+    bank,...data,updated:td()
+  };
+  saveReqs(r)
+}
+
+function loadProfileEvents(){
+  return ld(PROFILE_EVT_KEY,[]).map(x=>({id:String(x.id||('evt_'+Math.random().toString(36).slice(2,8))),bank:String(x.bank||'').trim(),entryId:String(x.entryId||''),type:String(x.type||'').trim(),date:String(x.date||''),label:String(x.label||'').trim(),createdAt:String(x.createdAt||td())})).filter(x=>x.bank&&x.type)
+}
+
+function saveProfileEvents(rows){
+  sv(PROFILE_EVT_KEY,(rows||[]).map(x=>({id:String(x.id||('evt_'+Math.random().toString(36).slice(2,8))),bank:String(x.bank||'').trim(),entryId:String(x.entryId||''),type:String(x.type||'').trim(),date:String(x.date||''),label:String(x.label||'').trim(),createdAt:String(x.createdAt||td())})).filter(x=>x.bank&&x.type))
+}
+
+function setProfileEvent(bank,entryId,type,date,label){
+  if(!bank||!entryId||!type)return;
+  let rows=loadProfileEvents().filter(x=>!(x.entryId===String(entryId)&&x.type===type));
+  if(date)rows.unshift({id:'evt_'+Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-5),bank:String(bank).trim(),entryId:String(entryId),type,date,label:String(label||'').trim(),createdAt:td()});
+  saveProfileEvents(rows)
+}
+
+function syncProfileEventsFromEntry(e){
+  if(!e||!e.id||!e.bank)return;
+  setProfileEvent(e.bank,e.id,'opened',e.opened,'Account opened');
+  setProfileEvent(e.bank,e.id,'reqMet',e.reqMet,'Requirements met');
+  setProfileEvent(e.bank,e.id,'bonusReceived',e.bonusRecd,(e.bonus||0)?('Bonus received · '+fM(e.bonus)):'Bonus received');
+  setProfileEvent(e.bank,e.id,'closed',e.closed,'Account closed')
+}
+
+function getProfileEventsForBank(bank){
+  const key=bankKey(bank);
+  return loadProfileEvents().filter(x=>bankKey(x.bank)===key).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.createdAt||'').localeCompare(a.createdAt||''))
+}
+
+function entryReqSnapshot(e){
+  if(!e||!e.bank)return null;
+  const snap={
+    bank:e.bank
+  };
+  ['bonus','notes','dataPoint','churn','reqDays','monthlyFeeYNText','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText','eligibilityText','expirationDateText','requiredDaysText','minHoldDays','earlyCloseFee'].forEach(k=>{const v=e[k];if(v!==undefined&&v!==null&&v!=='')snap[k]=v});
+  return snap
+}
+
+function refreshSavedReqFromEntry(e){
+  const snap=entryReqSnapshot(e);
+  if(!snap||!snap.bank)return;
+  const current=profileReqForBank(snap.bank)||{
+    
+  };
+  saveReq(snap.bank,{...current,...snap,lastProfileRefreshAt:td(),sourceEntryId:e.id||''})
+}
+
+function bankMemoryFor(bank){
+  if(!bank)return null;
+  const matches=sortMatchChoices(bank,getBankMatches(bank));
+  const req=profileReqForBank(bank)||{
+    
+  };
+  const worked=loadUserDatapoints().filter(x=>bankKey(x.bank)===bankKey(bank)&&!profileMethodFailed((x.note||'')+' '+(x.method||'')));
+  const methodCount={
+    
+  };
+  worked.forEach(x=>{const key=String(x.method||'').trim();if(key)methodCount[key]=(methodCount[key]||0)+1});
+  const bestMethod=Object.entries(methodCount).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))[0]?.[0]||matches.find(x=>x.dataPoint)?.dataPoint||req.dataPoint||'';
+  const latest=[...matches].sort((a,b)=>(profileTimelineDate(b)||'').localeCompare(profileTimelineDate(a)||''))[0]||null;
+  const latestSuccess=[...matches].filter(e=>taxReady(e)).sort((a,b)=>(profileTimelineDate(b)||'').localeCompare(profileTimelineDate(a)||''))[0]||latest;
+  return{
+    churn:latestSuccess?.churn||latest?.churn||'',bonus:latestSuccess?.bonus||req.bonus||0,dataPoint:bestMethod,reqDays:latestSuccess?.reqDays||latest?.reqDays||req.reqDays||0,minHoldDays:latestSuccess?.minHoldDays||latest?.minHoldDays||req.minHoldDays||0,earlyCloseFee:latestSuccess?.earlyCloseFee||latest?.earlyCloseFee||req.earlyCloseFee||0,monthlyFeeYNText:latestSuccess?.monthlyFeeYNText||latest?.monthlyFeeYNText||req.monthlyFeeYNText||'',promoCodeText:latestSuccess?.promoCodeText||latest?.promoCodeText||req.promoCodeText||'',avoidMonthlyFeeText:latestSuccess?.avoidMonthlyFeeText||latest?.avoidMonthlyFeeText||req.avoidMonthlyFeeText||'',completeBonusText:latestSuccess?.completeBonusText||latest?.completeBonusText||req.completeBonusText||'',earlyTerminationFeeText:latestSuccess?.earlyTerminationFeeText||latest?.earlyTerminationFeeText||req.earlyTerminationFeeText||'',eligibilityText:latestSuccess?.eligibilityText||latest?.eligibilityText||req.eligibilityText||'',expirationDateText:latestSuccess?.expirationDateText||latest?.expirationDateText||req.expirationDateText||'',requiredDaysText:latestSuccess?.requiredDaysText||latest?.requiredDaysText||req.requiredDaysText||''
+  }
+  
+}
+
+function applyModalBankMemory(){
+  if(!modal||modal._edit)return;
+  const mem=bankMemoryFor(modal.bank||'');
+  if(!mem)return;
+  ['churn','dataPoint','monthlyFeeYNText','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText','eligibilityText','expirationDateText','requiredDaysText'].forEach(k=>{if(!modal[k]&&mem[k])modal[k]=mem[k]});
+  if(!(modal.reqDays>0)&&mem.reqDays)modal.reqDays=mem.reqDays;
+  if(!(modal.minHoldDays>0)&&mem.minHoldDays)modal.minHoldDays=mem.minHoldDays;
+  if(!(modal.earlyCloseFee>0)&&mem.earlyCloseFee)modal.earlyCloseFee=mem.earlyCloseFee;
+  if(!(modal.bonus>0)&&mem.bonus)modal.bonus=mem.bonus;
+  R()
+}
+
+function profileIntelligence(group){
+  const entries=(group?.entries||[]);
+  const completed=entries.filter(e=>isEarnedBonus(e));
+  const avg=(arr)=>arr.length?Math.round(arr.reduce((s,v)=>s+v,0)/arr.length):null;
+  const toReceive=completed.filter(e=>e.opened&&e.bonusRecd).map(e=>Math.max(0,dB(e.opened,e.bonusRecd)));
+  const receiveToClose=completed.filter(e=>e.bonusRecd&&e.closed).map(e=>Math.max(0,dB(e.bonusRecd,e.closed)));
+  const methodStats={
+    
+  };
+  loadUserDatapoints().filter(x=>bankKey(x.bank)===group.key&&!profileMethodFailed((x.note||'')+' '+(x.method||''))).forEach(x=>{const k=String(x.method||'').trim();if(k)methodStats[k]=(methodStats[k]||0)+1});
+  const bestMethod=Object.entries(methodStats).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))[0]?.[0]||'';
+  const churnCounts={
+    
+  };
+  entries.forEach(e=>{if(e.churn)churnCounts[e.churn]=(churnCounts[e.churn]||0)+1});
+  const topChurn=Object.entries(churnCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
+  const latestRuleEntry=[...entries].sort((a,b)=>(profileTimelineDate(b)||'').localeCompare(profileTimelineDate(a)||''))[0]||null;
+  const lastChurn=latestRuleEntry?.churn||'';
+  const lastReceived=[...entries].filter(e=>e.bonusRecd).sort((a,b)=>(b.bonusRecd||'').localeCompare(a.bonusRecd||''))[0]||null;
+  return{
+    bestMethod,avgToReceive:avg(toReceive),avgReceiveToClose:avg(receiveToClose),topChurn,lastChurn,successCount:completed.length,lastSuccess:completed.sort((a,b)=>(profileTimelineDate(b)||'').localeCompare(profileTimelineDate(a)||''))[0]||null,lastReceived,lastEntry:latestRuleEntry
+  }
+  
+}
+
+function getLastBk(){
+  try{
+    return localStorage.getItem(BK_KEY)||''
+  }
+  catch{
+    return''
+  }
+  
+}
+function setLastBk(){
+  try{
+    localStorage.setItem(BK_KEY,td())
+  }
+  catch{
+    
+  }
+  
+}
+function daysSinceBk(){
+  const lb=getLastBk();
+  return lb?Math.max(0,dB(lb,td())):999
+}
+
+const BANK_BRANDS={
+  'chase':{
+    bg:'#0C4DA2',fg:'#fff',abbr:'CH',icon:'🏦'
+  },'chase biz':{
+    bg:'#0C4DA2',fg:'#fff',abbr:'CB',icon:'🏢'
+  },'bank of america':{
+    bg:'#C41230',fg:'#fff',abbr:'BA',icon:'🏦'
+  },'wells fargo':{
+    bg:'#D71E28',fg:'#fff',abbr:'WF',icon:'🏦'
+  },'u.s. bank':{
+    bg:'#0D2C54',fg:'#fff',abbr:'US',icon:'🏦'
+  },'u.s. bank biz':{
+    bg:'#0D2C54',fg:'#fff',abbr:'UB',icon:'🏢'
+  },'citi':{
+    bg:'#003DA5',fg:'#fff',abbr:'CI',icon:'🏦'
+  },'citibank':{
+    bg:'#003DA5',fg:'#fff',abbr:'CI',icon:'🏦'
+  },'pnc':{
+    bg:'#F58220',fg:'#fff',abbr:'PN',icon:'🏦'
+  },'simmons bank':{
+    bg:'#1B365D',fg:'#fff',abbr:'SM',icon:'🏦'
+  },'equity bank':{
+    bg:'#004C2F',fg:'#fff',abbr:'EQ',icon:'🏦'
+  },'regions':{
+    bg:'#007A33',fg:'#fff',abbr:'RG',icon:'🏦'
+  },'bmo':{
+    bg:'#0075BE',fg:'#fff',abbr:'BM',icon:'🏦'
+  },'capital one':{
+    bg:'#004879',fg:'#fff',abbr:'C1',icon:'🏦'
+  },'td bank':{
+    bg:'#34A853',fg:'#fff',abbr:'TD',icon:'🏦'
+  },'huntington':{
+    bg:'#005F3B',fg:'#fff',abbr:'HN',icon:'🏦'
+  },'fifth third':{
+    bg:'#003D4C',fg:'#fff',abbr:'5T',icon:'🏦'
+  },'central bank':{
+    bg:'#1A3A6B',fg:'#fff',abbr:'CB',icon:'🏦'
+  },'community america':{
+    bg:'#0054A6',fg:'#fff',abbr:'CA',icon:'🏦'
+  },'ally':{
+    bg:'#6B2D8B',fg:'#fff',abbr:'AL',icon:'🏦'
+  },'ally bank':{
+    bg:'#6B2D8B',fg:'#fff',abbr:'AL',icon:'🏦'
+  },'citizens':{
+    bg:'#006747',fg:'#fff',abbr:'CZ',icon:'🏦'
+  },'comerica':{
+    bg:'#00703C',fg:'#fff',abbr:'CM',icon:'🏦'
+  },'e-trade':{
+    bg:'#6633CC',fg:'#fff',abbr:'ET',icon:'📈'
+  },'keybank':{
+    bg:'#C4122E',fg:'#fff',abbr:'KB',icon:'🏦'
+  },'m&t bank':{
+    bg:'#003366',fg:'#fff',abbr:'MT',icon:'🏦'
+  },'navy federal':{
+    bg:'#003B71',fg:'#fff',abbr:'NF',icon:'⚓'
+  },'santander':{
+    bg:'#EC0000',fg:'#fff',abbr:'SN',icon:'🏦'
+  },'truist':{
+    bg:'#5C068C',fg:'#fff',abbr:'TR',icon:'🏦'
+  },'vantage cu':{
+    bg:'#005A9C',fg:'#fff',abbr:'VT',icon:'🏦'
+  },'schwab':{
+    bg:'#00A0DF',fg:'#fff',abbr:'SC',icon:'📈'
+  },'discover':{
+    bg:'#FF6000',fg:'#fff',abbr:'DS',icon:'🏦'
+  },'sofi':{
+    bg:'#62D2A2',fg:'#fff',abbr:'SF',icon:'🏦'
+  },'marcus':{
+    bg:'#003DA5',fg:'#fff',abbr:'GS',icon:'🏦'
+  },'us bank':{
+    bg:'#0D2C54',fg:'#fff',abbr:'US',icon:'🏦'
+  },'us bank biz':{
+    bg:'#0D2C54',fg:'#fff',abbr:'UB',icon:'🏢'
+  }
+  
+};
+
+function getBrand(name){
+  const n=(name||'').toLowerCase().trim();
+  if(BANK_BRANDS[n])return BANK_BRANDS[n];
+  for(const[k,v]of Object.entries(BANK_BRANDS)){
+    if(n.includes(k)||k.includes(n))return v
+  }
+  let h=0;
+  for(let i=0;i<n.length;i++){
+    h=n.charCodeAt(i)+((h<<5)-h)
+  }
+  const hue=Math.abs(h)%360;
+  const a=(name||'X').toUpperCase().replace(/[^A-Z]/g,'');
+  return{
+    bg:`hsl(${hue},55%,38%)`,fg:'#fff',abbr:(a[0]||'?')+(a[1]||''),icon:'🏦'
+  }
+  
+}
+
+function bankLogo(name,sm){
+  const b=getBrand(name);
+  const cls=sm?'blogo sm':'blogo';
+  return`<div class="${cls}" style="background:${b.bg};color:${b.fg}"><span>${esc(b.abbr)}</span></div>`
+}
+
+function churnTagHtml(bank,churn){
+  const map={
+    1:'1YR',2:'2YR',3:'3YR',180:'180D'
+  };
+  const label=map[churn]||String(churn||'').toUpperCase();
+  const cls=String(churn)==='180'?'c180':('c'+String(churn||'1'));
+  return '<span class="card-mini-chip '+cls+'">'+esc(label)+'</span>'
+}
+
+function nextReopen(e){
+  if(!e.closed||!e.churn)return'';
+  return e.churn==='180'?addD(e.closed,180):addM(e.closed,parseInt(e.churn)*12)
+}
+
+function daysLeft(e){
+  const nr=nextReopen(e);
+  if(!nr)return null;
+  const diff=dB(td(),nr);
+  return Math.max(0,diff+10)
+}
+
+function elapsed(e){
+  return e.bonusRecd?Math.max(0,dB(e.bonusRecd,td())):null
+}
+
+const BUFFER_DAYS=3;
+
+function rawSafeDate(e){
+  return(e.opened&&e.minHoldDays>0)?addD(e.opened,e.minHoldDays):null
+}
+
+function safeCloseDate(e){
+  return(e.opened&&e.minHoldDays>0)?addD(e.opened,e.minHoldDays+BUFFER_DAYS):null
+}
+
+function daysUntilSafe(e){
+  const s=safeCloseDate(e);
+  return s?Math.max(0,dB(td(),s)):null
+}
+
+function closeFeeCountdownMeta(e){
+  const d=daysUntilSafe(e);
+  if(d===null)return{
+    cls:'amber',text:'Set date'
+  };
+  if(d<=0)return{
+    cls:'green',text:'Safe'
+  };
+  return{
+    cls:d<=14?'red':d<=30?'amber':'blue',text:d+'d'
+  }
+  
+}
+
+function isInBuffer(e){
+  if(!e.opened||e.minHoldDays<=0||e.closed||e.feeChecked)return false;
+  const raw=rawSafeDate(e);
+  const buff=safeCloseDate(e);
+  if(!raw||!buff)return false;
+  return dB(td(),raw)<=0&&dB(td(),buff)>0
+}
+
+function holdProg(e){
+  return(e.opened&&e.minHoldDays>0)?Math.min(1,Math.max(0,dB(e.opened,td()))/(e.minHoldDays+BUFFER_DAYS)):null
+}
+
+function reqDeadline(e){
+  return(e.opened&&e.reqDays>0)?addD(e.opened,e.reqDays):null
+}
+
+function daysToDeadline(e){
+  const d=reqDeadline(e);
+  return d?dB(td(),d):null
+}
+
+function nextActiveTimer(e){
+  const timers=sortCustomTimers((e?.customTimers||[]).filter(t=>!t.done&&t.date));
+  return timers[0]||null
+}
+
+function status(e){
+  
+  if(!e.bank)return'';
+  
+  if(e.closed){
+    return daysLeft(e)===0?'TIME TO CHURN!':'WAITING TO CHURN!';
+    
+  }
+  
+  const activeTimer=nextActiveTimer(e);
+  
+  if(activeTimer)return'CUSTOM TIMER';
+  
+  if(e.feeChecked)return'SAFE TO CLOSE';
+  
+  if(e.minHoldDays>0&&e.opened){
+    if(isInBuffer(e))return'3-DAY BUFFER';
+    const dsc=daysUntilSafe(e);
+    if(dsc!==null&&dsc<=0)return'SAFE TO CLOSE';
+    
+  }
+  
+  return'WORKING';
+  
+}
+
+function sPri(s){
+  return s==='WORKING'?1:s==='CUSTOM TIMER'?1.2:s==='3-DAY BUFFER'?1.3:s==='SAFE TO CLOSE'?1.5:s==='TIME TO CHURN!'?2:s==='WAITING TO CHURN!'?3:99
+}
+
+function sortE(a){
+  return[...a].sort((x,y)=>{const px=sPri(status(x)),py=sPri(status(y));if(px!==py)return px-py;return(daysLeft(x)??999999)-(daysLeft(y)??999999)})
+}
+
+function taxReady(e){
+  return !!(e&&e.bonusRecd&&e.closed&&(e.bonus||0)>0)
+}
+
+function taxYearOf(e){
+  return e&&e.bonusRecd?new Date(e.bonusRecd+'T00:00:00').getFullYear():null
+}
+
+function taxEntriesForYear(yr){
+  return entries.filter(e=>taxReady(e)&&taxYearOf(e)===yr&&e.bonusRecd<=td())
+}
+
+function isEarnedBonus(e){
+  return !!(e&&e.bonusRecd&&(e.bonus||0)>0)
+}
+
+function isCompleted(e){
+  return taxReady(e)
+}
+
+function completedYrTotal(yr){
+  return taxEntriesForYear(yr).reduce((s,e)=>s+(e.bonus||0),0)
+}
+
+function genId(bank,taken){
+  const used=taken instanceof Set?taken:new Set();
+  const prefix=bankCode(bank)+'-'+bankTypeCode(bank)+'-';
+  let max=0;
+  entries.forEach(e=>{const id=String(e&&e.id||'').toUpperCase();if(!isOfficialEntryId(id))return;if(id.startsWith(prefix)){const num=parseInt(id.slice(prefix.length),10);if(!isNaN(num))max=Math.max(max,num)}});
+  let next=max+1;
+  let candidate=prefix+String(next).padStart(2,'0');
+  while(used.has(candidate)){
+    next++;
+    candidate=prefix+String(next).padStart(2,'0')
+  }
+  return candidate
+}
+
+function effortScore(e){
+  if(!e.bonus)return null;
+  let h=1;
+  const n=(e.notes||'').toLowerCase();
+  if(n.includes('debit'))h++;
+  if(n.includes('dd')||n.includes('direct'))h++;
+  if(n.includes('balance'))h++;
+  if(n.includes('branch'))h+=2;
+  if(e.minHoldDays>=180)h++;
+  if(e.earlyCloseFee>0)h++;
+  const sc=Math.round(e.bonus/h);
+  return{
+    score:sc,level:sc>=200?'easy':sc>=100?'med':'hard',label:sc>=200?'Easy':sc>=100?'Medium':'Hard'
+  }
+  
+}
+
 function getCountdown(e){
+  
   const s=status(e);
-  if(s==='CUSTOM TIMER'){const timer=nextActiveTimer(e);if(timer){const d=timerCountdownDays(timer);if(d!==null)return{lbl:timer.text||'Countdown active',days:d,date:timer.date,cls:d<=7?'red':d<=21?'amber':'blue',icon:'\u23F0'}}}
-  if((s==='WORKING'||s==='SAFE TO CLOSE'||s==='3-DAY BUFFER')&&!e.bonusRecd&&e.opened&&e.reqDays>0){const d=daysToDeadline(e);if(d!==null)return{lbl:'Req deadline',days:d,date:reqDeadline(e),cls:d<=7?'red':d<=21?'amber':'blue',icon:'\u23F0'}}
-  if((s==='WORKING'||s==='SAFE TO CLOSE'||s==='3-DAY BUFFER')&&e.bonusRecd&&e.plannedClose){const d=dB(td(),e.plannedClose);if(d>0)return{lbl:'Close account',days:d,date:e.plannedClose,cls:d<=3?'red':d<=7?'amber':'green',icon:'\uD83D\uDD12'};return{lbl:'Ready to close!',days:0,date:e.plannedClose,cls:'green',icon:'\u2705'}}
-  if(s==='WORKING'&&e.opened&&e.minHoldDays>0&&!e.feeChecked){const d=daysUntilSafe(e);if(d!==null&&d>0)return{lbl:'Safe to close (incl. 3d buffer)',days:d,date:safeCloseDate(e),cls:d<=14?'red':d<=30?'amber':'blue',icon:'\uD83D\uDEE1\uFE0F'}}
-  if(s==='3-DAY BUFFER'){const d=daysUntilSafe(e);return{lbl:'\uD83D\uDEE1 Buffer '+d+'d remaining',days:d,date:safeCloseDate(e),cls:'amber',icon:'\uD83D\uDEE1\uFE0F'}}
-  if(s==='SAFE TO CLOSE')return{lbl:'Safe to close!',days:0,date:'',cls:'green',icon:'\u2705'};
-  if(s==='WAITING TO CHURN!'){const dl=daysLeft(e);const nr=nextReopen(e);if(dl>0)return{lbl:'Churn ready',days:dl,date:nr,cls:dl<=30?'amber':'blue',icon:'\uD83D\uDD04'}}
-  if(s==='TIME TO CHURN!')return{lbl:'Ready now!',days:0,date:'',cls:'green',icon:'\uD83D\uDD25'};
-  return null}
-function getUrg(e){const s=status(e);if(s==='TIME TO CHURN!')return'red';if(s==='CUSTOM TIMER'){const timer=nextActiveTimer(e);const d=timerCountdownDays(timer);if(d!==null&&d<=7)return'red';return'yellow'}if(s==='SAFE TO CLOSE')return'green';if(s==='3-DAY BUFFER')return'yellow';const dsc=daysUntilSafe(e);if(!e.closed&&dsc!==null&&dsc<=7)return'red';if(!e.closed&&dsc!==null&&dsc<=30)return'yellow';if(s==='WAITING TO CHURN!'){const dl=daysLeft(e);if(dl!==null&&dl<=30)return'yellow'}if(s==='WORKING')return'blue';return'green'}
-function getAttentionSuggestions(){const sug=[];entries.forEach(e=>{if(!e||!e.bank||e.closed)return;const activeTimers=sortCustomTimers((e.customTimers||[]).filter(t=>!t.done&&t.date));if(activeTimers.length){const next=activeTimers[0];const d=timerCountdownDays(next);if(d!==null){let pri=0.2,days=Math.abs(d),rsn='';if(d<0){pri=0;rsn='Timer overdue: '+next.text}else if(d===0){pri=0.05;rsn='Timer due today: '+next.text}else if(d<=3){pri=0.1;rsn=d+'d left: '+next.text}else if(d<=7){pri=0.15;rsn=d+'d left: '+next.text}else{pri=0.8;rsn=d+'d left: '+next.text}sug.push({bank:e.bank,rsn,bonus:e.bonus||0,showBonus:(e.bonus||0)>0,pri,days});return;}}const st=status(e);let pri=99,days=999999,rsn='';if(st==='SAFE TO CLOSE'){pri=1;days=0;rsn='Safe to close now.'}else if(!e.bonusRecd&&e.opened&&e.reqDays>0){const d=daysToDeadline(e);if(d!==null){pri=d<0?1.2:2;days=Math.abs(d);rsn=d<0?'Requirement deadline passed.':d===0?'Requirement deadline is today.':d+'d to requirement deadline.'}}else if(e.bonusRecd&&e.plannedClose){const d=dB(td(),e.plannedClose);pri=d<=0?3:4;days=Math.abs(d);rsn=d<=0?'Planned close is due.':d+'d to planned close.'}else if(st==='3-DAY BUFFER'){const d=daysUntilSafe(e);if(d!==null){pri=5;days=Math.abs(d);rsn=d+'d left in close buffer.'}}else if(e.opened&&e.minHoldDays>0&&!e.feeChecked){const d=daysUntilSafe(e);if(d!==null){pri=d<=0?1:6;days=Math.abs(d);rsn=d<=0?'Safe to close now.':d+'d until safe to close.'}}else if(e.bonusRecd){const el=elapsed(e);pri=7;days=el===null?999999:el;rsn=el!==null?el+'d since bonus received.':'Bonus received — review close timing.'}else if(e.opened){const od=dB(e.opened,td());pri=8;days=od<0?0:od;rsn=od>0?od+'d open — working bonus requirements.':'Open — review this bank.'}else{pri=9;days=999999;rsn='Open — review this bank.'}sug.push({bank:e.bank,rsn,bonus:e.bonus||0,showBonus:(st==='WORKING'||st==='CUSTOM TIMER')&&(e.bonus||0)>0,pri,days})});return sug.sort((a,b)=>a.pri-b.pri||a.days-b.days||(b.bonus||0)-(a.bonus||0)||a.bank.localeCompare(b.bank))}
-function getChurnSuggestions(){const sug=[];entries.forEach(e=>{if(!e||!e.bank||!e.closed||!e.churn)return;const dl=daysLeft(e);if(dl===null)return;sug.push({bank:e.bank,rsn:dl<=0?'Ready to churn now.':dl+'d until churn.',bonus:e.bonus||0,showBonus:false,days:Math.max(0,dl)})});return sug.sort((a,b)=>a.days-b.days||(b.bonus||0)-(a.bonus||0)||a.bank.localeCompare(b.bank))}
-function chartData(){const ms=[];for(let m=0;m<12;m++){const l=['J','F','M','A','M','J','J','A','S','O','N','D'][m];const t=entries.filter(e=>isCompleted(e)&&new Date(e.closed+'T00:00:00').getFullYear()===dashYear&&new Date(e.closed+'T00:00:00').getMonth()===m).reduce((s,e)=>s+(e.bonus||0),0);ms.push({l,t})}return ms}
-function normalizeBankFamily(name){let n=(name||'').toLowerCase().trim();n=n.replace(/[®'.]/g,'');n=n.replace(/&/g,' and ');n=n.replace(/\bbiz\b|\bbusiness\b/g,'');n=n.replace(/\bchecking\b|\bsavings\b|\baccount\b|\baccounts\b/g,'');n=n.replace(/\bessentials\b|\bpreferred\b|\bcomplete\b|\badvantage\b|\beveryday\b|\bpremier\b|\bplus\b|\bbasic\b|\belite\b|\bselect\b|\bsmartly\b/g,'');n=n.replace(/\s+/g,' ').trim();if(/\bu\s*s\s*bank\b/.test(n))return'u.s. bank';if(/\bbank of america\b|\bbofa\b|\bboa\b/.test(n))return'bank of america';if(/\bwells\s*fargo\b/.test(n))return'wells fargo';if(/\bcapital\s*one\b/.test(n))return'capital one';if(/\bfifth\s*third\b|\b53\b/.test(n))return'fifth third';if(/\bciti(?:bank)?\b/.test(n))return'citibank';if(/\bcommunity\s*america\b/.test(n))return'community america';if(/\bnavy\s*federal\b/.test(n))return'navy federal';if(/\btd\s*bank\b/.test(n))return'td bank';return n}
+  
+  if(s==='CUSTOM TIMER'){
+    const timer=nextActiveTimer(e);
+    if(timer){
+      const d=timerCountdownDays(timer);
+      if(d!==null)return{
+        lbl:timer.text||'Countdown active',days:d,date:timer.date,cls:d<=7?'red':d<=21?'amber':'blue',icon:'\u23F0'
+      }
+      
+    }
+    
+  }
+  
+  if((s==='WORKING'||s==='SAFE TO CLOSE'||s==='3-DAY BUFFER')&&!e.bonusRecd&&e.opened&&e.reqDays>0){
+    const d=daysToDeadline(e);
+    if(d!==null)return{
+      lbl:'Req deadline',days:d,date:reqDeadline(e),cls:d<=7?'red':d<=21?'amber':'blue',icon:'\u23F0'
+    }
+    
+  }
+  
+  if((s==='WORKING'||s==='SAFE TO CLOSE'||s==='3-DAY BUFFER')&&e.bonusRecd&&e.plannedClose){
+    const d=dB(td(),e.plannedClose);
+    if(d>0)return{
+      lbl:'Close account',days:d,date:e.plannedClose,cls:d<=3?'red':d<=7?'amber':'green',icon:'\uD83D\uDD12'
+    };
+    return{
+      lbl:'Ready to close!',days:0,date:e.plannedClose,cls:'green',icon:'\u2705'
+    }
+    
+  }
+  
+  if(s==='WORKING'&&e.opened&&e.minHoldDays>0&&!e.feeChecked){
+    const d=daysUntilSafe(e);
+    if(d!==null&&d>0)return{
+      lbl:'Safe to close (incl. 3d buffer)',days:d,date:safeCloseDate(e),cls:d<=14?'red':d<=30?'amber':'blue',icon:'\uD83D\uDEE1\uFE0F'
+    }
+    
+  }
+  
+  if(s==='3-DAY BUFFER'){
+    const d=daysUntilSafe(e);
+    return{
+      lbl:'\uD83D\uDEE1 Buffer '+d+'d remaining',days:d,date:safeCloseDate(e),cls:'amber',icon:'\uD83D\uDEE1\uFE0F'
+    }
+    
+  }
+  
+  if(s==='SAFE TO CLOSE')return{
+    lbl:'Safe to close!',days:0,date:'',cls:'green',icon:'\u2705'
+  };
+  
+  if(s==='WAITING TO CHURN!'){
+    const dl=daysLeft(e);
+    const nr=nextReopen(e);
+    if(dl>0)return{
+      lbl:'Churn ready',days:dl,date:nr,cls:dl<=30?'amber':'blue',icon:'\uD83D\uDD04'
+    }
+    
+  }
+  
+  if(s==='TIME TO CHURN!')return{
+    lbl:'Ready now!',days:0,date:'',cls:'green',icon:'\uD83D\uDD25'
+  };
+  
+  return null
+}
+
+function getUrg(e){
+  const s=status(e);
+  if(s==='TIME TO CHURN!')return'red';
+  if(s==='CUSTOM TIMER'){
+    const timer=nextActiveTimer(e);
+    const d=timerCountdownDays(timer);
+    if(d!==null&&d<=7)return'red';
+    return'yellow'
+  }
+  if(s==='SAFE TO CLOSE')return'green';
+  if(s==='3-DAY BUFFER')return'yellow';
+  const dsc=daysUntilSafe(e);
+  if(!e.closed&&dsc!==null&&dsc<=7)return'red';
+  if(!e.closed&&dsc!==null&&dsc<=30)return'yellow';
+  if(s==='WAITING TO CHURN!'){
+    const dl=daysLeft(e);
+    if(dl!==null&&dl<=30)return'yellow'
+  }
+  if(s==='WORKING')return'blue';
+  return'green'
+}
+
+function getAttentionSuggestions(){
+  const sug=[];
+  entries.forEach(e=>{if(!e||!e.bank||e.closed)return;const activeTimers=sortCustomTimers((e.customTimers||[]).filter(t=>!t.done&&t.date));if(activeTimers.length){const next=activeTimers[0];const d=timerCountdownDays(next);if(d!==null){let pri=0.2,days=Math.abs(d),rsn='';if(d<0){pri=0;rsn='Timer overdue: '+next.text}else if(d===0){pri=0.05;rsn='Timer due today: '+next.text}else if(d<=3){pri=0.1;rsn=d+'d left: '+next.text}else if(d<=7){pri=0.15;rsn=d+'d left: '+next.text}else{pri=0.8;rsn=d+'d left: '+next.text}sug.push({bank:e.bank,rsn,bonus:e.bonus||0,showBonus:(e.bonus||0)>0,pri,days});return;}}const st=status(e);let pri=99,days=999999,rsn='';if(st==='SAFE TO CLOSE'){pri=1;days=0;rsn='Safe to close now.'}else if(!e.bonusRecd&&e.opened&&e.reqDays>0){const d=daysToDeadline(e);if(d!==null){pri=d<0?1.2:2;days=Math.abs(d);rsn=d<0?'Requirement deadline passed.':d===0?'Requirement deadline is today.':d+'d to requirement deadline.'}}else if(e.bonusRecd&&e.plannedClose){const d=dB(td(),e.plannedClose);pri=d<=0?3:4;days=Math.abs(d);rsn=d<=0?'Planned close is due.':d+'d to planned close.'}else if(st==='3-DAY BUFFER'){const d=daysUntilSafe(e);if(d!==null){pri=5;days=Math.abs(d);rsn=d+'d left in close buffer.'}}else if(e.opened&&e.minHoldDays>0&&!e.feeChecked){const d=daysUntilSafe(e);if(d!==null){pri=d<=0?1:6;days=Math.abs(d);rsn=d<=0?'Safe to close now.':d+'d until safe to close.'}}else if(e.bonusRecd){const el=elapsed(e);pri=7;days=el===null?999999:el;rsn=el!==null?el+'d since bonus received.':'Bonus received — review close timing.'}else if(e.opened){const od=dB(e.opened,td());pri=8;days=od<0?0:od;rsn=od>0?od+'d open — working bonus requirements.':'Open — review this bank.'}else{pri=9;days=999999;rsn='Open — review this bank.'}sug.push({bank:e.bank,rsn,bonus:e.bonus||0,showBonus:(st==='WORKING'||st==='CUSTOM TIMER')&&(e.bonus||0)>0,pri,days})});
+  return sug.sort((a,b)=>a.pri-b.pri||a.days-b.days||(b.bonus||0)-(a.bonus||0)||a.bank.localeCompare(b.bank))
+}
+
+function getChurnSuggestions(){
+  const sug=[];
+  entries.forEach(e=>{if(!e||!e.bank||!e.closed||!e.churn)return;const dl=daysLeft(e);if(dl===null)return;sug.push({bank:e.bank,rsn:dl<=0?'Ready to churn now.':dl+'d until churn.',bonus:e.bonus||0,showBonus:false,days:Math.max(0,dl)})});
+  return sug.sort((a,b)=>a.days-b.days||(b.bonus||0)-(a.bonus||0)||a.bank.localeCompare(b.bank))
+}
+
+function chartData(){
+  const ms=[];
+  for(let m=0;m<12;m++){
+    const l=['J','F','M','A','M','J','J','A','S','O','N','D'][m];
+    const t=entries.filter(e=>isCompleted(e)&&new Date(e.closed+'T00:00:00').getFullYear()===dashYear&&new Date(e.closed+'T00:00:00').getMonth()===m).reduce((s,e)=>s+(e.bonus||0),0);
+    ms.push({l,t})
+  }
+  return ms
+}
+
+function normalizeBankFamily(name){
+  let n=(name||'').toLowerCase().trim();
+  n=n.replace(/[®'.]/g,'');n=n.replace(/&/g,' and ');n=n.replace(/\bbiz\b|\bbusiness\b/g,'');n=n.replace(/\bchecking\b|\bsavings\b|\baccount\b|\baccounts\b/g,'');n=n.replace(/\bessentials\b|\bpreferred\b|\bcomplete\b|\badvantage\b|\beveryday\b|\bpremier\b|\bplus\b|\bbasic\b|\belite\b|\bselect\b|\bsmartly\b/g,'');n=n.replace(/\s+/g,' ').trim();if(/\bu\s*s\s*bank\b/.test(n))return'u.s. bank';if(/\bbank of america\b|\bbofa\b|\bboa\b/.test(n))return'bank of america';if(/\bwells\s*fargo\b/.test(n))return'wells fargo';if(/\bcapital\s*one\b/.test(n))return'capital one';if(/\bfifth\s*third\b|\b53\b/.test(n))return'fifth third';if(/\bciti(?:bank)?\b/.test(n))return'citibank';if(/\bcommunity\s*america\b/.test(n))return'community america';if(/\bnavy\s*federal\b/.test(n))return'navy federal';if(/\btd\s*bank\b/.test(n))return'td bank';return n}
 function bankTypeCode(name){return(/\bbiz\b|\bbusiness\b/i.test(name||''))?'B':'P'}
 function bankCode(name){const family=normalizeBankFamily(name);const overrides={'u.s. bank':'USB','bank of america':'BOA','wells fargo':'WFB','capital one':'CAP','fifth third':'FTH','u.s bank':'USB'};if(overrides[family])return overrides[family];const words=family.replace(/[^a-z0-9 ]/g,'').split(' ').filter(Boolean).filter(w=>!['bank','credit','union','financial'].includes(w));if(!words.length)return'BNK';if(words.length===1)return words[0].slice(0,3).toUpperCase().padEnd(3,'X');return (words[0][0]+(words[1]?.[0]||'')+(words[2]?.[0]||words[1]?.[1]||'')).toUpperCase().padEnd(3,'X').slice(0,3)}
 function bankKey(name){return bankCode(name)+'|'+bankTypeCode(name)}
@@ -382,7 +953,6 @@ function tcKnownBankName(text){
   return m?m[1].trim():''
 }
 function tcInferChurnRule(months){if(!months)return'';return months<=6?'180 days':months<=12?'1 year':months<=24?'2 years':'3 years'}
-
 
 function tcPushUnique(arr, value){
   if(!arr) return;
@@ -973,7 +1543,7 @@ const RULES=[["Chase","2yr",24,true,true,"None","$12/mo waived $500 DD","2yr fro
 const LEGACY_COMMUNITY_DEFAULTS=[["Chase","Fidelity ACH"],["Chase","Robinhood ACH"],["Chase","Schwab ACH"],["Bank of America","Fidelity ACH"],["Bank of America","Robinhood ACH"],["U.S. Bank","Robinhood ACH"],["U.S. Bank","Fidelity ACH"],["U.S. Bank","No early close fee"],["Wells Fargo","Employer DD only"],["Citi","ACH transfers"],["PNC","Fidelity ACH"],["Simmons Bank","$1k DD + 7 debit"],["Equity Bank","$1k DD + debit activation"],["Equity Bank","$400 clawback <180d"],["Regions","$1k DD + 10 debit txns"],["Capital One","Not churnable (2025+)"],["BMO","ACH works + CC funding"]];
 const DATA_POINTS=[
 ["Chase","Current personal bonus uses qualifying direct deposit in 90 days","Doctor of Credit current checking post tracks the main personal offer as DD-based within 90 days.","https://www.doctorofcredit.com/chase-400-checking-bonus/"],
-["Chase","Churn rule: 24 months from last enrollment date","Doctor of Credit churn list says Chase is generally once every 2 years from last enrollment date.","https://www.doctorofcredit.com/a-list-of-churnable-bank-account-bonuses/"],
+  ["Chase","Churn rule: 24 months from last enrollment date","Doctor of Credit churn list says Chase is generally once every 2 years from last enrollment date.","https://www.doctorofcredit.com/a-list-of-churnable-bank-account-bonuses/"],
 ["Chase","$900 combo offer is live","Doctor of Credit tracks the combo offer with a checking leg plus a savings leg that needs $15,000 for 90 days.","https://www.doctorofcredit.com/targeted-chase-900-checking-savings-bonus/"],
 ["Chase Biz","$20,000 new money within 30 days","Doctor of Credit current Chase business post tracks a $20k deposit requirement for the larger business bonus tier.","https://www.doctorofcredit.com/chase-business-total-checking-750-bonus-no-direct-deposit-required/"],
 ["Chase Biz","Keep balance 60 days + complete 5 qualifying transactions","Doctor of Credit says the business bonus needs the balance hold plus 5 qualifying transactions within 90 days.","https://www.doctorofcredit.com/chase-business-total-checking-750-bonus-no-direct-deposit-required/"],
@@ -1130,7 +1700,6 @@ function statusBadgeHtml(e,countdown){const meta=displayStatusMeta(status(e));co
 function quickBtn(cls,icon,label,onclick){return'<button class="qbtn '+cls+'" onclick="'+onclick+'">'+icon+'<span>'+label+'</span></button>'}
 function actionBtn(cls,icon,label,onclick){return'<button class="cbtn '+cls+'" onclick="'+onclick+'">'+icon+'<span>'+label+'</span></button>'}
 function highlightTC(text){if(!text)return'';let h=esc(text);h=h.replace(/^(REQUIREMENTS:|DIRECT DEPOSIT RULES:|ADDITIONAL BONUSES:|FEES &amp; TIMING:|CHURN &amp; TAX:)/gm,'<span class="hl-section">$1</span>');h=h.replace(/\* (Step \d+:)/g,'* <span class="hl-step">$1</span>');h=h.replace(/(\$[\d,]+(?:\.\d+)?)/g,'<span class="hl-money">$1</span>');h=h.replace(/(\d+\s+(?:days?|months?|weeks?|consecutive\s+days|statement\s+cycles?))/gi,'<span class="hl-days">$1</span>');h=h.replace(/(within\s+\d+\s+\w+)/gi,'<span class="hl-days">$1</span>');h=h.replace(/(NOT count|does NOT|do not qualify|not eligible|cannot be combined|not be combined|ineligible)/gi,'<span class="hl-warn">$1</span>');h=h.replace(/(clawback|penalty|early close|termination fee|fee if closed)/gi,'<span class="hl-fee">$1</span>');h=h.replace(/(?:code[:\s]+)([A-Z0-9]{3,})/g,'code: <span class="hl-code">$1</span>');h=h.replace(/(\$0 \(No fee\)|No fee|None|Safe anytime|free checking)/gi,'<span class="hl-good">$1</span>');h=h.replace(/(Zelle|P2P|Micro-deposits?|person-to-person)/gi,'<span class="hl-warn">$1</span>');return h}
-
 
 function profileGroupMatchKey(groupKey, bankName){return bankKey(bankName||'')===groupKey}
 function removeProfileReqsByGroupKey(groupKey){
@@ -1436,7 +2005,6 @@ function rProfiles(){
   h+='</div>';
   return h;
 }
-
 
 function isRealDateString(d){if(!d)return true;if(!/^\d{4}-\d{2}-\d{2}$/.test(String(d)))return false;const dt=new Date(d+'T00:00:00');return !isNaN(dt.getTime())&&dt.toISOString().slice(0,10)===d}
 function healthAdd(list,severity,title,msg,entryId){list.push({severity,title,msg,entryId})}
@@ -1797,46 +2365,93 @@ function normalizePromoWindowText(s){
   if(!s) return '';
   const raw=String(s).trim();
   const m=raw.match(/^Q[1-4]\s+\d{4}\s*\(([^)]+)\)$/i);
+  
   if(m) return m[1].trim();
+  
   return looksLikeActualDateText(raw) ? raw : '';
+  
 }
+
 function buildSimpleAutoFill(r){
+  
   const steps=[];
+  
   if(r.minOpeningDeposit) steps.push('Open with '+r.minOpeningDeposit);
+  
   else steps.push('Open the required account');
+  
   if(r.qualifyingPaths?.length){
+    
     steps.push(...r.qualifyingPaths);
-  }else{
+    
+  }
+  else{
+    
     if(r.ddAmount) steps.push('Direct deposit '+r.ddAmount+(r.ddCount?' ('+r.ddCount+'+ deposits)':''));
+    
     if(r.newMoneyAmount) steps.push('Deposit '+r.newMoneyAmount+' of new money'+(r.newMoneyDays?' within '+r.newMoneyDays+' days':''));
+    
     if(r.maintainBalance||r.maintainDays) steps.push('Maintain '+(r.maintainBalance||'required balance')+(r.maintainDays?' for '+r.maintainDays+' days':''));
+    
     if(r.activityCount) steps.push('Complete '+r.activityCount+' qualifying transactions'+(r.activityDays?' within '+r.activityDays+' days':''));
+    
     if(r.debitTxns) steps.push('Complete '+r.debitTxns+' debit card transactions');
+    
   }
+  
   if(r.mustRemainOpen) steps.push('Keep account open until bonus payout');
+  
   if(r.requiresGoodStanding) steps.push('Keep account in good standing');
+  
   const elig=[];
+  
   if(r.residency) elig.push(r.residency);
+  
   if(r.currentCustomerIneligible) elig.push('Current customers not eligible');
+  
   if(r.churnMonths) elig.push(r.churnMonths+'-month restriction');
+  
   if(r.priorBonusIneligible) elig.push('Previous bonus recipients not eligible');
+  
   if(r.limitOneBonus) elig.push(/business/i.test(r.acctType||r.bankName||'') ? 'One bonus per business/entity' : 'One bonus per customer/account');
+  
   if(r.primaryOwnerOnly) elig.push('Bonus paid to primary owner only');
+  
   let monthlyFeeYN='';
+  
   const mf=String(r.monthlyFee||'').trim();
+  
   if(mf){
+    
     if(mf==='$0 (No fee)' || /no fee/i.test(mf)) monthlyFeeYN='No';
+    
     else if(mf!=='Not clearly stated in pasted T&C') monthlyFeeYN='Yes';
-  } else if(r.feeWaiver){ monthlyFeeYN='Yes'; }
-  let earlyTerm='';
-  if(r.earlyCloseFee && String(r.earlyCloseFee).trim()!=='None'){
-    earlyTerm=String(r.earlyCloseFee).trim();
-    if(r.earlyCloseDays) earlyTerm+=' if closed within '+r.earlyCloseDays+' days';
-  } else if(r.earlyCloseDays){
-    earlyTerm='Fee applies if closed within '+r.earlyCloseDays+' days';
+    
   }
+   else if(r.feeWaiver){
+     monthlyFeeYN='Yes';
+    
+  }
+  
+  let earlyTerm='';
+  
+  if(r.earlyCloseFee && String(r.earlyCloseFee).trim()!=='None'){
+    
+    earlyTerm=String(r.earlyCloseFee).trim();
+    
+    if(r.earlyCloseDays) earlyTerm+=' if closed within '+r.earlyCloseDays+' days';
+    
+  }
+   else if(r.earlyCloseDays){
+    
+    earlyTerm='Fee applies if closed within '+r.earlyCloseDays+' days';
+    
+  }
+  
   const requiredDays=Math.max(parseInt(r.timelineDays||0,10)||0,parseInt(r.newMoneyDays||0,10)||0,parseInt(r.maintainDays||0,10)||0,parseInt(r.activityDays||0,10)||0,parseInt(r.minDaysOpen||0,10)||0);
+  
   return {
+    
     monthlyFeeYNText: monthlyFeeYN,
     promoCodeText: r.promoCode || '',
     avoidMonthlyFeeText: r.feeWaiver || '',
@@ -1846,23 +2461,243 @@ function buildSimpleAutoFill(r){
     expirationDateText: normalizePromoWindowText(r.openBy || r.openWindow || ''),
     requiredDaysText: requiredDays ? String(requiredDays) : ''
   };
+  
 }
 
-function runMainAnalyze(){const el=document.getElementById('az_input');if(!el)return;analyzerText=el.value;if(!analyzerText||analyzerText.length<20){alert('Paste more T&C text');return}analyzerResult=analyzeTC(analyzerText);analyzerIsBiz=/\bbusiness\b/i.test(analyzerText)||/\bbusiness\b/i.test((analyzerResult&&analyzerResult.acctType)||'')||/\bbusiness\b/i.test((analyzerResult&&analyzerResult.bankName)||'');if(analyzerResult&&analyzerResult.bankName)saveReq(formatAnalyzedBankName(analyzerResult.bankName||analyzerResult.acctType||'Unknown',analyzerIsBiz),analyzerResult);if(!analyzerResult||Object.keys(analyzerResult).length<2)alert('Could not extract enough data. Try pasting more of the full terms & conditions.');R()}
+function runMainAnalyze(){
+  const el=document.getElementById('az_input');
+  if(!el)return;
+  analyzerText=el.value;
+  if(!analyzerText||analyzerText.length<20){
+    alert('Paste more T&C text');
+    return
+  }
+  analyzerResult=analyzeTC(analyzerText);
+  analyzerIsBiz=/\bbusiness\b/i.test(analyzerText)||/\bbusiness\b/i.test((analyzerResult&&analyzerResult.acctType)||'')||/\bbusiness\b/i.test((analyzerResult&&analyzerResult.bankName)||'');
+  if(analyzerResult&&analyzerResult.bankName)saveReq(formatAnalyzedBankName(analyzerResult.bankName||analyzerResult.acctType||'Unknown',analyzerIsBiz),analyzerResult);
+  if(!analyzerResult||Object.keys(analyzerResult).length<2)alert('Could not extract enough data. Try pasting more of the full terms & conditions.');
+  R()
+}
 
-function timerCountdownDays(item){if(!item||!item.date||item.done)return null;return dB(td(),item.date)}
-function timerCountdownMeta(item){if(item?.done)return{cls:'gray',text:'Done'};if(!item||!item.date)return{cls:'amber',text:'No date'};const days=timerCountdownDays(item);if(days===null)return{cls:'amber',text:'No date'};if(days<0)return{cls:'red',text:`Overdue ${Math.abs(days)}d`};if(days===0)return{cls:'red',text:'Due today'};if(days<=7)return{cls:'red',text:`${days}d left`};if(days<=14)return{cls:'amber',text:`${days}d left`};return{cls:'green',text:`${days}d left`}}
-function sortCustomTimers(list){const src=normalizeTimerList(list);return [...src].sort((a,b)=>{const ad=a?.done?1:0,bd=b?.done?1:0;if(ad!==bd)return ad-bd;return (a?.date||'9999-12-31').localeCompare(b?.date||'9999-12-31')})}
-function timerDueFromStart(startDate,daysRequired){const n=parseInt(daysRequired,10)||0;if(!startDate||n<=0)return'';return addD(startDate,n)}
-function timerMetaLine(t){const due=t?.date||'';const start=t?.startDate||'';const days=t?.daysRequired||'';if(start&&days&&due)return 'Start: '+fD(start)+' • '+days+'d • Due: '+fD(due);if(due)return 'Due: '+fD(due);return 'No date set'}
+function timerCountdownDays(item){
+  if(!item||!item.date||item.done)return null;
+  return dB(td(),item.date)
+}
 
-function runInlineAnalyze(){const el=document.getElementById('inline_tc');if(!el||el.value.length<20){alert('Paste more T&C text');return}inlineResult=analyzeTC(el.value);if(inlineResult){if(inlineResult.notesForTracker)modal.analyzedTC=inlineResult.notesForTracker;if(inlineResult.bonusAmount&&!modal.bonus)modal.bonus=parseInt(String(inlineResult.bonusAmount).replace(/[$,]/g,''))||0;if(inlineResult.churnMonths&&!modal.churn)modal.churn=inlineResult.churnMonths<=6?'180':inlineResult.churnMonths<=12?'1':inlineResult.churnMonths<=24?'2':'3';if(inlineResult.earlyCloseDays)modal.minHoldDays=parseInt(inlineResult.earlyCloseDays)||0;if(inlineResult.earlyCloseFee)modal.earlyCloseFee=parseInt(String(inlineResult.earlyCloseFee).replace(/[$,]/g,''))||0;if(inlineResult.ddAmount||inlineResult.debitTxns)modal.dataPoint=[inlineResult.ddAmount?'DD '+inlineResult.ddAmount:'',inlineResult.debitTxns?inlineResult.debitTxns+' debit txns':''].filter(Boolean).join(' + ');if(inlineResult.promoCode&&!modal.dataPoint)modal.dataPoint='Promo: '+inlineResult.promoCode;if(inlineResult.timelineDays)modal.reqDays=inlineResult.timelineDays;if(inlineResult.minDaysOpen&&!modal.minHoldDays)modal.minHoldDays=inlineResult.minDaysOpen;const __simple=buildSimpleAutoFill(inlineResult);if(__simple.monthlyFeeYNText&&!modal.monthlyFeeYNText)modal.monthlyFeeYNText=__simple.monthlyFeeYNText;if(__simple.promoCodeText&&!modal.promoCodeText)modal.promoCodeText=__simple.promoCodeText;if(__simple.avoidMonthlyFeeText&&!modal.avoidMonthlyFeeText)modal.avoidMonthlyFeeText=__simple.avoidMonthlyFeeText;if(__simple.completeBonusText&&!modal.completeBonusText)modal.completeBonusText=__simple.completeBonusText;if(__simple.earlyTerminationFeeText&&!modal.earlyTerminationFeeText)modal.earlyTerminationFeeText=__simple.earlyTerminationFeeText;if(__simple.eligibilityText&&!modal.eligibilityText)modal.eligibilityText=__simple.eligibilityText;if(__simple.expirationDateText&&!modal.expirationDateText)modal.expirationDateText=__simple.expirationDateText;if(__simple.requiredDaysText&&!modal.requiredDaysText)modal.requiredDaysText=__simple.requiredDaysText;if(inlineResult.bankName&&!modal.bank)modal.bank=inlineResult.bankName}else{alert('Could not extract data. Paste more of the full T&C.')}R()}
-function normalizeRestoredEntry(e){const x=(e&&typeof e==='object')?{...e}:{};x.bank=String(x.bank||'').trim();x.bonus=parseInt(x.bonus||0,10)||0;x.churn=x.churn||'';x.opened=x.opened||'';x.closed=x.closed||'';x.bonusRecd=x.bonusRecd||'';x.reqMet=x.reqMet||'';x.notes=x.notes||'';x.analyzedTC=x.analyzedTC||'';x.minHoldDays=parseInt(x.minHoldDays||0,10)||0;x.earlyCloseFee=parseInt(x.earlyCloseFee||0,10)||0;x.dataPoint=x.dataPoint||'';x.reqDays=parseInt(x.reqDays||0,10)||0;x.referralBonus=parseInt(x.referralBonus||0,10)||0;x.plannedClose=x.plannedClose||'';x.phoneNum=x.phoneNum||'';x.feeChecked=!!x.feeChecked;x.monthlyFeeYNText=x.monthlyFeeYNText||'';x.promoCodeText=x.promoCodeText||'';x.avoidMonthlyFeeText=x.avoidMonthlyFeeText||'';x.completeBonusText=x.completeBonusText||'';x.earlyTerminationFeeText=x.earlyTerminationFeeText||'';x.eligibilityText=x.eligibilityText||'';x.expirationDateText=x.expirationDateText||'';x.requiredDaysText=x.requiredDaysText||'';x.checklist=Array.isArray(x.checklist)?x.checklist:[];x.customTimers=normalizeTimerList(x.customTimers);return x}
-function buildPortableBackupPayload(){const userDatapoints=loadUserDatapoints();const communityDatapoints=loadCommunityDatapoints();const phoneEdits=loadPhoneEdits();const reqs=loadReqs();const snapshot=buildStorageSnapshot();return{app:'Bank Bonus Tracker',backupType:'full-fidelity-portable',schemaVersion:'v10-no-profile',exportedAt:new Date().toISOString(),entryCount:Array.isArray(entries)?entries.length:0,userDatapointCount:userDatapoints.length,communityDatapointCount:communityDatapoints.length,requirementCount:Object.keys(reqs||{}).length,phoneCount:phoneEdits.length,prefs:{dashYear,taxYear},entries:(entries||[]).map(e=>({...e})),userDatapoints:[...userDatapoints],ddMethods:[...loadDD()],communityDatapoints:[...communityDatapoints],bankReqs:{...reqs},phoneBook:[...phoneEdits],storageSnapshot:snapshot,manifest:{includesProfiles:false,includesProfileHistory:false,includesTrackerEntries:true,includesUserDatapoints:true,includesCommunityDatapoints:true,includesSavedRequirements:true,includesPhoneBook:true,storageKeys:Object.keys(snapshot)}}}
-function describeBackupPayload(d){const when=d?.exportedAt?new Date(d.exportedAt).toLocaleString():'';return['Backup date: '+(when||'Unknown'),'Entries: '+countBackupEntries(d),'Your datapoints: '+countBackupUserDatapoints(d),'Community datapoints: '+countBackupCommunityDatapoints(d),'Saved bank requirements: '+countBackupReqs(d),'Saved phone entries: '+countBackupPhones(d)].join('\n')}
-function applyPortableRestore(d){if(!d||typeof d!=='object')throw new Error('Invalid backup file.');const restoredEntries=Array.isArray(d.entries)?d.entries:(Array.isArray(d?.storageSnapshot?.[SK])?d.storageSnapshot[SK]:null);if(!Array.isArray(restoredEntries))throw new Error('Backup file is missing entries.');const cleaned=restoredEntries.map(normalizeRestoredEntry).filter(e=>e.bank);const repaired=repairEntryIds(cleaned);entries=sortE(repaired.items);sv(SK,entries);const userPoints=Array.isArray(d.userDatapoints)?d.userDatapoints:(Array.isArray(d.ddMethods)?d.ddMethods:[]);saveDD(userPoints);saveCommunityDatapoints(Array.isArray(d.communityDatapoints)?d.communityDatapoints:(Array.isArray(d?.storageSnapshot?.[COMMUNITY_DP_KEY])?d.storageSnapshot[COMMUNITY_DP_KEY]:[]));saveReqs(d.bankReqs&&typeof d.bankReqs==='object'?d.bankReqs:((d?.storageSnapshot?.[REQ_KEY]&&typeof d.storageSnapshot[REQ_KEY]==='object')?d.storageSnapshot[REQ_KEY]:{}));savePhoneEdits(Array.isArray(d.phoneBook)?d.phoneBook:(Array.isArray(d?.storageSnapshot?.[PHONE_KEY])?d.storageSnapshot[PHONE_KEY]:[]));restoreStorageSnapshot(d.storageSnapshot);try{localStorage.removeItem(PROFILE_EVT_KEY)}catch{}if(d.prefs&&Number.isFinite(parseInt(d.prefs.dashYear,10)))dashYear=parseInt(d.prefs.dashYear,10);else dashYear=new Date().getFullYear();if(d.prefs&&Number.isFinite(parseInt(d.prefs.taxYear,10)))taxYear=parseInt(d.prefs.taxYear,10);else taxYear=new Date().getFullYear();setLastBk();cfm={title:'Restore Complete',msg:`${entries.length} entries restored.\n${countBackupUserDatapoints(d)} datapoints restored.\n\nThis backup is now ready on this browser/device.`,green:true,action:()=>{cfm=null;R()}};R()}
-function importBackup(){const inp=document.createElement('input');inp.type='file';inp.accept='.json';inp.onchange=function(ev){const f=ev.target.files&&ev.target.files[0];if(!f)return;const reader=new FileReader();reader.onload=async function(e){try{const data=JSON.parse(e.target.result);const ok=window.confirm(`Restore this full backup?\n\n${describeBackupPayload(data)}\n\nSafety upgrade: before restore, the app will export your current device data as a pre-restore backup. Then it will replace the current data on this device.`);if(!ok)return;try{await exportBackup(false,buildPortableBackupPayload(),'BankBonusTracker_PreRestore_'+backupTimestamp()+'.json')}catch{}applyPortableRestore(data)}catch(err){alert('Invalid or unsupported backup file.')}};reader.readAsText(f)};inp.click()}
-function exportCSV(yr){const yrE=taxEntriesForYear(yr);let csv='Bank,Bonus,Received,Opened,Closed,Data Point\n';yrE.forEach(e=>{csv+='"'+e.bank+'",'+e.bonus+',"'+fD(e.bonusRecd)+'","'+fD(e.opened)+'","'+fD(e.closed)+'","'+(e.dataPoint||'').replace(/"/g,"'")+'"\n'});csv+='\nTotal,'+yrE.reduce((s,e)=>s+(e.bonus||0),0)+'\n';const blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='BonusTracker_'+yr+'.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
+function timerCountdownMeta(item){
+  if(item?.done)return{
+    cls:'gray',text:'Done'
+  };
+  if(!item||!item.date)return{
+    cls:'amber',text:'No date'
+  };
+  const days=timerCountdownDays(item);
+  if(days===null)return{
+    cls:'amber',text:'No date'
+  };
+  if(days<0)return{
+    cls:'red',text:`Overdue ${Math.abs(days)}d`
+  };
+  if(days===0)return{
+    cls:'red',text:'Due today'
+  };
+  if(days<=7)return{
+    cls:'red',text:`${days}d left`
+  };
+  if(days<=14)return{
+    cls:'amber',text:`${days}d left`
+  };
+  return{
+    cls:'green',text:`${days}d left`
+  }
+  
+}
+
+function sortCustomTimers(list){
+  const src=normalizeTimerList(list);
+  return [...src].sort((a,b)=>{const ad=a?.done?1:0,bd=b?.done?1:0;if(ad!==bd)return ad-bd;return (a?.date||'9999-12-31').localeCompare(b?.date||'9999-12-31')})
+}
+
+function timerDueFromStart(startDate,daysRequired){
+  const n=parseInt(daysRequired,10)||0;
+  if(!startDate||n<=0)return'';
+  return addD(startDate,n)
+}
+
+function timerMetaLine(t){
+  const due=t?.date||'';
+  const start=t?.startDate||'';
+  const days=t?.daysRequired||'';
+  if(start&&days&&due)return 'Start: '+fD(start)+' • '+days+'d • Due: '+fD(due);
+  if(due)return 'Due: '+fD(due);
+  return 'No date set'
+}
+
+function runInlineAnalyze(){
+  const el=document.getElementById('inline_tc');
+  if(!el||el.value.length<20){
+    alert('Paste more T&C text');
+    return
+  }
+  inlineResult=analyzeTC(el.value);
+  if(inlineResult){
+    if(inlineResult.notesForTracker)modal.analyzedTC=inlineResult.notesForTracker;
+    if(inlineResult.bonusAmount&&!modal.bonus)modal.bonus=parseInt(String(inlineResult.bonusAmount).replace(/[$,]/g,''))||0;
+    if(inlineResult.churnMonths&&!modal.churn)modal.churn=inlineResult.churnMonths<=6?'180':inlineResult.churnMonths<=12?'1':inlineResult.churnMonths<=24?'2':'3';
+    if(inlineResult.earlyCloseDays)modal.minHoldDays=parseInt(inlineResult.earlyCloseDays)||0;
+    if(inlineResult.earlyCloseFee)modal.earlyCloseFee=parseInt(String(inlineResult.earlyCloseFee).replace(/[$,]/g,''))||0;
+    if(inlineResult.ddAmount||inlineResult.debitTxns)modal.dataPoint=[inlineResult.ddAmount?'DD '+inlineResult.ddAmount:'',inlineResult.debitTxns?inlineResult.debitTxns+' debit txns':''].filter(Boolean).join(' + ');
+    if(inlineResult.promoCode&&!modal.dataPoint)modal.dataPoint='Promo: '+inlineResult.promoCode;
+    if(inlineResult.timelineDays)modal.reqDays=inlineResult.timelineDays;
+    if(inlineResult.minDaysOpen&&!modal.minHoldDays)modal.minHoldDays=inlineResult.minDaysOpen;
+    const __simple=buildSimpleAutoFill(inlineResult);
+    if(__simple.monthlyFeeYNText&&!modal.monthlyFeeYNText)modal.monthlyFeeYNText=__simple.monthlyFeeYNText;
+    if(__simple.promoCodeText&&!modal.promoCodeText)modal.promoCodeText=__simple.promoCodeText;
+    if(__simple.avoidMonthlyFeeText&&!modal.avoidMonthlyFeeText)modal.avoidMonthlyFeeText=__simple.avoidMonthlyFeeText;
+    if(__simple.completeBonusText&&!modal.completeBonusText)modal.completeBonusText=__simple.completeBonusText;
+    if(__simple.earlyTerminationFeeText&&!modal.earlyTerminationFeeText)modal.earlyTerminationFeeText=__simple.earlyTerminationFeeText;
+    if(__simple.eligibilityText&&!modal.eligibilityText)modal.eligibilityText=__simple.eligibilityText;
+    if(__simple.expirationDateText&&!modal.expirationDateText)modal.expirationDateText=__simple.expirationDateText;
+    if(__simple.requiredDaysText&&!modal.requiredDaysText)modal.requiredDaysText=__simple.requiredDaysText;
+    if(inlineResult.bankName&&!modal.bank)modal.bank=inlineResult.bankName
+  }
+  else{
+    alert('Could not extract data. Paste more of the full T&C.')
+  }
+  R()
+}
+
+function normalizeRestoredEntry(e){
+  const x=(e&&typeof e==='object')?{
+    ...e
+  }
+  :{
+    
+  };
+  x.bank=String(x.bank||'').trim();
+  x.bonus=parseInt(x.bonus||0,10)||0;
+  x.churn=x.churn||'';
+  x.opened=x.opened||'';
+  x.closed=x.closed||'';
+  x.bonusRecd=x.bonusRecd||'';
+  x.reqMet=x.reqMet||'';
+  x.notes=x.notes||'';
+  x.analyzedTC=x.analyzedTC||'';
+  x.minHoldDays=parseInt(x.minHoldDays||0,10)||0;
+  x.earlyCloseFee=parseInt(x.earlyCloseFee||0,10)||0;
+  x.dataPoint=x.dataPoint||'';
+  x.reqDays=parseInt(x.reqDays||0,10)||0;
+  x.referralBonus=parseInt(x.referralBonus||0,10)||0;
+  x.plannedClose=x.plannedClose||'';
+  x.phoneNum=x.phoneNum||'';
+  x.feeChecked=!!x.feeChecked;
+  x.monthlyFeeYNText=x.monthlyFeeYNText||'';
+  x.promoCodeText=x.promoCodeText||'';
+  x.avoidMonthlyFeeText=x.avoidMonthlyFeeText||'';
+  x.completeBonusText=x.completeBonusText||'';
+  x.earlyTerminationFeeText=x.earlyTerminationFeeText||'';
+  x.eligibilityText=x.eligibilityText||'';
+  x.expirationDateText=x.expirationDateText||'';
+  x.requiredDaysText=x.requiredDaysText||'';
+  x.checklist=Array.isArray(x.checklist)?x.checklist:[];
+  x.customTimers=normalizeTimerList(x.customTimers);
+  return x
+}
+
+function buildPortableBackupPayload(){
+  const userDatapoints=loadUserDatapoints();
+  const communityDatapoints=loadCommunityDatapoints();
+  const phoneEdits=loadPhoneEdits();
+  const reqs=loadReqs();
+  const snapshot=buildStorageSnapshot();
+  return{
+    app:'Bank Bonus Tracker',backupType:'full-fidelity-portable',schemaVersion:'v10-no-profile',exportedAt:new Date().toISOString(),entryCount:Array.isArray(entries)?entries.length:0,userDatapointCount:userDatapoints.length,communityDatapointCount:communityDatapoints.length,requirementCount:Object.keys(reqs||{}).length,phoneCount:phoneEdits.length,prefs:{
+      dashYear,taxYear
+    },entries:(entries||[]).map(e=>({...e})),userDatapoints:[...userDatapoints],ddMethods:[...loadDD()],communityDatapoints:[...communityDatapoints],bankReqs:{
+      ...reqs
+    },phoneBook:[...phoneEdits],storageSnapshot:snapshot,manifest:{
+      includesProfiles:false,includesProfileHistory:false,includesTrackerEntries:true,includesUserDatapoints:true,includesCommunityDatapoints:true,includesSavedRequirements:true,includesPhoneBook:true,storageKeys:Object.keys(snapshot)
+    }
+    
+  }
+  
+}
+
+function describeBackupPayload(d){
+  const when=d?.exportedAt?new Date(d.exportedAt).toLocaleString():'';
+  return['Backup date: '+(when||'Unknown'),'Entries: '+countBackupEntries(d),'Your datapoints: '+countBackupUserDatapoints(d),'Community datapoints: '+countBackupCommunityDatapoints(d),'Saved bank requirements: '+countBackupReqs(d),'Saved phone entries: '+countBackupPhones(d)].join('\n')
+}
+
+function applyPortableRestore(d){
+  if(!d||typeof d!=='object')throw new Error('Invalid backup file.');
+  const restoredEntries=Array.isArray(d.entries)?d.entries:(Array.isArray(d?.storageSnapshot?.[SK])?d.storageSnapshot[SK]:null);
+  if(!Array.isArray(restoredEntries))throw new Error('Backup file is missing entries.');
+  const cleaned=restoredEntries.map(normalizeRestoredEntry).filter(e=>e.bank);
+  const repaired=repairEntryIds(cleaned);
+  entries=sortE(repaired.items);
+  sv(SK,entries);
+  const userPoints=Array.isArray(d.userDatapoints)?d.userDatapoints:(Array.isArray(d.ddMethods)?d.ddMethods:[]);
+  saveDD(userPoints);
+  saveCommunityDatapoints(Array.isArray(d.communityDatapoints)?d.communityDatapoints:(Array.isArray(d?.storageSnapshot?.[COMMUNITY_DP_KEY])?d.storageSnapshot[COMMUNITY_DP_KEY]:[]));
+  saveReqs(d.bankReqs&&typeof d.bankReqs==='object'?d.bankReqs:((d?.storageSnapshot?.[REQ_KEY]&&typeof d.storageSnapshot[REQ_KEY]==='object')?d.storageSnapshot[REQ_KEY]:{}));
+  savePhoneEdits(Array.isArray(d.phoneBook)?d.phoneBook:(Array.isArray(d?.storageSnapshot?.[PHONE_KEY])?d.storageSnapshot[PHONE_KEY]:[]));
+  restoreStorageSnapshot(d.storageSnapshot);
+  try{
+    localStorage.removeItem(PROFILE_EVT_KEY)
+  }
+  catch{
+    
+  }
+  if(d.prefs&&Number.isFinite(parseInt(d.prefs.dashYear,10)))dashYear=parseInt(d.prefs.dashYear,10);
+  else dashYear=new Date().getFullYear();
+  if(d.prefs&&Number.isFinite(parseInt(d.prefs.taxYear,10)))taxYear=parseInt(d.prefs.taxYear,10);
+  else taxYear=new Date().getFullYear();
+  setLastBk();
+  cfm={
+    title:'Restore Complete',msg:`${entries.length} entries restored.\n${countBackupUserDatapoints(d)} datapoints restored.\n\nThis backup is now ready on this browser/device.`,green:true,action:()=>{
+      cfm=null;
+      R()
+    }
+    
+  };
+  R()
+}
+
+function importBackup(){
+  const inp=document.createElement('input');
+  inp.type='file';
+  inp.accept='.json';
+  inp.onchange=function(ev){
+    const f=ev.target.files&&ev.target.files[0];
+    if(!f)return;
+    const reader=new FileReader();
+    reader.onload=async function(e){
+      try{
+        const data=JSON.parse(e.target.result);
+        const ok=window.confirm(`Restore this full backup?\n\n${describeBackupPayload(data)}\n\nSafety upgrade: before restore, the app will export your current device data as a pre-restore backup. Then it will replace the current data on this device.`);
+        if(!ok)return;
+        try{
+          await exportBackup(false,buildPortableBackupPayload(),'BankBonusTracker_PreRestore_'+backupTimestamp()+'.json')
+        }
+        catch{
+          
+        }
+        applyPortableRestore(data)
+      }
+      catch(err){
+        alert('Invalid or unsupported backup file.')
+      }
+      
+    };
+    reader.readAsText(f)
+  };
+  inp.click()
+}
+
+function exportCSV(yr){
+  const yrE=taxEntriesForYear(yr);
+  let csv='Bank,Bonus,Received,Opened,Closed,Data Point\n';
+  yrE.forEach(e=>{csv+='"'+e.bank+'",'+e.bonus+',"'+fD(e.bonusRecd)+'","'+fD(e.opened)+'","'+fD(e.closed)+'","'+(e.dataPoint||'').replace(/"/g,"'")+'"\n'});csv+='\nTotal,'+yrE.reduce((s,e)=>s+(e.bonus||0),0)+'\n';const blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='BonusTracker_'+yr+'.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
 function promptExportYear(){const raw=window.prompt('Enter the year you want to export:', String(taxYear||new Date().getFullYear()));if(raw===null)return;const yr=parseInt(String(raw).trim(),10);if(!Number.isFinite(yr)||yr<1900||yr>2100){alert('Please enter a valid 4-digit year.');return}exportCSV(yr)}
 function loadFeed(){feedLoading=true;R();fetch('https://api.allorigins.win/get?url='+encodeURIComponent('https://www.doctorofcredit.com/category/bank-account-bonuses/feed/')).then(r=>r.json()).then(d=>{const p=new DOMParser(),x=p.parseFromString(d.contents,'text/xml'),items=x.querySelectorAll('item');feedItems=[];items.forEach((it,i)=>{if(i>=12)return;feedItems.push({title:it.querySelector('title')?.textContent||'',link:it.querySelector('link')?.textContent||'',date:it.querySelector('pubDate')?.textContent||''})});feedLoading=false;R()}).catch(()=>{feedItems=null;feedLoading=false;R()})}
 entries=sortE(entries);R();
