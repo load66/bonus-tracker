@@ -1,8 +1,8 @@
 /*
  * filename: scripts/timers.js
- * version: 2.3
- * purpose: Clean mini timer picker for Due Date vs Start Date + Days timers.
- * last-touched: unknown
+ * version: 2.4
+ * purpose: Clean mini timer picker for Due Date vs Start Date + Days timers, including new timer inserts from Bank Actions.
+ * last-touched: 2026-05-02
  */
 (function(){
   const baseInlineStateFor = inlineStateFor;
@@ -158,12 +158,17 @@
     if (!txt || !start) { alert('Add a description and a date.'); return; }
     if (p.mode === 'days' && days <= 0) { alert('Add the number of days for a Start Date + Days timer.'); return; }
     const due = days > 0 ? timerDueFromStart(start, days) : start;
-    const updated = normalizeTimer({ id:p.timerId, text:txt, startDate:days > 0 ? start : '', daysRequired:days, date:due, done:false });
+    const updated = normalizeTimer({ id:p.timerId || timerId(), text:txt, startDate:days > 0 ? start : '', daysRequired:days, date:due, done:false });
     entries = entries.map(e => {
       if (e.id === p.entryId) {
         const timers = normalizeTimerList(e.customTimers);
-        const idx = timers.findIndex(t => t.id === p.timerId);
-        if (idx >= 0) { updated.done = !!timers[idx].done; timers[idx] = updated; }
+        const idx = timers.findIndex(t => t.id === updated.id);
+        if (idx >= 0) {
+          updated.done = !!timers[idx].done;
+          timers[idx] = updated;
+        } else {
+          timers.push(updated);
+        }
         e.customTimers = timers;
       }
       return e;
