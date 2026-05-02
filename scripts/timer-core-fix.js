@@ -1,26 +1,42 @@
 /*
  * filename: scripts/timer-core-fix.js
- * version: 3.3.28
- * purpose: Harden merged core mini-timer controls after v3.3.27 architecture cleanup.
+ * version: 3.3.29
+ * purpose: Restore reliable mini timer add flow after v3.3.27 architecture cleanup.
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER = '3.3.28';
+  const VER = '3.3.29';
   const clean = v => String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
 
-  function getGlobal(name){
+  function g(name){
     try { return (0, eval)(name); } catch { return window[name]; }
   }
 
-  function callGlobal(name, args){
-    const fn = getGlobal(name);
-    if (typeof fn !== 'function') return false;
-    try { fn.apply(window, args || []); return true; } catch (err) { console.warn('[timer-core-fix]', name, err); return false; }
+  function setBinding(name, value){
+    try {
+      window.__btTimerCoreFixValue = value;
+      (0, eval)(name + ' = window.__btTimerCoreFixValue');
+      return true;
+    } catch {
+      try { window[name] = value; return true; } catch { return false; }
+    }
+  }
+
+  function fn(name){
+    const x = g(name);
+    return typeof x === 'function' ? x : null;
+  }
+
+  function call(name, args){
+    const f = fn(name);
+    if (!f) return false;
+    try { f.apply(window, args || []); return true; }
+    catch (err) { console.warn('[timer-core-fix]', name, err); return false; }
   }
 
   function expose(name){
     try {
-      const value = getGlobal(name);
+      const value = g(name);
       if (value !== undefined && window[name] !== value) window[name] = value;
     } catch {}
   }
@@ -31,8 +47,20 @@
       'rTimerChoicePrompt','toggleInlineForm','clearInlineInputs','timerId','normalizeTimer',
       'normalizeTimerList','timerDueFromStart','timerMetaLine','timerCountdownDays','timerCountdownMeta',
       'openTimerEditor','closeTimerEditor','switchTimerEditMode','saveTimerEditor','rTimerEdit',
-      'toggleTimer','upsertTimer','rmTimer','R'
+      'toggleTimer','upsertTimer','rmTimer','R','sv','SK','entries'
     ].forEach(expose);
+  }
+
+  function entriesList(){
+    const rows = g('entries');
+    return Array.isArray(rows) ? rows : [];
+  }
+
+  function saveEntries(rows){
+    setBinding('entries', rows);
+    const save = fn('sv');
+    const key = g('SK') || window.SK;
+    if (save && key) save(key, rows);
   }
 
   function entryIdFromOnclick(el){
@@ -47,21 +75,137 @@
     return input ? String(input.id).replace(/^tm_txt_/, '') : '';
   }
 
-  function choose(kind){
+  function currentPromptId(){
+    const p = g('timerChoicePrompt') || window.timerChoicePrompt || null;
+    return clean(p && p.entryId);
+  }
+
+  function setPrompt(value){
+    window.timerChoicePrompt = value;
+    setBinding('timerChoicePrompt', value);
+  }
+
+  function openPrompt(id){
     exposeTimerApi();
-    if (callGlobal('chooseTimerType', [kind])) return;
-    const prompt = window.timerChoicePrompt || null;
-    const id = prompt && prompt.entryId;
-    if (!id) return;
-    const state = getGlobal('inlineStateFor')?.(id);
-    if (state) {
-      state.timerKind = kind === 'days' ? 'days' : 'due';
-      state.timerEdit = null;
+    if (!id) return false;
+    if (call('openTimerTypePrompt', [id])) return true;
+    const entry = entriesList().find(e => clean(e.id) === clean(id));
+    if (!entry) return false;
+    setPrompt({ entryId:id, bank:entry.bank || '' });
+    call('R', []);
+    return true;
+  }
+
+  function openTimerForm(kind){
+    exposeTimerApi();
+    const id = currentPromptId();
+    if (!id) return false;
+    const stateFor = fn('inlineStateFor');
+    const st = stateFor ? stateFor(id) : null;
+    if (st) {
+      st.timerKind = kind === 'days' ? 'days' : 'due';
+      st.timerEdit = null;
+      st.timer = true;
     }
-    window.timerChoicePrompt = null;
+    setPrompt(null);
     window.__skipTimerPrompt = true;
-    try { callGlobal('toggleInlineForm', [id, 'timer', true]); }
-    finally { window.__skipTimerPrompt = false; }
+    let opened = call('toggleInlineForm', [id, 'timer', true]);
+    window.__skipTimerPrompt = false;
+    if (!opened) call('R', []);
+    setTimeout(() => {
+      const target = document.getElementById('tm_txt_' + id);
+      if (target) target.focus();
+    }, 0);
+    return true;
+  }
+
+  function makeTimer(data){
+    const normalize = fn('normalizeTimer');
+    if (normalize) return normalize(data);
+    const id = data.id || ('tmr_' + Math.random().toString(36).slice(2,8) + Date.now().toString(36).slice(-5));
+    return {
+      id,
+      text:clean(data.text),
+      startDate:clean(data.startDate),
+      daysRequired:parseInt(data.daysRequired || 0, 10) || 0,
+      date:clean(data.date),
+      done:!!data.done
+    };
+  }
+
+  function normalizeTimers(list){
+    const normalizeList = fn('normalizeTimerList');
+    if (normalizeList) return normalizeList(list);
+    return (Array.isArray(list) ? list : []).map(makeTimer).filter(t => t.text || t.date);
+  }
+
+  function dueFromStart(start, days){
+    const calc = fn('timerDueFromStart');
+    if (calc) return calc(start, days);
+    const d = new Date(start + 'T00:00:00');
+    d.setDate(d.getDate() + Number(days || 0));
+    return d.toISOString().split('T')[0];
+  }
+
+  function isDeleted(entry, timer){
+    const check = fn('isDeletedTimer');
+    return check ? !!check(entry, timer) : false;
+  }
+
+  function clearDeleted(entry, timer){
+    const clear = fn('clearDeletedTimerKeys');
+    if (clear) { try { clear(entry, timer); } catch {} }
+  }
+
+  function saveInlineTimer(id){
+    exposeTimerApi();
+    id = clean(id);
+    const txt = document.getElementById('tm_txt_' + id);
+    const dateInput = document.getElementById('tm_start_' + id);
+    const daysInput = document.getElementById('tm_days_' + id);
+    const stateFor = fn('inlineStateFor');
+    const ui = stateFor ? stateFor(id) : { timerKind:'due', timerEdit:null };
+    const kind = ui.timerKind === 'days' ? 'days' : 'due';
+    const label = clean(txt && txt.value);
+    const start = clean(dateInput && dateInput.value);
+    const days = kind === 'days' ? (parseInt(daysInput && daysInput.value, 10) || 0) : 0;
+
+    if (!label || !start) {
+      alert(kind === 'days' ? 'Add a timer name and start date.' : 'Add a timer name and due date.');
+      return false;
+    }
+    if (kind === 'days' && days <= 0) {
+      alert('Add the number of days for this timer.');
+      return false;
+    }
+
+    const due = days > 0 ? dueFromStart(start, days) : start;
+    const editId = clean(ui.timerEdit || '');
+    const rows = entriesList().map(e => {
+      if (clean(e.id) !== id) return e;
+      const timers = normalizeTimers(e.customTimers).filter(t => !isDeleted(e, t));
+      const idx = timers.findIndex(t => clean(t.id) === editId);
+      const next = makeTimer({
+        id:idx >= 0 ? timers[idx].id : undefined,
+        text:label,
+        startDate:days > 0 ? start : '',
+        daysRequired:days,
+        date:due,
+        done:idx >= 0 ? !!timers[idx].done : false
+      });
+      clearDeleted(e, next);
+      if (idx >= 0) timers[idx] = next;
+      else timers.push(next);
+      return { ...e, customTimers:timers };
+    });
+
+    if (ui) {
+      ui.timerEdit = null;
+      ui.timer = false;
+    }
+    saveEntries(rows);
+    call('R', []);
+    return true;
   }
 
   function handleTimerClick(event){
@@ -74,22 +218,21 @@
       if (!id) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      exposeTimerApi();
-      callGlobal('toggleInlineForm', [id, 'timer', true]);
+      openPrompt(id);
       return;
     }
 
     if (text.includes('Due Date Timer')) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      choose('due');
+      openTimerForm('due');
       return;
     }
 
     if (text.includes('Start Date + Days Timer')) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      choose('days');
+      openTimerForm('days');
       return;
     }
 
@@ -98,8 +241,7 @@
       if (!id) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      exposeTimerApi();
-      callGlobal('upsertTimer', [id]);
+      saveInlineTimer(id);
       return;
     }
   }
@@ -113,9 +255,10 @@
     exposeTimerApi();
     return {
       version: VER,
-      hasToggleInlineForm: typeof window.toggleInlineForm === 'function',
-      hasChooseTimerType: typeof window.chooseTimerType === 'function',
-      hasUpsertTimer: typeof window.upsertTimer === 'function'
+      promptId: currentPromptId(),
+      hasInlineStateFor: typeof window.inlineStateFor === 'function' || typeof fn('inlineStateFor') === 'function',
+      hasToggleInlineForm: typeof window.toggleInlineForm === 'function' || typeof fn('toggleInlineForm') === 'function',
+      hasUpsertTimer: typeof window.upsertTimer === 'function' || typeof fn('upsertTimer') === 'function'
     };
   };
 })();
