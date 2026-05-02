@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.31 Newest update: Cache-bust bump for add countdown timer modal wording fix.
+// ✅ Version 3.3.32 Newest update: Cache-bust bump for safe timer modal fix.
 
-const V = 'bt-v3.3.31';
+const V = 'bt-v3.3.32';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
