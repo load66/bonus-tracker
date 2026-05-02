@@ -1,4 +1,9 @@
-/* ✅ Version 2.8.4 Newest update: T&C Source Vault adds organized Save T&C Source button inside Analyzer Pro. */
+/*
+ * filename: scripts/tc-source-vault.js
+ * version: 2.8.4
+ * purpose: T&C Source Vault adds organized Save T&C Source button inside Analyzer Pro.
+ * last-touched: unknown
+ */
 (function(){
   const VER = '2.8.4';
   const VAULT_KEY = 'bt_tc_source_v1';

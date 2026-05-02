@@ -1,4 +1,9 @@
-/* ✅ Version 2.8.6 Newest update: Fix tiered bonus parsing so deposit requirements are not mistaken as bonus amounts. */
+/*
+ * filename: scripts/tc-rules-engine.js
+ * version: 2.8.6
+ * purpose: Fix tiered bonus parsing so deposit requirements are not mistaken as bonus amounts.
+ * last-touched: unknown
+ */
 (function(){
   const VER='2.8.6';
   const $all=(s,r=document)=>Array.from(r.querySelectorAll(s));

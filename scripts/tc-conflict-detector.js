@@ -1,4 +1,9 @@
-/* ✅ Version 2.10.0 Newest update: Quiet conflict detector for Unified Analyzer Pro. No visible scorecard. */
+/*
+ * filename: scripts/tc-conflict-detector.js
+ * version: 2.10.0
+ * purpose: Quiet conflict detector for Unified Analyzer Pro. No visible scorecard.
+ * last-touched: unknown
+ */
 (function(){
   const VER='2.10.0';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();

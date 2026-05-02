@@ -1,4 +1,9 @@
-/* ✅ Version 2.13.0 Newest update: Weird Wording Normalizer for bank bonus T&C language. No extra UI. */
+/*
+ * filename: scripts/tc-weird-wording-normalizer.js
+ * version: 2.13.0
+ * purpose: Weird Wording Normalizer for bank bonus T&C language. No extra UI.
+ * last-touched: unknown
+ */
 (function(){
   const VER='2.13.0';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();

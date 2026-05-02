@@ -1,4 +1,9 @@
-/* ✅ Version 2.8.5 Newest update: Fix mini timer delete persistence + prevent deleted auto timers from returning overdue. */
+/*
+ * filename: scripts/timer-delete-fix.js
+ * version: 2.8.5
+ * purpose: Fix mini timer delete persistence + prevent deleted auto timers from returning overdue.
+ * last-touched: unknown
+ */
 (function(){
   const VER = '2.8.5';
   const DELETE_KEY_PREFIX = 'bt_deleted_timer_keys_v1:';

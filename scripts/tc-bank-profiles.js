@@ -1,4 +1,9 @@
-/* ✅ Version 2.15.0 Newest update: Add Bank of America Bonus Chart parser for table-style tiered offers. No extra UI. */
+/*
+ * filename: scripts/tc-bank-profiles.js
+ * version: 2.15.0
+ * purpose: Add Bank of America Bonus Chart parser for table-style tiered offers. No extra UI.
+ * last-touched: unknown
+ */
 (function(){
   const VER='2.15.0';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();

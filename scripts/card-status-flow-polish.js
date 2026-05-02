@@ -1,4 +1,9 @@
-/* Card status flow polish — Requirement Deadline wording + hide Effort. Version display is controlled only by index.html. */
+/*
+ * filename: scripts/card-status-flow-polish.js
+ * version: unknown
+ * purpose: Card status flow polish — Requirement Deadline wording + hide Effort. Version display is controlled only by index.html.
+ * last-touched: unknown
+ */
 (function(){
   function clean(v){return String(v||'').replace(/\s+/g,' ').trim();}
   function isVisible(el){

@@ -1,4 +1,9 @@
-/* ✅ Version 2.10.0 Newest update: Hidden Analyzer Test Harness. Developer/debug only, no visible UI. */
+/*
+ * filename: scripts/tc-test-harness.js
+ * version: 2.10.0
+ * purpose: Hidden Analyzer Test Harness. Developer/debug only, no visible UI.
+ * last-touched: unknown
+ */
 (function(){
   const VER='2.10.0';
   const samples=[

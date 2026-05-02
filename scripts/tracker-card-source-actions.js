@@ -1,4 +1,9 @@
-/* Compact source-rendered per-bank Actions menu. Version display is controlled only by index.html. */
+/*
+ * filename: scripts/tracker-card-source-actions.js
+ * version: unknown
+ * purpose: Compact source-rendered per-bank Actions menu. Version display is controlled only by index.html.
+ * last-touched: unknown
+ */
 (function(){
   window.__btBankActionPrompt=window.__btBankActionPrompt||null;
 

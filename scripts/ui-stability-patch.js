@@ -1,4 +1,9 @@
-/* ✅ Version 3.3.1 Newest update: Safari crash-safe UI patch. No badge edits, no live modal rewriting, no fixed action footer. */
+/*
+ * filename: scripts/ui-stability-patch.js
+ * version: 3.3.1
+ * purpose: Safari crash-safe UI patch. No badge edits, no live modal rewriting, no fixed action footer.
+ * last-touched: unknown
+ */
 (function(){
   const VER = '3.3.1';
 

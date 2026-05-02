@@ -1,4 +1,9 @@
-/* ✅ Version 2.9.0 Newest update: Unified Analyzer Engine. One parser powers Analyzer Pro, simple summary, auto-fill, timers, and saved T&C source. */
+/*
+ * filename: scripts/tc-unified-engine.js
+ * version: 2.9.0
+ * purpose: Unified Analyzer Engine. One parser powers Analyzer Pro, simple summary, auto-fill, timers, and saved T&C source.
+ * last-touched: unknown
+ */
 (function(){
   const VER='2.9.0';
   const clean=s=>String(s||'').replace(/\s+/g,' ').trim();

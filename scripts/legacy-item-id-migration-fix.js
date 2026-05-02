@@ -1,4 +1,9 @@
-/* ✅ Version 3.2.5 Newest update: Migrate legacy mini timers/checklist items so Edit works on every bank. */
+/*
+ * filename: scripts/legacy-item-id-migration-fix.js
+ * version: 3.2.5
+ * purpose: Migrate legacy mini timers/checklist items so Edit works on every bank.
+ * last-touched: unknown
+ */
 (function(){
   const VER='3.2.5';
   const KEY=(typeof SK==='string'&&SK)||'bt_e_v4';

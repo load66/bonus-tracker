@@ -1,4 +1,9 @@
-/* ✅ Version 2.7.9 Newest update: Rename promo date label to Promo Expiration / Open-by Date with crash-safe one-time polish. */
+/*
+ * filename: scripts/field-polish-patch.js
+ * version: 2.7.9
+ * purpose: Rename promo date label to Promo Expiration / Open-by Date with crash-safe one-time polish.
+ * last-touched: unknown
+ */
 (function(){
   const VER = '2.7.9';
   const qsa = (sel, root=document) => Array.from(root.querySelectorAll(sel));

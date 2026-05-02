@@ -1,4 +1,9 @@
-/* ✅ Version 2.9.0 Newest update: Unified Analyzer Pro wrapper. Overrides old Analyzer Pro UI to use tcUnifiedAnalyze(). */
+/*
+ * filename: scripts/tc-unified-pro-wrapper.js
+ * version: 2.9.0
+ * purpose: Unified Analyzer Pro wrapper. Overrides old Analyzer Pro UI to use tcUnifiedAnalyze().
+ * last-touched: unknown
+ */
 (function(){
   const VER='2.9.0';
   const state={open:false,raw:'',result:null,tierIndex:null};

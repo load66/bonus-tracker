@@ -1,4 +1,9 @@
-/* ✅ Version 2.5.0 Newest update: Professional Auto-fill Review form before creating generated entry fields + timers. */
+/*
+ * filename: scripts/tc-autofill-action.js
+ * version: 2.5.0
+ * purpose: Professional Auto-fill Review form before creating generated entry fields + timers.
+ * last-touched: unknown
+ */
 (function(){
   const VER = '2.5.0';
   const qsa = (sel, root=document) => Array.from(root.querySelectorAll(sel));

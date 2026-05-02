@@ -1,4 +1,9 @@
-/* Remove Health tab and stop all Health-related UI. Version display is controlled only by index.html. */
+/*
+ * filename: scripts/remove-health-tab.js
+ * version: unknown
+ * purpose: Remove Health tab and stop all Health-related UI. Version display is controlled only by index.html.
+ * last-touched: unknown
+ */
 (function(){
   const KEEP=['tracker','tax','datapoints','phone'];
 

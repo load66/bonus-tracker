@@ -1,4 +1,9 @@
-/* ✅ Version 3.3.1 Newest update: Stable action safety + full device-transfer backup/restore. No version badge control. */
+/*
+ * filename: scripts/action-button-safety-fix.js
+ * version: 3.3.1
+ * purpose: Stable action safety + full device-transfer backup/restore. No version badge control.
+ * last-touched: unknown
+ */
 (function(){
   const VER='3.3.1';
   const BACKUP_KIND='bonus-tracker-full-device-backup';

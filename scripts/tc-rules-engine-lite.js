@@ -1,4 +1,9 @@
-/* ✅ Version 2.4.5 Newest update: Lightweight strict T&C analyzer replacement. Fixes mobile scroll lag by removing continuous DOM watching. */
+/*
+ * filename: scripts/tc-rules-engine-lite.js
+ * version: 2.4.5
+ * purpose: Lightweight strict T&C analyzer replacement. Fixes mobile scroll lag by removing continuous DOM watching.
+ * last-touched: unknown
+ */
 (function(){
   const VER = '2.4.5';
   const $all = (sel, root=document) => Array.from(root.querySelectorAll(sel));

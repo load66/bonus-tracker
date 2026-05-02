@@ -1,4 +1,9 @@
-/* ✅ Version 2.3 Newest update: Clean mini timer picker for Due Date vs Start Date + Days timers. */
+/*
+ * filename: scripts/timers.js
+ * version: 2.3
+ * purpose: Clean mini timer picker for Due Date vs Start Date + Days timers.
+ * last-touched: unknown
+ */
 (function(){
   const baseInlineStateFor = inlineStateFor;
   const baseToggleInlineForm = toggleInlineForm;

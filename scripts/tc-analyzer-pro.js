@@ -1,4 +1,9 @@
-/* ✅ Version 2.8.0 Newest update: T&C Analyzer Pro extraction fix for promo code, promo expiration/open-by date, and monthly fee vs waiver. */
+/*
+ * filename: scripts/tc-analyzer-pro.js
+ * version: 2.8.0
+ * purpose: T&C Analyzer Pro extraction fix for promo code, promo expiration/open-by date, and monthly fee vs waiver.
+ * last-touched: unknown
+ */
 (function(){
   const TCA_VERSION = '2.8.0';
   const state = { open:false, raw:'', result:null, selectedTier:0, lastCopied:false };

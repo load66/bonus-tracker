@@ -1,4 +1,9 @@
-/* ✅ Version 2.15.2 Newest update: Visible summary uses current pasted T&C first; saved source vault is fallback only. */
+/*
+ * filename: scripts/tc-unified-summary-override.js
+ * version: 2.15.2
+ * purpose: Visible summary uses current pasted T&C first; saved source vault is fallback only.
+ * last-touched: unknown
+ */
 (function(){
   const VER='2.15.2';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();

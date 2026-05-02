@@ -1,4 +1,9 @@
-/* ✅ Version 2.12.0 Newest update: Analyzer Issue Reporter. Copies missing/error reports for continuous improvement. */
+/*
+ * filename: scripts/tc-issue-reporter.js
+ * version: 2.12.0
+ * purpose: Analyzer Issue Reporter. Copies missing/error reports for continuous improvement.
+ * last-touched: unknown
+ */
 (function(){
   const VER='2.12.0';
   const LOG_KEY='bt_issue_reporter_logs_v1';

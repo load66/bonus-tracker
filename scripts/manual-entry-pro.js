@@ -1,4 +1,9 @@
-/* ✅ Version 2.6.0 Newest update: Manual Entry Pro UI + strict Analyzer Pro fill connection + churn rule preservation. */
+/*
+ * filename: scripts/manual-entry-pro.js
+ * version: 2.6.0
+ * purpose: Manual Entry Pro UI + strict Analyzer Pro fill connection + churn rule preservation.
+ * last-touched: unknown
+ */
 (function(){
   const VER = '2.6.0';
   const qsa = (sel, root=document) => Array.from(root.querySelectorAll(sel));

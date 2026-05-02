@@ -1,4 +1,9 @@
-/* ✅ Version 2.11.0 Newest update: Local Analyzer Learning Memory. Learns user corrections quietly for long-term accuracy. */
+/*
+ * filename: scripts/tc-learning-memory.js
+ * version: 2.11.0
+ * purpose: Local Analyzer Learning Memory. Learns user corrections quietly for long-term accuracy.
+ * last-touched: unknown
+ */
 (function(){
   const VER='2.11.0';
   const KEY='bt_tc_learning_memory_v1';

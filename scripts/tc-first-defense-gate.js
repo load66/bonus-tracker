@@ -1,4 +1,9 @@
-/* ✅ Version 2.15.2 Newest update: Current pasted T&C is always first priority. Saved source vault is fallback only. */
+/*
+ * filename: scripts/tc-first-defense-gate.js
+ * version: 2.15.2
+ * purpose: Current pasted T&C is always first priority. Saved source vault is fallback only.
+ * last-touched: unknown
+ */
 (function(){
   const VER='2.15.2';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();

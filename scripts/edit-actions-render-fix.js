@@ -1,4 +1,9 @@
-/* ✅ Version 3.3.1 Newest update: Stable edit actions + legacy timer/checklist ID migration. No version badge control. */
+/*
+ * filename: scripts/edit-actions-render-fix.js
+ * version: 3.3.1
+ * purpose: Stable edit actions + legacy timer/checklist ID migration. No version badge control.
+ * last-touched: unknown
+ */
 (function(){
   const VER='3.3.1';
   const KEY=(typeof SK==='string'&&SK)||'bt_e_v4';

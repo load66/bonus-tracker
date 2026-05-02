@@ -1,4 +1,9 @@
-/* ✅ Version 3.3.12 Newest update: Source-clean Tools folder — native + is hidden immediately and Quick Add calls openAdd directly. */
+/*
+ * filename: scripts/tools-folder-fab.js
+ * version: 3.3.12
+ * purpose: Source-clean Tools folder — native + is hidden immediately and Quick Add calls openAdd directly.
+ * last-touched: unknown
+ */
 (function(){
   const VER='3.3.12';
 
