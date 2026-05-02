@@ -16,9 +16,7 @@ const sv=(k,v)=>{
   try{
     localStorage.setItem(k,JSON.stringify(v))
   }
-  catch{
-    
-  }
+  catch{}
   
 };
 
@@ -59,9 +57,7 @@ function normalizeUserDatapoint(row){
   const x=(row&&typeof row==='object')?{
     ...row
   }
-  :{
-    
-  };
+  :{};
   const bank=String(x.bank||'').trim();
   const method=String(x.method||x.text||'').trim();
   const note=String(x.note||x.notes||'').trim();
@@ -92,9 +88,7 @@ function saveUserDatapoints(rows){
   try{
     localStorage.setItem(DD_KEY,JSON.stringify(clean.map(x=>({id:x.id,bank:x.bank,method:x.method,bonus:0,date:x.lastConfirmedAt||x.updatedAt||x.createdAt,note:x.note||'',entryId:x.entryId||''}))))
   }
-  catch{
-    
-  }
+  catch{}
   
 }
 
@@ -179,22 +173,16 @@ function entryReqSnapshot(e){
 function refreshSavedReqFromEntry(e){
   const snap=entryReqSnapshot(e);
   if(!snap||!snap.bank)return;
-  const current=profileReqForBank(snap.bank)||{
-    
-  };
+  const current=profileReqForBank(snap.bank)||{};
   saveReq(snap.bank,{...current,...snap,lastProfileRefreshAt:td(),sourceEntryId:e.id||''})
 }
 
 function bankMemoryFor(bank){
   if(!bank)return null;
   const matches=sortMatchChoices(bank,getBankMatches(bank));
-  const req=profileReqForBank(bank)||{
-    
-  };
+  const req=profileReqForBank(bank)||{};
   const worked=loadUserDatapoints().filter(x=>bankKey(x.bank)===bankKey(bank)&&!profileMethodFailed((x.note||'')+' '+(x.method||'')));
-  const methodCount={
-    
-  };
+  const methodCount={};
   worked.forEach(x=>{const key=String(x.method||'').trim();if(key)methodCount[key]=(methodCount[key]||0)+1});
   const bestMethod=Object.entries(methodCount).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))[0]?.[0]||matches.find(x=>x.dataPoint)?.dataPoint||req.dataPoint||'';
   const latest=[...matches].sort((a,b)=>(profileTimelineDate(b)||'').localeCompare(profileTimelineDate(a)||''))[0]||null;
@@ -223,14 +211,10 @@ function profileIntelligence(group){
   const avg=(arr)=>arr.length?Math.round(arr.reduce((s,v)=>s+v,0)/arr.length):null;
   const toReceive=completed.filter(e=>e.opened&&e.bonusRecd).map(e=>Math.max(0,dB(e.opened,e.bonusRecd)));
   const receiveToClose=completed.filter(e=>e.bonusRecd&&e.closed).map(e=>Math.max(0,dB(e.bonusRecd,e.closed)));
-  const methodStats={
-    
-  };
+  const methodStats={};
   loadUserDatapoints().filter(x=>bankKey(x.bank)===group.key&&!profileMethodFailed((x.note||'')+' '+(x.method||''))).forEach(x=>{const k=String(x.method||'').trim();if(k)methodStats[k]=(methodStats[k]||0)+1});
   const bestMethod=Object.entries(methodStats).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))[0]?.[0]||'';
-  const churnCounts={
-    
-  };
+  const churnCounts={};
   entries.forEach(e=>{if(e.churn)churnCounts[e.churn]=(churnCounts[e.churn]||0)+1});
   const topChurn=Object.entries(churnCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
   const latestRuleEntry=[...entries].sort((a,b)=>(profileTimelineDate(b)||'').localeCompare(profileTimelineDate(a)||''))[0]||null;
@@ -255,9 +239,7 @@ function setLastBk(){
   try{
     localStorage.setItem(BK_KEY,td())
   }
-  catch{
-    
-  }
+  catch{}
   
 }
 function daysSinceBk(){
@@ -2571,9 +2553,7 @@ function normalizeRestoredEntry(e){
   const x=(e&&typeof e==='object')?{
     ...e
   }
-  :{
-    
-  };
+  :{};
   x.bank=String(x.bank||'').trim();
   x.bonus=parseInt(x.bonus||0,10)||0;
   x.churn=x.churn||'';
@@ -2645,9 +2625,7 @@ function applyPortableRestore(d){
   try{
     localStorage.removeItem(PROFILE_EVT_KEY)
   }
-  catch{
-    
-  }
+  catch{}
   if(d.prefs&&Number.isFinite(parseInt(d.prefs.dashYear,10)))dashYear=parseInt(d.prefs.dashYear,10);
   else dashYear=new Date().getFullYear();
   if(d.prefs&&Number.isFinite(parseInt(d.prefs.taxYear,10)))taxYear=parseInt(d.prefs.taxYear,10);
@@ -2679,9 +2657,7 @@ function importBackup(){
         try{
           await exportBackup(false,buildPortableBackupPayload(),'BankBonusTracker_PreRestore_'+backupTimestamp()+'.json')
         }
-        catch{
-          
-        }
+        catch{}
         applyPortableRestore(data)
       }
       catch(err){
