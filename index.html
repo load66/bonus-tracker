@@ -6,94 +6,46 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0A0F1E">
-<link rel="manifest" href="./manifest.json?v=3.3.26">
-<link rel="apple-touch-icon" href="./icon.svg?v=3.3.26">
+<link rel="manifest" href="./manifest.json?v=3.3.27">
+<link rel="apple-touch-icon" href="./icon.svg?v=3.3.27">
 <title>Bank Bonus Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=3.3.26">
+<link rel="stylesheet" href="./style.css?v=3.3.27">
 </head>
 <body>
-<div class="app-version">v3.3.26</div>
+<div class="app-version">v3.3.27</div>
 <div class="app" id="app"></div>
 <script>
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js?v=3.3.26').then(reg=>{
+  navigator.serviceWorker.register('./sw.js?v=3.3.27').then(reg=>{
     if(reg && reg.update) reg.update();
   }).catch(()=>{});
 }
 </script>
-<script src="./app.js?v=3.3.26"></script>
-<script src="./scripts/tracker-card-source-actions.js?v=3.3.26"></script>
-<script src="./scripts/timers.js?v=3.3.26"></script>
-<script src="./scripts/tc-weird-wording-normalizer.js?v=3.3.26"></script>
-<script src="./scripts/analyzer/source-resolver.js?v=3.3.26"></script>
-<script src="./scripts/analyzer/engine.js?v=3.3.26"></script>
-<script src="./scripts/analyzer/bank-rules.js?v=3.3.26"></script>
-<script src="./scripts/analyzer/bank-rules-capitalone.js?v=3.3.26"></script>
-<script src="./scripts/analyzer/bank-rules-boa-business.js?v=3.3.26"></script>
-<script src="./scripts/analyzer/bank-rules-pnc.js?v=3.3.26"></script>
-<script src="./scripts/analyzer/bank-rules-regions.js?v=3.3.26"></script>
-<script src="./scripts/analyzer/bank-rules-equity.js?v=3.3.26"></script>
-<script src="./scripts/analyzer/bank-rules-busey.js?v=3.3.26"></script>
-<script src="./scripts/analyzer/bank-rules-academy.js?v=3.3.26"></script>
-<script src="./scripts/analyzer/churn-profile-memory.js?v=3.3.26"></script>
-<script src="./scripts/analyzer/profile-registry.js?v=3.3.26"></script>
-<script src="./scripts/analyzer/profile-registry-academy.js?v=3.3.26"></script>
-<script src="./scripts/analyzer/profile-db.js?v=3.3.26"></script>
-<script src="./scripts/analyzer/controller.js?v=3.3.26"></script>
-<script src="./scripts/analyzer/profile-library-selftest.js?v=3.3.26"></script>
-<script src="./scripts/analyzer/profile-library-selftest-academy.js?v=3.3.26"></script>
-<script src="./scripts/analyzer/learning-inbox-conflict.js?v=3.3.26"></script>
-<script src="./scripts/ui-stability-patch.js?v=3.3.26"></script>
-<script src="./scripts/field-polish-patch.js?v=3.3.26"></script>
-<script src="./scripts/timer-delete-fix.js?v=3.3.26"></script>
-<script src="./scripts/tools-folder-fab.js?v=3.3.26"></script>
-<script src="./scripts/action-button-safety-fix.js?v=3.3.26"></script>
-<script src="./scripts/edit-actions-render-fix.js?v=3.3.26"></script>
-<script src="./scripts/remove-health-tab.js?v=3.3.26"></script>
-<script src="./scripts/card-status-flow-polish.js?v=3.3.26"></script>
-<script>
-(function(){
-  let wrapped=false, applying=false;
-  function callPatch(name){try{if(typeof window[name]==='function')window[name]()}catch(e){}}
-  function applyCleanUi(){
-    if(applying)return;
-    applying=true;
-    try{
-      try{if(typeof tab!=='undefined' && String(tab).toLowerCase()==='health')tab='tracker'}catch(e){}
-      callPatch('btRemoveHealthTabApply');
-      callPatch('btCardStatusFlowPolishApply');
-      callPatch('btToolsFolderFabApply');
-      callPatch('btActionButtonSafetyApply');
-      callPatch('btEditActionsRenderFixApply');
-      callPatch('btTimerDeleteFixApply');
-      callPatch('btFieldPolishPatchApply');
-    }finally{applying=false}
-  }
-  function wrapRender(){
-    if(wrapped||typeof window.R!=='function')return false;
-    const baseRender=window.R;
-    window.R=function(){
-      const result=baseRender.apply(this,arguments);
-      applyCleanUi();
-      return result;
-    };
-    wrapped=true;
-    try{window.R()}catch(e){applyCleanUi()}
-    return true;
-  }
-  function boot(){if(!wrapRender())setTimeout(boot,50)}
-  window.btRenderStabilizerApply=applyCleanUi;
-  boot();
-  /* Disabled 2026-05-02: these retries were the dominant cause of caution-banner flicker.
-     The R() wrapper above already calls applyCleanUi() on every render, so the timed
-     retries are belt-and-suspenders. If a patch fails to apply on first paint, restore
-     a single retry at 600ms — do NOT restore all three.
-  setTimeout(applyCleanUi,100);
-  setTimeout(applyCleanUi,600);
-  setTimeout(applyCleanUi,1400);
-  */
-})();
-</script>
+<script src="./app.js?v=3.3.27"></script>
+<script src="./scripts/tracker-card-source-actions.js?v=3.3.27"></script>
+<script src="./scripts/tc-weird-wording-normalizer.js?v=3.3.27"></script>
+<script src="./scripts/analyzer/source-resolver.js?v=3.3.27"></script>
+<script src="./scripts/analyzer/engine.js?v=3.3.27"></script>
+<script src="./scripts/analyzer/bank-rules.js?v=3.3.27"></script>
+<script src="./scripts/analyzer/bank-rules-capitalone.js?v=3.3.27"></script>
+<script src="./scripts/analyzer/bank-rules-boa-business.js?v=3.3.27"></script>
+<script src="./scripts/analyzer/bank-rules-pnc.js?v=3.3.27"></script>
+<script src="./scripts/analyzer/bank-rules-regions.js?v=3.3.27"></script>
+<script src="./scripts/analyzer/bank-rules-equity.js?v=3.3.27"></script>
+<script src="./scripts/analyzer/bank-rules-busey.js?v=3.3.27"></script>
+<script src="./scripts/analyzer/bank-rules-academy.js?v=3.3.27"></script>
+<script src="./scripts/analyzer/churn-profile-memory.js?v=3.3.27"></script>
+<script src="./scripts/analyzer/profile-registry.js?v=3.3.27"></script>
+<script src="./scripts/analyzer/profile-registry-academy.js?v=3.3.27"></script>
+<script src="./scripts/analyzer/profile-db.js?v=3.3.27"></script>
+<script src="./scripts/analyzer/controller.js?v=3.3.27"></script>
+<script src="./scripts/analyzer/profile-library-selftest.js?v=3.3.27"></script>
+<script src="./scripts/analyzer/profile-library-selftest-academy.js?v=3.3.27"></script>
+<script src="./scripts/analyzer/learning-inbox-conflict.js?v=3.3.27"></script>
+<script src="./scripts/ui-stability-patch.js?v=3.3.27"></script>
+<script src="./scripts/field-polish-patch.js?v=3.3.27"></script>
+<script src="./scripts/tools-folder-fab.js?v=3.3.27"></script>
+<script src="./scripts/action-button-safety-fix.js?v=3.3.27"></script>
 </body>
 </html>
