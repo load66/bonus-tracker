@@ -1,4 +1,9 @@
-/* ✅ Version 3.0.2 Newest update: Reusable Churn Profile Memory. Saves repeatable bank/product rules for future churn cycles. */
+/*
+ * filename: scripts/analyzer/churn-profile-memory.js
+ * version: 3.0.2
+ * purpose: Reusable Churn Profile Memory. Saves repeatable bank/product rules for future churn cycles.
+ * last-touched: unknown
+ */
 (function(){
   const VER='3.0.2';
   const KEY='bt_churn_profiles_v302';

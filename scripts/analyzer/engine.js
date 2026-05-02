@@ -1,4 +1,9 @@
-/* ✅ Version 3.0.0 Newest update: Analyzer v3 Engine. One parser result powers summary, autofill, timers, and issue reports. */
+/*
+ * filename: scripts/analyzer/engine.js
+ * version: 3.0.0
+ * purpose: Analyzer v3 Engine. One parser result powers summary, autofill, timers, and issue reports.
+ * last-touched: unknown
+ */
 (function(){
   const VER='3.0.0';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();

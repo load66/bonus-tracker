@@ -1,4 +1,9 @@
-/* ✅ Version 3.1.1 Newest update: Academy Bank Elite Investment Checking saved profile. */
+/*
+ * filename: scripts/analyzer/bank-rules-academy.js
+ * version: 3.1.1
+ * purpose: Academy Bank Elite Investment Checking saved profile.
+ * last-touched: unknown
+ */
 (function(){
   const VER='3.1.1';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();

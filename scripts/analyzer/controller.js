@@ -1,4 +1,9 @@
-/* ✅ Version 3.0.4 Newest update: Analyzer v3 Controller shows saved/new profile coverage status. */
+/*
+ * filename: scripts/analyzer/controller.js
+ * version: 3.0.4
+ * purpose: Analyzer v3 Controller shows saved/new profile coverage status.
+ * last-touched: unknown
+ */
 (function(){
   const VER='3.0.4';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();

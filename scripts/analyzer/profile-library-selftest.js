@@ -1,4 +1,9 @@
-/* ✅ Version 3.1.0 Newest update: Saved Profile Library + Analyzer Self-Test. */
+/*
+ * filename: scripts/analyzer/profile-library-selftest.js
+ * version: 3.1.0
+ * purpose: Saved Profile Library + Analyzer Self-Test.
+ * last-touched: unknown
+ */
 (function(){
   const VER='3.1.0';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();

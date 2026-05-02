@@ -1,4 +1,9 @@
-/* ✅ Version 3.0.0 Newest update: Analyzer v3 Source Resolver. One source-of-truth for T&C text. */
+/*
+ * filename: scripts/analyzer/source-resolver.js
+ * version: 3.0.0
+ * purpose: Analyzer v3 Source Resolver. One source-of-truth for T&C text.
+ * last-touched: unknown
+ */
 (function(){
   const VER='3.0.0';
   const STORE_KEY='bt_tc_entry_sources_v3';

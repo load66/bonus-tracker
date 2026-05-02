@@ -1,4 +1,9 @@
-/* ✅ Version 3.0.7 Newest update: Bank of America Business Advantage Banking saved profile. */
+/*
+ * filename: scripts/analyzer/bank-rules-boa-business.js
+ * version: 3.0.7
+ * purpose: Bank of America Business Advantage Banking saved profile.
+ * last-touched: unknown
+ */
 (function(){
   const VER='3.0.7';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();

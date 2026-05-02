@@ -1,4 +1,9 @@
-/* ✅ Version 3.0.6 Newest update: Capital One Business Checking saved profile. */
+/*
+ * filename: scripts/analyzer/bank-rules-capitalone.js
+ * version: 3.0.6
+ * purpose: Capital One Business Checking saved profile.
+ * last-touched: unknown
+ */
 (function(){
   const VER='3.0.6';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();

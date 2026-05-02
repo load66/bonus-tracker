@@ -1,4 +1,9 @@
-/* ✅ Version 3.0.5 Newest update: Analyzer v3 bank rules add BMO Business tiered Day 30 + Day 31–90 hold profile. */
+/*
+ * filename: scripts/analyzer/bank-rules.js
+ * version: 3.0.5
+ * purpose: Analyzer v3 bank rules add BMO Business tiered Day 30 + Day 31–90 hold profile.
+ * last-touched: unknown
+ */
 (function(){
   const VER='3.0.5';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();

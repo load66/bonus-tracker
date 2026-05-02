@@ -1,4 +1,9 @@
-/* ✅ Version 3.0.11 Newest update: Busey Bank tiered personal checking saved profile. */
+/*
+ * filename: scripts/analyzer/bank-rules-busey.js
+ * version: 3.0.11
+ * purpose: Busey Bank tiered personal checking saved profile.
+ * last-touched: unknown
+ */
 (function(){
   const VER='3.0.11';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();

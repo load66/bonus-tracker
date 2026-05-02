@@ -1,4 +1,9 @@
-/* ✅ Version 3.1.1 Newest update: Academy Bank Analyzer Self-Test extension. */
+/*
+ * filename: scripts/analyzer/profile-library-selftest-academy.js
+ * version: 3.1.1
+ * purpose: Academy Bank Analyzer Self-Test extension.
+ * last-touched: unknown
+ */
 (function(){
   const VER='3.1.1';
   const esc=v=>{const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML};

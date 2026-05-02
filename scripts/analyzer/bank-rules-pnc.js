@@ -1,4 +1,9 @@
-/* ✅ Version 3.0.8 Newest update: PNC Virtual Wallet consumer checking saved profile. */
+/*
+ * filename: scripts/analyzer/bank-rules-pnc.js
+ * version: 3.0.8
+ * purpose: PNC Virtual Wallet consumer checking saved profile.
+ * last-touched: unknown
+ */
 (function(){
   const VER='3.0.8';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();

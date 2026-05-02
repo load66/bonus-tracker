@@ -1,4 +1,9 @@
-/* ✅ Version 3.2.0 Newest update: Unified profile metadata database for health checks, conflict warnings, and T&C Learning Inbox. */
+/*
+ * filename: scripts/analyzer/profile-db.js
+ * version: 3.2.0
+ * purpose: Unified profile metadata database for health checks, conflict warnings, and T&C Learning Inbox.
+ * last-touched: unknown
+ */
 (function(){
   const VER='3.2.0';
   const DB=[

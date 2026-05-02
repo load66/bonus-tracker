@@ -1,4 +1,9 @@
-/* ✅ Version 3.2.0 Newest update: T&C Learning Inbox + Profile Conflict Warning + Profile Health Dashboard. */
+/*
+ * filename: scripts/analyzer/learning-inbox-conflict.js
+ * version: 3.2.0
+ * purpose: T&C Learning Inbox + Profile Conflict Warning + Profile Health Dashboard.
+ * last-touched: unknown
+ */
 (function(){
   const VER='3.2.0';
   const KEY='bt_tc_learning_inbox_v320';

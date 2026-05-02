@@ -1,4 +1,9 @@
-/* ✅ Version 3.0.9 Newest update: Regions LifeGreen Checking saved profile. */
+/*
+ * filename: scripts/analyzer/bank-rules-regions.js
+ * version: 3.0.9
+ * purpose: Regions LifeGreen Checking saved profile.
+ * last-touched: unknown
+ */
 (function(){
   const VER='3.0.9';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();

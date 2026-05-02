@@ -1,4 +1,9 @@
-/* ✅ Version 3.0.11 Newest update: Analyzer profile registry adds Busey Bank personal checking as saved reusable profile. */
+/*
+ * filename: scripts/analyzer/profile-registry.js
+ * version: 3.0.11
+ * purpose: Analyzer profile registry adds Busey Bank personal checking as saved reusable profile.
+ * last-touched: unknown
+ */
 (function(){
   const VER='3.0.11';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();

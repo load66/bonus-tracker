@@ -1,4 +1,9 @@
-/* ✅ Version 3.0.10 Newest update: Equity Bank Bloom checking+savings combo saved profile. */
+/*
+ * filename: scripts/analyzer/bank-rules-equity.js
+ * version: 3.0.10
+ * purpose: Equity Bank Bloom checking+savings combo saved profile.
+ * last-touched: unknown
+ */
 (function(){
   const VER='3.0.10';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
