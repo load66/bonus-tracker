@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.21 Newest update: Cache-bust bump for Chase Business gate fix and stabilizer flicker fix.
+// ✅ Version 3.3.25 Newest update: Cache-bust bump to match current app loader and analyzer fixes.
 
-const V = 'bt-v3.3.21';
+const V = 'bt-v3.3.25';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
