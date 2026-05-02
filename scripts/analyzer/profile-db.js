@@ -1,11 +1,11 @@
 /*
  * filename: scripts/analyzer/profile-db.js
- * version: 3.2.0
+ * version: 3.3.17
  * purpose: Unified profile metadata database for health checks, conflict warnings, and T&C Learning Inbox.
- * last-touched: unknown
+ * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.2.0';
+  const VER='3.3.17';
   const DB=[
     {id:'academy-bank-elite-investment-checking',bank:'Academy Bank',product:'Elite Investment Checking',type:'personal checking',kind:'direct-deposit',status:'saved',needs:[],baseline:{bonus:500,reqMoney:10000,reqDays:90,count:4,fundingAmount:100,openBy:'2026-05-15'},critical:['bonus','reqMoney','reqDays','count','openBy'],note:'$500 bonus, $100 opening balance, 4 DD totaling $10,000, Online Banking within 90 days.'},
     {id:'busey-bank-personal-checking-levelup',bank:'Busey Bank',product:'Foundation Checking / Pillar Banking',type:'personal checking',kind:'tiered-direct-deposit',status:'saved',needs:[],baseline:{bonus:500,reqMoney:5000,reqDays:90,count:3,openBy:'2026-05-01'},critical:['bonus','reqMoney','reqDays','count','openBy'],note:'Tiered DD + online banking + 3 debit card transactions within 90 days.'},
@@ -15,6 +15,7 @@
     {id:'bank-of-america-business-advantage-banking',bank:'Bank of America',product:'Business Advantage Banking',type:'business checking',kind:'tiered-new-money-hold',status:'saved',needs:[],baseline:{bonus:750,reqMoney:15000,reqDays:90,fundedDays:30,holdDays:90,openBy:'2026-12-31'},critical:['bonus','reqMoney','reqDays','fundedDays','holdDays','openBy'],note:'$400/$750 new money + day 31–90 maintenance period.'},
     {id:'capital-one-business-checking-sboffer500',bank:'Capital One',product:'Basic / Enhanced Business Checking',type:'business checking',kind:'deposit-hold-transactions',status:'saved',needs:[],baseline:{bonus:500,reqMoney:5000,reqDays:90,fundedDays:30,count:10,code:'SBOFFER500'},critical:['bonus','reqMoney','reqDays','fundedDays','count','code'],note:'$5,000 external deposit + balance hold + 10 transactions.'},
     {id:'bmo-business-checking-tiered-hold',bank:'BMO',product:'Business Checking',type:'business checking',kind:'tiered-balance-hold',status:'saved',needs:[],baseline:{bonus:1000,reqMoney:50000,reqDays:90,fundedDays:30,holdDays:90,openBy:'2026-04-30'},critical:['bonus','reqMoney','reqDays','fundedDays','holdDays','openBy'],note:'Day 30 tier check + day 31–90 hold.'},
+    {id:'chase-total-checking-personal',bank:'Chase',product:'Chase Total Checking',type:'personal checking',kind:'direct-deposit',status:'saved',needs:[],baseline:{bonus:300,reqMoney:1000,reqDays:90},critical:['reqMoney','reqDays'],note:'Personal Chase Total Checking direct deposit offer. Bonus amount may be $300 or different by coupon; do not compare transaction count.'},
     {id:'chase-business-complete-checking',bank:'Chase',product:'Business Complete Checking',type:'business checking',kind:'deposit-hold-transactions',status:'saved',needs:[],baseline:{bonus:500,reqMoney:10000,reqDays:90,fundedDays:30,holdDays:60,count:5},critical:['bonus','reqMoney','reqDays','fundedDays','holdDays','count'],note:'New money, 60-day hold, 5 qualifying transactions.'},
     {id:'wells-fargo-business-checking',bank:'Wells Fargo',product:'Initiate/Navigate/Optimize Business Checking',type:'business checking',kind:'deposit-hold',status:'saved',needs:[],baseline:{bonus:400,reqMoney:2500,reqDays:60,fundedDays:30,holdDays:60,openBy:'2026-05-05'},critical:['bonus','reqMoney','reqDays','fundedDays','holdDays','openBy'],note:'Deposit $2,500 by day 30 and hold through day 60.'},
     {id:'bank-of-america-personal-checking-chart',bank:'Bank of America',product:'Advantage personal checking',type:'personal checking',kind:'tiered-direct-deposit',status:'saved',needs:[],baseline:{bonus:500,reqMoney:10000,reqDays:90},critical:['bonus','reqMoney','reqDays'],note:'Personal checking bonus chart.'},
@@ -28,7 +29,13 @@
   function findForResult(r){
     const id=r?.profileRegistry?.id||r?.reusableChurnProfile?.profileKey||'';
     if(id){const byId=findById(id);if(byId)return byId;}
+    const raw=String(r?.normalizedRaw||r?.raw||'').toLowerCase();
     const b=slug(r?.bank||''), a=slug(r?.acct||'');
+    if(b==='chase'){
+      if(/chase\s+total\s+checking/i.test(raw)||a.includes('chase-total-checking'))return findById('chase-total-checking-personal');
+      if(/business\s+complete\s+checking/i.test(raw)||a.includes('business-complete-checking'))return findById('chase-business-complete-checking');
+      return null;
+    }
     return DB.find(p=>slug(p.bank)===b && (!a || a.includes(slug(p.product).split('-')[0]) || slug(p.product).includes(a.split('-')[0])))||DB.find(p=>slug(p.bank)===b)||null;
   }
   function health(){
