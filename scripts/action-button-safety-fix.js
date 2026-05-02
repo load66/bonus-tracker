@@ -1,11 +1,11 @@
 /*
  * filename: scripts/action-button-safety-fix.js
- * version: 3.3.1
+ * version: 3.3.2
  * purpose: Stable action safety + full device-transfer backup/restore. No version badge control.
  * last-touched: unknown
  */
 (function(){
-  const VER='3.3.1';
+  const VER='3.3.2';
   const BACKUP_KIND='bonus-tracker-full-device-backup';
   const APP_PREFIX='bt_';
   const KNOWN_KEYS=[
@@ -127,5 +127,6 @@
   window.btFullBackupMakePayload=makeBackupPayload;
   window.btFullBackupHealthCheck=function(){const p=makeBackupPayload('health-check');return {version:VER,kind:BACKUP_KIND,summary:p.summary,checksum:p.checksum,keys:Object.keys(p.localStorage).length};};
 
-  setTimeout(boot,250);setTimeout(boot,1000);setTimeout(boot,2500);setInterval(cleanup,1800);
+  boot();
+  if(typeof window.btRegisterPostRender==='function') window.btRegisterPostRender('action-button-safety',()=>{cleanup();hookBackupRestoreButtons();});
 })();

@@ -1,11 +1,11 @@
 /*
  * filename: scripts/tools-folder-fab.js
- * version: 3.3.12
+ * version: 3.3.13
  * purpose: Source-clean Tools folder — native + is hidden immediately and Quick Add calls openAdd directly.
  * last-touched: unknown
  */
 (function(){
-  const VER='3.3.12';
+  const VER='3.3.13';
 
   function addStyle(){
     let st=document.getElementById('bt_tools_folder_style');
@@ -68,5 +68,6 @@
   window.btToolsFolderApply=boot;
   window.btToolsButtonHealthCheck=function(){cleanupBackdrops();return {version:VER,menuOpen:!document.getElementById('bt_tools_folder_menu')?.hasAttribute('hidden'),backdrop:!!document.getElementById('bt_tools_backdrop')}};
 
-  setTimeout(boot,0);setTimeout(boot,100);setTimeout(boot,500);setTimeout(boot,1200);setInterval(boot,2500);
+  boot();
+  if(typeof window.btRegisterPostRender==='function') window.btRegisterPostRender('tools-folder',boot);
 })();
