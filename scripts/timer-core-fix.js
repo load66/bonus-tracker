@@ -1,11 +1,11 @@
 /*
  * filename: scripts/timer-core-fix.js
- * version: 3.3.29
- * purpose: Restore reliable mini timer add flow after v3.3.27 architecture cleanup.
+ * version: 3.3.30
+ * purpose: Restore reliable mini timer add/edit/save flow after v3.3.27 architecture cleanup.
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER = '3.3.29';
+  const VER = '3.3.30';
   const clean = v => String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
 
   function g(name){
@@ -47,7 +47,7 @@
       'rTimerChoicePrompt','toggleInlineForm','clearInlineInputs','timerId','normalizeTimer',
       'normalizeTimerList','timerDueFromStart','timerMetaLine','timerCountdownDays','timerCountdownMeta',
       'openTimerEditor','closeTimerEditor','switchTimerEditMode','saveTimerEditor','rTimerEdit',
-      'toggleTimer','upsertTimer','rmTimer','R','sv','SK','entries'
+      'toggleTimer','upsertTimer','rmTimer','R','sv','SK','entries','timerEditModal'
     ].forEach(expose);
   }
 
@@ -83,6 +83,15 @@
   function setPrompt(value){
     window.timerChoicePrompt = value;
     setBinding('timerChoicePrompt', value);
+  }
+
+  function currentEditModal(){
+    return g('timerEditModal') || window.timerEditModal || null;
+  }
+
+  function setEditModal(value){
+    window.timerEditModal = value;
+    setBinding('timerEditModal', value);
   }
 
   function openPrompt(id){
@@ -157,6 +166,34 @@
     if (clear) { try { clear(entry, timer); } catch {} }
   }
 
+  function writeTimerToEntry(entryId, timerIdValue, label, start, days, preserveDone){
+    entryId = clean(entryId);
+    const editId = clean(timerIdValue);
+    const due = days > 0 ? dueFromStart(start, days) : start;
+    let changed = false;
+    const rows = entriesList().map(e => {
+      if (clean(e.id) !== entryId) return e;
+      const timers = normalizeTimers(e.customTimers).filter(t => !isDeleted(e, t));
+      const idx = timers.findIndex(t => clean(t.id) === editId);
+      const next = makeTimer({
+        id:idx >= 0 ? timers[idx].id : undefined,
+        text:label,
+        startDate:days > 0 ? start : '',
+        daysRequired:days,
+        date:due,
+        done:idx >= 0 ? !!timers[idx].done : !!preserveDone
+      });
+      clearDeleted(e, next);
+      if (idx >= 0) timers[idx] = next;
+      else timers.push(next);
+      changed = true;
+      return { ...e, customTimers:timers };
+    });
+    if (!changed) return false;
+    saveEntries(rows);
+    return true;
+  }
+
   function saveInlineTimer(id){
     exposeTimerApi();
     id = clean(id);
@@ -179,39 +216,63 @@
       return false;
     }
 
-    const due = days > 0 ? dueFromStart(start, days) : start;
-    const editId = clean(ui.timerEdit || '');
-    const rows = entriesList().map(e => {
-      if (clean(e.id) !== id) return e;
-      const timers = normalizeTimers(e.customTimers).filter(t => !isDeleted(e, t));
-      const idx = timers.findIndex(t => clean(t.id) === editId);
-      const next = makeTimer({
-        id:idx >= 0 ? timers[idx].id : undefined,
-        text:label,
-        startDate:days > 0 ? start : '',
-        daysRequired:days,
-        date:due,
-        done:idx >= 0 ? !!timers[idx].done : false
-      });
-      clearDeleted(e, next);
-      if (idx >= 0) timers[idx] = next;
-      else timers.push(next);
-      return { ...e, customTimers:timers };
-    });
-
     if (ui) {
       ui.timerEdit = null;
       ui.timer = false;
     }
-    saveEntries(rows);
+    const ok = writeTimerToEntry(id, ui && ui.timerEdit, label, start, days, false);
+    if (ok) call('R', []);
+    return ok;
+  }
+
+  function saveEditModalTimer(){
+    exposeTimerApi();
+    const p = currentEditModal();
+    if (!p) return false;
+
+    const label = clean(document.getElementById('tem_text')?.value || p.text || '');
+    const start = clean(document.getElementById('tem_start')?.value || p.startDate || '');
+    const rawDays = document.getElementById('tem_days')?.value || p.daysRequired || '';
+    const mode = p.mode === 'days' ? 'days' : 'due';
+    const days = mode === 'days' ? (parseInt(rawDays, 10) || 0) : 0;
+
+    if (!label || !start) {
+      alert(mode === 'days' ? 'Add a description and start date.' : 'Add a description and due date.');
+      return false;
+    }
+    if (mode === 'days' && days <= 0) {
+      alert('Add the number of days for a Start Date + Days timer.');
+      return false;
+    }
+
+    const ok = writeTimerToEntry(p.entryId, p.timerId, label, start, days, false);
+    if (!ok) {
+      alert('Could not find the entry for this timer. Close and reopen the card, then try again.');
+      return false;
+    }
+    setEditModal(null);
     call('R', []);
     return true;
+  }
+
+  function isTimerEditSaveButton(btn){
+    if (!btn || clean(btn.textContent) !== 'Save') return false;
+    const box = btn.closest?.('.dd-box,.cbg,.modal,body');
+    if (!box) return false;
+    return !!box.querySelector?.('#tem_text,#tem_start') || /Edit countdown timer/i.test(box.textContent || '');
   }
 
   function handleTimerClick(event){
     const btn = event.target?.closest?.('button');
     if (!btn) return;
     const text = clean(btn.textContent);
+
+    if (isTimerEditSaveButton(btn)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      saveEditModalTimer();
+      return;
+    }
 
     if (text.includes('Add mini timer')) {
       const id = entryIdFromOnclick(btn) || entryIdFromTimerForm(btn);
@@ -256,6 +317,7 @@
     return {
       version: VER,
       promptId: currentPromptId(),
+      hasEditModal: !!currentEditModal(),
       hasInlineStateFor: typeof window.inlineStateFor === 'function' || typeof fn('inlineStateFor') === 'function',
       hasToggleInlineForm: typeof window.toggleInlineForm === 'function' || typeof fn('toggleInlineForm') === 'function',
       hasUpsertTimer: typeof window.upsertTimer === 'function' || typeof fn('upsertTimer') === 'function'
