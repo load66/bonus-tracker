@@ -3796,6 +3796,3 @@ html,body {
   pointer-events:none!important
 }
 
-body.bt-rendering #app {
-  visibility:hidden!important
-}

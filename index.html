@@ -74,17 +74,12 @@ if('serviceWorker' in navigator){
     if(wrapped||typeof window.R!=='function')return false;
     const baseRender=window.R;
     window.R=function(){
-      document.body.classList.add('bt-rendering');
-      try{
-        const result=baseRender.apply(this,arguments);
-        applyCleanUi();
-        return result;
-      }finally{
-        requestAnimationFrame(()=>document.body.classList.remove('bt-rendering'));
-      }
+      const result=baseRender.apply(this,arguments);
+      applyCleanUi();
+      return result;
     };
     wrapped=true;
-    try{window.R()}catch(e){applyCleanUi();document.body.classList.remove('bt-rendering')}
+    try{window.R()}catch(e){applyCleanUi()}
     return true;
   }
   function boot(){if(!wrapRender())setTimeout(boot,50)}
