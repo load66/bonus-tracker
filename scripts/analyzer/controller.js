@@ -1,11 +1,11 @@
 /*
  * filename: scripts/analyzer/controller.js
- * version: 3.0.4
- * purpose: Analyzer v3 Controller shows saved/new profile coverage status.
+ * version: 3.3.25
+ * purpose: Analyzer v3 Controller renders stable summaries and makes Auto-fill New Entry open the real entry modal.
  * last-touched: unknown
  */
 (function(){
-  const VER='3.0.4';
+  const VER='3.3.25';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const esc=v=>{if(window.esc)return window.esc(String(v??''));const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML};
   const money=n=>'$'+Number(n||0).toLocaleString();
@@ -66,17 +66,79 @@
   function findSummaryCard(){return Array.from(document.querySelectorAll('.tc-box,.az-area,.card')).filter(el=>!el.querySelector('textarea,input,select')).filter(el=>{const t=el.textContent||'';return t.includes('SIMPLE TERMS')&&(t.includes('HOW TO EARN')||t.includes('WHAT COUNTS'))}).sort((a,b)=>(a.textContent||'').length-(b.textContent||'').length)[0]||null}
   function findRaw(){const tca=document.getElementById('tca_raw')?.value||'';if(isTerms(tca))return tca;const areas=Array.from(document.querySelectorAll('textarea')).map(a=>a.value||'').filter(isTerms).sort((a,b)=>b.length-a.length);return areas[0]||''}
   function renderSummary(){const raw=findRaw();if(!raw)return false;const r=currentResult(raw);const card=findSummaryCard();if(!card||!r)return false;card.dataset.v3='true';card.dataset.sourceKind=r.sourceKind||'';card.style.height='auto';card.style.maxHeight='none';card.style.overflow='visible';card.innerHTML=summaryHtml(r);return true}
-  function modalObj(){try{return window.modal||null}catch{return null}}
+  function modalObj(){try{return modal||window.modal||null}catch{return window.modal||null}}
   function applyToModal(r){const m=modalObj();if(!m||!r)return false;m.bank=m.bank||r.bank;if(r.bonus)m.bonus=r.bonus;if(r.reqDays)m.reqDays=r.reqDays;if(r.code)m.promoCodeText=r.code;if(r.openBy)m.expirationDateText=pretty(r.openBy);if(r.fee)m.monthlyFeeYNText=`Yes — ${money(r.fee)} monthly fee`;if(r.waivers?.length)m.avoidMonthlyFeeText=r.waivers.join('\n');if(r.actionPlan)m.completeBonusText=r.actionPlan;if(r.eligibilityText)m.eligibilityText=r.eligibilityText;if(r.early)m.earlyTerminationFeeText=r.early;if(r.fundedDays)m.fundedDays=r.fundedDays;if(r.fundingAmount)m.fundingAmount=r.fundingAmount;if(r.holdDays)m.minHoldDays=r.holdDays;m.tcAnalysisResult=r;m.tcSourceRaw=r.raw;m.tcSourceId=r.sourceId;try{window.tcV3SaveSourceForCurrentEntry&&window.tcV3SaveSourceForCurrentEntry(r.raw,{bank:r.bank})}catch{}return true}
   function addDaysIso(start,days){try{if(window.addD)return window.addD(start,days)}catch{}const d=new Date(start+'T00:00:00');d.setDate(d.getDate()+Number(days||0));return d.toISOString().split('T')[0]}
   function createTimers(r){const m=modalObj();if(!m||!r)return 0;const opened=m.opened||'';m.customTimers=Array.isArray(m.customTimers)?m.customTimers:[];let added=0;const mk=(text,date,startDate='',daysRequired=0)=>({id:window.timerId?window.timerId():'tm_'+Math.random().toString(36).slice(2,8),text,date,startDate,daysRequired:Number(daysRequired||0),done:false});const add=t=>{if(!t.date)return;if(m.customTimers.some(x=>clean(x.text).toLowerCase()===clean(t.text).toLowerCase()&&x.date===t.date))return;m.customTimers.push(t);added++};(r.suggestedTimers||[]).forEach(t=>{if(t.date)add(mk(t.text,t.date));else if(opened&&t.daysRequired)add(mk(t.text,addDaysIso(opened,t.daysRequired),opened,t.daysRequired));});if(!r.suggestedTimers?.length){if(r.openBy)add(mk('Promo expiration / open-by deadline',r.openBy));if(opened&&r.reqDays)add(mk('Bonus requirement deadline',addDaysIso(opened,r.reqDays),opened,r.reqDays));if(opened&&r.fundedDays)add(mk('Funding deadline',addDaysIso(opened,r.fundedDays),opened,r.fundedDays));}return added}
   function issueReport(r){r=r||window.__tcV3AnalysisResult||currentResult(findRaw());if(!r)return'No analyzer result found.';return ['BANK BONUS TRACKER — v3 ANALYZER ISSUE REPORT','App Version: '+(document.querySelector('.app-version')?.textContent||'unknown'),'Engine: '+(window.tcV3EngineVersion||'unknown'),'Bank Rules: '+(window.tcV3BankRulesVersion||'unknown'),'Profile Registry: '+(window.tcV3ProfileRegistryVersion||'unknown'),'Profile: '+(r.profileRegistry?.note||'not checked'),'Source: '+(r.sourceKind||'unknown'),'Bank: '+(r.bank||'Review'),'Bonus: '+(r.bonus||'Review'),'Tiers: '+(r.bonusTierText||'None'),'Promo Code: '+(r.code||'Review'),'Open-by: '+(r.openBy||'Review'),'Req Days: '+(r.reqDays||'Review'),'Req Amount: '+(r.reqMoney||'Review'),'Funding Days: '+(r.fundedDays||'—'),'Hold Days: '+(r.holdDays||'—'),'Monthly Fee: '+(r.fee||'Review/None'),'Rules Applied: '+(r.bankRulesApplied?.join(' | ')||'None'),'Flags: '+(r.reviewFlags?.join(' | ')||'None'),'','SOURCE T&C:',String(r.raw||'').slice(0,15000)].join('\n')}
   function copyIssueReport(){const txt=issueReport();navigator.clipboard?.writeText(txt).then(()=>alert('Analyzer issue report copied.')).catch(()=>alert(txt))}
   function openPro(){const src=window.tcV3ResolveSource?window.tcV3ResolveSource(findRaw()):{raw:findRaw()};let r=analyze(src.raw);document.getElementById('tca_overlay')?.remove();let h=`<div class="cbg" onclick="tcClosePro()"><div class="dd-box tca-box" onclick="event.stopPropagation()"><h3>✨ Unified Analyzer Pro <span style="font-size:9px;color:#94A3B8">v3.0</span></h3><div class="sub">Clean v3 pipeline: current pasted text first, entry saved source second, vault fallback last.</div><textarea id="tca_raw" class="dd-input" style="height:150px;line-height:1.45">${esc(src.raw||'')}</textarea><div class="crow"><button class="c-c" onclick="tcClosePro()">Close</button><button class="c-g" onclick="tcRunPro()">Analyze</button></div><div id="tcv3_result">${summaryHtml(r)}</div>`;if(r?.tiers?.length){h+=`<div class="tc-box"><div class="tc-label">Target tier</div><select class="dd-input" onchange="tcV3SelectTier(this.value)">`;r.tiers.forEach((t,i)=>h+=`<option value="${i}" ${i===r.tiers.length-1?'selected':''}>${money(t.bonus)} bonus — ${money(t.requirement)}+</option>`);h+=`</select></div>`}h+=`<div class="crow"><button class="c-c" onclick="tcCopyIssueReport()">🧾 Copy Issue Report</button><button class="c-g" onclick="tcApplyPro()">Apply Fields</button></div><button class="btn-p" style="margin-top:8px" onclick="tcCreateTimers()">Create Suggested Mini Timers</button></div></div>`;const d=document.createElement('div');d.id='tca_overlay';d.innerHTML=h;document.body.appendChild(d)}
+  function resultPlainText(r){
+    if(!r)return'';
+    const box=document.createElement('div');
+    box.innerHTML=summaryHtml(r);
+    return clean((box.textContent||'').replace(/SIMPLE TERMS:/g,'SIMPLE TERMS:\n').replace(/HOW TO EARN THE BONUS:/g,'\nHOW TO EARN THE BONUS:\n').replace(/WHAT COUNTS:/g,'\nWHAT COUNTS:\n').replace(/WHAT DOES NOT COUNT:/g,'\nWHAT DOES NOT COUNT:\n').replace(/MONTHLY FEE CAN BE AVOIDED WITH:/g,'\nMONTHLY FEE CAN BE AVOIDED WITH:\n').replace(/ELIGIBILITY \/ CHURN:/g,'\nELIGIBILITY / CHURN:\n').replace(/REVIEW:/g,'\nREVIEW:\n'));
+  }
+  function buildEntryFromResult(r){
+    if(!r)return null;
+    const feeText=r.fee?`Yes — ${money(r.fee)} monthly fee`:'';
+    const reqDays=parseInt(r.reqDays||r.fundedDays||r.holdDays||0,10)||0;
+    const minHold=parseInt(r.holdDays||0,10)||0;
+    let earlyFee=0;
+    try{if(typeof parseCloseFeeAmount==='function')earlyFee=parseCloseFeeAmount(r.early||'')||0}catch{}
+    const complete=r.actionPlan||actionLines(r).join('\n');
+    const analyzed=resultPlainText(r);
+    return {
+      bank:r.bank||'',
+      bonus:parseInt(r.bonus||0,10)||0,
+      churn:'',
+      opened:'',
+      closed:'',
+      bonusRecd:'',
+      reqMet:'',
+      notes:'',
+      analyzedTC:analyzed,
+      minHoldDays:minHold,
+      earlyCloseFee:earlyFee,
+      reqDays:reqDays,
+      referralBonus:0,
+      dataPoint:'',
+      plannedClose:'',
+      phoneNum:'',
+      feeChecked:false,
+      monthlyFeeYNText:feeText,
+      promoCodeText:r.code||'',
+      avoidMonthlyFeeText:(r.waivers||[]).join('\n'),
+      completeBonusText:complete,
+      earlyTerminationFeeText:r.early||'',
+      eligibilityText:r.eligibilityText||'',
+      expirationDateText:r.openBy?pretty(r.openBy):'',
+      requiredDaysText:reqDays?String(reqDays):'',
+      customTimers:[]
+    };
+  }
+  window.fillFromAI=function(){
+    const raw=document.getElementById('az_input')?.value||findRaw();
+    if(!isTerms(raw)){alert('Paste and analyze the full T&C first.');return;}
+    analyzerText=raw;
+    const r=currentResult(raw);
+    if(!r){alert('Could not analyze enough data to create an entry.');return;}
+    analyzerResult=window.analyzerResult||analyzerResult;
+    const data=buildEntryFromResult(r);
+    if(!data||!data.bank){alert('Bank name was not detected. Review the T&C and try again.');return;}
+    try{window.tcV3SaveSourceForCurrentEntry&&window.tcV3SaveSourceForCurrentEntry(raw,{bank:data.bank})}catch{}
+    modal={...data,checklist:[],customTimers:[]};
+    showAnalyzer=false;
+    analyzerResult=null;
+    tab='tracker';
+    search='';
+    expanded=null;
+    R();
+    setTimeout(()=>{try{document.querySelector('.modal input')?.focus()}catch{}},80);
+  };
   window.tcOpenPro=openPro;window.tcClosePro=()=>document.getElementById('tca_overlay')?.remove();window.tcRunPro=function(){const raw=document.getElementById('tca_raw')?.value||findRaw();const r=analyze(raw);const box=document.getElementById('tcv3_result');if(box)box.innerHTML=summaryHtml(r);renderSummary()};window.tcV3SelectTier=function(i){const raw=document.getElementById('tca_raw')?.value||findRaw();const r=analyze(raw,{tierIndex:Number(i)});const box=document.getElementById('tcv3_result');if(box)box.innerHTML=summaryHtml(r)};window.tcApplyPro=function(){const raw=document.getElementById('tca_raw')?.value||findRaw();const r=currentResult(raw);applyToModal(r);alert('Applied v3 analyzer fields. Review, then save entry.');try{window.R&&window.R()}catch{};window.tcClosePro()};window.tcCreateTimers=function(){const raw=document.getElementById('tca_raw')?.value||findRaw();const r=currentResult(raw);const n=createTimers(r);alert(n?`Created ${n} mini timer(s). Save the entry.`:'No timers created. Add Opened Date for start+days timers.');try{window.R&&window.R()}catch{}};window.tcCopyIssueReport=copyIssueReport;window.tcV3RenderSummary=renderSummary;window.tcV3ApplyToModal=applyToModal;window.tcV3CreateTimers=createTimers;
-  document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const txt=clean(b.textContent||'');if(/analyz|hide analyzer|show analyzer|auto.?fill/i.test(txt))setTimeout(renderSummary,250);if(/Auto-fill New Entry/i.test(txt)){setTimeout(()=>{const r=currentResult(findRaw());applyToModal(r)},100)}} ,true);
+  document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const txt=clean(b.textContent||'');if(/analyz|hide analyzer|show analyzer/i.test(txt))setTimeout(renderSummary,250)} ,true);
   document.addEventListener('input',e=>{if(e.target?.tagName==='TEXTAREA')setTimeout(renderSummary,350)},true);
-  setInterval(()=>{if(findSummaryCard())renderSummary()},2500);
   setTimeout(renderSummary,800);setTimeout(renderSummary,1800);
   const st=document.createElement('style');st.textContent=`.app-version::after{content:''!important;display:none!important}.tc-strict-card,[data-v3="true"]{height:auto!important;max-height:none!important;overflow:visible!important}`;document.head.appendChild(st);
 })();
