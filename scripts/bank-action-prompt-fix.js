@@ -1,12 +1,13 @@
 /*
  * filename: scripts/bank-action-prompt-fix.js
- * version: 3.3.13
- * purpose: Restore prompt-based Add Checklist and Add Timer from the bank Actions menu.
+ * version: 3.3.14
+ * purpose: Route Bank Actions checklist/timer buttons to in-app UI, not browser prompts.
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.3.13';
+  const VER='3.3.14';
   const originalRunBankAction=window.runBankAction;
+  const originalSaveTimerEditor=window.saveTimerEditor;
 
   function saveEntries(){
     try{
@@ -15,9 +16,11 @@
         return;
       }
     }catch{}
-    try{
-      localStorage.setItem('bt_e_v4',JSON.stringify(entries));
-    }catch{}
+    try{localStorage.setItem('bt_e_v4',JSON.stringify(entries));}catch{}
+  }
+
+  function todayIso(){
+    try{return typeof td==='function'?td():new Date().toISOString().split('T')[0]}catch{return new Date().toISOString().split('T')[0]}
   }
 
   function getEntry(id){
@@ -33,107 +36,115 @@
     try{R()}catch{}
   }
 
-  function clean(v){return String(v||'').trim()}
-
-  function addChecklistPrompt(id){
-    const e=getEntry(id);
+  function openChecklistInline(id){
     closeActions();
+    const e=getEntry(id);
     if(!e){restoreCard(id);return}
-
-    let txt=window.prompt('Add checklist step for '+(e.bank||'this bank')+':','');
-    txt=clean(txt);
-    if(!txt){restoreCard(id);return}
-
-    if(!Array.isArray(e.checklist))e.checklist=[];
-    e.checklist.push({text:txt,done:false});
-
     try{
       const st=inlineStateFor(id);
-      st.checklist=false;
+      st.checklist=true;
       st.timer=false;
+      st.timerEdit=null;
     }catch{}
+    restoreCard(id);
+    setTimeout(()=>{try{document.getElementById('ck_'+id)?.focus()}catch{}},30);
+  }
 
-    saveEntries();
+  function newTimerId(){
+    try{if(typeof timerId==='function')return timerId()}catch{}
+    return 'tm_'+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);
+  }
+
+  function openNewTimerModal(id){
+    closeActions();
+    const e=getEntry(id);
+    if(!e){restoreCard(id);return}
+    try{expanded=id}catch{}
+    const start=e.opened||todayIso();
+    const defaultDays=(parseInt(e.reqDays||0,10)||0);
+    try{
+      timerEditModal={
+        entryId:id,
+        timerId:newTimerId(),
+        text:'',
+        mode:defaultDays>0?'days':'due',
+        startDate:start,
+        daysRequired:defaultDays>0?String(defaultDays):''
+      };
+    }catch(err){
+      // Fallback to the existing inline flow if the timer modal binding is unavailable.
+      try{
+        const st=inlineStateFor(id);
+        st.timer=true;
+        st.checklist=false;
+        st.timerEdit=null;
+      }catch{}
+    }
     restoreCard(id);
   }
 
-  function validIsoDate(v){
-    return /^\d{4}-\d{2}-\d{2}$/.test(String(v||''));
-  }
+  function saveTimerEditorWithInsert(){
+    let p;
+    try{p=timerEditModal}catch{return typeof originalSaveTimerEditor==='function'?originalSaveTimerEditor():undefined}
+    if(!p)return;
 
-  function addTimerPrompt(id){
-    const e=getEntry(id);
-    closeActions();
-    if(!e){restoreCard(id);return}
+    const txt=(document.getElementById('tem_text')?.value||'').trim();
+    const start=(document.getElementById('tem_start')?.value||'').trim();
+    const rawDays=document.getElementById('tem_days')?.value||'';
+    const days=p.mode==='days'?(parseInt(rawDays,10)||0):0;
 
-    let txt=clean(window.prompt('Mini timer name for '+(e.bank||'this bank')+':',''));
-    if(!txt){restoreCard(id);return}
+    if(!txt||!start){alert('Add a description and a date.');return;}
+    if(p.mode==='days'&&days<=0){alert('Add the number of days for a Start Date + Days timer.');return;}
 
-    const today=(typeof td==='function')?td():new Date().toISOString().split('T')[0];
-    let start=clean(window.prompt('Start date (YYYY-MM-DD):',e.opened||today));
-    if(!start){restoreCard(id);return}
-    if(!validIsoDate(start)){
-      window.alert('Use date format YYYY-MM-DD.');
-      restoreCard(id);
-      return;
-    }
+    let due=start;
+    try{due=days>0?timerDueFromStart(start,days):start}catch{due=start}
 
-    let daysRaw=clean(window.prompt('How many days from the start date?',String(e.reqDays||'')));
-    const days=parseInt(daysRaw,10);
-    if(!(days>0)){
-      window.alert('Days must be greater than 0.');
-      restoreCard(id);
-      return;
-    }
-
-    let due='';
-    try{
-      due=(typeof timerDueFromStart==='function')?timerDueFromStart(start,days):'';
-    }catch{}
-    if(!due){
-      try{due=addD(start,days)}catch{due=start}
-    }
-
-    let next={
-      id:(typeof timerId==='function')?timerId():('tm_'+Math.random().toString(36).slice(2,9)),
+    let updated={
+      id:p.timerId||newTimerId(),
       text:txt,
-      startDate:start,
+      startDate:days>0?start:'',
       daysRequired:days,
       date:due,
       done:false
     };
-    try{
-      if(typeof normalizeTimer==='function')next=normalizeTimer(next);
-    }catch{}
-
-    if(!Array.isArray(e.customTimers))e.customTimers=[];
-    try{e.customTimers=normalizeTimerList(e.customTimers)}catch{}
-    e.customTimers.push(next);
+    try{updated=normalizeTimer(updated)}catch{}
 
     try{
-      const st=inlineStateFor(id);
-      st.checklist=false;
-      st.timer=false;
-      st.timerEdit=null;
-    }catch{}
-
-    saveEntries();
-    restoreCard(id);
+      entries=entries.map(e=>{
+        if(e.id===p.entryId){
+          let timers=[];
+          try{timers=normalizeTimerList(e.customTimers)}catch{timers=Array.isArray(e.customTimers)?e.customTimers:[]}
+          const idx=timers.findIndex(t=>t&&t.id===updated.id);
+          if(idx>=0){
+            updated.done=!!timers[idx].done;
+            timers[idx]=updated;
+          }else{
+            timers.push(updated);
+          }
+          e.customTimers=timers;
+        }
+        return e;
+      });
+      saveEntries();
+      timerEditModal=null;
+      R();
+    }catch(err){
+      if(typeof originalSaveTimerEditor==='function')return originalSaveTimerEditor();
+    }
   }
 
   window.runBankAction=function(id,action){
     if(action==='checklist'){
-      addChecklistPrompt(id);
+      openChecklistInline(id);
       return;
     }
     if(action==='timer'){
-      addTimerPrompt(id);
+      openNewTimerModal(id);
       return;
     }
-    if(typeof originalRunBankAction==='function'){
-      return originalRunBankAction(id,action);
-    }
+    if(typeof originalRunBankAction==='function')return originalRunBankAction(id,action);
   };
 
+  window.saveTimerEditor=saveTimerEditor=saveTimerEditorWithInsert;
   window.btBankActionPromptFixVersion=VER;
 })();
