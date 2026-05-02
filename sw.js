@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.33 Newest update: Cache-bust bump for Start + Days timer switch fix.
+// ✅ Version 3.3.34 Newest update: Cache-bust bump to timer editor rebuild: core owns add/edit/date/start-days flow.
 
-const V = 'bt-v3.3.33';
+const V = 'bt-v3.3.34';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
