@@ -1,11 +1,11 @@
 /*
  * filename: scripts/analyzer/controller.js
- * version: 3.3.27
+ * version: 3.3.34
  * purpose: Analyzer v3 Controller renders stable summaries and makes Auto-fill New Entry open the real entry modal.
  * last-touched: unknown
  */
 (function(){
-  const VER='3.3.27';
+  const VER='3.3.34';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const esc=v=>{if(window.esc)return window.esc(String(v??''));const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML};
   const money=n=>'$'+Number(n||0).toLocaleString();
