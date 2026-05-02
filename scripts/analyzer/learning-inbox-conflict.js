@@ -1,11 +1,11 @@
 /*
  * filename: scripts/analyzer/learning-inbox-conflict.js
- * version: 3.3.19
- * purpose: T&C Learning Inbox + softer profile cautions + Profile Health Dashboard.
+ * version: 3.3.20
+ * purpose: T&C Learning Inbox + softer profile cautions + smarter product/profile mismatch detection.
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.3.19';
+  const VER='3.3.20';
   const KEY='bt_tc_learning_inbox_v320';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const slug=v=>clean(v).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
@@ -24,19 +24,43 @@
   function fieldLabel(k){return ({bonus:'Bonus amount',reqMoney:'Requirement amount',reqDays:'Requirement days',fundedDays:'Funding days',holdDays:'Hold days',count:'Required count',code:'Promo code',openBy:'Open-by / expiration',fee:'Monthly fee',monthlyFee:'Monthly fee',payout:'Payout timing',fundingAmount:'Opening/funding amount'})[k]||k}
   function fmt(v){return typeof v==='number'&&v>=100?money(v):String(v)}
 
+  function getOfferContext(raw){
+    const txt=String(raw||'').toLowerCase();
+    const markers=['bonus/account information','to receive the bonus','to earn the bonus','open a new','open an eligible','offer not available'];
+    let start=-1;
+    markers.forEach(m=>{const i=txt.indexOf(m);if(i>=0&&(start<0||i<start))start=i});
+    return start>=0?txt.slice(start,Math.min(txt.length,start+2600)):txt.slice(0,2600);
+  }
+
+  function detectProductType(r){
+    const raw=String(r?.normalizedRaw||r?.raw||'');
+    const acct=String(r?.acct||'');
+    const text=(acct+' '+raw).toLowerCase();
+    const offer=getOfferContext(raw);
+
+    const explicitPersonal=/chase\s+total\s+checking|chase\s+premier\s+plus\s+checking|chase\s+sapphire\s+checking|chase\s+private\s+client\s+checking|consumer\s+checking|personal\s+checking|advantage\s+personal\s+checking|smartly\s+checking|virtual\s+wallet/i.test(text);
+
+    const explicitBusiness=/business\s+complete\s+checking|business\s+advantage\s+banking|basic\s+business\s+checking|enhanced\s+business\s+checking|small\s+business\s+checking|business\s+checking\s+bonus|open\s+(?:a|an|new)\s+[^.]{0,80}business\s+checking/i.test(offer);
+
+    return {personal:explicitPersonal,business:explicitBusiness};
+  }
+
   function profileMismatch(r,p){
     const hard=[];
     if(!r||!p)return hard;
     const bankA=slug(r.bank||'');
     const bankB=slug(p.bank||'');
-    const raw=String(r.normalizedRaw||r.raw||'').toLowerCase();
-    const acct=String(r.acct||'').toLowerCase();
     if(bankA&&bankB&&bankA!==bankB)hard.push({field:'profile',label:'Profile mismatch',expected:p.bank,actual:r.bank||'Unknown bank'});
+
     const profileIsBusiness=/business/i.test(p.type||p.product||p.id||'');
-    const sourceLooksPersonal=/personal|consumer|total checking|advantage checking|smartly checking/i.test(acct+' '+raw);
-    const sourceLooksBusiness=/business|biz|commercial/i.test(acct+' '+raw);
-    if(profileIsBusiness&&sourceLooksPersonal)hard.push({field:'profile',label:'Profile type mismatch',expected:'Business profile: '+p.product,actual:'Personal/consumer terms detected'});
-    if(!profileIsBusiness&&sourceLooksBusiness&&/business/i.test(raw))hard.push({field:'profile',label:'Profile type mismatch',expected:'Personal profile: '+p.product,actual:'Business terms detected'});
+    const detected=detectProductType(r);
+
+    if(profileIsBusiness&&detected.personal&&!detected.business){
+      hard.push({field:'profile',label:'Profile type mismatch',expected:'Business profile: '+p.product,actual:'Personal/consumer offer detected'});
+    }
+    if(!profileIsBusiness&&detected.business&&!detected.personal){
+      hard.push({field:'profile',label:'Profile type mismatch',expected:'Personal profile: '+p.product,actual:'Business offer detected'});
+    }
     return hard;
   }
 
