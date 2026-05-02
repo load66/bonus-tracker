@@ -1,12 +1,11 @@
 /*
  * filename: scripts/tracker-card-source-actions.js
- * version: 3.3.16
- * purpose: Compact source-rendered per-bank Actions menu with in-app checklist/timer modals.
+ * version: 3.3.34
+ * purpose: Compact source-rendered per-bank Actions menu using core checklist/timer modals.
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.3.16';
-  const originalSaveTimerEditor=window.saveTimerEditor;
+  const VER='3.3.34';
   let checklistModal=null;
 
   window.__btBankActionPrompt=window.__btBankActionPrompt||null;
@@ -168,75 +167,19 @@
     showChecklistModal();
   }
 
-  function newTimerId(){
-    try{if(typeof timerId==='function')return timerId()}catch{}
-    return 'tm_'+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);
-  }
-
   function openNewTimerModal(id){
     const e=getEntry(id);
     window.__btBankActionPrompt=null;
     if(!e){R();return;}
     clearInlineState(id);
     try{expanded=id}catch{}
-    const start=e.opened||todayIso();
-    const defaultDays=parseInt(e.reqDays||0,10)||0;
+    if(typeof openNewTimerEditor==='function'){
+      openNewTimerEditor(id,'due');
+      return;
+    }
     try{
-      timerEditModal={
-        entryId:id,
-        timerId:newTimerId(),
-        text:'',
-        mode:defaultDays>0?'days':'due',
-        startDate:start,
-        daysRequired:defaultDays>0?String(defaultDays):''
-      };
+      timerEditModal={entryId:id,timerId:'',isNew:true,text:'',mode:'due',startDate:e.opened||todayIso(),daysRequired:''};
     }catch{}
-    R();
-  }
-
-  function saveTimerEditorWithInsert(){
-    let p;
-    try{p=timerEditModal}catch{return typeof originalSaveTimerEditor==='function'?originalSaveTimerEditor():undefined}
-    if(!p)return;
-
-    const txt=(document.getElementById('tem_text')?.value||'').trim();
-    const start=(document.getElementById('tem_start')?.value||'').trim();
-    const rawDays=document.getElementById('tem_days')?.value||'';
-    const days=p.mode==='days'?(parseInt(rawDays,10)||0):0;
-
-    if(!txt||!start){alert('Add a description and a date.');return;}
-    if(p.mode==='days'&&days<=0){alert('Add the number of days for a Start Date + Days timer.');return;}
-
-    let due=start;
-    try{due=days>0?timerDueFromStart(start,days):start}catch{due=start}
-
-    let updated={
-      id:p.timerId||newTimerId(),
-      text:txt,
-      startDate:days>0?start:'',
-      daysRequired:days,
-      date:due,
-      done:false
-    };
-    try{updated=normalizeTimer(updated)}catch{}
-
-    entries=entries.map(function(e){
-      if(e&&e.id===p.entryId){
-        let timers=[];
-        try{timers=normalizeTimerList(e.customTimers)}catch{timers=Array.isArray(e.customTimers)?e.customTimers:[]}
-        const idx=timers.findIndex(function(t){return t&&t.id===updated.id});
-        if(idx>=0){
-          updated.done=!!timers[idx].done;
-          timers[idx]=updated;
-        }else{
-          timers.push(updated);
-        }
-        e.customTimers=timers;
-      }
-      return e;
-    });
-    saveEntries();
-    timerEditModal=null;
     R();
   }
 
@@ -409,7 +352,6 @@
   window.runBankAction=runBankAction;
   window.rBankActions=rBankActions;
   window.rTracker=rTracker;
-  window.saveTimerEditor=saveTimerEditor=saveTimerEditorWithInsert;
   window.btCloseChecklistActionModal=closeChecklistModal;
   window.btSourceBankActionsVersion=VER;
 
