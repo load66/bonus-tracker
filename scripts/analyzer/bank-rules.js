@@ -1,11 +1,11 @@
 /*
  * filename: scripts/analyzer/bank-rules.js
- * version: 3.0.5
- * purpose: Analyzer v3 bank rules add BMO Business tiered Day 30 + Day 31–90 hold profile.
- * last-touched: unknown
+ * version: 3.0.6
+ * purpose: Analyzer v3 bank rules. Hardened Chase Business gate (no JPMorgan legal-entity false positives) + personal-product anti-signals.
+ * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.0.5';
+  const VER='3.0.6';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const money=n=>'$'+Number(n||0).toLocaleString();
   const uniq=a=>Array.from(new Set((a||[]).filter(Boolean).map(clean))).filter(Boolean);
@@ -28,7 +28,9 @@
   }
   function applyChaseBusiness(r){
     const raw=String(r.raw||r.normalizedRaw||'');
-    if(!/Chase Business Complete Checking|business checking offer|JPMorgan Chase/i.test(raw))return r;
+    if(!/Chase Business Complete Checking|business checking offer/i.test(raw))return r;
+    /* anti-signal: the document is clearly a personal-product T&C — refuse to fire. */
+    if(/Chase Total Checking|Chase SavingsSM|Chase First CheckingSM/i.test(raw))return r;
     r.bank='Chase';r.acct='Chase Business Complete Checking';
     const tiers=[];
     if(/\$\s*300[\s\S]{0,60}\$\s*2,?000\s*[-–—]\s*\$\s*9,?999/i.test(raw))tiers.push({bonus:300,requirement:2000,maxRequirement:9999,confidence:'High',source:'Chase table: $300 for $2,000–$9,999 new money'});
