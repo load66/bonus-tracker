@@ -1,11 +1,11 @@
 /*
  * filename: scripts/timer-core-fix.js
- * version: 3.3.30
+ * version: 3.3.31
  * purpose: Restore reliable mini timer add/edit/save flow after v3.3.27 architecture cleanup.
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER = '3.3.30';
+  const VER = '3.3.31';
   const clean = v => String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
 
   function g(name){
@@ -216,11 +216,12 @@
       return false;
     }
 
+    const editId = ui && ui.timerEdit;
     if (ui) {
       ui.timerEdit = null;
       ui.timer = false;
     }
-    const ok = writeTimerToEntry(id, ui && ui.timerEdit, label, start, days, false);
+    const ok = writeTimerToEntry(id, editId, label, start, days, false);
     if (ok) call('R', []);
     return ok;
   }
@@ -255,11 +256,34 @@
     return true;
   }
 
+  function isNewTimerModal(){
+    const p = currentEditModal();
+    return !!p && !clean(p.timerId);
+  }
+
+  function polishTimerModalLabels(){
+    const p = currentEditModal();
+    if (!p) return;
+    const isNew = !clean(p.timerId);
+    document.querySelectorAll('.dd-box').forEach(box => {
+      if (!box.querySelector('#tem_text,#tem_start') && !/countdown timer/i.test(box.textContent || '')) return;
+      const h = box.querySelector('h3');
+      if (h) h.textContent = isNew ? 'Add countdown timer' : 'Edit countdown timer';
+      const sub = box.querySelector('.sub');
+      if (sub) sub.textContent = isNew ? 'Create a due-date timer, or switch to start date + days.' : 'Keep it as an exact due date, or switch to start date + days.';
+      Array.from(box.querySelectorAll('button')).forEach(btn => {
+        if (clean(btn.textContent) === 'Save' || clean(btn.textContent) === 'Add Timer') btn.textContent = isNew ? 'Add Timer' : 'Save';
+      });
+    });
+  }
+
   function isTimerEditSaveButton(btn){
-    if (!btn || clean(btn.textContent) !== 'Save') return false;
+    if (!btn) return false;
+    const txt = clean(btn.textContent);
+    if (txt !== 'Save' && txt !== 'Add Timer') return false;
     const box = btn.closest?.('.dd-box,.cbg,.modal,body');
     if (!box) return false;
-    return !!box.querySelector?.('#tem_text,#tem_start') || /Edit countdown timer/i.test(box.textContent || '');
+    return !!box.querySelector?.('#tem_text,#tem_start') || /(?:Edit|Add) countdown timer/i.test(box.textContent || '');
   }
 
   function handleTimerClick(event){
@@ -311,6 +335,8 @@
   document.addEventListener('click', handleTimerClick, true);
   setTimeout(exposeTimerApi, 0);
   setTimeout(exposeTimerApi, 300);
+  setInterval(polishTimerModalLabels, 250);
+  try { new MutationObserver(polishTimerModalLabels).observe(document.documentElement, { childList:true, subtree:true }); } catch {}
 
   window.btTimerCoreFixStatus = function(){
     exposeTimerApi();
@@ -318,6 +344,7 @@
       version: VER,
       promptId: currentPromptId(),
       hasEditModal: !!currentEditModal(),
+      isNewTimerModal: isNewTimerModal(),
       hasInlineStateFor: typeof window.inlineStateFor === 'function' || typeof fn('inlineStateFor') === 'function',
       hasToggleInlineForm: typeof window.toggleInlineForm === 'function' || typeof fn('toggleInlineForm') === 'function',
       hasUpsertTimer: typeof window.upsertTimer === 'function' || typeof fn('upsertTimer') === 'function'
