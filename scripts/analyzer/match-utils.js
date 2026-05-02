@@ -1,9 +1,10 @@
 /*
  * filename: scripts/analyzer/match-utils.js
- * version: 1.0.0
+ * version: 1.0.1
  * purpose: Shared defensive matcher for analyzer bank-rule gates.
  */
 (function(){
+  window.tcV3EngineAnalyze=window.tcV3EngineAnalyze||window.tcV3Analyze;
   function list(v){return Array.isArray(v)?v.filter(Boolean):[];}
   function hit(raw,rx){
     try{
