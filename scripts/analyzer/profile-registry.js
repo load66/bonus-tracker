@@ -1,11 +1,11 @@
 /*
  * filename: scripts/analyzer/profile-registry.js
- * version: 3.3.23
+ * version: 3.3.26
  * purpose: Analyzer profile registry for reusable saved bank bonus profiles, including Chase Total Checking.
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.3.23';
+  const VER='3.3.26';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
     {
@@ -83,7 +83,7 @@
       bank:'Chase',
       product:'Chase Total Checking',
       type:'personal checking',
-      status:'saved-flexible-coupon',
+      status:'saved',
       signals:[/Chase Total Checking/i,/direct deposits totaling \$[\d,]+ or more/i,/within 90 days of coupon enrollment/i,/new Chase Total Checking account/i],
       requirements:'Coupon-specific direct deposit amount within 90 days; payout typically within 15 days after requirements are completed',
       note:'Saved profile: Chase Total Checking personal checking. Coupon bonus and DD amount can vary, so review/correct those fields after Auto-Fill.'
