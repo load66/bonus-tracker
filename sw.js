@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.27 Newest update: Cache-bust bump to architecture cleanup: core render owns stable timer/status UI.
+// ✅ Version 3.3.28 Newest update: Cache-bust bump for mini timer add regression fix.
 
-const V = 'bt-v3.3.27';
+const V = 'bt-v3.3.28';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
