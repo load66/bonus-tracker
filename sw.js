@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.35 Newest update: Core status-flow rebuild for requirement-met / bonus / close phases.
+// ✅ Version 3.3.36 Newest update: Consolidated stable patch modules into core app.js.
 
-const V = 'bt-v3.3.35';
+const V = 'bt-v3.3.36';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {

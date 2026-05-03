@@ -1,7 +1,7 @@
 /* ✅ Version 2.0 Newest update: Removed Profile tab + added Data Health and safer backup/close guardrails. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.3.35';
+const APP_VERSION='3.3.36';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 
 const ld=(k,d)=>{
@@ -2747,4 +2747,834 @@ function exportCSV(yr){
 function promptExportYear(){const raw=window.prompt('Enter the year you want to export:', String(taxYear||new Date().getFullYear()));if(raw===null)return;const yr=parseInt(String(raw).trim(),10);if(!Number.isFinite(yr)||yr<1900||yr>2100){alert('Please enter a valid 4-digit year.');return}exportCSV(yr)}
 function loadFeed(){feedLoading=true;R();fetch('https://api.allorigins.win/get?url='+encodeURIComponent('https://www.doctorofcredit.com/category/bank-account-bonuses/feed/')).then(r=>r.json()).then(d=>{const p=new DOMParser(),x=p.parseFromString(d.contents,'text/xml'),items=x.querySelectorAll('item');feedItems=[];items.forEach((it,i)=>{if(i>=12)return;feedItems.push({title:it.querySelector('title')?.textContent||'',link:it.querySelector('link')?.textContent||'',date:it.querySelector('pubDate')?.textContent||''})});feedLoading=false;R()}).catch(()=>{feedItems=null;feedLoading=false;R()})}
 entries=sortE(entries);R();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+
+/* === Consolidated core module: Core UI stability (moved into app.js in v3.3.36) === */
+/*
+ * filename: scripts/ui-stability-module.js
+ * version: 3.3.16
+ * consolidated-purpose: Safari crash-safe UI module and v3-aware smoke check.
+ * last-touched: 2026-05-02
+ */
+(function(){
+  const VER = '3.3.16';
+
+  function entriesReady(){
+    try { return Array.isArray(entries); } catch { return Array.isArray(window.entries); }
+  }
+
+  window.btSmokeCheck = function(){
+    return {
+      version: VER,
+      appRoot: !!document.getElementById('app'),
+      storageReady: typeof sv === 'function' && typeof SK !== 'undefined',
+      entriesReady: entriesReady(),
+      renderReady: typeof R === 'function',
+      analyzerEngineReady: typeof tcV3Analyze === 'function' || typeof tcStrictAnalyze === 'function',
+      analyzerProReady: typeof tcOpenPro === 'function' && typeof tcRunPro === 'function' && typeof tcApplyPro === 'function',
+      analyzerTimerReady: typeof tcCreateTimers === 'function' || typeof tcV3CreateTimers === 'function',
+      analyzerSourceReady: typeof tcV3ResolveSource === 'function' && typeof tcV3SaveSourceForCurrentEntry === 'function',
+      profileLibraryReady: typeof tcV31OpenProfileLibrary === 'function' || typeof tcV32OpenLearningInbox === 'function',
+      bankActionsReady: typeof openBankActions === 'function' && typeof runBankAction === 'function',
+      timerModalReady: typeof openTimerEditor === 'function' && typeof saveTimerEditor === 'function'
+    };
+  };
+
+  if (!document.getElementById('ui_stability_module_style')) {
+    const st = document.createElement('style');
+    st.id = 'ui_stability_module_style';
+    st.textContent = `
+      .tca-box .tm-pill{min-width:8px!important;width:8px!important;height:8px!important;padding:0!important;border-radius:999px!important;font-size:0!important;overflow:hidden!important;vertical-align:middle!important;margin-left:4px!important;display:inline-block!important}
+      .tca-box .tm-pill::before{content:'';display:block;width:8px;height:8px;border-radius:999px}.tca-box .tm-pill.green::before{background:#10B981}.tca-box .tm-pill.amber::before{background:#F59E0B}.tca-box .tm-pill.red::before{background:#EF4444}
+      .tcr-bg{align-items:flex-end!important;overflow:hidden!important}
+      .tcr-sheet{max-height:calc(100dvh - max(env(safe-area-inset-top,0px),8px))!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;contain:paint!important;transform:translateZ(0)!important}
+      .tcr-actions{position:static!important;display:flex!important;gap:10px!important;margin:16px 0 8px!important;padding:0 0 calc(10px + env(safe-area-inset-bottom,0px))!important;background:transparent!important;box-shadow:none!important;z-index:auto!important}
+      .tcr-actions button{min-height:56px!important;border-radius:16px!important;flex:1!important}
+      @media(max-width:700px){
+        .tcr-sheet{max-width:100%!important;border-radius:22px 22px 0 0!important;padding:9px 12px calc(18px + env(safe-area-inset-bottom,0px))!important}
+        .tcr-grid{grid-template-columns:1fr!important;gap:8px!important}
+        .tcr-summary{grid-template-columns:1fr 1fr!important;gap:7px!important}
+        .tcr-field,.tcr-field.wide{grid-column:1/-1!important;margin-bottom:9px!important}
+        .tcr-field input,.tcr-field textarea,.tcr-field select{font-size:16px!important;min-height:52px!important;line-height:1.35!important;white-space:normal!important;text-overflow:clip!important;overflow:visible!important}
+        .tcr-field textarea{min-height:132px!important;max-height:220px!important;overflow-y:auto!important;resize:none!important}
+        .tcr-section{border-radius:18px!important;padding:12px!important;margin:10px 0!important}
+        .tcr-hero{border-radius:20px!important;padding:13px!important}
+        .tcr-hero h3{font-size:18px!important}
+        .tcr-hero p{font-size:11px!important}
+        .tcr-chip b{font-size:12px!important}
+      }
+    `;
+    document.head.appendChild(st);
+  }
+})();
+/* === End consolidated core module: Core UI stability === */
+
+/* === Consolidated core module: Reviewed-entry field polish (moved into app.js in v3.3.36) === */
+/*
+ * filename: scripts/field-polish-module.js
+ * version: 2.7.9
+ * consolidated-purpose: Rename promo date label to Promo Expiration / Open-by Date with crash-safe one-time polish.
+ * last-touched: unknown
+ */
+(function(){
+  const VER = '2.7.9';
+  const qsa = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+  const clean = v => String(v || '').replace(/\s+/g, ' ').trim();
+  const money = n => '$' + Number(n || 0).toLocaleString();
+  const num = v => {
+    const m = String(v || '').replace(/[$,\s]/g,'').match(/-?\d+(?:\.\d+)?/);
+    const n = m ? parseFloat(m[0]) : 0;
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  function addDaysIso(start, days){
+    try { if (typeof timerDueFromStart === 'function') return timerDueFromStart(start, days); } catch {}
+    try { if (typeof addD === 'function') return addD(start, days); } catch {}
+    const d = new Date(String(start) + 'T00:00:00');
+    d.setDate(d.getDate() + (parseInt(days,10) || 0));
+    return d.toISOString().split('T')[0];
+  }
+  function timerIdLocal(){
+    try { if (typeof timerId === 'function') return timerId(); } catch {}
+    return 'tm_' + Math.random().toString(36).slice(2,8) + Date.now().toString(36).slice(-4);
+  }
+  function makeTimer(text, date, startDate='', daysRequired=0){
+    const raw = { id:timerIdLocal(), text, startDate:startDate || '', daysRequired:Number(daysRequired || 0), date:date || '', done:false };
+    try { return typeof normalizeTimer === 'function' ? normalizeTimer(raw) : raw; } catch { return raw; }
+  }
+  function getVal(id){ return document.getElementById(id)?.value || ''; }
+  function getNum(id){ return num(getVal(id)); }
+  function checked(id){ return !!document.getElementById(id)?.checked; }
+  function rawTerms(){
+    const values = qsa('textarea').map(a => a.value || '').filter(v => /bonus|qualifying|direct deposit|monthly service fee|monthly account fee|offer|promo|checking/i.test(v));
+    values.sort((a,b)=>b.length-a.length);
+    return values[0] || '';
+  }
+  function inferHoldDays(){
+    const payout = clean(getVal('tcr_payout'));
+    const explicit = parseInt(getVal('tcr_holddays'),10) || 0;
+    if (explicit) return explicit;
+    if (/120/.test(payout)) return 120;
+    return 0;
+  }
+  function pretty(iso){
+    if (!iso) return '';
+    try { return typeof fD === 'function' ? fD(iso) : iso; } catch { return iso; }
+  }
+  function inferBank(raw){
+    const text = String(raw || '');
+    if (/Morgan Stanley Private Bank|E\*TRADE/i.test(text)) return 'Morgan Stanley Private Bank';
+    if (/Wells Fargo/i.test(text)) return 'Wells Fargo';
+    if (/U\.S\. Bank|US Bank/i.test(text)) return 'U.S. Bank';
+    if (/Bank of America|BofA/i.test(text)) return 'Bank of America';
+    if (/Capital One/i.test(text)) return 'Capital One';
+    if (/Chase/i.test(text)) return 'Chase';
+    if (/Citi(?:bank)?/i.test(text)) return 'Citibank';
+    if (/PNC/i.test(text)) return 'PNC Bank';
+    const m = text.match(/(?:from|with|by)\s+([A-Z][A-Za-z&.'’\- ]{2,80}?(?:Bank|Credit Union|Private Bank))/);
+    return m ? clean(m[1]) : 'New Bank Bonus';
+  }
+  function newRecordId(bank){
+    try { if (typeof genId === 'function') return genId(bank, new Set((entries || []).map(e => e.id))); } catch {}
+    return 'BNK-P-' + Date.now().toString().slice(-6);
+  }
+  function textPlan(){
+    const lines = [];
+    const promo = clean(getVal('tcr_promo'));
+    const fundedDays = parseInt(getVal('tcr_funded_days'), 10) || 0;
+    const count = parseInt(getVal('tcr_dd_count'), 10) || 0;
+    const reqMoney = getNum('tcr_req_money');
+    const reqDays = parseInt(getVal('tcr_req_days'), 10) || 0;
+    const payout = clean(getVal('tcr_payout'));
+    lines.push(`1. Open one eligible account${promo ? ` using promo code ${promo}` : ''}.`);
+    if (fundedDays) lines.push(`${lines.length + 1}. Fund the account within ${fundedDays} days to keep it open.`);
+    lines.push(`${lines.length + 1}. Receive ${count ? `at least ${count} ` : ''}qualifying Direct Deposits${reqMoney ? ` of ${money(reqMoney)}+ each` : ''}${reqDays ? ` within ${reqDays} days of account opening` : ''}.`);
+    lines.push(`${lines.length + 1}. Bonus payout: ${payout || 'review payout timing'}.`);
+    lines.push(`${lines.length + 1}. Keep account open and in good standing until payout.`);
+    return lines.join('\n');
+  }
+  function buildTimers(){
+    const timers = [];
+    const opened = clean(getVal('tcr_opened'));
+    const raw = rawTerms();
+    let parsed = {};
+    try { if (typeof tcStrictAnalyze === 'function') parsed = tcStrictAnalyze(raw); } catch {}
+    if (checked('tcr_timer_promo') && parsed.openBy) timers.push(makeTimer('Promo expiration / open-by deadline', parsed.openBy));
+    const reqDays = parseInt(getVal('tcr_req_days'), 10) || 0;
+    const fundedDays = parseInt(getVal('tcr_funded_days'), 10) || 0;
+    const holdDays = inferHoldDays();
+    if (checked('tcr_timer_req') && opened && reqDays) timers.push(makeTimer('Bonus requirement deadline', addDaysIso(opened, reqDays), opened, reqDays));
+    if (checked('tcr_timer_fund') && opened && fundedDays) timers.push(makeTimer('Funding deadline', addDaysIso(opened, fundedDays), opened, fundedDays));
+    if (checked('tcr_timer_payout') && opened && holdDays) timers.push(makeTimer('Expected bonus payout / hold check', addDaysIso(opened, holdDays), opened, holdDays));
+    return timers;
+  }
+
+  function renamePromoDateLabel(){
+    const sheet = document.querySelector('.tcr-sheet');
+    if (!sheet || !sheet.textContent.includes('Auto-fill New Entry')) return;
+    const openBy = document.getElementById('tcr_openby');
+    const label = openBy?.closest('.tcr-field')?.querySelector('label');
+    if (label) label.textContent = 'Promo Expiration / Open-by Date';
+    qsa('.tcr-timer-row b', sheet).forEach(b => {
+      if (/promo\/open-by deadline/i.test(b.textContent || '')) b.textContent = 'Promo expiration / open-by deadline';
+    });
+  }
+
+  function ensureHiddenCompatFields(){
+    const sheet = document.querySelector('.tcr-sheet');
+    if (!sheet || !sheet.textContent.includes('Auto-fill New Entry')) return;
+    renamePromoDateLabel();
+    if (!document.getElementById('tcr_earlyfee')) sheet.insertAdjacentHTML('beforeend','<input id="tcr_earlyfee" type="hidden" value="0">');
+    if (!document.getElementById('tcr_holddays')) {
+      const payout = clean(getVal('tcr_payout'));
+      const defaultHold = /120/.test(payout) ? 120 : '';
+      sheet.insertAdjacentHTML('beforeend',`<input id="tcr_holddays" type="hidden" value="${defaultHold}">`);
+    }
+  }
+
+  function createReviewedEntry(){
+    const sheet = document.querySelector('.tcr-sheet');
+    if (!sheet || !sheet.textContent.includes('Auto-fill New Entry')) return false;
+    ensureHiddenCompatFields();
+    const raw = rawTerms();
+    let parsed = {};
+    try { if (typeof tcStrictAnalyze === 'function') parsed = tcStrictAnalyze(raw); } catch {}
+    const bank = clean(getVal('tcr_bank')) || parsed.bank || inferBank(raw);
+    const bonus = getNum('tcr_bonus');
+    if (!bank) { alert('Bank name is required.'); return true; }
+    if (!bonus) { alert('Bonus amount is missing. Review before saving.'); return true; }
+
+    const reqDays = parseInt(getVal('tcr_req_days'), 10) || 0;
+    const holdDays = inferHoldDays();
+    const earlyFee = getNum('tcr_earlyfee');
+    const payout = clean(getVal('tcr_payout'));
+    const notCounts = clean(getVal('tcr_not_counts'));
+    const notesParts = ['Created from T&C Analyzer Pro Review Form. Review all fields before opening/applying.'];
+    if (notCounts) notesParts.push('Does NOT count: ' + notCounts.replace(/\n/g, '; '));
+    if (payout) notesParts.push('Payout: ' + payout);
+    if (holdDays) notesParts.push('Hold until: ' + holdDays + ' days after opening before closing.');
+
+    const entry = {
+      id: newRecordId(bank), bank, bonus, churn: parsed.prior ? 1 : '',
+      opened: clean(getVal('tcr_opened')), bonusRecd: '', closed: '', dataPoint: clean(getVal('tcr_counts')),
+      notes: notesParts.join('\n'), reqDays, minHoldDays: holdDays, earlyCloseFee: earlyFee,
+      feeChecked: false, plannedClose: '', customTimers: buildTimers(),
+      monthlyFeeYNText: getNum('tcr_fee') ? `Yes — ${money(getNum('tcr_fee'))} monthly fee` : 'Not clearly stated in pasted T&C',
+      promoCodeText: clean(getVal('tcr_promo')),
+      avoidMonthlyFeeText: clean(getVal('tcr_waivers')),
+      completeBonusText: clean(getVal('tcr_complete')) || textPlan(),
+      earlyTerminationFeeText: earlyFee ? String(earlyFee) : '0',
+      eligibilityText: clean(getVal('tcr_eligibility')),
+      expirationDateText: clean(getVal('tcr_openby')) ? pretty(clean(getVal('tcr_openby'))) : '',
+      requiredDaysText: reqDays ? String(reqDays) : ''
+    };
+
+    try {
+      entries.unshift(entry);
+      if (typeof sv === 'function' && typeof SK !== 'undefined') sv(SK, entries);
+      if (typeof saveReq === 'function') saveReq(entry.bank, {
+        bank: entry.bank, bonus: entry.bonus, reqDays: entry.reqDays, minHoldDays: entry.minHoldDays, earlyCloseFee: entry.earlyCloseFee,
+        monthlyFeeYNText: entry.monthlyFeeYNText, promoCodeText: entry.promoCodeText, avoidMonthlyFeeText: entry.avoidMonthlyFeeText,
+        completeBonusText: entry.completeBonusText, earlyTerminationFeeText: entry.earlyTerminationFeeText,
+        eligibilityText: entry.eligibilityText, expirationDateText: entry.expirationDateText, requiredDaysText: entry.requiredDaysText, dataPoint: entry.dataPoint
+      });
+      document.getElementById('tc_review_overlay')?.remove();
+      if (typeof R === 'function') R();
+      setTimeout(() => alert('New entry created for ' + entry.bank + (entry.customTimers.length ? ` with ${entry.customTimers.length} mini timer(s).` : '. Add Opened Date later to auto-create requirement timers.') + ' Review the entry before opening/applying.'), 80);
+    } catch (err) {
+      console.error('[field-polish-module]', err);
+      alert('Could not create the entry. Refresh and try again.');
+    }
+    return true;
+  }
+
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    if (/Create Entry \+ Timers/i.test(btn.textContent || '') && document.querySelector('.tcr-sheet')?.textContent.includes('Auto-fill New Entry')) {
+      e.preventDefault(); e.stopImmediatePropagation(); createReviewedEntry(); return;
+    }
+    setTimeout(ensureHiddenCompatFields, 120);
+    setTimeout(renamePromoDateLabel, 320);
+  }, true);
+
+  if (!document.getElementById('field_polish_module_style')) {
+    const st = document.createElement('style');
+    st.id = 'field_polish_module_style';
+    st.textContent = `.app-version::after{content:' · Safe';opacity:.78}.manual-record-pill{display:inline-flex;align-items:center;gap:4px;margin:0 0 8px 2px;padding:6px 9px;border-radius:999px;background:#EEF2FF;color:#475569;font-size:10px;font-weight:900;letter-spacing:.5px}`;
+    document.head.appendChild(st);
+  }
+})();
+/* === End consolidated core module: Reviewed-entry field polish === */
+
+/* === Consolidated core module: Action button safety and full backup helpers (moved into app.js in v3.3.36) === */
+/*
+ * filename: scripts/action-button-safety-fix.js
+ * version: 3.3.2
+ * consolidated-purpose: Stable action safety + full device-transfer backup/restore. No version badge control.
+ * last-touched: unknown
+ */
+(function(){
+  const VER='3.3.2';
+  const BACKUP_KIND='bonus-tracker-full-device-backup';
+  const APP_PREFIX='bt_';
+  const KNOWN_KEYS=[
+    'bt_e_v4','bt_t_v4','bt_dd_methods','bt_bank_reqs','bt_last_backup','bt_last_restore','bt_phone_book_v1','bt_user_datapoints_v1','bt_community_datapoints_v1','bt_community_datapoints_seed_v2','bt_profile_events_v1','bt_tc_learning_inbox_v320'
+  ];
+
+  function addStyle(){
+    let st=document.getElementById('bt_action_button_safety_style');
+    if(!st){st=document.createElement('style');st.id='bt_action_button_safety_style';document.head.appendChild(st);}
+    st.textContent=`button,[role="button"],a,input[type="button"],input[type="submit"]{touch-action:manipulation}`;
+  }
+  function cleanup(){
+    const menu=document.getElementById('bt_tools_folder_menu');
+    if(!menu||menu.hasAttribute('hidden')) document.getElementById('bt_tools_backdrop')?.remove();
+    ['v32_inbox_btn','v31_profile_btn'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.style.pointerEvents='none';}});
+  }
+  function buttonInfo(){
+    return Array.from(document.querySelectorAll('button,a,[role="button"],input[type="button"],input[type="submit"]')).map((el,i)=>{
+      const r=el.getBoundingClientRect();
+      const s=getComputedStyle(el);
+      const text=(el.textContent||el.value||el.getAttribute('aria-label')||el.getAttribute('title')||'').trim().replace(/\s+/g,' ').slice(0,60);
+      return {i,text,tag:el.tagName,id:el.id||'',class:String(el.className||''),visible:r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden',pointerEvents:s.pointerEvents,rect:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}};
+    }).filter(x=>x.visible);
+  }
+
+  function todayStamp(){const d=new Date();const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes());}
+  function hashString(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h+=(h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24);}return (h>>>0).toString(16).padStart(8,'0');}
+  function safeJson(v,d){try{return JSON.parse(v)}catch{return d}}
+  function storageSnapshot(){
+    const out={};
+    for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k)out[k]=localStorage.getItem(k);}
+    try{if(Array.isArray(entries))out.bt_e_v4=JSON.stringify(entries)}catch{}
+    return out;
+  }
+  function countFrom(storage,key){const parsed=safeJson(storage[key],null);if(Array.isArray(parsed))return parsed.length;if(parsed&&typeof parsed==='object')return Object.keys(parsed).length;return 0;}
+  function makeBackupPayload(reason='manual'){
+    const localStorageData=storageSnapshot();
+    const summary={
+      entries:countFrom(localStorageData,'bt_e_v4'),
+      taxOrTimers:countFrom(localStorageData,'bt_t_v4'),
+      datapoints:countFrom(localStorageData,'bt_user_datapoints_v1'),
+      phoneContacts:countFrom(localStorageData,'bt_phone_book_v1'),
+      tcSamples:countFrom(localStorageData,'bt_tc_learning_inbox_v320'),
+      profileEvents:countFrom(localStorageData,'bt_profile_events_v1'),
+      totalStorageKeys:Object.keys(localStorageData).length
+    };
+    const payload={kind:BACKUP_KIND,backupVersion:'full-v1',app:'BonusTracker',appVersion:VER,createdAt:new Date().toISOString(),reason,url:location.href,userAgent:navigator.userAgent,summary,localStorage:localStorageData};
+    payload.checksum=hashString(JSON.stringify(payload));
+    return payload;
+  }
+  function downloadJson(obj,name){
+    const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1500);
+  }
+  function exportFullBackup(reason='manual'){
+    const payload=makeBackupPayload(reason);
+    try{localStorage.setItem('bt_last_backup',new Date().toISOString().split('T')[0])}catch{}
+    downloadJson(payload,'bonus-tracker-full-backup-'+todayStamp()+'.json');
+    setTimeout(()=>alert('Full backup saved. Keep this JSON file in iCloud Drive, Google Drive, or Files.\n\nSaved: '+payload.summary.entries+' banks, '+payload.summary.tcSamples+' T&C samples, '+payload.summary.datapoints+' datapoints.'),250);
+    return payload;
+  }
+  function validateBackup(obj){
+    if(!obj||typeof obj!=='object')return {ok:false,error:'Backup file is not valid JSON.'};
+    const storage=obj.localStorage||obj.storage||null;
+    if(!storage||typeof storage!=='object')return {ok:false,error:'No localStorage data found in this backup.'};
+    if(obj.kind&&obj.kind!==BACKUP_KIND)return {ok:false,error:'This JSON is not a BonusTracker full backup.'};
+    const hasEntries=Object.prototype.hasOwnProperty.call(storage,'bt_e_v4');
+    const hasAny=Object.keys(storage).some(k=>k.startsWith(APP_PREFIX)||KNOWN_KEYS.includes(k));
+    if(!hasEntries&&!hasAny)return {ok:false,error:'This backup does not contain BonusTracker app keys.'};
+    return {ok:true,storage};
+  }
+  function restoreFromObject(obj){
+    const v=validateBackup(obj);
+    if(!v.ok){alert(v.error);return false;}
+    const storage=v.storage;
+    const entryCount=countFrom(storage,'bt_e_v4');
+    const tcCount=countFrom(storage,'bt_tc_learning_inbox_v320');
+    const msg='Restore this backup?\n\nThis will replace the current app data on this phone.\n\nBackup contains:\n• '+entryCount+' bank entries\n• '+tcCount+' saved T&C samples\n• '+Object.keys(storage).length+' storage keys\n\nA current backup will download first as a safety copy.';
+    if(!confirm(msg))return false;
+    try{exportFullBackup('pre-restore-safety-copy')}catch{}
+    setTimeout(()=>{
+      try{
+        const existing=[];
+        for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k)existing.push(k);}
+        existing.forEach(k=>{if(k.startsWith(APP_PREFIX)||KNOWN_KEYS.includes(k))localStorage.removeItem(k);});
+        Object.entries(storage).forEach(([k,val])=>{try{localStorage.setItem(k,String(val??''))}catch{}});
+        localStorage.setItem('bt_last_restore',new Date().toISOString());
+        alert('Restore complete. The app will reload now.');
+        location.reload();
+      }catch(e){alert('Restore failed: '+(e&&e.message?e.message:e));}
+    },650);
+    return true;
+  }
+  function chooseRestoreFile(){
+    const input=document.createElement('input');input.type='file';input.accept='application/json,.json';input.style.display='none';
+    input.onchange=()=>{const file=input.files&&input.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{restoreFromObject(JSON.parse(String(reader.result||'')))}catch(e){alert('Could not read backup JSON: '+(e&&e.message?e.message:e));}};reader.readAsText(file);setTimeout(()=>input.remove(),3000);};
+    document.body.appendChild(input);input.click();
+  }
+  function buttonText(el){return (el.textContent||el.value||el.getAttribute('aria-label')||el.getAttribute('title')||'').trim().replace(/\s+/g,' ');}
+  function hookBackupRestoreButtons(){
+    if(window.__btFullBackupButtonsHooked)return;
+    document.addEventListener('click',function(e){
+      const btn=e.target?.closest?.('button,a,[role="button"],input[type="button"],input[type="submit"]');
+      if(!btn)return;
+      const txt=buttonText(btn).toLowerCase();
+      if(txt==='backup'||txt.includes('backup')){e.preventDefault();e.stopImmediatePropagation();exportFullBackup('manual-button');return;}
+      if(txt==='restore'||txt.includes('restore')){e.preventDefault();e.stopImmediatePropagation();chooseRestoreFile();return;}
+    },true);
+    window.__btFullBackupButtonsHooked=true;
+  }
+  function boot(){addStyle();cleanup();hookBackupRestoreButtons();}
+
+  window.btActionButtonSafetyFixVersion=VER;
+  window.btActionButtonHealthCheck=function(){cleanup();return {version:VER,buttons:buttonInfo(),tools:window.btToolsButtonHealthCheck?window.btToolsButtonHealthCheck():null,backup:window.btFullBackupHealthCheck?window.btFullBackupHealthCheck():null};};
+  window.btFullBackupExport=exportFullBackup;
+  window.btFullBackupRestore=chooseRestoreFile;
+  window.btFullBackupMakePayload=makeBackupPayload;
+  window.btFullBackupHealthCheck=function(){const p=makeBackupPayload('health-check');return {version:VER,kind:BACKUP_KIND,summary:p.summary,checksum:p.checksum,keys:Object.keys(p.localStorage).length};};
+
+  boot();
+  if(typeof window.btRegisterPostRender==='function') window.btRegisterPostRender('action-button-safety',()=>{cleanup();hookBackupRestoreButtons();});
+})();
+/* === End consolidated core module: Action button safety and full backup helpers === */
+
+/* === Consolidated core module: Tools folder floating menu (moved into app.js in v3.3.36) === */
+/*
+ * filename: scripts/tools-folder-fab.js
+ * version: 3.3.13
+ * consolidated-purpose: Source-clean Tools folder — native + is hidden immediately and Quick Add calls openAdd directly.
+ * last-touched: unknown
+ */
+(function(){
+  const VER='3.3.13';
+
+  function addStyle(){
+    let st=document.getElementById('bt_tools_folder_style');
+    if(!st){st=document.createElement('style');st.id='bt_tools_folder_style';document.head.appendChild(st);}
+    st.textContent=`
+      #v32_inbox_btn,#v31_profile_btn{display:none!important;pointer-events:none!important;}
+      .fab{display:none!important;opacity:0!important;pointer-events:none!important;transform:scale(.65)!important;}
+      #bt_tools_backdrop[hidden],#bt_tools_folder_menu[hidden]{display:none!important;pointer-events:none!important;}
+      #bt_tools_folder_btn{position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);z-index:245;border:0;border-radius:24px;width:76px;height:56px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 14px 34px rgba(37,99,235,.34);font:900 12px 'DM Sans',system-ui;letter-spacing:.2px;display:flex;align-items:center;justify-content:center;gap:3px;flex-direction:column;-webkit-tap-highlight-color:transparent;}
+      #bt_tools_folder_btn .ico{font-size:21px;line-height:18px}#bt_tools_folder_btn .lbl{font-size:11px;line-height:12px}
+      #bt_tools_folder_menu{position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 156px);z-index:246;width:min(244px,calc(100vw - 28px));background:rgba(248,250,252,.98);border:1px solid rgba(148,163,184,.35);border-radius:22px;padding:10px;box-shadow:0 22px 60px rgba(15,23,42,.32);font-family:'DM Sans',system-ui;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);}
+      .bt-tools-head{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 10px;color:#0f172a;font-weight:900}.bt-tools-head span{font-size:13px}.bt-tools-x{border:0;background:#e2e8f0;color:#334155;border-radius:999px;width:28px;height:28px;font-weight:900;font-size:18px}.bt-tools-item{width:100%;border:0;border-radius:16px;margin:5px 0;padding:12px 12px;background:white;color:#0f172a;text-align:left;font:900 13px 'DM Sans',system-ui;box-shadow:inset 0 0 0 1px rgba(226,232,240,.9);display:flex;align-items:center;gap:10px}.bt-tools-item small{display:block;color:#64748b;font-weight:700;font-size:11px;margin-top:1px}.bt-tools-item .emoji{font-size:18px;width:24px;text-align:center}.bt-tools-backdrop{position:fixed;inset:0;z-index:244;background:transparent;}
+      @media(max-width:430px){#bt_tools_folder_btn{right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);width:76px;height:54px;border-radius:22px}#bt_tools_folder_menu{right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 152px)}}
+    `;
+  }
+
+  function closeMenu(){document.getElementById('bt_tools_folder_menu')?.setAttribute('hidden','');document.getElementById('bt_tools_backdrop')?.remove();}
+  function toggleMenu(){
+    ensureMenu();
+    const m=document.getElementById('bt_tools_folder_menu');
+    if(!m)return;
+    if(m.hasAttribute('hidden')){
+      document.getElementById('bt_tools_backdrop')?.remove();
+      const bd=document.createElement('div');
+      bd.id='bt_tools_backdrop';bd.className='bt-tools-backdrop';bd.onclick=closeMenu;
+      document.body.appendChild(bd);
+      m.removeAttribute('hidden');
+    }else closeMenu();
+  }
+  function openTC(){closeMenu(); if(typeof window.tcV32OpenLearningInbox==='function')window.tcV32OpenLearningInbox(); else document.getElementById('v32_inbox_btn')?.click();}
+  function openProfiles(){closeMenu(); if(typeof window.tcV31OpenProfileLibrary==='function')window.tcV31OpenProfileLibrary(); else document.getElementById('v31_profile_btn')?.click();}
+  function runSelfTest(){closeMenu(); if(typeof window.tcV31OpenProfileLibrary==='function')window.tcV31OpenProfileLibrary(); setTimeout(()=>{ if(typeof window.tcV31RunAndShowSelfTest==='function')window.tcV31RunAndShowSelfTest(); },180);}
+  function quickAdd(){
+    closeMenu();
+    if(typeof window.openAdd==='function'){window.openAdd();return;}
+    try{if(typeof openAdd==='function'){openAdd();return;}}catch{}
+  }
+  function ensureMenu(){
+    if(document.getElementById('bt_tools_folder_menu'))return;
+    const m=document.createElement('div');m.id='bt_tools_folder_menu';m.setAttribute('hidden','');
+    m.innerHTML=`
+      <div class="bt-tools-head"><span>Tools Folder</span><button class="bt-tools-x" type="button" onclick="window.btToolsFolderClose&&window.btToolsFolderClose()">×</button></div>
+      <button class="bt-tools-item" type="button" onclick="window.btToolsQuickAdd&&window.btToolsQuickAdd()"><span class="emoji">＋</span><span>Quick Add<small>Create a new bank entry</small></span></button>
+      <button class="bt-tools-item" type="button" onclick="window.btToolsOpenTC&&window.btToolsOpenTC()"><span class="emoji">📄</span><span>T&C Inbox<small>Save/analyze promo terms</small></span></button>
+      <button class="bt-tools-item" type="button" onclick="window.btToolsOpenProfiles&&window.btToolsOpenProfiles()"><span class="emoji">🗂️</span><span>Profiles<small>Saved bank profiles</small></span></button>
+      <button class="bt-tools-item" type="button" onclick="window.btToolsRunSelfTest&&window.btToolsRunSelfTest()"><span class="emoji">✅</span><span>Run Self-Test<small>Verify analyzer profiles</small></span></button>
+    `;
+    document.body.appendChild(m);
+  }
+  function ensureButton(){if(document.getElementById('bt_tools_folder_btn'))return;const b=document.createElement('button');b.id='bt_tools_folder_btn';b.type='button';b.innerHTML='<span class="ico">＋</span><span class="lbl">Tools</span>';b.onclick=toggleMenu;document.body.appendChild(b);}
+  function cleanupBackdrops(){const m=document.getElementById('bt_tools_folder_menu');if(!m||m.hasAttribute('hidden'))document.getElementById('bt_tools_backdrop')?.remove();}
+  function boot(){addStyle();ensureButton();ensureMenu();cleanupBackdrops();}
+
+  window.btToolsFolderVersion=VER;
+  window.btToolsFolderClose=closeMenu;
+  window.btToolsQuickAdd=quickAdd;
+  window.btToolsOpenTC=openTC;
+  window.btToolsOpenProfiles=openProfiles;
+  window.btToolsRunSelfTest=runSelfTest;
+  window.btToolsFolderApply=boot;
+  window.btToolsButtonHealthCheck=function(){cleanupBackdrops();return {version:VER,menuOpen:!document.getElementById('bt_tools_folder_menu')?.hasAttribute('hidden'),backdrop:!!document.getElementById('bt_tools_backdrop')}};
+
+  boot();
+  if(typeof window.btRegisterPostRender==='function') window.btRegisterPostRender('tools-folder',boot);
+})();
+/* === End consolidated core module: Tools folder floating menu === */
+
+/* === Consolidated core module: Tracker card bank actions renderer (moved into app.js in v3.3.36) === */
+/*
+ * filename: scripts/tracker-card-source-actions.js
+ * version: 3.3.34
+ * consolidated-purpose: Compact source-rendered per-bank Actions menu using core checklist/timer modals.
+ * last-touched: 2026-05-02
+ */
+(function(){
+  const VER='3.3.34';
+  let checklistModal=null;
+
+  window.__btBankActionPrompt=window.__btBankActionPrompt||null;
+
+  function ensureBankActionCompactStyle(){
+    if(document.getElementById('bt_source_bank_actions_compact_style'))return;
+    const st=document.createElement('style');
+    st.id='bt_source_bank_actions_compact_style';
+    st.textContent=`
+      .bt-ba-compact{padding:10px 14px calc(12px + var(--safe-b))!important;max-height:72dvh!important;overflow-y:auto!important;border-radius:18px 18px 0 0!important;}
+      .bt-ba-compact .m-bar{margin-bottom:8px!important;height:4px!important;width:34px!important;}
+      .bt-ba-compact .m-hdr{margin-bottom:8px!important;}
+      .bt-ba-compact .m-hdr h2{font-size:15px!important;line-height:1.1!important;}
+      .bt-ba-identity{display:flex;align-items:center;gap:8px;margin:4px 0 8px;padding:6px 8px;border-radius:12px;background:#F8FAFC;border:1px solid #E2E8F0;}
+      .bt-ba-identity .blogo{width:30px!important;height:30px!important;border-radius:9px!important;font-size:11px!important;}
+      .bt-ba-identity .card-name{font-size:13px!important;line-height:1.1!important;}
+      .bt-ba-status{font-size:9px!important;color:#64748B;font-weight:900;letter-spacing:.3px;margin-top:1px;text-transform:uppercase;}
+      .bt-ba-list{display:grid;grid-template-columns:1fr;gap:6px;}
+      .bt-ba-mini{width:100%;border:0;border-radius:12px;background:#F8FAFC;color:#0F172A;padding:8px 10px;font-family:'DM Sans',system-ui,sans-serif;text-align:left;box-shadow:inset 0 0 0 1px #E2E8F0;display:flex;align-items:center;gap:8px;min-height:46px;cursor:pointer;}
+      .bt-ba-mini:active{transform:scale(.985);}
+      .bt-ba-mini .ico{width:24px;height:24px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:#EFF6FF;font-size:14px;flex-shrink:0;}
+      .bt-ba-mini b{display:block;font-size:12px;line-height:1.05;color:inherit;}
+      .bt-ba-mini small{display:block;margin-top:2px;font-size:9px;line-height:1.15;color:#94A3B8;font-weight:700;}
+      .bt-ba-mini.danger{background:#FEF2F2;color:#DC2626;box-shadow:inset 0 0 0 1px #FECACA;}
+      .bt-ba-mini.danger .ico{background:#FEE2E2;}
+      .bt-ba-mini.cancel{justify-content:center;text-align:center;background:#E2E8F0;color:#334155;min-height:40px;}
+      .bt-ba-mini.cancel .ico{display:none;}
+      @media(min-width:520px){.bt-ba-compact{max-width:420px!important;border-radius:18px!important;padding-bottom:14px!important}.bt-ba-list{grid-template-columns:1fr 1fr}.bt-ba-mini.danger,.bt-ba-mini.cancel{grid-column:1/-1}}
+    `;
+    document.head.appendChild(st);
+  }
+
+  function saveEntries(){
+    try{
+      if(typeof sv==='function'&&typeof SK!=='undefined'){
+        sv(SK,entries);
+        return;
+      }
+    }catch{}
+    try{localStorage.setItem('bt_e_v4',JSON.stringify(entries));}catch{}
+  }
+
+  function todayIso(){
+    try{return typeof td==='function'?td():new Date().toISOString().split('T')[0]}catch{return new Date().toISOString().split('T')[0]}
+  }
+
+  function getEntry(id){
+    try{return entries.find(function(e){return e&&e.id===id})||null}catch{return null}
+  }
+
+  function clearInlineState(id){
+    try{
+      const st=inlineStateFor(id);
+      st.checklist=false;
+      st.timer=false;
+      st.timerEdit=null;
+    }catch{}
+  }
+
+  function removeChecklistModal(){
+    const old=document.getElementById('bt_checklist_modal');
+    if(old)old.remove();
+  }
+
+  function closeChecklistModal(){
+    checklistModal=null;
+    removeChecklistModal();
+  }
+
+  function saveChecklistModal(){
+    if(!checklistModal)return;
+    const input=document.getElementById('bt_checklist_modal_text');
+    const text=(input&&input.value?input.value:'').trim();
+    if(!text){alert('Add a checklist description.');return;}
+    const id=checklistModal.entryId;
+    entries=entries.map(function(e){
+      if(e&&e.id===id){
+        if(!Array.isArray(e.checklist))e.checklist=[];
+        e.checklist.push({text:text,done:false});
+      }
+      return e;
+    });
+    saveEntries();
+    try{expanded=id}catch{}
+    closeChecklistModal();
+    R();
+  }
+
+  function showChecklistModal(){
+    removeChecklistModal();
+    if(!checklistModal)return;
+
+    const overlay=document.createElement('div');
+    overlay.id='bt_checklist_modal';
+    overlay.className='cbg';
+    overlay.addEventListener('click',closeChecklistModal);
+
+    const box=document.createElement('div');
+    box.className='dd-box';
+    box.addEventListener('click',function(ev){ev.stopPropagation();});
+
+    const title=document.createElement('h3');
+    title.textContent='Add checklist step';
+
+    const sub=document.createElement('div');
+    sub.className='sub';
+    sub.textContent='Add one requirement task for '+(checklistModal.bank||'this bank')+'.';
+
+    const fg=document.createElement('div');
+    fg.className='fg';
+
+    const label=document.createElement('label');
+    label.textContent='Description';
+
+    const input=document.createElement('input');
+    input.id='bt_checklist_modal_text';
+    input.placeholder='e.g. Make 1 debit card transaction';
+    input.addEventListener('keydown',function(ev){
+      if(ev.key==='Enter')saveChecklistModal();
+    });
+
+    fg.appendChild(label);
+    fg.appendChild(input);
+
+    const row=document.createElement('div');
+    row.className='crow';
+
+    const cancel=document.createElement('button');
+    cancel.className='c-c';
+    cancel.textContent='Cancel';
+    cancel.addEventListener('click',closeChecklistModal);
+
+    const save=document.createElement('button');
+    save.className='c-g';
+    save.textContent='Save';
+    save.addEventListener('click',saveChecklistModal);
+
+    row.appendChild(cancel);
+    row.appendChild(save);
+
+    box.appendChild(title);
+    box.appendChild(sub);
+    box.appendChild(fg);
+    box.appendChild(row);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    setTimeout(function(){try{input.focus()}catch{}},30);
+  }
+
+  function openChecklistModal(id){
+    const e=getEntry(id);
+    window.__btBankActionPrompt=null;
+    if(!e){R();return;}
+    clearInlineState(id);
+    try{expanded=id}catch{}
+    checklistModal={entryId:id,bank:e.bank||''};
+    R();
+    showChecklistModal();
+  }
+
+  function openNewTimerModal(id){
+    const e=getEntry(id);
+    window.__btBankActionPrompt=null;
+    if(!e){R();return;}
+    clearInlineState(id);
+    try{expanded=id}catch{}
+    if(typeof openNewTimerEditor==='function'){
+      openNewTimerEditor(id,'due');
+      return;
+    }
+    try{
+      timerEditModal={entryId:id,timerId:'',isNew:true,text:'',mode:'due',startDate:e.opened||todayIso(),daysRequired:''};
+    }catch{}
+    R();
+  }
+
+  function openBankActions(id){
+    window.__btBankActionPrompt=id;
+    R();
+  }
+  function closeBankActions(){
+    window.__btBankActionPrompt=null;
+    R();
+  }
+  function runBankAction(id,action){
+    const e=getEntry(id);
+    window.__btBankActionPrompt=null;
+    if(!e){R();return}
+    expanded=id;
+    if(action==='edit'){openEdit(id);return}
+    if(action==='received'){openRcv(id);return}
+    if(action==='close'){closeAcct(id);return}
+    if(action==='delete'){delEntry(id);return}
+    if(action==='checklist'){
+      openChecklistModal(id);
+      return;
+    }
+    if(action==='timer'){
+      openNewTimerModal(id);
+      return;
+    }
+    R();
+  }
+  function bankActionSheetButton(id,action,icon,title,sub,danger=false){
+    return `<button class="bt-ba-mini ${danger?'danger':''}" onclick="event.stopPropagation();runBankAction('${id}','${action}')"><span class="ico">${icon}</span><span><b>${esc(title)}</b>${sub?`<small>${esc(sub)}</small>`:''}</span></button>`;
+  }
+  function rBankActions(){
+    const e=entries.find(x=>x.id===window.__btBankActionPrompt);
+    if(!e)return'';
+    ensureBankActionCompactStyle();
+    let h='<div class="ov" onclick="closeBankActions()"><div class="modal bt-ba-compact" onclick="event.stopPropagation()">';
+    h+='<div class="m-bar"></div><div class="m-hdr"><h2>Bank Actions</h2><span class="m-id">'+esc(getEntryDisplayId(e)||e.id||'')+'</span></div>';
+    h+='<div class="bt-ba-identity">'+bankLogo(e.bank,true)+'<div><div class="card-name">'+esc(e.bank)+'</div><div class="bt-ba-status">'+esc(status(e)||'')+'</div></div></div>';
+    h+='<div class="bt-ba-list">';
+    h+=bankActionSheetButton(e.id,'edit','✏️','Edit Bank','Details, dates, bonus, rules');
+    if(!e.closed)h+=bankActionSheetButton(e.id,'received','🎁',e.bonusRecd?'Update Received':'Mark Received','Bonus received date');
+    if(!e.closed)h+=bankActionSheetButton(e.id,'close','🔒','Close Account','Record closed date');
+    if(!e.closed)h+=bankActionSheetButton(e.id,'checklist','✅','Add Checklist','New requirement step');
+    if(!e.closed)h+=bankActionSheetButton(e.id,'timer','⏱️','Add Timer','Custom countdown');
+    h+=bankActionSheetButton(e.id,'delete','🗑️','Delete Bank','Remove tracker entry',true);
+    h+='<button class="bt-ba-mini cancel" onclick="event.stopPropagation();closeBankActions()"><span><b>Cancel</b></span></button>';
+    h+='</div></div></div>';
+    return h;
+  }
+
+  function rTracker(sorted){
+    const q=search.toLowerCase();
+    const f=q?sorted.filter(e=>(e.bank||'').toLowerCase().includes(q)||(e.id||'').toLowerCase().includes(q)):sorted;
+    let h='';
+    const bkd=daysSinceBk();
+    if(bkd>=7) h += `<div class="bk-remind">${bkd>=999?'Backup recommended':'Backup updated '+bkd+'d ago'} <button onclick="exportBackup()">Export</button></div>`;
+
+    h += '<div class="qbar">';
+    h += quickBtn('blue',I.backup,'Backup','exportBackup()');
+    h += quickBtn('green',I.restore,'Restore','importBackup()');
+    h += quickBtn('purple',I.quick,'Quick Add','showTemplates=!showTemplates;R()');
+    h += quickBtn('red',I.trash,'Reset','resetAllData()');
+    h += '</div>';
+
+    if(showTemplates){
+      h += '<div class="sec">Quick add templates</div><div class="tgrid">';
+      TEMPLATES.forEach((t,i)=>{
+        h += `<button class="tbtn" onclick="addFromTpl(${i})">${bankLogo(t.bank,true)}<div class="t-info"><div class="nm">${esc(t.bank)}</div><div class="bn">${fM(t.bonus)}</div></div></button>`;
+      });
+      h += '</div>';
+    }
+
+    h += `<input class="sinput" type="text" placeholder="Search banks..." value="${esc(search)}" oninput="search=this.value;R()">`;
+    h += `<button class="tc-btn" onclick="showAnalyzer=!showAnalyzer;R()">${I.spark}<span>${showAnalyzer?'Hide analyzer':'Analyze promo terms'}</span></button>`;
+    if(showAnalyzer) h += rAnalyzer();
+
+    if(!f.length){
+      return h + '<div class="empty"><div class="em">No banks yet</div><p>Add your first bank with the + button, use Quick Add for templates, or restore a saved backup.</p></div>' + rBankActions();
+    }
+
+    h += '<div class="sec">Your banks</div>';
+
+    f.forEach(e=>{
+      const s=status(e), isX=expanded===e.id, nr=nextReopen(e), countdown=getCountdown(e), urg=getUrg(e);
+      h += `<div class="card u-${urg}">`;
+      h += `<div class="card-h" onclick="expanded=expanded==='${e.id}'?null:'${e.id}';R()">`;
+      h += `<div class="card-logo-col">${bankLogo(e.bank)}${e.churn?churnTagHtml(e.bank,e.churn):''}</div>`;
+      h += `<div class="card-left"><div class="card-name">${esc(e.bank)}</div><div class="card-row">${statusBadgeHtml(e,countdown)}</div></div>`;
+      h += '<div class="card-right"><div class="card-right-main">';
+      if((s==='WORKING'||s==='CUSTOM TIMER')&&e.bonus) h += `<div class="card-bonus">${fM(e.bonus)}</div>`;
+      h += `<div class="card-id">${esc(getEntryDisplayId(e))}</div></div>`;
+      h += '</div></div>';
+
+      if(isX){
+        h += '<div class="card-exp"><div class="card-grid">';
+        if(e.opened) h += `<div class="cf"><div class="k">Opened</div><div class="v">${fD(e.opened)}</div></div>`;
+        if(e.closed) h += `<div class="cf"><div class="k">Closed</div><div class="v">${fD(e.closed)}</div></div>`;
+        if(e.bonusRecd) h += `<div class="cf"><div class="k">Received</div><div class="v ok">${fD(e.bonusRecd)}</div></div>`;
+        if(nr) h += `<div class="cf"><div class="k">Reopen</div><div class="v">${fD(nr)}</div></div>`;
+        if(e.reqMet) h += `<div class="cf"><div class="k">Req Met</div><div class="v">${fD(e.reqMet)}</div></div>`;
+        if(isCompleted(e)) h += '<div class="cf"><div class="k">Tax</div><div class="v ok">Logged</div></div>';
+        if(e.referralBonus) h += `<div class="cf"><div class="k">Referral</div><div class="v"><span class="ref-b">+${fM(e.referralBonus)}</span></div></div>`;
+        if(e.minHoldDays>0&&!e.closed){
+          const scd=safeCloseDate(e);
+          h += `<div class="cf"><div class="k">Hold Until</div><div class="v${daysUntilSafe(e)<=0?' ok':' warn'}">${fD(scd)}</div></div>`;
+        }
+        if(e.earlyCloseFee>0&&!e.closed){
+          const __feeMeta=closeFeeCountdownMeta(e);
+          const __feeTitle=safeCloseDate(e)?`Safe close: ${fD(safeCloseDate(e))}`:'Add opened date to calculate';
+          h += `<div class="cf"><div class="k">Close Fee</div><div class="v warn">${fM(e.earlyCloseFee)}</div></div>`;
+          h += `<div class="cf"><div class="k">Close Fee Countdown</div><div class="v" style="padding-top:2px"><span class="tm-pill ${__feeMeta.cls}" title="${esc(__feeTitle)}" style="margin-left:6px">${esc(__feeMeta.text)}</span></div></div>`;
+        }
+        h += '</div>';
+
+        if(!e.closed){
+          h += '<div class="sec" style="margin-top:6px">Checklist</div><ul class="ck">';
+          if(e.checklist&&e.checklist.length){
+            e.checklist.forEach((c,ci)=>{
+              h += `<li><div class="ckb${c.done?' dn':''}" onclick="event.stopPropagation();toggleCk('${e.id}',${ci})"></div><span class="ck-text${c.done?' dn':''}">${esc(c.text)}</span><span class="ck-del" onclick="event.stopPropagation();rmCk('${e.id}',${ci})">×</span></li>`;
+            });
+          }
+          h += '</ul><div class="ck-add-shell">';
+          h += isInlineOpen(e.id,'checklist')
+            ? `<div class="inline-form" onclick="event.stopPropagation()"><div class="ck-add"><input id="ck_${e.id}" placeholder="Add step..." onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.stopPropagation();addCk('${e.id}')}" /></div><div class="inline-actions"><button class="inline-btn primary" onclick="event.stopPropagation();addCk('${e.id}')">Add</button><button class="inline-btn secondary" onclick="event.stopPropagation();clearInlineInputs('${e.id}','checklist')">Reset</button><button class="inline-btn ghost" onclick="event.stopPropagation();toggleInlineForm('${e.id}','checklist',false)">Cancel</button></div></div>`
+            : '';
+          h += '</div>';
+          h += '<div class="sec" style="margin-top:8px">Mini Countdown Timers</div><ul class="tm">';
+          const __timers=sortCustomTimers(e.customTimers||[]);
+          if(__timers.length){
+            __timers.forEach((t)=>{const meta=timerCountdownMeta(t);h += `<li><div class="ckb${t.done?' dn':''}" onclick="toggleTimer('${e.id}','${t.id||''}')"></div><div class="tm-main"><div class="tm-title${t.done?' dn':''}">${esc(t.text||'Timer')}</div><div class="tm-sub">${timerMetaLine(t)}</div></div><span class="tm-pill ${meta.cls}">${esc(meta.text)}</span><button type="button" class="tm-edit-btn" onclick="event.stopPropagation();openTimerEditor('${e.id}','${t.id||''}')">Edit</button><span class="ck-del" onclick="event.stopPropagation();rmTimer('${e.id}','${t.id||''}')">×</span></li>`;});
+          }else{
+            h += '<li><div class="tm-main"><div class="tm-sub">Add a custom due date for bank-specific requirements.</div></div></li>';
+          }
+          h += '</ul><div class="tm-add-shell">';
+          h += isInlineOpen(e.id,'timer')
+            ? `<div class="inline-form"><div class="tm-add"><input id="tm_txt_${e.id}" placeholder="e.g. Use debit card once"><input id="tm_start_${e.id}" type="date"><input id="tm_days_${e.id}" type="number" inputmode="numeric" min="1" placeholder="Days" onkeydown="if(event.key==='Enter'){upsertTimer('${e.id}')}"></div><div class="inline-actions"><button class="inline-btn primary" onclick="upsertTimer('${e.id}')">Add timer</button><button class="inline-btn secondary" onclick="clearInlineInputs('${e.id}','timer')">Reset</button><button class="inline-btn ghost" onclick="toggleInlineForm('${e.id}','timer',false)">Cancel</button></div></div>`
+            : '';
+          h += '</div>';
+        }
+
+        if(e.notes) h += `<div class="card-notes" style="white-space:pre-wrap;font-size:12px;line-height:1.6">${esc(e.notes)}</div>`;
+        if(e.analyzedTC) h += `<div class="tc-box"><div class="tc-label">T&amp;C analysis</div><div class="tc-body">${highlightTC(e.analyzedTC)}</div></div>`;
+        h += '';
+
+        h += '<div class="card-btns">';
+        h += actionBtn('edit',I.quick,'Actions',`event.stopPropagation();openBankActions('${e.id}')`);
+        h += '</div></div>';
+      }
+
+      h += '</div>';
+    });
+
+    const attentionSug=getAttentionSuggestions();
+    const churnSug=getChurnSuggestions();
+    if(attentionSug.length||churnSug.length){
+      h += '<div class="sec">Suggested next</div>';
+      h += '<div class="sug-split">';
+      h += '<div class="sug-panel"><div class="sug-panel-h">Needs attention • '+entries.filter(e=>e&&e.bank&&!e.closed).length+' open</div>'+(attentionSug.length?attentionSug.map(s=>`<div class="sug-c">${bankLogo(s.bank,true)}<div class="s-info"><div class="nm">${esc(s.bank)}</div>${s.showBonus&&s.bonus?`<div class="sub">${fM(s.bonus)}</div>`:''}<div class="rsn">${esc(s.rsn)}</div></div></div>`).join(''):'<div class="sug-empty">No urgent items.</div>')+'</div>';
+      h += '<div class="sug-panel"><div class="sug-panel-h">Least days to churn</div>'+(churnSug.length?churnSug.map(s=>`<div class="sug-c">${bankLogo(s.bank,true)}<div class="s-info"><div class="nm">${esc(s.bank)}</div>${s.showBonus&&s.bonus?`<div class="sub">${fM(s.bonus)}</div>`:''}<div class="rsn">${esc(s.rsn)}</div></div></div>`).join(''):'<div class="sug-empty">Nothing cooling down yet.</div>')+'</div>';
+      h += '</div>';
+    }
+
+    return h + rBankActions();
+  }
+
+  window.openBankActions=openBankActions;
+  window.closeBankActions=closeBankActions;
+  window.runBankAction=runBankAction;
+  window.rBankActions=rBankActions;
+  window.rTracker=rTracker;
+  window.btCloseChecklistActionModal=closeChecklistModal;
+  window.btSourceBankActionsVersion=VER;
+
+  setTimeout(()=>{try{ensureBankActionCompactStyle();R();}catch(e){console.error('Bank Actions source renderer failed',e);}},0);
+})();
+/* === End consolidated core module: Tracker card bank actions renderer === */
