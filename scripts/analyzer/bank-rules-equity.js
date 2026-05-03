@@ -18,7 +18,7 @@
   }
 
   function applyEquityBloom(r){
-    const raw=String(r?.raw||r?.normalizedRaw||'');
+    const raw=String(r?.normalizedRaw||r?.raw||'');
     if(!/Equity Bank|Equity Bancshares|Bloom/i.test(raw))return r;
     if(!/checking and savings|new checking and savings|Bloom Bonus|Enter Promotional Code/i.test(raw))return r;
 

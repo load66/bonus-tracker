@@ -27,7 +27,7 @@
     return pushRule(r,label);
   }
   function applyChaseBusiness(r){
-    const raw=String(r.raw||r.normalizedRaw||'');
+    const raw=String(r.normalizedRaw||r.raw||'');
     if(!/Chase Business Complete Checking|business checking offer/i.test(raw))return r;
     /* anti-signal: the document is clearly a personal-product T&C — refuse to fire. */
     if(/Chase Total Checking|Chase SavingsSM|Chase First CheckingSM/i.test(raw))return r;
@@ -52,7 +52,7 @@
     r.clear=!!(r.bonus&&r.reqDays&&r.fundedDays&&r.holdDays);return pushRule(r,'Chase Business Checking');
   }
   function applyWellsBusiness(r){
-    const raw=String(r.raw||r.normalizedRaw||'');
+    const raw=String(r.normalizedRaw||r.raw||'');
     if(!/Wells Fargo/i.test(raw)||!/business checking|Initiate Business Checking|Navigate Business Checking|Optimize Business Checking/i.test(raw))return r;
     r.bank='Wells Fargo';r.acct='Wells Fargo eligible business checking';r.bonus=r.selectedBonus=400;r.tiered=false;r.tiers=[];r.targetTier=null;r.bonusTierText='';
     r.code=r.code||'Required — use bonus offer code at account opening';r.promoCode={value:r.code,confidence:'Review',source:'Bonus offer code must be used at account opening.'};
@@ -71,7 +71,7 @@
     r.clear=!!(r.bonus&&r.openBy&&r.fundedDays&&r.holdDays);return pushRule(r,'Wells Fargo Business Checking');
   }
   function applyBmoBusiness(r){
-    const raw=String(r.raw||r.normalizedRaw||'');
+    const raw=String(r.normalizedRaw||r.raw||'');
     if(!/\bBMO\b/i.test(raw)||!/Business Checking|Digital Business Checking|Simple Business Checking|Premium Business Checking|Elite Business Checking/i.test(raw))return r;
     r.bank='BMO';
     r.acct='BMO eligible business checking';
@@ -116,7 +116,7 @@
     r.clear=!!(r.bonus&&r.openBy&&r.fundedDays&&r.holdDays);return pushRule(r,'BMO Business Checking');
   }
   function applyBOA(r){
-    const raw=String(r.raw||r.normalizedRaw||'');
+    const raw=String(r.normalizedRaw||r.raw||'');
     if(!/Bank of America|BofA|Advantage SafeBalance|Advantage Plus|Advantage Relationship/i.test(raw))return r;
     const tiers=[];
     if(/\$\s*2,?000\s*[-–—]\s*\$\s*4,?999[\s\S]{0,50}\$\s*100/i.test(raw))tiers.push({bonus:100,requirement:2000,maxRequirement:4999,confidence:'High',source:'BofA chart: $2,000–$4,999 = $100'});

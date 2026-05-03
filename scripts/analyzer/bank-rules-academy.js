@@ -10,7 +10,7 @@
   const uniq=a=>Array.from(new Set((a||[]).filter(Boolean).map(clean))).filter(Boolean);
 
   function applyAcademyElite(r){
-    const raw=String(r?.raw||r?.normalizedRaw||'');
+    const raw=String(r?.normalizedRaw||r?.raw||'');
     if(!/Academy Bank|Elite Investment Checking|MoneyPass/i.test(raw))return r;
     if(!/Elite Investment Checking|\$100 opening balance|required|four direct deposits|Online Banking/i.test(raw))return r;
 

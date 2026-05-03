@@ -10,7 +10,7 @@
   const uniq=a=>Array.from(new Set((a||[]).filter(Boolean).map(clean))).filter(Boolean);
 
   function applyCapitalOneBusiness(r){
-    const raw=String(r?.raw||r?.normalizedRaw||'');
+    const raw=String(r?.normalizedRaw||r?.raw||'');
     if(!/Capital One/i.test(raw))return r;
     if(!/SBOFFER500|Basic or Enhanced checking|Basic Checking|Enhanced Checking|business checking/i.test(raw))return r;
 

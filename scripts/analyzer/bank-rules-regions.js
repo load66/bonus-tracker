@@ -17,7 +17,7 @@
   }
 
   function applyRegionsLifeGreen(r){
-    const raw=String(r?.raw||r?.normalizedRaw||'');
+    const raw=String(r?.normalizedRaw||r?.raw||'');
     if(!/Regions/i.test(raw))return r;
     if(!/LifeGreen|personal Regions checking|Regions checking account|Qualifying ACH direct deposits/i.test(raw))return r;
 

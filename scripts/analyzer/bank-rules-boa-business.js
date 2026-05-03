@@ -11,7 +11,7 @@
   const uniq=a=>Array.from(new Set((a||[]).filter(Boolean).map(clean))).filter(Boolean);
 
   function applyBoaBusiness(r){
-    const raw=String(r?.raw||r?.normalizedRaw||'');
+    const raw=String(r?.normalizedRaw||r?.raw||'');
     if(!/Bank of America|BofA/i.test(raw))return r;
     if(!/Business Advantage Banking|Business Advantage Relationship Banking|Business Advantage Fundamentals/i.test(raw))return r;
     if(!/\$\s*400|\$\s*750|Maintenance Period|Balance Requirement/i.test(raw))return r;

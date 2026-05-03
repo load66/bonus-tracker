@@ -11,7 +11,7 @@
   const uniq=a=>Array.from(new Set((a||[]).filter(Boolean).map(clean))).filter(Boolean);
 
   function applyBuseyPersonal(r){
-    const raw=String(r?.raw||r?.normalizedRaw||'');
+    const raw=String(r?.normalizedRaw||r?.raw||'');
     if(!/Busey Bank|Busey/i.test(raw))return r;
     if(!/Foundation Checking|Pillar Banking|LEVELUP1|LEVELUP2|Busey Debit Mastercard/i.test(raw))return r;
 

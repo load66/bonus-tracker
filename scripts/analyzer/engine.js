@@ -1,16 +1,75 @@
 /*
  * filename: scripts/analyzer/engine.js
- * version: 3.0.0
- * purpose: Analyzer v3 Engine. One parser result powers summary, autofill, timers, and issue reports.
+ * version: 3.1.0
+ * purpose: Analyzer v3 Engine with built-in weird wording normalization. One parser result powers summary, autofill, timers, and issue reports.
  * last-touched: unknown
  */
 (function(){
-  const VER='3.0.0';
+  const VER='3.1.0';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const escRe=s=>String(s||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const moneyNum=s=>{const n=parseFloat(String(s||'').replace(/[$,\s]/g,''));return Number.isFinite(n)?n:0};
   const money=n=>'$'+Number(n||0).toLocaleString();
   const uniq=a=>Array.from(new Set((a||[]).filter(Boolean).map(clean))).filter(Boolean);
+
+  const WEIRD_WORDING_VER='3.3.37-core';
+  const phraseMap=[
+    {re:/adjusted interest/gi,label:'adjusted interest',add:'bonus payout'},
+    {re:/cash reward/gi,label:'cash reward',add:'cash bonus'},
+    {re:/cash offer/gi,label:'cash offer',add:'cash bonus offer'},
+    {re:/welcome offer/gi,label:'welcome offer',add:'bonus offer'},
+    {re:/\bincentive\b/gi,label:'incentive',add:'bonus'},
+    {re:/new money/gi,label:'new money',add:'new qualifying deposit funds'},
+    {re:/aggregate deposits?/gi,label:'aggregate deposits',add:'total qualifying deposits'},
+    {re:/cumulative deposits?/gi,label:'cumulative deposits',add:'total qualifying deposits'},
+    {re:/combined deposits?/gi,label:'combined deposits',add:'total qualifying deposits'},
+    {re:/qualifying electronic deposits?/gi,label:'qualifying electronic deposits',add:'qualifying direct deposits'},
+    {re:/eligible electronic deposits?/gi,label:'eligible electronic deposits',add:'qualifying direct deposits'},
+    {re:/external deposits?/gi,label:'external deposits',add:'qualifying external deposits'},
+    {re:/payroll deposits?/gi,label:'payroll deposits',add:'direct deposits from employer payroll'},
+    {re:/recurring deposits? of income/gi,label:'recurring deposits of income',add:'regular recurring direct deposit income'},
+    {re:/statement cycles?/gi,label:'statement cycles',add:'statement periods'},
+    {re:/fee periods?/gi,label:'fee periods',add:'monthly fee periods'},
+    {re:/maintain(?:ed)?/gi,label:'maintain/maintained',add:'keep / hold requirement'},
+    {re:/good standing/gi,label:'good standing',add:'account must remain open and eligible'},
+    {re:/positive balance/gi,label:'positive balance',add:'account must remain open with positive balance'},
+    {re:/available balance/gi,label:'available balance',add:'account balance'},
+    {re:/offer period/gi,label:'offer period',add:'promo open-by period'},
+    {re:/through and including/gi,label:'through and including',add:'through open-by date'},
+    {re:/valid through/gi,label:'valid through',add:'promo expiration date'},
+    {re:/valid until/gi,label:'valid until',add:'promo expiration date'},
+    {re:/discontinued or changed/gi,label:'discontinued or changed',add:'offer can change or end'},
+    {re:/not considered/gi,label:'not considered',add:'does not count'},
+    {re:/do not constitute/gi,label:'do not constitute',add:'does not count'},
+    {re:/excluded activity/gi,label:'excluded activity',add:'does not count activity'},
+    {re:/not qualify/gi,label:'not qualify',add:'does not qualify'},
+    {re:/not eligible/gi,label:'not eligible',add:'not eligible'},
+    {re:/sole discretion/gi,label:'sole discretion',add:'bank may review manually'},
+    {re:/gaming|abuse|misuse/gi,label:'gaming/abuse/misuse',add:'bonus abuse risk'},
+    {re:/clawback|reclaim|reverse|deduct|forfeit/gi,label:'clawback/reclaim/reverse/deduct/forfeit',add:'early closure clawback risk'}
+  ];
+  function detectWeirdWording(raw){
+    const found=[];
+    const text=String(raw||'');
+    phraseMap.forEach(p=>{p.re.lastIndex=0;if(p.re.test(text))found.push({term:p.label,meaning:p.add});p.re.lastIndex=0});
+    const seen=new Set();
+    return found.filter(x=>{const k=x.term+'|'+x.meaning;if(seen.has(k))return false;seen.add(k);return true});
+  }
+  function annotateWeirdSentence(sentence){
+    const notes=[];
+    phraseMap.forEach(p=>{p.re.lastIndex=0;if(p.re.test(sentence))notes.push(p.add);p.re.lastIndex=0});
+    const cleanNotes=uniq(notes);
+    if(!cleanNotes.length)return sentence;const note=`normalized terms: ${cleanNotes.join('; ')}`;return /[.!?]$/.test(sentence)?sentence.replace(/([.!?])$/,`; ${note}$1`):`${sentence}; ${note}`;
+  }
+  function normalizeWeirdBankWording(raw){
+    const original=String(raw||'');
+    const hits=detectWeirdWording(original);
+    if(!original.trim()||!hits.length)return{raw:original,normalized:original,hits,aliases:[]};
+    const parts=original.split(/(?<=[.!?])\s+|\n+/).map(s=>s.trim()).filter(Boolean);
+    const normalized=parts.length?parts.map(annotateWeirdSentence).join('\n'):original;
+    return{raw:original,normalized,aliases:hits.map(x=>x.meaning),hits};
+  }
+
   const mo={jan:1,january:1,feb:2,february:2,mar:3,march:3,apr:4,april:4,may:5,jun:6,june:6,jul:7,july:7,aug:8,august:8,sep:9,sept:9,september:9,oct:10,october:10,nov:11,november:11,dec:12,december:12};
   const pretty=iso=>{try{return window.fD?window.fD(iso):new Date(iso+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}catch{return iso||''}};
   const split=t=>String(t||'').replace(/\r/g,'\n').split(/(?<=[.!?])\s+|\n+/).map(clean).filter(x=>x.length>6);
@@ -22,7 +81,7 @@
   function allMatch(lines,res){return lines.filter(l=>res.some(r=>r.test(l)))}
   function bank(raw){if(/Bank of America|BofA/i.test(raw))return'Bank of America';if(/U\.S\. Bank|US Bank|Bank Smartly/i.test(raw))return'U.S. Bank';if(/Morgan Stanley Private Bank|E\*TRADE/i.test(raw))return'Morgan Stanley Private Bank';if(/Wells Fargo/i.test(raw))return'Wells Fargo';if(/Chase/i.test(raw))return'Chase';if(/Capital One/i.test(raw))return'Capital One';if(/Citi(?:bank)?/i.test(raw))return'Citibank';if(/PNC/i.test(raw))return'PNC Bank';const m=raw.match(/([A-Z][A-Za-z&.'’\- ]{2,90}?(?:Bank|Credit Union|Private Bank))/);return m?clean(m[1]):'New Bank Bonus'}
   function account(raw){if(/Bank of America/i.test(raw))return'Bank of America eligible personal checking';if(/Bank Smartly/i.test(raw))return'U.S. Bank Smartly Checking';if(/Checking or Max-Rate Checking|Checking OR Max-Rate Checking/i.test(raw))return'Checking OR Max-Rate Checking — open one only; do not enroll both';if(/consumer checking/i.test(raw))return'consumer checking';if(/personal checking/i.test(raw))return'personal checking';if(/business checking/i.test(raw))return'business checking';if(/checking/i.test(raw))return'checking';return'account type needs review'}
-  function normalize(raw){let out=String(raw||'');try{if(window.tcNormalizeWeirdBankWording)out=window.tcNormalizeWeirdBankWording(out)}catch{}return out}
+  function normalize(raw){return normalizeWeirdBankWording(raw).normalized}
   function tiers(raw){const text=String(raw||'').replace(/\s+/g,' ');const out=[];const push=(req,max,bonus,src)=>{req=moneyNum(req);max=moneyNum(max);bonus=moneyNum(bonus);if(req>=100&&bonus>0&&bonus<req)out.push({requirement:req,maxRequirement:max||0,bonus,source:clean(src),confidence:'High'})};let m;
     const patterns=[/\$\s*([0-9,]+(?:\.\d+)?)\s*(?:to|–|-|—)\s*\$\s*([0-9,]+(?:\.\d+)?)\s*(?:to earn|=|\s+)\s*(?:the\s*)?\$\s*([0-9,]+(?:\.\d+)?)\s*(?:bonus)?/gi,/\$\s*([0-9,]+(?:\.\d+)?)\s*(?:or more|\+)\s*(?:to earn|=|\s+)\s*(?:the\s*)?\$\s*([0-9,]+(?:\.\d+)?)\s*(?:bonus)?/gi];
     while((m=patterns[0].exec(text)))push(m[1],m[2],m[3],m[0]);while((m=patterns[1].exec(text)))push(m[1],0,m[2],m[0]);
@@ -62,11 +121,11 @@
     });
     return c.sort((a,b)=>b.score-a.score||a.value-b.value)[0]||null
   }
-  function analyze(input,opts={}){const source=window.tcV3ResolveSource?window.tcV3ResolveSource(input,opts):{raw:input||'',kind:'direct'};const original=source.raw||'';const raw=normalize(original);const lines=split(raw);let tierList=tiers(raw);const b=bank(raw);const p=promoCode(raw);const exp=openBy(raw,lines);const req=requirements(raw,lines,tierList);const fund=funding(raw,lines);const feeObj=fee(raw,lines);const pay=payout(raw,lines);let bonus=tierList.length?(opts.tierIndex!=null?tierList[opts.tierIndex]?.bonus:tierList[tierList.length-1].bonus):singleBonus(lines)?.value||0;const targetTier=tierList.length?(opts.tierIndex!=null?tierList[opts.tierIndex]:tierList[tierList.length-1]):null;
-    const result={version:VER,source,sourceKind:source.kind,sourceId:source.sourceId,sourceLength:source.length,bank:b,acct:account(raw),raw:original,normalizedRaw:raw,tiered:!!tierList.length,tiers:tierList,targetTier,bonus,selectedBonus:bonus,bonusTierText:tierList.map(t=>`${money(t.bonus)} for ${money(t.requirement)}+ DD`).join(' / '),code:p?.value||'',promoCode:p,openBy:exp?.value||'',expiration:exp,reqDays:req.reqDays,reqMoney:req.reqMoney,reqIsTotal:req.reqIsTotal,count:req.count,reqSource:req.source,fundedDays:fund.fundedDays,fundingAmount:fund.fundingAmount,fundingSource:fund.source,fee:feeObj.fee,monthlyFee:feeObj.fee?{value:money(feeObj.fee)+' monthly fee',amount:feeObj.fee,source:feeObj.source}:null,waivers:feeObj.waivers,counts:counts(raw),not:notCounts(raw),notCounts:notCounts(raw),eligibilityText:eligibility(raw).join('\n'),payout:pay.value,payoutText:pay.value,payoutSource:pay.source,early:'Keep account open and in good standing until bonus payout; closing/restriction before payout can forfeit bonus.',reviewFlags:[],clear:false,bankProfilesVersion:'v3-core'};
-    if(!result.bonus)result.reviewFlags.push('Bonus amount needs review.');if(!result.reqDays&&/direct deposit|qualifying deposit/i.test(raw))result.reviewFlags.push('Requirement deadline needs review.');if(/promo code|promotional code|offer code/i.test(raw)&&!result.code)result.reviewFlags.push('Promo code mentioned but exact code needs review.');if(/offer expires|through and including|open.*by/i.test(raw)&&!result.openBy)result.reviewFlags.push('Promo expiration/open-by date needs review.');result.clear=!!(result.bonus&&result.reqDays);
+  function analyze(input,opts={}){const source=window.tcV3ResolveSource?window.tcV3ResolveSource(input,opts):{raw:input||'',kind:'direct'};const original=source.raw||'';const weird=normalizeWeirdBankWording(original);const raw=weird.normalized;const lines=split(raw);let tierList=tiers(raw);const b=bank(raw);const p=promoCode(raw);const exp=openBy(raw,lines);const req=requirements(raw,lines,tierList);const fund=funding(raw,lines);const feeObj=fee(raw,lines);const pay=payout(raw,lines);let bonus=tierList.length?(opts.tierIndex!=null?tierList[opts.tierIndex]?.bonus:tierList[tierList.length-1].bonus):singleBonus(lines)?.value||0;const targetTier=tierList.length?(opts.tierIndex!=null?tierList[opts.tierIndex]:tierList[tierList.length-1]):null;
+    const result={version:VER,source,sourceKind:source.kind,sourceId:source.sourceId,sourceLength:source.length,bank:b,acct:account(raw),raw:original,normalizedRaw:raw,tiered:!!tierList.length,tiers:tierList,targetTier,bonus,selectedBonus:bonus,bonusTierText:tierList.map(t=>`${money(t.bonus)} for ${money(t.requirement)}+ DD`).join(' / '),code:p?.value||'',promoCode:p,openBy:exp?.value||'',expiration:exp,reqDays:req.reqDays,reqMoney:req.reqMoney,reqIsTotal:req.reqIsTotal,count:req.count,reqSource:req.source,fundedDays:fund.fundedDays,fundingAmount:fund.fundingAmount,fundingSource:fund.source,fee:feeObj.fee,monthlyFee:feeObj.fee?{value:money(feeObj.fee)+' monthly fee',amount:feeObj.fee,source:feeObj.source}:null,waivers:feeObj.waivers,counts:counts(raw),not:notCounts(raw),notCounts:notCounts(raw),eligibilityText:eligibility(raw).join('\n'),payout:pay.value,payoutText:pay.value,payoutSource:pay.source,early:'Keep account open and in good standing until bonus payout; closing/restriction before payout can forfeit bonus.',reviewFlags:[],clear:false,bankProfilesVersion:'v3-core',weirdWordingDetected:weird.hits,weirdWordingAliases:uniq(weird.aliases),weirdWordingNormalizerVersion:WEIRD_WORDING_VER};
+    if(result.weirdWordingAliases?.length)result.reviewFlags.push('Unusual bank wording normalized: '+result.weirdWordingAliases.slice(0,4).join('; ')+(result.weirdWordingAliases.length>4?'…':''));if(!result.bonus)result.reviewFlags.push('Bonus amount needs review.');if(!result.reqDays&&/direct deposit|qualifying deposit/i.test(raw))result.reviewFlags.push('Requirement deadline needs review.');if(/promo code|promotional code|offer code/i.test(raw)&&!result.code)result.reviewFlags.push('Promo code mentioned but exact code needs review.');if(/offer expires|through and including|open.*by/i.test(raw)&&!result.openBy)result.reviewFlags.push('Promo expiration/open-by date needs review.');result.clear=!!(result.bonus&&result.reqDays);
     result.suggestedTimers=[];if(result.openBy)result.suggestedTimers.push({kind:'due',text:'Promo expiration / open-by deadline',date:result.openBy});if(result.reqDays)result.suggestedTimers.push({kind:'days',text:'Bonus requirement deadline',daysRequired:result.reqDays});if(result.fundedDays)result.suggestedTimers.push({kind:'days',text:'Funding deadline',daysRequired:result.fundedDays});
     result.actionPlan=[`1. Open one eligible account${result.openBy?' by '+pretty(result.openBy):''}${result.code?' using promo code '+result.code:''}.`,result.fundedDays?`2. Fund the account${result.fundingAmount?' with at least '+money(result.fundingAmount):''} within ${result.fundedDays} days.`:'',`3. Complete ${result.count?'at least '+result.count+' ':''}qualifying Direct Deposits${result.reqMoney?`${result.reqIsTotal?' totaling ':' of '}${money(result.reqMoney)}+${result.reqIsTotal?'':' each'}`:''}${result.reqDays?' within '+result.reqDays+' days':''}.`,`4. Bonus payout: ${result.payout}.`,'5. Keep account open and in good standing until payout.'].filter(Boolean).join('\n');
     window.__tcV3AnalysisResult=result;window.__tcCurrentAnalysisResult=result;return result;}
-  window.tcV3Analyze=analyze;window.tcUnifiedAnalyze=analyze;window.tcStrictAnalyze=analyze;window.tcV3EngineVersion=VER;
+  window.tcNormalizeWeirdBankWording=normalize;window.tcAnalyzeWeirdBankWording=normalizeWeirdBankWording;window.tcV3Analyze=analyze;window.tcUnifiedAnalyze=analyze;window.tcStrictAnalyze=analyze;window.tcV3EngineVersion=VER;window.tcWeirdWordingNormalizerVersion=WEIRD_WORDING_VER;
 })();

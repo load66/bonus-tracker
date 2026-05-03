@@ -156,7 +156,7 @@
     const base=window.tcV3Analyze;
     window.tcV3Analyze=function(raw,opts){
       const r=base(raw,opts);
-      const m=matchProfile(raw||r?.raw||r?.normalizedRaw||'');
+      const m=matchProfile(raw||r?.normalizedRaw||r?.raw||'');
       if(r){
         r.profileRegistry=m;
         r.profileRegistryVersion=VER;

@@ -11,7 +11,7 @@
   const uniq=a=>Array.from(new Set((a||[]).filter(Boolean).map(clean))).filter(Boolean);
 
   function applyPncConsumer(r){
-    const raw=String(r?.raw||r?.normalizedRaw||'');
+    const raw=String(r?.normalizedRaw||r?.raw||'');
     if(!/\bPNC\b|PNC Bank/i.test(raw))return r;
     if(!/Virtual Wallet|Performance Select|CREDITS CHECK REWARD|Spend account/i.test(raw))return r;
 
