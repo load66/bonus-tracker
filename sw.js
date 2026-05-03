@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.49 Newest update: Reliable save button and verified entry persistence.
+// ✅ Version 3.3.52 Newest update: Clean direct action confirmation prompts.
 
-const V = 'bt-v3.3.50';
+const V = 'bt-v3.3.52';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
