@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.38 Newest update: Analyzer source snippets and known bank profile fallback intelligence.
+// ✅ Version 3.3.39 Newest update: ChatGPT-ready analyzer issue repair prompt.
 
-const V = 'bt-v3.3.38';
+const V = 'bt-v3.3.39';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
