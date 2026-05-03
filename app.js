@@ -1,7 +1,7 @@
 /* ✅ Version 2.0 Newest update: Removed Profile tab + added Data Health and safer backup/close guardrails. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.3.44';
+const APP_VERSION='3.3.45';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 
 const ld=(k,d)=>{
@@ -648,8 +648,122 @@ function getUrg(e){
 
 function getAttentionSuggestions(){
   const sug=[];
-  entries.forEach(e=>{if(!e||!e.bank||e.closed)return;const activeTimers=sortCustomTimers(normalizeTimerList(e.customTimers||[]).filter(t=>!t.done&&t.date&&!isDeletedTimer(e,t)));if(activeTimers.length){const next=activeTimers[0];const d=timerCountdownDays(next);if(d!==null){let pri=0.2,days=Math.abs(d),rsn='';if(d<0){pri=0;rsn='Timer overdue: '+next.text}else if(d===0){pri=0.05;rsn='Timer due today: '+next.text}else if(d<=3){pri=0.1;rsn=d+'d left: '+next.text}else if(d<=7){pri=0.15;rsn=d+'d left: '+next.text}else{pri=0.8;rsn=d+'d left: '+next.text}sug.push({bank:e.bank,rsn,bonus:e.bonus||0,showBonus:(e.bonus||0)>0,pri,days});return;}}const st=status(e);let pri=99,days=999999,rsn='';if(st==='SAFE TO CLOSE'){pri=1;days=0;rsn='Safe to close now.'}else if(!e.reqMet&&!e.bonusRecd&&e.opened&&e.reqDays>0){const d=daysToDeadline(e);if(d!==null){pri=d<0?1.2:2;days=Math.abs(d);rsn=d<0?'Requirement deadline passed.':d===0?'Requirement deadline is today.':d+'d to requirement deadline.'}}else if(e.bonusRecd&&e.plannedClose){const d=dB(td(),e.plannedClose);pri=d<=0?3:4;days=Math.abs(d);rsn=d<=0?'Planned close is due.':d+'d to planned close.'}else if(st==='3-DAY BUFFER'){const d=daysUntilSafe(e);if(d!==null){pri=5;days=Math.abs(d);rsn=d+'d left in close buffer.'}}else if(e.opened&&e.minHoldDays>0&&!e.feeChecked){const d=daysUntilSafe(e);if(d!==null){pri=d<=0?1:6;days=Math.abs(d);rsn=d<=0?'Safe to close now.':d+'d until safe to close.'}}else if(st==='REQ MET'){const d=e.reqMet?Math.max(0,dB(e.reqMet,td())):0;pri=6.5;days=d;rsn=d>0?'Waiting bonus — '+d+'d since req met.':'Requirements met — waiting bonus.'}else if(e.bonusRecd){const el=elapsed(e);pri=7;days=el===null?999999:el;rsn=el!==null?el+'d since bonus received.':'Bonus received — review close timing.'}else if(e.opened){const od=dB(e.opened,td());pri=8;days=od<0?0:od;rsn=od>0?od+'d open — working bonus requirements.':'Open — review this bank.'}else{pri=9;days=999999;rsn='Open — review this bank.'}sug.push({bank:e.bank,rsn,bonus:e.bonus||0,showBonus:!e.closed&&(e.bonus||0)>0,pri,days})});
-  return sug.sort((a,b)=>a.pri-b.pri||a.days-b.days||(b.bonus||0)-(a.bonus||0)||a.bank.localeCompare(b.bank))
+  const push=(e,rsn,pri,days,opts={})=>{
+    if(!e||!e.bank||!rsn)return;
+    const d=Number.isFinite(days)?Math.max(0,days):999999;
+    sug.push({
+      bank:e.bank,
+      rsn,
+      bonus:e.bonus||0,
+      showBonus:opts.showBonus!==undefined?!!opts.showBonus:!e.closed&&(e.bonus||0)>0,
+      pri,
+      days:d,
+      category:opts.category||''
+    });
+  };
+
+  entries.forEach(e=>{
+    if(!e||!e.bank||e.closed)return;
+
+    // Mini timers should only jump to the top when they are actually actionable.
+    // Long future timers should not hide the bank's core phase such as
+    // requirement deadline, waiting-to-close, or waiting-for-bonus.
+    const activeTimers=sortCustomTimers(normalizeTimerList(e.customTimers||[]).filter(t=>!t.done&&t.date&&!isDeletedTimer(e,t)));
+    if(activeTimers.length){
+      const next=activeTimers[0];
+      const d=timerCountdownDays(next);
+      if(d!==null){
+        const abs=Math.abs(d);
+        if(d<0)push(e,'Timer overdue: '+next.text,0,abs,{category:'timer'});
+        else if(d===0)push(e,'Timer due today: '+next.text,0.05,0,{category:'timer'});
+        else if(d<=3)push(e,d+'d left: '+next.text,0.1,d,{category:'timer'});
+        else if(d<=7)push(e,d+'d left: '+next.text,0.2,d,{category:'timer'});
+        else if(d<=14)push(e,d+'d left: '+next.text,0.35,d,{category:'timer'});
+      }
+    }
+
+    const st=status(e);
+
+    if(st==='SAFE TO CLOSE'){
+      push(e,'Safe to close now.',0.6,0,{category:'close'});
+      return;
+    }
+
+    // Requirement deadlines are the highest normal priority because missing the
+    // requirement can lose the bonus. Sort them by true days remaining.
+    if(!e.reqMet&&!e.bonusRecd&&e.opened&&e.reqDays>0){
+      const d=daysToDeadline(e);
+      if(d!==null){
+        if(d<0)push(e,'Requirement deadline passed.',0.4,Math.abs(d),{category:'requirement'});
+        else if(d===0)push(e,'Requirement deadline is today.',0.5,0,{category:'requirement'});
+        else if(d<=14)push(e,d+'d to requirement deadline.',1.2,d,{category:'requirement'});
+        else if(d<=30)push(e,d+'d to requirement deadline.',2.0,d,{category:'requirement'});
+        else push(e,d+'d to requirement deadline.',3.0,d,{category:'requirement'});
+        return;
+      }
+    }
+
+    if(e.bonusRecd&&e.plannedClose){
+      const d=dB(td(),e.plannedClose);
+      push(e,d<=0?'Planned close is due.':d+'d to planned close.',d<=0?0.7:2.4,Math.abs(d),{category:'planned-close'});
+      return;
+    }
+
+    if(st==='3-DAY BUFFER'){
+      const d=daysUntilSafe(e);
+      if(d!==null)push(e,d+'d left in close buffer.',1.4,Math.abs(d),{category:'close'});
+      return;
+    }
+
+    // Close countdowns are action items, but they come after requirement
+    // deadlines unless they are due/overdue.
+    if(e.opened&&e.minHoldDays>0&&!e.feeChecked){
+      const d=daysUntilSafe(e);
+      if(d!==null){
+        if(d<=0)push(e,'Safe to close now.',0.6,0,{category:'close'});
+        else if(d<=14)push(e,d+'d until safe to close.',2.2,d,{category:'close'});
+        else if(d<=60)push(e,d+'d until safe to close.',4.0,d,{category:'close'});
+        else push(e,d+'d until safe to close.',5.0,d,{category:'close'});
+        return;
+      }
+    }
+
+    // Waiting-for-bonus is not urgent right away. Only surface it after it has
+    // been waiting long enough to deserve follow-up.
+    if(st==='REQ MET'){
+      const d=e.reqMet?Math.max(0,dB(e.reqMet,td())):0;
+      if(d>=30)push(e,'Waiting bonus — '+d+'d since req met.',6.0,d,{category:'waiting-bonus'});
+      return;
+    }
+
+    if(e.bonusRecd){
+      const el=elapsed(e);
+      push(e,el!==null?el+'d since bonus received — review close timing.':'Bonus received — review close timing.',6.2,el===null?999999:el,{category:'bonus-received'});
+      return;
+    }
+
+    // Data-quality item: an open entry without an opened date cannot calculate
+    // requirement or close deadlines.
+    if(!e.opened){
+      push(e,'Missing opened date — deadlines cannot be calculated.',7.0,999999,{category:'data-quality'});
+      return;
+    }
+
+    // If it is open but has no requirement deadline, keep it lower priority.
+    if(e.opened&&!e.reqDays){
+      const od=dB(e.opened,td());
+      push(e,od>0?od+'d open — review bonus requirements.':'Open — review bonus requirements.',7.5,od<0?0:od,{category:'review'});
+    }
+  });
+
+  const bestByBank=new Map();
+  sug.forEach(s=>{
+    const key=(typeof bankKey==='function'?bankKey(s.bank):s.bank)+'|'+(s.category||'');
+    const prev=bestByBank.get(key);
+    if(!prev||s.pri<prev.pri||(s.pri===prev.pri&&s.days<prev.days))bestByBank.set(key,s);
+  });
+
+  return Array.from(bestByBank.values()).sort((a,b)=>a.pri-b.pri||a.days-b.days||(b.bonus||0)-(a.bonus||0)||a.bank.localeCompare(b.bank))
 }
 
 function getChurnSuggestions(){
@@ -672,7 +786,7 @@ function chartData(){
 /* Bank Identity v3.3.42
    Centralized bank matching. Display names can vary, but duplicate/churn
    matching uses canonical bank family + personal/business type. */
-const BANK_IDENTITY_VERSION='3.3.42';
+const BANK_IDENTITY_VERSION='3.3.45';
 function normBankText(v){return String(v||'').toLowerCase().replace(/[®™℠]/g,'').replace(/&/g,' and ').replace(/\*/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim()}
 function bankAliasGroups(){return[
   ['chase','CHA',['chase','jpmorgan chase','jp morgan chase','jpmorgan','jp morgan','jpm']],
@@ -2310,7 +2424,7 @@ function rTracker(sorted){
   if(attentionSug.length||churnSug.length){
     h += '<div class="sec">Suggested next</div>';
     h += '<div class="sug-split">';
-    h += '<div class="sug-panel"><div class="sug-panel-h">Needs attention • '+entries.filter(e=>e&&e.bank&&!e.closed).length+' open</div>'+(attentionSug.length?attentionSug.map(s=>`<div class="sug-c">${bankLogo(s.bank,true)}<div class="s-info"><div class="nm">${esc(s.bank)}</div>${s.showBonus&&s.bonus?`<div class="sub">${fM(s.bonus)}</div>`:''}<div class="rsn">${esc(s.rsn)}</div></div></div>`).join(''):'<div class="sug-empty">No urgent items.</div>')+'</div>';
+    h += '<div class="sug-panel"><div class="sug-panel-h">Needs attention • '+attentionSug.length+' item'+(attentionSug.length!==1?'s':'')+'</div>'+(attentionSug.length?attentionSug.map(s=>`<div class="sug-c">${bankLogo(s.bank,true)}<div class="s-info"><div class="nm">${esc(s.bank)}</div>${s.showBonus&&s.bonus?`<div class="sub">${fM(s.bonus)}</div>`:''}<div class="rsn">${esc(s.rsn)}</div></div></div>`).join(''):'<div class="sug-empty">No urgent items.</div>')+'</div>';
     h += '<div class="sug-panel"><div class="sug-panel-h">Least days to churn</div>'+(churnSug.length?churnSug.map(s=>`<div class="sug-c">${bankLogo(s.bank,true)}<div class="s-info"><div class="nm">${esc(s.bank)}</div>${s.showBonus&&s.bonus?`<div class="sub">${fM(s.bonus)}</div>`:''}<div class="rsn">${esc(s.rsn)}</div></div></div>`).join(''):'<div class="sug-empty">Nothing cooling down yet.</div>')+'</div>';
     h += '</div>';
   }
@@ -3763,7 +3877,7 @@ entries=sortE(entries);R();
     if(attentionSug.length||churnSug.length){
       h += '<div class="sec">Suggested next</div>';
       h += '<div class="sug-split">';
-      h += '<div class="sug-panel"><div class="sug-panel-h">Needs attention • '+entries.filter(e=>e&&e.bank&&!e.closed).length+' open</div>'+(attentionSug.length?attentionSug.map(s=>`<div class="sug-c">${bankLogo(s.bank,true)}<div class="s-info"><div class="nm">${esc(s.bank)}</div>${s.showBonus&&s.bonus?`<div class="sub">${fM(s.bonus)}</div>`:''}<div class="rsn">${esc(s.rsn)}</div></div></div>`).join(''):'<div class="sug-empty">No urgent items.</div>')+'</div>';
+      h += '<div class="sug-panel"><div class="sug-panel-h">Needs attention • '+attentionSug.length+' item'+(attentionSug.length!==1?'s':'')+'</div>'+(attentionSug.length?attentionSug.map(s=>`<div class="sug-c">${bankLogo(s.bank,true)}<div class="s-info"><div class="nm">${esc(s.bank)}</div>${s.showBonus&&s.bonus?`<div class="sub">${fM(s.bonus)}</div>`:''}<div class="rsn">${esc(s.rsn)}</div></div></div>`).join(''):'<div class="sug-empty">No urgent items.</div>')+'</div>';
       h += '<div class="sug-panel"><div class="sug-panel-h">Least days to churn</div>'+(churnSug.length?churnSug.map(s=>`<div class="sug-c">${bankLogo(s.bank,true)}<div class="s-info"><div class="nm">${esc(s.bank)}</div>${s.showBonus&&s.bonus?`<div class="sub">${fM(s.bonus)}</div>`:''}<div class="rsn">${esc(s.rsn)}</div></div></div>`).join(''):'<div class="sug-empty">Nothing cooling down yet.</div>')+'</div>';
       h += '</div>';
     }

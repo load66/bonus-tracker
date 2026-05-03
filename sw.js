@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.44 Newest update: Close fee days are based on opened date, not today.
+// ✅ Version 3.3.45 Newest update: Priority-based Needs Attention ordering.
 
-const V = 'bt-v3.3.44';
+const V = 'bt-v3.3.45';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
