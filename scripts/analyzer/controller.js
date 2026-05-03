@@ -1,11 +1,11 @@
 /*
  * filename: scripts/analyzer/controller.js
- * version: 3.3.39
+ * version: 3.3.40
  * purpose: Analyzer v3 Controller renders stable summaries and makes Auto-fill New Entry open the real entry modal.
  * last-touched: unknown
  */
 (function(){
-  const VER='3.3.39';
+  const VER='3.3.40';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const esc=v=>{if(window.esc)return window.esc(String(v??''));const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML};
   const money=n=>'$'+Number(n||0).toLocaleString();
@@ -70,7 +70,9 @@
   function findRaw(){const tca=document.getElementById('tca_raw')?.value||'';if(isTerms(tca))return tca;const areas=Array.from(document.querySelectorAll('textarea')).map(a=>a.value||'').filter(isTerms).sort((a,b)=>b.length-a.length);return areas[0]||''}
   function renderSummary(){const raw=findRaw();if(!raw)return false;const r=currentResult(raw);const card=findSummaryCard();if(!card||!r)return false;card.dataset.v3='true';card.dataset.sourceKind=r.sourceKind||'';card.style.height='auto';card.style.maxHeight='none';card.style.overflow='visible';card.innerHTML=summaryHtml(r);return true}
   function modalObj(){try{return modal||window.modal||null}catch{return window.modal||null}}
-  function applyToModal(r){const m=modalObj();if(!m||!r)return false;m.bank=m.bank||r.bank;if(r.bonus)m.bonus=r.bonus;if(r.reqDays)m.reqDays=r.reqDays;if(r.code)m.promoCodeText=r.code;if(r.openBy)m.expirationDateText=pretty(r.openBy);if(r.fee)m.monthlyFeeYNText=`Yes — ${money(r.fee)} monthly fee`;if(r.waivers?.length)m.avoidMonthlyFeeText=r.waivers.join('\n');if(r.actionPlan)m.completeBonusText=r.actionPlan;if(r.eligibilityText)m.eligibilityText=r.eligibilityText;if(r.early)m.earlyTerminationFeeText=r.early;if(r.fundedDays)m.fundedDays=r.fundedDays;if(r.fundingAmount)m.fundingAmount=r.fundingAmount;if(r.holdDays)m.minHoldDays=r.holdDays;m.tcAnalysisResult=r;m.tcSourceRaw=r.raw;m.tcSourceId=r.sourceId;try{window.tcV3SaveSourceForCurrentEntry&&window.tcV3SaveSourceForCurrentEntry(r.raw,{bank:r.bank})}catch{}return true}
+  function analyzerEarlyFeeText(r){const fee=r?.earlyCloseFee||r?.earlyTerminationFee;const n=parseInt(String(fee||'').replace(/[$,]/g,''),10)||0;if(n>0)return String(n);if(/no early close fee|no fee|none/i.test(String(r?.early||'')))return 'None';return ''}
+  function analyzerEligibilityText(r){const parts=[];if(r?.eligibilityText)parts.push(r.eligibilityText);if(r?.early&&/closed|restricted|payout|good standing/i.test(r.early))parts.push(r.early);return Array.from(new Set(parts.map(clean).filter(Boolean))).join('\n')}
+  function applyToModal(r){const m=modalObj();if(!m||!r)return false;m.bank=m.bank||r.bank;if(r.bonus)m.bonus=r.bonus;if(r.reqDays)m.reqDays=r.reqDays;if(r.reqMoney)m.dataPoint=m.dataPoint||('DD '+money(r.reqMoney)+(r.reqDays?' within '+r.reqDays+' days':''));if(r.code)m.promoCodeText=r.code;if(r.openBy)m.expirationDateText=pretty(r.openBy);if(r.fee)m.monthlyFeeYNText=`Yes — ${money(r.fee)} monthly fee`;if(r.waivers?.length)m.avoidMonthlyFeeText=r.waivers.join('\n');if(r.actionPlan)m.completeBonusText=r.actionPlan;const elig=analyzerEligibilityText(r);if(elig)m.eligibilityText=elig;const earlyFee=analyzerEarlyFeeText(r);if(earlyFee)m.earlyTerminationFeeText=earlyFee;if(r.fundedDays)m.fundedDays=r.fundedDays;if(r.fundingAmount)m.fundingAmount=r.fundingAmount;if(r.holdDays)m.minHoldDays=r.holdDays;m.tcAnalysisResult=r;m.tcSourceRaw=r.raw;m.tcSourceId=r.sourceId;try{window.tcV3SaveSourceForCurrentEntry&&window.tcV3SaveSourceForCurrentEntry(r.raw,{bank:r.bank})}catch{}return true}
   function addDaysIso(start,days){try{if(window.addD)return window.addD(start,days)}catch{}const d=new Date(start+'T00:00:00');d.setDate(d.getDate()+Number(days||0));return d.toISOString().split('T')[0]}
   function createTimers(r){const m=modalObj();if(!m||!r)return 0;const opened=m.opened||'';m.customTimers=Array.isArray(m.customTimers)?m.customTimers:[];let added=0;const mk=(text,date,startDate='',daysRequired=0)=>({id:window.timerId?window.timerId():'tm_'+Math.random().toString(36).slice(2,8),text,date,startDate,daysRequired:Number(daysRequired||0),done:false});const add=t=>{if(!t.date)return;if(m.customTimers.some(x=>clean(x.text).toLowerCase()===clean(t.text).toLowerCase()&&x.date===t.date))return;m.customTimers.push(t);added++};(r.suggestedTimers||[]).forEach(t=>{if(t.date)add(mk(t.text,t.date));else if(opened&&t.daysRequired)add(mk(t.text,addDaysIso(opened,t.daysRequired),opened,t.daysRequired));});if(!r.suggestedTimers?.length){if(r.openBy)add(mk('Promo expiration / open-by deadline',r.openBy));if(opened&&r.reqDays)add(mk('Bonus requirement deadline',addDaysIso(opened,r.reqDays),opened,r.reqDays));if(opened&&r.fundedDays)add(mk('Funding deadline',addDaysIso(opened,r.fundedDays),opened,r.fundedDays));}return added}
   function issueReport(r){
@@ -163,7 +165,7 @@
     ].join('\n')
   }
   function copyIssueReport(){const txt=issueReport();navigator.clipboard?.writeText(txt).then(()=>alert('ChatGPT-ready fix prompt copied. Paste it into ChatGPT with a short note about what looked wrong.')).catch(()=>alert(txt))}
-  function openPro(){const src=window.tcV3ResolveSource?window.tcV3ResolveSource(findRaw()):{raw:findRaw()};let r=analyze(src.raw);document.getElementById('tca_overlay')?.remove();let h=`<div class="cbg" onclick="tcClosePro()"><div class="dd-box tca-box" onclick="event.stopPropagation()"><h3>✨ Unified Analyzer Pro <span style="font-size:9px;color:#94A3B8">v3.3.39</span></h3><div class="sub">Clean v3 pipeline: current pasted text first, entry saved source second, vault fallback last.</div><textarea id="tca_raw" class="dd-input" style="height:150px;line-height:1.45">${esc(src.raw||'')}</textarea><div class="crow"><button class="c-c" onclick="tcClosePro()">Close</button><button class="c-g" onclick="tcRunPro()">Analyze</button></div><div id="tcv3_result">${summaryHtml(r)}</div>`;if(r?.tiers?.length){h+=`<div class="tc-box"><div class="tc-label">Target tier</div><select class="dd-input" onchange="tcV3SelectTier(this.value)">`;r.tiers.forEach((t,i)=>h+=`<option value="${i}" ${i===r.tiers.length-1?'selected':''}>${money(t.bonus)} bonus — ${money(t.requirement)}+</option>`);h+=`</select></div>`}h+=`<div class="crow"><button class="c-c" onclick="tcCopyIssueReport()">🧾 Copy ChatGPT Fix Prompt</button><button class="c-g" onclick="tcApplyPro()">Apply Fields</button></div><button class="btn-p" style="margin-top:8px" onclick="tcCreateTimers()">Create Suggested Mini Timers</button></div></div>`;const d=document.createElement('div');d.id='tca_overlay';d.innerHTML=h;document.body.appendChild(d)}
+  function openPro(){const src=window.tcV3ResolveSource?window.tcV3ResolveSource(findRaw()):{raw:findRaw()};let r=analyze(src.raw);document.getElementById('tca_overlay')?.remove();let h=`<div class="cbg" onclick="tcClosePro()"><div class="dd-box tca-box" onclick="event.stopPropagation()"><h3>✨ Unified Analyzer Pro <span style="font-size:9px;color:#94A3B8">v3.3.40</span></h3><div class="sub">Clean v3 pipeline: current pasted text first, entry saved source second, vault fallback last.</div><textarea id="tca_raw" class="dd-input" style="height:150px;line-height:1.45">${esc(src.raw||'')}</textarea><div class="crow"><button class="c-c" onclick="tcClosePro()">Close</button><button class="c-g" onclick="tcRunPro()">Analyze</button></div><div id="tcv3_result">${summaryHtml(r)}</div>`;if(r?.tiers?.length){h+=`<div class="tc-box"><div class="tc-label">Target tier</div><select class="dd-input" onchange="tcV3SelectTier(this.value)">`;r.tiers.forEach((t,i)=>h+=`<option value="${i}" ${i===r.tiers.length-1?'selected':''}>${money(t.bonus)} bonus — ${money(t.requirement)}+</option>`);h+=`</select></div>`}h+=`<div class="crow"><button class="c-c" onclick="tcCopyIssueReport()">🧾 Copy ChatGPT Fix Prompt</button><button class="c-g" onclick="tcApplyPro()">Apply Fields</button></div><button class="btn-p" style="margin-top:8px" onclick="tcCreateTimers()">Create Suggested Mini Timers</button></div></div>`;const d=document.createElement('div');d.id='tca_overlay';d.innerHTML=h;document.body.appendChild(d)}
   function resultPlainText(r){
     if(!r)return'';
     const box=document.createElement('div');
@@ -176,8 +178,10 @@
     const reqDays=parseInt(r.reqDays||r.fundedDays||r.holdDays||0,10)||0;
     const minHold=parseInt(r.holdDays||0,10)||0;
     let earlyFee=0;
-    try{if(typeof parseCloseFeeAmount==='function')earlyFee=parseCloseFeeAmount(r.early||'')||0}catch{}
+    const earlyFeeText=analyzerEarlyFeeText(r);
+    try{if(typeof parseCloseFeeAmount==='function')earlyFee=parseCloseFeeAmount(earlyFeeText)||0}catch{}
     const complete=r.actionPlan||actionLines(r).join('\n');
+    const eligibilityOut=analyzerEligibilityText(r);
     const analyzed=resultPlainText(r);
     return {
       bank:r.bank||'',
@@ -201,8 +205,8 @@
       promoCodeText:r.code||'',
       avoidMonthlyFeeText:(r.waivers||[]).join('\n'),
       completeBonusText:complete,
-      earlyTerminationFeeText:r.early||'',
-      eligibilityText:r.eligibilityText||'',
+      earlyTerminationFeeText:earlyFeeText,
+      eligibilityText:eligibilityOut,
       expirationDateText:r.openBy?pretty(r.openBy):'',
       requiredDaysText:reqDays?String(reqDays):'',
       customTimers:[]
