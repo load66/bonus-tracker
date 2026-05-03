@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.37 Newest update: Moved weird wording normalizer into analyzer engine core.
+// ✅ Version 3.3.38 Newest update: Analyzer source snippets and known bank profile fallback intelligence.
 
-const V = 'bt-v3.3.37';
+const V = 'bt-v3.3.38';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
