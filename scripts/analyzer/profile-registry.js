@@ -1,11 +1,11 @@
 /*
  * filename: scripts/analyzer/profile-registry.js
- * version: 3.3.38
+ * version: 3.3.40
  * purpose: Analyzer profile registry for reusable saved bank bonus profiles, including Chase Total Checking.
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.3.38';
+  const VER='3.3.40';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
     {
@@ -165,8 +165,8 @@
     if(ddMoney.length)out.reqMoney=Math.max(...ddMoney);
     if(/at least two|two or more/i.test(txt))out.count=2;
     else if((m=txt.match(/(\d{1,2})\s+(?:qualifying\s+)?(?:electronic\s+)?transactions?/i)))out.count=parseInt(m[1],10)||0;
-    if((m=txt.match(/(?:fund|funding|deposit|new money|external deposit)[^.;]{0,80}within\s+(\d{1,3})\s+days/i))||(m=txt.match(/by\s+day\s+(\d{1,3})/i)))out.fundedDays=parseInt(m[1],10)||0;
-    const fundClauses=txt.split(/[.;]/).filter(x=>/fund|funding|new money|external deposit|day 30 balance|deposit/i.test(x));
+    if((m=txt.match(/(?:fund|funding|new money|external deposit|opening deposit)[^.;]{0,80}within\s+(\d{1,3})\s+days/i))||(m=txt.match(/by\s+day\s+(\d{1,3})/i)))out.fundedDays=parseInt(m[1],10)||0;
+    const fundClauses=txt.split(/[.;]/).filter(x=>/fund|funding|new money|external deposit|opening deposit|day 30 balance/i.test(x)&&!/direct deposit|DD|ACH/i.test(x));
     const fundMoney=[];
     fundClauses.forEach(c=>{[...c.matchAll(/\$\s*[0-9][0-9,]*(?:\.\d+)?/g)].forEach(x=>{const v=moneyNum(x[0]);if(v>=100)fundMoney.push(v)})});
     if(fundMoney.length)out.fundingAmount=Math.max(...fundMoney);
