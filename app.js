@@ -1,7 +1,7 @@
 /* ✅ Version 2.0 Newest update: Removed Profile tab + added Data Health and safer backup/close guardrails. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.3.34';
+const APP_VERSION='3.3.35';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 
 const ld=(k,d)=>{
@@ -432,33 +432,48 @@ function nextActiveTimer(e){
 }
 
 function status(e){
-  
-  if(!e.bank)return'';
-  
+
+  if(!e||!e.bank)return'';
+
   if(e.closed){
     return daysLeft(e)===0?'TIME TO CHURN!':'WAITING TO CHURN!';
-    
+
   }
-  
+
   const activeTimer=nextActiveTimer(e);
-  
-  if(activeTimer)return'CUSTOM TIMER';
-  
-  if(e.feeChecked)return'SAFE TO CLOSE';
-  
-  if(e.minHoldDays>0&&e.opened){
-    if(isInBuffer(e))return'3-DAY BUFFER';
-    const dsc=daysUntilSafe(e);
-    if(dsc!==null&&dsc<=0)return'SAFE TO CLOSE';
-    
+  const hasReqMet=!!e.reqMet;
+  const hasBonus=!!e.bonusRecd;
+  const hasHold=!!(e.minHoldDays>0&&e.opened&&!e.feeChecked);
+  const safeDays=hasHold?daysUntilSafe(e):null;
+
+  // A received bonus moves the bank into the close/hold phase. It should never
+  // keep showing the old requirement deadline after this point.
+  if(hasBonus){
+    if(e.plannedClose){
+      const d=dB(td(),e.plannedClose);
+      if(d>0)return'PLANNED CLOSE';
+    }
+    if(hasHold){
+      if(isInBuffer(e))return'3-DAY BUFFER';
+      if(safeDays!==null&&safeDays>0)return'WAITING TO CLOSE';
+    }
+    return'SAFE TO CLOSE';
   }
-  
+
+  // Requirements met is its own phase. Requirement countdowns stop here.
+  if(hasReqMet){
+    if(activeTimer)return'CUSTOM TIMER';
+    return'REQ MET';
+  }
+
+  if(activeTimer)return'CUSTOM TIMER';
+
   return'WORKING';
-  
+
 }
 
 function sPri(s){
-  return s==='WORKING'?1:s==='CUSTOM TIMER'?1.2:s==='3-DAY BUFFER'?1.3:s==='SAFE TO CLOSE'?1.5:s==='TIME TO CHURN!'?2:s==='WAITING TO CHURN!'?3:99
+  return s==='TIME TO CHURN!'?0.6:s==='CUSTOM TIMER'?0.8:s==='SAFE TO CLOSE'?1:s==='3-DAY BUFFER'?1.1:s==='WAITING TO CLOSE'?1.2:s==='PLANNED CLOSE'?1.3:s==='WORKING'?2:s==='REQ MET'?2.2:s==='WAITING TO CHURN!'?3:s==='BONUS RECEIVED'?3.2:99
 }
 
 function sortE(a){
@@ -521,9 +536,9 @@ function effortScore(e){
 }
 
 function getCountdown(e){
-  
+
   const s=status(e);
-  
+
   if(s==='CUSTOM TIMER'){
     const timer=nextActiveTimer(e);
     if(timer){
@@ -531,20 +546,21 @@ function getCountdown(e){
       if(d!==null)return{
         lbl:timer.text||'Countdown active',days:d,date:timer.date,cls:d<=7?'red':d<=21?'amber':'blue',icon:'\u23F0'
       }
-      
+
     }
-    
+
   }
-  
-  if((s==='WORKING'||s==='SAFE TO CLOSE'||s==='3-DAY BUFFER')&&!e.bonusRecd&&e.opened&&e.reqDays>0){
+
+  // Requirement deadline is only relevant before requirements are marked met.
+  if(s==='WORKING'&&!e.reqMet&&!e.bonusRecd&&e.opened&&e.reqDays>0){
     const d=daysToDeadline(e);
     if(d!==null)return{
-      lbl:'Req deadline',days:d,date:reqDeadline(e),cls:d<=7?'red':d<=21?'amber':'blue',icon:'\u23F0'
+      lbl:'Req deadline',days:d,date:reqDeadline(e),cls:d<0?'red':d<=7?'red':d<=21?'amber':'blue',icon:'\u23F0'
     }
-    
+
   }
-  
-  if((s==='WORKING'||s==='SAFE TO CLOSE'||s==='3-DAY BUFFER')&&e.bonusRecd&&e.plannedClose){
+
+  if((s==='PLANNED CLOSE'||s==='SAFE TO CLOSE'||s==='3-DAY BUFFER'||s==='WAITING TO CLOSE')&&e.bonusRecd&&e.plannedClose){
     const d=dB(td(),e.plannedClose);
     if(d>0)return{
       lbl:'Close account',days:d,date:e.plannedClose,cls:d<=3?'red':d<=7?'amber':'green',icon:'\uD83D\uDD12'
@@ -552,42 +568,46 @@ function getCountdown(e){
     return{
       lbl:'Ready to close!',days:0,date:e.plannedClose,cls:'green',icon:'\u2705'
     }
-    
+
   }
-  
-  if(s==='WORKING'&&e.opened&&e.minHoldDays>0&&!e.feeChecked){
+
+  if(s==='WAITING TO CLOSE'){
     const d=daysUntilSafe(e);
     if(d!==null&&d>0)return{
-      lbl:'Safe to close (incl. 3d buffer)',days:d,date:safeCloseDate(e),cls:d<=14?'red':d<=30?'amber':'blue',icon:'\uD83D\uDEE1\uFE0F'
+      lbl:'Safe to close',days:d,date:safeCloseDate(e),cls:d<=14?'red':d<=30?'amber':'blue',icon:'\uD83D\uDEE1\uFE0F'
     }
-    
+
   }
-  
+
   if(s==='3-DAY BUFFER'){
     const d=daysUntilSafe(e);
     return{
       lbl:'\uD83D\uDEE1 Buffer '+d+'d remaining',days:d,date:safeCloseDate(e),cls:'amber',icon:'\uD83D\uDEE1\uFE0F'
     }
-    
+
   }
-  
+
+  if(s==='REQ MET')return{
+    lbl:'Waiting for bonus',days:e.reqMet?Math.max(0,dB(e.reqMet,td())):0,date:e.reqMet||'',cls:'blue',icon:'\u2705'
+  };
+
   if(s==='SAFE TO CLOSE')return{
     lbl:'Safe to close!',days:0,date:'',cls:'green',icon:'\u2705'
   };
-  
+
   if(s==='WAITING TO CHURN!'){
     const dl=daysLeft(e);
     const nr=nextReopen(e);
     if(dl>0)return{
       lbl:'Churn ready',days:dl,date:nr,cls:dl<=30?'amber':'blue',icon:'\uD83D\uDD04'
     }
-    
+
   }
-  
+
   if(s==='TIME TO CHURN!')return{
     lbl:'Ready now!',days:0,date:'',cls:'green',icon:'\uD83D\uDD25'
   };
-  
+
   return null
 }
 
@@ -602,9 +622,22 @@ function getUrg(e){
   }
   if(s==='SAFE TO CLOSE')return'green';
   if(s==='3-DAY BUFFER')return'yellow';
-  const dsc=daysUntilSafe(e);
-  if(!e.closed&&dsc!==null&&dsc<=7)return'red';
-  if(!e.closed&&dsc!==null&&dsc<=30)return'yellow';
+  if(s==='WAITING TO CLOSE'){
+    const d=daysUntilSafe(e);
+    if(d!==null&&d<=7)return'red';
+    if(d!==null&&d<=30)return'yellow';
+    return'blue'
+  }
+  if(s==='PLANNED CLOSE'){
+    const d=e.plannedClose?dB(td(),e.plannedClose):null;
+    if(d!==null&&d<=3)return'red';
+    if(d!==null&&d<=14)return'yellow';
+    return'green'
+  }
+  if(s==='REQ MET'){
+    const d=e.reqMet?dB(e.reqMet,td()):0;
+    return d>=30?'yellow':'blue'
+  }
   if(s==='WAITING TO CHURN!'){
     const dl=daysLeft(e);
     if(dl!==null&&dl<=30)return'yellow'
@@ -615,7 +648,7 @@ function getUrg(e){
 
 function getAttentionSuggestions(){
   const sug=[];
-  entries.forEach(e=>{if(!e||!e.bank||e.closed)return;const activeTimers=sortCustomTimers(normalizeTimerList(e.customTimers||[]).filter(t=>!t.done&&t.date&&!isDeletedTimer(e,t)));if(activeTimers.length){const next=activeTimers[0];const d=timerCountdownDays(next);if(d!==null){let pri=0.2,days=Math.abs(d),rsn='';if(d<0){pri=0;rsn='Timer overdue: '+next.text}else if(d===0){pri=0.05;rsn='Timer due today: '+next.text}else if(d<=3){pri=0.1;rsn=d+'d left: '+next.text}else if(d<=7){pri=0.15;rsn=d+'d left: '+next.text}else{pri=0.8;rsn=d+'d left: '+next.text}sug.push({bank:e.bank,rsn,bonus:e.bonus||0,showBonus:(e.bonus||0)>0,pri,days});return;}}const st=status(e);let pri=99,days=999999,rsn='';if(st==='SAFE TO CLOSE'){pri=1;days=0;rsn='Safe to close now.'}else if(!e.bonusRecd&&e.opened&&e.reqDays>0){const d=daysToDeadline(e);if(d!==null){pri=d<0?1.2:2;days=Math.abs(d);rsn=d<0?'Requirement deadline passed.':d===0?'Requirement deadline is today.':d+'d to requirement deadline.'}}else if(e.bonusRecd&&e.plannedClose){const d=dB(td(),e.plannedClose);pri=d<=0?3:4;days=Math.abs(d);rsn=d<=0?'Planned close is due.':d+'d to planned close.'}else if(st==='3-DAY BUFFER'){const d=daysUntilSafe(e);if(d!==null){pri=5;days=Math.abs(d);rsn=d+'d left in close buffer.'}}else if(e.opened&&e.minHoldDays>0&&!e.feeChecked){const d=daysUntilSafe(e);if(d!==null){pri=d<=0?1:6;days=Math.abs(d);rsn=d<=0?'Safe to close now.':d+'d until safe to close.'}}else if(e.bonusRecd){const el=elapsed(e);pri=7;days=el===null?999999:el;rsn=el!==null?el+'d since bonus received.':'Bonus received — review close timing.'}else if(e.opened){const od=dB(e.opened,td());pri=8;days=od<0?0:od;rsn=od>0?od+'d open — working bonus requirements.':'Open — review this bank.'}else{pri=9;days=999999;rsn='Open — review this bank.'}sug.push({bank:e.bank,rsn,bonus:e.bonus||0,showBonus:(st==='WORKING'||st==='CUSTOM TIMER')&&(e.bonus||0)>0,pri,days})});
+  entries.forEach(e=>{if(!e||!e.bank||e.closed)return;const activeTimers=sortCustomTimers(normalizeTimerList(e.customTimers||[]).filter(t=>!t.done&&t.date&&!isDeletedTimer(e,t)));if(activeTimers.length){const next=activeTimers[0];const d=timerCountdownDays(next);if(d!==null){let pri=0.2,days=Math.abs(d),rsn='';if(d<0){pri=0;rsn='Timer overdue: '+next.text}else if(d===0){pri=0.05;rsn='Timer due today: '+next.text}else if(d<=3){pri=0.1;rsn=d+'d left: '+next.text}else if(d<=7){pri=0.15;rsn=d+'d left: '+next.text}else{pri=0.8;rsn=d+'d left: '+next.text}sug.push({bank:e.bank,rsn,bonus:e.bonus||0,showBonus:(e.bonus||0)>0,pri,days});return;}}const st=status(e);let pri=99,days=999999,rsn='';if(st==='SAFE TO CLOSE'){pri=1;days=0;rsn='Safe to close now.'}else if(!e.reqMet&&!e.bonusRecd&&e.opened&&e.reqDays>0){const d=daysToDeadline(e);if(d!==null){pri=d<0?1.2:2;days=Math.abs(d);rsn=d<0?'Requirement deadline passed.':d===0?'Requirement deadline is today.':d+'d to requirement deadline.'}}else if(e.bonusRecd&&e.plannedClose){const d=dB(td(),e.plannedClose);pri=d<=0?3:4;days=Math.abs(d);rsn=d<=0?'Planned close is due.':d+'d to planned close.'}else if(st==='3-DAY BUFFER'){const d=daysUntilSafe(e);if(d!==null){pri=5;days=Math.abs(d);rsn=d+'d left in close buffer.'}}else if(e.opened&&e.minHoldDays>0&&!e.feeChecked){const d=daysUntilSafe(e);if(d!==null){pri=d<=0?1:6;days=Math.abs(d);rsn=d<=0?'Safe to close now.':d+'d until safe to close.'}}else if(st==='REQ MET'){const d=e.reqMet?Math.max(0,dB(e.reqMet,td())):0;pri=6.5;days=d;rsn=d>0?'Waiting bonus — '+d+'d since req met.':'Requirements met — waiting bonus.'}else if(e.bonusRecd){const el=elapsed(e);pri=7;days=el===null?999999:el;rsn=el!==null?el+'d since bonus received.':'Bonus received — review close timing.'}else if(e.opened){const od=dB(e.opened,td());pri=8;days=od<0?0:od;rsn=od>0?od+'d open — working bonus requirements.':'Open — review this bank.'}else{pri=9;days=999999;rsn='Open — review this bank.'}sug.push({bank:e.bank,rsn,bonus:e.bonus||0,showBonus:!e.closed&&(e.bonus||0)>0,pri,days})});
   return sug.sort((a,b)=>a.pri-b.pri||a.days-b.days||(b.bonus||0)-(a.bonus||0)||a.bank.localeCompare(b.bank))
 }
 
@@ -1693,8 +1726,8 @@ function callBank(id){const e=entries.find(x=>x.id===id);if(!e)return;const phon
 function undoClose(){if(!undoState)return;entries=entries.map(e=>e.id===undoState.id?{...undoState}:e);entries=sortE(entries);sv(SK,entries);undoState=null;if(undoTimer)clearTimeout(undoTimer);R()}
 let _sp=0;
 const I={grid:'<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',doc:'<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',tips:'<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>',phone:'<svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>',info:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>',profile:'<svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 9h.01"/><path d="M15 9h.01"/><path d="M9 13h.01"/><path d="M15 13h.01"/><path d="M12 21v-4"/></svg>',backup:'<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',restore:'<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',quick:'<svg viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>',trash:'<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',spark:'<svg viewBox="0 0 24 24"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.4L12 15l-1.9-4.6L5.5 9l4.6-1.4L12 3z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"/></svg>',edit:'<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>',gift:'<svg viewBox="0 0 24 24"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/></svg>',lock:'<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',clockShield:'<svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z"/><circle cx="12" cy="12" r="3.5"/><path d="M12 10.5v1.8l1.2.7"/></svg>',shieldCheck:'<svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>',refresh:'<svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10M1 14l5.36 4.36A9 9 0 0 0 20.49 15"/></svg>',alert:'<svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',target:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>',calendar:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',feed:'<svg viewBox="0 0 24 24"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>'};
-function displayStatusMeta(raw){switch(raw){case'WORKING':return{label:'Working',cls:'w',icon:I.target};case'CUSTOM TIMER':return{label:'Requirement Deadline',cls:'buf',icon:I.clockShield};case'3-DAY BUFFER':return{label:'Waiting to Close',cls:'buf',icon:I.clockShield};case'SAFE TO CLOSE':return{label:'Safe to Close',cls:'stc',icon:I.shieldCheck};case'WAITING TO CHURN!':return{label:'Waiting to Churn',cls:'wt',icon:I.refresh};case'TIME TO CHURN!':return{label:'Ready to Churn',cls:'ch',icon:I.alert};default:return{label:raw||'Status',cls:'w',icon:I.info}}}
-function supportLine(e,countdown){const s=status(e);const hasEarlyFee=!!(!e.closed&&e.earlyCloseFee>0&&!e.feeChecked);if(s==='WAITING TO CHURN!'){const dl=daysLeft(e);return dl!==null?dl+'d left':'Cooling down'}if(s==='TIME TO CHURN!')return'Ready now';if(s==='CUSTOM TIMER'){const timer=nextActiveTimer(e);const d=timerCountdownDays(timer);if(timer&&d!==null){if(d<0)return'Overdue: '+timer.text;if(d===0)return'Due today: '+timer.text;return d+'d left: '+timer.text}return'Countdown active'}if(s==='3-DAY BUFFER'){const d=daysUntilSafe(e);let msg=d!==null&&d>0?d+'d left':'Almost there';if(hasEarlyFee)msg+=' • fee if closed early';return msg}if(s==='SAFE TO CLOSE'){return(e.earlyCloseFee>0||e.minHoldDays>0)?'Close when ready':'Ready when you are'}if(s==='WORKING'){if(countdown&&countdown.lbl==='Req deadline'&&countdown.days>0)return countdown.days+'d to requirement deadline';if(countdown&&countdown.lbl==='Close account'&&countdown.days>0){let msg=countdown.days+'d to planned close';if(hasEarlyFee)msg+=' • fee if closed early';return msg}if(hasEarlyFee&&e.opened&&e.minHoldDays>0){const d=daysUntilSafe(e);if(d!==null&&d>0)return d+'d left • fee if closed early'}if(e.bonusRecd){const el=elapsed(e);if(el!==null)return el+'d since bonus received'}if(e.opened){const openDays=dB(e.opened,td());if(openDays>0)return openDays+'d open'}return'In progress'}return''}
+function displayStatusMeta(raw){switch(raw){case'WORKING':return{label:'Working',cls:'w',icon:I.target};case'CUSTOM TIMER':return{label:'Custom Timer',cls:'buf',icon:I.clockShield};case'REQ MET':return{label:'Req Met',cls:'req',icon:I.shieldCheck};case'PLANNED CLOSE':return{label:'Close Planned',cls:'wt',icon:I.lock};case'WAITING TO CLOSE':return{label:'Waiting to Close',cls:'buf',icon:I.clockShield};case'3-DAY BUFFER':return{label:'3-Day Buffer',cls:'buf',icon:I.clockShield};case'SAFE TO CLOSE':return{label:'Safe to Close',cls:'stc',icon:I.shieldCheck};case'WAITING TO CHURN!':return{label:'Waiting to Churn',cls:'wt',icon:I.refresh};case'TIME TO CHURN!':return{label:'Ready to Churn',cls:'ch',icon:I.alert};default:return{label:raw||'Status',cls:'w',icon:I.info}}}
+function supportLine(e,countdown){const s=status(e);const hasEarlyFee=!!(!e.closed&&e.earlyCloseFee>0&&!e.feeChecked);if(s==='WAITING TO CHURN!'){const dl=daysLeft(e);return dl!==null?dl+'d left':'Cooling down'}if(s==='TIME TO CHURN!')return'Ready now';if(s==='CUSTOM TIMER'){const timer=nextActiveTimer(e);const d=timerCountdownDays(timer);if(timer&&d!==null){if(d<0)return'Overdue: '+timer.text;if(d===0)return'Due today: '+timer.text;return d+'d left: '+timer.text}return e.reqMet?'Req met • countdown active':'Countdown active'}if(s==='REQ MET'){if(e.reqMet){const d=Math.max(0,dB(e.reqMet,td()));return d>0?'Waiting bonus • '+d+'d since req met':'Waiting bonus'}return'Waiting bonus'}if(s==='PLANNED CLOSE'){const d=e.plannedClose?dB(td(),e.plannedClose):null;if(d!==null){let msg=d>0?d+'d to planned close':'Ready to close';if(hasEarlyFee)msg+=' • check close fee';return msg}return'Close planned'}if(s==='WAITING TO CLOSE'){const d=daysUntilSafe(e);let msg=d!==null&&d>0?d+'d until safe to close':'Waiting to close';if(hasEarlyFee)msg+=' • fee if closed early';return msg}if(s==='3-DAY BUFFER'){const d=daysUntilSafe(e);let msg=d!==null&&d>0?d+'d left in buffer':'Almost there';if(hasEarlyFee)msg+=' • fee if closed early';return msg}if(s==='SAFE TO CLOSE'){return(e.earlyCloseFee>0||e.minHoldDays>0)?'Bonus received • close when ready':'Bonus received • ready when you are'}if(s==='WORKING'){if(countdown&&countdown.lbl==='Req deadline'&&countdown.days>0)return countdown.days+'d to requirement deadline';if(countdown&&countdown.lbl==='Req deadline'&&countdown.days===0)return'Requirement deadline today';if(countdown&&countdown.lbl==='Req deadline'&&countdown.days<0)return'Missed requirement deadline';if(e.opened){const openDays=dB(e.opened,td());if(openDays>0)return openDays+'d open'}return'In progress'}return''}
 function statusBadgeHtml(e,countdown){const meta=displayStatusMeta(status(e));const support=supportLine(e,countdown);return'<span class="badge '+meta.cls+'">'+meta.icon+'<span>'+esc(meta.label)+'</span></span>'+(support?'<div class="card-subline">'+esc(support)+'</div>':'')}
 function quickBtn(cls,icon,label,onclick){return'<button class="qbtn '+cls+'" onclick="'+onclick+'">'+icon+'<span>'+label+'</span></button>'}
 function actionBtn(cls,icon,label,onclick){return'<button class="cbtn '+cls+'" onclick="'+onclick+'">'+icon+'<span>'+label+'</span></button>'}
@@ -2100,7 +2133,7 @@ function rTracker(sorted){
     h += `<div class="card-logo-col">${bankLogo(e.bank)}${e.churn?churnTagHtml(e.bank,e.churn):''}</div>`;
     h += `<div class="card-left"><div class="card-name">${esc(e.bank)}</div><div class="card-row">${statusBadgeHtml(e,countdown)}</div></div>`;
     h += '<div class="card-right"><div class="card-right-main">';
-    if((s==='WORKING'||s==='CUSTOM TIMER')&&e.bonus) h += `<div class="card-bonus">${fM(e.bonus)}</div>`;
+    if(!e.closed&&e.bonus) h += `<div class="card-bonus">${fM(e.bonus)}</div>`;
     h += `<div class="card-id">${esc(getEntryDisplayId(e))}</div></div>`;
     h += '</div></div>';
 

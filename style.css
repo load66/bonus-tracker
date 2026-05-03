@@ -364,6 +364,16 @@ html,body {
   color:#92400E
 }
 
+.badge.req {
+  background:#E0E7FF;
+  color:#3730A3
+}
+
+.badge.pay {
+  background:#ECFDF5;
+  color:#047857
+}
+
 .card-stat {
   font-size:12px;
   font-weight:600;

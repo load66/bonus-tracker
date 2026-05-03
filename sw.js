@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.34 Newest update: Cache-bust bump to timer editor rebuild: core owns add/edit/date/start-days flow.
+// ✅ Version 3.3.35 Newest update: Core status-flow rebuild for requirement-met / bonus / close phases.
 
-const V = 'bt-v3.3.34';
+const V = 'bt-v3.3.35';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
