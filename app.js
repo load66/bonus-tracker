@@ -1,7 +1,7 @@
 /* ✅ Version 2.0 Newest update: Removed Profile tab + added Data Health and safer backup/close guardrails. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.3.45';
+const APP_VERSION='3.3.46';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 
 const ld=(k,d)=>{
@@ -2632,15 +2632,17 @@ function doAddNew(){
   overwritePrompt=null;modal=null;expanded=next.id;tab='tracker';search='';showInlineAZ=false;inlineResult=null;
   R();
 }
-function getBackupStorageKeys(){return[SK,TK,DD_KEY,REQ_KEY,PHONE_KEY,DP_USER_KEY,COMMUNITY_DP_KEY,COMMUNITY_DP_SEED_KEY]}
-function countBackupEntries(d){return Array.isArray(d?.entries)?d.entries.length:(Array.isArray(d?.storageSnapshot?.[SK])?d.storageSnapshot[SK].length:0)}
-function countBackupUserDatapoints(d){if(Array.isArray(d?.userDatapoints))return d.userDatapoints.length;if(Array.isArray(d?.ddMethods))return d.ddMethods.length;if(Array.isArray(d?.storageSnapshot?.[DP_USER_KEY]))return d.storageSnapshot[DP_USER_KEY].length;return 0}
-function countBackupCommunityDatapoints(d){if(Array.isArray(d?.communityDatapoints))return d.communityDatapoints.length;if(Array.isArray(d?.storageSnapshot?.[COMMUNITY_DP_KEY]))return d.storageSnapshot[COMMUNITY_DP_KEY].length;return 0}
-function countBackupProfileEvents(d){return 0}
-function countBackupReqs(d){if(d?.bankReqs&&typeof d.bankReqs==='object')return Object.keys(d.bankReqs).length;const snap=d?.storageSnapshot?.[REQ_KEY];return snap&&typeof snap==='object'?Object.keys(snap).length:0}
-function countBackupPhones(d){if(Array.isArray(d?.phoneBook))return d.phoneBook.length;if(Array.isArray(d?.storageSnapshot?.[PHONE_KEY]))return d.storageSnapshot[PHONE_KEY].length;return 0}
-function buildStorageSnapshot(){const snap={};getBackupStorageKeys().forEach(key=>{try{const raw=localStorage.getItem(key);if(raw===null)return;snap[key]=JSON.parse(raw)}catch{}});return snap}
-function restoreStorageSnapshot(snapshot){if(!snapshot||typeof snapshot!=='object')return;Object.entries(snapshot).forEach(([key,val])=>{if(!getBackupStorageKeys().includes(key))return;try{localStorage.setItem(key,JSON.stringify(val))}catch{}})}
+function getBackupStorageKeys(){return[SK,TK,DD_KEY,REQ_KEY,PHONE_KEY,DP_USER_KEY,COMMUNITY_DP_KEY,COMMUNITY_DP_SEED_KEY,PROFILE_EVT_KEY,BK_KEY,'bt_tc_learning_inbox_v320']}
+function parseBackupStorageValue(raw){try{return JSON.parse(raw)}catch{return raw}}
+function storageValueForRestore(val){return typeof val==='string'?val:JSON.stringify(val)}
+function countBackupEntries(d){if(Array.isArray(d?.entries))return d.entries.length;const arr=backupArrayFromStorage(d,SK);return arr.length}
+function countBackupUserDatapoints(d){if(Array.isArray(d?.userDatapoints))return d.userDatapoints.length;if(Array.isArray(d?.ddMethods))return d.ddMethods.length;const arr=backupArrayFromStorage(d,DP_USER_KEY);return arr.length||backupArrayFromStorage(d,DD_KEY).length}
+function countBackupCommunityDatapoints(d){if(Array.isArray(d?.communityDatapoints))return d.communityDatapoints.length;return backupArrayFromStorage(d,COMMUNITY_DP_KEY).length}
+function countBackupProfileEvents(d){if(Array.isArray(d?.profileEvents))return d.profileEvents.length;if(Array.isArray(d?.storageSnapshot?.[PROFILE_EVT_KEY]))return d.storageSnapshot[PROFILE_EVT_KEY].length;const raw=d?.localStorage?.[PROFILE_EVT_KEY];try{const p=JSON.parse(raw||'[]');return Array.isArray(p)?p.length:0}catch{return 0}}
+function countBackupReqs(d){if(d?.bankReqs&&typeof d.bankReqs==='object')return Object.keys(d.bankReqs).length;const obj=backupObjectFromStorage(d,REQ_KEY);return Object.keys(obj).length}
+function countBackupPhones(d){if(Array.isArray(d?.phoneBook))return d.phoneBook.length;return backupArrayFromStorage(d,PHONE_KEY).length}
+function buildStorageSnapshot(){const snap={};getBackupStorageKeys().forEach(key=>{try{const raw=localStorage.getItem(key);if(raw===null)return;snap[key]=parseBackupStorageValue(raw)}catch{}});return snap}
+function restoreStorageSnapshot(snapshot){if(!snapshot||typeof snapshot!=='object')return;Object.entries(snapshot).forEach(([key,val])=>{if(!getBackupStorageKeys().includes(key))return;try{localStorage.setItem(key,storageValueForRestore(val))}catch{}})}
 function backupTimestamp(){const dt=new Date();const pad=n=>String(n).padStart(2,'0');return dt.getFullYear()+pad(dt.getMonth()+1)+pad(dt.getDate())+'_'+pad(dt.getHours())+pad(dt.getMinutes())+pad(dt.getSeconds())}
 function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
 async function deliverBackupFile(blob,filename,preferShare){if(preferShare&&typeof File!=='undefined'&&navigator?.share){try{const file=new File([blob],filename,{type:'application/json'});if(!navigator.canShare||navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Bank Bonus Tracker backup',text:'Save this full backup to Files, iCloud Drive, Google Drive, or email so you can restore later on any device.'});return 'shared'}}catch(err){}}downloadBlob(blob,filename);return 'downloaded'}
@@ -2974,54 +2976,150 @@ function buildPortableBackupPayload(){
   const communityDatapoints=loadCommunityDatapoints();
   const phoneEdits=loadPhoneEdits();
   const reqs=loadReqs();
+  const profileEvents=loadProfileEvents();
   const snapshot=buildStorageSnapshot();
   return{
-    app:'Bank Bonus Tracker',backupType:'full-fidelity-portable',schemaVersion:'v10-no-profile',exportedAt:new Date().toISOString(),entryCount:Array.isArray(entries)?entries.length:0,userDatapointCount:userDatapoints.length,communityDatapointCount:communityDatapoints.length,requirementCount:Object.keys(reqs||{}).length,phoneCount:phoneEdits.length,prefs:{
+    app:'Bank Bonus Tracker',
+    appVersion:APP_VERSION,
+    backupType:'full-fidelity-portable',
+    schemaVersion:'v11-backup-restore-hardened',
+    exportedAt:new Date().toISOString(),
+    entryCount:Array.isArray(entries)?entries.length:0,
+    userDatapointCount:userDatapoints.length,
+    communityDatapointCount:communityDatapoints.length,
+    requirementCount:Object.keys(reqs||{}).length,
+    phoneCount:phoneEdits.length,
+    profileEventCount:profileEvents.length,
+    prefs:{
       dashYear,taxYear
-    },entries:(entries||[]).map(e=>({...e})),userDatapoints:[...userDatapoints],ddMethods:[...loadDD()],communityDatapoints:[...communityDatapoints],bankReqs:{
+    },
+    entries:(entries||[]).map(e=>({...e})),
+    userDatapoints:[...userDatapoints],
+    ddMethods:[...loadDD()],
+    communityDatapoints:[...communityDatapoints],
+    bankReqs:{
       ...reqs
-    },phoneBook:[...phoneEdits],storageSnapshot:snapshot,manifest:{
-      includesProfiles:false,includesProfileHistory:false,includesTrackerEntries:true,includesUserDatapoints:true,includesCommunityDatapoints:true,includesSavedRequirements:true,includesPhoneBook:true,storageKeys:Object.keys(snapshot)
+    },
+    phoneBook:[...phoneEdits],
+    profileEvents:[...profileEvents],
+    storageSnapshot:snapshot,
+    manifest:{
+      includesProfiles:false,
+      includesProfileHistory:true,
+      includesTrackerEntries:true,
+      includesUserDatapoints:true,
+      includesCommunityDatapoints:true,
+      includesSavedRequirements:true,
+      includesPhoneBook:true,
+      includesProfileEvents:true,
+      includesStorageSnapshot:true,
+      storageKeys:Object.keys(snapshot)
     }
-    
+
   }
-  
+
 }
 
 function describeBackupPayload(d){
-  const when=d?.exportedAt?new Date(d.exportedAt).toLocaleString():'';
-  return['Backup date: '+(when||'Unknown'),'Entries: '+countBackupEntries(d),'Your datapoints: '+countBackupUserDatapoints(d),'Community datapoints: '+countBackupCommunityDatapoints(d),'Saved bank requirements: '+countBackupReqs(d),'Saved phone entries: '+countBackupPhones(d)].join('\n')
+  const when=(d?.exportedAt||d?.createdAt)?new Date(d.exportedAt||d.createdAt).toLocaleString():'';
+  const type=d?.backupType||d?.backupVersion||d?.kind||'unknown';
+  return['Backup date: '+(when||'Unknown'),'Backup type: '+type,'Entries: '+countBackupEntries(d),'Your datapoints: '+countBackupUserDatapoints(d),'Community datapoints: '+countBackupCommunityDatapoints(d),'Saved bank requirements: '+countBackupReqs(d),'Saved phone entries: '+countBackupPhones(d),'Profile events: '+countBackupProfileEvents(d)].join('\n')
 }
 
-function applyPortableRestore(d){
+
+function normalizeBackupStorageSnapshot(d){
+  const source=(d&&typeof d==='object')?(d.storageSnapshot||d.localStorage||d.storage||null):null;
+  const out={};
+  if(!source||typeof source!=='object')return out;
+  Object.entries(source).forEach(([key,val])=>{
+    if(!getBackupStorageKeys().includes(key))return;
+    out[key]=typeof val==='string'?parseBackupStorageValue(val):val;
+  });
+  return out;
+}
+function backupArrayFromStorage(d,key){
+  const snap=normalizeBackupStorageSnapshot(d);
+  const v=snap[key];
+  if(Array.isArray(v))return v;
+  if(typeof v==='string'){try{const p=JSON.parse(v);return Array.isArray(p)?p:[]}catch{}}
+  return [];
+}
+function backupObjectFromStorage(d,key){
+  const snap=normalizeBackupStorageSnapshot(d);
+  const v=snap[key];
+  if(v&&typeof v==='object'&&!Array.isArray(v))return v;
+  if(typeof v==='string'){try{const p=JSON.parse(v);return p&&typeof p==='object'&&!Array.isArray(p)?p:{}}catch{}}
+  return {};
+}
+function normalizePortableBackupInput(d){
   if(!d||typeof d!=='object')throw new Error('Invalid backup file.');
+  if(Array.isArray(d.entries))return d;
+  const snapshot=normalizeBackupStorageSnapshot(d);
+  if(Array.isArray(snapshot[SK])){
+    return{
+      app:d.app||'Bank Bonus Tracker',
+      appVersion:d.appVersion||d.version||'legacy',
+      backupType:d.backupType||d.backupVersion||'legacy-full-storage',
+      schemaVersion:d.schemaVersion||'legacy-storage',
+      exportedAt:d.exportedAt||d.createdAt||'',
+      prefs:d.prefs||{},
+      entries:snapshot[SK]||[],
+      userDatapoints:snapshot[DP_USER_KEY]||snapshot[DD_KEY]||[],
+      ddMethods:snapshot[DD_KEY]||[],
+      communityDatapoints:snapshot[COMMUNITY_DP_KEY]||[],
+      bankReqs:snapshot[REQ_KEY]||{},
+      phoneBook:snapshot[PHONE_KEY]||[],
+      profileEvents:snapshot[PROFILE_EVT_KEY]||[],
+      storageSnapshot:snapshot,
+      legacySource:true
+    };
+  }
+  throw new Error('Backup file is missing entries.');
+}
+function applyPortableRestore(d){
+  d=normalizePortableBackupInput(d);
   const restoredEntries=Array.isArray(d.entries)?d.entries:(Array.isArray(d?.storageSnapshot?.[SK])?d.storageSnapshot[SK]:null);
   if(!Array.isArray(restoredEntries))throw new Error('Backup file is missing entries.');
   const cleaned=restoredEntries.map(normalizeRestoredEntry).filter(e=>e.bank);
   const repaired=repairEntryIds(cleaned);
   entries=sortE(repaired.items);
   sv(SK,entries);
-  const userPoints=Array.isArray(d.userDatapoints)?d.userDatapoints:(Array.isArray(d.ddMethods)?d.ddMethods:[]);
+
+  const userPoints=Array.isArray(d.userDatapoints)?d.userDatapoints:(Array.isArray(d.ddMethods)?d.ddMethods:backupArrayFromStorage(d,DP_USER_KEY));
   saveDD(userPoints);
-  saveCommunityDatapoints(Array.isArray(d.communityDatapoints)?d.communityDatapoints:(Array.isArray(d?.storageSnapshot?.[COMMUNITY_DP_KEY])?d.storageSnapshot[COMMUNITY_DP_KEY]:[]));
-  saveReqs(d.bankReqs&&typeof d.bankReqs==='object'?d.bankReqs:((d?.storageSnapshot?.[REQ_KEY]&&typeof d.storageSnapshot[REQ_KEY]==='object')?d.storageSnapshot[REQ_KEY]:{}));
-  savePhoneEdits(Array.isArray(d.phoneBook)?d.phoneBook:(Array.isArray(d?.storageSnapshot?.[PHONE_KEY])?d.storageSnapshot[PHONE_KEY]:[]));
-  restoreStorageSnapshot(d.storageSnapshot);
-  try{
-    localStorage.removeItem(PROFILE_EVT_KEY)
-  }
-  catch{}
+
+  const communityRows=Array.isArray(d.communityDatapoints)?d.communityDatapoints:backupArrayFromStorage(d,COMMUNITY_DP_KEY);
+  saveCommunityDatapoints(communityRows);
+
+  const reqRows=d.bankReqs&&typeof d.bankReqs==='object'?d.bankReqs:backupObjectFromStorage(d,REQ_KEY);
+  saveReqs(reqRows);
+
+  const phoneRows=Array.isArray(d.phoneBook)?d.phoneBook:backupArrayFromStorage(d,PHONE_KEY);
+  savePhoneEdits(phoneRows);
+
+  const profileRows=Array.isArray(d.profileEvents)?d.profileEvents:backupArrayFromStorage(d,PROFILE_EVT_KEY);
+  saveProfileEvents(profileRows);
+
+  restoreStorageSnapshot(d.storageSnapshot||normalizeBackupStorageSnapshot(d));
+  sv(SK,entries);
+  saveDD(userPoints);
+  saveCommunityDatapoints(communityRows);
+  saveReqs(reqRows);
+  savePhoneEdits(phoneRows);
+  saveProfileEvents(profileRows);
+
+  try{localStorage.setItem('bt_last_restore',new Date().toISOString())}catch{}
   if(d.prefs&&Number.isFinite(parseInt(d.prefs.dashYear,10)))dashYear=parseInt(d.prefs.dashYear,10);
   else dashYear=new Date().getFullYear();
   if(d.prefs&&Number.isFinite(parseInt(d.prefs.taxYear,10)))taxYear=parseInt(d.prefs.taxYear,10);
   else taxYear=new Date().getFullYear();
   setLastBk();
   cfm={
-    title:'Restore Complete',msg:`${entries.length} entries restored.\n${countBackupUserDatapoints(d)} datapoints restored.\n\nThis backup is now ready on this browser/device.`,green:true,action:()=>{
+    title:'Restore Complete',msg:`${entries.length} entries restored.\n${countBackupUserDatapoints(d)} datapoints restored.\n${countBackupProfileEvents(d)} profile events restored.\n\nThis backup is now ready on this browser/device.`,green:true,action:()=>{
       cfm=null;
       R()
     }
-    
+
   };
   R()
 }
@@ -3329,7 +3427,7 @@ entries=sortE(entries);R();
  * last-touched: unknown
  */
 (function(){
-  const VER='3.3.2';
+  const VER='3.3.46';
   const BACKUP_KIND='bonus-tracker-full-device-backup';
   const APP_PREFIX='bt_';
   const KNOWN_KEYS=[
@@ -3376,7 +3474,7 @@ entries=sortE(entries);R();
       profileEvents:countFrom(localStorageData,'bt_profile_events_v1'),
       totalStorageKeys:Object.keys(localStorageData).length
     };
-    const payload={kind:BACKUP_KIND,backupVersion:'full-v1',app:'BonusTracker',appVersion:VER,createdAt:new Date().toISOString(),reason,url:location.href,userAgent:navigator.userAgent,summary,localStorage:localStorageData};
+    const payload={kind:BACKUP_KIND,backupVersion:'full-v1',app:'BonusTracker',appVersion:(window.BT_APP_VERSION||(typeof APP_VERSION!=='undefined'?APP_VERSION:VER)),createdAt:new Date().toISOString(),reason,url:location.href,userAgent:navigator.userAgent,summary,localStorage:localStorageData};
     payload.checksum=hashString(JSON.stringify(payload));
     return payload;
   }
@@ -3437,8 +3535,8 @@ entries=sortE(entries);R();
       const btn=e.target?.closest?.('button,a,[role="button"],input[type="button"],input[type="submit"]');
       if(!btn)return;
       const txt=buttonText(btn).toLowerCase();
-      if(txt==='backup'||txt.includes('backup')){e.preventDefault();e.stopImmediatePropagation();exportFullBackup('manual-button');return;}
-      if(txt==='restore'||txt.includes('restore')){e.preventDefault();e.stopImmediatePropagation();chooseRestoreFile();return;}
+      if(txt==='backup'||txt.includes('backup')){e.preventDefault();e.stopImmediatePropagation();if(typeof exportBackup==='function')exportBackup(true);else exportFullBackup('manual-button');return;}
+      if(txt==='restore'||txt.includes('restore')){e.preventDefault();e.stopImmediatePropagation();if(typeof importBackup==='function')importBackup();else chooseRestoreFile();return;}
     },true);
     window.__btFullBackupButtonsHooked=true;
   }
@@ -3446,8 +3544,8 @@ entries=sortE(entries);R();
 
   window.btActionButtonSafetyFixVersion=VER;
   window.btActionButtonHealthCheck=function(){cleanup();return {version:VER,buttons:buttonInfo(),tools:window.btToolsButtonHealthCheck?window.btToolsButtonHealthCheck():null,backup:window.btFullBackupHealthCheck?window.btFullBackupHealthCheck():null};};
-  window.btFullBackupExport=exportFullBackup;
-  window.btFullBackupRestore=chooseRestoreFile;
+  window.btFullBackupExport=(reason='manual')=>typeof exportBackup==='function'?exportBackup(true):exportFullBackup(reason);
+  window.btFullBackupRestore=()=>typeof importBackup==='function'?importBackup():chooseRestoreFile();
   window.btFullBackupMakePayload=makeBackupPayload;
   window.btFullBackupHealthCheck=function(){const p=makeBackupPayload('health-check');return {version:VER,kind:BACKUP_KIND,summary:p.summary,checksum:p.checksum,keys:Object.keys(p.localStorage).length};};
 

@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.45 Newest update: Priority-based Needs Attention ordering.
+// ✅ Version 3.3.46 Newest update: Hardened backup and restore compatibility.
 
-const V = 'bt-v3.3.45';
+const V = 'bt-v3.3.46';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
