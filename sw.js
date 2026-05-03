@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.40 Newest update: Analyzer section-aware autofill and edit-field alignment.
+// ✅ Version 3.3.41 Newest update: Reliable duplicate bank replacement and churn-cycle flow.
 
-const V = 'bt-v3.3.40';
+const V = 'bt-v3.3.41';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
