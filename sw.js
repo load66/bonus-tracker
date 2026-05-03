@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.39 Newest update: ChatGPT-ready analyzer issue repair prompt.
+// ✅ Version 3.3.40 Newest update: Analyzer section-aware autofill and edit-field alignment.
 
-const V = 'bt-v3.3.39';
+const V = 'bt-v3.3.40';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
