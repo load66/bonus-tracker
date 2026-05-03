@@ -1,18 +1,18 @@
 /*
  * filename: scripts/analyzer/engine.js
- * version: 3.1.0
+ * version: 3.2.0
  * purpose: Analyzer v3 Engine with built-in weird wording normalization. One parser result powers summary, autofill, timers, and issue reports.
  * last-touched: unknown
  */
 (function(){
-  const VER='3.1.0';
+  const VER='3.2.0';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const escRe=s=>String(s||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const moneyNum=s=>{const n=parseFloat(String(s||'').replace(/[$,\s]/g,''));return Number.isFinite(n)?n:0};
   const money=n=>'$'+Number(n||0).toLocaleString();
   const uniq=a=>Array.from(new Set((a||[]).filter(Boolean).map(clean))).filter(Boolean);
 
-  const WEIRD_WORDING_VER='3.3.37-core';
+  const WEIRD_WORDING_VER='3.3.38-core';
   const phraseMap=[
     {re:/adjusted interest/gi,label:'adjusted interest',add:'bonus payout'},
     {re:/cash reward/gi,label:'cash reward',add:'cash bonus'},
@@ -121,11 +121,78 @@
     });
     return c.sort((a,b)=>b.score-a.score||a.value-b.value)[0]||null
   }
-  function analyze(input,opts={}){const source=window.tcV3ResolveSource?window.tcV3ResolveSource(input,opts):{raw:input||'',kind:'direct'};const original=source.raw||'';const weird=normalizeWeirdBankWording(original);const raw=weird.normalized;const lines=split(raw);let tierList=tiers(raw);const b=bank(raw);const p=promoCode(raw);const exp=openBy(raw,lines);const req=requirements(raw,lines,tierList);const fund=funding(raw,lines);const feeObj=fee(raw,lines);const pay=payout(raw,lines);let bonus=tierList.length?(opts.tierIndex!=null?tierList[opts.tierIndex]?.bonus:tierList[tierList.length-1].bonus):singleBonus(lines)?.value||0;const targetTier=tierList.length?(opts.tierIndex!=null?tierList[opts.tierIndex]:tierList[tierList.length-1]):null;
-    const result={version:VER,source,sourceKind:source.kind,sourceId:source.sourceId,sourceLength:source.length,bank:b,acct:account(raw),raw:original,normalizedRaw:raw,tiered:!!tierList.length,tiers:tierList,targetTier,bonus,selectedBonus:bonus,bonusTierText:tierList.map(t=>`${money(t.bonus)} for ${money(t.requirement)}+ DD`).join(' / '),code:p?.value||'',promoCode:p,openBy:exp?.value||'',expiration:exp,reqDays:req.reqDays,reqMoney:req.reqMoney,reqIsTotal:req.reqIsTotal,count:req.count,reqSource:req.source,fundedDays:fund.fundedDays,fundingAmount:fund.fundingAmount,fundingSource:fund.source,fee:feeObj.fee,monthlyFee:feeObj.fee?{value:money(feeObj.fee)+' monthly fee',amount:feeObj.fee,source:feeObj.source}:null,waivers:feeObj.waivers,counts:counts(raw),not:notCounts(raw),notCounts:notCounts(raw),eligibilityText:eligibility(raw).join('\n'),payout:pay.value,payoutText:pay.value,payoutSource:pay.source,early:'Keep account open and in good standing until bonus payout; closing/restriction before payout can forfeit bonus.',reviewFlags:[],clear:false,bankProfilesVersion:'v3-core',weirdWordingDetected:weird.hits,weirdWordingAliases:uniq(weird.aliases),weirdWordingNormalizerVersion:WEIRD_WORDING_VER};
-    if(result.weirdWordingAliases?.length)result.reviewFlags.push('Unusual bank wording normalized: '+result.weirdWordingAliases.slice(0,4).join('; ')+(result.weirdWordingAliases.length>4?'…':''));if(!result.bonus)result.reviewFlags.push('Bonus amount needs review.');if(!result.reqDays&&/direct deposit|qualifying deposit/i.test(raw))result.reviewFlags.push('Requirement deadline needs review.');if(/promo code|promotional code|offer code/i.test(raw)&&!result.code)result.reviewFlags.push('Promo code mentioned but exact code needs review.');if(/offer expires|through and including|open.*by/i.test(raw)&&!result.openBy)result.reviewFlags.push('Promo expiration/open-by date needs review.');result.clear=!!(result.bonus&&result.reqDays);
-    result.suggestedTimers=[];if(result.openBy)result.suggestedTimers.push({kind:'due',text:'Promo expiration / open-by deadline',date:result.openBy});if(result.reqDays)result.suggestedTimers.push({kind:'days',text:'Bonus requirement deadline',daysRequired:result.reqDays});if(result.fundedDays)result.suggestedTimers.push({kind:'days',text:'Funding deadline',daysRequired:result.fundedDays});
+
+  function srcItem(field,value,source,confidence='medium',kind='extracted'){
+    source=clean(source);
+    if(value===undefined||value===null||value===''||!source)return null;
+    return{field,value:String(value),source,confidence,kind};
+  }
+  function srcMap(items){
+    const out={},arr=[];
+    (items||[]).forEach(x=>{if(!x)return;out[x.field]=x;arr.push(x)});
+    const seen=new Set();
+    return{map:out,list:arr.filter(x=>{const k=x.field+'|'+x.source;if(seen.has(k))return false;seen.add(k);return true})};
+  }
+  function firstSource(lines,res){return lineMatch(lines,res)||''}
+  function analyze(input,opts={}){
+    const source=window.tcV3ResolveSource?window.tcV3ResolveSource(input,opts):{raw:input||'',kind:'direct'};
+    const original=source.raw||'';
+    const weird=normalizeWeirdBankWording(original);
+    const raw=weird.normalized;
+    const lines=split(raw);
+    let tierList=tiers(raw);
+    const b=bank(raw);
+    const acctValue=account(raw);
+    const p=promoCode(raw);
+    const exp=openBy(raw,lines);
+    const req=requirements(raw,lines,tierList);
+    const fund=funding(raw,lines);
+    const feeObj=fee(raw,lines);
+    const pay=payout(raw,lines);
+    const bonusPick=singleBonus(lines);
+    const targetTier=tierList.length?(opts.tierIndex!=null?tierList[opts.tierIndex]:tierList[tierList.length-1]):null;
+    let bonus=tierList.length?(targetTier?.bonus||0):(bonusPick?.value||0);
+    const countValues=counts(raw);
+    const notValues=notCounts(raw);
+    const eligibilityLines=eligibility(raw);
+    const bankSource=firstSource(lines,[new RegExp(escRe(b),'i')])||lines[0]||'';
+    const accountSource=firstSource(lines,[/checking|savings|account type|eligible account|open.*account/i]);
+    const bonusSource=targetTier?.source||bonusPick?.source||bonusPick?.context||'';
+    const countsSource=firstSource(lines,[/salary|paycheck|ACH|Automated Clearing House|account and routing numbers|regular monthly income|payroll|pension|Social Security|government benefits/i]);
+    const notSource=firstSource(lines,[/teller|wire|debit card transfers|ATM|Zelle|person-to-person|P2P|mobile check|internal transfers|Other electronic deposits/i]);
+    const eligibilitySource=firstSource(lines,[/new .*checking|new eligible|new consumer|last 12|within the last|cannot be combined|one bonus|1099|taxable|IRS|W-9|W-8|not eligible/i]);
+    const earlySource=firstSource(lines,[/good standing|forfeit|clawback|reclaim|reverse|deduct|close|closed|closure|restricted|early termination/i]);
+    const src=srcMap([
+      srcItem('Bank',b,bankSource,bankSource?(/New Bank Bonus/i.test(b)?'low':'medium'):'low'),
+      srcItem('Account',acctValue,accountSource,accountSource?'medium':'low'),
+      srcItem('Bonus',bonus?money(bonus):'',bonusSource,bonus?(targetTier||bonusPick?.score>0?'high':'medium'):'low'),
+      srcItem('Promo code',p?.value||'',p?.source||'',p?'high':'low'),
+      srcItem('Expiration / open-by date',exp?.display||exp?.value||'',exp?.source||'',exp?'high':'low'),
+      srcItem('Requirement days',req.reqDays?req.reqDays+' days':'',req.source||'',req.reqDays?'medium':'low'),
+      srcItem('Requirement amount',req.reqMoney?money(req.reqMoney):'',req.source||'',req.reqMoney?'medium':'low'),
+      srcItem('Funding deadline',fund.fundedDays?fund.fundedDays+' days':'',fund.source||'',fund.fundedDays?'medium':'low'),
+      srcItem('Funding amount',fund.fundingAmount?money(fund.fundingAmount):'',fund.source||'',fund.fundingAmount?'medium':'low'),
+      srcItem('Monthly fee',feeObj.fee?money(feeObj.fee):'',feeObj.source||'',feeObj.fee?'medium':'low'),
+      srcItem('Fee waiver',feeObj.waivers?.join(' OR ')||'',feeObj.source||'',feeObj.waivers?.length?'medium':'low'),
+      srcItem('What counts',countValues.join('; '),countsSource,countValues.length?'medium':'low'),
+      srcItem('What does not count',notValues.join('; '),notSource,notValues.length?'medium':'low'),
+      srcItem('Eligibility',eligibilityLines.join('; '),eligibilitySource,eligibilityLines.length?'medium':'low'),
+      srcItem('Payout timing',pay.value,pay.source||'',pay.source?'medium':'low'),
+      srcItem('Early close / payout risk','Keep account open and in good standing until payout.',earlySource,earlySource?'medium':'low')
+    ]);
+    const result={version:VER,source,sourceKind:source.kind,sourceId:source.sourceId,sourceLength:source.length,bank:b,acct:acctValue,raw:original,normalizedRaw:raw,tiered:!!tierList.length,tiers:tierList,targetTier,bonus,selectedBonus:bonus,bonusTierText:tierList.map(t=>`${money(t.bonus)} for ${money(t.requirement)}+ DD`).join(' / '),code:p?.value||'',promoCode:p,openBy:exp?.value||'',expiration:exp,reqDays:req.reqDays,reqMoney:req.reqMoney,reqIsTotal:req.reqIsTotal,count:req.count,reqSource:req.source,fundedDays:fund.fundedDays,fundingAmount:fund.fundingAmount,fundingSource:fund.source,fee:feeObj.fee,monthlyFee:feeObj.fee?{value:money(feeObj.fee)+' monthly fee',amount:feeObj.fee,source:feeObj.source}:null,waivers:feeObj.waivers,counts:countValues,not:notValues,notCounts:notValues,eligibilityText:eligibilityLines.join('\n'),payout:pay.value,payoutText:pay.value,payoutSource:pay.source,early:'Keep account open and in good standing until bonus payout; closing/restriction before payout can forfeit bonus.',reviewFlags:[],clear:false,bankProfilesVersion:'v3-core',weirdWordingDetected:weird.hits,weirdWordingAliases:uniq(weird.aliases),weirdWordingNormalizerVersion:WEIRD_WORDING_VER,fieldSources:src.map,sourceSnippets:src.list,fieldConfidence:Object.fromEntries(src.list.map(x=>[x.field,x.confidence]))};
+    if(result.weirdWordingAliases?.length)result.reviewFlags.push('Unusual bank wording normalized: '+result.weirdWordingAliases.slice(0,4).join('; ')+(result.weirdWordingAliases.length>4?'…':''));
+    if(!result.bonus)result.reviewFlags.push('Bonus amount needs review.');
+    if(!result.reqDays&&/direct deposit|qualifying deposit/i.test(raw))result.reviewFlags.push('Requirement deadline needs review.');
+    if(/promo code|promotional code|offer code/i.test(raw)&&!result.code)result.reviewFlags.push('Promo code mentioned but exact code needs review.');
+    if(/offer expires|through and including|open.*by/i.test(raw)&&!result.openBy)result.reviewFlags.push('Promo expiration/open-by date needs review.');
+    result.clear=!!(result.bonus&&result.reqDays);
+    result.suggestedTimers=[];
+    if(result.openBy)result.suggestedTimers.push({kind:'due',text:'Promo expiration / open-by deadline',date:result.openBy,source:exp?.source||''});
+    if(result.reqDays)result.suggestedTimers.push({kind:'days',text:'Bonus requirement deadline',daysRequired:result.reqDays,source:req.source||''});
+    if(result.fundedDays)result.suggestedTimers.push({kind:'days',text:'Funding deadline',daysRequired:result.fundedDays,source:fund.source||''});
     result.actionPlan=[`1. Open one eligible account${result.openBy?' by '+pretty(result.openBy):''}${result.code?' using promo code '+result.code:''}.`,result.fundedDays?`2. Fund the account${result.fundingAmount?' with at least '+money(result.fundingAmount):''} within ${result.fundedDays} days.`:'',`3. Complete ${result.count?'at least '+result.count+' ':''}qualifying Direct Deposits${result.reqMoney?`${result.reqIsTotal?' totaling ':' of '}${money(result.reqMoney)}+${result.reqIsTotal?'':' each'}`:''}${result.reqDays?' within '+result.reqDays+' days':''}.`,`4. Bonus payout: ${result.payout}.`,'5. Keep account open and in good standing until payout.'].filter(Boolean).join('\n');
-    window.__tcV3AnalysisResult=result;window.__tcCurrentAnalysisResult=result;return result;}
+    window.__tcV3AnalysisResult=result;window.__tcCurrentAnalysisResult=result;return result;
+  }
   window.tcNormalizeWeirdBankWording=normalize;window.tcAnalyzeWeirdBankWording=normalizeWeirdBankWording;window.tcV3Analyze=analyze;window.tcUnifiedAnalyze=analyze;window.tcStrictAnalyze=analyze;window.tcV3EngineVersion=VER;window.tcWeirdWordingNormalizerVersion=WEIRD_WORDING_VER;
 })();
