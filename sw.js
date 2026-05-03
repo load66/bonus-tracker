@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.36 Newest update: Consolidated stable patch modules into core app.js.
+// ✅ Version 3.3.37 Newest update: Moved weird wording normalizer into analyzer engine core.
 
-const V = 'bt-v3.3.36';
+const V = 'bt-v3.3.37';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
