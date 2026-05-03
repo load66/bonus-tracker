@@ -1,7 +1,7 @@
 /* ✅ Version 2.0 Newest update: Removed Profile tab + added Data Health and safer backup/close guardrails. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.3.41';
+const APP_VERSION='3.3.42';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 
 const ld=(k,d)=>{
@@ -668,14 +668,100 @@ function chartData(){
   return ms
 }
 
+
+/* Bank Identity v3.3.42
+   Centralized bank matching. Display names can vary, but duplicate/churn
+   matching uses canonical bank family + personal/business type. */
+const BANK_IDENTITY_VERSION='3.3.42';
+function normBankText(v){return String(v||'').toLowerCase().replace(/[®™℠]/g,'').replace(/&/g,' and ').replace(/\*/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim()}
+function bankAliasGroups(){return[
+  ['chase','CHA',['chase','jpmorgan chase','jp morgan chase','jpmorgan','jp morgan','jpm']],
+  ['bank of america','BOA',['bank of america','bofa','boa','merrill']],
+  ['u.s. bank','USB',['u s bank','us bank','u s bancorp','us bancorp','usb','bank smartly','smartly checking']],
+  ['wells fargo','WFB',['wells fargo','wf bank']],
+  ['capital one','CAP',['capital one','cap one','c1 bank']],
+  ['citibank','CIT',['citibank','citi bank','citi']],
+  ['pnc bank','PNC',['pnc','pnc bank','virtual wallet','performance select']],
+  ['regions bank','REG',['regions','regions bank','lifegreen','life green']],
+  ['equity bank','EQU',['equity bank','equity bancshares','bloom bonus']],
+  ['busey bank','BUS',['busey','busey bank','foundation checking','pillar banking','levelup']],
+  ['academy bank','ACA',['academy bank','academy']],
+  ['bmo','BMO',['bmo','bmo bank','bank of montreal']],
+  ['fifth third','FTH',['fifth third','fifth third bank','53 bank','5 3 bank','5/3 bank']],
+  ['td bank','TDB',['td bank','td checking']],
+  ['huntington bank','HUN',['huntington','huntington bank']],
+  ['central bank','CEN',['central bank']],
+  ['community america','CAC',['community america','communityamerica','cacu','community america credit union']],
+  ['ally bank','ALY',['ally','ally bank']],
+  ['citizens bank','CTZ',['citizens','citizens bank']],
+  ['comerica bank','COM',['comerica','comerica bank']],
+  ['morgan stanley private bank','MSP',['morgan stanley private bank','morgan stanley','etrade','e trade','e trade bank','max rate checking']],
+  ['keybank','KEY',['keybank','key bank']],
+  ['m&t bank','MTB',['m t bank','mt bank','m and t bank','mandt bank','m t']],
+  ['navy federal','NFC',['navy federal','navy federal credit union','nfcu']],
+  ['santander bank','SAN',['santander','santander bank']],
+  ['truist','TRU',['truist','truist bank','bb and t','bbt','suntrust']],
+  ['vantage credit union','VAN',['vantage cu','vantage credit union','vantage']],
+  ['schwab','SCH',['schwab','charles schwab','schwab bank']],
+  ['discover bank','DSC',['discover','discover bank']],
+  ['sofi','SOF',['sofi','sofi bank']],
+  ['marcus','MAR',['marcus','goldman sachs','marcus by goldman sachs']],
+  ['simmons bank','SIM',['simmons bank','simmons']],
+  ['first national bank','FNB',['first national bank','fnb']]
+]}
+function aliasMatchFamily(n){
+  n=normBankText(n);
+  if(!n)return'';
+  for(const [family,,aliases] of bankAliasGroups()){
+    for(const a of aliases){
+      const aa=normBankText(a);
+      if(!aa)continue;
+      if(n===aa||n.includes(' '+aa+' ')||n.startsWith(aa+' ')||n.endsWith(' '+aa)||n.includes(aa))return family;
+    }
+  }
+  return'';
+}
+function bankTypeInfo(name){
+  const n=normBankText(name);
+  const biz=/\b(biz|business|commercial|merchant|treasury|sboffer|llc|pllc|inc|corp|corporation|company|sole prop|sole proprietor|ein|business complete|business advantage|performance business|enhanced business|basic business|business checking|small business)\b/i.test(n);
+  if(biz)return{type:'B',explicit:true,reason:'business'};
+  const personal=/\b(personal|consumer|individual|household|total checking|safebalance|advantage plus|advantage relationship|smartly|virtual wallet|life green|lifegreen|bloom|foundation checking|pillar banking|max rate|maxrate|everyday checking|college checking|sapphire checking|premier plus checking|checking and savings combo)\b/i.test(n);
+  if(personal)return{type:'P',explicit:true,reason:'personal'};
+  return{type:'P',explicit:false,reason:'default-personal'};
+}
+function bankTypeCode(name){return bankTypeInfo(name).type}
 function normalizeBankFamily(name){
-  let n=(name||'').toLowerCase().trim();
-  n=n.replace(/[®'.]/g,'');n=n.replace(/&/g,' and ');n=n.replace(/\bbiz\b|\bbusiness\b/g,'');n=n.replace(/\bchecking\b|\bsavings\b|\baccount\b|\baccounts\b/g,'');n=n.replace(/\bessentials\b|\bpreferred\b|\bcomplete\b|\badvantage\b|\beveryday\b|\bpremier\b|\bplus\b|\bbasic\b|\belite\b|\bselect\b|\bsmartly\b/g,'');n=n.replace(/\s+/g,' ').trim();if(/\bu\s*s\s*bank\b/.test(n))return'u.s. bank';if(/\bbank of america\b|\bbofa\b|\bboa\b/.test(n))return'bank of america';if(/\bwells\s*fargo\b/.test(n))return'wells fargo';if(/\bcapital\s*one\b/.test(n))return'capital one';if(/\bfifth\s*third\b|\b53\b/.test(n))return'fifth third';if(/\bciti(?:bank)?\b/.test(n))return'citibank';if(/\bcommunity\s*america\b/.test(n))return'community america';if(/\bnavy\s*federal\b/.test(n))return'navy federal';if(/\btd\s*bank\b/.test(n))return'td bank';return n}
-function bankTypeCode(name){return(/\bbiz\b|\bbusiness\b/i.test(name||''))?'B':'P'}
-function bankCode(name){const family=normalizeBankFamily(name);const overrides={'u.s. bank':'USB','bank of america':'BOA','wells fargo':'WFB','capital one':'CAP','fifth third':'FTH','u.s bank':'USB'};if(overrides[family])return overrides[family];const words=family.replace(/[^a-z0-9 ]/g,'').split(' ').filter(Boolean).filter(w=>!['bank','credit','union','financial'].includes(w));if(!words.length)return'BNK';if(words.length===1)return words[0].slice(0,3).toUpperCase().padEnd(3,'X');return (words[0][0]+(words[1]?.[0]||'')+(words[2]?.[0]||words[1]?.[1]||'')).toUpperCase().padEnd(3,'X').slice(0,3)}
-function bankKey(name){return bankCode(name)+'|'+bankTypeCode(name)}
-function entryBankType(e){const id=String((e&&e.id)||'').toUpperCase();const m=id.match(/^[A-Z0-9]{3}-([PB])-\d{2}$/);return m?m[1]:bankTypeCode((e&&e.bank)||e||'')}
-function entryBankKey(e){return bankCode((e&&e.bank)||e||'')+'|'+entryBankType(e)}
+  let n=normBankText(name);
+  const direct=aliasMatchFamily(n);
+  if(direct)return direct;
+  n=n.replace(/\b(biz|business|commercial|merchant|small business|personal|consumer|checking|savings|account|accounts|bonus|promo|offer|banking|bank)\b/g,' ')
+     .replace(/\b(essentials|preferred|complete|advantage|everyday|premier|plus|basic|elite|select|smartly|total|relationship|fundamentals|enhanced|performance|virtual|wallet)\b/g,' ')
+     .replace(/\s+/g,' ').trim();
+  const second=aliasMatchFamily(n);
+  return second||n;
+}
+function bankCode(name){
+  const family=normalizeBankFamily(name);
+  const found=bankAliasGroups().find(g=>g[0]===family);
+  if(found)return found[1];
+  const overrides={'u.s bank':'USB','u.s. bank':'USB','bank of america':'BOA','wells fargo':'WFB','capital one':'CAP','fifth third':'FTH','pnc bank':'PNC','regions bank':'REG'};
+  if(overrides[family])return overrides[family];
+  const words=family.replace(/[^a-z0-9 ]/g,'').split(' ').filter(Boolean).filter(w=>!['bank','credit','union','financial','federal'].includes(w));
+  if(!words.length)return'BNK';
+  if(words.length===1)return words[0].slice(0,3).toUpperCase().padEnd(3,'X');
+  return (words[0][0]+(words[1]?.[0]||'')+(words[2]?.[0]||words[1]?.[1]||'')).toUpperCase().padEnd(3,'X').slice(0,3);
+}
+function bankIdentity(name){const family=normalizeBankFamily(name);const typeInfo=bankTypeInfo(name);return{family,code:bankCode(name),type:typeInfo.type,typeExplicit:typeInfo.explicit,key:bankCode(name)+'|'+typeInfo.type,display:String(name||'').trim()}}
+function bankKey(name){return bankIdentity(name).key}
+function entryBankType(e){
+  const id=String((e&&e.id)||'').toUpperCase();
+  const m=id.match(/^[A-Z0-9]{3}-([PB])-\d{2}$/);
+  const nameInfo=bankTypeInfo((e&&e.bank)||e||'');
+  if(nameInfo.explicit)return nameInfo.type;
+  return m?m[1]:nameInfo.type;
+}
+function entryBankIdentity(e){const bank=(e&&e.bank)||e||'';const idt=bankIdentity(bank);idt.type=entryBankType(e);idt.key=idt.code+'|'+idt.type;return idt}
+function entryBankKey(e){return entryBankIdentity(e).key}
 function isOfficialEntryId(id){return /^[A-Z0-9]{3}-[PB]-\d{2}$/i.test(String(id||'').trim())}
 function makeDraftId(bank){return 'DRAFT-'+bankCode(bank)+'-'+Math.random().toString(36).slice(2,6).toUpperCase()}
 function officialIdSet(){return new Set(entries.map(e=>e&&e.id).filter(isOfficialEntryId).map(id=>String(id).toUpperCase()))}
@@ -683,25 +769,19 @@ function assignEntryIdForCreate(entry){const next={...entry};next.id=next.opened
 function promoteDraftEntryId(entry,oldId){const next={...entry};if(next.opened&&!isOfficialEntryId(next.id)){next.id=genId(next.bank,officialIdSet());if(oldId&&oldId!==next.id)remapEntryReferences(oldId,next.id,next.bank)}return next}
 function remapEntryReferences(oldId,newId,bank){if(!oldId||!newId||oldId===newId)return;saveProfileEvents(loadProfileEvents().map(x=>x.entryId===oldId&&bankKey(x.bank)===bankKey(bank)?{...x,entryId:newId}:x));saveUserDatapoints(loadUserDatapoints().map(x=>x.entryId===oldId&&bankKey(x.bank)===bankKey(bank)?{...x,entryId:newId}:x));const reqs=loadReqs();let changed=false;Object.keys(reqs||{}).forEach(k=>{const row=reqs[k];if(row&&row.sourceEntryId===oldId&&bankKey(row.bank||k)===bankKey(bank)){reqs[k]={...row,sourceEntryId:newId};changed=true}});if(changed)saveReqs(reqs)}
 function getEntryDisplayId(e){if(!e)return'';if(isOfficialEntryId(e.id))return e.id;return e.opened?'Pending ID refresh':'Pending open date'}
-/* Duplicate handling is driven by bank family + personal/business type,
-   not raw bank label text. This keeps small naming variations grouped
-   while still separating personal and business promos cleanly. */
+/* Duplicate handling is driven by canonical bank family + personal/business type.
+   If the typed name is ambiguous and both personal/business records exist, the
+   app shows a picker instead of silently creating or replacing the wrong bank. */
 function getBankMatches(bankName){
   if(!bankName)return[];
-  const wantedType=bankTypeCode(bankName);
-  const wantedKey=bankKey(bankName);
-  const family=normalizeBankFamily(bankName);
-  return entries.filter(e=>{
-    if(!e||!e.bank)return false;
-    const eType=entryBankType(e);
-    if(eType!==wantedType)return false;
-    const eKey=entryBankKey(e);
-    const eFamily=normalizeBankFamily(e.bank);
-    if(eKey===wantedKey)return true;
-    if(eFamily===family)return true;
-    if(family.length>=4&&eFamily.length>=4&&(eFamily.includes(family)||family.includes(eFamily)))return true;
-    return false;
-  });
+  const wanted=bankIdentity(bankName);
+  const sameFamily=entries.filter(e=>e&&e.bank&&entryBankIdentity(e).family===wanted.family);
+  if(!sameFamily.length)return[];
+  if(wanted.typeExplicit)return sameFamily.filter(e=>entryBankType(e)===wanted.type);
+  const sameType=sameFamily.filter(e=>entryBankType(e)===wanted.type);
+  const types=new Set(sameFamily.map(entryBankType));
+  if(types.size>1)return sameFamily;
+  return sameType.length?sameType:sameFamily;
 }
 function isActiveEntry(e){return!!(e&&e.bank&&!e.closed)}
 function entryRecencyDate(e){return e?.closed||e?.opened||''}
@@ -715,12 +795,13 @@ function findExistingByBank(bankName){
 function makeDuplicatePrompt(newData,existingEntry,source='manual'){
   return{newData,existingEntry,mode:isActiveEntry(existingEntry)?'active':'history',source};
 }
-function entryTypeLabel(name){return bankTypeCode(name)==='B'?'Business':'Personal'}
+function entryTypeLabel(x){const t=(x&&typeof x==='object')?entryBankType(x):bankTypeCode(x);return t==='B'?'Business':'Personal'}
 function sortMatchChoices(bankName,matches){
-  const wantedKey=bankKey(bankName);
+  const wanted=bankIdentity(bankName);
   return[...matches].sort((a,b)=>{
-    const aExact=bankKey(a.bank)===wantedKey?0:1;
-    const bExact=bankKey(b.bank)===wantedKey?0:1;
+    const ai=entryBankIdentity(a),bi=entryBankIdentity(b);
+    const aExact=ai.key===wanted.key?0:1;
+    const bExact=bi.key===wanted.key?0:1;
     if(aExact!==bExact)return aExact-bExact;
     const aActive=isActiveEntry(a)?0:1;
     const bActive=isActiveEntry(b)?0:1;
@@ -728,7 +809,14 @@ function sortMatchChoices(bankName,matches){
     return entryRecencyDate(b).localeCompare(entryRecencyDate(a));
   });
 }
-function dpSignature(bank,method){return normalizeBankFamily(bank)+'|'+String(method||'').trim().toLowerCase()}
+function handleDuplicateFlow(newData,source='manual'){
+  const bank=(newData&&newData.bank)||'';
+  const matches=sortMatchChoices(bank,getBankMatches(bank));
+  if(!matches.length)return false;
+  if(matches.length>1){matchPickerPrompt={newData,matches,source,identity:bankIdentity(bank)};return true;}
+  overwritePrompt=makeDuplicatePrompt(newData,matches[0],source);return true;
+}
+function dpSignature(bank,method){return bankKey(bank)+'|'+String(method||'').trim().toLowerCase()}
 function syncExistingDatapointsToDB(){const rows=loadUserDatapoints();const seen=new Set(rows.map(r=>dpSignature(r.bank,r.method)));let changed=false;entries.forEach(e=>{if(!e||!e.bank||!e.dataPoint)return;const sig=dpSignature(e.bank,e.dataPoint);if(seen.has(sig))return;rows.push(normalizeUserDatapoint({bank:e.bank,method:e.dataPoint,note:'Imported from tracker history',date:e.closed||e.bonusRecd||e.opened||td(),entryId:e.id||''}));seen.add(sig);changed=true});if(changed)saveUserDatapoints(rows)}
 function normalizeCommunityDatapoint(row,i){const x=(row&&typeof row==='object')?{...row}:{};return{id:String(x.id||('cdp_'+(i||0)+'_'+Math.random().toString(36).slice(2,6))),bank:String(x.bank||'').trim(),method:String(x.method||'').trim(),result:String(x.result||x.note||'').trim(),link:String(x.link||'').trim()}}
 function communitySig(x){return normalizeBankFamily(x.bank)+'|'+String(x.method||'').trim().toLowerCase()}
@@ -1652,8 +1740,9 @@ function repairEntryIds(list){
   const repaired=src.map((entry,idx)=>{
     const e={...entry};
     const bank=e.bank||'';
-    const key=bankKey(bank||('Bank '+(idx+1)));
-    const prefix=bankCode(bank||'Bank')+'-'+bankTypeCode(bank)+'-';
+    const eType=entryBankType(e);
+    const key=bankCode(bank||('Bank '+(idx+1)))+'|'+eType;
+    const prefix=bankCode(bank||'Bank')+'-'+eType+'-';
     const rawId=String(e.id||'').toUpperCase().trim();
     if(!e.opened){
       if(rawId&&!isOfficialEntryId(rawId)){e.id=rawId;return e}
@@ -1870,9 +1959,9 @@ function openBankProfileFromBank(bankEnc){const bank=decodeURIComponent(bankEnc|
 function openBankProfileFromKey(key){if(!key)return;activeProfileKey=key;profileSearch='';tab='profiles';expanded=null;R();setTimeout(()=>{const sc=document.querySelector('.scroll');if(sc)sc.scrollTop=0},0)}
 function closeActiveProfile(){activeProfileKey='';R();setTimeout(()=>{const sc=document.querySelector('.scroll');if(sc)sc.scrollTop=0},0)}
 function profileTimelineDate(e){return e?.closed||e?.bonusRecd||e?.opened||''}
-function profileRuleForBank(bank){const family=normalizeBankFamily(bank);const matches=RULES.filter(r=>normalizeBankFamily(r[0])===family||family.includes(normalizeBankFamily(r[0]))||normalizeBankFamily(r[0]).includes(family));return matches.sort((a,b)=>String(b[0]||'').length-String(a[0]||'').length)[0]||null}
-function profileReqForBank(bank){const reqs=Object.values(loadReqs()||{});const family=normalizeBankFamily(bank);const match=reqs.filter(r=>normalizeBankFamily(r.bank||'')===family||family.includes(normalizeBankFamily(r.bank||''))||normalizeBankFamily(r.bank||'').includes(family));return match.sort((a,b)=>String(b.bank||'').length-String(a.bank||'').length)[0]||null}
-function profilePhoneForBank(bank){const family=normalizeBankFamily(bank);const rows=getPhoneBook().filter(r=>normalizeBankFamily(r.bank||'')===family||family.includes(normalizeBankFamily(r.bank||''))||normalizeBankFamily(r.bank||'').includes(family));return rows.sort((a,b)=>String(b.bank||'').length-String(a.bank||'').length)[0]||null}
+function profileRuleForBank(bank){const wanted=bankIdentity(bank);const same=RULES.filter(r=>{const rb=r&&r[0]||'';if(!rb)return false;const ri=bankIdentity(rb);if(ri.family!==wanted.family)return false;const rowExplicit=bankTypeInfo(rb).explicit;if(wanted.typeExplicit&&rowExplicit)return ri.type===wanted.type;return true});return same.sort((a,b)=>{const ai=bankIdentity(a[0]||''),bi=bankIdentity(b[0]||'');const ae=ai.key===wanted.key?0:1,be=bi.key===wanted.key?0:1;if(ae!==be)return ae-be;return String(b[0]||'').length-String(a[0]||'').length})[0]||null}
+function profileReqForBank(bank){const reqs=Object.values(loadReqs()||{});const wanted=bankIdentity(bank);const matches=reqs.filter(r=>{const rb=r&&r.bank||'';if(!rb)return false;const ri=bankIdentity(rb);if(ri.family!==wanted.family)return false;if(wanted.typeExplicit)return ri.type===wanted.type;return true});return matches.sort((a,b)=>{const ai=bankIdentity(a.bank||''),bi=bankIdentity(b.bank||'');const ae=ai.key===wanted.key?0:1,be=bi.key===wanted.key?0:1;if(ae!==be)return ae-be;return String(b.bank||'').length-String(a.bank||'').length})[0]||null}
+function profilePhoneForBank(bank){const wanted=bankIdentity(bank);const rows=getPhoneBook().filter(r=>{const rb=r&&r.bank||'';if(!rb)return false;const ri=bankIdentity(rb);if(ri.family!==wanted.family)return false;if(wanted.typeExplicit)return ri.type===wanted.type;return true});return rows.sort((a,b)=>{const ai=bankIdentity(a.bank||''),bi=bankIdentity(b.bank||'');const ae=ai.key===wanted.key?0:1,be=bi.key===wanted.key?0:1;if(ae!==be)return ae-be;return String(b.bank||'').length-String(a.bank||'').length})[0]||null}
 function profileMethodFailed(text){return /fail|failed|did not|didn't|didnt|not work|unreliable|rejected|declined|mixed|no longer/i.test(String(text||''))}
 function buildProfileGroups(){const map=new Map();const ensure=(bank)=>{const key=bankKey(bank||'Unknown Bank');if(!map.has(key))map.set(key,{key,bank:bank||'Unknown Bank',entries:[],user:[],community:[],rule:null,req:null,phone:null});const cur=map.get(key);if((cur.bank||'').length<(bank||'').length)cur.bank=bank;return cur};entries.forEach(e=>{if(e&&e.bank&&e.opened)ensure(e.bank).entries.push(e)});const getGroup=bank=>map.get(bankKey(bank||''))||null;loadUserDatapoints().forEach(item=>{const g=item&&item.bank?getGroup(item.bank):null;if(g)g.user.push(item)});getCommunityDatapoints().forEach(item=>{const g=item&&item.bank?getGroup(item.bank):null;if(g)g.community.push(item)});RULES.forEach(row=>{const g=getGroup(row&&row[0]);if(g&&(!g.rule||String(row[0]||'').length>String(g.rule?.[0]||'').length))g.rule=row});Object.values(loadReqs()||{}).forEach(r=>{const g=r&&r.bank?getGroup(r.bank):null;if(g&&(!g.req||String(r.bank||'').length>String(g.req?.bank||'').length))g.req=r});getPhoneBook().forEach(r=>{const g=r&&r.bank?getGroup(r.bank):null;if(g&&(!g.phone||String(r.bank||'').length>String(g.phone?.bank||'').length))g.phone=r});return Array.from(map.values()).map(g=>{g.entries=g.entries.sort((a,b)=>profileTimelineDate(b).localeCompare(profileTimelineDate(a)));g.activeEntry=g.entries.find(e=>e&&e.bank&&!e.closed)||null;g.cooldownEntry=g.entries.find(e=>['WAITING TO CHURN!','TIME TO CHURN!'].includes(status(e)))||null;g.rule=g.rule||profileRuleForBank(g.bank);g.req=g.req||profileReqForBank(g.bank);g.phone=g.phone||profilePhoneForBank(g.bank);g.completedEntries=g.entries.filter(e=>taxReady(e));g.receivedEntries=g.entries.filter(e=>isEarnedBonus(e));g.lifetime=g.completedEntries.reduce((s,e)=>s+(e.bonus||0),0);g.currentStatus=g.activeEntry?status(g.activeEntry):(g.cooldownEntry?status(g.cooldownEntry):(g.completedEntries.length?'ARCHIVED':'NO HISTORY'));g.nextReopen=g.cooldownEntry?nextReopen(g.cooldownEntry):'';g.confirmedWorked=g.user.filter(x=>!profileMethodFailed((x.note||'')+' '+(x.method||'')));g.confirmedFailed=g.user.filter(x=>profileMethodFailed((x.note||'')+' '+(x.method||'')));g.communityWarnings=g.community.filter(x=>profileMethodFailed((x.result||'')+' '+(x.method||'')));g.communityHelpful=g.community.filter(x=>!profileMethodFailed((x.result||'')+' '+(x.method||'')));g.activeCount=g.entries.filter(e=>e&&e.bank&&!e.closed).length;return g}).sort((a,b)=>{const aPri=a.activeCount?0:(a.cooldownEntry?1:2);const bPri=b.activeCount?0:(b.cooldownEntry?1:2);return aPri-bPri||b.lifetime-a.lifetime||b.completedEntries.length-a.completedEntries.length||a.bank.localeCompare(b.bank)})}
 function profileHeadline(group){if(group.activeEntry){const st=status(group.activeEntry);if(st==='WORKING')return 'Currently being worked.';if(st==='SAFE TO CLOSE')return 'Safe to close now.';if(st==='3-DAY BUFFER')return 'Inside close buffer.';if(st==='CUSTOM TIMER')return 'Custom countdown running.'}if(group.cooldownEntry){const st=status(group.cooldownEntry);if(st==='TIME TO CHURN!')return 'Ready to churn again now.';if(st==='WAITING TO CHURN!'){const dl=daysLeft(group.cooldownEntry);return (dl!==null?dl+' days left':'Cooling down')+' until next churn.'}}return group.completedEntries.length?'No active promo right now.':'No tracked history yet.'}
@@ -2055,7 +2144,7 @@ function getDataHealthIssues(){
   entries.forEach(e=>{if(e&&e.id){const k=String(e.id);if(!seenIds[k])seenIds[k]=[];seenIds[k].push(e)}});
   Object.entries(seenIds).forEach(([id,rows])=>{if(rows.length>1)healthAdd(issues,'red','Duplicate record ID',`${id} is used by ${rows.length} entries: ${rows.map(x=>x.bank).join(', ')}.`,rows[0].id)});
   const activeByBank={};
-  entries.forEach(e=>{if(!e||!e.bank)return;const key=bankKey(e.bank);if(!e.closed){if(!activeByBank[key])activeByBank[key]=[];activeByBank[key].push(e)}});
+  entries.forEach(e=>{if(!e||!e.bank)return;const key=entryBankKey(e);if(!e.closed){if(!activeByBank[key])activeByBank[key]=[];activeByBank[key].push(e)}});
   Object.values(activeByBank).forEach(rows=>{if(rows.length>1)healthAdd(issues,'amber','Multiple active entries for same bank',`${rows.map(x=>x.bank).join(', ')} are open at the same time. This may be okay, but review for duplicates.`,rows[0].id)});
   const dateFields=[['opened','Opened'],['closed','Closed'],['bonusRecd','Bonus received'],['reqMet','Requirement met'],['plannedClose','Planned close']];
   entries.forEach(e=>{
@@ -2318,20 +2407,20 @@ function rMatchPicker(){
   const p=matchPickerPrompt;
   let h='<div class="cbg" onclick="matchPickerPrompt=null;R()"><div class="ow-box" onclick="event.stopPropagation()">';
   h+='<h3>Pick the right bank match</h3>';
-  h+='<div class="sub">We found matching entries for <strong>'+esc(p.newData.bank)+'</strong>. Choose the exact bank record below for better accuracy.</div>';
+  h+='<div class="sub">We found bank-family matches for <strong>'+esc(p.newData.bank)+'</strong>. Pick Personal or Business so the app does not create the wrong duplicate.</div>';
   h+='<div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">';
   p.matches.forEach(m=>{
     const st=status(m);
     h+=`<button style="width:100%;text-align:left;padding:12px;border-radius:12px;border:1px solid var(--border);background:#fff;font-family:inherit;cursor:pointer" onclick="chooseMatch('${m.id}')">`;
     h+='<div style="display:flex;align-items:center;gap:10px">'+bankLogo(m.bank,true)+'<div style="flex:1;min-width:0">';
     h+='<div style="font-size:13px;font-weight:700">'+esc(m.bank)+'</div>';
-    h+='<div style="font-size:10px;color:var(--muted);margin-top:2px">'+esc(entryTypeLabel(m.bank))+' · ID: '+esc(getEntryDisplayId(m))+' · '+esc(st)+'</div>';
+    h+='<div style="font-size:10px;color:var(--muted);margin-top:2px">'+esc(entryTypeLabel(m))+' · ID: '+esc(getEntryDisplayId(m))+' · '+esc(st)+'</div>';
     h+='</div><div style="font-size:10px;font-weight:700;color:var(--accent)">Use</div></div>';
     h+='</button>';
   });
   h+='</div>';
   h+='<div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">';
-  h+='<button class="c-g" style="width:100%;padding:12px;border-radius:12px;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer" onclick="skipMatchPickerToNew()">Create New Entry Instead</button>';
+  h+='<button class="c-g" style="width:100%;padding:12px;border-radius:12px;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer" onclick="skipMatchPickerToNew()">Create Separate New Entry</button>';
   h+='<button class="c-c" style="width:100%;padding:10px;border-radius:10px;border:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer" onclick="matchPickerPrompt=null;R()">Cancel</button>';
   h+='</div></div></div>';
   return h;
@@ -2345,7 +2434,7 @@ function closeModal(){modal=null;showInlineAZ=false;inlineResult=null;R()}
 function clearFields(){if(!modal)return;['bonus','churn','opened','closed','bonusRecd','reqMet','dataPoint','notes','monthlyFeeYNText','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText','eligibilityText','expirationDateText','requiredDaysText','closeFeeCountdownDays'].forEach(k=>{modal[k]=''});modal.customTimers=[];['reqDays','minHoldDays','earlyCloseFee','referralBonus'].forEach(k=>{modal[k]=0});modal.bonus=0;modal.feeChecked=false;R()}
 function parseCloseFeeAmount(text){const raw=String(text||'').trim();if(!raw)return 0;if(/^(none|no|n\/a)$/i.test(raw))return 0;const m=raw.match(/\$?([\d,]+(?:\.\d+)?)/);return m?parseInt(String(m[1]).replace(/,/g,''),10)||0:0}
 function applyCountdownFromModal(d){const raw=String(modal.closeFeeCountdownDays??'').trim();if(raw==='')return;const wanted=Math.max(0,parseInt(raw,10)||0);if(wanted===0){d.minHoldDays=0;return}if(d.opened){const safeTarget=addD(td(),wanted);d.minHoldDays=Math.max(0,dB(d.opened,safeTarget)-BUFFER_DAYS)}else{d.minHoldDays=Math.max(0,wanted-BUFFER_DAYS)}}
-function saveEntry(){const bank=(modal.bank||'').trim();if(!bank){alert('Bank name required');return}const d={bank,bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',plannedClose:modal.plannedClose||'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false,monthlyFeeYNText:modal.monthlyFeeYNText||'',promoCodeText:modal.promoCodeText||'',avoidMonthlyFeeText:modal.avoidMonthlyFeeText||'',completeBonusText:modal.completeBonusText||'',earlyTerminationFeeText:modal.earlyTerminationFeeText||'',eligibilityText:modal.eligibilityText||'',expirationDateText:modal.expirationDateText||'',requiredDaysText:modal.requiredDaysText||'',customTimers:normalizeTimerList(modal.customTimers)};const __parsedCloseFee=parseCloseFeeAmount(modal.earlyTerminationFeeText);if(__parsedCloseFee||/^(none|no|n\/a)$/i.test(String(modal.earlyTerminationFeeText||'').trim()))d.earlyCloseFee=__parsedCloseFee;applyCountdownFromModal(d);let savedEntry=null;if(modal._edit){const targetId=modal.id;let promotedId='';entries=entries.map(e=>{if(e.id!==targetId)return e;let next={...e,...d,checklist:e.checklist||[],customTimers:e.customTimers||d.customTimers||[]};const beforeId=next.id;next=promoteDraftEntryId(next,beforeId);promotedId=next.id;return next});savedEntry=entries.find(e=>e.id===promotedId)||entries.find(e=>e.id===targetId)||null}else{if(!modal._skipDuplicateCheck){const existing=findExistingByBank(bank);if(existing){overwritePrompt=makeDuplicatePrompt(d,existing,'manual');closeModal();R();return}}const next=assignEntryIdForCreate({...d,checklist:[],customTimers:[]});entries.push(next);savedEntry=next}entries=sortE(entries);sv(SK,entries);if(savedEntry){syncProfileEventsFromEntry(savedEntry);refreshSavedReqFromEntry(savedEntry)}closeModal()}
+function saveEntry(){const bank=(modal.bank||'').trim();if(!bank){alert('Bank name required');return}const d={bank,bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',plannedClose:modal.plannedClose||'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false,monthlyFeeYNText:modal.monthlyFeeYNText||'',promoCodeText:modal.promoCodeText||'',avoidMonthlyFeeText:modal.avoidMonthlyFeeText||'',completeBonusText:modal.completeBonusText||'',earlyTerminationFeeText:modal.earlyTerminationFeeText||'',eligibilityText:modal.eligibilityText||'',expirationDateText:modal.expirationDateText||'',requiredDaysText:modal.requiredDaysText||'',customTimers:normalizeTimerList(modal.customTimers)};const __parsedCloseFee=parseCloseFeeAmount(modal.earlyTerminationFeeText);if(__parsedCloseFee||/^(none|no|n\/a)$/i.test(String(modal.earlyTerminationFeeText||'').trim()))d.earlyCloseFee=__parsedCloseFee;applyCountdownFromModal(d);let savedEntry=null;if(modal._edit){const targetId=modal.id;let promotedId='';entries=entries.map(e=>{if(e.id!==targetId)return e;let next={...e,...d,checklist:e.checklist||[],customTimers:e.customTimers||d.customTimers||[]};const beforeId=next.id;next=promoteDraftEntryId(next,beforeId);promotedId=next.id;return next});savedEntry=entries.find(e=>e.id===promotedId)||entries.find(e=>e.id===targetId)||null}else{if(!modal._skipDuplicateCheck&&handleDuplicateFlow(d,'manual')){closeModal();R();return}const next=assignEntryIdForCreate({...d,checklist:[],customTimers:[]});entries.push(next);savedEntry=next}entries=sortE(entries);sv(SK,entries);if(savedEntry){syncProfileEventsFromEntry(savedEntry);refreshSavedReqFromEntry(savedEntry)}closeModal()}
 function normalizeNewCycleData(d,existing){
   d={...(d||{})}; existing=existing||{};
   const next={...existing,...d};
@@ -2453,7 +2542,7 @@ function closeNext(){const p=closePrompt;if(!p)return;if(p.step==='date'){const 
 function closeBack(){const p=closePrompt;if(!p)return;if(p.step==='dp')p.step='bonus';else if(p.step==='bonus')p.step='date';R()}
 function finishClose(){const p=closePrompt;if(!p)return;const e=entries.find(x=>x.id===p.entryId);const warnings=closeSafetyWarnings(e,p);if(warnings.length&&!window.confirm('Review before closing:\n\n- '+warnings.join('\n- ')+'\n\nContinue anyway?'))return;undoState={...e};if(undoTimer)clearTimeout(undoTimer);undoTimer=setTimeout(()=>{undoState=null;R()},15000);entries=entries.map(x=>{if(x.id===p.entryId){x.closed=p.closeDate;x.bonus=p.actualBonus;if(p.actualBonus>0&&!x.bonusRecd)x.bonusRecd=p.closeDate;if(p.dp)x.dataPoint=p.dp;x.feeChecked=true}return x});const e2=entries.find(x=>x.id===p.entryId);const autoMethod=(p.dp||e2?.dataPoint||'').trim();if(e2&&p.actualBonus>0&&autoMethod)addDD(p.bank,autoMethod,p.actualBonus,p.closeDate,{entryId:p.entryId,note:'Auto-saved from successful close'});if(e2)refreshSavedReqFromEntry(e2);entries=sortE(entries);sv(SK,entries);closePrompt=null;expanded=null;R()}
 function cancelClose(){closePrompt=null;R()}
-function addFromTpl(i){const t=TEMPLATES[i];const existing=findExistingByBank(t.bank);const newData={bank:t.bank,bonus:t.bonus,churn:t.churn,opened:td(),closed:'',bonusRecd:'',reqMet:'',notes:t.notes||'',analyzedTC:'',minHoldDays:t.minHoldDays||0,earlyCloseFee:t.earlyCloseFee||0,dataPoint:t.dataPoint||'',reqDays:t.reqDays||0,referralBonus:0,plannedClose:'',phoneNum:'',feeChecked:false};if(existing){overwritePrompt=makeDuplicatePrompt(newData,existing,'template');showTemplates=false;R();return}modal=newData;modal.checklist=[];modal.customTimers=[];showTemplates=false;R()}
+function addFromTpl(i){const t=TEMPLATES[i];const newData={bank:t.bank,bonus:t.bonus,churn:t.churn,opened:td(),closed:'',bonusRecd:'',reqMet:'',notes:t.notes||'',analyzedTC:'',minHoldDays:t.minHoldDays||0,earlyCloseFee:t.earlyCloseFee||0,dataPoint:t.dataPoint||'',reqDays:t.reqDays||0,referralBonus:0,plannedClose:'',phoneNum:'',feeChecked:false};if(handleDuplicateFlow(newData,'template')){showTemplates=false;R();return}modal=newData;modal.checklist=[];modal.customTimers=[];showTemplates=false;R()}
 function toggleCk(id,i){entries=entries.map(e=>{if(e.id===id&&e.checklist)e.checklist[i].done=!e.checklist[i].done;return e});sv(SK,entries);R()}
 function addCk(id){const inp=document.getElementById('ck_'+id);if(!inp||!inp.value.trim())return;entries=entries.map(e=>{if(e.id===id){if(!e.checklist)e.checklist=[];e.checklist.push({text:inp.value.trim(),done:false})}return e});sv(SK,entries);toggleInlineForm(id,'checklist',false)}
 function rmCk(id,i){entries=entries.map(e=>{if(e.id===id&&e.checklist)e.checklist.splice(i,1);return e});sv(SK,entries);R()}
