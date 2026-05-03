@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.42 Newest update: Canonical bank identity aliases prevent accidental duplicates across personal/business records.
+// ✅ Version 3.3.43 Newest update: Close fee countdown reliably activates waiting-to-close status.
 
-const V = 'bt-v3.3.42';
+const V = 'bt-v3.3.43';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
