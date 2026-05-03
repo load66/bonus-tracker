@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.52 Newest update: Clean direct action confirmation prompts.
+// ✅ Version 3.3.55 Newest update: Flattened analyzer files into the app root; scripts folder removed.
 
-const V = 'bt-v3.3.52';
+const V = 'bt-v3.3.55';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {

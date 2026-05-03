@@ -1,7 +1,7 @@
 /* ✅ Version 2.0 Newest update: Removed Profile tab + added Data Health and safer backup/close guardrails. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.3.52';
+const APP_VERSION='3.3.55';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 
 const ld=(k,d)=>{
@@ -2750,7 +2750,7 @@ function buildResetSafetyBackupPayload(){const data=buildPortableBackupPayload()
 async function exportBackup(preferShare=true,customData=null,customFilename=''){const data=customData||buildPortableBackupPayload();const filename=customFilename||('BankBonusTracker_FullBackup_'+backupTimestamp()+'.json');const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const mode=await deliverBackupFile(blob,filename,preferShare);setLastBk();return{mode,filename,data}}
 function performHardReset(){entries=[];sv(SK,[]);try{getBackupStorageKeys().forEach(k=>localStorage.removeItem(k));localStorage.removeItem(PROFILE_EVT_KEY);localStorage.removeItem(BK_KEY)}catch{}dashYear=new Date().getFullYear();taxYear=new Date().getFullYear();expanded=null;modal=null;search='';showTemplates=false;showAnalyzer=false;analyzerText='';analyzerResult=null;inlineResult=null;showInlineAZ=false;phoneSearch='';showPhoneAdd=false;dpSearch='';dpExpandedBankKey='';dpEditor=null;profileSearch='';activeProfileKey='';overwritePrompt=null;matchPickerPrompt=null;ddPrompt=null;rcvPrompt=null;closePrompt=null;feeCheckPrompt=null;undoState=null;if(undoTimer)clearTimeout(undoTimer);R()}
 function resetAllData(){cfm={title:'⚠️ Reset All Data',msg:'This will permanently delete ALL tracker rows, datapoints, saved bank requirements, and saved phone data from this device.\n\nFor safety, the app will export one final full backup first so you can save it to Files/iCloud/Drive before the wipe finishes.',action:()=>{cfm={title:'🚨 Final confirmation',msg:'Continue with the full reset? A recovery backup file will be created first, then this device will be wiped.',action:async()=>{cfm=null;R();try{await exportBackup(false,buildResetSafetyBackupPayload(),'BankBonusTracker_PreReset_'+backupTimestamp()+'.json')}catch{}performHardReset();cfm={title:'Reset Complete',msg:'This device has been cleared. Keep the exported pre-reset backup file somewhere safe so you can restore later.',green:true,action:()=>{cfm=null;R()}};R()}};R()}};R()}
-function delEntry(id){const e=entries.find(x=>x.id===id);cfm={title:'\u{1F5D1} Delete Entry',msg:'Remove '+e.bank+'?\n\nThis cannot be undone.',action:()=>{cfm={title:'Confirm Delete',msg:'Are you sure you want to delete '+e.bank+'?',action:()=>{entries=entries.filter(x=>x.id!==id);sv(SK,entries);cfm=null;expanded=null;R()}};R()}};R()}
+function delEntry(id){const e=entries.find(x=>x.id===id);if(!e)return;cfm={title:'Delete Bank Entry?',msg:'Delete '+e.bank+' '+(e.id||'')+' from the tracker?\n\nThis cannot be undone.',action:()=>{entries=entries.filter(x=>x.id!==id);sv(SK,entries);expanded=null;cfm={title:'Bank Entry Deleted',msg:e.bank+' was deleted from the tracker.',green:true,action:()=>{cfm=null;R()}};R()}};R()}
 function closeAcct(id){const e=entries.find(x=>x.id===id);if(!e)return;feeCheckPrompt={entryId:id,bank:e.bank,step:'ask',months:e.minHoldDays>0?Math.round(e.minHoldDays/30):6,feeAmount:e.earlyCloseFee||0};R()}
 function feeCheckSkip(){if(!feeCheckPrompt)return;const id=feeCheckPrompt.entryId;entries=entries.map(e=>{if(e.id===id){e.feeChecked=true;e.minHoldDays=0;e.earlyCloseFee=0}return e});entries=sortE(entries);sv(SK,entries);feeCheckPrompt=null;startCloseFlow(id)}
 function feeCheckRemoveTimer(){if(!feeCheckPrompt)return;const id=feeCheckPrompt.entryId;const current=entries.find(e=>e.id===id);entries=entries.map(e=>{if(e.id===id){e.minHoldDays=0;e.earlyCloseFee=0;e.feeChecked=true}return e});entries=sortE(entries);sv(SK,entries);feeCheckPrompt=null;cfm={title:'Timer Removed',msg:(current?current.bank+' ':'')+'early-close timer removed. This bank is now marked Safe to Close.',green:true,action:()=>{cfm=null;R()}};R()}
@@ -2797,9 +2797,10 @@ function rmTimer(id,timerId){const entry=entries.find(e=>e.id===id);if(!entry)re
 function toggleDDChip(m){if(!ddPrompt)return;const i=ddPrompt.sel.indexOf(m);if(i>=0)ddPrompt.sel.splice(i,1);else ddPrompt.sel.push(m);R()}
 function submitDD(){if(!ddPrompt)return;const c=document.getElementById('dd_custom');const all=[...ddPrompt.sel];if(c&&c.value)c.value.split(',').forEach(x=>{const t=x.trim();if(t)all.push(t)});all.forEach(m=>addDD(ddPrompt.bank,m,ddPrompt.bonus,td()));ddPrompt=null;R()}
 function skipDD(){ddPrompt=null;R()}
+function confirmMarkReceived(id){const e=entries.find(x=>x.id===id);if(!e)return;cfm={title:e.bonusRecd?'Update Bonus Received?':'Mark Bonus Received?',msg:(e.bonusRecd?'Update the bonus received date for ':'Mark the bonus as received for ')+e.bank+'?\n\nYou can review the received date before saving.',green:true,action:()=>{cfm=null;openRcv(id)}};R()}
 function openRcv(id){const e=entries.find(x=>x.id===id);if(!e)return;rcvPrompt={entryId:id,bank:e.bank,date:e.bonusRecd||td(),hasExisting:!!e.bonusRecd};R()}
 function rcvNext(){}
-function rcvSubmit(){const p=rcvPrompt;if(!p)return;const d=document.getElementById('rcv_date');if(d)p.date=d.value;if(!p.date){alert('Received date required');return}entries=entries.map(e=>{if(e.id===p.entryId){e.bonusRecd=p.date;e.plannedClose=''}return e});const e2=entries.find(e=>e.id===p.entryId);if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}entries=sortE(entries);sv(SK,entries);rcvPrompt=null;R()}
+function rcvSubmit(){const p=rcvPrompt;if(!p)return;const d=document.getElementById('rcv_date');if(d)p.date=d.value;if(!p.date){alert('Received date required');return}entries=entries.map(e=>{if(e.id===p.entryId){e.bonusRecd=p.date;e.plannedClose=''}return e});const e2=entries.find(e=>e.id===p.entryId);if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}entries=sortE(entries);sv(SK,entries);rcvPrompt=null;cfm={title:'Bonus Received Saved',msg:(e2?e2.bank:'This bank')+' received date saved for '+fD(p.date)+'.',green:true,action:()=>{cfm=null;R()}};R()}
 function clearRcv(){const p=rcvPrompt;if(!p)return;entries=entries.map(e=>{if(e.id===p.entryId){e.bonusRecd='';e.plannedClose=''}return e});entries=sortE(entries);sv(SK,entries);rcvPrompt=null;R()}
 function skipRcv(){rcvPrompt=null;R()}
 function looksLikeActualDateText(s){
@@ -3930,7 +3931,7 @@ entries=sortE(entries);R();
     if(!e){R();return}
     expanded=id;
     if(action==='edit'){openEdit(id);return}
-    if(action==='received'){openRcv(id);return}
+    if(action==='received'){confirmMarkReceived(id);return}
     if(action==='close'){closeAcct(id);return}
     if(action==='delete'){delEntry(id);return}
     if(action==='checklist'){
@@ -4083,6 +4084,7 @@ entries=sortE(entries);R();
     return h + rBankActions();
   }
 
+  window.confirmMarkReceived=confirmMarkReceived;
   window.openBankActions=openBankActions;
   window.closeBankActions=closeBankActions;
   window.runBankAction=runBankAction;
