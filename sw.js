@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.43 Newest update: Close fee countdown reliably activates waiting-to-close status.
+// ✅ Version 3.3.44 Newest update: Close fee days are based on opened date, not today.
 
-const V = 'bt-v3.3.43';
+const V = 'bt-v3.3.44';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
