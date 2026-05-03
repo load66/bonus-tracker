@@ -1,11 +1,11 @@
 /*
  * filename: scripts/analyzer/controller.js
- * version: 3.3.38
+ * version: 3.3.39
  * purpose: Analyzer v3 Controller renders stable summaries and makes Auto-fill New Entry open the real entry modal.
  * last-touched: unknown
  */
 (function(){
-  const VER='3.3.38';
+  const VER='3.3.39';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const esc=v=>{if(window.esc)return window.esc(String(v??''));const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML};
   const money=n=>'$'+Number(n||0).toLocaleString();
@@ -78,10 +78,92 @@
     if(!r)return'No analyzer result found.';
     const snippets=(r.sourceSnippets||[]).map(x=>`${x.field} [${x.confidence||'medium'}${x.kind?'/'+x.kind:''}]: ${x.source}`).join('\n');
     const fallbacks=(r.profileFallbacks||[]).map(x=>`${x.field}: ${x.value} :: ${x.source}`).join('\n');
-    return ['BANK BONUS TRACKER — v3 ANALYZER ISSUE REPORT','App Version: '+(document.querySelector('.app-version')?.textContent||'unknown'),'Engine: '+(window.tcV3EngineVersion||'unknown'),'Bank Rules: '+(window.tcV3BankRulesVersion||'unknown'),'Profile Registry: '+(window.tcV3ProfileRegistryVersion||'unknown'),'Profile: '+(r.profileRegistry?.note||'not checked'),'Profile fallback: '+(r.profileFallbackSummary||'None'),'Source: '+(r.sourceKind||'unknown'),'Bank: '+(r.bank||'Review'),'Bonus: '+(r.bonus||'Review'),'Tiers: '+(r.bonusTierText||'None'),'Promo Code: '+(r.code||'Review'),'Open-by: '+(r.openBy||'Review'),'Req Days: '+(r.reqDays||'Review'),'Req Amount: '+(r.reqMoney||'Review'),'Funding Days: '+(r.fundedDays||'—'),'Funding Amount: '+(r.fundingAmount||'—'),'Hold Days: '+(r.holdDays||r.minHoldDays||'—'),'Monthly Fee: '+(r.fee||'Review/None'),'Rules Applied: '+(r.bankRulesApplied?.join(' | ')||'None'),'Flags: '+(r.reviewFlags?.join(' | ')||'None'),'Weird wording: '+(r.weirdWordingDetected?.map(x=>x.term+' -> '+x.meaning).join(' | ')||'None'),'','SOURCE SNIPPETS:',snippets||'None','','PROFILE FALLBACKS:',fallbacks||'None','','SOURCE T&C:',String(r.raw||'').slice(0,15000)].join('\n')
+    const weird=(r.weirdWordingDetected||[]).map(x=>x.term+' -> '+x.meaning).join(' | ')||'None';
+    const flags=(r.reviewFlags||[]).join(' | ')||'None';
+    const bankRules=(r.bankRulesApplied||[]).join(' | ')||'None';
+    const appVersion=document.querySelector('.app-version')?.textContent||'unknown';
+    const raw=String(r.raw||'').slice(0,15000);
+    return [
+      'CHATGPT FIX PROMPT — BANK BONUS TRACKER ANALYZER',
+      '',
+      'I am pasting this from my Bank Bonus Tracker app. Please use it as a ready repair prompt.',
+      '',
+      'USER-VISIBLE PROBLEM:',
+      '[Replace this line with what looked wrong in the app, for example: analyzer picked the wrong bonus amount, missed promo code, wrong requirement days, bad profile fallback, or confusing summary.]',
+      '',
+      'EXPECTED RESULT, IF KNOWN:',
+      '[Optional: write the correct bonus / requirement / deadline / fee / payout wording here.]',
+      '',
+      'WHAT I NEED FROM YOU:',
+      '1. Diagnose the issue using the structured report below.',
+      '2. Decide whether the issue is in analyzer engine, bank-rule file, profile fallback, controller display, source resolver, or app/cache/versioning.',
+      '3. Use SOURCE SNIPPETS first, PROFILE FALLBACKS second, and SOURCE T&C last.',
+      '4. Tell me the exact file(s) and function(s) that need changes.',
+      '5. If I uploaded the latest project zip in this chat, make the fix from that zip and give me changed files only plus a full backup zip.',
+      '6. Do not push directly to GitHub unless I explicitly say to.',
+      '7. Preserve current working behavior unless the report proves it is wrong.',
+      '',
+      'IMPORTANT CONTEXT:',
+      '- This is a static GitHub Pages app, not an API-backed app.',
+      '- Mobile Safari/PWA cache can show stale behavior, so check version markers before assuming upload failure.',
+      '- The analyzer should never silently trust profile fallback. It must label profile fallback clearly.',
+      '- If extraction is uncertain, prefer review warnings over false confidence.',
+      '',
+      'STRUCTURED REPORT:',
+      'App Version: '+appVersion,
+      'Engine: '+(window.tcV3EngineVersion||'unknown'),
+      'Bank Rules: '+(window.tcV3BankRulesVersion||'unknown'),
+      'Profile Registry: '+(window.tcV3ProfileRegistryVersion||'unknown'),
+      'Weird Wording Normalizer: '+(window.tcWeirdWordingNormalizerVersion||'unknown'),
+      'Source: '+(r.sourceKind||'unknown'),
+      'Source ID: '+(r.sourceId||'none'),
+      'Source Length: '+(r.sourceLength||raw.length||0),
+      '',
+      'EXTRACTED FIELDS:',
+      'Bank: '+(r.bank||'Review'),
+      'Account: '+(r.acct||'Review'),
+      'Bonus: '+(r.bonus||'Review'),
+      'Selected Tier: '+(r.bonusTierText||'None'),
+      'Promo Code: '+(r.code||'Review'),
+      'Open-by / Expiration: '+(r.openBy||'Review'),
+      'Requirement Days: '+(r.reqDays||'Review'),
+      'Requirement Amount: '+(r.reqMoney||'Review'),
+      'Requirement Is Total: '+(r.reqIsTotal?'yes':'no/unknown'),
+      'Required Count: '+(r.count||'—'),
+      'Funding Days: '+(r.fundedDays||'—'),
+      'Funding Amount: '+(r.fundingAmount||'—'),
+      'Hold Days: '+(r.holdDays||r.minHoldDays||'—'),
+      'Monthly Fee: '+(r.fee||'Review/None'),
+      'Payout: '+(r.payout||r.payoutText||'Review'),
+      '',
+      'ANALYZER FLAGS:',
+      flags,
+      '',
+      'RULES / PROFILE:',
+      'Rules Applied: '+bankRules,
+      'Profile Note: '+(r.profileRegistry?.note||'not checked'),
+      'Profile Known: '+(r.profileKnown?'yes':'no'),
+      'Profile Status: '+(r.profileStatus||'unknown'),
+      'Profile Fallback Summary: '+(r.profileFallbackSummary||'None'),
+      '',
+      'WEIRD WORDING:',
+      weird,
+      '',
+      'SOURCE SNIPPETS:',
+      snippets||'None',
+      '',
+      'PROFILE FALLBACKS:',
+      fallbacks||'None',
+      '',
+      'ACTION PLAN GENERATED BY APP:',
+      r.actionPlan||'None',
+      '',
+      'SOURCE T&C:',
+      raw
+    ].join('\n')
   }
-  function copyIssueReport(){const txt=issueReport();navigator.clipboard?.writeText(txt).then(()=>alert('Analyzer issue report copied.')).catch(()=>alert(txt))}
-  function openPro(){const src=window.tcV3ResolveSource?window.tcV3ResolveSource(findRaw()):{raw:findRaw()};let r=analyze(src.raw);document.getElementById('tca_overlay')?.remove();let h=`<div class="cbg" onclick="tcClosePro()"><div class="dd-box tca-box" onclick="event.stopPropagation()"><h3>✨ Unified Analyzer Pro <span style="font-size:9px;color:#94A3B8">v3.3.38</span></h3><div class="sub">Clean v3 pipeline: current pasted text first, entry saved source second, vault fallback last.</div><textarea id="tca_raw" class="dd-input" style="height:150px;line-height:1.45">${esc(src.raw||'')}</textarea><div class="crow"><button class="c-c" onclick="tcClosePro()">Close</button><button class="c-g" onclick="tcRunPro()">Analyze</button></div><div id="tcv3_result">${summaryHtml(r)}</div>`;if(r?.tiers?.length){h+=`<div class="tc-box"><div class="tc-label">Target tier</div><select class="dd-input" onchange="tcV3SelectTier(this.value)">`;r.tiers.forEach((t,i)=>h+=`<option value="${i}" ${i===r.tiers.length-1?'selected':''}>${money(t.bonus)} bonus — ${money(t.requirement)}+</option>`);h+=`</select></div>`}h+=`<div class="crow"><button class="c-c" onclick="tcCopyIssueReport()">🧾 Copy Issue Report</button><button class="c-g" onclick="tcApplyPro()">Apply Fields</button></div><button class="btn-p" style="margin-top:8px" onclick="tcCreateTimers()">Create Suggested Mini Timers</button></div></div>`;const d=document.createElement('div');d.id='tca_overlay';d.innerHTML=h;document.body.appendChild(d)}
+  function copyIssueReport(){const txt=issueReport();navigator.clipboard?.writeText(txt).then(()=>alert('ChatGPT-ready fix prompt copied. Paste it into ChatGPT with a short note about what looked wrong.')).catch(()=>alert(txt))}
+  function openPro(){const src=window.tcV3ResolveSource?window.tcV3ResolveSource(findRaw()):{raw:findRaw()};let r=analyze(src.raw);document.getElementById('tca_overlay')?.remove();let h=`<div class="cbg" onclick="tcClosePro()"><div class="dd-box tca-box" onclick="event.stopPropagation()"><h3>✨ Unified Analyzer Pro <span style="font-size:9px;color:#94A3B8">v3.3.39</span></h3><div class="sub">Clean v3 pipeline: current pasted text first, entry saved source second, vault fallback last.</div><textarea id="tca_raw" class="dd-input" style="height:150px;line-height:1.45">${esc(src.raw||'')}</textarea><div class="crow"><button class="c-c" onclick="tcClosePro()">Close</button><button class="c-g" onclick="tcRunPro()">Analyze</button></div><div id="tcv3_result">${summaryHtml(r)}</div>`;if(r?.tiers?.length){h+=`<div class="tc-box"><div class="tc-label">Target tier</div><select class="dd-input" onchange="tcV3SelectTier(this.value)">`;r.tiers.forEach((t,i)=>h+=`<option value="${i}" ${i===r.tiers.length-1?'selected':''}>${money(t.bonus)} bonus — ${money(t.requirement)}+</option>`);h+=`</select></div>`}h+=`<div class="crow"><button class="c-c" onclick="tcCopyIssueReport()">🧾 Copy ChatGPT Fix Prompt</button><button class="c-g" onclick="tcApplyPro()">Apply Fields</button></div><button class="btn-p" style="margin-top:8px" onclick="tcCreateTimers()">Create Suggested Mini Timers</button></div></div>`;const d=document.createElement('div');d.id='tca_overlay';d.innerHTML=h;document.body.appendChild(d)}
   function resultPlainText(r){
     if(!r)return'';
     const box=document.createElement('div');
