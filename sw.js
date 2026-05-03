@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.47 Newest update: Status field wiring for requirement deadlines and edit form consistency.
+// ✅ Version 3.3.49 Newest update: Reliable save button and verified entry persistence.
 
-const V = 'bt-v3.3.47';
+const V = 'bt-v3.3.50';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
