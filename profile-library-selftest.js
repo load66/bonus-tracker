@@ -1,11 +1,11 @@
 /*
  * filename: profile-library-selftest.js
- * version: 3.3.56
+ * version: 3.3.57
  * purpose: Saved Profile Library + Analyzer Self-Test.
  * last-touched: unknown
  */
 (function(){
-  const VER='3.3.56';
+  const VER='3.3.57';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const esc=v=>{const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML};
   const money=n=>'$'+Number(n||0).toLocaleString();

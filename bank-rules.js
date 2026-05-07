@@ -1,11 +1,11 @@
 /*
  * filename: bank-rules.js
- * version: 3.3.56
+ * version: 3.3.57
  * purpose: Analyzer v3 bank rules. Hardened Chase Business gate (no JPMorgan legal-entity false positives) + personal-product anti-signals.
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.3.56';
+  const VER='3.3.57';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const money=n=>'$'+Number(n||0).toLocaleString();
   const uniq=a=>Array.from(new Set((a||[]).filter(Boolean).map(clean))).filter(Boolean);

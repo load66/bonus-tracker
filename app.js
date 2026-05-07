@@ -1,7 +1,7 @@
 /* ✅ Version 2.0 Newest update: Removed Profile tab + added Data Health and safer backup/close guardrails. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.3.56';
+const APP_VERSION='3.3.57';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 
 const ld=(k,d)=>{
@@ -2636,15 +2636,16 @@ function saveEntry(){
   syncRequiredDaysFromModal(d);
   d.earlyCloseFee=parseCloseFeeAmount(modal.earlyTerminationFeeText);
   applyCountdownFromModal(d);
+  hydrateTimersFromOpened(d);
   if(!modal._edit&&!modal._skipDuplicateCheck&&handleDuplicateFlow(d,'manual')){closeModal();R();return true}
   const beforeEntries=entries.map(e=>({...e,checklist:Array.isArray(e.checklist)?[...e.checklist]:[],customTimers:normalizeTimerList(e.customTimers)}));
   let savedEntry=null;
   if(modal._edit){
     const targetId=modal.id;let promotedId='';
-    entries=entries.map(e=>{if(e.id!==targetId)return e;let next={...e,...d,checklist:e.checklist||[],customTimers:e.customTimers||d.customTimers||[]};const beforeId=next.id;next=promoteDraftEntryId(next,beforeId);promotedId=next.id;return next});
+    entries=entries.map(e=>{if(e.id!==targetId)return e;let next={...e,...d,checklist:e.checklist||[],customTimers:(d.customTimers&&d.customTimers.length)?d.customTimers:(e.customTimers||[])};hydrateTimersFromOpened(next);const beforeId=next.id;next=promoteDraftEntryId(next,beforeId);promotedId=next.id;return next});
     savedEntry=entries.find(e=>e.id===promotedId)||entries.find(e=>e.id===targetId)||null;
   }else{
-    const next=assignEntryIdForCreate({...d,checklist:[],customTimers:[]});entries.push(next);savedEntry=next;
+    const next=assignEntryIdForCreate({...d,checklist:[],customTimers:d.customTimers||[]});hydrateTimersFromOpened(next);entries.push(next);savedEntry=next;
   }
   entries=sortE(entries);
   if(!saveEntriesStrict(entries)){entries=beforeEntries;return false}
@@ -2668,6 +2669,7 @@ function normalizeNewCycleData(d,existing){
   next.notes=d.notes||'';
   next.checklist=[];
   next.customTimers=normalizeTimerList(d.customTimers||[]);
+  hydrateTimersFromOpened(next);
   next.feeChecked=false;
   next.referralBonus=d.referralBonus||0;
   next.dataPoint=d.dataPoint||'';
@@ -2768,6 +2770,7 @@ function rmCk(id,i){entries=entries.map(e=>{if(e.id===id&&e.checklist)e.checklis
 function timerId(){return 'tmr_'+Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-5)}
 function normalizeTimer(item){const x=(item&&typeof item==='object')?{...item}:{};const text=String(x.text||'').trim();const startDate=String(x.startDate||'').trim();const daysRequired=parseInt(x.daysRequired||0,10)||0;const date=String(x.date||timerDueFromStart(startDate,daysRequired)||'').trim();return{id:String(x.id||timerId()),text,startDate,daysRequired,date,done:!!x.done}}
 function normalizeTimerList(list){return(Array.isArray(list)?list:[]).map(normalizeTimer).filter(t=>t.text||t.date)}
+function hydrateTimersFromOpened(entry){if(!entry)return entry;const opened=String(entry.opened||'').trim();entry.customTimers=normalizeTimerList(entry.customTimers||[]).map(t=>{const days=parseInt(t.daysRequired||0,10)||0;if(opened&&days>0&&(!t.startDate||!t.date)){return normalizeTimer({...t,startDate:t.startDate||opened,date:t.date||timerDueFromStart(t.startDate||opened,days)})}return t});return entry}
 const TIMER_DELETE_KEY_PREFIX='bt_deleted_timer_keys_v1:';
 function normTimerVal(v){return String(v||'').replace(/\s+/g,' ').trim()}
 function normTimerLower(v){return normTimerVal(v).toLowerCase()}
@@ -3416,10 +3419,11 @@ entries=sortE(entries);R();
     const reqDays = parseInt(getVal('tcr_req_days'), 10) || 0;
     const fundedDays = parseInt(getVal('tcr_funded_days'), 10) || 0;
     const holdDays = inferHoldDays();
-    if (checked('tcr_timer_req') && opened && reqDays) timers.push(makeTimer('Bonus requirement deadline', addDaysIso(opened, reqDays), opened, reqDays));
-    if (checked('tcr_timer_fund') && opened && fundedDays) timers.push(makeTimer('Funding deadline', addDaysIso(opened, fundedDays), opened, fundedDays));
-    if (checked('tcr_timer_payout') && opened && holdDays) timers.push(makeTimer('Expected bonus payout / hold check', addDaysIso(opened, holdDays), opened, holdDays));
-    return timers;
+    if (checked('tcr_timer_fund') && fundedDays) timers.push(makeTimer('Deposit new money / funding deadline', opened ? addDaysIso(opened, fundedDays) : '', opened, fundedDays));
+    if (checked('tcr_timer_payout') && holdDays) timers.push(makeTimer('Maintain required balance / hold check', opened ? addDaysIso(opened, holdDays) : '', opened, holdDays));
+    if (checked('tcr_timer_req') && reqDays) timers.push(makeTimer(parsed.requirementType==='transactions'?'Complete qualifying transactions':'Bonus requirement deadline', opened ? addDaysIso(opened, reqDays) : '', opened, reqDays));
+    const seen = new Set();
+    return timers.filter(t => { const k=(t.text||'').toLowerCase()+'|'+(t.daysRequired||'')+'|'+(t.date||''); if(seen.has(k))return false; seen.add(k); return true; });
   }
 
   function renamePromoDateLabel(){

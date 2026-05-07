@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.56 Newest update: Analyzer current-offer fields override saved profile fallback.
+// ✅ Version 3.3.57 Newest update: Cleaner current-offer profile logic and auto-applied analyzer suggested timers.
 
-const V = 'bt-v3.3.56';
+const V = 'bt-v3.3.57';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {

@@ -5,7 +5,7 @@
  * last-touched: unknown
  */
 (function(){
-  const VER='3.3.56';
+  const VER='3.3.57';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const esc=v=>{if(window.esc)return window.esc(String(v??''));const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML};
   const money=n=>'$'+Number(n||0).toLocaleString();
@@ -73,9 +73,25 @@
   function modalObj(){try{return modal||window.modal||null}catch{return window.modal||null}}
   function analyzerEarlyFeeText(r){const fee=r?.earlyCloseFee||r?.earlyTerminationFee;const n=parseInt(String(fee||'').replace(/[$,]/g,''),10)||0;if(n>0)return String(n);if(/no early close fee|no fee|none/i.test(String(r?.early||'')))return 'None';return ''}
   function analyzerEligibilityText(r){const parts=[];if(r?.eligibilityText)parts.push(r.eligibilityText);if(r?.early&&/closed|restricted|payout|good standing/i.test(r.early))parts.push(r.early);return Array.from(new Set(parts.map(clean).filter(Boolean))).join('\n')}
-  function applyToModal(r){const m=modalObj();if(!m||!r)return false;m.bank=m.bank||r.bank;if(r.bonus)m.bonus=r.bonus;if(r.reqDays)m.reqDays=r.reqDays;if(r.reqMoney)m.dataPoint=m.dataPoint||('DD '+money(r.reqMoney)+(r.reqDays?' within '+r.reqDays+' days':''));if(r.code)m.promoCodeText=r.code;if(r.openBy)m.expirationDateText=pretty(r.openBy);if(r.fee)m.monthlyFeeYNText=`Yes — ${money(r.fee)} monthly fee`;if(r.waivers?.length)m.avoidMonthlyFeeText=r.waivers.join('\n');if(r.actionPlan)m.completeBonusText=r.actionPlan;const elig=analyzerEligibilityText(r);if(elig)m.eligibilityText=elig;const earlyFee=analyzerEarlyFeeText(r);if(earlyFee)m.earlyTerminationFeeText=earlyFee;if(r.fundedDays)m.fundedDays=r.fundedDays;if(r.fundingAmount)m.fundingAmount=r.fundingAmount;if(r.holdDays)m.minHoldDays=r.holdDays;m.tcAnalysisResult=r;m.tcSourceRaw=r.raw;m.tcSourceId=r.sourceId;try{window.tcV3SaveSourceForCurrentEntry&&window.tcV3SaveSourceForCurrentEntry(r.raw,{bank:r.bank})}catch{}return true}
+  function makeSuggestedTimers(r,opened=''){
+    const mk=(text,date='',startDate='',daysRequired=0)=>({id:window.timerId?window.timerId():'tm_'+Math.random().toString(36).slice(2,8),text:clean(text),date:date||'',startDate:startDate||'',daysRequired:Number(daysRequired||0),done:false});
+    const out=[];
+    const source=(r?.suggestedTimers&&r.suggestedTimers.length)?r.suggestedTimers:[];
+    source.forEach(t=>{const days=Number(t.daysRequired||t.days||0)||0;if(t.date)out.push(mk(t.text||'Suggested deadline',t.date,'',0));else if(days)out.push(mk(t.text||'Suggested timer',opened?addDaysIso(opened,days):'',opened,days));});
+    if(!source.length){if(r?.openBy)out.push(mk('Promo expiration / open-by deadline',r.openBy));if(r?.fundedDays)out.push(mk('Deposit new money / funding deadline',opened?addDaysIso(opened,r.fundedDays):'',opened,r.fundedDays));if(r?.holdDays||r?.minHoldDays){const d=r.holdDays||r.minHoldDays;out.push(mk('Maintain required balance / hold check',opened?addDaysIso(opened,d):'',opened,d));}if(r?.reqDays)out.push(mk(r.requirementType==='transactions'?'Complete qualifying transactions':'Bonus requirement deadline',opened?addDaysIso(opened,r.reqDays):'',opened,r.reqDays));}
+    const seen=new Set();
+    return out.filter(t=>{const k=clean(t.text).toLowerCase()+'|'+String(t.daysRequired||'')+'|'+String(t.date||'');if(!t.text||seen.has(k))return false;seen.add(k);return true});
+  }
+  function mergeSuggestedTimers(existing,r,opened=''){
+    const base=Array.isArray(existing)?existing.slice():[];
+    const sig=x=>clean(x?.text||'').toLowerCase()+'|'+String(x?.daysRequired||'')+'|'+String(x?.date||'');
+    const seen=new Set(base.map(sig));
+    makeSuggestedTimers(r,opened).forEach(t=>{const k=sig(t);if(!seen.has(k)){base.push(t);seen.add(k)}});
+    return base;
+  }
+  function applyToModal(r){const m=modalObj();if(!m||!r)return false;m.bank=m.bank||r.bank;if(r.bonus)m.bonus=r.bonus;if(r.reqDays)m.reqDays=r.reqDays;if(r.reqMoney)m.dataPoint=m.dataPoint||('DD '+money(r.reqMoney)+(r.reqDays?' within '+r.reqDays+' days':''));if(r.code)m.promoCodeText=r.code;if(r.openBy)m.expirationDateText=pretty(r.openBy);if(r.fee)m.monthlyFeeYNText=`Yes — ${money(r.fee)} monthly fee`;if(r.waivers?.length)m.avoidMonthlyFeeText=r.waivers.join('\n');if(r.actionPlan)m.completeBonusText=r.actionPlan;const elig=analyzerEligibilityText(r);if(elig)m.eligibilityText=elig;const earlyFee=analyzerEarlyFeeText(r);if(earlyFee)m.earlyTerminationFeeText=earlyFee;if(r.fundedDays)m.fundedDays=r.fundedDays;if(r.fundingAmount)m.fundingAmount=r.fundingAmount;if(r.holdDays)m.minHoldDays=r.holdDays;m.customTimers=mergeSuggestedTimers(m.customTimers,r,m.opened||'');m.tcAnalysisResult=r;m.tcSourceRaw=r.raw;m.tcSourceId=r.sourceId;try{window.tcV3SaveSourceForCurrentEntry&&window.tcV3SaveSourceForCurrentEntry(r.raw,{bank:r.bank})}catch{}return true}
   function addDaysIso(start,days){try{if(window.addD)return window.addD(start,days)}catch{}const d=new Date(start+'T00:00:00');d.setDate(d.getDate()+Number(days||0));return d.toISOString().split('T')[0]}
-  function createTimers(r){const m=modalObj();if(!m||!r)return 0;const opened=m.opened||'';m.customTimers=Array.isArray(m.customTimers)?m.customTimers:[];let added=0;const mk=(text,date,startDate='',daysRequired=0)=>({id:window.timerId?window.timerId():'tm_'+Math.random().toString(36).slice(2,8),text,date,startDate,daysRequired:Number(daysRequired||0),done:false});const add=t=>{if(!t.date)return;if(m.customTimers.some(x=>clean(x.text).toLowerCase()===clean(t.text).toLowerCase()&&x.date===t.date))return;m.customTimers.push(t);added++};(r.suggestedTimers||[]).forEach(t=>{if(t.date)add(mk(t.text,t.date));else if(opened&&t.daysRequired)add(mk(t.text,addDaysIso(opened,t.daysRequired),opened,t.daysRequired));});if(!r.suggestedTimers?.length){if(r.openBy)add(mk('Promo expiration / open-by deadline',r.openBy));if(opened&&r.reqDays)add(mk('Bonus requirement deadline',addDaysIso(opened,r.reqDays),opened,r.reqDays));if(opened&&r.fundedDays)add(mk('Funding deadline',addDaysIso(opened,r.fundedDays),opened,r.fundedDays));}return added}
+  function createTimers(r){const m=modalObj();if(!m||!r)return 0;m.customTimers=Array.isArray(m.customTimers)?m.customTimers:[];const before=m.customTimers.length;m.customTimers=mergeSuggestedTimers(m.customTimers,r,m.opened||'');return m.customTimers.length-before}
   function issueReport(r){
     r=r||window.__tcV3AnalysisResult||currentResult(findRaw());
     if(!r)return'No analyzer result found.';
@@ -166,7 +182,7 @@
     ].join('\n')
   }
   function copyIssueReport(){const txt=issueReport();navigator.clipboard?.writeText(txt).then(()=>alert('ChatGPT-ready fix prompt copied. Paste it into ChatGPT with a short note about what looked wrong.')).catch(()=>alert(txt))}
-  function openPro(){const src=window.tcV3ResolveSource?window.tcV3ResolveSource(findRaw()):{raw:findRaw()};let r=analyze(src.raw);document.getElementById('tca_overlay')?.remove();let h=`<div class="cbg" onclick="tcClosePro()"><div class="dd-box tca-box" onclick="event.stopPropagation()"><h3>✨ Unified Analyzer Pro <span style="font-size:9px;color:#94A3B8">v3.3.40</span></h3><div class="sub">Clean v3 pipeline: current pasted text first, entry saved source second, vault fallback last.</div><textarea id="tca_raw" class="dd-input" style="height:150px;line-height:1.45">${esc(src.raw||'')}</textarea><div class="crow"><button class="c-c" onclick="tcClosePro()">Close</button><button class="c-g" onclick="tcRunPro()">Analyze</button></div><div id="tcv3_result">${summaryHtml(r)}</div>`;if(r?.tiers?.length){h+=`<div class="tc-box"><div class="tc-label">Target tier</div><select class="dd-input" onchange="tcV3SelectTier(this.value)">`;r.tiers.forEach((t,i)=>h+=`<option value="${i}" ${i===r.tiers.length-1?'selected':''}>${money(t.bonus)} bonus — ${money(t.requirement)}+</option>`);h+=`</select></div>`}h+=`<div class="crow"><button class="c-c" onclick="tcCopyIssueReport()">🧾 Copy ChatGPT Fix Prompt</button><button class="c-g" onclick="tcApplyPro()">Apply Fields</button></div><button class="btn-p" style="margin-top:8px" onclick="tcCreateTimers()">Create Suggested Mini Timers</button></div></div>`;const d=document.createElement('div');d.id='tca_overlay';d.innerHTML=h;document.body.appendChild(d)}
+  function openPro(){const src=window.tcV3ResolveSource?window.tcV3ResolveSource(findRaw()):{raw:findRaw()};let r=analyze(src.raw);document.getElementById('tca_overlay')?.remove();let h=`<div class="cbg" onclick="tcClosePro()"><div class="dd-box tca-box" onclick="event.stopPropagation()"><h3>✨ Unified Analyzer Pro <span style="font-size:9px;color:#94A3B8">v3.3.57</span></h3><div class="sub">Clean v3 pipeline: current pasted text first, entry saved source second, vault fallback last.</div><textarea id="tca_raw" class="dd-input" style="height:150px;line-height:1.45">${esc(src.raw||'')}</textarea><div class="crow"><button class="c-c" onclick="tcClosePro()">Close</button><button class="c-g" onclick="tcRunPro()">Analyze</button></div><div id="tcv3_result">${summaryHtml(r)}</div>`;if(r?.tiers?.length){h+=`<div class="tc-box"><div class="tc-label">Target tier</div><select class="dd-input" onchange="tcV3SelectTier(this.value)">`;r.tiers.forEach((t,i)=>h+=`<option value="${i}" ${i===r.tiers.length-1?'selected':''}>${money(t.bonus)} bonus — ${money(t.requirement)}+</option>`);h+=`</select></div>`}h+=`<div class="crow"><button class="c-c" onclick="tcCopyIssueReport()">🧾 Copy ChatGPT Fix Prompt</button><button class="c-g" onclick="tcApplyPro()">Apply Fields</button></div><button class="btn-p" style="margin-top:8px" onclick="tcCreateTimers()">Create Suggested Mini Timers</button></div></div>`;const d=document.createElement('div');d.id='tca_overlay';d.innerHTML=h;document.body.appendChild(d)}
   function resultPlainText(r){
     if(!r)return'';
     const box=document.createElement('div');
@@ -210,7 +226,7 @@
       eligibilityText:eligibilityOut,
       expirationDateText:r.openBy?pretty(r.openBy):'',
       requiredDaysText:reqDays?String(reqDays):'',
-      customTimers:[]
+      customTimers:makeSuggestedTimers(r,'')
     };
   }
   window.fillFromAI=function(){
@@ -223,7 +239,7 @@
     const data=buildEntryFromResult(r);
     if(!data||!data.bank){alert('Bank name was not detected. Review the T&C and try again.');return;}
     try{window.tcV3SaveSourceForCurrentEntry&&window.tcV3SaveSourceForCurrentEntry(raw,{bank:data.bank})}catch{}
-    modal={...data,checklist:[],customTimers:[]};
+    modal={...data,checklist:[],customTimers:data.customTimers||[]};
     showAnalyzer=false;
     analyzerResult=null;
     tab='tracker';

@@ -5,7 +5,7 @@
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.3.56-profile-registry';
+  const VER='3.3.57-profile-registry';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
     {
@@ -179,6 +179,19 @@
     r.fieldSources[field]=item;r.fieldConfidence[field]='profile-fallback';
     if(!r.sourceSnippets.some(x=>x.field===field&&x.kind==='known-bank-profile'))r.sourceSnippets.push(item);
   }
+  function currentOfferIsStrong(r){
+    return !!(r&&(r.hasExplicitCurrentOffer||r.tiered||r.requirementType==='transactions'||r.fundedDays||r.holdDays||r.minHoldDays));
+  }
+  function removeProfileFallbackArtifacts(r){
+    if(!r)return r;
+    r.profileFallbacks=[];
+    r.profileFallbackSummary='';
+    r.reviewFlags=(r.reviewFlags||[]).filter(x=>!/profile fallback|saved profile|saved .*pasted|Requirement amount missing|Possible missing fields|Requirement deadline|Qualification path|Bonus amount not found/i.test(String(x||'')));
+    r.sourceSnippets=(r.sourceSnippets||[]).filter(x=>!(x&&String(x.confidence||'')==='profile-fallback')&&!(x&&String(x.kind||'')==='known-bank-profile'));
+    if(r.fieldSources){Object.keys(r.fieldSources).forEach(k=>{const x=r.fieldSources[k];if(x&&(x.confidence==='profile-fallback'||x.kind==='known-bank-profile'))delete r.fieldSources[k]});}
+    if(r.fieldConfidence){Object.keys(r.fieldConfidence).forEach(k=>{if(r.fieldConfidence[k]==='profile-fallback')delete r.fieldConfidence[k]});}
+    return r;
+  }
   function fixCurrentChaseBusinessOffer(r,raw){
     raw=String(raw||'');
     if(!r||!/Chase Business Complete Checking/i.test(raw))return r;
@@ -194,9 +207,12 @@
     r.payout=r.payoutText='within 15 days after all checking requirements are completed';
     r.forceActionPlan=true;
     r.actionPlan=['1. Open a new Chase Business Complete Checking account using the offer code.','2. Deposit new money within 30 days: '+r.bonusTierText+'.','3. Maintain the required new-money balance for 60 days from offer enrollment.','4. Complete 5 qualifying transactions within 90 days of offer enrollment.','5. Keep the account open and unrestricted until payout.'].join('\n');
-    r.profileFallbacks=[];
-    r.profileFallbackSummary='';
-    r.reviewFlags=(r.reviewFlags||[]).filter(x=>!/profile fallback|Requirement deadline|Qualification path|Bonus amount not found/i.test(x));
+    r.suggestedTimers=[
+      {kind:'days',text:'Deposit new money / funding deadline',daysRequired:30,source:'current pasted Chase Business offer'},
+      {kind:'days',text:'Maintain required new-money balance',daysRequired:60,source:'current pasted Chase Business offer'},
+      {kind:'days',text:'Complete 5 qualifying transactions',daysRequired:90,source:'current pasted Chase Business offer'}
+    ];
+    removeProfileFallbackArtifacts(r);
     r.clear=true;
     return r;
   }
@@ -216,7 +232,7 @@
     const fb=profileFallbackFromMatch(m);
     const used=[];
     const src='Known profile: '+(m.product||m.bank||m.id)+' — '+(m.requirements||m.note||'saved bank profile');
-    const set=(key,label,value,display)=>{if(!value)return;if(r[key])return;if(r.requirementType==='transactions'&&(key==='reqMoney'||key==='count'))return;if(r.hasExplicitCurrentOffer&&(key==='reqMoney'||key==='count'||key==='reqDays'))return;r[key]=value;used.push({field:label,value:display||String(value),source:src});addProfileSource(r,label,display||String(value),src)};
+    const set=(key,label,value,display)=>{if(!value)return;if(r[key])return;if(currentOfferIsStrong(r)&&['bonus','reqMoney','count','reqDays','fundedDays','fundingAmount','minHoldDays','holdDays'].includes(key))return;if(r.requirementType==='transactions'&&(key==='reqMoney'||key==='count'))return;if(r.hasExplicitCurrentOffer&&(key==='reqMoney'||key==='count'||key==='reqDays'))return;r[key]=value;used.push({field:label,value:display||String(value),source:src});addProfileSource(r,label,display||String(value),src)};
     set('reqDays','Requirement days',fb.reqDays,fb.reqDays?fb.reqDays+' days':'');
     set('reqMoney','Requirement amount',fb.reqMoney,fb.reqMoney?money(fb.reqMoney):'');
     set('count','Required count',fb.count,fb.count?String(fb.count):'');
@@ -248,8 +264,9 @@
         r.profileKnown=!!m.known;
         r.profileStatus=m.status;
         r.profileNote=m.note;
-        applyKnownProfileFallback(r,m);
         fixCurrentChaseBusinessOffer(r,raw||r.normalizedRaw||r.raw||'');
+        applyKnownProfileFallback(r,m);
+        if(currentOfferIsStrong(r))removeProfileFallbackArtifacts(r);
       }
       return r;
     };

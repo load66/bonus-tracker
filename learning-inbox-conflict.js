@@ -53,10 +53,16 @@
     }
     return hard;
   }
+  function currentOfferIsStrong(r){
+    return !!(r&&(r.hasExplicitCurrentOffer||r.tiered||r.requirementType==='transactions'||r.fundedDays||r.holdDays||r.minHoldDays));
+  }
   function compareToProfile(r){
     const p=profileFor(r);
     if(!p)return {hasProfile:false,hasConflicts:false,hasCautions:true,hasMissing:false,profile:null,conflicts:[],cautions:[],missing:[],warnings:['No exact saved profile found yet. Review the parsed fields before using Auto-Fill.']};
     const conflicts=profileMismatch(r,p);
+    if(currentOfferIsStrong(r)){
+      return {hasProfile:true,hasConflicts:conflicts.length>0,hasCautions:false,hasMissing:false,profile:p,conflicts,cautions:[],missing:[],warnings:[]};
+    }
     const cautions=[];
     const missing=[];
     const warnings=[];
