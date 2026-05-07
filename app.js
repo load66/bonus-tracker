@@ -1,7 +1,7 @@
 /* ✅ Version 2.0 Newest update: Removed Profile tab + added Data Health and safer backup/close guardrails. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.3.57';
+const APP_VERSION='3.3.58';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 
 const ld=(k,d)=>{
@@ -653,6 +653,8 @@ function getAttentionSuggestions(){
     const d=Number.isFinite(days)?Math.max(0,days):999999;
     sug.push({
       bank:e.bank,
+      entryId:e.id||'',
+      dedupeKey:opts.dedupeKey||(e.id||e.bank),
       rsn,
       bonus:e.bonus||0,
       showBonus:opts.showBonus!==undefined?!!opts.showBonus:!e.closed&&(e.bonus||0)>0,
@@ -665,9 +667,9 @@ function getAttentionSuggestions(){
   entries.forEach(e=>{
     if(!e||!e.bank||e.closed)return;
 
-    // Mini timers should only jump to the top when they are actually actionable.
-    // Long future timers should not hide the bank's core phase such as
-    // requirement deadline, waiting-to-close, or waiting-for-bonus.
+    // Mini timers are real requirement deadlines. Always consider the next
+    // active timer so Needs Attention matches the card countdown instead of
+    // falling back to the later 90-day requirement deadline.
     const activeTimers=sortCustomTimers(normalizeTimerList(e.customTimers||[]).filter(t=>!t.done&&t.date&&!isDeletedTimer(e,t)));
     if(activeTimers.length){
       const next=activeTimers[0];
@@ -679,6 +681,9 @@ function getAttentionSuggestions(){
         else if(d<=3)push(e,d+'d left: '+next.text,0.1,d,{category:'timer'});
         else if(d<=7)push(e,d+'d left: '+next.text,0.2,d,{category:'timer'});
         else if(d<=14)push(e,d+'d left: '+next.text,0.35,d,{category:'timer'});
+        else if(d<=30)push(e,d+'d left: '+next.text,1.6,d,{category:'timer'});
+        else if(d<=60)push(e,d+'d left: '+next.text,2.4,d,{category:'timer'});
+        else push(e,d+'d left: '+next.text,3.4,d,{category:'timer'});
       }
     }
 
@@ -756,14 +761,14 @@ function getAttentionSuggestions(){
     }
   });
 
-  const bestByBank=new Map();
+  const bestByEntry=new Map();
   sug.forEach(s=>{
-    const key=(typeof bankKey==='function'?bankKey(s.bank):s.bank)+'|'+(s.category||'');
-    const prev=bestByBank.get(key);
-    if(!prev||s.pri<prev.pri||(s.pri===prev.pri&&s.days<prev.days))bestByBank.set(key,s);
+    const key=s.dedupeKey||s.entryId||s.bank;
+    const prev=bestByEntry.get(key);
+    if(!prev||s.pri<prev.pri||(s.pri===prev.pri&&s.days<prev.days))bestByEntry.set(key,s);
   });
 
-  return Array.from(bestByBank.values()).sort((a,b)=>a.pri-b.pri||a.days-b.days||(b.bonus||0)-(a.bonus||0)||a.bank.localeCompare(b.bank))
+  return Array.from(bestByEntry.values()).sort((a,b)=>a.pri-b.pri||a.days-b.days||(b.bonus||0)-(a.bonus||0)||a.bank.localeCompare(b.bank))
 }
 
 function getChurnSuggestions(){

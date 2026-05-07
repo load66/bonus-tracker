@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.57 Newest update: Cleaner current-offer profile logic and auto-applied analyzer suggested timers.
+// ✅ Version 3.3.58 Newest update: Needs Attention uses the earliest active mini timer before later requirement deadlines.
 
-const V = 'bt-v3.3.57';
+const V = 'bt-v3.3.58';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
