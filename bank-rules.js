@@ -1,11 +1,11 @@
 /*
  * filename: bank-rules.js
- * version: 3.0.6
+ * version: 3.3.56
  * purpose: Analyzer v3 bank rules. Hardened Chase Business gate (no JPMorgan legal-entity false positives) + personal-product anti-signals.
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.0.6';
+  const VER='3.3.56';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const money=n=>'$'+Number(n||0).toLocaleString();
   const uniq=a=>Array.from(new Set((a||[]).filter(Boolean).map(clean))).filter(Boolean);
@@ -18,12 +18,13 @@
     return '';
   }
   function pushRule(r,label){r.bankRulesApplied=uniq((r.bankRulesApplied||[]).concat(label));return r;}
-  function setTiers(r,tiers,label){
+  function setTiers(r,tiers,label,opts={}){
     tiers=(tiers||[]).filter(t=>t&&t.bonus&&t.requirement).sort((a,b)=>a.requirement-b.requirement);
     if(!tiers.length)return r;
     r.tiers=tiers;r.tiered=true;r.targetTier=tiers[tiers.length-1];
-    r.bonus=r.selectedBonus=r.targetTier.bonus;r.reqMoney=r.targetTier.requirement;r.reqIsTotal=true;
-    r.bonusTierText=tiers.map(t=>`${money(t.bonus)} for ${money(t.requirement)}+`).join(' / ');
+    r.bonus=r.selectedBonus=r.targetTier.bonus;
+    if(!opts.fundingTiers){r.reqMoney=r.targetTier.requirement;r.reqIsTotal=true;}
+    r.bonusTierText=tiers.map(t=>`${money(t.bonus)} for ${money(t.requirement)}+${opts.fundingTiers?' new money':''}`).join(' / ');
     return pushRule(r,label);
   }
   function applyChaseBusiness(r){
@@ -33,13 +34,17 @@
     if(/Chase Total Checking|Chase SavingsSM|Chase First CheckingSM/i.test(raw))return r;
     r.bank='Chase';r.acct='Chase Business Complete Checking';
     const tiers=[];
-    if(/\$\s*300[\s\S]{0,60}\$\s*2,?000\s*[-–—]\s*\$\s*9,?999/i.test(raw))tiers.push({bonus:300,requirement:2000,maxRequirement:9999,confidence:'High',source:'Chase table: $300 for $2,000–$9,999 new money'});
-    if(/\$\s*500[\s\S]{0,60}\$\s*10,?000\s*or\s*more/i.test(raw))tiers.push({bonus:500,requirement:10000,maxRequirement:0,confidence:'High',source:'Chase table: $500 for $10,000+ new money'});
-    setTiers(r,tiers,'Chase Business Checking');
+    // Current flyer wording: Earn $500/$750/$1,500 with minimum $2,000/$20,000/$100,000 deposited in new money.
+    let m;const tierRe=/earn\s*\$\s*([0-9,]+)\s+with\s+(?:a\s+)?minimum\s+\$\s*([0-9,]+)\s+deposit(?:\s+in\s+new\s+money)?/gi;
+    while((m=tierRe.exec(raw)))tiers.push({bonus:parseInt(m[1].replace(/,/g,''),10),requirement:parseInt(m[2].replace(/,/g,''),10),maxRequirement:0,confidence:'High',source:clean(m[0])});
+    // Legacy Chase business wording is still supported, but only when the current flyer wording is absent.
+    if(!tiers.length&&/\$\s*300[\s\S]{0,60}\$\s*2,?000\s*[-–—]\s*\$\s*9,?999/i.test(raw))tiers.push({bonus:300,requirement:2000,maxRequirement:9999,confidence:'High',source:'Chase table: $300 for $2,000–$9,999 new money'});
+    if(!tiers.length&&/\$\s*500[\s\S]{0,60}\$\s*10,?000\s*or\s*more/i.test(raw))tiers.push({bonus:500,requirement:10000,maxRequirement:0,confidence:'High',source:'Chase table: $500 for $10,000+ new money'});
+    setTiers(r,tiers,'Chase Business Checking',{fundingTiers:true});
     const exp=isoDate(raw); if(exp){r.openBy=exp;r.expiration={value:exp,display:exp,confidence:'High',source:'Chase offer end date'};}
-    if(/Deposit a total of \$\s*2,?000 or more[\s\S]{0,100}within 30 days/i.test(raw)){r.fundedDays=30;r.fundingAmount=2000;}
-    if(/Maintain the new money[\s\S]{0,180}at least 60 days/i.test(raw)){r.holdDays=60;r.early='Maintain the qualifying new money for at least 60 days; dropping below threshold can change or disqualify the offer.';}
-    if(/Complete\s+5\s+qualifying transactions\s+within\s+90\s+days/i.test(raw)){r.count=5;r.reqDays=90;r.transactionRequirement=true;}
+    if(/deposit[\s\S]{0,120}within 30 days/i.test(raw)){r.fundedDays=30;r.fundingAmount=r.targetTier?.requirement||r.fundingAmount||0;}
+    if(/maintain[\s\S]{0,180}(?:60 days|for 60 days|at least 60 days)/i.test(raw)){r.holdDays=60;r.minHoldDays=60;r.early='Maintain the qualifying new money for at least 60 days; dropping below threshold can change or disqualify the offer.';}
+    if(/Complete\s+(?:5|five)\s+qualifying transactions\s+within\s+90\s+days/i.test(raw)){r.count=5;r.reqDays=90;r.reqMoney=0;r.reqIsTotal=false;r.requirementType='transactions';r.requirementNoun='qualifying transactions';r.transactionRequirement=true;}
     r.fee=15;r.monthlyFee={value:'$15 Monthly Service Fee',amount:15,source:'Chase Business Complete Checking monthly service fee',confidence:'High'};
     r.waivers=uniq(['Linked qualifying Chase personal/private client checking account','Chase Military Banking requirements','$2,000 minimum daily ending balance OR Chase Payment Solutions deposits OR eligible card purchases']);
     r.counts=uniq(['New money deposit into the new Chase business checking account','Debit card purchases','Chase QuickDeposit','ACH credits','Wires credits and debits','Chase Online Bill Pay','Chase QuickAccept']);

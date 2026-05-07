@@ -5,7 +5,7 @@
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.3.40';
+  const VER='3.3.56-profile-registry';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
     {
@@ -179,11 +179,34 @@
     r.fieldSources[field]=item;r.fieldConfidence[field]='profile-fallback';
     if(!r.sourceSnippets.some(x=>x.field===field&&x.kind==='known-bank-profile'))r.sourceSnippets.push(item);
   }
+  function fixCurrentChaseBusinessOffer(r,raw){
+    raw=String(raw||'');
+    if(!r||!/Chase Business Complete Checking/i.test(raw))return r;
+    if(!/earn\s*\$\s*500\s+with\s+(?:a\s+)?minimum\s+\$\s*2,?000/i.test(raw)||!/earn\s*\$\s*1,?500\s+with\s+(?:a\s+)?minimum\s+\$\s*100,?000/i.test(raw))return r;
+    const tiers=[];let m;const re=/earn\s*\$\s*([0-9,]+)\s+with\s+(?:a\s+)?minimum\s+\$\s*([0-9,]+)\s+deposit(?:\s+in\s+new\s+money)?/gi;
+    while((m=re.exec(raw)))tiers.push({bonus:moneyNum(m[1]),requirement:moneyNum(m[2]),maxRequirement:0,confidence:'High',source:clean(m[0])});
+    if(!tiers.length)return r;
+    tiers.sort((a,b)=>a.requirement-b.requirement);
+    r.bank='Chase';r.acct='Chase Business Complete Checking';r.tiers=tiers;r.tiered=true;r.targetTier=tiers[tiers.length-1];r.bonus=r.selectedBonus=r.targetTier.bonus;r.bonusTierText=tiers.map(t=>money(t.bonus)+' for '+money(t.requirement)+'+ new money').join(' / ');
+    r.reqMoney=0;r.reqIsTotal=false;r.requirementType='transactions';r.requirementNoun='qualifying transactions';r.count=5;r.reqDays=90;r.fundedDays=30;r.fundingAmount=r.targetTier.requirement;r.holdDays=60;r.minHoldDays=60;r.hasExplicitCurrentOffer=true;
+    r.counts=['New money deposit into the new Chase business checking account','Debit card purchases','Chase QuickDeposit','ACH credits','Wires credits and debits','Chase Online Bill Pay','Chase QuickAccept'];
+    r.not=r.notCounts=['ACH debits','Person-to-person payments / P2P transfers including Zelle','Online transfers to Chase credit cards'];
+    r.payout=r.payoutText='within 15 days after all checking requirements are completed';
+    r.forceActionPlan=true;
+    r.actionPlan=['1. Open a new Chase Business Complete Checking account using the offer code.','2. Deposit new money within 30 days: '+r.bonusTierText+'.','3. Maintain the required new-money balance for 60 days from offer enrollment.','4. Complete 5 qualifying transactions within 90 days of offer enrollment.','5. Keep the account open and unrestricted until payout.'].join('\n');
+    r.profileFallbacks=[];
+    r.profileFallbackSummary='';
+    r.reviewFlags=(r.reviewFlags||[]).filter(x=>!/profile fallback|Requirement deadline|Qualification path|Bonus amount not found/i.test(x));
+    r.clear=true;
+    return r;
+  }
   function rebuildActionPlan(r){
     const lines=[];let step=1;
     lines.push(`${step++}. Open one eligible account${r.openBy?' by '+r.openBy:''}${r.code?' using promo code '+r.code:''}.`);
-    if(r.fundedDays)lines.push(`${step++}. Fund the account${r.fundingAmount?' with at least '+money(r.fundingAmount):''} within ${r.fundedDays} days.`);
-    lines.push(`${step++}. Complete ${r.count?'at least '+r.count+' ':''}qualifying Direct Deposits${r.reqMoney?`${r.reqIsTotal?' totaling ':' of '}${money(r.reqMoney)}+${r.reqIsTotal?'':' each'}`:''}${r.reqDays?' within '+r.reqDays+' days':''}.`);
+    if(r.fundedDays)lines.push(`${step++}. Deposit new money / fund the account${r.fundingAmount?' with at least '+money(r.fundingAmount):''} within ${r.fundedDays} days.`);
+    if(r.holdDays||r.minHoldDays)lines.push(`${step++}. Maintain the required new-money balance for ${r.holdDays||r.minHoldDays} days.`);
+    if(r.requirementType==='transactions')lines.push(`${step++}. Complete ${r.count||''} qualifying transactions${r.reqDays?' within '+r.reqDays+' days':''}.`);
+    else lines.push(`${step++}. Complete ${r.count?'at least '+r.count+' ':''}qualifying Direct Deposits${r.reqMoney?`${r.reqIsTotal?' totaling ':' of '}${money(r.reqMoney)}+${r.reqIsTotal?'':' each'}`:''}${r.reqDays?' within '+r.reqDays+' days':''}.`);
     lines.push(`${step++}. Bonus payout: ${r.payout||'payout timing needs review'}.`);
     lines.push(`${step++}. Keep account open and in good standing until payout.`);
     r.actionPlan=lines.filter(Boolean).join('\n');
@@ -193,7 +216,7 @@
     const fb=profileFallbackFromMatch(m);
     const used=[];
     const src='Known profile: '+(m.product||m.bank||m.id)+' — '+(m.requirements||m.note||'saved bank profile');
-    const set=(key,label,value,display)=>{if(!value)return;if(r[key])return;r[key]=value;used.push({field:label,value:display||String(value),source:src});addProfileSource(r,label,display||String(value),src)};
+    const set=(key,label,value,display)=>{if(!value)return;if(r[key])return;if(r.requirementType==='transactions'&&(key==='reqMoney'||key==='count'))return;if(r.hasExplicitCurrentOffer&&(key==='reqMoney'||key==='count'||key==='reqDays'))return;r[key]=value;used.push({field:label,value:display||String(value),source:src});addProfileSource(r,label,display||String(value),src)};
     set('reqDays','Requirement days',fb.reqDays,fb.reqDays?fb.reqDays+' days':'');
     set('reqMoney','Requirement amount',fb.reqMoney,fb.reqMoney?money(fb.reqMoney):'');
     set('count','Required count',fb.count,fb.count?String(fb.count):'');
@@ -226,6 +249,7 @@
         r.profileStatus=m.status;
         r.profileNote=m.note;
         applyKnownProfileFallback(r,m);
+        fixCurrentChaseBusinessOffer(r,raw||r.normalizedRaw||r.raw||'');
       }
       return r;
     };
@@ -236,5 +260,5 @@
   window.tcV3KnownProfiles=list;
   window.tcV3MatchKnownProfile=matchProfile;
   window.tcV3ProfileRegistryVersion=VER;
-  setTimeout(wrap,80);setTimeout(wrap,500);setTimeout(wrap,1400);
+  wrap();setTimeout(wrap,80);setTimeout(wrap,500);setTimeout(wrap,1400);
 })();

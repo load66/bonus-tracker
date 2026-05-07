@@ -1,18 +1,18 @@
 /*
  * filename: profile-library-selftest.js
- * version: 3.1.0
+ * version: 3.3.56
  * purpose: Saved Profile Library + Analyzer Self-Test.
  * last-touched: unknown
  */
 (function(){
-  const VER='3.1.0';
+  const VER='3.3.56';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const esc=v=>{const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML};
   const money=n=>'$'+Number(n||0).toLocaleString();
 
   const SAMPLES={
     bmo:`BMO Business Checking Bonus. You can receive either a $400 cash bonus, a $750 cash bonus, or a $1,000 cash bonus. Open a BMO Digital Business Checking, BMO Simple Business Checking, BMO Premium Business Checking, or BMO Elite Business Checking account between January 29, 2026 and April 30, 2026. On Day 30 balance must be $4,000 for $400, $25,000 for $750, or $50,000 for $1,000. From Day 31 through Day 90 your account balance must not drop below the assigned tier. Cash bonus deposited approximately Day 104.`,
-    chase:`Chase Business Complete Checking business checking offer. Offer valid 01/08/2026-05/14/2026. Deposit a total of $2,000 or more in new money into your new qualifying checking account within 30 days. Business checking offer amount $300 new money deposit amount $2,000 - $9,999. Business checking offer amount $500 new money deposit amount $10,000 or more. Maintain the new money for at least 60 days. Complete 5 qualifying transactions within 90 days. Qualifying transactions include debit card purchases, ACH credits, wires credits and debits, Bill Pay and QuickAccept.`,
+    chase:`Chase Business Complete Checking bonus offer. Earn $500 with a minimum $2,000 deposit in new money, earn $750 with a minimum $20,000 deposit in new money, or earn $1,500 with a minimum $100,000 deposit in new money. Open a new Chase Business Complete Checking account using the offer code. Deposit new money within 30 days of offer enrollment. Maintain the required new-money balance for 60 days from offer enrollment. Complete 5 qualifying transactions within 90 days of offer enrollment. Qualifying transactions include debit card purchases, Chase QuickDeposit, ACH credits, wires credits and debits, Chase Online Bill Pay, Chase QuickAccept card payments, and Chase QuickAccept transactions. ACH debits, person-to-person payments including Zelle, and online transfers to Chase credit cards do not count.`,
     wells:`Wells Fargo business checking offer. To receive the $400 bonus, bonus offer code must be used when opening a new eligible business checking account by May 5, 2026. Eligible accounts include Initiate Business Checking, Navigate Business Checking or Optimize Business Checking. Deposit $2,500 or more by day 30 from account opening and maintain a minimum daily collected balance of $2,500 through day 60 after account opening. Bonus deposited within 30 days after the 60-day qualification period.`,
     capitalone:`Capital One Basic or Enhanced checking account online using promo code SBOFFER500. Deposit at least $5,000 from an external source within 30 days. Maintain a minimum end-of-day balance of $5,000 for at least 60 days within 90 days of account opening. Make 10 qualifying electronic transactions within 90 days. Qualifying transactions include electronic wire, remote check deposit, ACH and instant transfers. Bonus deposited within 60-90 days.`,
     boaBusiness:`Bank of America Business Advantage Banking $400 or $750 cash bonus. Offer expires on December 31, 2026. Open a new Business Advantage Relationship Banking or Business Advantage Fundamentals Banking account online. Deposit New Money within thirty 30 days. Bonus Chart Balance Requirement $5,000 Cash Bonus Tier $400. Balance Requirement $15,000 Cash Bonus Tier $750. Maintenance Period begins thirty-one 31 calendar days after opening and ends ninety 90 calendar days after opening.`,
@@ -34,11 +34,13 @@
     ]},
     {id:'Chase Business', sample:SAMPLES.chase, expect:r=>[
       [r.bank==='Chase','bank = Chase'],
-      [r.tiered&&r.tiers?.length>=2,'$300/$500 tiers'],
+      [r.tiered&&r.tiers?.length===3,'$500/$750/$1,500 tiers'],
+      [r.bonus===1500,'top bonus $1,500'],
       [r.fundedDays===30,'30-day funding'],
       [r.holdDays===60,'60-day hold'],
       [r.count===5,'5 transactions'],
-      [(r.counts||[]).some(x=>/wires/i.test(x)),'wires count correctly']
+      [r.requirementType==='transactions','transaction requirement, not direct deposit'],
+      [(r.not||[]).some(x=>/Zelle/i.test(x)),'Zelle excluded correctly']
     ]},
     {id:'Wells Fargo Business', sample:SAMPLES.wells, expect:r=>[
       [r.bank==='Wells Fargo','bank = Wells Fargo'],

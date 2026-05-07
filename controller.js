@@ -5,7 +5,7 @@
  * last-touched: unknown
  */
 (function(){
-  const VER='3.3.40';
+  const VER='3.3.56';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const esc=v=>{if(window.esc)return window.esc(String(v??''));const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML};
   const money=n=>'$'+Number(n||0).toLocaleString();
@@ -25,8 +25,9 @@
     if(r?.forceActionPlan&&r.actionPlan)return String(r.actionPlan).split('\n').filter(Boolean);
     const lines=[];let step=1;
     lines.push(`${step++}. Open one eligible account${r.openBy?' by '+pretty(r.openBy):''}${r.code&&!/Required/i.test(r.code)?' using promo code '+r.code:''}.`);
-    if(r.fundedDays)lines.push(`${step++}. Fund the account${r.fundingAmount?' with at least '+money(r.fundingAmount):''} within ${r.fundedDays} days.`);
-    if(r.holdDays&&r.depositHoldRequirement)lines.push(`${step++}. Maintain the required balance through day ${r.holdDays}.`);
+    if(r.fundedDays)lines.push(`${step++}. Deposit new money / fund the account${r.fundingAmount?' with at least '+money(r.fundingAmount):''} within ${r.fundedDays} days.`);
+    if(r.holdDays||r.minHoldDays)lines.push(`${step++}. Maintain the required new-money balance for ${r.holdDays||r.minHoldDays} days.`);
+    if(r.requirementType==='transactions')lines.push(`${step++}. Complete ${r.count||''} qualifying transactions${r.reqDays?' within '+r.reqDays+' days':''}.`);
     else lines.push(`${step++}. Complete ${r.count?'at least '+r.count+' ':''}qualifying Direct Deposits${r.reqMoney?`${r.reqIsTotal?' totaling ':' of '}${money(r.reqMoney)}+${r.reqIsTotal?'':' each'}`:''}${r.reqDays?' within '+r.reqDays+' days':''}.`);
     lines.push(`${step++}. Bonus payout: ${r.payout||'payout timing needs review'}.`);
     lines.push(`${step++}. Keep account open and in good standing until payout.`);
