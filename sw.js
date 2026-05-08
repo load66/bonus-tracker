@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.62 Newest update: Personal/Business only account type dropdown, default personal migration, and smaller full-word account badges.
+// ✅ Version 3.3.63 Newest update: Fixed Personal/Business badge rail layout so account-type badges cannot overlap status pills.
 
-const V = 'bt-v3.3.62';
+const V = 'bt-v3.3.63';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
