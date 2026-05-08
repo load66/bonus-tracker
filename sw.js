@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.64 Newest update: Hardened close/finished-bank flow with planned close handling, bonus received date, close-risk warnings, and full undo snapshots.
+// ✅ Version 3.3.65 Newest update: Full lifecycle consistency audit for requirement met, bonus received, timers, backup/restore, data health, and close flow.
 
-const V = 'bt-v3.3.64';
+const V = 'bt-v3.3.65';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
