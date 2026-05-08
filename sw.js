@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.59 Newest update: Offer history, close plans, lifecycle timers, and clean replaced-bank cycles.
+// ✅ Version 3.3.60 Newest update: Hardened add/replace flow, duplicate prompts, and funding/payout fields.
 
-const V = 'bt-v3.3.59';
+const V = 'bt-v3.3.60';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
