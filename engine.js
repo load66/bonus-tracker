@@ -5,7 +5,7 @@
  * last-touched: unknown
  */
 (function(){
-  const VER='3.3.57';
+  const VER='3.3.59';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const escRe=s=>String(s||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const moneyNum=s=>{const n=parseFloat(String(s||'').replace(/[$,\s]/g,''));return Number.isFinite(n)?n:0};
@@ -122,6 +122,7 @@
   function notCounts(raw){const out=[];const add=(label,re)=>{if(re.test(raw))out.push(label)};add('Teller deposits',/teller deposits/i);add('Wire transfers',/wire transfers|incoming wires|\bwires\b/i);add('Debit card transfers',/debit card transfers/i);add('ATM transfers or deposits',/ATM transfers or deposits|ATM deposits/i);add('Online/Mobile Banking transfers or deposits',/Online and Mobile Banking transfers or deposits|mobile banking transfers|online transfers/i);add('Bank/brokerage/Merrill transfers',/bank or brokerage account|Merrill investment account|brokerage transfers/i);add('Person-to-person payments / P2P transfers',/person-to-person|person to person|P2P/i);add('ACH debits',/ACH debits/i);add('Zelle incoming payments',/Zelle/i);add('Mobile/check deposits',/mobile check deposits|mobile deposits|check deposits/i);add('Internal/account-to-account transfers',/internal transfers|account-to-account|one account to another/i);add('Online transfers to Chase credit cards',/online transfers to Chase credit cards|Chase credit card/i);add('Other electronic deposits',/Other electronic deposits/i);return uniq(out)}
   function eligibility(raw){const out=[];if(/new .*checking|new eligible|new consumer/i.test(raw))out.push('New checking customer/account required.');if(/within the last twelve|within the last 12|past 12|last 12/i.test(raw))out.push('Not eligible if you owned/co-owned or received a related checking bonus within the last 12 months.');if(/Fiduciary|trusts|business accounts are not eligible/i.test(raw))out.push('Fiduciary/trust and business accounts may not be eligible.');if(/cannot be combined|may not be combined/i.test(raw))out.push('Cannot be combined with other checking bonus offers.');if(/one bonus per account|one bonus per customer/i.test(raw))out.push('Limited to one bonus per account/customer.');if(/1099|taxable|Internal Revenue Service|IRS|W-9|W-8/i.test(raw))out.push('Bonus may be taxable and reported on Form 1099/IRS.');return uniq(out)}
   function payout(raw,lines){const candidates=allMatch(lines,[/within fifteen|within 15|within sixty|within 60|within thirty|within 30|120th day|day 120/i]);const l=candidates.find(x=>/bonus|payout|credited|deposit/i.test(x))||candidates[0]||lineMatch(lines,[/credited.*bonus|deposit.*bonus/i]);if(/within fifteen|within 15/i.test(l))return{value:'within 15 days after requirements are completed, if account remains open and unrestricted',source:l};if(/within sixty|within 60/i.test(l))return{value:'within 60 days after the requirement/deposit period ends and requirements are satisfied',source:l};if(/120th day|day 120/i.test(raw))return{value:'after day 90 assessment; deposited on or about day 120 if qualified',source:l};if(/within thirty|within 30|up to 30/i.test(l))return{value:'within 30 days after requirements are met/assessed',source:l};return{value:'payout timing needs review',source:l}}
+  function payoutDaysFromText(txt){txt=String(txt||'');if(/within\s+15|fifteen/i.test(txt))return 15;if(/within\s+30|thirty|up to\s+30/i.test(txt))return 30;if(/within\s+60|sixty/i.test(txt))return 60;if(/120th day|day\s*120/i.test(txt))return 30;return 0}
   function singleBonus(lines){
     const c=[];
     const reqNear=/(direct\s+deposits?|qualifying\s+deposits?|deposit(?:s|ed|ing)?|fund(?:ing|ed)?|minimum|balance|fee|waive|maintain|total(?:ing|ed)?|aggregate|cumulative|combined|spend|purchase|APY)/i;
@@ -256,9 +257,12 @@
     result.clear=!!(result.bonus&&result.reqDays);
     result.suggestedTimers=[];
     if(result.openBy)result.suggestedTimers.push({kind:'due',text:'Promo expiration / open-by deadline',date:result.openBy,source:exp?.source||''});
-    if(result.reqDays)result.suggestedTimers.push({kind:'days',text:result.requirementType==='transactions'?'Complete qualifying transactions':'Bonus requirement deadline',daysRequired:result.reqDays,source:req.source||''});
     if(result.fundedDays)result.suggestedTimers.push({kind:'days',text:'Deposit new money / funding deadline',daysRequired:result.fundedDays,source:result.fundingSource||fund.source||''});
     if(result.holdDays)result.suggestedTimers.push({kind:'days',text:'Maintain required new-money balance',daysRequired:result.holdDays,source:'hold requirement'});
+    if(result.reqDays)result.suggestedTimers.push({kind:'days',text:result.requirementType==='transactions'?'Complete qualifying transactions':'Bonus requirement deadline',daysRequired:result.reqDays,source:req.source||''});
+    const payoutDays=payoutDaysFromText(result.payout||result.payoutText||'');
+    if(result.reqDays&&payoutDays)result.suggestedTimers.push({kind:'days',text:'Bonus payout watch',daysRequired:Number(result.reqDays)+payoutDays,source:result.payoutSource||'payout timing'});
+    if(result.reqDays&&payoutDays)result.suggestedTimers.push({kind:'days',text:'Close review after payout',daysRequired:Number(result.reqDays)+payoutDays+5,source:'close plan'});
     const plan=[];let step=1;
     plan.push(`${step++}. Open one eligible account${result.openBy?' by '+pretty(result.openBy):''}${result.code?' using promo code '+result.code:''}.`);
     if(result.fundedDays)plan.push(`${step++}. Deposit new money / fund the account${result.fundingAmount?' with at least '+money(result.fundingAmount):''} within ${result.fundedDays} days.`);

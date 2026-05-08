@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.58 Newest update: Needs Attention uses the earliest active mini timer before later requirement deadlines.
+// ✅ Version 3.3.59 Newest update: Offer history, close plans, lifecycle timers, and clean replaced-bank cycles.
 
-const V = 'bt-v3.3.58';
+const V = 'bt-v3.3.59';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {

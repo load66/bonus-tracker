@@ -1,8 +1,9 @@
 /* ✅ Version 2.0 Newest update: Removed Profile tab + added Data Health and safer backup/close guardrails. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.3.58';
+const APP_VERSION='3.3.59';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
+const OFFER_HIST_KEY='bt_offer_history_v1';
 
 const ld=(k,d)=>{
   try{
@@ -136,6 +137,81 @@ function saveReq(bank,data){
   saveReqs(r)
 }
 
+function loadOfferHistory(){
+  return ld(OFFER_HIST_KEY,{})
+}
+function saveOfferHistory(rows){
+  sv(OFFER_HIST_KEY,rows||{})
+}
+function offerHistoryKey(bank){
+  try{return entryBankKey({bank})}catch{return bankKey(bank||'')}
+}
+function offerTextSig(v){
+  return String(v||'').toLowerCase().replace(/\$|,/g,'').replace(/\s+/g,' ').trim()
+}
+function offerSignature(snap){
+  return [offerTextSig(snap.bank),offerTextSig(snap.bonusTierText||snap.bonus||''),offerTextSig(snap.reqDays||''),offerTextSig(snap.minHoldDays||''),offerTextSig(snap.fundedDays||''),offerTextSig(snap.promoCodeText||''),offerTextSig(snap.completeBonusText||'').slice(0,220)].join('|')
+}
+function offerSnapshotFromEntry(e,source){
+  if(!e||!e.bank)return null;
+  const analyzed=String(e.analyzedTC||'');
+  const snap={id:'ofr_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6),bank:e.bank,entryId:e.id||'',source:source||'entry',savedAt:td(),opened:e.opened||'',closed:e.closed||'',bonusRecd:e.bonusRecd||'',bonus:e.bonus||0,churn:e.churn||'',reqDays:e.reqDays||0,minHoldDays:e.minHoldDays||0,earlyCloseFee:e.earlyCloseFee||0,fundedDays:e.fundedDays||0,monthlyFeeYNText:e.monthlyFeeYNText||'',promoCodeText:e.promoCodeText||'',avoidMonthlyFeeText:e.avoidMonthlyFeeText||'',completeBonusText:e.completeBonusText||'',eligibilityText:e.eligibilityText||'',expirationDateText:e.expirationDateText||'',requiredDaysText:e.requiredDaysText||'',notes:String(e.notes||'').slice(0,600),analyzedPreview:analyzed.slice(0,900)};
+  const tier=analyzed.match(/Bonus:\s*([^*]{0,240})/i);
+  if(tier)snap.bonusTierText=tier[1].trim();
+  snap.signature=offerSignature(snap);
+  return snap
+}
+function saveOfferVersionFromEntry(e,source){
+  const snap=offerSnapshotFromEntry(e,source||'entry');
+  if(!snap)return false;
+  const all=loadOfferHistory();
+  const key=offerHistoryKey(snap.bank);
+  const list=Array.isArray(all[key])?all[key]:[];
+  const exists=list.find(x=>x.signature===snap.signature);
+  if(exists)Object.assign(exists,{...snap,id:exists.id,savedAt:td()});
+  else list.unshift(snap);
+  all[key]=list.sort((a,b)=>(b.savedAt||'').localeCompare(a.savedAt||'')).slice(0,12);
+  saveOfferHistory(all);
+  return true
+}
+function offerHistoryForBank(bank){
+  const all=loadOfferHistory();
+  const key=offerHistoryKey(bank);
+  return Array.isArray(all[key])?all[key]:[]
+}
+function archivedCycleSnapshot(e){
+  if(!e)return null;
+  return{bank:e.bank||'',id:e.id||'',archivedAt:td(),opened:e.opened||'',reqMet:e.reqMet||'',bonusRecd:e.bonusRecd||'',closed:e.closed||'',bonus:e.bonus||0,churn:e.churn||'',notes:String(e.notes||'').slice(0,900),analyzedPreview:String(e.analyzedTC||'').slice(0,900),timerSummary:normalizeTimerList(e.customTimers||[]).map(t=>({text:t.text||'',date:t.date||'',daysRequired:t.daysRequired||0,done:!!t.done})).slice(0,8)}
+}
+function closePlanForEntry(e){
+  if(!e||!e.bank)return[];
+  const lines=[];
+  const active=sortCustomTimers(normalizeTimerList(e.customTimers||[]).filter(t=>!t.done&&t.date&&!isDeletedTimer(e,t)));
+  if(!e.bonusRecd){
+    lines.push('Do not close yet — keep the account open and unrestricted until the bonus posts.');
+    if(active.length){const t=active[0],d=timerCountdownDays(t);lines.push('Next checkpoint: '+(t.text||'mini timer')+(d!==null?' in '+d+'d':'')+(t.date?' · due '+fD(t.date):'')+'.');}
+    if(e.minHoldDays>0&&e.opened)lines.push('Hold/safe-close target with buffer: '+fD(safeCloseDate(e))+'.');
+    else lines.push('No fixed early-close fee countdown is set; treat this as payout-risk only unless terms say otherwise.');
+    return lines;
+  }
+  lines.push('Bonus received on '+fD(e.bonusRecd)+'. Keep open a few extra days before closing.');
+  if(e.minHoldDays>0&&e.opened){const s=safeCloseDate(e);lines.push(daysUntilSafe(e)>0?'Do not close before '+fD(s)+' because the hold/buffer is still running.':'Hold/buffer period appears complete; safe-close date was '+fD(s)+'.');}
+  lines.push('Before closing: confirm no pending transactions, no upcoming monthly fee issue, and export/backup the entry.');
+  lines.push('Close only if you no longer need the account and the bonus is fully posted/settled.');
+  return lines
+}
+function renderClosePlan(e){
+  const lines=closePlanForEntry(e);
+  if(!lines.length)return'';
+  return '<div class="tc-box"><div class="tc-label">Close plan</div><div class="tc-body">'+lines.map(x=>'* '+esc(x)).join('\n')+'</div></div>'
+}
+function renderOfferHistory(e){
+  const hist=offerHistoryForBank(e.bank);
+  if(!hist.length)return'';
+  const rows=hist.slice(0,4).map((x,i)=>{const parts=[];if(x.bonusTierText)parts.push(x.bonusTierText.replace(/\s+/g,' '));else if(x.bonus)parts.push(fM(x.bonus));if(x.reqDays)parts.push(x.reqDays+'d req');if(x.minHoldDays)parts.push(x.minHoldDays+'d hold');if(x.opened)parts.push('opened '+fD(x.opened));return '* '+(i===0?'Current/latest: ':'History: ')+esc(parts.join(' · ')||'Saved profile version')+(x.source?' — '+esc(x.source):'');});
+  return '<div class="tc-box"><div class="tc-label">Offer history</div><div class="tc-body">'+rows.join('\n')+'</div></div>'
+}
+
 function loadProfileEvents(){
   return ld(PROFILE_EVT_KEY,[]).map(x=>({id:String(x.id||('evt_'+Math.random().toString(36).slice(2,8))),bank:String(x.bank||'').trim(),entryId:String(x.entryId||''),type:String(x.type||'').trim(),date:String(x.date||''),label:String(x.label||'').trim(),createdAt:String(x.createdAt||td())})).filter(x=>x.bank&&x.type)
 }
@@ -177,7 +253,8 @@ function refreshSavedReqFromEntry(e){
   const snap=entryReqSnapshot(e);
   if(!snap||!snap.bank)return;
   const current=profileReqForBank(snap.bank)||{};
-  saveReq(snap.bank,{...current,...snap,lastProfileRefreshAt:td(),sourceEntryId:e.id||''})
+  saveReq(snap.bank,{...current,...snap,lastProfileRefreshAt:td(),sourceEntryId:e.id||''});
+  saveOfferVersionFromEntry(e,'saved-entry-profile')
 }
 
 function bankMemoryFor(bank){
@@ -2690,6 +2767,7 @@ function normalizeNewCycleData(d,existing){
   next.eligibilityText=d.eligibilityText||'';
   next.expirationDateText=d.expirationDateText||'';
   next.requiredDaysText=d.requiredDaysText||'';
+  next.previousCycles=Array.isArray(existing.previousCycles)?existing.previousCycles.slice(0,10):[];
   return next;
 }
 function chooseMatch(id){
@@ -2718,7 +2796,10 @@ function doOverwrite(){
   let savedId=p.existingEntry.id;
   entries=entries.map(e=>{
     if(e.id!==p.existingEntry.id)return e;
+    const oldCycle=archivedCycleSnapshot(e);
+    saveOfferVersionFromEntry(e,'archived-before-replace');
     let next=normalizeNewCycleData(d,e);
+    if(oldCycle)next.previousCycles=[oldCycle,...(Array.isArray(e.previousCycles)?e.previousCycles:[])].slice(0,10);
     next=promoteDraftEntryId(next,e.id);
     savedId=next.id;
     return next;
@@ -2739,7 +2820,7 @@ function doAddNew(){
   overwritePrompt=null;modal=null;expanded=next.id;tab='tracker';search='';showInlineAZ=false;inlineResult=null;
   R();
 }
-function getBackupStorageKeys(){return[SK,TK,DD_KEY,REQ_KEY,PHONE_KEY,DP_USER_KEY,COMMUNITY_DP_KEY,COMMUNITY_DP_SEED_KEY,PROFILE_EVT_KEY,BK_KEY,'bt_tc_learning_inbox_v320']}
+function getBackupStorageKeys(){return[SK,TK,DD_KEY,REQ_KEY,OFFER_HIST_KEY,PHONE_KEY,DP_USER_KEY,COMMUNITY_DP_KEY,COMMUNITY_DP_SEED_KEY,PROFILE_EVT_KEY,BK_KEY,'bt_tc_learning_inbox_v320']}
 function parseBackupStorageValue(raw){try{return JSON.parse(raw)}catch{return raw}}
 function storageValueForRestore(val){return typeof val==='string'?val:JSON.stringify(val)}
 function countBackupEntries(d){if(Array.isArray(d?.entries))return d.entries.length;const arr=backupArrayFromStorage(d,SK);return arr.length}
@@ -3355,6 +3436,14 @@ entries=sortE(entries);R();
     d.setDate(d.getDate() + (parseInt(days,10) || 0));
     return d.toISOString().split('T')[0];
   }
+  function payoutDaysFromText(txt){
+    txt = String(txt || '');
+    if(/within\s+15|fifteen/i.test(txt)) return 15;
+    if(/within\s+30|thirty|up to\s+30/i.test(txt)) return 30;
+    if(/within\s+60|sixty/i.test(txt)) return 60;
+    if(/120th day|day\s*120/i.test(txt)) return 30;
+    return 0;
+  }
   function timerIdLocal(){
     try { if (typeof timerId === 'function') return timerId(); } catch {}
     return 'tm_' + Math.random().toString(36).slice(2,8) + Date.now().toString(36).slice(-4);
@@ -3427,6 +3516,9 @@ entries=sortE(entries);R();
     if (checked('tcr_timer_fund') && fundedDays) timers.push(makeTimer('Deposit new money / funding deadline', opened ? addDaysIso(opened, fundedDays) : '', opened, fundedDays));
     if (checked('tcr_timer_payout') && holdDays) timers.push(makeTimer('Maintain required balance / hold check', opened ? addDaysIso(opened, holdDays) : '', opened, holdDays));
     if (checked('tcr_timer_req') && reqDays) timers.push(makeTimer(parsed.requirementType==='transactions'?'Complete qualifying transactions':'Bonus requirement deadline', opened ? addDaysIso(opened, reqDays) : '', opened, reqDays));
+    const payoutDays = payoutDaysFromText(clean(getVal('tcr_payout')));
+    if (reqDays && payoutDays) timers.push(makeTimer('Bonus payout watch', opened ? addDaysIso(opened, reqDays + payoutDays) : '', opened, reqDays + payoutDays));
+    if (reqDays && payoutDays) timers.push(makeTimer('Close review after payout', opened ? addDaysIso(opened, reqDays + payoutDays + 5) : '', opened, reqDays + payoutDays + 5));
     const seen = new Set();
     return timers.filter(t => { const k=(t.text||'').toLowerCase()+'|'+(t.daysRequired||'')+'|'+(t.date||''); if(seen.has(k))return false; seen.add(k); return true; });
   }
@@ -3500,6 +3592,7 @@ entries=sortE(entries);R();
         completeBonusText: entry.completeBonusText, earlyTerminationFeeText: entry.earlyTerminationFeeText,
         eligibilityText: entry.eligibilityText, expirationDateText: entry.expirationDateText, requiredDaysText: entry.requiredDaysText, dataPoint: entry.dataPoint
       });
+      try{saveOfferVersionFromEntry(entry,'analyzer-created-entry')}catch{}
       document.getElementById('tc_review_overlay')?.remove();
       if (typeof R === 'function') R();
       setTimeout(() => alert('New entry created for ' + entry.bank + (entry.customTimers.length ? ` with ${entry.customTimers.length} mini timer(s).` : '. Add Opened Date later to auto-create requirement timers.') + ' Review the entry before opening/applying.'), 80);
@@ -4069,6 +4162,8 @@ entries=sortE(entries);R();
         }
 
         if(e.notes) h += `<div class="card-notes" style="white-space:pre-wrap;font-size:12px;line-height:1.6">${esc(e.notes)}</div>`;
+        h += renderClosePlan(e);
+        h += renderOfferHistory(e);
         if(e.analyzedTC) h += `<div class="tc-box"><div class="tc-label">T&amp;C analysis</div><div class="tc-body">${highlightTC(e.analyzedTC)}</div></div>`;
         h += '';
 

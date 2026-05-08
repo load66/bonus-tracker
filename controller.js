@@ -5,7 +5,7 @@
  * last-touched: unknown
  */
 (function(){
-  const VER='3.3.57';
+  const VER='3.3.59';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const esc=v=>{if(window.esc)return window.esc(String(v??''));const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML};
   const money=n=>'$'+Number(n||0).toLocaleString();
@@ -73,12 +73,22 @@
   function modalObj(){try{return modal||window.modal||null}catch{return window.modal||null}}
   function analyzerEarlyFeeText(r){const fee=r?.earlyCloseFee||r?.earlyTerminationFee;const n=parseInt(String(fee||'').replace(/[$,]/g,''),10)||0;if(n>0)return String(n);if(/no early close fee|no fee|none/i.test(String(r?.early||'')))return 'None';return ''}
   function analyzerEligibilityText(r){const parts=[];if(r?.eligibilityText)parts.push(r.eligibilityText);if(r?.early&&/closed|restricted|payout|good standing/i.test(r.early))parts.push(r.early);return Array.from(new Set(parts.map(clean).filter(Boolean))).join('\n')}
+  function payoutDaysFromText(txt){txt=String(txt||'');if(/within\s+15|fifteen/i.test(txt))return 15;if(/within\s+30|thirty|up to\s+30/i.test(txt))return 30;if(/within\s+60|sixty/i.test(txt))return 60;if(/120th day|day\s*120/i.test(txt))return 30;return 0}
   function makeSuggestedTimers(r,opened=''){
     const mk=(text,date='',startDate='',daysRequired=0)=>({id:window.timerId?window.timerId():'tm_'+Math.random().toString(36).slice(2,8),text:clean(text),date:date||'',startDate:startDate||'',daysRequired:Number(daysRequired||0),done:false});
     const out=[];
+    const addDaysTimer=(text,days)=>{days=Number(days||0)||0;if(days>0)out.push(mk(text,opened?addDaysIso(opened,days):'',opened,days));};
     const source=(r?.suggestedTimers&&r.suggestedTimers.length)?r.suggestedTimers:[];
-    source.forEach(t=>{const days=Number(t.daysRequired||t.days||0)||0;if(t.date)out.push(mk(t.text||'Suggested deadline',t.date,'',0));else if(days)out.push(mk(t.text||'Suggested timer',opened?addDaysIso(opened,days):'',opened,days));});
-    if(!source.length){if(r?.openBy)out.push(mk('Promo expiration / open-by deadline',r.openBy));if(r?.fundedDays)out.push(mk('Deposit new money / funding deadline',opened?addDaysIso(opened,r.fundedDays):'',opened,r.fundedDays));if(r?.holdDays||r?.minHoldDays){const d=r.holdDays||r.minHoldDays;out.push(mk('Maintain required balance / hold check',opened?addDaysIso(opened,d):'',opened,d));}if(r?.reqDays)out.push(mk(r.requirementType==='transactions'?'Complete qualifying transactions':'Bonus requirement deadline',opened?addDaysIso(opened,r.reqDays):'',opened,r.reqDays));}
+    source.forEach(t=>{const days=Number(t.daysRequired||t.days||0)||0;if(t.date)out.push(mk(t.text||'Suggested deadline',t.date,'',0));else if(days)addDaysTimer(t.text||'Suggested timer',days);});
+    if(r?.openBy)out.push(mk('Promo expiration / open-by deadline',r.openBy));
+    if(r?.fundedDays)addDaysTimer('Deposit new money / funding deadline',r.fundedDays);
+    if(r?.holdDays||r?.minHoldDays)addDaysTimer('Maintain required balance / hold check',r.holdDays||r.minHoldDays);
+    if(r?.reqDays)addDaysTimer(r.requirementType==='transactions'?'Complete qualifying transactions':'Bonus requirement deadline',r.reqDays);
+    const pDays=payoutDaysFromText(r?.payout||r?.payoutText||'');
+    if(r?.reqDays&&pDays){
+      addDaysTimer('Bonus payout watch',Number(r.reqDays)+pDays);
+      addDaysTimer('Close review after payout',Number(r.reqDays)+pDays+5);
+    }
     const seen=new Set();
     return out.filter(t=>{const k=clean(t.text).toLowerCase()+'|'+String(t.daysRequired||'')+'|'+String(t.date||'');if(!t.text||seen.has(k))return false;seen.add(k);return true});
   }
