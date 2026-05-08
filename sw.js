@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.60 Newest update: Hardened add/replace flow, duplicate prompts, and funding/payout fields.
+// ✅ Version 3.3.61 Newest update: Global Personal/Business account type separation for matching, profiles, offer history, and analyzer autofill.
 
-const V = 'bt-v3.3.60';
+const V = 'bt-v3.3.61';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
