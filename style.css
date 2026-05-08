@@ -765,6 +765,12 @@ html,body {
   outline:none
 }
 @media (max-width:430px) {
+  .acct-type-chip {
+    padding:3px 6px;
+    font-size:7.8px;
+    letter-spacing:.35px
+  }
+
   .tm-add {
     grid-template-columns:minmax(0,1fr) minmax(0,.62fr) 82px
   }
@@ -2837,6 +2843,16 @@ html,body {
 .card-mini-chip.c3 {
   background:linear-gradient(135deg,#f59e0b,#d97706)
 }
+.acct-type-chip {
+  min-width:auto;
+  padding:4px 7px;
+  font-size:8.5px;
+  line-height:1;
+  letter-spacing:.45px;
+  white-space:nowrap;
+  box-shadow:0 5px 10px rgba(15,23,42,.14)
+}
+
 .card-mini-chip.c180 {
   background:linear-gradient(135deg,#8b5cf6,#6d28d9)
 }
@@ -3806,3 +3822,125 @@ html,body {
   pointer-events:none!important
 }
 
+
+/* v3.3.62 account type badge compact override */
+@media (max-width:430px) {
+  .acct-type-chip {
+    padding:3px 6px;
+    font-size:7.8px;
+    letter-spacing:.35px;
+    min-width:auto
+  }
+}
+
+
+/* v3.3.63 fixed badge rail layout
+   The account-type badge lives in a real left rail now, so PERSONAL/BUSINESS
+   cannot overlap the status pill in the main content column. */
+.card-h {
+  display:grid !important;
+  grid-template-columns:92px minmax(0,1fr) auto !important;
+  align-items:center !important;
+  column-gap:14px !important
+}
+.card-logo-col {
+  width:92px !important;
+  max-width:92px !important;
+  min-width:92px !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+  overflow:visible !important
+}
+.card-logo-col .blogo {
+  align-self:center !important
+}
+.card-left {
+  min-width:0 !important;
+  overflow:hidden !important
+}
+.card-row {
+  min-width:0 !important;
+  align-items:center !important;
+  gap:7px !important
+}
+.card-row .badge {
+  max-width:100% !important
+}
+.card-subline {
+  flex-basis:100% !important;
+  min-width:0 !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis
+}
+.acct-type-chip {
+  min-width:0 !important;
+  max-width:84px !important;
+  width:auto !important;
+  padding:4px 7px !important;
+  font-size:8px !important;
+  line-height:1 !important;
+  letter-spacing:.35px !important;
+  white-space:nowrap !important;
+  box-shadow:0 5px 10px rgba(15,23,42,.14) !important
+}
+
+@media (max-width:700px) {
+  .card-h {
+    grid-template-columns:86px minmax(0,1fr) auto !important;
+    column-gap:12px !important
+  }
+  .card-logo-col {
+    width:86px !important;
+    max-width:86px !important;
+    min-width:86px !important;
+    gap:6px !important
+  }
+  .acct-type-chip {
+    max-width:78px !important;
+    padding:3px 6px !important;
+    font-size:7.7px !important;
+    letter-spacing:.3px !important
+  }
+}
+
+@media (max-width:430px) {
+  .card-h {
+    grid-template-columns:78px minmax(0,1fr) auto !important;
+    column-gap:10px !important;
+    padding-left:10px !important;
+    padding-right:10px !important
+  }
+  .card-logo-col {
+    width:78px !important;
+    max-width:78px !important;
+    min-width:78px !important
+  }
+  .acct-type-chip {
+    max-width:72px !important;
+    padding:3px 5px !important;
+    font-size:7.2px !important;
+    letter-spacing:.24px !important
+  }
+  .card-row .badge {
+    padding:6px 9px !important;
+    font-size:10px !important
+  }
+}
+
+@media (max-width:370px) {
+  .card-h {
+    grid-template-columns:72px minmax(0,1fr) auto !important;
+    column-gap:8px !important
+  }
+  .card-logo-col {
+    width:72px !important;
+    max-width:72px !important;
+    min-width:72px !important
+  }
+  .acct-type-chip {
+    max-width:68px !important;
+    padding:3px 4px !important;
+    font-size:6.9px !important;
+    letter-spacing:.18px !important
+  }
+}
