@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.61 Newest update: Global Personal/Business account type separation for matching, profiles, offer history, and analyzer autofill.
+// ✅ Version 3.3.62 Newest update: Personal/Business only account type dropdown, default personal migration, and smaller full-word account badges.
 
-const V = 'bt-v3.3.61';
+const V = 'bt-v3.3.62';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {

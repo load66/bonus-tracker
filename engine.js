@@ -5,7 +5,7 @@
  * last-touched: unknown
  */
 (function(){
-  const VER='3.3.61';
+  const VER='3.3.62';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const escRe=s=>String(s||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const moneyNum=s=>{const n=parseFloat(String(s||'').replace(/[$,\s]/g,''));return Number.isFinite(n)?n:0};
@@ -79,7 +79,7 @@
   function isDisclosure(s){return /\bas of\b|APY|Annual Percentage Yield|effective as of|rates?|StockBrokers|U\.S\. News|FDIC|ratesheet|depositsrates|trademark|overdraft|Erica|mobile banking requires/i.test(s||'')}
   function lineMatch(lines,res){return lines.find(l=>res.some(r=>r.test(l)))||''}
   function allMatch(lines,res){return lines.filter(l=>res.some(r=>r.test(l)))}
-  function accountType(raw,acct){const text=[raw,acct].filter(Boolean).join(' ');if(/\b(biz|business|commercial|merchant|treasury|llc|pllc|ein|dba|sole proprietor|business complete|business advantage|business checking|small business)\b/i.test(text))return'business';if(/\b(personal|consumer|individual|household|total checking|smartly checking|virtual wallet|advantage banking|everyday checking|college checking|sapphire checking|premier plus checking)\b/i.test(text))return'personal';return'unknown'}
+  function accountType(raw,acct){const text=[raw,acct].filter(Boolean).join(' ');if(/\b(biz|business|commercial|merchant|treasury|llc|pllc|ein|dba|sole proprietor|business complete|business advantage|business checking|small business)\b/i.test(text))return'business';return'personal'}
   function bank(raw){if(/Bank of America|BofA/i.test(raw))return'Bank of America';if(/U\.S\. Bank|US Bank|Bank Smartly/i.test(raw))return'U.S. Bank';if(/Morgan Stanley Private Bank|E\*TRADE/i.test(raw))return'Morgan Stanley Private Bank';if(/Wells Fargo/i.test(raw))return'Wells Fargo';if(/Chase/i.test(raw))return'Chase';if(/Capital One/i.test(raw))return'Capital One';if(/Citi(?:bank)?/i.test(raw))return'Citibank';if(/PNC/i.test(raw))return'PNC Bank';const m=raw.match(/([A-Z][A-Za-z&.'’\- ]{2,90}?(?:Bank|Credit Union|Private Bank))/);return m?clean(m[1]):'New Bank Bonus'}
   function account(raw){if(/Chase Total Checking/i.test(raw))return'Chase Total Checking';if(/Bank of America/i.test(raw))return'Bank of America eligible personal checking';if(/Bank Smartly/i.test(raw))return'U.S. Bank Smartly Checking';if(/Checking or Max-Rate Checking|Checking OR Max-Rate Checking/i.test(raw))return'Checking OR Max-Rate Checking — open one only; do not enroll both';if(/consumer checking/i.test(raw))return'consumer checking';if(/personal checking/i.test(raw))return'personal checking';if(/business checking/i.test(raw))return'business checking';if(/checking/i.test(raw))return'checking';return'account type needs review'}
   function normalize(raw){return normalizeWeirdBankWording(raw).normalized}
