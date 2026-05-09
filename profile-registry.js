@@ -9,6 +9,16 @@
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
     {
+      id:'guaranty-bank-perks-consumer-checking',
+      bank:'Guaranty Bank',
+      product:'Perks consumer checking',
+      type:'personal checking',
+      status:'saved',
+      signals:[/Guaranty Bank|Gbank|gbankmo/i,/Perks Truth in Savings Addendum|Perks Banking/i,/New Consumer Checking Account Bonus Offer|consumer checking account bonus/i,/RoundUp Program|Early Closing Fee/i],
+      requirements:'Open new consumer checking with $25-$50 minimum opening deposit + at least one ACH direct deposit or ACH direct debit within 90 calendar days of account opening; account open at least 30 days and positive balance at end of 90-day qualifying period; payout within 30 calendar days after requirements are met; $20 early closing fee if closed within 90 calendar days of account opening; 12-month closed-account eligibility rule; Missouri resident required; business accounts not eligible',
+      note:'Saved profile: Guaranty Bank / GBank Perks consumer checking $300 bonus. Personal checking only. Close rule basis is opened date, 90 hold days, 3-day buffer, $20 early close fee. If bonus received May 7, 2026, keep the received date saved in the entry; safe close still follows opened date + 90 days + buffer.'
+    },
+    {
       id:'busey-bank-personal-checking-levelup',
       bank:'Busey Bank',
       product:'Foundation Checking / Pillar Banking',
@@ -232,6 +242,19 @@
     const fb=profileFallbackFromMatch(m);
     const used=[];
     const src='Known profile: '+(m.product||m.bank||m.id)+' — '+(m.requirements||m.note||'saved bank profile');
+    if(m.id==='guaranty-bank-perks-consumer-checking'){
+      fb.reqDays=fb.reqDays||90;
+      fb.count=fb.count||1;
+      fb.minHoldDays=fb.minHoldDays||90;
+      fb.earlyCloseFee=fb.earlyCloseFee||20;
+      fb.closeRuleBasis='opened';
+      fb.closeBufferDays=3;
+      fb.closeRuleText='Early closing fee of $20 if consumer checking account is closed within 90 calendar days of account opening.';
+      fb.payoutTimingText='within 30 calendar days after all qualifying requirements are met';
+      fb.eligibilityText='New Guaranty Bank consumer checking client only. Cannot have closed a Guaranty Bank consumer checking account within the previous 12-month period. Current consumer checking accountholders and business accounts are not eligible. Missouri resident required. Customers who previously received a new account bonus are not eligible.';
+      fb.monthlyFeeYNText='Paper statement fee $2-$3 if receiving paper statements; eStatements free with valid email.';
+      fb.avoidMonthlyFeeText='Use eStatements with a valid email to avoid the paper statement fee.';
+    }
     const set=(key,label,value,display)=>{if(!value)return;if(r[key])return;if(currentOfferIsStrong(r)&&['bonus','reqMoney','count','reqDays','fundedDays','fundingAmount','minHoldDays','holdDays'].includes(key))return;if(r.requirementType==='transactions'&&(key==='reqMoney'||key==='count'))return;if(r.hasExplicitCurrentOffer&&(key==='reqMoney'||key==='count'||key==='reqDays'))return;r[key]=value;used.push({field:label,value:display||String(value),source:src});addProfileSource(r,label,display||String(value),src)};
     set('reqDays','Requirement days',fb.reqDays,fb.reqDays?fb.reqDays+' days':'');
     set('reqMoney','Requirement amount',fb.reqMoney,fb.reqMoney?money(fb.reqMoney):'');
@@ -239,6 +262,14 @@
     set('fundedDays','Funding deadline',fb.fundedDays,fb.fundedDays?fb.fundedDays+' days':'');
     set('fundingAmount','Funding amount',fb.fundingAmount,fb.fundingAmount?money(fb.fundingAmount):'');
     set('minHoldDays','Hold period',fb.minHoldDays,fb.minHoldDays?fb.minHoldDays+' days':'');
+    set('earlyCloseFee','Early close fee',fb.earlyCloseFee,fb.earlyCloseFee?money(fb.earlyCloseFee):'');
+    set('closeRuleBasis','Close rule basis',fb.closeRuleBasis,fb.closeRuleBasis||'');
+    set('closeBufferDays','Close buffer days',fb.closeBufferDays,fb.closeBufferDays?fb.closeBufferDays+' days':'');
+    set('closeRuleText','Close rule wording',fb.closeRuleText,fb.closeRuleText||'');
+    set('payoutTimingText','Payout timing',fb.payoutTimingText,fb.payoutTimingText||'');
+    set('eligibilityText','Eligibility / churn',fb.eligibilityText,fb.eligibilityText||'');
+    set('monthlyFeeYNText','Monthly fee',fb.monthlyFeeYNText,fb.monthlyFeeYNText||'');
+    set('avoidMonthlyFeeText','Avoid monthly fee',fb.avoidMonthlyFeeText,fb.avoidMonthlyFeeText||'');
     if(used.length){
       r.profileFallbacks=(r.profileFallbacks||[]).concat(used);
       r.profileFallbackSummary='Used saved bank profile for missing fields: '+used.map(x=>x.field+' '+x.value).join(', ')+'. Verify against current offer terms.';

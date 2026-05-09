@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.66 Newest update: Close Intelligence upgrade with close-rule basis, smarter close popup, planned-close display, and final close safety polish.
+// ✅ Version 3.3.67 Newest update: Added Guaranty Bank / GBank Perks Consumer Checking saved profile with close-rule intelligence.
 
-const V = 'bt-v3.3.66';
+const V = 'bt-v3.3.67';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
