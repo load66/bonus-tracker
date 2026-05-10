@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.69 Newest update: Added Guaranty Bank / GBank Perks Consumer Checking saved profile with close-rule intelligence.
+// ✅ Version 3.3.76 Newest update: Manual old-entry replacement dropdown for new entries and edit duplicate fixes.
 
-const V = 'bt-v3.3.69';
+const V = 'bt-v3.3.76';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {

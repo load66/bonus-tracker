@@ -1,7 +1,7 @@
 /* ✅ Version 2.0 Newest update: Removed Profile tab + added Data Health and safer backup/close guardrails. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.3.69';
+const APP_VERSION='3.3.76';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 
@@ -160,7 +160,7 @@ function offerSignature(snap){
 function offerSnapshotFromEntry(e,source){
   if(!e||!e.bank)return null;
   const analyzed=String(e.analyzedTC||'');
-  const snap={id:'ofr_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6),bank:e.bank,accountType:normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'personal',entryId:e.id||'',source:source||'entry',savedAt:td(),opened:e.opened||'',closed:e.closed||'',bonusRecd:e.bonusRecd||'',bonus:e.bonus||0,churn:e.churn||'',reqDays:e.reqDays||0,minHoldDays:e.minHoldDays||0,earlyCloseFee:e.earlyCloseFee||0,closeRuleBasis:normalizeCloseRuleBasis(e.closeRuleBasis),closeBufferDays:closeBufferDaysFor(e),closeRuleText:e.closeRuleText||'',monthlyFeeChecked:!!e.monthlyFeeChecked,fundedDays:e.fundedDays||0,fundingAmount:e.fundingAmount||0,fundingAmountText:e.fundingAmountText||'',payoutTimingText:e.payoutTimingText||'',monthlyFeeYNText:e.monthlyFeeYNText||'',promoCodeText:e.promoCodeText||'',avoidMonthlyFeeText:e.avoidMonthlyFeeText||'',completeBonusText:e.completeBonusText||'',eligibilityText:e.eligibilityText||'',expirationDateText:e.expirationDateText||'',requiredDaysText:e.requiredDaysText||'',notes:String(e.notes||'').slice(0,600),analyzedPreview:analyzed.slice(0,900)};
+  const snap={id:'ofr_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6),bank:e.bank,accountType:normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'personal',entryId:e.id||'',source:source||'entry',savedAt:td(),opened:e.opened||'',closed:e.closed||'',bonusRecd:e.bonusRecd||'',bonus:e.bonus||0,churn:e.churn||'',reqDays:e.reqDays||0,minHoldDays:e.minHoldDays||0,earlyCloseFee:e.earlyCloseFee||0,closeRuleBasis:normalizeCloseRuleBasis(e.closeRuleBasis),closeBufferDays:closeBufferDaysFor(e),closeRuleText:e.closeRuleText||'',monthlyFeeChecked:!!e.monthlyFeeChecked,fundedDays:e.fundedDays||0,fundingAmount:e.fundingAmount||0,fundingAmountText:e.fundingAmountText||'',payoutTimingText:e.payoutTimingText||'',monthlyFeeYNText:e.monthlyFeeYNText||'',monthlyFeeAmountText:e.monthlyFeeAmountText||'',monthlyFeeFrequency:e.monthlyFeeFrequency||'',monthlyFeeWaiverType:e.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:e.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:e.monthlyFeeWaiverText||'',promoCodeText:e.promoCodeText||'',avoidMonthlyFeeText:e.avoidMonthlyFeeText||'',completeBonusText:e.completeBonusText||'',eligibilityText:e.eligibilityText||'',expirationDateText:e.expirationDateText||'',requiredDaysText:e.requiredDaysText||'',notes:String(e.notes||'').slice(0,600),analyzedPreview:analyzed.slice(0,900)};
   const tier=analyzed.match(/Bonus:\s*([^*]{0,240})/i);
   if(tier)snap.bonusTierText=tier[1].trim();
   snap.signature=offerSignature(snap);
@@ -251,6 +251,246 @@ function renderClosePlan(e){
   const ready=closeReadiness(e);
   return '<div class="tc-box close-intel '+esc(ready.cls)+'"><div class="tc-label">Close plan · '+esc(ready.label)+'</div><div class="tc-body">'+lines.map(x=>'* '+esc(x)).join('\n')+'</div></div>'
 }
+
+
+
+
+function cleanPlanText(v){
+  return String(v||'').replace(/[•·]/g,' * ').replace(/\s+/g,' ').trim()
+}
+function splitPlanLines(v){
+  return String(v||'')
+    .replace(/\r/g,'\n')
+    .split(/\n|;|\s+\*\s+|\s+\|\s+|\s+\/\s+| OR /i)
+    .map(cleanPlanText)
+    .map(x=>x.replace(/^\*+\s*/,'').trim())
+    .filter(Boolean)
+}
+function normalizeMoneyToken(v){
+  return String(v||'').replace(/\s+/g,'').replace(/\.00\b/,'')
+}
+function normalizeWaiverPhrase(s){
+  let x=cleanPlanText(s);
+  x=x.replace(/\bw\s*\/\s*/ig,'with ');
+  x=x.replace(/\bDD\b/g,'direct deposit');
+  x=x.replace(/\/mo\b/ig,' per month');
+  x=x.replace(/\bmo\b/ig,'month');
+  x=x.replace(/\bavg\b/ig,'average balance');
+  x=x.replace(/\s+or\s+/ig,' OR ');
+  x=x.replace(/\s+\/\s+/g,' OR ');
+  x=x.replace(/^waived?\s*(?:with)?\s*/i,'Waived with ');
+  x=x.replace(/^waiver\s*(?:with)?\s*/i,'Waived with ');
+  x=x.replace(/Waived with\s+with\s+/i,'Waived with ');
+  return cleanPlanText(x)
+}
+function monthlyTextScope(e){
+  return String([
+    e?.monthlyFeeYNText,
+    e?.avoidMonthlyFeeText,
+    e?.monthlyFeeWaiverText,
+    e?.notes,
+    e?.dataPoint,
+    e?.completeBonusText,
+    e?.eligibilityText,
+    e?.analyzedTC
+  ].filter(Boolean).join('\n'))
+}
+function segmentMonthlyText(e){
+  const raw=monthlyTextScope(e);
+  const base=[];
+  splitPlanLines(raw).forEach(x=>base.push(x));
+  raw.split(/(?<=[.!?])\s+|\n+|;+/).forEach(sentence=>{
+    const s=cleanPlanText(sentence);
+    if(!s)return;
+    if(/waiv|avoid|monthly|maintenance|service charge|service fee|paper statement|statement fee|quarterly|\$[0-9]|avg|balance|\/mo|\bDD\b|direct deposit/i.test(s)){
+      s.split(/\s+\/\s+/).map(cleanPlanText).filter(Boolean).forEach(part=>base.push(part));
+      const m=s.match(/(?:waived?|waiver|avoid(?:ed)?)(?:\s+w\/|\s+with|\s+by)?\s*[:\-]?\s*([\s\S]{0,260})/i);
+      if(m&&m[1])base.push('Waived with '+m[1]);
+    }
+  });
+  return Array.from(new Set(base.map(cleanPlanText).filter(Boolean))).slice(0,50)
+}
+function isUnrelatedFeeLine(x){
+  return /overdraft|wire|atm|cashier|stop payment|returned|nsf|foreign|replacement card/i.test(x||'')
+}
+function isBonusRequirementNoise(x){
+  const s=String(x||'');
+  return /(bonus|debit txns?|transactions?|within\s+\d+\s+days|req(?:uirement)?|direct deposit within|DD within|fee if closed|closed\s*<|early close|closing fee)/i.test(s)
+    && !/(waiv|avoid|monthly|maintenance|service fee|service charge|paper statement|statement fee|average balance|avg|minimum balance|\$[0-9][0-9,]*(?:\.\d{1,2})?\s*(?:\/mo|per month|monthly))/i.test(s)
+}
+function noMonthlyFeeDetected(e){
+  const direct=String(e?.monthlyFeeYNText||'');
+  const scope=monthlyTextScope(e);
+  return /(?:no|none|waived|free)[^.]{0,60}(?:monthly|maintenance|service)\s+fee|(?:monthly|maintenance|service)\s+fee[^.]{0,50}(?:no|none|\$0|zero)|no\s+minimum\s+balance\s+requirement/i.test(direct)
+    || /no\s+monthly\s+(?:service\s+)?fee|no\s+monthly\s+maintenance\s+fee|\$0\s+monthly/i.test(scope)
+}
+function feeCandidateSentences(e){
+  const parts=segmentMonthlyText(e);
+  const feeWords=/(monthly|maintenance|service fee|service charge|paper statement|statement fee|quarterly|monthly account fee|maintenance charge|account fee|fee period|cycle fee)/i;
+  return parts.filter(x=>feeWords.test(x)&&!isUnrelatedFeeLine(x)&&!/(closed?\s*<|early close|closing fee|fee if closed|closed within)/i.test(x)).slice(0,20)
+}
+function extractFeeAmounts(e){
+  const out=[];
+  feeCandidateSentences(e).forEach(s=>{
+    const matches=[...s.matchAll(/\$\s*[0-9][0-9,]*(?:\.\d{1,2})?/g)];
+    matches.forEach(m=>{
+      const amt=normalizeMoneyToken(m[0]);
+      if(!out.some(x=>x.amount===amt&&x.text===s))out.push({amount:amt,text:s});
+    })
+  });
+  return out.slice(0,6)
+}
+function detectMonthlyFeeFrequency(e){
+  const scope=monthlyTextScope(e);
+  if(/quarterly|per quarter|each quarter/i.test(scope))return'quarterly';
+  if(/statement cycle|fee period|cycle fee/i.test(scope))return'statement-cycle';
+  if(/monthly|per month|\/mo|maintenance fee|service fee/i.test(scope))return'monthly';
+  return''
+}
+function extractMonthlyFeeAmountText(e){
+  if(e?.monthlyFeeAmountText)return cleanPlanText(e.monthlyFeeAmountText);
+  if(noMonthlyFeeDetected(e))return 'No monthly service fee saved';
+  const fees=extractFeeAmounts(e);
+  if(fees.length){
+    const preferred=fees.find(x=>/(monthly|maintenance|service fee|monthly account fee|paper statement|statement fee|quarterly|service charge)/i.test(x.text))||fees[0];
+    return preferred.text
+  }
+  const direct=cleanPlanText(e?.monthlyFeeYNText||'');
+  if(direct&&!/^(yes|y|true|monthly fee[: ]*yes|service fee[: ]*yes)$/i.test(direct)&&!/not clearly stated/i.test(direct))return direct;
+  return ''
+}
+function waiverCandidateSentences(e){
+  const parts=segmentMonthlyText(e);
+  const waiverWords=/(avoid|waive|waived|waiver|with\s+\$|w\/|no monthly|no service fee|minimum|daily|average|avg|ending|beginning|combined|balance|direct deposit|\bDD\b|electronic deposit|debit card|card purchases|payment solutions|estatements?|paperless|military|student|age|senior|linked|relationship|rewards|smart rewards|roundup|\$[0-9][0-9,]*(?:\.\d{1,2})?\s*(?:avg|average|balance|\/mo|per month|monthly))/i;
+  return parts
+    .filter(x=>waiverWords.test(x)&&!isUnrelatedFeeLine(x))
+    .filter(x=>!isBonusRequirementNoise(x)||/waiv|avoid|monthly|maintenance|service fee|service charge|paper statement|statement fee/i.test(x))
+    .slice(0,28)
+}
+function extractBalanceWaiverText(e){
+  if(e?.monthlyFeeWaiverAmountText)return cleanPlanText(e.monthlyFeeWaiverAmountText);
+  const list=waiverCandidateSentences(e);
+  const patterns=[
+    /\$\s*[0-9][0-9,]*(?:\.\d{1,2})?[^.]{0,150}(?:minimum|daily|average|avg|ending|beginning|combined)[^.]{0,150}balance/i,
+    /(?:minimum|daily|average|avg|ending|beginning|combined)[^.]{0,150}balance[^.]{0,150}\$\s*[0-9][0-9,]*(?:\.\d{1,2})?/i,
+    /\$\s*[0-9][0-9,]*(?:\.\d{1,2})?\s*(?:avg|average)/i,
+    /\$\s*[0-9][0-9,]*(?:\.\d{1,2})?[^.]{0,150}(?:direct deposits?|\bDD\b|electronic deposits?|payment solutions|card purchases|debit card purchases|\/mo|per month)/i,
+    /(?:direct deposits?|\bDD\b|electronic deposits?|payment solutions|card purchases|debit card purchases)[^.]{0,150}\$\s*[0-9][0-9,]*(?:\.\d{1,2})?/i
+  ];
+  for(const s of list){
+    for(const re of patterns){
+      const m=s.match(re);
+      if(m)return normalizeWaiverPhrase(m[0])
+    }
+  }
+  return ''
+}
+function classifyMonthlyFeeWaiverType(text){
+  const s=String(text||'');
+  const types=[];
+  if(/balance|avg|average|minimum|daily|combined/i.test(s))types.push('Balance');
+  if(/direct deposit|\bDD\b|electronic deposit|\/mo|per month|monthly deposit/i.test(s))types.push('Direct deposit');
+  if(/estatements?|paperless|paper statement/i.test(s))types.push('eStatements');
+  if(/linked|relationship|qualifying account/i.test(s))types.push('Linked account');
+  if(/card purchases|debit card|payment solutions/i.test(s))types.push('Card/payment activity');
+  if(/military|student|senior|\bage\b|age-based|under\s+age|over\s+age/i.test(s))types.push('Age/military/student');
+  return types.length?types.join(' / '):''
+}
+function extractExplicitWaiverText(e){
+  if(e?.monthlyFeeWaiverText)return normalizeWaiverPhrase(e.monthlyFeeWaiverText);
+  const parts=segmentMonthlyText(e);
+  const found=[];
+  parts.forEach(p=>{
+    const s=cleanPlanText(p);
+    if(/^(?:waived?|waiver|avoid)/i.test(s)||/(?:waived?|waiver|avoid)[^.;]{0,240}\$[0-9]/i.test(s)){
+      found.push(normalizeWaiverPhrase(s.replace(/^[^:]*:\s*/,'')))
+    }
+  });
+  const raw=monthlyTextScope(e);
+  const m=raw.match(/(?:waived?|waiver|avoid(?:ed)?)(?:\s+w\/|\s+with|\s+by)?\s*[:\-]?\s*([\s\S]{0,260})/i);
+  if(m&&m[1])found.push(normalizeWaiverPhrase('Waived with '+m[1].split(/[.\n]/)[0]));
+  return Array.from(new Set(found.filter(Boolean))).find(x=>/\$[0-9]|estatements?|paperless|balance|direct deposit/i.test(x))||''
+}
+function extractAvoidFeeLines(e){
+  const out=[];
+  const explicit=extractExplicitWaiverText(e);
+  if(explicit)out.push(explicit);
+  splitPlanLines(e?.avoidMonthlyFeeText).forEach(x=>out.push(x));
+  const analyzed=String(e?.analyzedTC||'');
+  const m=analyzed.match(/MONTHLY FEE CAN BE AVOIDED WITH:\s*([\s\S]{0,1200}?)(?:\n[A-Z][A-Z \/]+:|\nREVIEW:|\nWORDING NORMALIZED:|\nSOURCE SNIPPETS:|$)/i);
+  if(m)splitPlanLines(m[1]).forEach(x=>out.push(x));
+  waiverCandidateSentences(e).forEach(s=>{
+    if(/estatements?|paperless|paper statement/i.test(s))out.push(s);
+    else if(/(?:avoid|waive|waived|waiver|w\/)/i.test(s))out.push(s);
+    else if(/(?:minimum|daily|average|avg|ending|beginning|combined)[^.]{0,140}balance|\$\s*[0-9][0-9,]*(?:\.\d{1,2})?[^.]{0,140}(?:balance|avg|average)/i.test(s))out.push(s);
+    else if(/direct deposits?|\bDD\b|electronic deposits?|card purchases|payment solutions|linked|relationship|military|student|senior|age|\$[0-9][0-9,]*(?:\.\d{1,2})?\s*\/mo/i.test(s))out.push(s);
+  });
+  const fee=String(e?.monthlyFeeYNText||'');
+  if(/estatements?|paper statement|paperless/i.test(fee)&&!/estatements?|paperless/i.test(out.join(' ')))out.push('Use eStatements / paperless statements when available');
+  const clean=Array.from(new Set(out.map(normalizeWaiverPhrase).filter(Boolean)))
+    .filter(x=>x.length<420)
+    .filter(x=>!isBonusRequirementNoise(x) || /waiv|avoid|monthly|maintenance|service fee|service charge|paper statement|statement fee/i.test(x))
+    .filter(x=>!/^\s*(yes|true|no)\s*$/i.test(x));
+  const full=clean.find(x=>/^Waived with/i.test(x)&&((x.match(/\$/g)||[]).length>=2||/estatements?|paperless/i.test(x)));
+  if(full)return [full].concat(clean.filter(x=>x!==full&&!/^Waived with/i.test(x)).slice(0,2));
+  return clean.slice(0,4)
+}
+function deriveMonthlyFeeStructure(e){
+  const feeText=extractMonthlyFeeAmountText(e);
+  const waiverText=extractAvoidFeeLines(e).join(' OR ');
+  const waiverAmount=extractBalanceWaiverText(e);
+  const freq=detectMonthlyFeeFrequency(e);
+  const noFee=noMonthlyFeeDetected(e);
+  return{
+    monthlyFeeAmountText:noFee?'$0':(feeText&&/^\$/.test(feeText)?feeText:''),
+    monthlyFeeFrequency:freq||'monthly',
+    monthlyFeeWaiverType:classifyMonthlyFeeWaiverType(waiverText||waiverAmount),
+    monthlyFeeWaiverAmountText:waiverAmount||'',
+    monthlyFeeWaiverText:waiverText||'',
+    monthlyFeeNoMonthlyServiceFee:!!noFee
+  }
+}
+function monthlyFeeKnownStatus(e){
+  if(noMonthlyFeeDetected(e))return{kind:'none',label:'No Monthly Fee',cls:'safe'};
+  const fees=extractFeeAmounts(e);
+  const avoid=extractAvoidFeeLines(e);
+  if(e?.monthlyFeeChecked)return{kind:'checked',label:'Fee Checked',cls:'safe'};
+  if(fees.length||avoid.length||e?.monthlyFeeYNText||e?.avoidMonthlyFeeText||e?.monthlyFeeWaiverText||e?.notes)return{kind:'avoid',label:'Avoid Until Close',cls:'warn'};
+  return{kind:'review',label:'Review Fee Terms',cls:'warn'}
+}
+function monthlyFeePlanForEntry(e){
+  if(!e||!e.bank)return null;
+  const structured=deriveMonthlyFeeStructure(e);
+  const raw=cleanPlanText([e.monthlyFeeYNText,e.avoidMonthlyFeeText,e.monthlyFeeWaiverText,e.notes].filter(Boolean).join(' '));
+  const fee=extractMonthlyFeeAmountText(e);
+  const balance=structured.monthlyFeeWaiverAmountText||extractBalanceWaiverText(e);
+  const avoid=structured.monthlyFeeWaiverText?structured.monthlyFeeWaiverText.split(/\s+OR\s+/i).map(normalizeWaiverPhrase).filter(Boolean):extractAvoidFeeLines(e);
+  const hasAny=!!(fee||balance||avoid.length||raw);
+  if(!hasAny)return null;
+  const state=monthlyFeeKnownStatus(e);
+  const lines=[];
+  if(state.kind==='none')lines.push('Monthly fee status: no monthly service fee is saved for this account.');
+  else if(state.kind==='checked')lines.push('Monthly fee status: checked / confirmed before close.');
+  else lines.push('Monthly fee status: keep fee waiver active until the account is actually closed.');
+  if(fee)lines.push('Fee: '+fee+'.');
+  else if(state.kind!=='none')lines.push('Fee amount: not saved clearly; review account terms or statement cycle.');
+  if(structured.monthlyFeeFrequency&&state.kind!=='none')lines.push('Fee frequency: '+structured.monthlyFeeFrequency.replace('-', ' ')+'.');
+  if(balance)lines.push('Minimum balance / waiver target: '+balance+'.');
+  if(structured.monthlyFeeWaiverType)lines.push('Waiver type: '+structured.monthlyFeeWaiverType+'.');
+  if(avoid.length)lines.push('How to avoid: '+Array.from(new Set(avoid)).slice(0,3).join(' OR ')+'.');
+  else if(state.kind!=='none')lines.push('How to avoid: not saved clearly; add waiver terms in Edit when known.');
+  if(e.monthlyFeeChecked)lines.push('Monthly fee checked: Yes.');
+  else if(state.kind!=='none')lines.push('Monthly fee checked: Not yet — check before closing or before the next statement cycle.');
+  if(e.closed)lines.push('Account closed on '+fD(e.closed)+'. No active monthly-fee tracking needed.');
+  else if(e.plannedClose)lines.push('Keep the waiver active through planned close date '+fD(e.plannedClose)+'.');
+  else lines.push('Keep this fee waiver active until the account is actually closed.');
+  return{label:state.label,cls:state.cls,lines}
+}
+function renderMonthlyFeePlan(e){
+  const p=monthlyFeePlanForEntry(e);
+  if(!p)return'';
+  return '<div class="tc-box monthly-fee-plan '+esc(p.cls)+'"><div class="tc-label">Monthly fee plan · '+esc(p.label)+'</div><div class="tc-body">'+p.lines.map(x=>'* '+esc(x)).join('\n')+'</div></div>'
+}
 function renderOfferHistory(e){
   const hist=offerHistoryForBank(e);
   if(!hist.length)return'';
@@ -292,7 +532,7 @@ function entryReqSnapshot(e){
     bank:e.bank,
     accountType:normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'personal'
   };
-  ['bonus','notes','dataPoint','fundedDays','fundingAmount','fundingAmountText','payoutTimingText','churn','reqDays','monthlyFeeYNText','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText','eligibilityText','expirationDateText','requiredDaysText','minHoldDays','earlyCloseFee','closeRuleBasis','closeBufferDays','closeRuleText','monthlyFeeChecked'].forEach(k=>{const v=e[k];if(v!==undefined&&v!==null&&v!=='')snap[k]=v});
+  ['bonus','notes','dataPoint','fundedDays','fundingAmount','fundingAmountText','payoutTimingText','churn','reqDays','monthlyFeeYNText','monthlyFeeAmountText','monthlyFeeFrequency','monthlyFeeWaiverType','monthlyFeeWaiverAmountText','monthlyFeeWaiverText','monthlyFeeNoMonthlyServiceFee','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText','eligibilityText','expirationDateText','requiredDaysText','minHoldDays','earlyCloseFee','closeRuleBasis','closeBufferDays','closeRuleText','monthlyFeeChecked'].forEach(k=>{const v=e[k];if(v!==undefined&&v!==null&&v!=='')snap[k]=v});
   return snap
 }
 
@@ -984,7 +1224,7 @@ function chartData(){
 /* Bank Identity v3.3.42
    Centralized bank matching. Display names can vary, but duplicate/churn
    matching uses canonical bank family + personal/business type. */
-const BANK_IDENTITY_VERSION='3.3.69';
+const BANK_IDENTITY_VERSION='3.3.76';
 function normBankText(v){return String(v||'').toLowerCase().replace(/[®™℠]/g,'').replace(/&/g,' and ').replace(/\*/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim()}
 function bankAliasGroups(){return[
   ['chase','CHA',['chase','jpmorgan chase','jp morgan chase','jpmorgan','jp morgan','jpm']],
@@ -1199,6 +1439,103 @@ function handleDuplicateFlow(newData,source='manual'){
   if(!matches.length)return false;
   if(matches.length>1){matchPickerPrompt={newData,matches,source,identity:bankIdentity(bank)};return true;}
   overwritePrompt=makeDuplicatePrompt(newData,matches[0],source);return true;
+}
+function replaceCandidateStatus(e){
+  try{return status(e)||''}catch{return''}
+}
+function isOldReplacementCandidate(e){
+  if(!e||!e.bank)return false;
+  const st=replaceCandidateStatus(e);
+  return !!(e.closed||/CHURN|READY|WAITING/i.test(st)||!isActiveEntry(e))
+}
+function replacementCandidateScore(newData,e){
+  if(!e)return 9999;
+  const ni=entryBankIdentity(newData||{}), ei=entryBankIdentity(e);
+  let score=0;
+  if(ei.family!==ni.family)score+=80;
+  if(ei.type!==ni.type)score+=15;
+  if(!isOldReplacementCandidate(e))score+=25;
+  if(isActiveEntry(e))score+=20;
+  if(e.closed)score-=8;
+  if(/TIME TO CHURN|READY/i.test(replaceCandidateStatus(e)))score-=12;
+  return score
+}
+function replacementCandidateLabel(e){
+  const st=replaceCandidateStatus(e);
+  const bits=[];
+  bits.push(entryTypeLabel(e));
+  if(st)bits.push(st);
+  if(e.opened)bits.push('Opened '+fD(e.opened));
+  if(e.closed)bits.push('Closed '+fD(e.closed));
+  if(e.bonus)bits.push(fM(e.bonus));
+  bits.push('ID '+(getEntryDisplayId(e)||e.id||''));
+  return (e.bank||'Unknown')+' — '+bits.join(' · ')
+}
+function getManualReplacementCandidates(newData,currentId=''){
+  return entries
+    .filter(e=>e&&e.bank&&e.id!==currentId)
+    .sort((a,b)=>replacementCandidateScore(newData,a)-replacementCandidateScore(newData,b)||entryRecencyDate(b).localeCompare(entryRecencyDate(a))||String(a.bank||'').localeCompare(String(b.bank||'')))
+    .slice(0,80)
+}
+function handleManualReplacementPicker(newData,source='manual',currentId=''){
+  if(!newData||!newData.bank)return false;
+  const candidates=getManualReplacementCandidates(newData,currentId);
+  if(!candidates.length)return false;
+  replacementPickerPrompt={
+    newData,
+    candidates,
+    selectedId:candidates[0]?.id||'',
+    source,
+    currentId,
+    title:currentId?'Replace old entry from Edit?':'Replace an old entry?',
+    message:currentId
+      ?'Choose an old/cooldown/ready entry to overwrite with this edited entry. This removes the duplicate you are editing.'
+      :'Choose an old/cooldown/ready entry to replace, or create this as a separate new entry.'
+  };
+  return true
+}
+function setReplacementPickerTarget(id){if(replacementPickerPrompt){replacementPickerPrompt.selectedId=id;R()}}
+function doReplacementPickerReplace(){
+  if(!replacementPickerPrompt)return;
+  const p=replacementPickerPrompt;
+  const picked=p.candidates.find(x=>x.id===p.selectedId);
+  if(!picked){alert('Choose an old entry first.');return}
+  overwritePrompt=makeDuplicatePrompt(p.newData,picked,p.source||'manual-picker');
+  overwritePrompt.removeEntryId=p.currentId||'';
+  replacementPickerPrompt=null;
+  expanded=picked.id;tab='tracker';search='';
+  R()
+}
+function doReplacementPickerCreateSeparate(){
+  if(!replacementPickerPrompt)return;
+  const p=replacementPickerPrompt;
+  const d={...p.newData};
+  const next=assignEntryIdForCreate({...d,checklist:[],customTimers:normalizeTimerList(d.customTimers||[]),feeChecked:false});
+  hydrateTimersFromOpened(next);Object.assign(next,normalizeLifecycleEntry(next));
+  entries.push(next);entries=sortE(entries);sv(SK,entries);
+  syncProfileEventsFromEntry(next);refreshSavedReqFromEntry(next);
+  replacementPickerPrompt=null;modal=null;expanded=next.id;tab='tracker';search='';showInlineAZ=false;inlineResult=null;
+  R()
+}
+function doReplacementPickerBack(){
+  if(!replacementPickerPrompt)return;
+  const p=replacementPickerPrompt;
+  modal={...p.newData,checklist:Array.isArray(p.newData?.checklist)?p.newData.checklist:[],_edit:!!p.currentId,id:p.currentId||p.newData.id||'',_skipManualReplacePrompt:true};
+  replacementPickerPrompt=null;
+  R()
+}
+function beginManualReplaceFromEdit(){
+  if(!modal||!modal._edit){alert('Open an existing entry first.');return}
+  const d=collectModalEntryData();
+  if(!d)return;
+  const targetId=modal._manualReplaceTarget||'';
+  const target=entries.find(e=>e.id===targetId);
+  if(!target){alert('Choose an old entry to replace.');return}
+  if(target.id===modal.id){alert('Choose a different old entry, not the same entry you are editing.');return}
+  overwritePrompt=makeDuplicatePrompt(d,target,'edit-manual-replace');
+  overwritePrompt.removeEntryId=modal.id||'';
+  modal=null;replacementPickerPrompt=null;expanded=target.id;tab='tracker';search='';
+  R()
 }
 function dpSignature(bank,method){return bankKey(bank)+'|'+String(method||'').trim().toLowerCase()}
 function syncExistingDatapointsToDB(){const rows=loadUserDatapoints();const seen=new Set(rows.map(r=>dpSignature(r.bank,r.method)));let changed=false;entries.forEach(e=>{if(!e||!e.bank||!e.dataPoint)return;const sig=dpSignature(e.bank,e.dataPoint);if(seen.has(sig))return;rows.push(normalizeUserDatapoint({bank:e.bank,method:e.dataPoint,note:'Imported from tracker history',date:e.closed||e.bonusRecd||e.opened||td(),entryId:e.id||''}));seen.add(sig);changed=true});if(changed)saveUserDatapoints(rows)}
@@ -2183,7 +2520,7 @@ let undoState=null,undoTimer=null;
 let closePrompt=null;
 let overwritePrompt=null;
 let matchPickerPrompt=null;
-let newEntryChoicePrompt=null;
+let replacementPickerPrompt=null;
 let feeCheckPrompt=null;
 let timerEditModal=null;
 const btPostRenderHooks=[];
@@ -2679,6 +3016,25 @@ function closeSafetyWarnings(e,p){
   return w;
 }
 
+
+function closeRuleLooksLikeMonthlyFee(e){
+  const txt=String([e?.closeRuleText,e?.earlyTerminationFeeText,e?.monthlyFeeYNText,e?.avoidMonthlyFeeText,e?.monthlyFeeAmountText,e?.monthlyFeeWaiverText].filter(Boolean).join(' '));
+  return /(monthly account fee|monthly service fee|monthly maintenance fee|monthly fee|service charge|maintenance fee|average monthly balance|fee waived|waived with|avoid monthly|paper statement fee|statement fee)/i.test(txt)
+}
+function sanitizeCloseFieldsForEntry(x){
+  if(!x||typeof x!=='object')return x;
+  const n=parseInt(x.minHoldDays||x.closeFeeCountdownDays||0,10)||0;
+  const txt=String(x.closeRuleText||'');
+  const hasCloseWording=/(close|closed|closing|remain open|keep[^.]{0,40}open|maintain[^.]{0,40}open|forfeit|clawback|good standing|restricted|default)/i.test(txt);
+  if(n&&(n>730||closeRuleLooksLikeMonthlyFee(x)||(!hasCloseWording&&n>365))){
+    x.minHoldDays=0;
+    x.closeFeeCountdownDays='';
+    if(closeRuleLooksLikeMonthlyFee(x))x.closeRuleText='';
+    if(normalizeCloseRuleBasis(x.closeRuleBasis)==='opened')x.closeRuleBasis='bonus';
+    x.closeBufferDays=x.closeBufferDays||BUFFER_DAYS;
+  }
+  return x
+}
 function normalizeLifecycleEntry(e){
   const x=(e&&typeof e==='object')?{...e}: {};
   x.bank=String(x.bank||'').trim();
@@ -2692,7 +3048,17 @@ function normalizeLifecycleEntry(e){
   x.closeBufferDays=parseInt(x.closeBufferDays,10);
   if(!Number.isFinite(x.closeBufferDays)||x.closeBufferDays<0)x.closeBufferDays=BUFFER_DAYS;
   x.closeRuleText=String(x.closeRuleText||'').trim();
+  sanitizeCloseFieldsForEntry(x);
   x.monthlyFeeChecked=!!x.monthlyFeeChecked;
+  try{
+    const feeStruct=deriveMonthlyFeeStructure(x);
+    x.monthlyFeeAmountText=x.monthlyFeeAmountText||feeStruct.monthlyFeeAmountText||'';
+    x.monthlyFeeFrequency=x.monthlyFeeFrequency||feeStruct.monthlyFeeFrequency||'';
+    x.monthlyFeeWaiverType=x.monthlyFeeWaiverType||feeStruct.monthlyFeeWaiverType||'';
+    x.monthlyFeeWaiverAmountText=x.monthlyFeeWaiverAmountText||feeStruct.monthlyFeeWaiverAmountText||'';
+    x.monthlyFeeWaiverText=x.monthlyFeeWaiverText||feeStruct.monthlyFeeWaiverText||'';
+    x.monthlyFeeNoMonthlyServiceFee=!!(x.monthlyFeeNoMonthlyServiceFee||feeStruct.monthlyFeeNoMonthlyServiceFee);
+  }catch{}
   x.customTimers=normalizeTimerList(x.customTimers||[]);
   if(x.closed&&isFutureDate(x.closed)){
     if(!x.plannedClose)x.plannedClose=x.closed;
@@ -2708,7 +3074,7 @@ function normalizeLifecycleEntries(rows){
   return (rows||[]).map(normalizeLifecycleEntry)
 }
 
-function R(){const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;if(tab==='profiles'||tab==='health')tab='tracker';sanitizeAllTimers(false);const sorted=sortE(entries);const wk=sorted.filter(e=>e.bank&&!e.closed).length;const ch=sorted.filter(e=>status(e)==='WAITING TO CHURN!'||status(e)==='TIME TO CHURN!').length;const rd=sorted.filter(e=>status(e)==='TIME TO CHURN!').length;const yr=completedYrTotal(dashYear);const thisYr=new Date().getFullYear();let h='';h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div><h1><em>Bonus</em>Tracker</h1><div class="hdr-sub">Track • close • churn</div></div><div class="yr-pills">';[thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});h+='</div></div>';if(tab==='tracker'){h+='<div class="hero"><div class="hero-copy"><div class="hero-kicker">'+dashYear+' total collected</div><div class="hero-value">'+fM(yr)+'</div><div class="hero-note">'+wk+' open • '+ch+' cooling down • '+rd+' ready right now</div></div><div class="hero-side"><div class="hero-chip">'+rd+' ready</div></div></div>';h+='<div class="stats"><div class="st"><div class="n">'+wk+'</div><div class="l">Open</div></div><div class="st"><div class="n">'+ch+'</div><div class="l">Cooldown</div></div><div class="st"><div class="n">'+rd+'</div><div class="l">Ready</div></div><div class="st"><div class="n">'+fM(yr)+'</div><div class="l">'+dashYear+'</div></div></div>'}h+='</div></div>';h+='<div class="scroll">';if(tab==='tracker')h+=rTracker(sorted);else if(tab==='tax')h+=rTax();else if(tab==='tips')h+=rTips();else if(tab==='phone')h+=rPhone();h+='</div>';if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';h+='<div class="tabs">';['tracker','tax','tips','phone'].forEach((t,i)=>{h+='<button class="tb'+(tab===t?' on':'')+'" onclick="tab=\''+t+'\';search=\''+'\';R()">'+[I.grid,I.doc,I.tips,I.phone][i]+'<span>'+['Tracker','Tax','Datapoints','Phone'][i]+'</span></button>'});h+='</div>';if(modal)h+=rModal();if(cfm)h+=rCfm();if(ddPrompt)h+=rDD();if(rcvPrompt)h+=rRcv();if(reqPrompt)h+=rReqMet();if(closePrompt)h+=rClose();if(overwritePrompt)h+=rOverwrite();if(matchPickerPrompt)h+=rMatchPicker();if(newEntryChoicePrompt)h+=rNewEntryChoice();if(feeCheckPrompt)h+=rFeeCheck();if(timerEditModal)h+=rTimerEdit();if(dpEditor)h+=rDpEditor();if(timerChoicePrompt)h+=rTimerChoicePrompt();if(undoState)h+='<div class="undo-bar"><span>Close saved for '+esc(undoState.bank)+' — undo restores entry, timers, profiles, offer history, datapoints, and events.</span><button onclick="undoClose()">Undo</button></div>';document.getElementById('app').innerHTML=h;const ns=document.querySelector('.scroll');if(ns)ns.scrollTop=_sp;btRunPostRenderHooks()}
+function R(){const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;if(tab==='profiles'||tab==='health')tab='tracker';try{if(!window.__btAutoCleanupV371){entries=sortE(normalizeLifecycleEntries(entries));sv(SK,entries);window.__btAutoCleanupV371=true}}catch{}sanitizeAllTimers(false);const sorted=sortE(entries);const wk=sorted.filter(e=>e.bank&&!e.closed).length;const ch=sorted.filter(e=>status(e)==='WAITING TO CHURN!'||status(e)==='TIME TO CHURN!').length;const rd=sorted.filter(e=>status(e)==='TIME TO CHURN!').length;const yr=completedYrTotal(dashYear);const thisYr=new Date().getFullYear();let h='';h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div><h1><em>Bonus</em>Tracker</h1><div class="hdr-sub">Track • close • churn</div></div><div class="yr-pills">';[thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});h+='</div></div>';if(tab==='tracker'){h+='<div class="hero"><div class="hero-copy"><div class="hero-kicker">'+dashYear+' total collected</div><div class="hero-value">'+fM(yr)+'</div><div class="hero-note">'+wk+' open • '+ch+' cooling down • '+rd+' ready right now</div></div><div class="hero-side"><div class="hero-chip">'+rd+' ready</div></div></div>';h+='<div class="stats"><div class="st"><div class="n">'+wk+'</div><div class="l">Open</div></div><div class="st"><div class="n">'+ch+'</div><div class="l">Cooldown</div></div><div class="st"><div class="n">'+rd+'</div><div class="l">Ready</div></div><div class="st"><div class="n">'+fM(yr)+'</div><div class="l">'+dashYear+'</div></div></div>'}h+='</div></div>';h+='<div class="scroll">';if(tab==='tracker')h+=rTracker(sorted);else if(tab==='tax')h+=rTax();else if(tab==='tips')h+=rTips();else if(tab==='phone')h+=rPhone();h+='</div>';if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';h+='<div class="tabs">';['tracker','tax','tips','phone'].forEach((t,i)=>{h+='<button class="tb'+(tab===t?' on':'')+'" onclick="tab=\''+t+'\';search=\''+'\';R()">'+[I.grid,I.doc,I.tips,I.phone][i]+'<span>'+['Tracker','Tax','Datapoints','Phone'][i]+'</span></button>'});h+='</div>';if(modal)h+=rModal();if(cfm)h+=rCfm();if(ddPrompt)h+=rDD();if(rcvPrompt)h+=rRcv();if(reqPrompt)h+=rReqMet();if(closePrompt)h+=rClose();if(overwritePrompt)h+=rOverwrite();if(matchPickerPrompt)h+=rMatchPicker();if(replacementPickerPrompt)h+=rReplacementPicker();if(feeCheckPrompt)h+=rFeeCheck();if(timerEditModal)h+=rTimerEdit();if(dpEditor)h+=rDpEditor();if(timerChoicePrompt)h+=rTimerChoicePrompt();if(undoState)h+='<div class="undo-bar"><span>Close saved for '+esc(undoState.bank)+' — undo restores entry, timers, profiles, offer history, datapoints, and events.</span><button onclick="undoClose()">Undo</button></div>';document.getElementById('app').innerHTML=h;const ns=document.querySelector('.scroll');if(ns)ns.scrollTop=_sp;btRunPostRenderHooks()}
 function rTracker(sorted){
   const q=search.toLowerCase();
   const f=q?sorted.filter(e=>(e.bank||'').toLowerCase().includes(q)||(e.id||'').toLowerCase().includes(q)):sorted;
@@ -2924,7 +3290,7 @@ function rClose(){
   return h
 }
 function rFeeCheck(){if(!feeCheckPrompt)return'';const p=feeCheckPrompt;const e=entries.find(x=>x.id===p.entryId);const hasTimer=!!(e&&e.minHoldDays>0&&!e.feeChecked);let h='<div class="cbg" onclick="feeCheckCancel()"><div class="fee-box" onclick="event.stopPropagation()">';if(p.step==='ask'){h+='<h3>🛡️ Early Closure Fee?</h3>';h+='<div class="sub">Does <strong>'+esc(p.bank)+'</strong> charge a fee for closing the account early?</div>';if(hasTimer){const dsc=daysUntilSafe(e);h+='<div style="padding:8px 10px;background:#FEF3C7;border-radius:8px;margin-bottom:10px;font-size:11px;color:#92400E;font-weight:600">⏰ Current hold: '+(dsc>0?dsc+'d remaining • '+fM(e.earlyCloseFee)+' fee':'✅ Hold period expired')+'</div>'}h+='<div class="fee-choice">';h+='<button class="fee-yes" onclick="feeCheckPrompt.step=\'months\';R()">⚠️ Yes, set timer</button>';h+='<button class="fee-no" onclick="feeCheckSkip()">✅ No fee / Close now</button>';h+='</div>';if(hasTimer){h+='<button class="btn-s" onclick="feeCheckRemoveTimer()">Remove current timer only</button>';h+='<div style="font-size:10px;color:var(--muted);text-align:center;margin-top:6px">This keeps the bank open and clears the early-close hold.</div>'}else{h+='<div style="font-size:10px;color:var(--muted);text-align:center">"Close now" clears any hold period and proceeds to close</div>'}}else if(p.step==='months'){h+='<h3>⏰ How long to wait?</h3>';h+='<div class="sub">How many months from account opening must you wait to avoid the fee?</div>';h+='<div class="fee-months-grid">';[3,6,9,12,18,24].forEach(m=>{const rawDate=e&&e.opened?addM(e.opened,m):'';const safeDate=rawDate?addD(rawDate,BUFFER_DAYS):'';const daysAway=safeDate?Math.max(0,dB(td(),safeDate)):0;h+='<button class="fee-mo-btn'+(p.months===m?' sel':'')+'" onclick="feeCheckPrompt.months='+m+';R()">'+m+' mo';if(safeDate&&e.opened)h+='<span class="sm">'+daysAway+'d left</span>';h+='</button>'});h+='</div>';h+='<div style="display:flex;gap:6px;margin-top:8px;align-items:center"><span style="font-size:12px;color:var(--sub);font-weight:600;white-space:nowrap">Custom:</span><input type="number" inputmode="numeric" id="fcp_custom" value="'+(p.months||'')+'" placeholder="months" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:var(--bg);outline:none" onchange="feeCheckPrompt.months=parseInt(this.value)||6;R()"><span style="font-size:12px;color:var(--sub);font-weight:600">months</span></div>';h+='<div style="display:flex;gap:6px;margin-top:10px;align-items:center"><label style="font-size:11px;font-weight:600;color:var(--sub);white-space:nowrap">Fee amount $</label><input type="number" inputmode="numeric" id="fcp_fee" value="'+(p.feeAmount||'')+'" placeholder="e.g. 25" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:var(--bg);outline:none" onchange="feeCheckPrompt.feeAmount=parseInt(this.value)||0"></div>';if(e&&e.opened&&p.months>0){const rawDate=addM(e.opened,p.months);const safeDate=addD(rawDate,BUFFER_DAYS);const daysAway=Math.max(0,dB(td(),safeDate));h+='<div class="fee-preview"><div class="fp-date">📅 Safe to close: '+fD(safeDate)+'</div><div class="fp-days">'+(daysAway>0?daysAway+' days (incl. 3d buffer)':'✅ Already past!')+'</div></div>'}else if(!e||!e.opened){h+='<div class="fee-preview"><div class="fp-date" style="color:var(--red)">⚠️ No open date set</div><div class="fp-days">Timer starts when you add an open date</div></div>'}h+='<div style="display:flex;gap:6px;margin-top:10px">';h+='<button class="c-c" onclick="feeCheckPrompt.step=\'ask\';R()">Back</button>';h+='<button class="c-g" onclick="feeCheckSave()">⏰ Set Timer</button>';h+='</div>';if(hasTimer)h+='<button class="btn-s" onclick="feeCheckRemoveTimer()">Remove current timer only</button>'}h+='</div></div>';return h}
-function rModal(){const e=modal;const oi=k=>' oninput="modal[\''+k+'\']=this.value" ';const on=k=>' oninput="modal[\''+k+'\']=parseInt(this.value)||0" ';let h='<div class="ov" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()">';h+='<div class="m-bar"></div><div class="m-hdr"><h2>'+(e._edit?'Edit':'New')+' Entry</h2>'+(e._edit?'<span class="m-id">'+esc(e.id||'')+'</span>':'')+'</div>';h+='<div class="fg"><label>Bank Name *</label><input value="'+esc(e.bank||'')+'" oninput="modal.bank=this.value;if(!modal.accountType)syncModalAccountTypeFromBank();R()" onblur="applyModalBankMemory()" placeholder="e.g. Chase"></div>';h+='<div class="fg"><label>Account Type</label><select onchange="modal.accountType=this.value"><option value="personal"'+((normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e))==='personal'?' selected':'')+'>Personal</option><option value="business"'+((normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e))==='business'?' selected':'')+'>Business</option></select></div>';h+='<div class="m-sec">Bonus</div>';h+='<div class="frow"><div class="fg"><label>Amount $</label><input type="number" inputmode="numeric" value="'+(e.bonus||'')+'"'+on('bonus')+'placeholder="300"></div>';h+='<div class="fg"><label>Churn Rule</label><select onchange="modal.churn=this.value"><option value="">Select</option><option value="1"'+(e.churn==='1'?' selected':'')+'>1 Year</option><option value="2"'+(e.churn==='2'?' selected':'')+'>2 Years</option><option value="3"'+(e.churn==='3'?' selected':'')+'>3 Years</option><option value="180"'+(e.churn==='180'?' selected':'')+'>180 Days</option></select></div></div>';h+='<div class="m-sec">Simple Terms Auto-Fill</div>';h+='<div class="frow"><div class="fg"><label>Monthly Fee (Yes / No)</label><input value="'+esc(e.monthlyFeeYNText||'')+'" oninput="modal.monthlyFeeYNText=this.value" placeholder="Yes or No"></div><div class="fg"><label>Promo Code</label><input value="'+esc(e.promoCodeText||'')+'" oninput="modal.promoCodeText=this.value" placeholder="leave blank if missing"></div></div>';h+='<div class="frow"><div class="fg"><label>Known DD / Data Point</label><input value="'+esc(e.dataPoint||'')+'" oninput="modal.dataPoint=this.value" placeholder="e.g. Employer DD, ACH, payroll"></div><div class="fg"><label>Promo Expiration / Open By</label><input value="'+esc(e.expirationDateText||'')+'" oninput="modal.expirationDateText=this.value" placeholder="leave blank if missing"></div></div>';h+='<div class="frow"><div class="fg"><label>Funding Deadline Days</label><input type="number" inputmode="numeric" min="0" value="'+esc(String(e.fundedDays||''))+'" oninput="modal.fundedDays=parseInt(this.value)||0" placeholder="e.g. 30"></div><div class="fg"><label>Funding Amount / Target Tier</label><input value="'+esc(e.fundingAmountText||(e.fundingAmount?fM(e.fundingAmount):''))+'" oninput="modal.fundingAmountText=this.value;modal.fundingAmount=parseCloseFeeAmount(this.value)" placeholder="e.g. $2,000 for $500 tier"></div></div>';h+='<div class="fg"><label>Payout Timing</label><input value="'+esc(e.payoutTimingText||'')+'" oninput="modal.payoutTimingText=this.value" placeholder="e.g. within 15 days after requirements are met"></div>';h+='<div class="fg"><label>How to Avoid the Monthly Fee</label><input value="'+esc(e.avoidMonthlyFeeText||'')+'" oninput="modal.avoidMonthlyFeeText=this.value" placeholder="leave blank if missing"></div>';h+='<div class="fg"><label>How to Complete the Bonus</label><textarea rows="3" oninput="modal.completeBonusText=this.value" placeholder="leave blank if missing">'+esc(e.completeBonusText||'')+'</textarea></div>';h+='<div class="frow"><div class="fg"><label>Early Close Fee Amount</label><input value="'+esc(e.earlyTerminationFeeText||'')+'" oninput="modal.earlyTerminationFeeText=this.value;modal.earlyCloseFee=parseCloseFeeAmount(this.value)" placeholder="number only, e.g. 25 or None"></div><div class="fg"><label>Close Hold Days</label><input type="number" inputmode="numeric" min="0" value="'+esc(String(e.closeFeeCountdownDays??e.minHoldDays??''))+'" oninput="modal.closeFeeCountdownDays=this.value;modal.minHoldDays=parseInt(this.value)||0;modal.feeChecked=false" placeholder="e.g. 180"></div></div>';h+='<div class="frow"><div class="fg"><label>Close Rule Basis</label><select onchange="modal.closeRuleBasis=this.value"><option value="opened"'+(normalizeCloseRuleBasis(e.closeRuleBasis)==='opened'?' selected':'')+'>Opened date</option><option value="bonus"'+(normalizeCloseRuleBasis(e.closeRuleBasis)==='bonus'?' selected':'')+'>Bonus received date</option><option value="reqmet"'+(normalizeCloseRuleBasis(e.closeRuleBasis)==='reqmet'?' selected':'')+'>Requirement met date</option><option value="manual"'+(normalizeCloseRuleBasis(e.closeRuleBasis)==='manual'?' selected':'')+'>Manual review</option></select></div><div class="fg"><label>Close Buffer Days</label><input type="number" inputmode="numeric" min="0" value="'+esc(String(e.closeBufferDays??BUFFER_DAYS))+'" oninput="modal.closeBufferDays=parseInt(this.value)||0" placeholder="3"></div></div>';h+='<div class="frow"><div class="fg"><label>Monthly Fee Checked</label><select onchange="modal.monthlyFeeChecked=this.value===\'yes\'"><option value="no"'+(!e.monthlyFeeChecked?' selected':'')+'>No</option><option value="yes"'+(e.monthlyFeeChecked?' selected':'')+'>Yes</option></select></div><div class="fg"><label>Close Rule Wording</label><input value="'+esc(e.closeRuleText||'')+'" oninput="modal.closeRuleText=this.value" placeholder="e.g. keep open 180 days after opening"></div></div>';h+='<div class="fg"><label>Eligibility / Churn</label><textarea rows="2" oninput="modal.eligibilityText=this.value" placeholder="leave blank if missing">'+esc(e.eligibilityText||'')+'</textarea></div>';h+='<div class="fg"><label>How Many Days Required to Complete the Bonus?</label><input value="'+esc(e.requiredDaysText||(e.reqDays>0?String(e.reqDays):''))+'" oninput="modal.requiredDaysText=this.value;modal.reqDays=parseRequirementDaysText(this.value)" placeholder="e.g. 90"></div>';h+='<div class="m-sec">Dates</div>';const df=(lbl,id,k,v)=>'<div class="fg"><label>'+lbl+'</label><div class="date-wrap"><input type="date" value="'+(v||'')+'"'+oi(k)+'><button class="date-clr" type="button" onclick="modal.'+k+'=\'\';this.previousElementSibling.value=\'\'">\u2715</button></div></div>';h+='<div class="frow">'+df('Opened','fo','opened',e.opened)+df('Closed','fc','closed',e.closed)+'</div>';h+='<div class="frow">'+df('Bonus Received','fb','bonusRecd',e.bonusRecd)+df('Req Met','fr','reqMet',e.reqMet)+'</div>';h+='<div class="m-sec">Your Notes</div>';h+='<div style="font-size:10px;color:var(--muted);margin-bottom:3px">Your personal notes — never overwritten by analyzer</div>';h+='<div class="fg"><textarea rows="3" style="font-size:13px;line-height:1.5;min-height:60px"'+oi('notes')+'placeholder="Your personal notes, tips, reminders...">'+esc(e.notes||'')+'</textarea></div>';if(modal.analyzedTC){h+='<div class="m-sec">Analyzed T&C Summary</div>';h+='<div style="font-size:10px;color:var(--muted);margin-bottom:3px">Auto-generated from T&C analyzer — re-analyze to update</div>';h+='<div class="fg"><textarea rows="6" style="font-size:12px;line-height:1.6;min-height:120px;background:#F8FAFC;border:1.5px solid #E2E8F0" oninput="modal.analyzedTC=this.value" placeholder="Analyzed T&C will appear here...">'+esc(modal.analyzedTC)+'</textarea></div>'}h+='<button type="button" class="tc-btn" onclick="showInlineAZ=!showInlineAZ;R()">\uD83E\uDDE0 '+(showInlineAZ?'Hide T&C Analyzer':'Paste T&C to Auto-fill')+'</button>';if(showInlineAZ){h+='<div class="az-area"><textarea id="inline_tc" placeholder="Paste T&C here..."></textarea><button class="az-go" onclick="event.preventDefault();runInlineAnalyze()">Analyze & Auto-fill</button>'+(inlineResult?'<div style="margin-top:4px;font-size:10px;color:var(--green);font-weight:600">\u2705 Auto-filled!</div>':'')+'</div>'}if(e._edit)h+=rEditReplaceSelector(e);h+='<button type="button" class="btn-p" onclick="saveEntryFromButton(this,event)">\uD83D\uDCBE '+(e._edit?'Save Changes':'Add Entry')+'</button>';h+='<button class="btn-s" onclick="closeModal()">Cancel</button>';if(e._edit)h+='<button class="btn-d" onclick="clearFields()">Clear All Fields</button>';h+='</div></div>';return h}
+function rModal(){const e=modal;const oi=k=>' oninput="modal[\''+k+'\']=this.value" ';const on=k=>' oninput="modal[\''+k+'\']=parseInt(this.value)||0" ';let h='<div class="ov" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()">';h+='<div class="m-bar"></div><div class="m-hdr"><h2>'+(e._edit?'Edit':'New')+' Entry</h2>'+(e._edit?'<span class="m-id">'+esc(e.id||'')+'</span>':'')+'</div>';h+='<div class="fg"><label>Bank Name *</label><input value="'+esc(e.bank||'')+'" oninput="modal.bank=this.value;if(!modal.accountType)syncModalAccountTypeFromBank();R()" onblur="applyModalBankMemory()" placeholder="e.g. Chase"></div>';h+='<div class="fg"><label>Account Type</label><select onchange="modal.accountType=this.value"><option value="personal"'+((normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e))==='personal'?' selected':'')+'>Personal</option><option value="business"'+((normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e))==='business'?' selected':'')+'>Business</option></select></div>';if(e._edit){const repl=getManualReplacementCandidates(e,e.id||'');if(repl.length){h+='<div class="m-sec">Duplicate Fix / Replace Old Entry</div>';h+='<div style="font-size:10px;color:var(--muted);margin-bottom:6px">Use this if the app missed an old churn-ready entry and created a duplicate.</div>';h+='<div class="fg"><label>Old entry to replace with this entry</label><select onchange="modal._manualReplaceTarget=this.value"><option value="">Choose old entry…</option>'+repl.map(c=>'<option value="'+esc(c.id)+'"'+(modal._manualReplaceTarget===c.id?' selected':'')+'>'+esc(replacementCandidateLabel(c))+'</option>').join('')+'</select></div>';h+='<button class="btn-s" style="margin-top:0;margin-bottom:8px" onclick="beginManualReplaceFromEdit()">Replace Selected Old Entry</button>';}}h+='<div class="m-sec">Bonus</div>';h+='<div class="frow"><div class="fg"><label>Amount $</label><input type="number" inputmode="numeric" value="'+(e.bonus||'')+'"'+on('bonus')+'placeholder="300"></div>';h+='<div class="fg"><label>Churn Rule</label><select onchange="modal.churn=this.value"><option value="">Select</option><option value="1"'+(e.churn==='1'?' selected':'')+'>1 Year</option><option value="2"'+(e.churn==='2'?' selected':'')+'>2 Years</option><option value="3"'+(e.churn==='3'?' selected':'')+'>3 Years</option><option value="180"'+(e.churn==='180'?' selected':'')+'>180 Days</option></select></div></div>';h+='<div class="m-sec">Simple Terms Auto-Fill</div>';h+='<div class="frow"><div class="fg"><label>Monthly Fee (Yes / No)</label><input value="'+esc(e.monthlyFeeYNText||'')+'" oninput="modal.monthlyFeeYNText=this.value" placeholder="Yes or No"></div><div class="fg"><label>Promo Code</label><input value="'+esc(e.promoCodeText||'')+'" oninput="modal.promoCodeText=this.value" placeholder="leave blank if missing"></div></div>';h+='<div class="frow"><div class="fg"><label>Known DD / Data Point</label><input value="'+esc(e.dataPoint||'')+'" oninput="modal.dataPoint=this.value" placeholder="e.g. Employer DD, ACH, payroll"></div><div class="fg"><label>Promo Expiration / Open By</label><input value="'+esc(e.expirationDateText||'')+'" oninput="modal.expirationDateText=this.value" placeholder="leave blank if missing"></div></div>';h+='<div class="frow"><div class="fg"><label>Funding Deadline Days</label><input type="number" inputmode="numeric" min="0" value="'+esc(String(e.fundedDays||''))+'" oninput="modal.fundedDays=parseInt(this.value)||0" placeholder="e.g. 30"></div><div class="fg"><label>Funding Amount / Target Tier</label><input value="'+esc(e.fundingAmountText||(e.fundingAmount?fM(e.fundingAmount):''))+'" oninput="modal.fundingAmountText=this.value;modal.fundingAmount=parseCloseFeeAmount(this.value)" placeholder="e.g. $2,000 for $500 tier"></div></div>';h+='<div class="fg"><label>Payout Timing</label><input value="'+esc(e.payoutTimingText||'')+'" oninput="modal.payoutTimingText=this.value" placeholder="e.g. within 15 days after requirements are met"></div>';h+='<div class="fg"><label>How to Avoid the Monthly Fee</label><input value="'+esc(e.avoidMonthlyFeeText||'')+'" oninput="modal.avoidMonthlyFeeText=this.value" placeholder="leave blank if missing"></div>';h+='<div class="fg"><label>How to Complete the Bonus</label><textarea rows="3" oninput="modal.completeBonusText=this.value" placeholder="leave blank if missing">'+esc(e.completeBonusText||'')+'</textarea></div>';h+='<div class="frow"><div class="fg"><label>Early Close Fee Amount</label><input value="'+esc(e.earlyTerminationFeeText||'')+'" oninput="modal.earlyTerminationFeeText=this.value;modal.earlyCloseFee=parseCloseFeeAmount(this.value)" placeholder="number only, e.g. 25 or None"></div><div class="fg"><label>Close Hold Days</label><input type="number" inputmode="numeric" min="0" value="'+esc(String(e.closeFeeCountdownDays??e.minHoldDays??''))+'" oninput="modal.closeFeeCountdownDays=this.value;modal.minHoldDays=parseInt(this.value)||0;modal.feeChecked=false" placeholder="e.g. 180"></div></div>';h+='<div class="frow"><div class="fg"><label>Close Rule Basis</label><select onchange="modal.closeRuleBasis=this.value"><option value="opened"'+(normalizeCloseRuleBasis(e.closeRuleBasis)==='opened'?' selected':'')+'>Opened date</option><option value="bonus"'+(normalizeCloseRuleBasis(e.closeRuleBasis)==='bonus'?' selected':'')+'>Bonus received date</option><option value="reqmet"'+(normalizeCloseRuleBasis(e.closeRuleBasis)==='reqmet'?' selected':'')+'>Requirement met date</option><option value="manual"'+(normalizeCloseRuleBasis(e.closeRuleBasis)==='manual'?' selected':'')+'>Manual review</option></select></div><div class="fg"><label>Close Buffer Days</label><input type="number" inputmode="numeric" min="0" value="'+esc(String(e.closeBufferDays??BUFFER_DAYS))+'" oninput="modal.closeBufferDays=parseInt(this.value)||0" placeholder="3"></div></div>';h+='<div class="frow"><div class="fg"><label>Monthly Fee Checked</label><select onchange="modal.monthlyFeeChecked=this.value===\'yes\'"><option value="no"'+(!e.monthlyFeeChecked?' selected':'')+'>No</option><option value="yes"'+(e.monthlyFeeChecked?' selected':'')+'>Yes</option></select></div><div class="fg"><label>Close Rule Wording</label><input value="'+esc(e.closeRuleText||'')+'" oninput="modal.closeRuleText=this.value" placeholder="e.g. keep open 180 days after opening"></div></div>';h+='<div class="fg"><label>Eligibility / Churn</label><textarea rows="2" oninput="modal.eligibilityText=this.value" placeholder="leave blank if missing">'+esc(e.eligibilityText||'')+'</textarea></div>';h+='<div class="fg"><label>How Many Days Required to Complete the Bonus?</label><input value="'+esc(e.requiredDaysText||(e.reqDays>0?String(e.reqDays):''))+'" oninput="modal.requiredDaysText=this.value;modal.reqDays=parseRequirementDaysText(this.value)" placeholder="e.g. 90"></div>';h+='<div class="m-sec">Dates</div>';const df=(lbl,id,k,v)=>'<div class="fg"><label>'+lbl+'</label><div class="date-wrap"><input type="date" value="'+(v||'')+'"'+oi(k)+'><button class="date-clr" type="button" onclick="modal.'+k+'=\'\';this.previousElementSibling.value=\'\'">\u2715</button></div></div>';h+='<div class="frow">'+df('Opened','fo','opened',e.opened)+df('Closed','fc','closed',e.closed)+'</div>';h+='<div class="frow">'+df('Bonus Received','fb','bonusRecd',e.bonusRecd)+df('Req Met','fr','reqMet',e.reqMet)+'</div>';h+='<div class="m-sec">Your Notes</div>';h+='<div style="font-size:10px;color:var(--muted);margin-bottom:3px">Your personal notes — never overwritten by analyzer</div>';h+='<div class="fg"><textarea rows="3" style="font-size:13px;line-height:1.5;min-height:60px"'+oi('notes')+'placeholder="Your personal notes, tips, reminders...">'+esc(e.notes||'')+'</textarea></div>';if(modal.analyzedTC){h+='<div class="m-sec">Analyzed T&C Summary</div>';h+='<div style="font-size:10px;color:var(--muted);margin-bottom:3px">Auto-generated from T&C analyzer — re-analyze to update</div>';h+='<div class="fg"><textarea rows="6" style="font-size:12px;line-height:1.6;min-height:120px;background:#F8FAFC;border:1.5px solid #E2E8F0" oninput="modal.analyzedTC=this.value" placeholder="Analyzed T&C will appear here...">'+esc(modal.analyzedTC)+'</textarea></div>'}h+='<button type="button" class="tc-btn" onclick="showInlineAZ=!showInlineAZ;R()">\uD83E\uDDE0 '+(showInlineAZ?'Hide T&C Analyzer':'Paste T&C to Auto-fill')+'</button>';if(showInlineAZ){h+='<div class="az-area"><textarea id="inline_tc" placeholder="Paste T&C here..."></textarea><button class="az-go" onclick="event.preventDefault();runInlineAnalyze()">Analyze & Auto-fill</button>'+(inlineResult?'<div style="margin-top:4px;font-size:10px;color:var(--green);font-weight:600">\u2705 Auto-filled!</div>':'')+'</div>'}h+='<button type="button" class="btn-p" onclick="saveEntryFromButton(this,event)">\uD83D\uDCBE '+(e._edit?'Save Changes':'Add Entry')+'</button>';h+='<button class="btn-s" onclick="closeModal()">Cancel</button>';if(e._edit)h+='<button class="btn-d" onclick="clearFields()">Clear All Fields</button>';h+='</div></div>';return h}
 function rCfm(){return'<div class="cbg" onclick="cfm=null;R()"><div class="cbox" onclick="event.stopPropagation()"><h3>'+cfm.title+'</h3><p>'+cfm.msg+'</p><div class="crow"><button class="c-c" onclick="cfm=null;R()">Cancel</button><button class="'+(cfm.green?'c-g':'c-r')+'" onclick="cfm.action()">'+(cfm.confirmLabel||(cfm.green?'Confirm':'Delete'))+'</button></div></div></div>'}
 function rDD(){const p=ddPrompt;const common=['Employer DD','Robinhood ACH','Fidelity ACH','Schwab ACH','Venmo DD','PayPal DD','Melio Bill Pay','Cash App DD','No DD Required','Debit Card Only'];let h='<div class="cbg" onclick="skipDD()"><div class="dd-box" onclick="event.stopPropagation()"><h3>\uD83D\uDCCB What triggered the bonus?</h3><div class="sub">Select DD method(s) for '+esc(p.bank)+'. Optional \u2014 tap Skip to close without saving.</div><div class="dd-chips">';common.forEach(m=>{h+='<button class="dd-chip'+(p.sel.includes(m)?' sel':'')+'" onclick="event.stopPropagation();toggleDDChip(\''+esc(m)+'\')">'+esc(m)+'</button>'});h+='</div><input class="dd-input" id="dd_custom" placeholder="Other methods, comma separated..." onclick="event.stopPropagation()">';h+='<div class="crow"><button class="c-c" onclick="skipDD()">Skip</button><button class="c-g" onclick="submitDD()">\uD83D\uDCBE Save</button></div></div></div>';return h}
 function rRcv(){
@@ -2955,10 +3321,13 @@ function rOverwrite(){
   const s=status(ex);
   const isHistory=!isActive;
   let h='<div class="cbg" onclick="overwritePrompt=null;R()"><div class="ow-box" onclick="event.stopPropagation()">';
-  h+='<h3>'+esc(isHistory?'Start new churn cycle?':'Matching bank already exists')+'</h3>';
-  h+='<div class="sub">'+(isHistory
-    ?'<strong>'+esc(p.newData.bank)+'</strong> matches an older/cooldown record. Replace that record to start the next churn cycle, or choose Create Separate Entry if you really want a duplicate.'
-    :'<strong>'+esc(p.newData.bank)+'</strong> already has an active matching entry. Edit it, replace it, or create a separate entry intentionally.'
+  h+='<h3>'+esc(p.removeEntryId?'Replace old entry and remove duplicate?':(isHistory?'Start new churn cycle?':'Matching bank already exists'))+'</h3>';
+  h+='<div class="sub">'+(p.removeEntryId
+    ?'<strong>'+esc(p.newData.bank)+'</strong> will overwrite the selected old entry and remove the duplicate entry you were editing.'
+    :(isHistory
+      ?'<strong>'+esc(p.newData.bank)+'</strong> matches an older/cooldown record. Replace that record to start the next churn cycle, or choose Create Separate Entry if you really want a duplicate.'
+      :'<strong>'+esc(p.newData.bank)+'</strong> already has an active matching entry. Edit it, replace it, or create a separate entry intentionally.'
+    )
   )+'</div>';
   h+='<div class="ow-existing">'+bankLogo(ex.bank)+'<div class="ow-info"><div class="nm">'+esc(ex.bank)+'</div><div class="det">'+esc(s)+' · ID: '+esc(getEntryDisplayId(ex)||ex.id||'')+'</div>';
   if(ex.opened)h+='<div class="det">Opened: '+fD(ex.opened)+'</div>';
@@ -3001,193 +3370,37 @@ function rMatchPicker(){
   h+='</div></div></div>';
   return h;
 }
-
-function newEntryChoiceRows(){
-  return [...entries].filter(e=>e&&e.bank).sort((a,b)=>{
-    const aOld=isActiveEntry(a)?1:0;
-    const bOld=isActiveEntry(b)?1:0;
-    if(aOld!==bOld)return aOld-bOld;
-    const ad=entryRecencyDate(a)||'';
-    const bd=entryRecencyDate(b)||'';
-    return bd.localeCompare(ad)||(a.bank||'').localeCompare(b.bank||'');
+function rReplacementPicker(){
+  if(!replacementPickerPrompt)return'';
+  const p=replacementPickerPrompt;
+  const selected=p.selectedId||p.candidates[0]?.id||'';
+  const sel=p.candidates.find(x=>x.id===selected)||p.candidates[0];
+  let h='<div class="cbg" onclick="replacementPickerPrompt=null;R()"><div class="ow-box" onclick="event.stopPropagation()">';
+  h+='<h3>'+esc(p.title||'Replace old entry?')+'</h3>';
+  h+='<div class="sub">'+esc(p.message||'Choose an old entry to replace, or create a separate new entry.')+'</div>';
+  h+='<div class="fg" style="margin-top:10px"><label>Old entry to replace</label><select onchange="setReplacementPickerTarget(this.value)">';
+  p.candidates.forEach(c=>{
+    h+='<option value="'+esc(c.id)+'"'+(c.id===selected?' selected':'')+'>'+esc(replacementCandidateLabel(c))+'</option>';
   });
-}
-function newEntryChoiceLabel(e){
-  const bits=[];
-  bits.push(e.bank||'Unnamed bank');
-  bits.push(entryTypeLabel(e));
-  bits.push(status(e)||'Saved');
-  if(e.opened)bits.push('Opened '+fD(e.opened));
-  if(e.closed)bits.push('Closed '+fD(e.closed));
-  if(e.bonus)bits.push(fM(e.bonus));
-  const id=getEntryDisplayId(e)||e.id||'';
-  if(id)bits.push(id);
-  return bits.join(' · ');
-}
-function openNewEntryChoice(newData,source='manual'){
-  if(!entries.some(e=>e&&e.bank))return false;
-  newEntryChoicePrompt={newData:{...(newData||{}),customTimers:normalizeTimerList(newData&&newData.customTimers)},source,selectedId:''};
-  overwritePrompt=null;matchPickerPrompt=null;
-  return true;
-}
-function rNewEntryChoice(){
-  if(!newEntryChoicePrompt)return'';
-  const p=newEntryChoicePrompt;
-  const rows=newEntryChoiceRows();
-  if(!rows.length){newEntryChoicePrompt=null;return''}
-  const picked=rows.find(e=>e.id===p.selectedId)||null;
-  let h='<div class="cbg" onclick="cancelNewEntryChoice()"><div class="ow-box" onclick="event.stopPropagation()">';
-  h+='<h3>Choose old entry to replace</h3>';
-  h+='<div class="sub">New entry: <strong>'+esc(p.newData.bank||'New bank')+'</strong>'+(p.newData.bonus?(' · '+fM(p.newData.bonus)):'')+'. Pick an existing tracker entry from the dropdown, or create this as a separate new entry. The app will not guess from bank wording.</div>';
-  h+='<div class="fg" style="margin-top:10px"><label>Old entry to replace</label><select onchange="newEntryChoicePrompt.selectedId=this.value;R()">';
-  h+='<option value="">Create as separate new entry</option>';
-  rows.forEach(e=>{h+='<option value="'+esc(e.id||'')+'"'+(p.selectedId===e.id?' selected':'')+'>'+esc(newEntryChoiceLabel(e))+'</option>'});
   h+='</select></div>';
-  if(picked){
-    const isActive=isActiveEntry(picked);
-    h+='<div class="ow-existing">'+bankLogo(picked.bank)+'<div class="ow-info"><div class="nm">'+esc(picked.bank)+'</div><div class="det">'+esc(entryTypeLabel(picked))+' · '+esc(status(picked)||'Saved')+' · ID: '+esc(getEntryDisplayId(picked)||picked.id||'')+'</div>';
-    if(picked.opened)h+='<div class="det">Opened: '+fD(picked.opened)+'</div>';
-    if(picked.closed)h+='<div class="det">Closed: '+fD(picked.closed)+'</div>';
-    if(isActive)h+='<div class="det" style="color:var(--red);font-weight:800">Active entry selected — replacing it will overwrite the active record.</div>';
-    h+='</div><div class="amt">'+fM(picked.bonus||0)+'</div></div>';
-  }else{
-    h+='<div class="sub" style="margin-top:6px">Leave the dropdown on “Create as separate new entry” when this is truly a different account or bank.</div>';
+  if(sel){
+    h+='<div class="ow-existing">'+bankLogo(sel.bank)+'<div class="ow-info"><div class="nm">'+esc(sel.bank)+'</div><div class="det">'+esc(replaceCandidateStatus(sel))+' · '+esc(entryTypeLabel(sel))+' · ID: '+esc(getEntryDisplayId(sel)||sel.id||'')+'</div>';
+    if(sel.opened)h+='<div class="det">Opened: '+fD(sel.opened)+'</div>';
+    if(sel.closed)h+='<div class="det">Closed: '+fD(sel.closed)+'</div>';
+    h+='</div><div class="amt">'+fM(sel.bonus)+'</div></div>';
   }
   h+='<div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">';
-  if(picked)h+='<button class="c-g" style="width:100%;padding:12px;border-radius:12px;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer" onclick="replaceFromNewEntryChoice()">Replace Selected Old Entry</button>';
-  h+='<button style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;background:#fff;color:var(--text)" onclick="createFromNewEntryChoice()">Create Separate New Entry</button>';
-  h+='<button class="c-c" style="width:100%;padding:10px;border-radius:10px;border:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer" onclick="cancelNewEntryChoice()">Back to Edit</button>';
+  h+='<button class="c-g" style="width:100%;padding:12px;border-radius:12px;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer" onclick="doReplacementPickerReplace()">Review Replace Selected Old Entry</button>';
+  if(!p.currentId)h+='<button style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;background:#fff;color:var(--text)" onclick="doReplacementPickerCreateSeparate()">Create Separate New Entry</button>';
+  h+='<button class="c-c" style="width:100%;padding:10px;border-radius:10px;border:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer" onclick="doReplacementPickerBack()">Back to Entry</button>';
   h+='</div></div></div>';
-  return h;
-}
-function createFromNewEntryChoice(){
-  if(!newEntryChoicePrompt)return;
-  const p=newEntryChoicePrompt;
-  const beforeEntries=entries.map(e=>({...e,checklist:Array.isArray(e.checklist)?[...e.checklist]:[],customTimers:normalizeTimerList(e.customTimers)}));
-  const next=assignEntryIdForCreate({...p.newData,checklist:[],customTimers:normalizeTimerList(p.newData.customTimers||[]),feeChecked:false});
-  hydrateTimersFromOpened(next);Object.assign(next,normalizeLifecycleEntry(next));
-  entries.push(next);entries=sortE(entries);
-  if(!saveEntriesStrict(entries)){entries=beforeEntries;return}
-  syncProfileEventsFromEntry(next);refreshSavedReqFromEntry(next);
-  newEntryChoicePrompt=null;modal=null;expanded=next.id;tab='tracker';search='';showInlineAZ=false;inlineResult=null;
-  R();
-}
-function replaceFromNewEntryChoice(){
-  if(!newEntryChoicePrompt)return;
-  const p=newEntryChoicePrompt;
-  const selectedId=p.selectedId||'';
-  const existing=entries.find(e=>e.id===selectedId);
-  if(!existing){alert('Choose an old entry to replace, or create this as a separate new entry.');return}
-  const beforeEntries=entries.map(e=>({...e,checklist:Array.isArray(e.checklist)?[...e.checklist]:[],customTimers:normalizeTimerList(e.customTimers)}));
-  let savedId=existing.id;
-  entries=entries.map(e=>{
-    if(e.id!==existing.id)return e;
-    const oldCycle=archivedCycleSnapshot(e);
-    saveOfferVersionFromEntry(e,'archived-before-manual-dropdown-replace');
-    let next=normalizeNewCycleData(p.newData,e);
-    if(oldCycle)next.previousCycles=[oldCycle,...(Array.isArray(e.previousCycles)?e.previousCycles:[])].slice(0,10);
-    next=promoteDraftEntryId(next,e.id);
-    savedId=next.id;
-    return next;
-  });
-  entries=sortE(entries);
-  if(!saveEntriesStrict(entries)){entries=beforeEntries;return}
-  const saved=entries.find(e=>e.id===savedId)||null;
-  if(saved){syncProfileEventsFromEntry(saved);refreshSavedReqFromEntry(saved)}
-  newEntryChoicePrompt=null;modal=null;expanded=savedId;tab='tracker';search='';showInlineAZ=false;inlineResult=null;
-  R();
-}
-function cancelNewEntryChoice(){
-  if(!newEntryChoicePrompt){R();return}
-  const d=newEntryChoicePrompt.newData||{};
-  modal={...d,checklist:[],customTimers:normalizeTimerList(d.customTimers||[]),closeFeeCountdownDays:d.minHoldDays>0?d.minHoldDays:''};
-  newEntryChoicePrompt=null;overwritePrompt=null;matchPickerPrompt=null;tab='tracker';search='';
-  R();
-}
-
-function editReplaceRows(currentId){
-  const cid=String(currentId||'');
-  return [...entries].filter(e=>e&&e.bank&&String(e.id)!==cid).sort((a,b)=>{
-    const aOld=isActiveEntry(a)?1:0;
-    const bOld=isActiveEntry(b)?1:0;
-    if(aOld!==bOld)return aOld-bOld;
-    const ad=entryRecencyDate(a)||'';
-    const bd=entryRecencyDate(b)||'';
-    return bd.localeCompare(ad)||(a.bank||'').localeCompare(b.bank||'');
-  });
-}
-function rEditReplaceSelector(e){
-  if(!e||!e._edit)return'';
-  const rows=editReplaceRows(e.id);
-  if(!rows.length)return'';
-  const picked=rows.find(x=>x.id===e.replaceTargetId)||null;
-  let h='<div class="m-sec">Replace Existing Entry</div>';
-  h+='<div style="font-size:10px;color:var(--muted);margin-bottom:6px;line-height:1.45">Use this only when this edit row is the correct new version, but an older duplicate is still in the tracker. The selected old row will be overwritten with the values currently shown in this edit form, and this duplicate row will be removed.</div>';
-  h+='<div class="fg"><label>Existing old entry to overwrite</label><select onchange="modal.replaceTargetId=this.value;R()">';
-  h+='<option value="">Do not replace another entry</option>';
-  rows.forEach(row=>{h+='<option value="'+esc(row.id||'')+'"'+(e.replaceTargetId===row.id?' selected':'')+'>'+esc(newEntryChoiceLabel(row))+'</option>'});
-  h+='</select></div>';
-  if(picked){
-    const active=isActiveEntry(picked);
-    h+='<div class="ow-existing" style="margin-top:6px">'+bankLogo(picked.bank)+'<div class="ow-info"><div class="nm">'+esc(picked.bank)+'</div><div class="det">'+esc(entryTypeLabel(picked))+' · '+esc(status(picked)||'Saved')+' · ID: '+esc(getEntryDisplayId(picked)||picked.id||'')+'</div>';
-    if(picked.opened)h+='<div class="det">Opened: '+fD(picked.opened)+'</div>';
-    if(picked.closed)h+='<div class="det">Closed: '+fD(picked.closed)+'</div>';
-    if(active)h+='<div class="det" style="color:var(--red);font-weight:800">Active entry selected — this will overwrite an active record.</div>';
-    h+='</div><div class="amt">'+fM(picked.bonus||0)+'</div></div>';
-    h+='<button type="button" class="btn-s" style="margin-top:8px;background:#FEF3C7;color:#92400E;border:1px solid #FDE68A" onclick="replaceAnotherEntryFromEdit()">Replace Selected Entry With This Edit</button>';
-  }
-  return h;
-}
-function entryDataFromModal(){
-  syncModalFromEditDOM();
-  syncModalAccountTypeFromBank();
-  const d={bank:(modal.bank||'').trim(),accountType:normalizeAccountType(modal.accountType)||'personal',bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',fundedDays:modal.fundedDays||0,fundingAmount:modal.fundingAmount||0,fundingAmountText:modal.fundingAmountText||'',payoutTimingText:modal.payoutTimingText||'',plannedClose:modal.plannedClose||'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false,monthlyFeeYNText:modal.monthlyFeeYNText||'',promoCodeText:modal.promoCodeText||'',avoidMonthlyFeeText:modal.avoidMonthlyFeeText||'',completeBonusText:modal.completeBonusText||'',earlyTerminationFeeText:modal.earlyTerminationFeeText||'',eligibilityText:modal.eligibilityText||'',expirationDateText:modal.expirationDateText||'',requiredDaysText:modal.requiredDaysText||'',closeRuleBasis:normalizeCloseRuleBasis(modal.closeRuleBasis),closeBufferDays:parseInt(modal.closeBufferDays,10)||BUFFER_DAYS,closeRuleText:modal.closeRuleText||'',monthlyFeeChecked:!!modal.monthlyFeeChecked,customTimers:normalizeTimerList(modal.customTimers)};
-  syncRequiredDaysFromModal(d);
-  d.earlyCloseFee=parseCloseFeeAmount(modal.earlyTerminationFeeText);
-  applyCountdownFromModal(d);
-  hydrateTimersFromOpened(d);
-  Object.assign(d,normalizeLifecycleEntry(d));
-  return d;
-}
-function replaceAnotherEntryFromEdit(){
-  if(!modal||!modal._edit){alert('Open the duplicate in Edit first.');return}
-  const sourceId=String(modal.id||'');
-  const targetId=String(modal.replaceTargetId||'');
-  if(!targetId){alert('Choose an existing old entry to overwrite.');return}
-  if(targetId===sourceId){alert('Choose a different old entry to overwrite.');return}
-  const target=entries.find(e=>String(e.id)===targetId);
-  const source=entries.find(e=>String(e.id)===sourceId);
-  if(!target){alert('Selected old entry was not found.');return}
-  const d=entryDataFromModal();
-  if(!d.bank){alert('Bank name required');return}
-  const msg='Replace "'+(target.bank||'old entry')+'" with the data currently shown in this edit form?\n\nThis will overwrite the selected old entry and remove this duplicate row so it will not appear twice.';
-  if(!window.confirm(msg))return;
-  const beforeEntries=entries.map(e=>({...e,checklist:Array.isArray(e.checklist)?[...e.checklist]:[],customTimers:normalizeTimerList(e.customTimers)}));
-  let savedId=target.id;
-  entries=entries.map(e=>{
-    if(String(e.id)!==targetId)return e;
-    const oldCycle=archivedCycleSnapshot(e);
-    saveOfferVersionFromEntry(e,'archived-before-edit-dropdown-replace');
-    let next=normalizeNewCycleData(d,e);
-    if(oldCycle)next.previousCycles=[oldCycle,...(Array.isArray(e.previousCycles)?e.previousCycles:[])].slice(0,10);
-    next=promoteDraftEntryId(next,e.id);
-    savedId=next.id;
-    return next;
-  }).filter(e=>String(e.id)!==sourceId||String(savedId)===sourceId);
-  if(source&&sourceId!==savedId){try{remapEntryReferences(sourceId,savedId,target.bank||d.bank)}catch{}}
-  entries=sortE(entries);
-  if(!saveEntriesStrict(entries)){entries=beforeEntries;return}
-  const saved=entries.find(e=>e.id===savedId)||null;
-  if(saved){syncProfileEventsFromEntry(saved);refreshSavedReqFromEntry(saved)}
-  modal=null;expanded=savedId;tab='tracker';search='';showInlineAZ=false;inlineResult=null;
-  alert('Replacement saved. Duplicate row removed.');
-  R();
+  return h
 }
 function rAnalyzer(){let h='<div style="background:var(--card);border-radius:12px;padding:12px;margin-bottom:8px;border:1px solid var(--border)">';h+='<div style="font-size:12px;font-weight:700;margin-bottom:6px">\uD83D\uDD0D T&C Analyzer</div>';h+='<textarea class="fg" id="az_input" style="width:100%;min-height:120px;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:11px;outline:none;resize:vertical" placeholder="Paste full terms & conditions here...">'+esc(analyzerText)+'</textarea>';h+='<div style="display:flex;gap:4px;margin-top:4px"><button class="az-go" style="flex:1" onclick="runMainAnalyze()">Analyze</button><button class="btn-s" style="flex:0;margin:0;padding:8px 12px" onclick="showAnalyzer=false;analyzerText=\'\';analyzerResult=null;R()">Close</button></div>';if(analyzerResult){const r=analyzerResult;h+='<div style="margin-top:8px">';if(r.notesForTracker){h+='<div class="tc-box" style="padding:12px;border-radius:12px"><div class="tc-body" style="font-size:13px;line-height:1.8">'+highlightTC(r.notesForTracker)+'</div></div>'}else{h+='<div style="padding:12px;background:var(--bg);border-radius:12px;font-size:13px;line-height:1.8">';if(r.bonusAmount)h+='<div>* Bonus: '+esc(r.bonusAmount)+'</div>';if(r.ddAmount)h+='<div>* DD: '+esc(r.ddAmount)+(r.ddCount?' (x'+r.ddCount+')':'')+'</div>';if(r.debitTxns)h+='<div>* Debit Txns: '+esc(r.debitTxns)+'</div>';if(r.timeline)h+='<div>* Timeline: '+esc(r.timeline)+'</div>';if(r.monthlyFee)h+='<div>* Monthly Fee: '+esc(r.monthlyFee)+'</div>';if(r.promoCode)h+='<div>* Promo: '+esc(r.promoCode)+'</div>';if(r.churnRule)h+='<div>* Churn: '+esc(r.churnRule)+'</div>';if(r.earlyCloseFee)h+='<div>* Close Fee: '+esc(r.earlyCloseFee)+'</div>';h+='</div>'}h+='<button class="btn-p" style="margin-top:8px;font-size:13px;padding:12px" onclick="fillFromAI()">\u2B07 Auto-fill New Entry</button>';h+='</div>'}h+='</div>';return h}
-function openAdd(){modal={bank:'',accountType:'unknown',bonus:0,churn:'',opened:'',closed:'',bonusRecd:'',reqMet:'',notes:'',analyzedTC:'',minHoldDays:0,earlyCloseFee:0,closeFeeCountdownDays:'',dataPoint:'',reqDays:0,referralBonus:0,checklist:[],plannedClose:'',phoneNum:'',feeChecked:false,monthlyFeeYNText:'',promoCodeText:'',avoidMonthlyFeeText:'',eligibilityText:'',expirationDateText:'',requiredDaysText:'',completeBonusText:'',earlyTerminationFeeText:'',fundedDays:0,fundingAmount:0,fundingAmountText:'',payoutTimingText:'',customTimers:[]};overwritePrompt=null;matchPickerPrompt=null;newEntryChoicePrompt=null;showInlineAZ=false;inlineResult=null;R()}
+function openAdd(){modal={bank:'',accountType:'unknown',bonus:0,churn:'',opened:'',closed:'',bonusRecd:'',reqMet:'',notes:'',analyzedTC:'',minHoldDays:0,earlyCloseFee:0,closeFeeCountdownDays:'',dataPoint:'',reqDays:0,referralBonus:0,checklist:[],plannedClose:'',phoneNum:'',feeChecked:false,monthlyFeeYNText:'',promoCodeText:'',avoidMonthlyFeeText:'',eligibilityText:'',expirationDateText:'',requiredDaysText:'',completeBonusText:'',earlyTerminationFeeText:'',fundedDays:0,fundingAmount:0,fundingAmountText:'',payoutTimingText:'',customTimers:[]};overwritePrompt=null;matchPickerPrompt=null;replacementPickerPrompt=null;showInlineAZ=false;inlineResult=null;R()}
 try{window.openAdd=openAdd}catch{}
 function formatAnalyzedBankName(name,isBiz){let bank=(name||'').trim();if(!bank)return isBiz?'Biz':'';bank=bank.replace(/\s+/g,' ').trim();if(isBiz){if(/\bbiz\b/i.test(bank))return bank;if(/\bbusiness\b/i.test(bank))return bank.replace(/\bbusiness\b/i,'Biz').replace(/\s+/g,' ').trim();return bank+' Biz'}return bank}
-function openEdit(id){const e=entries.find(x=>x.id===id);if(e){modal={...e,analyzedTC:e.analyzedTC||'',requiredDaysText:e.requiredDaysText||(e.reqDays>0?String(e.reqDays):''),earlyTerminationFeeText:e.earlyTerminationFeeText||(e.earlyCloseFee>0?String(e.earlyCloseFee):''),closeFeeCountdownDays:e.minHoldDays>0?e.minHoldDays:'',_edit:true};showInlineAZ=false;inlineResult=null;R()}}
+function openEdit(id){const e=entries.find(x=>x.id===id);if(e){modal={...e,analyzedTC:e.analyzedTC||'',requiredDaysText:e.requiredDaysText||(e.reqDays>0?String(e.reqDays):''),earlyTerminationFeeText:e.earlyTerminationFeeText||(e.earlyCloseFee>0?String(e.earlyCloseFee):''),closeFeeCountdownDays:e.minHoldDays>0?e.minHoldDays:'',_manualReplaceTarget:'',_edit:true};showInlineAZ=false;inlineResult=null;R()}}
 function closeModal(){modal=null;showInlineAZ=false;inlineResult=null;R()}
 function clearFields(){if(!modal)return;modal.accountType='personal';['bonus','churn','opened','closed','bonusRecd','reqMet','dataPoint','notes','plannedClose','phoneNum','monthlyFeeYNText','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText','eligibilityText','expirationDateText','requiredDaysText','closeFeeCountdownDays'].forEach(k=>{modal[k]=''});modal.customTimers=[];['reqDays','minHoldDays','earlyCloseFee','referralBonus'].forEach(k=>{modal[k]=0});modal.bonus=0;modal.feeChecked=false;R()}
 function parseCloseFeeAmount(text){const raw=String(text||'').trim();if(!raw)return 0;if(/^(none|no|n\/a)$/i.test(raw))return 0;const m=raw.match(/\$?([\d,]+(?:\.\d+)?)/);return m?parseInt(String(m[1]).replace(/,/g,''),10)||0:0}
@@ -3280,12 +3493,25 @@ function saveEntryFromButton(btn,ev){
   },0);
   return false;
 }
-function saveEntry(){
+function collectModalEntryData(){
   syncModalFromEditDOM();
   const bank=(modal.bank||'').trim();
-  if(!bank){alert('Bank name required');return false}
-  const d=entryDataFromModal();
-  if(!modal._edit&&!modal._skipNewEntryChoice&&openNewEntryChoice(d,'manual')){closeModal();R();return 'duplicate-prompt'}
+  if(!bank){alert('Bank name required');return null}
+  syncModalAccountTypeFromBank();
+  const d={bank,accountType:normalizeAccountType(modal.accountType)||'personal',bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',fundedDays:modal.fundedDays||0,fundingAmount:modal.fundingAmount||0,fundingAmountText:modal.fundingAmountText||'',payoutTimingText:modal.payoutTimingText||'',plannedClose:modal.plannedClose||'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false,monthlyFeeYNText:modal.monthlyFeeYNText||'',monthlyFeeAmountText:modal.monthlyFeeAmountText||'',monthlyFeeFrequency:modal.monthlyFeeFrequency||'',monthlyFeeWaiverType:modal.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:modal.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:modal.monthlyFeeWaiverText||'',promoCodeText:modal.promoCodeText||'',avoidMonthlyFeeText:modal.avoidMonthlyFeeText||'',completeBonusText:modal.completeBonusText||'',earlyTerminationFeeText:modal.earlyTerminationFeeText||'',eligibilityText:modal.eligibilityText||'',expirationDateText:modal.expirationDateText||'',requiredDaysText:modal.requiredDaysText||'',closeRuleBasis:normalizeCloseRuleBasis(modal.closeRuleBasis),closeBufferDays:parseInt(modal.closeBufferDays,10)||BUFFER_DAYS,closeRuleText:modal.closeRuleText||'',monthlyFeeChecked:!!modal.monthlyFeeChecked,customTimers:normalizeTimerList(modal.customTimers)};
+  sanitizeCloseFieldsForEntry(d);
+  syncRequiredDaysFromModal(d);
+  d.earlyCloseFee=parseCloseFeeAmount(modal.earlyTerminationFeeText);
+  applyCountdownFromModal(d);
+  hydrateTimersFromOpened(d);
+  Object.assign(d,normalizeLifecycleEntry(d));
+  return d
+}
+function saveEntry(){
+  const d=collectModalEntryData();
+  if(!d)return false;
+  if(!modal._edit&&!modal._skipManualReplacePrompt&&handleManualReplacementPicker(d,'manual','')){closeModal();R();return 'duplicate-prompt'}
+  if(!modal._edit&&!modal._skipDuplicateCheck&&handleDuplicateFlow(d,'manual')){closeModal();R();return 'duplicate-prompt'}
   const beforeEntries=entries.map(e=>({...e,checklist:Array.isArray(e.checklist)?[...e.checklist]:[],customTimers:normalizeTimerList(e.customTimers)}));
   let savedEntry=null;
   if(modal._edit){
@@ -3368,8 +3594,9 @@ function doOverwrite(){
   if(!overwritePrompt)return;
   const p=overwritePrompt;
   const d=p.newData||{};
+  const removeId=p.removeEntryId&&p.removeEntryId!==p.existingEntry.id?p.removeEntryId:'';
   let savedId=p.existingEntry.id;
-  entries=entries.map(e=>{
+  entries=entries.filter(e=>!removeId||e.id!==removeId).map(e=>{
     if(e.id!==p.existingEntry.id)return e;
     const oldCycle=archivedCycleSnapshot(e);
     saveOfferVersionFromEntry(e,'archived-before-replace');
@@ -3412,7 +3639,7 @@ function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a
 async function deliverBackupFile(blob,filename,preferShare){if(preferShare&&typeof File!=='undefined'&&navigator?.share){try{const file=new File([blob],filename,{type:'application/json'});if(!navigator.canShare||navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Bank Bonus Tracker backup',text:'Save this full backup to Files, iCloud Drive, Google Drive, or email so you can restore later on any device.'});return 'shared'}}catch(err){}}downloadBlob(blob,filename);return 'downloaded'}
 function buildResetSafetyBackupPayload(){const data=buildPortableBackupPayload();data.reason='pre-reset-safety-backup';return data}
 async function exportBackup(preferShare=true,customData=null,customFilename=''){const data=customData||buildPortableBackupPayload();const filename=customFilename||('BankBonusTracker_FullBackup_'+backupTimestamp()+'.json');const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const mode=await deliverBackupFile(blob,filename,preferShare);setLastBk();return{mode,filename,data}}
-function performHardReset(){entries=[];sv(SK,[]);try{getBackupStorageKeys().forEach(k=>localStorage.removeItem(k));localStorage.removeItem(PROFILE_EVT_KEY);localStorage.removeItem(BK_KEY)}catch{}dashYear=new Date().getFullYear();taxYear=new Date().getFullYear();expanded=null;modal=null;search='';showTemplates=false;showAnalyzer=false;analyzerText='';analyzerResult=null;inlineResult=null;showInlineAZ=false;phoneSearch='';showPhoneAdd=false;dpSearch='';dpExpandedBankKey='';dpEditor=null;profileSearch='';activeProfileKey='';overwritePrompt=null;matchPickerPrompt=null;newEntryChoicePrompt=null;ddPrompt=null;rcvPrompt=null;closePrompt=null;feeCheckPrompt=null;undoState=null;if(undoTimer)clearTimeout(undoTimer);R()}
+function performHardReset(){entries=[];sv(SK,[]);try{getBackupStorageKeys().forEach(k=>localStorage.removeItem(k));localStorage.removeItem(PROFILE_EVT_KEY);localStorage.removeItem(BK_KEY)}catch{}dashYear=new Date().getFullYear();taxYear=new Date().getFullYear();expanded=null;modal=null;search='';showTemplates=false;showAnalyzer=false;analyzerText='';analyzerResult=null;inlineResult=null;showInlineAZ=false;phoneSearch='';showPhoneAdd=false;dpSearch='';dpExpandedBankKey='';dpEditor=null;profileSearch='';activeProfileKey='';overwritePrompt=null;matchPickerPrompt=null;ddPrompt=null;rcvPrompt=null;closePrompt=null;feeCheckPrompt=null;undoState=null;if(undoTimer)clearTimeout(undoTimer);R()}
 function resetAllData(){cfm={title:'⚠️ Reset All Data',msg:'This will permanently delete ALL tracker rows, datapoints, saved bank requirements, and saved phone data from this device.\n\nFor safety, the app will export one final full backup first so you can save it to Files/iCloud/Drive before the wipe finishes.',action:()=>{cfm={title:'🚨 Final confirmation',msg:'Continue with the full reset? A recovery backup file will be created first, then this device will be wiped.',action:async()=>{cfm=null;R();try{await exportBackup(false,buildResetSafetyBackupPayload(),'BankBonusTracker_PreReset_'+backupTimestamp()+'.json')}catch{}performHardReset();cfm={title:'Reset Complete',msg:'This device has been cleared. Keep the exported pre-reset backup file somewhere safe so you can restore later.',green:true,action:()=>{cfm=null;R()}};R()}};R()}};R()}
 function delEntry(id){const e=entries.find(x=>x.id===id);if(!e)return;cfm={title:'Delete Bank Entry?',msg:'Delete '+e.bank+' '+(e.id||'')+' from the tracker?\n\nThis cannot be undone.',action:()=>{entries=entries.filter(x=>x.id!==id);sv(SK,entries);expanded=null;cfm={title:'Bank Entry Deleted',msg:e.bank+' was deleted from the tracker.',green:true,action:()=>{cfm=null;R()}};R()}};R()}
 function closeAcct(id){const e=entries.find(x=>x.id===id);if(!e)return;feeCheckPrompt={entryId:id,bank:e.bank,step:'ask',months:e.minHoldDays>0?Math.round(e.minHoldDays/30):6,feeAmount:e.earlyCloseFee||0};R()}
@@ -3545,7 +3772,7 @@ function finishClose(){
   R()
 }
 function cancelClose(){closePrompt=null;R()}
-function addFromTpl(i){const t=TEMPLATES[i];const newData={bank:t.bank,bonus:t.bonus,churn:t.churn,opened:td(),closed:'',bonusRecd:'',reqMet:'',notes:t.notes||'',analyzedTC:'',minHoldDays:t.minHoldDays||0,earlyCloseFee:t.earlyCloseFee||0,dataPoint:t.dataPoint||'',reqDays:t.reqDays||0,referralBonus:0,plannedClose:'',phoneNum:'',feeChecked:false};if(openNewEntryChoice(newData,'template')){showTemplates=false;R();return}modal=newData;modal.checklist=[];modal.customTimers=[];showTemplates=false;R()}
+function addFromTpl(i){const t=TEMPLATES[i];const newData={bank:t.bank,bonus:t.bonus,churn:t.churn,opened:td(),closed:'',bonusRecd:'',reqMet:'',notes:t.notes||'',analyzedTC:'',minHoldDays:t.minHoldDays||0,earlyCloseFee:t.earlyCloseFee||0,dataPoint:t.dataPoint||'',reqDays:t.reqDays||0,referralBonus:0,plannedClose:'',phoneNum:'',feeChecked:false};if(handleDuplicateFlow(newData,'template')){showTemplates=false;R();return}modal=newData;modal.checklist=[];modal.customTimers=[];showTemplates=false;R()}
 function toggleCk(id,i){entries=entries.map(e=>{if(e.id===id&&e.checklist)e.checklist[i].done=!e.checklist[i].done;return e});sv(SK,entries);R()}
 function addCk(id){const inp=document.getElementById('ck_'+id);if(!inp||!inp.value.trim())return;entries=entries.map(e=>{if(e.id===id){if(!e.checklist)e.checklist=[];e.checklist.push({text:inp.value.trim(),done:false})}return e});sv(SK,entries);toggleInlineForm(id,'checklist',false)}
 function rmCk(id,i){entries=entries.map(e=>{if(e.id===id&&e.checklist)e.checklist.splice(i,1);return e});sv(SK,entries);R()}
@@ -3972,7 +4199,53 @@ function normalizeRestoredEntry(e){
   return normalizeLifecycleEntry(x)
 }
 
+
+function backupIntegrityReport(data){
+  const rows=Array.isArray(data?.entries)?data.entries:(Array.isArray(entries)?entries:[]);
+  const warnings=[];
+  const ids=new Set();
+  let duplicateIds=0, missingAccountType=0, missingOpenDate=0, closedNoChurn=0, receivedNoReq=0, monthlyFeeNeedsReview=0;
+  rows.forEach(e=>{
+    if(!e||!e.bank)return;
+    if(e.id){if(ids.has(e.id))duplicateIds++;ids.add(e.id)}
+    if(!normalizeAccountType(e.accountType))missingAccountType++;
+    if(!e.opened&&!e.closed)missingOpenDate++;
+    if(e.closed&&!e.churn)closedNoChurn++;
+    if(e.bonusRecd&&!e.reqMet)receivedNoReq++;
+    const hasMonthlyRisk=/(yes|\$|monthly|maintenance|service fee|service charge|quarterly|statement fee|paper statement)/i.test(String(e.monthlyFeeYNText||'')+' '+String(e.avoidMonthlyFeeText||'')+' '+String(e.notes||''));
+    if(hasMonthlyRisk&&!e.monthlyFeeChecked&&!deriveMonthlyFeeStructure(e).monthlyFeeWaiverText&&!deriveMonthlyFeeStructure(e).monthlyFeeWaiverAmountText)monthlyFeeNeedsReview++;
+  });
+  if(duplicateIds)warnings.push(duplicateIds+' duplicate entry ID issue(s)');
+  if(missingAccountType)warnings.push(missingAccountType+' entr'+(missingAccountType===1?'y':'ies')+' missing Personal/Business type');
+  if(missingOpenDate)warnings.push(missingOpenDate+' open entr'+(missingOpenDate===1?'y':'ies')+' missing opened date');
+  if(closedNoChurn)warnings.push(closedNoChurn+' closed entr'+(closedNoChurn===1?'y':'ies')+' missing churn rule');
+  if(receivedNoReq)warnings.push(receivedNoReq+' entr'+(receivedNoReq===1?'y':'ies')+' has bonus received but missing Req Met date');
+  if(monthlyFeeNeedsReview)warnings.push(monthlyFeeNeedsReview+' entr'+(monthlyFeeNeedsReview===1?'y':'ies')+' may need monthly fee waiver review');
+  const reqs=loadReqs();
+  const userDatapoints=loadUserDatapoints();
+  const profileEvents=loadProfileEvents();
+  const offerHistory=loadOfferHistory();
+  return{
+    ok:warnings.length===0,
+    warnings,
+    checkedAt:new Date().toISOString(),
+    entries:rows.length,
+    closed:rows.filter(e=>e&&e.closed).length,
+    received:rows.filter(e=>e&&e.bonusRecd).length,
+    reqs:Object.keys(reqs||{}).length,
+    userDatapoints:userDatapoints.length,
+    profileEvents:profileEvents.length,
+    offerHistoryVersions:countBackupOfferHistory({offerHistory})
+  }
+}
+function backupIntegritySummary(data){
+  const r=data?.backupIntegrity||backupIntegrityReport(data||{entries});
+  if(!r)return'Backup integrity: not checked';
+  return r.ok?'Backup integrity: looks complete':('Backup warnings: '+(r.warnings||[]).slice(0,4).join('; '))
+}
 function buildPortableBackupPayload(){
+  entries=sortE(normalizeLifecycleEntries(entries));
+  sv(SK,entries);
   const userDatapoints=loadUserDatapoints();
   const communityDatapoints=loadCommunityDatapoints();
   const phoneEdits=loadPhoneEdits();
@@ -3993,6 +4266,7 @@ function buildPortableBackupPayload(){
     phoneCount:phoneEdits.length,
     profileEventCount:profileEvents.length,
     offerHistoryCount:countBackupOfferHistory({offerHistory}),
+    backupIntegrity:backupIntegrityReport({entries}),
     prefs:{
       dashYear,taxYear
     },
@@ -4028,7 +4302,7 @@ function buildPortableBackupPayload(){
 function describeBackupPayload(d){
   const when=(d?.exportedAt||d?.createdAt)?new Date(d.exportedAt||d.createdAt).toLocaleString():'';
   const type=d?.backupType||d?.backupVersion||d?.kind||'unknown';
-  return['Backup date: '+(when||'Unknown'),'Backup type: '+type,'Entries: '+countBackupEntries(d),'Your datapoints: '+countBackupUserDatapoints(d),'Community datapoints: '+countBackupCommunityDatapoints(d),'Saved bank requirements: '+countBackupReqs(d),'Offer history versions: '+countBackupOfferHistory(d),'Saved phone entries: '+countBackupPhones(d),'Profile events: '+countBackupProfileEvents(d)].join('\n')
+  return['Backup date: '+(when||'Unknown'),'Backup type: '+type,'Entries: '+countBackupEntries(d),'Your datapoints: '+countBackupUserDatapoints(d),'Community datapoints: '+countBackupCommunityDatapoints(d),'Saved bank requirements: '+countBackupReqs(d),'Offer history versions: '+countBackupOfferHistory(d),'Saved phone entries: '+countBackupPhones(d),'Profile events: '+countBackupProfileEvents(d),backupIntegritySummary(d)].join('\n')
 }
 
 
@@ -4125,7 +4399,7 @@ function applyPortableRestore(d){
   else taxYear=new Date().getFullYear();
   setLastBk();
   cfm={
-    title:'Restore Complete',msg:`${entries.length} entries restored.\n${countBackupUserDatapoints(d)} datapoints restored.\n${countBackupProfileEvents(d)} profile events restored.\n\nThis backup is now ready on this browser/device.`,green:true,action:()=>{
+    title:'Restore Complete',msg:`${entries.length} entries restored.\n${countBackupUserDatapoints(d)} datapoints restored.\n${countBackupProfileEvents(d)} profile events restored.\n${backupIntegritySummary({entries,backupIntegrity:backupIntegrityReport({entries})})}\n\nThis backup is now ready on this browser/device.`,green:true,action:()=>{
       cfm=null;
       R()
     }
@@ -4408,9 +4682,10 @@ entries=sortE(entries);R();
 
     try {
       hydrateTimersFromOpened(entry);
-      if (typeof openNewEntryChoice === 'function' && openNewEntryChoice(entry,'analyzer-review')) {
+      if (typeof handleDuplicateFlow === 'function' && handleDuplicateFlow(entry,'analyzer-review')) {
         document.getElementById('tc_review_overlay')?.remove();
         if (typeof R === 'function') R();
+        setTimeout(() => alert('Matching bank found. Choose replace existing, edit existing, or create separate entry.'), 80);
         return true;
       }
       const next = typeof assignEntryIdForCreate === 'function' ? assignEntryIdForCreate({...entry,checklist:[],customTimers:normalizeTimerList(entry.customTimers||[])}) : {...entry,id:newRecordId(bank),checklist:[]};
@@ -4994,6 +5269,7 @@ entries=sortE(entries);R();
         }
 
         if(e.notes) h += `<div class="card-notes" style="white-space:pre-wrap;font-size:12px;line-height:1.6">${esc(e.notes)}</div>`;
+        h += renderMonthlyFeePlan(e);
         h += renderClosePlan(e);
         h += renderOfferHistory(e);
         if(e.analyzedTC) h += `<div class="tc-box"><div class="tc-label">T&amp;C analysis</div><div class="tc-body">${highlightTC(e.analyzedTC)}</div></div>`;
@@ -5034,4 +5310,6 @@ entries=sortE(entries);R();
 })();
 /* === End consolidated core module: Tracker card bank actions renderer === */
 
-(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.67 close intelligence polish */\n.close-intel.safe{border-color:#bbf7d0;background:#f0fdf4}\n.close-intel.warn,.close-intel.plan{border-color:#fde68a;background:#fffbeb}\n.close-intel.danger{border-color:#fecaca;background:#fff7f7}\n.close-ready{padding:10px 12px;border-radius:14px;margin:10px 0 12px;border:1px solid #e5e7eb;background:#f8fafc;font-size:12px;line-height:1.35}\n.close-ready b{display:block;font-size:13px;margin-bottom:2px}\n.close-ready.safe{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}\n.close-ready.warn,.close-ready.plan{background:#fffbeb;border-color:#fde68a;color:#78350f}\n.close-ready.danger{background:#fff1f2;border-color:#fecaca;color:#7f1d1d}\n.close-final-note{font-size:11px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px;margin-top:10px;line-height:1.35}\n";document.head.appendChild(st)}catch{}})();
+(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.76 close intelligence polish */\n.close-intel.safe{border-color:#bbf7d0;background:#f0fdf4}\n.close-intel.warn,.close-intel.plan{border-color:#fde68a;background:#fffbeb}\n.close-intel.danger{border-color:#fecaca;background:#fff7f7}\n.close-ready{padding:10px 12px;border-radius:14px;margin:10px 0 12px;border:1px solid #e5e7eb;background:#f8fafc;font-size:12px;line-height:1.35}\n.close-ready b{display:block;font-size:13px;margin-bottom:2px}\n.close-ready.safe{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}\n.close-ready.warn,.close-ready.plan{background:#fffbeb;border-color:#fde68a;color:#78350f}\n.close-ready.danger{background:#fff1f2;border-color:#fecaca;color:#7f1d1d}\n.close-final-note{font-size:11px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px;margin-top:10px;line-height:1.35}\n";document.head.appendChild(st)}catch{}})();
+
+(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.76 monthly fee plan box */\n.monthly-fee-plan.safe{border-color:#bbf7d0;background:#f0fdf4}\n.monthly-fee-plan.warn{border-color:#fde68a;background:#fffbeb}\n.monthly-fee-plan .tc-label{letter-spacing:.11em}\n";document.head.appendChild(st)}catch{}})();
