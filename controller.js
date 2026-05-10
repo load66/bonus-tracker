@@ -5,7 +5,7 @@
  * last-touched: unknown
  */
 (function(){
-  const VER='3.3.72';
+  const VER='3.3.73';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const esc=v=>{if(window.esc)return window.esc(String(v??''));const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML};
   const money=n=>'$'+Number(n||0).toLocaleString();
@@ -102,7 +102,7 @@
     makeSuggestedTimers(r,opened).forEach(t=>{const k=sig(t);if(!seen.has(k)){base.push(t);seen.add(k)}});
     return base;
   }
-  function applyToModal(r){const m=modalObj();if(!m||!r)return false;m.bank=m.bank||r.bank;m.accountType=normalizeAccountType(m.accountType)||detectAccountType(r);if(r.bonus)m.bonus=r.bonus;if(r.reqDays)m.reqDays=r.reqDays;if(r.reqMoney)m.dataPoint=m.dataPoint||('DD '+money(r.reqMoney)+(r.reqDays?' within '+r.reqDays+' days':''));if(r.code)m.promoCodeText=r.code;if(r.openBy)m.expirationDateText=pretty(r.openBy);if(r.fee)m.monthlyFeeYNText=`Yes — ${money(r.fee)} monthly fee`;if(r.waivers?.length)m.avoidMonthlyFeeText=r.waivers.join('\n');if(r.actionPlan)m.completeBonusText=r.actionPlan;const elig=analyzerEligibilityText(r);if(elig)m.eligibilityText=elig;const earlyFee=analyzerEarlyFeeText(r);if(earlyFee)m.earlyTerminationFeeText=earlyFee;if(r.fundedDays)m.fundedDays=r.fundedDays;if(r.fundingAmount){m.fundingAmount=r.fundingAmount;m.fundingAmountText=money(r.fundingAmount)}if(r.payout||r.payoutText)m.payoutTimingText=r.payout||r.payoutText;if(r.closeRuleBasis)m.closeRuleBasis=r.closeRuleBasis;if(r.closeRuleDays){m.minHoldDays=r.closeRuleDays;m.closeFeeCountdownDays=String(r.closeRuleDays)}else if(r.holdDays)m.minHoldDays=r.holdDays;if(r.closeRuleText)m.closeRuleText=r.closeRuleText;if(r.closeBufferDays)m.closeBufferDays=r.closeBufferDays;if(r.monthlyFeeAmountText)m.monthlyFeeAmountText=r.monthlyFeeAmountText;if(r.monthlyFeeFrequency)m.monthlyFeeFrequency=r.monthlyFeeFrequency;if(r.monthlyFeeWaiverType)m.monthlyFeeWaiverType=r.monthlyFeeWaiverType;if(r.monthlyFeeWaiverAmountText)m.monthlyFeeWaiverAmountText=r.monthlyFeeWaiverAmountText;if(r.monthlyFeeWaiverText)m.monthlyFeeWaiverText=r.monthlyFeeWaiverText;m.customTimers=mergeSuggestedTimers(m.customTimers,r,m.opened||'');m.tcAnalysisResult=r;m.tcSourceRaw=r.raw;m.tcSourceId=r.sourceId;try{window.tcV3SaveSourceForCurrentEntry&&window.tcV3SaveSourceForCurrentEntry(r.raw,{bank:r.bank})}catch{}return true}
+  function applyToModal(r){const m=modalObj();if(!m||!r)return false;m.bank=m.bank||r.bank;m.accountType=normalizeAccountType(m.accountType)||detectAccountType(r);if(r.bonus)m.bonus=r.bonus;if(r.reqDays)m.reqDays=r.reqDays;if(r.reqMoney)m.dataPoint=m.dataPoint||('DD '+money(r.reqMoney)+(r.reqDays?' within '+r.reqDays+' days':''));if(r.code)m.promoCodeText=r.code;if(r.openBy)m.expirationDateText=pretty(r.openBy);if(r.fee)m.monthlyFeeYNText=`Yes — ${money(r.fee)} monthly fee`;if(r.waivers?.length)m.avoidMonthlyFeeText=r.waivers.join('\n');if(r.actionPlan)m.completeBonusText=r.actionPlan;const elig=analyzerEligibilityText(r);if(elig)m.eligibilityText=elig;const earlyFee=analyzerEarlyFeeText(r);if(earlyFee)m.earlyTerminationFeeText=earlyFee;if(r.fundedDays)m.fundedDays=r.fundedDays;if(r.fundingAmount){m.fundingAmount=r.fundingAmount;m.fundingAmountText=money(r.fundingAmount)}if(r.payout||r.payoutText)m.payoutTimingText=r.payout||r.payoutText;const safeCloseDays=safeAnalyzerCloseDays(r);m.closeRuleBasis=safeAnalyzerCloseBasis(r);if(safeCloseDays){m.minHoldDays=safeCloseDays;m.closeFeeCountdownDays=String(safeCloseDays)}else{m.minHoldDays=0;m.closeFeeCountdownDays=''}if(r.closeRuleText&&!analyzerCloseLooksLikeMonthlyFee(r))m.closeRuleText=r.closeRuleText;else if(!safeCloseDays&&/bonus|payout|payment|good standing|restricted|default/i.test(analyzerCloseText(r)))m.closeRuleText=analyzerCloseText(r);if(r.closeBufferDays)m.closeBufferDays=r.closeBufferDays;if(r.monthlyFeeAmountText)m.monthlyFeeAmountText=r.monthlyFeeAmountText;if(r.monthlyFeeFrequency)m.monthlyFeeFrequency=r.monthlyFeeFrequency;if(r.monthlyFeeWaiverType)m.monthlyFeeWaiverType=r.monthlyFeeWaiverType;if(r.monthlyFeeWaiverAmountText)m.monthlyFeeWaiverAmountText=r.monthlyFeeWaiverAmountText;if(r.monthlyFeeWaiverText)m.monthlyFeeWaiverText=r.monthlyFeeWaiverText;m.customTimers=mergeSuggestedTimers(m.customTimers,r,m.opened||'');m.tcAnalysisResult=r;m.tcSourceRaw=r.raw;m.tcSourceId=r.sourceId;try{window.tcV3SaveSourceForCurrentEntry&&window.tcV3SaveSourceForCurrentEntry(r.raw,{bank:r.bank})}catch{}return true}
   function addDaysIso(start,days){try{if(window.addD)return window.addD(start,days)}catch{}const d=new Date(start+'T00:00:00');d.setDate(d.getDate()+Number(days||0));return d.toISOString().split('T')[0]}
   function createTimers(r){const m=modalObj();if(!m||!r)return 0;m.customTimers=Array.isArray(m.customTimers)?m.customTimers:[];const before=m.customTimers.length;m.customTimers=mergeSuggestedTimers(m.customTimers,r,m.opened||'');return m.customTimers.length-before}
   function issueReport(r){
@@ -199,18 +199,41 @@
     ].join('\n')
   }
   function copyIssueReport(){const txt=issueReport();navigator.clipboard?.writeText(txt).then(()=>alert('ChatGPT-ready fix prompt copied. Paste it into ChatGPT with a short note about what looked wrong.')).catch(()=>alert(txt))}
-  function openPro(){const src=window.tcV3ResolveSource?window.tcV3ResolveSource(findRaw()):{raw:findRaw()};let r=analyze(src.raw);document.getElementById('tca_overlay')?.remove();let h=`<div class="cbg" onclick="tcClosePro()"><div class="dd-box tca-box" onclick="event.stopPropagation()"><h3>✨ Unified Analyzer Pro <span style="font-size:9px;color:#94A3B8">v3.3.72</span></h3><div class="sub">Clean v3 pipeline: current pasted text first, entry saved source second, vault fallback last.</div><textarea id="tca_raw" class="dd-input" style="height:150px;line-height:1.45">${esc(src.raw||'')}</textarea><div class="crow"><button class="c-c" onclick="tcClosePro()">Close</button><button class="c-g" onclick="tcRunPro()">Analyze</button></div><div id="tcv3_result">${summaryHtml(r)}</div>`;if(r?.tiers?.length){h+=`<div class="tc-box"><div class="tc-label">Target tier</div><select class="dd-input" onchange="tcV3SelectTier(this.value)">`;r.tiers.forEach((t,i)=>h+=`<option value="${i}" ${i===r.tiers.length-1?'selected':''}>${money(t.bonus)} bonus — ${money(t.requirement)}+</option>`);h+=`</select></div>`}h+=`<div class="crow"><button class="c-c" onclick="tcCopyIssueReport()">🧾 Copy ChatGPT Fix Prompt</button><button class="c-g" onclick="tcApplyPro()">Apply Fields</button></div><button class="btn-p" style="margin-top:8px" onclick="tcCreateTimers()">Create Suggested Mini Timers</button></div></div>`;const d=document.createElement('div');d.id='tca_overlay';d.innerHTML=h;document.body.appendChild(d)}
+  function openPro(){const src=window.tcV3ResolveSource?window.tcV3ResolveSource(findRaw()):{raw:findRaw()};let r=analyze(src.raw);document.getElementById('tca_overlay')?.remove();let h=`<div class="cbg" onclick="tcClosePro()"><div class="dd-box tca-box" onclick="event.stopPropagation()"><h3>✨ Unified Analyzer Pro <span style="font-size:9px;color:#94A3B8">v3.3.73</span></h3><div class="sub">Clean v3 pipeline: current pasted text first, entry saved source second, vault fallback last.</div><textarea id="tca_raw" class="dd-input" style="height:150px;line-height:1.45">${esc(src.raw||'')}</textarea><div class="crow"><button class="c-c" onclick="tcClosePro()">Close</button><button class="c-g" onclick="tcRunPro()">Analyze</button></div><div id="tcv3_result">${summaryHtml(r)}</div>`;if(r?.tiers?.length){h+=`<div class="tc-box"><div class="tc-label">Target tier</div><select class="dd-input" onchange="tcV3SelectTier(this.value)">`;r.tiers.forEach((t,i)=>h+=`<option value="${i}" ${i===r.tiers.length-1?'selected':''}>${money(t.bonus)} bonus — ${money(t.requirement)}+</option>`);h+=`</select></div>`}h+=`<div class="crow"><button class="c-c" onclick="tcCopyIssueReport()">🧾 Copy ChatGPT Fix Prompt</button><button class="c-g" onclick="tcApplyPro()">Apply Fields</button></div><button class="btn-p" style="margin-top:8px" onclick="tcCreateTimers()">Create Suggested Mini Timers</button></div></div>`;const d=document.createElement('div');d.id='tca_overlay';d.innerHTML=h;document.body.appendChild(d)}
   function resultPlainText(r){
     if(!r)return'';
     const box=document.createElement('div');
     box.innerHTML=summaryHtml(r);
     return clean((box.textContent||'').replace(/SIMPLE TERMS:/g,'SIMPLE TERMS:\n').replace(/HOW TO EARN THE BONUS:/g,'\nHOW TO EARN THE BONUS:\n').replace(/WHAT COUNTS:/g,'\nWHAT COUNTS:\n').replace(/WHAT DOES NOT COUNT:/g,'\nWHAT DOES NOT COUNT:\n').replace(/MONTHLY FEE CAN BE AVOIDED WITH:/g,'\nMONTHLY FEE CAN BE AVOIDED WITH:\n').replace(/ELIGIBILITY \/ CHURN:/g,'\nELIGIBILITY / CHURN:\n').replace(/REVIEW:/g,'\nREVIEW:\n'));
   }
+
+  function analyzerCloseText(r){
+    return clean([r?.closeRuleText,r?.closeRuleSource,r?.early,r?.earlyTerminationFeeText].filter(Boolean).join(' '));
+  }
+  function analyzerCloseLooksLikeMonthlyFee(r){
+    const txt=analyzerCloseText(r)+' '+clean(r?.monthlyFeeText||r?.monthlyFeeYNText||'');
+    return /(monthly account fee|monthly service fee|monthly maintenance fee|monthly fee|service charge|maintenance fee|average monthly balance|fee waived|waived with|avoid monthly|paper statement fee|statement fee)/i.test(txt);
+  }
+  function safeAnalyzerCloseDays(r){
+    const n=parseInt(r?.closeRuleDays||r?.minHoldDays||0,10)||0;
+    const txt=analyzerCloseText(r);
+    if(!n)return 0;
+    if(analyzerCloseLooksLikeMonthlyFee(r))return 0;
+    if(n>730)return 0;
+    if(!/(close|closed|closing|remain open|keep[^.]{0,40}open|maintain[^.]{0,40}open|forfeit|clawback|good standing|restricted|default)/i.test(txt))return 0;
+    return n;
+  }
+  function safeAnalyzerCloseBasis(r){
+    const days=safeAnalyzerCloseDays(r);
+    const basis=r?.closeRuleBasis||'';
+    if(!days&&/(bonus|payout|payment|good standing|restricted|default)/i.test(analyzerCloseText(r)))return 'bonus';
+    return basis||'opened';
+  }
   function buildEntryFromResult(r){
     if(!r)return null;
     const feeText=r.fee?`Yes — ${money(r.fee)} monthly fee`:'';
     const reqDays=parseInt(r.reqDays||r.fundedDays||r.holdDays||0,10)||0;
-    const minHold=parseInt(r.closeRuleDays||r.holdDays||0,10)||0;
+    const minHold=safeAnalyzerCloseDays(r);
     let earlyFee=0;
     const earlyFeeText=analyzerEarlyFeeText(r);
     try{if(typeof parseCloseFeeAmount==='function')earlyFee=parseCloseFeeAmount(earlyFeeText)||0}catch{}
@@ -229,9 +252,9 @@
       notes:'',
       analyzedTC:analyzed,
       minHoldDays:minHold,
-      closeRuleBasis:r.closeRuleBasis||'opened',
+      closeRuleBasis:safeAnalyzerCloseBasis(r),
       closeBufferDays:parseInt(r.closeBufferDays||3,10)||3,
-      closeRuleText:r.closeRuleText||'',
+      closeRuleText:(!analyzerCloseLooksLikeMonthlyFee(r)?(r.closeRuleText||''):(/bonus|payout|payment|good standing|restricted|default/i.test(analyzerCloseText(r))?analyzerCloseText(r):'')),
       monthlyFeeChecked:false,
       earlyCloseFee:earlyFee,
       reqDays:reqDays,

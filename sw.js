@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.72 Newest update: Added saved exact Morgan Stanley Private Bank / E*TRADE CHECKING25 profile.
+// ✅ Version 3.3.73 Newest update: Analyzer close-rule guard prevents monthly-fee wording from becoming close-hold days.
 
-const V = 'bt-v3.3.72';
+const V = 'bt-v3.3.73';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {

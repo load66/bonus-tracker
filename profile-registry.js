@@ -5,7 +5,7 @@
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.3.72-profile-registry';
+  const VER='3.3.73-profile-registry';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
     {
@@ -269,16 +269,21 @@
       r.monthlyFeeWaiverType=r.monthlyFeeWaiverType||'Balance';
       r.monthlyFeeWaiverAmountText=r.monthlyFeeWaiverAmountText||'$5,000 average monthly balance';
       r.monthlyFeeWaiverText=r.monthlyFeeWaiverText||'Waived with $5,000 average monthly balance in Max-Rate Checking on or after the end of the second calendar month from opening.';
-      r.closeRuleBasis=r.closeRuleBasis||'bonus';
-      r.closeBufferDays=r.closeBufferDays||3;
-      r.closeRuleText=r.closeRuleText||'Must keep account open and in good standing until bonus payment. If account is defaulted, restricted, or closed before bonus payment, bonus may be denied.';
+      r.holdDays=0;
+      r.minHoldDays=0;
+      r.closeRuleDays=0;
+      r.earlyCloseFee=0;
+      r.closeRuleBasis='bonus';
+      r.closeBufferDays=3;
+      r.closeRuleText='Must keep account open and in good standing until bonus payment. If account is defaulted, restricted, or closed before bonus payment, bonus may be denied.';
       r.eligibilityText=r.eligibilityText||'Not eligible if customer has or had owned/co-owned a Morgan Stanley Private Bank Checking or Max-Rate Checking account within the last 12 months from offer enrollment. One Checking OR Max-Rate Checking account only; if both are opened, Checking is enrolled. One checking offer at a time. Individual/joint online accounts only; primary owner receives bonus. Non-U.S. residents excluded. Promo code single-use and non-transferable.';
       r.counts=r.counts||['Regular recurring ACH direct deposit of income','Salary','Pension','Government payments such as Social Security','Employer payroll','Benefits provider payments','Government agency payments'];
       r.not=r.notCounts=r.notCounts||['Incoming wires','Check deposits','Mobile check deposits','P2P transfers including PayPal and Venmo','Merchant transactions such as PayPal, Stripe, Square','Zelle incoming payments','Real-Time Payment network transactions','E*TRADE Transfer Money transactions','Internal Morgan Stanley transfers','Brokerage transfers','Online transfers','Bank-to-bank transfers not from employer or government','ACH transfers not from employer or government'];
       r.suggestedTimers=r.suggestedTimers||[];
       if(!r.suggestedTimers.some(t=>/recurring income ACH DDs/i.test(t.text||'')))r.suggestedTimers.push({kind:'days',text:'Complete 2 recurring income ACH DDs of $1,500+ each',daysRequired:90,source:'Morgan Stanley CHECKING25 profile'});
       if(!r.suggestedTimers.some(t=>/bonus payout watch/i.test(t.text||'')))r.suggestedTimers.push({kind:'days',text:'Bonus payout watch / expected around day 120',daysRequired:120,source:'Morgan Stanley CHECKING25 profile'});
-      r.reviewFlags=(r.reviewFlags||[]).filter(x=>!/monthly fee|close rule|payout timing/i.test(String(x||'')));
+      r.reviewFlags=(r.reviewFlags||[]).filter(x=>!/monthly fee|close rule|payout timing|hold period|450/i.test(String(x||'')));
+      r.reviewFlags.push('Profile guard: no early-close hold countdown for this offer; close risk is payout only.');
       r.clear=!!(r.bonus&&r.reqDays&&r.reqMoney&&r.count);
     }
     if(m.id==='guaranty-bank-perks-consumer-checking'){
