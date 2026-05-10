@@ -5,7 +5,7 @@
  * last-touched: unknown
  */
 (function(){
-  const VER='3.3.77';
+  const VER='3.3.78';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const esc=v=>{if(window.esc)return window.esc(String(v??''));const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML};
   const money=n=>'$'+Number(n||0).toLocaleString();
@@ -77,30 +77,82 @@
   function normalizeAccountType(v){v=String(v||'').toLowerCase().trim();if(/^(business|biz|b|commercial)$/.test(v))return'business';if(/^(personal|consumer|individual|p)$/.test(v))return'personal';return''}
   function detectAccountType(r){const direct=normalizeAccountType(r?.accountType);if(direct)return direct;const text=[r?.bank,r?.acct,r?.raw,r?.actionPlan,r?.eligibilityText].filter(Boolean).join(' ');if(/\b(biz|business|commercial|merchant|llc|ein|dba|sole proprietor|business checking|small business)\b/i.test(text))return'business';return'personal'}
   function payoutDaysFromText(txt){txt=String(txt||'');if(/within\s+15|fifteen/i.test(txt))return 15;if(/within\s+30|thirty|up to\s+30/i.test(txt))return 30;if(/within\s+60|sixty/i.test(txt))return 60;if(/120th day|day\s*120/i.test(txt))return 30;return 0}
+  function timerCategoryFromText(text){
+    const s=clean(text||'').toLowerCase();
+    if(/promo|expiration|open[- ]?by/.test(s))return'openby';
+    if(/close review|review after payout|safe close/.test(s))return'close-review';
+    if(/payout|bonus payment|bonus watch|expected around day/.test(s))return'payout';
+    if(/maintain|required balance|hold check|hold deadline|new-money hold/.test(s))return'hold';
+    if(/funding deadline|fund the account|funded within|deposit new money|new money funding/.test(s))return'funding';
+    if(/requirement|direct deposit|\bdd\b|ach dd|qualifying transactions|debit transactions|recurring income/.test(s))return'requirement';
+    return s.slice(0,40)||'timer'
+  }
+  function timerPriority(t){
+    const s=clean(t?.text||'').toLowerCase();
+    let p=50;
+    if(/bonus requirement deadline|bonus payout watch$|suggested timer|deadline$/.test(s))p+=20;
+    if(/direct deposit|\bdd\b|recurring income|ach|transactions|expected around day|funding deadline|close review/.test(s))p-=15;
+    if(/\$|[0-9]/.test(s))p-=5;
+    return p
+  }
+  function timerKey(t){
+    const cat=timerCategoryFromText(t?.text||'');
+    const days=Number(t?.daysRequired||0)||0;
+    const date=String(t?.date||'');
+    return cat+'|'+days+'|'+date
+  }
+  function dedupeSuggestedTimerList(list){
+    const map=new Map();
+    (Array.isArray(list)?list:[]).forEach(t=>{
+      if(!t||!clean(t.text))return;
+      const k=timerKey(t);
+      const cur=map.get(k);
+      if(!cur||timerPriority(t)<timerPriority(cur))map.set(k,t)
+    });
+    return Array.from(map.values())
+  }
+  function hasTimerCategory(list,cat,days=0){
+    return (list||[]).some(t=>timerCategoryFromText(t?.text||'')===cat&&(!days||Number(t?.daysRequired||0)===Number(days)))
+  }
+  function makeRequirementTimerText(r){
+    if(r?.suggestedTimers?.some(t=>timerCategoryFromText(t.text)==='requirement'))return '';
+    if(r?.requirementType==='transactions')return r.count?`Complete ${r.count} qualifying transactions`:'Complete qualifying transactions';
+    const noun=r?.requirementNoun||'qualifying Direct Deposits';
+    const n=r?.count?String(r.count)+' ':'';
+    const amt=r?.reqMoney?` of ${money(r.reqMoney)}+${r.reqIsTotal?' total':' each'}`:'';
+    return `Complete ${n}${noun}${amt}`.replace(/\s+/g,' ').trim()
+  }
   function makeSuggestedTimers(r,opened=''){
     const mk=(text,date='',startDate='',daysRequired=0)=>({id:window.timerId?window.timerId():'tm_'+Math.random().toString(36).slice(2,8),text:clean(text),date:date||'',startDate:startDate||'',daysRequired:Number(daysRequired||0),done:false});
     const out=[];
-    const addDaysTimer=(text,days)=>{days=Number(days||0)||0;if(days>0)out.push(mk(text,opened?addDaysIso(opened,days):'',opened,days));};
+    const addDaysTimer=(text,days,cat='')=>{days=Number(days||0)||0;if(days>0&&!hasTimerCategory(out,cat||timerCategoryFromText(text),days))out.push(mk(text,opened?addDaysIso(opened,days):'',opened,days));};
     const source=(r?.suggestedTimers&&r.suggestedTimers.length)?r.suggestedTimers:[];
-    source.forEach(t=>{const days=Number(t.daysRequired||t.days||0)||0;if(t.date)out.push(mk(t.text||'Suggested deadline',t.date,'',0));else if(days)addDaysTimer(t.text||'Suggested timer',days);});
-    if(r?.openBy)out.push(mk('Promo expiration / open-by deadline',r.openBy));
-    if(r?.fundedDays)addDaysTimer('Deposit new money / funding deadline',r.fundedDays);
-    if(r?.holdDays||r?.minHoldDays)addDaysTimer('Maintain required balance / hold check',r.holdDays||r.minHoldDays);
-    if(r?.reqDays)addDaysTimer(r.requirementType==='transactions'?'Complete qualifying transactions':'Bonus requirement deadline',r.reqDays);
+    source.forEach(t=>{const days=Number(t.daysRequired||t.days||0)||0;if(t.date)out.push(mk(t.text||'Suggested deadline',t.date,'',0));else if(days)addDaysTimer(t.text||'Suggested timer',days,t.category||timerCategoryFromText(t.text||''));});
+    if(r?.openBy&&!hasTimerCategory(out,'openby'))out.push(mk('Promo expiration / open-by deadline',r.openBy));
+    if(r?.fundedDays&&!hasTimerCategory(out,'funding',Number(r.fundedDays)))addDaysTimer('Deposit new money / funding deadline',r.fundedDays,'funding');
+    if((r?.holdDays||r?.minHoldDays)&&!hasTimerCategory(out,'hold',Number(r.holdDays||r.minHoldDays)))addDaysTimer('Maintain required balance / hold check',r.holdDays||r.minHoldDays,'hold');
+    if(r?.reqDays&&!hasTimerCategory(out,'requirement',Number(r.reqDays))){
+      const reqText=makeRequirementTimerText(r)||'Bonus requirement deadline';
+      addDaysTimer(reqText,r.reqDays,'requirement');
+    }
     const pDays=payoutDaysFromText(r?.payout||r?.payoutText||'');
     if(r?.reqDays&&pDays){
-      addDaysTimer('Bonus payout watch',Number(r.reqDays)+pDays);
-      addDaysTimer('Close review after payout',Number(r.reqDays)+pDays+5);
+      const payoutTotal=Number(r.reqDays)+pDays;
+      if(!hasTimerCategory(out,'payout',payoutTotal))addDaysTimer(/120th day|day\s*120/i.test(String(r?.payout||r?.payoutText||''))?'Bonus payout watch / expected around day 120':'Bonus payout watch',payoutTotal,'payout');
+      const buffer=Number(r?.closeBufferDays||3)||3;
+      const closeReviewDays=payoutTotal+buffer;
+      if(!hasTimerCategory(out,'close-review',closeReviewDays))addDaysTimer('Close review after payout buffer',closeReviewDays,'close-review');
     }
-    const seen=new Set();
-    return out.filter(t=>{const k=clean(t.text).toLowerCase()+'|'+String(t.daysRequired||'')+'|'+String(t.date||'');if(!t.text||seen.has(k))return false;seen.add(k);return true});
+    return dedupeSuggestedTimerList(out)
   }
   function mergeSuggestedTimers(existing,r,opened=''){
-    const base=Array.isArray(existing)?existing.slice():[];
-    const sig=x=>clean(x?.text||'').toLowerCase()+'|'+String(x?.daysRequired||'')+'|'+String(x?.date||'');
-    const seen=new Set(base.map(sig));
-    makeSuggestedTimers(r,opened).forEach(t=>{const k=sig(t);if(!seen.has(k)){base.push(t);seen.add(k)}});
-    return base;
+    const base=dedupeSuggestedTimerList(Array.isArray(existing)?existing.slice():[]);
+    const map=new Map(base.map(t=>[timerKey(t),t]));
+    makeSuggestedTimers(r,opened).forEach(t=>{
+      const k=timerKey(t), cur=map.get(k);
+      if(!cur||timerPriority(t)<timerPriority(cur))map.set(k,t);
+    });
+    return dedupeSuggestedTimerList(Array.from(map.values()));
   }
   function applyToModal(r){const m=modalObj();if(!m||!r)return false;r=chooseNoFeeAccountOption(r);m.bank=m.bank||r.bank;if(!m.opened)m.opened=todayIso();m.accountType=normalizeAccountType(m.accountType)||detectAccountType(r);if(r.bonus)m.bonus=r.bonus;if(r.reqDays)m.reqDays=r.reqDays;if(r.reqMoney)m.dataPoint=m.dataPoint||('DD '+money(r.reqMoney)+(r.reqDays?' within '+r.reqDays+' days':''));if(r.code)m.promoCodeText=r.code;if(r.openBy)m.expirationDateText=pretty(r.openBy);if(r.monthlyFeeYNText)m.monthlyFeeYNText=r.monthlyFeeYNText;else if(r.fee)m.monthlyFeeYNText=`Yes — ${money(r.fee)} monthly fee`;if(r.avoidMonthlyFeeText)m.avoidMonthlyFeeText=r.avoidMonthlyFeeText;else if(r.waivers?.length)m.avoidMonthlyFeeText=r.waivers.join('\n');if(r.actionPlan)m.completeBonusText=r.actionPlan;const elig=analyzerEligibilityText(r);if(elig)m.eligibilityText=elig;const earlyFee=analyzerEarlyFeeText(r);if(earlyFee)m.earlyTerminationFeeText=earlyFee;if(r.fundedDays)m.fundedDays=r.fundedDays;if(r.fundingAmount){m.fundingAmount=r.fundingAmount;m.fundingAmountText=money(r.fundingAmount)}if(r.payout||r.payoutText)m.payoutTimingText=r.payout||r.payoutText;const safeCloseDays=safeAnalyzerCloseDays(r);m.closeRuleBasis=safeAnalyzerCloseBasis(r);if(safeCloseDays){m.minHoldDays=safeCloseDays;m.closeFeeCountdownDays=String(safeCloseDays)}else{m.minHoldDays=0;m.closeFeeCountdownDays=''}if(r.closeRuleText&&!analyzerCloseLooksLikeMonthlyFee(r))m.closeRuleText=r.closeRuleText;else if(!safeCloseDays&&/bonus|payout|payment|good standing|restricted|default/i.test(analyzerCloseText(r)))m.closeRuleText=analyzerCloseText(r);if(r.closeBufferDays)m.closeBufferDays=r.closeBufferDays;if(r.monthlyFeeAmountText)m.monthlyFeeAmountText=r.monthlyFeeAmountText;if(r.monthlyFeeFrequency)m.monthlyFeeFrequency=r.monthlyFeeFrequency;if(r.monthlyFeeWaiverType)m.monthlyFeeWaiverType=r.monthlyFeeWaiverType;if(r.monthlyFeeWaiverAmountText)m.monthlyFeeWaiverAmountText=r.monthlyFeeWaiverAmountText;if(r.monthlyFeeWaiverText)m.monthlyFeeWaiverText=r.monthlyFeeWaiverText;m.customTimers=mergeSuggestedTimers(m.customTimers,r,m.opened||'');m.tcAnalysisResult=r;m.tcSourceRaw=r.raw;m.tcSourceId=r.sourceId;try{window.tcV3SaveSourceForCurrentEntry&&window.tcV3SaveSourceForCurrentEntry(r.raw,{bank:r.bank})}catch{}return true}
   function addDaysIso(start,days){try{if(window.addD)return window.addD(start,days)}catch{}const d=new Date(start+'T00:00:00');d.setDate(d.getDate()+Number(days||0));return d.toISOString().split('T')[0]}
@@ -199,7 +251,7 @@
     ].join('\n')
   }
   function copyIssueReport(){const txt=issueReport();navigator.clipboard?.writeText(txt).then(()=>alert('ChatGPT-ready fix prompt copied. Paste it into ChatGPT with a short note about what looked wrong.')).catch(()=>alert(txt))}
-  function openPro(){const src=window.tcV3ResolveSource?window.tcV3ResolveSource(findRaw()):{raw:findRaw()};let r=analyze(src.raw);document.getElementById('tca_overlay')?.remove();let h=`<div class="cbg" onclick="tcClosePro()"><div class="dd-box tca-box" onclick="event.stopPropagation()"><h3>✨ Unified Analyzer Pro <span style="font-size:9px;color:#94A3B8">v3.3.77</span></h3><div class="sub">Clean v3 pipeline: current pasted text first, entry saved source second, vault fallback last.</div><textarea id="tca_raw" class="dd-input" style="height:150px;line-height:1.45">${esc(src.raw||'')}</textarea><div class="crow"><button class="c-c" onclick="tcClosePro()">Close</button><button class="c-g" onclick="tcRunPro()">Analyze</button></div><div id="tcv3_result">${summaryHtml(r)}</div>`;if(r?.tiers?.length){h+=`<div class="tc-box"><div class="tc-label">Target tier</div><select class="dd-input" onchange="tcV3SelectTier(this.value)">`;r.tiers.forEach((t,i)=>h+=`<option value="${i}" ${i===r.tiers.length-1?'selected':''}>${money(t.bonus)} bonus — ${money(t.requirement)}+</option>`);h+=`</select></div>`}h+=`<div class="crow"><button class="c-c" onclick="tcCopyIssueReport()">🧾 Copy ChatGPT Fix Prompt</button><button class="c-g" onclick="tcApplyPro()">Apply Fields</button></div><button class="btn-p" style="margin-top:8px" onclick="tcCreateTimers()">Create Suggested Mini Timers</button></div></div>`;const d=document.createElement('div');d.id='tca_overlay';d.innerHTML=h;document.body.appendChild(d)}
+  function openPro(){const src=window.tcV3ResolveSource?window.tcV3ResolveSource(findRaw()):{raw:findRaw()};let r=analyze(src.raw);document.getElementById('tca_overlay')?.remove();let h=`<div class="cbg" onclick="tcClosePro()"><div class="dd-box tca-box" onclick="event.stopPropagation()"><h3>✨ Unified Analyzer Pro <span style="font-size:9px;color:#94A3B8">v3.3.78</span></h3><div class="sub">Clean v3 pipeline: current pasted text first, entry saved source second, vault fallback last.</div><textarea id="tca_raw" class="dd-input" style="height:150px;line-height:1.45">${esc(src.raw||'')}</textarea><div class="crow"><button class="c-c" onclick="tcClosePro()">Close</button><button class="c-g" onclick="tcRunPro()">Analyze</button></div><div id="tcv3_result">${summaryHtml(r)}</div>`;if(r?.tiers?.length){h+=`<div class="tc-box"><div class="tc-label">Target tier</div><select class="dd-input" onchange="tcV3SelectTier(this.value)">`;r.tiers.forEach((t,i)=>h+=`<option value="${i}" ${i===r.tiers.length-1?'selected':''}>${money(t.bonus)} bonus — ${money(t.requirement)}+</option>`);h+=`</select></div>`}h+=`<div class="crow"><button class="c-c" onclick="tcCopyIssueReport()">🧾 Copy ChatGPT Fix Prompt</button><button class="c-g" onclick="tcApplyPro()">Apply Fields</button></div><button class="btn-p" style="margin-top:8px" onclick="tcCreateTimers()">Create Suggested Mini Timers</button></div></div>`;const d=document.createElement('div');d.id='tca_overlay';d.innerHTML=h;document.body.appendChild(d)}
   function resultPlainText(r){
     if(!r)return'';
     const box=document.createElement('div');

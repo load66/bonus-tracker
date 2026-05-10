@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.77 Newest update: Fixed mobile keyboard dropping while typing Bank Name in New/Edit Entry.
+// ✅ Version 3.3.78 Newest update: Cleaned mini countdown timer generation and duplicate timer cleanup.
 
-const V = 'bt-v3.3.77';
+const V = 'bt-v3.3.78';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
