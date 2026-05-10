@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.76 Newest update: Manual old-entry replacement dropdown for new entries and edit duplicate fixes.
+// ✅ Version 3.3.77 Newest update: Fixed mobile keyboard dropping while typing Bank Name in New/Edit Entry.
 
-const V = 'bt-v3.3.76';
+const V = 'bt-v3.3.77';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
