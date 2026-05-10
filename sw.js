@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.67 Newest update: Added Guaranty Bank / GBank Perks Consumer Checking saved profile with close-rule intelligence.
+// ✅ Version 3.3.69 Newest update: Smarter Monthly Fee Plan parser for all banks, with stronger fee/waiver wording support.
 
-const V = 'bt-v3.3.67';
+const V = 'bt-v3.3.69';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
