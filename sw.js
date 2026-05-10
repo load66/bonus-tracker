@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.75 Newest update: Global no-monthly-fee account preference across bank offers plus today-opened autofill.
+// ✅ Version 3.3.69 Newest update: Added Guaranty Bank / GBank Perks Consumer Checking saved profile with close-rule intelligence.
 
-const V = 'bt-v3.3.75';
+const V = 'bt-v3.3.69';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
