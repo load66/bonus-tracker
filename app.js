@@ -1,7 +1,7 @@
 /* ✅ Version 2.0 Newest update: Removed Profile tab + added Data Health and safer backup/close guardrails. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.3.69';
+const APP_VERSION='3.3.70';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 
@@ -253,6 +253,7 @@ function renderClosePlan(e){
 }
 
 
+
 function cleanPlanText(v){
   return String(v||'').replace(/[•·]/g,' * ').replace(/\s+/g,' ').trim()
 }
@@ -268,10 +269,20 @@ function monthlyTextScope(e){
   return String([
     e?.monthlyFeeYNText,
     e?.avoidMonthlyFeeText,
+    e?.notes,
+    e?.dataPoint,
     e?.completeBonusText,
     e?.eligibilityText,
     e?.analyzedTC
   ].filter(Boolean).join('\n'))
+}
+function noteMonthlyFeeScope(e){
+  const scope=monthlyTextScope(e);
+  const out=[];
+  splitPlanLines(scope).forEach(line=>{
+    if(/fee|waiv|avg|average|minimum|balance|\$[0-9]|\/mo|monthly|statement|estatements?|DD|direct deposit/i.test(line))out.push(line)
+  });
+  return out.join('\n')
 }
 function noMonthlyFeeDetected(e){
   const direct=String(e?.monthlyFeeYNText||'');
@@ -281,9 +292,9 @@ function noMonthlyFeeDetected(e){
 }
 function feeCandidateSentences(e){
   const scope=monthlyTextScope(e).replace(/\r/g,'\n');
-  const parts=scope.split(/(?<=[.!?])\s+|\n+/).map(cleanPlanText).filter(Boolean);
-  const feeWords=/(monthly|maintenance|service fee|service charge|paper statement|statement fee|quarterly|monthly account fee|maintenance charge|account fee|fee period|cycle fee)/i;
-  return parts.filter(x=>feeWords.test(x)&&!/overdraft|wire|atm|cashier|stop payment|returned|nsf|foreign|replacement card/i.test(x)).slice(0,18)
+  const parts=scope.split(/(?<=[.!?])\s+|\n+|\/+/).map(cleanPlanText).filter(Boolean);
+  const feeWords=/(monthly|maintenance|service fee|service charge|paper statement|statement fee|quarterly|monthly account fee|maintenance charge|account fee|fee period|cycle fee|closed?\s*<|fee if closed)/i;
+  return parts.filter(x=>feeWords.test(x)&&!/overdraft|wire|atm|cashier|stop payment|returned|nsf|foreign|replacement card/i.test(x)).slice(0,20)
 }
 function extractFeeAmounts(e){
   const out=[];
@@ -294,37 +305,47 @@ function extractFeeAmounts(e){
       if(!out.some(x=>x.amount===amt&&x.text===s))out.push({amount:amt,text:s});
     })
   });
-  return out.slice(0,5)
+  return out.slice(0,6)
 }
 function extractMonthlyFeeAmountText(e){
   if(noMonthlyFeeDetected(e))return 'No monthly service fee saved';
-  const fees=extractFeeAmounts(e);
+  const fees=extractFeeAmounts(e).filter(x=>!/(closed?\s*<|early close|closing fee|fee if closed|closed within)/i.test(x.text));
   if(fees.length){
     const preferred=fees.find(x=>/(monthly|maintenance|service fee|monthly account fee|paper statement|statement fee|quarterly|service charge)/i.test(x.text))||fees[0];
     return preferred.text
   }
   const direct=cleanPlanText(e?.monthlyFeeYNText||'');
-  if(direct&&!/not clearly stated/i.test(direct))return direct;
+  if(direct&&!/^(yes|y|true|monthly fee[: ]*yes|service fee[: ]*yes)$/i.test(direct)&&!/not clearly stated/i.test(direct))return direct;
   return ''
 }
 function waiverCandidateSentences(e){
   const scope=monthlyTextScope(e).replace(/\r/g,'\n');
   const parts=scope.split(/(?<=[.!?])\s+|\n+/).map(cleanPlanText).filter(Boolean);
-  const waiverWords=/(avoid|waive|waived|waiver|no monthly|no service fee|minimum|daily|average|ending|beginning|combined|balance|direct deposit|electronic deposit|debit card|card purchases|payment solutions|estatements?|paperless|military|student|age|senior|linked|relationship|rewards|smart rewards|roundup)/i;
-  return parts.filter(x=>waiverWords.test(x)&&!/overdraft|wire|atm|cashier|stop payment|returned|nsf|foreign/i.test(x)).slice(0,24)
+  const waiverWords=/(avoid|waive|waived|waiver|w\/|no monthly|no service fee|minimum|daily|average|avg|ending|beginning|combined|balance|direct deposit|\bDD\b|electronic deposit|debit card|card purchases|payment solutions|estatements?|paperless|military|student|age|senior|linked|relationship|rewards|smart rewards|roundup|\$[0-9][0-9,]*(?:\.\d{1,2})?\s*(?:avg|average|balance|\/mo|per month|monthly))/i;
+  return parts.filter(x=>waiverWords.test(x)&&!/overdraft|wire|atm|cashier|stop payment|returned|nsf|foreign/i.test(x)).slice(0,28)
+}
+function normalizeWaiverPhrase(s){
+  let x=cleanPlanText(s);
+  x=x.replace(/\bw\/\b/ig,'with');
+  x=x.replace(/\bDD\b/g,'direct deposit');
+  x=x.replace(/\/mo\b/ig,' per month');
+  x=x.replace(/\bavg\b/ig,'average balance');
+  x=x.replace(/\s+or\s+/ig,' OR ');
+  return x
 }
 function extractBalanceWaiverText(e){
   const list=waiverCandidateSentences(e);
   const patterns=[
-    /\$\s*[0-9][0-9,]*(?:\.\d{1,2})?[^.]{0,150}(?:minimum|daily|average|ending|beginning|combined)[^.]{0,150}balance/i,
-    /(?:minimum|daily|average|ending|beginning|combined)[^.]{0,150}balance[^.]{0,150}\$\s*[0-9][0-9,]*(?:\.\d{1,2})?/i,
-    /\$\s*[0-9][0-9,]*(?:\.\d{1,2})?[^.]{0,150}(?:direct deposits?|electronic deposits?|payment solutions|card purchases|debit card purchases)/i,
-    /(?:direct deposits?|electronic deposits?|payment solutions|card purchases|debit card purchases)[^.]{0,150}\$\s*[0-9][0-9,]*(?:\.\d{1,2})?/i
+    /\$\s*[0-9][0-9,]*(?:\.\d{1,2})?[^.]{0,150}(?:minimum|daily|average|avg|ending|beginning|combined)[^.]{0,150}balance/i,
+    /(?:minimum|daily|average|avg|ending|beginning|combined)[^.]{0,150}balance[^.]{0,150}\$\s*[0-9][0-9,]*(?:\.\d{1,2})?/i,
+    /\$\s*[0-9][0-9,]*(?:\.\d{1,2})?\s*(?:avg|average)/i,
+    /\$\s*[0-9][0-9,]*(?:\.\d{1,2})?[^.]{0,150}(?:direct deposits?|\bDD\b|electronic deposits?|payment solutions|card purchases|debit card purchases|\/mo|per month)/i,
+    /(?:direct deposits?|\bDD\b|electronic deposits?|payment solutions|card purchases|debit card purchases)[^.]{0,150}\$\s*[0-9][0-9,]*(?:\.\d{1,2})?/i
   ];
   for(const s of list){
     for(const re of patterns){
       const m=s.match(re);
-      if(m)return cleanPlanText(m[0])
+      if(m)return normalizeWaiverPhrase(m[0])
     }
   }
   return ''
@@ -337,27 +358,28 @@ function extractAvoidFeeLines(e){
   if(m)splitPlanLines(m[1]).forEach(x=>out.push(x));
   waiverCandidateSentences(e).forEach(s=>{
     if(/estatements?|paperless|paper statement/i.test(s))out.push(s);
-    else if(/(?:avoid|waive|waived|waiver)/i.test(s))out.push(s);
-    else if(/(?:minimum|daily|average|ending|beginning|combined)[^.]{0,140}balance|\$\s*[0-9][0-9,]*(?:\.\d{1,2})?[^.]{0,140}balance/i.test(s))out.push(s);
-    else if(/direct deposits?|electronic deposits?|card purchases|payment solutions|linked|relationship|military|student|senior|age/i.test(s))out.push(s);
+    else if(/(?:avoid|waive|waived|waiver|w\/)/i.test(s))out.push(s);
+    else if(/(?:minimum|daily|average|avg|ending|beginning|combined)[^.]{0,140}balance|\$\s*[0-9][0-9,]*(?:\.\d{1,2})?[^.]{0,140}(?:balance|avg|average)/i.test(s))out.push(s);
+    else if(/direct deposits?|\bDD\b|electronic deposits?|card purchases|payment solutions|linked|relationship|military|student|senior|age|\$[0-9][0-9,]*(?:\.\d{1,2})?\s*\/mo/i.test(s))out.push(s);
   });
   const fee=String(e?.monthlyFeeYNText||'');
   if(/estatements?|paper statement|paperless/i.test(fee)&&!/estatements?|paperless/i.test(out.join(' ')))out.push('Use eStatements / paperless statements when available');
-  return Array.from(new Set(out.map(cleanPlanText).filter(Boolean)))
+  return Array.from(new Set(out.map(normalizeWaiverPhrase).filter(Boolean)))
     .filter(x=>x.length<420)
+    .filter(x=>!/^\s*(yes|true|no)\s*$/i.test(x))
     .slice(0,6)
 }
 function monthlyFeeKnownStatus(e){
   if(noMonthlyFeeDetected(e))return{kind:'none',label:'No Monthly Fee',cls:'safe'};
-  const fees=extractFeeAmounts(e);
+  const fees=extractFeeAmounts(e).filter(x=>!/(closed?\s*<|early close|closing fee|fee if closed|closed within)/i.test(x.text));
   const avoid=extractAvoidFeeLines(e);
   if(e?.monthlyFeeChecked)return{kind:'checked',label:'Fee Checked',cls:'safe'};
-  if(fees.length||avoid.length||e?.monthlyFeeYNText||e?.avoidMonthlyFeeText)return{kind:'avoid',label:'Avoid Until Close',cls:'warn'};
+  if(fees.length||avoid.length||e?.monthlyFeeYNText||e?.avoidMonthlyFeeText||noteMonthlyFeeScope(e))return{kind:'avoid',label:'Avoid Until Close',cls:'warn'};
   return{kind:'review',label:'Review Fee Terms',cls:'warn'}
 }
 function monthlyFeePlanForEntry(e){
   if(!e||!e.bank)return null;
-  const raw=cleanPlanText([e.monthlyFeeYNText,e.avoidMonthlyFeeText].filter(Boolean).join(' '));
+  const raw=cleanPlanText([e.monthlyFeeYNText,e.avoidMonthlyFeeText,e.notes].filter(Boolean).join(' '));
   const fee=extractMonthlyFeeAmountText(e);
   const balance=extractBalanceWaiverText(e);
   const avoid=extractAvoidFeeLines(e);
@@ -1118,7 +1140,7 @@ function chartData(){
 /* Bank Identity v3.3.42
    Centralized bank matching. Display names can vary, but duplicate/churn
    matching uses canonical bank family + personal/business type. */
-const BANK_IDENTITY_VERSION='3.3.69';
+const BANK_IDENTITY_VERSION='3.3.70';
 function normBankText(v){return String(v||'').toLowerCase().replace(/[®™℠]/g,'').replace(/&/g,' and ').replace(/\*/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim()}
 function bankAliasGroups(){return[
   ['chase','CHA',['chase','jpmorgan chase','jp morgan chase','jpmorgan','jp morgan','jpm']],
@@ -4993,6 +5015,6 @@ entries=sortE(entries);R();
 })();
 /* === End consolidated core module: Tracker card bank actions renderer === */
 
-(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.69 close intelligence polish */\n.close-intel.safe{border-color:#bbf7d0;background:#f0fdf4}\n.close-intel.warn,.close-intel.plan{border-color:#fde68a;background:#fffbeb}\n.close-intel.danger{border-color:#fecaca;background:#fff7f7}\n.close-ready{padding:10px 12px;border-radius:14px;margin:10px 0 12px;border:1px solid #e5e7eb;background:#f8fafc;font-size:12px;line-height:1.35}\n.close-ready b{display:block;font-size:13px;margin-bottom:2px}\n.close-ready.safe{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}\n.close-ready.warn,.close-ready.plan{background:#fffbeb;border-color:#fde68a;color:#78350f}\n.close-ready.danger{background:#fff1f2;border-color:#fecaca;color:#7f1d1d}\n.close-final-note{font-size:11px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px;margin-top:10px;line-height:1.35}\n";document.head.appendChild(st)}catch{}})();
+(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.70 close intelligence polish */\n.close-intel.safe{border-color:#bbf7d0;background:#f0fdf4}\n.close-intel.warn,.close-intel.plan{border-color:#fde68a;background:#fffbeb}\n.close-intel.danger{border-color:#fecaca;background:#fff7f7}\n.close-ready{padding:10px 12px;border-radius:14px;margin:10px 0 12px;border:1px solid #e5e7eb;background:#f8fafc;font-size:12px;line-height:1.35}\n.close-ready b{display:block;font-size:13px;margin-bottom:2px}\n.close-ready.safe{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}\n.close-ready.warn,.close-ready.plan{background:#fffbeb;border-color:#fde68a;color:#78350f}\n.close-ready.danger{background:#fff1f2;border-color:#fecaca;color:#7f1d1d}\n.close-final-note{font-size:11px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px;margin-top:10px;line-height:1.35}\n";document.head.appendChild(st)}catch{}})();
 
-(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.69 monthly fee plan box */\n.monthly-fee-plan.safe{border-color:#bbf7d0;background:#f0fdf4}\n.monthly-fee-plan.warn{border-color:#fde68a;background:#fffbeb}\n.monthly-fee-plan .tc-label{letter-spacing:.11em}\n";document.head.appendChild(st)}catch{}})();
+(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.70 monthly fee plan box */\n.monthly-fee-plan.safe{border-color:#bbf7d0;background:#f0fdf4}\n.monthly-fee-plan.warn{border-color:#fde68a;background:#fffbeb}\n.monthly-fee-plan .tc-label{letter-spacing:.11em}\n";document.head.appendChild(st)}catch{}})();

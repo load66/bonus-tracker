@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.69 Newest update: Smarter Monthly Fee Plan parser for all banks, with stronger fee/waiver wording support.
+// ✅ Version 3.3.70 Newest update: Monthly Fee Plan now reads bank notes and shorthand waiver wording like $1,500 avg or $500/mo DD.
 
-const V = 'bt-v3.3.69';
+const V = 'bt-v3.3.70';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
