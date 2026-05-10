@@ -1,7 +1,7 @@
 /* ✅ Version 2.0 Newest update: Removed Profile tab + added Data Health and safer backup/close guardrails. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.3.70';
+const APP_VERSION='3.3.71';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 
@@ -160,7 +160,7 @@ function offerSignature(snap){
 function offerSnapshotFromEntry(e,source){
   if(!e||!e.bank)return null;
   const analyzed=String(e.analyzedTC||'');
-  const snap={id:'ofr_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6),bank:e.bank,accountType:normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'personal',entryId:e.id||'',source:source||'entry',savedAt:td(),opened:e.opened||'',closed:e.closed||'',bonusRecd:e.bonusRecd||'',bonus:e.bonus||0,churn:e.churn||'',reqDays:e.reqDays||0,minHoldDays:e.minHoldDays||0,earlyCloseFee:e.earlyCloseFee||0,closeRuleBasis:normalizeCloseRuleBasis(e.closeRuleBasis),closeBufferDays:closeBufferDaysFor(e),closeRuleText:e.closeRuleText||'',monthlyFeeChecked:!!e.monthlyFeeChecked,fundedDays:e.fundedDays||0,fundingAmount:e.fundingAmount||0,fundingAmountText:e.fundingAmountText||'',payoutTimingText:e.payoutTimingText||'',monthlyFeeYNText:e.monthlyFeeYNText||'',promoCodeText:e.promoCodeText||'',avoidMonthlyFeeText:e.avoidMonthlyFeeText||'',completeBonusText:e.completeBonusText||'',eligibilityText:e.eligibilityText||'',expirationDateText:e.expirationDateText||'',requiredDaysText:e.requiredDaysText||'',notes:String(e.notes||'').slice(0,600),analyzedPreview:analyzed.slice(0,900)};
+  const snap={id:'ofr_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6),bank:e.bank,accountType:normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'personal',entryId:e.id||'',source:source||'entry',savedAt:td(),opened:e.opened||'',closed:e.closed||'',bonusRecd:e.bonusRecd||'',bonus:e.bonus||0,churn:e.churn||'',reqDays:e.reqDays||0,minHoldDays:e.minHoldDays||0,earlyCloseFee:e.earlyCloseFee||0,closeRuleBasis:normalizeCloseRuleBasis(e.closeRuleBasis),closeBufferDays:closeBufferDaysFor(e),closeRuleText:e.closeRuleText||'',monthlyFeeChecked:!!e.monthlyFeeChecked,fundedDays:e.fundedDays||0,fundingAmount:e.fundingAmount||0,fundingAmountText:e.fundingAmountText||'',payoutTimingText:e.payoutTimingText||'',monthlyFeeYNText:e.monthlyFeeYNText||'',monthlyFeeAmountText:e.monthlyFeeAmountText||'',monthlyFeeFrequency:e.monthlyFeeFrequency||'',monthlyFeeWaiverType:e.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:e.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:e.monthlyFeeWaiverText||'',promoCodeText:e.promoCodeText||'',avoidMonthlyFeeText:e.avoidMonthlyFeeText||'',completeBonusText:e.completeBonusText||'',eligibilityText:e.eligibilityText||'',expirationDateText:e.expirationDateText||'',requiredDaysText:e.requiredDaysText||'',notes:String(e.notes||'').slice(0,600),analyzedPreview:analyzed.slice(0,900)};
   const tier=analyzed.match(/Bonus:\s*([^*]{0,240})/i);
   if(tier)snap.bonusTierText=tier[1].trim();
   snap.signature=offerSignature(snap);
@@ -254,21 +254,40 @@ function renderClosePlan(e){
 
 
 
+
 function cleanPlanText(v){
   return String(v||'').replace(/[•·]/g,' * ').replace(/\s+/g,' ').trim()
 }
 function splitPlanLines(v){
   return String(v||'')
     .replace(/\r/g,'\n')
-    .split(/\n|;|\s+\*\s+|\s+\|\s+| OR /i)
+    .split(/\n|;|\s+\*\s+|\s+\|\s+|\s+\/\s+| OR /i)
     .map(cleanPlanText)
     .map(x=>x.replace(/^\*+\s*/,'').trim())
     .filter(Boolean)
+}
+function normalizeMoneyToken(v){
+  return String(v||'').replace(/\s+/g,'').replace(/\.00\b/,'')
+}
+function normalizeWaiverPhrase(s){
+  let x=cleanPlanText(s);
+  x=x.replace(/\bw\s*\/\s*/ig,'with ');
+  x=x.replace(/\bDD\b/g,'direct deposit');
+  x=x.replace(/\/mo\b/ig,' per month');
+  x=x.replace(/\bmo\b/ig,'month');
+  x=x.replace(/\bavg\b/ig,'average balance');
+  x=x.replace(/\s+or\s+/ig,' OR ');
+  x=x.replace(/\s+\/\s+/g,' OR ');
+  x=x.replace(/^waived?\s*(?:with)?\s*/i,'Waived with ');
+  x=x.replace(/^waiver\s*(?:with)?\s*/i,'Waived with ');
+  x=x.replace(/Waived with\s+with\s+/i,'Waived with ');
+  return cleanPlanText(x)
 }
 function monthlyTextScope(e){
   return String([
     e?.monthlyFeeYNText,
     e?.avoidMonthlyFeeText,
+    e?.monthlyFeeWaiverText,
     e?.notes,
     e?.dataPoint,
     e?.completeBonusText,
@@ -276,13 +295,28 @@ function monthlyTextScope(e){
     e?.analyzedTC
   ].filter(Boolean).join('\n'))
 }
-function noteMonthlyFeeScope(e){
-  const scope=monthlyTextScope(e);
-  const out=[];
-  splitPlanLines(scope).forEach(line=>{
-    if(/fee|waiv|avg|average|minimum|balance|\$[0-9]|\/mo|monthly|statement|estatements?|DD|direct deposit/i.test(line))out.push(line)
+function segmentMonthlyText(e){
+  const raw=monthlyTextScope(e);
+  const base=[];
+  splitPlanLines(raw).forEach(x=>base.push(x));
+  raw.split(/(?<=[.!?])\s+|\n+|;+/).forEach(sentence=>{
+    const s=cleanPlanText(sentence);
+    if(!s)return;
+    if(/waiv|avoid|monthly|maintenance|service charge|service fee|paper statement|statement fee|quarterly|\$[0-9]|avg|balance|\/mo|\bDD\b|direct deposit/i.test(s)){
+      s.split(/\s+\/\s+/).map(cleanPlanText).filter(Boolean).forEach(part=>base.push(part));
+      const m=s.match(/(?:waived?|waiver|avoid(?:ed)?)(?:\s+w\/|\s+with|\s+by)?\s*[:\-]?\s*([\s\S]{0,260})/i);
+      if(m&&m[1])base.push('Waived with '+m[1]);
+    }
   });
-  return out.join('\n')
+  return Array.from(new Set(base.map(cleanPlanText).filter(Boolean))).slice(0,50)
+}
+function isUnrelatedFeeLine(x){
+  return /overdraft|wire|atm|cashier|stop payment|returned|nsf|foreign|replacement card/i.test(x||'')
+}
+function isBonusRequirementNoise(x){
+  const s=String(x||'');
+  return /(bonus|debit txns?|transactions?|within\s+\d+\s+days|req(?:uirement)?|direct deposit within|DD within|fee if closed|closed\s*<|early close|closing fee)/i.test(s)
+    && !/(waiv|avoid|monthly|maintenance|service fee|service charge|paper statement|statement fee|average balance|avg|minimum balance|\$[0-9][0-9,]*(?:\.\d{1,2})?\s*(?:\/mo|per month|monthly))/i.test(s)
 }
 function noMonthlyFeeDetected(e){
   const direct=String(e?.monthlyFeeYNText||'');
@@ -291,25 +325,32 @@ function noMonthlyFeeDetected(e){
     || /no\s+monthly\s+(?:service\s+)?fee|no\s+monthly\s+maintenance\s+fee|\$0\s+monthly/i.test(scope)
 }
 function feeCandidateSentences(e){
-  const scope=monthlyTextScope(e).replace(/\r/g,'\n');
-  const parts=scope.split(/(?<=[.!?])\s+|\n+|\/+/).map(cleanPlanText).filter(Boolean);
-  const feeWords=/(monthly|maintenance|service fee|service charge|paper statement|statement fee|quarterly|monthly account fee|maintenance charge|account fee|fee period|cycle fee|closed?\s*<|fee if closed)/i;
-  return parts.filter(x=>feeWords.test(x)&&!/overdraft|wire|atm|cashier|stop payment|returned|nsf|foreign|replacement card/i.test(x)).slice(0,20)
+  const parts=segmentMonthlyText(e);
+  const feeWords=/(monthly|maintenance|service fee|service charge|paper statement|statement fee|quarterly|monthly account fee|maintenance charge|account fee|fee period|cycle fee)/i;
+  return parts.filter(x=>feeWords.test(x)&&!isUnrelatedFeeLine(x)&&!/(closed?\s*<|early close|closing fee|fee if closed|closed within)/i.test(x)).slice(0,20)
 }
 function extractFeeAmounts(e){
   const out=[];
   feeCandidateSentences(e).forEach(s=>{
     const matches=[...s.matchAll(/\$\s*[0-9][0-9,]*(?:\.\d{1,2})?/g)];
     matches.forEach(m=>{
-      const amt=m[0].replace(/\s+/g,'');
+      const amt=normalizeMoneyToken(m[0]);
       if(!out.some(x=>x.amount===amt&&x.text===s))out.push({amount:amt,text:s});
     })
   });
   return out.slice(0,6)
 }
+function detectMonthlyFeeFrequency(e){
+  const scope=monthlyTextScope(e);
+  if(/quarterly|per quarter|each quarter/i.test(scope))return'quarterly';
+  if(/statement cycle|fee period|cycle fee/i.test(scope))return'statement-cycle';
+  if(/monthly|per month|\/mo|maintenance fee|service fee/i.test(scope))return'monthly';
+  return''
+}
 function extractMonthlyFeeAmountText(e){
+  if(e?.monthlyFeeAmountText)return cleanPlanText(e.monthlyFeeAmountText);
   if(noMonthlyFeeDetected(e))return 'No monthly service fee saved';
-  const fees=extractFeeAmounts(e).filter(x=>!/(closed?\s*<|early close|closing fee|fee if closed|closed within)/i.test(x.text));
+  const fees=extractFeeAmounts(e);
   if(fees.length){
     const preferred=fees.find(x=>/(monthly|maintenance|service fee|monthly account fee|paper statement|statement fee|quarterly|service charge)/i.test(x.text))||fees[0];
     return preferred.text
@@ -319,21 +360,15 @@ function extractMonthlyFeeAmountText(e){
   return ''
 }
 function waiverCandidateSentences(e){
-  const scope=monthlyTextScope(e).replace(/\r/g,'\n');
-  const parts=scope.split(/(?<=[.!?])\s+|\n+/).map(cleanPlanText).filter(Boolean);
-  const waiverWords=/(avoid|waive|waived|waiver|w\/|no monthly|no service fee|minimum|daily|average|avg|ending|beginning|combined|balance|direct deposit|\bDD\b|electronic deposit|debit card|card purchases|payment solutions|estatements?|paperless|military|student|age|senior|linked|relationship|rewards|smart rewards|roundup|\$[0-9][0-9,]*(?:\.\d{1,2})?\s*(?:avg|average|balance|\/mo|per month|monthly))/i;
-  return parts.filter(x=>waiverWords.test(x)&&!/overdraft|wire|atm|cashier|stop payment|returned|nsf|foreign/i.test(x)).slice(0,28)
-}
-function normalizeWaiverPhrase(s){
-  let x=cleanPlanText(s);
-  x=x.replace(/\bw\/\b/ig,'with');
-  x=x.replace(/\bDD\b/g,'direct deposit');
-  x=x.replace(/\/mo\b/ig,' per month');
-  x=x.replace(/\bavg\b/ig,'average balance');
-  x=x.replace(/\s+or\s+/ig,' OR ');
-  return x
+  const parts=segmentMonthlyText(e);
+  const waiverWords=/(avoid|waive|waived|waiver|with\s+\$|w\/|no monthly|no service fee|minimum|daily|average|avg|ending|beginning|combined|balance|direct deposit|\bDD\b|electronic deposit|debit card|card purchases|payment solutions|estatements?|paperless|military|student|age|senior|linked|relationship|rewards|smart rewards|roundup|\$[0-9][0-9,]*(?:\.\d{1,2})?\s*(?:avg|average|balance|\/mo|per month|monthly))/i;
+  return parts
+    .filter(x=>waiverWords.test(x)&&!isUnrelatedFeeLine(x))
+    .filter(x=>!isBonusRequirementNoise(x)||/waiv|avoid|monthly|maintenance|service fee|service charge|paper statement|statement fee/i.test(x))
+    .slice(0,28)
 }
 function extractBalanceWaiverText(e){
+  if(e?.monthlyFeeWaiverAmountText)return cleanPlanText(e.monthlyFeeWaiverAmountText);
   const list=waiverCandidateSentences(e);
   const patterns=[
     /\$\s*[0-9][0-9,]*(?:\.\d{1,2})?[^.]{0,150}(?:minimum|daily|average|avg|ending|beginning|combined)[^.]{0,150}balance/i,
@@ -350,8 +385,36 @@ function extractBalanceWaiverText(e){
   }
   return ''
 }
+function classifyMonthlyFeeWaiverType(text){
+  const s=String(text||'');
+  const types=[];
+  if(/balance|avg|average|minimum|daily|combined/i.test(s))types.push('Balance');
+  if(/direct deposit|\bDD\b|electronic deposit|\/mo|per month|monthly deposit/i.test(s))types.push('Direct deposit');
+  if(/estatements?|paperless|paper statement/i.test(s))types.push('eStatements');
+  if(/linked|relationship|qualifying account/i.test(s))types.push('Linked account');
+  if(/card purchases|debit card|payment solutions/i.test(s))types.push('Card/payment activity');
+  if(/military|student|senior|\bage\b|age-based|under\s+age|over\s+age/i.test(s))types.push('Age/military/student');
+  return types.length?types.join(' / '):''
+}
+function extractExplicitWaiverText(e){
+  if(e?.monthlyFeeWaiverText)return normalizeWaiverPhrase(e.monthlyFeeWaiverText);
+  const parts=segmentMonthlyText(e);
+  const found=[];
+  parts.forEach(p=>{
+    const s=cleanPlanText(p);
+    if(/^(?:waived?|waiver|avoid)/i.test(s)||/(?:waived?|waiver|avoid)[^.;]{0,240}\$[0-9]/i.test(s)){
+      found.push(normalizeWaiverPhrase(s.replace(/^[^:]*:\s*/,'')))
+    }
+  });
+  const raw=monthlyTextScope(e);
+  const m=raw.match(/(?:waived?|waiver|avoid(?:ed)?)(?:\s+w\/|\s+with|\s+by)?\s*[:\-]?\s*([\s\S]{0,260})/i);
+  if(m&&m[1])found.push(normalizeWaiverPhrase('Waived with '+m[1].split(/[.\n]/)[0]));
+  return Array.from(new Set(found.filter(Boolean))).find(x=>/\$[0-9]|estatements?|paperless|balance|direct deposit/i.test(x))||''
+}
 function extractAvoidFeeLines(e){
   const out=[];
+  const explicit=extractExplicitWaiverText(e);
+  if(explicit)out.push(explicit);
   splitPlanLines(e?.avoidMonthlyFeeText).forEach(x=>out.push(x));
   const analyzed=String(e?.analyzedTC||'');
   const m=analyzed.match(/MONTHLY FEE CAN BE AVOIDED WITH:\s*([\s\S]{0,1200}?)(?:\n[A-Z][A-Z \/]+:|\nREVIEW:|\nWORDING NORMALIZED:|\nSOURCE SNIPPETS:|$)/i);
@@ -364,25 +427,44 @@ function extractAvoidFeeLines(e){
   });
   const fee=String(e?.monthlyFeeYNText||'');
   if(/estatements?|paper statement|paperless/i.test(fee)&&!/estatements?|paperless/i.test(out.join(' ')))out.push('Use eStatements / paperless statements when available');
-  return Array.from(new Set(out.map(normalizeWaiverPhrase).filter(Boolean)))
+  const clean=Array.from(new Set(out.map(normalizeWaiverPhrase).filter(Boolean)))
     .filter(x=>x.length<420)
-    .filter(x=>!/^\s*(yes|true|no)\s*$/i.test(x))
-    .slice(0,6)
+    .filter(x=>!isBonusRequirementNoise(x) || /waiv|avoid|monthly|maintenance|service fee|service charge|paper statement|statement fee/i.test(x))
+    .filter(x=>!/^\s*(yes|true|no)\s*$/i.test(x));
+  const full=clean.find(x=>/^Waived with/i.test(x)&&((x.match(/\$/g)||[]).length>=2||/estatements?|paperless/i.test(x)));
+  if(full)return [full].concat(clean.filter(x=>x!==full&&!/^Waived with/i.test(x)).slice(0,2));
+  return clean.slice(0,4)
+}
+function deriveMonthlyFeeStructure(e){
+  const feeText=extractMonthlyFeeAmountText(e);
+  const waiverText=extractAvoidFeeLines(e).join(' OR ');
+  const waiverAmount=extractBalanceWaiverText(e);
+  const freq=detectMonthlyFeeFrequency(e);
+  const noFee=noMonthlyFeeDetected(e);
+  return{
+    monthlyFeeAmountText:noFee?'$0':(feeText&&/^\$/.test(feeText)?feeText:''),
+    monthlyFeeFrequency:freq||'monthly',
+    monthlyFeeWaiverType:classifyMonthlyFeeWaiverType(waiverText||waiverAmount),
+    monthlyFeeWaiverAmountText:waiverAmount||'',
+    monthlyFeeWaiverText:waiverText||'',
+    monthlyFeeNoMonthlyServiceFee:!!noFee
+  }
 }
 function monthlyFeeKnownStatus(e){
   if(noMonthlyFeeDetected(e))return{kind:'none',label:'No Monthly Fee',cls:'safe'};
-  const fees=extractFeeAmounts(e).filter(x=>!/(closed?\s*<|early close|closing fee|fee if closed|closed within)/i.test(x.text));
+  const fees=extractFeeAmounts(e);
   const avoid=extractAvoidFeeLines(e);
   if(e?.monthlyFeeChecked)return{kind:'checked',label:'Fee Checked',cls:'safe'};
-  if(fees.length||avoid.length||e?.monthlyFeeYNText||e?.avoidMonthlyFeeText||noteMonthlyFeeScope(e))return{kind:'avoid',label:'Avoid Until Close',cls:'warn'};
+  if(fees.length||avoid.length||e?.monthlyFeeYNText||e?.avoidMonthlyFeeText||e?.monthlyFeeWaiverText||e?.notes)return{kind:'avoid',label:'Avoid Until Close',cls:'warn'};
   return{kind:'review',label:'Review Fee Terms',cls:'warn'}
 }
 function monthlyFeePlanForEntry(e){
   if(!e||!e.bank)return null;
-  const raw=cleanPlanText([e.monthlyFeeYNText,e.avoidMonthlyFeeText,e.notes].filter(Boolean).join(' '));
+  const structured=deriveMonthlyFeeStructure(e);
+  const raw=cleanPlanText([e.monthlyFeeYNText,e.avoidMonthlyFeeText,e.monthlyFeeWaiverText,e.notes].filter(Boolean).join(' '));
   const fee=extractMonthlyFeeAmountText(e);
-  const balance=extractBalanceWaiverText(e);
-  const avoid=extractAvoidFeeLines(e);
+  const balance=structured.monthlyFeeWaiverAmountText||extractBalanceWaiverText(e);
+  const avoid=structured.monthlyFeeWaiverText?structured.monthlyFeeWaiverText.split(/\s+OR\s+/i).map(normalizeWaiverPhrase).filter(Boolean):extractAvoidFeeLines(e);
   const hasAny=!!(fee||balance||avoid.length||raw);
   if(!hasAny)return null;
   const state=monthlyFeeKnownStatus(e);
@@ -392,8 +474,10 @@ function monthlyFeePlanForEntry(e){
   else lines.push('Monthly fee status: keep fee waiver active until the account is actually closed.');
   if(fee)lines.push('Fee: '+fee+'.');
   else if(state.kind!=='none')lines.push('Fee amount: not saved clearly; review account terms or statement cycle.');
+  if(structured.monthlyFeeFrequency&&state.kind!=='none')lines.push('Fee frequency: '+structured.monthlyFeeFrequency.replace('-', ' ')+'.');
   if(balance)lines.push('Minimum balance / waiver target: '+balance+'.');
-  if(avoid.length)lines.push('How to avoid: '+avoid.join(' OR ')+'.');
+  if(structured.monthlyFeeWaiverType)lines.push('Waiver type: '+structured.monthlyFeeWaiverType+'.');
+  if(avoid.length)lines.push('How to avoid: '+Array.from(new Set(avoid)).slice(0,3).join(' OR ')+'.');
   else if(state.kind!=='none')lines.push('How to avoid: not saved clearly; add waiver terms in Edit when known.');
   if(e.monthlyFeeChecked)lines.push('Monthly fee checked: Yes.');
   else if(state.kind!=='none')lines.push('Monthly fee checked: Not yet — check before closing or before the next statement cycle.');
@@ -448,7 +532,7 @@ function entryReqSnapshot(e){
     bank:e.bank,
     accountType:normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'personal'
   };
-  ['bonus','notes','dataPoint','fundedDays','fundingAmount','fundingAmountText','payoutTimingText','churn','reqDays','monthlyFeeYNText','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText','eligibilityText','expirationDateText','requiredDaysText','minHoldDays','earlyCloseFee','closeRuleBasis','closeBufferDays','closeRuleText','monthlyFeeChecked'].forEach(k=>{const v=e[k];if(v!==undefined&&v!==null&&v!=='')snap[k]=v});
+  ['bonus','notes','dataPoint','fundedDays','fundingAmount','fundingAmountText','payoutTimingText','churn','reqDays','monthlyFeeYNText','monthlyFeeAmountText','monthlyFeeFrequency','monthlyFeeWaiverType','monthlyFeeWaiverAmountText','monthlyFeeWaiverText','monthlyFeeNoMonthlyServiceFee','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText','eligibilityText','expirationDateText','requiredDaysText','minHoldDays','earlyCloseFee','closeRuleBasis','closeBufferDays','closeRuleText','monthlyFeeChecked'].forEach(k=>{const v=e[k];if(v!==undefined&&v!==null&&v!=='')snap[k]=v});
   return snap
 }
 
@@ -1140,7 +1224,7 @@ function chartData(){
 /* Bank Identity v3.3.42
    Centralized bank matching. Display names can vary, but duplicate/churn
    matching uses canonical bank family + personal/business type. */
-const BANK_IDENTITY_VERSION='3.3.70';
+const BANK_IDENTITY_VERSION='3.3.71';
 function normBankText(v){return String(v||'').toLowerCase().replace(/[®™℠]/g,'').replace(/&/g,' and ').replace(/\*/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim()}
 function bankAliasGroups(){return[
   ['chase','CHA',['chase','jpmorgan chase','jp morgan chase','jpmorgan','jp morgan','jpm']],
@@ -2848,6 +2932,15 @@ function normalizeLifecycleEntry(e){
   if(!Number.isFinite(x.closeBufferDays)||x.closeBufferDays<0)x.closeBufferDays=BUFFER_DAYS;
   x.closeRuleText=String(x.closeRuleText||'').trim();
   x.monthlyFeeChecked=!!x.monthlyFeeChecked;
+  try{
+    const feeStruct=deriveMonthlyFeeStructure(x);
+    x.monthlyFeeAmountText=x.monthlyFeeAmountText||feeStruct.monthlyFeeAmountText||'';
+    x.monthlyFeeFrequency=x.monthlyFeeFrequency||feeStruct.monthlyFeeFrequency||'';
+    x.monthlyFeeWaiverType=x.monthlyFeeWaiverType||feeStruct.monthlyFeeWaiverType||'';
+    x.monthlyFeeWaiverAmountText=x.monthlyFeeWaiverAmountText||feeStruct.monthlyFeeWaiverAmountText||'';
+    x.monthlyFeeWaiverText=x.monthlyFeeWaiverText||feeStruct.monthlyFeeWaiverText||'';
+    x.monthlyFeeNoMonthlyServiceFee=!!(x.monthlyFeeNoMonthlyServiceFee||feeStruct.monthlyFeeNoMonthlyServiceFee);
+  }catch{}
   x.customTimers=normalizeTimerList(x.customTimers||[]);
   if(x.closed&&isFutureDate(x.closed)){
     if(!x.plannedClose)x.plannedClose=x.closed;
@@ -2863,7 +2956,7 @@ function normalizeLifecycleEntries(rows){
   return (rows||[]).map(normalizeLifecycleEntry)
 }
 
-function R(){const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;if(tab==='profiles'||tab==='health')tab='tracker';sanitizeAllTimers(false);const sorted=sortE(entries);const wk=sorted.filter(e=>e.bank&&!e.closed).length;const ch=sorted.filter(e=>status(e)==='WAITING TO CHURN!'||status(e)==='TIME TO CHURN!').length;const rd=sorted.filter(e=>status(e)==='TIME TO CHURN!').length;const yr=completedYrTotal(dashYear);const thisYr=new Date().getFullYear();let h='';h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div><h1><em>Bonus</em>Tracker</h1><div class="hdr-sub">Track • close • churn</div></div><div class="yr-pills">';[thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});h+='</div></div>';if(tab==='tracker'){h+='<div class="hero"><div class="hero-copy"><div class="hero-kicker">'+dashYear+' total collected</div><div class="hero-value">'+fM(yr)+'</div><div class="hero-note">'+wk+' open • '+ch+' cooling down • '+rd+' ready right now</div></div><div class="hero-side"><div class="hero-chip">'+rd+' ready</div></div></div>';h+='<div class="stats"><div class="st"><div class="n">'+wk+'</div><div class="l">Open</div></div><div class="st"><div class="n">'+ch+'</div><div class="l">Cooldown</div></div><div class="st"><div class="n">'+rd+'</div><div class="l">Ready</div></div><div class="st"><div class="n">'+fM(yr)+'</div><div class="l">'+dashYear+'</div></div></div>'}h+='</div></div>';h+='<div class="scroll">';if(tab==='tracker')h+=rTracker(sorted);else if(tab==='tax')h+=rTax();else if(tab==='tips')h+=rTips();else if(tab==='phone')h+=rPhone();h+='</div>';if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';h+='<div class="tabs">';['tracker','tax','tips','phone'].forEach((t,i)=>{h+='<button class="tb'+(tab===t?' on':'')+'" onclick="tab=\''+t+'\';search=\''+'\';R()">'+[I.grid,I.doc,I.tips,I.phone][i]+'<span>'+['Tracker','Tax','Datapoints','Phone'][i]+'</span></button>'});h+='</div>';if(modal)h+=rModal();if(cfm)h+=rCfm();if(ddPrompt)h+=rDD();if(rcvPrompt)h+=rRcv();if(reqPrompt)h+=rReqMet();if(closePrompt)h+=rClose();if(overwritePrompt)h+=rOverwrite();if(matchPickerPrompt)h+=rMatchPicker();if(feeCheckPrompt)h+=rFeeCheck();if(timerEditModal)h+=rTimerEdit();if(dpEditor)h+=rDpEditor();if(timerChoicePrompt)h+=rTimerChoicePrompt();if(undoState)h+='<div class="undo-bar"><span>Close saved for '+esc(undoState.bank)+' — undo restores entry, timers, profiles, offer history, datapoints, and events.</span><button onclick="undoClose()">Undo</button></div>';document.getElementById('app').innerHTML=h;const ns=document.querySelector('.scroll');if(ns)ns.scrollTop=_sp;btRunPostRenderHooks()}
+function R(){const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;if(tab==='profiles'||tab==='health')tab='tracker';try{if(!window.__btAutoCleanupV371){entries=sortE(normalizeLifecycleEntries(entries));sv(SK,entries);window.__btAutoCleanupV371=true}}catch{}sanitizeAllTimers(false);const sorted=sortE(entries);const wk=sorted.filter(e=>e.bank&&!e.closed).length;const ch=sorted.filter(e=>status(e)==='WAITING TO CHURN!'||status(e)==='TIME TO CHURN!').length;const rd=sorted.filter(e=>status(e)==='TIME TO CHURN!').length;const yr=completedYrTotal(dashYear);const thisYr=new Date().getFullYear();let h='';h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div><h1><em>Bonus</em>Tracker</h1><div class="hdr-sub">Track • close • churn</div></div><div class="yr-pills">';[thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});h+='</div></div>';if(tab==='tracker'){h+='<div class="hero"><div class="hero-copy"><div class="hero-kicker">'+dashYear+' total collected</div><div class="hero-value">'+fM(yr)+'</div><div class="hero-note">'+wk+' open • '+ch+' cooling down • '+rd+' ready right now</div></div><div class="hero-side"><div class="hero-chip">'+rd+' ready</div></div></div>';h+='<div class="stats"><div class="st"><div class="n">'+wk+'</div><div class="l">Open</div></div><div class="st"><div class="n">'+ch+'</div><div class="l">Cooldown</div></div><div class="st"><div class="n">'+rd+'</div><div class="l">Ready</div></div><div class="st"><div class="n">'+fM(yr)+'</div><div class="l">'+dashYear+'</div></div></div>'}h+='</div></div>';h+='<div class="scroll">';if(tab==='tracker')h+=rTracker(sorted);else if(tab==='tax')h+=rTax();else if(tab==='tips')h+=rTips();else if(tab==='phone')h+=rPhone();h+='</div>';if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';h+='<div class="tabs">';['tracker','tax','tips','phone'].forEach((t,i)=>{h+='<button class="tb'+(tab===t?' on':'')+'" onclick="tab=\''+t+'\';search=\''+'\';R()">'+[I.grid,I.doc,I.tips,I.phone][i]+'<span>'+['Tracker','Tax','Datapoints','Phone'][i]+'</span></button>'});h+='</div>';if(modal)h+=rModal();if(cfm)h+=rCfm();if(ddPrompt)h+=rDD();if(rcvPrompt)h+=rRcv();if(reqPrompt)h+=rReqMet();if(closePrompt)h+=rClose();if(overwritePrompt)h+=rOverwrite();if(matchPickerPrompt)h+=rMatchPicker();if(feeCheckPrompt)h+=rFeeCheck();if(timerEditModal)h+=rTimerEdit();if(dpEditor)h+=rDpEditor();if(timerChoicePrompt)h+=rTimerChoicePrompt();if(undoState)h+='<div class="undo-bar"><span>Close saved for '+esc(undoState.bank)+' — undo restores entry, timers, profiles, offer history, datapoints, and events.</span><button onclick="undoClose()">Undo</button></div>';document.getElementById('app').innerHTML=h;const ns=document.querySelector('.scroll');if(ns)ns.scrollTop=_sp;btRunPostRenderHooks()}
 function rTracker(sorted){
   const q=search.toLowerCase();
   const f=q?sorted.filter(e=>(e.bank||'').toLowerCase().includes(q)||(e.id||'').toLowerCase().includes(q)):sorted;
@@ -3258,7 +3351,7 @@ function saveEntry(){
   const bank=(modal.bank||'').trim();
   if(!bank){alert('Bank name required');return false}
   syncModalAccountTypeFromBank();
-  const d={bank,accountType:normalizeAccountType(modal.accountType)||'personal',bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',fundedDays:modal.fundedDays||0,fundingAmount:modal.fundingAmount||0,fundingAmountText:modal.fundingAmountText||'',payoutTimingText:modal.payoutTimingText||'',plannedClose:modal.plannedClose||'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false,monthlyFeeYNText:modal.monthlyFeeYNText||'',promoCodeText:modal.promoCodeText||'',avoidMonthlyFeeText:modal.avoidMonthlyFeeText||'',completeBonusText:modal.completeBonusText||'',earlyTerminationFeeText:modal.earlyTerminationFeeText||'',eligibilityText:modal.eligibilityText||'',expirationDateText:modal.expirationDateText||'',requiredDaysText:modal.requiredDaysText||'',closeRuleBasis:normalizeCloseRuleBasis(modal.closeRuleBasis),closeBufferDays:parseInt(modal.closeBufferDays,10)||BUFFER_DAYS,closeRuleText:modal.closeRuleText||'',monthlyFeeChecked:!!modal.monthlyFeeChecked,customTimers:normalizeTimerList(modal.customTimers)};
+  const d={bank,accountType:normalizeAccountType(modal.accountType)||'personal',bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',fundedDays:modal.fundedDays||0,fundingAmount:modal.fundingAmount||0,fundingAmountText:modal.fundingAmountText||'',payoutTimingText:modal.payoutTimingText||'',plannedClose:modal.plannedClose||'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false,monthlyFeeYNText:modal.monthlyFeeYNText||'',monthlyFeeAmountText:modal.monthlyFeeAmountText||'',monthlyFeeFrequency:modal.monthlyFeeFrequency||'',monthlyFeeWaiverType:modal.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:modal.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:modal.monthlyFeeWaiverText||'',promoCodeText:modal.promoCodeText||'',avoidMonthlyFeeText:modal.avoidMonthlyFeeText||'',completeBonusText:modal.completeBonusText||'',earlyTerminationFeeText:modal.earlyTerminationFeeText||'',eligibilityText:modal.eligibilityText||'',expirationDateText:modal.expirationDateText||'',requiredDaysText:modal.requiredDaysText||'',closeRuleBasis:normalizeCloseRuleBasis(modal.closeRuleBasis),closeBufferDays:parseInt(modal.closeBufferDays,10)||BUFFER_DAYS,closeRuleText:modal.closeRuleText||'',monthlyFeeChecked:!!modal.monthlyFeeChecked,customTimers:normalizeTimerList(modal.customTimers)};
   syncRequiredDaysFromModal(d);
   d.earlyCloseFee=parseCloseFeeAmount(modal.earlyTerminationFeeText);
   applyCountdownFromModal(d);
@@ -3951,7 +4044,53 @@ function normalizeRestoredEntry(e){
   return normalizeLifecycleEntry(x)
 }
 
+
+function backupIntegrityReport(data){
+  const rows=Array.isArray(data?.entries)?data.entries:(Array.isArray(entries)?entries:[]);
+  const warnings=[];
+  const ids=new Set();
+  let duplicateIds=0, missingAccountType=0, missingOpenDate=0, closedNoChurn=0, receivedNoReq=0, monthlyFeeNeedsReview=0;
+  rows.forEach(e=>{
+    if(!e||!e.bank)return;
+    if(e.id){if(ids.has(e.id))duplicateIds++;ids.add(e.id)}
+    if(!normalizeAccountType(e.accountType))missingAccountType++;
+    if(!e.opened&&!e.closed)missingOpenDate++;
+    if(e.closed&&!e.churn)closedNoChurn++;
+    if(e.bonusRecd&&!e.reqMet)receivedNoReq++;
+    const hasMonthlyRisk=/(yes|\$|monthly|maintenance|service fee|service charge|quarterly|statement fee|paper statement)/i.test(String(e.monthlyFeeYNText||'')+' '+String(e.avoidMonthlyFeeText||'')+' '+String(e.notes||''));
+    if(hasMonthlyRisk&&!e.monthlyFeeChecked&&!deriveMonthlyFeeStructure(e).monthlyFeeWaiverText&&!deriveMonthlyFeeStructure(e).monthlyFeeWaiverAmountText)monthlyFeeNeedsReview++;
+  });
+  if(duplicateIds)warnings.push(duplicateIds+' duplicate entry ID issue(s)');
+  if(missingAccountType)warnings.push(missingAccountType+' entr'+(missingAccountType===1?'y':'ies')+' missing Personal/Business type');
+  if(missingOpenDate)warnings.push(missingOpenDate+' open entr'+(missingOpenDate===1?'y':'ies')+' missing opened date');
+  if(closedNoChurn)warnings.push(closedNoChurn+' closed entr'+(closedNoChurn===1?'y':'ies')+' missing churn rule');
+  if(receivedNoReq)warnings.push(receivedNoReq+' entr'+(receivedNoReq===1?'y':'ies')+' has bonus received but missing Req Met date');
+  if(monthlyFeeNeedsReview)warnings.push(monthlyFeeNeedsReview+' entr'+(monthlyFeeNeedsReview===1?'y':'ies')+' may need monthly fee waiver review');
+  const reqs=loadReqs();
+  const userDatapoints=loadUserDatapoints();
+  const profileEvents=loadProfileEvents();
+  const offerHistory=loadOfferHistory();
+  return{
+    ok:warnings.length===0,
+    warnings,
+    checkedAt:new Date().toISOString(),
+    entries:rows.length,
+    closed:rows.filter(e=>e&&e.closed).length,
+    received:rows.filter(e=>e&&e.bonusRecd).length,
+    reqs:Object.keys(reqs||{}).length,
+    userDatapoints:userDatapoints.length,
+    profileEvents:profileEvents.length,
+    offerHistoryVersions:countBackupOfferHistory({offerHistory})
+  }
+}
+function backupIntegritySummary(data){
+  const r=data?.backupIntegrity||backupIntegrityReport(data||{entries});
+  if(!r)return'Backup integrity: not checked';
+  return r.ok?'Backup integrity: looks complete':('Backup warnings: '+(r.warnings||[]).slice(0,4).join('; '))
+}
 function buildPortableBackupPayload(){
+  entries=sortE(normalizeLifecycleEntries(entries));
+  sv(SK,entries);
   const userDatapoints=loadUserDatapoints();
   const communityDatapoints=loadCommunityDatapoints();
   const phoneEdits=loadPhoneEdits();
@@ -3972,6 +4111,7 @@ function buildPortableBackupPayload(){
     phoneCount:phoneEdits.length,
     profileEventCount:profileEvents.length,
     offerHistoryCount:countBackupOfferHistory({offerHistory}),
+    backupIntegrity:backupIntegrityReport({entries}),
     prefs:{
       dashYear,taxYear
     },
@@ -4007,7 +4147,7 @@ function buildPortableBackupPayload(){
 function describeBackupPayload(d){
   const when=(d?.exportedAt||d?.createdAt)?new Date(d.exportedAt||d.createdAt).toLocaleString():'';
   const type=d?.backupType||d?.backupVersion||d?.kind||'unknown';
-  return['Backup date: '+(when||'Unknown'),'Backup type: '+type,'Entries: '+countBackupEntries(d),'Your datapoints: '+countBackupUserDatapoints(d),'Community datapoints: '+countBackupCommunityDatapoints(d),'Saved bank requirements: '+countBackupReqs(d),'Offer history versions: '+countBackupOfferHistory(d),'Saved phone entries: '+countBackupPhones(d),'Profile events: '+countBackupProfileEvents(d)].join('\n')
+  return['Backup date: '+(when||'Unknown'),'Backup type: '+type,'Entries: '+countBackupEntries(d),'Your datapoints: '+countBackupUserDatapoints(d),'Community datapoints: '+countBackupCommunityDatapoints(d),'Saved bank requirements: '+countBackupReqs(d),'Offer history versions: '+countBackupOfferHistory(d),'Saved phone entries: '+countBackupPhones(d),'Profile events: '+countBackupProfileEvents(d),backupIntegritySummary(d)].join('\n')
 }
 
 
@@ -4104,7 +4244,7 @@ function applyPortableRestore(d){
   else taxYear=new Date().getFullYear();
   setLastBk();
   cfm={
-    title:'Restore Complete',msg:`${entries.length} entries restored.\n${countBackupUserDatapoints(d)} datapoints restored.\n${countBackupProfileEvents(d)} profile events restored.\n\nThis backup is now ready on this browser/device.`,green:true,action:()=>{
+    title:'Restore Complete',msg:`${entries.length} entries restored.\n${countBackupUserDatapoints(d)} datapoints restored.\n${countBackupProfileEvents(d)} profile events restored.\n${backupIntegritySummary({entries,backupIntegrity:backupIntegrityReport({entries})})}\n\nThis backup is now ready on this browser/device.`,green:true,action:()=>{
       cfm=null;
       R()
     }
@@ -5015,6 +5155,6 @@ entries=sortE(entries);R();
 })();
 /* === End consolidated core module: Tracker card bank actions renderer === */
 
-(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.70 close intelligence polish */\n.close-intel.safe{border-color:#bbf7d0;background:#f0fdf4}\n.close-intel.warn,.close-intel.plan{border-color:#fde68a;background:#fffbeb}\n.close-intel.danger{border-color:#fecaca;background:#fff7f7}\n.close-ready{padding:10px 12px;border-radius:14px;margin:10px 0 12px;border:1px solid #e5e7eb;background:#f8fafc;font-size:12px;line-height:1.35}\n.close-ready b{display:block;font-size:13px;margin-bottom:2px}\n.close-ready.safe{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}\n.close-ready.warn,.close-ready.plan{background:#fffbeb;border-color:#fde68a;color:#78350f}\n.close-ready.danger{background:#fff1f2;border-color:#fecaca;color:#7f1d1d}\n.close-final-note{font-size:11px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px;margin-top:10px;line-height:1.35}\n";document.head.appendChild(st)}catch{}})();
+(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.71 close intelligence polish */\n.close-intel.safe{border-color:#bbf7d0;background:#f0fdf4}\n.close-intel.warn,.close-intel.plan{border-color:#fde68a;background:#fffbeb}\n.close-intel.danger{border-color:#fecaca;background:#fff7f7}\n.close-ready{padding:10px 12px;border-radius:14px;margin:10px 0 12px;border:1px solid #e5e7eb;background:#f8fafc;font-size:12px;line-height:1.35}\n.close-ready b{display:block;font-size:13px;margin-bottom:2px}\n.close-ready.safe{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}\n.close-ready.warn,.close-ready.plan{background:#fffbeb;border-color:#fde68a;color:#78350f}\n.close-ready.danger{background:#fff1f2;border-color:#fecaca;color:#7f1d1d}\n.close-final-note{font-size:11px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px;margin-top:10px;line-height:1.35}\n";document.head.appendChild(st)}catch{}})();
 
-(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.70 monthly fee plan box */\n.monthly-fee-plan.safe{border-color:#bbf7d0;background:#f0fdf4}\n.monthly-fee-plan.warn{border-color:#fde68a;background:#fffbeb}\n.monthly-fee-plan .tc-label{letter-spacing:.11em}\n";document.head.appendChild(st)}catch{}})();
+(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.71 monthly fee plan box */\n.monthly-fee-plan.safe{border-color:#bbf7d0;background:#f0fdf4}\n.monthly-fee-plan.warn{border-color:#fde68a;background:#fffbeb}\n.monthly-fee-plan .tc-label{letter-spacing:.11em}\n";document.head.appendChild(st)}catch{}})();
