@@ -5,7 +5,7 @@
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.3.73-profile-registry';
+  const VER='3.3.75-profile-registry';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
     {
@@ -131,7 +131,7 @@
     {
       id:'morgan-stanley-private-bank-checking-checking25',
       bank:'Morgan Stanley Private Bank / E*TRADE',
-      product:'Checking OR Max-Rate Checking — CHECKING25',
+      product:'Checking — CHECKING25 no-monthly-fee default',
       type:'personal checking',
       status:'saved',
       signals:[
@@ -141,8 +141,8 @@
         /two Direct Deposits|at least two Direct Deposits|each of \$?1,?500|\$1,500 or more/i,
         /120th day|first 90 days|up to 30 days/i
       ],
-      requirements:'Promo code CHECKING25. Open one new Checking OR Max-Rate Checking account online by the offer deadline. No minimum initial deposit required, but the account must be funded within 90 days to remain open. Receive at least two regular recurring ACH Direct Deposits of income, each $1,500 or more, within 90 days of account opening. Bonus is assessed after the first 90 days and processing can take up to 30 days; expected around day 120 from account opening. Must keep account open and in good standing until payout. Not eligible if customer owned or co-owned Checking or Max-Rate Checking within the last 12 months from offer enrollment. One checking offer at a time. Individual/joint online accounts only; primary owner receives bonus; non-U.S. residents excluded. Max-Rate Checking has a $15 monthly account fee waived with $5,000+ average monthly balance on or after the end of the second calendar month from opening.',
-      note:'Saved exact profile: Morgan Stanley Private Bank / E*TRADE CHECKING25 $300 personal checking offer. DD rule is 2 recurring income ACH direct deposits of $1,500+ each within 90 days. Payout expected around day 120. Close risk is payout risk only: keep open/good standing until bonus posts, then normal 3-day buffer. Max-Rate monthly fee: $15, waived with $5,000+ average monthly balance after the second calendar month.'
+      requirements:'Promo code CHECKING25. Default to regular Checking because it has $0 monthly account fee. Offer also mentions Max-Rate Checking, but Max-Rate has a $15 monthly account fee unless waived with $5,000+ average monthly balance. Open one new Checking account online by the offer deadline. No minimum initial deposit required, but the account must be funded within 90 days to remain open. Receive at least two regular recurring ACH Direct Deposits of income, each $1,500 or more, within 90 days of account opening. Bonus is assessed after the first 90 days and processing can take up to 30 days; expected around day 120 from account opening. Must keep account open and in good standing until payout. Not eligible if customer owned or co-owned Checking or Max-Rate Checking within the last 12 months from offer enrollment. One checking offer at a time. Individual/joint online accounts only; primary owner receives bonus; non-U.S. residents excluded.',
+      note:'Saved exact profile: Morgan Stanley Private Bank / E*TRADE CHECKING25 $300 personal checking offer. Default account selection is regular Checking because it has $0 monthly account fee. DD rule is 2 recurring income ACH direct deposits of $1,500+ each within 90 days. Payout expected around day 120. Close risk is payout risk only: keep open/good standing until bonus posts, then normal 3-day buffer. If user intentionally chooses Max-Rate Checking, monthly fee is $15 waived with $5,000+ average monthly balance after the second calendar month.'
     },
     {
       id:'us-bank-smartly-checking',
@@ -250,7 +250,9 @@
     const src='Known profile: '+(m.product||m.bank||m.id)+' — '+(m.requirements||m.note||'saved bank profile');
     if(m.id==='morgan-stanley-private-bank-checking-checking25'){
       r.bank=r.bank||'Morgan Stanley Private Bank / E*TRADE';
-      r.acct=r.acct||'Checking OR Max-Rate Checking';
+      r.acct='Checking';
+      r.noFeeDefaultAccount='Checking';
+      r.accountChoiceReason='Regular Checking selected because it has $0 monthly account fee; Max-Rate Checking has a $15 monthly account fee unless waived with $5,000 average monthly balance.';
       r.bonus=r.bonus||300;
       r.selectedBonus=r.selectedBonus||300;
       r.code=r.code||'CHECKING25';
@@ -262,13 +264,13 @@
       r.requirementNoun=r.requirementNoun||'recurring income ACH direct deposits';
       r.payout=r.payout||'after first 90 days are assessed; processing can take up to 30 days; expected around day 120 from account opening';
       r.payoutText=r.payoutText||r.payout;
-      r.monthlyFeeYNText=r.monthlyFeeYNText||'$15 monthly account fee for Max-Rate Checking';
-      r.avoidMonthlyFeeText=r.avoidMonthlyFeeText||'Maintain an average monthly balance of at least $5,000 in the Max-Rate Checking account on or after the end of the second calendar month from opening.';
-      r.monthlyFeeAmountText=r.monthlyFeeAmountText||'$15 monthly account fee';
-      r.monthlyFeeFrequency=r.monthlyFeeFrequency||'monthly';
-      r.monthlyFeeWaiverType=r.monthlyFeeWaiverType||'Balance';
-      r.monthlyFeeWaiverAmountText=r.monthlyFeeWaiverAmountText||'$5,000 average monthly balance';
-      r.monthlyFeeWaiverText=r.monthlyFeeWaiverText||'Waived with $5,000 average monthly balance in Max-Rate Checking on or after the end of the second calendar month from opening.';
+      r.monthlyFeeYNText='No monthly account fee for regular Checking';
+      r.avoidMonthlyFeeText='Default to regular Checking to avoid monthly fee. Max-Rate Checking has a $15 monthly account fee unless waived with $5,000 average monthly balance on or after the end of the second calendar month from opening.';
+      r.monthlyFeeAmountText='$0 monthly account fee';
+      r.monthlyFeeFrequency='monthly';
+      r.monthlyFeeWaiverType='No-fee account choice';
+      r.monthlyFeeWaiverAmountText='$0 monthly fee with regular Checking';
+      r.monthlyFeeWaiverText='Choose regular Checking instead of Max-Rate Checking for $0 monthly account fee.';
       r.holdDays=0;
       r.minHoldDays=0;
       r.closeRuleDays=0;
@@ -283,6 +285,7 @@
       if(!r.suggestedTimers.some(t=>/recurring income ACH DDs/i.test(t.text||'')))r.suggestedTimers.push({kind:'days',text:'Complete 2 recurring income ACH DDs of $1,500+ each',daysRequired:90,source:'Morgan Stanley CHECKING25 profile'});
       if(!r.suggestedTimers.some(t=>/bonus payout watch/i.test(t.text||'')))r.suggestedTimers.push({kind:'days',text:'Bonus payout watch / expected around day 120',daysRequired:120,source:'Morgan Stanley CHECKING25 profile'});
       r.reviewFlags=(r.reviewFlags||[]).filter(x=>!/monthly fee|close rule|payout timing|hold period|450/i.test(String(x||'')));
+      r.reviewFlags.push('No-fee account default: regular Checking selected because it avoids the Max-Rate $15 monthly fee.');
       r.reviewFlags.push('Profile guard: no early-close hold countdown for this offer; close risk is payout only.');
       r.clear=!!(r.bonus&&r.reqDays&&r.reqMoney&&r.count);
     }

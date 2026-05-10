@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.73 Newest update: Analyzer close-rule guard prevents monthly-fee wording from becoming close-hold days.
+// ✅ Version 3.3.75 Newest update: Global no-monthly-fee account preference across bank offers plus today-opened autofill.
 
-const V = 'bt-v3.3.73';
+const V = 'bt-v3.3.75';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
