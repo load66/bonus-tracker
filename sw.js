@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.71 Newest update: Structured monthly-fee fields, old-entry auto-cleanup, and backup integrity checks.
+// ✅ Version 3.3.72 Newest update: Added saved exact Morgan Stanley Private Bank / E*TRADE CHECKING25 profile.
 
-const V = 'bt-v3.3.71';
+const V = 'bt-v3.3.72';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
