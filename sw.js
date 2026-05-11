@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.78 Newest update: Cleaned mini countdown timer generation and duplicate timer cleanup.
+// ✅ Version 3.3.79 Newest update: Fixed manual Close Hold Days saving/display and repaired old affected close-hold entries.
 
-const V = 'bt-v3.3.78';
+const V = 'bt-v3.3.79';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
