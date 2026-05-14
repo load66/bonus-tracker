@@ -5,7 +5,7 @@
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.3.81-profile-registry';
+  const VER='3.3.82-profile-registry';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
     {

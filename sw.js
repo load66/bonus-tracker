@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.81 Newest update: Needs Attention now sorts by true urgency/days across requirement and safe-close tasks.
+// ✅ Version 3.3.82 Newest update: Needs Attention honors active mini timers over generic requirement fallback deadlines.
 
-const V = 'bt-v3.3.81';
+const V = 'bt-v3.3.82';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
