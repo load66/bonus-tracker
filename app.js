@@ -1,7 +1,7 @@
-/* ✅ Version 3.3.86 update: Analyzer Review Wizard, beginner-friendly apply flow, selectable timers, and analyzer history. */
+/* ✅ Version 3.3.87 update: Cleaner beginner-friendly bank cards, structured plan sections, and normalized line breaks. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.3.86';
+const APP_VERSION='3.3.87';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 
@@ -217,39 +217,65 @@ function closeReadiness(e,closeDate=''){
   if(e.plannedClose&&!e.closed){label='Planned Close Saved';cls='plan'}
   return{label,cls,items,warnings,safeDate:safe,rawDate:raw,basis}
 }
-function closePlanForEntry(e){
-  if(!e||!e.bank)return[];
-  const ready=closeReadiness(e);
-  const lines=[];
-  lines.push('Close readiness: '+ready.label+'.');
-  if(e.closed){
-    lines.push('Closed on '+fD(e.closed)+'. Churn-ready date with buffer: '+(churnReadyDate(e)?fD(churnReadyDate(e)):'not available')+'.');
-    return lines
+function cleanDisplayText(v){
+  return String(v||'').replace(/\\n/g,'\n').replace(/\r/g,'').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim()
+}
+function shortCleanText(v,max=180){
+  const t=cleanDisplayText(v).replace(/\s+/g,' ').trim();
+  return t.length>max?t.slice(0,max-1).trim()+'…':t
+}
+function renderCleanPlanCard(o){
+  if(!o)return'';
+  const cls=esc(o.cls||'');
+  const rows=(o.rows||[]).filter(r=>r&&r.value!==undefined&&r.value!==null&&String(r.value).trim()!=='');
+  const notes=(o.notes||[]).filter(Boolean).map(x=>shortCleanText(x,220));
+  let h='<div class="clean-plan-card '+cls+'">';
+  h+='<div class="clean-plan-head"><div><div class="clean-plan-title">'+esc(o.title||'Plan')+'</div>'+(o.sub?'<div class="clean-plan-sub">'+esc(o.sub)+'</div>':'')+'</div>'+(o.chip?'<span class="clean-plan-chip '+cls+'">'+esc(o.chip)+'</span>':'')+'</div>';
+  if(rows.length){
+    h+='<div class="clean-plan-rows">';
+    rows.forEach(r=>{h+='<div class="clean-plan-row '+esc(r.cls||'')+'"><span>'+esc(r.label||'')+'</span><b>'+esc(shortCleanText(r.value,160))+'</b></div>'});
+    h+='</div>'
   }
-  if(e.plannedClose)lines.push('Planned close date: '+fD(e.plannedClose)+'. Account still stays open until you record the actual close.');
-  if(!e.bonusRecd)lines.push('Do not close yet — keep the account open and unrestricted until the bonus posts.');
-  else lines.push('Bonus received on '+fD(e.bonusRecd)+'.');
-  if(e.reqMet)lines.push('Requirement met on '+fD(e.reqMet)+'.');
-  else lines.push('Requirement met date is missing; save it before closing if possible.');
+  if(notes.length){
+    h+='<div class="clean-plan-notes">'+notes.slice(0,3).map(x=>'<div>• '+esc(x)+'</div>').join('')+'</div>'
+  }
+  h+='</div>';
+  return h
+}
+function closePlanForEntry(e){
+  if(!e||!e.bank)return null;
+  const ready=closeReadiness(e);
+  const safe=safeCloseDate(e);
+  const rows=[];
+  const notes=[];
+  const row=(label,value,cls='')=>rows.push({label,value,cls});
+  row('Readiness',ready.label,ready.cls);
+  if(e.closed){
+    row('Closed',fD(e.closed),'ok');
+    row('Churn ready',churnReadyDate(e)?fD(churnReadyDate(e)):'Not calculated');
+    notes.push('This cycle is closed. Future churn timing is based on the actual closed date.');
+    return{title:'Close Plan',sub:'Actual close is already saved',chip:ready.label,cls:ready.cls,rows,notes}
+  }
+  if(e.plannedClose)row('Planned close',fD(e.plannedClose),'warn');
+  row('Bonus',e.bonusRecd?'Received '+fD(e.bonusRecd):'Not received yet',e.bonusRecd?'ok':'bad');
+  row('Requirement',e.reqMet?'Met '+fD(e.reqMet):'Missing date',e.reqMet?'ok':'warn');
   if(e.minHoldDays>0){
     const basis=normalizeCloseRuleBasis(e.closeRuleBasis||inferCloseRuleBasisFromText(e));
-    const safe=safeCloseDate(e);
-    lines.push('Close rule: keep open '+e.minHoldDays+' days from '+closeRuleBasisLabel(basis)+' + '+closeBufferDaysFor(e)+' day buffer.');
-    lines.push(safe?(daysUntilSafe(e)>0?'Do not close before '+fD(safe)+'.':'Hold/buffer period appears complete; safe-close date was '+fD(safe)+'.'):'Safe-close date cannot be calculated yet.');
+    row('Hold rule',e.minHoldDays+' days from '+closeRuleBasisLabel(basis)+' + '+closeBufferDaysFor(e)+' day buffer');
+    row('Safe close date',safe?fD(safe):'Needs start date',safe&&daysUntilSafe(e)<=0?'ok':'warn');
   }else{
-    lines.push('No fixed early-close countdown is set; treat this as payout-risk/manual-review unless terms say otherwise.');
+    row('Early-close rule','Manual review','warn');
+    notes.push('No fixed early-close countdown is saved. Review the terms before closing.');
   }
   const hasMonthlyFee=/(yes|\$|monthly|service fee|maintenance fee)/i.test(String(e.monthlyFeeYNText||'')+' '+String(e.avoidMonthlyFeeText||''));
-  if(hasMonthlyFee&&!e.monthlyFeeChecked)lines.push('Monthly fee check is still needed before closing.');
-  if(e.closeRuleText)lines.push('Saved close wording: '+String(e.closeRuleText).replace(/\s+/g,' ').trim().slice(0,240));
-  lines.push('Before closing: confirm no pending transactions and export/backup if this is an important cycle.');
-  return lines
+  if(hasMonthlyFee)row('Monthly fee',e.monthlyFeeChecked?'Checked':'Check before close',e.monthlyFeeChecked?'ok':'warn');
+  if(!e.bonusRecd)notes.push('Keep the account open until the bonus posts.');
+  if(e.closeRuleText)notes.push('Saved wording: '+shortCleanText(e.closeRuleText,190));
+  notes.push('Before closing, confirm no pending transactions.');
+  return{title:'Close Plan',sub:e.plannedClose&&!e.closed?'Planned only — account still open':'Beginner check before closing',chip:ready.label,cls:ready.cls,rows,notes}
 }
 function renderClosePlan(e){
-  const lines=closePlanForEntry(e);
-  if(!lines.length)return'';
-  const ready=closeReadiness(e);
-  return '<div class="tc-box close-intel '+esc(ready.cls)+'"><div class="tc-label">Close plan · '+esc(ready.label)+'</div><div class="tc-body">'+lines.map(x=>'* '+esc(x)).join('\\n')+'</div></div>'
+  return renderCleanPlanCard(closePlanForEntry(e))
 }
 
 function closeFlowRecommendedMode(e,preferred){
@@ -617,43 +643,45 @@ function monthlyFeePlanForEntry(e){
   const fee=extractMonthlyFeeAmountText(e);
   const balance=structured.monthlyFeeWaiverAmountText||extractBalanceWaiverText(e);
   const avoid=structured.monthlyFeeWaiverText?structured.monthlyFeeWaiverText.split(/\s+OR\s+/i).map(normalizeWaiverPhrase).filter(Boolean):extractAvoidFeeLines(e);
-  const hasAny=!!(fee||balance||avoid.length||raw);
+  const hasAny=!!(fee||balance||avoid.length||raw||noMonthlyFeeDetected(e));
   if(!hasAny)return null;
   const state=monthlyFeeKnownStatus(e);
-  const lines=[];
-  if(state.kind==='none')lines.push('Monthly fee status: no monthly service fee is saved for this account.');
-  else if(state.kind==='checked')lines.push('Monthly fee status: checked / confirmed before close.');
-  else lines.push('Monthly fee status: keep fee waiver active until the account is actually closed.');
-  if(fee)lines.push('Fee: '+fee+'.');
-  else if(state.kind!=='none')lines.push('Fee amount: not saved clearly; review account terms or statement cycle.');
-  if(structured.monthlyFeeFrequency&&state.kind!=='none')lines.push('Fee frequency: '+structured.monthlyFeeFrequency.replace('-', ' ')+'.');
-  if(balance)lines.push((/fee threshold/i.test(balance)?'Minimum balance / fee-risk target: ':'Minimum balance / waiver target: ')+balance+'.');
-  if(structured.monthlyFeeWaiverType)lines.push('Waiver type: '+structured.monthlyFeeWaiverType+'.');
-  if(avoid.length){
-    const cleanAvoid=Array.from(new Set(avoid)).filter(x=>!isRequirementOnlyMonthlyNoise(x));
-    if(cleanAvoid.length)lines.push('How to avoid: '+cleanAvoid.slice(0,3).join(' OR ')+'.');
-    else if(state.kind!=='none'&&balance&&/fee threshold/i.test(balance))lines.push('How to avoid: keep the related account at or above the saved fee threshold until closing.');
-    else if(state.kind!=='none')lines.push('How to avoid: not saved clearly; add waiver terms in Edit when known.');
-  }
-  else if(state.kind!=='none'&&balance&&/fee threshold/i.test(balance))lines.push('How to avoid: keep the related account at or above the saved fee threshold until closing.');
-  else if(state.kind!=='none')lines.push('How to avoid: not saved clearly; add waiver terms in Edit when known.');
-  if(e.monthlyFeeChecked)lines.push('Monthly fee checked: Yes.');
-  else if(state.kind!=='none')lines.push('Monthly fee checked: Not yet — check before closing or before the next statement cycle.');
-  if(e.closed)lines.push('Account closed on '+fD(e.closed)+'. No active monthly-fee tracking needed.');
-  else if(e.plannedClose)lines.push('Keep the waiver active through planned close date '+fD(e.plannedClose)+'.');
-  else lines.push('Keep this fee waiver active until the account is actually closed.');
-  return{label:state.label,cls:state.cls,lines}
+  const rows=[];
+  const notes=[];
+  const row=(label,value,cls='')=>rows.push({label,value,cls});
+  const cleanAvoid=Array.from(new Set(avoid)).filter(x=>!isRequirementOnlyMonthlyNoise(x)).map(x=>shortCleanText(x,140));
+  row('Status',state.kind==='none'?'No monthly service fee saved':(state.kind==='checked'?'Checked before close':'Keep waiver active'),state.kind==='none'||state.kind==='checked'?'ok':'warn');
+  row('Monthly fee',state.kind==='none'?'$0':(fee||'Not saved clearly'),state.kind==='none'||fee?'':'warn');
+  if(structured.monthlyFeeFrequency&&state.kind!=='none')row('Frequency',structured.monthlyFeeFrequency.replace('-', ' '));
+  if(balance)row(/fee threshold/i.test(balance)?'Fee-risk target':'Waiver target',balance,'warn');
+  if(structured.monthlyFeeWaiverType)row('Waiver type',structured.monthlyFeeWaiverType);
+  if(cleanAvoid.length)row('How to avoid',cleanAvoid.slice(0,2).join(' OR '));
+  else if(state.kind!=='none'&&balance&&/fee threshold/i.test(balance))row('How to avoid','Keep the related account at or above the saved threshold.');
+  else if(state.kind!=='none')row('How to avoid','Add waiver terms when known.','warn');
+  if(state.kind!=='none')row('Before close',e.monthlyFeeChecked?'Already checked':'Check statement/fee timing',e.monthlyFeeChecked?'ok':'warn');
+  if(e.closed)notes.push('Account closed on '+fD(e.closed)+'. No active monthly-fee tracking needed.');
+  else if(e.plannedClose)notes.push('Keep the waiver active through planned close date '+fD(e.plannedClose)+'.');
+  else if(state.kind!=='none')notes.push('Keep the waiver active until the account is actually closed.');
+  return{title:'Monthly Fee Plan',sub:state.kind==='none'?'No active fee issue found':'Avoid surprises before closing',chip:state.label,cls:state.cls,rows,notes}
 }
 function renderMonthlyFeePlan(e){
-  const p=monthlyFeePlanForEntry(e);
-  if(!p)return'';
-  return '<div class="tc-box monthly-fee-plan '+esc(p.cls)+'"><div class="tc-label">Monthly fee plan · '+esc(p.label)+'</div><div class="tc-body">'+p.lines.map(x=>'* '+esc(x)).join('\\n')+'</div></div>'
+  return renderCleanPlanCard(monthlyFeePlanForEntry(e))
 }
+
 function renderOfferHistory(e){
   const hist=offerHistoryForBank(e);
   if(!hist.length)return'';
-  const rows=hist.slice(0,4).map((x,i)=>{const parts=[];if(x.bonusTierText)parts.push(x.bonusTierText.replace(/\s+/g,' '));else if(x.bonus)parts.push(fM(x.bonus));if(x.reqDays)parts.push(x.reqDays+'d req');if(x.minHoldDays)parts.push(x.minHoldDays+'d hold');if(x.opened)parts.push('opened '+fD(x.opened));return '* '+(i===0?'Current/latest: ':'History: ')+esc(parts.join(' · ')||'Saved profile version')+(x.source?' — '+esc(x.source):'');});
-  return '<div class="tc-box"><div class="tc-label">Offer history</div><div class="tc-body">'+rows.join('\\n')+'</div></div>'
+  let h='<details class="clean-details"><summary>Offer History <span>'+hist.length+'</span></summary><div class="clean-detail-body">';
+  hist.slice(0,4).forEach((x,i)=>{
+    const parts=[];
+    if(x.bonusTierText)parts.push(shortCleanText(x.bonusTierText,120));else if(x.bonus)parts.push(fM(x.bonus));
+    if(x.reqDays)parts.push(x.reqDays+'d req');
+    if(x.minHoldDays)parts.push(x.minHoldDays+'d hold');
+    if(x.opened)parts.push('opened '+fD(x.opened));
+    h+='<div class="clean-mini-row"><b>'+esc(i===0?'Latest':'History')+'</b><span>'+esc(parts.join(' · ')||'Saved profile version')+(x.source?' · '+esc(shortCleanText(x.source,70)):'')+'</span></div>'
+  });
+  h+='</div></details>';
+  return h
 }
 
 function loadProfileEvents(){
@@ -1414,7 +1442,7 @@ function chartData(){
 /* Bank Identity v3.3.42
    Centralized bank matching. Display names can vary, but duplicate/churn
    matching uses canonical bank family + personal/business type. */
-const BANK_IDENTITY_VERSION='3.3.86';
+const BANK_IDENTITY_VERSION='3.3.87';
 function normBankText(v){return String(v||'').toLowerCase().replace(/[®™℠]/g,'').replace(/&/g,' and ').replace(/\*/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim()}
 function bankAliasGroups(){return[
   ['chase','CHA',['chase','jpmorgan chase','jp morgan chase','jpmorgan','jp morgan','jpm']],
@@ -2756,7 +2784,26 @@ function supportLine(e,countdown){const s=status(e);const hasEarlyFee=!!(!e.clos
 function statusBadgeHtml(e,countdown){const meta=displayStatusMeta(status(e));const support=supportLine(e,countdown);return'<span class="badge '+meta.cls+'">'+meta.icon+'<span>'+esc(meta.label)+'</span></span>'+(support?'<div class="card-subline">'+esc(support)+'</div>':'')}
 function quickBtn(cls,icon,label,onclick){return'<button class="qbtn '+cls+'" onclick="'+onclick+'">'+icon+'<span>'+label+'</span></button>'}
 function actionBtn(cls,icon,label,onclick){return'<button class="cbtn '+cls+'" onclick="'+onclick+'">'+icon+'<span>'+label+'</span></button>'}
-function highlightTC(text){if(!text)return'';let h=esc(text);h=h.replace(/^(REQUIREMENTS:|DIRECT DEPOSIT RULES:|ADDITIONAL BONUSES:|FEES &amp; TIMING:|CHURN &amp; TAX:)/gm,'<span class="hl-section">$1</span>');h=h.replace(/\* (Step \d+:)/g,'* <span class="hl-step">$1</span>');h=h.replace(/(\$[\d,]+(?:\.\d+)?)/g,'<span class="hl-money">$1</span>');h=h.replace(/(\d+\s+(?:days?|months?|weeks?|consecutive\s+days|statement\s+cycles?))/gi,'<span class="hl-days">$1</span>');h=h.replace(/(within\s+\d+\s+\w+)/gi,'<span class="hl-days">$1</span>');h=h.replace(/(NOT count|does NOT|do not qualify|not eligible|cannot be combined|not be combined|ineligible)/gi,'<span class="hl-warn">$1</span>');h=h.replace(/(clawback|penalty|early close|termination fee|fee if closed)/gi,'<span class="hl-fee">$1</span>');h=h.replace(/(?:code[:\s]+)([A-Z0-9]{3,})/g,'code: <span class="hl-code">$1</span>');h=h.replace(/(\$0 \(No fee\)|No fee|None|Safe anytime|free checking)/gi,'<span class="hl-good">$1</span>');h=h.replace(/(Zelle|P2P|Micro-deposits?|person-to-person)/gi,'<span class="hl-warn">$1</span>');return h}
+function highlightTC(text){
+  if(!text)return'';
+  let h=esc(cleanDisplayText(text));
+  h=h.replace(/^(REQUIREMENTS:|DIRECT DEPOSIT RULES:|ADDITIONAL BONUSES:|FEES &amp; TIMING:|CHURN &amp; TAX:)/gm,'<span class="hl-section">$1</span>');
+  h=h.replace(/\* (Step \d+:)/g,'* <span class="hl-step">$1</span>');
+  h=h.replace(/(\$[\d,]+(?:\.\d+)?)/g,'<span class="hl-money">$1</span>');
+  h=h.replace(/(\d+\s+(?:days?|months?|weeks?|consecutive\s+days|statement\s+cycles?))/gi,'<span class="hl-days">$1</span>');
+  h=h.replace(/(within\s+\d+\s+\w+)/gi,'<span class="hl-days">$1</span>');
+  h=h.replace(/(NOT count|does NOT|do not qualify|not eligible|cannot be combined|not be combined|ineligible)/gi,'<span class="hl-warn">$1</span>');
+  h=h.replace(/(clawback|penalty|early close|termination fee|fee if closed)/gi,'<span class="hl-fee">$1</span>');
+  h=h.replace(/(?:code[:\s]+)([A-Z0-9]{3,})/g,'code: <span class="hl-code">$1</span>');
+  h=h.replace(/(\$0 \(No fee\)|No fee|None|Safe anytime|free checking)/gi,'<span class="hl-good">$1</span>');
+  h=h.replace(/(Zelle|P2P|Micro-deposits?|person-to-person)/gi,'<span class="hl-warn">$1</span>');
+  return h
+}
+function renderAnalyzedTermsCard(e){
+  if(!e||!e.analyzedTC)return'';
+  return '<details class="clean-details tc-clean-details"><summary>T&amp;C Analysis <span>View</span></summary><div class="tc-body clean-tc-body">'+highlightTC(e.analyzedTC)+'</div></details>'
+}
+
 
 function profileGroupMatchKey(groupKey, bankName){return bankKey(bankName||'')===groupKey}
 function removeProfileReqsByGroupKey(groupKey){
@@ -3306,7 +3353,7 @@ function normalizeLifecycleEntry(e){
     x.monthlyFeeNoMonthlyServiceFee=!!(x.monthlyFeeNoMonthlyServiceFee||feeStruct.monthlyFeeNoMonthlyServiceFee);
   }catch{}
   x.customTimers=normalizeTimerList(x.customTimers||[]);
-  // v3.3.86: closed remains actual only. Planned close is stored separately by the close flow.
+  // v3.3.87: closed remains actual only. Planned close is stored separately by the close flow.
   // Do not silently convert future closed dates into plannedClose.
   if(x.closed)x.plannedClose='';
   if(x.bonusRecd&&!x.reqMet)x.reqMet=x.bonusRecd;
@@ -3418,7 +3465,7 @@ function rTracker(sorted){
       }
 
       if(e.notes) h += `<div class="card-notes" style="white-space:pre-wrap;font-size:12px;line-height:1.6">${esc(e.notes)}</div>`;
-      if(e.analyzedTC) h += `<div class="tc-box"><div class="tc-label">T&amp;C analysis</div><div class="tc-body">${highlightTC(e.analyzedTC)}</div></div>`;
+      h += renderAnalyzedTermsCard(e);
       h += '';
 
       h += '<div class="card-btns">';
@@ -5777,7 +5824,7 @@ entries=sortE(entries);R();
         h += renderEntryHistory(e);
         h += renderAnalyzerHistory(e);
         h += renderOfferHistory(e);
-        if(e.analyzedTC) h += `<div class="tc-box"><div class="tc-label">T&amp;C analysis</div><div class="tc-body">${highlightTC(e.analyzedTC)}</div></div>`;
+        h += renderAnalyzedTermsCard(e);
         h += '';
 
         h += '<div class="card-btns">';
@@ -5815,6 +5862,6 @@ entries=sortE(entries);R();
 })();
 /* === End consolidated core module: Tracker card bank actions renderer === */
 
-(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.86 close intelligence polish */\n.close-intel.safe{border-color:#bbf7d0;background:#f0fdf4}\n.close-intel.warn,.close-intel.plan{border-color:#fde68a;background:#fffbeb}\n.close-intel.danger{border-color:#fecaca;background:#fff7f7}\n.close-ready{padding:10px 12px;border-radius:14px;margin:10px 0 12px;border:1px solid #e5e7eb;background:#f8fafc;font-size:12px;line-height:1.35}\n.close-ready b{display:block;font-size:13px;margin-bottom:2px}\n.close-ready.safe{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}\n.close-ready.warn,.close-ready.plan{background:#fffbeb;border-color:#fde68a;color:#78350f}\n.close-ready.danger{background:#fff1f2;border-color:#fecaca;color:#7f1d1d}\n.close-final-note{font-size:11px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px;margin-top:10px;line-height:1.35}\n.close-mode-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}\n.close-mode{border:1px solid #e2e8f0;background:#f8fafc;border-radius:14px;padding:10px 9px;text-align:left;font-family:'DM Sans',system-ui,sans-serif;color:#334155;cursor:pointer}\n.close-mode b{display:block;font-size:12px;line-height:1.05;color:#0f172a}\n.close-mode span{display:block;font-size:9px;line-height:1.2;color:#64748b;font-weight:800;margin-top:3px}\n.close-mode.sel{background:#eff6ff;border-color:#93c5fd;box-shadow:0 0 0 2px rgba(59,130,246,.10)}\n";document.head.appendChild(st)}catch{}})();
+(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.87 close intelligence polish */\n.close-intel.safe{border-color:#bbf7d0;background:#f0fdf4}\n.close-intel.warn,.close-intel.plan{border-color:#fde68a;background:#fffbeb}\n.close-intel.danger{border-color:#fecaca;background:#fff7f7}\n.close-ready{padding:10px 12px;border-radius:14px;margin:10px 0 12px;border:1px solid #e5e7eb;background:#f8fafc;font-size:12px;line-height:1.35}\n.close-ready b{display:block;font-size:13px;margin-bottom:2px}\n.close-ready.safe{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}\n.close-ready.warn,.close-ready.plan{background:#fffbeb;border-color:#fde68a;color:#78350f}\n.close-ready.danger{background:#fff1f2;border-color:#fecaca;color:#7f1d1d}\n.close-final-note{font-size:11px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px;margin-top:10px;line-height:1.35}\n.close-mode-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}\n.close-mode{border:1px solid #e2e8f0;background:#f8fafc;border-radius:14px;padding:10px 9px;text-align:left;font-family:'DM Sans',system-ui,sans-serif;color:#334155;cursor:pointer}\n.close-mode b{display:block;font-size:12px;line-height:1.05;color:#0f172a}\n.close-mode span{display:block;font-size:9px;line-height:1.2;color:#64748b;font-weight:800;margin-top:3px}\n.close-mode.sel{background:#eff6ff;border-color:#93c5fd;box-shadow:0 0 0 2px rgba(59,130,246,.10)}\n";document.head.appendChild(st)}catch{}})();
 
-(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.86 monthly fee plan box */\n.monthly-fee-plan.safe{border-color:#bbf7d0;background:#f0fdf4}\n.monthly-fee-plan.warn{border-color:#fde68a;background:#fffbeb}\n.monthly-fee-plan .tc-label{letter-spacing:.11em}\n";document.head.appendChild(st)}catch{}})();
+(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.87 monthly fee plan box */\n.monthly-fee-plan.safe{border-color:#bbf7d0;background:#f0fdf4}\n.monthly-fee-plan.warn{border-color:#fde68a;background:#fffbeb}\n.monthly-fee-plan .tc-label{letter-spacing:.11em}\n";document.head.appendChild(st)}catch{}})();

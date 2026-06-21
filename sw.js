@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.86 Newest update: Analyzer Review Wizard adds safer beginner-friendly field review, selectable timers, and analyzer history.
+// ✅ Version 3.3.87 Newest update: Analyzer Review Wizard adds safer beginner-friendly field review, selectable timers, and analyzer history.
 
-const V = 'bt-v3.3.86';
+const V = 'bt-v3.3.87';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {

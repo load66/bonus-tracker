@@ -1,10 +1,10 @@
 /*
  * filename: controller.js
- * version: 3.3.86
+ * version: 3.3.87
  * purpose: Beginner-friendly Analyzer Review Wizard. Review first, then apply approved fields and selected timers.
  */
 (function(){
-  const VER='3.3.86';
+  const VER='3.3.87';
   const WIZARD_SCHEMA='analyzer-review-v1';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const esc=v=>{if(window.esc)return window.esc(String(v??''));const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML};

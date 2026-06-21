@@ -1,11 +1,11 @@
 /*
  * filename: engine.js
- * version: 3.3.86
+ * version: 3.3.87
  * purpose: Analyzer v3 Engine with built-in weird wording normalization. One parser result powers summary, autofill, timers, and issue reports.
  * last-touched: unknown
  */
 (function(){
-  const VER='3.3.86';
+  const VER='3.3.87';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const escRe=s=>String(s||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const moneyNum=s=>{const n=parseFloat(String(s||'').replace(/[$,\s]/g,''));return Number.isFinite(n)?n:0};
