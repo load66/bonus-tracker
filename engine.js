@@ -5,7 +5,7 @@
  * last-touched: unknown
  */
 (function(){
-  const VER='3.3.82';
+  const VER='3.3.61';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const escRe=s=>String(s||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const moneyNum=s=>{const n=parseFloat(String(s||'').replace(/[$,\s]/g,''));return Number.isFinite(n)?n:0};
@@ -79,7 +79,7 @@
   function isDisclosure(s){return /\bas of\b|APY|Annual Percentage Yield|effective as of|rates?|StockBrokers|U\.S\. News|FDIC|ratesheet|depositsrates|trademark|overdraft|Erica|mobile banking requires/i.test(s||'')}
   function lineMatch(lines,res){return lines.find(l=>res.some(r=>r.test(l)))||''}
   function allMatch(lines,res){return lines.filter(l=>res.some(r=>r.test(l)))}
-  function accountType(raw,acct){const text=[raw,acct].filter(Boolean).join(' ');if(/\b(biz|business|commercial|merchant|treasury|llc|pllc|ein|dba|sole proprietor|business complete|business advantage|business checking|small business)\b/i.test(text))return'business';return'personal'}
+  function accountType(raw,acct){const text=[raw,acct].filter(Boolean).join(' ');if(/\b(biz|business|commercial|merchant|treasury|llc|pllc|ein|dba|sole proprietor|business complete|business advantage|business checking|small business)\b/i.test(text))return'business';if(/\b(personal|consumer|individual|household|total checking|smartly checking|virtual wallet|advantage banking|everyday checking|college checking|sapphire checking|premier plus checking)\b/i.test(text))return'personal';return'unknown'}
   function bank(raw){if(/Bank of America|BofA/i.test(raw))return'Bank of America';if(/U\.S\. Bank|US Bank|Bank Smartly/i.test(raw))return'U.S. Bank';if(/Morgan Stanley Private Bank|E\*TRADE/i.test(raw))return'Morgan Stanley Private Bank';if(/Wells Fargo/i.test(raw))return'Wells Fargo';if(/Chase/i.test(raw))return'Chase';if(/Capital One/i.test(raw))return'Capital One';if(/Citi(?:bank)?/i.test(raw))return'Citibank';if(/PNC/i.test(raw))return'PNC Bank';const m=raw.match(/([A-Z][A-Za-z&.'’\- ]{2,90}?(?:Bank|Credit Union|Private Bank))/);return m?clean(m[1]):'New Bank Bonus'}
   function account(raw){if(/Chase Total Checking/i.test(raw))return'Chase Total Checking';if(/Bank of America/i.test(raw))return'Bank of America eligible personal checking';if(/Bank Smartly/i.test(raw))return'U.S. Bank Smartly Checking';if(/Checking or Max-Rate Checking|Checking OR Max-Rate Checking/i.test(raw))return'Checking OR Max-Rate Checking — open one only; do not enroll both';if(/consumer checking/i.test(raw))return'consumer checking';if(/personal checking/i.test(raw))return'personal checking';if(/business checking/i.test(raw))return'business checking';if(/checking/i.test(raw))return'checking';return'account type needs review'}
   function normalize(raw){return normalizeWeirdBankWording(raw).normalized}
@@ -93,48 +93,6 @@
   }
   function holdDaysFromText(raw){const text=String(raw||'');let m=text.match(/maintain[^.]{0,120}?(?:for|through)\s+(\d{1,3})\s+days/i)||text.match(/balance[^.]{0,80}?for\s+(\d{1,3})\s+days/i);return m?parseInt(m[1],10)||0:0}
   function depositDaysFromText(raw){const text=String(raw||'');let m=text.match(/deposit[^.]{0,120}?(?:within|in)\s+(\d{1,3})\s+days/i)||text.match(/fund[^.]{0,120}?(?:within|in)\s+(\d{1,3})\s+days/i);return m?parseInt(m[1],10)||0:0}
-  function closeRule(raw){
-    const text=String(raw||'').replace(/\s+/g,' ');
-    const out={basis:'opened',days:0,text:'',confidence:'low'};
-    const closeWords=/(closed?|closing|close|remain open|keep[^.]{0,40}open|maintain[^.]{0,40}open|forfeit|forfeiture|clawback|reclaim|reverse|deduct|good standing|restricted|default)/i;
-    const monthlyFeeNoise=/(monthly account fee|monthly service fee|monthly maintenance fee|monthly fee|service charge|maintenance fee|paper statement fee|statement fee|average monthly balance|avg monthly balance|fee waived|waived with|waived when|waive the monthly|avoid monthly|fee can be waived|minimum balance|APY|interest rate)/i;
-    const split=text.split(/(?<=[.!?])\s+|\n+|;/).map(clean).filter(Boolean);
-    const candidates=split.filter(s=>closeWords.test(s)&&!monthlyFeeNoise.test(s));
-    const fallback=candidates.length?candidates.join('. '):'';
-    const source=fallback||'';
-    const patterns=[
-      /(?:closed?|closing|close)[^.]{0,120}?(?:within|before)\s+(\d{1,3})\s*(days?|months?)\b[^.]{0,160}/i,
-      /(?:remain|keep|maintain)[^.]{0,80}?open[^.]{0,120}?(\d{1,3})\s*(days?|months?)\b[^.]{0,160}/i,
-      /(\d{1,3})\s*(days?|months?)\b[^.]{0,120}?(?:after|from)[^.]{0,80}?(?:opening|opened|account opening|account open)[^.]{0,120}/i,
-      /(\d{1,3})\s*(days?|months?)\b[^.]{0,120}?(?:after|from)[^.]{0,80}?(?:bonus|cash reward|payout|payment)[^.]{0,120}/i,
-      /(\d{1,3})\s*(days?|months?)\b[^.]{0,120}?(?:after|from)[^.]{0,80}?(?:requirement|qualification|deposit period)[^.]{0,120}/i
-    ];
-    let m=null, found='';
-    for(const re of patterns){m=source.match(re);if(m){found=m[0];break}}
-    if(m){
-      let n=parseInt(m[1],10)||0;
-      const unit=String(m[2]||'').toLowerCase();
-      if(/month/.test(unit))n*=30;
-      if(n>0&&n<=730){
-        out.days=n;
-        out.text=clean(found).slice(0,360);
-        out.confidence='medium';
-      }
-    }
-    const src=out.text||source||text;
-    if(/after[^.]{0,90}(bonus|cash reward|payout|payment)|bonus[^.]{0,90}(posts|posted|received|paid|payment)/i.test(src))out.basis='bonus';
-    else if(/after[^.]{0,90}(requirement|qualification|deposit period)|requirement[^.]{0,90}(met|complete|satisfied)/i.test(src))out.basis='reqmet';
-    else if(/manual review|sole discretion|may forfeit|clawback|reclaim|reverse|deduct|forfeit|good standing|restricted|default/i.test(src)&&!out.days)out.basis='bonus';
-    else out.basis=out.days?'opened':'bonus';
-    if(!out.text){
-      const risk=candidates.find(s=>/(forfeit|clawback|reclaim|reverse|deduct|good standing|remain open|keep[^.]{0,30}open|restricted|default)/i.test(s));
-      if(risk){out.text=clean(risk).slice(0,360);out.confidence='low'}
-    }
-    if(monthlyFeeNoise.test(out.text||'')){
-      out.days=0;out.text='';out.confidence='low';out.basis='bonus';
-    }
-    return out
-  }
   function tiers(raw){const text=String(raw||'').replace(/\s+/g,' ');const out=[];const push=(req,max,bonus,src)=>{req=moneyNum(req);max=moneyNum(max);bonus=moneyNum(bonus);if(req>=100&&bonus>0&&bonus<req)out.push({requirement:req,maxRequirement:max||0,bonus,source:clean(src),confidence:'High'})};let m;
     const patterns=[/\$\s*([0-9,]+(?:\.\d+)?)\s*(?:to|–|-|—)\s*\$\s*([0-9,]+(?:\.\d+)?)\s*(?:to earn|=|\s+)\s*(?:the\s*)?\$\s*([0-9,]+(?:\.\d+)?)\s*(?:bonus)?/gi,/\$\s*([0-9,]+(?:\.\d+)?)\s*(?:or more|\+)\s*(?:to earn|=|\s+)\s*(?:the\s*)?\$\s*([0-9,]+(?:\.\d+)?)\s*(?:bonus)?/gi,/earn\s*\$\s*([0-9,]+(?:\.\d+)?)\s+with\s+(?:a\s+)?minimum\s+\$\s*([0-9,]+(?:\.\d+)?)\s+deposit(?:\s+in\s+new\s+money)?/gi,/\$\s*([0-9,]+(?:\.\d+)?)\s+(?:bonus|cash bonus)?[^.]{0,80}?minimum\s+\$\s*([0-9,]+(?:\.\d+)?)\s+deposit(?:\s+in\s+new\s+money)?/gi];
     while((m=patterns[0].exec(text)))push(m[1],m[2],m[3],m[0]);while((m=patterns[1].exec(text)))push(m[1],0,m[2],m[0]);while((m=patterns[2].exec(text)))push(m[2],0,m[1],m[0]);while((m=patterns[3].exec(text)))push(m[2],0,m[1],m[0]);
@@ -293,8 +251,7 @@
       srcItem('Payout timing',pay.value,pay.source||'',pay.source?'medium':'low'),
       srcItem('Early close / payout risk','Keep account open and in good standing until payout.',earlySource,earlySource?'medium':'low')
     ]);
-        const cr=closeRule(scopes.full);
-    const result={version:VER,source,sourceKind:source.kind,sourceId:source.sourceId,sourceLength:source.length,bank:b,acct:acctValue,accountType:acctType,raw:original,normalizedRaw:raw,bonusScope:bonusRaw,feeScope:feeRaw,tiered:!!tierList.length,tiers:tierList,targetTier,bonus,selectedBonus:bonus,bonusTierText:tierList.map(t=>`${money(t.bonus)} for ${money(t.requirement)}+${hasNewMoneyFunding(bonusRaw)?' new money':' DD'}`).join(' / '),code:p?.value||'',promoCode:p,openBy:exp?.value||'',expiration:exp,reqDays:req.reqDays,reqMoney:req.reqMoney,reqIsTotal:req.reqIsTotal,count:req.count,reqSource:req.source,requirementType:req.requirementType,requirementNoun:req.requirementNoun,fundedDays:fund.fundedDays||((tierList.length&&hasNewMoneyFunding(bonusRaw))?depositDaysFromText(bonusRaw):0),fundingAmount:fund.fundingAmount||((tierList.length&&hasNewMoneyFunding(bonusRaw))?(targetTier?.requirement||0):0),fundingSource:fund.source||((tierList.length&&hasNewMoneyFunding(bonusRaw))?(targetTier?.source||'new money funding requirement'):''),holdDays:holdDaysFromText(bonusRaw),minHoldDays:((cr.days&&cr.text)?cr.days:holdDaysFromText(bonusRaw)),closeRuleBasis:cr.basis,closeRuleDays:cr.days,closeRuleText:cr.text,closeRuleConfidence:cr.confidence,closeBufferDays:3,hasExplicitCurrentOffer:!!(tierList.length||req.source),fee:feeObj.fee,monthlyFee:feeObj.fee?{value:money(feeObj.fee)+' monthly fee',amount:feeObj.fee,source:feeObj.source}:null,waivers:feeObj.waivers,counts:countValues,not:notValues,notCounts:notValues,eligibilityText:eligibilityLines.join('\n'),payout:pay.value,payoutText:pay.value,payoutSource:pay.source,early:'Keep account open and in good standing until bonus payout; closing/restriction before payout can forfeit bonus.',reviewFlags:[],clear:false,bankProfilesVersion:'v3-core',weirdWordingDetected:weird.hits,weirdWordingAliases:uniq(weird.aliases),weirdWordingNormalizerVersion:WEIRD_WORDING_VER,fieldSources:src.map,sourceSnippets:src.list,fieldConfidence:Object.fromEntries(src.list.map(x=>[x.field,x.confidence]))};
+    const result={version:VER,source,sourceKind:source.kind,sourceId:source.sourceId,sourceLength:source.length,bank:b,acct:acctValue,accountType:acctType,raw:original,normalizedRaw:raw,bonusScope:bonusRaw,feeScope:feeRaw,tiered:!!tierList.length,tiers:tierList,targetTier,bonus,selectedBonus:bonus,bonusTierText:tierList.map(t=>`${money(t.bonus)} for ${money(t.requirement)}+${hasNewMoneyFunding(bonusRaw)?' new money':' DD'}`).join(' / '),code:p?.value||'',promoCode:p,openBy:exp?.value||'',expiration:exp,reqDays:req.reqDays,reqMoney:req.reqMoney,reqIsTotal:req.reqIsTotal,count:req.count,reqSource:req.source,requirementType:req.requirementType,requirementNoun:req.requirementNoun,fundedDays:fund.fundedDays||((tierList.length&&hasNewMoneyFunding(bonusRaw))?depositDaysFromText(bonusRaw):0),fundingAmount:fund.fundingAmount||((tierList.length&&hasNewMoneyFunding(bonusRaw))?(targetTier?.requirement||0):0),fundingSource:fund.source||((tierList.length&&hasNewMoneyFunding(bonusRaw))?(targetTier?.source||'new money funding requirement'):''),holdDays:holdDaysFromText(bonusRaw),minHoldDays:holdDaysFromText(bonusRaw),hasExplicitCurrentOffer:!!(tierList.length||req.source),fee:feeObj.fee,monthlyFee:feeObj.fee?{value:money(feeObj.fee)+' monthly fee',amount:feeObj.fee,source:feeObj.source}:null,waivers:feeObj.waivers,counts:countValues,not:notValues,notCounts:notValues,eligibilityText:eligibilityLines.join('\n'),payout:pay.value,payoutText:pay.value,payoutSource:pay.source,early:'Keep account open and in good standing until bonus payout; closing/restriction before payout can forfeit bonus.',reviewFlags:[],clear:false,bankProfilesVersion:'v3-core',weirdWordingDetected:weird.hits,weirdWordingAliases:uniq(weird.aliases),weirdWordingNormalizerVersion:WEIRD_WORDING_VER,fieldSources:src.map,sourceSnippets:src.list,fieldConfidence:Object.fromEntries(src.list.map(x=>[x.field,x.confidence]))};
     if(result.weirdWordingAliases?.length)result.reviewFlags.push('Unusual bank wording normalized: '+result.weirdWordingAliases.slice(0,4).join('; ')+(result.weirdWordingAliases.length>4?'…':''));
     if(!result.bonus)result.reviewFlags.push('Bonus amount not found in bonus section. Leave amount blank/review instead of using fee-waiver amounts.');
     if(!result.reqDays&&/direct deposit|qualifying deposit/i.test(bonusRaw))result.reviewFlags.push('Requirement deadline needs review.');
@@ -302,7 +259,6 @@
     if(/offer expires|through and including|open.*by/i.test(bonusRaw)&&!result.openBy)result.reviewFlags.push('Promo expiration/open-by date needs review.');
     result.clear=!!(result.bonus&&result.reqDays);
     result.suggestedTimers=[];
-    if(result.closeRuleText&&!result.closeRuleDays)result.reviewFlags.push('Close rule wording needs manual review: '+result.closeRuleText.slice(0,180));
     if(result.openBy)result.suggestedTimers.push({kind:'due',text:'Promo expiration / open-by deadline',date:result.openBy,source:exp?.source||''});
     if(result.fundedDays)result.suggestedTimers.push({kind:'days',text:'Deposit new money / funding deadline',daysRequired:result.fundedDays,source:result.fundingSource||fund.source||''});
     if(result.holdDays)result.suggestedTimers.push({kind:'days',text:'Maintain required new-money balance',daysRequired:result.holdDays,source:'hold requirement'});
@@ -310,7 +266,6 @@
     const payoutDays=payoutDaysFromText(result.payout||result.payoutText||'');
     if(result.reqDays&&payoutDays)result.suggestedTimers.push({kind:'days',text:'Bonus payout watch',daysRequired:Number(result.reqDays)+payoutDays,source:result.payoutSource||'payout timing'});
     if(result.reqDays&&payoutDays)result.suggestedTimers.push({kind:'days',text:'Close review after payout',daysRequired:Number(result.reqDays)+payoutDays+5,source:'close plan'});
-    if(result.closeRuleDays)result.suggestedTimers.push({kind:'days',text:'Close hold / early-close safety date',daysRequired:result.closeRuleDays+3,source:result.closeRuleText||'close rule'});
     const plan=[];let step=1;
     plan.push(`${step++}. Open one eligible account${result.openBy?' by '+pretty(result.openBy):''}${result.code?' using promo code '+result.code:''}.`);
     if(result.fundedDays)plan.push(`${step++}. Deposit new money / fund the account${result.fundingAmount?' with at least '+money(result.fundingAmount):''} within ${result.fundedDays} days.`);
@@ -319,8 +274,6 @@
     else plan.push(`${step++}. Complete ${result.count?'at least '+result.count+' ':''}qualifying Direct Deposits${result.reqMoney?`${result.reqIsTotal?' totaling ':' of '}${money(result.reqMoney)}+${result.reqIsTotal?'':' each'}`:''}${result.reqDays?' within '+result.reqDays+' days':''}.`);
     plan.push(`${step++}. Bonus payout: ${result.payout}.`);
     plan.push(`${step++}. Keep account open and in good standing until payout.`);
-    if(result.closeRuleDays)plan.push(`${step++}. Close safety: keep open ${result.closeRuleDays} days from ${result.closeRuleBasis==='bonus'?'bonus received date':result.closeRuleBasis==='reqmet'?'requirement met date':'opened date'} plus your close buffer.`);
-    else if(result.closeRuleText)plan.push(`${step++}. Close safety needs review: ${result.closeRuleText}`);
     result.actionPlan=plan.filter(Boolean).join('\n');
     window.__tcV3AnalysisResult=result;window.__tcCurrentAnalysisResult=result;return result;
   }

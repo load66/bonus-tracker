@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.82 Newest update: Needs Attention honors active mini timers over generic requirement fallback deadlines.
+// ✅ Version 3.3.61 Newest update: Global Personal/Business account type separation for matching, profiles, offer history, and analyzer autofill.
 
-const V = 'bt-v3.3.82';
+const V = 'bt-v3.3.61';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
