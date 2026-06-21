@@ -1,9 +1,10 @@
-/* ✅ Version 3.3.87 update: Cleaner beginner-friendly bank cards, structured plan sections, and normalized line breaks. */
+/* ✅ Version 3.3.88 update: Verified Apply Mode, adaptive analyzer learning, and stronger weird-wording parsing. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.3.87';
+const APP_VERSION='3.3.88';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
+const ANALYZER_MEMORY_KEY='bt_analyzer_memory_v1';
 
 const ld=(k,d)=>{
   try{
@@ -749,6 +750,133 @@ function bankMemoryFor(bank){
   
 }
 
+
+function analyzerMemoryLoad(){
+  const raw=ld(ANALYZER_MEMORY_KEY,{});
+  return raw&&typeof raw==='object'?raw:{}
+}
+function analyzerMemorySave(mem){
+  sv(ANALYZER_MEMORY_KEY,mem&&typeof mem==='object'?mem:{})
+}
+function analyzerMemoryValueKey(v){
+  return String(v??'').replace(/\s+/g,' ').trim().toLowerCase().slice(0,260)
+}
+function analyzerMemoryPushField(bucket,field,label,value,opts={}){
+  const val=String(value??'').replace(/\s+/g,' ').trim();
+  if(!val||val==='0'||val==='false')return;
+  bucket.fields=bucket.fields||{};
+  const rec=bucket.fields[field]||{field,label:label||field,values:{},lastValue:'',lastAt:'',stable:!!opts.stable,dynamic:!!opts.dynamic};
+  rec.label=label||rec.label||field;
+  rec.stable=!!(rec.stable||opts.stable);
+  rec.dynamic=!!(rec.dynamic||opts.dynamic);
+  const key=analyzerMemoryValueKey(val);
+  const cur=rec.values[key]||{value:val,count:0,firstAt:td(),lastAt:'',entryIds:[]};
+  cur.value=val;
+  const seenEntry=opts.entryId&&cur.entryIds.includes(opts.entryId);
+  if(!seenEntry)cur.count=(cur.count||0)+1;
+  cur.lastAt=td();
+  if(opts.entryId&&!cur.entryIds.includes(opts.entryId))cur.entryIds.unshift(opts.entryId);
+  cur.entryIds=(cur.entryIds||[]).slice(0,6);
+  rec.values[key]=cur;rec.lastValue=val;rec.lastAt=td();
+  bucket.fields[field]=rec;
+}
+function learnAnalyzerMemoryFromEntry(e){
+  if(!e||!e.bank)return;
+  const key=bankKey(e.bank);
+  if(!key)return;
+  const mem=analyzerMemoryLoad();
+  const bucket=mem[key]||{bank:e.bank,key,accountTypes:{},fields:{},cycles:0,updatedAt:'',entryIds:[]};
+  bucket.bank=e.bank;bucket.key=key;bucket.updatedAt=td();
+  if(e.id&&!bucket.entryIds.includes(e.id))bucket.entryIds.unshift(e.id);
+  bucket.entryIds=(bucket.entryIds||[]).slice(0,30);
+  bucket.cycles=bucket.entryIds.length||Math.max(1,bucket.cycles||0);
+  const type=normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'personal';
+  bucket.accountTypes[type]=(bucket.accountTypes[type]||0)+1;
+  const opt={entryId:e.id||'',stable:false,dynamic:false};
+  analyzerMemoryPushField(bucket,'accountType','Account type',type,{...opt,stable:true});
+  analyzerMemoryPushField(bucket,'churn','Churn rule',e.churn,{...opt,stable:true});
+  analyzerMemoryPushField(bucket,'reqDays','Requirement days',e.reqDays?String(e.reqDays):'',{...opt,dynamic:true});
+  analyzerMemoryPushField(bucket,'dataPoint','Requirement summary',e.dataPoint,{...opt,dynamic:true});
+  analyzerMemoryPushField(bucket,'fundedDays','Funding deadline',e.fundedDays?String(e.fundedDays):'',{...opt,dynamic:true});
+  analyzerMemoryPushField(bucket,'fundingAmountText','Funding amount',e.fundingAmountText||((e.fundingAmount||0)?fM(e.fundingAmount):''),{...opt,dynamic:true});
+  analyzerMemoryPushField(bucket,'payoutTimingText','Payout timing',e.payoutTimingText,{...opt,stable:true});
+  analyzerMemoryPushField(bucket,'monthlyFeeYNText','Monthly fee',e.monthlyFeeYNText||e.monthlyFeeAmountText,{...opt,stable:true});
+  analyzerMemoryPushField(bucket,'avoidMonthlyFeeText','Fee waiver',e.avoidMonthlyFeeText||e.monthlyFeeWaiverText,{...opt,stable:true});
+  analyzerMemoryPushField(bucket,'monthlyFeeAmountText','Monthly fee amount',e.monthlyFeeAmountText,{...opt,stable:true});
+  analyzerMemoryPushField(bucket,'monthlyFeeWaiverText','Monthly fee waiver wording',e.monthlyFeeWaiverText,{...opt,stable:true});
+  analyzerMemoryPushField(bucket,'eligibilityText','Eligibility / churn',e.eligibilityText,{...opt,stable:true});
+  analyzerMemoryPushField(bucket,'minHoldDays','Close hold days',e.minHoldDays?String(e.minHoldDays):'',{...opt,stable:true});
+  analyzerMemoryPushField(bucket,'closeRuleBasis','Close rule basis',e.closeRuleBasis,{...opt,stable:true});
+  analyzerMemoryPushField(bucket,'closeRuleText','Close rule wording',e.closeRuleText,{...opt,stable:true});
+  analyzerMemoryPushField(bucket,'bonus','Bonus amount',(e.bonus||0)?String(e.bonus):'',{...opt,dynamic:true});
+  mem[key]=bucket;analyzerMemorySave(mem);
+}
+function analyzerMemoryBest(rec){
+  const vals=Object.values(rec?.values||{});
+  if(!vals.length)return null;
+  return vals.sort((a,b)=>(b.count||0)-(a.count||0)||(b.lastAt||'').localeCompare(a.lastAt||''))[0]||null
+}
+function analyzerResultFieldFilled(r,key){
+  if(!r)return false;
+  const map={accountType:'accountType',churn:'churn',reqDays:'reqDays',dataPoint:'dataPoint',fundedDays:'fundedDays',fundingAmountText:'fundingAmount',payoutTimingText:'payoutTimingText',monthlyFeeYNText:'monthlyFeeYNText',avoidMonthlyFeeText:'avoidMonthlyFeeText',monthlyFeeAmountText:'monthlyFeeAmountText',monthlyFeeWaiverText:'monthlyFeeWaiverText',eligibilityText:'eligibilityText',minHoldDays:'minHoldDays',closeRuleBasis:'closeRuleBasis',closeRuleText:'closeRuleText',bonus:'bonus'};
+  const target=map[key]||key;const v=r[target];
+  return v!==undefined&&v!==null&&String(v).trim()!==''&&String(v)!=='0'
+}
+function tcApplyAnalyzerAdaptiveLearning(r){
+  if(!r||!r.bank)return r;
+  const mem=analyzerMemoryLoad();
+  const bucket=mem[bankKey(r.bank)];
+  if(!bucket||!bucket.fields)return r;
+  const used=[];
+  const safeApply=(key,outKey,label,format)=>{
+    const rec=bucket.fields[key];const best=analyzerMemoryBest(rec);if(!rec||!best||!best.value)return;
+    const confirmations=best.count||0;
+    const stable=!!rec.stable;
+    const dynamic=!!rec.dynamic;
+    const already=analyzerResultFieldFilled(r,key);
+    const allowFill=!already && (stable||confirmations>=2);
+    const display=format?format(best.value):best.value;
+    const source='Learned from your saved '+(bucket.bank||r.bank)+' history — '+confirmations+' approved cycle'+(confirmations!==1?'s':'')+'. Review against the current offer before applying.';
+    const fb={field:label,value:display,source,confidence:(allowFill&&confirmations>=2?'learned-stable':'learned-review'),kind:'adaptive-learned'};
+    r.profileFallbacks=(r.profileFallbacks||[]).concat(fb);
+    r.sourceSnippets=r.sourceSnippets||[];r.fieldSources=r.fieldSources||{};r.fieldConfidence=r.fieldConfidence||{};
+    if(!r.fieldSources[label])r.fieldSources[label]=fb;
+    if(!r.sourceSnippets.some(x=>x.field===label&&x.kind==='adaptive-learned'))r.sourceSnippets.push(fb);
+    r.fieldConfidence[label]=fb.confidence;
+    if(allowFill){
+      let val=best.value;
+      if(['reqDays','fundedDays','minHoldDays','bonus'].includes(key))val=parseInt(String(val).replace(/[^0-9]/g,''),10)||0;
+      if(key==='minHoldDays'){r.minHoldDays=val;r.closeRuleDays=r.closeRuleDays||val;}
+      else if(key==='bonus'){r.bonus=r.bonus||val;r.selectedBonus=r.selectedBonus||val;}
+      else r[outKey||key]=val;
+      used.push(label);
+    }else if(dynamic&&!already){used.push(label+' suggestion');}
+  };
+  safeApply('accountType','accountType','Account type');
+  safeApply('churn','churn','Churn rule');
+  safeApply('reqDays','reqDays','Requirement days',v=>v+' days');
+  safeApply('dataPoint','dataPoint','Requirement amount');
+  safeApply('fundedDays','fundedDays','Funding deadline',v=>v+' days');
+  safeApply('fundingAmountText','fundingAmountText','Funding amount');
+  safeApply('payoutTimingText','payoutTimingText','Payout timing');
+  safeApply('monthlyFeeYNText','monthlyFeeYNText','Monthly fee');
+  safeApply('avoidMonthlyFeeText','avoidMonthlyFeeText','Fee waiver');
+  safeApply('monthlyFeeAmountText','monthlyFeeAmountText','Monthly fee amount');
+  safeApply('monthlyFeeWaiverText','monthlyFeeWaiverText','Monthly fee waiver wording');
+  safeApply('eligibilityText','eligibilityText','Eligibility');
+  safeApply('minHoldDays','minHoldDays','Close hold days',v=>v+' days');
+  safeApply('closeRuleBasis','closeRuleBasis','Close rule basis');
+  safeApply('closeRuleText','closeRuleText','Close rule wording');
+  safeApply('bonus','bonus','Bonus amount',v=>fM(parseInt(String(v).replace(/[^0-9]/g,''),10)||0));
+  if(used.length){
+    r.adaptiveLearning={matched:true,bank:bucket.bank||r.bank,cycles:bucket.cycles||0,fields:used.slice(0,12),summary:'Found '+(bucket.cycles||1)+' saved cycle'+((bucket.cycles||1)!==1?'s':'')+' for this bank. Current T&C proof still takes priority.'};
+    r.reviewFlags=r.reviewFlags||[];
+    r.reviewFlags.push('Adaptive learning used saved history for missing/unclear fields. Verify learned suggestions before applying.');
+  }
+  return r
+}
+try{window.tcLearnAnalyzerFromEntry=learnAnalyzerMemoryFromEntry;window.tcApplyAnalyzerAdaptiveLearning=tcApplyAnalyzerAdaptiveLearning;window.tcAnalyzerMemoryLoad=analyzerMemoryLoad}catch{}
+
 function applyModalBankMemory(){
   if(!modal||modal._edit)return;
   syncModalAccountTypeFromBank();
@@ -1442,7 +1570,7 @@ function chartData(){
 /* Bank Identity v3.3.42
    Centralized bank matching. Display names can vary, but duplicate/churn
    matching uses canonical bank family + personal/business type. */
-const BANK_IDENTITY_VERSION='3.3.87';
+const BANK_IDENTITY_VERSION='3.3.88';
 function normBankText(v){return String(v||'').toLowerCase().replace(/[®™℠]/g,'').replace(/&/g,' and ').replace(/\*/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim()}
 function bankAliasGroups(){return[
   ['chase','CHA',['chase','jpmorgan chase','jp morgan chase','jpmorgan','jp morgan','jpm']],
@@ -1731,7 +1859,7 @@ function doReplacementPickerCreateSeparate(){
   const next=assignEntryIdForCreate({...d,checklist:[],customTimers:normalizeTimerList(d.customTimers||[]),feeChecked:false});
   hydrateTimersFromOpened(next);Object.assign(next,normalizeLifecycleEntry(next));
   entries.push(next);entries=sortE(entries);sv(SK,entries);
-  syncProfileEventsFromEntry(next);refreshSavedReqFromEntry(next);
+  syncProfileEventsFromEntry(next);refreshSavedReqFromEntry(next);learnAnalyzerMemoryFromEntry(next);
   replacementPickerPrompt=null;modal=null;expanded=next.id;tab='tracker';search='';showInlineAZ=false;inlineResult=null;
   R()
 }
@@ -3353,7 +3481,7 @@ function normalizeLifecycleEntry(e){
     x.monthlyFeeNoMonthlyServiceFee=!!(x.monthlyFeeNoMonthlyServiceFee||feeStruct.monthlyFeeNoMonthlyServiceFee);
   }catch{}
   x.customTimers=normalizeTimerList(x.customTimers||[]);
-  // v3.3.87: closed remains actual only. Planned close is stored separately by the close flow.
+  // v3.3.88: closed remains actual only. Planned close is stored separately by the close flow.
   // Do not silently convert future closed dates into plannedClose.
   if(x.closed)x.plannedClose='';
   if(x.bonusRecd&&!x.reqMet)x.reqMet=x.bonusRecd;
@@ -3868,7 +3996,7 @@ function saveEntry(){
   }
   entries=sortE(entries);
   if(!saveEntriesStrict(entries)){entries=beforeEntries;return false}
-  if(savedEntry){syncProfileEventsFromEntry(savedEntry);refreshSavedReqFromEntry(savedEntry)}
+  if(savedEntry){syncProfileEventsFromEntry(savedEntry);refreshSavedReqFromEntry(savedEntry);learnAnalyzerMemoryFromEntry(savedEntry)}
   closeModal();
   return true;
 }
@@ -3957,7 +4085,7 @@ function doOverwrite(){
   });
   entries=sortE(entries);sv(SK,entries);
   const saved=entries.find(e=>e.id===savedId)||null;
-  if(saved){syncProfileEventsFromEntry(saved);refreshSavedReqFromEntry(saved)}
+  if(saved){syncProfileEventsFromEntry(saved);refreshSavedReqFromEntry(saved);learnAnalyzerMemoryFromEntry(saved)}
   overwritePrompt=null;modal=null;expanded=savedId;tab='tracker';search='';showInlineAZ=false;inlineResult=null;
   R();
 }
@@ -3967,11 +4095,11 @@ function doAddNew(){
   const d={...p.newData};
   const next=assignEntryIdForCreate({...d,checklist:[],customTimers:normalizeTimerList(d.customTimers||[]),feeChecked:false});
   entries.push(next);entries=sortE(entries);sv(SK,entries);
-  syncProfileEventsFromEntry(next);refreshSavedReqFromEntry(next);
+  syncProfileEventsFromEntry(next);refreshSavedReqFromEntry(next);learnAnalyzerMemoryFromEntry(next);
   overwritePrompt=null;modal=null;expanded=next.id;tab='tracker';search='';showInlineAZ=false;inlineResult=null;
   R();
 }
-function getBackupStorageKeys(){return[SK,TK,DD_KEY,REQ_KEY,OFFER_HIST_KEY,PHONE_KEY,DP_USER_KEY,COMMUNITY_DP_KEY,COMMUNITY_DP_SEED_KEY,PROFILE_EVT_KEY,BK_KEY,'bt_tc_learning_inbox_v320']}
+function getBackupStorageKeys(){return[SK,TK,DD_KEY,REQ_KEY,OFFER_HIST_KEY,PHONE_KEY,DP_USER_KEY,COMMUNITY_DP_KEY,COMMUNITY_DP_SEED_KEY,PROFILE_EVT_KEY,BK_KEY,'bt_tc_learning_inbox_v320',ANALYZER_MEMORY_KEY]}
 function parseBackupStorageValue(raw){try{return JSON.parse(raw)}catch{return raw}}
 function storageValueForRestore(val){return typeof val==='string'?val:JSON.stringify(val)}
 function countBackupEntries(d){if(Array.isArray(d?.entries))return d.entries.length;const arr=backupArrayFromStorage(d,SK);return arr.length}
@@ -5862,6 +5990,6 @@ entries=sortE(entries);R();
 })();
 /* === End consolidated core module: Tracker card bank actions renderer === */
 
-(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.87 close intelligence polish */\n.close-intel.safe{border-color:#bbf7d0;background:#f0fdf4}\n.close-intel.warn,.close-intel.plan{border-color:#fde68a;background:#fffbeb}\n.close-intel.danger{border-color:#fecaca;background:#fff7f7}\n.close-ready{padding:10px 12px;border-radius:14px;margin:10px 0 12px;border:1px solid #e5e7eb;background:#f8fafc;font-size:12px;line-height:1.35}\n.close-ready b{display:block;font-size:13px;margin-bottom:2px}\n.close-ready.safe{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}\n.close-ready.warn,.close-ready.plan{background:#fffbeb;border-color:#fde68a;color:#78350f}\n.close-ready.danger{background:#fff1f2;border-color:#fecaca;color:#7f1d1d}\n.close-final-note{font-size:11px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px;margin-top:10px;line-height:1.35}\n.close-mode-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}\n.close-mode{border:1px solid #e2e8f0;background:#f8fafc;border-radius:14px;padding:10px 9px;text-align:left;font-family:'DM Sans',system-ui,sans-serif;color:#334155;cursor:pointer}\n.close-mode b{display:block;font-size:12px;line-height:1.05;color:#0f172a}\n.close-mode span{display:block;font-size:9px;line-height:1.2;color:#64748b;font-weight:800;margin-top:3px}\n.close-mode.sel{background:#eff6ff;border-color:#93c5fd;box-shadow:0 0 0 2px rgba(59,130,246,.10)}\n";document.head.appendChild(st)}catch{}})();
+(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.88 close intelligence polish */\n.close-intel.safe{border-color:#bbf7d0;background:#f0fdf4}\n.close-intel.warn,.close-intel.plan{border-color:#fde68a;background:#fffbeb}\n.close-intel.danger{border-color:#fecaca;background:#fff7f7}\n.close-ready{padding:10px 12px;border-radius:14px;margin:10px 0 12px;border:1px solid #e5e7eb;background:#f8fafc;font-size:12px;line-height:1.35}\n.close-ready b{display:block;font-size:13px;margin-bottom:2px}\n.close-ready.safe{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}\n.close-ready.warn,.close-ready.plan{background:#fffbeb;border-color:#fde68a;color:#78350f}\n.close-ready.danger{background:#fff1f2;border-color:#fecaca;color:#7f1d1d}\n.close-final-note{font-size:11px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px;margin-top:10px;line-height:1.35}\n.close-mode-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}\n.close-mode{border:1px solid #e2e8f0;background:#f8fafc;border-radius:14px;padding:10px 9px;text-align:left;font-family:'DM Sans',system-ui,sans-serif;color:#334155;cursor:pointer}\n.close-mode b{display:block;font-size:12px;line-height:1.05;color:#0f172a}\n.close-mode span{display:block;font-size:9px;line-height:1.2;color:#64748b;font-weight:800;margin-top:3px}\n.close-mode.sel{background:#eff6ff;border-color:#93c5fd;box-shadow:0 0 0 2px rgba(59,130,246,.10)}\n";document.head.appendChild(st)}catch{}})();
 
-(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.87 monthly fee plan box */\n.monthly-fee-plan.safe{border-color:#bbf7d0;background:#f0fdf4}\n.monthly-fee-plan.warn{border-color:#fde68a;background:#fffbeb}\n.monthly-fee-plan .tc-label{letter-spacing:.11em}\n";document.head.appendChild(st)}catch{}})();
+(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.88 monthly fee plan box */\n.monthly-fee-plan.safe{border-color:#bbf7d0;background:#f0fdf4}\n.monthly-fee-plan.warn{border-color:#fde68a;background:#fffbeb}\n.monthly-fee-plan .tc-label{letter-spacing:.11em}\n";document.head.appendChild(st)}catch{}})();
