@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.83 Newest update: Close flow now marks closed immediately by picked date, adds stronger undo, and uses 5-day close buffer.
+// ✅ Version 3.3.85 Newest update: Close flow now marks closed immediately by picked date, adds stronger undo, and uses 5-day close buffer.
 
-const V = 'bt-v3.3.83';
+const V = 'bt-v3.3.85';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {

@@ -1,7 +1,7 @@
-/* ✅ Version 2.0 Newest update: Removed Profile tab + added Data Health and safer backup/close guardrails. */
+/* ✅ Version 3.3.85 update: Professional close flow, lifecycle stepper, safer date defaults, and persistent action history. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.3.84';
+const APP_VERSION='3.3.85';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 
@@ -252,7 +252,89 @@ function renderClosePlan(e){
   return '<div class="tc-box close-intel '+esc(ready.cls)+'"><div class="tc-label">Close plan · '+esc(ready.label)+'</div><div class="tc-body">'+lines.map(x=>'* '+esc(x)).join('\n')+'</div></div>'
 }
 
-
+function closeFlowRecommendedMode(e,preferred){
+  if(preferred==='actual'||preferred==='planned')return preferred;
+  if(!e||e.closed)return'actual';
+  if(!e.bonusRecd)return'planned';
+  if(!e.reqMet)return'planned';
+  const safe=safeCloseDate(e);
+  if(safe&&dB(td(),safe)>0)return'planned';
+  if(e.plannedClose&&dB(td(),e.plannedClose)>0)return'planned';
+  return'actual'
+}
+function closeFlowDefaultDate(e,mode){
+  if(mode==='planned')return e?.plannedClose||safeCloseDate(e)||td();
+  return td()
+}
+function closeFlowModeReason(e,mode){
+  if(!e)return'Entry needs manual review.';
+  if(mode==='planned'){
+    if(!e.bonusRecd)return'Bonus is not received yet, so planning is safer than actual close.';
+    if(!e.reqMet)return'Requirement met date is missing, so planning keeps the cycle active.';
+    const safe=safeCloseDate(e);
+    if(safe&&dB(td(),safe)>0)return'Hold period or buffer is not complete until '+fD(safe)+'.';
+    if(e.plannedClose)return'Existing planned close date is saved. Review before recording the actual close.';
+    return'Plan only keeps this bank active and does not start the churn countdown.'
+  }
+  if(e.closed)return'This entry already has an actual closed date saved.';
+  return'Bonus and close timing look ready enough to review actual close.'
+}
+function normalizeEntryHistoryList(list){
+  return (Array.isArray(list)?list:[]).filter(x=>x&&typeof x==='object').map(x=>({
+    at:String(x.at||x.date||'').trim(),
+    type:String(x.type||x.action||'').trim(),
+    title:String(x.title||x.label||'').trim(),
+    detail:String(x.detail||x.note||'').trim()
+  })).filter(x=>x.at||x.title||x.detail).slice(-80)
+}
+function historyEventTitle(type){
+  const map={actual_close:'Actual close saved',planned_close:'Planned close saved',clear_planned_close:'Planned close cleared',still_open:'Marked still open',bonus_received:'Bonus received saved',bonus_received_cleared:'Bonus received cleared',req_met:'Requirement met saved',req_met_cleared:'Requirement met cleared',entry_saved:'Entry saved'};
+  return map[type]||'Tracker update'
+}
+function appendEntryHistory(x,type,detail){
+  if(!x||typeof x!=='object')return x;
+  const list=normalizeEntryHistoryList(x.history);
+  list.push({at:new Date().toISOString(),type:String(type||'update'),title:historyEventTitle(type),detail:String(detail||'').trim()});
+  x.history=list.slice(-80);
+  return x
+}
+function renderEntryHistory(e){
+  const list=normalizeEntryHistoryList(e?.history).slice(-6).reverse();
+  if(!list.length)return'';
+  let h='<div class="bt-history-card"><div class="bt-history-title">Action history</div>';
+  list.forEach(ev=>{
+    const d=ev.at?new Date(ev.at):null;
+    const when=d&&!isNaN(d)?d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):ev.at;
+    h+='<div class="bt-history-row"><div><b>'+esc(ev.title||historyEventTitle(ev.type))+'</b><span>'+esc(ev.detail||'Saved update')+'</span></div><em>'+esc(when||'')+'</em></div>'
+  });
+  h+='</div>';
+  return h
+}
+function lifecycleSteps(e){
+  const safe=safeCloseDate(e);
+  const churn=churnReadyDate(e);
+  return [
+    {key:'opened',label:'Opened',done:!!e?.opened,date:e?.opened||''},
+    {key:'funded',label:'Funded',done:!!(e?.fundedDate||e?.fundedAt||e?.fundingCompleted||e?.fundedDone),date:e?.fundedDate||e?.fundedAt||''},
+    {key:'req',label:'Req Met',done:!!e?.reqMet,date:e?.reqMet||''},
+    {key:'bonus',label:'Bonus',done:!!e?.bonusRecd,date:e?.bonusRecd||''},
+    {key:'safe',label:'Safe Close',done:!!(e?.closed||(safe&&dB(td(),safe)<=0)),date:safe||''},
+    {key:'closed',label:'Closed',done:!!e?.closed,date:e?.closed||e?.plannedClose||'',planned:!e?.closed&&!!e?.plannedClose},
+    {key:'churn',label:'Churn',done:!!(e?.closed&&churn&&dB(td(),churn)<=0),date:churn||''}
+  ]
+}
+function renderLifecycleStepper(e){
+  if(!e||!e.bank)return'';
+  const steps=lifecycleSteps(e);
+  let h='<div class="bt-life"><div class="bt-life-title">Lifecycle</div><div class="bt-life-steps">';
+  steps.forEach(st=>{
+    const cls=st.done?'done':(st.planned?'planned':'todo');
+    const sub=st.date?(st.planned?'Planned '+fD(st.date):fD(st.date)):(st.key==='funded'?'Optional':'Pending');
+    h+='<div class="bt-life-step '+cls+'"><i>'+esc(st.done?'✓':(st.planned?'📅':'•'))+'</i><b>'+esc(st.label)+'</b><span>'+esc(sub)+'</span></div>'
+  });
+  h+='</div></div>';
+  return h
+}
 
 
 function cleanPlanText(v){
@@ -1296,7 +1378,7 @@ function chartData(){
 /* Bank Identity v3.3.42
    Centralized bank matching. Display names can vary, but duplicate/churn
    matching uses canonical bank family + personal/business type. */
-const BANK_IDENTITY_VERSION='3.3.84';
+const BANK_IDENTITY_VERSION='3.3.85';
 function normBankText(v){return String(v||'').toLowerCase().replace(/[®™℠]/g,'').replace(/&/g,' and ').replace(/\*/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim()}
 function bankAliasGroups(){return[
   ['chase','CHA',['chase','jpmorgan chase','jp morgan chase','jpmorgan','jp morgan','jpm']],
@@ -3060,37 +3142,6 @@ function closeActualWarnings(e,p){
   if(p&&p.monthlyFeeChecked===false)w.push('Monthly fee was not checked before close.');
   return Array.from(new Set(w.filter(Boolean)))
 }
-function finishPlannedClose(){
-  const p=closePrompt;
-  if(!p)return;
-  const e=entries.find(x=>x.id===p.entryId);
-  if(!e)return;
-  const warnings=plannedCloseWarnings(e,p).filter(Boolean);
-  const summary='Save planned close date?\n\nBank: '+(p.bank||e.bank||'')+'\nPlanned close: '+fD(p.closeDate)+'\nAccount status: stays open / not closed yet\n\n'+(warnings.length?('Review notes:\n- '+Array.from(new Set(warnings)).join('\n- ')+'\n\n'):'')+'This will clear any mistaken actual closed date and keep the entry active until you record the real close.';
-  if(!window.confirm(summary))return;
-  undoState=closeUndoSnapshot(e);
-  undoState.undoLabel='Planned close saved for '+(e.bank||p.bank||'this bank')+' — Undo restores everything for 60 seconds.';
-  if(undoTimer)clearTimeout(undoTimer);
-  undoTimer=setTimeout(()=>{undoState=null;R()},60000);
-  entries=entries.map(x=>{
-    if(x.id===p.entryId){
-      x.plannedClose=p.closeDate;
-      x.closed='';
-      x.feeChecked=false;
-      x.monthlyFeeChecked=!!p.monthlyFeeChecked;
-      return normalizeLifecycleEntry(x)
-    }
-    return x
-  });
-  const e2=entries.find(x=>x.id===p.entryId);
-  if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
-  entries=sortE(entries);sv(SK,entries);
-  closePrompt=null;
-  expanded=e2?e2.id:null;
-  cfm={title:'Planned Close Saved',msg:(e2?e2.bank:'This bank')+' is still open. Planned close date saved for '+fD(p.closeDate)+'.\n\nUse Actions → Close Account when the account is actually closed.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
-  R()
-}
-
 function closeSafetyWarnings(e,p){
   const w=[];
   if(!e)w.push('Original tracker entry was not found.');
@@ -3196,6 +3247,7 @@ function normalizeLifecycleEntry(e){
   x.bonusRecd=x.bonusRecd||'';
   x.reqMet=x.reqMet||'';
   x.plannedClose=x.plannedClose||'';
+  x.history=normalizeEntryHistoryList(x.history);
   x.closeRuleBasis=normalizeCloseRuleBasis(x.closeRuleBasis||inferCloseRuleBasisFromText(x));
   x.closeBufferDays=parseInt(x.closeBufferDays,10);
   // v3.3.83: default close safety buffer is 5 days.
@@ -3216,7 +3268,7 @@ function normalizeLifecycleEntry(e){
     x.monthlyFeeNoMonthlyServiceFee=!!(x.monthlyFeeNoMonthlyServiceFee||feeStruct.monthlyFeeNoMonthlyServiceFee);
   }catch{}
   x.customTimers=normalizeTimerList(x.customTimers||[]);
-  // v3.3.84: closed remains actual only. Planned close is stored separately by the close flow.
+  // v3.3.85: closed remains actual only. Planned close is stored separately by the close flow.
   // Do not silently convert future closed dates into plannedClose.
   if(x.closed)x.plannedClose='';
   if(x.bonusRecd&&!x.reqMet)x.reqMet=x.bonusRecd;
@@ -3408,19 +3460,71 @@ function rTips(){
 }
 function rPhone(){const rows=getPhoneBook();const q=(phoneSearch||'').toLowerCase().trim();const filtered=q?rows.filter(r=>r.bank.toLowerCase().includes(q)||r.personal.toLowerCase().includes(q)||r.business.toLowerCase().includes(q)):rows;let h='<div class="sec">Customer Service Numbers</div>';h+='<input class="sinput" placeholder="Search banks or phone numbers..." value="'+esc(phoneSearch||'')+'" oninput="phoneSearch=this.value;R()" id="phs">';h+='<button class="tc-btn" style="height:auto;padding:14px 16px;margin-bottom:10px" onclick="showPhoneAdd=!showPhoneAdd;R()">'+I.phone+'<span>'+(showPhoneAdd?'Hide add bank form':'Add new bank phone')+'</span></button>';if(showPhoneAdd){h+='<div class="ph-add-card"><div class="ph-top"><div><div class="nm">Add Bank</div><div class="ph-help">Create a phone entry manually with separate personal and business numbers.</div></div></div><div class="fg" style="margin-bottom:8px"><label>Bank Name</label><input id="ph_new_bank" class="ph-field" placeholder="e.g. Guaranty Bank"></div><div class="ph-edit-grid"><div><span class="ph-label">Personal</span><input id="ph_new_personal" class="ph-field" placeholder="1-800-000-0000"></div><div><span class="ph-label">Business</span><input id="ph_new_business" class="ph-field" placeholder="1-800-000-0000"></div></div><div class="ph-actions"><button class="ph-mini ph-save" onclick="addPhoneTabRow()">Save</button><button class="ph-mini ph-reset" onclick="showPhoneAdd=false;R()">Cancel</button></div></div>'}if(!filtered.length)return h+'<div class="empty"><div class="em">📞</div><p>No phone entries found.</p></div>';filtered.forEach((row,idx)=>{const bankEnc=encodeURIComponent(row.bank);const isCustom=!!row.custom&&!hasDefaultPhone(row.bank);h+='<div class="ph-card">'+bankLogo(row.bank,false)+'<div style="flex:1"><div class="ph-top"><div><div class="nm">'+esc(row.bank)+'</div><div class="ph-help">Edit and save personal/business numbers from this tab.</div></div>'+(isCustom?'<span class="tag b">Custom</span>':'')+'</div><div class="ph-edit-grid"><div><span class="ph-label">Personal</span><input id="ph_p_'+idx+'" class="ph-field" value="'+esc(row.personal||'')+'" placeholder="No personal number"></div><div><span class="ph-label">Business</span><input id="ph_b_'+idx+'" class="ph-field" value="'+esc(row.business||'')+'" placeholder="No business number"></div></div><div class="ph-actions"><button class="ph-mini ph-save" onclick="savePhoneTabRow(\''+bankEnc+'\','+idx+','+(isCustom?'true':'false')+')">Save</button>'+(hasDefaultPhone(row.bank)?'<button class="ph-mini ph-reset" onclick="resetPhoneTabRow(\''+bankEnc+'\')">Reset</button>':'<button class="ph-mini ph-del" onclick="deletePhoneTabRow(\''+bankEnc+'\')">Delete</button>')+(row.personal?'<a href="tel:'+esc(row.personal)+'" class="ph-mini ph-reset" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Call Personal</a>':'')+(row.business?'<a href="tel:'+esc(row.business)+'" class="ph-mini ph-reset" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Call Business</a>':'')+'</div></div></div>'});return h}
 function rRules(){let h='<div class="sec">Churn Rules \u2014 MO + Nationwide</div><input class="sinput" placeholder="Search..." oninput="this.dataset.q=this.value;R()" id="rs">';const q=(document.getElementById('rs')||{}).value||'';const fl=q?RULES.filter(r=>r[0].toLowerCase().includes(q.toLowerCase())):RULES;h+='<div class="rcard" style="margin-bottom:8px"><div class="nm">Tracker Bonus Display Rule</div><div class="sub" style="margin-top:4px">On the Tracker tab, the $ bonus amount shows only when a bank has a saved bonus amount and the status is Working or Countdown Active.</div></div>';fl.forEach(([bank,rule,mo,churnable,moAvail,closeFee,maint,notes])=>{h+='<div class="rcard" style="display:flex;align-items:flex-start;gap:10px">'+bankLogo(bank,false)+'<div style="flex:1"><div class="rcard-row"><div class="nm">'+esc(bank)+'</div><div style="text-align:right"><div class="ph">'+esc(rule)+'</div><div class="ph2">'+mo+'mo</div></div></div><div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:2px">';h+=churnable?'<span class="tag y">\u2705 Churnable</span>':'<span class="tag n">\u274C Not Churnable</span>';if(moAvail)h+='<span class="tag m">\uD83D\uDCCD MO</span>';if(closeFee&&closeFee!=='None')h+='<span class="tag f">\u26A0 '+esc(closeFee)+'</span>';h+='<span class="tag '+(maint.includes('$0')||maint.includes('free')?'b':'f')+'">'+esc(maint)+'</span>';h+='</div>';if(notes)h+='<div class="sub">'+esc(notes)+'</div>';h+='</div></div>'});return h}
+function closeReviewRows(e,p){
+  const rows=[];
+  const push=(k,v,cls='')=>rows.push('<div class="close-review-row"><span>'+esc(k)+'</span><b class="'+esc(cls)+'">'+esc(v||'—')+'</b></div>');
+  push('Bank',p.bank||e?.bank||'');
+  push(p.mode==='planned'?'Planned close date':'Actual close date',p.closeDate?fD(p.closeDate):'Missing',p.mode==='planned'?'warn':'');
+  if(p.mode==='actual'){
+    push('Bonus received',p.bonusDate?fD(p.bonusDate):'Not saved',(p.actualBonus||0)>0&&!p.bonusDate?'bad':'');
+    push('Requirement met',p.reqDate?fD(p.reqDate):'Not saved',(p.actualBonus||0)>0&&!p.reqDate?'warn':'');
+    push('Actual bonus',fM(p.actualBonus||0));
+    push('Churn rule',e?.churn?(e.churn==='180'?'180 days':e.churn+' year'):'Missing',e?.churn?'':'warn');
+  }else{
+    push('Account status','Stays open / active','warn');
+    push('Churn countdown','Not started','');
+  }
+  push('Monthly fee checked',p.monthlyFeeChecked?'Yes':'No',p.monthlyFeeChecked?'':'warn');
+  return rows.join('')
+}
+function closeReviewWarnings(e,p){
+  const w=p.mode==='planned'?plannedCloseWarnings(e,p):closeActualWarnings(e,p);
+  return Array.from(new Set((w||[]).filter(Boolean)))
+}
+function renderCloseReadinessList(e,p){
+  const ready=closeReadiness(e,p?.closeDate);
+  let h='<div class="close-check-list">';
+  ready.items.forEach(it=>{h+='<div class="close-check '+(it.ok?'ok':(it.level==='danger'?'bad':'warn'))+'"><i>'+(it.ok?'✓':'!')+'</i><div><b>'+esc(it.label)+'</b><span>'+esc(it.detail||'')+'</span></div></div>'});
+  h+='</div>';
+  return h
+}
 function rClose(){
   if(!closePrompt)return'';
   const p=closePrompt;
+  const e=entries.find(x=>x.id===p.entryId);
   let h='<div class="cbg" onclick="cancelClose()"><div class="close-modal" onclick="event.stopPropagation()">';
-  if(p.step==='date'){
-    const e=entries.find(x=>x.id===p.entryId);const ready=closeReadiness(e,p.closeDate);const isPlan=p.mode==='planned';
-    h+='<h3>🔒 Close '+esc(p.bank)+'</h3><div class="sub">Choose whether this is the real bank closure or only a planned close reminder. Planned close keeps the account active.</div>';
-    h+='<div class="close-mode-row"><button class="close-mode '+(!isPlan?'sel':'')+'" onclick="closePrompt.mode=\'actual\';R()"><b>Actual close</b><span>Bank is already closed</span></button><button class="close-mode '+(isPlan?'sel':'')+'" onclick="closePrompt.mode=\'planned\';R()"><b>Plan only</b><span>Still open / reminder</span></button></div>';
-    h+='<div class="close-ready '+esc(isPlan?'plan':ready.cls)+'"><b>'+esc(isPlan?'Plan Only — Account Stays Open':ready.label)+'</b><span>'+esc(isPlan?'This will save a planned close date and will not start churn countdown.':(ready.warnings[0]||'Close logic looks clear based on saved fields.'))+'</span></div>';
-    h+='<label>'+(isPlan?'Planned Close Date':'Actual Close Date')+'</label><input type="date" id="cp_date" value="'+p.closeDate+'">';
+  if(p.step==='stillopen'){
+    h+='<h3>↩️ Mark Still Open</h3><div class="sub">Use this when the old flow marked '+esc(p.bank)+' closed but the account is still open.</div>';
+    h+='<div class="close-review-card"><div class="close-review-row"><span>Saved closed date</span><b>'+esc(p.closeDate?fD(p.closeDate):'Missing')+'</b></div><div class="close-review-row"><span>New status</span><b class="warn">Active / open</b></div><div class="close-review-row"><span>Churn countdown</span><b>Stopped until actual close</b></div></div>';
+    h+='<label>What should happen to the old closed date?</label><div class="close-mode-row"><button class="close-mode '+(p.moveClosedToPlan?'sel':'')+'" onclick="closePrompt.moveClosedToPlan=true;R()"><b>Move to Planned Close</b><span>Best if you still plan to close on that date</span></button><button class="close-mode '+(!p.moveClosedToPlan?'sel':'')+'" onclick="closePrompt.moveClosedToPlan=false;R()"><b>Clear Completely</b><span>Use if that date was wrong</span></button></div>';
+    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="finishStillOpen()">Save Still Open</button></div>';
+  }else if(p.step==='review'){
+    const reviewOnly=!!p.reviewOnly;
+    const ready=closeReadiness(e,p.closeDate);
+    const warnings=closeReviewWarnings(e,p);
+    h+='<h3>'+(reviewOnly?'🧾 Close Timing Review':(p.mode==='planned'?'📅 Review Planned Close':'🔒 Review Actual Close'))+'</h3><div class="sub">Review the lifecycle dates before saving. This screen replaces the old browser confirmation popup.</div>';
+    h+='<div class="close-ready '+esc(p.mode==='planned'?'plan':ready.cls)+'"><b>'+esc(p.mode==='planned'?'Plan Only — Account Stays Open':ready.label)+'</b><span>'+esc(closeFlowModeReason(e,p.mode))+'</span></div>';
+    h+='<div class="close-review-card">'+closeReviewRows(e,p)+'</div>';
+    h+=renderCloseReadinessList(e,p);
+    if(warnings.length)h+='<div class="close-warnings"><b>Review notes</b>'+warnings.map(x=>'<span>• '+esc(x)+'</span>').join('')+'</div>';
+    if(reviewOnly){
+      h+='<div class="close-final-note">No changes saved yet. Choose a workflow below when you are ready.</div>';
+      h+='<div class="close-review-actions"><button class="c-c" onclick="cancelClose()">Close Review</button><button class="c-c" onclick="closeModeSelect(\'planned\')">Save Planned Close</button><button class="c-g" onclick="closeModeSelect(\'actual\')">Record Actual Close</button></div>';
+    }else{
+      h+='<div class="close-review-actions"><button class="c-c" onclick="closeBack()">Back</button>';
+      if(p.mode==='actual')h+='<button class="c-c" onclick="closePrompt.mode=\'planned\';closePrompt.step=\'review\';R()">Save as Planned Instead</button>';
+      h+='<button class="c-g" onclick="closeNext()">'+(p.mode==='planned'?'Save Planned Close':'Save Actual Close')+'</button></div>';
+    }
+  }else if(p.step==='date'){
+    const ready=closeReadiness(e,p.closeDate);const isPlan=p.mode==='planned';
+    h+='<h3>'+(isPlan?'📅 Save Planned Close':'🔒 Record Actual Close')+'</h3><div class="sub">Actual close means the bank is truly closed. Plan only keeps the account active and does not start churn.</div>';
+    if(p.recommendedMode&&p.recommendedMode!==p.mode){h+='<div class="close-recommend">Recommended: '+(p.recommendedMode==='planned'?'Plan Only':'Actual Close')+' — '+esc(closeFlowModeReason(e,p.recommendedMode))+'</div>'}
+    h+='<div class="close-mode-row"><button class="close-mode '+(!isPlan?'sel':'')+'" onclick="closeModeSelect(\'actual\')"><b>Actual close</b><span>Bank is already closed</span></button><button class="close-mode '+(isPlan?'sel':'')+'" onclick="closeModeSelect(\'planned\')"><b>Plan only</b><span>Still open / reminder</span></button></div>';
+    h+='<div class="close-ready '+esc(isPlan?'plan':ready.cls)+'"><b>'+esc(isPlan?'Plan Only — Account Stays Open':ready.label)+'</b><span>'+esc(isPlan?'This saves a planned close date and will not start churn countdown.':(ready.warnings[0]||'Close logic looks clear based on saved fields.'))+'</span></div>';
+    h+='<label>'+(isPlan?'Planned Close Date':'Actual Close Date')+'</label><input type="date" id="cp_date" value="'+esc(p.closeDate||'')+'">';
     h+='<label>Monthly Fee Checked?</label><select id="cp_monthly_checked"><option value="no"'+(!p.monthlyFeeChecked?' selected':'')+'>No — remind me</option><option value="yes"'+(p.monthlyFeeChecked?' selected':'')+'>Yes — checked</option></select>';
-    h+='<div style="font-size:10px;color:var(--muted);margin-top:4px">Plan only is for accounts still open. Actual close starts the churn countdown from the saved close date.</div>';
-    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">'+(isPlan?'Save Plan':'Next →')+'</button></div>'
+    h+='<div style="font-size:10px;color:var(--muted);margin-top:4px">Actual close starts the churn countdown from the saved close date. Plan only is for accounts still open.</div>';
+    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">'+(isPlan?'Review Plan':'Next →')+'</button></div>'
   }else if(p.step==='bonus'){
     h+='<h3>💰 Bonus payout check</h3><div class="sub">'+esc(p.bank)+' — expected '+fM(p.bonus)+'</div>';
     h+='<div class="bonus-row"><button class="bonus-opt'+(p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=true;closePrompt.actualBonus=closePrompt.bonus;R()">Yes — '+fM(p.bonus)+'</button><button class="bonus-opt'+(!p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=false;R()">No — partial/none</button></div>';
@@ -3428,18 +3532,18 @@ function rClose(){
       h+='<label>How much did you actually get?</label><input type="number" inputmode="numeric" id="cp_amt" value="'+(p.actualBonus||0)+'" placeholder="0">'
     }
     if((p.actualBonus||0)>0||p.gotFull){
-      h+='<label>Bonus Received Date</label><input type="date" id="cp_bonus_date" value="'+esc(p.bonusDate||p.closeDate||td())+'">';
-      h+='<label>Requirement Met Date</label><input type="date" id="cp_req_date" value="'+esc(p.reqDate||p.bonusDate||p.closeDate||td())+'">';
-      h+='<div style="font-size:10px;color:var(--muted);margin-top:4px">Used for tax year, requirement history, and close planning. Do not default these to close date unless that is true.</div>'
+      h+='<label>Bonus Received Date</label><input type="date" id="cp_bonus_date" value="'+esc(p.bonusDate||'')+'" placeholder="yyyy-mm-dd">';
+      h+='<label>Requirement Met Date</label><input type="date" id="cp_req_date" value="'+esc(p.reqDate||'')+'" placeholder="yyyy-mm-dd">';
+      h+='<div style="font-size:10px;color:var(--muted);margin-top:4px">Safer default: these stay blank unless already saved. Enter the real dates only.</div>'
     }
     h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-g" onclick="closeNext()">Next →</button></div>'
   }else if(p.step==='dp'){
-    h+='<h3>📋 What triggered the bonus?</h3><div class="sub">What DD method or action triggered '+esc(p.bank)+'\'s bonus? (Optional)</div>';
+    h+='<h3>📋 What triggered the bonus?</h3><div class="sub">What DD method or action triggered '+esc(p.bank)+'\'s bonus? Optional.</div>';
     h+='<div class="dd-chips" style="margin-bottom:8px">';
-    ['Employer DD','Robinhood ACH','Fidelity ACH','Schwab ACH','Venmo DD','Melio Bill Pay','No DD needed','Debit only'].forEach(m=>{h+='<button class="dd-chip" onclick="document.getElementById(\'cp_dp\').value=\''+m+'\'">'+m+'</button>'});
+    ['Employer DD','Robinhood ACH','Fidelity ACH','Schwab ACH','Venmo DD','Melio Bill Pay','No DD needed','Debit only'].forEach(m=>{h+='<button class="dd-chip" onclick="document.getElementById(\'cp_dp\').value=\''+esc(m)+'\'">'+esc(m)+'</button>'});
     h+='</div><input id="cp_dp" value="'+esc(p.dp)+'" placeholder="e.g. $1,000 DD via Robinhood ACH" onclick="event.stopPropagation()">';
-    h+='<div class="close-final-note">Final check: the app will archive this cycle, start churn countdown from the close date, and keep Undo available briefly after saving.</div>';
-    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">Review & Close</button></div>'
+    h+='<div class="close-final-note">Next screen shows a professional review before anything is saved.</div>';
+    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">Review</button></div>'
   }
   h+='</div></div>';
   return h
@@ -3840,29 +3944,66 @@ function feeCheckSave(){
   R()
 }
 function feeCheckCancel(){feeCheckPrompt=null;R()}
-function startCloseFlow(id){
+function startCloseFlow(id,preferredMode='auto'){
   const e=entries.find(x=>x.id===id);
   if(!e)return;
-  closePrompt={entryId:id,bank:e.bank,bonus:e.bonus||0,step:'date',closeDate:td(),bonusDate:e.bonusRecd||'',reqDate:e.reqMet||'',gotFull:true,actualBonus:e.bonus||0,dp:e.dataPoint||'',monthlyFeeChecked:!!e.monthlyFeeChecked,mode:'actual'};
+  const mode=closeFlowRecommendedMode(e,preferredMode);
+  const reviewOnly=preferredMode==='review';
+  closePrompt={
+    entryId:id,
+    bank:e.bank,
+    bonus:e.bonus||0,
+    step:reviewOnly?'review':'date',
+    closeDate:closeFlowDefaultDate(e,mode),
+    bonusDate:e.bonusRecd||'',
+    reqDate:e.reqMet||'',
+    gotFull:true,
+    actualBonus:e.bonus||0,
+    dp:e.dataPoint||'',
+    monthlyFeeChecked:!!e.monthlyFeeChecked,
+    mode,
+    reviewOnly,
+    recommendedMode:closeFlowRecommendedMode(e,'auto')
+  };
   R()
+}
+function closeModeSelect(mode){
+  const p=closePrompt;
+  if(!p)return;
+  const e=entries.find(x=>x.id===p.entryId);
+  p.mode=mode==='planned'?'planned':'actual';
+  p.closeDate=closeFlowDefaultDate(e,p.mode);
+  p.step='date';
+  p.reviewOnly=false;
+  R()
+}
+function closeCollectDateFields(){
+  const p=closePrompt;
+  if(!p)return;
+  const d=document.getElementById('cp_date');
+  if(d)p.closeDate=d.value;
+  const mf=document.getElementById('cp_monthly_checked');
+  if(mf)p.monthlyFeeChecked=mf.value==='yes';
 }
 function closeNext(){
   const p=closePrompt;
   if(!p)return;
+  if(p.step==='review'){
+    if(p.reviewOnly){p.step='date';p.reviewOnly=false;R();return}
+    if(p.mode==='planned')finishPlannedClose();
+    else finishClose();
+    return
+  }
   if(p.step==='date'){
-    const d=document.getElementById('cp_date');
-    if(d)p.closeDate=d.value;
-    const mf=document.getElementById('cp_monthly_checked');
-    if(mf)p.monthlyFeeChecked=mf.value==='yes';
+    closeCollectDateFields();
     if(!p.closeDate){alert((p.mode==='planned'?'Planned close date':'Close date')+' is required.');return}
     const e=entries.find(x=>x.id===p.entryId);
     if(e?.opened&&dB(e.opened,p.closeDate)<0){alert('Close date cannot be before the opened date.');return}
     if(p.mode==='planned'){
-      finishPlannedClose();
+      p.step='review';
+      R();
       return
     }
-    if(isFutureDate(p.closeDate)&&!window.confirm('This close date is in the future. Save it as the actual Closed date anyway?\n\nUse Plan Only instead if the bank is not closed yet.'))return;
-    if(!p.bonusDate)p.bonusDate=e?.bonusRecd||p.closeDate;
     p.step='bonus';
     R()
   }else if(p.step==='bonus'){
@@ -3876,22 +4017,23 @@ function closeNext(){
     if(bd)p.bonusDate=bd.value;
     const rd=document.getElementById('cp_req_date');
     if(rd)p.reqDate=rd.value;
-    if((p.actualBonus||0)>0&&!p.bonusDate){alert('Bonus received date is required for tax tracking.');return}
-    if((p.actualBonus||0)>0&&p.bonusDate&&p.closeDate&&dB(p.bonusDate,p.closeDate)<0){
-      if(!window.confirm('Bonus received date is after the close date. Continue anyway?'))return
-    }
+    if((p.actualBonus||0)>0&&!p.bonusDate){alert('Bonus received date is required for tax tracking when an actual bonus amount is saved.');return}
     p.step='dp';
     R()
   }else if(p.step==='dp'){
     const dp=document.getElementById('cp_dp');
     if(dp)p.dp=dp.value.trim();
-    finishClose()
+    p.step='review';
+    R()
   }
 }
 function closeBack(){
   const p=closePrompt;
   if(!p)return;
-  if(p.step==='dp')p.step='bonus';
+  if(p.step==='review'){
+    if(p.reviewOnly){cancelClose();return}
+    p.step=p.mode==='planned'?'date':'dp';
+  }else if(p.step==='dp')p.step='bonus';
   else if(p.step==='bonus')p.step='date';
   R()
 }
@@ -3899,12 +4041,10 @@ function finishClose(){
   const p=closePrompt;
   if(!p)return;
   const e=entries.find(x=>x.id===p.entryId);
-  const warnings=closeActualWarnings(e,p);
-  const projected={...(e||{}),closed:p.closeDate,bonusRecd:p.bonusDate||e?.bonusRecd||p.closeDate,reqMet:p.reqDate||e?.reqMet||p.bonusDate||p.closeDate,monthlyFeeChecked:!!p.monthlyFeeChecked};
-  const ready=closeReadiness(projected,p.closeDate);
-  const summary='Close confirmation:\n\nBank: '+(p.bank||e?.bank||'')+'\nClose date: '+fD(p.closeDate)+'\nBonus received: '+(p.bonusDate?fD(p.bonusDate):'not saved')+'\nRequirement met: '+(p.reqDate?fD(p.reqDate):'not saved')+'\nClose readiness: '+ready.label+'\n\n'+(warnings.length?('Warnings:\n- '+warnings.join('\n- ')+'\n\n'):'')+'Save this close?';
-  if(!window.confirm(summary))return;
+  if(!e)return;
+  if(!p.closeDate){alert('Close date is required.');return}
   undoState=closeUndoSnapshot(e);
+  undoState.undoLabel='Actual close saved for '+(e.bank||p.bank||'this bank')+' — Undo restores everything for 60 seconds.';
   if(undoTimer)clearTimeout(undoTimer);
   undoTimer=setTimeout(()=>{undoState=null;R()},60000);
   entries=entries.map(x=>{
@@ -3912,57 +4052,70 @@ function finishClose(){
       x.closed=p.closeDate;
       x.plannedClose='';
       x.bonus=Number(p.actualBonus||0);
-      if(Number(p.actualBonus||0)>0)x.bonusRecd=p.bonusDate||x.bonusRecd||p.closeDate;
-      if(Number(p.actualBonus||0)>0)x.reqMet=p.reqDate||x.reqMet||x.bonusRecd;
+      if(Number(p.actualBonus||0)>0){
+        x.bonusRecd=p.bonusDate||x.bonusRecd||'';
+        x.reqMet=p.reqDate||x.reqMet||x.bonusRecd||'';
+      }
       if(p.dp)x.dataPoint=p.dp;
       x.monthlyFeeChecked=!!p.monthlyFeeChecked;
       x.feeChecked=true;
+      appendEntryHistory(x,'actual_close','Closed '+fD(p.closeDate)+(x.bonusRecd?' · bonus received '+fD(x.bonusRecd):'')+'.');
       return normalizeLifecycleEntry(x)
     }
     return x
   });
   const e2=entries.find(x=>x.id===p.entryId);
   const autoMethod=(p.dp||e2?.dataPoint||'').trim();
-  if(e2&&Number(p.actualBonus||0)>0&&autoMethod)addDD(p.bank,autoMethod,Number(p.actualBonus||0),p.bonusDate||p.closeDate,{entryId:p.entryId,accountType:e2.accountType,note:'Auto-saved from successful close'});
+  if(e2&&Number(p.actualBonus||0)>0&&autoMethod&&p.bonusDate)addDD(p.bank,autoMethod,Number(p.actualBonus||0),p.bonusDate,{entryId:p.entryId,accountType:e2.accountType,note:'Auto-saved from successful close'});
   if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
   entries=sortE(entries);sv(SK,entries);
   closePrompt=null;
-  expanded=null;
+  expanded=e2?e2.id:null;
   const readyDate=e2&&churnReadyDate(e2)?fD(churnReadyDate(e2)):'not available';
   cfm={title:'Closed Saved',msg:(e2?e2.bank:'This bank')+' closed on '+fD(p.closeDate)+'.\n\nChurn-ready date: '+readyDate+'.\nStatus: '+(e2?status(e2):'Waiting to Churn')+'.\n\nUndo is available for 60 seconds at the bottom of the app.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
   R()
 }
-
-function confirmClearCloseDate(id){
-  const e=entries.find(x=>x.id===id);
-  if(!e||!e.closed)return;
-  cfm={
-    title:'Account Still Open?',
-    msg:'Remove the saved closed date for '+e.bank+'?\n\nUse this when an older flow marked the bank closed, but the account is still open. Bonus received, requirement met, notes, and datapoints stay saved. The churn countdown will stop because the entry becomes active again.',
-    green:true,
-    confirmLabel:'Remove Closed Date',
-    action:()=>{
-      cfm=null;
-      const keepPlan=e.closed&&window.confirm('Keep '+fD(e.closed)+' as the planned close date?\n\nOK = move it to Planned Close.\nCancel = clear it completely.');
-      clearCloseDate(id,keepPlan)
-    }
-  };
-  R()
-}
-function clearCloseDate(id,keepAsPlanned){
-  const e=entries.find(x=>x.id===id);
+function finishPlannedClose(){
+  const p=closePrompt;
+  if(!p)return;
+  const e=entries.find(x=>x.id===p.entryId);
   if(!e)return;
-  const oldClosed=e.closed||'';
+  if(!p.closeDate){alert('Planned close date is required.');return}
   undoState=closeUndoSnapshot(e);
-  undoState.undoLabel='Closed date removed for '+(e.bank||'this bank')+' — Undo restores everything for 60 seconds.';
+  undoState.undoLabel='Planned close saved for '+(e.bank||p.bank||'this bank')+' — Undo restores everything for 60 seconds.';
   if(undoTimer)clearTimeout(undoTimer);
   undoTimer=setTimeout(()=>{undoState=null;R()},60000);
   entries=entries.map(x=>{
-    if(x.id===id){
+    if(x.id===p.entryId){
+      x.plannedClose=p.closeDate;
       x.closed='';
       x.feeChecked=false;
-      if(keepAsPlanned&&oldClosed)x.plannedClose=oldClosed;
-      else x.plannedClose='';
+      x.monthlyFeeChecked=!!p.monthlyFeeChecked;
+      appendEntryHistory(x,'planned_close','Planned close '+fD(p.closeDate)+'. Account remains open.');
+      return normalizeLifecycleEntry(x)
+    }
+    return x
+  });
+  const e2=entries.find(x=>x.id===p.entryId);
+  if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
+  entries=sortE(entries);sv(SK,entries);
+  closePrompt=null;
+  expanded=e2?e2.id:null;
+  cfm={title:'Planned Close Saved',msg:(e2?e2.bank:'This bank')+' is still open. Planned close date saved for '+fD(p.closeDate)+'.\n\nUse Actions → Record Actual Close when the bank is actually closed.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
+  R()
+}
+function clearPlannedClose(id){
+  const e=entries.find(x=>x.id===id);
+  if(!e||!e.plannedClose)return;
+  undoState=closeUndoSnapshot(e);
+  undoState.undoLabel='Planned close cleared for '+(e.bank||'this bank')+' — Undo restores everything for 60 seconds.';
+  if(undoTimer)clearTimeout(undoTimer);
+  undoTimer=setTimeout(()=>{undoState=null;R()},60000);
+  const old=e.plannedClose;
+  entries=entries.map(x=>{
+    if(x.id===id){
+      x.plannedClose='';
+      appendEntryHistory(x,'clear_planned_close','Cleared planned close '+fD(old)+'.');
       return normalizeLifecycleEntry(x)
     }
     return x
@@ -3970,9 +4123,49 @@ function clearCloseDate(id,keepAsPlanned){
   const e2=entries.find(x=>x.id===id);
   if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
   entries=sortE(entries);sv(SK,entries);
-  expanded=e2?e2.id:null;
-  cfm={title:'Closed Date Removed',msg:(e2?e2.bank:'This bank')+' is back to active/open status. '+(keepAsPlanned&&oldClosed?'The old date was moved to Planned Close: '+fD(oldClosed)+'.':'No planned close date was saved.')+'\\n\\nUndo is available for 60 seconds at the bottom of the app.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
+  expanded=id;
+  cfm={title:'Planned Close Cleared',msg:(e2?e2.bank:'This bank')+' no longer has a planned close date.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
   R()
+}
+function confirmClearCloseDate(id){
+  const e=entries.find(x=>x.id===id);
+  if(!e||!e.closed)return;
+  closePrompt={entryId:id,bank:e.bank,bonus:e.bonus||0,step:'stillopen',closeDate:e.closed,bonusDate:e.bonusRecd||'',reqDate:e.reqMet||'',moveClosedToPlan:true,monthlyFeeChecked:!!e.monthlyFeeChecked,mode:'stillopen'};
+  R()
+}
+function finishStillOpen(){
+  const p=closePrompt;
+  if(!p)return;
+  const e=entries.find(x=>x.id===p.entryId);
+  if(!e)return;
+  const oldClosed=e.closed||p.closeDate||'';
+  undoState=closeUndoSnapshot(e);
+  undoState.undoLabel='Closed date removed for '+(e.bank||'this bank')+' — Undo restores everything for 60 seconds.';
+  if(undoTimer)clearTimeout(undoTimer);
+  undoTimer=setTimeout(()=>{undoState=null;R()},60000);
+  entries=entries.map(x=>{
+    if(x.id===p.entryId){
+      x.closed='';
+      x.feeChecked=false;
+      x.plannedClose=(p.moveClosedToPlan&&oldClosed)?oldClosed:'';
+      appendEntryHistory(x,'still_open','Removed closed date '+(oldClosed?fD(oldClosed):'')+(p.moveClosedToPlan&&oldClosed?' and moved it to Planned Close.':'.'));
+      return normalizeLifecycleEntry(x)
+    }
+    return x
+  });
+  const e2=entries.find(x=>x.id===p.entryId);
+  if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
+  entries=sortE(entries);sv(SK,entries);
+  closePrompt=null;
+  expanded=e2?e2.id:null;
+  cfm={title:'Marked Still Open',msg:(e2?e2.bank:'This bank')+' is active/open again. '+(e2?.plannedClose?'Old close date moved to Planned Close: '+fD(e2.plannedClose)+'.':'Closed date was cleared completely.')+'\n\nUndo is available for 60 seconds at the bottom of the app.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
+  R()
+}
+function clearCloseDate(id,keepAsPlanned){
+  const e=entries.find(x=>x.id===id);
+  if(!e)return;
+  closePrompt={entryId:id,bank:e.bank,bonus:e.bonus||0,step:'stillopen',closeDate:e.closed||'',bonusDate:e.bonusRecd||'',reqDate:e.reqMet||'',moveClosedToPlan:!!keepAsPlanned,monthlyFeeChecked:!!e.monthlyFeeChecked,mode:'stillopen'};
+  finishStillOpen()
 }
 function cancelClose(){closePrompt=null;R()}
 function addFromTpl(i){const t=TEMPLATES[i];const newData={bank:t.bank,bonus:t.bonus,churn:t.churn,opened:td(),closed:'',bonusRecd:'',reqMet:'',notes:t.notes||'',analyzedTC:'',minHoldDays:t.minHoldDays||0,earlyCloseFee:t.earlyCloseFee||0,dataPoint:t.dataPoint||'',reqDays:t.reqDays||0,referralBonus:0,plannedClose:'',phoneNum:'',feeChecked:false};if(handleDuplicateFlow(newData,'template')){showTemplates=false;R();return}modal=newData;modal.checklist=[];modal.customTimers=[];showTemplates=false;R()}
@@ -4061,13 +4254,20 @@ function rcvSubmit(){
   const warnings=bonusReceiveWarnings(e,p.date);
   if(p.reqDate&&p.date&&dB(p.reqDate,p.date)<0)warnings.push('Requirement met date is after the bonus received date.');
   if(e?.opened&&p.reqDate&&dB(e.opened,p.reqDate)<0)warnings.push('Requirement met date is before the opened date.');
-  if(warnings.length&&!window.confirm('Review bonus received details:\n\n- '+Array.from(new Set(warnings)).join('\n- ')+'\n\nSave anyway?'))return;
+  if(warnings.length&&!p.warningReviewed){
+    rcvPrompt=null;
+    cfm={title:'Review Bonus Received',msg:'Review these notes before saving:\n\n- '+Array.from(new Set(warnings)).join('\n- '),green:true,confirmLabel:'Save Anyway',action:()=>{cfm=null;rcvPrompt=p;p.warningReviewed=true;rcvSubmit()}};
+    R();
+    return
+  }
+  p.warningReviewed=false;
   entries=entries.map(e=>{
     if(e.id===p.entryId){
       e.bonusRecd=p.date;
       e.reqMet=p.reqDate||e.reqMet||p.date;
       e.plannedClose='';
       if(p.dp)e.dataPoint=p.dp;
+      appendEntryHistory(e,'bonus_received','Bonus received '+fD(p.date)+(p.reqDate?' · requirement met '+fD(p.reqDate):'')+'.');
       return normalizeLifecycleEntry(e)
     }
     return e
@@ -4094,6 +4294,7 @@ function clearRcv(){
     if(e.id===p.entryId){
       e.bonusRecd='';
       e.plannedClose='';
+      appendEntryHistory(e,'bonus_received_cleared','Cleared bonus received date.');
       return normalizeLifecycleEntry(e)
     }
     return e
@@ -4125,10 +4326,17 @@ function reqSubmit(){
   if(!p.date){alert('Requirement met date required');return}
   const e=entries.find(x=>x.id===p.entryId);
   const warnings=reqMetWarnings(e,p.date);
-  if(warnings.length&&!window.confirm('Review requirement met date:\n\n- '+warnings.join('\n- ')+'\n\nSave anyway?'))return;
+  if(warnings.length&&!p.warningReviewed){
+    reqPrompt=null;
+    cfm={title:'Review Requirement Met',msg:'Review these notes before saving:\n\n- '+warnings.join('\n- '),green:true,confirmLabel:'Save Anyway',action:()=>{cfm=null;reqPrompt=p;p.warningReviewed=true;reqSubmit()}};
+    R();
+    return
+  }
+  p.warningReviewed=false;
   entries=entries.map(e=>{
     if(e.id===p.entryId){
       e.reqMet=p.date;
+      appendEntryHistory(e,'req_met','Requirement met '+fD(p.date)+'.');
       return normalizeLifecycleEntry(e)
     }
     return e
@@ -4153,6 +4361,7 @@ function clearReqMet(){
   entries=entries.map(e=>{
     if(e.id===p.entryId){
       e.reqMet='';
+      appendEntryHistory(e,'req_met_cleared','Cleared requirement met date.');
       return normalizeLifecycleEntry(e)
     }
     return e
@@ -5374,7 +5583,11 @@ entries=sortE(entries);R();
     if(action==='edit'){openEdit(id);return}
     if(action==='reqmet'){confirmMarkReqMet(id);return}
     if(action==='received'){confirmMarkReceived(id);return}
-    if(action==='close'){closeAcct(id);return}
+    if(action==='reviewclose'){startCloseFlow(id,'review');return}
+    if(action==='planclose'){startCloseFlow(id,'planned');return}
+    if(action==='recordclose'){startCloseFlow(id,'actual');return}
+    if(action==='close'){startCloseFlow(id,'auto');return}
+    if(action==='clearplan'){clearPlannedClose(id);return}
     if(action==='clearclose'){confirmClearCloseDate(id);return}
     if(action==='delete'){delEntry(id);return}
     if(action==='checklist'){
@@ -5398,13 +5611,24 @@ entries=sortE(entries);R();
     h+='<div class="m-bar"></div><div class="m-hdr"><h2>Bank Actions</h2><span class="m-id">'+esc(getEntryDisplayId(e)||e.id||'')+'</span></div>';
     h+='<div class="bt-ba-identity">'+bankLogo(e.bank,true)+'<div><div class="card-name">'+esc(e.bank)+'</div><div class="bt-ba-status">'+esc(status(e)||'')+'</div></div></div>';
     h+='<div class="bt-ba-list">';
-    h+=bankActionSheetButton(e.id,'edit','✏️','Edit Bank','Details, dates, bonus, rules');
-    if(!e.closed&&!e.bonusRecd)h+=bankActionSheetButton(e.id,'reqmet','✅',e.reqMet?'Update Req Met':'Mark Req Met','Requirement completed date');
-    if(!e.closed)h+=bankActionSheetButton(e.id,'received','🎁',e.bonusRecd?'Update Received':'Mark Received','Bonus received date');
-    if(!e.closed)h+=bankActionSheetButton(e.id,'close','🔒','Close Account','Actual close or planned reminder');
-    if(e.closed)h+=bankActionSheetButton(e.id,'clearclose','↩️','Still Open','Remove mistaken closed date');
-    if(!e.closed)h+=bankActionSheetButton(e.id,'checklist','✅','Add Checklist','New requirement step');
-    if(!e.closed)h+=bankActionSheetButton(e.id,'timer','⏱️','Add Timer','Custom countdown');
+    const st=status(e);
+    const rec=closeFlowRecommendedMode(e,'auto');
+    if(e.closed){
+      h+=bankActionSheetButton(e.id,'clearclose','↩️','Mark Still Open','Remove mistaken closed date');
+      h+=bankActionSheetButton(e.id,'edit','✏️','Edit Bank','Details, dates, bonus, rules');
+    }else{
+      if(!e.bonusRecd)h+=bankActionSheetButton(e.id,'reqmet','✅',e.reqMet?'Update Req Met':'Mark Req Met','Requirement completed date');
+      if(!e.bonusRecd)h+=bankActionSheetButton(e.id,'received','🎁','Mark Received','Bonus received date');
+      if(e.bonusRecd&&rec==='actual')h+=bankActionSheetButton(e.id,'recordclose','🔒','Record Actual Close','Bank is really closed');
+      h+=bankActionSheetButton(e.id,'reviewclose','🧾','Review Close Timing','Safe date, hold, fee, churn');
+      if(rec==='planned'||!e.plannedClose)h+=bankActionSheetButton(e.id,'planclose','📅',e.plannedClose?'Update Planned Close':'Save Planned Close','Reminder only, stays open');
+      if(e.bonusRecd&&rec!=='actual')h+=bankActionSheetButton(e.id,'recordclose','🔒','Record Actual Close','Use only after real closure');
+      if(e.bonusRecd)h+=bankActionSheetButton(e.id,'received','🎁','Update Received','Bonus/date/datapoint');
+      if(e.plannedClose)h+=bankActionSheetButton(e.id,'clearplan','🧹','Clear Planned Close','Remove reminder date');
+      h+=bankActionSheetButton(e.id,'edit','✏️','Edit Bank','Details, dates, bonus, rules');
+      h+=bankActionSheetButton(e.id,'checklist','✅','Add Checklist','New requirement step');
+      h+=bankActionSheetButton(e.id,'timer','⏱️','Add Timer','Custom countdown');
+    }
     h+=bankActionSheetButton(e.id,'delete','🗑️','Delete Bank','Remove tracker entry',true);
     h+='<button class="bt-ba-mini cancel" onclick="event.stopPropagation();closeBankActions()"><span><b>Cancel</b></span></button>';
     h+='</div></div></div>';
@@ -5478,6 +5702,7 @@ entries=sortE(entries);R();
           h += `<div class="cf"><div class="k">Close Fee Countdown</div><div class="v" style="padding-top:2px"><span class="tm-pill ${__feeMeta.cls}" title="${esc(__feeTitle)}" style="margin-left:6px">${esc(__feeMeta.text)}</span></div></div>`;
         }
         h += '</div>';
+        h += renderLifecycleStepper(e);
 
         if(!e.closed){
           h += '<div class="sec" style="margin-top:6px">Checklist</div><ul class="ck">';
@@ -5508,6 +5733,7 @@ entries=sortE(entries);R();
         if(e.notes) h += `<div class="card-notes" style="white-space:pre-wrap;font-size:12px;line-height:1.6">${esc(e.notes)}</div>`;
         h += renderMonthlyFeePlan(e);
         h += renderClosePlan(e);
+        h += renderEntryHistory(e);
         h += renderOfferHistory(e);
         if(e.analyzedTC) h += `<div class="tc-box"><div class="tc-label">T&amp;C analysis</div><div class="tc-body">${highlightTC(e.analyzedTC)}</div></div>`;
         h += '';
@@ -5547,6 +5773,6 @@ entries=sortE(entries);R();
 })();
 /* === End consolidated core module: Tracker card bank actions renderer === */
 
-(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.84 close intelligence polish */\n.close-intel.safe{border-color:#bbf7d0;background:#f0fdf4}\n.close-intel.warn,.close-intel.plan{border-color:#fde68a;background:#fffbeb}\n.close-intel.danger{border-color:#fecaca;background:#fff7f7}\n.close-ready{padding:10px 12px;border-radius:14px;margin:10px 0 12px;border:1px solid #e5e7eb;background:#f8fafc;font-size:12px;line-height:1.35}\n.close-ready b{display:block;font-size:13px;margin-bottom:2px}\n.close-ready.safe{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}\n.close-ready.warn,.close-ready.plan{background:#fffbeb;border-color:#fde68a;color:#78350f}\n.close-ready.danger{background:#fff1f2;border-color:#fecaca;color:#7f1d1d}\n.close-final-note{font-size:11px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px;margin-top:10px;line-height:1.35}\n.close-mode-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}\n.close-mode{border:1px solid #e2e8f0;background:#f8fafc;border-radius:14px;padding:10px 9px;text-align:left;font-family:'DM Sans',system-ui,sans-serif;color:#334155;cursor:pointer}\n.close-mode b{display:block;font-size:12px;line-height:1.05;color:#0f172a}\n.close-mode span{display:block;font-size:9px;line-height:1.2;color:#64748b;font-weight:800;margin-top:3px}\n.close-mode.sel{background:#eff6ff;border-color:#93c5fd;box-shadow:0 0 0 2px rgba(59,130,246,.10)}\n";document.head.appendChild(st)}catch{}})();
+(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.85 close intelligence polish */\n.close-intel.safe{border-color:#bbf7d0;background:#f0fdf4}\n.close-intel.warn,.close-intel.plan{border-color:#fde68a;background:#fffbeb}\n.close-intel.danger{border-color:#fecaca;background:#fff7f7}\n.close-ready{padding:10px 12px;border-radius:14px;margin:10px 0 12px;border:1px solid #e5e7eb;background:#f8fafc;font-size:12px;line-height:1.35}\n.close-ready b{display:block;font-size:13px;margin-bottom:2px}\n.close-ready.safe{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}\n.close-ready.warn,.close-ready.plan{background:#fffbeb;border-color:#fde68a;color:#78350f}\n.close-ready.danger{background:#fff1f2;border-color:#fecaca;color:#7f1d1d}\n.close-final-note{font-size:11px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px;margin-top:10px;line-height:1.35}\n.close-mode-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}\n.close-mode{border:1px solid #e2e8f0;background:#f8fafc;border-radius:14px;padding:10px 9px;text-align:left;font-family:'DM Sans',system-ui,sans-serif;color:#334155;cursor:pointer}\n.close-mode b{display:block;font-size:12px;line-height:1.05;color:#0f172a}\n.close-mode span{display:block;font-size:9px;line-height:1.2;color:#64748b;font-weight:800;margin-top:3px}\n.close-mode.sel{background:#eff6ff;border-color:#93c5fd;box-shadow:0 0 0 2px rgba(59,130,246,.10)}\n";document.head.appendChild(st)}catch{}})();
 
-(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.84 monthly fee plan box */\n.monthly-fee-plan.safe{border-color:#bbf7d0;background:#f0fdf4}\n.monthly-fee-plan.warn{border-color:#fde68a;background:#fffbeb}\n.monthly-fee-plan .tc-label{letter-spacing:.11em}\n";document.head.appendChild(st)}catch{}})();
+(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.85 monthly fee plan box */\n.monthly-fee-plan.safe{border-color:#bbf7d0;background:#f0fdf4}\n.monthly-fee-plan.warn{border-color:#fde68a;background:#fffbeb}\n.monthly-fee-plan .tc-label{letter-spacing:.11em}\n";document.head.appendChild(st)}catch{}})();
