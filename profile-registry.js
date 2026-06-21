@@ -5,7 +5,7 @@
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.3.83-profile-registry';
+  const VER='3.3.90-profile-registry';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
     {
@@ -159,11 +159,17 @@
     raw=String(raw||'');
     let best=null,bestScore=0;
     PROFILES.forEach(p=>{
-      const score=(p.signals||[]).reduce((n,re)=>n+(re.test(raw)?1:0),0);
+      const signals=p.signals||[];
+      // v3.3.90: require the profile's bank/brand anchor before matching secondary wording.
+      // This prevents a new/unknown bank from accidentally matching a saved profile just
+      // because it also says things like "promo code", "checking", "90 days", or "$1,500".
+      const anchor=signals.length?signals[0].test(raw):false;
+      if(!anchor)return;
+      const score=signals.reduce((n,re)=>n+(re.test(raw)?1:0),0);
       if(score>bestScore){bestScore=score;best=p;}
     });
     if(best&&bestScore>=2)return {...best,score:bestScore,known:true};
-    return {known:false,status:'new-or-review',note:'No saved exact profile found. Send this sample so it can be added as a reusable bank profile.'};
+    return {known:false,status:'new-or-review',note:'No saved exact profile found. Save this T&C as a training example or teach phrases if this bank uses unusual wording.'};
   }
   function list(){return PROFILES.slice();}
   function moneyNum(v){const n=parseFloat(String(v||'').replace(/[$,\s]/g,''));return Number.isFinite(n)?n:0}

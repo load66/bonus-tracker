@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.89 Newest update: Analyzer Training Library adds user learning rules, saved T&C examples, and retesting.
+// ✅ Version 3.3.90 Newest update: Analyzer Training Library adds user learning rules, saved T&C examples, and retesting.
 
-const V = 'bt-v3.3.89';
+const V = 'bt-v3.3.90';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
