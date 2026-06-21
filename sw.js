@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.88 Newest update: Verified Apply Mode adds source-backed auto-checking, adaptive analyzer learning, and stronger weird-wording parsing.
+// ✅ Version 3.3.89 Newest update: Analyzer Training Library adds user learning rules, saved T&C examples, and retesting.
 
-const V = 'bt-v3.3.88';
+const V = 'bt-v3.3.89';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {

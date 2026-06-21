@@ -1,23 +1,25 @@
 /*
  * filename: engine.js
- * version: 3.3.88
- * purpose: Analyzer v3 Engine with broader weird-wording normalization, safer source proof, and adaptive-learning-ready results.
+ * version: 3.3.89
+ * purpose: Analyzer v3 Engine with broader weird-wording normalization, safer source proof, and training-learning-ready results.
  * last-touched: unknown
  */
 (function(){
-  const VER='3.3.88';
+  const VER='3.3.89';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const escRe=s=>String(s||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const moneyNum=s=>{const n=parseFloat(String(s||'').replace(/[$,\s]/g,''));return Number.isFinite(n)?n:0};
   const money=n=>'$'+Number(n||0).toLocaleString();
   const uniq=a=>Array.from(new Set((a||[]).filter(Boolean).map(clean))).filter(Boolean);
 
-  const WEIRD_WORDING_VER='3.3.88-core';
+  const WEIRD_WORDING_VER='3.3.89-core';
   const phraseMap=[
     {re:/adjusted interest/gi,label:'adjusted interest',add:'bonus payout'},
     {re:/cash reward/gi,label:'cash reward',add:'cash bonus'},
     {re:/statement credit/gi,label:'statement credit',add:'cash bonus / account credit'},
     {re:/account credit/gi,label:'account credit',add:'cash bonus credited to account'},
+    {re:/relationship credit/gi,label:'relationship credit',add:'cash bonus credited after validation'},
+    {re:/promotional reward/gi,label:'promotional reward',add:'cash bonus reward'},
     {re:/promotional credit/gi,label:'promotional credit',add:'cash bonus credited to account'},
     {re:/welcome bonus/gi,label:'welcome bonus',add:'cash bonus offer'},
     {re:/cash offer/gi,label:'cash offer',add:'cash bonus offer'},
@@ -33,6 +35,8 @@
     {re:/qualifying credits?/gi,label:'qualifying credits',add:'qualifying direct deposits / credits'},
     {re:/ACH credits?/gi,label:'ACH credits',add:'ACH direct deposits / qualifying credits'},
     {re:/external deposits?/gi,label:'external deposits',add:'qualifying external deposits'},
+    {re:/eligible external transfers?/gi,label:'eligible external transfers',add:'qualifying external deposits'},
+    {re:/external transfer activity/gi,label:'external transfer activity',add:'qualifying external deposit activity'},
     {re:/payroll deposits?/gi,label:'payroll deposits',add:'direct deposits from employer payroll'},
     {re:/recurring deposits? of income/gi,label:'recurring deposits of income',add:'regular recurring direct deposit income'},
     {re:/statement cycles?/gi,label:'statement cycles',add:'statement periods'},
@@ -42,6 +46,8 @@
     {re:/positive balance/gi,label:'positive balance',add:'account must remain open with positive balance'},
     {re:/available balance/gi,label:'available balance',add:'account balance'},
     {re:/offer period/gi,label:'offer period',add:'promo open-by period'},
+    {re:/validation cycle/gi,label:'validation cycle',add:'bonus payout review period'},
+    {re:/qualification period/gi,label:'qualification period',add:'bonus requirement period'},
     {re:/through and including/gi,label:'through and including',add:'through open-by date'},
     {re:/valid through/gi,label:'valid through',add:'promo expiration date'},
     {re:/valid until/gi,label:'valid until',add:'promo expiration date'},
@@ -113,7 +119,7 @@
   }
   function bestRequirementSource(raw,lines){
     const c=[];
-    const reqRe=/(direct deposits?|electronic deposits?|qualifying deposits?|qualifying credits?|ACH credits?|recurring income|payroll|salary|government benefits|deposit period|qualifying activities|eligible deposits?)/i;
+    const reqRe=/(direct deposits?|electronic deposits?|qualifying deposits?|qualifying credits?|ACH credits?|recurring income|payroll|salary|government benefits|deposit period|qualifying activities|eligible deposits?|eligible external transfers?|external transfer activity)/i;
     (Array.isArray(lines)?lines:split(raw)).forEach(l=>{
       if(!reqRe.test(l)||isDisclosure(l))return;
       let score=0;
@@ -183,7 +189,7 @@
   function requirements(raw,lines,tierList){
     const txn=transactionRequirement(raw);
     if(txn)return{reqDays:txn.days,count:txn.count,reqMoney:0,reqIsTotal:false,source:txn.source,targetTier:tierList[tierList.length-1]||null,requirementType:'transactions',requirementNoun:'qualifying transactions'};
-    let l=bestRequirementSource(raw,lines)||lineMatch(lines,[/direct deposits?.*within/i,/within.*direct deposits?/i,/Qualifying Direct Deposits/i,/Deposit Period/i,/qualifying electronic deposits/i,/qualifying credits/i,/ACH credits/i,/recurring income/i])||'';
+    let l=bestRequirementSource(raw,lines)||lineMatch(lines,[/direct deposits?.*within/i,/within.*direct deposits?/i,/Qualifying Direct Deposits/i,/Deposit Period/i,/qualifying electronic deposits/i,/qualifying credits/i,/ACH credits/i,/recurring income/i,/eligible external transfers?/i,/external transfer activity/i])||'';
     const explicitDayText=raw.match(/(?:90|60|30)[- ]day Deposit Period|ninety\s*\(90\)\s*days|sixty\s*\(60\)\s*days|thirty\s*\(30\)\s*days|within\s+(?:90|60|30)\s+days|by\s+day\s+(?:90|60|30)/i)?.[0]||'';
     const ds=days(l+' '+explicitDayText);
     let reqDays=(ds.find(d=>[90,60,30].includes(d.days))||ds[0]||{}).days||0;
@@ -196,7 +202,7 @@
       const ms=monies(l).filter(x=>x.value>=100).sort((a,b)=>b.value-a.value);
       reqMoney=ms[0]?.value||0;
     }
-    const noun=/recurring income/i.test(l)?'recurring income direct deposits':(/ACH credits?|qualifying credits?/i.test(l)?'qualifying ACH credits':'qualifying Direct Deposits');
+    const noun=/recurring income/i.test(l)?'recurring income direct deposits':(/eligible external|external transfer activity/i.test(l)?'eligible external deposits/transfers':(/ACH credits?|qualifying credits?/i.test(l)?'qualifying ACH credits':'qualifying Direct Deposits'));
     return{reqDays,count,reqMoney,reqIsTotal,source:l,targetTier:target||null,requirementType:'direct-deposit',requirementNoun:noun}
   }
   function funding(raw,lines){
@@ -233,12 +239,12 @@
   function counts(raw){const out=[];if(/qualifying transactions?|debit card purchases|QuickDeposit|QuickAccept|Online Bill Pay|ACH credits/i.test(raw)){if(/debit card purchases/i.test(raw))out.push('Debit card purchases');if(/QuickDeposit/i.test(raw))out.push('Chase QuickDeposit');if(/ACH credits/i.test(raw))out.push('ACH credits');if(/wires|wire credits|wire transfer/i.test(raw))out.push('Wires credits/debits');if(/Online Bill Pay/i.test(raw))out.push('Chase Online Bill Pay');if(/QuickAccept/i.test(raw))out.push('Chase QuickAccept');}if(/new money/i.test(raw))out.push('New money deposit into the new account');if(/regular monthly income|regular recurring.*income/i.test(raw))out.push('Regular recurring income direct deposit');if(/ACH|Automated Clearing House/i.test(raw))out.push('ACH direct deposit');if(/salary|paycheck|pension|Social Security|government benefits|employer|payroll/i.test(raw))out.push('Salary/paycheck, pension, Social Security/government benefits, employer/government income');if(/account and routing numbers/i.test(raw))out.push('Direct deposit using account and routing numbers');return uniq(out)}
   function notCounts(raw){const out=[];const add=(label,re)=>{if(re.test(raw))out.push(label)};add('Teller deposits',/teller deposits/i);add('Wire transfers',/wire transfers|incoming wires|\bwires\b/i);add('Debit card transfers',/debit card transfers/i);add('ATM transfers or deposits',/ATM transfers or deposits|ATM deposits/i);add('Online/Mobile Banking transfers or deposits',/Online and Mobile Banking transfers or deposits|mobile banking transfers|online transfers/i);add('Bank/brokerage/Merrill transfers',/bank or brokerage account|Merrill investment account|brokerage transfers/i);add('Person-to-person payments / P2P transfers',/person-to-person|person to person|P2P/i);add('ACH debits',/ACH debits/i);add('Zelle incoming payments',/Zelle/i);add('Mobile/check deposits',/mobile check deposits|mobile deposits|check deposits/i);add('Internal/account-to-account transfers',/internal transfers|account-to-account|one account to another/i);add('Online transfers to Chase credit cards',/online transfers to Chase credit cards|Chase credit card/i);add('Other electronic deposits',/Other electronic deposits/i);return uniq(out)}
   function eligibility(raw){const out=[];if(/new .*checking|new eligible|new consumer/i.test(raw))out.push('New checking customer/account required.');if(/within the last twelve|within the last 12|past 12|last 12/i.test(raw))out.push('Not eligible if you owned/co-owned or received a related checking bonus within the last 12 months.');if(/Fiduciary|trusts|business accounts are not eligible/i.test(raw))out.push('Fiduciary/trust and business accounts may not be eligible.');if(/cannot be combined|may not be combined/i.test(raw))out.push('Cannot be combined with other checking bonus offers.');if(/one bonus per account|one bonus per customer/i.test(raw))out.push('Limited to one bonus per account/customer.');if(/1099|taxable|Internal Revenue Service|IRS|W-9|W-8/i.test(raw))out.push('Bonus may be taxable and reported on Form 1099/IRS.');return uniq(out)}
-  function payout(raw,lines){const candidates=allMatch(lines,[/within fifteen|within 15|within sixty|within 60|within thirty|within 30|120th day|day 120/i]);const l=candidates.find(x=>/bonus|payout|credited|deposit/i.test(x))||candidates[0]||lineMatch(lines,[/credited.*bonus|deposit.*bonus/i]);if(/within fifteen|within 15/i.test(l))return{value:'within 15 days after requirements are completed, if account remains open and unrestricted',source:l};if(/within sixty|within 60/i.test(l))return{value:'within 60 days after the requirement/deposit period ends and requirements are satisfied',source:l};if(/120th day|day 120/i.test(raw))return{value:'after day 90 assessment; deposited on or about day 120 if qualified',source:l};if(/within thirty|within 30|up to 30/i.test(l))return{value:'within 30 days after requirements are met/assessed',source:l};return{value:'payout timing needs review',source:l}}
+  function payout(raw,lines){const candidates=allMatch(lines,[/within fifteen|within 15|within sixty|within 60|within thirty|within 30|120th day|day 120|validation cycle|validate|validation/i]);const l=candidates.find(x=>/bonus|payout|credited|deposit/i.test(x))||candidates[0]||lineMatch(lines,[/credited.*bonus|deposit.*bonus/i]);if(/within fifteen|within 15/i.test(l))return{value:'within 15 days after requirements are completed, if account remains open and unrestricted',source:l};if(/validation cycle|validate|validation/i.test(l))return{value:'after bank validation/review cycle once requirements are satisfied',source:l};if(/within sixty|within 60/i.test(l))return{value:'within 60 days after the requirement/deposit period ends and requirements are satisfied',source:l};if(/120th day|day 120/i.test(raw))return{value:'after day 90 assessment; deposited on or about day 120 if qualified',source:l};if(/within thirty|within 30|up to 30/i.test(l))return{value:'within 30 days after requirements are met/assessed',source:l};return{value:'payout timing needs review',source:l}}
   function payoutDaysFromText(txt){txt=String(txt||'');if(/within\s+15|fifteen/i.test(txt))return 15;if(/within\s+30|thirty|up to\s+30/i.test(txt))return 30;if(/within\s+60|sixty/i.test(txt))return 60;if(/120th day|day\s*120/i.test(txt))return 30;return 0}
   function singleBonus(lines){
     const c=[];
     const reqNear=/(direct\s+deposits?|qualifying\s+deposits?|deposit(?:s|ed|ing)?|fund(?:ing|ed)?|minimum|balance|fee|waive|maintain|total(?:ing|ed)?|aggregate|cumulative|combined|spend|purchase|APY)/i;
-    lines.filter(l=>/bonus|earn|receive|get|cash|offer|reward|incentive|statement credit|account credit|promotional credit|welcome bonus/i.test(l)&&!isDisclosure(l)).forEach(l=>{
+    lines.filter(l=>/bonus|earn|receive|get|cash|offer|reward|incentive|statement credit|account credit|relationship credit|promotional reward|promotional credit|welcome bonus/i.test(l)&&!isDisclosure(l)).forEach(l=>{
       monies(l).forEach(m=>{
         if(!(m.value>=50&&m.value<3000))return;
         const pos=l.indexOf(m.text);
@@ -246,7 +252,7 @@
         const after=pos>=0?l.slice(pos+m.text.length,pos+m.text.length+80):l;
         const around=before+' '+m.text+' '+after;
         let score=0;
-        if(/bonus|cash\s+(?:bonus|offer|reward)|reward|incentive|statement credit|account credit|promotional credit|welcome bonus/i.test(around))score+=8;
+        if(/bonus|cash\s+(?:bonus|offer|reward)|reward|incentive|statement credit|account credit|relationship credit|promotional reward|promotional credit|welcome bonus/i.test(around))score+=8;
         if(/(?:earn|receive|get|credited|deposited)\s+(?:a\s+|an\s+|the\s+)?(?:cash\s+)?bonus[^$]{0,45}$/i.test(before))score+=10;
         if(/(?:earn|receive|get|credited|deposited)[^$]{0,35}$/i.test(before)&&/bonus|cash/i.test(after))score+=7;
         if(/^\s*(?:cash\s+)?bonus\b/i.test(after))score+=8;
