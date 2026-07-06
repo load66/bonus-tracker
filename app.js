@@ -1,7 +1,7 @@
-/* ✅ Version 3.3.90 update: Analyzer Training Library, user learning rules, Verified Apply Mode, and adaptive analyzer learning. */
+/* ✅ Version 3.3.91 update: simplified Close Now flow, compact close review, and removed planned-close UI logic. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.3.90';
+const APP_VERSION='3.3.91';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const ANALYZER_MEMORY_KEY='bt_analyzer_memory_v1';
@@ -217,7 +217,6 @@ function closeReadiness(e,closeDate=''){
   let label='Safe to Close',cls='safe';
   if(warnings.some(w=>/bonus received|requirement met|hold period|start date/i.test(w))){label='Do Not Close Yet';cls='danger'}
   else if(warnings.length){label='Close Soon';cls='warn'}
-  if(e.plannedClose&&!e.closed){label='Planned Close Saved';cls='plan'}
   return{label,cls,items,warnings,safeDate:safe,rawDate:raw,basis}
 }
 function cleanDisplayText(v){
@@ -259,7 +258,6 @@ function closePlanForEntry(e){
     notes.push('This cycle is closed. Future churn timing is based on the actual closed date.');
     return{title:'Close Plan',sub:'Actual close is already saved',chip:ready.label,cls:ready.cls,rows,notes}
   }
-  if(e.plannedClose)row('Planned close',fD(e.plannedClose),'warn');
   row('Bonus',e.bonusRecd?'Received '+fD(e.bonusRecd):'Not received yet',e.bonusRecd?'ok':'bad');
   row('Requirement',e.reqMet?'Met '+fD(e.reqMet):'Missing date',e.reqMet?'ok':'warn');
   if(e.minHoldDays>0){
@@ -275,38 +273,23 @@ function closePlanForEntry(e){
   if(!e.bonusRecd)notes.push('Keep the account open until the bonus posts.');
   if(e.closeRuleText)notes.push('Saved wording: '+shortCleanText(e.closeRuleText,190));
   notes.push('Before closing, confirm no pending transactions.');
-  return{title:'Close Plan',sub:e.plannedClose&&!e.closed?'Planned only — account still open':'Beginner check before closing',chip:ready.label,cls:ready.cls,rows,notes}
+  return{title:'Close Plan',sub:'Compact check before closing',chip:ready.label,cls:ready.cls,rows,notes}
 }
 function renderClosePlan(e){
   return renderCleanPlanCard(closePlanForEntry(e))
 }
 
 function closeFlowRecommendedMode(e,preferred){
-  if(preferred==='actual'||preferred==='planned')return preferred;
-  if(!e||e.closed)return'actual';
-  if(!e.bonusRecd)return'planned';
-  if(!e.reqMet)return'planned';
-  const safe=safeCloseDate(e);
-  if(safe&&dB(td(),safe)>0)return'planned';
-  if(e.plannedClose&&dB(td(),e.plannedClose)>0)return'planned';
-  return'actual'
+  return 'actual'
 }
 function closeFlowDefaultDate(e,mode){
-  if(mode==='planned')return e?.plannedClose||safeCloseDate(e)||td();
   return td()
 }
 function closeFlowModeReason(e,mode){
   if(!e)return'Entry needs manual review.';
-  if(mode==='planned'){
-    if(!e.bonusRecd)return'Bonus is not received yet, so planning is safer than actual close.';
-    if(!e.reqMet)return'Requirement met date is missing, so planning keeps the cycle active.';
-    const safe=safeCloseDate(e);
-    if(safe&&dB(td(),safe)>0)return'Hold period or buffer is not complete until '+fD(safe)+'.';
-    if(e.plannedClose)return'Existing planned close date is saved. Review before recording the actual close.';
-    return'Plan only keeps this bank active and does not start the churn countdown.'
-  }
-  if(e.closed)return'This entry already has an actual closed date saved.';
-  return'Bonus and close timing look ready enough to review actual close.'
+  if(e.closed)return'This entry already has a closed date saved.';
+  const ready=closeReadiness(e);
+  return ready.warnings?.length ? 'Review the warnings below, then close only if the bank is truly closed.' : 'Close date will start the churn countdown.'
 }
 function normalizeEntryHistoryList(list){
   return (Array.isArray(list)?list:[]).filter(x=>x&&typeof x==='object').map(x=>({
@@ -353,7 +336,7 @@ function renderAnalyzerHistory(e){
   return h
 }
 function historyEventTitle(type){
-  const map={actual_close:'Actual close saved',planned_close:'Planned close saved',clear_planned_close:'Planned close cleared',still_open:'Marked still open',bonus_received:'Bonus received saved',bonus_received_cleared:'Bonus received cleared',req_met:'Requirement met saved',req_met_cleared:'Requirement met cleared',entry_saved:'Entry saved',analyzer_applied:'Analyzer review applied'};
+  const map={actual_close:'Closed saved',still_open:'Marked still open',bonus_received:'Bonus received saved',bonus_received_cleared:'Bonus received cleared',req_met:'Requirement met saved',req_met_cleared:'Requirement met cleared',entry_saved:'Entry saved',analyzer_applied:'Analyzer review applied'};
   return map[type]||'Tracker update'
 }
 function appendEntryHistory(x,type,detail){
@@ -384,7 +367,7 @@ function lifecycleSteps(e){
     {key:'req',label:'Req Met',done:!!e?.reqMet,date:e?.reqMet||''},
     {key:'bonus',label:'Bonus',done:!!e?.bonusRecd,date:e?.bonusRecd||''},
     {key:'safe',label:'Safe Close',done:!!(e?.closed||(safe&&dB(td(),safe)<=0)),date:safe||''},
-    {key:'closed',label:'Closed',done:!!e?.closed,date:e?.closed||e?.plannedClose||'',planned:!e?.closed&&!!e?.plannedClose},
+    {key:'closed',label:'Closed',done:!!e?.closed,date:e?.closed||'',planned:false},
     {key:'churn',label:'Churn',done:!!(e?.closed&&churn&&dB(td(),churn)<=0),date:churn||''}
   ]
 }
@@ -393,9 +376,9 @@ function renderLifecycleStepper(e){
   const steps=lifecycleSteps(e);
   let h='<div class="bt-life"><div class="bt-life-title">Lifecycle</div><div class="bt-life-steps">';
   steps.forEach(st=>{
-    const cls=st.done?'done':(st.planned?'planned':'todo');
-    const sub=st.date?(st.planned?'Planned '+fD(st.date):fD(st.date)):(st.key==='funded'?'Optional':'Pending');
-    h+='<div class="bt-life-step '+cls+'"><i>'+esc(st.done?'✓':(st.planned?'📅':'•'))+'</i><b>'+esc(st.label)+'</b><span>'+esc(sub)+'</span></div>'
+    const cls=st.done?'done':'todo';
+    const sub=st.date?fD(st.date):(st.key==='funded'?'Optional':'Pending');
+    h+='<div class="bt-life-step '+cls+'"><i>'+esc(st.done?'✓':'•')+'</i><b>'+esc(st.label)+'</b><span>'+esc(sub)+'</span></div>'
   });
   h+='</div></div>';
   return h
@@ -663,7 +646,6 @@ function monthlyFeePlanForEntry(e){
   else if(state.kind!=='none')row('How to avoid','Add waiver terms when known.','warn');
   if(state.kind!=='none')row('Before close',e.monthlyFeeChecked?'Already checked':'Check statement/fee timing',e.monthlyFeeChecked?'ok':'warn');
   if(e.closed)notes.push('Account closed on '+fD(e.closed)+'. No active monthly-fee tracking needed.');
-  else if(e.plannedClose)notes.push('Keep the waiver active through planned close date '+fD(e.plannedClose)+'.');
   else if(state.kind!=='none')notes.push('Keep the waiver active until the account is actually closed.');
   return{title:'Monthly Fee Plan',sub:state.kind==='none'?'No active fee issue found':'Avoid surprises before closing',chip:state.label,cls:state.cls,rows,notes}
 }
@@ -1197,10 +1179,6 @@ function status(e){
   // A received bonus moves the bank into the close/hold phase. It should never
   // keep showing the old requirement deadline after this point.
   if(hasBonus){
-    if(e.plannedClose){
-      const d=dB(td(),e.plannedClose);
-      if(d>0)return'PLANNED CLOSE';
-    }
     if(hasHold){
       if(isInBuffer(e))return'3-DAY BUFFER';
       if(safeDays!==null&&safeDays>0)return'WAITING TO CLOSE';
@@ -1221,7 +1199,7 @@ function status(e){
 }
 
 function sPri(s){
-  return s==='TIME TO CHURN!'?0.6:s==='CUSTOM TIMER'?0.8:s==='SAFE TO CLOSE'?1:s==='3-DAY BUFFER'?1.1:s==='WAITING TO CLOSE'?1.2:s==='PLANNED CLOSE'?1.3:s==='WORKING'?2:s==='REQ MET'?2.2:s==='WAITING TO CHURN!'?3:s==='BONUS RECEIVED'?3.2:99
+  return s==='TIME TO CHURN!'?0.6:s==='CUSTOM TIMER'?0.8:s==='SAFE TO CLOSE'?1:s==='3-DAY BUFFER'?1.1:s==='WAITING TO CLOSE'?1.2:s==='WORKING'?2:s==='REQ MET'?2.2:s==='WAITING TO CHURN!'?3:s==='BONUS RECEIVED'?3.2:99
 }
 
 function sortE(a){
@@ -1308,18 +1286,6 @@ function getCountdown(e){
     }
 
   }
-
-  if((s==='PLANNED CLOSE'||s==='SAFE TO CLOSE'||s==='3-DAY BUFFER'||s==='WAITING TO CLOSE')&&e.bonusRecd&&e.plannedClose){
-    const d=dB(td(),e.plannedClose);
-    if(d>0)return{
-      lbl:'Close account',days:d,date:e.plannedClose,cls:d<=3?'red':d<=7?'amber':'green',icon:'\uD83D\uDD12'
-    };
-    return{
-      lbl:'Ready to close!',days:0,date:e.plannedClose,cls:'green',icon:'\u2705'
-    }
-
-  }
-
   if(s==='WAITING TO CLOSE'){
     const d=daysUntilSafe(e);
     if(d!==null&&d>0)return{
@@ -1376,12 +1342,6 @@ function getUrg(e){
     if(d!==null&&d<=7)return'red';
     if(d!==null&&d<=30)return'yellow';
     return'blue'
-  }
-  if(s==='PLANNED CLOSE'){
-    const d=e.plannedClose?dB(td(),e.plannedClose):null;
-    if(d!==null&&d<=3)return'red';
-    if(d!==null&&d<=14)return'yellow';
-    return'green'
   }
   if(s==='REQ MET'){
     const d=e.reqMet?dB(e.reqMet,td()):0;
@@ -1461,12 +1421,6 @@ function getAttentionSuggestions(){
       }
     }
 
-    if(e.bonusRecd&&e.plannedClose){
-      const d=dB(td(),e.plannedClose);
-      push(e,d<=0?'Planned close is due.':d+'d to planned close.',d<=0?0.7:2.4,Math.abs(d),{category:'planned-close'});
-      return;
-    }
-
     if(st==='3-DAY BUFFER'){
       const d=daysUntilSafe(e);
       if(d!==null)push(e,d+'d left in close buffer.',1.4,Math.abs(d),{category:'close'});
@@ -1518,20 +1472,20 @@ function getAttentionSuggestions(){
   // Old behavior grouped requirement deadlines before safe-close countdowns,
   // so an 86-day requirement appeared above a 58-day safe-close task.
   // New behavior: urgent/overdue first, then closest actionable day across
-  // requirements, timers, planned closes, and safe-close countdowns.
+  // requirements, timers, and safe-close countdowns.
   function attentionUrgencyGroup(s){
     const cat=String(s?.category||'');
     const text=String(s?.rsn||'');
     const d=Number.isFinite(s?.days)?s.days:999999;
     if(/overdue|passed|due today|is due|Safe to close now/i.test(text)||d===0)return 0;
-    if(cat==='timer'||cat==='requirement'||cat==='close'||cat==='planned-close')return 1;
+    if(cat==='timer'||cat==='requirement'||cat==='close')return 1;
     if(cat==='waiting-bonus'||cat==='bonus-received')return 2;
     if(cat==='data-quality'||cat==='review')return 3;
     return 4
   }
   function attentionCategoryOrder(s){
     const cat=String(s?.category||'');
-    return cat==='requirement'?0:cat==='timer'?1:cat==='close'?2:cat==='planned-close'?3:cat==='waiting-bonus'?4:cat==='bonus-received'?5:cat==='data-quality'?6:cat==='review'?7:9
+    return cat==='requirement'?0:cat==='timer'?1:cat==='close'?2:cat==='waiting-bonus'?3:cat==='bonus-received'?4:cat==='data-quality'?5:cat==='review'?6:9
   }
   function compareAttention(a,b){
     return attentionUrgencyGroup(a)-attentionUrgencyGroup(b)
@@ -1572,7 +1526,7 @@ function chartData(){
 /* Bank Identity v3.3.42
    Centralized bank matching. Display names can vary, but duplicate/churn
    matching uses canonical bank family + personal/business type. */
-const BANK_IDENTITY_VERSION='3.3.90';
+const BANK_IDENTITY_VERSION='3.3.91';
 function normBankText(v){return String(v||'').toLowerCase().replace(/[®™℠]/g,'').replace(/&/g,' and ').replace(/\*/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim()}
 function bankAliasGroups(){return[
   ['chase','CHA',['chase','jpmorgan chase','jp morgan chase','jpmorgan','jp morgan','jpm']],
@@ -2909,8 +2863,8 @@ function undoClose(){
 }
 let _sp=0;
 const I={grid:'<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',doc:'<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',tips:'<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>',phone:'<svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>',info:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>',profile:'<svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 9h.01"/><path d="M15 9h.01"/><path d="M9 13h.01"/><path d="M15 13h.01"/><path d="M12 21v-4"/></svg>',backup:'<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',restore:'<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',quick:'<svg viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>',trash:'<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',spark:'<svg viewBox="0 0 24 24"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.4L12 15l-1.9-4.6L5.5 9l4.6-1.4L12 3z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"/></svg>',edit:'<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>',gift:'<svg viewBox="0 0 24 24"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/></svg>',lock:'<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',clockShield:'<svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z"/><circle cx="12" cy="12" r="3.5"/><path d="M12 10.5v1.8l1.2.7"/></svg>',shieldCheck:'<svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>',refresh:'<svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10M1 14l5.36 4.36A9 9 0 0 0 20.49 15"/></svg>',alert:'<svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',target:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>',calendar:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',feed:'<svg viewBox="0 0 24 24"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>'};
-function displayStatusMeta(raw){switch(raw){case'WORKING':return{label:'Working',cls:'w',icon:I.target};case'CUSTOM TIMER':return{label:'Custom Timer',cls:'buf',icon:I.clockShield};case'REQ MET':return{label:'Req Met',cls:'req',icon:I.shieldCheck};case'PLANNED CLOSE':return{label:'Close Planned',cls:'wt',icon:I.lock};case'WAITING TO CLOSE':return{label:'Waiting to Close',cls:'buf',icon:I.clockShield};case'3-DAY BUFFER':return{label:'3-Day Buffer',cls:'buf',icon:I.clockShield};case'SAFE TO CLOSE':return{label:'Safe to Close',cls:'stc',icon:I.shieldCheck};case'WAITING TO CHURN!':return{label:'Waiting to Churn',cls:'wt',icon:I.refresh};case'TIME TO CHURN!':return{label:'Ready to Churn',cls:'ch',icon:I.alert};default:return{label:raw||'Status',cls:'w',icon:I.info}}}
-function supportLine(e,countdown){const s=status(e);const hasEarlyFee=!!(!e.closed&&e.earlyCloseFee>0&&!e.feeChecked);if(s==='WAITING TO CHURN!'){const dl=daysLeft(e);return dl!==null?dl+'d left':'Cooling down'}if(s==='TIME TO CHURN!')return'Ready now';if(s==='CUSTOM TIMER'){const timer=nextActiveTimer(e);const d=timerCountdownDays(timer);if(timer&&d!==null){if(d<0)return'Overdue: '+timer.text;if(d===0)return'Due today: '+timer.text;return d+'d left: '+timer.text}return e.reqMet?'Req met • countdown active':'Countdown active'}if(s==='REQ MET'){if(e.reqMet){const d=Math.max(0,dB(e.reqMet,td()));return d>0?'Waiting bonus • '+d+'d since req met':'Waiting bonus'}return'Waiting bonus'}if(s==='PLANNED CLOSE'){const d=e.plannedClose?dB(td(),e.plannedClose):null;if(d!==null){let msg=d>0?d+'d to planned close':'Ready to close';if(hasEarlyFee)msg+=' • check close fee';return msg}return'Close planned'}if(s==='WAITING TO CLOSE'){const d=daysUntilSafe(e);let msg=d!==null&&d>0?d+'d until safe to close':'Waiting to close';if(hasEarlyFee)msg+=' • fee if closed early';return msg}if(s==='3-DAY BUFFER'){const d=daysUntilSafe(e);let msg=d!==null&&d>0?d+'d left in buffer':'Almost there';if(hasEarlyFee)msg+=' • fee if closed early';return msg}if(s==='SAFE TO CLOSE'){return(e.earlyCloseFee>0||e.minHoldDays>0)?'Bonus received • close when ready':'Bonus received • ready when you are'}if(s==='WORKING'){if(countdown&&countdown.lbl==='Req deadline'&&countdown.days>0)return countdown.days+'d to requirement deadline';if(countdown&&countdown.lbl==='Req deadline'&&countdown.days===0)return'Requirement deadline today';if(countdown&&countdown.lbl==='Req deadline'&&countdown.days<0)return'Missed requirement deadline';if(e.opened){const openDays=dB(e.opened,td());if(openDays>0)return openDays+'d open'}return'In progress'}return''}
+function displayStatusMeta(raw){switch(raw){case'WORKING':return{label:'Working',cls:'w',icon:I.target};case'CUSTOM TIMER':return{label:'Custom Timer',cls:'buf',icon:I.clockShield};case'REQ MET':return{label:'Req Met',cls:'req',icon:I.shieldCheck};case'WAITING TO CLOSE':return{label:'Waiting to Close',cls:'buf',icon:I.clockShield};case'3-DAY BUFFER':return{label:'3-Day Buffer',cls:'buf',icon:I.clockShield};case'SAFE TO CLOSE':return{label:'Safe to Close',cls:'stc',icon:I.shieldCheck};case'WAITING TO CHURN!':return{label:'Waiting to Churn',cls:'wt',icon:I.refresh};case'TIME TO CHURN!':return{label:'Ready to Churn',cls:'ch',icon:I.alert};default:return{label:raw||'Status',cls:'w',icon:I.info}}}
+function supportLine(e,countdown){const s=status(e);const hasEarlyFee=!!(!e.closed&&e.earlyCloseFee>0&&!e.feeChecked);if(s==='WAITING TO CHURN!'){const dl=daysLeft(e);return dl!==null?dl+'d left':'Cooling down'}if(s==='TIME TO CHURN!')return'Ready now';if(s==='CUSTOM TIMER'){const timer=nextActiveTimer(e);const d=timerCountdownDays(timer);if(timer&&d!==null){if(d<0)return'Overdue: '+timer.text;if(d===0)return'Due today: '+timer.text;return d+'d left: '+timer.text}return e.reqMet?'Req met • countdown active':'Countdown active'}if(s==='REQ MET'){if(e.reqMet){const d=Math.max(0,dB(e.reqMet,td()));return d>0?'Waiting bonus • '+d+'d since req met':'Waiting bonus'}return'Waiting bonus'}if(s==='WAITING TO CLOSE'){const d=daysUntilSafe(e);let msg=d!==null&&d>0?d+'d until safe to close':'Waiting to close';if(hasEarlyFee)msg+=' • fee if closed early';return msg}if(s==='3-DAY BUFFER'){const d=daysUntilSafe(e);let msg=d!==null&&d>0?d+'d left in buffer':'Almost there';if(hasEarlyFee)msg+=' • fee if closed early';return msg}if(s==='SAFE TO CLOSE'){return(e.earlyCloseFee>0||e.minHoldDays>0)?'Bonus received • close when ready':'Bonus received • ready when you are'}if(s==='WORKING'){if(countdown&&countdown.lbl==='Req deadline'&&countdown.days>0)return countdown.days+'d to requirement deadline';if(countdown&&countdown.lbl==='Req deadline'&&countdown.days===0)return'Requirement deadline today';if(countdown&&countdown.lbl==='Req deadline'&&countdown.days<0)return'Missed requirement deadline';if(e.opened){const openDays=dB(e.opened,td());if(openDays>0)return openDays+'d open'}return'In progress'}return''}
 function statusBadgeHtml(e,countdown){const meta=displayStatusMeta(status(e));const support=supportLine(e,countdown);return'<span class="badge '+meta.cls+'">'+meta.icon+'<span>'+esc(meta.label)+'</span></span>'+(support?'<div class="card-subline">'+esc(support)+'</div>':'')}
 function quickBtn(cls,icon,label,onclick){return'<button class="qbtn '+cls+'" onclick="'+onclick+'">'+icon+'<span>'+label+'</span></button>'}
 function actionBtn(cls,icon,label,onclick){return'<button class="cbtn '+cls+'" onclick="'+onclick+'">'+icon+'<span>'+label+'</span></button>'}
@@ -3020,7 +2974,7 @@ function clearProfileMilestone(entryId,type){
   const entry=entries.find(e=>e.id===entryId);
   if(!entry||!field)return;
   cfm={title:'Clear milestone',msg:'Clear '+type+' for '+entry.bank+'?',action:()=>{
-    entries=entries.map(e=>e.id===entryId?{...e,[field]:'',...(field==='closed'?{feeChecked:false}:{}),...(field==='bonusRecd'?{plannedClose:''}:{})}:e);
+    entries=entries.map(e=>e.id===entryId?{...e,[field]:'',...(field==='closed'?{feeChecked:false}:{})}:e);
     sv(SK,entries);
     const updated=entries.find(e=>e.id===entryId);
     if(updated){syncProfileEventsFromEntry(updated);refreshSavedReqFromEntry(updated)}
@@ -3250,15 +3204,14 @@ function getDataHealthIssues(){
   const activeByBank={};
   entries.forEach(e=>{if(!e||!e.bank)return;const key=entryBankKey(e);if(!e.closed){if(!activeByBank[key])activeByBank[key]=[];activeByBank[key].push(e)}});
   Object.values(activeByBank).forEach(rows=>{if(rows.length>1)healthAdd(issues,'amber','Multiple active entries for same bank',`${rows.map(x=>x.bank).join(', ')} are open at the same time. This may be okay, but review for duplicates.`,rows[0].id)});
-  const dateFields=[['opened','Opened'],['closed','Closed'],['bonusRecd','Bonus received'],['reqMet','Requirement met'],['plannedClose','Planned close']];
+  const dateFields=[['opened','Opened'],['closed','Closed'],['bonusRecd','Bonus received'],['reqMet','Requirement met']];
   entries.forEach(e=>{
     if(!e||!e.bank)return;
     dateFields.forEach(([key,label])=>{const val=e[key];if(val&&!isRealDateString(val))healthAdd(issues,'red','Invalid date',`${e.bank}: ${label} date is not valid (${val}).`,e.id);else if(val&&dB(td(),val)>0)healthAdd(issues,'amber','Future date check',`${e.bank}: ${label} is in the future (${fD(val)}).`,e.id)});
     if(e.opened&&e.closed&&dB(e.opened,e.closed)<0)healthAdd(issues,'red','Closed before opened',`${e.bank}: Closed date is before opened date.`,e.id);
     if(e.opened&&e.bonusRecd&&dB(e.opened,e.bonusRecd)<0)healthAdd(issues,'amber','Bonus received before opened',`${e.bank}: Bonus received date is before opened date.`,e.id);
     if(e.reqMet&&e.bonusRecd&&dB(e.reqMet,e.bonusRecd)<0)healthAdd(issues,'red','Lifecycle date order',`${e.bank}: Requirement met date is after bonus received date.`,e.id);
-    if(e.closed&&isFutureDate(e.closed))healthAdd(issues,'red','Future closed date',`${e.bank}: Closed date is in the future. Use Planned Close instead.`,e.id);
-    if(e.closed&&e.plannedClose)healthAdd(issues,'amber','Closed plus planned close',`${e.bank}: Entry is closed but still has a planned close date.`,e.id);
+    if(e.closed&&isFutureDate(e.closed))healthAdd(issues,'red','Future closed date',`${e.bank}: Closed date is in the future. Clear it unless the bank is already closed.`,e.id);
     if(e.bonusRecd&&!e.reqMet)healthAdd(issues,'amber','Missing requirement met date',`${e.bank}: Bonus is received but Requirement Met date is blank.`,e.id);
     const stale=staleLifecycleTimers(e);
     if(stale.length)healthAdd(issues,'amber','Stale lifecycle timer',`${e.bank}: ${stale.length} old funding/requirement/payout timer(s) are no longer controlling status because the lifecycle moved forward.`,e.id);
@@ -3268,7 +3221,7 @@ function getDataHealthIssues(){
     if(e.closed&&e.bonusRecd&&!(e.bonus>0))healthAdd(issues,'amber','Closed with $0 bonus',`${e.bank}: Closed and has a received date, but bonus amount is $0.`,e.id);
     if(!e.opened&&!e.closed)healthAdd(issues,'blue','Draft entry',`${e.bank}: Missing opened date. It will stay as a draft until opened date is added.`,e.id);
     if(!e.closed&&!e.bonusRecd&&e.opened&&e.reqDays>0&&daysToDeadline(e)<0)healthAdd(issues,'red','Requirement deadline passed',`${e.bank}: Requirement deadline appears overdue by ${Math.abs(daysToDeadline(e))} day(s).`,e.id);
-    if(!e.closed&&e.bonusRecd&&!e.plannedClose&&!(e.minHoldDays>0)&&!e.feeChecked)healthAdd(issues,'amber','Review close timing',`${e.bank}: Bonus received but no planned close date or close-fee timer is set.`,e.id);
+    if(!e.closed&&e.bonusRecd&&!(e.minHoldDays>0)&&!e.feeChecked)healthAdd(issues,'amber','Review close timing',`${e.bank}: Bonus received. Use Close Now only after the account is actually closed.`,e.id);
     if(!e.closed&&(e.bonus||0)>0&&!e.churn)healthAdd(issues,'amber','Missing churn rule',`${e.bank}: Bonus amount is set but churn rule is blank.`,e.id);
   });
   const rank={red:0,amber:1,blue:2};
@@ -3322,12 +3275,6 @@ function closeRiskWarnings(e,closeDate){
     w.push('Close date is before the safe-close date '+fD(safe)+'.'+fee);
   }
   if(e.bonusRecd&&closeDate&&dB(e.bonusRecd,closeDate)<0)w.push('Close date is before the bonus received date.');
-  return w
-}
-function plannedCloseWarnings(e,p){
-  const w=closeRiskWarnings(e,p?.closeDate);
-  if(e&&!e.bonusRecd)w.push('Bonus is not marked received yet. Closing now may risk missing or losing the bonus.');
-  if(e&&e.closed)w.push('This account already has a closed date.');
   return w
 }
 function bonusReceiveWarnings(e,date){
@@ -3459,7 +3406,7 @@ function normalizeLifecycleEntry(e){
   x.closed=x.closed||'';
   x.bonusRecd=x.bonusRecd||'';
   x.reqMet=x.reqMet||'';
-  x.plannedClose=x.plannedClose||'';
+  x.plannedClose='';
   x.history=normalizeEntryHistoryList(x.history);
   x.analysis=(x.analysis&&typeof x.analysis==='object')?x.analysis:null;
   x.analyzerHistory=normalizeAnalyzerHistoryList(x.analyzerHistory);
@@ -3483,9 +3430,8 @@ function normalizeLifecycleEntry(e){
     x.monthlyFeeNoMonthlyServiceFee=!!(x.monthlyFeeNoMonthlyServiceFee||feeStruct.monthlyFeeNoMonthlyServiceFee);
   }catch{}
   x.customTimers=normalizeTimerList(x.customTimers||[]);
-  // v3.3.90: closed remains actual only. Planned close is stored separately by the close flow.
-  // Do not silently convert future closed dates into plannedClose.
-  if(x.closed)x.plannedClose='';
+  // v3.3.91: planned-close flow was removed. Closed date is actual only.
+  x.plannedClose='';
   if(x.bonusRecd&&!x.reqMet)x.reqMet=x.bonusRecd;
   if(x.reqMet&&x.bonusRecd&&dB(x.reqMet,x.bonusRecd)<0)x.reqMet=x.bonusRecd;
   hydrateTimersFromOpened(x);
@@ -3679,27 +3625,21 @@ function closeReviewRows(e,p){
   const rows=[];
   const push=(k,v,cls='')=>rows.push('<div class="close-review-row"><span>'+esc(k)+'</span><b class="'+esc(cls)+'">'+esc(v||'—')+'</b></div>');
   push('Bank',p.bank||e?.bank||'');
-  push(p.mode==='planned'?'Planned close date':'Actual close date',p.closeDate?fD(p.closeDate):'Missing',p.mode==='planned'?'warn':'');
-  if(p.mode==='actual'){
-    push('Bonus received',p.bonusDate?fD(p.bonusDate):'Not saved',(p.actualBonus||0)>0&&!p.bonusDate?'bad':'');
-    push('Requirement met',p.reqDate?fD(p.reqDate):'Not saved',(p.actualBonus||0)>0&&!p.reqDate?'warn':'');
-    push('Actual bonus',fM(p.actualBonus||0));
-    push('Churn rule',e?.churn?(e.churn==='180'?'180 days':e.churn+' year'):'Missing',e?.churn?'':'warn');
-  }else{
-    push('Account status','Stays open / active','warn');
-    push('Churn countdown','Not started','');
-  }
+  push('Close date',p.closeDate?fD(p.closeDate):'Missing',p.closeDate?'':'bad');
+  push('Bonus received',p.bonusDate?fD(p.bonusDate):'Not saved',(p.actualBonus||0)>0&&!p.bonusDate?'bad':'');
+  push('Requirement met',p.reqDate?fD(p.reqDate):'Not saved',(p.actualBonus||0)>0&&!p.reqDate?'warn':'');
+  push('Bonus amount',fM(p.actualBonus||0));
   push('Monthly fee checked',p.monthlyFeeChecked?'Yes':'No',p.monthlyFeeChecked?'':'warn');
   return rows.join('')
 }
 function closeReviewWarnings(e,p){
-  const w=p.mode==='planned'?plannedCloseWarnings(e,p):closeActualWarnings(e,p);
-  return Array.from(new Set((w||[]).filter(Boolean)))
+  return Array.from(new Set((closeActualWarnings(e,p)||[]).filter(Boolean)))
 }
 function renderCloseReadinessList(e,p){
   const ready=closeReadiness(e,p?.closeDate);
-  let h='<div class="close-check-list">';
-  ready.items.forEach(it=>{h+='<div class="close-check '+(it.ok?'ok':(it.level==='danger'?'bad':'warn'))+'"><i>'+(it.ok?'✓':'!')+'</i><div><b>'+esc(it.label)+'</b><span>'+esc(it.detail||'')+'</span></div></div>'});
+  const important=ready.items.filter(it=>!it.ok||/bonus|requirement|hold period|monthly fee/i.test(it.label)).slice(0,4);
+  let h='<div class="close-check-list compact">';
+  important.forEach(it=>{h+='<div class="close-check '+(it.ok?'ok':(it.level==='danger'?'bad':'warn'))+'"><i>'+(it.ok?'✓':'!')+'</i><div><b>'+esc(it.label)+'</b><span>'+esc(it.detail||'')+'</span></div></div>'});
   h+='</div>';
   return h
 }
@@ -3707,63 +3647,46 @@ function rClose(){
   if(!closePrompt)return'';
   const p=closePrompt;
   const e=entries.find(x=>x.id===p.entryId);
-  let h='<div class="cbg" onclick="cancelClose()"><div class="close-modal" onclick="event.stopPropagation()">';
+  let h='<div class="cbg" onclick="cancelClose()"><div class="close-modal compact-close" onclick="event.stopPropagation()">';
   if(p.step==='stillopen'){
-    h+='<h3>↩️ Mark Still Open</h3><div class="sub">Use this when the old flow marked '+esc(p.bank)+' closed but the account is still open.</div>';
-    h+='<div class="close-review-card"><div class="close-review-row"><span>Saved closed date</span><b>'+esc(p.closeDate?fD(p.closeDate):'Missing')+'</b></div><div class="close-review-row"><span>New status</span><b class="warn">Active / open</b></div><div class="close-review-row"><span>Churn countdown</span><b>Stopped until actual close</b></div></div>';
-    h+='<label>What should happen to the old closed date?</label><div class="close-mode-row"><button class="close-mode '+(p.moveClosedToPlan?'sel':'')+'" onclick="closePrompt.moveClosedToPlan=true;R()"><b>Move to Planned Close</b><span>Best if you still plan to close on that date</span></button><button class="close-mode '+(!p.moveClosedToPlan?'sel':'')+'" onclick="closePrompt.moveClosedToPlan=false;R()"><b>Clear Completely</b><span>Use if that date was wrong</span></button></div>';
-    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="finishStillOpen()">Save Still Open</button></div>';
+    h+='<h3>↩️ Mark Still Open</h3><div class="sub">Use this only if the saved closed date was wrong and the account is still open.</div>';
+    h+='<div class="close-review-card"><div class="close-review-row"><span>Old closed date</span><b>'+esc(p.closeDate?fD(p.closeDate):'Missing')+'</b></div><div class="close-review-row"><span>New status</span><b class="warn">Open / active</b></div><div class="close-review-row"><span>Churn countdown</span><b>Stopped</b></div></div>';
+    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="finishStillOpen()">Clear Closed Date</button></div>';
   }else if(p.step==='review'){
-    const reviewOnly=!!p.reviewOnly;
     const ready=closeReadiness(e,p.closeDate);
-    const warnings=closeReviewWarnings(e,p);
-    h+='<h3>'+(reviewOnly?'🧾 Close Timing Review':(p.mode==='planned'?'📅 Review Planned Close':'🔒 Review Actual Close'))+'</h3><div class="sub">Review the lifecycle dates before saving. This screen replaces the old browser confirmation popup.</div>';
-    h+='<div class="close-ready '+esc(p.mode==='planned'?'plan':ready.cls)+'"><b>'+esc(p.mode==='planned'?'Plan Only — Account Stays Open':ready.label)+'</b><span>'+esc(closeFlowModeReason(e,p.mode))+'</span></div>';
+    const warnings=closeReviewWarnings(e,p).slice(0,4);
+    h+='<h3>🔒 Close Now</h3><div class="sub">Compact final check. Save only if the bank is already closed.</div>';
+    h+='<div class="close-ready '+esc(ready.cls)+'"><b>'+esc(ready.label)+'</b><span>'+esc(closeFlowModeReason(e,'actual'))+'</span></div>';
     h+='<div class="close-review-card">'+closeReviewRows(e,p)+'</div>';
     h+=renderCloseReadinessList(e,p);
-    if(warnings.length)h+='<div class="close-warnings"><b>Review notes</b>'+warnings.map(x=>'<span>• '+esc(x)+'</span>').join('')+'</div>';
-    if(reviewOnly){
-      h+='<div class="close-final-note">No changes saved yet. Choose a workflow below when you are ready.</div>';
-      h+='<div class="close-review-actions"><button class="c-c" onclick="cancelClose()">Close Review</button><button class="c-c" onclick="closeModeSelect(\'planned\')">Save Planned Close</button><button class="c-g" onclick="closeModeSelect(\'actual\')">Record Actual Close</button></div>';
-    }else{
-      h+='<div class="close-review-actions"><button class="c-c" onclick="closeBack()">Back</button>';
-      if(p.mode==='actual')h+='<button class="c-c" onclick="closePrompt.mode=\'planned\';closePrompt.step=\'review\';R()">Save as Planned Instead</button>';
-      h+='<button class="c-g" onclick="closeNext()">'+(p.mode==='planned'?'Save Planned Close':'Save Actual Close')+'</button></div>';
-    }
+    if(warnings.length)h+='<div class="close-warnings compact"><b>Review</b>'+warnings.map(x=>'<span>• '+esc(x)+'</span>').join('')+'</div>';
+    h+='<div class="close-review-actions"><button class="c-c" onclick="closeBack()">Back</button><button class="c-g" onclick="finishClose()">Save Closed</button></div>';
   }else if(p.step==='date'){
-    const ready=closeReadiness(e,p.closeDate);const isPlan=p.mode==='planned';
-    h+='<h3>'+(isPlan?'📅 Save Planned Close':'🔒 Record Actual Close')+'</h3><div class="sub">Actual close means the bank is truly closed. Plan only keeps the account active and does not start churn.</div>';
-    if(p.recommendedMode&&p.recommendedMode!==p.mode){h+='<div class="close-recommend">Recommended: '+(p.recommendedMode==='planned'?'Plan Only':'Actual Close')+' — '+esc(closeFlowModeReason(e,p.recommendedMode))+'</div>'}
-    h+='<div class="close-mode-row"><button class="close-mode '+(!isPlan?'sel':'')+'" onclick="closeModeSelect(\'actual\')"><b>Actual close</b><span>Bank is already closed</span></button><button class="close-mode '+(isPlan?'sel':'')+'" onclick="closeModeSelect(\'planned\')"><b>Plan only</b><span>Still open / reminder</span></button></div>';
-    h+='<div class="close-ready '+esc(isPlan?'plan':ready.cls)+'"><b>'+esc(isPlan?'Plan Only — Account Stays Open':ready.label)+'</b><span>'+esc(isPlan?'This saves a planned close date and will not start churn countdown.':(ready.warnings[0]||'Close logic looks clear based on saved fields.'))+'</span></div>';
-    h+='<label>'+(isPlan?'Planned Close Date':'Actual Close Date')+'</label><input type="date" id="cp_date" value="'+esc(p.closeDate||'')+'">';
-    h+='<label>Monthly Fee Checked?</label><select id="cp_monthly_checked"><option value="no"'+(!p.monthlyFeeChecked?' selected':'')+'>No — remind me</option><option value="yes"'+(p.monthlyFeeChecked?' selected':'')+'>Yes — checked</option></select>';
-    h+='<div style="font-size:10px;color:var(--muted);margin-top:4px">Actual close starts the churn countdown from the saved close date. Plan only is for accounts still open.</div>';
-    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">'+(isPlan?'Review Plan':'Next →')+'</button></div>'
+    const ready=closeReadiness(e,p.closeDate);
+    h+='<h3>🔒 Close Now</h3><div class="sub">Record the actual date the bank account was closed.</div>';
+    h+='<div class="close-ready '+esc(ready.cls)+'"><b>'+esc(ready.label)+'</b><span>'+esc(ready.warnings[0]||'Closed date starts the churn countdown.')+'</span></div>';
+    h+='<label>Actual Close Date</label><input type="date" id="cp_date" value="'+esc(p.closeDate||'')+'">';
+    h+='<label>Monthly Fee Checked?</label><select id="cp_monthly_checked"><option value="no"'+(!p.monthlyFeeChecked?' selected':'')+'>No</option><option value="yes"'+(p.monthlyFeeChecked?' selected':'')+'>Yes</option></select>';
+    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">Next</button></div>';
   }else if(p.step==='bonus'){
-    h+='<h3>💰 Bonus payout check</h3><div class="sub">'+esc(p.bank)+' — expected '+fM(p.bonus)+'</div>';
-    h+='<div class="bonus-row"><button class="bonus-opt'+(p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=true;closePrompt.actualBonus=closePrompt.bonus;R()">Yes — '+fM(p.bonus)+'</button><button class="bonus-opt'+(!p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=false;R()">No — partial/none</button></div>';
-    if(!p.gotFull){
-      h+='<label>How much did you actually get?</label><input type="number" inputmode="numeric" id="cp_amt" value="'+(p.actualBonus||0)+'" placeholder="0">'
-    }
+    h+='<h3>💰 Bonus Check</h3><div class="sub">Confirm payout details before closing '+esc(p.bank)+'.</div>';
+    h+='<div class="bonus-row"><button class="bonus-opt'+(p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=true;closePrompt.actualBonus=closePrompt.bonus;R()">Full '+fM(p.bonus)+'</button><button class="bonus-opt'+(!p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=false;R()">Partial / none</button></div>';
+    if(!p.gotFull)h+='<label>Actual bonus amount</label><input type="number" inputmode="numeric" id="cp_amt" value="'+(p.actualBonus||0)+'" placeholder="0">';
     if((p.actualBonus||0)>0||p.gotFull){
-      h+='<label>Bonus Received Date</label><input type="date" id="cp_bonus_date" value="'+esc(p.bonusDate||'')+'" placeholder="yyyy-mm-dd">';
-      h+='<label>Requirement Met Date</label><input type="date" id="cp_req_date" value="'+esc(p.reqDate||'')+'" placeholder="yyyy-mm-dd">';
-      h+='<div style="font-size:10px;color:var(--muted);margin-top:4px">Safer default: these stay blank unless already saved. Enter the real dates only.</div>'
+      h+='<label>Bonus Received Date</label><input type="date" id="cp_bonus_date" value="'+esc(p.bonusDate||'')+'">';
+      h+='<label>Requirement Met Date</label><input type="date" id="cp_req_date" value="'+esc(p.reqDate||'')+'">';
     }
-    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-g" onclick="closeNext()">Next →</button></div>'
+    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-g" onclick="closeNext()">Next</button></div>';
   }else if(p.step==='dp'){
-    h+='<h3>📋 What triggered the bonus?</h3><div class="sub">What DD method or action triggered '+esc(p.bank)+'\'s bonus? Optional.</div>';
-    h+='<div class="dd-chips" style="margin-bottom:8px">';
-    ['Employer DD','Robinhood ACH','Fidelity ACH','Schwab ACH','Venmo DD','Melio Bill Pay','No DD needed','Debit only'].forEach(m=>{h+='<button class="dd-chip" onclick="document.getElementById(\'cp_dp\').value=\''+esc(m)+'\'">'+esc(m)+'</button>'});
-    h+='</div><input id="cp_dp" value="'+esc(p.dp)+'" placeholder="e.g. $1,000 DD via Robinhood ACH" onclick="event.stopPropagation()">';
-    h+='<div class="close-final-note">Next screen shows a professional review before anything is saved.</div>';
-    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">Review</button></div>'
+    h+='<h3>📋 Trigger Method</h3><div class="sub">Optional. Save the DD/ACH/action that triggered the bonus.</div>';
+    h+='<input id="cp_dp" value="'+esc(p.dp)+'" placeholder="e.g. Employer DD or ACH push" onclick="event.stopPropagation()">';
+    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">Review</button></div>';
   }
   h+='</div></div>';
   return h
 }
-function rFeeCheck(){if(!feeCheckPrompt)return'';const p=feeCheckPrompt;const e=entries.find(x=>x.id===p.entryId);const hasTimer=!!(e&&e.minHoldDays>0&&!e.feeChecked);let h='<div class="cbg" onclick="feeCheckCancel()"><div class="fee-box" onclick="event.stopPropagation()">';if(p.step==='ask'){h+='<h3>🛡️ Early Closure Fee?</h3>';h+='<div class="sub">Does <strong>'+esc(p.bank)+'</strong> charge a fee for closing the account early?</div>';if(hasTimer){const dsc=daysUntilSafe(e);h+='<div style="padding:8px 10px;background:#FEF3C7;border-radius:8px;margin-bottom:10px;font-size:11px;color:#92400E;font-weight:600">⏰ Current hold: '+(dsc>0?dsc+'d remaining • '+fM(e.earlyCloseFee)+' fee':'✅ Hold period expired')+'</div>'}h+='<div class="fee-choice">';h+='<button class="fee-yes" onclick="feeCheckPrompt.step=\'months\';R()">⚠️ Yes, set timer</button>';h+='<button class="fee-no" onclick="feeCheckSkip()">✅ No fee / Continue</button>';h+='</div>';if(hasTimer){h+='<button class="btn-s" onclick="feeCheckRemoveTimer()">Remove current timer only</button>';h+='<div style="font-size:10px;color:var(--muted);text-align:center;margin-top:6px">This keeps the bank open and clears the early-close hold.</div>'}else{h+='<div style="font-size:10px;color:var(--muted);text-align:center">Continue clears any hold period, then lets you choose Actual Close or Plan Only</div>'}}else if(p.step==='months'){h+='<h3>⏰ How long to wait?</h3>';h+='<div class="sub">How many months from account opening must you wait to avoid the fee?</div>';h+='<div class="fee-months-grid">';[3,6,9,12,18,24].forEach(m=>{const rawDate=e&&e.opened?addM(e.opened,m):'';const safeDate=rawDate?addD(rawDate,BUFFER_DAYS):'';const daysAway=safeDate?Math.max(0,dB(td(),safeDate)):0;h+='<button class="fee-mo-btn'+(p.months===m?' sel':'')+'" onclick="feeCheckPrompt.months='+m+';R()">'+m+' mo';if(safeDate&&e.opened)h+='<span class="sm">'+daysAway+'d left</span>';h+='</button>'});h+='</div>';h+='<div style="display:flex;gap:6px;margin-top:8px;align-items:center"><span style="font-size:12px;color:var(--sub);font-weight:600;white-space:nowrap">Custom:</span><input type="number" inputmode="numeric" id="fcp_custom" value="'+(p.months||'')+'" placeholder="months" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:var(--bg);outline:none" onchange="feeCheckPrompt.months=parseInt(this.value)||6;R()"><span style="font-size:12px;color:var(--sub);font-weight:600">months</span></div>';h+='<div style="display:flex;gap:6px;margin-top:10px;align-items:center"><label style="font-size:11px;font-weight:600;color:var(--sub);white-space:nowrap">Fee amount $</label><input type="number" inputmode="numeric" id="fcp_fee" value="'+(p.feeAmount||'')+'" placeholder="e.g. 25" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:var(--bg);outline:none" onchange="feeCheckPrompt.feeAmount=parseInt(this.value)||0"></div>';if(e&&e.opened&&p.months>0){const rawDate=addM(e.opened,p.months);const safeDate=addD(rawDate,BUFFER_DAYS);const daysAway=Math.max(0,dB(td(),safeDate));h+='<div class="fee-preview"><div class="fp-date">📅 Safe to close: '+fD(safeDate)+'</div><div class="fp-days">'+(daysAway>0?daysAway+' days (incl. 5d buffer)':'✅ Already past!')+'</div></div>'}else if(!e||!e.opened){h+='<div class="fee-preview"><div class="fp-date" style="color:var(--red)">⚠️ No open date set</div><div class="fp-days">Timer starts when you add an open date</div></div>'}h+='<div style="display:flex;gap:6px;margin-top:10px">';h+='<button class="c-c" onclick="feeCheckPrompt.step=\'ask\';R()">Back</button>';h+='<button class="c-g" onclick="feeCheckSave()">⏰ Set Timer</button>';h+='</div>';if(hasTimer)h+='<button class="btn-s" onclick="feeCheckRemoveTimer()">Remove current timer only</button>'}h+='</div></div>';return h}
+
+function rFeeCheck(){if(!feeCheckPrompt)return'';const p=feeCheckPrompt;const e=entries.find(x=>x.id===p.entryId);const hasTimer=!!(e&&e.minHoldDays>0&&!e.feeChecked);let h='<div class="cbg" onclick="feeCheckCancel()"><div class="fee-box" onclick="event.stopPropagation()">';if(p.step==='ask'){h+='<h3>🛡️ Early Closure Fee?</h3>';h+='<div class="sub">Does <strong>'+esc(p.bank)+'</strong> charge a fee for closing the account early?</div>';if(hasTimer){const dsc=daysUntilSafe(e);h+='<div style="padding:8px 10px;background:#FEF3C7;border-radius:8px;margin-bottom:10px;font-size:11px;color:#92400E;font-weight:600">⏰ Current hold: '+(dsc>0?dsc+'d remaining • '+fM(e.earlyCloseFee)+' fee':'✅ Hold period expired')+'</div>'}h+='<div class="fee-choice">';h+='<button class="fee-yes" onclick="feeCheckPrompt.step=\'months\';R()">⚠️ Yes, set timer</button>';h+='<button class="fee-no" onclick="feeCheckSkip()">✅ No fee / Continue</button>';h+='</div>';if(hasTimer){h+='<button class="btn-s" onclick="feeCheckRemoveTimer()">Remove current timer only</button>';h+='<div style="font-size:10px;color:var(--muted);text-align:center;margin-top:6px">This keeps the bank open and clears the early-close hold.</div>'}else{h+='<div style="font-size:10px;color:var(--muted);text-align:center">Continue clears any hold period, then opens Close Now</div>'}}else if(p.step==='months'){h+='<h3>⏰ How long to wait?</h3>';h+='<div class="sub">How many months from account opening must you wait to avoid the fee?</div>';h+='<div class="fee-months-grid">';[3,6,9,12,18,24].forEach(m=>{const rawDate=e&&e.opened?addM(e.opened,m):'';const safeDate=rawDate?addD(rawDate,BUFFER_DAYS):'';const daysAway=safeDate?Math.max(0,dB(td(),safeDate)):0;h+='<button class="fee-mo-btn'+(p.months===m?' sel':'')+'" onclick="feeCheckPrompt.months='+m+';R()">'+m+' mo';if(safeDate&&e.opened)h+='<span class="sm">'+daysAway+'d left</span>';h+='</button>'});h+='</div>';h+='<div style="display:flex;gap:6px;margin-top:8px;align-items:center"><span style="font-size:12px;color:var(--sub);font-weight:600;white-space:nowrap">Custom:</span><input type="number" inputmode="numeric" id="fcp_custom" value="'+(p.months||'')+'" placeholder="months" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:var(--bg);outline:none" onchange="feeCheckPrompt.months=parseInt(this.value)||6;R()"><span style="font-size:12px;color:var(--sub);font-weight:600">months</span></div>';h+='<div style="display:flex;gap:6px;margin-top:10px;align-items:center"><label style="font-size:11px;font-weight:600;color:var(--sub);white-space:nowrap">Fee amount $</label><input type="number" inputmode="numeric" id="fcp_fee" value="'+(p.feeAmount||'')+'" placeholder="e.g. 25" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:var(--bg);outline:none" onchange="feeCheckPrompt.feeAmount=parseInt(this.value)||0"></div>';if(e&&e.opened&&p.months>0){const rawDate=addM(e.opened,p.months);const safeDate=addD(rawDate,BUFFER_DAYS);const daysAway=Math.max(0,dB(td(),safeDate));h+='<div class="fee-preview"><div class="fp-date">📅 Safe to close: '+fD(safeDate)+'</div><div class="fp-days">'+(daysAway>0?daysAway+' days (incl. 5d buffer)':'✅ Already past!')+'</div></div>'}else if(!e||!e.opened){h+='<div class="fee-preview"><div class="fp-date" style="color:var(--red)">⚠️ No open date set</div><div class="fp-days">Timer starts when you add an open date</div></div>'}h+='<div style="display:flex;gap:6px;margin-top:10px">';h+='<button class="c-c" onclick="feeCheckPrompt.step=\'ask\';R()">Back</button>';h+='<button class="c-g" onclick="feeCheckSave()">⏰ Set Timer</button>';h+='</div>';if(hasTimer)h+='<button class="btn-s" onclick="feeCheckRemoveTimer()">Remove current timer only</button>'}h+='</div></div>';return h}
 /* v3.3.83 mobile focus rule: do not call R() inside text input oninput handlers inside modal; iOS Safari drops keyboard when modal redraws. */
 function rModal(){const e=modal;const oi=k=>' oninput="modal[\''+k+'\']=this.value" ';const on=k=>' oninput="modal[\''+k+'\']=parseInt(this.value)||0" ';let h='<div class="ov" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()">';h+='<div class="m-bar"></div><div class="m-hdr"><h2>'+(e._edit?'Edit':'New')+' Entry</h2>'+(e._edit?'<span class="m-id">'+esc(e.id||'')+'</span>':'')+'</div>';h+='<div class="fg"><label>Bank Name *</label><input value="'+esc(e.bank||'')+'" oninput="modal.bank=this.value;if(!modal.accountType||modal.accountType===\'unknown\')syncModalAccountTypeFromBank()" onblur="applyModalBankMemory();R()" placeholder="e.g. Chase"></div>';h+='<div class="fg"><label>Account Type</label><select onchange="modal.accountType=this.value"><option value="personal"'+((normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e))==='personal'?' selected':'')+'>Personal</option><option value="business"'+((normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e))==='business'?' selected':'')+'>Business</option></select></div>';if(e._edit){const repl=getManualReplacementCandidates(e,e.id||'');if(repl.length){h+='<div class="m-sec">Duplicate Fix / Replace Old Entry</div>';h+='<div style="font-size:10px;color:var(--muted);margin-bottom:6px">Use this if the app missed an old churn-ready entry and created a duplicate.</div>';h+='<div class="fg"><label>Old entry to replace with this entry</label><select onchange="modal._manualReplaceTarget=this.value"><option value="">Choose old entry…</option>'+repl.map(c=>'<option value="'+esc(c.id)+'"'+(modal._manualReplaceTarget===c.id?' selected':'')+'>'+esc(replacementCandidateLabel(c))+'</option>').join('')+'</select></div>';h+='<button class="btn-s" style="margin-top:0;margin-bottom:8px" onclick="beginManualReplaceFromEdit()">Replace Selected Old Entry</button>';}}h+='<div class="m-sec">Bonus</div>';h+='<div class="frow"><div class="fg"><label>Amount $</label><input type="number" inputmode="numeric" value="'+(e.bonus||'')+'"'+on('bonus')+'placeholder="300"></div>';h+='<div class="fg"><label>Churn Rule</label><select onchange="modal.churn=this.value"><option value="">Select</option><option value="1"'+(e.churn==='1'?' selected':'')+'>1 Year</option><option value="2"'+(e.churn==='2'?' selected':'')+'>2 Years</option><option value="3"'+(e.churn==='3'?' selected':'')+'>3 Years</option><option value="180"'+(e.churn==='180'?' selected':'')+'>180 Days</option></select></div></div>';h+='<div class="m-sec">Simple Terms Auto-Fill</div>';h+='<div class="frow"><div class="fg"><label>Monthly Fee (Yes / No)</label><input value="'+esc(e.monthlyFeeYNText||'')+'" oninput="modal.monthlyFeeYNText=this.value" placeholder="Yes or No"></div><div class="fg"><label>Promo Code</label><input value="'+esc(e.promoCodeText||'')+'" oninput="modal.promoCodeText=this.value" placeholder="leave blank if missing"></div></div>';h+='<div class="frow"><div class="fg"><label>Known DD / Data Point</label><input value="'+esc(e.dataPoint||'')+'" oninput="modal.dataPoint=this.value" placeholder="e.g. Employer DD, ACH, payroll"></div><div class="fg"><label>Promo Expiration / Open By</label><input value="'+esc(e.expirationDateText||'')+'" oninput="modal.expirationDateText=this.value" placeholder="leave blank if missing"></div></div>';h+='<div class="frow"><div class="fg"><label>Funding Deadline Days</label><input type="number" inputmode="numeric" min="0" value="'+esc(String(e.fundedDays||''))+'" oninput="modal.fundedDays=parseInt(this.value)||0" placeholder="e.g. 30"></div><div class="fg"><label>Funding Amount / Target Tier</label><input value="'+esc(e.fundingAmountText||(e.fundingAmount?fM(e.fundingAmount):''))+'" oninput="modal.fundingAmountText=this.value;modal.fundingAmount=parseCloseFeeAmount(this.value)" placeholder="e.g. $2,000 for $500 tier"></div></div>';h+='<div class="fg"><label>Payout Timing</label><input value="'+esc(e.payoutTimingText||'')+'" oninput="modal.payoutTimingText=this.value" placeholder="e.g. within 15 days after requirements are met"></div>';h+='<div class="fg"><label>How to Avoid the Monthly Fee</label><input value="'+esc(e.avoidMonthlyFeeText||'')+'" oninput="modal.avoidMonthlyFeeText=this.value" placeholder="leave blank if missing"></div>';h+='<div class="fg"><label>How to Complete the Bonus</label><textarea rows="3" oninput="modal.completeBonusText=this.value" placeholder="leave blank if missing">'+esc(e.completeBonusText||'')+'</textarea></div>';h+='<div class="frow"><div class="fg"><label>Early Close Fee Amount</label><input value="'+esc(e.earlyTerminationFeeText||'')+'" oninput="modal.earlyTerminationFeeText=this.value;modal.earlyCloseFee=parseCloseFeeAmount(this.value)" placeholder="number only, e.g. 25 or None"></div><div class="fg"><label>Close Hold Days</label><input type="number" inputmode="numeric" min="0" value="'+esc(closeHoldDisplayValue(e))+'" oninput="modal.closeFeeCountdownDays=this.value;modal.minHoldDays=parseInt(this.value)||0;modal.feeChecked=false" placeholder="e.g. 180"></div></div>';h+='<div class="frow"><div class="fg"><label>Close Rule Basis</label><select onchange="modal.closeRuleBasis=this.value"><option value="opened"'+(normalizeCloseRuleBasis(e.closeRuleBasis)==='opened'?' selected':'')+'>Opened date</option><option value="bonus"'+(normalizeCloseRuleBasis(e.closeRuleBasis)==='bonus'?' selected':'')+'>Bonus received date</option><option value="reqmet"'+(normalizeCloseRuleBasis(e.closeRuleBasis)==='reqmet'?' selected':'')+'>Requirement met date</option><option value="manual"'+(normalizeCloseRuleBasis(e.closeRuleBasis)==='manual'?' selected':'')+'>Manual review</option></select></div><div class="fg"><label>Close Buffer Days</label><input type="number" inputmode="numeric" min="0" value="'+esc(String(e.closeBufferDays??BUFFER_DAYS))+'" oninput="modal.closeBufferDays=parseInt(this.value)||0" placeholder="5"></div></div>';h+='<div class="frow"><div class="fg"><label>Monthly Fee Checked</label><select onchange="modal.monthlyFeeChecked=this.value===\'yes\'"><option value="no"'+(!e.monthlyFeeChecked?' selected':'')+'>No</option><option value="yes"'+(e.monthlyFeeChecked?' selected':'')+'>Yes</option></select></div><div class="fg"><label>Close Rule Wording</label><input value="'+esc(e.closeRuleText||'')+'" oninput="modal.closeRuleText=this.value" placeholder="e.g. keep open 180 days after opening"></div></div>';h+='<div class="fg"><label>Eligibility / Churn</label><textarea rows="2" oninput="modal.eligibilityText=this.value" placeholder="leave blank if missing">'+esc(e.eligibilityText||'')+'</textarea></div>';h+='<div class="fg"><label>How Many Days Required to Complete the Bonus?</label><input value="'+esc(e.requiredDaysText||(e.reqDays>0?String(e.reqDays):''))+'" oninput="modal.requiredDaysText=this.value;modal.reqDays=parseRequirementDaysText(this.value)" placeholder="e.g. 90"></div>';h+='<div class="m-sec">Dates</div>';const df=(lbl,id,k,v)=>'<div class="fg"><label>'+lbl+'</label><div class="date-wrap"><input type="date" value="'+(v||'')+'"'+oi(k)+'><button class="date-clr" type="button" onclick="modal.'+k+'=\'\';this.previousElementSibling.value=\'\'">\u2715</button></div></div>';h+='<div class="frow">'+df('Opened','fo','opened',e.opened)+df('Closed','fc','closed',e.closed)+'</div>';h+='<div class="frow">'+df('Bonus Received','fb','bonusRecd',e.bonusRecd)+df('Req Met','fr','reqMet',e.reqMet)+'</div>';h+='<div class="m-sec">Your Notes</div>';h+='<div style="font-size:10px;color:var(--muted);margin-bottom:3px">Your personal notes — never overwritten by analyzer</div>';h+='<div class="fg"><textarea rows="3" style="font-size:13px;line-height:1.5;min-height:60px"'+oi('notes')+'placeholder="Your personal notes, tips, reminders...">'+esc(e.notes||'')+'</textarea></div>';if(modal.analyzedTC){h+='<div class="m-sec">Analyzed T&C Summary</div>';h+='<div style="font-size:10px;color:var(--muted);margin-bottom:3px">Auto-generated from T&C analyzer — re-analyze to update</div>';h+='<div class="fg"><textarea rows="6" style="font-size:12px;line-height:1.6;min-height:120px;background:#F8FAFC;border:1.5px solid #E2E8F0" oninput="modal.analyzedTC=this.value" placeholder="Analyzed T&C will appear here...">'+esc(modal.analyzedTC)+'</textarea></div>'}h+='<button type="button" class="tc-btn" onclick="showInlineAZ=!showInlineAZ;R()">\uD83E\uDDE0 '+(showInlineAZ?'Hide Analyzer Review Wizard':'Paste T&C to Review')+'</button>';if(showInlineAZ){h+='<div class="az-area"><textarea id="inline_tc" placeholder="Paste T&C here..."></textarea><button class="az-go" onclick="event.preventDefault();runInlineAnalyze()">Review with Analyzer</button>'+(inlineResult?'<div style="margin-top:4px;font-size:10px;color:var(--green);font-weight:600">\u2705 Reviewed</div>':'')+'</div>'}h+='<button type="button" class="btn-p" onclick="saveEntryFromButton(this,event)">\uD83D\uDCBE '+(e._edit?'Save Changes':'Add Entry')+'</button>';h+='<button class="btn-s" onclick="closeModal()">Cancel</button>';if(e._edit)h+='<button class="btn-d" onclick="clearFields()">Clear All Fields</button>';h+='</div></div>';return h}
 function rCfm(){return'<div class="cbg" onclick="cfm=null;R()"><div class="cbox" onclick="event.stopPropagation()"><h3>'+cfm.title+'</h3><p>'+cfm.msg+'</p><div class="crow"><button class="c-c" onclick="cfm=null;R()">Cancel</button><button class="'+(cfm.green?'c-g':'c-r')+'" onclick="cfm.action()">'+(cfm.confirmLabel||(cfm.green?'Confirm':'Delete'))+'</button></div></div></div>'}
@@ -3973,7 +3896,7 @@ function collectModalEntryData(){
   const bank=(modal.bank||'').trim();
   if(!bank){alert('Bank name required');return null}
   syncModalAccountTypeFromBank();
-  const d={bank,accountType:normalizeAccountType(modal.accountType)||'personal',bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,closeFeeCountdownDays:modal.closeFeeCountdownDays||'',earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',fundedDays:modal.fundedDays||0,fundingAmount:modal.fundingAmount||0,fundingAmountText:modal.fundingAmountText||'',payoutTimingText:modal.payoutTimingText||'',plannedClose:modal.plannedClose||'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false,monthlyFeeYNText:modal.monthlyFeeYNText||'',monthlyFeeAmountText:modal.monthlyFeeAmountText||'',monthlyFeeFrequency:modal.monthlyFeeFrequency||'',monthlyFeeWaiverType:modal.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:modal.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:modal.monthlyFeeWaiverText||'',promoCodeText:modal.promoCodeText||'',avoidMonthlyFeeText:modal.avoidMonthlyFeeText||'',completeBonusText:modal.completeBonusText||'',earlyTerminationFeeText:modal.earlyTerminationFeeText||'',eligibilityText:modal.eligibilityText||'',expirationDateText:modal.expirationDateText||'',requiredDaysText:modal.requiredDaysText||'',closeRuleBasis:normalizeCloseRuleBasis(modal.closeRuleBasis),closeBufferDays:parseInt(modal.closeBufferDays,10)||BUFFER_DAYS,closeRuleText:modal.closeRuleText||'',monthlyFeeChecked:!!modal.monthlyFeeChecked,analysis:(modal.analysis&&typeof modal.analysis==='object')?modal.analysis:null,analyzerHistory:normalizeAnalyzerHistoryList(modal.analyzerHistory),history:normalizeEntryHistoryList(modal.history),customTimers:normalizeTimerList(modal.customTimers)};
+  const d={bank,accountType:normalizeAccountType(modal.accountType)||'personal',bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,closeFeeCountdownDays:modal.closeFeeCountdownDays||'',earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',fundedDays:modal.fundedDays||0,fundingAmount:modal.fundingAmount||0,fundingAmountText:modal.fundingAmountText||'',payoutTimingText:modal.payoutTimingText||'',plannedClose:'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false,monthlyFeeYNText:modal.monthlyFeeYNText||'',monthlyFeeAmountText:modal.monthlyFeeAmountText||'',monthlyFeeFrequency:modal.monthlyFeeFrequency||'',monthlyFeeWaiverType:modal.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:modal.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:modal.monthlyFeeWaiverText||'',promoCodeText:modal.promoCodeText||'',avoidMonthlyFeeText:modal.avoidMonthlyFeeText||'',completeBonusText:modal.completeBonusText||'',earlyTerminationFeeText:modal.earlyTerminationFeeText||'',eligibilityText:modal.eligibilityText||'',expirationDateText:modal.expirationDateText||'',requiredDaysText:modal.requiredDaysText||'',closeRuleBasis:normalizeCloseRuleBasis(modal.closeRuleBasis),closeBufferDays:parseInt(modal.closeBufferDays,10)||BUFFER_DAYS,closeRuleText:modal.closeRuleText||'',monthlyFeeChecked:!!modal.monthlyFeeChecked,analysis:(modal.analysis&&typeof modal.analysis==='object')?modal.analysis:null,analyzerHistory:normalizeAnalyzerHistoryList(modal.analyzerHistory),history:normalizeEntryHistoryList(modal.history),customTimers:normalizeTimerList(modal.customTimers)};
   sanitizeCloseFieldsForEntry(d);
   syncRequiredDaysFromModal(d);
   d.earlyCloseFee=parseCloseFeeAmount(modal.earlyTerminationFeeText);
@@ -4162,38 +4085,29 @@ function feeCheckSave(){
   R()
 }
 function feeCheckCancel(){feeCheckPrompt=null;R()}
-function startCloseFlow(id,preferredMode='auto'){
+function startCloseFlow(id,preferredMode='actual'){
   const e=entries.find(x=>x.id===id);
   if(!e)return;
-  const mode=closeFlowRecommendedMode(e,preferredMode);
-  const reviewOnly=preferredMode==='review';
   closePrompt={
     entryId:id,
     bank:e.bank,
     bonus:e.bonus||0,
-    step:reviewOnly?'review':'date',
-    closeDate:closeFlowDefaultDate(e,mode),
+    step:'date',
+    closeDate:td(),
     bonusDate:e.bonusRecd||'',
     reqDate:e.reqMet||'',
     gotFull:true,
     actualBonus:e.bonus||0,
     dp:e.dataPoint||'',
     monthlyFeeChecked:!!e.monthlyFeeChecked,
-    mode,
-    reviewOnly,
-    recommendedMode:closeFlowRecommendedMode(e,'auto')
+    mode:'actual',
+    reviewOnly:false,
+    recommendedMode:'actual'
   };
   R()
 }
 function closeModeSelect(mode){
-  const p=closePrompt;
-  if(!p)return;
-  const e=entries.find(x=>x.id===p.entryId);
-  p.mode=mode==='planned'?'planned':'actual';
-  p.closeDate=closeFlowDefaultDate(e,p.mode);
-  p.step='date';
-  p.reviewOnly=false;
-  R()
+  startCloseFlow(closePrompt?.entryId,'actual')
 }
 function closeCollectDateFields(){
   const p=closePrompt;
@@ -4206,39 +4120,30 @@ function closeCollectDateFields(){
 function closeNext(){
   const p=closePrompt;
   if(!p)return;
-  if(p.step==='review'){
-    if(p.reviewOnly){p.step='date';p.reviewOnly=false;R();return}
-    if(p.mode==='planned')finishPlannedClose();
-    else finishClose();
-    return
-  }
   if(p.step==='date'){
     closeCollectDateFields();
-    if(!p.closeDate){alert((p.mode==='planned'?'Planned close date':'Close date')+' is required.');return}
+    if(!p.closeDate){alert('Close date is required.');return}
     const e=entries.find(x=>x.id===p.entryId);
     if(e?.opened&&dB(e.opened,p.closeDate)<0){alert('Close date cannot be before the opened date.');return}
-    if(p.mode==='planned'){
-      p.step='review';
-      R();
-      return
-    }
     p.step='bonus';
-    R()
-  }else if(p.step==='bonus'){
+    R();
+    return
+  }
+  if(p.step==='bonus'){
     if(!p.gotFull){
       const v=document.getElementById('cp_amt');
       if(v)p.actualBonus=parseInt(v.value)||0
-    }else{
-      p.actualBonus=p.bonus||0
-    }
+    }else p.actualBonus=p.bonus||0;
     const bd=document.getElementById('cp_bonus_date');
     if(bd)p.bonusDate=bd.value;
     const rd=document.getElementById('cp_req_date');
     if(rd)p.reqDate=rd.value;
     if((p.actualBonus||0)>0&&!p.bonusDate){alert('Bonus received date is required for tax tracking when an actual bonus amount is saved.');return}
     p.step='dp';
-    R()
-  }else if(p.step==='dp'){
+    R();
+    return
+  }
+  if(p.step==='dp'){
     const dp=document.getElementById('cp_dp');
     if(dp)p.dp=dp.value.trim();
     p.step='review';
@@ -4248,13 +4153,13 @@ function closeNext(){
 function closeBack(){
   const p=closePrompt;
   if(!p)return;
-  if(p.step==='review'){
-    if(p.reviewOnly){cancelClose();return}
-    p.step=p.mode==='planned'?'date':'dp';
-  }else if(p.step==='dp')p.step='bonus';
+  if(p.step==='review')p.step='dp';
+  else if(p.step==='dp')p.step='bonus';
   else if(p.step==='bonus')p.step='date';
+  else cancelClose();
   R()
 }
+
 function finishClose(){
   const p=closePrompt;
   if(!p)return;
@@ -4262,7 +4167,7 @@ function finishClose(){
   if(!e)return;
   if(!p.closeDate){alert('Close date is required.');return}
   undoState=closeUndoSnapshot(e);
-  undoState.undoLabel='Actual close saved for '+(e.bank||p.bank||'this bank')+' — Undo restores everything for 60 seconds.';
+  undoState.undoLabel='Closed saved for '+(e.bank||p.bank||'this bank')+' — Undo restores everything for 60 seconds.';
   if(undoTimer)clearTimeout(undoTimer);
   undoTimer=setTimeout(()=>{undoState=null;R()},60000);
   entries=entries.map(x=>{
@@ -4293,62 +4198,10 @@ function finishClose(){
   cfm={title:'Closed Saved',msg:(e2?e2.bank:'This bank')+' closed on '+fD(p.closeDate)+'.\n\nChurn-ready date: '+readyDate+'.\nStatus: '+(e2?status(e2):'Waiting to Churn')+'.\n\nUndo is available for 60 seconds at the bottom of the app.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
   R()
 }
-function finishPlannedClose(){
-  const p=closePrompt;
-  if(!p)return;
-  const e=entries.find(x=>x.id===p.entryId);
-  if(!e)return;
-  if(!p.closeDate){alert('Planned close date is required.');return}
-  undoState=closeUndoSnapshot(e);
-  undoState.undoLabel='Planned close saved for '+(e.bank||p.bank||'this bank')+' — Undo restores everything for 60 seconds.';
-  if(undoTimer)clearTimeout(undoTimer);
-  undoTimer=setTimeout(()=>{undoState=null;R()},60000);
-  entries=entries.map(x=>{
-    if(x.id===p.entryId){
-      x.plannedClose=p.closeDate;
-      x.closed='';
-      x.feeChecked=false;
-      x.monthlyFeeChecked=!!p.monthlyFeeChecked;
-      appendEntryHistory(x,'planned_close','Planned close '+fD(p.closeDate)+'. Account remains open.');
-      return normalizeLifecycleEntry(x)
-    }
-    return x
-  });
-  const e2=entries.find(x=>x.id===p.entryId);
-  if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
-  entries=sortE(entries);sv(SK,entries);
-  closePrompt=null;
-  expanded=e2?e2.id:null;
-  cfm={title:'Planned Close Saved',msg:(e2?e2.bank:'This bank')+' is still open. Planned close date saved for '+fD(p.closeDate)+'.\n\nUse Actions → Record Actual Close when the bank is actually closed.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
-  R()
-}
-function clearPlannedClose(id){
-  const e=entries.find(x=>x.id===id);
-  if(!e||!e.plannedClose)return;
-  undoState=closeUndoSnapshot(e);
-  undoState.undoLabel='Planned close cleared for '+(e.bank||'this bank')+' — Undo restores everything for 60 seconds.';
-  if(undoTimer)clearTimeout(undoTimer);
-  undoTimer=setTimeout(()=>{undoState=null;R()},60000);
-  const old=e.plannedClose;
-  entries=entries.map(x=>{
-    if(x.id===id){
-      x.plannedClose='';
-      appendEntryHistory(x,'clear_planned_close','Cleared planned close '+fD(old)+'.');
-      return normalizeLifecycleEntry(x)
-    }
-    return x
-  });
-  const e2=entries.find(x=>x.id===id);
-  if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
-  entries=sortE(entries);sv(SK,entries);
-  expanded=id;
-  cfm={title:'Planned Close Cleared',msg:(e2?e2.bank:'This bank')+' no longer has a planned close date.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
-  R()
-}
 function confirmClearCloseDate(id){
   const e=entries.find(x=>x.id===id);
   if(!e||!e.closed)return;
-  closePrompt={entryId:id,bank:e.bank,bonus:e.bonus||0,step:'stillopen',closeDate:e.closed,bonusDate:e.bonusRecd||'',reqDate:e.reqMet||'',moveClosedToPlan:true,monthlyFeeChecked:!!e.monthlyFeeChecked,mode:'stillopen'};
+  closePrompt={entryId:id,bank:e.bank,bonus:e.bonus||0,step:'stillopen',closeDate:e.closed,bonusDate:e.bonusRecd||'',reqDate:e.reqMet||'',moveClosedToPlan:false,monthlyFeeChecked:!!e.monthlyFeeChecked,mode:'stillopen'};
   R()
 }
 function finishStillOpen(){
@@ -4365,8 +4218,8 @@ function finishStillOpen(){
     if(x.id===p.entryId){
       x.closed='';
       x.feeChecked=false;
-      x.plannedClose=(p.moveClosedToPlan&&oldClosed)?oldClosed:'';
-      appendEntryHistory(x,'still_open','Removed closed date '+(oldClosed?fD(oldClosed):'')+(p.moveClosedToPlan&&oldClosed?' and moved it to Planned Close.':'.'));
+      x.plannedClose='';
+      appendEntryHistory(x,'still_open','Removed closed date '+(oldClosed?fD(oldClosed):'')+'.');
       return normalizeLifecycleEntry(x)
     }
     return x
@@ -4376,13 +4229,13 @@ function finishStillOpen(){
   entries=sortE(entries);sv(SK,entries);
   closePrompt=null;
   expanded=e2?e2.id:null;
-  cfm={title:'Marked Still Open',msg:(e2?e2.bank:'This bank')+' is active/open again. '+(e2?.plannedClose?'Old close date moved to Planned Close: '+fD(e2.plannedClose)+'.':'Closed date was cleared completely.')+'\n\nUndo is available for 60 seconds at the bottom of the app.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
+  cfm={title:'Marked Still Open',msg:(e2?e2.bank:'This bank')+' is active/open again. Closed date was cleared completely.'+'\n\nUndo is available for 60 seconds at the bottom of the app.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
   R()
 }
 function clearCloseDate(id,keepAsPlanned){
   const e=entries.find(x=>x.id===id);
   if(!e)return;
-  closePrompt={entryId:id,bank:e.bank,bonus:e.bonus||0,step:'stillopen',closeDate:e.closed||'',bonusDate:e.bonusRecd||'',reqDate:e.reqMet||'',moveClosedToPlan:!!keepAsPlanned,monthlyFeeChecked:!!e.monthlyFeeChecked,mode:'stillopen'};
+  closePrompt={entryId:id,bank:e.bank,bonus:e.bonus||0,step:'stillopen',closeDate:e.closed||'',bonusDate:e.bonusRecd||'',reqDate:e.reqMet||'',moveClosedToPlan:false,monthlyFeeChecked:!!e.monthlyFeeChecked,mode:'stillopen'};
   finishStillOpen()
 }
 function cancelClose(){closePrompt=null;R()}
@@ -4845,7 +4698,7 @@ function normalizeRestoredEntry(e){
   x.dataPoint=x.dataPoint||'';
   x.reqDays=parseInt(x.reqDays||0,10)||0;
   x.referralBonus=parseInt(x.referralBonus||0,10)||0;
-  x.plannedClose=x.plannedClose||'';
+  x.plannedClose='';
   x.phoneNum=x.phoneNum||'';
   x.feeChecked=!!x.feeChecked;
   x.monthlyFeeYNText=x.monthlyFeeYNText||'';
@@ -5801,11 +5654,7 @@ entries=sortE(entries);R();
     if(action==='edit'){openEdit(id);return}
     if(action==='reqmet'){confirmMarkReqMet(id);return}
     if(action==='received'){confirmMarkReceived(id);return}
-    if(action==='reviewclose'){startCloseFlow(id,'review');return}
-    if(action==='planclose'){startCloseFlow(id,'planned');return}
-    if(action==='recordclose'){startCloseFlow(id,'actual');return}
-    if(action==='close'){startCloseFlow(id,'auto');return}
-    if(action==='clearplan'){clearPlannedClose(id);return}
+    if(action==='recordclose'||action==='close'){startCloseFlow(id,'actual');return}
     if(action==='clearclose'){confirmClearCloseDate(id);return}
     if(action==='delete'){delEntry(id);return}
     if(action==='checklist'){
@@ -5830,19 +5679,14 @@ entries=sortE(entries);R();
     h+='<div class="bt-ba-identity">'+bankLogo(e.bank,true)+'<div><div class="card-name">'+esc(e.bank)+'</div><div class="bt-ba-status">'+esc(status(e)||'')+'</div></div></div>';
     h+='<div class="bt-ba-list">';
     const st=status(e);
-    const rec=closeFlowRecommendedMode(e,'auto');
     if(e.closed){
       h+=bankActionSheetButton(e.id,'clearclose','↩️','Mark Still Open','Remove mistaken closed date');
       h+=bankActionSheetButton(e.id,'edit','✏️','Edit Bank','Details, dates, bonus, rules');
     }else{
       if(!e.bonusRecd)h+=bankActionSheetButton(e.id,'reqmet','✅',e.reqMet?'Update Req Met':'Mark Req Met','Requirement completed date');
       if(!e.bonusRecd)h+=bankActionSheetButton(e.id,'received','🎁','Mark Received','Bonus received date');
-      if(e.bonusRecd&&rec==='actual')h+=bankActionSheetButton(e.id,'recordclose','🔒','Record Actual Close','Bank is really closed');
-      h+=bankActionSheetButton(e.id,'reviewclose','🧾','Review Close Timing','Safe date, hold, fee, churn');
-      if(rec==='planned'||!e.plannedClose)h+=bankActionSheetButton(e.id,'planclose','📅',e.plannedClose?'Update Planned Close':'Save Planned Close','Reminder only, stays open');
-      if(e.bonusRecd&&rec!=='actual')h+=bankActionSheetButton(e.id,'recordclose','🔒','Record Actual Close','Use only after real closure');
+      if(e.bonusRecd)h+=bankActionSheetButton(e.id,'recordclose','🔒','Close Now','Record actual closure');
       if(e.bonusRecd)h+=bankActionSheetButton(e.id,'received','🎁','Update Received','Bonus/date/datapoint');
-      if(e.plannedClose)h+=bankActionSheetButton(e.id,'clearplan','🧹','Clear Planned Close','Remove reminder date');
       h+=bankActionSheetButton(e.id,'edit','✏️','Edit Bank','Details, dates, bonus, rules');
       h+=bankActionSheetButton(e.id,'checklist','✅','Add Checklist','New requirement step');
       h+=bankActionSheetButton(e.id,'timer','⏱️','Add Timer','Custom countdown');
@@ -5900,7 +5744,6 @@ entries=sortE(entries);R();
         h += '<div class="card-exp"><div class="card-grid">';
         if(e.opened) h += `<div class="cf"><div class="k">Opened</div><div class="v">${fD(e.opened)}</div></div>`;
         if(e.closed) h += `<div class="cf"><div class="k">Closed</div><div class="v">${fD(e.closed)}</div></div>`;
-        if(e.plannedClose&&!e.closed) h += `<div class="cf"><div class="k">Planned Close</div><div class="v warn">${fD(e.plannedClose)}</div></div>`;
         if(e.bonusRecd) h += `<div class="cf"><div class="k">Received</div><div class="v ok">${fD(e.bonusRecd)}</div></div>`;
         if(nr) h += `<div class="cf"><div class="k">Reopen</div><div class="v">${fD(nr)}</div></div>`;
         if(e.reqMet) h += `<div class="cf"><div class="k">Req Met</div><div class="v">${fD(e.reqMet)}</div></div>`;
@@ -5958,7 +5801,8 @@ entries=sortE(entries);R();
         h += '';
 
         h += '<div class="card-btns">';
-        h += actionBtn('edit',I.quick,'Actions',`event.stopPropagation();openBankActions('${e.id}')`);
+        if(!e.closed&&e.bonusRecd) h += actionBtn('cls',I.lock,'Close Now',`event.stopPropagation();startCloseFlow('${e.id}','actual')`);
+        h += actionBtn('edit',I.quick,'Manage',`event.stopPropagation();openBankActions('${e.id}')`);
         h += '</div></div>';
       }
 
@@ -5992,6 +5836,6 @@ entries=sortE(entries);R();
 })();
 /* === End consolidated core module: Tracker card bank actions renderer === */
 
-(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.90 close intelligence polish */\n.close-intel.safe{border-color:#bbf7d0;background:#f0fdf4}\n.close-intel.warn,.close-intel.plan{border-color:#fde68a;background:#fffbeb}\n.close-intel.danger{border-color:#fecaca;background:#fff7f7}\n.close-ready{padding:10px 12px;border-radius:14px;margin:10px 0 12px;border:1px solid #e5e7eb;background:#f8fafc;font-size:12px;line-height:1.35}\n.close-ready b{display:block;font-size:13px;margin-bottom:2px}\n.close-ready.safe{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}\n.close-ready.warn,.close-ready.plan{background:#fffbeb;border-color:#fde68a;color:#78350f}\n.close-ready.danger{background:#fff1f2;border-color:#fecaca;color:#7f1d1d}\n.close-final-note{font-size:11px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px;margin-top:10px;line-height:1.35}\n.close-mode-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}\n.close-mode{border:1px solid #e2e8f0;background:#f8fafc;border-radius:14px;padding:10px 9px;text-align:left;font-family:'DM Sans',system-ui,sans-serif;color:#334155;cursor:pointer}\n.close-mode b{display:block;font-size:12px;line-height:1.05;color:#0f172a}\n.close-mode span{display:block;font-size:9px;line-height:1.2;color:#64748b;font-weight:800;margin-top:3px}\n.close-mode.sel{background:#eff6ff;border-color:#93c5fd;box-shadow:0 0 0 2px rgba(59,130,246,.10)}\n";document.head.appendChild(st)}catch{}})();
+(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.91 close intelligence polish */\n.close-intel.safe{border-color:#bbf7d0;background:#f0fdf4}\n.close-intel.warn,.close-intel.plan{border-color:#fde68a;background:#fffbeb}\n.close-intel.danger{border-color:#fecaca;background:#fff7f7}\n.close-ready{padding:10px 12px;border-radius:14px;margin:10px 0 12px;border:1px solid #e5e7eb;background:#f8fafc;font-size:12px;line-height:1.35}\n.close-ready b{display:block;font-size:13px;margin-bottom:2px}\n.close-ready.safe{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}\n.close-ready.warn,.close-ready.plan{background:#fffbeb;border-color:#fde68a;color:#78350f}\n.close-ready.danger{background:#fff1f2;border-color:#fecaca;color:#7f1d1d}\n.close-final-note{font-size:11px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px;margin-top:10px;line-height:1.35}\n.close-mode-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}\n.close-mode{border:1px solid #e2e8f0;background:#f8fafc;border-radius:14px;padding:10px 9px;text-align:left;font-family:'DM Sans',system-ui,sans-serif;color:#334155;cursor:pointer}\n.close-mode b{display:block;font-size:12px;line-height:1.05;color:#0f172a}\n.close-mode span{display:block;font-size:9px;line-height:1.2;color:#64748b;font-weight:800;margin-top:3px}\n.close-mode.sel{background:#eff6ff;border-color:#93c5fd;box-shadow:0 0 0 2px rgba(59,130,246,.10)}\n";document.head.appendChild(st)}catch{}})();
 
-(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.90 monthly fee plan box */\n.monthly-fee-plan.safe{border-color:#bbf7d0;background:#f0fdf4}\n.monthly-fee-plan.warn{border-color:#fde68a;background:#fffbeb}\n.monthly-fee-plan .tc-label{letter-spacing:.11em}\n";document.head.appendChild(st)}catch{}})();
+(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.91 monthly fee plan box */\n.monthly-fee-plan.safe{border-color:#bbf7d0;background:#f0fdf4}\n.monthly-fee-plan.warn{border-color:#fde68a;background:#fffbeb}\n.monthly-fee-plan .tc-label{letter-spacing:.11em}\n";document.head.appendChild(st)}catch{}})();
