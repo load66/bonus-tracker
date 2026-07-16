@@ -1,4 +1,4 @@
-name: Close Rule Regression
+name: Latest Release Verification
 
 on:
   push:
@@ -6,11 +6,18 @@ on:
   pull_request:
 
 jobs:
-  test:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: node tests/close-rules.test.js
+      - name: Verify latest release files
+        run: python tests/verify-latest.py
+      - name: Check every JavaScript file
+        run: find . -name '*.js' -not -path './.git/*' -print0 | xargs -0 -n1 node --check
+      - name: Run close-rule tests
+        run: node tests/close-rules.test.js
+      - name: Run full app smoke and analyzer tests
+        run: node tests/full-app-smoke.test.js
