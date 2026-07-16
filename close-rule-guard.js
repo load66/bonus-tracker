@@ -1,8 +1,8 @@
-/* BonusTracker v3.3.96 — T&C close-rule guard and stale-rule repair. */
+/* BonusTracker v3.3.97 — T&C close-rule guard and stale-rule repair. */
 (function(){
   'use strict';
 
-  const VER='3.3.96';
+  const VER='3.3.97';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const split=v=>String(v||'').replace(/\r/g,'\n').split(/(?<=[.!?])\s+|\n+|;/).map(clean).filter(Boolean);
   const closeWords=/(?:\bclose(?:d|s|ing)?\b|early\s+(?:close|closing|termination)|remain\s+open|keep[^.]{0,45}\bopen\b|maintain[^.]{0,45}\bopen\b|fee[^.]{0,80}(?:if|when)[^.]{0,80}\bclosed?\b|forfeit|clawback|reclaim|reverse|deduct)/i;
@@ -12,11 +12,15 @@
   const falseCloseLine=/(?:close\s+safety|close\s+hold|early-close\s+safety|close\s+check\s+after\s+payout\s+buffer|do\s+not\s+close\s+within\s+90\s+days|close\s+on\s+day\s+91|90\s+days\s+from\s+requirement|day\s+91\s+from\s+opened)/i;
 
   function isChaseBusinessComplete(v){
-    const text=clean([
-      v&&v.bank,v&&v.acct,v&&v.accountName,v&&v.productName,v&&v.accountType,
+    const bank=clean(v&&v.bank).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+    const detail=clean([
+      v&&v.acct,v&&v.accountName,v&&v.productName,v&&v.accountType,
       v&&v.raw,v&&v.normalizedRaw,v&&v.analyzedTC,v&&v.completeBonusText,v&&v.eligibilityText
     ].filter(Boolean).join(' '));
-    return /\b(?:jpmorgan\s+)?chase\b/i.test(text)&&/\b(?:business\s+complete|business\s+checking|chase\s+business|business)\b/i.test(text)&&!/\b(?:total\s+checking|secure\s+banking|private\s+client)\b/i.test(text);
+    const all=clean(bank+' '+detail);
+    if(!/\b(?:jpmorgan\s+)?chase\b/i.test(all)||/\b(?:total\s+checking|secure\s+banking|private\s+client)\b/i.test(all))return false;
+    if(/\bbusiness\s+complete(?:\s+checking)?\b/i.test(all))return true;
+    return /^(?:jpmorgan )?chase (?:biz|business)$/.test(bank)&&/\b(?:5|five)\s+qualifying\s+transactions|new\s+money|business\s+checking\s+offer/i.test(detail);
   }
 
   function sourceText(r){
@@ -27,7 +31,27 @@
   }
 
   function explicitFixedRule(text){
-    return split(text).find(s=>closeWords.test(s)&&durationWords.test(s)&&fixedRelation.test(s))||'';
+    const d=durationWords.source;
+    const patterns=[
+      new RegExp('(?:closed?|closing|close|early\\s+(?:close|closing|termination))[^.]{0,140}(?:within|before|less\\s+than|during\\s+the\\s+first)\\s*'+d,'i'),
+      new RegExp('(?:remain|keep|maintain)[^.]{0,70}open[^.]{0,110}(?:for|through|until)\\s*'+d,'i'),
+      new RegExp(d+'[^.]{0,110}(?:from|after)\\s+(?:account\\s+opening|opened\\s+date|opening\\s+date)[^.]{0,100}(?:close|closed|fee|penalty|forfeit)','i'),
+      new RegExp('(?:fee|penalty|charge)[^.]{0,100}(?:if|when)[^.]{0,100}closed?[^.]{0,100}'+d,'i')
+    ];
+    return split(text).find(sentence=>patterns.some(re=>re.test(sentence)))||'';
+  }
+
+  function durationDays(text){
+    const map={thirty:30,sixty:60,ninety:90,'one hundred eighty':180};
+    let m=String(text||'').match(/\b(\d{1,3})\s*(?:calendar\s*)?(days?|months?)\b/i);
+    let n=m?parseInt(m[1],10)||0:0;
+    let unit=m&&m[2]||'';
+    if(!n){
+      m=String(text||'').match(/\b(thirty|sixty|ninety|one\s+hundred\s+eighty)\s*(?:\(\s*(\d{1,3})\s*\))?\s*(?:calendar\s*)?(days?|months?)\b/i);
+      if(m){n=parseInt(m[2],10)||map[clean(m[1]).toLowerCase()]||0;unit=m[3]||'';}
+    }
+    if(n&&/month/i.test(unit))n*=30;
+    return n>0&&n<=730?n:0;
   }
 
   function stripFalseCloseText(value){
@@ -73,10 +97,8 @@
         if(!r.reviewFlags.includes(note))r.reviewFlags.push(note);
       }
     }else{
-      const m=explicit.match(/(\d{1,3})\s*(?:calendar\s*)?(days?|months?)/i);
-      let days=m?parseInt(m[1],10)||0:0;
-      if(m&&/month/i.test(m[2]))days*=30;
-      if(days>0&&days<=730){
+      const days=durationDays(explicit);
+      if(days){
         r.closeRuleDays=days;
         r.minHoldDays=days;
         r.closeRuleText=explicit;
@@ -151,7 +173,7 @@
       if(!plan||!payoutOnlyEntry(e))return plan;
       plan.rows=(plan.rows||[]).filter(r=>!/^(?:Close rule|Earliest close|Early-close rule)$/i.test(String(r&&r.label||'')));
       plan.rows.splice(Math.min(3,plan.rows.length),0,{label:'Close rule',value:e.bonusRecd?'Close after bonus posts':'Wait for bonus to post',cls:e.bonusRecd?'ok':'bad'});
-      if(e.bonusRecd)plan.rows.splice(Math.min(4,plan.rows.length),0,{label:'Earliest close',value:typeof window.fD==='function'?window.fD(e.bonusRecd):e.bonusRecd,cls:'ok'});
+      if(e.bonusRecd)plan.rows.splice(Math.min(4,plan.rows.length),0,{label:'Earliest close',value:typeof fD==='function'?fD(e.bonusRecd):e.bonusRecd,cls:'ok'});
       plan.notes=(plan.notes||[]).filter(n=>!/manual review|fixed early-close countdown/i.test(String(n||'')));
       plan.notes.unshift('No fixed post-bonus hold was found in the analyzed T&C.');
       return plan;
