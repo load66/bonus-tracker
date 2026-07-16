@@ -5,19 +5,9 @@
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.3.92-profile-registry';
+  const VER='3.3.57-profile-registry';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
-    {
-      id:'guaranty-bank-perks-consumer-checking',
-      bank:'Guaranty Bank',
-      product:'Perks consumer checking',
-      type:'personal checking',
-      status:'saved',
-      signals:[/Guaranty Bank|Gbank|gbankmo/i,/Perks Truth in Savings Addendum|Perks Banking/i,/New Consumer Checking Account Bonus Offer|consumer checking account bonus/i,/RoundUp Program|Early Closing Fee/i],
-      requirements:'Open new consumer checking with $25-$50 minimum opening deposit + at least one ACH direct deposit or ACH direct debit within 90 calendar days of account opening; account open at least 30 days and positive balance at end of 90-day qualifying period; payout within 30 calendar days after requirements are met; $20 early closing fee if closed within 90 calendar days of account opening; 12-month closed-account eligibility rule; Missouri resident required; business accounts not eligible',
-      note:'Saved profile: Guaranty Bank / GBank Perks consumer checking $300 bonus. Personal checking only. Close rule basis is opened date, 90 hold days, 3-day buffer, $20 early close fee. If bonus received May 7, 2026, keep the received date saved in the entry; safe close still follows opened date + 90 days + buffer.'
-    },
     {
       id:'busey-bank-personal-checking-levelup',
       bank:'Busey Bank',
@@ -129,20 +119,14 @@
       note:'Saved profile: Bank of America personal checking bonus chart.'
     },
     {
-      id:'morgan-stanley-private-bank-checking-checking25',
-      bank:'Morgan Stanley Private Bank / E*TRADE',
-      product:'Checking — CHECKING25 no-monthly-fee default',
+      id:'morgan-stanley-private-bank-checking',
+      bank:'Morgan Stanley Private Bank',
+      product:'Checking / Max-Rate Checking',
       type:'personal checking',
-      status:'saved',
-      signals:[
-        /Morgan Stanley Private Bank|E\*TRADE|etrade/i,
-        /Checking OR Max-Rate Checking|Checking or Max-Rate Checking|Max-Rate Checking|Bank Checking/i,
-        /CHECKING25|valid promotional code|promo code/i,
-        /two Direct Deposits|at least two Direct Deposits|each of \$?1,?500|\$1,500 or more/i,
-        /120th day|first 90 days|up to 30 days/i
-      ],
-      requirements:'Promo code CHECKING25. Default to regular Checking because it has $0 monthly account fee. Offer also mentions Max-Rate Checking, but Max-Rate has a $15 monthly account fee unless waived with $5,000+ average monthly balance. Open one new Checking account online by the offer deadline. No minimum initial deposit required, but the account must be funded within 90 days to remain open. Receive at least two regular recurring ACH Direct Deposits of income, each $1,500 or more, within 90 days of account opening. Bonus is assessed after the first 90 days and processing can take up to 30 days; expected around day 120 from account opening. Must keep account open and in good standing until payout. Not eligible if customer owned or co-owned Checking or Max-Rate Checking within the last 12 months from offer enrollment. One checking offer at a time. Individual/joint online accounts only; primary owner receives bonus; non-U.S. residents excluded.',
-      note:'Saved exact profile: Morgan Stanley Private Bank / E*TRADE CHECKING25 $300 personal checking offer. Default account selection is regular Checking because it has $0 monthly account fee. DD rule is 2 recurring income ACH direct deposits of $1,500+ each within 90 days. Payout expected around day 120. Close risk is payout risk only: keep open/good standing until bonus posts, then normal 3-day buffer. If user intentionally chooses Max-Rate Checking, monthly fee is $15 waived with $5,000+ average monthly balance after the second calendar month.'
+      status:'generic-covered',
+      signals:[/Morgan Stanley Private Bank|E\*TRADE/i,/Max-Rate Checking/i,/CHECKING25|promo code/i],
+      requirements:'Direct deposit bonus; generic parser covers it, dedicated profile can be added if needed',
+      note:'Generic-covered profile: Morgan Stanley Private Bank Checking / Max-Rate Checking.'
     },
     {
       id:'us-bank-smartly-checking',
@@ -159,17 +143,11 @@
     raw=String(raw||'');
     let best=null,bestScore=0;
     PROFILES.forEach(p=>{
-      const signals=p.signals||[];
-      // v3.3.92: require the profile's bank/brand anchor before matching secondary wording.
-      // This prevents a new/unknown bank from accidentally matching a saved profile just
-      // because it also says things like "promo code", "checking", "90 days", or "$1,500".
-      const anchor=signals.length?signals[0].test(raw):false;
-      if(!anchor)return;
-      const score=signals.reduce((n,re)=>n+(re.test(raw)?1:0),0);
+      const score=(p.signals||[]).reduce((n,re)=>n+(re.test(raw)?1:0),0);
       if(score>bestScore){bestScore=score;best=p;}
     });
     if(best&&bestScore>=2)return {...best,score:bestScore,known:true};
-    return {known:false,status:'new-or-review',note:'No saved exact profile found. Save this T&C as a training example or teach phrases if this bank uses unusual wording.'};
+    return {known:false,status:'new-or-review',note:'No saved exact profile found. Send this sample so it can be added as a reusable bank profile.'};
   }
   function list(){return PROFILES.slice();}
   function moneyNum(v){const n=parseFloat(String(v||'').replace(/[$,\s]/g,''));return Number.isFinite(n)?n:0}
@@ -223,7 +201,7 @@
     if(!tiers.length)return r;
     tiers.sort((a,b)=>a.requirement-b.requirement);
     r.bank='Chase';r.acct='Chase Business Complete Checking';r.tiers=tiers;r.tiered=true;r.targetTier=tiers[tiers.length-1];r.bonus=r.selectedBonus=r.targetTier.bonus;r.bonusTierText=tiers.map(t=>money(t.bonus)+' for '+money(t.requirement)+'+ new money').join(' / ');
-    r.reqMoney=0;r.reqIsTotal=false;r.requirementType='transactions';r.requirementNoun='qualifying transactions';r.count=5;r.reqDays=90;r.fundedDays=30;r.fundingAmount=r.targetTier.requirement;r.holdDays=60;r.minHoldDays=90;r.closeRuleDays=90;r.closeRuleBasis='opened';r.closeBufferDays=1;r.closeRuleText='Do not close within 90 days of account opening. Close on day 91 or later, after the bonus posts.';r.hasExplicitCurrentOffer=true;
+    r.reqMoney=0;r.reqIsTotal=false;r.requirementType='transactions';r.requirementNoun='qualifying transactions';r.count=5;r.reqDays=90;r.fundedDays=30;r.fundingAmount=r.targetTier.requirement;r.holdDays=60;r.minHoldDays=60;r.hasExplicitCurrentOffer=true;
     r.counts=['New money deposit into the new Chase business checking account','Debit card purchases','Chase QuickDeposit','ACH credits','Wires credits and debits','Chase Online Bill Pay','Chase QuickAccept'];
     r.not=r.notCounts=['ACH debits','Person-to-person payments / P2P transfers including Zelle','Online transfers to Chase credit cards'];
     r.payout=r.payoutText='within 15 days after all checking requirements are completed';
@@ -254,66 +232,6 @@
     const fb=profileFallbackFromMatch(m);
     const used=[];
     const src='Known profile: '+(m.product||m.bank||m.id)+' — '+(m.requirements||m.note||'saved bank profile');
-    if(m.id==='morgan-stanley-private-bank-checking-checking25'){
-      r.bank=r.bank||'Morgan Stanley Private Bank / E*TRADE';
-      r.acct='Checking';
-      r.noFeeDefaultAccount='Checking';
-      r.accountChoiceReason='Regular Checking selected because it has $0 monthly account fee; Max-Rate Checking has a $15 monthly account fee unless waived with $5,000 average monthly balance.';
-      r.bonus=r.bonus||300;
-      r.selectedBonus=r.selectedBonus||300;
-      r.code=r.code||'CHECKING25';
-      r.reqDays=r.reqDays||90;
-      r.count=r.count||2;
-      r.reqMoney=r.reqMoney||1500;
-      r.reqIsTotal=false;
-      r.requirementType=r.requirementType||'direct-deposit';
-      r.requirementNoun=r.requirementNoun||'recurring income ACH direct deposits';
-      r.payout=r.payout||'after first 90 days are assessed; processing can take up to 30 days; expected around day 120 from account opening';
-      r.payoutText=r.payoutText||r.payout;
-      r.monthlyFeeYNText='No monthly account fee for regular Checking';
-      r.avoidMonthlyFeeText='Default to regular Checking to avoid monthly fee. Max-Rate Checking has a $15 monthly account fee unless waived with $5,000 average monthly balance on or after the end of the second calendar month from opening.';
-      r.monthlyFeeAmountText='$0 monthly account fee';
-      r.monthlyFeeFrequency='monthly';
-      r.monthlyFeeWaiverType='No-fee account choice';
-      r.monthlyFeeWaiverAmountText='$0 monthly fee with regular Checking';
-      r.monthlyFeeWaiverText='Choose regular Checking instead of Max-Rate Checking for $0 monthly account fee.';
-      r.holdDays=0;
-      r.minHoldDays=0;
-      r.closeRuleDays=0;
-      r.earlyCloseFee=0;
-      r.closeRuleBasis='bonus';
-      r.closeBufferDays=5;
-      r.closeRuleText='Must keep account open and in good standing until bonus payment. If account is defaulted, restricted, or closed before bonus payment, bonus may be denied.';
-      r.eligibilityText=r.eligibilityText||'Not eligible if customer has or had owned/co-owned a Morgan Stanley Private Bank Checking or Max-Rate Checking account within the last 12 months from offer enrollment. One Checking OR Max-Rate Checking account only; if both are opened, Checking is enrolled. One checking offer at a time. Individual/joint online accounts only; primary owner receives bonus. Non-U.S. residents excluded. Promo code single-use and non-transferable.';
-      r.counts=r.counts||['Regular recurring ACH direct deposit of income','Salary','Pension','Government payments such as Social Security','Employer payroll','Benefits provider payments','Government agency payments'];
-      r.not=r.notCounts=r.notCounts||['Incoming wires','Check deposits','Mobile check deposits','P2P transfers including PayPal and Venmo','Merchant transactions such as PayPal, Stripe, Square','Zelle incoming payments','Real-Time Payment network transactions','E*TRADE Transfer Money transactions','Internal Morgan Stanley transfers','Brokerage transfers','Online transfers','Bank-to-bank transfers not from employer or government','ACH transfers not from employer or government'];
-      r.suggestedTimers=r.suggestedTimers||[];
-      if(!r.suggestedTimers.some(t=>/recurring income ACH DDs/i.test(t.text||'')))r.suggestedTimers.push({kind:'days',text:'Complete 2 recurring income ACH DDs of $1,500+ each',daysRequired:90,source:'Morgan Stanley CHECKING25 profile'});
-      if(!r.suggestedTimers.some(t=>/bonus payout watch/i.test(t.text||'')))r.suggestedTimers.push({kind:'days',text:'Bonus payout watch / expected around day 120',daysRequired:120,source:'Morgan Stanley CHECKING25 profile'});
-      r.reviewFlags=(r.reviewFlags||[]).filter(x=>!/monthly fee|close rule|payout timing|hold period|450/i.test(String(x||'')));
-      r.reviewFlags.push('No-fee account default: regular Checking selected because it avoids the Max-Rate $15 monthly fee.');
-      r.reviewFlags.push('Profile guard: no early-close hold countdown for this offer; close risk is payout only.');
-      r.clear=!!(r.bonus&&r.reqDays&&r.reqMoney&&r.count);
-    }
-    if(m.id==='chase-business-complete-checking'){
-      fb.minHoldDays=90;
-      fb.closeRuleBasis='opened';
-      fb.closeBufferDays=1;
-      fb.closeRuleText='Do not close within 90 days of account opening. Close on day 91 or later, after the bonus posts.';
-    }
-    if(m.id==='guaranty-bank-perks-consumer-checking'){
-      fb.reqDays=fb.reqDays||90;
-      fb.count=fb.count||1;
-      fb.minHoldDays=fb.minHoldDays||90;
-      fb.earlyCloseFee=fb.earlyCloseFee||20;
-      fb.closeRuleBasis='opened';
-      fb.closeBufferDays=5;
-      fb.closeRuleText='Early closing fee of $20 if consumer checking account is closed within 90 calendar days of account opening.';
-      fb.payoutTimingText='within 30 calendar days after all qualifying requirements are met';
-      fb.eligibilityText='New Guaranty Bank consumer checking client only. Cannot have closed a Guaranty Bank consumer checking account within the previous 12-month period. Current consumer checking accountholders and business accounts are not eligible. Missouri resident required. Customers who previously received a new account bonus are not eligible.';
-      fb.monthlyFeeYNText='Paper statement fee $2-$3 if receiving paper statements; eStatements free with valid email.';
-      fb.avoidMonthlyFeeText='Use eStatements with a valid email to avoid the paper statement fee.';
-    }
     const set=(key,label,value,display)=>{if(!value)return;if(r[key])return;if(currentOfferIsStrong(r)&&['bonus','reqMoney','count','reqDays','fundedDays','fundingAmount','minHoldDays','holdDays'].includes(key))return;if(r.requirementType==='transactions'&&(key==='reqMoney'||key==='count'))return;if(r.hasExplicitCurrentOffer&&(key==='reqMoney'||key==='count'||key==='reqDays'))return;r[key]=value;used.push({field:label,value:display||String(value),source:src});addProfileSource(r,label,display||String(value),src)};
     set('reqDays','Requirement days',fb.reqDays,fb.reqDays?fb.reqDays+' days':'');
     set('reqMoney','Requirement amount',fb.reqMoney,fb.reqMoney?money(fb.reqMoney):'');
@@ -321,19 +239,6 @@
     set('fundedDays','Funding deadline',fb.fundedDays,fb.fundedDays?fb.fundedDays+' days':'');
     set('fundingAmount','Funding amount',fb.fundingAmount,fb.fundingAmount?money(fb.fundingAmount):'');
     set('minHoldDays','Hold period',fb.minHoldDays,fb.minHoldDays?fb.minHoldDays+' days':'');
-    set('earlyCloseFee','Early close fee',fb.earlyCloseFee,fb.earlyCloseFee?money(fb.earlyCloseFee):'');
-    set('closeRuleBasis','Close rule basis',fb.closeRuleBasis,fb.closeRuleBasis||'');
-    set('closeBufferDays','Close buffer days',fb.closeBufferDays,fb.closeBufferDays?fb.closeBufferDays+' days':'');
-    set('closeRuleText','Close rule wording',fb.closeRuleText,fb.closeRuleText||'');
-    set('payoutTimingText','Payout timing',fb.payoutTimingText,fb.payoutTimingText||'');
-    set('eligibilityText','Eligibility / churn',fb.eligibilityText,fb.eligibilityText||'');
-    set('monthlyFeeYNText','Monthly fee',fb.monthlyFeeYNText,fb.monthlyFeeYNText||'');
-    set('monthlyFeeAmountText','Monthly fee amount',fb.monthlyFeeAmountText,fb.monthlyFeeAmountText||'');
-    set('monthlyFeeFrequency','Monthly fee frequency',fb.monthlyFeeFrequency,fb.monthlyFeeFrequency||'');
-    set('monthlyFeeWaiverType','Monthly fee waiver type',fb.monthlyFeeWaiverType,fb.monthlyFeeWaiverType||'');
-    set('monthlyFeeWaiverAmountText','Monthly fee waiver amount',fb.monthlyFeeWaiverAmountText,fb.monthlyFeeWaiverAmountText||'');
-    set('monthlyFeeWaiverText','Monthly fee waiver wording',fb.monthlyFeeWaiverText,fb.monthlyFeeWaiverText||'');
-    set('avoidMonthlyFeeText','Avoid monthly fee',fb.avoidMonthlyFeeText,fb.avoidMonthlyFeeText||'');
     if(used.length){
       r.profileFallbacks=(r.profileFallbacks||[]).concat(used);
       r.profileFallbackSummary='Used saved bank profile for missing fields: '+used.map(x=>x.field+' '+x.value).join(', ')+'. Verify against current offer terms.';

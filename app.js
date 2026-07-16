@@ -1,12 +1,9 @@
-/* ✅ Version 3.3.92 update: Chase Business close timing corrected to day 91 from opening; compact Close Check UI. */
+/* ✅ Version 2.0 Newest update: Removed Profile tab + added Data Health and safer backup/close guardrails. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.3.92';
+const APP_VERSION='3.3.61';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
-const ANALYZER_MEMORY_KEY='bt_analyzer_memory_v1';
-const ANALYZER_TRAINING_KEY='bt_analyzer_training_library_v1';
-const ANALYZER_RULES_KEY='bt_analyzer_user_rules_v1';
 
 const ld=(k,d)=>{
   try{
@@ -139,7 +136,7 @@ function reqStorageKey(bank,data={}){
 function saveReq(bank,data){
   const r=loadReqs();
   const row={bank,...(data||{})};
-  row.accountType=normalizeAccountType(row.accountType)||inferAccountTypeForEntry(row)||'personal';
+  row.accountType=normalizeAccountType(row.accountType)||inferAccountTypeForEntry(row)||'unknown';
   row.updated=td();
   r[reqStorageKey(bank,row)]=row;
   saveReqs(r)
@@ -163,7 +160,7 @@ function offerSignature(snap){
 function offerSnapshotFromEntry(e,source){
   if(!e||!e.bank)return null;
   const analyzed=String(e.analyzedTC||'');
-  const snap={id:'ofr_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6),bank:e.bank,accountType:normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'personal',entryId:e.id||'',source:source||'entry',savedAt:td(),opened:e.opened||'',closed:e.closed||'',bonusRecd:e.bonusRecd||'',bonus:e.bonus||0,churn:e.churn||'',reqDays:e.reqDays||0,minHoldDays:e.minHoldDays||0,earlyCloseFee:e.earlyCloseFee||0,closeRuleBasis:normalizeCloseRuleBasis(e.closeRuleBasis),closeBufferDays:closeBufferDaysFor(e),closeRuleText:e.closeRuleText||'',monthlyFeeChecked:!!e.monthlyFeeChecked,fundedDays:e.fundedDays||0,fundingAmount:e.fundingAmount||0,fundingAmountText:e.fundingAmountText||'',payoutTimingText:e.payoutTimingText||'',monthlyFeeYNText:e.monthlyFeeYNText||'',monthlyFeeAmountText:e.monthlyFeeAmountText||'',monthlyFeeFrequency:e.monthlyFeeFrequency||'',monthlyFeeWaiverType:e.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:e.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:e.monthlyFeeWaiverText||'',promoCodeText:e.promoCodeText||'',avoidMonthlyFeeText:e.avoidMonthlyFeeText||'',completeBonusText:e.completeBonusText||'',eligibilityText:e.eligibilityText||'',expirationDateText:e.expirationDateText||'',requiredDaysText:e.requiredDaysText||'',notes:String(e.notes||'').slice(0,600),analyzedPreview:analyzed.slice(0,900)};
+  const snap={id:'ofr_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6),bank:e.bank,accountType:normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'unknown',entryId:e.id||'',source:source||'entry',savedAt:td(),opened:e.opened||'',closed:e.closed||'',bonusRecd:e.bonusRecd||'',bonus:e.bonus||0,churn:e.churn||'',reqDays:e.reqDays||0,minHoldDays:e.minHoldDays||0,earlyCloseFee:e.earlyCloseFee||0,fundedDays:e.fundedDays||0,fundingAmount:e.fundingAmount||0,fundingAmountText:e.fundingAmountText||'',payoutTimingText:e.payoutTimingText||'',monthlyFeeYNText:e.monthlyFeeYNText||'',promoCodeText:e.promoCodeText||'',avoidMonthlyFeeText:e.avoidMonthlyFeeText||'',completeBonusText:e.completeBonusText||'',eligibilityText:e.eligibilityText||'',expirationDateText:e.expirationDateText||'',requiredDaysText:e.requiredDaysText||'',notes:String(e.notes||'').slice(0,600),analyzedPreview:analyzed.slice(0,900)};
   const tier=analyzed.match(/Bonus:\s*([^*]{0,240})/i);
   if(tier)snap.bonusTierText=tier[1].trim();
   snap.signature=offerSignature(snap);
@@ -191,485 +188,33 @@ function archivedCycleSnapshot(e){
   if(!e)return null;
   return{bank:e.bank||'',id:e.id||'',archivedAt:td(),opened:e.opened||'',reqMet:e.reqMet||'',bonusRecd:e.bonusRecd||'',closed:e.closed||'',bonus:e.bonus||0,churn:e.churn||'',notes:String(e.notes||'').slice(0,900),analyzedPreview:String(e.analyzedTC||'').slice(0,900),timerSummary:normalizeTimerList(e.customTimers||[]).map(t=>({text:t.text||'',date:t.date||'',daysRequired:t.daysRequired||0,done:!!t.done})).slice(0,8)}
 }
-function closeReadiness(e,closeDate=''){
-  const items=[];
-  const add=(ok,label,detail='',level='warn')=>items.push({ok:!!ok,label,detail,level});
-  if(!e||!e.bank)return{label:'Manual Review',cls:'warn',items:[{ok:false,label:'Entry missing',detail:'Original tracker entry was not found.',level:'danger'}],warnings:['Entry missing']};
-  if(e.closed)return{label:'Closed / Waiting to Churn',cls:'done',items:[{ok:true,label:'Closed date saved',detail:fD(e.closed)}],warnings:[]};
-  const safe=safeCloseDate(e);
-  const raw=rawSafeDate(e);
-  const base=closeBasisDate(e);
-  const basis=closeRuleBasisFor(e);
-  const ruleDays=closeRuleDaysFor(e);
-  const target=closeDate||td();
-  const warnings=[];
-  add(!!e.reqMet,'Requirement met date saved',e.reqMet?fD(e.reqMet):'Save Req Met before closing','danger');
-  add(!!e.bonusRecd,'Bonus received',e.bonusRecd?fD(e.bonusRecd):'Do not close before the bonus posts','danger');
-  if(ruleDays>0){
-    add(!!base,'Close-rule start date available',base?closeRuleBasisLabel(basis)+' · '+fD(base):closeRuleBasisLabel(basis)+' is blank','danger');
-    add(!!safe&&dB(target,safe)<=0,'Hold period + buffer complete',safe?('Safe close: '+fD(safe)+' · basis: '+closeRuleBasisLabel(basis)):'Safe-close date cannot be calculated','danger');
-  }else{
-    add(true,'No fixed close hold timer',e.closeRuleText?'Review close wording saved below':'No early-close countdown is set');
-  }
-  add(!!e.churn,'Churn rule saved',e.churn?((e.churn==='180'?'180 days':e.churn+' year')+' churn rule'):'Needed for future reopen countdown','warn');
-  const hasMonthlyFee=/(yes|\$|monthly|service fee|maintenance fee)/i.test(String(e.monthlyFeeYNText||'')+' '+String(e.avoidMonthlyFeeText||''));
-  add(!hasMonthlyFee||!!e.monthlyFeeChecked,'Monthly fee checked',hasMonthlyFee?(e.monthlyFeeChecked?'Confirmed before close':'Check next fee/statement timing before close'):'No monthly fee risk detected from saved fields','warn');
-  items.forEach(x=>{if(!x.ok)warnings.push(x.label+(x.detail?': '+x.detail:''))});
-  let label='Safe to Close',cls='safe';
-  if(warnings.some(w=>/bonus received|requirement met|hold period|start date/i.test(w))){label='Do Not Close Yet';cls='danger'}
-  else if(warnings.length){label='Close Soon';cls='warn'}
-  return{label,cls,items,warnings,safeDate:safe,rawDate:raw,basis}
-}
-function cleanDisplayText(v){
-  return String(v||'').replace(/\\n/g,'\n').replace(/\r/g,'').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim()
-}
-function shortCleanText(v,max=180){
-  const t=cleanDisplayText(v).replace(/\s+/g,' ').trim();
-  return t.length>max?t.slice(0,max-1).trim()+'…':t
-}
-function renderCleanPlanCard(o){
-  if(!o)return'';
-  const cls=esc(o.cls||'');
-  const rows=(o.rows||[]).filter(r=>r&&r.value!==undefined&&r.value!==null&&String(r.value).trim()!=='');
-  const notes=(o.notes||[]).filter(Boolean).map(x=>shortCleanText(x,220));
-  let h='<div class="clean-plan-card '+cls+'">';
-  h+='<div class="clean-plan-head"><div><div class="clean-plan-title">'+esc(o.title||'Plan')+'</div>'+(o.sub?'<div class="clean-plan-sub">'+esc(o.sub)+'</div>':'')+'</div>'+(o.chip?'<span class="clean-plan-chip '+cls+'">'+esc(o.chip)+'</span>':'')+'</div>';
-  if(rows.length){
-    h+='<div class="clean-plan-rows">';
-    rows.forEach(r=>{h+='<div class="clean-plan-row '+esc(r.cls||'')+'"><span>'+esc(r.label||'')+'</span><b>'+esc(shortCleanText(r.value,160))+'</b></div>'});
-    h+='</div>'
-  }
-  if(notes.length){
-    h+='<div class="clean-plan-notes">'+notes.slice(0,3).map(x=>'<div>• '+esc(x)+'</div>').join('')+'</div>'
-  }
-  h+='</div>';
-  return h
-}
 function closePlanForEntry(e){
-  if(!e||!e.bank)return null;
-  const ready=closeReadiness(e);
-  const safe=safeCloseDate(e);
-  const rows=[];
-  const notes=[];
-  const row=(label,value,cls='')=>rows.push({label,value,cls});
-  row('Readiness',ready.label,ready.cls);
-  if(e.closed){
-    row('Closed',fD(e.closed),'ok');
-    row('Churn ready',churnReadyDate(e)?fD(churnReadyDate(e)):'Not calculated');
-    notes.push('This cycle is closed. Future churn timing is based on the actual closed date.');
-    return{title:'Close Check',sub:'Actual close is already saved',chip:ready.label,cls:ready.cls,rows,notes}
+  if(!e||!e.bank)return[];
+  const lines=[];
+  const active=sortCustomTimers(normalizeTimerList(e.customTimers||[]).filter(t=>!t.done&&t.date&&!isDeletedTimer(e,t)));
+  if(!e.bonusRecd){
+    lines.push('Do not close yet — keep the account open and unrestricted until the bonus posts.');
+    if(active.length){const t=active[0],d=timerCountdownDays(t);lines.push('Next checkpoint: '+(t.text||'mini timer')+(d!==null?' in '+d+'d':'')+(t.date?' · due '+fD(t.date):'')+'.');}
+    if(e.minHoldDays>0&&e.opened)lines.push('Hold/safe-close target with buffer: '+fD(safeCloseDate(e))+'.');
+    else lines.push('No fixed early-close fee countdown is set; treat this as payout-risk only unless terms say otherwise.');
+    return lines;
   }
-  row('Bonus',e.bonusRecd?'Received '+fD(e.bonusRecd):'Not received yet',e.bonusRecd?'ok':'bad');
-  row('Requirement',e.reqMet?'Met '+fD(e.reqMet):'Missing date',e.reqMet?'ok':'warn');
-  const ruleDays=closeRuleDaysFor(e);
-  if(ruleDays>0){
-    const basis=closeRuleBasisFor(e);
-    const buffer=closeBufferDaysFor(e);
-    row('Close rule',ruleDays+' days from '+closeRuleBasisLabel(basis)+(buffer?' + '+buffer+' day safety':''));
-    row('Earliest close',safe?fD(safe):'Needs start date',safe&&daysUntilSafe(e)<=0?'ok':'warn');
-  }else{
-    row('Early-close rule','Manual review','warn');
-    notes.push('No fixed early-close countdown is saved. Review the terms before closing.');
-  }
-  const hasMonthlyFee=/(yes|\$|monthly|service fee|maintenance fee)/i.test(String(e.monthlyFeeYNText||'')+' '+String(e.avoidMonthlyFeeText||''));
-  if(hasMonthlyFee)row('Monthly fee',e.monthlyFeeChecked?'Checked':'Check before close',e.monthlyFeeChecked?'ok':'warn');
-  if(!e.bonusRecd)notes.push('Keep the account open until the bonus posts.');
-  if(e.closeRuleText)notes.push('Saved wording: '+shortCleanText(e.closeRuleText,190));
-  notes.push('Before closing, confirm no pending transactions.');
-  return{title:'Close Check',sub:'Quick check before closing',chip:ready.label,cls:ready.cls,rows,notes}
+  lines.push('Bonus received on '+fD(e.bonusRecd)+'. Keep open a few extra days before closing.');
+  if(e.minHoldDays>0&&e.opened){const s=safeCloseDate(e);lines.push(daysUntilSafe(e)>0?'Do not close before '+fD(s)+' because the hold/buffer is still running.':'Hold/buffer period appears complete; safe-close date was '+fD(s)+'.');}
+  lines.push('Before closing: confirm no pending transactions, no upcoming monthly fee issue, and export/backup the entry.');
+  lines.push('Close only if you no longer need the account and the bonus is fully posted/settled.');
+  return lines
 }
 function renderClosePlan(e){
-  return renderCleanPlanCard(closePlanForEntry(e))
+  const lines=closePlanForEntry(e);
+  if(!lines.length)return'';
+  return '<div class="tc-box"><div class="tc-label">Close plan</div><div class="tc-body">'+lines.map(x=>'* '+esc(x)).join('\n')+'</div></div>'
 }
-
-function closeFlowRecommendedMode(e,preferred){
-  return 'actual'
-}
-function closeFlowDefaultDate(e,mode){
-  return td()
-}
-function closeFlowModeReason(e,mode){
-  if(!e)return'Entry needs manual review.';
-  if(e.closed)return'This entry already has a closed date saved.';
-  const ready=closeReadiness(e);
-  return ready.warnings?.length ? 'Review the warnings below, then close only if the bank is truly closed.' : 'Close date will start the churn countdown.'
-}
-function normalizeEntryHistoryList(list){
-  return (Array.isArray(list)?list:[]).filter(x=>x&&typeof x==='object').map(x=>({
-    at:String(x.at||x.date||'').trim(),
-    type:String(x.type||x.action||'').trim(),
-    title:String(x.title||x.label||'').trim(),
-    detail:String(x.detail||x.note||'').trim()
-  })).filter(x=>x.at||x.title||x.detail).slice(-80)
-}
-function normalizeAnalyzerHistoryList(list){
-  return (Array.isArray(list)?list:[]).filter(x=>x&&typeof x==='object').map(x=>({
-    schema:String(x.schema||'analyzer-review-v1'),
-    version:String(x.version||''),
-    engineVersion:String(x.engineVersion||''),
-    sourceKind:String(x.sourceKind||''),
-    sourceId:String(x.sourceId||''),
-    sourceLength:parseInt(x.sourceLength||0,10)||0,
-    analyzedAt:String(x.analyzedAt||x.date||''),
-    bank:String(x.bank||''),
-    accountType:String(x.accountType||''),
-    selectedBonus:parseInt(x.selectedBonus||0,10)||0,
-    tiered:!!x.tiered,
-    bonusTierText:String(x.bonusTierText||''),
-    reviewFlags:Array.isArray(x.reviewFlags)?x.reviewFlags.slice(0,20):[],
-    profileFallbacks:Array.isArray(x.profileFallbacks)?x.profileFallbacks.slice(0,20):[],
-    appliedFields:Array.isArray(x.appliedFields)?x.appliedFields.slice(0,40):[],
-    selectedTimers:Array.isArray(x.selectedTimers)?x.selectedTimers.slice(0,40):[],
-    sourceSnippets:Array.isArray(x.sourceSnippets)?x.sourceSnippets.slice(0,18):[]
-  })).filter(x=>x.analyzedAt||x.appliedFields.length||x.reviewFlags.length).slice(-20)
-}
-function renderAnalyzerHistory(e){
-  const hist=normalizeAnalyzerHistoryList(e?.analyzerHistory);
-  const latest=e?.analysis&&typeof e.analysis==='object'?e.analysis:(hist.length?hist[hist.length-1]:null);
-  if(!latest&&!hist.length)return'';
-  const flags=Array.isArray(latest?.reviewFlags)?latest.reviewFlags:[];
-  const fields=Array.isArray(latest?.appliedFields)?latest.appliedFields:[];
-  const timers=Array.isArray(latest?.selectedTimers)?latest.selectedTimers:[];
-  const d=latest?.analyzedAt?new Date(latest.analyzedAt):null;
-  const when=d&&!isNaN(d)?d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'';
-  let h='<div class="bt-history-card analyzer-history-card"><div class="bt-history-title">Analyzer review</div>';
-  h+='<div class="bt-history-row"><div><b>'+esc((latest?.version?('Wizard v'+latest.version):'Review saved'))+'</b><span>'+esc([fields.length?(fields.length+' approved field'+(fields.length!==1?'s':'')):'No fields listed',timers.length?(timers.length+' timer'+(timers.length!==1?'s':'')):'no timers'].join(' · '))+'</span></div><em>'+esc(when||'')+'</em></div>';
-  if(flags.length)h+='<div class="tc-body" style="margin-top:6px">'+flags.slice(0,5).map(x=>'* '+esc(x)).join('\n')+'</div>';
-  h+='</div>';
-  return h
-}
-function historyEventTitle(type){
-  const map={actual_close:'Closed saved',still_open:'Marked still open',bonus_received:'Bonus received saved',bonus_received_cleared:'Bonus received cleared',req_met:'Requirement met saved',req_met_cleared:'Requirement met cleared',entry_saved:'Entry saved',analyzer_applied:'Analyzer review applied'};
-  return map[type]||'Tracker update'
-}
-function appendEntryHistory(x,type,detail){
-  if(!x||typeof x!=='object')return x;
-  const list=normalizeEntryHistoryList(x.history);
-  list.push({at:new Date().toISOString(),type:String(type||'update'),title:historyEventTitle(type),detail:String(detail||'').trim()});
-  x.history=list.slice(-80);
-  return x
-}
-function renderEntryHistory(e){
-  const list=normalizeEntryHistoryList(e?.history).slice(-6).reverse();
-  if(!list.length)return'';
-  let h='<div class="bt-history-card"><div class="bt-history-title">Action history</div>';
-  list.forEach(ev=>{
-    const d=ev.at?new Date(ev.at):null;
-    const when=d&&!isNaN(d)?d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):ev.at;
-    h+='<div class="bt-history-row"><div><b>'+esc(ev.title||historyEventTitle(ev.type))+'</b><span>'+esc(ev.detail||'Saved update')+'</span></div><em>'+esc(when||'')+'</em></div>'
-  });
-  h+='</div>';
-  return h
-}
-function lifecycleSteps(e){
-  const safe=safeCloseDate(e);
-  const churn=churnReadyDate(e);
-  return [
-    {key:'opened',label:'Opened',done:!!e?.opened,date:e?.opened||''},
-    {key:'funded',label:'Funded',done:!!(e?.fundedDate||e?.fundedAt||e?.fundingCompleted||e?.fundedDone),date:e?.fundedDate||e?.fundedAt||''},
-    {key:'req',label:'Req Met',done:!!e?.reqMet,date:e?.reqMet||''},
-    {key:'bonus',label:'Bonus',done:!!e?.bonusRecd,date:e?.bonusRecd||''},
-    {key:'safe',label:'Safe Close',done:!!(e?.closed||(safe&&dB(td(),safe)<=0)),date:safe||''},
-    {key:'closed',label:'Closed',done:!!e?.closed,date:e?.closed||'',planned:false},
-    {key:'churn',label:'Churn',done:!!(e?.closed&&churn&&dB(td(),churn)<=0),date:churn||''}
-  ]
-}
-function renderLifecycleStepper(e){
-  if(!e||!e.bank)return'';
-  const steps=lifecycleSteps(e);
-  let h='<div class="bt-life"><div class="bt-life-title">Lifecycle</div><div class="bt-life-steps">';
-  steps.forEach(st=>{
-    const cls=st.done?'done':'todo';
-    const sub=st.date?fD(st.date):(st.key==='funded'?'Optional':'Pending');
-    h+='<div class="bt-life-step '+cls+'"><i>'+esc(st.done?'✓':'•')+'</i><b>'+esc(st.label)+'</b><span>'+esc(sub)+'</span></div>'
-  });
-  h+='</div></div>';
-  return h
-}
-
-
-function cleanPlanText(v){
-  return String(v||'').replace(/[•·]/g,' * ').replace(/\s+/g,' ').trim()
-}
-function splitPlanLines(v){
-  return String(v||'')
-    .replace(/\r/g,'\n')
-    .split(/\n|;|\s+\*\s+|\s+\|\s+|\s+\/\s+| OR /i)
-    .map(cleanPlanText)
-    .map(x=>x.replace(/^\*+\s*/,'').trim())
-    .filter(Boolean)
-}
-function normalizeMoneyToken(v){
-  return String(v||'').replace(/\s+/g,'').replace(/\.00\b/,'')
-}
-function normalizeWaiverPhrase(s){
-  let x=cleanPlanText(s);
-  x=x.replace(/\bw\s*\/\s*/ig,'with ');
-  x=x.replace(/\bDD\b/g,'direct deposit');
-  x=x.replace(/\/mo\b/ig,' per month');
-  x=x.replace(/\bmo\b/ig,'month');
-  x=x.replace(/\bavg\b/ig,'average balance');
-  x=x.replace(/\s+or\s+/ig,' OR ');
-  x=x.replace(/\s+\/\s+/g,' OR ');
-  x=x.replace(/^waived?\s*(?:with)?\s*/i,'Waived with ');
-  x=x.replace(/^waiver\s*(?:with)?\s*/i,'Waived with ');
-  x=x.replace(/Waived with\s+with\s+/i,'Waived with ');
-  return cleanPlanText(x)
-}
-function monthlyTextScope(e){
-  return String([
-    e?.monthlyFeeYNText,
-    e?.avoidMonthlyFeeText,
-    e?.monthlyFeeWaiverText,
-    e?.notes,
-    e?.dataPoint,
-    e?.completeBonusText,
-    e?.eligibilityText,
-    e?.analyzedTC
-  ].filter(Boolean).join('\\n'))
-}
-function segmentMonthlyText(e){
-  const raw=monthlyTextScope(e);
-  const base=[];
-  splitPlanLines(raw).forEach(x=>base.push(x));
-  raw.split(/(?<=[.!?])\s+|\n+|;+/).forEach(sentence=>{
-    const s=cleanPlanText(sentence);
-    if(!s)return;
-    if(/waiv|avoid|monthly|maintenance|service charge|service fee|paper statement|statement fee|quarterly|\$[0-9]|avg|balance|\/mo|\bDD\b|direct deposit/i.test(s)){
-      s.split(/\s+\/\s+/).map(cleanPlanText).filter(Boolean).forEach(part=>base.push(part));
-      const m=s.match(/(?:waived?|waiver|avoid(?:ed)?)(?:\s+w\/|\s+with|\s+by)?\s*[:\-]?\s*([\s\S]{0,260})/i);
-      if(m&&m[1])base.push('Waived with '+m[1]);
-    }
-  });
-  return Array.from(new Set(base.map(cleanPlanText).filter(Boolean))).slice(0,50)
-}
-function isUnrelatedFeeLine(x){
-  return /overdraft|wire|atm|cashier|stop payment|returned|nsf|foreign|replacement card/i.test(x||'')
-}
-function isBonusRequirementNoise(x){
-  const s=String(x||'');
-  return /(bonus|debit txns?|transactions?|\btxn\b|activate debit|within\s+\d+\s+days|req(?:uirement)?|direct deposit within|DD within|\bDD\b\s*\$|fee if closed|closed\s*<|early close|closing fee|clawback|must open both)/i.test(s)
-    && !/(waiv|avoid|monthly|maintenance|service fee|service charge|paper statement|statement fee|average balance|avg|minimum balance|\$[0-9][0-9,]*(?:\.\d{1,2})?\s*(?:\/mo|per month|monthly)|fee\s+if\s*<|fee\s+if\s+below|below\s+\$)/i.test(s)
-}
-function hasMonthlyFeeWaiverContext(s){
-  s=String(s||'');
-  return /(waiv|avoid|monthly|maintenance|service fee|service charge|account fee|paper statement|statement fee|fee can be waived|no monthly|per month|\/mo|fee\s+if\s*<|fee\s+if\s+below|below\s+\$|minimum balance|average balance|avg balance|savings fee|checking fee)/i.test(s)
-}
-function isRequirementOnlyMonthlyNoise(s){
-  s=String(s||'');
-  return /(\bDD\b|direct deposits?|debit txns?|transactions?|\btxn\b|activate debit|within\s+\d+\s+days|must open both|bonus requirement)/i.test(s)
-    && !hasMonthlyFeeWaiverContext(s)
-}
-function extractFeeIfBelowPhrase(s){
-  s=String(s||'');
-  const m=s.match(/(?:[A-Za-z][A-Za-z ]{0,40}\s+fee\s+if\s*<\s*\$\s*[0-9][0-9,]*(?:\.\d{1,2})?|fee\s+if\s+below\s*\$\s*[0-9][0-9,]*(?:\.\d{1,2})?|below\s+\$\s*[0-9][0-9,]*(?:\.\d{1,2})?)/i);
-  return m?cleanPlanText(m[0]):''
-}
-function noMonthlyFeeDetected(e){
-  const direct=String(e?.monthlyFeeYNText||'');
-  const scope=monthlyTextScope(e);
-  return /(?:no|none|waived|free)[^.]{0,60}(?:monthly|maintenance|service)\s+fee|(?:monthly|maintenance|service)\s+fee[^.]{0,50}(?:no|none|\$0|zero)|no\s+minimum\s+balance\s+requirement/i.test(direct)
-    || /no\s+monthly\s+(?:service\s+)?fee|no\s+monthly\s+maintenance\s+fee|\$0\s+monthly/i.test(scope)
-}
-function feeCandidateSentences(e){
-  const parts=segmentMonthlyText(e);
-  const feeWords=/(monthly|maintenance|service fee|service charge|paper statement|statement fee|quarterly|monthly account fee|maintenance charge|account fee|fee period|cycle fee)/i;
-  return parts.filter(x=>feeWords.test(x)&&!isUnrelatedFeeLine(x)&&!/(closed?\s*<|early close|closing fee|fee if closed|closed within)/i.test(x)).slice(0,20)
-}
-function extractFeeAmounts(e){
-  const out=[];
-  feeCandidateSentences(e).forEach(s=>{
-    const matches=[...s.matchAll(/\$\s*[0-9][0-9,]*(?:\.\d{1,2})?/g)];
-    matches.forEach(m=>{
-      const amt=normalizeMoneyToken(m[0]);
-      if(!out.some(x=>x.amount===amt&&x.text===s))out.push({amount:amt,text:s});
-    })
-  });
-  return out.slice(0,6)
-}
-function detectMonthlyFeeFrequency(e){
-  const scope=monthlyTextScope(e);
-  if(/quarterly|per quarter|each quarter/i.test(scope))return'quarterly';
-  if(/statement cycle|fee period|cycle fee/i.test(scope))return'statement-cycle';
-  if(/monthly|per month|\/mo|maintenance fee|service fee/i.test(scope))return'monthly';
-  return''
-}
-function extractMonthlyFeeAmountText(e){
-  if(e?.monthlyFeeAmountText)return cleanPlanText(e.monthlyFeeAmountText);
-  if(noMonthlyFeeDetected(e))return 'No monthly service fee saved';
-  const fees=extractFeeAmounts(e);
-  if(fees.length){
-    const preferred=fees.find(x=>/(monthly|maintenance|service fee|monthly account fee|paper statement|statement fee|quarterly|service charge)/i.test(x.text))||fees[0];
-    return preferred.text
-  }
-  const direct=cleanPlanText(e?.monthlyFeeYNText||'');
-  if(direct&&!/^(yes|y|true|monthly fee[: ]*yes|service fee[: ]*yes)$/i.test(direct)&&!/not clearly stated/i.test(direct))return direct;
-  return ''
-}
-function waiverCandidateSentences(e){
-  const parts=segmentMonthlyText(e);
-  const waiverWords=/(avoid|waive|waived|waiver|with\s+\$|w\/|no monthly|no service fee|minimum|daily|average|avg|ending|beginning|combined|balance|fee\s+if\s*<|fee\s+if\s+below|below\s+\$|savings fee|checking fee|direct deposit|\bDD\b|electronic deposit|debit card|card purchases|payment solutions|estatements?|paperless|military|student|age|senior|linked|relationship|rewards|smart rewards|roundup|\$[0-9][0-9,]*(?:\.\d{1,2})?\s*(?:avg|average|balance|\/mo|per month|monthly))/i;
-  return parts
-    .filter(x=>waiverWords.test(x)&&!isUnrelatedFeeLine(x))
-    .filter(x=>!isBonusRequirementNoise(x)||/waiv|avoid|monthly|maintenance|service fee|service charge|paper statement|statement fee/i.test(x))
-    .slice(0,28)
-}
-function extractBalanceWaiverText(e){
-  if(e?.monthlyFeeWaiverAmountText)return cleanPlanText(e.monthlyFeeWaiverAmountText);
-  const list=waiverCandidateSentences(e).filter(x=>!isRequirementOnlyMonthlyNoise(x));
-  for(const s of list){
-    const phrase=extractFeeIfBelowPhrase(s);
-    if(phrase){
-      const money=(phrase.match(/\$\s*[0-9][0-9,]*(?:\.\d{1,2})?/)||[''])[0];
-      if(money)return normalizeMoneyToken(money)+' minimum balance / fee threshold'
-    }
-  }
-  const balancePatterns=[
-    /\$\s*[0-9][0-9,]*(?:\.\d{1,2})?[^.]{0,150}(?:minimum|daily|average|avg|ending|beginning|combined)[^.]{0,150}balance/i,
-    /(?:minimum|daily|average|avg|ending|beginning|combined)[^.]{0,150}balance[^.]{0,150}\$\s*[0-9][0-9,]*(?:\.\d{1,2})?/i,
-    /\$\s*[0-9][0-9,]*(?:\.\d{1,2})?\s*(?:avg|average)/i
-  ];
-  const activityPatterns=[
-    /\$\s*[0-9][0-9,]*(?:\.\d{1,2})?[^.]{0,150}(?:direct deposits?|\bDD\b|electronic deposits?|payment solutions|card purchases|debit card purchases|\/mo|per month)/i,
-    /(?:direct deposits?|\bDD\b|electronic deposits?|payment solutions|card purchases|debit card purchases)[^.]{0,150}\$\s*[0-9][0-9,]*(?:\.\d{1,2})?/i
-  ];
-  for(const s of list){
-    for(const re of balancePatterns){
-      const m=s.match(re);
-      if(m)return normalizeWaiverPhrase(m[0])
-    }
-  }
-  for(const s of list){
-    if(!hasMonthlyFeeWaiverContext(s))continue;
-    for(const re of activityPatterns){
-      const m=s.match(re);
-      if(m)return normalizeWaiverPhrase(m[0])
-    }
-  }
-  return ''
-}
-function classifyMonthlyFeeWaiverType(text){
-  const s=String(text||'');
-  const types=[];
-  if(/balance|avg|average|minimum|daily|combined/i.test(s))types.push('Balance');
-  if(/direct deposit|\bDD\b|electronic deposit|\/mo|per month|monthly deposit/i.test(s))types.push('Direct deposit');
-  if(/estatements?|paperless|paper statement/i.test(s))types.push('eStatements');
-  if(/linked|relationship|qualifying account/i.test(s))types.push('Linked account');
-  if(/card purchases|debit card|payment solutions/i.test(s))types.push('Card/payment activity');
-  if(/military|student|senior|\bage\b|age-based|under\s+age|over\s+age/i.test(s))types.push('Age/military/student');
-  return types.length?types.join(' / '):''
-}
-function extractExplicitWaiverText(e){
-  if(e?.monthlyFeeWaiverText)return normalizeWaiverPhrase(e.monthlyFeeWaiverText);
-  const parts=segmentMonthlyText(e);
-  const found=[];
-  parts.forEach(p=>{
-    const s=cleanPlanText(p);
-    if(/^(?:waived?|waiver|avoid)/i.test(s)||/(?:waived?|waiver|avoid)[^.;]{0,240}\$[0-9]/i.test(s)){
-      found.push(normalizeWaiverPhrase(s.replace(/^[^:]*:\s*/,'')))
-    }
-  });
-  const raw=monthlyTextScope(e);
-  const m=raw.match(/(?:waived?|waiver|avoid(?:ed)?)(?:\s+w\/|\s+with|\s+by)?\s*[:\-]?\s*([\s\S]{0,260})/i);
-  if(m&&m[1])found.push(normalizeWaiverPhrase('Waived with '+m[1].split(/[.\n]/)[0]));
-  return Array.from(new Set(found.filter(Boolean))).find(x=>/\$[0-9]|estatements?|paperless|balance|direct deposit/i.test(x))||''
-}
-function extractAvoidFeeLines(e){
-  const out=[];
-  const explicit=extractExplicitWaiverText(e);
-  if(explicit)out.push(explicit);
-  splitPlanLines(e?.avoidMonthlyFeeText).forEach(x=>out.push(x));
-  const analyzed=String(e?.analyzedTC||'');
-  const m=analyzed.match(/MONTHLY FEE CAN BE AVOIDED WITH:\s*([\s\S]{0,1200}?)(?:\n[A-Z][A-Z \/]+:|\nREVIEW:|\nWORDING NORMALIZED:|\nSOURCE SNIPPETS:|$)/i);
-  if(m)splitPlanLines(m[1]).forEach(x=>out.push(x));
-  waiverCandidateSentences(e).forEach(s=>{
-    if(/estatements?|paperless|paper statement/i.test(s))out.push(s);
-    else if(/(?:avoid|waive|waived|waiver|w\/)/i.test(s))out.push(s);
-    else if(/fee\s+if\s*<\s*\$|fee\s+if\s+below\s*\$|below\s+\$[0-9]/i.test(s)){const phrase=extractFeeIfBelowPhrase(s);if(phrase)out.push(phrase);}
-    else if(/(?:minimum|daily|average|avg|ending|beginning|combined)[^.]{0,140}balance|\$\s*[0-9][0-9,]*(?:\.\d{1,2})?[^.]{0,140}(?:balance|avg|average)/i.test(s))out.push(s);
-    else if(/direct deposits?|\bDD\b|electronic deposits?|card purchases|payment solutions|linked|relationship|military|student|senior|age|\$[0-9][0-9,]*(?:\.\d{1,2})?\s*\/mo/i.test(s)){
-      if(hasMonthlyFeeWaiverContext(s)&&!isRequirementOnlyMonthlyNoise(s))out.push(s);
-    }
-  });
-  const fee=String(e?.monthlyFeeYNText||'');
-  if(/estatements?|paper statement|paperless/i.test(fee)&&!/estatements?|paperless/i.test(out.join(' ')))out.push('Use eStatements / paperless statements when available');
-  const clean=Array.from(new Set(out.map(normalizeWaiverPhrase).filter(Boolean)))
-    .filter(x=>x.length<420)
-    .filter(x=>!isRequirementOnlyMonthlyNoise(x))
-    .filter(x=>!isBonusRequirementNoise(x) || /waiv|avoid|monthly|maintenance|service fee|service charge|paper statement|statement fee|fee\s+if\s*<|fee\s+if\s+below|below\s+\$/i.test(x))
-    .filter(x=>!/^\s*(yes|true|no)\s*$/i.test(x));
-  const full=clean.find(x=>/^Waived with/i.test(x)&&((x.match(/\$/g)||[]).length>=2||/estatements?|paperless/i.test(x)));
-  if(full)return [full].concat(clean.filter(x=>x!==full&&!/^Waived with/i.test(x)).slice(0,2));
-  return clean.slice(0,4)
-}
-function deriveMonthlyFeeStructure(e){
-  const feeText=extractMonthlyFeeAmountText(e);
-  const waiverText=extractAvoidFeeLines(e).join(' OR ');
-  const waiverAmount=extractBalanceWaiverText(e);
-  const freq=detectMonthlyFeeFrequency(e);
-  const noFee=noMonthlyFeeDetected(e);
-  return{
-    monthlyFeeAmountText:noFee?'$0':(feeText&&/^\$/.test(feeText)?feeText:''),
-    monthlyFeeFrequency:freq||'monthly',
-    monthlyFeeWaiverType:classifyMonthlyFeeWaiverType(waiverText||waiverAmount),
-    monthlyFeeWaiverAmountText:waiverAmount||'',
-    monthlyFeeWaiverText:waiverText||'',
-    monthlyFeeNoMonthlyServiceFee:!!noFee
-  }
-}
-function monthlyFeeKnownStatus(e){
-  if(noMonthlyFeeDetected(e))return{kind:'none',label:'No Monthly Fee',cls:'safe'};
-  const fees=extractFeeAmounts(e);
-  const avoid=extractAvoidFeeLines(e);
-  if(e?.monthlyFeeChecked)return{kind:'checked',label:'Fee Checked',cls:'safe'};
-  if(fees.length||avoid.length||e?.monthlyFeeYNText||e?.avoidMonthlyFeeText||e?.monthlyFeeWaiverText||e?.notes)return{kind:'avoid',label:'Avoid Until Close',cls:'warn'};
-  return{kind:'review',label:'Review Fee Terms',cls:'warn'}
-}
-function monthlyFeePlanForEntry(e){
-  if(!e||!e.bank)return null;
-  const structured=deriveMonthlyFeeStructure(e);
-  const raw=cleanPlanText([e.monthlyFeeYNText,e.avoidMonthlyFeeText,e.monthlyFeeWaiverText,e.notes].filter(Boolean).join(' '));
-  const fee=extractMonthlyFeeAmountText(e);
-  const balance=structured.monthlyFeeWaiverAmountText||extractBalanceWaiverText(e);
-  const avoid=structured.monthlyFeeWaiverText?structured.monthlyFeeWaiverText.split(/\s+OR\s+/i).map(normalizeWaiverPhrase).filter(Boolean):extractAvoidFeeLines(e);
-  const hasAny=!!(fee||balance||avoid.length||raw||noMonthlyFeeDetected(e));
-  if(!hasAny)return null;
-  const state=monthlyFeeKnownStatus(e);
-  const rows=[];
-  const notes=[];
-  const row=(label,value,cls='')=>rows.push({label,value,cls});
-  const cleanAvoid=Array.from(new Set(avoid)).filter(x=>!isRequirementOnlyMonthlyNoise(x)).map(x=>shortCleanText(x,140));
-  row('Status',state.kind==='none'?'No monthly service fee saved':(state.kind==='checked'?'Checked before close':'Keep waiver active'),state.kind==='none'||state.kind==='checked'?'ok':'warn');
-  row('Monthly fee',state.kind==='none'?'$0':(fee||'Not saved clearly'),state.kind==='none'||fee?'':'warn');
-  if(structured.monthlyFeeFrequency&&state.kind!=='none')row('Frequency',structured.monthlyFeeFrequency.replace('-', ' '));
-  if(balance)row(/fee threshold/i.test(balance)?'Fee-risk target':'Waiver target',balance,'warn');
-  if(structured.monthlyFeeWaiverType)row('Waiver type',structured.monthlyFeeWaiverType);
-  if(cleanAvoid.length)row('How to avoid',cleanAvoid.slice(0,2).join(' OR '));
-  else if(state.kind!=='none'&&balance&&/fee threshold/i.test(balance))row('How to avoid','Keep the related account at or above the saved threshold.');
-  else if(state.kind!=='none')row('How to avoid','Add waiver terms when known.','warn');
-  if(state.kind!=='none')row('Before close',e.monthlyFeeChecked?'Already checked':'Check statement/fee timing',e.monthlyFeeChecked?'ok':'warn');
-  if(e.closed)notes.push('Account closed on '+fD(e.closed)+'. No active monthly-fee tracking needed.');
-  else if(state.kind!=='none')notes.push('Keep the waiver active until the account is actually closed.');
-  return{title:'Monthly Fee Plan',sub:state.kind==='none'?'No active fee issue found':'Avoid surprises before closing',chip:state.label,cls:state.cls,rows,notes}
-}
-function renderMonthlyFeePlan(e){
-  return renderCleanPlanCard(monthlyFeePlanForEntry(e))
-}
-
 function renderOfferHistory(e){
   const hist=offerHistoryForBank(e);
   if(!hist.length)return'';
-  let h='<details class="clean-details"><summary>Offer History <span>'+hist.length+'</span></summary><div class="clean-detail-body">';
-  hist.slice(0,4).forEach((x,i)=>{
-    const parts=[];
-    if(x.bonusTierText)parts.push(shortCleanText(x.bonusTierText,120));else if(x.bonus)parts.push(fM(x.bonus));
-    if(x.reqDays)parts.push(x.reqDays+'d req');
-    if(x.minHoldDays)parts.push(x.minHoldDays+'d hold');
-    if(x.opened)parts.push('opened '+fD(x.opened));
-    h+='<div class="clean-mini-row"><b>'+esc(i===0?'Latest':'History')+'</b><span>'+esc(parts.join(' · ')||'Saved profile version')+(x.source?' · '+esc(shortCleanText(x.source,70)):'')+'</span></div>'
-  });
-  h+='</div></details>';
-  return h
+  const rows=hist.slice(0,4).map((x,i)=>{const parts=[];if(x.bonusTierText)parts.push(x.bonusTierText.replace(/\s+/g,' '));else if(x.bonus)parts.push(fM(x.bonus));if(x.reqDays)parts.push(x.reqDays+'d req');if(x.minHoldDays)parts.push(x.minHoldDays+'d hold');if(x.opened)parts.push('opened '+fD(x.opened));return '* '+(i===0?'Current/latest: ':'History: ')+esc(parts.join(' · ')||'Saved profile version')+(x.source?' — '+esc(x.source):'');});
+  return '<div class="tc-box"><div class="tc-label">Offer history</div><div class="tc-body">'+rows.join('\n')+'</div></div>'
 }
 
 function loadProfileEvents(){
@@ -704,9 +249,9 @@ function entryReqSnapshot(e){
   if(!e||!e.bank)return null;
   const snap={
     bank:e.bank,
-    accountType:normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'personal'
+    accountType:normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'unknown'
   };
-  ['bonus','notes','dataPoint','fundedDays','fundingAmount','fundingAmountText','payoutTimingText','churn','reqDays','monthlyFeeYNText','monthlyFeeAmountText','monthlyFeeFrequency','monthlyFeeWaiverType','monthlyFeeWaiverAmountText','monthlyFeeWaiverText','monthlyFeeNoMonthlyServiceFee','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText','eligibilityText','expirationDateText','requiredDaysText','minHoldDays','earlyCloseFee','closeRuleBasis','closeBufferDays','closeRuleText','monthlyFeeChecked'].forEach(k=>{const v=e[k];if(v!==undefined&&v!==null&&v!=='')snap[k]=v});
+  ['bonus','notes','dataPoint','fundedDays','fundingAmount','fundingAmountText','payoutTimingText','churn','reqDays','monthlyFeeYNText','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText','eligibilityText','expirationDateText','requiredDaysText','minHoldDays','earlyCloseFee'].forEach(k=>{const v=e[k];if(v!==undefined&&v!==null&&v!=='')snap[k]=v});
   return snap
 }
 
@@ -736,133 +281,6 @@ function bankMemoryFor(bank){
   }
   
 }
-
-
-function analyzerMemoryLoad(){
-  const raw=ld(ANALYZER_MEMORY_KEY,{});
-  return raw&&typeof raw==='object'?raw:{}
-}
-function analyzerMemorySave(mem){
-  sv(ANALYZER_MEMORY_KEY,mem&&typeof mem==='object'?mem:{})
-}
-function analyzerMemoryValueKey(v){
-  return String(v??'').replace(/\s+/g,' ').trim().toLowerCase().slice(0,260)
-}
-function analyzerMemoryPushField(bucket,field,label,value,opts={}){
-  const val=String(value??'').replace(/\s+/g,' ').trim();
-  if(!val||val==='0'||val==='false')return;
-  bucket.fields=bucket.fields||{};
-  const rec=bucket.fields[field]||{field,label:label||field,values:{},lastValue:'',lastAt:'',stable:!!opts.stable,dynamic:!!opts.dynamic};
-  rec.label=label||rec.label||field;
-  rec.stable=!!(rec.stable||opts.stable);
-  rec.dynamic=!!(rec.dynamic||opts.dynamic);
-  const key=analyzerMemoryValueKey(val);
-  const cur=rec.values[key]||{value:val,count:0,firstAt:td(),lastAt:'',entryIds:[]};
-  cur.value=val;
-  const seenEntry=opts.entryId&&cur.entryIds.includes(opts.entryId);
-  if(!seenEntry)cur.count=(cur.count||0)+1;
-  cur.lastAt=td();
-  if(opts.entryId&&!cur.entryIds.includes(opts.entryId))cur.entryIds.unshift(opts.entryId);
-  cur.entryIds=(cur.entryIds||[]).slice(0,6);
-  rec.values[key]=cur;rec.lastValue=val;rec.lastAt=td();
-  bucket.fields[field]=rec;
-}
-function learnAnalyzerMemoryFromEntry(e){
-  if(!e||!e.bank)return;
-  const key=bankKey(e.bank);
-  if(!key)return;
-  const mem=analyzerMemoryLoad();
-  const bucket=mem[key]||{bank:e.bank,key,accountTypes:{},fields:{},cycles:0,updatedAt:'',entryIds:[]};
-  bucket.bank=e.bank;bucket.key=key;bucket.updatedAt=td();
-  if(e.id&&!bucket.entryIds.includes(e.id))bucket.entryIds.unshift(e.id);
-  bucket.entryIds=(bucket.entryIds||[]).slice(0,30);
-  bucket.cycles=bucket.entryIds.length||Math.max(1,bucket.cycles||0);
-  const type=normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'personal';
-  bucket.accountTypes[type]=(bucket.accountTypes[type]||0)+1;
-  const opt={entryId:e.id||'',stable:false,dynamic:false};
-  analyzerMemoryPushField(bucket,'accountType','Account type',type,{...opt,stable:true});
-  analyzerMemoryPushField(bucket,'churn','Churn rule',e.churn,{...opt,stable:true});
-  analyzerMemoryPushField(bucket,'reqDays','Requirement days',e.reqDays?String(e.reqDays):'',{...opt,dynamic:true});
-  analyzerMemoryPushField(bucket,'dataPoint','Requirement summary',e.dataPoint,{...opt,dynamic:true});
-  analyzerMemoryPushField(bucket,'fundedDays','Funding deadline',e.fundedDays?String(e.fundedDays):'',{...opt,dynamic:true});
-  analyzerMemoryPushField(bucket,'fundingAmountText','Funding amount',e.fundingAmountText||((e.fundingAmount||0)?fM(e.fundingAmount):''),{...opt,dynamic:true});
-  analyzerMemoryPushField(bucket,'payoutTimingText','Payout timing',e.payoutTimingText,{...opt,stable:true});
-  analyzerMemoryPushField(bucket,'monthlyFeeYNText','Monthly fee',e.monthlyFeeYNText||e.monthlyFeeAmountText,{...opt,stable:true});
-  analyzerMemoryPushField(bucket,'avoidMonthlyFeeText','Fee waiver',e.avoidMonthlyFeeText||e.monthlyFeeWaiverText,{...opt,stable:true});
-  analyzerMemoryPushField(bucket,'monthlyFeeAmountText','Monthly fee amount',e.monthlyFeeAmountText,{...opt,stable:true});
-  analyzerMemoryPushField(bucket,'monthlyFeeWaiverText','Monthly fee waiver wording',e.monthlyFeeWaiverText,{...opt,stable:true});
-  analyzerMemoryPushField(bucket,'eligibilityText','Eligibility / churn',e.eligibilityText,{...opt,stable:true});
-  analyzerMemoryPushField(bucket,'minHoldDays','Close hold days',e.minHoldDays?String(e.minHoldDays):'',{...opt,stable:true});
-  analyzerMemoryPushField(bucket,'closeRuleBasis','Close rule basis',e.closeRuleBasis,{...opt,stable:true});
-  analyzerMemoryPushField(bucket,'closeRuleText','Close rule wording',e.closeRuleText,{...opt,stable:true});
-  analyzerMemoryPushField(bucket,'bonus','Bonus amount',(e.bonus||0)?String(e.bonus):'',{...opt,dynamic:true});
-  mem[key]=bucket;analyzerMemorySave(mem);
-}
-function analyzerMemoryBest(rec){
-  const vals=Object.values(rec?.values||{});
-  if(!vals.length)return null;
-  return vals.sort((a,b)=>(b.count||0)-(a.count||0)||(b.lastAt||'').localeCompare(a.lastAt||''))[0]||null
-}
-function analyzerResultFieldFilled(r,key){
-  if(!r)return false;
-  const map={accountType:'accountType',churn:'churn',reqDays:'reqDays',dataPoint:'dataPoint',fundedDays:'fundedDays',fundingAmountText:'fundingAmount',payoutTimingText:'payoutTimingText',monthlyFeeYNText:'monthlyFeeYNText',avoidMonthlyFeeText:'avoidMonthlyFeeText',monthlyFeeAmountText:'monthlyFeeAmountText',monthlyFeeWaiverText:'monthlyFeeWaiverText',eligibilityText:'eligibilityText',minHoldDays:'minHoldDays',closeRuleBasis:'closeRuleBasis',closeRuleText:'closeRuleText',bonus:'bonus'};
-  const target=map[key]||key;const v=r[target];
-  return v!==undefined&&v!==null&&String(v).trim()!==''&&String(v)!=='0'
-}
-function tcApplyAnalyzerAdaptiveLearning(r){
-  if(!r||!r.bank)return r;
-  const mem=analyzerMemoryLoad();
-  const bucket=mem[bankKey(r.bank)];
-  if(!bucket||!bucket.fields)return r;
-  const used=[];
-  const safeApply=(key,outKey,label,format)=>{
-    const rec=bucket.fields[key];const best=analyzerMemoryBest(rec);if(!rec||!best||!best.value)return;
-    const confirmations=best.count||0;
-    const stable=!!rec.stable;
-    const dynamic=!!rec.dynamic;
-    const already=analyzerResultFieldFilled(r,key);
-    const allowFill=!already && (stable||confirmations>=2);
-    const display=format?format(best.value):best.value;
-    const source='Learned from your saved '+(bucket.bank||r.bank)+' history — '+confirmations+' approved cycle'+(confirmations!==1?'s':'')+'. Review against the current offer before applying.';
-    const fb={field:label,value:display,source,confidence:(allowFill&&confirmations>=2?'learned-stable':'learned-review'),kind:'adaptive-learned'};
-    r.profileFallbacks=(r.profileFallbacks||[]).concat(fb);
-    r.sourceSnippets=r.sourceSnippets||[];r.fieldSources=r.fieldSources||{};r.fieldConfidence=r.fieldConfidence||{};
-    if(!r.fieldSources[label])r.fieldSources[label]=fb;
-    if(!r.sourceSnippets.some(x=>x.field===label&&x.kind==='adaptive-learned'))r.sourceSnippets.push(fb);
-    r.fieldConfidence[label]=fb.confidence;
-    if(allowFill){
-      let val=best.value;
-      if(['reqDays','fundedDays','minHoldDays','bonus'].includes(key))val=parseInt(String(val).replace(/[^0-9]/g,''),10)||0;
-      if(key==='minHoldDays'){r.minHoldDays=val;r.closeRuleDays=r.closeRuleDays||val;}
-      else if(key==='bonus'){r.bonus=r.bonus||val;r.selectedBonus=r.selectedBonus||val;}
-      else r[outKey||key]=val;
-      used.push(label);
-    }else if(dynamic&&!already){used.push(label+' suggestion');}
-  };
-  safeApply('accountType','accountType','Account type');
-  safeApply('churn','churn','Churn rule');
-  safeApply('reqDays','reqDays','Requirement days',v=>v+' days');
-  safeApply('dataPoint','dataPoint','Requirement amount');
-  safeApply('fundedDays','fundedDays','Funding deadline',v=>v+' days');
-  safeApply('fundingAmountText','fundingAmountText','Funding amount');
-  safeApply('payoutTimingText','payoutTimingText','Payout timing');
-  safeApply('monthlyFeeYNText','monthlyFeeYNText','Monthly fee');
-  safeApply('avoidMonthlyFeeText','avoidMonthlyFeeText','Fee waiver');
-  safeApply('monthlyFeeAmountText','monthlyFeeAmountText','Monthly fee amount');
-  safeApply('monthlyFeeWaiverText','monthlyFeeWaiverText','Monthly fee waiver wording');
-  safeApply('eligibilityText','eligibilityText','Eligibility');
-  safeApply('minHoldDays','minHoldDays','Close hold days',v=>v+' days');
-  safeApply('closeRuleBasis','closeRuleBasis','Close rule basis');
-  safeApply('closeRuleText','closeRuleText','Close rule wording');
-  safeApply('bonus','bonus','Bonus amount',v=>fM(parseInt(String(v).replace(/[^0-9]/g,''),10)||0));
-  if(used.length){
-    r.adaptiveLearning={matched:true,bank:bucket.bank||r.bank,cycles:bucket.cycles||0,fields:used.slice(0,12),summary:'Found '+(bucket.cycles||1)+' saved cycle'+((bucket.cycles||1)!==1?'s':'')+' for this bank. Current T&C proof still takes priority.'};
-    r.reviewFlags=r.reviewFlags||[];
-    r.reviewFlags.push('Adaptive learning used saved history for missing/unclear fields. Verify learned suggestions before applying.');
-  }
-  return r
-}
-try{window.tcLearnAnalyzerFromEntry=learnAnalyzerMemoryFromEntry;window.tcApplyAnalyzerAdaptiveLearning=tcApplyAnalyzerAdaptiveLearning;window.tcAnalyzerMemoryLoad=analyzerMemoryLoad}catch{}
 
 function applyModalBankMemory(){
   if(!modal||modal._edit)return;
@@ -1034,107 +452,25 @@ function nextReopen(e){
   return e.churn==='180'?addD(e.closed,180):addM(e.closed,parseInt(e.churn)*12)
 }
 
-function churnReadyDate(e){
-  const nr=nextReopen(e);
-  return nr?addD(nr,10):''
-}
-
-
 function daysLeft(e){
-  const ready=churnReadyDate(e);
-  if(!ready)return null;
-  return Math.max(0,dB(td(),ready))
+  const nr=nextReopen(e);
+  if(!nr)return null;
+  const diff=dB(td(),nr);
+  return Math.max(0,diff+10)
 }
 
 function elapsed(e){
   return e.bonusRecd?Math.max(0,dB(e.bonusRecd,td())):null
 }
 
-const BUFFER_DAYS=5;
+const BUFFER_DAYS=3;
 
-function normalizeCloseRuleBasis(v){
-  const s=String(v||'').toLowerCase().replace(/[^a-z]/g,'').trim();
-  if(['bonus','bonusreceived','bonusrecd','payout','payment'].includes(s))return'bonus';
-  if(['reqmet','requirementmet','requirementsmet','requirement'].includes(s))return'reqmet';
-  if(['manual','review','manualreview'].includes(s))return'manual';
-  return'opened'
-}
-function isChaseBusinessCompleteEntry(e){
-  if(!e)return false;
-  const text=String([
-    e.bank,e.acct,e.accountName,e.productName,e.analysis&&e.analysis.acct,
-    e.analyzedTC,e.completeBonusText,e.eligibilityText,e.notes
-  ].filter(Boolean).join(' ')).toLowerCase();
-  if(!/chase|jpmorgan/.test(text))return false;
-  if(/platinum business|performance business|private client|total checking|secure banking|first checking/.test(text))return false;
-  if(/chase business complete|business complete checking/.test(text))return true;
-  const bankText=String(e.bank||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-  const business=inferAccountTypeForEntry(e)==='business';
-  return business && (bankText==='chase biz'||bankText==='chase business'||/qualifying transactions|new money|business checking offer/.test(text));
-}
-function knownClosePolicy(e){
-  if(isChaseBusinessCompleteEntry(e))return{
-    days:90,
-    basis:'opened',
-    buffer:1,
-    text:'For safer future Chase Business offer eligibility, do not close within 90 days of account opening. Close on day 91 or later, after the bonus posts.'
-  };
-  return null;
-}
-function applyKnownClosePolicy(e){
-  const p=knownClosePolicy(e);
-  if(!p||!e)return e;
-  e.minHoldDays=p.days;
-  e.closeFeeCountdownDays=String(p.days);
-  e.closeRuleBasis=p.basis;
-  e.closeBufferDays=p.buffer;
-  e.closeRuleText=p.text;
-  return e;
-}
-function closeRuleDaysFor(e){
-  const p=knownClosePolicy(e);
-  if(p)return p.days;
-  const n=parseInt(e&&e.minHoldDays,10);
-  return Number.isFinite(n)&&n>0?n:0;
-}
-function closeRuleBasisFor(e){
-  const p=knownClosePolicy(e);
-  return p?p.basis:normalizeCloseRuleBasis(e&&e.closeRuleBasis||inferCloseRuleBasisFromText(e));
-}
-function closeRuleBasisLabel(v){
-  const b=normalizeCloseRuleBasis(v);
-  return b==='bonus'?'Bonus received date':b==='reqmet'?'Requirement met date':b==='manual'?'Manual review':'Opened date'
-}
-function inferCloseRuleBasisFromText(e){
-  const txt=String([e?.closeRuleText,e?.earlyTerminationFeeText,e?.eligibilityText,e?.completeBonusText,e?.analyzedTC].filter(Boolean).join(' ')).toLowerCase();
-  if(/after[^.]{0,80}(bonus|cash reward|payout|payment)|bonus[^.]{0,80}(posts|posted|received|paid|payment)/i.test(txt))return'bonus';
-  if(/after[^.]{0,80}(requirement|qualif|deposit period)|requirement[^.]{0,80}(met|complete|satisfied)/i.test(txt))return'reqmet';
-  return'opened'
-}
-function closeBufferDaysFor(e){
-  const p=knownClosePolicy(e);
-  if(p)return p.buffer;
-  const n=parseInt(e&&e.closeBufferDays,10);
-  return Number.isFinite(n)&&n>=0?n:BUFFER_DAYS
-}
-function closeBasisDate(e){
-  if(!e)return'';
-  const b=closeRuleBasisFor(e);
-  if(b==='bonus')return e.bonusRecd||'';
-  if(b==='reqmet')return e.reqMet||'';
-  if(b==='manual')return'';
-  return e.opened||''
-}
 function rawSafeDate(e){
-  const base=closeBasisDate(e);
-  const days=closeRuleDaysFor(e);
-  return(base&&days>0)?addD(base,days):null
+  return(e.opened&&e.minHoldDays>0)?addD(e.opened,e.minHoldDays):null
 }
 
 function safeCloseDate(e){
-  const base=closeBasisDate(e);
-  const days=closeRuleDaysFor(e);
-  return(base&&days>0)?addD(base,days+closeBufferDaysFor(e)):null
+  return(e.opened&&e.minHoldDays>0)?addD(e.opened,e.minHoldDays+BUFFER_DAYS):null
 }
 
 function daysUntilSafe(e){
@@ -1165,8 +501,7 @@ function isInBuffer(e){
 }
 
 function holdProg(e){
-  const base=closeBasisDate(e);
-  return(base&&e.minHoldDays>0)?Math.min(1,Math.max(0,dB(base,td()))/(e.minHoldDays+closeBufferDaysFor(e))):null
+  return(e.opened&&e.minHoldDays>0)?Math.min(1,Math.max(0,dB(e.opened,td()))/(e.minHoldDays+BUFFER_DAYS)):null
 }
 
 function reqDeadline(e){
@@ -1178,35 +513,8 @@ function daysToDeadline(e){
   return d?dB(td(),d):null
 }
 
-function lifecycleTimerKind(t){
-  const s=String(t?.text||'').toLowerCase();
-  if(/fund|new money|deposit new money|funding/.test(s))return'funding';
-  if(/requirement deadline|bonus requirement|complete qualifying|qualifying transaction|qualifying direct|direct deposit|transaction/.test(s))return'requirement';
-  if(/payout|bonus watch|waiting bonus|bonus payout/.test(s))return'payout';
-  if(/close|safe to close|close review|hold check|maintain required balance|early close|buffer/.test(s))return'close';
-  return'custom'
-}
-function isLifecycleTimerRelevant(e,t){
-  if(!e||!t||t.done||!t.date||isDeletedTimer(e,t))return false;
-  const kind=lifecycleTimerKind(t);
-  if(e.closed)return false;
-  if(e.bonusRecd)return kind==='close'||kind==='custom';
-  if(e.reqMet)return kind==='payout'||kind==='close'||kind==='custom';
-  return true
-}
-function activeLifecycleTimers(e){
-  return sortCustomTimers(normalizeTimerList(e?.customTimers||[]).filter(t=>isLifecycleTimerRelevant(e,t)))
-}
-function staleLifecycleTimers(e){
-  if(!e||e.closed)return[];
-  return normalizeTimerList(e.customTimers||[]).filter(t=>{
-    if(!t||t.done||!t.date||isDeletedTimer(e,t))return false;
-    const kind=lifecycleTimerKind(t);
-    return (e.bonusRecd&&(kind==='funding'||kind==='requirement'||kind==='payout')) || (e.reqMet&&(kind==='funding'||kind==='requirement'));
-  })
-}
 function nextActiveTimer(e){
-  const timers=activeLifecycleTimers(e);
+  const timers=sortCustomTimers(normalizeTimerList(e?.customTimers||[]).filter(t=>!t.done&&t.date&&!isDeletedTimer(e,t)));
   return timers[0]||null
 }
 
@@ -1228,6 +536,10 @@ function status(e){
   // A received bonus moves the bank into the close/hold phase. It should never
   // keep showing the old requirement deadline after this point.
   if(hasBonus){
+    if(e.plannedClose){
+      const d=dB(td(),e.plannedClose);
+      if(d>0)return'PLANNED CLOSE';
+    }
     if(hasHold){
       if(isInBuffer(e))return'3-DAY BUFFER';
       if(safeDays!==null&&safeDays>0)return'WAITING TO CLOSE';
@@ -1248,7 +560,7 @@ function status(e){
 }
 
 function sPri(s){
-  return s==='TIME TO CHURN!'?0.6:s==='CUSTOM TIMER'?0.8:s==='SAFE TO CLOSE'?1:s==='3-DAY BUFFER'?1.1:s==='WAITING TO CLOSE'?1.2:s==='WORKING'?2:s==='REQ MET'?2.2:s==='WAITING TO CHURN!'?3:s==='BONUS RECEIVED'?3.2:99
+  return s==='TIME TO CHURN!'?0.6:s==='CUSTOM TIMER'?0.8:s==='SAFE TO CLOSE'?1:s==='3-DAY BUFFER'?1.1:s==='WAITING TO CLOSE'?1.2:s==='PLANNED CLOSE'?1.3:s==='WORKING'?2:s==='REQ MET'?2.2:s==='WAITING TO CHURN!'?3:s==='BONUS RECEIVED'?3.2:99
 }
 
 function sortE(a){
@@ -1335,6 +647,18 @@ function getCountdown(e){
     }
 
   }
+
+  if((s==='PLANNED CLOSE'||s==='SAFE TO CLOSE'||s==='3-DAY BUFFER'||s==='WAITING TO CLOSE')&&e.bonusRecd&&e.plannedClose){
+    const d=dB(td(),e.plannedClose);
+    if(d>0)return{
+      lbl:'Close account',days:d,date:e.plannedClose,cls:d<=3?'red':d<=7?'amber':'green',icon:'\uD83D\uDD12'
+    };
+    return{
+      lbl:'Ready to close!',days:0,date:e.plannedClose,cls:'green',icon:'\u2705'
+    }
+
+  }
+
   if(s==='WAITING TO CLOSE'){
     const d=daysUntilSafe(e);
     if(d!==null&&d>0)return{
@@ -1361,7 +685,7 @@ function getCountdown(e){
 
   if(s==='WAITING TO CHURN!'){
     const dl=daysLeft(e);
-    const nr=churnReadyDate(e);
+    const nr=nextReopen(e);
     if(dl>0)return{
       lbl:'Churn ready',days:dl,date:nr,cls:dl<=30?'amber':'blue',icon:'\uD83D\uDD04'
     }
@@ -1391,6 +715,12 @@ function getUrg(e){
     if(d!==null&&d<=7)return'red';
     if(d!==null&&d<=30)return'yellow';
     return'blue'
+  }
+  if(s==='PLANNED CLOSE'){
+    const d=e.plannedClose?dB(td(),e.plannedClose):null;
+    if(d!==null&&d<=3)return'red';
+    if(d!==null&&d<=14)return'yellow';
+    return'green'
   }
   if(s==='REQ MET'){
     const d=e.reqMet?dB(e.reqMet,td()):0;
@@ -1428,13 +758,11 @@ function getAttentionSuggestions(){
     // Mini timers are real requirement deadlines. Always consider the next
     // active timer so Needs Attention matches the card countdown instead of
     // falling back to the later 90-day requirement deadline.
-    const activeTimers=activeLifecycleTimers(e);
-    let hasAttentionTimer=false;
+    const activeTimers=sortCustomTimers(normalizeTimerList(e.customTimers||[]).filter(t=>!t.done&&t.date&&!isDeletedTimer(e,t)));
     if(activeTimers.length){
       const next=activeTimers[0];
       const d=timerCountdownDays(next);
       if(d!==null){
-        hasAttentionTimer=true;
         const abs=Math.abs(d);
         if(d<0)push(e,'Timer overdue: '+next.text,0,abs,{category:'timer'});
         else if(d===0)push(e,'Timer due today: '+next.text,0.05,0,{category:'timer'});
@@ -1456,9 +784,7 @@ function getAttentionSuggestions(){
 
     // Requirement deadlines are the highest normal priority because missing the
     // requirement can lose the bonus. Sort them by true days remaining.
-    // v3.3.83: if an active mini timer exists, do not add the generic reqDays fallback.
-    // The timer is the user's deliberate current task and should match the card countdown.
-    if(!hasAttentionTimer&&!e.reqMet&&!e.bonusRecd&&e.opened&&e.reqDays>0){
+    if(!e.reqMet&&!e.bonusRecd&&e.opened&&e.reqDays>0){
       const d=daysToDeadline(e);
       if(d!==null){
         if(d<0)push(e,'Requirement deadline passed.',0.4,Math.abs(d),{category:'requirement'});
@@ -1468,6 +794,12 @@ function getAttentionSuggestions(){
         else push(e,d+'d to requirement deadline.',3.0,d,{category:'requirement'});
         return;
       }
+    }
+
+    if(e.bonusRecd&&e.plannedClose){
+      const d=dB(td(),e.plannedClose);
+      push(e,d<=0?'Planned close is due.':d+'d to planned close.',d<=0?0.7:2.4,Math.abs(d),{category:'planned-close'});
+      return;
     }
 
     if(st==='3-DAY BUFFER'){
@@ -1517,42 +849,14 @@ function getAttentionSuggestions(){
     }
   });
 
-  // v3.3.83: Needs Attention should feel like a real task list.
-  // Old behavior grouped requirement deadlines before safe-close countdowns,
-  // so an 86-day requirement appeared above a 58-day safe-close task.
-  // New behavior: urgent/overdue first, then closest actionable day across
-  // requirements, timers, and safe-close countdowns.
-  function attentionUrgencyGroup(s){
-    const cat=String(s?.category||'');
-    const text=String(s?.rsn||'');
-    const d=Number.isFinite(s?.days)?s.days:999999;
-    if(/overdue|passed|due today|is due|Safe to close now/i.test(text)||d===0)return 0;
-    if(cat==='timer'||cat==='requirement'||cat==='close')return 1;
-    if(cat==='waiting-bonus'||cat==='bonus-received')return 2;
-    if(cat==='data-quality'||cat==='review')return 3;
-    return 4
-  }
-  function attentionCategoryOrder(s){
-    const cat=String(s?.category||'');
-    return cat==='requirement'?0:cat==='timer'?1:cat==='close'?2:cat==='waiting-bonus'?3:cat==='bonus-received'?4:cat==='data-quality'?5:cat==='review'?6:9
-  }
-  function compareAttention(a,b){
-    return attentionUrgencyGroup(a)-attentionUrgencyGroup(b)
-      || (a.days||999999)-(b.days||999999)
-      || attentionCategoryOrder(a)-attentionCategoryOrder(b)
-      || (a.pri||99)-(b.pri||99)
-      || (b.bonus||0)-(a.bonus||0)
-      || String(a.bank||'').localeCompare(String(b.bank||''))
-  }
-
   const bestByEntry=new Map();
   sug.forEach(s=>{
     const key=s.dedupeKey||s.entryId||s.bank;
     const prev=bestByEntry.get(key);
-    if(!prev||compareAttention(s,prev)<0)bestByEntry.set(key,s);
+    if(!prev||s.pri<prev.pri||(s.pri===prev.pri&&s.days<prev.days))bestByEntry.set(key,s);
   });
 
-  return Array.from(bestByEntry.values()).sort(compareAttention)
+  return Array.from(bestByEntry.values()).sort((a,b)=>a.pri-b.pri||a.days-b.days||(b.bonus||0)-(a.bonus||0)||a.bank.localeCompare(b.bank))
 }
 
 function getChurnSuggestions(){
@@ -1575,7 +879,7 @@ function chartData(){
 /* Bank Identity v3.3.42
    Centralized bank matching. Display names can vary, but duplicate/churn
    matching uses canonical bank family + personal/business type. */
-const BANK_IDENTITY_VERSION='3.3.92';
+const BANK_IDENTITY_VERSION='3.3.45';
 function normBankText(v){return String(v||'').toLowerCase().replace(/[®™℠]/g,'').replace(/&/g,' and ').replace(/\*/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim()}
 function bankAliasGroups(){return[
   ['chase','CHA',['chase','jpmorgan chase','jp morgan chase','jpmorgan','jp morgan','jpm']],
@@ -1628,44 +932,46 @@ function normalizeAccountType(v){
   const s=String(v||'').toLowerCase().trim();
   if(['business','biz','b','commercial'].includes(s))return'business';
   if(['personal','consumer','individual','p'].includes(s))return'personal';
+  if(['unknown','unsure','not sure',''].includes(s))return s?'unknown':'';
   return'';
 }
 function detectAccountTypeFromText(v){
   const n=normBankText(v);
-  // Future-proof default: only mark Business when the text clearly says business.
-  // Everything else defaults to Personal so there is no Unknown lane.
-  if(!n)return'personal';
-  if(/\b(biz|business|commercial|merchant|treasury|sboffer|llc|pllc|ein|dba|sole prop|sole proprietor|business complete|business advantage|performance business|enhanced business|basic business|business checking|small business)\b/i.test(n))return'business';
-  return'personal';
+  if(!n)return'unknown';
+  if(/(biz|business|commercial|merchant|treasury|sboffer|llc|pllc|ein|dba|sole prop|sole proprietor|business complete|business advantage|performance business|enhanced business|basic business|business checking|small business)/i.test(n))return'business';
+  if(/(personal|consumer|individual|household|total checking|safebalance|advantage plus|advantage relationship|smartly|virtual wallet|life green|lifegreen|bloom|foundation checking|pillar banking|max rate|maxrate|everyday checking|college checking|sapphire checking|premier plus checking|checking and savings combo)/i.test(n))return'personal';
+  return'unknown';
 }
 function inferAccountTypeForEntry(e){
   const explicit=normalizeAccountType(e&&e.accountType);
-  if(explicit)return explicit;
+  if(explicit&&explicit!=='unknown')return explicit;
+  const text=[e&&e.bank,e&&e.acct,e&&e.accountName,e&&e.analyzedTC,e&&e.completeBonusText,e&&e.eligibilityText,e&&e.notes].filter(Boolean).join(' ');
+  const detected=detectAccountTypeFromText(text);
+  if(detected!=='unknown')return detected;
   const id=String((e&&e.id)||'').toUpperCase();
   const m=id.match(/^[A-Z0-9]{3}-([PB])-\d{2}$/);
   if(m)return m[1]==='B'?'business':'personal';
-  const text=[e&&e.bank,e&&e.acct,e&&e.accountName,e&&e.analyzedTC,e&&e.completeBonusText,e&&e.eligibilityText,e&&e.notes].filter(Boolean).join(' ');
-  return detectAccountTypeFromText(text);
+  return'unknown';
 }
 function accountTypeCode(v){
-  const t=(v&&typeof v==='object')?inferAccountTypeForEntry(v):(normalizeAccountType(v)||detectAccountTypeFromText(v));
+  const t=normalizeAccountType(v)||inferAccountTypeForEntry(v)||'unknown';
   return t==='business'?'B':'P';
 }
 function accountTypeLabel(v){
-  const t=(v&&typeof v==='object')?inferAccountTypeForEntry(v):(normalizeAccountType(v)||detectAccountTypeFromText(v));
-  return t==='business'?'Business':'Personal';
+  const t=normalizeAccountType(v)||inferAccountTypeForEntry(v)||'unknown';
+  return t==='business'?'Business':t==='personal'?'Personal':'Unknown';
 }
 function accountTypeChipHtml(e){
-  const t=inferAccountTypeForEntry(e);
-  const cls=t==='business'?'c2':'c1';
-  const label=t==='business'?'BUSINESS':'PERSONAL';
-  return '<span class="card-mini-chip acct-type-chip '+cls+'">'+label+'</span>'
+  const t=normalizeAccountType(e&&e.accountType)||inferAccountTypeForEntry(e)||'unknown';
+  const cls=t==='business'?'c2':t==='personal'?'c1':'c3';
+  const label=t==='business'?'BUSINESS':t==='personal'?'PERSONAL':'UNKNOWN';
+  return '<span class="card-mini-chip '+cls+'">'+label+'</span>'
 }
 function normalizeEntryAccountTypeRow(e){
   if(!e||typeof e!=='object')return e;
   const current=normalizeAccountType(e.accountType);
   if(current)return{...e,accountType:current};
-  return{...e,accountType:inferAccountTypeForEntry(e)||'personal'};
+  return{...e,accountType:inferAccountTypeForEntry(e)||'unknown'};
 }
 function migrateEntryAccountTypes(rows){
   let changed=false;
@@ -1676,8 +982,9 @@ function migrateEntryAccountTypes(rows){
 function syncModalAccountTypeFromBank(){
   if(!modal)return;
   const cur=normalizeAccountType(modal.accountType);
-  if(cur)return;
-  modal.accountType=detectAccountTypeFromText([modal.bank,modal.analyzedTC,modal.completeBonusText,modal.eligibilityText].filter(Boolean).join(' '));
+  if(cur&&cur!=='unknown')return;
+  const detected=detectAccountTypeFromText([modal.bank,modal.analyzedTC,modal.completeBonusText,modal.eligibilityText].filter(Boolean).join(' '));
+  if(detected!=='unknown')modal.accountType=detected;
 }
 function bankTypeInfo(name){
   const n=normBankText(name);
@@ -1770,7 +1077,7 @@ function findExistingByBank(bankName){
 function makeDuplicatePrompt(newData,existingEntry,source='manual'){
   return{newData,existingEntry,mode:isActiveEntry(existingEntry)?'active':'history',source};
 }
-function entryTypeLabel(x){const t=(x&&typeof x==='object')?entryBankType(x):bankTypeCode(x);return t==='B'?'Business':'Personal'}
+function entryTypeLabel(x){const explicit=normalizeAccountType(x&&x.accountType);if(explicit==='unknown')return'Unknown';const t=(x&&typeof x==='object')?entryBankType(x):bankTypeCode(x);return t==='B'?'Business':'Personal'}
 function sortMatchChoices(bankName,matches){
   const wanted=bankIdentity(bankName);
   return[...matches].sort((a,b)=>{
@@ -1790,103 +1097,6 @@ function handleDuplicateFlow(newData,source='manual'){
   if(!matches.length)return false;
   if(matches.length>1){matchPickerPrompt={newData,matches,source,identity:bankIdentity(bank)};return true;}
   overwritePrompt=makeDuplicatePrompt(newData,matches[0],source);return true;
-}
-function replaceCandidateStatus(e){
-  try{return status(e)||''}catch{return''}
-}
-function isOldReplacementCandidate(e){
-  if(!e||!e.bank)return false;
-  const st=replaceCandidateStatus(e);
-  return !!(e.closed||/CHURN|READY|WAITING/i.test(st)||!isActiveEntry(e))
-}
-function replacementCandidateScore(newData,e){
-  if(!e)return 9999;
-  const ni=entryBankIdentity(newData||{}), ei=entryBankIdentity(e);
-  let score=0;
-  if(ei.family!==ni.family)score+=80;
-  if(ei.type!==ni.type)score+=15;
-  if(!isOldReplacementCandidate(e))score+=25;
-  if(isActiveEntry(e))score+=20;
-  if(e.closed)score-=8;
-  if(/TIME TO CHURN|READY/i.test(replaceCandidateStatus(e)))score-=12;
-  return score
-}
-function replacementCandidateLabel(e){
-  const st=replaceCandidateStatus(e);
-  const bits=[];
-  bits.push(entryTypeLabel(e));
-  if(st)bits.push(st);
-  if(e.opened)bits.push('Opened '+fD(e.opened));
-  if(e.closed)bits.push('Closed '+fD(e.closed));
-  if(e.bonus)bits.push(fM(e.bonus));
-  bits.push('ID '+(getEntryDisplayId(e)||e.id||''));
-  return (e.bank||'Unknown')+' — '+bits.join(' · ')
-}
-function getManualReplacementCandidates(newData,currentId=''){
-  return entries
-    .filter(e=>e&&e.bank&&e.id!==currentId)
-    .sort((a,b)=>replacementCandidateScore(newData,a)-replacementCandidateScore(newData,b)||entryRecencyDate(b).localeCompare(entryRecencyDate(a))||String(a.bank||'').localeCompare(String(b.bank||'')))
-    .slice(0,80)
-}
-function handleManualReplacementPicker(newData,source='manual',currentId=''){
-  if(!newData||!newData.bank)return false;
-  const candidates=getManualReplacementCandidates(newData,currentId);
-  if(!candidates.length)return false;
-  replacementPickerPrompt={
-    newData,
-    candidates,
-    selectedId:candidates[0]?.id||'',
-    source,
-    currentId,
-    title:currentId?'Replace old entry from Edit?':'Replace an old entry?',
-    message:currentId
-      ?'Choose an old/cooldown/ready entry to overwrite with this edited entry. This removes the duplicate you are editing.'
-      :'Choose an old/cooldown/ready entry to replace, or create this as a separate new entry.'
-  };
-  return true
-}
-function setReplacementPickerTarget(id){if(replacementPickerPrompt){replacementPickerPrompt.selectedId=id;R()}}
-function doReplacementPickerReplace(){
-  if(!replacementPickerPrompt)return;
-  const p=replacementPickerPrompt;
-  const picked=p.candidates.find(x=>x.id===p.selectedId);
-  if(!picked){alert('Choose an old entry first.');return}
-  overwritePrompt=makeDuplicatePrompt(p.newData,picked,p.source||'manual-picker');
-  overwritePrompt.removeEntryId=p.currentId||'';
-  replacementPickerPrompt=null;
-  expanded=picked.id;tab='tracker';search='';
-  R()
-}
-function doReplacementPickerCreateSeparate(){
-  if(!replacementPickerPrompt)return;
-  const p=replacementPickerPrompt;
-  const d={...p.newData};
-  const next=assignEntryIdForCreate({...d,checklist:[],customTimers:normalizeTimerList(d.customTimers||[]),feeChecked:false});
-  hydrateTimersFromOpened(next);Object.assign(next,normalizeLifecycleEntry(next));
-  entries.push(next);entries=sortE(entries);sv(SK,entries);
-  syncProfileEventsFromEntry(next);refreshSavedReqFromEntry(next);learnAnalyzerMemoryFromEntry(next);
-  replacementPickerPrompt=null;modal=null;expanded=next.id;tab='tracker';search='';showInlineAZ=false;inlineResult=null;
-  R()
-}
-function doReplacementPickerBack(){
-  if(!replacementPickerPrompt)return;
-  const p=replacementPickerPrompt;
-  modal={...p.newData,checklist:Array.isArray(p.newData?.checklist)?p.newData.checklist:[],_edit:!!p.currentId,id:p.currentId||p.newData.id||'',_skipManualReplacePrompt:true};
-  replacementPickerPrompt=null;
-  R()
-}
-function beginManualReplaceFromEdit(){
-  if(!modal||!modal._edit){alert('Open an existing entry first.');return}
-  const d=collectModalEntryData();
-  if(!d)return;
-  const targetId=modal._manualReplaceTarget||'';
-  const target=entries.find(e=>e.id===targetId);
-  if(!target){alert('Choose an old entry to replace.');return}
-  if(target.id===modal.id){alert('Choose a different old entry, not the same entry you are editing.');return}
-  overwritePrompt=makeDuplicatePrompt(d,target,'edit-manual-replace');
-  overwritePrompt.removeEntryId=modal.id||'';
-  modal=null;replacementPickerPrompt=null;expanded=target.id;tab='tracker';search='';
-  R()
 }
 function dpSignature(bank,method){return bankKey(bank)+'|'+String(method||'').trim().toLowerCase()}
 function syncExistingDatapointsToDB(){const rows=loadUserDatapoints();const seen=new Set(rows.map(r=>dpSignature(r.bank,r.method)));let changed=false;entries.forEach(e=>{if(!e||!e.bank||!e.dataPoint)return;const sig=dpSignature(e.bank,e.dataPoint);if(seen.has(sig))return;rows.push(normalizeUserDatapoint({bank:e.bank,method:e.dataPoint,note:'Imported from tracker history',date:e.closed||e.bonusRecd||e.opened||td(),entryId:e.id||''}));seen.add(sig);changed=true});if(changed)saveUserDatapoints(rows)}
@@ -2019,7 +1229,7 @@ function buildTrackerNotes(r,t){
   if(t.includes('limit one'))n.push('* Limit one bonus per account/member');
   if(t.includes('cannot be combined')||t.includes('not be combined'))n.push('* Cannot be combined with other offers');
   if(t.includes('open and in good standing'))n.push('* Account must be open and in good standing at payout');
-  return n.filter(x=>x!==undefined).join('\\n');
+  return n.filter(x=>x!==undefined).join('\n');
 }
 function buildChecklistFromAnalysis(r){
   const checklist=[];
@@ -2690,7 +1900,7 @@ function analyzeTCSection(text){
     n.push('* Confidence is low on this one. Double-check the pasted terms manually.');
   }
 
-  r.notesForTracker=n.filter(Boolean).join('\\n');
+  r.notesForTracker=n.filter(Boolean).join('\n');
 
   /* ---------- checklist ---------- */
   r.checklist=[];
@@ -2865,13 +2075,12 @@ let dpSearch='',dpExpandedBankKey='';
 let profileSearch='',activeProfileKey='';
 let inlineUiState={};
 let dpEditor=null;
-let ddPrompt=null,rcvPrompt=null,reqPrompt=null,showTemplates=false;
+let ddPrompt=null,rcvPrompt=null,showTemplates=false;
 let feedItems=null,feedLoading=false;
 let undoState=null,undoTimer=null;
 let closePrompt=null;
 let overwritePrompt=null;
 let matchPickerPrompt=null;
-let replacementPickerPrompt=null;
 let feeCheckPrompt=null;
 let timerEditModal=null;
 const btPostRenderHooks=[];
@@ -2894,49 +2103,15 @@ function clearInlineInputs(id,type){if(type==='checklist'){const inp=document.ge
 function findPhone(bank,eid){if(eid){const ee=entries.find(x=>x.id===eid);if(ee&&ee.phoneNum)return ee.phoneNum}const bn=(bank||'').toLowerCase();const isBiz=bn.includes('biz')||bn.includes('business');const row=getPhoneBook().find(r=>{const bl=(r.bank||'').toLowerCase();return bn===bl||bn.includes(bl)||bl.includes(bn)||normalizeBankFamily(bn)===normalizeBankFamily(bl)});if(!row)return null;return isBiz?(row.business||row.personal):(row.personal||row.business)}
 function findPhoneLabel(bank){const bn=bank.toLowerCase();return(bn.includes('biz')||bn.includes('business'))?'Business':'Personal'}
 function callBank(id){const e=entries.find(x=>x.id===id);if(!e)return;const phone=findPhone(e.bank,id);if(phone)window.location.href='tel:'+phone.replace(/[^0-9+]/g,'');else{cfm={title:'No Number Found',msg:'No phone number found for '+e.bank+'. Check the Phone tab.',green:true,action:()=>{cfm=null;R()}};R()}}
-function undoClose(){
-  if(!undoState)return;
-  if(undoState.entriesSnapshot){
-    entries=deepCopy(undoState.entriesSnapshot)||entries;
-    saveUserDatapoints(deepCopy(undoState.userDatapointsSnapshot)||[]);
-    saveReqs(deepCopy(undoState.reqSnapshot)||{});
-    saveOfferHistory(deepCopy(undoState.offerHistorySnapshot)||{});
-    saveProfileEvents(deepCopy(undoState.profileEventsSnapshot)||[]);
-  }else{
-    entries=entries.map(e=>e.id===undoState.id?{...undoState}:e);
-  }
-  entries=sortE(entries);sv(SK,entries);
-  undoState=null;
-  if(undoTimer)clearTimeout(undoTimer);
-  R()
-}
+function undoClose(){if(!undoState)return;entries=entries.map(e=>e.id===undoState.id?{...undoState}:e);entries=sortE(entries);sv(SK,entries);undoState=null;if(undoTimer)clearTimeout(undoTimer);R()}
 let _sp=0;
 const I={grid:'<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',doc:'<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',tips:'<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>',phone:'<svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>',info:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>',profile:'<svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 9h.01"/><path d="M15 9h.01"/><path d="M9 13h.01"/><path d="M15 13h.01"/><path d="M12 21v-4"/></svg>',backup:'<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',restore:'<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',quick:'<svg viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>',trash:'<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',spark:'<svg viewBox="0 0 24 24"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.4L12 15l-1.9-4.6L5.5 9l4.6-1.4L12 3z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"/></svg>',edit:'<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>',gift:'<svg viewBox="0 0 24 24"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/></svg>',lock:'<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',clockShield:'<svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z"/><circle cx="12" cy="12" r="3.5"/><path d="M12 10.5v1.8l1.2.7"/></svg>',shieldCheck:'<svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>',refresh:'<svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10M1 14l5.36 4.36A9 9 0 0 0 20.49 15"/></svg>',alert:'<svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',target:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>',calendar:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',feed:'<svg viewBox="0 0 24 24"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>'};
-function displayStatusMeta(raw){switch(raw){case'WORKING':return{label:'Working',cls:'w',icon:I.target};case'CUSTOM TIMER':return{label:'Custom Timer',cls:'buf',icon:I.clockShield};case'REQ MET':return{label:'Req Met',cls:'req',icon:I.shieldCheck};case'WAITING TO CLOSE':return{label:'Waiting to Close',cls:'buf',icon:I.clockShield};case'3-DAY BUFFER':return{label:'3-Day Buffer',cls:'buf',icon:I.clockShield};case'SAFE TO CLOSE':return{label:'Safe to Close',cls:'stc',icon:I.shieldCheck};case'WAITING TO CHURN!':return{label:'Waiting to Churn',cls:'wt',icon:I.refresh};case'TIME TO CHURN!':return{label:'Ready to Churn',cls:'ch',icon:I.alert};default:return{label:raw||'Status',cls:'w',icon:I.info}}}
-function supportLine(e,countdown){const s=status(e);const hasEarlyFee=!!(!e.closed&&e.earlyCloseFee>0&&!e.feeChecked);if(s==='WAITING TO CHURN!'){const dl=daysLeft(e);return dl!==null?dl+'d left':'Cooling down'}if(s==='TIME TO CHURN!')return'Ready now';if(s==='CUSTOM TIMER'){const timer=nextActiveTimer(e);const d=timerCountdownDays(timer);if(timer&&d!==null){if(d<0)return'Overdue: '+timer.text;if(d===0)return'Due today: '+timer.text;return d+'d left: '+timer.text}return e.reqMet?'Req met • countdown active':'Countdown active'}if(s==='REQ MET'){if(e.reqMet){const d=Math.max(0,dB(e.reqMet,td()));return d>0?'Waiting bonus • '+d+'d since req met':'Waiting bonus'}return'Waiting bonus'}if(s==='WAITING TO CLOSE'){const d=daysUntilSafe(e);let msg=d!==null&&d>0?d+'d until safe to close':'Waiting to close';if(hasEarlyFee)msg+=' • fee if closed early';return msg}if(s==='3-DAY BUFFER'){const d=daysUntilSafe(e);let msg=d!==null&&d>0?d+'d left in buffer':'Almost there';if(hasEarlyFee)msg+=' • fee if closed early';return msg}if(s==='SAFE TO CLOSE'){return(e.earlyCloseFee>0||e.minHoldDays>0)?'Bonus received • close when ready':'Bonus received • ready when you are'}if(s==='WORKING'){if(countdown&&countdown.lbl==='Req deadline'&&countdown.days>0)return countdown.days+'d to requirement deadline';if(countdown&&countdown.lbl==='Req deadline'&&countdown.days===0)return'Requirement deadline today';if(countdown&&countdown.lbl==='Req deadline'&&countdown.days<0)return'Missed requirement deadline';if(e.opened){const openDays=dB(e.opened,td());if(openDays>0)return openDays+'d open'}return'In progress'}return''}
+function displayStatusMeta(raw){switch(raw){case'WORKING':return{label:'Working',cls:'w',icon:I.target};case'CUSTOM TIMER':return{label:'Custom Timer',cls:'buf',icon:I.clockShield};case'REQ MET':return{label:'Req Met',cls:'req',icon:I.shieldCheck};case'PLANNED CLOSE':return{label:'Close Planned',cls:'wt',icon:I.lock};case'WAITING TO CLOSE':return{label:'Waiting to Close',cls:'buf',icon:I.clockShield};case'3-DAY BUFFER':return{label:'3-Day Buffer',cls:'buf',icon:I.clockShield};case'SAFE TO CLOSE':return{label:'Safe to Close',cls:'stc',icon:I.shieldCheck};case'WAITING TO CHURN!':return{label:'Waiting to Churn',cls:'wt',icon:I.refresh};case'TIME TO CHURN!':return{label:'Ready to Churn',cls:'ch',icon:I.alert};default:return{label:raw||'Status',cls:'w',icon:I.info}}}
+function supportLine(e,countdown){const s=status(e);const hasEarlyFee=!!(!e.closed&&e.earlyCloseFee>0&&!e.feeChecked);if(s==='WAITING TO CHURN!'){const dl=daysLeft(e);return dl!==null?dl+'d left':'Cooling down'}if(s==='TIME TO CHURN!')return'Ready now';if(s==='CUSTOM TIMER'){const timer=nextActiveTimer(e);const d=timerCountdownDays(timer);if(timer&&d!==null){if(d<0)return'Overdue: '+timer.text;if(d===0)return'Due today: '+timer.text;return d+'d left: '+timer.text}return e.reqMet?'Req met • countdown active':'Countdown active'}if(s==='REQ MET'){if(e.reqMet){const d=Math.max(0,dB(e.reqMet,td()));return d>0?'Waiting bonus • '+d+'d since req met':'Waiting bonus'}return'Waiting bonus'}if(s==='PLANNED CLOSE'){const d=e.plannedClose?dB(td(),e.plannedClose):null;if(d!==null){let msg=d>0?d+'d to planned close':'Ready to close';if(hasEarlyFee)msg+=' • check close fee';return msg}return'Close planned'}if(s==='WAITING TO CLOSE'){const d=daysUntilSafe(e);let msg=d!==null&&d>0?d+'d until safe to close':'Waiting to close';if(hasEarlyFee)msg+=' • fee if closed early';return msg}if(s==='3-DAY BUFFER'){const d=daysUntilSafe(e);let msg=d!==null&&d>0?d+'d left in buffer':'Almost there';if(hasEarlyFee)msg+=' • fee if closed early';return msg}if(s==='SAFE TO CLOSE'){return(e.earlyCloseFee>0||e.minHoldDays>0)?'Bonus received • close when ready':'Bonus received • ready when you are'}if(s==='WORKING'){if(countdown&&countdown.lbl==='Req deadline'&&countdown.days>0)return countdown.days+'d to requirement deadline';if(countdown&&countdown.lbl==='Req deadline'&&countdown.days===0)return'Requirement deadline today';if(countdown&&countdown.lbl==='Req deadline'&&countdown.days<0)return'Missed requirement deadline';if(e.opened){const openDays=dB(e.opened,td());if(openDays>0)return openDays+'d open'}return'In progress'}return''}
 function statusBadgeHtml(e,countdown){const meta=displayStatusMeta(status(e));const support=supportLine(e,countdown);return'<span class="badge '+meta.cls+'">'+meta.icon+'<span>'+esc(meta.label)+'</span></span>'+(support?'<div class="card-subline">'+esc(support)+'</div>':'')}
 function quickBtn(cls,icon,label,onclick){return'<button class="qbtn '+cls+'" onclick="'+onclick+'">'+icon+'<span>'+label+'</span></button>'}
 function actionBtn(cls,icon,label,onclick){return'<button class="cbtn '+cls+'" onclick="'+onclick+'">'+icon+'<span>'+label+'</span></button>'}
-function highlightTC(text){
-  if(!text)return'';
-  let h=esc(cleanDisplayText(text));
-  h=h.replace(/^(REQUIREMENTS:|DIRECT DEPOSIT RULES:|ADDITIONAL BONUSES:|FEES &amp; TIMING:|CHURN &amp; TAX:)/gm,'<span class="hl-section">$1</span>');
-  h=h.replace(/\* (Step \d+:)/g,'* <span class="hl-step">$1</span>');
-  h=h.replace(/(\$[\d,]+(?:\.\d+)?)/g,'<span class="hl-money">$1</span>');
-  h=h.replace(/(\d+\s+(?:days?|months?|weeks?|consecutive\s+days|statement\s+cycles?))/gi,'<span class="hl-days">$1</span>');
-  h=h.replace(/(within\s+\d+\s+\w+)/gi,'<span class="hl-days">$1</span>');
-  h=h.replace(/(NOT count|does NOT|do not qualify|not eligible|cannot be combined|not be combined|ineligible)/gi,'<span class="hl-warn">$1</span>');
-  h=h.replace(/(clawback|penalty|early close|termination fee|fee if closed)/gi,'<span class="hl-fee">$1</span>');
-  h=h.replace(/(?:code[:\s]+)([A-Z0-9]{3,})/g,'code: <span class="hl-code">$1</span>');
-  h=h.replace(/(\$0 \(No fee\)|No fee|None|Safe anytime|free checking)/gi,'<span class="hl-good">$1</span>');
-  h=h.replace(/(Zelle|P2P|Micro-deposits?|person-to-person)/gi,'<span class="hl-warn">$1</span>');
-  return h
-}
-function renderAnalyzedTermsCard(e){
-  if(!e||!e.analyzedTC)return'';
-  return '<details class="clean-details tc-clean-details"><summary>T&amp;C Analysis <span>View</span></summary><div class="tc-body clean-tc-body">'+highlightTC(e.analyzedTC)+'</div></details>'
-}
-
+function highlightTC(text){if(!text)return'';let h=esc(text);h=h.replace(/^(REQUIREMENTS:|DIRECT DEPOSIT RULES:|ADDITIONAL BONUSES:|FEES &amp; TIMING:|CHURN &amp; TAX:)/gm,'<span class="hl-section">$1</span>');h=h.replace(/\* (Step \d+:)/g,'* <span class="hl-step">$1</span>');h=h.replace(/(\$[\d,]+(?:\.\d+)?)/g,'<span class="hl-money">$1</span>');h=h.replace(/(\d+\s+(?:days?|months?|weeks?|consecutive\s+days|statement\s+cycles?))/gi,'<span class="hl-days">$1</span>');h=h.replace(/(within\s+\d+\s+\w+)/gi,'<span class="hl-days">$1</span>');h=h.replace(/(NOT count|does NOT|do not qualify|not eligible|cannot be combined|not be combined|ineligible)/gi,'<span class="hl-warn">$1</span>');h=h.replace(/(clawback|penalty|early close|termination fee|fee if closed)/gi,'<span class="hl-fee">$1</span>');h=h.replace(/(?:code[:\s]+)([A-Z0-9]{3,})/g,'code: <span class="hl-code">$1</span>');h=h.replace(/(\$0 \(No fee\)|No fee|None|Safe anytime|free checking)/gi,'<span class="hl-good">$1</span>');h=h.replace(/(Zelle|P2P|Micro-deposits?|person-to-person)/gi,'<span class="hl-warn">$1</span>');return h}
 
 function profileGroupMatchKey(groupKey, bankName){return bankKey(bankName||'')===groupKey}
 function removeProfileReqsByGroupKey(groupKey){
@@ -3023,7 +2198,7 @@ function clearProfileMilestone(entryId,type){
   const entry=entries.find(e=>e.id===entryId);
   if(!entry||!field)return;
   cfm={title:'Clear milestone',msg:'Clear '+type+' for '+entry.bank+'?',action:()=>{
-    entries=entries.map(e=>e.id===entryId?{...e,[field]:'',...(field==='closed'?{feeChecked:false}:{})}:e);
+    entries=entries.map(e=>e.id===entryId?{...e,[field]:'',...(field==='closed'?{feeChecked:false}:{}),...(field==='bonusRecd'?{plannedClose:''}:{})}:e);
     sv(SK,entries);
     const updated=entries.find(e=>e.id===entryId);
     if(updated){syncProfileEventsFromEntry(updated);refreshSavedReqFromEntry(updated)}
@@ -3066,8 +2241,8 @@ function openBankProfileFromBank(bankEnc){const bank=decodeURIComponent(bankEnc|
 function openBankProfileFromKey(key){if(!key)return;activeProfileKey=key;profileSearch='';tab='profiles';expanded=null;R();setTimeout(()=>{const sc=document.querySelector('.scroll');if(sc)sc.scrollTop=0},0)}
 function closeActiveProfile(){activeProfileKey='';R();setTimeout(()=>{const sc=document.querySelector('.scroll');if(sc)sc.scrollTop=0},0)}
 function profileTimelineDate(e){return e?.closed||e?.bonusRecd||e?.opened||''}
-function profileRuleForBank(bank){const carrier=(bank&&typeof bank==='object')?bank:{bank};const wanted=entryBankIdentity(carrier);const same=RULES.filter(r=>{const rb=r&&r[0]||'';if(!rb)return false;const ri=entryBankIdentity({bank:rb,accountType:detectAccountTypeFromText(rb)});if(ri.family!==wanted.family)return false;const rowExplicit=bankTypeInfo(rb).explicit;if((carrier.accountType&&['personal','business'].includes(normalizeAccountType(carrier.accountType)))||wanted.typeExplicit&&rowExplicit)return ri.type===wanted.type;return true});return same.sort((a,b)=>{const ai=entryBankIdentity({bank:a[0]||'',accountType:detectAccountTypeFromText(a[0]||'')}),bi=entryBankIdentity({bank:b[0]||'',accountType:detectAccountTypeFromText(b[0]||'')});const ae=ai.key===wanted.key?0:1,be=bi.key===wanted.key?0:1;if(ae!==be)return ae-be;return String(b[0]||'').length-String(a[0]||'').length})[0]||null}
-function profileReqForBank(bank){const reqs=Object.values(loadReqs()||{});const carrier=(bank&&typeof bank==='object')?bank:{bank};const wanted=entryBankIdentity(carrier);const explicit=!!(carrier.accountType&&['personal','business'].includes(normalizeAccountType(carrier.accountType)));const matches=reqs.filter(r=>{const rb=r&&r.bank||'';if(!rb)return false;const ri=entryBankIdentity(r);if(ri.family!==wanted.family)return false;if(explicit||wanted.typeExplicit)return ri.type===wanted.type;return true});return matches.sort((a,b)=>{const ai=entryBankIdentity(a),bi=entryBankIdentity(b);const ae=ai.key===wanted.key?0:1,be=bi.key===wanted.key?0:1;if(ae!==be)return ae-be;return String(b.bank||'').length-String(a.bank||'').length})[0]||null}
+function profileRuleForBank(bank){const carrier=(bank&&typeof bank==='object')?bank:{bank};const wanted=entryBankIdentity(carrier);const same=RULES.filter(r=>{const rb=r&&r[0]||'';if(!rb)return false;const ri=entryBankIdentity({bank:rb,accountType:detectAccountTypeFromText(rb)});if(ri.family!==wanted.family)return false;const rowExplicit=bankTypeInfo(rb).explicit;if((carrier.accountType&&normalizeAccountType(carrier.accountType)!=='unknown')||wanted.typeExplicit&&rowExplicit)return ri.type===wanted.type;return true});return same.sort((a,b)=>{const ai=entryBankIdentity({bank:a[0]||'',accountType:detectAccountTypeFromText(a[0]||'')}),bi=entryBankIdentity({bank:b[0]||'',accountType:detectAccountTypeFromText(b[0]||'')});const ae=ai.key===wanted.key?0:1,be=bi.key===wanted.key?0:1;if(ae!==be)return ae-be;return String(b[0]||'').length-String(a[0]||'').length})[0]||null}
+function profileReqForBank(bank){const reqs=Object.values(loadReqs()||{});const carrier=(bank&&typeof bank==='object')?bank:{bank};const wanted=entryBankIdentity(carrier);const explicit=!!(carrier.accountType&&normalizeAccountType(carrier.accountType)!=='unknown');const matches=reqs.filter(r=>{const rb=r&&r.bank||'';if(!rb)return false;const ri=entryBankIdentity(r);if(ri.family!==wanted.family)return false;if(explicit||wanted.typeExplicit)return ri.type===wanted.type;return true});return matches.sort((a,b)=>{const ai=entryBankIdentity(a),bi=entryBankIdentity(b);const ae=ai.key===wanted.key?0:1,be=bi.key===wanted.key?0:1;if(ae!==be)return ae-be;return String(b.bank||'').length-String(a.bank||'').length})[0]||null}
 function profilePhoneForBank(bank){const wanted=bankIdentity(bank);const rows=getPhoneBook().filter(r=>{const rb=r&&r.bank||'';if(!rb)return false;const ri=bankIdentity(rb);if(ri.family!==wanted.family)return false;if(wanted.typeExplicit)return ri.type===wanted.type;return true});return rows.sort((a,b)=>{const ai=bankIdentity(a.bank||''),bi=bankIdentity(b.bank||'');const ae=ai.key===wanted.key?0:1,be=bi.key===wanted.key?0:1;if(ae!==be)return ae-be;return String(b.bank||'').length-String(a.bank||'').length})[0]||null}
 function profileMethodFailed(text){return /fail|failed|did not|didn't|didnt|not work|unreliable|rejected|declined|mixed|no longer/i.test(String(text||''))}
 function buildProfileGroups(){const map=new Map();const ensure=(bank)=>{const key=bankKey(bank||'Unknown Bank');if(!map.has(key))map.set(key,{key,bank:bank||'Unknown Bank',entries:[],user:[],community:[],rule:null,req:null,phone:null});const cur=map.get(key);if((cur.bank||'').length<(bank||'').length)cur.bank=bank;return cur};entries.forEach(e=>{if(e&&e.bank&&e.opened)ensure(e.bank).entries.push(e)});const getGroup=bank=>map.get(bankKey(bank||''))||null;loadUserDatapoints().forEach(item=>{const g=item&&item.bank?getGroup(item.bank):null;if(g)g.user.push(item)});getCommunityDatapoints().forEach(item=>{const g=item&&item.bank?getGroup(item.bank):null;if(g)g.community.push(item)});RULES.forEach(row=>{const g=getGroup(row&&row[0]);if(g&&(!g.rule||String(row[0]||'').length>String(g.rule?.[0]||'').length))g.rule=row});Object.values(loadReqs()||{}).forEach(r=>{const g=r&&r.bank?getGroup(r.bank):null;if(g&&(!g.req||String(r.bank||'').length>String(g.req?.bank||'').length))g.req=r});getPhoneBook().forEach(r=>{const g=r&&r.bank?getGroup(r.bank):null;if(g&&(!g.phone||String(r.bank||'').length>String(g.phone?.bank||'').length))g.phone=r});return Array.from(map.values()).map(g=>{g.entries=g.entries.sort((a,b)=>profileTimelineDate(b).localeCompare(profileTimelineDate(a)));g.activeEntry=g.entries.find(e=>e&&e.bank&&!e.closed)||null;g.cooldownEntry=g.entries.find(e=>['WAITING TO CHURN!','TIME TO CHURN!'].includes(status(e)))||null;g.rule=g.rule||profileRuleForBank(g.bank);g.req=g.req||profileReqForBank(g.bank);g.phone=g.phone||profilePhoneForBank(g.bank);g.completedEntries=g.entries.filter(e=>taxReady(e));g.receivedEntries=g.entries.filter(e=>isEarnedBonus(e));g.lifetime=g.completedEntries.reduce((s,e)=>s+(e.bonus||0),0);g.currentStatus=g.activeEntry?status(g.activeEntry):(g.cooldownEntry?status(g.cooldownEntry):(g.completedEntries.length?'ARCHIVED':'NO HISTORY'));g.nextReopen=g.cooldownEntry?nextReopen(g.cooldownEntry):'';g.confirmedWorked=g.user.filter(x=>!profileMethodFailed((x.note||'')+' '+(x.method||'')));g.confirmedFailed=g.user.filter(x=>profileMethodFailed((x.note||'')+' '+(x.method||'')));g.communityWarnings=g.community.filter(x=>profileMethodFailed((x.result||'')+' '+(x.method||'')));g.communityHelpful=g.community.filter(x=>!profileMethodFailed((x.result||'')+' '+(x.method||'')));g.activeCount=g.entries.filter(e=>e&&e.bank&&!e.closed).length;return g}).sort((a,b)=>{const aPri=a.activeCount?0:(a.cooldownEntry?1:2);const bPri=b.activeCount?0:(b.cooldownEntry?1:2);return aPri-bPri||b.lifetime-a.lifetime||b.completedEntries.length-a.completedEntries.length||a.bank.localeCompare(b.bank)})}
@@ -3253,24 +2428,18 @@ function getDataHealthIssues(){
   const activeByBank={};
   entries.forEach(e=>{if(!e||!e.bank)return;const key=entryBankKey(e);if(!e.closed){if(!activeByBank[key])activeByBank[key]=[];activeByBank[key].push(e)}});
   Object.values(activeByBank).forEach(rows=>{if(rows.length>1)healthAdd(issues,'amber','Multiple active entries for same bank',`${rows.map(x=>x.bank).join(', ')} are open at the same time. This may be okay, but review for duplicates.`,rows[0].id)});
-  const dateFields=[['opened','Opened'],['closed','Closed'],['bonusRecd','Bonus received'],['reqMet','Requirement met']];
+  const dateFields=[['opened','Opened'],['closed','Closed'],['bonusRecd','Bonus received'],['reqMet','Requirement met'],['plannedClose','Planned close']];
   entries.forEach(e=>{
     if(!e||!e.bank)return;
     dateFields.forEach(([key,label])=>{const val=e[key];if(val&&!isRealDateString(val))healthAdd(issues,'red','Invalid date',`${e.bank}: ${label} date is not valid (${val}).`,e.id);else if(val&&dB(td(),val)>0)healthAdd(issues,'amber','Future date check',`${e.bank}: ${label} is in the future (${fD(val)}).`,e.id)});
     if(e.opened&&e.closed&&dB(e.opened,e.closed)<0)healthAdd(issues,'red','Closed before opened',`${e.bank}: Closed date is before opened date.`,e.id);
     if(e.opened&&e.bonusRecd&&dB(e.opened,e.bonusRecd)<0)healthAdd(issues,'amber','Bonus received before opened',`${e.bank}: Bonus received date is before opened date.`,e.id);
-    if(e.reqMet&&e.bonusRecd&&dB(e.reqMet,e.bonusRecd)<0)healthAdd(issues,'red','Lifecycle date order',`${e.bank}: Requirement met date is after bonus received date.`,e.id);
-    if(e.closed&&isFutureDate(e.closed))healthAdd(issues,'red','Future closed date',`${e.bank}: Closed date is in the future. Clear it unless the bank is already closed.`,e.id);
-    if(e.bonusRecd&&!e.reqMet)healthAdd(issues,'amber','Missing requirement met date',`${e.bank}: Bonus is received but Requirement Met date is blank.`,e.id);
-    const stale=staleLifecycleTimers(e);
-    if(stale.length)healthAdd(issues,'amber','Stale lifecycle timer',`${e.bank}: ${stale.length} old funding/requirement/payout timer(s) are no longer controlling status because the lifecycle moved forward.`,e.id);
-    if(!['personal','business'].includes(normalizeAccountType(e.accountType)))healthAdd(issues,'amber','Missing account type',`${e.bank}: Account type was missing and should be set to Personal or Business.`,e.id);
     if(e.closed&&!e.churn)healthAdd(issues,'red','Missing churn rule',`${e.bank}: Closed entry has no churn rule, so the reopen countdown cannot be trusted.`,e.id);
     if(e.closed&&(e.bonus||0)>0&&!e.bonusRecd)healthAdd(issues,'red','Tax-ready data missing',`${e.bank}: Closed with a bonus amount but missing Bonus Received date.`,e.id);
     if(e.closed&&e.bonusRecd&&!(e.bonus>0))healthAdd(issues,'amber','Closed with $0 bonus',`${e.bank}: Closed and has a received date, but bonus amount is $0.`,e.id);
     if(!e.opened&&!e.closed)healthAdd(issues,'blue','Draft entry',`${e.bank}: Missing opened date. It will stay as a draft until opened date is added.`,e.id);
     if(!e.closed&&!e.bonusRecd&&e.opened&&e.reqDays>0&&daysToDeadline(e)<0)healthAdd(issues,'red','Requirement deadline passed',`${e.bank}: Requirement deadline appears overdue by ${Math.abs(daysToDeadline(e))} day(s).`,e.id);
-    if(!e.closed&&e.bonusRecd&&!(e.minHoldDays>0)&&!e.feeChecked)healthAdd(issues,'amber','Review close timing',`${e.bank}: Bonus received. Use Close Now only after the account is actually closed.`,e.id);
+    if(!e.closed&&e.bonusRecd&&!e.plannedClose&&!(e.minHoldDays>0)&&!e.feeChecked)healthAdd(issues,'amber','Review close timing',`${e.bank}: Bonus received but no planned close date or close-fee timer is set.`,e.id);
     if(!e.closed&&(e.bonus||0)>0&&!e.churn)healthAdd(issues,'amber','Missing churn rule',`${e.bank}: Bonus amount is set but churn rule is blank.`,e.id);
   });
   const rank={red:0,amber:1,blue:2};
@@ -3291,207 +2460,20 @@ function rHealth(){
   h+='</div>';
   return h;
 }
-
-function deepCopy(v){
-  try{return JSON.parse(JSON.stringify(v))}
-  catch{return v}
-}
-function closeUndoSnapshot(entry){
-  return {
-    id:entry?.id||'',
-    bank:entry?.bank||'',
-    entry:deepCopy(entry||{}),
-    entriesSnapshot:deepCopy(entries||[]),
-    userDatapointsSnapshot:deepCopy(loadUserDatapoints()),
-    reqSnapshot:deepCopy(loadReqs()),
-    offerHistorySnapshot:deepCopy(loadOfferHistory()),
-    profileEventsSnapshot:deepCopy(loadProfileEvents())
-  }
-}
-function isFutureDate(d){
-  return !!(d&&dB(td(),d)>0)
-}
-function closeRiskDate(e){
-  return e&&e.opened&&e.minHoldDays>0?safeCloseDate(e):''
-}
-function closeRiskWarnings(e,closeDate){
-  const w=[];
-  if(!e)return w;
-  if(!e.opened)w.push('Opened date is blank, so hold/churn history may be less reliable.');
-  const safe=closeRiskDate(e);
-  if(safe&&closeDate&&dB(closeDate,safe)>0){
-    const fee=e.earlyCloseFee>0?' Possible fee: '+fM(e.earlyCloseFee)+'.':'';
-    w.push('Close date is before the safe-close date '+fD(safe)+'.'+fee);
-  }
-  if(e.bonusRecd&&closeDate&&dB(e.bonusRecd,closeDate)<0)w.push('Close date is before the bonus received date.');
-  return w
-}
-function bonusReceiveWarnings(e,date){
-  const w=[];
-  if(!date)w.push('Bonus received date is blank.');
-  if(date&&isFutureDate(date))w.push('Bonus received date is in the future.');
-  if(e?.opened&&date&&dB(e.opened,date)<0)w.push('Bonus received date is before the opened date.');
-  if(e?.closed&&date&&dB(date,e.closed)<0)w.push('Bonus received date is after the closed date.');
-  return w
-}
-function closeActualWarnings(e,p){
-  const actual=Number(p?.actualBonus||0);
-  const projected={...(e||{}),bonusRecd:(actual>0?(p?.bonusDate||e?.bonusRecd||''):(e?.bonusRecd||'')),reqMet:(actual>0?(p?.reqDate||e?.reqMet||p?.bonusDate||''):(e?.reqMet||'')),monthlyFeeChecked:!!p?.monthlyFeeChecked};
-  const w=closeSafetyWarnings(e,p);
-  closeRiskWarnings(projected,p?.closeDate).forEach(x=>w.push(x));
-  if(isFutureDate(p?.closeDate))w.push('Close date is in the future. The app will still mark it closed using the picked date.');
-  if(actual>0){
-    if(!p.bonusDate)w.push('Bonus received date is blank.');
-    if(p.bonusDate&&p.closeDate&&dB(p.bonusDate,p.closeDate)<0)w.push('Bonus received date is after the close date.');
-    if(e?.opened&&p.bonusDate&&dB(e.opened,p.bonusDate)<0)w.push('Bonus received date is before the opened date.');
-    if(p.reqDate&&p.bonusDate&&dB(p.reqDate,p.bonusDate)<0)w.push('Requirement met date is after the bonus received date.');
-    if(e?.opened&&p.reqDate&&dB(e.opened,p.reqDate)<0)w.push('Requirement met date is before the opened date.');
-  }
-  closeReadiness(projected,p?.closeDate).warnings.forEach(x=>w.push(x));
-  if(p&&p.monthlyFeeChecked===false)w.push('Monthly fee was not checked before close.');
-  return Array.from(new Set(w.filter(Boolean)))
-}
 function closeSafetyWarnings(e,p){
   const w=[];
   if(!e)w.push('Original tracker entry was not found.');
   if(!p.closeDate)w.push('Close date is blank.');
   if(e?.opened&&p.closeDate&&dB(e.opened,p.closeDate)<0)w.push('Close date is before the opened date.');
-  if(e?.closed)w.push('This entry already has a closed date.');
-  if(e?.bonus&&Number(p.actualBonus||0)===0)w.push('Expected bonus is '+fM(e.bonus)+' but actual bonus is $0.');
+  if(e?.bonus&&p.actualBonus===0)w.push('Expected bonus is '+fM(e.bonus)+' but actual bonus is $0.');
   if((p.actualBonus||0)>0&&!e?.bank)w.push('Bank name is missing.');
   if((p.actualBonus||0)>0&&!p.closeDate)w.push('Bonus cannot be tax-ready without a close date.');
+  if((p.actualBonus||0)>0&&!e?.bonusRecd)w.push('Bonus received date is blank, so the close date will be used as the received date.');
   if(e&&!e.churn)w.push('Churn rule is blank, so reopen countdown will not be reliable.');
   return w;
 }
 
-
-function closeRuleLooksLikeMonthlyFee(e){
-  const txt=String([e?.closeRuleText,e?.earlyTerminationFeeText,e?.monthlyFeeYNText,e?.avoidMonthlyFeeText,e?.monthlyFeeAmountText,e?.monthlyFeeWaiverText].filter(Boolean).join(' '));
-  return /(monthly account fee|monthly service fee|monthly maintenance fee|monthly fee|service charge|maintenance fee|average monthly balance|fee waived|waived with|avoid monthly|paper statement fee|statement fee)/i.test(txt)
-}
-
-function firstPositiveInt(){
-  for(let i=0;i<arguments.length;i++){
-    const v=parseInt(arguments[i],10);
-    if(Number.isFinite(v)&&v>0)return v;
-  }
-  return 0
-}
-function closeHoldDisplayValue(e){
-  const a=parseInt(e?.closeFeeCountdownDays,10);
-  if(Number.isFinite(a)&&a>0)return String(a);
-  const b=parseInt(e?.minHoldDays,10);
-  if(Number.isFinite(b)&&b>0)return String(b);
-  return ''
-}
-function closeHoldRelevantText(e){
-  return String([
-    e?.closeRuleText,
-    e?.earlyTerminationFeeText,
-    e?.notes,
-    e?.dataPoint,
-    e?.analyzedTC,
-    e?.eligibilityText,
-    e?.completeBonusText
-  ].filter(Boolean).join(' ')).replace(/\s+/g,' ').trim()
-}
-function inferCloseHoldDaysFromEntry(e){
-  const txt=closeHoldRelevantText(e);
-  if(!txt)return 0;
-  if(/monthly account fee|monthly service fee|monthly maintenance fee|monthly fee|service charge|maintenance fee|average monthly balance|fee waived|waived with|avoid monthly|paper statement fee|statement fee/i.test(txt)&&!/closed?|closing|close|early termination|early close|forfeit|clawback/i.test(txt))return 0;
-  const patterns=[
-    /(?:closed?|closing|close)[^.]{0,100}(?:<|less than|within|before)\s*(\d{2,4})\s*days?/i,
-    /\$?\s*\d+(?:\.\d{1,2})?[^.]{0,80}(?:fee|penalty|charge)[^.]{0,80}(?:closed?|closing|close)[^.]{0,80}(?:<|less than|within|before)\s*(\d{2,4})\s*days?/i,
-    /(?:fee|penalty|charge)[^.]{0,80}(?:if|when)[^.]{0,80}(?:closed?|closing|close)[^.]{0,80}(?:<|less than|within|before)\s*(\d{2,4})\s*days?/i,
-    /(?:keep|remain|maintain)[^.]{0,80}open[^.]{0,80}(\d{2,4})\s*days?/i,
-    /(\d{2,4})\s*days?[^.]{0,80}(?:after|from)[^.]{0,80}(?:opened|opening|account opening|open date)/i,
-    /(?:early termination|early close|close fee)[^.]{0,120}(\d{2,4})\s*days?/i
-  ];
-  for(const re of patterns){
-    const m=txt.match(re);
-    if(m){
-      const n=parseInt(m[1],10)||0;
-      if(n>0&&n<=730)return n;
-    }
-  }
-  return 0
-}
-function repairManualCloseHoldFields(x){
-  if(!x||typeof x!=='object')return x;
-  let n=firstPositiveInt(x.minHoldDays,x.closeFeeCountdownDays);
-  if(!n)n=inferCloseHoldDaysFromEntry(x);
-  if(n>0&&n<=730){
-    x.minHoldDays=n;
-    x.closeFeeCountdownDays=String(n);
-    if(!x.closeBufferDays)x.closeBufferDays=BUFFER_DAYS;
-    if(!x.closeRuleBasis)x.closeRuleBasis='opened';
-  }
-  return x
-}
-function sanitizeCloseFieldsForEntry(x){
-  if(!x||typeof x!=='object')return x;
-  repairManualCloseHoldFields(x);
-  const n=parseInt(x.minHoldDays||x.closeFeeCountdownDays||0,10)||0;
-  const txt=String(x.closeRuleText||'');
-  const hasCloseWording=/(close|closed|closing|remain open|keep[^.]{0,40}open|maintain[^.]{0,40}open|forfeit|clawback|good standing|restricted|default|early termination|early close|fee if closed)/i.test(txt+' '+closeHoldRelevantText(x));
-  if(n&&(n>730||closeRuleLooksLikeMonthlyFee(x)&&!hasCloseWording)){
-    x.minHoldDays=0;
-    x.closeFeeCountdownDays='';
-    if(closeRuleLooksLikeMonthlyFee(x))x.closeRuleText='';
-    if(normalizeCloseRuleBasis(x.closeRuleBasis)==='opened')x.closeRuleBasis='bonus';
-    x.closeBufferDays=x.closeBufferDays||BUFFER_DAYS;
-  }
-  if(n>0&&n<=730){
-    x.minHoldDays=n;
-    x.closeFeeCountdownDays=String(n);
-  }
-  return x
-}
-function normalizeLifecycleEntry(e){
-  const x=(e&&typeof e==='object')?{...e}: {};
-  x.bank=String(x.bank||'').trim();
-  x.accountType=normalizeAccountType(x.accountType)||inferAccountTypeForEntry(x)||'personal';
-  x.opened=x.opened||'';
-  x.closed=x.closed||'';
-  x.bonusRecd=x.bonusRecd||'';
-  x.reqMet=x.reqMet||'';
-  x.plannedClose='';
-  x.history=normalizeEntryHistoryList(x.history);
-  x.analysis=(x.analysis&&typeof x.analysis==='object')?x.analysis:null;
-  x.analyzerHistory=normalizeAnalyzerHistoryList(x.analyzerHistory);
-  x.closeRuleBasis=normalizeCloseRuleBasis(x.closeRuleBasis||inferCloseRuleBasisFromText(x));
-  x.closeBufferDays=parseInt(x.closeBufferDays,10);
-  // v3.3.83: default close safety buffer is 5 days.
-  // Migrate old default 3-day buffer entries to 5 unless user explicitly set another value.
-  if(x.closeBufferDays===3)x.closeBufferDays=BUFFER_DAYS;
-  if(!Number.isFinite(x.closeBufferDays)||x.closeBufferDays<0)x.closeBufferDays=BUFFER_DAYS;
-  x.closeRuleText=String(x.closeRuleText||'').trim();
-  repairManualCloseHoldFields(x);
-  sanitizeCloseFieldsForEntry(x);
-  applyKnownClosePolicy(x);
-  x.monthlyFeeChecked=!!x.monthlyFeeChecked;
-  try{
-    const feeStruct=deriveMonthlyFeeStructure(x);
-    x.monthlyFeeAmountText=x.monthlyFeeAmountText||feeStruct.monthlyFeeAmountText||'';
-    x.monthlyFeeFrequency=x.monthlyFeeFrequency||feeStruct.monthlyFeeFrequency||'';
-    x.monthlyFeeWaiverType=x.monthlyFeeWaiverType||feeStruct.monthlyFeeWaiverType||'';
-    x.monthlyFeeWaiverAmountText=x.monthlyFeeWaiverAmountText||feeStruct.monthlyFeeWaiverAmountText||'';
-    x.monthlyFeeWaiverText=x.monthlyFeeWaiverText||feeStruct.monthlyFeeWaiverText||'';
-    x.monthlyFeeNoMonthlyServiceFee=!!(x.monthlyFeeNoMonthlyServiceFee||feeStruct.monthlyFeeNoMonthlyServiceFee);
-  }catch{}
-  x.customTimers=normalizeTimerList(x.customTimers||[]);
-  // v3.3.92: planned-close flow was removed. Closed date is actual only.
-  x.plannedClose='';
-  if(x.bonusRecd&&!x.reqMet)x.reqMet=x.bonusRecd;
-  if(x.reqMet&&x.bonusRecd&&dB(x.reqMet,x.bonusRecd)<0)x.reqMet=x.bonusRecd;
-  hydrateTimersFromOpened(x);
-  return x
-}
-function normalizeLifecycleEntries(rows){
-  return (rows||[]).map(normalizeLifecycleEntry)
-}
-
-function R(){const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;if(tab==='profiles'||tab==='health')tab='tracker';try{if(!window.__btAutoCleanupV384){entries=sortE(normalizeLifecycleEntries(entries));sv(SK,entries);window.__btAutoCleanupV384=true}}catch{}sanitizeAllTimers(false);const sorted=sortE(entries);const wk=sorted.filter(e=>e.bank&&!e.closed).length;const ch=sorted.filter(e=>status(e)==='WAITING TO CHURN!'||status(e)==='TIME TO CHURN!').length;const rd=sorted.filter(e=>status(e)==='TIME TO CHURN!').length;const yr=completedYrTotal(dashYear);const thisYr=new Date().getFullYear();let h='';h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div><h1><em>Bonus</em>Tracker</h1><div class="hdr-sub">Track • close • churn</div></div><div class="yr-pills">';[thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});h+='</div></div>';if(tab==='tracker'){h+='<div class="hero"><div class="hero-copy"><div class="hero-kicker">'+dashYear+' total collected</div><div class="hero-value">'+fM(yr)+'</div><div class="hero-note">'+wk+' open • '+ch+' cooling down • '+rd+' ready right now</div></div><div class="hero-side"><div class="hero-chip">'+rd+' ready</div></div></div>';h+='<div class="stats"><div class="st"><div class="n">'+wk+'</div><div class="l">Open</div></div><div class="st"><div class="n">'+ch+'</div><div class="l">Cooldown</div></div><div class="st"><div class="n">'+rd+'</div><div class="l">Ready</div></div><div class="st"><div class="n">'+fM(yr)+'</div><div class="l">'+dashYear+'</div></div></div>'}h+='</div></div>';h+='<div class="scroll">';if(tab==='tracker')h+=rTracker(sorted);else if(tab==='tax')h+=rTax();else if(tab==='tips')h+=rTips();else if(tab==='phone')h+=rPhone();h+='</div>';if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';h+='<div class="tabs">';['tracker','tax','tips','phone'].forEach((t,i)=>{h+='<button class="tb'+(tab===t?' on':'')+'" onclick="tab=\''+t+'\';search=\''+'\';R()">'+[I.grid,I.doc,I.tips,I.phone][i]+'<span>'+['Tracker','Tax','Datapoints','Phone'][i]+'</span></button>'});h+='</div>';if(modal)h+=rModal();if(cfm)h+=rCfm();if(ddPrompt)h+=rDD();if(rcvPrompt)h+=rRcv();if(reqPrompt)h+=rReqMet();if(closePrompt)h+=rClose();if(overwritePrompt)h+=rOverwrite();if(matchPickerPrompt)h+=rMatchPicker();if(replacementPickerPrompt)h+=rReplacementPicker();if(feeCheckPrompt)h+=rFeeCheck();if(timerEditModal)h+=rTimerEdit();if(dpEditor)h+=rDpEditor();if(timerChoicePrompt)h+=rTimerChoicePrompt();if(undoState)h+='<div class="undo-bar"><span>'+esc(undoState.undoLabel||('Change saved for '+undoState.bank+' — Undo restores everything for 60 seconds.'))+'</span><button onclick="undoClose()">Undo</button></div>';document.getElementById('app').innerHTML=h;const ns=document.querySelector('.scroll');if(ns)ns.scrollTop=_sp;btRunPostRenderHooks()}
+function R(){const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;if(tab==='profiles'||tab==='health')tab='tracker';sanitizeAllTimers(false);const sorted=sortE(entries);const wk=sorted.filter(e=>e.bank&&!e.closed).length;const ch=sorted.filter(e=>status(e)==='WAITING TO CHURN!'||status(e)==='TIME TO CHURN!').length;const rd=sorted.filter(e=>status(e)==='TIME TO CHURN!').length;const yr=completedYrTotal(dashYear);const thisYr=new Date().getFullYear();let h='';h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div><h1><em>Bonus</em>Tracker</h1><div class="hdr-sub">Track • close • churn</div></div><div class="yr-pills">';[thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});h+='</div></div>';if(tab==='tracker'){h+='<div class="hero"><div class="hero-copy"><div class="hero-kicker">'+dashYear+' total collected</div><div class="hero-value">'+fM(yr)+'</div><div class="hero-note">'+wk+' open • '+ch+' cooling down • '+rd+' ready right now</div></div><div class="hero-side"><div class="hero-chip">'+rd+' ready</div></div></div>';h+='<div class="stats"><div class="st"><div class="n">'+wk+'</div><div class="l">Open</div></div><div class="st"><div class="n">'+ch+'</div><div class="l">Cooldown</div></div><div class="st"><div class="n">'+rd+'</div><div class="l">Ready</div></div><div class="st"><div class="n">'+fM(yr)+'</div><div class="l">'+dashYear+'</div></div></div>'}h+='</div></div>';h+='<div class="scroll">';if(tab==='tracker')h+=rTracker(sorted);else if(tab==='tax')h+=rTax();else if(tab==='tips')h+=rTips();else if(tab==='phone')h+=rPhone();h+='</div>';if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';h+='<div class="tabs">';['tracker','tax','tips','phone'].forEach((t,i)=>{h+='<button class="tb'+(tab===t?' on':'')+'" onclick="tab=\''+t+'\';search=\''+'\';R()">'+[I.grid,I.doc,I.tips,I.phone][i]+'<span>'+['Tracker','Tax','Datapoints','Phone'][i]+'</span></button>'});h+='</div>';if(modal)h+=rModal();if(cfm)h+=rCfm();if(ddPrompt)h+=rDD();if(rcvPrompt)h+=rRcv();if(closePrompt)h+=rClose();if(overwritePrompt)h+=rOverwrite();if(matchPickerPrompt)h+=rMatchPicker();if(feeCheckPrompt)h+=rFeeCheck();if(timerEditModal)h+=rTimerEdit();if(dpEditor)h+=rDpEditor();if(timerChoicePrompt)h+=rTimerChoicePrompt();if(undoState)h+='<div class="undo-bar"><span>Closed '+esc(undoState.bank)+'</span><button onclick="undoClose()">Undo</button></div>';document.getElementById('app').innerHTML=h;const ns=document.querySelector('.scroll');if(ns)ns.scrollTop=_sp;btRunPostRenderHooks()}
 function rTracker(sorted){
   const q=search.toLowerCase();
   const f=q?sorted.filter(e=>(e.bank||'').toLowerCase().includes(q)||(e.id||'').toLowerCase().includes(q)):sorted;
@@ -3515,7 +2497,7 @@ function rTracker(sorted){
   }
 
   h += `<input class="sinput" type="text" placeholder="Search banks..." value="${esc(search)}" oninput="search=this.value;R()">`;
-  h += `<button class="tc-btn" onclick="showAnalyzer=!showAnalyzer;R()">${I.spark}<span>${showAnalyzer?'Hide analyzer':'Review promo terms'}</span></button>`;
+  h += `<button class="tc-btn" onclick="showAnalyzer=!showAnalyzer;R()">${I.spark}<span>${showAnalyzer?'Hide analyzer':'Analyze promo terms'}</span></button>`;
   if(showAnalyzer) h += rAnalyzer();
 
   if(!f.length){
@@ -3591,12 +2573,11 @@ function rTracker(sorted){
       }
 
       if(e.notes) h += `<div class="card-notes" style="white-space:pre-wrap;font-size:12px;line-height:1.6">${esc(e.notes)}</div>`;
-      h += renderAnalyzedTermsCard(e);
+      if(e.analyzedTC) h += `<div class="tc-box"><div class="tc-label">T&amp;C analysis</div><div class="tc-body">${highlightTC(e.analyzedTC)}</div></div>`;
       h += '';
 
       h += '<div class="card-btns">';
       h += actionBtn('edit',I.edit,'Edit',`event.stopPropagation();openEdit('${e.id}')`);
-      if(!e.closed&&!e.bonusRecd) h += actionBtn('rcv',I.shieldCheck,(e.reqMet?'Update Req':'Req Met'),`event.stopPropagation();openReqMet('${e.id}')`);
       if(!e.closed) h += actionBtn('rcv',I.gift,(e.bonusRecd?'Update Received':'Received'),`event.stopPropagation();openRcv('${e.id}')`);
       if(!e.closed) h += actionBtn('cls',I.lock,'Close',`event.stopPropagation();closeAcct('${e.id}')`);
       h += actionBtn('del',I.trash,'Delete',`event.stopPropagation();delEntry('${e.id}')`);
@@ -3671,111 +2652,22 @@ function rTips(){
 }
 function rPhone(){const rows=getPhoneBook();const q=(phoneSearch||'').toLowerCase().trim();const filtered=q?rows.filter(r=>r.bank.toLowerCase().includes(q)||r.personal.toLowerCase().includes(q)||r.business.toLowerCase().includes(q)):rows;let h='<div class="sec">Customer Service Numbers</div>';h+='<input class="sinput" placeholder="Search banks or phone numbers..." value="'+esc(phoneSearch||'')+'" oninput="phoneSearch=this.value;R()" id="phs">';h+='<button class="tc-btn" style="height:auto;padding:14px 16px;margin-bottom:10px" onclick="showPhoneAdd=!showPhoneAdd;R()">'+I.phone+'<span>'+(showPhoneAdd?'Hide add bank form':'Add new bank phone')+'</span></button>';if(showPhoneAdd){h+='<div class="ph-add-card"><div class="ph-top"><div><div class="nm">Add Bank</div><div class="ph-help">Create a phone entry manually with separate personal and business numbers.</div></div></div><div class="fg" style="margin-bottom:8px"><label>Bank Name</label><input id="ph_new_bank" class="ph-field" placeholder="e.g. Guaranty Bank"></div><div class="ph-edit-grid"><div><span class="ph-label">Personal</span><input id="ph_new_personal" class="ph-field" placeholder="1-800-000-0000"></div><div><span class="ph-label">Business</span><input id="ph_new_business" class="ph-field" placeholder="1-800-000-0000"></div></div><div class="ph-actions"><button class="ph-mini ph-save" onclick="addPhoneTabRow()">Save</button><button class="ph-mini ph-reset" onclick="showPhoneAdd=false;R()">Cancel</button></div></div>'}if(!filtered.length)return h+'<div class="empty"><div class="em">📞</div><p>No phone entries found.</p></div>';filtered.forEach((row,idx)=>{const bankEnc=encodeURIComponent(row.bank);const isCustom=!!row.custom&&!hasDefaultPhone(row.bank);h+='<div class="ph-card">'+bankLogo(row.bank,false)+'<div style="flex:1"><div class="ph-top"><div><div class="nm">'+esc(row.bank)+'</div><div class="ph-help">Edit and save personal/business numbers from this tab.</div></div>'+(isCustom?'<span class="tag b">Custom</span>':'')+'</div><div class="ph-edit-grid"><div><span class="ph-label">Personal</span><input id="ph_p_'+idx+'" class="ph-field" value="'+esc(row.personal||'')+'" placeholder="No personal number"></div><div><span class="ph-label">Business</span><input id="ph_b_'+idx+'" class="ph-field" value="'+esc(row.business||'')+'" placeholder="No business number"></div></div><div class="ph-actions"><button class="ph-mini ph-save" onclick="savePhoneTabRow(\''+bankEnc+'\','+idx+','+(isCustom?'true':'false')+')">Save</button>'+(hasDefaultPhone(row.bank)?'<button class="ph-mini ph-reset" onclick="resetPhoneTabRow(\''+bankEnc+'\')">Reset</button>':'<button class="ph-mini ph-del" onclick="deletePhoneTabRow(\''+bankEnc+'\')">Delete</button>')+(row.personal?'<a href="tel:'+esc(row.personal)+'" class="ph-mini ph-reset" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Call Personal</a>':'')+(row.business?'<a href="tel:'+esc(row.business)+'" class="ph-mini ph-reset" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Call Business</a>':'')+'</div></div></div>'});return h}
 function rRules(){let h='<div class="sec">Churn Rules \u2014 MO + Nationwide</div><input class="sinput" placeholder="Search..." oninput="this.dataset.q=this.value;R()" id="rs">';const q=(document.getElementById('rs')||{}).value||'';const fl=q?RULES.filter(r=>r[0].toLowerCase().includes(q.toLowerCase())):RULES;h+='<div class="rcard" style="margin-bottom:8px"><div class="nm">Tracker Bonus Display Rule</div><div class="sub" style="margin-top:4px">On the Tracker tab, the $ bonus amount shows only when a bank has a saved bonus amount and the status is Working or Countdown Active.</div></div>';fl.forEach(([bank,rule,mo,churnable,moAvail,closeFee,maint,notes])=>{h+='<div class="rcard" style="display:flex;align-items:flex-start;gap:10px">'+bankLogo(bank,false)+'<div style="flex:1"><div class="rcard-row"><div class="nm">'+esc(bank)+'</div><div style="text-align:right"><div class="ph">'+esc(rule)+'</div><div class="ph2">'+mo+'mo</div></div></div><div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:2px">';h+=churnable?'<span class="tag y">\u2705 Churnable</span>':'<span class="tag n">\u274C Not Churnable</span>';if(moAvail)h+='<span class="tag m">\uD83D\uDCCD MO</span>';if(closeFee&&closeFee!=='None')h+='<span class="tag f">\u26A0 '+esc(closeFee)+'</span>';h+='<span class="tag '+(maint.includes('$0')||maint.includes('free')?'b':'f')+'">'+esc(maint)+'</span>';h+='</div>';if(notes)h+='<div class="sub">'+esc(notes)+'</div>';h+='</div></div>'});return h}
-function closeReviewRows(e,p){
-  const rows=[];
-  const push=(k,v,cls='')=>rows.push('<div class="close-review-row"><span>'+esc(k)+'</span><b class="'+esc(cls)+'">'+esc(v||'—')+'</b></div>');
-  push('Bank',p.bank||e?.bank||'');
-  push('Close date',p.closeDate?fD(p.closeDate):'Missing',p.closeDate?'':'bad');
-  push('Bonus received',p.bonusDate?fD(p.bonusDate):'Not saved',(p.actualBonus||0)>0&&!p.bonusDate?'bad':'');
-  push('Requirement met',p.reqDate?fD(p.reqDate):'Not saved',(p.actualBonus||0)>0&&!p.reqDate?'warn':'');
-  push('Bonus amount',fM(p.actualBonus||0));
-  push('Monthly fee checked',p.monthlyFeeChecked?'Yes':'No',p.monthlyFeeChecked?'':'warn');
-  return rows.join('')
-}
-function closeReviewWarnings(e,p){
-  return Array.from(new Set((closeActualWarnings(e,p)||[]).filter(Boolean)))
-}
-function renderCloseReadinessList(e,p){
-  const ready=closeReadiness(e,p?.closeDate);
-  const important=ready.items.filter(it=>!it.ok||/bonus|requirement|hold period|monthly fee/i.test(it.label)).slice(0,4);
-  let h='<div class="close-check-list compact">';
-  important.forEach(it=>{h+='<div class="close-check '+(it.ok?'ok':(it.level==='danger'?'bad':'warn'))+'"><i>'+(it.ok?'✓':'!')+'</i><div><b>'+esc(it.label)+'</b><span>'+esc(it.detail||'')+'</span></div></div>'});
-  h+='</div>';
-  return h
-}
-function rClose(){
-  if(!closePrompt)return'';
-  const p=closePrompt;
-  const e=entries.find(x=>x.id===p.entryId);
-  let h='<div class="cbg" onclick="cancelClose()"><div class="close-modal compact-close" onclick="event.stopPropagation()">';
-  if(p.step==='stillopen'){
-    h+='<h3>↩️ Mark Still Open</h3><div class="sub">Use this only if the saved closed date was wrong and the account is still open.</div>';
-    h+='<div class="close-review-card"><div class="close-review-row"><span>Old closed date</span><b>'+esc(p.closeDate?fD(p.closeDate):'Missing')+'</b></div><div class="close-review-row"><span>New status</span><b class="warn">Open / active</b></div><div class="close-review-row"><span>Churn countdown</span><b>Stopped</b></div></div>';
-    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="finishStillOpen()">Clear Closed Date</button></div>';
-  }else if(p.step==='review'){
-    const ready=closeReadiness(e,p.closeDate);
-    const warnings=closeReviewWarnings(e,p).slice(0,4);
-    h+='<h3>🔒 Close Now</h3><div class="sub">Compact final check. Save only if the bank is already closed.</div>';
-    h+='<div class="close-ready '+esc(ready.cls)+'"><b>'+esc(ready.label)+'</b><span>'+esc(closeFlowModeReason(e,'actual'))+'</span></div>';
-    h+='<div class="close-review-card">'+closeReviewRows(e,p)+'</div>';
-    h+=renderCloseReadinessList(e,p);
-    if(warnings.length)h+='<div class="close-warnings compact"><b>Review</b>'+warnings.map(x=>'<span>• '+esc(x)+'</span>').join('')+'</div>';
-    h+='<div class="close-review-actions"><button class="c-c" onclick="closeBack()">Back</button><button class="c-g" onclick="finishClose()">Save Closed</button></div>';
-  }else if(p.step==='date'){
-    const ready=closeReadiness(e,p.closeDate);
-    h+='<h3>🔒 Close Now</h3><div class="sub">Record the actual date the bank account was closed.</div>';
-    h+='<div class="close-ready '+esc(ready.cls)+'"><b>'+esc(ready.label)+'</b><span>'+esc(ready.warnings[0]||'Closed date starts the churn countdown.')+'</span></div>';
-    h+='<label>Actual Close Date</label><input type="date" id="cp_date" value="'+esc(p.closeDate||'')+'">';
-    h+='<label>Monthly Fee Checked?</label><select id="cp_monthly_checked"><option value="no"'+(!p.monthlyFeeChecked?' selected':'')+'>No</option><option value="yes"'+(p.monthlyFeeChecked?' selected':'')+'>Yes</option></select>';
-    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">Next</button></div>';
-  }else if(p.step==='bonus'){
-    h+='<h3>💰 Bonus Check</h3><div class="sub">Confirm payout details before closing '+esc(p.bank)+'.</div>';
-    h+='<div class="bonus-row"><button class="bonus-opt'+(p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=true;closePrompt.actualBonus=closePrompt.bonus;R()">Full '+fM(p.bonus)+'</button><button class="bonus-opt'+(!p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=false;R()">Partial / none</button></div>';
-    if(!p.gotFull)h+='<label>Actual bonus amount</label><input type="number" inputmode="numeric" id="cp_amt" value="'+(p.actualBonus||0)+'" placeholder="0">';
-    if((p.actualBonus||0)>0||p.gotFull){
-      h+='<label>Bonus Received Date</label><input type="date" id="cp_bonus_date" value="'+esc(p.bonusDate||'')+'">';
-      h+='<label>Requirement Met Date</label><input type="date" id="cp_req_date" value="'+esc(p.reqDate||'')+'">';
-    }
-    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-g" onclick="closeNext()">Next</button></div>';
-  }else if(p.step==='dp'){
-    h+='<h3>📋 Trigger Method</h3><div class="sub">Optional. Save the DD/ACH/action that triggered the bonus.</div>';
-    h+='<input id="cp_dp" value="'+esc(p.dp)+'" placeholder="e.g. Employer DD or ACH push" onclick="event.stopPropagation()">';
-    h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">Review</button></div>';
-  }
-  h+='</div></div>';
-  return h
-}
-
-function rFeeCheck(){if(!feeCheckPrompt)return'';const p=feeCheckPrompt;const e=entries.find(x=>x.id===p.entryId);const hasTimer=!!(e&&e.minHoldDays>0&&!e.feeChecked);let h='<div class="cbg" onclick="feeCheckCancel()"><div class="fee-box" onclick="event.stopPropagation()">';if(p.step==='ask'){h+='<h3>🛡️ Early Closure Fee?</h3>';h+='<div class="sub">Does <strong>'+esc(p.bank)+'</strong> charge a fee for closing the account early?</div>';if(hasTimer){const dsc=daysUntilSafe(e);h+='<div style="padding:8px 10px;background:#FEF3C7;border-radius:8px;margin-bottom:10px;font-size:11px;color:#92400E;font-weight:600">⏰ Current hold: '+(dsc>0?dsc+'d remaining • '+fM(e.earlyCloseFee)+' fee':'✅ Hold period expired')+'</div>'}h+='<div class="fee-choice">';h+='<button class="fee-yes" onclick="feeCheckPrompt.step=\'months\';R()">⚠️ Yes, set timer</button>';h+='<button class="fee-no" onclick="feeCheckSkip()">✅ No fee / Continue</button>';h+='</div>';if(hasTimer){h+='<button class="btn-s" onclick="feeCheckRemoveTimer()">Remove current timer only</button>';h+='<div style="font-size:10px;color:var(--muted);text-align:center;margin-top:6px">This keeps the bank open and clears the early-close hold.</div>'}else{h+='<div style="font-size:10px;color:var(--muted);text-align:center">Continue clears any hold period, then opens Close Now</div>'}}else if(p.step==='months'){h+='<h3>⏰ How long to wait?</h3>';h+='<div class="sub">How many months from account opening must you wait to avoid the fee?</div>';h+='<div class="fee-months-grid">';[3,6,9,12,18,24].forEach(m=>{const rawDate=e&&e.opened?addM(e.opened,m):'';const safeDate=rawDate?addD(rawDate,BUFFER_DAYS):'';const daysAway=safeDate?Math.max(0,dB(td(),safeDate)):0;h+='<button class="fee-mo-btn'+(p.months===m?' sel':'')+'" onclick="feeCheckPrompt.months='+m+';R()">'+m+' mo';if(safeDate&&e.opened)h+='<span class="sm">'+daysAway+'d left</span>';h+='</button>'});h+='</div>';h+='<div style="display:flex;gap:6px;margin-top:8px;align-items:center"><span style="font-size:12px;color:var(--sub);font-weight:600;white-space:nowrap">Custom:</span><input type="number" inputmode="numeric" id="fcp_custom" value="'+(p.months||'')+'" placeholder="months" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:var(--bg);outline:none" onchange="feeCheckPrompt.months=parseInt(this.value)||6;R()"><span style="font-size:12px;color:var(--sub);font-weight:600">months</span></div>';h+='<div style="display:flex;gap:6px;margin-top:10px;align-items:center"><label style="font-size:11px;font-weight:600;color:var(--sub);white-space:nowrap">Fee amount $</label><input type="number" inputmode="numeric" id="fcp_fee" value="'+(p.feeAmount||'')+'" placeholder="e.g. 25" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:var(--bg);outline:none" onchange="feeCheckPrompt.feeAmount=parseInt(this.value)||0"></div>';if(e&&e.opened&&p.months>0){const rawDate=addM(e.opened,p.months);const safeDate=addD(rawDate,BUFFER_DAYS);const daysAway=Math.max(0,dB(td(),safeDate));h+='<div class="fee-preview"><div class="fp-date">📅 Safe to close: '+fD(safeDate)+'</div><div class="fp-days">'+(daysAway>0?daysAway+' days (incl. 5d buffer)':'✅ Already past!')+'</div></div>'}else if(!e||!e.opened){h+='<div class="fee-preview"><div class="fp-date" style="color:var(--red)">⚠️ No open date set</div><div class="fp-days">Timer starts when you add an open date</div></div>'}h+='<div style="display:flex;gap:6px;margin-top:10px">';h+='<button class="c-c" onclick="feeCheckPrompt.step=\'ask\';R()">Back</button>';h+='<button class="c-g" onclick="feeCheckSave()">⏰ Set Timer</button>';h+='</div>';if(hasTimer)h+='<button class="btn-s" onclick="feeCheckRemoveTimer()">Remove current timer only</button>'}h+='</div></div>';return h}
-/* v3.3.83 mobile focus rule: do not call R() inside text input oninput handlers inside modal; iOS Safari drops keyboard when modal redraws. */
-function rModal(){const e=modal;const oi=k=>' oninput="modal[\''+k+'\']=this.value" ';const on=k=>' oninput="modal[\''+k+'\']=parseInt(this.value)||0" ';let h='<div class="ov" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()">';h+='<div class="m-bar"></div><div class="m-hdr"><h2>'+(e._edit?'Edit':'New')+' Entry</h2>'+(e._edit?'<span class="m-id">'+esc(e.id||'')+'</span>':'')+'</div>';h+='<div class="fg"><label>Bank Name *</label><input value="'+esc(e.bank||'')+'" oninput="modal.bank=this.value;if(!modal.accountType||modal.accountType===\'unknown\')syncModalAccountTypeFromBank()" onblur="applyModalBankMemory();R()" placeholder="e.g. Chase"></div>';h+='<div class="fg"><label>Account Type</label><select onchange="modal.accountType=this.value"><option value="personal"'+((normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e))==='personal'?' selected':'')+'>Personal</option><option value="business"'+((normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e))==='business'?' selected':'')+'>Business</option></select></div>';if(e._edit){const repl=getManualReplacementCandidates(e,e.id||'');if(repl.length){h+='<div class="m-sec">Duplicate Fix / Replace Old Entry</div>';h+='<div style="font-size:10px;color:var(--muted);margin-bottom:6px">Use this if the app missed an old churn-ready entry and created a duplicate.</div>';h+='<div class="fg"><label>Old entry to replace with this entry</label><select onchange="modal._manualReplaceTarget=this.value"><option value="">Choose old entry…</option>'+repl.map(c=>'<option value="'+esc(c.id)+'"'+(modal._manualReplaceTarget===c.id?' selected':'')+'>'+esc(replacementCandidateLabel(c))+'</option>').join('')+'</select></div>';h+='<button class="btn-s" style="margin-top:0;margin-bottom:8px" onclick="beginManualReplaceFromEdit()">Replace Selected Old Entry</button>';}}h+='<div class="m-sec">Bonus</div>';h+='<div class="frow"><div class="fg"><label>Amount $</label><input type="number" inputmode="numeric" value="'+(e.bonus||'')+'"'+on('bonus')+'placeholder="300"></div>';h+='<div class="fg"><label>Churn Rule</label><select onchange="modal.churn=this.value"><option value="">Select</option><option value="1"'+(e.churn==='1'?' selected':'')+'>1 Year</option><option value="2"'+(e.churn==='2'?' selected':'')+'>2 Years</option><option value="3"'+(e.churn==='3'?' selected':'')+'>3 Years</option><option value="180"'+(e.churn==='180'?' selected':'')+'>180 Days</option></select></div></div>';h+='<div class="m-sec">Simple Terms Auto-Fill</div>';h+='<div class="frow"><div class="fg"><label>Monthly Fee (Yes / No)</label><input value="'+esc(e.monthlyFeeYNText||'')+'" oninput="modal.monthlyFeeYNText=this.value" placeholder="Yes or No"></div><div class="fg"><label>Promo Code</label><input value="'+esc(e.promoCodeText||'')+'" oninput="modal.promoCodeText=this.value" placeholder="leave blank if missing"></div></div>';h+='<div class="frow"><div class="fg"><label>Known DD / Data Point</label><input value="'+esc(e.dataPoint||'')+'" oninput="modal.dataPoint=this.value" placeholder="e.g. Employer DD, ACH, payroll"></div><div class="fg"><label>Promo Expiration / Open By</label><input value="'+esc(e.expirationDateText||'')+'" oninput="modal.expirationDateText=this.value" placeholder="leave blank if missing"></div></div>';h+='<div class="frow"><div class="fg"><label>Funding Deadline Days</label><input type="number" inputmode="numeric" min="0" value="'+esc(String(e.fundedDays||''))+'" oninput="modal.fundedDays=parseInt(this.value)||0" placeholder="e.g. 30"></div><div class="fg"><label>Funding Amount / Target Tier</label><input value="'+esc(e.fundingAmountText||(e.fundingAmount?fM(e.fundingAmount):''))+'" oninput="modal.fundingAmountText=this.value;modal.fundingAmount=parseCloseFeeAmount(this.value)" placeholder="e.g. $2,000 for $500 tier"></div></div>';h+='<div class="fg"><label>Payout Timing</label><input value="'+esc(e.payoutTimingText||'')+'" oninput="modal.payoutTimingText=this.value" placeholder="e.g. within 15 days after requirements are met"></div>';h+='<div class="fg"><label>How to Avoid the Monthly Fee</label><input value="'+esc(e.avoidMonthlyFeeText||'')+'" oninput="modal.avoidMonthlyFeeText=this.value" placeholder="leave blank if missing"></div>';h+='<div class="fg"><label>How to Complete the Bonus</label><textarea rows="3" oninput="modal.completeBonusText=this.value" placeholder="leave blank if missing">'+esc(e.completeBonusText||'')+'</textarea></div>';h+='<div class="frow"><div class="fg"><label>Early Close Fee Amount</label><input value="'+esc(e.earlyTerminationFeeText||'')+'" oninput="modal.earlyTerminationFeeText=this.value;modal.earlyCloseFee=parseCloseFeeAmount(this.value)" placeholder="number only, e.g. 25 or None"></div><div class="fg"><label>Close Hold Days</label><input type="number" inputmode="numeric" min="0" value="'+esc(closeHoldDisplayValue(e))+'" oninput="modal.closeFeeCountdownDays=this.value;modal.minHoldDays=parseInt(this.value)||0;modal.feeChecked=false" placeholder="e.g. 180"></div></div>';h+='<div class="frow"><div class="fg"><label>Close Rule Basis</label><select onchange="modal.closeRuleBasis=this.value"><option value="opened"'+(normalizeCloseRuleBasis(e.closeRuleBasis)==='opened'?' selected':'')+'>Opened date</option><option value="bonus"'+(normalizeCloseRuleBasis(e.closeRuleBasis)==='bonus'?' selected':'')+'>Bonus received date</option><option value="reqmet"'+(normalizeCloseRuleBasis(e.closeRuleBasis)==='reqmet'?' selected':'')+'>Requirement met date</option><option value="manual"'+(normalizeCloseRuleBasis(e.closeRuleBasis)==='manual'?' selected':'')+'>Manual review</option></select></div><div class="fg"><label>Close Buffer Days</label><input type="number" inputmode="numeric" min="0" value="'+esc(String(e.closeBufferDays??BUFFER_DAYS))+'" oninput="modal.closeBufferDays=parseInt(this.value)||0" placeholder="5"></div></div>';h+='<div class="frow"><div class="fg"><label>Monthly Fee Checked</label><select onchange="modal.monthlyFeeChecked=this.value===\'yes\'"><option value="no"'+(!e.monthlyFeeChecked?' selected':'')+'>No</option><option value="yes"'+(e.monthlyFeeChecked?' selected':'')+'>Yes</option></select></div><div class="fg"><label>Close Rule Wording</label><input value="'+esc(e.closeRuleText||'')+'" oninput="modal.closeRuleText=this.value" placeholder="e.g. keep open 180 days after opening"></div></div>';h+='<div class="fg"><label>Eligibility / Churn</label><textarea rows="2" oninput="modal.eligibilityText=this.value" placeholder="leave blank if missing">'+esc(e.eligibilityText||'')+'</textarea></div>';h+='<div class="fg"><label>How Many Days Required to Complete the Bonus?</label><input value="'+esc(e.requiredDaysText||(e.reqDays>0?String(e.reqDays):''))+'" oninput="modal.requiredDaysText=this.value;modal.reqDays=parseRequirementDaysText(this.value)" placeholder="e.g. 90"></div>';h+='<div class="m-sec">Dates</div>';const df=(lbl,id,k,v)=>'<div class="fg"><label>'+lbl+'</label><div class="date-wrap"><input type="date" value="'+(v||'')+'"'+oi(k)+'><button class="date-clr" type="button" onclick="modal.'+k+'=\'\';this.previousElementSibling.value=\'\'">\u2715</button></div></div>';h+='<div class="frow">'+df('Opened','fo','opened',e.opened)+df('Closed','fc','closed',e.closed)+'</div>';h+='<div class="frow">'+df('Bonus Received','fb','bonusRecd',e.bonusRecd)+df('Req Met','fr','reqMet',e.reqMet)+'</div>';h+='<div class="m-sec">Your Notes</div>';h+='<div style="font-size:10px;color:var(--muted);margin-bottom:3px">Your personal notes — never overwritten by analyzer</div>';h+='<div class="fg"><textarea rows="3" style="font-size:13px;line-height:1.5;min-height:60px"'+oi('notes')+'placeholder="Your personal notes, tips, reminders...">'+esc(e.notes||'')+'</textarea></div>';if(modal.analyzedTC){h+='<div class="m-sec">Analyzed T&C Summary</div>';h+='<div style="font-size:10px;color:var(--muted);margin-bottom:3px">Auto-generated from T&C analyzer — re-analyze to update</div>';h+='<div class="fg"><textarea rows="6" style="font-size:12px;line-height:1.6;min-height:120px;background:#F8FAFC;border:1.5px solid #E2E8F0" oninput="modal.analyzedTC=this.value" placeholder="Analyzed T&C will appear here...">'+esc(modal.analyzedTC)+'</textarea></div>'}h+='<button type="button" class="tc-btn" onclick="showInlineAZ=!showInlineAZ;R()">\uD83E\uDDE0 '+(showInlineAZ?'Hide Analyzer Review Wizard':'Paste T&C to Review')+'</button>';if(showInlineAZ){h+='<div class="az-area"><textarea id="inline_tc" placeholder="Paste T&C here..."></textarea><button class="az-go" onclick="event.preventDefault();runInlineAnalyze()">Review with Analyzer</button>'+(inlineResult?'<div style="margin-top:4px;font-size:10px;color:var(--green);font-weight:600">\u2705 Reviewed</div>':'')+'</div>'}h+='<button type="button" class="btn-p" onclick="saveEntryFromButton(this,event)">\uD83D\uDCBE '+(e._edit?'Save Changes':'Add Entry')+'</button>';h+='<button class="btn-s" onclick="closeModal()">Cancel</button>';if(e._edit)h+='<button class="btn-d" onclick="clearFields()">Clear All Fields</button>';h+='</div></div>';return h}
-function rCfm(){return'<div class="cbg" onclick="cfm=null;R()"><div class="cbox" onclick="event.stopPropagation()"><h3>'+cfm.title+'</h3><p>'+cfm.msg+'</p><div class="crow"><button class="c-c" onclick="cfm=null;R()">Cancel</button><button class="'+(cfm.green?'c-g':'c-r')+'" onclick="cfm.action()">'+(cfm.confirmLabel||(cfm.green?'Confirm':'Delete'))+'</button></div></div></div>'}
+function rClose(){if(!closePrompt)return'';const p=closePrompt;let h='<div class="cbg" onclick="cancelClose()"><div class="close-modal" onclick="event.stopPropagation()">';if(p.step==='date'){h+='<h3>\uD83D\uDD12 Close '+esc(p.bank)+'</h3><div class="sub">When did you close (or plan to close) this account?</div>';h+='<label>Close Date</label><input type="date" id="cp_date" value="'+p.closeDate+'">';h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">Next \u2192</button></div>'}else if(p.step==='bonus'){h+='<h3>\uD83D\uDCB0 Did you get the full bonus?</h3><div class="sub">'+esc(p.bank)+' \u2014 expected '+fM(p.bonus)+'</div>';h+='<div class="bonus-row"><button class="bonus-opt'+(p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=true;closePrompt.actualBonus=closePrompt.bonus;R()">Yes \u2014 '+fM(p.bonus)+'</button><button class="bonus-opt'+(!p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=false;R()">No \u2014 partial/none</button></div>';if(!p.gotFull){h+='<label>How much did you actually get?</label><input type="number" inputmode="numeric" id="cp_amt" value="'+(p.actualBonus||0)+'" placeholder="0">'}h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-g" onclick="closeNext()">Next \u2192</button></div>'}else if(p.step==='dp'){h+='<h3>\uD83D\uDCCB What triggered the bonus?</h3><div class="sub">What DD method or action triggered '+esc(p.bank)+'\'s bonus? (Optional)</div>';h+='<div class="dd-chips" style="margin-bottom:8px">';['Employer DD','Robinhood ACH','Fidelity ACH','Schwab ACH','Venmo DD','Melio Bill Pay','No DD needed','Debit only'].forEach(m=>{h+='<button class="dd-chip" onclick="document.getElementById(\'cp_dp\').value=\''+m+'\'">'+m+'</button>'});h+='</div><input id="cp_dp" value="'+esc(p.dp)+'" placeholder="e.g. $1,000 DD via Robinhood ACH" onclick="event.stopPropagation()">';h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">\u2705 Close Account</button></div>'}h+='</div></div>';return h}
+function rFeeCheck(){if(!feeCheckPrompt)return'';const p=feeCheckPrompt;const e=entries.find(x=>x.id===p.entryId);const hasTimer=!!(e&&e.minHoldDays>0&&!e.feeChecked);let h='<div class="cbg" onclick="feeCheckCancel()"><div class="fee-box" onclick="event.stopPropagation()">';if(p.step==='ask'){h+='<h3>🛡️ Early Closure Fee?</h3>';h+='<div class="sub">Does <strong>'+esc(p.bank)+'</strong> charge a fee for closing the account early?</div>';if(hasTimer){const dsc=daysUntilSafe(e);h+='<div style="padding:8px 10px;background:#FEF3C7;border-radius:8px;margin-bottom:10px;font-size:11px;color:#92400E;font-weight:600">⏰ Current hold: '+(dsc>0?dsc+'d remaining • '+fM(e.earlyCloseFee)+' fee':'✅ Hold period expired')+'</div>'}h+='<div class="fee-choice">';h+='<button class="fee-yes" onclick="feeCheckPrompt.step=\'months\';R()">⚠️ Yes, set timer</button>';h+='<button class="fee-no" onclick="feeCheckSkip()">✅ No fee / Close now</button>';h+='</div>';if(hasTimer){h+='<button class="btn-s" onclick="feeCheckRemoveTimer()">Remove current timer only</button>';h+='<div style="font-size:10px;color:var(--muted);text-align:center;margin-top:6px">This keeps the bank open and clears the early-close hold.</div>'}else{h+='<div style="font-size:10px;color:var(--muted);text-align:center">"Close now" clears any hold period and proceeds to close</div>'}}else if(p.step==='months'){h+='<h3>⏰ How long to wait?</h3>';h+='<div class="sub">How many months from account opening must you wait to avoid the fee?</div>';h+='<div class="fee-months-grid">';[3,6,9,12,18,24].forEach(m=>{const rawDate=e&&e.opened?addM(e.opened,m):'';const safeDate=rawDate?addD(rawDate,BUFFER_DAYS):'';const daysAway=safeDate?Math.max(0,dB(td(),safeDate)):0;h+='<button class="fee-mo-btn'+(p.months===m?' sel':'')+'" onclick="feeCheckPrompt.months='+m+';R()">'+m+' mo';if(safeDate&&e.opened)h+='<span class="sm">'+daysAway+'d left</span>';h+='</button>'});h+='</div>';h+='<div style="display:flex;gap:6px;margin-top:8px;align-items:center"><span style="font-size:12px;color:var(--sub);font-weight:600;white-space:nowrap">Custom:</span><input type="number" inputmode="numeric" id="fcp_custom" value="'+(p.months||'')+'" placeholder="months" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:var(--bg);outline:none" onchange="feeCheckPrompt.months=parseInt(this.value)||6;R()"><span style="font-size:12px;color:var(--sub);font-weight:600">months</span></div>';h+='<div style="display:flex;gap:6px;margin-top:10px;align-items:center"><label style="font-size:11px;font-weight:600;color:var(--sub);white-space:nowrap">Fee amount $</label><input type="number" inputmode="numeric" id="fcp_fee" value="'+(p.feeAmount||'')+'" placeholder="e.g. 25" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:var(--bg);outline:none" onchange="feeCheckPrompt.feeAmount=parseInt(this.value)||0"></div>';if(e&&e.opened&&p.months>0){const rawDate=addM(e.opened,p.months);const safeDate=addD(rawDate,BUFFER_DAYS);const daysAway=Math.max(0,dB(td(),safeDate));h+='<div class="fee-preview"><div class="fp-date">📅 Safe to close: '+fD(safeDate)+'</div><div class="fp-days">'+(daysAway>0?daysAway+' days (incl. 3d buffer)':'✅ Already past!')+'</div></div>'}else if(!e||!e.opened){h+='<div class="fee-preview"><div class="fp-date" style="color:var(--red)">⚠️ No open date set</div><div class="fp-days">Timer starts when you add an open date</div></div>'}h+='<div style="display:flex;gap:6px;margin-top:10px">';h+='<button class="c-c" onclick="feeCheckPrompt.step=\'ask\';R()">Back</button>';h+='<button class="c-g" onclick="feeCheckSave()">⏰ Set Timer</button>';h+='</div>';if(hasTimer)h+='<button class="btn-s" onclick="feeCheckRemoveTimer()">Remove current timer only</button>'}h+='</div></div>';return h}
+function rModal(){const e=modal;const oi=k=>' oninput="modal[\''+k+'\']=this.value" ';const on=k=>' oninput="modal[\''+k+'\']=parseInt(this.value)||0" ';let h='<div class="ov" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()">';h+='<div class="m-bar"></div><div class="m-hdr"><h2>'+(e._edit?'Edit':'New')+' Entry</h2>'+(e._edit?'<span class="m-id">'+esc(e.id||'')+'</span>':'')+'</div>';h+='<div class="fg"><label>Bank Name *</label><input value="'+esc(e.bank||'')+'" oninput="modal.bank=this.value;if((!modal.accountType||modal.accountType===\'unknown\'))syncModalAccountTypeFromBank();R()" onblur="applyModalBankMemory()" placeholder="e.g. Chase"></div>';h+='<div class="fg"><label>Account Type</label><select onchange="modal.accountType=this.value"><option value="unknown"'+((normalizeAccountType(e.accountType)||'unknown')==='unknown'?' selected':'')+'>Unknown / Not sure</option><option value="personal"'+((normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e))==='personal'?' selected':'')+'>Personal</option><option value="business"'+((normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e))==='business'?' selected':'')+'>Business</option></select></div>';h+='<div class="m-sec">Bonus</div>';h+='<div class="frow"><div class="fg"><label>Amount $</label><input type="number" inputmode="numeric" value="'+(e.bonus||'')+'"'+on('bonus')+'placeholder="300"></div>';h+='<div class="fg"><label>Churn Rule</label><select onchange="modal.churn=this.value"><option value="">Select</option><option value="1"'+(e.churn==='1'?' selected':'')+'>1 Year</option><option value="2"'+(e.churn==='2'?' selected':'')+'>2 Years</option><option value="3"'+(e.churn==='3'?' selected':'')+'>3 Years</option><option value="180"'+(e.churn==='180'?' selected':'')+'>180 Days</option></select></div></div>';h+='<div class="m-sec">Simple Terms Auto-Fill</div>';h+='<div class="frow"><div class="fg"><label>Monthly Fee (Yes / No)</label><input value="'+esc(e.monthlyFeeYNText||'')+'" oninput="modal.monthlyFeeYNText=this.value" placeholder="Yes or No"></div><div class="fg"><label>Promo Code</label><input value="'+esc(e.promoCodeText||'')+'" oninput="modal.promoCodeText=this.value" placeholder="leave blank if missing"></div></div>';h+='<div class="frow"><div class="fg"><label>Known DD / Data Point</label><input value="'+esc(e.dataPoint||'')+'" oninput="modal.dataPoint=this.value" placeholder="e.g. Employer DD, ACH, payroll"></div><div class="fg"><label>Promo Expiration / Open By</label><input value="'+esc(e.expirationDateText||'')+'" oninput="modal.expirationDateText=this.value" placeholder="leave blank if missing"></div></div>';h+='<div class="frow"><div class="fg"><label>Funding Deadline Days</label><input type="number" inputmode="numeric" min="0" value="'+esc(String(e.fundedDays||''))+'" oninput="modal.fundedDays=parseInt(this.value)||0" placeholder="e.g. 30"></div><div class="fg"><label>Funding Amount / Target Tier</label><input value="'+esc(e.fundingAmountText||(e.fundingAmount?fM(e.fundingAmount):''))+'" oninput="modal.fundingAmountText=this.value;modal.fundingAmount=parseCloseFeeAmount(this.value)" placeholder="e.g. $2,000 for $500 tier"></div></div>';h+='<div class="fg"><label>Payout Timing</label><input value="'+esc(e.payoutTimingText||'')+'" oninput="modal.payoutTimingText=this.value" placeholder="e.g. within 15 days after requirements are met"></div>';h+='<div class="fg"><label>How to Avoid the Monthly Fee</label><input value="'+esc(e.avoidMonthlyFeeText||'')+'" oninput="modal.avoidMonthlyFeeText=this.value" placeholder="leave blank if missing"></div>';h+='<div class="fg"><label>How to Complete the Bonus</label><textarea rows="3" oninput="modal.completeBonusText=this.value" placeholder="leave blank if missing">'+esc(e.completeBonusText||'')+'</textarea></div>';h+='<div class="frow"><div class="fg"><label>Early Close Fee Amount</label><input value="'+esc(e.earlyTerminationFeeText||'')+'" oninput="modal.earlyTerminationFeeText=this.value;modal.earlyCloseFee=parseCloseFeeAmount(this.value)" placeholder="number only, e.g. 25 or None"></div><div class="fg"><label>Close Fee Days After Opened</label><input type="number" inputmode="numeric" min="0" value="'+esc(String(e.closeFeeCountdownDays??''))+'" oninput="modal.closeFeeCountdownDays=this.value;modal.minHoldDays=parseInt(this.value)||0;modal.feeChecked=false" placeholder="e.g. 180 from opened date"></div></div>';h+='<div class="fg"><label>Eligibility / Churn</label><textarea rows="2" oninput="modal.eligibilityText=this.value" placeholder="leave blank if missing">'+esc(e.eligibilityText||'')+'</textarea></div>';h+='<div class="fg"><label>How Many Days Required to Complete the Bonus?</label><input value="'+esc(e.requiredDaysText||(e.reqDays>0?String(e.reqDays):''))+'" oninput="modal.requiredDaysText=this.value;modal.reqDays=parseRequirementDaysText(this.value)" placeholder="e.g. 90"></div>';h+='<div class="m-sec">Dates</div>';const df=(lbl,id,k,v)=>'<div class="fg"><label>'+lbl+'</label><div class="date-wrap"><input type="date" value="'+(v||'')+'"'+oi(k)+'><button class="date-clr" type="button" onclick="modal.'+k+'=\'\';this.previousElementSibling.value=\'\'">\u2715</button></div></div>';h+='<div class="frow">'+df('Opened','fo','opened',e.opened)+df('Closed','fc','closed',e.closed)+'</div>';h+='<div class="frow">'+df('Bonus Received','fb','bonusRecd',e.bonusRecd)+df('Req Met','fr','reqMet',e.reqMet)+'</div>';h+='<div class="m-sec">Your Notes</div>';h+='<div style="font-size:10px;color:var(--muted);margin-bottom:3px">Your personal notes — never overwritten by analyzer</div>';h+='<div class="fg"><textarea rows="3" style="font-size:13px;line-height:1.5;min-height:60px"'+oi('notes')+'placeholder="Your personal notes, tips, reminders...">'+esc(e.notes||'')+'</textarea></div>';if(modal.analyzedTC){h+='<div class="m-sec">Analyzed T&C Summary</div>';h+='<div style="font-size:10px;color:var(--muted);margin-bottom:3px">Auto-generated from T&C analyzer — re-analyze to update</div>';h+='<div class="fg"><textarea rows="6" style="font-size:12px;line-height:1.6;min-height:120px;background:#F8FAFC;border:1.5px solid #E2E8F0" oninput="modal.analyzedTC=this.value" placeholder="Analyzed T&C will appear here...">'+esc(modal.analyzedTC)+'</textarea></div>'}h+='<button type="button" class="tc-btn" onclick="showInlineAZ=!showInlineAZ;R()">\uD83E\uDDE0 '+(showInlineAZ?'Hide T&C Analyzer':'Paste T&C to Auto-fill')+'</button>';if(showInlineAZ){h+='<div class="az-area"><textarea id="inline_tc" placeholder="Paste T&C here..."></textarea><button class="az-go" onclick="event.preventDefault();runInlineAnalyze()">Analyze & Auto-fill</button>'+(inlineResult?'<div style="margin-top:4px;font-size:10px;color:var(--green);font-weight:600">\u2705 Auto-filled!</div>':'')+'</div>'}h+='<button type="button" class="btn-p" onclick="saveEntryFromButton(this,event)">\uD83D\uDCBE '+(e._edit?'Save Changes':'Add Entry')+'</button>';h+='<button class="btn-s" onclick="closeModal()">Cancel</button>';if(e._edit)h+='<button class="btn-d" onclick="clearFields()">Clear All Fields</button>';h+='</div></div>';return h}
+function rCfm(){return'<div class="cbg" onclick="cfm=null;R()"><div class="cbox" onclick="event.stopPropagation()"><h3>'+cfm.title+'</h3><p>'+cfm.msg+'</p><div class="crow"><button class="c-c" onclick="cfm=null;R()">Cancel</button><button class="'+(cfm.green?'c-g':'c-r')+'" onclick="cfm.action()">'+(cfm.green?'Confirm':'Delete')+'</button></div></div></div>'}
 function rDD(){const p=ddPrompt;const common=['Employer DD','Robinhood ACH','Fidelity ACH','Schwab ACH','Venmo DD','PayPal DD','Melio Bill Pay','Cash App DD','No DD Required','Debit Card Only'];let h='<div class="cbg" onclick="skipDD()"><div class="dd-box" onclick="event.stopPropagation()"><h3>\uD83D\uDCCB What triggered the bonus?</h3><div class="sub">Select DD method(s) for '+esc(p.bank)+'. Optional \u2014 tap Skip to close without saving.</div><div class="dd-chips">';common.forEach(m=>{h+='<button class="dd-chip'+(p.sel.includes(m)?' sel':'')+'" onclick="event.stopPropagation();toggleDDChip(\''+esc(m)+'\')">'+esc(m)+'</button>'});h+='</div><input class="dd-input" id="dd_custom" placeholder="Other methods, comma separated..." onclick="event.stopPropagation()">';h+='<div class="crow"><button class="c-c" onclick="skipDD()">Skip</button><button class="c-g" onclick="submitDD()">\uD83D\uDCBE Save</button></div></div></div>';return h}
-function rRcv(){
-  const p=rcvPrompt;
-  if(!p)return'';
-  let h='<div class="cbg" onclick="skipRcv()"><div class="rcv-box" onclick="event.stopPropagation()">';
-  h+='<h3>🎉 Bonus Received</h3><div class="sub">This marks '+esc(p.bank)+' as received. Requirement met and closing stay tracked as separate lifecycle steps.</div>';
-  h+='<label>Bonus Received Date</label><input class="dd-input" type="date" id="rcv_date" value="'+(p.date||'')+'" onclick="event.stopPropagation()">';
-  h+='<label>Requirement Met Date</label><input class="dd-input" type="date" id="rcv_req_date" value="'+(p.reqDate||p.date||'')+'" onclick="event.stopPropagation()">';
-  h+='<label>Triggering DD / Method</label><input class="dd-input" id="rcv_dp" value="'+esc(p.dp||'')+'" placeholder="e.g. Employer DD, ACH push, debit transactions" onclick="event.stopPropagation()">';
-  h+='<div class="crow"><button class="c-c" onclick="skipRcv()">Cancel</button>'+(p.hasExisting?'<button class="c-r" onclick="confirmClearRcv()">Clear</button>':'')+'<button class="c-g" onclick="rcvSubmit()">Save</button></div>';
-  h+='</div></div>';
-  return h
-}
-function rReqMet(){
-  const p=reqPrompt;
-  if(!p)return'';
-  let h='<div class="cbg" onclick="skipReq()"><div class="rcv-box" onclick="event.stopPropagation()">';
-  h+='<h3>✅ Requirement Met</h3><div class="sub">This stops the requirement countdown for '+esc(p.bank)+'. Bonus received still stays separate for tax and close tracking.</div>';
-  h+='<label>Requirement Met Date</label><input class="dd-input" type="date" id="req_date" value="'+(p.date||'')+'" onclick="event.stopPropagation()">';
-  h+='<div class="crow"><button class="c-c" onclick="skipReq()">Cancel</button>'+(p.hasExisting?'<button class="c-r" onclick="confirmClearReqMet()">Clear</button>':'')+'<button class="c-g" onclick="reqSubmit()">Save</button></div>';
-  h+='</div></div>';
-  return h
-}
+function rRcv(){const p=rcvPrompt;if(!p)return'';let h='<div class="cbg" onclick="skipRcv()"><div class="rcv-box" onclick="event.stopPropagation()">';h+='<h3>🎉 Bonus Received</h3><div class="sub">This only marks '+esc(p.bank)+' as received. Closing stays separate.</div>';h+='<input class="dd-input" type="date" id="rcv_date" value="'+(p.date||'')+'" onclick="event.stopPropagation()">';h+='<div class="crow"><button class="c-c" onclick="skipRcv()">Cancel</button>'+(p.hasExisting?'<button class="c-r" onclick="clearRcv()">Clear</button>':'')+'<button class="c-g" onclick="rcvSubmit()">Save</button></div>';h+='</div></div>';return h}
 function rOverwrite(){
   if(!overwritePrompt)return'';
   const p=overwritePrompt, ex=p.existingEntry, isActive=isActiveEntry(ex);
   const s=status(ex);
   const isHistory=!isActive;
   let h='<div class="cbg" onclick="overwritePrompt=null;R()"><div class="ow-box" onclick="event.stopPropagation()">';
-  h+='<h3>'+esc(p.removeEntryId?'Replace old entry and remove duplicate?':(isHistory?'Start new churn cycle?':'Matching bank already exists'))+'</h3>';
-  h+='<div class="sub">'+(p.removeEntryId
-    ?'<strong>'+esc(p.newData.bank)+'</strong> will overwrite the selected old entry and remove the duplicate entry you were editing.'
-    :(isHistory
-      ?'<strong>'+esc(p.newData.bank)+'</strong> matches an older/cooldown record. Replace that record to start the next churn cycle, or choose Create Separate Entry if you really want a duplicate.'
-      :'<strong>'+esc(p.newData.bank)+'</strong> already has an active matching entry. Edit it, replace it, or create a separate entry intentionally.'
-    )
+  h+='<h3>'+esc(isHistory?'Start new churn cycle?':'Matching bank already exists')+'</h3>';
+  h+='<div class="sub">'+(isHistory
+    ?'<strong>'+esc(p.newData.bank)+'</strong> matches an older/cooldown record. Replace that record to start the next churn cycle, or choose Create Separate Entry if you really want a duplicate.'
+    :'<strong>'+esc(p.newData.bank)+'</strong> already has an active matching entry. Edit it, replace it, or create a separate entry intentionally.'
   )+'</div>';
   h+='<div class="ow-existing">'+bankLogo(ex.bank)+'<div class="ow-info"><div class="nm">'+esc(ex.bank)+'</div><div class="det">'+esc(s)+' · ID: '+esc(getEntryDisplayId(ex)||ex.id||'')+'</div>';
   if(ex.opened)h+='<div class="det">Opened: '+fD(ex.opened)+'</div>';
@@ -3818,43 +2710,17 @@ function rMatchPicker(){
   h+='</div></div></div>';
   return h;
 }
-function rReplacementPicker(){
-  if(!replacementPickerPrompt)return'';
-  const p=replacementPickerPrompt;
-  const selected=p.selectedId||p.candidates[0]?.id||'';
-  const sel=p.candidates.find(x=>x.id===selected)||p.candidates[0];
-  let h='<div class="cbg" onclick="replacementPickerPrompt=null;R()"><div class="ow-box" onclick="event.stopPropagation()">';
-  h+='<h3>'+esc(p.title||'Replace old entry?')+'</h3>';
-  h+='<div class="sub">'+esc(p.message||'Choose an old entry to replace, or create a separate new entry.')+'</div>';
-  h+='<div class="fg" style="margin-top:10px"><label>Old entry to replace</label><select onchange="setReplacementPickerTarget(this.value)">';
-  p.candidates.forEach(c=>{
-    h+='<option value="'+esc(c.id)+'"'+(c.id===selected?' selected':'')+'>'+esc(replacementCandidateLabel(c))+'</option>';
-  });
-  h+='</select></div>';
-  if(sel){
-    h+='<div class="ow-existing">'+bankLogo(sel.bank)+'<div class="ow-info"><div class="nm">'+esc(sel.bank)+'</div><div class="det">'+esc(replaceCandidateStatus(sel))+' · '+esc(entryTypeLabel(sel))+' · ID: '+esc(getEntryDisplayId(sel)||sel.id||'')+'</div>';
-    if(sel.opened)h+='<div class="det">Opened: '+fD(sel.opened)+'</div>';
-    if(sel.closed)h+='<div class="det">Closed: '+fD(sel.closed)+'</div>';
-    h+='</div><div class="amt">'+fM(sel.bonus)+'</div></div>';
-  }
-  h+='<div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">';
-  h+='<button class="c-g" style="width:100%;padding:12px;border-radius:12px;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer" onclick="doReplacementPickerReplace()">Review Replace Selected Old Entry</button>';
-  if(!p.currentId)h+='<button style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;background:#fff;color:var(--text)" onclick="doReplacementPickerCreateSeparate()">Create Separate New Entry</button>';
-  h+='<button class="c-c" style="width:100%;padding:10px;border-radius:10px;border:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer" onclick="doReplacementPickerBack()">Back to Entry</button>';
-  h+='</div></div></div>';
-  return h
-}
-function rAnalyzer(){let h='<div style="background:var(--card);border-radius:12px;padding:12px;margin-bottom:8px;border:1px solid var(--border)">';h+='<div style="font-size:12px;font-weight:700;margin-bottom:6px">\uD83D\uDD0D Analyzer Review Wizard</div>';h+='<textarea class="fg" id="az_input" style="width:100%;min-height:120px;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:11px;outline:none;resize:vertical" placeholder="Paste full terms & conditions here...">'+esc(analyzerText)+'</textarea>';h+='<div style="display:flex;gap:4px;margin-top:4px"><button class="az-go" style="flex:1" onclick="runMainAnalyze()">Review</button><button class="btn-s" style="flex:0;margin:0;padding:8px 12px" onclick="showAnalyzer=false;analyzerText=\'\';analyzerResult=null;R()">Close</button></div>';if(analyzerResult){const r=analyzerResult;h+='<div style="margin-top:8px">';if(r.notesForTracker){h+='<div class="tc-box" style="padding:12px;border-radius:12px"><div class="tc-body" style="font-size:13px;line-height:1.8">'+highlightTC(r.notesForTracker)+'</div></div>'}else{h+='<div style="padding:12px;background:var(--bg);border-radius:12px;font-size:13px;line-height:1.8">';if(r.bonusAmount)h+='<div>* Bonus: '+esc(r.bonusAmount)+'</div>';if(r.ddAmount)h+='<div>* DD: '+esc(r.ddAmount)+(r.ddCount?' (x'+r.ddCount+')':'')+'</div>';if(r.debitTxns)h+='<div>* Debit Txns: '+esc(r.debitTxns)+'</div>';if(r.timeline)h+='<div>* Timeline: '+esc(r.timeline)+'</div>';if(r.monthlyFee)h+='<div>* Monthly Fee: '+esc(r.monthlyFee)+'</div>';if(r.promoCode)h+='<div>* Promo: '+esc(r.promoCode)+'</div>';if(r.churnRule)h+='<div>* Churn: '+esc(r.churnRule)+'</div>';if(r.earlyCloseFee)h+='<div>* Close Fee: '+esc(r.earlyCloseFee)+'</div>';h+='</div>'}h+='<button class="btn-p" style="margin-top:8px;font-size:13px;padding:12px" onclick="fillFromAI()">\u2B07 Review & Create Entry</button>';h+='</div>'}h+='</div>';return h}
-function openAdd(){modal={bank:'',accountType:'unknown',bonus:0,churn:'',opened:'',closed:'',bonusRecd:'',reqMet:'',notes:'',analyzedTC:'',minHoldDays:0,earlyCloseFee:0,closeFeeCountdownDays:'',dataPoint:'',reqDays:0,referralBonus:0,checklist:[],plannedClose:'',phoneNum:'',feeChecked:false,monthlyFeeYNText:'',promoCodeText:'',avoidMonthlyFeeText:'',eligibilityText:'',expirationDateText:'',requiredDaysText:'',completeBonusText:'',earlyTerminationFeeText:'',fundedDays:0,fundingAmount:0,fundingAmountText:'',payoutTimingText:'',customTimers:[],analysis:null,analyzerHistory:[],history:[]};overwritePrompt=null;matchPickerPrompt=null;replacementPickerPrompt=null;showInlineAZ=false;inlineResult=null;R()}
+function rAnalyzer(){let h='<div style="background:var(--card);border-radius:12px;padding:12px;margin-bottom:8px;border:1px solid var(--border)">';h+='<div style="font-size:12px;font-weight:700;margin-bottom:6px">\uD83D\uDD0D T&C Analyzer</div>';h+='<textarea class="fg" id="az_input" style="width:100%;min-height:120px;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:11px;outline:none;resize:vertical" placeholder="Paste full terms & conditions here...">'+esc(analyzerText)+'</textarea>';h+='<div style="display:flex;gap:4px;margin-top:4px"><button class="az-go" style="flex:1" onclick="runMainAnalyze()">Analyze</button><button class="btn-s" style="flex:0;margin:0;padding:8px 12px" onclick="showAnalyzer=false;analyzerText=\'\';analyzerResult=null;R()">Close</button></div>';if(analyzerResult){const r=analyzerResult;h+='<div style="margin-top:8px">';if(r.notesForTracker){h+='<div class="tc-box" style="padding:12px;border-radius:12px"><div class="tc-body" style="font-size:13px;line-height:1.8">'+highlightTC(r.notesForTracker)+'</div></div>'}else{h+='<div style="padding:12px;background:var(--bg);border-radius:12px;font-size:13px;line-height:1.8">';if(r.bonusAmount)h+='<div>* Bonus: '+esc(r.bonusAmount)+'</div>';if(r.ddAmount)h+='<div>* DD: '+esc(r.ddAmount)+(r.ddCount?' (x'+r.ddCount+')':'')+'</div>';if(r.debitTxns)h+='<div>* Debit Txns: '+esc(r.debitTxns)+'</div>';if(r.timeline)h+='<div>* Timeline: '+esc(r.timeline)+'</div>';if(r.monthlyFee)h+='<div>* Monthly Fee: '+esc(r.monthlyFee)+'</div>';if(r.promoCode)h+='<div>* Promo: '+esc(r.promoCode)+'</div>';if(r.churnRule)h+='<div>* Churn: '+esc(r.churnRule)+'</div>';if(r.earlyCloseFee)h+='<div>* Close Fee: '+esc(r.earlyCloseFee)+'</div>';h+='</div>'}h+='<button class="btn-p" style="margin-top:8px;font-size:13px;padding:12px" onclick="fillFromAI()">\u2B07 Auto-fill New Entry</button>';h+='</div>'}h+='</div>';return h}
+function openAdd(){modal={bank:'',accountType:'unknown',bonus:0,churn:'',opened:'',closed:'',bonusRecd:'',reqMet:'',notes:'',analyzedTC:'',minHoldDays:0,earlyCloseFee:0,closeFeeCountdownDays:'',dataPoint:'',reqDays:0,referralBonus:0,checklist:[],plannedClose:'',phoneNum:'',feeChecked:false,monthlyFeeYNText:'',promoCodeText:'',avoidMonthlyFeeText:'',eligibilityText:'',expirationDateText:'',requiredDaysText:'',completeBonusText:'',earlyTerminationFeeText:'',fundedDays:0,fundingAmount:0,fundingAmountText:'',payoutTimingText:'',customTimers:[]};overwritePrompt=null;matchPickerPrompt=null;showInlineAZ=false;inlineResult=null;R()}
 try{window.openAdd=openAdd}catch{}
 function formatAnalyzedBankName(name,isBiz){let bank=(name||'').trim();if(!bank)return isBiz?'Biz':'';bank=bank.replace(/\s+/g,' ').trim();if(isBiz){if(/\bbiz\b/i.test(bank))return bank;if(/\bbusiness\b/i.test(bank))return bank.replace(/\bbusiness\b/i,'Biz').replace(/\s+/g,' ').trim();return bank+' Biz'}return bank}
-function openEdit(id){const e=entries.find(x=>x.id===id);if(e){modal={...e,analysis:e.analysis||null,analyzerHistory:normalizeAnalyzerHistoryList(e.analyzerHistory),history:normalizeEntryHistoryList(e.history),analyzedTC:e.analyzedTC||'',requiredDaysText:e.requiredDaysText||(e.reqDays>0?String(e.reqDays):''),earlyTerminationFeeText:e.earlyTerminationFeeText||(e.earlyCloseFee>0?String(e.earlyCloseFee):''),closeFeeCountdownDays:closeHoldDisplayValue(e),_manualReplaceTarget:'',_edit:true};showInlineAZ=false;inlineResult=null;R()}}
+function openEdit(id){const e=entries.find(x=>x.id===id);if(e){modal={...e,analyzedTC:e.analyzedTC||'',requiredDaysText:e.requiredDaysText||(e.reqDays>0?String(e.reqDays):''),earlyTerminationFeeText:e.earlyTerminationFeeText||(e.earlyCloseFee>0?String(e.earlyCloseFee):''),closeFeeCountdownDays:e.minHoldDays>0?e.minHoldDays:'',_edit:true};showInlineAZ=false;inlineResult=null;R()}}
 function closeModal(){modal=null;showInlineAZ=false;inlineResult=null;R()}
-function clearFields(){if(!modal)return;modal.accountType='personal';['bonus','churn','opened','closed','bonusRecd','reqMet','dataPoint','notes','plannedClose','phoneNum','monthlyFeeYNText','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText','eligibilityText','expirationDateText','requiredDaysText','closeFeeCountdownDays'].forEach(k=>{modal[k]=''});modal.customTimers=[];['reqDays','minHoldDays','earlyCloseFee','referralBonus'].forEach(k=>{modal[k]=0});modal.bonus=0;modal.feeChecked=false;R()}
+function clearFields(){if(!modal)return;modal.accountType='unknown';['bonus','churn','opened','closed','bonusRecd','reqMet','dataPoint','notes','plannedClose','phoneNum','monthlyFeeYNText','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText','eligibilityText','expirationDateText','requiredDaysText','closeFeeCountdownDays'].forEach(k=>{modal[k]=''});modal.customTimers=[];['reqDays','minHoldDays','earlyCloseFee','referralBonus'].forEach(k=>{modal[k]=0});modal.bonus=0;modal.feeChecked=false;R()}
 function parseCloseFeeAmount(text){const raw=String(text||'').trim();if(!raw)return 0;if(/^(none|no|n\/a)$/i.test(raw))return 0;const m=raw.match(/\$?([\d,]+(?:\.\d+)?)/);return m?parseInt(String(m[1]).replace(/,/g,''),10)||0:0}
 function parseRequirementDaysText(v){const raw=String(v??'').trim();if(!raw)return 0;const m=raw.match(/(\d{1,4})/);return m?Math.max(0,parseInt(m[1],10)||0):0}
 function syncRequiredDaysFromModal(d){const raw=String(modal.requiredDaysText??'').trim();const parsed=parseRequirementDaysText(raw);if(raw){d.requiredDaysText=raw;d.reqDays=parsed}else if((modal.reqDays||0)>0){d.reqDays=parseInt(modal.reqDays,10)||0;d.requiredDaysText=String(d.reqDays)}else{d.requiredDaysText='';d.reqDays=0}return d.reqDays}
-function applyCountdownFromModal(d){const raw=String(modal.closeFeeCountdownDays??'').trim();if(raw===''){d.minHoldDays=0;d.closeFeeCountdownDays='';d.feeChecked=false;return true}const wanted=Math.max(0,parseInt(raw,10)||0);if(wanted===0){d.minHoldDays=0;d.closeFeeCountdownDays='';d.feeChecked=false;return true}d.minHoldDays=wanted;d.closeFeeCountdownDays=String(wanted);d.feeChecked=false;return true}
+function applyCountdownFromModal(d){const raw=String(modal.closeFeeCountdownDays??'').trim();if(raw===''){d.minHoldDays=0;d.feeChecked=false;return true}const wanted=Math.max(0,parseInt(raw,10)||0);if(wanted===0){d.minHoldDays=0;d.feeChecked=false;return true}d.minHoldDays=wanted;d.feeChecked=false;return true}
 let entrySaveBusy=false;
 function modalControlValueByLabel(labelRe){
   const box=document.querySelector('.modal');
@@ -3890,17 +2756,12 @@ function syncModalFromEditDOM(){
   setStr('completeBonusText',/^How to Complete/i);
   setStr('earlyTerminationFeeText',/^Early Close Fee Amount/i);
   modal.earlyCloseFee=parseCloseFeeAmount(modal.earlyTerminationFeeText);
-  const holdRaw=modalControlValueByLabel(/^Close (Fee Days After Opened|Hold Days)/i);
+  const holdRaw=modalControlValueByLabel(/^Close Fee Days After Opened/i);
   if(holdRaw!==null){
     modal.closeFeeCountdownDays=holdRaw;
     modal.minHoldDays=parseInt(holdRaw,10)||0;
     modal.feeChecked=false;
   }
-  setStr('closeRuleBasis',/^Close Rule Basis/i);
-  setNum('closeBufferDays',/^Close Buffer Days/i);
-  const mfv=modalControlValueByLabel(/^Monthly Fee Checked/i);
-  if(mfv!==null)modal.monthlyFeeChecked=String(mfv).toLowerCase()==='yes';
-  setStr('closeRuleText',/^Close Rule Wording/i);
   setStr('eligibilityText',/^Eligibility/i);
   const reqRaw=modalControlValueByLabel(/^How Many Days Required/i);
   if(reqRaw!==null){
@@ -3941,37 +2802,29 @@ function saveEntryFromButton(btn,ev){
   },0);
   return false;
 }
-function collectModalEntryData(){
+function saveEntry(){
   syncModalFromEditDOM();
   const bank=(modal.bank||'').trim();
-  if(!bank){alert('Bank name required');return null}
+  if(!bank){alert('Bank name required');return false}
   syncModalAccountTypeFromBank();
-  const d={bank,accountType:normalizeAccountType(modal.accountType)||'personal',bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,closeFeeCountdownDays:modal.closeFeeCountdownDays||'',earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',fundedDays:modal.fundedDays||0,fundingAmount:modal.fundingAmount||0,fundingAmountText:modal.fundingAmountText||'',payoutTimingText:modal.payoutTimingText||'',plannedClose:'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false,monthlyFeeYNText:modal.monthlyFeeYNText||'',monthlyFeeAmountText:modal.monthlyFeeAmountText||'',monthlyFeeFrequency:modal.monthlyFeeFrequency||'',monthlyFeeWaiverType:modal.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:modal.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:modal.monthlyFeeWaiverText||'',promoCodeText:modal.promoCodeText||'',avoidMonthlyFeeText:modal.avoidMonthlyFeeText||'',completeBonusText:modal.completeBonusText||'',earlyTerminationFeeText:modal.earlyTerminationFeeText||'',eligibilityText:modal.eligibilityText||'',expirationDateText:modal.expirationDateText||'',requiredDaysText:modal.requiredDaysText||'',closeRuleBasis:normalizeCloseRuleBasis(modal.closeRuleBasis),closeBufferDays:parseInt(modal.closeBufferDays,10)||BUFFER_DAYS,closeRuleText:modal.closeRuleText||'',monthlyFeeChecked:!!modal.monthlyFeeChecked,analysis:(modal.analysis&&typeof modal.analysis==='object')?modal.analysis:null,analyzerHistory:normalizeAnalyzerHistoryList(modal.analyzerHistory),history:normalizeEntryHistoryList(modal.history),customTimers:normalizeTimerList(modal.customTimers)};
-  sanitizeCloseFieldsForEntry(d);
+  const d={bank,accountType:normalizeAccountType(modal.accountType)||'unknown',bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',fundedDays:modal.fundedDays||0,fundingAmount:modal.fundingAmount||0,fundingAmountText:modal.fundingAmountText||'',payoutTimingText:modal.payoutTimingText||'',plannedClose:modal.plannedClose||'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false,monthlyFeeYNText:modal.monthlyFeeYNText||'',promoCodeText:modal.promoCodeText||'',avoidMonthlyFeeText:modal.avoidMonthlyFeeText||'',completeBonusText:modal.completeBonusText||'',earlyTerminationFeeText:modal.earlyTerminationFeeText||'',eligibilityText:modal.eligibilityText||'',expirationDateText:modal.expirationDateText||'',requiredDaysText:modal.requiredDaysText||'',customTimers:normalizeTimerList(modal.customTimers)};
   syncRequiredDaysFromModal(d);
   d.earlyCloseFee=parseCloseFeeAmount(modal.earlyTerminationFeeText);
   applyCountdownFromModal(d);
   hydrateTimersFromOpened(d);
-  Object.assign(d,normalizeLifecycleEntry(d));
-  return d
-}
-function saveEntry(){
-  const d=collectModalEntryData();
-  if(!d)return false;
-  if(!modal._edit&&!modal._skipManualReplacePrompt&&handleManualReplacementPicker(d,'manual','')){closeModal();R();return 'duplicate-prompt'}
   if(!modal._edit&&!modal._skipDuplicateCheck&&handleDuplicateFlow(d,'manual')){closeModal();R();return 'duplicate-prompt'}
   const beforeEntries=entries.map(e=>({...e,checklist:Array.isArray(e.checklist)?[...e.checklist]:[],customTimers:normalizeTimerList(e.customTimers)}));
   let savedEntry=null;
   if(modal._edit){
     const targetId=modal.id;let promotedId='';
-    entries=entries.map(e=>{if(e.id!==targetId)return e;let next={...e,...d,checklist:e.checklist||[],customTimers:(d.customTimers&&d.customTimers.length)?d.customTimers:(e.customTimers||[])};hydrateTimersFromOpened(next);Object.assign(next,normalizeLifecycleEntry(next));const beforeId=next.id;next=promoteDraftEntryId(next,beforeId);promotedId=next.id;return next});
+    entries=entries.map(e=>{if(e.id!==targetId)return e;let next={...e,...d,checklist:e.checklist||[],customTimers:(d.customTimers&&d.customTimers.length)?d.customTimers:(e.customTimers||[])};hydrateTimersFromOpened(next);const beforeId=next.id;next=promoteDraftEntryId(next,beforeId);promotedId=next.id;return next});
     savedEntry=entries.find(e=>e.id===promotedId)||entries.find(e=>e.id===targetId)||null;
   }else{
-    const next=assignEntryIdForCreate({...d,checklist:[],customTimers:d.customTimers||[]});hydrateTimersFromOpened(next);Object.assign(next,normalizeLifecycleEntry(next));entries.push(next);savedEntry=next;
+    const next=assignEntryIdForCreate({...d,checklist:[],customTimers:d.customTimers||[]});hydrateTimersFromOpened(next);entries.push(next);savedEntry=next;
   }
   entries=sortE(entries);
   if(!saveEntriesStrict(entries)){entries=beforeEntries;return false}
-  if(savedEntry){syncProfileEventsFromEntry(savedEntry);refreshSavedReqFromEntry(savedEntry);learnAnalyzerMemoryFromEntry(savedEntry)}
+  if(savedEntry){syncProfileEventsFromEntry(savedEntry);refreshSavedReqFromEntry(savedEntry)}
   closeModal();
   return true;
 }
@@ -3980,7 +2833,7 @@ function normalizeNewCycleData(d,existing){
   const next={...existing,...d};
   next.id=existing.id||d.id||next.id;
   next.bank=d.bank||existing.bank||'';
-  next.accountType=normalizeAccountType(d.accountType)||normalizeAccountType(existing.accountType)||inferAccountTypeForEntry(next)||'personal';
+  next.accountType=normalizeAccountType(d.accountType)||normalizeAccountType(existing.accountType)||inferAccountTypeForEntry(next)||'unknown';
   next.bonus=(d.bonus||d.bonus===0)?d.bonus:(existing.bonus||0);
   next.churn=d.churn||existing.churn||'';
   next.opened=d.opened||'';
@@ -3988,10 +2841,6 @@ function normalizeNewCycleData(d,existing){
   next.bonusRecd='';
   next.reqMet='';
   next.plannedClose='';
-  next.closeRuleBasis=normalizeCloseRuleBasis(d.closeRuleBasis||existing.closeRuleBasis||inferCloseRuleBasisFromText(next));
-  next.closeBufferDays=parseInt(d.closeBufferDays??existing.closeBufferDays??BUFFER_DAYS,10)||BUFFER_DAYS;
-  next.closeRuleText=d.closeRuleText||existing.closeRuleText||'';
-  next.monthlyFeeChecked=!!d.monthlyFeeChecked;
   next.phoneNum=d.phoneNum||existing.phoneNum||'';
   next.notes=d.notes||'';
   next.checklist=[];
@@ -4006,7 +2855,6 @@ function normalizeNewCycleData(d,existing){
   next.payoutTimingText=d.payoutTimingText||'';
   next.reqDays=d.reqDays||0;
   next.minHoldDays=d.minHoldDays||0;
-  next.closeFeeCountdownDays=d.closeFeeCountdownDays||String(next.minHoldDays||'');
   next.earlyCloseFee=d.earlyCloseFee||0;
   next.analyzedTC=d.analyzedTC||'';
   next.monthlyFeeYNText=d.monthlyFeeYNText||'';
@@ -4017,11 +2865,8 @@ function normalizeNewCycleData(d,existing){
   next.eligibilityText=d.eligibilityText||'';
   next.expirationDateText=d.expirationDateText||'';
   next.requiredDaysText=d.requiredDaysText||'';
-  next.analysis=(d.analysis&&typeof d.analysis==='object')?d.analysis:((existing.analysis&&typeof existing.analysis==='object')?existing.analysis:null);
-  next.analyzerHistory=normalizeAnalyzerHistoryList(d.analyzerHistory&&d.analyzerHistory.length?d.analyzerHistory:existing.analyzerHistory);
-  next.history=normalizeEntryHistoryList(d.history&&d.history.length?d.history:existing.history);
   next.previousCycles=Array.isArray(existing.previousCycles)?existing.previousCycles.slice(0,10):[];
-  return normalizeLifecycleEntry(next);
+  return next;
 }
 function chooseMatch(id){
   if(!matchPickerPrompt)return;
@@ -4046,9 +2891,8 @@ function doOverwrite(){
   if(!overwritePrompt)return;
   const p=overwritePrompt;
   const d=p.newData||{};
-  const removeId=p.removeEntryId&&p.removeEntryId!==p.existingEntry.id?p.removeEntryId:'';
   let savedId=p.existingEntry.id;
-  entries=entries.filter(e=>!removeId||e.id!==removeId).map(e=>{
+  entries=entries.map(e=>{
     if(e.id!==p.existingEntry.id)return e;
     const oldCycle=archivedCycleSnapshot(e);
     saveOfferVersionFromEntry(e,'archived-before-replace');
@@ -4060,7 +2904,7 @@ function doOverwrite(){
   });
   entries=sortE(entries);sv(SK,entries);
   const saved=entries.find(e=>e.id===savedId)||null;
-  if(saved){syncProfileEventsFromEntry(saved);refreshSavedReqFromEntry(saved);learnAnalyzerMemoryFromEntry(saved)}
+  if(saved){syncProfileEventsFromEntry(saved);refreshSavedReqFromEntry(saved)}
   overwritePrompt=null;modal=null;expanded=savedId;tab='tracker';search='';showInlineAZ=false;inlineResult=null;
   R();
 }
@@ -4070,11 +2914,11 @@ function doAddNew(){
   const d={...p.newData};
   const next=assignEntryIdForCreate({...d,checklist:[],customTimers:normalizeTimerList(d.customTimers||[]),feeChecked:false});
   entries.push(next);entries=sortE(entries);sv(SK,entries);
-  syncProfileEventsFromEntry(next);refreshSavedReqFromEntry(next);learnAnalyzerMemoryFromEntry(next);
+  syncProfileEventsFromEntry(next);refreshSavedReqFromEntry(next);
   overwritePrompt=null;modal=null;expanded=next.id;tab='tracker';search='';showInlineAZ=false;inlineResult=null;
   R();
 }
-function getBackupStorageKeys(){return[SK,TK,DD_KEY,REQ_KEY,OFFER_HIST_KEY,PHONE_KEY,DP_USER_KEY,COMMUNITY_DP_KEY,COMMUNITY_DP_SEED_KEY,PROFILE_EVT_KEY,BK_KEY,'bt_tc_learning_inbox_v320',ANALYZER_MEMORY_KEY,ANALYZER_TRAINING_KEY,ANALYZER_RULES_KEY]}
+function getBackupStorageKeys(){return[SK,TK,DD_KEY,REQ_KEY,OFFER_HIST_KEY,PHONE_KEY,DP_USER_KEY,COMMUNITY_DP_KEY,COMMUNITY_DP_SEED_KEY,PROFILE_EVT_KEY,BK_KEY,'bt_tc_learning_inbox_v320']}
 function parseBackupStorageValue(raw){try{return JSON.parse(raw)}catch{return raw}}
 function storageValueForRestore(val){return typeof val==='string'?val:JSON.stringify(val)}
 function countBackupEntries(d){if(Array.isArray(d?.entries))return d.entries.length;const arr=backupArrayFromStorage(d,SK);return arr.length}
@@ -4082,7 +2926,6 @@ function countBackupUserDatapoints(d){if(Array.isArray(d?.userDatapoints))return
 function countBackupCommunityDatapoints(d){if(Array.isArray(d?.communityDatapoints))return d.communityDatapoints.length;return backupArrayFromStorage(d,COMMUNITY_DP_KEY).length}
 function countBackupProfileEvents(d){if(Array.isArray(d?.profileEvents))return d.profileEvents.length;if(Array.isArray(d?.storageSnapshot?.[PROFILE_EVT_KEY]))return d.storageSnapshot[PROFILE_EVT_KEY].length;const raw=d?.localStorage?.[PROFILE_EVT_KEY];try{const p=JSON.parse(raw||'[]');return Array.isArray(p)?p.length:0}catch{return 0}}
 function countBackupReqs(d){if(d?.bankReqs&&typeof d.bankReqs==='object')return Object.keys(d.bankReqs).length;const obj=backupObjectFromStorage(d,REQ_KEY);return Object.keys(obj).length}
-function countBackupOfferHistory(d){if(d?.offerHistory&&typeof d.offerHistory==='object')return Object.values(d.offerHistory).reduce((s,v)=>s+(Array.isArray(v)?v.length:0),0);const obj=backupObjectFromStorage(d,OFFER_HIST_KEY);return Object.values(obj||{}).reduce((s,v)=>s+(Array.isArray(v)?v.length:0),0)}
 function countBackupPhones(d){if(Array.isArray(d?.phoneBook))return d.phoneBook.length;return backupArrayFromStorage(d,PHONE_KEY).length}
 function buildStorageSnapshot(){const snap={};getBackupStorageKeys().forEach(key=>{try{const raw=localStorage.getItem(key);if(raw===null)return;snap[key]=parseBackupStorageValue(raw)}catch{}});return snap}
 function restoreStorageSnapshot(snapshot){if(!snapshot||typeof snapshot!=='object')return;Object.entries(snapshot).forEach(([key,val])=>{if(!getBackupStorageKeys().includes(key))return;try{localStorage.setItem(key,storageValueForRestore(val))}catch{}})}
@@ -4095,199 +2938,14 @@ function performHardReset(){entries=[];sv(SK,[]);try{getBackupStorageKeys().forE
 function resetAllData(){cfm={title:'⚠️ Reset All Data',msg:'This will permanently delete ALL tracker rows, datapoints, saved bank requirements, and saved phone data from this device.\n\nFor safety, the app will export one final full backup first so you can save it to Files/iCloud/Drive before the wipe finishes.',action:()=>{cfm={title:'🚨 Final confirmation',msg:'Continue with the full reset? A recovery backup file will be created first, then this device will be wiped.',action:async()=>{cfm=null;R();try{await exportBackup(false,buildResetSafetyBackupPayload(),'BankBonusTracker_PreReset_'+backupTimestamp()+'.json')}catch{}performHardReset();cfm={title:'Reset Complete',msg:'This device has been cleared. Keep the exported pre-reset backup file somewhere safe so you can restore later.',green:true,action:()=>{cfm=null;R()}};R()}};R()}};R()}
 function delEntry(id){const e=entries.find(x=>x.id===id);if(!e)return;cfm={title:'Delete Bank Entry?',msg:'Delete '+e.bank+' '+(e.id||'')+' from the tracker?\n\nThis cannot be undone.',action:()=>{entries=entries.filter(x=>x.id!==id);sv(SK,entries);expanded=null;cfm={title:'Bank Entry Deleted',msg:e.bank+' was deleted from the tracker.',green:true,action:()=>{cfm=null;R()}};R()}};R()}
 function closeAcct(id){const e=entries.find(x=>x.id===id);if(!e)return;feeCheckPrompt={entryId:id,bank:e.bank,step:'ask',months:e.minHoldDays>0?Math.round(e.minHoldDays/30):6,feeAmount:e.earlyCloseFee||0};R()}
-function feeCheckSkip(){
-  if(!feeCheckPrompt)return;
-  const id=feeCheckPrompt.entryId;
-  feeCheckPrompt=null;
-  startCloseFlow(id)
-}
+function feeCheckSkip(){if(!feeCheckPrompt)return;const id=feeCheckPrompt.entryId;entries=entries.map(e=>{if(e.id===id){e.feeChecked=true;e.minHoldDays=0;e.earlyCloseFee=0}return e});entries=sortE(entries);sv(SK,entries);feeCheckPrompt=null;startCloseFlow(id)}
 function feeCheckRemoveTimer(){if(!feeCheckPrompt)return;const id=feeCheckPrompt.entryId;const current=entries.find(e=>e.id===id);entries=entries.map(e=>{if(e.id===id){e.minHoldDays=0;e.earlyCloseFee=0;e.feeChecked=true}return e});entries=sortE(entries);sv(SK,entries);feeCheckPrompt=null;cfm={title:'Timer Removed',msg:(current?current.bank+' ':'')+'early-close timer removed. This bank is now marked Safe to Close.',green:true,action:()=>{cfm=null;R()}};R()}
-function feeCheckSave(){
-  if(!feeCheckPrompt)return;
-  const p=feeCheckPrompt;
-  const id=p.entryId;
-  const months=p.months||6;
-  const feeAmt=p.feeAmount||0;
-  entries=entries.map(e=>{
-    if(e.id===id){
-      if(e.opened){
-        const safeDate=addM(e.opened,months);
-        e.minHoldDays=dB(e.opened,safeDate)
-      }else{
-        e.minHoldDays=months*30
-      }
-      e.earlyCloseFee=feeAmt;
-      e.feeChecked=false
-    }
-    return e
-  });
-  entries=sortE(entries);sv(SK,entries);
-  feeCheckPrompt=null;
-  const e=entries.find(x=>x.id===id);
-  if(e){
-    const dsc=daysUntilSafe(e);
-    if(dsc!==null&&dsc<=0){
-      cfm={title:'✅ Already Safe',msg:e.bank+' hold period has already passed. Continue to close this account now?',green:true,confirmLabel:'Continue',action:()=>{cfm=null;startCloseFlow(id)}};
-      R();
-      return
-    }
-  }
-  R()
-}
+function feeCheckSave(){if(!feeCheckPrompt)return;const p=feeCheckPrompt;const id=p.entryId;const months=p.months||6;const feeAmt=p.feeAmount||0;entries=entries.map(e=>{if(e.id===id){if(e.opened){const safeDate=addM(e.opened,months);e.minHoldDays=dB(e.opened,safeDate)}else{e.minHoldDays=months*30}e.earlyCloseFee=feeAmt;e.feeChecked=false}return e});entries=sortE(entries);sv(SK,entries);feeCheckPrompt=null;const e=entries.find(x=>x.id===id);if(e){const dsc=daysUntilSafe(e);if(dsc!==null&&dsc<=0){cfm={title:'\u2705 Already Safe!',msg:e.bank+' hold period has already passed. You can close anytime!',green:true,action:()=>{cfm=null;R()}};R();return}}R()}
 function feeCheckCancel(){feeCheckPrompt=null;R()}
-function startCloseFlow(id,preferredMode='actual'){
-  const e=entries.find(x=>x.id===id);
-  if(!e)return;
-  closePrompt={
-    entryId:id,
-    bank:e.bank,
-    bonus:e.bonus||0,
-    step:'date',
-    closeDate:td(),
-    bonusDate:e.bonusRecd||'',
-    reqDate:e.reqMet||'',
-    gotFull:true,
-    actualBonus:e.bonus||0,
-    dp:e.dataPoint||'',
-    monthlyFeeChecked:!!e.monthlyFeeChecked,
-    mode:'actual',
-    reviewOnly:false,
-    recommendedMode:'actual'
-  };
-  R()
-}
-function closeModeSelect(mode){
-  startCloseFlow(closePrompt?.entryId,'actual')
-}
-function closeCollectDateFields(){
-  const p=closePrompt;
-  if(!p)return;
-  const d=document.getElementById('cp_date');
-  if(d)p.closeDate=d.value;
-  const mf=document.getElementById('cp_monthly_checked');
-  if(mf)p.monthlyFeeChecked=mf.value==='yes';
-}
-function closeNext(){
-  const p=closePrompt;
-  if(!p)return;
-  if(p.step==='date'){
-    closeCollectDateFields();
-    if(!p.closeDate){alert('Close date is required.');return}
-    const e=entries.find(x=>x.id===p.entryId);
-    if(e?.opened&&dB(e.opened,p.closeDate)<0){alert('Close date cannot be before the opened date.');return}
-    p.step='bonus';
-    R();
-    return
-  }
-  if(p.step==='bonus'){
-    if(!p.gotFull){
-      const v=document.getElementById('cp_amt');
-      if(v)p.actualBonus=parseInt(v.value)||0
-    }else p.actualBonus=p.bonus||0;
-    const bd=document.getElementById('cp_bonus_date');
-    if(bd)p.bonusDate=bd.value;
-    const rd=document.getElementById('cp_req_date');
-    if(rd)p.reqDate=rd.value;
-    if((p.actualBonus||0)>0&&!p.bonusDate){alert('Bonus received date is required for tax tracking when an actual bonus amount is saved.');return}
-    p.step='dp';
-    R();
-    return
-  }
-  if(p.step==='dp'){
-    const dp=document.getElementById('cp_dp');
-    if(dp)p.dp=dp.value.trim();
-    p.step='review';
-    R()
-  }
-}
-function closeBack(){
-  const p=closePrompt;
-  if(!p)return;
-  if(p.step==='review')p.step='dp';
-  else if(p.step==='dp')p.step='bonus';
-  else if(p.step==='bonus')p.step='date';
-  else cancelClose();
-  R()
-}
-
-function finishClose(){
-  const p=closePrompt;
-  if(!p)return;
-  const e=entries.find(x=>x.id===p.entryId);
-  if(!e)return;
-  if(!p.closeDate){alert('Close date is required.');return}
-  undoState=closeUndoSnapshot(e);
-  undoState.undoLabel='Closed saved for '+(e.bank||p.bank||'this bank')+' — Undo restores everything for 60 seconds.';
-  if(undoTimer)clearTimeout(undoTimer);
-  undoTimer=setTimeout(()=>{undoState=null;R()},60000);
-  entries=entries.map(x=>{
-    if(x.id===p.entryId){
-      x.closed=p.closeDate;
-      x.plannedClose='';
-      x.bonus=Number(p.actualBonus||0);
-      if(Number(p.actualBonus||0)>0){
-        x.bonusRecd=p.bonusDate||x.bonusRecd||'';
-        x.reqMet=p.reqDate||x.reqMet||x.bonusRecd||'';
-      }
-      if(p.dp)x.dataPoint=p.dp;
-      x.monthlyFeeChecked=!!p.monthlyFeeChecked;
-      x.feeChecked=true;
-      appendEntryHistory(x,'actual_close','Closed '+fD(p.closeDate)+(x.bonusRecd?' · bonus received '+fD(x.bonusRecd):'')+'.');
-      return normalizeLifecycleEntry(x)
-    }
-    return x
-  });
-  const e2=entries.find(x=>x.id===p.entryId);
-  const autoMethod=(p.dp||e2?.dataPoint||'').trim();
-  if(e2&&Number(p.actualBonus||0)>0&&autoMethod&&p.bonusDate)addDD(p.bank,autoMethod,Number(p.actualBonus||0),p.bonusDate,{entryId:p.entryId,accountType:e2.accountType,note:'Auto-saved from successful close'});
-  if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
-  entries=sortE(entries);sv(SK,entries);
-  closePrompt=null;
-  expanded=e2?e2.id:null;
-  const readyDate=e2&&churnReadyDate(e2)?fD(churnReadyDate(e2)):'not available';
-  cfm={title:'Closed Saved',msg:(e2?e2.bank:'This bank')+' closed on '+fD(p.closeDate)+'.\n\nChurn-ready date: '+readyDate+'.\nStatus: '+(e2?status(e2):'Waiting to Churn')+'.\n\nUndo is available for 60 seconds at the bottom of the app.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
-  R()
-}
-function confirmClearCloseDate(id){
-  const e=entries.find(x=>x.id===id);
-  if(!e||!e.closed)return;
-  closePrompt={entryId:id,bank:e.bank,bonus:e.bonus||0,step:'stillopen',closeDate:e.closed,bonusDate:e.bonusRecd||'',reqDate:e.reqMet||'',moveClosedToPlan:false,monthlyFeeChecked:!!e.monthlyFeeChecked,mode:'stillopen'};
-  R()
-}
-function finishStillOpen(){
-  const p=closePrompt;
-  if(!p)return;
-  const e=entries.find(x=>x.id===p.entryId);
-  if(!e)return;
-  const oldClosed=e.closed||p.closeDate||'';
-  undoState=closeUndoSnapshot(e);
-  undoState.undoLabel='Closed date removed for '+(e.bank||'this bank')+' — Undo restores everything for 60 seconds.';
-  if(undoTimer)clearTimeout(undoTimer);
-  undoTimer=setTimeout(()=>{undoState=null;R()},60000);
-  entries=entries.map(x=>{
-    if(x.id===p.entryId){
-      x.closed='';
-      x.feeChecked=false;
-      x.plannedClose='';
-      appendEntryHistory(x,'still_open','Removed closed date '+(oldClosed?fD(oldClosed):'')+'.');
-      return normalizeLifecycleEntry(x)
-    }
-    return x
-  });
-  const e2=entries.find(x=>x.id===p.entryId);
-  if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
-  entries=sortE(entries);sv(SK,entries);
-  closePrompt=null;
-  expanded=e2?e2.id:null;
-  cfm={title:'Marked Still Open',msg:(e2?e2.bank:'This bank')+' is active/open again. Closed date was cleared completely.'+'\n\nUndo is available for 60 seconds at the bottom of the app.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
-  R()
-}
-function clearCloseDate(id,keepAsPlanned){
-  const e=entries.find(x=>x.id===id);
-  if(!e)return;
-  closePrompt={entryId:id,bank:e.bank,bonus:e.bonus||0,step:'stillopen',closeDate:e.closed||'',bonusDate:e.bonusRecd||'',reqDate:e.reqMet||'',moveClosedToPlan:false,monthlyFeeChecked:!!e.monthlyFeeChecked,mode:'stillopen'};
-  finishStillOpen()
-}
+function startCloseFlow(id){const e=entries.find(x=>x.id===id);if(!e)return;closePrompt={entryId:id,bank:e.bank,bonus:e.bonus||0,step:'date',closeDate:td(),gotFull:true,actualBonus:e.bonus||0,dp:''};R()}
+function closeNext(){const p=closePrompt;if(!p)return;if(p.step==='date'){const d=document.getElementById('cp_date');if(d)p.closeDate=d.value;if(!p.closeDate){alert('Close date is required.');return}p.step='bonus';R()}else if(p.step==='bonus'){if(!p.gotFull){const v=document.getElementById('cp_amt');if(v)p.actualBonus=parseInt(v.value)||0}p.step='dp';R()}else if(p.step==='dp'){const dp=document.getElementById('cp_dp');if(dp)p.dp=dp.value.trim();finishClose()}}
+function closeBack(){const p=closePrompt;if(!p)return;if(p.step==='dp')p.step='bonus';else if(p.step==='bonus')p.step='date';R()}
+function finishClose(){const p=closePrompt;if(!p)return;const e=entries.find(x=>x.id===p.entryId);const warnings=closeSafetyWarnings(e,p);if(warnings.length&&!window.confirm('Review before closing:\n\n- '+warnings.join('\n- ')+'\n\nContinue anyway?'))return;undoState={...e};if(undoTimer)clearTimeout(undoTimer);undoTimer=setTimeout(()=>{undoState=null;R()},15000);entries=entries.map(x=>{if(x.id===p.entryId){x.closed=p.closeDate;x.bonus=p.actualBonus;if(p.actualBonus>0&&!x.bonusRecd)x.bonusRecd=p.closeDate;if(p.dp)x.dataPoint=p.dp;x.feeChecked=true}return x});const e2=entries.find(x=>x.id===p.entryId);const autoMethod=(p.dp||e2?.dataPoint||'').trim();if(e2&&p.actualBonus>0&&autoMethod)addDD(p.bank,autoMethod,p.actualBonus,p.closeDate,{entryId:p.entryId,note:'Auto-saved from successful close'});if(e2)refreshSavedReqFromEntry(e2);entries=sortE(entries);sv(SK,entries);closePrompt=null;expanded=null;R()}
 function cancelClose(){closePrompt=null;R()}
 function addFromTpl(i){const t=TEMPLATES[i];const newData={bank:t.bank,bonus:t.bonus,churn:t.churn,opened:td(),closed:'',bonusRecd:'',reqMet:'',notes:t.notes||'',analyzedTC:'',minHoldDays:t.minHoldDays||0,earlyCloseFee:t.earlyCloseFee||0,dataPoint:t.dataPoint||'',reqDays:t.reqDays||0,referralBonus:0,plannedClose:'',phoneNum:'',feeChecked:false};if(handleDuplicateFlow(newData,'template')){showTemplates=false;R();return}modal=newData;modal.checklist=[];modal.customTimers=[];showTemplates=false;R()}
 function toggleCk(id,i){entries=entries.map(e=>{if(e.id===id&&e.checklist)e.checklist[i].done=!e.checklist[i].done;return e});sv(SK,entries);R()}
@@ -4295,39 +2953,7 @@ function addCk(id){const inp=document.getElementById('ck_'+id);if(!inp||!inp.val
 function rmCk(id,i){entries=entries.map(e=>{if(e.id===id&&e.checklist)e.checklist.splice(i,1);return e});sv(SK,entries);R()}
 function timerId(){return 'tmr_'+Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-5)}
 function normalizeTimer(item){const x=(item&&typeof item==='object')?{...item}:{};const text=String(x.text||'').trim();const startDate=String(x.startDate||'').trim();const daysRequired=parseInt(x.daysRequired||0,10)||0;const date=String(x.date||timerDueFromStart(startDate,daysRequired)||'').trim();return{id:String(x.id||timerId()),text,startDate,daysRequired,date,done:!!x.done}}
-function timerCleanText(v){return String(v||'').replace(/\s+/g,' ').trim()}
-function timerCategory(t){
-  const s=timerCleanText(t?.text||'').toLowerCase();
-  if(/promo|expiration|open[- ]?by/.test(s))return'openby';
-  if(/close review|review after payout|safe close/.test(s))return'close-review';
-  if(/payout|bonus payment|bonus watch|expected around day/.test(s))return'payout';
-  if(/maintain|required balance|hold check|hold deadline|new-money hold/.test(s))return'hold';
-  if(/funding deadline|fund the account|funded within|deposit new money|new money funding/.test(s))return'funding';
-  if(/requirement|direct deposit|\bdd\b|ach dd|qualifying transactions|debit transactions|recurring income/.test(s))return'requirement';
-  return s.slice(0,40)||'timer'
-}
-function timerPriority(t){
-  const s=timerCleanText(t?.text||'').toLowerCase();
-  let p=50;
-  if(/bonus requirement deadline|bonus payout watch$|suggested timer|deadline$/.test(s))p+=20;
-  if(/direct deposit|\bdd\b|recurring income|ach|transactions|expected around day|funding deadline|close review/.test(s))p-=15;
-  if(/\$|[0-9]/.test(s))p-=5;
-  return p
-}
-function normalizedTimerKey(t){return timerCategory(t)+'|'+String(parseInt(t?.daysRequired||0,10)||0)+'|'+String(t?.date||'')}
-function dedupeTimerList(list){
-  const map=new Map();
-  (Array.isArray(list)?list:[]).forEach(item=>{
-    const t=normalizeTimer(item);
-    if(!t.text&&!t.date)return;
-    const k=normalizedTimerKey(t);
-    const cur=map.get(k);
-    if(!cur||timerPriority(t)<timerPriority(cur))map.set(k,t)
-  });
-  return Array.from(map.values())
-}
-function normalizeTimerList(list){return dedupeTimerList(list)}
-
+function normalizeTimerList(list){return(Array.isArray(list)?list:[]).map(normalizeTimer).filter(t=>t.text||t.date)}
 function hydrateTimersFromOpened(entry){if(!entry)return entry;const opened=String(entry.opened||'').trim();entry.customTimers=normalizeTimerList(entry.customTimers||[]).map(t=>{const days=parseInt(t.daysRequired||0,10)||0;if(opened&&days>0&&(!t.startDate||!t.date)){return normalizeTimer({...t,startDate:t.startDate||opened,date:t.date||timerDueFromStart(t.startDate||opened,days)})}return t});return entry}
 const TIMER_DELETE_KEY_PREFIX='bt_deleted_timer_keys_v1:';
 function normTimerVal(v){return String(v||'').replace(/\s+/g,' ').trim()}
@@ -4358,143 +2984,12 @@ function rmTimer(id,timerId){const entry=entries.find(e=>e.id===id);if(!entry)re
 function toggleDDChip(m){if(!ddPrompt)return;const i=ddPrompt.sel.indexOf(m);if(i>=0)ddPrompt.sel.splice(i,1);else ddPrompt.sel.push(m);R()}
 function submitDD(){if(!ddPrompt)return;const c=document.getElementById('dd_custom');const all=[...ddPrompt.sel];if(c&&c.value)c.value.split(',').forEach(x=>{const t=x.trim();if(t)all.push(t)});all.forEach(m=>addDD(ddPrompt.bank,m,ddPrompt.bonus,td()));ddPrompt=null;R()}
 function skipDD(){ddPrompt=null;R()}
-function confirmMarkReceived(id){const e=entries.find(x=>x.id===id);if(!e)return;cfm={title:e.bonusRecd?'Update Bonus Received?':'Mark Bonus Received?',msg:(e.bonusRecd?'Update the bonus received date for ':'Mark the bonus as received for ')+e.bank+'?\n\nYou can review received date, requirement met date, and the triggering method before saving.',green:true,action:()=>{cfm=null;openRcv(id)}};R()}
-function openRcv(id){const e=entries.find(x=>x.id===id);if(!e)return;rcvPrompt={entryId:id,bank:e.bank,date:e.bonusRecd||td(),reqDate:e.reqMet||td(),dp:e.dataPoint||'',bonus:e.bonus||0,hasExisting:!!e.bonusRecd};R()}
+function confirmMarkReceived(id){const e=entries.find(x=>x.id===id);if(!e)return;cfm={title:e.bonusRecd?'Update Bonus Received?':'Mark Bonus Received?',msg:(e.bonusRecd?'Update the bonus received date for ':'Mark the bonus as received for ')+e.bank+'?\n\nYou can review the received date before saving.',green:true,action:()=>{cfm=null;openRcv(id)}};R()}
+function openRcv(id){const e=entries.find(x=>x.id===id);if(!e)return;rcvPrompt={entryId:id,bank:e.bank,date:e.bonusRecd||td(),hasExisting:!!e.bonusRecd};R()}
 function rcvNext(){}
-function rcvSubmit(){
-  const p=rcvPrompt;
-  if(!p)return;
-  const d=document.getElementById('rcv_date');
-  const r=document.getElementById('rcv_req_date');
-  const dp=document.getElementById('rcv_dp');
-  if(d)p.date=d.value;
-  if(r)p.reqDate=r.value;
-  if(dp)p.dp=dp.value;
-  if(!p.date){alert('Received date required');return}
-  const e=entries.find(x=>x.id===p.entryId);
-  const warnings=bonusReceiveWarnings(e,p.date);
-  if(p.reqDate&&p.date&&dB(p.reqDate,p.date)<0)warnings.push('Requirement met date is after the bonus received date.');
-  if(e?.opened&&p.reqDate&&dB(e.opened,p.reqDate)<0)warnings.push('Requirement met date is before the opened date.');
-  if(warnings.length&&!p.warningReviewed){
-    rcvPrompt=null;
-    cfm={title:'Review Bonus Received',msg:'Review these notes before saving:\n\n- '+Array.from(new Set(warnings)).join('\n- '),green:true,confirmLabel:'Save Anyway',action:()=>{cfm=null;rcvPrompt=p;p.warningReviewed=true;rcvSubmit()}};
-    R();
-    return
-  }
-  p.warningReviewed=false;
-  entries=entries.map(e=>{
-    if(e.id===p.entryId){
-      e.bonusRecd=p.date;
-      e.reqMet=p.reqDate||e.reqMet||p.date;
-      e.plannedClose='';
-      if(p.dp)e.dataPoint=p.dp;
-      appendEntryHistory(e,'bonus_received','Bonus received '+fD(p.date)+(p.reqDate?' · requirement met '+fD(p.reqDate):'')+'.');
-      return normalizeLifecycleEntry(e)
-    }
-    return e
-  });
-  const e2=entries.find(e=>e.id===p.entryId);
-  if(e2&&p.dp&&Number(e2.bonus||0)>0)addDD(e2.bank,p.dp,Number(e2.bonus||0),p.date,{entryId:e2.id,accountType:e2.accountType,note:'Auto-saved from bonus received flow'});
-  if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
-  entries=sortE(entries);sv(SK,entries);
-  rcvPrompt=null;
-  cfm={title:'Bonus Received Saved',msg:(e2?e2.bank:'This bank')+' received date saved for '+fD(p.date)+'.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
-  R()
-}
-function confirmClearRcv(){
-  const p=rcvPrompt;
-  if(!p)return;
-  const id=p.entryId, bank=p.bank;
-  cfm={title:'Clear Bonus Received?',msg:'Clear the bonus received date for '+bank+'?\n\nThis can change status, tax tracking, and close timing. Requirement Met date will stay unless you clear it separately.',confirmLabel:'Clear',action:()=>{cfm=null;rcvPrompt={entryId:id,bank,date:p.date||'',reqDate:p.reqDate||'',dp:p.dp||'',hasExisting:true};clearRcv()}};
-  R()
-}
-function clearRcv(){
-  const p=rcvPrompt;
-  if(!p)return;
-  entries=entries.map(e=>{
-    if(e.id===p.entryId){
-      e.bonusRecd='';
-      e.plannedClose='';
-      appendEntryHistory(e,'bonus_received_cleared','Cleared bonus received date.');
-      return normalizeLifecycleEntry(e)
-    }
-    return e
-  });
-  const e2=entries.find(e=>e.id===p.entryId);
-  if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
-  entries=sortE(entries);sv(SK,entries);
-  rcvPrompt=null;
-  cfm={title:'Bonus Received Cleared',msg:(e2?e2.bank:'This bank')+' no longer has a bonus received date.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
-  R()
-}
+function rcvSubmit(){const p=rcvPrompt;if(!p)return;const d=document.getElementById('rcv_date');if(d)p.date=d.value;if(!p.date){alert('Received date required');return}entries=entries.map(e=>{if(e.id===p.entryId){e.bonusRecd=p.date;e.plannedClose=''}return e});const e2=entries.find(e=>e.id===p.entryId);if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}entries=sortE(entries);sv(SK,entries);rcvPrompt=null;cfm={title:'Bonus Received Saved',msg:(e2?e2.bank:'This bank')+' received date saved for '+fD(p.date)+'.',green:true,action:()=>{cfm=null;R()}};R()}
+function clearRcv(){const p=rcvPrompt;if(!p)return;entries=entries.map(e=>{if(e.id===p.entryId){e.bonusRecd='';e.plannedClose=''}return e});entries=sortE(entries);sv(SK,entries);rcvPrompt=null;R()}
 function skipRcv(){rcvPrompt=null;R()}
-function reqMetWarnings(e,date){
-  const w=[];
-  if(!date)w.push('Requirement met date is blank.');
-  if(date&&isFutureDate(date))w.push('Requirement met date is in the future.');
-  if(e?.opened&&date&&dB(e.opened,date)<0)w.push('Requirement met date is before the opened date.');
-  if(e?.bonusRecd&&date&&dB(date,e.bonusRecd)<0)w.push('Requirement met date is after the bonus received date.');
-  if(e?.closed&&date&&dB(date,e.closed)<0)w.push('Requirement met date is after the closed date.');
-  return w
-}
-function confirmMarkReqMet(id){const e=entries.find(x=>x.id===id);if(!e)return;cfm={title:e.reqMet?'Update Requirement Met?':'Mark Requirement Met?',msg:(e.reqMet?'Update the requirement met date for ':'Mark requirements complete for ')+e.bank+'?\n\nThis stops requirement/funding timers from controlling the main card status, but bonus received stays separate.',green:true,action:()=>{cfm=null;openReqMet(id)}};R()}
-function openReqMet(id){const e=entries.find(x=>x.id===id);if(!e)return;reqPrompt={entryId:id,bank:e.bank,date:e.reqMet||td(),hasExisting:!!e.reqMet};R()}
-function reqSubmit(){
-  const p=reqPrompt;
-  if(!p)return;
-  const d=document.getElementById('req_date');
-  if(d)p.date=d.value;
-  if(!p.date){alert('Requirement met date required');return}
-  const e=entries.find(x=>x.id===p.entryId);
-  const warnings=reqMetWarnings(e,p.date);
-  if(warnings.length&&!p.warningReviewed){
-    reqPrompt=null;
-    cfm={title:'Review Requirement Met',msg:'Review these notes before saving:\n\n- '+warnings.join('\n- '),green:true,confirmLabel:'Save Anyway',action:()=>{cfm=null;reqPrompt=p;p.warningReviewed=true;reqSubmit()}};
-    R();
-    return
-  }
-  p.warningReviewed=false;
-  entries=entries.map(e=>{
-    if(e.id===p.entryId){
-      e.reqMet=p.date;
-      appendEntryHistory(e,'req_met','Requirement met '+fD(p.date)+'.');
-      return normalizeLifecycleEntry(e)
-    }
-    return e
-  });
-  const e2=entries.find(e=>e.id===p.entryId);
-  if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
-  entries=sortE(entries);sv(SK,entries);
-  reqPrompt=null;
-  cfm={title:'Requirement Met Saved',msg:(e2?e2.bank:'This bank')+' requirement met date saved for '+fD(p.date)+'. Bonus received is still tracked separately.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
-  R()
-}
-function confirmClearReqMet(){
-  const p=reqPrompt;
-  if(!p)return;
-  const id=p.entryId, bank=p.bank;
-  cfm={title:'Clear Requirement Met?',msg:'Clear the requirement met date for '+bank+'?\n\nIf a bonus is already received, the app may restore this date to keep lifecycle history consistent.',confirmLabel:'Clear',action:()=>{cfm=null;reqPrompt={entryId:id,bank,date:p.date||'',hasExisting:true};clearReqMet()}};
-  R()
-}
-function clearReqMet(){
-  const p=reqPrompt;
-  if(!p)return;
-  entries=entries.map(e=>{
-    if(e.id===p.entryId){
-      e.reqMet='';
-      appendEntryHistory(e,'req_met_cleared','Cleared requirement met date.');
-      return normalizeLifecycleEntry(e)
-    }
-    return e
-  });
-  const e2=entries.find(e=>e.id===p.entryId);
-  if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
-  entries=sortE(entries);sv(SK,entries);
-  reqPrompt=null;
-  cfm={title:'Requirement Met Cleared',msg:(e2?e2.bank:'This bank')+' requirement met date was cleared.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
-  R()
-}
-function skipReq(){reqPrompt=null;R()}
 function looksLikeActualDateText(s){
   if(!s) return false;
   return /(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},\s+\d{4}/i.test(s) || /^\d{4}-\d{2}-\d{2}$/.test(String(s).trim());
@@ -4593,7 +3088,7 @@ function buildSimpleAutoFill(r){
     monthlyFeeYNText: monthlyFeeYN,
     promoCodeText: r.promoCode || '',
     avoidMonthlyFeeText: r.feeWaiver || '',
-    completeBonusText: steps.map((s,i)=>(i+1)+'. '+s).join('\\n'),
+    completeBonusText: steps.map((s,i)=>(i+1)+'. '+s).join('\n'),
     earlyTerminationFeeText: earlyTerm,
     eligibilityText: elig.join(' | '),
     expirationDateText: normalizePromoWindowText(r.openBy || r.openWindow || ''),
@@ -4690,12 +3185,12 @@ function runInlineAnalyze(){
         if(r.code&&!modal.promoCodeText)modal.promoCodeText=r.code;
         if(r.openBy&&!modal.expirationDateText)modal.expirationDateText=fD(r.openBy);
         if(r.fee&&!modal.monthlyFeeYNText)modal.monthlyFeeYNText='Yes — '+fM(r.fee)+' monthly fee';
-        if(r.waivers?.length&&!modal.avoidMonthlyFeeText)modal.avoidMonthlyFeeText=r.waivers.join('\\n');
+        if(r.waivers?.length&&!modal.avoidMonthlyFeeText)modal.avoidMonthlyFeeText=r.waivers.join('\n');
         if(r.actionPlan&&!modal.completeBonusText)modal.completeBonusText=r.actionPlan;
         if(r.reqDays&&!modal.requiredDaysText)modal.requiredDaysText=String(r.reqDays);
       }
       if(!modal.analyzedTC){
-        modal.analyzedTC=['Analyzer result',r.actionPlan||'',r.reviewFlags?.length?('Review: '+r.reviewFlags.join(' | ')):''].filter(Boolean).join('\\n');
+        modal.analyzedTC=['Analyzer result',r.actionPlan||'',r.reviewFlags?.length?('Review: '+r.reviewFlags.join(' | ')):''].filter(Boolean).join('\n');
       }
       R();
       return;
@@ -4748,7 +3243,7 @@ function normalizeRestoredEntry(e){
   x.dataPoint=x.dataPoint||'';
   x.reqDays=parseInt(x.reqDays||0,10)||0;
   x.referralBonus=parseInt(x.referralBonus||0,10)||0;
-  x.plannedClose='';
+  x.plannedClose=x.plannedClose||'';
   x.phoneNum=x.phoneNum||'';
   x.feeChecked=!!x.feeChecked;
   x.monthlyFeeYNText=x.monthlyFeeYNText||'';
@@ -4761,62 +3256,15 @@ function normalizeRestoredEntry(e){
   x.requiredDaysText=x.requiredDaysText||'';
   x.checklist=Array.isArray(x.checklist)?x.checklist:[];
   x.customTimers=normalizeTimerList(x.customTimers);
-  return normalizeLifecycleEntry(x)
+  return x
 }
 
-
-function backupIntegrityReport(data){
-  const rows=Array.isArray(data?.entries)?data.entries:(Array.isArray(entries)?entries:[]);
-  const warnings=[];
-  const ids=new Set();
-  let duplicateIds=0, missingAccountType=0, missingOpenDate=0, closedNoChurn=0, receivedNoReq=0, monthlyFeeNeedsReview=0;
-  rows.forEach(e=>{
-    if(!e||!e.bank)return;
-    if(e.id){if(ids.has(e.id))duplicateIds++;ids.add(e.id)}
-    if(!normalizeAccountType(e.accountType))missingAccountType++;
-    if(!e.opened&&!e.closed)missingOpenDate++;
-    if(e.closed&&!e.churn)closedNoChurn++;
-    if(e.bonusRecd&&!e.reqMet)receivedNoReq++;
-    const hasMonthlyRisk=/(yes|\$|monthly|maintenance|service fee|service charge|quarterly|statement fee|paper statement)/i.test(String(e.monthlyFeeYNText||'')+' '+String(e.avoidMonthlyFeeText||'')+' '+String(e.notes||''));
-    if(hasMonthlyRisk&&!e.monthlyFeeChecked&&!deriveMonthlyFeeStructure(e).monthlyFeeWaiverText&&!deriveMonthlyFeeStructure(e).monthlyFeeWaiverAmountText)monthlyFeeNeedsReview++;
-  });
-  if(duplicateIds)warnings.push(duplicateIds+' duplicate entry ID issue(s)');
-  if(missingAccountType)warnings.push(missingAccountType+' entr'+(missingAccountType===1?'y':'ies')+' missing Personal/Business type');
-  if(missingOpenDate)warnings.push(missingOpenDate+' open entr'+(missingOpenDate===1?'y':'ies')+' missing opened date');
-  if(closedNoChurn)warnings.push(closedNoChurn+' closed entr'+(closedNoChurn===1?'y':'ies')+' missing churn rule');
-  if(receivedNoReq)warnings.push(receivedNoReq+' entr'+(receivedNoReq===1?'y':'ies')+' has bonus received but missing Req Met date');
-  if(monthlyFeeNeedsReview)warnings.push(monthlyFeeNeedsReview+' entr'+(monthlyFeeNeedsReview===1?'y':'ies')+' may need monthly fee waiver review');
-  const reqs=loadReqs();
-  const userDatapoints=loadUserDatapoints();
-  const profileEvents=loadProfileEvents();
-  const offerHistory=loadOfferHistory();
-  return{
-    ok:warnings.length===0,
-    warnings,
-    checkedAt:new Date().toISOString(),
-    entries:rows.length,
-    closed:rows.filter(e=>e&&e.closed).length,
-    received:rows.filter(e=>e&&e.bonusRecd).length,
-    reqs:Object.keys(reqs||{}).length,
-    userDatapoints:userDatapoints.length,
-    profileEvents:profileEvents.length,
-    offerHistoryVersions:countBackupOfferHistory({offerHistory})
-  }
-}
-function backupIntegritySummary(data){
-  const r=data?.backupIntegrity||backupIntegrityReport(data||{entries});
-  if(!r)return'Backup integrity: not checked';
-  return r.ok?'Backup integrity: looks complete':('Backup warnings: '+(r.warnings||[]).slice(0,4).join('; '))
-}
 function buildPortableBackupPayload(){
-  entries=sortE(normalizeLifecycleEntries(entries));
-  sv(SK,entries);
   const userDatapoints=loadUserDatapoints();
   const communityDatapoints=loadCommunityDatapoints();
   const phoneEdits=loadPhoneEdits();
   const reqs=loadReqs();
   const profileEvents=loadProfileEvents();
-  const offerHistory=loadOfferHistory();
   const snapshot=buildStorageSnapshot();
   return{
     app:'Bank Bonus Tracker',
@@ -4830,8 +3278,6 @@ function buildPortableBackupPayload(){
     requirementCount:Object.keys(reqs||{}).length,
     phoneCount:phoneEdits.length,
     profileEventCount:profileEvents.length,
-    offerHistoryCount:countBackupOfferHistory({offerHistory}),
-    backupIntegrity:backupIntegrityReport({entries}),
     prefs:{
       dashYear,taxYear
     },
@@ -4844,7 +3290,6 @@ function buildPortableBackupPayload(){
     },
     phoneBook:[...phoneEdits],
     profileEvents:[...profileEvents],
-    offerHistory:{...offerHistory},
     storageSnapshot:snapshot,
     manifest:{
       includesProfiles:false,
@@ -4855,7 +3300,6 @@ function buildPortableBackupPayload(){
       includesSavedRequirements:true,
       includesPhoneBook:true,
       includesProfileEvents:true,
-      includesOfferHistory:true,
       includesStorageSnapshot:true,
       storageKeys:Object.keys(snapshot)
     }
@@ -4867,7 +3311,7 @@ function buildPortableBackupPayload(){
 function describeBackupPayload(d){
   const when=(d?.exportedAt||d?.createdAt)?new Date(d.exportedAt||d.createdAt).toLocaleString():'';
   const type=d?.backupType||d?.backupVersion||d?.kind||'unknown';
-  return['Backup date: '+(when||'Unknown'),'Backup type: '+type,'Entries: '+countBackupEntries(d),'Your datapoints: '+countBackupUserDatapoints(d),'Community datapoints: '+countBackupCommunityDatapoints(d),'Saved bank requirements: '+countBackupReqs(d),'Offer history versions: '+countBackupOfferHistory(d),'Saved phone entries: '+countBackupPhones(d),'Profile events: '+countBackupProfileEvents(d),backupIntegritySummary(d)].join('\\n')
+  return['Backup date: '+(when||'Unknown'),'Backup type: '+type,'Entries: '+countBackupEntries(d),'Your datapoints: '+countBackupUserDatapoints(d),'Community datapoints: '+countBackupCommunityDatapoints(d),'Saved bank requirements: '+countBackupReqs(d),'Saved phone entries: '+countBackupPhones(d),'Profile events: '+countBackupProfileEvents(d)].join('\n')
 }
 
 
@@ -4914,7 +3358,6 @@ function normalizePortableBackupInput(d){
       bankReqs:snapshot[REQ_KEY]||{},
       phoneBook:snapshot[PHONE_KEY]||[],
       profileEvents:snapshot[PROFILE_EVT_KEY]||[],
-      offerHistory:snapshot[OFFER_HIST_KEY]||{},
       storageSnapshot:snapshot,
       legacySource:true
     };
@@ -4927,7 +3370,7 @@ function applyPortableRestore(d){
   if(!Array.isArray(restoredEntries))throw new Error('Backup file is missing entries.');
   const cleaned=restoredEntries.map(normalizeRestoredEntry).filter(e=>e.bank);
   const repaired=repairEntryIds(cleaned);
-  entries=sortE(normalizeLifecycleEntries(repaired.items));
+  entries=sortE(repaired.items);
   sv(SK,entries);
 
   const userPoints=Array.isArray(d.userDatapoints)?d.userDatapoints:(Array.isArray(d.ddMethods)?d.ddMethods:backupArrayFromStorage(d,DP_USER_KEY));
@@ -4945,9 +3388,6 @@ function applyPortableRestore(d){
   const profileRows=Array.isArray(d.profileEvents)?d.profileEvents:backupArrayFromStorage(d,PROFILE_EVT_KEY);
   saveProfileEvents(profileRows);
 
-  const offerRows=d.offerHistory&&typeof d.offerHistory==='object'?d.offerHistory:backupObjectFromStorage(d,OFFER_HIST_KEY);
-  saveOfferHistory(offerRows);
-
   restoreStorageSnapshot(d.storageSnapshot||normalizeBackupStorageSnapshot(d));
   sv(SK,entries);
   saveDD(userPoints);
@@ -4955,7 +3395,6 @@ function applyPortableRestore(d){
   saveReqs(reqRows);
   savePhoneEdits(phoneRows);
   saveProfileEvents(profileRows);
-  saveOfferHistory(offerRows);
 
   try{localStorage.setItem('bt_last_restore',new Date().toISOString())}catch{}
   if(d.prefs&&Number.isFinite(parseInt(d.prefs.dashYear,10)))dashYear=parseInt(d.prefs.dashYear,10);
@@ -4964,7 +3403,7 @@ function applyPortableRestore(d){
   else taxYear=new Date().getFullYear();
   setLastBk();
   cfm={
-    title:'Restore Complete',msg:`${entries.length} entries restored.\n${countBackupUserDatapoints(d)} datapoints restored.\n${countBackupProfileEvents(d)} profile events restored.\n${backupIntegritySummary({entries,backupIntegrity:backupIntegrityReport({entries})})}\n\nThis backup is now ready on this browser/device.`,green:true,action:()=>{
+    title:'Restore Complete',msg:`${entries.length} entries restored.\n${countBackupUserDatapoints(d)} datapoints restored.\n${countBackupProfileEvents(d)} profile events restored.\n\nThis backup is now ready on this browser/device.`,green:true,action:()=>{
       cfm=null;
       R()
     }
@@ -5160,7 +3599,7 @@ entries=sortE(entries);R();
     lines.push(`${lines.length + 1}. Receive ${count ? `at least ${count} ` : ''}qualifying Direct Deposits${reqMoney ? ` of ${money(reqMoney)}+ each` : ''}${reqDays ? ` within ${reqDays} days of account opening` : ''}.`);
     lines.push(`${lines.length + 1}. Bonus payout: ${payout || 'review payout timing'}.`);
     lines.push(`${lines.length + 1}. Keep account open and in good standing until payout.`);
-    return lines.join('\\n');
+    return lines.join('\n');
   }
   function buildTimers(){
     const timers = [];
@@ -5184,7 +3623,7 @@ entries=sortE(entries);R();
 
   function renamePromoDateLabel(){
     const sheet = document.querySelector('.tcr-sheet');
-    if (!sheet || !sheet.textContent.includes('Review & Create Entry')) return;
+    if (!sheet || !sheet.textContent.includes('Auto-fill New Entry')) return;
     const openBy = document.getElementById('tcr_openby');
     const label = openBy?.closest('.tcr-field')?.querySelector('label');
     if (label) label.textContent = 'Promo Expiration / Open-by Date';
@@ -5195,7 +3634,7 @@ entries=sortE(entries);R();
 
   function ensureHiddenCompatFields(){
     const sheet = document.querySelector('.tcr-sheet');
-    if (!sheet || !sheet.textContent.includes('Review & Create Entry')) return;
+    if (!sheet || !sheet.textContent.includes('Auto-fill New Entry')) return;
     renamePromoDateLabel();
     if (!document.getElementById('tcr_earlyfee')) sheet.insertAdjacentHTML('beforeend','<input id="tcr_earlyfee" type="hidden" value="0">');
     if (!document.getElementById('tcr_holddays')) {
@@ -5207,7 +3646,7 @@ entries=sortE(entries);R();
 
   function createReviewedEntry(){
     const sheet = document.querySelector('.tcr-sheet');
-    if (!sheet || !sheet.textContent.includes('Review & Create Entry')) return false;
+    if (!sheet || !sheet.textContent.includes('Auto-fill New Entry')) return false;
     ensureHiddenCompatFields();
     const raw = rawTerms();
     let parsed = {};
@@ -5222,7 +3661,7 @@ entries=sortE(entries);R();
     const earlyFee = getNum('tcr_earlyfee');
     const payout = clean(getVal('tcr_payout'));
     const notCounts = clean(getVal('tcr_not_counts'));
-    const notesParts = ['Created from Analyzer Review Wizard Pro Review Form. Review all fields before opening/applying.'];
+    const notesParts = ['Created from T&C Analyzer Pro Review Form. Review all fields before opening/applying.'];
     if (notCounts) notesParts.push('Does NOT count: ' + notCounts.replace(/\n/g, '; '));
     if (payout) notesParts.push('Payout: ' + payout);
     if (holdDays) notesParts.push('Hold until: ' + holdDays + ' days after opening before closing.');
@@ -5230,9 +3669,9 @@ entries=sortE(entries);R();
     const fundedDays = parseInt(getVal('tcr_funded_days'), 10) || 0;
     const fundingAmount = getNum('tcr_funding_amount') || getNum('tcr_requirement_amount');
     const entry = {
-      bank, accountType:normalizeAccountType(parsed.accountType)||inferAccountTypeForEntry({bank,analyzedTC:raw})||'personal', bonus, churn: parsed.prior ? 1 : '',
+      bank, accountType:normalizeAccountType(parsed.accountType)||inferAccountTypeForEntry({bank,analyzedTC:raw})||'unknown', bonus, churn: parsed.prior ? 1 : '',
       opened: clean(getVal('tcr_opened')), bonusRecd: '', closed: '', dataPoint: clean(getVal('tcr_counts')),
-      notes: notesParts.join('\\n'), reqDays, minHoldDays: holdDays, earlyCloseFee: earlyFee,
+      notes: notesParts.join('\n'), reqDays, minHoldDays: holdDays, earlyCloseFee: earlyFee,
       fundedDays, fundingAmount, fundingAmountText: fundingAmount ? money(fundingAmount) : '', payoutTimingText: payout,
       feeChecked: false, plannedClose: '', customTimers: buildTimers(),
       monthlyFeeYNText: getNum('tcr_fee') ? `Yes — ${money(getNum('tcr_fee'))} monthly fee` : 'Not clearly stated in pasted T&C',
@@ -5275,7 +3714,7 @@ entries=sortE(entries);R();
   document.addEventListener('click', e => {
     const btn = e.target.closest('button');
     if (!btn) return;
-    if (/Create Entry \+ Timers/i.test(btn.textContent || '') && document.querySelector('.tcr-sheet')?.textContent.includes('Review & Create Entry')) {
+    if (/Create Entry \+ Timers/i.test(btn.textContent || '') && document.querySelector('.tcr-sheet')?.textContent.includes('Auto-fill New Entry')) {
       e.preventDefault(); e.stopImmediatePropagation(); createReviewedEntry(); return;
     }
     setTimeout(ensureHiddenCompatFields, 120);
@@ -5702,10 +4141,8 @@ entries=sortE(entries);R();
     if(!e){R();return}
     expanded=id;
     if(action==='edit'){openEdit(id);return}
-    if(action==='reqmet'){confirmMarkReqMet(id);return}
     if(action==='received'){confirmMarkReceived(id);return}
-    if(action==='recordclose'||action==='close'){startCloseFlow(id,'actual');return}
-    if(action==='clearclose'){confirmClearCloseDate(id);return}
+    if(action==='close'){closeAcct(id);return}
     if(action==='delete'){delEntry(id);return}
     if(action==='checklist'){
       openChecklistModal(id);
@@ -5728,19 +4165,11 @@ entries=sortE(entries);R();
     h+='<div class="m-bar"></div><div class="m-hdr"><h2>Bank Actions</h2><span class="m-id">'+esc(getEntryDisplayId(e)||e.id||'')+'</span></div>';
     h+='<div class="bt-ba-identity">'+bankLogo(e.bank,true)+'<div><div class="card-name">'+esc(e.bank)+'</div><div class="bt-ba-status">'+esc(status(e)||'')+'</div></div></div>';
     h+='<div class="bt-ba-list">';
-    const st=status(e);
-    if(e.closed){
-      h+=bankActionSheetButton(e.id,'clearclose','↩️','Mark Still Open','Remove mistaken closed date');
-      h+=bankActionSheetButton(e.id,'edit','✏️','Edit Bank','Details, dates, bonus, rules');
-    }else{
-      if(!e.bonusRecd)h+=bankActionSheetButton(e.id,'reqmet','✅',e.reqMet?'Update Req Met':'Mark Req Met','Requirement completed date');
-      if(!e.bonusRecd)h+=bankActionSheetButton(e.id,'received','🎁','Mark Received','Bonus received date');
-      if(e.bonusRecd)h+=bankActionSheetButton(e.id,'recordclose','🔒','Close Now','Record actual closure');
-      if(e.bonusRecd)h+=bankActionSheetButton(e.id,'received','🎁','Update Received','Bonus/date/datapoint');
-      h+=bankActionSheetButton(e.id,'edit','✏️','Edit Bank','Details, dates, bonus, rules');
-      h+=bankActionSheetButton(e.id,'checklist','✅','Add Checklist','New requirement step');
-      h+=bankActionSheetButton(e.id,'timer','⏱️','Add Timer','Custom countdown');
-    }
+    h+=bankActionSheetButton(e.id,'edit','✏️','Edit Bank','Details, dates, bonus, rules');
+    if(!e.closed)h+=bankActionSheetButton(e.id,'received','🎁',e.bonusRecd?'Update Received':'Mark Received','Bonus received date');
+    if(!e.closed)h+=bankActionSheetButton(e.id,'close','🔒','Close Account','Record closed date');
+    if(!e.closed)h+=bankActionSheetButton(e.id,'checklist','✅','Add Checklist','New requirement step');
+    if(!e.closed)h+=bankActionSheetButton(e.id,'timer','⏱️','Add Timer','Custom countdown');
     h+=bankActionSheetButton(e.id,'delete','🗑️','Delete Bank','Remove tracker entry',true);
     h+='<button class="bt-ba-mini cancel" onclick="event.stopPropagation();closeBankActions()"><span><b>Cancel</b></span></button>';
     h+='</div></div></div>';
@@ -5770,7 +4199,7 @@ entries=sortE(entries);R();
     }
 
     h += `<input class="sinput" type="text" placeholder="Search banks..." value="${esc(search)}" oninput="search=this.value;R()">`;
-    h += `<button class="tc-btn" onclick="showAnalyzer=!showAnalyzer;R()">${I.spark}<span>${showAnalyzer?'Hide analyzer':'Review promo terms'}</span></button>`;
+    h += `<button class="tc-btn" onclick="showAnalyzer=!showAnalyzer;R()">${I.spark}<span>${showAnalyzer?'Hide analyzer':'Analyze promo terms'}</span></button>`;
     if(showAnalyzer) h += rAnalyzer();
 
     if(!f.length){
@@ -5813,7 +4242,6 @@ entries=sortE(entries);R();
           h += `<div class="cf"><div class="k">Close Fee Countdown</div><div class="v" style="padding-top:2px"><span class="tm-pill ${__feeMeta.cls}" title="${esc(__feeTitle)}" style="margin-left:6px">${esc(__feeMeta.text)}</span></div></div>`;
         }
         h += '</div>';
-        h += renderLifecycleStepper(e);
 
         if(!e.closed){
           h += '<div class="sec" style="margin-top:6px">Checklist</div><ul class="ck">';
@@ -5842,17 +4270,13 @@ entries=sortE(entries);R();
         }
 
         if(e.notes) h += `<div class="card-notes" style="white-space:pre-wrap;font-size:12px;line-height:1.6">${esc(e.notes)}</div>`;
-        h += renderMonthlyFeePlan(e);
         h += renderClosePlan(e);
-        h += renderEntryHistory(e);
-        h += renderAnalyzerHistory(e);
         h += renderOfferHistory(e);
-        h += renderAnalyzedTermsCard(e);
+        if(e.analyzedTC) h += `<div class="tc-box"><div class="tc-label">T&amp;C analysis</div><div class="tc-body">${highlightTC(e.analyzedTC)}</div></div>`;
         h += '';
 
         h += '<div class="card-btns">';
-        if(!e.closed&&e.bonusRecd) h += actionBtn('cls',I.lock,'Close Now',`event.stopPropagation();startCloseFlow('${e.id}','actual')`);
-        h += actionBtn('edit',I.quick,'Manage',`event.stopPropagation();openBankActions('${e.id}')`);
+        h += actionBtn('edit',I.quick,'Actions',`event.stopPropagation();openBankActions('${e.id}')`);
         h += '</div></div>';
       }
 
@@ -5873,7 +4297,6 @@ entries=sortE(entries);R();
   }
 
   window.confirmMarkReceived=confirmMarkReceived;
-  window.confirmMarkReqMet=confirmMarkReqMet;
   window.openBankActions=openBankActions;
   window.closeBankActions=closeBankActions;
   window.runBankAction=runBankAction;
@@ -5885,7 +4308,3 @@ entries=sortE(entries);R();
   setTimeout(()=>{try{ensureBankActionCompactStyle();R();}catch(e){console.error('Bank Actions source renderer failed',e);}},0);
 })();
 /* === End consolidated core module: Tracker card bank actions renderer === */
-
-(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.92 close intelligence polish */\n.close-intel.safe{border-color:#bbf7d0;background:#f0fdf4}\n.close-intel.warn,.close-intel.plan{border-color:#fde68a;background:#fffbeb}\n.close-intel.danger{border-color:#fecaca;background:#fff7f7}\n.close-ready{padding:10px 12px;border-radius:14px;margin:10px 0 12px;border:1px solid #e5e7eb;background:#f8fafc;font-size:12px;line-height:1.35}\n.close-ready b{display:block;font-size:13px;margin-bottom:2px}\n.close-ready.safe{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}\n.close-ready.warn,.close-ready.plan{background:#fffbeb;border-color:#fde68a;color:#78350f}\n.close-ready.danger{background:#fff1f2;border-color:#fecaca;color:#7f1d1d}\n.close-final-note{font-size:11px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px;margin-top:10px;line-height:1.35}\n.close-mode-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}\n.close-mode{border:1px solid #e2e8f0;background:#f8fafc;border-radius:14px;padding:10px 9px;text-align:left;font-family:'DM Sans',system-ui,sans-serif;color:#334155;cursor:pointer}\n.close-mode b{display:block;font-size:12px;line-height:1.05;color:#0f172a}\n.close-mode span{display:block;font-size:9px;line-height:1.2;color:#64748b;font-weight:800;margin-top:3px}\n.close-mode.sel{background:#eff6ff;border-color:#93c5fd;box-shadow:0 0 0 2px rgba(59,130,246,.10)}\n";document.head.appendChild(st)}catch{}})();
-
-(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.92 monthly fee plan box */\n.monthly-fee-plan.safe{border-color:#bbf7d0;background:#f0fdf4}\n.monthly-fee-plan.warn{border-color:#fde68a;background:#fffbeb}\n.monthly-fee-plan .tc-label{letter-spacing:.11em}\n";document.head.appendChild(st)}catch{}})();
