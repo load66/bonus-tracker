@@ -1,7 +1,7 @@
-/* Bonus Tracker Close Rules Integration v3.4.03 — binds the permanent core to the live app. */
+/* Bonus Tracker Close Rules Integration v3.4.04 — binds the permanent core to the live app. */
 (function(){
   'use strict';
-  const VER='3.4.03',SCHEMA=6,SCHEMA_KEY='bt_data_schema_version',BACKUP_KEY='bt_pre_migration_backup_v6';
+  const VER='3.4.04',SCHEMA=6,SCHEMA_KEY='bt_data_schema_version',BACKUP_KEY='bt_pre_migration_backup_v6';
   const core=window.BTCloseRules;if(!core){console.error('Close Rules Core missing');return}
   const escFn=v=>{try{return esc(String(v??''))}catch{const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML}};
   const short=v=>String(v||'').replace(/\s+/g,' ').trim().slice(0,420);
@@ -104,8 +104,22 @@
   window.feeCheckRemoveTimer=function(){const p=typeof feeCheckPrompt!=='undefined'?feeCheckPrompt:window.feeCheckPrompt;if(!p)return;const id=p.entryId,current=entries.find(e=>e.id===id);entries=entries.map(e=>e.id===id?normalizeEntry(clearTimer({...e})):e);entries=sortE(entries);sv(SK,entries);feeCheckPrompt=null;cfm={title:'Timer Removed',msg:(current?current.bank+' ':'')+'early-close timer removed. This bank is now marked Safe to Close.',green:true,action:()=>{cfm=null;R()}};R()};
   window.feeCheckSave=function(){const p=typeof feeCheckPrompt!=='undefined'?feeCheckPrompt:window.feeCheckPrompt;if(!p)return;const id=p.entryId,months=Math.max(1,parseInt(p.months,10)||6),feeAmt=Math.max(0,parseFloat(p.feeAmount)||0);entries=entries.map(e=>{if(e.id!==id)return e;const x={...e},end=x.opened?addM(x.opened,months):'',days=x.opened&&end?dB(x.opened,end):months*30;x.minHoldDays=days;x.closeFeeCountdownDays=String(days);x.closeRuleBasis='opened';x.closeBufferDays=5;x.closeRestrictionType='manual-fixed';x.closeRuleSource='manual';x.earlyCloseFee=feeAmt;x.earlyTerminationFeeText=feeAmt?'$'+feeAmt.toLocaleString():'';x.closeRuleText=`Manual early-close hold: keep the account open for ${months} month${months===1?'':'s'} from the opened date${feeAmt?' to avoid a $'+feeAmt.toLocaleString()+' fee':''}.`;x.closeRuleSourceSentence=x.closeRuleText;x.fieldSources=(x.fieldSources&&typeof x.fieldSources==='object')?x.fieldSources:{};const meta={kind:'manual',confidence:'verified',source:'Set manually in the Early Closure Fee timer.',updatedAt:new Date().toISOString()};x.fieldSources.closeFeeCountdownDays=meta;x.fieldSources.closeRuleText=meta;x.fieldSources.closeRuleBasis=meta;return normalizeEntry(x)});entries=sortE(entries);sv(SK,entries);feeCheckPrompt=null;R()};
 
-  window.btRunFullRegressionTests=function(){const report=core.runSelfTests();window.__btFullRegressionReport={...report,ranAt:new Date().toISOString()};try{localStorage.setItem('bt_last_regression_v1',JSON.stringify(window.__btFullRegressionReport))}catch{}return window.__btFullRegressionReport};
+  function analyzerWrappersReady(){
+    return ['__tcV3BankRulesWrapped','__tcV3CapitalOneRulesWrapped','__tcV3BoaBusinessRulesWrapped','__tcV3PncRulesWrapped','__tcV3RegionsRulesWrapped','__tcV3EquityRulesWrapped','__tcV3BuseyRulesWrapped','__tcV3AcademyRulesWrapped','__tcV3ProfileRegistryWrapped','__tcV31AcademyRegistryWrapped'].every(k=>!!window[k])
+  }
+  window.btRunFullRegressionTests=function(opts={}){
+    const suites=[];
+    const close=core.runSelfTests();suites.push({name:'Close rules',...close});
+    if(!analyzerWrappersReady()&&!opts.force){
+      const report={version:VER,passed:close.passed,total:close.total,ok:true,pending:true,suites,ranAt:new Date().toISOString()};window.__btFullRegressionReport=report;return report
+    }
+    try{if(typeof window.tcV31RunAnalyzerSelfTest==='function'){const a=window.tcV31RunAnalyzerSelfTest();suites.push({name:'Bank analyzer',...a})}}catch(err){suites.push({name:'Bank analyzer',ok:false,passed:0,total:1,error:err?.message||String(err)})}
+    const passed=suites.reduce((n,x)=>n+Number(x.passed||0),0),total=suites.reduce((n,x)=>n+Number(x.total||0),0);
+    const report={version:VER,passed,total,ok:suites.every(x=>x.ok!==false),pending:false,suites,ranAt:new Date().toISOString()};window.__btFullRegressionReport=report;try{localStorage.setItem('bt_last_regression_v1',JSON.stringify(report))}catch{}return report
+  };
   window.BT_APP_VERSION=VER;window.btCloseRulesVersion=VER;
+  try{if(typeof buildPortableBackupPayload==='function'){const oldPortable=buildPortableBackupPayload;buildPortableBackupPayload=function(){const out=oldPortable();if(out)out.appVersion=VER;return out};window.buildPortableBackupPayload=buildPortableBackupPayload}}catch{}
   migrateOnce();
-  setTimeout(()=>{try{if(typeof entries!=='undefined')entries=entries.map(normalizeEntry);const rep=window.btRunFullRegressionTests();if(!rep.ok)console.warn('Close-rule regression warnings',rep);if(typeof R==='function')R()}catch(err){console.error('Close Rules Integration failed',err)}},0);
+  setTimeout(()=>{try{if(typeof entries!=='undefined')entries=entries.map(normalizeEntry);if(typeof R==='function')R()}catch(err){console.error('Close Rules Integration failed',err)}},0);
+  setTimeout(()=>{try{const rep=window.btRunFullRegressionTests({force:true});if(!rep.ok)console.warn('Latest-release regression warnings',rep)}catch(err){console.error('Latest-release regression run failed',err)}},1800);
 })();
