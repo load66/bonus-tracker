@@ -1,10 +1,10 @@
 /*
  * filename: controller.js
- * version: 3.3.94
+ * version: 3.3.95
  * purpose: Beginner-friendly Analyzer Review Wizard with Training Library, user learning rules, Verified Apply, and adaptive learning.
  */
 (function(){
-  const VER='3.3.94';
+  const VER='3.3.95';
   const WIZARD_SCHEMA='analyzer-review-v1';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const esc=v=>{if(window.esc)return window.esc(String(v??''));const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML};

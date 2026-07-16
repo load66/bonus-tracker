@@ -1,18 +1,18 @@
 /*
  * filename: engine.js
- * version: 3.3.94
+ * version: 3.3.95
  * purpose: Analyzer v3 Engine with broader weird-wording normalization, safer source proof, and training-learning-ready results.
  * last-touched: unknown
  */
 (function(){
-  const VER='3.3.94';
+  const VER='3.3.95';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const escRe=s=>String(s||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const moneyNum=s=>{const n=parseFloat(String(s||'').replace(/[$,\s]/g,''));return Number.isFinite(n)?n:0};
   const money=n=>'$'+Number(n||0).toLocaleString();
   const uniq=a=>Array.from(new Set((a||[]).filter(Boolean).map(clean))).filter(Boolean);
 
-  const WEIRD_WORDING_VER='3.3.94-core';
+  const WEIRD_WORDING_VER='3.3.95-core';
   const phraseMap=[
     {re:/adjusted interest/gi,label:'adjusted interest',add:'bonus payout'},
     {re:/cash reward/gi,label:'cash reward',add:'cash bonus'},

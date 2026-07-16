@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.94 Newest update: simplified Close Now flow and compact close review.
+// ✅ Version 3.3.95 Newest update: simplified Close Now flow and compact close review.
 
-const V = 'bt-v3.3.94';
+const V = 'bt-v3.3.95';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {

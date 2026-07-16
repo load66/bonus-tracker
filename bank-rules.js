@@ -29,7 +29,7 @@
   }
   function applyChaseBusiness(r){
     const raw=String(r.normalizedRaw||r.raw||'');
-    if(!/Chase Business Complete Checking|business checking offer/i.test(raw))return r;
+    if(!/Chase Business Complete Checking|Chase Business Complete|Chase business checking|business checking offer/i.test(raw))return r;
     /* anti-signal: the document is clearly a personal-product T&C — refuse to fire. */
     if(/Chase Total Checking|Chase SavingsSM|Chase First CheckingSM/i.test(raw))return r;
     r.bank='Chase';r.acct='Chase Business Complete Checking';

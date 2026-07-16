@@ -5,7 +5,7 @@
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.3.94-profile-registry';
+  const VER='3.3.95-profile-registry';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
     {
@@ -300,6 +300,16 @@
       fb.closeRuleBasis='opened';
       fb.closeBufferDays=1;
       fb.closeRuleText='Do not close within 90 days of account opening. Close on day 91 or later, after the bonus posts.';
+      // Verified current-bank rule must replace stale personal/profile close logic.
+      r.minHoldDays=90;
+      r.closeRuleDays=90;
+      r.closeRuleBasis='opened';
+      r.closeBufferDays=1;
+      r.closeRuleText=fb.closeRuleText;
+      r.holdDays=parseInt(r.holdDays||0,10)||60;
+      r.fundedDays=parseInt(r.fundedDays||0,10)||30;
+      r.profileRuleOverride='chase-business-day91';
+      r.reviewFlags=(r.reviewFlags||[]).filter(x=>!/close rule|requirement met date|90 days from requirement/i.test(String(x||'')));
     }
     if(m.id==='guaranty-bank-perks-consumer-checking'){
       fb.reqDays=fb.reqDays||90;

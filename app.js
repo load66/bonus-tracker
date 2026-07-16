@@ -1,7 +1,7 @@
-/* ✅ Version 3.3.94 update: verified bank-card source priority; Chase Business close timing is day 91 from opening. */
+/* ✅ Version 3.3.95 update: T&C analyzer/profile conflict fix; Chase Biz identity overrides stale personal-profile close wording. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.3.94';
+const APP_VERSION='3.3.95';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const ANALYZER_MEMORY_KEY='bt_analyzer_memory_v1';
@@ -1075,7 +1075,12 @@ function isChaseBusinessCompleteEntry(e){
   // depend on old analyzer/profile wording, which may be stale or incorrect.
   const chaseBrand=/^(jpmorgan )?chase\b/.test(bank)||bank.includes('jp morgan chase');
   if(!chaseBrand)return false;
-  if(/platinum business|performance business|private client|total checking|secure banking|first checking/.test(bank+' '+acct+' '+detail))return false;
+  // Never let stale analyzer/profile text reclassify an explicitly named Chase Biz entry.
+  // Only explicit saved bank/account identity may exclude the business rule.
+  const identityText=(bank+' '+acct).trim();
+  const explicitPersonal=/\b(chase total checking|secure banking|first checking|private client checking)\b/.test(identityText);
+  const explicitOtherBusiness=/\b(platinum business|performance business)\b/.test(identityText);
+  if(explicitPersonal||explicitOtherBusiness)return false;
 
   const businessName=/\b(biz|business|business complete)\b/.test(bank);
   const businessAcct=/\b(biz|business|business complete)\b/.test(acct);
@@ -1099,6 +1104,17 @@ function applyKnownClosePolicy(e){
   e.closeRuleBasis=p.basis;
   e.closeBufferDays=p.buffer;
   e.closeRuleText=p.text;
+  e.closeRuleSource='verified-bank-rule';
+  // Keep the 60-day new-money hold separate from the account close rule.
+  if(isChaseBusinessCompleteEntry(e)){
+    e.fundedDays=parseInt(e.fundedDays,10)||30;
+    e.holdDays=parseInt(e.holdDays,10)||60;
+    if(e.analysis&&typeof e.analysis==='object'){
+      e.analysis.closeRuleBasis='opened';
+      e.analysis.closeRuleDays=90;
+      e.analysis.closeBufferDays=1;
+    }
+  }
   return e;
 }
 function closeRuleDaysFor(e){
