@@ -1,11 +1,11 @@
-/* Bonus Tracker Close Rules Core v3.4.03 — single source of truth for T&C close timing. */
+/* Bonus Tracker Close Rules Core v3.4.04 — single source of truth for T&C close timing. */
 (function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.BTCloseRules=api;
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
-  const VERSION='3.4.03';
+  const VERSION='3.4.04';
   const FIXED_TYPES=new Set(['explicit-clawback','minimum-open','manual-fixed']);
   const AUTO_CLOSE_TIMER_RE=/(?:close check after payout|close hold|early-close safety|safe to close)/i;
   const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
