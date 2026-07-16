@@ -1,7 +1,7 @@
-/* ✅ Version 3.3.96 update: simplified professional bank profile, compact Close Check, and concise Fee Check. */
+/* ✅ Version 3.4.00: unified bank profile, guided editor, Start New Cycle, update flow, and safer analyzer integration. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.3.96';
+const APP_VERSION='3.4.00';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const ANALYZER_MEMORY_KEY='bt_analyzer_memory_v1';
@@ -3529,7 +3529,6 @@ function normalizeLifecycleEntry(e){
   x.closed=x.closed||'';
   x.bonusRecd=x.bonusRecd||'';
   x.reqMet=x.reqMet||'';
-  x.plannedClose='';
   x.history=normalizeEntryHistoryList(x.history);
   x.analysis=(x.analysis&&typeof x.analysis==='object')?x.analysis:null;
   x.analyzerHistory=normalizeAnalyzerHistoryList(x.analyzerHistory);
@@ -3557,7 +3556,6 @@ function normalizeLifecycleEntry(e){
   }catch{}
   x.customTimers=normalizeTimerList(x.customTimers||[]);
   // v3.3.92: planned-close flow was removed. Closed date is actual only.
-  x.plannedClose='';
   if(x.bonusRecd&&!x.reqMet)x.reqMet=x.bonusRecd;
   if(x.reqMet&&x.bonusRecd&&dB(x.reqMet,x.bonusRecd)<0)x.reqMet=x.bonusRecd;
   hydrateTimersFromOpened(x);
@@ -3921,12 +3919,12 @@ function rReplacementPicker(){
   return h
 }
 function rAnalyzer(){let h='<div style="background:var(--card);border-radius:12px;padding:12px;margin-bottom:8px;border:1px solid var(--border)">';h+='<div style="font-size:12px;font-weight:700;margin-bottom:6px">\uD83D\uDD0D Analyzer Review Wizard</div>';h+='<textarea class="fg" id="az_input" style="width:100%;min-height:120px;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:11px;outline:none;resize:vertical" placeholder="Paste full terms & conditions here...">'+esc(analyzerText)+'</textarea>';h+='<div style="display:flex;gap:4px;margin-top:4px"><button class="az-go" style="flex:1" onclick="runMainAnalyze()">Review</button><button class="btn-s" style="flex:0;margin:0;padding:8px 12px" onclick="showAnalyzer=false;analyzerText=\'\';analyzerResult=null;R()">Close</button></div>';if(analyzerResult){const r=analyzerResult;h+='<div style="margin-top:8px">';if(r.notesForTracker){h+='<div class="tc-box" style="padding:12px;border-radius:12px"><div class="tc-body" style="font-size:13px;line-height:1.8">'+highlightTC(r.notesForTracker)+'</div></div>'}else{h+='<div style="padding:12px;background:var(--bg);border-radius:12px;font-size:13px;line-height:1.8">';if(r.bonusAmount)h+='<div>* Bonus: '+esc(r.bonusAmount)+'</div>';if(r.ddAmount)h+='<div>* DD: '+esc(r.ddAmount)+(r.ddCount?' (x'+r.ddCount+')':'')+'</div>';if(r.debitTxns)h+='<div>* Debit Txns: '+esc(r.debitTxns)+'</div>';if(r.timeline)h+='<div>* Timeline: '+esc(r.timeline)+'</div>';if(r.monthlyFee)h+='<div>* Monthly Fee: '+esc(r.monthlyFee)+'</div>';if(r.promoCode)h+='<div>* Promo: '+esc(r.promoCode)+'</div>';if(r.churnRule)h+='<div>* Churn: '+esc(r.churnRule)+'</div>';if(r.earlyCloseFee)h+='<div>* Close Fee: '+esc(r.earlyCloseFee)+'</div>';h+='</div>'}h+='<button class="btn-p" style="margin-top:8px;font-size:13px;padding:12px" onclick="fillFromAI()">\u2B07 Review & Create Entry</button>';h+='</div>'}h+='</div>';return h}
-function openAdd(){modal={bank:'',accountType:'unknown',bonus:0,churn:'',opened:'',closed:'',bonusRecd:'',reqMet:'',notes:'',analyzedTC:'',minHoldDays:0,earlyCloseFee:0,closeFeeCountdownDays:'',dataPoint:'',reqDays:0,referralBonus:0,checklist:[],plannedClose:'',phoneNum:'',feeChecked:false,monthlyFeeYNText:'',promoCodeText:'',avoidMonthlyFeeText:'',eligibilityText:'',expirationDateText:'',requiredDaysText:'',completeBonusText:'',earlyTerminationFeeText:'',fundedDays:0,fundingAmount:0,fundingAmountText:'',payoutTimingText:'',customTimers:[],analysis:null,analyzerHistory:[],history:[]};overwritePrompt=null;matchPickerPrompt=null;replacementPickerPrompt=null;showInlineAZ=false;inlineResult=null;R()}
+function openAdd(){modal={bank:'',accountType:'unknown',bonus:0,churn:'',opened:'',closed:'',bonusRecd:'',reqMet:'',notes:'',analyzedTC:'',minHoldDays:0,earlyCloseFee:0,closeFeeCountdownDays:'',dataPoint:'',reqDays:0,referralBonus:0,checklist:[],phoneNum:'',feeChecked:false,monthlyFeeYNText:'',promoCodeText:'',avoidMonthlyFeeText:'',eligibilityText:'',expirationDateText:'',requiredDaysText:'',completeBonusText:'',earlyTerminationFeeText:'',fundedDays:0,fundingAmount:0,fundingAmountText:'',payoutTimingText:'',customTimers:[],analysis:null,analyzerHistory:[],history:[]};overwritePrompt=null;matchPickerPrompt=null;replacementPickerPrompt=null;showInlineAZ=false;inlineResult=null;R()}
 try{window.openAdd=openAdd}catch{}
 function formatAnalyzedBankName(name,isBiz){let bank=(name||'').trim();if(!bank)return isBiz?'Biz':'';bank=bank.replace(/\s+/g,' ').trim();if(isBiz){if(/\bbiz\b/i.test(bank))return bank;if(/\bbusiness\b/i.test(bank))return bank.replace(/\bbusiness\b/i,'Biz').replace(/\s+/g,' ').trim();return bank+' Biz'}return bank}
 function openEdit(id){const e=entries.find(x=>x.id===id);if(e){modal={...e,analysis:e.analysis||null,analyzerHistory:normalizeAnalyzerHistoryList(e.analyzerHistory),history:normalizeEntryHistoryList(e.history),analyzedTC:e.analyzedTC||'',requiredDaysText:e.requiredDaysText||(e.reqDays>0?String(e.reqDays):''),earlyTerminationFeeText:e.earlyTerminationFeeText||(e.earlyCloseFee>0?String(e.earlyCloseFee):''),closeFeeCountdownDays:closeHoldDisplayValue(e),_manualReplaceTarget:'',_edit:true};showInlineAZ=false;inlineResult=null;R()}}
 function closeModal(){modal=null;showInlineAZ=false;inlineResult=null;R()}
-function clearFields(){if(!modal)return;modal.accountType='personal';['bonus','churn','opened','closed','bonusRecd','reqMet','dataPoint','notes','plannedClose','phoneNum','monthlyFeeYNText','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText','eligibilityText','expirationDateText','requiredDaysText','closeFeeCountdownDays'].forEach(k=>{modal[k]=''});modal.customTimers=[];['reqDays','minHoldDays','earlyCloseFee','referralBonus'].forEach(k=>{modal[k]=0});modal.bonus=0;modal.feeChecked=false;R()}
+function clearFields(){if(!modal)return;modal.accountType='personal';['bonus','churn','opened','closed','bonusRecd','reqMet','dataPoint','notes','phoneNum','monthlyFeeYNText','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText','eligibilityText','expirationDateText','requiredDaysText','closeFeeCountdownDays'].forEach(k=>{modal[k]=''});modal.customTimers=[];['reqDays','minHoldDays','earlyCloseFee','referralBonus'].forEach(k=>{modal[k]=0});modal.bonus=0;modal.feeChecked=false;R()}
 function parseCloseFeeAmount(text){const raw=String(text||'').trim();if(!raw)return 0;if(/^(none|no|n\/a)$/i.test(raw))return 0;const m=raw.match(/\$?([\d,]+(?:\.\d+)?)/);return m?parseInt(String(m[1]).replace(/,/g,''),10)||0:0}
 function parseRequirementDaysText(v){const raw=String(v??'').trim();if(!raw)return 0;const m=raw.match(/(\d{1,4})/);return m?Math.max(0,parseInt(m[1],10)||0):0}
 function syncRequiredDaysFromModal(d){const raw=String(modal.requiredDaysText??'').trim();const parsed=parseRequirementDaysText(raw);if(raw){d.requiredDaysText=raw;d.reqDays=parsed}else if((modal.reqDays||0)>0){d.reqDays=parseInt(modal.reqDays,10)||0;d.requiredDaysText=String(d.reqDays)}else{d.requiredDaysText='';d.reqDays=0}return d.reqDays}
@@ -4022,7 +4020,7 @@ function collectModalEntryData(){
   const bank=(modal.bank||'').trim();
   if(!bank){alert('Bank name required');return null}
   syncModalAccountTypeFromBank();
-  const d={bank,accountType:normalizeAccountType(modal.accountType)||'personal',bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,closeFeeCountdownDays:modal.closeFeeCountdownDays||'',earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',fundedDays:modal.fundedDays||0,fundingAmount:modal.fundingAmount||0,fundingAmountText:modal.fundingAmountText||'',payoutTimingText:modal.payoutTimingText||'',plannedClose:'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false,monthlyFeeYNText:modal.monthlyFeeYNText||'',monthlyFeeAmountText:modal.monthlyFeeAmountText||'',monthlyFeeFrequency:modal.monthlyFeeFrequency||'',monthlyFeeWaiverType:modal.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:modal.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:modal.monthlyFeeWaiverText||'',promoCodeText:modal.promoCodeText||'',avoidMonthlyFeeText:modal.avoidMonthlyFeeText||'',completeBonusText:modal.completeBonusText||'',earlyTerminationFeeText:modal.earlyTerminationFeeText||'',eligibilityText:modal.eligibilityText||'',expirationDateText:modal.expirationDateText||'',requiredDaysText:modal.requiredDaysText||'',closeRuleBasis:normalizeCloseRuleBasis(modal.closeRuleBasis),closeBufferDays:parseInt(modal.closeBufferDays,10)||BUFFER_DAYS,closeRuleText:modal.closeRuleText||'',monthlyFeeChecked:!!modal.monthlyFeeChecked,analysis:(modal.analysis&&typeof modal.analysis==='object')?modal.analysis:null,analyzerHistory:normalizeAnalyzerHistoryList(modal.analyzerHistory),history:normalizeEntryHistoryList(modal.history),customTimers:normalizeTimerList(modal.customTimers)};
+  const d={bank,accountType:normalizeAccountType(modal.accountType)||'personal',bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,closeFeeCountdownDays:modal.closeFeeCountdownDays||'',earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',fundedDays:modal.fundedDays||0,fundingAmount:modal.fundingAmount||0,fundingAmountText:modal.fundingAmountText||'',payoutTimingText:modal.payoutTimingText||'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false,monthlyFeeYNText:modal.monthlyFeeYNText||'',monthlyFeeAmountText:modal.monthlyFeeAmountText||'',monthlyFeeFrequency:modal.monthlyFeeFrequency||'',monthlyFeeWaiverType:modal.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:modal.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:modal.monthlyFeeWaiverText||'',promoCodeText:modal.promoCodeText||'',avoidMonthlyFeeText:modal.avoidMonthlyFeeText||'',completeBonusText:modal.completeBonusText||'',earlyTerminationFeeText:modal.earlyTerminationFeeText||'',eligibilityText:modal.eligibilityText||'',expirationDateText:modal.expirationDateText||'',requiredDaysText:modal.requiredDaysText||'',closeRuleBasis:normalizeCloseRuleBasis(modal.closeRuleBasis),closeBufferDays:parseInt(modal.closeBufferDays,10)||BUFFER_DAYS,closeRuleText:modal.closeRuleText||'',monthlyFeeChecked:!!modal.monthlyFeeChecked,analysis:(modal.analysis&&typeof modal.analysis==='object')?modal.analysis:null,analyzerHistory:normalizeAnalyzerHistoryList(modal.analyzerHistory),history:normalizeEntryHistoryList(modal.history),customTimers:normalizeTimerList(modal.customTimers)};
   sanitizeCloseFieldsForEntry(d);
   syncRequiredDaysFromModal(d);
   d.earlyCloseFee=parseCloseFeeAmount(modal.earlyTerminationFeeText);
@@ -4063,7 +4061,6 @@ function normalizeNewCycleData(d,existing){
   next.closed='';
   next.bonusRecd='';
   next.reqMet='';
-  next.plannedClose='';
   next.closeRuleBasis=normalizeCloseRuleBasis(d.closeRuleBasis||existing.closeRuleBasis||inferCloseRuleBasisFromText(next));
   next.closeBufferDays=parseInt(d.closeBufferDays??existing.closeBufferDays??BUFFER_DAYS,10)||BUFFER_DAYS;
   next.closeRuleText=d.closeRuleText||existing.closeRuleText||'';
@@ -4299,8 +4296,7 @@ function finishClose(){
   entries=entries.map(x=>{
     if(x.id===p.entryId){
       x.closed=p.closeDate;
-      x.plannedClose='';
-      x.bonus=Number(p.actualBonus||0);
+          x.bonus=Number(p.actualBonus||0);
       if(Number(p.actualBonus||0)>0){
         x.bonusRecd=p.bonusDate||x.bonusRecd||'';
         x.reqMet=p.reqDate||x.reqMet||x.bonusRecd||'';
@@ -4344,8 +4340,7 @@ function finishStillOpen(){
     if(x.id===p.entryId){
       x.closed='';
       x.feeChecked=false;
-      x.plannedClose='';
-      appendEntryHistory(x,'still_open','Removed closed date '+(oldClosed?fD(oldClosed):'')+'.');
+          appendEntryHistory(x,'still_open','Removed closed date '+(oldClosed?fD(oldClosed):'')+'.');
       return normalizeLifecycleEntry(x)
     }
     return x
@@ -4365,7 +4360,7 @@ function clearCloseDate(id,keepAsPlanned){
   finishStillOpen()
 }
 function cancelClose(){closePrompt=null;R()}
-function addFromTpl(i){const t=TEMPLATES[i];const newData={bank:t.bank,bonus:t.bonus,churn:t.churn,opened:td(),closed:'',bonusRecd:'',reqMet:'',notes:t.notes||'',analyzedTC:'',minHoldDays:t.minHoldDays||0,earlyCloseFee:t.earlyCloseFee||0,dataPoint:t.dataPoint||'',reqDays:t.reqDays||0,referralBonus:0,plannedClose:'',phoneNum:'',feeChecked:false};if(handleDuplicateFlow(newData,'template')){showTemplates=false;R();return}modal=newData;modal.checklist=[];modal.customTimers=[];showTemplates=false;R()}
+function addFromTpl(i){const t=TEMPLATES[i];const newData={bank:t.bank,bonus:t.bonus,churn:t.churn,opened:td(),closed:'',bonusRecd:'',reqMet:'',notes:t.notes||'',analyzedTC:'',minHoldDays:t.minHoldDays||0,earlyCloseFee:t.earlyCloseFee||0,dataPoint:t.dataPoint||'',reqDays:t.reqDays||0,referralBonus:0,phoneNum:'',feeChecked:false};if(handleDuplicateFlow(newData,'template')){showTemplates=false;R();return}modal=newData;modal.checklist=[];modal.customTimers=[];showTemplates=false;R()}
 function toggleCk(id,i){entries=entries.map(e=>{if(e.id===id&&e.checklist)e.checklist[i].done=!e.checklist[i].done;return e});sv(SK,entries);R()}
 function addCk(id){const inp=document.getElementById('ck_'+id);if(!inp||!inp.value.trim())return;entries=entries.map(e=>{if(e.id===id){if(!e.checklist)e.checklist=[];e.checklist.push({text:inp.value.trim(),done:false})}return e});sv(SK,entries);toggleInlineForm(id,'checklist',false)}
 function rmCk(id,i){entries=entries.map(e=>{if(e.id===id&&e.checklist)e.checklist.splice(i,1);return e});sv(SK,entries);R()}
@@ -4462,7 +4457,6 @@ function rcvSubmit(){
     if(e.id===p.entryId){
       e.bonusRecd=p.date;
       e.reqMet=p.reqDate||e.reqMet||p.date;
-      e.plannedClose='';
       if(p.dp)e.dataPoint=p.dp;
       appendEntryHistory(e,'bonus_received','Bonus received '+fD(p.date)+(p.reqDate?' · requirement met '+fD(p.reqDate):'')+'.');
       return normalizeLifecycleEntry(e)
@@ -4490,7 +4484,6 @@ function clearRcv(){
   entries=entries.map(e=>{
     if(e.id===p.entryId){
       e.bonusRecd='';
-      e.plannedClose='';
       appendEntryHistory(e,'bonus_received_cleared','Cleared bonus received date.');
       return normalizeLifecycleEntry(e)
     }
@@ -4824,7 +4817,6 @@ function normalizeRestoredEntry(e){
   x.dataPoint=x.dataPoint||'';
   x.reqDays=parseInt(x.reqDays||0,10)||0;
   x.referralBonus=parseInt(x.referralBonus||0,10)||0;
-  x.plannedClose='';
   x.phoneNum=x.phoneNum||'';
   x.feeChecked=!!x.feeChecked;
   x.monthlyFeeYNText=x.monthlyFeeYNText||'';
@@ -5310,7 +5302,7 @@ entries=sortE(entries);R();
       opened: clean(getVal('tcr_opened')), bonusRecd: '', closed: '', dataPoint: clean(getVal('tcr_counts')),
       notes: notesParts.join('\\n'), reqDays, minHoldDays: holdDays, earlyCloseFee: earlyFee,
       fundedDays, fundingAmount, fundingAmountText: fundingAmount ? money(fundingAmount) : '', payoutTimingText: payout,
-      feeChecked: false, plannedClose: '', customTimers: buildTimers(),
+      feeChecked: false, customTimers: buildTimers(),
       monthlyFeeYNText: getNum('tcr_fee') ? `Yes — ${money(getNum('tcr_fee'))} monthly fee` : 'Not clearly stated in pasted T&C',
       promoCodeText: clean(getVal('tcr_promo')),
       avoidMonthlyFeeText: clean(getVal('tcr_waivers')),
