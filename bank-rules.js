@@ -51,6 +51,10 @@
     r.not=r.notCounts=uniq(['ACH debits','Person-to-person payments / P2P transfers including Zelle','Online transfers to Chase credit cards']);
     r.payout=r.payoutText='within 15 days after all checking requirements are completed';
     r.eligibilityText=uniq(['Not available to existing businesses with Chase business checking accounts.','Not eligible if account closed within 90 days or closed with a negative balance within the last 3 years.','Signers can receive only one business checking offer every two years from last offer enrollment date.','Only one offer per account.','Employees of JPMorgan Chase Bank and affiliates are not eligible.','Offer may be reported on IRS Form 1099-INT or Form 1042-S.']).join('\n');
+    // Account-close timing is separate from the 60-day new-money balance hold.
+    // Close on day 91 or later from opening to avoid the "closed within 90 days" window.
+    r.minHoldDays=90;r.closeRuleDays=90;r.closeRuleBasis='opened';r.closeBufferDays=1;
+    r.closeRuleText='Do not close within 90 days of account opening. Close on day 91 or later, after the bonus posts.';
     r.suggestedTimers=[];if(r.openBy)r.suggestedTimers.push({kind:'due',text:'Promo expiration / open-by deadline',date:r.openBy});r.suggestedTimers.push({kind:'days',text:'New money funding deadline',daysRequired:30},{kind:'days',text:'New money hold deadline',daysRequired:60},{kind:'days',text:'5 qualifying transactions deadline',daysRequired:90});
     r.forceActionPlan=true;
     r.actionPlan=[`1. Open a new Chase Business Complete Checking account${r.openBy?' by '+r.openBy:''}.`,`2. Deposit new money within 30 days: ${r.tiered?r.bonusTierText:'review target tier'}.`,'3. Maintain the qualifying new money for at least 60 days from offer enrollment.','4. Complete 5 qualifying transactions within 90 days of offer enrollment.','5. Keep the account open and unrestricted until payout.'].join('\n');

@@ -5,7 +5,7 @@
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.3.91-profile-registry';
+  const VER='3.3.92-profile-registry';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
     {
@@ -160,7 +160,7 @@
     let best=null,bestScore=0;
     PROFILES.forEach(p=>{
       const signals=p.signals||[];
-      // v3.3.91: require the profile's bank/brand anchor before matching secondary wording.
+      // v3.3.92: require the profile's bank/brand anchor before matching secondary wording.
       // This prevents a new/unknown bank from accidentally matching a saved profile just
       // because it also says things like "promo code", "checking", "90 days", or "$1,500".
       const anchor=signals.length?signals[0].test(raw):false;
@@ -223,7 +223,7 @@
     if(!tiers.length)return r;
     tiers.sort((a,b)=>a.requirement-b.requirement);
     r.bank='Chase';r.acct='Chase Business Complete Checking';r.tiers=tiers;r.tiered=true;r.targetTier=tiers[tiers.length-1];r.bonus=r.selectedBonus=r.targetTier.bonus;r.bonusTierText=tiers.map(t=>money(t.bonus)+' for '+money(t.requirement)+'+ new money').join(' / ');
-    r.reqMoney=0;r.reqIsTotal=false;r.requirementType='transactions';r.requirementNoun='qualifying transactions';r.count=5;r.reqDays=90;r.fundedDays=30;r.fundingAmount=r.targetTier.requirement;r.holdDays=60;r.minHoldDays=60;r.hasExplicitCurrentOffer=true;
+    r.reqMoney=0;r.reqIsTotal=false;r.requirementType='transactions';r.requirementNoun='qualifying transactions';r.count=5;r.reqDays=90;r.fundedDays=30;r.fundingAmount=r.targetTier.requirement;r.holdDays=60;r.minHoldDays=90;r.closeRuleDays=90;r.closeRuleBasis='opened';r.closeBufferDays=1;r.closeRuleText='Do not close within 90 days of account opening. Close on day 91 or later, after the bonus posts.';r.hasExplicitCurrentOffer=true;
     r.counts=['New money deposit into the new Chase business checking account','Debit card purchases','Chase QuickDeposit','ACH credits','Wires credits and debits','Chase Online Bill Pay','Chase QuickAccept'];
     r.not=r.notCounts=['ACH debits','Person-to-person payments / P2P transfers including Zelle','Online transfers to Chase credit cards'];
     r.payout=r.payoutText='within 15 days after all checking requirements are completed';
@@ -294,6 +294,12 @@
       r.reviewFlags.push('No-fee account default: regular Checking selected because it avoids the Max-Rate $15 monthly fee.');
       r.reviewFlags.push('Profile guard: no early-close hold countdown for this offer; close risk is payout only.');
       r.clear=!!(r.bonus&&r.reqDays&&r.reqMoney&&r.count);
+    }
+    if(m.id==='chase-business-complete-checking'){
+      fb.minHoldDays=90;
+      fb.closeRuleBasis='opened';
+      fb.closeBufferDays=1;
+      fb.closeRuleText='Do not close within 90 days of account opening. Close on day 91 or later, after the bonus posts.';
     }
     if(m.id==='guaranty-bank-perks-consumer-checking'){
       fb.reqDays=fb.reqDays||90;

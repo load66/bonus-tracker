@@ -1,7 +1,7 @@
-/* ✅ Version 3.3.91 update: simplified Close Now flow, compact close review, and removed planned-close UI logic. */
+/* ✅ Version 3.3.92 update: Chase Business close timing corrected to day 91 from opening; compact Close Check UI. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.3.91';
+const APP_VERSION='3.3.92';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const ANALYZER_MEMORY_KEY='bt_analyzer_memory_v1';
@@ -199,12 +199,13 @@ function closeReadiness(e,closeDate=''){
   const safe=safeCloseDate(e);
   const raw=rawSafeDate(e);
   const base=closeBasisDate(e);
-  const basis=normalizeCloseRuleBasis(e.closeRuleBasis||inferCloseRuleBasisFromText(e));
+  const basis=closeRuleBasisFor(e);
+  const ruleDays=closeRuleDaysFor(e);
   const target=closeDate||td();
   const warnings=[];
   add(!!e.reqMet,'Requirement met date saved',e.reqMet?fD(e.reqMet):'Save Req Met before closing','danger');
   add(!!e.bonusRecd,'Bonus received',e.bonusRecd?fD(e.bonusRecd):'Do not close before the bonus posts','danger');
-  if(e.minHoldDays>0){
+  if(ruleDays>0){
     add(!!base,'Close-rule start date available',base?closeRuleBasisLabel(basis)+' · '+fD(base):closeRuleBasisLabel(basis)+' is blank','danger');
     add(!!safe&&dB(target,safe)<=0,'Hold period + buffer complete',safe?('Safe close: '+fD(safe)+' · basis: '+closeRuleBasisLabel(basis)):'Safe-close date cannot be calculated','danger');
   }else{
@@ -256,14 +257,16 @@ function closePlanForEntry(e){
     row('Closed',fD(e.closed),'ok');
     row('Churn ready',churnReadyDate(e)?fD(churnReadyDate(e)):'Not calculated');
     notes.push('This cycle is closed. Future churn timing is based on the actual closed date.');
-    return{title:'Close Plan',sub:'Actual close is already saved',chip:ready.label,cls:ready.cls,rows,notes}
+    return{title:'Close Check',sub:'Actual close is already saved',chip:ready.label,cls:ready.cls,rows,notes}
   }
   row('Bonus',e.bonusRecd?'Received '+fD(e.bonusRecd):'Not received yet',e.bonusRecd?'ok':'bad');
   row('Requirement',e.reqMet?'Met '+fD(e.reqMet):'Missing date',e.reqMet?'ok':'warn');
-  if(e.minHoldDays>0){
-    const basis=normalizeCloseRuleBasis(e.closeRuleBasis||inferCloseRuleBasisFromText(e));
-    row('Hold rule',e.minHoldDays+' days from '+closeRuleBasisLabel(basis)+' + '+closeBufferDaysFor(e)+' day buffer');
-    row('Safe close date',safe?fD(safe):'Needs start date',safe&&daysUntilSafe(e)<=0?'ok':'warn');
+  const ruleDays=closeRuleDaysFor(e);
+  if(ruleDays>0){
+    const basis=closeRuleBasisFor(e);
+    const buffer=closeBufferDaysFor(e);
+    row('Close rule',ruleDays+' days from '+closeRuleBasisLabel(basis)+(buffer?' + '+buffer+' day safety':''));
+    row('Earliest close',safe?fD(safe):'Needs start date',safe&&daysUntilSafe(e)<=0?'ok':'warn');
   }else{
     row('Early-close rule','Manual review','warn');
     notes.push('No fixed early-close countdown is saved. Review the terms before closing.');
@@ -273,7 +276,7 @@ function closePlanForEntry(e){
   if(!e.bonusRecd)notes.push('Keep the account open until the bonus posts.');
   if(e.closeRuleText)notes.push('Saved wording: '+shortCleanText(e.closeRuleText,190));
   notes.push('Before closing, confirm no pending transactions.');
-  return{title:'Close Plan',sub:'Compact check before closing',chip:ready.label,cls:ready.cls,rows,notes}
+  return{title:'Close Check',sub:'Quick check before closing',chip:ready.label,cls:ready.cls,rows,notes}
 }
 function renderClosePlan(e){
   return renderCleanPlanCard(closePlanForEntry(e))
@@ -1056,6 +1059,48 @@ function normalizeCloseRuleBasis(v){
   if(['manual','review','manualreview'].includes(s))return'manual';
   return'opened'
 }
+function isChaseBusinessCompleteEntry(e){
+  if(!e)return false;
+  const text=String([
+    e.bank,e.acct,e.accountName,e.productName,e.analysis&&e.analysis.acct,
+    e.analyzedTC,e.completeBonusText,e.eligibilityText,e.notes
+  ].filter(Boolean).join(' ')).toLowerCase();
+  if(!/chase|jpmorgan/.test(text))return false;
+  if(/platinum business|performance business|private client|total checking|secure banking|first checking/.test(text))return false;
+  if(/chase business complete|business complete checking/.test(text))return true;
+  const bankText=String(e.bank||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  const business=inferAccountTypeForEntry(e)==='business';
+  return business && (bankText==='chase biz'||bankText==='chase business'||/qualifying transactions|new money|business checking offer/.test(text));
+}
+function knownClosePolicy(e){
+  if(isChaseBusinessCompleteEntry(e))return{
+    days:90,
+    basis:'opened',
+    buffer:1,
+    text:'For safer future Chase Business offer eligibility, do not close within 90 days of account opening. Close on day 91 or later, after the bonus posts.'
+  };
+  return null;
+}
+function applyKnownClosePolicy(e){
+  const p=knownClosePolicy(e);
+  if(!p||!e)return e;
+  e.minHoldDays=p.days;
+  e.closeFeeCountdownDays=String(p.days);
+  e.closeRuleBasis=p.basis;
+  e.closeBufferDays=p.buffer;
+  e.closeRuleText=p.text;
+  return e;
+}
+function closeRuleDaysFor(e){
+  const p=knownClosePolicy(e);
+  if(p)return p.days;
+  const n=parseInt(e&&e.minHoldDays,10);
+  return Number.isFinite(n)&&n>0?n:0;
+}
+function closeRuleBasisFor(e){
+  const p=knownClosePolicy(e);
+  return p?p.basis:normalizeCloseRuleBasis(e&&e.closeRuleBasis||inferCloseRuleBasisFromText(e));
+}
 function closeRuleBasisLabel(v){
   const b=normalizeCloseRuleBasis(v);
   return b==='bonus'?'Bonus received date':b==='reqmet'?'Requirement met date':b==='manual'?'Manual review':'Opened date'
@@ -1067,12 +1112,14 @@ function inferCloseRuleBasisFromText(e){
   return'opened'
 }
 function closeBufferDaysFor(e){
+  const p=knownClosePolicy(e);
+  if(p)return p.buffer;
   const n=parseInt(e&&e.closeBufferDays,10);
   return Number.isFinite(n)&&n>=0?n:BUFFER_DAYS
 }
 function closeBasisDate(e){
   if(!e)return'';
-  const b=normalizeCloseRuleBasis(e.closeRuleBasis||inferCloseRuleBasisFromText(e));
+  const b=closeRuleBasisFor(e);
   if(b==='bonus')return e.bonusRecd||'';
   if(b==='reqmet')return e.reqMet||'';
   if(b==='manual')return'';
@@ -1080,12 +1127,14 @@ function closeBasisDate(e){
 }
 function rawSafeDate(e){
   const base=closeBasisDate(e);
-  return(base&&e&&e.minHoldDays>0)?addD(base,e.minHoldDays):null
+  const days=closeRuleDaysFor(e);
+  return(base&&days>0)?addD(base,days):null
 }
 
 function safeCloseDate(e){
   const base=closeBasisDate(e);
-  return(base&&e&&e.minHoldDays>0)?addD(base,e.minHoldDays+closeBufferDaysFor(e)):null
+  const days=closeRuleDaysFor(e);
+  return(base&&days>0)?addD(base,days+closeBufferDaysFor(e)):null
 }
 
 function daysUntilSafe(e){
@@ -1526,7 +1575,7 @@ function chartData(){
 /* Bank Identity v3.3.42
    Centralized bank matching. Display names can vary, but duplicate/churn
    matching uses canonical bank family + personal/business type. */
-const BANK_IDENTITY_VERSION='3.3.91';
+const BANK_IDENTITY_VERSION='3.3.92';
 function normBankText(v){return String(v||'').toLowerCase().replace(/[®™℠]/g,'').replace(/&/g,' and ').replace(/\*/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim()}
 function bankAliasGroups(){return[
   ['chase','CHA',['chase','jpmorgan chase','jp morgan chase','jpmorgan','jp morgan','jpm']],
@@ -3419,6 +3468,7 @@ function normalizeLifecycleEntry(e){
   x.closeRuleText=String(x.closeRuleText||'').trim();
   repairManualCloseHoldFields(x);
   sanitizeCloseFieldsForEntry(x);
+  applyKnownClosePolicy(x);
   x.monthlyFeeChecked=!!x.monthlyFeeChecked;
   try{
     const feeStruct=deriveMonthlyFeeStructure(x);
@@ -3430,7 +3480,7 @@ function normalizeLifecycleEntry(e){
     x.monthlyFeeNoMonthlyServiceFee=!!(x.monthlyFeeNoMonthlyServiceFee||feeStruct.monthlyFeeNoMonthlyServiceFee);
   }catch{}
   x.customTimers=normalizeTimerList(x.customTimers||[]);
-  // v3.3.91: planned-close flow was removed. Closed date is actual only.
+  // v3.3.92: planned-close flow was removed. Closed date is actual only.
   x.plannedClose='';
   if(x.bonusRecd&&!x.reqMet)x.reqMet=x.bonusRecd;
   if(x.reqMet&&x.bonusRecd&&dB(x.reqMet,x.bonusRecd)<0)x.reqMet=x.bonusRecd;
@@ -5836,6 +5886,6 @@ entries=sortE(entries);R();
 })();
 /* === End consolidated core module: Tracker card bank actions renderer === */
 
-(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.91 close intelligence polish */\n.close-intel.safe{border-color:#bbf7d0;background:#f0fdf4}\n.close-intel.warn,.close-intel.plan{border-color:#fde68a;background:#fffbeb}\n.close-intel.danger{border-color:#fecaca;background:#fff7f7}\n.close-ready{padding:10px 12px;border-radius:14px;margin:10px 0 12px;border:1px solid #e5e7eb;background:#f8fafc;font-size:12px;line-height:1.35}\n.close-ready b{display:block;font-size:13px;margin-bottom:2px}\n.close-ready.safe{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}\n.close-ready.warn,.close-ready.plan{background:#fffbeb;border-color:#fde68a;color:#78350f}\n.close-ready.danger{background:#fff1f2;border-color:#fecaca;color:#7f1d1d}\n.close-final-note{font-size:11px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px;margin-top:10px;line-height:1.35}\n.close-mode-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}\n.close-mode{border:1px solid #e2e8f0;background:#f8fafc;border-radius:14px;padding:10px 9px;text-align:left;font-family:'DM Sans',system-ui,sans-serif;color:#334155;cursor:pointer}\n.close-mode b{display:block;font-size:12px;line-height:1.05;color:#0f172a}\n.close-mode span{display:block;font-size:9px;line-height:1.2;color:#64748b;font-weight:800;margin-top:3px}\n.close-mode.sel{background:#eff6ff;border-color:#93c5fd;box-shadow:0 0 0 2px rgba(59,130,246,.10)}\n";document.head.appendChild(st)}catch{}})();
+(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.92 close intelligence polish */\n.close-intel.safe{border-color:#bbf7d0;background:#f0fdf4}\n.close-intel.warn,.close-intel.plan{border-color:#fde68a;background:#fffbeb}\n.close-intel.danger{border-color:#fecaca;background:#fff7f7}\n.close-ready{padding:10px 12px;border-radius:14px;margin:10px 0 12px;border:1px solid #e5e7eb;background:#f8fafc;font-size:12px;line-height:1.35}\n.close-ready b{display:block;font-size:13px;margin-bottom:2px}\n.close-ready.safe{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}\n.close-ready.warn,.close-ready.plan{background:#fffbeb;border-color:#fde68a;color:#78350f}\n.close-ready.danger{background:#fff1f2;border-color:#fecaca;color:#7f1d1d}\n.close-final-note{font-size:11px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px;margin-top:10px;line-height:1.35}\n.close-mode-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}\n.close-mode{border:1px solid #e2e8f0;background:#f8fafc;border-radius:14px;padding:10px 9px;text-align:left;font-family:'DM Sans',system-ui,sans-serif;color:#334155;cursor:pointer}\n.close-mode b{display:block;font-size:12px;line-height:1.05;color:#0f172a}\n.close-mode span{display:block;font-size:9px;line-height:1.2;color:#64748b;font-weight:800;margin-top:3px}\n.close-mode.sel{background:#eff6ff;border-color:#93c5fd;box-shadow:0 0 0 2px rgba(59,130,246,.10)}\n";document.head.appendChild(st)}catch{}})();
 
-(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.91 monthly fee plan box */\n.monthly-fee-plan.safe{border-color:#bbf7d0;background:#f0fdf4}\n.monthly-fee-plan.warn{border-color:#fde68a;background:#fffbeb}\n.monthly-fee-plan .tc-label{letter-spacing:.11em}\n";document.head.appendChild(st)}catch{}})();
+(function(){try{const st=document.createElement('style');st.textContent="\n/* v3.3.92 monthly fee plan box */\n.monthly-fee-plan.safe{border-color:#bbf7d0;background:#f0fdf4}\n.monthly-fee-plan.warn{border-color:#fde68a;background:#fffbeb}\n.monthly-fee-plan .tc-label{letter-spacing:.11em}\n";document.head.appendChild(st)}catch{}})();

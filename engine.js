@@ -1,18 +1,18 @@
 /*
  * filename: engine.js
- * version: 3.3.91
+ * version: 3.3.92
  * purpose: Analyzer v3 Engine with broader weird-wording normalization, safer source proof, and training-learning-ready results.
  * last-touched: unknown
  */
 (function(){
-  const VER='3.3.91';
+  const VER='3.3.92';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const escRe=s=>String(s||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const moneyNum=s=>{const n=parseFloat(String(s||'').replace(/[$,\s]/g,''));return Number.isFinite(n)?n:0};
   const money=n=>'$'+Number(n||0).toLocaleString();
   const uniq=a=>Array.from(new Set((a||[]).filter(Boolean).map(clean))).filter(Boolean);
 
-  const WEIRD_WORDING_VER='3.3.91-core';
+  const WEIRD_WORDING_VER='3.3.92-core';
   const phraseMap=[
     {re:/adjusted interest/gi,label:'adjusted interest',add:'bonus payout'},
     {re:/cash reward/gi,label:'cash reward',add:'cash bonus'},
@@ -384,7 +384,7 @@
     if(result.reqDays)result.suggestedTimers.push({kind:'days',text:result.requirementType==='transactions'?'Complete qualifying transactions':'Bonus requirement deadline',daysRequired:result.reqDays,source:req.source||''});
     const payoutDays=payoutDaysFromText(result.payout||result.payoutText||'');
     if(result.reqDays&&payoutDays)result.suggestedTimers.push({kind:'days',text:'Bonus payout watch',daysRequired:Number(result.reqDays)+payoutDays,source:result.payoutSource||'payout timing'});
-    if(result.reqDays&&payoutDays)result.suggestedTimers.push({kind:'days',text:'Close review after payout',daysRequired:Number(result.reqDays)+payoutDays+5,source:'close plan'});
+    if(result.reqDays&&payoutDays)result.suggestedTimers.push({kind:'days',text:'Close check after payout',daysRequired:Number(result.reqDays)+payoutDays+5,source:'close check'});
     if(result.closeRuleDays)result.suggestedTimers.push({kind:'days',text:'Close hold / early-close safety date',daysRequired:result.closeRuleDays+3,source:result.closeRuleText||'close rule'});
     const plan=[];let step=1;
     plan.push(`${step++}. Open one eligible account${result.openBy?' by '+pretty(result.openBy):''}${result.code?' using promo code '+result.code:''}.`);
