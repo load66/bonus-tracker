@@ -5,7 +5,7 @@
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.3.93-profile-registry';
+  const VER='3.3.94-profile-registry';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
     {
@@ -160,7 +160,7 @@
     let best=null,bestScore=0;
     PROFILES.forEach(p=>{
       const signals=p.signals||[];
-      // v3.3.93: require the profile's bank/brand anchor before matching secondary wording.
+      // v3.3.94: require the profile's bank/brand anchor before matching secondary wording.
       // This prevents a new/unknown bank from accidentally matching a saved profile just
       // because it also says things like "promo code", "checking", "90 days", or "$1,500".
       const anchor=signals.length?signals[0].test(raw):false;

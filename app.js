@@ -1,7 +1,7 @@
-/* ✅ Version 3.3.93 update: Chase Business detection hardened; safe close is always day 91 from opening. */
+/* ✅ Version 3.3.94 update: verified bank-card source priority; Chase Business close timing is day 91 from opening. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.3.93';
+const APP_VERSION='3.3.94';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const ANALYZER_MEMORY_KEY='bt_analyzer_memory_v1';
@@ -262,10 +262,16 @@ function closePlanForEntry(e){
   row('Bonus',e.bonusRecd?'Received '+fD(e.bonusRecd):'Not received yet',e.bonusRecd?'ok':'bad');
   row('Requirement',e.reqMet?'Met '+fD(e.reqMet):'Missing date',e.reqMet?'ok':'warn');
   const ruleDays=closeRuleDaysFor(e);
+  const verifiedPolicy=knownClosePolicy(e);
   if(ruleDays>0){
     const basis=closeRuleBasisFor(e);
     const buffer=closeBufferDaysFor(e);
-    row('Close rule',ruleDays+' days from '+closeRuleBasisLabel(basis)+(buffer?' + '+buffer+' day safety':''));
+    if(verifiedPolicy&&basis==='opened'){
+      row('Close rule','Day '+(ruleDays+buffer)+' from opened date');
+      row('Opened',e.opened?fD(e.opened):'Missing date',e.opened?'ok':'bad');
+    }else{
+      row('Close rule',ruleDays+' days from '+closeRuleBasisLabel(basis)+(buffer?' + '+buffer+' day safety':''));
+    }
     row('Earliest close',safe?fD(safe):'Needs start date',safe&&daysUntilSafe(e)<=0?'ok':'warn');
   }else{
     row('Early-close rule','Manual review','warn');
@@ -274,7 +280,7 @@ function closePlanForEntry(e){
   const hasMonthlyFee=/(yes|\$|monthly|service fee|maintenance fee)/i.test(String(e.monthlyFeeYNText||'')+' '+String(e.avoidMonthlyFeeText||''));
   if(hasMonthlyFee)row('Monthly fee',e.monthlyFeeChecked?'Checked':'Check before close',e.monthlyFeeChecked?'ok':'warn');
   if(!e.bonusRecd)notes.push('Keep the account open until the bonus posts.');
-  if(e.closeRuleText)notes.push('Saved wording: '+shortCleanText(e.closeRuleText,190));
+  if(e.closeRuleText&&!verifiedPolicy)notes.push('Saved wording: '+shortCleanText(e.closeRuleText,190));
   notes.push('Before closing, confirm no pending transactions.');
   return{title:'Close Check',sub:'Quick check before closing',chip:ready.label,cls:ready.cls,rows,notes}
 }
@@ -1061,20 +1067,20 @@ function normalizeCloseRuleBasis(v){
 }
 function isChaseBusinessCompleteEntry(e){
   if(!e)return false;
-  const text=String([
-    e.bank,e.acct,e.accountName,e.productName,e.analysis&&e.analysis.acct,
-    e.analyzedTC,e.completeBonusText,e.eligibilityText,e.notes
-  ].filter(Boolean).join(' ')).toLowerCase();
-  if(!/chase|jpmorgan/.test(text))return false;
-  if(/platinum business|performance business|private client|total checking|secure banking|first checking/.test(text))return false;
-  if(/chase business complete|business complete checking/.test(text))return true;
-  const bankText=String(e.bank||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-  // The saved bank name is the strongest signal. Do not depend on account-type
-  // inference because older entries may store Business under legacy values.
-  if(/^(chase biz|chase business|chase business complete|jp morgan chase business)$/.test(bankText))return true;
-  if(/chase/.test(bankText)&&/(biz|business)/.test(bankText))return true;
-  const business=inferAccountTypeForEntry(e)==='business';
-  return business && /qualifying transactions|new money|business checking offer/.test(text);
+  const bank=String(e.bank||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
+  const acct=String([e.accountType,e.acct,e.accountName,e.productName,e.analysis&&e.analysis.acct].filter(Boolean).join(' ')).toLowerCase();
+  const detail=String([e.analyzedTC,e.completeBonusText,e.eligibilityText,e.notes].filter(Boolean).join(' ')).toLowerCase();
+
+  // The saved bank name is the primary identity. This intentionally does not
+  // depend on old analyzer/profile wording, which may be stale or incorrect.
+  const chaseBrand=/^(jpmorgan )?chase\b/.test(bank)||bank.includes('jp morgan chase');
+  if(!chaseBrand)return false;
+  if(/platinum business|performance business|private client|total checking|secure banking|first checking/.test(bank+' '+acct+' '+detail))return false;
+
+  const businessName=/\b(biz|business|business complete)\b/.test(bank);
+  const businessAcct=/\b(biz|business|business complete)\b/.test(acct);
+  const businessProduct=/\b(chase business complete|business complete checking)\b/.test(detail);
+  return businessName||businessAcct||businessProduct;
 }
 function knownClosePolicy(e){
   if(isChaseBusinessCompleteEntry(e))return{
@@ -3473,6 +3479,8 @@ function normalizeLifecycleEntry(e){
   repairManualCloseHoldFields(x);
   sanitizeCloseFieldsForEntry(x);
   applyKnownClosePolicy(x);
+  if(knownClosePolicy(x))x.closeRuleSource='verified-bank-rule';
+  else if(!x.closeRuleSource)x.closeRuleSource=x.closeRuleText?'saved-entry':'manual-review';
   x.monthlyFeeChecked=!!x.monthlyFeeChecked;
   try{
     const feeStruct=deriveMonthlyFeeStructure(x);
