@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.96: T&C close-rule guard and stale close-date repair.
+// ✅ Version 3.3.97: hardened T&C close-rule analysis and stale close-date repair.
 
-const V = 'bt-v3.3.96';
+const V = 'bt-v3.3.97';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
