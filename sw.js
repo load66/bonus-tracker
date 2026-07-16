@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.3.95 Newest update: simplified Close Now flow and compact close review.
+// ✅ Version 3.3.96: T&C close-rule guard and stale close-date repair.
 
-const V = 'bt-v3.3.95';
+const V = 'bt-v3.3.96';
 const ASSETS = ['./index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', event => {
@@ -40,7 +40,6 @@ self.addEventListener('fetch', event => {
   const isSameOrigin = url.origin === self.location.origin;
   if (!isSameOrigin) return;
 
-  // App code must be network-first so old helper scripts cannot keep rewriting the badge.
   if (isAppShellOrCode(url, req)) {
     event.respondWith(
       fetch(req, { cache: 'no-store' })
@@ -54,7 +53,6 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Non-code assets can remain cache-first for speed/offline support.
   event.respondWith(
     caches.match(req).then(cached => {
       if (cached) return cached;
