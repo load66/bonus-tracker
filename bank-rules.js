@@ -1,11 +1,11 @@
 /*
  * filename: bank-rules.js
- * version: 3.3.57
+ * version: 3.4.04
  * purpose: Analyzer v3 bank rules. Hardened Chase Business gate (no JPMorgan legal-entity false positives) + personal-product anti-signals.
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.4.01';
+  const VER='3.4.04';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const money=n=>'$'+Number(n||0).toLocaleString();
   const uniq=a=>Array.from(new Set((a||[]).filter(Boolean).map(clean))).filter(Boolean);
@@ -29,15 +29,14 @@
   }
   function applyChaseBusiness(r){
     const raw=String(r.normalizedRaw||r.raw||'');
-    if(!/Chase Business Complete Checking|Chase Business Complete|Chase business checking|business checking offer/i.test(raw))return r;
+    if(!/\b(?:JPMorgan\s+)?Chase\b/i.test(raw))return r;
+    if(!/Chase Business Complete Checking|Chase Business Complete|Chase business checking|Chase business checking offer/i.test(raw))return r;
     /* anti-signal: the document is clearly a personal-product T&C — refuse to fire. */
     if(/Chase Total Checking|Chase SavingsSM|Chase First CheckingSM/i.test(raw))return r;
     r.bank='Chase';r.acct='Chase Business Complete Checking';
     const tiers=[];
-    // Current flyer wording: Earn $500/$750/$1,500 with minimum $2,000/$20,000/$100,000 deposited in new money.
     let m;const tierRe=/earn\s*\$\s*([0-9,]+)\s+with\s+(?:a\s+)?minimum\s+\$\s*([0-9,]+)\s+deposit(?:\s+in\s+new\s+money)?/gi;
     while((m=tierRe.exec(raw)))tiers.push({bonus:parseInt(m[1].replace(/,/g,''),10),requirement:parseInt(m[2].replace(/,/g,''),10),maxRequirement:0,confidence:'High',source:clean(m[0])});
-    // Legacy Chase business wording is still supported, but only when the current flyer wording is absent.
     if(!tiers.length&&/\$\s*300[\s\S]{0,60}\$\s*2,?000\s*[-–—]\s*\$\s*9,?999/i.test(raw))tiers.push({bonus:300,requirement:2000,maxRequirement:9999,confidence:'High',source:'Chase table: $300 for $2,000–$9,999 new money'});
     if(!tiers.length&&/\$\s*500[\s\S]{0,60}\$\s*10,?000\s*or\s*more/i.test(raw))tiers.push({bonus:500,requirement:10000,maxRequirement:0,confidence:'High',source:'Chase table: $500 for $10,000+ new money'});
     setTiers(r,tiers,'Chase Business Checking',{fundingTiers:true});
@@ -51,8 +50,6 @@
     r.not=r.notCounts=uniq(['ACH debits','Person-to-person payments / P2P transfers including Zelle','Online transfers to Chase credit cards']);
     r.payout=r.payoutText='within 15 days after all checking requirements are completed';
     r.eligibilityText=uniq(['Not available to existing businesses with Chase business checking accounts.','Not eligible if account closed within 90 days or closed with a negative balance within the last 3 years.','Signers can receive only one business checking offer every two years from last offer enrollment date.','Only one offer per account.','Employees of JPMorgan Chase Bank and affiliates are not eligible.','Offer may be reported on IRS Form 1099-INT or Form 1042-S.']).join('\n');
-    // Eligibility lookback wording is not a current-account minimum-open rule.
-    // Only explicit clawback/minimum-open wording from the pasted T&C may create a close countdown.
     if(!r.closeRestrictionType)r.closeRestrictionType='none';
     r.suggestedTimers=[];if(r.openBy)r.suggestedTimers.push({kind:'due',text:'Promo expiration / open-by deadline',date:r.openBy});r.suggestedTimers.push({kind:'days',text:'New money funding deadline',daysRequired:30},{kind:'days',text:'New money hold deadline',daysRequired:60},{kind:'days',text:'5 qualifying transactions deadline',daysRequired:90});
     r.forceActionPlan=true;
@@ -81,8 +78,7 @@
   function applyBmoBusiness(r){
     const raw=String(r.normalizedRaw||r.raw||'');
     if(!/\bBMO\b/i.test(raw)||!/Business Checking|Digital Business Checking|Simple Business Checking|Premium Business Checking|Elite Business Checking/i.test(raw))return r;
-    r.bank='BMO';
-    r.acct='BMO eligible business checking';
+    r.bank='BMO';r.acct='BMO eligible business checking';
     const tiers=[
       {bonus:400,requirement:4000,maxRequirement:24999,confidence:'High',source:'BMO Tier 1: $400 bonus; $4,000+ balance on Day 30 and Day 31–90 hold'},
       {bonus:750,requirement:25000,maxRequirement:49999,confidence:'High',source:'BMO Tier 2: $750 bonus; $25,000+ balance on Day 30 and Day 31–90 hold'},
@@ -96,28 +92,11 @@
     r.promoCode={value:r.code,confidence:'High',source:'BMO online auto-applies promo code; branch opening requires SEND MY PROMO CODE.'};
     r.fee=0;r.monthlyFee=null;
     r.waivers=uniq(['Monthly service fee not clearly stated in pasted T&C — review BMO account fee schedule']);
-    r.counts=uniq([
-      'Open BMO Digital Business Checking, Simple Business Checking, Premium Business Checking, or Elite Business Checking',
-      'Balance on Day 30 determines assigned bonus tier',
-      'Maintain the assigned tier minimum daily balance from Day 31 through Day 90',
-      'Minimum opening deposit is $100'
-    ]);
-    r.not=r.notCounts=uniq([
-      'Existing BMO business checking account owners are not eligible',
-      'Closed BMO business checking account within the past 12 months using same TIN/EIN/SSN is not eligible',
-      'Cannot combine with any other offer',
-      'Only one cash bonus per business entity',
-      'Opening multiple checking accounts will not earn multiple bonuses'
-    ]);
+    r.counts=uniq(['Open BMO Digital Business Checking, Simple Business Checking, Premium Business Checking, or Elite Business Checking','Balance on Day 30 determines assigned bonus tier','Maintain the assigned tier minimum daily balance from Day 31 through Day 90','Minimum opening deposit is $100']);
+    r.not=r.notCounts=uniq(['Existing BMO business checking account owners are not eligible','Closed BMO business checking account within the past 12 months using same TIN/EIN/SSN is not eligible','Cannot combine with any other offer','Only one cash bonus per business entity','Opening multiple checking accounts will not earn multiple bonuses']);
     r.early='Maintain the assigned tier balance from Day 31 through Day 90. Dropping below the assigned tier can reduce the bonus to a lower tier or disqualify the bonus.';
     r.payout=r.payoutText='within 14 days of meeting the promotion requirements, approximately Day 104';
-    r.eligibilityText=uniq([
-      'New BMO business checking customers only.',
-      'Not eligible with existing BMO business checking or closed BMO business checking within past 12 months using same TIN/EIN/SSN.',
-      'Offer limited to one cash bonus per business entity.',
-      'Account must be open, in good standing, and have a balance greater than zero on payment day.',
-      'Cash bonus may be reported to the IRS for tax purposes.'
-    ]).join('\n');
+    r.eligibilityText=uniq(['New BMO business checking customers only.','Not eligible with existing BMO business checking or closed BMO business checking within past 12 months using same TIN/EIN/SSN.','Offer limited to one cash bonus per business entity.','Account must be open, in good standing, and have a balance greater than zero on payment day.','Cash bonus may be reported to the IRS for tax purposes.']).join('\n');
     r.suggestedTimers=[];if(r.openBy)r.suggestedTimers.push({kind:'due',text:'Promo expiration / open-by deadline',date:r.openBy});r.suggestedTimers.push({kind:'days',text:'Day 30 tier balance check',daysRequired:30},{kind:'days',text:'Day 90 balance hold complete',daysRequired:90},{kind:'days',text:'Expected bonus payout check',daysRequired:104});
     r.forceActionPlan=true;
     r.actionPlan=[`1. Open an eligible BMO business checking account by ${r.openBy}.`,`2. Use online offer page for auto-applied promo code, or get branch promo code from BMO offer page.`,'3. Meet your target tier balance on Day 30: $4,000 = $400, $25,000 = $750, or $50,000 = $1,000.','4. Maintain the assigned tier minimum daily balance from Day 31 through Day 90.','5. Keep account open, in good standing, and above $0 until payout around Day 104.'].join('\n');
