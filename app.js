@@ -1,7 +1,7 @@
-/* ✅ Version 3.4.00: unified bank profile, guided editor, Start New Cycle, update flow, and safer analyzer integration. */
+/* ✅ Version 3.4.01: unified bank profile, guided editor, Start New Cycle, update flow, and safer analyzer integration. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.00';
+const APP_VERSION='3.4.01';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const ANALYZER_MEMORY_KEY='bt_analyzer_memory_v1';
@@ -265,7 +265,7 @@ function closePlanForEntry(e){
   if(ruleDays>0){
     if(verifiedPolicy&&basis==='opened')row('Rule','Day '+(ruleDays+buffer)+' from opening');
     else row('Rule',ruleDays+' days from '+closeRuleBasisLabel(basis)+(buffer?' + '+buffer+' day safety':''));
-  }else row('Rule','Manual review','warn');
+  }else row('Rule',e.closeRestrictionType==='payout-only'?'Keep open until bonus posts':'No close restriction found','ok');
   row('Final check',e.bonusRecd?'Bonus posted · check pending activity':'Wait for bonus to post',e.bonusRecd?'':'bad');
   if(e.closeRuleText&&!verifiedPolicy&&!ruleDays)notes.push(shortCleanText(e.closeRuleText,120));
   return{title:'Close Check',sub:'Only what matters before closing',chip:ready.label,cls:ready.cls,rows,notes:notes.slice(0,1),compact:true}
@@ -760,7 +760,7 @@ function entryReqSnapshot(e){
     bank:e.bank,
     accountType:normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'personal'
   };
-  ['bonus','notes','dataPoint','fundedDays','fundingAmount','fundingAmountText','payoutTimingText','churn','reqDays','monthlyFeeYNText','monthlyFeeAmountText','monthlyFeeFrequency','monthlyFeeWaiverType','monthlyFeeWaiverAmountText','monthlyFeeWaiverText','monthlyFeeNoMonthlyServiceFee','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText','eligibilityText','expirationDateText','requiredDaysText','minHoldDays','earlyCloseFee','closeRuleBasis','closeBufferDays','closeRuleText','monthlyFeeChecked'].forEach(k=>{const v=e[k];if(v!==undefined&&v!==null&&v!=='')snap[k]=v});
+  ['bonus','notes','dataPoint','fundedDays','fundingAmount','fundingAmountText','payoutTimingText','churn','reqDays','monthlyFeeYNText','monthlyFeeAmountText','monthlyFeeFrequency','monthlyFeeWaiverType','monthlyFeeWaiverAmountText','monthlyFeeWaiverText','monthlyFeeNoMonthlyServiceFee','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText','eligibilityText','expirationDateText','requiredDaysText','minHoldDays','earlyCloseFee','closeRuleBasis','closeBufferDays','closeRuleText','closeRestrictionType','monthlyFeeChecked'].forEach(k=>{const v=e[k];if(v!==undefined&&v!==null&&v!=='')snap[k]=v});
   return snap
 }
 
@@ -1135,33 +1135,15 @@ function isChaseBusinessCompleteEntry(e){
   const businessProduct=/\b(chase business complete|business complete checking)\b/.test(detail);
   return businessName||businessAcct||businessProduct;
 }
-function knownClosePolicy(e){
-  if(isChaseBusinessCompleteEntry(e))return{
-    days:90,
-    basis:'opened',
-    buffer:1,
-    text:'For safer future Chase Business offer eligibility, do not close within 90 days of account opening. Close on day 91 or later, after the bonus posts.'
-  };
-  return null;
-}
+function knownClosePolicy(e){return null}
 function applyKnownClosePolicy(e){
-  const p=knownClosePolicy(e);
-  if(!p||!e)return e;
-  e.minHoldDays=p.days;
-  e.closeFeeCountdownDays=String(p.days);
-  e.closeRuleBasis=p.basis;
-  e.closeBufferDays=p.buffer;
-  e.closeRuleText=p.text;
-  e.closeRuleSource='verified-bank-rule';
-  // Keep the 60-day new-money hold separate from the account close rule.
+  if(!e)return e;
   if(isChaseBusinessCompleteEntry(e)){
     e.fundedDays=parseInt(e.fundedDays,10)||30;
     e.holdDays=parseInt(e.holdDays,10)||60;
-    if(e.analysis&&typeof e.analysis==='object'){
-      e.analysis.closeRuleBasis='opened';
-      e.analysis.closeRuleDays=90;
-      e.analysis.closeBufferDays=1;
-    }
+    const stale=/day 91|do not close within 90 days|safer future chase business offer eligibility/i.test(String(e.closeRuleText||''))||e.profileRuleOverride==='chase-business-day91'||e.closeRuleSource==='verified-bank-rule';
+    const explicit=['explicit-clawback','minimum-open','payout-only'].includes(String(e.closeRestrictionType||e.analysis?.closeRestrictionType||''));
+    if(stale&&!explicit){e.minHoldDays=0;e.closeFeeCountdownDays='';e.closeRuleBasis='bonus';e.closeBufferDays=5;e.closeRuleText='';e.closeRuleSource='current-tc-only';e.profileRuleOverride='';}
   }
   return e;
 }
@@ -3539,6 +3521,7 @@ function normalizeLifecycleEntry(e){
   if(x.closeBufferDays===3)x.closeBufferDays=BUFFER_DAYS;
   if(!Number.isFinite(x.closeBufferDays)||x.closeBufferDays<0)x.closeBufferDays=BUFFER_DAYS;
   x.closeRuleText=String(x.closeRuleText||'').trim();
+  x.closeRestrictionType=String(x.closeRestrictionType||x.analysis?.closeRestrictionType||'none').trim()||'none';
   repairManualCloseHoldFields(x);
   sanitizeCloseFieldsForEntry(x);
   applyKnownClosePolicy(x);

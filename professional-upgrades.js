@@ -1,12 +1,12 @@
 /*
  * Bonus Tracker Professional Workflow Upgrade
- * version: 3.4.00
+ * version: 3.4.01
  * purpose: unified field sources, guided editor, repeat-cycle workflow,
  *          safer validation, update handling, mobile polish, and full regression hooks.
  */
 (function(){
   'use strict';
-  const VER='3.4.00';
+  const VER='3.4.01';
   const PROFILE_SCHEMA='bank-profile-v2';
   const SOURCE_PRIORITY={manual:500,'verified-bank-rule':450,'current-tc':400,extracted:380,'user-rule':340,learned:250,'prior-cycle':200,profile:150,generated:100,unknown:0};
   const html=v=>{try{return esc(String(v??''))}catch{const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML}};
@@ -419,7 +419,8 @@
       }
     }
 
-    const explicitClose=closeLines.map(s=>({s,ds:days(s)})).filter(x=>x.ds.length);
+    const eligibilityLookback=s=>/(not eligible|ineligible|eligibility|previously|prior|past) [^.]{0,90}(closed|close)|closed [^.]{0,60}(within|in the past|during the previous)/i.test(s)&&!/(deduct|reverse|forfeit|clawback|early termination fee|must remain open|keep the account open)/i.test(s);
+    const explicitClose=closeLines.filter(s=>!eligibilityLookback(s)).map(s=>({s,ds:days(s)})).filter(x=>x.ds.length);
     if(explicitClose.length){
       const best=explicitClose.sort((a,b)=>{
         const score=x=>(/remain open|keep[^.]{0,35}open|close within|closed within|early termination|forfeit|clawback/i.test(x.s)?10:0)+(/after opening|from opening|after account opening/i.test(x.s)?4:0)+(/after bonus|after payout|after payment/i.test(x.s)?4:0);
@@ -428,11 +429,11 @@
       const n=best.ds[0];
       r.closeRuleDays=n;r.minHoldDays=n;r.closeRuleText=best.s;
       r.closeRuleBasis=/after[^.]{0,40}(bonus|payout|payment)|bonus[^.]{0,40}(paid|posted|received)/i.test(best.s)?'bonus':/after[^.]{0,40}(requirement|qualif)|requirements?[^.]{0,30}(met|complete)/i.test(best.s)?'reqmet':'opened';
-      r.closeRuleConfidence='high';setSource(r,'Early close / payout risk',best.s,'high','extracted');
+      r.closeRuleConfidence='high';r.closeRestrictionType=/(deduct|reverse|forfeit|clawback|fee|penalty)/i.test(best.s)?'explicit-clawback':'minimum-open';setSource(r,'Early close / payout risk',best.s,'high','extracted');
     }else if(r.closeRuleDays||r.minHoldDays){
       const existing=String(r.closeRuleText||r.fieldSources?.['Early close / payout risk']?.source||'');
       if(!/(close|closed|remain open|keep[^.]{0,35}open|early termination|forfeit|clawback)/i.test(existing)){
-        r.closeRuleDays=0;r.minHoldDays=0;r.closeRuleText='';r.closeRuleConfidence='low';addFlag(r,'A fixed close countdown was removed because no source sentence connected the days to closing or keeping the account open.');
+        r.closeRuleDays=0;r.minHoldDays=0;r.closeRuleText='';r.closeRuleConfidence='low';r.closeRestrictionType='none';addFlag(r,'A fixed close countdown was removed because no source sentence connected the days to closing or keeping the account open.');
       }
     }
 
@@ -446,9 +447,9 @@
     const bonusAmounts=uniq(bonusLines.flatMap(money)).filter(n=>n>=25);
     if(bonusAmounts.length>1&&!r.tiered)addFlag(r,'Multiple bonus-like dollar amounts were found. Confirm the selected bonus and any referral or tier amounts.');
 
-    r.analysisDiagnostics={version:'3.4.00',sentences:list.length,feeCandidates:feeLines.length,requirementCandidates:reqLines.length,closeCandidates:closeLines.length,explicitCloseCandidates:explicitClose.length,accountType:type||'unknown'};
+    r.analysisDiagnostics={version:'3.4.01',sentences:list.length,feeCandidates:feeLines.length,requirementCandidates:reqLines.length,closeCandidates:closeLines.length,explicitCloseCandidates:explicitClose.length,accountType:type||'unknown'};
     r.reviewFlags=uniq(r.reviewFlags).slice(0,20);
     window.__tcV3AnalysisResult=r;window.__tcCurrentAnalysisResult=r;return r;
   };
-  window.tcUnifiedAnalyze=window.tcV3Analyze;window.tcStrictAnalyze=window.tcV3Analyze;window.tcV3EngineVersion='3.4.00';
+  window.tcUnifiedAnalyze=window.tcV3Analyze;window.tcStrictAnalyze=window.tcV3Analyze;window.tcV3EngineVersion='3.4.01';
 })();

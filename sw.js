@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.4.00: staged updates, full app-shell caching, and safe cache cleanup.
+// ✅ Version 3.4.01: staged updates, full app-shell caching, and safe cache cleanup.
 
-const V = 'bt-v3.4.00';
+const V = 'bt-v3.4.01';
 const ASSETS = ['./app.js', './bank-rules-academy.js', './bank-rules-boa-business.js', './bank-rules-busey.js', './bank-rules-capitalone.js', './bank-rules-equity.js', './bank-rules-pnc.js', './bank-rules-regions.js', './bank-rules.js', './churn-profile-memory.js', './controller.js', './engine.js', './icon.svg', './index.html', './learning-inbox-conflict.js', './manifest.json', './professional-upgrades.js', './profile-db.js', './profile-library-selftest-academy.js', './profile-library-selftest.js', './profile-registry-academy.js', './profile-registry.js', './source-resolver.js', './style.css', './sw.js'];
 
 self.addEventListener('install', event => {

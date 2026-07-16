@@ -5,7 +5,7 @@
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.4.00-profile-registry';
+  const VER='3.4.01-profile-registry';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const PROFILES=[
     {
@@ -223,7 +223,7 @@
     if(!tiers.length)return r;
     tiers.sort((a,b)=>a.requirement-b.requirement);
     r.bank='Chase';r.acct='Chase Business Complete Checking';r.tiers=tiers;r.tiered=true;r.targetTier=tiers[tiers.length-1];r.bonus=r.selectedBonus=r.targetTier.bonus;r.bonusTierText=tiers.map(t=>money(t.bonus)+' for '+money(t.requirement)+'+ new money').join(' / ');
-    r.reqMoney=0;r.reqIsTotal=false;r.requirementType='transactions';r.requirementNoun='qualifying transactions';r.count=5;r.reqDays=90;r.fundedDays=30;r.fundingAmount=r.targetTier.requirement;r.holdDays=60;r.minHoldDays=90;r.closeRuleDays=90;r.closeRuleBasis='opened';r.closeBufferDays=1;r.closeRuleText='Do not close within 90 days of account opening. Close on day 91 or later, after the bonus posts.';r.hasExplicitCurrentOffer=true;
+    r.reqMoney=0;r.reqIsTotal=false;r.requirementType='transactions';r.requirementNoun='qualifying transactions';r.count=5;r.reqDays=90;r.fundedDays=30;r.fundingAmount=r.targetTier.requirement;r.holdDays=60;r.minHoldDays=0;r.closeRuleDays=0;r.closeRuleBasis='bonus';r.closeBufferDays=5;r.closeRuleText='';r.closeRestrictionType='none';r.hasExplicitCurrentOffer=true;
     r.counts=['New money deposit into the new Chase business checking account','Debit card purchases','Chase QuickDeposit','ACH credits','Wires credits and debits','Chase Online Bill Pay','Chase QuickAccept'];
     r.not=r.notCounts=['ACH debits','Person-to-person payments / P2P transfers including Zelle','Online transfers to Chase credit cards'];
     r.payout=r.payoutText='within 15 days after all checking requirements are completed';
@@ -296,20 +296,10 @@
       r.clear=!!(r.bonus&&r.reqDays&&r.reqMoney&&r.count);
     }
     if(m.id==='chase-business-complete-checking'){
-      fb.minHoldDays=90;
-      fb.closeRuleBasis='opened';
-      fb.closeBufferDays=1;
-      fb.closeRuleText='Do not close within 90 days of account opening. Close on day 91 or later, after the bonus posts.';
-      // Verified current-bank rule must replace stale personal/profile close logic.
-      r.minHoldDays=90;
-      r.closeRuleDays=90;
-      r.closeRuleBasis='opened';
-      r.closeBufferDays=1;
-      r.closeRuleText=fb.closeRuleText;
-      r.holdDays=parseInt(r.holdDays||0,10)||60;
-      r.fundedDays=parseInt(r.fundedDays||0,10)||30;
-      r.profileRuleOverride='chase-business-day91';
-      r.reviewFlags=(r.reviewFlags||[]).filter(x=>!/close rule|requirement met date|90 days from requirement/i.test(String(x||'')));
+      // Never invent a Chase close countdown from eligibility lookback wording.
+      // Current pasted T&C proof controls clawback/minimum-open rules.
+      if(!r.closeRestrictionType)r.closeRestrictionType='none';
+      r.reviewFlags=(r.reviewFlags||[]).filter(x=>!/day 91|90 days from opening|close rule/i.test(String(x||'')));
     }
     if(m.id==='guaranty-bank-perks-consumer-checking'){
       fb.reqDays=fb.reqDays||90;

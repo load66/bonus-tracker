@@ -5,7 +5,7 @@
  * last-touched: 2026-05-02
  */
 (function(){
-  const VER='3.3.57';
+  const VER='3.4.01';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const money=n=>'$'+Number(n||0).toLocaleString();
   const uniq=a=>Array.from(new Set((a||[]).filter(Boolean).map(clean))).filter(Boolean);
@@ -43,7 +43,7 @@
     setTiers(r,tiers,'Chase Business Checking',{fundingTiers:true});
     const exp=isoDate(raw); if(exp){r.openBy=exp;r.expiration={value:exp,display:exp,confidence:'High',source:'Chase offer end date'};}
     if(/deposit[\s\S]{0,120}within 30 days/i.test(raw)){r.fundedDays=30;r.fundingAmount=r.targetTier?.requirement||r.fundingAmount||0;}
-    if(/maintain[\s\S]{0,180}(?:60 days|for 60 days|at least 60 days)/i.test(raw)){r.holdDays=60;r.minHoldDays=60;r.early='Maintain the qualifying new money for at least 60 days; dropping below threshold can change or disqualify the offer.';}
+    if(/maintain[\s\S]{0,180}(?:60 days|for 60 days|at least 60 days)/i.test(raw)){r.holdDays=60;r.early='Maintain the qualifying new money for at least 60 days; dropping below threshold can change or disqualify the offer.';}
     if(/Complete\s+(?:5|five)\s+qualifying transactions\s+within\s+90\s+days/i.test(raw)){r.count=5;r.reqDays=90;r.reqMoney=0;r.reqIsTotal=false;r.requirementType='transactions';r.requirementNoun='qualifying transactions';r.transactionRequirement=true;}
     r.fee=15;r.monthlyFee={value:'$15 Monthly Service Fee',amount:15,source:'Chase Business Complete Checking monthly service fee',confidence:'High'};
     r.waivers=uniq(['Linked qualifying Chase personal/private client checking account','Chase Military Banking requirements','$2,000 minimum daily ending balance OR Chase Payment Solutions deposits OR eligible card purchases']);
@@ -51,10 +51,9 @@
     r.not=r.notCounts=uniq(['ACH debits','Person-to-person payments / P2P transfers including Zelle','Online transfers to Chase credit cards']);
     r.payout=r.payoutText='within 15 days after all checking requirements are completed';
     r.eligibilityText=uniq(['Not available to existing businesses with Chase business checking accounts.','Not eligible if account closed within 90 days or closed with a negative balance within the last 3 years.','Signers can receive only one business checking offer every two years from last offer enrollment date.','Only one offer per account.','Employees of JPMorgan Chase Bank and affiliates are not eligible.','Offer may be reported on IRS Form 1099-INT or Form 1042-S.']).join('\n');
-    // Account-close timing is separate from the 60-day new-money balance hold.
-    // Close on day 91 or later from opening to avoid the "closed within 90 days" window.
-    r.minHoldDays=90;r.closeRuleDays=90;r.closeRuleBasis='opened';r.closeBufferDays=1;
-    r.closeRuleText='Do not close within 90 days of account opening. Close on day 91 or later, after the bonus posts.';
+    // Eligibility lookback wording is not a current-account minimum-open rule.
+    // Only explicit clawback/minimum-open wording from the pasted T&C may create a close countdown.
+    if(!r.closeRestrictionType)r.closeRestrictionType='none';
     r.suggestedTimers=[];if(r.openBy)r.suggestedTimers.push({kind:'due',text:'Promo expiration / open-by deadline',date:r.openBy});r.suggestedTimers.push({kind:'days',text:'New money funding deadline',daysRequired:30},{kind:'days',text:'New money hold deadline',daysRequired:60},{kind:'days',text:'5 qualifying transactions deadline',daysRequired:90});
     r.forceActionPlan=true;
     r.actionPlan=[`1. Open a new Chase Business Complete Checking account${r.openBy?' by '+r.openBy:''}.`,`2. Deposit new money within 30 days: ${r.tiered?r.bonusTierText:'review target tier'}.`,'3. Maintain the qualifying new money for at least 60 days from offer enrollment.','4. Complete 5 qualifying transactions within 90 days of offer enrollment.','5. Keep the account open and unrestricted until payout.'].join('\n');
