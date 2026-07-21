@@ -71,7 +71,7 @@ mobile_css=text('mobile-analyzer.css')
 for token in ('#tca_overlay .tca-box','overflow-y:auto!important','-webkit-overflow-scrolling:touch','touch-action:pan-y'):
     if token not in mobile_css: fail(f'mobile analyzer scroll protection missing: {token}')
 fourleaf=text('bank-rules-fourleaf.js')
-for token in ("r.reqMoney=500","r.reqDays=90","r.closeRestrictionType='payout-only'","r.churnable=false","twenty-four (24)"):
+for token in ("r.reqMoney=500","r.reqDays=90","r.closeRestrictionType='payout-only'","r.churnable=false","24 consecutive"):
     if token not in fourleaf: fail(f'FourLeaf rule missing required logic: {token}')
 
 runtime_text='\n'.join(p.read_text(encoding='utf-8',errors='ignore') for p in files if p.suffix in {'.js','.html','.css','.json'} and 'tests' not in p.parts)
