@@ -30,7 +30,9 @@ if len(parser.ids)!=len(set(parser.ids)): fail('duplicate static HTML id found')
 for ref in parser.refs:
     if not (ROOT/ref).exists(): fail(f'index references missing file: {ref}')
 if not parser.scripts or parser.scripts[0]!='close-rules-core.js': fail('close-rules-core.js must be first external script')
-if not parser.scripts or parser.scripts[-1]!='close-rules-integration.js': fail('close-rules-integration.js must be final external script')
+if not parser.scripts or parser.scripts[-1]!='mobile-analyzer.js': fail('mobile-analyzer.js must be final external script')
+if 'bank-rules-fourleaf.js' not in parser.scripts: fail('FourLeaf analyzer rule is not loaded')
+elif parser.scripts.index('bank-rules-fourleaf.js')<parser.scripts.index('bank-rules.js'): fail('FourLeaf rule must load after the base bank rules')
 
 root_js=sorted(p.name for p in ROOT.glob('*.js') if p.name!='sw.js')
 if sorted(parser.scripts)!=root_js:
@@ -38,6 +40,7 @@ if sorted(parser.scripts)!=root_js:
 root_css=sorted(p.name for p in ROOT.glob('*.css'))
 index_css=sorted(x for x in parser.refs if x.endswith('.css'))
 if root_css!=index_css: fail('root CSS files and index stylesheets differ')
+if not index_css or 'mobile-analyzer.css' not in index_css: fail('mobile analyzer stylesheet is not loaded')
 
 sw=text('sw.js')
 m=re.search(r'const ASSETS\s*=\s*\[(.*?)\];',sw,re.S)
@@ -64,10 +67,17 @@ for css in ROOT.glob('*.css'):
     s=css.read_text(encoding='utf-8')
     if s.count('{')!=s.count('}'): fail(f'CSS brace mismatch: {css.name}')
 
+mobile_css=text('mobile-analyzer.css')
+for token in ('#tca_overlay .tca-box','overflow-y:auto!important','-webkit-overflow-scrolling:touch','touch-action:pan-y'):
+    if token not in mobile_css: fail(f'mobile analyzer scroll protection missing: {token}')
+fourleaf=text('bank-rules-fourleaf.js')
+for token in ("r.reqMoney=500","r.reqDays=90","r.closeRestrictionType='payout-only'","r.churnable=false","twenty-four (24)"):
+    if token not in fourleaf: fail(f'FourLeaf rule missing required logic: {token}')
+
 runtime_text='\n'.join(p.read_text(encoding='utf-8',errors='ignore') for p in files if p.suffix in {'.js','.html','.css','.json'} and 'tests' not in p.parts)
 obsolete='close-rules-'+'v3402.js'
 if obsolete in runtime_text: fail('obsolete v3.4.02 patch reference remains')
-for critical in ('index.html','sw.js','close-rules-core.js','close-rules-integration.js'):
+for critical in ('index.html','sw.js','bank-rules-fourleaf.js','mobile-analyzer.js','mobile-analyzer.css'):
     if release not in text(critical): fail(f'{critical} is not aligned to release {release}')
 workflow=text('.github/workflows/close-rules.yml')
 for cmd in ('node tests/close-rules.test.js','node tests/full-app-smoke.test.js','python tests/verify-latest.py'):
@@ -77,4 +87,4 @@ if issues:
     print(f'LATEST RELEASE VERIFY FAILED v{release}: {len(issues)} issue(s)')
     for issue in issues: print('FAIL',issue)
     sys.exit(1)
-print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, and integration checks passed')
+print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, analyzer, and mobile-scroll checks passed')
