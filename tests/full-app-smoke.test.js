@@ -55,9 +55,10 @@ function assert(ok,msg){if(!ok)throw new Error(msg)}
 setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.06',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.4.06',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
-    assert(sandbox.tcV3FourLeafRulesVersion==='3.4.06',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.07',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.4.07',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.tcV3FourLeafRulesVersion==='3.4.07',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
+    assert(sandbox.btCloseRulesVersion==='3.4.07',`Unexpected close integration version ${sandbox.btCloseRulesVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.04',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
     const report=sandbox.btRunFullRegressionTests();
@@ -75,12 +76,21 @@ setTimeout(()=>{
     assert(fr.closeRestrictionType==='payout-only'&&Number(fr.minHoldDays||0)===0,'FourLeaf payout-only close rule failed');
     assert(fr.churnable===false&&fr.churnability==='not-repeatable','FourLeaf lifetime-like churn restriction failed');
     assert(/24 consecutive/i.test(fr.actionPlan||''),'FourLeaf 24-month milestone plan missing');
+    const opened=sandbox.td(),due=sandbox.addD(opened,90);
+    const fourLeafEntry={bank:'FourLeaf Bank',accountType:'personal',opened,bonus:350,bonusRecd:'',reqMet:'',closeRestrictionType:'payout-only',closeRuleBasis:'bonus',closeRuleText:'The checking account must remain open and in good standing up to and including the date each bonus is deposited.',eligibilityText:'Not eligible if you previously received a new checking account opening related bonus from FourLeaf.',customTimers:[{id:'fourleaf-dd',text:'Initial $500+ qualifying direct deposit deadline',startDate:opened,daysRequired:90,date:due,done:false}]};
+    assert(sandbox.btTimerBadgeLabel(fourLeafEntry)==='DD Due','Analyzer timer badge should say DD Due');
+    assert(sandbox.btRequirementSummary(fourLeafEntry)===`$500+ DD due ${sandbox.fD(due)}`,'Requirement summary should show amount and exact due date');
+    assert(sandbox.btEarliestCloseSummary(fourLeafEntry)==='After $350 posts','Payout-only earliest-close summary is unclear');
+    assert(sandbox.btIsNonRepeatable(fourLeafEntry),'FourLeaf non-repeatable eligibility was not recognized');
+    const summary=sandbox.renderBankProfileSummary(fourLeafEntry);
+    assert(/After \$350 posts/.test(summary),'Expanded card did not show the payout-only close summary');
+    assert(!/Review terms/.test(summary),'Expanded card still shows contradictory Review terms text');
     const close=sandbox.BTCloseRules.sanitizeEntry({bank:'Chase Biz',accountType:'business',opened:'2026-05-07',reqMet:'2026-05-29',bonusRecd:'2026-07-14',minHoldDays:90,closeFeeCountdownDays:'90',closeRuleBasis:'bonus',closeBufferDays:5,closeRestrictionType:'payout-only',closeRuleText:'Keep the account open until the bonus posts.'});
     assert(close.minHoldDays===0,'Stale Chase close countdown survived');
     assert(sandbox.BTCloseRules.safeCloseDate(close)==='2026-07-14','Payout-only close date is incorrect');
     if(typeof sandbox.R==='function')sandbox.R();
     assert(app.innerHTML.length>1000,'Tracker failed to render after regression run');
     assert(!errors.some(x=>x.startsWith('ERROR ')),`Runtime console errors: ${errors.join(' | ')}`);
-    console.log(`Full app smoke passed: ${scripts.length} runtime scripts · ${report.passed}/${report.total} regression checks · FourLeaf and mobile Safari release verified`);
+    console.log(`Full app smoke passed: ${scripts.length} runtime scripts · ${report.passed}/${report.total} regression checks · FourLeaf timer labels and summaries verified`);
   }catch(err){console.error(err.stack||err);process.exitCode=1}
 },2200);
