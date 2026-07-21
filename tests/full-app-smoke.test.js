@@ -4,20 +4,20 @@ const vm=require('vm');
 
 class ElementStub{
   constructor(tag='div'){
-    this.tagName=String(tag).toUpperCase();this.children=[];this.style={};this.dataset={};this.attributes={};this.value='';this.checked=false;this.textContent='';this._html='';this.id='';
+    this.tagName=String(tag).toUpperCase();this.children=[];this.style={setProperty(){}};this.dataset={};this.attributes={};this.value='';this.checked=false;this.textContent='';this._html='';this.id='';this.scrollTop=0;this.tabIndex=0;
     const classes=new Set();
     this.classList={add:(...x)=>x.forEach(v=>classes.add(v)),remove:(...x)=>x.forEach(v=>classes.delete(v)),toggle:v=>classes.has(v)?(classes.delete(v),false):(classes.add(v),true),contains:v=>classes.has(v)};
   }
   set innerHTML(v){this._html=String(v)} get innerHTML(){return this._html}
   appendChild(x){this.children.push(x);return x} prepend(x){this.children.unshift(x);return x}
-  remove(){} focus(){} click(){} select(){} querySelector(){return null} querySelectorAll(){return []} closest(){return null}
+  remove(){} focus(){} blur(){} click(){} select(){} querySelector(){return null} querySelectorAll(){return []} closest(){return null} contains(){return false}
   setAttribute(k,v){this.attributes[k]=String(v)} getAttribute(k){return this.attributes[k]??null}
   addEventListener(){} removeEventListener(){}
 }
 
 const app=new ElementStub('div');app.id='app';
 const document={
-  head:new ElementStub('head'),body:new ElementStub('body'),documentElement:new ElementStub('html'),readyState:'complete',
+  head:new ElementStub('head'),body:new ElementStub('body'),documentElement:new ElementStub('html'),readyState:'complete',activeElement:null,
   createElement:t=>new ElementStub(t),createTextNode:t=>({textContent:String(t)}),getElementById:id=>id==='app'?app:null,
   querySelector:s=>s==='#app'||s==='.app'?app:null,querySelectorAll:()=>[],addEventListener(){},removeEventListener(){}
 };
@@ -31,12 +31,13 @@ const testConsole={
 };
 class MutationObserverStub{constructor(cb){this.cb=cb}observe(){}disconnect(){}}
 const sandbox={
-  console:testConsole,document,localStorage,sessionStorage:localStorage,
-  navigator:{userAgent:'BonusTracker CI',serviceWorker:{register:()=>Promise.resolve({update(){}}),getRegistration:()=>Promise.resolve(null),addEventListener(){},removeEventListener(){},controller:null},clipboard:{writeText:()=>Promise.resolve()}},
+  console:testConsole,document,localStorage,sessionStorage:localStorage,innerHeight:844,
+  navigator:{userAgent:'iPhone Safari BonusTracker CI',serviceWorker:{register:()=>Promise.resolve({update(){}}),getRegistration:()=>Promise.resolve(null),addEventListener(){},removeEventListener(){},controller:null},clipboard:{writeText:()=>Promise.resolve()}},
   location:{href:'https://example.test/index.html',origin:'https://example.test',reload(){}},history:{pushState(){},replaceState(){}},
   alert(){},confirm(){return true},prompt(){return''},requestAnimationFrame:fn=>setTimeout(fn,0),cancelAnimationFrame:clearTimeout,
   setTimeout,clearTimeout,setInterval,clearInterval,Blob,URL,Date,Math,JSON,Map,Set,WeakMap,WeakSet,Array,Object,String,Number,Boolean,RegExp,Error,TypeError,Promise,Intl,parseInt,parseFloat,isNaN,
-  crypto:require('crypto').webcrypto,matchMedia:()=>({matches:false,addEventListener(){},removeEventListener(){}}),getComputedStyle:()=>({}),Event:class{},CustomEvent:class{},FileReader:class{readAsText(){this.result='';this.onload&&this.onload()}},HTMLElement:ElementStub,Node:ElementStub,MutationObserver:MutationObserverStub
+  crypto:require('crypto').webcrypto,matchMedia:()=>({matches:false,addEventListener(){},removeEventListener(){}}),getComputedStyle:()=>({}),Event:class{},CustomEvent:class{},FileReader:class{readAsText(){this.result='';this.onload&&this.onload()}},HTMLElement:ElementStub,Node:ElementStub,MutationObserver:MutationObserverStub,
+  visualViewport:{height:760,offsetTop:0,addEventListener(){},removeEventListener(){}},addEventListener(){},removeEventListener(){}
 };
 sandbox.window=sandbox;sandbox.globalThis=sandbox;sandbox.self=sandbox;
 vm.createContext(sandbox);
@@ -54,7 +55,9 @@ function assert(ok,msg){if(!ok)throw new Error(msg)}
 setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.05',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.06',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.4.06',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.tcV3FourLeafRulesVersion==='3.4.06',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.04',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
     const report=sandbox.btRunFullRegressionTests();
@@ -78,6 +81,6 @@ setTimeout(()=>{
     if(typeof sandbox.R==='function')sandbox.R();
     assert(app.innerHTML.length>1000,'Tracker failed to render after regression run');
     assert(!errors.some(x=>x.startsWith('ERROR ')),`Runtime console errors: ${errors.join(' | ')}`);
-    console.log(`Full app smoke passed: ${scripts.length} runtime scripts · ${report.passed}/${report.total} regression checks · FourLeaf verified`);
+    console.log(`Full app smoke passed: ${scripts.length} runtime scripts · ${report.passed}/${report.total} regression checks · FourLeaf and mobile Safari release verified`);
   }catch(err){console.error(err.stack||err);process.exitCode=1}
 },2200);
