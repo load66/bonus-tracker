@@ -33,6 +33,7 @@ if not parser.scripts or parser.scripts[0]!='close-rules-core.js': fail('close-r
 if not parser.scripts or parser.scripts[-1]!='mobile-analyzer.js': fail('mobile-analyzer.js must be final external script')
 if 'bank-rules-fourleaf.js' not in parser.scripts: fail('FourLeaf analyzer rule is not loaded')
 elif parser.scripts.index('bank-rules-fourleaf.js')<parser.scripts.index('bank-rules.js'): fail('FourLeaf rule must load after the base bank rules')
+if parser.scripts.index('close-rules-integration.js')>parser.scripts.index('mobile-analyzer.js'): fail('close-rule integration must load before the final mobile release guard')
 
 root_js=sorted(p.name for p in ROOT.glob('*.js') if p.name!='sw.js')
 if sorted(parser.scripts)!=root_js:
@@ -73,11 +74,14 @@ for token in ('#tca_overlay .tca-box','overflow-y:auto!important','-webkit-overf
 fourleaf=text('bank-rules-fourleaf.js')
 for token in ("r.reqMoney=500","r.reqDays=90","r.closeRestrictionType='payout-only'","r.churnable=false","24 consecutive"):
     if token not in fourleaf: fail(f'FourLeaf rule missing required logic: {token}')
+integration=text('close-rules-integration.js')
+for token in ('btTimerBadgeLabel','btRequirementSummary','btEarliestCloseSummary','btIsNonRepeatable',"return'DD Due'","After ${typeof fM==='function'?fM(e.bonus):'$'+e.bonus} posts"):
+    if token not in integration: fail(f'v3.4.07 summary integration missing: {token}')
 
 runtime_text='\n'.join(p.read_text(encoding='utf-8',errors='ignore') for p in files if p.suffix in {'.js','.html','.css','.json'} and 'tests' not in p.parts)
 obsolete='close-rules-'+'v3402.js'
 if obsolete in runtime_text: fail('obsolete v3.4.02 patch reference remains')
-for critical in ('index.html','sw.js','bank-rules-fourleaf.js','mobile-analyzer.js','mobile-analyzer.css'):
+for critical in ('index.html','sw.js','bank-rules-fourleaf.js','close-rules-integration.js','mobile-analyzer.js','mobile-analyzer.css'):
     if release not in text(critical): fail(f'{critical} is not aligned to release {release}')
 workflow=text('.github/workflows/close-rules.yml')
 for cmd in ('node tests/close-rules.test.js','node tests/full-app-smoke.test.js','python tests/verify-latest.py'):
@@ -87,4 +91,4 @@ if issues:
     print(f'LATEST RELEASE VERIFY FAILED v{release}: {len(issues)} issue(s)')
     for issue in issues: print('FAIL',issue)
     sys.exit(1)
-print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, analyzer, and mobile-scroll checks passed')
+print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, analyzer, timer-label, summary, and mobile-scroll checks passed')
