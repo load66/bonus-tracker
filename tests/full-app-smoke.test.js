@@ -5,7 +5,8 @@ const vm=require('vm');
 class ElementStub{
   constructor(tag='div'){
     this.tagName=String(tag).toUpperCase();this.children=[];this.style={};this.dataset={};this.attributes={};this.value='';this.checked=false;this.textContent='';this._html='';this.id='';
-    this.classList={add(){},remove(){},toggle(){},contains(){return false}};
+    const classes=new Set();
+    this.classList={add:(...x)=>x.forEach(v=>classes.add(v)),remove:(...x)=>x.forEach(v=>classes.delete(v)),toggle:v=>classes.has(v)?(classes.delete(v),false):(classes.add(v),true),contains:v=>classes.has(v)};
   }
   set innerHTML(v){this._html=String(v)} get innerHTML(){return this._html}
   appendChild(x){this.children.push(x);return x} prepend(x){this.children.unshift(x);return x}
@@ -28,13 +29,14 @@ const testConsole={
   warn:(...a)=>{errors.push('WARN '+a.map(String).join(' '));console.warn(...a)},
   error:(...a)=>{errors.push('ERROR '+a.map(String).join(' '));console.error(...a)}
 };
+class MutationObserverStub{constructor(cb){this.cb=cb}observe(){}disconnect(){}}
 const sandbox={
   console:testConsole,document,localStorage,sessionStorage:localStorage,
   navigator:{userAgent:'BonusTracker CI',serviceWorker:{register:()=>Promise.resolve({update(){}}),getRegistration:()=>Promise.resolve(null),addEventListener(){},removeEventListener(){},controller:null},clipboard:{writeText:()=>Promise.resolve()}},
   location:{href:'https://example.test/index.html',origin:'https://example.test',reload(){}},history:{pushState(){},replaceState(){}},
   alert(){},confirm(){return true},prompt(){return''},requestAnimationFrame:fn=>setTimeout(fn,0),cancelAnimationFrame:clearTimeout,
   setTimeout,clearTimeout,setInterval,clearInterval,Blob,URL,Date,Math,JSON,Map,Set,WeakMap,WeakSet,Array,Object,String,Number,Boolean,RegExp,Error,TypeError,Promise,Intl,parseInt,parseFloat,isNaN,
-  crypto:require('crypto').webcrypto,matchMedia:()=>({matches:false,addEventListener(){},removeEventListener(){}}),getComputedStyle:()=>({}),Event:class{},CustomEvent:class{},FileReader:class{readAsText(){this.result='';this.onload&&this.onload()}},HTMLElement:ElementStub,Node:ElementStub
+  crypto:require('crypto').webcrypto,matchMedia:()=>({matches:false,addEventListener(){},removeEventListener(){}}),getComputedStyle:()=>({}),Event:class{},CustomEvent:class{},FileReader:class{readAsText(){this.result='';this.onload&&this.onload()}},HTMLElement:ElementStub,Node:ElementStub,MutationObserver:MutationObserverStub
 };
 sandbox.window=sandbox;sandbox.globalThis=sandbox;sandbox.self=sandbox;
 vm.createContext(sandbox);
@@ -52,8 +54,8 @@ function assert(ok,msg){if(!ok)throw new Error(msg)}
 setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.04',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btCloseRulesVersion==='3.4.04',`Unexpected close-rule version ${sandbox.btCloseRulesVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.05',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.BTCloseRules?.VERSION==='3.4.04',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
     const report=sandbox.btRunFullRegressionTests();
     assert(report.ok,`Full regression failed: ${JSON.stringify(report)}`);
@@ -62,12 +64,20 @@ setTimeout(()=>{
     const wr=sandbox.tcV3Analyze(wells,{noGlobalFallback:true});
     assert(wr.bank==='Wells Fargo','Wells Fargo rule failed');
     assert(!(wr.bankRulesApplied||[]).includes('Chase Business Checking'),'Chase rule contaminated Wells Fargo analysis');
+    const fourLeaf='FourLeaf Checking Up to $550 Bonus Offer. Open a Free Checking, Smart Checking, or Student Checking account between February 2, 2026 and December 31, 2026. Have a Qualifying Direct Deposit post within ninety (90) calendar days of account opening. A Qualifying Direct Deposit is a recurring electronic deposit of a paycheck, pension, or government benefits of $500.00 or more. The First Direct Deposit Bonus of $350 will be deposited within sixty (60) calendar days following the initial Qualifying Direct Deposit. Continue to have a Qualifying Direct Deposit for twelve (12) consecutive months for an additional $100 and twenty-four (24) consecutive months for another $100. The checking account must remain open and in good standing up to and including the date each bonus is deposited. You must not have previously received a new checking account opening related bonus from FourLeaf.';
+    const fr=sandbox.tcV3Analyze(fourLeaf,{noGlobalFallback:true});
+    assert(fr.bank==='FourLeaf','FourLeaf bank identification failed');
+    assert(fr.bonus===550,'FourLeaf bonus amount failed');
+    assert(fr.reqMoney===500&&fr.reqDays===90,'FourLeaf $500 / 90-day requirement failed');
+    assert(fr.closeRestrictionType==='payout-only'&&Number(fr.minHoldDays||0)===0,'FourLeaf payout-only close rule failed');
+    assert(fr.churnable===false&&fr.churnability==='not-repeatable','FourLeaf lifetime-like churn restriction failed');
+    assert(/24 consecutive/i.test(fr.actionPlan||''),'FourLeaf 24-month milestone plan missing');
     const close=sandbox.BTCloseRules.sanitizeEntry({bank:'Chase Biz',accountType:'business',opened:'2026-05-07',reqMet:'2026-05-29',bonusRecd:'2026-07-14',minHoldDays:90,closeFeeCountdownDays:'90',closeRuleBasis:'bonus',closeBufferDays:5,closeRestrictionType:'payout-only',closeRuleText:'Keep the account open until the bonus posts.'});
     assert(close.minHoldDays===0,'Stale Chase close countdown survived');
     assert(sandbox.BTCloseRules.safeCloseDate(close)==='2026-07-14','Payout-only close date is incorrect');
     if(typeof sandbox.R==='function')sandbox.R();
     assert(app.innerHTML.length>1000,'Tracker failed to render after regression run');
     assert(!errors.some(x=>x.startsWith('ERROR ')),`Runtime console errors: ${errors.join(' | ')}`);
-    console.log(`Full app smoke passed: ${scripts.length} runtime scripts · ${report.passed}/${report.total} regression checks`);
+    console.log(`Full app smoke passed: ${scripts.length} runtime scripts · ${report.passed}/${report.total} regression checks · FourLeaf verified`);
   }catch(err){console.error(err.stack||err);process.exitCode=1}
-},2000);
+},2200);
