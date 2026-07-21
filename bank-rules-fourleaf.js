@@ -1,11 +1,11 @@
 /*
  * filename: bank-rules-fourleaf.js
- * version: 3.4.05
+ * version: 3.4.06
  * purpose: FourLeaf Checking Up to $550 milestone offer — exact DD amount, calendar-month milestones, payout-only close rule, and lifetime-like eligibility.
  */
 (function(){
   'use strict';
-  const VER='3.4.05';
+  const VER='3.4.06';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const uniq=a=>Array.from(new Set((a||[]).filter(Boolean).map(clean))).filter(Boolean);
 
