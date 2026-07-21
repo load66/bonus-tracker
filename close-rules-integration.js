@@ -1,7 +1,7 @@
-/* Bonus Tracker Close Rules Integration v3.4.04 — binds the permanent core to the live app. */
+/* Bonus Tracker Close Rules Integration v3.4.07 — binds the permanent core to the live app. */
 (function(){
   'use strict';
-  const VER='3.4.04',SCHEMA=6,SCHEMA_KEY='bt_data_schema_version',BACKUP_KEY='bt_pre_migration_backup_v6';
+  const VER='3.4.07',SCHEMA=7,SCHEMA_KEY='bt_data_schema_version',BACKUP_KEY='bt_pre_migration_backup_v7';
   const core=window.BTCloseRules;if(!core){console.error('Close Rules Core missing');return}
   const escFn=v=>{try{return esc(String(v??''))}catch{const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML}};
   const short=v=>String(v||'').replace(/\s+/g,' ').trim().slice(0,420);
@@ -15,6 +15,49 @@
   const safeDate=e=>core.safeCloseDate(e);
   const daysSafe=e=>core.daysUntilSafe(e,typeof td==='function'?td():new Date().toISOString().slice(0,10));
   const inBuffer=e=>core.isInBuffer(e,typeof td==='function'?td():new Date().toISOString().slice(0,10));
+
+  function activeTimer(e){try{return typeof nextActiveTimer==='function'?nextActiveTimer(e):null}catch{return null}}
+  function timerKind(t){
+    try{if(typeof timerCategory==='function')return timerCategory(t)}catch{}
+    const s=String(t?.text||'').toLowerCase();
+    if(/promo|expiration|open[- ]?by/.test(s))return'openby';
+    if(/close review|review after payout|safe close/.test(s))return'close-review';
+    if(/payout|bonus payment|bonus watch|expected around day/.test(s))return'payout';
+    if(/maintain|required balance|hold check|hold deadline|new-money hold/.test(s))return'hold';
+    if(/funding deadline|fund the account|deposit new money|new money funding/.test(s))return'funding';
+    if(/requirement|direct deposit|\bdd\b|ach dd|qualifying transactions|debit transactions|recurring income/.test(s))return'requirement';
+    return'custom';
+  }
+  function timerBadgeLabel(e){
+    const t=activeTimer(e),kind=timerKind(t),text=String(t?.text||'');
+    if(kind==='requirement')return /direct deposit|\bdd\b/i.test(text)?'DD Due':'Requirement';
+    if(kind==='funding')return'Fund Due';
+    if(kind==='payout')return'Bonus Pending';
+    if(kind==='hold')return'Balance Hold';
+    if(kind==='openby')return'Open By';
+    if(kind==='close-review')return'Close Review';
+    return'Custom Timer';
+  }
+  function isNonRepeatable(e){
+    if(e?.churnable===false||String(e?.churnability||'').toLowerCase()==='not-repeatable')return true;
+    const s=String([e?.eligibilityText,e?.analyzedTC,e?.completeBonusText].filter(Boolean).join(' '));
+    return /(?:not eligible|ineligible)[^.]{0,180}(?:previously received|ever received|prior bonus)|(?:previously received|ever received)[^.]{0,180}(?:not eligible|ineligible)|once per lifetime|lifetime-like/i.test(s);
+  }
+  function requirementSummary(e){
+    if(e?.reqMet)return'Met '+fD(e.reqMet);
+    const t=activeTimer(e);if(!t||timerKind(t)!=='requirement')return'Pending';
+    const text=String(t.text||'');
+    const amount=(text.match(/\$\s*[0-9][0-9,]*(?:\.\d{1,2})?\+?/)||[''])[0].replace(/\s+/g,'');
+    const noun=/direct deposit|\bdd\b/i.test(text)?'DD':'Requirement';
+    return t.date?`${amount?amount+' ':''}${noun} due ${fD(t.date)}`:short(text).slice(0,70);
+  }
+  function earliestCloseSummary(e){
+    const safe=safeDate(e);if(safe)return fD(safe);
+    const type=core.typeForEntry(e);
+    if(type==='payout-only')return e?.bonusRecd?'Now':(e?.bonus?`After ${typeof fM==='function'?fM(e.bonus):'$'+e.bonus} posts`:'After bonus posts');
+    if(ruleDays(e)>0)return baseDate(e)?'Calculating':'Add rule start date';
+    return'No fixed hold';
+  }
 
   bind('knownClosePolicy',()=>null);
   bind('applyKnownClosePolicy',e=>core.sanitizeEntry(e));
@@ -37,11 +80,17 @@
     if(e.closed)return daysLeft(e)===0?'TIME TO CHURN!':'WAITING TO CHURN!';
     const hasBonus=!!e.bonusRecd,hasReq=!!e.reqMet,hasHold=ruleDays(e)>0&&!!baseDate(e);
     if(hasBonus){if(hasHold){if(inBuffer(e))return'3-DAY BUFFER';const d=daysSafe(e);if(d!==null&&d>0)return'WAITING TO CLOSE'}return'SAFE TO CLOSE'}
-    const active=typeof nextActiveTimer==='function'?nextActiveTimer(e):null;
+    const active=activeTimer(e);
     if(hasReq)return active?'CUSTOM TIMER':'REQ MET';
     return active?'CUSTOM TIMER':'WORKING'
   }
   bind('status',statusFixed);
+
+  const oldStatusBadge=typeof window.statusBadgeHtml==='function'?window.statusBadgeHtml:(typeof statusBadgeHtml==='function'?statusBadgeHtml:null);
+  if(oldStatusBadge)bind('statusBadgeHtml',function(e,countdown){
+    const out=oldStatusBadge(e,countdown);
+    return statusFixed(e)==='CUSTOM TIMER'?String(out||'').replace(/Custom Timer/gi,timerBadgeLabel(e)):out;
+  });
 
   function readiness(e,closeDate=''){
     const items=[];const add=(ok,label,detail='',level='warn')=>items.push({ok:!!ok,label,detail,level});
@@ -52,7 +101,8 @@
     add(!!e.bonusRecd,'Bonus received',e.bonusRecd?fD(e.bonusRecd):'Do not close before the bonus posts','danger');
     if(days){add(!!start,'Close-rule start date available',start?fD(start):'Missing','danger');add(!!safe&&dB(target,safe)<=0,'Hold period + buffer complete',safe?'Safe close: '+fD(safe):'Cannot calculate','danger')}
     else add(true,'No fixed post-bonus hold',core.typeForEntry(e)==='payout-only'?'Close after bonus posts':'No countdown found');
-    add(!!e.churn,'Churn rule saved',e.churn?(e.churn==='180'?'180 days':e.churn+' year'):'Needed for future churn','warn');
+    const nonRepeatable=isNonRepeatable(e);
+    add(nonRepeatable||!!e.churn,'Churn rule saved',nonRepeatable?'Not repeatable under the saved eligibility terms':e.churn?(e.churn==='180'?'180 days':e.churn+' year'):'Needed for future churn','warn');
     const hasFee=/(yes|\$|monthly|service fee|maintenance fee)/i.test(String(e.monthlyFeeYNText||'')+' '+String(e.avoidMonthlyFeeText||''));
     add(!hasFee||!!e.monthlyFeeChecked,'Monthly fee checked',hasFee?(e.monthlyFeeChecked?'Confirmed':'Check next statement before close'):'No monthly fee risk','warn');
     const warnings=items.filter(x=>!x.ok).map(x=>x.label+(x.detail?': '+x.detail:''));
@@ -83,13 +133,30 @@
   bind('renderCleanPlanCard',renderPlan);
   bind('renderClosePlan',e=>renderPlan(closePlan(e)));
 
+  function renderProfileSummary(e){
+    if(!e)return'';const items=[];const add=(label,value,cls='')=>items.push({label,value,cls});
+    add('Opened',e.opened?fD(e.opened):'Add date',e.opened?'':'warn');
+    if(e.closed){
+      add('Closed',fD(e.closed),'ok');
+      add('Bonus',e.bonusRecd?((e.bonus?fM(e.bonus)+' · ':'')+fD(e.bonusRecd)):(e.bonus?fM(e.bonus):'Not saved'),e.bonusRecd?'ok':'');
+      const cr=churnReadyDate(e);add('Churn ready',cr?fD(cr):(isNonRepeatable(e)?'Not repeatable':'Not calculated'),cr?'ok':isNonRepeatable(e)?'':'warn');
+    }else{
+      add('Bonus',e.bonusRecd?((e.bonus?fM(e.bonus)+' · ':'')+fD(e.bonusRecd)):(e.bonus?fM(e.bonus)+' pending':'Pending'),e.bonusRecd?'ok':'warn');
+      add('Requirement',requirementSummary(e),e.reqMet?'ok':'warn');
+      const safe=safeDate(e),type=core.typeForEntry(e),earliest=earliestCloseSummary(e);
+      add('Earliest close',earliest,safe&&daysSafe(e)<=0?'ok':type==='payout-only'?'warn':safe?'warn':'');
+    }
+    return '<div class="profile-summary">'+items.map(x=>'<div class="profile-summary-item '+escFn(x.cls||'')+'"><span>'+escFn(x.label)+'</span><b>'+escFn(x.value)+'</b></div>').join('')+'</div>';
+  }
+  bind('renderBankProfileSummary',renderProfileSummary);
+
   const analyzer=window.tcV3Analyze;
   if(typeof analyzer==='function'){
     window.tcV3Analyze=function(raw,opts){return core.sanitizeAnalysis(analyzer(raw,opts),raw)};
     window.tcUnifiedAnalyze=window.tcV3Analyze;window.tcStrictAnalyze=window.tcV3Analyze;window.tcV3EngineVersion=VER;
   }
   const oldApply=window.tcApplyReviewed;
-  if(typeof oldApply==='function')window.tcApplyReviewed=function(){const raw=document.getElementById('tca_raw')?.value||'';const result=window.tcV3Analyze?window.tcV3Analyze(raw):null;const out=oldApply.apply(this,arguments);setTimeout(()=>{try{if(typeof modal!=='undefined'&&modal){if(result){modal.closeRestrictionType=result.closeRestrictionType||'none';modal.closeRuleSourceSentence=result.closeRuleSourceSentence||'';modal.closeRuleSource='current-tc'}core.sanitizeEntry(modal)}if(typeof R==='function')R()}catch{}},0);return out};
+  if(typeof oldApply==='function')window.tcApplyReviewed=function(){const raw=document.getElementById('tca_raw')?.value||'';const result=window.tcV3Analyze?window.tcV3Analyze(raw):null;const out=oldApply.apply(this,arguments);setTimeout(()=>{try{if(typeof modal!=='undefined'&&modal){if(result){modal.closeRestrictionType=result.closeRestrictionType||'none';modal.closeRuleSourceSentence=result.closeRuleSourceSentence||'';modal.closeRuleSource='current-tc';if(result.churnable===false)modal.churnable=false;if(result.churnability)modal.churnability=result.churnability;if(result.churnReason)modal.churnReason=result.churnReason;if(result.milestoneOffer)modal.milestoneOffer=true;if(Array.isArray(result.bonusMilestones))modal.bonusMilestones=result.bonusMilestones.slice(0,6)}core.sanitizeEntry(modal)}if(typeof R==='function')R()}catch{}},0);return out};
 
   function migrateOnce(){
     try{
@@ -105,7 +172,7 @@
   window.feeCheckSave=function(){const p=typeof feeCheckPrompt!=='undefined'?feeCheckPrompt:window.feeCheckPrompt;if(!p)return;const id=p.entryId,months=Math.max(1,parseInt(p.months,10)||6),feeAmt=Math.max(0,parseFloat(p.feeAmount)||0);entries=entries.map(e=>{if(e.id!==id)return e;const x={...e},end=x.opened?addM(x.opened,months):'',days=x.opened&&end?dB(x.opened,end):months*30;x.minHoldDays=days;x.closeFeeCountdownDays=String(days);x.closeRuleBasis='opened';x.closeBufferDays=5;x.closeRestrictionType='manual-fixed';x.closeRuleSource='manual';x.earlyCloseFee=feeAmt;x.earlyTerminationFeeText=feeAmt?'$'+feeAmt.toLocaleString():'';x.closeRuleText=`Manual early-close hold: keep the account open for ${months} month${months===1?'':'s'} from the opened date${feeAmt?' to avoid a $'+feeAmt.toLocaleString()+' fee':''}.`;x.closeRuleSourceSentence=x.closeRuleText;x.fieldSources=(x.fieldSources&&typeof x.fieldSources==='object')?x.fieldSources:{};const meta={kind:'manual',confidence:'verified',source:'Set manually in the Early Closure Fee timer.',updatedAt:new Date().toISOString()};x.fieldSources.closeFeeCountdownDays=meta;x.fieldSources.closeRuleText=meta;x.fieldSources.closeRuleBasis=meta;return normalizeEntry(x)});entries=sortE(entries);sv(SK,entries);feeCheckPrompt=null;R()};
 
   function analyzerWrappersReady(){
-    return ['__tcV3BankRulesWrapped','__tcV3CapitalOneRulesWrapped','__tcV3BoaBusinessRulesWrapped','__tcV3PncRulesWrapped','__tcV3RegionsRulesWrapped','__tcV3EquityRulesWrapped','__tcV3BuseyRulesWrapped','__tcV3AcademyRulesWrapped','__tcV3ProfileRegistryWrapped','__tcV31AcademyRegistryWrapped'].every(k=>!!window[k])
+    return ['__tcV3BankRulesWrapped','__tcV3FourLeafRulesWrapped','__tcV3CapitalOneRulesWrapped','__tcV3BoaBusinessRulesWrapped','__tcV3PncRulesWrapped','__tcV3RegionsRulesWrapped','__tcV3EquityRulesWrapped','__tcV3BuseyRulesWrapped','__tcV3AcademyRulesWrapped','__tcV3ProfileRegistryWrapped','__tcV31AcademyRegistryWrapped'].every(k=>!!window[k])
   }
   window.btRunFullRegressionTests=function(opts={}){
     const suites=[];
@@ -117,6 +184,10 @@
     const passed=suites.reduce((n,x)=>n+Number(x.passed||0),0),total=suites.reduce((n,x)=>n+Number(x.total||0),0);
     const report={version:VER,passed,total,ok:suites.every(x=>x.ok!==false),pending:false,suites,ranAt:new Date().toISOString()};window.__btFullRegressionReport=report;try{localStorage.setItem('bt_last_regression_v1',JSON.stringify(report))}catch{}return report
   };
+  window.btTimerBadgeLabel=timerBadgeLabel;
+  window.btRequirementSummary=requirementSummary;
+  window.btEarliestCloseSummary=earliestCloseSummary;
+  window.btIsNonRepeatable=isNonRepeatable;
   window.BT_APP_VERSION=VER;window.btCloseRulesVersion=VER;
   try{if(typeof buildPortableBackupPayload==='function'){const oldPortable=buildPortableBackupPayload;buildPortableBackupPayload=function(){const out=oldPortable();if(out)out.appVersion=VER;return out};window.buildPortableBackupPayload=buildPortableBackupPayload}}catch{}
   migrateOnce();
