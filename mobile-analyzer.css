@@ -1,43 +1,71 @@
-/* Bonus Tracker v3.4.05 — mobile Safari analyzer scrolling and compact review layout. */
+/* Bonus Tracker v3.4.06 — reliable full-height analyzer scrolling on mobile Safari. */
+html.analyzer-open,
+body.analyzer-open{
+  overflow:hidden!important;
+  overscroll-behavior:none;
+}
+
 #tca_overlay{
   position:fixed;
-  inset:0;
+  left:0;
+  right:0;
+  top:var(--tca-visual-top,0px);
+  height:var(--tca-visual-height,100dvh);
   z-index:1000;
+  overflow:hidden;
+  isolation:isolate;
 }
+
+/* The backdrop is the single scroll container. This avoids the iOS Safari
+   nested/fixed-element scroll lock that could hide the top and bottom. */
 #tca_overlay .cbg{
   position:absolute;
   inset:0;
-  align-items:flex-start;
-  justify-content:center;
-  overflow:hidden;
-  padding:max(10px,env(safe-area-inset-top)) 10px max(8px,env(safe-area-inset-bottom));
-}
-#tca_overlay .tca-box{
-  width:min(100%,720px);
-  max-width:720px;
-  max-height:calc(100vh - 20px);
-  max-height:calc(100dvh - max(10px,env(safe-area-inset-top)) - max(8px,env(safe-area-inset-bottom)));
-  min-height:0;
+  display:block;
   overflow-x:hidden!important;
   overflow-y:auto!important;
   -webkit-overflow-scrolling:touch;
   overscroll-behavior-y:contain;
   touch-action:pan-y;
-  position:relative;
-  padding:14px 16px calc(28px + env(safe-area-inset-bottom));
-  scrollbar-gutter:stable;
+  padding:max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom));
+  scroll-padding-top:max(10px,env(safe-area-inset-top));
+  scroll-padding-bottom:max(18px,env(safe-area-inset-bottom));
 }
+
+#tca_overlay .tca-box{
+  display:block;
+  width:min(100%,720px);
+  max-width:720px;
+  height:auto!important;
+  min-height:0;
+  max-height:none!important;
+  margin:0 auto;
+  overflow:visible!important;
+  position:relative;
+  padding:14px 16px calc(34px + env(safe-area-inset-bottom));
+  transform:translateZ(0);
+}
+
 #tca_overlay .tca-box textarea,
 #tca_overlay .tca-box input,
 #tca_overlay .tca-box select,
 #tca_overlay .tca-box button,
-#tca_overlay .tca-box details,
 #tca_overlay .tca-box summary{
   touch-action:manipulation;
 }
+
 #tca_overlay .tca-box textarea{
   touch-action:auto;
 }
+
+#tca_overlay .az-field-card,
+#tca_overlay .az-timer-card,
+#tca_overlay .az-field-main,
+#tca_overlay .az-review-grid,
+#tca_overlay #tcv3_result{
+  touch-action:pan-y;
+}
+
 #tca_overlay .az-actions{
   position:sticky;
   bottom:-1px;
@@ -46,18 +74,22 @@
   padding:10px 4px calc(8px + env(safe-area-inset-bottom));
   background:linear-gradient(180deg,rgba(255,255,255,0),#fff 28%,#fff);
 }
+
 #tca_overlay .az-review-grid,
 #tca_overlay .az-timer-grid{
   gap:8px;
 }
+
 #tca_overlay .az-field-card,
 #tca_overlay .az-timer-card{
   border-radius:14px;
   padding:10px 11px;
 }
+
 #tca_overlay .az-field-val{
   line-height:1.3;
 }
+
 #tca_overlay .az-field-card details div{
   max-height:170px;
   overflow:auto;
@@ -66,31 +98,34 @@
 
 @media(max-width:720px){
   #tca_overlay .cbg{
-    padding:max(6px,env(safe-area-inset-top)) 0 0;
+    padding:max(6px,env(safe-area-inset-top)) 0 max(8px,env(safe-area-inset-bottom));
   }
+
   #tca_overlay .tca-box{
     width:100%;
     max-width:none;
-    height:calc(100vh - max(6px,env(safe-area-inset-top)));
-    height:calc(100dvh - max(6px,env(safe-area-inset-top)));
-    max-height:none;
+    min-height:calc(var(--tca-visual-height,100dvh) - max(6px,env(safe-area-inset-top)) - max(8px,env(safe-area-inset-bottom)));
     border-radius:20px 20px 0 0;
-    padding:12px 12px calc(30px + env(safe-area-inset-bottom));
+    padding:12px 12px calc(38px + env(safe-area-inset-bottom));
   }
+
   #tca_overlay .tca-box>h3{
     font-size:15px;
     margin-bottom:3px;
   }
+
   #tca_overlay .tca-box>.sub{
     font-size:10px;
     line-height:1.35;
     margin-bottom:8px;
   }
+
   #tca_overlay #tca_raw{
     height:108px!important;
     min-height:108px;
     font-size:12px;
   }
+
   #tca_overlay .az-beginner,
   #tca_overlay .az-verifybar,
   #tca_overlay .az-warnbox,
@@ -99,43 +134,54 @@
     padding:8px 9px;
     border-radius:12px;
   }
+
   #tca_overlay .az-review-grid,
   #tca_overlay .az-timer-grid{
     gap:6px;
   }
+
   #tca_overlay .az-field-card,
   #tca_overlay .az-timer-card{
     padding:9px;
     border-radius:12px;
     gap:8px;
   }
+
   #tca_overlay .az-field-top b{
     font-size:11px;
   }
+
   #tca_overlay .az-field-top span{
     font-size:8px;
   }
+
   #tca_overlay .az-field-val{
     font-size:12px;
     line-height:1.28;
   }
+
   #tca_overlay .az-proof{
     font-size:8px;
     padding:3px 6px;
   }
+
   #tca_overlay .az-field-note{
     display:none;
   }
+
   #tca_overlay .az-field-card details summary{
     padding-top:4px;
     font-size:9px;
   }
+
   #tca_overlay .az-section-title{
     margin-top:9px;
   }
+
   #tca_overlay .az-learn-panel{
     margin-top:8px;
   }
+
   #tca_overlay .az-footnote{
     padding-bottom:4px;
   }
