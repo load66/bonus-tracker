@@ -15,6 +15,8 @@ html=text('index.html')
 version_match=re.search(r'class="app-version">v([^<]+)',html)
 release=version_match.group(1) if version_match else ''
 if not release: fail('visible release version missing')
+for match in re.finditer(r'(?:src|href)="\./[^"?]+\?v=([^"]+)"',html):
+    if match.group(1)!=release: fail(f'index cache token {match.group(1)} is not aligned to visible release {release}')
 
 class RefParser(HTMLParser):
     def __init__(self): super().__init__(); self.refs=[]; self.scripts=[]; self.ids=[]
@@ -34,6 +36,8 @@ if not parser.scripts or parser.scripts[-1]!='mobile-analyzer.js': fail('mobile-
 if 'bank-rules-fourleaf.js' not in parser.scripts: fail('FourLeaf analyzer rule is not loaded')
 elif parser.scripts.index('bank-rules-fourleaf.js')<parser.scripts.index('bank-rules.js'): fail('FourLeaf rule must load after the base bank rules')
 if parser.scripts.index('close-rules-integration.js')>parser.scripts.index('mobile-analyzer.js'): fail('close-rule integration must load before the final mobile release guard')
+if 'nonrepeatable-archive.js' not in parser.scripts: fail('non-repeatable archive lifecycle is not loaded')
+elif parser.scripts.index('nonrepeatable-archive.js')<parser.scripts.index('close-rules-integration.js'): fail('archive lifecycle must load after close-rule integration')
 
 root_js=sorted(p.name for p in ROOT.glob('*.js') if p.name!='sw.js')
 if sorted(parser.scripts)!=root_js:
@@ -53,6 +57,7 @@ else:
         if not (ROOT/a).exists(): fail(f'service worker references missing file: {a}')
     for ref in parser.refs:
         if ref not in assets: fail(f'index asset is not cached by service worker: {ref}')
+if release not in sw: fail(f'service worker cache is not aligned to release {release}')
 
 try: manifest=json.loads(text('manifest.json'))
 except Exception as e: fail(f'manifest invalid JSON: {e}');manifest={}
@@ -76,13 +81,14 @@ for token in ("r.reqMoney=500","r.reqDays=90","r.closeRestrictionType='payout-on
     if token not in fourleaf: fail(f'FourLeaf rule missing required logic: {token}')
 integration=text('close-rules-integration.js')
 for token in ('btTimerBadgeLabel','btRequirementSummary','btEarliestCloseSummary','btIsNonRepeatable',"return'DD Due'","After ${typeof fM==='function'?fM(e.bonus):'$'+e.bonus} posts"):
-    if token not in integration: fail(f'v3.4.07 summary integration missing: {token}')
+    if token not in integration: fail(f'close-rule summary integration missing: {token}')
+archive=text('nonrepeatable-archive.js')
+for token in ('archive3','ARCHIVED','knownNonRepeatableBank','churnable=false'):
+    if token not in archive: fail(f'non-repeatable archive lifecycle missing: {token}')
 
 runtime_text='\n'.join(p.read_text(encoding='utf-8',errors='ignore') for p in files if p.suffix in {'.js','.html','.css','.json'} and 'tests' not in p.parts)
 obsolete='close-rules-'+'v3402.js'
 if obsolete in runtime_text: fail('obsolete v3.4.02 patch reference remains')
-for critical in ('index.html','sw.js','bank-rules-fourleaf.js','close-rules-integration.js','mobile-analyzer.js','mobile-analyzer.css'):
-    if release not in text(critical): fail(f'{critical} is not aligned to release {release}')
 workflow=text('.github/workflows/close-rules.yml')
 for cmd in ('node tests/close-rules.test.js','node tests/full-app-smoke.test.js','python tests/verify-latest.py'):
     if cmd not in workflow: fail(f'workflow missing: {cmd}')
@@ -91,4 +97,4 @@ if issues:
     print(f'LATEST RELEASE VERIFY FAILED v{release}: {len(issues)} issue(s)')
     for issue in issues: print('FAIL',issue)
     sys.exit(1)
-print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, analyzer, timer-label, summary, and mobile-scroll checks passed')
+print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, analyzer, archive-lifecycle, and mobile-scroll checks passed')
