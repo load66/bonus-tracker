@@ -191,10 +191,55 @@ function archivedCycleSnapshot(e){
   if(!e)return null;
   return{bank:e.bank||'',id:e.id||'',archivedAt:td(),opened:e.opened||'',reqMet:e.reqMet||'',bonusRecd:e.bonusRecd||'',closed:e.closed||'',bonus:e.bonus||0,churn:e.churn||'',notes:String(e.notes||'').slice(0,900),analyzedPreview:String(e.analyzedTC||'').slice(0,900),timerSummary:normalizeTimerList(e.customTimers||[]).map(t=>({text:t.text||'',date:t.date||'',daysRequired:t.daysRequired||0,done:!!t.done})).slice(0,8)}
 }
+
+function nonRepeatableSourceText(e){
+  return String([
+    e?.eligibilityText,e?.analyzedTC,e?.completeBonusText,e?.notes,e?.churnReason,
+    e?.analysis?.eligibilityText,e?.analysis?.churnReason,e?.analysis?.rawText,
+    e?.profile?.eligibilityText,e?.profile?.churnReason
+  ].filter(Boolean).join(' '));
+}
+function hasTimedChurnWindow(text){
+  return /(?:within|during|past|last|preceding|previous)\s+(?:the\s+)?(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|twelve|twenty[- ]?four|thirty[- ]?six)\s+(?:calendar\s+)?(?:months?|years?)/i.test(String(text||''))
+    || /(?:\d+|one|two|three|four|five)\s+(?:months?|years?)\s+(?:before|prior|preceding)/i.test(String(text||''));
+}
+function isNonRepeatableEntry(e){
+  if(!e)return false;
+  if(e.churnable===true||/^(?:repeatable|churnable)$/i.test(String(e.churnability||'').trim()))return false;
+  if(e.lifecycleState==='archived-nonrepeatable'||e.churnable===false||String(e.churnability||'').toLowerCase()==='not-repeatable')return true;
+  if(/\bfour[\s-]*leaf\b/i.test(String(e.bank||'')))return true;
+  const raw=nonRepeatableSourceText(e);
+  if(/once per lifetime|lifetime[- ]?like|not repeatable|one[- ]?time bonus only/i.test(raw))return true;
+  return raw.split(/[.\n;]+/).some(sentence=>{
+    const x=String(sentence||'').replace(/\s+/g,' ').trim();
+    if(!x||hasTimedChurnWindow(x))return false;
+    return /(?:must not|may not|cannot|can't|not eligible|ineligible|have not|has not)[^.;]{0,220}(?:previously received|ever received|prior bonus|received[^.;]{0,80}(?:this|a|an|new account|checking account)[^.;]{0,60}bonus)/i.test(x)
+      || /(?:previously received|ever received)[^.;]{0,180}(?:not eligible|ineligible|may not|cannot|can't)/i.test(x);
+  });
+}
+function normalizeNonRepeatableEntry(x){
+  if(!x||!isNonRepeatableEntry(x))return x;
+  x.churnable=false;
+  x.churnability='not-repeatable';
+  x.churnReason=String(x.churnReason||x.analysis?.churnReason||'Not repeatable under the saved eligibility terms').trim();
+  x.churn='';
+  if(x.closed){
+    x.lifecycleState='archived-nonrepeatable';
+    x.archived=true;
+    x.archivedAt=x.archivedAt||x.closed;
+    x.archiveReason=x.churnReason;
+  }
+  return x;
+}
+
 function closeReadiness(e,closeDate=''){
   const items=[];
   const add=(ok,label,detail='',level='warn')=>items.push({ok:!!ok,label,detail,level});
   if(!e||!e.bank)return{label:'Manual Review',cls:'warn',items:[{ok:false,label:'Entry missing',detail:'Original tracker entry was not found.',level:'danger'}],warnings:['Entry missing']};
+  if(e.closed&&isNonRepeatableEntry(e))return{label:'Closed / Archived',cls:'done',archived:true,items:[
+    {ok:true,label:'Closed date saved',detail:fD(e.closed)},
+    {ok:true,label:'Archive status',detail:'Non-repeatable offer'}
+  ],warnings:[]};
   if(e.closed)return{label:'Closed / Waiting to Churn',cls:'done',items:[{ok:true,label:'Closed date saved',detail:fD(e.closed)}],warnings:[]};
   const safe=safeCloseDate(e);
   const raw=rawSafeDate(e);
@@ -211,7 +256,8 @@ function closeReadiness(e,closeDate=''){
   }else{
     add(true,'No fixed close hold timer',e.closeRuleText?'Review close wording saved below':'No early-close countdown is set');
   }
-  add(!!e.churn,'Churn rule saved',e.churn?((e.churn==='180'?'180 days':e.churn+' year')+' churn rule'):'Needed for future reopen countdown','warn');
+  if(isNonRepeatableEntry(e))add(true,'Future eligibility','Non-repeatable offer — it will archive after closing');
+  else add(!!e.churn,'Churn rule saved',e.churn?((e.churn==='180'?'180 days':e.churn+' year')+' churn rule'):'Needed for future reopen countdown','warn');
   const hasMonthlyFee=/(yes|\$|monthly|service fee|maintenance fee)/i.test(String(e.monthlyFeeYNText||'')+' '+String(e.avoidMonthlyFeeText||''));
   add(!hasMonthlyFee||!!e.monthlyFeeChecked,'Monthly fee checked',hasMonthlyFee?(e.monthlyFeeChecked?'Confirmed before close':'Check next fee/statement timing before close'):'No monthly fee risk detected from saved fields','warn');
   items.forEach(x=>{if(!x.ok)warnings.push(x.label+(x.detail?': '+x.detail:''))});
@@ -254,6 +300,10 @@ function closePlanForEntry(e){
   const row=(label,value,cls='')=>rows.push({label,value,cls});
   if(e.closed){
     row('Closed',fD(e.closed),'ok');
+    if(isNonRepeatableEntry(e)){
+      row('Archive','Non-repeatable offer','ok');
+      return{title:'Archive',sub:'Closed record saved',chip:'Archived',cls:'done',rows,notes:['No churn countdown or reopen date was created.'],compact:true}
+    }
     row('Churn ready',churnReadyDate(e)?fD(churnReadyDate(e)):'Not calculated');
     return{title:'Close Check',sub:'Closure saved',chip:ready.label,cls:ready.cls,rows,notes,compact:true}
   }
@@ -268,7 +318,8 @@ function closePlanForEntry(e){
   }else row('Rule',e.closeRestrictionType==='payout-only'?'Keep open until bonus posts':'No close restriction found','ok');
   row('Final check',e.bonusRecd?'Bonus posted · check pending activity':'Wait for bonus to post',e.bonusRecd?'':'bad');
   if(e.closeRuleText&&!verifiedPolicy&&!ruleDays)notes.push(shortCleanText(e.closeRuleText,120));
-  return{title:'Close Check',sub:'Only what matters before closing',chip:ready.label,cls:ready.cls,rows,notes:notes.slice(0,1),compact:true}
+  if(isNonRepeatableEntry(e))notes.push('After closing, this record will be archived because the offer is not repeatable.');
+  return{title:'Close Check',sub:'Only what matters before closing',chip:ready.label,cls:ready.cls,rows,notes:notes.slice(0,2),compact:true}
 }
 function renderClosePlan(e){
   return renderCleanPlanCard(closePlanForEntry(e))
@@ -364,7 +415,7 @@ function lifecycleSteps(e){
     {key:'safe',label:'Safe Close',done:!!(e?.closed||(safe&&dB(td(),safe)<=0)),date:safe||''},
     {key:'closed',label:'Closed',done:!!e?.closed,date:e?.closed||'',planned:false}
   ];
-  if(e?.closed&&isNonRepeatableEntry(e))steps.push({key:'archive',label:'Archived',done:true,date:e.closed||'',planned:false});
+  if(isNonRepeatableEntry(e))steps.push({key:'archive',label:'Archived',done:!!e?.closed,date:e?.closed||'',planned:false});
   else steps.push({key:'churn',label:'Churn',done:!!(e?.closed&&churn&&dB(td(),churn)<=0),date:churn||''});
   return steps
 }
@@ -701,14 +752,16 @@ function renderBankProfileSummary(e){
   if(e.closed){
     add('Closed',fD(e.closed),'ok');
     add('Bonus',e.bonusRecd?((e.bonus?fM(e.bonus)+' · ':'')+fD(e.bonusRecd)):(e.bonus?fM(e.bonus):'Not saved'),e.bonusRecd?'ok':'');
-    const cr=churnReadyDate(e);
     if(isNonRepeatableEntry(e))add('Archive','Non-repeatable offer','ok');
-    else add('Churn ready',cr?fD(cr):'Not calculated',cr?'':'warn');
+    else{
+      const cr=churnReadyDate(e);
+      add('Churn ready',cr?fD(cr):'Not calculated',cr?'':'warn');
+    }
   }else{
     add('Bonus',e.bonusRecd?((e.bonus?fM(e.bonus)+' · ':'')+fD(e.bonusRecd)):(e.bonus?fM(e.bonus)+' pending':'Pending'),e.bonusRecd?'ok':'warn');
     add('Requirement',e.reqMet?'Met '+fD(e.reqMet):'Pending',e.reqMet?'ok':'warn');
     const safe=safeCloseDate(e);
-    add('Earliest close',safe?fD(safe):'Review terms',safe&&daysUntilSafe(e)<=0?'ok':safe?'warn':'bad');
+    add('Earliest close',safe?fD(safe):(e.closeRestrictionType==='payout-only'&&e.bonus?'After '+fM(e.bonus)+' posts':'Review terms'),safe&&daysUntilSafe(e)<=0?'ok':safe?'warn':'bad');
   }
   return '<div class="profile-summary">'+items.map(x=>'<div class="profile-summary-item '+esc(x.cls||'')+'"><span>'+esc(x.label)+'</span><b>'+esc(x.value)+'</b></div>').join('')+'</div>'
 }
@@ -1086,55 +1139,13 @@ function churnTagHtml(bank,churn){
   return '<span class="card-mini-chip '+cls+'">'+esc(label)+'</span>'
 }
 
-function hasTimedChurnRestrictionText(text){
-  const s=String(text||'');
-  return /(?:within|during|past|last|preceding|previous)\s+(?:the\s+)?(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|twelve|twenty[- ]?four|thirty[- ]?six)\s+(?:calendar\s+)?(?:months?|years?)/i.test(s)
-    || /(?:\d+|one|two|three|four|five)\s+(?:months?|years?)\s+(?:before|prior|preceding)/i.test(s)
-}
-function nonRepeatableSourceText(e){
-  return String([
-    e?.eligibilityText,e?.analyzedTC,e?.completeBonusText,e?.notes,e?.churnReason,
-    e?.analysis?.eligibilityText,e?.analysis?.churnReason,e?.analysis?.rawText,
-    e?.profile?.eligibilityText,e?.profile?.churnReason
-  ].filter(Boolean).join(' '))
-}
-function isNonRepeatableEntry(e){
-  if(!e)return false;
-  if(e.churnable===true||/^(?:repeatable|churnable)$/i.test(String(e.churnability||'').trim()))return false;
-  if(e.lifecycleState==='archived-nonrepeatable'||e.churnable===false||String(e.churnability||'').toLowerCase()==='not-repeatable')return true;
-  if(/\bfour[\s-]*leaf\b/i.test(String(e.bank||'')))return true;
-  const raw=nonRepeatableSourceText(e);
-  if(/once per lifetime|lifetime[- ]?like|not repeatable|one[- ]?time bonus only/i.test(raw))return true;
-  return raw.split(/[.\n;]+/).some(sentence=>{
-    const x=String(sentence||'').replace(/\s+/g,' ').trim();
-    if(!x||hasTimedChurnRestrictionText(x))return false;
-    return /(?:must not|may not|cannot|can't|not eligible|ineligible|have not|has not)[^.;]{0,220}(?:previously received|ever received|prior bonus|received[^.;]{0,80}(?:this|a|an|new account|checking account)[^.;]{0,60}bonus)/i.test(x)
-      || /(?:previously received|ever received)[^.;]{0,180}(?:not eligible|ineligible|may not|cannot|can't)/i.test(x)
-  })
-}
-function applyArchiveLifecycleFields(x){
-  if(!x||!isNonRepeatableEntry(x))return x;
-  x.churnable=false;
-  x.churnability='not-repeatable';
-  x.churnReason=String(x.churnReason||x.analysis?.churnReason||'Not repeatable under the saved eligibility terms').trim();
-  x.churn='';
-  if(x.closed){
-    x.lifecycleState='archived-nonrepeatable';
-    x.archived=true;
-    x.archivedAt=x.archivedAt||x.closed;
-    x.archiveReason=x.churnReason;
-  }
-  return x
-}
-
 function nextReopen(e){
-  if(isNonRepeatableEntry(e))return'';
-  if(!e.closed||!e.churn)return'';
+  if(!e||isNonRepeatableEntry(e)||!e.closed||!e.churn)return'';
   return e.churn==='180'?addD(e.closed,180):addM(e.closed,parseInt(e.churn)*12)
 }
 
 function churnReadyDate(e){
-  if(isNonRepeatableEntry(e))return'';
+  if(!e||isNonRepeatableEntry(e))return'';
   const nr=nextReopen(e);
   return nr?addD(nr,10):''
 }
@@ -1314,10 +1325,11 @@ function nextActiveTimer(e){
 
 function status(e){
 
+  if(e?.closed&&isNonRepeatableEntry(e))return'ARCHIVED';
+
   if(!e||!e.bank)return'';
 
   if(e.closed){
-    if(isNonRepeatableEntry(e))return'ARCHIVED';
     return daysLeft(e)===0?'TIME TO CHURN!':'WAITING TO CHURN!';
 
   }
@@ -3015,8 +3027,8 @@ function undoClose(){
 }
 let _sp=0;
 const I={grid:'<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',doc:'<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',tips:'<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>',phone:'<svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>',info:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>',profile:'<svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 9h.01"/><path d="M15 9h.01"/><path d="M9 13h.01"/><path d="M15 13h.01"/><path d="M12 21v-4"/></svg>',backup:'<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',restore:'<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',quick:'<svg viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>',trash:'<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',spark:'<svg viewBox="0 0 24 24"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.4L12 15l-1.9-4.6L5.5 9l4.6-1.4L12 3z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"/></svg>',edit:'<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>',gift:'<svg viewBox="0 0 24 24"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/></svg>',lock:'<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',clockShield:'<svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z"/><circle cx="12" cy="12" r="3.5"/><path d="M12 10.5v1.8l1.2.7"/></svg>',shieldCheck:'<svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>',refresh:'<svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10M1 14l5.36 4.36A9 9 0 0 0 20.49 15"/></svg>',alert:'<svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',target:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>',calendar:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',feed:'<svg viewBox="0 0 24 24"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>'};
-function displayStatusMeta(raw){switch(raw){case'WORKING':return{label:'Working',cls:'w',icon:I.target};case'CUSTOM TIMER':return{label:'Custom Timer',cls:'buf',icon:I.clockShield};case'REQ MET':return{label:'Req Met',cls:'req',icon:I.shieldCheck};case'WAITING TO CLOSE':return{label:'Waiting to Close',cls:'buf',icon:I.clockShield};case'3-DAY BUFFER':return{label:'3-Day Buffer',cls:'buf',icon:I.clockShield};case'SAFE TO CLOSE':return{label:'Safe to Close',cls:'stc',icon:I.shieldCheck};case'WAITING TO CHURN!':return{label:'Waiting to Churn',cls:'wt',icon:I.refresh};case'TIME TO CHURN!':return{label:'Ready to Churn',cls:'ch',icon:I.alert};case'ARCHIVED':return{label:'Archived',cls:'w',icon:I.doc};default:return{label:raw||'Status',cls:'w',icon:I.info}}}
-function supportLine(e,countdown){const s=status(e);if(s==='ARCHIVED')return'Closed • non-repeatable offer';const hasEarlyFee=!!(!e.closed&&e.earlyCloseFee>0&&!e.feeChecked);if(s==='WAITING TO CHURN!'){const dl=daysLeft(e);return dl!==null?dl+'d left':'Cooling down'}if(s==='TIME TO CHURN!')return'Ready now';if(s==='CUSTOM TIMER'){const timer=nextActiveTimer(e);const d=timerCountdownDays(timer);if(timer&&d!==null){if(d<0)return'Overdue: '+timer.text;if(d===0)return'Due today: '+timer.text;return d+'d left: '+timer.text}return e.reqMet?'Req met • countdown active':'Countdown active'}if(s==='REQ MET'){if(e.reqMet){const d=Math.max(0,dB(e.reqMet,td()));return d>0?'Waiting bonus • '+d+'d since req met':'Waiting bonus'}return'Waiting bonus'}if(s==='WAITING TO CLOSE'){const d=daysUntilSafe(e);let msg=d!==null&&d>0?d+'d until safe to close':'Waiting to close';if(hasEarlyFee)msg+=' • fee if closed early';return msg}if(s==='3-DAY BUFFER'){const d=daysUntilSafe(e);let msg=d!==null&&d>0?d+'d left in buffer':'Almost there';if(hasEarlyFee)msg+=' • fee if closed early';return msg}if(s==='SAFE TO CLOSE'){return(e.earlyCloseFee>0||e.minHoldDays>0)?'Bonus received • close when ready':'Bonus received • ready when you are'}if(s==='WORKING'){if(countdown&&countdown.lbl==='Req deadline'&&countdown.days>0)return countdown.days+'d to requirement deadline';if(countdown&&countdown.lbl==='Req deadline'&&countdown.days===0)return'Requirement deadline today';if(countdown&&countdown.lbl==='Req deadline'&&countdown.days<0)return'Missed requirement deadline';if(e.opened){const openDays=dB(e.opened,td());if(openDays>0)return openDays+'d open'}return'In progress'}return''}
+function displayStatusMeta(raw){switch(raw){case'ARCHIVED':return{label:'Archived',cls:'w',icon:I.doc};case'WORKING':return{label:'Working',cls:'w',icon:I.target};case'CUSTOM TIMER':return{label:'Custom Timer',cls:'buf',icon:I.clockShield};case'REQ MET':return{label:'Req Met',cls:'req',icon:I.shieldCheck};case'WAITING TO CLOSE':return{label:'Waiting to Close',cls:'buf',icon:I.clockShield};case'3-DAY BUFFER':return{label:'3-Day Buffer',cls:'buf',icon:I.clockShield};case'SAFE TO CLOSE':return{label:'Safe to Close',cls:'stc',icon:I.shieldCheck};case'WAITING TO CHURN!':return{label:'Waiting to Churn',cls:'wt',icon:I.refresh};case'TIME TO CHURN!':return{label:'Ready to Churn',cls:'ch',icon:I.alert};default:return{label:raw||'Status',cls:'w',icon:I.info}}}
+function supportLine(e,countdown){const s=status(e);if(s==='ARCHIVED')return'Closed • not repeatable';const hasEarlyFee=!!(!e.closed&&e.earlyCloseFee>0&&!e.feeChecked);if(s==='WAITING TO CHURN!'){const dl=daysLeft(e);return dl!==null?dl+'d left':'Cooling down'}if(s==='TIME TO CHURN!')return'Ready now';if(s==='CUSTOM TIMER'){const timer=nextActiveTimer(e);const d=timerCountdownDays(timer);if(timer&&d!==null){if(d<0)return'Overdue: '+timer.text;if(d===0)return'Due today: '+timer.text;return d+'d left: '+timer.text}return e.reqMet?'Req met • countdown active':'Countdown active'}if(s==='REQ MET'){if(e.reqMet){const d=Math.max(0,dB(e.reqMet,td()));return d>0?'Waiting bonus • '+d+'d since req met':'Waiting bonus'}return'Waiting bonus'}if(s==='WAITING TO CLOSE'){const d=daysUntilSafe(e);let msg=d!==null&&d>0?d+'d until safe to close':'Waiting to close';if(hasEarlyFee)msg+=' • fee if closed early';return msg}if(s==='3-DAY BUFFER'){const d=daysUntilSafe(e);let msg=d!==null&&d>0?d+'d left in buffer':'Almost there';if(hasEarlyFee)msg+=' • fee if closed early';return msg}if(s==='SAFE TO CLOSE'){return(e.earlyCloseFee>0||e.minHoldDays>0)?'Bonus received • close when ready':'Bonus received • ready when you are'}if(s==='WORKING'){if(countdown&&countdown.lbl==='Req deadline'&&countdown.days>0)return countdown.days+'d to requirement deadline';if(countdown&&countdown.lbl==='Req deadline'&&countdown.days===0)return'Requirement deadline today';if(countdown&&countdown.lbl==='Req deadline'&&countdown.days<0)return'Missed requirement deadline';if(e.opened){const openDays=dB(e.opened,td());if(openDays>0)return openDays+'d open'}return'In progress'}return''}
 function statusBadgeHtml(e,countdown){const meta=displayStatusMeta(status(e));const support=supportLine(e,countdown);return'<span class="badge '+meta.cls+'">'+meta.icon+'<span>'+esc(meta.label)+'</span></span>'+(support?'<div class="card-subline">'+esc(support)+'</div>':'')}
 function quickBtn(cls,icon,label,onclick){return'<button class="qbtn '+cls+'" onclick="'+onclick+'">'+icon+'<span>'+label+'</span></button>'}
 function actionBtn(cls,icon,label,onclick){return'<button class="cbtn '+cls+'" onclick="'+onclick+'">'+icon+'<span>'+label+'</span></button>'}
@@ -3463,7 +3475,7 @@ function closeSafetyWarnings(e,p){
   if(e?.bonus&&Number(p.actualBonus||0)===0)w.push('Expected bonus is '+fM(e.bonus)+' but actual bonus is $0.');
   if((p.actualBonus||0)>0&&!e?.bank)w.push('Bank name is missing.');
   if((p.actualBonus||0)>0&&!p.closeDate)w.push('Bonus cannot be tax-ready without a close date.');
-  if(e&&!e.churn)w.push('Churn rule is blank, so reopen countdown will not be reliable.');
+  if(e&&!e.churn&&!isNonRepeatableEntry(e))w.push('Churn rule is blank, so reopen countdown will not be reliable.');
   return w;
 }
 
@@ -3589,7 +3601,7 @@ function normalizeLifecycleEntry(e){
   if(x.bonusRecd&&!x.reqMet)x.reqMet=x.bonusRecd;
   if(x.reqMet&&x.bonusRecd&&dB(x.reqMet,x.bonusRecd)<0)x.reqMet=x.bonusRecd;
   hydrateTimersFromOpened(x);
-  applyArchiveLifecycleFields(x);
+  normalizeNonRepeatableEntry(x);
   return x
 }
 function normalizeLifecycleEntries(rows){
@@ -4052,6 +4064,9 @@ function collectModalEntryData(){
   if(!bank){alert('Bank name required');return null}
   syncModalAccountTypeFromBank();
   const d={bank,accountType:normalizeAccountType(modal.accountType)||'personal',bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,closeFeeCountdownDays:modal.closeFeeCountdownDays||'',earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',fundedDays:modal.fundedDays||0,fundingAmount:modal.fundingAmount||0,fundingAmountText:modal.fundingAmountText||'',payoutTimingText:modal.payoutTimingText||'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false,monthlyFeeYNText:modal.monthlyFeeYNText||'',monthlyFeeAmountText:modal.monthlyFeeAmountText||'',monthlyFeeFrequency:modal.monthlyFeeFrequency||'',monthlyFeeWaiverType:modal.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:modal.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:modal.monthlyFeeWaiverText||'',promoCodeText:modal.promoCodeText||'',avoidMonthlyFeeText:modal.avoidMonthlyFeeText||'',completeBonusText:modal.completeBonusText||'',earlyTerminationFeeText:modal.earlyTerminationFeeText||'',eligibilityText:modal.eligibilityText||'',expirationDateText:modal.expirationDateText||'',requiredDaysText:modal.requiredDaysText||'',closeRuleBasis:normalizeCloseRuleBasis(modal.closeRuleBasis),closeBufferDays:parseInt(modal.closeBufferDays,10)||BUFFER_DAYS,closeRuleText:modal.closeRuleText||'',monthlyFeeChecked:!!modal.monthlyFeeChecked,analysis:(modal.analysis&&typeof modal.analysis==='object')?modal.analysis:null,analyzerHistory:normalizeAnalyzerHistoryList(modal.analyzerHistory),history:normalizeEntryHistoryList(modal.history),customTimers:normalizeTimerList(modal.customTimers)};
+  if(modal.churnable===false||modal.analysis?.churnable===false)d.churnable=false;
+  d.churnability=modal.churnability||modal.analysis?.churnability||'';
+  d.churnReason=modal.churnReason||modal.analysis?.churnReason||'';
   sanitizeCloseFieldsForEntry(d);
   syncRequiredDaysFromModal(d);
   d.earlyCloseFee=parseCloseFeeAmount(modal.earlyTerminationFeeText);
@@ -4347,11 +4362,14 @@ function finishClose(){
   entries=sortE(entries);sv(SK,entries);
   closePrompt=null;
   expanded=e2?e2.id:null;
-  const archived=!!(e2&&isNonRepeatableEntry(e2));
-  const readyDate=e2&&churnReadyDate(e2)?fD(churnReadyDate(e2)):'not available';
-  cfm=archived
-    ? {title:'Closed & Archived',msg:(e2?e2.bank:'This bank')+' closed on '+fD(p.closeDate)+'.\n\nArchive status: Non-repeatable offer.\nNo churn countdown or reopen date was created.\n\nUndo is available for 60 seconds at the bottom of the app.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}}
-    : {title:'Closed Saved',msg:(e2?e2.bank:'This bank')+' closed on '+fD(p.closeDate)+'.\n\nChurn-ready date: '+readyDate+'.\nStatus: '+(e2?status(e2):'Waiting to Churn')+'.\n\nUndo is available for 60 seconds at the bottom of the app.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
+  if(e2&&isNonRepeatableEntry(e2)){
+    normalizeNonRepeatableEntry(e2);
+    sv(SK,entries);
+    cfm={title:'Closed & Archived',msg:e2.bank+' closed on '+fD(p.closeDate)+'.\n\nArchive status: Non-repeatable offer.\nNo churn countdown or reopen date was created.\n\nUndo is available for 60 seconds at the bottom of the app.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
+  }else{
+    const readyDate=e2&&churnReadyDate(e2)?fD(churnReadyDate(e2)):'not available';
+    cfm={title:'Closed Saved',msg:(e2?e2.bank:'This bank')+' closed on '+fD(p.closeDate)+'.\n\nChurn-ready date: '+readyDate+'.\nStatus: '+(e2?status(e2):'Waiting to Churn')+'.\n\nUndo is available for 60 seconds at the bottom of the app.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
+  }
   R()
 }
 function confirmClearCloseDate(id){

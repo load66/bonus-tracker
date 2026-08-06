@@ -256,7 +256,8 @@
     if(p.dates.closed){
       add('Closed',fD(p.dates.closed),'ok');
       add('Bonus',p.dates.bonusReceived?((p.offer.bonus.value?fM(p.offer.bonus.value)+' · ':'')+fD(p.dates.bonusReceived)):(p.offer.bonus.value?fM(p.offer.bonus.value):'Not saved'),p.dates.bonusReceived?'ok':'');
-      const cr=churnReadyDate(e);add('Churn ready',cr?fD(cr):'Not calculated',cr?'':'warn');
+      if(typeof isNonRepeatableEntry==='function'&&isNonRepeatableEntry(e))add('Archive','Non-repeatable offer','ok');
+      else{const cr=churnReadyDate(e);add('Churn ready',cr?fD(cr):'Not calculated',cr?'':'warn');}
     }else{
       add('Bonus',p.dates.bonusReceived?((p.offer.bonus.value?fM(p.offer.bonus.value)+' · ':'')+fD(p.dates.bonusReceived)):(p.offer.bonus.value?fM(p.offer.bonus.value)+' pending':'Pending'),p.dates.bonusReceived?'ok':'warn');
       add('Requirement',p.dates.requirementMet?'Met '+fD(p.dates.requirementMet):'Pending',p.dates.requirementMet?'ok':'warn');
