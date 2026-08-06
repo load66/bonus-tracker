@@ -1,17 +1,18 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.4.08: Safari-safe archived lifecycle for non-repeatable offers.
+// Version 3.4.09: immediate activation, network-first app code, and safe cache cleanup.
 
-const V = 'bt-v3.4.08';
+const V = 'bt-v3.4.09';
 const ASSETS = ['./app.js', './bank-rules-academy.js', './bank-rules-boa-business.js', './bank-rules-busey.js', './bank-rules-capitalone.js', './bank-rules-equity.js', './bank-rules-fourleaf.js', './bank-rules-pnc.js', './bank-rules-regions.js', './bank-rules.js', './churn-profile-memory.js', './controller.js', './close-rules-core.js', './close-rules-integration.js', './close-rules.css', './engine.js', './icon.svg', './index.html', './learning-inbox-conflict.js', './manifest.json', './mobile-analyzer.css', './mobile-analyzer.js', './nonrepeatable-archive.js', './professional-upgrades.js', './profile-db.js', './profile-library-selftest-academy.js', './profile-library-selftest.js', './profile-registry-academy.js', './profile-registry.js', './source-resolver.js', './style.css', './sw.js'];
 
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(V).then(cache => cache.addAll(ASSETS)).catch(() => null)
   );
 });
 
 self.addEventListener('message', event => {
-  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+  if(event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
@@ -37,18 +38,19 @@ function isAppShellOrCode(url, req) {
 
 self.addEventListener('fetch', event => {
   const req = event.request;
-  if (req.method !== 'GET') return;
+  if(req.method !== 'GET') return;
 
   const url = new URL(req.url);
-  const isSameOrigin = url.origin === self.location.origin;
-  if (!isSameOrigin) return;
+  if(url.origin !== self.location.origin) return;
 
-  if (isAppShellOrCode(url, req)) {
+  if(isAppShellOrCode(url, req)) {
     event.respondWith(
       fetch(req, { cache: 'no-store' })
         .then(res => {
-          const copy = res.clone();
-          caches.open(V).then(cache => cache.put(req, copy)).catch(() => null);
+          if(res && res.ok){
+            const copy = res.clone();
+            caches.open(V).then(cache => cache.put(req, copy)).catch(() => null);
+          }
           return res;
         })
         .catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
@@ -58,10 +60,12 @@ self.addEventListener('fetch', event => {
 
   event.respondWith(
     caches.match(req).then(cached => {
-      if (cached) return cached;
+      if(cached) return cached;
       return fetch(req).then(res => {
-        const copy = res.clone();
-        caches.open(V).then(cache => cache.put(req, copy)).catch(() => null);
+        if(res && res.ok){
+          const copy = res.clone();
+          caches.open(V).then(cache => cache.put(req, copy)).catch(() => null);
+        }
         return res;
       });
     })
