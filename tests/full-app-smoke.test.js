@@ -60,6 +60,7 @@ setTimeout(()=>{
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.07',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
     assert(sandbox.btCloseRulesVersion==='3.4.07',`Unexpected close integration version ${sandbox.btCloseRulesVersion}`);
     assert(sandbox.btNonRepeatableArchiveVersion==='3.4.07',`Unexpected archive lifecycle version ${sandbox.btNonRepeatableArchiveVersion}`);
+    assert(sandbox.btNonRepeatableArchivePatch==='archive2',`Unexpected archive patch ${sandbox.btNonRepeatableArchivePatch}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.04',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
     const report=sandbox.btRunFullRegressionTests();
@@ -92,6 +93,12 @@ setTimeout(()=>{
     assert(archivedPlan?.chip==='Archived'&&archivedPlan?.rows?.some(x=>x.value==='Not repeatable'),'Archived close plan is missing non-repeatable status');
     const integrity=sandbox.backupIntegrityReport({entries:[{...closedFourLeaf,churn:''}]});
     assert(!(integrity.warnings||[]).some(x=>/missing churn rule/i.test(String(x))),'Backup integrity incorrectly requires churn for a non-repeatable bank');
+    const legacyFourLeaf={bank:'FourLeaf Bank',accountType:'personal',id:'FOURLEAF-LEGACY',opened,closed:opened,bonus:350,bonusRecd:opened,reqMet:opened,churn:''};
+    assert(sandbox.status(legacyFourLeaf)==='ARCHIVED','Legacy FourLeaf record without analyzer flags was not archived');
+    assert(sandbox.btIsNonRepeatable(legacyFourLeaf),'Legacy FourLeaf bank identity was not recognized as non-repeatable');
+    const normalizedLegacy=sandbox.normalizeLifecycleEntry(legacyFourLeaf);
+    assert(normalizedLegacy.churnable===false&&normalizedLegacy.churnability==='not-repeatable'&&normalizedLegacy.lifecycleState==='archived-nonrepeatable','Legacy FourLeaf migration did not persist archive metadata');
+    assert(!sandbox.btIsNonRepeatable({bank:'Example Bank',eligibilityText:'Not eligible if you received a bonus within the past 24 months.'}),'Timed churn restriction was incorrectly treated as lifetime non-repeatable');
     const summary=sandbox.renderBankProfileSummary(fourLeafEntry);
     assert(/After \$350 posts/.test(summary),'Expanded card did not show the payout-only close summary');
     assert(!/Review terms/.test(summary),'Expanded card still shows contradictory Review terms text');
