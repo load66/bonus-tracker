@@ -76,6 +76,8 @@ for css in ROOT.glob('*.css'):
 mobile_css=text('mobile-analyzer.css')
 for token in ('#tca_overlay .tca-box','overflow-y:auto!important','-webkit-overflow-scrolling:touch','touch-action:pan-y'):
     if token not in mobile_css: fail(f'mobile analyzer scroll protection missing: {token}')
+mobile_js=text('mobile-analyzer.js')
+if f"const VER='{release}'" not in mobile_js: fail(f'final mobile release guard is not aligned to {release}')
 fourleaf=text('bank-rules-fourleaf.js')
 for token in ("r.reqMoney=500","r.reqDays=90","r.closeRestrictionType='payout-only'","r.churnable=false","24 consecutive"):
     if token not in fourleaf: fail(f'FourLeaf rule missing required logic: {token}')
@@ -83,7 +85,7 @@ integration=text('close-rules-integration.js')
 for token in ('btTimerBadgeLabel','btRequirementSummary','btEarliestCloseSummary','btIsNonRepeatable',"return'DD Due'","After ${typeof fM==='function'?fM(e.bonus):'$'+e.bonus} posts"):
     if token not in integration: fail(f'close-rule summary integration missing: {token}')
 archive=text('nonrepeatable-archive.js')
-for token in ('archive3','ARCHIVED','knownNonRepeatableBank','churnable=false'):
+for token in (release,'archive4','ARCHIVED','knownNonRepeatableBank','churnable=false','lifecycleStepsFixed','finishCloseFixed','startNewCycleFixed','Closed & Archived'):
     if token not in archive: fail(f'non-repeatable archive lifecycle missing: {token}')
 
 runtime_text='\n'.join(p.read_text(encoding='utf-8',errors='ignore') for p in files if p.suffix in {'.js','.html','.css','.json'} and 'tests' not in p.parts)
