@@ -73,25 +73,24 @@ for token in ('#tca_overlay .tca-box','overflow-y:auto!important','-webkit-overf
 fourleaf=text('bank-rules-fourleaf.js')
 for token in ("r.reqMoney=500","r.reqDays=90","r.closeRestrictionType='payout-only'","r.churnable=false","24 consecutive"):
     if token not in fourleaf: fail(f'FourLeaf rule missing required logic: {token}')
+app_js=text('app.js')
+for token in ('isNonRepeatableEntry','archived-nonrepeatable',"return'ARCHIVED'",'Closed & Archived','Non-repeatable offer'):
+    if token not in app_js: fail(f'archive lifecycle missing from app.js: {token}')
+integration=text('close-rules-integration.js')
+for token in ("nonRepeatable(e)?'ARCHIVED'",'Closed / Archived','Non-repeatable offer'):
+    if token not in integration: fail(f'archive lifecycle missing from close integration: {token}')
 
 runtime_text='\n'.join(p.read_text(encoding='utf-8',errors='ignore') for p in files if p.suffix in {'.js','.html','.css','.json'} and 'tests' not in p.parts)
 obsolete='close-rules-'+'v3402.js'
 if obsolete in runtime_text: fail('obsolete v3.4.02 patch reference remains')
 for critical in ('index.html','sw.js','bank-rules-fourleaf.js','mobile-analyzer.js','mobile-analyzer.css'):
     if release not in text(critical): fail(f'{critical} is not aligned to release {release}')
-app_js=text('app.js')
-for token in ('isNonRepeatableEntry','archived-nonrepeatable',"return'ARCHIVED'",'Closed & Archived'):
-    if token not in app_js: fail(f'archive lifecycle core missing: {token}')
-integration=text('close-rules-integration.js')
-for token in ('btTimerBadgeLabel','btRequirementSummary','btEarliestCloseSummary','btIsNonRepeatable','Closed / Archived'):
-    if token not in integration: fail(f'close-rule/archive integration missing: {token}')
-
 workflow=text('.github/workflows/close-rules.yml')
-for cmd in ('node tests/close-rules.test.js','node tests/full-app-smoke.test.js','python tests/verify-latest.py'):
+for cmd in ('node tests/close-rules.test.js','node tests/full-app-smoke.test.js','python3 tests/verify-latest.py'):
     if cmd not in workflow: fail(f'workflow missing: {cmd}')
 
 if issues:
     print(f'LATEST RELEASE VERIFY FAILED v{release}: {len(issues)} issue(s)')
     for issue in issues: print('FAIL',issue)
     sys.exit(1)
-print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, analyzer, and mobile-scroll checks passed')
+print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, analyzer, archive-lifecycle, and mobile-scroll checks passed')

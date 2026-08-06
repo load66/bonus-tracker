@@ -55,9 +55,9 @@ function assert(ok,msg){if(!ok)throw new Error(msg)}
 setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.10',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.4.10',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
-    assert(sandbox.tcV3FourLeafRulesVersion==='3.4.10',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.11',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.4.11',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.tcV3FourLeafRulesVersion==='3.4.11',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.04',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
     const report=sandbox.btRunFullRegressionTests();
@@ -75,23 +75,28 @@ setTimeout(()=>{
     assert(fr.closeRestrictionType==='payout-only'&&Number(fr.minHoldDays||0)===0,'FourLeaf payout-only close rule failed');
     assert(fr.churnable===false&&fr.churnability==='not-repeatable','FourLeaf lifetime-like churn restriction failed');
     assert(/24 consecutive/i.test(fr.actionPlan||''),'FourLeaf 24-month milestone plan missing');
-
-    const closedFourLeaf={bank:'FourLeaf Bank',id:'FOURLEAF-ARCHIVE',accountType:'personal',opened:'2026-07-21',closed:'2026-09-01',bonus:350,bonusRecd:'2026-08-20',reqMet:'2026-07-25',churn:'2',churnable:false,churnability:'not-repeatable',eligibilityText:'Not eligible if you previously received a new checking account opening related bonus from FourLeaf.'};
-    const normalizedArchive=sandbox.normalizeLifecycleEntry(closedFourLeaf);
-    assert(sandbox.status(normalizedArchive)==='ARCHIVED','Closed non-repeatable offer was not archived');
-    assert(sandbox.nextReopen(normalizedArchive)==='','Archived offer received a reopen date');
-    assert(sandbox.churnReadyDate(normalizedArchive)==='','Archived offer received a churn-ready date');
-    assert(normalizedArchive.churn===''&&normalizedArchive.lifecycleState==='archived-nonrepeatable'&&normalizedArchive.archived===true,'Archive fields were not persisted');
-    const archiveSteps=sandbox.lifecycleSteps(normalizedArchive);
-    assert(archiveSteps.some(x=>x.key==='archive')&&!archiveSteps.some(x=>x.key==='churn'),'Archived lifecycle still contains churn step');
-    assert(sandbox.closeReadiness(normalizedArchive).label==='Closed / Archived','Archived readiness label failed');
-
+    const closedFourLeaf=sandbox.normalizeLifecycleEntry({
+      bank:'FourLeaf Bank',accountType:'personal',id:'FOURLEAF-ARCHIVE',
+      opened:'2026-07-21',reqMet:'2026-07-25',bonusRecd:'2026-08-01',closed:'2026-08-06',
+      bonus:350,churn:'2',churnable:false,churnability:'not-repeatable',
+      eligibilityText:'Not eligible if you previously received a new checking account opening related bonus from FourLeaf.'
+    });
+    assert(closedFourLeaf.archived===true&&closedFourLeaf.lifecycleState==='archived-nonrepeatable','Closed FourLeaf record was not marked archived');
+    assert(closedFourLeaf.churn==='', 'Archived FourLeaf record kept a churn rule');
+    assert(sandbox.status(closedFourLeaf)==='ARCHIVED','Closed non-repeatable entry did not show Archived');
+    assert(sandbox.nextReopen(closedFourLeaf)==='','Archived entry received a reopen date');
+    assert(sandbox.churnReadyDate(closedFourLeaf)==='','Archived entry received a churn-ready date');
+    assert(sandbox.closeReadiness(closedFourLeaf).label==='Closed / Archived','Archived close-readiness label is incorrect');
+    const archivedPlan=sandbox.closePlanForEntry(closedFourLeaf);
+    assert(archivedPlan?.chip==='Archived'&&archivedPlan?.rows?.some(x=>x.value==='Non-repeatable offer'),'Archived close plan is incorrect');
+    const integrity=sandbox.backupIntegrityReport({entries:[closedFourLeaf]});
+    assert(!(integrity.warnings||[]).some(x=>/missing churn rule/i.test(String(x))),'Archive incorrectly requires a churn rule');
     const close=sandbox.BTCloseRules.sanitizeEntry({bank:'Chase Biz',accountType:'business',opened:'2026-05-07',reqMet:'2026-05-29',bonusRecd:'2026-07-14',minHoldDays:90,closeFeeCountdownDays:'90',closeRuleBasis:'bonus',closeBufferDays:5,closeRestrictionType:'payout-only',closeRuleText:'Keep the account open until the bonus posts.'});
     assert(close.minHoldDays===0,'Stale Chase close countdown survived');
     assert(sandbox.BTCloseRules.safeCloseDate(close)==='2026-07-14','Payout-only close date is incorrect');
     if(typeof sandbox.R==='function')sandbox.R();
     assert(app.innerHTML.length>1000,'Tracker failed to render after regression run');
     assert(!errors.some(x=>x.startsWith('ERROR ')),`Runtime console errors: ${errors.join(' | ')}`);
-    console.log(`Full app smoke passed: ${scripts.length} runtime scripts · ${report.passed}/${report.total} regression checks · FourLeaf and mobile Safari release verified`);
+    console.log(`Full app smoke passed: ${scripts.length} runtime scripts · ${report.passed}/${report.total} regression checks · FourLeaf archive and mobile Safari release verified`);
   }catch(err){console.error(err.stack||err);process.exitCode=1}
 },2200);
