@@ -1,10 +1,10 @@
-/* Bonus Tracker v3.4.07 archive3 — Safari-safe archived lifecycle for non-repeatable offers. */
+/* Bonus Tracker v3.4.08 archive4 — Safari-safe archived lifecycle for non-repeatable offers. */
 (function(){
   'use strict';
-  if(window.__btNonRepeatableArchive3Loaded)return;
-  window.__btNonRepeatableArchive3Loaded=true;
+  if(window.__btNonRepeatableArchive4Loaded)return;
+  window.__btNonRepeatableArchive4Loaded=true;
 
-  const VER='3.4.07',PATCH='archive3';
+  const VER='3.4.08',PATCH='archive4';
   const original={
     status:typeof status==='function'?status:null,
     nextReopen:typeof nextReopen==='function'?nextReopen:null,
@@ -16,6 +16,9 @@
     renderCleanPlanCard:typeof renderCleanPlanCard==='function'?renderCleanPlanCard:null,
     renderBankProfileSummary:typeof renderBankProfileSummary==='function'?renderBankProfileSummary:null,
     normalizeLifecycleEntry:typeof normalizeLifecycleEntry==='function'?normalizeLifecycleEntry:null,
+    lifecycleSteps:typeof lifecycleSteps==='function'?lifecycleSteps:null,
+    finishClose:typeof finishClose==='function'?finishClose:null,
+    startNewCycle:typeof startNewCycle==='function'?startNewCycle:null,
     getDataHealthIssues:typeof getDataHealthIssues==='function'?getDataHealthIssues:null,
     backupIntegrityReport:typeof backupIntegrityReport==='function'?backupIntegrityReport:null,
     closeSafetyWarnings:typeof closeSafetyWarnings==='function'?closeSafetyWarnings:null,
@@ -51,13 +54,18 @@
     });
   }
 
+  function knownNonRepeatableBank(e){
+    const bank=clean((e&&e.bank)||e||'');
+    return /\bfour[\s-]*leaf\b/i.test(bank);
+  }
+
   function isNonRepeatable(e){
     if(!e)return false;
     if(e.churnable===true||/^(?:repeatable|churnable)$/i.test(clean(e.churnability)))return false;
     if(e.lifecycleState==='archived-nonrepeatable'||e.churnable===false||clean(e.churnability).toLowerCase()==='not-repeatable')return true;
     try{if(original.btIsNonRepeatable&&original.btIsNonRepeatable(e))return true}catch{}
     if(lifetimeTextDetected(sourceText(e)))return true;
-    return /\bfour[\s-]*leaf\b/i.test(clean(e.bank));
+    return knownNonRepeatableBank(e);
   }
 
   function markNonRepeatable(x){
@@ -68,6 +76,8 @@
     x.churn='';
     if(x.closed){
       x.lifecycleState='archived-nonrepeatable';
+      x.archived=true;
+      x.archivedAt=x.archivedAt||x.closed;
       x.archiveReason=x.churnReason;
     }
     return x;
@@ -97,14 +107,14 @@
   function closeReadinessFixed(e,closeDate=''){
     if(e?.closed&&isNonRepeatable(e))return{label:'Closed / Archived',cls:'done',archived:true,warnings:[],items:[
       {ok:true,label:'Closed date saved',detail:formatDate(e.closed)},
-      {ok:true,label:'Future churn',detail:'Not repeatable under the saved eligibility terms'}
+      {ok:true,label:'Archive status',detail:'Not repeatable under the saved eligibility terms'}
     ]};
     return original.closeReadiness?original.closeReadiness(e,closeDate):{label:'Manual Review',cls:'warn',items:[],warnings:[]};
   }
 
   function closePlanFixed(e){
-    if(e?.closed&&isNonRepeatable(e))return{title:'Close Check',sub:'Closure saved',chip:'Archived',cls:'done',compact:true,
-      rows:[{label:'Closed',value:formatDate(e.closed),cls:'ok'},{label:'Future churn',value:'Not repeatable',cls:'ok'}],
+    if(e?.closed&&isNonRepeatable(e))return{title:'Archive',sub:'Closed record saved',chip:'Archived',cls:'done',compact:true,
+      rows:[{label:'Closed',value:formatDate(e.closed),cls:'ok'},{label:'Archive',value:'Non-repeatable offer',cls:'ok'}],
       notes:['This record stays in history and is excluded from cooldown and ready-to-churn lists.']};
     return original.closePlanForEntry?original.closePlanForEntry(e):null;
   }
@@ -113,9 +123,44 @@
   function renderProfileSummaryFixed(e){
     if(!(e?.closed&&isNonRepeatable(e)))return original.renderBankProfileSummary?original.renderBankProfileSummary(e):'';
     const bonus=e.bonusRecd?((e.bonus&&typeof fM==='function'?fM(e.bonus)+' · ':'')+formatDate(e.bonusRecd)):(e.bonus&&typeof fM==='function'?fM(e.bonus):'Not saved');
-    const rows=[['Opened',e.opened?formatDate(e.opened):'Add date',''],['Closed',formatDate(e.closed),'ok'],['Bonus',bonus,e.bonusRecd?'ok':''],['Future churn','Not repeatable','ok']];
+    const rows=[['Opened',e.opened?formatDate(e.opened):'Add date',''],['Closed',formatDate(e.closed),'ok'],['Bonus',bonus,e.bonusRecd?'ok':''],['Archive','Non-repeatable offer','ok']];
     const escape=v=>{try{return typeof esc==='function'?esc(String(v??'')):String(v??'')}catch{return String(v??'')}};
     return '<div class="profile-summary">'+rows.map(x=>'<div class="profile-summary-item '+escape(x[2])+'"><span>'+escape(x[0])+'</span><b>'+escape(x[1])+'</b></div>').join('')+'</div>';
+  }
+
+  function lifecycleStepsFixed(e){
+    const steps=original.lifecycleSteps?original.lifecycleSteps(e):[];
+    if(!(e?.closed&&isNonRepeatable(e)))return steps;
+    return (steps||[]).filter(x=>x?.key!=='churn').concat({key:'archive',label:'Archived',done:true,date:e.closed||'',planned:false});
+  }
+
+  function startNewCycleFixed(id){
+    let e=null;try{e=Array.isArray(entries)?entries.find(x=>x&&x.id===id):null}catch{}
+    if(e&&isNonRepeatable(e)){
+      const msg='This offer is non-repeatable. The closed record stays archived and cannot start another churn cycle.';
+      try{if(typeof window.btNotify==='function')window.btNotify(msg,'info',4200);else alert(msg)}catch{}
+      return;
+    }
+    return original.startNewCycle?original.startNewCycle.apply(this,arguments):undefined;
+  }
+
+  function finishCloseFixed(){
+    let id='';try{id=closePrompt?.entryId||''}catch{}
+    const out=original.finishClose?original.finishClose.apply(this,arguments):undefined;
+    try{
+      if(!id||typeof entries==='undefined'||!Array.isArray(entries))return out;
+      const idx=entries.findIndex(x=>x&&x.id===id);
+      if(idx<0)return out;
+      const entry=normalizeFixed(entries[idx]);
+      if(!(entry.closed&&isNonRepeatable(entry)))return out;
+      entries[idx]=entry;
+      if(typeof sv==='function'&&typeof SK!=='undefined')sv(SK,entries);
+      if(typeof cfm!=='undefined'&&cfm){
+        cfm={...cfm,title:'Closed & Archived',msg:`${entry.bank} closed on ${formatDate(entry.closed)}.\n\nArchive status: Non-repeatable offer.\nNo churn countdown or reopen date was created.\n\nUndo is available for 60 seconds at the bottom of the app.`};
+      }
+      if(typeof R==='function')R();
+    }catch(err){console.error('Archive4 close finalization failed',err)}
+    return out;
   }
 
   function entryById(id){try{return Array.isArray(entries)?entries.find(e=>e&&e.id===id):null}catch{return null}}
@@ -167,6 +212,9 @@
     try{renderBankProfileSummary=renderProfileSummaryFixed}catch{}
     try{normalizeLifecycleEntry=normalizeFixed}catch{}
     try{normalizeLifecycleEntries=rows=>(rows||[]).map(normalizeFixed)}catch{}
+    try{lifecycleSteps=lifecycleStepsFixed}catch{}
+    try{if(original.finishClose)finishClose=finishCloseFixed}catch{}
+    try{if(original.startNewCycle)startNewCycle=startNewCycleFixed}catch{}
     try{getDataHealthIssues=healthFixed}catch{}
     try{backupIntegrityReport=backupIntegrityFixed}catch{}
     try{if(original.closeSafetyWarnings)closeSafetyWarnings=function(e,p){return filterChurnWarnings(original.closeSafetyWarnings,e,[e,p])}}catch{}
@@ -183,6 +231,9 @@
     window.renderBankProfileSummary=renderProfileSummaryFixed;
     window.normalizeLifecycleEntry=normalizeFixed;
     window.normalizeLifecycleEntries=rows=>(rows||[]).map(normalizeFixed);
+    window.lifecycleSteps=lifecycleStepsFixed;
+    if(original.finishClose)window.finishClose=finishCloseFixed;
+    if(original.startNewCycle)window.startNewCycle=startNewCycleFixed;
     window.getDataHealthIssues=healthFixed;
     window.backupIntegrityReport=backupIntegrityFixed;
     window.collectModalEntryData=collectModalEntryDataFixed;
@@ -193,22 +244,24 @@
       if(typeof entries==='undefined'||!Array.isArray(entries))return false;
       let changed=false;
       entries=entries.map(e=>{
-        const before=JSON.stringify([e?.churnable,e?.churnability,e?.churn,e?.lifecycleState,e?.archiveReason]);
+        const before=JSON.stringify([e?.churnable,e?.churnability,e?.churn,e?.lifecycleState,e?.archived,e?.archivedAt,e?.archiveReason]);
         const x=normalizeFixed(e);
-        const after=JSON.stringify([x?.churnable,x?.churnability,x?.churn,x?.lifecycleState,x?.archiveReason]);
+        const after=JSON.stringify([x?.churnable,x?.churnability,x?.churn,x?.lifecycleState,x?.archived,x?.archivedAt,x?.archiveReason]);
         if(before!==after)changed=true;
         return x;
       });
       if(typeof sortE==='function')entries=sortE(entries);
       if(changed){if(typeof sv==='function'&&typeof SK!=='undefined')sv(SK,entries);else localStorage.setItem('bt_e_v4',JSON.stringify(entries))}
       return changed;
-    }catch(err){console.error('Archive3 migration failed',err);return false}
+    }catch(err){console.error('Archive4 migration failed',err);return false}
   }
 
+  window.btKnownNonRepeatableBank=knownNonRepeatableBank;
   window.btIsArchivedNonRepeatable=isNonRepeatable;
   window.btNonRepeatableArchiveVersion=VER;
   window.btNonRepeatableArchivePatch=PATCH;
+  window.BT_APP_VERSION=VER;
   replaceGlobalBindings();
   migrateExisting();
-  setTimeout(()=>{try{replaceGlobalBindings();migrateExisting();if(typeof R==='function')R()}catch(err){console.error('Archive3 render failed',err)}},0);
+  setTimeout(()=>{try{replaceGlobalBindings();migrateExisting();if(typeof R==='function')R()}catch(err){console.error('Archive4 render failed',err)}},0);
 })();
