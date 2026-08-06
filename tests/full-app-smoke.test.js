@@ -55,12 +55,12 @@ function assert(ok,msg){if(!ok)throw new Error(msg)}
 setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.07',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.4.07',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.08',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.4.08',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.07',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
     assert(sandbox.btCloseRulesVersion==='3.4.07',`Unexpected close integration version ${sandbox.btCloseRulesVersion}`);
-    assert(sandbox.btNonRepeatableArchiveVersion==='3.4.07',`Unexpected archive lifecycle version ${sandbox.btNonRepeatableArchiveVersion}`);
-    assert(sandbox.btNonRepeatableArchivePatch==='archive2',`Unexpected archive patch ${sandbox.btNonRepeatableArchivePatch}`);
+    assert(sandbox.btNonRepeatableArchiveVersion==='3.4.08',`Unexpected archive lifecycle version ${sandbox.btNonRepeatableArchiveVersion}`);
+    assert(sandbox.btNonRepeatableArchivePatch==='archive4',`Unexpected archive patch ${sandbox.btNonRepeatableArchivePatch}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.04',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
     const report=sandbox.btRunFullRegressionTests();
@@ -84,30 +84,36 @@ setTimeout(()=>{
     assert(sandbox.btRequirementSummary(fourLeafEntry)===`$500+ DD due ${sandbox.fD(due)}`,'Requirement summary should show amount and exact due date');
     assert(sandbox.btEarliestCloseSummary(fourLeafEntry)==='After $350 posts','Payout-only earliest-close summary is unclear');
     assert(sandbox.btIsNonRepeatable(fourLeafEntry),'FourLeaf non-repeatable eligibility was not recognized');
+    assert(sandbox.btKnownNonRepeatableBank(fourLeafEntry),'Known FourLeaf archive fallback is missing');
     const closedFourLeaf={...fourLeafEntry,id:'FOURLEAF-ARCHIVED',closed:opened,bonusRecd:opened,reqMet:opened,churn:'2',churnable:false,churnability:'not-repeatable'};
     assert(sandbox.status(closedFourLeaf)==='ARCHIVED','Closed non-repeatable entry was placed in churn cooldown');
     assert(sandbox.nextReopen(closedFourLeaf)==='','Non-repeatable entry received a reopen date');
     assert(sandbox.churnReadyDate(closedFourLeaf)==='','Non-repeatable entry received a churn-ready date');
     assert(sandbox.closeReadiness(closedFourLeaf).label==='Closed / Archived','Closed non-repeatable readiness label is incorrect');
     const archivedPlan=sandbox.closePlanForEntry(closedFourLeaf);
-    assert(archivedPlan?.chip==='Archived'&&archivedPlan?.rows?.some(x=>x.value==='Not repeatable'),'Archived close plan is missing non-repeatable status');
+    assert(archivedPlan?.chip==='Archived'&&archivedPlan?.rows?.some(x=>x.value==='Non-repeatable offer'),'Archived close plan is missing non-repeatable status');
     const integrity=sandbox.backupIntegrityReport({entries:[{...closedFourLeaf,churn:''}]});
     assert(!(integrity.warnings||[]).some(x=>/missing churn rule/i.test(String(x))),'Backup integrity incorrectly requires churn for a non-repeatable bank');
     const legacyFourLeaf={bank:'FourLeaf Bank',accountType:'personal',id:'FOURLEAF-LEGACY',opened,closed:opened,bonus:350,bonusRecd:opened,reqMet:opened,churn:''};
     assert(sandbox.status(legacyFourLeaf)==='ARCHIVED','Legacy FourLeaf record without analyzer flags was not archived');
-    assert(sandbox.btIsNonRepeatable(legacyFourLeaf),'Legacy FourLeaf bank identity was not recognized as non-repeatable');
+    assert(sandbox.btIsArchivedNonRepeatable(legacyFourLeaf),'Legacy FourLeaf bank identity was not recognized as non-repeatable');
     const normalizedLegacy=sandbox.normalizeLifecycleEntry(legacyFourLeaf);
     assert(normalizedLegacy.churnable===false&&normalizedLegacy.churnability==='not-repeatable'&&normalizedLegacy.lifecycleState==='archived-nonrepeatable','Legacy FourLeaf migration did not persist archive metadata');
-    assert(!sandbox.btIsNonRepeatable({bank:'Example Bank',eligibilityText:'Not eligible if you received a bonus within the past 24 months.'}),'Timed churn restriction was incorrectly treated as lifetime non-repeatable');
+    assert(normalizedLegacy.archived===true&&normalizedLegacy.archivedAt===opened,'Archive metadata was not saved with the closed record');
+    const life=sandbox.lifecycleSteps(normalizedLegacy);
+    assert(life.some(x=>x.key==='archive'&&x.done)&&!life.some(x=>x.key==='churn'),'Archived lifecycle still shows a churn step');
+    assert(!sandbox.btIsArchivedNonRepeatable({bank:'Example Bank',eligibilityText:'Not eligible if you received a bonus within the past 24 months.'}),'Timed churn restriction was incorrectly treated as lifetime non-repeatable');
     const summary=sandbox.renderBankProfileSummary(fourLeafEntry);
     assert(/After \$350 posts/.test(summary),'Expanded card did not show the payout-only close summary');
     assert(!/Review terms/.test(summary),'Expanded card still shows contradictory Review terms text');
+    const archivedSummary=sandbox.renderBankProfileSummary(normalizedLegacy);
+    assert(/Archive/.test(archivedSummary)&&/Non-repeatable offer/.test(archivedSummary),'Archived profile summary is incorrect');
     const close=sandbox.BTCloseRules.sanitizeEntry({bank:'Chase Biz',accountType:'business',opened:'2026-05-07',reqMet:'2026-05-29',bonusRecd:'2026-07-14',minHoldDays:90,closeFeeCountdownDays:'90',closeRuleBasis:'bonus',closeBufferDays:5,closeRestrictionType:'payout-only',closeRuleText:'Keep the account open until the bonus posts.'});
     assert(close.minHoldDays===0,'Stale Chase close countdown survived');
     assert(sandbox.BTCloseRules.safeCloseDate(close)==='2026-07-14','Payout-only close date is incorrect');
     if(typeof sandbox.R==='function')sandbox.R();
     assert(app.innerHTML.length>1000,'Tracker failed to render after regression run');
     assert(!errors.some(x=>x.startsWith('ERROR ')),`Runtime console errors: ${errors.join(' | ')}`);
-    console.log(`Full app smoke passed: ${scripts.length} runtime scripts · ${report.passed}/${report.total} regression checks · FourLeaf archive lifecycle verified`);
+    console.log(`Full app smoke passed: ${scripts.length} runtime scripts · ${report.passed}/${report.total} regression checks · non-repeatable archive lifecycle verified`);
   }catch(err){console.error(err.stack||err);process.exitCode=1}
 },2200);
