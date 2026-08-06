@@ -1,8 +1,8 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.4.09: immediate activation, network-first app code, and safe cache cleanup.
+// ✅ Version 3.4.10: mobile analyzer scrolling fix and safe cache refresh.
 
-const V = 'bt-v3.4.09';
-const ASSETS = ['./app.js', './bank-rules-academy.js', './bank-rules-boa-business.js', './bank-rules-busey.js', './bank-rules-capitalone.js', './bank-rules-equity.js', './bank-rules-fourleaf.js', './bank-rules-pnc.js', './bank-rules-regions.js', './bank-rules.js', './churn-profile-memory.js', './controller.js', './close-rules-core.js', './close-rules-integration.js', './close-rules.css', './engine.js', './icon.svg', './index.html', './learning-inbox-conflict.js', './manifest.json', './mobile-analyzer.css', './mobile-analyzer.js', './nonrepeatable-archive.js', './professional-upgrades.js', './profile-db.js', './profile-library-selftest-academy.js', './profile-library-selftest.js', './profile-registry-academy.js', './profile-registry.js', './source-resolver.js', './style.css', './sw.js'];
+const V = 'bt-v3.4.10';
+const ASSETS = ['./app.js', './bank-rules-academy.js', './bank-rules-boa-business.js', './bank-rules-busey.js', './bank-rules-capitalone.js', './bank-rules-equity.js', './bank-rules-fourleaf.js', './bank-rules-pnc.js', './bank-rules-regions.js', './bank-rules.js', './churn-profile-memory.js', './controller.js', './close-rules-core.js', './close-rules-integration.js', './close-rules.css', './engine.js', './icon.svg', './index.html', './learning-inbox-conflict.js', './manifest.json', './mobile-analyzer.css', './mobile-analyzer.js', './professional-upgrades.js', './profile-db.js', './profile-library-selftest-academy.js', './profile-library-selftest.js', './profile-registry-academy.js', './profile-registry.js', './source-resolver.js', './style.css', './sw.js'];
 
 self.addEventListener('install', event => {
   self.skipWaiting();
@@ -12,7 +12,7 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('message', event => {
-  if(event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
@@ -38,19 +38,19 @@ function isAppShellOrCode(url, req) {
 
 self.addEventListener('fetch', event => {
   const req = event.request;
-  if(req.method !== 'GET') return;
+  if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
-  if(url.origin !== self.location.origin) return;
+  const isSameOrigin = url.origin === self.location.origin;
+  if (!isSameOrigin) return;
 
-  if(isAppShellOrCode(url, req)) {
+  // App code must be network-first so old helper scripts cannot keep rewriting the badge.
+  if (isAppShellOrCode(url, req)) {
     event.respondWith(
       fetch(req, { cache: 'no-store' })
         .then(res => {
-          if(res && res.ok){
-            const copy = res.clone();
-            caches.open(V).then(cache => cache.put(req, copy)).catch(() => null);
-          }
+          const copy = res.clone();
+          caches.open(V).then(cache => cache.put(req, copy)).catch(() => null);
           return res;
         })
         .catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
@@ -58,14 +58,13 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  // Non-code assets can remain cache-first for speed/offline support.
   event.respondWith(
     caches.match(req).then(cached => {
-      if(cached) return cached;
+      if (cached) return cached;
       return fetch(req).then(res => {
-        if(res && res.ok){
-          const copy = res.clone();
-          caches.open(V).then(cache => cache.put(req, copy)).catch(() => null);
-        }
+        const copy = res.clone();
+        caches.open(V).then(cache => cache.put(req, copy)).catch(() => null);
         return res;
       });
     })

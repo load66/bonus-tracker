@@ -1,7 +1,7 @@
-/* Bonus Tracker Close Rules Integration v3.4.07 — binds the permanent core to the live app. */
+/* Bonus Tracker Close Rules Integration v3.4.10 — binds the permanent core to the live app. */
 (function(){
   'use strict';
-  const VER='3.4.07',SCHEMA=7,SCHEMA_KEY='bt_data_schema_version',BACKUP_KEY='bt_pre_migration_backup_v7';
+  const VER='3.4.10',SCHEMA=7,SCHEMA_KEY='bt_data_schema_version',BACKUP_KEY='bt_pre_migration_backup_v7';
   const core=window.BTCloseRules;if(!core){console.error('Close Rules Core missing');return}
   const escFn=v=>{try{return esc(String(v??''))}catch{const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML}};
   const short=v=>String(v||'').replace(/\s+/g,' ').trim().slice(0,420);
@@ -16,12 +16,12 @@
   const daysSafe=e=>core.daysUntilSafe(e,typeof td==='function'?td():new Date().toISOString().slice(0,10));
   const inBuffer=e=>core.isInBuffer(e,typeof td==='function'?td():new Date().toISOString().slice(0,10));
 
+
   function activeTimer(e){try{return typeof nextActiveTimer==='function'?nextActiveTimer(e):null}catch{return null}}
   function timerKind(t){
-    try{if(typeof timerCategory==='function')return timerCategory(t)}catch{}
+    try{if(typeof lifecycleTimerKind==='function')return lifecycleTimerKind(t)}catch{}
     const s=String(t?.text||'').toLowerCase();
     if(/promo|expiration|open[- ]?by/.test(s))return'openby';
-    if(/close review|review after payout|safe close/.test(s))return'close-review';
     if(/payout|bonus payment|bonus watch|expected around day/.test(s))return'payout';
     if(/maintain|required balance|hold check|hold deadline|new-money hold/.test(s))return'hold';
     if(/funding deadline|fund the account|deposit new money|new money funding/.test(s))return'funding';
@@ -35,13 +35,12 @@
     if(kind==='payout')return'Bonus Pending';
     if(kind==='hold')return'Balance Hold';
     if(kind==='openby')return'Open By';
-    if(kind==='close-review')return'Close Review';
     return'Custom Timer';
   }
   function isNonRepeatable(e){
+    try{if(typeof isNonRepeatableEntry==='function')return isNonRepeatableEntry(e)}catch{}
     if(e?.churnable===false||String(e?.churnability||'').toLowerCase()==='not-repeatable')return true;
-    const s=String([e?.eligibilityText,e?.analyzedTC,e?.completeBonusText].filter(Boolean).join(' '));
-    return /(?:not eligible|ineligible)[^.]{0,180}(?:previously received|ever received|prior bonus)|(?:previously received|ever received)[^.]{0,180}(?:not eligible|ineligible)|once per lifetime|lifetime-like/i.test(s);
+    return /\bfour[\s-]*leaf\b/i.test(String(e?.bank||''));
   }
   function requirementSummary(e){
     if(e?.reqMet)return'Met '+fD(e.reqMet);
@@ -71,13 +70,13 @@
   bind('closeBufferDaysFor',e=>ruleDays(e)>0?Math.max(0,parseInt(e?.closeBufferDays,10)||0):0);
 
   const oldNormalize=window.normalizeLifecycleEntry;
-  function normalizeEntry(e){const x=oldNormalize?oldNormalize(e):({...e});core.sanitizeEntry(x);try{if(typeof window.btBuildResolvedBankProfile==='function'){x.profile=window.btBuildResolvedBankProfile(x);x.profileVersion='bank-profile-v2'}}catch{}return x}
+  function normalizeEntry(e){const x=oldNormalize?oldNormalize(e):({...e});core.sanitizeEntry(x);try{if(typeof applyArchiveLifecycleFields==='function')applyArchiveLifecycleFields(x)}catch{}try{if(typeof window.btBuildResolvedBankProfile==='function'){x.profile=window.btBuildResolvedBankProfile(x);x.profileVersion='bank-profile-v2'}}catch{}return x}
   bind('normalizeLifecycleEntry',normalizeEntry);
   bind('normalizeLifecycleEntries',rows=>(rows||[]).map(normalizeEntry));
 
   function statusFixed(e){
     if(!e||!e.bank)return'';
-    if(e.closed)return daysLeft(e)===0?'TIME TO CHURN!':'WAITING TO CHURN!';
+    if(e.closed){if(isNonRepeatable(e))return'ARCHIVED';return daysLeft(e)===0?'TIME TO CHURN!':'WAITING TO CHURN!'}
     const hasBonus=!!e.bonusRecd,hasReq=!!e.reqMet,hasHold=ruleDays(e)>0&&!!baseDate(e);
     if(hasBonus){if(hasHold){if(inBuffer(e))return'3-DAY BUFFER';const d=daysSafe(e);if(d!==null&&d>0)return'WAITING TO CLOSE'}return'SAFE TO CLOSE'}
     const active=activeTimer(e);
@@ -95,14 +94,13 @@
   function readiness(e,closeDate=''){
     const items=[];const add=(ok,label,detail='',level='warn')=>items.push({ok:!!ok,label,detail,level});
     if(!e||!e.bank)return{label:'Manual Review',cls:'warn',items:[],warnings:['Entry missing']};
-    if(e.closed)return{label:'Closed / Waiting to Churn',cls:'done',items:[{ok:true,label:'Closed date saved',detail:fD(e.closed)}],warnings:[]};
+    if(e.closed)return isNonRepeatable(e)?{label:'Closed / Archived',cls:'done',archived:true,items:[{ok:true,label:'Closed date saved',detail:fD(e.closed)},{ok:true,label:'Archive status',detail:'Non-repeatable offer'}],warnings:[]}:{label:'Closed / Waiting to Churn',cls:'done',items:[{ok:true,label:'Closed date saved',detail:fD(e.closed)}],warnings:[]};
     const safe=safeDate(e),target=closeDate||(typeof td==='function'?td():new Date().toISOString().slice(0,10)),days=ruleDays(e),start=baseDate(e);
     add(!!e.reqMet,'Requirement met date saved',e.reqMet?fD(e.reqMet):'Save Req Met before closing','danger');
     add(!!e.bonusRecd,'Bonus received',e.bonusRecd?fD(e.bonusRecd):'Do not close before the bonus posts','danger');
     if(days){add(!!start,'Close-rule start date available',start?fD(start):'Missing','danger');add(!!safe&&dB(target,safe)<=0,'Hold period + buffer complete',safe?'Safe close: '+fD(safe):'Cannot calculate','danger')}
     else add(true,'No fixed post-bonus hold',core.typeForEntry(e)==='payout-only'?'Close after bonus posts':'No countdown found');
-    const nonRepeatable=isNonRepeatable(e);
-    add(nonRepeatable||!!e.churn,'Churn rule saved',nonRepeatable?'Not repeatable under the saved eligibility terms':e.churn?(e.churn==='180'?'180 days':e.churn+' year'):'Needed for future churn','warn');
+    add(isNonRepeatable(e)||!!e.churn,'Churn rule saved',isNonRepeatable(e)?'Not repeatable under the saved eligibility terms':e.churn?(e.churn==='180'?'180 days':e.churn+' year'):'Needed for future churn','warn');
     const hasFee=/(yes|\$|monthly|service fee|maintenance fee)/i.test(String(e.monthlyFeeYNText||'')+' '+String(e.avoidMonthlyFeeText||''));
     add(!hasFee||!!e.monthlyFeeChecked,'Monthly fee checked',hasFee?(e.monthlyFeeChecked?'Confirmed':'Check next statement before close'):'No monthly fee risk','warn');
     const warnings=items.filter(x=>!x.ok).map(x=>x.label+(x.detail?': '+x.detail:''));
@@ -113,7 +111,7 @@
 
   function closePlan(e){
     if(!e?.bank)return null;const ready=readiness(e),rows=[];
-    if(e.closed){rows.push({label:'Closed',value:fD(e.closed),cls:'ok'});const cr=churnReadyDate(e);if(cr)rows.push({label:'Churn ready',value:fD(cr)});return{title:'Close Check',sub:'Closure saved',chip:ready.label,cls:ready.cls,rows,notes:[],compact:true}}
+    if(e.closed){rows.push({label:'Closed',value:fD(e.closed),cls:'ok'});if(isNonRepeatable(e)){rows.push({label:'Archive',value:'Non-repeatable offer',cls:'ok'});return{title:'Archive',sub:'Closed record saved',chip:'Archived',cls:'done',rows,notes:['Excluded from churn countdowns and reopen dates.'],compact:true}}const cr=churnReadyDate(e);if(cr)rows.push({label:'Churn ready',value:fD(cr)});return{title:'Close Check',sub:'Closure saved',chip:ready.label,cls:ready.cls,rows,notes:[],compact:true}}
     const safe=safeDate(e),days=ruleDays(e),buffer=days?(parseInt(e.closeBufferDays,10)||0):0,type=core.typeForEntry(e);
     rows.push({label:'Earliest close',value:safe?fD(safe):(e.bonusRecd?'Close after bonus posts':'Wait for bonus'),cls:safe&&daysSafe(e)<=0?'ok':safe?'warn':'bad'});
     rows.push({label:'Rule',value:days?`${days} days from ${closeRuleBasisLabel(basis(e)).toLowerCase()}${buffer?' + '+buffer+' day safety':''}`:(type==='payout-only'?'Close after bonus posts':'No fixed post-bonus hold'),cls:days?'':'ok'});
@@ -133,13 +131,15 @@
   bind('renderCleanPlanCard',renderPlan);
   bind('renderClosePlan',e=>renderPlan(closePlan(e)));
 
+
   function renderProfileSummary(e){
     if(!e)return'';const items=[];const add=(label,value,cls='')=>items.push({label,value,cls});
     add('Opened',e.opened?fD(e.opened):'Add date',e.opened?'':'warn');
     if(e.closed){
       add('Closed',fD(e.closed),'ok');
       add('Bonus',e.bonusRecd?((e.bonus?fM(e.bonus)+' · ':'')+fD(e.bonusRecd)):(e.bonus?fM(e.bonus):'Not saved'),e.bonusRecd?'ok':'');
-      const cr=churnReadyDate(e);add('Churn ready',cr?fD(cr):(isNonRepeatable(e)?'Not repeatable':'Not calculated'),cr?'ok':isNonRepeatable(e)?'':'warn');
+      if(isNonRepeatable(e))add('Archive','Non-repeatable offer','ok');
+      else{const cr=churnReadyDate(e);add('Churn ready',cr?fD(cr):'Not calculated',cr?'ok':'warn')}
     }else{
       add('Bonus',e.bonusRecd?((e.bonus?fM(e.bonus)+' · ':'')+fD(e.bonusRecd)):(e.bonus?fM(e.bonus)+' pending':'Pending'),e.bonusRecd?'ok':'warn');
       add('Requirement',requirementSummary(e),e.reqMet?'ok':'warn');
@@ -156,7 +156,7 @@
     window.tcUnifiedAnalyze=window.tcV3Analyze;window.tcStrictAnalyze=window.tcV3Analyze;window.tcV3EngineVersion=VER;
   }
   const oldApply=window.tcApplyReviewed;
-  if(typeof oldApply==='function')window.tcApplyReviewed=function(){const raw=document.getElementById('tca_raw')?.value||'';const result=window.tcV3Analyze?window.tcV3Analyze(raw):null;const out=oldApply.apply(this,arguments);setTimeout(()=>{try{if(typeof modal!=='undefined'&&modal){if(result){modal.closeRestrictionType=result.closeRestrictionType||'none';modal.closeRuleSourceSentence=result.closeRuleSourceSentence||'';modal.closeRuleSource='current-tc';if(result.churnable===false)modal.churnable=false;if(result.churnability)modal.churnability=result.churnability;if(result.churnReason)modal.churnReason=result.churnReason;if(result.milestoneOffer)modal.milestoneOffer=true;if(Array.isArray(result.bonusMilestones))modal.bonusMilestones=result.bonusMilestones.slice(0,6)}core.sanitizeEntry(modal)}if(typeof R==='function')R()}catch{}},0);return out};
+  if(typeof oldApply==='function')window.tcApplyReviewed=function(){const raw=document.getElementById('tca_raw')?.value||'';const result=window.tcV3Analyze?window.tcV3Analyze(raw):null;const out=oldApply.apply(this,arguments);setTimeout(()=>{try{if(typeof modal!=='undefined'&&modal){if(result){modal.closeRestrictionType=result.closeRestrictionType||'none';modal.closeRuleSourceSentence=result.closeRuleSourceSentence||'';modal.closeRuleSource='current-tc';if(result.churnable===false)modal.churnable=false;if(result.churnability)modal.churnability=result.churnability;if(result.churnReason)modal.churnReason=result.churnReason;if(result.milestoneOffer)modal.milestoneOffer=true;if(Array.isArray(result.bonusMilestones))modal.bonusMilestones=result.bonusMilestones.slice(0,6)}core.sanitizeEntry(modal);try{if(typeof applyArchiveLifecycleFields==='function')applyArchiveLifecycleFields(modal)}catch{}}if(typeof R==='function')R()}catch{}},0);return out};
 
   function migrateOnce(){
     try{
@@ -184,11 +184,7 @@
     const passed=suites.reduce((n,x)=>n+Number(x.passed||0),0),total=suites.reduce((n,x)=>n+Number(x.total||0),0);
     const report={version:VER,passed,total,ok:suites.every(x=>x.ok!==false),pending:false,suites,ranAt:new Date().toISOString()};window.__btFullRegressionReport=report;try{localStorage.setItem('bt_last_regression_v1',JSON.stringify(report))}catch{}return report
   };
-  window.btTimerBadgeLabel=timerBadgeLabel;
-  window.btRequirementSummary=requirementSummary;
-  window.btEarliestCloseSummary=earliestCloseSummary;
-  window.btIsNonRepeatable=isNonRepeatable;
-  window.BT_APP_VERSION=VER;window.btCloseRulesVersion=VER;
+  window.btTimerBadgeLabel=timerBadgeLabel;window.btRequirementSummary=requirementSummary;window.btEarliestCloseSummary=earliestCloseSummary;window.btIsNonRepeatable=isNonRepeatable;window.BT_APP_VERSION=VER;window.btCloseRulesVersion=VER;
   try{if(typeof buildPortableBackupPayload==='function'){const oldPortable=buildPortableBackupPayload;buildPortableBackupPayload=function(){const out=oldPortable();if(out)out.appVersion=VER;return out};window.buildPortableBackupPayload=buildPortableBackupPayload}}catch{}
   migrateOnce();
   setTimeout(()=>{try{if(typeof entries!=='undefined')entries=entries.map(normalizeEntry);if(typeof R==='function')R()}catch(err){console.error('Close Rules Integration failed',err)}},0);
