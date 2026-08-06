@@ -79,11 +79,13 @@ for token in ('isNonRepeatableEntry','archived-nonrepeatable',"return'ARCHIVED'"
 integration=text('close-rules-integration.js')
 for token in ("nonRepeatable(e)?'ARCHIVED'",'Closed / Archived','Non-repeatable offer'):
     if token not in integration: fail(f'archive lifecycle missing from close integration: {token}')
+for token in ('Future Eligibility *','Can this bonus be earned again? *','hasSavedChurnDecision','Future eligibility is required before creating this bank','Eligibility Reset / Churn Rule *'):
+    if token not in app_js: fail(f'churnability intake gate missing from app.js: {token}')
 
 runtime_text='\n'.join(p.read_text(encoding='utf-8',errors='ignore') for p in files if p.suffix in {'.js','.html','.css','.json'} and 'tests' not in p.parts)
 obsolete='close-rules-'+'v3402.js'
 if obsolete in runtime_text: fail('obsolete v3.4.02 patch reference remains')
-for critical in ('index.html','sw.js','bank-rules-fourleaf.js','mobile-analyzer.js','mobile-analyzer.css'):
+for critical in ('index.html','sw.js','app.js','bank-rules-fourleaf.js','mobile-analyzer.js','mobile-analyzer.css'):
     if release not in text(critical): fail(f'{critical} is not aligned to release {release}')
 workflow=text('.github/workflows/close-rules.yml')
 for cmd in ('node tests/close-rules.test.js','node tests/full-app-smoke.test.js','python3 tests/verify-latest.py'):

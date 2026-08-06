@@ -55,9 +55,9 @@ function assert(ok,msg){if(!ok)throw new Error(msg)}
 setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.11',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.4.11',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
-    assert(sandbox.tcV3FourLeafRulesVersion==='3.4.11',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.12',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.4.12',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.tcV3FourLeafRulesVersion==='3.4.12',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.04',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
     const report=sandbox.btRunFullRegressionTests();
@@ -75,6 +75,26 @@ setTimeout(()=>{
     assert(fr.closeRestrictionType==='payout-only'&&Number(fr.minHoldDays||0)===0,'FourLeaf payout-only close rule failed');
     assert(fr.churnable===false&&fr.churnability==='not-repeatable','FourLeaf lifetime-like churn restriction failed');
     assert(/24 consecutive/i.test(fr.actionPlan||''),'FourLeaf 24-month milestone plan missing');
+    assert(typeof sandbox.churnDecisionForEntry==='function'&&typeof sandbox.hasSavedChurnDecision==='function','Churnability intake helpers missing');
+    assert(sandbox.hasSavedChurnDecision({bank:'Repeat Bank',churnable:true,churnability:'repeatable',churn:'2'})===true,'Repeatable decision was not recognized');
+    assert(sandbox.hasSavedChurnDecision({bank:'Unknown Bank',churn:'',churnability:''})===false,'Unknown churnability was incorrectly accepted');
+    const gate=vm.runInContext(`(function(){
+      const before=entries.length;
+      openAdd();modal.bank='Gate Test Bank';modal.bonus=100;
+      const blocked=saveEntry();
+      const afterBlocked=entries.length;
+      modal.churnable=true;modal.churnability='repeatable';modal.churn='2';
+      const saved=saveEntry();
+      const created=entries.find(x=>x.bank==='Gate Test Bank');
+      return{before,blocked,afterBlocked,saved,created};
+    })()`,sandbox);
+    assert(gate.blocked===false&&gate.afterBlocked===gate.before,'New bank saved without a churnability decision');
+    assert(gate.saved===true&&gate.created?.churnability==='repeatable'&&gate.created?.churn==='2','Repeatable churn decision was not saved');
+    const nonrepeat=vm.runInContext(`(function(){
+      openAdd();modal.bank='Lifetime Unique Credit Union';modal.bonus=50;modal._skipDuplicateCheck=true;modal._skipManualReplacePrompt=true;modal.churnable=false;modal.churnability='not-repeatable';modal.churnReason='One-time offer';
+      const saved=saveEntry();const created=entries.find(x=>x.bank==='Lifetime Unique Credit Union');return{saved,created};
+    })()`,sandbox);
+    assert(nonrepeat.saved===true&&nonrepeat.created?.churnable===false&&nonrepeat.created?.churn==='', 'Non-repeatable decision was not saved correctly');
     const closedFourLeaf=sandbox.normalizeLifecycleEntry({
       bank:'FourLeaf Bank',accountType:'personal',id:'FOURLEAF-ARCHIVE',
       opened:'2026-07-21',reqMet:'2026-07-25',bonusRecd:'2026-08-01',closed:'2026-08-06',
