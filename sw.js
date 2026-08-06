@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.4.07: clearer analyzer-created timer labels, accurate pending-close summaries, and archived non-repeatable offers.
+// ✅ Version 3.4.07 archive3: Safari-safe archived lifecycle for non-repeatable offers.
 
-const V = 'bt-v3.4.07-archive2';
+const V = 'bt-v3.4.07-archive3';
 const ASSETS = ['./app.js', './bank-rules-academy.js', './bank-rules-boa-business.js', './bank-rules-busey.js', './bank-rules-capitalone.js', './bank-rules-equity.js', './bank-rules-fourleaf.js', './bank-rules-pnc.js', './bank-rules-regions.js', './bank-rules.js', './churn-profile-memory.js', './controller.js', './close-rules-core.js', './close-rules-integration.js', './close-rules.css', './engine.js', './icon.svg', './index.html', './learning-inbox-conflict.js', './manifest.json', './mobile-analyzer.css', './mobile-analyzer.js', './nonrepeatable-archive.js', './professional-upgrades.js', './profile-db.js', './profile-library-selftest-academy.js', './profile-library-selftest.js', './profile-registry-academy.js', './profile-registry.js', './source-resolver.js', './style.css', './sw.js'];
 
 self.addEventListener('install', event => {
