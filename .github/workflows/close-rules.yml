@@ -1,23 +1,75 @@
-name: Latest Release Verification
+name: Verify and Deploy BonusTracker
 
 on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   verify:
+    name: Verify latest release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout latest main files
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Verify latest release files
-        run: python tests/verify-latest.py
+        run: python3 tests/verify-latest.py
+
       - name: Check every JavaScript file
         run: find . -name '*.js' -not -path './.git/*' -print0 | xargs -0 -n1 node --check
+
       - name: Run close-rule tests
         run: node tests/close-rules.test.js
+
       - name: Run full app smoke and analyzer tests
         run: node tests/full-app-smoke.test.js
+
+  deploy:
+    name: Deploy verified release to GitHub Pages
+    if: github.event_name != 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout the exact verified commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload verified site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy verified site
+        id: deployment
+        uses: actions/deploy-pages@v4
