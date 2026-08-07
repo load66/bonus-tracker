@@ -98,7 +98,7 @@ for token in (
     'needs: verify',
     'actions/configure-pages@v5',
     'enablement: true',
-    'actions/upload-pages-artifact@v3',
+    'actions/upload-pages-artifact@v4',
     'actions/deploy-pages@v4',
     'name: github-pages'
 ):
