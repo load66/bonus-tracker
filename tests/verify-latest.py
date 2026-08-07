@@ -87,12 +87,27 @@ obsolete='close-rules-'+'v3402.js'
 if obsolete in runtime_text: fail('obsolete v3.4.02 patch reference remains')
 for critical in ('index.html','sw.js','app.js','bank-rules-fourleaf.js','mobile-analyzer.js','mobile-analyzer.css'):
     if release not in text(critical): fail(f'{critical} is not aligned to release {release}')
+
 workflow=text('.github/workflows/close-rules.yml')
-for cmd in ('node tests/close-rules.test.js','node tests/full-app-smoke.test.js','python3 tests/verify-latest.py'):
-    if cmd not in workflow: fail(f'workflow missing: {cmd}')
+for token in (
+    'actions/setup-python@v5',
+    "python-version: '3.12'",
+    'python3 tests/verify-latest.py',
+    'node tests/close-rules.test.js',
+    'node tests/full-app-smoke.test.js',
+    'needs: verify',
+    'actions/configure-pages@v5',
+    'enablement: true',
+    'actions/upload-pages-artifact@v3',
+    'actions/deploy-pages@v4',
+    'name: github-pages'
+):
+    if token not in workflow: fail(f'verify/deploy workflow missing: {token}')
+if workflow.find('needs: verify')>workflow.find('actions/deploy-pages@v4'):
+    fail('Pages deploy is not gated behind verification')
 
 if issues:
     print(f'LATEST RELEASE VERIFY FAILED v{release}: {len(issues)} issue(s)')
     for issue in issues: print('FAIL',issue)
     sys.exit(1)
-print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, analyzer, archive-lifecycle, and mobile-scroll checks passed')
+print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, analyzer, archive-lifecycle, churn-intake, and verify-before-deploy checks passed')
