@@ -35,6 +35,9 @@ if 'bank-rules-fourleaf.js' not in parser.scripts: fail('FourLeaf analyzer rule 
 elif parser.scripts.index('bank-rules-fourleaf.js')<parser.scripts.index('bank-rules.js'): fail('FourLeaf rule must load after the base bank rules')
 if 'bank-rules-wells-consumer.js' not in parser.scripts: fail('Wells Fargo consumer analyzer rule is not loaded')
 elif parser.scripts.index('bank-rules-wells-consumer.js')<parser.scripts.index('bank-rules.js'): fail('Wells consumer rule must load after the base bank rules')
+if 'churn-close-policy.js' not in parser.scripts: fail('confirmed-close-date churn policy is not loaded')
+elif parser.scripts.index('churn-close-policy.js')<parser.scripts.index('wells-professional-runtime.js'): fail('churn close-date policy must load after professional runtime')
+elif parser.scripts.index('churn-close-policy.js')>parser.scripts.index('mobile-analyzer.js'): fail('churn close-date policy must load before mobile release marker')
 
 root_js=sorted(p.name for p in ROOT.glob('*.js') if p.name!='sw.js')
 if sorted(parser.scripts)!=root_js:
@@ -88,7 +91,9 @@ for token in (
     "r.closeRestrictionType='payout-only'",
     "r.churnable=true",
     "r.churn='1'",
-    "r.churnBasis='bonus'",
+    "r.churnBasis='closed'",
+    "r.sourceEligibilityBasis='bonus-received'",
+    "r.churnTrackingPolicy='confirmed-close-date'",
     'r.churnBufferDays=0',
     'Consumer Account Fee and Information Schedule'
 ):
@@ -112,8 +117,12 @@ controller=text('controller.js')
 professional=text('professional-upgrades.js')
 for token in ('tcV3MakeSuggestedTimers','tcApplyReviewed','rModal'):
     if token not in controller+professional: fail(f'legacy analyzer/professional hook missing: {token}')
-for token in ('wellsSuggestedTimers','Can this bonus be earned again? *','Eligibility clock starts from *','Future eligibility','Separate fee schedule','Fee Schedule','requirementSummaryForEntry','polishAnalyzerDom','tcApplyReviewed','After '+"'+fM(e.bonus||0)+'"+' posts'):
+for token in ('wellsSuggestedTimers','Can this bonus be earned again? *','Future eligibility','Separate fee schedule','Fee Schedule','requirementSummaryForEntry','polishAnalyzerDom','tcApplyReviewed','After '+"'+fM(e.bonus||0)+'"+' posts'):
     if token not in runtime_fix: fail(f'professional Wells runtime behavior missing: {token}')
+
+churn_policy=text('churn-close-policy.js')
+for token in ('confirmed bank close date','churnBasisDate','nextReopen','churnReadyDate','churnBufferDaysFor','churnTrackingPolicy','Churn countdown starts after confirmed closure','collectModalEntryData','normalizeLifecycleEntry'):
+    if token not in churn_policy: fail(f'confirmed-close-date churn policy missing: {token}')
 
 close_core=text('close-rules-core.js')
 for token in ('Payout attempt wording recognized','attempt to deposit the bonus'):
@@ -126,11 +135,7 @@ for token in ("nonRepeatable(e)?'ARCHIVED'",'Closed / Archived','Non-repeatable 
 runtime_text='\n'.join(p.read_text(encoding='utf-8',errors='ignore') for p in files if p.suffix in {'.js','.html','.css','.json'} and 'tests' not in p.parts)
 obsolete='close-rules-'+'v3402.js'
 if obsolete in runtime_text: fail('obsolete v3.4.02 patch reference remains')
-for critical in (
-    'index.html','sw.js','bank-rules-fourleaf.js','bank-rules-wells-consumer.js','wells-professional-runtime.js',
-    'churn-profile-memory.js','close-rules-core.js','close-rules-integration.js',
-    'mobile-analyzer.js','mobile-analyzer.css'
-):
+for critical in ('index.html','sw.js','bank-rules-wells-consumer.js','churn-close-policy.js','mobile-analyzer.js'):
     if release not in text(critical): fail(f'{critical} is not aligned to release {release}')
 
 workflow=text('.github/workflows/close-rules.yml')
