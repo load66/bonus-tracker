@@ -75,7 +75,7 @@
     r.fee=0;r.monthlyFee=null;
     r.monthlyFeeYNText='Not stated in bonus disclosure — separate Wells Fargo fee schedule applies';
     r.monthlyFeeAmountText='';
-    r.avoidMonthlyFeeText='Review the Wells Fargo Consumer Account Fee and Information Schedule. Bonus requirements are separate from the bonus requirements and the monthly service fee must be checked separately.';
+    r.avoidMonthlyFeeText='Review the Wells Fargo Consumer Account Fee and Information Schedule. Bonus requirements are separate from monthly-fee waiver requirements.';
     r.waivers=[];
     r.counts=uniq([
       'Posted ACH direct deposit, such as salary, government benefit payment, or other income',
