@@ -10,6 +10,7 @@ const appSource=fs.readFileSync('app.js','utf8');
 assert(importSource.includes("modal._skipManualReplacePrompt=false"),'Entry-file import bypasses the existing replacement picker');
 assert(importSource.includes("modal._skipDuplicateCheck=false"),'Entry-file import bypasses duplicate protection');
 assert(importSource.includes("modal._edit=false"),'Entry-file import is not staged as a new entry');
+assert(importSource.includes("modal.monthlyFeeChecked=false"),'Entry-file import can incorrectly pre-mark monthly fee review as checked');
 assert(importSource.includes("Import Entry File"),'Import Entry File UI is missing');
 assert(importSource.includes(".json,.html,application/json,text/html"),'JSON/HTML entry-file support is missing');
 assert(appSource.includes("if(!modal._edit&&!modal._skipManualReplacePrompt&&handleManualReplacementPicker(d,'manual',''))"),'saveEntry no longer routes new entries through the replacement picker');
@@ -57,7 +58,7 @@ vm.runInContext(importSource,sandbox,{filename:'entry-link-import.js'});
 
 const payload={
   bank:'Citi',accountType:'personal',bonus:325,churn:'1',churnable:true,churnability:'repeatable',
-  opened:'2026-08-10',dataPoint:'2 Enhanced Direct Deposits totaling $3,000+ within 90 days',customTimers:[]
+  opened:'2026-08-10',dataPoint:'2 Enhanced Direct Deposits totaling $3,000+ within 90 days',monthlyFeeChecked:true,feeChecked:true,customTimers:[]
 };
 const parsedJson=sandbox.btParseEntryFileText(JSON.stringify({kind:'BonusTrackerEntry',entry:payload}),'Citi.json');
 assert(parsedJson.bank==='Citi'&&parsedJson.bonus===325,'JSON entry file did not parse');
@@ -74,6 +75,7 @@ assert(staged.status==='review','File import did not stop at review');
 assert(modal&&modal.bank==='Citi'&&modal._edit===false,'Imported file did not open as a New Entry');
 assert(modal._skipManualReplacePrompt===false,'Imported file disabled Replace Old Entry protection');
 assert(modal._skipDuplicateCheck===false,'Imported file disabled duplicate protection');
+assert(modal.monthlyFeeChecked===false&&modal.feeChecked===false,'Imported file incorrectly marked fee review as user-checked');
 assert(modal.id==='','Imported file retained an external entry ID');
 assert(showTemplates===false,'Quick Add panel stayed open after staging file');
 assert(showInlineAZ===false&&inlineResult===null,'Stale analyzer UI survived entry-file staging');
@@ -84,4 +86,4 @@ sandbox.postRenderHook();
 assert(document.getElementById('bt_import_entry_file'),'Import Entry File button was not injected into Quick Add');
 assert(document.getElementById('bt_import_entry_note'),'Replacement-safety explanation is missing from Quick Add');
 
-console.log('Entry file import passed: JSON + HTML parsing, review-before-save, duplicate protection, and existing churn replacement flow preserved');
+console.log('Entry file import passed: JSON + HTML parsing, review-before-save, fee-review safety, duplicate protection, and existing churn replacement flow preserved');
