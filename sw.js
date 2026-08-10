@@ -1,8 +1,8 @@
 // Bank Bonus Tracker Service Worker
-// ✅ Version 3.4.13: professional Wells consumer analyzer, tracker cleanup, and immediate updates.
+// ✅ Version 3.4.13: archive non-repeatable offers and activate updates immediately.
 
 const V = 'bt-v3.4.13';
-const ASSETS = ['./app.js', './bank-rules-academy.js', './bank-rules-boa-business.js', './bank-rules-busey.js', './bank-rules-capitalone.js', './bank-rules-equity.js', './bank-rules-fourleaf.js', './bank-rules-pnc.js', './bank-rules-regions.js', './bank-rules-wells-personal.js', './bank-rules.js', './churn-profile-memory.js', './controller.js', './close-rules-core.js', './close-rules-integration.js', './close-rules.css', './engine.js', './icon.svg', './index.html', './learning-inbox-conflict.js', './manifest.json', './mobile-analyzer.css', './mobile-analyzer.js', './professional-upgrades.js', './profile-db.js', './profile-library-selftest-academy.js', './profile-library-selftest.js', './profile-registry-academy.js', './profile-registry.js', './source-resolver.js', './style.css', './tracker-professional.css', './tracker-professional.js', './tracker-save-guard.js', './sw.js'];
+const ASSETS = ['./app.js', './bank-rules-academy.js', './bank-rules-boa-business.js', './bank-rules-busey.js', './bank-rules-capitalone.js', './bank-rules-equity.js', './bank-rules-fourleaf.js', './bank-rules-pnc.js', './bank-rules-regions.js', './bank-rules.js', './bank-rules-wells-consumer.js', './churn-profile-memory.js', './controller.js', './close-rules-core.js', './close-rules-integration.js', './close-rules.css', './engine.js', './icon.svg', './index.html', './learning-inbox-conflict.js', './manifest.json', './mobile-analyzer.css', './mobile-analyzer.js', './professional-upgrades.js', './profile-db.js', './profile-library-selftest-academy.js', './profile-library-selftest.js', './profile-registry-academy.js', './profile-registry.js', './source-resolver.js', './style.css', './wells-professional-runtime.js', './sw.js'];
 
 self.addEventListener('install', event => {
   self.skipWaiting();
@@ -44,6 +44,7 @@ self.addEventListener('fetch', event => {
   const isSameOrigin = url.origin === self.location.origin;
   if (!isSameOrigin) return;
 
+  // App code must be network-first so old helper scripts cannot keep rewriting the badge.
   if (isAppShellOrCode(url, req)) {
     event.respondWith(
       fetch(req, { cache: 'no-store' })
@@ -57,6 +58,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  // Non-code assets can remain cache-first for speed/offline support.
   event.respondWith(
     caches.match(req).then(cached => {
       if (cached) return cached;

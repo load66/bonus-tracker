@@ -1,11 +1,11 @@
-/* Bonus Tracker Close Rules Core v3.4.04 — single source of truth for T&C close timing. */
+/* Bonus Tracker Close Rules Core v3.4.13 — single source of truth for T&C close timing. */
 (function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.BTCloseRules=api;
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
-  const VERSION='3.4.04';
+  const VERSION='3.4.13';
   const FIXED_TYPES=new Set(['explicit-clawback','minimum-open','manual-fixed']);
   const AUTO_CLOSE_TIMER_RE=/(?:close check after payout|close hold|early-close safety|safe to close)/i;
   const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
@@ -58,10 +58,10 @@
     return sentences(text).find(s=>!isLookback(s)&&patterns.some(re=>re.test(s)))||'';
   }
   function payoutText(v){
-    return sentences(v).find(s=>/(?:remain open|keep[^.]{0,45}open|good standing|unrestricted)[^.]{0,120}(?:until|through)[^.]{0,80}(?:bonus|reward|payout|payment|credit)|(?:bonus|reward|payout|payment|credit)[^.]{0,90}(?:post|posts|posted|paid|credited|received)/i.test(s))||'';
+    return sentences(v).find(s=>/(?:remain[^.]{0,35}open|stay[^.]{0,35}open|keep[^.]{0,45}open|good standing|unrestricted)[^.]{0,140}(?:until|through)[^.]{0,100}(?:bonus|reward|payout|payment|credit|deposit)|(?:account[^.]{0,40})?must[^.]{0,50}(?:remain|stay|keep)[^.]{0,35}open[^.]{0,120}(?:bonus|deposit|payout)|(?:bonus|reward|payout|payment|credit)[^.]{0,90}(?:post|posts|posted|paid|credited|received)/i.test(s))||'';
   }
   function basisForText(text){
-    if(/after[^.]{0,80}(?:bonus|reward|payout|payment)|(?:bonus|reward|payout|payment)[^.]{0,80}(?:posted|received|paid)/i.test(text))return'bonus';
+    if(/after[^.]{0,80}(?:bonus|reward|payout|payment)|(?:bonus|reward|payout|payment)[^.]{0,100}(?:posted|received|paid|deposit)|(?:deposit|credit)[^.]{0,40}(?:the\s+)?bonus/i.test(text))return'bonus';
     if(/after[^.]{0,80}(?:requirement|qualification)|(?:requirement|qualification)[^.]{0,80}(?:met|completed|satisfied)/i.test(text))return'reqmet';
     return'opened';
   }
@@ -159,6 +159,7 @@
     test('Weird termination wording parsed',()=>{const r=analyzeText('If you terminate the account before the ninetieth calendar day following account opening, a $25 charge will be deducted.');return r.days===90&&r.type==='explicit-clawback'&&r.earlyCloseFee===25});
     test('Manual close timer remains authoritative',()=>{const x=sanitizeEntry({bank:'Example',opened:'2026-01-01',bonusRecd:'2026-02-01',minHoldDays:180,closeFeeCountdownDays:'180',closeRestrictionType:'manual-fixed',closeRuleSource:'manual',closeRuleBasis:'opened',closeBufferDays:5,closeRuleText:'Manual early-close hold: keep the account open for 6 months.'});return ruleDays(x)===180&&safeCloseDate(x)==='2026-07-05'});
     test('Payout-only source sentence retained',()=>{const x=sanitizeEntry({bank:'Example',bonusRecd:'2026-02-01',closeRuleText:'Keep the account open until the bonus posts.'});return x.closeRuleSourceSentence==='Keep the account open until the bonus posts.'});
+    test('Payout attempt wording recognized',()=>{const r=analyzeText('Your new account must stay open through the time we attempt to deposit the bonus.');return r.type==='payout-only'&&r.basis==='bonus'&&r.days===0});
     const passed=results.filter(x=>x.ok).length;return{version:VERSION,passed,total:results.length,ok:passed===results.length,results};
   }
 

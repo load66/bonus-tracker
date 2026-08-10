@@ -1,7 +1,7 @@
-/* Bonus Tracker Close Rules Integration v3.4.04 — binds the permanent core to the live app. */
+/* Bonus Tracker Close Rules Integration v3.4.13 — permanent close rules plus source-accurate payout-only summaries and verified migrations. */
 (function(){
   'use strict';
-  const VER='3.4.04',SCHEMA=6,SCHEMA_KEY='bt_data_schema_version',BACKUP_KEY='bt_pre_migration_backup_v6';
+  const VER='3.4.13',SCHEMA=7,SCHEMA_KEY='bt_data_schema_version',BACKUP_KEY='bt_pre_migration_backup_v7';
   const core=window.BTCloseRules;if(!core){console.error('Close Rules Core missing');return}
   const escFn=v=>{try{return esc(String(v??''))}catch{const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML}};
   const short=v=>String(v||'').replace(/\s+/g,' ').trim().slice(0,420);
@@ -73,7 +73,7 @@
       return{title:'Close Check',sub:'Closure saved',chip:ready.label,cls:ready.cls,rows,notes:[],compact:true}
     }
     const safe=safeDate(e),days=ruleDays(e),buffer=days?(parseInt(e.closeBufferDays,10)||0):0,type=core.typeForEntry(e);
-    rows.push({label:'Earliest close',value:safe?fD(safe):(e.bonusRecd?'Close after bonus posts':'Wait for bonus'),cls:safe&&daysSafe(e)<=0?'ok':safe?'warn':'bad'});
+    rows.push({label:'Earliest close',value:safe?fD(safe):(type==='payout-only'&&e.bonus?'After '+fM(e.bonus)+' posts':e.bonusRecd?'Close after bonus posts':'Wait for bonus'),cls:safe&&daysSafe(e)<=0?'ok':safe?'warn':type==='payout-only'?'warn':'bad'});
     rows.push({label:'Rule',value:days?`${days} days from ${closeRuleBasisLabel(basis(e)).toLowerCase()}${buffer?' + '+buffer+' day safety':''}`:(type==='payout-only'?'Close after bonus posts':'No fixed post-bonus hold'),cls:days?'':'ok'});
     rows.push({label:'Final check',value:e.bonusRecd?'Bonus posted · no pending activity':'Wait for bonus to post',cls:e.bonusRecd?'':'bad'});
     return{title:'Close Check',sub:'One clear source of truth',chip:ready.label,cls:ready.cls,rows,notes:[],proof:core.sourceSentence(e),compact:true}
@@ -113,7 +113,7 @@
   window.feeCheckSave=function(){const p=typeof feeCheckPrompt!=='undefined'?feeCheckPrompt:window.feeCheckPrompt;if(!p)return;const id=p.entryId,months=Math.max(1,parseInt(p.months,10)||6),feeAmt=Math.max(0,parseFloat(p.feeAmount)||0);entries=entries.map(e=>{if(e.id!==id)return e;const x={...e},end=x.opened?addM(x.opened,months):'',days=x.opened&&end?dB(x.opened,end):months*30;x.minHoldDays=days;x.closeFeeCountdownDays=String(days);x.closeRuleBasis='opened';x.closeBufferDays=5;x.closeRestrictionType='manual-fixed';x.closeRuleSource='manual';x.earlyCloseFee=feeAmt;x.earlyTerminationFeeText=feeAmt?'$'+feeAmt.toLocaleString():'';x.closeRuleText=`Manual early-close hold: keep the account open for ${months} month${months===1?'':'s'} from the opened date${feeAmt?' to avoid a $'+feeAmt.toLocaleString()+' fee':''}.`;x.closeRuleSourceSentence=x.closeRuleText;x.fieldSources=(x.fieldSources&&typeof x.fieldSources==='object')?x.fieldSources:{};const meta={kind:'manual',confidence:'verified',source:'Set manually in the Early Closure Fee timer.',updatedAt:new Date().toISOString()};x.fieldSources.closeFeeCountdownDays=meta;x.fieldSources.closeRuleText=meta;x.fieldSources.closeRuleBasis=meta;return normalizeEntry(x)});entries=sortE(entries);sv(SK,entries);feeCheckPrompt=null;R()};
 
   function analyzerWrappersReady(){
-    return ['__tcV3BankRulesWrapped','__tcV3CapitalOneRulesWrapped','__tcV3BoaBusinessRulesWrapped','__tcV3PncRulesWrapped','__tcV3RegionsRulesWrapped','__tcV3EquityRulesWrapped','__tcV3BuseyRulesWrapped','__tcV3AcademyRulesWrapped','__tcV3ProfileRegistryWrapped','__tcV31AcademyRegistryWrapped'].every(k=>!!window[k])
+    return ['__tcV3BankRulesWrapped','__tcV3WellsConsumerRulesWrapped','__tcV3CapitalOneRulesWrapped','__tcV3BoaBusinessRulesWrapped','__tcV3PncRulesWrapped','__tcV3RegionsRulesWrapped','__tcV3EquityRulesWrapped','__tcV3BuseyRulesWrapped','__tcV3AcademyRulesWrapped','__tcV3ProfileRegistryWrapped','__tcV31AcademyRegistryWrapped'].every(k=>!!window[k])
   }
   window.btRunFullRegressionTests=function(opts={}){
     const suites=[];
