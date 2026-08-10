@@ -1,0 +1,71 @@
+/* BonusTracker v3.4.13 — compact, professional tracker presentation. */
+.bt-life-steps{
+  grid-template-columns:repeat(auto-fit,minmax(72px,1fr));
+  gap:6px;
+}
+.bt-life-step{
+  min-height:72px;
+  align-content:start;
+  padding:8px 5px;
+}
+.bt-life-step b{
+  white-space:normal;
+  overflow:visible;
+  text-overflow:clip;
+  line-height:1.08;
+  min-height:18px;
+}
+.bt-life-step span{
+  min-height:auto;
+  line-height:1.15;
+}
+.bt-life-step.planned{
+  border-color:#FDE68A;
+  background:#FFFBEB;
+}
+.bt-life-step.planned i{
+  background:#F59E0B;
+  color:#fff;
+}
+.profile-summary{
+  gap:8px;
+}
+.profile-summary-item{
+  min-width:0;
+}
+.profile-summary-item b{
+  line-height:1.22;
+  overflow-wrap:anywhere;
+}
+.card-subline{
+  line-height:1.25;
+  max-width:100%;
+}
+.clean-plan-row{
+  align-items:flex-start;
+}
+.clean-plan-row b{
+  line-height:1.28;
+  max-width:62%;
+}
+.ck li{
+  align-items:flex-start;
+}
+.ck li .ck-text,
+.ck li > div{
+  min-width:0;
+}
+.tm-edit-btn{
+  margin-top:1px;
+}
+@media(max-width:430px){
+  .bt-life-steps{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+  .bt-life-step{
+    min-height:68px;
+  }
+  .clean-plan-row b{
+    max-width:60%;
+  }
+}
