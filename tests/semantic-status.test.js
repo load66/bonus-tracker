@@ -29,6 +29,12 @@ const sandbox={
   supportLine:()=> 'old support',
   statusBadgeHtml:()=> 'old badge',
   requirementSummaryForEntry:e=>e.dataPoint||'Pending',
+  lifecycleSteps:e=>[
+    {key:'opened',label:'Opened',done:!!e.opened,date:e.opened||''},
+    {key:'req',label:'Direct Deposit',done:!!e.reqMet,date:e.reqMet||''},
+    {key:'bonus',label:'Bonus',done:!!e.bonusRecd,date:e.bonusRecd||''},
+    {key:'closed',label:'Closed',done:!!e.closed,date:e.closed||''}
+  ],
   normalizeLifecycleEntry:e=>({...e,customTimers:sandbox.normalizeTimerList(e.customTimers||[])}),
   collectModalEntryData:()=>({bank:'Citi',customTimers:[{text:'$3,000 EDD requirement deadline',date:'2026-11-08'}]}),
   tcV3MakeSuggestedTimers:()=>[{text:'Maintain required balance / hold check',date:'2026-10-09'}],
@@ -60,10 +66,13 @@ assert(/Requirement Due/.test(badge),'Card badge does not use Requirement Due');
 assert(!/Custom Timer|Deadline Active/.test(badge),'Legacy generic timer label leaked into card badge');
 const req=sandbox.requirementSummaryForEntry(citi);
 assert(req==='$3,000 EDD total · 2 deposits · due Nov 8, 2026','Citi requirement summary is not concise/consistent: '+req);
+const life=sandbox.lifecycleSteps(citi);
+assert(life.find(x=>x.key==='req')?.label==='Requirement Due','Lifecycle requirement step is inconsistent with the card status');
+assert(life.find(x=>x.key==='bonus')?.label==='Bonus Pending','Lifecycle bonus step is inconsistent with pending bonus state');
 const collected=sandbox.collectModalEntryData();
 assert(collected.customTimers[0].kind==='requirement','Saving an entry dropped persisted timer kind');
 const suggested=sandbox.tcV3MakeSuggestedTimers({});
 assert(suggested[0].kind==='hold','Analyzer suggested timer did not persist semantic kind');
 assert(storage.length>0,'Migration did not persist upgraded legacy timers');
 
-console.log('Semantic status passed: canonical timer kinds persist and requirement timers always render as Requirement Due');
+console.log('Semantic status passed: canonical timer kinds persist and card, summary, and lifecycle all use Requirement Due consistently');
