@@ -6,9 +6,9 @@
   const baseNormalizeTimer=window.normalizeTimer;
   const baseNormalizeTimerList=window.normalizeTimerList;
   const baseTimerCategory=window.timerCategory;
-  const baseTimerStatusMeta=window.timerStatusMeta;
   const baseSupportLine=window.supportLine;
   const baseStatusBadgeHtml=window.statusBadgeHtml;
+  const baseRequirementSummary=window.requirementSummaryForEntry;
   const baseNormalizeLifecycleEntry=window.normalizeLifecycleEntry;
   const baseCollectModalEntryData=window.collectModalEntryData;
   const baseSuggestedTimers=window.tcV3MakeSuggestedTimers;
@@ -120,6 +120,32 @@
     if(typeof baseStatusBadgeHtml==='function')return baseStatusBadgeHtml(e,countdown);
     return'';
   }
+  function compactRequirementText(e){
+    const raw=String(e?.dataPoint||'').replace(/^DD\s+/i,'').replace(/\s+/g,' ').trim();
+    if(!raw)return'';
+    if(raw.length<=46)return raw;
+    const amount=raw.match(/\$\s?\d[\d,]*(?:\.\d{1,2})?/i)?.[0]?.replace(/\s+/g,'')||'';
+    const count=raw.match(/(?:at least\s+)?(\d+)\s+(?:enhanced\s+)?(?:direct\s+)?deposits?/i)?.[1]||'';
+    let type='';
+    if(/enhanced direct deposit|\bedd\b/i.test(raw))type='EDD total';
+    else if(/qualifying electronic deposit/i.test(raw))type='electronic deposits';
+    else if(/direct deposit/i.test(raw))type='direct deposits';
+    else if(/debit.*(?:transactions?|purchases?)/i.test(raw))type='debit transactions';
+    if(amount&&type)return amount+' '+type+(count?' · '+count+' deposits':'');
+    return raw.length>54?raw.slice(0,51).trim()+'…':raw;
+  }
+  function requirementSummarySemantic(e){
+    if(!e)return'Pending';
+    if(e.reqMet){try{return'Met '+fD(e.reqMet)}catch{return'Met'}}
+    let text=compactRequirementText(e);
+    if(!text&&typeof baseRequirementSummary==='function'){
+      try{return baseRequirementSummary(e)}catch{}
+    }
+    if(!text&&Number(e.reqDays||0)>0)text='Complete bonus requirements';
+    let due='';try{if(typeof reqDeadline==='function')due=reqDeadline(e)||''}catch{}
+    if(due){try{text+=' · due '+fD(due)}catch{text+=' · due '+due}}
+    return text||'Pending';
+  }
   function semanticStateForEntry(e){
     let raw='';try{raw=typeof status==='function'?status(e):''}catch{}
     const timer=nextTimer(e);
@@ -171,6 +197,7 @@
     window.timerStatusMeta=timerStatusMetaSemantic;
     window.supportLine=supportLineSemantic;
     window.statusBadgeHtml=statusBadgeHtmlSemantic;
+    window.requirementSummaryForEntry=requirementSummarySemantic;
     window.btSemanticStateForEntry=semanticStateForEntry;
     window.btSemanticTimerKind=timerCategorySemantic;
     window.btSemanticStatusVersion=VER;
@@ -180,11 +207,13 @@
     try{timerStatusMeta=timerStatusMetaSemantic}catch{}
     try{supportLine=supportLineSemantic}catch{}
     try{statusBadgeHtml=statusBadgeHtmlSemantic}catch{}
+    try{requirementSummaryForEntry=requirementSummarySemantic}catch{}
     if(window.normalizeLifecycleEntry===baseNormalizeLifecycleEntry)wrapEntryFunction('normalizeLifecycleEntry',baseNormalizeLifecycleEntry);
     if(window.collectModalEntryData===baseCollectModalEntryData)wrapEntryFunction('collectModalEntryData',baseCollectModalEntryData);
     wrapSuggested();wrapHydrate();migrate();
   }
+  function refresh(){migrate();try{if(typeof R==='function')R()}catch{}}
   install();
-  setTimeout(migrate,250);
-  setTimeout(migrate,1200);
+  setTimeout(refresh,180);
+  setTimeout(refresh,1200);
 })();
