@@ -1,11 +1,11 @@
 /*
  * filename: bank-rules-wells-consumer.js
- * version: 3.4.13
+ * version: 3.4.14
  * purpose: Exact Wells Fargo $400 consumer checking offer. Prevents business-profile/timer contamination and stores the 12-month bonus-received eligibility basis.
  */
 (function(){
   'use strict';
-  const VER='3.4.13';
+  const VER='3.4.14';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const uniq=a=>Array.from(new Set((a||[]).filter(Boolean).map(clean))).filter(Boolean);
   function addSource(r,label,source,value,kind='extracted',confidence='High'){
@@ -50,7 +50,6 @@
     r.requirementType='electronic-deposit';
     r.requirementNoun='qualifying electronic deposits';
     r.transactionRequirement=false;
-    /* This consumer offer has no separate 30-day funding or 60-day balance-hold requirement. */
     r.fundedDays=0;r.fundingAmount=0;r.fundingAmountText='';r.holdDays=0;r.depositHoldRequirement=false;
     r.minHoldDays=0;r.closeRuleDays=0;r.closeFeeCountdownDays='';r.earlyCloseFee=0;r.earlyTerminationFee=0;
     r.payout=r.payoutText='within 30 calendar days after all bonus requirements are met';
@@ -65,8 +64,10 @@
     r.churnable=true;
     r.churnability='repeatable';
     r.churn='1';
-    r.churnBasis='bonus';
+    r.churnBasis='closed';
     r.churnBufferDays=0;
+    r.sourceEligibilityBasis='bonus-received';
+    r.churnTrackingPolicy='confirmed-close-date';
     r.churnReason=eligibility;
     r.churnRuleText=eligibility;
     r.churnDecisionSource='current-tc';
@@ -74,7 +75,7 @@
     r.fee=0;r.monthlyFee=null;
     r.monthlyFeeYNText='Not stated in bonus disclosure — separate Wells Fargo fee schedule applies';
     r.monthlyFeeAmountText='';
-    r.avoidMonthlyFeeText='Review the Wells Fargo Consumer Account Fee and Information Schedule. Bonus requirements are separate from monthly-fee waiver requirements.';
+    r.avoidMonthlyFeeText='Review the Wells Fargo Consumer Account Fee and Information Schedule. Bonus requirements are separate from the bonus requirements and the monthly service fee must be checked separately.';
     r.waivers=[];
     r.counts=uniq([
       'Posted ACH direct deposit, such as salary, government benefit payment, or other income',
@@ -107,7 +108,7 @@
       '3. Use only qualifying posted electronic deposits: ACH direct deposit, RTP/FedNow instant payment, or eligible Visa/Mastercard debit-card credit.',
       '4. After the requirements are met, allow up to 30 calendar days for the $400 bonus to post.',
       '5. Keep the account open through the bonus deposit attempt. After the $400 posts, there is no stated fixed post-bonus hold in this disclosure.',
-      '6. Future eligibility resets 12 months after the bonus received date, not the account close date.'
+      '6. For tracker countdown purposes, start the 1-year churn timer only after the bank has actually closed the account and the confirmed close date is recorded. The original Wells eligibility wording is still saved for reference.'
     ].join('\n');
     r.reviewFlags=(Array.isArray(r.reviewFlags)?r.reviewFlags:[]).filter(x=>!/funding|hold|maintain required balance|profile fallback|saved profile/i.test(String(x||'')));
     r.reviewFlags.push('Monthly service fee amount and waiver details are not contained in this bonus disclosure; review the separate Wells Fargo fee schedule.');
