@@ -46,6 +46,9 @@ jobs:
       - name: Run full app smoke and analyzer tests
         run: node tests/full-app-smoke.test.js
 
+      - name: Run entry-file import and replacement safety tests
+        run: node tests/entry-file-import.test.js
+
   deploy:
     name: Deploy verified release to GitHub Pages
     if: github.event_name != 'pull_request'
