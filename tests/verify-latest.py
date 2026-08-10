@@ -33,6 +33,8 @@ if not parser.scripts or parser.scripts[0]!='close-rules-core.js': fail('close-r
 if not parser.scripts or parser.scripts[-1]!='mobile-analyzer.js': fail('mobile-analyzer.js must be final external script')
 if 'bank-rules-fourleaf.js' not in parser.scripts: fail('FourLeaf analyzer rule is not loaded')
 elif parser.scripts.index('bank-rules-fourleaf.js')<parser.scripts.index('bank-rules.js'): fail('FourLeaf rule must load after the base bank rules')
+if 'bank-rules-wells-consumer.js' not in parser.scripts: fail('Wells Fargo consumer analyzer rule is not loaded')
+elif parser.scripts.index('bank-rules-wells-consumer.js')<parser.scripts.index('bank-rules.js'): fail('Wells consumer rule must load after the base bank rules')
 
 root_js=sorted(p.name for p in ROOT.glob('*.js') if p.name!='sw.js')
 if sorted(parser.scripts)!=root_js:
@@ -70,22 +72,65 @@ for css in ROOT.glob('*.css'):
 mobile_css=text('mobile-analyzer.css')
 for token in ('#tca_overlay .tca-box','overflow-y:auto!important','-webkit-overflow-scrolling:touch','touch-action:pan-y'):
     if token not in mobile_css: fail(f'mobile analyzer scroll protection missing: {token}')
+
 fourleaf=text('bank-rules-fourleaf.js')
 for token in ("r.reqMoney=500","r.reqDays=90","r.closeRestrictionType='payout-only'","r.churnable=false","24 consecutive"):
     if token not in fourleaf: fail(f'FourLeaf rule missing required logic: {token}')
+
+wells=text('bank-rules-wells-consumer.js')
+for token in (
+    'Wells Fargo Consumer Checking $400',
+    'r.reqMoney=1000',
+    'r.reqIsTotal=true',
+    'r.reqDays=90',
+    'r.fundedDays=0',
+    'r.holdDays=0',
+    "r.closeRestrictionType='payout-only'",
+    "r.churnable=true",
+    "r.churn='1'",
+    "r.churnBasis='bonus'",
+    'r.churnBufferDays=0',
+    'Consumer Account Fee and Information Schedule'
+):
+    if token not in wells: fail(f'Wells consumer exact-rule logic missing: {token}')
+
+memory=text('churn-profile-memory.js')
+for token in ('profileKey:keyFor(r)','accountType:typeFor(r)','compatibleProduct','opts.noGlobalFallback','opts.selfTest','opts.testMode','business and personal offers never cross-fill'):
+    if token not in memory: fail(f'product-safe analyzer memory protection missing: {token}')
+
 app_js=text('app.js')
 for token in ('isNonRepeatableEntry','archived-nonrepeatable',"return'ARCHIVED'",'Closed & Archived','Non-repeatable offer'):
     if token not in app_js: fail(f'archive lifecycle missing from app.js: {token}')
-integration=text('close-rules-integration.js')
-for token in ("nonRepeatable(e)?'ARCHIVED'",'Closed / Archived','Non-repeatable offer'):
-    if token not in integration: fail(f'archive lifecycle missing from close integration: {token}')
 for token in ('Future Eligibility *','Can this bonus be earned again? *','hasSavedChurnDecision','Future eligibility is required before creating this bank','Eligibility Reset / Churn Rule *'):
     if token not in app_js: fail(f'churnability intake gate missing from app.js: {token}')
+
+runtime_fix=text('wells-professional-runtime.js')
+for token in ('repairWellsConsumer400Entry','Requirement Due','requirementSummaryForEntry','churnBasisDate','Key Deadlines','Lifecycle & Deadlines','btWellsProfessionalRuntimeVersion','normalizeLifecycleEntry'):
+    if token not in runtime_fix: fail(f'professional Wells runtime repair missing: {token}')
+
+controller=text('controller.js')
+professional=text('professional-upgrades.js')
+for token in ('tcV3MakeSuggestedTimers','tcApplyReviewed','rModal'):
+    if token not in controller+professional: fail(f'legacy analyzer/professional hook missing: {token}')
+for token in ('wellsSuggestedTimers','Can this bonus be earned again? *','Eligibility clock starts from *','Future eligibility','Separate fee schedule','Fee Schedule','requirementSummaryForEntry','polishAnalyzerDom','tcApplyReviewed','After '+"'+fM(e.bonus||0)+'"+' posts'):
+    if token not in runtime_fix: fail(f'professional Wells runtime behavior missing: {token}')
+
+close_core=text('close-rules-core.js')
+for token in ('Payout attempt wording recognized','attempt to deposit the bonus'):
+    if token not in close_core: fail(f'payout-attempt close wording support missing: {token}')
+
+integration=text('close-rules-integration.js')
+for token in ("nonRepeatable(e)?'ARCHIVED'",'Closed / Archived','Non-repeatable offer','__tcV3WellsConsumerRulesWrapped','After '+"'+fM(e.bonus)+'"+' posts'):
+    if token not in integration: fail(f'archive/Wells close integration missing: {token}')
 
 runtime_text='\n'.join(p.read_text(encoding='utf-8',errors='ignore') for p in files if p.suffix in {'.js','.html','.css','.json'} and 'tests' not in p.parts)
 obsolete='close-rules-'+'v3402.js'
 if obsolete in runtime_text: fail('obsolete v3.4.02 patch reference remains')
-for critical in ('index.html','sw.js','app.js','bank-rules-fourleaf.js','mobile-analyzer.js','mobile-analyzer.css'):
+for critical in (
+    'index.html','sw.js','bank-rules-fourleaf.js','bank-rules-wells-consumer.js','wells-professional-runtime.js',
+    'churn-profile-memory.js','close-rules-core.js','close-rules-integration.js',
+    'mobile-analyzer.js','mobile-analyzer.css'
+):
     if release not in text(critical): fail(f'{critical} is not aligned to release {release}')
 
 workflow=text('.github/workflows/close-rules.yml')
@@ -110,4 +155,4 @@ if issues:
     print(f'LATEST RELEASE VERIFY FAILED v{release}: {len(issues)} issue(s)')
     for issue in issues: print('FAIL',issue)
     sys.exit(1)
-print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, analyzer, archive-lifecycle, churn-intake, and verify-before-deploy checks passed')
+print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, Wells accuracy, analyzer isolation, archive lifecycle, churn intake, professional UI, and verify-before-deploy checks passed')
