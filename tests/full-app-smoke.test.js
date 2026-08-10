@@ -55,18 +55,70 @@ function assert(ok,msg){if(!ok)throw new Error(msg)}
 setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.12',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.4.12',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
-    assert(sandbox.tcV3FourLeafRulesVersion==='3.4.12',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.13',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.4.13',`Unexpected release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.btProfessionalVersion==='3.4.13',`Unexpected professional layer version ${sandbox.btProfessionalVersion}`);
+    assert(sandbox.tcV3WellsPersonalRulesVersion==='3.4.13',`Unexpected Wells personal rule version ${sandbox.tcV3WellsPersonalRulesVersion}`);
+    assert(sandbox.tcV3FourLeafRulesVersion==='3.4.12',`Unexpected FourLeaf module version ${sandbox.tcV3FourLeafRulesVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.04',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
+
     const report=sandbox.btRunFullRegressionTests();
     assert(report.ok,`Full regression failed: ${JSON.stringify(report)}`);
     assert(report.total>=17,`Full regression suite is incomplete: ${report.total}`);
-    const wells='Wells Fargo business checking offer. To receive the $400 bonus, bonus offer code must be used when opening a new eligible business checking account by May 5, 2026. Eligible accounts include Initiate Business Checking, Navigate Business Checking or Optimize Business Checking. Deposit $2,500 or more by day 30 from account opening and maintain a minimum daily collected balance of $2,500 through day 60 after account opening. Bonus deposited within 30 days after the 60-day qualification period.';
-    const wr=sandbox.tcV3Analyze(wells,{noGlobalFallback:true});
-    assert(wr.bank==='Wells Fargo','Wells Fargo rule failed');
-    assert(!(wr.bankRulesApplied||[]).includes('Chase Business Checking'),'Chase rule contaminated Wells Fargo analysis');
+
+    const wellsBusiness='Wells Fargo business checking offer. To receive the $400 bonus, bonus offer code must be used when opening a new eligible business checking account by May 5, 2026. Eligible accounts include Initiate Business Checking, Navigate Business Checking or Optimize Business Checking. Deposit $2,500 or more by day 30 from account opening and maintain a minimum daily collected balance of $2,500 through day 60 after account opening. Bonus deposited within 30 days after the 60-day qualification period.';
+    const wr=sandbox.tcV3Analyze(wellsBusiness,{noGlobalFallback:true});
+    assert(wr.bank==='Wells Fargo'&&wr.accountType==='business','Wells Fargo business rule failed');
+    assert(wr.fundedDays===30&&wr.holdDays===60&&wr.fundingAmount===2500,'Wells Fargo business funding/hold rule changed');
+    assert(!(wr.bankRulesApplied||[]).includes('Chase Business Checking'),'Chase rule contaminated Wells Fargo business analysis');
+
+    const wellsPersonal='Account opening bonus disclosure. Offer is for new consumer checking customers only. Offer is not available to customers that received a bonus for a Wells Fargo consumer checking account within the past 12 months, are Wells Fargo employees, or are non-resident aliens or foreign entities signing IRS Form W-8. To receive the $400 bonus: you must use your bonus offer code when opening a new Wells Fargo consumer checking account by August 18, 2026 and receive $1,000 or more in qualifying electronic deposits within 90 calendar days of account opening. A qualifying electronic deposit includes ACH direct deposit, RTP network, FedNow Service, or an eligible electronic credit from a third party service to the debit card network. Transfers from one account to another, mobile deposits, Zelle, or deposits made at a branch or ATM are not qualifying electronic deposits. Once you have met all requirements, we will deposit the bonus into your new account within 30 calendar days. Your new account must stay open through the time we attempt to deposit the bonus. Monthly service fee and options to avoid it are in the separate Consumer Account Fee and Information Schedule.';
+    const wp=sandbox.tcV3Analyze(wellsPersonal,{noGlobalFallback:true});
+    assert(wp.bank==='Wells Fargo'&&wp.accountType==='personal','Wells Fargo consumer offer was not identified as personal');
+    assert(wp.bonus===400&&wp.openBy==='2026-08-18','Wells Fargo consumer bonus/open-by extraction failed');
+    assert(wp.reqMoney===1000&&wp.reqDays===90&&wp.reqIsTotal===true,'Wells Fargo consumer $1,000 / 90-day requirement failed');
+    assert(Number(wp.fundedDays||0)===0&&Number(wp.holdDays||0)===0&&Number(wp.fundingAmount||0)===0,'Business funding/hold fields leaked into Wells consumer analysis');
+    assert(wp.closeRestrictionType==='payout-only'&&Number(wp.minHoldDays||0)===0,'Wells consumer close rule is not payout-only');
+    assert(wp.churnable===true&&wp.churnability==='repeatable'&&wp.churn==='1'&&wp.churnBasis==='bonus-received','Wells consumer churn rule/basis failed');
+    assert((wp.suggestedTimers||[]).length===1&&wp.suggestedTimers[0].daysRequired===90,'Wells consumer analyzer created unnecessary timers');
+    assert(!(wp.bankRulesApplied||[]).includes('Wells Fargo Business Checking'),'Wells business profile contaminated Wells consumer analysis');
+    assert(/RTP/i.test((wp.counts||[]).join(' '))&&/FedNow/i.test((wp.counts||[]).join(' ')),'Wells qualifying instant-payment methods missing');
+    assert(/Zelle/i.test((wp.notCounts||[]).join(' ')),'Wells non-qualifying Zelle rule missing');
+    assert(wp.monthlyFeeUnknown===true&&/not stated/i.test(wp.monthlyFeeYNText||''),'Wells fee disclosure was incorrectly treated as a known fee');
+
+    const repaired=sandbox.btProfessionalRepairWellsPersonal({
+      bank:'Wells Fargo',accountType:'personal',bonus:400,opened:'2026-08-10',
+      fundedDays:30,fundingAmount:2500,holdDays:60,minHoldDays:60,
+      closeRestrictionType:'payout-only',churn:'1',
+      customTimers:[
+        {id:'a',text:'Deposit new money / funding deadline',startDate:'2026-08-10',date:'2026-09-09',daysRequired:30,done:false},
+        {id:'b',text:'Maintain required balance / hold check',startDate:'2026-08-10',date:'2026-10-09',daysRequired:60,done:false},
+        {id:'c',text:'Bonus requirement deadline',startDate:'2026-08-10',date:'2026-11-08',daysRequired:90,done:false},
+        {id:'d',text:'Bonus payout watch',startDate:'2026-08-10',date:'2026-12-08',daysRequired:120,done:false}
+      ]
+    });
+    assert(repaired.reqMoney===1000&&repaired.reqDays===90,'Saved Wells consumer repair did not restore requirement');
+    assert(repaired.fundedDays===0&&repaired.holdDays===0&&repaired.fundingAmount===0,'Saved Wells consumer repair did not clear business fields');
+    assert(repaired.customTimers.length===1&&/\$1,000 qualifying electronic deposits due/i.test(repaired.customTimers[0].text),'Saved Wells consumer timer cleanup failed');
+    assert(repaired.customTimers[0].date==='2026-11-08','Wells 90-day due date is wrong for Aug 10 opening');
+    assert(repaired.churnBasis==='bonus-received'&&repaired.churn==='1','Saved Wells consumer churn basis was not repaired');
+
+    const badge=sandbox.statusBadgeHtml(repaired,null);
+    assert(/DD Due/.test(badge),'Professional status badge still shows Custom Timer instead of DD Due');
+    const summary=sandbox.renderBankProfileSummary(repaired);
+    assert(/\$1,000 deposits/.test(summary)&&/After \$400 posts/.test(summary),'Professional Wells summary did not show actionable requirement/close text');
+    const feePlan=sandbox.monthlyFeePlanForEntry(repaired);
+    assert(/Not stated in bonus disclosure/.test(JSON.stringify(feePlan)),'Professional fee card still shows generic Review terms');
+    const closePlan=sandbox.closePlanForEntry(repaired);
+    assert((closePlan.rows||[]).some(x=>/Earliest close/i.test(x.label)&&x.value==='After $400 posts'),'Professional close card did not show After $400 posts');
+    const life=sandbox.lifecycleSteps(repaired);
+    assert(!life.some(x=>x.key==='funded')&&life.some(x=>x.label==='DD $1K'),'Professional lifecycle still shows the false Funded step');
+
+    const churnSample={bank:'Wells Fargo',accountType:'personal',bonus:400,bonusRecd:'2026-09-01',closed:'2026-09-10',churnable:true,churnability:'repeatable',churn:'1',churnBasis:'bonus-received',churnBufferDays:0};
+    assert(sandbox.nextReopen(churnSample)==='2027-09-01','Wells next eligibility was incorrectly based on closed date');
+    assert(sandbox.churnReadyDate(churnSample)==='2027-09-01','Source-derived Wells churn date received an unwanted legacy buffer');
+
     const fourLeaf='FourLeaf Checking Up to $550 Bonus Offer. Open a Free Checking, Smart Checking, or Student Checking account between February 2, 2026 and December 31, 2026. Have a Qualifying Direct Deposit post within ninety (90) calendar days of account opening. A Qualifying Direct Deposit is a recurring electronic deposit of a paycheck, pension, or government benefits of $500.00 or more. The First Direct Deposit Bonus of $350 will be deposited within sixty (60) calendar days following the initial Qualifying Direct Deposit. Continue to have a Qualifying Direct Deposit for twelve (12) consecutive months for an additional $100 and twenty-four (24) consecutive months for another $100. The checking account must remain open and in good standing up to and including the date each bonus is deposited. You must not have previously received a new checking account opening related bonus from FourLeaf.';
     const fr=sandbox.tcV3Analyze(fourLeaf,{noGlobalFallback:true});
     assert(fr.bank==='FourLeaf','FourLeaf bank identification failed');
@@ -75,6 +127,7 @@ setTimeout(()=>{
     assert(fr.closeRestrictionType==='payout-only'&&Number(fr.minHoldDays||0)===0,'FourLeaf payout-only close rule failed');
     assert(fr.churnable===false&&fr.churnability==='not-repeatable','FourLeaf lifetime-like churn restriction failed');
     assert(/24 consecutive/i.test(fr.actionPlan||''),'FourLeaf 24-month milestone plan missing');
+
     assert(typeof sandbox.churnDecisionForEntry==='function'&&typeof sandbox.hasSavedChurnDecision==='function','Churnability intake helpers missing');
     assert(sandbox.hasSavedChurnDecision({bank:'Repeat Bank',churnable:true,churnability:'repeatable',churn:'2'})===true,'Repeatable decision was not recognized');
     assert(sandbox.hasSavedChurnDecision({bank:'Unknown Bank',churn:'',churnability:''})===false,'Unknown churnability was incorrectly accepted');
@@ -95,6 +148,7 @@ setTimeout(()=>{
       const saved=saveEntry();const created=entries.find(x=>x.bank==='Lifetime Unique Credit Union');return{saved,created};
     })()`,sandbox);
     assert(nonrepeat.saved===true&&nonrepeat.created?.churnable===false&&nonrepeat.created?.churn==='', 'Non-repeatable decision was not saved correctly');
+
     const closedFourLeaf=sandbox.normalizeLifecycleEntry({
       bank:'FourLeaf Bank',accountType:'personal',id:'FOURLEAF-ARCHIVE',
       opened:'2026-07-21',reqMet:'2026-07-25',bonusRecd:'2026-08-01',closed:'2026-08-06',
@@ -111,12 +165,14 @@ setTimeout(()=>{
     assert(archivedPlan?.chip==='Archived'&&archivedPlan?.rows?.some(x=>x.value==='Non-repeatable offer'),'Archived close plan is incorrect');
     const integrity=sandbox.backupIntegrityReport({entries:[closedFourLeaf]});
     assert(!(integrity.warnings||[]).some(x=>/missing churn rule/i.test(String(x))),'Archive incorrectly requires a churn rule');
+
     const close=sandbox.BTCloseRules.sanitizeEntry({bank:'Chase Biz',accountType:'business',opened:'2026-05-07',reqMet:'2026-05-29',bonusRecd:'2026-07-14',minHoldDays:90,closeFeeCountdownDays:'90',closeRuleBasis:'bonus',closeBufferDays:5,closeRestrictionType:'payout-only',closeRuleText:'Keep the account open until the bonus posts.'});
     assert(close.minHoldDays===0,'Stale Chase close countdown survived');
     assert(sandbox.BTCloseRules.safeCloseDate(close)==='2026-07-14','Payout-only close date is incorrect');
+
     if(typeof sandbox.R==='function')sandbox.R();
     assert(app.innerHTML.length>1000,'Tracker failed to render after regression run');
     assert(!errors.some(x=>x.startsWith('ERROR ')),`Runtime console errors: ${errors.join(' | ')}`);
-    console.log(`Full app smoke passed: ${scripts.length} runtime scripts · ${report.passed}/${report.total} regression checks · FourLeaf archive and mobile Safari release verified`);
+    console.log(`Full app smoke passed: ${scripts.length} runtime scripts · ${report.passed}/${report.total} built-in regression checks · Wells personal, professional tracker, archive, and Safari release verified`);
   }catch(err){console.error(err.stack||err);process.exitCode=1}
-},2200);
+},2400);
