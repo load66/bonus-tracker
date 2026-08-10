@@ -9,6 +9,8 @@
   const baseStatusBadgeHtml=window.statusBadgeHtml;
   const baseRequirementSummary=window.requirementSummaryForEntry;
   const baseLifecycleSteps=window.lifecycleSteps;
+  const baseRenderLifecycleStepper=window.renderLifecycleStepper;
+  const baseRenderBankProfileSummary=window.renderBankProfileSummary;
   const baseNormalizeLifecycleEntry=window.normalizeLifecycleEntry;
   const baseCollectModalEntryData=window.collectModalEntryData;
   const baseSuggestedTimers=window.tcV3MakeSuggestedTimers;
@@ -152,6 +154,36 @@
       return st;
     });
   }
+  function renderLifecycleStepperSemantic(e){
+    const steps=lifecycleStepsSemantic(e);
+    if(!steps.length&&typeof baseRenderLifecycleStepper==='function')return baseRenderLifecycleStepper(e);
+    try{
+      let h='<div class="bt-life"><div class="bt-life-title">Lifecycle</div><div class="bt-life-steps">';
+      steps.forEach(st=>{const cls=st.done?'done':'todo';const sub=st.date?fD(st.date):'Pending';h+='<div class="bt-life-step '+cls+'"><i>'+esc(st.done?'✓':'•')+'</i><b>'+esc(st.label)+'</b><span>'+esc(sub)+'</span></div>'});
+      return h+'</div></div>';
+    }catch{return typeof baseRenderLifecycleStepper==='function'?baseRenderLifecycleStepper(e):''}
+  }
+  function renderBankProfileSummarySemantic(e){
+    if(!e)return'';
+    try{
+      const items=[];const add=(label,value,cls='')=>items.push({label,value,cls});
+      add('Opened',e.opened?fD(e.opened):'Add date',e.opened?'':'warn');
+      if(e.closed){
+        add('Closed',fD(e.closed),'ok');
+        add('Bonus',e.bonusRecd?((e.bonus?fM(e.bonus)+' · ':'')+fD(e.bonusRecd)):(e.bonus?fM(e.bonus):'Not saved'),e.bonusRecd?'ok':'');
+        if(typeof isNonRepeatableEntry==='function'&&isNonRepeatableEntry(e))add('Archive','Non-repeatable offer','ok');
+        else{const cr=typeof churnReadyDate==='function'?churnReadyDate(e):'';add('Next eligible',cr?fD(cr):'Waiting for close date',cr?'ok':'warn')}
+      }else{
+        add('Bonus',e.bonusRecd?((e.bonus?fM(e.bonus)+' · ':'')+fD(e.bonusRecd)):(e.bonus?fM(e.bonus)+' pending':'Pending'),e.bonusRecd?'ok':'warn');
+        add('Requirement',requirementSummarySemantic(e),e.reqMet?'ok':'warn');
+        const type=String(e.closeRestrictionType||e.analysis?.closeRestrictionType||'');
+        const safe=typeof safeCloseDate==='function'?safeCloseDate(e):'';
+        if(type==='payout-only')add('Earliest close',e.bonusRecd?'Bonus posted · close when ready':'After '+fM(e.bonus||0)+' posts',e.bonusRecd?'ok':'warn');
+        else add('Earliest close',safe?fD(safe):'Review terms',safe&&typeof daysUntilSafe==='function'&&daysUntilSafe(e)<=0?'ok':safe?'warn':'bad');
+      }
+      return '<div class="profile-summary">'+items.map(x=>'<div class="profile-summary-item '+esc(x.cls||'')+'"><span>'+esc(x.label)+'</span><b>'+esc(x.value)+'</b></div>').join('')+'</div>';
+    }catch{return typeof baseRenderBankProfileSummary==='function'?baseRenderBankProfileSummary(e):''}
+  }
   function semanticStateForEntry(e){
     let raw='';try{raw=typeof status==='function'?status(e):''}catch{}
     const timer=nextTimer(e);
@@ -205,6 +237,8 @@
     window.statusBadgeHtml=statusBadgeHtmlSemantic;
     window.requirementSummaryForEntry=requirementSummarySemantic;
     window.lifecycleSteps=lifecycleStepsSemantic;
+    window.renderLifecycleStepper=renderLifecycleStepperSemantic;
+    window.renderBankProfileSummary=renderBankProfileSummarySemantic;
     window.btSemanticStateForEntry=semanticStateForEntry;
     window.btSemanticTimerKind=timerCategorySemantic;
     window.btSemanticStatusVersion=VER;
@@ -216,6 +250,8 @@
     try{statusBadgeHtml=statusBadgeHtmlSemantic}catch{}
     try{requirementSummaryForEntry=requirementSummarySemantic}catch{}
     try{lifecycleSteps=lifecycleStepsSemantic}catch{}
+    try{renderLifecycleStepper=renderLifecycleStepperSemantic}catch{}
+    try{renderBankProfileSummary=renderBankProfileSummarySemantic}catch{}
     if(window.normalizeLifecycleEntry===baseNormalizeLifecycleEntry)wrapEntryFunction('normalizeLifecycleEntry',baseNormalizeLifecycleEntry);
     if(window.collectModalEntryData===baseCollectModalEntryData)wrapEntryFunction('collectModalEntryData',baseCollectModalEntryData);
     wrapSuggested();wrapHydrate();migrate();
