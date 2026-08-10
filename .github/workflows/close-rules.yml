@@ -52,6 +52,9 @@ jobs:
       - name: Run canonical semantic status tests
         run: node tests/semantic-status.test.js
 
+      - name: Run imported fee-review migration tests
+        run: node tests/fee-review-migration.test.js
+
   deploy:
     name: Deploy verified release to GitHub Pages
     if: github.event_name != 'pull_request'
