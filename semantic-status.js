@@ -8,6 +8,7 @@
   const baseSupportLine=window.supportLine;
   const baseStatusBadgeHtml=window.statusBadgeHtml;
   const baseRequirementSummary=window.requirementSummaryForEntry;
+  const baseLifecycleSteps=window.lifecycleSteps;
   const baseNormalizeLifecycleEntry=window.normalizeLifecycleEntry;
   const baseCollectModalEntryData=window.collectModalEntryData;
   const baseSuggestedTimers=window.tcV3MakeSuggestedTimers;
@@ -29,7 +30,6 @@
     const explicit=explicitKind(t);if(explicit)return explicit;
     const s=String([t.text,t.label,t.name,t.source].filter(Boolean).join(' ')).toLowerCase().replace(/\s+/g,' ').trim();
     if(!s)return'custom';
-    // Order matters. More specific lifecycle deadlines are classified before the broad requirement bucket.
     if(/\b(open[ -]?by|apply by|application deadline|offer (?:expires?|expiration)|opening deadline)\b/.test(s))return'openby';
     if(/\b(balance hold|hold check|maintain(?:ing)? (?:a |the )?(?:minimum |required )?balance|required balance|keep (?:a |the )?.{0,30}balance|maintenance period)\b/.test(s))return'hold';
     if(/\b(funding|fund account|initial deposit|opening deposit|deposit new money|new money deposit)\b/.test(s))return'funding';
@@ -139,6 +139,19 @@
     if(due){try{text+=' · due '+fD(due)}catch{text+=' · due '+due}}
     return text||'Pending';
   }
+  function lifecycleStepsSemantic(e){
+    let steps=[];
+    if(typeof baseLifecycleSteps==='function'){
+      try{steps=(baseLifecycleSteps(e)||[]).map(x=>({...x}))}catch{}
+    }
+    if(!steps.length)return steps;
+    return steps.map(st=>{
+      if(st.key==='req')st.label=e?.reqMet?'Requirement Met':'Requirement Due';
+      else if(st.key==='bonus')st.label=e?.bonusRecd?'Bonus Received':'Bonus Pending';
+      else if(st.key==='funded')st.label=st.done?'Funding Complete':'Funding Due';
+      return st;
+    });
+  }
   function semanticStateForEntry(e){
     let raw='';try{raw=typeof status==='function'?status(e):''}catch{}
     const timer=nextTimer(e);
@@ -191,6 +204,7 @@
     window.supportLine=supportLineSemantic;
     window.statusBadgeHtml=statusBadgeHtmlSemantic;
     window.requirementSummaryForEntry=requirementSummarySemantic;
+    window.lifecycleSteps=lifecycleStepsSemantic;
     window.btSemanticStateForEntry=semanticStateForEntry;
     window.btSemanticTimerKind=timerCategorySemantic;
     window.btSemanticStatusVersion=VER;
@@ -201,6 +215,7 @@
     try{supportLine=supportLineSemantic}catch{}
     try{statusBadgeHtml=statusBadgeHtmlSemantic}catch{}
     try{requirementSummaryForEntry=requirementSummarySemantic}catch{}
+    try{lifecycleSteps=lifecycleStepsSemantic}catch{}
     if(window.normalizeLifecycleEntry===baseNormalizeLifecycleEntry)wrapEntryFunction('normalizeLifecycleEntry',baseNormalizeLifecycleEntry);
     if(window.collectModalEntryData===baseCollectModalEntryData)wrapEntryFunction('collectModalEntryData',baseCollectModalEntryData);
     wrapSuggested();wrapHydrate();migrate();
