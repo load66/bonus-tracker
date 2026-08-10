@@ -83,6 +83,10 @@
     modal._entryFileName=String(fileName||next._importFileName||'').trim();
     modal.importSource=source;
     modal.importedAt=typeof td==='function'?td():new Date().toISOString().slice(0,10);
+    // A generated/imported file may carry fee facts, but "Checked" is a user verification action.
+    // Always require the user to confirm the monthly-fee review in the New Entry screen.
+    modal.monthlyFeeChecked=false;
+    modal.feeChecked=false;
     try{if(typeof showTemplates!=='undefined')showTemplates=false}catch{}
     try{if(typeof showInlineAZ!=='undefined')showInlineAZ=false}catch{}
     try{if(typeof inlineResult!=='undefined')inlineResult=null}catch{}
