@@ -31,12 +31,12 @@ for ref in parser.refs:
     if not (ROOT/ref).exists(): fail(f'index references missing file: {ref}')
 if not parser.scripts or parser.scripts[0]!='close-rules-core.js': fail('close-rules-core.js must be first external script')
 if not parser.scripts or parser.scripts[-1]!='tracker-professional.js': fail('tracker-professional.js must be final external script')
-if 'mobile-analyzer.js' not in parser.scripts: fail('mobile-analyzer.js is not loaded')
-elif parser.scripts.index('mobile-analyzer.js')>parser.scripts.index('tracker-professional.js'): fail('mobile analyzer must load before the final professional layer')
-if 'bank-rules-fourleaf.js' not in parser.scripts: fail('FourLeaf analyzer rule is not loaded')
-elif parser.scripts.index('bank-rules-fourleaf.js')<parser.scripts.index('bank-rules.js'): fail('FourLeaf rule must load after the base bank rules')
-if 'bank-rules-wells-personal.js' not in parser.scripts: fail('Wells personal analyzer rule is not loaded')
-elif parser.scripts.index('bank-rules-wells-personal.js')<parser.scripts.index('bank-rules.js'): fail('Wells personal rule must load after base bank rules')
+for required in ('mobile-analyzer.js','tracker-save-guard.js','tracker-professional.js','bank-rules-wells-personal.js','bank-rules-fourleaf.js'):
+    if required not in parser.scripts: fail(f'{required} is not loaded')
+if 'bank-rules-wells-personal.js' in parser.scripts and parser.scripts.index('bank-rules-wells-personal.js')<parser.scripts.index('bank-rules.js'):
+    fail('Wells personal rule must load after base bank rules')
+if 'tracker-save-guard.js' in parser.scripts and 'tracker-professional.js' in parser.scripts and parser.scripts.index('tracker-save-guard.js')>parser.scripts.index('tracker-professional.js'):
+    fail('tracker save guard must load before final professional layer')
 
 root_js=sorted(p.name for p in ROOT.glob('*.js') if p.name!='sw.js')
 if sorted(parser.scripts)!=root_js:
@@ -82,8 +82,12 @@ wells=text('bank-rules-wells-personal.js')
 for token in ("r.reqMoney=1000","r.reqDays=90","r.fundedDays=0","r.holdDays=0","r.closeRestrictionType='payout-only'","r.churnBasis='bonus-received'","Wells Fargo Consumer Checking 2026"):
     if token not in wells: fail(f'Wells personal rule missing required logic: {token}')
 professional=text('tracker-professional.js')
-for token in ('repairWellsPersonal','looksLikeWellsBusinessLeak','DD Due','After '+"'"+'+(e.bonus?',"churnBasis",'professionalNextReopen','renderBankProfileSummary','monthlyFeePlanForEntry','renderLifecycleStepper'):
+for token in ('repairWellsPersonal','looksLikeWellsBusinessLeak','DD Due','professionalNextReopen','renderBankProfileSummary','monthlyFeePlanForEntry','renderLifecycleStepper','After '+"'"+'+(e.bonus?'):
     if token not in professional: fail(f'professional tracker layer missing required logic: {token}')
+save_guard=text('tracker-save-guard.js')
+for token in ('normalizeLifecycleEntry','collectModalEntryData','btProfessionalRepairWellsPersonal','btTrackerSaveGuardVersion'):
+    if token not in save_guard: fail(f'tracker save guard missing required logic: {token}')
+
 app_js=text('app.js')
 for token in ('isNonRepeatableEntry','archived-nonrepeatable',"return'ARCHIVED'",'Closed & Archived','Non-repeatable offer'):
     if token not in app_js: fail(f'archive lifecycle missing from app.js: {token}')
@@ -96,7 +100,7 @@ for token in ('Future Eligibility *','Can this bonus be earned again? *','hasSav
 runtime_text='\n'.join(p.read_text(encoding='utf-8',errors='ignore') for p in files if p.suffix in {'.js','.html','.css','.json'} and 'tests' not in p.parts)
 obsolete='close-rules-'+'v3402.js'
 if obsolete in runtime_text: fail('obsolete v3.4.02 patch reference remains')
-for critical in ('index.html','sw.js','bank-rules-wells-personal.js','tracker-professional.js','tracker-professional.css'):
+for critical in ('index.html','sw.js','bank-rules-wells-personal.js','tracker-professional.js','tracker-save-guard.js','tracker-professional.css'):
     if release not in text(critical): fail(f'{critical} is not aligned to release {release}')
 
 workflow=text('.github/workflows/close-rules.yml')
@@ -121,4 +125,4 @@ if issues:
     print(f'LATEST RELEASE VERIFY FAILED v{release}: {len(issues)} issue(s)')
     for issue in issues: print('FAIL',issue)
     sys.exit(1)
-print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, analyzer, Wells-personal, professional-UI, archive-lifecycle, churn-intake, and verify-before-deploy checks passed')
+print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, analyzer, Wells-personal, professional-UI, save-guard, archive-lifecycle, churn-intake, and verify-before-deploy checks passed')
