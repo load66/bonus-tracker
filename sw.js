@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.4.14: one-click local entry import helper, confirmed-close-date churn countdown, and immediate updates.
+// Version 3.4.14 entry-file refresh: safe file import, confirmed-close-date churn countdown, and immediate updates.
 
-const V = 'bt-v3.4.14';
+const V = 'bt-v3.4.14-entryfile2';
 const ASSETS = ['./app.js', './bank-rules-academy.js', './bank-rules-boa-business.js', './bank-rules-busey.js', './bank-rules-capitalone.js', './bank-rules-equity.js', './bank-rules-fourleaf.js', './bank-rules-pnc.js', './bank-rules-regions.js', './bank-rules.js', './bank-rules-wells-consumer.js', './churn-close-policy.js', './churn-profile-memory.js', './controller.js', './close-rules-core.js', './close-rules-integration.js', './close-rules.css', './engine.js', './entry-link-import.js', './icon.svg', './index.html', './learning-inbox-conflict.js', './manifest.json', './mobile-analyzer.css', './mobile-analyzer.js', './professional-upgrades.js', './profile-db.js', './profile-library-selftest-academy.js', './profile-library-selftest.js', './profile-registry-academy.js', './profile-registry.js', './source-resolver.js', './style.css', './wells-professional-runtime.js', './sw.js'];
 
 self.addEventListener('install', event => {
