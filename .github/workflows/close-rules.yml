@@ -49,6 +49,9 @@ jobs:
       - name: Run entry-file import and replacement safety tests
         run: node tests/entry-file-import.test.js
 
+      - name: Run canonical semantic status tests
+        run: node tests/semantic-status.test.js
+
   deploy:
     name: Deploy verified release to GitHub Pages
     if: github.event_name != 'pull_request'
