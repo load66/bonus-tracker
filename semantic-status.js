@@ -5,7 +5,6 @@
   const VALID=new Set(['requirement','funding','hold','payout','openby','close-review','custom']);
   const baseNormalizeTimer=window.normalizeTimer;
   const baseNormalizeTimerList=window.normalizeTimerList;
-  const baseTimerCategory=window.timerCategory;
   const baseSupportLine=window.supportLine;
   const baseStatusBadgeHtml=window.statusBadgeHtml;
   const baseRequirementSummary=window.requirementSummaryForEntry;
@@ -28,15 +27,9 @@
   function inferredKind(t){
     if(!t)return'custom';
     const explicit=explicitKind(t);if(explicit)return explicit;
-    try{
-      if(typeof baseTimerCategory==='function'){
-        const k=String(baseTimerCategory(t)||'').toLowerCase().trim();
-        if(VALID.has(k))return k;
-        if(k==='close')return'close-review';
-      }
-    }catch{}
-    const s=String([t.text,t.label,t.name,t.source].filter(Boolean).join(' ')).toLowerCase().replace(/\s+/g,' ');
+    const s=String([t.text,t.label,t.name,t.source].filter(Boolean).join(' ')).toLowerCase().replace(/\s+/g,' ').trim();
     if(!s)return'custom';
+    // Order matters. More specific lifecycle deadlines are classified before the broad requirement bucket.
     if(/\b(open[ -]?by|apply by|application deadline|offer (?:expires?|expiration)|opening deadline)\b/.test(s))return'openby';
     if(/\b(balance hold|hold check|maintain(?:ing)? (?:a |the )?(?:minimum |required )?balance|required balance|keep (?:a |the )?.{0,30}balance|maintenance period)\b/.test(s))return'hold';
     if(/\b(funding|fund account|initial deposit|opening deposit|deposit new money|new money deposit)\b/.test(s))return'funding';
