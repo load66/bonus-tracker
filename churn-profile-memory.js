@@ -1,25 +1,34 @@
 /*
  * filename: churn-profile-memory.js
- * version: 3.0.2
- * purpose: Reusable Churn Profile Memory. Saves repeatable bank/product rules for future churn cycles.
- * last-touched: unknown
+ * version: 3.4.13
+ * purpose: Product-safe reusable analyzer memory. Never lets self-tests or a different account type contaminate current T&C results.
  */
 (function(){
-  const VER='3.0.2';
+  'use strict';
+  const VER='3.4.13';
   const KEY='bt_churn_profiles_v302';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const slug=v=>clean(v).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'unknown';
   const uniq=a=>Array.from(new Set((a||[]).filter(Boolean).map(clean))).filter(Boolean);
   function read(){try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch{return{}}}
   function write(v){try{localStorage.setItem(KEY,JSON.stringify(v||{}));return true}catch{return false}}
-  function keyFor(r){return `${slug(r?.bank||'bank')}__${slug(r?.acct||'account')}`}
+  function typeFor(r){
+    const direct=String(r?.accountType||r?.type||'').toLowerCase();
+    if(/business|commercial|biz/.test(direct))return'business';
+    if(/personal|consumer|individual/.test(direct))return'personal';
+    const text=clean([r?.acct,r?.accountName,r?.raw,r?.normalizedRaw].filter(Boolean).join(' '));
+    return /\b(business|commercial|merchant|llc|ein|sole proprietor)\b/i.test(text)?'business':'personal';
+  }
+  function accountNameFor(r){return clean(r?.acct||r?.accountName||r?.product||'account')||'account'}
+  function keyFor(r){return `${slug(r?.bank||'bank')}__${slug(typeFor(r))}__${slug(accountNameFor(r))}`}
   function profileFromResult(r){
     if(!r)return null;
     return {
       version:VER,
       profileKey:keyFor(r),
       bank:r.bank||'',
-      accountType:r.acct||'',
+      accountType:typeFor(r),
+      accountName:accountNameFor(r),
       tiered:!!r.tiered,
       tiers:r.tiers||[],
       defaultTargetTier:r.targetTier||null,
@@ -44,7 +53,7 @@
       lastSourceKind:r.sourceKind||'',
       lastSourceId:r.sourceId||'',
       lastUpdated:new Date().toISOString(),
-      notes:'Reusable churn profile. Re-check current T&C before applying because bank promos can change.'
+      notes:'Reusable product-specific analyzer memory. Current T&C always wins; business and personal offers never cross-fill.'
     };
   }
   function save(r){
@@ -57,16 +66,28 @@
     window.__tcV3LastSavedChurnProfile=db[p.profileKey];
     return db[p.profileKey];
   }
-  function find(bank,acct){
+  function compatibleProduct(wanted,p){
+    const a=slug(accountNameFor(wanted)),b=slug(p?.accountName||p?.acct||'');
+    if(!a||!b||a==='unknown'||b==='unknown')return false;
+    if(a===b)return true;
+    const generic=new Set(['account','checking','consumer-checking','personal-checking','business-checking','eligible-business-checking']);
+    if(generic.has(a)||generic.has(b))return false;
+    return a.includes(b)||b.includes(a);
+  }
+  function find(bank,acct,accountType=''){
     const db=read();
-    const exact=db[`${slug(bank)}__${slug(acct||'account')}`];
-    if(exact)return exact;
-    const b=slug(bank);
-    return Object.values(db).find(p=>slug(p.bank)===b)||null;
+    const wanted={bank,acct,accountType};
+    const bankSlug=slug(bank),wantedType=typeFor(wanted);
+    const exact=db[keyFor(wanted)];
+    if(exact&&typeFor(exact)===wantedType)return exact;
+    /* Legacy key support is allowed only when its saved type and product are compatible. */
+    const legacy=db[`${bankSlug}__${slug(acct||'account')}`];
+    if(legacy&&typeFor(legacy)===wantedType&&compatibleProduct(wanted,legacy))return legacy;
+    return Object.values(db).find(p=>slug(p?.bank)===bankSlug&&typeFor(p)===wantedType&&compatibleProduct(wanted,p))||null;
   }
   function applyProfileToResult(r){
     if(!r)return r;
-    const p=find(r.bank,r.acct);
+    const p=find(r.bank,r.acct,r.accountType);
     if(!p)return r;
     r.reusableChurnProfile=p;
     r.reusableProfileFound=true;
@@ -81,14 +102,17 @@
     r.profileMemoryVersion=VER;
     return r;
   }
+  function isolated(opts){return !!(opts&&(opts.noGlobalFallback||opts.selfTest||opts.testMode||opts.trainingTest))}
   function wrap(){
     if(window.__tcV3ChurnMemoryWrapped)return;
     if(typeof window.tcV3Analyze!=='function')return;
     const base=window.tcV3Analyze;
     window.tcV3Analyze=function(raw,opts){
-      const r=applyProfileToResult(base(raw,opts));
-      if(r&&r.bank&&r.clear)save(r);
-      return r;
+      const r=base(raw,opts);
+      if(isolated(opts))return r;
+      const out=applyProfileToResult(r);
+      if(out&&out.bank&&out.clear)save(out);
+      return out;
     };
     window.tcUnifiedAnalyze=window.tcV3Analyze;
     window.tcStrictAnalyze=window.tcV3Analyze;
