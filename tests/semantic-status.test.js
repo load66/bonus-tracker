@@ -6,7 +6,7 @@ function assert(ok,msg){if(!ok)throw new Error(msg)}
 const src=fs.readFileSync('semantic-status.js','utf8');
 const storage=[];
 let entries=[
-  {id:'CIT-P-01',bank:'Citi',opened:'2026-08-10',customTimers:[{id:'1',text:'$3,000 EDD requirement deadline',startDate:'2026-08-10',daysRequired:90,date:'2026-11-08',done:false}]},
+  {id:'CIT-P-01',bank:'Citi',opened:'2026-08-10',reqDays:90,dataPoint:'At least 2 Enhanced Direct Deposits totaling $3,000+ within 90 days',customTimers:[{id:'1',text:'$3,000 EDD requirement deadline',startDate:'2026-08-10',daysRequired:90,date:'2026-11-08',done:false}]},
   {id:'LEG-P-01',bank:'Legacy Bank',opened:'2026-08-10',customTimers:[{id:'2',text:'Bonus requirement deadline',startDate:'2026-08-10',daysRequired:90,date:'2026-11-08',done:false}]}
 ];
 const I={target:'T',clockShield:'C',gift:'G',calendar:'D'};
@@ -16,6 +16,7 @@ const sandbox={
   td:()=> '2026-08-10',
   dB:(a,b)=>Math.floor((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/864e5),
   fD:d=>new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
+  reqDeadline:e=>e.opened&&e.reqDays?new Date(new Date(e.opened+'T00:00:00').getTime()+e.reqDays*864e5).toISOString().slice(0,10):'',
   esc:s=>String(s),
   status:e=>e.closed?'WAITING TO CHURN!':'CUSTOM TIMER',
   timerCountdownDays:t=>Math.floor((new Date(t.date+'T00:00:00')-new Date('2026-08-10T00:00:00'))/864e5),
@@ -27,10 +28,12 @@ const sandbox={
   timerStatusMeta:e=>({label:'Deadline Active',cls:'buf',icon:'C'}),
   supportLine:()=> 'old support',
   statusBadgeHtml:()=> 'old badge',
+  requirementSummaryForEntry:e=>e.dataPoint||'Pending',
   normalizeLifecycleEntry:e=>({...e,customTimers:sandbox.normalizeTimerList(e.customTimers||[])}),
   collectModalEntryData:()=>({bank:'Citi',customTimers:[{text:'$3,000 EDD requirement deadline',date:'2026-11-08'}]}),
   tcV3MakeSuggestedTimers:()=>[{text:'Maintain required balance / hold check',date:'2026-10-09'}],
   hydrateTimersFromOpened:e=>{e.customTimers=e.customTimers||[];return e},
+  R(){},
   setTimeout:fn=>{fn();return 0},clearTimeout(){},JSON,Date,Math,Set,String,Number,Array,Object,RegExp,parseInt
 };
 sandbox.window=sandbox;sandbox.globalThis=sandbox;
@@ -55,6 +58,8 @@ assert(state.support==='90d left · Due Nov 8, 2026','Requirement support line i
 const badge=sandbox.statusBadgeHtml(citi,null);
 assert(/Requirement Due/.test(badge),'Card badge does not use Requirement Due');
 assert(!/Custom Timer|Deadline Active/.test(badge),'Legacy generic timer label leaked into card badge');
+const req=sandbox.requirementSummaryForEntry(citi);
+assert(req==='$3,000 EDD total · 2 deposits · due Nov 8, 2026','Citi requirement summary is not concise/consistent: '+req);
 const collected=sandbox.collectModalEntryData();
 assert(collected.customTimers[0].kind==='requirement','Saving an entry dropped persisted timer kind');
 const suggested=sandbox.tcV3MakeSuggestedTimers({});
