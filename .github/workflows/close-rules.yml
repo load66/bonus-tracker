@@ -55,6 +55,9 @@ jobs:
       - name: Run imported fee-review migration tests
         run: node tests/fee-review-migration.test.js
 
+      - name: Run smart Needs Attention coverage tests
+        run: node tests/smart-attention.test.js
+
   deploy:
     name: Deploy verified release to GitHub Pages
     if: github.event_name != 'pull_request'
