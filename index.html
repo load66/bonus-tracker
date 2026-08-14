@@ -26,7 +26,7 @@
     refreshed=true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=3.4.14-feereview1',{updateViaCache:'none'}).then(reg=>{
+  navigator.serviceWorker.register('./sw.js?v=3.4.14-attention1',{updateViaCache:'none'}).then(reg=>{
     const activate=worker=>{try{worker&&worker.postMessage({type:'SKIP_WAITING'})}catch{}};
     if(reg.waiting)activate(reg.waiting);
     reg.addEventListener('updatefound',()=>{
@@ -69,6 +69,7 @@
 <script src="./semantic-status.js?v=3.4.14-semantic1"></script>
 <script src="./entry-link-import.js?v=3.4.14-entryfile2"></script>
 <script src="./fee-review-migration.js?v=3.4.14-feereview1"></script>
+<script src="./smart-attention.js?v=3.4.14-attention1"></script>
 <script src="./mobile-analyzer.js?v=3.4.14"></script>
 </body>
 </html>
