@@ -1,0 +1,51 @@
+name: Patch 5-day churn verifier expectations
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Align smoke and release verifier
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          smoke=Path('tests/full-app-smoke.test.js')
+          s=smoke.read_text()
+          old="/Churn countdown starts after confirmed closure/"
+          new="/Churn clock uses confirmed closure \\+ 5-day safety buffer/"
+          if old not in s:
+              raise SystemExit('missing old guided churn smoke assertion')
+          smoke.write_text(s.replace(old,new))
+
+          verify=Path('tests/verify-latest.py')
+          v=verify.read_text()
+          reps={
+            "'confirmed bank close date'":"'universal 5-day safety buffer'",
+            "'Churn countdown starts after confirmed closure'":"'Churn clock uses confirmed closure + 5-day safety buffer'"
+          }
+          for old,new in reps.items():
+              if old not in v:
+                  raise SystemExit(f'missing verifier token: {old}')
+              v=v.replace(old,new)
+          verify.write_text(v)
+          PY
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add tests/full-app-smoke.test.js tests/verify-latest.py
+          if git diff --cached --quiet; then
+            echo "No patch needed"
+            exit 0
+          fi
+          git commit -m "Align verification with 5-day churn buffer"
+          git push
