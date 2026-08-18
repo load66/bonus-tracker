@@ -1,7 +1,8 @@
-/* BonusTracker v3.4.14 — one operational churn clock: confirmed bank close date. */
+/* BonusTracker v3.4.14 — confirmed-close-date churn clock with a universal 5-day safety buffer. */
 (function(){
   'use strict';
   const VER='3.4.14';
+  const SAFETY_BUFFER_DAYS=5;
 
   function decision(e){
     try{if(typeof window.churnDecisionForEntry==='function')return window.churnDecisionForEntry(e)}catch{}
@@ -29,10 +30,14 @@
       return e;
     }
     if(d==='repeatable'){
-      e.churnBasis='closed';e.churnBufferDays=0;e.churnTrackingPolicy='confirmed-close-date';
+      e.churnBasis='closed';
+      e.churnBufferDays=SAFETY_BUFFER_DAYS;
+      e.churnTrackingPolicy='confirmed-close-date-plus-5-day-buffer';
       if(e.analysis&&typeof e.analysis==='object'){
         if(!e.analysis.sourceEligibilityBasis)e.analysis.sourceEligibilityBasis=e.sourceEligibilityBasis||'';
-        e.analysis.churnBasis='closed';e.analysis.churnBufferDays=0;e.analysis.churnTrackingPolicy='confirmed-close-date';
+        e.analysis.churnBasis='closed';
+        e.analysis.churnBufferDays=SAFETY_BUFFER_DAYS;
+        e.analysis.churnTrackingPolicy='confirmed-close-date-plus-5-day-buffer';
       }
     }
     return e;
@@ -49,7 +54,10 @@
   }
   function next(e){
     if(!e||decision(e)!=='repeatable'||!e.closed||!e.churn)return'';
-    return String(e.churn)==='180'?addDLocal(e.closed,180):addMLocal(e.closed,(parseInt(e.churn,10)||0)*12);
+    const base=String(e.churn)==='180'
+      ?addDLocal(e.closed,180)
+      :addMLocal(e.closed,(parseInt(e.churn,10)||0)*12);
+    return base?addDLocal(base,SAFETY_BUFFER_DAYS):'';
   }
   function ready(e){return next(e)}
   function left(e){
@@ -58,10 +66,12 @@
     try{if(typeof window.dB==='function'&&typeof window.td==='function')return Math.max(0,window.dB(window.td(),d))}catch{}
     return null
   }
+  function bufferFor(e){return decision(e)==='repeatable'?SAFETY_BUFFER_DAYS:0}
   function assignGlobals(){
     window.churnBasisDate=e=>e?.closed||'';
-    window.churnBufferDaysFor=()=>0;
+    window.churnBufferDaysFor=bufferFor;
     window.nextReopen=next;window.churnReadyDate=ready;window.daysLeft=left;
+    window.btChurnSafetyBufferDays=SAFETY_BUFFER_DAYS;
     try{churnBasisDate=window.churnBasisDate}catch{}
     try{churnBufferDaysFor=window.churnBufferDaysFor}catch{}
     try{nextReopen=next}catch{}
@@ -73,15 +83,15 @@
     if(d==='nonrepeatable')return'Non-repeatable · archives after closing';
     if(d!=='repeatable')return'Not saved';
     const rule=String(e?.churn)==='180'?'180 days':e?.churn?(e.churn+' year'+(String(e.churn)==='1'?'':'s')):'Reset period missing';
-    return rule+' after confirmed account close date';
+    return rule+' + '+SAFETY_BUFFER_DAYS+'-day safety buffer after confirmed account close date';
   }
   function closeNote(){
-    return '<div class="fg full"><div class="guided-decision-note"><b>Churn countdown starts after confirmed closure</b><span>Request closure with the bank, wait until the account is actually closed, then tap Close Now and record that actual close date. The churn countdown begins from that date.</span></div></div>';
+    return '<div class="fg full"><div class="guided-decision-note"><b>Churn clock uses confirmed closure + 5-day safety buffer</b><span>Request closure with the bank, wait until the account is actually closed, then tap Close Now and record that actual close date. The saved churn period runs from that confirmed close date, and BonusTracker adds 5 extra safety days before marking the bank eligible again.</span></div></div>';
   }
   function polishModalHtml(h){
     h=String(h||'');
     h=h.replace(/<div class="fg"><label>Eligibility clock starts from \*<\/label><select[\s\S]*?<\/select><div class="guided-field-help">[\s\S]*?<\/div><\/div>/,closeNote());
-    h=h.replace(/\b(180 days|[123] years?|1 year) after (?:bonus received|account opened|account closed) date\b/gi,(m,rule)=>rule+' after confirmed account close date');
+    h=h.replace(/\b(180 days|[123] years?|1 year) after (?:bonus received|account opened|account closed|confirmed account close) date\b/gi,(m,rule)=>rule+' + '+SAFETY_BUFFER_DAYS+'-day safety buffer after confirmed account close date');
     return h;
   }
   function wrap(name,after){
