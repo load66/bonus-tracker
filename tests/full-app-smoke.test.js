@@ -108,7 +108,7 @@ setTimeout(()=>{
     sandbox.btModalSet('bank','Wells Fargo');sandbox.btModalSet('accountType','personal');sandbox.btModalSet('bonus','400','number');sandbox.setModalChurnability('repeatable');sandbox.setModalChurnRule('1');sandbox.setModalChurnBasis('bonus');sandbox.btModalSet('opened','2026-08-10');sandbox.btModalSet('monthlyFeeYNText','Not stated in bonus disclosure — separate Wells Fargo fee schedule applies');sandbox.btModalSet('avoidMonthlyFeeText','Review the Wells Fargo Consumer Account Fee and Information Schedule.');
     sandbox.btWizardStep(1);
     const wizardBasics=sandbox.rModal();
-    assert(/Can this bonus be earned again\? \*/.test(wizardBasics)&&/Churn countdown starts after confirmed closure/.test(wizardBasics),'Guided editor did not show the close-date churn policy');
+    assert(/Can this bonus be earned again\? \*/.test(wizardBasics)&&/Churn clock uses confirmed closure \+ 5-day safety buffer/.test(wizardBasics),'Guided editor did not show the close-date churn policy');
     sandbox.btWizardStep(4);
     const wizardReview=sandbox.rModal();
     assert(/Future eligibility/.test(wizardReview)&&/1 year \+ 5-day safety buffer after confirmed account close date/.test(wizardReview),'Guided review did not show the confirmed-close-date churn policy');

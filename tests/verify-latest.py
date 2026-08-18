@@ -121,7 +121,7 @@ for token in ('wellsSuggestedTimers','Can this bonus be earned again? *','Future
     if token not in runtime_fix: fail(f'professional Wells runtime behavior missing: {token}')
 
 churn_policy=text('churn-close-policy.js')
-for token in ('confirmed bank close date','churnBasisDate','nextReopen','churnReadyDate','churnBufferDaysFor','churnTrackingPolicy','Churn countdown starts after confirmed closure','collectModalEntryData','normalizeLifecycleEntry'):
+for token in ('universal 5-day safety buffer','churnBasisDate','nextReopen','churnReadyDate','churnBufferDaysFor','churnTrackingPolicy','Churn clock uses confirmed closure + 5-day safety buffer','collectModalEntryData','normalizeLifecycleEntry'):
     if token not in churn_policy: fail(f'confirmed-close-date churn policy missing: {token}')
 
 close_core=text('close-rules-core.js')
