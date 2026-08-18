@@ -79,7 +79,7 @@ setTimeout(()=>{
     assert(wc.reqMoney===1000&&wc.reqIsTotal===true&&wc.reqDays===90,'Wells consumer $1,000 / 90-day requirement failed');
     assert(Number(wc.fundedDays||0)===0&&Number(wc.holdDays||0)===0&&Number(wc.minHoldDays||0)===0,'Wells consumer received false funding/hold requirements');
     assert(wc.closeRestrictionType==='payout-only'&&wc.closeBufferDays===0,'Wells consumer payout-only close rule failed');
-    assert(wc.churnable===true&&wc.churnability==='repeatable'&&wc.churn==='1'&&wc.churnBasis==='closed'&&wc.churnBufferDays===0,'Wells tracker churn countdown is not anchored to confirmed close date');
+    assert(wc.churnable===true&&wc.churnability==='repeatable'&&wc.churn==='1'&&wc.churnBasis==='closed'&&wc.churnBufferDays===5,'Wells tracker churn countdown is not anchored to confirmed close date');
     assert(/not stated in bonus disclosure/i.test(wc.monthlyFeeYNText||''),'Wells fee disclosure was invented instead of deferred to the separate fee schedule');
     const wt=sandbox.tcV3MakeSuggestedTimers(wc,'2026-08-10');
     assert(wt.some(t=>/\$1,000 qualifying electronic deposits/i.test(t.text)&&Number(t.daysRequired)===90),'Wells requirement timer missing');
@@ -98,10 +98,10 @@ setTimeout(()=>{
     const preBonusPlan=sandbox.closePlanForEntry(repaired);
     assert(preBonusPlan.rows.some(x=>x.label==='Earliest close'&&x.value==='After $400 posts'),'Wells earliest-close summary is still contradictory');
     const eligibility=sandbox.normalizeLifecycleEntry({...repaired,reqMet:'2026-08-20',bonusRecd:'2026-09-01',closed:'2026-09-10'});
-    assert(sandbox.nextReopen(eligibility)==='2027-09-10'&&sandbox.churnReadyDate(eligibility)==='2027-09-10','Wells churn countdown did not start from the confirmed close date');
+    assert(sandbox.nextReopen(eligibility)==='2027-09-15'&&sandbox.churnReadyDate(eligibility)==='2027-09-15','Wells churn countdown did not start from the confirmed close date');
     const genericRepeat=sandbox.normalizeLifecycleEntry({bank:'Generic Repeat Bank',accountType:'personal',bonus:200,opened:'2026-01-01',bonusRecd:'2026-02-01',closed:'2026-03-05',churnable:true,churnability:'repeatable',churn:'2',churnBasis:'bonus',churnBufferDays:10});
-    assert(genericRepeat.churnBasis==='closed'&&genericRepeat.churnBufferDays===0,'Repeatable entry kept a non-close churn basis or buffer');
-    assert(sandbox.nextReopen(genericRepeat)==='2028-03-05','Generic churn timer did not start from confirmed close date');
+    assert(genericRepeat.churnBasis==='closed'&&genericRepeat.churnBufferDays===5,'Repeatable entry kept a non-close churn basis or buffer');
+    assert(sandbox.nextReopen(genericRepeat)==='2028-03-10','Generic churn timer did not start from confirmed close date');
     const notClosedYet=sandbox.normalizeLifecycleEntry({bank:'Pending Closure Bank',bonus:100,bonusRecd:'2026-04-01',churnable:true,churnability:'repeatable',churn:'1'});
     assert(sandbox.nextReopen(notClosedYet)==='', 'Churn countdown started before the bank was actually closed');
     sandbox.openAdd();
@@ -111,7 +111,7 @@ setTimeout(()=>{
     assert(/Can this bonus be earned again\? \*/.test(wizardBasics)&&/Churn countdown starts after confirmed closure/.test(wizardBasics),'Guided editor did not show the close-date churn policy');
     sandbox.btWizardStep(4);
     const wizardReview=sandbox.rModal();
-    assert(/Future eligibility/.test(wizardReview)&&/1 year after confirmed account close date/.test(wizardReview),'Guided review did not show the confirmed-close-date churn policy');
+    assert(/Future eligibility/.test(wizardReview)&&/1 year \+ 5-day safety buffer after confirmed account close date/.test(wizardReview),'Guided review did not show the confirmed-close-date churn policy');
 
     const fourLeaf='FourLeaf Checking Up to $550 Bonus Offer. Open a Free Checking, Smart Checking, or Student Checking account between February 2, 2026 and December 31, 2026. Have a Qualifying Direct Deposit post within ninety (90) calendar days of account opening. A Qualifying Direct Deposit is a recurring electronic deposit of a paycheck, pension, or government benefits of $500.00 or more. The First Direct Deposit Bonus of $350 will be deposited within sixty (60) calendar days following the initial Qualifying Direct Deposit. Continue to have a Qualifying Direct Deposit for twelve (12) consecutive months for an additional $100 and twenty-four (24) consecutive months for another $100. The checking account must remain open and in good standing up to and including the date each bonus is deposited. You must not have previously received a new checking account opening related bonus from FourLeaf.';
     const fr=sandbox.tcV3Analyze(fourLeaf,{noGlobalFallback:true});
