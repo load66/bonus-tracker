@@ -58,6 +58,9 @@ jobs:
       - name: Run smart Needs Attention coverage tests
         run: node tests/smart-attention.test.js
 
+      - name: Run universal 5-day churn buffer tests
+        run: node tests/churn-buffer.test.js
+
   deploy:
     name: Deploy verified release to GitHub Pages
     if: github.event_name != 'pull_request'
