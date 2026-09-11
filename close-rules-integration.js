@@ -1,7 +1,7 @@
-/* Bonus Tracker Close Rules Integration v3.4.13 — permanent close rules plus source-accurate payout-only summaries and verified migrations. */
+/* Bonus Tracker Close Rules Integration v3.4.15 — Lafayette Boost300 correction plus source-accurate close/fee migrations. */
 (function(){
   'use strict';
-  const VER='3.4.13',SCHEMA=7,SCHEMA_KEY='bt_data_schema_version',BACKUP_KEY='bt_pre_migration_backup_v7';
+  const VER='3.4.15',SCHEMA=8,SCHEMA_KEY='bt_data_schema_version',BACKUP_KEY='bt_pre_migration_backup_v8';
   const core=window.BTCloseRules;if(!core){console.error('Close Rules Core missing');return}
   const escFn=v=>{try{return esc(String(v??''))}catch{const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML}};
   const short=v=>String(v||'').replace(/\s+/g,' ').trim().slice(0,420);
@@ -28,8 +28,67 @@
   bind('isInBuffer',inBuffer);
   bind('closeBufferDaysFor',e=>ruleDays(e)>0?Math.max(0,parseInt(e?.closeBufferDays,10)||0):0);
 
+  // Relationship-level monthly fee guard. Some offers have fee-free checking but a required
+  // companion membership/share account that can still incur a recurring fee. In that case the
+  // tracker must not collapse the whole relationship into "No Fee" just because checking is $0.
+  const oldNoMonthlyFeeDetected=window.noMonthlyFeeDetected;
+  function recurringMonthlyFeeRisk(e){
+    const scope=String([e?.monthlyFeeYNText,e?.monthlyFeeAmountText,e?.monthlyFeeWaiverText,e?.avoidMonthlyFeeText,e?.notes,e?.analyzedTC].filter(Boolean).join('\n'));
+    const lines=scope.split(/\n+|(?<=[.!?])\s+|;+/).map(x=>String(x||'').trim()).filter(Boolean);
+    return lines.some(s=>{
+      if(/account closure|closed? within|early close|early-close|closing fee|termination fee|clawback/i.test(s))return false;
+      if(/\$\s*[1-9][0-9,]*(?:\.\d{1,2})?\s*(?:\/\s*mo(?:nth)?|per\s+month|monthly)\b/i.test(s))return true;
+      if(/(?:monthly|maintenance|service|account)\s+(?:service\s+)?(?:fee|charge)[^$]{0,60}\$\s*[1-9][0-9,]*(?:\.\d{1,2})?/i.test(s))return true;
+      if(/\$\s*[1-9][0-9,]*(?:\.\d{1,2})?[^.]{0,60}(?:monthly|maintenance|service)\s+(?:fee|charge)/i.test(s))return true;
+      return false
+    })
+  }
+  bind('noMonthlyFeeDetected',e=>recurringMonthlyFeeRisk(e)?false:(typeof oldNoMonthlyFeeDetected==='function'?oldNoMonthlyFeeDetected(e):false));
+
+  function normalizeLafayetteBoost300(x){
+    if(!x||typeof x!=='object')return x;
+    const bank=String(x.bank||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+    if(!/\blafayette federal(?: credit union)?\b/.test(bank))return x;
+    const detail=String([x.notes,x.analyzedTC,x.completeBonusText,x.eligibilityText,x.dataPoint].filter(Boolean).join(' '));
+    const looksLikeBoost300=/boost300|one[- ]time use per membership|qualified direct deposit|preferred or premier savings/i.test(detail)||Number(x.bonus||0)===250;
+    if(!looksLikeBoost300)return x;
+
+    // Official Personal Fee Schedule: $25 if the account is closed within 6 months.
+    // Use one calendar day after the six-month anniversary as the conservative no-fee date.
+    if(x.opened&&typeof addM==='function'&&typeof addD==='function'&&typeof dB==='function'){
+      const sixMonthAnniversary=addM(x.opened,6);
+      const conservativeDate=addD(sixMonthAnniversary,1);
+      const holdDays=dB(x.opened,conservativeDate);
+      if(Number.isFinite(holdDays)&&holdDays>0){
+        x.minHoldDays=holdDays;
+        x.closeFeeCountdownDays=String(holdDays);
+        x.closeRuleBasis='opened';
+        x.closeBufferDays=0;
+        x.closeRestrictionType='explicit-clawback';
+        x.closeRuleSource='verified-bank-rule';
+        x.earlyCloseFee=25;
+        x.earlyTerminationFeeText='$25 account-closure fee if closed within 6 months of account opening.';
+        x.closeRuleText='A $25 account-closure fee applies if the account is closed within 6 months of account opening. Conservative safe-close date is one calendar day after the 6-month anniversary.';
+        x.closeRuleSourceSentence='$25 if closed within 6 months of account opening';
+        x.closeRuleDisplayText='6 months + 1 day from opened date';
+      }
+    }
+
+    // Personal checking is fee-free, but the required membership Share Savings has a recurring fee risk
+    // if its $50 minimum is not maintained. Track the relationship-level risk so Fee Check is not "No Fee".
+    x.monthlyFeeYNText='Personal checking: $0 monthly maintenance fee. Required Share Savings: $10/month if the $50 minimum balance is not maintained.';
+    x.monthlyFeeAmountText='$10';
+    x.monthlyFeeFrequency='monthly';
+    x.monthlyFeeWaiverType='Balance';
+    x.monthlyFeeWaiverAmountText='$50 minimum Share Savings balance';
+    x.monthlyFeeWaiverText='Keep at least $50 in the required Share Savings account to avoid the $10/month fee.';
+    x.avoidMonthlyFeeText=x.monthlyFeeWaiverText;
+    x.monthlyFeeNoMonthlyServiceFee=false;
+    return x
+  }
+
   const oldNormalize=window.normalizeLifecycleEntry;
-  function normalizeEntry(e){const x=oldNormalize?oldNormalize(e):({...e});core.sanitizeEntry(x);try{if(typeof window.btBuildResolvedBankProfile==='function'){x.profile=window.btBuildResolvedBankProfile(x);x.profileVersion='bank-profile-v2'}}catch{}return x}
+  function normalizeEntry(e){const x=oldNormalize?oldNormalize(e):({...e});normalizeLafayetteBoost300(x);core.sanitizeEntry(x);try{if(typeof window.btBuildResolvedBankProfile==='function'){x.profile=window.btBuildResolvedBankProfile(x);x.profileVersion='bank-profile-v2'}}catch{}return x}
   bind('normalizeLifecycleEntry',normalizeEntry);
   bind('normalizeLifecycleEntries',rows=>(rows||[]).map(normalizeEntry));
 
@@ -74,7 +133,7 @@
     }
     const safe=safeDate(e),days=ruleDays(e),buffer=days?(parseInt(e.closeBufferDays,10)||0):0,type=core.typeForEntry(e);
     rows.push({label:'Earliest close',value:safe?fD(safe):(type==='payout-only'&&e.bonus?'After '+fM(e.bonus)+' posts':e.bonusRecd?'Close after bonus posts':'Wait for bonus'),cls:safe&&daysSafe(e)<=0?'ok':safe?'warn':type==='payout-only'?'warn':'bad'});
-    rows.push({label:'Rule',value:days?`${days} days from ${closeRuleBasisLabel(basis(e)).toLowerCase()}${buffer?' + '+buffer+' day safety':''}`:(type==='payout-only'?'Close after bonus posts':'No fixed post-bonus hold'),cls:days?'':'ok'});
+    rows.push({label:'Rule',value:days?(e.closeRuleDisplayText||`${days} days from ${closeRuleBasisLabel(basis(e)).toLowerCase()}${buffer?' + '+buffer+' day safety':''}`):(type==='payout-only'?'Close after bonus posts':'No fixed post-bonus hold'),cls:days?'':'ok'});
     rows.push({label:'Final check',value:e.bonusRecd?'Bonus posted · no pending activity':'Wait for bonus to post',cls:e.bonusRecd?'':'bad'});
     return{title:'Close Check',sub:'One clear source of truth',chip:ready.label,cls:ready.cls,rows,notes:[],proof:core.sourceSentence(e),compact:true}
   }
