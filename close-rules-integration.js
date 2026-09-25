@@ -1,7 +1,7 @@
-/* Bonus Tracker Close Rules Integration v3.4.15 — Lafayette Boost300 correction plus source-accurate close/fee migrations. */
+/* Bonus Tracker Close Rules Integration v3.4.16 — calendar/export/offline/analyzer hardening plus Lafayette source-accurate close/fee migrations. */
 (function(){
   'use strict';
-  const VER='3.4.15',SCHEMA=8,SCHEMA_KEY='bt_data_schema_version',BACKUP_KEY='bt_pre_migration_backup_v8';
+  const VER='3.4.16',SCHEMA=8,SCHEMA_KEY='bt_data_schema_version',BACKUP_KEY='bt_pre_migration_backup_v8';
   const core=window.BTCloseRules;if(!core){console.error('Close Rules Core missing');return}
   const escFn=v=>{try{return esc(String(v??''))}catch{const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML}};
   const short=v=>String(v||'').replace(/\s+/g,' ').trim().slice(0,420);
@@ -150,9 +150,32 @@
   bind('renderCleanPlanCard',renderPlan);
   bind('renderClosePlan',e=>renderPlan(closePlan(e)));
 
+  function academyOfferIsExplicitlyNegated(raw){
+    const text=String(raw||'');
+    if(!/\bAcademy Bank\b/i.test(text)||!/\bElite Investment Checking\b/i.test(text))return false;
+    try{if(typeof window.tcV3AcademyUnconditionalNoBonus==='function')return !!window.tcV3AcademyUnconditionalNoBonus(text)}catch{}
+    return text.replace(/\r/g,'\n').split(/(?<=[.!?])\s+|\n+|;+/).some(line=>{
+      const s=String(line||'').replace(/\s+/g,' ').trim();
+      if(/\bnot available to\b|\bnot available for\b|\bineligible if\b|\bnot eligible if\b|\bunless\b|\bcustomers? who\b|\bemployees?\b/i.test(s))return false;
+      return /\b(?:there is|there's)\s+no\s+(?:cash\s+)?bonus\b/i.test(s)
+        || /\bno\s+\$\s*[0-9][0-9,]*(?:\.\d{1,2})?\s+(?:cash\s+)?bonus\b/i.test(s)
+        || /\bnot\s+(?:a|an)\s+(?:cash\s+)?bonus\s+offer\b/i.test(s)
+        || /\b(?:does not|doesn't|will not|won't)\s+(?:offer|include|provide|pay)\b[^.]{0,80}\bbonus\b/i.test(s)
+    })
+  }
+  function sanitizeNegatedAcademyBonus(r,raw){
+    if(!r||!academyOfferIsExplicitlyNegated(raw))return r;
+    r.bonus=0;r.selectedBonus=0;r.tiered=false;r.tiers=[];r.targetTier=null;r.bonusTierText='';r.clear=false;
+    if(r.fieldSources&&typeof r.fieldSources==='object')Object.keys(r.fieldSources).forEach(k=>{if(/bonus/i.test(k))delete r.fieldSources[k]});
+    if(Array.isArray(r.sourceSnippets))r.sourceSnippets=r.sourceSnippets.filter(x=>!x||!/bonus/i.test(String(x.field||'')));
+    r.reviewFlags=Array.from(new Set([...(Array.isArray(r.reviewFlags)?r.reviewFlags:[]),'Academy source explicitly says no bonus is offered; bonus amount was cleared.']));
+    r.bankRulesApplied=(Array.isArray(r.bankRulesApplied)?r.bankRulesApplied:[]).filter(x=>!/Academy Bank Elite Investment Checking/i.test(String(x||'')));
+    return r
+  }
+
   const analyzer=window.tcV3Analyze;
   if(typeof analyzer==='function'){
-    window.tcV3Analyze=function(raw,opts){return core.sanitizeAnalysis(analyzer(raw,opts),raw)};
+    window.tcV3Analyze=function(raw,opts){return sanitizeNegatedAcademyBonus(core.sanitizeAnalysis(analyzer(raw,opts),raw),raw)};
     window.tcUnifiedAnalyze=window.tcV3Analyze;window.tcStrictAnalyze=window.tcV3Analyze;window.tcV3EngineVersion=VER;
   }
   const oldApply=window.tcApplyReviewed;
