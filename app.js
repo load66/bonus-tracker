@@ -4,6 +4,7 @@ const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK
 const APP_VERSION='3.4.22';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
+const TC_ARCHIVE_KEY='bt_tc_archive_v1';
 const ANALYZER_MEMORY_KEY='bt_analyzer_memory_v1';
 const ANALYZER_TRAINING_KEY='bt_analyzer_training_library_v1';
 const ANALYZER_RULES_KEY='bt_analyzer_user_rules_v1';
@@ -191,6 +192,114 @@ function offerHistoryForBank(bank){
   const all=loadOfferHistory();
   const key=offerHistoryKey(bank);
   return Array.isArray(all[key])?all[key]:[]
+}
+
+function loadTermsArchive(){
+  const raw=ld(TC_ARCHIVE_KEY,{});
+  return raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{}
+}
+function saveTermsArchive(rows){
+  sv(TC_ARCHIVE_KEY,rows&&typeof rows==='object'?rows:{})
+}
+function termsArchiveKey(entry){return offerHistoryKey(entry)}
+function termsArchiveSourceText(e){
+  return String(e?.tcSourceRaw||e?.analysis?.rawText||e?.analyzedTC||'').trim()
+}
+function termsArchiveSnapshot(e,source){
+  if(!e||!e.bank||!e.opened)return null;
+  const raw=termsArchiveSourceText(e);
+  if(raw.length<120)return null;
+  let verified=false;
+  try{verified=!!window.BTEligibilityGate?.validate?.({...e,tcSourceRaw:raw})?.ok}catch{}
+  if(!verified)return null;
+  return{
+    id:'tc_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7),
+    bank:e.bank||'',
+    accountType:normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'personal',
+    entryId:e.id||'',
+    opened:e.opened||'',
+    bonus:Number(e.bonus||0),
+    capturedAt:td(),
+    termsVerifiedAt:e.termsVerifiedAt||e.eligibilityVerifiedAt||td(),
+    source:source||'new-cycle',
+    schemaVersion:parseInt(e.schemaVersion||0,10)||0,
+    promoSourceUrl:e.promoSourceUrl||'',
+    feeScheduleSourceUrl:e.feeScheduleSourceUrl||'',
+    tcSourceRaw:raw,
+    eligibilityRules:Array.isArray(e.eligibilityRules)?e.eligibilityRules.map(r=>({...r})):[],
+    eligibilityEvidenceText:e.eligibilityEvidenceText||'',
+    eligibilityEvidenceSource:e.eligibilityEvidenceSource||'',
+    currentCustomerEvidenceText:e.currentCustomerEvidenceText||'',
+    monthlyFeeYNText:e.monthlyFeeYNText||'',
+    monthlyFeeAmountText:e.monthlyFeeAmountText||'',
+    monthlyFeeWaiverText:e.monthlyFeeWaiverText||'',
+    avoidMonthlyFeeText:e.avoidMonthlyFeeText||'',
+    earlyTerminationFeeText:e.earlyTerminationFeeText||'',
+    closeRuleText:e.closeRuleText||'',
+    closeRuleBasis:e.closeRuleBasis||'',
+    minHoldDays:parseInt(e.minHoldDays||0,10)||0,
+    earlyCloseFee:Number(e.earlyCloseFee||0),
+    expirationDateText:e.expirationDateText||''
+  }
+}
+function termsCycleToken(x){
+  return [String(x?.entryId||''),String(x?.opened||''),String(x?.termsVerifiedAt||''),String(x?.tcSourceRaw||'').slice(0,180)].join('|')
+}
+function saveTermsArchiveForNewCycle(e,source){
+  const snap=termsArchiveSnapshot(e,source);
+  if(!snap)return false;
+  const all=loadTermsArchive(),key=termsArchiveKey(snap);
+  const bucket=(all[key]&&typeof all[key]==='object')?all[key]:{bank:snap.bank,accountType:snap.accountType,current:null,versions:[]};
+  const cur=bucket.current&&typeof bucket.current==='object'?bucket.current:null;
+  if(cur&&cur.entryId===snap.entryId&&cur.opened===snap.opened)return false;
+  let versions=Array.isArray(bucket.versions)?bucket.versions:[];
+  if(cur){
+    const archived={...cur,replacedAt:td(),replacedByOpened:snap.opened};
+    const token=termsCycleToken(archived);
+    versions=[archived,...versions.filter(v=>termsCycleToken(v)!==token)].slice(0,12);
+  }
+  bucket.bank=snap.bank;bucket.accountType=snap.accountType;bucket.current=snap;bucket.versions=versions;
+  all[key]=bucket;saveTermsArchive(all);return true
+}
+function termsArchiveRows(){
+  const all=loadTermsArchive();
+  return Object.values(all).filter(x=>x&&x.current).sort((a,b)=>String(a.current?.bank||a.bank||'').localeCompare(String(b.current?.bank||b.bank||'')))
+}
+function safeExternalUrl(v){
+  const x=String(v||'').trim();
+  return /^https?:\/\//i.test(x)?x:''
+}
+function eligibilityRuleStorageLabel(r){
+  const p=parseInt(r?.periodValue||r?.churnPeriodValue||0,10)||0;
+  const u=String(r?.periodUnit||r?.churnPeriodUnit||'').replace(/s$/,'');
+  const b=window.BTEligibilityGate?.anchorLabel?.(window.BTEligibilityGate?.normalizeBasis?.(r?.basis||''))||String(r?.basis||'rule');
+  const cond=window.BTEligibilityGate?.normalizeCondition?.(r?.condition||r?.appliesWhen);
+  return (p?(p+' '+u+(p===1?'':'s')+' after '):'')+b+(cond?.type==='closed-with-negative-balance'?' · only if closed negative':'')
+}
+function rTermsStorage(){
+  const q=String(storageSearch||'').trim().toLowerCase();
+  const rows=termsArchiveRows().filter(b=>!q||String(b.current?.bank||b.bank||'').toLowerCase().includes(q)||String(b.current?.accountType||b.accountType||'').toLowerCase().includes(q));
+  let h='<div class="sec">T&C Storage</div><div class="sub" style="margin:0 2px 10px">Latest verified terms by bank/product. Existing-cycle edits never replace this record; only a new opened bonus cycle with verified T&C can replace it.</div>';
+  h+='<input class="sinput" type="text" placeholder="Search stored T&C..." value="'+esc(storageSearch||'')+'" oninput="storageSearch=this.value;R()">';
+  if(!rows.length)return h+'<div class="empty">No verified T&C cycles stored yet.</div>';
+  rows.forEach(bucket=>{
+    const x=bucket.current||{},versions=Array.isArray(bucket.versions)?bucket.versions:[];
+    const rules=Array.isArray(x.eligibilityRules)?x.eligibilityRules:[];
+    const promo=safeExternalUrl(x.promoSourceUrl),fee=safeExternalUrl(x.feeScheduleSourceUrl);
+    h+='<div class="clean-plan-card safe"><div class="clean-plan-head"><div><div class="clean-plan-title">'+esc(x.bank||bucket.bank||'Bank')+'</div><div class="clean-plan-sub">'+esc((x.accountType||bucket.accountType||'personal')+' · opened '+(x.opened?fD(x.opened):'—'))+'</div></div><span class="clean-plan-chip safe">Current T&C</span></div>';
+    h+='<div class="clean-plan-rows"><div class="clean-plan-row"><span>Bonus</span><b>'+esc(x.bonus?fM(x.bonus):'—')+'</b></div><div class="clean-plan-row"><span>Verified</span><b>'+esc(x.termsVerifiedAt||x.capturedAt||'—')+'</b></div><div class="clean-plan-row"><span>Rules</span><b>'+esc(rules.length?rules.map(eligibilityRuleStorageLabel).join(' | '):'Saved eligibility evidence')+'</b></div></div>';
+    if(promo||fee){h+='<div class="sub" style="margin-top:8px">';if(promo)h+='<a href="'+esc(promo)+'" target="_blank" rel="noopener noreferrer">Official promo</a>';if(promo&&fee)h+=' · ';if(fee)h+='<a href="'+esc(fee)+'" target="_blank" rel="noopener noreferrer">Fee schedule</a>';h+='</div>'}
+    h+='<details class="clean-details"><summary>Full T&C</summary><div class="clean-detail-body"><div style="white-space:pre-wrap;font-size:11px;line-height:1.45">'+esc(x.tcSourceRaw||'')+'</div></div></details>';
+    if(versions.length){
+      h+='<details class="clean-details"><summary>Previous T&C cycles <span>'+versions.length+'</span></summary><div class="clean-detail-body">';
+      versions.slice(0,8).forEach(v=>{
+        h+='<details class="clean-details"><summary>'+esc((v.opened?fD(v.opened):'Prior cycle')+(v.bonus?' · '+fM(v.bonus):''))+'</summary><div class="clean-detail-body"><div class="sub">Replaced '+esc(v.replacedAt||'')+(v.termsVerifiedAt?' · verified '+esc(v.termsVerifiedAt):'')+'</div><div style="white-space:pre-wrap;font-size:11px;line-height:1.45;margin-top:7px">'+esc(v.tcSourceRaw||'')+'</div></div></details>'
+      });
+      h+='</div></details>'
+    }
+    h+='</div>'
+  });
+  return h
 }
 function archivedCycleSnapshot(e){
   if(!e)return null;
