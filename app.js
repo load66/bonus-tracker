@@ -1,7 +1,7 @@
-/* ✅ Version 3.4.12: required future-eligibility decision before creation, archive lifecycle, and safer analyzer integration. */
+/* ✅ Version 3.4.16: required future-eligibility decision before creation, archive lifecycle, and safer analyzer integration. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.12';
+const APP_VERSION='3.4.16';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const ANALYZER_MEMORY_KEY='bt_analyzer_memory_v1';
@@ -27,26 +27,31 @@ const sv=(k,v)=>{
   
 };
 
-const td=()=>new Date().toISOString().split('T')[0];
+const isoParts=d=>{const m=String(d||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?{y:Number(m[1]),m:Number(m[2]),d:Number(m[3])}:null};
+const isoFromUtcDate=dt=>dt.toISOString().slice(0,10);
+const td=()=>{const dt=new Date(),pad=n=>String(n).padStart(2,'0');return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`};
 
-const dB=(a,b)=>Math.floor((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/864e5);
+const dB=(a,b)=>{const x=isoParts(a),y=isoParts(b);if(!x||!y)return NaN;return Math.floor((Date.UTC(y.y,y.m-1,y.d)-Date.UTC(x.y,x.m-1,x.d))/864e5)};
 
 const addM=(d,m)=>{
-  const dt=new Date(d+'T00:00:00');
-  dt.setMonth(dt.getMonth()+m);
-  return dt.toISOString().split('T')[0]
+  const p=isoParts(d);if(!p)return'';
+  const rawMonth=(p.m-1)+Number(m||0),targetYear=p.y+Math.floor(rawMonth/12),month=((rawMonth%12)+12)%12;
+  const maxDay=new Date(Date.UTC(targetYear,month+1,0)).getUTCDate();
+  return isoFromUtcDate(new Date(Date.UTC(targetYear,month,Math.min(p.d,maxDay))))
 };
 
 const addD=(d,n)=>{
-  const dt=new Date(d+'T00:00:00');
-  dt.setDate(dt.getDate()+n);
-  return dt.toISOString().split('T')[0]
+  const p=isoParts(d);if(!p)return'';
+  const dt=new Date(Date.UTC(p.y,p.m-1,p.d));
+  dt.setUTCDate(dt.getUTCDate()+Number(n||0));
+  return isoFromUtcDate(dt)
 };
 
 const fD=d=>{
-  if(!d)return'\u2014';
-  return new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+  const p=isoParts(d);if(!p)return'\u2014';
+  return new Date(p.y,p.m-1,p.d,12).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
 };
+try{Object.assign(window,{td,dB,addM,addD,fD})}catch{}
 
 const fM=n=>'$'+(n||0).toLocaleString();
 
@@ -1426,11 +1431,11 @@ function sortE(a){
 }
 
 function taxReady(e){
-  return !!(e&&e.bonusRecd&&e.closed&&(e.bonus||0)>0)
+  return !!(e&&e.bonusRecd&&(e.bonus||0)>0)
 }
 
 function taxYearOf(e){
-  return e&&e.bonusRecd?new Date(e.bonusRecd+'T00:00:00').getFullYear():null
+  const p=isoParts(e&&e.bonusRecd);return p?p.y:null
 }
 
 function taxEntriesForYear(yr){
@@ -3413,7 +3418,7 @@ function rProfiles(){
   return h;
 }
 
-function isRealDateString(d){if(!d)return true;if(!/^\d{4}-\d{2}-\d{2}$/.test(String(d)))return false;const dt=new Date(d+'T00:00:00');return !isNaN(dt.getTime())&&dt.toISOString().slice(0,10)===d}
+function isRealDateString(d){if(!d)return true;const p=isoParts(d);if(!p)return false;const dt=new Date(Date.UTC(p.y,p.m-1,p.d));return dt.getUTCFullYear()===p.y&&dt.getUTCMonth()===p.m-1&&dt.getUTCDate()===p.d}
 function healthAdd(list,severity,title,msg,entryId){list.push({severity,title,msg,entryId})}
 function getDataHealthIssues(){
   const issues=[];
@@ -3791,7 +3796,7 @@ function rTracker(sorted){
 
   return h;
 }
-function rTax(){const yrs=[];for(let y=2025;y<=2040;y++)yrs.push(y);const yrE=taxEntriesForYear(taxYear);const yrA=yrE.reduce((s,e)=>s+(e.bonus||0),0);const allA=entries.filter(e=>taxReady(e)).reduce((s,e)=>s+(e.bonus||0),0);let h='<div class="sec">Tax Year</div><div class="ybar">';yrs.forEach(y=>{const a=completedYrTotal(y);h+='<button class="ypill'+(taxYear===y?' on':'')+'" onclick="taxYear='+y+';R()">'+y+(a?' · '+fM(a):'')+'</button>'});h+='</div><div class="ytotal">'+fM(yrA)+'</div><div class="ysub">'+taxYear+' — '+yrE.length+' completed bonus'+(yrE.length!==1?'es':'')+' (received + closed)</div>';h+='<button class="export-btn" onclick="promptExportYear()">Export a Year CSV</button>';if(!yrE.length)return h+'<div class="empty"><div class="em">📋</div><p>No completed bonuses in '+taxYear+'</p></div>';yrE.forEach(e=>{h+='<div class="tax-c"><div class="tax-top"><div class="tax-bank">'+bankLogo(e.bank,true)+' '+esc(e.bank)+'</div><div class="tax-amt">'+fM(e.bonus)+'</div></div><div class="tax-dates">'+(e.opened?'<span>Open: '+fD(e.opened)+'</span>':'')+'<span>Received: '+fD(e.bonusRecd)+'</span><span>Closed: '+fD(e.closed)+'</span></div></div>'});h+='<div class="sec" style="margin-top:16px">All-Time</div><div class="ytotal">'+fM(allA)+'</div>';return h}
+function rTax(){const yrs=[];for(let y=2025;y<=2040;y++)yrs.push(y);const yrE=taxEntriesForYear(taxYear);const yrA=yrE.reduce((s,e)=>s+(e.bonus||0),0);const allA=entries.filter(e=>taxReady(e)).reduce((s,e)=>s+(e.bonus||0),0);let h='<div class="sec">Tax Year</div><div class="ybar">';yrs.forEach(y=>{const a=completedYrTotal(y);h+='<button class="ypill'+(taxYear===y?' on':'')+'" onclick="taxYear='+y+';R()">'+y+(a?' · '+fM(a):'')+'</button>'});h+='</div><div class="ytotal">'+fM(yrA)+'</div><div class="ysub">'+taxYear+' — '+yrE.length+' received bonus'+(yrE.length!==1?'es':'')</div>';h+='<button class="export-btn" onclick="promptExportYear()">Export a Year CSV</button>';if(!yrE.length)return h+'<div class="empty"><div class="em">📋</div><p>No received bonuses in '+taxYear+'</p></div>';yrE.forEach(e=>{h+='<div class="tax-c"><div class="tax-top"><div class="tax-bank">'+bankLogo(e.bank,true)+' '+esc(e.bank)+'</div><div class="tax-amt">'+fM(e.bonus)+'</div></div><div class="tax-dates">'+(e.opened?'<span>Open: '+fD(e.opened)+'</span>':'')+'<span>Received: '+fD(e.bonusRecd)+'</span>'+(e.closed?'<span>Closed: '+fD(e.closed)+'</span>':'<span>Account: Open</span>')+'</div></div>'});h+='<div class="sec" style="margin-top:16px">All-Time</div><div class="ytotal">'+fM(allA)+'</div>';return h}
 function rTips(){
   const groups=buildDatapointGroups();
   const userCount=loadUserDatapoints().length;
@@ -5194,10 +5199,19 @@ function importBackup(){
   inp.click()
 }
 
-function exportCSV(yr){
-  const yrE=taxEntriesForYear(yr);
-  let csv='Bank,Bonus,Received,Opened,Closed,Data Point\n';
-  yrE.forEach(e=>{csv+='"'+e.bank+'",'+e.bonus+',"'+fD(e.bonusRecd)+'","'+fD(e.opened)+'","'+fD(e.closed)+'","'+(e.dataPoint||'').replace(/"/g,"'")+'"\n'});csv+='\nTotal,'+yrE.reduce((s,e)=>s+(e.bonus||0),0)+'\n';const blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='BonusTracker_'+yr+'.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
+function csvCell(value){
+  let s=String(value??'');
+  if(/^[\u0000-\u0020]*[=+\-@]/.test(s))s="'"+s;
+  return '"'+s.replace(/"/g,'""')+'"'
+}
+function csvRow(values){return values.map(csvCell).join(',')}
+function buildTaxCSV(yr){
+  const yrE=taxEntriesForYear(yr),rows=[csvRow(['Bank','Bonus','Received','Opened','Closed','Data Point'])];
+  yrE.forEach(e=>rows.push(csvRow([e.bank,e.bonus,fD(e.bonusRecd),fD(e.opened),e.closed?fD(e.closed):'',e.dataPoint||''])));
+  rows.push('',csvRow(['Total',yrE.reduce((sum,e)=>sum+(e.bonus||0),0),'','','','']));
+  return rows.join('\r\n')+'\r\n'
+}
+function exportCSV(yr){const csv=buildTaxCSV(yr),blob=new Blob([csv],{type:'text/csv;charset=utf-8'});downloadBlob(blob,'BonusTracker_'+yr+'.csv')}
 function promptExportYear(){const raw=window.prompt('Enter the year you want to export:', String(taxYear||new Date().getFullYear()));if(raw===null)return;const yr=parseInt(String(raw).trim(),10);if(!Number.isFinite(yr)||yr<1900||yr>2100){alert('Please enter a valid 4-digit year.');return}exportCSV(yr)}
 function loadFeed(){feedLoading=true;R();fetch('https://api.allorigins.win/get?url='+encodeURIComponent('https://www.doctorofcredit.com/category/bank-account-bonuses/feed/')).then(r=>r.json()).then(d=>{const p=new DOMParser(),x=p.parseFromString(d.contents,'text/xml'),items=x.querySelectorAll('item');feedItems=[];items.forEach((it,i)=>{if(i>=12)return;feedItems.push({title:it.querySelector('title')?.textContent||'',link:it.querySelector('link')?.textContent||'',date:it.querySelector('pubDate')?.textContent||''})});feedLoading=false;R()}).catch(()=>{feedItems=null;feedLoading=false;R()})}
 entries=sortE(entries);R();
