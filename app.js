@@ -1,7 +1,7 @@
-/* ✅ Version 3.4.22: conditional churn rules, coupon-enrollment anchors, and close-state resolution. */
+/* ✅ Version 3.4.23: direct T&C Archive navigation, restored churn suggestions, and no Tools overlay. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.22';
+const APP_VERSION='3.4.23';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -279,7 +279,7 @@ function eligibilityRuleStorageLabel(r){
 function rTermsStorage(){
   const q=String(storageSearch||'').trim().toLowerCase();
   const rows=termsArchiveRows().filter(b=>!q||String(b.current?.bank||b.bank||'').toLowerCase().includes(q)||String(b.current?.accountType||b.accountType||'').toLowerCase().includes(q));
-  let h='<div class="sec">T&C Storage</div><div class="sub" style="margin:0 2px 10px">Latest verified terms by bank/product. Existing-cycle edits never replace this record; only a new opened bonus cycle with verified T&C can replace it.</div>';
+  let h='<div class="sec">T&C Archive</div><div class="sub" style="margin:0 2px 10px">Exact verified terms by bank/product. Existing-cycle edits never replace this record; only a new opened bonus cycle with verified T&C can replace it.</div>';
   h+='<input class="sinput" type="text" placeholder="Search stored T&C..." value="'+esc(storageSearch||'')+'" oninput="storageSearch=this.value;R()">';
   if(!rows.length)return h+'<div class="empty">No verified T&C cycles stored yet.</div>';
   rows.forEach(bucket=>{
@@ -1847,7 +1847,18 @@ function getAttentionSuggestions(){
 
 function getChurnSuggestions(){
   const sug=[];
-  entries.forEach(e=>{if(!e||!e.bank||!e.closed||!e.churn)return;const dl=daysLeft(e);if(dl===null)return;sug.push({bank:e.bank,rsn:dl<=0?'Ready to churn now.':dl+'d until churn.',bonus:e.bonus||0,showBonus:false,days:Math.max(0,dl)})});
+  entries.forEach(e=>{
+    if(!e||!e.bank||!e.closed||isNonRepeatableEntry(e))return;
+    let ready='';
+    try{
+      if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.safeEligibilityDate==='function'){
+        ready=window.BTEligibilityGate.safeEligibilityDate(e,addD,addM)||'';
+      }
+    }catch{}
+    if(!ready)return;
+    const dl=Math.max(0,dB(td(),ready));
+    sug.push({bank:e.bank,rsn:dl<=0?'Ready to churn now.':dl+'d until churn.',bonus:e.bonus||0,showBonus:false,days:dl,readyDate:ready})
+  });
   return sug.sort((a,b)=>a.days-b.days||(b.bonus||0)-(a.bonus||0)||a.bank.localeCompare(b.bank))
 }
 
@@ -3793,7 +3804,7 @@ function normalizeLifecycleEntries(rows){
   return (rows||[]).map(normalizeLifecycleEntry)
 }
 
-function R(){const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;if(tab==='profiles'||tab==='health')tab='tracker';try{if(!window.__btAutoCleanupV384){entries=sortE(normalizeLifecycleEntries(entries));sv(SK,entries);window.__btAutoCleanupV384=true}}catch{}sanitizeAllTimers(false);const sorted=sortE(entries);const wk=sorted.filter(e=>e.bank&&!e.closed).length;const ch=sorted.filter(e=>status(e)==='WAITING TO CHURN!'||status(e)==='TIME TO CHURN!').length;const rd=sorted.filter(e=>status(e)==='TIME TO CHURN!').length;const yr=completedYrTotal(dashYear);const thisYr=new Date().getFullYear();let h='';h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div><h1><em>Bonus</em>Tracker</h1><div class="hdr-sub">Track • close • churn</div></div><div class="yr-pills">';[thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});h+='</div></div>';if(tab==='tracker'){h+='<div class="hero"><div class="hero-copy"><div class="hero-kicker">'+dashYear+' total collected</div><div class="hero-value">'+fM(yr)+'</div><div class="hero-note">'+wk+' open • '+ch+' cooling down • '+rd+' ready right now</div></div><div class="hero-side"><div class="hero-chip">'+rd+' ready</div></div></div>';h+='<div class="stats"><div class="st"><div class="n">'+wk+'</div><div class="l">Open</div></div><div class="st"><div class="n">'+ch+'</div><div class="l">Cooldown</div></div><div class="st"><div class="n">'+rd+'</div><div class="l">Ready</div></div><div class="st"><div class="n">'+fM(yr)+'</div><div class="l">'+dashYear+'</div></div></div>'}h+='</div></div>';h+='<div class="scroll">';if(tab==='tracker')h+=rTracker(sorted);else if(tab==='tax')h+=rTax();else if(tab==='tips')h+=rTips();else if(tab==='phone')h+=rPhone();else if(tab==='storage')h+=rTermsStorage();h+='</div>';if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';h+='<div class="tabs">';['tracker','tax','tips','phone','storage'].forEach((t,i)=>{h+='<button class="tb'+(tab===t?' on':'')+'" onclick="tab=\''+t+'\';search=\''+'\';R()">'+[I.grid,I.doc,I.tips,I.phone,I.lock][i]+'<span>'+['Tracker','Tax','Datapoints','Phone','T&C'][i]+'</span></button>'});h+='</div>';if(modal)h+=rModal();if(cfm)h+=rCfm();if(ddPrompt)h+=rDD();if(rcvPrompt)h+=rRcv();if(reqPrompt)h+=rReqMet();if(closePrompt)h+=rClose();if(overwritePrompt)h+=rOverwrite();if(matchPickerPrompt)h+=rMatchPicker();if(replacementPickerPrompt)h+=rReplacementPicker();if(feeCheckPrompt)h+=rFeeCheck();if(timerEditModal)h+=rTimerEdit();if(dpEditor)h+=rDpEditor();if(timerChoicePrompt)h+=rTimerChoicePrompt();if(undoState)h+='<div class="undo-bar"><span>'+esc(undoState.undoLabel||('Change saved for '+undoState.bank+' — Undo restores everything for 60 seconds.'))+'</span><button onclick="undoClose()">Undo</button></div>';document.getElementById('app').innerHTML=h;const ns=document.querySelector('.scroll');if(ns)ns.scrollTop=_sp;btRunPostRenderHooks()}
+function R(){const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;if(tab==='profiles'||tab==='health')tab='tracker';try{if(!window.__btAutoCleanupV384){entries=sortE(normalizeLifecycleEntries(entries));sv(SK,entries);window.__btAutoCleanupV384=true}}catch{}sanitizeAllTimers(false);const sorted=sortE(entries);const wk=sorted.filter(e=>e.bank&&!e.closed).length;const ch=sorted.filter(e=>status(e)==='WAITING TO CHURN!'||status(e)==='TIME TO CHURN!').length;const rd=sorted.filter(e=>status(e)==='TIME TO CHURN!').length;const yr=completedYrTotal(dashYear);const thisYr=new Date().getFullYear();let h='';h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div><h1><em>Bonus</em>Tracker</h1><div class="hdr-sub">Track • close • churn</div></div><div class="yr-pills">';[thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});h+='</div></div>';if(tab==='tracker'){h+='<div class="hero"><div class="hero-copy"><div class="hero-kicker">'+dashYear+' total collected</div><div class="hero-value">'+fM(yr)+'</div><div class="hero-note">'+wk+' open • '+ch+' cooling down • '+rd+' ready right now</div></div><div class="hero-side"><div class="hero-chip">'+rd+' ready</div></div></div>';h+='<div class="stats"><div class="st"><div class="n">'+wk+'</div><div class="l">Open</div></div><div class="st"><div class="n">'+ch+'</div><div class="l">Cooldown</div></div><div class="st"><div class="n">'+rd+'</div><div class="l">Ready</div></div><div class="st"><div class="n">'+fM(yr)+'</div><div class="l">'+dashYear+'</div></div></div>'}h+='</div></div>';h+='<div class="scroll">';if(tab==='tracker')h+=rTracker(sorted);else if(tab==='tax')h+=rTax();else if(tab==='tips')h+=rTips();else if(tab==='storage')h+=rTermsStorage();h+='</div>';if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';h+='<div class="tabs">';['tracker','tax','tips','storage'].forEach((t,i)=>{h+='<button class="tb'+(tab===t?' on':'')+'" onclick="tab=\''+t+'\';search=\''+'\';R()">'+[I.grid,I.doc,I.tips,I.lock][i]+'<span>'+['Tracker','Tax','Datapoints','T&C Archive'][i]+'</span></button>'});h+='</div>';if(modal)h+=rModal();if(cfm)h+=rCfm();if(ddPrompt)h+=rDD();if(rcvPrompt)h+=rRcv();if(reqPrompt)h+=rReqMet();if(closePrompt)h+=rClose();if(overwritePrompt)h+=rOverwrite();if(matchPickerPrompt)h+=rMatchPicker();if(replacementPickerPrompt)h+=rReplacementPicker();if(feeCheckPrompt)h+=rFeeCheck();if(timerEditModal)h+=rTimerEdit();if(dpEditor)h+=rDpEditor();if(timerChoicePrompt)h+=rTimerChoicePrompt();if(undoState)h+='<div class="undo-bar"><span>'+esc(undoState.undoLabel||('Change saved for '+undoState.bank+' — Undo restores everything for 60 seconds.'))+'</span><button onclick="undoClose()">Undo</button></div>';document.getElementById('app').innerHTML=h;const ns=document.querySelector('.scroll');if(ns)ns.scrollTop=_sp;btRunPostRenderHooks()}
 function rTracker(sorted){
   const q=search.toLowerCase();
   const f=q?sorted.filter(e=>(e.bank||'').toLowerCase().includes(q)||(e.id||'').toLowerCase().includes(q)):sorted;
@@ -5842,81 +5853,9 @@ entries=sortE(entries);R();
 })();
 /* === End consolidated core module: Action button safety and full backup helpers === */
 
-/* === Consolidated core module: Tools folder floating menu (moved into app.js in v3.3.36) === */
-/*
- * filename: scripts/tools-folder-fab.js
- * version: 3.3.13
- * consolidated-purpose: Source-clean Tools folder — native + is hidden immediately and Quick Add calls openAdd directly.
- * last-touched: unknown
- */
-(function(){
-  const VER='3.3.13';
+/* Tools floating-folder UI removed in v3.4.23. Quick Add remains the native + button; T&C Archive is a bottom tab. */
 
-  function addStyle(){
-    let st=document.getElementById('bt_tools_folder_style');
-    if(!st){st=document.createElement('style');st.id='bt_tools_folder_style';document.head.appendChild(st);}
-    st.textContent=`
-      #v32_inbox_btn,#v31_profile_btn{display:none!important;pointer-events:none!important;}
-      .fab{display:none!important;opacity:0!important;pointer-events:none!important;transform:scale(.65)!important;}
-      #bt_tools_backdrop[hidden],#bt_tools_folder_menu[hidden]{display:none!important;pointer-events:none!important;}
-      #bt_tools_folder_btn{position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);z-index:245;border:0;border-radius:24px;width:76px;height:56px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 14px 34px rgba(37,99,235,.34);font:900 12px 'DM Sans',system-ui;letter-spacing:.2px;display:flex;align-items:center;justify-content:center;gap:3px;flex-direction:column;-webkit-tap-highlight-color:transparent;}
-      #bt_tools_folder_btn .ico{font-size:21px;line-height:18px}#bt_tools_folder_btn .lbl{font-size:11px;line-height:12px}
-      #bt_tools_folder_menu{position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 156px);z-index:246;width:min(244px,calc(100vw - 28px));background:rgba(248,250,252,.98);border:1px solid rgba(148,163,184,.35);border-radius:22px;padding:10px;box-shadow:0 22px 60px rgba(15,23,42,.32);font-family:'DM Sans',system-ui;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);}
-      .bt-tools-head{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 10px;color:#0f172a;font-weight:900}.bt-tools-head span{font-size:13px}.bt-tools-x{border:0;background:#e2e8f0;color:#334155;border-radius:999px;width:28px;height:28px;font-weight:900;font-size:18px}.bt-tools-item{width:100%;border:0;border-radius:16px;margin:5px 0;padding:12px 12px;background:white;color:#0f172a;text-align:left;font:900 13px 'DM Sans',system-ui;box-shadow:inset 0 0 0 1px rgba(226,232,240,.9);display:flex;align-items:center;gap:10px}.bt-tools-item small{display:block;color:#64748b;font-weight:700;font-size:11px;margin-top:1px}.bt-tools-item .emoji{font-size:18px;width:24px;text-align:center}.bt-tools-backdrop{position:fixed;inset:0;z-index:244;background:transparent;}
-      @media(max-width:430px){#bt_tools_folder_btn{right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);width:76px;height:54px;border-radius:22px}#bt_tools_folder_menu{right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 152px)}}
-    `;
-  }
 
-  function closeMenu(){document.getElementById('bt_tools_folder_menu')?.setAttribute('hidden','');document.getElementById('bt_tools_backdrop')?.remove();}
-  function toggleMenu(){
-    ensureMenu();
-    const m=document.getElementById('bt_tools_folder_menu');
-    if(!m)return;
-    if(m.hasAttribute('hidden')){
-      document.getElementById('bt_tools_backdrop')?.remove();
-      const bd=document.createElement('div');
-      bd.id='bt_tools_backdrop';bd.className='bt-tools-backdrop';bd.onclick=closeMenu;
-      document.body.appendChild(bd);
-      m.removeAttribute('hidden');
-    }else closeMenu();
-  }
-  function openTC(){closeMenu(); if(typeof window.tcV32OpenLearningInbox==='function')window.tcV32OpenLearningInbox(); else document.getElementById('v32_inbox_btn')?.click();}
-  function openProfiles(){closeMenu(); if(typeof window.tcV31OpenProfileLibrary==='function')window.tcV31OpenProfileLibrary(); else document.getElementById('v31_profile_btn')?.click();}
-  function runSelfTest(){closeMenu(); if(typeof window.tcV31OpenProfileLibrary==='function')window.tcV31OpenProfileLibrary(); setTimeout(()=>{ if(typeof window.tcV31RunAndShowSelfTest==='function')window.tcV31RunAndShowSelfTest(); },180);}
-  function quickAdd(){
-    closeMenu();
-    if(typeof window.openAdd==='function'){window.openAdd();return;}
-    try{if(typeof openAdd==='function'){openAdd();return;}}catch{}
-  }
-  function ensureMenu(){
-    if(document.getElementById('bt_tools_folder_menu'))return;
-    const m=document.createElement('div');m.id='bt_tools_folder_menu';m.setAttribute('hidden','');
-    m.innerHTML=`
-      <div class="bt-tools-head"><span>Tools Folder</span><button class="bt-tools-x" type="button" onclick="window.btToolsFolderClose&&window.btToolsFolderClose()">×</button></div>
-      <button class="bt-tools-item" type="button" onclick="window.btToolsQuickAdd&&window.btToolsQuickAdd()"><span class="emoji">＋</span><span>Quick Add<small>Create a new bank entry</small></span></button>
-      <button class="bt-tools-item" type="button" onclick="window.btToolsOpenTC&&window.btToolsOpenTC()"><span class="emoji">📄</span><span>T&C Inbox<small>Save/analyze promo terms</small></span></button>
-      <button class="bt-tools-item" type="button" onclick="window.btToolsOpenProfiles&&window.btToolsOpenProfiles()"><span class="emoji">🗂️</span><span>Profiles<small>Saved bank profiles</small></span></button>
-      <button class="bt-tools-item" type="button" onclick="window.btToolsRunSelfTest&&window.btToolsRunSelfTest()"><span class="emoji">✅</span><span>Run Self-Test<small>Verify analyzer profiles</small></span></button>
-    `;
-    document.body.appendChild(m);
-  }
-  function ensureButton(){if(document.getElementById('bt_tools_folder_btn'))return;const b=document.createElement('button');b.id='bt_tools_folder_btn';b.type='button';b.innerHTML='<span class="ico">＋</span><span class="lbl">Tools</span>';b.onclick=toggleMenu;document.body.appendChild(b);}
-  function cleanupBackdrops(){const m=document.getElementById('bt_tools_folder_menu');if(!m||m.hasAttribute('hidden'))document.getElementById('bt_tools_backdrop')?.remove();}
-  function boot(){addStyle();ensureButton();ensureMenu();cleanupBackdrops();}
-
-  window.btToolsFolderVersion=VER;
-  window.btToolsFolderClose=closeMenu;
-  window.btToolsQuickAdd=quickAdd;
-  window.btToolsOpenTC=openTC;
-  window.btToolsOpenProfiles=openProfiles;
-  window.btToolsRunSelfTest=runSelfTest;
-  window.btToolsFolderApply=boot;
-  window.btToolsButtonHealthCheck=function(){cleanupBackdrops();return {version:VER,menuOpen:!document.getElementById('bt_tools_folder_menu')?.hasAttribute('hidden'),backdrop:!!document.getElementById('bt_tools_backdrop')}};
-
-  boot();
-  if(typeof window.btRegisterPostRender==='function') window.btRegisterPostRender('tools-folder',boot);
-})();
-/* === End consolidated core module: Tools folder floating menu === */
 
 /* === Consolidated core module: Tracker card bank actions renderer (moved into app.js in v3.3.36) === */
 /*
