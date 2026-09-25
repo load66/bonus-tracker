@@ -5,7 +5,8 @@ const vm=require('vm');
 function assert(ok,msg){if(!ok)throw new Error(msg)}
 
 const importSource=fs.readFileSync('entry-link-import.js','utf8');
-const appSource=fs.readFileSync('app.js','utf8');\nconst eligibilityGate=require('../eligibility-gate.js');
+const appSource=fs.readFileSync('app.js','utf8');
+const eligibilityGate=require('../eligibility-gate.js');
 
 assert(importSource.includes("modal._skipManualReplacePrompt=false"),'Entry-file import bypasses the existing replacement picker');
 assert(importSource.includes("modal._skipDuplicateCheck=false"),'Entry-file import bypasses duplicate protection');
@@ -41,7 +42,8 @@ let modal=null,rendered=0,showTemplates=true,showInlineAZ=false,inlineResult='st
 const sandbox={
   console,document,location:{hash:'',pathname:'/bonus-tracker/',search:''},history:{replaceState(){}},
   alert(){},confirm(){return true},TextDecoder,Uint8Array,atob,Date,JSON,Math,Promise,FileReader:function(){},setTimeout(){return 0},clearTimeout(){},
-  normalizeTimerList:x=>Array.isArray(x)?x:[],\n  BTEligibilityGate:eligibilityGate,
+  normalizeTimerList:x=>Array.isArray(x)?x:[],
+  BTEligibilityGate:eligibilityGate,
   churnDecisionForEntry:e=>e.churnable===false?'nonrepeatable':e.churn?'repeatable':'',
   normalizeLifecycleEntry:e=>({...e}),
   openAdd(){modal={bank:'',_edit:false};sandbox.modal=modal},
