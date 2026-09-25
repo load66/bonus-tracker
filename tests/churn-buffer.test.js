@@ -45,6 +45,16 @@ const sixMonths={opened:'2026-01-31',churnPeriodValue:6,churnPeriodUnit:'months'
 assert(sandbox.nextReopen(sixMonths)==='2026-08-05','Six calendar months was incorrectly treated as a day count');
 
 assert(sandbox.nextReopen({bonusRecd:'2026-08-14',churn:'1',churnable:true,churnability:'repeatable',sourceEligibilityBasis:'bonus-received'})==='','Countdown was created without T&C evidence');
+
+const legacyClosed={closed:'2026-01-15',churn:'2',churnable:true,churnability:'repeatable'};
+assert(sandbox.nextReopen(legacyClosed)==='2028-01-20','Closed legacy 2-year record did not regain its cooldown countdown');
+assert(sandbox.churnBufferDaysFor(legacyClosed)===5,'Closed legacy cooldown did not receive the standard 5-day safety buffer');
+assert(sandbox.btHasStructuredEligibilityEvidence(legacyClosed)===false,'Legacy record was incorrectly classified as structured T&C');
+
+const conditionalText='Not available if an account was closed with a negative balance within the last 3 years.';
+const unresolvedStructured={closed:'2026-08-01',churn:'2',churnable:true,churnability:'repeatable',tcSourceRaw:conditionalText,eligibilityRules:[{id:'negative-close-3y',basis:'account-closed',periodValue:3,periodUnit:'years',condition:{type:'closed-with-negative-balance',expected:true},evidenceText:conditionalText,evidenceSource:'official-promotion-terms'}]};
+assert(sandbox.btHasStructuredEligibilityEvidence(unresolvedStructured)===true,'Structured T&C was not detected');
+assert(sandbox.nextReopen(unresolvedStructured)==='','Structured unresolved T&C incorrectly fell back to a legacy churn date');
 assert(sandbox.nextReopen({...sixMonths,churnPeriodValue:180,churnPeriodUnit:'days'})==='','Mismatched 180-day period passed a 6-month T&C rule');
 
 const current={...verified,closed:'',eligibilityEvidenceText:'New checking customers only. '+evidence};
@@ -64,10 +74,10 @@ const index=fs.readFileSync('index.html','utf8');
 const sw=fs.readFileSync('sw.js','utf8');
 assert(workflow.includes('node tests/churn-buffer.test.js'),'Pages deploy is not gated by the churn-buffer regression test');
 assert(workflow.includes('node tests/eligibility-gate.test.js'),'Pages deploy is not gated by the eligibility evidence regression test');
-assert(index.includes('./churn-close-policy.js?v=3.4.24-conditional1'),'Index does not force-refresh the evidence-gated churn policy');
-assert(index.includes('./eligibility-gate.js?v=3.4.24'),'Index does not load the churn evidence validator');
-assert(index.includes('./sw.js?v=3.4.24-dark1'),'Index does not force-refresh the evidence-gated service worker');
-assert(sw.includes("const V = 'bt-v3.4.24-dark1'"),'Service worker cache version is stale');
+assert(index.includes('./churn-close-policy.js?v=3.4.25-conditional1'),'Index does not force-refresh the evidence-gated churn policy');
+assert(index.includes('./eligibility-gate.js?v=3.4.25'),'Index does not load the churn evidence validator');
+assert(index.includes('./sw.js?v=3.4.25-churn1'),'Index does not force-refresh the evidence-gated service worker');
+assert(sw.includes("const V = 'bt-v3.4.25-churn1'"),'Service worker cache version is stale');
 assert(sw.includes("'./eligibility-gate.js'"),'Eligibility gate is missing from the offline cache');
 
 console.log('Eligibility countdown passed: T&C evidence chooses the exact clock and unit, unverified rules fail closed, and the 5-day safety buffer is separate from official eligibility');
