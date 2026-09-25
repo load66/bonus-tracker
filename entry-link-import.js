@@ -35,7 +35,9 @@
     out.reqDays=Math.max(0,parseInt(out.reqDays||0,10)||0);
     out.minHoldDays=Math.max(0,parseInt(out.minHoldDays||0,10)||0);
     out.closeBufferDays=Math.max(0,parseInt(out.closeBufferDays||0,10)||0);
-    out.churnBufferDays=0;\n    out.churnPeriodValue=Math.max(0,parseInt(out.churnPeriodValue||0,10)||0);\n    out.churnPeriodUnit=String(out.churnPeriodUnit||'').toLowerCase().trim();
+    out.churnBufferDays=0;
+    out.churnPeriodValue=Math.max(0,parseInt(out.churnPeriodValue||0,10)||0);
+    out.churnPeriodUnit=String(out.churnPeriodUnit||'').toLowerCase().trim();
     out.customTimers=typeof normalizeTimerList==='function'?normalizeTimerList(out.customTimers||[]):(Array.isArray(out.customTimers)?out.customTimers:[]);
     return out;
   }
