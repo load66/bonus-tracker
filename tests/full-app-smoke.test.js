@@ -111,7 +111,9 @@ setTimeout(()=>{
       entries=oldEntries;expanded=oldExpanded;search=oldSearch;tab=oldTab;R();
       return result;
     })()`,sandbox);
-    assert(sectionStateRegression.attrBefore===' open','profileSectionOpenAttr did not report open before render: '+sectionStateRegression.attrBefore);\n    assert(sectionStateRegression.rendererHasSectionState,'Registered window.rTracker is not the section-state-aware renderer');\n    if(!sectionStateRegression.directOpen||!sectionStateRegression.beforeOpen||!sectionStateRegression.afterOpen){
+    assert(sectionStateRegression.attrBefore===' open','profileSectionOpenAttr did not report open before render: '+sectionStateRegression.attrBefore);
+    assert(sectionStateRegression.rendererHasSectionState,'Registered window.rTracker is not the section-state-aware renderer');
+    if(!sectionStateRegression.directOpen||!sectionStateRegression.beforeOpen||!sectionStateRegression.afterOpen){
       console.log('SECTION_STATE_DIAG',JSON.stringify(sectionStateRegression));
       console.log('ACTIVE_RENDERER_HAS_STATE_HELPER',String(sandbox.rTracker).includes('profileSectionOpenAttr'));
     }
