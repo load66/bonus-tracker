@@ -6,7 +6,7 @@ function parts(date){const m=String(date||'').match(/^(\d{4})-(\d{2})-(\d{2})$/)
 function addD(date,days){const p=parts(date);if(!p)return'';const d=new Date(Date.UTC(p.y,p.mo-1,p.d));d.setUTCDate(d.getUTCDate()+Number(days||0));return d.toISOString().slice(0,10)}
 function addM(date,months){const p=parts(date);if(!p)return'';const total=p.y*12+(p.mo-1)+Number(months||0),y=Math.floor(total/12),mo=((total%12)+12)%12,last=new Date(Date.UTC(y,mo+1,0)).getUTCDate();return `${y}-${String(mo+1).padStart(2,'0')}-${String(Math.min(p.d,last)).padStart(2,'0')}`}
 
-assert(G.VERSION==='1.1.0','Unexpected eligibility gate version');
+assert(G.VERSION==='1.2.0','Unexpected eligibility gate version');
 
 const bonusRule={
   churnable:true,churnability:'repeatable',churn:'1',churnPeriodValue:12,churnPeriodUnit:'months',
@@ -60,6 +60,31 @@ assert(multiStamped.eligibilityRules.length===2&&multiStamped.churnBasis==='mult
 const missingClose={...multiRule,closed:''};
 assert(G.officialEligibilityDate(missingClose,addD,addM)==='','Tracker produced a final eligibility date while one rule anchor was still missing');
 
+
+const usBankFinePrint='To be eligible, you or any owner(s) on your new Bank Smartly Checking account cannot have an existing U.S. Bank consumer checking account, had a U.S. Bank consumer checking account in the last 12 months or received other U.S. Bank consumer checking bonus offers within the past 12 months.';
+const usBankRules={
+  churnable:true,churnability:'repeatable',opened:'2026-05-10',closed:'2026-08-01',tcSourceRaw:usBankFinePrint,
+  eligibilityRules:[
+    {id:'ownership-12m',basis:'account-ownership-ended',periodValue:12,periodUnit:'months',scope:'us-bank-consumer-checking',evidenceText:usBankFinePrint,evidenceSource:'official-promotion-terms'},
+    {id:'offer-12m',basis:'bonus-offer-received',periodValue:12,periodUnit:'months',anchorDate:'2026-05-01',scope:'us-bank-consumer-checking',evidenceText:usBankFinePrint,evidenceSource:'official-promotion-terms'}
+  ]
+};
+v=G.validate(usBankRules);
+assert(v.ok&&v.rules.length===2,'U.S. Bank-style ownership/bonus-offer rules did not verify separately');
+assert(v.rules.some(r=>r.basis==='account-ownership-ended')&&v.rules.some(r=>r.basis==='bonus-offer-received'),'U.S. Bank semantic anchors were collapsed');
+assert(G.officialEligibilityDate(usBankRules,addD,addM)==='2027-08-01','Later account-ownership clearing date did not control equal 12-month rules');
+assert(G.safeEligibilityDate(usBankRules,addD,addM)==='2027-08-06','U.S. Bank-style safe date is wrong');
+
+const wrongUsBankBasis={...usBankRules,eligibilityRules:[
+  usBankRules.eligibilityRules[0],
+  {...usBankRules.eligibilityRules[1],basis:'bonus-received'}
+]};
+assert(!G.validate(wrongUsBankBasis).ok,'Phrase "received bonus offers" was incorrectly accepted as bonus payout received');
+
+const discoveredUsBank=G.discoverTimedRestrictions(usBankFinePrint);
+assert(discoveredUsBank.some(r=>r.basis==='account-ownership-ended')&&discoveredUsBank.some(r=>r.basis==='bonus-offer-received'),'T&C discovery missed U.S. Bank ownership or bonus-offer restriction');
+assert(!discoveredUsBank.some(r=>r.basis==='bonus-received'),'T&C discovery mislabeled a bonus offer as a bonus payout');
+
 const noEvidence={churnable:true,churnability:'repeatable',churn:'1',sourceEligibilityBasis:'bonus-received'};
 assert(!G.validate(noEvidence).ok,'Manual dropdown values passed without T&C evidence');
 
@@ -83,4 +108,4 @@ assert(G.applicationReadyDate(currentCustomer,addD,addM)==='','Application-ready
 assert(G.applicationReadyDate({...currentCustomer,closed:'2027-08-15'},addD,addM)==='2027-09-06','Early account close incorrectly moved the cooldown date');
 assert(G.applicationReadyDate({...currentCustomer,closed:'2027-09-10'},addD,addM)==='2027-09-10','Later required account close was not respected');
 
-console.log('Eligibility evidence gate passed: single and multi-rule source wording, latest-date control, exact units, closure requirements, and safe dates verified');
+console.log('Eligibility evidence gate passed: single/multi-rule wording, U.S. Bank offer-vs-payout semantics, ownership lookbacks, latest-date control, exact units, and safe dates verified');
