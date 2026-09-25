@@ -151,7 +151,25 @@
     d.churnRuleText=modal?.churnRuleText||modal?.analysis?.churnRuleText||d.churnRuleText||'';
     repairWellsConsumer400Entry(d);ensurePayoutTimerAfterRequirement(d);try{if(typeof btBuildResolvedBankProfile==='function'){d.profile=btBuildResolvedBankProfile(d);d.profileVersion='bank-profile-v2'}}catch{}return d;
   };
-  if(typeof oldNormalizeNewCycle==='function')window.normalizeNewCycleData=function(d,existing){const x=oldNormalizeNewCycle(d,existing);x.churnable=d?.churnable!==undefined?d.churnable:existing?.churnable;x.churnability=d?.churnability||existing?.churnability||'';x.churnBasis=normalizeChurnBasis(d?.sourceEligibilityBasis||d?.churnBasis||existing?.sourceEligibilityBasis||existing?.churnBasis||d?.analysis?.sourceEligibilityBasis||d?.analysis?.churnBasis||'');x.sourceEligibilityBasis=d?.sourceEligibilityBasis||existing?.sourceEligibilityBasis||sourceBasisLabel(x.churnBasis);x.churnBufferDays=x.churnBasis?5:0;x.churnReason=d?.churnReason||existing?.churnReason||'';x.churnRuleText=d?.churnRuleText||existing?.churnRuleText||'';return normalizeEntry(x)};
+  if(typeof oldNormalizeNewCycle==='function')window.normalizeNewCycleData=function(d,existing){
+    const x=oldNormalizeNewCycle(d,existing);
+    x.churnable=d?.churnable!==undefined?d.churnable:existing?.churnable;
+    x.churnability=d?.churnability||existing?.churnability||'';
+    x.churnBasis=normalizeChurnBasis(d?.sourceEligibilityBasis||d?.churnBasis||existing?.sourceEligibilityBasis||existing?.churnBasis||d?.analysis?.sourceEligibilityBasis||d?.analysis?.churnBasis||'');
+    x.sourceEligibilityBasis=d?.sourceEligibilityBasis||existing?.sourceEligibilityBasis||sourceBasisLabel(x.churnBasis);
+    x.churnPeriodValue=parseInt(d?.churnPeriodValue||existing?.churnPeriodValue||d?.analysis?.churnPeriodValue||0,10)||0;
+    x.churnPeriodUnit=d?.churnPeriodUnit||existing?.churnPeriodUnit||d?.analysis?.churnPeriodUnit||'';
+    x.eligibilityEvidenceText=d?.eligibilityEvidenceText||existing?.eligibilityEvidenceText||d?.analysis?.eligibilityEvidenceText||'';
+    x.eligibilityAnchorEvidenceText=d?.eligibilityAnchorEvidenceText||existing?.eligibilityAnchorEvidenceText||'';
+    x.eligibilityEvidenceSource=d?.eligibilityEvidenceSource||existing?.eligibilityEvidenceSource||d?.analysis?.eligibilityEvidenceSource||'';
+    x.currentCustomerEvidenceText=d?.currentCustomerEvidenceText||existing?.currentCustomerEvidenceText||'';
+    x.mustCloseBeforeReapply=d?.mustCloseBeforeReapply!==undefined?d.mustCloseBeforeReapply:existing?.mustCloseBeforeReapply;
+    x.reapplicationAction=d?.reapplicationAction||existing?.reapplicationAction||'';
+    x.churnReason=d?.churnReason||existing?.churnReason||'';
+    x.churnRuleText=d?.churnRuleText||existing?.churnRuleText||'';
+    try{if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.stamp==='function')Object.assign(x,window.BTEligibilityGate.stamp(x))}catch{}
+    return normalizeEntry(x)
+  };
 
   const baseFeePlan=window.monthlyFeePlanForEntry;
   window.monthlyFeePlanForEntry=function(e){const raw=String([e?.monthlyFeeYNText,e?.avoidMonthlyFeeText,e?.monthlyFeeWaiverText].filter(Boolean).join(' '));const separate=/not stated in bonus disclosure|not contained in this bonus disclosure|separate[^.]{0,80}fee schedule|consumer account fee and information schedule/i.test(raw);if(!separate)return typeof baseFeePlan==='function'?baseFeePlan(e):null;const checked=!!e?.monthlyFeeChecked;return{title:'Fee Check',sub:'Bonus disclosure points to a separate account fee schedule',chip:checked?'Checked':'Fee Schedule',cls:checked?'safe':'warn',rows:[{label:'Monthly fee',value:'Not in bonus disclosure',cls:'warn'},{label:'Action',value:/Wells Fargo/i.test(String(e?.bank||''))?'Review Wells Fargo fee schedule':'Review separate account fee schedule',cls:checked?'ok':'warn'},{label:'Status',value:checked?'Fee/waiver terms checked':'Not checked yet',cls:checked?'ok':'warn'}],notes:e?.avoidMonthlyFeeText?[e.avoidMonthlyFeeText]:[],compact:true}};
