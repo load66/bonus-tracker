@@ -1,11 +1,11 @@
-/* BonusTracker churn eligibility evidence gate v1.2.0 — distinguish payout, offer-received, and account-ownership eligibility semantics. */
+/* BonusTracker churn eligibility evidence gate v1.3.0 — conditional eligibility rules plus coupon/offer-enrollment cooldown anchors. */
 (function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.BTEligibilityGate=api;
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
-  const VERSION='1.2.0';
+  const VERSION='1.3.0';
   const SAFETY_BUFFER_DAYS=5;
   const NUMBER_WORDS={
     one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,
@@ -30,12 +30,28 @@
   }
   function normalizeBasis(v){
     const raw=clean(v).toLowerCase(),x=raw.replace(/[^a-z]/g,'');
+    if(/couponenroll|offerenroll|enrollmentdate|enrolmentdate/.test(x))return'offer-enrollment';
     if(/bonusoffer|offerreceived|receivedoffer/.test(x))return'bonus-offer-received';
     if(/ownershipended|accountended|stoppedhaving|nolongerhad/.test(x))return'account-ownership-ended';
     if(/bonus|payout/.test(x))return'bonus-received';
     if(/open/.test(x))return'account-opened';
     if(/clos/.test(x))return'account-closed';
     return'';
+  }
+  function normalizeCondition(v){
+    if(!v)return null;
+    const raw=typeof v==='string'?v:(v.type||v.kind||'');
+    const x=clean(raw).toLowerCase().replace(/[^a-z]/g,'');
+    if(/negativebalance/.test(x))return{type:'closed-with-negative-balance',expected:v?.expected!==false};
+    return null;
+  }
+  function legacyBasisKey(basis){
+    return basis==='offer-enrollment'?'enrollment':
+      basis==='bonus-offer-received'?'offer':
+      basis==='account-ownership-ended'?'ownership-ended':
+      basis==='bonus-received'?'bonus':
+      basis==='account-opened'?'opened':
+      basis==='account-closed'?'closed':'';
   }
   function decision(e){
     if(!e)return'';
@@ -66,7 +82,7 @@
     let m;
     while((m=re.exec(s))){
       const value=toNumber(m[1]),unit=normalizeUnit(m[2]);
-      if(value&&unit)out.push({value,unit,text:m[0]});
+      if(value&&unit)out.push({value,unit,text:m[0],index:m.index});
     }
     return out;
   }
@@ -88,37 +104,48 @@
     return protectedText.split(/(?:\n+|(?<=[.!?])\s+|;\s+)/).map(x=>clean(x.replace(/\uE000/g,'.'))).filter(Boolean);
   }
   function eligibilityContext(s){
-    return /not eligible|ineligible|not available|cannot|can't|may not|must not|have not|has not|new (?:[^.]{0,40})?customers? only|new (?:[^.]{0,40})?accounts? only|previously received|received [^.]{0,80}bonus|past|previous|preceding|within/i.test(s);
+    return /not eligible|ineligible|not available|cannot|can't|may not|must not|have not|has not|new (?:[^.]{0,40})?customers? only|new (?:[^.]{0,40})?accounts? only|previously received|received [^.]{0,80}bonus|past|previous|preceding|within|only one [^.]{0,180}bonus|bonus [^.]{0,100}every/i.test(s);
   }
   function basisContext(s,basis){
     const t=stripAbbreviationDots(clean(s));
+    if(basis==='offer-enrollment')return /\b(?:coupon|offer)\s+enroll(?:ment|ed|ing)?\b|\benrollment\s+date\b|\blast\s+coupon\s+enrollment\s+date\b/i.test(t);
     if(basis==='bonus-offer-received')return /\breceiv(?:e|ed|ing)\b[^.;]{0,120}\bbonus\s+offers?\b|\bbonus\s+offers?\b[^.;]{0,120}\breceiv(?:e|ed|ing)\b/i.test(t);
     if(basis==='bonus-received'){
       if(/\bbonus\s+offers?\b/i.test(t))return false;
+      if(basisContext(t,'offer-enrollment')&&/\bonly\s+one\b[^.;]{0,180}\bbonus\b[^.;]{0,100}\bevery\b/i.test(t))return false;
       return /(?:receiv(?:e|ed|ing)|paid|payment|payout|earn(?:ed|ing)?)\b[^.;]{0,100}\bbonus\b|\bbonus\b[^.;]{0,100}\b(?:receiv(?:e|ed|ing)|paid|payment|payout|earn(?:ed|ing)?)\b/i.test(t);
     }
     if(basis==='account-ownership-ended')return /\b(?:had|have|owned|owner(?:s)?)\b[^.;]{0,140}\b(?:account|checking|savings)\b|\b(?:account|checking|savings)\b[^.;]{0,140}\b(?:had|have|owned|owner(?:s)?)\b/i.test(t);
     if(basis==='account-opened')return /\b(?:opened|opening)\b[^.;]{0,100}\b(?:account|checking|savings)\b|\b(?:account|checking|savings)\b[^.;]{0,100}\b(?:opened|opening)\b/i.test(t);
-    if(basis==='account-closed')return /\b(?:closed|closing|closure)\b[^.;]{0,100}\b(?:account|checking|savings)\b|\b(?:account|checking|savings)\b[^.;]{0,100}\b(?:closed|closing|closure)\b/i.test(t);
+    if(basis==='account-closed')return /\b(?:closed|closing|closure)\b[^.;]{0,120}\b(?:account|accounts?|checking|savings)\b|\b(?:account|accounts?|checking|savings)\b[^.;]{0,120}\b(?:closed|closing|closure)\b/i.test(t);
     return false;
+  }
+  function inferConditionForDuration(sentence,basis,period){
+    if(basis!=='account-closed')return null;
+    const t=stripAbbreviationDots(clean(sentence)).toLowerCase();
+    const d=extractDurations(t).find(x=>equivalentPeriod(x,period));
+    if(!d)return null;
+    const before=t.slice(Math.max(0,d.index-100),d.index);
+    if(/closed\s+with\s+(?:a\s+)?negative\s+balance|negative\s+balance[^.;]{0,60}closed/.test(before))return{type:'closed-with-negative-balance',expected:true};
+    return null;
   }
   function matchingTimedSentence(text,basis,period){
     return splitEvidence(text).find(s=>eligibilityContext(s)&&basisContext(s,basis)&&extractDurations(s).some(x=>equivalentPeriod(x,period)))||'';
   }
-  function lookbackRestrictionContext(s){
-    return /not eligible|ineligible|not available|cannot|can't|may not|must not|do not qualify|does not qualify|aren't eligible|isn't eligible/i.test(s)
-      && /past|previous|preceding|prior|previously|last\s+\d|before\s+(?:opening|applying)|prior\s+to/i.test(s);
-  }
   function discoverTimedRestrictions(text){
-    const out=[],seen=new Set(),bases=['bonus-offer-received','bonus-received','account-ownership-ended','account-opened','account-closed'];
+    const out=[],seen=new Set(),bases=['offer-enrollment','bonus-offer-received','bonus-received','account-ownership-ended','account-opened','account-closed'];
     splitEvidence(text).forEach(sentence=>{
-      if(!lookbackRestrictionContext(sentence))return;
+      const eligible=eligibilityContext(sentence);
+      if(!eligible)return;
       bases.forEach(basis=>{
         if(!basisContext(sentence,basis))return;
         extractDurations(sentence).forEach(period=>{
-          const key=basis+'|'+period.value+'|'+period.unit;
+          const timedLookback=/past|previous|preceding|prior|previously|last\s+\d|within|every\b|from\s+the\s+last/i.test(sentence);
+          if(!timedLookback)return;
+          const condition=inferConditionForDuration(sentence,basis,period);
+          const key=basis+'|'+period.value+'|'+period.unit+'|'+(condition?.type||'always');
           if(seen.has(key))return;seen.add(key);
-          out.push({basis,period:{value:period.value,unit:period.unit,source:'discovered'},evidenceSentence:sentence});
+          out.push({basis,period:{value:period.value,unit:period.unit,source:'discovered'},condition,evidenceSentence:sentence});
         });
       });
     });
@@ -162,11 +189,26 @@
   }
   function basisDate(e,basis,rule){
     if(rule?.anchorDate)return clean(rule.anchorDate);
+    if(basis==='offer-enrollment'){
+      const explicit=clean(e?.couponEnrollmentDate||e?.offerEnrollmentDate);
+      if(explicit)return explicit;
+      if(rule?.anchorFallback==='account-opened'||rule?.anchorFallbackBasis==='account-opened')return clean(e?.opened);
+      return'';
+    }
     if(basis==='bonus-received')return clean(e?.bonusRecd);
     if(basis==='bonus-offer-received')return clean(e?.bonusOfferReceived||e?.offerReceivedDate);
     if(basis==='account-opened')return clean(e?.opened);
     if(basis==='account-closed'||basis==='account-ownership-ended')return clean(e?.closed);
     return'';
+  }
+  function ruleConditionState(e,rule){
+    const c=normalizeCondition(rule?.condition);
+    if(!c)return'active';
+    if(c.type==='closed-with-negative-balance'){
+      if(typeof e?.closedWithNegativeBalance!=='boolean')return'unknown';
+      return e.closedWithNegativeBalance===c.expected?'active':'inactive';
+    }
+    return'unknown';
   }
   function normalizeRule(r,e,index){
     const fallbackSource=evidenceSource(e);
@@ -177,7 +219,9 @@
       evidenceText:clean(r?.evidenceText||r?.eligibilityEvidenceText||''),
       evidenceSource:clean(r?.evidenceSource||r?.eligibilityEvidenceSource||fallbackSource),
       scope:clean(r?.scope||r?.eligibilityScope||''),
-      anchorDate:clean(r?.anchorDate||r?.eligibilityAnchorDate||'')
+      anchorDate:clean(r?.anchorDate||r?.eligibilityAnchorDate||''),
+      anchorFallback:clean(r?.anchorFallback||r?.anchorFallbackBasis||''),
+      condition:normalizeCondition(r?.condition||r?.appliesWhen)
     };
   }
   function normalizedRules(e){
@@ -201,7 +245,12 @@
     if(!rule.evidenceSource)return{ok:false,status:'unresolved',reason:'Eligibility rule '+(index+1)+' is not tied to a saved T&C source.'};
     const sentence=matchingTimedSentence(rule.evidenceText,rule.basis,rule.period);
     if(!sentence)return{ok:false,status:'conflict',reason:'Eligibility rule '+(index+1)+' does not match its saved T&C wording.'};
-    return{ok:true,status:'verified',rule:{...rule,evidenceSentence:sentence}};
+    const requiredCondition=inferConditionForDuration(sentence,rule.basis,rule.period);
+    const savedCondition=normalizeCondition(rule.condition);
+    if(requiredCondition&&!savedCondition)return{ok:false,status:'incomplete',reason:'Eligibility rule '+(index+1)+' is conditional in the T&C but the condition is missing from the rule.'};
+    if(requiredCondition&&savedCondition?.type!==requiredCondition.type)return{ok:false,status:'conflict',reason:'Eligibility rule '+(index+1)+' has the wrong condition for the saved T&C wording.'};
+    if(!requiredCondition&&savedCondition)return{ok:false,status:'conflict',reason:'Eligibility rule '+(index+1)+' adds a condition that the saved T&C wording does not support.'};
+    return{ok:true,status:'verified',rule:{...rule,condition:savedCondition,evidenceSentence:sentence}};
   }
   function validate(e){
     const d=decision(e),scope=rawTerms(e),current=currentCustomerRestriction(scope);
@@ -222,7 +271,11 @@
     const sourceText=clean(e?.tcSourceRaw||e?.analysis?.rawText||'');
     if(sourceText){
       const discovered=discoverTimedRestrictions(sourceText);
-      const missing=discovered.find(d=>!verifiedRules.some(r=>r.basis===d.basis&&equivalentPeriod(r.period,d.period)));
+      const missing=discovered.find(d=>!verifiedRules.some(r=>{
+        if(r.basis!==d.basis||!equivalentPeriod(r.period,d.period))return false;
+        const a=normalizeCondition(r.condition),b=normalizeCondition(d.condition);
+        return (a?.type||'')===(b?.type||'');
+      }));
       if(missing)return{
         ok:false,status:'incomplete',decision:d,
         reason:'The T&C contains an additional '+periodLabel(missing.period)+' '+anchorLabel(missing.basis)+' eligibility restriction that is missing from eligibilityRules.',
@@ -248,18 +301,21 @@
   function officialEligibilityDates(e,addD,addM){
     const v=validate(e);if(!v.ok||v.decision!=='repeatable')return[];
     return v.rules.map(rule=>{
-      const anchorDate=basisDate(e,rule.basis,rule);
-      const eligibleDate=anchorDate?applyPeriod(anchorDate,rule.period,addD,addM):'';
-      return{...rule,anchorDate,eligibleDate};
+      const conditionState=ruleConditionState(e,rule);
+      const anchorDate=conditionState==='active'?basisDate(e,rule.basis,rule):'';
+      const eligibleDate=conditionState==='active'&&anchorDate?applyPeriod(anchorDate,rule.period,addD,addM):'';
+      return{...rule,conditionState,anchorDate,eligibleDate};
     });
   }
   function officialEligibilityDate(e,addD,addM){
     const rows=officialEligibilityDates(e,addD,addM);
-    if(!rows.length||rows.some(r=>!r.eligibleDate))return'';
-    return rows.map(r=>r.eligibleDate).sort().at(-1)||'';
+    if(!rows.length||rows.some(r=>r.conditionState==='unknown'))return'';
+    const active=rows.filter(r=>r.conditionState==='active');
+    if(!active.length||active.some(r=>!r.eligibleDate))return'';
+    return active.map(r=>r.eligibleDate).sort().at(-1)||'';
   }
   function controllingRule(e,addD,addM){
-    const rows=officialEligibilityDates(e,addD,addM).filter(r=>r.eligibleDate);
+    const rows=officialEligibilityDates(e,addD,addM).filter(r=>r.conditionState==='active'&&r.eligibleDate);
     if(!rows.length)return null;
     return rows.sort((a,b)=>b.eligibleDate.localeCompare(a.eligibleDate))[0]||null;
   }
@@ -279,7 +335,8 @@
     return period.value+' '+period.unit.replace(/s$/,'')+(period.value===1?'':'s');
   }
   function anchorLabel(basis){
-    return basis==='bonus-received'?'bonus payout received':
+    return basis==='offer-enrollment'?'coupon/offer enrollment':
+      basis==='bonus-received'?'bonus payout received':
       basis==='bonus-offer-received'?'bonus offer received':
       basis==='account-opened'?'account opened':
       basis==='account-ownership-ended'?'account ownership ended':
@@ -304,12 +361,13 @@
     if(v.ok&&v.decision==='repeatable'){
       out.eligibilityRules=v.rules.map(r=>({
         id:r.id,basis:r.basis,periodValue:r.period.value,periodUnit:r.period.unit,
-        evidenceText:r.evidenceText,evidenceSource:r.evidenceSource,scope:r.scope||'',anchorDate:r.anchorDate||''
+        evidenceText:r.evidenceText,evidenceSource:r.evidenceSource,scope:r.scope||'',anchorDate:r.anchorDate||'',
+        anchorFallback:r.anchorFallback||'',condition:r.condition||null
       }));
       if(v.rules.length===1){
         const r=v.rules[0];
         out.sourceEligibilityBasis=r.basis;
-        out.churnBasis=r.basis==='bonus-received'?'bonus':r.basis==='account-opened'?'opened':'closed';
+        out.churnBasis=legacyBasisKey(r.basis);
         out.churnPeriodValue=r.period.value;out.churnPeriodUnit=r.period.unit;
         out.eligibilityEvidenceText=r.evidenceText;out.eligibilityAnchorEvidenceText=r.evidenceSentence;
         out.eligibilityEvidenceSource=r.evidenceSource;
@@ -333,8 +391,8 @@
   }
 
   return{
-    VERSION,SAFETY_BUFFER_DAYS,normalizeBasis,normalizeUnit,decision,periodFromEntry,periodFromRule,extractDurations,equivalentPeriod,
-    evidenceText,evidenceSource,rawTerms,currentCustomerRestriction,discoverTimedRestrictions,normalizedRules,validate,stamp,officialEligibilityDates,
+    VERSION,SAFETY_BUFFER_DAYS,normalizeBasis,normalizeUnit,normalizeCondition,legacyBasisKey,decision,periodFromEntry,periodFromRule,extractDurations,equivalentPeriod,
+    evidenceText,evidenceSource,rawTerms,currentCustomerRestriction,discoverTimedRestrictions,ruleConditionState,normalizedRules,validate,stamp,officialEligibilityDates,
     officialEligibilityDate,controllingRule,safeEligibilityDate,applicationReadyDate,periodLabel,anchorLabel,summary
   };
 });
