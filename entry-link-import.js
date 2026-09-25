@@ -1,10 +1,10 @@
-/* BonusTracker v3.4.19 — evidence-gated entry-file import and replacement-aware review. */
+/* BonusTracker v3.4.20 — strict verified JSON import with multi-rule churn eligibility and safe replacement. */
 (function(){
   'use strict';
-  const VER='3.4.19';
+  const VER='3.4.20';
   const HASH_KEY='btadd=';
   const ALLOWED=[
-    'bank','accountType','bonus','churn','churnable','churnability','churnBasis','churnBufferDays','churnReason','sourceEligibilityBasis','churnTrackingPolicy','churnDecisionSource','churnDecisionConfidence','churnDecisionConfirmedAt','churnPeriodValue','churnPeriodUnit','eligibilityEvidenceText','eligibilityAnchorEvidenceText','eligibilityEvidenceSource','eligibilityVerified','eligibilityVerifiedAt','eligibilityVerificationStatus','eligibilityVerificationReason','currentCustomerExcluded','currentCustomerEvidenceText','mustCloseBeforeReapply','reapplicationAction','tcSourceRaw','tcSourceId','tcSourceUpdatedAt',
+    'bank','accountType','bonus','churn','churnable','churnability','churnBasis','churnBufferDays','churnReason','sourceEligibilityBasis','churnTrackingPolicy','churnDecisionSource','churnDecisionConfidence','churnDecisionConfirmedAt','churnPeriodValue','churnPeriodUnit','eligibilityRules','eligibilityScope','eligibilityEvidenceText','eligibilityAnchorEvidenceText','eligibilityEvidenceSource','eligibilityVerified','eligibilityVerifiedAt','eligibilityVerificationStatus','eligibilityVerificationReason','currentCustomerExcluded','currentCustomerEvidenceText','mustCloseBeforeReapply','reapplicationAction','promoSourceUrl','feeScheduleSourceUrl','termsVerifiedAt','schemaVersion','tcSourceRaw','tcSourceId','tcSourceUpdatedAt',
     'opened','closed','bonusRecd','reqMet','notes','analyzedTC','minHoldDays','closeFeeCountdownDays','earlyCloseFee','reqDays','referralBonus','dataPoint',
     'fundedDays','fundingAmount','fundingAmountText','payoutTimingText','phoneNum','feeChecked','monthlyFeeYNText','monthlyFeeAmountText','monthlyFeeFrequency',
     'monthlyFeeWaiverType','monthlyFeeWaiverAmountText','monthlyFeeWaiverText','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText',
@@ -22,8 +22,14 @@
     return JSON.parse(txt);
   }
   function cleanPayload(p){
-    const src=(p&&typeof p==='object'&&(p.entry||p.payload))?(p.entry||p.payload):p;
+    const envelope=(p&&typeof p==='object'&&!Array.isArray(p))?p:{};
+    const src=(envelope.entry||envelope.payload)||p;
     const out={};if(!src||typeof src!=='object'||Array.isArray(src))return out;
+    const verification=(envelope.verification&&typeof envelope.verification==='object'?envelope.verification:(src.verification&&typeof src.verification==='object'?src.verification:{}));
+    out.schemaVersion=parseInt(envelope.schemaVersion||src.schemaVersion||1,10)||1;
+    out.promoSourceUrl=String(verification.promoSourceUrl||src.promoSourceUrl||'').trim();
+    out.feeScheduleSourceUrl=String(verification.feeScheduleSourceUrl||src.feeScheduleSourceUrl||'').trim();
+    out.termsVerifiedAt=String(verification.termsVerifiedAt||src.termsVerifiedAt||'').trim();
     ALLOWED.forEach(k=>{if(src[k]!==undefined)out[k]=src[k]});
     out.bank=String(out.bank||'').trim();
     out.accountType=String(out.accountType||'personal').toLowerCase()==='business'?'business':'personal';
@@ -38,6 +44,7 @@
     out.churnBufferDays=0;
     out.churnPeriodValue=Math.max(0,parseInt(out.churnPeriodValue||0,10)||0);
     out.churnPeriodUnit=String(out.churnPeriodUnit||'').toLowerCase().trim();
+    out.eligibilityRules=Array.isArray(out.eligibilityRules)?out.eligibilityRules.filter(r=>r&&typeof r==='object').map(r=>({...r})):[];
     out.customTimers=typeof normalizeTimerList==='function'?normalizeTimerList(out.customTimers||[]):(Array.isArray(out.customTimers)?out.customTimers:[]);
     return out;
   }
@@ -45,6 +52,12 @@
     let next=cleanPayload(payload);
     if(!next.bank)throw new Error('Bank name is missing.');
     if(!next.opened)throw new Error('Opened date is missing.');
+    if(next.schemaVersion>=2){
+      if(!next.promoSourceUrl)throw new Error('Strict JSON is missing the official promotion source URL.');
+      if(!next.feeScheduleSourceUrl)throw new Error('Strict JSON is missing the official fee-schedule source URL.');
+      if(!next.termsVerifiedAt)throw new Error('Strict JSON is missing the verification date.');
+      if((next.churnable===true||String(next.churnability||'').toLowerCase()==='repeatable')&&!next.eligibilityRules.length)throw new Error('Strict JSON must list every churn restriction in eligibilityRules.');
+    }
     if(!window.BTEligibilityGate||typeof window.BTEligibilityGate.validate!=='function')throw new Error('Churn eligibility validator is unavailable.');
     const verified=window.BTEligibilityGate.validate(next);
     if(!verified.ok)throw new Error('Churn eligibility is not verified from the T&C: '+verified.reason);
@@ -97,7 +110,83 @@
     return{status:'review',entry:next};
   }
   function preview(p){
-    const bonus='$'+Number(p.bonus||0).toLocaleString();
+    const bonus='
+    const future=window.BTEligibilityGate&&typeof window.BTEligibilityGate.summary==='function'?window.BTEligibilityGate.summary(p):(p.churnability==='not-repeatable'?'Non-repeatable':'T&C verification required');
+    return `Load ${p.bank} ${bonus} into New Entry?\n${schema}\n\nOpened: ${p.opened}\nRequirement: ${p.dataPoint||'See saved terms'}\nFuture eligibility: ${future}\n\nNothing is saved or replaced yet. Review the entry, then tap Add Entry. If this bank has an older churn/cooldown record, the normal replacement screen will still appear before anything is replaced.`;
+  }
+  function readFileText(file){
+    if(file&&typeof file.text==='function')return file.text();
+    return new Promise((resolve,reject)=>{
+      const reader=new FileReader();
+      reader.onload=()=>resolve(String(reader.result||''));
+      reader.onerror=()=>reject(reader.error||new Error('Could not read the selected file.'));
+      reader.readAsText(file);
+    });
+  }
+  async function importEntryFile(file){
+    if(!file)throw new Error('No file selected.');
+    const text=await readFileText(file);
+    const payload=parseEntryFileText(text,file.name||'');
+    if(!window.confirm(preview(payload)))return{status:'cancelled'};
+    return stageEntryForReview(payload,'entry-file',file.name||'');
+  }
+  function chooseEntryFile(){
+    const input=document.createElement('input');
+    input.type='file';
+    input.accept='.json,.html,application/json,text/html';
+    input.style.display='none';
+    input.onchange=async()=>{
+      const file=input.files&&input.files[0];
+      try{if(file)await importEntryFile(file)}catch(err){alert('Could not import this entry file: '+(err&&err.message?err.message:err))}
+      setTimeout(()=>{try{input.remove()}catch{}},50);
+    };
+    document.body.appendChild(input);
+    input.click();
+  }
+  function importIcon(){
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"/><path d="m8 10 4 4 4-4"/><path d="M5 18v2h14v-2"/></svg>';
+  }
+  function injectQuickAddImport(){
+    const grid=document.querySelector('.tgrid');
+    if(!grid||document.getElementById('bt_import_entry_file'))return;
+    const btn=document.createElement('button');
+    btn.id='bt_import_entry_file';
+    btn.type='button';
+    btn.className='tbtn';
+    btn.style.gridColumn='1 / -1';
+    btn.innerHTML='<div class="blogo sm" style="background:#0F172A">'+importIcon()+'</div><div class="t-info"><div class="nm">Import Entry File</div><div class="bn">JSON / HTML · review before save</div></div>';
+    btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();chooseEntryFile()});
+    grid.prepend(btn);
+    const note=document.createElement('div');
+    note.id='bt_import_entry_note';
+    note.style.cssText='grid-column:1/-1;font-size:9px;line-height:1.45;color:var(--muted);padding:0 4px 4px';
+    note.textContent='Strict import: the file must contain T&C-backed churn eligibility before it can open as a New Entry. Existing churn records still use the normal Replace Old Entry flow.';
+    btn.insertAdjacentElement('afterend',note);
+  }
+  function runHash(){
+    if(hashHandled)return;
+    const h=String(location.hash||'').replace(/^#/,'');
+    if(!h.startsWith(HASH_KEY))return;
+    hashHandled=true;
+    try{
+      const payload=validatePayload(decode(h.slice(HASH_KEY.length)));
+      if(!window.confirm(preview(payload))){clearHash();return}
+      stageEntryForReview(payload,'one-click-link','');
+      clearHash();
+    }catch(err){clearHash();alert('Could not load this bank entry: '+(err&&err.message?err.message:err));}
+  }
+
+  window.btAddEntryFromPayload=(payload)=>stageEntryForReview(payload,'payload','');
+  window.btStageEntryPayload=stageEntryForReview;
+  window.btParseEntryFileText=parseEntryFileText;
+  window.btImportEntryFile=chooseEntryFile;
+  window.btImportEntryFileObject=importEntryFile;
+  window.btEntryLinkImportVersion=VER;
+  if(typeof window.btRegisterPostRender==='function')window.btRegisterPostRender('entry-file-import',injectQuickAddImport);
+  injectQuickAddImport();
+  setTimeout(runHash,80);setTimeout(runHash,700);
+})();
++Number(p.bonus||0).toLocaleString();\n    const schema=p.schemaVersion>=2?'Verified JSON v2':'Legacy-compatible JSON';
     const future=window.BTEligibilityGate&&typeof window.BTEligibilityGate.summary==='function'?window.BTEligibilityGate.summary(p):(p.churnability==='not-repeatable'?'Non-repeatable':'T&C verification required');
     return `Load ${p.bank} ${bonus} into New Entry?\n\nOpened: ${p.opened}\nRequirement: ${p.dataPoint||'See saved terms'}\nFuture eligibility: ${future}\n\nNothing is saved or replaced yet. Review the entry, then tap Add Entry. If this bank has an older churn/cooldown record, the normal replacement screen will still appear before anything is replaced.`;
   }
