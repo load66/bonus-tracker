@@ -80,6 +80,60 @@ const sixMonthPayload={...payload,churn:'',churnPeriodValue:6,churnPeriodUnit:'m
 const parsedSix=sandbox.btParseEntryFileText(JSON.stringify({kind:'BonusTrackerEntry',entry:sixMonthPayload}),'SixMonths.json');
 assert(parsedSix.churnPeriodValue===6&&parsedSix.churnPeriodUnit==='months'&&parsedSix.eligibilityVerified===true,'Exact six-month cooldown did not import');
 
+
+const strictV2={
+  kind:'BonusTrackerEntry',
+  schemaVersion:2,
+  verification:{
+    promoSourceUrl:'https://example-bank.test/promo',
+    feeScheduleSourceUrl:'https://example-bank.test/fees',
+    termsVerifiedAt:'2026-09-25'
+  },
+  entry:{
+    ...payload,
+    tcSourceRaw:'Citi checking bonus promotional terms. This offer is for eligible new consumer checking customers. Not eligible if you received a Citi checking bonus within the past 12 months. Complete the qualifying deposit requirements within 90 days after account opening. Bonus payout follows the promotional terms.',
+    eligibilityRules:[
+      {id:'bonus-12m',basis:'bonus-received',periodValue:12,periodUnit:'months',scope:'consumer-checking',evidenceText:'Not eligible if you received a Citi checking bonus within the past 12 months.',evidenceSource:'official-promotion-terms'}
+    ]
+  }
+};
+const parsedV2=sandbox.btParseEntryFileText(JSON.stringify(strictV2),'Citi-v2.json');
+assert(parsedV2.schemaVersion===2&&parsedV2.eligibilityRules.length===1,'Strict JSON v2 did not preserve eligibility rules');
+assert(parsedV2.promoSourceUrl&&parsedV2.feeScheduleSourceUrl&&parsedV2.termsVerifiedAt==='2026-09-25','Strict JSON v2 provenance was not preserved');
+
+rejected=false;
+try{
+  sandbox.btParseEntryFileText(JSON.stringify({...strictV2,verification:{...strictV2.verification,feeScheduleSourceUrl:''}}),'MissingFeeSource.json')
+}catch(e){rejected=/fee-schedule source URL/.test(String(e.message))}
+assert(rejected,'Strict JSON v2 accepted a missing official fee-schedule source');
+
+rejected=false;
+try{
+  const noRules={...strictV2,entry:{...strictV2.entry,eligibilityRules:[]}};
+  sandbox.btParseEntryFileText(JSON.stringify(noRules),'MissingRules.json')
+}catch(e){rejected=/eligibilityRules/.test(String(e.message))}
+assert(rejected,'Strict JSON v2 accepted a repeatable bonus without eligibilityRules');
+
+rejected=false;
+try{
+  const missingTc={...strictV2,entry:{...strictV2.entry,tcSourceRaw:''}};
+  sandbox.btParseEntryFileText(JSON.stringify(missingTc),'MissingTC.json')
+}catch(e){rejected=/full pasted T&C/.test(String(e.message))}
+assert(rejected,'Strict JSON v2 accepted a missing full T&C source');
+
+rejected=false;
+try{
+  const omittedRule={...strictV2,entry:{
+    ...strictV2.entry,
+    tcSourceRaw:'Citi checking bonus promotional terms. Not eligible if you received a checking bonus within the past 24 months. You are also not eligible if you closed a checking account within the past 12 months. Complete qualifying deposits within 90 days after account opening.',
+    eligibilityRules:[
+      {id:'bonus-24m',basis:'bonus-received',periodValue:24,periodUnit:'months',scope:'consumer-checking',evidenceText:'Not eligible if you received a checking bonus within the past 24 months.',evidenceSource:'official-promotion-terms'}
+    ]
+  }};
+  sandbox.btParseEntryFileText(JSON.stringify(omittedRule),'OmittedRule.json')
+}catch(e){rejected=/additional .* eligibility restriction|missing from eligibilityRules/.test(String(e.message))}
+assert(rejected,'Strict JSON v2 accepted T&C containing an omitted second churn restriction');
+
 const encoded=Buffer.from(JSON.stringify(payload)).toString('base64url');
 const parsedHtml=sandbox.btParseEntryFileText(`<a href="https://load66.github.io/bonus-tracker/#btadd=${encoded}">Add Citi</a>`,'Citi.html');
 assert(parsedHtml.bank==='Citi'&&parsedHtml.opened==='2026-08-10','HTML entry file did not parse the embedded btadd payload');
@@ -102,4 +156,4 @@ sandbox.postRenderHook();
 assert(document.getElementById('bt_import_entry_file'),'Import Entry File button was not injected into Quick Add');
 assert(document.getElementById('bt_import_entry_note'),'Replacement-safety explanation is missing from Quick Add');
 
-console.log('Entry file import passed: JSON + HTML parsing, mandatory T&C churn evidence, exact cooldown units, review-before-save, fee safety, and duplicate protection preserved');
+console.log('Entry file import passed: legacy compatibility, strict verified JSON v2 provenance, multi-rule churn evidence, review-before-save, fee safety, and duplicate protection preserved');

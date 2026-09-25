@@ -1,7 +1,7 @@
-/* ✅ Version 3.4.19: evidence-gated churn eligibility, exact cooldown units, transactional restore, and hardened analyzer/export runtime. */
+/* ✅ Version 3.4.20: multi-rule churn eligibility, safe same-product re-churn replacement, and evidence-gated imports. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.19';
+const APP_VERSION='3.4.20';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const ANALYZER_MEMORY_KEY='bt_analyzer_memory_v1';
@@ -168,7 +168,7 @@ function offerSignature(snap){
 function offerSnapshotFromEntry(e,source){
   if(!e||!e.bank)return null;
   const analyzed=String(e.analyzedTC||'');
-  const snap={id:'ofr_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6),bank:e.bank,accountType:normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'personal',entryId:e.id||'',source:source||'entry',savedAt:td(),opened:e.opened||'',closed:e.closed||'',bonusRecd:e.bonusRecd||'',bonus:e.bonus||0,churn:e.churn||'',reqDays:e.reqDays||0,minHoldDays:e.minHoldDays||0,earlyCloseFee:e.earlyCloseFee||0,closeRuleBasis:normalizeCloseRuleBasis(e.closeRuleBasis),closeBufferDays:closeBufferDaysFor(e),closeRuleText:e.closeRuleText||'',monthlyFeeChecked:!!e.monthlyFeeChecked,fundedDays:e.fundedDays||0,fundingAmount:e.fundingAmount||0,fundingAmountText:e.fundingAmountText||'',payoutTimingText:e.payoutTimingText||'',monthlyFeeYNText:e.monthlyFeeYNText||'',monthlyFeeAmountText:e.monthlyFeeAmountText||'',monthlyFeeFrequency:e.monthlyFeeFrequency||'',monthlyFeeWaiverType:e.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:e.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:e.monthlyFeeWaiverText||'',promoCodeText:e.promoCodeText||'',avoidMonthlyFeeText:e.avoidMonthlyFeeText||'',completeBonusText:e.completeBonusText||'',eligibilityText:e.eligibilityText||'',sourceEligibilityBasis:e.sourceEligibilityBasis||'',churnPeriodValue:e.churnPeriodValue||0,churnPeriodUnit:e.churnPeriodUnit||'',eligibilityEvidenceText:e.eligibilityEvidenceText||'',eligibilityAnchorEvidenceText:e.eligibilityAnchorEvidenceText||'',currentCustomerEvidenceText:e.currentCustomerEvidenceText||'',eligibilityEvidenceSource:e.eligibilityEvidenceSource||'',eligibilityVerified:!!e.eligibilityVerified,currentCustomerExcluded:!!e.currentCustomerExcluded,mustCloseBeforeReapply:!!e.mustCloseBeforeReapply,reapplicationAction:e.reapplicationAction||'',expirationDateText:e.expirationDateText||'',requiredDaysText:e.requiredDaysText||'',notes:String(e.notes||'').slice(0,600),analyzedPreview:analyzed.slice(0,900)};
+  const snap={id:'ofr_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6),bank:e.bank,accountType:normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'personal',entryId:e.id||'',source:source||'entry',savedAt:td(),opened:e.opened||'',closed:e.closed||'',bonusRecd:e.bonusRecd||'',bonus:e.bonus||0,churn:e.churn||'',reqDays:e.reqDays||0,minHoldDays:e.minHoldDays||0,earlyCloseFee:e.earlyCloseFee||0,closeRuleBasis:normalizeCloseRuleBasis(e.closeRuleBasis),closeBufferDays:closeBufferDaysFor(e),closeRuleText:e.closeRuleText||'',monthlyFeeChecked:!!e.monthlyFeeChecked,fundedDays:e.fundedDays||0,fundingAmount:e.fundingAmount||0,fundingAmountText:e.fundingAmountText||'',payoutTimingText:e.payoutTimingText||'',monthlyFeeYNText:e.monthlyFeeYNText||'',monthlyFeeAmountText:e.monthlyFeeAmountText||'',monthlyFeeFrequency:e.monthlyFeeFrequency||'',monthlyFeeWaiverType:e.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:e.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:e.monthlyFeeWaiverText||'',promoCodeText:e.promoCodeText||'',avoidMonthlyFeeText:e.avoidMonthlyFeeText||'',completeBonusText:e.completeBonusText||'',eligibilityText:e.eligibilityText||'',schemaVersion:parseInt(e.schemaVersion||0,10)||0,eligibilityRules:Array.isArray(e.eligibilityRules)?e.eligibilityRules.map(r=>({...r})):[],eligibilityScope:e.eligibilityScope||'',sourceEligibilityBasis:e.sourceEligibilityBasis||'',churnPeriodValue:e.churnPeriodValue||0,churnPeriodUnit:e.churnPeriodUnit||'',eligibilityEvidenceText:e.eligibilityEvidenceText||'',eligibilityAnchorEvidenceText:e.eligibilityAnchorEvidenceText||'',currentCustomerEvidenceText:e.currentCustomerEvidenceText||'',eligibilityEvidenceSource:e.eligibilityEvidenceSource||'',eligibilityVerified:!!e.eligibilityVerified,promoSourceUrl:e.promoSourceUrl||'',feeScheduleSourceUrl:e.feeScheduleSourceUrl||'',termsVerifiedAt:e.termsVerifiedAt||'',currentCustomerExcluded:!!e.currentCustomerExcluded,mustCloseBeforeReapply:!!e.mustCloseBeforeReapply,reapplicationAction:e.reapplicationAction||'',expirationDateText:e.expirationDateText||'',requiredDaysText:e.requiredDaysText||'',notes:String(e.notes||'').slice(0,600),analyzedPreview:analyzed.slice(0,900)};
   const tier=analyzed.match(/Bonus:\s*([^*]{0,240})/i);
   if(tier)snap.bonusTierText=tier[1].trim();
   snap.signature=offerSignature(snap);
@@ -194,7 +194,7 @@ function offerHistoryForBank(bank){
 }
 function archivedCycleSnapshot(e){
   if(!e)return null;
-  return{bank:e.bank||'',id:e.id||'',archivedAt:td(),opened:e.opened||'',reqMet:e.reqMet||'',bonusRecd:e.bonusRecd||'',closed:e.closed||'',bonus:e.bonus||0,churn:e.churn||'',notes:String(e.notes||'').slice(0,900),analyzedPreview:String(e.analyzedTC||'').slice(0,900),timerSummary:normalizeTimerList(e.customTimers||[]).map(t=>({text:t.text||'',date:t.date||'',daysRequired:t.daysRequired||0,done:!!t.done})).slice(0,8)}
+  return{bank:e.bank||'',accountType:e.accountType||'',id:e.id||'',archivedAt:td(),opened:e.opened||'',reqMet:e.reqMet||'',bonusRecd:e.bonusRecd||'',closed:e.closed||'',bonus:e.bonus||0,churn:e.churn||'',schemaVersion:parseInt(e.schemaVersion||0,10)||0,sourceEligibilityBasis:e.sourceEligibilityBasis||'',churnPeriodValue:e.churnPeriodValue||0,churnPeriodUnit:e.churnPeriodUnit||'',eligibilityRules:Array.isArray(e.eligibilityRules)?e.eligibilityRules.map(r=>({...r})):[],eligibilityEvidenceText:e.eligibilityEvidenceText||'',eligibilityEvidenceSource:e.eligibilityEvidenceSource||'',eligibilityVerifiedAt:e.eligibilityVerifiedAt||'',promoSourceUrl:e.promoSourceUrl||'',feeScheduleSourceUrl:e.feeScheduleSourceUrl||'',termsVerifiedAt:e.termsVerifiedAt||'',notes:String(e.notes||'').slice(0,900),analyzedPreview:String(e.analyzedTC||'').slice(0,900),timerSummary:normalizeTimerList(e.customTimers||[]).map(t=>({text:t.text||'',date:t.date||'',daysRequired:t.daysRequired||0,done:!!t.done})).slice(0,8)}
 }
 
 function nonRepeatableSourceText(e){
@@ -2003,11 +2003,18 @@ function replacementCandidateLabel(e){
   bits.push('ID '+(getEntryDisplayId(e)||e.id||''));
   return (e.bank||'Unknown')+' — '+bits.join(' · ')
 }
+function replacementIdentityCompatible(newData,e){
+  if(!newData||!e)return false;
+  const ni=entryBankIdentity(newData),ei=entryBankIdentity(e);
+  if(ni.family!==ei.family)return false;
+  const explicit=['personal','business'].includes(normalizeAccountType(newData.accountType));
+  return !explicit||ni.type===ei.type;
+}
 function getManualReplacementCandidates(newData,currentId=''){
   return entries
-    .filter(e=>e&&e.bank&&e.id!==currentId)
+    .filter(e=>e&&e.bank&&e.id!==currentId&&replacementIdentityCompatible(newData,e))
     .sort((a,b)=>replacementCandidateScore(newData,a)-replacementCandidateScore(newData,b)||entryRecencyDate(b).localeCompare(entryRecencyDate(a))||String(a.bank||'').localeCompare(String(b.bank||'')))
-    .slice(0,80)
+    .slice(0,40)
 }
 function handleManualReplacementPicker(newData,source='manual',currentId=''){
   if(!newData||!newData.bank)return false;
@@ -2032,6 +2039,7 @@ function doReplacementPickerReplace(){
   const p=replacementPickerPrompt;
   const picked=p.candidates.find(x=>x.id===p.selectedId);
   if(!picked){alert('Choose an old entry first.');return}
+  if(!replacementIdentityCompatible(p.newData,picked)){alert('That entry is not the same bank/product type and cannot be replaced.');return}
   overwritePrompt=makeDuplicatePrompt(p.newData,picked,p.source||'manual-picker');
   overwritePrompt.removeEntryId=p.currentId||'';
   replacementPickerPrompt=null;
@@ -4130,7 +4138,7 @@ function collectModalEntryData(){
   const bank=(modal.bank||'').trim();
   if(!bank){alert('Bank name required');return null}
   syncModalAccountTypeFromBank();
-  const d={bank,accountType:normalizeAccountType(modal.accountType)||'personal',bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,closeFeeCountdownDays:modal.closeFeeCountdownDays||'',earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',fundedDays:modal.fundedDays||0,fundingAmount:modal.fundingAmount||0,fundingAmountText:modal.fundingAmountText||'',payoutTimingText:modal.payoutTimingText||'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false,monthlyFeeYNText:modal.monthlyFeeYNText||'',monthlyFeeAmountText:modal.monthlyFeeAmountText||'',monthlyFeeFrequency:modal.monthlyFeeFrequency||'',monthlyFeeWaiverType:modal.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:modal.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:modal.monthlyFeeWaiverText||'',promoCodeText:modal.promoCodeText||'',avoidMonthlyFeeText:modal.avoidMonthlyFeeText||'',completeBonusText:modal.completeBonusText||'',earlyTerminationFeeText:modal.earlyTerminationFeeText||'',eligibilityText:modal.eligibilityText||'',expirationDateText:modal.expirationDateText||'',requiredDaysText:modal.requiredDaysText||'',closeRuleBasis:normalizeCloseRuleBasis(modal.closeRuleBasis),closeBufferDays:parseInt(modal.closeBufferDays,10)||BUFFER_DAYS,closeRuleText:modal.closeRuleText||'',monthlyFeeChecked:!!modal.monthlyFeeChecked,eligibilityEvidenceText:modal.eligibilityEvidenceText||modal.analysis?.eligibilityEvidenceText||modal.eligibilityText||'',eligibilityAnchorEvidenceText:modal.eligibilityAnchorEvidenceText||modal.analysis?.eligibilityAnchorEvidenceText||'',currentCustomerEvidenceText:modal.currentCustomerEvidenceText||modal.analysis?.currentCustomerEvidenceText||'',reapplicationAction:modal.reapplicationAction||modal.analysis?.reapplicationAction||'',eligibilityEvidenceSource:modal.eligibilityEvidenceSource||modal.analysis?.eligibilityEvidenceSource||(modal.tcSourceId?'saved-tc':''),churnPeriodValue:parseInt(modal.churnPeriodValue||modal.analysis?.churnPeriodValue||0,10)||0,churnPeriodUnit:modal.churnPeriodUnit||modal.analysis?.churnPeriodUnit||'',tcSourceRaw:modal.tcSourceRaw||'',tcSourceId:modal.tcSourceId||'',tcSourceUpdatedAt:modal.tcSourceUpdatedAt||'',analysis:(modal.analysis&&typeof modal.analysis==='object')?modal.analysis:null,analyzerHistory:normalizeAnalyzerHistoryList(modal.analyzerHistory),history:normalizeEntryHistoryList(modal.history),customTimers:normalizeTimerList(modal.customTimers)};
+  const d={bank,accountType:normalizeAccountType(modal.accountType)||'personal',bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,closeFeeCountdownDays:modal.closeFeeCountdownDays||'',earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',fundedDays:modal.fundedDays||0,fundingAmount:modal.fundingAmount||0,fundingAmountText:modal.fundingAmountText||'',payoutTimingText:modal.payoutTimingText||'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false,monthlyFeeYNText:modal.monthlyFeeYNText||'',monthlyFeeAmountText:modal.monthlyFeeAmountText||'',monthlyFeeFrequency:modal.monthlyFeeFrequency||'',monthlyFeeWaiverType:modal.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:modal.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:modal.monthlyFeeWaiverText||'',promoCodeText:modal.promoCodeText||'',avoidMonthlyFeeText:modal.avoidMonthlyFeeText||'',completeBonusText:modal.completeBonusText||'',earlyTerminationFeeText:modal.earlyTerminationFeeText||'',eligibilityText:modal.eligibilityText||'',expirationDateText:modal.expirationDateText||'',requiredDaysText:modal.requiredDaysText||'',closeRuleBasis:normalizeCloseRuleBasis(modal.closeRuleBasis),closeBufferDays:parseInt(modal.closeBufferDays,10)||BUFFER_DAYS,closeRuleText:modal.closeRuleText||'',monthlyFeeChecked:!!modal.monthlyFeeChecked,schemaVersion:parseInt(modal.schemaVersion||0,10)||0,eligibilityRules:Array.isArray(modal.eligibilityRules)?modal.eligibilityRules.map(r=>({...r})):[],eligibilityScope:modal.eligibilityScope||modal.analysis?.eligibilityScope||'',eligibilityEvidenceText:modal.eligibilityEvidenceText||modal.analysis?.eligibilityEvidenceText||modal.eligibilityText||'',eligibilityAnchorEvidenceText:modal.eligibilityAnchorEvidenceText||modal.analysis?.eligibilityAnchorEvidenceText||'',currentCustomerEvidenceText:modal.currentCustomerEvidenceText||modal.analysis?.currentCustomerEvidenceText||'',reapplicationAction:modal.reapplicationAction||modal.analysis?.reapplicationAction||'',promoSourceUrl:modal.promoSourceUrl||'',feeScheduleSourceUrl:modal.feeScheduleSourceUrl||'',termsVerifiedAt:modal.termsVerifiedAt||'',eligibilityEvidenceSource:modal.eligibilityEvidenceSource||modal.analysis?.eligibilityEvidenceSource||(modal.tcSourceId?'saved-tc':''),churnPeriodValue:parseInt(modal.churnPeriodValue||modal.analysis?.churnPeriodValue||0,10)||0,churnPeriodUnit:modal.churnPeriodUnit||modal.analysis?.churnPeriodUnit||'',tcSourceRaw:modal.tcSourceRaw||'',tcSourceId:modal.tcSourceId||'',tcSourceUpdatedAt:modal.tcSourceUpdatedAt||'',analysis:(modal.analysis&&typeof modal.analysis==='object')?modal.analysis:null,analyzerHistory:normalizeAnalyzerHistoryList(modal.analyzerHistory),history:normalizeEntryHistoryList(modal.history),customTimers:normalizeTimerList(modal.customTimers)};
   if(modal.churnable===false||modal.analysis?.churnable===false)d.churnable=false;
   else if(modal.churnable===true||modal.analysis?.churnable===true||modal.churn)d.churnable=true;
   d.churnability=modal.churnability||modal.analysis?.churnability||(d.churnable===false?'not-repeatable':d.churn?'repeatable':'');
@@ -4224,6 +4232,18 @@ function normalizeNewCycleData(d,existing){
   next.completeBonusText=d.completeBonusText||'';
   next.earlyTerminationFeeText=d.earlyTerminationFeeText||'';
   next.eligibilityText=d.eligibilityText||'';
+  next.eligibilityRules=Array.isArray(d.eligibilityRules)?d.eligibilityRules.map(r=>({...r})):[];
+  next.eligibilityScope=d.eligibilityScope||'';
+  next.eligibilityEvidenceText=d.eligibilityEvidenceText||'';
+  next.eligibilityAnchorEvidenceText=d.eligibilityAnchorEvidenceText||'';
+  next.eligibilityEvidenceSource=d.eligibilityEvidenceSource||'';
+  next.currentCustomerEvidenceText=d.currentCustomerEvidenceText||'';
+  next.promoSourceUrl=d.promoSourceUrl||'';
+  next.feeScheduleSourceUrl=d.feeScheduleSourceUrl||'';
+  next.termsVerifiedAt=d.termsVerifiedAt||'';
+  next.sourceEligibilityBasis=d.sourceEligibilityBasis||'';
+  next.churnPeriodValue=parseInt(d.churnPeriodValue||0,10)||0;
+  next.churnPeriodUnit=d.churnPeriodUnit||'';
   next.expirationDateText=d.expirationDateText||'';
   next.requiredDaysText=d.requiredDaysText||'';
   next.analysis=(d.analysis&&typeof d.analysis==='object')?d.analysis:((existing.analysis&&typeof existing.analysis==='object')?existing.analysis:null);

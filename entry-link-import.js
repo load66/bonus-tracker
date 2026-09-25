@@ -1,10 +1,10 @@
-/* BonusTracker v3.4.19 — evidence-gated entry-file import and replacement-aware review. */
+/* BonusTracker v3.4.20 — strict verified JSON import with multi-rule churn eligibility and safe replacement. */
 (function(){
   'use strict';
-  const VER='3.4.19';
+  const VER='3.4.20';
   const HASH_KEY='btadd=';
   const ALLOWED=[
-    'bank','accountType','bonus','churn','churnable','churnability','churnBasis','churnBufferDays','churnReason','sourceEligibilityBasis','churnTrackingPolicy','churnDecisionSource','churnDecisionConfidence','churnDecisionConfirmedAt','churnPeriodValue','churnPeriodUnit','eligibilityEvidenceText','eligibilityAnchorEvidenceText','eligibilityEvidenceSource','eligibilityVerified','eligibilityVerifiedAt','eligibilityVerificationStatus','eligibilityVerificationReason','currentCustomerExcluded','currentCustomerEvidenceText','mustCloseBeforeReapply','reapplicationAction','tcSourceRaw','tcSourceId','tcSourceUpdatedAt',
+    'bank','accountType','bonus','churn','churnable','churnability','churnBasis','churnBufferDays','churnReason','sourceEligibilityBasis','churnTrackingPolicy','churnDecisionSource','churnDecisionConfidence','churnDecisionConfirmedAt','churnPeriodValue','churnPeriodUnit','eligibilityRules','eligibilityScope','eligibilityEvidenceText','eligibilityAnchorEvidenceText','eligibilityEvidenceSource','eligibilityVerified','eligibilityVerifiedAt','eligibilityVerificationStatus','eligibilityVerificationReason','currentCustomerExcluded','currentCustomerEvidenceText','mustCloseBeforeReapply','reapplicationAction','promoSourceUrl','feeScheduleSourceUrl','termsVerifiedAt','schemaVersion','tcSourceRaw','tcSourceId','tcSourceUpdatedAt',
     'opened','closed','bonusRecd','reqMet','notes','analyzedTC','minHoldDays','closeFeeCountdownDays','earlyCloseFee','reqDays','referralBonus','dataPoint',
     'fundedDays','fundingAmount','fundingAmountText','payoutTimingText','phoneNum','feeChecked','monthlyFeeYNText','monthlyFeeAmountText','monthlyFeeFrequency',
     'monthlyFeeWaiverType','monthlyFeeWaiverAmountText','monthlyFeeWaiverText','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText',
@@ -22,8 +22,14 @@
     return JSON.parse(txt);
   }
   function cleanPayload(p){
-    const src=(p&&typeof p==='object'&&(p.entry||p.payload))?(p.entry||p.payload):p;
+    const envelope=(p&&typeof p==='object'&&!Array.isArray(p))?p:{};
+    const src=(envelope.entry||envelope.payload)||p;
     const out={};if(!src||typeof src!=='object'||Array.isArray(src))return out;
+    const verification=(envelope.verification&&typeof envelope.verification==='object'?envelope.verification:(src.verification&&typeof src.verification==='object'?src.verification:{}));
+    out.schemaVersion=parseInt(envelope.schemaVersion||src.schemaVersion||1,10)||1;
+    out.promoSourceUrl=String(verification.promoSourceUrl||src.promoSourceUrl||'').trim();
+    out.feeScheduleSourceUrl=String(verification.feeScheduleSourceUrl||src.feeScheduleSourceUrl||'').trim();
+    out.termsVerifiedAt=String(verification.termsVerifiedAt||src.termsVerifiedAt||'').trim();
     ALLOWED.forEach(k=>{if(src[k]!==undefined)out[k]=src[k]});
     out.bank=String(out.bank||'').trim();
     out.accountType=String(out.accountType||'personal').toLowerCase()==='business'?'business':'personal';
@@ -38,6 +44,7 @@
     out.churnBufferDays=0;
     out.churnPeriodValue=Math.max(0,parseInt(out.churnPeriodValue||0,10)||0);
     out.churnPeriodUnit=String(out.churnPeriodUnit||'').toLowerCase().trim();
+    out.eligibilityRules=Array.isArray(out.eligibilityRules)?out.eligibilityRules.filter(r=>r&&typeof r==='object').map(r=>({...r})):[];
     out.customTimers=typeof normalizeTimerList==='function'?normalizeTimerList(out.customTimers||[]):(Array.isArray(out.customTimers)?out.customTimers:[]);
     return out;
   }
@@ -45,6 +52,16 @@
     let next=cleanPayload(payload);
     if(!next.bank)throw new Error('Bank name is missing.');
     if(!next.opened)throw new Error('Opened date is missing.');
+    if(next.schemaVersion>=2){
+      if(!next.promoSourceUrl)throw new Error('Strict JSON is missing the official promotion source URL.');
+      if(!next.feeScheduleSourceUrl)throw new Error('Strict JSON is missing the official fee-schedule source URL.');
+      if(!next.termsVerifiedAt)throw new Error('Strict JSON is missing the verification date.');
+      if(String(next.tcSourceRaw||'').trim().length<120)throw new Error('Strict JSON must include the full pasted T&C so eligibility rules can be cross-checked.');
+      if(next.churnable===true||String(next.churnability||'').toLowerCase()==='repeatable'){
+        if(!next.eligibilityRules.length)throw new Error('Strict JSON must list every churn restriction in eligibilityRules.');
+        if(next.eligibilityRules.some(r=>!String(r.scope||r.eligibilityScope||'').trim()))throw new Error('Every strict JSON eligibility rule must define its product/customer scope.');
+      }
+    }
     if(!window.BTEligibilityGate||typeof window.BTEligibilityGate.validate!=='function')throw new Error('Churn eligibility validator is unavailable.');
     const verified=window.BTEligibilityGate.validate(next);
     if(!verified.ok)throw new Error('Churn eligibility is not verified from the T&C: '+verified.reason);
@@ -98,8 +115,9 @@
   }
   function preview(p){
     const bonus='$'+Number(p.bonus||0).toLocaleString();
+    const schema=p.schemaVersion>=2?'Verified JSON v2':'Legacy-compatible JSON';
     const future=window.BTEligibilityGate&&typeof window.BTEligibilityGate.summary==='function'?window.BTEligibilityGate.summary(p):(p.churnability==='not-repeatable'?'Non-repeatable':'T&C verification required');
-    return `Load ${p.bank} ${bonus} into New Entry?\n\nOpened: ${p.opened}\nRequirement: ${p.dataPoint||'See saved terms'}\nFuture eligibility: ${future}\n\nNothing is saved or replaced yet. Review the entry, then tap Add Entry. If this bank has an older churn/cooldown record, the normal replacement screen will still appear before anything is replaced.`;
+    return `Load ${p.bank} ${bonus} into New Entry?\n${schema}\n\nOpened: ${p.opened}\nRequirement: ${p.dataPoint||'See saved terms'}\nFuture eligibility: ${future}\n\nNothing is saved or replaced yet. Review the entry, then tap Add Entry. If this bank has an older churn/cooldown record, the normal replacement screen will still appear before anything is replaced.`;
   }
   function readFileText(file){
     if(file&&typeof file.text==='function')return file.text();
@@ -172,4 +190,4 @@
   if(typeof window.btRegisterPostRender==='function')window.btRegisterPostRender('entry-file-import',injectQuickAddImport);
   injectQuickAddImport();
   setTimeout(runHash,80);setTimeout(runHash,700);
-})();
+})()

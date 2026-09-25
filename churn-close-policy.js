@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.19 — T&C-evidence-gated eligibility clock with exact cooldown units and a 5-day safety buffer. */
+/* BonusTracker v3.4.20 — multi-rule T&C eligibility clock with latest-rule control and a 5-day safety buffer. */
 (function(){
   'use strict';
-  const VER='3.4.19';
+  const VER='3.4.20';
   const SAFETY_BUFFER_DAYS=5;
 
   function decision(e){
@@ -42,13 +42,19 @@
       return e;
     }
     if(d==='repeatable'){
-      const b=sourceBasis(e);
-      e.churnBasis=b;
-      e.sourceEligibilityBasis=b?sourceLabel(b):'';
-      e.churnBufferDays=b?SAFETY_BUFFER_DAYS:0;
-      e.churnTrackingPolicy=b?'source-'+e.sourceEligibilityBasis+'-plus-5-day-buffer':'source-basis-required';
+      const v=verification(e),rules=Array.isArray(v?.rules)?v.rules:[];
+      const b=rules.length===1?(rules[0].basis==='bonus-received'?'bonus':rules[0].basis==='account-opened'?'opened':rules[0].basis==='account-closed'?'closed':''):sourceBasis(e);
+      if(rules.length===1){
+        e.churnBasis=b;
+        e.sourceEligibilityBasis=b?sourceLabel(b):'';
+      }else if(rules.length>1){
+        e.churnBasis='multiple';
+        e.sourceEligibilityBasis='multiple';
+      }
+      e.churnBufferDays=v?.ok?SAFETY_BUFFER_DAYS:0;
+      e.churnTrackingPolicy=v?.ok?(rules.length>1?'multi-rule-latest-date-plus-5-day-buffer':('source-'+e.sourceEligibilityBasis+'-plus-5-day-buffer')):'source-basis-required';
       if(e.analysis&&typeof e.analysis==='object'){
-        e.analysis.churnBasis=b;
+        e.analysis.churnBasis=e.churnBasis;
         e.analysis.sourceEligibilityBasis=e.sourceEligibilityBasis;
         e.analysis.churnBufferDays=e.churnBufferDays;
         e.analysis.churnTrackingPolicy=e.churnTrackingPolicy;
@@ -71,24 +77,25 @@
     return b==='bonus'?(e?.bonusRecd||''):b==='opened'?(e?.opened||''):b==='closed'?(e?.closed||''):'';
   }
   function official(e){
-    const v=verification(e);if(!v.ok||v.decision!=='repeatable')return'';
-    const start=basisDate(e);if(!start)return'';
-    const p=v.period;
-    if(!p)return'';
-    if(p.unit==='days')return addDLocal(start,p.value);
-    if(p.unit==='months')return addMLocal(start,p.value);
-    if(p.unit==='years')return addMLocal(start,p.value*12);
+    try{
+      if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.officialEligibilityDate==='function')
+        return window.BTEligibilityGate.officialEligibilityDate(e,addDLocal,addMLocal);
+    }catch{}
     return'';
   }
   function next(e){
+    try{
+      if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.safeEligibilityDate==='function')
+        return window.BTEligibilityGate.safeEligibilityDate(e,addDLocal,addMLocal);
+    }catch{}
     const base=official(e);return base?addDLocal(base,SAFETY_BUFFER_DAYS):'';
   }
   function applicationReady(e){
-    const v=verification(e);if(!v.ok||v.decision!=='repeatable')return'';
-    const safe=next(e);if(!safe)return'';
-    if(!v.mustCloseBeforeReapply)return safe;
-    const closed=String(e?.closed||'');if(!closed)return'';
-    return closed>safe?closed:safe;
+    try{
+      if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.applicationReadyDate==='function')
+        return window.BTEligibilityGate.applicationReadyDate(e,addDLocal,addMLocal);
+    }catch{}
+    return'';
   }
   function ready(e){return next(e)}
   function left(e){
@@ -127,17 +134,17 @@
   }
   function wrap(name,after){
     const base=window[name];
-    if(typeof base!=='function'||base.__btEligibility3419)return;
+    if(typeof base!=='function'||base.__btEligibility3420)return;
     const fn=function(){const out=base.apply(this,arguments);return after(out,arguments)};
-    fn.__btEligibility3419=true;window[name]=fn;
+    fn.__btEligibility3420=true;window[name]=fn;
     try{globalThis[name]=fn}catch{}
   }
   function install(){
     assignGlobals();
     wrap('normalizeLifecycleEntry',out=>normalize(out));
-    if(typeof window.normalizeLifecycleEntries==='function'&&!window.normalizeLifecycleEntries.__btEligibility3419){
+    if(typeof window.normalizeLifecycleEntries==='function'&&!window.normalizeLifecycleEntries.__btEligibility3420){
       const base=window.normalizeLifecycleEntries;
-      const fn=function(rows){return (base(rows)||[]).map(normalize)};fn.__btEligibility3419=true;window.normalizeLifecycleEntries=fn;
+      const fn=function(rows){return (base(rows)||[]).map(normalize)};fn.__btEligibility3420=true;window.normalizeLifecycleEntries=fn;
       try{normalizeLifecycleEntries=fn}catch{}
     }
     wrap('collectModalEntryData',out=>normalize(out));
@@ -148,8 +155,8 @@
     wrap('setModalChurnability',out=>{try{if(typeof modal!=='undefined'&&modal)normalize(modal)}catch{}return out});
     wrap('setModalChurnRule',out=>{try{if(typeof modal!=='undefined'&&modal)normalize(modal)}catch{}return out});
     wrap('setModalChurnBasis',out=>{try{if(typeof modal!=='undefined'&&modal)normalize(modal)}catch{}return out});
-    if(typeof window.rModal==='function'&&!window.rModal.__btEligibility3419){
-      const base=window.rModal;const fn=function(){return polishModalHtml(base.apply(this,arguments))};fn.__btEligibility3419=true;window.rModal=fn;try{rModal=fn}catch{}
+    if(typeof window.rModal==='function'&&!window.rModal.__btEligibility3420){
+      const base=window.rModal;const fn=function(){return polishModalHtml(base.apply(this,arguments))};fn.__btEligibility3420=true;window.rModal=fn;try{rModal=fn}catch{}
     }
     window.btFutureEligibilityText=eligibilityText;
     window.btChurnCloseDatePolicyVersion=VER;

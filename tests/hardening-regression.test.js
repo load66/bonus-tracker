@@ -2,7 +2,7 @@
 const fs=require('fs'),vm=require('vm');
 function assert(ok,msg){if(!ok)throw new Error(msg)}
 const sw=fs.readFileSync('sw.js','utf8');
-assert(sw.includes("const V = 'bt-v3.4.19-eligibility1'"),'Service-worker release cache is stale');
+assert(sw.includes("const V = 'bt-v3.4.20-multirule1'"),'Service-worker release cache is stale');
 assert(sw.includes('installCompleteCache')&&!/cache\.addAll\(ASSETS\)\.catch/.test(sw),'Atomic cache install hardening missing');
 assert(sw.includes("if(req.mode==='navigate')")&&sw.includes("status:503"),'Navigation-only HTML fallback / asset failure response missing');
 assert(sw.includes('responseMatches(url.pathname,res)'),'Asset content-type validation missing');
@@ -25,7 +25,7 @@ let installPromise;handlers.install({waitUntil:p=>{installPromise=p}});
 installPromise.then(()=>{throw new Error('Incomplete offline install unexpectedly succeeded')}).catch(async()=>{
   assert(puts.length===0,'Failed install populated a partial cache');
   sandbox.fetch=async()=>new Response('<!doctype html><html>wrong</html>',{status:200,headers:{'content-type':'text/html'}});
-  let assetPromise;handlers.fetch({request:{method:'GET',url:'https://example.test/app.js?v=3.4.19',mode:'cors',headers:{get:()=>''}},respondWith:p=>{assetPromise=p}});
+  let assetPromise;handlers.fetch({request:{method:'GET',url:'https://example.test/app.js?v=3.4.20',mode:'cors',headers:{get:()=>''}},respondWith:p=>{assetPromise=p}});
   const asset=await assetPromise;assert(asset.status===503,'Missing JavaScript fell back to HTML instead of failing safely');
   cachedIndex=new Response('<!doctype html><html>cached</html>',{status:200,headers:{'content-type':'text/html'}});
   sandbox.fetch=async()=>{throw new Error('offline')};
