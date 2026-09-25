@@ -91,8 +91,12 @@ for token in (
     "r.closeRestrictionType='payout-only'",
     "r.churnable=true",
     "r.churn='1'",
+    "r.churnPeriodValue=12",
+    "r.churnPeriodUnit='months'",
     "r.churnBasis='bonus'",
     "r.sourceEligibilityBasis='bonus-received'",
+    "r.eligibilityEvidenceText=eligibility",
+    "r.eligibilityEvidenceSource='official-promotion-terms'",
     "r.churnTrackingPolicy='source-bonus-received-plus-5-day-buffer'",
     'r.churnBufferDays=5',
     'Consumer Account Fee and Information Schedule'
