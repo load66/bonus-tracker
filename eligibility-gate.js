@@ -81,7 +81,8 @@
     return false;
   }
   function splitEvidence(text){
-    return String(text||'').split(/(?:\n+|(?<=[.!?])\s+|;\s+)/).map(clean).filter(Boolean);
+    const protectedText=String(text||'').replace(/\b(?:[A-Za-z]\.){2,}/g,m=>m.replace(/\./g,'\uE000'));
+    return protectedText.split(/(?:\n+|(?<=[.!?])\s+|;\s+)/).map(x=>clean(x.replace(/\uE000/g,'.'))).filter(Boolean);
   }
   function eligibilityContext(s){
     return /not eligible|ineligible|not available|cannot|can't|may not|must not|have not|has not|new (?:[^.]{0,40})?customers? only|new (?:[^.]{0,40})?accounts? only|previously received|received [^.]{0,80}bonus|past|previous|preceding|within/i.test(s);
