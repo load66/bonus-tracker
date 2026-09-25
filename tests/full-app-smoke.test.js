@@ -55,11 +55,11 @@ function assert(ok,msg){if(!ok)throw new Error(msg)}
 setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.16',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.4.16',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.17',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.4.17',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.13',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
-    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.16',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
-    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.16',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
+    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.17',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
+    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.17',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.13',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
     const localNow=new Date(),pad=n=>String(n).padStart(2,'0'),localToday=`${localNow.getFullYear()}-${pad(localNow.getMonth()+1)}-${pad(localNow.getDate())}`;
@@ -102,7 +102,7 @@ setTimeout(()=>{
     assert(wc.reqMoney===1000&&wc.reqIsTotal===true&&wc.reqDays===90,'Wells consumer $1,000 / 90-day requirement failed');
     assert(Number(wc.fundedDays||0)===0&&Number(wc.holdDays||0)===0&&Number(wc.minHoldDays||0)===0,'Wells consumer received false funding/hold requirements');
     assert(wc.closeRestrictionType==='payout-only'&&wc.closeBufferDays===0,'Wells consumer payout-only close rule failed');
-    assert(wc.churnable===true&&wc.churnability==='repeatable'&&wc.churn==='1'&&wc.churnBasis==='closed'&&wc.churnBufferDays===5,'Wells tracker churn countdown is not anchored to confirmed close date');
+    assert(wc.churnable===true&&wc.churnability==='repeatable'&&wc.churn==='1'&&wc.churnBasis==='bonus'&&wc.sourceEligibilityBasis==='bonus-received'&&wc.churnBufferDays===5,'Wells tracker churn countdown is not anchored to the source bonus-received rule');
     assert(/not stated in bonus disclosure/i.test(wc.monthlyFeeYNText||''),'Wells fee disclosure was invented instead of deferred to the separate fee schedule');
     const wt=sandbox.tcV3MakeSuggestedTimers(wc,'2026-08-10');
     assert(wt.some(t=>/\$1,000 qualifying electronic deposits/i.test(t.text)&&Number(t.daysRequired)===90),'Wells requirement timer missing');
@@ -121,20 +121,20 @@ setTimeout(()=>{
     const preBonusPlan=sandbox.closePlanForEntry(repaired);
     assert(preBonusPlan.rows.some(x=>x.label==='Earliest close'&&x.value==='After $400 posts'),'Wells earliest-close summary is still contradictory');
     const eligibility=sandbox.normalizeLifecycleEntry({...repaired,reqMet:'2026-08-20',bonusRecd:'2026-09-01',closed:'2026-09-10'});
-    assert(sandbox.nextReopen(eligibility)==='2027-09-15'&&sandbox.churnReadyDate(eligibility)==='2027-09-15','Wells churn countdown did not start from the confirmed close date');
-    const genericRepeat=sandbox.normalizeLifecycleEntry({bank:'Generic Repeat Bank',accountType:'personal',bonus:200,opened:'2026-01-01',bonusRecd:'2026-02-01',closed:'2026-03-05',churnable:true,churnability:'repeatable',churn:'2',churnBasis:'bonus',churnBufferDays:10});
-    assert(genericRepeat.churnBasis==='closed'&&genericRepeat.churnBufferDays===5,'Repeatable entry kept a non-close churn basis or buffer');
-    assert(sandbox.nextReopen(genericRepeat)==='2028-03-10','Generic churn timer did not start from confirmed close date');
-    const notClosedYet=sandbox.normalizeLifecycleEntry({bank:'Pending Closure Bank',bonus:100,bonusRecd:'2026-04-01',churnable:true,churnability:'repeatable',churn:'1'});
-    assert(sandbox.nextReopen(notClosedYet)==='', 'Churn countdown started before the bank was actually closed');
+    assert(sandbox.nextReopen(eligibility)==='2027-09-06'&&sandbox.churnReadyDate(eligibility)==='2027-09-06','Wells churn countdown did not start from the source bonus-received date');
+    const genericRepeat=sandbox.normalizeLifecycleEntry({bank:'Generic Repeat Bank',accountType:'personal',bonus:200,opened:'2026-01-01',bonusRecd:'2026-02-01',closed:'2026-03-05',churnable:true,churnability:'repeatable',churn:'2',churnBasis:'bonus',sourceEligibilityBasis:'bonus-received',churnBufferDays:10});
+    assert(genericRepeat.churnBasis==='bonus'&&genericRepeat.sourceEligibilityBasis==='bonus-received'&&genericRepeat.churnBufferDays===5,'Repeatable entry did not preserve source eligibility basis + buffer');
+    assert(sandbox.nextReopen(genericRepeat)==='2028-02-06','Generic churn timer did not start from its saved bonus-received basis');
+    const unknownBasis=sandbox.normalizeLifecycleEntry({bank:'Pending Eligibility Bank',bonus:100,bonusRecd:'2026-04-01',closed:'2026-04-10',churnable:true,churnability:'repeatable',churn:'1'});
+    assert(sandbox.nextReopen(unknownBasis)==='', 'Unknown eligibility basis incorrectly defaulted to a date');
     sandbox.openAdd();
     sandbox.btModalSet('bank','Wells Fargo');sandbox.btModalSet('accountType','personal');sandbox.btModalSet('bonus','400','number');sandbox.setModalChurnability('repeatable');sandbox.setModalChurnRule('1');sandbox.setModalChurnBasis('bonus');sandbox.btModalSet('opened','2026-08-10');sandbox.btModalSet('monthlyFeeYNText','Not stated in bonus disclosure — separate Wells Fargo fee schedule applies');sandbox.btModalSet('avoidMonthlyFeeText','Review the Wells Fargo Consumer Account Fee and Information Schedule.');
     sandbox.btWizardStep(1);
     const wizardBasics=sandbox.rModal();
-    assert(/Can this bonus be earned again\? \*/.test(wizardBasics)&&/Churn clock uses confirmed closure \+ 5-day safety buffer/.test(wizardBasics),'Guided editor did not show the close-date churn policy');
+    assert(/Can this bonus be earned again\? \*/.test(wizardBasics)&&/Eligibility clock starts from \*/.test(wizardBasics)&&/exact eligibility wording from the offer/i.test(wizardBasics),'Guided editor did not require the source eligibility basis');
     sandbox.btWizardStep(4);
     const wizardReview=sandbox.rModal();
-    assert(/Future eligibility/.test(wizardReview)&&/1 year \+ 5-day safety buffer after confirmed account close date/.test(wizardReview),'Guided review did not show the confirmed-close-date churn policy');
+    assert(/Future eligibility/.test(wizardReview)&&/1 year \+ 5-day safety buffer after bonus received date/.test(wizardReview),'Guided review did not show the source-based eligibility policy');
 
     const fourLeaf='FourLeaf Checking Up to $550 Bonus Offer. Open a Free Checking, Smart Checking, or Student Checking account between February 2, 2026 and December 31, 2026. Have a Qualifying Direct Deposit post within ninety (90) calendar days of account opening. A Qualifying Direct Deposit is a recurring electronic deposit of a paycheck, pension, or government benefits of $500.00 or more. The First Direct Deposit Bonus of $350 will be deposited within sixty (60) calendar days following the initial Qualifying Direct Deposit. Continue to have a Qualifying Direct Deposit for twelve (12) consecutive months for an additional $100 and twenty-four (24) consecutive months for another $100. The checking account must remain open and in good standing up to and including the date each bonus is deposited. You must not have previously received a new checking account opening related bonus from FourLeaf.';
     const fr=sandbox.tcV3Analyze(fourLeaf,{noGlobalFallback:true});
@@ -145,7 +145,8 @@ setTimeout(()=>{
     assert(fr.churnable===false&&fr.churnability==='not-repeatable','FourLeaf lifetime-like churn restriction failed');
     assert(/24 consecutive/i.test(fr.actionPlan||''),'FourLeaf 24-month milestone plan missing');
     assert(typeof sandbox.churnDecisionForEntry==='function'&&typeof sandbox.hasSavedChurnDecision==='function','Churnability intake helpers missing');
-    assert(sandbox.hasSavedChurnDecision({bank:'Repeat Bank',churnable:true,churnability:'repeatable',churn:'2'})===true,'Repeatable decision was not recognized');
+    assert(sandbox.hasSavedChurnDecision({bank:'Repeat Bank',churnable:true,churnability:'repeatable',churn:'2',sourceEligibilityBasis:'bonus-received'})===true,'Source-backed repeatable decision was not recognized');
+    assert(sandbox.hasSavedChurnDecision({bank:'Repeat Bank',churnable:true,churnability:'repeatable',churn:'2'})===false,'Repeatable decision without a source basis was incorrectly accepted');
     assert(sandbox.hasSavedChurnDecision({bank:'Unknown Bank',churn:'',churnability:''})===false,'Unknown churnability was incorrectly accepted');
     const gate=vm.runInContext(`(function(){
       const before=entries.length;
@@ -153,12 +154,16 @@ setTimeout(()=>{
       const blocked=saveEntry();
       const afterBlocked=entries.length;
       modal.churnable=true;modal.churnability='repeatable';modal.churn='2';
+      const missingBasis=saveEntry();
+      const afterMissingBasis=entries.length;
+      setModalChurnBasis('bonus');
       const saved=saveEntry();
       const created=entries.find(x=>x.bank==='Gate Test Bank');
-      return{before,blocked,afterBlocked,saved,created};
+      return{before,blocked,afterBlocked,missingBasis,afterMissingBasis,saved,created};
     })()`,sandbox);
     assert(gate.blocked===false&&gate.afterBlocked===gate.before,'New bank saved without a churnability decision');
-    assert(gate.saved===true&&gate.created?.churnability==='repeatable'&&gate.created?.churn==='2','Repeatable churn decision was not saved');
+    assert(gate.missingBasis===false&&gate.afterMissingBasis===gate.before,'Repeatable bank saved without an eligibility start basis');
+    assert(gate.saved===true&&gate.created?.churnability==='repeatable'&&gate.created?.churn==='2'&&gate.created?.churnBasis==='bonus','Repeatable source-based churn decision was not saved');
     const nonrepeat=vm.runInContext(`(function(){
       openAdd();modal.bank='Lifetime Unique Credit Union';modal.bonus=50;modal._skipDuplicateCheck=true;modal._skipManualReplacePrompt=true;modal.churnable=false;modal.churnability='not-repeatable';modal.churnReason='One-time offer';
       const saved=saveEntry();const created=entries.find(x=>x.bank==='Lifetime Unique Credit Union');return{saved,created};
@@ -186,6 +191,6 @@ setTimeout(()=>{
     if(typeof sandbox.R==='function')sandbox.R();
     assert(app.innerHTML.length>1000,'Tracker failed to render after regression run');
     assert(!errors.some(x=>x.startsWith('ERROR ')),`Runtime console errors: ${errors.join(' | ')}`);
-    console.log(`Full app smoke passed: ${scripts.length} runtime scripts · ${report.passed}/${report.total} regression checks · Wells consumer accuracy, FourLeaf archive, and mobile Safari release verified`);
+    console.log(`Full app smoke passed: ${scripts.length} runtime scripts · ${report.passed}/${report.total} regression checks · source-accurate eligibility, Wells consumer accuracy, FourLeaf archive, and mobile Safari release verified`);
   }catch(err){console.error(err.stack||err);process.exitCode=1}
 },2200);

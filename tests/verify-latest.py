@@ -35,9 +35,9 @@ if 'bank-rules-fourleaf.js' not in parser.scripts: fail('FourLeaf analyzer rule 
 elif parser.scripts.index('bank-rules-fourleaf.js')<parser.scripts.index('bank-rules.js'): fail('FourLeaf rule must load after the base bank rules')
 if 'bank-rules-wells-consumer.js' not in parser.scripts: fail('Wells Fargo consumer analyzer rule is not loaded')
 elif parser.scripts.index('bank-rules-wells-consumer.js')<parser.scripts.index('bank-rules.js'): fail('Wells consumer rule must load after the base bank rules')
-if 'churn-close-policy.js' not in parser.scripts: fail('confirmed-close-date churn policy is not loaded')
-elif parser.scripts.index('churn-close-policy.js')<parser.scripts.index('wells-professional-runtime.js'): fail('churn close-date policy must load after professional runtime')
-elif parser.scripts.index('churn-close-policy.js')>parser.scripts.index('mobile-analyzer.js'): fail('churn close-date policy must load before mobile release marker')
+if 'churn-close-policy.js' not in parser.scripts: fail('source-accurate churn policy is not loaded')
+elif parser.scripts.index('churn-close-policy.js')<parser.scripts.index('wells-professional-runtime.js'): fail('source-accurate churn policy must load after professional runtime')
+elif parser.scripts.index('churn-close-policy.js')>parser.scripts.index('mobile-analyzer.js'): fail('source-accurate churn policy must load before mobile release marker')
 
 root_js=sorted(p.name for p in ROOT.glob('*.js') if p.name!='sw.js')
 if sorted(parser.scripts)!=root_js:
@@ -91,10 +91,10 @@ for token in (
     "r.closeRestrictionType='payout-only'",
     "r.churnable=true",
     "r.churn='1'",
-    "r.churnBasis='closed'",
+    "r.churnBasis='bonus'",
     "r.sourceEligibilityBasis='bonus-received'",
-    "r.churnTrackingPolicy='confirmed-close-date'",
-    'r.churnBufferDays=0',
+    "r.churnTrackingPolicy='source-bonus-received-plus-5-day-buffer'",
+    'r.churnBufferDays=5',
     'Consumer Account Fee and Information Schedule'
 ):
     if token not in wells: fail(f'Wells consumer exact-rule logic missing: {token}')
@@ -121,8 +121,8 @@ for token in ('wellsSuggestedTimers','Can this bonus be earned again? *','Future
     if token not in runtime_fix: fail(f'professional Wells runtime behavior missing: {token}')
 
 churn_policy=text('churn-close-policy.js')
-for token in ('universal 5-day safety buffer','churnBasisDate','nextReopen','churnReadyDate','churnBufferDaysFor','churnTrackingPolicy','Churn clock uses confirmed closure + 5-day safety buffer','collectModalEntryData','normalizeLifecycleEntry'):
-    if token not in churn_policy: fail(f'confirmed-close-date churn policy missing: {token}')
+for token in ('source-accurate eligibility clock','sourceEligibilityBasis','churnBasisDate','nextReopen','churnReadyDate','churnBufferDaysFor','source-basis-required','collectModalEntryData','normalizeLifecycleEntry'):
+    if token not in churn_policy: fail(f'source-accurate churn policy missing: {token}')
 
 close_core=text('close-rules-core.js')
 for token in ('Payout attempt wording recognized','attempt to deposit the bonus'):
