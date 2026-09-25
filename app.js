@@ -3175,6 +3175,7 @@ let profileSearch='',activeProfileKey='';
 let inlineUiState={};
 let profileSectionUiState={};
 function profileSectionStateKey(entryId,sectionKey){return String(entryId||'')+'::'+String(sectionKey||'')}
+function profileSectionAttr(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function setProfileSectionOpen(entryId,sectionKey,isOpen){profileSectionUiState[profileSectionStateKey(entryId,sectionKey)]=!!isOpen}
 function profileSectionIsOpen(entryId,sectionKey,defaultOpen=false){const k=profileSectionStateKey(entryId,sectionKey);return Object.prototype.hasOwnProperty.call(profileSectionUiState,k)?!!profileSectionUiState[k]:!!defaultOpen}
 function profileSectionOpenAttr(entryId,sectionKey,defaultOpen=false){return profileSectionIsOpen(entryId,sectionKey,defaultOpen)?' open':''}
@@ -3185,10 +3186,15 @@ function captureProfileSectionState(){
     })
   }catch{}
 }
+function handleProfileSectionToggle(el){
+  if(!el)return;
+  setProfileSectionOpen(el.getAttribute('data-entry-id')||'',el.getAttribute('data-section-key')||'',!!el.open)
+}
 try{
   window.setProfileSectionOpen=setProfileSectionOpen;
   window.profileSectionIsOpen=profileSectionIsOpen;
   window.captureProfileSectionState=captureProfileSectionState;
+  window.handleProfileSectionToggle=handleProfileSectionToggle;
 }catch{}
 let dpEditor=null;
 let ddPrompt=null,rcvPrompt=null,reqPrompt=null,showTemplates=false;
@@ -6166,7 +6172,7 @@ entries=sortE(entries);R();
         h += renderBankProfileSummary(e);
         h += renderClosePlan(e);
         h += renderMonthlyFeePlan(e);
-        h += '<details class="profile-section" data-entry-id="'+esc(e.id)+'" data-section-key="lifecycle"'+profileSectionOpenAttr(e.id,'lifecycle')+' ontoggle="setProfileSectionOpen(\''+esc(e.id)+'\',\'lifecycle\',this.open)"><summary><span>'+(e.closed?'Lifecycle':'Lifecycle & Tasks')+'</span><em>View</em></summary><div class="profile-section-body">';
+        h += '<details class="profile-section" data-entry-id="'+profileSectionAttr(e.id)+'" data-section-key="lifecycle"'+profileSectionOpenAttr(e.id,'lifecycle')+' ontoggle="handleProfileSectionToggle(this)"><summary><span>'+(e.closed?'Lifecycle':'Lifecycle & Tasks')+'</span><em>View</em></summary><div class="profile-section-body">';
         h += renderLifecycleStepper(e);
 
         if(!e.closed){
@@ -6202,7 +6208,7 @@ entries=sortE(entries);R();
         historyHtml += renderAnalyzerHistory(e);
         historyHtml += renderOfferHistory(e);
         historyHtml += renderAnalyzedTermsCard(e);
-        if(historyHtml)h += '<details class="profile-section" data-entry-id="'+esc(e.id)+'" data-section-key="history"'+profileSectionOpenAttr(e.id,'history')+' ontoggle="setProfileSectionOpen(\''+esc(e.id)+'\',\'history\',this.open)"><summary><span>History & Analysis</span><em>View</em></summary><div class="profile-section-body">'+historyHtml+'</div></details>';
+        if(historyHtml)h += '<details class="profile-section" data-entry-id="'+profileSectionAttr(e.id)+'" data-section-key="history"'+profileSectionOpenAttr(e.id,'history')+' ontoggle="handleProfileSectionToggle(this)"><summary><span>History & Analysis</span><em>View</em></summary><div class="profile-section-body">'+historyHtml+'</div></details>';
 
         h += '<div class="card-btns">';
         if(!e.closed&&e.bonusRecd) h += actionBtn('cls',I.lock,'Close Now',`event.stopPropagation();startCloseFlow('${e.id}','actual')`);
