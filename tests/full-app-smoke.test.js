@@ -82,14 +82,14 @@ setTimeout(()=>{
       toggleCk(id,0);
       const after=document.getElementById('app').innerHTML;
       const lifecycleTagOpen=html=>{
-        const needle='data-entry-id="'+id+'"';
-        const at=html.indexOf(needle);
+        const sectionNeedle='data-section-key="lifecycle"';
+        const at=html.indexOf(sectionNeedle);
         if(at<0)return false;
         const start=html.lastIndexOf('<details',at);
         const end=html.indexOf('>',at);
         if(start<0||end<0)return false;
         const tag=html.slice(start,end+1);
-        return tag.includes('data-section-key="lifecycle"')&&(' '+tag.replace(/\s+/g,' ')+' ').includes(' open ');
+        return tag.includes('data-entry-id="'+id+'"')&&(' '+tag.replace(/\s+/g,' ')+' ').includes(' open ');
       };
       const result={
         stateBefore:profileSectionIsOpen(id,'lifecycle'),
