@@ -1,11 +1,11 @@
 /*
  * filename: bank-rules-wells-consumer.js
- * version: 3.4.16
+ * version: 3.4.17
  * purpose: Exact Wells Fargo $400 consumer checking offer. Prevents business-profile/timer contamination and stores the 12-month bonus-received eligibility basis.
  */
 (function(){
   'use strict';
-  const VER='3.4.16';
+  const VER='3.4.17';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const uniq=a=>Array.from(new Set((a||[]).filter(Boolean).map(clean))).filter(Boolean);
   function addSource(r,label,source,value,kind='extracted',confidence='High'){
@@ -64,10 +64,10 @@
     r.churnable=true;
     r.churnability='repeatable';
     r.churn='1';
-    r.churnBasis='closed';
-    r.churnBufferDays=0;
+    r.churnBasis='bonus';
+    r.churnBufferDays=5;
     r.sourceEligibilityBasis='bonus-received';
-    r.churnTrackingPolicy='confirmed-close-date';
+    r.churnTrackingPolicy='source-bonus-received-plus-5-day-buffer';
     r.churnReason=eligibility;
     r.churnRuleText=eligibility;
     r.churnDecisionSource='current-tc';
@@ -108,7 +108,7 @@
       '3. Use only qualifying posted electronic deposits: ACH direct deposit, RTP/FedNow instant payment, or eligible Visa/Mastercard debit-card credit.',
       '4. After the requirements are met, allow up to 30 calendar days for the $400 bonus to post.',
       '5. Keep the account open through the bonus deposit attempt. After the $400 posts, there is no stated fixed post-bonus hold in this disclosure.',
-      '6. For tracker countdown purposes, start the 1-year churn timer only after the bank has actually closed the account and the confirmed close date is recorded. The original Wells eligibility wording is still saved for reference.'
+      '6. Future eligibility follows the source wording: 12 months after the prior Wells Fargo consumer checking bonus was received. BonusTracker adds a 5-day safety buffer after that source date.'
     ].join('\n');
     r.reviewFlags=(Array.isArray(r.reviewFlags)?r.reviewFlags:[]).filter(x=>!/funding|hold|maintain required balance|profile fallback|saved profile/i.test(String(x||'')));
     r.reviewFlags.push('Monthly service fee amount and waiver details are not contained in this bonus disclosure; review the separate Wells Fargo fee schedule.');
