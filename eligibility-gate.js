@@ -171,7 +171,8 @@
       period:periodFromRule(r),
       evidenceText:clean(r?.evidenceText||r?.eligibilityEvidenceText||''),
       evidenceSource:clean(r?.evidenceSource||r?.eligibilityEvidenceSource||fallbackSource),
-      scope:clean(r?.scope||r?.eligibilityScope||''),\n      anchorDate:clean(r?.anchorDate||r?.eligibilityAnchorDate||'')
+      scope:clean(r?.scope||r?.eligibilityScope||''),
+      anchorDate:clean(r?.anchorDate||r?.eligibilityAnchorDate||'')
     };
   }
   function normalizedRules(e){
