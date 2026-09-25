@@ -116,7 +116,7 @@
       return /(?:receiv(?:e|ed|ing)|paid|payment|payout|earn(?:ed|ing)?)\b[^.;]{0,100}\bbonus\b|\bbonus\b[^.;]{0,100}\b(?:receiv(?:e|ed|ing)|paid|payment|payout|earn(?:ed|ing)?)\b/i.test(t);
     }
     if(basis==='account-ownership-ended')return /\b(?:had|have|owned|owner(?:s)?)\b[^.;]{0,140}\b(?:account|checking|savings)\b|\b(?:account|checking|savings)\b[^.;]{0,140}\b(?:had|have|owned|owner(?:s)?)\b/i.test(t);
-    if(basis==='account-opened')return /\b(?:opened|opening)\b[^.;]{0,100}\b(?:account|checking|savings)\b|\b(?:account|checking|savings)\b[^.;]{0,100}\b(?:opened|opening)\b/i.test(t);
+    if(basis==='account-opened')return /\b(?:opened|opening)\b[^.;]{0,50}\b(?:an?\s+|the\s+|your\s+)?(?:account|checking|savings)\b|\b(?:account|checking|savings)\b[^.;]{0,50}\b(?:was\s+)?opened\b|\b(?:after|from|since|of|within)\s+(?:the\s+)?(?:account|checking|savings)\s+opening\b/i.test(t);
     if(basis==='account-closed')return /\b(?:closed|closing|closure)\b[^.;]{0,120}\b(?:account|accounts?|checking|savings)\b|\b(?:account|accounts?|checking|savings)\b[^.;]{0,120}\b(?:closed|closing|closure)\b/i.test(t);
     return false;
   }
