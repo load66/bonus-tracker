@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.22 — strict verified JSON import with conditional multi-rule churn and enrollment anchors. */
+/* BonusTracker v3.4.30 — strict verified JSON import with professional in-app review and conditional multi-rule churn. */
 (function(){
   'use strict';
-  const VER='3.4.22';
+  const VER='3.4.30';
   const HASH_KEY='btadd=';
   const ALLOWED=[
     'bank','accountType','bonus','churn','churnable','churnability','churnBasis','churnBufferDays','churnReason','sourceEligibilityBasis','churnTrackingPolicy','churnDecisionSource','churnDecisionConfidence','churnDecisionConfirmedAt','churnPeriodValue','churnPeriodUnit','eligibilityRules','couponEnrollmentDate','offerEnrollmentDate','closedWithNegativeBalance','eligibilityScope','eligibilityEvidenceText','eligibilityAnchorEvidenceText','eligibilityEvidenceSource','eligibilityVerified','eligibilityVerifiedAt','eligibilityVerificationStatus','eligibilityVerificationReason','currentCustomerExcluded','currentCustomerEvidenceText','mustCloseBeforeReapply','reapplicationAction','promoSourceUrl','feeScheduleSourceUrl','termsVerifiedAt','schemaVersion','tcSourceRaw','tcSourceId','tcSourceUpdatedAt',
@@ -125,6 +125,17 @@
     const future=window.BTEligibilityGate&&typeof window.BTEligibilityGate.summary==='function'?window.BTEligibilityGate.summary(p):(p.churnability==='not-repeatable'?'Non-repeatable':'T&C verification required');
     return `Load ${p.bank} ${bonus} into New Entry?\n${schema}\n\nOpened: ${p.opened}\nRequirement: ${p.dataPoint||'See saved terms'}\nFuture eligibility: ${future}\n\nNothing is saved or replaced yet. Review the entry, then tap Add Entry. If this bank has an older churn/cooldown record, the normal replacement screen will still appear before anything is replaced.`;
   }
+  async function confirmImportReview(p,source='entry-file'){
+    const message=preview(p);
+    if(typeof window.btConfirmDialog==='function'){
+      return window.btConfirmDialog(message,{
+        title:'Review imported bonus',
+        kicker:source==='one-click-link'?'One-click import':'Verified entry import',
+        confirmLabel:'Review Entry'
+      })
+    }
+    return true
+  }
   function readFileText(file){
     if(file&&typeof file.text==='function')return file.text();
     return new Promise((resolve,reject)=>{
@@ -138,7 +149,7 @@
     if(!file)throw new Error('No file selected.');
     const text=await readFileText(file);
     const payload=parseEntryFileText(text,file.name||'');
-    if(!window.confirm(preview(payload)))return{status:'cancelled'};
+    if(!(await confirmImportReview(payload,'entry-file')))return{status:'cancelled'};
     return stageEntryForReview(payload,'entry-file',file.name||'');
   }
   function chooseEntryFile(){
@@ -174,14 +185,14 @@
     note.textContent='Strict import: the file must contain T&C-backed churn eligibility before it can open as a New Entry. Existing churn records still use the normal Replace Old Entry flow.';
     btn.insertAdjacentElement('afterend',note);
   }
-  function runHash(){
+  async function runHash(){
     if(hashHandled)return;
     const h=String(location.hash||'').replace(/^#/,'');
     if(!h.startsWith(HASH_KEY))return;
     hashHandled=true;
     try{
       const payload=validatePayload(decode(h.slice(HASH_KEY.length)));
-      if(!window.confirm(preview(payload))){clearHash();return}
+      if(!(await confirmImportReview(payload,'one-click-link'))){clearHash();return}
       stageEntryForReview(payload,'one-click-link','');
       clearHash();
     }catch(err){clearHash();alert('Could not load this bank entry: '+(err&&err.message?err.message:err));}

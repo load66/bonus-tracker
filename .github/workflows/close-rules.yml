@@ -59,6 +59,9 @@ jobs:
       - name: Run smart Needs Attention coverage tests
         run: node tests/smart-attention.test.js
 
+      - name: Run professional operations UI tests
+        run: node tests/professional-ops.test.js
+
       - name: Run churn eligibility evidence tests
         run: node tests/eligibility-gate.test.js
 

@@ -52,8 +52,8 @@ sandbox.window=sandbox;sandbox.globalThis=sandbox;
 vm.createContext(sandbox);
 vm.runInContext(src,sandbox,{filename:'semantic-status.js'});
 
-assert(sandbox.btSemanticStatusVersion==='3.4.29-status1','Semantic status patch version missing');
-assert(sandbox.btLifecycleStatusVersion==='3.4.29-status1','Lifecycle status version missing');
+assert(sandbox.btSemanticStatusVersion==='3.4.30-status1','Semantic status patch version missing');
+assert(sandbox.btLifecycleStatusVersion==='3.4.30-status1','Lifecycle status version missing');
 assert(sandbox.btSemanticTimerKind({text:'$3,000 EDD requirement deadline'})==='requirement','Citi EDD timer not classified as requirement');
 assert(sandbox.btSemanticTimerKind({text:'Deposit new money / funding deadline'})==='funding','Funding timer misclassified');
 assert(sandbox.btSemanticTimerKind({text:'Maintain required balance / hold check'})==='hold','Balance hold timer misclassified');

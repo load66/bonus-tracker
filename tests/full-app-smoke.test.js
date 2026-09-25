@@ -55,14 +55,16 @@ function assert(ok,msg){if(!ok)throw new Error(msg)}
 setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.29',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.4.29',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.30',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.4.30',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.13',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
-    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.29',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
-    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.29',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
+    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.30',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
+    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.30',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.13',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
     assert(sandbox.BTEligibilityGate?.VERSION==='1.3.0',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
-    assert(sandbox.btLifecycleStatusVersion==='3.4.29-status1',`Unexpected lifecycle status version ${sandbox.btLifecycleStatusVersion}`);
+    assert(sandbox.btLifecycleStatusVersion==='3.4.30-status1',`Unexpected lifecycle status version ${sandbox.btLifecycleStatusVersion}`);
+    assert(sandbox.btSmartAttentionVersion==='3.4.30-action1',`Unexpected Action Center version ${sandbox.btSmartAttentionVersion}`);
+    assert(sandbox.btUiFeedbackVersion==='3.4.30-feedback1',`Unexpected UI feedback version ${sandbox.btUiFeedbackVersion}`);
     const lifecycleSamples=[
       {bank:'Progress Bank',opened:'2026-09-01',dataPoint:'Make a qualifying direct deposit',customTimers:[]},
       {bank:'Await Bank',reqMet:'2026-09-20',payoutTimingText:'within 30 calendar days',customTimers:[]},
@@ -73,6 +75,8 @@ setTimeout(()=>{
       assert(!/CUSTOM TIMER|Custom Timer|Deadline Active|WORKING|WAITING TO CHURN|TIME TO CHURN/.test(html),'Legacy/internal lifecycle status leaked to full app card: '+html);
     }
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
+    assert(app.innerHTML.includes('Active bonus pipeline'),'Professional pipeline dashboard did not render');
+    assert(app.innerHTML.includes('Action Center'),'Lifecycle Action Center did not render');
     sandbox.R();
     assert(app.innerHTML.includes('<span>T&C Archive</span>'),'T&C Archive did not replace the Phone bottom tab');
     const appSource=fs.readFileSync('app.js','utf8');
