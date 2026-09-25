@@ -303,7 +303,7 @@ function rTermsStorage(){
 }
 function archivedCycleSnapshot(e){
   if(!e)return null;
-  return{bank:e.bank||'',accountType:e.accountType||'',id:e.id||'',archivedAt:td(),opened:e.opened||'',reqMet:e.reqMet||'',bonusRecd:e.bonusRecd||'',closed:e.closed||'',bonus:e.bonus||0,churn:e.churn||'',schemaVersion:parseInt(e.schemaVersion||0,10)||0,sourceEligibilityBasis:e.sourceEligibilityBasis||'',churnPeriodValue:e.churnPeriodValue||0,churnPeriodUnit:e.churnPeriodUnit||'',eligibilityRules:Array.isArray(e.eligibilityRules)?e.eligibilityRules.map(r=>({...r})):[],eligibilityEvidenceText:e.eligibilityEvidenceText||'',eligibilityEvidenceSource:e.eligibilityEvidenceSource||'',eligibilityVerifiedAt:e.eligibilityVerifiedAt||'',promoSourceUrl:e.promoSourceUrl||'',feeScheduleSourceUrl:e.feeScheduleSourceUrl||'',termsVerifiedAt:e.termsVerifiedAt||'',notes:String(e.notes||'').slice(0,900),analyzedPreview:String(e.analyzedTC||'').slice(0,900),timerSummary:normalizeTimerList(e.customTimers||[]).map(t=>({text:t.text||'',date:t.date||'',daysRequired:t.daysRequired||0,done:!!t.done})).slice(0,8)}
+  return{bank:e.bank||'',accountType:e.accountType||'',id:e.id||'',archivedAt:td(),opened:e.opened||'',reqMet:e.reqMet||'',bonusRecd:e.bonusRecd||'',closed:e.closed||'',bonus:e.bonus||0,churn:e.churn||'',schemaVersion:parseInt(e.schemaVersion||0,10)||0,sourceEligibilityBasis:e.sourceEligibilityBasis||'',churnPeriodValue:e.churnPeriodValue||0,churnPeriodUnit:e.churnPeriodUnit||'',eligibilityRules:Array.isArray(e.eligibilityRules)?e.eligibilityRules.map(r=>({...r})):[],couponEnrollmentDate:e.couponEnrollmentDate||'',offerEnrollmentDate:e.offerEnrollmentDate||'',closedWithNegativeBalance:typeof e.closedWithNegativeBalance==='boolean'?e.closedWithNegativeBalance:null,eligibilityEvidenceText:e.eligibilityEvidenceText||'',eligibilityEvidenceSource:e.eligibilityEvidenceSource||'',eligibilityVerifiedAt:e.eligibilityVerifiedAt||'',promoSourceUrl:e.promoSourceUrl||'',feeScheduleSourceUrl:e.feeScheduleSourceUrl||'',termsVerifiedAt:e.termsVerifiedAt||'',tcSourceRaw:String(e.tcSourceRaw||e.analysis?.rawText||e.analyzedTC||''),notes:String(e.notes||'').slice(0,900),analyzedPreview:String(e.analyzedTC||'').slice(0,900),timerSummary:normalizeTimerList(e.customTimers||[]).map(t=>({text:t.text||'',date:t.date||'',daysRequired:t.daysRequired||0,done:!!t.done})).slice(0,8)}
 }
 
 function nonRepeatableSourceText(e){
@@ -4355,6 +4355,10 @@ function normalizeNewCycleData(d,existing){
   next.earlyTerminationFeeText=d.earlyTerminationFeeText||'';
   next.eligibilityText=d.eligibilityText||'';
   next.eligibilityRules=Array.isArray(d.eligibilityRules)?d.eligibilityRules.map(r=>({...r})):[];
+  next.couponEnrollmentDate=d.couponEnrollmentDate||'';
+  next.offerEnrollmentDate=d.offerEnrollmentDate||'';
+  next.tcSourceRaw=d.tcSourceRaw||d.analysis?.rawText||d.analyzedTC||'';
+  next.schemaVersion=parseInt(d.schemaVersion||0,10)||0;
   next.eligibilityScope=d.eligibilityScope||'';
   next.eligibilityEvidenceText=d.eligibilityEvidenceText||'';
   next.eligibilityAnchorEvidenceText=d.eligibilityAnchorEvidenceText||'';
@@ -4442,7 +4446,7 @@ function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a
 async function deliverBackupFile(blob,filename,preferShare){if(preferShare&&typeof File!=='undefined'&&navigator?.share){try{const file=new File([blob],filename,{type:'application/json'});if(!navigator.canShare||navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Bank Bonus Tracker backup',text:'Save this full backup to Files, iCloud Drive, Google Drive, or email so you can restore later on any device.'});return 'shared'}}catch(err){}}downloadBlob(blob,filename);return 'downloaded'}
 function buildResetSafetyBackupPayload(){const data=buildPortableBackupPayload();data.reason='pre-reset-safety-backup';return data}
 async function exportBackup(preferShare=true,customData=null,customFilename=''){const data=customData||buildPortableBackupPayload();const filename=customFilename||('BankBonusTracker_FullBackup_'+backupTimestamp()+'.json');const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const mode=await deliverBackupFile(blob,filename,preferShare);setLastBk();return{mode,filename,data}}
-function performHardReset(){entries=[];sv(SK,[]);try{getBackupStorageKeys().forEach(k=>localStorage.removeItem(k));localStorage.removeItem(PROFILE_EVT_KEY);localStorage.removeItem(BK_KEY)}catch{}dashYear=new Date().getFullYear();taxYear=new Date().getFullYear();expanded=null;modal=null;search='';showTemplates=false;showAnalyzer=false;analyzerText='';analyzerResult=null;inlineResult=null;showInlineAZ=false;phoneSearch='';showPhoneAdd=false;dpSearch='';dpExpandedBankKey='';dpEditor=null;profileSearch='';activeProfileKey='';overwritePrompt=null;matchPickerPrompt=null;ddPrompt=null;rcvPrompt=null;closePrompt=null;feeCheckPrompt=null;undoState=null;if(undoTimer)clearTimeout(undoTimer);R()}
+function performHardReset(){entries=[];sv(SK,[]);try{getBackupStorageKeys().forEach(k=>localStorage.removeItem(k));localStorage.removeItem(PROFILE_EVT_KEY);localStorage.removeItem(BK_KEY)}catch{}dashYear=new Date().getFullYear();taxYear=new Date().getFullYear();expanded=null;modal=null;search='';showTemplates=false;showAnalyzer=false;analyzerText='';analyzerResult=null;inlineResult=null;showInlineAZ=false;phoneSearch='';showPhoneAdd=false;storageSearch='';dpSearch='';dpExpandedBankKey='';dpEditor=null;profileSearch='';activeProfileKey='';overwritePrompt=null;matchPickerPrompt=null;ddPrompt=null;rcvPrompt=null;closePrompt=null;feeCheckPrompt=null;undoState=null;if(undoTimer)clearTimeout(undoTimer);R()}
 function resetAllData(){cfm={title:'⚠️ Reset All Data',msg:'This will permanently delete ALL tracker rows, datapoints, saved bank requirements, and saved phone data from this device.\n\nFor safety, the app will export one final full backup first so you can save it to Files/iCloud/Drive before the wipe finishes.',action:()=>{cfm={title:'🚨 Final confirmation',msg:'Continue with the full reset? A recovery backup file will be created first, then this device will be wiped.',action:async()=>{cfm=null;R();try{await exportBackup(false,buildResetSafetyBackupPayload(),'BankBonusTracker_PreReset_'+backupTimestamp()+'.json')}catch{}performHardReset();cfm={title:'Reset Complete',msg:'This device has been cleared. Keep the exported pre-reset backup file somewhere safe so you can restore later.',green:true,action:()=>{cfm=null;R()}};R()}};R()}};R()}
 function delEntry(id){const e=entries.find(x=>x.id===id);if(!e)return;cfm={title:'Delete Bank Entry?',msg:'Delete '+e.bank+' '+(e.id||'')+' from the tracker?\n\nThis cannot be undone.',action:()=>{entries=entries.filter(x=>x.id!==id);sv(SK,entries);expanded=null;cfm={title:'Bank Entry Deleted',msg:e.bank+' was deleted from the tracker.',green:true,action:()=>{cfm=null;R()}};R()}};R()}
 function closeAcct(id){const e=entries.find(x=>x.id===id);if(!e)return;feeCheckPrompt={entryId:id,bank:e.bank,step:'ask',months:e.minHoldDays>0?Math.round(e.minHoldDays/30):6,feeAmount:e.earlyCloseFee||0};R()}
@@ -5181,6 +5185,7 @@ function buildPortableBackupPayload(){
   const reqs=loadReqs();
   const profileEvents=loadProfileEvents();
   const offerHistory=loadOfferHistory();
+  const termsArchive=loadTermsArchive();
   const snapshot=buildStorageSnapshot();
   return{
     app:'Bank Bonus Tracker',
@@ -5209,6 +5214,7 @@ function buildPortableBackupPayload(){
     phoneBook:[...phoneEdits],
     profileEvents:[...profileEvents],
     offerHistory:{...offerHistory},
+    termsArchive:{...termsArchive},
     storageSnapshot:snapshot,
     manifest:{
       includesProfiles:false,
@@ -5220,6 +5226,7 @@ function buildPortableBackupPayload(){
       includesPhoneBook:true,
       includesProfileEvents:true,
       includesOfferHistory:true,
+      includesTermsArchive:true,
       includesStorageSnapshot:true,
       storageKeys:Object.keys(snapshot)
     }
@@ -5279,6 +5286,7 @@ function normalizePortableBackupInput(d){
       phoneBook:snapshot[PHONE_KEY]||[],
       profileEvents:snapshot[PROFILE_EVT_KEY]||[],
       offerHistory:snapshot[OFFER_HIST_KEY]||{},
+      termsArchive:snapshot[TC_ARCHIVE_KEY]||{},
       storageSnapshot:snapshot,
       legacySource:true
     };
@@ -5304,6 +5312,7 @@ function stagePortableRestore(d){
   const phoneRows=(Array.isArray(d.phoneBook)?d.phoneBook:backupArrayFromStorage(d,PHONE_KEY)).map(normalizePhoneRow).filter(r=>r.bank);
   const profileRows=normalizedRestoreProfileEvents(Array.isArray(d.profileEvents)?d.profileEvents:backupArrayFromStorage(d,PROFILE_EVT_KEY));
   const offerRows=d.offerHistory&&typeof d.offerHistory==='object'&&!Array.isArray(d.offerHistory)?d.offerHistory:backupObjectFromStorage(d,OFFER_HIST_KEY);
+  const termsRows=d.termsArchive&&typeof d.termsArchive==='object'&&!Array.isArray(d.termsArchive)?d.termsArchive:backupObjectFromStorage(d,TC_ARCHIVE_KEY);
 
   const writes={};
   const snap=normalizeBackupStorageSnapshot(d);
@@ -5317,6 +5326,7 @@ function stagePortableRestore(d){
   writes[PHONE_KEY]=JSON.stringify(phoneRows);
   writes[PROFILE_EVT_KEY]=JSON.stringify(profileRows);
   writes[OFFER_HIST_KEY]=JSON.stringify(offerRows||{});
+  writes[TC_ARCHIVE_KEY]=JSON.stringify(termsRows||{});
   writes[BK_KEY]=td();
   writes.bt_last_restore=new Date().toISOString();
 
