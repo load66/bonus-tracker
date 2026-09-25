@@ -56,7 +56,11 @@
       if(!next.promoSourceUrl)throw new Error('Strict JSON is missing the official promotion source URL.');
       if(!next.feeScheduleSourceUrl)throw new Error('Strict JSON is missing the official fee-schedule source URL.');
       if(!next.termsVerifiedAt)throw new Error('Strict JSON is missing the verification date.');
-      if((next.churnable===true||String(next.churnability||'').toLowerCase()==='repeatable')&&!next.eligibilityRules.length)throw new Error('Strict JSON must list every churn restriction in eligibilityRules.');
+      if(String(next.tcSourceRaw||'').trim().length<120)throw new Error('Strict JSON must include the full pasted T&C so eligibility rules can be cross-checked.');
+      if(next.churnable===true||String(next.churnability||'').toLowerCase()==='repeatable'){
+        if(!next.eligibilityRules.length)throw new Error('Strict JSON must list every churn restriction in eligibilityRules.');
+        if(next.eligibilityRules.some(r=>!String(r.scope||r.eligibilityScope||'').trim()))throw new Error('Every strict JSON eligibility rule must define its product/customer scope.');
+      }
     }
     if(!window.BTEligibilityGate||typeof window.BTEligibilityGate.validate!=='function')throw new Error('Churn eligibility validator is unavailable.');
     const verified=window.BTEligibilityGate.validate(next);
