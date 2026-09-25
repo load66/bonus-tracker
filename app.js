@@ -5677,6 +5677,7 @@ entries=sortE(entries);R();
       if(!savedOk){ entries = before; return true; }
       if (typeof syncProfileEventsFromEntry === 'function') syncProfileEventsFromEntry(next);
       if (typeof refreshSavedReqFromEntry === 'function') refreshSavedReqFromEntry(next);
+      if (typeof saveTermsArchiveForNewCycle === 'function') saveTermsArchiveForNewCycle(next,'reviewed-tc-new-cycle');
       document.getElementById('tc_review_overlay')?.remove();
       if (typeof R === 'function') R();
       setTimeout(() => alert('New entry created for ' + next.bank + (next.customTimers.length ? ` with ${next.customTimers.length} mini timer(s).` : '. Add Opened Date later to auto-create requirement timers.') + ' Review the entry before opening/applying.'), 80);
