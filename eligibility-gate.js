@@ -290,6 +290,11 @@
         out.churnPeriodValue=r.period.value;out.churnPeriodUnit=r.period.unit;
         out.eligibilityEvidenceText=r.evidenceText;out.eligibilityAnchorEvidenceText=r.evidenceSentence;
         out.eligibilityEvidenceSource=r.evidenceSource;
+      }else if(v.rules.length>1){
+        out.sourceEligibilityBasis='multiple';
+        out.churnBasis='multiple';
+        out.churnPeriodValue=0;
+        out.churnPeriodUnit='';
       }
     }else if(v.ok&&v.decision==='nonrepeatable'){
       out.eligibilityEvidenceSource=v.evidenceSource||out.eligibilityEvidenceSource||'';
