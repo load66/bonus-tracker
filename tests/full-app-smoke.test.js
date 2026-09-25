@@ -70,6 +70,29 @@ setTimeout(()=>{
     assert(timerClickMatches.length>=2,'Mini timer checkboxes can still bubble to the card header and collapse the expanded entry');
     assert(appSource.includes("function toggleTimer(id,timerId)")&&appSource.includes("sv(SK,entries);expanded=id;R()}"),'Timer toggle does not explicitly preserve the expanded bank');
     assert(appSource.includes("function toggleCk(id,i)")&&appSource.includes("sv(SK,entries);expanded=id;R()}"),'Checklist toggle does not explicitly preserve the expanded bank');
+    const sectionStateRegression=vm.runInContext(`(function(){
+      const oldEntries=entries, oldExpanded=expanded, oldSearch=search, oldTab=tab;
+      const id='SECTION-STATE-01';
+      entries=[{id,bank:'Section State Bank',accountType:'personal',opened:'2026-09-01',bonus:100,churn:'1',checklist:[{id:'ck_test',text:'Test requirement',done:false}],customTimers:[]}];
+      expanded=id;search='';tab='tracker';
+      setProfileSectionOpen(id,'lifecycle',true);
+      R();
+      const before=document.getElementById('app').innerHTML;
+      toggleCk(id,0);
+      const after=document.getElementById('app').innerHTML;
+      const result={
+        beforeOpen:before.includes('data-entry-id="'+id+'" data-section-key="lifecycle" open'),
+        afterOpen:after.includes('data-entry-id="'+id+'" data-section-key="lifecycle" open'),
+        checked:!!entries[0].checklist[0].done,
+        expandedStill:expanded===id
+      };
+      entries=oldEntries;expanded=oldExpanded;search=oldSearch;tab=oldTab;R();
+      return result;
+    })()`,sandbox);
+    assert(sectionStateRegression.beforeOpen,'Lifecycle section did not render open from centralized UI state');
+    assert(sectionStateRegression.afterOpen,'Lifecycle section collapsed after checklist toggle/full render cycle');
+    assert(sectionStateRegression.checked,'Checklist state did not toggle during lifecycle persistence regression');
+    assert(sectionStateRegression.expandedStill,'Bank card did not remain expanded during lifecycle persistence regression');
     assert((appSource.match(/function rTracker\\(sorted\\)/g)||[]).length===1,'More than one active tracker renderer remains');
     assert((appSource.match(/function rTrackerLegacy\\(sorted\\)/g)||[]).length===1,'Legacy tracker fallback is not explicitly named');
     assert(appSource.includes("typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy"),'R() does not explicitly select the active tracker renderer');
