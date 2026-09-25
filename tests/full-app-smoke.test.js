@@ -55,11 +55,11 @@ function assert(ok,msg){if(!ok)throw new Error(msg)}
 setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.24',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.4.24',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.25',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.4.25',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.13',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
-    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.24',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
-    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.24',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
+    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.25',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
+    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.25',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.13',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
     assert(sandbox.BTEligibilityGate?.VERSION==='1.3.0',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
@@ -67,18 +67,21 @@ setTimeout(()=>{
     assert(app.innerHTML.includes('<span>T&C Archive</span>'),'T&C Archive did not replace the Phone bottom tab');
     assert(!app.innerHTML.includes('<span>Phone</span>'),'Phone bottom tab is still rendered');
     const darkCss=fs.readFileSync('style.css','utf8');
-    assert(darkCss.includes('v3.4.24 Midnight professional dark theme'),'Midnight dark theme release marker missing');
+    assert(darkCss.includes('v3.4.25 Midnight professional dark theme'),'Midnight dark theme release marker missing');
     assert(darkCss.includes('--bg:#060A11')&&darkCss.includes('--card:#0D1420')&&darkCss.includes('color-scheme:dark'),'Core dark theme palette is incomplete');
     assert(darkCss.includes('.modal,.dd-box')&&darkCss.includes('.clean-plan-card')&&darkCss.includes('.dp-summary'),'Dark theme does not cover modal, T&C archive, and datapoint surfaces');
     const churnListNoLegacy=vm.runInContext(`(function(){
       const old=entries;
       const wording='Not eligible if you closed a consumer checking account within the past 12 months.';
-      entries=[{bank:'Eligibility Rule Bank',accountType:'personal',opened:'2026-01-01',closed:'2026-02-01',bonus:250,churnable:true,churnability:'repeatable',tcSourceRaw:wording,eligibilityRules:[{id:'closed12',basis:'account-closed',periodValue:12,periodUnit:'months',scope:'consumer-checking',evidenceText:wording,evidenceSource:'official-promotion-terms'}]}];
+      entries=[
+        {bank:'Eligibility Rule Bank',accountType:'personal',opened:'2026-01-01',closed:'2026-02-01',bonus:250,churnable:true,churnability:'repeatable',tcSourceRaw:wording,eligibilityRules:[{id:'closed12',basis:'account-closed',periodValue:12,periodUnit:'months',scope:'consumer-checking',evidenceText:wording,evidenceSource:'official-promotion-terms'}]},
+        {bank:'Legacy Cooldown Bank',accountType:'personal',closed:'2026-03-01',bonus:300,churn:'2',churnable:true,churnability:'repeatable'}
+      ];
       const out=getChurnSuggestions();
       entries=old;
       return out;
     })()`,sandbox);
-    assert(churnListNoLegacy.length===1&&churnListNoLegacy[0].bank==='Eligibility Rule Bank','Least-days-to-churn omitted an eligibilityRules entry without legacy churn');
+    assert(churnListNoLegacy.length===2&&churnListNoLegacy.some(x=>x.bank==='Eligibility Rule Bank')&&churnListNoLegacy.some(x=>x.bank==='Legacy Cooldown Bank'),'Least-days-to-churn did not combine verified eligibility entries with closed legacy cooldown records');
     const localNow=new Date(),pad=n=>String(n).padStart(2,'0'),localToday=`${localNow.getFullYear()}-${pad(localNow.getMonth()+1)}-${pad(localNow.getDate())}`;
     assert(vm.runInContext('td()',sandbox)===localToday,'Today default is not based on the local calendar date');
     assert(vm.runInContext("addD('2026-03-08',1)",sandbox)==='2026-03-09','Calendar-day addition failed across DST start');
