@@ -74,7 +74,9 @@ setTimeout(()=>{
       const html=sandbox.statusBadgeHtml(sample,null);
       assert(!/CUSTOM TIMER|Custom Timer|Deadline Active|WORKING|WAITING TO CHURN|TIME TO CHURN/.test(html),'Legacy/internal lifecycle status leaked to full app card: '+html);
     }
-    assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');\n    assert(app.innerHTML.includes('Active bonus pipeline'),'Professional pipeline dashboard did not render');\n    assert(app.innerHTML.includes('Action Center'),'Lifecycle Action Center did not render');
+    assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
+    assert(app.innerHTML.includes('Active bonus pipeline'),'Professional pipeline dashboard did not render');
+    assert(app.innerHTML.includes('Action Center'),'Lifecycle Action Center did not render');
     sandbox.R();
     assert(app.innerHTML.includes('<span>T&C Archive</span>'),'T&C Archive did not replace the Phone bottom tab');
     const appSource=fs.readFileSync('app.js','utf8');
