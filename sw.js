@@ -1,8 +1,8 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.4.17: retain atomic/type-safe offline hardening and refresh source-accurate eligibility runtime.
+// Version 3.4.18: retain atomic/type-safe offline hardening and preload transactional restore runtime.
 
-const V = 'bt-v3.4.17-sourceeligibility1';
-const ASSETS = ['./app.js', './bank-rules-academy.js', './bank-rules-boa-business.js', './bank-rules-busey.js', './bank-rules-capitalone.js', './bank-rules-equity.js', './bank-rules-fourleaf.js', './bank-rules-pnc.js', './bank-rules-regions.js', './bank-rules.js', './bank-rules-wells-consumer.js', './churn-close-policy.js', './churn-profile-memory.js', './controller.js', './close-rules-core.js', './close-rules-integration.js', './close-rules.css', './engine.js', './entry-link-import.js', './fee-review-migration.js', './icon.svg', './index.html', './learning-inbox-conflict.js', './manifest.json', './mobile-analyzer.css', './mobile-analyzer.js', './professional-upgrades.js', './profile-db.js', './profile-library-selftest-academy.js', './profile-library-selftest.js', './profile-registry-academy.js', './profile-registry.js', './semantic-status.js', './smart-attention.js', './source-resolver.js', './style.css', './wells-professional-runtime.js', './sw.js'];
+const V = 'bt-v3.4.18-restore1';
+const ASSETS = ['./app.js', './bank-rules-academy.js', './bank-rules-boa-business.js', './bank-rules-busey.js', './bank-rules-capitalone.js', './bank-rules-equity.js', './bank-rules-fourleaf.js', './bank-rules-pnc.js', './bank-rules-regions.js', './bank-rules.js', './bank-rules-wells-consumer.js', './churn-close-policy.js', './churn-profile-memory.js', './controller.js', './close-rules-core.js', './close-rules-integration.js', './close-rules.css', './engine.js', './entry-link-import.js', './fee-review-migration.js', './icon.svg', './index.html', './learning-inbox-conflict.js', './manifest.json', './mobile-analyzer.css', './mobile-analyzer.js', './professional-upgrades.js', './profile-db.js', './persistence-transaction.js', './profile-library-selftest-academy.js', './profile-library-selftest.js', './profile-registry-academy.js', './profile-registry.js', './semantic-status.js', './smart-attention.js', './source-resolver.js', './style.css', './wells-professional-runtime.js', './sw.js'];
 
 function expectedTypes(path){
   path=String(path||'').toLowerCase();
