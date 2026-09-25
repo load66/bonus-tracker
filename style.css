@@ -4508,7 +4508,7 @@ html,body {
 @media(max-width:520px){.guided-modal{padding:14px 12px 16px}.guided-grid{grid-template-columns:1fr}.guided-grid .full{grid-column:auto}.guided-progress button span{display:none}.guided-progress{gap:5px}.guided-summary>div{grid-template-columns:86px minmax(0,1fr)}.guided-source-grid{grid-template-columns:1fr}.guided-actions{position:sticky;bottom:-1px;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);padding-top:8px;z-index:5}.bt-update-banner{grid-template-columns:1fr auto}.bt-update-banner .later{display:none}}
 
 
-/* === v3.4.25 Midnight professional dark theme === */
+/* === v3.4.26 Midnight professional dark theme === */
 :root{
   color-scheme:dark;
   --bg:#060A11;
