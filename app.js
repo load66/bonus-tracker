@@ -1,7 +1,7 @@
-/* ✅ Version 3.4.21: precise churn-event semantics, multi-rule eligibility, and safe re-churn replacement. */
+/* ✅ Version 3.4.22: conditional churn rules, coupon-enrollment anchors, and close-state resolution. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.21';
+const APP_VERSION='3.4.22';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const ANALYZER_MEMORY_KEY='bt_analyzer_memory_v1';
@@ -168,7 +168,7 @@ function offerSignature(snap){
 function offerSnapshotFromEntry(e,source){
   if(!e||!e.bank)return null;
   const analyzed=String(e.analyzedTC||'');
-  const snap={id:'ofr_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6),bank:e.bank,accountType:normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'personal',entryId:e.id||'',source:source||'entry',savedAt:td(),opened:e.opened||'',closed:e.closed||'',bonusRecd:e.bonusRecd||'',bonus:e.bonus||0,churn:e.churn||'',reqDays:e.reqDays||0,minHoldDays:e.minHoldDays||0,earlyCloseFee:e.earlyCloseFee||0,closeRuleBasis:normalizeCloseRuleBasis(e.closeRuleBasis),closeBufferDays:closeBufferDaysFor(e),closeRuleText:e.closeRuleText||'',monthlyFeeChecked:!!e.monthlyFeeChecked,fundedDays:e.fundedDays||0,fundingAmount:e.fundingAmount||0,fundingAmountText:e.fundingAmountText||'',payoutTimingText:e.payoutTimingText||'',monthlyFeeYNText:e.monthlyFeeYNText||'',monthlyFeeAmountText:e.monthlyFeeAmountText||'',monthlyFeeFrequency:e.monthlyFeeFrequency||'',monthlyFeeWaiverType:e.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:e.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:e.monthlyFeeWaiverText||'',promoCodeText:e.promoCodeText||'',avoidMonthlyFeeText:e.avoidMonthlyFeeText||'',completeBonusText:e.completeBonusText||'',eligibilityText:e.eligibilityText||'',schemaVersion:parseInt(e.schemaVersion||0,10)||0,eligibilityRules:Array.isArray(e.eligibilityRules)?e.eligibilityRules.map(r=>({...r})):[],eligibilityScope:e.eligibilityScope||'',sourceEligibilityBasis:e.sourceEligibilityBasis||'',churnPeriodValue:e.churnPeriodValue||0,churnPeriodUnit:e.churnPeriodUnit||'',eligibilityEvidenceText:e.eligibilityEvidenceText||'',eligibilityAnchorEvidenceText:e.eligibilityAnchorEvidenceText||'',currentCustomerEvidenceText:e.currentCustomerEvidenceText||'',eligibilityEvidenceSource:e.eligibilityEvidenceSource||'',eligibilityVerified:!!e.eligibilityVerified,promoSourceUrl:e.promoSourceUrl||'',feeScheduleSourceUrl:e.feeScheduleSourceUrl||'',termsVerifiedAt:e.termsVerifiedAt||'',currentCustomerExcluded:!!e.currentCustomerExcluded,mustCloseBeforeReapply:!!e.mustCloseBeforeReapply,reapplicationAction:e.reapplicationAction||'',expirationDateText:e.expirationDateText||'',requiredDaysText:e.requiredDaysText||'',notes:String(e.notes||'').slice(0,600),analyzedPreview:analyzed.slice(0,900)};
+  const snap={id:'ofr_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6),bank:e.bank,accountType:normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'personal',entryId:e.id||'',source:source||'entry',savedAt:td(),opened:e.opened||'',closed:e.closed||'',bonusRecd:e.bonusRecd||'',bonus:e.bonus||0,churn:e.churn||'',reqDays:e.reqDays||0,minHoldDays:e.minHoldDays||0,earlyCloseFee:e.earlyCloseFee||0,closeRuleBasis:normalizeCloseRuleBasis(e.closeRuleBasis),closeBufferDays:closeBufferDaysFor(e),closeRuleText:e.closeRuleText||'',monthlyFeeChecked:!!e.monthlyFeeChecked,fundedDays:e.fundedDays||0,fundingAmount:e.fundingAmount||0,fundingAmountText:e.fundingAmountText||'',payoutTimingText:e.payoutTimingText||'',monthlyFeeYNText:e.monthlyFeeYNText||'',monthlyFeeAmountText:e.monthlyFeeAmountText||'',monthlyFeeFrequency:e.monthlyFeeFrequency||'',monthlyFeeWaiverType:e.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:e.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:e.monthlyFeeWaiverText||'',promoCodeText:e.promoCodeText||'',avoidMonthlyFeeText:e.avoidMonthlyFeeText||'',completeBonusText:e.completeBonusText||'',eligibilityText:e.eligibilityText||'',schemaVersion:parseInt(e.schemaVersion||0,10)||0,eligibilityRules:Array.isArray(e.eligibilityRules)?e.eligibilityRules.map(r=>({...r})):[],couponEnrollmentDate:e.couponEnrollmentDate||'',offerEnrollmentDate:e.offerEnrollmentDate||'',closedWithNegativeBalance:typeof e.closedWithNegativeBalance==='boolean'?e.closedWithNegativeBalance:null,eligibilityScope:e.eligibilityScope||'',sourceEligibilityBasis:e.sourceEligibilityBasis||'',churnPeriodValue:e.churnPeriodValue||0,churnPeriodUnit:e.churnPeriodUnit||'',eligibilityEvidenceText:e.eligibilityEvidenceText||'',eligibilityAnchorEvidenceText:e.eligibilityAnchorEvidenceText||'',currentCustomerEvidenceText:e.currentCustomerEvidenceText||'',eligibilityEvidenceSource:e.eligibilityEvidenceSource||'',eligibilityVerified:!!e.eligibilityVerified,promoSourceUrl:e.promoSourceUrl||'',feeScheduleSourceUrl:e.feeScheduleSourceUrl||'',termsVerifiedAt:e.termsVerifiedAt||'',currentCustomerExcluded:!!e.currentCustomerExcluded,mustCloseBeforeReapply:!!e.mustCloseBeforeReapply,reapplicationAction:e.reapplicationAction||'',expirationDateText:e.expirationDateText||'',requiredDaysText:e.requiredDaysText||'',notes:String(e.notes||'').slice(0,600),analyzedPreview:analyzed.slice(0,900)};
   const tier=analyzed.match(/Bonus:\s*([^*]{0,240})/i);
   if(tier)snap.bonusTierText=tier[1].trim();
   snap.signature=offerSignature(snap);
@@ -3863,11 +3863,18 @@ function rTips(){
 }
 function rPhone(){const rows=getPhoneBook();const q=(phoneSearch||'').toLowerCase().trim();const filtered=q?rows.filter(r=>r.bank.toLowerCase().includes(q)||r.personal.toLowerCase().includes(q)||r.business.toLowerCase().includes(q)):rows;let h='<div class="sec">Customer Service Numbers</div>';h+='<input class="sinput" placeholder="Search banks or phone numbers..." value="'+esc(phoneSearch||'')+'" oninput="phoneSearch=this.value;R()" id="phs">';h+='<button class="tc-btn" style="height:auto;padding:14px 16px;margin-bottom:10px" onclick="showPhoneAdd=!showPhoneAdd;R()">'+I.phone+'<span>'+(showPhoneAdd?'Hide add bank form':'Add new bank phone')+'</span></button>';if(showPhoneAdd){h+='<div class="ph-add-card"><div class="ph-top"><div><div class="nm">Add Bank</div><div class="ph-help">Create a phone entry manually with separate personal and business numbers.</div></div></div><div class="fg" style="margin-bottom:8px"><label>Bank Name</label><input id="ph_new_bank" class="ph-field" placeholder="e.g. Guaranty Bank"></div><div class="ph-edit-grid"><div><span class="ph-label">Personal</span><input id="ph_new_personal" class="ph-field" placeholder="1-800-000-0000"></div><div><span class="ph-label">Business</span><input id="ph_new_business" class="ph-field" placeholder="1-800-000-0000"></div></div><div class="ph-actions"><button class="ph-mini ph-save" onclick="addPhoneTabRow()">Save</button><button class="ph-mini ph-reset" onclick="showPhoneAdd=false;R()">Cancel</button></div></div>'}if(!filtered.length)return h+'<div class="empty"><div class="em">📞</div><p>No phone entries found.</p></div>';filtered.forEach((row,idx)=>{const bankEnc=encodeURIComponent(row.bank);const isCustom=!!row.custom&&!hasDefaultPhone(row.bank);h+='<div class="ph-card">'+bankLogo(row.bank,false)+'<div style="flex:1"><div class="ph-top"><div><div class="nm">'+esc(row.bank)+'</div><div class="ph-help">Edit and save personal/business numbers from this tab.</div></div>'+(isCustom?'<span class="tag b">Custom</span>':'')+'</div><div class="ph-edit-grid"><div><span class="ph-label">Personal</span><input id="ph_p_'+idx+'" class="ph-field" value="'+esc(row.personal||'')+'" placeholder="No personal number"></div><div><span class="ph-label">Business</span><input id="ph_b_'+idx+'" class="ph-field" value="'+esc(row.business||'')+'" placeholder="No business number"></div></div><div class="ph-actions"><button class="ph-mini ph-save" onclick="savePhoneTabRow(\''+bankEnc+'\','+idx+','+(isCustom?'true':'false')+')">Save</button>'+(hasDefaultPhone(row.bank)?'<button class="ph-mini ph-reset" onclick="resetPhoneTabRow(\''+bankEnc+'\')">Reset</button>':'<button class="ph-mini ph-del" onclick="deletePhoneTabRow(\''+bankEnc+'\')">Delete</button>')+(row.personal?'<a href="tel:'+esc(row.personal)+'" class="ph-mini ph-reset" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Call Personal</a>':'')+(row.business?'<a href="tel:'+esc(row.business)+'" class="ph-mini ph-reset" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Call Business</a>':'')+'</div></div></div>'});return h}
 function rRules(){let h='<div class="sec">Churn Rules \u2014 MO + Nationwide</div><input class="sinput" placeholder="Search..." oninput="this.dataset.q=this.value;R()" id="rs">';const q=(document.getElementById('rs')||{}).value||'';const fl=q?RULES.filter(r=>r[0].toLowerCase().includes(q.toLowerCase())):RULES;h+='<div class="rcard" style="margin-bottom:8px"><div class="nm">Tracker Bonus Display Rule</div><div class="sub" style="margin-top:4px">On the Tracker tab, the $ bonus amount shows only when a bank has a saved bonus amount and the status is Working or Countdown Active.</div></div>';fl.forEach(([bank,rule,mo,churnable,moAvail,closeFee,maint,notes])=>{h+='<div class="rcard" style="display:flex;align-items:flex-start;gap:10px">'+bankLogo(bank,false)+'<div style="flex:1"><div class="rcard-row"><div class="nm">'+esc(bank)+'</div><div style="text-align:right"><div class="ph">'+esc(rule)+'</div><div class="ph2">'+mo+'mo</div></div></div><div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:2px">';h+=churnable?'<span class="tag y">\u2705 Churnable</span>':'<span class="tag n">\u274C Not Churnable</span>';if(moAvail)h+='<span class="tag m">\uD83D\uDCCD MO</span>';if(closeFee&&closeFee!=='None')h+='<span class="tag f">\u26A0 '+esc(closeFee)+'</span>';h+='<span class="tag '+(maint.includes('$0')||maint.includes('free')?'b':'f')+'">'+esc(maint)+'</span>';h+='</div>';if(notes)h+='<div class="sub">'+esc(notes)+'</div>';h+='</div></div>'});return h}
+function entryNeedsNegativeBalanceClosureAnswer(e){
+  try{
+    const rules=window.BTEligibilityGate?.normalizedRules?.(e)||[];
+    return rules.some(r=>window.BTEligibilityGate?.normalizeCondition?.(r.condition)?.type==='closed-with-negative-balance')
+  }catch{return false}
+}
 function closeReviewRows(e,p){
   const rows=[];
   const push=(k,v,cls='')=>rows.push('<div class="close-review-row"><span>'+esc(k)+'</span><b class="'+esc(cls)+'">'+esc(v||'—')+'</b></div>');
   push('Bank',p.bank||e?.bank||'');
   push('Close date',p.closeDate?fD(p.closeDate):'Missing',p.closeDate?'':'bad');
+  if(entryNeedsNegativeBalanceClosureAnswer(e))push('Closed with negative balance',p.closedWithNegativeBalance===true?'Yes':p.closedWithNegativeBalance===false?'No':'Not answered',typeof p.closedWithNegativeBalance==='boolean'?'':'bad');
   push('Bonus received',p.bonusDate?fD(p.bonusDate):'Not saved',(p.actualBonus||0)>0&&!p.bonusDate?'bad':'');
   push('Requirement met',p.reqDate?fD(p.reqDate):'Not saved',(p.actualBonus||0)>0&&!p.reqDate?'warn':'');
   push('Bonus amount',fM(p.actualBonus||0));
@@ -3908,6 +3915,10 @@ function rClose(){
     h+='<h3>🔒 Close Now</h3><div class="sub">Record the actual date the bank account was closed.</div>';
     h+='<div class="close-ready '+esc(ready.cls)+'"><b>'+esc(ready.label)+'</b><span>'+esc(ready.warnings[0]||'Closed date starts the churn countdown.')+'</span></div>';
     h+='<label>Actual Close Date</label><input type="date" id="cp_date" value="'+esc(p.closeDate||'')+'">';
+    if(entryNeedsNegativeBalanceClosureAnswer(e)){
+      h+='<label>Was this account closed with a negative balance?</label><select id="cp_negative_balance"><option value=""'+(typeof p.closedWithNegativeBalance!=='boolean'?' selected':'')+'>Select</option><option value="no"'+(p.closedWithNegativeBalance===false?' selected':'')+'>No</option><option value="yes"'+(p.closedWithNegativeBalance===true?' selected':'')+'>Yes</option></select>';
+      h+='<div class="sub">This answer only activates conditional churn restrictions that explicitly depend on a negative-balance closure.</div>';
+    }
     h+='<label>Monthly Fee Checked?</label><select id="cp_monthly_checked"><option value="no"'+(!p.monthlyFeeChecked?' selected':'')+'>No</option><option value="yes"'+(p.monthlyFeeChecked?' selected':'')+'>Yes</option></select>';
     h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">Next</button></div>';
   }else if(p.step==='bonus'){
@@ -4138,7 +4149,7 @@ function collectModalEntryData(){
   const bank=(modal.bank||'').trim();
   if(!bank){alert('Bank name required');return null}
   syncModalAccountTypeFromBank();
-  const d={bank,accountType:normalizeAccountType(modal.accountType)||'personal',bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,closeFeeCountdownDays:modal.closeFeeCountdownDays||'',earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',fundedDays:modal.fundedDays||0,fundingAmount:modal.fundingAmount||0,fundingAmountText:modal.fundingAmountText||'',payoutTimingText:modal.payoutTimingText||'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false,monthlyFeeYNText:modal.monthlyFeeYNText||'',monthlyFeeAmountText:modal.monthlyFeeAmountText||'',monthlyFeeFrequency:modal.monthlyFeeFrequency||'',monthlyFeeWaiverType:modal.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:modal.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:modal.monthlyFeeWaiverText||'',promoCodeText:modal.promoCodeText||'',avoidMonthlyFeeText:modal.avoidMonthlyFeeText||'',completeBonusText:modal.completeBonusText||'',earlyTerminationFeeText:modal.earlyTerminationFeeText||'',eligibilityText:modal.eligibilityText||'',expirationDateText:modal.expirationDateText||'',requiredDaysText:modal.requiredDaysText||'',closeRuleBasis:normalizeCloseRuleBasis(modal.closeRuleBasis),closeBufferDays:parseInt(modal.closeBufferDays,10)||BUFFER_DAYS,closeRuleText:modal.closeRuleText||'',monthlyFeeChecked:!!modal.monthlyFeeChecked,schemaVersion:parseInt(modal.schemaVersion||0,10)||0,eligibilityRules:Array.isArray(modal.eligibilityRules)?modal.eligibilityRules.map(r=>({...r})):[],eligibilityScope:modal.eligibilityScope||modal.analysis?.eligibilityScope||'',eligibilityEvidenceText:modal.eligibilityEvidenceText||modal.analysis?.eligibilityEvidenceText||modal.eligibilityText||'',eligibilityAnchorEvidenceText:modal.eligibilityAnchorEvidenceText||modal.analysis?.eligibilityAnchorEvidenceText||'',currentCustomerEvidenceText:modal.currentCustomerEvidenceText||modal.analysis?.currentCustomerEvidenceText||'',reapplicationAction:modal.reapplicationAction||modal.analysis?.reapplicationAction||'',promoSourceUrl:modal.promoSourceUrl||'',feeScheduleSourceUrl:modal.feeScheduleSourceUrl||'',termsVerifiedAt:modal.termsVerifiedAt||'',eligibilityEvidenceSource:modal.eligibilityEvidenceSource||modal.analysis?.eligibilityEvidenceSource||(modal.tcSourceId?'saved-tc':''),churnPeriodValue:parseInt(modal.churnPeriodValue||modal.analysis?.churnPeriodValue||0,10)||0,churnPeriodUnit:modal.churnPeriodUnit||modal.analysis?.churnPeriodUnit||'',tcSourceRaw:modal.tcSourceRaw||'',tcSourceId:modal.tcSourceId||'',tcSourceUpdatedAt:modal.tcSourceUpdatedAt||'',analysis:(modal.analysis&&typeof modal.analysis==='object')?modal.analysis:null,analyzerHistory:normalizeAnalyzerHistoryList(modal.analyzerHistory),history:normalizeEntryHistoryList(modal.history),customTimers:normalizeTimerList(modal.customTimers)};
+  const d={bank,accountType:normalizeAccountType(modal.accountType)||'personal',bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,closeFeeCountdownDays:modal.closeFeeCountdownDays||'',earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',fundedDays:modal.fundedDays||0,fundingAmount:modal.fundingAmount||0,fundingAmountText:modal.fundingAmountText||'',payoutTimingText:modal.payoutTimingText||'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false,monthlyFeeYNText:modal.monthlyFeeYNText||'',monthlyFeeAmountText:modal.monthlyFeeAmountText||'',monthlyFeeFrequency:modal.monthlyFeeFrequency||'',monthlyFeeWaiverType:modal.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:modal.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:modal.monthlyFeeWaiverText||'',promoCodeText:modal.promoCodeText||'',avoidMonthlyFeeText:modal.avoidMonthlyFeeText||'',completeBonusText:modal.completeBonusText||'',earlyTerminationFeeText:modal.earlyTerminationFeeText||'',eligibilityText:modal.eligibilityText||'',expirationDateText:modal.expirationDateText||'',requiredDaysText:modal.requiredDaysText||'',closeRuleBasis:normalizeCloseRuleBasis(modal.closeRuleBasis),closeBufferDays:parseInt(modal.closeBufferDays,10)||BUFFER_DAYS,closeRuleText:modal.closeRuleText||'',monthlyFeeChecked:!!modal.monthlyFeeChecked,schemaVersion:parseInt(modal.schemaVersion||0,10)||0,eligibilityRules:Array.isArray(modal.eligibilityRules)?modal.eligibilityRules.map(r=>({...r})):[],couponEnrollmentDate:modal.couponEnrollmentDate||'',offerEnrollmentDate:modal.offerEnrollmentDate||'',eligibilityScope:modal.eligibilityScope||modal.analysis?.eligibilityScope||'',eligibilityEvidenceText:modal.eligibilityEvidenceText||modal.analysis?.eligibilityEvidenceText||modal.eligibilityText||'',eligibilityAnchorEvidenceText:modal.eligibilityAnchorEvidenceText||modal.analysis?.eligibilityAnchorEvidenceText||'',currentCustomerEvidenceText:modal.currentCustomerEvidenceText||modal.analysis?.currentCustomerEvidenceText||'',reapplicationAction:modal.reapplicationAction||modal.analysis?.reapplicationAction||'',promoSourceUrl:modal.promoSourceUrl||'',feeScheduleSourceUrl:modal.feeScheduleSourceUrl||'',termsVerifiedAt:modal.termsVerifiedAt||'',eligibilityEvidenceSource:modal.eligibilityEvidenceSource||modal.analysis?.eligibilityEvidenceSource||(modal.tcSourceId?'saved-tc':''),churnPeriodValue:parseInt(modal.churnPeriodValue||modal.analysis?.churnPeriodValue||0,10)||0,churnPeriodUnit:modal.churnPeriodUnit||modal.analysis?.churnPeriodUnit||'',tcSourceRaw:modal.tcSourceRaw||'',tcSourceId:modal.tcSourceId||'',tcSourceUpdatedAt:modal.tcSourceUpdatedAt||'',analysis:(modal.analysis&&typeof modal.analysis==='object')?modal.analysis:null,analyzerHistory:normalizeAnalyzerHistoryList(modal.analyzerHistory),history:normalizeEntryHistoryList(modal.history),customTimers:normalizeTimerList(modal.customTimers)};
   if(modal.churnable===false||modal.analysis?.churnable===false)d.churnable=false;
   else if(modal.churnable===true||modal.analysis?.churnable===true||modal.churn)d.churnable=true;
   d.churnability=modal.churnability||modal.analysis?.churnability||(d.churnable===false?'not-repeatable':d.churn?'repeatable':'');
@@ -4203,6 +4214,7 @@ function normalizeNewCycleData(d,existing){
   next.churn=d.churn||existing.churn||'';
   next.opened=d.opened||'';
   next.closed='';
+  next.closedWithNegativeBalance=null;
   next.bonusRecd='';
   next.reqMet='';
   next.closeRuleBasis=normalizeCloseRuleBasis(d.closeRuleBasis||existing.closeRuleBasis||inferCloseRuleBasisFromText(next));
@@ -4385,6 +4397,7 @@ function startCloseFlow(id,preferredMode='actual'){
     actualBonus:e.bonus||0,
     dp:e.dataPoint||'',
     monthlyFeeChecked:!!e.monthlyFeeChecked,
+    closedWithNegativeBalance:typeof e.closedWithNegativeBalance==='boolean'?e.closedWithNegativeBalance:null,
     mode:'actual',
     reviewOnly:false,
     recommendedMode:'actual'
@@ -4401,6 +4414,8 @@ function closeCollectDateFields(){
   if(d)p.closeDate=d.value;
   const mf=document.getElementById('cp_monthly_checked');
   if(mf)p.monthlyFeeChecked=mf.value==='yes';
+  const nb=document.getElementById('cp_negative_balance');
+  if(nb)p.closedWithNegativeBalance=nb.value==='yes'?true:nb.value==='no'?false:null;
 }
 function closeNext(){
   const p=closePrompt;
@@ -4410,6 +4425,7 @@ function closeNext(){
     if(!p.closeDate){alert('Close date is required.');return}
     const e=entries.find(x=>x.id===p.entryId);
     if(e?.opened&&dB(e.opened,p.closeDate)<0){alert('Close date cannot be before the opened date.');return}
+    if(entryNeedsNegativeBalanceClosureAnswer(e)&&typeof p.closedWithNegativeBalance!=='boolean'){alert('Answer whether the account was closed with a negative balance so conditional churn rules can be calculated correctly.');return}
     p.step='bonus';
     R();
     return
@@ -4458,7 +4474,8 @@ function finishClose(){
   entries=entries.map(x=>{
     if(x.id===p.entryId){
       x.closed=p.closeDate;
-          x.bonus=Number(p.actualBonus||0);
+      if(entryNeedsNegativeBalanceClosureAnswer(x))x.closedWithNegativeBalance=!!p.closedWithNegativeBalance;
+      x.bonus=Number(p.actualBonus||0);
       if(Number(p.actualBonus||0)>0){
         x.bonusRecd=p.bonusDate||x.bonusRecd||'';
         x.reqMet=p.reqDate||x.reqMet||x.bonusRecd||'';
@@ -4466,7 +4483,7 @@ function finishClose(){
       if(p.dp)x.dataPoint=p.dp;
       x.monthlyFeeChecked=!!p.monthlyFeeChecked;
       x.feeChecked=true;
-      appendEntryHistory(x,'actual_close','Closed '+fD(p.closeDate)+(x.bonusRecd?' · bonus received '+fD(x.bonusRecd):'')+'.');
+      appendEntryHistory(x,'actual_close','Closed '+fD(p.closeDate)+(x.bonusRecd?' · bonus received '+fD(x.bonusRecd):'')+(entryNeedsNegativeBalanceClosureAnswer(x)?(' · negative balance: '+(x.closedWithNegativeBalance?'yes':'no')):'')+'.');
       return normalizeLifecycleEntry(x)
     }
     return x
@@ -4507,6 +4524,7 @@ function finishStillOpen(){
   entries=entries.map(x=>{
     if(x.id===p.entryId){
       x.closed='';
+      x.closedWithNegativeBalance=null;
       x.feeChecked=false;
           appendEntryHistory(x,'still_open','Removed closed date '+(oldClosed?fD(oldClosed):'')+'.');
       return normalizeLifecycleEntry(x)
