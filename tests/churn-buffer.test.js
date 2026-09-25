@@ -55,7 +55,7 @@ assert(sandbox.btApplicationReadyDate({...current,closed:'2027-08-25'})==='2027-
 assert(sandbox.entries[0].churnBasis==='bonus'&&sandbox.entries[0].sourceEligibilityBasis==='bonus-received'&&sandbox.entries[0].churnBufferDays===5&&sandbox.entries[0].eligibilityVerified===true,'Existing source-backed entry was not normalized correctly');
 assert(sandbox.entries[0].churnTrackingPolicy==='source-bonus-received-plus-5-day-buffer','Source tracking policy was not persisted');
 assert(sandbox.entries[1].churnBufferDays===0,'Non-repeatable saved entry retained a churn buffer');
-assert(/12 months after bonus received/.test(sandbox.btFutureEligibilityText(sandbox.entries[0]))&&/5-day safety buffer/.test(sandbox.btFutureEligibilityText(sandbox.entries[0])),'Future eligibility text does not disclose exact source basis + safety buffer');
+assert(/12 months after bonus payout received/.test(sandbox.btFutureEligibilityText(sandbox.entries[0]))&&/5-day safety buffer/.test(sandbox.btFutureEligibilityText(sandbox.entries[0])),'Future eligibility text does not disclose exact source basis + safety buffer');
 assert(/T&C verification required/.test(sandbox.btFutureEligibilityText({churn:'1',churnable:true,churnability:'repeatable'})),'Missing T&C evidence is not surfaced for review');
 assert(saved.length>0,'Existing-entry normalization was not persisted');
 
@@ -64,10 +64,10 @@ const index=fs.readFileSync('index.html','utf8');
 const sw=fs.readFileSync('sw.js','utf8');
 assert(workflow.includes('node tests/churn-buffer.test.js'),'Pages deploy is not gated by the churn-buffer regression test');
 assert(workflow.includes('node tests/eligibility-gate.test.js'),'Pages deploy is not gated by the eligibility evidence regression test');
-assert(index.includes('./churn-close-policy.js?v=3.4.20-multirule1'),'Index does not force-refresh the evidence-gated churn policy');
-assert(index.includes('./eligibility-gate.js?v=3.4.20'),'Index does not load the churn evidence validator');
-assert(index.includes('./sw.js?v=3.4.20-multirule1'),'Index does not force-refresh the evidence-gated service worker');
-assert(sw.includes("const V = 'bt-v3.4.20-multirule1'"),'Service worker cache version is stale');
+assert(index.includes('./churn-close-policy.js?v=3.4.21-semantics1'),'Index does not force-refresh the evidence-gated churn policy');
+assert(index.includes('./eligibility-gate.js?v=3.4.21'),'Index does not load the churn evidence validator');
+assert(index.includes('./sw.js?v=3.4.21-semantics1'),'Index does not force-refresh the evidence-gated service worker');
+assert(sw.includes("const V = 'bt-v3.4.21-semantics1'"),'Service worker cache version is stale');
 assert(sw.includes("'./eligibility-gate.js'"),'Eligibility gate is missing from the offline cache');
 
 console.log('Eligibility countdown passed: T&C evidence chooses the exact clock and unit, unverified rules fail closed, and the 5-day safety buffer is separate from official eligibility');

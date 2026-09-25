@@ -127,7 +127,7 @@ for token in ('wellsSuggestedTimers','Can this bonus be earned again? *','Future
     if token not in runtime_fix: fail(f'professional Wells runtime behavior missing: {token}')
 
 eligibility_gate=text('eligibility-gate.js')
-for token in ('all applicable T&C restrictions must verify and clear','eligibilityRules','normalizedRules','officialEligibilityDates','officialEligibilityDate','controllingRule','safeEligibilityDate','applicationReadyDate','mustCloseBeforeReapply'):
+for token in ('distinguish payout, offer-received, and account-ownership eligibility semantics','bonus-offer-received','account-ownership-ended','eligibilityRules','discoverTimedRestrictions','officialEligibilityDates','officialEligibilityDate','controllingRule','safeEligibilityDate','applicationReadyDate'):
     if token not in eligibility_gate: fail(f'churn eligibility evidence gate missing: {token}')
 
 entry_import=text('entry-link-import.js')
@@ -135,7 +135,7 @@ for token in ('schemaVersion','Strict JSON is missing the official promotion sou
     if token not in entry_import: fail(f'evidence-gated entry import missing: {token}')
 
 churn_policy=text('churn-close-policy.js')
-for token in ('multi-rule T&C eligibility clock','multi-rule-latest-date-plus-5-day-buffer','nextReopen','churnReadyDate','churnBufferDaysFor','btOfficialEligibilityDate','btApplicationReadyDate','collectModalEntryData','normalizeLifecycleEntry'):
+for token in ('precise payout/offer/ownership eligibility semantics','bonus-offer-received','account-ownership-ended','multi-rule-latest-date-plus-5-day-buffer','nextReopen','btOfficialEligibilityDate','btApplicationReadyDate','normalizeLifecycleEntry'):
     if token not in churn_policy: fail(f'source-accurate churn policy missing: {token}')
 
 close_core=text('close-rules-core.js')
@@ -175,4 +175,4 @@ if issues:
     print(f'LATEST RELEASE VERIFY FAILED v{release}: {len(issues)} issue(s)')
     for issue in issues: print('FAIL',issue)
     sys.exit(1)
-print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, Wells accuracy, analyzer isolation, archive lifecycle, multi-rule churn intake, strict JSON provenance, safe re-churn replacement, professional UI, and verify-before-deploy checks passed')
+print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, Wells accuracy, analyzer isolation, archive lifecycle, precise payout/offer/ownership semantics, multi-rule churn intake, strict JSON provenance, safe re-churn replacement, professional UI, and verify-before-deploy checks passed')

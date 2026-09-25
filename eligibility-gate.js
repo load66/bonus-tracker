@@ -1,11 +1,11 @@
-/* BonusTracker churn eligibility evidence gate v1.1.0 — all applicable T&C restrictions must verify and clear. */
+/* BonusTracker churn eligibility evidence gate v1.2.0 — distinguish payout, offer-received, and account-ownership eligibility semantics. */
 (function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.BTEligibilityGate=api;
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
-  const VERSION='1.1.0';
+  const VERSION='1.2.0';
   const SAFETY_BUFFER_DAYS=5;
   const NUMBER_WORDS={
     one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,
@@ -29,7 +29,9 @@
     return'';
   }
   function normalizeBasis(v){
-    const x=clean(v).toLowerCase().replace(/[^a-z]/g,'');
+    const raw=clean(v).toLowerCase(),x=raw.replace(/[^a-z]/g,'');
+    if(/bonusoffer|offerreceived|receivedoffer/.test(x))return'bonus-offer-received';
+    if(/ownershipended|accountended|stoppedhaving|nolongerhad/.test(x))return'account-ownership-ended';
     if(/bonus|payout/.test(x))return'bonus-received';
     if(/open/.test(x))return'account-opened';
     if(/clos/.test(x))return'account-closed';
@@ -78,16 +80,26 @@
     }
     return false;
   }
+  function stripAbbreviationDots(text){
+    return String(text||'').replace(/\b(?:[A-Za-z]\.){2,}/g,m=>m.replace(/\./g,''));
+  }
   function splitEvidence(text){
-    return String(text||'').split(/(?:\n+|(?<=[.!?])\s+|;\s+)/).map(clean).filter(Boolean);
+    const protectedText=String(text||'').replace(/\b(?:[A-Za-z]\.){2,}/g,m=>m.replace(/\./g,'\uE000'));
+    return protectedText.split(/(?:\n+|(?<=[.!?])\s+|;\s+)/).map(x=>clean(x.replace(/\uE000/g,'.'))).filter(Boolean);
   }
   function eligibilityContext(s){
     return /not eligible|ineligible|not available|cannot|can't|may not|must not|have not|has not|new (?:[^.]{0,40})?customers? only|new (?:[^.]{0,40})?accounts? only|previously received|received [^.]{0,80}bonus|past|previous|preceding|within/i.test(s);
   }
   function basisContext(s,basis){
-    if(basis==='bonus-received')return /(?:receiv(?:e|ed|ing)|paid|payment|payout|earn(?:ed|ing)?)\b[^.;]{0,100}\bbonus\b|\bbonus\b[^.;]{0,100}\b(?:receiv(?:e|ed|ing)|paid|payment|payout|earn(?:ed|ing)?)\b/i.test(s);
-    if(basis==='account-opened')return /\b(?:opened|opening)\b[^.;]{0,100}\b(?:account|checking|savings)\b|\b(?:account|checking|savings)\b[^.;]{0,100}\b(?:opened|opening)\b/i.test(s);
-    if(basis==='account-closed')return /\b(?:closed|closing|closure)\b[^.;]{0,100}\b(?:account|checking|savings)\b|\b(?:account|checking|savings)\b[^.;]{0,100}\b(?:closed|closing|closure)\b/i.test(s);
+    const t=stripAbbreviationDots(clean(s));
+    if(basis==='bonus-offer-received')return /\breceiv(?:e|ed|ing)\b[^.;]{0,120}\bbonus\s+offers?\b|\bbonus\s+offers?\b[^.;]{0,120}\breceiv(?:e|ed|ing)\b/i.test(t);
+    if(basis==='bonus-received'){
+      if(/\bbonus\s+offers?\b/i.test(t))return false;
+      return /(?:receiv(?:e|ed|ing)|paid|payment|payout|earn(?:ed|ing)?)\b[^.;]{0,100}\bbonus\b|\bbonus\b[^.;]{0,100}\b(?:receiv(?:e|ed|ing)|paid|payment|payout|earn(?:ed|ing)?)\b/i.test(t);
+    }
+    if(basis==='account-ownership-ended')return /\b(?:had|have|owned|owner(?:s)?)\b[^.;]{0,140}\b(?:account|checking|savings)\b|\b(?:account|checking|savings)\b[^.;]{0,140}\b(?:had|have|owned|owner(?:s)?)\b/i.test(t);
+    if(basis==='account-opened')return /\b(?:opened|opening)\b[^.;]{0,100}\b(?:account|checking|savings)\b|\b(?:account|checking|savings)\b[^.;]{0,100}\b(?:opened|opening)\b/i.test(t);
+    if(basis==='account-closed')return /\b(?:closed|closing|closure)\b[^.;]{0,100}\b(?:account|checking|savings)\b|\b(?:account|checking|savings)\b[^.;]{0,100}\b(?:closed|closing|closure)\b/i.test(t);
     return false;
   }
   function matchingTimedSentence(text,basis,period){
@@ -98,7 +110,7 @@
       && /past|previous|preceding|prior|previously|last\s+\d|before\s+(?:opening|applying)|prior\s+to/i.test(s);
   }
   function discoverTimedRestrictions(text){
-    const out=[],seen=new Set(),bases=['bonus-received','account-opened','account-closed'];
+    const out=[],seen=new Set(),bases=['bonus-offer-received','bonus-received','account-ownership-ended','account-opened','account-closed'];
     splitEvidence(text).forEach(sentence=>{
       if(!lookbackRestrictionContext(sentence))return;
       bases.forEach(basis=>{
@@ -140,15 +152,21 @@
     return'';
   }
   function currentCustomerRestriction(text){
-    const sentence=splitEvidence(clean(text)).find(s=>
-      /new [^.]{0,80}(?:customer|checking|savings|account)[^.]{0,80}only/i.test(s)||
-      /(?:not eligible|ineligible|not available|cannot|can't|may not)[^.]{0,160}(?:current|existing)[^.]{0,100}(?:customer|owner|account|checking|savings)/i.test(s)||
-      /(?:current|existing)[^.]{0,100}(?:customer|owner|account|checking|savings)[^.]{0,160}(?:not eligible|ineligible|not available|cannot|can't|may not)/i.test(s)
-    )||'';
+    const sentence=splitEvidence(clean(text)).find(s=>{
+      const q=stripAbbreviationDots(s);
+      return /new [^.]{0,80}(?:customer|checking|savings|account)[^.]{0,80}only/i.test(q)||
+        /(?:not eligible|ineligible|not available|cannot|can't|may not)[^.]{0,160}(?:current|existing)[^.]{0,100}(?:customer|owner|account|checking|savings)/i.test(q)||
+        /(?:current|existing)[^.]{0,100}(?:customer|owner|account|checking|savings)[^.]{0,160}(?:not eligible|ineligible|not available|cannot|can't|may not)/i.test(q)
+    })||'';
     return{excluded:!!sentence,sentence};
   }
-  function basisDate(e,basis){
-    return basis==='bonus-received'?clean(e?.bonusRecd):basis==='account-opened'?clean(e?.opened):basis==='account-closed'?clean(e?.closed):'';
+  function basisDate(e,basis,rule){
+    if(rule?.anchorDate)return clean(rule.anchorDate);
+    if(basis==='bonus-received')return clean(e?.bonusRecd);
+    if(basis==='bonus-offer-received')return clean(e?.bonusOfferReceived||e?.offerReceivedDate);
+    if(basis==='account-opened')return clean(e?.opened);
+    if(basis==='account-closed'||basis==='account-ownership-ended')return clean(e?.closed);
+    return'';
   }
   function normalizeRule(r,e,index){
     const fallbackSource=evidenceSource(e);
@@ -158,7 +176,8 @@
       period:periodFromRule(r),
       evidenceText:clean(r?.evidenceText||r?.eligibilityEvidenceText||''),
       evidenceSource:clean(r?.evidenceSource||r?.eligibilityEvidenceSource||fallbackSource),
-      scope:clean(r?.scope||r?.eligibilityScope||'')
+      scope:clean(r?.scope||r?.eligibilityScope||''),
+      anchorDate:clean(r?.anchorDate||r?.eligibilityAnchorDate||'')
     };
   }
   function normalizedRules(e){
@@ -229,7 +248,7 @@
   function officialEligibilityDates(e,addD,addM){
     const v=validate(e);if(!v.ok||v.decision!=='repeatable')return[];
     return v.rules.map(rule=>{
-      const anchorDate=basisDate(e,rule.basis);
+      const anchorDate=basisDate(e,rule.basis,rule);
       const eligibleDate=anchorDate?applyPeriod(anchorDate,rule.period,addD,addM):'';
       return{...rule,anchorDate,eligibleDate};
     });
@@ -260,7 +279,11 @@
     return period.value+' '+period.unit.replace(/s$/,'')+(period.value===1?'':'s');
   }
   function anchorLabel(basis){
-    return basis==='bonus-received'?'bonus received':basis==='account-opened'?'account opened':basis==='account-closed'?'account closed':'';
+    return basis==='bonus-received'?'bonus payout received':
+      basis==='bonus-offer-received'?'bonus offer received':
+      basis==='account-opened'?'account opened':
+      basis==='account-ownership-ended'?'account ownership ended':
+      basis==='account-closed'?'account closed':'';
   }
   function summary(e){
     const v=validate(e);
@@ -281,7 +304,7 @@
     if(v.ok&&v.decision==='repeatable'){
       out.eligibilityRules=v.rules.map(r=>({
         id:r.id,basis:r.basis,periodValue:r.period.value,periodUnit:r.period.unit,
-        evidenceText:r.evidenceText,evidenceSource:r.evidenceSource,scope:r.scope||''
+        evidenceText:r.evidenceText,evidenceSource:r.evidenceSource,scope:r.scope||'',anchorDate:r.anchorDate||''
       }));
       if(v.rules.length===1){
         const r=v.rules[0];
