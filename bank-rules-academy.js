@@ -1,18 +1,43 @@
 /*
  * filename: bank-rules-academy.js
- * version: 3.1.1
+ * version: 3.4.16
  * purpose: Academy Bank Elite Investment Checking saved profile.
  * last-touched: unknown
  */
 (function(){
-  const VER='3.1.1';
+  const VER='3.4.16';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const uniq=a=>Array.from(new Set((a||[]).filter(Boolean).map(clean))).filter(Boolean);
 
+  function sentenceList(raw){return String(raw||'').replace(/\r/g,'\n').split(/(?<=[.!?])\s+|\n+|;+/).map(clean).filter(Boolean)}
+  function unconditionalNoBonus(raw){
+    return sentenceList(raw).some(line=>{
+      const s=clean(line);
+      if(/\bnot available to\b|\bnot available for\b|\bineligible if\b|\bnot eligible if\b|\bunless\b|\bcustomers? who\b|\bemployees?\b/i.test(s))return false;
+      return /\b(?:there is|there's)\s+no\s+(?:cash\s+)?bonus\b/i.test(s)
+        || /\b(?:this|the)\s+(?:account|offer|promotion)\s+(?:is|does)\s+not\s+(?:a\s+)?(?:cash\s+)?bonus(?:\s+offer)?\b/i.test(s)
+        || /\b(?:does not|doesn't|will not|won't)\s+(?:offer|include|provide|pay)\b[^.]{0,80}\bbonus\b/i.test(s)
+        || /\bno\s+\$\s*[0-9][0-9,]*(?:\.\d{1,2})?\s+(?:cash\s+)?bonus\b/i.test(s)
+        || /\b(?:cash\s+)?bonus\s+(?:is|are)\s+not\s+(?:offered|available|included|provided|payable)\s*[.!?]?$/i.test(s)
+        || /\bnot\s+(?:a|an)\s+(?:cash\s+)?bonus\s+offer\b/i.test(s)
+    })
+  }
+  function matchesSavedOffer(raw){
+    const s=String(raw||'');
+    if(!/\bAcademy Bank\b/i.test(s)||!/\bElite Investment Checking\b/i.test(s))return false;
+    if(unconditionalNoBonus(s))return false;
+    const positiveBonus=/(?:earn|receive|get|eligible for|offer(?:ing)?)[^.]{0,80}\$\s*500\s+(?:cash\s+)?bonus|\$\s*500\s+(?:cash\s+)?bonus[^.]{0,80}(?:when|after|for|with|by)/i.test(s);
+    return positiveBonus
+      && /\$\s*100[^.]{0,80}(?:opening balance|opening deposit|minimum opening)/i.test(s)
+      && /(?:four|4)\s+(?:qualifying\s+)?direct deposits?/i.test(s)
+      && /\$\s*10,?000/i.test(s)
+      && /\b90\s+(?:calendar\s+)?days?\b/i.test(s)
+      && /\bOnline Banking\b/i.test(s);
+  }
+
   function applyAcademyElite(r){
     const raw=String(r?.normalizedRaw||r?.raw||'');
-    if(!/Academy Bank|Elite Investment Checking|MoneyPass/i.test(raw))return r;
-    if(!/Elite Investment Checking|\$100 opening balance|required|four direct deposits|Online Banking/i.test(raw))return r;
+    if(!matchesSavedOffer(raw))return r;
 
     r.bank='Academy Bank';
     r.acct='Academy Bank Elite Investment Checking';
@@ -103,6 +128,8 @@
   }
 
   window.tcV3ApplyAcademyEliteRule=applyAcademyElite;
+  window.tcV3AcademySavedOfferMatches=matchesSavedOffer;
+  window.tcV3AcademyUnconditionalNoBonus=unconditionalNoBonus;
   window.tcV3AcademyRulesVersion=VER;
   setTimeout(wrap,80);setTimeout(wrap,500);setTimeout(wrap,1400);
 })();
