@@ -156,7 +156,9 @@ if 'window.confirm(' in entry_import or 'window.confirm(' in app_source:
     fail('native browser confirm remains in a production workflow')
 
 dark_css=text('style.css')
-if 'v3.4.30 professional operations UI' not in dark_css:\n    fail('professional operations visual layer missing')\nfor token in ('v3.4.29 expanded bank detail dark-surface hardening','.profile-section,.profile-section-body','.bt-life,.bt-life-step','.profile-summary-item','.ck li,.tm li'):
+if 'v3.4.30 professional operations UI' not in dark_css:
+    fail('professional operations visual layer missing')
+for token in ('v3.4.29 expanded bank detail dark-surface hardening','.profile-section,.profile-section-body','.bt-life,.bt-life-step','.profile-summary-item','.ck li,.tm li'):
     if token not in dark_css: fail(f'expanded bank detail dark coverage missing: {token}')
 if 'v3.4.29 interaction + dark prompt contrast hardening' not in dark_css:
     fail('dark prompt contrast hardening release marker missing')
