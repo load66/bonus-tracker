@@ -9,8 +9,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -61,29 +59,34 @@ jobs:
       - name: Run universal 5-day churn buffer tests
         run: node tests/churn-buffer.test.js
 
+      - name: Run hardening regression tests
+        env:
+          TZ: America/Chicago
+        run: node tests/hardening-regression.test.js
+
+      - name: Package the exact verified site
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: .
+
   deploy:
     name: Deploy verified release to GitHub Pages
     if: github.event_name != 'pull_request'
     needs: verify
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout the exact verified commit
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
         with:
           enablement: true
-
-      - name: Upload verified site artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: .
 
       - name: Deploy verified site
         id: deployment

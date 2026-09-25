@@ -11,8 +11,8 @@
   const money=n=>'$'+Number(n||0).toLocaleString();
   const pretty=d=>{try{return window.fD?window.fD(d):new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}catch{return d||''}};
   const isTerms=v=>String(v||'').length>120&&/(bonus|offer|eligible|qualifying|direct deposit|checking|monthly fee|terms|conditions|promo|qualification|cash bonus|account)/i.test(v||'');
-  function todayIso(){try{return typeof window.td==='function'?window.td():new Date().toISOString().slice(0,10)}catch{return new Date().toISOString().slice(0,10)}}
-  function addDaysIso(start,days){try{if(window.addD)return window.addD(start,days)}catch{}const d=new Date(start+'T00:00:00');d.setDate(d.getDate()+Number(days||0));return d.toISOString().split('T')[0]}
+  function todayIso(){try{if(typeof window.td==='function')return window.td()}catch{}const d=new Date(),pad=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
+  function addDaysIso(start,days){try{if(window.addD)return window.addD(start,days)}catch{}const m=String(start||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return'';const d=new Date(Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3])));d.setUTCDate(d.getUTCDate()+Number(days||0));return d.toISOString().slice(0,10)}
   const TRAINING_KEY='bt_analyzer_training_library_v1';
   const RULES_KEY='bt_analyzer_user_rules_v1';
   const ruleFields=[

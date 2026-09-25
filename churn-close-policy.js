@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.14 — confirmed-close-date churn clock with a universal 5-day safety buffer. */
+/* BonusTracker v3.4.16 — confirmed-close-date churn clock with a universal 5-day safety buffer. */
 (function(){
   'use strict';
-  const VER='3.4.14';
+  const VER='3.4.16';
   const SAFETY_BUFFER_DAYS=5;
 
   function decision(e){
