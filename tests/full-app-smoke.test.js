@@ -160,7 +160,7 @@ setTimeout(()=>{
     assert(/Can this bonus be earned again\? \*/.test(wizardBasics)&&/Eligibility clock starts from \*/.test(wizardBasics)&&/exact eligibility wording from the offer/i.test(wizardBasics)&&/Churn T&C verified/.test(wizardBasics),'Guided editor did not show verified T&C churn evidence');
     sandbox.btWizardStep(4);
     const wizardReview=sandbox.rModal();
-    assert(/Future eligibility/.test(wizardReview)&&/12 months after bonus received \+ 5-day safety buffer/.test(wizardReview),'Guided review did not show the T&C-verified source-based eligibility policy');
+    assert(/Future eligibility/.test(wizardReview)&&/12 months after bonus payout received \+ 5-day safety buffer/.test(wizardReview),'Guided review did not show the T&C-verified source-based eligibility policy');
 
     const fourLeaf='FourLeaf Checking Up to $550 Bonus Offer. Open a Free Checking, Smart Checking, or Student Checking account between February 2, 2026 and December 31, 2026. Have a Qualifying Direct Deposit post within ninety (90) calendar days of account opening. A Qualifying Direct Deposit is a recurring electronic deposit of a paycheck, pension, or government benefits of $500.00 or more. The First Direct Deposit Bonus of $350 will be deposited within sixty (60) calendar days following the initial Qualifying Direct Deposit. Continue to have a Qualifying Direct Deposit for twelve (12) consecutive months for an additional $100 and twenty-four (24) consecutive months for another $100. The checking account must remain open and in good standing up to and including the date each bonus is deposited. You must not have previously received a new checking account opening related bonus from FourLeaf.';
     const fr=sandbox.tcV3Analyze(fourLeaf,{noGlobalFallback:true});
