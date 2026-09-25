@@ -1,11 +1,11 @@
 /*
  * filename: profile-registry-academy.js
- * version: 3.1.1
+ * version: 3.4.16
  * purpose: Academy Bank profile registry extension.
  * last-touched: unknown
  */
 (function(){
-  const VER='3.1.1';
+  const VER='3.4.16';
   const ACADEMY={
     id:'academy-bank-elite-investment-checking',
     bank:'Academy Bank',
@@ -17,6 +17,17 @@
     note:'Saved profile: Academy Bank Elite Investment Checking $500 direct deposit bonus.'
   };
   function scoreProfile(p,raw){return (p.signals||[]).reduce((n,re)=>n+(re.test(raw)?1:0),0)}
+  function matchesAcademySavedOffer(raw){
+    try{if(typeof window.tcV3AcademySavedOfferMatches==='function')return window.tcV3AcademySavedOfferMatches(raw)}catch{}
+    const s=String(raw||'');
+    return /\bAcademy Bank\b/i.test(s)
+      && /\bElite Investment Checking\b/i.test(s)
+      && /\$\s*500\s+(?:cash\s+)?bonus/i.test(s)
+      && /(?:four|4)\s+(?:qualifying\s+)?direct deposits?/i.test(s)
+      && /\$\s*10,?000/i.test(s)
+      && /\b90\s+(?:calendar\s+)?days?\b/i.test(s)
+      && !/\b(?:there is|there's)\s+no\s+(?:cash\s+)?bonus\b|\bnot\s+(?:a|an)\s+(?:cash\s+)?bonus\s+offer\b/i.test(s)
+  }
   function wrapList(){
     if(window.__tcV31AcademyRegistryWrapped)return;
     if(typeof window.tcV3KnownProfiles!=='function'||typeof window.tcV3MatchKnownProfile!=='function')return;
@@ -31,7 +42,7 @@
       raw=String(raw||'');
       const academyScore=scoreProfile(ACADEMY,raw);
       const base=baseMatch(raw);
-      if(academyScore>=2 && (!base?.known || academyScore >= (base.score||0))) return {...ACADEMY,score:academyScore,known:true};
+      if(matchesAcademySavedOffer(raw) && (!base?.known || academyScore >= (base.score||0))) return {...ACADEMY,score:academyScore,known:true};
       return base;
     };
     window.__tcV31AcademyRegistryWrapped=true;
