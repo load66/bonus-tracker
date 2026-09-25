@@ -52,16 +52,15 @@
     return null;
   }
   function legacyFallbackReadyDate(e){
-    if(!e||decision(e)!=='repeatable'||hasStructuredEligibilityEvidence(e))return'';
+    // Legacy fallback is intentionally conservative: it applies only to a
+    // previously closed, pre-structured record and always anchors to closure.
+    // New structured T&C never falls through here when evidence is unresolved.
+    if(!e||!e.closed||decision(e)!=='repeatable'||hasStructuredEligibilityEvidence(e))return'';
     const period=legacyRulePeriod(e);if(!period)return'';
-    const b=sourceBasis(e);
-    let base=b?basisDate(e):'';
-    if(!base)base=e.closed||'';
-    if(!base)return'';
     let official='';
-    if(period.unit==='day')official=addDLocal(base,period.value);
-    else if(period.unit==='month')official=addMLocal(base,period.value);
-    else if(period.unit==='year')official=addMLocal(base,period.value*12);
+    if(period.unit==='day')official=addDLocal(e.closed,period.value);
+    else if(period.unit==='month')official=addMLocal(e.closed,period.value);
+    else if(period.unit==='year')official=addMLocal(e.closed,period.value*12);
     return official?addDLocal(official,SAFETY_BUFFER_DAYS):'';
   }
   function sourceBasis(e){
