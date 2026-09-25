@@ -25,7 +25,7 @@ const sandbox={
   safeCloseDate:e=>e._safeCloseDate||'',
   churnReadyDate:e=>e._churnReadyDate||'',
   isNonRepeatableEntry:e=>!!e._nonRepeatable,
-  fM:n=>'
+  fM:n=>'USD '+Number(n||0).toLocaleString(),
   nextActiveTimer:e=>(e.customTimers||[]).find(t=>!t.done)||null,
   normalizeTimer:t=>({id:t.id||'x',text:t.text||'',startDate:t.startDate||'',daysRequired:Number(t.daysRequired||0),date:t.date||'',done:!!t.done}),
   normalizeTimerList:list=>(list||[]).map(t=>({id:t.id||'x',text:t.text||'',startDate:t.startDate||'',daysRequired:Number(t.daysRequired||0),date:t.date||'',done:!!t.done})),
