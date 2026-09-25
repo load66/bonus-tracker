@@ -4139,7 +4139,8 @@ function collectModalEntryData(){
   d.churnReason=modal.churnReason||modal.analysis?.churnReason||'';
   d.churnDecisionSource=modal.churnDecisionSource||modal.analysis?.churnDecisionSource||(modal.analysis?'analyzer-reviewed':'user-confirmed');
   d.churnDecisionConfirmedAt=modal.churnDecisionConfirmedAt||td();
-  applyChurnDecisionFields(d);\n  try{if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.stamp==='function')Object.assign(d,window.BTEligibilityGate.stamp(d))}catch{}
+  applyChurnDecisionFields(d);
+  try{if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.stamp==='function')Object.assign(d,window.BTEligibilityGate.stamp(d))}catch{}
   sanitizeCloseFieldsForEntry(d);
   syncRequiredDaysFromModal(d);
   d.earlyCloseFee=parseCloseFeeAmount(modal.earlyTerminationFeeText);
