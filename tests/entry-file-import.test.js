@@ -91,6 +91,7 @@ const strictV2={
   },
   entry:{
     ...payload,
+    tcSourceRaw:'Citi checking bonus promotional terms. This offer is for eligible new consumer checking customers. Not eligible if you received a Citi checking bonus within the past 12 months. Complete the qualifying deposit requirements within 90 days after account opening. Bonus payout follows the promotional terms.',
     eligibilityRules:[
       {id:'bonus-12m',basis:'bonus-received',periodValue:12,periodUnit:'months',scope:'consumer-checking',evidenceText:'Not eligible if you received a Citi checking bonus within the past 12 months.',evidenceSource:'official-promotion-terms'}
     ]
@@ -112,6 +113,26 @@ try{
   sandbox.btParseEntryFileText(JSON.stringify(noRules),'MissingRules.json')
 }catch(e){rejected=/eligibilityRules/.test(String(e.message))}
 assert(rejected,'Strict JSON v2 accepted a repeatable bonus without eligibilityRules');
+
+rejected=false;
+try{
+  const missingTc={...strictV2,entry:{...strictV2.entry,tcSourceRaw:''}};
+  sandbox.btParseEntryFileText(JSON.stringify(missingTc),'MissingTC.json')
+}catch(e){rejected=/full pasted T&C/.test(String(e.message))}
+assert(rejected,'Strict JSON v2 accepted a missing full T&C source');
+
+rejected=false;
+try{
+  const omittedRule={...strictV2,entry:{
+    ...strictV2.entry,
+    tcSourceRaw:'Citi checking bonus promotional terms. Not eligible if you received a checking bonus within the past 24 months. You are also not eligible if you closed a checking account within the past 12 months. Complete qualifying deposits within 90 days after account opening.',
+    eligibilityRules:[
+      {id:'bonus-24m',basis:'bonus-received',periodValue:24,periodUnit:'months',scope:'consumer-checking',evidenceText:'Not eligible if you received a checking bonus within the past 24 months.',evidenceSource:'official-promotion-terms'}
+    ]
+  }};
+  sandbox.btParseEntryFileText(JSON.stringify(omittedRule),'OmittedRule.json')
+}catch(e){rejected=/additional .* eligibility restriction|missing from eligibilityRules/.test(String(e.message))}
+assert(rejected,'Strict JSON v2 accepted T&C containing an omitted second churn restriction');
 
 const encoded=Buffer.from(JSON.stringify(payload)).toString('base64url');
 const parsedHtml=sandbox.btParseEntryFileText(`<a href="https://load66.github.io/bonus-tracker/#btadd=${encoded}">Add Citi</a>`,'Citi.html');
