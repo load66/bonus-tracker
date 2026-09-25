@@ -13,7 +13,7 @@ assert(importSource.includes("modal._skipDuplicateCheck=false"),'Entry-file impo
 assert(importSource.includes("modal._edit=false"),'Entry-file import is not staged as a new entry');
 assert(importSource.includes("modal.monthlyFeeChecked=false"),'Entry-file import can incorrectly pre-mark monthly fee review as checked');
 assert(importSource.includes("Import Entry File"),'Import Entry File UI is missing');
-assert(importSource.includes(".json,.html,application/json,text/html"),'JSON/HTML entry-file support is missing');
+assert(importSource.includes(".json,.html,application/json,text/html"),'JSON/HTML entry-file support is missing');\nassert(importSource.includes('btConfirmDialog'),'Entry import did not adopt the in-app confirmation surface');\nassert(!importSource.includes('window.confirm('),'Entry import still invokes native browser confirm');
 assert(appSource.includes("if(!modal._edit&&!modal._skipManualReplacePrompt&&handleManualReplacementPicker(d,'manual',''))"),'saveEntry no longer routes new entries through the replacement picker');
 assert(appSource.includes('function doReplacementPickerReplace()'),'Replace Old Entry action is missing');
 assert(appSource.includes('function doReplacementPickerCreateSeparate()'),'Create Separate action is missing');
