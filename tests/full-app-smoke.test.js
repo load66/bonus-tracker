@@ -94,7 +94,7 @@ setTimeout(()=>{
       };
       const lifecycleTagOpen=html=>{
         const tag=lifecycleTag(html);
-        return !!tag&&tag.includes('data-entry-id="'+id+'"')&&(' '+tag.replace(/\s+/g,' ')+' ').includes(' open ');
+        return !!tag&&tag.includes('data-section-key="lifecycle"')&&(' '+tag.replace(/\s+/g,' ')+' ').includes(' open ');
       };
       const result={
         attrBefore,
