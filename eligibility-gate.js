@@ -113,7 +113,7 @@
     return clean([
       e?.tcSourceRaw,e?.analysis?.rawText,e?.analysis?.sourceText,
       e?.eligibilityEvidenceText,e?.analysis?.eligibilityEvidenceText,
-      e?.eligibilityText,e?.analysis?.eligibilityText,e?.churnRuleText,e?.churnReason
+      e?.eligibilityText,e?.analysis?.eligibilityText,e?.churnRuleText,e?.churnReason,e?.currentCustomerEvidenceText,e?.analysis?.currentCustomerEvidenceText
     ].filter(Boolean).join('\n'));
   }
   function evidenceSource(e){
@@ -205,10 +205,10 @@
     out.eligibilityVerificationStatus=v.status;
     out.eligibilityVerificationReason=v.reason||'';
     out.eligibilityEvidenceSource=v.evidenceSource||out.eligibilityEvidenceSource||'';
-    if(v.evidenceSentence)out.eligibilityEvidenceText=v.evidenceSentence;
+    if(v.evidenceText)out.eligibilityEvidenceText=v.evidenceText;\n    if(v.evidenceSentence)out.eligibilityAnchorEvidenceText=v.evidenceSentence;\n    if(v.currentCustomerSentence)out.currentCustomerEvidenceText=v.currentCustomerSentence;
     if(v.period){out.churnPeriodValue=v.period.value;out.churnPeriodUnit=v.period.unit;}
     out.currentCustomerExcluded=!!v.currentCustomerExcluded;
-    out.mustCloseBeforeReapply=!!v.mustCloseBeforeReapply;
+    out.mustCloseBeforeReapply=!!v.mustCloseBeforeReapply;\n    out.reapplicationAction=v.decision==='nonrepeatable'?'do-not-churn':v.ok?(v.mustCloseBeforeReapply?'close-before-reapply':'cooldown-only'):'review-required';
     if(v.ok)out.eligibilityVerifiedAt=out.eligibilityVerifiedAt||new Date().toISOString();
     return out;
   }
