@@ -5927,7 +5927,7 @@ entries=sortE(entries);R();
     if(!hasEntries&&!hasAny)return {ok:false,error:'This backup does not contain BonusTracker app keys.'};
     return {ok:true,storage};
   }
-  async async function restoreFromObject(obj){
+  async function restoreFromObject(obj){
     const v=validateBackup(obj);
     if(!v.ok){alert(v.error);return false;}
     const storage=v.storage;
