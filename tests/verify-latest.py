@@ -30,7 +30,9 @@ if len(parser.ids)!=len(set(parser.ids)): fail('duplicate static HTML id found')
 for ref in parser.refs:
     if not (ROOT/ref).exists(): fail(f'index references missing file: {ref}')
 if not parser.scripts or parser.scripts[0]!='close-rules-core.js': fail('close-rules-core.js must be first external script')
-if not parser.scripts or parser.scripts[-1]!='mobile-analyzer.js': fail('mobile-analyzer.js must be final external script')\nif 'eligibility-gate.js' not in parser.scripts: fail('churn eligibility evidence gate is not loaded')\nelif parser.scripts.index('eligibility-gate.js')>parser.scripts.index('app.js'): fail('eligibility gate must load before app.js')
+if not parser.scripts or parser.scripts[-1]!='mobile-analyzer.js': fail('mobile-analyzer.js must be final external script')
+if 'eligibility-gate.js' not in parser.scripts: fail('churn eligibility evidence gate is not loaded')
+elif parser.scripts.index('eligibility-gate.js')>parser.scripts.index('app.js'): fail('eligibility gate must load before app.js')
 if 'bank-rules-fourleaf.js' not in parser.scripts: fail('FourLeaf analyzer rule is not loaded')
 elif parser.scripts.index('bank-rules-fourleaf.js')<parser.scripts.index('bank-rules.js'): fail('FourLeaf rule must load after the base bank rules')
 if 'bank-rules-wells-consumer.js' not in parser.scripts: fail('Wells Fargo consumer analyzer rule is not loaded')
@@ -133,7 +135,7 @@ for token in ('BTEligibilityGate.validate','Churn eligibility is not verified fr
     if token not in entry_import: fail(f'evidence-gated entry import missing: {token}')
 
 churn_policy=text('churn-close-policy.js')
-for token in ('source-accurate eligibility clock','sourceEligibilityBasis','churnBasisDate','nextReopen','churnReadyDate','churnBufferDaysFor','source-basis-required','collectModalEntryData','normalizeLifecycleEntry'):
+for token in ('T&C-evidence-gated eligibility clock','sourceEligibilityBasis','churnBasisDate','nextReopen','churnReadyDate','churnBufferDaysFor','btOfficialEligibilityDate','btApplicationReadyDate','collectModalEntryData','normalizeLifecycleEntry'):
     if token not in churn_policy: fail(f'source-accurate churn policy missing: {token}')
 
 close_core=text('close-rules-core.js')
@@ -156,7 +158,8 @@ for token in (
     "python-version: '3.12'",
     'python3 tests/verify-latest.py',
     'node tests/close-rules.test.js',
-    'node tests/full-app-smoke.test.js',\n    'node tests/eligibility-gate.test.js',
+    'node tests/full-app-smoke.test.js',
+    'node tests/eligibility-gate.test.js',
     'needs: verify',
     'actions/configure-pages@v5',
     'enablement: true',
