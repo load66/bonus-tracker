@@ -80,16 +80,30 @@ setTimeout(()=>{
       const before=document.getElementById('app').innerHTML;
       toggleCk(id,0);
       const after=document.getElementById('app').innerHTML;
+      const lifecycleTagOpen=html=>{
+        const needle='data-entry-id="'+id+'"';
+        const at=html.indexOf(needle);
+        if(at<0)return false;
+        const start=html.lastIndexOf('<details',at);
+        const end=html.indexOf('>',at);
+        if(start<0||end<0)return false;
+        const tag=html.slice(start,end+1);
+        return tag.includes('data-section-key="lifecycle"')&&(' '+tag.replace(/\s+/g,' ')+' ').includes(' open ');
+      };
       const result={
-        beforeOpen:before.includes('data-entry-id="'+id+'" data-section-key="lifecycle" open'),
-        afterOpen:after.includes('data-entry-id="'+id+'" data-section-key="lifecycle" open'),
+        stateBefore:profileSectionIsOpen(id,'lifecycle'),
+        beforeOpen:lifecycleTagOpen(before),
+        afterOpen:lifecycleTagOpen(after),
+        stateAfter:profileSectionIsOpen(id,'lifecycle'),
         checked:!!entries[0].checklist[0].done,
         expandedStill:expanded===id
       };
       entries=oldEntries;expanded=oldExpanded;search=oldSearch;tab=oldTab;R();
       return result;
     })()`,sandbox);
-    assert(sectionStateRegression.beforeOpen,'Lifecycle section did not render open from centralized UI state');
+    assert(sectionStateRegression.stateBefore,'Centralized lifecycle state was not open before toggle');
+    assert(sectionStateRegression.beforeOpen,'Lifecycle section did not render with open attribute from centralized UI state');
+    assert(sectionStateRegression.stateAfter,'Centralized lifecycle state was lost after checklist toggle/full render cycle');
     assert(sectionStateRegression.afterOpen,'Lifecycle section collapsed after checklist toggle/full render cycle');
     assert(sectionStateRegression.checked,'Checklist state did not toggle during lifecycle persistence regression');
     assert(sectionStateRegression.expandedStill,'Bank card did not remain expanded during lifecycle persistence regression');
