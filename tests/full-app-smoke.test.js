@@ -111,7 +111,11 @@ setTimeout(()=>{
       entries=oldEntries;expanded=oldExpanded;search=oldSearch;tab=oldTab;R();
       return result;
     })()`,sandbox);
-    assert(sectionStateRegression.attrBefore===' open','profileSectionOpenAttr did not report open before render: '+sectionStateRegression.attrBefore);\n    assert(sectionStateRegression.rendererHasSectionState,'Registered window.rTracker is not the section-state-aware renderer');\n    assert(sectionStateRegression.stateBefore,'Centralized lifecycle state was not open before toggle');
+    assert(sectionStateRegression.attrBefore===' open','profileSectionOpenAttr did not report open before render: '+sectionStateRegression.attrBefore);\n    assert(sectionStateRegression.rendererHasSectionState,'Registered window.rTracker is not the section-state-aware renderer');\n    if(!sectionStateRegression.directOpen||!sectionStateRegression.beforeOpen||!sectionStateRegression.afterOpen){
+      console.log('SECTION_STATE_DIAG',JSON.stringify(sectionStateRegression));
+      console.log('ACTIVE_RENDERER_HAS_STATE_HELPER',String(sandbox.rTracker).includes('profileSectionOpenAttr'));
+    }
+    assert(sectionStateRegression.stateBefore,'Centralized lifecycle state was not open before toggle');
     assert(sectionStateRegression.directOpen,'Registered active tracker renderer ignored centralized lifecycle open state: '+sectionStateRegression.directTag);
     assert(sectionStateRegression.beforeOpen,'R() did not preserve active renderer lifecycle open state');
     assert(sectionStateRegression.stateAfter,'Centralized lifecycle state was lost after checklist toggle/full render cycle');
