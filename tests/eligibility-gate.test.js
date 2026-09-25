@@ -56,6 +56,9 @@ const currentCustomer={
 };
 v=G.validate(currentCustomer);
 assert(v.ok&&v.mustCloseBeforeReapply,'Current-customer exclusion was not captured');
+const stamped=G.stamp(currentCustomer);
+assert(stamped.currentCustomerEvidenceText&&stamped.reapplicationAction==='close-before-reapply','Current-customer evidence/action was not persisted');
+assert(G.validate(stamped).mustCloseBeforeReapply,'Stamped entry forgot the current-customer closure requirement');
 assert(G.applicationReadyDate(currentCustomer,addD,addM)==='','Application-ready date was shown while a required account closure is missing');
 assert(G.applicationReadyDate({...currentCustomer,closed:'2027-08-15'},addD,addM)==='2027-09-06','Early account close incorrectly moved the cooldown date');
 assert(G.applicationReadyDate({...currentCustomer,closed:'2027-09-10'},addD,addM)==='2027-09-10','Later required account close was not respected');
