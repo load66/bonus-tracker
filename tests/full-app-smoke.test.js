@@ -55,12 +55,12 @@ function assert(ok,msg){if(!ok)throw new Error(msg)}
 setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.18',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.4.18',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.19',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.4.19',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.13',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
-    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.18',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
-    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.18',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
-    assert(sandbox.BTCloseRules?.VERSION==='3.4.13',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
+    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.19',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
+    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.19',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
+    assert(sandbox.BTCloseRules?.VERSION==='3.4.13',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);\n    assert(sandbox.BTEligibilityGate?.VERSION==='1.0.0',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
     const localNow=new Date(),pad=n=>String(n).padStart(2,'0'),localToday=`${localNow.getFullYear()}-${pad(localNow.getMonth()+1)}-${pad(localNow.getDate())}`;
     assert(vm.runInContext('td()',sandbox)===localToday,'Today default is not based on the local calendar date');
@@ -195,6 +195,6 @@ setTimeout(()=>{
     if(typeof sandbox.R==='function')sandbox.R();
     assert(app.innerHTML.length>1000,'Tracker failed to render after regression run');
     assert(!errors.some(x=>x.startsWith('ERROR ')),`Runtime console errors: ${errors.join(' | ')}`);
-    console.log(`Full app smoke passed: ${scripts.length} runtime scripts · ${report.passed}/${report.total} regression checks · transactional restore, source-accurate eligibility, Wells consumer accuracy, FourLeaf archive, and mobile Safari release verified`);
+    console.log(`Full app smoke passed: ${scripts.length} runtime scripts · ${report.passed}/${report.total} regression checks · transactional restore, T&C-evidence-gated eligibility, Wells consumer accuracy, FourLeaf archive, and mobile Safari release verified`);
   }catch(err){console.error(err.stack||err);process.exitCode=1}
 },2200);
