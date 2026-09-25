@@ -55,8 +55,8 @@ function assert(ok,msg){if(!ok)throw new Error(msg)}
 setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.23',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.4.23',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.24',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.4.24',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.13',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
     assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.23',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
     assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.23',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
@@ -66,6 +66,10 @@ setTimeout(()=>{
     sandbox.R();
     assert(app.innerHTML.includes('<span>T&C Archive</span>'),'T&C Archive did not replace the Phone bottom tab');
     assert(!app.innerHTML.includes('<span>Phone</span>'),'Phone bottom tab is still rendered');
+    const darkCss=fs.readFileSync('style.css','utf8');
+    assert(darkCss.includes('v3.4.24 Midnight professional dark theme'),'Midnight dark theme release marker missing');
+    assert(darkCss.includes('--bg:#060A11')&&darkCss.includes('--card:#0D1420')&&darkCss.includes('color-scheme:dark'),'Core dark theme palette is incomplete');
+    assert(darkCss.includes('.modal,.dd-box')&&darkCss.includes('.clean-plan-card')&&darkCss.includes('.dp-summary'),'Dark theme does not cover modal, T&C archive, and datapoint surfaces');
     const churnListNoLegacy=vm.runInContext(`(function(){
       const old=entries;
       const wording='Not eligible if you closed a consumer checking account within the past 12 months.';
