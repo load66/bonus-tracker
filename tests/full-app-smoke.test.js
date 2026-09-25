@@ -60,7 +60,8 @@ setTimeout(()=>{
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.13',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
     assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.19',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
     assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.19',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
-    assert(sandbox.BTCloseRules?.VERSION==='3.4.13',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);\n    assert(sandbox.BTEligibilityGate?.VERSION==='1.0.0',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
+    assert(sandbox.BTCloseRules?.VERSION==='3.4.13',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
+    assert(sandbox.BTEligibilityGate?.VERSION==='1.0.0',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
     const localNow=new Date(),pad=n=>String(n).padStart(2,'0'),localToday=`${localNow.getFullYear()}-${pad(localNow.getMonth()+1)}-${pad(localNow.getDate())}`;
     assert(vm.runInContext('td()',sandbox)===localToday,'Today default is not based on the local calendar date');
