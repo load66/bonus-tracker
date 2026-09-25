@@ -1,10 +1,10 @@
-/* BonusTracker v3.4.15 — safe entry-file import and replacement-aware review. */
+/* BonusTracker v3.4.19 — evidence-gated entry-file import and replacement-aware review. */
 (function(){
   'use strict';
-  const VER='3.4.15';
+  const VER='3.4.19';
   const HASH_KEY='btadd=';
   const ALLOWED=[
-    'bank','accountType','bonus','churn','churnable','churnability','churnBasis','churnBufferDays','churnReason','sourceEligibilityBasis','churnTrackingPolicy','churnDecisionSource','churnDecisionConfidence','churnDecisionConfirmedAt',
+    'bank','accountType','bonus','churn','churnable','churnability','churnBasis','churnBufferDays','churnReason','sourceEligibilityBasis','churnTrackingPolicy','churnDecisionSource','churnDecisionConfidence','churnDecisionConfirmedAt','churnPeriodValue','churnPeriodUnit','eligibilityEvidenceText','eligibilityEvidenceSource','eligibilityVerified','eligibilityVerifiedAt','eligibilityVerificationStatus','eligibilityVerificationReason','currentCustomerExcluded','mustCloseBeforeReapply','tcSourceRaw','tcSourceId','tcSourceUpdatedAt',
     'opened','closed','bonusRecd','reqMet','notes','analyzedTC','minHoldDays','closeFeeCountdownDays','earlyCloseFee','reqDays','referralBonus','dataPoint',
     'fundedDays','fundingAmount','fundingAmountText','payoutTimingText','phoneNum','feeChecked','monthlyFeeYNText','monthlyFeeAmountText','monthlyFeeFrequency',
     'monthlyFeeWaiverType','monthlyFeeWaiverAmountText','monthlyFeeWaiverText','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText',
@@ -35,7 +35,7 @@
     out.reqDays=Math.max(0,parseInt(out.reqDays||0,10)||0);
     out.minHoldDays=Math.max(0,parseInt(out.minHoldDays||0,10)||0);
     out.closeBufferDays=Math.max(0,parseInt(out.closeBufferDays||0,10)||0);
-    out.churnBufferDays=0;
+    out.churnBufferDays=0;\n    out.churnPeriodValue=Math.max(0,parseInt(out.churnPeriodValue||0,10)||0);\n    out.churnPeriodUnit=String(out.churnPeriodUnit||'').toLowerCase().trim();
     out.customTimers=typeof normalizeTimerList==='function'?normalizeTimerList(out.customTimers||[]):(Array.isArray(out.customTimers)?out.customTimers:[]);
     return out;
   }
@@ -43,9 +43,10 @@
     let next=cleanPayload(payload);
     if(!next.bank)throw new Error('Bank name is missing.');
     if(!next.opened)throw new Error('Opened date is missing.');
-    const decision=typeof churnDecisionForEntry==='function'?churnDecisionForEntry(next):(next.churnable===false?'nonrepeatable':next.churn?'repeatable':'');
-    if(!decision)throw new Error('Future eligibility decision is missing.');
-    if(decision==='repeatable'&&!['180','1','2','3'].includes(String(next.churn||'')))throw new Error('Repeatable entry is missing a supported churn period.');
+    if(!window.BTEligibilityGate||typeof window.BTEligibilityGate.validate!=='function')throw new Error('Churn eligibility validator is unavailable.');
+    const verified=window.BTEligibilityGate.validate(next);
+    if(!verified.ok)throw new Error('Churn eligibility is not verified from the T&C: '+verified.reason);
+    next=window.BTEligibilityGate.stamp(next);
     if(typeof normalizeLifecycleEntry==='function')next=normalizeLifecycleEntry(next)||next;
     return next;
   }
@@ -95,7 +96,7 @@
   }
   function preview(p){
     const bonus='$'+Number(p.bonus||0).toLocaleString();
-    const future=p.churnability==='not-repeatable'?'Non-repeatable':(p.churn==='180'?'180 days':p.churn+' year'+(String(p.churn)==='1'?'':'s'))+' after confirmed account close';
+    const future=window.BTEligibilityGate&&typeof window.BTEligibilityGate.summary==='function'?window.BTEligibilityGate.summary(p):(p.churnability==='not-repeatable'?'Non-repeatable':'T&C verification required');
     return `Load ${p.bank} ${bonus} into New Entry?\n\nOpened: ${p.opened}\nRequirement: ${p.dataPoint||'See saved terms'}\nFuture eligibility: ${future}\n\nNothing is saved or replaced yet. Review the entry, then tap Add Entry. If this bank has an older churn/cooldown record, the normal replacement screen will still appear before anything is replaced.`;
   }
   function readFileText(file){
@@ -144,7 +145,7 @@
     const note=document.createElement('div');
     note.id='bt_import_entry_note';
     note.style.cssText='grid-column:1/-1;font-size:9px;line-height:1.45;color:var(--muted);padding:0 4px 4px';
-    note.textContent='Safe import: the file opens as a New Entry first. Existing churn records use the normal Replace Old Entry flow and are never overwritten automatically.';
+    note.textContent='Strict import: the file must contain T&C-backed churn eligibility before it can open as a New Entry. Existing churn records still use the normal Replace Old Entry flow.';
     btn.insertAdjacentElement('afterend',note);
   }
   function runHash(){
