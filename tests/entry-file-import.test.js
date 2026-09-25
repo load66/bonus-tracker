@@ -134,6 +134,36 @@ try{
 }catch(e){rejected=/additional .* eligibility restriction|missing from eligibilityRules/.test(String(e.message))}
 assert(rejected,'Strict JSON v2 accepted T&C containing an omitted second churn restriction');
 
+const chaseTerms='Checking offer is not available to existing Chase checking customers. Both offers are not available to those whose accounts have been closed within 90 days or closed with a negative balance within the last 3 years. You can receive only one new checking account opening related bonus every two years from the last coupon enrollment date and only one bonus per account.';
+const chaseV2={
+  kind:'BonusTrackerEntry',
+  schemaVersion:2,
+  verification:{
+    promoSourceUrl:'https://example-bank.test/chase-promo',
+    feeScheduleSourceUrl:'https://example-bank.test/chase-fees',
+    termsVerifiedAt:'2026-09-25'
+  },
+  entry:{
+    bank:'Chase',accountType:'personal',bonus:300,opened:'2026-05-01',churnable:true,churnability:'repeatable',tcSourceRaw:chaseTerms,
+    eligibilityRules:[
+      {id:'closed90',basis:'account-closed',periodValue:90,periodUnit:'days',scope:'chase-checking',evidenceText:chaseTerms,evidenceSource:'official-promotion-terms'},
+      {id:'closed3y',basis:'account-closed',periodValue:3,periodUnit:'years',scope:'chase-checking',condition:{type:'closed-with-negative-balance',expected:true},evidenceText:chaseTerms,evidenceSource:'official-promotion-terms'},
+      {id:'coupon2y',basis:'offer-enrollment',periodValue:2,periodUnit:'years',scope:'chase-checking',anchorFallback:'account-opened',evidenceText:chaseTerms,evidenceSource:'official-promotion-terms'}
+    ]
+  }
+};
+const parsedChase=sandbox.btParseEntryFileText(JSON.stringify(chaseV2),'Chase-v2.json');
+assert(parsedChase.eligibilityRules.length===3&&parsedChase.eligibilityRules.some(r=>r.basis==='offer-enrollment'&&r.anchorFallback==='account-opened'),'Strict JSON did not preserve Chase coupon enrollment fallback');
+assert(parsedChase.eligibilityRules.some(r=>r.condition?.type==='closed-with-negative-balance'),'Strict JSON did not preserve Chase conditional negative-balance rule');
+
+rejected=false;
+try{
+  const missingEnrollmentFallback={...chaseV2,entry:{...chaseV2.entry,eligibilityRules:chaseV2.entry.eligibilityRules.map(r=>r.id==='coupon2y'?({...r,anchorFallback:''}):r)}};
+  sandbox.btParseEntryFileText(JSON.stringify(missingEnrollmentFallback),'ChaseMissingEnrollmentAnchor.json')
+}catch(e){rejected=/enrollment rule needs an explicit enrollment date|anchorFallback account-opened/.test(String(e.message))}
+assert(rejected,'Strict JSON accepted a coupon-enrollment rule without an explicit date or declared opening-date fallback');
+
+
 const encoded=Buffer.from(JSON.stringify(payload)).toString('base64url');
 const parsedHtml=sandbox.btParseEntryFileText(`<a href="https://load66.github.io/bonus-tracker/#btadd=${encoded}">Add Citi</a>`,'Citi.html');
 assert(parsedHtml.bank==='Citi'&&parsedHtml.opened==='2026-08-10','HTML entry file did not parse the embedded btadd payload');
@@ -156,4 +186,4 @@ sandbox.postRenderHook();
 assert(document.getElementById('bt_import_entry_file'),'Import Entry File button was not injected into Quick Add');
 assert(document.getElementById('bt_import_entry_note'),'Replacement-safety explanation is missing from Quick Add');
 
-console.log('Entry file import passed: legacy compatibility, strict verified JSON v2 provenance, multi-rule churn evidence, review-before-save, fee safety, and duplicate protection preserved');
+console.log('Entry file import passed: legacy compatibility, strict verified JSON v2 provenance, enrollment anchors, conditional churn evidence, review-before-save, fee safety, and duplicate protection preserved');

@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.21 — precise payout/offer/ownership eligibility semantics with multi-rule latest-date control. */
+/* BonusTracker v3.4.22 — conditional eligibility plus coupon-enrollment anchors with multi-rule latest-date control. */
 (function(){
   'use strict';
-  const VER='3.4.21';
+  const VER='3.4.22';
   const SAFETY_BUFFER_DAYS=5;
 
   function decision(e){
@@ -12,6 +12,7 @@
   }
   function basisKey(v){
     const x=String(v||'').toLowerCase().replace(/[^a-z]/g,'');
+    if(/couponenroll|offerenroll|enrollmentdate|enrolmentdate/.test(x))return'enrollment';
     if(/bonusoffer|offerreceived|receivedoffer/.test(x))return'offer';
     if(/ownershipended|accountended|stoppedhaving|nolongerhad/.test(x))return'ownership-ended';
     if(/bonus|payout/.test(x))return'bonus';
@@ -20,7 +21,8 @@
     return'';
   }
   function sourceLabel(b){
-    return b==='offer'?'bonus-offer-received':
+    return b==='enrollment'?'offer-enrollment':
+      b==='offer'?'bonus-offer-received':
       b==='ownership-ended'?'account-ownership-ended':
       b==='bonus'?'bonus-received':
       b==='opened'?'account-opened':
@@ -35,7 +37,8 @@
     try{
       if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.normalizeBasis==='function'){
         const b=window.BTEligibilityGate.normalizeBasis(e.sourceEligibilityBasis||e.analysis?.sourceEligibilityBasis||e.churnBasis||e.analysis?.churnBasis||'');
-        return b==='bonus-offer-received'?'offer':b==='account-ownership-ended'?'ownership-ended':b==='bonus-received'?'bonus':b==='account-opened'?'opened':b==='account-closed'?'closed':'';
+        if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.legacyBasisKey==='function')return window.BTEligibilityGate.legacyBasisKey(b);
+        return b==='offer-enrollment'?'enrollment':b==='bonus-offer-received'?'offer':b==='account-ownership-ended'?'ownership-ended':b==='bonus-received'?'bonus':b==='account-opened'?'opened':b==='account-closed'?'closed':'';
       }
     }catch{}
     return basisKey(e.sourceEligibilityBasis||e.analysis?.sourceEligibilityBasis||e.churnBasis||e.analysis?.churnBasis||'');
@@ -51,7 +54,7 @@
     }
     if(d==='repeatable'){
       const v=verification(e),rules=Array.isArray(v?.rules)?v.rules:[];
-      const b=rules.length===1?(rules[0].basis==='bonus-offer-received'?'offer':rules[0].basis==='account-ownership-ended'?'ownership-ended':rules[0].basis==='bonus-received'?'bonus':rules[0].basis==='account-opened'?'opened':rules[0].basis==='account-closed'?'closed':''):sourceBasis(e);
+      const b=rules.length===1?(window.BTEligibilityGate?.legacyBasisKey?.(rules[0].basis)||basisKey(rules[0].basis)):sourceBasis(e);
       if(rules.length===1){
         e.churnBasis=b;
         e.sourceEligibilityBasis=b?sourceLabel(b):'';
@@ -82,6 +85,7 @@
   }
   function basisDate(e){
     const b=sourceBasis(e);
+    if(b==='enrollment')return e?.couponEnrollmentDate||e?.offerEnrollmentDate||e?.opened||'';
     return b==='offer'?(e?.bonusOfferReceived||e?.offerReceivedDate||''):b==='ownership-ended'?(e?.closed||''):b==='bonus'?(e?.bonusRecd||''):b==='opened'?(e?.opened||''):b==='closed'?(e?.closed||''):'';
   }
   function official(e){
@@ -142,17 +146,17 @@
   }
   function wrap(name,after){
     const base=window[name];
-    if(typeof base!=='function'||base.__btEligibility3421)return;
+    if(typeof base!=='function'||base.__btEligibility3422)return;
     const fn=function(){const out=base.apply(this,arguments);return after(out,arguments)};
-    fn.__btEligibility3421=true;window[name]=fn;
+    fn.__btEligibility3422=true;window[name]=fn;
     try{globalThis[name]=fn}catch{}
   }
   function install(){
     assignGlobals();
     wrap('normalizeLifecycleEntry',out=>normalize(out));
-    if(typeof window.normalizeLifecycleEntries==='function'&&!window.normalizeLifecycleEntries.__btEligibility3421){
+    if(typeof window.normalizeLifecycleEntries==='function'&&!window.normalizeLifecycleEntries.__btEligibility3422){
       const base=window.normalizeLifecycleEntries;
-      const fn=function(rows){return (base(rows)||[]).map(normalize)};fn.__btEligibility3421=true;window.normalizeLifecycleEntries=fn;
+      const fn=function(rows){return (base(rows)||[]).map(normalize)};fn.__btEligibility3422=true;window.normalizeLifecycleEntries=fn;
       try{normalizeLifecycleEntries=fn}catch{}
     }
     wrap('collectModalEntryData',out=>normalize(out));
@@ -163,8 +167,8 @@
     wrap('setModalChurnability',out=>{try{if(typeof modal!=='undefined'&&modal)normalize(modal)}catch{}return out});
     wrap('setModalChurnRule',out=>{try{if(typeof modal!=='undefined'&&modal)normalize(modal)}catch{}return out});
     wrap('setModalChurnBasis',out=>{try{if(typeof modal!=='undefined'&&modal)normalize(modal)}catch{}return out});
-    if(typeof window.rModal==='function'&&!window.rModal.__btEligibility3421){
-      const base=window.rModal;const fn=function(){return polishModalHtml(base.apply(this,arguments))};fn.__btEligibility3421=true;window.rModal=fn;try{rModal=fn}catch{}
+    if(typeof window.rModal==='function'&&!window.rModal.__btEligibility3422){
+      const base=window.rModal;const fn=function(){return polishModalHtml(base.apply(this,arguments))};fn.__btEligibility3422=true;window.rModal=fn;try{rModal=fn}catch{}
     }
     window.btFutureEligibilityText=eligibilityText;
     window.btChurnCloseDatePolicyVersion=VER;

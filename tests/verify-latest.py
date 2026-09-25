@@ -127,15 +127,19 @@ for token in ('wellsSuggestedTimers','Can this bonus be earned again? *','Future
     if token not in runtime_fix: fail(f'professional Wells runtime behavior missing: {token}')
 
 eligibility_gate=text('eligibility-gate.js')
-for token in ('distinguish payout, offer-received, and account-ownership eligibility semantics','bonus-offer-received','account-ownership-ended','eligibilityRules','discoverTimedRestrictions','officialEligibilityDates','officialEligibilityDate','controllingRule','safeEligibilityDate','applicationReadyDate'):
+for token in ('conditional eligibility rules plus coupon/offer-enrollment cooldown anchors','offer-enrollment','bonus-offer-received','account-ownership-ended','closed-with-negative-balance','normalizeCondition','ruleConditionState','eligibilityRules','discoverTimedRestrictions','officialEligibilityDates','officialEligibilityDate','controllingRule','safeEligibilityDate','applicationReadyDate'):
     if token not in eligibility_gate: fail(f'churn eligibility evidence gate missing: {token}')
 
+app_source=text('app.js')
+for token in ("TC_ARCHIVE_KEY='bt_tc_archive_v1'","function saveTermsArchiveForNewCycle","function rTermsStorage","Existing-cycle edits never replace this record","closedWithNegativeBalance","entryNeedsNegativeBalanceClosureAnswer"):
+    if token not in app_source: fail(f'T&C Storage / conditional close architecture missing: {token}')
+
 entry_import=text('entry-link-import.js')
-for token in ('schemaVersion','Strict JSON is missing the official promotion source URL','Strict JSON is missing the official fee-schedule source URL','Strict JSON must list every churn restriction in eligibilityRules','BTEligibilityGate.validate','eligibilityRules','promoSourceUrl','feeScheduleSourceUrl','termsVerifiedAt'):
+for token in ('schemaVersion','Strict JSON is missing the official promotion source URL','Strict JSON is missing the official fee-schedule source URL','Strict JSON must list every churn restriction in eligibilityRules','Coupon/offer enrollment rule needs an explicit enrollment date or anchorFallback account-opened','BTEligibilityGate.validate','eligibilityRules','couponEnrollmentDate','closedWithNegativeBalance','promoSourceUrl','feeScheduleSourceUrl','termsVerifiedAt'):
     if token not in entry_import: fail(f'evidence-gated entry import missing: {token}')
 
 churn_policy=text('churn-close-policy.js')
-for token in ('precise payout/offer/ownership eligibility semantics','bonus-offer-received','account-ownership-ended','multi-rule-latest-date-plus-5-day-buffer','nextReopen','btOfficialEligibilityDate','btApplicationReadyDate','normalizeLifecycleEntry'):
+for token in ('conditional eligibility plus coupon-enrollment anchors','offer-enrollment','bonus-offer-received','account-ownership-ended','multi-rule-latest-date-plus-5-day-buffer','nextReopen','btOfficialEligibilityDate','btApplicationReadyDate','normalizeLifecycleEntry'):
     if token not in churn_policy: fail(f'source-accurate churn policy missing: {token}')
 
 close_core=text('close-rules-core.js')
@@ -175,4 +179,4 @@ if issues:
     print(f'LATEST RELEASE VERIFY FAILED v{release}: {len(issues)} issue(s)')
     for issue in issues: print('FAIL',issue)
     sys.exit(1)
-print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, Wells accuracy, analyzer isolation, archive lifecycle, precise payout/offer/ownership semantics, multi-rule churn intake, strict JSON provenance, safe re-churn replacement, professional UI, and verify-before-deploy checks passed')
+print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, Wells accuracy, analyzer isolation, archive lifecycle, conditional churn semantics, coupon enrollment anchors, T&C Storage, multi-rule churn intake, strict JSON provenance, safe re-churn replacement, professional UI, and verify-before-deploy checks passed')

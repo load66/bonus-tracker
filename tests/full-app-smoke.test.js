@@ -55,13 +55,13 @@ function assert(ok,msg){if(!ok)throw new Error(msg)}
 setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.21',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.4.21',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.22',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.4.22',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.13',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
-    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.21',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
-    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.21',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
+    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.22',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
+    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.22',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.13',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
-    assert(sandbox.BTEligibilityGate?.VERSION==='1.2.0',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
+    assert(sandbox.BTEligibilityGate?.VERSION==='1.3.0',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
     const localNow=new Date(),pad=n=>String(n).padStart(2,'0'),localToday=`${localNow.getFullYear()}-${pad(localNow.getMonth()+1)}-${pad(localNow.getDate())}`;
     assert(vm.runInContext('td()',sandbox)===localToday,'Today default is not based on the local calendar date');
@@ -99,6 +99,23 @@ setTimeout(()=>{
       entries=keep;return ids;
     })()`,sandbox);
     assert(replacementIds.length===1&&replacementIds[0]==='WF-P-OLD','Re-churn replacement picker exposed a different bank or account type');
+
+    const tcStorageLifecycle=vm.runInContext(`(function(){
+      localStorage.removeItem('bt_tc_archive_v1');
+      const t1='Storage Test Bank consumer checking offer. Not eligible if you received a Storage Test Bank checking bonus within the past 12 months. Complete qualifying requirements after account opening. Official promotional terms and fee schedule were reviewed for this cycle.';
+      const e1={id:'ST-P-01',bank:'Storage Test Bank',accountType:'personal',opened:'2026-01-01',bonus:200,churnable:true,churnability:'repeatable',tcSourceRaw:t1,termsVerifiedAt:'2026-01-01',promoSourceUrl:'https://example.test/promo1',feeScheduleSourceUrl:'https://example.test/fees1',eligibilityRules:[{id:'bonus12',basis:'bonus-received',periodValue:12,periodUnit:'months',scope:'consumer-checking',evidenceText:'Not eligible if you received a Storage Test Bank checking bonus within the past 12 months.',evidenceSource:'official-promotion-terms'}]};
+      const first=saveTermsArchiveForNewCycle(e1,'new-cycle');
+      const editAttempt=saveTermsArchiveForNewCycle({...e1,notes:'edited existing cycle'},'edit-existing');
+      const t2='Storage Test Bank consumer checking offer for a later cycle. Not eligible if you received a Storage Test Bank checking bonus within the past 24 months. Complete qualifying requirements after account opening. Official promotional terms and fee schedule were reviewed for the new cycle.';
+      const e2={...e1,opened:'2028-02-01',bonus:300,tcSourceRaw:t2,termsVerifiedAt:'2028-02-01',promoSourceUrl:'https://example.test/promo2',eligibilityRules:[{id:'bonus24',basis:'bonus-received',periodValue:24,periodUnit:'months',scope:'consumer-checking',evidenceText:'Not eligible if you received a Storage Test Bank checking bonus within the past 24 months.',evidenceSource:'official-promotion-terms'}]};
+      const replaced=saveTermsArchiveForNewCycle(e2,'replacement-cycle');
+      const bucket=termsArchiveRows()[0];
+      return{first,editAttempt,replaced,currentOpened:bucket?.current?.opened,currentBonus:bucket?.current?.bonus,versions:bucket?.versions?.length||0,oldText:bucket?.versions?.[0]?.tcSourceRaw||'',newText:bucket?.current?.tcSourceRaw||'',view:rTermsStorage()};
+    })()`,sandbox);
+    assert(tcStorageLifecycle.first===true&&tcStorageLifecycle.editAttempt===false,'Existing-cycle edit incorrectly replaced stored T&C');
+    assert(tcStorageLifecycle.replaced===true&&tcStorageLifecycle.currentOpened==='2028-02-01'&&tcStorageLifecycle.currentBonus===300,'New bonus cycle did not replace Current T&C');
+    assert(tcStorageLifecycle.versions===1&&/12 months/.test(tcStorageLifecycle.oldText)&&/24 months/.test(tcStorageLifecycle.newText),'Previous T&C was not preserved after replacement');
+    assert(/T&C Storage/.test(tcStorageLifecycle.view)&&/Previous T&C cycles/.test(tcStorageLifecycle.view),'T&C Storage tab did not render current and historical terms');
 
     const report=sandbox.btRunFullRegressionTests();
     assert(report.ok,`Full regression failed: ${JSON.stringify(report)}`);

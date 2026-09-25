@@ -1,10 +1,10 @@
-/* BonusTracker v3.4.20 — strict verified JSON import with multi-rule churn eligibility and safe replacement. */
+/* BonusTracker v3.4.22 — strict verified JSON import with conditional multi-rule churn and enrollment anchors. */
 (function(){
   'use strict';
-  const VER='3.4.20';
+  const VER='3.4.22';
   const HASH_KEY='btadd=';
   const ALLOWED=[
-    'bank','accountType','bonus','churn','churnable','churnability','churnBasis','churnBufferDays','churnReason','sourceEligibilityBasis','churnTrackingPolicy','churnDecisionSource','churnDecisionConfidence','churnDecisionConfirmedAt','churnPeriodValue','churnPeriodUnit','eligibilityRules','eligibilityScope','eligibilityEvidenceText','eligibilityAnchorEvidenceText','eligibilityEvidenceSource','eligibilityVerified','eligibilityVerifiedAt','eligibilityVerificationStatus','eligibilityVerificationReason','currentCustomerExcluded','currentCustomerEvidenceText','mustCloseBeforeReapply','reapplicationAction','promoSourceUrl','feeScheduleSourceUrl','termsVerifiedAt','schemaVersion','tcSourceRaw','tcSourceId','tcSourceUpdatedAt',
+    'bank','accountType','bonus','churn','churnable','churnability','churnBasis','churnBufferDays','churnReason','sourceEligibilityBasis','churnTrackingPolicy','churnDecisionSource','churnDecisionConfidence','churnDecisionConfirmedAt','churnPeriodValue','churnPeriodUnit','eligibilityRules','couponEnrollmentDate','offerEnrollmentDate','closedWithNegativeBalance','eligibilityScope','eligibilityEvidenceText','eligibilityAnchorEvidenceText','eligibilityEvidenceSource','eligibilityVerified','eligibilityVerifiedAt','eligibilityVerificationStatus','eligibilityVerificationReason','currentCustomerExcluded','currentCustomerEvidenceText','mustCloseBeforeReapply','reapplicationAction','promoSourceUrl','feeScheduleSourceUrl','termsVerifiedAt','schemaVersion','tcSourceRaw','tcSourceId','tcSourceUpdatedAt',
     'opened','closed','bonusRecd','reqMet','notes','analyzedTC','minHoldDays','closeFeeCountdownDays','earlyCloseFee','reqDays','referralBonus','dataPoint',
     'fundedDays','fundingAmount','fundingAmountText','payoutTimingText','phoneNum','feeChecked','monthlyFeeYNText','monthlyFeeAmountText','monthlyFeeFrequency',
     'monthlyFeeWaiverType','monthlyFeeWaiverAmountText','monthlyFeeWaiverText','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText',
@@ -45,6 +45,9 @@
     out.churnPeriodValue=Math.max(0,parseInt(out.churnPeriodValue||0,10)||0);
     out.churnPeriodUnit=String(out.churnPeriodUnit||'').toLowerCase().trim();
     out.eligibilityRules=Array.isArray(out.eligibilityRules)?out.eligibilityRules.filter(r=>r&&typeof r==='object').map(r=>({...r})):[];
+    out.couponEnrollmentDate=String(out.couponEnrollmentDate||'').trim();
+    out.offerEnrollmentDate=String(out.offerEnrollmentDate||'').trim();
+    if(typeof out.closedWithNegativeBalance!=='boolean')out.closedWithNegativeBalance=null;
     out.customTimers=typeof normalizeTimerList==='function'?normalizeTimerList(out.customTimers||[]):(Array.isArray(out.customTimers)?out.customTimers:[]);
     return out;
   }
@@ -60,6 +63,9 @@
       if(next.churnable===true||String(next.churnability||'').toLowerCase()==='repeatable'){
         if(!next.eligibilityRules.length)throw new Error('Strict JSON must list every churn restriction in eligibilityRules.');
         if(next.eligibilityRules.some(r=>!String(r.scope||r.eligibilityScope||'').trim()))throw new Error('Every strict JSON eligibility rule must define its product/customer scope.');
+        const enrollRules=next.eligibilityRules.filter(r=>window.BTEligibilityGate?.normalizeBasis?.(r.basis||r.sourceEligibilityBasis||r.churnBasis)==='offer-enrollment');
+        if(enrollRules.some(r=>!String(r.anchorDate||'').trim()&&!next.couponEnrollmentDate&&!next.offerEnrollmentDate&&String(r.anchorFallback||r.anchorFallbackBasis||'')!=='account-opened'))
+          throw new Error('Coupon/offer enrollment rule needs an explicit enrollment date or anchorFallback account-opened.');
       }
     }
     if(!window.BTEligibilityGate||typeof window.BTEligibilityGate.validate!=='function')throw new Error('Churn eligibility validator is unavailable.');
