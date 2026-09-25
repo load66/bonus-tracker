@@ -72,7 +72,7 @@ setTimeout(()=>{
     assert(appSource.includes("function toggleCk(id,i)")&&appSource.includes("sv(SK,entries);expanded=id;R()}"),'Checklist toggle does not explicitly preserve the expanded bank');
     const sectionStateRegression=vm.runInContext(`(function(){
       const oldEntries=entries, oldExpanded=expanded, oldSearch=search, oldTab=tab;
-      const id='SECTION-STATE-01';
+      const id='SS01';
       entries=[{id,bank:'Section State Bank',accountType:'personal',opened:'2026-09-01',bonus:100,churn:'1',checklist:[{id:'ck_test',text:'Test requirement',done:false}],customTimers:[]}];
       expanded=id;search='';tab='tracker';
       setProfileSectionOpen(id,'lifecycle',true);
@@ -113,10 +113,6 @@ setTimeout(()=>{
     })()`,sandbox);
     assert(sectionStateRegression.attrBefore===' open','profileSectionOpenAttr did not report open before render: '+sectionStateRegression.attrBefore);
     assert(sectionStateRegression.rendererHasSectionState,'Registered window.rTracker is not the section-state-aware renderer');
-    if(!sectionStateRegression.directOpen||!sectionStateRegression.beforeOpen||!sectionStateRegression.afterOpen){
-      console.log('SECTION_STATE_DIAG',JSON.stringify(sectionStateRegression));
-      console.log('ACTIVE_RENDERER_HAS_STATE_HELPER',String(sandbox.rTracker).includes('profileSectionOpenAttr'));
-    }
     assert(sectionStateRegression.stateBefore,'Centralized lifecycle state was not open before toggle');
     assert(sectionStateRegression.directOpen,'Registered active tracker renderer ignored centralized lifecycle open state: '+sectionStateRegression.directTag);
     assert(sectionStateRegression.beforeOpen,'R() did not preserve active renderer lifecycle open state');
