@@ -84,8 +84,14 @@ assert(storage.length>0,'Migration did not persist upgraded legacy timers');
 
 const stage=sandbox.btLifecycleStageForEntry;
 assert(stage(citi).code==='IN_PROGRESS','Long-dated requirement should be In Progress');
+const genericTimer={bank:'Generic Timer Bank',opened:'2026-08-10',dataPoint:'Complete bonus requirements',customTimers:[{text:'Call bank about debit card',date:'2026-09-15',done:false}]};
+assert(stage(genericTimer).code==='IN_PROGRESS','Generic/custom timer became a primary lifecycle status');
+assert(!/Custom Timer|Deadline Active/.test(sandbox.statusBadgeHtml(genericTimer,null)),'Generic/custom timer leaked into the primary lifecycle badge');
 const urgent={bank:'Urgent Bank',opened:'2026-08-10',reqDays:5,dataPoint:'Make qualifying direct deposit',customTimers:[{text:'Direct deposit requirement',date:'2026-08-15',done:false}]};
 assert(stage(urgent).code==='ACTION_NEEDED','Near-term requirement did not escalate to Action Needed');
+const overdue={bank:'Overdue Bank',opened:'2026-08-01',reqDays:30,dataPoint:'Make qualifying direct deposit',customTimers:[{text:'$500 DD requirement',date:'2026-08-09',done:false}]};
+assert(stage(overdue).code==='ACTION_NEEDED','Overdue actionable requirement did not escalate to Action Needed');
+assert(/Overdue/.test(stage(overdue).support),'Overdue actionable requirement lost overdue timing context');
 
 const lafayette={bank:'Lafayette Federal',opened:'2026-08-10',reqMet:'2026-08-10',payoutTimingText:'within 60 days',customTimers:[{text:'Monthly $500 direct deposit requirement',date:'2026-09-05',done:false}]};
 assert(stage(lafayette).code==='IN_PROGRESS','Recurring monthly DD was incorrectly treated as fully complete');
@@ -104,12 +110,12 @@ assert(stage(ready).code==='READY_TO_CLOSE','Safe-to-close state did not map to 
 
 const cooldown={bank:'Cooldown Bank',closed:'2026-08-01',_daysLeft:120,_churnReadyDate:'2026-12-08'};
 assert(stage(cooldown).code==='COOLDOWN','Closed repeatable bank did not map to Cooldown');
-const eligible={bank:'Eligible Bank',closed:'2026-08-01',_daysLeft:0,_churnReadyDate:'2026-08-10'};
-assert(stage(eligible).code==='ELIGIBLE','Cleared cooldown did not map to Eligible');
+const eligible={bank:'Eligible Bank',closed:'2026-08-01',_daysLeft:-1,_churnReadyDate:'2026-08-09'};
+assert(stage(eligible).code==='ELIGIBLE','Closed repeatable entry past its eligibility date did not map to Eligible');
 const archived={bank:'Archive Bank',closed:'2026-08-01',_nonRepeatable:true};
 assert(stage(archived).code==='ARCHIVED','Non-repeatable closed bank did not map to Archived');
 
-for(const entry of [citi,urgent,lafayette,lafayetteDue,reqMet,awaiting,hold,ready,cooldown,eligible,archived]){
+for(const entry of [citi,genericTimer,urgent,overdue,lafayette,lafayetteDue,reqMet,awaiting,hold,ready,cooldown,eligible,archived]){
   const html=sandbox.statusBadgeHtml(entry,null);
   assert(!/CUSTOM TIMER|Custom Timer|Deadline Active|WORKING|WAITING TO CHURN|TIME TO CHURN/.test(html),'Legacy/internal status leaked to card: '+html);
 }
