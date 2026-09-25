@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.17 — source-accurate eligibility clock with a 5-day safety buffer. */
+/* BonusTracker v3.4.18 — source-accurate eligibility clock with a 5-day safety buffer. */
 (function(){
   'use strict';
-  const VER='3.4.17';
+  const VER='3.4.18';
   const SAFETY_BUFFER_DAYS=5;
 
   function decision(e){
