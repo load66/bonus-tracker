@@ -1,7 +1,7 @@
-/* ✅ Version 3.4.17: source-accurate future eligibility, archive lifecycle, and hardened analyzer/export runtime. */
+/* ✅ Version 3.4.18: transactional restore, source-accurate eligibility, and hardened analyzer/export runtime. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.17';
+const APP_VERSION='3.4.18';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const ANALYZER_MEMORY_KEY='bt_analyzer_memory_v1';
@@ -5123,57 +5123,86 @@ function normalizePortableBackupInput(d){
   }
   throw new Error('Backup file is missing entries.');
 }
-function applyPortableRestore(d){
+function normalizedRestoreProfileEvents(rows){
+  return (rows||[]).map(x=>({id:String(x?.id||('evt_'+Math.random().toString(36).slice(2,8))),bank:String(x?.bank||'').trim(),entryId:String(x?.entryId||''),type:String(x?.type||'').trim(),date:String(x?.date||''),label:String(x?.label||'').trim(),createdAt:String(x?.createdAt||td())})).filter(x=>x.bank&&x.type)
+}
+function stagePortableRestore(d){
   d=normalizePortableBackupInput(d);
   const restoredEntries=Array.isArray(d.entries)?d.entries:(Array.isArray(d?.storageSnapshot?.[SK])?d.storageSnapshot[SK]:null);
   if(!Array.isArray(restoredEntries))throw new Error('Backup file is missing entries.');
   const cleaned=restoredEntries.map(normalizeRestoredEntry).filter(e=>e.bank);
   const repaired=repairEntryIds(cleaned);
-  entries=sortE(normalizeLifecycleEntries(repaired.items));
-  sv(SK,entries);
+  const stagedEntries=sortE(normalizeLifecycleEntries(repaired.items));
 
-  const userPoints=Array.isArray(d.userDatapoints)?d.userDatapoints:(Array.isArray(d.ddMethods)?d.ddMethods:backupArrayFromStorage(d,DP_USER_KEY));
-  saveDD(userPoints);
+  const userSource=Array.isArray(d.userDatapoints)?d.userDatapoints:(Array.isArray(d.ddMethods)?d.ddMethods:backupArrayFromStorage(d,DP_USER_KEY));
+  const userPoints=(userSource||[]).map(normalizeUserDatapoint).filter(x=>x.bank&&x.method);
+  const ddMethods=userPoints.map(x=>({id:x.id,bank:x.bank,method:x.method,bonus:0,date:x.lastConfirmedAt||x.updatedAt||x.createdAt,note:x.note||'',entryId:x.entryId||''}));
+  const communityRows=(Array.isArray(d.communityDatapoints)?d.communityDatapoints:backupArrayFromStorage(d,COMMUNITY_DP_KEY)).map(normalizeCommunityDatapoint).filter(x=>x.bank&&x.method);
+  const reqRows=d.bankReqs&&typeof d.bankReqs==='object'&&!Array.isArray(d.bankReqs)?d.bankReqs:backupObjectFromStorage(d,REQ_KEY);
+  const phoneRows=(Array.isArray(d.phoneBook)?d.phoneBook:backupArrayFromStorage(d,PHONE_KEY)).map(normalizePhoneRow).filter(r=>r.bank);
+  const profileRows=normalizedRestoreProfileEvents(Array.isArray(d.profileEvents)?d.profileEvents:backupArrayFromStorage(d,PROFILE_EVT_KEY));
+  const offerRows=d.offerHistory&&typeof d.offerHistory==='object'&&!Array.isArray(d.offerHistory)?d.offerHistory:backupObjectFromStorage(d,OFFER_HIST_KEY);
 
-  const communityRows=Array.isArray(d.communityDatapoints)?d.communityDatapoints:backupArrayFromStorage(d,COMMUNITY_DP_KEY);
-  saveCommunityDatapoints(communityRows);
+  const writes={};
+  const snap=normalizeBackupStorageSnapshot(d);
+  Object.entries(snap).forEach(([key,val])=>{if(getBackupStorageKeys().includes(key))writes[key]=storageValueForRestore(val)});
+  writes[SK]=JSON.stringify(stagedEntries);
+  writes[DP_USER_KEY]=JSON.stringify(userPoints);
+  writes[DD_KEY]=JSON.stringify(ddMethods);
+  writes[COMMUNITY_DP_KEY]=JSON.stringify(communityRows);
+  writes[COMMUNITY_DP_SEED_KEY]='doc_v2';
+  writes[REQ_KEY]=JSON.stringify(reqRows||{});
+  writes[PHONE_KEY]=JSON.stringify(phoneRows);
+  writes[PROFILE_EVT_KEY]=JSON.stringify(profileRows);
+  writes[OFFER_HIST_KEY]=JSON.stringify(offerRows||{});
+  writes[BK_KEY]=td();
+  writes.bt_last_restore=new Date().toISOString();
 
-  const reqRows=d.bankReqs&&typeof d.bankReqs==='object'?d.bankReqs:backupObjectFromStorage(d,REQ_KEY);
-  saveReqs(reqRows);
-
-  const phoneRows=Array.isArray(d.phoneBook)?d.phoneBook:backupArrayFromStorage(d,PHONE_KEY);
-  savePhoneEdits(phoneRows);
-
-  const profileRows=Array.isArray(d.profileEvents)?d.profileEvents:backupArrayFromStorage(d,PROFILE_EVT_KEY);
-  saveProfileEvents(profileRows);
-
-  const offerRows=d.offerHistory&&typeof d.offerHistory==='object'?d.offerHistory:backupObjectFromStorage(d,OFFER_HIST_KEY);
-  saveOfferHistory(offerRows);
-
-  restoreStorageSnapshot(d.storageSnapshot||normalizeBackupStorageSnapshot(d));
-  sv(SK,entries);
-  saveDD(userPoints);
-  saveCommunityDatapoints(communityRows);
-  saveReqs(reqRows);
-  savePhoneEdits(phoneRows);
-  saveProfileEvents(profileRows);
-  saveOfferHistory(offerRows);
-
-  try{localStorage.setItem('bt_last_restore',new Date().toISOString())}catch{}
-  if(d.prefs&&Number.isFinite(parseInt(d.prefs.dashYear,10)))dashYear=parseInt(d.prefs.dashYear,10);
-  else dashYear=new Date().getFullYear();
-  if(d.prefs&&Number.isFinite(parseInt(d.prefs.taxYear,10)))taxYear=parseInt(d.prefs.taxYear,10);
-  else taxYear=new Date().getFullYear();
-  setLastBk();
+  const nowYear=new Date().getFullYear();
+  return{
+    source:d,
+    entries:stagedEntries,
+    writes,
+    prefs:{
+      dashYear:d.prefs&&Number.isFinite(parseInt(d.prefs.dashYear,10))?parseInt(d.prefs.dashYear,10):nowYear,
+      taxYear:d.prefs&&Number.isFinite(parseInt(d.prefs.taxYear,10))?parseInt(d.prefs.taxYear,10):nowYear
+    },
+    idRepairs:repaired.changed||0
+  }
+}
+function commitPortableRestorePlan(plan){
+  if(!plan||!plan.writes)throw new Error('Restore plan is missing.');
+  if(!window.BTPersistence||typeof window.BTPersistence.commit!=='function')throw new Error('Persistence transaction core is unavailable.');
+  return window.BTPersistence.commit(localStorage,plan.writes)
+}
+function applyPortableRestore(d){
+  const plan=stagePortableRestore(d);
+  const previousEntries=entries;
+  const previousDashYear=dashYear,previousTaxYear=taxYear;
+  let tx=null;
+  try{
+    tx=commitPortableRestorePlan(plan);
+    entries=plan.entries;
+    dashYear=plan.prefs.dashYear;
+    taxYear=plan.prefs.taxYear;
+  }catch(err){
+    entries=previousEntries;
+    dashYear=previousDashYear;
+    taxYear=previousTaxYear;
+    console.error('Bank Bonus Tracker restore failed and was rolled back',err);
+    throw err;
+  }
   cfm={
-    title:'Restore Complete',msg:`${entries.length} entries restored.\n${countBackupUserDatapoints(d)} datapoints restored.\n${countBackupProfileEvents(d)} profile events restored.\n${backupIntegritySummary({entries,backupIntegrity:backupIntegrityReport({entries})})}\n\nThis backup is now ready on this browser/device.`,green:true,action:()=>{
+    title:'Restore Complete',msg:`${entries.length} entries restored.\n${countBackupUserDatapoints(plan.source)} datapoints restored.\n${countBackupProfileEvents(plan.source)} profile events restored.\n${backupIntegritySummary({entries,backupIntegrity:backupIntegrityReport({entries})})}\n\nAll restore writes were verified before the tracker switched to this backup.`,green:true,action:()=>{
       cfm=null;
       R()
     }
 
   };
-  R()
+  R();
+  return{ok:true,transaction:tx,idRepairs:plan.idRepairs}
 }
+try{Object.assign(window,{stagePortableRestore,commitPortableRestorePlan})}catch{}
 
 function importBackup(){
   const inp=document.createElement('input');
@@ -5195,7 +5224,10 @@ function importBackup(){
         applyPortableRestore(data)
       }
       catch(err){
-        alert('Invalid or unsupported backup file.')
+        console.error('Backup restore failed',err);
+        const msg=String(err&&err.message||err||'');
+        if(/storage|transaction|rollback|persistence|write verification/i.test(msg))alert('Restore failed safely. The app could not verify every storage write, so the previous device data was restored. No partial restore was kept.');
+        else alert('Invalid or unsupported backup file.')
       }
       
     };
