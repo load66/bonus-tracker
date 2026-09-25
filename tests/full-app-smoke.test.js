@@ -55,11 +55,11 @@ function assert(ok,msg){if(!ok)throw new Error(msg)}
 setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.17',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.4.17',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.18',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.4.18',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.13',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
-    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.17',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
-    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.17',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
+    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.18',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
+    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.18',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.13',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
     const localNow=new Date(),pad=n=>String(n).padStart(2,'0'),localToday=`${localNow.getFullYear()}-${pad(localNow.getMonth()+1)}-${pad(localNow.getDate())}`;
@@ -74,6 +74,10 @@ setTimeout(()=>{
     assert(quotedCell.includes('""Quoted""')&&quotedCell.includes('\n'),'CSV quote/line-break escaping failed');
     const openTaxCsv=vm.runInContext(`(function(){const old=entries;entries=[{bank:'Open Bonus Bank',bonus:275,bonusRecd:'2026-09-01',opened:'2026-08-01',closed:'',dataPoint:'DD'}];const out=buildTaxCSV(2026);entries=old;return out})()`,sandbox);
     assert(openTaxCsv.includes('Open Bonus Bank')&&!openTaxCsv.includes('—'),'Open-account received bonus did not export cleanly');
+    const beforeRestoreStage=localStorage.getItem('bt_e_v4');
+    const restorePlan=sandbox.stagePortableRestore({entries:[{id:'CIT-P-01',bank:'Citi',accountType:'personal',bonus:100,opened:'2026-01-01',bonusRecd:'2026-02-01',churn:'1',churnable:true,churnability:'repeatable',churnBasis:'bonus',sourceEligibilityBasis:'bonus-received'}],userDatapoints:[],communityDatapoints:[],bankReqs:{},phoneBook:[],profileEvents:[],offerHistory:{}});
+    assert(restorePlan.entries.length===1&&restorePlan.entries[0].id==='CIT-P-01','Restore staging did not preserve an existing entry ID');
+    assert(localStorage.getItem('bt_e_v4')===beforeRestoreStage,'Restore staging wrote storage before commit');
     const report=sandbox.btRunFullRegressionTests();
     assert(report.ok,`Full regression failed: ${JSON.stringify(report)}`);
     assert(report.total>=17,`Full regression suite is incomplete: ${report.total}`);
@@ -191,6 +195,6 @@ setTimeout(()=>{
     if(typeof sandbox.R==='function')sandbox.R();
     assert(app.innerHTML.length>1000,'Tracker failed to render after regression run');
     assert(!errors.some(x=>x.startsWith('ERROR ')),`Runtime console errors: ${errors.join(' | ')}`);
-    console.log(`Full app smoke passed: ${scripts.length} runtime scripts · ${report.passed}/${report.total} regression checks · source-accurate eligibility, Wells consumer accuracy, FourLeaf archive, and mobile Safari release verified`);
+    console.log(`Full app smoke passed: ${scripts.length} runtime scripts · ${report.passed}/${report.total} regression checks · transactional restore, source-accurate eligibility, Wells consumer accuracy, FourLeaf archive, and mobile Safari release verified`);
   }catch(err){console.error(err.stack||err);process.exitCode=1}
 },2200);

@@ -45,8 +45,8 @@ const workflow=fs.readFileSync('.github/workflows/close-rules.yml','utf8');
 const index=fs.readFileSync('index.html','utf8');
 const sw=fs.readFileSync('sw.js','utf8');
 assert(workflow.includes('node tests/churn-buffer.test.js'),'Pages deploy is not gated by the churn-buffer regression test');
-assert(index.includes('./churn-close-policy.js?v=3.4.17-sourceeligibility1'),'Index does not force-refresh the source-accurate churn policy');
-assert(index.includes('./sw.js?v=3.4.17-sourceeligibility1'),'Index does not force-refresh the source-accurate service worker');
-assert(sw.includes("const V = 'bt-v3.4.17-sourceeligibility1'"),'Service worker cache version is stale');
+assert(index.includes('./churn-close-policy.js?v=3.4.18-restore1'),'Index does not force-refresh the source-accurate churn policy');
+assert(index.includes('./sw.js?v=3.4.18-restore1'),'Index does not force-refresh the source-accurate service worker');
+assert(sw.includes("const V = 'bt-v3.4.18-restore1'"),'Service worker cache version is stale');
 
 console.log('Eligibility buffer passed: source terms choose bonus/open/close clock, unknown bases remain unresolved, and a 5-day safety buffer is added only after a verified basis');
