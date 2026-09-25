@@ -1,49 +1,105 @@
-/* BonusTracker v3.4.14 attention hotfix — every open bank gets exactly one smart Needs Attention item. */
+/* BonusTracker v3.4.30 Action Center — canonical lifecycle stages drive every user-facing action item. */
 (function(){
   'use strict';
-  const VER='3.4.14-attention1';
-  const base=window.getAttentionSuggestions;
+  const VER='3.4.30-action1';
 
+  function finite(v){const n=Number(v);return Number.isFinite(n)?n:null}
   function daysTo(date){
-    if(!date)return 999999;
-    try{if(typeof dB==='function'&&typeof td==='function')return Math.max(0,dB(td(),date))}catch{}
-    const now=new Date(), due=new Date(String(date)+'T00:00:00');
-    return Math.max(0,Math.floor((due-now)/864e5));
+    if(!date)return null;
+    try{if(typeof dB==='function'&&typeof td==='function')return dB(td(),date)}catch{}
+    const due=new Date(String(date)+'T00:00:00'),now=new Date();
+    if(isNaN(due))return null;
+    return Math.floor((due-now)/864e5)
   }
-  function semanticMissing(e){
-    let state=null;
-    try{if(typeof window.btSemanticStateForEntry==='function')state=window.btSemanticStateForEntry(e)}catch{}
-    const timer=state?.timer||null;
-    if(timer&&timer.date){
-      const d=daysTo(timer.date);
-      const label=String(state?.label||'Deadline').trim();
-      const support=String(state?.support||'').trim();
-      return {bank:e.bank,entryId:e.id||'',dedupeKey:e.id||e.bank,rsn:support?(support+' · '+label):label,bonus:e.bonus||0,showBonus:true,days:d,pri:3.5,category:state?.kind||'timer'};
+  function fallbackStage(e){
+    let raw='';try{raw=typeof status==='function'?String(status(e)||''):''}catch{}
+    if(e?.closed){
+      if(raw==='ARCHIVED')return{code:'ARCHIVED',label:'Archived',support:'Completed · non-repeatable offer'};
+      let d=null;try{d=typeof daysLeft==='function'?daysLeft(e):null}catch{}
+      return finite(d)!==null&&d<=0
+        ?{code:'ELIGIBLE',label:'Eligible',support:'Eligible to reapply'}
+        :{code:'COOLDOWN',label:'Cooldown',support:finite(d)!=null?d+'d until eligible':'Waiting for eligibility date'};
     }
-    if(!e.reqMet&&!e.bonusRecd&&e.opened&&Number(e.reqDays||0)>0){
-      let due='';try{if(typeof reqDeadline==='function')due=reqDeadline(e)||''}catch{}
-      const d=due?daysTo(due):999999;
-      return {bank:e.bank,entryId:e.id||'',dedupeKey:e.id||e.bank,rsn:d<999999?(d+'d to requirement deadline.'):'Requirement pending.',bonus:e.bonus||0,showBonus:true,days:d,pri:4,category:'requirement'};
+    if(raw==='SAFE TO CLOSE')return{code:'READY_TO_CLOSE',label:'Ready to Close',support:'All close restrictions cleared'};
+    if(raw==='WAITING TO CLOSE'||raw==='3-DAY BUFFER')return{code:'HOLD_OPEN',label:'Hold Open',support:'Keep account open until close rules clear'};
+    if(e?.bonusRecd)return{code:'BONUS_RECEIVED',label:'Bonus Received',support:'Review close eligibility'};
+    if(e?.reqMet)return{code:'AWAITING_BONUS',label:'Awaiting Bonus',support:'Requirements complete · waiting for payout'};
+    return{code:'IN_PROGRESS',label:'In Progress',support:'Complete bonus requirements'}
+  }
+  function stageFor(e){
+    try{if(typeof window.btLifecycleStageForEntry==='function')return window.btLifecycleStageForEntry(e)}catch{}
+    return fallbackStage(e)
+  }
+  function stageDays(e,stage){
+    if(stage?.timer?.date){
+      try{if(typeof timerCountdownDays==='function'){const d=timerCountdownDays(stage.timer);if(Number.isFinite(d))return d}}catch{}
+      const d=daysTo(stage.timer.date);if(d!==null)return d
     }
-    if(e.reqMet&&!e.bonusRecd)return {bank:e.bank,entryId:e.id||'',dedupeKey:e.id||e.bank,rsn:'Requirements met · waiting for bonus.',bonus:e.bonus||0,showBonus:true,days:999998,pri:5,category:'waiting-bonus'};
-    if(e.bonusRecd)return {bank:e.bank,entryId:e.id||'',dedupeKey:e.id||e.bank,rsn:'Bonus received · close after the bank confirms closure.',bonus:e.bonus||0,showBonus:true,days:999997,pri:5.5,category:'bonus-received'};
-    return {bank:e.bank,entryId:e.id||'',dedupeKey:e.id||e.bank,rsn:'Open · review next requirement.',bonus:e.bonus||0,showBonus:true,days:999999,pri:8,category:'review'};
+    if(stage?.code==='HOLD_OPEN'){
+      try{const d=daysUntilSafe(e);if(Number.isFinite(d))return d}catch{}
+    }
+    if(stage?.code==='COOLDOWN'){
+      try{const d=daysLeft(e);if(Number.isFinite(d))return d}catch{}
+    }
+    if((stage?.code==='IN_PROGRESS'||stage?.code==='ACTION_NEEDED')&&!e?.reqMet){
+      try{const due=reqDeadline(e);const d=daysTo(due);if(d!==null)return d}catch{}
+    }
+    return null
+  }
+  function priority(code){
+    return code==='ACTION_NEEDED'?0:
+      code==='READY_TO_CLOSE'?1:
+      code==='ELIGIBLE'?2:
+      code==='AWAITING_BONUS'?3:
+      code==='REQUIREMENTS_MET'?3.2:
+      code==='HOLD_OPEN'?4:
+      code==='BONUS_RECEIVED'?4.2:
+      code==='IN_PROGRESS'?5:
+      code==='COOLDOWN'?6:99
+  }
+  function actionVerb(code){
+    return code==='ACTION_NEEDED'?'Act now':
+      code==='READY_TO_CLOSE'?'Close account':
+      code==='ELIGIBLE'?'Review opportunity':
+      code==='AWAITING_BONUS'?'Watch payout':
+      code==='REQUIREMENTS_MET'?'Confirm payout timing':
+      code==='HOLD_OPEN'?'Keep open':
+      code==='BONUS_RECEIVED'?'Review close rules':
+      code==='COOLDOWN'?'Wait for eligibility':'Complete next requirement'
+  }
+  function shouldInclude(e,stage,days){
+    if(!e||!e.bank||!stage)return false;
+    if(!e.closed)return stage.code!=='ARCHIVED';
+    if(stage.code==='ELIGIBLE')return true;
+    if(stage.code==='COOLDOWN')return Number.isFinite(days)&&days<=30;
+    return false
   }
   function smart(){
-    let rows=[];
-    try{rows=typeof base==='function'?(base()||[]):[]}catch{rows=[]}
-    const open=[];
-    try{if(typeof entries!=='undefined'&&Array.isArray(entries))entries.forEach(e=>{if(e&&e.bank&&!e.closed)open.push(e)})}catch{}
-    const seen=new Set(rows.map(r=>String(r?.entryId||r?.dedupeKey||r?.bank||'')));
-    open.forEach(e=>{
-      const key=String(e.id||e.bank||'');
-      if(!seen.has(key)){rows.push(semanticMissing(e));seen.add(key)}
+    const rows=[];
+    const source=[];try{if(typeof entries!=='undefined'&&Array.isArray(entries))source.push(...entries)}catch{}
+    source.forEach(e=>{
+      if(!e||!e.bank)return;
+      const stage=stageFor(e),rawDays=stageDays(e,stage),days=Number.isFinite(rawDays)?Math.max(0,rawDays):999999;
+      if(!shouldInclude(e,stage,rawDays))return;
+      rows.push({
+        bank:e.bank,
+        entryId:e.id||'',
+        dedupeKey:e.id||e.bank,
+        stageCode:stage.code||'IN_PROGRESS',
+        stageLabel:stage.label||'In Progress',
+        action:actionVerb(stage.code),
+        rsn:String(stage.support||'Review this account').trim(),
+        bonus:Number(e.bonus||0),
+        showBonus:Number(e.bonus||0)>0,
+        days,
+        pri:priority(stage.code),
+        category:String(stage.code||'').toLowerCase().replace(/_/g,'-')
+      })
     });
-    const openKeys=new Set(open.map(e=>String(e.id||e.bank||'')));
-    rows=rows.filter(r=>openKeys.has(String(r?.entryId||r?.dedupeKey||r?.bank||'')));
-    rows.sort((a,b)=>(Number(a.days??999999)-Number(b.days??999999))||(Number(a.pri??99)-Number(b.pri??99))||String(a.bank||'').localeCompare(String(b.bank||'')));
-    return rows;
+    rows.sort((a,b)=>(a.pri-b.pri)||(a.days-b.days)||(b.bonus-a.bonus)||String(a.bank).localeCompare(String(b.bank)));
+    return rows
   }
+
   window.getAttentionSuggestions=smart;
   try{getAttentionSuggestions=smart}catch{}
   window.btSmartAttentionVersion=VER;
