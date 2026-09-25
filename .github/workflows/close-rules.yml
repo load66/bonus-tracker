@@ -47,6 +47,9 @@ jobs:
       - name: Run entry-file import and replacement safety tests
         run: node tests/entry-file-import.test.js
 
+      - name: Run transactional persistence and restore tests
+        run: node tests/persistence-transaction.test.js
+
       - name: Run canonical semantic status tests
         run: node tests/semantic-status.test.js
 
