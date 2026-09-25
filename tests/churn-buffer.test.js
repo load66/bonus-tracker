@@ -55,7 +55,7 @@ assert(sandbox.btApplicationReadyDate({...current,closed:'2027-08-25'})==='2027-
 assert(sandbox.entries[0].churnBasis==='bonus'&&sandbox.entries[0].sourceEligibilityBasis==='bonus-received'&&sandbox.entries[0].churnBufferDays===5&&sandbox.entries[0].eligibilityVerified===true,'Existing source-backed entry was not normalized correctly');
 assert(sandbox.entries[0].churnTrackingPolicy==='source-bonus-received-plus-5-day-buffer','Source tracking policy was not persisted');
 assert(sandbox.entries[1].churnBufferDays===0,'Non-repeatable saved entry retained a churn buffer');
-assert(/12 months after bonus received/.test(sandbox.btFutureEligibilityText(sandbox.entries[0]))&&/5-day safety buffer/.test(sandbox.btFutureEligibilityText(sandbox.entries[0])),'Future eligibility text does not disclose exact source basis + safety buffer');
+assert(/12 months after bonus payout received/.test(sandbox.btFutureEligibilityText(sandbox.entries[0]))&&/5-day safety buffer/.test(sandbox.btFutureEligibilityText(sandbox.entries[0])),'Future eligibility text does not disclose exact source basis + safety buffer');
 assert(/T&C verification required/.test(sandbox.btFutureEligibilityText({churn:'1',churnable:true,churnability:'repeatable'})),'Missing T&C evidence is not surfaced for review');
 assert(saved.length>0,'Existing-entry normalization was not persisted');
 
