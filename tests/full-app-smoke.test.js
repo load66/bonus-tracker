@@ -126,7 +126,7 @@ setTimeout(()=>{
     assert(preBonusPlan.rows.some(x=>x.label==='Earliest close'&&x.value==='After $400 posts'),'Wells earliest-close summary is still contradictory');
     const eligibility=sandbox.normalizeLifecycleEntry({...repaired,reqMet:'2026-08-20',bonusRecd:'2026-09-01',closed:'2026-09-10'});
     assert(sandbox.nextReopen(eligibility)==='2027-09-06'&&sandbox.churnReadyDate(eligibility)==='2027-09-06','Wells churn countdown did not start from the source bonus-received date');
-    const genericRepeat=sandbox.normalizeLifecycleEntry({bank:'Generic Repeat Bank',accountType:'personal',bonus:200,opened:'2026-01-01',bonusRecd:'2026-02-01',closed:'2026-03-05',churnable:true,churnability:'repeatable',churn:'2',churnBasis:'bonus',sourceEligibilityBasis:'bonus-received',churnBufferDays:10});
+    const genericRepeat=sandbox.normalizeLifecycleEntry({bank:'Generic Repeat Bank',accountType:'personal',bonus:200,opened:'2026-01-01',bonusRecd:'2026-02-01',closed:'2026-03-05',churnable:true,churnability:'repeatable',churn:'2',churnPeriodValue:24,churnPeriodUnit:'months',churnBasis:'bonus',sourceEligibilityBasis:'bonus-received',churnBufferDays:10,eligibilityEvidenceText:'Not eligible if you received a Generic Repeat Bank checking bonus within the past 24 months.',eligibilityEvidenceSource:'official-promotion-terms'});
     assert(genericRepeat.churnBasis==='bonus'&&genericRepeat.sourceEligibilityBasis==='bonus-received'&&genericRepeat.churnBufferDays===5,'Repeatable entry did not preserve source eligibility basis + buffer');
     assert(sandbox.nextReopen(genericRepeat)==='2028-02-06','Generic churn timer did not start from its saved bonus-received basis');
     const unknownBasis=sandbox.normalizeLifecycleEntry({bank:'Pending Eligibility Bank',bonus:100,bonusRecd:'2026-04-01',closed:'2026-04-10',churnable:true,churnability:'repeatable',churn:'1'});
@@ -149,8 +149,8 @@ setTimeout(()=>{
     assert(fr.churnable===false&&fr.churnability==='not-repeatable','FourLeaf lifetime-like churn restriction failed');
     assert(/24 consecutive/i.test(fr.actionPlan||''),'FourLeaf 24-month milestone plan missing');
     assert(typeof sandbox.churnDecisionForEntry==='function'&&typeof sandbox.hasSavedChurnDecision==='function','Churnability intake helpers missing');
-    assert(sandbox.hasSavedChurnDecision({bank:'Repeat Bank',churnable:true,churnability:'repeatable',churn:'2',sourceEligibilityBasis:'bonus-received'})===true,'Source-backed repeatable decision was not recognized');
-    assert(sandbox.hasSavedChurnDecision({bank:'Repeat Bank',churnable:true,churnability:'repeatable',churn:'2'})===false,'Repeatable decision without a source basis was incorrectly accepted');
+    assert(sandbox.hasSavedChurnDecision({bank:'Repeat Bank',churnable:true,churnability:'repeatable',churn:'2',churnPeriodValue:24,churnPeriodUnit:'months',sourceEligibilityBasis:'bonus-received',eligibilityEvidenceText:'Not eligible if you received a Repeat Bank checking bonus within the past 24 months.',eligibilityEvidenceSource:'official-promotion-terms'})===true,'T&C-backed repeatable decision was not recognized');
+    assert(sandbox.hasSavedChurnDecision({bank:'Repeat Bank',churnable:true,churnability:'repeatable',churn:'2',sourceEligibilityBasis:'bonus-received'})===false,'Repeatable decision without T&C evidence was incorrectly accepted');
     assert(sandbox.hasSavedChurnDecision({bank:'Unknown Bank',churn:'',churnability:''})===false,'Unknown churnability was incorrectly accepted');
     const gate=vm.runInContext(`(function(){
       const before=entries.length;
