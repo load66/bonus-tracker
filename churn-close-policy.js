@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.23 — conditional eligibility plus coupon-enrollment anchors with multi-rule latest-date control. */
+/* BonusTracker v3.4.24 — conditional eligibility plus coupon-enrollment anchors with multi-rule latest-date control. */
 (function(){
   'use strict';
-  const VER='3.4.23';
+  const VER='3.4.24';
   const SAFETY_BUFFER_DAYS=5;
 
   function decision(e){
