@@ -136,10 +136,17 @@ if 'Tools Folder' in app_source or 'bt_tools_folder_btn' in app_source:
 for token in ("['tracker','tax','tips','storage']","['Tracker','Tax','Datapoints','T&C Archive']","function getChurnSuggestions","window.churnReadyDate"):
     if token not in app_source: fail(f'direct T&C Archive / churn suggestion architecture missing: {token}')
 
+semantic_status=text('semantic-status.js')
+for token in ("const VER='3.4.29-status1'","const STAGES=Object.freeze","function lifecycleStageForEntry","ACTION_NEEDED:'ACTION_NEEDED'","IN_PROGRESS:'IN_PROGRESS'","AWAITING_BONUS:'AWAITING_BONUS'","HOLD_OPEN:'HOLD_OPEN'","READY_TO_CLOSE:'READY_TO_CLOSE'","COOLDOWN:'COOLDOWN'","ELIGIBLE:'ELIGIBLE'","window.btLifecycleStageForEntry=lifecycleStageForEntry"):
+    if token not in semantic_status: fail(f'canonical lifecycle status architecture missing: {token}')
+for forbidden in ("label:'Custom Timer'","label:'Deadline Active'"):
+    if forbidden in semantic_status and "timerStatusMetaSemantic" not in semantic_status:
+        fail(f'legacy timer status leaked into lifecycle UI architecture: {forbidden}')
+
 dark_css=text('style.css')
-for token in ('v3.4.28 expanded bank detail dark-surface hardening','.profile-section,.profile-section-body','.bt-life,.bt-life-step','.profile-summary-item','.ck li,.tm li'):
+for token in ('v3.4.29 expanded bank detail dark-surface hardening','.profile-section,.profile-section-body','.bt-life,.bt-life-step','.profile-summary-item','.ck li,.tm li'):
     if token not in dark_css: fail(f'expanded bank detail dark coverage missing: {token}')
-if 'v3.4.28 interaction + dark prompt contrast hardening' not in dark_css:
+if 'v3.4.29 interaction + dark prompt contrast hardening' not in dark_css:
     fail('dark prompt contrast hardening release marker missing')
 for token in ('.cbox,.dd-box,.rcv-box,.ow-box,.fee-box,.close-modal','.dd-input,.rcv-box input','.crow .c-c','.crow .c-g','.ckb.dn'):
     if token not in dark_css: fail(f'dark prompt/checklist contrast coverage missing: {token}')
@@ -160,7 +167,7 @@ if app_source.count('function rTrackerLegacy(sorted)') != 1:
     fail('legacy tracker renderer is not isolated as an explicit fallback')
 for token in ("typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy",'captureProfileSectionState();const el=document.querySelector','data-section-key="lifecycle"','data-section-key="history"','function profileSectionStateKey','function captureProfileSectionState'):
     if token not in app_source: fail(f'nested profile-section state architecture missing: {token}')
-for token in ('v3.4.28 Midnight professional dark theme','color-scheme:dark','--bg:#060A11','--card:#0D1420','.modal,.dd-box','.clean-plan-card','.dp-summary','.tabs'):
+for token in ('v3.4.29 Midnight professional dark theme','color-scheme:dark','--bg:#060A11','--card:#0D1420','.modal,.dd-box','.clean-plan-card','.dp-summary','.tabs'):
     if token not in dark_css: fail(f'professional dark theme coverage missing: {token}')
 for token in ("TC_ARCHIVE_KEY='bt_tc_archive_v1'","function saveTermsArchiveForNewCycle","function rTermsStorage","Existing-cycle edits never replace this record","closedWithNegativeBalance","entryNeedsNegativeBalanceClosureAnswer"):
     if token not in app_source: fail(f'T&C Storage / conditional close architecture missing: {token}')
