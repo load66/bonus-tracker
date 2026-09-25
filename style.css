@@ -4508,7 +4508,7 @@ html,body {
 @media(max-width:520px){.guided-modal{padding:14px 12px 16px}.guided-grid{grid-template-columns:1fr}.guided-grid .full{grid-column:auto}.guided-progress button span{display:none}.guided-progress{gap:5px}.guided-summary>div{grid-template-columns:86px minmax(0,1fr)}.guided-source-grid{grid-template-columns:1fr}.guided-actions{position:sticky;bottom:-1px;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);padding-top:8px;z-index:5}.bt-update-banner{grid-template-columns:1fr auto}.bt-update-banner .later{display:none}}
 
 
-/* === v3.4.27 Midnight professional dark theme === */
+/* === v3.4.28 Midnight professional dark theme === */
 :root{
   color-scheme:dark;
   --bg:#060A11;
@@ -4723,7 +4723,7 @@ select option{background:#0D1420;color:var(--text)}
 
 
 
-/* === v3.4.27 interaction + dark prompt contrast hardening === */
+/* === v3.4.28 interaction + dark prompt contrast hardening === */
 /* Timer/checklist taps must remain visually stable; prompt surfaces must not inherit light-theme whites. */
 .cbox,.dd-box,.rcv-box,.ow-box,.fee-box,.close-modal{
   background:linear-gradient(180deg,#111A28 0%,#0B121D 100%)!important;
@@ -4821,7 +4821,7 @@ select option{background:#0D1420;color:var(--text)}
 }
 
 
-/* === v3.4.27 expanded bank detail dark-surface hardening === */
+/* === v3.4.28 expanded bank detail dark-surface hardening === */
 .card-exp,.profile-section,.profile-section-body,.profile-summary-item,.bt-life,.bt-life-step,
 .bt-history-card,.clean-plan-card.compact,.clean-plan-card.compact.safe,.clean-plan-card.compact.warn,
 .clean-plan-card.compact.plan,.clean-plan-card.compact.danger,.inline-form{
