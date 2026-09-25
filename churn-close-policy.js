@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.18 — source-accurate eligibility clock with a 5-day safety buffer. */
+/* BonusTracker v3.4.19 — T&C-evidence-gated eligibility clock with exact cooldown units and a 5-day safety buffer. */
 (function(){
   'use strict';
-  const VER='3.4.18';
+  const VER='3.4.19';
   const SAFETY_BUFFER_DAYS=5;
 
   function decision(e){
@@ -18,12 +18,23 @@
     return'';
   }
   function sourceLabel(b){return b==='bonus'?'bonus-received':b==='opened'?'account-opened':b==='closed'?'account-closed':''}
+  function verification(e){
+    try{if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.validate==='function')return window.BTEligibilityGate.validate(e)}catch{}
+    return{ok:false,status:'unresolved',reason:'Eligibility evidence validator unavailable'};
+  }
   function sourceBasis(e){
     if(!e)return'';
+    try{
+      if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.normalizeBasis==='function'){
+        const b=window.BTEligibilityGate.normalizeBasis(e.sourceEligibilityBasis||e.analysis?.sourceEligibilityBasis||e.churnBasis||e.analysis?.churnBasis||'');
+        return b==='bonus-received'?'bonus':b==='account-opened'?'opened':b==='account-closed'?'closed':'';
+      }
+    }catch{}
     return basisKey(e.sourceEligibilityBasis||e.analysis?.sourceEligibilityBasis||e.churnBasis||e.analysis?.churnBasis||'');
   }
   function normalize(e){
     if(!e)return e;
+    try{if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.stamp==='function')Object.assign(e,window.BTEligibilityGate.stamp(e))}catch{}
     const d=decision(e);
     if(d==='nonrepeatable'){
       e.churnBasis='';e.sourceEligibilityBasis='';e.churnBufferDays=0;e.churnTrackingPolicy='nonrepeatable';
@@ -59,13 +70,25 @@
     const b=sourceBasis(e);
     return b==='bonus'?(e?.bonusRecd||''):b==='opened'?(e?.opened||''):b==='closed'?(e?.closed||''):'';
   }
-  function next(e){
-    if(!e||decision(e)!=='repeatable'||!e.churn)return'';
+  function official(e){
+    const v=verification(e);if(!v.ok||v.decision!=='repeatable')return'';
     const start=basisDate(e);if(!start)return'';
-    const base=String(e.churn)==='180'
-      ?addDLocal(start,180)
-      :addMLocal(start,(parseInt(e.churn,10)||0)*12);
-    return base?addDLocal(base,SAFETY_BUFFER_DAYS):'';
+    const p=v.period;
+    if(!p)return'';
+    if(p.unit==='days')return addDLocal(start,p.value);
+    if(p.unit==='months')return addMLocal(start,p.value);
+    if(p.unit==='years')return addMLocal(start,p.value*12);
+    return'';
+  }
+  function next(e){
+    const base=official(e);return base?addDLocal(base,SAFETY_BUFFER_DAYS):'';
+  }
+  function applicationReady(e){
+    const v=verification(e);if(!v.ok||v.decision!=='repeatable')return'';
+    const safe=next(e);if(!safe)return'';
+    if(!v.mustCloseBeforeReapply)return safe;
+    const closed=String(e?.closed||'');if(!closed)return'';
+    return closed>safe?closed:safe;
   }
   function ready(e){return next(e)}
   function left(e){
@@ -74,13 +97,16 @@
     try{if(typeof window.dB==='function'&&typeof window.td==='function')return Math.max(0,window.dB(window.td(),d))}catch{}
     return null
   }
-  function bufferFor(e){return decision(e)==='repeatable'&&!!sourceBasis(e)?SAFETY_BUFFER_DAYS:0}
+  function bufferFor(e){const v=verification(e);return v.ok&&v.decision==='repeatable'?SAFETY_BUFFER_DAYS:0}
   function assignGlobals(){
     window.churnBasisDate=basisDate;
     window.churnBufferDaysFor=bufferFor;
     window.nextReopen=next;window.churnReadyDate=ready;window.daysLeft=left;
+    window.btOfficialEligibilityDate=official;
+    window.btApplicationReadyDate=applicationReady;
     window.btChurnSafetyBufferDays=SAFETY_BUFFER_DAYS;
     window.btEligibilityBasisFor=sourceBasis;
+    window.btEligibilityVerification=verification;
     try{churnBasisDate=basisDate}catch{}
     try{churnBufferDaysFor=window.churnBufferDaysFor}catch{}
     try{nextReopen=next}catch{}
@@ -88,14 +114,10 @@
     try{daysLeft=left}catch{}
   }
   function eligibilityText(e){
+    try{if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.summary==='function')return window.BTEligibilityGate.summary(e)}catch{}
     const d=decision(e);
     if(d==='nonrepeatable')return'Non-repeatable · archives after closing';
-    if(d!=='repeatable')return'Not saved';
-    const rule=String(e?.churn)==='180'?'180 days':e?.churn?(e.churn+' year'+(String(e.churn)==='1'?'':'s')):'Reset period missing';
-    const b=sourceBasis(e);
-    if(!b)return rule+' · eligibility start date needs review';
-    const label=b==='bonus'?'bonus received date':b==='opened'?'account opened date':'account closed date';
-    return rule+' + '+SAFETY_BUFFER_DAYS+'-day safety buffer after '+label;
+    return'T&C verification required';
   }
   function polishModalHtml(h){
     h=String(h||'');
@@ -105,17 +127,17 @@
   }
   function wrap(name,after){
     const base=window[name];
-    if(typeof base!=='function'||base.__btEligibility3417)return;
+    if(typeof base!=='function'||base.__btEligibility3419)return;
     const fn=function(){const out=base.apply(this,arguments);return after(out,arguments)};
-    fn.__btEligibility3417=true;window[name]=fn;
+    fn.__btEligibility3419=true;window[name]=fn;
     try{globalThis[name]=fn}catch{}
   }
   function install(){
     assignGlobals();
     wrap('normalizeLifecycleEntry',out=>normalize(out));
-    if(typeof window.normalizeLifecycleEntries==='function'&&!window.normalizeLifecycleEntries.__btEligibility3417){
+    if(typeof window.normalizeLifecycleEntries==='function'&&!window.normalizeLifecycleEntries.__btEligibility3419){
       const base=window.normalizeLifecycleEntries;
-      const fn=function(rows){return (base(rows)||[]).map(normalize)};fn.__btEligibility3417=true;window.normalizeLifecycleEntries=fn;
+      const fn=function(rows){return (base(rows)||[]).map(normalize)};fn.__btEligibility3419=true;window.normalizeLifecycleEntries=fn;
       try{normalizeLifecycleEntries=fn}catch{}
     }
     wrap('collectModalEntryData',out=>normalize(out));
@@ -126,8 +148,8 @@
     wrap('setModalChurnability',out=>{try{if(typeof modal!=='undefined'&&modal)normalize(modal)}catch{}return out});
     wrap('setModalChurnRule',out=>{try{if(typeof modal!=='undefined'&&modal)normalize(modal)}catch{}return out});
     wrap('setModalChurnBasis',out=>{try{if(typeof modal!=='undefined'&&modal)normalize(modal)}catch{}return out});
-    if(typeof window.rModal==='function'&&!window.rModal.__btEligibility3417){
-      const base=window.rModal;const fn=function(){return polishModalHtml(base.apply(this,arguments))};fn.__btEligibility3417=true;window.rModal=fn;try{rModal=fn}catch{}
+    if(typeof window.rModal==='function'&&!window.rModal.__btEligibility3419){
+      const base=window.rModal;const fn=function(){return polishModalHtml(base.apply(this,arguments))};fn.__btEligibility3419=true;window.rModal=fn;try{rModal=fn}catch{}
     }
     window.btFutureEligibilityText=eligibilityText;
     window.btChurnCloseDatePolicyVersion=VER;

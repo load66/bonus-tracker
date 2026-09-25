@@ -6,6 +6,7 @@ function assert(ok,msg){if(!ok)throw new Error(msg)}
 
 const importSource=fs.readFileSync('entry-link-import.js','utf8');
 const appSource=fs.readFileSync('app.js','utf8');
+const eligibilityGate=require('../eligibility-gate.js');
 
 assert(importSource.includes("modal._skipManualReplacePrompt=false"),'Entry-file import bypasses the existing replacement picker');
 assert(importSource.includes("modal._skipDuplicateCheck=false"),'Entry-file import bypasses duplicate protection');
@@ -42,8 +43,9 @@ const sandbox={
   console,document,location:{hash:'',pathname:'/bonus-tracker/',search:''},history:{replaceState(){}},
   alert(){},confirm(){return true},TextDecoder,Uint8Array,atob,Date,JSON,Math,Promise,FileReader:function(){},setTimeout(){return 0},clearTimeout(){},
   normalizeTimerList:x=>Array.isArray(x)?x:[],
+  BTEligibilityGate:eligibilityGate,
   churnDecisionForEntry:e=>e.churnable===false?'nonrepeatable':e.churn?'repeatable':'',
-  normalizeLifecycleEntry:e=>({...e,churnBasis:e.churnable===false?'':'closed',churnBufferDays:0}),
+  normalizeLifecycleEntry:e=>({...e}),
   openAdd(){modal={bank:'',_edit:false};sandbox.modal=modal},
   R(){rendered++},td:()=> '2026-08-10',
   btRegisterPostRender:(name,fn)=>{sandbox.postRenderHook=fn;return true},
@@ -58,11 +60,25 @@ vm.runInContext(importSource,sandbox,{filename:'entry-link-import.js'});
 
 const payload={
   bank:'Citi',accountType:'personal',bonus:325,churn:'1',churnable:true,churnability:'repeatable',
+  churnBasis:'bonus',sourceEligibilityBasis:'bonus-received',churnPeriodValue:12,churnPeriodUnit:'months',
+  eligibilityEvidenceText:'Not eligible if you received a Citi checking bonus within the past 12 months.',
+  eligibilityEvidenceSource:'official-promotion-terms',
   opened:'2026-08-10',dataPoint:'2 Enhanced Direct Deposits totaling $3,000+ within 90 days',monthlyFeeChecked:true,feeChecked:true,customTimers:[]
 };
 const parsedJson=sandbox.btParseEntryFileText(JSON.stringify({kind:'BonusTrackerEntry',entry:payload}),'Citi.json');
 assert(parsedJson.bank==='Citi'&&parsedJson.bonus===325,'JSON entry file did not parse');
-assert(parsedJson.churnBasis==='closed'&&parsedJson.churnBufferDays===0,'Imported repeatable entry was not normalized to confirmed-close-date churn policy');
+assert(parsedJson.churnBasis==='bonus'&&parsedJson.eligibilityVerified===true&&parsedJson.churnPeriodValue===12&&parsedJson.churnPeriodUnit==='months','Imported repeatable entry did not preserve verified T&C churn evidence');
+let rejected=false;
+try{sandbox.btParseEntryFileText(JSON.stringify({kind:'BonusTrackerEntry',entry:{...payload,eligibilityEvidenceText:'',eligibilityEvidenceSource:''}}),'MissingEvidence.json')}catch(e){rejected=/Churn eligibility is not verified/.test(String(e.message))}
+assert(rejected,'Import accepted a repeatable bonus with no T&C churn evidence');
+
+rejected=false;
+try{sandbox.btParseEntryFileText(JSON.stringify({kind:'BonusTrackerEntry',entry:{...payload,churnBasis:'opened',sourceEligibilityBasis:'account-opened'}}),'WrongBasis.json')}catch(e){rejected=/does not match/.test(String(e.message))}
+assert(rejected,'Import accepted a churn basis that conflicts with the T&C wording');
+
+const sixMonthPayload={...payload,churn:'',churnPeriodValue:6,churnPeriodUnit:'months',churnBasis:'opened',sourceEligibilityBasis:'account-opened',eligibilityEvidenceText:'Not eligible if you opened a checking account within the past 6 months.'};
+const parsedSix=sandbox.btParseEntryFileText(JSON.stringify({kind:'BonusTrackerEntry',entry:sixMonthPayload}),'SixMonths.json');
+assert(parsedSix.churnPeriodValue===6&&parsedSix.churnPeriodUnit==='months'&&parsedSix.eligibilityVerified===true,'Exact six-month cooldown did not import');
 
 const encoded=Buffer.from(JSON.stringify(payload)).toString('base64url');
 const parsedHtml=sandbox.btParseEntryFileText(`<a href="https://load66.github.io/bonus-tracker/#btadd=${encoded}">Add Citi</a>`,'Citi.html');
@@ -86,4 +102,4 @@ sandbox.postRenderHook();
 assert(document.getElementById('bt_import_entry_file'),'Import Entry File button was not injected into Quick Add');
 assert(document.getElementById('bt_import_entry_note'),'Replacement-safety explanation is missing from Quick Add');
 
-console.log('Entry file import passed: JSON + HTML parsing, review-before-save, fee-review safety, duplicate protection, and existing churn replacement flow preserved');
+console.log('Entry file import passed: JSON + HTML parsing, mandatory T&C churn evidence, exact cooldown units, review-before-save, fee safety, and duplicate protection preserved');
