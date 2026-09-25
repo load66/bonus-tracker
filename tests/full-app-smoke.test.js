@@ -76,22 +76,30 @@ setTimeout(()=>{
       entries=[{id,bank:'Section State Bank',accountType:'personal',opened:'2026-09-01',bonus:100,churn:'1',checklist:[{id:'ck_test',text:'Test requirement',done:false}],customTimers:[]}];
       expanded=id;search='';tab='tracker';
       setProfileSectionOpen(id,'lifecycle',true);
+      const attrBefore=profileSectionOpenAttr(id,'lifecycle');
+      const rendererSource=String(window.rTracker||'');
       const directBefore=window.rTracker(entries);
       R();
       const before=document.getElementById('app').innerHTML;
       toggleCk(id,0);
       const after=document.getElementById('app').innerHTML;
-      const lifecycleTagOpen=html=>{
+      const lifecycleTag=html=>{
         const sectionNeedle='data-section-key="lifecycle"';
         const at=html.indexOf(sectionNeedle);
-        if(at<0)return false;
+        if(at<0)return '';
         const start=html.lastIndexOf('<details',at);
         const end=html.indexOf('>',at);
-        if(start<0||end<0)return false;
-        const tag=html.slice(start,end+1);
-        return tag.includes('data-entry-id="'+id+'"')&&(' '+tag.replace(/\s+/g,' ')+' ').includes(' open ');
+        if(start<0||end<0)return '';
+        return html.slice(start,end+1);
+      };
+      const lifecycleTagOpen=html=>{
+        const tag=lifecycleTag(html);
+        return !!tag&&tag.includes('data-entry-id="'+id+'"')&&(' '+tag.replace(/\s+/g,' ')+' ').includes(' open ');
       };
       const result={
+        attrBefore,
+        rendererHasSectionState:rendererSource.includes('profileSectionOpenAttr'),
+        directTag:lifecycleTag(directBefore),
         stateBefore:profileSectionIsOpen(id,'lifecycle'),
         directOpen:lifecycleTagOpen(directBefore),
         beforeOpen:lifecycleTagOpen(before),
@@ -103,8 +111,8 @@ setTimeout(()=>{
       entries=oldEntries;expanded=oldExpanded;search=oldSearch;tab=oldTab;R();
       return result;
     })()`,sandbox);
-    assert(sectionStateRegression.stateBefore,'Centralized lifecycle state was not open before toggle');
-    assert(sectionStateRegression.directOpen,'Registered active tracker renderer ignored centralized lifecycle open state');
+    assert(sectionStateRegression.attrBefore===' open','profileSectionOpenAttr did not report open before render: '+sectionStateRegression.attrBefore);\n    assert(sectionStateRegression.rendererHasSectionState,'Registered window.rTracker is not the section-state-aware renderer');\n    assert(sectionStateRegression.stateBefore,'Centralized lifecycle state was not open before toggle');
+    assert(sectionStateRegression.directOpen,'Registered active tracker renderer ignored centralized lifecycle open state: '+sectionStateRegression.directTag);
     assert(sectionStateRegression.beforeOpen,'R() did not preserve active renderer lifecycle open state');
     assert(sectionStateRegression.stateAfter,'Centralized lifecycle state was lost after checklist toggle/full render cycle');
     assert(sectionStateRegression.afterOpen,'Lifecycle section collapsed after checklist toggle/full render cycle');
