@@ -1,7 +1,7 @@
-/* ✅ Version 3.4.16: required future-eligibility decision before creation, archive lifecycle, and safer analyzer integration. */
+/* ✅ Version 3.4.17: source-accurate future eligibility, archive lifecycle, and hardened analyzer/export runtime. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.16';
+const APP_VERSION='3.4.17';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const ANALYZER_MEMORY_KEY='bt_analyzer_memory_v1';
@@ -247,7 +247,9 @@ function churnDecisionForEntry(e){
 function hasSavedChurnDecision(e){
   const decision=churnDecisionForEntry(e);
   if(decision==='nonrepeatable')return true;
-  return decision==='repeatable'&&['180','1','2','3'].includes(String(e?.churn||'').trim());
+  const basis=String(e?.sourceEligibilityBasis||e?.churnBasis||e?.analysis?.sourceEligibilityBasis||e?.analysis?.churnBasis||'').toLowerCase();
+  const hasBasis=/bonus|open|clos/.test(basis);
+  return decision==='repeatable'&&['180','1','2','3'].includes(String(e?.churn||'').trim())&&hasBasis;
 }
 function applyChurnDecisionFields(x){
   if(!x)return x;
@@ -4128,6 +4130,8 @@ function collectModalEntryData(){
   if(modal.churnable===false||modal.analysis?.churnable===false)d.churnable=false;
   else if(modal.churnable===true||modal.analysis?.churnable===true||modal.churn)d.churnable=true;
   d.churnability=modal.churnability||modal.analysis?.churnability||(d.churnable===false?'not-repeatable':d.churn?'repeatable':'');
+  d.churnBasis=modal.churnBasis||modal.analysis?.churnBasis||'';
+  d.sourceEligibilityBasis=modal.sourceEligibilityBasis||modal.analysis?.sourceEligibilityBasis||(d.churnBasis==='bonus'?'bonus-received':d.churnBasis==='opened'?'account-opened':d.churnBasis==='closed'?'account-closed':'');
   d.churnReason=modal.churnReason||modal.analysis?.churnReason||'';
   d.churnDecisionSource=modal.churnDecisionSource||modal.analysis?.churnDecisionSource||(modal.analysis?'analyzer-reviewed':'user-confirmed');
   d.churnDecisionConfirmedAt=modal.churnDecisionConfirmedAt||td();
@@ -4147,6 +4151,7 @@ function saveEntry(){
     const decision=churnDecisionForEntry(d);
     if(!decision){alert('Future eligibility is required before creating this bank. Choose whether the bonus is Repeatable or Non-repeatable.');return false}
     if(decision==='repeatable'&&!['180','1','2','3'].includes(String(d.churn||''))){alert('Select the eligibility reset / churn rule before creating this repeatable bank.');return false}
+    if(decision==='repeatable'&&!hasSavedChurnDecision(d)){alert('Select the eligibility clock start from the offer terms before creating this repeatable bank.');return false}
     d.churnDecisionConfirmedAt=d.churnDecisionConfirmedAt||td();
     d.churnDecisionSource=d.churnDecisionSource||'user-confirmed';
   }
