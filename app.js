@@ -1,7 +1,7 @@
-/* ✅ Version 3.4.29: canonical user-facing bank-bonus lifecycle statuses with timer-aware secondary context. */
+/* ✅ Version 3.4.30: professional operations dashboard, lifecycle Action Center, standardized cards, activity timeline, and in-app feedback. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.29';
+const APP_VERSION='3.4.30';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -567,16 +567,41 @@ function appendEntryHistory(x,type,detail){
   x.history=list.slice(-80);
   return x
 }
+function timelineRowsForEntry(e){
+  const stored=normalizeEntryHistoryList(e?.history).map((ev,i)=>({...ev,_synthetic:false,_seq:i}));
+  const types=new Set(stored.map(x=>String(x.type||'')));
+  const rows=stored.slice();
+  const add=(at,type,title,detail)=>{
+    if(!at||types.has(type))return;
+    rows.push({at:String(at),type,title,detail,_synthetic:true,_seq:rows.length});
+    types.add(type)
+  };
+  add(e?.opened,'account_opened','Account opened','Bonus cycle started');
+  if(e?.fundedDate||e?.fundedAt)add(e.fundedDate||e.fundedAt,'funding_completed','Funding completed','Funding milestone recorded');
+  add(e?.reqMet,'req_met','Requirements completed','Qualification requirements recorded as complete');
+  add(e?.bonusRecd,'bonus_received','Bonus received',(e?.bonus?fM(e.bonus)+' posted':'Bonus payment recorded'));
+  add(e?.closed,'actual_close','Account closed',isNonRepeatableEntry(e)?'Cycle archived · non-repeatable offer':'Cooldown eligibility clock started');
+  const stamp=v=>{
+    if(!v)return 0;
+    const raw=/^\d{4}-\d{2}-\d{2}$/.test(String(v))?String(v)+'T12:00:00':String(v);
+    const d=new Date(raw);return isNaN(d)?0:d.getTime()
+  };
+  return rows.sort((a,b)=>stamp(b.at)-stamp(a.at)||(b._seq-a._seq)).slice(0,12)
+}
+function timelineWhen(v){
+  if(!v)return'';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(String(v))){try{return fD(v)}catch{}}
+  const d=new Date(v);
+  return !isNaN(d)?d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):String(v)
+}
 function renderEntryHistory(e){
-  const list=normalizeEntryHistoryList(e?.history).slice(-6).reverse();
+  const list=timelineRowsForEntry(e);
   if(!list.length)return'';
-  let h='<div class="bt-history-card"><div class="bt-history-title">Action history</div>';
+  let h='<div class="bt-history-card bt-timeline-card"><div class="bt-history-title">Activity Timeline</div><div class="bt-timeline">';
   list.forEach(ev=>{
-    const d=ev.at?new Date(ev.at):null;
-    const when=d&&!isNaN(d)?d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):ev.at;
-    h+='<div class="bt-history-row"><div><b>'+esc(ev.title||historyEventTitle(ev.type))+'</b><span>'+esc(ev.detail||'Saved update')+'</span></div><em>'+esc(when||'')+'</em></div>'
+    h+='<div class="bt-timeline-item'+(ev._synthetic?' milestone':'')+'"><i class="bt-timeline-dot"></i><div class="bt-timeline-copy"><div class="bt-timeline-top"><b>'+esc(ev.title||historyEventTitle(ev.type))+'</b><em>'+esc(timelineWhen(ev.at))+'</em></div><span>'+esc(ev.detail||'Saved update')+'</span></div></div>'
   });
-  h+='</div>';
+  h+='</div></div>';
   return h
 }
 function lifecycleSteps(e){
@@ -3826,7 +3851,87 @@ function normalizeLifecycleEntries(rows){
   return (rows||[]).map(normalizeLifecycleEntry)
 }
 
-function R(){captureProfileSectionState();const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;if(tab==='profiles'||tab==='health')tab='tracker';try{if(!window.__btAutoCleanupV384){entries=sortE(normalizeLifecycleEntries(entries));sv(SK,entries);window.__btAutoCleanupV384=true}}catch{}sanitizeAllTimers(false);const sorted=sortE(entries);const wk=sorted.filter(e=>e.bank&&!e.closed).length;const ch=sorted.filter(e=>status(e)==='WAITING TO CHURN!'||status(e)==='TIME TO CHURN!').length;const rd=sorted.filter(e=>status(e)==='TIME TO CHURN!').length;const yr=completedYrTotal(dashYear);const thisYr=new Date().getFullYear();let h='';h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div><h1><em>Bonus</em>Tracker</h1><div class="hdr-sub">Track • close • churn</div></div><div class="yr-pills">';[thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});h+='</div></div>';if(tab==='tracker'){h+='<div class="hero"><div class="hero-copy"><div class="hero-kicker">'+dashYear+' total collected</div><div class="hero-value">'+fM(yr)+'</div><div class="hero-note">'+wk+' open • '+ch+' cooling down • '+rd+' ready right now</div></div><div class="hero-side"><div class="hero-chip">'+rd+' ready</div></div></div>';h+='<div class="stats"><div class="st"><div class="n">'+wk+'</div><div class="l">Open</div></div><div class="st"><div class="n">'+ch+'</div><div class="l">Cooldown</div></div><div class="st"><div class="n">'+rd+'</div><div class="l">Ready</div></div><div class="st"><div class="n">'+fM(yr)+'</div><div class="l">'+dashYear+'</div></div></div>'}h+='</div></div>';h+='<div class="scroll">';if(tab==='tracker'){const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted)}else if(tab==='tax')h+=rTax();else if(tab==='tips')h+=rTips();else if(tab==='storage')h+=rTermsStorage();h+='</div>';if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';h+='<div class="tabs">';['tracker','tax','tips','storage'].forEach((t,i)=>{h+='<button class="tb'+(tab===t?' on':'')+'" onclick="tab=\''+t+'\';search=\''+'\';R()">'+[I.grid,I.doc,I.tips,I.lock][i]+'<span>'+['Tracker','Tax','Datapoints','T&C Archive'][i]+'</span></button>'});h+='</div>';if(modal)h+=rModal();if(cfm)h+=rCfm();if(ddPrompt)h+=rDD();if(rcvPrompt)h+=rRcv();if(reqPrompt)h+=rReqMet();if(closePrompt)h+=rClose();if(overwritePrompt)h+=rOverwrite();if(matchPickerPrompt)h+=rMatchPicker();if(replacementPickerPrompt)h+=rReplacementPicker();if(feeCheckPrompt)h+=rFeeCheck();if(timerEditModal)h+=rTimerEdit();if(dpEditor)h+=rDpEditor();if(timerChoicePrompt)h+=rTimerChoicePrompt();if(undoState)h+='<div class="undo-bar"><span>'+esc(undoState.undoLabel||('Change saved for '+undoState.bank+' — Undo restores everything for 60 seconds.'))+'</span><button onclick="undoClose()">Undo</button></div>';document.getElementById('app').innerHTML=h;const ns=document.querySelector('.scroll');if(ns)ns.scrollTop=_sp;btRunPostRenderHooks()}
+function lifecycleViewForEntry(e){
+  try{if(typeof window.btLifecycleStageForEntry==='function')return window.btLifecycleStageForEntry(e)}catch{}
+  const raw=status(e);
+  if(e?.closed){
+    if(raw==='ARCHIVED')return{code:'ARCHIVED',label:'Archived',support:'Completed · non-repeatable offer'};
+    return raw==='TIME TO CHURN!'?{code:'ELIGIBLE',label:'Eligible',support:'Eligible to reapply'}:{code:'COOLDOWN',label:'Cooldown',support:'Waiting for eligibility'};
+  }
+  if(raw==='SAFE TO CLOSE')return{code:'READY_TO_CLOSE',label:'Ready to Close',support:'All close restrictions cleared'};
+  if(raw==='WAITING TO CLOSE'||raw==='3-DAY BUFFER')return{code:'HOLD_OPEN',label:'Hold Open',support:'Keep account open'};
+  if(e?.bonusRecd)return{code:'BONUS_RECEIVED',label:'Bonus Received',support:'Review close rules'};
+  if(e?.reqMet)return{code:'AWAITING_BONUS',label:'Awaiting Bonus',support:'Requirements complete · waiting for payout'};
+  return{code:'IN_PROGRESS',label:'In Progress',support:'Complete bonus requirements'}
+}
+function bonusPipelineMetrics(rows,year){
+  const out={collected:completedYrTotal(year),awaiting:0,inProgress:0,actionNeeded:0,openCount:0,cooldownCount:0,eligibleCount:0,readyCloseCount:0,actionCount:0,awaitingCount:0};
+  (rows||[]).forEach(e=>{
+    if(!e||!e.bank)return;
+    const st=lifecycleViewForEntry(e),bonus=Number(e.bonus||0);
+    if(!e.closed)out.openCount++;
+    if(st.code==='COOLDOWN')out.cooldownCount++;
+    if(st.code==='ELIGIBLE')out.eligibleCount++;
+    if(st.code==='READY_TO_CLOSE')out.readyCloseCount++;
+    if(e.closed||e.bonusRecd)return;
+    if(st.code==='ACTION_NEEDED'){out.actionNeeded+=bonus;out.actionCount++;return}
+    if(st.code==='AWAITING_BONUS'||st.code==='REQUIREMENTS_MET'){out.awaiting+=bonus;out.awaitingCount++;return}
+    out.inProgress+=bonus
+  });
+  out.active=out.awaiting+out.inProgress+out.actionNeeded;
+  return out
+}
+function renderCardProgressLine(e){
+  if(!e||e.closed)return'';
+  const tasks=Array.isArray(e.checklist)?e.checklist.filter(x=>x&&String(x.text||'').trim()):[];
+  if(!tasks.length)return'';
+  const done=tasks.filter(x=>x.done).length;
+  const pct=Math.round(done/tasks.length*100);
+  return '<div class="card-progressline"><span>'+done+' of '+tasks.length+' tasks complete</span><i><b style="width:'+pct+'%"></b></i></div>'
+}
+function renderActionCenter(){
+  let rows=[];try{rows=typeof window.getAttentionSuggestions==='function'?(window.getAttentionSuggestions()||[]):[]}catch{}
+  if(!rows.length)return'<div class="ops-action-center clear"><div class="ops-section-head"><div><span>Action Center</span><b>All caught up</b></div></div><div class="ops-empty">No account needs immediate follow-up.</div></div>';
+  const visible=rows.slice(0,8);
+  let h='<div class="ops-action-center"><div class="ops-section-head"><div><span>Action Center</span><b>'+rows.length+' account'+(rows.length!==1?'s':'')+' in your workflow</b></div></div><div class="ops-action-list">';
+  visible.forEach(x=>{
+    const entryId=String(x.entryId||'');
+    const stage=String(x.stageCode||'IN_PROGRESS').toLowerCase().replace(/_/g,'-');
+    h+='<button type="button" class="ops-action-row stage-'+esc(stage)+'" onclick="event.stopPropagation();expanded=\''+esc(entryId)+'\';search=\'\';R()">'+bankLogo(x.bank,true)+'<span class="ops-action-main"><b>'+esc(x.bank)+'</b><em>'+esc(x.rsn||x.action||'Review account')+'</em></span><span class="ops-action-side">'+(x.showBonus&&x.bonus?'<strong>'+fM(x.bonus)+'</strong>':'')+'<small>'+esc(x.stageLabel||'In Progress')+'</small></span></button>'
+  });
+  h+='</div>';
+  if(rows.length>visible.length)h+='<div class="ops-action-more">'+(rows.length-visible.length)+' more account'+(rows.length-visible.length!==1?'s':'')+' continue below in the tracker.</div>';
+  return h+'</div>'
+}
+function R(){captureProfileSectionState();const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;
+  if(tab==='profiles'||tab==='health')tab='tracker';
+  try{if(!window.__btAutoCleanupV384){entries=sortE(normalizeLifecycleEntries(entries));sv(SK,entries);window.__btAutoCleanupV384=true}}catch{}
+  sanitizeAllTimers(false);
+  const sorted=sortE(entries),thisYr=new Date().getFullYear(),metrics=bonusPipelineMetrics(sorted,dashYear);
+  let h='';
+  h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div><h1><em>Bonus</em>Tracker</h1><div class="hdr-sub">Bonus operations • lifecycle • churn</div></div><div class="yr-pills">';
+  [thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});
+  h+='</div></div>';
+  if(tab==='tracker'){
+    h+='<div class="hero ops-hero"><div class="hero-copy"><div class="hero-kicker">Active bonus pipeline</div><div class="hero-value">'+fM(metrics.active)+'</div><div class="hero-note">'+fM(metrics.collected)+' collected in '+dashYear+' • '+metrics.openCount+' open • '+metrics.cooldownCount+' cooling down</div></div><div class="hero-side"><div class="hero-chip">'+metrics.readyCloseCount+' ready to close</div><div class="hero-chip secondary">'+metrics.actionCount+' action'+(metrics.actionCount!==1?'s':'')+'</div></div></div>';
+    h+='<div class="stats ops-stats"><div class="st"><div class="n">'+fM(metrics.collected)+'</div><div class="l">Collected</div></div><div class="st"><div class="n">'+fM(metrics.awaiting)+'</div><div class="l">Awaiting</div></div><div class="st"><div class="n">'+fM(metrics.inProgress)+'</div><div class="l">In Progress</div></div><div class="st"><div class="n">'+fM(metrics.actionNeeded)+'</div><div class="l">Action Needed</div></div></div>'
+  }
+  h+='</div></div><div class="scroll">';
+  if(tab==='tracker'){const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted)}
+  else if(tab==='tax')h+=rTax();
+  else if(tab==='tips')h+=rTips();
+  else if(tab==='storage')h+=rTermsStorage();
+  h+='</div>';
+  if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';
+  h+='<div class="tabs">';
+  ['tracker','tax','tips','storage'].forEach((t,i)=>{h+='<button class="tb'+(tab===t?' on':'')+'" onclick="tab=\''+t+'\';search=\''+'\';R()">'+[I.grid,I.doc,I.tips,I.lock][i]+'<span>'+['Tracker','Tax','Datapoints','T&C Archive'][i]+'</span></button>'});
+  h+='</div>';
+  if(modal)h+=rModal();if(cfm)h+=rCfm();if(ddPrompt)h+=rDD();if(rcvPrompt)h+=rRcv();if(reqPrompt)h+=rReqMet();if(closePrompt)h+=rClose();if(overwritePrompt)h+=rOverwrite();if(matchPickerPrompt)h+=rMatchPicker();if(replacementPickerPrompt)h+=rReplacementPicker();if(feeCheckPrompt)h+=rFeeCheck();if(timerEditModal)h+=rTimerEdit();if(dpEditor)h+=rDpEditor();if(timerChoicePrompt)h+=rTimerChoicePrompt();
+  if(undoState)h+='<div class="undo-bar"><span>'+esc(undoState.undoLabel||('Change saved for '+undoState.bank+' — Undo restores everything for 60 seconds.'))+'</span><button onclick="undoClose()">Undo</button></div>';
+  document.getElementById('app').innerHTML=h;
+  const ns=document.querySelector('.scroll');if(ns)ns.scrollTop=_sp;
+  btRunPostRenderHooks()
+}
 function rTrackerLegacy(sorted){
   const q=search.toLowerCase();
   const f=q?sorted.filter(e=>(e.bank||'').toLowerCase().includes(q)||(e.id||'').toLowerCase().includes(q)):sorted;
@@ -5420,7 +5525,7 @@ function importBackup(){
     reader.onload=async function(e){
       try{
         const data=JSON.parse(e.target.result);
-        const ok=window.confirm(`Restore this full backup?\n\n${describeBackupPayload(data)}\n\nSafety upgrade: before restore, the app will export your current device data as a pre-restore backup. Then it will replace the current data on this device.`);
+        const ok=await window.btConfirmDialog(`Restore this full backup?\n\n${describeBackupPayload(data)}\n\nA safety backup of the current device data will be exported first.`,{title:'Restore Backup',kicker:'Data safety',confirmLabel:'Restore Backup',danger:true});
         if(!ok)return;
         try{
           await exportBackup(false,buildPortableBackupPayload(),'BankBonusTracker_PreRestore_'+backupTimestamp()+'.json')
@@ -5822,14 +5927,14 @@ entries=sortE(entries);R();
     if(!hasEntries&&!hasAny)return {ok:false,error:'This backup does not contain BonusTracker app keys.'};
     return {ok:true,storage};
   }
-  function restoreFromObject(obj){
+  async function restoreFromObject(obj){
     const v=validateBackup(obj);
     if(!v.ok){alert(v.error);return false;}
     const storage=v.storage;
     const entryCount=countFrom(storage,'bt_e_v4');
     const tcCount=countFrom(storage,'bt_tc_learning_inbox_v320');
     const msg='Restore this backup?\n\nThis will replace the current app data on this phone.\n\nBackup contains:\n• '+entryCount+' bank entries\n• '+tcCount+' saved T&C samples\n• '+Object.keys(storage).length+' storage keys\n\nA current backup will download first as a safety copy.';
-    if(!confirm(msg))return false;
+    if(!(await window.btConfirmDialog(msg,{title:'Restore Backup',kicker:'Data safety',confirmLabel:'Restore Backup',danger:true})))return false;
     try{exportFullBackup('pre-restore-safety-copy')}catch{}
     setTimeout(()=>{
       try{
@@ -5846,7 +5951,7 @@ entries=sortE(entries);R();
   }
   function chooseRestoreFile(){
     const input=document.createElement('input');input.type='file';input.accept='application/json,.json';input.style.display='none';
-    input.onchange=()=>{const file=input.files&&input.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{restoreFromObject(JSON.parse(String(reader.result||'')))}catch(e){alert('Could not read backup JSON: '+(e&&e.message?e.message:e));}};reader.readAsText(file);setTimeout(()=>input.remove(),3000);};
+    input.onchange=()=>{const file=input.files&&input.files[0];if(!file)return;const reader=new FileReader();reader.onload=async()=>{try{await restoreFromObject(JSON.parse(String(reader.result||'')))}catch(e){alert('Could not read backup JSON: '+(e&&e.message?e.message:e));}};reader.readAsText(file);setTimeout(()=>input.remove(),3000);};
     document.body.appendChild(input);input.click();
   }
   function buttonText(el){return (el.textContent||el.value||el.getAttribute('aria-label')||el.getAttribute('title')||'').trim().replace(/\s+/g,' ');}
@@ -6146,24 +6251,25 @@ entries=sortE(entries);R();
       h += '</div>';
     }
 
-    h += `<input class="sinput" type="text" placeholder="Search banks..." value="${esc(search)}" oninput="search=this.value;R()">`;
+    h += `<input class="sinput" type="text" placeholder="Search accounts..." value="${esc(search)}" oninput="search=this.value;R()">`;
     h += `<button class="tc-btn" onclick="showAnalyzer=!showAnalyzer;R()">${I.spark}<span>${showAnalyzer?'Hide analyzer':'Review promo terms'}</span></button>`;
     if(showAnalyzer) h += rAnalyzer();
+    h += renderActionCenter();
 
     if(!f.length){
       return h + '<div class="empty"><div class="em">No banks yet</div><p>Add your first bank with the + button, use Quick Add for templates, or restore a saved backup.</p></div>' + rBankActions();
     }
 
-    h += '<div class="sec">Your banks</div>';
+    h += '<div class="sec">Bonus Accounts</div>';
 
     f.forEach(e=>{
-      const s=status(e), isX=expanded===e.id, nr=nextReopen(e), countdown=getCountdown(e), urg=getUrg(e);
+      const isX=expanded===e.id, nr=nextReopen(e), countdown=getCountdown(e), urg=getUrg(e);
       h += `<div class="card u-${urg}">`;
       h += `<div class="card-h" onclick="expanded=expanded==='${e.id}'?null:'${e.id}';R()">`;
       h += `<div class="card-logo-col">${bankLogo(e.bank)}${accountTypeChipHtml(e)}${e.churn?churnTagHtml(e.bank,e.churn):''}</div>`;
-      h += `<div class="card-left"><div class="card-name">${esc(e.bank)}</div><div class="card-row">${statusBadgeHtml(e,countdown)}</div></div>`;
+      h += `<div class="card-left"><div class="card-name">${esc(e.bank)}</div><div class="card-row">${statusBadgeHtml(e,countdown)}</div>${renderCardProgressLine(e)}</div>`;
       h += '<div class="card-right"><div class="card-right-main">';
-      if((s==='WORKING'||s==='CUSTOM TIMER')&&e.bonus) h += `<div class="card-bonus">${fM(e.bonus)}</div>`;
+      if(e.bonus) h += `<div class="card-bonus"><span>Bonus</span>${fM(e.bonus)}</div>`;
       h += `<div class="card-id">${esc(getEntryDisplayId(e))}</div></div>`;
       h += '</div></div>';
 
@@ -6208,7 +6314,7 @@ entries=sortE(entries);R();
         historyHtml += renderAnalyzerHistory(e);
         historyHtml += renderOfferHistory(e);
         historyHtml += renderAnalyzedTermsCard(e);
-        if(historyHtml)h += '<details class="profile-section" data-entry-id="'+profileSectionAttr(e.id)+'" data-section-key="history"'+profileSectionOpenAttr(e.id,'history')+' ontoggle="handleProfileSectionToggle(this)"><summary><span>History & Analysis</span><em>View</em></summary><div class="profile-section-body">'+historyHtml+'</div></details>';
+        if(historyHtml)h += '<details class="profile-section" data-entry-id="'+profileSectionAttr(e.id)+'" data-section-key="history"'+profileSectionOpenAttr(e.id,'history')+' ontoggle="handleProfileSectionToggle(this)"><summary><span>Activity & Analysis</span><em>View</em></summary><div class="profile-section-body">'+historyHtml+'</div></details>';
 
         h += '<div class="card-btns">';
         if(!e.closed&&e.bonusRecd) h += actionBtn('cls',I.lock,'Close Now',`event.stopPropagation();startCloseFlow('${e.id}','actual')`);
@@ -6218,16 +6324,6 @@ entries=sortE(entries);R();
 
       h += '</div>';
     });
-
-    const attentionSug=getAttentionSuggestions();
-    const churnSug=getChurnSuggestions();
-    if(attentionSug.length||churnSug.length){
-      h += '<div class="sec">Suggested next</div>';
-      h += '<div class="sug-split">';
-      h += '<div class="sug-panel"><div class="sug-panel-h">Needs attention • '+attentionSug.length+' item'+(attentionSug.length!==1?'s':'')+'</div>'+(attentionSug.length?attentionSug.map(s=>`<div class="sug-c">${bankLogo(s.bank,true)}<div class="s-info"><div class="nm">${esc(s.bank)}</div>${s.showBonus&&s.bonus?`<div class="sub">${fM(s.bonus)}</div>`:''}<div class="rsn">${esc(s.rsn)}</div></div></div>`).join(''):'<div class="sug-empty">No urgent items.</div>')+'</div>';
-      h += '<div class="sug-panel"><div class="sug-panel-h">Least days to churn</div>'+(churnSug.length?churnSug.map(s=>`<div class="sug-c">${bankLogo(s.bank,true)}<div class="s-info"><div class="nm">${esc(s.bank)}</div>${s.showBonus&&s.bonus?`<div class="sub">${fM(s.bonus)}</div>`:''}<div class="rsn">${esc(s.rsn)}</div></div></div>`).join(''):'<div class="sug-empty">Nothing cooling down yet.</div>')+'</div>';
-      h += '</div>';
-    }
 
     return h + rBankActions();
   }
