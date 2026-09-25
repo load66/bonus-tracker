@@ -137,9 +137,9 @@ for token in ("['tracker','tax','tips','storage']","['Tracker','Tax','Datapoints
     if token not in app_source: fail(f'direct T&C Archive / churn suggestion architecture missing: {token}')
 
 dark_css=text('style.css')
-for token in ('v3.4.27 expanded bank detail dark-surface hardening','.profile-section,.profile-section-body','.bt-life,.bt-life-step','.profile-summary-item','.ck li,.tm li'):
+for token in ('v3.4.28 expanded bank detail dark-surface hardening','.profile-section,.profile-section-body','.bt-life,.bt-life-step','.profile-summary-item','.ck li,.tm li'):
     if token not in dark_css: fail(f'expanded bank detail dark coverage missing: {token}')
-if 'v3.4.27 interaction + dark prompt contrast hardening' not in dark_css:
+if 'v3.4.28 interaction + dark prompt contrast hardening' not in dark_css:
     fail('dark prompt contrast hardening release marker missing')
 for token in ('.cbox,.dd-box,.rcv-box,.ow-box,.fee-box,.close-modal','.dd-input,.rcv-box input','.crow .c-c','.crow .c-g','.ckb.dn'):
     if token not in dark_css: fail(f'dark prompt/checklist contrast coverage missing: {token}')
@@ -147,7 +147,14 @@ if app_source.count('onclick="event.stopPropagation();toggleTimer(') < 2:
     fail('mini timer checkbox clicks can still bubble and collapse expanded cards')
 for token in ('function toggleTimer(id,timerId)','function toggleCk(id,i)','sv(SK,entries);expanded=id;R()}'):
     if token not in app_source: fail(f'expanded-card state persistence missing: {token}')
-for token in ('v3.4.27 Midnight professional dark theme','color-scheme:dark','--bg:#060A11','--card:#0D1420','.modal,.dd-box','.clean-plan-card','.dp-summary','.tabs'):
+
+if app_source.count('function rTracker(sorted)') != 1:
+    fail('tracker renderer architecture has more than one active rTracker definition')
+if app_source.count('function rTrackerLegacy(sorted)') != 1:
+    fail('legacy tracker renderer is not isolated as an explicit fallback')
+for token in ("typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy",'captureProfileSectionState();const el=document.querySelector','data-section-key="lifecycle"','data-section-key="history"','function profileSectionStateKey','function captureProfileSectionState'):
+    if token not in app_source: fail(f'nested profile-section state architecture missing: {token}')
+for token in ('v3.4.28 Midnight professional dark theme','color-scheme:dark','--bg:#060A11','--card:#0D1420','.modal,.dd-box','.clean-plan-card','.dp-summary','.tabs'):
     if token not in dark_css: fail(f'professional dark theme coverage missing: {token}')
 for token in ("TC_ARCHIVE_KEY='bt_tc_archive_v1'","function saveTermsArchiveForNewCycle","function rTermsStorage","Existing-cycle edits never replace this record","closedWithNegativeBalance","entryNeedsNegativeBalanceClosureAnswer"):
     if token not in app_source: fail(f'T&C Storage / conditional close architecture missing: {token}')
