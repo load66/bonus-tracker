@@ -55,13 +55,13 @@ function assert(ok,msg){if(!ok)throw new Error(msg)}
 setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.19',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.4.19',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.20',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.4.20',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.13',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
-    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.19',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
-    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.19',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
+    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.20',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
+    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.20',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.13',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
-    assert(sandbox.BTEligibilityGate?.VERSION==='1.0.0',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
+    assert(sandbox.BTEligibilityGate?.VERSION==='1.1.0',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
     const localNow=new Date(),pad=n=>String(n).padStart(2,'0'),localToday=`${localNow.getFullYear()}-${pad(localNow.getMonth()+1)}-${pad(localNow.getDate())}`;
     assert(vm.runInContext('td()',sandbox)===localToday,'Today default is not based on the local calendar date');
@@ -79,6 +79,27 @@ setTimeout(()=>{
     const restorePlan=sandbox.stagePortableRestore({entries:[{id:'CIT-P-01',bank:'Citi',accountType:'personal',bonus:100,opened:'2026-01-01',bonusRecd:'2026-02-01',churn:'1',churnable:true,churnability:'repeatable',churnBasis:'bonus',sourceEligibilityBasis:'bonus-received'}],userDatapoints:[],communityDatapoints:[],bankReqs:{},phoneBook:[],profileEvents:[],offerHistory:{}});
     assert(restorePlan.entries.length===1&&restorePlan.entries[0].id==='CIT-P-01','Restore staging did not preserve an existing entry ID');
     assert(localStorage.getItem('bt_e_v4')===beforeRestoreStage,'Restore staging wrote storage before commit');
+    const multiRuleDate=vm.runInContext(`(function(){
+      const e={churnable:true,churnability:'repeatable',bonusRecd:'2026-06-01',closed:'2027-08-01',eligibilityRules:[
+        {id:'bonus24',basis:'bonus-received',periodValue:24,periodUnit:'months',evidenceText:'Not eligible if you received a checking bonus within the past 24 months.',evidenceSource:'official-promotion-terms'},
+        {id:'closed12',basis:'account-closed',periodValue:12,periodUnit:'months',evidenceText:'Not eligible if you closed a checking account within the past 12 months.',evidenceSource:'official-promotion-terms'}
+      ]};
+      return {official:btOfficialEligibilityDate(e),safe:nextReopen(e),policy:normalizeLifecycleEntry({...e}).churnTrackingPolicy};
+    })()`,sandbox);
+    assert(multiRuleDate.official==='2028-08-01'&&multiRuleDate.safe==='2028-08-06'&&/multi-rule/.test(multiRuleDate.policy),'Multi-rule churn countdown did not use the latest actual clearing date');
+
+    const replacementIds=vm.runInContext(`(function(){
+      const keep=entries;
+      entries=[
+        {id:'WF-P-OLD',bank:'Wells Fargo',accountType:'personal',opened:'2025-01-01',closed:'2025-03-01'},
+        {id:'WF-B-OLD',bank:'Wells Fargo Business Checking',accountType:'business',opened:'2025-01-01',closed:'2025-03-01'},
+        {id:'CITI-P-OLD',bank:'Citi',accountType:'personal',opened:'2025-01-01',closed:'2025-03-01'}
+      ];
+      const ids=getManualReplacementCandidates({bank:'Wells Fargo',accountType:'personal'},'').map(x=>x.id);
+      entries=keep;return ids;
+    })()`,sandbox);
+    assert(replacementIds.length===1&&replacementIds[0]==='WF-P-OLD','Re-churn replacement picker exposed a different bank or account type');
+
     const report=sandbox.btRunFullRegressionTests();
     assert(report.ok,`Full regression failed: ${JSON.stringify(report)}`);
     assert(report.total>=17,`Full regression suite is incomplete: ${report.total}`);
