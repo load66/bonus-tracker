@@ -158,6 +158,8 @@ if 'window.confirm(' in entry_import or 'window.confirm(' in app_source:
 dark_css=text('style.css')
 if 'v3.4.30 professional operations UI' not in dark_css:
     fail('professional operations visual layer missing')
+for token in ('.ops-action-center','.card-progressline','.bt-timeline-card','.bt-notice-host','.bt-confirm-overlay'):
+    if token not in dark_css: fail(f'professional operations component style missing: {token}')
 for token in ('v3.4.29 expanded bank detail dark-surface hardening','.profile-section,.profile-section-body','.bt-life,.bt-life-step','.profile-summary-item','.ck li,.tm li'):
     if token not in dark_css: fail(f'expanded bank detail dark coverage missing: {token}')
 if 'v3.4.29 interaction + dark prompt contrast hardening' not in dark_css:
