@@ -80,6 +80,9 @@
     }
     return false;
   }
+  function stripAbbreviationDots(text){
+    return String(text||'').replace(/\b(?:[A-Za-z]\.){2,}/g,m=>m.replace(/\./g,''));
+  }
   function splitEvidence(text){
     const protectedText=String(text||'').replace(/\b(?:[A-Za-z]\.){2,}/g,m=>m.replace(/\./g,'\uE000'));
     return protectedText.split(/(?:\n+|(?<=[.!?])\s+|;\s+)/).map(x=>clean(x.replace(/\uE000/g,'.'))).filter(Boolean);
@@ -88,7 +91,7 @@
     return /not eligible|ineligible|not available|cannot|can't|may not|must not|have not|has not|new (?:[^.]{0,40})?customers? only|new (?:[^.]{0,40})?accounts? only|previously received|received [^.]{0,80}bonus|past|previous|preceding|within/i.test(s);
   }
   function basisContext(s,basis){
-    const t=clean(s);
+    const t=stripAbbreviationDots(clean(s));
     if(basis==='bonus-offer-received')return /\breceiv(?:e|ed|ing)\b[^.;]{0,120}\bbonus\s+offers?\b|\bbonus\s+offers?\b[^.;]{0,120}\breceiv(?:e|ed|ing)\b/i.test(t);
     if(basis==='bonus-received'){
       if(/\bbonus\s+offers?\b/i.test(t))return false;
@@ -149,11 +152,12 @@
     return'';
   }
   function currentCustomerRestriction(text){
-    const sentence=splitEvidence(clean(text)).find(s=>
-      /new [^.]{0,80}(?:customer|checking|savings|account)[^.]{0,80}only/i.test(s)||
-      /(?:not eligible|ineligible|not available|cannot|can't|may not)[^.]{0,160}(?:current|existing)[^.]{0,100}(?:customer|owner|account|checking|savings)/i.test(s)||
-      /(?:current|existing)[^.]{0,100}(?:customer|owner|account|checking|savings)[^.]{0,160}(?:not eligible|ineligible|not available|cannot|can't|may not)/i.test(s)
-    )||'';
+    const sentence=splitEvidence(clean(text)).find(s=>{
+      const q=stripAbbreviationDots(s);
+      return /new [^.]{0,80}(?:customer|checking|savings|account)[^.]{0,80}only/i.test(q)||
+        /(?:not eligible|ineligible|not available|cannot|can't|may not)[^.]{0,160}(?:current|existing)[^.]{0,100}(?:customer|owner|account|checking|savings)/i.test(q)||
+        /(?:current|existing)[^.]{0,100}(?:customer|owner|account|checking|savings)[^.]{0,160}(?:not eligible|ineligible|not available|cannot|can't|may not)/i.test(q)
+    })||'';
     return{excluded:!!sentence,sentence};
   }
   function basisDate(e,basis,rule){
