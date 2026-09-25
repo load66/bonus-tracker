@@ -213,6 +213,7 @@ for token in (
     'python3 tests/verify-latest.py',
     'node tests/close-rules.test.js',
     'node tests/full-app-smoke.test.js',
+    'node tests/professional-ops.test.js',
     'node tests/eligibility-gate.test.js',
     'needs: verify',
     'actions/configure-pages@v5',
