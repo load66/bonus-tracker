@@ -4721,3 +4721,101 @@ select option{background:#0D1420;color:var(--text)}
   .tb span{font-size:8.5px!important}
 }
 
+
+
+/* === v3.4.26 interaction + dark prompt contrast hardening === */
+/* Timer/checklist taps must remain visually stable; prompt surfaces must not inherit light-theme whites. */
+.cbox,.dd-box,.rcv-box,.ow-box,.fee-box,.close-modal{
+  background:linear-gradient(180deg,#111A28 0%,#0B121D 100%)!important;
+  color:#F4F7FC!important;
+  border:1px solid #2B3A52!important;
+  box-shadow:0 22px 70px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+.cbox h3,.dd-box h3,.rcv-box h3,.ow-box h3,.fee-box h3,.close-modal h3{
+  color:#F7FAFF!important;
+  text-shadow:none!important;
+}
+.cbox p,.cbox .sub,.dd-box .sub,.rcv-box .sub,.ow-box .sub,.fee-box .sub,.close-modal .sub{
+  color:#AAB6CA!important;
+}
+.cbox label,.dd-box label,.rcv-box label,.ow-box label,.fee-box label,.close-modal label,
+.fg label,.m-sec{
+  color:#D8E1EF!important;
+}
+.cbox strong,.dd-box strong,.rcv-box strong,.ow-box strong,.fee-box strong,.close-modal strong{
+  color:#FFFFFF!important;
+}
+.dd-input,.rcv-box input,.rcv-box select,.rcv-box textarea,.ow-box input,.ow-box select,.ow-box textarea,
+.fee-box input,.fee-box select,.fee-box textarea,.close-modal input,.close-modal select,.close-modal textarea{
+  background:#080E17!important;
+  color:#F4F7FC!important;
+  border:1px solid #31425D!important;
+  -webkit-text-fill-color:#F4F7FC!important;
+  caret-color:#8FB0FF!important;
+}
+.dd-input::placeholder,.rcv-box input::placeholder,.rcv-box textarea::placeholder,
+.ow-box input::placeholder,.ow-box textarea::placeholder,.fee-box input::placeholder,.fee-box textarea::placeholder,
+.close-modal input::placeholder,.close-modal textarea::placeholder{
+  color:#6F7D93!important;
+  -webkit-text-fill-color:#6F7D93!important;
+}
+.crow .c-c{
+  background:#090F19!important;
+  color:#F1F5FB!important;
+  border:1px solid #2E3D55!important;
+}
+.crow .c-g{
+  background:#35C978!important;
+  color:#06120B!important;
+  border:1px solid #5BE39A!important;
+}
+.crow .c-r{
+  background:#DA4F5D!important;
+  color:#FFFFFF!important;
+  border:1px solid #F27380!important;
+}
+.dd-chip,.wait-btn{
+  background:#0B1420!important;
+  color:#B9C5D8!important;
+  border-color:#2D3D55!important;
+}
+.dd-chip.sel,.wait-btn.sel{
+  background:#17366E!important;
+  color:#C7D7FF!important;
+  border-color:#4B75D4!important;
+}
+.cbg{
+  background:rgba(0,0,0,.76)!important;
+  backdrop-filter:blur(8px)!important;
+  -webkit-backdrop-filter:blur(8px)!important;
+}
+.tm li,.ck li{
+  color:#DCE5F2!important;
+}
+.tm-title,.ck-text{
+  color:#E9EFF8!important;
+}
+.tm-sub{
+  color:#9EABC0!important;
+}
+.tm-edit-btn{
+  background:#12213A!important;
+  color:#9DB7FF!important;
+  border-color:#294976!important;
+}
+.ckb{
+  background:#080E17!important;
+  border-color:#526782!important;
+}
+.ckb.dn{
+  background:#1B8E58!important;
+  border-color:#47D890!important;
+}
+.ckb.dn::after{
+  color:#FFFFFF!important;
+}
+@media(max-width:430px){
+  .cbox,.dd-box,.rcv-box,.ow-box,.fee-box,.close-modal{padding:18px!important}
+  .cbox h3,.dd-box h3,.rcv-box h3,.ow-box h3,.fee-box h3,.close-modal h3{font-size:16px!important}
+  .cbox p,.cbox .sub,.dd-box .sub,.rcv-box .sub,.ow-box .sub,.fee-box .sub,.close-modal .sub{font-size:12px!important;line-height:1.5!important}
+}
