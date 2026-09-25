@@ -120,8 +120,8 @@ setTimeout(()=>{
     assert(sectionStateRegression.afterOpen,'Lifecycle section collapsed after checklist toggle/full render cycle');
     assert(sectionStateRegression.checked,'Checklist state did not toggle during lifecycle persistence regression');
     assert(sectionStateRegression.expandedStill,'Bank card did not remain expanded during lifecycle persistence regression');
-    assert((appSource.match(/function rTracker\\(sorted\\)/g)||[]).length===1,'More than one active tracker renderer remains');
-    assert((appSource.match(/function rTrackerLegacy\\(sorted\\)/g)||[]).length===1,'Legacy tracker fallback is not explicitly named');
+    assert(appSource.split('function rTracker(sorted)').length-1===1,'Active tracker renderer count is not exactly one');
+    assert(appSource.split('function rTrackerLegacy(sorted)').length-1===1,'Legacy tracker fallback count is not exactly one');
     assert(appSource.includes("typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy"),'R() does not explicitly select the active tracker renderer');
     assert(appSource.includes('captureProfileSectionState();const el=document.querySelector'), 'R() does not snapshot nested section state before rebuilding HTML');
     const stateRoundTrip=vm.runInContext(`(function(){
