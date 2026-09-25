@@ -55,13 +55,23 @@ function assert(ok,msg){if(!ok)throw new Error(msg)}
 setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.28',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.4.28',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.29',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.4.29',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.13',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
-    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.28',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
-    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.28',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
+    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.29',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
+    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.29',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.13',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
     assert(sandbox.BTEligibilityGate?.VERSION==='1.3.0',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
+    assert(sandbox.btLifecycleStatusVersion==='3.4.29-status1',`Unexpected lifecycle status version ${sandbox.btLifecycleStatusVersion}`);
+    const lifecycleSamples=[
+      {bank:'Progress Bank',opened:'2026-09-01',dataPoint:'Make a qualifying direct deposit',customTimers:[]},
+      {bank:'Await Bank',reqMet:'2026-09-20',payoutTimingText:'within 30 calendar days',customTimers:[]},
+      {bank:'Ready Bank',bonus:300,bonusRecd:'2026-09-20',customTimers:[],closeRestrictionType:'payout-only'}
+    ];
+    for(const sample of lifecycleSamples){
+      const html=sandbox.statusBadgeHtml(sample,null);
+      assert(!/CUSTOM TIMER|Custom Timer|Deadline Active|WORKING|WAITING TO CHURN|TIME TO CHURN/.test(html),'Legacy/internal lifecycle status leaked to full app card: '+html);
+    }
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
     sandbox.R();
     assert(app.innerHTML.includes('<span>T&C Archive</span>'),'T&C Archive did not replace the Phone bottom tab');
@@ -152,16 +162,16 @@ setTimeout(()=>{
     })()`,sandbox);
     assert(activeRendererState,'Lifecycle & Tasks collapses after checklist toggle in the active renderer');
     const contrastCss=fs.readFileSync('style.css','utf8');
-    assert(contrastCss.includes('v3.4.28 interaction + dark prompt contrast hardening'),'Dark prompt contrast hardening marker missing');
+    assert(contrastCss.includes('v3.4.29 interaction + dark prompt contrast hardening'),'Dark prompt contrast hardening marker missing');
     for(const selector of ['.cbox,.dd-box,.rcv-box,.ow-box,.fee-box,.close-modal','.dd-input,.rcv-box input','.crow .c-c','.crow .c-g','.ckb.dn']){
       assert(contrastCss.includes(selector),'Dark prompt/checklist contrast coverage missing: '+selector);
     }
     assert(!app.innerHTML.includes('<span>Phone</span>'),'Phone bottom tab is still rendered');
     const darkCss=fs.readFileSync('style.css','utf8');
-    assert(darkCss.includes('v3.4.28 Midnight professional dark theme'),'Midnight dark theme release marker missing');
+    assert(darkCss.includes('v3.4.29 Midnight professional dark theme'),'Midnight dark theme release marker missing');
     assert(darkCss.includes('--bg:#060A11')&&darkCss.includes('--card:#0D1420')&&darkCss.includes('color-scheme:dark'),'Core dark theme palette is incomplete');
     assert(darkCss.includes('.modal,.dd-box')&&darkCss.includes('.clean-plan-card')&&darkCss.includes('.dp-summary'),'Dark theme does not cover modal, T&C archive, and datapoint surfaces');
-    assert(darkCss.includes('v3.4.28 expanded bank detail dark-surface hardening'),'Expanded bank detail dark theme marker missing');
+    assert(darkCss.includes('v3.4.29 expanded bank detail dark-surface hardening'),'Expanded bank detail dark theme marker missing');
     for(const selector of ['.profile-section,.profile-section-body','.bt-life,.bt-life-step','.profile-summary-item','.ck li,.tm li']){
       assert(darkCss.includes(selector),'Expanded bank detail dark coverage missing: '+selector);
     }
