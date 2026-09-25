@@ -230,7 +230,55 @@
       case STAGES.AWAITING_BONUS:
         return payoutSupport(e,core.timer);
       case STAGES.BONUS_RECEIVED:
-        return(e?.bonus?('
+        return(e?.bonus?(typeof fM==='function'?fM(e.bonus):String(e.bonus)):'Bonus received')+(e?.bonusRecd?' received '+fmtDate(e.bonusRecd):'')+' · review close rules';
+      case STAGES.HOLD_OPEN:{
+        if(core.timer){
+          const d=timerDays(core.timer),due=fmtDate(core.timer.date);
+          if(Number.isFinite(d)&&d>0)return'Keep open · '+d+'d remaining'+(due?' · '+due:'');
+        }
+        const d=safeDaysUntilClose(e),safe=safeCloseDateValue(e);
+        if(Number.isFinite(d)&&d>0)return'Safe close in '+d+'d'+(safe?' · '+fmtDate(safe):'');
+        return'Bonus received · keep account open';
+      }
+      case STAGES.READY_TO_CLOSE:
+        return(e?.bonusRecd?'Bonus received '+fmtDate(e.bonusRecd)+' · ':'')+'all close restrictions cleared';
+      case STAGES.COOLDOWN:{
+        const d=safeDaysLeft(e),ready=churnReadyDateValue(e);
+        return(Number.isFinite(d)?d+'d until eligible':'Waiting for eligibility date')+(ready?' · '+fmtDate(ready):'');
+      }
+      case STAGES.ELIGIBLE:{
+        const ready=churnReadyDateValue(e);
+        return'Eligible to reapply'+(ready?' · '+fmtDate(ready):'');
+      }
+      case STAGES.ARCHIVED:return'Completed · non-repeatable offer';
+      default:return'';
+    }
+  }
+  function lifecycleStageForEntry(e){
+    const core=stageCore(e),meta=STAGE_META[core.code]||STAGE_META.IN_PROGRESS;
+    return{...core,label:meta.label,cls:meta.cls,priority:meta.priority,support:stageSupport(core,e)};
+  }
+  function supportLineSemantic(e,countdown){
+    const stage=lifecycleStageForEntry(e);
+    if(stage?.support)return stage.support;
+    if(typeof baseSupportLine==='function'){try{return baseSupportLine(e,countdown)}catch{}}
+    return'';
+  }
+  function displayMeta(raw,e){
+    if(e){
+      const stage=lifecycleStageForEntry(e),meta=STAGE_META[stage.code]||STAGE_META.IN_PROGRESS;
+      return{label:meta.label,cls:meta.cls,icon:''};
+    }
+    if(raw==='CUSTOM TIMER')return timerStatusMetaSemantic(e);
+    try{if(typeof window.displayStatusMeta==='function')return window.displayStatusMeta(raw)}catch{}
+    return{label:raw||'Status',cls:'w',icon:''};
+  }
+  function statusBadgeHtmlSemantic(e,countdown){
+    const stage=lifecycleStageForEntry(e),support=stage.support||supportLineSemantic(e,countdown);
+    try{return'<span class="badge bt-stage '+stage.cls+'"><span>'+esc(stage.label)+'</span></span>'+(support?'<div class="card-subline">'+esc(support)+'</div>':'')}catch{}
+    if(typeof baseStatusBadgeHtml==='function')return baseStatusBadgeHtml(e,countdown);
+    return'';
+  }
   function compactRequirementText(e){
     const raw=String(e?.dataPoint||'').replace(/^DD\s+/i,'').replace(/\s+/g,' ').trim();
     if(!raw)return'';
