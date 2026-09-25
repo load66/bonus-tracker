@@ -1,11 +1,11 @@
 /*
  * filename: profile-library-selftest-academy.js
- * version: 3.1.1
+ * version: 3.4.16
  * purpose: Academy Bank Analyzer Self-Test extension.
  * last-touched: unknown
  */
 (function(){
-  const VER='3.1.1';
+  const VER='3.4.16';
   const esc=v=>{const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML};
   const money=n=>'$'+Number(n||0).toLocaleString();
   const SAMPLE=`Academy Bank Elite Investment Checking. $100 opening balance required on Elite Investment Checking Account. Subject to monthly service charge. To receive $500 bonus, open a new Elite Investment Checking Account, make at least four direct deposits totaling $10,000 and enroll in Online Banking within 90 days of account opening. The checking account bonus will be deposited into your new checking account within 60 days of direct deposit verification. Closing a new account within 90 days of opening will result in a $25 early closure fee. Offer expires May 15, 2026. Direct deposit required. Maximum ACH credit is $15,000.`;
@@ -16,6 +16,10 @@
     try{
       if(typeof analyze!=='function') throw new Error('Analyzer engine is not loaded.');
       r=analyze(SAMPLE,{noGlobalFallback:true});
+      const negated=analyze('Academy Bank Elite Investment Checking. There is no $500 bonus. $100 opening balance required. Make four direct deposits totaling $10,000 and enroll in Online Banking within 90 days.',{noGlobalFallback:true});
+      const altered=analyze('Academy Bank Elite Investment Checking. Earn a $300 bonus. $100 opening balance required. Make four direct deposits totaling $10,000 and enroll in Online Banking within 90 days.',{noGlobalFallback:true});
+      const other=analyze('Ally Bank checking with MoneyPass access. $100 opening balance required. Make four direct deposits totaling $10,000 and enroll in Online Banking within 90 days.',{noGlobalFallback:true});
+      const conditional=analyze(SAMPLE+' Offer is not available to existing customers who received a checking bonus in the past 12 months.',{noGlobalFallback:true});
       checks=[
         {ok:r.bank==='Academy Bank',label:'bank = Academy Bank'},
         {ok:r.acct==='Academy Bank Elite Investment Checking',label:'Elite Investment Checking profile used'},
@@ -25,7 +29,11 @@
         {ok:r.count===4,label:'4 direct deposits'},
         {ok:r.reqDays===90,label:'90-day requirement window'},
         {ok:/60 days/i.test(r.payout||''),label:'60-day payout after DD verification'},
-        {ok:/25/.test(r.early||''),label:'$25 early closure fee captured'}
+        {ok:/25/.test(r.early||''),label:'$25 early closure fee captured'},
+        {ok:Number(negated.bonus||0)===0,label:'explicit no-bonus wording clears generic bonus extraction'},
+        {ok:Number(altered.bonus||0)!==500&&!((altered.bankRulesApplied||[]).includes('Academy Bank Elite Investment Checking')),label:'altered Academy offer does not reuse saved $500 profile'},
+        {ok:other.bank!=='Academy Bank',label:'MoneyPass cross-bank text does not match Academy'},
+        {ok:conditional.bonus===500,label:'conditional eligibility exclusion does not negate valid offer'}
       ];
       pass=checks.every(c=>c.ok);
     }catch(e){error=e?.message||String(e);}
