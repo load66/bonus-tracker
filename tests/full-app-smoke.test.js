@@ -127,7 +127,7 @@ setTimeout(()=>{
     assert(tcStorageLifecycle.first===true&&tcStorageLifecycle.editAttempt===false,'Existing-cycle edit incorrectly replaced stored T&C');
     assert(tcStorageLifecycle.replaced===true&&tcStorageLifecycle.currentOpened==='2028-02-01'&&tcStorageLifecycle.currentBonus===300,'New bonus cycle did not replace Current T&C');
     assert(tcStorageLifecycle.versions===1&&/12 months/.test(tcStorageLifecycle.oldText)&&/24 months/.test(tcStorageLifecycle.newText),'Previous T&C was not preserved after replacement');
-    assert(/T&C Storage/.test(tcStorageLifecycle.view)&&/Previous T&C cycles/.test(tcStorageLifecycle.view),'T&C Storage tab did not render current and historical terms');
+    assert(/T&C Archive/.test(tcStorageLifecycle.view)&&/Previous T&C cycles/.test(tcStorageLifecycle.view),'T&C Archive tab did not render current and historical terms');
 
     const report=sandbox.btRunFullRegressionTests();
     assert(report.ok,`Full regression failed: ${JSON.stringify(report)}`);
