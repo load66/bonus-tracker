@@ -55,11 +55,11 @@ function assert(ok,msg){if(!ok)throw new Error(msg)}
 setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.27',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.4.27',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.28',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.4.28',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.13',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
-    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.27',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
-    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.27',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
+    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.28',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
+    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.28',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.13',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
     assert(sandbox.BTEligibilityGate?.VERSION==='1.3.0',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
@@ -70,17 +70,98 @@ setTimeout(()=>{
     assert(timerClickMatches.length>=2,'Mini timer checkboxes can still bubble to the card header and collapse the expanded entry');
     assert(appSource.includes("function toggleTimer(id,timerId)")&&appSource.includes("sv(SK,entries);expanded=id;R()}"),'Timer toggle does not explicitly preserve the expanded bank');
     assert(appSource.includes("function toggleCk(id,i)")&&appSource.includes("sv(SK,entries);expanded=id;R()}"),'Checklist toggle does not explicitly preserve the expanded bank');
+    const sectionStateRegression=vm.runInContext(`(function(){
+      const oldEntries=entries, oldExpanded=expanded, oldSearch=search, oldTab=tab;
+      const id='SS01';
+      entries=[{id,bank:'Section State Bank',accountType:'personal',opened:'2026-09-01',bonus:100,churn:'1',checklist:[{id:'ck_test',text:'Test requirement',done:false}],customTimers:[]}];
+      expanded=id;search='';tab='tracker';
+      setProfileSectionOpen(id,'lifecycle',true);
+      const attrBefore=profileSectionOpenAttr(id,'lifecycle');
+      const rendererSource=String(window.rTracker||'');
+      const directBefore=window.rTracker(entries);
+      R();
+      const before=document.getElementById('app').innerHTML;
+      toggleCk(id,0);
+      const after=document.getElementById('app').innerHTML;
+      const lifecycleTag=html=>{
+        const sectionNeedle='data-section-key="lifecycle"';
+        const at=html.indexOf(sectionNeedle);
+        if(at<0)return '';
+        const start=html.lastIndexOf('<details',at);
+        const end=html.indexOf('>',at);
+        if(start<0||end<0)return '';
+        return html.slice(start,end+1);
+      };
+      const lifecycleTagOpen=html=>{
+        const tag=lifecycleTag(html);
+        return !!tag&&tag.includes('data-section-key="lifecycle"')&&(' '+tag.replace(/\s+/g,' ')+' ').includes(' open ');
+      };
+      const result={
+        attrBefore,
+        rendererHasSectionState:rendererSource.includes('profileSectionOpenAttr'),
+        directTag:lifecycleTag(directBefore),
+        stateBefore:profileSectionIsOpen(id,'lifecycle'),
+        directOpen:lifecycleTagOpen(directBefore),
+        beforeOpen:lifecycleTagOpen(before),
+        afterOpen:lifecycleTagOpen(after),
+        stateAfter:profileSectionIsOpen(id,'lifecycle'),
+        checked:!!entries[0].checklist[0].done,
+        expandedStill:expanded===id
+      };
+      entries=oldEntries;expanded=oldExpanded;search=oldSearch;tab=oldTab;R();
+      return result;
+    })()`,sandbox);
+    assert(sectionStateRegression.attrBefore===' open','profileSectionOpenAttr did not report open before render: '+sectionStateRegression.attrBefore);
+    assert(sectionStateRegression.rendererHasSectionState,'Registered window.rTracker is not the section-state-aware renderer');
+    assert(sectionStateRegression.stateBefore,'Centralized lifecycle state was not open before toggle');
+    assert(sectionStateRegression.directOpen,'Registered active tracker renderer ignored centralized lifecycle open state: '+sectionStateRegression.directTag);
+    assert(sectionStateRegression.beforeOpen,'R() did not preserve active renderer lifecycle open state');
+    assert(sectionStateRegression.stateAfter,'Centralized lifecycle state was lost after checklist toggle/full render cycle');
+    assert(sectionStateRegression.afterOpen,'Lifecycle section collapsed after checklist toggle/full render cycle');
+    assert(sectionStateRegression.checked,'Checklist state did not toggle during lifecycle persistence regression');
+    assert(sectionStateRegression.expandedStill,'Bank card did not remain expanded during lifecycle persistence regression');
+    assert(appSource.split('function rTracker(sorted)').length-1===1,'Active tracker renderer count is not exactly one');
+    assert(appSource.split('function rTrackerLegacy(sorted)').length-1===1,'Legacy tracker fallback count is not exactly one');
+    assert(appSource.includes("typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy"),'R() does not explicitly select the active tracker renderer');
+    assert(appSource.includes('captureProfileSectionState();const el=document.querySelector'), 'R() does not snapshot nested section state before rebuilding HTML');
+    const stateRoundTrip=vm.runInContext(`(function(){
+      setProfileSectionOpen('UI-STATE-1','lifecycle',true);
+      const before=profileSectionIsOpen('UI-STATE-1','lifecycle')&&profileSectionOpenAttr('UI-STATE-1','lifecycle')===' open';
+      const oldQS=document.querySelectorAll;
+      document.querySelectorAll=function(sel){
+        if(sel==='details.profile-section[data-entry-id][data-section-key]'){
+          return [{open:true,getAttribute:function(k){return k==='data-entry-id'?'UI-STATE-2':(k==='data-section-key'?'history':'')}}];
+        }
+        return [];
+      };
+      captureProfileSectionState();
+      document.querySelectorAll=oldQS;
+      return before&&profileSectionIsOpen('UI-STATE-2','history');
+    })()`,sandbox);
+    assert(stateRoundTrip,'Profile subsection open state does not survive capture/restore');
+    const activeRendererState=vm.runInContext(`(function(){
+      const oldEntries=entries,oldExpanded=expanded,oldSearch=search;
+      const sample={id:'UI-STATE-3',bank:'State Bank',accountType:'personal',opened:'2026-09-01',closed:'',bonus:100,checklist:[{text:'Test requirement',done:false}],customTimers:[],notes:'',churnable:true};
+      entries=[sample];expanded=sample.id;search='';
+      setProfileSectionOpen(sample.id,'lifecycle',true);
+      const before=window.rTracker(entries).includes('data-section-key="lifecycle" open');
+      toggleCk(sample.id,0);
+      const after=expanded===sample.id&&profileSectionIsOpen(sample.id,'lifecycle')&&document.getElementById('app').innerHTML.includes('data-section-key="lifecycle" open');
+      entries=oldEntries;expanded=oldExpanded;search=oldSearch;
+      return before&&after;
+    })()`,sandbox);
+    assert(activeRendererState,'Lifecycle & Tasks collapses after checklist toggle in the active renderer');
     const contrastCss=fs.readFileSync('style.css','utf8');
-    assert(contrastCss.includes('v3.4.27 interaction + dark prompt contrast hardening'),'Dark prompt contrast hardening marker missing');
+    assert(contrastCss.includes('v3.4.28 interaction + dark prompt contrast hardening'),'Dark prompt contrast hardening marker missing');
     for(const selector of ['.cbox,.dd-box,.rcv-box,.ow-box,.fee-box,.close-modal','.dd-input,.rcv-box input','.crow .c-c','.crow .c-g','.ckb.dn']){
       assert(contrastCss.includes(selector),'Dark prompt/checklist contrast coverage missing: '+selector);
     }
     assert(!app.innerHTML.includes('<span>Phone</span>'),'Phone bottom tab is still rendered');
     const darkCss=fs.readFileSync('style.css','utf8');
-    assert(darkCss.includes('v3.4.27 Midnight professional dark theme'),'Midnight dark theme release marker missing');
+    assert(darkCss.includes('v3.4.28 Midnight professional dark theme'),'Midnight dark theme release marker missing');
     assert(darkCss.includes('--bg:#060A11')&&darkCss.includes('--card:#0D1420')&&darkCss.includes('color-scheme:dark'),'Core dark theme palette is incomplete');
     assert(darkCss.includes('.modal,.dd-box')&&darkCss.includes('.clean-plan-card')&&darkCss.includes('.dp-summary'),'Dark theme does not cover modal, T&C archive, and datapoint surfaces');
-    assert(darkCss.includes('v3.4.27 expanded bank detail dark-surface hardening'),'Expanded bank detail dark theme marker missing');
+    assert(darkCss.includes('v3.4.28 expanded bank detail dark-surface hardening'),'Expanded bank detail dark theme marker missing');
     for(const selector of ['.profile-section,.profile-section-body','.bt-life,.bt-life-step','.profile-summary-item','.ck li,.tm li']){
       assert(darkCss.includes(selector),'Expanded bank detail dark coverage missing: '+selector);
     }

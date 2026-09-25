@@ -1,7 +1,7 @@
-/* ✅ Version 3.4.27: keep expanded checklist state stable and fully darken bank-detail surfaces. */
+/* ✅ Version 3.4.28: centralize tracker rendering and preserve nested profile-section state across re-renders. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.27';
+const APP_VERSION='3.4.28';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -3173,6 +3173,29 @@ let storageSearch='';
 let dpSearch='',dpExpandedBankKey='';
 let profileSearch='',activeProfileKey='';
 let inlineUiState={};
+let profileSectionUiState={};
+function profileSectionStateKey(entryId,sectionKey){return String(entryId||'')+'::'+String(sectionKey||'')}
+function profileSectionAttr(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function setProfileSectionOpen(entryId,sectionKey,isOpen){profileSectionUiState[profileSectionStateKey(entryId,sectionKey)]=!!isOpen}
+function profileSectionIsOpen(entryId,sectionKey,defaultOpen=false){const k=profileSectionStateKey(entryId,sectionKey);return Object.prototype.hasOwnProperty.call(profileSectionUiState,k)?!!profileSectionUiState[k]:!!defaultOpen}
+function profileSectionOpenAttr(entryId,sectionKey,defaultOpen=false){return profileSectionIsOpen(entryId,sectionKey,defaultOpen)?' open':''}
+function captureProfileSectionState(){
+  try{
+    document.querySelectorAll('details.profile-section[data-entry-id][data-section-key]').forEach(el=>{
+      setProfileSectionOpen(el.getAttribute('data-entry-id')||'',el.getAttribute('data-section-key')||'',!!el.open)
+    })
+  }catch{}
+}
+function handleProfileSectionToggle(el){
+  if(!el)return;
+  setProfileSectionOpen(el.getAttribute('data-entry-id')||'',el.getAttribute('data-section-key')||'',!!el.open)
+}
+try{
+  window.setProfileSectionOpen=setProfileSectionOpen;
+  window.profileSectionIsOpen=profileSectionIsOpen;
+  window.captureProfileSectionState=captureProfileSectionState;
+  window.handleProfileSectionToggle=handleProfileSectionToggle;
+}catch{}
 let dpEditor=null;
 let ddPrompt=null,rcvPrompt=null,reqPrompt=null,showTemplates=false;
 let feedItems=null,feedLoading=false;
@@ -3803,8 +3826,8 @@ function normalizeLifecycleEntries(rows){
   return (rows||[]).map(normalizeLifecycleEntry)
 }
 
-function R(){const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;if(tab==='profiles'||tab==='health')tab='tracker';try{if(!window.__btAutoCleanupV384){entries=sortE(normalizeLifecycleEntries(entries));sv(SK,entries);window.__btAutoCleanupV384=true}}catch{}sanitizeAllTimers(false);const sorted=sortE(entries);const wk=sorted.filter(e=>e.bank&&!e.closed).length;const ch=sorted.filter(e=>status(e)==='WAITING TO CHURN!'||status(e)==='TIME TO CHURN!').length;const rd=sorted.filter(e=>status(e)==='TIME TO CHURN!').length;const yr=completedYrTotal(dashYear);const thisYr=new Date().getFullYear();let h='';h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div><h1><em>Bonus</em>Tracker</h1><div class="hdr-sub">Track • close • churn</div></div><div class="yr-pills">';[thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});h+='</div></div>';if(tab==='tracker'){h+='<div class="hero"><div class="hero-copy"><div class="hero-kicker">'+dashYear+' total collected</div><div class="hero-value">'+fM(yr)+'</div><div class="hero-note">'+wk+' open • '+ch+' cooling down • '+rd+' ready right now</div></div><div class="hero-side"><div class="hero-chip">'+rd+' ready</div></div></div>';h+='<div class="stats"><div class="st"><div class="n">'+wk+'</div><div class="l">Open</div></div><div class="st"><div class="n">'+ch+'</div><div class="l">Cooldown</div></div><div class="st"><div class="n">'+rd+'</div><div class="l">Ready</div></div><div class="st"><div class="n">'+fM(yr)+'</div><div class="l">'+dashYear+'</div></div></div>'}h+='</div></div>';h+='<div class="scroll">';if(tab==='tracker')h+=rTracker(sorted);else if(tab==='tax')h+=rTax();else if(tab==='tips')h+=rTips();else if(tab==='storage')h+=rTermsStorage();h+='</div>';if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';h+='<div class="tabs">';['tracker','tax','tips','storage'].forEach((t,i)=>{h+='<button class="tb'+(tab===t?' on':'')+'" onclick="tab=\''+t+'\';search=\''+'\';R()">'+[I.grid,I.doc,I.tips,I.lock][i]+'<span>'+['Tracker','Tax','Datapoints','T&C Archive'][i]+'</span></button>'});h+='</div>';if(modal)h+=rModal();if(cfm)h+=rCfm();if(ddPrompt)h+=rDD();if(rcvPrompt)h+=rRcv();if(reqPrompt)h+=rReqMet();if(closePrompt)h+=rClose();if(overwritePrompt)h+=rOverwrite();if(matchPickerPrompt)h+=rMatchPicker();if(replacementPickerPrompt)h+=rReplacementPicker();if(feeCheckPrompt)h+=rFeeCheck();if(timerEditModal)h+=rTimerEdit();if(dpEditor)h+=rDpEditor();if(timerChoicePrompt)h+=rTimerChoicePrompt();if(undoState)h+='<div class="undo-bar"><span>'+esc(undoState.undoLabel||('Change saved for '+undoState.bank+' — Undo restores everything for 60 seconds.'))+'</span><button onclick="undoClose()">Undo</button></div>';document.getElementById('app').innerHTML=h;const ns=document.querySelector('.scroll');if(ns)ns.scrollTop=_sp;btRunPostRenderHooks()}
-function rTracker(sorted){
+function R(){captureProfileSectionState();const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;if(tab==='profiles'||tab==='health')tab='tracker';try{if(!window.__btAutoCleanupV384){entries=sortE(normalizeLifecycleEntries(entries));sv(SK,entries);window.__btAutoCleanupV384=true}}catch{}sanitizeAllTimers(false);const sorted=sortE(entries);const wk=sorted.filter(e=>e.bank&&!e.closed).length;const ch=sorted.filter(e=>status(e)==='WAITING TO CHURN!'||status(e)==='TIME TO CHURN!').length;const rd=sorted.filter(e=>status(e)==='TIME TO CHURN!').length;const yr=completedYrTotal(dashYear);const thisYr=new Date().getFullYear();let h='';h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div><h1><em>Bonus</em>Tracker</h1><div class="hdr-sub">Track • close • churn</div></div><div class="yr-pills">';[thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});h+='</div></div>';if(tab==='tracker'){h+='<div class="hero"><div class="hero-copy"><div class="hero-kicker">'+dashYear+' total collected</div><div class="hero-value">'+fM(yr)+'</div><div class="hero-note">'+wk+' open • '+ch+' cooling down • '+rd+' ready right now</div></div><div class="hero-side"><div class="hero-chip">'+rd+' ready</div></div></div>';h+='<div class="stats"><div class="st"><div class="n">'+wk+'</div><div class="l">Open</div></div><div class="st"><div class="n">'+ch+'</div><div class="l">Cooldown</div></div><div class="st"><div class="n">'+rd+'</div><div class="l">Ready</div></div><div class="st"><div class="n">'+fM(yr)+'</div><div class="l">'+dashYear+'</div></div></div>'}h+='</div></div>';h+='<div class="scroll">';if(tab==='tracker'){const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted)}else if(tab==='tax')h+=rTax();else if(tab==='tips')h+=rTips();else if(tab==='storage')h+=rTermsStorage();h+='</div>';if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';h+='<div class="tabs">';['tracker','tax','tips','storage'].forEach((t,i)=>{h+='<button class="tb'+(tab===t?' on':'')+'" onclick="tab=\''+t+'\';search=\''+'\';R()">'+[I.grid,I.doc,I.tips,I.lock][i]+'<span>'+['Tracker','Tax','Datapoints','T&C Archive'][i]+'</span></button>'});h+='</div>';if(modal)h+=rModal();if(cfm)h+=rCfm();if(ddPrompt)h+=rDD();if(rcvPrompt)h+=rRcv();if(reqPrompt)h+=rReqMet();if(closePrompt)h+=rClose();if(overwritePrompt)h+=rOverwrite();if(matchPickerPrompt)h+=rMatchPicker();if(replacementPickerPrompt)h+=rReplacementPicker();if(feeCheckPrompt)h+=rFeeCheck();if(timerEditModal)h+=rTimerEdit();if(dpEditor)h+=rDpEditor();if(timerChoicePrompt)h+=rTimerChoicePrompt();if(undoState)h+='<div class="undo-bar"><span>'+esc(undoState.undoLabel||('Change saved for '+undoState.bank+' — Undo restores everything for 60 seconds.'))+'</span><button onclick="undoClose()">Undo</button></div>';document.getElementById('app').innerHTML=h;const ns=document.querySelector('.scroll');if(ns)ns.scrollTop=_sp;btRunPostRenderHooks()}
+function rTrackerLegacy(sorted){
   const q=search.toLowerCase();
   const f=q?sorted.filter(e=>(e.bank||'').toLowerCase().includes(q)||(e.id||'').toLowerCase().includes(q)):sorted;
   let h='';
@@ -4456,9 +4479,9 @@ function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a
 async function deliverBackupFile(blob,filename,preferShare){if(preferShare&&typeof File!=='undefined'&&navigator?.share){try{const file=new File([blob],filename,{type:'application/json'});if(!navigator.canShare||navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Bank Bonus Tracker backup',text:'Save this full backup to Files, iCloud Drive, Google Drive, or email so you can restore later on any device.'});return 'shared'}}catch(err){}}downloadBlob(blob,filename);return 'downloaded'}
 function buildResetSafetyBackupPayload(){const data=buildPortableBackupPayload();data.reason='pre-reset-safety-backup';return data}
 async function exportBackup(preferShare=true,customData=null,customFilename=''){const data=customData||buildPortableBackupPayload();const filename=customFilename||('BankBonusTracker_FullBackup_'+backupTimestamp()+'.json');const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const mode=await deliverBackupFile(blob,filename,preferShare);setLastBk();return{mode,filename,data}}
-function performHardReset(){entries=[];sv(SK,[]);try{getBackupStorageKeys().forEach(k=>localStorage.removeItem(k));localStorage.removeItem(PROFILE_EVT_KEY);localStorage.removeItem(BK_KEY)}catch{}dashYear=new Date().getFullYear();taxYear=new Date().getFullYear();expanded=null;modal=null;search='';showTemplates=false;showAnalyzer=false;analyzerText='';analyzerResult=null;inlineResult=null;showInlineAZ=false;phoneSearch='';showPhoneAdd=false;storageSearch='';dpSearch='';dpExpandedBankKey='';dpEditor=null;profileSearch='';activeProfileKey='';overwritePrompt=null;matchPickerPrompt=null;ddPrompt=null;rcvPrompt=null;closePrompt=null;feeCheckPrompt=null;undoState=null;if(undoTimer)clearTimeout(undoTimer);R()}
+function performHardReset(){entries=[];profileSectionUiState={};sv(SK,[]);try{getBackupStorageKeys().forEach(k=>localStorage.removeItem(k));localStorage.removeItem(PROFILE_EVT_KEY);localStorage.removeItem(BK_KEY)}catch{}dashYear=new Date().getFullYear();taxYear=new Date().getFullYear();expanded=null;modal=null;search='';showTemplates=false;showAnalyzer=false;analyzerText='';analyzerResult=null;inlineResult=null;showInlineAZ=false;phoneSearch='';showPhoneAdd=false;storageSearch='';dpSearch='';dpExpandedBankKey='';dpEditor=null;profileSearch='';activeProfileKey='';overwritePrompt=null;matchPickerPrompt=null;ddPrompt=null;rcvPrompt=null;closePrompt=null;feeCheckPrompt=null;undoState=null;if(undoTimer)clearTimeout(undoTimer);R()}
 function resetAllData(){cfm={title:'⚠️ Reset All Data',msg:'This will permanently delete ALL tracker rows, datapoints, saved bank requirements, and saved phone data from this device.\n\nFor safety, the app will export one final full backup first so you can save it to Files/iCloud/Drive before the wipe finishes.',action:()=>{cfm={title:'🚨 Final confirmation',msg:'Continue with the full reset? A recovery backup file will be created first, then this device will be wiped.',action:async()=>{cfm=null;R();try{await exportBackup(false,buildResetSafetyBackupPayload(),'BankBonusTracker_PreReset_'+backupTimestamp()+'.json')}catch{}performHardReset();cfm={title:'Reset Complete',msg:'This device has been cleared. Keep the exported pre-reset backup file somewhere safe so you can restore later.',green:true,action:()=>{cfm=null;R()}};R()}};R()}};R()}
-function delEntry(id){const e=entries.find(x=>x.id===id);if(!e)return;cfm={title:'Delete Bank Entry?',msg:'Delete '+e.bank+' '+(e.id||'')+' from the tracker?\n\nThis cannot be undone.',action:()=>{entries=entries.filter(x=>x.id!==id);sv(SK,entries);expanded=null;cfm={title:'Bank Entry Deleted',msg:e.bank+' was deleted from the tracker.',green:true,action:()=>{cfm=null;R()}};R()}};R()}
+function delEntry(id){const e=entries.find(x=>x.id===id);if(!e)return;cfm={title:'Delete Bank Entry?',msg:'Delete '+e.bank+' '+(e.id||'')+' from the tracker?\n\nThis cannot be undone.',action:()=>{entries=entries.filter(x=>x.id!==id);Object.keys(profileSectionUiState).forEach(k=>{if(k.startsWith(id+'::'))delete profileSectionUiState[k]});sv(SK,entries);expanded=null;cfm={title:'Bank Entry Deleted',msg:e.bank+' was deleted from the tracker.',green:true,action:()=>{cfm=null;R()}};R()}};R()}
 function closeAcct(id){const e=entries.find(x=>x.id===id);if(!e)return;feeCheckPrompt={entryId:id,bank:e.bank,step:'ask',months:e.minHoldDays>0?Math.round(e.minHoldDays/30):6,feeAmount:e.earlyCloseFee||0};R()}
 function feeCheckSkip(){
   if(!feeCheckPrompt)return;
@@ -6149,7 +6172,7 @@ entries=sortE(entries);R();
         h += renderBankProfileSummary(e);
         h += renderClosePlan(e);
         h += renderMonthlyFeePlan(e);
-        h += '<details class="profile-section"><summary><span>'+(e.closed?'Lifecycle':'Lifecycle & Tasks')+'</span><em>View</em></summary><div class="profile-section-body">';
+        h += '<details class="profile-section" data-entry-id="'+profileSectionAttr(e.id)+'" data-section-key="lifecycle"'+profileSectionOpenAttr(e.id,'lifecycle')+' ontoggle="handleProfileSectionToggle(this)"><summary><span>'+(e.closed?'Lifecycle':'Lifecycle & Tasks')+'</span><em>View</em></summary><div class="profile-section-body">';
         h += renderLifecycleStepper(e);
 
         if(!e.closed){
@@ -6185,7 +6208,7 @@ entries=sortE(entries);R();
         historyHtml += renderAnalyzerHistory(e);
         historyHtml += renderOfferHistory(e);
         historyHtml += renderAnalyzedTermsCard(e);
-        if(historyHtml)h += '<details class="profile-section"><summary><span>History & Analysis</span><em>View</em></summary><div class="profile-section-body">'+historyHtml+'</div></details>';
+        if(historyHtml)h += '<details class="profile-section" data-entry-id="'+profileSectionAttr(e.id)+'" data-section-key="history"'+profileSectionOpenAttr(e.id,'history')+' ontoggle="handleProfileSectionToggle(this)"><summary><span>History & Analysis</span><em>View</em></summary><div class="profile-section-body">'+historyHtml+'</div></details>';
 
         h += '<div class="card-btns">';
         if(!e.closed&&e.bonusRecd) h += actionBtn('cls',I.lock,'Close Now',`event.stopPropagation();startCloseFlow('${e.id}','actual')`);
