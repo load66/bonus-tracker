@@ -132,13 +132,13 @@ setTimeout(()=>{
     const unknownBasis=sandbox.normalizeLifecycleEntry({bank:'Pending Eligibility Bank',bonus:100,bonusRecd:'2026-04-01',closed:'2026-04-10',churnable:true,churnability:'repeatable',churn:'1'});
     assert(sandbox.nextReopen(unknownBasis)==='', 'Unknown eligibility basis incorrectly defaulted to a date');
     sandbox.openAdd();
-    sandbox.btModalSet('bank','Wells Fargo');sandbox.btModalSet('accountType','personal');sandbox.btModalSet('bonus','400','number');sandbox.setModalChurnability('repeatable');sandbox.setModalChurnRule('1');sandbox.setModalChurnBasis('bonus');sandbox.btModalSet('opened','2026-08-10');sandbox.btModalSet('monthlyFeeYNText','Not stated in bonus disclosure — separate Wells Fargo fee schedule applies');sandbox.btModalSet('avoidMonthlyFeeText','Review the Wells Fargo Consumer Account Fee and Information Schedule.');
+    sandbox.btModalSet('bank','Wells Fargo');sandbox.btModalSet('accountType','personal');sandbox.btModalSet('bonus','400','number');sandbox.setModalChurnability('repeatable');sandbox.setModalChurnRule('1');sandbox.setModalChurnBasis('bonus');sandbox.btModalSet('opened','2026-08-10');sandbox.btModalSet('monthlyFeeYNText','Not stated in bonus disclosure — separate Wells Fargo fee schedule applies');sandbox.btModalSet('avoidMonthlyFeeText','Review the Wells Fargo Consumer Account Fee and Information Schedule.');vm.runInContext("modal.churnPeriodValue=12;modal.churnPeriodUnit='months';modal.eligibilityEvidenceText='Not eligible if you received a Wells Fargo consumer checking bonus within the past 12 months.';modal.eligibilityEvidenceSource='official-promotion-terms'",sandbox);
     sandbox.btWizardStep(1);
     const wizardBasics=sandbox.rModal();
     assert(/Can this bonus be earned again\? \*/.test(wizardBasics)&&/Eligibility clock starts from \*/.test(wizardBasics)&&/exact eligibility wording from the offer/i.test(wizardBasics),'Guided editor did not require the source eligibility basis');
     sandbox.btWizardStep(4);
     const wizardReview=sandbox.rModal();
-    assert(/Future eligibility/.test(wizardReview)&&/1 year \+ 5-day safety buffer after bonus received date/.test(wizardReview),'Guided review did not show the source-based eligibility policy');
+    assert(/Future eligibility/.test(wizardReview)&&/12 months after bonus received \+ 5-day safety buffer/.test(wizardReview)&&/Churn T&C verified/.test(wizardReview),'Guided review did not show the T&C-verified source-based eligibility policy');
 
     const fourLeaf='FourLeaf Checking Up to $550 Bonus Offer. Open a Free Checking, Smart Checking, or Student Checking account between February 2, 2026 and December 31, 2026. Have a Qualifying Direct Deposit post within ninety (90) calendar days of account opening. A Qualifying Direct Deposit is a recurring electronic deposit of a paycheck, pension, or government benefits of $500.00 or more. The First Direct Deposit Bonus of $350 will be deposited within sixty (60) calendar days following the initial Qualifying Direct Deposit. Continue to have a Qualifying Direct Deposit for twelve (12) consecutive months for an additional $100 and twenty-four (24) consecutive months for another $100. The checking account must remain open and in good standing up to and including the date each bonus is deposited. You must not have previously received a new checking account opening related bonus from FourLeaf.';
     const fr=sandbox.tcV3Analyze(fourLeaf,{noGlobalFallback:true});
@@ -157,19 +157,24 @@ setTimeout(()=>{
       openAdd();modal.bank='Gate Test Bank';modal.bonus=100;
       const blocked=saveEntry();
       const afterBlocked=entries.length;
-      modal.churnable=true;modal.churnability='repeatable';modal.churn='2';
+      modal.churnable=true;modal.churnability='repeatable';modal.churn='2';modal.churnPeriodValue=24;modal.churnPeriodUnit='months';
       const missingBasis=saveEntry();
       const afterMissingBasis=entries.length;
       setModalChurnBasis('bonus');
+      const missingEvidence=saveEntry();
+      const afterMissingEvidence=entries.length;
+      modal.eligibilityEvidenceText='Not eligible if you received a Gate Test Bank checking bonus within the past 24 months.';
+      modal.eligibilityEvidenceSource='official-promotion-terms';
       const saved=saveEntry();
       const created=entries.find(x=>x.bank==='Gate Test Bank');
-      return{before,blocked,afterBlocked,missingBasis,afterMissingBasis,saved,created};
+      return{before,blocked,afterBlocked,missingBasis,afterMissingBasis,missingEvidence,afterMissingEvidence,saved,created};
     })()`,sandbox);
     assert(gate.blocked===false&&gate.afterBlocked===gate.before,'New bank saved without a churnability decision');
     assert(gate.missingBasis===false&&gate.afterMissingBasis===gate.before,'Repeatable bank saved without an eligibility start basis');
-    assert(gate.saved===true&&gate.created?.churnability==='repeatable'&&gate.created?.churn==='2'&&gate.created?.churnBasis==='bonus','Repeatable source-based churn decision was not saved');
+    assert(gate.missingEvidence===false&&gate.afterMissingEvidence===gate.before,'Repeatable bank saved from dropdown choices without T&C evidence');
+    assert(gate.saved===true&&gate.created?.churnability==='repeatable'&&gate.created?.churnBasis==='bonus'&&gate.created?.eligibilityVerified===true,'T&C-verified repeatable churn decision was not saved');
     const nonrepeat=vm.runInContext(`(function(){
-      openAdd();modal.bank='Lifetime Unique Credit Union';modal.bonus=50;modal._skipDuplicateCheck=true;modal._skipManualReplacePrompt=true;modal.churnable=false;modal.churnability='not-repeatable';modal.churnReason='One-time offer';
+      openAdd();modal.bank='Lifetime Unique Credit Union';modal.bonus=50;modal._skipDuplicateCheck=true;modal._skipManualReplacePrompt=true;modal.churnable=false;modal.churnability='not-repeatable';modal.churnReason='One-time offer';modal.eligibilityEvidenceText='This bonus is available once per lifetime and is not repeatable.';modal.eligibilityEvidenceSource='official-promotion-terms';
       const saved=saveEntry();const created=entries.find(x=>x.bank==='Lifetime Unique Credit Union');return{saved,created};
     })()`,sandbox);
     assert(nonrepeat.saved===true&&nonrepeat.created?.churnable===false&&nonrepeat.created?.churn==='', 'Non-repeatable decision was not saved correctly');
@@ -177,7 +182,7 @@ setTimeout(()=>{
       bank:'FourLeaf Bank',accountType:'personal',id:'FOURLEAF-ARCHIVE',
       opened:'2026-07-21',reqMet:'2026-07-25',bonusRecd:'2026-08-01',closed:'2026-08-06',
       bonus:350,churn:'2',churnable:false,churnability:'not-repeatable',
-      eligibilityText:'Not eligible if you previously received a new checking account opening related bonus from FourLeaf.'
+      eligibilityText:'Not eligible if you previously received a new checking account opening related bonus from FourLeaf.',eligibilityEvidenceText:'Not eligible if you previously received a new checking account opening related bonus from FourLeaf.',eligibilityEvidenceSource:'official-promotion-terms'
     });
     assert(closedFourLeaf.archived===true&&closedFourLeaf.lifecycleState==='archived-nonrepeatable','Closed FourLeaf record was not marked archived');
     assert(closedFourLeaf.churn==='', 'Archived FourLeaf record kept a churn rule');
