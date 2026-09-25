@@ -4508,7 +4508,7 @@ html,body {
 @media(max-width:520px){.guided-modal{padding:14px 12px 16px}.guided-grid{grid-template-columns:1fr}.guided-grid .full{grid-column:auto}.guided-progress button span{display:none}.guided-progress{gap:5px}.guided-summary>div{grid-template-columns:86px minmax(0,1fr)}.guided-source-grid{grid-template-columns:1fr}.guided-actions{position:sticky;bottom:-1px;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);padding-top:8px;z-index:5}.bt-update-banner{grid-template-columns:1fr auto}.bt-update-banner .later{display:none}}
 
 
-/* === v3.4.26 Midnight professional dark theme === */
+/* === v3.4.27 Midnight professional dark theme === */
 :root{
   color-scheme:dark;
   --bg:#060A11;
@@ -4723,7 +4723,7 @@ select option{background:#0D1420;color:var(--text)}
 
 
 
-/* === v3.4.26 interaction + dark prompt contrast hardening === */
+/* === v3.4.27 interaction + dark prompt contrast hardening === */
 /* Timer/checklist taps must remain visually stable; prompt surfaces must not inherit light-theme whites. */
 .cbox,.dd-box,.rcv-box,.ow-box,.fee-box,.close-modal{
   background:linear-gradient(180deg,#111A28 0%,#0B121D 100%)!important;
@@ -4819,3 +4819,65 @@ select option{background:#0D1420;color:var(--text)}
   .cbox h3,.dd-box h3,.rcv-box h3,.ow-box h3,.fee-box h3,.close-modal h3{font-size:16px!important}
   .cbox p,.cbox .sub,.dd-box .sub,.rcv-box .sub,.ow-box .sub,.fee-box .sub,.close-modal .sub{font-size:12px!important;line-height:1.5!important}
 }
+
+
+/* === v3.4.27 expanded bank detail dark-surface hardening === */
+.card-exp,.profile-section,.profile-section-body,.profile-summary-item,.bt-life,.bt-life-step,
+.bt-history-card,.clean-plan-card.compact,.clean-plan-card.compact.safe,.clean-plan-card.compact.warn,
+.clean-plan-card.compact.plan,.clean-plan-card.compact.danger,.inline-form{
+  background:#0B121D!important;
+  color:#EAF0F8!important;
+  border-color:#26364C!important;
+  box-shadow:none!important;
+}
+.profile-section>summary{
+  background:#0E1724!important;
+  color:#F4F7FC!important;
+  border-color:#24344B!important;
+}
+.profile-section>summary em{color:#91A0B7!important}
+.profile-section>summary em:after{background:#142743!important;color:#9CB9FF!important}
+.profile-section[open]>summary{border-bottom:1px solid #24344B!important}
+.profile-summary-item span,.clean-plan-card.compact .clean-plan-row span,
+.bt-history-row span,.bt-life-step span{color:#8F9DB2!important}
+.profile-summary-item b,.clean-plan-card.compact .clean-plan-row b,
+.bt-history-row b,.bt-life-title,.bt-history-title{color:#F2F6FC!important}
+.profile-summary-item.ok{background:#0F2A21!important;border-color:#22513E!important}
+.profile-summary-item.ok b{color:#75E2A6!important}
+.profile-summary-item.warn{background:#2B2212!important;border-color:#5B471F!important}
+.profile-summary-item.warn b{color:#F6D073!important}
+.profile-summary-item.bad{background:#311820!important;border-color:#6B2D3A!important}
+.profile-summary-item.bad b{color:#FF8F9A!important}
+.clean-plan-card.compact .clean-plan-row + .clean-plan-row,.bt-history-row{border-color:#1F2D40!important}
+.clean-plan-card.compact .clean-plan-notes{background:#09111B!important;color:#AAB6C8!important}
+.bt-life{background:#09111B!important}
+.bt-life-step{background:#0F1825!important;border-color:#2B3A50!important}
+.bt-life-step i{background:#1A2738!important;color:#A9B5C8!important}
+.bt-life-step b{color:#EAF0F8!important}
+.bt-life-step.done{background:#0F2A21!important;border-color:#24553F!important}
+.bt-life-step.done i{background:#22A866!important;color:#FFFFFF!important}
+.bt-life-step.planned{background:#2B2212!important;border-color:#5D4820!important}
+.bt-life-step.planned i{background:#D89B25!important;color:#111827!important}
+.profile-section-body .sec,.card-exp .sec{color:#9CAAC0!important}
+.ck li,.tm li{background:transparent!important;border-color:#26364C!important}
+.ck-text,.tm-title{color:#E8EEF7!important}
+.ck-text.dn,.tm-title.dn{color:#9AA7BA!important}
+.tm-sub{color:#8F9DB2!important}
+.tm-pill.green{background:#143624!important;color:#76E2A7!important}
+.tm-pill.amber{background:#342811!important;color:#F7D273!important}
+.tm-pill.red{background:#371A21!important;color:#FF919C!important}
+.tm-pill.blue{background:#162D56!important;color:#A5BEFF!important}
+.tm-pill.gray{background:#1A2533!important;color:#B0BCCF!important}
+.inline-trigger{background:#0B1420!important;color:#9DB8FF!important;border-color:#35527D!important}
+.ck-add input,.tm-add input{
+  background:#080E17!important;color:#F4F7FC!important;border-color:#31425D!important;
+  -webkit-text-fill-color:#F4F7FC!important;
+}
+.inline-btn.secondary,.inline-btn.ghost{
+  background:#151F2D!important;color:#C0CAD9!important;border-color:#2B3B52!important;
+}
+.card-btns{background:transparent!important}
+.cbtn.edit{background:#142A51!important;color:#A8BEFF!important}
+.cbtn.cls{background:#103023!important;color:#79E2AA!important}
+.cbtn.rcv{background:#261D43!important;color:#C6AEFF!important}
+.cbtn.del{background:#351920!important;color:#FF929D!important}
