@@ -1,11 +1,11 @@
 /*
  * filename: bank-rules-wells-consumer.js
- * version: 3.4.18
+ * version: 3.4.19
  * purpose: Exact Wells Fargo $400 consumer checking offer. Prevents business-profile/timer contamination and stores the 12-month bonus-received eligibility basis.
  */
 (function(){
   'use strict';
-  const VER='3.4.18';
+  const VER='3.4.19';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const uniq=a=>Array.from(new Set((a||[]).filter(Boolean).map(clean))).filter(Boolean);
   function addSource(r,label,source,value,kind='extracted',confidence='High'){
@@ -64,12 +64,17 @@
     r.churnable=true;
     r.churnability='repeatable';
     r.churn='1';
+    r.churnPeriodValue=12;
+    r.churnPeriodUnit='months';
     r.churnBasis='bonus';
     r.churnBufferDays=5;
     r.sourceEligibilityBasis='bonus-received';
     r.churnTrackingPolicy='source-bonus-received-plus-5-day-buffer';
     r.churnReason=eligibility;
     r.churnRuleText=eligibility;
+    r.eligibilityEvidenceText=eligibility;
+    r.eligibilityEvidenceSource='official-promotion-terms';
+    r.eligibilityVerified=true;
     r.churnDecisionSource='current-tc';
     r.churnDecisionConfidence='High';
     r.fee=0;r.monthlyFee=null;
