@@ -75,8 +75,8 @@ setTimeout(()=>{
     const openTaxCsv=vm.runInContext(`(function(){const old=entries;entries=[{bank:'Open Bonus Bank',bonus:275,bonusRecd:'2026-09-01',opened:'2026-08-01',closed:'',dataPoint:'DD'}];const out=buildTaxCSV(2026);entries=old;return out})()`,sandbox);
     assert(openTaxCsv.includes('Open Bonus Bank')&&!openTaxCsv.includes('—'),'Open-account received bonus did not export cleanly');
     const beforeRestoreStage=localStorage.getItem('bt_e_v4');
-    const restorePlan=sandbox.stagePortableRestore({entries:[{id:'KEEP-RESTORE-ID',bank:'Restore Test Bank',accountType:'personal',bonus:100,opened:'2026-01-01',bonusRecd:'2026-02-01',churn:'1',churnable:true,churnability:'repeatable',churnBasis:'bonus',sourceEligibilityBasis:'bonus-received'}],userDatapoints:[],communityDatapoints:[],bankReqs:{},phoneBook:[],profileEvents:[],offerHistory:{}});
-    assert(restorePlan.entries.length===1&&restorePlan.entries[0].id==='KEEP-RESTORE-ID','Restore staging did not preserve an existing entry ID');
+    const restorePlan=sandbox.stagePortableRestore({entries:[{id:'CIT-P-01',bank:'Citi',accountType:'personal',bonus:100,opened:'2026-01-01',bonusRecd:'2026-02-01',churn:'1',churnable:true,churnability:'repeatable',churnBasis:'bonus',sourceEligibilityBasis:'bonus-received'}],userDatapoints:[],communityDatapoints:[],bankReqs:{},phoneBook:[],profileEvents:[],offerHistory:{}});
+    assert(restorePlan.entries.length===1&&restorePlan.entries[0].id==='CIT-P-01','Restore staging did not preserve an existing entry ID');
     assert(localStorage.getItem('bt_e_v4')===beforeRestoreStage,'Restore staging wrote storage before commit');
     const report=sandbox.btRunFullRegressionTests();
     assert(report.ok,`Full regression failed: ${JSON.stringify(report)}`);
