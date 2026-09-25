@@ -114,7 +114,8 @@
     return{status:'review',entry:next};
   }
   function preview(p){
-    const bonus='
+    const bonus='$'+Number(p.bonus||0).toLocaleString();
+    const schema=p.schemaVersion>=2?'Verified JSON v2':'Legacy-compatible JSON';
     const future=window.BTEligibilityGate&&typeof window.BTEligibilityGate.summary==='function'?window.BTEligibilityGate.summary(p):(p.churnability==='not-repeatable'?'Non-repeatable':'T&C verification required');
     return `Load ${p.bank} ${bonus} into New Entry?\n${schema}\n\nOpened: ${p.opened}\nRequirement: ${p.dataPoint||'See saved terms'}\nFuture eligibility: ${future}\n\nNothing is saved or replaced yet. Review the entry, then tap Add Entry. If this bank has an older churn/cooldown record, the normal replacement screen will still appear before anything is replaced.`;
   }
