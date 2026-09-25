@@ -62,7 +62,9 @@ setTimeout(()=>{
     assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.30',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.13',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
     assert(sandbox.BTEligibilityGate?.VERSION==='1.3.0',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
-    assert(sandbox.btLifecycleStatusVersion==='3.4.30-status1',`Unexpected lifecycle status version ${sandbox.btLifecycleStatusVersion}`);\n    assert(sandbox.btSmartAttentionVersion==='3.4.30-action1',`Unexpected Action Center version ${sandbox.btSmartAttentionVersion}`);\n    assert(sandbox.btUiFeedbackVersion==='3.4.30-feedback1',`Unexpected UI feedback version ${sandbox.btUiFeedbackVersion}`);
+    assert(sandbox.btLifecycleStatusVersion==='3.4.30-status1',`Unexpected lifecycle status version ${sandbox.btLifecycleStatusVersion}`);
+    assert(sandbox.btSmartAttentionVersion==='3.4.30-action1',`Unexpected Action Center version ${sandbox.btSmartAttentionVersion}`);
+    assert(sandbox.btUiFeedbackVersion==='3.4.30-feedback1',`Unexpected UI feedback version ${sandbox.btUiFeedbackVersion}`);
     const lifecycleSamples=[
       {bank:'Progress Bank',opened:'2026-09-01',dataPoint:'Make a qualifying direct deposit',customTimers:[]},
       {bank:'Await Bank',reqMet:'2026-09-20',payoutTimingText:'within 30 calendar days',customTimers:[]},
