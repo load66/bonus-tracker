@@ -147,6 +147,12 @@ if app_source.count('onclick="event.stopPropagation();toggleTimer(') < 2:
     fail('mini timer checkbox clicks can still bubble and collapse expanded cards')
 for token in ('function toggleTimer(id,timerId)','function toggleCk(id,i)','sv(SK,entries);expanded=id;R()}'):
     if token not in app_source: fail(f'expanded-card state persistence missing: {token}')
+for token in ('let profileSectionUiState={}','function profileSectionStateKey','function setProfileSectionOpen','function profileSectionIsOpen','function profileSectionOpenAttr','function captureProfileSectionState','data-section-key="lifecycle"','data-section-key="history"','const trackerRenderer=(typeof window.rTracker'):
+    if token not in app_source: fail(f'centralized tracker/section state architecture missing: {token}')
+if app_source.count('function rTrackerLegacy(sorted)') != 1:
+    fail('legacy tracker renderer is not explicitly isolated')
+if app_source.count('function rTracker(sorted)') != 1:
+    fail('active tracker renderer is not singular after legacy isolation')
 
 if app_source.count('function rTracker(sorted)') != 1:
     fail('tracker renderer architecture has more than one active rTracker definition')
