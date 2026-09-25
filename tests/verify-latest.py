@@ -135,6 +135,10 @@ if 'Tools Folder' in app_source or 'bt_tools_folder_btn' in app_source:
     fail('removed Tools popup/floating button is still present')
 for token in ("['tracker','tax','tips','storage']","['Tracker','Tax','Datapoints','T&C Archive']","function getChurnSuggestions","BTEligibilityGate.safeEligibilityDate"):
     if token not in app_source: fail(f'direct T&C Archive / churn suggestion architecture missing: {token}')
+
+dark_css=text('style.css')
+for token in ('v3.4.24 Midnight professional dark theme','color-scheme:dark','--bg:#060A11','--card:#0D1420','.modal,.dd-box','.clean-plan-card','.dp-summary','.tabs'):
+    if token not in dark_css: fail(f'professional dark theme coverage missing: {token}')
 for token in ("TC_ARCHIVE_KEY='bt_tc_archive_v1'","function saveTermsArchiveForNewCycle","function rTermsStorage","Existing-cycle edits never replace this record","closedWithNegativeBalance","entryNeedsNegativeBalanceClosureAnswer"):
     if token not in app_source: fail(f'T&C Storage / conditional close architecture missing: {token}')
 
