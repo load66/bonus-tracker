@@ -59,6 +59,9 @@ jobs:
       - name: Run smart Needs Attention coverage tests
         run: node tests/smart-attention.test.js
 
+      - name: Run churn eligibility evidence tests
+        run: node tests/eligibility-gate.test.js
+
       - name: Run universal 5-day churn buffer tests
         run: node tests/churn-buffer.test.js
 
