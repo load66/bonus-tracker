@@ -42,8 +42,8 @@ const workflow=fs.readFileSync('.github/workflows/close-rules.yml','utf8');
 const index=fs.readFileSync('index.html','utf8');
 const sw=fs.readFileSync('sw.js','utf8');
 assert(workflow.includes('node tests/churn-buffer.test.js'),'Pages deploy is not gated by the churn-buffer regression test');
-assert(index.includes('./churn-close-policy.js?v=3.4.14-buffer5'),'Index does not force-refresh the 5-day churn policy');
-assert(index.includes('./sw.js?v=3.4.14-buffer5'),'Index does not force-refresh the 5-day churn service worker');
-assert(sw.includes("const V = 'bt-v3.4.14-buffer5'"),'Service worker cache version does not include the 5-day churn refresh');
+assert(index.includes('./churn-close-policy.js?v=3.4.16'),'Index does not force-refresh the 5-day churn policy');
+assert(index.includes('./sw.js?v=3.4.16-hardening1'),'Index does not force-refresh the 5-day churn service worker');
+assert(sw.includes("const V = 'bt-v3.4.16-hardening1'"),'Service worker cache version does not include the 5-day churn refresh');
 
 console.log('Churn buffer passed: every repeatable bank uses confirmed close date + saved churn period + 5 safety days; non-repeatable offers remain excluded; deploy/cache gate is permanent');
