@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.24 — conditional eligibility plus coupon-enrollment anchors with multi-rule latest-date control. */
+/* BonusTracker v3.4.25 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
 (function(){
   'use strict';
-  const VER='3.4.24';
+  const VER='3.4.25';
   const SAFETY_BUFFER_DAYS=5;
 
   function decision(e){
@@ -31,6 +31,38 @@
   function verification(e){
     try{if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.validate==='function')return window.BTEligibilityGate.validate(e)}catch{}
     return{ok:false,status:'unresolved',reason:'Eligibility evidence validator unavailable'};
+  }
+  function hasStructuredEligibilityEvidence(e){
+    if(!e)return false;
+    const ownRules=Array.isArray(e.eligibilityRules)?e.eligibilityRules:[];
+    const analysisRules=Array.isArray(e.analysis?.eligibilityRules)?e.analysis.eligibilityRules:[];
+    if(ownRules.length||analysisRules.length)return true;
+    const evidenceText=String(e.eligibilityEvidenceText||e.analysis?.eligibilityEvidenceText||'').trim();
+    const evidenceSource=String(e.eligibilityEvidenceSource||e.analysis?.eligibilityEvidenceSource||'').trim();
+    return !!(evidenceText&&evidenceSource);
+  }
+  function legacyRulePeriod(e){
+    if(!e)return null;
+    const value=parseInt(e.churnPeriodValue||e.analysis?.churnPeriodValue||0,10)||0;
+    const unit=String(e.churnPeriodUnit||e.analysis?.churnPeriodUnit||'').toLowerCase().replace(/\s+/g,'').replace(/s$/,'');
+    if(value>0&&['day','month','year'].includes(unit))return{value,unit};
+    const churn=String(e.churn||'').trim();
+    if(churn==='180')return{value:180,unit:'day'};
+    if(/^[1-9]\d*$/.test(churn))return{value:parseInt(churn,10),unit:'year'};
+    return null;
+  }
+  function legacyFallbackReadyDate(e){
+    if(!e||decision(e)!=='repeatable'||hasStructuredEligibilityEvidence(e))return'';
+    const period=legacyRulePeriod(e);if(!period)return'';
+    const b=sourceBasis(e);
+    let base=b?basisDate(e):'';
+    if(!base)base=e.closed||'';
+    if(!base)return'';
+    let official='';
+    if(period.unit==='day')official=addDLocal(base,period.value);
+    else if(period.unit==='month')official=addMLocal(base,period.value);
+    else if(period.unit==='year')official=addMLocal(base,period.value*12);
+    return official?addDLocal(official,SAFETY_BUFFER_DAYS):'';
   }
   function sourceBasis(e){
     if(!e)return'';
@@ -62,8 +94,9 @@
         e.churnBasis='multiple';
         e.sourceEligibilityBasis='multiple';
       }
-      e.churnBufferDays=v?.ok?SAFETY_BUFFER_DAYS:0;
-      e.churnTrackingPolicy=v?.ok?(rules.length>1?'multi-rule-latest-date-plus-5-day-buffer':('source-'+e.sourceEligibilityBasis+'-plus-5-day-buffer')):'source-basis-required';
+      const legacyReady=!v?.ok?legacyFallbackReadyDate(e):'';
+      e.churnBufferDays=(v?.ok||legacyReady)?SAFETY_BUFFER_DAYS:0;
+      e.churnTrackingPolicy=v?.ok?(rules.length>1?'multi-rule-latest-date-plus-5-day-buffer':('source-'+e.sourceEligibilityBasis+'-plus-5-day-buffer')):(legacyReady?'legacy-saved-rule-plus-5-day-buffer':'source-basis-required');
       if(e.analysis&&typeof e.analysis==='object'){
         e.analysis.churnBasis=e.churnBasis;
         e.analysis.sourceEligibilityBasis=e.sourceEligibilityBasis;
@@ -97,10 +130,13 @@
   }
   function next(e){
     try{
-      if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.safeEligibilityDate==='function')
-        return window.BTEligibilityGate.safeEligibilityDate(e,addDLocal,addMLocal);
+      if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.safeEligibilityDate==='function'){
+        const verified=window.BTEligibilityGate.safeEligibilityDate(e,addDLocal,addMLocal);
+        if(verified)return verified;
+      }
     }catch{}
-    const base=official(e);return base?addDLocal(base,SAFETY_BUFFER_DAYS):'';
+    const base=official(e);if(base)return addDLocal(base,SAFETY_BUFFER_DAYS);
+    return legacyFallbackReadyDate(e);
   }
   function applicationReady(e){
     try{
@@ -116,7 +152,7 @@
     try{if(typeof window.dB==='function'&&typeof window.td==='function')return Math.max(0,window.dB(window.td(),d))}catch{}
     return null
   }
-  function bufferFor(e){const v=verification(e);return v.ok&&v.decision==='repeatable'?SAFETY_BUFFER_DAYS:0}
+  function bufferFor(e){const v=verification(e);return(v.ok&&v.decision==='repeatable')||legacyFallbackReadyDate(e)?SAFETY_BUFFER_DAYS:0}
   function assignGlobals(){
     window.churnBasisDate=basisDate;
     window.churnBufferDaysFor=bufferFor;
@@ -126,6 +162,8 @@
     window.btChurnSafetyBufferDays=SAFETY_BUFFER_DAYS;
     window.btEligibilityBasisFor=sourceBasis;
     window.btEligibilityVerification=verification;
+    window.btLegacyChurnFallbackDate=legacyFallbackReadyDate;
+    window.btHasStructuredEligibilityEvidence=hasStructuredEligibilityEvidence;
     try{churnBasisDate=basisDate}catch{}
     try{churnBufferDaysFor=window.churnBufferDaysFor}catch{}
     try{nextReopen=next}catch{}
