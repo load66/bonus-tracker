@@ -93,6 +93,25 @@
   function matchingTimedSentence(text,basis,period){
     return splitEvidence(text).find(s=>eligibilityContext(s)&&basisContext(s,basis)&&extractDurations(s).some(x=>equivalentPeriod(x,period)))||'';
   }
+  function lookbackRestrictionContext(s){
+    return /not eligible|ineligible|not available|cannot|can't|may not|must not|do not qualify|does not qualify|aren't eligible|isn't eligible/i.test(s)
+      && /past|previous|preceding|prior|previously|last\s+\d|before\s+(?:opening|applying)|prior\s+to/i.test(s);
+  }
+  function discoverTimedRestrictions(text){
+    const out=[],seen=new Set(),bases=['bonus-received','account-opened','account-closed'];
+    splitEvidence(text).forEach(sentence=>{
+      if(!lookbackRestrictionContext(sentence))return;
+      bases.forEach(basis=>{
+        if(!basisContext(sentence,basis))return;
+        extractDurations(sentence).forEach(period=>{
+          const key=basis+'|'+period.value+'|'+period.unit;
+          if(seen.has(key))return;seen.add(key);
+          out.push({basis,period:{value:period.value,unit:period.unit,source:'discovered'},evidenceSentence:sentence});
+        });
+      });
+    });
+    return out;
+  }
   function nonRepeatableSentence(text){
     return splitEvidence(text).find(s=>{
       if(/once per lifetime|one[- ]time bonus only|not repeatable|lifetime[- ]?like/i.test(s))return true;
@@ -181,6 +200,16 @@
     const bad=checked.find(x=>!x.ok);
     if(bad)return{ok:false,status:bad.status,decision:d,reason:bad.reason,rules:checked.map(x=>x.rule).filter(Boolean),currentCustomerExcluded:current.excluded,currentCustomerSentence:current.sentence};
     const verifiedRules=checked.map(x=>x.rule);
+    const sourceText=clean(e?.tcSourceRaw||e?.analysis?.rawText||'');
+    if(sourceText){
+      const discovered=discoverTimedRestrictions(sourceText);
+      const missing=discovered.find(d=>!verifiedRules.some(r=>r.basis===d.basis&&equivalentPeriod(r.period,d.period)));
+      if(missing)return{
+        ok:false,status:'incomplete',decision:d,
+        reason:'The T&C contains an additional '+periodLabel(missing.period)+' '+anchorLabel(missing.basis)+' eligibility restriction that is missing from eligibilityRules.',
+        rules:verifiedRules,currentCustomerExcluded:current.excluded,currentCustomerSentence:current.sentence
+      };
+    }
     const single=verifiedRules.length===1?verifiedRules[0]:null;
     return{
       ok:true,status:'verified',decision:d,rules:verifiedRules,
@@ -277,7 +306,7 @@
 
   return{
     VERSION,SAFETY_BUFFER_DAYS,normalizeBasis,normalizeUnit,decision,periodFromEntry,periodFromRule,extractDurations,equivalentPeriod,
-    evidenceText,evidenceSource,rawTerms,currentCustomerRestriction,normalizedRules,validate,stamp,officialEligibilityDates,
+    evidenceText,evidenceSource,rawTerms,currentCustomerRestriction,discoverTimedRestrictions,normalizedRules,validate,stamp,officialEligibilityDates,
     officialEligibilityDate,controllingRule,safeEligibilityDate,applicationReadyDate,periodLabel,anchorLabel,summary
   };
 });
