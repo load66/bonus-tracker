@@ -143,7 +143,7 @@ for token in ('.cbox,.dd-box,.rcv-box,.ow-box,.fee-box,.close-modal','.dd-input,
     if token not in dark_css: fail(f'dark prompt/checklist contrast coverage missing: {token}')
 if app_source.count('onclick="event.stopPropagation();toggleTimer(') < 2:
     fail('mini timer checkbox clicks can still bubble and collapse expanded cards')
-for token in ('v3.4.25 Midnight professional dark theme','color-scheme:dark','--bg:#060A11','--card:#0D1420','.modal,.dd-box','.clean-plan-card','.dp-summary','.tabs'):
+for token in ('v3.4.26 Midnight professional dark theme','color-scheme:dark','--bg:#060A11','--card:#0D1420','.modal,.dd-box','.clean-plan-card','.dp-summary','.tabs'):
     if token not in dark_css: fail(f'professional dark theme coverage missing: {token}')
 for token in ("TC_ARCHIVE_KEY='bt_tc_archive_v1'","function saveTermsArchiveForNewCycle","function rTermsStorage","Existing-cycle edits never replace this record","closedWithNegativeBalance","entryNeedsNegativeBalanceClosureAnswer"):
     if token not in app_source: fail(f'T&C Storage / conditional close architecture missing: {token}')
