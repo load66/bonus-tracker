@@ -76,6 +76,7 @@ setTimeout(()=>{
       entries=[{id,bank:'Section State Bank',accountType:'personal',opened:'2026-09-01',bonus:100,churn:'1',checklist:[{id:'ck_test',text:'Test requirement',done:false}],customTimers:[]}];
       expanded=id;search='';tab='tracker';
       setProfileSectionOpen(id,'lifecycle',true);
+      const directBefore=window.rTracker(entries);
       R();
       const before=document.getElementById('app').innerHTML;
       toggleCk(id,0);
@@ -92,6 +93,7 @@ setTimeout(()=>{
       };
       const result={
         stateBefore:profileSectionIsOpen(id,'lifecycle'),
+        directOpen:lifecycleTagOpen(directBefore),
         beforeOpen:lifecycleTagOpen(before),
         afterOpen:lifecycleTagOpen(after),
         stateAfter:profileSectionIsOpen(id,'lifecycle'),
@@ -102,7 +104,8 @@ setTimeout(()=>{
       return result;
     })()`,sandbox);
     assert(sectionStateRegression.stateBefore,'Centralized lifecycle state was not open before toggle');
-    assert(sectionStateRegression.beforeOpen,'Lifecycle section did not render with open attribute from centralized UI state');
+    assert(sectionStateRegression.directOpen,'Registered active tracker renderer ignored centralized lifecycle open state');
+    assert(sectionStateRegression.beforeOpen,'R() did not preserve active renderer lifecycle open state');
     assert(sectionStateRegression.stateAfter,'Centralized lifecycle state was lost after checklist toggle/full render cycle');
     assert(sectionStateRegression.afterOpen,'Lifecycle section collapsed after checklist toggle/full render cycle');
     assert(sectionStateRegression.checked,'Checklist state did not toggle during lifecycle persistence regression');
