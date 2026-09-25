@@ -1,7 +1,7 @@
-/* ✅ Version 3.4.24: professional Midnight dark UI over direct T&C Archive and verified churn suggestions. */
+/* ✅ Version 3.4.25: restore legacy cooldown countdowns without weakening verified eligibility rules. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.24';
+const APP_VERSION='3.4.25';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -1851,9 +1851,8 @@ function getChurnSuggestions(){
     if(!e||!e.bank||!e.closed||isNonRepeatableEntry(e))return;
     let ready='';
     try{
-      if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.safeEligibilityDate==='function'){
-        ready=window.BTEligibilityGate.safeEligibilityDate(e,addD,addM)||'';
-      }
+      if(typeof window.churnReadyDate==='function')ready=window.churnReadyDate(e)||'';
+      else if(typeof churnReadyDate==='function')ready=churnReadyDate(e)||'';
     }catch{}
     if(!ready)return;
     const dl=Math.max(0,dB(td(),ready));
