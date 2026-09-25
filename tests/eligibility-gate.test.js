@@ -6,7 +6,7 @@ function parts(date){const m=String(date||'').match(/^(\d{4})-(\d{2})-(\d{2})$/)
 function addD(date,days){const p=parts(date);if(!p)return'';const d=new Date(Date.UTC(p.y,p.mo-1,p.d));d.setUTCDate(d.getUTCDate()+Number(days||0));return d.toISOString().slice(0,10)}
 function addM(date,months){const p=parts(date);if(!p)return'';const total=p.y*12+(p.mo-1)+Number(months||0),y=Math.floor(total/12),mo=((total%12)+12)%12,last=new Date(Date.UTC(y,mo+1,0)).getUTCDate();return `${y}-${String(mo+1).padStart(2,'0')}-${String(Math.min(p.d,last)).padStart(2,'0')}`}
 
-assert(G.VERSION==='1.0.0','Unexpected eligibility gate version');
+assert(G.VERSION==='1.1.0','Unexpected eligibility gate version');
 
 const bonusRule={
   churnable:true,churnability:'repeatable',churn:'1',churnPeriodValue:12,churnPeriodUnit:'months',
@@ -40,6 +40,26 @@ const closeRule={
 };
 assert(G.validate(closeRule).ok&&G.safeEligibilityDate(closeRule,addD,addM)==='2028-04-15','Closed-date 24-month rule failed');
 
+
+const multiRule={
+  churnable:true,churnability:'repeatable',
+  bonusRecd:'2026-06-01',closed:'2027-08-01',
+  eligibilityRules:[
+    {id:'bonus-24m',basis:'bonus-received',periodValue:24,periodUnit:'months',scope:'consumer-checking',evidenceText:'Not eligible if you received a consumer checking bonus within the past 24 months.',evidenceSource:'official-promotion-terms'},
+    {id:'closed-12m',basis:'account-closed',periodValue:12,periodUnit:'months',scope:'consumer-checking',evidenceText:'Not eligible if you closed a consumer checking account within the past 12 months.',evidenceSource:'official-promotion-terms'}
+  ]
+};
+v=G.validate(multiRule);
+assert(v.ok&&v.rules.length===2,'Multiple eligibility restrictions did not verify');
+assert(G.officialEligibilityDate(multiRule,addD,addM)==='2028-08-01','Latest actual eligibility date was not selected');
+assert(G.controllingRule(multiRule,addD,addM)?.id==='closed-12m','Shorter close-based rule should control because it ends later');
+assert(G.safeEligibilityDate(multiRule,addD,addM)==='2028-08-06','Multi-rule safe eligibility date is wrong');
+const multiStamped=G.stamp(multiRule);
+assert(multiStamped.eligibilityRules.length===2&&multiStamped.churnBasis==='multiple','Stamped multi-rule entry did not preserve every restriction');
+
+const missingClose={...multiRule,closed:''};
+assert(G.officialEligibilityDate(missingClose,addD,addM)==='','Tracker produced a final eligibility date while one rule anchor was still missing');
+
 const noEvidence={churnable:true,churnability:'repeatable',churn:'1',sourceEligibilityBasis:'bonus-received'};
 assert(!G.validate(noEvidence).ok,'Manual dropdown values passed without T&C evidence');
 
@@ -63,4 +83,4 @@ assert(G.applicationReadyDate(currentCustomer,addD,addM)==='','Application-ready
 assert(G.applicationReadyDate({...currentCustomer,closed:'2027-08-15'},addD,addM)==='2027-09-06','Early account close incorrectly moved the cooldown date');
 assert(G.applicationReadyDate({...currentCustomer,closed:'2027-09-10'},addD,addM)==='2027-09-10','Later required account close was not respected');
 
-console.log('Eligibility evidence gate passed: source wording, exact units, anchor matching, non-repeatable proof, current-customer closure, and safe dates verified');
+console.log('Eligibility evidence gate passed: single and multi-rule source wording, latest-date control, exact units, closure requirements, and safe dates verified');
