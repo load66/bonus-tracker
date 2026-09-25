@@ -30,7 +30,7 @@ if len(parser.ids)!=len(set(parser.ids)): fail('duplicate static HTML id found')
 for ref in parser.refs:
     if not (ROOT/ref).exists(): fail(f'index references missing file: {ref}')
 if not parser.scripts or parser.scripts[0]!='close-rules-core.js': fail('close-rules-core.js must be first external script')
-if not parser.scripts or parser.scripts[-1]!='mobile-analyzer.js': fail('mobile-analyzer.js must be final external script')
+if not parser.scripts or parser.scripts[-1]!='mobile-analyzer.js': fail('mobile-analyzer.js must be final external script')\nif 'eligibility-gate.js' not in parser.scripts: fail('churn eligibility evidence gate is not loaded')\nelif parser.scripts.index('eligibility-gate.js')>parser.scripts.index('app.js'): fail('eligibility gate must load before app.js')
 if 'bank-rules-fourleaf.js' not in parser.scripts: fail('FourLeaf analyzer rule is not loaded')
 elif parser.scripts.index('bank-rules-fourleaf.js')<parser.scripts.index('bank-rules.js'): fail('FourLeaf rule must load after the base bank rules')
 if 'bank-rules-wells-consumer.js' not in parser.scripts: fail('Wells Fargo consumer analyzer rule is not loaded')
@@ -106,7 +106,7 @@ for token in ('profileKey:keyFor(r)','accountType:typeFor(r)','compatibleProduct
 app_js=text('app.js')
 for token in ('isNonRepeatableEntry','archived-nonrepeatable',"return'ARCHIVED'",'Closed & Archived','Non-repeatable offer'):
     if token not in app_js: fail(f'archive lifecycle missing from app.js: {token}')
-for token in ('Future Eligibility *','Can this bonus be earned again? *','hasSavedChurnDecision','Future eligibility is required before creating this bank','Eligibility Reset / Churn Rule *'):
+for token in ('Future Eligibility *','Can this bonus be earned again? *','hasSavedChurnDecision','churnEligibilityValidation','Cannot open/save this bonus yet. Churn eligibility must be proven by the T&C.','Eligibility Reset / Churn Rule *'):
     if token not in app_js: fail(f'churnability intake gate missing from app.js: {token}')
 
 runtime_fix=text('wells-professional-runtime.js')
@@ -119,6 +119,14 @@ for token in ('tcV3MakeSuggestedTimers','tcApplyReviewed','rModal'):
     if token not in controller+professional: fail(f'legacy analyzer/professional hook missing: {token}')
 for token in ('wellsSuggestedTimers','Can this bonus be earned again? *','Future eligibility','Separate fee schedule','Fee Schedule','requirementSummaryForEntry','polishAnalyzerDom','tcApplyReviewed','After '+"'+fM(e.bonus||0)+'"+' posts'):
     if token not in runtime_fix: fail(f'professional Wells runtime behavior missing: {token}')
+
+eligibility_gate=text('eligibility-gate.js')
+for token in ('fail closed','eligibilityEvidenceText','eligibilityEvidenceSource','churnPeriodValue','churnPeriodUnit','officialEligibilityDate','safeEligibilityDate','applicationReadyDate','mustCloseBeforeReapply'):
+    if token not in eligibility_gate: fail(f'churn eligibility evidence gate missing: {token}')
+
+entry_import=text('entry-link-import.js')
+for token in ('BTEligibilityGate.validate','Churn eligibility is not verified from the T&C','churnPeriodValue','eligibilityEvidenceText'):
+    if token not in entry_import: fail(f'evidence-gated entry import missing: {token}')
 
 churn_policy=text('churn-close-policy.js')
 for token in ('source-accurate eligibility clock','sourceEligibilityBasis','churnBasisDate','nextReopen','churnReadyDate','churnBufferDaysFor','source-basis-required','collectModalEntryData','normalizeLifecycleEntry'):
@@ -144,7 +152,7 @@ for token in (
     "python-version: '3.12'",
     'python3 tests/verify-latest.py',
     'node tests/close-rules.test.js',
-    'node tests/full-app-smoke.test.js',
+    'node tests/full-app-smoke.test.js',\n    'node tests/eligibility-gate.test.js',
     'needs: verify',
     'actions/configure-pages@v5',
     'enablement: true',
@@ -160,4 +168,4 @@ if issues:
     print(f'LATEST RELEASE VERIFY FAILED v{release}: {len(issues)} issue(s)')
     for issue in issues: print('FAIL',issue)
     sys.exit(1)
-print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, Wells accuracy, analyzer isolation, archive lifecycle, churn intake, professional UI, and verify-before-deploy checks passed')
+print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, Wells accuracy, analyzer isolation, archive lifecycle, evidence-gated churn intake, professional UI, and verify-before-deploy checks passed')
