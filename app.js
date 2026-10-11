@@ -1,7 +1,7 @@
-/* ✅ Version 3.4.30: professional operations dashboard, lifecycle Action Center, standardized cards, activity timeline, and in-app feedback. */
+/* Version 3.4.31: reliable confirmations, shared timer saves with activity history, Action Center navigation, and clear search feedback. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.30';
+const APP_VERSION='3.4.31';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -3889,6 +3889,23 @@ function renderCardProgressLine(e){
   const pct=Math.round(done/tasks.length*100);
   return '<div class="card-progressline"><span>'+done+' of '+tasks.length+' tasks complete</span><i><b style="width:'+pct+'%"></b></i></div>'
 }
+function openAccountFromActionCenter(id){
+  if(!entries.some(e=>e.id===id))return;
+  expanded=id;
+  search='';
+  tab='tracker';
+  R();
+  const card=Array.from(document.querySelectorAll('.card[data-bt-entry-id]')).find(el=>el.getAttribute('data-bt-entry-id')===id);
+  if(!card)return;
+  card.scrollIntoView({block:'start',behavior:'auto'});
+  const header=card.querySelector('.card-h');
+  if(header){header.setAttribute('tabindex','-1');header.focus({preventScroll:true})}
+}
+function renderAccountEmptyState(query){
+  return query
+    ? '<div class="empty"><div class="em">No matching accounts</div><p>No account matches “'+esc(query)+'”.</p><button type="button" class="btn-s" onclick="search=\'\';R()">Clear search</button></div>'
+    : '<div class="empty"><div class="em">No banks yet</div><p>Add your first bank with the + button, use Quick Add for templates, or restore a saved backup.</p></div>'
+}
 function renderActionCenter(){
   let rows=[];try{rows=typeof window.getAttentionSuggestions==='function'?(window.getAttentionSuggestions()||[]):[]}catch{}
   if(!rows.length)return'<div class="ops-action-center clear"><div class="ops-section-head"><div><span>Action Center</span><b>All caught up</b></div></div><div class="ops-empty">No account needs immediate follow-up.</div></div>';
@@ -3897,7 +3914,7 @@ function renderActionCenter(){
   visible.forEach(x=>{
     const entryId=String(x.entryId||'');
     const stage=String(x.stageCode||'IN_PROGRESS').toLowerCase().replace(/_/g,'-');
-    h+='<button type="button" class="ops-action-row stage-'+esc(stage)+'" onclick="event.stopPropagation();expanded=\''+esc(entryId)+'\';search=\'\';R()">'+bankLogo(x.bank,true)+'<span class="ops-action-main"><b>'+esc(x.bank)+'</b><em>'+esc(x.rsn||x.action||'Review account')+'</em></span><span class="ops-action-side">'+(x.showBonus&&x.bonus?'<strong>'+fM(x.bonus)+'</strong>':'')+'<small>'+esc(x.stageLabel||'In Progress')+'</small></span></button>'
+    h+='<button type="button" class="ops-action-row stage-'+esc(stage)+'" onclick="event.stopPropagation();openAccountFromActionCenter('+profileSectionAttr(JSON.stringify(entryId))+')">'+bankLogo(x.bank,true)+'<span class="ops-action-main"><b>'+esc(x.bank)+'</b><em>'+esc(x.rsn||x.action||'Review account')+'</em></span><span class="ops-action-side">'+(x.showBonus&&x.bonus?'<strong>'+fM(x.bonus)+'</strong>':'')+'<small>'+esc(x.stageLabel||'In Progress')+'</small></span></button>'
   });
   h+='</div>';
   if(rows.length>visible.length)h+='<div class="ops-action-more">'+(rows.length-visible.length)+' more account'+(rows.length-visible.length!==1?'s':'')+' continue below in the tracker.</div>';
@@ -4853,16 +4870,63 @@ function clearDeletedTimerKeys(e,t){if(!e||!t)return;const keys=deletedTimerKeys
 function isDeletedTimer(e,t){if(!e||!t)return false;const keys=deletedTimerKeys(e);return keys.has(timerDeleteSignature(t))||keys.has(timerDeleteTextKey(t))||keys.has(timerDeleteIdKey(t))}
 function sanitizeEntryTimers(e){if(!e||!Array.isArray(e.customTimers))return false;const before=e.customTimers.length;e.customTimers=normalizeTimerList(e.customTimers).filter(t=>!isDeletedTimer(e,t));return e.customTimers.length!==before}
 function sanitizeAllTimers(save){let changed=false;entries.forEach(e=>{if(sanitizeEntryTimers(e))changed=true});if(changed&&save)sv(SK,entries);return changed}
-function timerEditorDraft(){const p=timerEditModal;if(!p)return null;return {...p,text:(document.getElementById('tem_text')?.value??p.text??'').trim(),startDate:(document.getElementById('tem_start')?.value??p.startDate??'').trim(),daysRequired:(document.getElementById('tem_days')?.value??p.daysRequired??'').trim()}}
+function timerEditorDraft(){
+  const p=timerEditModal;
+  if(!p)return null;
+  const value=(id,fallback)=>String(document.getElementById(id)?.value??fallback??'').trim();
+  return {...p,text:value('tem_text',p.text),startDate:value('tem_start',p.startDate),daysRequired:value('tem_days',p.daysRequired)}
+}
 function openNewTimerEditor(id,mode='due'){const entry=entries.find(e=>e.id===id);if(!entry)return;const fallbackDate=entry.opened||td();timerEditModal={entryId:id,timerId:'',isNew:true,text:'',mode:mode==='days'?'days':'due',startDate:fallbackDate,daysRequired:''};R();setTimeout(()=>{const el=document.getElementById('tem_text');if(el)el.focus()},0)}
 function openTimerEditor(id,timerIdValue){const entry=entries.find(e=>e.id===id);if(!entry)return;const timer=normalizeTimerList(entry.customTimers).find(t=>t.id===timerIdValue);if(!timer)return;timerEditModal={entryId:id,timerId:timer.id,isNew:false,text:timer.text||'',mode:timer.daysRequired>0?'days':'due',startDate:(timer.daysRequired>0?timer.startDate:timer.date)||'',daysRequired:timer.daysRequired?String(timer.daysRequired):''};R();setTimeout(()=>{const el=document.getElementById('tem_text');if(el)el.focus()},0)}
 function closeTimerEditor(){timerEditModal=null;R()}
 function switchTimerEditMode(mode){if(!timerEditModal)return;const draft=timerEditorDraft()||timerEditModal;timerEditModal={...draft,mode:mode==='days'?'days':'due'};if(timerEditModal.mode==='due')timerEditModal.daysRequired='';R();setTimeout(()=>{const el=document.getElementById('tem_text');if(el)el.focus()},0)}
-function saveTimerEditor(){const draft=timerEditorDraft();if(!draft)return;const txt=(draft.text||'').trim();const start=(draft.startDate||'').trim();const days=draft.mode==='days'?(parseInt(draft.daysRequired,10)||0):0;if(!txt||!start){alert(draft.mode==='days'?'Add a description and start date.':'Add a description and due date.');return}if(draft.mode==='days'&&days<=0){alert('Add the number of days for a Start Date + Days timer.');return}const due=days>0?timerDueFromStart(start,days):start;const idToSave=draft.timerId||timerId();const updated=normalizeTimer({id:idToSave,text:txt,startDate:days>0?start:'',daysRequired:days,date:due,done:false});let found=false;entries=entries.map(e=>{if(e.id===draft.entryId){found=true;const timers=normalizeTimerList(e.customTimers).filter(t=>!isDeletedTimer(e,t));const idx=timers.findIndex(t=>t.id===updated.id);clearDeletedTimerKeys(e,updated);if(idx>=0){updated.done=!!timers[idx].done;timers[idx]=updated}else timers.push(updated);e.customTimers=timers}return e});if(!found){alert('Could not find the bank entry for this timer.');return}sv(SK,entries);timerEditModal=null;R()}
+// Both timer editors use the same persistence and history path.
+function saveEntryTimer(entryId,draft){
+  const e=entries.find(e=>e.id===entryId);
+  if(!e)return false;
+  const timers=normalizeTimerList(e.customTimers).filter(t=>!isDeletedTimer(e,t));
+  const index=timers.findIndex(t=>t.id===draft.id);
+  const next=normalizeTimer({...timers[index],...draft,done:index>=0?!!timers[index].done:false});
+  clearDeletedTimerKeys(e,next);
+  if(index>=0)timers[index]=next;
+  else timers.push(next);
+  e.customTimers=timers;
+  appendEntryHistory(e,index>=0?'timer_updated':'timer_added',next.text+' · due '+next.date);
+  sv(SK,entries);
+  return true
+}
+function saveTimerEditor(){
+  const draft=timerEditorDraft();
+  if(!draft)return;
+  const text=draft.text,start=draft.startDate;
+  const days=draft.mode==='days'?(parseInt(draft.daysRequired,10)||0):0;
+  if(!text||!start){alert(draft.mode==='days'?'Add a description and start date.':'Add a description and due date.');return}
+  if(draft.mode==='days'&&days<=0){alert('Add the number of days for a Start Date + Days timer.');return}
+  const saved=saveEntryTimer(draft.entryId,{
+    id:draft.timerId||timerId(),text,startDate:days>0?start:'',daysRequired:days,
+    date:days>0?timerDueFromStart(start,days):start
+  });
+  if(!saved){alert('Could not find the bank entry for this timer.');return}
+  expanded=draft.entryId;
+  timerEditModal=null;
+  R()
+}
 function rTimerEdit(){if(!timerEditModal)return'';const p=timerEditModal;const isDays=p.mode==='days';const isNew=!!p.isNew||!p.timerId;let h='<div class="cbg" onclick="closeTimerEditor()"><div class="dd-box" onclick="event.stopPropagation()">';h+='<h3>'+(isNew?'Add countdown timer':'Edit countdown timer')+'</h3>';h+='<div class="sub">'+(isNew?'Create a custom countdown. Use an exact due date, or switch to start date + days.':'Keep it as an exact due date, or switch to start date + days.')+'</div>';h+='<div class="dd-chips"><button type="button" class="dd-chip '+(!isDays?'sel':'')+'" onclick="event.stopPropagation();switchTimerEditMode(\'due\')">Due Date</button><button type="button" class="dd-chip '+(isDays?'sel':'')+'" onclick="event.stopPropagation();switchTimerEditMode(\'days\')">Start + Days</button></div>';h+='<div class="fg"><label>Description</label><input id="tem_text" value="'+esc(p.text||'')+'" placeholder="e.g. Deposit deadline"></div>';if(isDays){h+='<div class="frow"><div class="fg"><label>Start date</label><input id="tem_start" type="date" value="'+esc(p.startDate||'')+'"></div><div class="fg"><label>Days</label><input id="tem_days" type="number" inputmode="numeric" min="1" value="'+esc(String(p.daysRequired||''))+'" placeholder="60"></div></div>'}else{h+='<div class="fg"><label>Due date</label><input id="tem_start" type="date" value="'+esc(p.startDate||'')+'"><input id="tem_days" type="hidden" value=""></div>'}h+='<div class="crow"><button type="button" class="c-c" onclick="closeTimerEditor()">Cancel</button><button type="button" class="c-g" onclick="saveTimerEditor()">'+(isNew?'Add Timer':'Save')+'</button></div>';h+='</div></div>';return h}
 
 function toggleTimer(id,timerId){entries=entries.map(e=>{if(e.id===id){let changed=null;e.customTimers=normalizeTimerList(e.customTimers).filter(t=>!isDeletedTimer(e,t)).map(t=>{if(t.id!==timerId)return t;changed={...t,done:!t.done};return changed});if(changed)appendEntryHistory(e,changed.done?'timer_completed':'timer_reopened',changed.text||'Timer')}return e});sv(SK,entries);expanded=id;R()}
-function upsertTimer(id){const txt=document.getElementById('tm_txt_'+id);const st=document.getElementById('tm_start_'+id);const ds=document.getElementById('tm_days_'+id);const ui=inlineStateFor(id);const kind=ui.timerKind==='days'?'days':'due';const days=kind==='days'?(parseInt(ds?.value,10)||0):0;if(!txt||!st||!txt.value.trim()||!st.value){alert(kind==='days'?'Add a timer name and start date.':'Add a timer name and due date.');return}if(kind==='days'&&days<=0){alert('Add the number of days for this timer.');return}const editId=ui.timerEdit||'';const due=days>0?timerDueFromStart(st.value,days):st.value;entries=entries.map(e=>{if(e.id===id){const timers=normalizeTimerList(e.customTimers).filter(t=>!isDeletedTimer(e,t));const idx=timers.findIndex(t=>t.id===editId);const next=normalizeTimer({id:idx>=0?timers[idx].id:timerId(),text:txt.value.trim(),startDate:days>0?st.value:'',daysRequired:days,date:due,done:idx>=0?!!timers[idx].done:false});clearDeletedTimerKeys(e,next);if(idx>=0)timers[idx]=next;else timers.push(next);e.customTimers=timers}return e});sv(SK,entries);ui.timerEdit=null;window.__skipTimerPrompt=true;toggleInlineForm(id,'timer',false);window.__skipTimerPrompt=false}
+function upsertTimer(id){
+  const text=document.getElementById('tm_txt_'+id)?.value.trim();
+  const start=document.getElementById('tm_start_'+id)?.value;
+  const ui=inlineStateFor(id),kind=ui.timerKind==='days'?'days':'due';
+  const days=kind==='days'?(parseInt(document.getElementById('tm_days_'+id)?.value,10)||0):0;
+  if(!text||!start){alert(kind==='days'?'Add a timer name and start date.':'Add a timer name and due date.');return}
+  if(kind==='days'&&days<=0){alert('Add the number of days for this timer.');return}
+  if(!saveEntryTimer(id,{id:ui.timerEdit||timerId(),text,startDate:days>0?start:'',daysRequired:days,date:days>0?timerDueFromStart(start,days):start}))return;
+  expanded=id;
+  ui.timerEdit=null;
+  window.__skipTimerPrompt=true;
+  try{toggleInlineForm(id,'timer',false)}finally{window.__skipTimerPrompt=false}
+}
 function rmTimer(id,timerId){const entry=entries.find(e=>e.id===id);if(!entry)return;const timer=normalizeTimerList(entry.customTimers).find(t=>t.id===timerId);const label=timer?.text?('Delete mini timer “'+timer.text+'”?'):'Delete this mini timer?';cfm={title:'Delete mini timer',msg:label,action:()=>{entries=entries.map(e=>{if(e.id===id){const timers=normalizeTimerList(e.customTimers);const target=timers.find(t=>t.id===timerId);if(target)addDeletedTimerKeys(e,target);e.customTimers=timers.filter(t=>t.id!==timerId)}return e});const st=inlineStateFor(id);if(st.timerEdit===timerId)st.timerEdit=null;sv(SK,entries);cfm=null;R()}};R()}
 function toggleDDChip(m){if(!ddPrompt)return;const i=ddPrompt.sel.indexOf(m);if(i>=0)ddPrompt.sel.splice(i,1);else ddPrompt.sel.push(m);R()}
 function submitDD(){if(!ddPrompt)return;const c=document.getElementById('dd_custom');const all=[...ddPrompt.sel];if(c&&c.value)c.value.split(',').forEach(x=>{const t=x.trim();if(t)all.push(t)});all.forEach(m=>addDD(ddPrompt.bank,m,ddPrompt.bonus,td()));ddPrompt=null;R()}
@@ -6257,14 +6321,14 @@ entries=sortE(entries);R();
     h += renderActionCenter();
 
     if(!f.length){
-      return h + '<div class="empty"><div class="em">No banks yet</div><p>Add your first bank with the + button, use Quick Add for templates, or restore a saved backup.</p></div>' + rBankActions();
+      return h + renderAccountEmptyState(search) + rBankActions();
     }
 
     h += '<div class="sec">Bonus Accounts</div>';
 
     f.forEach(e=>{
       const isX=expanded===e.id, nr=nextReopen(e), countdown=getCountdown(e), urg=getUrg(e);
-      h += `<div class="card u-${urg}">`;
+      h += `<div class="card u-${urg}" data-bt-entry-id="${profileSectionAttr(e.id)}">`;
       h += `<div class="card-h" onclick="expanded=expanded==='${e.id}'?null:'${e.id}';R()">`;
       h += `<div class="card-logo-col">${bankLogo(e.bank)}${accountTypeChipHtml(e)}${e.churn?churnTagHtml(e.bank,e.churn):''}</div>`;
       h += `<div class="card-left"><div class="card-name">${esc(e.bank)}</div><div class="card-row">${statusBadgeHtml(e,countdown)}</div>${renderCardProgressLine(e)}</div>`;
