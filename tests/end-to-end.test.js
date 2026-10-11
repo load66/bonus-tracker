@@ -1,11 +1,18 @@
 'use strict';
 const assert=require('node:assert/strict');
 const vm=require('node:vm');
-const {sandbox,storage,errors}=require('./full-app-smoke.test.js');
+const {sandbox,document,storage,errors}=require('./full-app-smoke.test.js');
 const run=code=>vm.runInContext(code,sandbox);
 
 setTimeout(()=>{
   try{
+    const toolbarHandler=document.eventListeners.find(x=>x.type==='click'&&x.capture===true&&String(x.fn).includes('buttonText(btn)'));
+    assert.ok(toolbarHandler,'Toolbar delegation is installed');
+    for(const text of ['Restore Backup','Restore Complete','Pre-restore safety copy']){
+      let intercepted=false;
+      toolbarHandler.fn({target:{closest:()=>({textContent:text})},preventDefault(){intercepted=true},stopImmediatePropagation(){intercepted=true}});
+      assert.equal(intercepted,false,'Toolbar must not intercept '+text);
+    }
     run('openAdd()');
     for(const editing of [false,true]){
       sandbox.editing=editing;

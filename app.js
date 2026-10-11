@@ -510,7 +510,7 @@ function closeFlowModeReason(e,mode){
   if(!e)return'Entry needs manual review.';
   if(e.closed)return'This entry already has a closed date saved.';
   const ready=closeReadiness(e);
-  return ready.warnings?.length ? 'Review the warnings below, then close only if the bank is truly closed.' : 'Close date will start the churn countdown.'
+  return ready.warnings?.length ? 'Review the warnings below, then close only if the bank is truly closed.' : 'Closure is recorded separately from the T&C eligibility clock.'
 }
 function normalizeEntryHistoryList(list){
   return (Array.isArray(list)?list:[]).filter(x=>x&&typeof x==='object').map(x=>({
@@ -4196,7 +4196,7 @@ function rClose(){
   }else if(p.step==='date'){
     const ready=closeReadiness(e,p.closeDate);
     h+='<h3>🔒 Close Now</h3><div class="sub">Record the actual date the bank account was closed.</div>';
-    h+='<div class="close-ready '+esc(ready.cls)+'"><b>'+esc(ready.label)+'</b><span>'+esc(ready.warnings[0]||'Closed date starts the churn countdown.')+'</span></div>';
+    h+='<div class="close-ready '+esc(ready.cls)+'"><b>'+esc(ready.label)+'</b><span>'+esc(ready.warnings[0]||'Closure is recorded separately from the T&C eligibility clock.')+'</span></div>';
     h+='<label>Actual Close Date</label><input type="date" id="cp_date" value="'+esc(p.closeDate||'')+'">';
     if(entryNeedsNegativeBalanceClosureAnswer(e)){
       h+='<label>Was this account closed with a negative balance?</label><select id="cp_negative_balance"><option value=""'+(typeof p.closedWithNegativeBalance!=='boolean'?' selected':'')+'>Select</option><option value="no"'+(p.closedWithNegativeBalance===false?' selected':'')+'>No</option><option value="yes"'+(p.closedWithNegativeBalance===true?' selected':'')+'>Yes</option></select>';
@@ -6043,8 +6043,8 @@ entries=sortE(entries);R();
       const btn=e.target?.closest?.('button,a,[role="button"],input[type="button"],input[type="submit"]');
       if(!btn)return;
       const txt=buttonText(btn).toLowerCase();
-      if(txt==='backup'||txt.includes('backup')){e.preventDefault();e.stopImmediatePropagation();if(typeof exportBackup==='function')exportBackup(true);else exportFullBackup('manual-button');return;}
-      if(txt==='restore'||txt.includes('restore')){e.preventDefault();e.stopImmediatePropagation();if(typeof importBackup==='function')importBackup();else chooseRestoreFile();return;}
+      if(txt==='backup'){e.preventDefault();e.stopImmediatePropagation();if(typeof exportBackup==='function')exportBackup(true);else exportFullBackup('manual-button');return;}
+      if(txt==='restore'){e.preventDefault();e.stopImmediatePropagation();if(typeof importBackup==='function')importBackup();else chooseRestoreFile();return;}
     },true);
     window.__btFullBackupButtonsHooked=true;
   }

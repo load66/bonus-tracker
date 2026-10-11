@@ -21,7 +21,7 @@ const app=new ElementStub('div');app.id='app';
 const document={
   head:new ElementStub('head'),body:new ElementStub('body'),documentElement:new ElementStub('html'),readyState:'complete',activeElement:null,
   createElement:t=>new ElementStub(t),createTextNode:t=>({textContent:String(t)}),getElementById:id=>id==='app'?app:null,
-  querySelector:s=>s==='#app'||s==='.app'?app:null,querySelectorAll:()=>[],addEventListener(){},removeEventListener(){}
+  querySelector:s=>s==='#app'||s==='.app'?app:null,querySelectorAll:()=>[],eventListeners:[],addEventListener(type,fn,capture){this.eventListeners.push({type,fn,capture})},removeEventListener(){}
 };
 const storage=new Map();
 const localStorage={getItem:k=>storage.has(k)?storage.get(k):null,setItem:(k,v)=>storage.set(k,String(v)),removeItem:k=>storage.delete(k),clear:()=>storage.clear(),key:i=>[...storage.keys()][i]||null,get length(){return storage.size}};
