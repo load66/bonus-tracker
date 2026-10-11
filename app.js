@@ -1,7 +1,7 @@
-/* Version 3.4.31: reliable confirmations, shared timer saves with activity history, Action Center navigation, and clear search feedback. */
+/* Version 3.4.32: direct milestone actions, shared date explanations, missing-date review, and safe local-day refresh. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.31';
+const APP_VERSION='3.4.32';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -1483,6 +1483,8 @@ function holdProg(e){
 }
 
 function reqDeadline(e){
+  // An exact statement date or business-day calendar cannot be inferred from a day count.
+  if(/business days?|statement (?:period|cycle)|billing (?:period|cycle)|\bmonths?\b|\byears?\b/i.test(String(e.requiredDaysText||'')))return null;
   return(e.opened&&e.reqDays>0)?addD(e.opened,e.reqDays):null
 }
 
@@ -3906,6 +3908,17 @@ function renderAccountEmptyState(query){
     ? '<div class="empty"><div class="em">No matching accounts</div><p>No account matches “'+esc(query)+'”.</p><button type="button" class="btn-s" onclick="search=\'\';R()">Clear search</button></div>'
     : '<div class="empty"><div class="em">No banks yet</div><p>Add your first bank with the + button, use Quick Add for templates, or restore a saved backup.</p></div>'
 }
+function runNextAccountAction(id){
+  const e=entries.find(e=>e.id===id);
+  if(!e)return;
+  // Re-evaluate on click so a stale button cannot bypass a changed restriction.
+  const next=window.btNextActionForEntry?.(e);
+  expanded=id;search='';tab='tracker';
+  if(next?.kind==='requirements')openReqMet(id);
+  else if(next?.kind==='bonus')openRcv(id);
+  else if(next?.kind==='close')startCloseFlow(id,'actual');
+  else{setProfileSectionOpen(id,'lifecycle',true);openAccountFromActionCenter(id)}
+}
 function renderActionCenter(){
   let rows=[];try{rows=typeof window.getAttentionSuggestions==='function'?(window.getAttentionSuggestions()||[]):[]}catch{}
   if(!rows.length)return'<div class="ops-action-center clear"><div class="ops-section-head"><div><span>Action Center</span><b>All caught up</b></div></div><div class="ops-empty">No account needs immediate follow-up.</div></div>';
@@ -3914,7 +3927,12 @@ function renderActionCenter(){
   visible.forEach(x=>{
     const entryId=String(x.entryId||'');
     const stage=String(x.stageCode||'IN_PROGRESS').toLowerCase().replace(/_/g,'-');
-    h+='<button type="button" class="ops-action-row stage-'+esc(stage)+'" onclick="event.stopPropagation();openAccountFromActionCenter('+profileSectionAttr(JSON.stringify(entryId))+')">'+bankLogo(x.bank,true)+'<span class="ops-action-main"><b>'+esc(x.bank)+'</b><em>'+esc(x.rsn||x.action||'Review account')+'</em></span><span class="ops-action-side">'+(x.showBonus&&x.bonus?'<strong>'+fM(x.bonus)+'</strong>':'')+'<small>'+esc(x.stageLabel||'In Progress')+'</small></span></button>'
+    h+='<div class="ops-action-item"><button type="button" class="ops-action-row stage-'+esc(stage)+'" onclick="event.stopPropagation();openAccountFromActionCenter('+profileSectionAttr(JSON.stringify(entryId))+')">'+bankLogo(x.bank,true)+'<span class="ops-action-main"><b>'+esc(x.bank)+'</b><em>'+esc(x.rsn||x.action||'Review account')+'</em></span><span class="ops-action-side">'+(x.showBonus&&x.bonus?'<strong>'+fM(x.bonus)+'</strong>':'')+'<small>'+esc(x.stageLabel||'In Progress')+'</small></span></button>';
+    if(x.dateContext){
+      const proof=x.dateContext;
+      h+='<details class="profile-section ops-date-proof" data-entry-id="'+profileSectionAttr(entryId)+'" data-section-key="action-date"'+profileSectionOpenAttr(entryId,'action-date')+' ontoggle="handleProfileSectionToggle(this)"><summary>'+(proof.confirmed?'Saved deadline · '+esc(fD(proof.date)):'Date not confirmed')+'</summary><p>'+esc(proof.explanation)+'</p></details>'
+    }
+    h+='<div class="ops-action-controls"><button type="button" class="ops-next-action" onclick="event.stopPropagation();runNextAccountAction('+profileSectionAttr(JSON.stringify(entryId))+')">'+esc(x.actionLabel||'Review account')+'</button></div></div>'
   });
   h+='</div>';
   if(rows.length>visible.length)h+='<div class="ops-action-more">'+(rows.length-visible.length)+' more account'+(rows.length-visible.length!==1?'s':'')+' continue below in the tracker.</div>';

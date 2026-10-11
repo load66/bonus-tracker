@@ -4905,7 +4905,7 @@ select option{background:#0D1420;color:var(--text)}
 .card-subline{color:#A7B4C8!important}
 
 
-/* === v3.4.31 professional operations UI === */
+/* === v3.4.32 professional operations UI === */
 .ops-hero{gap:12px}
 .ops-hero .hero-side{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
 .hero-chip.secondary{background:#111B2B!important;color:#AFC1DC!important;border:1px solid #2A3B54!important}
@@ -4979,3 +4979,15 @@ select option{background:#0D1420;color:var(--text)}
   .ops-action-side small{max-width:96px}
   .card-progressline{max-width:210px}
 }
+
+/* v3.4.32 direct next actions and saved date explanations */
+.ops-action-item{border-bottom:1px solid #26364C}
+.ops-action-item:last-child{border-bottom:0}
+.ops-action-item .ops-action-row{border-bottom:0}
+.ops-action-item .ops-action-main em{white-space:normal;overflow:visible}
+.ops-action-controls{padding:0 12px 12px}
+.ops-next-action{width:100%;min-height:40px;padding:9px 12px;border:1px solid #37577D;border-radius:10px;background:#172A42;color:#DCEBFF;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer}
+.ops-next-action:focus-visible,.ops-action-row:focus-visible{outline:2px solid #77B7FF;outline-offset:-2px}
+.ops-action-item .ops-date-proof{margin:0 12px 9px;padding:0;border:0;background:transparent;border-radius:0}
+.ops-action-item .ops-date-proof summary{min-height:32px;padding:5px 0;color:#A7B8CC;font-size:10px;line-height:1.45;cursor:pointer}
+.ops-action-item .ops-date-proof p{margin:0;padding:0 0 8px;color:#9DACC0;font-size:10px;line-height:1.6;overflow-wrap:anywhere}
