@@ -1,9 +1,9 @@
-/* BonusTracker v3.4.31 Action Center — canonical lifecycle stages drive every user-facing action item. */
+/* BonusTracker v3.4.32 Action Center — canonical lifecycle stages drive every user-facing action item. */
 (function(){
   'use strict';
-  const VER='3.4.31-action1';
+  const VER='3.4.32-action1';
 
-  function finite(v){const n=Number(v);return Number.isFinite(n)?n:null}
+  function finite(v){if(v==null||v==='')return null;const n=Number(v);return Number.isFinite(n)?n:null}
   function daysTo(date){
     if(!date)return null;
     try{if(typeof dB==='function'&&typeof td==='function')return dB(td(),date)}catch{}
@@ -67,11 +67,68 @@
       code==='BONUS_RECEIVED'?'Review close rules':
       code==='COOLDOWN'?'Wait for eligibility':'Complete next requirement'
   }
+  function recurring(e,stage){
+    return /monthly|each month|every month|per month|recurring|ongoing/i.test([e.completeBonusText,e.requiredDaysText,stage?.timer?.text].filter(Boolean).join(' '));
+  }
+  function dateText(value){try{return typeof fD==='function'?fD(value):String(value)}catch{return String(value)}}
+  function dateContext(e,stage){
+    const unknown=detail=>({date:'',confirmed:false,explanation:'Date not confirmed · '+detail});
+    const result=(date,explanation)=>date?{date,confirmed:true,explanation}:unknown(explanation);
+    const gate=window.BTEligibilityGate;
+    if(e.closed){
+      const ready=typeof churnReadyDate==='function'?churnReadyDate(e):'';
+      if(!gate)return unknown('review saved eligibility terms');
+      const validation=gate.validate(e);
+      if(!validation.ok)return {date:ready||'',confirmed:false,explanation:ready?'Saved legacy countdown · '+dateText(ready)+' · current offer terms need review':'Date not confirmed · '+validation.reason};
+      const official=gate.officialEligibilityDate(e,addD,addM);
+      const rule=gate.controllingRule(e,addD,addM);
+      if(!official||!ready||!rule)return unknown('eligibility anchor or condition is missing');
+      return result(ready,gate.anchorLabel(rule.basis)+' '+dateText(rule.anchorDate)+' + '+gate.periodLabel(rule.period)+' → official '+dateText(official)+' · safe reapply '+dateText(ready)+' (includes eligibility safety buffer)');
+    }
+    if(e.bonusRecd){
+      const core=window.BTCloseRules;
+      const proof=core?.sourceSentence(e)||e.closeRuleText||e.earlyTerminationFeeText||'';
+      if(!proof.trim())return unknown('close-rule wording is missing');
+      if(/business days?|statement (?:period|cycle)|\bmonths?\b|\byears?\b/i.test(proof))return unknown('review the exact calendar or statement-based close rule');
+      const date=typeof safeCloseDate==='function'?safeCloseDate(e):'';
+      const raw=typeof rawSafeDate==='function'?rawSafeDate(e):'';
+      const days=typeof closeRuleDaysFor==='function'?closeRuleDaysFor(e):0;
+      if(!date)return unknown('close-rule start date is missing');
+      if(!days&&core?.typeForEntry(e)==='review')return unknown('close terms require review');
+      if(!days)return result(date,'Bonus received '+dateText(e.bonusRecd)+' · '+String(proof).replace(/\s+/g,' ').slice(0,180));
+      const anchor=closeBasisDate(e),basis=closeRuleBasisLabel(closeRuleBasisFor(e));
+      const buffer=closeBufferDaysFor(e);
+      return result(date,basis+' '+dateText(anchor)+' + '+days+' days → hold ends '+dateText(raw)+(buffer?' · safety '+buffer+' days → '+dateText(date):''));
+    }
+    const timer=stage.timer;
+    if(timer?.startDate&&timer?.daysRequired&&/business days?|statement (?:period|cycle)|\bmonths?\b|\byears?\b/i.test([timer.text,stage.kind==='requirement'?e.requiredDaysText:''].filter(Boolean).join(' ')))return unknown('the saved timer needs an exact calendar or statement date');
+    if(timer?.date)return result(timer.date,(timer.startDate&&timer.daysRequired?dateText(timer.startDate)+' + '+timer.daysRequired+' calendar days':'Saved '+(stage.kind||'custom')+' timer')+' → '+dateText(timer.date));
+    if(e.reqMet)return unknown('payout deadline is not saved; review the payout wording');
+    const date=typeof reqDeadline==='function'?reqDeadline(e):'';
+    return result(date,date?'Opened '+dateText(e.opened)+' + '+e.reqDays+' calendar days → '+dateText(date):'requirement deadline or opening date is missing')
+  }
+  function nextActionForEntry(e){
+    const stage=stageFor(e),context=dateContext(e,stage);
+    let kind='review',label='Review account';
+    if(!e.closed&&!e.bonusRecd){
+      if(e.reqMet&&!recurring(e,stage)){kind='bonus';label='Confirm bonus received'}
+      else if(recurring(e,stage))label='Review recurring requirements';
+      else if(!stage.timer||stage.kind==='requirement'){kind='requirements';label='Confirm requirements completed'}
+      else label='Review '+(stage.kind||'next')+' requirement';
+    }else if(!e.closed&&e.bonusRecd){
+      const readiness=typeof closeReadiness==='function'?closeReadiness(e):null;
+      const eligibility=window.BTEligibilityGate?.validate(e);
+      if(stage.code==='READY_TO_CLOSE'&&readiness?.cls==='safe'&&eligibility?.ok&&context.confirmed){kind='close';label='Review & record closure'}
+      else label='Review close checks';
+    }else if(stage.code==='ELIGIBLE')label='Review current offer';
+    else if(!context.date)label='Review eligibility terms';
+    return {stage,context,kind,label}
+  }
   function shouldInclude(e,stage,days){
     if(!e||!e.bank||!stage)return false;
     if(!e.closed)return stage.code!=='ARCHIVED';
     if(stage.code==='ELIGIBLE')return true;
-    if(stage.code==='COOLDOWN')return Number.isFinite(days)&&days<=30;
+    if(stage.code==='COOLDOWN')return !Number.isFinite(days)||days<=30;
     return false
   }
   function smart(){
@@ -79,7 +136,7 @@
     const source=[];try{if(typeof entries!=='undefined'&&Array.isArray(entries))source.push(...entries)}catch{}
     source.forEach(e=>{
       if(!e||!e.bank)return;
-      const stage=stageFor(e),rawDays=stageDays(e,stage),days=Number.isFinite(rawDays)?Math.max(0,rawDays):999999;
+      const nextAction=nextActionForEntry(e),stage=nextAction.stage,rawDays=stageDays(e,stage),days=Number.isFinite(rawDays)?Math.max(0,rawDays):999999;
       if(!shouldInclude(e,stage,rawDays))return;
       rows.push({
         bank:e.bank,
@@ -88,6 +145,9 @@
         stageCode:stage.code||'IN_PROGRESS',
         stageLabel:stage.label||'In Progress',
         action:actionVerb(stage.code),
+        actionKind:nextAction.kind,
+        actionLabel:nextAction.label,
+        dateContext:nextAction.context,
         rsn:String(stage.support||'Review this account').trim(),
         bonus:Number(e.bonus||0),
         showBonus:Number(e.bonus||0)>0,
@@ -101,6 +161,29 @@
   }
 
   window.getAttentionSuggestions=smart;
+  window.btNextActionForEntry=nextActionForEntry;
+  window.btActionDateContext=dateContext;
+  // Refresh on local-day changes, but never rebuild a form being edited.
+  let renderedDay=typeof td==='function'?td():'';
+  function refreshDay(){
+    const today=typeof td==='function'?td():'';
+    if(!today||today===renderedDay||typeof R!=='function')return false;
+    const editing=typeof document!=='undefined'&&(/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName||'')||document.activeElement?.isContentEditable);
+    let busy=false;
+    try{busy=!!(modal||cfm||reqPrompt||rcvPrompt||closePrompt||timerEditModal||ddPrompt||overwritePrompt||matchPickerPrompt||replacementPickerPrompt||feeCheckPrompt||dpEditor||timerChoicePrompt||window.__btBankActionPrompt)}catch{}
+    const openEditor=typeof document!=='undefined'&&document.querySelector('.inline-form');
+    if(editing||busy||openEditor||(typeof document!=='undefined'&&document.getElementById('bt_confirm_overlay')))return false;
+    R();renderedDay=today;return true;
+  }
+  window.btRefreshActionDay=refreshDay;
+  if(typeof document!=='undefined'){
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshDay()});
+    document.addEventListener('focusout',()=>setTimeout(refreshDay,0));
+    window.addEventListener?.('focus',refreshDay);
+    const dayTimer=setInterval(refreshDay,60000);
+    if(typeof dayTimer?.unref==='function')dayTimer.unref();
+    if(typeof window.btRegisterPostRender==='function')window.btRegisterPostRender('action-center-day',()=>{renderedDay=td()});
+  }
   try{getAttentionSuggestions=smart}catch{}
   window.btSmartAttentionVersion=VER;
 })();
