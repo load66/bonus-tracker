@@ -136,7 +136,7 @@
   function wizardRequirements(e){
     let h='<div class="guided-tip"><b>What earns the bonus?</b><span>Keep this in plain English. Exact dates can be tracked with the built-in timers.</span></div><div class="guided-grid">';
     h+=input('Main requirement','dataPoint',e.dataPoint,{full:true,placeholder:'e.g. $5,000 new money or $1,000 direct deposit'});
-    h+=input('Days to complete','requiredDaysText',e.requiredDaysText||(e.reqDays||''),{type:'number',placeholder:'90'});
+    h+=input('Days to complete','requiredDaysText',e.requiredDaysText||(e.reqDays||''),{placeholder:'e.g. 90 calendar days'});
     h+=input('Funding deadline days','fundedDays',e.fundedDays,{type:'number',placeholder:'30'});
     h+=input('Funding amount / target tier','fundingAmountText',e.fundingAmountText||(e.fundingAmount?fM(e.fundingAmount):''),{placeholder:'$5,000'});
     h+=input('Promo code','promoCodeText',e.promoCodeText,{placeholder:'Leave blank if none'});

@@ -21,7 +21,7 @@ const app=new ElementStub('div');app.id='app';
 const document={
   head:new ElementStub('head'),body:new ElementStub('body'),documentElement:new ElementStub('html'),readyState:'complete',activeElement:null,
   createElement:t=>new ElementStub(t),createTextNode:t=>({textContent:String(t)}),getElementById:id=>id==='app'?app:null,
-  querySelector:s=>s==='#app'||s==='.app'?app:null,querySelectorAll:()=>[],addEventListener(){},removeEventListener(){}
+  querySelector:s=>s==='#app'||s==='.app'?app:null,querySelectorAll:()=>[],eventListeners:[],addEventListener(type,fn,capture){this.eventListeners.push({type,fn,capture})},removeEventListener(){}
 };
 const storage=new Map();
 const localStorage={getItem:k=>storage.has(k)?storage.get(k):null,setItem:(k,v)=>storage.set(k,String(v)),removeItem:k=>storage.delete(k),clear:()=>storage.clear(),key:i=>[...storage.keys()][i]||null,get length(){return storage.size}};
@@ -59,16 +59,16 @@ module.exports={sandbox,document,app,storage,errors};
 if(require.main===module)setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.33',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.4.33',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.34',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.4.34',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.13',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
-    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.33',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
-    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.33',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
+    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.34',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
+    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.34',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.13',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
     assert(sandbox.BTEligibilityGate?.VERSION==='1.3.0',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
-    assert(sandbox.btLifecycleStatusVersion==='3.4.33-status1',`Unexpected lifecycle status version ${sandbox.btLifecycleStatusVersion}`);
-    assert(sandbox.btSmartAttentionVersion==='3.4.33-action1',`Unexpected Action Center version ${sandbox.btSmartAttentionVersion}`);
-    assert(sandbox.btUiFeedbackVersion==='3.4.33-feedback1',`Unexpected UI feedback version ${sandbox.btUiFeedbackVersion}`);
+    assert(sandbox.btLifecycleStatusVersion==='3.4.34-status1',`Unexpected lifecycle status version ${sandbox.btLifecycleStatusVersion}`);
+    assert(sandbox.btSmartAttentionVersion==='3.4.34-action1',`Unexpected Action Center version ${sandbox.btSmartAttentionVersion}`);
+    assert(sandbox.btUiFeedbackVersion==='3.4.34-feedback1',`Unexpected UI feedback version ${sandbox.btUiFeedbackVersion}`);
     const lifecycleSamples=[
       {bank:'Progress Bank',opened:'2026-09-01',dataPoint:'Make a qualifying direct deposit',customTimers:[]},
       {bank:'Await Bank',reqMet:'2026-09-20',payoutTimingText:'within 30 calendar days',customTimers:[]},

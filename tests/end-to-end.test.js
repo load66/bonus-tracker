@@ -1,11 +1,18 @@
 'use strict';
 const assert=require('node:assert/strict');
 const vm=require('node:vm');
-const {sandbox,storage,errors}=require('./full-app-smoke.test.js');
+const {sandbox,document,storage,errors}=require('./full-app-smoke.test.js');
 const run=code=>vm.runInContext(code,sandbox);
 
 setTimeout(()=>{
   try{
+    const toolbarHandler=document.eventListeners.find(x=>x.type==='click'&&x.capture===true&&String(x.fn).includes('buttonText(btn)'));
+    assert.ok(toolbarHandler,'Toolbar delegation is installed');
+    for(const text of ['Restore Backup','Restore Complete','Pre-restore safety copy']){
+      let intercepted=false;
+      toolbarHandler.fn({target:{closest:()=>({textContent:text})},preventDefault(){intercepted=true},stopImmediatePropagation(){intercepted=true}});
+      assert.equal(intercepted,false,'Toolbar must not intercept '+text);
+    }
     run('openAdd()');
     for(const editing of [false,true]){
       sandbox.editing=editing;
@@ -19,6 +26,8 @@ setTimeout(()=>{
       assert.match(form,/value="325"/);
       assert.match(form,/value="business" selected/);
     }
+    run("modal._wizardStep=2;modal.requiredDaysText='90 calendar days'");
+    assert.match(run('rModal()'),/type="text"[^>]*value="90 calendar days"[^>]*btModalSet\('requiredDaysText'/,'Editor must display exact deadline wording and units');
     run(`closeModal();entries=[];sv(SK,entries);`);
     const entry={bank:'Verification Bank',accountType:'personal',bonus:325,opened:'2026-01-31',
       churn:'1',churnable:true,churnability:'repeatable',churnBasis:'bonus',sourceEligibilityBasis:'bonus-received',
@@ -43,7 +52,13 @@ setTimeout(()=>{
     assert.equal(run('entries.length'),1,'Editing must not create a duplicate');
     run('expanded=testId');
     assert.match(run('rTracker(entries)'),/&lt;tags&gt;/,'Personal notes must be escaped');
-    run("openReqMet(testId);reqPrompt.date='2026-04-01';reqSubmit();cfm=null");
+    run('openReqMet(testId)');
+    const reqInput=run('rReqMet()').match(/<input[^>]*id="req_date"[^>]*>/)[0];
+    const reqHandler=reqInput.match(/oninput="([^"]+)"/)[1];
+    run(`(function(){${reqHandler}}).call({value:'2026-04-01'});R()`);
+    assert.match(run('rReqMet()'),/value="2026-04-01"/,'Redraw must retain the unsaved date draft');
+    assert.equal(run('entries[0].reqMet'),'','Typing must not save a milestone');
+    run('reqSubmit();cfm=null');
     assert.equal(run('entries[0].reqMet'),'2026-04-01');
     assert.equal(run('btLifecycleStageForEntry(entries[0]).code'),'AWAITING_BONUS');
     run("openRcv(testId);rcvPrompt.date='2026-04-15';rcvPrompt.reqDate='2026-04-01';rcvSubmit();cfm=null");
@@ -78,6 +93,14 @@ setTimeout(()=>{
     assert.ok(run('entries[0].history.some(x=>x.type===\'req_met\')'));
     assert.ok(run('entries[0].history.some(x=>x.type===\'bonus_received\')'));
     assert.ok(run('entries[0].history.some(x=>x.type===\'actual_close\')'));
+    // Exercise the opposite eligibility branch through the real save/close path.
+    sandbox.oneTime={kind:'BonusTrackerEntry',entry:{...entry,bank:'One Time Verification Bank',bonus:0,churn:'',churnable:false,churnability:'not-repeatable',churnBasis:'',sourceEligibilityBasis:'',churnPeriodValue:0,churnPeriodUnit:'',eligibilityEvidenceText:'This bonus is available once per lifetime.',customTimers:[]}};
+    run("btStageEntryPayload(btParseEntryFileText(JSON.stringify(oneTime),'one-time.json'),'entry-file','one-time.json')");
+    assert.equal(run('saveEntry()'),true);
+    run("var oneTimeId=entries.find(e=>e.bank==='One Time Verification Bank').id;startCloseFlow(oneTimeId);closePrompt.closeDate=td();closeNext();closeNext();closeNext();finishClose();cfm=null");
+    assert.equal(run("entries.find(e=>e.id===oneTimeId).archived"),true,'Non-repeatable account must archive');
+    assert.equal(run("!!nextReopen(entries.find(e=>e.id===oneTimeId))"),false,'Non-repeatable account must not invent eligibility');
+    assert.equal(run("entries.find(e=>e.id===testId).notes"),restored.notes,'Saving another account cannot change existing notes');
     run('if(undoTimer)clearTimeout(undoTimer);undoState=null;R()');
     assert.equal(errors.length,0,'Integrated flow emitted a runtime error');
     console.log('End-to-end integration passed: installed editor, JSON review/save, edit/escaping, requirements, payout, timers, closure, exact eligibility, tax years, and full backup restore');

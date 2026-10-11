@@ -84,6 +84,25 @@ jobs:
           TZ: America/Chicago
         run: node tests/hardening-regression.test.js
 
+      - name: Install isolated browser test dependencies
+        run: |
+          npm install --prefix "$RUNNER_TEMP/bonus-tracker-browser-tests" --no-save playwright@1.58.2
+          "$RUNNER_TEMP/bonus-tracker-browser-tests/node_modules/.bin/playwright" install --with-deps chromium firefox webkit
+
+      - name: Run real browser end-to-end tests
+        env:
+          NODE_PATH: ${{ runner.temp }}/bonus-tracker-browser-tests/node_modules
+          BT_BROWSER_RESULTS: ${{ runner.temp }}/bonus-tracker-browser-results
+        run: node tests/browser-e2e.cjs
+
+      - name: Save browser verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-verification
+          path: ${{ runner.temp }}/bonus-tracker-browser-results
+          if-no-files-found: ignore
+
       - name: Package the exact verified site
         if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v4
