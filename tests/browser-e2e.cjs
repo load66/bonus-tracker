@@ -27,7 +27,7 @@ const payload={kind:'BonusTrackerEntry',schemaVersion:2,
     closeRestrictionType:'payout-only',closeRuleText:'Keep the account open until the bonus posts.',
     notes:'Synthetic verification record only',customTimers:[],
     tcSourceRaw:'E2E Verification Bank checking promotional terms. This offer is for eligible new consumer checking customers. Not eligible if you received a checking bonus within the past 12 months. Complete qualifying deposit requirements within 90 calendar days after opening. Keep the account open until the bonus posts.',
-    eligibilityRules:[{id:'bonus-12m',basis:'bonus-received',periodValue:12,periodUnit:'months',evidenceText:'Not eligible if you received a checking bonus within the past 12 months.',evidenceSource:'official-promotion-terms'}]
+    eligibilityRules:[{id:'bonus-12m',basis:'bonus-received',periodValue:12,periodUnit:'months',scope:'consumer-checking',evidenceText:'Not eligible if you received a checking bonus within the past 12 months.',evidenceSource:'official-promotion-terms'}]
   }};
 
 async function exercise(name,engine,url){
@@ -47,6 +47,8 @@ async function exercise(name,engine,url){
     const chooser=page.waitForEvent('filechooser');
     await page.getByRole('button',{name:/Import Entry File JSON/}).click();
     await (await chooser).setFiles({name:'verification.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(object))});
+    await page.waitForSelector('#bt_confirm_overlay,.bt-toast.error');
+    if(await page.locator('.bt-toast.error').count())throw Error(await page.locator('.bt-toast.error').innerText());
     await button('Review Entry').click();
     await page.getByRole('heading',{name:'Add Bank',exact:true}).waitFor();
   };
@@ -97,7 +99,7 @@ async function exercise(name,engine,url){
     const backupEvent=page.waitForEvent('download');await button('Backup').click();
     const backupFile=path.join(output,name+'-backup.json');await (await backupEvent).saveAs(backupFile);
     const backup=JSON.parse(await fs.readFile(backupFile,'utf8'));
-    check('backup contains records, events, and terms',backup.entries.length===1&&backup.entries[0].id===id&&Object.keys(backup.termsArchive).length>0&&backup.profileEvents.length>0);
+    check('backup contains records, history, and terms',backup.entries.length===1&&backup.entries[0].id===id&&Object.keys(backup.termsArchive).length>0&&backup.entries[0].history.length>0);
     await close();check('closure uses actual date',(await record()).closed==='2026-05-01');
     check('eligibility uses payout plus exact months and buffer',await page.evaluate(()=>btOfficialEligibilityDate(entries[0])==='2027-04-15'&&nextReopen(entries[0])==='2027-04-20'));
     await button('Undo').click();check('undo restores account and notes',!(await record()).closed&&(await record()).notes===backup.entries[0].notes);
