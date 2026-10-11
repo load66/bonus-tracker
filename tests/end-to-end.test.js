@@ -93,6 +93,14 @@ setTimeout(()=>{
     assert.ok(run('entries[0].history.some(x=>x.type===\'req_met\')'));
     assert.ok(run('entries[0].history.some(x=>x.type===\'bonus_received\')'));
     assert.ok(run('entries[0].history.some(x=>x.type===\'actual_close\')'));
+    // Exercise the opposite eligibility branch through the real save/close path.
+    sandbox.oneTime={kind:'BonusTrackerEntry',entry:{...entry,bank:'One Time Verification Bank',bonus:0,churn:'',churnable:false,churnability:'not-repeatable',churnBasis:'',sourceEligibilityBasis:'',churnPeriodValue:0,churnPeriodUnit:'',eligibilityEvidenceText:'This bonus is available once per lifetime.',customTimers:[]}};
+    run("btStageEntryPayload(btParseEntryFileText(JSON.stringify(oneTime),'one-time.json'),'entry-file','one-time.json')");
+    assert.equal(run('saveEntry()'),true);
+    run("var oneTimeId=entries.find(e=>e.bank==='One Time Verification Bank').id;startCloseFlow(oneTimeId);closePrompt.closeDate=td();closeNext();closeNext();closeNext();finishClose();cfm=null");
+    assert.equal(run("entries.find(e=>e.id===oneTimeId).archived"),true,'Non-repeatable account must archive');
+    assert.equal(run("!!nextReopen(entries.find(e=>e.id===oneTimeId))"),false,'Non-repeatable account must not invent eligibility');
+    assert.equal(run("entries.find(e=>e.id===testId).notes"),restored.notes,'Saving another account cannot change existing notes');
     run('if(undoTimer)clearTimeout(undoTimer);undoState=null;R()');
     assert.equal(errors.length,0,'Integrated flow emitted a runtime error');
     console.log('End-to-end integration passed: installed editor, JSON review/save, edit/escaping, requirements, payout, timers, closure, exact eligibility, tax years, and full backup restore');

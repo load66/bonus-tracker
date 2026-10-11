@@ -9,7 +9,9 @@ const {chromium,firefox,webkit}=require('playwright');
 const root=path.resolve(__dirname,'..');
 const output=process.env.BT_BROWSER_RESULTS||path.join(process.env.RUNNER_TEMP||'/tmp','bonus-tracker-browser-results');
 const mime={'.html':'text/html','.js':'application/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml'};
+let serverUnavailable=false;
 const server=http.createServer(async(req,res)=>{
+  if(serverUnavailable){req.socket.destroy();return}
   try{
     const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
     const filename=path.resolve(root,'.'+(pathname==='/'?'/index.html':pathname));
@@ -36,7 +38,7 @@ async function exercise(name,engine,url){
   await context.tracing.start({screenshots:true,snapshots:true});
   const page=await context.newPage(),errors=[],warnings=[],checks=[];
   page.on('pageerror',err=>errors.push(String(err)));
-  page.on('console',msg=>{if(msg.type()==='warning')warnings.push(msg.text())});
+  page.on('console',msg=>{if(msg.type()==='warning')warnings.push(msg.text());if(msg.type()==='error'&&!/Failed to load resource|net::ERR|404 \(Not Found\)/i.test(msg.text()))errors.push(msg.text())});
   await page.addInitScript(()=>{const RealDate=Date;const now=Date.parse('2026-10-11T17:00:00Z');window.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[now]))}static now(){return now}}});
   const button=text=>page.getByRole('button',{name:text,exact:true});
   const wait=async fn=>{await page.waitForFunction(fn,{},{timeout:15000})};
@@ -127,9 +129,13 @@ async function exercise(name,engine,url){
     check('mobile layout fits viewport',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
     await page.evaluate(async()=>{await navigator.serviceWorker.ready});
     await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
-    await context.setOffline(true);await page.reload();await page.getByText('BonusTracker',{exact:false}).first().waitFor();
-    check('offline reload preserves account',(await record()).id===id);
-    await context.setOffline(false);
+    // WebKit's protocol offline mode can abort navigation before its service
+    // worker fallback runs. Remove the origin instead to exercise real failed
+    // network fetches; Chromium/Firefox also test protocol offline mode.
+    if(name==='webkit')serverUnavailable=true;else await context.setOffline(true);
+    await page.reload();await page.getByText('BonusTracker',{exact:false}).first().waitFor();
+    check(name==='webkit'?'network-loss reload preserves account':'offline reload preserves account',(await record()).id===id);
+    serverUnavailable=false;await context.setOffline(false);
     check('no uncaught application errors',errors.length===0);
     await page.screenshot({path:path.join(output,name+'-verified.png')});
     await context.tracing.stop();
@@ -140,7 +146,7 @@ async function exercise(name,engine,url){
     await page.screenshot({path:path.join(output,name+'-failure.png')}).catch(()=>{});
     await context.tracing.stop({path:path.join(output,name+'-trace.zip')});
     throw err;
-  }finally{await browser.close()}
+  }finally{serverUnavailable=false;await browser.close()}
 }
 (async()=>{
   await fs.mkdir(output,{recursive:true});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
