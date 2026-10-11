@@ -62,6 +62,9 @@ jobs:
       - name: Run professional operations UI tests
         run: node tests/professional-ops.test.js
 
+      - name: Run operations interaction tests
+        run: node tests/operations-interactions.test.js
+
       - name: Run churn eligibility evidence tests
         run: node tests/eligibility-gate.test.js
 

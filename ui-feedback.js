@@ -1,9 +1,11 @@
-/* BonusTracker v3.4.30 — professional in-app feedback surfaces. */
+/* BonusTracker v3.4.31 — professional in-app feedback surfaces. */
 (function(){
   'use strict';
-  const VER='3.4.30-feedback1';
+  const VER='3.4.31-feedback1';
   const nativeAlert=typeof window.alert==='function'?window.alert.bind(window):null;
   const nativeConfirm=typeof window.confirm==='function'?window.confirm.bind(window):null;
+  const confirmations=[];
+  let confirmationActive=false;
 
   function text(v){return String(v==null?'':v).trim()}
   function toneFor(message,requested){
@@ -40,47 +42,77 @@
     return item
   }
   function confirmDialog(message,opts={}){
-    const msg=text(message);
     return new Promise(resolve=>{
-      if(typeof document==='undefined'||!document.body){
-        let ok=false;try{ok=nativeConfirm?!!nativeConfirm(msg):false}catch{}
-        resolve(ok);return
-      }
-      const old=document.getElementById('bt_confirm_overlay');if(old)old.remove();
-      const overlay=document.createElement('div');
-      overlay.id='bt_confirm_overlay';
-      overlay.className='bt-confirm-overlay';
-      overlay.setAttribute('role','presentation');
-      const box=document.createElement('div');
-      box.className='bt-confirm-sheet';
-      box.setAttribute('role','dialog');
-      box.setAttribute('aria-modal','true');
-      const kicker=document.createElement('div');
-      kicker.className='bt-confirm-kicker';
-      kicker.textContent=text(opts.kicker)||'Confirm action';
-      const title=document.createElement('h3');
-      title.textContent=text(opts.title)||'Please review';
-      const body=document.createElement('div');
-      body.className='bt-confirm-message';
-      body.textContent=msg;
-      const actions=document.createElement('div');
-      actions.className='bt-confirm-actions';
-      const cancel=document.createElement('button');
-      cancel.type='button';cancel.className='bt-confirm-btn secondary';
-      cancel.textContent=text(opts.cancelLabel)||'Cancel';
-      const ok=document.createElement('button');
-      ok.type='button';ok.className='bt-confirm-btn '+(opts.danger?'danger':'primary');
-      ok.textContent=text(opts.confirmLabel)||'Continue';
-      actions.appendChild(cancel);actions.appendChild(ok);
-      box.appendChild(kicker);box.appendChild(title);box.appendChild(body);box.appendChild(actions);
-      overlay.appendChild(box);document.body.appendChild(overlay);
-      let settled=false;
-      const finish=value=>{if(settled)return;settled=true;try{overlay.remove()}catch{};resolve(value)};
-      cancel.addEventListener('click',()=>finish(false));
-      ok.addEventListener('click',()=>finish(true));
-      overlay.addEventListener('click',e=>{if(e.target===overlay)finish(false)});
-      try{ok.focus()}catch{}
+      confirmations.push({message,opts,resolve});
+      showNextConfirmation();
     })
+  }
+  function showNextConfirmation(){
+    if(confirmationActive||!confirmations.length)return;
+    confirmationActive=true;
+    const {message,opts,resolve}=confirmations.shift();
+    const msg=text(message);
+    const previousFocus=typeof document!=='undefined'?document.activeElement:null;
+    const settle=value=>{
+      confirmationActive=false;
+      resolve(value);
+      showNextConfirmation();
+    };
+    if(typeof document==='undefined'||!document.body){
+      let ok=false;try{ok=nativeConfirm?!!nativeConfirm(msg):false}catch{}
+      settle(ok);return
+    }
+    const overlay=document.createElement('div');
+    overlay.id='bt_confirm_overlay';
+    overlay.className='bt-confirm-overlay';
+    overlay.setAttribute('role','presentation');
+    const box=document.createElement('div');
+    box.className='bt-confirm-sheet';
+    box.setAttribute('role','dialog');
+    box.setAttribute('aria-modal','true');
+    box.setAttribute('aria-labelledby','bt_confirm_title');
+    box.setAttribute('aria-describedby','bt_confirm_message');
+    const kicker=document.createElement('div');
+    kicker.className='bt-confirm-kicker';
+    kicker.textContent=text(opts.kicker)||'Confirm action';
+    const title=document.createElement('h3');
+    title.id='bt_confirm_title';
+    title.textContent=text(opts.title)||'Please review';
+    const body=document.createElement('div');
+    body.id='bt_confirm_message';
+    body.className='bt-confirm-message';
+    body.textContent=msg;
+    const actions=document.createElement('div');
+    actions.className='bt-confirm-actions';
+    const cancel=document.createElement('button');
+    cancel.type='button';cancel.className='bt-confirm-btn secondary';
+    cancel.textContent=text(opts.cancelLabel)||'Cancel';
+    const ok=document.createElement('button');
+    ok.type='button';ok.className='bt-confirm-btn '+(opts.danger?'danger':'primary');
+    ok.textContent=text(opts.confirmLabel)||'Continue';
+    actions.appendChild(cancel);actions.appendChild(ok);
+    box.appendChild(kicker);box.appendChild(title);box.appendChild(body);box.appendChild(actions);
+    overlay.appendChild(box);document.body.appendChild(overlay);
+    let settled=false;
+    const finish=value=>{
+      if(settled)return;
+      settled=true;
+      document.removeEventListener('keydown',onKeyDown,true);
+      try{overlay.remove();previousFocus?.focus({preventScroll:true})}catch{}
+      settle(value);
+    };
+    const onKeyDown=e=>{
+      if(e.key==='Escape'){e.preventDefault();e.stopPropagation();finish(false)}
+      else if(e.key==='Tab'){
+        e.preventDefault();
+        (document.activeElement===cancel?ok:cancel).focus();
+      }
+    };
+    document.addEventListener('keydown',onKeyDown,true);
+    cancel.addEventListener('click',()=>finish(false));
+    ok.addEventListener('click',()=>finish(true));
+    overlay.addEventListener('click',e=>{if(e.target===overlay)finish(false)});
+    try{cancel.focus()}catch{}
   }
 
   window.btNotify=notify;
