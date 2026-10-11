@@ -19,6 +19,8 @@ setTimeout(()=>{
       assert.match(form,/value="325"/);
       assert.match(form,/value="business" selected/);
     }
+    run("modal._wizardStep=2;modal.requiredDaysText='90 calendar days'");
+    assert.match(run('rModal()'),/type="text"[^>]*value="90 calendar days"[^>]*btModalSet\('requiredDaysText'/,'Editor must display exact deadline wording and units');
     run(`closeModal();entries=[];sv(SK,entries);`);
     const entry={bank:'Verification Bank',accountType:'personal',bonus:325,opened:'2026-01-31',
       churn:'1',churnable:true,churnability:'repeatable',churnBasis:'bonus',sourceEligibilityBasis:'bonus-received',
