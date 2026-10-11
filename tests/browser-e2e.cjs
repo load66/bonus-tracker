@@ -102,6 +102,11 @@ async function exercise(name,engine,url){
     check('checklist completion persists without collapsing section',(await record()).checklist[0].done&&await page.locator('details[data-section-key="lifecycle"]').evaluate(e=>e.open));
     await button('Tax').click();
     check('tax includes received bonus on open account',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));
+    page.once('dialog',dialog=>dialog.accept('2026'));
+    const taxDownload=page.waitForEvent('download');await button('Export a Year CSV').click();
+    const taxFile=path.join(output,name+'-tax.csv');await (await taxDownload).saveAs(taxFile);
+    const taxCSV=await fs.readFile(taxFile,'utf8');
+    check('tax CSV downloads with correct amount and dates',taxCSV.includes('E2E Verification Bank')&&taxCSV.includes('"325"')&&taxCSV.includes('Apr 15, 2026'));
     await button('Tracker').click();
     const backupEvent=page.waitForEvent('download');await button('Backup').click();
     const backupFile=path.join(output,name+'-backup.json');await (await backupEvent).saveAs(backupFile);

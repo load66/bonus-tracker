@@ -52,7 +52,13 @@ setTimeout(()=>{
     assert.equal(run('entries.length'),1,'Editing must not create a duplicate');
     run('expanded=testId');
     assert.match(run('rTracker(entries)'),/&lt;tags&gt;/,'Personal notes must be escaped');
-    run("openReqMet(testId);reqPrompt.date='2026-04-01';reqSubmit();cfm=null");
+    run('openReqMet(testId)');
+    const reqInput=run('rReqMet()').match(/<input[^>]*id="req_date"[^>]*>/)[0];
+    const reqHandler=reqInput.match(/oninput="([^"]+)"/)[1];
+    run(`(function(){${reqHandler}}).call({value:'2026-04-01'});R()`);
+    assert.match(run('rReqMet()'),/value="2026-04-01"/,'Redraw must retain the unsaved date draft');
+    assert.equal(run('entries[0].reqMet'),'','Typing must not save a milestone');
+    run('reqSubmit();cfm=null');
     assert.equal(run('entries[0].reqMet'),'2026-04-01');
     assert.equal(run('btLifecycleStageForEntry(entries[0]).code'),'AWAITING_BONUS');
     run("openRcv(testId);rcvPrompt.date='2026-04-15';rcvPrompt.reqDate='2026-04-01';rcvSubmit();cfm=null");

@@ -4197,7 +4197,7 @@ function rClose(){
     const ready=closeReadiness(e,p.closeDate);
     h+='<h3>🔒 Close Now</h3><div class="sub">Record the actual date the bank account was closed.</div>';
     h+='<div class="close-ready '+esc(ready.cls)+'"><b>'+esc(ready.label)+'</b><span>'+esc(ready.warnings[0]||'Closure is recorded separately from the T&C eligibility clock.')+'</span></div>';
-    h+='<label>Actual Close Date</label><input type="date" id="cp_date" value="'+esc(p.closeDate||'')+'">';
+    h+='<label>Actual Close Date</label><input type="date" id="cp_date" oninput="if(closePrompt)closePrompt.closeDate=this.value" value="'+esc(p.closeDate||'')+'">';
     if(entryNeedsNegativeBalanceClosureAnswer(e)){
       h+='<label>Was this account closed with a negative balance?</label><select id="cp_negative_balance"><option value=""'+(typeof p.closedWithNegativeBalance!=='boolean'?' selected':'')+'>Select</option><option value="no"'+(p.closedWithNegativeBalance===false?' selected':'')+'>No</option><option value="yes"'+(p.closedWithNegativeBalance===true?' selected':'')+'>Yes</option></select>';
       h+='<div class="sub">This answer only activates conditional churn restrictions that explicitly depend on a negative-balance closure.</div>';
@@ -4207,15 +4207,15 @@ function rClose(){
   }else if(p.step==='bonus'){
     h+='<h3>💰 Bonus Check</h3><div class="sub">Confirm payout details before closing '+esc(p.bank)+'.</div>';
     h+='<div class="bonus-row"><button class="bonus-opt'+(p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=true;closePrompt.actualBonus=closePrompt.bonus;R()">Full '+fM(p.bonus)+'</button><button class="bonus-opt'+(!p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=false;R()">Partial / none</button></div>';
-    if(!p.gotFull)h+='<label>Actual bonus amount</label><input type="number" inputmode="numeric" id="cp_amt" value="'+(p.actualBonus||0)+'" placeholder="0">';
+    if(!p.gotFull)h+='<label>Actual bonus amount</label><input type="number" inputmode="numeric" id="cp_amt" oninput="if(closePrompt)closePrompt.actualBonus=this.value" value="'+(p.actualBonus||0)+'" placeholder="0">';
     if((p.actualBonus||0)>0||p.gotFull){
-      h+='<label>Bonus Received Date</label><input type="date" id="cp_bonus_date" value="'+esc(p.bonusDate||'')+'">';
-      h+='<label>Requirement Met Date</label><input type="date" id="cp_req_date" value="'+esc(p.reqDate||'')+'">';
+      h+='<label>Bonus Received Date</label><input type="date" id="cp_bonus_date" oninput="if(closePrompt)closePrompt.bonusDate=this.value" value="'+esc(p.bonusDate||'')+'">';
+      h+='<label>Requirement Met Date</label><input type="date" id="cp_req_date" oninput="if(closePrompt)closePrompt.reqDate=this.value" value="'+esc(p.reqDate||'')+'">';
     }
     h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-g" onclick="closeNext()">Next</button></div>';
   }else if(p.step==='dp'){
     h+='<h3>📋 Trigger Method</h3><div class="sub">Optional. Save the DD/ACH/action that triggered the bonus.</div>';
-    h+='<input id="cp_dp" value="'+esc(p.dp)+'" placeholder="e.g. Employer DD or ACH push" onclick="event.stopPropagation()">';
+    h+='<input id="cp_dp" oninput="if(closePrompt)closePrompt.dp=this.value" value="'+esc(p.dp)+'" placeholder="e.g. Employer DD or ACH push" onclick="event.stopPropagation()">';
     h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="closeBack()">Back</button><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">Review</button></div>';
   }
   h+='</div></div>';
@@ -4232,9 +4232,9 @@ function rRcv(){
   if(!p)return'';
   let h='<div class="cbg" onclick="skipRcv()"><div class="rcv-box" onclick="event.stopPropagation()">';
   h+='<h3>🎉 Bonus Received</h3><div class="sub">This marks '+esc(p.bank)+' as received. Requirement met and closing stay tracked as separate lifecycle steps.</div>';
-  h+='<label>Bonus Received Date</label><input class="dd-input" type="date" id="rcv_date" value="'+(p.date||'')+'" onclick="event.stopPropagation()">';
-  h+='<label>Requirement Met Date</label><input class="dd-input" type="date" id="rcv_req_date" value="'+(p.reqDate||p.date||'')+'" onclick="event.stopPropagation()">';
-  h+='<label>Triggering DD / Method</label><input class="dd-input" id="rcv_dp" value="'+esc(p.dp||'')+'" placeholder="e.g. Employer DD, ACH push, debit transactions" onclick="event.stopPropagation()">';
+  h+='<label>Bonus Received Date</label><input class="dd-input" type="date" id="rcv_date" oninput="if(rcvPrompt)rcvPrompt.date=this.value" value="'+(p.date||'')+'" onclick="event.stopPropagation()">';
+  h+='<label>Requirement Met Date</label><input class="dd-input" type="date" id="rcv_req_date" oninput="if(rcvPrompt)rcvPrompt.reqDate=this.value" value="'+(p.reqDate||p.date||'')+'" onclick="event.stopPropagation()">';
+  h+='<label>Triggering DD / Method</label><input class="dd-input" id="rcv_dp" oninput="if(rcvPrompt)rcvPrompt.dp=this.value" value="'+esc(p.dp||'')+'" placeholder="e.g. Employer DD, ACH push, debit transactions" onclick="event.stopPropagation()">';
   h+='<div class="crow"><button class="c-c" onclick="skipRcv()">Cancel</button>'+(p.hasExisting?'<button class="c-r" onclick="confirmClearRcv()">Clear</button>':'')+'<button class="c-g" onclick="rcvSubmit()">Save</button></div>';
   h+='</div></div>';
   return h
@@ -4244,7 +4244,7 @@ function rReqMet(){
   if(!p)return'';
   let h='<div class="cbg" onclick="skipReq()"><div class="rcv-box" onclick="event.stopPropagation()">';
   h+='<h3>✅ Requirement Met</h3><div class="sub">This stops the requirement countdown for '+esc(p.bank)+'. Bonus received still stays separate for tax and close tracking.</div>';
-  h+='<label>Requirement Met Date</label><input class="dd-input" type="date" id="req_date" value="'+(p.date||'')+'" onclick="event.stopPropagation()">';
+  h+='<label>Requirement Met Date</label><input class="dd-input" type="date" id="req_date" oninput="if(reqPrompt)reqPrompt.date=this.value" value="'+(p.date||'')+'" onclick="event.stopPropagation()">';
   h+='<div class="crow"><button class="c-c" onclick="skipReq()">Cancel</button>'+(p.hasExisting?'<button class="c-r" onclick="confirmClearReqMet()">Clear</button>':'')+'<button class="c-g" onclick="reqSubmit()">Save</button></div>';
   h+='</div></div>';
   return h
@@ -4929,7 +4929,7 @@ function saveTimerEditor(){
   timerEditModal=null;
   R()
 }
-function rTimerEdit(){if(!timerEditModal)return'';const p=timerEditModal;const isDays=p.mode==='days';const isNew=!!p.isNew||!p.timerId;let h='<div class="cbg" onclick="closeTimerEditor()"><div class="dd-box" onclick="event.stopPropagation()">';h+='<h3>'+(isNew?'Add countdown timer':'Edit countdown timer')+'</h3>';h+='<div class="sub">'+(isNew?'Create a custom countdown. Use an exact due date, or switch to start date + days.':'Keep it as an exact due date, or switch to start date + days.')+'</div>';h+='<div class="dd-chips"><button type="button" class="dd-chip '+(!isDays?'sel':'')+'" onclick="event.stopPropagation();switchTimerEditMode(\'due\')">Due Date</button><button type="button" class="dd-chip '+(isDays?'sel':'')+'" onclick="event.stopPropagation();switchTimerEditMode(\'days\')">Start + Days</button></div>';h+='<div class="fg"><label>Description</label><input id="tem_text" value="'+esc(p.text||'')+'" placeholder="e.g. Deposit deadline"></div>';if(isDays){h+='<div class="frow"><div class="fg"><label>Start date</label><input id="tem_start" type="date" value="'+esc(p.startDate||'')+'"></div><div class="fg"><label>Days</label><input id="tem_days" type="number" inputmode="numeric" min="1" value="'+esc(String(p.daysRequired||''))+'" placeholder="60"></div></div>'}else{h+='<div class="fg"><label>Due date</label><input id="tem_start" type="date" value="'+esc(p.startDate||'')+'"><input id="tem_days" type="hidden" value=""></div>'}h+='<div class="crow"><button type="button" class="c-c" onclick="closeTimerEditor()">Cancel</button><button type="button" class="c-g" onclick="saveTimerEditor()">'+(isNew?'Add Timer':'Save')+'</button></div>';h+='</div></div>';return h}
+function rTimerEdit(){if(!timerEditModal)return'';const p=timerEditModal;const isDays=p.mode==='days';const isNew=!!p.isNew||!p.timerId;let h='<div class="cbg" onclick="closeTimerEditor()"><div class="dd-box" onclick="event.stopPropagation()">';h+='<h3>'+(isNew?'Add countdown timer':'Edit countdown timer')+'</h3>';h+='<div class="sub">'+(isNew?'Create a custom countdown. Use an exact due date, or switch to start date + days.':'Keep it as an exact due date, or switch to start date + days.')+'</div>';h+='<div class="dd-chips"><button type="button" class="dd-chip '+(!isDays?'sel':'')+'" onclick="event.stopPropagation();switchTimerEditMode(\'due\')">Due Date</button><button type="button" class="dd-chip '+(isDays?'sel':'')+'" onclick="event.stopPropagation();switchTimerEditMode(\'days\')">Start + Days</button></div>';h+='<div class="fg"><label>Description</label><input id="tem_text" oninput="if(timerEditModal)timerEditModal.text=this.value" value="'+esc(p.text||'')+'" placeholder="e.g. Deposit deadline"></div>';if(isDays){h+='<div class="frow"><div class="fg"><label>Start date</label><input id="tem_start" oninput="if(timerEditModal)timerEditModal.startDate=this.value" type="date" value="'+esc(p.startDate||'')+'"></div><div class="fg"><label>Days</label><input id="tem_days" oninput="if(timerEditModal)timerEditModal.daysRequired=this.value" type="number" inputmode="numeric" min="1" value="'+esc(String(p.daysRequired||''))+'" placeholder="60"></div></div>'}else{h+='<div class="fg"><label>Due date</label><input id="tem_start" oninput="if(timerEditModal)timerEditModal.startDate=this.value" type="date" value="'+esc(p.startDate||'')+'"><input id="tem_days" oninput="if(timerEditModal)timerEditModal.daysRequired=this.value" type="hidden" value=""></div>'}h+='<div class="crow"><button type="button" class="c-c" onclick="closeTimerEditor()">Cancel</button><button type="button" class="c-g" onclick="saveTimerEditor()">'+(isNew?'Add Timer':'Save')+'</button></div>';h+='</div></div>';return h}
 
 function toggleTimer(id,timerId){entries=entries.map(e=>{if(e.id===id){let changed=null;e.customTimers=normalizeTimerList(e.customTimers).filter(t=>!isDeletedTimer(e,t)).map(t=>{if(t.id!==timerId)return t;changed={...t,done:!t.done};return changed});if(changed)appendEntryHistory(e,changed.done?'timer_completed':'timer_reopened',changed.text||'Timer')}return e});sv(SK,entries);expanded=id;R()}
 function upsertTimer(id){
