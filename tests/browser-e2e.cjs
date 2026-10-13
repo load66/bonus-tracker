@@ -9,11 +9,13 @@ const {chromium,firefox,webkit}=require('playwright');
 const root=path.resolve(__dirname,'..');
 const output=process.env.BT_BROWSER_RESULTS||path.join(process.env.RUNNER_TEMP||'/tmp','bonus-tracker-browser-results');
 const mime={'.html':'text/html','.js':'application/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml'};
-let serverUnavailable=false;
+let serverUnavailable=false,feedInvalid=false;
+const radarFixture={schemaVersion:1,checkedAt:'2026-10-09T12:00:00Z',offers:[{title:'Synthetic Checking $500 Bonus <img src=x onerror=alert(1)>',url:'https://www.doctorofcredit.com/synthetic-checking-bonus/',publishedAt:'2026-10-08T12:00:00Z'}]};
 const server=http.createServer(async(req,res)=>{
   if(serverUnavailable){req.socket.destroy();return}
   try{
     const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
+    if(pathname==='/data/bank-bonuses.json'){res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify(feedInvalid?{schemaVersion:99}:radarFixture));return}
     const filename=path.resolve(root,'.'+(pathname==='/'?'/index.html':pathname));
     if(!filename.startsWith(root+path.sep))throw Error('Invalid path');
     const body=await fs.readFile(filename);
@@ -127,6 +129,17 @@ async function exercise(name,engine,url){
     check('search keeps stored record',(await record()).id===id);
     await page.setViewportSize({width:390,height:844});
     check('mobile layout fits viewport',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
+    const storedBeforeRadar=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
+    await button('Bank Bonuses').click();
+    await page.getByText(/Synthetic Checking/).waitFor();
+    check('bank feed renders escaped discovery title',(await page.locator('.radar-card img').count())===0&&(await page.locator('.radar-card').innerText()).includes('<img'));
+    check('bank feed warns when source check is stale',(await page.locator('#app').innerText()).includes('Updates are stale'));
+    check('bank bonus tab fits mobile viewport',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
+    feedInvalid=true;await button('Check updates').click();
+    await page.getByText(/Could not check for updates/).waitFor();
+    check('failed feed refresh retains loaded results',await page.locator('.radar-card').count()===1);
+    check('bank feed leaves saved account data unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
+    feedInvalid=false;await button('Tracker').click();
     await page.evaluate(async()=>{await navigator.serviceWorker.ready});
     await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
     // WebKit's protocol offline mode can abort navigation before its service
@@ -146,7 +159,7 @@ async function exercise(name,engine,url){
     await page.screenshot({path:path.join(output,name+'-failure.png')}).catch(()=>{});
     await context.tracing.stop({path:path.join(output,name+'-trace.zip')});
     throw err;
-  }finally{serverUnavailable=false;await browser.close()}
+  }finally{serverUnavailable=false;feedInvalid=false;await browser.close()}
 }
 (async()=>{
   await fs.mkdir(output,{recursive:true});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));

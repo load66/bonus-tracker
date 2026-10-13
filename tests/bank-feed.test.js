@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('assert');
+const {sandbox,app,storage}=require('./full-app-smoke.test.js');
+const before=JSON.stringify([...storage]);
+const safe={schemaVersion:1,checkedAt:'2026-10-11T12:00:00Z',offers:[{title:'Bank <img onerror=alert(1)> $500 Bonus',url:'https://www.doctorofcredit.com/bank-bonus/',publishedAt:'2026-10-10T12:00:00Z'}]};
+assert.equal(sandbox.BTBankBonusFeed.validate(safe).offers.length,1);
+assert.equal(sandbox.BTBankBonusFeed.validate({...safe,offers:[{...safe.offers[0],url:'javascript:alert(1)'}]}).offers.length,0);
+assert.equal(sandbox.BTBankBonusFeed.validate({...safe,offers:[{...safe.offers[0],publishedAt:'2099-01-01'}]}).offers.length,0);
+assert.throws(()=>sandbox.BTBankBonusFeed.validate({...safe,checkedAt:'bad'}));
+assert.throws(()=>sandbox.BTBankBonusFeed.validate({...safe,schemaVersion:2}));
+assert.equal(JSON.stringify([...storage]),before,'Feed validator changed account storage');
+assert.ok(app.innerHTML.includes('Bank Bonuses'),'New tab not rendered');
+console.log('Bank feed validation passed: schema, safe links, future dates, tab and account isolation');
