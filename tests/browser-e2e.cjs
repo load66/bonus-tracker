@@ -86,6 +86,8 @@ async function exercise(name,engine,url){
     await button('4 Review').click();await button('💾 Add Bank').click();
     await wait(()=>JSON.parse(localStorage.getItem('bt_e_v4')).length===1);
     check('90-day deadline is exact',await page.evaluate(()=>reqDeadline(entries[0]))==='2026-05-01');
+    check('long action guidance is collapsed by default',!await page.locator('.ops-action-explanation').isVisible());
+    await page.locator('.ops-action-why summary').click();
     check('next action explains saved requirements without AI',(await page.locator('.ops-action-explanation').innerText()).includes('qualifying activity with the bank'));
     const id=(await record()).id;
     await page.reload();check('reload preserves identity and notes',(await record()).id===id&&(await record()).notes===payload.entry.notes);
@@ -106,6 +108,7 @@ async function exercise(name,engine,url){
     await button('Manage').click();await button('✅ Add Checklist New requirement step').click();await page.getByPlaceholder('e.g. Make 1 debit card transaction').fill('E2E checklist task');await button('Save').click();
     await page.locator('.ck li').filter({hasText:'E2E checklist task'}).locator('.ckb').click();
     check('checklist completion persists without collapsing section',(await record()).checklist[0].done&&await page.locator('details[data-section-key="lifecycle"]').evaluate(e=>e.open));
+    check('checklist exposes accessible completion state',await page.getByRole('checkbox',{name:'E2E checklist task',exact:true}).getAttribute('aria-checked')==='true');
     await button('Tax').click();
     check('tax includes received bonus on open account',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));
     page.once('dialog',dialog=>dialog.accept('2026'));
@@ -145,11 +148,14 @@ async function exercise(name,engine,url){
     check('feed and official check times are separate',(await page.locator('.radar-evidence').innerText()).includes('Official documents checked')&&(await page.locator('#app').innerText()).includes('Latest successful check'));
     check('missing fee evidence remains explicitly unconfirmed',(await page.locator('.radar-evidence').innerText()).includes('Monthly fee wording'));
     await button('Copy offer for review').click();
+    if(!await page.locator('.radar-review .mobile-disclosure').evaluate(e=>e.open))await page.locator('.radar-review summary').click();
     await page.getByLabel('Offer review text',{exact:true}).waitFor();
     const copiedReview=await page.getByLabel('Offer review text',{exact:true}).inputValue();
     check('review copy includes sources and unconfirmed fields',copiedReview.includes('https://accountoffers.wellsfargo.com/checkingoffer/')&&copiedReview.includes('Monthly fee wording: NOT CONFIRMED'));
     check('review copy excludes saved account history',!copiedReview.includes('E2E Verification Bank')&&!copiedReview.includes('Keep <img'));
     check('copy rerender preserves evidence disclosure',await page.locator('.radar-evidence').evaluate(e=>e.open));
+    check('advanced evidence filters are collapsed by default',!await page.getByLabel('Monthly fee evidence',{exact:true}).isVisible());
+    await page.getByText('More filters',{exact:true}).click();
     await page.getByLabel('Monthly fee evidence',{exact:true}).selectOption('present');
     check('fee filter never assumes missing means free',await page.locator('.radar-card').count()===0);
     await page.getByLabel('Monthly fee evidence',{exact:true}).selectOption('all');
@@ -170,6 +176,40 @@ async function exercise(name,engine,url){
     check('failed feed refresh retains loaded results',await page.locator('.radar-card').count()===3);
     check('bank feed leaves saved account data unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
     feedInvalid=false;await button('Tracker').click();
+    check('mobile dashboard scrolls with content',await page.locator('.tracker-overview').evaluate(e=>!!e.closest('.scroll')));
+    check('mobile fixed header leaves room for workflow',await page.locator('.hdr').evaluate(e=>e.getBoundingClientRect().height<=90));
+    const why=page.locator('.ops-action-why');
+    if(!await why.evaluate(e=>e.open))await why.locator('summary').click();
+    await button('2025').click();
+    check('expanded action guidance survives dashboard rerender',await page.locator('.ops-action-why').evaluate(e=>e.open));
+    await button('2026').click();
+    await page.getByPlaceholder('Search accounts...').pressSequentially('E2E');
+    check('tracker search keeps cursor through consecutive keystrokes',await page.getByPlaceholder('Search accounts...').inputValue()==='E2E'&&await page.evaluate(()=>document.activeElement.id==='tracker-search'));
+    await page.getByPlaceholder('Search accounts...').fill('');
+    await button('Datapoints').click();
+    await page.getByPlaceholder('Search bank, method, or note...').pressSequentially('E2E');
+    check('datapoint search keeps focus while typing',await page.getByPlaceholder('Search bank, method, or note...').inputValue()==='E2E'&&await page.evaluate(()=>document.activeElement.id==='datapoints-search'));
+    check('datapoint bank is keyboard accessible',await page.locator('button.dp-head').getAttribute('aria-expanded')!==null);
+    await button('T&C Archive').click();
+    await page.getByPlaceholder('Search stored T&C...').pressSequentially('E2E');
+    check('terms search keeps focus while typing',await page.getByPlaceholder('Search stored T&C...').inputValue()==='E2E'&&await page.evaluate(()=>document.activeElement.id==='terms-search'));
+    for(const width of [320,390]){
+      await page.setViewportSize({width,height:844});
+      for(const name of ['Tracker','Bank Bonuses','Tax','Datapoints','T&C Archive']){
+        await button(name).click();
+        check(name+' fits '+width+'px mobile width',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
+        check(name+' navigation starts at the top at '+width+'px',await page.locator('.scroll').evaluate(e=>e.scrollTop===0));
+      }
+    }
+    check('mobile tab targets are at least 44px tall',await page.locator('.tabs .tb').evaluateAll(rows=>rows.every(e=>e.getBoundingClientRect().height>=44)));
+    await button('Tracker').click();
+    await edit();
+    check('mobile editor fits viewport and prevents input zoom',await page.locator('.modal').evaluate(e=>e.getBoundingClientRect().width<=window.innerWidth)&&await page.locator('.modal input').first().evaluate(e=>parseFloat(getComputedStyle(e).fontSize)>=16));
+    await button('Cancel').click();
+    check('mobile navigation and editor leave saved records unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
+    if(await page.locator('.ops-action-why').evaluate(e=>e.open))await page.locator('.ops-action-why summary').click();
+    await page.locator('.ops-action-center').scrollIntoViewIfNeeded();
+    await page.screenshot({path:path.join(output,name+'-mobile-verified.png')});
     await page.evaluate(async()=>{await navigator.serviceWorker.ready});
     await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
     // WebKit's protocol offline mode can abort navigation before its service

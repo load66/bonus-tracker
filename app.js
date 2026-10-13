@@ -1,7 +1,7 @@
-/* Version 3.4.39: direct milestone actions, shared date explanations, missing-date review, and safe local-day refresh. */
+/* Version 3.4.40: direct milestone actions, shared date explanations, missing-date review, and safe local-day refresh. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.39';
+const APP_VERSION='3.4.40';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -279,8 +279,8 @@ function eligibilityRuleStorageLabel(r){
 function rTermsStorage(){
   const q=String(storageSearch||'').trim().toLowerCase();
   const rows=termsArchiveRows().filter(b=>!q||String(b.current?.bank||b.bank||'').toLowerCase().includes(q)||String(b.current?.accountType||b.accountType||'').toLowerCase().includes(q));
-  let h='<div class="sec">T&C Archive</div><div class="sub" style="margin:0 2px 10px">Exact verified terms by bank/product. Existing-cycle edits never replace this record; only a new opened bonus cycle with verified T&C can replace it.</div>';
-  h+='<input class="sinput" type="text" placeholder="Search stored T&C..." value="'+esc(storageSearch||'')+'" oninput="storageSearch=this.value;R()">';
+  let h='<div class="sec">T&C Archive</div><div class="sub" style="margin:0 2px 10px">Saved terms for each opened bonus cycle. New public offers do not replace your enrolled terms.</div><details class="mobile-disclosure"><summary>How archived terms work</summary><div class="mobile-disclosure-body">Existing-cycle edits never replace this record; only a new opened bonus cycle with verified T&C can replace it.</div></details>';
+  h+='<input class="sinput" type="text" id="terms-search" aria-label="Search stored terms" placeholder="Search stored T&C..." value="'+esc(storageSearch||'')+'" oninput="updateViewSearch(\'terms\',this.value,this.selectionStart)">';
   if(!rows.length)return h+'<div class="empty">No verified T&C cycles stored yet.</div>';
   rows.forEach(bucket=>{
     const x=bucket.current||{},versions=Array.isArray(bucket.versions)?bucket.versions:[];
@@ -3930,30 +3930,47 @@ function renderActionCenter(){
     h+='<div class="ops-action-item"><button type="button" class="ops-action-row stage-'+esc(stage)+'" onclick="event.stopPropagation();openAccountFromActionCenter('+profileSectionAttr(JSON.stringify(entryId))+')">'+bankLogo(x.bank,true)+'<span class="ops-action-main"><b>'+esc(x.bank)+'</b><em>'+esc(x.rsn||x.action||'Review account')+'</em></span><span class="ops-action-side">'+(x.showBonus&&x.bonus?'<strong>'+fM(x.bonus)+'</strong>':'')+'<small>'+esc(x.stageLabel||'In Progress')+'</small></span></button>';
     if(x.dateContext){
       const proof=x.dateContext;
-      h+='<details class="profile-section ops-date-proof" data-entry-id="'+profileSectionAttr(entryId)+'" data-section-key="action-date"'+profileSectionOpenAttr(entryId,'action-date')+' ontoggle="handleProfileSectionToggle(this)"><summary>'+(proof.confirmed?'Saved deadline · '+esc(fD(proof.date)):'Date not confirmed')+'</summary><p>'+esc(proof.explanation)+'</p></details>'
+      h+='<details class="profile-section ops-date-proof'+(proof.confirmed?'':' unconfirmed')+'" data-entry-id="'+profileSectionAttr(entryId)+'" data-section-key="action-date"'+profileSectionOpenAttr(entryId,'action-date')+' ontoggle="handleProfileSectionToggle(this)"><summary>'+(proof.confirmed?'Saved deadline · '+esc(fD(proof.date)):'Date not confirmed')+'</summary><p>'+esc(proof.explanation)+'</p></details>'
     }
-    if(x.actionExplanation)h+='<p class="ops-action-explanation">'+esc(x.actionExplanation)+'</p>';
+    if(x.actionExplanation)h+='<details class="profile-section ops-action-why" data-entry-id="'+profileSectionAttr(entryId)+'" data-section-key="action-why"'+profileSectionOpenAttr(entryId,'action-why')+' ontoggle="handleProfileSectionToggle(this)"><summary>Why this action?</summary><p class="ops-action-explanation">'+esc(x.actionExplanation)+'</p></details>';
     h+='<div class="ops-action-controls"><button type="button" class="ops-next-action" onclick="event.stopPropagation();runNextAccountAction('+profileSectionAttr(JSON.stringify(entryId))+')">'+esc(x.actionLabel||'Review account')+'</button></div></div>'
   });
   h+='</div>';
   if(rows.length>visible.length)h+='<div class="ops-action-more">'+(rows.length-visible.length)+' more account'+(rows.length-visible.length!==1?'s':'')+' continue below in the tracker.</div>';
   return h+'</div>'
 }
+function switchMainTab(value){
+  if(!['tracker','bonuses','tax','tips','storage'].includes(value))return;
+  tab=value;search='';_sp=0;
+  const current=document.querySelector('.scroll');if(current)current.scrollTop=0;
+  R();
+}
+function updateViewSearch(kind,value,cursor){
+  const id=kind==='tracker'?'tracker-search':kind==='datapoints'?'datapoints-search':kind==='terms'?'terms-search':'';
+  if(!id)return;
+  if(kind==='tracker')search=value;
+  else if(kind==='datapoints')dpSearch=value;
+  else storageSearch=value;
+  R();
+  const input=document.getElementById(id);
+  if(input){input.focus({preventScroll:true});const position=Number.isInteger(cursor)?Math.min(cursor,input.value.length):input.value.length;input.setSelectionRange(position,position);}
+}
 function R(){captureProfileSectionState();const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;
   if(tab==='profiles'||tab==='health')tab='tracker';
   try{if(!window.__btAutoCleanupV384){entries=sortE(normalizeLifecycleEntries(entries));sv(SK,entries);window.__btAutoCleanupV384=true}}catch{}
   sanitizeAllTimers(false);
   const sorted=sortE(entries),thisYr=new Date().getFullYear(),metrics=bonusPipelineMetrics(sorted,dashYear);
-  let h='';
-  h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div><h1><em>Bonus</em>Tracker</h1><div class="hdr-sub">Bonus operations • lifecycle • churn</div></div><div class="yr-pills">';
-  [thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});
-  h+='</div></div>';
+  let h='',overview='';
+  h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div><h1><em>Bonus</em>Tracker</h1><div class="hdr-sub">Bonus operations • lifecycle • churn</div></div>';
+  if(tab==='tracker')h+='<div class="yr-pills">';
+  if(tab==='tracker')[thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});
+  h+=tab==='tracker'?'</div></div>':'<span class="mobile-page-caption">'+esc({bonuses:'Bank offers',tax:'Tax',tips:'Datapoints',storage:'Terms archive'}[tab]||'')+'</span></div>';
   if(tab==='tracker'){
-    h+='<div class="hero ops-hero"><div class="hero-copy"><div class="hero-kicker">Active bonus pipeline</div><div class="hero-value">'+fM(metrics.active)+'</div><div class="hero-note">'+fM(metrics.collected)+' collected in '+dashYear+' • '+metrics.openCount+' open • '+metrics.cooldownCount+' cooling down</div></div><div class="hero-side"><div class="hero-chip">'+metrics.readyCloseCount+' ready to close</div><div class="hero-chip secondary">'+metrics.actionCount+' action'+(metrics.actionCount!==1?'s':'')+'</div></div></div>';
-    h+='<div class="stats ops-stats"><div class="st"><div class="n">'+fM(metrics.collected)+'</div><div class="l">Collected</div></div><div class="st"><div class="n">'+fM(metrics.awaiting)+'</div><div class="l">Awaiting</div></div><div class="st"><div class="n">'+fM(metrics.inProgress)+'</div><div class="l">In Progress</div></div><div class="st"><div class="n">'+fM(metrics.actionNeeded)+'</div><div class="l">Action Needed</div></div></div>'
+    overview+='<div class="hero ops-hero"><div class="hero-copy"><div class="hero-kicker">Active bonus pipeline</div><div class="hero-value">'+fM(metrics.active)+'</div><div class="hero-note">'+fM(metrics.collected)+' collected in '+dashYear+' • '+metrics.openCount+' open • '+metrics.cooldownCount+' cooling down</div></div><div class="hero-side"><div class="hero-chip">'+metrics.readyCloseCount+' ready to close</div><div class="hero-chip secondary">'+metrics.actionCount+' urgent'+'</div></div></div>';
+    overview+='<div class="stats ops-stats"><div class="st"><div class="n">'+fM(metrics.collected)+'</div><div class="l">Collected</div></div><div class="st"><div class="n">'+fM(metrics.awaiting)+'</div><div class="l">Awaiting</div></div><div class="st"><div class="n">'+fM(metrics.inProgress)+'</div><div class="l">In Progress</div></div><div class="st"><div class="n">'+fM(metrics.actionNeeded)+'</div><div class="l">Action Needed</div></div></div>'
   }
   h+='</div></div><div class="scroll">';
-  if(tab==='tracker'){const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted)}
+  if(tab==='tracker'){h+='<section class="tracker-overview" aria-label="Bonus totals">'+overview+'</section>';const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted)}
   else if(tab==='tax')h+=rTax();
   else if(tab==='tips')h+=rTips();
   else if(tab==='storage')h+=rTermsStorage();
@@ -3961,7 +3978,7 @@ function R(){captureProfileSectionState();const el=document.querySelector('.scro
   h+='</div>';
   if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';
   h+='<div class="tabs">';
-  ['tracker','bonuses','tax','tips','storage'].forEach((t,i)=>{h+='<button class="tb'+(tab===t?' on':'')+'" onclick="tab=\''+t+'\';search=\''+'\';R()">'+[I.grid,I.tips,I.doc,I.tips,I.lock][i]+'<span>'+['Tracker','Bank Bonuses','Tax','Datapoints','T&C Archive'][i]+'</span></button>'});
+  ['tracker','bonuses','tax','tips','storage'].forEach((t,i)=>{h+='<button class="tb'+(tab===t?' on':'')+'" aria-current="'+(tab===t?'page':'false')+'" onclick="switchMainTab(\''+t+'\')">'+[I.grid,I.tips,I.doc,I.tips,I.lock][i]+'<span>'+['Tracker','Bank Bonuses','Tax','Datapoints','T&C Archive'][i]+'</span></button>'});
   h+='</div>';
   if(modal)h+=rModal();if(cfm)h+=rCfm();if(ddPrompt)h+=rDD();if(rcvPrompt)h+=rRcv();if(reqPrompt)h+=rReqMet();if(closePrompt)h+=rClose();if(overwritePrompt)h+=rOverwrite();if(matchPickerPrompt)h+=rMatchPicker();if(replacementPickerPrompt)h+=rReplacementPicker();if(feeCheckPrompt)h+=rFeeCheck();if(timerEditModal)h+=rTimerEdit();if(dpEditor)h+=rDpEditor();if(timerChoicePrompt)h+=rTimerChoicePrompt();
   if(undoState)h+='<div class="undo-bar"><span>'+esc(undoState.undoLabel||('Change saved for '+undoState.bank+' — Undo restores everything for 60 seconds.'))+'</span><button onclick="undoClose()">Undo</button></div>';
@@ -3991,7 +4008,7 @@ function rTrackerLegacy(sorted){
     h += '</div>';
   }
 
-  h += `<input class="sinput" type="text" placeholder="Search banks..." value="${esc(search)}" oninput="search=this.value;R()">`;
+  h += `<input class="sinput" type="text" id="tracker-search" aria-label="Search accounts" placeholder="Search banks..." value="${esc(search)}" oninput="updateViewSearch('tracker',this.value,this.selectionStart)">`;
   h += `<button class="tc-btn" onclick="showAnalyzer=!showAnalyzer;R()">${I.spark}<span>${showAnalyzer?'Hide analyzer':'Review promo terms'}</span></button>`;
   if(showAnalyzer) h += rAnalyzer();
 
@@ -4040,7 +4057,7 @@ function rTrackerLegacy(sorted){
         h += '<div class="sec" style="margin-top:6px">Checklist</div><ul class="ck">';
         if(e.checklist&&e.checklist.length){
           e.checklist.forEach((c,ci)=>{
-            h += `<li><div class="ckb${c.done?' dn':''}" onclick="event.stopPropagation();toggleCk('${e.id}',${ci})"></div><span class="ck-text${c.done?' dn':''}">${esc(c.text)}</span><span class="ck-del" onclick="event.stopPropagation();rmCk('${e.id}',${ci})">×</span></li>`;
+            h += `<li><button type="button" role="checkbox" aria-checked="${!!c.done}" aria-label="${esc(c.text)}" class="ckb${c.done?' dn':''}" onclick="event.stopPropagation();toggleCk('${e.id}',${ci})"></button><span class="ck-text${c.done?' dn':''}">${esc(c.text)}</span><button type="button" aria-label="Remove checklist task" class="ck-del" onclick="event.stopPropagation();rmCk('${e.id}',${ci})">×</button></li>`;
           });
         }
         h += '</ul><div class="ck-add-shell">';
@@ -4053,7 +4070,7 @@ function rTrackerLegacy(sorted){
         const __timerEditId=inlineStateFor(e.id).timerEdit||'';
         const __editTimer=__timers.find(t=>t.id===__timerEditId)||null;
         if(__timers.length){
-          __timers.forEach((t)=>{const meta=timerCountdownMeta(t);h += `<li><div class="ckb${t.done?' dn':''}" onclick="event.stopPropagation();toggleTimer('${e.id}','${t.id||''}')"></div><div class="tm-main"><div class="tm-title${t.done?' dn':''}">${esc(t.text||'Timer')}</div><div class="tm-sub">${timerMetaLine(t)}</div></div><span class="tm-pill ${meta.cls}">${esc(meta.text)}</span><button type="button" class="tm-edit-btn" onclick="event.stopPropagation();openTimerEditor('${e.id}','${t.id||''}')">Edit</button><span class="ck-del" onclick="event.stopPropagation();rmTimer('${e.id}','${t.id||''}')">×</span></li>`;});
+          __timers.forEach((t)=>{const meta=timerCountdownMeta(t);h += `<li><button type="button" role="checkbox" aria-checked="${!!t.done}" aria-label="${esc(t.text||'Timer')}" class="ckb${t.done?' dn':''}" onclick="event.stopPropagation();toggleTimer('${e.id}','${t.id||''}')"></button><div class="tm-main"><div class="tm-title${t.done?' dn':''}">${esc(t.text||'Timer')}</div><div class="tm-sub">${timerMetaLine(t)}</div></div><span class="tm-pill ${meta.cls}">${esc(meta.text)}</span><button type="button" class="tm-edit-btn" onclick="event.stopPropagation();openTimerEditor('${e.id}','${t.id||''}')">Edit</button><button type="button" aria-label="Remove timer" class="ck-del" onclick="event.stopPropagation();rmTimer('${e.id}','${t.id||''}')">×</button></li>`;});
         }else{
           h += '<li><div class="tm-main"><div class="tm-sub">Add a custom due date for bank-specific requirements.</div></div></li>';
         }
@@ -4102,8 +4119,8 @@ function rTips(){
   const communityCount=getCommunityDatapoints().length;
   let h='';
   h+='<div class="dp-shell">';
-  h+='<div class="dp-summary"><div class="ttl">Structured Datapoints Database</div><div class="sub">Tap a bank to open its datapoints. Confirmed datapoints stay compact until you tap <strong>Edit</strong>, which helps prevent accidental changes. Community datapoints can now also be edited or removed when needed.</div></div>';
-  h+='<input class="sinput dp-search" placeholder="Search bank, method, or note..." value="'+esc(dpSearch)+'" oninput="dpSearch=this.value;R()">';
+  h+='<div class="dp-summary"><div class="ttl">Bank datapoints</div><div class="sub">Your confirmed methods and community reports. Past success does not guarantee future qualification.</div></div>';
+  h+='<input class="sinput dp-search" id="datapoints-search" aria-label="Search datapoints" placeholder="Search bank, method, or note..." value="'+esc(dpSearch)+'" oninput="updateViewSearch(\'datapoints\',this.value,this.selectionStart)">';
   h+='<div class="rcard"><div class="rcard-row"><div class="nm">Coverage</div><div class="ph2">'+groups.length+' banks</div></div><div class="sub" style="margin-top:4px">'+userCount+' confirmed user datapoints · '+communityCount+' community datapoints</div></div>';
   if(!groups.length){
     h+='<div class="empty"><div class="em">🗂️</div><p>No datapoints matched your search.</p></div>';
@@ -4111,10 +4128,10 @@ function rTips(){
     groups.forEach(g=>{
       const open=dpExpandedBankKey===g.key;
       h+='<div class="dp-bank">';
-      h+='<div class="dp-head" onclick="toggleDPBank(\''+g.key+'\')">';
+      h+='<button type="button" class="dp-head" aria-expanded="'+open+'" onclick="toggleDPBank(\''+g.key+'\')">';
       h+=bankLogo(g.bank,true);
       h+='<div class="dp-info"><div class="dp-name">'+esc(g.bank)+'</div><div class="dp-meta"><span class="dp-count user">'+g.user.length+' confirmed</span><span class="dp-count community">'+g.community.length+' community</span></div></div>';
-      h+='<div class="dp-arrow">'+(open?'−':'＋')+'</div></div>';
+      h+='<div class="dp-arrow">'+(open?'−':'＋')+'</div></button>';
       if(open){
         h+='<div class="dp-body">';
         h+='<div class="ph-actions" style="justify-content:flex-end;margin:2px 0 8px"><button class="ph-mini ph-del" onclick="event.stopPropagation();deleteDPBankGroup(\''+g.key+'\',\''+encodeURIComponent(g.bank)+'\')">Delete bank</button></div>';
@@ -6335,7 +6352,7 @@ entries=sortE(entries);R();
       h += '</div>';
     }
 
-    h += `<input class="sinput" type="text" placeholder="Search accounts..." value="${esc(search)}" oninput="search=this.value;R()">`;
+    h += `<input class="sinput" type="text" id="tracker-search" aria-label="Search accounts" placeholder="Search accounts..." value="${esc(search)}" oninput="updateViewSearch('tracker',this.value,this.selectionStart)">`;
     h += `<button class="tc-btn" onclick="showAnalyzer=!showAnalyzer;R()">${I.spark}<span>${showAnalyzer?'Hide analyzer':'Review promo terms'}</span></button>`;
     if(showAnalyzer) h += rAnalyzer();
     h += renderActionCenter();
@@ -6369,7 +6386,7 @@ entries=sortE(entries);R();
           h += '<div class="sec" style="margin-top:6px">Checklist</div><ul class="ck">';
           if(e.checklist&&e.checklist.length){
             e.checklist.forEach((c,ci)=>{
-              h += `<li><div class="ckb${c.done?' dn':''}" onclick="event.stopPropagation();toggleCk('${e.id}',${ci})"></div><span class="ck-text${c.done?' dn':''}">${esc(c.text)}</span><span class="ck-del" onclick="event.stopPropagation();rmCk('${e.id}',${ci})">×</span></li>`;
+              h += `<li><button type="button" role="checkbox" aria-checked="${!!c.done}" aria-label="${esc(c.text)}" class="ckb${c.done?' dn':''}" onclick="event.stopPropagation();toggleCk('${e.id}',${ci})"></button><span class="ck-text${c.done?' dn':''}">${esc(c.text)}</span><button type="button" aria-label="Remove checklist task" class="ck-del" onclick="event.stopPropagation();rmCk('${e.id}',${ci})">×</button></li>`;
             });
           }
           h += '</ul><div class="ck-add-shell">';
@@ -6380,7 +6397,7 @@ entries=sortE(entries);R();
           h += '<div class="sec" style="margin-top:8px">Mini Countdown Timers</div><ul class="tm">';
           const __timers=sortCustomTimers(e.customTimers||[]);
           if(__timers.length){
-            __timers.forEach((t)=>{const meta=timerCountdownMeta(t);h += `<li><div class="ckb${t.done?' dn':''}" onclick="event.stopPropagation();toggleTimer('${e.id}','${t.id||''}')"></div><div class="tm-main"><div class="tm-title${t.done?' dn':''}">${esc(t.text||'Timer')}</div><div class="tm-sub">${timerMetaLine(t)}</div></div><span class="tm-pill ${meta.cls}">${esc(meta.text)}</span><button type="button" class="tm-edit-btn" onclick="event.stopPropagation();openTimerEditor('${e.id}','${t.id||''}')">Edit</button><span class="ck-del" onclick="event.stopPropagation();rmTimer('${e.id}','${t.id||''}')">×</span></li>`;});
+            __timers.forEach((t)=>{const meta=timerCountdownMeta(t);h += `<li><button type="button" role="checkbox" aria-checked="${!!t.done}" aria-label="${esc(t.text||'Timer')}" class="ckb${t.done?' dn':''}" onclick="event.stopPropagation();toggleTimer('${e.id}','${t.id||''}')"></button><div class="tm-main"><div class="tm-title${t.done?' dn':''}">${esc(t.text||'Timer')}</div><div class="tm-sub">${timerMetaLine(t)}</div></div><span class="tm-pill ${meta.cls}">${esc(meta.text)}</span><button type="button" class="tm-edit-btn" onclick="event.stopPropagation();openTimerEditor('${e.id}','${t.id||''}')">Edit</button><button type="button" aria-label="Remove timer" class="ck-del" onclick="event.stopPropagation();rmTimer('${e.id}','${t.id||''}')">×</button></li>`;});
           }else{
             h += '<li><div class="tm-main"><div class="tm-sub">Add a custom due date for bank-specific requirements.</div></div></li>';
           }
