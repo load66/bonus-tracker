@@ -1,8 +1,8 @@
-# Bank Bonuses tab — v3.4.36
+# Bank Bonuses tab — v3.4.37
 
 The discovery tab automatically retrieves RSS metadata from Doctor of Credit, Frequent Miler, and Hustler Money Blog. It does not connect to banks or read, upload, or overwrite saved account history, requirements, enrolled terms, or eligibility calculations. Connecting saved countdowns was explicitly removed from this update's scope.
 
-GitHub Actions checks sources on release and every six hours (`23 */6 * * *`, UTC). Full verification gates publication. Scheduling and deployments can delay delivery; this is not real time. The open tab loads the published snapshot every 15 minutes. Check updates retrieves that snapshot rather than initiating a server job.
+GitHub Actions checks sources on release and every hour at minute 23 (`23 * * * *`, UTC). Full verification gates publication. Scheduling and deployments can delay delivery; this is not real time. The open tab loads the published snapshot every 15 minutes. Check updates retrieves that snapshot rather than initiating a server job.
 
 Sources are fetched independently, with bounded timeouts and a 2 MB limit each. Frequent Miler uses its bank-bonus tag feed, with its officially published general RSS feed as a fallback. A general feed may contain no bank posts in its recent window. Each source has its own successful-check timestamp and update status. A failure preserves that source's last valid posts and timestamps, while successful sources continue. Missing initialized data for every source prevents publication.
 
