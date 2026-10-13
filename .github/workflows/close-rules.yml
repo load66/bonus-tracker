@@ -6,6 +6,8 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: '23 */6 * * *'
 
 permissions:
   contents: read
@@ -83,6 +85,13 @@ jobs:
         env:
           TZ: America/Chicago
         run: node tests/hardening-regression.test.js
+
+      - name: Verify bank-only feed filtering
+        run: python3 -B tests/bank-feed.test.py && node tests/bank-feed.test.js
+
+      - name: Refresh bank bonus RSS metadata
+        if: github.event_name != 'pull_request'
+        run: python3 scripts/update-bank-feed.py
 
       - name: Install isolated browser test dependencies
         run: |
