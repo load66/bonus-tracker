@@ -20,4 +20,14 @@ assert.equal(sandbox.BTBankBonusFeed.validate({...safe,offers:[{...safe.offers[0
 assert.equal(JSON.stringify([...storage]),before,'Feed validator changed account storage');
 assert.ok(app.innerHTML.includes('Bank Bonuses'),'New tab not rendered');
 assert.ok(!require('fs').readFileSync('style.css','utf8').includes('.tabs .tb:nth-child(5)'),'Obsolete fifth-tab hide rule remains');
+const offer={title:'Wells Fargo $325 Checking Bonus',url:'https://www.hustlermoneyblog.com/wells-fargo-checking-bonus/'};
+const evidence={schemaVersion:1,status:'complete',records:{[offer.url]:{offerTitle:offer.title,offerUrl:offer.url,status:'evidence-found',officialCheckedAt:new Date().toISOString(),aiCheckedAt:new Date().toISOString(),reason:'Extracted quotations need review.',fields:{bonus:{value:'$325',quote:'Receive a $325 bonus.',sourceUrl:'https://accountoffers.wellsfargo.com/checkingoffer/',sourceHash:'a'.repeat(64)}}}}};
+assert.equal(sandbox.BTBankBonusFeed.evidence(offer,evidence).fields.bonus.value,'$325');
+assert.equal(sandbox.BTBankBonusFeed.evidence({...offer,title:'Wells Fargo $500 Bonus'},evidence),null);
+assert.equal(sandbox.BTBankBonusFeed.evidence(offer,{...evidence,status:'unavailable'}),null);
+const stale=JSON.parse(JSON.stringify(evidence));stale.records[offer.url].officialCheckedAt='2020-01-01';
+assert.equal(Object.keys(sandbox.BTBankBonusFeed.evidence(offer,stale).fields).length,0);
+const unsafe=JSON.parse(JSON.stringify(evidence));unsafe.records[offer.url].fields.bonus.sourceUrl='https://www.wellsfargo.com.evil.test/';
+assert.equal(Object.keys(sandbox.BTBankBonusFeed.evidence(offer,unsafe).fields).length,0);
+assert.equal(JSON.stringify([...storage]),before,'Evidence projection changed saved account storage');
 console.log('Bank feed validation passed: schema, safe links, future dates, tab and account isolation');
