@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {sandbox,storage}=require('./full-app-smoke.test.js');
+const e={id:'private-record-id',bank:'Synthetic Bank',bonus:325,opened:'2026-01-31',reqMet:'2026-04-01',bonusRecd:'2026-04-15',churn:'1',churnable:true,notes:'private note',phoneNum:'private phone',accountNumber:'private number',tcSourceRaw:'Public promotional terms. Complete requirements within 90 days.',checklist:[{text:'Private task detail',done:true}]};
+const before=JSON.stringify([...storage]),record=JSON.stringify(e);
+const facts=sandbox.BTBonusAI.contextFor(e);
+assert.ok(facts.some(f=>f.id==='close_date')&&facts.some(f=>f.id==='close_gate'));
+assert.ok(facts.some(f=>f.id==='bonus'&&f.text==='$325'));
+assert.ok(!JSON.stringify(facts).includes('private')&&!JSON.stringify(facts).includes('Private task detail'));
+assert.equal(JSON.stringify(e),record,'AI context changed the supplied record');
+assert.equal(JSON.stringify([...storage]),before,'AI context changed saved data');
+const truncated=sandbox.BTBonusAI.contextFor({...e,tcSourceRaw:'x'.repeat(14000)});
+assert.equal(truncated.find(f=>f.id==='terms').text.length,10000);
+assert.ok(truncated.find(f=>f.id==='termscoverage').text.includes('first 10000'));
+const redacted=sandbox.BTBonusAI.contextFor({...e,tcSourceRaw:'Account 123456789012 should not be shared.'});
+assert.ok(!redacted.find(f=>f.id==='terms').text.includes('123456789012'));
+console.log('Bonus AI context passed: canonical facts, private-field exclusion, no mutations, bounded terms and identifier redaction');

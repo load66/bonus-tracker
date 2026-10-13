@@ -1,8 +1,7 @@
 /* Public discovery metadata only. Never reads or writes saved account data. */
 (function(){
   'use strict';
-  let feed=null,loading=false,error='',attempted=false,query='',availabilityFilter='all',evidenceFilter='all',feeFilter='all',activityFilter='all',amountFilter='all',reviewText='',copyStatus='';
-  let showOfferDetails=false;
+  let feed=null,loading=false,error='',attempted=false,query='',availabilityFilter='all',evidenceFilter='all',feeFilter='all',activityFilter='all',amountFilter='all';
   const evidenceOpen=new Set();
   const sourceNames={doc:'Doctor of Credit',fm:'Frequent Miler',hmb:'Hustler Money Blog'};
   const sourceHosts={'www.doctorofcredit.com':'doc','frequentmiler.com':'fm','www.hustlermoneyblog.com':'hmb'};
@@ -78,24 +77,7 @@
         (!options.amount||options.amount==='all'||options.amount==='unknown'&&amount===null||/^(300|500|1000)$/.test(options.amount)&&amount!==null&&amount>=Number(options.amount));
     });
   }
-  function reviewFor(offer){
-    const e=offer.evidence,fields=e&&e.fields||{};
-    const lines=['BonusTracker offer for review',offer.title,'Discovery source: '+offer.url,'Please verify the official promotion and fee schedule, resolve missing terms, and generate the import JSON here. Do not import or update a saved account automatically.','These are AI-selected excerpts, not verified personal eligibility.'];
-    if(e&&e.checkedAt)lines.push('Official documents checked: '+e.checkedAt);
-    if(e&&e.aiCheckedAt)lines.push('AI extraction: '+e.aiCheckedAt);
-    if(e)lines.push('Review status: '+e.reason+(e.stale?' [STALE]':''));
-    if(e)for(const source of e.sources)lines.push('Official '+source.role+': '+source.url);
-    for(const [key,label] of Object.entries(evidenceLabels)){
-      const field=fields[key];
-      lines.push(label+': '+(field?field.value:'NOT CONFIRMED'));
-      if(field)lines.push('Supporting quotation: '+field.quote,'Source: '+field.sourceUrl);
-    }
-    if(e)for(const change of e.changes)lines.push('Evidence change — '+evidenceLabels[change.field]+': '+(change.before||'previously unconfirmed')+' → '+(change.after||'now unconfirmed'));
-    lines.push('Also verify exact date anchors, all repeat-bonus restrictions, fee-waiver conditions, required companion accounts and product/tier applicability.');
-    return lines.join('\n');
-  }
   window.btRadarSearch=function(value,cursor){query=value;R();const el=document.getElementById('radar-search');if(el){el.focus();const pos=Number.isInteger(cursor)?Math.min(cursor,el.value.length):el.value.length;el.setSelectionRange(pos,pos);}};
-  window.btRadarShowDetails=function(value){showOfferDetails=value===true;R();};
   window.btRadarAvailability=function(value){availabilityFilter=['all','nationwide','regional','unknown'].includes(value)?value:'all';R();};
   window.btRadarFilter=function(kind,value){
     if(kind==='evidence')evidenceFilter=['all','present','missing','queued','stale','changed'].includes(value)?value:'all';
@@ -110,18 +92,6 @@
       const key=element.getAttribute('data-radar-key');
       if(element.open)evidenceOpen.add(key);else evidenceOpen.delete(key);
     });
-  };
-  function setDisclosureOpen(key,open){
-    if(open)evidenceOpen.add(key);else evidenceOpen.delete(key);
-    document.querySelectorAll('details[data-radar-key]').forEach(element=>{if(element.getAttribute('data-radar-key')===key)element.open=open;});
-  }
-  window.btRadarCopy=async function(url){
-    const offer=feed&&feed.offers.find(x=>x.url===url);
-    if(!offer)return;
-    reviewText=reviewFor(offer);
-    try{await navigator.clipboard.writeText(reviewText);setDisclosureOpen('review-text',false);copyStatus='Copied. Paste it into our chat for verification and JSON generation.';}
-    catch{setDisclosureOpen('review-text',true);copyStatus='Copy the review text below, then paste it into our chat.';}
-    R();
   };
   function disclosure(key,label,body){
     return '<details class="mobile-disclosure" data-radar-key="'+escape(key)+'"'+(evidenceOpen.has(key)?' open':'')+' ontoggle="btRadarEvidenceToggle('+escape(JSON.stringify(key))+',this.open,this)"><summary>'+escape(label)+'</summary><div class="mobile-disclosure-body">'+body+'</div></details>';
@@ -142,39 +112,22 @@
   window.btRefreshBankBonuses=refresh;
   window.rBankBonuses=function(){
     if(!attempted){attempted=true;setTimeout(refresh,0);}
-    let h='<div class="sec">Bank Bonuses</div><section class="radar-intro"><h2>Discover your next bank bonus</h2><p>Bank and credit-union deposit bonuses, updated automatically.</p><p class="radar-notice">Review official terms before applying. Personal eligibility is not verified; saved accounts stay unchanged.</p>';
-    h+='<div class="radar-toolbar"><span>'+(feed?'Latest successful check '+escape(new Date(feed.checkedAt).toLocaleString()):'Checking source feeds…')+'</span><button type="button" class="ph-mini ph-save" onclick="btRefreshBankBonuses()" '+(loading?'disabled':'')+'>'+(loading?'Checking…':'Check updates')+'</button></div><p>Background checks are scheduled every hour; delivery may be delayed. Recently posted does not necessarily mean a newly launched promotion. This is not a complete catalog of active offers.</p></section>';
+    let h='<div class="sec">Bank Bonuses</div><section class="radar-intro"><h2>Bank offers</h2><p>Review source terms before applying.</p>';
+    h+='<div class="radar-toolbar"><span>'+(feed?'Latest successful check '+escape(new Date(feed.checkedAt).toLocaleString()):'Checking source feeds…')+'</span><button type="button" class="ph-mini ph-save" onclick="btRefreshBankBonuses()" '+(loading?'disabled':'')+'>'+(loading?'Checking…':'Check updates')+'</button></div></section>';
     if(error)h+='<p role="status" class="radar-warning">'+escape(error)+'</p>';
     if(feed&&Date.now()-Date.parse(feed.checkedAt)>24*60*60*1000)h+='<p role="status" class="radar-warning">Updates are stale: the source has not been successfully checked in over 24 hours.</p>';
     if(!feed)return h+'<p role="status">'+(loading?'Loading bank bonus posts…':'Feed not loaded.')+'</p>';
     if(feed.sources.length)h+=disclosure('source-times','Source check times','<div class="radar-sources">'+feed.sources.map(s=>'<p>'+escape(s.name)+' · '+(s.status==='ok'?'Checked':'Update unavailable')+(s.checkedAt?' '+escape(new Date(s.checkedAt).toLocaleString()):' · no successful check yet')+'</p>').join('')+'</div>');
     if(feed.sources.some(s=>s.status!=='ok'))h+='<p role="status" class="radar-warning">Some sources could not update. Available sources continue working; retained posts use their last successful check.</p>';
-    h+=disclosure('coverage','Evidence coverage and limitations','<section class="radar-verification-info"><b>Official-source AI evidence</b><p>Feed checks and official-document checks are separate. AI selects passages; displayed quotations must match fetched official documents. AI excerpts do not prove eligibility or complete account/tier applicability.</p><p>Official-source profiles: Wells Fargo Everyday Checking, U.S. Bank business checking and Smartly checking, and Chase Total Checking. Profile coverage does not confirm that a discovery post matches the official offer. Other products remain Needs review. Newly changed posts can be queued until the next verification cycle. Saved accounts, enrolled terms and calculations are never updated automatically.</p>'+(feed.verificationStatus==='complete'?'':'<p role="status">'+(feed.verificationStatus==='pending'?'Official evidence check is running; this feed will receive the result on a later update.':'Official evidence service is unavailable or has not completed a check. No AI evidence is presented as current.')+'</p>')+'</section>');
-    if(feed.verificationStatus!=='complete')h+='<p role="status" class="radar-warning">'+(feed.verificationStatus==='pending'?'Official evidence check is running.':'Official evidence is unavailable. Review the bank’s terms directly.')+'</p>';
-    if(feed.verificationStatus==='complete'&&Object.keys(feed.usage).length)h+='<details class="radar-verification-info"><summary>AI check activity</summary><p>Last cycle: '+(feed.usage.newExtractions||0)+' new extraction attempts · '+(feed.usage.cacheHits||0)+' reused · '+(feed.usage.queued||0)+' queued · '+(feed.usage.failed||0)+' failed · '+(feed.usage.throttled||0)+' throttled.</p><p>Provider requests: '+(feed.usage.providerRequests||0)+' · successful-call reported tokens: '+(feed.usage.reportedTokens||0).toLocaleString()+' · retries: '+(feed.usage.retries||0)+' · official documents checked: '+(feed.usage.documentsChecked||0)+'.</p><p>App budgets: '+(feed.usage.cycleLimit||0)+' extractions per cycle; '+(feed.usage.dailyAccountedTokens||0).toLocaleString()+' / '+(feed.usage.dailyTokenBudget||0).toLocaleString()+' accounted tokens today (UTC). Failed calls reserve an estimate. These are app budgets, not your provider quota or billing.</p></details>';
-    h+='<div class="radar-filters"><label for="radar-search">Find a bank</label><input id="radar-search" class="sinput" placeholder="Search bank bonuses…" value="'+escape(query)+'" oninput="btRadarSearch(this.value,this.selectionStart)"><div class="radar-quick"><button type="button" class="ph-mini ph-save" onclick="btRadarSearch(\'U.S. Bank\')">U.S. Bank</button><button type="button" class="ph-mini ph-save" onclick="btRadarSearch(\'Wells Fargo\')">Wells Fargo</button><button type="button" class="ph-mini" onclick="btRadarSearch(\'\')">All banks</button></div><label for="radar-availability">Availability</label><select id="radar-availability" onchange="btRadarAvailability(this.value)">'+[['all','All bank offers'],['nationwide','Nationwide reported'],['regional','Regional reported'],['unknown','Availability unclear']].map(([v,l])=>'<option value="'+v+'"'+(availabilityFilter===v?' selected':'')+'>'+l+'</option>').join('')+'</select><p>Nationwide labels reflect explicit source wording, not verified personal eligibility. Unstated or conflicting availability stays unclear.</p></div>';
-    h+=disclosure('more-filters','More filters'+([evidenceFilter,feeFilter,activityFilter,amountFilter].filter(value=>value!=='all').length?' · '+[evidenceFilter,feeFilter,activityFilter,amountFilter].filter(value=>value!=='all').length+' active':''),'<section class="radar-filters radar-extra-filters"><label class="radar-detail-toggle"><input type="checkbox" onchange="btRadarShowDetails(this.checked)"'+(showOfferDetails?' checked':'')+'> Show offer review tools</label><div>'+selectFilter('radar-evidence-filter','Official evidence',evidenceFilter,[['all','All evidence states'],['present','Excerpts available — review'],['missing','No current excerpts'],['queued','Queued checks'],['stale','Stale evidence'],['changed','Evidence changed in last 7 days']],'evidence')+'</div><div>'+selectFilter('radar-fee-filter','Monthly fee evidence',feeFilter,[['all','All fee evidence states'],['present','Fee excerpt available — review'],['missing','Monthly fee not confirmed']],'fees')+'</div><div>'+selectFilter('radar-activity-filter','Qualifying activity evidence',activityFilter,[['all','All requirement evidence states'],['present','Activity excerpt available — review'],['missing','Activity not confirmed']],'activity')+'</div><div>'+selectFilter('radar-amount-filter','Single bonus amount excerpt',amountFilter,[['all','All amounts'],['300','$300 or more'],['500','$500 or more'],['1000','$1,000 or more'],['unknown','Amount unknown, tiered or mismatched']],'amount')+'</div><p>Evidence filters reflect quoted wording, not complete verification. Amount filters require a single dollar amount and headline match; tiered or mismatched offers remain unknown.</p></section>');
-    if(showOfferDetails&&copyStatus)h+='<section class="radar-review"><p role="status">'+escape(copyStatus)+'</p>'+disclosure('review-text','Review text','<label for="radar-review-text">Offer review text</label><textarea id="radar-review-text" readonly rows="8">'+escape(reviewText)+'</textarea>')+'</section>';
+    h+='<div class="radar-filters"><label for="radar-search">Find a bank</label><input id="radar-search" class="sinput" placeholder="Search bank bonuses…" value="'+escape(query)+'" oninput="btRadarSearch(this.value,this.selectionStart)"><div class="radar-quick"><button type="button" class="ph-mini ph-save" onclick="btRadarSearch(\'U.S. Bank\')">U.S. Bank</button><button type="button" class="ph-mini ph-save" onclick="btRadarSearch(\'Wells Fargo\')">Wells Fargo</button><button type="button" class="ph-mini" onclick="btRadarSearch(\'\')">All banks</button></div><label for="radar-availability">Availability</label><select id="radar-availability" onchange="btRadarAvailability(this.value)">'+[['all','All bank offers'],['nationwide','Nationwide reported'],['regional','Regional reported'],['unknown','Availability unclear']].map(([v,l])=>'<option value="'+v+'"'+(availabilityFilter===v?' selected':'')+'>'+l+'</option>').join('')+'</select><p>Availability is reported by the source.</p></div>';
     if(!feed.offers.length)return h+'<p>No qualifying bank bonus posts in the latest source feed.</p>';
     const visible=filtered(feed.offers,query,availabilityFilter,{evidence:evidenceFilter,fees:feeFilter,activity:activityFilter,amount:amountFilter});
     h+='<div class="radar-count">'+visible.length+' matching offer posts · '+feed.offers.length+' source posts checked</div>';
     if(!visible.length)h+='<p>No posts match these filters. Try All banks or All bank offers.</p>';
-    visible.forEach(x=>{if(!showOfferDetails){const link=x.links[0];h+='<article class="radar-card radar-card-compact"><h3>'+escape(x.title)+'</h3><a class="radar-offer-link" href="'+escape(link.url)+'" target="_blank" rel="noopener noreferrer">'+escape(link.source)+' ↗</a></article>';return;}h+='<article class="radar-card"><span class="tag n">Terms need verification</span><span class="radar-availability">'+escape(x.availability==='nationwide'?'Nationwide reported':x.availability==='regional'?'Regional reported':'Availability unclear')+'</span><h3>'+escape(x.title)+'</h3><p>Posted '+escape(new Date(x.publishedAt).toLocaleDateString())+'</p>'+x.links.map(link=>'<a class="pf-link" href="'+escape(link.url)+'" target="_blank" rel="noopener noreferrer">'+escape(link.source)+' · Read source ↗</a>').join('');
-      const e=x.evidence;
-      h+='<div class="radar-card-actions"><button type="button" class="ph-mini ph-save" onclick="btRadarCopy('+escape(JSON.stringify(x.url))+')">Copy offer for review</button></div>';
-      if(e){h+='<details class="radar-evidence" data-radar-key="'+escape(x.url)+'"'+(evidenceOpen.has(x.url)?' open':'')+' ontoggle="btRadarEvidenceToggle('+escape(JSON.stringify(x.url))+',this.open,this)"><summary>'+(e.stale?'Official evidence stale — needs review':Object.keys(e.fields).length?'Official evidence excerpts — review':'Official evidence needs review')+'</summary><p>'+escape(e.reason)+'</p>'+(e.checkedAt?'<p>Official documents checked '+escape(new Date(e.checkedAt).toLocaleString())+'</p>':'')+(e.aiCheckedAt?'<p>AI extraction '+escape(new Date(e.aiCheckedAt).toLocaleString())+'</p>':'')+(e.changed?'<p class="radar-warning">Official document text changed since the previous snapshot. Review the new evidence.</p>':'');
-        h+='<p>Evidence coverage: '+Object.keys(e.fields).length+' of '+Object.keys(evidenceLabels).length+' fields have excerpts. Full applicability still requires review.</p>';
-        if(e.checkState==='queued')h+='<p class="radar-warning">Check queued'+(e.retryAt?' · provider retry after '+escape(new Date(e.retryAt).toLocaleString()):'')+'.</p>';
-        for(const source of e.sources)h+='<a class="pf-link" href="'+escape(source.url)+'" target="_blank" rel="noopener noreferrer">Official '+escape(source.role==='fees'?'fee schedule':'promotion')+' ↗</a>';
-        if(e.changes.length)h+='<section class="radar-changes"><b>Evidence changes · '+escape(new Date(e.changesAt).toLocaleString())+'</b><p>Quotation changes need review; they do not prove the bank changed its policy.</p>'+e.changes.map(c=>'<p><b>'+escape(evidenceLabels[c.field])+'</b><br>Before: '+escape(c.before||'Not confirmed')+'<br>Now: '+escape(c.after||'Not confirmed')+'</p>').join('')+'</section>';
-        for(const [key,field] of Object.entries(e.fields))h+='<div class="radar-evidence-field"><b>'+escape(evidenceLabels[key])+'</b><p>'+escape(field.value)+'</p><blockquote>'+escape(field.quote)+'</blockquote><a class="pf-link" href="'+escape(field.sourceUrl)+'" target="_blank" rel="noopener noreferrer">Official source ↗</a></div>';
-        const missing=Object.keys(evidenceLabels).filter(key=>!e.fields[key]);if(missing.length)h+='<p>Not confirmed: '+missing.map(key=>escape(evidenceLabels[key])).join(', ')+'.</p>';
-        h+='</details>';
-      }else h+='<p>Official evidence: Needs review.</p>';
-      h+='</article>';});
+    visible.forEach(x=>{const link=x.links[0];h+='<article class="radar-card radar-card-compact"><h3>'+escape(x.title)+'</h3><a class="radar-offer-link" href="'+escape(link.url)+'" target="_blank" rel="noopener noreferrer">'+escape(link.source)+' ↗</a></article>';});
     return h;
   };
-  window.BTBankBonusFeed={validate:valid,group:grouped,filter:filtered,evidence:evidenceFor,reviewText:reviewFor,amount:amountFor};
+  window.BTBankBonusFeed={validate:valid,group:grouped,filter:filtered,evidence:evidenceFor,amount:amountFor};
   // While the tab stays open, refresh the published snapshot without re-entering anything.
   const poll=setInterval(()=>{if(typeof tab!=='undefined'&&tab==='bonuses')refresh();},15*60*1000);
   if(poll&&typeof poll.unref==='function')poll.unref();
