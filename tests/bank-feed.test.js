@@ -41,9 +41,6 @@ assert.equal(sandbox.BTBankBonusFeed.filter([candidate],'','all',{fees:'present'
 assert.equal(sandbox.BTBankBonusFeed.filter([candidate],'','all',{activity:'missing'}).length,1);
 assert.equal(sandbox.BTBankBonusFeed.filter([{...candidate,evidence:{...fresh,status:'needs-review'}}],'','all',{amount:'unknown'}).length,1,'Mismatched amount must remain unknown');
 assert.equal(sandbox.BTBankBonusFeed.filter([{...candidate,evidence:{...fresh,fields:{bonus:{value:'$325 or $500'}}}}],'','all',{amount:'unknown'}).length,1,'Tiered amounts must remain unknown');
-const review=sandbox.BTBankBonusFeed.reviewText(candidate);
-assert.ok(review.includes(offer.url)&&review.includes('Supporting quotation: Receive a $325 bonus.')&&review.includes('Monthly fee wording: NOT CONFIRMED'));
-assert.ok(review.includes('generate the import JSON here')&&!review.includes('Keep these notes'),'Review text must not read saved accounts');
 const changedEvidence=JSON.parse(JSON.stringify(evidence));
 changedEvidence.records[offer.url].changesAt=new Date().toISOString();
 changedEvidence.records[offer.url].changes=[{field:'monthly_fee',before:'$10',after:'$15',kind:'changed'},{field:'evil',before:'unsafe',after:'unsafe',kind:'changed'}];

@@ -19,3 +19,9 @@ The final offline run exposed an external Google Fonts download failure in Firef
 ## v3.4.41 compact bank offers
 
 Discovery cards default to the source headline and one source link. Repeated badges, dates, copy controls and evidence panels are available only when “Show offer review tools” is enabled in More filters. Additional source links remain available in that mode. No bonus amount is inferred from an ambiguous headline. Outage and stale-feed warnings remain visible; stored accounts and calculation rules are unchanged. Browser checks cover compact card structure, opting into tools, returning to compact view, and all existing review/filter flows. Each engine saves an offers screenshot with synthetic data.
+
+## v3.4.42 Ask AI on Tracker
+
+Offer review controls, AI metadata panels and advanced evidence filters are removed from the Bank Bonuses interface. Source health warnings, search, availability filtering, refresh and compact cards remain. Discovery publishing no longer invokes paid evidence extraction.
+
+Expanded accounts and Bank Actions expose Ask AI. The modal uses owner sign-in, a question and optional suggested prompts. It sends only the selected bonus's allowed saved facts after the user presses Ask AI, displays cited facts and missing information, and never writes account records. Native mobile forms, focus trapping, dismissal, session disconnect, stale-result checks and rate-limit handling are covered with synthetic browser fixtures. Provider answers are explanations of saved facts rather than freshly verified terms or replacement calculations.

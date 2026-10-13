@@ -1,7 +1,7 @@
-/* Version 3.4.41: direct milestone actions, shared date explanations, missing-date review, and safe local-day refresh. */
+/* Version 3.4.42: direct milestone actions, shared date explanations, missing-date review, and safe local-day refresh. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.41';
+const APP_VERSION='3.4.42';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -6285,6 +6285,7 @@ entries=sortE(entries);R();
     window.__btBankActionPrompt=null;
     if(!e){R();return}
     expanded=id;
+    if(action==='askai'){R();window.btOpenBonusAI(id);return}
     if(action==='edit'){openEdit(id);return}
     if(action==='reqmet'){confirmMarkReqMet(id);return}
     if(action==='received'){confirmMarkReceived(id);return}
@@ -6325,6 +6326,7 @@ entries=sortE(entries);R();
       h+=bankActionSheetButton(e.id,'checklist','✅','Add Checklist','New requirement step');
       h+=bankActionSheetButton(e.id,'timer','⏱️','Add Timer','Custom countdown');
     }
+    h+=bankActionSheetButton(e.id,'askai','✦','Ask AI','Questions about this bonus');
     h+=bankActionSheetButton(e.id,'delete','🗑️','Delete Bank','Remove tracker entry',true);
     h+='<button class="bt-ba-mini cancel" onclick="event.stopPropagation();closeBankActions()"><span><b>Cancel</b></span></button>';
     h+='</div></div></div>';
@@ -6377,6 +6379,7 @@ entries=sortE(entries);R();
 
       if(isX){
         h += '<div class="card-exp">';
+        h += '<button type="button" class="bonus-ai-open" aria-label="Ask AI about this bonus" onclick="btOpenBonusAI(\''+esc(e.id)+'\')">✦ Ask AI about this bonus</button>';
         h += renderBankProfileSummary(e);
         h += renderClosePlan(e);
         h += renderMonthlyFeePlan(e);

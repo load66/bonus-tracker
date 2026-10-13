@@ -166,7 +166,7 @@ def main():
             previous = {}
     except Exception:
         pass
-    payload = attach_verification(build_payload(now, previous), previous)
+    payload = build_payload(now, previous)  # Discovery needs no paid AI calls; Tracker AI is on demand.
     OUTPUT.parent.mkdir(exist_ok=True)
     OUTPUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     print('Bank-only feed:', len(payload['offers']), 'items; source checked', payload['checkedAt'])
