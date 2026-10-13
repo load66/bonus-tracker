@@ -101,6 +101,18 @@ setTimeout(()=>{
     assert.equal(run("entries.find(e=>e.id===oneTimeId).archived"),true,'Non-repeatable account must archive');
     assert.equal(run("!!nextReopen(entries.find(e=>e.id===oneTimeId))"),false,'Non-repeatable account must not invent eligibility');
     assert.equal(run("entries.find(e=>e.id===testId).notes"),restored.notes,'Saving another account cannot change existing notes');
+    const richEntry={...entry,bank:'Rich JSON Verification Bank',opened:'2026-06-01',monthlyFeeYNText:'Yes',monthlyFeeAmountText:'$15',monthlyFeeFrequency:'monthly',monthlyFeeWaiverType:'balance',monthlyFeeWaiverAmountText:'$1,500',monthlyFeeWaiverText:'Maintain $1,500 daily balance OR receive qualifying deposits each month.',avoidMonthlyFeeText:'Required savings retains $100; its $5 fee is waived at $100.',completeBonusText:'Receive qualifying deposits in each of three monthly periods.',earlyTerminationFeeText:'A $25 early-close fee applies within 90 days.',promoCodeText:'TEST-ONLY',fundingAmountText:'Maintain $1,500 for 60 days.',eligibilityRules:[{id:'bonus-12m',basis:'bonus-received',periodValue:12,periodUnit:'months',scope:'consumer-checking',evidenceText:entry.eligibilityEvidenceText,evidenceSource:'official-promotion-terms'}],tcSourceRaw:'Rich JSON Verification Bank checking promotion. '+entry.eligibilityEvidenceText+' Complete qualifying deposits in each of three monthly periods within 90 calendar days. '+entry.closeRuleText,customTimers:[{text:'Deposit period 2',startDate:'2026-07-01',date:'2026-07-31',daysRequired:30,done:false}]};
+    sandbox.richPayload={kind:'BonusTrackerEntry',schemaVersion:2,verification:{promoSourceUrl:'https://example-bank.test/promo',feeScheduleSourceUrl:'https://example-bank.test/fees',termsVerifiedAt:'2026-10-13'},entry:richEntry};
+    run("btStageEntryPayload(btParseEntryFileText(JSON.stringify(richPayload),'rich-json.json'),'entry-file','rich-json.json')");
+    assert.equal(run('saveEntry()'),true);
+    const richSaved=JSON.parse(run("JSON.stringify(entries.find(e=>e.bank==='Rich JSON Verification Bank'))"));
+    for(const key of ['monthlyFeeAmountText','monthlyFeeFrequency','monthlyFeeWaiverType','monthlyFeeWaiverAmountText','monthlyFeeWaiverText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText','promoCodeText','fundingAmountText','tcSourceRaw'])assert.equal(richSaved[key],richEntry[key],'Strict JSON round trip lost '+key);
+    assert.equal(richSaved.eligibilityRules[0].scope,'consumer-checking');
+    assert.equal(richSaved.customTimers[0].date,'2026-07-31');
+    assert.equal(richSaved.feeScheduleSourceUrl,'https://example-bank.test/fees');
+    const aiFacts=JSON.stringify(sandbox.BTBonusAI.contextFor(richSaved));
+    for(const value of ['$15','OR receive','Required savings','three monthly periods','early-close fee','consumer-checking','Deposit period 2','example-bank.test/fees'])assert.ok(aiFacts.includes(value),'Saved JSON missing from AI context: '+value);
+    assert.equal(run('entries.find(e=>e.id===testId).notes'),restored.notes,'Rich JSON must preserve other accounts');
     run('if(undoTimer)clearTimeout(undoTimer);undoState=null;R()');
     assert.equal(errors.length,0,'Integrated flow emitted a runtime error');
     console.log('End-to-end integration passed: installed editor, JSON review/save, edit/escaping, requirements, payout, timers, closure, exact eligibility, tax years, and full backup restore');

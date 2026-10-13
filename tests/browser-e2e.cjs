@@ -188,6 +188,7 @@ async function exercise(name,engine,url){
     await page.getByLabel('Email',{exact:true}).fill('synthetic-owner@example.test');await page.getByLabel('Password',{exact:true}).fill('synthetic-password');await button('Connect AI').click();
     await page.getByText('Connected. Ask a question when ready.',{exact:true}).waitFor();
     check('AI login does not automatically send account context',await page.evaluate(()=>window.__bonusAITest.authCalls===1&&window.__bonusAITest.calls.length===0));
+    for(const label of ['Monthly fee','Waive fees','Direct deposit','Early-close fee','Savings account','Repeat eligibility']){await button(label).click();check('prefill: '+label,(await page.locator('#bonus-ai-question').inputValue()).length>20);}
     await button('Can I close?').click();await page.locator('#bonus-ai-send').click();
     await page.locator('#bonus-ai-answer p').first().waitFor();
     const {packet:aiPacket,authorization:aiAuthorization}=await page.evaluate(()=>window.__bonusAITest.calls[0]);
