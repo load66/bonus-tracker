@@ -15,3 +15,7 @@ Verification includes all existing Node and Python feed suites, asset/cache chec
 Pre-release verification passed all 15 Node suites and 81 checks per engine in Chromium, Firefox and WebKit. WebKit and Chromium mobile screenshots were visually reviewed. A final styling adjustment makes the promo-review action consistent with the dark theme; the latest CI/deployment remains the publication gate.
 
 The final offline run exposed an external Google Fonts download failure in Firefox. External font loading was removed in favor of native system fonts, and mobile pinch zoom is enabled. Offline verification continues to require no uncaught application errors.
+
+## v3.4.41 compact bank offers
+
+Discovery cards default to the source headline and one source link. Repeated badges, dates, copy controls and evidence panels are available only when “Show offer review tools” is enabled in More filters. Additional source links remain available in that mode. No bonus amount is inferred from an ambiguous headline. Outage and stale-feed warnings remain visible; stored accounts and calculation rules are unchanged. Browser checks cover compact card structure, opting into tools, returning to compact view, and all existing review/filter flows. Each engine saves an offers screenshot with synthetic data.
