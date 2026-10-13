@@ -180,8 +180,12 @@ async function exercise(name,engine,url){
     await page.getByLabel('Show offer review tools',{exact:true}).uncheck();
     check('returning to compact offers removes repeated review content',await page.locator('.radar-card').evaluateAll(cards=>cards.every(card=>card.children.length===2)));
     await page.locator('[data-radar-key="more-filters"] summary').click();
+    check('compact mode hides prior review text',await page.locator('.radar-review').count()===0);
+    await page.evaluate(()=>{undoState=null;clearTimeout(undoTimer);R()});
+    await page.getByPlaceholder('Search bank bonuses…').fill('Wells Fargo');
     await page.locator('.radar-card').first().scrollIntoViewIfNeeded();
     await page.screenshot({path:path.join(output,name+'-offers-compact.png')});
+    await page.getByRole('button',{name:'All banks',exact:true}).click();
     feedInvalid=true;await button('Check updates').click();
     await page.getByText(/Could not check for updates/).waitFor();
     check('failed feed refresh retains loaded results',await page.locator('.radar-card').count()===3);
