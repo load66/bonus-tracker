@@ -190,6 +190,8 @@ async function exercise(name,engine,url){
     check('AI disconnect clears only its session',await page.evaluate(()=>sessionStorage.getItem('bonus-ai-auth')===null&&localStorage.getItem('bt_e_v4')!==null));
     await page.getByRole('button',{name:'Close AI',exact:true}).click();
     check('asking AI preserves all saved account data',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
+    // Remove synthetic API interception before testing native service-worker offline navigation.
+    await page.unrouteAll({behavior:'wait'});
 
     const why=page.locator('.ops-action-why');
     if(!await why.evaluate(e=>e.open))await why.locator('summary').click();
