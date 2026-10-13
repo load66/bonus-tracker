@@ -12,7 +12,7 @@
   function contextFor(e){
     const facts=[];
     const add=(id,label,value,max=500)=>{if(value!==undefined&&value!==null&&String(value).trim())facts.push({id,label,text:text(value).slice(0,max)});};
-    add('bank','Bank / account',e.bank,150);add('bonus','Saved bonus amount',e.bonus?fM(e.bonus):'Not recorded',80);
+    add('bank','Bank / account',e.bank,150);add('accounttype','Saved account category',e.accountType||'Not recorded',60);add('bonus','Saved bonus amount',e.bonus?fM(e.bonus):'Not recorded',80);
     add('today','Tracker date',td(),40);add('stage','Saved lifecycle stage',status(e),100);
     for(const [key,label] of [['opened','Opened'],['reqMet','Requirement met'],['bonusRecd','Bonus received'],['closed','Closed']])add(key.toLowerCase(),label,e[key]||'Not recorded',40);
     add('requirements','Saved requirement wording',e.requiredDaysText);add('payout','Saved payout wording',e.payoutTimingText);
@@ -59,7 +59,7 @@
       const token=await accessToken();const r=await fetch(API+'/api/bonus-tracker/ask',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({question,facts}),signal:controller.signal});const result=await r.json();
       if(!r.ok){if(r.status===401||r.status===403)sessionStorage.removeItem(SESSION_KEY);throw Error(result.detail||result.error||'AI is unavailable.');}
       if(typeof result.answer!=='string'||!Array.isArray(result.factIds)||!Array.isArray(result.missing)||result.factIds.some(id=>!facts.some(f=>f.id===id)))throw Error('AI returned an unsupported answer.');
-      if(modal&&generation===requestGeneration){if(JSON.stringify(contextFor(findEntry(selected)||{}))!==JSON.stringify(facts))message('Tracker facts changed. Ask again for an updated explanation.');else renderAnswer(result,facts);}
+      if(modal&&generation===requestGeneration){if(!findEntry(selected)||JSON.stringify(contextFor(findEntry(selected)))!==JSON.stringify(facts))message('Tracker facts changed. Ask again for an updated explanation.');else renderAnswer(result,facts);}
     }catch(error){if(modal&&generation===requestGeneration){message(error.name==='AbortError'?'AI timed out. Your tracker is unchanged.':error.message);modal.querySelector('#bonus-ai-login').hidden=!!session();}}
     finally{clearTimeout(timer);if(modal&&generation===requestGeneration){busy=false;modal.querySelector('#bonus-ai-question').disabled=false;modal.querySelectorAll('[data-question]').forEach(b=>b.disabled=false);modal.querySelector('#bonus-ai-send').disabled=false;}}
   }

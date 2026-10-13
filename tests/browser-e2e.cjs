@@ -164,10 +164,10 @@ async function exercise(name,engine,url){
     feedInvalid=false;await button('Tracker').click();
     check('mobile dashboard scrolls with content',await page.locator('.tracker-overview').evaluate(e=>!!e.closest('.scroll')));
     check('mobile fixed header leaves room for workflow',await page.locator('.hdr').evaluate(e=>e.getBoundingClientRect().height<=90));
-    let aiCalls=0,aiFailure=false,aiPacket=null;
+    let aiCalls=0,aiFailure=false,aiPacket=null,aiAuthorization='';
     await page.route('https://ppsljqaaanpkksxbpalk.supabase.co/auth/v1/token*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({access_token:'synthetic-owner-token',refresh_token:'synthetic-refresh-token',expires_in:3600})}));
     await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/ask',route=>{
-      aiCalls++;aiPacket=route.request().postDataJSON();
+      aiCalls++;aiPacket=route.request().postDataJSON();aiAuthorization=route.request().headers().authorization;
       return route.fulfill({status:aiFailure?429:200,contentType:'application/json',body:JSON.stringify(aiFailure?{detail:'AI is busy. Try again later.'}:{answer:'The bonus is recorded as received. Check the tracker closure gates before closing.',factIds:['bonusrecd','close_gate'],missing:[],cached:false})});
     });
     if(!await button('Ask AI about this bonus').count())await page.locator('.card-h').first().click();
@@ -178,7 +178,7 @@ async function exercise(name,engine,url){
     check('AI login does not automatically send account context',aiCalls===0);
     await button('Can I close?').click();await page.locator('#bonus-ai-send').click();
     await page.locator('#bonus-ai-answer p').first().waitFor();
-    check('AI request is authenticated',aiPacket.question.includes('closure')&&(await page.evaluate(()=>sessionStorage.getItem('bonus-ai-auth'))).includes('synthetic-owner-token'));
+    check('AI request is authenticated',aiAuthorization==='Bearer synthetic-owner-token'&&aiPacket.question.includes('closure')&&(await page.evaluate(()=>sessionStorage.getItem('bonus-ai-auth'))).includes('synthetic-owner-token'));
     check('AI uses canonical saved facts without account identifiers or notes',aiPacket.facts.some(f=>f.id==='close_gate')&&aiPacket.facts.some(f=>f.id==='close_date')&&!JSON.stringify(aiPacket).includes(id)&&!JSON.stringify(aiPacket).includes('Synthetic verification record only'));
     await page.locator('#bonus-ai-answer summary').click();
     check('AI displays cited saved facts',(await page.locator('#bonus-ai-answer').innerText()).includes('Tracker closure checks'));
