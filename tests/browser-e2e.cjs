@@ -243,6 +243,27 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>{undoState=null;clearTimeout(undoTimer);R()});
     await page.locator('.ops-action-center').scrollIntoViewIfNeeded();
     await page.screenshot({path:path.join(output,name+'-mobile-verified.png')});
+    // Long saved requirements must remain readable without changing account storage.
+    await page.evaluate(()=>{
+      window.__cardTextOriginal=JSON.parse(JSON.stringify(entries));
+      const e=entries[0];e.bank='E2E Lafayette Federal Credit Union';e.reqMet='2026-08-10';e.bonusRecd='';e.closed='';
+      e.customTimers=[{id:'long-requirement',text:'Establish $500+ monthly qualified direct deposits and retain the required membership savings balance',startDate:'2026-09-11',date:'2026-10-26',daysRequired:45,done:false}];
+      expanded=null;R();
+    });
+    for(const width of [320,390,1024]){
+      await page.setViewportSize({width,height:844});
+      const card=page.locator('.card-h').first();
+      check('full recurring requirement at '+width+'px',(await card.locator('.bt-card-deadline p').innerText())==='Establish $500+ monthly qualified direct deposits and retain the required membership savings balance');
+      check('countdown and date separate at '+width+'px',(await card.locator('.bt-card-deadline-meta').innerText()).includes('Due Oct 26, 2026'));
+      check('card text wraps without clipping at '+width+'px',await card.evaluate(e=>{
+        const name=e.querySelector('.card-name'),support=e.querySelector('.card-subline');
+        return [name,support].every(n=>n.scrollWidth<=n.clientWidth+1&&n.scrollHeight<=n.clientHeight+1)&&support.getBoundingClientRect().width>e.getBoundingClientRect().width*.85&&document.documentElement.scrollWidth<=innerWidth;
+      }));
+      if(width===390)await card.screenshot({path:path.join(output,name+'-card-text.png')});
+    }
+    await page.evaluate(()=>{entries=window.__cardTextOriginal;delete window.__cardTextOriginal;R();});
+    await page.setViewportSize({width:390,height:844});
+    check('card layout leaves saved records unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
     await page.evaluate(async()=>{await navigator.serviceWorker.ready});
     await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
     // WebKit's protocol offline mode can abort navigation before its service

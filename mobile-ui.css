@@ -1,4 +1,4 @@
-/* v3.4.43: a consistent mobile hierarchy; financial rules stay in the engine. */
+/* v3.4.44: a consistent mobile hierarchy; financial rules stay in the engine. */
 .tracker-overview{margin-bottom:16px}
 .mobile-page-caption{font-size:12px;color:var(--sub);font-weight:600;align-self:center}
 .mobile-disclosure{border:1px solid var(--border);border-radius:12px;background:var(--card);margin:10px 0;overflow-wrap:anywhere}
@@ -98,3 +98,16 @@
   #tca_overlay .tca-box summary,#tca_overlay .tca-box button{min-height:44px}
   #tca_overlay .az-field-note{display:block;font-size:12px;line-height:1.5}
 }
+
+/* Full-width supporting text avoids squeezing long requirements beside the bonus. */
+.card-h{display:grid!important;grid-template-columns:76px minmax(0,1fr) auto;align-items:start!important;gap:8px 12px!important}
+.card-h>.card-logo-col{grid-column:1;grid-row:1/span 2;min-width:0}
+.card-h>.card-left,.card-h>.card-left>.card-row{display:contents!important}
+.card-h .card-name{grid-column:2;grid-row:1;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere;line-height:1.35}
+.card-h .card-row>.badge{grid-column:2;grid-row:2;justify-self:start;align-self:start;max-width:100%}
+.card-h>.card-right{grid-column:3;grid-row:1/span 2;align-self:center;min-width:0}
+.card-h .card-subline{grid-column:1/-1;grid-row:3;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;max-height:none!important;-webkit-line-clamp:unset!important;overflow-wrap:anywhere;line-height:1.5!important;border-top:1px solid var(--border);padding-top:10px;margin-top:2px!important}
+.card-h .card-progressline{grid-column:1/-1;grid-row:4;max-width:none;margin-top:0}
+.bt-card-deadline-meta{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;font-weight:600;color:var(--text)}
+.bt-card-deadline p{margin:6px 0 0;font-weight:400;color:var(--muted);line-height:1.5}
+@media(max-width:640px){.card-h{grid-template-columns:64px minmax(0,1fr) auto;gap:6px 10px!important}.card-h .card-name{font-size:14px!important}.card-h .card-subline{font-size:12px!important}.card-h .card-id{overflow-wrap:anywhere;max-width:84px}}
