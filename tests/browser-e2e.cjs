@@ -164,34 +164,47 @@ async function exercise(name,engine,url){
     feedInvalid=false;await button('Tracker').click();
     check('mobile dashboard scrolls with content',await page.locator('.tracker-overview').evaluate(e=>!!e.closest('.scroll')));
     check('mobile fixed header leaves room for workflow',await page.locator('.hdr').evaluate(e=>e.getBoundingClientRect().height<=90));
-    let aiCalls=0,aiFailure=false,aiPacket=null,aiAuthorization='';
-    await page.route('https://ppsljqaaanpkksxbpalk.supabase.co/auth/v1/token*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({access_token:'synthetic-owner-token',refresh_token:'synthetic-refresh-token',expires_in:3600})}));
-    await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/ask',route=>{
-      aiCalls++;aiPacket=route.request().postDataJSON();aiAuthorization=route.request().headers().authorization;
-      return route.fulfill({status:aiFailure?429:200,contentType:'application/json',body:JSON.stringify(aiFailure?{detail:'AI is busy. Try again later.'}:{answer:'The bonus is recorded as received. Check the tracker closure gates before closing.',factIds:['bonusrecd','close_gate'],missing:[],cached:false})});
+    // WebKit service-worker-controlled fetches can bypass Playwright HTTP routing.
+    // Stub only the two external AI boundaries in-page; never send synthetic login data to production.
+    await page.evaluate(()=>{
+      const nativeFetch=window.fetch;
+      window.__bonusAITest={calls:[],authCalls:0,fail:false,nativeFetch};
+      window.fetch=async function(input,options){
+        const url=typeof input==='string'?input:input.url;
+        if(url.startsWith('https://ppsljqaaanpkksxbpalk.supabase.co/auth/v1/token?')){
+          window.__bonusAITest.authCalls++;
+          return new Response(JSON.stringify({access_token:'synthetic-owner-token',refresh_token:'synthetic-refresh-token',expires_in:3600}),{status:200,headers:{'Content-Type':'application/json'}});
+        }
+        if(url==='https://api-production-00f74.up.railway.app/api/bonus-tracker/ask'){
+          window.__bonusAITest.calls.push({packet:JSON.parse(options.body),authorization:options.headers.Authorization});
+          return new Response(JSON.stringify(window.__bonusAITest.fail?{detail:'AI is busy. Try again later.'}:{answer:'The bonus is recorded as received. Check the tracker closure gates before closing.',factIds:['bonusrecd','close_gate'],missing:[],cached:false}),{status:window.__bonusAITest.fail?429:200,headers:{'Content-Type':'application/json'}});
+        }
+        return nativeFetch.call(this,input,options);
+      };
     });
     if(!await button('Ask AI about this bonus').count())await page.locator('.card-h').first().click();
     await button('Ask AI about this bonus').click();
-    check('Tracker AI opens for one selected bank',(await page.locator('.bonus-ai-heading').innerText()).includes('E2E Verification Bank')&&aiCalls===0);
+    check('Tracker AI opens for one selected bank',(await page.locator('.bonus-ai-heading').innerText()).includes('E2E Verification Bank')&&await page.evaluate(()=>window.__bonusAITest.calls.length===0));
     await page.getByLabel('Email',{exact:true}).fill('synthetic-owner@example.test');await page.getByLabel('Password',{exact:true}).fill('synthetic-password');await button('Connect AI').click();
     await page.getByText('Connected. Ask a question when ready.',{exact:true}).waitFor();
-    check('AI login does not automatically send account context',aiCalls===0);
+    check('AI login does not automatically send account context',await page.evaluate(()=>window.__bonusAITest.authCalls===1&&window.__bonusAITest.calls.length===0));
     await button('Can I close?').click();await page.locator('#bonus-ai-send').click();
     await page.locator('#bonus-ai-answer p').first().waitFor();
+    const {packet:aiPacket,authorization:aiAuthorization}=await page.evaluate(()=>window.__bonusAITest.calls[0]);
     check('AI request is authenticated',aiAuthorization==='Bearer synthetic-owner-token'&&aiPacket.question.includes('closure')&&(await page.evaluate(()=>sessionStorage.getItem('bonus-ai-auth'))).includes('synthetic-owner-token'));
     check('AI uses canonical saved facts without account identifiers or notes',aiPacket.facts.some(f=>f.id==='close_gate')&&aiPacket.facts.some(f=>f.id==='close_date')&&!JSON.stringify(aiPacket).includes(id)&&!JSON.stringify(aiPacket).includes('Synthetic verification record only'));
     await page.locator('#bonus-ai-answer summary').click();
     check('AI displays cited saved facts',(await page.locator('#bonus-ai-answer').innerText()).includes('Tracker closure checks'));
     check('AI modal fits narrow mobile viewport',await page.locator('.bonus-ai-modal').evaluate(e=>e.getBoundingClientRect().width<=window.innerWidth));
     await page.screenshot({path:path.join(output,name+'-tracker-ai.png')});
-    aiFailure=true;await page.locator('#bonus-ai-send').click();await page.getByText('AI is busy. Try again later.',{exact:true}).waitFor();
-    check('AI rate limit is handled without repeated requests',aiCalls===2);
+    await page.evaluate(()=>window.__bonusAITest.fail=true);await page.locator('#bonus-ai-send').click();await page.getByText('AI is busy. Try again later.',{exact:true}).waitFor();
+    check('AI rate limit is handled without repeated requests',await page.evaluate(()=>window.__bonusAITest.calls.length===2));
     await button('Disconnect AI').click();
     check('AI disconnect clears only its session',await page.evaluate(()=>sessionStorage.getItem('bonus-ai-auth')===null&&localStorage.getItem('bt_e_v4')!==null));
     await page.getByRole('button',{name:'Close AI',exact:true}).click();
     check('asking AI preserves all saved account data',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
-    // Remove synthetic API interception before testing native service-worker offline navigation.
-    await page.unrouteAll({behavior:'wait'});
+    // Restore native fetch before verifying real service-worker offline navigation.
+    await page.evaluate(()=>{window.fetch=window.__bonusAITest.nativeFetch;delete window.__bonusAITest;});
 
     const why=page.locator('.ops-action-why');
     if(!await why.evaluate(e=>e.open))await why.locator('summary').click();
