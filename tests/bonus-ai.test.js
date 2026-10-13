@@ -15,3 +15,15 @@ assert.ok(truncated.find(f=>f.id==='termscoverage').text.includes('first 10000')
 const redacted=sandbox.BTBonusAI.contextFor({...e,tcSourceRaw:'Account 123456789012 should not be shared.'});
 assert.ok(!redacted.find(f=>f.id==='terms').text.includes('123456789012'));
 console.log('Bonus AI context passed: canonical facts, private-field exclusion, no mutations, bounded terms and identifier redaction');
+
+const rich={...e,completeBonusText:'Receive qualifying deposits in each of three monthly periods.',fundingAmountText:'Maintain $1,500 for 60 days.',monthlyFeeYNText:'Yes',monthlyFeeAmountText:'$15',monthlyFeeFrequency:'monthly',monthlyFeeWaiverType:'balance',monthlyFeeWaiverAmountText:'$1,500',monthlyFeeWaiverText:'Maintain the stated daily balance OR complete qualifying monthly deposits.',avoidMonthlyFeeText:'Required savings: retain $100; $5 fee waived at $100.',earlyTerminationFeeText:'A $25 closure fee applies during the first 90 days.',eligibilityRules:[{basis:'bonus-received',periodValue:12,periodUnit:'months',scope:'consumer-checking',evidenceText:'Not eligible if you received a checking bonus within the past 12 months.'}],customTimers:[{text:'Monthly deposit period 2',startDate:'2026-03-01',date:'2026-03-31',daysRequired:30,done:false}],promoSourceUrl:'https://example-bank.test/promo',feeScheduleSourceUrl:'https://example-bank.test/fees',termsVerifiedAt:'2026-10-13'};
+const richFacts=sandbox.BTBonusAI.contextFor(rich),all=JSON.stringify(richFacts);
+for(const value of ['three monthly periods','$1,500','OR complete','Required savings','closure fee','consumer-checking','Monthly deposit period 2','2026-03-31','example-bank.test/fees'])assert.ok(all.includes(value),'AI context lost '+value);
+assert.ok(richFacts.length<=30);
+const huge={...rich,tcSourceRaw:'"'.repeat(20000)};
+for(const key of ['completeBonusText','monthlyFeeWaiverText','avoidMonthlyFeeText','closeRuleText','payoutTimingText'])huge[key]='"'.repeat(12000);
+const hugeFacts=sandbox.BTBonusAI.contextFor(huge);
+assert.ok(JSON.stringify({question:'x'.repeat(500),facts:hugeFacts}).length<=17500,'AI request exceeds the server contract');
+assert.ok(hugeFacts.find(f=>f.id==='contextcoverage').text.includes('shortened'));
+assert.ok(hugeFacts.find(f=>f.id==='termscoverage').text.includes('Omitted wording'));
+console.log('Rich JSON AI coverage passed: recurring rules, complete waivers, companion fees, eligibility, timers, provenance and explicit context limits');
