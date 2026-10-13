@@ -1,4 +1,4 @@
-# Bank Bonuses tab — v3.4.37
+# Bank Bonuses tab — v3.4.38
 
 The discovery tab automatically retrieves RSS metadata from Doctor of Credit, Frequent Miler, and Hustler Money Blog. It does not connect to banks or read, upload, or overwrite saved account history, requirements, enrolled terms, or eligibility calculations. Connecting saved countdowns was explicitly removed from this update's scope.
 
@@ -15,3 +15,9 @@ Matching normalized titles share a card with attributed source links. Amounts, p
 This is a recent-post discovery feed, not an exhaustive active-offer catalog. Recently posted can mean an existing promotion was updated rather than a newly launched bonus. Geography, targeting, promo codes, eligibility and expiry require official-term verification. RSS feeds have finite windows and can omit updates. No missing offers are manually inserted. No full article content is republished. No paid backend, credentials, account-history upload, CORS proxy, or BankRewards.io scraping is used.
 
 Verification: `python3 -B tests/bank-feed.test.py` covers filtering, nationwide evidence/negation/conflicts, safe links, title keys, partial outage, v1 fallback and unchanged successful timestamps. `node tests/bank-feed.test.js` covers v1/v2 intake, URL isolation, grouping, conflicting availability, search and saved-data isolation. Chromium/Firefox/WebKit checks exercise nationwide filtering, major-bank shortcuts, search focus, outage disclosure, stale/error retention, mobile layout and prior account workflows.
+
+## Official-source AI evidence
+
+The hourly publication attaches the journal server’s fixed public evidence catalog. No credentials or saved account data are sent. Fingerprints must match the current feed title and URL; changed offers cannot borrow earlier evidence. UI projections accept only known fields, approved official HTTPS source hosts, bounded strings and source hashes. Evidence older than 24 hours is hidden as stale. Failed/pending service responses do not present retained excerpts as current.
+
+Initial coverage is Wells Fargo consumer checking and U.S. Bank business checking. Unsupported products remain Needs review. Model-selected passages must match retrieved promotion/fee documents; this proves quotation provenance, not full semantic interpretation, tier applicability, completeness, verified eligibility or an import-ready calculation rule. Feed, official-source and AI extraction times are separate. Saved account data, enrolled terms and mathematical rules are never changed. New/changed posts can wait a verification cycle because the service reads the previously published feed. The first public read warms a single background job; the collector waits up to two minutes for completion, then publishes an explicit pending/unavailable state.

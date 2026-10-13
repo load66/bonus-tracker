@@ -5,6 +5,8 @@ import html
 import json
 import re
 import sys
+import hashlib
+import time
 import urllib.request
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
@@ -19,6 +21,34 @@ SOURCES = (
 )
 PUBLISHED = 'https://load66.github.io/bonus-tracker/data/bank-bonuses.json'
 OUTPUT = Path(__file__).resolve().parents[1] / 'data/bank-bonuses.json'
+VERIFICATION_URL = 'https://api-production-00f74.up.railway.app/public/bank-bonus-verification'
+
+def attach_verification(payload, previous):
+    last = previous.get('verification', {})
+    snapshot = {'schemaVersion':1,'status':'unavailable','records':last.get('records',{}),'checkedAt':last.get('checkedAt')}
+    try:
+        # Fixed public endpoint; no journal credentials or account data are sent.
+        for attempt in range(13):
+            result=json.loads(download(VERIFICATION_URL))
+            if result.get('schemaVersion')!=1 or not isinstance(result.get('records'),dict):
+                raise ValueError('Invalid evidence service response')
+            if result.get('status')!='pending' or attempt==12:break
+            time.sleep(10)
+        if result.get('status')=='complete':
+            records={}
+            for offer in payload['offers']:
+                record=result['records'].get(offer['url'])
+                expected=hashlib.sha256((offer['title']+'\n'+offer['url']).encode()).hexdigest()
+                if isinstance(record,dict) and record.get('offerFingerprint')==expected:
+                    records[offer['url']]={**record,'offerTitle':offer['title'],'offerUrl':offer['url']}
+            snapshot={'schemaVersion':1,'status':'complete','records':records,'checkedAt':result.get('checkedAt')}
+        else:
+            snapshot['status']='pending' if result.get('status')=='pending' else 'unavailable'
+    except Exception:
+        pass
+    payload['verification']=snapshot
+    print('Official evidence service:', snapshot['status'], len(snapshot['records']), 'matching records')
+    return payload
 
 def bank_bonus(title, categories):
     text = html.unescape(title).lower()
@@ -136,7 +166,7 @@ def main():
             previous = {}
     except Exception:
         pass
-    payload = build_payload(now, previous)
+    payload = attach_verification(build_payload(now, previous), previous)
     OUTPUT.parent.mkdir(exist_ok=True)
     OUTPUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     print('Bank-only feed:', len(payload['offers']), 'items; source checked', payload['checkedAt'])

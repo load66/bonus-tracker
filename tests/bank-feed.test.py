@@ -64,3 +64,20 @@ assert payload['sources'][2]['status']=='ok'
 assert payload['sources'][0]['checkedAt']==previous['checkedAt']
 m.download=original
 print('Multi-source coverage passed: availability evidence, conservative title keys, per-source fallback, partial outage and no false freshness')
+import hashlib
+offer={'title':'Wells Fargo $325 Checking Bonus','url':'https://www.hustlermoneyblog.com/wells-fargo-checking-bonus/'}
+record={'offerFingerprint':hashlib.sha256((offer['title']+'\n'+offer['url']).encode()).hexdigest(),'status':'evidence-found','fields':{}}
+def evidence_response(url):return json.dumps({'schemaVersion':1,'status':'complete','records':{offer['url']:record}}).encode()
+import json
+m.download=evidence_response
+attached=m.attach_verification({'offers':[offer]}, {})
+assert attached['verification']['records'][offer['url']]['offerTitle']==offer['title']
+changed=m.attach_verification({'offers':[{**offer,'title':'Wells Fargo $500 Checking Bonus'}]}, {})
+assert changed['verification']['records']=={}
+m.download=offline
+old={'verification':attached['verification']}
+failed=m.attach_verification({'offers':[offer]}, old)
+assert failed['verification']['status']=='unavailable'
+assert failed['verification']['records']==attached['verification']['records']
+m.download=original
+print('Evidence attachment passed: exact offer fingerprint, changed-headline isolation and unavailable-state preservation')

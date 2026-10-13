@@ -11,6 +11,7 @@ const output=process.env.BT_BROWSER_RESULTS||path.join(process.env.RUNNER_TEMP||
 const mime={'.html':'text/html','.js':'application/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml'};
 let serverUnavailable=false,feedInvalid=false;
 const radarFixture={schemaVersion:2,checkedAt:'2026-10-09T12:00:00Z',sources:[{id:'doc',status:'ok',checkedAt:'2026-10-09T12:00:00Z'},{id:'fm',status:'unavailable',checkedAt:null},{id:'hmb',status:'ok',checkedAt:'2026-10-09T12:00:00Z'}],offers:[{title:'Synthetic Checking $500 Bonus <img src=x onerror=alert(1)>',url:'https://www.doctorofcredit.com/synthetic-checking-bonus/',publishedAt:'2026-10-08T12:00:00Z'},{title:'Wells Fargo $325 Checking Bonus (Nationwide)',url:'https://www.hustlermoneyblog.com/wells-fargo-bonus/',publishedAt:'2026-10-08T12:00:00Z',availability:'nationwide',groupKey:'wells fargo 325 checking nationwide'},{title:'U.S. Bank $450 Checking Bonus',url:'https://frequentmiler.com/us-bank-bonus/',publishedAt:'2026-10-08T12:00:00Z',availability:'unknown'}]};
+radarFixture.verification={schemaVersion:1,status:'complete',records:{'https://www.hustlermoneyblog.com/wells-fargo-bonus/':{offerTitle:radarFixture.offers[1].title,offerUrl:radarFixture.offers[1].url,status:'evidence-found',officialCheckedAt:'2026-10-11T16:00:00Z',aiCheckedAt:'2026-10-11T16:00:00Z',reason:'Source quotations require full applicability review.',fields:{bonus:{value:'$325',quote:'Receive a $325 bonus.',sourceUrl:'https://accountoffers.wellsfargo.com/checkingoffer/',sourceHash:'a'.repeat(64)}}}}};
 const server=http.createServer(async(req,res)=>{
   if(serverUnavailable){req.socket.destroy();return}
   try{
@@ -138,6 +139,10 @@ async function exercise(name,engine,url){
     check('partial source outage is disclosed',(await page.locator('#app').innerText()).includes('Some sources could not update'));
     await page.getByLabel('Availability',{exact:true}).selectOption('nationwide');
     check('nationwide filter requires explicit source label',await page.locator('.radar-card').count()===1&&(await page.locator('.radar-card').innerText()).includes('Wells Fargo'));
+    await page.locator('.radar-evidence summary').click();
+    check('AI evidence shows exact source quote and official link',(await page.locator('.radar-evidence').innerText()).includes('Receive a $325 bonus.')&&await page.locator('.radar-evidence-field a').getAttribute('href')==='https://accountoffers.wellsfargo.com/checkingoffer/');
+    check('feed and official check times are separate',(await page.locator('.radar-evidence').innerText()).includes('Official documents checked')&&(await page.locator('#app').innerText()).includes('Latest successful check'));
+    check('missing fee evidence remains explicitly unconfirmed',(await page.locator('.radar-evidence').innerText()).includes('Monthly fee wording'));
     await page.getByRole('button',{name:'U.S. Bank',exact:true}).click();
     check('unverified geography does not become nationwide',await page.locator('.radar-card').count()===0);
     await page.getByLabel('Availability',{exact:true}).selectOption('all');
