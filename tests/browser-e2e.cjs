@@ -132,7 +132,7 @@ async function exercise(name,engine,url){
     const storedBeforeRadar=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     await button('Bank Bonuses').click();
     await page.getByText(/Synthetic Checking/).waitFor();
-    check('bank feed renders escaped discovery title',(await page.locator('.radar-card img').count())===0&&(await page.locator('.radar-card').innerText()).includes('<img'));
+    check('bank feed renders escaped discovery title',(await page.locator('.radar-card img').count())===0&&(await page.locator('.radar-card').filter({hasText:'Synthetic Checking'}).innerText()).includes('<img'));
     check('bank feed warns when source check is stale',(await page.locator('#app').innerText()).includes('Updates are stale'));
     check('bank bonus tab fits mobile viewport',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
     check('partial source outage is disclosed',(await page.locator('#app').innerText()).includes('Some sources could not update'));
