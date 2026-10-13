@@ -10,6 +10,8 @@ setTimeout(()=>{
     const before=run('JSON.stringify(entries)'),persisted=JSON.stringify([...storage]);
     const action=run('btNextActionForEntry(entries[0])');
     assert.equal(action.kind,'requirements');
+    assert.match(action.explanation,/checklist task remains/);
+    assert.match(action.explanation,/qualifying activity with the bank/);
     assert.equal(action.context.date,run('reqDeadline(entries[0])'));
     assert.equal(action.context.date,'2024-03-01');
     assert.match(action.context.explanation,/2 calendar days/);
@@ -22,6 +24,7 @@ setTimeout(()=>{
     assert.equal(JSON.stringify([...storage]),persisted,'Opening a confirmation must preserve saved data');
     run(`reqPrompt=null;entries[0].reqMet='2024-03-01';`);
     assert.equal(run('btNextActionForEntry(entries[0]).kind'),'bonus');
+    assert.match(run('btNextActionForEntry(entries[0]).explanation'),/payment is not recorded/);
     assert.equal(run('btNextActionForEntry(entries[0]).context.confirmed'),false);
     assert.match(run('btNextActionForEntry(entries[0]).context.explanation'),/Date not confirmed/);
     run('runNextAccountAction(entries[0].id)');
@@ -43,6 +46,7 @@ setTimeout(()=>{
     run(`entries[0].customTimers=[];entries[0].bonusRecd='2026-09-02';entries[0].closeRestrictionType='payout-only';entries[0].closeRuleText='Keep the account open until the bonus posts.';entries[0].churnable=true;entries[0].churnability='repeatable';entries[0].churn='1';entries[0].churnPeriodValue=12;entries[0].churnPeriodUnit='months';entries[0].sourceEligibilityBasis='bonus-received';entries[0].eligibilityEvidenceText='Not eligible if you received a checking bonus within the past 12 months.';entries[0].eligibilityEvidenceSource='official-promotion-terms';`);
     assert.equal(run('btNextActionForEntry(entries[0]).context.date'),run('safeCloseDate(entries[0])'));
     assert.equal(run('btNextActionForEntry(entries[0]).kind'),'close');
+    assert.match(run('btNextActionForEntry(entries[0]).explanation'),/companion accounts/);
     // Re-evaluation on click catches a restriction added after the row rendered.
     run(`entries[0].minHoldDays=180;entries[0].closeRuleSource='manual';entries[0].closeRuleBasis='bonus';entries[0].closeBufferDays=5;entries[0].closeRuleText='Keep the account open for 180 days after the bonus is received.';entries[0].closeRestrictionType='minimum-open';`);
     assert.equal(run('btNextActionForEntry(entries[0]).kind'),'review');

@@ -86,6 +86,7 @@ async function exercise(name,engine,url){
     await button('4 Review').click();await button('💾 Add Bank').click();
     await wait(()=>JSON.parse(localStorage.getItem('bt_e_v4')).length===1);
     check('90-day deadline is exact',await page.evaluate(()=>reqDeadline(entries[0]))==='2026-05-01');
+    check('next action explains saved requirements without AI',(await page.locator('.ops-action-explanation').innerText()).includes('qualifying activity with the bank'));
     const id=(await record()).id;
     await page.reload();check('reload preserves identity and notes',(await record()).id===id&&(await record()).notes===payload.entry.notes);
     await edit();await button('3 Fees & Close').click();
@@ -143,6 +144,20 @@ async function exercise(name,engine,url){
     check('AI evidence shows exact source quote and official link',(await page.locator('.radar-evidence').innerText()).includes('Receive a $325 bonus.')&&await page.locator('.radar-evidence-field a').getAttribute('href')==='https://accountoffers.wellsfargo.com/checkingoffer/');
     check('feed and official check times are separate',(await page.locator('.radar-evidence').innerText()).includes('Official documents checked')&&(await page.locator('#app').innerText()).includes('Latest successful check'));
     check('missing fee evidence remains explicitly unconfirmed',(await page.locator('.radar-evidence').innerText()).includes('Monthly fee wording'));
+    await button('Copy offer for review').click();
+    await page.getByLabel('Offer review text',{exact:true}).waitFor();
+    const copiedReview=await page.getByLabel('Offer review text',{exact:true}).inputValue();
+    check('review copy includes sources and unconfirmed fields',copiedReview.includes('https://accountoffers.wellsfargo.com/checkingoffer/')&&copiedReview.includes('Monthly fee wording: NOT CONFIRMED'));
+    check('review copy excludes saved account history',!copiedReview.includes('E2E Verification Bank')&&!copiedReview.includes('Keep <img'));
+    check('copy rerender preserves evidence disclosure',await page.locator('.radar-evidence').evaluate(e=>e.open));
+    await page.getByLabel('Monthly fee evidence',{exact:true}).selectOption('present');
+    check('fee filter never assumes missing means free',await page.locator('.radar-card').count()===0);
+    await page.getByLabel('Monthly fee evidence',{exact:true}).selectOption('all');
+    await page.getByLabel('Single bonus amount excerpt',{exact:true}).selectOption('300');
+    check('single amount evidence filter matches supported amount',await page.locator('.radar-card').count()===1);
+    await page.getByLabel('Single bonus amount excerpt',{exact:true}).selectOption('500');
+    check('amount filter does not invent larger reward',await page.locator('.radar-card').count()===0);
+    await page.getByLabel('Single bonus amount excerpt',{exact:true}).selectOption('all');
     await page.getByRole('button',{name:'U.S. Bank',exact:true}).click();
     check('unverified geography does not become nationwide',await page.locator('.radar-card').count()===0);
     await page.getByLabel('Availability',{exact:true}).selectOption('all');

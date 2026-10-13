@@ -81,3 +81,10 @@ assert failed['verification']['status']=='unavailable'
 assert failed['verification']['records']==attached['verification']['records']
 m.download=original
 print('Evidence attachment passed: exact offer fingerprint, changed-headline isolation and unavailable-state preservation')
+
+record_response={"schemaVersion":1,"status":"complete","records":{offer["url"]:record},"usage":{"cacheHits":3,"queued":1},"coverage":["Everyday Checking"]}
+m.download=lambda _:json.dumps(record_response).encode()
+with_usage=m.attach_verification({"offers":[offer]}, {})
+assert with_usage["verification"]["usage"]["cacheHits"]==3
+assert with_usage["verification"]["coverage"]==["Everyday Checking"]
+m.download=original

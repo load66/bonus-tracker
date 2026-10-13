@@ -25,7 +25,7 @@ VERIFICATION_URL = 'https://api-production-00f74.up.railway.app/public/bank-bonu
 
 def attach_verification(payload, previous):
     last = previous.get('verification', {})
-    snapshot = {'schemaVersion':1,'status':'unavailable','records':last.get('records',{}),'checkedAt':last.get('checkedAt')}
+    snapshot = {'schemaVersion':1,'status':'unavailable','records':last.get('records',{}),'checkedAt':last.get('checkedAt'),'usage':last.get('usage',{}),'coverage':last.get('coverage',[])}
     try:
         # Fixed public endpoint; no journal credentials or account data are sent.
         for attempt in range(13):
@@ -41,7 +41,7 @@ def attach_verification(payload, previous):
                 expected=hashlib.sha256((offer['title']+'\n'+offer['url']).encode()).hexdigest()
                 if isinstance(record,dict) and record.get('offerFingerprint')==expected:
                     records[offer['url']]={**record,'offerTitle':offer['title'],'offerUrl':offer['url']}
-            snapshot={'schemaVersion':1,'status':'complete','records':records,'checkedAt':result.get('checkedAt')}
+            snapshot={'schemaVersion':1,'status':'complete','records':records,'checkedAt':result.get('checkedAt'),'usage':result.get('usage',{}),'coverage':result.get('coverage',[])}
         else:
             snapshot['status']='pending' if result.get('status')=='pending' else 'unavailable'
     except Exception:
