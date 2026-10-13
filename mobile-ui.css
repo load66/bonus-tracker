@@ -47,6 +47,7 @@
   .ops-action-item .ops-date-proof p{font-size:13px!important;line-height:1.6}
   .ops-next-action{min-height:44px;font-size:13px;padding:10px 12px}
   .ops-empty,.ops-action-more{font-size:12px;line-height:1.5}
+  .tc-btn{min-height:44px;padding:10px 12px!important;background:#142A44!important;color:#B9D9FF!important;border:1px solid #355C88!important;border-radius:12px;font-size:13px!important}
   .sinput,input:not([type=checkbox]):not([type=radio]),select,textarea{font-size:16px!important;max-width:100%;min-width:0}
   .sinput{min-height:46px;padding:12px!important;border-radius:12px}
   .card-h{padding:12px!important;gap:8px}

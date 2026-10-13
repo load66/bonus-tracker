@@ -212,6 +212,7 @@ async function exercise(name,engine,url){
     await button('Cancel').click();
     check('mobile navigation and editor leave saved records unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
     if(await page.locator('.ops-action-why').evaluate(e=>e.open))await page.locator('.ops-action-why summary').click();
+    await page.evaluate(()=>{undoState=null;clearTimeout(undoTimer);R()});
     await page.locator('.ops-action-center').scrollIntoViewIfNeeded();
     await page.screenshot({path:path.join(output,name+'-mobile-verified.png')});
     await page.evaluate(async()=>{await navigator.serviceWorker.ready});
