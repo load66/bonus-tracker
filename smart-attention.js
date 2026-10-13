@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.38 Action Center — canonical lifecycle stages drive every user-facing action item. */
+/* BonusTracker v3.4.39 Action Center — canonical lifecycle stages drive every user-facing action item. */
 (function(){
   'use strict';
-  const VER='3.4.38-action1';
+  const VER='3.4.39-action1';
 
   function finite(v){if(v==null||v==='')return null;const n=Number(v);return Number.isFinite(n)?n:null}
   function daysTo(date){
@@ -122,7 +122,18 @@
       else label='Review close checks';
     }else if(stage.code==='ELIGIBLE')label='Review current offer';
     else if(!context.date)label='Review eligibility terms';
-    return {stage,context,kind,label}
+    let explanation='Review the saved requirements and dates before recording another milestone.';
+    if(e.closed)explanation='This account is recorded as closed. Review current official terms before considering another application.';
+    else if(recurring(e,stage))explanation='This offer has recurring requirements. A completed deposit or task does not confirm every required period.';
+    else if(kind==='requirements'){
+      const remaining=Array.isArray(e.checklist)?e.checklist.filter(t=>t&&!t.done).length:0;
+      const requirement=String(e.dataPoint||'').trim();
+      explanation=(requirement?'Saved requirement: '+requirement.slice(0,300)+'. ':'')+(remaining?remaining+' checklist task'+(remaining===1?' remains':'s remain')+'. ':'')+'Confirm completion only after checking qualifying activity with the bank.';
+    }else if(kind==='bonus')explanation='Requirements are marked complete; payment is not recorded yet. '+(e.payoutTimingText?'Saved payout wording: '+String(e.payoutTimingText).slice(0,400):'Payout timing is not confirmed in the saved record.')+' Record receipt after the bonus posts.';
+    else if(kind==='close')explanation='The saved close checks are satisfied. Confirm current fees, pending transactions and companion accounts with the bank before closing; record the actual closure date afterward.';
+    else if(e.bonusRecd)explanation='The bonus is recorded as received. Review the saved keep-open restrictions and fee checks before recording closure.';
+    if(!context.confirmed)explanation+=' The next date is not confirmed; review its terms and start date.';
+    return {stage,context,kind,label,explanation}
   }
   function shouldInclude(e,stage,days){
     if(!e||!e.bank||!stage)return false;
@@ -147,6 +158,7 @@
         action:actionVerb(stage.code),
         actionKind:nextAction.kind,
         actionLabel:nextAction.label,
+        actionExplanation:nextAction.explanation,
         dateContext:nextAction.context,
         rsn:String(stage.support||'Review this account').trim(),
         bonus:Number(e.bonus||0),

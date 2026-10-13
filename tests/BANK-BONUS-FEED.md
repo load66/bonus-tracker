@@ -1,4 +1,4 @@
-# Bank Bonuses tab — v3.4.38
+# Bank Bonuses tab — v3.4.39
 
 The discovery tab automatically retrieves RSS metadata from Doctor of Credit, Frequent Miler, and Hustler Money Blog. It does not connect to banks or read, upload, or overwrite saved account history, requirements, enrolled terms, or eligibility calculations. Connecting saved countdowns was explicitly removed from this update's scope.
 
@@ -20,10 +20,20 @@ Verification: `python3 -B tests/bank-feed.test.py` covers filtering, nationwide 
 
 The hourly publication attaches the journal server’s fixed public evidence catalog. No credentials or saved account data are sent. Fingerprints must match the current feed title and URL; changed offers cannot borrow earlier evidence. UI projections accept only known fields, approved official HTTPS source hosts, bounded strings and source hashes. Evidence older than 24 hours is hidden as stale. Failed/pending service responses do not present retained excerpts as current.
 
-Initial coverage is Wells Fargo consumer checking and U.S. Bank business checking. Unsupported products remain Needs review. Model-selected passages must match retrieved promotion/fee documents; this proves quotation provenance, not full semantic interpretation, tier applicability, completeness, verified eligibility or an import-ready calculation rule. Feed, official-source and AI extraction times are separate. Saved account data, enrolled terms and mathematical rules are never changed. New/changed posts can wait a verification cycle because the service reads the previously published feed. The first public read warms a single background job; the collector waits up to two minutes for completion, then publishes an explicit pending/unavailable state.
+Product profiles cover Wells Fargo Everyday Checking, U.S. Bank business and Smartly checking, and Chase Total Checking. A profile match does not prove the post is the same promotion. Unsupported products remain Needs review. Model-selected passages must match retrieved promotion/fee documents; this proves quotation provenance, not full semantic interpretation, tier applicability, completeness, verified eligibility or an import-ready calculation rule. Feed, official-source and AI extraction times are separate. Saved account data, enrolled terms and mathematical rules are never changed. New/changed posts can wait a verification cycle because the service reads the previously published feed. The first public read warms a single background job; the collector waits up to two minutes for completion, then publishes an explicit pending/unavailable state.
 
 ## Release verification — 2026-10-13
 
 The journal backend passed 303 tests and deployed successfully at commit `787f305`. BonusTracker passed all 15 Node suites and the Python feed tests, plus 39 end-to-end checks each in Chromium, Firefox, and WebKit. The public evidence endpoint completed a live Groq extraction for 20 discovery posts. Five accepted fields across two covered offers were independently checked against newly fetched official documents and matching source hashes. Wells Fargo returned three grounded fields; U.S. Bank returned two and was marked Needs review because the source headline amounts were not fully confirmed. Unextracted fees and restrictions remain unconfirmed. Health returned HTTP 200; the protected accounts endpoint without authentication returned HTTP 401.
 
 These checks establish tested behavior and citation provenance at the time of release; they do not guarantee future bank-page availability, exhaustive offer coverage, semantic correctness, or personal eligibility.
+
+## v3.4.39 review workflow
+
+The evidence service retries bounded transient failures, respects long provider waiting periods, queues older work fairly, accounts daily usage and reuses unchanged evidence. AI check activity reports new/cached/queued/failed/throttled work, requests and conservative app budgets. These figures describe this service, not organization-wide billing or unlimited quota. Fourteen evidence fields distinguish closure fees from promotion keep-open/forfeiture restrictions and companion-account fees from membership requirements.
+
+Evidence filters select current excerpts, missing/queued/stale evidence and changed wording in the last seven days. Fee and qualifying-activity filters select excerpt availability, never presumed fee-free or direct-deposit-free offers. Amount filters require an exact single dollar value with a matching headline; tiered, mismatched or missing values remain unknown. All offers still require applicability review.
+
+Copy offer for review prepares public titles, links, timestamps, supporting quotations, unresolved fields and change comparisons. Clipboard denial exposes the same text in a read-only field. It never includes saved account history, generates import JSON, imports records or updates terms. JSON generation remains the chat workflow followed by user review/upload. Evidence disclosures preserve open state across rerenders within the current session; no discovery preference writes account storage.
+
+Next-action explanations use templates grounded in saved lifecycle state, checklist status and existing date calculations. They caution about recurring requirements, pending payout, close checks and unconfirmed dates. No AI call or upload of saved records is made; existing calculation functions and completion/closure gates remain authoritative.
