@@ -13,3 +13,5 @@ The shared mobile stylesheet provides readable typography, larger tap targets, s
 Verification includes all existing Node and Python feed suites, asset/cache checks and actual Chromium/Firefox/WebKit tests. Mobile coverage exercises every tab at 320px and 390px, header height, touch targets, field font sizes, navigation reset, consecutive search keystrokes, guidance/filter state, editor cancellation, account storage isolation and existing import/restore/closure behavior. The CI report and deployment status are the release gates; screenshots use synthetic test data only.
 
 Pre-release verification passed all 15 Node suites and 81 checks per engine in Chromium, Firefox and WebKit. WebKit and Chromium mobile screenshots were visually reviewed. A final styling adjustment makes the promo-review action consistent with the dark theme; the latest CI/deployment remains the publication gate.
+
+The final offline run exposed an external Google Fonts download failure in Firefox. External font loading was removed in favor of native system fonts, and mobile pinch zoom is enabled. Offline verification continues to require no uncaught application errors.
