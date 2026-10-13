@@ -10,4 +10,5 @@ assert.throws(()=>sandbox.BTBankBonusFeed.validate({...safe,checkedAt:'bad'}));
 assert.throws(()=>sandbox.BTBankBonusFeed.validate({...safe,schemaVersion:2}));
 assert.equal(JSON.stringify([...storage]),before,'Feed validator changed account storage');
 assert.ok(app.innerHTML.includes('Bank Bonuses'),'New tab not rendered');
+assert.ok(!require('fs').readFileSync('style.css','utf8').includes('.tabs .tb:nth-child(5)'),'Obsolete fifth-tab hide rule remains');
 console.log('Bank feed validation passed: schema, safe links, future dates, tab and account isolation');

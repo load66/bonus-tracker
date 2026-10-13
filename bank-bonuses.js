@@ -12,14 +12,14 @@
   async function refresh(){
     if(loading)return;
     loading=true;attempted=true;error='';
-    if(typeof R==='function')R();
+    if(typeof R==='function'&&typeof tab!=='undefined'&&tab==='bonuses')R();
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);
     try{
       const response=await fetch('./data/bank-bonuses.json',{cache:'no-store',signal:controller.signal});
       if(!response.ok)throw Error('Feed unavailable');
       feed=valid(await response.json());
     }catch{error='Could not check for updates. '+(feed?'Showing the last loaded feed.':'Reconnect to load the bank bonus feed.');}
-    finally{clearTimeout(timeout);loading=false;if(typeof R==='function')R();}
+    finally{clearTimeout(timeout);loading=false;if(typeof R==='function'&&typeof tab!=='undefined'&&tab==='bonuses')R();}
   }
   window.btRefreshBankBonuses=refresh;
   window.rBankBonuses=function(){
