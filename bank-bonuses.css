@@ -10,3 +10,10 @@
 .radar-verification-info,.radar-evidence{border:1px solid var(--border);background:var(--card);border-radius:12px;padding:12px;margin:12px 0;font-size:12px;line-height:1.6;overflow-wrap:anywhere}.radar-verification-info p,.radar-evidence p{color:var(--muted)}.radar-evidence summary{cursor:pointer;color:var(--text);font-weight:600}.radar-evidence-field{border-top:1px solid var(--border);padding-top:12px;margin-top:12px}.radar-evidence blockquote{border-left:3px solid #6084b9;margin:8px 0;padding-left:12px;color:var(--text)}
 .radar-extra-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.radar-extra-filters>p{grid-column:1/-1}.radar-card-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:12px 0}.radar-card-actions span{font-size:11px;color:var(--muted)}.radar-review,.radar-changes{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px;margin:12px 0;font-size:12px;line-height:1.6;overflow-wrap:anywhere}.radar-review label{display:block;margin-bottom:8px;font-weight:600}.radar-review textarea{width:100%;box-sizing:border-box;resize:vertical;padding:12px;color:var(--text);background:var(--card);border:1px solid var(--border);border-radius:8px;font-size:12px;line-height:1.6}.ops-action-explanation{font-size:12px;line-height:1.6;color:var(--muted);margin:8px 14px;overflow-wrap:anywhere}
 @media(max-width:600px){.radar-extra-filters{grid-template-columns:minmax(0,1fr)}}
+
+/* Discovery defaults to a short headline and a single source link. */
+.radar-card-compact h3{margin:0 0 6px;font-size:16px;line-height:1.45}
+.radar-offer-link{display:inline-flex;align-items:center;min-height:44px;color:#8cc9ff;font-size:13px;text-decoration:none;font-weight:600}
+.radar-offer-link:hover{text-decoration:underline}.radar-offer-link:focus-visible{outline:2px solid #8cc9ff;outline-offset:3px;border-radius:4px}
+.radar-filters .radar-detail-toggle{display:flex;align-items:center;gap:10px;grid-column:1/-1;min-height:44px;margin:0}
+.radar-filters .radar-detail-toggle input{width:20px;height:20px;padding:0;flex:none;accent-color:#59baff}

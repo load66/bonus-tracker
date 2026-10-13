@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.40 Action Center — canonical lifecycle stages drive every user-facing action item. */
+/* BonusTracker v3.4.41 Action Center — canonical lifecycle stages drive every user-facing action item. */
 (function(){
   'use strict';
-  const VER='3.4.40-action1';
+  const VER='3.4.41-action1';
 
   function finite(v){if(v==null||v==='')return null;const n=Number(v);return Number.isFinite(n)?n:null}
   function daysTo(date){

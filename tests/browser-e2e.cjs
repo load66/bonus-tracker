@@ -143,6 +143,11 @@ async function exercise(name,engine,url){
     check('partial source outage is disclosed',(await page.locator('#app').innerText()).includes('Some sources could not update'));
     await page.getByLabel('Availability',{exact:true}).selectOption('nationwide');
     check('nationwide filter requires explicit source label',await page.locator('.radar-card').count()===1&&(await page.locator('.radar-card').innerText()).includes('Wells Fargo'));
+    check('compact offers contain only headline and one source link',await page.locator('.radar-card').evaluateAll(cards=>cards.every(card=>card.children.length===2&&card.children[0].tagName==='H3'&&card.children[1].tagName==='A')));
+    await page.locator('[data-radar-key="more-filters"] summary').click();
+    await page.getByLabel('Show offer review tools',{exact:true}).check();
+    check('offer review tools are opt-in',await page.locator('.radar-evidence').count()===1);
+    await page.locator('[data-radar-key="more-filters"] summary').click();
     await page.locator('.radar-evidence summary').click();
     check('AI evidence shows exact source quote and official link',(await page.locator('.radar-evidence').innerText()).includes('Receive a $325 bonus.')&&await page.locator('.radar-evidence-field a').getAttribute('href')==='https://accountoffers.wellsfargo.com/checkingoffer/');
     check('feed and official check times are separate',(await page.locator('.radar-evidence').innerText()).includes('Official documents checked')&&(await page.locator('#app').innerText()).includes('Latest successful check'));
@@ -172,6 +177,11 @@ async function exercise(name,engine,url){
     await page.getByPlaceholder('Search bank bonuses…').fill('Wells Fargo');
     check('search preserves typed input and focus',await page.getByPlaceholder('Search bank bonuses…').inputValue()==='Wells Fargo'&&await page.evaluate(()=>document.activeElement.id==='radar-search'));
     await page.getByRole('button',{name:'All banks',exact:true}).click();
+    await page.getByLabel('Show offer review tools',{exact:true}).uncheck();
+    check('returning to compact offers removes repeated review content',await page.locator('.radar-card').evaluateAll(cards=>cards.every(card=>card.children.length===2)));
+    await page.locator('[data-radar-key="more-filters"] summary').click();
+    await page.locator('.radar-card').first().scrollIntoViewIfNeeded();
+    await page.screenshot({path:path.join(output,name+'-offers-compact.png')});
     feedInvalid=true;await button('Check updates').click();
     await page.getByText(/Could not check for updates/).waitFor();
     check('failed feed refresh retains loaded results',await page.locator('.radar-card').count()===3);
