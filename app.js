@@ -3955,7 +3955,7 @@ function updateViewSearch(kind,value,cursor){
   const input=document.getElementById(id);
   if(input){input.focus({preventScroll:true});const position=Number.isInteger(cursor)?Math.min(cursor,input.value.length):input.value.length;input.setSelectionRange(position,position);}
 }
-function R(){captureProfileSectionState();const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;
+function R(){captureProfileSectionState();if(typeof window.btCaptureRadarDisclosures==='function')window.btCaptureRadarDisclosures();const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;
   if(tab==='profiles'||tab==='health')tab='tracker';
   try{if(!window.__btAutoCleanupV384){entries=sortE(normalizeLifecycleEntries(entries));sv(SK,entries);window.__btAutoCleanupV384=true}}catch{}
   sanitizeAllTimers(false);

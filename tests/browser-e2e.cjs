@@ -157,6 +157,7 @@ async function exercise(name,engine,url){
     check('advanced evidence filters are collapsed by default',!await page.getByLabel('Monthly fee evidence',{exact:true}).isVisible());
     await page.getByText('More filters',{exact:true}).click();
     await page.getByLabel('Monthly fee evidence',{exact:true}).selectOption('present');
+    check('active filters remain understandable when collapsed',(await page.getByText('More filters · 1 active',{exact:true}).count())===1);
     check('fee filter never assumes missing means free',await page.locator('.radar-card').count()===0);
     await page.getByLabel('Monthly fee evidence',{exact:true}).selectOption('all');
     await page.getByLabel('Single bonus amount excerpt',{exact:true}).selectOption('300');
@@ -204,6 +205,9 @@ async function exercise(name,engine,url){
     check('mobile tab targets are at least 44px tall',await page.locator('.tabs .tb').evaluateAll(rows=>rows.every(e=>e.getBoundingClientRect().height>=44)));
     await button('Tracker').click();
     await edit();
+    await page.setViewportSize({width:320,height:844});
+    check('mobile editor content fits 320px',await page.locator('.modal').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+    await page.setViewportSize({width:390,height:844});
     check('mobile editor fits viewport and prevents input zoom',await page.locator('.modal').evaluate(e=>e.getBoundingClientRect().width<=window.innerWidth)&&await page.locator('.modal input').first().evaluate(e=>parseFloat(getComputedStyle(e).fontSize)>=16));
     await button('Cancel').click();
     check('mobile navigation and editor leave saved records unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
