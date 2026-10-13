@@ -24,3 +24,43 @@ try:
 except ValueError:
     pass
 print('Bank RSS filter passed: bank-only categories, exclusions, deduplication, future/invalid dates and unsafe URLs')
+assert m.bank_bonus('American Express $300 Checking Bonus', ['Bank Account Bonuses'])
+assert not m.bank_bonus('American Express Credit Card Bonus', ['Bank Account Bonuses'])
+assert m.availability('Wells Fargo $325 Checking Bonus (Nationwide)', [], '') == 'nationwide'
+assert m.availability('U.S. Bank $450 Checking Bonus', [], '') == 'unknown'
+assert m.availability('[MO] Bank $300 Checking Bonus', [], '') == 'regional'
+assert m.availability('Bank $300 Checking Bonus', ['nationwide bank bonuses'], '') == 'nationwide'
+assert m.availability('[MO] Bank $300 Bonus (Nationwide)', [], '') == 'unknown'
+assert m.availability('Bank $300 Bonus', [], 'Not available nationwide') == 'unknown'
+assert m.availability('Bank $300 Bonus', [], 'Available nationwide except Alaska') == 'unknown'
+assert m.availability('Bank $300 Bonus', [], 'Availability: Nationwide') == 'nationwide'
+assert m.title_key('U.S. Bank $450 Checking Bonus') == m.title_key('Earn $450 bonus with a new US Bank checking')
+assert m.title_key('Bank $450 Checking Bonus') != m.title_key('Bank $500 Checking Bonus')
+assert m.title_key('Bank $450 Checking Bonus') != m.title_key('Bank $450 Business Checking Bonus')
+assert m.safe_link('https://frequentmiler.com/checking/', m.SOURCES[1])
+assert not m.safe_link('https://frequentmiler.com.evil.test/checking/', m.SOURCES[1])
+assert not m.safe_link('https://user@frequentmiler.com/checking/', m.SOURCES[1])
+assert not m.safe_link('https://frequentmiler.com:bad/checking/', m.SOURCES[1])
+original=m.download
+def offline(url): raise OSError('synthetic source outage')
+m.download=offline
+previous={'schemaVersion':1,'checkedAt':'2026-10-11T12:00:00+00:00','offers':rows}
+payload=m.build_payload(now, previous)
+assert payload['checkedAt']==previous['checkedAt']
+assert len(payload['offers'])==1
+assert all(s['status']=='unavailable' for s in payload['sources'])
+try:
+    m.build_payload(now)
+    raise AssertionError('Uninitialized outage should block publication')
+except ValueError: pass
+def partial(url):
+    if 'hustlermoneyblog' in url:
+        return '<rss><channel><item><title>Wells Fargo $325 Checking Bonus (Nationwide)</title><link>https://www.hustlermoneyblog.com/wells-fargo-promotions/</link><pubDate>Sun, 11 Oct 2026 12:00:00 +0000</pubDate><category>Bank Promotions</category></item></channel></rss>'
+    raise OSError('synthetic outage')
+m.download=partial
+payload=m.build_payload(now, previous)
+assert len(payload['offers'])==2
+assert payload['sources'][2]['status']=='ok'
+assert payload['sources'][0]['checkedAt']==previous['checkedAt']
+m.download=original
+print('Multi-source coverage passed: availability evidence, conservative title keys, per-source fallback, partial outage and no false freshness')

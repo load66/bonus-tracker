@@ -10,7 +10,7 @@ const root=path.resolve(__dirname,'..');
 const output=process.env.BT_BROWSER_RESULTS||path.join(process.env.RUNNER_TEMP||'/tmp','bonus-tracker-browser-results');
 const mime={'.html':'text/html','.js':'application/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml'};
 let serverUnavailable=false,feedInvalid=false;
-const radarFixture={schemaVersion:1,checkedAt:'2026-10-09T12:00:00Z',offers:[{title:'Synthetic Checking $500 Bonus <img src=x onerror=alert(1)>',url:'https://www.doctorofcredit.com/synthetic-checking-bonus/',publishedAt:'2026-10-08T12:00:00Z'}]};
+const radarFixture={schemaVersion:2,checkedAt:'2026-10-09T12:00:00Z',sources:[{id:'doc',status:'ok',checkedAt:'2026-10-09T12:00:00Z'},{id:'fm',status:'unavailable',checkedAt:null},{id:'hmb',status:'ok',checkedAt:'2026-10-09T12:00:00Z'}],offers:[{title:'Synthetic Checking $500 Bonus <img src=x onerror=alert(1)>',url:'https://www.doctorofcredit.com/synthetic-checking-bonus/',publishedAt:'2026-10-08T12:00:00Z'},{title:'Wells Fargo $325 Checking Bonus (Nationwide)',url:'https://www.hustlermoneyblog.com/wells-fargo-bonus/',publishedAt:'2026-10-08T12:00:00Z',availability:'nationwide',groupKey:'wells fargo 325 checking nationwide'},{title:'U.S. Bank $450 Checking Bonus',url:'https://frequentmiler.com/us-bank-bonus/',publishedAt:'2026-10-08T12:00:00Z',availability:'unknown'}]};
 const server=http.createServer(async(req,res)=>{
   if(serverUnavailable){req.socket.destroy();return}
   try{
@@ -135,9 +135,19 @@ async function exercise(name,engine,url){
     check('bank feed renders escaped discovery title',(await page.locator('.radar-card img').count())===0&&(await page.locator('.radar-card').innerText()).includes('<img'));
     check('bank feed warns when source check is stale',(await page.locator('#app').innerText()).includes('Updates are stale'));
     check('bank bonus tab fits mobile viewport',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
+    check('partial source outage is disclosed',(await page.locator('#app').innerText()).includes('Some sources could not update'));
+    await page.getByLabel('Availability',{exact:true}).selectOption('nationwide');
+    check('nationwide filter requires explicit source label',await page.locator('.radar-card').count()===1&&(await page.locator('.radar-card').innerText()).includes('Wells Fargo'));
+    await page.getByRole('button',{name:'U.S. Bank',exact:true}).click();
+    check('unverified geography does not become nationwide',await page.locator('.radar-card').count()===0);
+    await page.getByLabel('Availability',{exact:true}).selectOption('all');
+    check('major bank search uses automatic source posts',await page.locator('.radar-card').count()===1&&(await page.locator('.radar-card').innerText()).includes('U.S. Bank'));
+    await page.getByPlaceholder('Search bank bonuses…').fill('Wells Fargo');
+    check('search preserves typed input and focus',await page.getByPlaceholder('Search bank bonuses…').inputValue()==='Wells Fargo'&&await page.evaluate(()=>document.activeElement.id==='radar-search'));
+    await page.getByRole('button',{name:'All banks',exact:true}).click();
     feedInvalid=true;await button('Check updates').click();
     await page.getByText(/Could not check for updates/).waitFor();
-    check('failed feed refresh retains loaded results',await page.locator('.radar-card').count()===1);
+    check('failed feed refresh retains loaded results',await page.locator('.radar-card').count()===3);
     check('bank feed leaves saved account data unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
     feedInvalid=false;await button('Tracker').click();
     await page.evaluate(async()=>{await navigator.serviceWorker.ready});
