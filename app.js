@@ -1,7 +1,7 @@
-/* Version 3.4.50: direct milestone actions, shared date explanations, missing-date review, and safe local-day refresh. */
+/* Version 3.4.51: direct milestone actions, shared date explanations, missing-date review, and safe local-day refresh. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.50';
+const APP_VERSION='3.4.51';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -6003,7 +6003,7 @@ entries=sortE(entries);R();
   function safeJson(v,d){try{return JSON.parse(v)}catch{return d}}
   function storageSnapshot(){
     const out={};
-    for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k)out[k]=localStorage.getItem(k);}
+    for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k!=='bonus-ai-auth')out[k]=localStorage.getItem(k);}
     try{if(Array.isArray(entries))out.bt_e_v4=JSON.stringify(entries)}catch{}
     return out;
   }
@@ -6060,7 +6060,7 @@ entries=sortE(entries);R();
         const existing=[];
         for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k)existing.push(k);}
         existing.forEach(k=>{if(k.startsWith(APP_PREFIX)||KNOWN_KEYS.includes(k))localStorage.removeItem(k);});
-        Object.entries(storage).forEach(([k,val])=>{try{localStorage.setItem(k,String(val??''))}catch{}});
+        Object.entries(storage).forEach(([k,val])=>{if(k==='bonus-ai-auth')return;try{localStorage.setItem(k,String(val??''))}catch{}});
         localStorage.setItem('bt_last_restore',new Date().toISOString());
         alert('Restore complete. The app will reload now.');
         location.reload();

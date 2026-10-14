@@ -50,7 +50,7 @@ jobs:
         run: node tests/financial-rules.test.js && node tests/structured-import.test.js
 
       - name: Run Ask AI grounding and closure guidance tests
-        run: node tests/bonus-ai.test.js
+        run: node tests/bonus-ai.test.js && node tests/bonus-ai-auth.test.js
 
       - name: Run entry-file import and replacement safety tests
         run: node tests/entry-file-import.test.js
