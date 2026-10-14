@@ -135,6 +135,18 @@ async function exercise(name,engine,url){
     const safetyDownload=page.waitForEvent('download');await button('Restore Backup').click();await safetyDownload;
     await page.getByRole('heading',{name:'Restore Complete'}).waitFor();await button('Confirm').click();
     check('restore recovers open state and saved details',!(await record()).closed&&(await record()).id===id&&(await record()).notes===backup.entries[0].notes);
+    // Exercise the real archive menu without changing financial records.
+    await page.evaluate(()=>{entries.push({id:'archive-e2e',bank:'Archived E2E Bank',closed:'2026-10-01',bonusRecd:'2026-09-01',bonus:100,churnable:false,churnability:'not-repeatable',notes:'Preserved archive note',history:[],customTimers:[],checklist:[]});R()});
+    check('closed nonrepeatable account hidden from tracker',await page.locator('[data-bt-entry-id="archive-e2e"]').count()===0);
+    await page.locator('#bt-data-menu>summary').click();await page.getByRole('button',{name:'Archived accounts',exact:false}).click();
+    check('archive menu reveals retained account',await page.locator('[data-bt-entry-id="archive-e2e"]').count()===1&&await page.locator('[data-bt-entry-id="'+id+'"]').count()===0);
+    await page.locator('#archive-search').fill('Archived E2E');
+    check('archive search remains focused after rerender',await page.locator('#archive-search').evaluate(el=>el===document.activeElement));
+    await page.locator('[data-bt-entry-id="archive-e2e"] .card-h').click();
+    check('archive preserves expanded history',await page.locator('[data-bt-entry-id="archive-e2e"] .card-exp').count()===1);
+    await page.getByRole('button',{name:'Back to Tracker',exact:true}).click();
+    check('archive navigation retains records',await page.evaluate(()=>entries.some(e=>e.id==='archive-e2e'&&e.notes==='Preserved archive note')));
+    await page.evaluate(()=>{entries=entries.filter(e=>e.id!=='archive-e2e');R()});
     await button('Datapoints').click();check('successful method appears in datapoints',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));await button('T&C Archive').click();check('terms archive contains original promotion',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));await button('Tracker').click();
     await page.getByPlaceholder('Search accounts...').fill('Does not exist');await page.getByText('No matching accounts',{exact:true}).waitFor();await page.getByPlaceholder('Search accounts...').fill('');
     check('search keeps stored record',(await record()).id===id);
