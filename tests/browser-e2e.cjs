@@ -270,7 +270,7 @@ async function exercise(name,engine,url){
     await page.getByText('Preview recovery',{exact:true}).waitFor();
     check('enabled switch reflects verified protection',await page.locator('#cloud-auto-toggle').isChecked()&&await page.locator('#cloud-protection').getAttribute('data-state')==='protected');
     check('legacy export reminder is removed',await page.locator('.bk-remind').count()===0);
-    await page.locator('#cloud-auto-toggle').uncheck();await page.locator('#bt_confirm_overlay').getByRole('button',{name:'Cancel',exact:true}).click();
+    await page.locator('#cloud-auto-toggle').click();await page.locator('#bt_confirm_overlay').getByRole('button',{name:'Cancel',exact:true}).click();
     check('canceling disable keeps automatic backup on',await page.locator('#cloud-auto-toggle').isChecked());
     check('cloud upload is readback-verified and authenticated',await page.evaluate(()=>JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')).lastHash?.length===64&&window.__cloudFixture.calls.every(c=>c.authorization?.startsWith('Bearer '))));
     const cloudRecords=await page.evaluate(()=>window.__cloudFixture.objects);
