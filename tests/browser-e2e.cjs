@@ -381,12 +381,31 @@ async function exercise(name,engine,url){
     await button('T&C Archive').click();
     await page.getByPlaceholder('Search stored T&C...').pressSequentially('E2E');
     check('terms search keeps focus while typing',await page.getByPlaceholder('Search stored T&C...').inputValue()==='E2E'&&await page.evaluate(()=>document.activeElement.id==='terms-search'));
+    await button('Tracker').click();
+    await page.evaluate(()=>{
+      window.__dashboardMetrics=bonusPipelineMetrics;
+      bonusPipelineMetrics=(...args)=>({...window.__dashboardMetrics(...args),active:575,collected:5100,openCount:2,cooldownCount:16,readyCloseCount:0,actionCount:0});R();
+    });
+    for(const width of [320,390,430,1024]){
+      await page.setViewportSize({width,height:844});
+      check('complete dashboard summary at '+width+'px',await page.locator('.ops-hero .hero-note').evaluate(e=>
+        e.textContent==='$5,100 collected in 2026 • 2 open • 16 cooling down'&&e.scrollWidth<=e.clientWidth+1&&e.scrollHeight<=e.clientHeight+1&&getComputedStyle(e).whiteSpace==='normal'));
+      check('release version stays inside header at '+width+'px',await page.locator('.hdr .app-version').evaluate(e=>{
+        const r=e.getBoundingClientRect(),h=e.closest('.hdr').getBoundingClientRect();
+        return e.textContent==='v'+window.BT_APP_VERSION&&r.width>0&&r.height>0&&r.top>=h.top&&r.bottom<=h.bottom&&r.left>=0&&r.right<=innerWidth&&getComputedStyle(e).position==='static';
+      }));
+      check('dashboard text and chips fit at '+width+'px',await page.locator('.ops-hero').evaluate(e=>
+        e.scrollWidth<=e.clientWidth+1&&[...e.querySelectorAll('.hero-kicker,.hero-chip')].every(n=>n.scrollWidth<=n.clientWidth+1&&n.scrollHeight<=n.clientHeight+1)));
+      if(width===430)await page.screenshot({path:path.join(output,name+'-dashboard-header.png')});
+    }
+    await page.evaluate(()=>{bonusPipelineMetrics=window.__dashboardMetrics;delete window.__dashboardMetrics;R();});
     for(const width of [320,390]){
       await page.setViewportSize({width,height:844});
       for(const name of ['Tracker','Bank Bonuses','Tax','Datapoints','T&C Archive']){
         await button(name).click();
         check(name+' fits '+width+'px mobile width',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
         check(name+' navigation starts at the top at '+width+'px',await page.locator('.scroll').evaluate(e=>e.scrollTop===0));
+        check(name+' shows version at '+width+'px',await page.locator('.hdr .app-version').isVisible());
         if(name==='Tracker'){
           check('action tile buttons retain mobile touch area at '+width+'px',await page.locator('.ops-action-tile .ops-next-action').evaluateAll(rows=>rows.length>0&&rows.every(e=>e.getBoundingClientRect().height>=44)));
           check('compact tiles fit at '+width+'px',await page.locator('.ops-action-tile').evaluateAll(rows=>rows.every(e=>e.scrollWidth<=e.clientWidth+1)));
