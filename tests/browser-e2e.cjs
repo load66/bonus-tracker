@@ -296,6 +296,20 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>{entries=window.__cardTextOriginal;delete window.__cardTextOriginal;R();});
     await page.setViewportSize({width:390,height:844});
     check('card layout leaves saved records unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
+    const structuredProbe=await page.evaluate(source=>{
+      const before=localStorage.getItem('bt_e_v4');
+      const payload={kind:'BonusTrackerEntry',schemaVersion:3,verification:{promoSourceUrl:source.promoSourceUrl,feeScheduleSourceUrl:source.feeScheduleSourceUrl,termsVerifiedAt:source.termsVerifiedAt},entry:source};
+      const parsed=btParseEntryFileText(JSON.stringify(payload),'Structured-E2E.json');
+      btStageEntryPayload(payload);
+      const projected=collectModalEntryData();
+      const valid=BTFinancialRules.validate(projected);
+      const facts=BTBonusAI.contextFor({...projected,monthlyFeeAmountText:'$999'});
+      const broken={...projected,financialRules:JSON.parse(JSON.stringify(projected.financialRules))};
+      broken.financialRules.accounts[1].fee.amount=999;
+      return {parsed:!!parsed.financialRules,valid:valid.ok,retained:JSON.stringify(projected.financialRules)===JSON.stringify(source.financialRules)&&projected.feeScheduleRaw===source.feeScheduleRaw,scoped:facts.some(f=>f.id==='financialrules'&&f.text.includes('Share Savings'))&&!facts.some(f=>f.id==='feeamount'),blocked:closeReadiness(broken).cls==='danger'&&BTBonusAI.guidanceFor(broken,'Can I close?').verdict==='Needs verification',unchanged:before===localStorage.getItem('bt_e_v4')};
+    },require('./fixtures/financial-rules.cjs').fixture());
+    for(const [key,value] of Object.entries(structuredProbe))check('structured v3 browser '+key,value);
+    await button('Cancel').click();
     await page.evaluate(async()=>{await navigator.serviceWorker.ready});
     await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
     // WebKit's protocol offline mode can abort navigation before its service

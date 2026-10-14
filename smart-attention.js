@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.49 Action Center — canonical lifecycle stages drive every user-facing action item. */
+/* BonusTracker v3.4.50 Action Center — canonical lifecycle stages drive every user-facing action item. */
 (function(){
   'use strict';
-  const VER='3.4.49-action1';
+  const VER='3.4.50-action1';
 
   function finite(v){if(v==null||v==='')return null;const n=Number(v);return Number.isFinite(n)?n:null}
   function daysTo(date){
@@ -68,6 +68,7 @@
       code==='COOLDOWN'?'Wait for eligibility':'Complete next requirement'
   }
   function recurring(e,stage){
+    if(window.BTFinancialRules?.summarize(e).recurring)return true;
     return /monthly|each month|every month|per month|recurring|ongoing/i.test([e.completeBonusText,e.requiredDaysText,stage?.timer?.text].filter(Boolean).join(' '));
   }
   function dateText(value){try{return typeof fD==='function'?fD(value):String(value)}catch{return String(value)}}

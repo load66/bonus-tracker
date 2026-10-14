@@ -8,22 +8,26 @@
   const text=value=>String(value??'').replace(/\b\d{8,}\b/g,'[identifier omitted]');
   function prefix(value,max){let s=value.slice(0,max);if(/[\uD800-\uDBFF]$/.test(s))s=s.slice(0,-1);return s;}
   function contextFor(e){
-    const facts=[],truncated=[];
+    const facts=[],truncated=[],structured=!!e.financialRules||Number(e.schemaVersion)>=3;
     const add=(id,label,value,max=700)=>{if(value===undefined||value===null||!String(value).trim())return;const full=text(value);if(full.length>max)truncated.push(label);facts.push({id,label,text:prefix(full,max)});};
     const combine=rows=>rows.filter(([,v])=>v!==undefined&&v!==null&&String(v).trim()).map(([k,v])=>k+': '+v).join('\n');
     add('bank','Bank / account',e.bank,150);add('accounttype','Saved account category',e.accountType||'Not recorded',60);add('bonus','Saved bonus amount',e.bonus?fM(e.bonus):'Not recorded',80);
     add('today','Tracker date',td(),40);add('stage','Saved lifecycle stage',status(e),100);
     for(const [key,label] of [['opened','Opened'],['reqMet','Requirement met'],['bonusRecd','Bonus received'],['closed','Closed']])add(key.toLowerCase(),label,e[key]||'Not recorded',40);
+    if(!structured){
     add('requirements','Saved requirements',combine([['Qualifying activity',e.dataPoint],['Complete bonus',e.completeBonusText],['Deadline wording',e.requiredDaysText],['Funding wording',e.fundingAmountText],['Required funding amount',Number(e.fundingAmount)>0?fM(e.fundingAmount):''],['Required hold days',Number(e.fundedDays)>0?e.fundedDays:''],['Enrollment code',e.promoCodeText]]),1500);
     add('payout','Saved payout wording',e.payoutTimingText);
     add('monthlyfee','Saved monthly fee wording',e.monthlyFeeYNText);add('feeamount','Saved monthly fee amount',e.monthlyFeeAmountText);add('feefrequency','Saved fee frequency',e.monthlyFeeFrequency,80);
     add('feewaiver','Saved fee waiver conditions',combine([['Waiver wording',e.monthlyFeeWaiverText],['Waiver type',e.monthlyFeeWaiverType],['Waiver amount',e.monthlyFeeWaiverAmountText],['Fee avoidance and companion accounts',e.avoidMonthlyFeeText]]),1500);
     add('closerule','Saved closure restrictions',combine([['Rule wording',e.closeRuleText],['Restriction type',e.closeRestrictionType],['Date basis',e.closeRuleBasis],['Early termination fee wording',e.earlyTerminationFeeText],['Saved early-close charge',Number(e.earlyCloseFee)>0?fM(e.earlyCloseFee):'']] ),1100);
+    }
     const gate=window.BTEligibilityGate;
     const rules=gate?.normalizedRules?.(e)||[];
     add('eligibility','Saved repeat-bonus rules',rules.map((r,i)=>combine([['Rule',i+1],['Basis',r.basis],['Period',r.period?r.period.value+' '+r.period.unit:'Not confirmed'],['Scope',r.scope],['Anchor date',r.anchorDate],['Anchor fallback',r.anchorFallback],['Condition',r.condition?JSON.stringify(r.condition):''],['Condition state',r.condition?gate.ruleConditionState(r,e):''],['Evidence',r.evidenceText]])).join('\n\n'),2200);
     add('eligibilitygate','Tracker repeat-eligibility checks',combine([['Decision',gate?.summary?.(e)],['Current-customer restriction',e.currentCustomerEvidenceText],['Closure prerequisite',e.mustCloseBeforeReapply===true?'Account must also be closed before reapplying':''],['Enrollment date',e.couponEnrollmentDate||e.offerEnrollmentDate],['Saved eligibility wording',e.eligibilityText]]),1000);
     add('timers','Saved custom reminders',Array.isArray(e.customTimers)?e.customTimers.map(t=>combine([['Reminder',t.text],['Start date',t.startDate],['Required days',Number(t.daysRequired)>0?t.daysRequired:''],['Saved due date',t.date],['Marked complete',t.done===true?'Yes':'No']])).join('\n\n'):'',1100);
+    if(structured)add('financialrules','Authoritative financial-rule evaluation',JSON.stringify(window.BTFinancialRules?.summarize(e)||{mode:'invalid',issues:['Financial-rule validator is unavailable.']}),3600);
+    if(structured)add('decisionpolicy','Explanation boundary','Use financialrules for bonus requirements, account fees, waivers, payout and closure restrictions. Invalid rules require verification. Use the tracker dates and close_gate exactly. Never infer actual deposit qualification or waiver satisfaction from terms or task counts.',500);
     add('provenance','Saved source verification',combine([['Promotion source',e.promoSourceUrl],['Fee schedule source',e.feeScheduleSourceUrl],['Verified at',e.termsVerifiedAt]]),650);
     add('close_date','Tracker-calculated earliest close date',safeCloseDate(e)||'Not confirmed',40);add('reopen_date','Tracker-calculated next reopen date',nextReopen(e)||'Not confirmed',40);
     const readiness=closeReadiness(e);add('close_gate','Tracker closure checks',readiness.label+'; '+readiness.items.map(x=>(x.ok?'Passed: ':'Needs review: ')+x.label+(x.detail?' — '+x.detail:'')).join('; '),1400);
@@ -70,9 +74,12 @@
     else if(/early.close|forfeiture/.test(q)){step='Review the saved closure restrictions and fee wording before making a closure decision.';ids.push('closerule','close_gate');}
     else if(/savings|membership|share account/.test(q)){step='Review the required companion account’s minimum balance and fee conditions before withdrawing funds or closing it.';ids.push('feewaiver','terms');}
     step=step.replace(/\bsaved /gi,'').replace('Review the saved','Review the');
+    const rules=window.BTFinancialRules?.validate(e);
+    if(verdict&&rules&&!rules.ok){verdict='Needs verification';tone='review';step='Resolve the conflicting financial rules before relying on the closure result.';missing.push(...rules.issues.map(x=>x.message));ids.push('financialrules');}
     return{verdict,tone,step,missing,ids};
   }
   function localAnswerFor(e,question,facts=contextFor(e)){
+    const structured=window.BTFinancialRules?.answer(e,question);if(structured)return structured;
     const q=String(question||'').toLowerCase(),guide=guidanceFor(e,question);
     const byId=id=>facts.find(f=>f.id===id);
     let ids=[],answer='',step='',missing=[];
@@ -114,7 +121,7 @@
     if(busy||!modal)return;const question=modal.querySelector('#bonus-ai-question').value.trim();if(!question){message('Enter a question about this bonus.');return;}
     const e=findEntry(selected);if(!e){message('This account is no longer in the tracker.');return;}
     const facts=contextFor(e),generation=requestGeneration;
-    const local=!forceAI&&localAnswerFor(e,question,facts);if(local){renderAnswer(local,facts,e,question);return;}
+    const local=(!forceAI||window.BTFinancialRules?.validate(e).ok===false)&&localAnswerFor(e,question,facts);if(local){renderAnswer(local,facts,e,question);return;}
     modal.querySelector('#bonus-ai-answer').replaceChildren();
     busy=true;modal.querySelector('#bonus-ai-question').disabled=true;modal.querySelectorAll('[data-question]').forEach(b=>b.disabled=true);modal.querySelector('#bonus-ai-send').disabled=true;modal.querySelector('#bonus-ai-more').disabled=true;message('Reviewing saved terms and tracker facts…');
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);

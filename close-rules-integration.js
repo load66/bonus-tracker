@@ -33,6 +33,8 @@
   // tracker must not collapse the whole relationship into "No Fee" just because checking is $0.
   const oldNoMonthlyFeeDetected=window.noMonthlyFeeDetected;
   function recurringMonthlyFeeRisk(e){
+    const financial=window.BTFinancialRules?.summarize(e);
+    if(financial&&financial.mode!=='legacy')return financial.feeRisk!==false;
     const scope=String([e?.monthlyFeeYNText,e?.monthlyFeeAmountText,e?.monthlyFeeWaiverText,e?.avoidMonthlyFeeText,e?.notes,e?.analyzedTC].filter(Boolean).join('\n'));
     const lines=scope.split(/\n+|(?<=[.!?])\s+|;+/).map(x=>String(x||'').trim()).filter(Boolean);
     return lines.some(s=>{
@@ -47,6 +49,7 @@
 
   function normalizeLafayetteBoost300(x){
     if(!x||typeof x!=='object')return x;
+    if(x.financialRules)return x;
     const bank=String(x.bank||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
     if(!/\blafayette federal(?: credit union)?\b/.test(bank))return x;
     const detail=String([x.notes,x.analyzedTC,x.completeBonusText,x.eligibilityText,x.dataPoint].filter(Boolean).join(' '));
@@ -109,13 +112,16 @@
     if(e.closed&&nonRepeatable(e))return{label:'Closed / Archived',cls:'done',archived:true,items:[{ok:true,label:'Closed date saved',detail:fD(e.closed)},{ok:true,label:'Archive status',detail:'Non-repeatable offer'}],warnings:[]};
     if(e.closed)return{label:'Closed / Waiting to Churn',cls:'done',items:[{ok:true,label:'Closed date saved',detail:fD(e.closed)}],warnings:[]};
     const safe=safeDate(e),target=closeDate||(typeof td==='function'?td():new Date().toISOString().slice(0,10)),days=ruleDays(e),start=baseDate(e);
+    const financial=window.BTFinancialRules?.validate(e);
+    if(financial&&financial.mode!=='legacy')add(financial.ok,'Financial rules consistent',financial.ok?'Evidence and calculation fields agree':financial.issues.map(x=>x.message).join('; '),'danger');
+    if(financial?.rules)add(financial.rules.closure.restrictionType!=='manual-review','Closure terms resolved',financial.rules.closure.restrictionType==='manual-review'?'The closure restriction requires manual review':'The closure restriction is explicit','danger');
     add(!!e.reqMet,'Requirement met date saved',e.reqMet?fD(e.reqMet):'Save Req Met before closing','danger');
     add(!!e.bonusRecd,'Bonus received',e.bonusRecd?fD(e.bonusRecd):'Do not close before the bonus posts','danger');
     if(days){add(!!start,'Close-rule start date available',start?fD(start):'Missing','danger');add(!!safe&&dB(target,safe)<=0,'Hold period + buffer complete',safe?'Safe close: '+fD(safe):'Cannot calculate','danger')}
     else add(true,'No fixed post-bonus hold',core.typeForEntry(e)==='payout-only'?'Close after bonus posts':'No countdown found');
     if(nonRepeatable(e))add(true,'Future eligibility','Non-repeatable offer — archives after closing');
     else add(!!e.churn,'Churn rule saved',e.churn?(e.churn==='180'?'180 days':e.churn+' year'):'Needed for future churn','warn');
-    const hasFee=/(yes|\$|monthly|service fee|maintenance fee)/i.test(String(e.monthlyFeeYNText||'')+' '+String(e.avoidMonthlyFeeText||''));
+    const hasFee=recurringMonthlyFeeRisk(e)||/(yes|\$|monthly|service fee|maintenance fee)/i.test(String(e.monthlyFeeYNText||'')+' '+String(e.avoidMonthlyFeeText||''));
     add(!hasFee||!!e.monthlyFeeChecked,'Monthly fee checked',hasFee?(e.monthlyFeeChecked?'Confirmed':'Check next statement before close'):'No monthly fee risk','warn');
     const warnings=items.filter(x=>!x.ok).map(x=>x.label+(x.detail?': '+x.detail:''));
     const blockers=items.filter(x=>!x.ok&&x.level==='danger'),cautions=items.filter(x=>!x.ok&&x.level!=='danger');
