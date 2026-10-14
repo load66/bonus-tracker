@@ -33,5 +33,15 @@
     persistence.commit(storage,writes);
     return result;
   }
-  return{FORMAT,VERSION,MAX_BYTES,snapshot,inspect,hasRecords,digest,restore};
+  function protectionState(cfg,runtime){
+    if(!cfg.enabled)return{tone:'off',title:'Automatic backup is OFF',detail:'New changes stay on this phone. Existing verified cloud versions remain available.'};
+    if(!runtime.connected)return{tone:'danger',title:'Sign-in required',detail:'Automatic backup is ON, but new changes cannot upload until you sign in.'};
+    if(cfg.error)return{tone:'danger',title:'Backup needs attention',detail:'Recent changes may not be protected. '+cfg.error};
+    if(!runtime.online)return{tone:'warning',title:'Offline · upload pending',detail:'Cloud recovery covers your last verified upload. New offline changes still need to upload.'};
+    if(runtime.busy)return{tone:'warning',title:'Uploading and verifying',detail:'Keep the app open until verification completes. The latest changes are not confirmed yet.'};
+    if(runtime.pending)return{tone:'warning',title:'Changes waiting for backup',detail:'Your latest changes are not verified in the cloud yet. Automatic upload will retry.'};
+    if(!runtime.currentVerified||!cfg.lastAt||!/^[a-f0-9]{64}$/.test(cfg.lastHash||''))return{tone:'warning',title:'Checking current protection',detail:'Automatic backup is ON. Current protection will be confirmed after verification.'};
+    return{tone:'protected',title:'Current data verified in the cloud',detail:'Automatic backup is ON. This verified version can be recovered if this phone is lost or damaged.'};
+  }
+  return{FORMAT,VERSION,MAX_BYTES,snapshot,inspect,hasRecords,digest,restore,protectionState};
 });

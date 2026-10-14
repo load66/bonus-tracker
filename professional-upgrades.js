@@ -295,8 +295,10 @@
     const t=document.createElement('div');t.className='bt-toast '+type;t.innerHTML=`<span>${type==='success'?'✓':type==='error'?'!':'i'}</span><b>${html(message)}</b>`;host.appendChild(t);
     requestAnimationFrame(()=>t.classList.add('show'));setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),220)},duration);
   }
-  window.btNotify=btNotify;
-  window.alert=function(msg){btNotify(String(msg||''),/failed|error|invalid|required|could not/i.test(String(msg))?'error':/saved|complete|copied|added|updated/i.test(String(msg))?'success':'info',4200);};
+  if(typeof window.btNotify!=='function'){
+    window.btNotify=btNotify;
+    window.alert=function(msg){btNotify(String(msg||''),/failed|error|invalid|required|could not/i.test(String(msg))?'error':/saved|complete|copied|added|updated/i.test(String(msg))?'success':'info',4200);};
+  }
 
   let updateReady=false,updateRequested=false,controlled=!!navigator.serviceWorker?.controller;
   function reloadWhenIdle(){if(document.querySelector('.cloud-overlay,#bt_confirm_overlay')||window.BTCloudBackup?.isBusy?.()){setTimeout(reloadWhenIdle,1000);return;}if(sessionStorage.getItem('bt_reloading'))return;sessionStorage.setItem('bt_reloading','1');location.reload();}

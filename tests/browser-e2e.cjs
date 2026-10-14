@@ -120,7 +120,9 @@ async function exercise(name,engine,url){
     const taxCSV=await fs.readFile(taxFile,'utf8');
     check('tax CSV downloads with correct amount and dates',taxCSV.includes('E2E Verification Bank')&&taxCSV.includes('"325"')&&taxCSV.includes('Apr 15, 2026'));
     await button('Tracker').click();
-    const backupEvent=page.waitForEvent('download');await button('Backup').click();
+    await page.locator('#bt-data-menu>summary').click();
+    check('data tools are in the header menu',await page.getByRole('button',{name:'Export backup file',exact:false}).isVisible()&&await page.getByRole('button',{name:'Reset this device',exact:false}).isVisible()&&await page.locator('.tracker-quick-actions button').count()===1);
+    const backupEvent=page.waitForEvent('download');await page.getByRole('button',{name:'Export backup file',exact:false}).click();
     const backupFile=path.join(output,name+'-backup.json');await (await backupEvent).saveAs(backupFile);
     const backup=JSON.parse(await fs.readFile(backupFile,'utf8'));
     check('backup contains records, history, and terms',backup.entries.length===1&&backup.entries[0].id===id&&Object.keys(backup.termsArchive).length>0&&backup.entries[0].history.length>0);
@@ -128,7 +130,8 @@ async function exercise(name,engine,url){
     check('eligibility uses payout plus exact months and buffer',await page.evaluate(()=>btOfficialEligibilityDate(entries[0])==='2027-04-15'&&nextReopen(entries[0])==='2027-04-20'));
     await button('Undo').click();check('undo restores account and notes',!(await record()).closed&&(await record()).notes===backup.entries[0].notes);
     await close();
-    const chooser=page.waitForEvent('filechooser');await button('Restore').click();await (await chooser).setFiles(backupFile);
+    await page.locator('#bt-data-menu>summary').click();
+    const chooser=page.waitForEvent('filechooser');await page.getByRole('button',{name:'Import backup file',exact:false}).click();await (await chooser).setFiles(backupFile);
     const safetyDownload=page.waitForEvent('download');await button('Restore Backup').click();await safetyDownload;
     await page.getByRole('heading',{name:'Restore Complete'}).waitFor();await button('Confirm').click();
     check('restore recovers open state and saved details',!(await record()).closed&&(await record()).id===id&&(await record()).notes===backup.entries[0].notes);
@@ -250,6 +253,7 @@ async function exercise(name,engine,url){
         if(db.failure)return new Response(JSON.stringify({detail:'Synthetic cloud outage'}),{status:503,headers:{'Content-Type':'application/json'}});
         if(url.endsWith('/health'))return new Response(JSON.stringify({readWriteVerified:true}),{headers:{'Content-Type':'application/json'}});
         if(options.method==='POST'){
+          if(db.holdNext){db.holdNext=false;await new Promise(resolve=>{db.releaseUpload=resolve;});}
           const packet=JSON.parse(options.body),count=JSON.parse(JSON.parse(packet.snapshot).storageSnapshot.bt_e_v4).length;
           const backup={id:packet.id,createdAt:new Date().toISOString(),sha256:packet.sha256,entryCount:count,bytes:packet.snapshot.length,reason:packet.reason,verified:true};
           db.objects[packet.id]={backup,snapshot:packet.snapshot};return new Response(JSON.stringify(backup),{headers:{'Content-Type':'application/json'}});
@@ -260,9 +264,25 @@ async function exercise(name,engine,url){
       };
     });
     await page.locator('#bt-cloud-open').click();
-    await button('Enable automatic backup').click();
+    check('automatic backup switch begins off',!(await page.locator('#cloud-auto-toggle').isChecked()));
+    await page.locator('#cloud-enable-ack').check();await button('Enable automatic backup').click();
+    check('enabling requires explicit confirmation',await page.locator('#bt_confirm_overlay').isVisible()&&!(await page.locator('#cloud-auto-toggle').isChecked()));
+    await page.locator('#bt_confirm_overlay').getByRole('button',{name:'Enable and verify',exact:true}).click();
     await page.getByText('Preview recovery',{exact:true}).waitFor();
+    check('enabled switch reflects verified protection',await page.locator('#cloud-auto-toggle').isChecked()&&await page.locator('#cloud-protection').getAttribute('data-state')==='protected');
+    check('legacy export reminder is removed',await page.locator('.bk-remind').count()===0);
+    await page.locator('#cloud-auto-toggle').click();await page.locator('#bt_confirm_overlay').getByRole('button',{name:'Cancel',exact:true}).click();
+    check('canceling disable keeps automatic backup on',await page.locator('#cloud-auto-toggle').isChecked());
     check('cloud upload is readback-verified and authenticated',await page.evaluate(()=>JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')).lastHash?.length===64&&window.__cloudFixture.calls.every(c=>c.authorization?.startsWith('Bearer '))));
+    await page.evaluate(()=>{window.__cloudFixture.holdNext=true;const changed=JSON.parse(localStorage.getItem('bt_e_v4'));changed[0].notes+=' Synthetic pending-change verification';entries=changed;localStorage.setItem('bt_e_v4',JSON.stringify(changed));btCloudBackupChanged();R();});
+    await page.waitForFunction(()=>typeof window.__cloudFixture.releaseUpload==='function');
+    check('pending upload never shows current-data protection',await page.locator('#cloud-protection').getAttribute('data-state')==='warning'&&await page.locator('#cloud-auto-toggle').isChecked());
+    await page.evaluate(()=>{window.__cloudFixture.releaseUpload();delete window.__cloudFixture.releaseUpload;});
+    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')).pending===false&&document.querySelector('#cloud-protection')?.dataset.state==='protected');
+    await page.getByText('Backup verified',{exact:true}).first().waitFor();
+    check('saved changes upload while recovery settings are open',await page.evaluate(()=>Object.values(window.__cloudFixture.objects).some(x=>x.backup.reason==='automatic'&&x.snapshot.includes('Synthetic pending-change verification'))));
+    await page.evaluate(raw=>{entries=JSON.parse(raw);localStorage.setItem('bt_e_v4',raw);btCloudBackupChanged();R();},storedBeforeRadar);
+    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')).pending===false&&document.querySelector('#cloud-protection')?.dataset.state==='protected');
     const cloudRecords=await page.evaluate(()=>window.__cloudFixture.objects);
     await button('Close').click();
     const newPhoneContext=await browser.newContext({viewport:{width:390,height:844},timezoneId:'America/Chicago'});
@@ -273,6 +293,7 @@ async function exercise(name,engine,url){
       const prior=window.fetch;
       window.fetch=async(input,options={})=>{
         const url=String(input);if(!url.startsWith('https://api-production-00f74.up.railway.app/api/bonus-tracker/backups'))return prior(input,options);
+        if(options.method==='POST'){const p=JSON.parse(options.body),count=JSON.parse(JSON.parse(p.snapshot).storageSnapshot.bt_e_v4).length;const backup={id:p.id,createdAt:new Date().toISOString(),sha256:p.sha256,entryCount:count,bytes:p.snapshot.length,reason:p.reason,verified:true};objects[p.id]={backup,snapshot:p.snapshot};return new Response(JSON.stringify(backup),{headers:{'Content-Type':'application/json'}});}
         const ident=url.split('/').pop();const body=objects[ident]||{backups:Object.values(objects).map(x=>x.backup),total:Object.keys(objects).length,nextOffset:null};
         return new Response(JSON.stringify(body),{headers:{'Content-Type':'application/json'}});
       };
@@ -288,9 +309,11 @@ async function exercise(name,engine,url){
     check('new-phone recovery preserves exact stored tracker data',await newPhone.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
     check('new-phone recovery retains its own login',await newPhone.evaluate(()=>BTBonusAuth.connected()));
     await newPhoneContext.close();
-    await page.evaluate(()=>{window.__cloudFixture.failure=true;});
+    await page.evaluate(()=>{document.getElementById('bt_notice_host')?.replaceChildren();window.__cloudFixture.failure=true;});
     await page.locator('#bt-cloud-open').click();await button('Back up now').click();
     await page.locator('#cloud-status').getByText('Synthetic cloud outage',{exact:true}).waitFor();
+    check('failed upload never shows a success popup',await page.getByText('Backup verified',{exact:true}).count()===0);
+    check('cloud outage never shows protected status',await page.locator('#cloud-protection').getAttribute('data-state')==='danger'&&await page.locator('#cloud-auto-toggle').isChecked());
     check('cloud outage leaves original records untouched',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
     await button('Close').click();
     await page.evaluate(()=>{localStorage.removeItem('bt_cloud_recovery_v1');delete window.__cloudFixture;});
