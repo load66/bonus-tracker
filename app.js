@@ -1,7 +1,7 @@
-/* Version 3.4.59: read-only churn-aware and area-aware bank offer discovery. */
+/* Version 3.4.60: read-only churn-aware and area-aware bank offer discovery. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.59';
+const APP_VERSION='3.4.60';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -3986,7 +3986,7 @@ function R(){captureProfileSectionState();const el=document.querySelector('.scro
   sanitizeAllTimers(false);
   const sorted=sortE(entries),thisYr=new Date().getFullYear(),metrics=bonusPipelineMetrics(sorted,dashYear);
   let h='',overview='';
-  h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div><h1><em>Bonus</em>Tracker</h1><div class="hdr-sub">Bonus operations • lifecycle • churn</div></div>';
+  h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div class="hdr-brand"><h1><em>Bonus</em>Tracker</h1><span class="app-version" aria-label="App version">v'+APP_VERSION+'</span></div>';
   if(tab==='tracker')h+='<div class="yr-pills">';
   if(tab==='tracker')[thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});
   h+=tab==='tracker'?'</div>':'<span class="mobile-page-caption">'+esc({bonuses:'Bank offers',tax:'Tax',tips:'Datapoints',storage:'Terms archive',archive:'Account archive'}[tab]||'')+'</span>';
