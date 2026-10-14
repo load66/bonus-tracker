@@ -59,6 +59,22 @@ assert(multiStamped.eligibilityRules.length===2&&multiStamped.churnBasis==='mult
 
 const missingClose={...multiRule,closed:''};
 assert(G.officialEligibilityDate(missingClose,addD,addM)==='','Tracker produced a final eligibility date while one rule anchor was still missing');
+assert(G.controllingRule(missingClose,addD,addM)===null,'Partial rules incorrectly produced a controlling-rule verdict');
+for(const value of ['12junk','12.5',12.5,Infinity,'9007199254740992']){
+  assert(G.periodFromRule({periodValue:value,periodUnit:'months'})===null,'Malformed cooldown was accepted: '+value);
+}
+for(const date of ['2026-02-30','2026-13-01','2026-9-01','not-a-date']){
+  assert(G.officialEligibilityDate({...bonusRule,bonusRecd:date},addD,addM)==='','Invalid calendar anchor produced eligibility: '+date);
+  assert(G.applicationReadyDate({...currentCustomerPlaceholder(),closed:date},addD,addM)==='','Invalid closure produced application readiness');
+}
+function currentCustomerPlaceholder(){return {...bonusRule,eligibilityEvidenceText:'New checking customers only. '+bonusRule.eligibilityEvidenceText};}
+assert(G.officialEligibilityDate(bonusRule,()=>'',()=>{throw new Error('out of range')})==='','Calculator exception escaped eligibility evaluation');
+assert(G.officialEligibilityDate(bonusRule,addD,()=> '2027-02-30')==='','Invalid calculator output produced eligibility');
+assert(G.ruleConditionState({}, {condition:{type:'unsupported-condition'}})==='unknown','Unsupported condition became active');
+const unsupportedCondition={...multiRule,eligibilityRules:multiRule.eligibilityRules.map((r,i)=>i?{...r,condition:{type:'unsupported-condition'}}:r)};
+assert(!G.validate(unsupportedCondition).ok,'Unknown condition was discarded during normalization');
+assert(G.officialEligibilityDate(unsupportedCondition,addD,addM)==='','Unknown condition allowed a final date');
+assert(G.controllingRule(unsupportedCondition,addD,addM)===null,'Unknown condition allowed a controlling rule');
 
 
 const usBankFinePrint='To be eligible, you or any owner(s) on your new Bank Smartly Checking account cannot have an existing U.S. Bank consumer checking account, had a U.S. Bank consumer checking account in the last 12 months or received other U.S. Bank consumer checking bonus offers within the past 12 months.';
