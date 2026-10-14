@@ -106,7 +106,7 @@
   };
   window.btCloudBackupChanged=changed;
   window.btCloudBeforeDestructive=async reason=>{if(read().enabled&&core.hasRecords(core.inspect(current(),keys()))){const before=current();await upload(reason);if(current()!==before)throw Error('Records changed during the safety backup. Retry after backup completes.');}};
-  window.BTCloudBackup={current,upload,tick,download,restoreVersion};
+  window.BTCloudBackup={current,upload,tick,download,restoreVersion,isBusy:()=>busy};
   window.btRegisterPostRender?.('cloud-backup-status',paint);
   window.addEventListener('online',()=>{phase='';tick();});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick();});

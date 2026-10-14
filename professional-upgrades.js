@@ -310,7 +310,9 @@
       if(reg.waiting){updateReady=true;renderUpdateBanner();}
       reg.addEventListener('updatefound',()=>{const w=reg.installing;if(!w)return;w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller){updateReady=true;renderUpdateBanner();}})});
     }).catch(()=>{});
-    navigator.serviceWorker.addEventListener('controllerchange',()=>{if(sessionStorage.getItem('bt_reloading'))return;sessionStorage.setItem('bt_reloading','1');location.reload()});
+    let controlled=!!navigator.serviceWorker.controller;
+    const reloadWhenIdle=()=>{if(document.querySelector('.cloud-overlay,#bt_confirm_overlay')||window.BTCloudBackup?.isBusy?.()){setTimeout(reloadWhenIdle,1000);return;}if(sessionStorage.getItem('bt_reloading'))return;sessionStorage.setItem('bt_reloading','1');location.reload();};
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!controlled){controlled=true;return;}reloadWhenIdle();});
   }
   function renderUpdateBanner(){
     document.querySelector('.bt-update-banner')?.remove();if(!updateReady)return;
