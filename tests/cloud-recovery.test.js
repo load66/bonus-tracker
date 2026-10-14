@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),core=require('../cloud-backup-core.js
 const keys=['bt_e_v4','bt_t_v4','bt_tc_archive_v1','bt_user_datapoints_v1'];
 class Store{constructor(rows={}){this.data=new Map(Object.entries(rows));}get length(){return this.data.size;}key(i){return [...this.data.keys()][i]??null;}getItem(k){return this.data.get(k)??null;}setItem(k,v){if(this.failKey===k&&v!==this.oldValue)throw Error('Storage full');this.data.set(k,v);}removeItem(k){this.data.delete(k);}}
 const original=new Store({bt_e_v4:JSON.stringify([{id:'one',bank:'Synthetic CU',notes:'Exact notes',financialRules:{version:1},customTimers:[{id:'timer',done:true}],deletedTimerKeys:['id::source-deletion'],closed:'2026-10-14'}]),bt_t_v4:'[2026]',bt_tc_archive_v1:'{"exact":"original terms"}',bt_user_datapoints_v1:'[{"method":"payroll"}]','bonus-ai-auth':'secret','bt_cloud_recovery_v1':'device-state'});
-const raw=core.snapshot(original,keys,{dashYear:2026,taxYear:2027},'3.4.58');
+const raw=core.snapshot(original,keys,{dashYear:2026,taxYear:2027},'3.4.59');
 assert.ok(!raw.includes('secret')&&!raw.includes('device-state'));
 const freshPhone=new Store({'bonus-ai-auth':'new-phone-login','bt_deleted_timer_keys_v1:one':'["id::timer"]','bt_deleted_timer_keys_v1:old':'["id::old"]'});
 const result=core.restore(freshPhone,raw,keys,persistence);
