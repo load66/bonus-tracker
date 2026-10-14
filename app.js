@@ -1,7 +1,7 @@
-/* Version 3.4.61: read-only churn-aware and area-aware bank offer discovery. */
+/* Version 3.4.62: read-only churn-aware and area-aware bank offer discovery. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.61';
+const APP_VERSION='3.4.62';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -3214,6 +3214,8 @@ let dpSearch='',dpExpandedBankKey='';
 let profileSearch='',activeProfileKey='';
 let inlineUiState={};
 let profileSectionUiState={};
+let actionCenterOpen=false;
+function toggleActionCenter(){actionCenterOpen=!actionCenterOpen;R();document.getElementById('bt-action-center-toggle')?.focus({preventScroll:true})}
 function profileSectionStateKey(entryId,sectionKey){return String(entryId||'')+'::'+String(sectionKey||'')}
 function profileSectionAttr(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function setProfileSectionOpen(entryId,sectionKey,isOpen){profileSectionUiState[profileSectionStateKey(entryId,sectionKey)]=!!isOpen}
@@ -3935,9 +3937,11 @@ function runNextAccountAction(id){
 }
 function renderActionCenter(){
   let rows=[];try{rows=typeof window.getAttentionSuggestions==='function'?(window.getAttentionSuggestions()||[]):[]}catch{}
-  if(!rows.length)return'<div class="ops-action-center clear"><div class="ops-section-head"><div><span>Action Center</span><b>All caught up</b></div></div><div class="ops-empty">No account needs immediate follow-up.</div></div>';
+  const header='<button type="button" id="bt-action-center-toggle" class="ops-section-head ops-action-toggle" aria-expanded="'+actionCenterOpen+'" aria-controls="bt-action-center-body" aria-label="'+(actionCenterOpen?'Collapse':'Expand')+' Action Center" onclick="toggleActionCenter()"><div><span>Action Center</span><b>'+(rows.length?rows.length+' account'+(rows.length!==1?'s':'')+' in your workflow':'All caught up')+'</b></div><svg class="ops-action-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>';
+  const body='<div id="bt-action-center-body" class="ops-action-body"'+(actionCenterOpen?'':' hidden')+'>';
+  if(!rows.length)return'<div class="ops-action-center clear">'+header+body+'<div class="ops-empty">No account needs immediate follow-up.</div></div></div>';
   const visible=rows.slice(0,8);
-  let h='<div class="ops-action-center"><div class="ops-section-head"><div><span>Action Center</span><b>'+rows.length+' account'+(rows.length!==1?'s':'')+' in your workflow</b></div></div><div class="ops-action-list">';
+  let h='<div class="ops-action-center">'+header+body+'<div class="ops-action-list">';
   visible.forEach(x=>{
     const entryId=String(x.entryId||'');
     const stage=String(x.stageCode||'IN_PROGRESS').toLowerCase().replace(/_/g,'-');
@@ -3952,7 +3956,7 @@ function renderActionCenter(){
   });
   h+='</div>';
   if(rows.length>visible.length)h+='<div class="ops-action-more">'+(rows.length-visible.length)+' more account'+(rows.length-visible.length!==1?'s':'')+' continue below in the tracker.</div>';
-  return h+'</div>'
+  return h+'</div></div>'
 }
 function renderNextAccountGuidance(e){
   const next=window.btNextActionForEntry?.(e);

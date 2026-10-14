@@ -1,5 +1,12 @@
-/* v3.4.61: a consistent mobile hierarchy; financial rules stay in the engine. */
+/* v3.4.62: a consistent mobile hierarchy; financial rules stay in the engine. */
 .tracker-overview{margin-bottom:16px}
+.ops-action-toggle{width:100%;min-height:60px;background:transparent;border:0;color:inherit;font-family:inherit;text-align:left;cursor:pointer}
+.ops-action-toggle[aria-expanded=false]{border-bottom:0}
+.ops-action-toggle[aria-expanded=true]{border-bottom:1px solid #202F43}
+.ops-action-toggle:focus-visible{outline:2px solid #8BC8FF;outline-offset:-4px;border-radius:14px}
+.ops-action-chevron{width:20px;height:20px;flex-shrink:0;fill:none;stroke:#AFC1DC;stroke-width:2;transition:transform .15s}
+.ops-action-toggle[aria-expanded=true] .ops-action-chevron{transform:rotate(180deg)}
+.ops-action-body[hidden]{display:none!important}
 .hdr-brand{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;min-width:0}
 .hdr-brand .app-version{position:static;transform:none;max-width:none;z-index:auto;padding:0;border:0;background:transparent!important;backdrop-filter:none;-webkit-backdrop-filter:none;font-size:10px;line-height:1.2;letter-spacing:.3px;white-space:normal;overflow:visible}
 .ops-hero .hero-note{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}

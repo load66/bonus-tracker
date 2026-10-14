@@ -84,6 +84,7 @@ async function exercise(name,engine,url){
   try{
     await page.goto(url);
     await page.getByText('No banks yet',{exact:true}).waitFor();
+    check('Action Center defaults collapsed',await page.locator('#bt-action-center-toggle').getAttribute('aria-expanded')==='false'&&!await page.locator('#bt-action-center-body').isVisible());
     await page.waitForFunction(()=>window.__btFullRegressionReport&&!window.__btFullRegressionReport.pending&&window.__btFullRegressionReport.total===18);
     const diagnostics=await page.evaluate(()=>window.btRunFullRegressionTests({force:true}));
     await fs.writeFile(path.join(output,name+'-diagnostics.json'),JSON.stringify(diagnostics,null,2));
@@ -98,14 +99,26 @@ async function exercise(name,engine,url){
     await button('4 Review').click();await button('💾 Add Bank').click();
     await wait(()=>JSON.parse(localStorage.getItem('bt_e_v4')).length===1);
     check('90-day deadline is exact',await page.evaluate(()=>reqDeadline(entries[0]))==='2026-05-01');
+    const beforeDisclosure=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
+    await page.locator('#bt-action-center-toggle').click();
+    check('header expands Action Center',await page.locator('#bt-action-center-toggle').getAttribute('aria-expanded')==='true'&&await page.locator('.ops-action-row').first().isVisible());
+    await page.evaluate(()=>R());
+    check('Action Center remains open through render',await page.locator('#bt-action-center-body').isVisible());
+    await page.locator('#bt-action-center-toggle').press('Enter');
+    check('keyboard collapses Action Center',!await page.locator('#bt-action-center-body').isVisible());
+    await page.locator('#bt-action-center-toggle').press('Space');
+    check('keyboard expands Action Center without record changes',await page.locator('#bt-action-center-body').isVisible()&&await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===beforeDisclosure);
     check('compact action tiles omit duplicate explanations',await page.locator('.ops-action-center .ops-action-explanation').count()===0&&await page.locator('.ops-action-center .ops-date-proof').count()===0);
     await page.locator('.ops-action-row').first().click();
     check('action tile opens its full account card',await page.locator('.card-exp').isVisible());
+    check('using an action preserves expanded Action Center',await page.locator('#bt-action-center-toggle').getAttribute('aria-expanded')==='true');
     check('long action guidance is collapsed by default',!await page.locator('.ops-action-explanation').isVisible());
     await page.locator('.ops-action-why summary').click();
     check('next action explains saved requirements without AI',(await page.locator('.ops-action-explanation').innerText()).includes('qualifying activity with the bank'));
     const id=(await record()).id;
     await page.reload();check('reload preserves identity and notes',(await record()).id===id&&(await record()).notes===payload.entry.notes);
+    check('refresh resets Action Center to collapsed',await page.locator('#bt-action-center-toggle').getAttribute('aria-expanded')==='false');
+    await page.locator('#bt-action-center-toggle').click();
     await edit();await button('3 Fees & Close').click();
     await page.getByPlaceholder('Personal reminders—never overwritten by analyzer').fill('Keep <img src=x onerror=alert(1)> & "quotes"');
     await button('4 Review').click();await button('💾 Save Changes').click();
@@ -455,6 +468,10 @@ async function exercise(name,engine,url){
     check('mobile Action Center uses two compact columns',await page.locator('.ops-action-tile').evaluateAll(rows=>rows.length===2&&Math.abs(rows[0].getBoundingClientRect().top-rows[1].getBoundingClientRect().top)<2));
     check('compact recurring and payout buttons remain available',await button('Review recurring requirements').count()===1&&await button('Confirm bonus received').count()===1);
     await page.locator('.ops-action-center').screenshot({path:path.join(output,name+'-action-tiles.png')});
+    await page.locator('#bt-action-center-toggle').click();
+    check('collapsed Action Center remains compact on mobile',await page.locator('.ops-action-center').evaluate(e=>e.getBoundingClientRect().height<100)&&!await page.locator('.ops-action-list').isVisible());
+    await page.locator('.ops-action-center').screenshot({path:path.join(output,name+'-action-center-collapsed.png')});
+    await page.locator('#bt-action-center-toggle').click();
     await page.evaluate(()=>{entries=window.__cardTextOriginal;delete window.__cardTextOriginal;R();});
     await page.setViewportSize({width:390,height:844});
     check('card layout leaves saved records unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
