@@ -39,6 +39,18 @@
   }
   function close(){requestGeneration++;if(modal)modal.remove();modal=null;selected='';busy=false;if(restoreFocus?.isConnected)restoreFocus.focus();restoreFocus=null;}
   function message(value){if(modal)modal.querySelector('#bonus-ai-status').textContent=value;}
+  function answerText(value){
+    return String(value||'').split('\n').map(line=>line.replace(/^(?:Qualifying activity|Complete bonus|Deadline wording|Funding wording|Required funding amount|Required hold days|Enrollment code|Waiver wording|Waiver type|Waiver amount|Fee avoidance and companion accounts|Rule wording|Restriction type|Date basis|Early termination fee wording|Saved early-close charge):\s*/i,'').trim()).filter(Boolean).filter((line,i,all)=>all.findIndex(v=>v.toLowerCase()===line.toLowerCase())===i).join('\n');
+  }
+  function feeAnswer(e){
+    const wording=answerText(e.monthlyFeeYNText),amount=answerText(e.monthlyFeeAmountText);
+    if(wording&&!/^(?:yes|no|unknown|not confirmed)$/i.test(wording))return wording
+      .replace(/\bPersonal checking:\s*\$0 monthly maintenance fee\.?/i,'Your checking account has no monthly maintenance fee.')
+      .replace(/\bRequired ([^:\n.]+):\s*\$([\d,.]+)\/month if the \$([\d,.]+) minimum balance is not maintained\.?/i,(_,account,fee,balance)=>'The required '+account+' account charges $'+fee+' per month if its balance falls below $'+balance+'.');
+    if(/^no$/i.test(wording))return 'Your account is marked as having no monthly maintenance fee. Check any required companion account separately.';
+    if(amount)return 'The fee listed for this account is '+amount+(e.monthlyFeeFrequency&&!/month|year|quarter|cycle/i.test(amount)?' ('+e.monthlyFeeFrequency+')':'')+'.';
+    return 'The monthly fee has not been confirmed for this account.';
+  }
   function guidanceFor(e,question){
     const next=window.btNextActionForEntry?.(e),missing=[],ids=['nextaction'];
     let verdict='',tone='review',step=next?.explanation||'Review the saved requirements and dates before recording another milestone.';
@@ -54,47 +66,49 @@
     }else if(/waiv|maintenance fee|monthly.{0,20}fee/.test(q)){step='Check each account’s saved fee and waiver conditions against your actual balance and activity. Include any required savings or membership account.';ids.push('monthlyfee','feeamount','feewaiver');}
     else if(/direct deposit/.test(q)){step='Compare actual deposits with the saved qualifying activity, deadline and every recurring period before confirming completion.';ids.push('requirements','timers','tasks');}
     else if(/payout|paid|bonus.{0,15}arriv/.test(q)){step=e.bonusRecd?'The bonus is recorded as received. Review the tracker’s close checks next.':'Check the saved payout wording and actual bank activity; record receipt only after the bonus posts.';ids.push('payout','bonusrecd');}
-    else if(/repeat|apply again|eligib/.test(q)){step='Use the tracker’s saved repeat-eligibility rules and calculated date, then verify the current official offer before applying again.';ids.push('eligibility','eligibilitygate','reopen_date');}
+    else if(/repeat|apply.{0,35}again|eligib/.test(q)){step='Use the tracker’s saved repeat-eligibility rules and calculated date, then verify the current official offer before applying again.';ids.push('eligibility','eligibilitygate','reopen_date');}
     else if(/early.close|forfeiture/.test(q)){step='Review the saved closure restrictions and fee wording before making a closure decision.';ids.push('closerule','close_gate');}
     else if(/savings|membership|share account/.test(q)){step='Review the required companion account’s minimum balance and fee conditions before withdrawing funds or closing it.';ids.push('feewaiver','terms');}
+    step=step.replace(/\bsaved /gi,'').replace('Review the saved','Review the');
     return{verdict,tone,step,missing,ids};
   }
   function localAnswerFor(e,question,facts=contextFor(e)){
     const q=String(question||'').toLowerCase(),guide=guidanceFor(e,question);
     const byId=id=>facts.find(f=>f.id===id);
-    let ids=[],answer='',missing=[];
+    let ids=[],answer='',step='',missing=[];
     // Handle one narrow intent. Comparisons and compound questions go to AI
     // rather than silently answering only the first recognized topic.
     if(/compare|versus|\bvs\b|also|why|explain|calculate/.test(q))return null;
     if(/\band\b/.test(q)&&!/^what (?:monthly maintenance fees|direct deposits)/.test(q)&&!q.includes('tracker closure checks and saved terms'))return null;
     if(guide.verdict){answer=guide.verdict+'. '+guide.step;ids=guide.ids;missing=guide.missing;}
-    else if(/early.close|forfeit|termination fee/.test(q)){ids=['closerule'];}
-    else if(/waiv|avoid.{0,15}fee/.test(q)){ids=['feewaiver'];if(!byId('feewaiver'))missing.push('The exact saved fee-waiver conditions.');}
-    else if(/monthly.{0,25}fee|maintenance fee/.test(q)){ids=['monthlyfee','feeamount','feefrequency','feewaiver'];if(!byId('monthlyfee')&&!byId('feeamount'))missing.push('Monthly fee amount and the official fee schedule.');}
-    else if(/savings|membership|share account/.test(q)){ids=['feewaiver'];missing.push('Confirm companion-account requirements against the saved official terms.');}
-    else if(/direct deposit|\bdd\b|requirements|what (?:remains|do i still need)/.test(q)){ids=['requirements','timers','tasks','nextaction'];if(!byId('requirements'))missing.push('The qualifying activity, amount, deadline and recurring periods.');}
-    else if(/payout|paid|bonus.{0,15}arriv/.test(q)){ids=['payout','bonusrecd'];if(!byId('payout'))missing.push('The exact payout wording and its start event.');}
-    else if(/repeat|apply again|eligib/.test(q)){ids=['eligibility','eligibilitygate','reopen_date'];}
+    else if(/early.close|forfeit|termination fee/.test(q)){ids=['closerule'];answer=answerText([e.closeRuleText,e.earlyTerminationFeeText].filter(Boolean).join('\n'))||'Early-close fees and restrictions have not been confirmed.';}
+    else if(/waiv|avoid.{0,15}fee/.test(q)){ids=['feewaiver'];answer=answerText(e.monthlyFeeWaiverText||e.avoidMonthlyFeeText)||'The fee-waiver conditions have not been confirmed.';step=answerText(e.avoidMonthlyFeeText||e.monthlyFeeWaiverText)||guide.step;if(!byId('feewaiver'))missing.push('The exact fee-waiver conditions.');}
+    else if(/monthly.{0,25}fee|maintenance fee/.test(q)){ids=['monthlyfee','feeamount','feefrequency','feewaiver'];answer=feeAnswer(e);step=answerText([e.monthlyFeeWaiverText,e.avoidMonthlyFeeText].filter(Boolean).join('\n'))||guide.step;if(!byId('monthlyfee')&&!byId('feeamount'))missing.push('Monthly fee amount and the official fee schedule.');}
+    else if(/savings|membership|share account/.test(q)){ids=['feewaiver','monthlyfee'];answer=answerText(e.avoidMonthlyFeeText||e.monthlyFeeWaiverText)||'Companion-account requirements have not been confirmed.';missing.push('Confirm companion-account requirements against the official terms.');}
+    else if(/direct deposit|\bdd\b|requirements|what (?:remains|do i still need)/.test(q)){ids=['requirements','timers','tasks','nextaction'];answer=answerText([e.completeBonusText||e.dataPoint,e.fundingAmountText,e.requiredDaysText?'Completion window: '+e.requiredDaysText:'',byId('tasks')?.text].filter(Boolean).join('\n'))||guide.step;if(!byId('requirements'))missing.push('The qualifying activity, amount, deadline and recurring periods.');}
+    else if(/payout|paid|bonus.{0,15}arriv/.test(q)){ids=['payout','bonusrecd'];answer=(e.bonusRecd?'Your bonus is marked as received on '+e.bonusRecd+'.':'Your bonus has not been marked as received.')+(e.payoutTimingText?'\n\n'+answerText(e.payoutTimingText):'');if(!byId('payout'))missing.push('The exact payout wording and its start event.');}
+    else if(/repeat|apply.{0,35}again|eligib/.test(q)){ids=['eligibility','eligibilitygate','reopen_date'];const rules=window.BTEligibilityGate?.normalizedRules?.(e)||[];const date=byId('reopen_date')?.text;answer=answerText(rules.map(r=>r.evidenceText).filter(Boolean).join('\n'))||'Repeat-bonus eligibility has not been confirmed.';answer+='\n\n'+(date&&date!=='Not confirmed'?'Tracker eligibility date: '+date+'.':'Your next application date is not confirmed.');}
     else if(/next deadline|next due date/.test(q)){const next=window.btNextActionForEntry?.(e);answer=next?.context?.confirmed?next.context.explanation:'The next tracker date is not confirmed.';ids=['nextaction'];}
     else return null;
     const used=ids.map(byId).filter(Boolean);
-    if(!answer)answer=used.length?used.map(f=>f.label+': '+f.text).join('\n\n'):'This information is not recorded in the saved rules.';
-    if(!used.length)missing.push('Save the relevant official promotion or fee wording.');
-    return {answer,factIds:used.map(f=>f.id),missing,local:true};
+    if(!answer)answer=used.length?used.map(f=>answerText(f.text)).filter((text,i,all)=>all.indexOf(text)===i).join('\n\n'):'This information has not been confirmed for this account.';
+    if(!used.length)missing.push('The applicable promotion or fee terms.');
+    return {answer,step,factIds:used.map(f=>f.id),missing,local:true};
   }
   function renderAnswer(result,facts,e,question){
     const area=modal.querySelector('#bonus-ai-answer');area.replaceChildren();
     const guide=guidanceFor(e,question);
     if(guide.verdict){const verdict=document.createElement('div');verdict.className='bonus-ai-verdict '+guide.tone;verdict.textContent=guide.verdict;area.append(verdict);}
-    const title=document.createElement('b');title.textContent=result.local?'Saved-rule answer':'AI answer';area.append(title);
+    const title=document.createElement('b');title.textContent='Answer';area.append(title);
     const p=document.createElement('p');p.className='bonus-ai-direct-answer';p.textContent=result.answer;area.append(p);
-    const step=document.createElement('section'),heading=document.createElement('b'),body=document.createElement('p');step.className='bonus-ai-next-step';heading.textContent='Your next step';body.textContent=guide.step;step.append(heading,body);area.append(step);
+    const step=document.createElement('section'),heading=document.createElement('b'),body=document.createElement('p');step.className='bonus-ai-next-step';heading.textContent='Your next step';body.textContent=result.step||guide.step;step.append(heading,body);area.append(step);
     const missing=[...new Set([...guide.missing,...result.missing])];
-    for(const id of ['contextcoverage','termscoverage']){const f=facts.find(x=>x.id===id);if(f&&/missing|shortened|only the first/i.test(f.text))missing.push(f.text);}
-    if(missing.length){const title=document.createElement('b');title.textContent='Needs verification';area.append(title);const list=document.createElement('ul');list.className='bonus-ai-missing';for(const value of missing){const li=document.createElement('li');li.textContent=value;list.append(li)}area.append(list)}
-    const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Supporting saved facts';details.append(summary);
-    for(const id of [...new Set([...result.factIds,...guide.ids])]){const f=facts.find(x=>x.id===id);if(!f)continue;const label=document.createElement('b'),body=document.createElement('p');label.textContent=f.label;body.textContent=f.text;details.append(label,body)}area.append(details);
-    message(result.local?'Answered from saved rules on this device.':result.cached?'Saved explanation reused.':'AI explanation · check the cited saved facts.');
+    const coverage=['contextcoverage','termscoverage'].map(id=>facts.find(f=>f.id===id)).filter(f=>f&&/missing|shortened|only the first/i.test(f.text));
+    if(!result.local)missing.push(...coverage.map(f=>f.text));
+    if(missing.length){const title=document.createElement('b');title.textContent='What to confirm';area.append(title);const list=document.createElement('ul');list.className='bonus-ai-missing';for(const value of missing){const li=document.createElement('li');li.textContent=value;list.append(li)}area.append(list)}
+    const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent=coverage.length?'Source details · limited information':'Source details';details.append(summary);
+    for(const id of [...new Set([...result.factIds,...guide.ids,...coverage.map(f=>f.id)])]){const f=facts.find(x=>x.id===id);if(!f)continue;const label=document.createElement('b'),body=document.createElement('p');label.textContent=f.label.replace(/^Saved /,'').replace(/^Tracker-calculated /,'');body.textContent=f.text;details.append(label,body)}area.append(details);
+    message(result.local?'Based on your account details.':result.cached?'Previous AI explanation reused.':'AI explanation · review the source details.');
   }
   async function ask(forceAI=false){
     if(busy||!modal)return;const question=modal.querySelector('#bonus-ai-question').value.trim();if(!question){message('Enter a question about this bonus.');return;}
@@ -115,7 +129,7 @@
   window.btOpenBonusAI=function(id){
     const e=findEntry(id);if(!e)return;const opener=document.activeElement;close();restoreFocus=opener;selected=id;
     modal=document.createElement('div');modal.className='ov bonus-ai-overlay';modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-labelledby','bonus-ai-title');
-    modal.innerHTML='<section class="modal bonus-ai-modal"><div class="bonus-ai-heading"><div><h2 id="bonus-ai-title">Ask AI</h2><p>'+escape(e.bank)+'</p></div><button type="button" id="bonus-ai-close" aria-label="Close AI">×</button></div><label for="bonus-ai-question">Your question</label><textarea id="bonus-ai-question" maxlength="500" rows="3" placeholder="What do I still need to do for this bonus?"></textarea><div class="bonus-ai-suggestions"><button type="button" data-question="What do I still need to do for this bonus?">What remains?</button><button type="button" data-question="What do the saved terms say about when the bonus will be paid?">Payout timing</button><button type="button" data-question="What do the tracker closure checks and saved terms say about closing this account?">Can I close?</button><button type="button" data-question="What monthly maintenance fees are stated in the saved terms, including required companion accounts?">Monthly fee</button><button type="button" data-question="What are the exact saved conditions to waive each monthly fee? Distinguish alternatives from combined requirements.">Waive fees</button><button type="button" data-question="What direct deposits are required, including the amount, deadline and every recurring period?">Direct deposit</button><button type="button" data-question="What early-close fees or bonus forfeiture restrictions are stated in the saved terms?">Early-close fee</button><button type="button" data-question="Is a membership, share or savings account required? What are its minimum balance and fees?">Savings account</button><button type="button" data-question="What saved repeat-bonus rules and tracker checks determine when I can apply again?">Repeat eligibility</button></div><p class="bonus-ai-sharing">Common questions use saved rules on your device. Other questions, or “Ask AI for more,” send this bonus’s saved facts and your question to Groq. Notes, account IDs and other bonuses are excluded.</p><button type="button" class="btn-p" id="bonus-ai-send">Get answer</button><button type="button" class="btn-s" id="bonus-ai-more">Ask AI for more</button><p id="bonus-ai-status" role="status"></p><div id="bonus-ai-answer"></div><p class="bonus-ai-boundary">Explains saved information. Current terms and eligibility may need verification. Answers never update records or replace tracker calculations.</p></section>';
+    modal.innerHTML='<section class="modal bonus-ai-modal"><div class="bonus-ai-heading"><div><h2 id="bonus-ai-title">Ask AI</h2><p>'+escape(e.bank)+'</p></div><button type="button" id="bonus-ai-close" aria-label="Close AI">×</button></div><label for="bonus-ai-question">Your question</label><textarea id="bonus-ai-question" maxlength="500" rows="3" placeholder="What do I still need to do for this bonus?"></textarea><div class="bonus-ai-suggestions"><button type="button" data-question="What do I still need to do for this bonus?">What remains?</button><button type="button" data-question="When should this bonus be paid?">Payout timing</button><button type="button" data-question="Can I close this account now?">Can I close?</button><button type="button" data-question="What monthly maintenance fees apply, including required companion accounts?">Monthly fee</button><button type="button" data-question="How do I waive each monthly fee?">Waive fees</button><button type="button" data-question="What direct deposits are required, including the amount, deadline and every recurring period?">Direct deposit</button><button type="button" data-question="What early-close fees or bonus forfeiture restrictions apply?">Early-close fee</button><button type="button" data-question="Is a membership, share or savings account required? What are its minimum balance and fees?">Savings account</button><button type="button" data-question="When can I apply for this bonus again?">Repeat eligibility</button></div><p class="bonus-ai-sharing">Common questions use the information in your account. Other questions, or “Ask AI for more,” send this bonus’s details and your question to Groq. Notes, account IDs and other bonuses are excluded.</p><button type="button" class="btn-p" id="bonus-ai-send">Get answer</button><button type="button" class="btn-s" id="bonus-ai-more">Ask AI for more</button><p id="bonus-ai-status" role="status"></p><div id="bonus-ai-answer"></div><p class="bonus-ai-boundary">Explains the information in your account. Current terms and eligibility may need verification. Answers never update records or replace tracker calculations.</p></section>';
     document.body.append(modal);modal.querySelector('#bonus-ai-close').onclick=close;modal.onclick=ev=>{if(ev.target===modal)close()};
     modal.querySelector('#bonus-ai-send').onclick=()=>ask();modal.querySelector('#bonus-ai-more').onclick=()=>ask(true);
     modal.querySelectorAll('[data-question]').forEach(button=>button.onclick=()=>{modal.querySelector('#bonus-ai-question').value=button.dataset.question;modal.querySelector('#bonus-ai-question').focus()});

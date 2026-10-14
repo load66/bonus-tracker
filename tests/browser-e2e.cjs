@@ -195,9 +195,9 @@ async function exercise(name,engine,url){
     check('AI closure decision uses tracker gates',(await page.locator('.bonus-ai-verdict').innerText())==='Ready — tracker checks passed');
     check('AI explains a concrete next step',(await page.locator('.bonus-ai-next-step').innerText()).includes('companion accounts'));
     check('common answers do not send facts',await page.evaluate(()=>window.__bonusAITest.calls.length===0&&window.__bonusAITest.authCalls===0));
-    await button('Ask AI for more').click();await page.getByText('AI explanation · check the cited saved facts.',{exact:true}).waitFor();
+    await button('Ask AI for more').click();await page.getByText('AI explanation · review the source details.',{exact:true}).waitFor();
     const {packet:aiPacket,authorization:aiAuthorization,credentials:aiCredentials}=await page.evaluate(()=>window.__bonusAITest.calls[0]);
-    check('AI sends no owner token or cookies',!aiAuthorization&&aiCredentials==='omit'&&aiPacket.question.includes('closure'));
+    check('AI sends no owner token or cookies',!aiAuthorization&&aiCredentials==='omit'&&aiPacket.question.includes('close'));
     check('AI uses canonical saved facts without account identifiers or notes',aiPacket.facts.some(f=>f.id==='close_gate')&&aiPacket.facts.some(f=>f.id==='close_date')&&!JSON.stringify(aiPacket).includes(id)&&!JSON.stringify(aiPacket).includes('Synthetic verification record only'));
     await page.locator('#bonus-ai-answer summary').click();
     check('AI displays cited saved facts',(await page.locator('#bonus-ai-answer').innerText()).includes('Tracker closure checks'));
@@ -209,7 +209,20 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>window.__bonusAITest.fail=true);await button('Ask AI for more').click();await page.getByText('AI is busy. Try again later.',{exact:true}).waitFor();
     check('AI rate limit is handled without repeated requests',await page.evaluate(()=>window.__bonusAITest.calls.length===3));
     await button('Monthly fee').click();await page.locator('#bonus-ai-send').click();
-    check('saved-rule answers work after AI failure',await page.getByText('Answered from saved rules on this device.',{exact:true}).count()===1&&await page.evaluate(()=>window.__bonusAITest.calls.length===3));
+    check('saved-rule answers work after AI failure',await page.getByText('Based on your account details.',{exact:true}).count()===1&&await page.evaluate(()=>window.__bonusAITest.calls.length===3));
+    const feeFields=await page.evaluate(()=>{
+      const e=entries[0],keys=['monthlyFeeYNText','monthlyFeeAmountText','monthlyFeeFrequency','monthlyFeeWaiverText','avoidMonthlyFeeText'];
+      const prior=keys.map(key=>({key,present:Object.hasOwn(e,key),value:e[key]}));
+      Object.assign(e,{monthlyFeeYNText:'Personal checking: $0 monthly maintenance fee. Required Share Savings: $10/month if the $50 minimum balance is not maintained.',monthlyFeeAmountText:'$10',monthlyFeeFrequency:'monthly',monthlyFeeWaiverText:'Keep at least $50 in the required Share Savings account to avoid the $10/month fee.',avoidMonthlyFeeText:'Keep at least $50 in the required Share Savings account to avoid the $10/month fee.'});
+      return prior;
+    });
+    await button('Monthly fee').click();await page.locator('#bonus-ai-send').click();
+    const feeAnswer=await page.locator('.bonus-ai-direct-answer').innerText();
+    check('fee answer distinguishes checking and companion account',feeAnswer==='Your checking account has no monthly maintenance fee. The required Share Savings account charges $10 per month if its balance falls below $50.');
+    check('fee next step is specific without duplicate fields',(await page.locator('.bonus-ai-next-step p').innerText())==='Keep at least $50 in the required Share Savings account to avoid the $10/month fee.');
+    check('answer hides implementation labels',!await page.getByText('Saved-rule answer',{exact:true}).count()&&!/Saved monthly|Waiver type:|Waiver amount:/.test(feeAnswer));
+    await page.screenshot({path:path.join(output,name+'-natural-fee-answer.png')});
+    await page.evaluate(prior=>{const e=entries[0];for(const f of prior){if(f.present)e[f.key]=f.value;else delete e[f.key];}},feeFields);
     await page.getByRole('button',{name:'Close AI',exact:true}).click();
     check('asking AI preserves all saved account data',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
     // Restore native fetch before verifying real service-worker offline navigation.
