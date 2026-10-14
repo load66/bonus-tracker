@@ -87,7 +87,60 @@
     }
     return [...out];
   }
+  const AVAILABILITY_API='https://api-production-00f74.up.railway.app';
+  let officialCatalog=null,officialBusy=false,officialError='',lastPriority='',lastPriorityAt=0;
+  const availabilityHosts=new Set(['www.truist.com','www.busey.com','www.upgrade.com','www.westerracu.com','www.wellbyfinancial.com','www.starkcu.org','www.unitusccu.com','join.unitusccu.com','cobaltcu.com','www.cobaltcu.com','www.fhb.com','www.ccuflorida.org','www.safecu.org','www.chase.com','account.chase.com','www.wellsfargo.com','accountoffers.wellsfargo.com','www.usbank.com','www.citi.com','online.citi.com','www.bankcsb.com','bankcsb.com']);
+  function availabilityUrl(value){try{const u=new URL(value);return u.protocol==='https:'&&availabilityHosts.has(u.hostname)&&!u.username&&!u.password&&!u.port?u.href:'';}catch{return'';}}
+  function availabilityFor(offer,catalog){
+    const r=catalog?.schemaVersion===1?catalog.records?.[offer.url]:null;
+    if(!r||r.offerTitle!==offer.title||r.offerUrl!==offer.url)return null;
+    const base={status:'needs-review',checkState:['queued','unsupported','failed','checked'].includes(r.checkState)?r.checkState:'failed',reason:String(r.reason||'Official evidence needs review.').slice(0,300)};
+    const checked=Date.parse(r.checkedAt),expires=Date.parse(r.expiresAt),now=Date.now(),source=availabilityUrl(r.sourceUrl);
+    if(!Number.isFinite(checked)||!Number.isFinite(expires)||expires<=checked||expires-checked>24*86400000||checked>now+60000||!source||!/^[a-f0-9]{64}$/.test(r.sourceHash||''))return base;
+    if(expires<=now)return{...base,status:'stale',checkedAt:r.checkedAt,sourceUrl:source,reason:'Official evidence has expired. A fresh check is required.'};
+    const conditions=Array.isArray(r.conditions)?r.conditions.filter(q=>typeof q==='string'&&q.length>0&&q.length<=500).slice(0,4):[];
+    const rules=Array.isArray(r.rules)?r.rules.filter(x=>x&&['include','exclude'].includes(x.mode)&&Array.isArray(x.states)&&x.states.length>0&&x.states.length<=51&&x.states.every(v=>Object.hasOwn(states,v))&&typeof x.quote==='string'&&x.quote.length>0&&x.quote.length<=1200).map(x=>({mode:x.mode,states:[...x.states],quote:x.quote})).slice(0,8):[];
+    if(r.status==='verified'&&(!rules.length&&!(r.nationwide===true&&typeof r.nationwideQuote==='string'&&r.nationwideQuote.length>0&&r.nationwideQuote.length<=500)||rules.length!==(r.rules||[]).length))return base;
+    if(r.status==='verified'&&r.nationwide===true&&rules.length)return base;
+    if(r.status==='expired'&&!(typeof r.expirationQuote==='string'&&r.expirationQuote.length>0&&r.expirationQuote.length<=500))return base;
+    return{...base,status:['verified','conditional','expired'].includes(r.status)?r.status:'needs-review',checkedAt:r.checkedAt,expiresAt:r.expiresAt,sourceUrl:source,rules,conditions,nationwide:r.nationwide===true,nationwideQuote:String(r.nationwideQuote||'').slice(0,500)};
+  }
+  function priorityIdentifiers(rows,context,selected){
+    return prioritize(grouped(rows),context.rows,selected,context).filter(x=>['ready','next'].includes(x.match?.kind)&&x.geo.kind!=='outside').slice(0,8).map(x=>x.url);
+  }
+  async function submitPriorities(){
+    if(!feed||!window.BTBonusAuth?.connected?.())return;
+    const context=trackerContext(),offers=priorityIdentifiers(feed.offers,context,area),signature=JSON.stringify(offers);
+    if(signature===lastPriority&&Date.now()-lastPriorityAt<300000)return;
+    lastPriority=signature;lastPriorityAt=Date.now();
+    const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
+    try{
+      const send=token=>fetch(AVAILABILITY_API+'/api/bank-bonus-availability/priorities',{method:'POST',credentials:'omit',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({offers}),signal:controller.signal});
+      let response=await send(await window.BTBonusAuth.token());if(response.status===401)response=await send(await window.BTBonusAuth.token(true));
+      if(!response.ok)lastPriorityAt=Date.now()-240000;
+    }catch{lastPriorityAt=Date.now()-240000;}finally{clearTimeout(timeout);}
+  }
+  async function refreshOfficial(){
+    if(officialBusy)return;
+    officialBusy=true;const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);
+    try{
+      const response=await fetch(AVAILABILITY_API+'/public/bank-bonus-availability',{credentials:'omit',cache:'no-store',signal:controller.signal});
+      if(!response.ok)throw Error('Unavailable');const data=await response.json();
+      if(data.schemaVersion!==1||!['pending','complete','unavailable'].includes(data.status)||!data.records||typeof data.records!=='object'||Array.isArray(data.records)||Object.keys(data.records).length>200)throw Error('Invalid catalog');
+      officialCatalog=data;officialError=data.status==='unavailable'?'Official availability checks are unavailable; personal eligibility remains unconfirmed.':'';
+      await submitPriorities();
+    }catch{officialError='Official availability could not update. Expired evidence will not be shown as verified.';}
+    finally{clearTimeout(timeout);officialBusy=false;if(typeof tab!=='undefined'&&tab==='bonuses')R();}
+  }
+
   function geography(offer,selected){
+    const proof=offer.officialAvailability||availabilityFor(offer,officialCatalog);
+    if(proof?.status==='expired')return{kind:'expired',label:'Official offer ended',detail:proof.reason,proof};
+    if(proof?.status==='verified'&&Object.hasOwn(states,selected)){
+      const outside=proof.rules.some(r=>r.mode==='include'&&!r.states.includes(selected)||r.mode==='exclude'&&r.states.includes(selected));
+      return{kind:outside?'outside':proof.conditions.length?'conditional':proof.nationwide?'nationwide':'listed',label:outside?'Officially outside your area':proof.conditions.length?'Additional requirements':states[selected]+' · official scope',detail:outside?'The official promotion excludes your selected state.':proof.conditions.length?'State scope matches; membership, county, ZIP or other restrictions still need review.':'Official geographic scope matches your state. Personal and current-offer eligibility still need review.',proof};
+    }
+    if(proof&&['conditional','stale'].includes(proof.status))return{kind:'unknown',label:proof.status==='stale'?'Official check expired':'Additional requirements',detail:proof.reason,proof};
     const prefix=String(offer.title||'').match(/\[([^\]]+)\]/)?.[1]||'';
     const evidence=offer.evidence&&!offer.evidence.stale?offer.evidence.fields?.availability?.value||'':'';
     const scope=prefix||evidence;
@@ -137,10 +190,10 @@
       const geo=geography(offer,selected),match=trackerMatch(offer,tracker,context);
       const group=geo.kind==='outside'?'outside':match?.kind==='ready'?'ready':match?.kind==='next'?'next':match?'review':'explore';
       return{...offer,geo,match,priorityGroup:group,index};
-    }).filter(x=>filter==='all'||filter==='tracker'&&!!x.match||filter==='area'&&x.geo.kind!=='outside')
+    }).filter(x=>x.geo.kind!=='expired'&&(filter==='all'||filter==='tracker'&&!!x.match||filter==='area'&&x.geo.kind!=='outside'))
       .sort((a,b)=>({ready:0,next:1,explore:2,review:3,outside:4}[a.priorityGroup]-{ready:0,next:1,explore:2,review:3,outside:4}[b.priorityGroup])||
         (a.priorityGroup==='next'?(a.match.date.localeCompare(b.match.date)):0)||
-        ({listed:0,nationwide:0,unknown:1,outside:2}[a.geo.kind]-{listed:0,nationwide:0,unknown:1,outside:2}[b.geo.kind])||
+        ({listed:0,nationwide:0,conditional:1,unknown:1,outside:2}[a.geo.kind]-{listed:0,nationwide:0,conditional:1,unknown:1,outside:2}[b.geo.kind])||
         (Date.parse(b.publishedAt)-Date.parse(a.publishedAt))||a.index-b.index);
   }
   function trackerContext(){
@@ -171,13 +224,13 @@
   function selectFilter(id,label,value,choices,kind){return '<label for="'+id+'">'+label+'</label><select id="'+id+'" onchange="btRadarFilter(\''+kind+'\',this.value)">'+choices.map(([v,l])=>'<option value="'+v+'"'+(v===value?' selected':'')+'>'+l+'</option>').join('')+'</select>';}
   async function refresh(){
     if(loading)return;
-    loading=true;attempted=true;error='';
+    loading=true;attempted=true;error='';refreshOfficial();
     if(typeof R==='function'&&typeof tab!=='undefined'&&tab==='bonuses')R();
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);
     try{
       const response=await fetch('./data/bank-bonuses.json',{cache:'no-store',signal:controller.signal});
       if(!response.ok)throw Error('Feed unavailable');
-      feed=valid(await response.json());
+      const data=await response.json();feed=valid(data);if(!officialCatalog&&data.availability?.schemaVersion===1)officialCatalog=data.availability;submitPriorities();
     }catch{error='Could not check for updates. '+(feed?'Showing the last loaded feed.':'Reconnect to load the bank bonus feed.');}
     finally{clearTimeout(timeout);loading=false;if(typeof R==='function'&&typeof tab!=='undefined'&&tab==='bonuses')R();}
   }
@@ -189,6 +242,10 @@
     if(error)h+='<p role="status" class="radar-warning">'+escape(error)+'</p>';
     if(feed&&Date.now()-Date.parse(feed.checkedAt)>24*60*60*1000)h+='<p role="status" class="radar-warning">Updates are stale: the source has not been successfully checked in over 24 hours.</p>';
     if(!feed)return h+'<p role="status">'+(loading?'Loading bank bonus posts…':'Feed not loaded.')+'</p>';
+    const proofs=feed.offers.map(o=>availabilityFor(o,officialCatalog));
+    const checked=proofs.filter(p=>p&&['verified','conditional','expired'].includes(p.status)).length;
+    h+='<div class="radar-verification-status" role="status"><b>Official availability</b><span>'+checked+' of '+feed.offers.length+' posts have current official scope evidence'+(officialCatalog?.status==='pending'?' · checking…':'')+'</span><p>Checks run hourly; scope evidence expires after 24 hours. Next churn matches receive priority after sign-in. Account history stays on this device.</p></div>';
+    if(officialError)h+='<p class="radar-warning">'+escape(officialError)+'</p>';
     if(feed.sources.length)h+=disclosure('source-times','Source check times','<div class="radar-sources">'+feed.sources.map(s=>'<p>'+escape(s.name)+' · '+(s.status==='ok'?'Checked':'Update unavailable')+(s.checkedAt?' '+escape(new Date(s.checkedAt).toLocaleString()):' · no successful check yet')+'</p>').join('')+'</div>');
     if(feed.sources.some(s=>s.status!=='ok'))h+='<p role="status" class="radar-warning">Some sources could not update. Available sources continue working; retained posts use their last successful check.</p>';
     h+='<section class="radar-filters radar-personal-filters" aria-label="Offer preferences"><label for="radar-search">Find an offer</label><input id="radar-search" class="sinput" placeholder="Search bank bonuses…" value="'+escape(query)+'" oninput="btRadarSearch(this.value,this.selectionStart)"><div class="radar-filter-grid"><div><label for="radar-area">Your area</label><select id="radar-area" onchange="btRadarArea(this.value)"><option value=""'+(!area?' selected':'')+'>Choose a state</option>'+Object.entries(states).map(([code,name])=>'<option value="'+code+'"'+(area===code?' selected':'')+'>'+name+'</option>').join('')+'</select></div><div><label for="radar-availability">Availability</label><select id="radar-availability" onchange="btRadarAvailability(this.value)">'+[['all','All bank offers'],['nationwide','Nationwide reported'],['regional','Regional reported'],['unknown','Availability unclear']].map(([v,l])=>'<option value="'+v+'"'+(availabilityFilter===v?' selected':'')+'>'+l+'</option>').join('')+'</select></div></div><div class="radar-priority-tabs" role="group" aria-label="Offer priority">'+[['all','For you'],['tracker','Churn matches'],['area','Hide out-of-area']].map(([v,l])=>'<button type="button" aria-pressed="'+(priorityFilter===v)+'" onclick="btRadarPriority(\''+v+'\')">'+l+'</button>').join('')+'</div><p>Ordered by tracker review dates and source-reported geography. Unknown availability stays visible; new offer eligibility always needs review.</p></section>';
@@ -208,12 +265,17 @@
       const link=x.links[0],date=x.match?.date;
       h+='<article class="radar-card radar-card-compact radar-priority-'+x.priorityGroup+'"><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+'</div><h3>'+escape(x.title)+'</h3>';
       if(x.match)h+='<div class="radar-tracker-context"><b>'+escape(x.match.label)+'</b>'+(date?'<time datetime="'+date+'">'+escape(typeof fD==='function'?fD(date):date)+'</time>':'')+'<p>'+escape(x.match.detail)+'</p></div>';
-      h+='<p class="radar-area-note">'+escape(x.geo.detail)+'</p><a class="radar-offer-link" href="'+escape(link.url)+'" target="_blank" rel="noopener noreferrer">Review offer · '+escape(link.source)+' ↗</a></article>';
+      h+='<p class="radar-area-note">'+escape(x.geo.detail)+'</p>';
+      const proof=x.geo.proof||availabilityFor(x,officialCatalog);
+      if(proof?.sourceUrl){h+='<details class="radar-official-proof"><summary>Official check · '+escape(new Date(proof.checkedAt).toLocaleString())+'</summary><div>';for(const q of [...(proof.rules||[]).map(r=>r.quote),...(proof.nationwideQuote?[proof.nationwideQuote]:[]),...(proof.conditions||[])])h+='<blockquote>'+escape(q)+'</blockquote>';h+='<a href="'+escape(proof.sourceUrl)+'" target="_blank" rel="noopener noreferrer">Official promotion ↗</a></div></details>';}
+      h+='<a class="radar-offer-link" href="'+escape(link.url)+'" target="_blank" rel="noopener noreferrer">Review offer · '+escape(link.source)+' ↗</a></article>';
     });
     return h;
   };
-  window.BTBankBonusFeed={validate:valid,group:grouped,filter:filtered,evidence:evidenceFor,amount:amountFor,geography,match:trackerMatch,prioritize};
+  window.BTBankBonusFeed={validate:valid,group:grouped,filter:filtered,evidence:evidenceFor,amount:amountFor,geography,match:trackerMatch,prioritize,availability:availabilityFor,priorityIdentifiers};
   // While the tab stays open, refresh the published snapshot without re-entering anything.
+  const officialPoll=setInterval(()=>{if(typeof tab!=='undefined'&&tab==='bonuses')refreshOfficial();},60000);
+  if(officialPoll&&typeof officialPoll.unref==='function')officialPoll.unref();
   const poll=setInterval(()=>{if(typeof tab!=='undefined'&&tab==='bonuses')refresh();},15*60*1000);
   if(poll&&typeof poll.unref==='function')poll.unref();
 })();

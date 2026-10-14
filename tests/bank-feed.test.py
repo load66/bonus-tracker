@@ -88,3 +88,15 @@ with_usage=m.attach_verification({"offers":[offer]}, {})
 assert with_usage["verification"]["usage"]["cacheHits"]==3
 assert with_usage["verification"]["coverage"]==["Everyday Checking"]
 m.download=original
+
+record.update(offerTitle=offer['title'],offerUrl=offer['url'])
+m.download=lambda _:json.dumps({'schemaVersion':1,'status':'complete','records':{offer['url']:record}}).encode()
+scoped=m.attach_availability({'offers':[offer]}, {})
+assert scoped['availability']['records'][offer['url']]==record
+changed=m.attach_availability({'offers':[{**offer,'title':'Different promotion'}]}, {})
+assert changed['availability']['records']=={}
+m.download=offline
+failed=m.attach_availability({'offers':[offer]}, {'availability':scoped['availability']})
+assert failed['availability']['status']=='unavailable' and failed['availability']['records']==scoped['availability']['records']
+m.download=original
+print('Official availability attachment passed: exact offer identity and unchanged evidence timestamps on outage')

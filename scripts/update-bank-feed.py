@@ -50,6 +50,26 @@ def attach_verification(payload, previous):
     print('Official evidence service:', snapshot['status'], len(snapshot['records']), 'matching records')
     return payload
 
+AVAILABILITY_URL = 'https://api-production-00f74.up.railway.app/public/bank-bonus-availability'
+
+def attach_availability(payload, previous):
+    # Preserve timestamps and exact identity; old scope cannot become freshly verified.
+    last=previous.get('availability',{})
+    last=last if isinstance(last,dict) else {}
+    snapshot={'schemaVersion':1,'status':'unavailable','records':last.get('records',{}),'checkedAt':last.get('checkedAt')}
+    try:
+        result=json.loads(download(AVAILABILITY_URL))
+        if result.get('schemaVersion')!=1 or result.get('status') not in ('complete','pending','unavailable') or not isinstance(result.get('records'),dict):raise ValueError('Invalid availability response')
+        records={}
+        for offer in payload['offers']:
+            r=result['records'].get(offer['url'])
+            expected=hashlib.sha256((offer['title']+'\n'+offer['url']).encode()).hexdigest()
+            if isinstance(r,dict) and r.get('offerFingerprint')==expected and r.get('offerTitle')==offer['title'] and r.get('offerUrl')==offer['url']:records[offer['url']]=r
+        snapshot={'schemaVersion':1,'status':result['status'],'checkedAt':result.get('checkedAt'),'records':records,'coverage':result.get('coverage',{})}
+    except Exception:pass
+    payload['availability']=snapshot
+    return payload
+
 def bank_bonus(title, categories):
     text = html.unescape(title).lower()
     if re.search(r'\b(credit card|brokerage|crypto|binance|bitcoin|tastytrade|robinhood|investment|ira|stock)\b', text):
@@ -167,6 +187,7 @@ def main():
     except Exception:
         pass
     payload = build_payload(now, previous)  # Discovery needs no paid AI calls; Tracker AI is on demand.
+    payload = attach_availability(payload, previous)
     OUTPUT.parent.mkdir(exist_ok=True)
     OUTPUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     print('Bank-only feed:', len(payload['offers']), 'items; source checked', payload['checkedAt'])

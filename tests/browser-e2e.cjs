@@ -43,6 +43,18 @@ async function exercise(name,engine,url){
   page.on('pageerror',err=>errors.push(String(err)));
   page.on('console',msg=>{if(msg.type()==='warning')warnings.push(msg.text());if(msg.type()==='error'&&!/Failed to load resource|net::ERR|404 \(Not Found\)/i.test(msg.text()))errors.push(msg.text())});
   await page.addInitScript(()=>{const RealDate=Date;const now=Date.parse('2026-10-11T17:00:00Z');window.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[now]))}static now(){return now}}});
+  await page.addInitScript(()=>{
+    const native=window.fetch.bind(window);window.__availabilityPriorityRequests=[];
+    window.fetch=async function(input,options={}){
+      const url=String(input);
+      if(url.includes('/public/bank-bonus-availability')){
+        const title='Wells Fargo $325 Checking Bonus (Nationwide)',offerUrl='https://www.hustlermoneyblog.com/wells-fargo-bonus/';
+        return new Response(JSON.stringify({schemaVersion:1,status:'complete',records:{[offerUrl]:{offerTitle:title,offerUrl,status:'verified',checkState:'checked',checkedAt:'2026-10-11T16:00:00Z',expiresAt:'2026-10-12T16:00:00Z',sourceUrl:'https://accountoffers.wellsfargo.com/checkingoffer/',sourceHash:'a'.repeat(64),nationwide:true,nationwideQuote:'This offer is available nationwide.',rules:[],conditions:[]}}}),{status:200,headers:{'Content-Type':'application/json'}});
+      }
+      if(url.includes('/api/bank-bonus-availability/priorities')){window.__availabilityPriorityRequests.push(JSON.parse(options.body));return new Response(JSON.stringify({accepted:true,count:JSON.parse(options.body).offers.length}),{status:200});}
+      return native(input,options);
+    };
+  });
   const button=text=>page.getByRole('button',{name:text,exact:true});
   const wait=async fn=>{await page.waitForFunction(fn,{},{timeout:15000})};
   const record=async()=>page.evaluate(()=>JSON.parse(localStorage.getItem('bt_e_v4')||'[]')[0]);
@@ -163,7 +175,10 @@ async function exercise(name,engine,url){
     check('partial source outage is disclosed',(await page.locator('#app').innerText()).includes('Some sources could not update'));
     await page.getByLabel('Availability',{exact:true}).selectOption('nationwide');
     check('nationwide filter requires explicit source label',await page.locator('.radar-card').count()===1&&(await page.locator('.radar-card').innerText()).includes('Wells Fargo'));
-    check('compact offers show geography and one source link',await page.locator('.radar-card').evaluateAll(cards=>cards.every(card=>card.querySelectorAll('h3').length===1&&card.querySelectorAll('a').length===1&&card.querySelector('.radar-geo'))));
+    check('compact offers show geography and one source link',await page.locator('.radar-card').evaluateAll(cards=>cards.every(card=>card.querySelectorAll('h3').length===1&&card.querySelectorAll('.radar-offer-link').length===1&&card.querySelector('.radar-geo'))));
+    check('fresh official geography is distinguished from source reports',(await page.locator('.radar-card').innerText()).includes('Missouri · official scope'));
+    await page.locator('.radar-official-proof summary').click();
+    check('official verification exposes its source quotation',(await page.locator('.radar-official-proof').innerText()).includes('This offer is available nationwide.'));
     check('offer review tools have been removed',await button('Copy offer for review').count()===0&&await page.locator('.radar-evidence').count()===0);
     await page.getByRole('button',{name:'U.S. Bank',exact:true}).click();
     check('unverified geography does not become nationwide',await page.locator('.radar-card').count()===0);
@@ -183,6 +198,10 @@ async function exercise(name,engine,url){
     await page.getByLabel('Your area',{exact:true}).selectOption('CA');
     check('area selector reevaluates source region',(await page.locator('.radar-card').filter({hasText:'Regional E2E Bank'}).innerText()).includes('California listed'));
     await page.getByLabel('Your area',{exact:true}).selectOption('MO');
+    await page.evaluate(()=>{window.__savedPriorityAuth=BTBonusAuth;BTBonusAuth={connected:()=>true,token:async()=> 'e2e-priority-token'};});
+    await button('Check updates').click();await page.waitForFunction(()=>window.__availabilityPriorityRequests.length>0);
+    check('churn verifier receives only public offer URLs',await page.evaluate(()=>window.__availabilityPriorityRequests.every(p=>Object.keys(p).join(',')==='offers'&&p.offers.length<=8&&p.offers.every(x=>x.startsWith('https://')))));
+    await page.evaluate(()=>{BTBonusAuth=window.__savedPriorityAuth;delete window.__savedPriorityAuth;});
     check('personal discovery fits narrow mobile viewport',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
     await page.evaluate(()=>{undoState=null;clearTimeout(undoTimer);R()});
     await page.getByPlaceholder('Search bank bonuses…').fill('');
