@@ -39,3 +39,7 @@ Long bank names wrap. Supporting text spans the card below its bank/status/bonus
 ## v3.4.45 compact Action Center
 
 Two-column mobile shortcut tiles show the square bank icon, bank name, bonus and one timing/status indicator. Compact buttons retain the canonical prefilled action handlers and 44px touch targets. The tile body opens, scrolls to and focuses its full account card. Date evidence and action explanations live in the expanded account rather than repeating in the shortcuts; their existing per-entry disclosure state is preserved. Desktop uses up to four columns. No storage or calculation rules change.
+
+## v3.4.47 actionable AI explanations
+
+Answers include a canonical next step, expandable supporting saved facts and explicit unresolved information. Closure questions get a tracker-derived Ready, Wait, Needs verification or Already closed verdict; early-close fee questions do not imply permission. Qualifying activity and the canonical next action are included in bounded AI context. Missing original terms and shortened evidence are visible. Malformed output is rejected before rendering. No additional background calls, automatic changes to entries or replacement calculations are introduced. Browser verification uses synthetic AI responses, not a paid live-provider conversation.
