@@ -253,6 +253,7 @@ async function exercise(name,engine,url){
         if(db.failure)return new Response(JSON.stringify({detail:'Synthetic cloud outage'}),{status:503,headers:{'Content-Type':'application/json'}});
         if(url.endsWith('/health'))return new Response(JSON.stringify({readWriteVerified:true}),{headers:{'Content-Type':'application/json'}});
         if(options.method==='POST'){
+          if(db.holdNext){db.holdNext=false;await new Promise(resolve=>{db.releaseUpload=resolve;});}
           const packet=JSON.parse(options.body),count=JSON.parse(JSON.parse(packet.snapshot).storageSnapshot.bt_e_v4).length;
           const backup={id:packet.id,createdAt:new Date().toISOString(),sha256:packet.sha256,entryCount:count,bytes:packet.snapshot.length,reason:packet.reason,verified:true};
           db.objects[packet.id]={backup,snapshot:packet.snapshot};return new Response(JSON.stringify(backup),{headers:{'Content-Type':'application/json'}});
@@ -273,6 +274,15 @@ async function exercise(name,engine,url){
     await page.locator('#cloud-auto-toggle').click();await page.locator('#bt_confirm_overlay').getByRole('button',{name:'Cancel',exact:true}).click();
     check('canceling disable keeps automatic backup on',await page.locator('#cloud-auto-toggle').isChecked());
     check('cloud upload is readback-verified and authenticated',await page.evaluate(()=>JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')).lastHash?.length===64&&window.__cloudFixture.calls.every(c=>c.authorization?.startsWith('Bearer '))));
+    await page.evaluate(()=>{window.__cloudFixture.holdNext=true;const changed=JSON.parse(localStorage.getItem('bt_e_v4'));changed[0].notes+=' Synthetic pending-change verification';entries=changed;localStorage.setItem('bt_e_v4',JSON.stringify(changed));btCloudBackupChanged();R();});
+    await page.waitForFunction(()=>typeof window.__cloudFixture.releaseUpload==='function');
+    check('pending upload never shows current-data protection',await page.locator('#cloud-protection').getAttribute('data-state')==='warning'&&await page.locator('#cloud-auto-toggle').isChecked());
+    await page.evaluate(()=>{window.__cloudFixture.releaseUpload();delete window.__cloudFixture.releaseUpload;});
+    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')).pending===false&&document.querySelector('#cloud-protection')?.dataset.state==='protected');
+    await page.getByText('Backup verified',{exact:true}).first().waitFor();
+    check('saved changes upload while recovery settings are open',await page.evaluate(()=>Object.values(window.__cloudFixture.objects).some(x=>x.backup.reason==='automatic'&&x.snapshot.includes('Synthetic pending-change verification'))));
+    await page.evaluate(raw=>{entries=JSON.parse(raw);localStorage.setItem('bt_e_v4',raw);btCloudBackupChanged();R();},storedBeforeRadar);
+    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')).pending===false&&document.querySelector('#cloud-protection')?.dataset.state==='protected');
     const cloudRecords=await page.evaluate(()=>window.__cloudFixture.objects);
     await button('Close').click();
     const newPhoneContext=await browser.newContext({viewport:{width:390,height:844},timezoneId:'America/Chicago'});
@@ -299,9 +309,10 @@ async function exercise(name,engine,url){
     check('new-phone recovery preserves exact stored tracker data',await newPhone.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
     check('new-phone recovery retains its own login',await newPhone.evaluate(()=>BTBonusAuth.connected()));
     await newPhoneContext.close();
-    await page.evaluate(()=>{window.__cloudFixture.failure=true;});
+    await page.evaluate(()=>{document.getElementById('bt_notice_host')?.replaceChildren();window.__cloudFixture.failure=true;});
     await page.locator('#bt-cloud-open').click();await button('Back up now').click();
     await page.locator('#cloud-status').getByText('Synthetic cloud outage',{exact:true}).waitFor();
+    check('failed upload never shows a success popup',await page.getByText('Backup verified',{exact:true}).count()===0);
     check('cloud outage never shows protected status',await page.locator('#cloud-protection').getAttribute('data-state')==='danger'&&await page.locator('#cloud-auto-toggle').isChecked());
     check('cloud outage leaves original records untouched',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
     await button('Close').click();
