@@ -185,7 +185,7 @@ async function exercise(name,engine,url){
     check('bank feed renders escaped discovery title',(await page.locator('.radar-card img').count())===0&&(await page.locator('.radar-card').filter({hasText:'Synthetic Checking'}).innerText()).includes('<img'));
     check('bank feed warns when source check is stale',(await page.locator('#app').innerText()).includes('Updates are stale'));
     check('bank bonus tab fits mobile viewport',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
-    check('partial source outage is disclosed',(await page.locator('#app').innerText()).includes('Some sources could not update'));
+    check('partial source outage is disclosed',(await page.locator('#app').innerText()).includes('Some sources are unavailable'));
     await page.getByLabel('Availability',{exact:true}).selectOption('nationwide');
     check('nationwide filter requires explicit source label',await page.locator('.radar-card').count()===1&&(await page.locator('.radar-card').innerText()).includes('Wells Fargo'));
     check('compact offers show geography and one source link',await page.locator('.radar-card').evaluateAll(cards=>cards.every(card=>card.querySelectorAll('h3').length===1&&card.querySelectorAll('.radar-offer-link').length===1&&card.querySelector('.radar-geo'))));
