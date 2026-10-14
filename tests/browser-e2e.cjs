@@ -179,6 +179,7 @@ async function exercise(name,engine,url){
     check('fresh official geography is distinguished from source reports',(await page.locator('.radar-card').innerText()).includes('Missouri · official scope'));
     await page.locator('.radar-official-proof summary').click();
     check('official verification exposes its source quotation',(await page.locator('.radar-official-proof').innerText()).includes('This offer is available nationwide.'));
+    await page.evaluate(()=>R());check('official source stays open after rerender',await page.locator('.radar-official-proof').evaluate(el=>el.open));
     check('offer review tools have been removed',await button('Copy offer for review').count()===0&&await page.locator('.radar-evidence').count()===0);
     await page.getByRole('button',{name:'U.S. Bank',exact:true}).click();
     check('unverified geography does not become nationwide',await page.locator('.radar-card').count()===0);

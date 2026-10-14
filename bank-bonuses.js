@@ -127,7 +127,7 @@
       const response=await fetch(AVAILABILITY_API+'/public/bank-bonus-availability',{credentials:'omit',cache:'no-store',signal:controller.signal});
       if(!response.ok)throw Error('Unavailable');const data=await response.json();
       if(data.schemaVersion!==1||!['pending','complete','unavailable'].includes(data.status)||!data.records||typeof data.records!=='object'||Array.isArray(data.records)||Object.keys(data.records).length>200)throw Error('Invalid catalog');
-      officialCatalog=data;officialError=data.status==='unavailable'?'Official availability checks are unavailable; personal eligibility remains unconfirmed.':'';
+      officialCatalog=data.status==='pending'?{...data,records:{...(officialCatalog?.records||{}),...data.records}}:data;officialError=data.status==='unavailable'?'Official availability checks are unavailable; personal eligibility remains unconfirmed.':'';
       await submitPriorities();
     }catch{officialError='Official availability could not update. Expired evidence will not be shown as verified.';}
     finally{clearTimeout(timeout);officialBusy=false;if(typeof tab!=='undefined'&&tab==='bonuses')R();}
@@ -230,7 +230,7 @@
     try{
       const response=await fetch('./data/bank-bonuses.json',{cache:'no-store',signal:controller.signal});
       if(!response.ok)throw Error('Feed unavailable');
-      const data=await response.json();feed=valid(data);if(!officialCatalog&&data.availability?.schemaVersion===1)officialCatalog=data.availability;submitPriorities();
+      const data=await response.json();feed=valid(data);if(data.availability?.schemaVersion===1&&(!officialCatalog||officialCatalog.status==='pending'))officialCatalog={...data.availability,...(officialCatalog||{}),records:{...(data.availability.records||{}),...(officialCatalog?.records||{})}};submitPriorities();
     }catch{error='Could not check for updates. '+(feed?'Showing the last loaded feed.':'Reconnect to load the bank bonus feed.');}
     finally{clearTimeout(timeout);loading=false;if(typeof R==='function'&&typeof tab!=='undefined'&&tab==='bonuses')R();}
   }
@@ -267,7 +267,7 @@
       if(x.match)h+='<div class="radar-tracker-context"><b>'+escape(x.match.label)+'</b>'+(date?'<time datetime="'+date+'">'+escape(typeof fD==='function'?fD(date):date)+'</time>':'')+'<p>'+escape(x.match.detail)+'</p></div>';
       h+='<p class="radar-area-note">'+escape(x.geo.detail)+'</p>';
       const proof=x.geo.proof||availabilityFor(x,officialCatalog);
-      if(proof?.sourceUrl){h+='<details class="radar-official-proof"><summary>Official check · '+escape(new Date(proof.checkedAt).toLocaleString())+'</summary><div>';for(const q of [...(proof.rules||[]).map(r=>r.quote),...(proof.nationwideQuote?[proof.nationwideQuote]:[]),...(proof.conditions||[])])h+='<blockquote>'+escape(q)+'</blockquote>';h+='<a href="'+escape(proof.sourceUrl)+'" target="_blank" rel="noopener noreferrer">Official promotion ↗</a></div></details>';}
+      if(proof?.sourceUrl){let body='';for(const q of [...(proof.rules||[]).map(r=>r.quote),...(proof.nationwideQuote?[proof.nationwideQuote]:[]),...(proof.conditions||[])])body+='<blockquote>'+escape(q)+'</blockquote>';body+='<a href="'+escape(proof.sourceUrl)+'" target="_blank" rel="noopener noreferrer">Official promotion ↗</a>';h+=disclosure('availability:'+x.url,'Official check · '+new Date(proof.checkedAt).toLocaleString(),body).replace('class="mobile-disclosure"','class="mobile-disclosure radar-official-proof"');}
       h+='<a class="radar-offer-link" href="'+escape(link.url)+'" target="_blank" rel="noopener noreferrer">Review offer · '+escape(link.source)+' ↗</a></article>';
     });
     return h;
