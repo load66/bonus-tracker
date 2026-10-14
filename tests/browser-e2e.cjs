@@ -152,8 +152,9 @@ async function exercise(name,engine,url){
     check('search keeps stored record',(await record()).id===id);
     await page.setViewportSize({width:390,height:844});
     check('mobile layout fits viewport',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
-    await page.evaluate(()=>{const base=entries[0];entries.push({...base,id:'radar-us-bank',bank:'U.S. Bank',closed:'2026-05-01'});sv(SK,entries);R()});
     const storedBeforeRadar=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
+    await page.evaluate(()=>{const base=entries[0];entries.push({...base,id:'radar-us-bank',bank:'U.S. Bank',closed:'2026-05-01'});sv(SK,entries);R()});
+    const storedDuringRadar=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     await button('Bank Bonuses').click();
     await page.getByText(/Synthetic Checking/).waitFor();
     check('bank feed renders escaped discovery title',(await page.locator('.radar-card img').count())===0&&(await page.locator('.radar-card').filter({hasText:'Synthetic Checking'}).innerText()).includes('<img'));
@@ -191,7 +192,7 @@ async function exercise(name,engine,url){
     feedInvalid=true;await button('Check updates').click();
     await page.getByText(/Could not check for updates/).waitFor();
     check('failed feed refresh retains loaded results',await page.locator('.radar-card').count()===4);
-    check('bank feed leaves saved account data unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
+    check('bank feed leaves saved account data unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedDuringRadar);
     feedInvalid=false;await page.evaluate(()=>{entries=entries.filter(e=>e.id!=='radar-us-bank');sv(SK,entries);R()});await button('Tracker').click();
     check('mobile dashboard scrolls with content',await page.locator('.tracker-overview').evaluate(e=>!!e.closest('.scroll')));
     check('mobile fixed header leaves room for workflow',await page.locator('.hdr').evaluate(e=>e.getBoundingClientRect().height<=90));
