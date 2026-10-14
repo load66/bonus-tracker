@@ -1,7 +1,7 @@
-/* Version 3.4.52: direct milestone actions, shared date explanations, missing-date review, and safe local-day refresh. */
+/* Version 3.4.53: direct milestone actions, shared date explanations, missing-date review, and safe local-day refresh. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.52';
+const APP_VERSION='3.4.53';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -21,11 +21,21 @@ const ld=(k,d)=>{
 };
 
 const sv=(k,v)=>{
+  let before=null;
   try{
-    localStorage.setItem(k,JSON.stringify(v))
+    before=localStorage.getItem(k);
+    const payload=JSON.stringify(v);
+    if(window.BTPersistence)window.BTPersistence.commit(localStorage,{[k]:payload});
+    else{localStorage.setItem(k,payload);if(localStorage.getItem(k)!==payload)throw Error('Storage verification failed');}
+    window.btCloudBackupChanged?.();
+    return true;
+  }catch(error){
+    if(k===SK&&before!==null){try{entries=JSON.parse(before)}catch{}}
+    const message='Changes were not saved. Your previous stored records are retained. Check browser storage and export a backup before retrying.';
+    if(window.btNotify)window.btNotify(message,{title:'Save failed',tone:'danger'});
+    if(!window.btStorageWritesReady){window.btInitialSaveError=message;return false;}
+    throw new Error(message,{cause:error});
   }
-  catch{}
-  
 };
 
 const isoParts=d=>{const m=String(d||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?{y:Number(m[1]),m:Number(m[2]),d:Number(m[3])}:null};
@@ -97,12 +107,9 @@ function loadUserDatapoints(){
 
 function saveUserDatapoints(rows){
   const clean=(rows||[]).map(normalizeUserDatapoint).filter(x=>x.bank&&x.method);
-  sv(DP_USER_KEY,clean);
-  try{
-    localStorage.setItem(DD_KEY,JSON.stringify(clean.map(x=>({id:x.id,bank:x.bank,method:x.method,bonus:0,date:x.lastConfirmedAt||x.updatedAt||x.createdAt,note:x.note||'',entryId:x.entryId||''}))))
-  }
-  catch{}
-  
+  const legacy=clean.map(x=>({id:x.id,bank:x.bank,method:x.method,bonus:0,date:x.lastConfirmedAt||x.updatedAt||x.createdAt,note:x.note||'',entryId:x.entryId||''}));
+  window.BTPersistence.commit(localStorage,{[DP_USER_KEY]:JSON.stringify(clean),[DD_KEY]:JSON.stringify(legacy)});
+  window.btCloudBackupChanged?.();
 }
 
 function loadDD(){
@@ -2243,7 +2250,7 @@ function closeDPEditor(){dpEditor=null;R()}
 function saveDPEditor(){if(!dpEditor)return;const bank=String(dpEditor.bank||'').trim();const method=String(dpEditor.method||'').trim();if(!bank||!method){alert('Bank and datapoint method are required');return}if(dpEditor.type==='user'){const rows=loadUserDatapoints();if(dpEditor.mode==='edit'&&dpEditor.id){const idx=rows.findIndex(r=>r.id===dpEditor.id);if(idx>=0)rows[idx]={...rows[idx],bank,method,note:String(dpEditor.note||'').trim(),lastConfirmedAt:dpEditor.lastConfirmedAt||td(),updatedAt:td()}}else{rows.unshift(normalizeUserDatapoint({bank,method,note:String(dpEditor.note||'').trim(),date:dpEditor.lastConfirmedAt||td()}))}saveUserDatapoints(rows);dpExpandedBankKey=bankKey(bank);dpEditor=null;R();return}const rows=loadCommunityDatapoints();if(dpEditor.mode==='edit'&&dpEditor.id){const idx=rows.findIndex(r=>r.id===dpEditor.id);if(idx>=0)rows[idx]={...rows[idx],bank,method,result:String(dpEditor.result||'').trim(),link:String(dpEditor.link||'').trim()}}else{rows.unshift(normalizeCommunityDatapoint({bank,method,result:String(dpEditor.result||'').trim(),link:String(dpEditor.link||'').trim()}))}saveCommunityDatapoints(rows);dpExpandedBankKey=bankKey(bank);dpEditor=null;R()}
 function deleteUserDP(id){const rows=loadUserDatapoints();const item=rows.find(r=>r.id===id);if(!item)return;cfm={title:'Delete datapoint',msg:'Remove '+item.method+' from '+item.bank+'?',action:()=>{saveUserDatapoints(rows.filter(r=>r.id!==id));if(dpEditor&&dpEditor.id===id)dpEditor=null;cfm=null;R()}};R()}
 function deleteCommunityDP(id){const rows=loadCommunityDatapoints();const item=rows.find(r=>r.id===id);if(!item)return;cfm={title:'Delete community datapoint',msg:'Remove '+item.method+' from '+item.bank+'?',action:()=>{saveCommunityDatapoints(rows.filter(r=>r.id!==id));if(dpEditor&&dpEditor.id===id)dpEditor=null;cfm=null;R()}};R()}
-function deleteDPBankGroup(groupKey,bankEnc){const bank=decodeURIComponent(bankEnc||'');if(!groupKey)return;const entryMatches=entries.filter(e=>bankKey(e.bank)===groupKey);const entryIds=new Set(entryMatches.map(e=>e.id));const userRows=loadUserDatapoints();const communityRows=loadCommunityDatapoints();const userMatches=userRows.filter(r=>bankKey(r.bank)===groupKey);const communityMatches=communityRows.filter(r=>bankKey(r.bank)===groupKey);const reqs=loadReqs();const reqKeys=Object.keys(reqs||{}).filter(k=>bankKey(((reqs[k]||{}).bank)||k)===groupKey);const parts=[];if(entryMatches.length)parts.push(entryMatches.length+' tracker '+(entryMatches.length===1?'entry':'entries'));if(userMatches.length)parts.push(userMatches.length+' confirmed datapoint'+(userMatches.length===1?'':'s'));if(communityMatches.length)parts.push(communityMatches.length+' community datapoint'+(communityMatches.length===1?'':'s'));if(reqKeys.length)parts.push(reqKeys.length+' saved requirement'+(reqKeys.length===1?'':'s'));const detail=parts.length?parts.join(', '):'this empty bank shell';cfm={title:'Delete bank',msg:'Delete the entire '+bank+' bank group?\n\nThis will remove '+detail+'.\n\nThis cannot be undone.',action:()=>{entries=entries.filter(e=>bankKey(e.bank)!==groupKey);sv(SK,entries);saveUserDatapoints(userRows.filter(r=>bankKey(r.bank)!==groupKey));saveCommunityDatapoints(communityRows.filter(r=>bankKey(r.bank)!==groupKey));if(reqKeys.length){const next={...reqs};reqKeys.forEach(k=>delete next[k]);saveReqs(next)}if(dpEditor&&bankKey(dpEditor.bank)===groupKey)dpEditor=null;if(modal&&bankKey(modal.bank)===groupKey)modal=null;if(expanded&&entryIds.has(expanded))expanded=null;if(undoState&&bankKey(undoState.bank)===groupKey)undoState=null;dpExpandedBankKey='';cfm=null;R()}};R()}
+function deleteDPBankGroup(groupKey,bankEnc){const bank=decodeURIComponent(bankEnc||'');if(!groupKey)return;const entryMatches=entries.filter(e=>bankKey(e.bank)===groupKey);const entryIds=new Set(entryMatches.map(e=>e.id));const userRows=loadUserDatapoints();const communityRows=loadCommunityDatapoints();const userMatches=userRows.filter(r=>bankKey(r.bank)===groupKey);const communityMatches=communityRows.filter(r=>bankKey(r.bank)===groupKey);const reqs=loadReqs();const reqKeys=Object.keys(reqs||{}).filter(k=>bankKey(((reqs[k]||{}).bank)||k)===groupKey);const parts=[];if(entryMatches.length)parts.push(entryMatches.length+' tracker '+(entryMatches.length===1?'entry':'entries'));if(userMatches.length)parts.push(userMatches.length+' confirmed datapoint'+(userMatches.length===1?'':'s'));if(communityMatches.length)parts.push(communityMatches.length+' community datapoint'+(communityMatches.length===1?'':'s'));if(reqKeys.length)parts.push(reqKeys.length+' saved requirement'+(reqKeys.length===1?'':'s'));const detail=parts.length?parts.join(', '):'this empty bank shell';cfm={title:'Delete bank',msg:'Delete the entire '+bank+' bank group?\n\nThis will remove '+detail+'.\n\nThis cannot be undone.',action:()=>btVerifiedMutation(()=>{entries=entries.filter(e=>bankKey(e.bank)!==groupKey);sv(SK,entries);saveUserDatapoints(userRows.filter(r=>bankKey(r.bank)!==groupKey));saveCommunityDatapoints(communityRows.filter(r=>bankKey(r.bank)!==groupKey));if(reqKeys.length){const next={...reqs};reqKeys.forEach(k=>delete next[k]);saveReqs(next)}if(dpEditor&&bankKey(dpEditor.bank)===groupKey)dpEditor=null;if(modal&&bankKey(modal.bank)===groupKey)modal=null;if(expanded&&entryIds.has(expanded))expanded=null;if(undoState&&bankKey(undoState.bank)===groupKey)undoState=null;dpExpandedBankKey='';cfm=null;R()})};R()}
 function rDpEditor(){const d=dpEditor;if(!d)return'';let h='<div class="ov" onclick="closeDPEditor()"><div class="modal" onclick="event.stopPropagation()">';h+='<div class="m-bar"></div><div class="m-hdr"><h2>'+(d.type==='user'?(d.mode==='edit'?'Edit Confirmed Datapoint':'New Confirmed Datapoint'):(d.mode==='edit'?'Edit Community Datapoint':'New Community Datapoint'))+'</h2><span class="m-id">'+esc(d.bank||'')+'</span></div>';h+='<div class="fg"><label>Bank</label><input value="'+esc(d.bank||'')+'" oninput="dpEditor.bank=this.value"></div>';h+='<div class="fg"><label>Method / datapoint</label><input value="'+esc(d.method||'')+'" oninput="dpEditor.method=this.value" placeholder="e.g. Fidelity ACH works"></div>';if(d.type==='user'){h+='<div class="fg"><label>Notes</label><textarea rows="4" oninput="dpEditor.note=this.value" placeholder="Optional note for your future self or future autofill logic">'+esc(d.note||'')+'</textarea></div>';h+='<div class="fg"><label>Last confirmed</label><input type="date" value="'+esc(d.lastConfirmedAt||'')+'" oninput="dpEditor.lastConfirmedAt=this.value"></div>';}else{h+='<div class="fg"><label>Community note / result</label><textarea rows="4" oninput="dpEditor.result=this.value" placeholder="e.g. Works as DD, ACH may fail, Safe anytime">'+esc(d.result||'')+'</textarea></div>';h+='<div class="fg"><label>Source link</label><input value="'+esc(d.link||'')+'" oninput="dpEditor.link=this.value" placeholder="Optional source URL"></div>';}h+='<button class="btn-p" onclick="saveDPEditor()">Save</button>';h+='<button class="btn-s" onclick="closeDPEditor()">Cancel</button>';if(d.mode==='edit'){h+='<button class="btn-d" onclick="'+(d.type==='user'?'deleteUserDP(\''+d.id+'\')':'deleteCommunityDP(\''+d.id+'\')')+'">Delete</button>';}h+='</div></div>';return h}
 
 /* -----------------------------
@@ -4435,8 +4442,8 @@ function syncModalFromEditDOM(){
 function saveEntriesStrict(rows){
   try{
     const payload=JSON.stringify(rows||[]);
-    localStorage.setItem(SK,payload);
-    if(localStorage.getItem(SK)!==payload)throw new Error('Local save verification failed');
+    window.BTPersistence.commit(localStorage,{[SK]:payload});
+    window.btCloudBackupChanged?.();
     return true;
   }catch(err){
     console.error('Bank Bonus Tracker save failed',err);
@@ -4507,6 +4514,8 @@ function saveEntry(){
   if(!modal._edit&&!modal._skipManualReplacePrompt&&handleManualReplacementPicker(d,'manual','')){closeModal();R();return 'duplicate-prompt'}
   if(!modal._edit&&!modal._skipDuplicateCheck&&handleDuplicateFlow(d,'manual')){closeModal();R();return 'duplicate-prompt'}
   const beforeEntries=entries.map(e=>({...e,checklist:Array.isArray(e.checklist)?[...e.checklist]:[],customTimers:normalizeTimerList(e.customTimers)}));
+  const beforeStorage=window.BTPersistence.capture(localStorage,getBackupStorageKeys());
+  try{
   let savedEntry=null;
   if(modal._edit){
     const targetId=modal.id;let promotedId='';
@@ -4520,6 +4529,12 @@ function saveEntry(){
   if(savedEntry){syncProfileEventsFromEntry(savedEntry);refreshSavedReqFromEntry(savedEntry);learnAnalyzerMemoryFromEntry(savedEntry);if(!modal._edit)saveTermsArchiveForNewCycle(savedEntry,modal._entryFileImport?'verified-json-new-cycle':'new-cycle')}
   closeModal();
   return true;
+  }catch(error){
+    try{window.BTPersistence.rollback(localStorage,beforeStorage);}catch(rollbackError){alert('Save recovery needs attention. Keep this page open and export a backup.');}
+    entries=beforeEntries;
+    alert('The account update was not completed. Previous stored records were restored where possible.');
+    return false;
+  }
 }
 function normalizeNewCycleData(d,existing){
   d={...(d||{})}; existing=existing||{};
@@ -4656,7 +4671,7 @@ async function deliverBackupFile(blob,filename,preferShare){if(preferShare&&type
 function buildResetSafetyBackupPayload(){const data=buildPortableBackupPayload();data.reason='pre-reset-safety-backup';return data}
 async function exportBackup(preferShare=true,customData=null,customFilename=''){const data=customData||buildPortableBackupPayload();const filename=customFilename||('BankBonusTracker_FullBackup_'+backupTimestamp()+'.json');const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const mode=await deliverBackupFile(blob,filename,preferShare);setLastBk();return{mode,filename,data}}
 function performHardReset(){entries=[];profileSectionUiState={};sv(SK,[]);try{getBackupStorageKeys().forEach(k=>localStorage.removeItem(k));localStorage.removeItem(PROFILE_EVT_KEY);localStorage.removeItem(BK_KEY)}catch{}dashYear=new Date().getFullYear();taxYear=new Date().getFullYear();expanded=null;modal=null;search='';showTemplates=false;showAnalyzer=false;analyzerText='';analyzerResult=null;inlineResult=null;showInlineAZ=false;phoneSearch='';showPhoneAdd=false;storageSearch='';dpSearch='';dpExpandedBankKey='';dpEditor=null;profileSearch='';activeProfileKey='';overwritePrompt=null;matchPickerPrompt=null;ddPrompt=null;rcvPrompt=null;closePrompt=null;feeCheckPrompt=null;undoState=null;if(undoTimer)clearTimeout(undoTimer);R()}
-function resetAllData(){cfm={title:'⚠️ Reset All Data',msg:'This will permanently delete ALL tracker rows, datapoints, saved bank requirements, and saved phone data from this device.\n\nFor safety, the app will export one final full backup first so you can save it to Files/iCloud/Drive before the wipe finishes.',action:()=>{cfm={title:'🚨 Final confirmation',msg:'Continue with the full reset? A recovery backup file will be created first, then this device will be wiped.',action:async()=>{cfm=null;R();try{await exportBackup(false,buildResetSafetyBackupPayload(),'BankBonusTracker_PreReset_'+backupTimestamp()+'.json')}catch{}performHardReset();cfm={title:'Reset Complete',msg:'This device has been cleared. Keep the exported pre-reset backup file somewhere safe so you can restore later.',green:true,action:()=>{cfm=null;R()}};R()}};R()}};R()}
+function resetAllData(){cfm={title:'⚠️ Reset All Data',msg:'This will permanently delete ALL tracker rows, datapoints, saved bank requirements, and saved phone data from this device.\n\nFor safety, the app will export one final full backup first so you can save it to Files/iCloud/Drive before the wipe finishes.',action:()=>{cfm={title:'🚨 Final confirmation',msg:'Continue with the full reset? A recovery backup file will be created first, then this device will be wiped.',action:async()=>{cfm=null;R();try{await window.btCloudBeforeDestructive?.('pre-reset');await exportBackup(false,buildResetSafetyBackupPayload(),'BankBonusTracker_PreReset_'+backupTimestamp()+'.json')}catch(err){alert('Reset stopped: the recovery backup was not confirmed. '+err.message);return}performHardReset();cfm={title:'Reset Complete',msg:'This device has been cleared. Keep the exported pre-reset backup file somewhere safe so you can restore later.',green:true,action:()=>{cfm=null;R()}};R()}};R()}};R()}
 function delEntry(id){const e=entries.find(x=>x.id===id);if(!e)return;cfm={title:'Delete Bank Entry?',msg:'Delete '+e.bank+' '+(e.id||'')+' from the tracker?\n\nThis cannot be undone.',action:()=>{entries=entries.filter(x=>x.id!==id);Object.keys(profileSectionUiState).forEach(k=>{if(k.startsWith(id+'::'))delete profileSectionUiState[k]});sv(SK,entries);expanded=null;cfm={title:'Bank Entry Deleted',msg:e.bank+' was deleted from the tracker.',green:true,action:()=>{cfm=null;R()}};R()}};R()}
 function closeAcct(id){const e=entries.find(x=>x.id===id);if(!e)return;feeCheckPrompt={entryId:id,bank:e.bank,step:'ask',months:e.minHoldDays>0?Math.round(e.minHoldDays/30):6,feeAmount:e.earlyCloseFee||0};R()}
 function feeCheckSkip(){
@@ -5647,6 +5662,7 @@ function importBackup(){
         const ok=await window.btConfirmDialog(`Restore this full backup?\n\n${describeBackupPayload(data)}\n\nA safety backup of the current device data will be exported first.`,{title:'Restore Backup',kicker:'Data safety',confirmLabel:'Restore Backup',danger:true});
         if(!ok)return;
         try{
+          await window.btCloudBeforeDestructive?.('pre-restore');
           await exportBackup(false,buildPortableBackupPayload(),'BankBonusTracker_PreRestore_'+backupTimestamp()+'.json')
         }
         catch{}
@@ -6357,6 +6373,7 @@ entries=sortE(entries);R();
     const bkd=daysSinceBk();
     if(bkd>=7) h += `<div class="bk-remind">${bkd>=999?'Backup recommended':'Backup updated '+bkd+'d ago'} <button onclick="exportBackup()">Export</button></div>`;
 
+    h += '<button id="bt-cloud-open" class="cloud-status-button" onclick="btOpenCloudBackup()">Cloud backup · Not enabled</button>';
     h += '<div class="qbar">';
     h += quickBtn('blue',I.backup,'Backup','exportBackup()');
     h += quickBtn('green',I.restore,'Restore','importBackup()');
@@ -6468,3 +6485,24 @@ entries=sortE(entries);R();
 (function(){try{const st=document.createElement('style');st.textContent="\n/* legacy close intelligence polish */\n.close-intel.safe{border-color:#bbf7d0;background:#f0fdf4}\n.close-intel.warn,.close-intel.plan{border-color:#fde68a;background:#fffbeb}\n.close-intel.danger{border-color:#fecaca;background:#fff7f7}\n.close-ready{padding:10px 12px;border-radius:14px;margin:10px 0 12px;border:1px solid #e5e7eb;background:#f8fafc;font-size:12px;line-height:1.35}\n.close-ready b{display:block;font-size:13px;margin-bottom:2px}\n.close-ready.safe{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}\n.close-ready.warn,.close-ready.plan{background:#fffbeb;border-color:#fde68a;color:#78350f}\n.close-ready.danger{background:#fff1f2;border-color:#fecaca;color:#7f1d1d}\n.close-final-note{font-size:11px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px;margin-top:10px;line-height:1.35}\n.close-mode-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}\n.close-mode{border:1px solid #e2e8f0;background:#f8fafc;border-radius:14px;padding:10px 9px;text-align:left;font-family:'DM Sans',system-ui,sans-serif;color:#334155;cursor:pointer}\n.close-mode b{display:block;font-size:12px;line-height:1.05;color:#0f172a}\n.close-mode span{display:block;font-size:9px;line-height:1.2;color:#64748b;font-weight:800;margin-top:3px}\n.close-mode.sel{background:#eff6ff;border-color:#93c5fd;box-shadow:0 0 0 2px rgba(59,130,246,.10)}\n";document.head.appendChild(st)}catch{}})();
 
 (function(){try{const st=document.createElement('style');st.textContent="\n/* legacy fee box compatibility */\n.monthly-fee-plan.safe{border-color:#bbf7d0;background:#f0fdf4}\n.monthly-fee-plan.warn{border-color:#fde68a;background:#fffbeb}\n.monthly-fee-plan .tc-label{letter-spacing:.11em}\n";document.head.appendChild(st)}catch{}})();
+
+window.btStorageWritesReady=true;
+
+function btVerifiedMutation(action){
+  let before,previousEntries;
+  try{before=window.BTPersistence.capture(localStorage,getBackupStorageKeys());previousEntries=JSON.parse(JSON.stringify(entries));}
+  catch(error){window.btNotify?.('Changes were stopped because local storage could not be read.',{title:'Save failed',tone:'danger'});return false;}
+  try{return action();}
+  catch(error){
+    let recovered=true;try{window.BTPersistence.rollback(localStorage,before);}catch{recovered=false;}
+    entries=previousEntries;R();
+    window.btNotify?.(recovered?'Changes were not saved. Your previous records were restored.':'Save recovery could not be verified. Keep this page open and export a backup.',{title:'Save failed',tone:'danger'});
+    return false;
+  }
+}
+const btOriginalOverwrite=doOverwrite;
+doOverwrite=function(){return btVerifiedMutation(()=>btOriginalOverwrite());};
+const btOriginalToggleCk=toggleCk;
+toggleCk=function(id,i){return btVerifiedMutation(()=>btOriginalToggleCk(id,i));};
+const btOriginalToggleTimer=toggleTimer;
+toggleTimer=function(id,timerId){return btVerifiedMutation(()=>btOriginalToggleTimer(id,timerId));};

@@ -239,6 +239,61 @@ async function exercise(name,engine,url){
     await page.evaluate(prior=>{const e=entries[0];for(const f of prior){if(f.present)e[f.key]=f.value;else delete e[f.key];}},feeFields);
     await page.getByRole('button',{name:'Close AI',exact:true}).click();
     check('asking AI preserves all saved account data',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
+    // Test cloud recovery in two independent browser profiles; no production records are contacted.
+    await page.evaluate(()=>{
+      window.__cloudFixture={objects:{},calls:[],failure:false};
+      const prior=window.fetch;
+      window.fetch=async(input,options={})=>{
+        const url=String(input);
+        if(!url.startsWith('https://api-production-00f74.up.railway.app/api/bonus-tracker/backups'))return prior(input,options);
+        const db=window.__cloudFixture;db.calls.push({url,method:options.method||'GET',authorization:options.headers.Authorization});
+        if(db.failure)return new Response(JSON.stringify({detail:'Synthetic cloud outage'}),{status:503,headers:{'Content-Type':'application/json'}});
+        if(url.endsWith('/health'))return new Response(JSON.stringify({readWriteVerified:true}),{headers:{'Content-Type':'application/json'}});
+        if(options.method==='POST'){
+          const packet=JSON.parse(options.body),count=JSON.parse(JSON.parse(packet.snapshot).storageSnapshot.bt_e_v4).length;
+          const backup={id:packet.id,createdAt:new Date().toISOString(),sha256:packet.sha256,entryCount:count,bytes:packet.snapshot.length,reason:packet.reason,verified:true};
+          db.objects[packet.id]={backup,snapshot:packet.snapshot};return new Response(JSON.stringify(backup),{headers:{'Content-Type':'application/json'}});
+        }
+        const ident=url.split('/').pop();
+        const body=db.objects[ident]||{backups:Object.values(db.objects).map(x=>x.backup),total:Object.keys(db.objects).length,nextOffset:null};
+        return new Response(JSON.stringify(body),{headers:{'Content-Type':'application/json'}});
+      };
+    });
+    await page.locator('#bt-cloud-open').click();
+    await button('Enable automatic backup').click();
+    await page.getByText('Preview recovery',{exact:true}).waitFor();
+    check('cloud upload is readback-verified and authenticated',await page.evaluate(()=>JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')).lastHash?.length===64&&window.__cloudFixture.calls.every(c=>c.authorization?.startsWith('Bearer '))));
+    const cloudRecords=await page.evaluate(()=>window.__cloudFixture.objects);
+    await button('Close').click();
+    const newPhoneContext=await browser.newContext({viewport:{width:390,height:844},timezoneId:'America/Chicago'});
+    const newPhone=await newPhoneContext.newPage();
+    await newPhone.goto(url);await newPhone.getByText('BonusTracker',{exact:false}).first().waitFor();
+    await newPhone.evaluate(objects=>{
+      localStorage.setItem('bonus-ai-auth',JSON.stringify({access_token:'synthetic-owner-token',refresh_token:'synthetic-refresh',expires_at:Date.now()/1000+3600}));
+      const prior=window.fetch;
+      window.fetch=async(input,options={})=>{
+        const url=String(input);if(!url.startsWith('https://api-production-00f74.up.railway.app/api/bonus-tracker/backups'))return prior(input,options);
+        const ident=url.split('/').pop();const body=objects[ident]||{backups:Object.values(objects).map(x=>x.backup),total:Object.keys(objects).length,nextOffset:null};
+        return new Response(JSON.stringify(body),{headers:{'Content-Type':'application/json'}});
+      };
+    },cloudRecords);
+    check('new phone begins without account records',await newPhone.evaluate(()=>entries.length===0));
+    await newPhone.locator('#bt-cloud-open').click();await newPhone.getByRole('button',{name:'Preview recovery',exact:true}).first().click();
+    await newPhone.getByRole('button',{name:'Restore this version',exact:true}).waitFor();
+    check('recovery preview fits a new-phone viewport',await newPhone.locator('.cloud-modal').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&e.getBoundingClientRect().width<=innerWidth));
+    await newPhone.screenshot({path:path.join(output,name+'-cloud-recovery-preview.png')});
+    await newPhone.getByRole('button',{name:'Restore this version',exact:true}).click();
+    await newPhone.locator('#bt_confirm_overlay').getByRole('button',{name:'Restore',exact:true}).click();
+    await newPhone.getByText('Cloud recovery completed. All storage writes were verified.',{exact:true}).waitFor();
+    check('new-phone recovery preserves exact stored tracker data',await newPhone.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
+    check('new-phone recovery retains its own login',await newPhone.evaluate(()=>BTBonusAuth.connected()));
+    await newPhoneContext.close();
+    await page.evaluate(()=>{window.__cloudFixture.failure=true;});
+    await page.locator('#bt-cloud-open').click();await button('Back up now').click();
+    await page.getByText('Synthetic cloud outage',{exact:true}).waitFor();
+    check('cloud outage leaves original records untouched',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
+    await button('Close').click();
+    await page.evaluate(()=>{localStorage.removeItem('bt_cloud_recovery_v1');delete window.__cloudFixture;});
     // Restore native fetch before verifying real service-worker offline navigation.
     await page.evaluate(()=>{window.fetch=window.__bonusAITest.nativeFetch;delete window.__bonusAITest;});
 

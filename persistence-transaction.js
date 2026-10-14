@@ -1,11 +1,11 @@
-/* BonusTracker persistence transaction core v1.0.0 — verified multi-key localStorage commit with rollback. */
+/* BonusTracker persistence transaction core v1.1.0 — verified multi-key localStorage commit with rollback. */
 (function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.BTPersistence=api;
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
-  const VERSION='1.0.0';
+  const VERSION='1.1.0';
 
   function uniqueKeys(keys){
     return Array.from(new Set((keys||[]).map(x=>String(x||'').trim()).filter(Boolean)));
@@ -31,11 +31,14 @@
   }
   function rollback(storage,snapshot){
     const errors=[];
+    // Free newly allocated or changed values first, so a full browser store can restore the original bytes.
     Object.entries(snapshot||{}).forEach(([key,state])=>{
-      try{
-        if(state&&state.exists)writeRaw(storage,key,state.raw);
-        else writeRaw(storage,key,null);
-      }catch(err){errors.push(key+': '+(err&&err.message?err.message:String(err)))}
+      try{if(!state?.exists||storage.getItem(key)!==state.raw)writeRaw(storage,key,null);}
+      catch(err){errors.push(key+': '+(err&&err.message?err.message:String(err)))}
+    });
+    Object.entries(snapshot||{}).forEach(([key,state])=>{
+      try{if(state?.exists)writeRaw(storage,key,state.raw);}
+      catch(err){errors.push(key+': '+(err&&err.message?err.message:String(err)))}
     });
     if(errors.length)throw new Error('Rollback incomplete — '+errors.join('; '));
     return true;
