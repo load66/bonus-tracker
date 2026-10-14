@@ -267,7 +267,7 @@ async function exercise(name,engine,url){
     await button('Close').click();
     const newPhoneContext=await browser.newContext({viewport:{width:390,height:844},timezoneId:'America/Chicago'});
     const newPhone=await newPhoneContext.newPage();
-    await newPhone.goto(url);await newPhone.getByText('BonusTracker',{exact:false}).first().waitFor();
+    await newPhone.goto(url);await newPhone.waitForFunction(()=>navigator.serviceWorker.controller&&window.__btFullRegressionReport?.total===18&&!window.__btFullRegressionReport.pending);
     await newPhone.evaluate(objects=>{
       localStorage.setItem('bonus-ai-auth',JSON.stringify({access_token:'synthetic-owner-token',refresh_token:'synthetic-refresh',expires_at:Date.now()/1000+3600}));
       const prior=window.fetch;
