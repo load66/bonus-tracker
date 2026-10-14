@@ -1,4 +1,4 @@
-/* Public discovery metadata only. Never reads or writes saved account data. */
+/* Public offer discovery with read-only tracker prioritization. Never changes account records. */
 (function(){
   'use strict';
   let feed=null,loading=false,error='',attempted=false,query='',availabilityFilter='all',evidenceFilter='all',feeFilter='all',activityFilter='all',amountFilter='all';
@@ -77,6 +77,78 @@
         (!options.amount||options.amount==='all'||options.amount==='unknown'&&amount===null||/^(300|500|1000)$/.test(options.amount)&&amount!==null&&amount>=Number(options.amount));
     });
   }
+  const states={AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',CO:'Colorado',CT:'Connecticut',DE:'Delaware',DC:'District of Columbia',FL:'Florida',GA:'Georgia',HI:'Hawaii',ID:'Idaho',IL:'Illinois',IN:'Indiana',IA:'Iowa',KS:'Kansas',KY:'Kentucky',LA:'Louisiana',ME:'Maine',MD:'Maryland',MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',MS:'Mississippi',MO:'Missouri',MT:'Montana',NE:'Nebraska',NV:'Nevada',NH:'New Hampshire',NJ:'New Jersey',NM:'New Mexico',NY:'New York',NC:'North Carolina',ND:'North Dakota',OH:'Ohio',OK:'Oklahoma',OR:'Oregon',PA:'Pennsylvania',RI:'Rhode Island',SC:'South Carolina',SD:'South Dakota',TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',VA:'Virginia',WA:'Washington',WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming'};
+  let area='MO',priorityFilter='all';
+  // View settings only; account records and financial rule engines are never changed.
+  function listedStates(text){
+    const out=new Set();
+    for(const [code,name] of Object.entries(states)){
+      if(new RegExp('\\b'+code+'\\b').test(text)||new RegExp('\\b'+name+'\\b','i').test(text))out.add(code);
+    }
+    return [...out];
+  }
+  function geography(offer,selected){
+    const prefix=String(offer.title||'').match(/\[([^\]]+)\]/)?.[1]||'';
+    const evidence=offer.evidence&&!offer.evidence.stale?offer.evidence.fields?.availability?.value||'':'';
+    const scope=prefix||evidence;
+    const codes=listedStates(scope);
+    const exception=scope.match(/\b(?:except|excluding|not in|not available (?:in|to))\s+([^.;]+)/i);
+    const excluded=exception?listedStates(exception[1]):[];
+    // Full names outside brackets count only when an explicit residents/only restriction exists.
+    const headline=String(offer.title||'');
+    const restricted=headline.match(/\b(?:only (?:in|for)|available (?:in|to residents of))\s+([A-Za-z ,&]+)|\b([A-Za-z ]+) residents only\b/i);
+    const included=exception?[]:codes.length?codes:restricted?listedStates(restricted[1]||restricted[2]):[];
+    const nationwide=/\bnationwide\b/i.test(scope)||/\(nationwide\)/i.test(headline)||offer.availability==='nationwide';
+    const limited=/\b(?:counties|county|branch|targeted|membership|select|invitation)\b/i.test(scope+' '+headline);
+    if(!states[selected])return{kind:'unknown',label:'Area not selected',detail:'Select a state to prioritize source-reported availability.'};
+    if(excluded.includes(selected))return{kind:'outside',label:'Outside your area',detail:'Source excludes '+states[selected]+'.'};
+    if(included.length&&nationwide)return{kind:'unknown',label:'Area needs review',detail:'Source geography is inconsistent; check the offer’s exact location restrictions.'};
+    if(included.length)return{kind:included.includes(selected)?'listed':'outside',label:included.includes(selected)?states[selected]+' listed':'Outside your area',detail:'Source lists '+included.join(', ')+(limited?' · branch, membership or local limits may apply.':'.')};
+    if(nationwide&&!exception)return{kind:'nationwide',label:'Nationwide reported',detail:limited?'Source reports nationwide availability; additional access restrictions need review.':'Source reports nationwide availability; personal eligibility still needs review.'};
+    return{kind:'unknown',label:'Area needs review',detail:'The source does not establish availability in '+states[selected]+'.'};
+  }
+  function titleMatches(entry,title,context){
+    const text=' '+normalize(title)+' ';
+    const raw=normalize(entry.bank).replace(/\b(biz|business|personal|consumer|checking|savings|account|accounts)\b/g,' ').replace(/\s+/g,' ').trim();
+    if(raw.length>=5&&text.includes(' '+raw+' '))return true;
+    try{const a=context.family(entry.bank),b=context.family(title);return !!a&&a===b&&normalize(a).length>=3;}catch{return false;}
+  }
+  function trackerMatch(offer,rows,context){
+    if(!context||!Array.isArray(rows))return null;
+    const business=/\b(?:business|biz|commercial)\b/i.test(offer.title);
+    const investment=/\b(?:investing|investment|brokerage|wealth)\b/i.test(offer.title);
+    const audience=business?'business':'personal';
+    const matches=rows.filter(e=>e&&e.bank&&titleMatches(e,offer.title,context)&&context.audience(e)===audience);
+    if(!matches.length)return null;
+    const families=new Set(matches.map(e=>context.family(e.bank)));
+    if(families.size!==1)return{kind:'review',label:'Bank match needs review',detail:'Several tracked institutions match this headline.',date:''};
+    const bank=matches[0].bank;
+    if(investment)return{kind:'review',bank,label:'Different product may apply',detail:'This investment or wealth offer needs a separate product review.',date:''};
+    if(matches.some(e=>!e.closed))return{kind:'review',bank,label:'Account still open',detail:'An open '+audience+' account is in your tracker. Review current-customer restrictions.',date:''};
+    if(matches.some(e=>context.nonrepeat(e)))return{kind:'review',bank,label:'Non-repeatable in tracker',detail:'Your completed offer is non-repeatable under its recorded terms. Do not assume a new headline changes that rule.',date:''};
+    const dates=matches.map(e=>context.ready(e));
+    if(dates.some(d=>!/^\d{4}-\d{2}-\d{2}$/.test(d||'')||!Number.isFinite(Date.parse(d+'T12:00:00Z'))||new Date(d+'T12:00:00Z').toISOString().slice(0,10)!==d))return{kind:'review',bank,label:'Tracker date needs review',detail:'The tracker does not provide a supported repeat-review date for every matching account.',date:''};
+    const date=dates.sort().at(-1); // Multiple tracked cycles: keep the latest restriction.
+    const ready=date<=context.today;
+    return{kind:ready?'ready':'next',bank,date,label:ready?'Tracker date reached':'Next tracker review',detail:'Tracker review date '+date+'. Confirm the new offer’s terms, account type and eligibility before applying.'};
+  }
+  function prioritize(rows,tracker,selected,context,filter='all'){
+    return rows.map((offer,index)=>{
+      const geo=geography(offer,selected),match=trackerMatch(offer,tracker,context);
+      const group=geo.kind==='outside'?'outside':match?.kind==='ready'?'ready':match?.kind==='next'?'next':match?'review':'explore';
+      return{...offer,geo,match,priorityGroup:group,index};
+    }).filter(x=>filter==='all'||filter==='tracker'&&!!x.match||filter==='area'&&x.geo.kind!=='outside')
+      .sort((a,b)=>({ready:0,next:1,explore:2,review:3,outside:4}[a.priorityGroup]-{ready:0,next:1,explore:2,review:3,outside:4}[b.priorityGroup])||
+        (a.priorityGroup==='next'?(a.match.date.localeCompare(b.match.date)):0)||
+        ({listed:0,nationwide:0,unknown:1,outside:2}[a.geo.kind]-{listed:0,nationwide:0,unknown:1,outside:2}[b.geo.kind])||
+        (Date.parse(b.publishedAt)-Date.parse(a.publishedAt))||a.index-b.index);
+  }
+  function trackerContext(){
+    try{return {rows:typeof entries!=='undefined'?entries:[],family:name=>typeof normalizeBankFamily==='function'?normalizeBankFamily(name):normalize(name),audience:e=>typeof entryBankType==='function'&&entryBankType(e)==='B'?'business':'personal',nonrepeat:e=>typeof isNonRepeatableEntry==='function'&&isNonRepeatableEntry(e),ready:e=>typeof nextReopen==='function'?nextReopen(e):'',today:typeof td==='function'?td():new Date().toISOString().slice(0,10)};}catch{return{rows:[]};}
+  }
+  window.btRadarArea=function(value){area=Object.hasOwn(states,value)?value:'';R();};
+  window.btRadarPriority=function(value){priorityFilter=['all','tracker','area'].includes(value)?value:'all';R();};
+
   window.btRadarSearch=function(value,cursor){query=value;R();const el=document.getElementById('radar-search');if(el){el.focus();const pos=Number.isInteger(cursor)?Math.min(cursor,el.value.length):el.value.length;el.setSelectionRange(pos,pos);}};
   window.btRadarAvailability=function(value){availabilityFilter=['all','nationwide','regional','unknown'].includes(value)?value:'all';R();};
   window.btRadarFilter=function(kind,value){
@@ -119,15 +191,28 @@
     if(!feed)return h+'<p role="status">'+(loading?'Loading bank bonus posts…':'Feed not loaded.')+'</p>';
     if(feed.sources.length)h+=disclosure('source-times','Source check times','<div class="radar-sources">'+feed.sources.map(s=>'<p>'+escape(s.name)+' · '+(s.status==='ok'?'Checked':'Update unavailable')+(s.checkedAt?' '+escape(new Date(s.checkedAt).toLocaleString()):' · no successful check yet')+'</p>').join('')+'</div>');
     if(feed.sources.some(s=>s.status!=='ok'))h+='<p role="status" class="radar-warning">Some sources could not update. Available sources continue working; retained posts use their last successful check.</p>';
-    h+='<div class="radar-filters"><label for="radar-search">Find a bank</label><input id="radar-search" class="sinput" placeholder="Search bank bonuses…" value="'+escape(query)+'" oninput="btRadarSearch(this.value,this.selectionStart)"><div class="radar-quick"><button type="button" class="ph-mini ph-save" onclick="btRadarSearch(\'U.S. Bank\')">U.S. Bank</button><button type="button" class="ph-mini ph-save" onclick="btRadarSearch(\'Wells Fargo\')">Wells Fargo</button><button type="button" class="ph-mini" onclick="btRadarSearch(\'\')">All banks</button></div><label for="radar-availability">Availability</label><select id="radar-availability" onchange="btRadarAvailability(this.value)">'+[['all','All bank offers'],['nationwide','Nationwide reported'],['regional','Regional reported'],['unknown','Availability unclear']].map(([v,l])=>'<option value="'+v+'"'+(availabilityFilter===v?' selected':'')+'>'+l+'</option>').join('')+'</select><p>Availability is reported by the source.</p></div>';
+    h+='<section class="radar-filters radar-personal-filters" aria-label="Offer preferences"><label for="radar-search">Find an offer</label><input id="radar-search" class="sinput" placeholder="Search bank bonuses…" value="'+escape(query)+'" oninput="btRadarSearch(this.value,this.selectionStart)"><div class="radar-filter-grid"><div><label for="radar-area">Your area</label><select id="radar-area" onchange="btRadarArea(this.value)"><option value=""'+(!area?' selected':'')+'>Choose a state</option>'+Object.entries(states).map(([code,name])=>'<option value="'+code+'"'+(area===code?' selected':'')+'>'+name+'</option>').join('')+'</select></div><div><label for="radar-availability">Availability</label><select id="radar-availability" onchange="btRadarAvailability(this.value)">'+[['all','All bank offers'],['nationwide','Nationwide reported'],['regional','Regional reported'],['unknown','Availability unclear']].map(([v,l])=>'<option value="'+v+'"'+(availabilityFilter===v?' selected':'')+'>'+l+'</option>').join('')+'</select></div></div><div class="radar-priority-tabs" role="group" aria-label="Offer priority">'+[['all','For you'],['tracker','Churn matches'],['area','Hide out-of-area']].map(([v,l])=>'<button type="button" aria-pressed="'+(priorityFilter===v)+'" onclick="btRadarPriority(\''+v+'\')">'+l+'</button>').join('')+'</div><p>Ordered by tracker review dates and source-reported geography. Unknown availability stays visible; new offer eligibility always needs review.</p></section>';
+    const context=trackerContext();
+    const upcoming=context.rows.filter(e=>e.closed&&!context.nonrepeat(e)&&context.ready(e)).sort((a,b)=>context.ready(a).localeCompare(context.ready(b)));
+    const names=[...new Set(upcoming.map(e=>e.bank))].slice(0,3);
+    if(names.length)h+='<div class="radar-quick radar-churn-shortcuts" aria-label="Your churn list">'+names.map(name=>'<button type="button" class="ph-mini" onclick="btRadarSearch('+escape(JSON.stringify(context.family(name)))+')">'+escape(name)+'</button>').join('')+'<button type="button" class="ph-mini" onclick="btRadarSearch(\'\')">All banks</button></div>';
+    else h+='<div class="radar-quick"><button type="button" class="ph-mini" onclick="btRadarSearch(\'\')">All banks</button></div>';
     if(!feed.offers.length)return h+'<p>No qualifying bank bonus posts in the latest source feed.</p>';
-    const visible=filtered(feed.offers,query,availabilityFilter,{evidence:evidenceFilter,fees:feeFilter,activity:activityFilter,amount:amountFilter});
+    const visible=prioritize(filtered(feed.offers,query,availabilityFilter,{evidence:evidenceFilter,fees:feeFilter,activity:activityFilter,amount:amountFilter}),context.rows,area,context,priorityFilter);
     h+='<div class="radar-count">'+visible.length+' matching offer posts · '+feed.offers.length+' source posts checked</div>';
     if(!visible.length)h+='<p>No posts match these filters. Try All banks or All bank offers.</p>';
-    visible.forEach(x=>{const link=x.links[0];h+='<article class="radar-card radar-card-compact"><h3>'+escape(x.title)+'</h3><a class="radar-offer-link" href="'+escape(link.url)+'" target="_blank" rel="noopener noreferrer">'+escape(link.source)+' ↗</a></article>';});
+    const groupLabels={ready:'Tracker date reached',next:'Next in your churn list',explore:'Other offers to explore',review:'Tracker restrictions to review',outside:'Outside your selected area'};
+    let lastGroup='';
+    visible.forEach(x=>{
+      if(x.priorityGroup!==lastGroup){lastGroup=x.priorityGroup;h+='<h2 class="radar-group-heading">'+groupLabels[lastGroup]+'</h2>';}
+      const link=x.links[0],date=x.match?.date;
+      h+='<article class="radar-card radar-card-compact radar-priority-'+x.priorityGroup+'"><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+'</div><h3>'+escape(x.title)+'</h3>';
+      if(x.match)h+='<div class="radar-tracker-context"><b>'+escape(x.match.label)+'</b>'+(date?'<time datetime="'+date+'">'+escape(typeof fD==='function'?fD(date):date)+'</time>':'')+'<p>'+escape(x.match.detail)+'</p></div>';
+      h+='<p class="radar-area-note">'+escape(x.geo.detail)+'</p><a class="radar-offer-link" href="'+escape(link.url)+'" target="_blank" rel="noopener noreferrer">Review offer · '+escape(link.source)+' ↗</a></article>';
+    });
     return h;
   };
-  window.BTBankBonusFeed={validate:valid,group:grouped,filter:filtered,evidence:evidenceFor,amount:amountFor};
+  window.BTBankBonusFeed={validate:valid,group:grouped,filter:filtered,evidence:evidenceFor,amount:amountFor,geography,match:trackerMatch,prioritize};
   // While the tab stays open, refresh the published snapshot without re-entering anything.
   const poll=setInterval(()=>{if(typeof tab!=='undefined'&&tab==='bonuses')refresh();},15*60*1000);
   if(poll&&typeof poll.unref==='function')poll.unref();

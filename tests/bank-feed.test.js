@@ -57,3 +57,38 @@ malformed.records[offer.url].fields.bonus.value='';
 malformed.records[offer.url].fields.toString={value:'$325',quote:'$325',sourceUrl:'https://accountoffers.wellsfargo.com/checkingoffer/',sourceHash:'a'.repeat(64)};
 assert.equal(Object.keys(sandbox.BTBankBonusFeed.evidence(offer,malformed).fields).length,0,'Empty values and inherited field names must be rejected');
 assert.equal(sandbox.BTBankBonusFeed.amount({...candidate,evidence:{...fresh,fields:{bonus:{value:'$3,25'}}}}),null,'Malformed currency must stay unknown');
+
+// Geography never guesses availability from a bank name or a missing restriction.
+const priority=sandbox.BTBankBonusFeed;
+const geo=(title,area='MO',availability='unknown')=>priority.geography({title,availability},area);
+assert.equal(geo('[CA, UT In Branch] Columbia Bank $250 Checking Bonus').kind,'outside');
+assert.equal(geo('(Update) [MO, KS] Regional Bank $300 Checking Bonus').kind,'listed');
+assert.equal(geo('[MO, Select Counties only] Regional Bank $300').kind,'listed');
+assert.match(geo('[MO, Select Counties only] Regional Bank $300').detail,/local limits/);
+assert.equal(geo('Wells Fargo $325 Checking Bonus').kind,'unknown');
+assert.equal(geo('Any Bank (Nationwide)').kind,'nationwide');
+assert.equal(geo('[CA only] Any Bank (Nationwide)').kind,'unknown','Contradictory geography must not become exclusion');
+assert.equal(geo('[Nationwide except MO] Any Bank').kind,'outside');
+assert.equal(geo('[CA only] Any Bank','CA').kind,'listed');
+assert.equal(geo('[CA only] Any Bank','').kind,'unknown');
+const context={today:'2026-10-14',family:n=>String(n).toLowerCase().replace(/\b(?:bank|biz|business|personal)\b/g,'').replace(/\s+/g,' ').trim(),audience:e=>e.accountType||'personal',nonrepeat:e=>e.churnable===false,ready:e=>e.reviewDate||''};
+const rows=[{bank:'Soon Bank',closed:'2026-01-01',reviewDate:'2026-11-01'}, {bank:'Ready Bank',closed:'2026-01-01',reviewDate:'2026-10-13'}, {bank:'Later Bank',closed:'2026-01-01',reviewDate:'2026-12-01'}, {bank:'Open Bank',closed:'',reviewDate:'2026-01-01'}, {bank:'Once Bank',closed:'2026-01-01',churnable:false}, {bank:'Unknown Bank',closed:'2026-01-01'}, {bank:'Chase Biz',accountType:'business',closed:'2026-01-01',reviewDate:'2026-10-01'}];
+const discovery=['[CA only] Ready Bank $300 Checking Bonus','Later Bank $400 Checking Bonus','New Bank $300 Checking Bonus','Soon Bank $300 Checking Bonus','Ready Bank $500 Checking Bonus','Open Bank $250 Checking Bonus','Once Bank $300 Checking Bonus','Unknown Bank $100 Checking Bonus','Chase Bank $500 Business Checking Bonus'].map((title,i)=>({title,publishedAt:'2026-10-13T12:00:00Z',url:'https://example.test/'+i}));
+const snapshot=JSON.stringify(rows);
+const ordered=priority.prioritize(discovery,rows,'MO',context);
+assert.equal(ordered[0].priorityGroup,'ready');
+assert.equal(ordered.at(-1).geo.kind,'outside','Regional mismatch overrides tracker readiness');
+assert.equal(ordered.find(x=>x.title.startsWith('Open')).match.kind,'review');
+assert.equal(ordered.find(x=>x.title.startsWith('Once')).match.kind,'review');
+assert.equal(ordered.find(x=>x.title.startsWith('Unknown')).match.date,'');
+assert.equal(ordered.filter(x=>x.priorityGroup==='next').map(x=>x.match.date).join(','),'2026-11-01,2026-12-01');
+assert.equal(priority.match({title:'Chase $500 Checking Bonus'},rows,context),null,'Business cooldown must not be applied to a consumer offer');
+assert.equal(priority.match({title:'Ready Bank $2,500 Investing Bonus'},rows,context).kind,'review');
+assert.equal(priority.match({title:'Soon Bank $300 Checking Bonus'},[...rows,{bank:'Soon Bank',closed:'2026-01-01',reviewDate:'2027-01-01'}],context).date,'2027-01-01');
+assert.equal(priority.prioritize(discovery,rows,'MO',context,'area').some(x=>x.geo.kind==='outside'),false);
+assert.equal(priority.prioritize(discovery,rows,'MO',context,'tracker').every(x=>!!x.match),true);
+assert.equal(JSON.stringify(rows),snapshot,'Ranking must not mutate account records');
+assert.equal(JSON.stringify([...storage]),before,'Personal discovery must not change persisted financial data');
+console.log('Personal discovery passed: state evidence, unknown availability, audience/product separation, latest restriction, stable ordering and read-only records');
+
+assert.equal(priority.match({title:'Soon Bank $300 Checking Bonus'},[{bank:'Soon Bank',closed:'2026-01-01',reviewDate:'2026-02-30'}],context).kind,'review','Invalid dates must not produce readiness');
