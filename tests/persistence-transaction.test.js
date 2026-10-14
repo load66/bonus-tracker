@@ -17,7 +17,7 @@ class FakeStorage{
   }
 }
 
-assert(P.VERSION==='1.0.0','Unexpected persistence transaction version');
+assert(P.VERSION==='1.1.0','Unexpected persistence transaction version');
 
 const okStore=new FakeStorage({a:'old-a',b:'old-b'});
 const ok=P.commit(okStore,{a:'new-a',b:'new-b',c:'new-c'});

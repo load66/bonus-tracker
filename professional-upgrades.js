@@ -298,10 +298,12 @@
   window.btNotify=btNotify;
   window.alert=function(msg){btNotify(String(msg||''),/failed|error|invalid|required|could not/i.test(String(msg))?'error':/saved|complete|copied|added|updated/i.test(String(msg))?'success':'info',4200);};
 
-  let updateReady=false;
+  let updateReady=false,updateRequested=false,controlled=!!navigator.serviceWorker?.controller;
+  function reloadWhenIdle(){if(document.querySelector('.cloud-overlay,#bt_confirm_overlay')||window.BTCloudBackup?.isBusy?.()){setTimeout(reloadWhenIdle,1000);return;}if(sessionStorage.getItem('bt_reloading'))return;sessionStorage.setItem('bt_reloading','1');location.reload();}
   window.btApplyUpdate=function(){
-    if(!navigator.serviceWorker)return location.reload();
-    navigator.serviceWorker.getRegistration().then(reg=>{if(reg?.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});else location.reload()}).catch(()=>location.reload());
+    updateRequested=true;
+    if(!navigator.serviceWorker)return reloadWhenIdle();
+    navigator.serviceWorker.getRegistration().then(reg=>{if(reg?.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});else reloadWhenIdle()}).catch(()=>reloadWhenIdle());
   };
   function initUpdateFlow(){
     if(!('serviceWorker' in navigator))return;
@@ -310,7 +312,7 @@
       if(reg.waiting){updateReady=true;renderUpdateBanner();}
       reg.addEventListener('updatefound',()=>{const w=reg.installing;if(!w)return;w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller){updateReady=true;renderUpdateBanner();}})});
     }).catch(()=>{});
-    navigator.serviceWorker.addEventListener('controllerchange',()=>{if(sessionStorage.getItem('bt_reloading'))return;sessionStorage.setItem('bt_reloading','1');location.reload()});
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!controlled){controlled=true;return;}if(updateRequested)reloadWhenIdle();else{updateReady=true;renderUpdateBanner();}});
   }
   function renderUpdateBanner(){
     document.querySelector('.bt-update-banner')?.remove();if(!updateReady)return;
