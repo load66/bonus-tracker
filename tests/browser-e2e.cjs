@@ -284,7 +284,7 @@ async function exercise(name,engine,url){
     await newPhone.screenshot({path:path.join(output,name+'-cloud-recovery-preview.png')});
     await newPhone.getByRole('button',{name:'Restore this version',exact:true}).click();
     await newPhone.locator('#bt_confirm_overlay').getByRole('button',{name:'Restore',exact:true}).click();
-    await newPhone.getByText('Cloud recovery completed. All storage writes were verified.',{exact:true}).waitFor();
+    try{await newPhone.getByText('Cloud recovery completed. All storage writes were verified.',{exact:true}).waitFor();}catch(e){console.error('Recovery diagnostics:',await newPhone.evaluate(()=>({status:document.querySelector('#cloud-status')?.textContent,accounts:entries.length,storage:getBackupStorageKeys().map(k=>[k,localStorage.getItem(k)?.length])})));throw e;}
     check('new-phone recovery preserves exact stored tracker data',await newPhone.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
     check('new-phone recovery retains its own login',await newPhone.evaluate(()=>BTBonusAuth.connected()));
     await newPhoneContext.close();
