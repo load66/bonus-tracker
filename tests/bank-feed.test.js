@@ -92,3 +92,21 @@ assert.equal(JSON.stringify([...storage]),before,'Personal discovery must not ch
 console.log('Personal discovery passed: state evidence, unknown availability, audience/product separation, latest restriction, stable ordering and read-only records');
 
 assert.equal(priority.match({title:'Soon Bank $300 Checking Bonus'},[{bank:'Soon Bank',closed:'2026-01-01',reviewDate:'2026-02-30'}],context).kind,'review','Invalid dates must not produce readiness');
+
+const scopeOffer={title:'Truist $500 Checking Bonus',url:'https://www.doctorofcredit.com/truist-bonus/'};
+const checkedAt=new Date(Date.now()-60000).toISOString(),expiresAt=new Date(Date.now()+3600000).toISOString();
+const scopeRecord={...scopeOffer,offerTitle:scopeOffer.title,offerUrl:scopeOffer.url,status:'verified',checkState:'checked',checkedAt,expiresAt,sourceUrl:'https://www.truist.com/checking/lp/promos/checking-promo4',sourceHash:'a'.repeat(64),rules:[{mode:'include',states:['AL','AR'],quote:'The client must have a physical address in AL or AR.'}],conditions:[]};
+const catalog={schemaVersion:1,records:{[scopeOffer.url]:scopeRecord}};
+const official=priority.availability(scopeOffer,catalog);
+assert.equal(official.status,'verified');
+assert.equal(priority.geography({...scopeOffer,officialAvailability:official},'MO').kind,'outside');
+assert.equal(priority.availability({...scopeOffer,title:'Truist $300 Checking Bonus'},catalog),null,'Changed offer identity cannot borrow evidence');
+assert.equal(priority.availability(scopeOffer,{...catalog,records:{[scopeOffer.url]:{...scopeRecord,expiresAt:new Date(Date.now()-1000).toISOString()}}}).status,'stale');
+assert.equal(priority.availability(scopeOffer,{...catalog,records:{[scopeOffer.url]:{...scopeRecord,rules:[{mode:'include',states:['BAD'],quote:'Invalid'}]}}}).status,'needs-review');
+assert.equal(priority.availability(scopeOffer,{...catalog,records:{[scopeOffer.url]:{...scopeRecord,sourceUrl:'https://www.truist.com.evil.test/'}}}).status,'needs-review');
+assert.equal(priority.availability(scopeOffer,{...catalog,records:{[scopeOffer.url]:{...scopeRecord,checkedAt:new Date(Date.now()+600000).toISOString()}}}).status,'needs-review');
+const ids=priority.priorityIdentifiers(discovery, {...context,rows},'MO');
+assert.ok(ids.length<=8&&ids.every(id=>typeof id==='string'),'Priority envelope contains only public URLs');
+assert.ok(!JSON.stringify(ids).includes('reviewDate'));
+assert.equal(JSON.stringify([...storage]),before,'Availability verification cannot rewrite saved terms');
+console.log('Official scope projection passed: exact offer identity, source trust, expiry, state constraints and public-only priority identifiers');
