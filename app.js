@@ -6094,7 +6094,7 @@ entries=sortE(entries);R();
     if(window.__btFullBackupButtonsHooked)return;
     document.addEventListener('click',function(e){
       const btn=e.target?.closest?.('button,a,[role="button"],input[type="button"],input[type="submit"]');
-      if(!btn||btn.closest('#bt_confirm_overlay,.cloud-overlay'))return;
+      if(!btn||btn.closest?.('#bt_confirm_overlay,.cloud-overlay'))return;
       const txt=buttonText(btn).toLowerCase();
       if(txt==='backup'){e.preventDefault();e.stopImmediatePropagation();if(typeof exportBackup==='function')exportBackup(true);else exportFullBackup('manual-button');return;}
       if(txt==='restore'){e.preventDefault();e.stopImmediatePropagation();if(typeof importBackup==='function')importBackup();else chooseRestoreFile();return;}
