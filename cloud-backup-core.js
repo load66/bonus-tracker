@@ -26,6 +26,10 @@
   function restore(storage,raw,keys,persistence){
     const result=inspect(raw,keys),writes={};
     for(const key of [...keys,'bt_last_restore'])writes[key]=Object.hasOwn(result.data.storageSnapshot,key)?result.data.storageSnapshot[key]:null;
+    // Timer deletion markers belong to the restored accounts, not the previous device state.
+    const timerPrefix='bt_deleted_timer_keys_v1:';
+    for(let i=0;i<storage.length;i++){const key=storage.key(i);if(key?.startsWith(timerPrefix))writes[key]=null;}
+    for(const entry of result.entries)if(typeof entry.id==='string'&&Array.isArray(entry.deletedTimerKeys))writes[timerPrefix+entry.id]=JSON.stringify(entry.deletedTimerKeys);
     persistence.commit(storage,writes);
     return result;
   }
