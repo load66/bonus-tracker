@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.58 Action Center — canonical lifecycle stages drive every user-facing action item. */
+/* BonusTracker v3.4.59 Action Center — canonical lifecycle stages drive every user-facing action item. */
 (function(){
   'use strict';
-  const VER='3.4.58-action1';
+  const VER='3.4.59-action1';
 
   function finite(v){if(v==null||v==='')return null;const n=Number(v);return Number.isFinite(n)?n:null}
   function daysTo(date){
@@ -110,6 +110,11 @@
   }
   function nextActionForEntry(e){
     const stage=stageFor(e),context=dateContext(e,stage);
+    const financial=window.BTFinancialRules?.validate(e);
+    if(financial&&!financial.ok){
+      const issues=financial.issues.map(x=>x.message).join('; ');
+      return {stage,context:{date:'',confirmed:false,explanation:'Financial rules need review · '+issues},kind:'review',label:'Review financial rules',explanation:'The saved financial rules are incomplete or inconsistent. Review the original promotion and fee terms before relying on a completion or closure recommendation. '+issues};
+    }
     let kind='review',label='Review account';
     if(!e.closed&&!e.bonusRecd){
       if(e.reqMet&&!recurring(e,stage)){kind='bonus';label='Confirm bonus received'}

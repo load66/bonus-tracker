@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.58 lifecycle-status — canonical timer semantics plus one user-facing bank-bonus lifecycle stage. */
+/* BonusTracker v3.4.59 lifecycle-status — canonical timer semantics plus one user-facing bank-bonus lifecycle stage. */
 (function(){
   'use strict';
-  const VER='3.4.58-status1';
+  const VER='3.4.59-status1';
   const VALID=new Set(['requirement','funding','hold','payout','openby','close-review','custom']);
   const baseNormalizeTimer=window.normalizeTimer;
   const baseNormalizeTimerList=window.normalizeTimerList;
@@ -173,6 +173,8 @@
       const dl=safeDaysLeft(e);
       return{code:dl!==null&&dl<=0?STAGES.ELIGIBLE:STAGES.COOLDOWN,raw,timer:null,kind:''};
     }
+    const financial=window.BTFinancialRules?.validate(e);
+    if(financial&&!financial.ok)return{code:STAGES.ACTION_NEEDED,raw,timer:null,kind:'review',reviewReason:'Financial rules need review'};
     const timer=nextStageTimer(e),kind=timer?timerCategorySemantic(timer):'';
     if(e.bonusRecd){
       const d=timer?timerDays(timer):null;
@@ -210,6 +212,7 @@
     return (met?'Requirements met '+met:'Requirements complete')+(timing?' · '+timing:'');
   }
   function stageSupport(core,e){
+    if(core.reviewReason)return core.reviewReason;
     switch(core.code){
       case STAGES.ACTION_NEEDED:
         if(core.timer)return deadlineSupport(core.timer);

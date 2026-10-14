@@ -14,6 +14,24 @@ setTimeout(()=>{
     assert.match(action.explanation,/qualifying activity with the bank/);
     assert.equal(action.context.date,run('reqDeadline(entries[0])'));
     assert.equal(action.context.date,'2024-03-01');
+    // Unsupported structured records must not invite milestone confirmation.
+    const original=run('JSON.stringify(entries[0])');
+    run('entries[0].schemaVersion=3;entries[0].financialRules={version:999};');
+    const invalidSnapshot=run('JSON.stringify(entries)'),invalidStorage=JSON.stringify([...storage]);
+    assert.equal(run('btNextActionForEntry(entries[0]).kind'),'review');
+    assert.equal(run('btNextActionForEntry(entries[0]).context.confirmed'),false);
+    assert.match(run('btNextActionForEntry(entries[0]).label'),/financial rules/);
+    run('runNextAccountAction(entries[0].id)');
+    assert.equal(run('reqPrompt'),null,'Invalid rules must not open a completion confirmation');
+    assert.equal(run('JSON.stringify(entries)'),invalidSnapshot);
+    assert.equal(JSON.stringify([...storage]),invalidStorage,'Invalid-rule guidance must not write records');
+    run("entries[0].reqMet='2024-03-01';entries[0].bonusRecd='2024-03-02';entries[0].churn='1';");
+    assert.equal(run('closeReadiness(entries[0]).label'),'Do Not Close Yet');
+    assert.equal(run('closeReadiness(entries[0]).cls'),'danger');
+    assert.equal(run('btNextActionForEntry(entries[0]).kind'),'review');
+    assert.equal(run('btLifecycleStageForEntry(entries[0]).code'),'ACTION_NEEDED');
+    assert.match(run('btLifecycleStageForEntry(entries[0]).support'),/Financial rules need review/);
+    sandbox.auditOriginal=original;run('entries[0]=JSON.parse(auditOriginal)');
     assert.match(action.context.explanation,/2 calendar days/);
     run('getAttentionSuggestions();btNextActionForEntry(entries[0]);renderActionCenter()');
     const tiles=run('renderActionCenter()');
