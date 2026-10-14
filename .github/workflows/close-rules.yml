@@ -46,6 +46,9 @@ jobs:
       - name: Run full app smoke and analyzer tests
         run: node tests/full-app-smoke.test.js
 
+      - name: Run structured financial-rule and import tests
+        run: node tests/financial-rules.test.js && node tests/structured-import.test.js
+
       - name: Run Ask AI grounding and closure guidance tests
         run: node tests/bonus-ai.test.js
 

@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.49 — strict verified JSON import with professional in-app review and conditional multi-rule churn. */
+/* BonusTracker v3.4.50 — strict verified JSON import with professional in-app review and conditional multi-rule churn. */
 (function(){
   'use strict';
-  const VER='3.4.49';
+  const VER='3.4.50';
   const HASH_KEY='btadd=';
   const ALLOWED=[
     'bank','accountType','bonus','churn','churnable','churnability','churnBasis','churnBufferDays','churnReason','sourceEligibilityBasis','churnTrackingPolicy','churnDecisionSource','churnDecisionConfidence','churnDecisionConfirmedAt','churnPeriodValue','churnPeriodUnit','eligibilityRules','couponEnrollmentDate','offerEnrollmentDate','closedWithNegativeBalance','eligibilityScope','eligibilityEvidenceText','eligibilityAnchorEvidenceText','eligibilityEvidenceSource','eligibilityVerified','eligibilityVerifiedAt','eligibilityVerificationStatus','eligibilityVerificationReason','currentCustomerExcluded','currentCustomerEvidenceText','mustCloseBeforeReapply','reapplicationAction','promoSourceUrl','feeScheduleSourceUrl','termsVerifiedAt','schemaVersion','tcSourceRaw','tcSourceId','tcSourceUpdatedAt',
@@ -9,7 +9,7 @@
     'fundedDays','fundingAmount','fundingAmountText','payoutTimingText','phoneNum','feeChecked','monthlyFeeYNText','monthlyFeeAmountText','monthlyFeeFrequency',
     'monthlyFeeWaiverType','monthlyFeeWaiverAmountText','monthlyFeeWaiverText','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText',
     'eligibilityText','expirationDateText','requiredDaysText','closeRuleBasis','closeBufferDays','closeRuleText','closeRestrictionType','monthlyFeeChecked','customTimers',
-    'analysis','analyzerHistory','history'
+    'analysis','analyzerHistory','history','financialRules','feeScheduleRaw'
   ];
   let hashHandled=false;
 
@@ -52,7 +52,9 @@
     return out;
   }
   function validatePayload(payload){
+    if(payload?.schemaVersion!==undefined&&payload?.entry?.schemaVersion!==undefined&&payload.schemaVersion!==payload.entry.schemaVersion)throw new Error('Envelope and entry schema versions conflict.');
     let next=cleanPayload(payload);
+    if(![1,2,3].includes(next.schemaVersion))throw new Error('This import schema version is unsupported.');
     if(!next.bank)throw new Error('Bank name is missing.');
     if(!next.opened)throw new Error('Opened date is missing.');
     if(next.schemaVersion>=2){
@@ -68,11 +70,24 @@
           throw new Error('Coupon/offer enrollment rule needs an explicit enrollment date or anchorFallback account-opened.');
       }
     }
+    if(next.schemaVersion===3&&!next.financialRules)throw new Error('JSON v3 requires an evidence-backed financialRules package.');
+    if(next.schemaVersion===3){
+      const src=payload.entry||payload.payload||payload;
+      const unknown=Object.keys(src).filter(k=>!ALLOWED.includes(k)&&k!=='verification');
+      if(unknown.length)throw new Error('JSON v3 contains unsupported entry fields: '+unknown.join(', '));
+    }
+    if(next.financialRules){
+      if(!window.BTFinancialRules)throw new Error('The financial-rule validator is unavailable.');
+      const rules=window.BTFinancialRules.validate(next);
+      if(!rules.ok)throw new Error('Financial rules need verification: '+rules.issues.map(x=>x.path+': '+x.message).join('; '));
+      next.financialRules=JSON.parse(JSON.stringify(next.financialRules));
+    }
     if(!window.BTEligibilityGate||typeof window.BTEligibilityGate.validate!=='function')throw new Error('Churn eligibility validator is unavailable.');
     const verified=window.BTEligibilityGate.validate(next);
     if(!verified.ok)throw new Error('Churn eligibility is not verified from the T&C: '+verified.reason);
     next=window.BTEligibilityGate.stamp(next);
     if(typeof normalizeLifecycleEntry==='function')next=normalizeLifecycleEntry(next)||next;
+    if(next.financialRules){const result=window.BTFinancialRules.validate(next);if(!result.ok)throw new Error('Normalized tracker fields conflict with financial rules: '+result.issues.map(x=>x.message).join('; '));}
     return next;
   }
   function extractHashPayload(text){
@@ -121,7 +136,7 @@
   }
   function preview(p){
     const bonus='$'+Number(p.bonus||0).toLocaleString();
-    const schema=p.schemaVersion>=2?'Verified JSON v2':'Legacy-compatible JSON';
+    const schema=p.schemaVersion===3?'Structured JSON v3':p.schemaVersion>=2?'Verified JSON v2':'Legacy-compatible JSON';
     const future=window.BTEligibilityGate&&typeof window.BTEligibilityGate.summary==='function'?window.BTEligibilityGate.summary(p):(p.churnability==='not-repeatable'?'Non-repeatable':'T&C verification required');
     return `Load ${p.bank} ${bonus} into New Entry?\n${schema}\n\nOpened: ${p.opened}\nRequirement: ${p.dataPoint||'See saved terms'}\nFuture eligibility: ${future}\n\nNothing is saved or replaced yet. Review the entry, then tap Add Entry. If this bank has an older churn/cooldown record, the normal replacement screen will still appear before anything is replaced.`;
   }
