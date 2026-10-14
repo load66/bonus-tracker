@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.43 lifecycle-status — canonical timer semantics plus one user-facing bank-bonus lifecycle stage. */
+/* BonusTracker v3.4.44 lifecycle-status — canonical timer semantics plus one user-facing bank-bonus lifecycle stage. */
 (function(){
   'use strict';
-  const VER='3.4.43-status1';
+  const VER='3.4.44-status1';
   const VALID=new Set(['requirement','funding','hold','payout','openby','close-review','custom']);
   const baseNormalizeTimer=window.normalizeTimer;
   const baseNormalizeTimerList=window.normalizeTimerList;
@@ -188,14 +188,10 @@
     if(!e.reqMet||recurring)return{code:STAGES.IN_PROGRESS,raw,timer,kind};
     return{code:payoutEvidence(e,timer)?STAGES.AWAITING_BONUS:STAGES.REQUIREMENTS_MET,raw,timer,kind};
   }
-  function shortText(v,max=52){
-    const s=String(v||'').replace(/\s+/g,' ').trim();
-    return s.length>max?s.slice(0,max-1).trim()+'…':s;
-  }
   function fmtDate(v){if(!v)return'';try{return typeof fD==='function'?fD(v):String(v)}catch{return String(v)}}
   function deadlineSupport(t){
     if(!t)return'Action required';
-    const d=timerDays(t),label=shortText(t.text||t.label||'Deadline',38),due=fmtDate(t.date);
+    const d=timerDays(t),label=String(t.text||t.label||'Deadline').replace(/\s+/g,' ').trim(),due=fmtDate(t.date);
     if(Number.isFinite(d)){
       if(d<0)return'Overdue · '+label+(due?' · '+due:'');
       if(d===0)return'Due today · '+label;
@@ -210,7 +206,7 @@
       if(d<0)return'Payout window reached'+(due?' · '+due:'');
     }
     const met=e?.reqMet?fmtDate(e.reqMet):'';
-    const timing=shortText(e?.payoutTimingText||e?.analysis?.payoutTimingText||'',44);
+    const timing=String(e?.payoutTimingText||e?.analysis?.payoutTimingText||'').replace(/\s+/g,' ').trim();
     return (met?'Requirements met '+met:'Requirements complete')+(timing?' · '+timing:'');
   }
   function stageSupport(core,e){
@@ -275,24 +271,19 @@
   }
   function statusBadgeHtmlSemantic(e,countdown){
     const stage=lifecycleStageForEntry(e),support=stage.support||supportLineSemantic(e,countdown);
-    try{return'<span class="badge bt-stage '+stage.cls+'"><span>'+esc(stage.label)+'</span></span>'+(support?'<div class="card-subline">'+esc(support)+'</div>':'')}catch{}
+    try{
+      let detail=support?'<div class="card-subline">'+esc(support)+'</div>':'';
+      if(stage.timer&&(stage.code===STAGES.ACTION_NEEDED||(stage.code===STAGES.IN_PROGRESS&&e?.reqMet&&stage.kind==='requirement'))){
+        const days=timerDays(stage.timer),due=fmtDate(stage.timer.date);
+        const count=Number.isFinite(days)?(days<0?'Overdue':days===0?'Due today':days+'d left'):'Date not confirmed';
+        detail='<div class="card-subline bt-card-deadline"><div class="bt-card-deadline-meta"><span>'+esc(count)+'</span>'+(due?'<span>Due '+esc(due)+'</span>':'')+'</div><p>'+esc(String(stage.timer.text||stage.timer.label||'Deadline').replace(/\s+/g,' ').trim())+'</p></div>';
+      }
+      return '<span class="badge bt-stage '+stage.cls+'"><span>'+esc(stage.label)+'</span></span>'+detail;
+    }catch{}
     if(typeof baseStatusBadgeHtml==='function')return baseStatusBadgeHtml(e,countdown);
     return'';
   }
-  function compactRequirementText(e){
-    const raw=String(e?.dataPoint||'').replace(/^DD\s+/i,'').replace(/\s+/g,' ').trim();
-    if(!raw)return'';
-    if(raw.length<=46)return raw;
-    const amount=raw.match(/\$\s?\d[\d,]*(?:\.\d{1,2})?/i)?.[0]?.replace(/\s+/g,'')||'';
-    const count=raw.match(/(?:at least\s+)?(\d+)\s+(?:enhanced\s+)?(?:direct\s+)?deposits?/i)?.[1]||'';
-    let type='';
-    if(/enhanced direct deposit|\bedd\b/i.test(raw))type='EDD total';
-    else if(/qualifying electronic deposit/i.test(raw))type='electronic deposits';
-    else if(/direct deposit/i.test(raw))type='direct deposits';
-    else if(/debit.*(?:transactions?|purchases?)/i.test(raw))type='debit transactions';
-    if(amount&&type)return amount+' '+type+(count?' · '+count+' deposits':'');
-    return raw.length>54?raw.slice(0,51).trim()+'…':raw;
-  }
+  function compactRequirementText(e){return String(e?.dataPoint||'').replace(/^DD\s+/i,'').replace(/\s+/g,' ').trim();}
   function requirementSummarySemantic(e){
     if(!e)return'Pending';
     if(e.reqMet){try{return'Met '+fD(e.reqMet)}catch{return'Met'}}
