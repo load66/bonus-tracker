@@ -16,6 +16,13 @@ setTimeout(()=>{
     assert.equal(action.context.date,'2024-03-01');
     assert.match(action.context.explanation,/2 calendar days/);
     run('getAttentionSuggestions();btNextActionForEntry(entries[0]);renderActionCenter()');
+    const tiles=run('renderActionCenter()');
+    assert.match(tiles,/ops-action-tile/);
+    assert.match(tiles,/aria-label="Confirm requirements completed"/);
+    assert.doesNotMatch(tiles,/ops-action-explanation|ops-date-proof|Why this action/);
+    const guidance=run('renderNextAccountGuidance(entries[0])');
+    assert.match(guidance,/qualifying activity with the bank/);
+    assert.match(guidance,/ops-date-proof/);
     assert.equal(run('JSON.stringify(entries)'),before,'Recommendations must not mutate entries');
     assert.equal(JSON.stringify([...storage]),persisted,'Recommendations must not write storage');
     run('runNextAccountAction(entries[0].id)');

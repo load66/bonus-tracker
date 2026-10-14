@@ -35,3 +35,7 @@ Structured rules and canonical dates take priority over raw terms. The adapter r
 ## v3.4.44 readable tracker cards
 
 Long bank names wrap. Supporting text spans the card below its bank/status/bonus header, with separate countdown and due-date metadata for active requirement timers. Saved requirement and payout wording is preserved rather than shortened with ellipses. No lifecycle calculations or account storage formats change. Browser fixtures check long recurring requirements at 320, 390 and 1024 pixels and verify saved records are unchanged.
+
+## v3.4.45 compact Action Center
+
+Two-column mobile shortcut tiles show the square bank icon, bank name, bonus and one timing/status indicator. Compact buttons retain the canonical prefilled action handlers and 44px touch targets. The tile body opens, scrolls to and focuses its full account card. Date evidence and action explanations live in the expanded account rather than repeating in the shortcuts; their existing per-entry disclosure state is preserved. Desktop uses up to four columns. No storage or calculation rules change.

@@ -86,6 +86,9 @@ async function exercise(name,engine,url){
     await button('4 Review').click();await button('💾 Add Bank').click();
     await wait(()=>JSON.parse(localStorage.getItem('bt_e_v4')).length===1);
     check('90-day deadline is exact',await page.evaluate(()=>reqDeadline(entries[0]))==='2026-05-01');
+    check('compact action tiles omit duplicate explanations',await page.locator('.ops-action-center .ops-action-explanation').count()===0&&await page.locator('.ops-action-center .ops-date-proof').count()===0);
+    await page.locator('.ops-action-row').first().click();
+    check('action tile opens its full account card',await page.locator('.card-exp').isVisible());
     check('long action guidance is collapsed by default',!await page.locator('.ops-action-explanation').isVisible());
     await page.locator('.ops-action-why summary').click();
     check('next action explains saved requirements without AI',(await page.locator('.ops-action-explanation').innerText()).includes('qualifying activity with the bank'));
@@ -210,8 +213,8 @@ async function exercise(name,engine,url){
     const why=page.locator('.ops-action-why');
     if(!await why.evaluate(e=>e.open))await why.locator('summary').click();
     await button('2025').click();
-    check('expanded action guidance survives dashboard rerender',await page.locator('.ops-action-why').evaluate(e=>e.open));
     await button('2026').click();
+    check('expanded account guidance survives year navigation',await page.locator('.ops-action-why').evaluate(e=>e.open));
     await page.getByPlaceholder('Search accounts...').pressSequentially('E2E');
     check('tracker search keeps cursor through consecutive keystrokes',await page.getByPlaceholder('Search accounts...').inputValue()==='E2E'&&await page.evaluate(()=>document.activeElement.id==='tracker-search'));
     await page.getByPlaceholder('Search accounts...').fill('');
@@ -228,6 +231,10 @@ async function exercise(name,engine,url){
         await button(name).click();
         check(name+' fits '+width+'px mobile width',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
         check(name+' navigation starts at the top at '+width+'px',await page.locator('.scroll').evaluate(e=>e.scrollTop===0));
+        if(name==='Tracker'){
+          check('action tile buttons retain mobile touch area at '+width+'px',await page.locator('.ops-action-tile .ops-next-action').evaluateAll(rows=>rows.length>0&&rows.every(e=>e.getBoundingClientRect().height>=44)));
+          check('compact tiles fit at '+width+'px',await page.locator('.ops-action-tile').evaluateAll(rows=>rows.every(e=>e.scrollWidth<=e.clientWidth+1)));
+        }
       }
     }
     check('mobile tab targets are at least 44px tall',await page.locator('.tabs .tb').evaluateAll(rows=>rows.every(e=>e.getBoundingClientRect().height>=44)));
@@ -261,6 +268,13 @@ async function exercise(name,engine,url){
       }));
       if(width===390)await card.screenshot({path:path.join(output,name+'-card-text.png')});
     }
+    await page.setViewportSize({width:390,height:844});
+    await page.evaluate(()=>{
+      entries.push({...entries[0],id:'E2E-TILE-02',bank:'E2E Citi',bonus:325,reqMet:'2026-08-10',payoutTimingText:'Bonus expected after requirements are completed',customTimers:[]});R();
+    });
+    check('mobile Action Center uses two compact columns',await page.locator('.ops-action-tile').evaluateAll(rows=>rows.length===2&&Math.abs(rows[0].getBoundingClientRect().top-rows[1].getBoundingClientRect().top)<2));
+    check('compact recurring and payout buttons remain available',await button('Review recurring requirements').count()===1&&await button('Confirm bonus received').count()===1);
+    await page.locator('.ops-action-center').screenshot({path:path.join(output,name+'-action-tiles.png')});
     await page.evaluate(()=>{entries=window.__cardTextOriginal;delete window.__cardTextOriginal;R();});
     await page.setViewportSize({width:390,height:844});
     check('card layout leaves saved records unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);

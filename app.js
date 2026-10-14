@@ -1,7 +1,7 @@
-/* Version 3.4.44: direct milestone actions, shared date explanations, missing-date review, and safe local-day refresh. */
+/* Version 3.4.45: direct milestone actions, shared date explanations, missing-date review, and safe local-day refresh. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.44';
+const APP_VERSION='3.4.45';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -3927,17 +3927,27 @@ function renderActionCenter(){
   visible.forEach(x=>{
     const entryId=String(x.entryId||'');
     const stage=String(x.stageCode||'IN_PROGRESS').toLowerCase().replace(/_/g,'-');
-    h+='<div class="ops-action-item"><button type="button" class="ops-action-row stage-'+esc(stage)+'" onclick="event.stopPropagation();openAccountFromActionCenter('+profileSectionAttr(JSON.stringify(entryId))+')">'+bankLogo(x.bank,true)+'<span class="ops-action-main"><b>'+esc(x.bank)+'</b><em>'+esc(x.rsn||x.action||'Review account')+'</em></span><span class="ops-action-side">'+(x.showBonus&&x.bonus?'<strong>'+fM(x.bonus)+'</strong>':'')+'<small>'+esc(x.stageLabel||'In Progress')+'</small></span></button>';
-    if(x.dateContext){
-      const proof=x.dateContext;
-      h+='<details class="profile-section ops-date-proof'+(proof.confirmed?'':' unconfirmed')+'" data-entry-id="'+profileSectionAttr(entryId)+'" data-section-key="action-date"'+profileSectionOpenAttr(entryId,'action-date')+' ontoggle="handleProfileSectionToggle(this)"><summary>'+(proof.confirmed?'Saved deadline · '+esc(fD(proof.date)):'Date not confirmed')+'</summary><p>'+esc(proof.explanation)+'</p></details>'
-    }
-    if(x.actionExplanation)h+='<details class="profile-section ops-action-why" data-entry-id="'+profileSectionAttr(entryId)+'" data-section-key="action-why"'+profileSectionOpenAttr(entryId,'action-why')+' ontoggle="handleProfileSectionToggle(this)"><summary>Why this action?</summary><p class="ops-action-explanation">'+esc(x.actionExplanation)+'</p></details>';
-    h+='<div class="ops-action-controls"><button type="button" class="ops-next-action" onclick="event.stopPropagation();runNextAccountAction('+profileSectionAttr(JSON.stringify(entryId))+')">'+esc(x.actionLabel||'Review account')+'</button></div></div>'
+    const proof=x.dateContext;
+    let indicator=x.stageLabel||'Review needed';
+    if(proof?.confirmed&&proof.date){const days=dB(td(),proof.date);indicator=Number.isFinite(days)?(days<0?'Overdue':days===0?'Due today':days+'d left'):'Date needs review'}
+    else if(proof&&!proof.confirmed&&stage!=='awaiting-bonus')indicator='Date needs review';
+    const label=x.actionLabel||'Review account';
+    const miniLabel=label==='Confirm bonus received'?'Confirm received':label==='Confirm requirements completed'?'Confirm tasks':label==='Review recurring requirements'?'Review tasks':label==='Review & record closure'?'Review closure':'Review account';
+    h+='<div class="ops-action-item ops-action-tile stage-'+esc(stage)+'"><button type="button" class="ops-action-row" aria-label="'+esc('Open '+x.bank+' account')+'" onclick="event.stopPropagation();openAccountFromActionCenter('+profileSectionAttr(JSON.stringify(entryId))+')"><span class="ops-tile-top">'+bankLogo(x.bank,true)+(x.showBonus&&x.bonus?'<strong>'+fM(x.bonus)+'</strong>':'')+'</span><b class="ops-tile-bank">'+esc(x.bank)+'</b><span class="ops-tile-status">'+esc(indicator)+'</span></button>';
+    h+='<div class="ops-action-controls"><button type="button" class="ops-next-action" aria-label="'+esc(label)+'" onclick="event.stopPropagation();runNextAccountAction('+profileSectionAttr(JSON.stringify(entryId))+')">'+esc(miniLabel)+'</button></div></div>'
   });
   h+='</div>';
   if(rows.length>visible.length)h+='<div class="ops-action-more">'+(rows.length-visible.length)+' more account'+(rows.length-visible.length!==1?'s':'')+' continue below in the tracker.</div>';
   return h+'</div>'
+}
+function renderNextAccountGuidance(e){
+  const next=window.btNextActionForEntry?.(e);
+  if(!next)return'';
+  const proof=next.context,id=String(e.id||'');
+  let h='<div class="ops-account-guidance">';
+  if(proof)h+='<details class="profile-section ops-date-proof'+(proof.confirmed?'':' unconfirmed')+'" data-entry-id="'+profileSectionAttr(id)+'" data-section-key="action-date"'+profileSectionOpenAttr(id,'action-date')+' ontoggle="handleProfileSectionToggle(this)"><summary>'+(proof.confirmed?'Saved deadline · '+esc(fD(proof.date)):'Date not confirmed')+'</summary><p>'+esc(proof.explanation)+'</p></details>';
+  if(next.explanation)h+='<details class="profile-section ops-action-why" data-entry-id="'+profileSectionAttr(id)+'" data-section-key="action-why"'+profileSectionOpenAttr(id,'action-why')+' ontoggle="handleProfileSectionToggle(this)"><summary>Why this action?</summary><p class="ops-action-explanation">'+esc(next.explanation)+'</p></details>';
+  return h+'</div>';
 }
 function switchMainTab(value){
   if(!['tracker','bonuses','tax','tips','storage'].includes(value))return;
@@ -6381,6 +6391,7 @@ entries=sortE(entries);R();
         h += '<div class="card-exp">';
         h += '<button type="button" class="bonus-ai-open" aria-label="Ask AI about this bonus" onclick="btOpenBonusAI(\''+esc(e.id)+'\')">✦ Ask AI about this bonus</button>';
         h += renderBankProfileSummary(e);
+        h += renderNextAccountGuidance(e);
         h += renderClosePlan(e);
         h += renderMonthlyFeePlan(e);
         h += '<details class="profile-section" data-entry-id="'+profileSectionAttr(e.id)+'" data-section-key="lifecycle"'+profileSectionOpenAttr(e.id,'lifecycle')+' ontoggle="handleProfileSectionToggle(this)"><summary><span>'+(e.closed?'Lifecycle':'Lifecycle & Tasks')+'</span><em>View</em></summary><div class="profile-section-body">';
