@@ -326,6 +326,11 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>{window.__cloudFixture.releaseUpload();delete window.__cloudFixture.releaseUpload;});
     await page.waitForFunction(()=>JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')).pending===false&&document.querySelector('#cloud-protection')?.dataset.state==='protected');
     await page.getByText('Backup verified',{exact:true}).first().waitFor();
+    const noticeStamp=await page.evaluate(()=>JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')).lastSuccessNoticeAt);
+    await page.evaluate(()=>document.getElementById('bt_notice_host')?.replaceChildren());
+    await page.evaluate(()=>BTCloudBackup.upload('manual'));
+    check('verified backup notice has a persistent 30-minute cooldown',await page.getByText('Backup verified',{exact:true}).count()===0&&await page.evaluate(()=>JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')).lastSuccessNoticeAt)===noticeStamp);
+    check('cooldown still verifies current records',await page.locator('#cloud-protection').getAttribute('data-state')==='protected');
     check('saved changes upload while recovery settings are open',await page.evaluate(()=>Object.values(window.__cloudFixture.objects).some(x=>x.backup.reason==='automatic'&&x.snapshot.includes('Synthetic pending-change verification'))));
     await page.evaluate(raw=>{entries=JSON.parse(raw);localStorage.setItem('bt_e_v4',raw);btCloudBackupChanged();R();},storedBeforeRadar);
     await page.waitForFunction(()=>JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')).pending===false&&document.querySelector('#cloud-protection')?.dataset.state==='protected');

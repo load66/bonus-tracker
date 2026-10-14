@@ -1,7 +1,7 @@
 /* Versioned cloud recovery. No AI calls, credential exports or automatic restores. */
 (function(){
   'use strict';
-  const API='https://api-production-00f74.up.railway.app/api/bonus-tracker/backups',CFG='bt_cloud_recovery_v1',HALF_DAY=12*60*60*1000;
+  const API='https://api-production-00f74.up.railway.app/api/bonus-tracker/backups',CFG='bt_cloud_recovery_v1',HALF_DAY=12*60*60*1000,NOTICE_COOLDOWN=30*60*1000;
   let busy=false,panel=null,debounce=null,phase='',paused=false,switching=false,currentVerified=false,checkedSession=false,pending=false,statusError='',retentionPolicy=null;
   const core=window.BTCloudCore;
   const read=()=>{try{return JSON.parse(localStorage.getItem(CFG)||'{}')}catch{return{}}};
@@ -46,10 +46,12 @@
       // Only mark this device current if no records changed during the upload.
       retentionPolicy=receipt.retention||retentionPolicy;
       const unchanged=current()===raw;
+      const now=Date.now(),lastNotice=read().lastSuccessNoticeAt;
+      const showNotice=!switching&&!(typeof lastNotice==='number'&&Number.isFinite(lastNotice)&&lastNotice>0&&now-lastNotice<NOTICE_COOLDOWN);
       changesDuringUpload=!unchanged;currentVerified=unchanged;checkedSession=true;pending=!unchanged;
-      update({lastAt:receipt.createdAt,lastCheck:Date.now(),lastHash:sha256,lastDataHash:recordHash,lastId:id,lastCount:receipt.entryCount,retention:receipt.retention,pending:!unchanged,error:unchanged?'':'More changes are waiting to be backed up.'});
+      update({lastAt:receipt.createdAt,lastCheck:now,lastHash:sha256,lastDataHash:recordHash,lastId:id,lastCount:receipt.entryCount,retention:receipt.retention,pending:!unchanged,error:unchanged?'':'More changes are waiting to be backed up.',...(showNotice?{lastSuccessNoticeAt:now}:{})});
       phase=unchanged?'Cloud backup · Verified':'Cloud backup · Changes pending';paint();
-      if(!switching)window.btNotify(unchanged?'Your backup was verified in the cloud at '+new Date(receipt.createdAt).toLocaleTimeString()+'. '+receipt.entryCount+' accounts can be recovered.':'A backup was verified. Newer changes are still waiting to upload.',{title:'Backup verified',tone:'success',duration:6500});
+      if(showNotice)window.btNotify(unchanged?'Your backup was verified in the cloud at '+new Date(receipt.createdAt).toLocaleTimeString()+'. '+receipt.entryCount+' accounts can be recovered.':'A backup was verified. Newer changes are still waiting to upload.',{title:'Backup verified',tone:'success',duration:6500});
       return receipt;
     }catch(e){update({error:e.name==='AbortError'?'Cloud backup timed out. Your local data is retained.':e.message});phase='Cloud backup · Needs attention';paint();throw e;}
     finally{busy=false;paint();if(!paused){if(changesDuringUpload)queueBackup();setTimeout(()=>{phase='';paint();},1500);}}
