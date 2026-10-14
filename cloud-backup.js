@@ -49,7 +49,7 @@
       changesDuringUpload=!unchanged;currentVerified=unchanged;checkedSession=true;pending=!unchanged;
       update({lastAt:receipt.createdAt,lastCheck:Date.now(),lastHash:sha256,lastDataHash:recordHash,lastId:id,lastCount:receipt.entryCount,retention:receipt.retention,pending:!unchanged,error:unchanged?'':'More changes are waiting to be backed up.'});
       phase=unchanged?'Cloud backup · Verified':'Cloud backup · Changes pending';paint();
-      if(!switching)window.btNotify(unchanged?'Your backup was verified in the cloud at '+new Date(receipt.createdAt).toLocaleTimeString()+'. '+receipt.entryCount+' accounts can be recovered.':'A backup was verified. Newer changes are still waiting to upload.',{title:'Backup verified',duration:6500});
+      if(!switching)window.btNotify(unchanged?'Your backup was verified in the cloud at '+new Date(receipt.createdAt).toLocaleTimeString()+'. '+receipt.entryCount+' accounts can be recovered.':'A backup was verified. Newer changes are still waiting to upload.',{title:'Backup verified',tone:'success',duration:6500});
       return receipt;
     }catch(e){update({error:e.name==='AbortError'?'Cloud backup timed out. Your local data is retained.':e.message});phase='Cloud backup · Needs attention';paint();throw e;}
     finally{busy=false;paint();if(!paused){if(changesDuringUpload)queueBackup();setTimeout(()=>{phase='';paint();},1500);}}
@@ -150,7 +150,7 @@
           if(!(await window.btConfirmDialog('Enable automatic backup on this phone? Your first backup will be uploaded and read back for verification before the switch turns ON. Future saved changes upload promptly while connected. The server checkpoints uploaded data every 12 hours.',{title:'Confirm automatic backup',confirmLabel:'Enable and verify'})))return;
           const health=await request('/health');if(!health.readWriteVerified)throw Error('Cloud storage verification did not pass.');
           await upload('manual');update({enabled:true});
-          window.btNotify(currentVerified?'Automatic backup is ON. Your current records are verified in the cloud.':'Automatic backup is ON. Additional changes are waiting for verification.',{title:'Automatic backup enabled'});
+          window.btNotify(currentVerified?'Automatic backup is ON. Your current records are verified in the cloud.':'Automatic backup is ON. Additional changes are waiting for verification.',{title:'Automatic backup enabled',tone:currentVerified?'success':'info'});
           await list();
         }else{
           if(!(await window.btConfirmDialog('Turn off automatic uploads on this phone? Future changes will remain on this device until you back them up. Retained cloud versions and server checkpoints remain available.',{title:'Turn off automatic backup?',confirmLabel:'Turn off',danger:true})))return;
