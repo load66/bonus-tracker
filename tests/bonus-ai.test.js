@@ -43,3 +43,20 @@ assert.ok(JSON.stringify({question:'x'.repeat(500),facts:hugeFacts}).length<=175
 assert.ok(hugeFacts.find(f=>f.id==='contextcoverage').text.includes('shortened'));
 assert.ok(hugeFacts.find(f=>f.id==='termscoverage').text.includes('Omitted wording'));
 console.log('Rich JSON AI coverage passed: recurring rules, complete waivers, companion fees, eligibility, timers, provenance and explicit context limits');
+
+const local=sandbox.BTBonusAI.localAnswerFor;
+assert.equal(local({...e,reqMet:'',bonusRecd:''},'Can I close?').local,true);
+assert.equal(local(e,'What do the tracker closure checks and saved terms say about closing this account?').local,true);
+assert.ok(local(rich,'How do I waive monthly fees?').answer.includes('OR complete'));
+assert.ok(local(rich,'What monthly maintenance fees are stated in the saved terms, including required companion accounts?').answer.includes('Required savings'));
+assert.ok(local(rich,'What direct deposits are required, including the amount, deadline and every recurring period?').answer.includes('three monthly periods'));
+const unknownFee=local(e,'What is the monthly fee?');
+assert.ok(unknownFee.missing.some(s=>s.includes('Monthly fee amount')));
+assert.ok(!/fee.free|\$0|no fee/i.test(unknownFee.answer),'Missing fee data must not imply zero');
+assert.equal(local(rich,'Compare the fee waiver versus requirements'),null);
+assert.equal(local(e,'Can I close and apply again?'),null);
+assert.equal(JSON.stringify([...storage]),before,'Local answers must not mutate stored records');
+const source=require('node:fs').readFileSync('bonus-ai.js','utf8');
+assert.ok(!source.includes('supabase.co')&&!source.includes('access_token')&&!source.includes('bonus-ai-login'));
+assert.ok(source.includes("credentials:'omit'")&&source.includes('/public/bonus-tracker/ask'));
+console.log('Login-free answers passed: local grounding, unknown fees, compound-question fallback, no credentials and no writes');
