@@ -17,7 +17,7 @@
     add('bank','Bank / account',e.bank,150);add('accounttype','Saved account category',e.accountType||'Not recorded',60);add('bonus','Saved bonus amount',e.bonus?fM(e.bonus):'Not recorded',80);
     add('today','Tracker date',td(),40);add('stage','Saved lifecycle stage',status(e),100);
     for(const [key,label] of [['opened','Opened'],['reqMet','Requirement met'],['bonusRecd','Bonus received'],['closed','Closed']])add(key.toLowerCase(),label,e[key]||'Not recorded',40);
-    add('requirements','Saved requirements',combine([['Complete bonus',e.completeBonusText],['Deadline wording',e.requiredDaysText],['Funding wording',e.fundingAmountText],['Required funding amount',Number(e.fundingAmount)>0?fM(e.fundingAmount):''],['Required hold days',Number(e.fundedDays)>0?e.fundedDays:''],['Enrollment code',e.promoCodeText]]),1500);
+    add('requirements','Saved requirements',combine([['Qualifying activity',e.dataPoint],['Complete bonus',e.completeBonusText],['Deadline wording',e.requiredDaysText],['Funding wording',e.fundingAmountText],['Required funding amount',Number(e.fundingAmount)>0?fM(e.fundingAmount):''],['Required hold days',Number(e.fundedDays)>0?e.fundedDays:''],['Enrollment code',e.promoCodeText]]),1500);
     add('payout','Saved payout wording',e.payoutTimingText);
     add('monthlyfee','Saved monthly fee wording',e.monthlyFeeYNText);add('feeamount','Saved monthly fee amount',e.monthlyFeeAmountText);add('feefrequency','Saved fee frequency',e.monthlyFeeFrequency,80);
     add('feewaiver','Saved fee waiver conditions',combine([['Waiver wording',e.monthlyFeeWaiverText],['Waiver type',e.monthlyFeeWaiverType],['Waiver amount',e.monthlyFeeWaiverAmountText],['Fee avoidance and companion accounts',e.avoidMonthlyFeeText]]),1500);
@@ -31,6 +31,7 @@
     add('close_date','Tracker-calculated earliest close date',safeCloseDate(e)||'Not confirmed',40);add('reopen_date','Tracker-calculated next reopen date',nextReopen(e)||'Not confirmed',40);
     const readiness=closeReadiness(e);add('close_gate','Tracker closure checks',readiness.label+'; '+readiness.items.map(x=>(x.ok?'Passed: ':'Needs review: ')+x.label+(x.detail?' — '+x.detail:'')).join('; '),1400);
     const tasks=Array.isArray(e.checklist)?e.checklist:[];add('tasks','Task progress',tasks.filter(x=>x.done).length+' of '+tasks.length+' marked complete. This does not independently confirm every recurring period.',180);
+    const next=window.btNextActionForEntry?.(e);if(next)add('nextaction','Tracker next step',next.label+'\n'+next.explanation,900);
     if(truncated.length)add('contextcoverage','Saved-field coverage','These fields were shortened: '+truncated.join(', ')+'. Omitted wording and conditions cannot be assumed.',900);
     const terms=text(e.tcSourceRaw||''),limit=Math.min(10000,terms.length);
     const withTerms=n=>[...facts,{id:'terms',label:'Saved promotion terms',text:prefix(terms,n)||'No original terms saved'},{id:'termscoverage',label:'Saved terms coverage',text:!terms?'Original promotion terms are missing.':n<terms.length?'Only the first '+prefix(terms,n).length+' of '+terms.length+' characters are included. Omitted wording cannot be assumed.':'These are saved historical terms, not freshly verified official terms.'}];
@@ -53,12 +54,38 @@
   }
   function close(){requestGeneration++;if(modal)modal.remove();modal=null;selected='';busy=false;if(restoreFocus?.isConnected)restoreFocus.focus();restoreFocus=null;}
   function message(value){if(modal)modal.querySelector('#bonus-ai-status').textContent=value;}
-  function renderAnswer(result,facts){
+  function guidanceFor(e,question){
+    const next=window.btNextActionForEntry?.(e),missing=[],ids=['nextaction'];
+    let verdict='',tone='review',step=next?.explanation||'Review the saved requirements and dates before recording another milestone.';
+    const q=String(question||'').toLowerCase();
+    if(/(?:can|could|should|may|when).{0,40}\bclose\b|safe.{0,30}(?:close|closing)|closing this account|closure checks|\bclose (?:it|this account|my account|now)\b/.test(q)){
+      ids.push('close_gate','close_date','eligibilitygate');
+      if(e.closed){verdict='Already closed';step='The closure is recorded. Review the saved repeat-eligibility rules before another application.';}
+      else if(next?.kind==='close'){verdict='Ready — tracker checks passed';tone='ready';step=next.explanation;}
+      else if(!e.reqMet||!e.bonusRecd){verdict='Wait';tone='wait';step=!e.reqMet?'Confirm all qualifying requirements with the bank before recording completion.':'Wait until the bonus posts, then record its receipt before reviewing closure.';}
+      else if(next?.context?.confirmed&&next.context.date&&next.context.date>td()){verdict='Wait';tone='wait';step='The tracker’s close checks are still blocked. Review the saved close date and restrictions below.';}
+      else{verdict='Needs verification';step='Review the unresolved tracker closure checks and saved fee/eligibility terms before closing.';}
+      if(verdict==='Needs verification'){const readiness=closeReadiness(e);for(const item of readiness.items||[])if(!item.ok)missing.push(item.label+(item.detail?': '+item.detail:''));if(!next?.context?.confirmed)missing.push('A confirmed closure date and its supporting terms.');if(!window.BTEligibilityGate?.validate?.(e)?.ok)missing.push('Verified repeat-eligibility rules or confirmed non-repeatable status.');}
+    }else if(/waiv|maintenance fee|monthly.{0,20}fee/.test(q)){step='Check each account’s saved fee and waiver conditions against your actual balance and activity. Include any required savings or membership account.';ids.push('monthlyfee','feeamount','feewaiver');}
+    else if(/direct deposit/.test(q)){step='Compare actual deposits with the saved qualifying activity, deadline and every recurring period before confirming completion.';ids.push('requirements','timers','tasks');}
+    else if(/payout|paid|bonus.{0,15}arriv/.test(q)){step=e.bonusRecd?'The bonus is recorded as received. Review the tracker’s close checks next.':'Check the saved payout wording and actual bank activity; record receipt only after the bonus posts.';ids.push('payout','bonusrecd');}
+    else if(/repeat|apply again|eligib/.test(q)){step='Use the tracker’s saved repeat-eligibility rules and calculated date, then verify the current official offer before applying again.';ids.push('eligibility','eligibilitygate','reopen_date');}
+    else if(/early.close|forfeiture/.test(q)){step='Review the saved closure restrictions and fee wording before making a closure decision.';ids.push('closerule','close_gate');}
+    else if(/savings|membership|share account/.test(q)){step='Review the required companion account’s minimum balance and fee conditions before withdrawing funds or closing it.';ids.push('feewaiver','terms');}
+    return{verdict,tone,step,missing,ids};
+  }
+  function renderAnswer(result,facts,e,question){
     const area=modal.querySelector('#bonus-ai-answer');area.replaceChildren();
-    const p=document.createElement('p');p.textContent=result.answer;area.append(p);
-    if(result.missing.length){const title=document.createElement('b');title.textContent='Still needed';area.append(title);const list=document.createElement('ul');for(const value of result.missing){const li=document.createElement('li');li.textContent=value;list.append(li)}area.append(list)}
-    const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Saved facts used';details.append(summary);
-    for(const id of result.factIds){const f=facts.find(x=>x.id===id);if(!f)continue;const label=document.createElement('b'),body=document.createElement('p');label.textContent=f.label;body.textContent=f.text;details.append(label,body)}area.append(details);
+    const guide=guidanceFor(e,question);
+    if(guide.verdict){const verdict=document.createElement('div');verdict.className='bonus-ai-verdict '+guide.tone;verdict.textContent=guide.verdict;area.append(verdict);}
+    const title=document.createElement('b');title.textContent='AI answer';area.append(title);
+    const p=document.createElement('p');p.className='bonus-ai-direct-answer';p.textContent=result.answer;area.append(p);
+    const step=document.createElement('section'),heading=document.createElement('b'),body=document.createElement('p');step.className='bonus-ai-next-step';heading.textContent='Your next step';body.textContent=guide.step;step.append(heading,body);area.append(step);
+    const missing=[...new Set([...guide.missing,...result.missing])];
+    for(const id of ['contextcoverage','termscoverage']){const f=facts.find(x=>x.id===id);if(f&&/missing|shortened|only the first/i.test(f.text))missing.push(f.text);}
+    if(missing.length){const title=document.createElement('b');title.textContent='Needs verification';area.append(title);const list=document.createElement('ul');list.className='bonus-ai-missing';for(const value of missing){const li=document.createElement('li');li.textContent=value;list.append(li)}area.append(list)}
+    const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Supporting saved facts';details.append(summary);
+    for(const id of [...new Set([...result.factIds,...guide.ids])]){const f=facts.find(x=>x.id===id);if(!f)continue;const label=document.createElement('b'),body=document.createElement('p');label.textContent=f.label;body.textContent=f.text;details.append(label,body)}area.append(details);
     message(result.cached?'Saved explanation reused.':'AI explanation · check the cited saved facts.');
   }
   async function ask(){
@@ -71,8 +98,8 @@
     try{
       const token=await accessToken();const r=await fetch(API+'/api/bonus-tracker/ask',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({question,facts}),signal:controller.signal});const result=await r.json();
       if(!r.ok){if(r.status===401||r.status===403)sessionStorage.removeItem(SESSION_KEY);throw Error(result.detail||result.error||'AI is unavailable.');}
-      if(typeof result.answer!=='string'||!Array.isArray(result.factIds)||!Array.isArray(result.missing)||result.factIds.some(id=>!facts.some(f=>f.id===id)))throw Error('AI returned an unsupported answer.');
-      if(modal&&generation===requestGeneration){if(!findEntry(selected)||JSON.stringify(contextFor(findEntry(selected)))!==JSON.stringify(facts))message('Tracker facts changed. Ask again for an updated explanation.');else renderAnswer(result,facts);}
+      if(typeof result.answer!=='string'||!result.answer.trim()||result.answer.length>1600||!Array.isArray(result.factIds)||result.factIds.length>12||!Array.isArray(result.missing)||result.missing.length>6||result.missing.some(x=>typeof x!=='string'||!x.trim()||x.length>180)||result.factIds.some(id=>!facts.some(f=>f.id===id))||(!result.factIds.length&&!result.missing.length))throw Error('AI returned an unsupported answer.');
+      if(modal&&generation===requestGeneration){if(!findEntry(selected)||JSON.stringify(contextFor(findEntry(selected)))!==JSON.stringify(facts))message('Tracker facts changed. Ask again for an updated explanation.');else renderAnswer(result,facts,findEntry(selected),question);}
     }catch(error){if(modal&&generation===requestGeneration){message(error.name==='AbortError'?'AI timed out. Your tracker is unchanged.':error.message);modal.querySelector('#bonus-ai-login').hidden=!!session();}}
     finally{clearTimeout(timer);if(modal&&generation===requestGeneration){busy=false;modal.querySelector('#bonus-ai-question').disabled=false;modal.querySelectorAll('[data-question]').forEach(b=>b.disabled=false);modal.querySelector('#bonus-ai-send').disabled=false;}}
   }
@@ -93,5 +120,5 @@
     modal.querySelector(session()?'#bonus-ai-question':'#bonus-ai-email').focus();
   };
   document.addEventListener('keydown',ev=>{if(!modal)return;if(ev.key==='Escape'){close();return;}if(ev.key==='Tab'){const controls=[...modal.querySelectorAll('button,input,textarea,summary')].filter(e=>!e.disabled&&e.getClientRects().length);const first=controls[0],last=controls[controls.length-1];if(ev.shiftKey&&document.activeElement===first){ev.preventDefault();last.focus()}else if(!ev.shiftKey&&document.activeElement===last){ev.preventDefault();first.focus()}}});
-  window.BTBonusAI={contextFor};
+  window.BTBonusAI={contextFor,guidanceFor};
 })();

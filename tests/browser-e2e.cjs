@@ -180,7 +180,7 @@ async function exercise(name,engine,url){
         }
         if(url==='https://api-production-00f74.up.railway.app/api/bonus-tracker/ask'){
           window.__bonusAITest.calls.push({packet:JSON.parse(options.body),authorization:options.headers.Authorization});
-          return new Response(JSON.stringify(window.__bonusAITest.fail?{detail:'AI is busy. Try again later.'}:{answer:'The bonus is recorded as received. Check the tracker closure gates before closing.',factIds:['bonusrecd','close_gate'],missing:[],cached:false}),{status:window.__bonusAITest.fail?429:200,headers:{'Content-Type':'application/json'}});
+          return new Response(JSON.stringify(window.__bonusAITest.fail?{detail:'AI is busy. Try again later.'}:window.__bonusAITest.response||{answer:'The bonus is recorded as received. Check the tracker closure gates before closing.',factIds:['bonusrecd','close_gate'],missing:[],cached:false}),{status:window.__bonusAITest.fail?429:200,headers:{'Content-Type':'application/json'}});
         }
         return nativeFetch.call(this,input,options);
       };
@@ -194,6 +194,8 @@ async function exercise(name,engine,url){
     for(const label of ['Monthly fee','Waive fees','Direct deposit','Early-close fee','Savings account','Repeat eligibility']){await button(label).click();check('prefill: '+label,(await page.locator('#bonus-ai-question').inputValue()).length>20);}
     await button('Can I close?').click();await page.locator('#bonus-ai-send').click();
     await page.locator('#bonus-ai-answer p').first().waitFor();
+    check('AI closure decision uses tracker gates',(await page.locator('.bonus-ai-verdict').innerText())==='Ready — tracker checks passed');
+    check('AI explains a concrete next step',(await page.locator('.bonus-ai-next-step').innerText()).includes('companion accounts'));
     const {packet:aiPacket,authorization:aiAuthorization}=await page.evaluate(()=>window.__bonusAITest.calls[0]);
     check('AI request is authenticated',aiAuthorization==='Bearer synthetic-owner-token'&&aiPacket.question.includes('closure')&&(await page.evaluate(()=>sessionStorage.getItem('bonus-ai-auth'))).includes('synthetic-owner-token'));
     check('AI uses canonical saved facts without account identifiers or notes',aiPacket.facts.some(f=>f.id==='close_gate')&&aiPacket.facts.some(f=>f.id==='close_date')&&!JSON.stringify(aiPacket).includes(id)&&!JSON.stringify(aiPacket).includes('Synthetic verification record only'));
@@ -201,8 +203,11 @@ async function exercise(name,engine,url){
     check('AI displays cited saved facts',(await page.locator('#bonus-ai-answer').innerText()).includes('Tracker closure checks'));
     check('AI modal fits narrow mobile viewport',await page.locator('.bonus-ai-modal').evaluate(e=>e.getBoundingClientRect().width<=window.innerWidth));
     await page.screenshot({path:path.join(output,name+'-tracker-ai.png')});
+    await page.evaluate(()=>window.__bonusAITest.response={answer:'Unsupported response',factIds:[],missing:[{text:'Malformed'}]});
+    await page.locator('#bonus-ai-send').click();await page.getByText('AI returned an unsupported answer.',{exact:true}).waitFor();
+    check('malformed AI output is rejected',await page.locator('.bonus-ai-verdict').count()===0);
     await page.evaluate(()=>window.__bonusAITest.fail=true);await page.locator('#bonus-ai-send').click();await page.getByText('AI is busy. Try again later.',{exact:true}).waitFor();
-    check('AI rate limit is handled without repeated requests',await page.evaluate(()=>window.__bonusAITest.calls.length===2));
+    check('AI rate limit is handled without repeated requests',await page.evaluate(()=>window.__bonusAITest.calls.length===3));
     await button('Disconnect AI').click();
     check('AI disconnect clears only its session',await page.evaluate(()=>sessionStorage.getItem('bonus-ai-auth')===null&&localStorage.getItem('bt_e_v4')!==null));
     await page.getByRole('button',{name:'Close AI',exact:true}).click();
