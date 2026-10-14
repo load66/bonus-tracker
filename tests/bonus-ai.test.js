@@ -57,9 +57,9 @@ assert.equal(local(rich,'Compare the fee waiver versus requirements'),null);
 assert.equal(local(e,'Can I close and apply again?'),null);
 assert.equal(JSON.stringify([...storage]),before,'Local answers must not mutate stored records');
 const source=require('node:fs').readFileSync('bonus-ai.js','utf8');
-assert.ok(!source.includes('supabase.co')&&!source.includes('access_token')&&!source.includes('bonus-ai-login'));
-assert.ok(source.includes("credentials:'omit'")&&source.includes('/public/bonus-tracker/ask'));
-console.log('Login-free answers passed: local grounding, unknown fees, compound-question fallback, no credentials and no writes');
+assert.ok(!source.includes('access_token')&&source.includes('bonus-ai-login'));
+assert.ok(source.includes("credentials:'omit'")&&source.includes('/api/bonus-tracker/ask'));
+console.log('Local answers passed: local grounding, unknown fees, compound-question fallback, no local-answer credentials and no writes');
 
 const screenshotAccount={...e,monthlyFeeYNText:'Personal checking: $0 monthly maintenance fee. Required Share Savings: $10/month if the $50 minimum balance is not maintained.',monthlyFeeAmountText:'$10',monthlyFeeFrequency:'monthly',monthlyFeeWaiverText:'Keep at least $50 in the required Share Savings account to avoid the $10/month fee.',avoidMonthlyFeeText:'Keep at least $50 in the required Share Savings account to avoid the $10/month fee.'};
 const polished=local(screenshotAccount,'What is the monthly fee?');

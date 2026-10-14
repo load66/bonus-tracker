@@ -176,9 +176,9 @@ async function exercise(name,engine,url){
         const url=typeof input==='string'?input:input.url;
         if(url.startsWith('https://ppsljqaaanpkksxbpalk.supabase.co/auth/v1/token?')){
           window.__bonusAITest.authCalls++;
-          throw Error('Login must not be requested by BonusTracker');
+          return new Response(JSON.stringify({access_token:window.__bonusAITest.authCalls===1?'synthetic-owner-token':'synthetic-refreshed-token',refresh_token:'synthetic-refresh-token',expires_in:3600}),{status:200,headers:{'Content-Type':'application/json'}});
         }
-        if(url==='https://api-production-00f74.up.railway.app/public/bonus-tracker/ask'){
+        if(url==='https://api-production-00f74.up.railway.app/api/bonus-tracker/ask'){
           window.__bonusAITest.calls.push({packet:JSON.parse(options.body),authorization:options.headers.Authorization,credentials:options.credentials});
           return new Response(JSON.stringify(window.__bonusAITest.fail?{detail:'AI is busy. Try again later.'}:window.__bonusAITest.response||{answer:'The bonus is recorded as received. Check the tracker closure gates before closing.',factIds:['bonusrecd','close_gate'],missing:[],cached:false}),{status:window.__bonusAITest.fail?429:200,headers:{'Content-Type':'application/json'}});
         }
@@ -188,28 +188,38 @@ async function exercise(name,engine,url){
     if(!await button('Ask AI about this bonus').count())await page.locator('.card-h').first().click();
     await button('Ask AI about this bonus').click();
     check('Tracker AI opens for one selected bank',(await page.locator('.bonus-ai-heading').innerText()).includes('E2E Verification Bank')&&await page.evaluate(()=>window.__bonusAITest.calls.length===0));
-    check('AI needs no login',await page.getByLabel('Email',{exact:true}).count()===0&&await page.getByLabel('Password',{exact:true}).count()===0);
+    check('local answers need no login',await page.locator('#bonus-ai-login').isHidden());
     for(const label of ['Monthly fee','Waive fees','Direct deposit','Early-close fee','Savings account','Repeat eligibility']){await button(label).click();check('prefill: '+label,(await page.locator('#bonus-ai-question').inputValue()).length>20);}
     await button('Can I close?').click();await page.locator('#bonus-ai-send').click();
     await page.locator('#bonus-ai-answer p').first().waitFor();
     check('AI closure decision uses tracker gates',(await page.locator('.bonus-ai-verdict').innerText())==='Ready — tracker checks passed');
     check('AI explains a concrete next step',(await page.locator('.bonus-ai-next-step').innerText()).includes('companion accounts'));
     check('common answers do not send facts',await page.evaluate(()=>window.__bonusAITest.calls.length===0&&window.__bonusAITest.authCalls===0));
-    await button('Ask AI for more').click();await page.getByText('AI explanation · review the source details.',{exact:true}).waitFor();
+    await button('Ask AI for more').click();
+    check('remote AI asks for login before sending facts',await page.locator('#bonus-ai-login').isVisible()&&await page.evaluate(()=>window.__bonusAITest.calls.length===0));
+    await page.getByLabel('Email',{exact:true}).fill('synthetic@example.test');
+    await page.getByLabel('Password',{exact:true}).fill('synthetic-test-password');
+    await button('Sign in and ask AI').click();await page.getByText('AI explanation · review the source details.',{exact:true}).waitFor();
+    check('login resumes the pending AI question',await page.evaluate(()=>window.__bonusAITest.authCalls===1&&window.__bonusAITest.calls.length===1));
+    check('password is cleared and never persisted',await page.locator('#bonus-ai-password').inputValue()===''&&await page.evaluate(()=>!localStorage.getItem('bonus-ai-auth').includes('synthetic-test-password')));
+
     const {packet:aiPacket,authorization:aiAuthorization,credentials:aiCredentials}=await page.evaluate(()=>window.__bonusAITest.calls[0]);
-    check('AI sends no owner token or cookies',!aiAuthorization&&aiCredentials==='omit'&&aiPacket.question.includes('close'));
+    check('AI uses authenticated endpoint without cookies',aiAuthorization==='Bearer synthetic-owner-token'&&aiCredentials==='omit'&&aiPacket.question.includes('close'));
     check('AI uses canonical saved facts without account identifiers or notes',aiPacket.facts.some(f=>f.id==='close_gate')&&aiPacket.facts.some(f=>f.id==='close_date')&&!JSON.stringify(aiPacket).includes(id)&&!JSON.stringify(aiPacket).includes('Synthetic verification record only'));
     await page.locator('#bonus-ai-answer summary').click();
     check('AI displays cited saved facts',(await page.locator('#bonus-ai-answer').innerText()).includes('Tracker closure checks'));
     check('AI modal fits narrow mobile viewport',await page.locator('.bonus-ai-modal').evaluate(e=>e.getBoundingClientRect().width<=window.innerWidth));
     await page.screenshot({path:path.join(output,name+'-tracker-ai.png')});
+    await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('bonus-ai-auth'));s.expires_at=0;localStorage.setItem('bonus-ai-auth',JSON.stringify(s));});
+    await button('Ask AI for more').click();await page.getByText('AI explanation · review the source details.',{exact:true}).waitFor();
+    check('expired access token refreshes without login',await page.evaluate(()=>window.__bonusAITest.authCalls===2&&window.__bonusAITest.calls[1].authorization==='Bearer synthetic-refreshed-token')&&await page.locator('#bonus-ai-login').isHidden());
     await page.evaluate(()=>window.__bonusAITest.response={answer:'Unsupported response',factIds:[],missing:[{text:'Malformed'}]});
     await button('Ask AI for more').click();await page.getByText('AI returned an unsupported answer.',{exact:true}).waitFor();
     check('malformed AI output is rejected',await page.locator('.bonus-ai-verdict').count()===0);
     await page.evaluate(()=>window.__bonusAITest.fail=true);await button('Ask AI for more').click();await page.getByText('AI is busy. Try again later.',{exact:true}).waitFor();
-    check('AI rate limit is handled without repeated requests',await page.evaluate(()=>window.__bonusAITest.calls.length===3));
+    check('AI rate limit is handled without repeated requests',await page.evaluate(()=>window.__bonusAITest.calls.length===4));
     await button('Monthly fee').click();await page.locator('#bonus-ai-send').click();
-    check('saved-rule answers work after AI failure',await page.getByText('Based on your account details.',{exact:true}).count()===1&&await page.evaluate(()=>window.__bonusAITest.calls.length===3));
+    check('saved-rule answers work after AI failure',await page.getByText('Based on your account details.',{exact:true}).count()===1&&await page.evaluate(()=>window.__bonusAITest.calls.length===4));
     const feeFields=await page.evaluate(()=>{
       const e=entries[0],keys=['monthlyFeeYNText','monthlyFeeAmountText','monthlyFeeFrequency','monthlyFeeWaiverText','avoidMonthlyFeeText'];
       const prior=keys.map(key=>({key,present:Object.hasOwn(e,key),value:e[key]}));
@@ -319,6 +329,9 @@ async function exercise(name,engine,url){
     await page.reload();await page.getByText('BonusTracker',{exact:false}).first().waitFor();
     check(name==='webkit'?'network-loss reload preserves account':'offline reload preserves account',(await record()).id===id);
     serverUnavailable=false;await context.setOffline(false);
+    check('AI login persists across browser reload',await page.evaluate(()=>BTBonusAuth.connected()));
+    await page.evaluate(()=>BTBonusAuth.disconnect());
+    check('AI sign-out removes remembered session',await page.evaluate(()=>!localStorage.getItem('bonus-ai-auth')&&!BTBonusAuth.connected()));
     check('no uncaught application errors',errors.length===0);
     await page.screenshot({path:path.join(output,name+'-verified.png')});
     await context.tracing.stop();

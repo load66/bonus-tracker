@@ -1,3 +1,7 @@
+## v3.4.51 — remembered AI sign-in
+
+Authenticated AI requests resume after sign-in; the browser retains the session across reloads and rotates expired access tokens. Browser checks cover password clearing, refresh and sign-out. Local answers and tracker data remain independent of login.
+
 # Mobile UI cleanup — v3.4.40
 
 This release changes presentation and navigation, not bank rules, enrolled terms, records, histories or calculations.
@@ -55,6 +59,6 @@ Common questions return labeled saved-rule answers on the device without network
 Local responses lead with account-specific explanations and a concrete next step. Redundant field labels and duplicate waiver text are removed from the answer; original evidence remains in Source details. Missing promotion text remains visible in the limited-information disclosure instead of becoming an unrelated fee warning. Local results are labeled Answer and Based on your account details, without claiming model generation.
 
 
-## v3.4.50 structured financial rules
+## v3.4.51 structured financial rules
 
 New generated imports use schema v3 and an evidence-backed, account-scoped financial rule contract. Import and save validation reject unsupported versions, invented amounts, missing source quotations and conflicting calculation fields. Ask AI uses the validated evaluation; legacy records retain existing behavior. Financial inconsistencies and manual closure restrictions block canonical close readiness. The current generation standard and contract live in docs and repository AGENTS.md.
