@@ -1,7 +1,7 @@
-/* Version 3.4.54: direct milestone actions, shared date explanations, missing-date review, and safe local-day refresh. */
+/* Version 3.4.55: completed non-repeatable accounts move out of Tracker into a recoverable account archive. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.54';
+const APP_VERSION='3.4.55';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -337,6 +337,10 @@ function isNonRepeatableEntry(e){
     return /(?:must not|may not|cannot|can't|not eligible|ineligible|have not|has not)[^.;]{0,220}(?:previously received|ever received|prior bonus|received[^.;]{0,80}(?:this|a|an|new account|checking account)[^.;]{0,60}bonus)/i.test(x)
       || /(?:previously received|ever received)[^.;]{0,180}(?:not eligible|ineligible|may not|cannot|can't)/i.test(x);
   });
+}
+// Archive is a view of completed records, never a separate or deleted data store.
+function isArchivedTrackerEntry(e){
+  return !!e?.closed && isNonRepeatableEntry(e);
 }
 function normalizeNonRepeatableEntry(x){
   if(!x||!isNonRepeatableEntry(x))return x;
@@ -3915,6 +3919,7 @@ function openAccountFromActionCenter(id){
 function renderAccountEmptyState(query){
   return query
     ? '<div class="empty"><div class="em">No matching accounts</div><p>No account matches “'+esc(query)+'”.</p><button type="button" class="btn-s" onclick="search=\'\';R()">Clear search</button></div>'
+    : entries.some(isArchivedTrackerEntry)?'<div class="empty"><div class="em">No active accounts</div><p>Completed, non-repeatable offers are saved in Archived accounts.</p><button type="button" class="btn-s" onclick="switchMainTab(\'archive\')">View archived accounts</button></div>'
     : '<div class="empty"><div class="em">No banks yet</div><p>Add your first bank with the + button, use Quick Add for templates, or restore a saved backup.</p></div>'
 }
 function runNextAccountAction(id){
@@ -3959,13 +3964,13 @@ function renderNextAccountGuidance(e){
   return h+'</div>';
 }
 function switchMainTab(value){
-  if(!['tracker','bonuses','tax','tips','storage'].includes(value))return;
+  if(!['tracker','bonuses','tax','tips','storage','archive'].includes(value))return;
   tab=value;search='';_sp=0;
   const current=document.querySelector('.scroll');if(current)current.scrollTop=0;
   R();
 }
 function updateViewSearch(kind,value,cursor){
-  const id=kind==='tracker'?'tracker-search':kind==='datapoints'?'datapoints-search':kind==='terms'?'terms-search':'';
+  const id=kind==='tracker'?(tab==='archive'?'archive-search':'tracker-search'):kind==='datapoints'?'datapoints-search':kind==='terms'?'terms-search':'';
   if(!id)return;
   if(kind==='tracker')search=value;
   else if(kind==='datapoints')dpSearch=value;
@@ -3984,8 +3989,8 @@ function R(){captureProfileSectionState();const el=document.querySelector('.scro
   h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div><h1><em>Bonus</em>Tracker</h1><div class="hdr-sub">Bonus operations • lifecycle • churn</div></div>';
   if(tab==='tracker')h+='<div class="yr-pills">';
   if(tab==='tracker')[thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});
-  h+=tab==='tracker'?'</div>':'<span class="mobile-page-caption">'+esc({bonuses:'Bank offers',tax:'Tax',tips:'Datapoints',storage:'Terms archive'}[tab]||'')+'</span>';
-  h+='<details id="bt-data-menu" class="header-data-menu"><summary aria-label="Data and backup menu" title="Data and backup menu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></summary><div class="header-data-panel" role="group" aria-label="Data and recovery actions"><h3>Data & recovery</h3><button onclick="this.closest(\'details\').open=false;btOpenCloudBackup()"><strong>Cloud backup & recovery</strong><small>Automatic protection and recovery versions</small></button><button onclick="this.closest(\'details\').open=false;exportBackup()"><strong>Export backup file</strong><small>Download an additional recovery copy</small></button><button onclick="this.closest(\'details\').open=false;importBackup()"><strong>Import backup file</strong><small>Review and restore a downloaded copy</small></button><button class="data-menu-danger" onclick="this.closest(\'details\').open=false;resetAllData()"><strong>Reset this device</strong><small>Requires confirmation and a safety backup</small></button></div></details></div>';
+  h+=tab==='tracker'?'</div>':'<span class="mobile-page-caption">'+esc({bonuses:'Bank offers',tax:'Tax',tips:'Datapoints',storage:'Terms archive',archive:'Account archive'}[tab]||'')+'</span>';
+  h+='<details id="bt-data-menu" class="header-data-menu"><summary aria-label="Data and backup menu" title="Data and backup menu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></summary><div class="header-data-panel" role="group" aria-label="Data and recovery actions"><h3>Data & recovery</h3><button onclick="this.closest(\'details\').open=false;switchMainTab(\'archive\')"><strong>Archived accounts</strong><small>Completed, non-repeatable offers and their history</small></button><button onclick="this.closest(\'details\').open=false;btOpenCloudBackup()"><strong>Cloud backup & recovery</strong><small>Automatic protection and recovery versions</small></button><button onclick="this.closest(\'details\').open=false;exportBackup()"><strong>Export backup file</strong><small>Download an additional recovery copy</small></button><button onclick="this.closest(\'details\').open=false;importBackup()"><strong>Import backup file</strong><small>Review and restore a downloaded copy</small></button><button class="data-menu-danger" onclick="this.closest(\'details\').open=false;resetAllData()"><strong>Reset this device</strong><small>Requires confirmation and a safety backup</small></button></div></details></div>';
 
   if(tab==='tracker'){
     overview+='<div class="hero ops-hero"><div class="hero-copy"><div class="hero-kicker">Active bonus pipeline</div><div class="hero-value">'+fM(metrics.active)+'</div><div class="hero-note">'+fM(metrics.collected)+' collected in '+dashYear+' • '+metrics.openCount+' open • '+metrics.cooldownCount+' cooling down</div></div><div class="hero-side"><div class="hero-chip">'+metrics.readyCloseCount+' ready to close</div><div class="hero-chip secondary">'+metrics.actionCount+' urgent'+'</div></div></div>';
@@ -3993,6 +3998,7 @@ function R(){captureProfileSectionState();const el=document.querySelector('.scro
   }
   h+='</div></div><div class="scroll">';
   if(tab==='tracker'){h+='<section class="tracker-overview" aria-label="Bonus totals">'+overview+'</section>';const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted)}
+  else if(tab==='archive'){const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted,true)}
   else if(tab==='tax')h+=rTax();
   else if(tab==='tips')h+=rTips();
   else if(tab==='storage')h+=rTermsStorage();
@@ -4009,6 +4015,8 @@ function R(){captureProfileSectionState();const el=document.querySelector('.scro
   btRunPostRenderHooks()
 }
 function rTrackerLegacy(sorted){
+  const archiveView=arguments[1]===true;
+  sorted=sorted.filter(e=>isArchivedTrackerEntry(e)===archiveView);
   const q=search.toLowerCase();
   const f=q?sorted.filter(e=>(e.bank||'').toLowerCase().includes(q)||(e.id||'').toLowerCase().includes(q)):sorted;
   let h='';
@@ -6368,11 +6376,16 @@ entries=sortE(entries);R();
   }
 
   function rTracker(sorted){
+    const archiveView=arguments[1]===true;
+    sorted=sorted.filter(e=>isArchivedTrackerEntry(e)===archiveView);
     const q=search.toLowerCase();
     const f=q?sorted.filter(e=>(e.bank||'').toLowerCase().includes(q)||(e.id||'').toLowerCase().includes(q)):sorted;
     let h='';
     const bkd=daysSinceBk();
 
+    if(archiveView){
+      h+='<button type="button" class="btn-s" onclick="switchMainTab(\'tracker\')">Back to Tracker</button><div class="sec">Archived accounts</div><div class="sub">Completed, non-repeatable offers. Records, received bonuses and enrolled terms remain available for history, tax and recovery.</div>';
+    }else{
     h += '<button id="bt-cloud-open" class="cloud-status-button" onclick="btOpenCloudBackup()">Cloud backup · Not enabled</button>';
     h += '<div class="qbar tracker-quick-actions">';
 
@@ -6389,16 +6402,19 @@ entries=sortE(entries);R();
       h += '</div>';
     }
 
-    h += `<input class="sinput" type="text" id="tracker-search" aria-label="Search accounts" placeholder="Search accounts..." value="${esc(search)}" oninput="updateViewSearch('tracker',this.value,this.selectionStart)">`;
+    }
+    h += `<input class="sinput" type="text" id="${archiveView?'archive-search':'tracker-search'}" aria-label="${archiveView?'Search archived accounts':'Search accounts'}" placeholder="${archiveView?'Search archived accounts...':'Search accounts...'}" value="${esc(search)}" oninput="updateViewSearch('tracker',this.value,this.selectionStart)">`;
+    if(!archiveView){
     h += `<button class="tc-btn" onclick="showAnalyzer=!showAnalyzer;R()">${I.spark}<span>${showAnalyzer?'Hide analyzer':'Review promo terms'}</span></button>`;
     if(showAnalyzer) h += rAnalyzer();
     h += renderActionCenter();
-
-    if(!f.length){
-      return h + renderAccountEmptyState(search) + rBankActions();
     }
 
-    h += '<div class="sec">Bonus Accounts</div>';
+    if(!f.length){
+      return h + (archiveView?'<div class="empty">'+(search?'No archived account matches your search.':'No completed, non-repeatable accounts to archive.')+'</div>':renderAccountEmptyState(search)) + rBankActions();
+    }
+
+    if(!archiveView)h += '<div class="sec">Bonus Accounts</div>';
 
     f.forEach(e=>{
       const isX=expanded===e.id, nr=nextReopen(e), countdown=getCountdown(e), urg=getUrg(e);
