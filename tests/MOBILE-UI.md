@@ -48,3 +48,8 @@ Answers include a canonical next step, expandable supporting saved facts and exp
 ## v3.4.48 login-free bonus questions
 
 Common questions return labeled saved-rule answers on the device without network calls. Other questions and Ask AI for more send one bounded account context to the isolated public bonus-question route, with no cookies, credentials or Supabase sign-in. Failed or rate-limited AI calls do not disable local answers. Browser fixtures verify the absent login fields, local-versus-remote behavior, malformed-answer rejection and preserved records.
+
+
+## v3.4.49 natural account answers
+
+Local responses lead with account-specific explanations and a concrete next step. Redundant field labels and duplicate waiver text are removed from the answer; original evidence remains in Source details. Missing promotion text remains visible in the limited-information disclosure instead of becoming an unrelated fee warning. Local results are labeled Answer and Based on your account details, without claiming model generation.

@@ -195,9 +195,9 @@ async function exercise(name,engine,url){
     check('AI closure decision uses tracker gates',(await page.locator('.bonus-ai-verdict').innerText())==='Ready — tracker checks passed');
     check('AI explains a concrete next step',(await page.locator('.bonus-ai-next-step').innerText()).includes('companion accounts'));
     check('common answers do not send facts',await page.evaluate(()=>window.__bonusAITest.calls.length===0&&window.__bonusAITest.authCalls===0));
-    await button('Ask AI for more').click();await page.getByText('AI explanation · check the cited saved facts.',{exact:true}).waitFor();
+    await button('Ask AI for more').click();await page.getByText('AI explanation · review the source details.',{exact:true}).waitFor();
     const {packet:aiPacket,authorization:aiAuthorization,credentials:aiCredentials}=await page.evaluate(()=>window.__bonusAITest.calls[0]);
-    check('AI sends no owner token or cookies',!aiAuthorization&&aiCredentials==='omit'&&aiPacket.question.includes('closure'));
+    check('AI sends no owner token or cookies',!aiAuthorization&&aiCredentials==='omit'&&aiPacket.question.includes('close'));
     check('AI uses canonical saved facts without account identifiers or notes',aiPacket.facts.some(f=>f.id==='close_gate')&&aiPacket.facts.some(f=>f.id==='close_date')&&!JSON.stringify(aiPacket).includes(id)&&!JSON.stringify(aiPacket).includes('Synthetic verification record only'));
     await page.locator('#bonus-ai-answer summary').click();
     check('AI displays cited saved facts',(await page.locator('#bonus-ai-answer').innerText()).includes('Tracker closure checks'));
@@ -209,7 +209,7 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>window.__bonusAITest.fail=true);await button('Ask AI for more').click();await page.getByText('AI is busy. Try again later.',{exact:true}).waitFor();
     check('AI rate limit is handled without repeated requests',await page.evaluate(()=>window.__bonusAITest.calls.length===3));
     await button('Monthly fee').click();await page.locator('#bonus-ai-send').click();
-    check('saved-rule answers work after AI failure',await page.getByText('Answered from saved rules on this device.',{exact:true}).count()===1&&await page.evaluate(()=>window.__bonusAITest.calls.length===3));
+    check('saved-rule answers work after AI failure',await page.getByText('Based on your account details.',{exact:true}).count()===1&&await page.evaluate(()=>window.__bonusAITest.calls.length===3));
     await page.getByRole('button',{name:'Close AI',exact:true}).click();
     check('asking AI preserves all saved account data',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
     // Restore native fetch before verifying real service-worker offline navigation.
