@@ -290,7 +290,7 @@ async function exercise(name,engine,url){
     await newPhoneContext.close();
     await page.evaluate(()=>{window.__cloudFixture.failure=true;});
     await page.locator('#bt-cloud-open').click();await button('Back up now').click();
-    await page.getByText('Synthetic cloud outage',{exact:true}).waitFor();
+    await page.locator('#cloud-status').getByText('Synthetic cloud outage',{exact:true}).waitFor();
     check('cloud outage leaves original records untouched',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
     await button('Close').click();
     await page.evaluate(()=>{localStorage.removeItem('bt_cloud_recovery_v1');delete window.__cloudFixture;});
