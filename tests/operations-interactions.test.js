@@ -77,6 +77,14 @@ async function testOperations(){
   run(`timerEditModal={entryId:entries[0].id,mode:'days',text:'Invalid',startDate:'2026-09-01',daysRequired:0};saveTimerEditor();`);
   assert.equal(run('JSON.stringify(entries)'),beforeInvalid,'Invalid timer does not change saved data');
   timerInputsTest();
+  // Autofocus completes before later fields can receive typing.
+  const focusGet=document.getElementById,focusTimeout=sandbox.setTimeout;
+  let focusNow=false,focusScheduled=false;
+  document.getElementById=id=>id==='tem_text'?{focus(){focusNow=true}}:focusGet.call(document,id);
+  sandbox.setTimeout=()=>{focusScheduled=true};
+  run('focusTimerDescription()');
+  assert.equal(focusNow,true);assert.equal(focusScheduled,false,'Timer autofocus must not steal later input');
+  document.getElementById=focusGet;sandbox.setTimeout=focusTimeout;
 
   let scrolled=false,focused=false;
   const header={setAttribute(){},focus(opts){focused=opts.preventScroll}};

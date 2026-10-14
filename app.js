@@ -1,7 +1,7 @@
-/* Version 3.4.45: direct milestone actions, shared date explanations, missing-date review, and safe local-day refresh. */
+/* Version 3.4.46: direct milestone actions, shared date explanations, missing-date review, and safe local-day refresh. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.45';
+const APP_VERSION='3.4.46';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -4924,10 +4924,11 @@ function timerEditorDraft(){
   const value=(id,fallback)=>String(document.getElementById(id)?.value??fallback??'').trim();
   return {...p,text:value('tem_text',p.text),startDate:value('tem_start',p.startDate),daysRequired:value('tem_days',p.daysRequired)}
 }
-function openNewTimerEditor(id,mode='due'){const entry=entries.find(e=>e.id===id);if(!entry)return;const fallbackDate=entry.opened||td();timerEditModal={entryId:id,timerId:'',isNew:true,text:'',mode:mode==='days'?'days':'due',startDate:fallbackDate,daysRequired:''};R();setTimeout(()=>{const el=document.getElementById('tem_text');if(el)el.focus()},0)}
-function openTimerEditor(id,timerIdValue){const entry=entries.find(e=>e.id===id);if(!entry)return;const timer=normalizeTimerList(entry.customTimers).find(t=>t.id===timerIdValue);if(!timer)return;timerEditModal={entryId:id,timerId:timer.id,isNew:false,text:timer.text||'',mode:timer.daysRequired>0?'days':'due',startDate:(timer.daysRequired>0?timer.startDate:timer.date)||'',daysRequired:timer.daysRequired?String(timer.daysRequired):''};R();setTimeout(()=>{const el=document.getElementById('tem_text');if(el)el.focus()},0)}
+function focusTimerDescription(){const el=document.getElementById('tem_text');if(el)el.focus()}
+function openNewTimerEditor(id,mode='due'){const entry=entries.find(e=>e.id===id);if(!entry)return;const fallbackDate=entry.opened||td();timerEditModal={entryId:id,timerId:'',isNew:true,text:'',mode:mode==='days'?'days':'due',startDate:fallbackDate,daysRequired:''};R();focusTimerDescription()}
+function openTimerEditor(id,timerIdValue){const entry=entries.find(e=>e.id===id);if(!entry)return;const timer=normalizeTimerList(entry.customTimers).find(t=>t.id===timerIdValue);if(!timer)return;timerEditModal={entryId:id,timerId:timer.id,isNew:false,text:timer.text||'',mode:timer.daysRequired>0?'days':'due',startDate:(timer.daysRequired>0?timer.startDate:timer.date)||'',daysRequired:timer.daysRequired?String(timer.daysRequired):''};R();focusTimerDescription()}
 function closeTimerEditor(){timerEditModal=null;R()}
-function switchTimerEditMode(mode){if(!timerEditModal)return;const draft=timerEditorDraft()||timerEditModal;timerEditModal={...draft,mode:mode==='days'?'days':'due'};if(timerEditModal.mode==='due')timerEditModal.daysRequired='';R();setTimeout(()=>{const el=document.getElementById('tem_text');if(el)el.focus()},0)}
+function switchTimerEditMode(mode){if(!timerEditModal)return;const draft=timerEditorDraft()||timerEditModal;timerEditModal={...draft,mode:mode==='days'?'days':'due'};if(timerEditModal.mode==='due')timerEditModal.daysRequired='';R();focusTimerDescription()}
 // Both timer editors use the same persistence and history path.
 function saveEntryTimer(entryId,draft){
   const e=entries.find(e=>e.id===entryId);
