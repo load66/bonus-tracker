@@ -2,10 +2,7 @@
 (function(){
   'use strict';
   const API='https://api-production-00f74.up.railway.app';
-  const AUTH_URL='https://ppsljqaaanpkksxbpalk.supabase.co';
-  const PUBLIC_KEY='sb_publishable_2JLPa7GMpdacVfxBnfCv_w_wl36jn2n';
-  const SESSION_KEY='bonus-ai-auth';
-  let modal=null,selected='',busy=false,requestGeneration=0,refreshPromise=null,restoreFocus=null;
+  let modal=null,selected='',busy=false,requestGeneration=0,restoreFocus=null;
   const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const findEntry=id=>entries.find(e=>e.id===id);
   const text=value=>String(value??'').replace(/\b\d{8,}\b/g,'[identifier omitted]');
@@ -40,18 +37,6 @@
     let low=0,high=limit;while(low<high){const mid=Math.ceil((low+high)/2);if(JSON.stringify({question:'x'.repeat(500),facts:withTerms(mid)}).length<=17500)low=mid;else high=mid-1;}
     return withTerms(low);
   }
-  function session(){try{return JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null')}catch{return null}}
-  function saveSession(s){sessionStorage.setItem(SESSION_KEY,JSON.stringify({access_token:s.access_token,refresh_token:s.refresh_token,expires_at:s.expires_at||Math.floor(Date.now()/1000)+Number(s.expires_in||3600)}));}
-  async function authRequest(grant,body){
-    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
-    try{const r=await fetch(AUTH_URL+'/auth/v1/token?grant_type='+grant,{method:'POST',headers:{apikey:PUBLIC_KEY,'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});const d=await r.json();if(!r.ok||!d.access_token||!d.refresh_token)throw Error('Could not sign in. Check your Trading Journal email and password.');saveSession(d);return d.access_token;}finally{clearTimeout(timer)}
-  }
-  async function accessToken(){
-    const s=session();if(!s?.access_token)throw Error('Sign in to use AI.');
-    if(Number(s.expires_at)>Date.now()/1000+60)return s.access_token;
-    if(!refreshPromise)refreshPromise=authRequest('refresh_token',{refresh_token:s.refresh_token}).catch(()=>{sessionStorage.removeItem(SESSION_KEY);throw Error('Your AI sign-in expired. Sign in again.');}).finally(()=>{refreshPromise=null;});
-    return refreshPromise;
-  }
   function close(){requestGeneration++;if(modal)modal.remove();modal=null;selected='';busy=false;if(restoreFocus?.isConnected)restoreFocus.focus();restoreFocus=null;}
   function message(value){if(modal)modal.querySelector('#bonus-ai-status').textContent=value;}
   function guidanceFor(e,question){
@@ -74,11 +59,34 @@
     else if(/savings|membership|share account/.test(q)){step='Review the required companion account’s minimum balance and fee conditions before withdrawing funds or closing it.';ids.push('feewaiver','terms');}
     return{verdict,tone,step,missing,ids};
   }
+  function localAnswerFor(e,question,facts=contextFor(e)){
+    const q=String(question||'').toLowerCase(),guide=guidanceFor(e,question);
+    const byId=id=>facts.find(f=>f.id===id);
+    let ids=[],answer='',missing=[];
+    // Handle one narrow intent. Comparisons and compound questions go to AI
+    // rather than silently answering only the first recognized topic.
+    if(/compare|versus|\bvs\b|also|why|explain|calculate/.test(q))return null;
+    if(/\band\b/.test(q)&&!/^what (?:monthly maintenance fees|direct deposits)/.test(q)&&!q.includes('tracker closure checks and saved terms'))return null;
+    if(guide.verdict){answer=guide.verdict+'. '+guide.step;ids=guide.ids;missing=guide.missing;}
+    else if(/early.close|forfeit|termination fee/.test(q)){ids=['closerule'];}
+    else if(/waiv|avoid.{0,15}fee/.test(q)){ids=['feewaiver'];if(!byId('feewaiver'))missing.push('The exact saved fee-waiver conditions.');}
+    else if(/monthly.{0,25}fee|maintenance fee/.test(q)){ids=['monthlyfee','feeamount','feefrequency','feewaiver'];if(!byId('monthlyfee')&&!byId('feeamount'))missing.push('Monthly fee amount and the official fee schedule.');}
+    else if(/savings|membership|share account/.test(q)){ids=['feewaiver'];missing.push('Confirm companion-account requirements against the saved official terms.');}
+    else if(/direct deposit|\bdd\b|requirements|what (?:remains|do i still need)/.test(q)){ids=['requirements','timers','tasks','nextaction'];if(!byId('requirements'))missing.push('The qualifying activity, amount, deadline and recurring periods.');}
+    else if(/payout|paid|bonus.{0,15}arriv/.test(q)){ids=['payout','bonusrecd'];if(!byId('payout'))missing.push('The exact payout wording and its start event.');}
+    else if(/repeat|apply again|eligib/.test(q)){ids=['eligibility','eligibilitygate','reopen_date'];}
+    else if(/next deadline|next due date/.test(q)){const next=window.btNextActionForEntry?.(e);answer=next?.context?.confirmed?next.context.explanation:'The next tracker date is not confirmed.';ids=['nextaction'];}
+    else return null;
+    const used=ids.map(byId).filter(Boolean);
+    if(!answer)answer=used.length?used.map(f=>f.label+': '+f.text).join('\n\n'):'This information is not recorded in the saved rules.';
+    if(!used.length)missing.push('Save the relevant official promotion or fee wording.');
+    return {answer,factIds:used.map(f=>f.id),missing,local:true};
+  }
   function renderAnswer(result,facts,e,question){
     const area=modal.querySelector('#bonus-ai-answer');area.replaceChildren();
     const guide=guidanceFor(e,question);
     if(guide.verdict){const verdict=document.createElement('div');verdict.className='bonus-ai-verdict '+guide.tone;verdict.textContent=guide.verdict;area.append(verdict);}
-    const title=document.createElement('b');title.textContent='AI answer';area.append(title);
+    const title=document.createElement('b');title.textContent=result.local?'Saved-rule answer':'AI answer';area.append(title);
     const p=document.createElement('p');p.className='bonus-ai-direct-answer';p.textContent=result.answer;area.append(p);
     const step=document.createElement('section'),heading=document.createElement('b'),body=document.createElement('p');step.className='bonus-ai-next-step';heading.textContent='Your next step';body.textContent=guide.step;step.append(heading,body);area.append(step);
     const missing=[...new Set([...guide.missing,...result.missing])];
@@ -86,39 +94,33 @@
     if(missing.length){const title=document.createElement('b');title.textContent='Needs verification';area.append(title);const list=document.createElement('ul');list.className='bonus-ai-missing';for(const value of missing){const li=document.createElement('li');li.textContent=value;list.append(li)}area.append(list)}
     const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Supporting saved facts';details.append(summary);
     for(const id of [...new Set([...result.factIds,...guide.ids])]){const f=facts.find(x=>x.id===id);if(!f)continue;const label=document.createElement('b'),body=document.createElement('p');label.textContent=f.label;body.textContent=f.text;details.append(label,body)}area.append(details);
-    message(result.cached?'Saved explanation reused.':'AI explanation · check the cited saved facts.');
+    message(result.local?'Answered from saved rules on this device.':result.cached?'Saved explanation reused.':'AI explanation · check the cited saved facts.');
   }
-  async function ask(){
+  async function ask(forceAI=false){
     if(busy||!modal)return;const question=modal.querySelector('#bonus-ai-question').value.trim();if(!question){message('Enter a question about this bonus.');return;}
     const e=findEntry(selected);if(!e){message('This account is no longer in the tracker.');return;}
     const facts=contextFor(e),generation=requestGeneration;
+    const local=!forceAI&&localAnswerFor(e,question,facts);if(local){renderAnswer(local,facts,e,question);return;}
     modal.querySelector('#bonus-ai-answer').replaceChildren();
-    busy=true;modal.querySelector('#bonus-ai-question').disabled=true;modal.querySelectorAll('[data-question]').forEach(b=>b.disabled=true);modal.querySelector('#bonus-ai-send').disabled=true;message('Reviewing saved terms and tracker facts…');
+    busy=true;modal.querySelector('#bonus-ai-question').disabled=true;modal.querySelectorAll('[data-question]').forEach(b=>b.disabled=true);modal.querySelector('#bonus-ai-send').disabled=true;modal.querySelector('#bonus-ai-more').disabled=true;message('Reviewing saved terms and tracker facts…');
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);
     try{
-      const token=await accessToken();const r=await fetch(API+'/api/bonus-tracker/ask',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({question,facts}),signal:controller.signal});const result=await r.json();
-      if(!r.ok){if(r.status===401||r.status===403)sessionStorage.removeItem(SESSION_KEY);throw Error(result.detail||result.error||'AI is unavailable.');}
+      const r=await fetch(API+'/public/bonus-tracker/ask',{method:'POST',credentials:'omit',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,facts}),signal:controller.signal});const result=await r.json();
+      if(!r.ok)throw Error(result.detail||result.error||'AI is unavailable. Saved-rule answers still work.');
       if(typeof result.answer!=='string'||!result.answer.trim()||result.answer.length>1600||!Array.isArray(result.factIds)||result.factIds.length>12||!Array.isArray(result.missing)||result.missing.length>6||result.missing.some(x=>typeof x!=='string'||!x.trim()||x.length>180)||result.factIds.some(id=>!facts.some(f=>f.id===id))||(!result.factIds.length&&!result.missing.length))throw Error('AI returned an unsupported answer.');
       if(modal&&generation===requestGeneration){if(!findEntry(selected)||JSON.stringify(contextFor(findEntry(selected)))!==JSON.stringify(facts))message('Tracker facts changed. Ask again for an updated explanation.');else renderAnswer(result,facts,findEntry(selected),question);}
-    }catch(error){if(modal&&generation===requestGeneration){message(error.name==='AbortError'?'AI timed out. Your tracker is unchanged.':error.message);modal.querySelector('#bonus-ai-login').hidden=!!session();}}
-    finally{clearTimeout(timer);if(modal&&generation===requestGeneration){busy=false;modal.querySelector('#bonus-ai-question').disabled=false;modal.querySelectorAll('[data-question]').forEach(b=>b.disabled=false);modal.querySelector('#bonus-ai-send').disabled=false;}}
+    }catch(error){if(modal&&generation===requestGeneration){message(error.name==='AbortError'?'AI timed out. Your tracker is unchanged.':error.message);}}
+    finally{clearTimeout(timer);if(modal&&generation===requestGeneration){busy=false;modal.querySelector('#bonus-ai-question').disabled=false;modal.querySelectorAll('[data-question]').forEach(b=>b.disabled=false);modal.querySelector('#bonus-ai-send').disabled=false;modal.querySelector('#bonus-ai-more').disabled=false;}}
   }
   window.btOpenBonusAI=function(id){
     const e=findEntry(id);if(!e)return;const opener=document.activeElement;close();restoreFocus=opener;selected=id;
     modal=document.createElement('div');modal.className='ov bonus-ai-overlay';modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-labelledby','bonus-ai-title');
-    modal.innerHTML='<section class="modal bonus-ai-modal"><div class="bonus-ai-heading"><div><h2 id="bonus-ai-title">Ask AI</h2><p>'+escape(e.bank)+'</p></div><button type="button" id="bonus-ai-close" aria-label="Close AI">×</button></div><div id="bonus-ai-login"'+(session()?' hidden':'')+'><p>Use your existing Trading Journal sign-in.</p><label for="bonus-ai-email">Email</label><input id="bonus-ai-email" type="email" autocomplete="username"><label for="bonus-ai-password">Password</label><input id="bonus-ai-password" type="password" autocomplete="current-password"><button type="button" class="btn-s" id="bonus-ai-signin">Connect AI</button></div><label for="bonus-ai-question">Your question</label><textarea id="bonus-ai-question" maxlength="500" rows="3" placeholder="What do I still need to do for this bonus?"></textarea><div class="bonus-ai-suggestions"><button type="button" data-question="What do I still need to do for this bonus?">What remains?</button><button type="button" data-question="What do the saved terms say about when the bonus will be paid?">Payout timing</button><button type="button" data-question="What do the tracker closure checks and saved terms say about closing this account?">Can I close?</button><button type="button" data-question="What monthly maintenance fees are stated in the saved terms, including required companion accounts?">Monthly fee</button><button type="button" data-question="What are the exact saved conditions to waive each monthly fee? Distinguish alternatives from combined requirements.">Waive fees</button><button type="button" data-question="What direct deposits are required, including the amount, deadline and every recurring period?">Direct deposit</button><button type="button" data-question="What early-close fees or bonus forfeiture restrictions are stated in the saved terms?">Early-close fee</button><button type="button" data-question="Is a membership, share or savings account required? What are its minimum balance and fees?">Savings account</button><button type="button" data-question="What saved repeat-bonus rules and tracker checks determine when I can apply again?">Repeat eligibility</button></div><p class="bonus-ai-sharing">Ask AI shares this bonus’s saved rules, terms, dates, reminders, task counts and your question with Groq. Notes, account IDs and other bonuses are excluded.</p><button type="button" class="btn-p" id="bonus-ai-send">Ask AI</button><p id="bonus-ai-status" role="status"></p><div id="bonus-ai-answer"></div><p class="bonus-ai-boundary">Explains saved information. Current terms and eligibility may need verification. Answers never update records or replace tracker calculations.</p><button type="button" class="btn-s" id="bonus-ai-disconnect"'+(session()?'':' hidden')+'>Disconnect AI</button></section>';
+    modal.innerHTML='<section class="modal bonus-ai-modal"><div class="bonus-ai-heading"><div><h2 id="bonus-ai-title">Ask AI</h2><p>'+escape(e.bank)+'</p></div><button type="button" id="bonus-ai-close" aria-label="Close AI">×</button></div><label for="bonus-ai-question">Your question</label><textarea id="bonus-ai-question" maxlength="500" rows="3" placeholder="What do I still need to do for this bonus?"></textarea><div class="bonus-ai-suggestions"><button type="button" data-question="What do I still need to do for this bonus?">What remains?</button><button type="button" data-question="What do the saved terms say about when the bonus will be paid?">Payout timing</button><button type="button" data-question="What do the tracker closure checks and saved terms say about closing this account?">Can I close?</button><button type="button" data-question="What monthly maintenance fees are stated in the saved terms, including required companion accounts?">Monthly fee</button><button type="button" data-question="What are the exact saved conditions to waive each monthly fee? Distinguish alternatives from combined requirements.">Waive fees</button><button type="button" data-question="What direct deposits are required, including the amount, deadline and every recurring period?">Direct deposit</button><button type="button" data-question="What early-close fees or bonus forfeiture restrictions are stated in the saved terms?">Early-close fee</button><button type="button" data-question="Is a membership, share or savings account required? What are its minimum balance and fees?">Savings account</button><button type="button" data-question="What saved repeat-bonus rules and tracker checks determine when I can apply again?">Repeat eligibility</button></div><p class="bonus-ai-sharing">Common questions use saved rules on your device. Other questions, or “Ask AI for more,” send this bonus’s saved facts and your question to Groq. Notes, account IDs and other bonuses are excluded.</p><button type="button" class="btn-p" id="bonus-ai-send">Get answer</button><button type="button" class="btn-s" id="bonus-ai-more">Ask AI for more</button><p id="bonus-ai-status" role="status"></p><div id="bonus-ai-answer"></div><p class="bonus-ai-boundary">Explains saved information. Current terms and eligibility may need verification. Answers never update records or replace tracker calculations.</p></section>';
     document.body.append(modal);modal.querySelector('#bonus-ai-close').onclick=close;modal.onclick=ev=>{if(ev.target===modal)close()};
-    modal.querySelector('#bonus-ai-send').onclick=ask;
+    modal.querySelector('#bonus-ai-send').onclick=()=>ask();modal.querySelector('#bonus-ai-more').onclick=()=>ask(true);
     modal.querySelectorAll('[data-question]').forEach(button=>button.onclick=()=>{modal.querySelector('#bonus-ai-question').value=button.dataset.question;modal.querySelector('#bonus-ai-question').focus()});
-    modal.querySelector('#bonus-ai-signin').onclick=async()=>{
-      const generation=requestGeneration,button=modal.querySelector('#bonus-ai-signin');button.disabled=true;message('Connecting…');
-      const email=modal.querySelector('#bonus-ai-email').value.trim(),password=modal.querySelector('#bonus-ai-password').value;
-      try{await authRequest('password',{email,password});if(modal&&generation===requestGeneration){modal.querySelector('#bonus-ai-password').value='';modal.querySelector('#bonus-ai-login').hidden=true;modal.querySelector('#bonus-ai-disconnect').hidden=false;message('Connected. Ask a question when ready.');}}
-      catch(error){if(modal&&generation===requestGeneration)message(error.message)}finally{button.disabled=false;}
-    };
-    modal.querySelector('#bonus-ai-disconnect').onclick=()=>{sessionStorage.removeItem(SESSION_KEY);modal.querySelector('#bonus-ai-login').hidden=false;modal.querySelector('#bonus-ai-disconnect').hidden=true;message('Disconnected.');};
-    modal.querySelector(session()?'#bonus-ai-question':'#bonus-ai-email').focus();
+    modal.querySelector('#bonus-ai-question').focus();
   };
   document.addEventListener('keydown',ev=>{if(!modal)return;if(ev.key==='Escape'){close();return;}if(ev.key==='Tab'){const controls=[...modal.querySelectorAll('button,input,textarea,summary')].filter(e=>!e.disabled&&e.getClientRects().length);const first=controls[0],last=controls[controls.length-1];if(ev.shiftKey&&document.activeElement===first){ev.preventDefault();last.focus()}else if(!ev.shiftKey&&document.activeElement===last){ev.preventDefault();first.focus()}}});
-  window.BTBonusAI={contextFor,guidanceFor};
+  window.BTBonusAI={contextFor,guidanceFor,localAnswerFor};
 })();

@@ -43,3 +43,8 @@ Two-column mobile shortcut tiles show the square bank icon, bank name, bonus and
 ## v3.4.47 actionable AI explanations
 
 Answers include a canonical next step, expandable supporting saved facts and explicit unresolved information. Closure questions get a tracker-derived Ready, Wait, Needs verification or Already closed verdict; early-close fee questions do not imply permission. Qualifying activity and the canonical next action are included in bounded AI context. Missing original terms and shortened evidence are visible. Malformed output is rejected before rendering. No additional background calls, automatic changes to entries or replacement calculations are introduced. Browser verification uses synthetic AI responses, not a paid live-provider conversation.
+
+
+## v3.4.48 login-free bonus questions
+
+Common questions return labeled saved-rule answers on the device without network calls. Other questions and Ask AI for more send one bounded account context to the isolated public bonus-question route, with no cookies, credentials or Supabase sign-in. Failed or rate-limited AI calls do not disable local answers. Browser fixtures verify the absent login fields, local-versus-remote behavior, malformed-answer rejection and preserved records.
