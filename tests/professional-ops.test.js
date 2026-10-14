@@ -7,7 +7,7 @@ const index=fs.readFileSync('index.html','utf8');
 const feedback=fs.readFileSync('ui-feedback.js','utf8');
 const entryImport=fs.readFileSync('entry-link-import.js','utf8');
 const attention=fs.readFileSync('smart-attention.js','utf8');
-for(const token of ['function bonusPipelineMetrics','Active bonus pipeline','Collected','Awaiting','In Progress','Action Needed','function renderActionCenter','function renderCardProgressLine']){
+for(const token of ['function bonusPipelineMetrics','Active bonuses','Collected','Awaiting','In Progress','Action Needed','function renderActionCenter','function renderCardProgressLine']){
   assert(app.includes(token),'Professional dashboard/card architecture missing: '+token);
 }
 for(const token of ['function timelineRowsForEntry','Activity Timeline','account_opened','Requirements completed','Bonus received','Account closed']){
@@ -22,10 +22,10 @@ assert(entryImport.includes('confirmImportReview')&&entryImport.includes('btConf
 const feedbackPos=index.indexOf('./ui-feedback.js');
 const appPos=index.indexOf('./app.js');
 assert(feedbackPos>=0&&appPos>=0&&feedbackPos<appPos,'UI feedback layer must load before app.js');
-for(const token of ["const VER='3.4.62-feedback1'",'window.alert=function','window.btConfirmDialog=confirmDialog']){
+for(const token of ["const VER='3.4.63-feedback1'",'window.alert=function','window.btConfirmDialog=confirmDialog']){
   assert(feedback.includes(token),'In-app feedback adapter missing: '+token);
 }
-for(const token of ['v3.4.62 professional operations UI','.ops-action-center','.ops-stats','.card-progressline','.bt-timeline-card','.bt-notice-host','.bt-confirm-overlay']){
+for(const token of ['v3.4.63 professional operations UI','.ops-action-center','.ops-stats','.card-progressline','.bt-timeline-card','.bt-notice-host','.bt-confirm-overlay']){
   assert(css.includes(token),'Professional operations styling missing: '+token);
 }
 assert(attention.includes('btLifecycleStageForEntry')&&!attention.includes('btSemanticStateForEntry'),'Action Center is not driven directly by canonical lifecycle status');

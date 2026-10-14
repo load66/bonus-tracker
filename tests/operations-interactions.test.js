@@ -108,9 +108,9 @@ async function testOperations(){
   sandbox.getAttentionSuggestions=suggestions;
   run(`search='No such bank';R()`);
   assert.match(document.getElementById('app').innerHTML,/No matching accounts/);
-  assert.doesNotMatch(document.getElementById('app').innerHTML,/No banks yet/);
+  assert.doesNotMatch(document.getElementById('app').innerHTML,/No accounts yet/);
   run(`search='';entries=[];R()`);
-  assert.match(document.getElementById('app').innerHTML,/No banks yet/);
+  assert.match(document.getElementById('app').innerHTML,/No accounts yet/);
   assert.equal(errors.filter(x=>x.startsWith('ERROR ')).length,0);
 
   function timerInputsTest(){
