@@ -278,7 +278,7 @@ async function exercise(name,engine,url){
       };
     },cloudRecords);
     check('new phone begins without account records',await newPhone.evaluate(()=>entries.length===0));
-    await newPhone.locator('#bt-cloud-open').click();await newPhone.getByRole('button',{name:'Preview recovery',exact:true}).first().click();
+    await newPhone.locator('#bt-cloud-open').click();try{await newPhone.getByRole('button',{name:'Preview recovery',exact:true}).first().click();}catch(e){console.error(name+' catalog diagnostics:',await newPhone.evaluate(()=>({status:document.querySelector('#cloud-status')?.textContent,connected:BTBonusAuth.connected(),version:BT_APP_VERSION,body:document.querySelector('.cloud-modal')?.innerText})));throw e;}
     await newPhone.getByRole('button',{name:'Restore this version',exact:true}).waitFor();
     check('recovery preview fits a new-phone viewport',await newPhone.locator('.cloud-modal').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&e.getBoundingClientRect().width<=innerWidth));
     await newPhone.screenshot({path:path.join(output,name+'-cloud-recovery-preview.png')});
