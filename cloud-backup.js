@@ -4,6 +4,7 @@
   const API='https://api-production-00f74.up.railway.app/api/bonus-tracker/backups',CFG='bt_cloud_recovery_v1',HALF_DAY=12*60*60*1000,NOTICE_COOLDOWN=30*60*1000;
   let busy=false,panel=null,debounce=null,phase='',paused=false,switching=false,currentVerified=false,checkedSession=false,pending=false,statusError='',retentionPolicy=null;
   const core=window.BTCloudCore;
+  const accountCount=n=>n+' account'+(n===1?'':'s');
   const read=()=>{try{return JSON.parse(localStorage.getItem(CFG)||'{}')}catch{return{}}};
   function update(value){try{const raw=JSON.stringify({...read(),...value});window.BTPersistence.commit(localStorage,{[CFG]:raw});statusError='';paint();}catch(e){statusError='Backup settings could not be saved. Check browser storage.';currentVerified=false;paint();throw e;}}
   const keys=()=>getBackupStorageKeys();
@@ -18,7 +19,7 @@
     panel.querySelector('#cloud-state').textContent=state.title;panel.querySelector('#cloud-summary').textContent=state.detail;
     panel.querySelector('#cloud-last-verified').textContent=date;
     panel.querySelector('#cloud-retention-status').textContent=retentionPolicy?.maxCopies===4?(cfg.retention?.cleanup==='pending'?'Backup verified. Older-copy cleanup is pending and will retry on the next backup.':'Storage keeps the latest backup and two earlier states, plus the active 12-hour checkpoint: at most four copies after verified cleanup.'):'Storage cleanup policy has not yet been confirmed by the server.';
-    panel.querySelector('#cloud-proof').textContent=cfg.lastAt?'Server readback and checksum verified'+(Number.isInteger(cfg.lastCount)?' · '+cfg.lastCount+' accounts':''):'Protection starts after a verified first upload.';
+    panel.querySelector('#cloud-proof').textContent=cfg.lastAt?'Server readback and checksum verified'+(Number.isInteger(cfg.lastCount)?' · '+accountCount(cfg.lastCount):''):'Protection starts after a verified first upload.';
     panel.querySelector('#cloud-file-date').textContent='Last downloaded backup file: '+(localStorage.getItem('bt_last_backup')||'None recorded');
     const toggle=panel.querySelector('#cloud-auto-toggle');toggle.checked=cfg.enabled===true;toggle.disabled=busy||switching;
     panel.querySelector('#cloud-switch-state').textContent=cfg.enabled?'ON':'OFF';
@@ -51,7 +52,7 @@
       changesDuringUpload=!unchanged;currentVerified=unchanged;checkedSession=true;pending=!unchanged;
       update({lastAt:receipt.createdAt,lastCheck:now,lastHash:sha256,lastDataHash:recordHash,lastId:id,lastCount:receipt.entryCount,retention:receipt.retention,pending:!unchanged,error:unchanged?'':'More changes are waiting to be backed up.',...(showNotice?{lastSuccessNoticeAt:now}:{})});
       phase=unchanged?'Cloud backup · Verified':'Cloud backup · Changes pending';paint();
-      if(showNotice)window.btNotify(unchanged?'Your backup was verified in the cloud at '+new Date(receipt.createdAt).toLocaleTimeString()+'. '+receipt.entryCount+' accounts can be recovered.':'A backup was verified. Newer changes are still waiting to upload.',{title:'Backup verified',tone:'success',duration:6500});
+      if(showNotice)window.btNotify(unchanged?'Your backup was verified in the cloud at '+new Date(receipt.createdAt).toLocaleTimeString()+'. '+accountCount(receipt.entryCount)+' can be recovered.':'A backup was verified. Newer changes are still waiting to upload.',{title:'Backup verified',tone:'success',duration:6500});
       return receipt;
     }catch(e){update({error:e.name==='AbortError'?'Cloud backup timed out. Your local data is retained.':e.message});phase='Cloud backup · Needs attention';paint();throw e;}
     finally{busy=false;paint();if(!paused){if(changesDuringUpload)queueBackup();setTimeout(()=>{phase='';paint();},1500);}}
@@ -97,7 +98,7 @@
       if(offset===0)text('p','Choose a verified version. Restoring replaces this device’s tracker after you review it. The latest backup and two previous recovery states are retained. A current twelve-hour checkpoint may also be kept.',area);
       for(const b of result.backups){
         const row=document.createElement('section');row.className='cloud-version';
-        text('b',new Date(b.createdAt).toLocaleString(),row);text('p',b.entryCount+' accounts · '+b.reason+' · '+Math.ceil(b.bytes/1024)+' KB',row);
+        text('b',new Date(b.createdAt).toLocaleString(),row);text('p',accountCount(b.entryCount)+' · '+b.reason+' · '+Math.ceil(b.bytes/1024)+' KB',row);
         const button=text('button','Preview recovery',row);button.type='button';button.onclick=()=>preview(b);area.append(row);
       }
       if(result.nextOffset!==null&&result.nextOffset!==undefined){const more=text('button','Older recovery versions',area);more.onclick=()=>{more.remove();list(result.nextOffset);};}
@@ -112,7 +113,7 @@
   async function preview(b){
     try{
       const recovered=await download(b.id),area=panel.querySelector('#cloud-preview');area.replaceChildren();
-      text('h3','Recovery preview',area);text('p',recovered.entryCount+' accounts from '+new Date(b.createdAt).toLocaleString()+'. This device currently has '+entries.length+' accounts.',area);
+      text('h3','Recovery preview',area);text('p',accountCount(recovered.entryCount)+' from '+new Date(b.createdAt).toLocaleString()+'. This device currently has '+accountCount(entries.length)+'.',area);
       text('p',recovered.entries.slice(0,15).map(e=>e.bank).join(' · '),area);
       const restore=text('button','Restore this version',area);restore.type='button';restore.className='btn-p';restore.onclick=()=>restoreVersion(b.id,recovered.snapshot);
       const file=text('button','Download recovery file',area);file.type='button';file.className='btn-s';file.onclick=()=>downloadBlob(new Blob([recovered.snapshot],{type:'application/json'}),'BonusTracker_CloudRecovery_'+b.id+'.json');
@@ -123,7 +124,7 @@
     try{
       const fresh=await download(ident);
       if(fresh.snapshot!==expected)throw Error('Recovery version changed. Preview it again.');
-      if(!(await window.btConfirmDialog('Replace this device with '+fresh.entryCount+' recovered accounts? Your current nonempty tracker will be backed up first.',{title:'Restore cloud backup',confirmLabel:'Restore',danger:true})))return;
+      if(!(await window.btConfirmDialog('Replace this device with '+accountCount(fresh.entryCount)+' from backup? Your current nonempty tracker will be backed up first.',{title:'Restore cloud backup',confirmLabel:'Restore',danger:true})))return;
       if(core.hasRecords(core.inspect(current(),keys()))){const protective=current();await upload('pre-restore');if(current()!==protective)throw Error('Records changed during the safety backup. Restore stopped; preview and try again.');}
       // Keep the established import validation as a preflight; preserve exact stored bytes when committing.
       const snap={};for(const [k,v]of Object.entries(fresh.data.storageSnapshot))snap[k]=parseBackupStorageValue(v);
