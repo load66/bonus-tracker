@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('node:assert/strict'),core=require('../cloud-backup-core.js');
+const cfg={enabled:true,lastAt:'2026-10-14T10:30:00Z',lastHash:'a'.repeat(64)};
+const runtime={connected:true,currentVerified:true,online:true,pending:false,busy:false};
+assert.equal(core.protectionState(cfg,runtime).tone,'protected');
+assert.notEqual(core.protectionState(cfg,{...runtime,currentVerified:false}).tone,'protected','An ON setting alone is not protection proof');
+assert.equal(core.protectionState(cfg,{...runtime,pending:true}).tone,'warning','Unuploaded changes must visibly remove protection');
+assert.equal(core.protectionState(cfg,{...runtime,busy:true}).tone,'warning','Upload in progress is not verification');
+assert.equal(core.protectionState({...cfg,error:'Storage unavailable'},runtime).tone,'danger');
+assert.equal(core.protectionState(cfg,{...runtime,connected:false}).tone,'danger');
+assert.equal(core.protectionState(cfg,{...runtime,online:false}).tone,'warning');
+assert.equal(core.protectionState({...cfg,enabled:false},runtime).tone,'off');
+assert.notEqual(core.protectionState({...cfg,lastHash:''},runtime).tone,'protected');
+console.log('Cloud protection passed: ON does not imply current protection; pending, offline, failed, unsigned and unverified states remain visible');

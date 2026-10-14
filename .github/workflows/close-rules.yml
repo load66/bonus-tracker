@@ -56,7 +56,7 @@ jobs:
         run: node tests/entry-file-import.test.js
 
       - name: Run transactional persistence and restore tests
-        run: node tests/persistence-transaction.test.js && node tests/cloud-recovery.test.js
+        run: node tests/persistence-transaction.test.js && node tests/cloud-recovery.test.js && node tests/cloud-protection.test.js
 
       - name: Run canonical semantic status tests
         run: node tests/semantic-status.test.js

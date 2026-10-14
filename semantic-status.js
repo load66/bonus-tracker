@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.53 lifecycle-status — canonical timer semantics plus one user-facing bank-bonus lifecycle stage. */
+/* BonusTracker v3.4.54 lifecycle-status — canonical timer semantics plus one user-facing bank-bonus lifecycle stage. */
 (function(){
   'use strict';
-  const VER='3.4.53-status1';
+  const VER='3.4.54-status1';
   const VALID=new Set(['requirement','funding','hold','payout','openby','close-review','custom']);
   const baseNormalizeTimer=window.normalizeTimer;
   const baseNormalizeTimerList=window.normalizeTimerList;

@@ -6,7 +6,7 @@ The recovery service uses the Trading Journal's existing private Cloudflare R2 c
 
 1. Open Bonus Tracker on the phone containing your records.
 2. Open **Cloud backup** and sign in with the same Trading Journal account.
-3. Choose **Enable automatic backup**.
+3. Check the acknowledgement, choose **Enable automatic backup**, then confirm **Enable and verify**. The switch turns ON only after verified readback.
 4. Wait for **Verified**. An upload is acknowledged only after the server reads it back and checks SHA-256 and account count.
 5. Keep an exported recovery file in another safe location as an additional recovery option.
 
@@ -18,13 +18,13 @@ The app checks for changed persisted records and uploads after a short pause whi
 
 The backend independently creates a checkpoint in each twelve-hour UTC interval from the latest verified uploaded state. The checkpoint ID is stable across restarts and multiple backend instances. This works while the browser is closed, provided the backend is running. A sleeping/offline backend catches up when running again; no browser timer is treated as a guarantee.
 
-Changes made offline cannot be recovered from the cloud until uploaded. The status reports this limitation. A new or reset phone never automatically uploads an empty replacement. Backups are separate versions; the app has no endpoint that deletes or overwrites an existing version. Cloud-provider account policies remain outside the app's control.
+Changes made offline cannot be recovered from the cloud until uploaded. The status reports this limitation. A new or reset phone never automatically uploads an empty replacement. Backups are immutable while retained. After verifying a replacement and retained recovery copies, the backend keeps the latest three distinct states plus the current twelve-hour checkpoint (at most four copies). It removes superseded versions only inside the authenticated owner’s recovery prefix. Safety backups defer cleanup until a normal verified replacement or server cleanup check. Cleanup failures preserve the new verified backup and retry; the app reports pending cleanup. Cloud-provider account policies remain outside the app's control.
 
 ## Recover on a new phone
 
 1. Open `https://load66.github.io/bonus-tracker/`.
 2. Open **Cloud backup**, sign in to the same Trading Journal account, then choose **Recover on a new phone**.
-3. Preview a version and check its date, account count and bank names. Older versions can be paged through.
+3. Preview a version and check its date, account count and bank names. Retained previous states remain available.
 4. Choose **Restore this version** and confirm.
 5. If the new device already contains meaningful records, its state must first receive a verified safety backup. Recovery stops if that backup fails or records change during it.
 6. The download's checksum and structure are verified. The established restore validator must accept every account. Storage writes are verified as a transaction before the live tracker adopts the recovered state.
@@ -40,3 +40,9 @@ The recovery envelope is `BonusTrackerCloudBackup`, numeric version `1`, with ra
 ## Verification
 
 Tests cover a fresh device, exact stored-value restoration, credentials staying separate, checksum corruption, immutable upload identities, owner isolation, unavailable storage, twelve-hour restart-safe checkpoints, safety snapshots, and rollback when local storage fills partway through restore. Three-browser tests use isolated profiles and synthetic records; no live user records are changed during testing.
+
+## Visible protection and data menu
+
+The dashboard has one cloud-protection panel. ON/OFF is the persisted automatic-upload setting; green current-data protection additionally requires authenticated verification and no pending changes or errors. Uploads start after a 350 ms quiet period following a persisted save. Changes during an upload trigger a follow-up upload. Opening the recovery panel does not pause protection. Every successful upload produces a nonblocking verification popup; failed attempts never produce a success popup. Offline, pending and failed states remain visible.
+
+Export/import/reset live in the header Data & recovery menu. The old downloaded-file age warning is removed; file-export history appears separately inside recovery settings and is never described as cloud protection. Turning automatic backup OFF requires confirmation. An older retained restore is uploaded and verified again before current cloud protection is shown.
