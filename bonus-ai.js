@@ -63,8 +63,8 @@
       ids.push('close_gate','close_date','eligibilitygate');
       if(e.closed){verdict='Already closed';step='The closure is recorded. Review the saved repeat-eligibility rules before another application.';}
       else if(next?.kind==='close'){verdict='Ready — tracker checks passed';tone='ready';step=next.explanation;}
-      else if(!e.reqMet||!e.bonusRecd){verdict='Wait';tone='wait';step=!e.reqMet?'Confirm all qualifying requirements with the bank before recording completion.':'Wait until the bonus posts, then record its receipt before reviewing closure.';}
-      else if(next?.context?.confirmed&&next.context.date&&next.context.date>td()){verdict='Wait';tone='wait';step='The tracker’s close checks are still blocked. Review the saved close date and restrictions below.';}
+      else if(!e.reqMet||!e.bonusRecd){verdict=!e.reqMet?'Requirements incomplete':'Awaiting bonus payment';tone='wait';step=!e.reqMet?'Confirm all qualifying requirements with the bank before recording completion.':'Wait until the bonus posts, then record its receipt before reviewing closure.';}
+      else if(next?.context?.confirmed&&next.context.date&&next.context.date>td()){verdict='Hold period active';tone='wait';step='The tracker’s close checks are still blocked. Review the saved close date and restrictions below.';}
       else{verdict='Needs verification';step='Review the unresolved tracker closure checks and saved fee/eligibility terms before closing.';}
       if(verdict==='Needs verification'){const readiness=closeReadiness(e);for(const item of readiness.items||[])if(!item.ok)missing.push(item.label+(item.detail?': '+item.detail:''));if(!next?.context?.confirmed)missing.push('A confirmed closure date and its supporting terms.');if(!window.BTEligibilityGate?.validate?.(e)?.ok)missing.push('Verified repeat-eligibility rules or confirmed non-repeatable status.');}
     }else if(/waiv|maintenance fee|monthly.{0,20}fee/.test(q)){step='Check each account’s saved fee and waiver conditions against your actual balance and activity. Include any required savings or membership account.';ids.push('monthlyfee','feeamount','feewaiver');}
@@ -87,7 +87,7 @@
     // rather than silently answering only the first recognized topic.
     if(/compare|versus|\bvs\b|also|why|explain|calculate/.test(q))return null;
     if(/\band\b/.test(q)&&!/^what (?:monthly maintenance fees|direct deposits)/.test(q)&&!q.includes('tracker closure checks and saved terms'))return null;
-    if(guide.verdict){answer=guide.verdict+'. '+guide.step;ids=guide.ids;missing=guide.missing;}
+    if(guide.verdict){answer=guide.verdict==='Awaiting bonus payment'?'Your bonus payment has not been recorded, so the tracker is not ready to recommend closing this account. '+guide.step:guide.verdict==='Requirements incomplete'?'Completion of the qualifying requirements has not been recorded. '+guide.step:guide.verdict+'. '+guide.step;ids=guide.ids;missing=guide.missing;}
     else if(/early.close|forfeit|termination fee/.test(q)){ids=['closerule'];answer=answerText([e.closeRuleText,e.earlyTerminationFeeText].filter(Boolean).join('\n'))||'Early-close fees and restrictions have not been confirmed.';}
     else if(/waiv|avoid.{0,15}fee/.test(q)){ids=['feewaiver'];answer=answerText(e.monthlyFeeWaiverText||e.avoidMonthlyFeeText)||'The fee-waiver conditions have not been confirmed.';step=answerText(e.avoidMonthlyFeeText||e.monthlyFeeWaiverText)||guide.step;if(!byId('feewaiver'))missing.push('The exact fee-waiver conditions.');}
     else if(/monthly.{0,25}fee|maintenance fee/.test(q)){ids=['monthlyfee','feeamount','feefrequency','feewaiver'];answer=feeAnswer(e);step=answerText([e.monthlyFeeWaiverText,e.avoidMonthlyFeeText].filter(Boolean).join('\n'))||guide.step;if(!byId('monthlyfee')&&!byId('feeamount'))missing.push('Monthly fee amount and the official fee schedule.');}
@@ -123,7 +123,8 @@
     const facts=contextFor(e),generation=requestGeneration;
     const local=(!forceAI||window.BTFinancialRules?.validate(e).ok===false)&&localAnswerFor(e,question,facts);if(local){renderAnswer(local,facts,e,question);return;}
     if(!window.BTBonusAuth?.connected()){pendingQuestion=question;modal.querySelector('#bonus-ai-login').hidden=false;message('Sign in once to use Ask AI for more. This browser will remember your session.');modal.querySelector('#bonus-ai-email').focus();return;}
-    modal.querySelector('#bonus-ai-answer').replaceChildren();
+    const fallback=localAnswerFor(e,question,facts);
+    if(fallback)renderAnswer(fallback,facts,e,question);else modal.querySelector('#bonus-ai-answer').replaceChildren();
     busy=true;modal.querySelector('#bonus-ai-question').disabled=true;modal.querySelectorAll('[data-question]').forEach(b=>b.disabled=true);modal.querySelector('#bonus-ai-send').disabled=true;modal.querySelector('#bonus-ai-more').disabled=true;message('Reviewing saved terms and tracker facts…');
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);
     try{
@@ -134,7 +135,7 @@
       if(!r.ok)throw Error(result.detail||result.error||'AI is unavailable. Account-detail answers still work.');
       if(typeof result.answer!=='string'||!result.answer.trim()||result.answer.length>1600||!Array.isArray(result.factIds)||result.factIds.length>12||!Array.isArray(result.missing)||result.missing.length>6||result.missing.some(x=>typeof x!=='string'||!x.trim()||x.length>180)||result.factIds.some(id=>!facts.some(f=>f.id===id))||(!result.factIds.length&&!result.missing.length))throw Error('AI returned an unsupported answer.');
       if(modal&&generation===requestGeneration){if(!findEntry(selected)||JSON.stringify(contextFor(findEntry(selected)))!==JSON.stringify(facts))message('Tracker facts changed. Ask again for an updated explanation.');else renderAnswer(result,facts,findEntry(selected),question);}
-    }catch(error){if(modal&&generation===requestGeneration){message(error.name==='AbortError'?'AI timed out. Your tracker is unchanged.':error.message);modal.querySelector('#bonus-ai-login').hidden=window.BTBonusAuth?.connected()!==false;}}
+    }catch(error){if(modal&&generation===requestGeneration){const current=findEntry(selected),same=current&&JSON.stringify(contextFor(current))===JSON.stringify(facts);if(same&&fallback)renderAnswer(fallback,facts,current,question);message((error.name==='AbortError'?'AI timed out.':error.message)+(same&&fallback?' Account-detail answer shown below.':''));modal.querySelector('#bonus-ai-login').hidden=window.BTBonusAuth?.connected()!==false;}}
     finally{clearTimeout(timer);if(modal&&generation===requestGeneration){busy=false;modal.querySelector('#bonus-ai-question').disabled=false;modal.querySelectorAll('[data-question]').forEach(b=>b.disabled=false);modal.querySelector('#bonus-ai-send').disabled=false;modal.querySelector('#bonus-ai-more').disabled=false;}}
   }
   window.btOpenBonusAI=function(id){
