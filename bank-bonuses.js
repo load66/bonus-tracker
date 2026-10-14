@@ -244,7 +244,7 @@
     if(!feed)return h+'<p role="status">'+(loading?'Loading bank bonus posts…':'Feed not loaded.')+'</p>';
     const proofs=feed.offers.map(o=>availabilityFor(o,officialCatalog));
     const checked=proofs.filter(p=>p&&['verified','conditional','expired'].includes(p.status)).length;
-    h+='<div class="radar-verification-status" role="status"><b>Official availability</b><span>'+checked+' of '+feed.offers.length+' posts have current official scope evidence'+(officialCatalog?.status==='pending'?' · checking…':'')+'</span><p>Checks run hourly; scope evidence expires after 24 hours. Next churn matches receive priority after sign-in. Account history stays on this device.</p></div>';
+    h+='<div class="radar-verification-status" role="status"><b>Official availability</b><span>'+checked+' of '+feed.offers.length+' posts have current official scope evidence'+(officialCatalog?.status==='pending'?' · checking…':'')+'</span><p>Checks run hourly; scope evidence expires after 24 hours. Next churn matches receive priority after sign-in. Verification sends public offer links, not account history.</p></div>';
     if(officialError)h+='<p class="radar-warning">'+escape(officialError)+'</p>';
     if(feed.sources.length)h+=disclosure('source-times','Source check times','<div class="radar-sources">'+feed.sources.map(s=>'<p>'+escape(s.name)+' · '+(s.status==='ok'?'Checked':'Update unavailable')+(s.checkedAt?' '+escape(new Date(s.checkedAt).toLocaleString()):' · no successful check yet')+'</p>').join('')+'</div>');
     if(feed.sources.some(s=>s.status!=='ok'))h+='<p role="status" class="radar-warning">Some sources could not update. Available sources continue working; retained posts use their last successful check.</p>';
