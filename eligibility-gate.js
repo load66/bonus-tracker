@@ -60,8 +60,8 @@
     return'';
   }
   function periodFromValue(value,unit,source='exact'){
-    const n=parseInt(value,10),u=normalizeUnit(unit);
-    return n>0&&u?{value:n,unit:u,source}:null;
+    const raw=String(value??'').trim(),n=Number(raw),u=normalizeUnit(unit);
+    return /^\d+$/.test(raw)&&Number.isSafeInteger(n)&&n>0&&u?{value:n,unit:u,source}:null;
   }
   function periodFromEntry(e){
     if(!e)return null;
@@ -203,7 +203,7 @@
   }
   function ruleConditionState(e,rule){
     const c=normalizeCondition(rule?.condition);
-    if(!c)return'active';
+    if(!c)return rule?.condition?'unknown':'active';
     if(c.type==='closed-with-negative-balance'){
       if(typeof e?.closedWithNegativeBalance!=='boolean')return'unknown';
       return e.closedWithNegativeBalance===c.expected?'active':'inactive';
@@ -221,7 +221,7 @@
       scope:clean(r?.scope||r?.eligibilityScope||''),
       anchorDate:clean(r?.anchorDate||r?.eligibilityAnchorDate||''),
       anchorFallback:clean(r?.anchorFallback||r?.anchorFallbackBasis||''),
-      condition:normalizeCondition(r?.condition||r?.appliesWhen)
+      condition:normalizeCondition(r?.condition||r?.appliesWhen)||(r?.condition||r?.appliesWhen||null)
     };
   }
   function normalizedRules(e){
@@ -239,6 +239,7 @@
     }];
   }
   function validateRule(rule,index){
+    if(rule.condition&&!normalizeCondition(rule.condition))return{ok:false,status:'unresolved',reason:'Eligibility rule '+(index+1)+' contains an unsupported condition that requires review.'};
     if(!rule.basis)return{ok:false,status:'unresolved',reason:'Eligibility rule '+(index+1)+' is missing its clock anchor.'};
     if(!rule.period)return{ok:false,status:'unresolved',reason:'Eligibility rule '+(index+1)+' is missing its exact cooldown length and unit.'};
     if(!rule.evidenceText)return{ok:false,status:'unresolved',reason:'Eligibility rule '+(index+1)+' is missing exact T&C evidence.'};
@@ -292,11 +293,19 @@
     };
   }
   function applyPeriod(date,period,addD,addM){
-    if(!date||!period)return'';
-    if(period.unit==='days')return addD(date,period.value);
-    if(period.unit==='months')return addM(date,period.value);
-    if(period.unit==='years')return addM(date,period.value*12);
-    return'';
+    if(!validDate(date)||!period)return'';
+    let result='';
+    try{
+      if(period.unit==='days')result=addD(date,period.value);
+      if(period.unit==='months')result=addM(date,period.value);
+      if(period.unit==='years')result=addM(date,period.value*12);
+    }catch(_){return'';}
+    return validDate(result)?result:'';
+  }
+  function validDate(value){
+    if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;
+    const d=new Date(value+'T00:00:00Z');
+    return !Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===value;
   }
   function officialEligibilityDates(e,addD,addM){
     const v=validate(e);if(!v.ok||v.decision!=='repeatable')return[];
@@ -315,19 +324,20 @@
     return active.map(r=>r.eligibleDate).sort().at(-1)||'';
   }
   function controllingRule(e,addD,addM){
+    if(!officialEligibilityDate(e,addD,addM))return null;
     const rows=officialEligibilityDates(e,addD,addM).filter(r=>r.conditionState==='active'&&r.eligibleDate);
     if(!rows.length)return null;
     return rows.sort((a,b)=>b.eligibleDate.localeCompare(a.eligibleDate))[0]||null;
   }
   function safeEligibilityDate(e,addD,addM){
     const official=officialEligibilityDate(e,addD,addM);
-    return official?addD(official,SAFETY_BUFFER_DAYS):'';
+    return official?applyPeriod(official,{value:SAFETY_BUFFER_DAYS,unit:'days'},addD,addM):'';
   }
   function applicationReadyDate(e,addD,addM){
     const v=validate(e);if(!v.ok||v.decision!=='repeatable')return'';
     const safe=safeEligibilityDate(e,addD,addM);if(!safe)return'';
     if(!v.mustCloseBeforeReapply)return safe;
-    const closed=clean(e?.closed);if(!closed)return'';
+    const closed=clean(e?.closed);if(!validDate(closed))return'';
     return closed>safe?closed:safe;
   }
   function periodLabel(period){
