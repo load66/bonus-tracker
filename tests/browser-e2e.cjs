@@ -180,7 +180,7 @@ async function exercise(name,engine,url){
         }
         if(url==='https://api-production-00f74.up.railway.app/api/bonus-tracker/ask'){
           window.__bonusAITest.calls.push({packet:JSON.parse(options.body),authorization:options.headers.Authorization,credentials:options.credentials});
-          return new Response(JSON.stringify(window.__bonusAITest.fail?{detail:'AI is busy. Try again later.'}:window.__bonusAITest.response||{answer:'The bonus is recorded as received. Check the tracker closure gates before closing.',factIds:['bonusrecd','close_gate'],missing:[],cached:false}),{status:window.__bonusAITest.fail?429:200,headers:{'Content-Type':'application/json'}});
+          return new Response(JSON.stringify(window.__bonusAITest.serverFailure?{detail:'AI could not produce a supported answer.'}:window.__bonusAITest.fail?{detail:'AI is busy. Try again later.'}:window.__bonusAITest.response||{answer:'The bonus is recorded as received. Check the tracker closure gates before closing.',factIds:['bonusrecd','close_gate'],missing:[],cached:false}),{status:window.__bonusAITest.serverFailure?503:window.__bonusAITest.fail?429:200,headers:{'Content-Type':'application/json'}});
         }
         return nativeFetch.call(this,input,options);
       };
@@ -215,12 +215,15 @@ async function exercise(name,engine,url){
     await button('Ask AI for more').click();await page.getByText('AI explanation · review the source details.',{exact:true}).waitFor();
     check('expired access token refreshes without login',await page.evaluate(()=>window.__bonusAITest.authCalls===2&&window.__bonusAITest.calls[1].authorization==='Bearer synthetic-refreshed-token')&&await page.locator('#bonus-ai-login').isHidden());
     await page.evaluate(()=>window.__bonusAITest.response={answer:'Unsupported response',factIds:[],missing:[{text:'Malformed'}]});
-    await button('Ask AI for more').click();await page.getByText('AI returned an unsupported answer.',{exact:true}).waitFor();
-    check('malformed AI output is rejected',await page.locator('.bonus-ai-verdict').count()===0);
-    await page.evaluate(()=>window.__bonusAITest.fail=true);await button('Ask AI for more').click();await page.getByText('AI is busy. Try again later.',{exact:true}).waitFor();
+    await button('Ask AI for more').click();await page.getByText('AI returned an unsupported answer. Account-detail answer shown below.',{exact:true}).waitFor();
+    check('malformed AI output uses account-detail answer',await page.locator('.bonus-ai-verdict').innerText()==='Ready — tracker checks passed');
+    await page.evaluate(()=>window.__bonusAITest.fail=true);await button('Ask AI for more').click();await page.getByText('AI is busy. Try again later. Account-detail answer shown below.',{exact:true}).waitFor();
     check('AI rate limit is handled without repeated requests',await page.evaluate(()=>window.__bonusAITest.calls.length===4));
+    await page.evaluate(()=>{window.__bonusAITest.fail=false;window.__bonusAITest.response=null;window.__bonusAITest.serverFailure=true;});
+    await button('Ask AI for more').click();await page.getByText('AI could not produce a supported answer. Account-detail answer shown below.',{exact:true}).waitFor();
+    check('production-style AI failure preserves a useful closure answer',(await page.locator('.bonus-ai-direct-answer').innerText()).includes('tracker checks passed'));
     await button('Monthly fee').click();await page.locator('#bonus-ai-send').click();
-    check('saved-rule answers work after AI failure',await page.getByText('Based on your account details.',{exact:true}).count()===1&&await page.evaluate(()=>window.__bonusAITest.calls.length===4));
+    check('saved-rule answers work after AI failure',await page.getByText('Based on your account details.',{exact:true}).count()===1&&await page.evaluate(()=>window.__bonusAITest.calls.length===5));
     const feeFields=await page.evaluate(()=>{
       const e=entries[0],keys=['monthlyFeeYNText','monthlyFeeAmountText','monthlyFeeFrequency','monthlyFeeWaiverText','avoidMonthlyFeeText'];
       const prior=keys.map(key=>({key,present:Object.hasOwn(e,key),value:e[key]}));
