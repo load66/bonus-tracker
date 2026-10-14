@@ -10,7 +10,7 @@ const root=path.resolve(__dirname,'..');
 const output=process.env.BT_BROWSER_RESULTS||path.join(process.env.RUNNER_TEMP||'/tmp','bonus-tracker-browser-results');
 const mime={'.html':'text/html','.js':'application/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml'};
 let serverUnavailable=false,feedInvalid=false;
-const radarFixture={schemaVersion:2,checkedAt:'2026-10-09T12:00:00Z',sources:[{id:'doc',status:'ok',checkedAt:'2026-10-09T12:00:00Z'},{id:'fm',status:'unavailable',checkedAt:null},{id:'hmb',status:'ok',checkedAt:'2026-10-09T12:00:00Z'}],offers:[{title:'Synthetic Checking $500 Bonus <img src=x onerror=alert(1)>',url:'https://www.doctorofcredit.com/synthetic-checking-bonus/',publishedAt:'2026-10-08T12:00:00Z'},{title:'Wells Fargo $325 Checking Bonus (Nationwide)',url:'https://www.hustlermoneyblog.com/wells-fargo-bonus/',publishedAt:'2026-10-08T12:00:00Z',availability:'nationwide',groupKey:'wells fargo 325 checking nationwide'},{title:'U.S. Bank $450 Checking Bonus',url:'https://frequentmiler.com/us-bank-bonus/',publishedAt:'2026-10-08T12:00:00Z',availability:'unknown'}]};
+const radarFixture={schemaVersion:2,checkedAt:'2026-10-09T12:00:00Z',sources:[{id:'doc',status:'ok',checkedAt:'2026-10-09T12:00:00Z'},{id:'fm',status:'unavailable',checkedAt:null},{id:'hmb',status:'ok',checkedAt:'2026-10-09T12:00:00Z'}],offers:[{title:'Synthetic Checking $500 Bonus <img src=x onerror=alert(1)>',url:'https://www.doctorofcredit.com/synthetic-checking-bonus/',publishedAt:'2026-10-08T12:00:00Z'},{title:'Wells Fargo $325 Checking Bonus (Nationwide)',url:'https://www.hustlermoneyblog.com/wells-fargo-bonus/',publishedAt:'2026-10-08T12:00:00Z',availability:'nationwide',groupKey:'wells fargo 325 checking nationwide'},{title:'U.S. Bank $450 Checking Bonus',url:'https://frequentmiler.com/us-bank-bonus/',publishedAt:'2026-10-08T12:00:00Z',availability:'unknown'},{title:'[CA only] Regional E2E Bank $250 Checking Bonus',url:'https://www.doctorofcredit.com/regional-e2e-bank/',publishedAt:'2026-10-08T12:00:00Z',availability:'regional'}]};
 radarFixture.verification={schemaVersion:1,status:'complete',records:{'https://www.hustlermoneyblog.com/wells-fargo-bonus/':{offerTitle:radarFixture.offers[1].title,offerUrl:radarFixture.offers[1].url,status:'evidence-found',officialCheckedAt:'2026-10-11T16:00:00Z',aiCheckedAt:'2026-10-11T16:00:00Z',reason:'Source quotations require full applicability review.',fields:{bonus:{value:'$325',quote:'Receive a $325 bonus.',sourceUrl:'https://accountoffers.wellsfargo.com/checkingoffer/',sourceHash:'a'.repeat(64)}}}}};
 const server=http.createServer(async(req,res)=>{
   if(serverUnavailable){req.socket.destroy();return}
@@ -152,6 +152,7 @@ async function exercise(name,engine,url){
     check('search keeps stored record',(await record()).id===id);
     await page.setViewportSize({width:390,height:844});
     check('mobile layout fits viewport',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
+    await page.evaluate(()=>{const base=entries[0];entries.push({...base,id:'radar-us-bank',bank:'U.S. Bank',closed:'2026-05-01'});sv(SK,entries);R()});
     const storedBeforeRadar=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     await button('Bank Bonuses').click();
     await page.getByText(/Synthetic Checking/).waitFor();
@@ -161,7 +162,7 @@ async function exercise(name,engine,url){
     check('partial source outage is disclosed',(await page.locator('#app').innerText()).includes('Some sources could not update'));
     await page.getByLabel('Availability',{exact:true}).selectOption('nationwide');
     check('nationwide filter requires explicit source label',await page.locator('.radar-card').count()===1&&(await page.locator('.radar-card').innerText()).includes('Wells Fargo'));
-    check('compact offers contain only headline and one source link',await page.locator('.radar-card').evaluateAll(cards=>cards.every(card=>card.children.length===2&&card.children[0].tagName==='H3'&&card.children[1].tagName==='A')));
+    check('compact offers show geography and one source link',await page.locator('.radar-card').evaluateAll(cards=>cards.every(card=>card.querySelectorAll('h3').length===1&&card.querySelectorAll('a').length===1&&card.querySelector('.radar-geo'))));
     check('offer review tools have been removed',await button('Copy offer for review').count()===0&&await page.locator('.radar-evidence').count()===0);
     await page.getByRole('button',{name:'U.S. Bank',exact:true}).click();
     check('unverified geography does not become nationwide',await page.locator('.radar-card').count()===0);
@@ -170,16 +171,28 @@ async function exercise(name,engine,url){
     await page.getByPlaceholder('Search bank bonuses…').fill('Wells Fargo');
     check('search preserves typed input and focus',await page.getByPlaceholder('Search bank bonuses…').inputValue()==='Wells Fargo'&&await page.evaluate(()=>document.activeElement.id==='radar-search'));
     await page.getByRole('button',{name:'All banks',exact:true}).click();
+    check('tracker churn match ranks above discovery posts',(await page.locator('.radar-card').first().innerText()).includes('U.S. Bank'));
+    check('known regional mismatch ranks last',(await page.locator('.radar-card').last().innerText()).includes('Regional E2E Bank')&&(await page.locator('.radar-card').last().innerText()).includes('Outside your area'));
+    await page.getByRole('button',{name:'Churn matches',exact:true}).click();
+    check('churn filter uses read-only tracker match',await page.locator('.radar-card').count()===1&&(await page.locator('.radar-card').innerText()).includes('Next tracker review'));
+    await page.getByRole('button',{name:'For you',exact:true}).click();
+    await page.getByRole('button',{name:'Hide out-of-area',exact:true}).click();
+    check('area filter retains unknown offers',await page.locator('.radar-card').count()===3);
+    await page.getByRole('button',{name:'For you',exact:true}).click();
+    await page.getByLabel('Your area',{exact:true}).selectOption('CA');
+    check('area selector reevaluates source region',(await page.locator('.radar-card').filter({hasText:'Regional E2E Bank'}).innerText()).includes('California listed'));
+    await page.getByLabel('Your area',{exact:true}).selectOption('MO');
+    check('personal discovery fits narrow mobile viewport',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
     await page.evaluate(()=>{undoState=null;clearTimeout(undoTimer);R()});
-    await page.getByPlaceholder('Search bank bonuses…').fill('Wells Fargo');
+    await page.getByPlaceholder('Search bank bonuses…').fill('');
     await page.locator('.radar-card').first().scrollIntoViewIfNeeded();
     await page.screenshot({path:path.join(output,name+'-offers-compact.png')});
     await page.getByRole('button',{name:'All banks',exact:true}).click();
     feedInvalid=true;await button('Check updates').click();
     await page.getByText(/Could not check for updates/).waitFor();
-    check('failed feed refresh retains loaded results',await page.locator('.radar-card').count()===3);
+    check('failed feed refresh retains loaded results',await page.locator('.radar-card').count()===4);
     check('bank feed leaves saved account data unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
-    feedInvalid=false;await button('Tracker').click();
+    feedInvalid=false;await page.evaluate(()=>{entries=entries.filter(e=>e.id!=='radar-us-bank');sv(SK,entries);R()});await button('Tracker').click();
     check('mobile dashboard scrolls with content',await page.locator('.tracker-overview').evaluate(e=>!!e.closest('.scroll')));
     check('mobile fixed header leaves room for workflow',await page.locator('.hdr').evaluate(e=>e.getBoundingClientRect().height<=90));
     // WebKit service-worker-controlled fetches can bypass Playwright HTTP routing.

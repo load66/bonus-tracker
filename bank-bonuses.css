@@ -17,3 +17,13 @@
 .radar-offer-link:hover{text-decoration:underline}.radar-offer-link:focus-visible{outline:2px solid #8cc9ff;outline-offset:3px;border-radius:4px}
 .radar-filters .radar-detail-toggle{display:flex;align-items:center;gap:10px;grid-column:1/-1;min-height:44px;margin:0}
 .radar-filters .radar-detail-toggle input{width:20px;height:20px;padding:0;flex:none;accent-color:#59baff}
+
+/* Personalized discovery: readable hierarchy, compact mobile controls, no hidden uncertainty. */
+.radar-personal-filters{padding:16px}.radar-filter-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.radar-priority-tabs{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}.radar-priority-tabs button{flex:1;min-height:44px;padding:9px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--muted);font:inherit;font-size:12px;font-weight:600;cursor:pointer}.radar-priority-tabs button[aria-pressed="true"]{background:#173655;color:#b9ddff;border-color:#5286b5}.radar-priority-tabs button:focus-visible{outline:2px solid #8cc9ff;outline-offset:2px}
+.radar-group-heading{font-size:14px;line-height:1.4;font-weight:700;margin:22px 2px 10px;color:var(--text)}
+.radar-card-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.radar-geo,.radar-match-label{font-size:11px;line-height:1.35;padding:5px 8px;border-radius:7px;border:1px solid var(--border);color:var(--muted);background:var(--bg)}.radar-geo-listed,.radar-geo-nationwide{color:#9dd7b9;border-color:#345d4c}.radar-geo-outside{color:#c0ad96;border-color:#5d5144}.radar-match-label{color:#aad4ff;border-color:#34597e}
+.radar-tracker-context{border-left:3px solid #5389b7;padding:8px 10px;margin:12px 0;background:rgba(65,122,174,.09);border-radius:0 8px 8px 0}.radar-tracker-context b,.radar-tracker-context time{display:block;font-size:12px;line-height:1.5}.radar-tracker-context time{color:#abd5ff;font-weight:700;margin-top:2px}.radar-card .radar-tracker-context p{font-size:11px;line-height:1.5;margin:5px 0 0}.radar-card .radar-area-note{font-size:11px;margin:7px 0;line-height:1.5}.radar-priority-outside{border-color:#4c4640}.radar-priority-ready{border-color:#38634f}.radar-priority-next{border-color:#34597e}
+.radar-churn-shortcuts button{max-width:100%;overflow-wrap:anywhere;white-space:normal}
+@media(max-width:420px){.radar-filter-grid{gap:8px}.radar-personal-filters{padding:12px}.radar-priority-tabs button{font-size:11px;padding:8px 6px}.radar-filter-grid select{font-size:13px;padding:11px 8px}.radar-card-compact h3{font-size:15px;line-height:1.45}}
+@media(max-width:330px){.radar-filter-grid{grid-template-columns:minmax(0,1fr)}.radar-priority-tabs button{flex-basis:45%}}
