@@ -6003,7 +6003,7 @@ entries=sortE(entries);R();
   function safeJson(v,d){try{return JSON.parse(v)}catch{return d}}
   function storageSnapshot(){
     const out={};
-    for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k)out[k]=localStorage.getItem(k);}
+    for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k!=='bonus-ai-auth')out[k]=localStorage.getItem(k);}
     try{if(Array.isArray(entries))out.bt_e_v4=JSON.stringify(entries)}catch{}
     return out;
   }
@@ -6060,7 +6060,7 @@ entries=sortE(entries);R();
         const existing=[];
         for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k)existing.push(k);}
         existing.forEach(k=>{if(k.startsWith(APP_PREFIX)||KNOWN_KEYS.includes(k))localStorage.removeItem(k);});
-        Object.entries(storage).forEach(([k,val])=>{try{localStorage.setItem(k,String(val??''))}catch{}});
+        Object.entries(storage).forEach(([k,val])=>{if(k==='bonus-ai-auth')return;try{localStorage.setItem(k,String(val??''))}catch{}});
         localStorage.setItem('bt_last_restore',new Date().toISOString());
         alert('Restore complete. The app will reload now.');
         location.reload();
