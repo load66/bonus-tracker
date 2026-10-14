@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.61 — professional in-app feedback surfaces. */
+/* BonusTracker v3.4.62 — professional in-app feedback surfaces. */
 (function(){
   'use strict';
-  const VER='3.4.61-feedback1';
+  const VER='3.4.62-feedback1';
   const nativeAlert=typeof window.alert==='function'?window.alert.bind(window):null;
   const nativeConfirm=typeof window.confirm==='function'?window.confirm.bind(window):null;
   const confirmations=[];

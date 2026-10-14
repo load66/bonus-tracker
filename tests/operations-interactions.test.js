@@ -94,7 +94,12 @@ async function testOperations(){
   const suggestions=sandbox.getAttentionSuggestions;
   sandbox.getAttentionSuggestions=()=>[{entryId:run('entries[0].id'),bank:'Interaction Bank',stageCode:'IN_PROGRESS'}];
   const actionHtml=run('renderActionCenter()');
-  const handler=actionHtml.match(/onclick="([^"]+)"/)[1].replace(/&quot;/g,'"').replace(/&amp;/g,'&');
+  assert.match(actionHtml,/aria-expanded="false"/);
+  assert.match(actionHtml,/class="ops-action-body" hidden/);
+  run('toggleActionCenter()');
+  assert.match(run('renderActionCenter()'),/aria-expanded="true"/);
+  run('R()');assert.equal(run('actionCenterOpen'),true,'Re-render must preserve disclosure state');
+  const handler=actionHtml.match(/onclick="([^"]*openAccountFromActionCenter[^\"]*)"/)[1].replace(/&quot;/g,'"').replace(/&amp;/g,'&');
   sandbox.event={stopPropagation(){}};
   run(`search='missing';${handler}`);
   assert.equal(run('expanded'),run('entries[0].id'));
