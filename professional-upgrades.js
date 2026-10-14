@@ -115,10 +115,10 @@
   function select(label,key,value,items){return `<div class="fg"><label>${html(label)}</label><select onchange="btModalSet('${key}',this.value)">${items.map(x=>`<option value="${html(x[0])}"${String(value||'')===String(x[0])?' selected':''}>${html(x[1])}</option>`).join('')}</select></div>`;}
   function wizardHeader(e,step){
     const steps=['Basics','Requirements','Fees & Close','Review'];
-    return `<div class="m-bar"></div><div class="m-hdr"><div><h2>${e._startingNewCycle?'Start New Cycle':(e._edit?'Edit Bank':'Add Bank')}</h2><div class="guided-sub">Step ${step} of 4 · ${steps[step-1]}</div></div>${e._edit?`<span class="m-id">${html(e.id||'')}</span>`:''}</div><div class="guided-progress">${steps.map((s,i)=>`<button type="button" class="${i+1===step?'on':i+1<step?'done':''}" onclick="btWizardStep(${i+1})"><i>${i+1<step?'✓':i+1}</i><span>${html(s)}</span></button>`).join('')}</div>`;
+    return `<div class="m-bar"></div><div class="m-hdr"><div><h2>${e._startingNewCycle?'Start new cycle':(e._edit?'Edit account':'Add account')}</h2><div class="guided-sub">Step ${step} of 4 · ${steps[step-1]}</div></div>${e._edit?`<span class="m-id">${html(e.id||'')}</span>`:''}</div><div class="guided-progress">${steps.map((s,i)=>`<button type="button" class="${i+1===step?'on':i+1<step?'done':''}" onclick="btWizardStep(${i+1})"><i>${i+1<step?'✓':i+1}</i><span>${html(s)}</span></button>`).join('')}</div>`;
   }
   function wizardBasics(e){
-    let h='<div class="guided-tip"><b>Start simple.</b><span>Add the bank and the offer. Paste the T&C whenever you have it—the analyzer will fill only reviewed fields.</span></div>';
+    let h='<div class="guided-tip"><b>Account details</b><span>Enter the account and offer details. Review the terms before applying extracted fields.</span></div>';
     h+='<div class="guided-grid">';
     h+=input('Bank name *','bank',e.bank,{placeholder:'e.g. Chase Business'});
     h+=select('Account type','accountType',e.accountType||'personal',[['personal','Personal'],['business','Business']]);
@@ -129,12 +129,12 @@
     h+=dateInput('Bonus received','bonusRecd',e.bonusRecd);
     if(e._edit&&!e._startingNewCycle)h+=dateInput('Closed','closed',e.closed);
     h+='</div>';
-    h+=`<button type="button" class="tc-btn guided-analyze" onclick="showInlineAZ=!showInlineAZ;R()">🧠 ${showInlineAZ?'Hide T&C Analyzer':'Paste T&C and Review'}</button>`;
-    if(showInlineAZ)h+=`<div class="az-area"><textarea id="inline_tc" placeholder="Paste the complete promotion terms here..."></textarea><button class="az-go" type="button" onclick="event.preventDefault();runInlineAnalyze()">Analyze Terms</button></div>`;
+    h+=`<button type="button" class="tc-btn guided-analyze" onclick="showInlineAZ=!showInlineAZ;R()">🧠 ${showInlineAZ?'Hide terms review':'Review terms'}</button>`;
+    if(showInlineAZ)h+=`<div class="az-area"><textarea id="inline_tc" placeholder="Paste the complete promotion terms here..."></textarea><button class="az-go" type="button" onclick="event.preventDefault();runInlineAnalyze()">Analyze terms</button></div>`;
     return h;
   }
   function wizardRequirements(e){
-    let h='<div class="guided-tip"><b>What earns the bonus?</b><span>Keep this in plain English. Exact dates can be tracked with the built-in timers.</span></div><div class="guided-grid">';
+    let h='<div class="guided-tip"><b>Bonus requirements</b><span>Record the qualifying activity and deadlines from the terms.</span></div><div class="guided-grid">';
     h+=input('Main requirement','dataPoint',e.dataPoint,{full:true,placeholder:'e.g. $5,000 new money or $1,000 direct deposit'});
     h+=input('Days to complete','requiredDaysText',e.requiredDaysText||(e.reqDays||''),{placeholder:'e.g. 90 calendar days'});
     h+=input('Funding deadline days','fundedDays',e.fundedDays,{type:'number',placeholder:'30'});
@@ -147,7 +147,7 @@
     return h;
   }
   function wizardFeesClose(e){
-    let h='<div class="guided-tip"><b>Protect the bonus.</b><span>Only save a fixed close countdown when the terms clearly connect a number of days to keeping the account open.</span></div><div class="guided-grid">';
+    let h='<div class="guided-tip"><b>Fees and closure</b><span>Use a fixed hold period only when required by the terms.</span></div><div class="guided-grid">';
     h+=input('Monthly fee','monthlyFeeYNText',e.monthlyFeeYNText,{placeholder:'No fee or $15 monthly'});
     h+=input('How to avoid the fee','avoidMonthlyFeeText',e.avoidMonthlyFeeText,{full:true,placeholder:'$2,000 balance or eligible relationship'});
     h+=`<div class="fg"><label>Fee timing checked</label><select onchange="btModalSet('monthlyFeeChecked',this.value==='yes','bool')"><option value="no"${!e.monthlyFeeChecked?' selected':''}>Not yet</option><option value="yes"${e.monthlyFeeChecked?' selected':''}>Yes</option></select></div>`;
@@ -157,7 +157,7 @@
     h+=input('Early-close fee','earlyTerminationFeeText',e.earlyTerminationFeeText,{placeholder:'None or $25'});
     h+=input('Close rule wording','closeRuleText',e.closeRuleText,{full:true,placeholder:'Exact close/keep-open wording'});
     h+=textarea('Eligibility / churn notes','eligibilityText',e.eligibilityText,'Who qualifies again and when',2);
-    h+=textarea('Your notes','notes',e.notes,'Personal reminders—never overwritten by analyzer',3);
+    h+=textarea('Your notes','notes',e.notes,'Personal notes; terms review does not overwrite them',3);
     h+='</div>';
     if(e.analyzedTC)h+=`<details class="guided-details"><summary>Analyzer summary</summary><div class="guided-readonly">${html(short(e.analyzedTC,1400)).replace(/\n/g,'<br>')}</div></details>`;
     return h;
@@ -204,7 +204,7 @@
     if(step<4)h+='<button type="button" class="btn-p" onclick="btWizardStep('+(step+1)+')">Continue</button>';
     else{
       const errors=validationIssues(e).some(x=>x.level==='error');
-      h+=`<button type="button" class="btn-p" ${errors?'disabled':''} onclick="saveEntryFromButton(this,event)">💾 ${e._startingNewCycle?'Start New Cycle':(e._edit?'Save Changes':'Add Bank')}</button>`;
+      h+=`<button type="button" class="btn-p" ${errors?'disabled':''} onclick="saveEntryFromButton(this,event)">💾 ${e._startingNewCycle?'Start new cycle':(e._edit?'Save changes':'Add account')}</button>`;
     }
     h+='<button type="button" class="btn-s" onclick="closeModal()">Cancel</button>';
     h+='</div>';
@@ -328,14 +328,14 @@
     const htmlOut=oldRBankActions();
     if(!window.__btBankActionPrompt)return htmlOut;
     const e=(entries||[]).find(x=>x.id===window.__btBankActionPrompt);if(!e||!e.closed)return htmlOut;
-    return htmlOut.replace('<div class="bt-ba-list">','<div class="bt-ba-list">'+bankActionSheetButton(e.id,'newcycle','↻','Start New Cycle','Reuse the bank profile and reset cycle dates'));
+    return htmlOut.replace('<div class="bt-ba-list">','<div class="bt-ba-list">'+bankActionSheetButton(e.id,'newcycle','↻','Start new cycle','Reuse the bank profile and reset cycle dates'));
   };
 
   function injectStartCycleAction(){
     const id=window.__btBankActionPrompt;if(!id)return;
     const e=(entries||[]).find(x=>x.id===id);if(!e||!e.closed)return;
     const list=document.querySelector('.bt-ba-list');if(!list||list.querySelector('[data-bt-newcycle]'))return;
-    const b=document.createElement('button');b.className='bt-ba-mini';b.dataset.btNewcycle='1';b.innerHTML='<span class="ico">↻</span><span><b>Start New Cycle</b><small>Reuse the bank profile and reset cycle dates</small></span>';
+    const b=document.createElement('button');b.className='bt-ba-mini';b.dataset.btNewcycle='1';b.innerHTML='<span class="ico">↻</span><span><b>Start new cycle</b><small>Reuse the bank profile and reset cycle dates</small></span>';
     b.addEventListener('click',ev=>{ev.stopPropagation();window.__btBankActionPrompt=null;startNewCycle(id)});list.prepend(b);
   }
   const oldR=typeof R==='function'?R:null;

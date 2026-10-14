@@ -67,13 +67,13 @@ async function exercise(name,engine,url){
     await page.waitForSelector('#bt_confirm_overlay,.bt-toast.error');
     if(await page.locator('.bt-toast.error').count())throw Error(await page.locator('.bt-toast.error').innerText());
     await button('Review Entry').click();
-    await page.getByRole('heading',{name:'Add Bank',exact:true}).waitFor();
+    await page.getByRole('heading',{name:'Add account',exact:true}).waitFor();
   };
   const edit=async()=>{
     const card=page.locator('.card-h').first();
     if(!await button('Manage').isVisible())await card.click();
     await button('Manage').click();
-    await page.getByRole('button',{name:'✏️ Edit Bank Details, dates, bonus, rules',exact:true}).click();
+    await page.getByRole('button',{name:'✏️ Edit account Details, dates, bonus, rules',exact:true}).click();
   };
   const close=async()=>{
     await button('Review & record closure').click();
@@ -83,7 +83,7 @@ async function exercise(name,engine,url){
   };
   try{
     await page.goto(url);
-    await page.getByText('No banks yet',{exact:true}).waitFor();
+    await page.getByText('No accounts yet',{exact:true}).waitFor();
     check('Action Center defaults collapsed',await page.locator('#bt-action-center-toggle').getAttribute('aria-expanded')==='false'&&!await page.locator('#bt-action-center-body').isVisible());
     await page.waitForFunction(()=>window.__btFullRegressionReport&&!window.__btFullRegressionReport.pending&&window.__btFullRegressionReport.total===18);
     const diagnostics=await page.evaluate(()=>window.btRunFullRegressionTests({force:true}));
@@ -91,12 +91,12 @@ async function exercise(name,engine,url){
     check('runtime self-tests pass',diagnostics.ok);
     await button('Quick Add').click();await button('CI Citi $300').click();
     check('Quick Add exposes bank/account/bonus',await page.locator('input[oninput*="\'bank\'"]').isVisible()&&await page.locator('select[onchange*="\'accountType\'"]').isVisible()&&await page.locator('input[oninput*="\'bonus\'"]').isVisible());
-    await button('4 Review').click();check('unverified template cannot be saved',await button('💾 Add Bank').isDisabled());await button('Cancel').click();
+    await button('4 Review').click();check('unverified template cannot be saved',await button('💾 Add account').isDisabled());await button('Cancel').click();
     await importEntry(payload);
     check('import stops before saving',await page.evaluate(()=>JSON.parse(localStorage.getItem('bt_e_v4')).length===0));
     await button('2 Requirements').click();
     check('deadline wording is visible',await page.locator('input[oninput*="\'requiredDaysText\'"]').inputValue()==='90 calendar days');
-    await button('4 Review').click();await button('💾 Add Bank').click();
+    await button('4 Review').click();await button('💾 Add account').click();
     await wait(()=>JSON.parse(localStorage.getItem('bt_e_v4')).length===1);
     check('90-day deadline is exact',await page.evaluate(()=>reqDeadline(entries[0]))==='2026-05-01');
     const beforeDisclosure=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
@@ -120,8 +120,8 @@ async function exercise(name,engine,url){
     check('refresh resets Action Center to collapsed',await page.locator('#bt-action-center-toggle').getAttribute('aria-expanded')==='false');
     await page.locator('#bt-action-center-toggle').click();
     await edit();await button('3 Fees & Close').click();
-    await page.getByPlaceholder('Personal reminders—never overwritten by analyzer').fill('Keep <img src=x onerror=alert(1)> & "quotes"');
-    await button('4 Review').click();await button('💾 Save Changes').click();
+    await page.getByPlaceholder('Personal notes; terms review does not overwrite them').fill('Keep <img src=x onerror=alert(1)> & "quotes"');
+    await button('4 Review').click();await button('💾 Save changes').click();
     await wait(()=>modal===null&&!entrySaveBusy);
     check('edit preserves identity',(await record()).id===id);
     check('notes cannot inject HTML',await page.locator('img[src="x"]').count()===0);
@@ -129,18 +129,18 @@ async function exercise(name,engine,url){
     check('requirements and payout stay separate',(await record()).reqMet==='2026-04-01'&&!(await record()).bonusRecd);
     await button('Confirm bonus received').click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('OK').click();
     check('bonus receipt updates close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
-    await button('Manage').click();await button('⏱️ Add Timer Custom countdown').click();
-    await button('Start + Days').click();await page.locator('#tem_text').fill('E2E manual reminder');await page.locator('#tem_start').fill('2026-03-08');await page.locator('#tem_days').fill('1');await button('Add Timer').click();
+    await button('Manage').click();await button('⏱️ Add timer Set a reminder or deadline').click();
+    await button('Start + Days').click();await page.locator('#tem_text').fill('E2E manual reminder');await page.locator('#tem_start').fill('2026-03-08');await page.locator('#tem_days').fill('1');await button('Add timer').click();
     check('timer uses calendar days across DST',(await record()).customTimers.some(t=>t.text==='E2E manual reminder'&&t.date==='2026-03-09'));
     await page.locator('details[data-section-key="lifecycle"] summary').click();
-    await button('Manage').click();await button('✅ Add Checklist New requirement step').click();await page.getByPlaceholder('e.g. Make 1 debit card transaction').fill('E2E checklist task');await button('Save').click();
+    await button('Manage').click();await button('✅ Add task Track a requirement').click();await page.getByPlaceholder('e.g. Make 1 debit card transaction').fill('E2E checklist task');await button('Save').click();
     await page.locator('.ck li').filter({hasText:'E2E checklist task'}).locator('.ckb').click();
     check('checklist completion persists without collapsing section',(await record()).checklist[0].done&&await page.locator('details[data-section-key="lifecycle"]').evaluate(e=>e.open));
     check('checklist exposes accessible completion state',await page.getByRole('checkbox',{name:'E2E checklist task',exact:true}).getAttribute('aria-checked')==='true');
     await button('Tax').click();
     check('tax includes received bonus on open account',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));
     page.once('dialog',dialog=>dialog.accept('2026'));
-    const taxDownload=page.waitForEvent('download');await button('Export a Year CSV').click();
+    const taxDownload=page.waitForEvent('download');await button('Export tax CSV').click();
     const taxFile=path.join(output,name+'-tax.csv');await (await taxDownload).saveAs(taxFile);
     const taxCSV=await fs.readFile(taxFile,'utf8');
     check('tax CSV downloads with correct amount and dates',taxCSV.includes('E2E Verification Bank')&&taxCSV.includes('"325"')&&taxCSV.includes('Apr 15, 2026'));
@@ -251,8 +251,8 @@ async function exercise(name,engine,url){
     await button('Ask AI about this bonus').click();
     check('Tracker AI opens for one selected bank',(await page.locator('.bonus-ai-heading').innerText()).includes('E2E Verification Bank')&&await page.evaluate(()=>window.__bonusAITest.calls.length===0));
     check('local answers need no login',await page.locator('#bonus-ai-login').isHidden());
-    for(const label of ['Monthly fee','Waive fees','Direct deposit','Early-close fee','Savings account','Repeat eligibility']){await button(label).click();check('prefill: '+label,(await page.locator('#bonus-ai-question').inputValue()).length>20);}
-    await button('Can I close?').click();await page.locator('#bonus-ai-send').click();
+    for(const label of ['Monthly fee','Fee waivers','Direct deposit','Early-close fee','Companion account','Repeat eligibility']){await button(label).click();check('prefill: '+label,(await page.locator('#bonus-ai-question').inputValue()).length>20);}
+    await button('Closure rules').click();await page.locator('#bonus-ai-send').click();
     await page.locator('#bonus-ai-answer p').first().waitFor();
     check('AI closure decision uses tracker gates',(await page.locator('.bonus-ai-verdict').innerText())==='Ready — tracker checks passed');
     check('AI explains a concrete next step',(await page.locator('.bonus-ai-next-step').innerText()).includes('companion accounts'));
@@ -369,7 +369,7 @@ async function exercise(name,engine,url){
     await newPhone.screenshot({path:path.join(output,name+'-cloud-recovery-preview.png')});
     await newPhone.getByRole('button',{name:'Restore this version',exact:true}).click();
     await newPhone.locator('#bt_confirm_overlay').getByRole('button',{name:'Restore',exact:true}).click();
-    try{await newPhone.getByText('Cloud recovery completed. All storage writes were verified.',{exact:true}).waitFor();}catch(e){console.error('Recovery diagnostics:',await newPhone.evaluate(()=>({status:document.querySelector('#cloud-status')?.textContent,accounts:entries.length,storage:getBackupStorageKeys().map(k=>[k,localStorage.getItem(k)?.length])})));throw e;}
+    try{await newPhone.getByText('Recovery complete. Your restored records were verified.',{exact:true}).waitFor();}catch(e){console.error('Recovery diagnostics:',await newPhone.evaluate(()=>({status:document.querySelector('#cloud-status')?.textContent,accounts:entries.length,storage:getBackupStorageKeys().map(k=>[k,localStorage.getItem(k)?.length])})));throw e;}
     check('new-phone recovery preserves exact stored tracker data',await newPhone.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
     check('new-phone recovery retains its own login',await newPhone.evaluate(()=>BTBonusAuth.connected()));
     await newPhoneContext.close();

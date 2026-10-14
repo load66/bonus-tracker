@@ -112,7 +112,7 @@ for token in ('profileKey:keyFor(r)','accountType:typeFor(r)','compatibleProduct
 app_js=text('app.js')
 for token in ('isNonRepeatableEntry','archived-nonrepeatable',"return'ARCHIVED'",'Closed & Archived','Non-repeatable offer'):
     if token not in app_js: fail(f'archive lifecycle missing from app.js: {token}')
-for token in ('Future Eligibility *','Can this bonus be earned again? *','hasSavedChurnDecision','churnEligibilityValidation','Cannot open/save this bonus yet. Churn eligibility must be proven by the T&C.','Eligibility Reset / Churn Rule *'):
+for token in ('Repeat eligibility *','Can this bonus be earned again? *','hasSavedChurnDecision','churnEligibilityValidation','Cannot open/save this bonus yet. Churn eligibility must be proven by the T&C.','Eligibility Reset / Churn Rule *'):
     if token not in app_js: fail(f'churnability intake gate missing from app.js: {token}')
 
 runtime_fix=text('wells-professional-runtime.js')
@@ -137,26 +137,26 @@ for token in ("['tracker','bonuses','tax','tips','storage']","['Tracker','Bank B
     if token not in app_source: fail(f'direct T&C Archive / churn suggestion architecture missing: {token}')
 
 semantic_status=text('semantic-status.js')
-for token in ("const VER='3.4.62-status1'","const STAGES=Object.freeze","function lifecycleStageForEntry","ACTION_NEEDED:'ACTION_NEEDED'","IN_PROGRESS:'IN_PROGRESS'","AWAITING_BONUS:'AWAITING_BONUS'","HOLD_OPEN:'HOLD_OPEN'","READY_TO_CLOSE:'READY_TO_CLOSE'","COOLDOWN:'COOLDOWN'","ELIGIBLE:'ELIGIBLE'","window.btLifecycleStageForEntry=lifecycleStageForEntry"):
+for token in ("const VER='3.4.63-status1'","const STAGES=Object.freeze","function lifecycleStageForEntry","ACTION_NEEDED:'ACTION_NEEDED'","IN_PROGRESS:'IN_PROGRESS'","AWAITING_BONUS:'AWAITING_BONUS'","HOLD_OPEN:'HOLD_OPEN'","READY_TO_CLOSE:'READY_TO_CLOSE'","COOLDOWN:'COOLDOWN'","ELIGIBLE:'ELIGIBLE'","window.btLifecycleStageForEntry=lifecycleStageForEntry"):
     if token not in semantic_status: fail(f'canonical lifecycle status architecture missing: {token}')
 for forbidden in ("label:'Custom Timer'","label:'Deadline Active'"):
     if forbidden in semantic_status and "timerStatusMetaSemantic" not in semantic_status:
         fail(f'legacy timer status leaked into lifecycle UI architecture: {forbidden}')
 
-for token in ('function bonusPipelineMetrics','function renderActionCenter','Active bonus pipeline','Action Center','function timelineRowsForEntry','Activity Timeline','renderCardProgressLine'):
+for token in ('function bonusPipelineMetrics','function renderActionCenter','Active bonuses','Action Center','function timelineRowsForEntry','Activity Timeline','renderCardProgressLine'):
     if token not in app_source: fail(f'professional operations UI missing: {token}')
 feedback=text('ui-feedback.js')
-for token in ("const VER='3.4.62-feedback1'",'function notify','function confirmDialog','window.btConfirmDialog=confirmDialog'):
+for token in ("const VER='3.4.63-feedback1'",'function notify','function confirmDialog','window.btConfirmDialog=confirmDialog'):
     if token not in feedback: fail(f'professional feedback surface missing: {token}')
 attention=text('smart-attention.js')
-for token in ("const VER='3.4.62-action1'",'btLifecycleStageForEntry','READY_TO_CLOSE','ACTION_NEEDED','ELIGIBLE'):
+for token in ("const VER='3.4.63-action1'",'btLifecycleStageForEntry','READY_TO_CLOSE','ACTION_NEEDED','ELIGIBLE'):
     if token not in attention: fail(f'lifecycle Action Center architecture missing: {token}')
 entry_import=text('entry-link-import.js')
 if 'window.confirm(' in entry_import or 'window.confirm(' in app_source:
     fail('native browser confirm remains in a production workflow')
 
 dark_css=text('style.css')
-if 'v3.4.62 professional operations UI' not in dark_css:
+if 'v3.4.63 professional operations UI' not in dark_css:
     fail('professional operations visual layer missing')
 for token in ('.ops-action-center','.card-progressline','.bt-timeline-card','.bt-notice-host','.bt-confirm-overlay'):
     if token not in dark_css: fail(f'professional operations component style missing: {token}')
@@ -185,7 +185,7 @@ for token in ("typeof window.rTracker==='function'?window.rTracker:rTrackerLegac
     if token not in app_source: fail(f'nested profile-section state architecture missing: {token}')
 for token in ('v3.4.29 Midnight professional dark theme','color-scheme:dark','--bg:#060A11','--card:#0D1420','.modal,.dd-box','.clean-plan-card','.dp-summary','.tabs'):
     if token not in dark_css: fail(f'professional dark theme coverage missing: {token}')
-for token in ("TC_ARCHIVE_KEY='bt_tc_archive_v1'","function saveTermsArchiveForNewCycle","function rTermsStorage","Existing-cycle edits never replace this record","closedWithNegativeBalance","entryNeedsNegativeBalanceClosureAnswer"):
+for token in ("TC_ARCHIVE_KEY='bt_tc_archive_v1'","function saveTermsArchiveForNewCycle","function rTermsStorage","Terms remain tied to the enrolled offer.","closedWithNegativeBalance","entryNeedsNegativeBalanceClosureAnswer"):
     if token not in app_source: fail(f'T&C Storage / conditional close architecture missing: {token}')
 
 entry_import=text('entry-link-import.js')
