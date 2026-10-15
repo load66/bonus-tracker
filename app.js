@@ -1,7 +1,7 @@
-/* Version 3.4.72: read-only churn-aware and area-aware bank offer discovery. */
+/* Version 3.4.73: read-only churn-aware and area-aware bank offer discovery. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.72';
+const APP_VERSION='3.4.73';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -237,6 +237,7 @@ function termsArchiveSnapshot(e,source){
     eligibilityEvidenceText:e.eligibilityEvidenceText||'',
     eligibilityEvidenceSource:e.eligibilityEvidenceSource||'',
     currentCustomerEvidenceText:e.currentCustomerEvidenceText||'',
+    completeBonusText:e.completeBonusText||'',
     monthlyFeeYNText:e.monthlyFeeYNText||'',
     monthlyFeeAmountText:e.monthlyFeeAmountText||'',
     monthlyFeeWaiverText:e.monthlyFeeWaiverText||'',
@@ -283,30 +284,43 @@ function eligibilityRuleStorageLabel(r){
   const cond=window.BTEligibilityGate?.normalizeCondition?.(r?.condition||r?.appliesWhen);
   return (p?(p+' '+u+(p===1?'':'s')+' after '):'')+b+(cond?.type==='closed-with-negative-balance'?' · only if closed negative':'')
 }
+
+function termsDisplayBuckets(){
+ const rows=termsArchiveRows().map(x=>({...x,current:{...x.current},versions:[...(x.versions||[])]}));
+ entries.forEach(e=>{
+  if(!e?.bank)return;
+  const identity=entryBankIdentity(e),found=rows.find(b=>entryBankIdentity(b.current||b).key===identity.key);
+  const x={...e,accountType:identity.type,entryId:e.id,tcSourceRaw:termsArchiveSourceText(e),_fromEntry:true};
+  if(found){if(found.current?.opened!==e.opened&&!found.versions.some(v=>v.opened===e.opened))found.versions.push(x)}
+  else rows.push({bank:e.bank,accountType:identity.type,current:x,versions:[]});
+ });
+ return rows.sort((a,b)=>String(a.current?.bank||a.bank).localeCompare(String(b.current?.bank||b.bank)));
+}
+function renderTermsCycle(x,previous=false){
+ const raw=termsArchiveSourceText(x),promo=safeExternalUrl(x.promoSourceUrl),fee=safeExternalUrl(x.feeScheduleSourceUrl),rules=Array.isArray(x.eligibilityRules)?x.eligibilityRules:[];
+ let h='<div class="archive-cycle"><div class="research-report-top"><span class="research-kind">'+(previous?'Previous offer':'Saved offer')+'</span><b>'+(x.bonus?esc(fM(x.bonus)):'Bonus not saved')+'</b></div><dl class="research-dates"><div><dt>Account opened</dt><dd>'+esc(x.opened?fD(x.opened):'Not saved')+'</dd></div><div><dt>Terms saved / reviewed</dt><dd>'+esc((x.termsVerifiedAt||x.capturedAt)?fD(x.termsVerifiedAt||x.capturedAt):'Not recorded')+'</dd></div></dl>';
+ if(!raw)h+='<p class="research-caveat">Original terms have not been saved for this account. Notes below may be incomplete.</p>';
+ const facts=[['Bonus requirements',x.completeBonusText],['Monthly fee',x.monthlyFeeAmountText||x.monthlyFeeYNText],['How to avoid the fee',x.monthlyFeeWaiverText||x.avoidMonthlyFeeText],['Closing the account',x.closeRuleText||x.earlyTerminationFeeText],['Offer deadline',x.expirationDateText]];
+ if(facts.some(([,v])=>v)||rules.length){h+='<details class="research-help"><summary>Saved requirements & fees</summary><dl class="archive-facts">';facts.forEach(([k,v])=>{if(v)h+='<div><dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd></div>'});if(rules.length)h+='<div><dt>When another bonus may be available</dt><dd>'+rules.map(r=>esc(eligibilityRuleStorageLabel(r))).join('<br>')+'</dd></div>';h+='</dl><p class="research-caveat">Saved account information; the original offer text controls. Missing details require review.</p></details>'}
+ if(promo||fee){h+='<div class="archive-links">';if(promo)h+='<a class="research-source" href="'+esc(promo)+'" target="_blank" rel="noopener noreferrer">Promotion source ↗</a>';if(fee)h+='<a class="research-source" href="'+esc(fee)+'" target="_blank" rel="noopener noreferrer">Fee schedule ↗</a>';h+='</div><p class="research-caveat">Live pages can change. The saved text below belongs to this offer.</p>'}
+ if(raw)h+='<details class="research-help archive-original"><summary>Read original saved terms</summary><div class="archive-raw">'+esc(raw)+'</div></details>';
+ return h+'</div>';
+}
 function rTermsStorage(){
-  const q=String(storageSearch||'').trim().toLowerCase();
-  const rows=termsArchiveRows().filter(b=>!q||String(b.current?.bank||b.bank||'').toLowerCase().includes(q)||String(b.current?.accountType||b.accountType||'').toLowerCase().includes(q));
-  let h='<div class="sec">T&C Archive</div><div class="sub" style="margin:0 2px 10px">Terms saved for each bonus cycle. Current offers do not replace your enrolled terms.</div><details class="mobile-disclosure"><summary>How archived terms work</summary><div class="mobile-disclosure-body">Terms remain tied to the enrolled offer. A new verified bonus cycle creates a new archive record.</div></details>';
-  h+='<input class="sinput" type="text" id="terms-search" aria-label="Search stored terms" placeholder="Search stored T&C..." value="'+esc(storageSearch||'')+'" oninput="updateViewSearch(\'terms\',this.value,this.selectionStart)">';
-  if(!rows.length)return h+'<div class="empty">No verified T&C cycles stored yet.</div>';
-  rows.forEach(bucket=>{
-    const x=bucket.current||{},versions=Array.isArray(bucket.versions)?bucket.versions:[];
-    const rules=Array.isArray(x.eligibilityRules)?x.eligibilityRules:[];
-    const promo=safeExternalUrl(x.promoSourceUrl),fee=safeExternalUrl(x.feeScheduleSourceUrl);
-    h+='<div class="clean-plan-card safe"><div class="clean-plan-head"><div><div class="clean-plan-title">'+esc(x.bank||bucket.bank||'Bank')+'</div><div class="clean-plan-sub">'+esc((x.accountType||bucket.accountType||'personal')+' · opened '+(x.opened?fD(x.opened):'—'))+'</div></div><span class="clean-plan-chip safe">Current T&C</span></div>';
-    h+='<div class="clean-plan-rows"><div class="clean-plan-row"><span>Bonus</span><b>'+esc(x.bonus?fM(x.bonus):'—')+'</b></div><div class="clean-plan-row"><span>Verified</span><b>'+esc(x.termsVerifiedAt||x.capturedAt||'—')+'</b></div><div class="clean-plan-row"><span>Rules</span><b>'+esc(rules.length?rules.map(eligibilityRuleStorageLabel).join(' | '):'Saved eligibility evidence')+'</b></div></div>';
-    if(promo||fee){h+='<div class="sub" style="margin-top:8px">';if(promo)h+='<a href="'+esc(promo)+'" target="_blank" rel="noopener noreferrer">Official promo</a>';if(promo&&fee)h+=' · ';if(fee)h+='<a href="'+esc(fee)+'" target="_blank" rel="noopener noreferrer">Fee schedule</a>';h+='</div>'}
-    h+='<details class="clean-details"><summary>Full T&C</summary><div class="clean-detail-body"><div style="white-space:pre-wrap;font-size:11px;line-height:1.45">'+esc(x.tcSourceRaw||'')+'</div></div></details>';
-    if(versions.length){
-      h+='<details class="clean-details"><summary>Previous T&C cycles <span>'+versions.length+'</span></summary><div class="clean-detail-body">';
-      versions.slice(0,8).forEach(v=>{
-        h+='<details class="clean-details"><summary>'+esc((v.opened?fD(v.opened):'Prior cycle')+(v.bonus?' · '+fM(v.bonus):''))+'</summary><div class="clean-detail-body"><div class="sub">Replaced '+esc(v.replacedAt||'')+(v.termsVerifiedAt?' · verified '+esc(v.termsVerifiedAt):'')+'</div><div style="white-space:pre-wrap;font-size:11px;line-height:1.45;margin-top:7px">'+esc(v.tcSourceRaw||'')+'</div></div></details>'
-      });
-      h+='</div></details>'
-    }
-    h+='</div>'
-  });
-  return h
+ const q=String(storageSearch||'').trim().toLowerCase();
+ const match=x=>[x.bank,x.accountType,x.opened,x.tcSourceRaw,x.completeBonusText,x.closeRuleText,x.avoidMonthlyFeeText].join(' ').toLowerCase().includes(q);
+ const rows=termsDisplayBuckets().filter(b=>!q||[b.current,...b.versions].some(match));
+ let h='<div class="research-shell archive-shell"><header class="research-intro"><span class="research-eyebrow">YOUR OFFER RECORDS</span><h2>T&C Archive</h2><p>The bank’s terms for each account and bonus cycle, kept together so you can find them later.</p><button class="research-text-button" onclick="switchMainTab(\'tips\')">View community experiences →</button></header><input class="sinput" type="text" id="terms-search" aria-label="Search stored terms" placeholder="Search stored T&C..." value="'+esc(storageSearch||'')+'" oninput="updateViewSearch(\'terms\',this.value,this.selectionStart)"><div class="research-coverage"><b>'+rows.length+' account groups</b><span>Original text and previous offers stay saved</span></div><details class="research-help"><summary>About saved terms</summary><p>Terms remain tied to the enrolled offer. Current promotions and community reports do not replace your original terms.</p></details>';
+ rows.forEach(bucket=>{
+  const x=bucket.current||{},versions=bucket.versions||[];
+  h+='<details class="archive-bank"><summary>'+bankLogo(x.bank||bucket.bank,true)+'<span><b>'+esc(x.bank||bucket.bank)+'</b><small>'+esc(x.accountType==='business'?'Business':'Personal')+' · '+(termsArchiveSourceText(x)?'Terms saved':'Terms not saved')+'</small></span><span class="archive-chevron" aria-hidden="true">⌄</span></summary><div class="archive-bank-body">'+renderTermsCycle(x);
+  if(versions.length){h+='<details class="research-help archive-history"><summary>Previous T&C cycles <span>'+versions.length+'</span></summary>';versions.forEach(v=>h+='<details class="research-help"><summary>'+esc(v.opened?fD(v.opened):'Date not recorded')+(v.bonus?' · '+esc(fM(v.bonus)):'')+'</summary>'+renderTermsCycle(v,true)+'</details>');h+='</details>'}
+  h+='</div></details>';
+ });
+ if(!rows.length)h+='<div class="research-empty">'+(q?'No saved terms match your search.':'Your saved offers will appear here after you add an account.')+'</div>';
+ const references=loadCommunityDatapoints().filter(isOfferReference).filter(x=>!q||[x.bank,x.method,x.result].join(' ').toLowerCase().includes(q));
+ if(references.length)h+='<details class="research-help archive-references"><summary>Older offer references · '+references.length+'</summary><p>These third-party summaries were previously listed under Datapoints. They are not your enrolled terms and may be out of date. Original records remain in your backup.</p>'+references.map(x=>'<article class="research-report"><span class="research-kind">Third-party reference · Date not provided</span><h3>'+esc(x.bank)+'</h3><p>'+esc(x.method)+'</p><a class="research-source" href="'+esc(safeExternalUrl(x.link))+'" target="_blank" rel="noopener noreferrer">Read reference ↗</a></article>').join('')+'</details>';
+ return h+'</div>';
 }
 function archivedCycleSnapshot(e){
   if(!e)return null;
@@ -2238,24 +2252,89 @@ function beginManualReplaceFromEdit(){
 }
 function dpSignature(bank,method){return bankKey(bank)+'|'+String(method||'').trim().toLowerCase()}
 function syncExistingDatapointsToDB(){const rows=loadUserDatapoints();const seen=new Set(rows.map(r=>dpSignature(r.bank,r.method)));let changed=false;entries.forEach(e=>{if(!e||!e.bank||!e.dataPoint)return;const sig=dpSignature(e.bank,e.dataPoint);if(seen.has(sig))return;rows.push(normalizeUserDatapoint({bank:e.bank,method:e.dataPoint,note:'Imported from tracker history',date:e.closed||e.bonusRecd||e.opened||td(),entryId:e.id||''}));seen.add(sig);changed=true});if(changed)saveUserDatapoints(rows)}
-function normalizeCommunityDatapoint(row,i){const x=(row&&typeof row==='object')?{...row}:{};return{id:String(x.id||('cdp_'+(i||0)+'_'+Math.random().toString(36).slice(2,6))),bank:String(x.bank||'').trim(),method:String(x.method||'').trim(),result:String(x.result||x.note||'').trim(),link:String(x.link||'').trim()}}
+function normalizeCommunityDatapoint(row,i){
+ const x=row&&typeof row==='object'?row:{};
+ const out={...x,id:String(x.id||('cdp_'+(i||0)+'_'+Math.random().toString(36).slice(2,6))),bank:String(x.bank||'').trim(),method:String(x.method||'').trim(),result:String(x.result||x.note||'').trim(),link:String(x.link||'').trim()};
+ for(const k of ['product','accountType','reportedAt','eventDate','threadDate','checkedAt','sourceName','evidenceKind','dateLabel'])out[k]=String(x[k]||'').trim();
+ out.outcome=['worked','failed','mixed','pending','unknown'].includes(x.outcome)?x.outcome:'unknown';return out;
+}
+function untouchedCommunitySeed(x){
+ return DATA_POINTS.some(([bank,method,result,link])=>x.bank===bank&&x.method===method&&x.result===result&&x.link===link);
+}
+function isOfferReference(x){return safeExternalUrl(x.link).includes('doctorofcredit.com/')&&!x.link.includes('/knowledge-base/list-methods-banks-count-direct-deposits/')&&DATA_POINTS.some(([b,m,r,u])=>b===x.bank&&m===x.method&&r===x.result&&u===x.link)}
 function communitySig(x){return normalizeBankFamily(x.bank)+'|'+String(x.method||'').trim().toLowerCase()}
 function defaultCommunityRows(){return DATA_POINTS.map(([bank,method,result,link],i)=>normalizeCommunityDatapoint({id:'cdp_'+i,bank,method,result,link},i))}
-function loadCommunityDatapoints(){const saved=ld(COMMUNITY_DP_KEY,null);let rows=Array.isArray(saved)?saved.map(normalizeCommunityDatapoint).filter(x=>x.bank&&x.method):[];const seedVer=(()=>{try{return localStorage.getItem(COMMUNITY_DP_SEED_KEY)||''}catch{return''}})();if(seedVer!=='doc_v2'){const defaults=defaultCommunityRows();const defaultSigs=new Set(defaults.map(communitySig));const legacySigs=new Set(LEGACY_COMMUNITY_DEFAULTS.map(([bank,method])=>communitySig({bank,method})));rows=rows.filter(x=>!(legacySigs.has(communitySig(x))&&!defaultSigs.has(communitySig(x))));const seen=new Set(rows.map(communitySig));defaults.forEach(item=>{const sig=communitySig(item);if(!seen.has(sig)){rows.push(item);seen.add(sig)}});rows.sort((a,b)=>a.bank.localeCompare(b.bank)||a.method.localeCompare(b.method));sv(COMMUNITY_DP_KEY,rows);try{localStorage.setItem(COMMUNITY_DP_SEED_KEY,'doc_v2')}catch{}}if(!rows.length&&!Array.isArray(saved)){rows=defaultCommunityRows();sv(COMMUNITY_DP_KEY,rows);try{localStorage.setItem(COMMUNITY_DP_SEED_KEY,'doc_v2')}catch{}}return rows}
+function loadCommunityDatapoints(){
+ const saved=ld(COMMUNITY_DP_KEY,[]);
+ return (Array.isArray(saved)?saved:[]).map(normalizeCommunityDatapoint).filter(x=>x.bank&&x.method);
+}
 function saveCommunityDatapoints(rows){sv(COMMUNITY_DP_KEY,(rows||[]).map(normalizeCommunityDatapoint).filter(x=>x.bank&&x.method));try{localStorage.setItem(COMMUNITY_DP_SEED_KEY,'doc_v2')}catch{}}
-function getCommunityDatapoints(){return loadCommunityDatapoints()}
-function buildDatapointGroups(){const user=loadUserDatapoints();const community=getCommunityDatapoints();const map=new Map();const ensure=(bank)=>{const key=bankKey(bank||'Unknown Bank');if(!map.has(key))map.set(key,{key,bank:bank||'Unknown Bank',user:[],community:[],entryCount:0});const cur=map.get(key);if((cur.bank||'').length<(bank||'').length)cur.bank=bank;return cur;};entries.forEach(e=>{if(e&&e.bank){const g=ensure(e.bank);g.entryCount++;}});user.forEach(item=>ensure(item.bank).user.push(item));community.forEach(item=>ensure(item.bank).community.push(item));let groups=Array.from(map.values()).map(g=>({...g,user:g.user.sort((a,b)=>(b.lastConfirmedAt||'').localeCompare(a.lastConfirmedAt||'')||a.method.localeCompare(b.method)),community:g.community.sort((a,b)=>a.method.localeCompare(b.method))}));const q=dpSearch.trim().toLowerCase();if(q){groups=groups.filter(g=>{if((g.bank||'').toLowerCase().includes(q))return true;if(g.user.some(x=>(x.method||'').toLowerCase().includes(q)||(x.note||'').toLowerCase().includes(q)))return true;if(g.community.some(x=>(x.method||'').toLowerCase().includes(q)||(x.result||'').toLowerCase().includes(q)))return true;return false;})}return groups.sort((a,b)=>{const aScore=(a.user.length?0:1)+(a.community.length?0:2);const bScore=(b.user.length?0:1)+(b.community.length?0:2);return aScore-bScore||b.user.length-a.user.length||b.community.length-a.community.length||a.bank.localeCompare(b.bank)})}
+function getCommunityDatapoints(){
+ const saved=loadCommunityDatapoints().filter(x=>!untouchedCommunitySeed(x));
+ return [...saved,...(window.BTCommunityCatalog?.reports||[]).map(normalizeCommunityDatapoint)];
+}
+function dpReportDate(x){return dpValidDate(x.eventDate)||dpValidDate(x.reportedAt)||''}
+function dpValidDate(v){const x=String(v||'');if(!/^\d{4}-\d{2}-\d{2}$/.test(x))return'';const d=new Date(x+'T12:00:00Z');return !isNaN(d)&&d.toISOString().slice(0,10)===x?x:''}
+function dpOutcome(x){return {worked:'Reported success',failed:'Reported failure',mixed:'Mixed reports',pending:'Still waiting',unknown:'Result not recorded'}[x.outcome]||'Result not recorded'}
+function dpFilterRows(rows){return rows.filter(x=>{
+ if(dpFilters.result!=='all'&&x.outcome!==dpFilters.result)return false;
+ if(dpFilters.type!=='all'&&x.accountType!==dpFilters.type)return false;
+ if(dpFilters.source!=='all'&&(dpFilters.source==='reddit'?!/reddit/i.test(x.sourceName):!/doctor of credit/i.test(x.sourceName)))return false;
+ if(dpFilters.dated==='recent'){const d=dpReportDate(x),today=td();if(!d||d>today||(Date.parse(today+'T12:00:00Z')-Date.parse(d+'T12:00:00Z'))>90*86400000)return false;}
+ return true;
+})}
+function resetDPFilters(){dpFilters={view:'all',scope:'all',result:'all',type:'all',source:'all',dated:'all'};R()}
+function setDPFilter(key,value){if(Object.prototype.hasOwnProperty.call(dpFilters,key))dpFilters[key]=value;R()}
+function reportSearchMatch(x,q){return [x.method,x.note,x.result,x.product,x.sourceName,x.eventDate,x.reportedAt,x.accountType].join(' ').toLowerCase().includes(q)}
+function buildDatapointGroups(){
+ const map=new Map(),ensure=(bank,carrier)=>{const key=carrier?entryBankIdentity(carrier).key:bankKey(bank||'Unknown bank');if(!map.has(key))map.set(key,{key,bank:bank||'Unknown bank',accountType:carrier?entryBankIdentity(carrier).type:bankIdentity(bank).type,user:[],community:[],entryCount:0});return map.get(key)};
+ entries.forEach(e=>{if(e?.bank)ensure(e.bank,e).entryCount++});
+ loadUserDatapoints().forEach(x=>ensure(x.bank).user.push(x));
+ getCommunityDatapoints().forEach(x=>ensure(x.bank,x.accountType?x:null).community.push(x));
+ const q=dpSearch.trim().toLowerCase();
+ return [...map.values()].filter(g=>dpFilters.scope!=='mine'||g.entryCount>0).map(g=>{
+  let community=dpFilterRows(g.community),user=g.user;
+  if(dpFilters.view==='personal')community=[];
+  if(q&&!g.bank.toLowerCase().includes(q)){community=community.filter(x=>reportSearchMatch(x,q));user=user.filter(x=>reportSearchMatch(x,q))}
+  community.sort((a,b)=>dpReportDate(b).localeCompare(dpReportDate(a))||a.method.localeCompare(b.method));
+  user.sort((a,b)=>String(b.lastConfirmedAt||'').localeCompare(String(a.lastConfirmedAt||'')));
+  return {...g,community,user};
+ }).filter(g=>g.community.length||g.user.length||((!q||g.bank.toLowerCase().includes(q))&&g.entryCount&&dpFilters.result==='all'&&dpFilters.type==='all'&&dpFilters.source==='all'&&dpFilters.dated==='all')).sort((a,b)=>(b.entryCount>0)-(a.entryCount>0)||dpReportDate(b.community[0]||{}).localeCompare(dpReportDate(a.community[0]||{}))||a.bank.localeCompare(b.bank));
+}
 function toggleDPBank(key){dpExpandedBankKey=dpExpandedBankKey===key?'':key;R()}
 function addUserDPForBank(bankEnc){const bank=decodeURIComponent(bankEnc||'');if(!bank)return;dpEditor={type:'user',mode:'new',id:'',bank,method:'',note:'',lastConfirmedAt:td()};dpExpandedBankKey=bankKey(bank);R()}
 function addCommunityDPForBank(bankEnc){const bank=decodeURIComponent(bankEnc||'');if(!bank)return;dpEditor={type:'community',mode:'new',id:'',bank,method:'',result:'',link:''};dpExpandedBankKey=bankKey(bank);R()}
 function openUserDPEditor(id){const item=loadUserDatapoints().find(r=>r.id===id);if(!item)return;dpEditor={type:'user',mode:'edit',id:item.id,bank:item.bank,method:item.method,note:item.note||'',lastConfirmedAt:item.lastConfirmedAt||td()};R()}
-function openCommunityDPEditor(id){const item=loadCommunityDatapoints().find(r=>r.id===id);if(!item)return;dpEditor={type:'community',mode:'edit',id:item.id,bank:item.bank,method:item.method,result:item.result||'',link:item.link||''};R()}
+function openCommunityDPEditor(id){const item=loadCommunityDatapoints().find(r=>r.id===id);if(!item)return;dpEditor={...item,type:'community',mode:'edit'};R()}
 function closeDPEditor(){dpEditor=null;R()}
-function saveDPEditor(){if(!dpEditor)return;const bank=String(dpEditor.bank||'').trim();const method=String(dpEditor.method||'').trim();if(!bank||!method){alert('Bank and datapoint method are required');return}if(dpEditor.type==='user'){const rows=loadUserDatapoints();if(dpEditor.mode==='edit'&&dpEditor.id){const idx=rows.findIndex(r=>r.id===dpEditor.id);if(idx>=0)rows[idx]={...rows[idx],bank,method,note:String(dpEditor.note||'').trim(),lastConfirmedAt:dpEditor.lastConfirmedAt||td(),updatedAt:td()}}else{rows.unshift(normalizeUserDatapoint({bank,method,note:String(dpEditor.note||'').trim(),date:dpEditor.lastConfirmedAt||td()}))}saveUserDatapoints(rows);dpExpandedBankKey=bankKey(bank);dpEditor=null;R();return}const rows=loadCommunityDatapoints();if(dpEditor.mode==='edit'&&dpEditor.id){const idx=rows.findIndex(r=>r.id===dpEditor.id);if(idx>=0)rows[idx]={...rows[idx],bank,method,result:String(dpEditor.result||'').trim(),link:String(dpEditor.link||'').trim()}}else{rows.unshift(normalizeCommunityDatapoint({bank,method,result:String(dpEditor.result||'').trim(),link:String(dpEditor.link||'').trim()}))}saveCommunityDatapoints(rows);dpExpandedBankKey=bankKey(bank);dpEditor=null;R()}
+function saveDPEditor(){if(!dpEditor)return;if(dpEditor.link&&!safeExternalUrl(dpEditor.link)){alert('Use a source link beginning with https:// or http://.');return}const bank=String(dpEditor.bank||'').trim();const method=String(dpEditor.method||'').trim();if(!bank||!method){alert('Bank and datapoint method are required');return}if(dpEditor.type==='user'){const rows=loadUserDatapoints();if(dpEditor.mode==='edit'&&dpEditor.id){const idx=rows.findIndex(r=>r.id===dpEditor.id);if(idx>=0)rows[idx]={...rows[idx],bank,method,note:String(dpEditor.note||'').trim(),lastConfirmedAt:dpEditor.lastConfirmedAt||td(),updatedAt:td()}}else{rows.unshift(normalizeUserDatapoint({bank,method,note:String(dpEditor.note||'').trim(),date:dpEditor.lastConfirmedAt||td()}))}saveUserDatapoints(rows);dpExpandedBankKey=bankKey(bank);dpEditor=null;R();return}const rows=loadCommunityDatapoints();if(dpEditor.mode==='edit'&&dpEditor.id){const idx=rows.findIndex(r=>r.id===dpEditor.id);if(idx>=0)rows[idx]={...rows[idx],bank,method,result:String(dpEditor.result||'').trim(),link:String(dpEditor.link||'').trim(),outcome:dpEditor.outcome||'unknown',reportedAt:dpValidDate(dpEditor.reportedAt),eventDate:dpValidDate(dpEditor.eventDate),product:String(dpEditor.product||'').trim(),accountType:dpEditor.accountType||'',sourceName:String(dpEditor.sourceName||'').trim()}}else{rows.unshift(normalizeCommunityDatapoint({bank,method,result:String(dpEditor.result||'').trim(),link:String(dpEditor.link||'').trim(),outcome:dpEditor.outcome||'unknown',reportedAt:dpValidDate(dpEditor.reportedAt),eventDate:dpValidDate(dpEditor.eventDate),product:String(dpEditor.product||'').trim(),accountType:dpEditor.accountType||'',sourceName:String(dpEditor.sourceName||'').trim()}))}saveCommunityDatapoints(rows);dpExpandedBankKey=bankKey(bank);dpEditor=null;R()}
 function deleteUserDP(id){const rows=loadUserDatapoints();const item=rows.find(r=>r.id===id);if(!item)return;cfm={title:'Delete datapoint',msg:'Remove '+item.method+' from '+item.bank+'?',action:()=>{saveUserDatapoints(rows.filter(r=>r.id!==id));if(dpEditor&&dpEditor.id===id)dpEditor=null;cfm=null;R()}};R()}
 function deleteCommunityDP(id){const rows=loadCommunityDatapoints();const item=rows.find(r=>r.id===id);if(!item)return;cfm={title:'Delete community datapoint',msg:'Remove '+item.method+' from '+item.bank+'?',action:()=>{saveCommunityDatapoints(rows.filter(r=>r.id!==id));if(dpEditor&&dpEditor.id===id)dpEditor=null;cfm=null;R()}};R()}
-function deleteDPBankGroup(groupKey,bankEnc){const bank=decodeURIComponent(bankEnc||'');if(!groupKey)return;const entryMatches=entries.filter(e=>bankKey(e.bank)===groupKey);const entryIds=new Set(entryMatches.map(e=>e.id));const userRows=loadUserDatapoints();const communityRows=loadCommunityDatapoints();const userMatches=userRows.filter(r=>bankKey(r.bank)===groupKey);const communityMatches=communityRows.filter(r=>bankKey(r.bank)===groupKey);const reqs=loadReqs();const reqKeys=Object.keys(reqs||{}).filter(k=>bankKey(((reqs[k]||{}).bank)||k)===groupKey);const parts=[];if(entryMatches.length)parts.push(entryMatches.length+' tracker '+(entryMatches.length===1?'entry':'entries'));if(userMatches.length)parts.push(userMatches.length+' confirmed datapoint'+(userMatches.length===1?'':'s'));if(communityMatches.length)parts.push(communityMatches.length+' community datapoint'+(communityMatches.length===1?'':'s'));if(reqKeys.length)parts.push(reqKeys.length+' saved requirement'+(reqKeys.length===1?'':'s'));const detail=parts.length?parts.join(', '):'this empty bank shell';cfm={title:'Delete bank',msg:'Delete the entire '+bank+' bank group?\n\nThis will remove '+detail+'.\n\nThis cannot be undone.',action:()=>btVerifiedMutation(()=>{entries=entries.filter(e=>bankKey(e.bank)!==groupKey);sv(SK,entries);saveUserDatapoints(userRows.filter(r=>bankKey(r.bank)!==groupKey));saveCommunityDatapoints(communityRows.filter(r=>bankKey(r.bank)!==groupKey));if(reqKeys.length){const next={...reqs};reqKeys.forEach(k=>delete next[k]);saveReqs(next)}if(dpEditor&&bankKey(dpEditor.bank)===groupKey)dpEditor=null;if(modal&&bankKey(modal.bank)===groupKey)modal=null;if(expanded&&entryIds.has(expanded))expanded=null;if(undoState&&bankKey(undoState.bank)===groupKey)undoState=null;dpExpandedBankKey='';cfm=null;R()})};R()}
-function rDpEditor(){const d=dpEditor;if(!d)return'';let h='<div class="ov" onclick="closeDPEditor()"><div class="modal" onclick="event.stopPropagation()">';h+='<div class="m-bar"></div><div class="m-hdr"><h2>'+(d.type==='user'?(d.mode==='edit'?'Edit Confirmed Datapoint':'New Confirmed Datapoint'):(d.mode==='edit'?'Edit Community Datapoint':'New Community Datapoint'))+'</h2><span class="m-id">'+esc(d.bank||'')+'</span></div>';h+='<div class="fg"><label>Bank</label><input value="'+esc(d.bank||'')+'" oninput="dpEditor.bank=this.value"></div>';h+='<div class="fg"><label>Method / datapoint</label><input value="'+esc(d.method||'')+'" oninput="dpEditor.method=this.value" placeholder="e.g. Fidelity ACH works"></div>';if(d.type==='user'){h+='<div class="fg"><label>Notes</label><textarea rows="4" oninput="dpEditor.note=this.value" placeholder="Optional note for your future self or future autofill logic">'+esc(d.note||'')+'</textarea></div>';h+='<div class="fg"><label>Last confirmed</label><input type="date" value="'+esc(d.lastConfirmedAt||'')+'" oninput="dpEditor.lastConfirmedAt=this.value"></div>';}else{h+='<div class="fg"><label>Community note / result</label><textarea rows="4" oninput="dpEditor.result=this.value" placeholder="e.g. Works as DD, ACH may fail, Safe anytime">'+esc(d.result||'')+'</textarea></div>';h+='<div class="fg"><label>Source link</label><input value="'+esc(d.link||'')+'" oninput="dpEditor.link=this.value" placeholder="Optional source URL"></div>';}h+='<button class="btn-p" onclick="saveDPEditor()">Save</button>';h+='<button class="btn-s" onclick="closeDPEditor()">Cancel</button>';if(d.mode==='edit'){h+='<button class="btn-d" onclick="'+(d.type==='user'?'deleteUserDP(\''+d.id+'\')':'deleteCommunityDP(\''+d.id+'\')')+'">Delete</button>';}h+='</div></div>';return h}
+function deleteDPBankGroup(groupKey,bankEnc){
+ const bank=decodeURIComponent(bankEnc||'');if(!groupKey)return;
+ cfm={title:'Remove saved reports',msg:'Remove your saved reports for '+bank+'? Tracker accounts, saved terms and the public research catalog will stay.',action:()=>btVerifiedMutation(()=>{
+ saveUserDatapoints(loadUserDatapoints().filter(x=>bankKey(x.bank)!==groupKey));saveCommunityDatapoints(loadCommunityDatapoints().filter(x=>bankKey(x.bank)!==groupKey));cfm=null;dpEditor=null;R();
+ })};R();
+}
+
+function newDPReport(){dpEditor={type:'community',mode:'new',bank:'',method:'',result:'',outcome:'unknown'};R()}
+function rDpEditor(){
+ const d=dpEditor;if(!d)return'';
+ const personal=d.type==='user';
+ const field=(key,label,placeholder='',type='text')=>'<div class="fg"><label>'+label+'<input type="'+type+'" value="'+esc(d[key]||'')+'" oninput="dpEditor.'+key+'=this.value" placeholder="'+esc(placeholder)+'"></label></div>';
+ const select=(key,label,options)=>'<div class="fg"><label>'+label+'<select onchange="dpEditor.'+key+'=this.value">'+options.map(([v,t])=>'<option value="'+v+'"'+((d[key]||'')===v?' selected':'')+'>'+t+'</option>').join('')+'</select></label></div>';
+ let h='<div class="ov" onclick="closeDPEditor()"><section class="modal research-editor" role="dialog" aria-modal="true" aria-labelledby="dp-editor-title" onclick="event.stopPropagation()"><header class="research-editor-header"><h2 id="dp-editor-title">'+(personal?'My experience':'Source report')+'</h2><p>Save what happened. Leave unknown details blank.</p></header><div class="research-editor-body">';
+ h+=field('bank','Bank','e.g. Chase')+field('method','Transfer or activity','e.g. Employer payroll to checking');
+ if(personal){h+='<div class="fg"><label>What happened?<textarea rows="4" oninput="dpEditor.note=this.value" placeholder="Deposit amount, result, and any useful details">'+esc(d.note||'')+'</textarea></label></div>'+field('lastConfirmedAt','Experience date','','date')}
+ else{
+ h+=field('product','Account / offer','e.g. Total Checking · $900 offer');
+ h+=select('accountType','Account type',[['','Not specified'],['personal','Personal'],['business','Business']]);
+ h+=select('outcome','Result',[['unknown','Not recorded'],['worked','Reported success'],['failed','Reported failure'],['mixed','Mixed reports'],['pending','Still waiting']]);
+ h+='<div class="fg"><label>What happened?<textarea rows="4" oninput="dpEditor.result=this.value" placeholder="Include amounts, dates, and whether the bonus was paid">'+esc(d.result||'')+'</textarea></label></div>';
+ h+=field('eventDate','Activity or payout date','','date')+field('reportedAt','Report posted on','','date')+field('sourceName','Source name','e.g. Reddit or Doctor of Credit')+field('link','Source link','https://…','url');
+ }
+ h+='</div><footer class="research-editor-footer"><button class="btn-p" onclick="saveDPEditor()">Save report</button><button class="btn-s" onclick="closeDPEditor()">Cancel</button></footer></section></div>';return h;
+}
 
 /* -----------------------------
    SMARTER T&C ANALYZER HELPERS
@@ -3211,6 +3290,7 @@ let showInlineAZ=false,inlineResult=null;
 let phoneSearch='',showPhoneAdd=false;
 let storageSearch='';
 let dpSearch='',dpExpandedBankKey='';
+let dpFilters={view:'all',scope:'all',result:'all',type:'all',source:'all',dated:'all'};
 let profileSearch='',activeProfileKey='';
 let inlineUiState={};
 let profileSectionUiState={};
@@ -3444,7 +3524,7 @@ function profileRuleForBank(bank){const carrier=(bank&&typeof bank==='object')?b
 function profileReqForBank(bank){const reqs=Object.values(loadReqs()||{});const carrier=(bank&&typeof bank==='object')?bank:{bank};const wanted=entryBankIdentity(carrier);const explicit=!!(carrier.accountType&&['personal','business'].includes(normalizeAccountType(carrier.accountType)));const matches=reqs.filter(r=>{const rb=r&&r.bank||'';if(!rb)return false;const ri=entryBankIdentity(r);if(ri.family!==wanted.family)return false;if(explicit||wanted.typeExplicit)return ri.type===wanted.type;return true});return matches.sort((a,b)=>{const ai=entryBankIdentity(a),bi=entryBankIdentity(b);const ae=ai.key===wanted.key?0:1,be=bi.key===wanted.key?0:1;if(ae!==be)return ae-be;return String(b.bank||'').length-String(a.bank||'').length})[0]||null}
 function profilePhoneForBank(bank){const wanted=bankIdentity(bank);const rows=getPhoneBook().filter(r=>{const rb=r&&r.bank||'';if(!rb)return false;const ri=bankIdentity(rb);if(ri.family!==wanted.family)return false;if(wanted.typeExplicit)return ri.type===wanted.type;return true});return rows.sort((a,b)=>{const ai=bankIdentity(a.bank||''),bi=bankIdentity(b.bank||'');const ae=ai.key===wanted.key?0:1,be=bi.key===wanted.key?0:1;if(ae!==be)return ae-be;return String(b.bank||'').length-String(a.bank||'').length})[0]||null}
 function profileMethodFailed(text){return /fail|failed|did not|didn't|didnt|not work|unreliable|rejected|declined|mixed|no longer/i.test(String(text||''))}
-function buildProfileGroups(){const map=new Map();const ensure=(bank)=>{const key=bankKey(bank||'Unknown Bank');if(!map.has(key))map.set(key,{key,bank:bank||'Unknown Bank',entries:[],user:[],community:[],rule:null,req:null,phone:null});const cur=map.get(key);if((cur.bank||'').length<(bank||'').length)cur.bank=bank;return cur};entries.forEach(e=>{if(e&&e.bank&&e.opened)ensure(e.bank).entries.push(e)});const getGroup=bank=>map.get(bankKey(bank||''))||null;loadUserDatapoints().forEach(item=>{const g=item&&item.bank?getGroup(item.bank):null;if(g)g.user.push(item)});getCommunityDatapoints().forEach(item=>{const g=item&&item.bank?getGroup(item.bank):null;if(g)g.community.push(item)});RULES.forEach(row=>{const g=getGroup(row&&row[0]);if(g&&(!g.rule||String(row[0]||'').length>String(g.rule?.[0]||'').length))g.rule=row});Object.values(loadReqs()||{}).forEach(r=>{const g=r&&r.bank?getGroup(r.bank):null;if(g&&(!g.req||String(r.bank||'').length>String(g.req?.bank||'').length))g.req=r});getPhoneBook().forEach(r=>{const g=r&&r.bank?getGroup(r.bank):null;if(g&&(!g.phone||String(r.bank||'').length>String(g.phone?.bank||'').length))g.phone=r});return Array.from(map.values()).map(g=>{g.entries=g.entries.sort((a,b)=>profileTimelineDate(b).localeCompare(profileTimelineDate(a)));g.activeEntry=g.entries.find(e=>e&&e.bank&&!e.closed)||null;g.cooldownEntry=g.entries.find(e=>['WAITING TO CHURN!','TIME TO CHURN!'].includes(status(e)))||null;g.rule=g.rule||profileRuleForBank(g.bank);g.req=g.req||profileReqForBank(g.bank);g.phone=g.phone||profilePhoneForBank(g.bank);g.completedEntries=g.entries.filter(e=>taxReady(e));g.receivedEntries=g.entries.filter(e=>isEarnedBonus(e));g.lifetime=g.completedEntries.reduce((s,e)=>s+(e.bonus||0),0);g.currentStatus=g.activeEntry?status(g.activeEntry):(g.cooldownEntry?status(g.cooldownEntry):(g.completedEntries.length?'ARCHIVED':'NO HISTORY'));g.nextReopen=g.cooldownEntry?nextReopen(g.cooldownEntry):'';g.confirmedWorked=g.user.filter(x=>!profileMethodFailed((x.note||'')+' '+(x.method||'')));g.confirmedFailed=g.user.filter(x=>profileMethodFailed((x.note||'')+' '+(x.method||'')));g.communityWarnings=g.community.filter(x=>profileMethodFailed((x.result||'')+' '+(x.method||'')));g.communityHelpful=g.community.filter(x=>!profileMethodFailed((x.result||'')+' '+(x.method||'')));g.activeCount=g.entries.filter(e=>e&&e.bank&&!e.closed).length;return g}).sort((a,b)=>{const aPri=a.activeCount?0:(a.cooldownEntry?1:2);const bPri=b.activeCount?0:(b.cooldownEntry?1:2);return aPri-bPri||b.lifetime-a.lifetime||b.completedEntries.length-a.completedEntries.length||a.bank.localeCompare(b.bank)})}
+function buildProfileGroups(){const map=new Map();const ensure=(bank)=>{const key=bankKey(bank||'Unknown Bank');if(!map.has(key))map.set(key,{key,bank:bank||'Unknown Bank',entries:[],user:[],community:[],rule:null,req:null,phone:null});const cur=map.get(key);if((cur.bank||'').length<(bank||'').length)cur.bank=bank;return cur};entries.forEach(e=>{if(e&&e.bank&&e.opened)ensure(e.bank).entries.push(e)});const getGroup=bank=>map.get(bankKey(bank||''))||null;loadUserDatapoints().forEach(item=>{const g=item&&item.bank?getGroup(item.bank):null;if(g)g.user.push(item)});getCommunityDatapoints().forEach(item=>{const g=item&&item.bank?getGroup(item.bank):null;if(g)g.community.push(item)});RULES.forEach(row=>{const g=getGroup(row&&row[0]);if(g&&(!g.rule||String(row[0]||'').length>String(g.rule?.[0]||'').length))g.rule=row});Object.values(loadReqs()||{}).forEach(r=>{const g=r&&r.bank?getGroup(r.bank):null;if(g&&(!g.req||String(r.bank||'').length>String(g.req?.bank||'').length))g.req=r});getPhoneBook().forEach(r=>{const g=r&&r.bank?getGroup(r.bank):null;if(g&&(!g.phone||String(r.bank||'').length>String(g.phone?.bank||'').length))g.phone=r});return Array.from(map.values()).map(g=>{g.entries=g.entries.sort((a,b)=>profileTimelineDate(b).localeCompare(profileTimelineDate(a)));g.activeEntry=g.entries.find(e=>e&&e.bank&&!e.closed)||null;g.cooldownEntry=g.entries.find(e=>['WAITING TO CHURN!','TIME TO CHURN!'].includes(status(e)))||null;g.rule=g.rule||profileRuleForBank(g.bank);g.req=g.req||profileReqForBank(g.bank);g.phone=g.phone||profilePhoneForBank(g.bank);g.completedEntries=g.entries.filter(e=>taxReady(e));g.receivedEntries=g.entries.filter(e=>isEarnedBonus(e));g.lifetime=g.completedEntries.reduce((s,e)=>s+(e.bonus||0),0);g.currentStatus=g.activeEntry?status(g.activeEntry):(g.cooldownEntry?status(g.cooldownEntry):(g.completedEntries.length?'ARCHIVED':'NO HISTORY'));g.nextReopen=g.cooldownEntry?nextReopen(g.cooldownEntry):'';g.confirmedWorked=g.user.filter(x=>!profileMethodFailed((x.note||'')+' '+(x.method||'')));g.confirmedFailed=g.user.filter(x=>profileMethodFailed((x.note||'')+' '+(x.method||'')));g.communityWarnings=g.community.filter(x=>x.outcome!=='worked');g.communityHelpful=g.community.filter(x=>x.outcome==='worked');g.activeCount=g.entries.filter(e=>e&&e.bank&&!e.closed).length;return g}).sort((a,b)=>{const aPri=a.activeCount?0:(a.cooldownEntry?1:2);const bPri=b.activeCount?0:(b.cooldownEntry?1:2);return aPri-bPri||b.lifetime-a.lifetime||b.completedEntries.length-a.completedEntries.length||a.bank.localeCompare(b.bank)})}
 function profileHeadline(group){if(group.activeEntry){const st=status(group.activeEntry);if(st==='WORKING')return 'Currently being worked.';if(st==='SAFE TO CLOSE')return 'Safe to close now.';if(st==='3-DAY BUFFER')return 'Inside close buffer.';if(st==='CUSTOM TIMER')return 'Set a reminder or deadline running.'}if(group.cooldownEntry){const st=status(group.cooldownEntry);if(st==='TIME TO CHURN!')return 'Ready to churn again now.';if(st==='WAITING TO CHURN!'){const dl=daysLeft(group.cooldownEntry);return (dl!==null?dl+' days left':'Cooling down')+' until next churn.'}}return group.completedEntries.length?'No active promo right now.':'No tracked history yet.'}
 function profileRequirements(group){const src=[group.req||{},group.activeEntry||{},group.cooldownEntry||{}];const pick=(...keys)=>{for(const obj of src){for(const key of keys){const v=obj&&obj[key];if(v!==undefined&&v!==null&&v!=='')return v}}return''};const rows=[];const push=(label,value)=>{if(value!==undefined&&value!==null&&String(value).trim()!=='')rows.push([label,String(value)])};push('Promo code',pick('promoCodeText','promoCode'));push('Monthly fee',pick('monthlyFeeYNText','monthlyFee'));push('Avoid fee',pick('avoidMonthlyFeeText','feeWaiver'));push('How to complete',pick('completeBonusText'));push('Required days',pick('requiredDaysText')||((pick('reqDays')&&Number(pick('reqDays'))>0)?(pick('reqDays')+' days'):''));push('Expiration',pick('expirationDateText','openWindow','openBy'));let eligibility=pick('eligibilityText');if(!eligibility&&group.rule)eligibility=group.rule[1]+' churn rule';push('Eligibility',eligibility);let early=pick('earlyTerminationFeeText');if(!early&&group.rule&&group.rule[5])early=group.rule[5];else if(!early&&pick('earlyCloseFee'))early=fM(parseInt(pick('earlyCloseFee'))||0);push('Early close',early);if(group.rule){push('Rule notes',group.rule[7]||'');push('MO availability',group.rule[4]?'Available in MO':'');}return rows.filter(r=>r[1])}
 function profileStatusChip(group){const st=group.currentStatus;if(st==='TIME TO CHURN!')return '<span class="pf-chip red">Ready to churn</span>';if(st==='WAITING TO CHURN!')return '<span class="pf-chip amber">Cooling down</span>';if(st==='SAFE TO CLOSE')return '<span class="pf-chip green">Safe to close</span>';if(st==='3-DAY BUFFER')return '<span class="pf-chip amber">Close buffer</span>';if(st==='CUSTOM TIMER')return '<span class="pf-chip amber">Countdown active</span>';if(st==='WORKING')return '<span class="pf-chip blue">Working</span>';if(st==='ARCHIVED')return '<span class="pf-chip gray">Archived</span>';return '<span class="pf-chip gray">No history</span>'}
@@ -3551,7 +3631,7 @@ function renderProfileDetail(group){
       <div class="pf-sec">
         <div class="pf-sec-h"><div class="pf-sec-t">Failed / Caution Methods</div></div>
         ${group.confirmedFailed.length||group.communityWarnings.length
-          ? `<div class="pf-history">${group.confirmedFailed.map(x=>`<div class="pf-history-card"><div class="pf-history-top"><div><div class="pf-name">${esc(x.method)}</div><div class="pf-history-id">Unsuccessful method</div></div><span class="tag n">Caution</span></div><div class="pf-item-note">${esc(x.note||'No notes.')}</div><div class="ph-actions"><button class="ph-mini ph-save" onclick="openUserDPEditor('${x.id}')">Edit</button><button class="ph-mini ph-del" onclick="deleteUserDP('${x.id}')">Remove</button></div></div>`).join('')}${group.communityWarnings.map(x=>`<div class="pf-history-card"><div class="pf-history-top"><div><div class="pf-name">${esc(x.method)}</div><div class="pf-history-id">Community caution</div></div><span class="tag f">Community</span></div><div class="pf-item-note">${esc(x.result||'No notes.')}</div><div class="ph-actions">${x.link?`<a class="pf-link" href="${x.link}" target="_blank" rel="noopener">Source</a>`:''}<button class="ph-mini ph-save" onclick="openCommunityDPEditor('${x.id}')">Edit</button><button class="ph-mini ph-del" onclick="deleteCommunityDP('${x.id}')">Remove</button></div></div>`).join('')}</div>`
+          ? `<div class="pf-history">${group.confirmedFailed.map(x=>`<div class="pf-history-card"><div class="pf-history-top"><div><div class="pf-name">${esc(x.method)}</div><div class="pf-history-id">Unsuccessful method</div></div><span class="tag n">Caution</span></div><div class="pf-item-note">${esc(x.note||'No notes.')}</div><div class="ph-actions"><button class="ph-mini ph-save" onclick="openUserDPEditor('${x.id}')">Edit</button><button class="ph-mini ph-del" onclick="deleteUserDP('${x.id}')">Remove</button></div></div>`).join('')}${group.communityWarnings.map(renderCommunityReport).join('')}</div>`
           : '<div class="pf-empty">No unsuccessful methods or caution reports saved.</div>'}
       </div>
 
@@ -3571,7 +3651,7 @@ function renderProfileDetail(group){
           <div class="ph-actions" style="margin:0"><button class="ph-mini ph-save" onclick="addCommunityDPForBank('${encodeURIComponent(group.bank)}')">Add community</button></div>
         </div>
         ${group.communityHelpful.length
-          ? `<div class="pf-history">${group.communityHelpful.slice(0,12).map(x=>`<div class="pf-history-card"><div class="pf-history-top"><div><div class="pf-name">${esc(x.method)}</div><div class="pf-history-id">Community datapoint</div></div><span class="tag y">Helpful</span></div><div class="pf-item-note">${esc(x.result||'No notes.')}</div><div class="ph-actions">${x.link?`<a class="pf-link" href="${x.link}" target="_blank" rel="noopener">Source</a>`:''}<button class="ph-mini ph-save" onclick="openCommunityDPEditor('${x.id}')">Edit</button><button class="ph-mini ph-del" onclick="deleteCommunityDP('${x.id}')">Remove</button></div></div>`).join('')}</div>`
+          ? `<div class="pf-history">${group.communityHelpful.map(renderCommunityReport).join('')}</div>`
           : '<div class="pf-empty">No community reports saved.</div>'}
       </div>
 
@@ -4153,55 +4233,47 @@ function rTrackerLegacy(sorted){
   return h;
 }
 function rTax(){const yrs=[];for(let y=2025;y<=2040;y++)yrs.push(y);const yrE=taxEntriesForYear(taxYear);const yrA=yrE.reduce((s,e)=>s+(e.bonus||0),0);const allA=entries.filter(e=>taxReady(e)).reduce((s,e)=>s+(e.bonus||0),0);let h='<div class="sec">Tax Year</div><div class="ybar">';yrs.forEach(y=>{const a=completedYrTotal(y);h+='<button class="ypill'+(taxYear===y?' on':'')+'" onclick="taxYear='+y+';R()">'+y+(a?' · '+fM(a):'')+'</button>'});h+='</div><div class="ytotal">'+fM(yrA)+'</div><div class="ysub">'+taxYear+' — '+yrE.length+' received bonus'+(yrE.length!==1?'es':'')+'</div>';h+='<button class="export-btn" onclick="promptExportYear()">Export tax CSV</button>';if(!yrE.length)return h+'<div class="empty"><div class="em">📋</div><p>No received bonuses in '+taxYear+'</p></div>';yrE.forEach(e=>{h+='<div class="tax-c"><div class="tax-top"><div class="tax-bank">'+bankLogo(e.bank,true)+' '+esc(e.bank)+'</div><div class="tax-amt">'+fM(e.bonus)+'</div></div><div class="tax-dates">'+(e.opened?'<span>Open: '+fD(e.opened)+'</span>':'')+'<span>Received: '+fD(e.bonusRecd)+'</span>'+(e.closed?'<span>Closed: '+fD(e.closed)+'</span>':'<span>Account: Open</span>')+'</div></div>'});h+='<div class="sec" style="margin-top:16px">All-Time</div><div class="ytotal">'+fM(allA)+'</div>';return h}
+function dpSelect(key,label,options){return '<label class="research-filter">'+esc(label)+'<select aria-label="'+esc(label)+'" onchange="setDPFilter(\''+key+'\',this.value)">'+options.map(([v,t])=>'<option value="'+v+'"'+(dpFilters[key]===v?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select></label>'}
+function renderCommunityReport(item){
+ const curated=(window.BTCommunityCatalog?.reports||[]).some(x=>x.id===item.id),link=safeExternalUrl(item.link),date=dpReportDate(item);
+ let h='<article class="research-report"><div class="research-report-top"><span class="research-result '+esc(item.outcome||'unknown')+'">'+esc(dpOutcome(item))+'</span><span class="research-kind">'+(item.evidenceKind==='source-index'?'Source summary':'Community report')+'</span></div><h3>'+esc(item.method)+'</h3><p class="research-product">'+esc(item.product||'Product not specified')+' · '+esc(item.accountType==='business'?'Business':item.accountType==='personal'?'Personal':'Account type not specified')+'</p><p>'+esc(item.result||'Result not recorded.')+'</p>';
+ h+='<dl class="research-dates"><div><dt>'+(item.eventDate?esc(item.dateLabel||'Activity date'):'Report date')+'</dt><dd>'+esc(date?fD(date):'Not provided')+'</dd></div>';
+ if(item.reportedAt&&item.eventDate)h+='<div><dt>Report posted</dt><dd>'+esc(fD(item.reportedAt))+'</dd></div>';
+ if(item.threadDate)h+='<div><dt>Thread started</dt><dd>'+esc(fD(item.threadDate))+'</dd></div>';
+ if(item.checkedAt)h+='<div><dt>Source checked</dt><dd>'+esc(fD(item.checkedAt))+'</dd></div>';
+ h+='</dl>';
+ if(item.evidenceKind==='source-index')h+='<p class="research-caveat">Historical list; individual report dates and offer versions are not established.</p>';
+ if(link)h+='<a class="research-source" href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">Read '+esc(item.sourceName||'original source')+' ↗</a>';else h+='<p class="research-caveat">No source link saved.</p>';
+ if(!curated)h+='<div class="ph-actions"><button class="ph-mini" onclick="openCommunityDPEditor('+profileSectionAttr(JSON.stringify(item.id))+')">Edit report</button><button class="ph-mini" onclick="deleteCommunityDP('+profileSectionAttr(JSON.stringify(item.id))+')">Remove</button></div>';
+ return h+'</article>';
+}
 function rTips(){
-  const groups=buildDatapointGroups();
-  const userCount=loadUserDatapoints().length;
-  const communityCount=getCommunityDatapoints().length;
-  let h='';
-  h+='<div class="dp-shell">';
-  h+='<div class="dp-summary"><div class="ttl">Bank datapoints</div><div class="sub">Confirmed methods and community reports. Past results do not guarantee qualification.</div></div>';
-  h+='<input class="sinput dp-search" id="datapoints-search" aria-label="Search datapoints" placeholder="Search bank, method, or note..." value="'+esc(dpSearch)+'" oninput="updateViewSearch(\'datapoints\',this.value,this.selectionStart)">';
-  h+='<div class="rcard"><div class="rcard-row"><div class="nm">Coverage</div><div class="ph2">'+groups.length+' banks</div></div><div class="sub" style="margin-top:4px">'+userCount+' confirmed user datapoints · '+communityCount+' community datapoints</div></div>';
-  if(!groups.length){
-    h+='<div class="empty"><div class="em">🗂️</div><p>No datapoints matched your search.</p></div>';
-  }else{
-    groups.forEach(g=>{
-      const open=dpExpandedBankKey===g.key;
-      h+='<div class="dp-bank">';
-      h+='<button type="button" class="dp-head" aria-expanded="'+open+'" onclick="toggleDPBank(\''+g.key+'\')">';
-      h+=bankLogo(g.bank,true);
-      h+='<div class="dp-info"><div class="dp-name">'+esc(g.bank)+'</div><div class="dp-meta"><span class="dp-count user">'+g.user.length+' confirmed</span><span class="dp-count community">'+g.community.length+' community</span></div></div>';
-      h+='<div class="dp-arrow">'+(open?'−':'＋')+'</div></button>';
-      if(open){
-        h+='<div class="dp-body">';
-        h+='<div class="ph-actions" style="justify-content:flex-end;margin:2px 0 8px"><button class="ph-mini ph-del" onclick="event.stopPropagation();deleteDPBankGroup(\''+g.key+'\',\''+encodeURIComponent(g.bank)+'\')">Delete bank</button></div>';
-        h+='<div class="dp-block"><div class="dp-block-h"><div class="dp-block-t">Confirmed User Datapoints</div><button class="dp-add" onclick="event.stopPropagation();addUserDPForBank(\''+encodeURIComponent(g.bank)+'\')">+ Add confirmed</button></div>';
-        if(g.user.length){
-          g.user.forEach(item=>{
-            h+='<div class="dp-ref"><div class="dp-ref-top"><div><div class="dp-ref-title">'+esc(item.method)+'</div><div class="dp-ref-sub">'+esc(item.note||'No notes.')+'</div><div class="ph-help" style="margin-top:6px">Last confirmed '+esc(fD(item.lastConfirmedAt||item.updatedAt||item.createdAt))+(item.entryId?' · linked to tracker history':'')+'</div></div><span class="tag b">Confirmed</span></div><div class="ph-actions"><button class="ph-mini ph-save" onclick="openUserDPEditor(\''+item.id+'\')">Edit</button><button class="ph-mini ph-del" onclick="deleteUserDP(\''+item.id+'\')">Remove</button></div></div>';
-          });
-        }else{
-          h+='<div class="dp-empty">No confirmed methods saved.</div>';
-        }
-        h+='</div>';
-        h+='<div class="dp-block"><div class="dp-block-h"><div class="dp-block-t">Community Datapoints</div><button class="dp-add" onclick="event.stopPropagation();addCommunityDPForBank(\''+encodeURIComponent(g.bank)+'\')">+ Add community</button></div>';
-        if(g.community.length){
-          g.community.forEach(item=>{
-            h+='<div class="dp-ref"><div class="dp-ref-top"><div><div class="dp-ref-title">'+esc(item.method)+'</div><div class="dp-ref-sub">'+esc(item.result||'No community note saved.')+'</div></div><span class="tag '+(((item.result||'').toLowerCase().includes('work')||(item.result||'').toLowerCase().includes('safe'))?'y':'f')+'">Community</span></div>'+(item.link?'<a class="dp-link" href="'+item.link+'" target="_blank" rel="noopener">Open source</a>':'<div class="ph-help" style="margin-top:6px">No source link saved</div>')+'<div class="ph-actions"><button class="ph-mini ph-save" onclick="openCommunityDPEditor(\''+item.id+'\')">Edit</button><button class="ph-mini ph-del" onclick="deleteCommunityDP(\''+item.id+'\')">Remove</button></div></div>';
-          });
-        }else{
-          h+='<div class="dp-empty">No community reports saved.</div>';
-        }
-        h+='</div>';
-        h+='</div>';
-      }
-      h+='</div>';
-    });
-  }
-  h+='<div class="sec">📚 Resources</div>';
-  DOC_LINKS.forEach(([t,u])=>{h+='<a href="'+u+'" target="_blank" rel="noopener" class="feed-c"><div class="feed-t">🔗 '+esc(t)+'</div></a>'});
-  h+='</div>';
-  return h;
+ const groups=buildDatapointGroups(),catalog=window.BTCommunityCatalog||{};
+ let h='<div class="research-shell dp-shell"><header class="research-intro dp-summary"><span class="research-eyebrow">COMMUNITY EXPERIENCE</span><h2>Bank datapoints</h2><p>A datapoint is someone’s report of what happened. Compare the account, method and date before using it.</p><button class="research-text-button" onclick="switchMainTab(\'storage\')">View saved bank terms →</button><button class="dp-add research-new-report" onclick="newDPReport()">+ Add a report</button></header>';
+ h+='<input class="sinput dp-search" id="datapoints-search" aria-label="Search datapoints" placeholder="Search bank, method, or note..." value="'+esc(dpSearch)+'" oninput="updateViewSearch(\'datapoints\',this.value,this.selectionStart)">';
+ h+='<div class="research-switch" role="group" aria-label="Report view">'+[['all','All reports'],['personal','My saved notes']].map(([v,t])=>'<button aria-pressed="'+(dpFilters.view===v)+'" onclick="setDPFilter(\'view\',\''+v+'\')">'+t+'</button>').join('')+'</div>';
+ h+='<details class="research-filters"><summary>Filter reports</summary><div class="research-filter-grid">';
+ h+=dpSelect('scope','Banks',[['all','All banks'],['mine','My tracked banks']]);
+ h+=dpSelect('type','Account type',[['all','All account types'],['personal','Personal'],['business','Business']]);
+ h+=dpSelect('result','Result',[['all','All results'],['worked','Reported success'],['failed','Reported failure'],['mixed','Mixed reports'],['pending','Still waiting'],['unknown','Not recorded']]);
+ h+=dpSelect('source','Source',[['all','All sources'],['reddit','Reddit'],['doc','Doctor of Credit']]);
+ h+=dpSelect('dated','Dates',[['all','All dates'],['recent','Dated within 90 days']]);
+ h+='</div><button class="research-text-button" onclick="resetDPFilters()">Reset filters</button><p class="research-caveat">Filters apply to community reports. Your saved notes stay visible.</p></details>';
+ h+='<div class="research-coverage"><b>'+groups.reduce((n,g)=>n+g.community.length,0)+' community reports</b><span>'+groups.length+' banks shown · Catalog checked '+esc(catalog.checkedAt?fD(catalog.checkedAt):'date unavailable')+'</span></div>';
+ h+='<details class="research-help"><summary>How to read these reports</summary><p>Reported success means a person received a payment or reported a qualifying result. Mixed reports means people had different results. Still waiting does not mean failure.</p><p>DD means direct deposit, such as a paycheck. An ACH push is a bank transfer started from the sending account. A bank transfer is not automatically a qualifying direct deposit.</p><p>'+esc(catalog.coverage||'Coverage is limited to sources shown.')+'</p><p>Source checked is the research date, not the transaction date. Community reports never change your saved offer rules or deadlines.</p></details>';
+ if(!groups.length)h+='<div class="research-empty">No matching reports. Try another bank or reset the filters.</div>';
+ groups.forEach(g=>{
+ const open=dpExpandedBankKey===g.key,last=dpReportDate(g.community[0]||{});
+ h+='<section class="dp-bank research-bank"><button class="dp-head" type="button" aria-expanded="'+open+'" onclick="toggleDPBank(\''+g.key+'\')">'+bankLogo(g.bank,true)+'<span class="dp-info"><span class="dp-name">'+esc(g.bank)+'</span><span class="dp-meta">'+g.community.length+' community · '+g.user.length+' saved · '+(g.accountType==='business'?'Business':'Personal / unspecified')+(g.entryCount?' · Tracked':'')+'</span>'+(last?'<span class="research-latest">Latest dated result '+esc(fD(last))+'</span>':'')+'</span><span class="dp-arrow" aria-hidden="true">'+(open?'−':'+')+'</span></button>';
+ if(open){
+ h+='<div class="dp-body"><div class="research-add"><button class="dp-add" onclick="addUserDPForBank('+profileSectionAttr(JSON.stringify(encodeURIComponent(g.bank)))+')">+ My experience</button><button class="dp-add" onclick="addCommunityDPForBank('+profileSectionAttr(JSON.stringify(encodeURIComponent(g.bank)))+')">+ Source report</button></div>';
+ if(g.user.length){h+='<h3 class="research-section-label">My saved notes</h3>';g.user.forEach(x=>{h+='<article class="research-report personal"><span class="research-kind">Personal record</span><h3>'+esc(x.method)+'</h3><p>'+esc(x.note||'No notes saved.')+'</p><p class="research-caveat">Saved date '+esc(x.lastConfirmedAt?fD(x.lastConfirmedAt):'not provided')+(x.entryId?' · From tracker history':'')+'</p><div class="ph-actions"><button class="ph-mini" onclick="openUserDPEditor('+profileSectionAttr(JSON.stringify(x.id))+')">Edit</button><button class="ph-mini" onclick="deleteUserDP('+profileSectionAttr(JSON.stringify(x.id))+')">Remove</button></div></article>'})}
+ if(g.community.length){h+='<h3 class="research-section-label">Community reports</h3>';g.community.forEach(x=>h+=renderCommunityReport(x))}else h+='<div class="research-empty">No reports match this view. Add your experience when you have a result to record.</div>';
+ h+='</div>';
+ }h+='</section>';
+ });
+ h+='<details class="research-help"><summary>Find more reports</summary><p>Open these sources to look for reports published after the catalog date.</p><a class="research-source" href="https://www.reddit.com/r/churning/search/?q=Bank%20Bonus%20Weekly&amp;restrict_sr=1&amp;sort=new" target="_blank" rel="noopener noreferrer">Reddit bank bonus threads ↗</a><a class="research-source" href="https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/" target="_blank" rel="noopener noreferrer">Doctor of Credit transfer reports ↗</a></details></div>';
+ return h;
 }
 function rPhone(){const rows=getPhoneBook();const q=(phoneSearch||'').toLowerCase().trim();const filtered=q?rows.filter(r=>r.bank.toLowerCase().includes(q)||r.personal.toLowerCase().includes(q)||r.business.toLowerCase().includes(q)):rows;let h='<div class="sec">Customer Service Numbers</div>';h+='<input class="sinput" placeholder="Search banks or phone numbers..." value="'+esc(phoneSearch||'')+'" oninput="phoneSearch=this.value;R()" id="phs">';h+='<button class="tc-btn" style="height:auto;padding:14px 16px;margin-bottom:10px" onclick="showPhoneAdd=!showPhoneAdd;R()">'+I.phone+'<span>'+(showPhoneAdd?'Hide add bank form':'Add new bank phone')+'</span></button>';if(showPhoneAdd){h+='<div class="ph-add-card"><div class="ph-top"><div><div class="nm">Add Bank</div><div class="ph-help">Create a phone entry manually with separate personal and business numbers.</div></div></div><div class="fg" style="margin-bottom:8px"><label>Bank Name</label><input id="ph_new_bank" class="ph-field" placeholder="e.g. Guaranty Bank"></div><div class="ph-edit-grid"><div><span class="ph-label">Personal</span><input id="ph_new_personal" class="ph-field" placeholder="1-800-000-0000"></div><div><span class="ph-label">Business</span><input id="ph_new_business" class="ph-field" placeholder="1-800-000-0000"></div></div><div class="ph-actions"><button class="ph-mini ph-save" onclick="addPhoneTabRow()">Save</button><button class="ph-mini ph-reset" onclick="showPhoneAdd=false;R()">Cancel</button></div></div>'}if(!filtered.length)return h+'<div class="empty"><div class="em">📞</div><p>No phone entries found.</p></div>';filtered.forEach((row,idx)=>{const bankEnc=encodeURIComponent(row.bank);const isCustom=!!row.custom&&!hasDefaultPhone(row.bank);h+='<div class="ph-card">'+bankLogo(row.bank,false)+'<div style="flex:1"><div class="ph-top"><div><div class="nm">'+esc(row.bank)+'</div><div class="ph-help">Edit and save personal/business numbers from this tab.</div></div>'+(isCustom?'<span class="tag b">Custom</span>':'')+'</div><div class="ph-edit-grid"><div><span class="ph-label">Personal</span><input id="ph_p_'+idx+'" class="ph-field" value="'+esc(row.personal||'')+'" placeholder="No personal number"></div><div><span class="ph-label">Business</span><input id="ph_b_'+idx+'" class="ph-field" value="'+esc(row.business||'')+'" placeholder="No business number"></div></div><div class="ph-actions"><button class="ph-mini ph-save" onclick="savePhoneTabRow(\''+bankEnc+'\','+idx+','+(isCustom?'true':'false')+')">Save</button>'+(hasDefaultPhone(row.bank)?'<button class="ph-mini ph-reset" onclick="resetPhoneTabRow(\''+bankEnc+'\')">Reset</button>':'<button class="ph-mini ph-del" onclick="deletePhoneTabRow(\''+bankEnc+'\')">Delete</button>')+(row.personal?'<a href="tel:'+esc(row.personal)+'" class="ph-mini ph-reset" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Call Personal</a>':'')+(row.business?'<a href="tel:'+esc(row.business)+'" class="ph-mini ph-reset" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Call Business</a>':'')+'</div></div></div>'});return h}
 function rRules(){let h='<div class="sec">Churn Rules \u2014 MO + Nationwide</div><input class="sinput" placeholder="Search..." oninput="this.dataset.q=this.value;R()" id="rs">';const q=(document.getElementById('rs')||{}).value||'';const fl=q?RULES.filter(r=>r[0].toLowerCase().includes(q.toLowerCase())):RULES;h+='<div class="rcard" style="margin-bottom:8px"><div class="nm">Tracker Bonus Display Rule</div><div class="sub" style="margin-top:4px">On the Tracker tab, the $ bonus amount shows only when a bank has a saved bonus amount and the status is Working or Countdown Active.</div></div>';fl.forEach(([bank,rule,mo,churnable,moAvail,closeFee,maint,notes])=>{h+='<div class="rcard" style="display:flex;align-items:flex-start;gap:10px">'+bankLogo(bank,false)+'<div style="flex:1"><div class="rcard-row"><div class="nm">'+esc(bank)+'</div><div style="text-align:right"><div class="ph">'+esc(rule)+'</div><div class="ph2">'+mo+'mo</div></div></div><div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:2px">';h+=churnable?'<span class="tag y">\u2705 Churnable</span>':'<span class="tag n">\u274C Not Churnable</span>';if(moAvail)h+='<span class="tag m">\uD83D\uDCCD MO</span>';if(closeFee&&closeFee!=='None')h+='<span class="tag f">\u26A0 '+esc(closeFee)+'</span>';h+='<span class="tag '+(maint.includes('$0')||maint.includes('free')?'b':'f')+'">'+esc(maint)+'</span>';h+='</div>';if(notes)h+='<div class="sub">'+esc(notes)+'</div>';h+='</div></div>'});return h}

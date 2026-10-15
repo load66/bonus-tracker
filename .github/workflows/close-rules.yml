@@ -79,7 +79,7 @@ jobs:
         run: node tests/operations-interactions.test.js
 
       - name: Run next-action consistency and data preservation tests
-        run: node tests/next-actions.test.js && node tests/specific-actions.test.js
+        run: node tests/next-actions.test.js && node tests/specific-actions.test.js && node tests/research-tabs.test.js
 
       - name: Run churn eligibility evidence tests
         run: node tests/eligibility-gate.test.js
