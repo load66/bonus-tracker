@@ -27,6 +27,7 @@ try{
  s.openCommunityDPEditor(custom.id);run("dpEditor.result='Updated result';saveDPEditor()");
  const edited=s.loadCommunityDatapoints()[0];assert.equal(edited.result,'Updated result');assert.equal(edited.eventDate,custom.eventDate);assert.equal(edited.extraProvenance,custom.extraProvenance);
  const seed=run('defaultCommunityRows().find(isOfferReference)');
+ assert(!s.untouchedCommunitySeed({...seed,privateNote:'My saved evidence'}),'Custom provenance treated as built-in seed');assert(!s.untouchedCommunitySeed({...seed,eventDate:'2026-09-29'}),'Dated personal edit treated as unchanged default');assert(!s.untouchedCommunitySeed({...seed,id:'my-own-report'}),'Personal report treated as built-in seed');
  s.saveCommunityDatapoints([seed,{...seed,id:'edited-seed',result:'My edited note'}]);
  assert(!s.getCommunityDatapoints().some(x=>x.id===seed.id),'Untouched offer reference remains in Datapoints');
  assert(s.getCommunityDatapoints().some(x=>x.id==='edited-seed'),'Personal edit was hidden');

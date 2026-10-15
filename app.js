@@ -2259,9 +2259,9 @@ function normalizeCommunityDatapoint(row,i){
  out.outcome=['worked','failed','mixed','pending','unknown'].includes(x.outcome)?x.outcome:'unknown';return out;
 }
 function untouchedCommunitySeed(x){
- return DATA_POINTS.some(([bank,method,result,link])=>x.bank===bank&&x.method===method&&x.result===result&&x.link===link);
+ return !Object.keys(x).some(k=>!['id','bank','method','result','link','outcome','product','accountType','reportedAt','eventDate','threadDate','checkedAt','sourceName','evidenceKind','dateLabel'].includes(k))&&!['product','accountType','reportedAt','eventDate','threadDate','checkedAt','sourceName','evidenceKind','dateLabel'].some(k=>x[k])&&(!x.outcome||x.outcome==='unknown')&&DATA_POINTS.some(([bank,method,result,link],i)=>x.id==='cdp_'+i&&x.bank===bank&&x.method===method&&x.result===result&&x.link===link);
 }
-function isOfferReference(x){return safeExternalUrl(x.link).includes('doctorofcredit.com/')&&!x.link.includes('/knowledge-base/list-methods-banks-count-direct-deposits/')&&DATA_POINTS.some(([b,m,r,u])=>b===x.bank&&m===x.method&&r===x.result&&u===x.link)}
+function isOfferReference(x){return untouchedCommunitySeed(x)&&safeExternalUrl(x.link).includes('doctorofcredit.com/')&&!x.link.includes('/knowledge-base/list-methods-banks-count-direct-deposits/')&&DATA_POINTS.some(([b,m,r,u])=>b===x.bank&&m===x.method&&r===x.result&&u===x.link)}
 function communitySig(x){return normalizeBankFamily(x.bank)+'|'+String(x.method||'').trim().toLowerCase()}
 function defaultCommunityRows(){return DATA_POINTS.map(([bank,method,result,link],i)=>normalizeCommunityDatapoint({id:'cdp_'+i,bank,method,result,link},i))}
 function loadCommunityDatapoints(){
