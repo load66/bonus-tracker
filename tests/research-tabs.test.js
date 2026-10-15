@@ -14,6 +14,7 @@ try{
   if(x.eventDate)assert.equal(s.dpValidDate(x.eventDate),x.eventDate);
   if(x.evidenceKind==='source-index')assert.equal(x.eventDate,'','Summary invented an event date');
  }
+ const query=s.document.querySelector;s.document.querySelector=q=>q==='.research-filters'?{open:true}:query(q);assert(s.rTips().includes('class="research-filters" open'),'Open filter panel collapsed on render');s.document.querySelector=query;run('dpFiltersOpen=false');
  assert.equal(s.dpValidDate('2026-02-31'),'');assert.equal(s.dpValidDate('2026-09-29'),'2026-09-29');
  const before=JSON.stringify([...storage]);s.loadCommunityDatapoints();s.getCommunityDatapoints();s.rTips();s.rTermsStorage();
  assert.equal(JSON.stringify([...storage]),before,'Research view wrote storage');

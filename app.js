@@ -298,7 +298,7 @@ function termsDisplayBuckets(){
 }
 function renderTermsCycle(x,previous=false){
  const raw=termsArchiveSourceText(x),promo=safeExternalUrl(x.promoSourceUrl),fee=safeExternalUrl(x.feeScheduleSourceUrl),rules=Array.isArray(x.eligibilityRules)?x.eligibilityRules:[];
- let h='<div class="archive-cycle"><div class="research-report-top"><span class="research-kind">'+(previous?'Previous offer':'Saved offer')+'</span><b>'+(x.bonus?esc(fM(x.bonus)):'Bonus not saved')+'</b></div><dl class="research-dates"><div><dt>Account opened</dt><dd>'+esc(x.opened?fD(x.opened):'Not saved')+'</dd></div><div><dt>Terms saved / reviewed</dt><dd>'+esc((x.termsVerifiedAt||x.capturedAt)?fD(x.termsVerifiedAt||x.capturedAt):'Not recorded')+'</dd></div></dl>';
+ let h='<div class="archive-cycle"><div class="research-report-top"><span class="research-kind">'+(previous?'Previous offer':'Saved offer')+'</span><b>'+(x.bonus?esc(fM(x.bonus)):'Bonus not saved')+'</b></div><dl class="research-dates"><div><dt>Account opened</dt><dd>'+esc(x.opened?fD(x.opened):'Not saved')+'</dd></div><div><dt>Terms saved / reviewed</dt><dd>'+esc((x.termsVerifiedAt||x.capturedAt)?fD(String(x.termsVerifiedAt||x.capturedAt).slice(0,10)):'Not recorded')+'</dd></div></dl>';
  if(!raw)h+='<p class="research-caveat">Original terms have not been saved for this account. Notes below may be incomplete.</p>';
  const facts=[['Bonus requirements',x.completeBonusText],['Monthly fee',x.monthlyFeeAmountText||x.monthlyFeeYNText],['How to avoid the fee',x.monthlyFeeWaiverText||x.avoidMonthlyFeeText],['Closing the account',x.closeRuleText||x.earlyTerminationFeeText],['Offer deadline',x.expirationDateText]];
  if(facts.some(([,v])=>v)||rules.length){h+='<details class="research-help"><summary>Saved requirements & fees</summary><dl class="archive-facts">';facts.forEach(([k,v])=>{if(v)h+='<div><dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd></div>'});if(rules.length)h+='<div><dt>When another bonus may be available</dt><dd>'+rules.map(r=>esc(eligibilityRuleStorageLabel(r))).join('<br>')+'</dd></div>';h+='</dl><p class="research-caveat">Saved account information; the original offer text controls. Missing details require review.</p></details>'}
@@ -3289,7 +3289,7 @@ let showAnalyzer=false,analyzerText='',analyzerResult=null,analyzerIsBiz=false;
 let showInlineAZ=false,inlineResult=null;
 let phoneSearch='',showPhoneAdd=false;
 let storageSearch='';
-let dpSearch='',dpExpandedBankKey='';
+let dpSearch='',dpExpandedBankKey='',dpFiltersOpen=false;
 let dpFilters={view:'all',scope:'all',result:'all',type:'all',source:'all',dated:'all'};
 let profileSearch='',activeProfileKey='';
 let inlineUiState={};
@@ -4249,17 +4249,18 @@ function renderCommunityReport(item){
 }
 function rTips(){
  const groups=buildDatapointGroups(),catalog=window.BTCommunityCatalog||{};
+ dpFiltersOpen=document.querySelector('.research-filters')?.open??dpFiltersOpen;
  let h='<div class="research-shell dp-shell"><header class="research-intro dp-summary"><span class="research-eyebrow">COMMUNITY EXPERIENCE</span><h2>Bank datapoints</h2><p>A datapoint is someone’s report of what happened. Compare the account, method and date before using it.</p><button class="research-text-button" onclick="switchMainTab(\'storage\')">View saved bank terms →</button><button class="dp-add research-new-report" onclick="newDPReport()">+ Add a report</button></header>';
  h+='<input class="sinput dp-search" id="datapoints-search" aria-label="Search datapoints" placeholder="Search bank, method, or note..." value="'+esc(dpSearch)+'" oninput="updateViewSearch(\'datapoints\',this.value,this.selectionStart)">';
  h+='<div class="research-switch" role="group" aria-label="Report view">'+[['all','All reports'],['personal','My saved notes']].map(([v,t])=>'<button aria-pressed="'+(dpFilters.view===v)+'" onclick="setDPFilter(\'view\',\''+v+'\')">'+t+'</button>').join('')+'</div>';
- h+='<details class="research-filters"><summary>Filter reports</summary><div class="research-filter-grid">';
+ h+='<details class="research-filters"'+(dpFiltersOpen?' open':'')+'><summary>Filter reports</summary><div class="research-filter-grid">';
  h+=dpSelect('scope','Banks',[['all','All banks'],['mine','My tracked banks']]);
  h+=dpSelect('type','Account type',[['all','All account types'],['personal','Personal'],['business','Business']]);
  h+=dpSelect('result','Result',[['all','All results'],['worked','Reported success'],['failed','Reported failure'],['mixed','Mixed reports'],['pending','Still waiting'],['unknown','Not recorded']]);
  h+=dpSelect('source','Source',[['all','All sources'],['reddit','Reddit'],['doc','Doctor of Credit']]);
  h+=dpSelect('dated','Dates',[['all','All dates'],['recent','Dated within 90 days']]);
  h+='</div><button class="research-text-button" onclick="resetDPFilters()">Reset filters</button><p class="research-caveat">Filters apply to community reports. Your saved notes stay visible.</p></details>';
- h+='<div class="research-coverage"><b>'+groups.reduce((n,g)=>n+g.community.length,0)+' community reports</b><span>'+groups.length+' banks shown · Catalog checked '+esc(catalog.checkedAt?fD(catalog.checkedAt):'date unavailable')+'</span></div>';
+ h+='<div class="research-coverage"><b>'+groups.reduce((n,g)=>n+g.community.length,0)+' reports &amp; summaries</b><span>'+groups.length+' banks shown · Catalog checked '+esc(catalog.checkedAt?fD(catalog.checkedAt):'date unavailable')+'</span></div>';
  h+='<details class="research-help"><summary>How to read these reports</summary><p>Reported success means a person received a payment or reported a qualifying result. Mixed reports means people had different results. Still waiting does not mean failure.</p><p>DD means direct deposit, such as a paycheck. An ACH push is a bank transfer started from the sending account. A bank transfer is not automatically a qualifying direct deposit.</p><p>'+esc(catalog.coverage||'Coverage is limited to sources shown.')+'</p><p>Source checked is the research date, not the transaction date. Community reports never change your saved offer rules or deadlines.</p></details>';
  if(!groups.length)h+='<div class="research-empty">No matching reports. Try another bank or reset the filters.</div>';
  groups.forEach(g=>{
