@@ -34,7 +34,7 @@
     return b==='bonus'?(e.bonusRecd||''):b==='opened'?(e.opened||''):(e.closed||'');
   }
   function churnBufferDaysFor(e){
-    try{const v=window.BTEligibilityGate?.validate(e);return v?.ok&&v?.decision==='repeatable'?5:0}catch{return 0}
+    try{const v=window.BTEligibilityGate?.validate(e);return v?.ok&&v?.decision==='repeatable'?2:0}catch{return 0}
   }
   function nextReopen(e){
     if(!e||typeof isNonRepeatableEntry==='function'&&isNonRepeatableEntry(e))return'';
@@ -42,7 +42,7 @@
     if(!v?.ok||v.decision!=='repeatable')return'';
     const base=churnBasisDate(e);if(!base||!v.period)return'';
     const raw=v.period.unit==='days'?addD(base,v.period.value):v.period.unit==='months'?addM(base,v.period.value):addM(base,v.period.value*12);
-    return raw?addD(raw,5):'';
+    return raw?addD(raw,2):'';
   }
   function churnReadyDate(e){return nextReopen(e)}
   function daysLeft(e){const d=churnReadyDate(e);return d?Math.max(0,dB(td(),d)):null}
