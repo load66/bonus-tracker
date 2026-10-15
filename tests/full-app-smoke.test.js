@@ -59,16 +59,16 @@ module.exports={sandbox,document,app,storage,errors};
 if(require.main===module)setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.63',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.4.63',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.64',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.4.64',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.13',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
-    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.63',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
-    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.63',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
+    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.64',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
+    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.64',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.13',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
     assert(sandbox.BTEligibilityGate?.VERSION==='1.3.0',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
-    assert(sandbox.btLifecycleStatusVersion==='3.4.63-status1',`Unexpected lifecycle status version ${sandbox.btLifecycleStatusVersion}`);
-    assert(sandbox.btSmartAttentionVersion==='3.4.63-action1',`Unexpected Action Center version ${sandbox.btSmartAttentionVersion}`);
-    assert(sandbox.btUiFeedbackVersion==='3.4.63-feedback1',`Unexpected UI feedback version ${sandbox.btUiFeedbackVersion}`);
+    assert(sandbox.btLifecycleStatusVersion==='3.4.64-status1',`Unexpected lifecycle status version ${sandbox.btLifecycleStatusVersion}`);
+    assert(sandbox.btSmartAttentionVersion==='3.4.64-action1',`Unexpected Action Center version ${sandbox.btSmartAttentionVersion}`);
+    assert(sandbox.btUiFeedbackVersion==='3.4.64-feedback1',`Unexpected UI feedback version ${sandbox.btUiFeedbackVersion}`);
     const lifecycleSamples=[
       {bank:'Progress Bank',opened:'2026-09-01',dataPoint:'Make a qualifying direct deposit',customTimers:[]},
       {bank:'Await Bank',reqMet:'2026-09-20',payoutTimingText:'within 30 calendar days',customTimers:[]},
@@ -218,7 +218,10 @@ if(require.main===module)setTimeout(()=>{
       ]};
       return {official:btOfficialEligibilityDate(e),safe:nextReopen(e),policy:normalizeLifecycleEntry({...e}).churnTrackingPolicy};
     })()`,sandbox);
-    assert(multiRuleDate.official==='2028-08-01'&&multiRuleDate.safe==='2028-08-06'&&/multi-rule/.test(multiRuleDate.policy),'Multi-rule churn countdown did not use the latest actual clearing date');
+    assert(multiRuleDate.official==='2028-08-01'&&multiRuleDate.safe==='2028-08-03'&&/multi-rule/.test(multiRuleDate.policy),'Multi-rule churn countdown did not use the latest actual clearing date');
+
+    const lafBuffer=sandbox.normalizeLifecycleEntry({bank:'Lafayette Federal Credit Union',opened:'2026-10-31',bonus:250,analyzedTC:'Boost300 qualified direct deposit'});
+    assert(sandbox.safeCloseDate(lafBuffer)==='2027-05-02','Lafayette close date must preserve six calendar months and a separate two-day cushion');
 
     const replacementIds=vm.runInContext(`(function(){
       const keep=entries;
@@ -277,7 +280,7 @@ if(require.main===module)setTimeout(()=>{
     assert(wc.reqMoney===1000&&wc.reqIsTotal===true&&wc.reqDays===90,'Wells consumer $1,000 / 90-day requirement failed');
     assert(Number(wc.fundedDays||0)===0&&Number(wc.holdDays||0)===0&&Number(wc.minHoldDays||0)===0,'Wells consumer received false funding/hold requirements');
     assert(wc.closeRestrictionType==='payout-only'&&wc.closeBufferDays===0,'Wells consumer payout-only close rule failed');
-    assert(wc.churnable===true&&wc.churnability==='repeatable'&&wc.churn==='1'&&wc.churnBasis==='bonus'&&wc.sourceEligibilityBasis==='bonus-received'&&wc.churnBufferDays===5,'Wells tracker churn countdown is not anchored to the source bonus-received rule');
+    assert(wc.churnable===true&&wc.churnability==='repeatable'&&wc.churn==='1'&&wc.churnBasis==='bonus'&&wc.sourceEligibilityBasis==='bonus-received'&&wc.churnBufferDays===2,'Wells tracker churn countdown is not anchored to the source bonus-received rule');
     assert(/not stated in bonus disclosure/i.test(wc.monthlyFeeYNText||''),'Wells fee disclosure was invented instead of deferred to the separate fee schedule');
     const wt=sandbox.tcV3MakeSuggestedTimers(wc,'2026-08-10');
     assert(wt.some(t=>/\$1,000 qualifying electronic deposits/i.test(t.text)&&Number(t.daysRequired)===90),'Wells requirement timer missing');
@@ -296,12 +299,12 @@ if(require.main===module)setTimeout(()=>{
     const preBonusPlan=sandbox.closePlanForEntry(repaired);
     assert(preBonusPlan.rows.some(x=>x.label==='Earliest close'&&x.value==='After $400 posts'),'Wells earliest-close summary is still contradictory');
     const eligibility=sandbox.normalizeLifecycleEntry({...repaired,reqMet:'2026-08-20',bonusRecd:'2026-09-01',closed:'2026-09-10'});
-    assert(sandbox.nextReopen(eligibility)==='2027-09-06'&&sandbox.churnReadyDate(eligibility)==='2027-09-06','Wells churn countdown did not start from the source bonus-received date');
+    assert(sandbox.nextReopen(eligibility)==='2027-09-03'&&sandbox.churnReadyDate(eligibility)==='2027-09-03','Wells churn countdown did not start from the source bonus-received date');
     const genericRepeat=sandbox.normalizeLifecycleEntry({bank:'Generic Repeat Bank',accountType:'personal',bonus:200,opened:'2026-01-01',bonusRecd:'2026-02-01',closed:'2026-03-05',churnable:true,churnability:'repeatable',churn:'2',churnPeriodValue:24,churnPeriodUnit:'months',churnBasis:'bonus',sourceEligibilityBasis:'bonus-received',churnBufferDays:10,eligibilityEvidenceText:'Not eligible if you received a Generic Repeat Bank checking bonus within the past 24 months.',eligibilityEvidenceSource:'official-promotion-terms'});
-    assert(genericRepeat.churnBasis==='bonus'&&genericRepeat.sourceEligibilityBasis==='bonus-received'&&genericRepeat.churnBufferDays===5,'Repeatable entry did not preserve source eligibility basis + buffer');
-    assert(sandbox.nextReopen(genericRepeat)==='2028-02-06','Generic churn timer did not start from its saved bonus-received basis');
+    assert(genericRepeat.churnBasis==='bonus'&&genericRepeat.sourceEligibilityBasis==='bonus-received'&&genericRepeat.churnBufferDays===2,'Repeatable entry did not preserve source eligibility basis + buffer');
+    assert(sandbox.nextReopen(genericRepeat)==='2028-02-03','Generic churn timer did not start from its saved bonus-received basis');
     const legacyUnknownBasis=sandbox.normalizeLifecycleEntry({bank:'Pending Eligibility Bank',bonus:100,bonusRecd:'2026-04-01',closed:'2026-04-10',churnable:true,churnability:'repeatable',churn:'1'});
-    assert(sandbox.nextReopen(legacyUnknownBasis)==='2027-04-15','Closed legacy churn record did not fall back conservatively from its saved close date');
+    assert(sandbox.nextReopen(legacyUnknownBasis)==='2027-04-12','Closed legacy churn record did not fall back conservatively from its saved close date');
     sandbox.openAdd();
     sandbox.btModalSet('bank','Wells Fargo');sandbox.btModalSet('accountType','personal');sandbox.btModalSet('bonus','400','number');sandbox.setModalChurnability('repeatable');sandbox.setModalChurnRule('1');sandbox.setModalChurnBasis('bonus');sandbox.btModalSet('opened','2026-08-10');sandbox.btModalSet('monthlyFeeYNText','Not stated in bonus disclosure — separate Wells Fargo fee schedule applies');sandbox.btModalSet('avoidMonthlyFeeText','Review the Wells Fargo Consumer Account Fee and Information Schedule.');vm.runInContext("modal.churnPeriodValue=12;modal.churnPeriodUnit='months';modal.eligibilityEvidenceText='Not eligible if you received a Wells Fargo consumer checking bonus within the past 12 months.';modal.eligibilityEvidenceSource='official-promotion-terms'",sandbox);
     sandbox.btWizardStep(1);
@@ -309,7 +312,7 @@ if(require.main===module)setTimeout(()=>{
     assert(/Can this bonus be earned again\? \*/.test(wizardBasics)&&/Eligibility clock starts from \*/.test(wizardBasics)&&/exact eligibility wording from the offer/i.test(wizardBasics)&&/Churn T&C verified/.test(wizardBasics),'Guided editor did not show verified T&C churn evidence');
     sandbox.btWizardStep(4);
     const wizardReview=sandbox.rModal();
-    assert(/Future eligibility/.test(wizardReview)&&/12 months after bonus payout received \+ 5-day safety buffer/.test(wizardReview),'Guided review did not show the T&C-verified source-based eligibility policy');
+    assert(/Future eligibility/.test(wizardReview)&&/12 months after bonus payout received \+ 2-day safety buffer/.test(wizardReview),'Guided review did not show the T&C-verified source-based eligibility policy');
 
     const fourLeaf='FourLeaf Checking Up to $550 Bonus Offer. Open a Free Checking, Smart Checking, or Student Checking account between February 2, 2026 and December 31, 2026. Have a Qualifying Direct Deposit post within ninety (90) calendar days of account opening. A Qualifying Direct Deposit is a recurring electronic deposit of a paycheck, pension, or government benefits of $500.00 or more. The First Direct Deposit Bonus of $350 will be deposited within sixty (60) calendar days following the initial Qualifying Direct Deposit. Continue to have a Qualifying Direct Deposit for twelve (12) consecutive months for an additional $100 and twenty-four (24) consecutive months for another $100. The checking account must remain open and in good standing up to and including the date each bonus is deposited. You must not have previously received a new checking account opening related bonus from FourLeaf.';
     const fr=sandbox.tcV3Analyze(fourLeaf,{noGlobalFallback:true});

@@ -68,3 +68,6 @@ AI explains saved facts, cites its supporting fields and identifies missing info
 8. Deliver the verified offer-specific JSON with a short summary of key requirements and any remaining limitation.
 
 No offer-specific financial values or dates have been invented in this standard. Each future import must be generated from its own verified sources and the user's actual enrollment/account information.
+## Optional date cushion
+
+From runtime v3.4.64, the app adds a two-calendar-day optional cushion after the latest supported repeat-eligibility restriction. Keep the bank restriction and its exact anchor unchanged. This does not extend qualification or payout deadlines, verify an unresolved legacy rule, or replace a separately saved account-closure buffer. Legacy Lafayette Boost300 closure uses six calendar months plus two days; structured closure terms continue to control their own saved buffer.

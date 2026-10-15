@@ -152,7 +152,7 @@ async function exercise(name,engine,url){
     const backup=JSON.parse(await fs.readFile(backupFile,'utf8'));
     check('backup contains records, history, and terms',backup.entries.length===1&&backup.entries[0].id===id&&Object.keys(backup.termsArchive).length>0&&backup.entries[0].history.length>0);
     await close();check('closure uses actual date',(await record()).closed==='2026-05-01');
-    check('eligibility uses payout plus exact months and buffer',await page.evaluate(()=>btOfficialEligibilityDate(entries[0])==='2027-04-15'&&nextReopen(entries[0])==='2027-04-20'));
+    check('eligibility uses payout plus exact months and buffer',await page.evaluate(()=>btOfficialEligibilityDate(entries[0])==='2027-04-15'&&nextReopen(entries[0])==='2027-04-17'));
     await button('Undo').click();check('undo restores account and notes',!(await record()).closed&&(await record()).notes===backup.entries[0].notes);
     await close();
     await page.locator('#bt-data-menu>summary').click();

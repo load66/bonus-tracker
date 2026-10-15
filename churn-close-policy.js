@@ -1,8 +1,8 @@
-/* BonusTracker v3.4.63 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
+/* BonusTracker v3.4.64 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
 (function(){
   'use strict';
-  const VER='3.4.63';
-  const SAFETY_BUFFER_DAYS=5;
+  const VER='3.4.64';
+  const SAFETY_BUFFER_DAYS=2;
 
   function decision(e){
     try{if(typeof window.churnDecisionForEntry==='function')return window.churnDecisionForEntry(e)}catch{}
@@ -95,7 +95,7 @@
       }
       const legacyReady=!v?.ok?legacyFallbackReadyDate(e):'';
       e.churnBufferDays=(v?.ok||legacyReady)?SAFETY_BUFFER_DAYS:0;
-      e.churnTrackingPolicy=v?.ok?(rules.length>1?'multi-rule-latest-date-plus-5-day-buffer':('source-'+e.sourceEligibilityBasis+'-plus-5-day-buffer')):(legacyReady?'legacy-saved-rule-plus-5-day-buffer':'source-basis-required');
+      e.churnTrackingPolicy=v?.ok?(rules.length>1?'multi-rule-latest-date-plus-2-day-buffer':('source-'+e.sourceEligibilityBasis+'-plus-2-day-buffer')):(legacyReady?'legacy-saved-rule-plus-2-day-buffer':'source-basis-required');
       if(e.analysis&&typeof e.analysis==='object'){
         e.analysis.churnBasis=e.churnBasis;
         e.analysis.sourceEligibilityBasis=e.sourceEligibilityBasis;
@@ -177,7 +177,7 @@
   }
   function polishModalHtml(h){
     h=String(h||'');
-    h=h.replace(/Saved now so the next-eligible date is automatic later\./g,'Use the exact eligibility wording from the offer. BonusTracker adds a 5-day safety buffer after the saved source date.');
+    h=h.replace(/Saved now so the next-eligible date is automatic later\./g,'Use the exact eligibility wording from the offer. BonusTracker adds a 2-day safety buffer after the saved source date.');
     h=h.replace(/After closing, the countdown will start automatically from the actual close date\./g,'Choose the eligibility start date from the offer terms; the tracker will not invent one.');
     return h;
   }

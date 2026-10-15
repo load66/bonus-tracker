@@ -84,7 +84,7 @@ jobs:
       - name: Run churn eligibility evidence tests
         run: node tests/eligibility-gate.test.js
 
-      - name: Run universal 5-day churn buffer tests
+      - name: Run universal 2-day churn buffer tests
         run: node tests/churn-buffer.test.js
 
       - name: Run hardening regression tests

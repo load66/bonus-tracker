@@ -88,7 +88,7 @@ setTimeout(()=>{
     assert.equal(run("addM('2025-01-31',1)"),'2025-02-28');
     assert.equal(run("dB('2026-03-07','2026-03-09')"),2,'DST must not change calendar-day differences');
     run(`entries[0].bonusRecd='2026-06-01';entries[0].closed='2027-08-01';entries[0].eligibilityRules=[{id:'bonus-24m',basis:'bonus-received',periodValue:24,periodUnit:'months',evidenceText:'Not eligible if you received a checking bonus within the past 24 months.',evidenceSource:'official-promotion-terms'},{id:'closed-12m',basis:'account-closed',periodValue:12,periodUnit:'months',evidenceText:'Not available if you closed a checking account within the previous 12 months.',evidenceSource:'official-promotion-terms'}];`);
-    assert.equal(run('btNextActionForEntry(entries[0]).context.date'),'2028-08-06');
+    assert.equal(run('btNextActionForEntry(entries[0]).context.date'),'2028-08-03');
     assert.equal(run('btNextActionForEntry(entries[0]).context.date'),run('churnReadyDate(entries[0])'));
     assert.match(run('btNextActionForEntry(entries[0]).context.explanation'),/account closed/);
 
