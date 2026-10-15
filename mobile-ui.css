@@ -1,4 +1,4 @@
-/* v3.4.69: a consistent mobile hierarchy; financial rules stay in the engine. */
+/* v3.4.70: a consistent mobile hierarchy; financial rules stay in the engine. */
 .tracker-overview{margin-bottom:16px}
 .ops-action-toggle{width:100%;min-height:52px;background:transparent;border:0;color:inherit;font-family:inherit;text-align:left;cursor:pointer}
 .ops-action-toggle .ops-action-title{font-size:14px;font-weight:700;letter-spacing:0;text-transform:none;color:#F3F7FC}
@@ -173,3 +173,30 @@
   .guided-modal .guided-progress button{min-height:48px;font-size:11px;padding:6px 2px}
   .guided-modal .guided-progress button span{font-size:10px}
 }
+
+/* One readable account replacement flow in light and dark surfaces. */
+.ow-box.replacement-dialog{width:min(100%,480px);max-width:480px;padding:20px!important;border:1px solid var(--border);border-radius:18px;background:#101824!important;color:#f2f5fc!important;overflow-x:hidden;overflow-y:auto;max-height:calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overscroll-behavior:contain}
+.replacement-dialog h3{font-size:19px!important;line-height:1.3!important;margin-bottom:8px}
+.replacement-dialog .sub{font-size:13px!important;line-height:1.5!important;color:#aebdd0!important;margin-bottom:16px;overflow-wrap:anywhere}
+.replacement-options{border:0;padding:0;margin:0 0 16px;min-width:0;display:grid;gap:10px}
+.replacement-options legend{font-size:12px;font-weight:600;color:#aebdd0;margin-bottom:8px;padding:0}
+.replacement-choice,.replacement-match{position:relative;display:flex;align-items:flex-start;gap:10px;min-width:0;width:100%;margin:0!important;padding:14px!important;border:1px solid #33445d;border-radius:14px;background:#0b121d;color:#f2f5fc!important;cursor:pointer;text-align:left;font:inherit}
+.replacement-choice.selected{border-color:#719aff;background:#12223c}
+.replacement-choice input[type=radio]{flex:none;appearance:auto;width:18px!important;height:18px!important;min-height:0!important;min-width:0!important;margin:4px 0 0;padding:0;accent-color:#719aff}
+.replacement-account{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:8px 10px;align-items:center;min-width:0;width:100%}
+.replacement-dialog>.replacement-account{padding:14px;border:1px solid #33445d;border-radius:14px;background:#0b121d;margin-bottom:16px}
+.replacement-account>.blogo,.replacement-account>svg,.replacement-account>img,.replacement-account>.bank-logo,.replacement-account>[class*=logo]{width:40px!important;height:40px!important;min-width:0!important;border-radius:10px}
+.replacement-account-info{min-width:0}.replacement-account-name{font-weight:700;font-size:15px;line-height:1.4;overflow-wrap:anywhere}
+.replacement-account-meta{color:#b6c5d9;font-size:12px;line-height:1.5;margin-top:3px;overflow-wrap:anywhere}
+.replacement-account-amount{font-size:15px;font-weight:700;color:#97b6ff;overflow-wrap:anywhere;max-width:90px}
+.replacement-account-dates{grid-column:1/-1;display:grid;gap:5px;margin:4px 0 0;padding-top:10px;border-top:1px solid #2c3c53}
+.replacement-account-dates:empty{display:none}.replacement-account-dates>div{display:grid;grid-template-columns:54px minmax(0,1fr);gap:8px;font-size:12px;line-height:1.5}
+.replacement-account-dates dt{color:#aebdd0}.replacement-account-dates dd{margin:0;color:#e0e8f5;overflow-wrap:anywhere}
+.replacement-actions{display:grid;gap:8px}.replacement-dialog .replacement-actions button{width:100%;min-height:48px;margin:0;padding:12px!important;border-radius:12px;font:inherit;font-size:14px!important;font-weight:600;line-height:1.4;white-space:normal;cursor:pointer}
+.replacement-dialog .btn-p{background:#315ed4!important;color:#fff!important;border:1px solid #7699ff!important}
+.replacement-dialog .btn-s{background:#1a273a!important;color:#e0e8f5!important;border:1px solid #435775!important}
+.replacement-back{background:transparent;color:#b6c5d9;border:1px solid transparent}
+.replacement-dialog button:focus-visible,.replacement-choice:focus-within{outline:2px solid #a4c0ff;outline-offset:3px}
+@media(max-width:360px){.ow-box.replacement-dialog{padding:16px!important}.replacement-choice{padding:12px!important}.replacement-account{grid-template-columns:32px minmax(0,1fr);gap:8px}.replacement-account-amount{grid-column:2;max-width:none}.replacement-account>.blogo,.replacement-account>svg,.replacement-account>img,.replacement-account>.bank-logo,.replacement-account>[class*=logo]{width:32px!important;height:32px!important}}
+
+.replacement-new-offer{display:grid;gap:4px;padding:12px 0 16px;font-size:12px;color:#b6c5d9;line-height:1.5;overflow-wrap:anywhere}.replacement-new-offer strong{font-size:14px;color:#f2f5fc}

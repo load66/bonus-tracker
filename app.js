@@ -1,7 +1,7 @@
-/* Version 3.4.69: read-only churn-aware and area-aware bank offer discovery. */
+/* Version 3.4.70: read-only churn-aware and area-aware bank offer discovery. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.69';
+const APP_VERSION='3.4.70';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -4301,86 +4301,58 @@ function rReqMet(){
   h+='</div></div>';
   return h
 }
+function replacementDisplayStatus(e){
+  try{const stage=window.btLifecycleStageForEntry?.(e);if(stage?.label)return stage.label}catch{}
+  const raw=replaceCandidateStatus(e);
+  try{return displayStatusMeta(raw,e)?.label||'Review required'}catch{return'Review required'}
+}
+function replacementAccountCard(e){
+  const ref=getEntryDisplayId(e)||'';
+  let h='<div class="replacement-account">'+bankLogo(e.bank,true)+'<div class="replacement-account-info"><div class="replacement-account-name">'+esc(e.bank||'Account')+'</div><div class="replacement-account-meta">'+esc(entryTypeLabel(e))+' · '+esc(replacementDisplayStatus(e))+'</div></div>';
+  if(e.bonus>0)h+='<div class="replacement-account-amount">'+fM(e.bonus)+'</div>';
+  h+='<dl class="replacement-account-dates">';
+  if(e.opened)h+='<div><dt>Opened</dt><dd>'+fD(e.opened)+'</dd></div>';
+  if(e.closed)h+='<div><dt>Closed</dt><dd>'+fD(e.closed)+'</dd></div>';
+  if(ref&&!/pending/i.test(ref))h+='<div><dt>Record</dt><dd>'+esc(ref)+'</dd></div>';
+  return h+'</dl></div>';
+}
 function rOverwrite(){
   if(!overwritePrompt)return'';
-  const p=overwritePrompt, ex=p.existingEntry, isActive=isActiveEntry(ex);
-  const s=status(ex);
-  const isHistory=!isActive;
-  let h='<div class="cbg" onclick="overwritePrompt=null;R()"><div class="ow-box" onclick="event.stopPropagation()">';
-  h+='<h3>'+esc(p.removeEntryId?'Replace old entry and remove duplicate?':(isHistory?'Start new churn cycle?':'Matching bank already exists'))+'</h3>';
-  h+='<div class="sub">'+(p.removeEntryId
-    ?'<strong>'+esc(p.newData.bank)+'</strong> will overwrite the selected old entry and remove the duplicate entry you were editing.'
-    :(isHistory
-      ?'<strong>'+esc(p.newData.bank)+'</strong> matches an older/cooldown record. Replace that record to start the next churn cycle, or choose Create Separate Entry if you really want a duplicate.'
-      :'<strong>'+esc(p.newData.bank)+'</strong> already has an active matching entry. Edit it, replace it, or create a separate entry intentionally.'
-    )
-  )+'</div>';
-  h+='<div class="ow-existing">'+bankLogo(ex.bank)+'<div class="ow-info"><div class="nm">'+esc(ex.bank)+'</div><div class="det">'+esc(s)+' · ID: '+esc(getEntryDisplayId(ex)||ex.id||'')+'</div>';
-  if(ex.opened)h+='<div class="det">Opened: '+fD(ex.opened)+'</div>';
-  if(ex.closed)h+='<div class="det">Closed: '+fD(ex.closed)+'</div>';
-  h+='</div><div class="amt">'+fM(ex.bonus)+'</div></div>';
-  h+='<div style="display:flex;flex-direction:column;gap:8px">';
-  if(isHistory){
-    h+='<button class="c-g" style="width:100%;padding:12px;border-radius:12px;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer" onclick="doOverwrite()">Start New Churn Cycle / Replace This Record</button>';
-    h+='<button style="width:100%;padding:12px;border-radius:12px;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;background:#EFF6FF;color:var(--accent)" onclick="doOpenExisting()">View / Edit Existing Record</button>';
-    h+='<button style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;background:#fff;color:var(--text)" onclick="doAddNew()">Create Separate New Entry</button>';
-  }else{
-    h+='<button style="width:100%;padding:12px;border-radius:12px;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;background:#EFF6FF;color:var(--accent)" onclick="doOpenExisting()">Edit Existing Entry</button>';
-    h+='<button class="c-g" style="width:100%;padding:12px;border-radius:12px;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer" onclick="doOverwrite()">Replace Existing Entry</button>';
-    h+='<button style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;background:#fff;color:var(--text)" onclick="doAddNew()">Create Separate New Entry</button>';
-  }
-  h+='<button class="c-c" style="width:100%;padding:10px;border-radius:10px;border:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer" onclick="overwritePrompt=null;R()">Cancel</button>';
-  h+='</div></div></div>';
-  return h;
+  const p=overwritePrompt,ex=p.existingEntry,isHistory=!isActiveEntry(ex);
+  let h='<div class="cbg" onclick="overwritePrompt=null;R()"><div class="ow-box replacement-dialog" role="dialog" aria-modal="true" aria-labelledby="replacement-confirm-title" onclick="event.stopPropagation()">';
+  h+='<h3 id="replacement-confirm-title">'+(p.removeEntryId?'Replace and remove duplicate?':isHistory?'Start a new cycle?':'Replace this account?')+'</h3>';
+  h+='<div class="sub">'+(p.removeEntryId?'Replace the account below and remove the duplicate you were editing.':isHistory?'Use your new offer details for this account. The previous cycle will be retained in its history.':'Replace the account below with your new offer details. Review the existing account before confirming.')+'</div>';
+  h+=replacementAccountCard(ex);
+  h+='<div class="replacement-new-offer"><span>New offer</span><strong>'+esc(p.newData.bank)+(p.newData.bonus>0?' · '+fM(p.newData.bonus):'')+'</strong>'+(p.newData.opened?'<span>Opened '+fD(p.newData.opened)+'</span>':'')+'</div>';
+  h+='<div class="replacement-actions">';
+  h+='<button type="button" class="btn-p" onclick="doOverwrite()">'+(isHistory?'Start new cycle':'Confirm replacement')+'</button>';
+  h+='<button type="button" class="btn-s" onclick="doOpenExisting()">View existing account</button>';
+  h+='<button type="button" class="btn-s" onclick="doAddNew()">Add separate account</button>';
+  h+='<button type="button" class="replacement-back" onclick="overwritePrompt=null;R()">Cancel</button>';
+  return h+'</div></div></div>';
 }
 function rMatchPicker(){
   if(!matchPickerPrompt)return'';
   const p=matchPickerPrompt;
-  let h='<div class="cbg" onclick="matchPickerPrompt=null;R()"><div class="ow-box" onclick="event.stopPropagation()">';
-  h+='<h3>Pick the right bank match</h3>';
-  h+='<div class="sub">We found bank-family matches for <strong>'+esc(p.newData.bank)+'</strong>. Pick Personal or Business so the app does not create the wrong duplicate.</div>';
-  h+='<div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">';
-  p.matches.forEach(m=>{
-    const st=status(m);
-    h+=`<button style="width:100%;text-align:left;padding:12px;border-radius:12px;border:1px solid var(--border);background:#fff;font-family:inherit;cursor:pointer" onclick="chooseMatch('${m.id}')">`;
-    h+='<div style="display:flex;align-items:center;gap:10px">'+bankLogo(m.bank,true)+'<div style="flex:1;min-width:0">';
-    h+='<div style="font-size:13px;font-weight:700">'+esc(m.bank)+'</div>';
-    h+='<div style="font-size:10px;color:var(--muted);margin-top:2px">'+esc(entryTypeLabel(m))+' · ID: '+esc(getEntryDisplayId(m))+' · '+esc(st)+'</div>';
-    h+='</div><div style="font-size:10px;font-weight:700;color:var(--accent)">Use</div></div>';
-    h+='</button>';
-  });
-  h+='</div>';
-  h+='<div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">';
-  h+='<button class="c-g" style="width:100%;padding:12px;border-radius:12px;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer" onclick="skipMatchPickerToNew()">Create Separate New Entry</button>';
-  h+='<button class="c-c" style="width:100%;padding:10px;border-radius:10px;border:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer" onclick="matchPickerPrompt=null;R()">Cancel</button>';
-  h+='</div></div></div>';
+  let h='<div class="cbg" onclick="matchPickerPrompt=null;R()"><div class="ow-box replacement-dialog" role="dialog" aria-modal="true" aria-labelledby="replacement-match-title" onclick="event.stopPropagation()">';
+  h+='<h3 id="replacement-match-title">Choose a matching account</h3><div class="sub">Select the correct account type for '+esc(p.newData.bank)+'.</div><div class="replacement-options">';
+  p.matches.forEach(m=>{h+='<button type="button" class="replacement-match" data-entry-id="'+esc(encodeURIComponent(m.id))+'" onclick="chooseMatch(decodeURIComponent(this.dataset.entryId))">'+replacementAccountCard(m)+'</button>'});
+  h+='</div><div class="replacement-actions"><button type="button" class="btn-s" onclick="skipMatchPickerToNew()">Add separate account</button><button type="button" class="replacement-back" onclick="matchPickerPrompt=null;R()">Cancel</button></div></div></div>';
   return h;
 }
 function rReplacementPicker(){
   if(!replacementPickerPrompt)return'';
-  const p=replacementPickerPrompt;
-  const selected=p.selectedId||p.candidates[0]?.id||'';
-  const sel=p.candidates.find(x=>x.id===selected)||p.candidates[0];
-  let h='<div class="cbg" onclick="replacementPickerPrompt=null;R()"><div class="ow-box" onclick="event.stopPropagation()">';
-  h+='<h3>'+esc(p.title||'Replace old entry?')+'</h3>';
-  h+='<div class="sub">'+esc(p.message||'Choose an old entry to replace, or create a separate new entry.')+'</div>';
-  h+='<div class="fg" style="margin-top:10px"><label>Old entry to replace</label><select onchange="setReplacementPickerTarget(this.value)">';
+  const p=replacementPickerPrompt,selected=p.selectedId||p.candidates[0]?.id||'';
+  let h='<div class="cbg" onclick="replacementPickerPrompt=null;R()"><div class="ow-box replacement-dialog" role="dialog" aria-modal="true" aria-labelledby="replacement-picker-title" onclick="event.stopPropagation()">';
+  h+='<h3 id="replacement-picker-title">Replace an old entry?</h3><div class="sub">'+(p.currentId?'Choose the account to replace. The duplicate you were editing will be removed after confirmation.':'Choose the account for your new offer. Review the replacement before saving.')+'</div>';
+  h+='<fieldset class="replacement-options"><legend>Matching account'+(p.candidates.length===1?'':'s')+'</legend>';
   p.candidates.forEach(c=>{
-    h+='<option value="'+esc(c.id)+'"'+(c.id===selected?' selected':'')+'>'+esc(replacementCandidateLabel(c))+'</option>';
+    h+='<label class="replacement-choice'+(c.id===selected?' selected':'')+'"><input type="radio" name="replacement-account" value="'+esc(c.id)+'" data-entry-id="'+esc(encodeURIComponent(c.id))+'"'+(c.id===selected?' checked':'')+' onchange="setReplacementPickerTarget(decodeURIComponent(this.dataset.entryId))">'+replacementAccountCard(c)+'</label>';
   });
-  h+='</select></div>';
-  if(sel){
-    h+='<div class="ow-existing">'+bankLogo(sel.bank)+'<div class="ow-info"><div class="nm">'+esc(sel.bank)+'</div><div class="det">'+esc(replaceCandidateStatus(sel))+' · '+esc(entryTypeLabel(sel))+' · ID: '+esc(getEntryDisplayId(sel)||sel.id||'')+'</div>';
-    if(sel.opened)h+='<div class="det">Opened: '+fD(sel.opened)+'</div>';
-    if(sel.closed)h+='<div class="det">Closed: '+fD(sel.closed)+'</div>';
-    h+='</div><div class="amt">'+fM(sel.bonus)+'</div></div>';
-  }
-  h+='<div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">';
-  h+='<button class="c-g" style="width:100%;padding:12px;border-radius:12px;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer" onclick="doReplacementPickerReplace()">Review Replace Selected Old Entry</button>';
-  if(!p.currentId)h+='<button style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;background:#fff;color:var(--text)" onclick="doReplacementPickerCreateSeparate()">Create Separate New Entry</button>';
-  h+='<button class="c-c" style="width:100%;padding:10px;border-radius:10px;border:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer" onclick="doReplacementPickerBack()">Back to Entry</button>';
-  h+='</div></div></div>';
-  return h
+  h+='</fieldset><div class="replacement-actions"><button type="button" class="btn-p" onclick="doReplacementPickerReplace()">Review replacement</button>';
+  if(!p.currentId)h+='<button type="button" class="btn-s" onclick="doReplacementPickerCreateSeparate()">Add separate account</button>';
+  h+='<button type="button" class="replacement-back" onclick="doReplacementPickerBack()">Back to entry</button>';
+  return h+'</div></div></div>';
 }
 function rAnalyzer(){let h='<div style="background:var(--card);border-radius:12px;padding:12px;margin-bottom:8px;border:1px solid var(--border)">';h+='<div style="font-size:12px;font-weight:700;margin-bottom:6px">\uD83D\uDD0D Terms review</div>';h+='<textarea class="fg" id="az_input" style="width:100%;min-height:120px;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:11px;outline:none;resize:vertical" placeholder="Paste full terms & conditions here...">'+esc(analyzerText)+'</textarea>';h+='<div style="display:flex;gap:4px;margin-top:4px"><button class="az-go" style="flex:1" onclick="runMainAnalyze()">Review</button><button class="btn-s" style="flex:0;margin:0;padding:8px 12px" onclick="showAnalyzer=false;analyzerText=\'\';analyzerResult=null;R()">Close</button></div>';if(analyzerResult){const r=analyzerResult;h+='<div style="margin-top:8px">';if(r.notesForTracker){h+='<div class="tc-box" style="padding:12px;border-radius:12px"><div class="tc-body" style="font-size:13px;line-height:1.8">'+highlightTC(r.notesForTracker)+'</div></div>'}else{h+='<div style="padding:12px;background:var(--bg);border-radius:12px;font-size:13px;line-height:1.8">';if(r.bonusAmount)h+='<div>* Bonus: '+esc(r.bonusAmount)+'</div>';if(r.ddAmount)h+='<div>* DD: '+esc(r.ddAmount)+(r.ddCount?' (x'+r.ddCount+')':'')+'</div>';if(r.debitTxns)h+='<div>* Debit Txns: '+esc(r.debitTxns)+'</div>';if(r.timeline)h+='<div>* Timeline: '+esc(r.timeline)+'</div>';if(r.monthlyFee)h+='<div>* Monthly Fee: '+esc(r.monthlyFee)+'</div>';if(r.promoCode)h+='<div>* Promo: '+esc(r.promoCode)+'</div>';if(r.churnRule)h+='<div>* Churn: '+esc(r.churnRule)+'</div>';if(r.earlyCloseFee)h+='<div>* Close Fee: '+esc(r.earlyCloseFee)+'</div>';h+='</div>'}h+='<button class="btn-p" style="margin-top:8px;font-size:13px;padding:12px" onclick="fillFromAI()">\u2B07 Review & Create Entry</button>';h+='</div>'}h+='</div>';return h}
 function openAdd(){modal={bank:'',accountType:'unknown',bonus:0,churn:'',churnable:null,churnability:'',churnReason:'',churnDecisionSource:'',opened:'',closed:'',bonusRecd:'',reqMet:'',notes:'',analyzedTC:'',minHoldDays:0,earlyCloseFee:0,closeFeeCountdownDays:'',dataPoint:'',reqDays:0,referralBonus:0,checklist:[],phoneNum:'',feeChecked:false,monthlyFeeYNText:'',promoCodeText:'',avoidMonthlyFeeText:'',eligibilityText:'',expirationDateText:'',requiredDaysText:'',completeBonusText:'',earlyTerminationFeeText:'',fundedDays:0,fundingAmount:0,fundingAmountText:'',payoutTimingText:'',customTimers:[],analysis:null,analyzerHistory:[],history:[]};overwritePrompt=null;matchPickerPrompt=null;replacementPickerPrompt=null;showInlineAZ=false;inlineResult=null;R()}
