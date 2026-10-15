@@ -507,6 +507,15 @@ async function exercise(name,engine,url){
       return {parsed:!!parsed.financialRules,valid:valid.ok,retained:JSON.stringify(projected.financialRules)===JSON.stringify(source.financialRules)&&projected.feeScheduleRaw===source.feeScheduleRaw,scoped:facts.some(f=>f.id==='financialrules'&&f.text.includes('Share Savings'))&&!facts.some(f=>f.id==='feeamount'),blocked:closeReadiness(broken).cls==='danger'&&BTBonusAI.guidanceFor(broken,'Can I close?').verdict==='Needs verification',unchanged:before===localStorage.getItem('bt_e_v4')};
     },require('./fixtures/financial-rules.cjs').fixture());
     for(const [key,value] of Object.entries(structuredProbe))check('structured v3 browser '+key,value);
+    const reviewProbe=await page.evaluate(source=>{
+      const before=localStorage.getItem('bt_e_v4');
+      btStageEntryPayload({kind:'BonusTrackerEntry',schemaVersion:3,verification:{promoSourceUrl:source.promoSourceUrl,feeScheduleSourceUrl:source.feeScheduleSourceUrl,termsVerifiedAt:source.termsVerifiedAt},entry:source});
+      const projected=collectModalEntryData(),after={...projected,reqMet:'2026-04-01',bonusRecd:'2026-04-15',monthlyFeeChecked:true};
+      let draftBlocked=false;try{btParseEntryFileText(JSON.stringify({kind:'BonusTrackerResearchDraft',importable:false}),'draft.json')}catch(e){draftBlocked=/review draft/.test(e.message)}
+      return {valid:BTFinancialRules.validate(projected).ok,unknown:projected.financialRules.closure.earlyCloseFee===null,manual:projected.closeRestrictionType==='manual-review'&&projected.closeRuleBasis==='manual',blocked:closeReadiness(after).cls==='danger'&&!safeCloseDate(after),draftBlocked,unchanged:before===localStorage.getItem('bt_e_v4')};
+    },require('./fixtures/financial-rules.cjs').reviewFixture());
+    for(const [key,value] of Object.entries(reviewProbe))check('financial v2 browser '+key,value);
+
     await button('Cancel').click();
     await page.evaluate(async()=>{await navigator.serviceWorker.ready});
     await page.waitForFunction(()=>!!navigator.serviceWorker.controller);

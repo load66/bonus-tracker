@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.66 — strict verified JSON import with professional in-app review and conditional multi-rule churn. */
+/* BonusTracker v3.4.67 — strict verified JSON import with professional in-app review and conditional multi-rule churn. */
 (function(){
   'use strict';
-  const VER='3.4.66';
+  const VER='3.4.67';
   const HASH_KEY='btadd=';
   const ALLOWED=[
     'bank','accountType','bonus','churn','churnable','churnability','churnBasis','churnBufferDays','churnReason','sourceEligibilityBasis','churnTrackingPolicy','churnDecisionSource','churnDecisionConfidence','churnDecisionConfirmedAt','churnPeriodValue','churnPeriodUnit','eligibilityRules','couponEnrollmentDate','offerEnrollmentDate','closedWithNegativeBalance','eligibilityScope','eligibilityEvidenceText','eligibilityAnchorEvidenceText','eligibilityEvidenceSource','eligibilityVerified','eligibilityVerifiedAt','eligibilityVerificationStatus','eligibilityVerificationReason','currentCustomerExcluded','currentCustomerEvidenceText','mustCloseBeforeReapply','reapplicationAction','promoSourceUrl','feeScheduleSourceUrl','termsVerifiedAt','schemaVersion','tcSourceRaw','tcSourceId','tcSourceUpdatedAt',
@@ -52,6 +52,7 @@
     return out;
   }
   function validatePayload(payload){
+    if(payload?.kind==='BonusTrackerResearchDraft'||payload?.importable===false)throw new Error('This is a review draft, not an importable entry. Use the validated BonusTrackerEntry JSON file.');
     if(payload?.schemaVersion!==undefined&&payload?.entry?.schemaVersion!==undefined&&payload.schemaVersion!==payload.entry.schemaVersion)throw new Error('Envelope and entry schema versions conflict.');
     let next=cleanPayload(payload);
     if(![1,2,3].includes(next.schemaVersion))throw new Error('This import schema version is unsupported.');

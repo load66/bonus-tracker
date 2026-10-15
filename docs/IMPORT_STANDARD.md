@@ -1,6 +1,6 @@
 # BonusTracker JSON generation standard
 
-Adopted October 13, 2026; revised October 14, 2026. Applies to every future BonusTracker import for Philip, including new conversations. Compatibility baseline: BonusTracker v3.4.50, strict numeric schemaVersion 3, and financialRules version 1. Existing schema v1/v2 records remain compatible; they are not the standard for new generated files. This document is a generation standard, not an importable offer or a claim that any bank's terms have been verified today.
+Adopted October 13, 2026; revised October 14, 2026. Applies to every future BonusTracker import for Philip, including new conversations. Compatibility baseline: BonusTracker v3.4.50, strict numeric schemaVersion 3, and financialRules version 1 or 2. Existing schema v1/v2 records remain compatible; they are not the standard for new generated files. This document is a generation standard, not an importable offer or a claim that any bank's terms have been verified today.
 
 ## Responsibility and release rule
 
@@ -22,7 +22,7 @@ Do not hand over a finalized import when an unresolved term could change the bon
 | Closure | Early-close charge, bonus forfeiture, hold period, exact anchor, contractual keep-open condition and separately identified safety buffer | `earlyCloseFee`, `earlyTerminationFeeText`, `closeRestrictionType`, `closeRuleBasis`, `minHoldDays`, `closeBufferDays`, `closeRuleText` |
 | Repeat eligibility | Every applicable restriction with its scope, exact basis, period/unit, evidence and any closure prerequisite | `eligibilityRules`, `churnability`, `churnable`, `sourceEligibilityBasis`, `churnPeriodValue`, `churnPeriodUnit`, `currentCustomerExcluded`, `mustCloseBeforeReapply`, evidence text fields |
 
-Use only the deployed runtime's recognized fields and values. New generated files must use numeric schemaVersion 3 and financialRules version 1. Include feeScheduleRaw and the complete financialRules package. Do not invent top-level properties or silently downgrade to bypass a failed validation. Checklist and arbitrary AI metadata remain unsupported import fields. Account-scoped companion objects are supported only inside financialRules.accounts, with explicit required status, charge, waiver logic and original evidence.
+Use only the deployed runtime's recognized fields and values. New generated files must use numeric schemaVersion 3 and financialRules version 1 or 2. Include feeScheduleRaw and the complete financialRules package. Do not invent top-level properties or silently downgrade to bypass a failed validation. Checklist and arbitrary AI metadata remain unsupported import fields. Account-scoped companion objects are supported only inside financialRules.accounts, with explicit required status, charge, waiver logic and original evidence.
 
 Preserve the enrolled promotion when current public wording differs. Identify the relevant version and enrollment period. Source URLs and dates alone do not prove the chosen product or offer applies.
 
@@ -59,7 +59,7 @@ AI explains saved facts, cites its supporting fields and identifies missing info
 ## Verification before delivery
 
 1. Recheck official source applicability and the promotion/fee version.
-2. Generate schemaVersion 3 with financialRules version 1, exact promotion/fee source text and only supported entry fields; run the current strict validator.
+2. Generate schemaVersion 3 with financialRules version 1 or 2, exact promotion/fee source text and only supported entry fields; run the current strict validator.
 3. Test the review-and-save round trip in an isolated context; compare important fields after saving.
 4. Test each deadline anchor, repeat rule and applicable closure/fee restriction against the canonical engine. Include end-of-month/calendar-month behavior, missing anchors and recurring-period cases when relevant.
 5. Confirm timers, requirement wording, closure readiness, fee review and repeat countdown agree. Do not let a generic buffer replace the bank's verified restriction.
@@ -75,3 +75,12 @@ From runtime v3.4.64, the app adds a two-calendar-day optional cushion after the
 ## Per-offer eligibility editor
 
 From v3.4.65, the account editor exposes all six existing eligibility anchors, exact calendar days/months/years, multiple saved restrictions, source wording, product/customer scope and negative-balance closure conditions. It uses the same eligibility engine as imports. A user can explicitly copy a known opening date into enrollment; missing dates remain unresolved. Changing a rule's anchor clears its old explicit anchor date. Preserve every applicable restriction and select the latest clearing date; a bank name alone never establishes the applicable rule. These controls do not create new schema fields or make unverified legacy terms verified.
+
+## Financial rule version 2 (runtime v3.4.67)
+
+SchemaVersion remains 3. financialRules version 1 remains supported unchanged; use version 2 for the following additions.
+
+- Balance-waiver metrics `minimum-beginning-day-balance` and `average-beginning-day-balance` preserve exact beginning-of-day wording. They are distinct from daily balance, average daily balance and statement-ending balance. Their evidence must explicitly establish the selected metric.
+- An unconfirmed early-close charge uses `closure.earlyCloseFee: null` only with `restrictionType: "manual-review"` and `basis: "manual"`. Retain the applicable official closure condition, original fee source evidence and an explicit explanation that the charge is unconfirmed. No zero-fee claim is made. Legacy numeric `earlyCloseFee: 0` is only a compatibility projection, never the authoritative charge. The structured null remains authoritative through import, review, save, backup and AI context.
+- Such an account can be imported for tracking known requirements, but closure remains blocked and no safe-close date may be shown, including after payout. This is a validated tracking import with an explicit unresolved closure check, not certification of complete closure terms or personal bonus eligibility. New offers still require exact bonus, activity, fee and waiver terms. Other unresolved material rules must not be finalized.
+- Research drafts are rejected with a draft-specific error before eligibility parsing. Generate a proper BonusTrackerEntry envelope with every applicable eligibility rule. Ordinary account closure wording does not create an additional account-ownership lookback.

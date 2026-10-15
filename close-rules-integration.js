@@ -138,8 +138,8 @@
       return{title:'Close Check',sub:'Closure saved',chip:ready.label,cls:ready.cls,rows,notes:[],compact:true}
     }
     const safe=safeDate(e),days=ruleDays(e),buffer=days?(parseInt(e.closeBufferDays,10)||0):0,type=core.typeForEntry(e);
-    rows.push({label:'Earliest close',value:safe?fD(safe):(type==='payout-only'&&e.bonus?'After '+fM(e.bonus)+' posts':e.bonusRecd?'Close after bonus posts':'Wait for bonus'),cls:safe&&daysSafe(e)<=0?'ok':safe?'warn':type==='payout-only'?'warn':'bad'});
-    rows.push({label:'Rule',value:days?(e.closeRuleDisplayText||`${days} days from ${closeRuleBasisLabel(basis(e)).toLowerCase()}${buffer?' + '+buffer+' day safety':''}`):(type==='payout-only'?'Close after bonus posts':'No fixed post-bonus hold'),cls:days?'':'ok'});
+    rows.push({label:'Earliest close',value:safe?fD(safe):(type==='review'?'Manual review required':type==='payout-only'&&e.bonus?'After '+fM(e.bonus)+' posts':e.bonusRecd?'Close after bonus posts':'Wait for bonus'),cls:safe&&daysSafe(e)<=0?'ok':safe?'warn':type==='payout-only'?'warn':'bad'});
+    rows.push({label:'Rule',value:days?(e.closeRuleDisplayText||`${days} days from ${closeRuleBasisLabel(basis(e)).toLowerCase()}${buffer?' + '+buffer+' day safety':''}`):(type==='review'?'Closure terms need review':type==='payout-only'?'Close after bonus posts':'No fixed post-bonus hold'),cls:type==='review'?'bad':days?'':'ok'});
     rows.push({label:'Final check',value:e.bonusRecd?'Bonus posted · no pending activity':'Wait for bonus to post',cls:e.bonusRecd?'':'bad'});
     return{title:'Close Check',sub:'One clear source of truth',chip:ready.label,cls:ready.cls,rows,notes:[],proof:core.sourceSentence(e),compact:true}
   }

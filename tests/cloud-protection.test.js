@@ -25,7 +25,7 @@ async function noticeCooldown(){
       Date:class extends Date{constructor(...a){super(...(a.length?a:[now]))}static now(){return now}},
       document:{getElementById:()=>null,addEventListener:()=>{}},addEventListener:()=>{},
       setTimeout:()=>0,clearTimeout:()=>{},setInterval:()=>({unref(){}}),
-      getBackupStorageKeys:()=>['bt_e_v4'],BT_APP_VERSION:'3.4.66',BTCloudCore:core,
+      getBackupStorageKeys:()=>['bt_e_v4'],BT_APP_VERSION:'3.4.67',BTCloudCore:core,
       BTPersistence:require('../persistence-transaction.js'),BTBonusAuth:{connected:()=>true,token:async()=> 'synthetic-token'},
       btNotify:(message,options)=>notices.push({message,...options}),
       fetch:async(url,options)=>{uploads++;if(failure)throw Error('Synthetic cloud outage');const p=JSON.parse(options.body);return{ok:true,status:200,json:async()=>({id:p.id,sha256:p.sha256,verified:true,entryCount:1,createdAt:new Date(now).toISOString()})}}};

@@ -88,8 +88,8 @@
   function ruleDays(e){const n=parseInt(e?.minHoldDays||e?.closeFeeCountdownDays||0,10)||0;return isFixed(e)&&n>0&&n<=730?n:0}
   function basisFor(e){return String(e?.closeRuleBasis||basisForText(e?.closeRuleText||'')||'opened')}
   function baseDate(e){const b=basisFor(e);return b==='bonus'?e?.bonusRecd||'':b==='reqmet'?e?.reqMet||'':b==='manual'?'':e?.opened||''}
-  function rawSafeDate(e){const d=ruleDays(e);return d?(baseDate(e)&&isoAddDays(baseDate(e),d)):e?.bonusRecd||null}
-  function safeCloseDate(e){const d=ruleDays(e);const buffer=d?(parseInt(e?.closeBufferDays,10)||0):0;return d?(baseDate(e)&&isoAddDays(baseDate(e),d+buffer)):e?.bonusRecd||null}
+  function rawSafeDate(e){if(typeForEntry(e)==='review')return null;const d=ruleDays(e);return d?(baseDate(e)&&isoAddDays(baseDate(e),d)):e?.bonusRecd||null}
+  function safeCloseDate(e){if(typeForEntry(e)==='review')return null;const d=ruleDays(e);const buffer=d?(parseInt(e?.closeBufferDays,10)||0):0;return d?(baseDate(e)&&isoAddDays(baseDate(e),d+buffer)):e?.bonusRecd||null}
   function daysUntilSafe(e,today){const s=safeCloseDate(e),t=today||new Date().toISOString().slice(0,10);if(!s)return null;const d=isoDiff(t,s);return d===null?null:Math.max(0,d)}
   function isInBuffer(e,today){if(!e?.opened||ruleDays(e)<=0||e.closed)return false;const raw=rawSafeDate(e),safe=safeCloseDate(e),t=today||new Date().toISOString().slice(0,10);if(!raw||!safe)return false;return isoDiff(t,raw)<=0&&isoDiff(t,safe)>0}
   function sourceSentence(e){return clean(e?.closeRuleSourceSentence||explicitRuleText(e)||payoutText([e?.closeRuleText,e?.analyzedTC,e?.completeBonusText].filter(Boolean).join(' '))||e?.closeRuleText||'')}
@@ -97,6 +97,8 @@
   function sanitizeEntry(e){
     if(!e||typeof e!=='object')return e;
     const x=e;
+    // Structured closure rules are validated separately; legacy text repair must not rewrite their basis or type.
+    if(x.financialRules)return x;
     let type=typeForEntry(x);
     const proof=explicitRuleText(x);
     let n=parseInt(x.minHoldDays||x.closeFeeCountdownDays||0,10)||0;
