@@ -38,9 +38,12 @@ setTimeout(()=>{
     assert.match(tiles,/ops-action-tile/);
     assert.match(tiles,/aria-label="Confirm requirements completed"/);
     assert.doesNotMatch(tiles,/ops-action-explanation|ops-date-proof|Why this action/);
-    const guidance=run('renderNextAccountGuidance(entries[0])');
-    assert.match(guidance,/qualifying activity with the bank/);
-    assert.match(guidance,/ops-date-proof/);
+    assert.match(tiles,/ops-tile-status/);
+    assert.match(tiles,/ops-tile-countdown/);
+    assert(tiles.includes(action.stage.label),'Countdown hid the lifecycle stage');
+    const account=run('expanded=entries[0].id;rTracker(entries)');
+    assert.doesNotMatch(account,/ops-date-proof|ops-action-why|Saved deadline|Why this action/);
+    assert.equal(run('entries[0].reqDays'),2,'Removing duplicate guidance changed the deadline');
     assert.equal(run('JSON.stringify(entries)'),before,'Recommendations must not mutate entries');
     assert.equal(JSON.stringify([...storage]),persisted,'Recommendations must not write storage');
     run('runNextAccountAction(entries[0].id)');
