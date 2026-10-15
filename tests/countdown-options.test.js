@@ -23,6 +23,13 @@ try{
  s.btEligibilitySetNegative('yes');assert.equal(run('nextReopen(modal)'),'2030-02-03');
  s.btEligibilityEditRule(0,'anchorDate','2026-04-01');s.btEligibilityEditRule(0,'basis','offer-enrollment');assert.equal(run('modal.eligibilityRules[0].anchorDate'),undefined,'Clock switch reused a different event date');
  s.btEligibilityEditRule(0,'evidenceText','</textarea><img src=x onerror=alert(1)>');assert(!run('btEligibilityEditorHtml(modal)').includes('<img src=x'),'Evidence escaped textarea');
+ run(`modal={bank:'Synthetic',churnable:true,churnability:'repeatable',eligibilityRules:[]};`);
+ s.btEligibilityApplyTemplate('combined');assert.equal(run('modal.eligibilityRules.length'),2);assert.equal(run('modal.eligibilityRules[0].periodValue'),24);assert.equal(run('modal.eligibilityRules[0].evidenceText'),'','Template must not fabricate evidence');assert.equal(run('BTEligibilityGate.validate(modal).ok'),false);
+ s.btEligibilityApplyTemplate('account-opened-60-months');assert.equal(run('modal.eligibilityRules.length'),3,'Template erased an existing restriction');assert.equal(run('modal.eligibilityRules[2].periodValue'),60);
+ const unchanged=run('JSON.stringify(modal)');s.btEligibilityApplyTemplate('unknown');assert.equal(run('JSON.stringify(modal)'),unchanged);
+ s.btEligibilitySetEvidence('currentCustomerEvidenceText','Not eligible for current checking account owners.');assert.equal(run('BTEligibilityGate.validate(modal).currentCustomerExcluded'),true);
+ h=run('btEligibilityEditorHtml(modal)');assert(h.includes('elig-rule-0-anchor'),'All clocks need a date override for prior accounts');assert(h.includes('<optgroup'),'Template library must be grouped');
+ s.btEligibilitySetEvidence('eligibilityEvidenceText','One-time bonus only.');assert(run('btEligibilityNonrepeatableHtml(modal)').includes('One-time bonus only.'));
  assert.equal(storage.get('bt_e_v4'),stored,'Editing saved live accounts without Save');
  console.log('Countdown editor passed: all clocks, explicit enrollment, exact periods, latest-date control, condition answers, save preservation, and safe text.');
  process.exit(0);

@@ -101,6 +101,12 @@ async function exercise(name,engine,url){
     check('rule stays expanded after changing clock',await page.locator('#elig-rule-0-anchor').isVisible());
     await page.locator('#elig-rule-0-anchor').fill('2026-02-01');await page.locator('#elig-rule-0-anchor').press('Tab');
     check('explicit rule date persists across rerender',await page.locator('#elig-rule-0-anchor').inputValue()==='2026-02-01');
+    await page.locator('#elig-template').selectOption('combined');
+    check('template appends without replacing existing rules',await page.locator('.eligibility-restriction').count()===4);
+    check('template does not invent evidence',await page.evaluate(()=>modal.eligibilityRules[2].evidenceText===''&&modal.eligibilityRules[3].periodValue===12));
+    await page.locator('#elig-customer').fill('Not eligible for current checking account owners.');await page.locator('#elig-customer').press('Tab');
+    check('customer exclusion wording survives rerender',await page.locator('#elig-customer').inputValue()==='Not eligible for current checking account owners.');
+
     await button('Cancel').click();
     await button('Quick Add').click();await button('CI Citi $300').click();
     check('Quick Add exposes bank/account/bonus',await page.locator('input[oninput*="\'bank\'"]').isVisible()&&await page.locator('select[onchange*="\'accountType\'"]').isVisible()&&await page.locator('input[oninput*="\'bonus\'"]').isVisible());

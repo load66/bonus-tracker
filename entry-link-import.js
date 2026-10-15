@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.65 — strict verified JSON import with professional in-app review and conditional multi-rule churn. */
+/* BonusTracker v3.4.66 — strict verified JSON import with professional in-app review and conditional multi-rule churn. */
 (function(){
   'use strict';
-  const VER='3.4.65';
+  const VER='3.4.66';
   const HASH_KEY='btadd=';
   const ALLOWED=[
     'bank','accountType','bonus','churn','churnable','churnability','churnBasis','churnBufferDays','churnReason','sourceEligibilityBasis','churnTrackingPolicy','churnDecisionSource','churnDecisionConfidence','churnDecisionConfirmedAt','churnPeriodValue','churnPeriodUnit','eligibilityRules','couponEnrollmentDate','offerEnrollmentDate','closedWithNegativeBalance','eligibilityScope','eligibilityEvidenceText','eligibilityAnchorEvidenceText','eligibilityEvidenceSource','eligibilityVerified','eligibilityVerifiedAt','eligibilityVerificationStatus','eligibilityVerificationReason','currentCustomerExcluded','currentCustomerEvidenceText','mustCloseBeforeReapply','reapplicationAction','promoSourceUrl','feeScheduleSourceUrl','termsVerifiedAt','schemaVersion','tcSourceRaw','tcSourceId','tcSourceUpdatedAt',
