@@ -420,9 +420,45 @@ async function exercise(name,engine,url){
     await page.getByPlaceholder('Search bank, method, or note...').pressSequentially('E2E');
     check('datapoint search keeps focus while typing',await page.getByPlaceholder('Search bank, method, or note...').inputValue()==='E2E'&&await page.evaluate(()=>document.activeElement.id==='datapoints-search'));
     check('datapoint bank is keyboard accessible',await page.locator('button.dp-head').getAttribute('aria-expanded')!==null);
+    await page.getByPlaceholder('Search bank, method, or note...').fill('Wells Fargo');
+    await page.locator('button.dp-head').first().click();
+    check('community report shows event and checked dates',await page.locator('.research-report').first().innerText().then(t=>t.includes('Bonus paid')&&t.includes('Source checked')&&t.includes('Reported success')));
+    check('datapoints no longer offers account deletion',await page.getByRole('button',{name:'Delete bank',exact:true}).count()===0);
+    await page.getByText('Filter reports',{exact:true}).click();
+    await page.getByLabel('Result',{exact:true}).selectOption('worked');
+    check('filter panel stays open after a selection',await page.locator('.research-filters').evaluate(e=>e.open));
+    await page.getByLabel('Source',{exact:true}).selectOption('reddit');
+    check('source filter returns dated Reddit reports',await page.locator('.research-report .research-source').first().getAttribute('href').then(u=>u.includes('reddit.com')));
+    await page.getByText('Filter reports',{exact:true}).click();
+    for(const width of [320,390,430]){
+      await page.setViewportSize({width,height:844});
+      check('datapoint mobile width '+width,await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&[...document.querySelectorAll('.research-report')].every(e=>e.scrollWidth<=e.clientWidth+1)));
+      if(width===390){await page.locator('.research-report').first().scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,name+'-datapoints-mobile.png')})}
+    }
+    await button('+ Add a report').click();
+    await page.locator('.research-editor-body input').first().fill('E2E Report Bank');
+    await page.locator('.research-editor-body input').nth(1).fill('Synthetic employer payroll');
+    await page.locator('.research-editor-body select').nth(1).selectOption('worked');
+    await page.locator('.research-editor-body textarea').fill('Synthetic report for browser verification');
+    await page.locator('.research-editor-body input[type=date]').first().fill('2026-09-30');
+    await page.locator('.research-editor-body input[type=url]').fill('https://example.test/report');
+    check('report editor footer stays within mobile viewport',await page.locator('.research-editor-footer').evaluate(e=>{const r=e.getBoundingClientRect();return r.bottom<=innerHeight+1&&r.top>0}));
+    await button('Save report').click();
+    check('source report save preserves activity date',await page.evaluate(()=>loadCommunityDatapoints().some(x=>x.bank==='E2E Report Bank'&&x.eventDate==='2026-09-30'&&x.outcome==='worked')));
     await button('T&C Archive').click();
     await page.getByPlaceholder('Search stored T&C...').pressSequentially('E2E');
     check('terms search keeps focus while typing',await page.getByPlaceholder('Search stored T&C...').inputValue()==='E2E'&&await page.evaluate(()=>document.activeElement.id==='terms-search'));
+    const termsBank=page.locator('.archive-bank').first();
+    check('terms bank starts collapsed',!(await termsBank.evaluate(e=>e.open)));
+    await termsBank.locator(':scope > summary').click();
+    await termsBank.getByText('Read original saved terms',{exact:true}).click();
+    check('archive reveals original evidence',(await termsBank.innerText()).includes('E2E Verification Bank checking promotional terms'));
+    for(const width of [320,390,430]){
+      await page.setViewportSize({width,height:844});
+      check('archive mobile width '+width,await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&[...document.querySelectorAll('.archive-raw')].every(e=>e.scrollWidth<=e.clientWidth+1)));
+      if(width===390){await page.locator('.archive-raw').first().scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,name+'-terms-archive-mobile.png')})}
+    }
+
     await button('Tracker').click();
     await page.evaluate(()=>{
       window.__dashboardMetrics=bonusPipelineMetrics;

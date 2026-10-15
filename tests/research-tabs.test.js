@@ -1,0 +1,54 @@
+'use strict';
+const assert=require('node:assert/strict'),vm=require('node:vm');
+const {sandbox:s,storage}=require('./full-app-smoke.test.js');
+const run=code=>vm.runInContext(code,s);
+try{
+ const catalog=s.BTCommunityCatalog;
+ assert.equal(catalog.checkedAt,'2026-10-15');
+ assert(catalog.reports.length>=20);
+ assert.equal(new Set(catalog.reports.map(x=>x.id)).size,catalog.reports.length);
+ for(const x of catalog.reports){
+  assert.match(x.link,/^https:\/\/(www\.)?(reddit\.com|doctorofcredit\.com)\//);
+  assert.equal(x.checkedAt,catalog.checkedAt);assert(x.method&&x.result&&x.product);
+  assert(['worked','failed','mixed','pending','unknown'].includes(x.outcome));
+  if(x.eventDate)assert.equal(s.dpValidDate(x.eventDate),x.eventDate);
+  if(x.evidenceKind==='source-index')assert.equal(x.eventDate,'','Summary invented an event date');
+ }
+ const query=s.document.querySelector;s.document.querySelector=q=>q==='.research-filters'?{open:true}:query(q);assert(s.rTips().includes('class="research-filters" open'),'Open filter panel collapsed on render');s.document.querySelector=query;run('dpFiltersOpen=false');
+ assert.equal(s.dpValidDate('2026-02-31'),'');assert.equal(s.dpValidDate('2026-09-29'),'2026-09-29');
+ const before=JSON.stringify([...storage]);s.loadCommunityDatapoints();s.getCommunityDatapoints();s.rTips();s.rTermsStorage();
+ assert.equal(JSON.stringify([...storage]),before,'Research view wrote storage');
+ const custom={id:'user-report-1',bank:'Chase',method:'Synthetic method',result:'Still checking',link:'https://example.test/report',outcome:'pending',eventDate:'2026-09-28',reportedAt:'2026-09-29',product:'Synthetic personal offer',accountType:'personal',sourceName:'Independent forum',extraProvenance:'Preserve me'};
+ s.saveCommunityDatapoints([custom]);
+ assert.equal(s.loadCommunityDatapoints()[0].extraProvenance,custom.extraProvenance);
+ const plan=s.stagePortableRestore({entries:[],communityDatapoints:s.loadCommunityDatapoints(),userDatapoints:[],bankReqs:{},phoneBook:[],profileEvents:[],offerHistory:{}});
+ assert(plan,'Restore plan not created');
+ const restored=JSON.parse(plan.writes.bt_community_datapoints_v1)[0];assert.equal(restored.eventDate,custom.eventDate);assert.equal(restored.reportedAt,custom.reportedAt);assert.equal(restored.extraProvenance,custom.extraProvenance);
+ s.openCommunityDPEditor(custom.id);run("dpEditor.result='Updated result';saveDPEditor()");
+ const edited=s.loadCommunityDatapoints()[0];assert.equal(edited.result,'Updated result');assert.equal(edited.eventDate,custom.eventDate);assert.equal(edited.extraProvenance,custom.extraProvenance);
+ const seed=run('defaultCommunityRows().find(isOfferReference)');
+ assert(!s.untouchedCommunitySeed({...seed,privateNote:'My saved evidence'}),'Custom provenance treated as built-in seed');assert(!s.untouchedCommunitySeed({...seed,eventDate:'2026-09-29'}),'Dated personal edit treated as unchanged default');assert(!s.untouchedCommunitySeed({...seed,id:'my-own-report'}),'Personal report treated as built-in seed');
+ s.saveCommunityDatapoints([seed,{...seed,id:'edited-seed',result:'My edited note'}]);
+ assert(!s.getCommunityDatapoints().some(x=>x.id===seed.id),'Untouched offer reference remains in Datapoints');
+ assert(s.getCommunityDatapoints().some(x=>x.id==='edited-seed'),'Personal edit was hidden');
+ const archive=s.rTermsStorage();assert(archive.includes('Older offer references'));assert(archive.includes('not your enrolled terms'));
+ const termsKey='bt_tc_archive_v1';
+ storage.set(termsKey,JSON.stringify({synthetic:{bank:'Synthetic Bank',current:{bank:'Synthetic Bank',accountType:'personal',opened:'2026-01-01',tcSourceRaw:'Original <terms> evidence'},versions:Array.from({length:10},(_,i)=>({bank:'Synthetic Bank',opened:`2025-01-${String(i+1).padStart(2,'0')}`,tcSourceRaw:'Older evidence '+i}))}}));
+ const storedBefore=storage.get(termsKey);
+ const view=s.rTermsStorage();assert(view.includes('Older evidence 9'),'Older cycles were truncated');assert(view.includes('Original &lt;terms&gt; evidence'),'Terms evidence not escaped');assert.equal(storage.get(termsKey),storedBefore);
+ run("storageSearch='Older evidence 9'");assert(s.rTermsStorage().includes('Synthetic Bank'),'Full-text historical search failed');run("storageSearch=''");
+ run("entries=[{id:'CHASE-BIZ',bank:'Chase',accountType:'business',opened:'2026-01-01'}];dpFilters.scope='mine'");
+ assert(!s.buildDatapointGroups().some(g=>g.community.some(x=>x.accountType==='personal')),'Business account matched personal reports');
+ run("dpFilters.scope='all';dpFilters.result='mixed'");assert(s.buildDatapointGroups().every(g=>g.community.every(x=>x.outcome==='mixed')));
+ run("dpFilters.result='all';dpFilters.dated='recent'");assert(s.buildDatapointGroups().every(g=>g.community.every(x=>!!s.dpReportDate(x))));run("resetDPFilters()");
+ s.saveCommunityDatapoints([custom]);
+ run("entries=[{id:'CHASE-P',bank:'Chase',opened:'2026-01-01',notes:'Keep financial record'}];saveReq('Chase',{completeBonusText:'Keep requirement'})");
+ const protectedBefore=run('JSON.stringify({entries,reqs:loadReqs(),terms:loadTermsArchive()})');
+ s.deleteDPBankGroup(s.bankKey('Chase'),encodeURIComponent('Chase'));run('cfm.action()');
+ assert.equal(run('JSON.stringify({entries,reqs:loadReqs(),terms:loadTermsArchive()})'),protectedBefore,'Deleting reports changed account or terms');
+ assert.equal(s.loadCommunityDatapoints().length,0);
+ const malicious=s.renderCommunityReport({id:'x\");window.pwned=true;//',method:'<img src=x onerror=alert(1)>',result:'<script>bad</script>',link:'javascript:alert(1)',outcome:'unknown'});
+ assert(!malicious.includes('href="javascript:'));assert(malicious.includes('&lt;img'));assert(malicious.includes('&lt;script&gt;'));
+ console.log('Research tabs passed: catalog dates/provenance, non-destructive legacy routing, metadata restore/edit, historical search, identity filters, XSS and report-only deletion');
+ process.exit(0);
+}catch(e){console.error(e.stack);process.exit(1)}
