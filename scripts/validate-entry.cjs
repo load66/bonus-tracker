@@ -13,6 +13,7 @@ try{
  sandbox.btStageEntryPayload(payload);
  const roundtrip=sandbox.collectModalEntryData();
  if(!roundtrip)throw Error('Entry review did not produce a valid record.');
+ for(const key of ['bonus','opened','reqDays','couponEnrollmentDate','offerEnrollmentDate','closeRuleBasis','closeRestrictionType'])if(parsed[key]!==undefined&&roundtrip[key]!==parsed[key])throw Error('Review/save projection changed '+key+'; correct the import wording or projection before delivery.');
  if(JSON.stringify(roundtrip.financialRules)!==JSON.stringify(parsed.financialRules)||roundtrip.feeScheduleRaw!==parsed.feeScheduleRaw)throw Error('Review/save projection lost rule or fee-source data.');
  const verdict=sandbox.BTFinancialRules.validate(roundtrip);if(!verdict.ok)throw Error(verdict.issues.map(x=>x.message).join('; '));
  const facts=sandbox.BTBonusAI.contextFor(roundtrip);if(!facts.some(f=>f.id==='financialrules'))throw Error('AI context omitted the validated rule evaluation.');
