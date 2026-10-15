@@ -193,7 +193,7 @@
 .replacement-account-dates:empty{display:none}.replacement-account-dates>div{display:grid;grid-template-columns:54px minmax(0,1fr);gap:8px;font-size:12px;line-height:1.5}
 .replacement-account-dates dt{color:#aebdd0}.replacement-account-dates dd{margin:0;color:#e0e8f5;overflow-wrap:anywhere}
 .replacement-actions{display:grid;gap:8px}.replacement-dialog .replacement-actions button{width:100%;min-height:48px;margin:0;padding:12px!important;border-radius:12px;font:inherit;font-size:14px!important;font-weight:600;line-height:1.4;white-space:normal;cursor:pointer}
-.replacement-dialog .btn-p{background:#4e79f4!important;color:#fff!important;border:1px solid #7699ff!important}
+.replacement-dialog .btn-p{background:#315ed4!important;color:#fff!important;border:1px solid #7699ff!important}
 .replacement-dialog .btn-s{background:#1a273a!important;color:#e0e8f5!important;border:1px solid #435775!important}
 .replacement-back{background:transparent;color:#b6c5d9;border:1px solid transparent}
 .replacement-dialog button:focus-visible,.replacement-choice:focus-within{outline:2px solid #a4c0ff;outline-offset:3px}
