@@ -98,8 +98,11 @@ async function exercise(name,engine,url){
     check('explicit enrollment copies opening',await page.locator('#elig-enrollment').inputValue()==='2026-01-31');
     await page.locator('#elig-enrollment').fill('2026-02-04');await page.locator('#elig-enrollment').press('Tab');
     check('enrollment date remains separate',await page.evaluate(()=>modal.offerEnrollmentDate==='2026-02-04'&&modal.couponEnrollmentDate==='2026-02-04'&&modal.opened==='2026-01-31'));
+    await page.locator('.eligibility-tools > summary').click();
     await button('Add another restriction').click();
     check('multiple restrictions appear in real editor',await page.locator('.eligibility-restriction').count()===2);
+    check('saved rules start collapsed',!await page.locator('#elig-rule-0-clock').isVisible());
+    await page.locator('.eligibility-restriction > summary').first().click();
     await page.locator('#elig-rule-0-clock').selectOption('bonus-offer-received');
     check('rule stays expanded after changing clock',await page.locator('#elig-rule-0-anchor').isVisible());
     await page.locator('#elig-rule-0-anchor').fill('2026-02-01');await page.locator('#elig-rule-0-anchor').press('Tab');
@@ -457,6 +460,18 @@ async function exercise(name,engine,url){
     await edit();
     await page.setViewportSize({width:320,height:844});
     check('mobile editor content fits 320px',await page.locator('.modal').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+    check('saved rule editing defaults collapsed on mobile',await page.locator('.eligibility-restriction').evaluateAll(rows=>rows.every(e=>!e.open)));
+    check('manual rule tools default collapsed on mobile',!await page.locator('#elig-template').isVisible());
+    for(const height of [568,844]){
+      await page.setViewportSize({width:320,height});
+      await page.locator('.guided-body').evaluate(e=>e.scrollTop=e.scrollHeight);
+      check('form and footer never overlap at '+height+'px',await page.locator('.guided-modal').evaluate(e=>{
+        const body=e.querySelector('.guided-body').getBoundingClientRect(),header=e.querySelector('.guided-header').getBoundingClientRect(),footer=e.querySelector('.guided-actions').getBoundingClientRect();
+        return body.top>=header.bottom-1&&body.bottom<=footer.top+1&&footer.bottom<=innerHeight+1&&body.height>40;
+      }));
+      await page.locator('.guided-body').evaluate(e=>e.scrollTop=0);
+    }
+    await page.screenshot({path:path.join(output,name+'-entry-editor-mobile.png')});
     await page.setViewportSize({width:390,height:844});
     check('mobile editor fits viewport and prevents input zoom',await page.locator('.modal').evaluate(e=>e.getBoundingClientRect().width<=window.innerWidth)&&await page.locator('.modal input').first().evaluate(e=>parseFloat(getComputedStyle(e).fontSize)>=16));
     await button('Cancel').click();

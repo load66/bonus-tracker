@@ -6,16 +6,16 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0A0F1E">
-<link rel="manifest" href="./manifest.json?v=3.4.68">
-<link rel="apple-touch-icon" href="./icon.svg?v=3.4.68">
+<link rel="manifest" href="./manifest.json?v=3.4.69">
+<link rel="apple-touch-icon" href="./icon.svg?v=3.4.69">
 <title>Bank Bonus Tracker</title>
-<link rel="stylesheet" href="./style.css?v=3.4.68">
-<link rel="stylesheet" href="./close-rules.css?v=3.4.68">
-<link rel="stylesheet" href="./mobile-analyzer.css?v=3.4.68">
-<link rel="stylesheet" href="./bank-bonuses.css?v=3.4.68">
-<link rel="stylesheet" href="./bonus-ai.css?v=3.4.68">
-<link rel="stylesheet" href="./mobile-ui.css?v=3.4.68">
-<link rel="stylesheet" href="./cloud-backup.css?v=3.4.68">
+<link rel="stylesheet" href="./style.css?v=3.4.69">
+<link rel="stylesheet" href="./close-rules.css?v=3.4.69">
+<link rel="stylesheet" href="./mobile-analyzer.css?v=3.4.69">
+<link rel="stylesheet" href="./bank-bonuses.css?v=3.4.69">
+<link rel="stylesheet" href="./bonus-ai.css?v=3.4.69">
+<link rel="stylesheet" href="./mobile-ui.css?v=3.4.69">
+<link rel="stylesheet" href="./cloud-backup.css?v=3.4.69">
 </head>
 <body>
 <div class="app" id="app"></div>
@@ -28,7 +28,7 @@
     refreshed=true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=3.4.68-ui2',{updateViaCache:'none'}).then(reg=>{
+  navigator.serviceWorker.register('./sw.js?v=3.4.69-ui2',{updateViaCache:'none'}).then(reg=>{
     const activate=worker=>{try{worker&&worker.postMessage({type:'SKIP_WAITING'})}catch{}};
     if(reg.waiting)activate(reg.waiting);
     reg.addEventListener('updatefound',()=>{
@@ -42,46 +42,46 @@
   }).catch(()=>{});
 })();
 </script>
-<script src="./close-rules-core.js?v=3.4.68"></script>
-<script src="./persistence-transaction.js?v=3.4.68"></script>
-<script src="./financial-rules.js?v=3.4.68"></script>
-<script src="./eligibility-gate.js?v=3.4.68"></script>
-<script src="./ui-feedback.js?v=3.4.68-feedback1"></script>
-<script src="./app.js?v=3.4.68"></script>
-<script src="./source-resolver.js?v=3.4.68"></script>
-<script src="./engine.js?v=3.4.68"></script>
-<script src="./bank-rules.js?v=3.4.68"></script>
-<script src="./bank-rules-wells-consumer.js?v=3.4.68"></script>
-<script src="./bank-rules-fourleaf.js?v=3.4.68"></script>
-<script src="./bank-rules-capitalone.js?v=3.4.68"></script>
-<script src="./bank-rules-boa-business.js?v=3.4.68"></script>
-<script src="./bank-rules-pnc.js?v=3.4.68"></script>
-<script src="./bank-rules-regions.js?v=3.4.68"></script>
-<script src="./bank-rules-equity.js?v=3.4.68"></script>
-<script src="./bank-rules-busey.js?v=3.4.68"></script>
-<script src="./bank-rules-academy.js?v=3.4.68"></script>
-<script src="./churn-profile-memory.js?v=3.4.68"></script>
-<script src="./profile-registry.js?v=3.4.68"></script>
-<script src="./profile-registry-academy.js?v=3.4.68"></script>
-<script src="./profile-db.js?v=3.4.68"></script>
-<script src="./controller.js?v=3.4.68"></script>
-<script src="./profile-library-selftest.js?v=3.4.68"></script>
-<script src="./profile-library-selftest-academy.js?v=3.4.68"></script>
-<script src="./learning-inbox-conflict.js?v=3.4.68"></script>
-<script src="./professional-upgrades.js?v=3.4.68"></script>
-<script src="./close-rules-integration.js?v=3.4.68"></script>
-<script src="./wells-professional-runtime.js?v=3.4.68"></script>
-<script src="./eligibility-editor.js?v=3.4.68"></script>
-<script src="./churn-close-policy.js?v=3.4.68-conditional1"></script>
-<script src="./semantic-status.js?v=3.4.68-status1"></script>
-<script src="./entry-link-import.js?v=3.4.68-conditional1"></script>
-<script src="./fee-review-migration.js?v=3.4.68-feereview1"></script>
-<script src="./smart-attention.js?v=3.4.68-action1"></script>
-<script src="./bank-bonuses.js?v=3.4.68-scope2"></script>
-<script src="./bonus-ai-auth.js?v=3.4.68"></script>
-<script src="./cloud-backup-core.js?v=3.4.68"></script>
-<script src="./cloud-backup.js?v=3.4.68"></script>
-<script src="./bonus-ai.js?v=3.4.68"></script>
-<script src="./mobile-analyzer.js?v=3.4.68"></script>
+<script src="./close-rules-core.js?v=3.4.69"></script>
+<script src="./persistence-transaction.js?v=3.4.69"></script>
+<script src="./financial-rules.js?v=3.4.69"></script>
+<script src="./eligibility-gate.js?v=3.4.69"></script>
+<script src="./ui-feedback.js?v=3.4.69-feedback1"></script>
+<script src="./app.js?v=3.4.69"></script>
+<script src="./source-resolver.js?v=3.4.69"></script>
+<script src="./engine.js?v=3.4.69"></script>
+<script src="./bank-rules.js?v=3.4.69"></script>
+<script src="./bank-rules-wells-consumer.js?v=3.4.69"></script>
+<script src="./bank-rules-fourleaf.js?v=3.4.69"></script>
+<script src="./bank-rules-capitalone.js?v=3.4.69"></script>
+<script src="./bank-rules-boa-business.js?v=3.4.69"></script>
+<script src="./bank-rules-pnc.js?v=3.4.69"></script>
+<script src="./bank-rules-regions.js?v=3.4.69"></script>
+<script src="./bank-rules-equity.js?v=3.4.69"></script>
+<script src="./bank-rules-busey.js?v=3.4.69"></script>
+<script src="./bank-rules-academy.js?v=3.4.69"></script>
+<script src="./churn-profile-memory.js?v=3.4.69"></script>
+<script src="./profile-registry.js?v=3.4.69"></script>
+<script src="./profile-registry-academy.js?v=3.4.69"></script>
+<script src="./profile-db.js?v=3.4.69"></script>
+<script src="./controller.js?v=3.4.69"></script>
+<script src="./profile-library-selftest.js?v=3.4.69"></script>
+<script src="./profile-library-selftest-academy.js?v=3.4.69"></script>
+<script src="./learning-inbox-conflict.js?v=3.4.69"></script>
+<script src="./professional-upgrades.js?v=3.4.69"></script>
+<script src="./close-rules-integration.js?v=3.4.69"></script>
+<script src="./wells-professional-runtime.js?v=3.4.69"></script>
+<script src="./eligibility-editor.js?v=3.4.69"></script>
+<script src="./churn-close-policy.js?v=3.4.69-conditional1"></script>
+<script src="./semantic-status.js?v=3.4.69-status1"></script>
+<script src="./entry-link-import.js?v=3.4.69-conditional1"></script>
+<script src="./fee-review-migration.js?v=3.4.69-feereview1"></script>
+<script src="./smart-attention.js?v=3.4.69-action1"></script>
+<script src="./bank-bonuses.js?v=3.4.69-scope2"></script>
+<script src="./bonus-ai-auth.js?v=3.4.69"></script>
+<script src="./cloud-backup-core.js?v=3.4.69"></script>
+<script src="./cloud-backup.js?v=3.4.69"></script>
+<script src="./bonus-ai.js?v=3.4.69"></script>
+<script src="./mobile-analyzer.js?v=3.4.69"></script>
 </body>
 </html>
