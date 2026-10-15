@@ -550,9 +550,22 @@ async function exercise(name,engine,url){
     await button('4 Review').click();await button('💾 Add account').click();
     await page.getByRole('heading',{name:'Replace an old entry?',exact:true}).waitFor();
     check('personal Chase import selects only old personal Chase',await page.evaluate(()=>replacementPickerPrompt.selectedId==='CHA-P-01'&&replacementPickerPrompt.candidates.length===1));
-    await button('Review Replace Selected Old Entry').click();
+    const originalViewport=page.viewportSize();
+    for(const width of [320,390]){
+      await page.setViewportSize({width,height:700});
+      check('replacement picker fits '+width+'px',await page.locator('.replacement-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+      check('replacement card is readable at '+width+'px',await page.locator('.replacement-account').evaluateAll(rows=>rows.every(e=>e.scrollWidth<=e.clientWidth+1)));
+      check('replacement radio selects personal Chase at '+width+'px',await page.getByRole('radio').isChecked());
+    }
+    await page.screenshot({path:path.join(output,name+'-replacement-picker-mobile.png')});
+    await button('Review replacement').click();
     check('replacement still requires final confirmation',await page.evaluate(()=>overwritePrompt.existingEntry.id==='CHA-P-01'&&localStorage.getItem('bt_e_v4')===window.__replacementBefore));
-    await button('Start New Churn Cycle / Replace This Record').click();
+    check('final confirmation fits mobile',await page.locator('.replacement-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+    check('final confirmation has readable secondary actions',await button('Add separate account').evaluate(e=>{const c=getComputedStyle(e);return c.backgroundColor==='rgb(26, 39, 58)'&&c.color==='rgb(224, 232, 245)'}));
+    check('replacement screens omit raw lifecycle labels',!await page.locator('.replacement-dialog').innerText().then(t=>/WAITING TO CHURN!|TIME TO CHURN!/.test(t)));
+    await page.screenshot({path:path.join(output,name+'-replacement-confirm-mobile.png')});
+    await button('Start new cycle').click();
+    await page.setViewportSize(originalViewport);
     check('confirmed replacement preserves history without duplicates',await page.evaluate(()=>{const n=entries.find(e=>e.id==='CHA-P-01');return entries.length===3&&n.financialRules.version===2&&!n.closed&&n.previousCycles[0].closed==='2025-01-01'}));
     check('confirmed personal replacement leaves Chase business and other bank intact',await page.evaluate(()=>JSON.stringify(entries.find(e=>e.id==='CHA-B-01'))===window.__replacementBusiness&&JSON.stringify(entries.find(e=>e.id==='CIT-P-01'))===window.__replacementOther));
     await page.evaluate(()=>{entries=window.__replacementSavedEntries;localStorage.setItem('bt_e_v4',window.__replacementSavedStorage);expanded='';R();});
