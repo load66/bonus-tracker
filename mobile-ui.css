@@ -1,4 +1,4 @@
-/* v3.4.71: a consistent mobile hierarchy; financial rules stay in the engine. */
+/* v3.4.72: a consistent mobile hierarchy; financial rules stay in the engine. */
 .tracker-overview{margin-bottom:16px}
 .ops-action-toggle{width:100%;min-height:52px;background:transparent;border:0;color:inherit;font-family:inherit;text-align:left;cursor:pointer}
 .ops-action-toggle .ops-action-title{font-size:14px;font-weight:700;letter-spacing:0;text-transform:none;color:#F3F7FC}
@@ -197,3 +197,5 @@
 @media(max-width:360px){.ow-box.replacement-dialog{padding:16px!important}.replacement-choice{padding:12px!important}.replacement-account{grid-template-columns:32px minmax(0,1fr);gap:8px}.replacement-account-amount{grid-column:2;max-width:none}.replacement-account>.blogo,.replacement-account>svg,.replacement-account>img,.replacement-account>.bank-logo,.replacement-account>[class*=logo]{width:32px!important;height:32px!important}}
 
 .replacement-new-offer{display:grid;gap:4px;padding:12px 0 16px;font-size:12px;color:#b6c5d9;line-height:1.5;overflow-wrap:anywhere}.replacement-new-offer strong{font-size:14px;color:#f2f5fc}
+
+.ops-task-current{padding:12px 0;margin-bottom:12px;border-bottom:1px solid var(--border);scroll-margin-block:16px;outline:none}.ops-task-current:focus{border-color:#719aff}.ops-task-current b{font-size:14px;line-height:1.45;color:var(--text)}.ops-task-current p{font-size:13px;line-height:1.6;color:var(--sub);margin:6px 0 0;overflow-wrap:anywhere}.ops-task-current .btn-s{margin:10px 0 0}
