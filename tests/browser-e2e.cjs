@@ -57,6 +57,9 @@ async function exercise(name,engine,url){
   });
   const button=text=>page.getByRole('button',{name:text,exact:true});
   const wait=async fn=>{await page.waitForFunction(fn,{},{timeout:15000})};
+  // Startup wrappers and controller renders are scheduled through 1.8 seconds.
+  // Wait beyond that initialization window after navigation; retain all assertions.
+  const settleStartup=async()=>{await page.waitForTimeout(2200);await page.waitForFunction(()=>window.__btFullRegressionReport&&!window.__btFullRegressionReport.pending);};
   const record=async()=>page.evaluate(()=>JSON.parse(localStorage.getItem('bt_e_v4')||'[]')[0]);
   const check=(label,condition)=>{assert.ok(condition,label);checks.push(label)};
   const importEntry=async object=>{
@@ -82,7 +85,7 @@ async function exercise(name,engine,url){
     await button('Next').click();await button('Next').click();await button('Review').click();await button('Save Closed').click();await button('OK').click();
   };
   try{
-    await page.goto(url);
+    await page.goto(url);await settleStartup();
     await page.getByText('No accounts yet',{exact:true}).waitFor();
     check('Action Center defaults collapsed',await page.locator('#bt-action-center-toggle').getAttribute('aria-expanded')==='false'&&!await page.locator('#bt-action-center-body').isVisible());
     await page.waitForFunction(()=>window.__btFullRegressionReport&&!window.__btFullRegressionReport.pending&&window.__btFullRegressionReport.total===18);
@@ -135,7 +138,7 @@ async function exercise(name,engine,url){
     await page.locator('.ops-action-why summary').click();
     check('next action explains saved requirements without AI',(await page.locator('.ops-action-explanation').innerText()).includes('qualifying activity with the bank'));
     const id=(await record()).id;
-    await page.reload();check('reload preserves identity and notes',(await record()).id===id&&(await record()).notes===payload.entry.notes);
+    await page.reload();await settleStartup();check('reload preserves identity and notes',(await record()).id===id&&(await record()).notes===payload.entry.notes);
     check('refresh resets Action Center to collapsed',await page.locator('#bt-action-center-toggle').getAttribute('aria-expanded')==='false');
     await page.locator('#bt-action-center-toggle').click();
     await edit();await button('3 Fees & Close').click();
@@ -523,7 +526,7 @@ async function exercise(name,engine,url){
     // worker fallback runs. Remove the origin instead to exercise real failed
     // network fetches; Chromium/Firefox also test protocol offline mode.
     if(name==='webkit')serverUnavailable=true;else await context.setOffline(true);
-    await page.reload();await page.getByText('BonusTracker',{exact:false}).first().waitFor();
+    await page.reload();await settleStartup();await page.getByText('BonusTracker',{exact:false}).first().waitFor();
     check(name==='webkit'?'network-loss reload preserves account':'offline reload preserves account',(await record()).id===id);
     serverUnavailable=false;await context.setOffline(false);
     check('AI login persists across browser reload',await page.evaluate(()=>BTBonusAuth.connected()));
