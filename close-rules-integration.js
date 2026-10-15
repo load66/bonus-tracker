@@ -57,10 +57,10 @@
     if(!looksLikeBoost300)return x;
 
     // Official Personal Fee Schedule: $25 if the account is closed within 6 months.
-    // Use one calendar day after the six-month anniversary as the conservative no-fee date.
+    // Use two calendar days after the six-month anniversary as the conservative no-fee date.
     if(x.opened&&typeof addM==='function'&&typeof addD==='function'&&typeof dB==='function'){
       const sixMonthAnniversary=addM(x.opened,6);
-      const conservativeDate=addD(sixMonthAnniversary,1);
+      const conservativeDate=addD(sixMonthAnniversary,2);
       const holdDays=dB(x.opened,conservativeDate);
       if(Number.isFinite(holdDays)&&holdDays>0){
         x.minHoldDays=holdDays;
@@ -71,9 +71,9 @@
         x.closeRuleSource='verified-bank-rule';
         x.earlyCloseFee=25;
         x.earlyTerminationFeeText='$25 account-closure fee if closed within 6 months of account opening.';
-        x.closeRuleText='A $25 account-closure fee applies if the account is closed within 6 months of account opening. Conservative safe-close date is one calendar day after the 6-month anniversary.';
+        x.closeRuleText='A $25 account-closure fee applies if the account is closed within 6 months of account opening. Conservative safe-close date is two calendar days after the 6-month anniversary.';
         x.closeRuleSourceSentence='$25 if closed within 6 months of account opening';
-        x.closeRuleDisplayText='6 months + 1 day from opened date';
+        x.closeRuleDisplayText='6 months + 2 days from opened date';
       }
     }
 

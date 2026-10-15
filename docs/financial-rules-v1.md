@@ -68,3 +68,7 @@ Run `node scripts/validate-entry.cjs /absolute/path/ENTRY.json`. It validates st
 Tests: `tests/financial-rules.test.js`, `tests/structured-import.test.js`, existing eligibility/date/persistence suites, and real browser tests. Synthetic fixtures model companion fees, recurring deposits, ALL/ANY waivers, unsupported rules and contradictory data; they are not verified current bank promotions.
 
 Changing financial meaning requires a versioned contract change, fixtures and an import/storage/AI round trip. Do not weaken validation to make a broken offer pass. Legacy records remain unchanged and use their existing wording; they are not automatically upgraded or declared verified.
+
+## Optional date cushion
+
+From runtime v3.4.64, the app adds a two-calendar-day optional cushion after the latest supported repeat-eligibility restriction. Keep the bank restriction and its exact anchor unchanged. This does not extend qualification or payout deadlines, verify an unresolved legacy rule, or replace a separately saved account-closure buffer. Legacy Lafayette Boost300 closure uses six calendar months plus two days; structured closure terms continue to control their own saved buffer.

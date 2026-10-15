@@ -99,8 +99,8 @@ for token in (
     "r.sourceEligibilityBasis='bonus-received'",
     "r.eligibilityEvidenceText=eligibility",
     "r.eligibilityEvidenceSource='official-promotion-terms'",
-    "r.churnTrackingPolicy='source-bonus-received-plus-5-day-buffer'",
-    'r.churnBufferDays=5',
+    "r.churnTrackingPolicy='source-bonus-received-plus-2-day-buffer'",
+    'r.churnBufferDays=2',
     'Consumer Account Fee and Information Schedule'
 ):
     if token not in wells: fail(f'Wells consumer exact-rule logic missing: {token}')
@@ -137,7 +137,7 @@ for token in ("['tracker','bonuses','tax','tips','storage']","['Tracker','Bank B
     if token not in app_source: fail(f'direct T&C Archive / churn suggestion architecture missing: {token}')
 
 semantic_status=text('semantic-status.js')
-for token in ("const VER='3.4.63-status1'","const STAGES=Object.freeze","function lifecycleStageForEntry","ACTION_NEEDED:'ACTION_NEEDED'","IN_PROGRESS:'IN_PROGRESS'","AWAITING_BONUS:'AWAITING_BONUS'","HOLD_OPEN:'HOLD_OPEN'","READY_TO_CLOSE:'READY_TO_CLOSE'","COOLDOWN:'COOLDOWN'","ELIGIBLE:'ELIGIBLE'","window.btLifecycleStageForEntry=lifecycleStageForEntry"):
+for token in ("const VER='3.4.64-status1'","const STAGES=Object.freeze","function lifecycleStageForEntry","ACTION_NEEDED:'ACTION_NEEDED'","IN_PROGRESS:'IN_PROGRESS'","AWAITING_BONUS:'AWAITING_BONUS'","HOLD_OPEN:'HOLD_OPEN'","READY_TO_CLOSE:'READY_TO_CLOSE'","COOLDOWN:'COOLDOWN'","ELIGIBLE:'ELIGIBLE'","window.btLifecycleStageForEntry=lifecycleStageForEntry"):
     if token not in semantic_status: fail(f'canonical lifecycle status architecture missing: {token}')
 for forbidden in ("label:'Custom Timer'","label:'Deadline Active'"):
     if forbidden in semantic_status and "timerStatusMetaSemantic" not in semantic_status:
@@ -146,17 +146,17 @@ for forbidden in ("label:'Custom Timer'","label:'Deadline Active'"):
 for token in ('function bonusPipelineMetrics','function renderActionCenter','Active bonuses','Action Center','function timelineRowsForEntry','Activity Timeline','renderCardProgressLine'):
     if token not in app_source: fail(f'professional operations UI missing: {token}')
 feedback=text('ui-feedback.js')
-for token in ("const VER='3.4.63-feedback1'",'function notify','function confirmDialog','window.btConfirmDialog=confirmDialog'):
+for token in ("const VER='3.4.64-feedback1'",'function notify','function confirmDialog','window.btConfirmDialog=confirmDialog'):
     if token not in feedback: fail(f'professional feedback surface missing: {token}')
 attention=text('smart-attention.js')
-for token in ("const VER='3.4.63-action1'",'btLifecycleStageForEntry','READY_TO_CLOSE','ACTION_NEEDED','ELIGIBLE'):
+for token in ("const VER='3.4.64-action1'",'btLifecycleStageForEntry','READY_TO_CLOSE','ACTION_NEEDED','ELIGIBLE'):
     if token not in attention: fail(f'lifecycle Action Center architecture missing: {token}')
 entry_import=text('entry-link-import.js')
 if 'window.confirm(' in entry_import or 'window.confirm(' in app_source:
     fail('native browser confirm remains in a production workflow')
 
 dark_css=text('style.css')
-if 'v3.4.63 professional operations UI' not in dark_css:
+if 'v3.4.64 professional operations UI' not in dark_css:
     fail('professional operations visual layer missing')
 for token in ('.ops-action-center','.card-progressline','.bt-timeline-card','.bt-notice-host','.bt-confirm-overlay'):
     if token not in dark_css: fail(f'professional operations component style missing: {token}')
@@ -193,7 +193,7 @@ for token in ('schemaVersion','Strict JSON is missing the official promotion sou
     if token not in entry_import: fail(f'evidence-gated entry import missing: {token}')
 
 churn_policy=text('churn-close-policy.js')
-for token in ('offer-enrollment','bonus-offer-received','account-ownership-ended','multi-rule-latest-date-plus-5-day-buffer','legacyFallbackReadyDate','hasStructuredEligibilityEvidence','legacy-saved-rule-plus-5-day-buffer','nextReopen','btOfficialEligibilityDate','btApplicationReadyDate','normalizeLifecycleEntry'):
+for token in ('offer-enrollment','bonus-offer-received','account-ownership-ended','multi-rule-latest-date-plus-2-day-buffer','legacyFallbackReadyDate','hasStructuredEligibilityEvidence','legacy-saved-rule-plus-2-day-buffer','nextReopen','btOfficialEligibilityDate','btApplicationReadyDate','normalizeLifecycleEntry'):
     if token not in churn_policy: fail(f'source-accurate churn policy missing: {token}')
 
 close_core=text('close-rules-core.js')

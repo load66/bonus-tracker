@@ -72,7 +72,7 @@ setTimeout(()=>{
     run('finishClose();cfm=null');
     assert.equal(run('entries[0].closed'),'2026-05-01');
     assert.equal(run('btOfficialEligibilityDate(entries[0])'),'2027-04-15');
-    assert.equal(run('nextReopen(entries[0])'),'2027-04-20');
+    assert.equal(run('nextReopen(entries[0])'),'2027-04-17');
     assert.equal(run('btLifecycleStageForEntry(entries[0]).code'),'COOLDOWN');
     run('undoClose()');
     assert.equal(run('entries[0].closed'),'','Undo must restore the pre-close account');

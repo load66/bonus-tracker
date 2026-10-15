@@ -20,7 +20,7 @@ Verified on October 11, 2026 with synthetic data. Browser results are recorded i
 | Creation and import | Quick Add; JSON v1/v2; embedded HTML/link parsing; provenance and evidence rejection; review before save; duplicate/replacement routing |
 | Editing | Bank/account/bonus fields; notes; exact requirement wording; identity preservation; escaped output |
 | Lifecycle | Requirements, bonus received, close review, actual closure, Undo, one-time archive, and repeatable cooldown |
-| Dates | Calendar days, DST, leap dates, month-end clamping, days/months/years, correct anchors, multiple restrictions, conditional rules, separate five-day safety buffer |
+| Dates | Calendar days, DST, leap dates, month-end clamping, days/months/years, correct anchors, multiple restrictions, conditional rules, separate two-day safety buffer |
 | Action Center | Canonical status; direct confirmations; recurring requirements sent to review; stale close-action protection; missing/unsupported dates remain unconfirmed |
 | Tasks and timers | Add/edit/toggle; history; start-plus-days and due-date modes; invalid input; subsection state preservation |
 | Tax | Received bonuses on open accounts; year filtering; totals; actual CSV download; quoting and formula-injection guard |
@@ -43,10 +43,12 @@ The deployment workflow additionally installs pinned Playwright 1.58.2 into the 
 
 ## Calculation example
 
-Synthetic account opened January 31, 2026. A 90-calendar-day requirement deadline is May 1, 2026. Requirements met April 1 give a 30-calendar-day payout deadline of May 1. A bonus received April 15 with a 12-month bonus-receipt lookback clears April 15, 2027; the five-day safety buffer makes April 20 the suggested reapply date. Recording closure May 1 does not move that bonus-based clock.
+Synthetic account opened January 31, 2026. A 90-calendar-day requirement deadline is May 1, 2026. Requirements met April 1 give a 30-calendar-day payout deadline of May 1. A bonus received April 15 with a 12-month bonus-receipt lookback clears April 15, 2027; the two-day safety buffer makes April 17 the suggested reapply date. Recording closure May 1 does not move that bonus-based clock.
 
 WebKit network-loss testing disconnects the local test server; Chromium and Firefox use browser offline mode. This avoids the observed WebKit offline-emulation navigation error, which matches the [reported Playwright issue](https://github.com/microsoft/playwright/issues/42775), while still requiring the app to reload from its service-worker cache with failed network requests.
 
 ## Limits
 
 This is workflow and scenario coverage, not exhaustive coverage of every function or branch. WebKit on Linux is not a physical iPhone/Safari test. Native mobile share sheets, browser storage eviction/quota behavior on real devices, and every possible future bank disclosure are not fully covered. The tracker cannot verify actual bank deposits or payouts automatically; the tests verify behavior after user confirmation. No existing user account data was used or modified. No storage keys or data schemas were changed by these fixes.
+
+As of v3.4.64, repeat-eligibility suggestions add two calendar days to the latest supported bank restriction. Requirement and payout deadlines are not extended. Existing explicit close buffers remain as saved; the legacy Lafayette six-calendar-month fee calculation uses a two-day cushion.
