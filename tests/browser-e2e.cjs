@@ -79,7 +79,7 @@ async function exercise(name,engine,url){
     await page.getByRole('button',{name:'✏️ Edit account Details, dates, bonus, rules',exact:true}).click();
   };
   const close=async()=>{
-    await button('Review & record closure').click();
+    await button('Review closure').click();
     await page.locator('#cp_date').fill('2026-05-01');
     await page.locator('#cp_monthly_checked').selectOption('yes');
     await button('Next').click();await button('Next').click();await button('Review').click();await button('Save Closed').click();await button('OK').click();
@@ -156,7 +156,7 @@ async function exercise(name,engine,url){
     await button('Manage').click();await button('⏱️ Add timer Set a reminder or deadline').click();
     await button('Start + Days').click();await page.locator('#tem_text').fill('E2E manual reminder');await page.locator('#tem_start').fill('2026-03-08');await page.locator('#tem_days').fill('1');await button('Add timer').click();
     check('timer uses calendar days across DST',(await record()).customTimers.some(t=>t.text==='E2E manual reminder'&&t.date==='2026-03-09'));
-    await page.locator('details[data-section-key="lifecycle"] summary').click();
+    if(!await page.locator('details[data-section-key="lifecycle"]').evaluate(e=>e.open))await page.locator('details[data-section-key="lifecycle"] summary').click();
     await button('Manage').click();await button('✅ Add task Track a requirement').click();await page.getByPlaceholder('e.g. Make 1 debit card transaction').fill('E2E checklist task');await button('Save').click();
     await page.locator('.ck li').filter({hasText:'E2E checklist task'}).locator('.ckb').click();
     check('checklist completion persists without collapsing section',(await record()).checklist[0].done&&await page.locator('details[data-section-key="lifecycle"]').evaluate(e=>e.open));
