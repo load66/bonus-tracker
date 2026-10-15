@@ -309,7 +309,7 @@ if(require.main===module)setTimeout(()=>{
     sandbox.btModalSet('bank','Wells Fargo');sandbox.btModalSet('accountType','personal');sandbox.btModalSet('bonus','400','number');sandbox.setModalChurnability('repeatable');sandbox.setModalChurnRule('1');sandbox.setModalChurnBasis('bonus');sandbox.btModalSet('opened','2026-08-10');sandbox.btModalSet('monthlyFeeYNText','Not stated in bonus disclosure — separate Wells Fargo fee schedule applies');sandbox.btModalSet('avoidMonthlyFeeText','Review the Wells Fargo Consumer Account Fee and Information Schedule.');vm.runInContext("modal.churnPeriodValue=12;modal.churnPeriodUnit='months';modal.eligibilityEvidenceText='Not eligible if you received a Wells Fargo consumer checking bonus within the past 12 months.';modal.eligibilityEvidenceSource='official-promotion-terms'",sandbox);
     sandbox.btWizardStep(1);
     const wizardBasics=sandbox.rModal();
-    assert(/Can this bonus be earned again\? \*/.test(wizardBasics)&&/Eligibility clock starts from \*/.test(wizardBasics)&&/exact eligibility wording from the offer/i.test(wizardBasics)&&/Churn T&C verified/.test(wizardBasics),'Guided editor did not show verified T&C churn evidence');
+    assert(/Can this bonus be earned again\? \*/.test(wizardBasics)&&/(?:Eligibility clock starts from|Restriction 1 clock)/.test(wizardBasics)&&/rules for this product and offer/i.test(wizardBasics)&&/Churn T&C verified/.test(wizardBasics),'Guided editor did not show verified T&C churn evidence');
     sandbox.btWizardStep(4);
     const wizardReview=sandbox.rModal();
     assert(/Future eligibility/.test(wizardReview)&&/12 months after bonus payout received \+ 2-day safety buffer/.test(wizardReview),'Guided review did not show the T&C-verified source-based eligibility policy');

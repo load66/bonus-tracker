@@ -72,3 +72,7 @@ Changing financial meaning requires a versioned contract change, fixtures and an
 ## Optional date cushion
 
 From runtime v3.4.64, the app adds a two-calendar-day optional cushion after the latest supported repeat-eligibility restriction. Keep the bank restriction and its exact anchor unchanged. This does not extend qualification or payout deadlines, verify an unresolved legacy rule, or replace a separately saved account-closure buffer. Legacy Lafayette Boost300 closure uses six calendar months plus two days; structured closure terms continue to control their own saved buffer.
+
+## Per-offer eligibility editor
+
+From v3.4.65, the account editor exposes all six existing eligibility anchors, exact calendar days/months/years, multiple saved restrictions, source wording, product/customer scope and negative-balance closure conditions. It uses the same eligibility engine as imports. A user can explicitly copy a known opening date into enrollment; missing dates remain unresolved. Changing a rule's anchor clears its old explicit anchor date. Preserve every applicable restriction and select the latest clearing date; a bank name alone never establishes the applicable rule. These controls do not create new schema fields or make unverified legacy terms verified.
