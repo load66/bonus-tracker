@@ -26,7 +26,7 @@ const sandbox={
 sandbox.window=sandbox;sandbox.globalThis=sandbox;
 vm.createContext(sandbox);vm.runInContext(src,sandbox,{filename:'smart-attention.js'});
 const rows=sandbox.getAttentionSuggestions();
-assert(sandbox.btSmartAttentionVersion==='3.4.64-action1','Action Center version missing');
+assert(sandbox.btSmartAttentionVersion==='3.4.65-action1','Action Center version missing');
 assert(rows.map(x=>x.entryId).join(',')==='ACT,RDY,ELG,AWT,PRG,CDN','Lifecycle priority order is wrong: '+rows.map(x=>x.entryId).join(','));
 assert(rows[0].stageCode==='ACTION_NEEDED'&&/overdue/i.test(rows[0].rsn),'Action Needed did not preserve lifecycle context');
 assert(rows.find(x=>x.entryId==='RDY')?.action==='Close account','Ready to Close did not produce the correct next action');

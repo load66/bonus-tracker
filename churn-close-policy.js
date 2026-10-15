@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.64 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
+/* BonusTracker v3.4.65 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
 (function(){
   'use strict';
-  const VER='3.4.64';
+  const VER='3.4.65';
   const SAFETY_BUFFER_DAYS=2;
 
   function decision(e){
@@ -53,14 +53,22 @@
   }
   function legacyFallbackReadyDate(e){
     // Legacy fallback is intentionally conservative: it applies only to a
-    // previously closed, pre-structured record and always anchors to closure.
+    // previously closed, pre-structured record. An explicit enrollment clock
+    // requires its own valid date; other legacy records keep the closure fallback.
     // New structured T&C never falls through here when evidence is unresolved.
     if(!e||!e.closed||decision(e)!=='repeatable'||hasStructuredEligibilityEvidence(e))return'';
     const period=legacyRulePeriod(e);if(!period)return'';
+    let anchor=e.closed;
+    if(sourceBasis(e)==='enrollment'){
+      anchor=String(e.couponEnrollmentDate||e.offerEnrollmentDate||'');
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(anchor))return'';
+      const parsed=new Date(anchor+'T00:00:00Z');
+      if(!Number.isFinite(parsed.getTime())||parsed.toISOString().slice(0,10)!==anchor)return'';
+    }
     let official='';
-    if(period.unit==='day')official=addDLocal(e.closed,period.value);
-    else if(period.unit==='month')official=addMLocal(e.closed,period.value);
-    else if(period.unit==='year')official=addMLocal(e.closed,period.value*12);
+    if(period.unit==='day')official=addDLocal(anchor,period.value);
+    else if(period.unit==='month')official=addMLocal(anchor,period.value);
+    else if(period.unit==='year')official=addMLocal(anchor,period.value*12);
     return official?addDLocal(official,SAFETY_BUFFER_DAYS):'';
   }
   function sourceBasis(e){
