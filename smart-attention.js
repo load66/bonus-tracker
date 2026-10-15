@@ -146,7 +146,7 @@
   function activityKind(text){
     const t=String(text||'');
     if(/payout|bonus (?:payment|posts?|received)|wait for.{0,20}bonus|tier determination/i.test(t))return'payout';
-    if(/clos(?:e|ure)|clawback|reapply|eligib/i.test(t))return'closure';
+    if(/clos(?:e|ure)|clawback|reapply|eligibility (?:date|review|restriction)|eligible (?:again|to reapply)/i.test(t))return'closure';
     if(/direct[ -]?deposits?|\bq?dd\b|payroll/i.test(t))return'direct-deposit';
     if(/maintain|retain|hold.{0,30}(?:balance|\$)|balance.{0,20}(?:hold|minimum)/i.test(t))return'balance-hold';
     if(/debit|transactions?|purchases?/i.test(t))return'transactions';
