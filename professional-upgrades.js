@@ -197,8 +197,8 @@
     const e=modal;if(!e)return'';
     const step=Math.max(1,Math.min(4,parseInt(e._wizardStep,10)||1));
     let h='<div class="ov" onclick="closeModal()"><div class="modal guided-modal" onclick="event.stopPropagation()">';
-    h+=wizardHeader(e,step);
-    h+='<div class="guided-body">'+(step===1?wizardBasics(e):step===2?wizardRequirements(e):step===3?wizardFeesClose(e):wizardReview(e))+'</div>';
+    h+='<div class="guided-header">'+wizardHeader(e,step)+'</div>';
+    h+='<div class="guided-body">'+(step===1?wizardBasics(e):step===2?wizardRequirements(e):step===3?wizardFeesClose(e):wizardReview(e))+(e._edit&&!e._startingNewCycle?'<details class="guided-danger"><summary>Advanced entry actions</summary><button class="btn-d" type="button" onclick="clearFields()">Clear all fields</button></details>':'')+'</div>';
     h+='<div class="guided-actions">';
     if(step>1)h+='<button type="button" class="btn-s" onclick="btWizardStep('+(step-1)+')">Back</button>';
     if(step<4)h+='<button type="button" class="btn-p" onclick="btWizardStep('+(step+1)+')">Continue</button>';
@@ -208,7 +208,7 @@
     }
     h+='<button type="button" class="btn-s" onclick="closeModal()">Cancel</button>';
     h+='</div>';
-    if(e._edit&&!e._startingNewCycle)h+='<details class="guided-danger"><summary>Advanced entry actions</summary><button class="btn-d" type="button" onclick="clearFields()">Clear all fields</button></details>';
+
     h+='</div></div>';return h;
   };
   window.rModal=rModal;
