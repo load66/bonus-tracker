@@ -518,8 +518,32 @@ async function exercise(name,engine,url){
       return {valid:BTFinancialRules.validate(projected).ok,unknown:projected.financialRules.closure.earlyCloseFee===null,manual:projected.closeRestrictionType==='manual-review'&&projected.closeRuleBasis==='manual',blocked:closeReadiness(after).cls==='danger'&&!safeCloseDate(after),draftBlocked,unchanged:before===localStorage.getItem('bt_e_v4')};
     },require('./fixtures/financial-rules.cjs').reviewFixture());
     for(const [key,value] of Object.entries(reviewProbe))check('financial v2 browser '+key,value);
-
     await button('Cancel').click();
+    const fileSource=require('./fixtures/financial-rules.cjs').reviewFixture();
+    await importEntry({kind:'BonusTrackerEntry',schemaVersion:3,verification:{promoSourceUrl:fileSource.promoSourceUrl,feeScheduleSourceUrl:fileSource.feeScheduleSourceUrl,termsVerifiedAt:fileSource.termsVerifiedAt},entry:fileSource});
+    check('actual v3 file chooser reaches review after confirmation',await page.getByRole('heading',{name:'Add account',exact:true}).isVisible());
+    check('actual v3 file review retains exact rules',await page.evaluate(()=>modal.financialRules.version===2&&modal.financialRules.closure.earlyCloseFee===null&&modal.closeRestrictionType==='manual-review'));
+    await button('Cancel').click();
+    await page.evaluate(()=>{
+      window.__replacementSavedEntries=JSON.parse(JSON.stringify(entries));window.__replacementSavedStorage=localStorage.getItem('bt_e_v4');
+      entries=[{id:'CHA-P-01',bank:'Chase',accountType:'personal',opened:'2023-01-01',closed:'2025-01-01',bonusRecd:'2023-03-01',bonus:100,churn:'1',churnable:true,notes:'Old personal history',customTimers:[],checklist:[],history:[]},{id:'CHA-B-01',bank:'Chase Biz',accountType:'business',opened:'2023-01-01',closed:'2025-01-01',bonusRecd:'2023-03-01',bonus:500,churn:'1',churnable:true,notes:'Business unchanged',customTimers:[],checklist:[],history:[]},{id:'CIT-P-01',bank:'Citi',accountType:'personal',opened:'2023-01-01',closed:'2025-01-01',bonus:50,churn:'1',churnable:true,notes:'Other unchanged',customTimers:[],checklist:[],history:[]}];sv(SK,entries);R();
+      window.__replacementBefore=localStorage.getItem('bt_e_v4');window.__replacementBusiness=JSON.stringify(entries.find(e=>e.id==='CHA-B-01'));window.__replacementOther=JSON.stringify(entries.find(e=>e.id==='CIT-P-01'));
+    });
+    const chaseSource=require('./fixtures/financial-rules.cjs').reviewFixture();chaseSource.bank='Chase';
+    await importEntry({kind:'BonusTrackerEntry',schemaVersion:3,verification:{promoSourceUrl:chaseSource.promoSourceUrl,feeScheduleSourceUrl:chaseSource.feeScheduleSourceUrl,termsVerifiedAt:chaseSource.termsVerifiedAt},entry:chaseSource});
+    check('Chase file review does not replace saved records',await page.evaluate(()=>localStorage.getItem('bt_e_v4')===window.__replacementBefore));
+    await button('4 Review').click();await button('💾 Add account').click();
+    await page.getByRole('heading',{name:'Replace an old entry?',exact:true}).waitFor();
+    check('personal Chase import selects only old personal Chase',await page.evaluate(()=>replacementPickerPrompt.selectedId==='CHA-P-01'&&replacementPickerPrompt.candidates.length===1));
+    await button('Review Replace Selected Old Entry').click();
+    check('replacement still requires final confirmation',await page.evaluate(()=>overwritePrompt.existingEntry.id==='CHA-P-01'&&localStorage.getItem('bt_e_v4')===window.__replacementBefore));
+    await button('Start New Churn Cycle / Replace This Record').click();
+    check('confirmed replacement preserves history without duplicates',await page.evaluate(()=>{const n=entries.find(e=>e.id==='CHA-P-01');return entries.length===3&&n.financialRules.version===2&&!n.closed&&n.previousCycles[0].closed==='2025-01-01'}));
+    check('confirmed personal replacement leaves Chase business and other bank intact',await page.evaluate(()=>JSON.stringify(entries.find(e=>e.id==='CHA-B-01'))===window.__replacementBusiness&&JSON.stringify(entries.find(e=>e.id==='CIT-P-01'))===window.__replacementOther));
+    await page.evaluate(()=>{entries=window.__replacementSavedEntries;localStorage.setItem('bt_e_v4',window.__replacementSavedStorage);expanded='';R();});
+
+
+
     await page.evaluate(async()=>{await navigator.serviceWorker.ready});
     await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
     // WebKit's protocol offline mode can abort navigation before its service

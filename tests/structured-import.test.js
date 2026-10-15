@@ -33,3 +33,34 @@ sandbox.btStageEntryPayload(reviewPayload);const reviewed=sandbox.collectModalEn
 assert.equal(reviewed.financialRules.closure.earlyCloseFee,null);assert.equal(reviewed.closeRuleBasis,'manual');assert.equal(reviewed.closeRestrictionType,'manual-review');assert.equal(sandbox.BTFinancialRules.validate(reviewed).ok,true);
 const afterPayout={...reviewed,reqMet:'2026-04-01',bonusRecd:'2026-04-15',monthlyFeeChecked:true};assert.equal(sandbox.closeReadiness(afterPayout).cls,'danger');assert(!sandbox.safeCloseDate(afterPayout),'Manual review cannot show a safe close date');assert(sandbox.BTBonusAI.contextFor(afterPayout).some(f=>f.id==='financialrules'&&/fee unconfirmed/.test(f.text)));
 assert.throws(()=>sandbox.btParseEntryFileText(JSON.stringify({kind:'BonusTrackerResearchDraft',importable:false,bank:'Synthetic'}),'draft.json'),/review draft/);
+
+(async()=>{
+ sandbox.atob=atob;
+ const original=JSON.stringify([...storage]);
+ sandbox.btConfirmDialog=async()=>true;
+ const result=await sandbox.btImportEntryFileObject({name:'Review-v3.json',text:async()=>JSON.stringify(reviewPayload)});
+ assert.equal(result.status,'review');assert.equal(sandbox.collectModalEntryData().financialRules.version,2);
+ const html='<a href="#btadd='+Buffer.from(JSON.stringify(reviewPayload)).toString('base64url')+'">Import</a>';
+ assert.equal((await sandbox.btImportEntryFileObject({name:'Review-v3.html',text:async()=>html})).status,'review');
+ sandbox.btConfirmDialog=async()=>false;
+ const modalBefore=require('node:vm').runInContext('JSON.stringify(modal)',sandbox);
+ assert.equal((await sandbox.btImportEntryFileObject({name:'cancel.json',text:async()=>JSON.stringify(reviewPayload)})).status,'cancelled');assert.equal(require('node:vm').runInContext('JSON.stringify(modal)',sandbox),modalBefore);
+ sandbox.btConfirmDialog=async()=>true;
+ await assert.rejects(sandbox.btImportEntryFileObject({name:'bad.json',text:async()=>JSON.stringify({...reviewPayload,entry:{...reviewPayload.entry,profile:{untrusted:true}}})}),/unsupported entry fields/);
+ assert.equal(JSON.stringify([...storage]),original,'File confirmation wrote saved records');
+
+ // Synthetic replacement identity probe: only the personal Chase cycle is eligible.
+ const run=code=>require('node:vm').runInContext(code,sandbox);
+ run(`entries=[{id:'CHA-P-01',bank:'Chase',accountType:'personal',opened:'2023-01-01',closed:'2025-01-01',bonusRecd:'2023-03-01',bonus:100,churn:'1',churnable:true,notes:'Old personal history',customTimers:[],checklist:[],history:[]},{id:'CHA-B-01',bank:'Chase Biz',accountType:'business',opened:'2023-01-01',closed:'2025-01-01',bonusRecd:'2023-03-01',bonus:500,churn:'1',churnable:true,notes:'Business unchanged',customTimers:[],checklist:[],history:[]},{id:'CIT-P-01',bank:'Citi',accountType:'personal',opened:'2023-01-01',closed:'2025-01-01',bonus:50,churn:'1',churnable:true,notes:'Other unchanged',customTimers:[],checklist:[],history:[]}];sv(SK,entries);`);
+ const seeded=storage.get('bt_e_v4'),businessBefore=run(`JSON.stringify(entries.find(e=>e.id==='CHA-B-01'))`),otherBefore=run(`JSON.stringify(entries.find(e=>e.id==='CIT-P-01'))`);
+ const chasePayload=JSON.parse(JSON.stringify(reviewPayload));chasePayload.entry.bank='Chase';
+ await sandbox.btImportEntryFileObject({name:'Synthetic-Chase-v3.json',text:async()=>JSON.stringify(chasePayload)});
+ assert.equal(storage.get('bt_e_v4'),seeded,'File review wrote old accounts');
+ sandbox.saveEntry();
+ assert.equal(run('replacementPickerPrompt.candidates.length'),1);assert.equal(run('replacementPickerPrompt.selectedId'),'CHA-P-01');assert.equal(storage.get('bt_e_v4'),seeded,'Opening replacement picker changed old accounts');
+ sandbox.doReplacementPickerReplace();assert.equal(storage.get('bt_e_v4'),seeded,'Replacement preview changed old accounts');
+ sandbox.doOverwrite();
+ assert.equal(run(`BTFinancialRules.validate(entries.find(e=>e.id==='CHA-P-01')).ok`),true);
+ assert.equal(run('entries.length'),3);assert.equal(run(`entries.find(e=>e.id==='CHA-P-01').financialRules.version`),2);assert.equal(run(`entries.find(e=>e.id==='CHA-P-01').closed`),'');assert.equal(run(`entries.find(e=>e.id==='CHA-P-01').previousCycles[0].closed`),'2025-01-01');assert.equal(run(`JSON.stringify(entries.find(e=>e.id==='CHA-B-01'))`),businessBefore);assert.equal(run(`JSON.stringify(entries.find(e=>e.id==='CIT-P-01'))`),otherBefore);
+ console.log('Actual v3 file-import path passed: confirmation, runtime metadata, JSON/HTML, cancellation, strict untrusted fields, confirmed replacement, history retention and business-account isolation.');
+})().catch(e=>{console.error(e);process.exitCode=1});

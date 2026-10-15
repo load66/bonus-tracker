@@ -3,14 +3,15 @@
 // Validate in a private in-memory app. Never reads or writes a user's tracker storage.
 const fs=require('node:fs'),path=require('node:path');
 const input=process.argv[2];if(!input){console.error('Usage: node scripts/validate-entry.cjs ENTRY.json');process.exit(2);}
-try{
+(async()=>{try{
  if(fs.statSync(input).size>2000000)throw Error('Entry exceeds the 2 MB validation limit.');
  const raw=fs.readFileSync(input,'utf8'),payload=JSON.parse(raw);
  if(payload.schemaVersion!==3)throw Error('New generated imports must use schemaVersion 3.');
  const root=path.resolve(__dirname,'..');process.chdir(root);
  const {sandbox}=require('../tests/full-app-smoke.test.js');
  const parsed=sandbox.btParseEntryFileText(raw,path.basename(input));
- sandbox.btStageEntryPayload(payload);
+ sandbox.btConfirmDialog=async()=>true;
+ await sandbox.btImportEntryFileObject({name:path.basename(input),text:async()=>raw});
  const roundtrip=sandbox.collectModalEntryData();
  if(!roundtrip)throw Error('Entry review did not produce a valid record.');
  for(const key of ['bonus','opened','reqDays','couponEnrollmentDate','offerEnrollmentDate','closeRuleBasis','closeRestrictionType'])if(parsed[key]!==undefined&&roundtrip[key]!==parsed[key])throw Error('Review/save projection changed '+key+'; correct the import wording or projection before delivery.');
@@ -20,3 +21,4 @@ try{
  if(JSON.stringify({question:'x'.repeat(500),facts}).length>17500||facts.length>30)throw Error('AI context exceeds its input budget.');
  console.log(JSON.stringify({ok:true,schemaVersion:parsed.schemaVersion,ruleVersion:parsed.financialRules.version,bank:parsed.bank,accounts:parsed.financialRules.accounts.length,requirements:parsed.financialRules.requirements.length,warnings:verdict.warnings.map(x=>x.message),reviewRoundtrip:true,aiFacts: facts.length},null,2));
 }catch(error){console.error('INVALID IMPORT: '+error.message);process.exitCode=1;}
+})();

@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.67 — strict verified JSON import with professional in-app review and conditional multi-rule churn. */
+/* BonusTracker v3.4.68 — strict verified JSON import with professional in-app review and conditional multi-rule churn. */
 (function(){
   'use strict';
-  const VER='3.4.67';
+  const VER='3.4.68';
   const HASH_KEY='btadd=';
   const ALLOWED=[
     'bank','accountType','bonus','churn','churnable','churnability','churnBasis','churnBufferDays','churnReason','sourceEligibilityBasis','churnTrackingPolicy','churnDecisionSource','churnDecisionConfidence','churnDecisionConfirmedAt','churnPeriodValue','churnPeriodUnit','eligibilityRules','couponEnrollmentDate','offerEnrollmentDate','closedWithNegativeBalance','eligibilityScope','eligibilityEvidenceText','eligibilityAnchorEvidenceText','eligibilityEvidenceSource','eligibilityVerified','eligibilityVerifiedAt','eligibilityVerificationStatus','eligibilityVerificationReason','currentCustomerExcluded','currentCustomerEvidenceText','mustCloseBeforeReapply','reapplicationAction','promoSourceUrl','feeScheduleSourceUrl','termsVerifiedAt','schemaVersion','tcSourceRaw','tcSourceId','tcSourceUpdatedAt',
@@ -96,14 +96,17 @@
     const m=raw.match(/#btadd=([A-Za-z0-9_-]+)/i);
     return m?decode(m[1]):null;
   }
-  function parseEntryFileText(text,fileName=''){
+  function readEntryFilePayload(text){
     const raw=String(text||'').trim();
     if(!raw)throw new Error('The selected file is empty.');
     let parsed=null;
     try{parsed=JSON.parse(raw)}catch{}
     if(!parsed)parsed=extractHashPayload(raw);
     if(!parsed)throw new Error('This is not a supported BonusTracker entry file. Use the JSON/HTML entry file created for BonusTracker.');
-    const out=validatePayload(parsed);
+    return parsed;
+  }
+  function parseEntryFileText(text,fileName=''){
+    const out=validatePayload(readEntryFilePayload(text));
     out._importFileName=String(fileName||'').trim();
     return out;
   }
@@ -166,7 +169,8 @@
     const text=await readFileText(file);
     const payload=parseEntryFileText(text,file.name||'');
     if(!(await confirmImportReview(payload,'entry-file')))return{status:'cancelled'};
-    return stageEntryForReview(payload,'entry-file',file.name||'');
+    // Revalidate the original external data, not the normalized preview with runtime-only metadata.
+    return stageEntryForReview(readEntryFilePayload(text),'entry-file',file.name||'');
   }
   function chooseEntryFile(){
     const input=document.createElement('input');
@@ -209,7 +213,7 @@
     try{
       const payload=validatePayload(decode(h.slice(HASH_KEY.length)));
       if(!(await confirmImportReview(payload,'one-click-link'))){clearHash();return}
-      stageEntryForReview(payload,'one-click-link','');
+      stageEntryForReview(decode(h.slice(HASH_KEY.length)),'one-click-link','');
       clearHash();
     }catch(err){clearHash();alert('Could not load this bank entry: '+(err&&err.message?err.message:err));}
   }
