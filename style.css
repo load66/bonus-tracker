@@ -4901,7 +4901,7 @@ select option{background:#0D1420;color:var(--text)}
 .card-subline{color:#A7B4C8!important}
 
 
-/* === v3.4.66 professional operations UI === */
+/* === v3.4.67 professional operations UI === */
 .ops-hero{gap:12px}
 .ops-hero .hero-side{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
 .hero-chip.secondary{background:#111B2B!important;color:#AFC1DC!important;border:1px solid #2A3B54!important}
@@ -4976,7 +4976,7 @@ select option{background:#0D1420;color:var(--text)}
   .card-progressline{max-width:210px}
 }
 
-/* v3.4.66 direct next actions and saved date explanations */
+/* v3.4.67 direct next actions and saved date explanations */
 .ops-action-item{border-bottom:1px solid #26364C}
 .ops-action-item:last-child{border-bottom:0}
 .ops-action-item .ops-action-row{border-bottom:0}

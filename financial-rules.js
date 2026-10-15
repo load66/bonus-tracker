@@ -1,7 +1,7 @@
 /* Evidence-backed, bank-independent rules. Pure functions; no tracker writes or new date arithmetic. */
 (function(root){
   'use strict';
-  const VERSION=1,clean=v=>String(v??'').replace(/\s+/g,' ').trim();
+  const VERSION=2,clean=v=>String(v??'').replace(/\s+/g,' ').trim();
   const object=v=>!!v&&typeof v==='object'&&!Array.isArray(v);
   const money=n=>'$'+Number(n).toLocaleString('en-US',{maximumFractionDigits:2});
   const number=n=>typeof n==='number'&&Number.isFinite(n)&&n>=0&&n<=100000000;
@@ -16,7 +16,7 @@
     const fail=(path,message)=>issues.push({path,message});
     const warn=(path,message)=>warnings.push({path,message});
     if(rules==null)return Number(e?.schemaVersion)>=3?{ok:false,mode:'invalid',issues:[{path:'financialRules',message:'Structured financial rules are missing.'}],warnings,rules:null}:{ok:true,mode:'legacy',issues,warnings,rules:null};
-    if(!object(rules)||rules.version!==VERSION)return{ok:false,mode:'invalid',issues:[{path:'financialRules.version',message:'The financial-rule version is unsupported.'}],warnings,rules:null};
+    if(!object(rules)||![1,VERSION].includes(rules.version))return{ok:false,mode:'invalid',issues:[{path:'financialRules.version',message:'The financial-rule version is unsupported.'}],warnings,rules:null};
     if(JSON.stringify(rules).length>60000)fail('financialRules','The financial-rule package is too large.');
     function keys(value,allowed,path){if(!object(value)){fail(path,'An object is required.');return false;}for(const k of Object.keys(value))if(!allowed.includes(k))fail(path+'.'+k,'This rule field is unsupported.');return true;}
     function evidence(value,path,expected){
@@ -41,8 +41,8 @@
       if(!kinds.has(value.kind)||!clean(value.text))fail(path,'The condition needs a supported kind and complete wording.');
       if(value.period!==undefined&&!periods.has(value.period))fail(path+'.period','The recurring period is unsupported.');
       const quote=evidence(value.evidence,path+'.evidence',expected);
-      const metrics={'minimum-daily-balance':/minimum daily balance/i,'average-daily-balance':/average daily balance/i,'statement-ending-balance':/statement.{0,20}(?:ending|end)|ending.{0,20}balance/i};
-      if(value.kind==='balance-hold'&&(!metrics[value.metric]||!metrics[value.metric].test(quote)))fail(path+'.metric','A balance waiver must retain its exact minimum-daily, average-daily or statement-ending basis.');
+      const metrics={...(rules.version>=2?{'minimum-beginning-day-balance':/balance at the beginning of each day/i,'average-beginning-day-balance':/average beginning day balance/i}:{}),'minimum-daily-balance':/minimum daily balance/i,'average-daily-balance':/average daily balance/i,'statement-ending-balance':/statement.{0,20}(?:ending|end)|ending.{0,20}balance/i};
+      if(value.kind==='balance-hold'&&(!metrics[value.metric]||!metrics[value.metric].test(quote)))fail(path+'.metric','A balance waiver must retain its exact daily, beginning-of-day or statement-ending basis.');
       if(value.metric!==undefined&&!Object.hasOwn(metrics,value.metric))fail(path+'.metric','The balance metric is unsupported.');
       if(value.amount!==undefined)supportedValue(value.amount,quote,path+'.amount',true);
       if(value.count!==undefined){if(!integer(value.count))fail(path+'.count','A positive whole count is required.');supportedValue(value.count,quote,path+'.count');}
@@ -97,13 +97,15 @@
     if(keys(rules.payout,['text','timing','evidence'],'payout')){if(!clean(rules.payout.text))fail('payout.text','Payout conditions are required.');evidence(rules.payout.evidence,'payout.evidence','promotion');if(e.payoutTimingText&&clean(rules.payout.text)!==clean(e.payoutTimingText))fail('payout.text','Structured payout wording conflicts with the tracker wording.');if(rules.payout.timing!==undefined){const t=rules.payout.timing;if(!keys(t,['basis','value','unit'],'payout.timing')||!['opened','reqmet','bonus','qualifying-period-end'].includes(t.basis)||!integer(t.value)||!units.has(t.unit))fail('payout.timing','Payout timing must retain its exact trigger and unit.');else{supportedValue(t.value,rules.payout.evidence?.quote||'','payout.timing.value');unitEvidence(t.unit,rules.payout.evidence?.quote||'','payout.timing.unit');}}}
     if(keys(rules.closure,['restrictionType','basis','minHoldDays','earlyCloseFee','text','evidence','feeEvidence'],'closure')){
       const c=rules.closure,q=evidence(c.evidence,'closure.evidence','promotion');
+      const unknownFee=rules.version>=2&&c.earlyCloseFee===null;
       const feeQuote=evidence(c.feeEvidence,'closure.feeEvidence');
-      if(!['payout-only','minimum-open','explicit-clawback','manual-review','none'].includes(c.restrictionType)||!['opened','reqmet','bonus','manual'].includes(c.basis)||!number(c.minHoldDays)||!Number.isInteger(c.minHoldDays)||!number(c.earlyCloseFee)||!clean(c.text))fail('closure','Closure restrictions, anchor, calendar-day hold and charge must be explicit.');
+      if(unknownFee){if(c.restrictionType!=='manual-review'||c.basis!=='manual')fail('closure.earlyCloseFee','An unconfirmed early-close fee must block closure through manual review.');warn('closure.earlyCloseFee','Early-close fee unconfirmed. Verify the applicable fee before closing; no zero-fee claim is made.');}
+      if(!['payout-only','minimum-open','explicit-clawback','manual-review','none'].includes(c.restrictionType)||!['opened','reqmet','bonus','manual'].includes(c.basis)||!number(c.minHoldDays)||!Number.isInteger(c.minHoldDays)||(!unknownFee&&!number(c.earlyCloseFee))||!clean(c.text))fail('closure','Closure restrictions, anchor, calendar-day hold and charge must be explicit.');
       if(c.minHoldDays>0)supportedValue(c.minHoldDays,q,'closure.minHoldDays');
       if(c.earlyCloseFee>0)supportedValue(c.earlyCloseFee,feeQuote,'closure.earlyCloseFee',true);
       if(c.minHoldDays>0&&/business days?|statement (?:cycles?|periods?)|calendar months?|years?/i.test(q))fail('closure.minHoldDays','A non-calendar hold cannot be converted to calendar days. Use manual review.');
       if(c.restrictionType==='manual-review'&&c.basis!=='manual')fail('closure.basis','Unresolved closure terms must require manual review.');
-      if(Number(e.minHoldDays||0)!==c.minHoldDays||Number(e.earlyCloseFee||0)!==c.earlyCloseFee||e.closeRuleBasis&&e.closeRuleBasis!==c.basis||e.closeRestrictionType&&e.closeRestrictionType!==c.restrictionType)fail('closure','Structured closure rules conflict with the tracker calculation fields.');
+      if(Number(e.minHoldDays||0)!==c.minHoldDays||(!unknownFee&&Number(e.earlyCloseFee||0)!==c.earlyCloseFee)||e.closeRuleBasis&&e.closeRuleBasis!==c.basis||e.closeRestrictionType&&e.closeRestrictionType!==c.restrictionType)fail('closure','Structured closure rules conflict with the tracker calculation fields.');
       if(c.earlyCloseFee===0&&!/no .*?(?:early|clos|terminat).*?fee|\$0|fee.free/i.test(feeQuote))fail('closure.earlyCloseFee','A zero early-close charge requires explicit fee evidence.');
     }
     return{ok:!issues.length,mode:issues.length?'invalid':'structured',issues,warnings,rules:issues.length?null:rules};
@@ -122,7 +124,7 @@
     const minimums=r.accounts.filter(a=>a.minimumBalance).map(a=>a.label+': '+a.minimumBalance.text);
     const evidence=[],seen=new Set();
     const walk=v=>{if(!object(v)&&!Array.isArray(v))return;if(v.source&&v.quote){const key=v.source+': '+v.quote;if(!seen.has(key)){seen.add(key);evidence.push(key);}}for(const child of Object.values(v))if(object(child)||Array.isArray(child))walk(child);};walk(r);
-    return{mode:'structured',fees,waivers,minimums,requirements:r.requirements.map(x=>x.text),payout:r.payout.text,closure:r.closure.text,recurring:r.requirements.some(x=>x.recurrence),feeRisk:r.accounts.some(a=>a.required&&a.fee.amount!==0),issues:[],warnings:v.warnings.map(x=>x.message),evidence};
+    return{mode:'structured',fees,waivers,minimums,requirements:r.requirements.map(x=>x.text),payout:r.payout.text,closure:r.closure.text+(r.closure.earlyCloseFee===null?' Early-close fee unconfirmed; manual closure review required.':''),recurring:r.requirements.some(x=>x.recurrence),feeRisk:r.accounts.some(a=>a.required&&a.fee.amount!==0),issues:[],warnings:v.warnings.map(x=>x.message),evidence};
   }
   function intentFor(question){
     const q=clean(question).toLowerCase();

@@ -157,3 +157,4 @@ assert(G.applicationReadyDate({...currentCustomer,closed:'2027-08-15'},addD,addM
 assert(G.applicationReadyDate({...currentCustomer,closed:'2027-09-10'},addD,addM)==='2027-09-10','Later required account close was not respected');
 
 console.log('Eligibility evidence gate passed: single/multi-rule wording, U.S. Bank semantics, Chase conditional/enrollment rules, latest-date control, exact units, and safe dates verified');
+assert(!G.discoverTimedRestrictions('Checking offer is not available to existing Chase checking customers or those whose accounts have been closed within 90 days or closed with a negative balance within the last 3 years.').some(r=>r.basis==='account-ownership-ended'),'Have been closed is a closure rule, not an ownership lookback');
