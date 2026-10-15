@@ -4901,7 +4901,7 @@ select option{background:#0D1420;color:var(--text)}
 .card-subline{color:#A7B4C8!important}
 
 
-/* === v3.4.64 professional operations UI === */
+/* === v3.4.65 professional operations UI === */
 .ops-hero{gap:12px}
 .ops-hero .hero-side{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
 .hero-chip.secondary{background:#111B2B!important;color:#AFC1DC!important;border:1px solid #2A3B54!important}
@@ -4976,7 +4976,7 @@ select option{background:#0D1420;color:var(--text)}
   .card-progressline{max-width:210px}
 }
 
-/* v3.4.64 direct next actions and saved date explanations */
+/* v3.4.65 direct next actions and saved date explanations */
 .ops-action-item{border-bottom:1px solid #26364C}
 .ops-action-item:last-child{border-bottom:0}
 .ops-action-item .ops-action-row{border-bottom:0}
@@ -4987,3 +4987,12 @@ select option{background:#0D1420;color:var(--text)}
 .ops-action-item .ops-date-proof{margin:0 12px 9px;padding:0;border:0;background:transparent;border-radius:0}
 .ops-action-item .ops-date-proof summary{min-height:32px;padding:5px 0;color:#A7B8CC;font-size:10px;line-height:1.45;cursor:pointer}
 .ops-action-item .ops-date-proof p{margin:0;padding:0 0 8px;color:#9DACC0;font-size:10px;line-height:1.6;overflow-wrap:anywhere}
+
+/* Per-offer eligibility editor: readable fields and stable disclosure panels. */
+.eligibility-restriction{min-width:0;border:1px solid var(--border);border-radius:12px;padding:10px 12px}
+.eligibility-restriction>summary{min-height:44px;display:list-item;padding:10px 0;cursor:pointer;font-weight:700;line-height:1.5;overflow-wrap:anywhere}
+.eligibility-rule-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding-top:10px}
+.eligibility-rule-grid>.full{grid-column:1/-1}
+.eligibility-rule-grid .fg{min-width:0}
+.eligibility-rule-grid textarea{width:100%;resize:vertical}
+@media(max-width:480px){.eligibility-rule-grid{grid-template-columns:minmax(0,1fr)}}

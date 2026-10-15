@@ -59,16 +59,16 @@ module.exports={sandbox,document,app,storage,errors};
 if(require.main===module)setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.64',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.4.64',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.65',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.4.65',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.13',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
-    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.64',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
-    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.64',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
+    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.65',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
+    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.65',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.13',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
     assert(sandbox.BTEligibilityGate?.VERSION==='1.3.0',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
-    assert(sandbox.btLifecycleStatusVersion==='3.4.64-status1',`Unexpected lifecycle status version ${sandbox.btLifecycleStatusVersion}`);
-    assert(sandbox.btSmartAttentionVersion==='3.4.64-action1',`Unexpected Action Center version ${sandbox.btSmartAttentionVersion}`);
-    assert(sandbox.btUiFeedbackVersion==='3.4.64-feedback1',`Unexpected UI feedback version ${sandbox.btUiFeedbackVersion}`);
+    assert(sandbox.btLifecycleStatusVersion==='3.4.65-status1',`Unexpected lifecycle status version ${sandbox.btLifecycleStatusVersion}`);
+    assert(sandbox.btSmartAttentionVersion==='3.4.65-action1',`Unexpected Action Center version ${sandbox.btSmartAttentionVersion}`);
+    assert(sandbox.btUiFeedbackVersion==='3.4.65-feedback1',`Unexpected UI feedback version ${sandbox.btUiFeedbackVersion}`);
     const lifecycleSamples=[
       {bank:'Progress Bank',opened:'2026-09-01',dataPoint:'Make a qualifying direct deposit',customTimers:[]},
       {bank:'Await Bank',reqMet:'2026-09-20',payoutTimingText:'within 30 calendar days',customTimers:[]},
@@ -309,7 +309,7 @@ if(require.main===module)setTimeout(()=>{
     sandbox.btModalSet('bank','Wells Fargo');sandbox.btModalSet('accountType','personal');sandbox.btModalSet('bonus','400','number');sandbox.setModalChurnability('repeatable');sandbox.setModalChurnRule('1');sandbox.setModalChurnBasis('bonus');sandbox.btModalSet('opened','2026-08-10');sandbox.btModalSet('monthlyFeeYNText','Not stated in bonus disclosure — separate Wells Fargo fee schedule applies');sandbox.btModalSet('avoidMonthlyFeeText','Review the Wells Fargo Consumer Account Fee and Information Schedule.');vm.runInContext("modal.churnPeriodValue=12;modal.churnPeriodUnit='months';modal.eligibilityEvidenceText='Not eligible if you received a Wells Fargo consumer checking bonus within the past 12 months.';modal.eligibilityEvidenceSource='official-promotion-terms'",sandbox);
     sandbox.btWizardStep(1);
     const wizardBasics=sandbox.rModal();
-    assert(/Can this bonus be earned again\? \*/.test(wizardBasics)&&/Eligibility clock starts from \*/.test(wizardBasics)&&/exact eligibility wording from the offer/i.test(wizardBasics)&&/Churn T&C verified/.test(wizardBasics),'Guided editor did not show verified T&C churn evidence');
+    assert(/Can this bonus be earned again\? \*/.test(wizardBasics)&&/(?:Eligibility clock starts from|Restriction 1 clock)/.test(wizardBasics)&&/rules for this product and offer/i.test(wizardBasics)&&/Churn T&C verified/.test(wizardBasics),'Guided editor did not show verified T&C churn evidence');
     sandbox.btWizardStep(4);
     const wizardReview=sandbox.rModal();
     assert(/Future eligibility/.test(wizardReview)&&/12 months after bonus payout received \+ 2-day safety buffer/.test(wizardReview),'Guided review did not show the T&C-verified source-based eligibility policy');

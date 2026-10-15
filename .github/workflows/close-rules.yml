@@ -85,7 +85,7 @@ jobs:
         run: node tests/eligibility-gate.test.js
 
       - name: Run universal 2-day churn buffer tests
-        run: node tests/churn-buffer.test.js
+        run: node tests/churn-buffer.test.js && node tests/countdown-options.test.js
 
       - name: Run hardening regression tests
         env:
