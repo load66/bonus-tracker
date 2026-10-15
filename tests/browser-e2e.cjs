@@ -138,7 +138,7 @@ async function exercise(name,engine,url){
     check('action tile opens its full account card',await page.locator('.card-exp').isVisible());
     check('using an action preserves expanded Action Center',await page.locator('#bt-action-center-toggle').getAttribute('aria-expanded')==='true');
     check('account omits redundant guidance sections',await page.locator('.ops-action-why,.ops-date-proof').count()===0);
-    check('Action Center shows lifecycle stage with countdown',await page.locator('.ops-tile-status').first().innerText().then(t=>t.length>0&&!/d left/.test(t))&&await page.locator('.ops-tile-countdown').count()>0);
+    check('Action Center shows next task with countdown',await page.locator('.ops-tile-status').first().innerText().then(t=>t.length>0&&!/d left/.test(t))&&await page.locator('.ops-tile-countdown').count()>0);
     const id=(await record()).id;
     await page.reload();await settleStartup();check('reload preserves identity and notes',(await record()).id===id&&(await record()).notes===payload.entry.notes);
     check('refresh resets Action Center to collapsed',await page.locator('#bt-action-center-toggle').getAttribute('aria-expanded')==='false');
@@ -149,9 +149,9 @@ async function exercise(name,engine,url){
     await wait(()=>modal===null&&!entrySaveBusy);
     check('edit preserves identity',(await record()).id===id);
     check('notes cannot inject HTML',await page.locator('img[src="x"]').count()===0);
-    await button('Confirm requirements completed').click();await page.locator('#req_date').fill('2026-04-01');await button('Save').click();await button('OK').click();
+    await button('Review deposits').click();await button('Confirm all requirements').click();await page.locator('#req_date').fill('2026-04-01');await button('Save').click();await button('OK').click();
     check('requirements and payout stay separate',(await record()).reqMet==='2026-04-01'&&!(await record()).bonusRecd);
-    await button('Confirm bonus received').click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('OK').click();
+    await button('Confirm received').click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('OK').click();
     check('bonus receipt updates close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
     await button('Manage').click();await button('⏱️ Add timer Set a reminder or deadline').click();
     await button('Start + Days').click();await page.locator('#tem_text').fill('E2E manual reminder');await page.locator('#tem_start').fill('2026-03-08');await page.locator('#tem_days').fill('1');await button('Add timer').click();
@@ -503,10 +503,14 @@ async function exercise(name,engine,url){
       entries.push({...entries[0],id:'E2E-TILE-02',bank:'E2E Citi',bonus:325,reqMet:'2026-08-10',payoutTimingText:'Bonus expected after requirements are completed',customTimers:[]});R();
     });
     check('mobile Action Center uses two compact columns',await page.locator('.ops-action-tile').evaluateAll(rows=>rows.length===2&&Math.abs(rows[0].getBoundingClientRect().top-rows[1].getBoundingClientRect().top)<2));
-    check('every Action Center tile shows canonical lifecycle stage',await page.locator('.ops-action-tile').evaluateAll(rows=>rows.every(e=>{const s=e.querySelector('.ops-tile-status');return s&&s.textContent.trim()&&!/d left|Date needs review/.test(s.textContent)})));
-    check('recurring and payout stages remain distinct',await page.locator('.ops-tile-status').allTextContents().then(rows=>rows.includes('In Progress')&&rows.includes('Awaiting Bonus')));
-    check('compact recurring and payout buttons remain available',await button('Review recurring requirements').count()===1&&await button('Confirm bonus received').count()===1);
+    check('every Action Center tile shows specific next action',await page.locator('.ops-action-tile').evaluateAll(rows=>rows.every(e=>{const s=e.querySelector('.ops-tile-status');return s&&s.textContent.trim()&&!/d left|Date needs review/.test(s.textContent)})));
+    check('recurring and payout tasks remain distinct',await page.locator('.ops-tile-status').allTextContents().then(rows=>rows.some(t=>t.includes('Establish $500+ monthly qualified direct deposits'))&&rows.includes('Confirm bonus payment')));
+    check('compact recurring and payout buttons remain available',await button('Review deposits').count()===1&&await button('Confirm received').count()===1);
     await page.locator('.ops-action-center').screenshot({path:path.join(output,name+'-action-tiles.png')});
+    const taskStorage=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
+    await button('Review deposits').click();
+    check('deposit action opens exact task and preserves data',await page.locator('.ops-task-current').isVisible()&&(await page.locator('.ops-task-current').innerText()).includes('$500+')&&await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===taskStorage);
+    check('one task review does not open whole-offer completion',await page.evaluate(()=>!reqPrompt&&!rcvPrompt));
     await page.locator('#bt-action-center-toggle').click();
     check('collapsed Action Center remains compact on mobile',await page.locator('.ops-action-center').evaluate(e=>e.getBoundingClientRect().height<100)&&!await page.locator('.ops-action-list').isVisible());
     await page.locator('.ops-action-center').screenshot({path:path.join(output,name+'-action-center-collapsed.png')});

@@ -1,7 +1,7 @@
-/* Version 3.4.71: read-only churn-aware and area-aware bank offer discovery. */
+/* Version 3.4.72: read-only churn-aware and area-aware bank offer discovery. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.71';
+const APP_VERSION='3.4.72';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -3924,16 +3924,31 @@ function renderAccountEmptyState(query){
     : entries.some(isArchivedTrackerEntry)?'<div class="empty"><div class="em">No active accounts</div><p>Completed, non-repeatable offers are saved in Archived accounts.</p><button type="button" class="btn-s" onclick="switchMainTab(\'archive\')">View archived accounts</button></div>'
     : '<div class="empty"><div class="em">No accounts yet</div><p>Add an account or restore a backup.</p></div>'
 }
-function runNextAccountAction(id){
-  const e=entries.find(e=>e.id===id);
-  if(!e)return;
-  // Re-evaluate on click so a stale button cannot bypass a changed restriction.
+function runNextAccountMilestone(id){
+  const e=entries.find(e=>e.id===id);if(!e)return;
   const next=window.btNextActionForEntry?.(e);
   expanded=id;search='';tab='tracker';
   if(next?.kind==='requirements')openReqMet(id);
   else if(next?.kind==='bonus')openRcv(id);
   else if(next?.kind==='close')startCloseFlow(id,'actual');
-  else{setProfileSectionOpen(id,'lifecycle',true);openAccountFromActionCenter(id)}
+  else openAccountFromActionCenter(id);
+}
+function runNextAccountAction(id){
+  const e=entries.find(e=>e.id===id);if(!e)return;
+  const next=window.btNextActionForEntry?.(e);
+  if(!next?.task||next.task.target==='milestone'){runNextAccountMilestone(id);return}
+  setProfileSectionOpen(id,'lifecycle',true);openAccountFromActionCenter(id);
+  const card=Array.from(document.querySelectorAll('.card[data-bt-entry-id]')).find(el=>el.getAttribute('data-bt-entry-id')===id);
+  const section=card?.querySelector('details[data-section-key="lifecycle"]');
+  if(section){section.open=true;setProfileSectionOpen(id,'lifecycle',true)}
+  const task=card?.querySelector('.ops-task-current');
+  if(task){task.scrollIntoView({block:'center',behavior:'auto'});task.focus({preventScroll:true})}
+}
+function renderCurrentAccountTask(e){
+  const next=window.btNextActionForEntry?.(e),task=next?.task;if(!task)return'';
+  let h='<div class="ops-task-current" tabindex="-1"><b>'+esc(task.title)+'</b><p>'+esc(String(task.detail||'').slice(0,700))+'</p>';
+  if(next.kind==='requirements'&&task.target!=='milestone')h+='<button type="button" class="btn-s" onclick="runNextAccountMilestone('+profileSectionAttr(JSON.stringify(String(e.id)))+')">Confirm all requirements</button>';
+  return h+'</div>';
 }
 function renderActionCenter(){
   let rows=[];try{rows=typeof window.getAttentionSuggestions==='function'?(window.getAttentionSuggestions()||[]):[]}catch{}
@@ -3946,12 +3961,12 @@ function renderActionCenter(){
     const entryId=String(x.entryId||'');
     const stage=String(x.stageCode||'IN_PROGRESS').toLowerCase().replace(/_/g,'-');
     const proof=x.dateContext;
-    const stageLabel=x.stageLabel||'Review needed';
+    const stageLabel=x.task?.title||x.stageLabel||'Review saved requirements';
     let indicator='';
     if(proof?.confirmed&&proof.date){const days=dB(td(),proof.date);indicator=Number.isFinite(days)?(days<0?'Overdue':days===0?'Due today':days+'d left'):'Date needs review'}
     else if(proof&&!proof.confirmed&&stage!=='awaiting-bonus')indicator='Date needs review';
-    const label=x.actionLabel||'Review account';
-    const miniLabel=label==='Confirm bonus received'?'Confirm received':label==='Confirm requirements completed'?'Confirm requirements':label==='Review recurring requirements'?'Review requirements':label==='Review & record closure'?'Review closure':label;
+    const label=x.task?.cta||x.actionLabel||'View requirements';
+    const miniLabel=label;
     h+='<div class="ops-action-item ops-action-tile stage-'+esc(stage)+'"><button type="button" class="ops-action-row" aria-label="'+esc('Open '+x.bank+' account')+'" onclick="event.stopPropagation();openAccountFromActionCenter('+profileSectionAttr(JSON.stringify(entryId))+')"><span class="ops-tile-top">'+bankLogo(x.bank,true)+(x.showBonus&&x.bonus?'<strong>'+fM(x.bonus)+'</strong>':'')+'</span><b class="ops-tile-bank">'+esc(x.bank)+'</b><span class="ops-tile-status">'+esc(stageLabel)+'</span>'+(indicator?'<span class="ops-tile-countdown">'+esc(indicator)+'</span>':'')+'</button>';
     h+='<div class="ops-action-controls"><button type="button" class="ops-next-action" aria-label="'+esc(label)+'" onclick="event.stopPropagation();runNextAccountAction('+profileSectionAttr(JSON.stringify(entryId))+')">'+esc(miniLabel)+'</button></div></div>'
   });
@@ -6402,6 +6417,7 @@ entries=sortE(entries);R();
         h += renderClosePlan(e);
         h += renderMonthlyFeePlan(e);
         h += '<details class="profile-section" data-entry-id="'+profileSectionAttr(e.id)+'" data-section-key="lifecycle"'+profileSectionOpenAttr(e.id,'lifecycle')+' ontoggle="handleProfileSectionToggle(this)"><summary><span>'+(e.closed?'Lifecycle':'Lifecycle & Tasks')+'</span><em>View</em></summary><div class="profile-section-body">';
+        h += renderCurrentAccountTask(e);
         h += renderLifecycleStepper(e);
 
         if(!e.closed){

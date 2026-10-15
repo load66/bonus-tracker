@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.71 Action Center — canonical lifecycle stages drive every user-facing action item. */
+/* BonusTracker v3.4.72 Action Center — canonical lifecycle stages drive every user-facing action item. */
 (function(){
   'use strict';
-  const VER='3.4.71-action1';
+  const VER='3.4.72-action1';
 
   function finite(v){if(v==null||v==='')return null;const n=Number(v);return Number.isFinite(n)?n:null}
   function daysTo(date){
@@ -108,7 +108,7 @@
     const date=typeof reqDeadline==='function'?reqDeadline(e):'';
     return result(date,date?'Opened '+dateText(e.opened)+' + '+e.reqDays+' calendar days → '+dateText(date):'requirement deadline or opening date is missing')
   }
-  function nextActionForEntry(e){
+  function milestoneActionForEntry(e){
     const stage=stageFor(e),context=dateContext(e,stage);
     const financial=window.BTFinancialRules?.validate(e);
     if(financial&&!financial.ok){
@@ -141,6 +141,75 @@
     if(!context.confirmed)explanation+=' The next date is not confirmed; review its terms and start date.';
     return {stage,context,kind,label,explanation}
   }
+  // Read-only task projection. Financial rules and user activity remain separate.
+  const normalizedTask=text=>String(text||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  function activityKind(text){
+    const t=String(text||'');
+    if(/payout|bonus (?:payment|posts?|received)|wait for.{0,20}bonus|tier determination/i.test(t))return'payout';
+    if(/clos(?:e|ure)|clawback|reapply|eligib/i.test(t))return'closure';
+    if(/direct[ -]?deposits?|\bq?dd\b|payroll/i.test(t))return'direct-deposit';
+    if(/maintain|retain|hold.{0,30}(?:balance|\$)|balance.{0,20}(?:hold|minimum)/i.test(t))return'balance-hold';
+    if(/debit|transactions?|purchases?/i.test(t))return'transactions';
+    if(/enroll|activate|register|coupon/i.test(t))return'enrollment';
+    if(/fund(?:ing)?|deposit\s+\$|initial deposit|new (?:money|funds)/i.test(t))return'new-money';
+    return'other';
+  }
+  function money(value){return Number.isFinite(value)&&value>0?'$'+value.toLocaleString('en-US',{maximumFractionDigits:2}):'';}
+  function taskTitle(kind,amount,count,period,text,e){
+    const a=money(amount),n=Number.isInteger(count)&&count>0?count:0;
+    if(!a&&kind!=='other'&&text)return String(text).replace(/\s+/g,' ').trim().slice(0,100);
+    if(kind==='direct-deposit')return (period&&e.reqMet?'Maintain ':'Receive ')+(a?a+' in ':'')+(period?period+' ':'')+'qualifying direct deposits';
+    if(kind==='new-money')return 'Fund '+(a?a+' into ':'')+'the account';
+    if(kind==='balance-hold')return 'Maintain '+(a?a+' ':'')+'required balance';
+    if(kind==='transactions')return 'Complete '+(n?n+' ':'')+(/debit/i.test(text)?'debit purchases':'qualifying transactions');
+    if(kind==='enrollment')return 'Complete required enrollment';
+    return String(text||'Review saved requirements').replace(/\s+/g,' ').trim().slice(0,100);
+  }
+  function specificTask(e,next){
+    const {stage}=next,base=(title,cta,target='lifecycle',detail=next.explanation)=>({title,cta,target,detail,context:next.context});
+    if(next.label==='Review financial rules')return base('Verify saved offer rules','Review terms');
+    if(e.closed)return base(next.context.confirmed?(stage.code==='ELIGIBLE'?'Review a new offer':'Wait for eligibility'):'Verify eligibility dates','Review eligibility');
+    if(e.bonusRecd){
+      if(next.kind==='close')return base('Review and close the account','Review closure','milestone');
+      return base(stage.code==='HOLD_OPEN'?'Keep the account open':'Verify closure terms','Review close checks');
+    }
+    if(next.kind==='bonus')return base('Confirm bonus payment','Confirm received','milestone');
+    const trackers=[...(Array.isArray(e.checklist)?e.checklist:[]).map((t,index)=>({...t,source:'checklist',index})),...(Array.isArray(e.customTimers)?e.customTimers:[]).map(t=>({...t,source:'timer'}))].filter(t=>t&&typeof t.text==='string');
+    const valid=window.BTFinancialRules?.validate(e),structured=valid?.ok&&valid.rules?valid.rules.requirements:null;
+    let candidates=[];
+    if(Array.isArray(structured)){
+      candidates=structured.filter(r=>!e.reqMet||r.recurrence).filter(r=>r.recurrence||!trackers.some(t=>t.done&&normalizedTask(t.text)===normalizedTask(r.text))).map(r=>{
+        const compatible=trackers.filter(t=>!t.done&&activityKind(t.text)===r.kind);
+        const linked=compatible.find(t=>normalizedTask(t.text)===normalizedTask(r.text))||(structured.filter(x=>x.kind===r.kind).length===1?compatible.filter(t=>t.source==='timer').sort((a,b)=>String(a.date||'9999').localeCompare(String(b.date||'9999')))[0]:null);
+        return {kind:r.kind,text:r.text,amount:r.amount,count:r.count,recurring:r.recurrence,linked};
+      });
+    }else{
+      candidates=trackers.filter(t=>!t.done&&!['payout','closure'].includes(activityKind(t.text))).map(t=>({kind:activityKind(t.text),text:t.text,linked:t}));
+      // Explicit legacy funding fields are used only when funding has no saved task.
+      if(!e.reqMet&&e.fundingAmount>0&&!trackers.some(t=>activityKind(t.text)==='new-money')&&!(e.fundedDate||e.fundedAt||e.fundingCompleted||e.fundedDone))candidates.push({kind:'new-money',text:e.fundingAmountText||'Saved account funding requirement',amount:e.fundingAmount});
+      if(!candidates.length&&recurring(e,stage)){const recurringTask=trackers.find(t=>/monthly|each month|every month|per month/i.test(t.text)&&!['payout','closure'].includes(activityKind(t.text)));if(recurringTask)candidates.push({kind:activityKind(recurringTask.text),text:recurringTask.text});}
+      if(!candidates.length&&!trackers.length&&(!e.reqMet||recurring(e,stage))){
+        const lines=String(e.completeBonusText||e.dataPoint||'').split(/\n|[;]+/).filter(t=>!/^\s*(?:no |not |exclude|wait |do not)/i.test(t.replace(/^\s*\d+[.)]\s*/,'')));
+        const line=lines.find(t=>['direct-deposit','new-money','balance-hold','transactions','enrollment'].includes(activityKind(t))&&!trackers.some(x=>x.done&&normalizedTask(x.text)===normalizedTask(t)));
+        if(line)candidates.push({kind:activityKind(line),text:line});
+      }
+    }
+    const order={'enrollment':0,'new-money':1,'direct-deposit':2,'transactions':3,'balance-hold':4,'other':5};
+    candidates.sort((a,b)=>String(a.linked?.date||'9999').localeCompare(String(b.linked?.date||'9999'))||(order[a.kind]??9)-(order[b.kind]??9));
+    const task=candidates[0];
+    if(!task)return base(next.kind==='requirements'?'Confirm all bonus requirements':'Review saved requirements',next.kind==='requirements'?'Confirm requirements':'View requirements',next.kind==='requirements'?'milestone':'lifecycle');
+    const period=task.recurring?({'calendar-month':'monthly','statement-cycle':'per-statement','calendar-quarter':'quarterly','calendar-year':'annual'}[task.recurring.period]||'recurring'):(/monthly|each month|every month|per month/i.test(task.text)?'monthly':'');
+    // Dollar/count values for legacy records stay in exact saved text; never parse a balance from an exclusion.
+    const title=taskTitle(task.kind,task.amount,task.count,period,task.text,e);
+    const cta={'new-money':'Review funding','direct-deposit':'Review deposits','balance-hold':'Review balance hold','transactions':'Review transactions','enrollment':'Review enrollment'}[task.kind]||'View task';
+    const result=base(title,cta,'lifecycle',task.text);
+    result.timerId=task.linked?.source==='timer'?task.linked.id:'';
+    result.checklistIndex=task.linked?.source==='checklist'?task.linked.index:null;
+    if(task.linked?.source==='timer')result.context=dateContext(e,{...stage,timer:task.linked,kind:task.kind==='direct-deposit'?'requirement':task.kind});
+    else if(task.kind==='new-money'&&!task.linked)result.context={date:'',confirmed:false,explanation:'Funding deadline needs review in the saved terms.'};
+    return result;
+  }
+  function nextActionForEntry(e){const next=milestoneActionForEntry(e);return {...next,task:specificTask(e,next)};}
   function shouldInclude(e,stage,days){
     if(!e||!e.bank||!stage)return false;
     if(!e.closed)return stage.code!=='ARCHIVED';
@@ -164,8 +233,9 @@
         action:actionVerb(stage.code),
         actionKind:nextAction.kind,
         actionLabel:nextAction.label,
+        task:nextAction.task,
         actionExplanation:nextAction.explanation,
-        dateContext:nextAction.context,
+        dateContext:nextAction.task?.context||nextAction.context,
         rsn:String(stage.support||'Review this account').trim(),
         bonus:Number(e.bonus||0),
         showBonus:Number(e.bonus||0)>0,
