@@ -1,4 +1,4 @@
-/* v3.4.70: a consistent mobile hierarchy; financial rules stay in the engine. */
+/* v3.4.71: a consistent mobile hierarchy; financial rules stay in the engine. */
 .tracker-overview{margin-bottom:16px}
 .ops-action-toggle{width:100%;min-height:52px;background:transparent;border:0;color:inherit;font-family:inherit;text-align:left;cursor:pointer}
 .ops-action-toggle .ops-action-title{font-size:14px;font-weight:700;letter-spacing:0;text-transform:none;color:#F3F7FC}
@@ -16,10 +16,6 @@
 .mobile-disclosure>summary{padding:12px 14px;min-height:44px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text)}
 .mobile-disclosure-body{padding:0 14px 12px;font-size:13px;line-height:1.6;color:var(--sub)}
 .mobile-disclosure-body .radar-filters,.mobile-disclosure-body .radar-verification-info,.mobile-disclosure-body .radar-sources{margin:0;padding:0;border:0;background:transparent}
-.ops-action-item .ops-action-why{margin:0 12px 8px;padding:0;border:0;border-radius:0;background:transparent!important}
-.ops-action-item .ops-action-why>summary{padding:8px 0;min-height:40px;background:transparent!important;font-size:12px;line-height:1.4;text-transform:none;letter-spacing:0;font-weight:600;color:#ABC8EF!important}
-.ops-action-item .ops-action-why .ops-action-explanation{margin:0;padding:0 0 10px;font-size:13px;line-height:1.6;color:var(--sub)}
-.ops-action-item .ops-date-proof.unconfirmed>summary{color:#F3CE83!important}
 .ck-del{border:0;background:transparent;font-family:inherit;cursor:pointer}
 .dp-head{width:100%;border:0;background:transparent;color:inherit;font-family:inherit;text-align:left;cursor:pointer}
 .dp-head:focus-visible,.mobile-disclosure>summary:focus-visible{outline:2px solid #8BC8FF;outline-offset:-3px}
@@ -139,7 +135,8 @@
 .ops-tile-top .blogo{width:36px;height:36px;border-radius:9px;flex-shrink:0}
 .ops-tile-top strong{font-size:16px;color:var(--text);overflow-wrap:anywhere}
 .ops-tile-bank{font-size:12px;line-height:1.35;overflow-wrap:anywhere;color:var(--text)}
-.ops-tile-status{font-size:11px;line-height:1.4;color:#ABC1DC;margin-top:auto}
+.ops-tile-status{font-size:11px;font-weight:700;line-height:1.4;color:#CFDCF0;margin-top:auto}
+.ops-tile-countdown{font-size:11px;font-weight:400;line-height:1.4;color:#ABC1DC}
 .stage-action-needed .ops-tile-status{color:#FFB1B9}
 .ops-action-tile .ops-action-controls{padding:0 8px 8px;margin:0}
 .ops-action-tile .ops-next-action{width:100%;min-height:44px;padding:6px 8px;font-size:11px;line-height:1.3;margin:0;border-radius:8px}

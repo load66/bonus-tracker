@@ -1,4 +1,4 @@
-/* BonusTracker v3.4.70 — explicit per-offer eligibility clocks and multiple restrictions. */
+/* BonusTracker v3.4.71 — explicit per-offer eligibility clocks and multiple restrictions. */
 (function(){
   'use strict';
   const G=window.BTEligibilityGate;

@@ -137,9 +137,8 @@ async function exercise(name,engine,url){
     await page.locator('.ops-action-row').first().click();
     check('action tile opens its full account card',await page.locator('.card-exp').isVisible());
     check('using an action preserves expanded Action Center',await page.locator('#bt-action-center-toggle').getAttribute('aria-expanded')==='true');
-    check('long action guidance is collapsed by default',!await page.locator('.ops-action-explanation').isVisible());
-    await page.locator('.ops-action-why summary').click();
-    check('next action explains saved requirements without AI',(await page.locator('.ops-action-explanation').innerText()).includes('qualifying activity with the bank'));
+    check('account omits redundant guidance sections',await page.locator('.ops-action-why,.ops-date-proof').count()===0);
+    check('Action Center shows lifecycle stage with countdown',await page.locator('.ops-tile-status').first().innerText().then(t=>t.length>0&&!/d left/.test(t))&&await page.locator('.ops-tile-countdown').count()>0);
     const id=(await record()).id;
     await page.reload();await settleStartup();check('reload preserves identity and notes',(await record()).id===id&&(await record()).notes===payload.entry.notes);
     check('refresh resets Action Center to collapsed',await page.locator('#bt-action-center-toggle').getAttribute('aria-expanded')==='false');
@@ -409,11 +408,11 @@ async function exercise(name,engine,url){
     // Restore native fetch before verifying real service-worker offline navigation.
     await page.evaluate(()=>{window.fetch=window.__bonusAITest.nativeFetch;delete window.__bonusAITest;});
 
-    const why=page.locator('.ops-action-why');
-    if(!await why.evaluate(e=>e.open))await why.locator('summary').click();
+    const lifecycle=page.locator('.profile-section[data-section-key="lifecycle"]').first();
+    if(!await lifecycle.evaluate(e=>e.open))await lifecycle.locator('summary').click();
     await button('2025').click();
     await button('2026').click();
-    check('expanded account guidance survives year navigation',await page.locator('.ops-action-why').evaluate(e=>e.open));
+    check('expanded Lifecycle & Tasks survives year navigation',await page.locator('.profile-section[data-section-key="lifecycle"]').first().evaluate(e=>e.open));
     await page.getByPlaceholder('Search accounts...').pressSequentially('E2E');
     check('tracker search keeps cursor through consecutive keystrokes',await page.getByPlaceholder('Search accounts...').inputValue()==='E2E'&&await page.evaluate(()=>document.activeElement.id==='tracker-search'));
     await page.getByPlaceholder('Search accounts...').fill('');
@@ -476,7 +475,8 @@ async function exercise(name,engine,url){
     check('mobile editor fits viewport and prevents input zoom',await page.locator('.modal').evaluate(e=>e.getBoundingClientRect().width<=window.innerWidth)&&await page.locator('.modal input').first().evaluate(e=>parseFloat(getComputedStyle(e).fontSize)>=16));
     await button('Cancel').click();
     check('mobile navigation and editor leave saved records unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
-    if(await page.locator('.ops-action-why').evaluate(e=>e.open))await page.locator('.ops-action-why summary').click();
+    const mobileLifecycle=page.locator('.profile-section[data-section-key="lifecycle"]').first();
+    if(await mobileLifecycle.evaluate(e=>e.open))await mobileLifecycle.locator('summary').click();
     await page.evaluate(()=>{undoState=null;clearTimeout(undoTimer);R()});
     await page.locator('.ops-action-center').scrollIntoViewIfNeeded();
     await page.screenshot({path:path.join(output,name+'-mobile-verified.png')});
@@ -503,6 +503,8 @@ async function exercise(name,engine,url){
       entries.push({...entries[0],id:'E2E-TILE-02',bank:'E2E Citi',bonus:325,reqMet:'2026-08-10',payoutTimingText:'Bonus expected after requirements are completed',customTimers:[]});R();
     });
     check('mobile Action Center uses two compact columns',await page.locator('.ops-action-tile').evaluateAll(rows=>rows.length===2&&Math.abs(rows[0].getBoundingClientRect().top-rows[1].getBoundingClientRect().top)<2));
+    check('every Action Center tile shows canonical lifecycle stage',await page.locator('.ops-action-tile').evaluateAll(rows=>rows.every(e=>{const s=e.querySelector('.ops-tile-status');return s&&s.textContent.trim()&&!/d left|Date needs review/.test(s.textContent)})));
+    check('recurring and payout stages remain distinct',await page.locator('.ops-tile-status').allTextContents().then(rows=>rows.includes('In Progress')&&rows.includes('Awaiting Bonus')));
     check('compact recurring and payout buttons remain available',await button('Review recurring requirements').count()===1&&await button('Confirm bonus received').count()===1);
     await page.locator('.ops-action-center').screenshot({path:path.join(output,name+'-action-tiles.png')});
     await page.locator('#bt-action-center-toggle').click();
