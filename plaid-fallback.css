@@ -41,3 +41,13 @@
 /* Native WebKit select text can report an overflowing internal scroll area.
    Clip it at each field group; the platform picker remains outside layout. */
 .plaid-trial-control,.plaid-trial-account-card,.plaid-trial-observations{overflow:hidden}
+
+.plaid-trial-capacity{height:7px;border-radius:99px;background:#263c54;overflow:hidden;margin:8px 0 14px}
+.plaid-trial-capacity[hidden]{display:none}
+.plaid-trial-capacity span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#72b9ff,#75d6bf)}
+.plaid-trial-next-step{padding:10px 12px!important;border-radius:10px;background:#152e47;color:#d8e9fa!important;border:1px solid #3e6287;font-size:13px!important}
+.plaid-trial-advanced{border:1px solid #42546d;border-radius:10px;padding:0 11px;background:#111e30}
+.plaid-trial-advanced summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-size:13px;font-weight:600;color:#c6d8ef;line-height:1.4}
+.plaid-trial-advanced[open]{padding-bottom:11px}
+.plaid-trial-fallback :is(button,input,select,summary):focus-visible{outline:3px solid #aad4ff;outline-offset:2px}
+.plaid-trial-account-card select{appearance:none;-webkit-appearance:none;padding-right:32px;background-image:linear-gradient(45deg,transparent 50%,#b9d3f2 50%),linear-gradient(135deg,#b9d3f2 50%,transparent 50%);background-position:calc(100% - 17px) 50%,calc(100% - 12px) 50%;background-size:5px 5px;background-repeat:no-repeat}

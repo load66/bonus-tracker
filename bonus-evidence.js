@@ -133,6 +133,7 @@
     }
     sourceSelect.disabled=saving;
     sourceSelect.onchange=()=>{provider=sourceSelect.value;reset();update();refresh()};
+    el('p','Review one connection source at a time. SimpleFIN is primary; Plaid covers banks it cannot connect.',root,'bonus-evidence-provider-help');
     const actions=el('div',undefined,top,'bonus-evidence-controls');
     if(!snapshot){
       const open=button(actions,loading?'Checking…':'Review bank activity',refresh,'bonus-evidence-button primary');

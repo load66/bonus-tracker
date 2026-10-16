@@ -311,12 +311,14 @@
   }
   function paint(){
     const host=currentRoot;if(!host||!host.isConnected)return;host.replaceChildren();
-    const sourceSelect=select(host,'Connection source',{
+    const sourceBox=el('section',undefined,host,'finance-page-connection');
+    const sourceSelect=select(sourceBox,'Connection source',{
       simplefin:'SimpleFIN · Primary',plaid:'Plaid · Fallback'},provider,value=>{
         provider=value;hidden=true;transactionAccount='';transactionSearch='';
         accountSearch='';accountType='';saveNotice='';refresh();
       });
     sourceSelect.setAttribute('aria-label','Finance connection source');sourceSelect.disabled=busy;
+    el('p',provider==='plaid'?'Showing fallback accounts only. Use SimpleFIN first when adding a bank.':'Showing your primary accounts. Choose Plaid to view fallback accounts.',sourceBox);
     const notice=el('p',saveNotice,host,'finance-page-notice');notice.setAttribute('role',saveNotice?'alert':'status');
     if(!data){statusMessage(host,'Loading financial accounts','Retrieving your private, read-only account summary.');return}
     if(!data.configured){statusMessage(host,'Financial connections unavailable','Secure account syncing is not configured on the server.');return}

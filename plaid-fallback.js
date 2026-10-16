@@ -59,9 +59,11 @@
     host.replaceChildren();
     host.classList.add('plaid-trial-fallback');
     elem('h4','Alternative connection — Plaid Trial',host);
-    elem('p','SimpleFIN is the primary bank connection. Use Plaid only if your institution cannot be connected through SimpleFIN. Manual entry remains available without consuming any Plaid slots.',host);
+    elem('p','Try SimpleFIN first. Use Plaid for a bank it cannot connect, or enter the account manually without using a Plaid slot.',host);
     const summary=elem('p','Checking free Trial capacity…',host,'plaid-trial-counter');
     summary.setAttribute('role','status');
+    const capacity=elem('div',undefined,host,'plaid-trial-capacity');capacity.hidden=true;
+    const capacityFill=elem('span',undefined,capacity);
     const message=elem('p','',host,'plaid-trial-message');
     message.setAttribute('role','status');
     const body=elem('div',undefined,host,'plaid-trial-control');
@@ -76,6 +78,7 @@
         elem('p','Your Plaid connection is secured. Discover accounts before choosing which ones to monitor.',accountsArea);
       }
       const selected=new Set(snapshot.monitoredAccounts||[]);
+      elem('p',!items.length?'Next: discover your accounts below.':!selected.size?'Next: select the accounts you want to monitor, then save. Bonus links are optional.':'Your selected accounts are monitored. Add an optional bonus link below, then review activity in Tracker or view accounts in Finances.',accountsArea,'plaid-trial-next-step');
       const options=elem('div',undefined,accountsArea,'plaid-trial-account-list');
       const available=typeof entries!=='undefined'&&Array.isArray(entries)
         ?entries.filter(e=>e&&!e.closed&&e.id!=null&&e.opened&&e.bank):[];
@@ -180,6 +183,13 @@
       summary.textContent=data.used===null||data.used===undefined
         ?'Plaid slots used: not verified / 10'
         :'Plaid slots used: '+data.used+'/10'+(data.reserved?' · '+data.reserved+' reserved':'');
+      capacity.hidden=!Number.isFinite(data.used);
+      if(!capacity.hidden){
+        const occupied=Math.min(10,Math.max(0,data.used+(data.reserved||0)));
+        capacityFill.style.width=(occupied*10)+'%';
+        capacity.setAttribute('role','meter');capacity.setAttribute('aria-label','Plaid lifetime capacity used or reserved');
+        capacity.setAttribute('aria-valuemin','0');capacity.setAttribute('aria-valuemax','10');capacity.setAttribute('aria-valuenow',String(occupied));
+      }
       body.replaceChildren();
       if(!data.configured){
         elem('p','Plaid linking is locked until the free Trial plan, lifetime usage count, credentials and read-only transaction monitoring are verified. No connection or charge has been made.',body,'plaid-trial-caution');
@@ -199,7 +209,10 @@
       const warned=elem('label',undefined,body,'plaid-trial-check');
       const acknowledge=elem('input',undefined,warned);acknowledge.type='checkbox';
       elem('span','I understand this permanently uses one of my 10 free Plaid Trial slots.',warned);
-      const duplicate=elem('label',undefined,body,'plaid-trial-check');
+      const advanced=elem('details',undefined,body,'plaid-trial-advanced');
+      elem('summary','Reconnecting a bank? Read this first',advanced);
+      elem('p','Another login to the same bank permanently uses another slot. Reuse the existing connection whenever possible.',advanced);
+      const duplicate=elem('label',undefined,advanced,'plaid-trial-check');
       const relink=elem('input',undefined,duplicate);relink.type='checkbox';
       elem('span','Allow another Plaid login for this bank even if already connected through Plaid.',duplicate);
       const go=action(body,'Connect with Plaid fallback',async()=>{

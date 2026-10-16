@@ -70,7 +70,7 @@ const KEY='a'.repeat(64);
         const host=page.locator('#target');
         await host.getByText('Plaid slots used: 1/10').waitFor();
         await host.getByText('Connected fallback accounts').waitFor();
-        assert.equal(await host.getByRole('checkbox').count(),4);
+        assert.equal(await host.getByRole('checkbox').count(),3);
         assert.equal(calls.some(x=>x.includes('link-token')||x.includes('/exchange')),false,
           'Opening the provider view must never consume a Plaid Item');
         assert.equal(await host.getByRole('button',{name:'Show amounts'}).count(),0,
@@ -105,6 +105,9 @@ const KEY='a'.repeat(64);
           }));
           assert.ok(size.scroll<=size.page+1,name+' overflow at '+width+': '+JSON.stringify(size));
           assert.ok(size.buttons.every(x=>x>=44),name+' insufficient button targets');
+          const output=process.env.BT_BROWSER_RESULTS||'/tmp/plaid-fallback-browser-results';
+          await fs.mkdir(output,{recursive:true});
+          await page.screenshot({path:path.join(output,name+'-plaid-fallback-'+width+'.png'),fullPage:true});
         }
         // Explicit acknowledgement gates SDK creation; repeated clicks stay locked.
         await host.getByRole('button',{name:'Connect with Plaid fallback'}).click();
