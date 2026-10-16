@@ -141,14 +141,15 @@
       if(signals.length){
         const review=elem('div',undefined,accountsArea,'plaid-trial-observations');
         elem('h5','Unverified activity for review',review);
-        action(review,amountsVisible?'Hide amounts':'Show amounts',()=>{
+        if(window.btFinanceAmountsHidden?.())elem('p','Amounts hidden in Finances.',review);
+        else action(review,amountsVisible?'Hide amounts':'Show amounts',()=>{
           amountsVisible=!amountsVisible;renderAccounts(snapshot);
         });
         for(const row of signals.slice(0,5)){
           const label=elem('p',undefined,review);
           const flags=row.signals.filter(v=>v.startsWith('possible_'))
             .map(v=>v.replace(/^possible_/,'').replaceAll('_',' '));
-          const amount=amountsVisible?(' · '+row.amount+' '+(row.currency||'USD')):' · ••••••';
+          const amount=(amountsVisible&&!window.btFinanceAmountsHidden?.())?(' · '+row.amount+' '+(row.currency||'USD')):' · ••••••';
           label.textContent=(row.merchant||row.description||'Transaction')+
             ' · '+flags.join(', ')+amount;
         }
