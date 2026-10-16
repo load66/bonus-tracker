@@ -1,4 +1,4 @@
-/* SimpleFIN primary > Plaid Trial fallback > manual entry. Never auto-link. */
+/* SimpleFIN primary > Plaid Trial fallback > manual entry. Activity auto-syncs after authorized linking. */
 (function(){
   'use strict';
   const URL='https://api-production-00f74.up.railway.app/api/bonus-tracker/plaid';
@@ -77,20 +77,17 @@
       elem('summary','Connected accounts ('+items.length+') · Manage',accountsArea);
       accountsArea.open=expanded;
       if(!items.length){
-        elem('p','Your Plaid connection is secured. Discover accounts before choosing which ones to monitor.',accountsArea);
+        elem('p','Bank linked. Account discovery or its first transaction sync is pending.',accountsArea);
       }
-      const selected=new Set(snapshot.monitoredAccounts||[]);
-      elem('p',!items.length?'Discover accounts using the button below.':'Manage monitoring or optional bonus links here, or in Finances.',accountsArea,'plaid-trial-next-step');
+      elem('p','Transactions sync automatically. Bonus links remain optional.',accountsArea,'plaid-trial-next-step');
       const options=elem('div',undefined,accountsArea,'plaid-trial-account-list');
       const available=typeof entries!=='undefined'&&Array.isArray(entries)
         ?entries.filter(e=>e&&!e.closed&&e.id!=null&&e.opened&&e.bank):[];
       const assignments=[];
       for(const account of items){
         const card=elem('section',undefined,options,'plaid-trial-account-card');
-        const label=elem('label',undefined,card,'plaid-trial-check');
-        const check=elem('input',undefined,label);check.type='checkbox';
-        check.value=account.key;check.checked=selected.has(account.key);
-        elem('span',[account.bank,account.name].filter(Boolean).join(' · '),label);
+        const label=elem('div',undefined,card,'plaid-trial-account-heading');
+        elem('strong',[account.bank,account.name].filter(Boolean).join(' · '),label);
         if(available.length){
           const cycleLabel=elem('label','Link to bonus (optional)',card);
           const cycle=elem('select',undefined,cycleLabel);cycle.setAttribute('aria-label','Bonus campaign for '+account.name);
@@ -100,7 +97,7 @@
             const option=elem('option',entry.bank+' · opened '+entry.opened,cycle);option.value=String(entry.id);
             if(saved?.entryId===String(entry.id)&&saved.bank===entry.bank&&saved.opened===entry.opened)option.selected=true;
           }
-          cycle.disabled=!selected.has(account.key);
+          cycle.disabled=false;
           const productLabel=elem('label','Bonus product (verified terms)',card);
           const product=elem('select',undefined,productLabel);product.setAttribute('aria-label','Bonus product for '+account.name);
           const fillProducts=()=>{
@@ -114,30 +111,6 @@
           };
           cycle.addEventListener('change',fillProducts);fillProducts();assignments.push({key:account.key,cycle,product});
         }
-      }
-      if(items.length){
-        action(accountsArea,'Save monitored accounts',async()=>{
-          const choices=[...options.querySelectorAll('input:checked')].map(n=>n.value);
-          message.textContent='Saving monitoring preferences…';
-          try{
-            const result=await api('/accounts/monitoring',{method:'PUT',body:JSON.stringify({accounts:choices})});
-            renderAccounts(result);
-            message.textContent='Monitoring saved. Checking for available posted transactions…';
-            try{
-              const synced=await api('/accounts/sync',{method:'POST'});
-              renderAccounts(synced);
-              const count=Object.values(synced.transactions||{}).reduce(
-                (total,rows)=>total+Object.keys(rows||{}).length,0);
-              message.textContent=synced.error?'Monitoring saved · '+synced.error:
-                'Monitoring saved · '+count+' posted transaction'+(count===1?'':'s')+
-                ' available. Review all activity in Finances.';
-              window.btRefreshFinancesPage?.();
-            }catch(error){
-              message.textContent='Monitoring saved; account activity can be reviewed after the next provider check. '+error.message;
-              window.btRefreshFinancesPage?.();
-            }
-          }catch(error){message.textContent=error.message;}
-        });
       }
       if(assignments.length)action(accountsArea,'Save bonus links',async()=>{
         const mappings={};
@@ -154,7 +127,7 @@
           renderAccounts(result);
         }catch(error){message.textContent=error.message;}
       });
-      action(accountsArea,items.length?'Sync selected activity':'Discover connected accounts',async()=>{
+      action(accountsArea,items.length?'Refresh transactions':'Discover connected accounts',async()=>{
         message.textContent='Requesting read-only account status…';
         try{
           const result=await api('/accounts/sync',{method:'POST'});
@@ -211,7 +184,26 @@
         return;
       }
       elem('p','Each new bank login uses one permanent Trial slot. Reuse existing connections.',body,'plaid-trial-disclosure');
-      if(Array.isArray(data.connected)&&data.connected.length)loadAccounts();
+      if(Array.isArray(data.connected)&&data.connected.length){
+        const banks=elem('div',undefined,body,'plaid-trial-connected-banks');
+        for(const bank of data.connected){
+          const row=elem('div',undefined,banks,'plaid-trial-connected-bank');
+          elem('span',bank.institution||'Connected bank',row);
+          if(bank.handle)action(row,'Remove',async()=>{
+            const approved=await window.btConfirmDialog(
+              'Disconnect '+(bank.institution||'this bank')+'? Saved account activity is removed, but bonus tracker entries stay. This does not restore the permanent Plaid Trial slot.',
+              {title:'Remove Plaid bank?',confirmLabel:'Remove bank',danger:true});
+            if(!approved)return;
+            try{
+              await api('/items/'+encodeURIComponent(bank.handle),{method:'DELETE'});
+              message.textContent='Bank disconnected. Your bonus tracker entries are unchanged.';
+              window.btRefreshFinancesPage?.();
+              await status();
+            }catch(error){message.textContent='Bank removal needs attention: '+error.message}
+          });
+        }
+        loadAccounts();
+      }
       if((data.remaining||0)<=0){
         elem('p','No unused Plaid Trial slots remain. Use SimpleFIN or manual entry. Paid upgrades are disabled.',body);
         return;
@@ -274,7 +266,7 @@
                   message.textContent=synced.error?
                     'Bank connected. Account discovery needs attention: '+synced.error:
                     'Bank connected · '+count+' account'+(count===1?'':'s')+
-                    ' discovered. Enable read-only monitoring in Finances for transaction history.';
+                    ' discovered. Transactions sync automatically and will appear in Finances when available.';
                 }catch(error){
                   message.textContent='Bank connected. Account discovery was delayed: '+error.message+
                     '. Check connected accounts instead of reconnecting.';
