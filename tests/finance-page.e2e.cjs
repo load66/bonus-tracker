@@ -116,9 +116,9 @@ const base=()=>({
       assert.ok(opened,name+' Finances navigation must become available after bootstrap');
       assert.equal(await section.locator('img').count(),0,'provider aliases must be text, never HTML');
       // Playwright's filter waits for actual content, unlike immediate text snapshots.
-      // Missing money must remain unknown rather than incorrectly becoming $0.00.
-      await section.locator('.finance-page-tile strong')
-        .filter({hasText:/^\s*—\s*$/}).first().waitFor({state:'visible'});
+      // With known balances, show a sourced subtotal rather than masking all money.
+      await section.locator('.finance-page-tile').filter({hasText:/Net worth/})
+        .locator('strong').filter({hasText:/\$/}).waitFor({state:'visible'});
       await section.locator('.finance-page-count').filter({hasText:'4 accounts'}).waitFor();
       await section.getByRole('heading',{name:'Connected accounts',exact:true}).waitFor();
       await section.getByRole('heading',{name:'Recent transactions',exact:true}).waitFor();
