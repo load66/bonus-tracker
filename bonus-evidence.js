@@ -19,7 +19,7 @@
   const button=(parent,label,onClick,cls='bonus-evidence-button')=>{
     const b=el('button',label,parent,cls);b.type='button';b.onclick=onClick;return b;
   };
-  const fmtDate=t=>Number.isFinite(t)&&t>0?new Date(t*1000).toLocaleDateString():'Not available';
+  const fmtDate=t=>Number.isFinite(t)&&t>0?new Date(t*1000).toLocaleDateString(undefined,{timeZone:'America/Chicago'}):'Not available';
   const fmtMoney=(v,code='USD')=>{
     const n=Number(v);
     if(v==null||v===''||!Number.isFinite(n))return 'Unavailable';
@@ -201,7 +201,7 @@
           const note=el('div',undefined,line);
           el('strong',TYPES[activity.type]||'Possible bank activity',note);
           el('small',fmtDate(activity.posted)+' · '+activity.description,note);
-          el('b',hideAmounts?'••••••':fmtMoney(activity.amount),line);
+          el('b',(hideAmounts||window.btFinanceAmountsHidden?.())?'••••••':fmtMoney(activity.amount),line);
           const actionRow=el('div',undefined,line,'bonus-evidence-review-actions');
           if(activity.reviewStatus==='unreviewed'){
             let choice=null;
@@ -249,7 +249,7 @@
             if(rule.applicable){
               const count=rule.reviewedCount+' reviewed candidate'+(rule.reviewedCount===1?'':'s');
               const goal=rule.targetCount?' / '+rule.targetCount+' required deposit(s)':'';
-              const amount=rule.targetAmount?' · Candidate amount '+(hideAmounts?'••••••':fmtMoney(rule.reviewedAmount))+' / '+(hideAmounts?'••••••':fmtMoney(rule.targetAmount)):'';
+              const amount=rule.targetAmount?' · Candidate amount '+((hideAmounts||window.btFinanceAmountsHidden?.())?'••••••':fmtMoney(rule.reviewedAmount))+' / '+((hideAmounts||window.btFinanceAmountsHidden?.())?'••••••':fmtMoney(rule.targetAmount)):'';
               el('small',count+goal+amount,entry);
               if(rule.recurrence==='calendar-month')el('small',rule.reviewedCalendarMonths+' observed calendar months; recurring qualification still needs verification.',entry);
             }else el('small','Manual check needed for this requirement.',entry);
@@ -266,7 +266,8 @@
     const footer=el('p','Reviewing or linking a candidate to a requirement is not confirmation that it qualifies. The bank’s source, timing and account rules must still be checked. No milestone, payout, closure or eligibility status is changed automatically.',root,'bonus-evidence-disclaimer');
     footer.setAttribute('role','note');
     const privacy=el('div',undefined,root,'bonus-evidence-privacy');
-    button(privacy,hideAmounts?'Show transaction amounts':'Hide transaction amounts',()=>{hideAmounts=!hideAmounts;update()});
+    if(window.btFinanceAmountsHidden?.())el('small','Amounts hidden in Finances.',privacy);
+    else button(privacy,hideAmounts?'Show transaction amounts':'Hide transaction amounts',()=>{hideAmounts=!hideAmounts;update()});
   }
   function dispose(){
     // Revoke in-flight requests and discard private account evidence on route changes.

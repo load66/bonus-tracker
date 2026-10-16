@@ -135,8 +135,8 @@ return result;
         assert.equal(await section.getByRole('button',{name:'Open tracker'}).count(),0,
           'Bank evidence stays in Finances rather than sending users to Tracker');
         await section.getByRole('button',{name:'Review payout'}).click();
-        assert.equal(await page.evaluate(()=>rcvPrompt?.entryId),cycleId,
-          'Finance bonus evidence invokes the existing explicit payout confirmation');
+        await page.waitForFunction(expected=>typeof rcvPrompt!=='undefined'&&rcvPrompt?.entryId===expected,
+          cycleId,{timeout:10000}); // Account for Firefox/main-shell redraw timing; require actual confirmation.
         assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,
           'Reviewing a possible payout cannot mark a Tracker milestone paid');
         await page.evaluate(()=>{rcvPrompt=null;R()});

@@ -97,6 +97,33 @@ Backend or frontend changes must not introduce automatic lifecycle writes.
 Production release status must be confirmed from the relevant GitHub Pages
 and Railway deployments rather than inferred from a successful merge alone.
 
+## October 2026 financial calculation refinement (unreleased Batch 1)
+
+The Finance summarizer now separately reports strict complete figures and
+coverage-labeled **observed subtotals**. A stale balance or missing source timestamp
+cannot silently be labeled a complete net worth. The relevant balance coverage
+contains eligible, covered, stale, undated, missing and foreign-currency counts.
+The frontend cannot interpret a cached Plaid observation as bank-confirmed freshness.
+
+Recognized account types default to asset (deposit/investment) or liability
+(credit/loan/mortgage). An explicit Exclude remains authoritative and never blocks
+otherwise valid eligible accounts. Liability amounts are signed: positive means owed;
+negative means a credit balance. Provider normalization must preserve this
+convention; conflicting provider semantics require exclusion or manual review.
+
+Category-linked and uniquely matched refunds offset original spending categories.
+Unattributed refunds remain a separate coverage gap. Posted bank bonus credits
+are reported on **Bonus income** separately from ordinary income. Transfers
+are excluded only when user-confirmed or uniquely matched by conservative
+cross-provider reconciliation. Unpaired automatically inferred transfers are
+returned for review. No categorization or observed bonus changes a canonical
+tracker milestone.
+
+Local month boundaries and finance display dates use America/Chicago.
+Charts must plot actual timestamp spacing. Hide-amounts mode also suppresses
+financial charts and the bonus-evidence amount display. The deployment requires
+updated script URLs and service-worker cache version.
+
 ## Roadmap, not currently supported
 
 A full personal-finance dashboard needs bank-specific account type and

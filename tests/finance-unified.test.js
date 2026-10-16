@@ -45,4 +45,87 @@ assert.equal(excluded.excludedForReview,2);
 assert.equal(finance.summarize(excluded,{now,days:30}).income,null);
 assert.equal(simple.accounts[0].key,a,'source snapshots stay unchanged');
 assert.equal(twin.accounts[0].key,b,'the second provider is never overwritten');
+
+// Phase 1: inferred account types drive defaults only when no override exists.
+const implied=core.combine({simplefin:{...simple,accountProfiles:{}},
+  plaid:{...plaid,accountProfiles:{}}});
+assert.equal(implied.accountProfiles['simplefin:'+a].balanceMode,'asset');
+assert.equal(implied.accountProfiles['plaid:'+b].balanceMode,'asset');
+assert.equal(core.defaultBalanceMode('credit_card'),'liability');
+assert.equal(core.defaultBalanceMode('mortgage'),'liability');
+assert.equal(core.defaultBalanceMode('retirement'),'asset');
+assert.equal(core.defaultBalanceMode('unclassified'),'exclude');
+const explicitlyExcluded=core.combine({simplefin:{...simple,
+  accountProfiles:{[a]:{kind:'checking',balanceMode:'exclude'}}}});
+assert.equal(explicitlyExcluded.accountProfiles['simplefin:'+a].balanceMode,'exclude',
+  'user exclusion must never be overridden by inferred defaults');
+
+const outgoing={...simple,transactions:{[a]:{
+  sent:{id:'sent',amount:'-35.01',posted:now-200,
+    description:'Credit card payment to bank',category:'transfer',
+    categorySource:'automatic',signals:['possible_transfer']},
+  unmatched:{id:'unmatched',amount:'-12.00',posted:now-500,
+    description:'Transfer to another bank',category:'transfer',
+    categorySource:'automatic',signals:['possible_transfer']}
+}}};
+const incoming={...plaid,transactions:{[b]:{
+  received:{id:'received',amount:'35.01',posted:now-180,
+    description:'Payment thank you',category:'unreviewed',
+    categorySource:'automatic',signals:['possible_transfer']}
+}}};
+const paired=core.safeForSummary(core.combine({simplefin:outgoing,plaid:incoming}));
+assert.equal(paired.transactions['simplefin:'+a].sent.category,'transfer');
+assert.equal(paired.transactions['plaid:'+b].received.category,'transfer');
+assert.ok(paired.transactions['plaid:'+b].received.signals.includes('matched_internal_transfer'));
+assert.equal(paired.transactions['simplefin:'+a].unmatched.category,'unreviewed',
+  'wording alone cannot verify an unpaired transfer');
+assert.equal(incoming.transactions[b].received.category,'unreviewed',
+  'source transactions are never silently rewritten');
+assert.equal(finance.summarize(paired,{now,days:30}).transfers,2,
+  'both confirmed sides are excluded from income and spending');
+
+const userOverride=JSON.parse(JSON.stringify(incoming));
+userOverride.transactions[b].received.categorySource='user';
+userOverride.transactions[b].received.category='income';
+const blocked=core.safeForSummary(core.combine({simplefin:outgoing,plaid:userOverride}));
+assert.equal(blocked.transactions['plaid:'+b].received.category,'income',
+  'transfer pairing must never override owner-confirmed categories');
+assert.equal(blocked.transactions['simplefin:'+a].sent.category,'unreviewed',
+  'unpaired automatic outgoing transfer requires review');
+
+const ambiguousIncoming=JSON.parse(JSON.stringify(incoming));
+ambiguousIncoming.transactions[b].second={...ambiguousIncoming.transactions[b].received,
+  id:'second',posted:now-150};
+const ambiguousTransfers=core.safeForSummary(core.combine({
+  simplefin:outgoing,plaid:ambiguousIncoming
+}));
+assert.equal(ambiguousTransfers.transactions['simplefin:'+a].sent.category,'unreviewed',
+  'ambiguous reciprocal movements must not be paired automatically');
+
+
+// Matching amounts alone must not disguise unrelated payroll or FX movements.
+const foreignCurrency=JSON.parse(JSON.stringify(incoming));
+foreignCurrency.accounts[0].currency='EUR';
+const fxSafe=core.safeForSummary(core.combine({simplefin:outgoing,plaid:foreignCurrency}));
+assert.equal(fxSafe.transactions['plaid:'+b].received.category,'unreviewed',
+  'different-currency movements must never be paired without FX reconciliation');
+const unrelatedIncome=JSON.parse(JSON.stringify(incoming));
+unrelatedIncome.transactions[b].received.description='Employer payroll';
+unrelatedIncome.transactions[b].received.signals=[];
+unrelatedIncome.transactions[b].received.category='income';
+const unrelatedSafe=core.safeForSummary(core.combine({simplefin:outgoing,plaid:unrelatedIncome}));
+assert.equal(unrelatedSafe.transactions['plaid:'+b].received.category,'income',
+  'an unrelated payroll deposit cannot be treated as a credit-card payment merely because amounts match');
+assert.equal(unrelatedSafe.transactions['simplefin:'+a].sent.category,'unreviewed',
+  'unpaired automatic transfer requires review');
+const payrollCoincidence={...plaid,transactions:{[b]:{
+  salary:{id:'salary',amount:'35.01',posted:now-195,description:'Employer payroll deposit',
+    category:'income',categorySource:'automatic',signals:['possible_direct_deposit']}
+}}};
+const protectedIncome=core.safeForSummary(core.combine({simplefin:outgoing,plaid:payrollCoincidence}));
+assert.equal(protectedIncome.transactions['plaid:'+b].salary.category,'income',
+  'a coincidental equal payroll amount must never be paired as a card payment');
+assert.equal(protectedIncome.transactions['simplefin:'+a].sent.category,'unreviewed');
+assert.equal(finance.summarize(protectedIncome,{now,days:30}).income,'35.01');
+
 console.log('Unified Finance: provider isolation, type inference, full account/transaction aggregation, exact cents, stale-balance safety and overlap controls passed');
