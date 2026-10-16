@@ -30,19 +30,24 @@
     try{result=validate(entry)}catch{return base;}
     if(result?.mode!=='structured'||result.ok!==true||!result.rules)return base;
     const rules=result.rules;
-    const primary=rules.accounts?.filter(a=>a.role==='primary'&&a.required)||[];
-    // The provider-to-product mapping does not yet identify checking vs savings
-    // accounts. A one-to-one link to a single verified product is the only
-    // safe automatic scoping today; never infer from bank or account names.
-    const scoped=(rules.accounts||[]).length===1
-      &&primary.length===1
-      &&group.linkedAccounts.length===1
-      &&group.missingAccounts===0
-      &&group.unsupportedCurrency===0;
-    const eligible=(group.activity||[]).filter(a=>a.type==='directDeposit'&&a.reviewStatus!=='dismissed');
+    const products=Array.isArray(rules.accounts)?rules.accounts:[];
+    const linked=Array.isArray(group.linkedAccounts)?group.linkedAccounts:[];
+    const candidatesByProduct=new Map();
+    for(const product of products){
+      // A product is attributable only when exactly one eligible connected
+      // account was explicitly assigned to that product from verified terms.
+      let accountKeys=linked.filter(a=>a.productId===product.id).map(a=>a.key);
+      // Preserve safe legacy one-product promotions without modifying old links.
+      if(products.length===1&&linked.length===1&&!linked[0].productId)accountKeys=[linked[0].key];
+      if(accountKeys.length===1&&!group.missingAccounts&&!group.unsupportedCurrency)
+        candidatesByProduct.set(product.id,accountKeys[0]);
+    }
+    const scoped=candidatesByProduct.size>0;
     const requirements=(rules.requirements||[]).map(r=>{
-      const applicable=scoped&&r.kind==='direct-deposit'&&r.accountId===primary[0]?.id;
-      const candidates=applicable?eligible:[];
+      const source=candidatesByProduct.get(r.accountId);
+      const applicable=Boolean(source)&&r.kind==='direct-deposit';
+      const candidates=applicable?(group.activity||[]).filter(a=>a.accountKey===source
+        &&a.type==='directDeposit'&&a.reviewStatus!=='dismissed'):[];
       const reviewed=candidates.filter(a=>a.reviewStatus==='reviewed'&&a.requirementId===r.id);
       const aggregate=rows=>rows.reduce((n,a)=>{
         const x=cents(a.amount);
@@ -67,8 +72,8 @@
     return {
       mode:'structured',scopeVerified:scoped,requirements,
       notice:scoped
-        ?'Only observed and reviewed deposit candidates are counted. Confirm deposit origin, amount, timing, recurring periods and bank acceptance before marking any requirement met.'
-        :'Account-product matching is not verified. Link one confirmed account to a single-product offer or review its requirements manually. Candidate credits are not qualifying-deposit proof.'
+        ?'Only candidates from explicitly matched products are counted. Confirm deposit origin, amount, timing, recurring periods, companion accounts, waiver rules and bank acceptance before marking requirements complete.'
+        :'Deposit progress needs an unambiguous checking or savings product match from verified promotion rules. Candidate credits alone are not qualifying-deposit proof.'
     };
   }
   return Object.freeze({evaluate,cents,decimal});
