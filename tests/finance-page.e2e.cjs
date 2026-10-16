@@ -119,6 +119,16 @@ const base=()=>({
       await section.locator('.finance-page-tile strong')
         .filter({hasText:/^\s*—\s*$/}).first().waitFor({state:'visible'});
       await section.getByText('4 accounts',{exact:false}).waitFor();
+      await section.getByRole('heading',{name:'Connected accounts',exact:true}).waitFor();
+      await section.getByRole('heading',{name:'Recent transactions',exact:true}).waitFor();
+      const previews=section.locator('.finance-page-preview-card');
+      assert.equal(await previews.count(),2,'Account and transaction previews belong on the Finance home dashboard');
+      const accountPreview=await previews.first().innerText();
+      assert.ok(accountPreview.includes('X Money')&&accountPreview.includes('Plaid')&&accountPreview.includes('SimpleFIN'),
+        'One compact account preview must show banks from both connected sources');
+      assert.ok((await previews.nth(1).innerText()).includes('X Money Bonus'),
+        'Recent Finance activity must include Plaid transactions');
+
       await section.getByText('Income',{exact:true}).locator('..').getByText(/250/).waitFor();
       await section.getByText('Expenses',{exact:true}).locator('..').getByText(/15/).waitFor();
       await section.getByText('Net flow',{exact:true}).locator('..').getByText(/235/).waitFor();
