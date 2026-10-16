@@ -74,7 +74,7 @@ const base=()=>({
       assert.equal(await section.locator('.finance-page-account').count(),3);
       const accountSearch=section.getByRole('searchbox',{name:'Search accounts'});await accountSearch.fill('other credit union');
       assert.equal(await section.locator('.finance-page-account:visible').count(),1);await accountSearch.fill('');
-      await section.getByText('Credit Card',{exact:true}).locator('..').getByLabel('Net worth treatment').selectOption('liability');
+      await section.locator('.finance-page-account-editor').filter({hasText:'Credit Card'}).getByLabel('Net worth treatment').selectOption('liability');
       await section.getByRole('button',{name:'Save account organization'}).click();
       assert.ok(requests.some(r=>r.path.endsWith('/account-profiles')));
 
