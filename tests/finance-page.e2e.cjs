@@ -68,7 +68,10 @@ const base=()=>({
       await section.getByText('Income',{exact:true}).locator('..').getByText(/200/).waitFor();
       await section.getByText('Expenses',{exact:true}).locator('..').getByText(/15/).waitFor();
       await section.getByText('Cash Flow',{exact:true}).locator('..').getByText(/185/).waitFor();
-      assert.ok((await section.innerText()).includes('Cash Flow is partial'),'reconciliation caveat required');
+      await section.locator('.finance-page-caution')
+        .filter({hasText:'Cash Flow is partial'}).first().waitFor({state:'visible'});
+      assert.ok((await section.locator('.finance-page-caution').allTextContents()).some(s=>s.includes('Cash Flow is partial')),
+        'reconciliation caveat required after the synthetic transaction snapshot finishes rendering');
       const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
       await section.getByRole('button',{name:'Hide amounts',exact:true}).click();
       assert.equal(await section.locator('.finance-page-tile strong').first().innerText(),'••••••');

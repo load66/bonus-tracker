@@ -4698,7 +4698,7 @@ select option{background:#0D1420;color:var(--text)}
 .clean-detail-body a,.sub a{color:#86A8FF!important}
 .fee-preview{background:#2A2212!important;border:1px solid #59461F!important}
 .fee-preview .fp-date,.fee-preview .fp-days{color:#F7D177!important}
-.tabs .tb{min-width:0}
+.tabs .tb{min-width:0;min-height:44px;box-sizing:border-box}
 .tabs .tb span{max-width:92px;text-align:center;line-height:1.1}
 .app-version{
   background:rgba(8,14,24,.78)!important;

@@ -9,7 +9,7 @@
 <link rel="manifest" href="./manifest.json?v=3.4.74">
 <link rel="apple-touch-icon" href="./icon.svg?v=3.4.74">
 <title>Bank Bonus Tracker</title>
-<link rel="stylesheet" href="./style.css?v=3.4.74-audit1">
+<link rel="stylesheet" href="./style.css?v=3.4.74-a11y1">
 <link rel="stylesheet" href="./close-rules.css?v=3.4.74">
 <link rel="stylesheet" href="./mobile-analyzer.css?v=3.4.74">
 <link rel="stylesheet" href="./bank-bonuses.css?v=3.4.74">
@@ -32,7 +32,7 @@
     refreshed=true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=3.4.74-inbox2',{updateViaCache:'none'}).then(reg=>{
+  navigator.serviceWorker.register('./sw.js?v=3.4.74-inbox3',{updateViaCache:'none'}).then(reg=>{
     const activate=worker=>{try{worker&&worker.postMessage({type:'SKIP_WAITING'})}catch{}};
     if(reg.waiting)activate(reg.waiting);
     reg.addEventListener('updatefound',()=>{
