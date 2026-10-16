@@ -3,3 +3,8 @@
 .bank-sync-modal,.bank-sync-body,.bank-sync-card{min-width:0}.bank-sync-modal button{margin-right:0;min-width:0}.bank-sync-modal input,.bank-sync-modal textarea,.bank-sync-modal select{min-width:0}
 
 .bank-sync-modal select{appearance:none;-webkit-appearance:none;font-size:16px;padding-right:32px;text-overflow:ellipsis;overflow:hidden;background-image:linear-gradient(45deg,transparent 50%,#bdcde2 50%),linear-gradient(135deg,#bdcde2 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat}.bank-sync-body{overflow-wrap:anywhere;word-break:break-word}
+
+/* Explicit, accessible account-monitoring controls; never inherit full-width input styling. */
+.bank-sync-modal .bank-sync-monitor-label{display:flex;align-items:center;gap:12px;padding:12px 10px;margin:12px 0;border:1px solid #4b6688;border-radius:10px;background:#102039;color:#edf4ff;cursor:pointer}
+.bank-sync-modal .bank-sync-monitor-label input[type="checkbox"]{display:inline-block;flex:0 0 20px;width:20px;height:20px;min-height:20px;max-width:20px;padding:0;margin:0;accent-color:#9ec8ff}
+.bank-sync-modal .bank-sync-monitor-label span{flex:1;min-width:0;line-height:1.45}
