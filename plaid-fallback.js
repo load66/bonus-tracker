@@ -239,8 +239,20 @@
               message.textContent='Saving the bank connection securely…';
               try{
                 await api('/exchange',{method:'POST',body:JSON.stringify({session:result.session,publicToken})});
-                message.textContent='Connection secured. Review transaction availability before considering it monitored.';
-                linkActive=false;await status();
+                linkActive=false;
+                message.textContent='Bank linked. Discovering accounts securely…';
+                try{
+                  const synced=await api('/accounts/sync',{method:'POST'});
+                  await status();
+                  const count=(synced.accounts||[]).length;
+                  message.textContent=count?'Connected · '+count+' account'+(count===1?'':'s')+' discovered. Enable monitoring only for the accounts you choose.':
+                    (synced.error||'Connected, but the provider has not returned accounts yet. Use Discover connected accounts later.');
+                  window.btRefreshFinancesPage?.();
+                }catch(discoveryError){
+                  await status();
+                  message.textContent='Bank linked, but account discovery needs another check: '+discoveryError.message;
+                  window.btRefreshFinancesPage?.();
+                }
               }catch(error){message.textContent=error.message+
                 ' Do not retry the bank login automatically; a permanent slot may already be consumed.';}
             },
