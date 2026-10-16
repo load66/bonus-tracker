@@ -38,6 +38,13 @@ const KEY='a'.repeat(64);
           }
           if(url.pathname.endsWith('/selection'))mappings=request.postDataJSON().mappings;
           if(url.pathname.endsWith('/sync'))syncs++;
+          if(url.pathname.endsWith('/link-token')){
+            const body=request.postDataJSON();
+            assert.equal(body.institution,'Other Bank');
+            assert.equal(body.triedSimplefin,true);
+            assert.equal(body.understandsLifetimeSlot,true);
+            assert.equal(body.allowDuplicate,false);
+          }
           if(url.pathname.endsWith('/exchange')){
             const body=request.postDataJSON();assert.equal(body.session,'b'.repeat(32));assert.equal(body.publicToken,'synthetic-public-token');used++;
           }
