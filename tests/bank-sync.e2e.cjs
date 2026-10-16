@@ -72,7 +72,18 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    assert.equal(await bridge.getAttribute('rel'),'noopener noreferrer');
    await dialog.getByText('Financial Institutions → New Connection',{exact:false}).waitFor();
    assert.equal(requests.some(r=>r.path.endsWith('/discover')),false,'Add bank provider link must not silently sync data or alter accounts');
+   await dialog.getByRole('button',{name:'Start guided bank setup'}).click();
+   await dialog.getByRole('heading',{name:'Add a bank'}).waitFor();
+   const hosted=dialog.getByRole('link',{name:'Continue to secure SimpleFIN'});
+   assert.equal(await hosted.getAttribute('href'),'https://beta-bridge.simplefin.org/');
+   assert.equal(await hosted.getAttribute('target'),'_blank');
+   assert.equal(await dialog.locator('input[type="password"]').count(),0,'No bank passwords collected in the guided flow');
+   assert.equal(await dialog.locator('#bank-sync-token').count(),0,'Adding an institution never requires another setup token');
+   assert.equal(requests.some(r=>r.path.endsWith('/discover')),false,'Guided wizard must not silently query provider');
    await dialog.getByRole('button',{name:'Refresh accounts after adding bank'}).click();
+   await dialog.getByRole('heading',{name:'Ready to organize your accounts'}).waitFor();
+   await dialog.getByText('Found 1 new account').waitFor();
+   await dialog.getByRole('button',{name:'Manage accounts and bonus matches'}).click();
    await dialog.getByText('Newly Added CU · Savings',{exact:true}).waitFor();
    assert.equal(state.accounts.length,2,'new provider accounts must appear without replacing the existing connection');
    assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened,productId:'checking'},'account discovery preserves the original verified product association');
@@ -100,13 +111,20 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-replacement-token')),false);
    assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before);
    await dialog.getByRole('button',{name:'Done',exact:true}).click();
-   state={configured:true,connected:false,evidenceOnly:true};await page.evaluate(()=>btOpenBankSync());await page.getByLabel('SimpleFIN setup token',{exact:true}).waitFor();
-   const firstBankLink=page.getByRole('link',{name:'1. Add banks in SimpleFIN'});
-   assert.equal(await firstBankLink.getAttribute('href'),'https://beta-bridge.simplefin.org/');
-   assert.equal(await firstBankLink.getAttribute('target'),'_blank');
-   assert.equal(await page.getByRole('link',{name:'2. Get setup token'}).getAttribute('href'),
-     'https://bridge.simplefin.org/simplefin/create');
-   await page.getByLabel('SimpleFIN setup token',{exact:true}).fill('synthetic-one-time-token');await page.getByRole('button',{name:'Connect SimpleFIN',exact:true}).click();await page.getByText('Connection active',{exact:true}).waitFor();
+   state={configured:true,connected:false,evidenceOnly:true};
+   await page.evaluate(()=>btOpenBankSync('add'));await page.getByRole('heading',{name:'Add a bank'}).waitFor();
+   const hostedFirst=dialog.getByRole('link',{name:'Continue to secure SimpleFIN'});
+   assert.equal(await hostedFirst.getAttribute('href'),'https://beta-bridge.simplefin.org/');
+   assert.equal(await hostedFirst.getAttribute('rel'),'noopener noreferrer');
+   const setup=dialog.getByRole('link',{name:'Generate one-time setup token'});
+   assert.equal(await setup.getAttribute('href'),'https://bridge.simplefin.org/simplefin/create');
+   assert.equal(await dialog.locator('input[type="password"]').count(),0,
+     'Initial setup must not impersonate a bank login or collect bank passwords');
+   await page.getByLabel('SimpleFIN setup token',{exact:true}).fill('synthetic-one-time-token');
+   await page.getByRole('button',{name:'Connect SimpleFIN',exact:true}).click();
+   await dialog.getByRole('heading',{name:'Ready to organize your accounts'}).waitFor();
+   await dialog.getByRole('button',{name:'Manage accounts and bonus matches'}).click();
+   await page.getByText('Connection active',{exact:true}).waitFor();
    assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-one-time-token')),false);
    assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before);
    assert.ok(requests.some(r=>r.path.endsWith('/connect')&&JSON.parse(r.body).setup_token==='synthetic-one-time-token'));
