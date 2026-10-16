@@ -28,7 +28,7 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    await page.evaluate(()=>btOpenBankSync());const dialog=page.getByRole('dialog',{name:'Financial accounts'});await dialog.getByText('Connection active',{exact:true}).waitFor();
    assert.equal(await dialog.locator('img').count(),0);
    await dialog.getByRole('button',{name:'Hide balances',exact:true}).click();await dialog.getByText('Balance: ••••••',{exact:false}).waitFor();
-   await dialog.getByRole('button',{name:'Show balances',exact:true}).click();await dialog.locator('p').filter({hasText:/Balance:\\s*.*200/}).first().waitFor();
+   await dialog.getByRole('button',{name:'Show balances',exact:true}).click();await dialog.locator('p').filter({hasText:/Balance:\s*.*200/}).first().waitFor();
    await dialog.getByLabel('Monitor transactions (read-only)',{exact:true}).check();
    await dialog.getByRole('button',{name:'Save monitoring preferences',exact:true}).click();
    assert.deepEqual(state.monitoredAccounts,[account.key]);assert.deepEqual(state.mappings,{});
