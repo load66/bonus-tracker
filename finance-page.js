@@ -316,7 +316,7 @@
     const position=el('section',undefined,host,'finance-page-card');
     el('h3','All accounts',position);
     const grid=el('div',undefined,position,'finance-page-grid');
-    const cash=(currentCombined?.accounts||[]).filter(a=>['checking','savings'].includes(profile(a).kind));
+    const cash=(currentCombined?.accounts||[]).filter(a=>['checking','savings'].includes(currentCombined.accountProfiles?.[a.key]?.kind));
     const exact=window.BTFinanceOverview;
     const canReport=cash.length>0&&cash.every(a=>a.currency==='USD'&&exact.cents(a.balance)!==null&&!a.possibleDuplicate);
     const reported=canReport?cash.reduce((total,a)=>total+exact.cents(a.balance),0n):null;
@@ -361,7 +361,8 @@
       }
     }
     const attention=el('section',undefined,more,'finance-page-card');el('h3','Needs review',attention);
-    const signals=flattenTransactions().filter(r=>!r.pending&&Array.isArray(r.signals)&&r.signals.some(x=>['possible_direct_deposit','possible_bonus','possible_reversal','possible_fee','possible_recurring'].includes(x)));
+    const cutoff=Math.floor(Date.now()/1000)-period*86400;
+    const signals=flattenTransactions().filter(r=>!r.pending&&r.posted>=cutoff&&r.posted<=Math.floor(Date.now()/1000)+300&&Array.isArray(r.signals)&&r.signals.some(x=>['possible_direct_deposit','possible_bonus','possible_reversal','possible_fee','possible_recurring'].includes(x)));
     if(!signals.length)el('p','No flagged transactions in the available data.',attention);
     else for(const row of signals.slice(0,8)){
       const line=el('article',undefined,attention,'finance-page-review-row'),copy=el('div',undefined,line);
@@ -391,7 +392,7 @@
       list.replaceChildren();const cutoff=Math.floor(Date.now()/1000)-period*86400;
       const filtered=flattenTransactions().filter(row=>{
         const hay=(row.merchant+' '+row.description+' '+row.account.bank+' '+row.account.name).toLowerCase();
-        return row.posted>=cutoff&&(!transactionSearch||hay.includes(transactionSearch))
+        return row.posted>=cutoff&&row.posted<=Math.floor(Date.now()/1000)+300&&(!transactionSearch||hay.includes(transactionSearch))
           &&(!transactionAccount||row.accountKey===transactionAccount)
           &&(!transactionCategory||row.category===transactionCategory)
           &&(!transactionStatus||(transactionStatus==='pending')===!!row.pending);
@@ -560,7 +561,7 @@
     const notice=el('p',saveNotice,host,'finance-page-notice');notice.setAttribute('role',saveNotice?'alert':'status');
     if(!data){statusMessage(host,'Loading accounts','Checking secure connections…');return}
     if(!currentCombined?.connected){
-      statusMessage(host,'Connect a bank','All of your supported accounts will appear in one dashboard.');
+      statusMessage(host,data?.error?'Bank connections unavailable':'Connect a bank',data?.error||'All of your supported accounts will appear in one dashboard.');
       action(host,'Add bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');return;
     }
     const summaryState=window.BTFinanceUnified.safeForSummary(currentCombined);
