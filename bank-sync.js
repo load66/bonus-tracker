@@ -110,6 +110,10 @@
       btn.classList.add('bank-connect-finish');
       el('p','The setup token is single-use and exchanged securely by the BonusTracker backend. Do not share it in messages, screenshots or email.',finish);
     }
+    const fallback=el('details',undefined,shell);fallback.className='bank-connect-fallback';
+    el('summary','Plaid Trial fallback · only when SimpleFIN is unsupported',fallback);
+    const fallbackBody=el('div',undefined,fallback);
+    window.BTLinkPlaidTrial?.mount(fallbackBody,data?.accounts||[]);
     const back=el('div',undefined,shell);back.className='bank-connect-bottom';
     button(back,connected?'Back to connected accounts':'Back to connection options',async()=>{view='accounts';wizardResult=null;paint();});
     if(connected&&wizardResult)button(back,'Review account settings',async()=>{view='accounts';wizardResult=null;paint();},'btn-p');

@@ -53,6 +53,8 @@ const base=()=>({
         if(url.pathname.endsWith('/account-profiles'))state.accountProfiles=body.profiles;
         await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(state)});
       });
+      await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/plaid**',route=>
+        route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({provider:'plaid',priority:'fallback',configured:false,used:null,limit:10})}));
       await page.addInitScript(()=>{
         const RealDate=Date,now=Date.parse('2026-10-16T07:00:00Z');
         window.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[now]))}static now(){return now}};

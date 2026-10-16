@@ -29,6 +29,11 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
     else if(url.pathname.endsWith('/connect'))state=seed();
     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(state)});
    });
+   const plaidCalls=[];
+   await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/plaid**',async route=>{
+     plaidCalls.push(route.request().method()+' '+new URL(route.request().url()).pathname);
+     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({provider:'plaid',priority:'fallback',configured:false,used:null,limit:10})});
+   });
    await page.addInitScript(({entry})=>{const RealDate=Date,now=Date.parse('2026-10-16T07:00:00Z');window.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[now]))}static now(){return now}};localStorage.setItem('bt_e_v4',JSON.stringify([entry]));localStorage.setItem('bonus-ai-auth',JSON.stringify({access_token:'synthetic-access',refresh_token:'synthetic-refresh',expires_at:4102444800}));},{entry});
    await page.goto(process.env.BT_BROWSER_SITE_URL||'http://127.0.0.1:'+server.address().port+'/');await page.waitForFunction(()=>typeof btOpenBankSync==='function');
    const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
@@ -74,6 +79,14 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    assert.equal(requests.some(r=>r.path.endsWith('/discover')),false,'Add bank provider link must not silently sync data or alter accounts');
    await dialog.getByRole('button',{name:'Connect a bank — guided setup'}).click();
    await dialog.getByText('SECURE BANK CONNECTION',{exact:true}).waitFor();
+   const fallback=dialog.locator('details.bank-connect-fallback');
+   await fallback.locator('summary').click();
+   await fallback.getByText('Plaid slots used: not verified / 10').waitFor();
+   await fallback.getByText('Plaid linking is locked until the free Trial plan', {exact:false}).waitFor();
+   assert.equal(await fallback.getByRole('button',{name:'Connect with Plaid (last fallback)'}).count(),0,
+     'No link control when backend quota or monitoring is unverified');
+   assert.deepEqual(plaidCalls.filter(c=>c.includes('link-token')),[],
+     'Opening Add Bank must never consume a Plaid Trial Item');
    const firstExternal=dialog.getByRole('link',{name:'Continue securely to SimpleFIN'});
    assert.equal(await firstExternal.getAttribute('href'),'https://beta-bridge.simplefin.org/');
    assert.equal(await firstExternal.getAttribute('target'),'_blank');
