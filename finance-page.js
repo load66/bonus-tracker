@@ -395,7 +395,7 @@
     metric(activityGrid,'Expenses',summary.hasActivity?amount(summary.expenses,'USD'):'—','After attributable refunds; excludes paired transfers');
     metric(activityGrid,'Net flow',summary.hasActivity?amount(summary.cashFlow,'USD'):'—');
     metric(activityGrid,'Savings rate',summary.savingsRate===null?'—':summary.savingsRate.toFixed(1)+'%');
-    if(!summary.complete)el('p','Cash Flow is partial: review '+summary.unreviewed+' uncategorized transaction'+(summary.unreviewed===1?'':'s')+'.',activity,'finance-page-caution');
+    if(!summary.complete)el('p','Cash Flow is partial · '+summary.unreviewed+' uncategorized · '+summary.unattributedRefunds+' unattributed refunds. Bank coverage or sync may also be incomplete.',activity,'finance-page-caution');
     compactActivityPreview(host);
     const more=el('details',undefined,host,'finance-page-more');
     el('summary','More insights · trends, spending & review',more);
@@ -690,6 +690,7 @@
       'Plaid authorization saved. Account discovery needs attention; manage this bank in Finances.';
     activityNotice='';refresh();
   });
+  window.btFinanceAmountsHidden=()=>hidden;
   window.btRefreshFinancesPage=refresh;
   window.btRegisterPostRender?.('finance-page',mount);
   window.addEventListener('storage',event=>{if(event.key==='bonus-ai-auth')refresh()});
