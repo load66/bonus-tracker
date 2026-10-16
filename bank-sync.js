@@ -21,7 +21,21 @@
     }catch(e){if(e.name==='AbortError')throw Error('The request timed out. Refresh status before trying again.');throw e;}finally{clearTimeout(timer);}
   }
   function message(s){const n=panel?.querySelector('#bank-sync-message');if(n)n.textContent=s;}
-  async function run(work){if(busy)return;busy=true;panel?.querySelectorAll('button,select,textarea,input').forEach(n=>n.disabled=true);try{await work();}catch(e){message(e.message);}finally{busy=false;panel?.querySelectorAll('button,select,textarea,input').forEach(n=>n.disabled=false);}}
+  async function run(work){
+    if(busy)return;
+    busy=true;
+    const controls=[...(panel?.querySelectorAll('button,select,textarea,input')||[])];
+    const previous=controls.map(n=>n.disabled);
+    controls.forEach(n=>n.disabled=true);
+    try{await work();}
+    catch(e){message(e.message);}
+    finally{
+      busy=false;
+      // Restore original disabled states only on surviving controls. Newly painted
+      // controls retain their own validation-dependent disabled state.
+      controls.forEach((n,i)=>{if(n.isConnected)n.disabled=previous[i];});
+    }
+  }
   function button(parent,label,fn,cls='btn-s'){const b=el('button',label,parent);b.type='button';b.className=cls;b.onclick=()=>run(fn);return b;}
   function close(){if(busy)return;generation++;panel?.remove();panel=null;data=null;hideBalances=false;accountFilter='';returnFocus?.focus();window.btRefreshFinancesPage?.();}
   function paint(){
