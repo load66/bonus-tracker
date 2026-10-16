@@ -132,14 +132,14 @@ const covered=summarize({
       {observedAt:NOW-60,balance:'100.05',currency:'USD'}],
     credit:[{observedAt:NOW-100000,balance:'5.00',currency:'USD'},
       {observedAt:NOW-60,balance:'-15.00',currency:'USD'}],
-    stale:[{observedAt:NOW-60,balance:'250.00',currency:'USD'}]
+    stale:[{observedAt:NOW-100000,balance:'250.00',currency:'USD'},{observedAt:NOW-60,balance:'250.00',currency:'USD'}]
   }
 },{now:financeAt});
 assert.equal(covered.netWorthAvailable,false,'stale inclusion must not be called complete');
 assert.equal(covered.observedNetWorth,'365.05','negative credit balance increases net worth; excluded account contributes zero');
 assert.deepEqual(covered.netWorthCoverage,{eligible:3,covered:3,stale:1,undated:0,missing:0,unsupportedCurrency:0});
 assert.equal(covered.excludedFromNetWorth,1);
-assert.equal(covered.netWorthHistory[0].value,'85.00','historic liability debt retains its sign');
+assert.equal(covered.netWorthHistory[0].value,'335.00','historic liability debt retains its sign');
 
 const excluding=summarize({
   accounts:[financeAccount('kept','checking','80.00'),financeAccount('ignored','savings','900.00')],
