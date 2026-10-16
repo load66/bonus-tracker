@@ -141,7 +141,7 @@ const base=()=>({
       assert.equal(plaidDiscoveries,1,'existing linked Plaid bank must recover its accounts without a new Item');
       assert.equal(requests.some(r=>r.path.endsWith('/link-token')||r.path.endsWith('/exchange')),false,'discovery must never reconnect the bank');
       await section.getByRole('button',{name:'Accounts',exact:true}).click();
-      await section.getByRole('heading',{name:/^Accounts · [0-9]+$/}).waitFor();
+      await section.getByRole('heading',{name:'Accounts',exact:true}).waitFor();
       // Merely opening and closing the provider wizard must not trigger an
       // unnecessary Finances reload while the user may be editing categories.
       await page.evaluate(()=>{
@@ -216,7 +216,7 @@ const base=()=>({
       }
       await section.getByRole('button',{name:'Manage connections',exact:true}).click();
       await page.getByRole('dialog',{name:'Financial accounts'}).waitFor();await page.getByRole('dialog',{name:'Financial accounts'}).getByRole('button',{name:'Done'}).click();
-      await section.getByRole('heading',{name:/^Accounts · [0-9]+$/}).waitFor();
+      await section.getByRole('heading',{name:'Accounts',exact:true}).waitFor();
       await section.getByRole('combobox',{name:'Finance connection source'}).selectOption('plaid');
       await section.getByText('Fallback Checking',{exact:true}).waitFor();
       assert.equal(await section.locator('.finance-page-account').count(),1,'Plaid must have its own account snapshot');
