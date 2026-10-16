@@ -132,7 +132,7 @@ return result;
         assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'no automatic payout completion');
         await page.evaluate(()=>{rcvPrompt=null;R()});
         await page.getByRole('button',{name:'Finances',exact:true}).click();
-        await page.getByRole('region',{name:'My finances'}).getByRole('heading',{name:'Financial overview'}).waitFor();
+        await page.getByRole('region',{name:'My finances'}).getByRole('heading',{name:'Finances'}).waitFor();
         // An immediate switch while the private dashboard is still mounting
         // can race another app re-render. Complete the route change first.
         const tracker=page.getByRole('button',{name:'Tracker',exact:true});

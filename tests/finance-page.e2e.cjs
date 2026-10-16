@@ -61,11 +61,16 @@ const base=()=>({
         }
         await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(state)});
       });
-      const plaidState=base();plaidState.accounts=[{...plaidState.accounts[0],bank:'Fallback Bank',name:'Fallback Checking'}];
+      const plaidState=base();plaidState.accounts=[];plaidState.lastSuccess=null;plaidState.nextSyncAt=0;let plaidDiscoveries=0;
       await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/plaid**',async route=>{
         const req=route.request(),url=new URL(req.url());
         const body=req.postDataJSON?.()||{};requests.push({path:url.pathname,method:req.method(),body});
         if(url.pathname.endsWith('/transaction-review'))plaidState.transactions[body.account][body.transaction].category=body.category;
+        if(url.pathname.endsWith('/accounts/sync')){
+          plaidDiscoveries++;
+          plaidState.accounts=[{...base().accounts[0],bank:'X Money',name:'X Money Checking'}];
+          plaidState.lastSuccess=NOW;
+        }
         const result=url.pathname.includes('/accounts')?plaidState:{provider:'plaid',priority:'fallback',configured:false,used:null,limit:10};
         await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(result)});
       });
@@ -86,7 +91,7 @@ const base=()=>({
       for(let attempt=0;attempt<3;attempt++){
         await financeTab.click();
         try{
-          await section.getByRole('heading',{name:'Financial overview'}).waitFor({timeout:7000});
+          await section.getByRole('heading',{name:'Finances'}).waitFor({timeout:7000});
           opened=true;break;
         }catch{
           const observed=await section.locator('h2,h3').allTextContents().catch(()=>[]);
@@ -102,12 +107,12 @@ const base=()=>({
       assert.ok(opened,name+' Finances navigation must become available after bootstrap');
       assert.equal(await section.locator('img').count(),0,'provider aliases must be text, never HTML');
       // Playwright's filter waits for actual content, unlike immediate text snapshots.
-      // Amounts can contain spacing; the user-facing status must be Unavailable.
+      // Missing money must remain unknown rather than incorrectly becoming $0.00.
       await section.locator('.finance-page-tile strong')
-        .filter({hasText:/^\s*Unavailable\s*$/}).first().waitFor({state:'visible'});
+        .filter({hasText:/^\s*—\s*$/}).first().waitFor({state:'visible'});
       await section.getByText('Income',{exact:true}).locator('..').getByText(/200/).waitFor();
       await section.getByText('Expenses',{exact:true}).locator('..').getByText(/15/).waitFor();
-      await section.getByText('Cash Flow',{exact:true}).locator('..').getByText(/185/).waitFor();
+      await section.getByText('Net flow',{exact:true}).locator('..').getByText(/185/).waitFor();
       await section.locator('.finance-page-caution')
         .filter({hasText:'Cash Flow is partial'}).first().waitFor({state:'visible'});
       // The awaited visibility assertion above is authoritative; do not reread
@@ -132,6 +137,9 @@ const base=()=>({
       assert.equal(state.transactions[A][T3].category,'shopping','retry must save category');
       assert.ok(requests.some(r=>r.path.endsWith('/transaction-review')&&r.body.category==='shopping'));
 
+      await section.getByText('X Money',{exact:false}).first().waitFor();
+      assert.equal(plaidDiscoveries,1,'existing linked Plaid bank must recover its accounts without a new Item');
+      assert.equal(requests.some(r=>r.path.endsWith('/link-token')||r.path.endsWith('/exchange')),false,'discovery must never reconnect the bank');
       await section.getByRole('button',{name:'Accounts',exact:true}).click();
       await section.getByRole('heading',{name:'Accounts',exact:true}).waitFor();
       // Merely opening and closing the provider wizard must not trigger an
@@ -145,7 +153,7 @@ const base=()=>({
       await addBank.click();
       const wizard=page.getByRole('dialog',{name:'Financial accounts'});
       await wizard.getByText('SECURE BANK CONNECTION',{exact:true}).waitFor();
-      const bridge=wizard.getByRole('link',{name:'Continue securely to SimpleFIN'});
+      const bridge=wizard.getByRole('link',{name:'Open SimpleFIN'});
       assert.equal(await bridge.getAttribute('href'),'https://beta-bridge.simplefin.org/');
       assert.equal(await bridge.getAttribute('target'),'_blank');
       assert.equal(await bridge.getAttribute('rel'),'noopener noreferrer');
@@ -155,13 +163,19 @@ const base=()=>({
       await wizard.getByRole('button',{name:'Done'}).click();
       assert.equal(await page.evaluate(()=>window.__bankWizardRefreshCount),0,
         'Closing an unchanged provider authorization wizard must not refresh or interrupt financial edits');
-      await section.getByText('Use Add bank for secure guided setup.',{exact:false}).waitFor();
-      assert.ok((await section.innerText()).includes('Discovery can be limited to once daily'),
-        'Explain provider discovery delay when adding a bank');
+      await section.getByText('X Money',{exact:false}).first().waitFor();
       assert.equal(await section.locator('.finance-page-account').count(),3);
-      const accountSearch=section.getByRole('searchbox',{name:'Search accounts'});await accountSearch.fill('other credit union');
-      assert.equal(await section.locator('.finance-page-account:visible').count(),1);await accountSearch.fill('');
+      const accountSearch=section.getByRole('searchbox',{name:'Search accounts'});
+      await accountSearch.fill('x money');
+      await section.getByRole('button',{name:'View matching accounts'}).waitFor();
+      await section.getByRole('button',{name:'View matching accounts'}).click();
+      await section.getByText('X Money Checking',{exact:true}).waitFor();
+      await section.getByLabel('Finance connection source').selectOption('simplefin');
+      await section.getByRole('button',{name:'Accounts',exact:true}).click();
+      const restoredSearch=section.getByRole('searchbox',{name:'Search accounts'});await restoredSearch.fill('other credit union');
+      assert.equal(await section.locator('.finance-page-account:visible').count(),1);await restoredSearch.fill('');
       const creditEditor=section.locator('.finance-page-account-info strong').filter({hasText:/^Credit Card$/}).locator('xpath=../../..');
+      await creditEditor.locator('details.finance-page-account-settings > summary').click();
       await creditEditor.getByLabel('Net worth treatment').selectOption('exclude');
       await section.getByRole('button',{name:'Save account organization'}).click();
       await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).waitFor();
@@ -204,7 +218,7 @@ const base=()=>({
       await page.getByRole('dialog',{name:'Financial accounts'}).waitFor();await page.getByRole('dialog',{name:'Financial accounts'}).getByRole('button',{name:'Done'}).click();
       await section.getByRole('heading',{name:'Accounts',exact:true}).waitFor();
       await section.getByRole('combobox',{name:'Finance connection source'}).selectOption('plaid');
-      await section.getByText('Fallback Checking',{exact:true}).waitFor();
+      await section.getByText('X Money Checking',{exact:true}).waitFor();
       assert.equal(await section.locator('.finance-page-account').count(),1,'Plaid must have its own account snapshot');
       assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts')));
       await section.getByRole('combobox',{name:'Finance connection source'}).selectOption('simplefin');

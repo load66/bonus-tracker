@@ -123,6 +123,9 @@ const KEY='a'.repeat(64);
         await page.evaluate(()=>window.syntheticLink.onSuccess('synthetic-public-token'));
         await host.getByText('Plaid slots used: 2/10').waitFor();
         assert.equal(calls.filter(x=>x.endsWith('/exchange')).length,1,'successful SDK handoff exchanges exactly once');
+        await page.waitForFunction(()=>document.querySelector('#target')?.textContent?.includes('discovered.'));
+        assert.equal(syncs,2,'successful Plaid link triggers one automatic, read-only account discovery');
+        assert.equal(calls.filter(x=>x.endsWith('/link-token')).length,1,'discovery never creates another lifetime Item');
         // A delayed response for one owner must never be shown after a user
         // switch, even when the panel remains mounted on the same page.
         holdAccounts=true;
