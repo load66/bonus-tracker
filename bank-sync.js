@@ -64,7 +64,7 @@
       due?'No new accounts yet. Next provider check: '+new Date(data.nextDiscoveryAt*1000).toLocaleString()+'.':
       'No new accounts returned. Confirm the bank is authorized in SimpleFIN.';
     paint();
-    message(wizardResult);
+    message(added?'Accounts added to your connection.':'No additional accounts discovered.');
     if(added)window.btRefreshFinancesPage?.();
   }
   function connectFlow(body){
@@ -98,7 +98,7 @@
         if(!token)throw Error('Paste your one-time SimpleFIN setup token.');
         data=await request('/connect',{method:'POST',body:JSON.stringify({setup_token:token})});
         wizardResult='Connected. '+(data.accounts||[]).length+' account'+((data.accounts||[]).length===1?'':'s')+' available.';
-        paint();message(wizardResult);window.btRefreshFinancesPage?.();
+        paint();message('Secure connection saved.');window.btRefreshFinancesPage?.();
       },'btn-p');btn.classList.add('bank-connect-finish');
     }
     const fallback=el('details',undefined,shell);fallback.className='bank-connect-fallback';
