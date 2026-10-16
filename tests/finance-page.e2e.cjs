@@ -76,7 +76,7 @@ const base=()=>({
       assert.equal(await section.locator('.finance-page-transaction:visible').count(),1);
       await txSearch.fill('');
       const category=section.getByLabel('Category for Unknown');await category.selectOption('shopping');
-      await section.getByRole('alert').getByText('Changes were not saved.',{exact:false}).waitFor();
+      await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).waitFor();
       assert.equal(state.transactions[A][T3].category,'unreviewed','failure must not silently commit category changes');
       await section.getByLabel('Category for Unknown').selectOption('shopping');
       await section.getByText('Confirmed by you',{exact:true}).waitFor();
@@ -92,9 +92,9 @@ const base=()=>({
       const creditEditor=section.locator('.finance-page-account-info strong').filter({hasText:/^Credit Card$/}).locator('xpath=../../..');
       await creditEditor.getByLabel('Net worth treatment').selectOption('exclude');
       await section.getByRole('button',{name:'Save account organization'}).click();
-      await section.getByRole('alert').getByText('Changes were not saved.',{exact:false}).waitFor();
+      await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).waitFor();
       assert.equal(state.accountProfiles[B].balanceMode,'liability','failed account save must leave encrypted server state unchanged');
-      assert.equal(await section.getByLabel('Net worth treatment').nth(1).inputValue(),'exclude','unsaved draft remains available for retry');
+      assert.equal(await creditEditor.getByLabel('Net worth treatment').inputValue(),'exclude','unsaved draft remains available for retry');
       await section.getByRole('button',{name:'Save account organization'}).click();
       await section.getByRole('alert').waitFor({state:'hidden'});
       assert.equal(state.accountProfiles[B].balanceMode,'exclude','successful retry must persist organization');
