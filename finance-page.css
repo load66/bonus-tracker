@@ -105,3 +105,16 @@
 }
 
 .finance-page-accounts-title{display:flex;align-items:center;gap:9px}.finance-page-accounts-title h3{margin:0}.finance-page-account-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;min-height:22px;border-radius:999px;background:#294769;color:#cae1ff;font-size:11px;font-weight:750;padding:0 5px}
+
+/* Financial bonus evidence stays inside Finances, never inside the Tracker layout. */
+.finance-page .finance-page-nav{grid-template-columns:repeat(4,minmax(0,1fr))}
+.finance-page .bonus-evidence{margin:0 0 14px;padding:14px;border-color:#455f81;border-radius:14px;background:#142238}
+.finance-page .bonus-evidence-heading strong{font-size:16px}
+.finance-page .bonus-evidence .bonus-evidence-toolbar{align-items:flex-start}
+.finance-page .bonus-evidence-provider-help{margin:5px 0 12px!important}
+.finance-page .bonus-evidence-card{min-width:0}
+@media(max-width:390px){
+  .finance-page .finance-page-nav{gap:4px;padding:4px}
+  .finance-page .finance-page-nav-button{padding:8px 3px;font-size:10px;overflow-wrap:anywhere;line-height:1.25}
+  .finance-page .bonus-evidence{padding:11px}
+}
