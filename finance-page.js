@@ -495,6 +495,7 @@
       connectionNotice=(account.name||'Account')+' removed from Finances. Other accounts remain connected.';
       expandedAccountSettings.delete(account.key);
       delete accountDraftProfiles[account.key];dirtyAccounts.delete(account.key);
+      if(transactionAccount===account.key)transactionAccount='';
       return {financeSource:source,snapshot};
     });
   }
@@ -532,6 +533,8 @@
       await request(plaid?'/items/'+encodeURIComponent(handle):'',{method:'DELETE'},source);
       const latest=await request('',{},source);
       applySource(source,latest);
+      if(transactionAccount.startsWith(source+':') &&
+          !(latest.accounts||[]).some(a=>source+':'+a.key===transactionAccount))transactionAccount='';
       accountDraftProfiles={};dirtyAccounts.clear();expandedAccountSettings.clear();
       connectionNotice=(plaid?'Bank removed.':'SimpleFIN disconnected.')+' Saved bonus tracker entries were not changed.';
     }catch(error){
