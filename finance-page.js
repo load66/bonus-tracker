@@ -18,7 +18,7 @@
   let transactionSearch='',transactionAccount='',transactionCategory='',transactionStatus='';
   let accountSearch='',accountType='',saveNotice='',accountDraftProfiles={},currentCombined=null;
   let activityNotice='',monitoringNotice='',connectionNotice='';
-  const dirtyAccounts=new Set(),monitoringDraft={};
+  const dirtyAccounts=new Set(),expandedAccountSettings=new Set(),monitoringDraft={};
   const sourceSnapshot=source=>source===provider?data:otherData?.provider===source?otherData.snapshot:null;
   const unified=()=>window.BTFinanceUnified?.combine({simplefin:sourceSnapshot('simplefin'),plaid:sourceSnapshot('plaid')})||null;
   function applySource(source,snapshot){
@@ -513,6 +513,12 @@
       el('b',amount(account.balance,account.currency),balances);
       if(account.availableBalance!==null&&account.availableBalance!==undefined)el('small','Available '+amount(account.availableBalance,account.currency),balances);
       const settings=el('details',undefined,article,'finance-page-account-settings');
+      settings.open=expandedAccountSettings.has(account.key);
+      settings.addEventListener('toggle',()=>{
+        if(!settings.isConnected)return;
+        if(settings.open)expandedAccountSettings.add(account.key);
+        else expandedAccountSettings.delete(account.key);
+      });
       el('summary','Account settings',settings);
       const fields=el('div',undefined,settings,'finance-page-account-fields');
       const monitoringLabel=el('label',undefined,fields,'finance-page-monitor');
@@ -608,7 +614,7 @@
     const call=++mountCall,auth=window.BTBonusAuth;
     if(!auth?.connected()){
       window.BTBonusEvidence?.dispose();
-      sessionIdentity=null;lastAuthenticatedOwner=null;monitoringNotice='';activityNotice='';connectionNotice='';
+      sessionIdentity=null;lastAuthenticatedOwner=null;expandedAccountSettings.clear();monitoringNotice='';activityNotice='';connectionNotice='';
       currentRoot=host;data=null;otherData=null;sequence++;
       host.replaceChildren();statusMessage(host,'Sign in to view finances','Sign in securely to view linked financial accounts.');
       action(host,'Sign in / manage accounts',()=>window.btOpenBankSync?.(),'finance-page-button finance-page-primary');return;
@@ -628,7 +634,7 @@
     }
     window.BTBonusEvidence?.dispose();
     if(lastAuthenticatedOwner&&lastAuthenticatedOwner!==identity){
-      monitoringNotice='';activityNotice='';connectionNotice='';
+      expandedAccountSettings.clear();monitoringNotice='';activityNotice='';connectionNotice='';
     }
     lastAuthenticatedOwner=identity;sessionIdentity=identity;currentRoot=host;data=null;otherData=null;
     accountDraftProfiles={};dirtyAccounts.clear();
