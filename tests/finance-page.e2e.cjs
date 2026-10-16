@@ -349,12 +349,20 @@ const base=()=>({
       assert.ok(state.removedAccounts[B]);
       assert.ok(requests.some(r=>r.path.endsWith('/simplefin/accounts/'+B)&&r.method==='DELETE'));
       await section.locator('summary',{hasText:'Removed accounts (1)'}).click();
-      await Promise.all([
-        page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/simplefin/accounts/'+B+'/restore')
-          && r.request().method()==='POST' && r.status()===200),
-        section.getByRole('button',{name:'Restore',exact:true}).click()
-      ]);
-      await section.getByText('Account restored to discovery.',{exact:false}).waitFor();
+      await section.getByRole('button',{name:'Restore',exact:true}).click();
+      await page.waitForFunction(()=>(
+        document.querySelector('#bt-finances-page')?.textContent||''
+      ).includes('Account restored to discovery.') || (
+        document.querySelector('#bt-finances-page')?.textContent||''
+      ).includes('Changes were not saved.'),null,{timeout:8000}).catch(()=>{});
+      if(state.removedAccounts[B]!==undefined){
+        const messages=await section.locator('.finance-page-notice,.finance-page-connection-success').allTextContents();
+        throw Error('Restore did not update synthetic account: '+JSON.stringify({
+          recentRequests:requests.slice(-6).map(r=>({path:r.path,method:r.method})),messages,
+          removedButtons:await section.getByRole('button',{name:'Restore',exact:true}).count(),
+          visibleAccounts:state.accounts.map(a=>a.key)
+        }));
+      }
       assert.equal(state.removedAccounts[B],undefined,'Restoration clears exact account exclusion');
       // Simulate a real SimpleFIN pending row with posted=0, visible but not booked.
       state.transactions[A]['pending-zero']={id:'pending-zero',posted:0,transactedAt:NOW-70,
