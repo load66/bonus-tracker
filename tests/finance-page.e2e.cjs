@@ -94,6 +94,13 @@ const base=()=>({
 
       await section.getByRole('button',{name:'Accounts',exact:true}).click();
       await section.getByRole('heading',{name:'Accounts',exact:true}).waitFor();
+      const addBank=section.getByRole('link',{name:'Add bank through SimpleFIN Bridge'});
+      await addBank.waitFor();
+      assert.equal(await addBank.getAttribute('href'),'https://beta-bridge.simplefin.org/');
+      assert.equal(await addBank.getAttribute('target'),'_blank');
+      assert.equal(await addBank.getAttribute('rel'),'noopener noreferrer');
+      assert.ok((await section.innerText()).includes('Discovery can be limited to once daily'),
+        'Explain provider discovery delay when adding a bank');
       assert.equal(await section.locator('.finance-page-account').count(),3);
       const accountSearch=section.getByRole('searchbox',{name:'Search accounts'});await accountSearch.fill('other credit union');
       assert.equal(await section.locator('.finance-page-account:visible').count(),1);await accountSearch.fill('');
