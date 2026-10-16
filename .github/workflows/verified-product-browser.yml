@@ -7,6 +7,7 @@ on:
       - 'bank-sync.js'
       - 'bonus-evidence-core.js'
       - 'bonus-requirements-progress.js'
+      - 'finance-page.js'
       - 'tests/bank-sync.e2e.cjs'
       - 'tests/bonus-evidence.e2e.cjs'
       - 'tests/finance-page.e2e.cjs'
