@@ -17,7 +17,7 @@
   let currentRoot=null,sequence=0,hidden=false,data=null,otherData=null,busy=false,view='overview',period=90;
   let transactionSearch='',transactionAccount='',transactionCategory='',transactionStatus='';
   let accountSearch='',accountType='',saveNotice='',accountDraftProfiles={},currentCombined=null;
-  let activityNotice='',connectionNotice='';
+  let activityNotice='',monitoringNotice='',connectionNotice='';
   const dirtyAccounts=new Set(),monitoringDraft={};
   const sourceSnapshot=source=>source===provider?data:otherData?.provider===source?otherData.snapshot:null;
   const unified=()=>window.BTFinanceUnified?.combine({simplefin:sourceSnapshot('simplefin'),plaid:sourceSnapshot('plaid')})||null;
@@ -211,8 +211,8 @@
       }
     }finally{
       busy=false;
-      activityNotice=(saved?saved+' account'+(saved===1?'':'s')+' enabled for read-only monitoring. ':'')+
-        (problems.length?'Review: '+problems.join(' · '):'');
+      monitoringNotice=saved?saved+' account'+(saved===1?'':'s')+' enabled for read-only monitoring.':'';
+      activityNotice=problems.length?'Review: '+problems.join(' · '):'';
       paint();
     }
     if(saved&&!problems.length)await refreshActivity();
@@ -587,6 +587,7 @@
       netWorthAvailable:!!calculated?.netWorthAvailable&&trustedTotals};
     hero(host,summary);
     if(connectionNotice){const banner=el('p',connectionNotice,host,'finance-page-connection-success');banner.setAttribute('role','status');}
+    if(monitoringNotice){const banner=el('p',monitoringNotice,host,'finance-page-activity-result');banner.setAttribute('role','status');}
     if(activityNotice){const banner=el('p',activityNotice,host,'finance-page-activity-result');banner.setAttribute('role','status');}
     if(view==='overview')activityPrompt(host);
     if(summaryState.incompleteProviders)el('p','Financial activity is partial: one linked provider has not completed a recent sync.',host,'finance-page-caution');
@@ -625,7 +626,7 @@
       currentRoot=host;paint();return;
     }
     window.BTBonusEvidence?.dispose();
-    sessionIdentity=identity;currentRoot=host;data=null;otherData=null;
+    sessionIdentity=identity;currentRoot=host;data=null;otherData=null;monitoringNotice='';activityNotice='';connectionNotice='';
     accountDraftProfiles={};dirtyAccounts.clear();
     Object.keys(monitoringDraft).forEach(k=>delete monitoringDraft[k]);
     const rev=++sequence;paint();
