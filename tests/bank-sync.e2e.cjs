@@ -138,7 +138,7 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    assert.equal(await page.locator('.bank-connect-flow input[type=password]').count(),0,'first-bank onboarding must not collect bank credentials');
    await page.getByLabel('One-time SimpleFIN setup token',{exact:true}).fill('synthetic-one-time-token');
    await page.getByRole('button',{name:'Connect my accounts securely',exact:true}).click();
-   await page.getByText('Connected. 1 account available.',{exact:true}).waitFor();
+   await page.getByText('Connected. 1 account found. Transactions sync automatically.',{exact:true}).waitFor();
    await page.getByRole('button',{name:'Review account settings'}).click();
    await page.getByText('Connection active',{exact:true}).waitFor();
    assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-one-time-token')),false);
