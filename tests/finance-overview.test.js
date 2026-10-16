@@ -112,4 +112,81 @@ result=summarize(classified,{now:NOW});
 assert.equal(result.cashAvailable,false,'stale deposit balances cannot produce a cash total');
 assert.equal(result.netWorthAvailable,false,'stale balances cannot produce net worth');
 
+
+// Phase 1 regression contract: financial truth must survive partial coverage.
+const financeAt=NOW;
+const financeAccount=(key,kind,balance,age=60)=>({
+  key,kind,detectedType:kind,currency:'USD',balance,balanceDate:financeAt-age
+});
+const partialAccounts=[
+  financeAccount('available','checking','100.05'),
+  financeAccount('credit','credit_card','-15.00'),
+  financeAccount('excluded','savings','500.00',9*DAY),
+  financeAccount('stale','brokerage','250.00',9*DAY)
+];
+const covered=summarize({
+  accounts:partialAccounts,
+  accountProfiles:{excluded:{kind:'savings',balanceMode:'exclude'}},
+  balanceHistory:{
+    available:[{observedAt:NOW-100000,balance:'90.00',currency:'USD'},
+      {observedAt:NOW-60,balance:'100.05',currency:'USD'}],
+    credit:[{observedAt:NOW-100000,balance:'5.00',currency:'USD'},
+      {observedAt:NOW-60,balance:'-15.00',currency:'USD'}],
+    stale:[{observedAt:NOW-60,balance:'250.00',currency:'USD'}]
+  }
+},{now:financeAt});
+assert.equal(covered.netWorthAvailable,false,'stale inclusion must not be called complete');
+assert.equal(covered.observedNetWorth,'365.05','negative credit balance increases net worth; excluded account contributes zero');
+assert.deepEqual(covered.netWorthCoverage,{eligible:3,covered:3,stale:1,undated:0,missing:0,unsupportedCurrency:0});
+assert.equal(covered.excludedFromNetWorth,1);
+assert.equal(covered.netWorthHistory[0].value,'85.00','historic liability debt retains its sign');
+
+const excluding=summarize({
+  accounts:[financeAccount('kept','checking','80.00'),financeAccount('ignored','savings','900.00')],
+  accountProfiles:{ignored:{kind:'savings',balanceMode:'exclude'}}
+},{now:NOW});
+assert.equal(excluding.netWorthAvailable,true,'an excluded valid account cannot block the eligible account');
+assert.equal(excluding.netWorth,'80.00');
+const unknown=summarize({
+  accounts:[financeAccount('cash','checking','100.00'),{key:'missing',kind:'savings',currency:'USD',balance:null}],
+},{now:NOW});
+assert.equal(unknown.netWorthAvailable,false);
+assert.equal(unknown.observedNetWorth,'100.00','known subtotal is displayed without inventing a missing balance');
+assert.equal(unknown.netWorthCoverage.covered,1);
+assert.equal(unknown.netWorthCoverage.missing,1);
+
+const cardCredit=summarize({accounts:[financeAccount('credit','credit_card','-30.00')]},{now:NOW});
+assert.equal(cardCredit.netWorth,'30.00','credit-card overpayment is a net-worth asset');
+const spendingState={
+  lastSuccess:NOW,accounts:[financeAccount('cash','checking','1000.00')],
+  monitoredAccounts:['cash'],transactions:{cash:{
+    income:{posted:NOW-120,amount:'500.00',category:'income'},
+    bonus:{posted:NOW-100,amount:'100.50',category:'bonus',kind:'possible_bonus'},
+    paid:{id:'paid',posted:NOW-90,amount:'-40.00',merchant:'Grocery',category:'groceries'},
+    refund:{posted:NOW-80,amount:'40.00',merchant:'Grocery',category:'refund'},
+    small:{posted:NOW-70,amount:'-0.01',category:'dining'},
+    transfer:{posted:NOW-60,amount:'-150.00',category:'transfer',signals:['matched_internal_transfer']},
+    uncertain:{posted:NOW-50,amount:'20.00',category:'refund',merchant:'Unknown'}
+  }}
+};
+const spend=summarize(spendingState,{now:NOW});
+assert.equal(spend.bonusIncome,'100.50');
+assert.equal(spend.income,'500.00','bonus income is kept separate');
+assert.equal(spend.expenses,'0.01','refund reverses its exact-cents purchase category');
+assert.equal(spend.spending.groceries,'0.00');
+assert.equal(spend.refunds,'40.00');
+assert.equal(spend.unattributedRefunds,1,'unattributed refund is flagged, never guessed');
+assert.equal(spend.cashFlow,'600.49','cash flow includes bonus income but excludes transfers');
+assert.equal(spend.complete,false,'unattributed refunds prevent a false complete report');
+assert.equal(spend.monthly[0].bonusIncome,'100.50');
+
+const octoberInChicago=Date.parse('2026-11-01T04:30:00Z')/1000;
+const localMonth=summarize({
+  accounts:[financeAccount('c','checking','1.00')],
+  monitoredAccounts:['c'],
+  transactions:{c:{entry:{posted:octoberInChicago,amount:'3.50',category:'income'}}}
+},{now:Date.parse('2026-11-01T06:00:00Z')/1000});
+assert.equal(localMonth.monthly[0].month,'2026-10',
+  'a late-night October 31 Chicago transaction must not fall into the UTC November bucket');
+
 console.log('Financial observations passed: strict scope, multi-currency safety, exact cents, availability, coverage, privacy and non-mutation');
