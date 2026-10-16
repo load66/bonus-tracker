@@ -19,7 +19,7 @@
 <link rel="stylesheet" href="./research-tabs.css?v=3.4.74">
 <link rel="stylesheet" href="./bank-sync.css?v=3.4.74-finance5">
 <link rel="stylesheet" href="./finance-page.css?v=3.4.74-finance5">
-<link rel="stylesheet" href="./bonus-evidence.css?v=3.4.74-evidence1">
+<link rel="stylesheet" href="./bonus-evidence.css?v=3.4.74-inbox1">
 </head>
 <body>
 <div class="app" id="app"></div>
@@ -32,7 +32,7 @@
     refreshed=true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=3.4.74-audit1',{updateViaCache:'none'}).then(reg=>{
+  navigator.serviceWorker.register('./sw.js?v=3.4.74-inbox1',{updateViaCache:'none'}).then(reg=>{
     const activate=worker=>{try{worker&&worker.postMessage({type:'SKIP_WAITING'})}catch{}};
     if(reg.waiting)activate(reg.waiting);
     reg.addEventListener('updatefound',()=>{
@@ -90,8 +90,9 @@
 <script src="./finance-overview-core.js?v=3.4.74-finance5"></script>
 <script src="./bank-sync.js?v=3.4.74-finance5"></script>
 <script src="./finance-page.js?v=3.4.74-finance5"></script>
-<script src="./bonus-evidence-core.js?v=3.4.74-evidence1"></script>
-<script src="./bonus-evidence.js?v=3.4.74-evidence1"></script>
+<script src="./bonus-evidence-core.js?v=3.4.74-inbox1"></script>
+<script src="./bonus-requirements-progress.js?v=3.4.74-inbox1"></script>
+<script src="./bonus-evidence.js?v=3.4.74-inbox1"></script>
 <script src="./mobile-analyzer.js?v=3.4.74"></script>
 </body>
 </html>

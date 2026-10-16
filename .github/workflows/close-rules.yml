@@ -108,8 +108,8 @@ jobs:
       - name: Check financial observation arithmetic and data scope
         run: node tests/finance-overview.test.js
 
-      - name: Verify bank bonus evidence classification and cycle isolation
-        run: node tests/bonus-evidence.test.js
+      - name: Verify bank bonus evidence inbox and promotion-scoped candidate progress
+        run: node tests/bonus-evidence.test.js && node tests/bonus-requirements-progress.test.js
 
       - name: Run real browser end-to-end tests
         env:

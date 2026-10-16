@@ -16,11 +16,11 @@ const server=http.createServer(async(req,res)=>{
 });
 const NOW=1792134000,accountKey='a'.repeat(64),opened='2026-10-01';
 const entry={id:'bonus-evidence-test',bank:'Synthetic Bank',accountType:'personal',opened,bonus:200};
-const sample=(cycleId)=>({
+const sample=(cycleId,reviews={})=>({
   configured:true,connected:true,evidenceOnly:true,status:'connected',lastSuccess:NOW,nextSyncAt:NOW+86400,
   accounts:[{key:accountKey,name:'Checking <img src=x onerror=alert(1)>',bank:'Synthetic Bank',currency:'USD',balance:'250.00',balanceDate:NOW}],
   mappings:{[accountKey]:{entryId:cycleId,bank:entry.bank,opened}},
-  missingAccounts:[],monitoredAccounts:[accountKey],
+  missingAccounts:[],monitoredAccounts:[accountKey],evidenceReviews:{[accountKey]:reviews},
   transactions:{[accountKey]:{
     a:{id:'a',amount:'500.00',posted:NOW-100,description:'Employer Direct Deposit <script>alert(1)</script>',signals:['possible_direct_deposit'],kind:'other_deposit',pending:false},
     b:{id:'b',amount:'200.00',posted:NOW-110,description:'Promotional Bonus <img src=x>',signals:['possible_bonus'],kind:'possible_bonus',pending:false},
@@ -38,13 +38,22 @@ const sample=(cycleId)=>({
       try{
         const context=await browser.newContext({serviceWorkers:'block',viewport:{width:390,height:844},timezoneId:'America/Chicago'});
         const page=await context.newPage(),errors=[],requests=[];
-        let cycleId=entry.id;
+        let cycleId=entry.id,reviews={};
         page.on('pageerror',err=>errors.push(err.message));
         // During production smoke, NEVER send synthetic session headers to any live API.
       if(process.env.BT_BROWSER_SITE_URL)await page.route('https://api-production-00f74.up.railway.app/**',route=>route.abort());
       await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin**',async route=>{
-          requests.push({path:new URL(route.request().url()).pathname,method:route.request().method()});
-          await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(sample(cycleId))});
+          const path=new URL(route.request().url()).pathname,method=route.request().method();
+          const payload=method==='PUT'&&route.request().postData()?route.request().postDataJSON():null;
+          requests.push({path,method,body:payload});
+          if(path.endsWith('/evidence-review')){
+            if(payload.decision==='clear')delete reviews[payload.transaction];
+            else reviews[payload.transaction]={
+              status:payload.decision,reviewedAt:NOW,
+              requirementId:payload.requirementId||null
+            };
+          }
+          await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(sample(cycleId,reviews))});
         });
         await page.addInitScript(({entry})=>{
           const RealDate=Date,now=Date.parse('2026-10-16T07:00:00Z');
@@ -60,7 +69,7 @@ const sample=(cycleId)=>({
         assert.equal(requests.length,0,'private bank evidence must load only after explicit review');
         await section.getByRole('button',{name:'Review bank activity',exact:true}).click();
         await section.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor();
-        await section.getByText('Possible direct deposits',{exact:true}).waitFor();
+        await section.getByText('Possible direct deposit',{exact:true}).waitFor();
         assert.ok((await section.innerText()).includes('Possible bonus payout'));
         assert.ok((await section.innerText()).includes('Possible bank fee'));
         assert.ok((await section.innerText()).includes('Possible bonus reversal'));
@@ -69,6 +78,23 @@ const sample=(cycleId)=>({
         assert.equal(await section.locator('.bonus-evidence-card').count(),1);
         assert.equal(await section.locator('.bonus-evidence-row').count(),4);
         assert.equal(await section.locator('.bonus-evidence-row>b').first().innerText(),'••••••','amounts hidden by default');
+        // Review a posted deposit and verify the queue shrinks without writing tracker data.
+        await section.getByRole('button',{name:'Mark reviewed',exact:true}).first().click();
+        await section.getByText('Review saved. Promotion requirements remain unconfirmed.').waitFor();
+        assert.equal(Object.values(reviews).filter(x=>x.status==='reviewed').length,1);
+        assert.equal(await section.locator('.bonus-evidence-row').count(),3);
+        assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before);
+        // A dismissed bonus must be suppressible without marking the payout received.
+        await section.getByRole('button',{name:'Not relevant',exact:true}).first().click();
+        await section.getByText('Not relevant saved.').waitFor();
+        assert.equal(Object.values(reviews).filter(x=>x.status==='dismissed').length,1);
+        assert.equal(await section.locator('.bonus-evidence-row').count(),2);
+        assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before);
+        await section.getByRole('button',{name:'Show reviewed / dismissed',exact:true}).click();
+        assert.equal(await section.locator('.bonus-evidence-row').count(),4);
+        await section.getByRole('button',{name:'Undo review',exact:true}).first().click();
+        await section.getByText('Review reopened.').waitFor();
+        assert.equal(Object.keys(reviews).length,1,'undo clears exactly one receipt');
         await section.getByRole('button',{name:'Show transaction amounts'}).click();
         assert.ok((await section.innerText()).includes('$200.00'));
         await section.getByRole('button',{name:'Hide transaction amounts'}).click();
@@ -92,6 +118,13 @@ const sample=(cycleId)=>({
         const reopened=page.getByRole('region',{name:'Bank bonus activity evidence'});
         await reopened.getByRole('button',{name:'Review bank activity',exact:true}).waitFor();
         assert.equal(await reopened.locator('.bonus-evidence-card').count(),0,'evidence must be cleared when leaving the Tracker');
+        await reopened.getByRole('button',{name:'Review bank activity',exact:true}).click();
+        await reopened.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor();
+        await reopened.getByRole('button',{name:'Show reviewed / dismissed',exact:true}).click();
+        assert.equal(await reopened.getByRole('button',{name:'Undo review',exact:true}).count(),1,
+          'a dismissed receipt persists across a cleared and reloaded session');
+        assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,
+          'reviewing evidence must never change canonical tracker records');
         assert.deepEqual(errors,[],'no browser errors');
         console.log(browserName+': safe bonus evidence, privacy, exact tracker matching, manual payout and mobile layout passed');
       }finally{await browser.close();}

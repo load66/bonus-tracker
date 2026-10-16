@@ -1,0 +1,75 @@
+/* Read-only candidate progress; never infers qualifying deposits or completes a bank bonus.
+ * Official, evidence-backed financial rules and exactly scoped accounts are required
+ * before a transaction is associated with a specific requirement.
+ */
+(function(root,factory){
+  'use strict';
+  const api=factory();
+  if(typeof module!=='undefined'&&module.exports)module.exports=api;
+  if(root)root.BTBonusRequirementProgress=api;
+})(typeof window!=='undefined'?window:null,function(){
+  'use strict';
+  const MAX_CENTS=100000000000000n;
+  function cents(raw){
+    const m=/^([+-]?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(raw??'').trim());
+    if(!m)return null;
+    try{
+      const v=BigInt(m[2])*100n+BigInt((m[3]||'').padEnd(2,'0')||'0');
+      if(v>MAX_CENTS)return null;
+      return m[1]==='-'?-v:v;
+    }catch{return null;}
+  }
+  function decimal(v){
+    const sign=v<0n?'-':'',n=v<0n?-v:v;
+    return sign+String(n/100n)+'.'+String(n%100n).padStart(2,'0');
+  }
+  function evaluate(entry,group,validate){
+    const base={mode:'manual',requirements:[],scopeVerified:false,notice:'Verify the promotion terms before using transaction candidates for requirement progress.'};
+    if(!entry||!group||typeof validate!=='function')return base;
+    let result;
+    try{result=validate(entry)}catch{return base;}
+    if(result?.mode!=='structured'||result.ok!==true||!result.rules)return base;
+    const rules=result.rules;
+    const primary=rules.accounts?.filter(a=>a.role==='primary'&&a.required)||[];
+    // The provider-to-product mapping does not yet identify checking vs savings
+    // accounts. A one-to-one link to a single verified product is the only
+    // safe automatic scoping today; never infer from bank or account names.
+    const scoped=(rules.accounts||[]).length===1
+      &&primary.length===1
+      &&group.linkedAccounts.length===1
+      &&group.missingAccounts===0
+      &&group.unsupportedCurrency===0;
+    const eligible=(group.activity||[]).filter(a=>a.type==='directDeposit'&&a.reviewStatus!=='dismissed');
+    const requirements=(rules.requirements||[]).map(r=>{
+      const applicable=scoped&&r.kind==='direct-deposit'&&r.accountId===primary[0]?.id;
+      const candidates=applicable?eligible:[];
+      const reviewed=candidates.filter(a=>a.reviewStatus==='reviewed'&&a.requirementId===r.id);
+      const aggregate=rows=>rows.reduce((n,a)=>{
+        const x=cents(a.amount);
+        return x!==null&&x>0n?n+x:n;
+      },0n);
+      const perMonth=new Set(reviewed.map(a=>Number.isFinite(a.posted)?new Date(a.posted*1000).toISOString().slice(0,7):'').filter(Boolean));
+      return {
+        id:r.id,kind:r.kind,text:r.text,applicable,
+        manual:!applicable,recurrence:r.recurrence?.period||'one-time',
+        targetAmount:typeof r.amount==='number'?String(r.amount):null,
+        targetCount:Number.isInteger(r.count)?r.count:null,
+        periodCount:Number.isInteger(r.recurrence?.count)?r.recurrence.count:null,
+        candidateCount:candidates.length,
+        candidateAmount:applicable?decimal(aggregate(candidates)):null,
+        reviewedCount:reviewed.length,
+        reviewedAmount:applicable?decimal(aggregate(reviewed)):null,
+        reviewedCalendarMonths:applicable?perMonth.size:0,
+        // Candidate values are never approved requirement completion.
+        verifiedMet:false
+      };
+    });
+    return {
+      mode:'structured',scopeVerified:scoped,requirements,
+      notice:scoped
+        ?'Only observed and reviewed deposit candidates are counted. Confirm deposit origin, amount, timing, recurring periods and bank acceptance before marking any requirement met.'
+        :'Account-product matching is not verified. Link one confirmed account to a single-product offer or review its requirements manually. Candidate credits are not qualifying-deposit proof.'
+    };
+  }
+  return Object.freeze({evaluate,cents,decimal});
+});
