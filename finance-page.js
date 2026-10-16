@@ -162,7 +162,11 @@
       const names=[...new Set(accounts.map(a=>a.bank||a.name).filter(Boolean))].slice(0,4);
       el('p',names.join(' · ')+(new Set(accounts.map(a=>a.bank||a.name).filter(Boolean)).size>4?' · +more':''),panel);
     }else{
-      el('p','Bank linked · accounts not yet discovered',panel);
+      const next=Number(other.nextSyncAt);
+      el('p',next>Date.now()/1000
+        ?'Bank linked · next account check '+stamp(next)
+        :'Bank linked · accounts not yet discovered',panel);
+      if(other.error)el('p','Account check needs attention. Open Plaid to review the connection.',panel,'finance-page-warning');
     }
     const row=el('div',undefined,panel,'finance-page-quick-actions');
     action(row,'View '+(source==='plaid'?'Plaid':'SimpleFIN')+' accounts',
