@@ -4055,7 +4055,7 @@ function renderActionCenter(){
   return h+'</div></div>'
 }
 function switchMainTab(value){
-  if(!['tracker','bonuses','tax','tips','storage','archive'].includes(value))return;
+  if(!['tracker','bonuses','finances','tax','tips','storage','archive'].includes(value))return;
   tab=value;search='';_sp=0;
   const current=document.querySelector('.scroll');if(current)current.scrollTop=0;
   R();
@@ -4080,7 +4080,7 @@ function R(){captureProfileSectionState();const el=document.querySelector('.scro
   h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div class="hdr-brand"><h1><em>Bonus</em>Tracker</h1><span class="app-version" aria-label="App version">v'+APP_VERSION+'</span></div>';
   if(tab==='tracker')h+='<div class="yr-pills">';
   if(tab==='tracker')[thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});
-  h+=tab==='tracker'?'</div>':'<span class="mobile-page-caption">'+esc({bonuses:'Bank offers',tax:'Tax',tips:'Datapoints',storage:'Terms archive',archive:'Account archive'}[tab]||'')+'</span>';
+  h+=tab==='tracker'?'</div>':'<span class="mobile-page-caption">'+esc({bonuses:'Bank offers',finances:'Finances',tax:'Tax',tips:'Datapoints',storage:'Terms archive',archive:'Account archive'}[tab]||'')+'</span>';
   h+='<details id="bt-data-menu" class="header-data-menu"><summary aria-label="Data and backup menu" title="Data and backup menu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></summary><div class="header-data-panel" role="group" aria-label="Data and recovery actions"><h3>Data & recovery</h3><button onclick="this.closest(\'details\').open=false;switchMainTab(\'archive\')"><strong>Archived accounts</strong><small>Completed, non-repeatable offers and their history</small></button><button onclick="this.closest(\'details\').open=false;btOpenCloudBackup()"><strong>Cloud backup & recovery</strong><small>Automatic protection and recovery versions</small></button><button onclick="this.closest(\'details\').open=false;exportBackup()"><strong>Export backup file</strong><small>Download an additional recovery copy</small></button><button onclick="this.closest(\'details\').open=false;importBackup()"><strong>Import backup file</strong><small>Review and restore a downloaded copy</small></button><button class="data-menu-danger" onclick="this.closest(\'details\').open=false;resetAllData()"><strong>Reset this device</strong><small>Requires confirmation and a safety backup</small></button></div></details></div>';
 
   if(tab==='tracker'){
@@ -4090,6 +4090,7 @@ function R(){captureProfileSectionState();const el=document.querySelector('.scro
   h+='</div></div><div class="scroll">';
   if(tab==='tracker'){h+='<section class="tracker-overview" aria-label="Bonus totals">'+overview+'</section>';const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted)}
   else if(tab==='archive'){const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted,true)}
+  else if(tab==='finances')h+='<section id="bt-finances-page" class="finance-page" aria-label="My finances"></section>';
   else if(tab==='tax')h+=rTax();
   else if(tab==='tips')h+=rTips();
   else if(tab==='storage')h+=rTermsStorage();
@@ -4097,7 +4098,7 @@ function R(){captureProfileSectionState();const el=document.querySelector('.scro
   h+='</div>';
   if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';
   h+='<div class="tabs">';
-  ['tracker','bonuses','tax','tips','storage'].forEach((t,i)=>{h+='<button class="tb'+(tab===t?' on':'')+'" aria-current="'+(tab===t?'page':'false')+'" onclick="switchMainTab(\''+t+'\')">'+[I.grid,I.tips,I.doc,I.tips,I.lock][i]+'<span>'+['Tracker','Bank Bonuses','Tax','Datapoints','T&C Archive'][i]+'</span></button>'});
+  ['tracker','bonuses','finances','tax','tips','storage'].forEach((t,i)=>{h+='<button class="tb'+(tab===t?' on':'')+'" aria-current="'+(tab===t?'page':'false')+'" onclick="switchMainTab(\''+t+'\')">'+[I.grid,I.tips,I.profile,I.doc,I.tips,I.lock][i]+'<span>'+['Tracker','Bank Bonuses','Finances','Tax','Datapoints','T&C Archive'][i]+'</span></button>'});
   h+='</div>';
   if(modal)h+=rModal();if(cfm)h+=rCfm();if(ddPrompt)h+=rDD();if(rcvPrompt)h+=rRcv();if(reqPrompt)h+=rReqMet();if(closePrompt)h+=rClose();if(overwritePrompt)h+=rOverwrite();if(matchPickerPrompt)h+=rMatchPicker();if(replacementPickerPrompt)h+=rReplacementPicker();if(feeCheckPrompt)h+=rFeeCheck();if(timerEditModal)h+=rTimerEdit();if(dpEditor)h+=rDpEditor();if(timerChoicePrompt)h+=rTimerChoicePrompt();
   if(undoState)h+='<div class="undo-bar"><span>'+esc(undoState.undoLabel||('Change saved for '+undoState.bank+' — Undo restores everything for 60 seconds.'))+'</span><button onclick="undoClose()">Undo</button></div>';

@@ -23,7 +23,7 @@
   function message(s){const n=panel?.querySelector('#bank-sync-message');if(n)n.textContent=s;}
   async function run(work){if(busy)return;busy=true;panel?.querySelectorAll('button,select,textarea,input').forEach(n=>n.disabled=true);try{await work();}catch(e){message(e.message);}finally{busy=false;panel?.querySelectorAll('button,select,textarea,input').forEach(n=>n.disabled=false);}}
   function button(parent,label,fn,cls='btn-s'){const b=el('button',label,parent);b.type='button';b.className=cls;b.onclick=()=>run(fn);return b;}
-  function close(){if(busy)return;generation++;panel?.remove();panel=null;data=null;hideBalances=false;accountFilter='';returnFocus?.focus();}
+  function close(){if(busy)return;generation++;panel?.remove();panel=null;data=null;hideBalances=false;accountFilter='';returnFocus?.focus();window.btRefreshFinancesPage?.();}
   function paint(){
     if(!panel)return;
     const body=panel.querySelector('.bank-sync-body');body.replaceChildren();
