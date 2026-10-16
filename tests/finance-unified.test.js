@@ -102,4 +102,20 @@ const ambiguousTransfers=core.safeForSummary(core.combine({
 assert.equal(ambiguousTransfers.transactions['simplefin:'+a].sent.category,'unreviewed',
   'ambiguous reciprocal movements must not be paired automatically');
 
+
+// Matching amounts alone must not disguise unrelated payroll or FX movements.
+const foreignCurrency=JSON.parse(JSON.stringify(incoming));
+foreignCurrency.accounts[0].currency='EUR';
+const fxSafe=core.safeForSummary(core.combine({simplefin:outgoing,plaid:foreignCurrency}));
+assert.equal(fxSafe.transactions['plaid:'+b].received.category,'unreviewed',
+  'different-currency movements must never be paired without FX reconciliation');
+const unrelatedIncome=JSON.parse(JSON.stringify(incoming));
+unrelatedIncome.transactions[b].received.description='Employer payroll';
+unrelatedIncome.transactions[b].received.signals=[];
+unrelatedIncome.transactions[b].received.category='income';
+const unrelatedSafe=core.safeForSummary(core.combine({simplefin:outgoing,plaid:unrelatedIncome}));
+assert.equal(unrelatedSafe.transactions['plaid:'+b].received.category,'income',
+  'an unrelated payroll deposit cannot be treated as a credit-card payment merely because amounts match');
+assert.equal(unrelatedSafe.transactions['simplefin:'+a].sent.category,'unreviewed',
+  'unpaired automatic transfer requires review');
 console.log('Unified Finance: provider isolation, type inference, full account/transaction aggregation, exact cents, stale-balance safety and overlap controls passed');
