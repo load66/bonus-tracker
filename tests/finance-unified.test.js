@@ -46,3 +46,13 @@ assert.equal(finance.summarize(excluded,{now,days:30}).income,null);
 assert.equal(simple.accounts[0].key,a,'source snapshots stay unchanged');
 assert.equal(twin.accounts[0].key,b,'the second provider is never overwritten');
 console.log('Unified Finance: provider isolation, type inference, full account/transaction aggregation, exact cents, stale-balance safety and overlap controls passed');
+
+// Synthetic history-only account: provider temporarily omits its account metadata.
+const orphan=core.combine({simplefin:{connected:true,accounts:[],monitoredAccounts:[],
+  transactions:{['orphan'.repeat(10)]:{old:{id:'old',amount:'1.00',posted:now-100,pending:false}}}}});
+const orphanKey='simplefin:'+'orphan'.repeat(10);
+assert.equal(Object.keys(orphan.transactions[orphanKey]).length,1,
+  'Orphaned history remains accessible without inventing an account balance');
+assert.equal(orphan.accounts.length,0,'Historical-only transactions never create financial account balances');
+assert.equal(Object.keys(core.safeForSummary(orphan).transactions).length,0,
+  'Unresolved history is not included in consolidated financial totals');
