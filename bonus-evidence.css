@@ -34,3 +34,16 @@
 .bonus-evidence-privacy{justify-content:flex-end}
 @media(min-width:680px){.bonus-evidence-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:360px){.bonus-evidence{margin:8px 8px 12px;padding:10px}.bonus-evidence-toolbar{align-items:flex-start}.bonus-evidence-controls{width:100%}.bonus-evidence-controls>.bonus-evidence-button{flex:1}.bonus-evidence-row{gap:7px}}
+
+/* Owner-private evidence inbox: compact, touch accessible, review-only. */
+.bonus-evidence-row{flex-wrap:wrap}
+.bonus-evidence-review-actions{display:flex;flex-wrap:wrap;align-items:center;gap:7px;width:100%;min-width:0}
+.bonus-evidence-review-label{display:flex;flex-direction:column;gap:5px;flex:1 1 185px;font-size:11px;color:#cde1fd;min-width:0}
+.bonus-evidence-rule-select{width:100%;min-height:44px;max-width:100%;font:inherit;font-size:13px;border:1px solid #6885aa;border-radius:9px;color:#edf5ff;background:#132c49;padding:9px;box-sizing:border-box}
+.bonus-evidence-progress{margin:12px 0;padding:12px;border:1px solid #3c6089;background:#11253e;border-radius:12px}
+.bonus-evidence-progress>strong{display:block;font-size:13px;color:#f6faff}
+.bonus-evidence-progress-row{display:flex;flex-direction:column;gap:4px;border-top:1px solid #344969;padding:10px 0}
+.bonus-evidence-progress-row>strong{font-size:12px;color:#e4f0ff;font-weight:650;line-height:1.4}
+.bonus-evidence-progress-row>small{font-size:11px;line-height:1.5;color:#bcdbfb}
+.bonus-evidence-row .bonus-evidence-button{min-height:44px}
+@media(max-width:360px){.bonus-evidence-review-actions>.bonus-evidence-button{flex:1 1 125px}}
