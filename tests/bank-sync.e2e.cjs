@@ -42,10 +42,12 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    assert.equal(await dialog.getByLabel('Monitor transactions (read-only)',{exact:true}).isVisible(),true);
    await dialog.getByRole('button',{name:'Hide balances',exact:true}).click();await dialog.getByText('Balance: ••••••',{exact:false}).waitFor();
    await dialog.getByRole('button',{name:'Show balances',exact:true}).click();await dialog.locator('p').filter({hasText:/Balance:\s*.*200/}).first().waitFor();
+   assert.equal(await dialog.getByLabel('Bonus product (verified terms)',{exact:true}).isDisabled(),true,'unlinked account cannot select a promotion product');
    await dialog.getByLabel('Monitor transactions (read-only)',{exact:true}).check();
    await dialog.getByRole('button',{name:'Save monitoring preferences',exact:true}).click();
    await dialog.getByText('Monitoring preferences saved.',{exact:false}).waitFor();
    assert.deepEqual(state.monitoredAccounts,[account.key]);assert.deepEqual(state.mappings,{});
+   assert.equal(await dialog.getByLabel('Bonus product (verified terms)',{exact:true}).isDisabled(),true,'unverified product choices must stay disabled after async form operations');
    await dialog.getByRole('button',{name:'Check for transactions',exact:true}).click();await dialog.getByText('Possible bonus · review',{exact:true}).waitFor();
    await dialog.getByText('Observed credits',{exact:true}).waitFor();
    await dialog.getByText('Bonus candidates',{exact:true}).waitFor();
@@ -60,6 +62,7 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    await dialog.getByRole('button',{name:'Show balances',exact:true}).click();
    await dialog.getByText('These are not verified income, expenses or net worth.',{exact:false}).waitFor();
    await dialog.getByLabel('Link to bonus (optional)',{exact:true}).selectOption(cycleId);
+   assert.equal(await dialog.getByLabel('Bonus product (verified terms)',{exact:true}).isEnabled(),true,'validated promotion products can be selected');
    await dialog.getByLabel('Bonus product (verified terms)',{exact:true}).selectOption('checking');
    await dialog.getByRole('button',{name:'Save account matches',exact:true}).click();await dialog.getByText('Bonus links saved.',{exact:false}).waitFor();
    assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened,productId:'checking'});
