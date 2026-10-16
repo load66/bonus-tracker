@@ -20,7 +20,7 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
     if(url.pathname.endsWith('/connect'))state=seed();
     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(state)});
    });
-   await page.addInitScript(({entry})=>{localStorage.setItem('bt_e_v4',JSON.stringify([entry]));localStorage.setItem('bonus-ai-auth',JSON.stringify({access_token:'synthetic-access',refresh_token:'synthetic-refresh',expires_at:4102444800}));},{entry});
+   await page.addInitScript(({entry})=>{const RealDate=Date,now=Date.parse('2026-10-16T07:00:00Z');window.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[now]))}static now(){return now}};localStorage.setItem('bt_e_v4',JSON.stringify([entry]));localStorage.setItem('bonus-ai-auth',JSON.stringify({access_token:'synthetic-access',refresh_token:'synthetic-refresh',expires_at:4102444800}));},{entry});
    await page.goto('http://127.0.0.1:'+server.address().port+'/');await page.waitForFunction(()=>typeof btOpenBankSync==='function');
    const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
    const cycleId=await page.evaluate(()=>entries[0].id);assert.ok(cycleId,'Loaded tracker cycle must have an ID');
