@@ -68,9 +68,13 @@ const KEY='a'.repeat(64);
         await page.goto('http://127.0.0.1:'+server.address().port+'/');
         await page.evaluate(()=>window.BTLinkPlaidTrial.mount(document.getElementById('target'),[]));
         const host=page.locator('#target');
-        await host.getByText('Plaid slots used: 1/10').waitFor();
-        await host.getByText('Connected fallback accounts').waitFor();
-        assert.equal(await host.getByRole('checkbox').count(),3);
+        await host.getByText('Plaid Trial · 1/10 used').waitFor();
+        const accountsToggle=host.getByText('Connected accounts (1) · Manage',{exact:true});
+        await accountsToggle.waitFor();
+        assert.equal(await host.getByRole('checkbox').count(),0,'No repeated Plaid acknowledgements or expanded account settings on first view');
+        assert.equal(await host.getByRole('button',{name:'Connect via Plaid · uses 1 lifetime slot'}).count(),1);
+        await accountsToggle.click();
+        assert.equal(await host.getByRole('checkbox').count(),1,'Only account monitoring remains as a checkbox');
         assert.equal(calls.some(x=>x.includes('link-token')||x.includes('/exchange')),false,
           'Opening the provider view must never consume a Plaid Item');
         assert.equal(await host.getByRole('button',{name:'Show amounts'}).count(),0,
@@ -109,19 +113,27 @@ const KEY='a'.repeat(64);
           await fs.mkdir(output,{recursive:true});
           await page.screenshot({path:path.join(output,name+'-plaid-fallback-'+width+'.png'),fullPage:true});
         }
-        // Explicit acknowledgement gates SDK creation; repeated clicks stay locked.
-        await host.getByRole('button',{name:'Connect with Plaid fallback'}).click();
-        assert.equal(calls.some(x=>x.includes('link-token')),false);
-        await host.getByLabel('Bank or credit union name').fill('Other Bank');
-        await host.getByRole('checkbox').nth(0).check();
-        await host.getByRole('checkbox').nth(1).check();
-        await host.getByRole('button',{name:'Connect with Plaid fallback'}).click();
+        // The explicit slot-cost CTA replaces redundant acknowledgements.
+        const connect=host.getByRole('button',{name:'Connect via Plaid · uses 1 lifetime slot'});
+        await connect.click();
+        assert.equal(calls.some(x=>x.includes('link-token')),false,'Institution name required before any new Item');
+        const nameField=host.getByLabel('Bank name');
+        await nameField.fill('Synthetic Bank');
+        await host.getByText('This bank is already connected · Review').waitFor();
+        await connect.click();
+        assert.equal(calls.some(x=>x.includes('link-token')),false,'Duplicate Plaid bank blocked by default');
+        await host.getByRole('checkbox').last().check();
+        assert.equal(calls.filter(x=>x.includes('link-token')).length,0,'Duplicate override alone must not start linking');
+        await nameField.fill('Other Bank');
+        assert.equal(await host.getByText('This bank is already connected · Review').isVisible(),false);
+        assert.equal(await host.getByRole('checkbox').count(),1,'Duplicate override resets when bank name changes');
+        await connect.click();
         await page.waitForFunction(()=>!!window.syntheticLink);
-        assert.equal(await host.getByRole('button',{name:'Connect with Plaid fallback'}).isDisabled(),true);
+        assert.equal(await connect.isDisabled(),true);
         assert.equal(calls.filter(x=>x.includes('link-token')).length,1);
         assert.equal(await page.evaluate(()=>window.syntheticLink.token),'synthetic-link-token');
         await page.evaluate(()=>window.syntheticLink.onSuccess('synthetic-public-token'));
-        await host.getByText('Plaid slots used: 2/10').waitFor();
+        await host.getByText('Plaid Trial · 2/10 used').waitFor();
         assert.equal(calls.filter(x=>x.endsWith('/exchange')).length,1,'successful SDK handoff exchanges exactly once');
         await page.waitForFunction(()=>document.querySelector('#target')?.textContent?.includes('discovered.'));
         assert.equal(syncs,2,'successful Plaid link triggers one automatic, read-only account discovery');
@@ -138,7 +150,7 @@ const KEY='a'.repeat(64);
         assert.equal(await host.getByText('Synthetic Bank · Checking',{exact:true}).count(),0,
           'another owner must never see a stale account response');
         assert.deepEqual(errors,[]);
-        console.log(name+': Plaid Trial opt-in account controls, masked evidence and quota-safe actions passed');
+        console.log(name+': compact Plaid setup, new-Item slot disclosure, duplicate protection and masked evidence passed');
       }finally{await browser.close()}
     }
   }finally{server.close()}
