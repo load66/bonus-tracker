@@ -61,11 +61,16 @@ const base=()=>({
         }
         await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(state)});
       });
-      const plaidState=base();plaidState.accounts=[{...plaidState.accounts[0],bank:'X Money',name:'X Money Checking'}];
+      const plaidState=base();plaidState.accounts=[];plaidState.lastSuccess=null;let plaidDiscoveries=0;
       await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/plaid**',async route=>{
         const req=route.request(),url=new URL(req.url());
         const body=req.postDataJSON?.()||{};requests.push({path:url.pathname,method:req.method(),body});
         if(url.pathname.endsWith('/transaction-review'))plaidState.transactions[body.account][body.transaction].category=body.category;
+        if(url.pathname.endsWith('/accounts/sync')){
+          plaidDiscoveries++;
+          plaidState.accounts=[{...base().accounts[0],bank:'X Money',name:'X Money Checking'}];
+          plaidState.lastSuccess=NOW;
+        }
         const result=url.pathname.includes('/accounts')?plaidState:{provider:'plaid',priority:'fallback',configured:false,used:null,limit:10};
         await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(result)});
       });
@@ -133,6 +138,8 @@ const base=()=>({
       assert.ok(requests.some(r=>r.path.endsWith('/transaction-review')&&r.body.category==='shopping'));
 
       await section.getByText('X Money',{exact:false}).first().waitFor();
+      assert.equal(plaidDiscoveries,1,'existing linked Plaid bank must recover its accounts without a new Item');
+      assert.equal(requests.some(r=>r.path.endsWith('/link-token')||r.path.endsWith('/exchange')),false,'discovery must never reconnect the bank');
       await section.getByRole('button',{name:'Accounts',exact:true}).click();
       await section.getByRole('heading',{name:'Accounts',exact:true}).waitFor();
       // Merely opening and closing the provider wizard must not trigger an
