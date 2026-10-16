@@ -47,24 +47,24 @@
     }
     const status=el('section',undefined,body);status.className='bank-sync-card';
     el('h3',data.status==='attention'?'Connection needs attention':'SimpleFIN connected',status);
-    el('p','Last successful transaction retrieval: '+stamp(data.lastSuccess),status);
-    el('p','Next scheduled check: '+stamp(data.nextSyncAt)+'. Daily bank updates may arrive later.',status);
+    el('p','Last synced: '+stamp(data.lastSuccess),status);
+    el('p','Next sync: '+stamp(data.nextSyncAt)+'. Daily bank updates may arrive later.',status);
     el('p','Retrieval time does not prove that every bank transaction is current or that the history is complete.',status);
     if(data.error)el('p',data.error,status);
     for(const warning of data.warnings||[])el('p',warning,status);
     if(data.missingAccounts?.length)el('p','A selected account was missing from the latest response. Its saved evidence is retained; this does not mean it is closed.',status);
     button(status,'Refresh status',async()=>{data=await request();paint();});
     button(status,'Check for transactions',async()=>{data=await request('/sync',{method:'POST'});paint();message('Status refreshed. Provider checks run at most once daily; an early check uses saved evidence.');});
-    button(status,'Refresh account list',async()=>{data=await request('/discover',{method:'POST'});paint();});
-    el('h3','Choose accounts to track',body);
+    button(status,'Refresh accounts',async()=>{data=await request('/discover',{method:'POST'});paint();});
+    el('h3','Connected accounts',body);
     el('p','Match checking or savings to an open bonus cycle. Leave unrelated accounts unselected. Saving a different cycle clears that account’s previous evidence from this trial.',body);
     const available=active(),selects=[];
     for(const a of data.accounts||[]){
       const card=el('section',undefined,body);card.className='bank-sync-card';
       el('h4',[a.bank,a.name].filter(Boolean).join(' · ')||'Bank account',card);
-      el('p','Reported balance: '+money(a.balance,a.currency)+' · dated '+stamp(a.balanceDate),card);
-      const label=el('label','Bonus cycle',card),select=el('select',undefined,card);select.id='bank-sync-cycle-'+a.key;label.htmlFor=select.id;select.dataset.account=a.key;
-      const empty=el('option','Do not track this account',select);empty.value='';
+      el('p','Balance: '+money(a.balance,a.currency)+' · Updated '+stamp(a.balanceDate),card);
+      const label=el('label','Link to bonus (optional)',card),select=el('select',undefined,card);select.id='bank-sync-cycle-'+a.key;label.htmlFor=select.id;select.dataset.account=a.key;
+      const empty=el('option','No bonus linked',select);empty.value='';
       const current=data.mappings?.[a.key];
       for(const e of available){const option=el('option',e.bank+' · '+(e.accountType||'personal')+' · opened '+e.opened,select);option.value=String(e.id);if(current?.entryId===String(e.id)&&current.opened===e.opened&&current.bank===e.bank)option.selected=true;}
       if(current&&!available.some(e=>String(e.id)===current.entryId&&e.opened===current.opened&&e.bank===current.bank))el('p','The saved cycle changed or is no longer open. Choose a current cycle or remove this match.',card);
@@ -103,7 +103,7 @@
     if(panel)return;returnFocus=document.activeElement;generation++;data=null;
     panel=el('div');panel.className='ov bank-sync-overlay';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-labelledby','bank-sync-title');
     const modal=el('section',undefined,panel);modal.className='bank-sync-modal';
-    const header=el('header',undefined,modal);el('h2','Bank sync · trial',header).id='bank-sync-title';el('p','SimpleFIN · read-only transaction evidence',header);
+    const header=el('header',undefined,modal);el('h2','Financial accounts',header).id='bank-sync-title';el('p','Balances, connections and bonus monitoring',header);
     const body=el('div',undefined,modal);body.className='bank-sync-body';
     const footer=el('footer',undefined,modal);const msg=el('p','',footer);msg.id='bank-sync-message';msg.setAttribute('role','status');
     const done=el('button','Done',footer);done.className='btn-s';done.type='button';done.onclick=close;
@@ -111,7 +111,7 @@
   }
   function install(){
     const menu=document.querySelector('.header-data-panel');if(!menu||menu.querySelector('[data-bank-sync]'))return;
-    const b=el('button',undefined,menu);b.type='button';b.dataset.bankSync='';el('strong','Bank sync · trial',b);el('small','Connect SimpleFIN and review bank activity',b);b.onclick=()=>{document.getElementById('bt-data-menu').open=false;open();};
+    const b=el('button',undefined,menu);b.type='button';b.dataset.bankSync='';el('strong','Financial accounts',b);el('small','Connect SimpleFIN and review bank activity',b);b.onclick=()=>{document.getElementById('bt-data-menu').open=false;open();};
   }
   window.btOpenBankSync=open;
   window.btRegisterPostRender?.('simplefin-bank-sync',install);install();
