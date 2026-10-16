@@ -117,7 +117,11 @@
         const month=monthly[key]||(monthly[key]={income:0n,bonusIncome:0n,expenses:0n,refunds:0n});
         if(category==='bonus'&&n>0n){bonusIncome+=n;month.bonusIncome+=n}
         else if(category==='income'&&n>0n){income+=n;month.income+=n}
-        else if(SPENDING.has(category)&&n<0n){
+        else if(SPENDING.has(category)&&n>0n){
+          // A confirmed category credit is a category refund, not income.
+          refunds+=n;expenses-=n;month.refunds+=n;month.expenses-=n;
+          spending[category]=(spending[category]||0n)-n;
+        }else if(SPENDING.has(category)&&n<0n){
           const value=-n;expenses+=value;month.expenses+=value;
           spending[category]=(spending[category]||0n)+value;
         }else if(n>0n&&(category==='refund'||row.signals?.includes('possible_refund'))){
