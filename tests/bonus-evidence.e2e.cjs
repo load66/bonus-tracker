@@ -165,16 +165,23 @@ return result;
         await reopened.getByRole('button',{name:'Show 5 more to review'}).waitFor();
         assert.equal(await reopened.locator('.bonus-evidence-row').count(),5,
           'first render remains compact even with many pending deposits');
-        await reopened.getByRole('button',{name:'Show 5 more to review'}).click();
-        assert.equal(await reopened.locator('.bonus-evidence-row').count(),10);
-        await reopened.getByRole('button',{name:'Show 5 more to review'}).click();
-        assert.equal(await reopened.locator('.bonus-evidence-row').count(),15);
-        const remainder=await reopened.getByRole('button',{name:/Show \d+ more to review/}).allTextContents();
-        assert.equal(remainder.length,1,'remaining pending history must be reachable');
-        await reopened.getByRole('button',{name:/Show \d+ more to review/}).click();
-        assert.equal(await reopened.getByRole('button',{name:/Show \d+ more to review/}).count(),0,
+        async function advanceQueue(expected){
+          const next=reopened.getByRole('button',{name:/^Show \\d+ more to review$/});
+          await next.click({timeout:5000}).catch(async e=>{
+            // The button may be replaced by the successful rerender before
+            // Playwright finishes its own click-stability bookkeeping.
+            if(await reopened.locator('.bonus-evidence-row').count()!==expected)throw e;
+          });
+          await reopened.locator('.bonus-evidence-row').nth(expected-1).waitFor({timeout:5000});
+          assert.equal(await reopened.locator('.bonus-evidence-row').count(),expected);
+        }
+        await advanceQueue(10);
+        await advanceQueue(15);
+        assert.equal(await reopened.getByRole('button',{name:/^Show \\d+ more to review$/}).count(),1,
+          'remaining pending history must be reachable');
+        await advanceQueue(17);
+        assert.equal(await reopened.getByRole('button',{name:/^Show \\d+ more to review$/}).count(),0,
           'no pending evidence should become stranded behind paging');
-        assert.equal(await reopened.locator('.bonus-evidence-row').count(),17);
         assert.equal(await reopened.locator('img').count(),0,'long queues must safely escape untrusted descriptions');
         await reopened.getByRole('button',{name:'Show reviewed / dismissed'}).click();
         assert.equal(await reopened.getByRole('button',{name:'Undo review'}).count(),1,
