@@ -30,7 +30,13 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened});
    await dialog.getByRole('button',{name:'Check for transactions',exact:true}).click();await dialog.getByText('Possible bonus · review',{exact:true}).waitFor();
    assert.equal(await dialog.locator('script').count(),0);
-   for(const width of [320,390,430]){await page.setViewportSize({width,height:760});const fit=await dialog.evaluate(d=>{const m=d.querySelector('.bank-sync-modal'),b=d.querySelector('.bank-sync-body');return m.getBoundingClientRect().width<=innerWidth&&b.scrollWidth<=b.clientWidth+1&&d.querySelector('footer').getBoundingClientRect().bottom<=innerHeight;});assert.ok(fit,name+' layout at '+width);await page.screenshot({path:path.join(output,name+'-simplefin-'+width+'.png')});}
+   for(const width of [320,390,430]){
+    await page.setViewportSize({width,height:760});await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    const geometry=await dialog.evaluate(d=>{const m=d.querySelector('.bank-sync-modal'),b=d.querySelector('.bank-sync-body');return {modalWidth:m.getBoundingClientRect().width,scrollWidth:b.scrollWidth,clientWidth:b.clientWidth,footerBottom:d.querySelector('footer').getBoundingClientRect().bottom,width:innerWidth,height:innerHeight};});
+    await page.screenshot({path:path.join(output,name+'-simplefin-'+width+'.png')});
+    assert.ok(geometry.modalWidth<=geometry.width&&geometry.scrollWidth<=geometry.clientWidth+1&&geometry.footerBottom<=geometry.height,name+' layout at '+width+': '+JSON.stringify(geometry));
+    await dialog.getByText('Possible bonus · review',{exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,name+'-simplefin-activity-'+width+'.png')});
+   }
    assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before);
    await dialog.getByRole('button',{name:'Done',exact:true}).click();
    state={configured:true,connected:false,evidenceOnly:true};await page.evaluate(()=>btOpenBankSync());await page.getByLabel('SimpleFIN setup token',{exact:true}).waitFor();
