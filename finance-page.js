@@ -615,7 +615,19 @@
     if(removedEntries.length)for(const item of removedEntries){
       const line=el('div',undefined,removed,'finance-page-quick-actions');
       el('span',[item.label.bank,item.label.name,sourceLabel(item.source)].filter(Boolean).join(' · '),line);
-      action(line,'Restore',()=>restoreSingleAccount(item.source,item.key),'finance-page-button');
+      // Preserve the activation if a parent redraw detaches the button
+      // between a touch/mouse press and the eventual click event. Keep
+      // keyboard activation via click; guard against double submission.
+      let activated=false;
+      const activate=()=>{
+        if(activated)return;
+        activated=true;
+        restoreSingleAccount(item.source,item.key);
+      };
+      const restoreButton=action(line,'Restore',activate,'finance-page-button');
+      restoreButton.addEventListener('pointerdown',event=>{
+        if(event.isPrimary&&event.button===0)activate();
+      });
     }else el('p','No removed accounts.',removed,'finance-page-hint');
     action(card,'Save account settings',()=>change(async()=>{
       const sources=[...new Set([...dirtyAccounts].map(k=>k.split(':')[0]))];
