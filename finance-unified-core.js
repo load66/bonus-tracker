@@ -108,6 +108,8 @@
             row.kind==='possible_bonus'||row.kind==='possible_reversal')continue;
         const signal=Array.isArray(row.signals)&&row.signals.includes('possible_transfer');
         const hinted=signal||transferWords.test(String(row.description||''));
+        // Matching amounts alone must not erase payroll or other ordinary income.
+        if((row.category==='income'||row.signals?.includes('possible_direct_deposit'))&&!hinted)continue;
         entries.push({account,row,amount,hinted});
         const bucket=String(amount<0n?-amount:amount);
         if(!amounts.has(bucket))amounts.set(bucket,{positive:[],negative:[]});
