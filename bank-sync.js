@@ -40,7 +40,7 @@
       el('h3','Connect a financial institution',body);
       el('p','Check supported institutions before subscribing. Authorize only accounts you intend to share. SimpleFIN manages bank authorization and billing separately.',body);
       const links=el('div',undefined,body);links.className='bank-sync-links';
-      for(const [label,url] of [['Check supported banks','https://beta-bridge.simplefin.org/search-institutions'],['Set up SimpleFIN','https://bridge.simplefin.org/simplefin/create']]){const a=el('a',label,links);a.href=url;a.target='_blank';a.rel='noopener noreferrer';}
+      for(const [label,url] of [['1. Add banks in SimpleFIN','https://beta-bridge.simplefin.org/'],['2. Get setup token','https://bridge.simplefin.org/simplefin/create'],['Check supported banks','https://beta-bridge.simplefin.org/search-institutions']]){const a=el('a',label,links);a.href=url;a.target='_blank';a.rel='noopener noreferrer';}
       el('p','First add your banks under Financial Institutions in SimpleFIN. Then use Apps → New Connection to create a one-time setup token for BonusTracker. Paste that token here. Bank logins are completed in SimpleFIN, not BonusTracker. Never share bank passwords or tokens in chat.',body);
       const label=el('label','SimpleFIN setup token',body),input=el('textarea',undefined,label);input.id='bank-sync-token';input.autocomplete='off';input.spellcheck=false;input.rows=3;
       button(body,'Connect SimpleFIN',async()=>{const token=input.value.trim();input.value='';if(!token)throw Error('Paste the setup token from SimpleFIN.');data=await request('/connect',{method:'POST',body:JSON.stringify({setup_token:token})});paint();if(data.error)message(data.error);},'btn-p');
