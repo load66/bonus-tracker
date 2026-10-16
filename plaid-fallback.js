@@ -13,7 +13,10 @@
   };
   const action=(host,label,fn)=>{
     const button=elem('button',label,host,'btn-s plaid-trial-action');
-    button.type='button';button.addEventListener('click',fn);return button;
+    button.type='button';button.addEventListener('click',async()=>{
+      if(button.disabled)return;button.disabled=true;
+      try{await fn()}finally{if(button.isConnected&&!button.dataset.keepDisabled)button.disabled=false}
+    });return button;
   };
   function sessionIdentity(token){
     try{
@@ -63,7 +66,7 @@
     message.setAttribute('role','status');
     const body=elem('div',undefined,host,'plaid-trial-control');
     const accountsArea=elem('div',undefined,host,'plaid-trial-accounts');
-    let amountsVisible=false;
+    let amountsVisible=false,linkActive=false;
     function renderAccounts(snapshot){
       if(!host.isConnected)return;
       accountsArea.replaceChildren();
@@ -74,11 +77,38 @@
       }
       const selected=new Set(snapshot.monitoredAccounts||[]);
       const options=elem('div',undefined,accountsArea,'plaid-trial-account-list');
+      const available=typeof entries!=='undefined'&&Array.isArray(entries)
+        ?entries.filter(e=>e&&!e.closed&&e.id!=null&&e.opened&&e.bank):[];
+      const assignments=[];
       for(const account of items){
-        const label=elem('label',undefined,options,'plaid-trial-check');
+        const card=elem('section',undefined,options,'plaid-trial-account-card');
+        const label=elem('label',undefined,card,'plaid-trial-check');
         const check=elem('input',undefined,label);check.type='checkbox';
         check.value=account.key;check.checked=selected.has(account.key);
         elem('span',[account.bank,account.name].filter(Boolean).join(' · '),label);
+        if(available.length){
+          const cycleLabel=elem('label','Link to bonus (optional)',card);
+          const cycle=elem('select',undefined,cycleLabel);cycle.setAttribute('aria-label','Bonus campaign for '+account.name);
+          const none=elem('option','No bonus linked',cycle);none.value='';
+          const saved=snapshot.mappings?.[account.key];
+          for(const entry of available){
+            const option=elem('option',entry.bank+' · opened '+entry.opened,cycle);option.value=String(entry.id);
+            if(saved?.entryId===String(entry.id)&&saved.bank===entry.bank&&saved.opened===entry.opened)option.selected=true;
+          }
+          cycle.disabled=!selected.has(account.key);
+          const productLabel=elem('label','Bonus product (verified terms)',card);
+          const product=elem('select',undefined,productLabel);product.setAttribute('aria-label','Bonus product for '+account.name);
+          const fillProducts=()=>{
+            product.replaceChildren();const none=elem('option','Not assigned — review manually',product);none.value='';
+            const entry=available.find(e=>String(e.id)===cycle.value);
+            const rules=entry?window.BTFinancialRules?.validate(entry):null;
+            const products=rules?.ok&&rules.mode==='structured'&&Array.isArray(rules.rules?.accounts)?rules.rules.accounts:[];
+            for(const value of products){const option=elem('option',value.label,product);option.value=value.id;}
+            if(saved?.entryId===cycle.value&&saved.bank===entry?.bank&&saved.opened===entry?.opened&&products.some(p=>p.id===saved.productId))product.value=saved.productId;
+            product.disabled=cycle.disabled||!products.length;
+          };
+          cycle.addEventListener('change',fillProducts);fillProducts();assignments.push({key:account.key,cycle,product});
+        }
       }
       if(items.length){
         action(accountsArea,'Save monitored accounts',async()=>{
@@ -91,6 +121,21 @@
           }catch(error){message.textContent=error.message;}
         });
       }
+      if(assignments.length)action(accountsArea,'Save bonus links',async()=>{
+        const mappings={};
+        for(const row of assignments){
+          const entry=available.find(e=>String(e.id)===row.cycle.value);
+          if(entry&&!row.cycle.disabled){
+            mappings[row.key]={entryId:String(entry.id),bank:entry.bank,opened:entry.opened};
+            if(row.product.value)mappings[row.key].productId=row.product.value;
+          }
+        }
+        try{
+          const result=await api('/accounts/selection',{method:'PUT',body:JSON.stringify({mappings})});
+          message.textContent='Bonus links saved. Review Plaid activity in Tracker; promotion milestones remain unconfirmed.';
+          renderAccounts(result);
+        }catch(error){message.textContent=error.message;}
+      });
       action(accountsArea,items.length?'Sync selected activity':'Discover connected accounts',async()=>{
         message.textContent='Requesting read-only account status…';
         try{
@@ -158,6 +203,7 @@
       const relink=elem('input',undefined,duplicate);relink.type='checkbox';
       elem('span','Allow another Plaid login for this bank even if already connected through Plaid.',duplicate);
       const go=action(body,'Connect with Plaid fallback',async()=>{
+        if(linkActive){message.textContent='A Plaid Link session is already open.';return}
         const institution=name.value.trim();
         if(institution.length<2){message.textContent='Enter the institution name first.';return}
         if(linkedNames.has(institution.toLowerCase())){
@@ -168,7 +214,7 @@
           message.textContent='Both acknowledgements are required before continuing.';
           return;
         }
-        go.disabled=true;message.textContent='Requesting one safe Plaid Link session…';
+        linkActive=true;go.disabled=true;message.textContent='Requesting one safe Plaid Link session…';
         try{
           const result=await api('/link-token',{method:'POST',body:JSON.stringify({
             institution,triedSimplefin:true,understandsLifetimeSlot:true,allowDuplicate:relink.checked
@@ -181,15 +227,15 @@
               try{
                 await api('/exchange',{method:'POST',body:JSON.stringify({session:result.session,publicToken})});
                 message.textContent='Connection secured. Review transaction availability before considering it monitored.';
-                await status();
+                linkActive=false;await status();
               }catch(error){message.textContent=error.message+
                 ' Do not retry the bank login automatically; a permanent slot may already be consumed.';}
             },
-            onExit:()=>{message.textContent='Link closed. An unused reservation may remain until it expires; no automatic retry was started.';}
+            onExit:()=>{linkActive=false;delete go.dataset.keepDisabled;go.disabled=false;message.textContent='Link closed. Capacity stays reserved until lifetime usage is reconciled; no automatic retry was started.';}
           });
-          link.open();
-        }catch(error){message.textContent=error.message}
-        finally{go.disabled=false}
+          go.dataset.keepDisabled="true";link.open();
+        }catch(error){linkActive=false;delete go.dataset.keepDisabled;message.textContent=error.message}
+        finally{go.disabled=linkActive}
       });
     }).catch(error=>{if(host.isConnected){summary.textContent='Plaid slots used: unavailable / 10';message.textContent=error.message}});
     status();

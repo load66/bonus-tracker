@@ -61,8 +61,14 @@ const base=()=>({
         }
         await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(state)});
       });
-      await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/plaid**',route=>
-        route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({provider:'plaid',priority:'fallback',configured:false,used:null,limit:10})}));
+      const plaidState=base();plaidState.accounts=[{...plaidState.accounts[0],bank:'Fallback Bank',name:'Fallback Checking'}];
+      await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/plaid**',async route=>{
+        const req=route.request(),url=new URL(req.url());
+        const body=req.postDataJSON?.()||{};requests.push({path:url.pathname,method:req.method(),body});
+        if(url.pathname.endsWith('/transaction-review'))plaidState.transactions[body.account][body.transaction].category=body.category;
+        const result=url.pathname.includes('/accounts')?plaidState:{provider:'plaid',priority:'fallback',configured:false,used:null,limit:10};
+        await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(result)});
+      });
       await page.addInitScript(()=>{
         const RealDate=Date,now=Date.parse('2026-10-16T07:00:00Z');
         window.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[now]))}static now(){return now}};
@@ -197,6 +203,13 @@ const base=()=>({
       await section.getByRole('button',{name:'Manage connections',exact:true}).click();
       await page.getByRole('dialog',{name:'Financial accounts'}).waitFor();await page.getByRole('dialog',{name:'Financial accounts'}).getByRole('button',{name:'Done'}).click();
       await section.getByRole('heading',{name:'Accounts',exact:true}).waitFor();
+      await section.getByRole('combobox',{name:'Finance connection source'}).selectOption('plaid');
+      await section.getByText('Fallback Checking',{exact:true}).waitFor();
+      assert.equal(await section.locator('.finance-page-account').count(),1,'Plaid must have its own account snapshot');
+      assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts')));
+      await section.getByRole('combobox',{name:'Finance connection source'}).selectOption('simplefin');
+      await section.getByText('Checking <img src=x>',{exact:true}).waitFor();
+      assert.equal(await section.locator('.finance-page-account').count(),3);
       assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'no tracker writes');
       assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-access')),true);
       assert.deepEqual(errors,[]);console.log(name+': finance overview, transactions, account management, privacy and responsive navigation passed');

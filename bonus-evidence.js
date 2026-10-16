@@ -3,7 +3,9 @@
  */
 (function(){
   'use strict';
-  const API='https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin';
+  const BASE='https://api-production-00f74.up.railway.app/api/bonus-tracker';
+  let provider='simplefin';
+  const endpoint=()=>BASE+(provider==='plaid'?'/plaid/accounts':'/simplefin');
   const TYPES=window.BTBonusEvidenceCore?.REASONS||{};
   let snapshot=null,loading=false,saving=false,error='',saveNotice='',showAll=false,showResolved=false,hideAmounts=true,rev=0;
   const pendingLimits=new Map(),resolvedLimits=new Map();
@@ -43,6 +45,13 @@
   function reviewPayout(id){
     if(typeof openRcv==='function')openRcv(String(id)); // Existing explicit confirmation flow.
   }
+  async function sameOwner(auth,token){
+    if(window.BTBonusAuth!==auth||!auth.connected())return false;
+    const current=await auth.token().catch(()=>null);if(!current||!auth.connected())return false;
+    if(current===token)return true;
+    const identity=value=>{try{const row=JSON.parse(atob(value.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));return row.sub?JSON.stringify([row.iss||'',row.sub]):null}catch{return null}};
+    return Boolean(identity(token)&&identity(token)===identity(current));
+  }
   async function refresh(){
     if(loading)return;
     const auth=window.BTBonusAuth;
@@ -55,12 +64,13 @@
     try{
       const token=await auth.token();
       if(call!==rev||!auth.connected())return;
-      const response=await fetch(API,{
+      const response=await fetch(endpoint(),{
         method:'GET',cache:'no-store',credentials:'omit',
         headers:{Authorization:'Bearer '+token},signal:controller.signal
       });
       const payload=await response.json().catch(()=>({}));
       if(!response.ok)throw Error(typeof payload.detail==='string'?payload.detail:'Bank activity could not be retrieved.');
+      if(!(await sameOwner(auth,token))){snapshot=null;throw Error('Sign-in changed. Reopen bank activity.');}
       if(call!==rev||!auth.connected()||!document.getElementById('bt-bonus-evidence'))return;
       snapshot=payload;error='';
     }catch(e){
@@ -81,7 +91,7 @@
       if(!auth?.connected())throw Error('Sign in to review your bank activity.');
       const token=await auth.token();
       if(rev!==call||!auth.connected())return;
-      const response=await fetch(API+'/evidence-review',{
+      const response=await fetch(endpoint()+'/evidence-review',{
         method:'PUT',credentials:'omit',cache:'no-store',
         headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
         signal:controller.signal,
@@ -93,6 +103,7 @@
       });
       const payload=await response.json().catch(()=>({}));
       if(!response.ok)throw Error(typeof payload.detail==='string'?payload.detail:'The review was not saved.');
+      if(!(await sameOwner(auth,token))){snapshot=null;throw Error('Sign-in changed. Reopen bank activity.');}
       if(call!==rev||!auth.connected()||!document.getElementById('bt-bonus-evidence'))return;
       snapshot=payload;
       saveNotice=decision==='clear'?'Review reopened.':decision==='dismissed'?'Not relevant saved.':'Review saved. Promotion requirements remain unconfirmed.';
@@ -114,6 +125,14 @@
     const title=el('div',undefined,top,'bonus-evidence-heading');
     el('strong','Bank Activity Review',title);
     el('small','Check potential deposits, bonus credits, fees and reversals',title);
+    const sourceLabel=el('label','Connection source',root,'bonus-evidence-review-label');
+    const sourceSelect=el('select',undefined,sourceLabel,'bonus-evidence-rule-select');
+    sourceSelect.setAttribute('aria-label','Bank activity connection source');
+    for(const [value,label] of [['simplefin','SimpleFIN · Primary'],['plaid','Plaid · Fallback']]){
+      const option=el('option',label,sourceSelect);option.value=value;option.selected=value===provider;
+    }
+    sourceSelect.disabled=saving;
+    sourceSelect.onchange=()=>{provider=sourceSelect.value;reset();update();refresh()};
     const actions=el('div',undefined,top,'bonus-evidence-controls');
     if(!snapshot){
       const open=button(actions,loading?'Checking…':'Review bank activity',refresh,'bonus-evidence-button primary');
@@ -128,7 +147,7 @@
     if(!snapshot){return;}
     if(!window.BTBonusAuth?.connected()){reset();update();return;}
     if(!snapshot.connected){
-      el('p','No connected financial institution. Link your SimpleFIN accounts to review bank-bonus evidence.',root,'bonus-evidence-note');
+      el('p',provider==='plaid'?'No connected Plaid fallback institution. Use Add Bank after trying SimpleFIN first.':'No connected financial institution. Link your SimpleFIN accounts to review bank-bonus evidence.',root,'bonus-evidence-note');
       button(root,'Manage connected accounts',manage);
       return;
     }

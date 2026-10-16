@@ -178,6 +178,21 @@ return result;
         assert.ok(geometry.width<=geometry.viewport+1&&geometry.content<=geometry.width+1,
           browserName+' long review queue overflows 320px: '+JSON.stringify(geometry));
         assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before);
+        const plaidReviews={};
+        await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/plaid/accounts**',async route=>{
+          const req=route.request(),path=new URL(req.url()).pathname;
+          const body=req.method()==='PUT'?req.postDataJSON():null;
+          requests.push({path,method:req.method(),body});
+          if(path.endsWith('/evidence-review'))plaidReviews[body.transaction]={status:body.decision,reviewedAt:NOW,requirementId:body.requirementId||null};
+          await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(sample(cycleId,plaidReviews,0))});
+        });
+        await reopened.getByRole('combobox',{name:'Bank activity connection source'}).selectOption('plaid');
+        await reopened.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor();
+        await reopened.getByRole('button',{name:'Mark reviewed',exact:true}).first().click();
+        await reopened.getByText('Review saved. Promotion requirements remain unconfirmed.').waitFor();
+        assert.equal(Object.keys(plaidReviews).length,1);
+        assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts/evidence-review')&&r.method==='PUT'));
+        assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'Plaid reviews never write promotion milestones');
         assert.deepEqual(errors,[],'no browser errors');
         console.log(browserName+': safe bonus evidence, privacy, exact tracker matching, manual payout and mobile layout passed');
       }finally{await browser.close();}
