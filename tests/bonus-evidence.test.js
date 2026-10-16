@@ -110,3 +110,16 @@ assert.equal(reviewReport.campaigns[0].activity.find(a=>a.id==='bonus').reviewSt
 assert.equal(reviewReport.campaigns[0].activity.find(a=>a.id==='fee').reviewStatus,'reviewed');
 assert.equal(JSON.stringify(reviewed),JSON.stringify({...state,evidenceReviews:reviewed.evidenceReviews}),
   'review projection must never write to private state or tracker records');
+
+
+const withVerifiedProduct=summarize({...state,mappings:{...state.mappings,
+  [A]:{...state.mappings[A],productId:'checking'},
+  [B]:{...state.mappings[B],productId:'share'}
+}},tracked,NOW);
+const productLinks=withVerifiedProduct.campaigns.find(c=>c.entryId==='offer-1').linkedAccounts;
+assert.equal(productLinks.find(a=>a.key===A).productId,'checking');
+assert.equal(productLinks.find(a=>a.key===B).productId,'share');
+assert.equal(output.campaigns[0].linkedAccounts.find(a=>a.key===A).productId,null,
+  'legacy links remain unclassified without changing recorded activity');
+assert.equal(output.campaigns[0].review.unreviewed,5,
+  'adding explicit product selectors cannot mark bonus evidence reviewed automatically');
