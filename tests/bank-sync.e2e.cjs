@@ -83,7 +83,21 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-one-time-token')),false);
    assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before);
    assert.ok(requests.some(r=>r.path.endsWith('/connect')&&JSON.parse(r.body).setup_token==='synthetic-one-time-token'));
-   assert.deepEqual(errors,[]);console.log(name+': SimpleFIN mobile, matching, evidence, secret storage and no-mutation checks passed');
+   // Cancellation must never remove the connection or saved tracker campaign.
+   await page.getByRole('button',{name:'Disconnect and remove sync data'}).click();
+   let confirmation=page.getByRole('dialog',{name:'Disconnect SimpleFIN?'});
+   await confirmation.getByRole('button',{name:'Cancel',exact:true}).click();
+   assert.equal(state.connected,true,'cancelled disconnect must preserve connection');
+   assert.equal(requests.some(r=>r.method==='DELETE'),false,'cancelled disconnect must not call the backend');
+   // Only the explicit second confirmation may disconnect SimpleFIN.
+   await page.getByRole('button',{name:'Disconnect and remove sync data'}).click();
+   confirmation=page.getByRole('dialog',{name:'Disconnect SimpleFIN?'});
+   await confirmation.getByRole('button',{name:'Disconnect',exact:true}).click();
+   await page.getByText('Connect a financial institution',{exact:true}).waitFor();
+   assert.equal(state.connected,false,'confirmed disconnect must change connection state');
+   assert.equal(requests.filter(r=>r.method==='DELETE').length,1,'disconnect must send one authenticated DELETE');
+   assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'disconnect must preserve tracker entry history');
+   assert.deepEqual(errors,[]);console.log(name+': SimpleFIN connect, sync, matches, reconnection, cancel/confirm disconnect, privacy and mobile checks passed');
   }finally{await browser.close();}
  }}finally{server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
