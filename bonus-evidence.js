@@ -6,6 +6,7 @@
   const API='https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin';
   const TYPES=window.BTBonusEvidenceCore?.REASONS||{};
   let snapshot=null,loading=false,saving=false,error='',saveNotice='',showAll=false,showResolved=false,hideAmounts=true,rev=0;
+  const pendingLimits=new Map(),resolvedLimits=new Map();
   const el=(tag,text,parent,cls)=>{
     const n=document.createElement(tag);
     if(text!==undefined)n.textContent=text;
@@ -25,7 +26,7 @@
   };
   const activeEntries=()=>typeof entries!=='undefined'&&Array.isArray(entries)?entries.filter(e=>e&&!e.closed):[];
   function reset(){
-    snapshot=null;loading=false;saving=false;error='';saveNotice='';showAll=false;showResolved=false;hideAmounts=true;rev++;
+    snapshot=null;loading=false;saving=false;error='';saveNotice='';showAll=false;showResolved=false;hideAmounts=true;pendingLimits.clear();resolvedLimits.clear();rev++;
   }
   function update(){
     const root=document.getElementById('bt-bonus-evidence');
@@ -176,7 +177,13 @@
       if(group.missingAccounts)el('p','A linked account was missing from the latest provider response. Check your connection.',card,'bonus-evidence-warning');
       if(group.unsupportedCurrency)el('p','A linked non-USD or unknown-currency account was excluded from this USD evidence review.',card,'bonus-evidence-warning');
       el('p',group.review.unreviewed+' needs review · '+group.review.reviewed+' reviewed · '+group.review.dismissed+' dismissed',card,'bonus-evidence-note');
-      const visibleActivity=showResolved?group.pending.concat(group.resolved).slice(0,10):group.pending.slice(0,5);
+      // Never strand older transaction evidence behind a fixed slice of the
+      // 90-day provider window. Small batches preserve mobile compactness.
+      const pendingShown=Math.min(group.pending.length,pendingLimits.get(group.entryId)||5);
+      const resolvedShown=showResolved
+        ?Math.min(group.resolved.length,resolvedLimits.get(group.entryId)||5):0;
+      const visibleActivity=group.pending.slice(0,pendingShown)
+        .concat(group.resolved.slice(0,resolvedShown));
       if(!visibleActivity.length)el('p',group.activity.length?'No new evidence in this campaign.':'No flagged posted transactions observed since this bonus was opened. This does not confirm requirements are unmet.',card,'bonus-evidence-note');
       else{
         const list=el('div',undefined,card,'bonus-evidence-activity');
@@ -206,7 +213,21 @@
             undo.disabled=saving;
           }
         }
-        if(group.activity.length>visibleActivity.length)el('small','More transaction evidence is available. Show reviewed items or open Finances for history.',card,'bonus-evidence-note');
+        const paging=el('div',undefined,card,'bonus-evidence-paging');
+        if(group.pending.length>pendingShown){
+          const more=Math.min(5,group.pending.length-pendingShown);
+          button(paging,'Show '+more+' more to review',()=>{
+            pendingLimits.set(group.entryId,pendingShown+5);update();
+          });
+        }
+        if(showResolved&&group.resolved.length>resolvedShown){
+          const more=Math.min(5,group.resolved.length-resolvedShown);
+          button(paging,'Show '+more+' more reviewed',()=>{
+            resolvedLimits.set(group.entryId,resolvedShown+5);update();
+          });
+        }
+        if(!showResolved&&group.resolved.length)el('small',group.resolved.length+
+          ' reviewed or dismissed entries hidden until you choose Show reviewed / dismissed.',card,'bonus-evidence-note');
       }
       const progress=requirementReport(group);
       if(progress){
