@@ -5,7 +5,7 @@
   let panel=null,data=null,busy=false,generation=0,returnFocus=null;
   const el=(tag,text,parent)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(parent)parent.append(n);return n;};
   const stamp=t=>typeof t==='number'&&t>0?new Date(t*1000).toLocaleString():'Not available';
-  const money=(a,c)=>{try{return new Intl.NumberFormat(undefined,{style:'currency',currency:c}).format(Number(a));}catch{return String(a)+' '+String(c);}};
+  const money=(a,c)=>{if(a===null||a===undefined||a===''||!Number.isFinite(Number(a)))return 'Unavailable';try{return new Intl.NumberFormat(undefined,{style:'currency',currency:c||'USD'}).format(Number(a));}catch{return String(a)+' '+String(c||'');}};
   const active=()=>typeof entries!=='undefined'&&Array.isArray(entries)?entries.filter(e=>!e.closed&&e.id&&e.opened):[];
   async function request(path='',options={}){
     const auth=window.BTBonusAuth;if(!auth?.connected())throw Error('Sign in with your existing BonusTracker account first.');
@@ -36,8 +36,8 @@
     if(!data){button(body,'Load connection status',async()=>{data=await request();paint();});return;}
     if(!data.configured){el('h3','Server setup is not ready',body);el('p','Bank syncing is awaiting secure server configuration. You do not need to buy a subscription yet.',body);return;}
     if(!data.connected){
-      el('h3','Try one active bank first',body);
-      el('p','Check your bank in SimpleFIN’s supported-institutions list. Choose monthly billing for the trial and authorize only the accounts you want to share.',body);
+      el('h3','Connect a financial institution',body);
+      el('p','Check supported institutions before subscribing. Authorize only accounts you intend to share. SimpleFIN manages bank authorization and billing separately.',body);
       const links=el('div',undefined,body);links.className='bank-sync-links';
       for(const [label,url] of [['Check supported banks','https://beta-bridge.simplefin.org/search-institutions'],['Set up SimpleFIN','https://bridge.simplefin.org/simplefin/create']]){const a=el('a',label,links);a.href=url;a.target='_blank';a.rel='noopener noreferrer';}
       el('p','Create a SimpleFIN app connection for BonusTracker. Enter its one-time setup token here only. Never share bank passwords or tokens in chat. BonusTracker does not initiate payments.',body);
@@ -48,7 +48,7 @@
     const status=el('section',undefined,body);status.className='bank-sync-card';
     el('h3',data.status==='attention'?'Connection needs attention':'Connection active',status);
     el('p','Last synced: '+stamp(data.lastSuccess),status);
-    el('p','Next sync: '+stamp(data.nextSyncAt)+'. Daily bank updates may arrive later.',status);
+    el('p','Next sync: '+stamp(data.nextSyncAt)+'. Bank updates can take several days to appear.',status);
     el('p','Balances and transactions may be delayed. A connection alone does not confirm a completed transaction sync.',status);
     if(data.error)el('p',data.error,status);
     for(const warning of data.warnings||[])el('p',warning,status);
@@ -56,13 +56,13 @@
     button(status,'Refresh status',async()=>{data=await request();paint();});
     button(status,'Check for transactions',async()=>{data=await request('/sync',{method:'POST'});paint();message('Sync requested. Provider data refreshes at most daily; earlier checks may show previously saved data. Check Last synced for confirmation.');});
     button(status,'Refresh accounts',async()=>{data=await request('/discover',{method:'POST'});paint();});
-    el('h3','Connected accounts',body);
+    el('h3','Connected accounts',body);el('p',String((data.accounts||[]).length)+' accounts available · '+String(Object.keys(data.mappings||{}).length)+' linked to bonuses',body);
     el('p','Accounts appear here even without a bonus. Link an eligible checking or savings account only to its matching open bonus cycle. Changing a link clears that account’s previous bonus evidence.',body);
     const available=active(),selects=[];
     for(const a of data.accounts||[]){
       const card=el('section',undefined,body);card.className='bank-sync-card';
       el('h4',[a.bank,a.name].filter(Boolean).join(' · ')||'Bank account',card);
-      el('p','Balance: '+money(a.balance,a.currency)+' · Updated '+stamp(a.balanceDate),card);
+      el('p','Balance: '+money(a.balance,a.currency)+' · As of '+stamp(a.balanceDate),card);
       const label=el('label','Link to bonus (optional)',card),select=el('select',undefined,card);select.id='bank-sync-cycle-'+a.key;label.htmlFor=select.id;select.dataset.account=a.key;
       const empty=el('option','No bonus linked',select);empty.value='';
       const current=data.mappings?.[a.key];
