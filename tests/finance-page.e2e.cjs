@@ -91,7 +91,7 @@ const base=()=>({
       for(let attempt=0;attempt<3;attempt++){
         await financeTab.click();
         try{
-          await section.getByRole('heading',{name:'Financial overview'}).waitFor({timeout:7000});
+          await section.getByRole('heading',{name:'Finances'}).waitFor({timeout:7000});
           opened=true;break;
         }catch{
           const observed=await section.locator('h2,h3').allTextContents().catch(()=>[]);
