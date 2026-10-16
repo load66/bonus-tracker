@@ -100,7 +100,10 @@ const base=()=>({
       await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).waitFor();
       assert.equal(state.accountProfiles[B].balanceMode,'liability','failed account save must leave encrypted server state unchanged');
       assert.equal(await creditEditor.getByLabel('Net worth treatment').inputValue(),'exclude','unsaved draft remains available for retry');
-      await section.getByRole('button',{name:'Save account organization'}).click();
+      await Promise.all([
+        page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/account-profiles')&&r.request().method()==='PUT'&&r.status()===200),
+        section.getByRole('button',{name:'Save account organization'}).click()
+      ]);
       await section.getByRole('alert').waitFor({state:'hidden'});
       assert.equal(state.accountProfiles[B].balanceMode,'exclude','successful retry must persist organization');
       assert.ok(requests.some(r=>r.path.endsWith('/account-profiles')));
