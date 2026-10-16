@@ -15,7 +15,7 @@
   };
   let currentRoot=null,sequence=0,hidden=false,data=null,busy=false,view='overview',period=30;
   let transactionSearch='',transactionAccount='',transactionCategory='',transactionStatus='';
-  let accountSearch='',accountType='';
+  let accountSearch='',accountType='',saveNotice='';
   const el=(tag,text,parent,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;if(parent)parent.append(n);return n};
   const stamp=t=>Number.isFinite(t)&&t>0?new Date(t*1000).toLocaleString():'Unavailable';
   const date=t=>Number.isFinite(t)&&t>0?new Date(t*1000).toLocaleDateString():'Unavailable';
@@ -60,10 +60,18 @@
     finally{clearTimeout(timer)}
   }
   async function change(work){
-    if(busy)return;busy=true;paint();
-    try{data=await work();paint()}
-    catch(error){busy=false;paint();const host=currentRoot?.querySelector('.finance-page-notice');if(host)host.textContent=error.message}
-    finally{busy=false;paint()}
+    if(busy)return;
+    busy=true;saveNotice='';paint();
+    try{
+      data=await work();
+      saveNotice='';
+    }catch(error){
+      // Account organization drafts stay on this page for retry. Transaction
+      // categories are not changed locally without a confirmed server response.
+      saveNotice='Changes were not saved. '+String(error?.message||'Please retry.')+' Review your selections and try again.';
+    }finally{
+      busy=false;paint();
+    }
   }
   function flattenTransactions(){
     const accounts=new Map((data.accounts||[]).map(a=>[a.key,a])),rows=[];
@@ -263,7 +271,7 @@
   }
   function paint(){
     const host=currentRoot;if(!host||!host.isConnected)return;host.replaceChildren();
-    const notice=el('p','',host,'finance-page-notice');notice.setAttribute('role','status');
+    const notice=el('p',saveNotice,host,'finance-page-notice');notice.setAttribute('role',saveNotice?'alert':'status');
     if(!data){statusMessage(host,'Loading financial accounts','Retrieving your private, read-only account summary.');return}
     if(!data.configured){statusMessage(host,'Financial connections unavailable','Secure account syncing is not configured on the server.');return}
     if(!data.connected){
