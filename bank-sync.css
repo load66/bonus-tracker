@@ -21,3 +21,34 @@
 .bank-sync-add-institution{border-color:#688cb6;background:#192c47}
 .bank-sync-add-institution .bank-sync-add-bank-link{background:#b7d6ff;color:#09213e;border:1px solid #d5e7ff;text-decoration:none;border-radius:10px;font-weight:750;min-height:44px;padding:11px 14px}
 .bank-sync-add-institution .bank-sync-links{display:flex;flex-wrap:wrap;gap:5px}
+
+/* Guided SimpleFIN authorization: our UX, provider-hosted credential collection. */
+.bank-sync-guide{padding:14px 0 20px;min-width:0}
+.bank-sync-guide-eyebrow{display:block;font-size:10px;letter-spacing:1.3px;font-weight:800;color:#9bc6fa;margin:0 0 6px}
+.bank-sync-guide>h3{font-size:21px;line-height:1.25;color:#f4f8ff;margin:2px 0 9px}
+.bank-sync-guide>p{font-size:13px;color:#c5d7eb;line-height:1.65;margin:8px 0}
+.bank-sync-guide-security{display:flex;align-items:center;gap:8px;border:1px solid #2c756c;border-radius:11px;background:#102d36;padding:10px 12px;color:#aeeadc!important}
+.bank-sync-guide-security:before{content:'✓';display:inline-grid;place-items:center;flex:0 0 23px;width:23px;height:23px;border-radius:50%;font-weight:900;background:#1e6659;color:#e3fff8}
+.bank-sync-guide-progress{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:16px 0}
+.bank-sync-guide-progress-step{display:flex;gap:7px;align-items:center;justify-content:center;border:1px solid #37516e;background:#122039;border-radius:10px;min-height:44px;padding:7px 5px;min-width:0;color:#99b2d1}
+.bank-sync-guide-progress-step.is-active{border-color:#9dc4ff;background:#23416b;color:#fff}
+.bank-sync-guide-progress-step span{display:inline-grid;place-items:center;width:21px;height:21px;flex-shrink:0;border-radius:50%;background:#3b5678;color:#eef6ff;font-weight:800;font-size:11px}
+.bank-sync-guide-progress-step small{font-size:11px;font-weight:750}
+.bank-sync-guide-step{display:flex;align-items:flex-start;gap:11px;margin:10px 0;padding:13px;background:#14243a;border:1px solid #405774;border-radius:13px;min-width:0}
+.bank-sync-guide-number{display:grid;place-items:center;width:29px;height:29px;flex:0 0 29px;border-radius:9px;background:#315781;color:#ecf6ff;font-size:13px;font-weight:850}
+.bank-sync-guide-step-copy{min-width:0;flex:1}
+.bank-sync-guide-step-copy>strong{font-size:13px;line-height:1.45;color:#f2f7ff}
+.bank-sync-guide-step-copy p{font-size:12px;color:#bdd0e6;line-height:1.6;margin:5px 0 9px}
+.bank-sync-guide-actions{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:10px 0}
+.bank-sync-guide-actions .bank-sync-guide-link{min-height:44px;display:inline-flex;align-items:center;justify-content:center;border-radius:9px;border:1px solid #6789af;color:#cfe4ff;text-decoration:none;background:#243a56;font-weight:760;padding:10px 12px;font-size:12px;line-height:1.4;max-width:100%}
+.bank-sync-guide-actions .bank-sync-guide-link.is-primary{color:#0a2140;background:#b7d6ff;border-color:#d4e7ff}
+.bank-sync-guide-step-copy label{margin:12px 0 7px;line-height:1.45}
+.bank-sync-guide-step-copy textarea{margin:7px 0 4px;min-height:78px;font-size:14px}
+.bank-sync-guide-hint{display:block;color:#b1c6df;font-size:11px;line-height:1.6}
+.bank-sync-guide-notice{border:1px solid #466990;background:#1b3250;color:#e8f4ff!important;padding:10px 12px;border-radius:9px}
+.bank-sync-guide-success{padding:14px;border:1px solid #46837a;background:#12332f;border-radius:13px}
+.bank-sync-guide-success h4{color:#d7fff4!important;margin:0 0 8px!important}
+.bank-sync-guide-success p{color:#c4eade!important}
+.bank-sync-guide-back{padding-top:10px;border-top:1px solid #354b68;margin-top:12px}
+.bank-sync-guide .bank-sync-guide-link:focus-visible{outline:3px solid #9fd1ff;outline-offset:3px}
+@media(max-width:390px){.bank-sync-guide-step{gap:8px;padding:10px}.bank-sync-guide-progress{gap:4px}.bank-sync-guide-progress-step{gap:4px;padding:6px 3px}.bank-sync-guide-progress-step small{font-size:10px}.bank-sync-guide-actions>*{width:100%;text-align:center}.bank-sync-guide{padding:10px 0 15px}}
