@@ -195,10 +195,18 @@ const base=()=>({
       assert.ok((await section.locator('.finance-page-account-source').allTextContents()).some(t=>t.includes('Plaid')));
       const accountSearch=section.getByRole('searchbox',{name:'Search accounts'});
       await accountSearch.fill('x money');
-      assert.equal(await section.locator('.finance-page-account:visible').count(),1);
+      await page.waitForFunction(([query,expected])=>{
+        const root=document.getElementById('bt-finances-page'),input=root?.querySelector('input[aria-label="Search accounts"]');
+        const shown=[...(root?.querySelectorAll('.finance-page-account')||[])].filter(el=>el.getClientRects().length);
+        return input?.value===query&&shown.length===1&&shown[0].textContent.includes(expected);
+      },['x money','X Money Checking'],{timeout:12000});
       await section.getByText('X Money Checking',{exact:true}).waitFor();
       await accountSearch.fill('other credit union');
-      assert.equal(await section.locator('.finance-page-account:visible').count(),1);
+      await page.waitForFunction(([query,expected])=>{
+        const root=document.getElementById('bt-finances-page'),input=root?.querySelector('input[aria-label="Search accounts"]');
+        const shown=[...(root?.querySelectorAll('.finance-page-account')||[])].filter(el=>el.getClientRects().length);
+        return input?.value===query&&shown.length===1&&shown[0].textContent.includes(expected);
+      },['other credit union','Credit Card'],{timeout:12000});
       await accountSearch.fill('');
       const creditEditor=section.locator('.finance-page-account-info strong').filter({hasText:/^Credit Card$/}).locator('xpath=../../..');
       await creditEditor.locator('details.finance-page-account-settings > summary').click();
