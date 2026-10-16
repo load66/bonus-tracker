@@ -40,24 +40,24 @@
       el('p','Check your bank in SimpleFIN’s supported-institutions list. Choose monthly billing for the trial and authorize only the accounts you want to share.',body);
       const links=el('div',undefined,body);links.className='bank-sync-links';
       for(const [label,url] of [['Check supported banks','https://beta-bridge.simplefin.org/search-institutions'],['Set up SimpleFIN','https://bridge.simplefin.org/simplefin/create']]){const a=el('a',label,links);a.href=url;a.target='_blank';a.rel='noopener noreferrer';}
-      el('p','Create an app token named BonusTracker in SimpleFIN, then paste the one-time setup token here. Do not paste a bank password or send this token in chat.',body);
+      el('p','Create a SimpleFIN app connection for BonusTracker. Enter its one-time setup token here only. Never share bank passwords or tokens in chat. BonusTracker does not initiate payments.',body);
       const label=el('label','SimpleFIN setup token',body),input=el('textarea',undefined,label);input.id='bank-sync-token';input.autocomplete='off';input.spellcheck=false;input.rows=3;
       button(body,'Connect SimpleFIN',async()=>{const token=input.value.trim();input.value='';if(!token)throw Error('Paste the setup token from SimpleFIN.');data=await request('/connect',{method:'POST',body:JSON.stringify({setup_token:token})});paint();if(data.error)message(data.error);},'btn-p');
       if(data.error)el('p',data.error,body);return;
     }
     const status=el('section',undefined,body);status.className='bank-sync-card';
-    el('h3',data.status==='attention'?'Connection needs attention':'SimpleFIN connected',status);
+    el('h3',data.status==='attention'?'Connection needs attention':'Connection active',status);
     el('p','Last synced: '+stamp(data.lastSuccess),status);
     el('p','Next sync: '+stamp(data.nextSyncAt)+'. Daily bank updates may arrive later.',status);
-    el('p','Retrieval time does not prove that every bank transaction is current or that the history is complete.',status);
+    el('p','Balances and transactions may be delayed. A connection alone does not confirm a completed transaction sync.',status);
     if(data.error)el('p',data.error,status);
     for(const warning of data.warnings||[])el('p',warning,status);
     if(data.missingAccounts?.length)el('p','A selected account was missing from the latest response. Its saved evidence is retained; this does not mean it is closed.',status);
     button(status,'Refresh status',async()=>{data=await request();paint();});
-    button(status,'Check for transactions',async()=>{data=await request('/sync',{method:'POST'});paint();message('Status refreshed. Provider checks run at most once daily; an early check uses saved evidence.');});
+    button(status,'Check for transactions',async()=>{data=await request('/sync',{method:'POST'});paint();message('Sync requested. Provider data refreshes at most daily; earlier checks may show previously saved data. Check Last synced for confirmation.');});
     button(status,'Refresh accounts',async()=>{data=await request('/discover',{method:'POST'});paint();});
     el('h3','Connected accounts',body);
-    el('p','Match checking or savings to an open bonus cycle. Leave unrelated accounts unselected. Saving a different cycle clears that account’s previous evidence from this trial.',body);
+    el('p','Accounts appear here even without a bonus. Link an eligible checking or savings account only to its matching open bonus cycle. Changing a link clears that account’s previous bonus evidence.',body);
     const available=active(),selects=[];
     for(const a of data.accounts||[]){
       const card=el('section',undefined,body);card.className='bank-sync-card';
@@ -93,7 +93,7 @@
       }
       if(rows.length>100)el('p','Showing the latest 100 transactions for this account.',section);
     }
-    if(!shown)el('p','Select an account and allow the first check to complete.',body);
+    if(!shown)el('p','No bonus activity to review. Unlinked accounts remain available above; bonus monitoring starts only after a valid bonus link.',body);
     button(body,'Disconnect and remove sync data',async()=>{
       if(!(await window.btConfirmDialog('Stop background syncing and remove this app’s saved bank-sync data? Your tracker entries stay intact. To revoke the token at SimpleFIN or cancel billing, also use your SimpleFIN account.',{title:'Disconnect SimpleFIN?',confirmLabel:'Disconnect',danger:true})))return;
       data=await request('',{method:'DELETE'});paint();message('Disconnected. Manage token revocation and subscription billing in SimpleFIN.');
