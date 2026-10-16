@@ -13,3 +13,9 @@
 .plaid-trial-action:disabled{opacity:.65}
 .plaid-trial-message:not(:empty){padding:8px;border-radius:6px;background:#23364a;color:#eef4fc!important}
 @media(max-width:390px){.plaid-trial-fallback{padding:12px}.plaid-trial-fallback h4{font-size:.96rem}}
+
+.bank-connect-fallback{margin:10px 0 4px;border-radius:12px;border:1px solid rgba(148,163,184,.26);background:rgba(15,23,42,.55)}
+.bank-connect-fallback>summary{cursor:pointer;list-style-position:inside;min-height:44px;padding:12px;color:#e4edf9;font-weight:650;font-size:.91rem;line-height:1.35}
+.bank-connect-fallback>summary:focus-visible{outline:2px solid #77c8f9;outline-offset:2px}
+.bank-connect-fallback[open]>summary{border-bottom:1px solid rgba(148,163,184,.2)}
+.bank-connect-fallback .plaid-trial-fallback{margin:0;border:0;border-radius:0 0 12px 12px;background:transparent}
