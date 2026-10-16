@@ -99,6 +99,7 @@ const KEY='a'.repeat(64);
           await page.setViewportSize({width,height:760});
           const size=await host.evaluate(n=>({
             page:innerWidth,scroll:n.scrollWidth,
+            internal:[...n.querySelectorAll('*')].filter(e=>e.scrollWidth>e.clientWidth+1).map(e=>({tag:e.tagName,cls:e.className,scroll:e.scrollWidth,client:e.clientWidth})),
             buttons:[...n.querySelectorAll('button')].map(b=>b.getBoundingClientRect().height),
             overflow:[...n.querySelectorAll('*')].filter(e=>e.getBoundingClientRect().right>innerWidth).map(e=>({tag:e.tagName,cls:e.className,width:e.getBoundingClientRect().width,text:e.textContent.slice(0,50)}))
           }));

@@ -37,3 +37,7 @@
 .plaid-trial-fallback *{box-sizing:border-box}
 .plaid-trial-account-card select{max-width:100%;text-overflow:ellipsis}
 .plaid-trial-check span{min-width:0}
+
+/* Native WebKit select text can report an overflowing internal scroll area.
+   Clip it at each field group; the platform picker remains outside layout. */
+.plaid-trial-control,.plaid-trial-account-card,.plaid-trial-observations{overflow:hidden}
