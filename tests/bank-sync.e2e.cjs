@@ -81,7 +81,7 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    await dialog.getByText('SECURE BANK CONNECTION',{exact:true}).waitFor();
    const fallback=dialog.locator('details.bank-connect-fallback');
    await fallback.locator('summary').click();
-   await fallback.getByText('Plaid slots used: not verified / 10').waitFor();
+   await fallback.getByText('Trial capacity not verified').waitFor();
    await fallback.getByText('Plaid linking is locked until the free Trial plan', {exact:false}).waitFor();
    assert.equal(await fallback.getByRole('button',{name:'Connect with Plaid (last fallback)'}).count(),0,
      'No link control when backend quota or monitoring is unverified');
