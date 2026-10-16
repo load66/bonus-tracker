@@ -132,7 +132,7 @@ return result;
         assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'no automatic payout completion');
         await page.evaluate(()=>{rcvPrompt=null;R()});
         await page.getByRole('button',{name:'Finances',exact:true}).click();
-        await page.getByRole('region',{name:'My finances'}).waitFor({state:'visible'});
+        await page.getByRole('region',{name:'My finances'}).getByRole('heading',{name:'Financial overview'}).waitFor();
         // An immediate switch while the private dashboard is still mounting
         // can race another app re-render. Complete the route change first.
         const tracker=page.getByRole('button',{name:'Tracker',exact:true});
@@ -153,7 +153,8 @@ return result;
         assert.ok(trackerReady,'Tracker activity review must survive private finance redraw');
         assert.equal(await reopened.locator('.bonus-evidence-card').count(),0,'evidence must be cleared when leaving the Tracker');
         await reopened.getByRole('button',{name:'Review bank activity',exact:true}).click();
-        await reopened.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor();
+        try{await reopened.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor({timeout:10000})}
+        catch{throw Error(browserName+' Tracker reload failed: '+JSON.stringify({text:await reopened.innerText(),requests,selected:await page.locator('.tabs .tb[aria-current="page"]').allTextContents()}))}
         await reopened.getByRole('button',{name:'Show reviewed / dismissed',exact:true}).click();
         assert.equal(await reopened.getByRole('button',{name:'Undo review',exact:true}).count(),1,
           'a dismissed receipt persists across a cleared and reloaded session');

@@ -22,7 +22,7 @@ const KEY='a'.repeat(64);
         const context=await browser.newContext({serviceWorkers:'block',viewport:{width:390,height:760}});
         const page=await context.newPage(),calls=[],errors=[];
         page.on('pageerror',err=>errors.push(err.message));
-        let monitored=[],mappings={},syncs=0,holdAccounts=false,accountWaiting,releaseAccount;
+        let monitored=[],mappings={},used=1,syncs=0,holdAccounts=false,accountWaiting,releaseAccount;
         await page.route('https://api-production-00f74.up.railway.app/**',route=>route.abort());
         await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/plaid**',async route=>{
           const request=route.request(),url=new URL(request.url());
@@ -38,6 +38,9 @@ const KEY='a'.repeat(64);
           }
           if(url.pathname.endsWith('/selection'))mappings=request.postDataJSON().mappings;
           if(url.pathname.endsWith('/sync'))syncs++;
+          if(url.pathname.endsWith('/exchange')){
+            const body=request.postDataJSON();assert.equal(body.session,'b'.repeat(32));assert.equal(body.publicToken,'synthetic-public-token');used++;
+          }
           if(url.pathname.endsWith('/accounts')&&request.method()==='GET'
             ||url.pathname.endsWith('/monitoring')||url.pathname.endsWith('/selection')
             ||url.pathname.endsWith('/sync')){
@@ -49,9 +52,10 @@ const KEY='a'.repeat(64);
                 signals:['possible_direct_deposit'],pending:false}}}:{},
               authoritativeMilestones:false};
           }else{
-            result={provider:'plaid',configured:true,used:1,reserved:0,remaining:9,limit:10,
+            result={provider:'plaid',configured:true,used,reserved:0,remaining:10-used,limit:10,
               connected:[{institution:'Synthetic Bank'}],paidUpgradeAllowed:false};
           }
+          if(url.pathname.endsWith('/link-token'))result={session:'b'.repeat(32),linkToken:'synthetic-link-token'};
           return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(result)});
         });
         await page.addInitScript(()=>{
@@ -111,8 +115,10 @@ const KEY='a'.repeat(64);
         await page.waitForFunction(()=>!!window.syntheticLink);
         assert.equal(await host.getByRole('button',{name:'Connect with Plaid fallback'}).isDisabled(),true);
         assert.equal(calls.filter(x=>x.includes('link-token')).length,1);
-        await page.evaluate(()=>window.syntheticLink.onExit());
-        assert.equal(await host.getByRole('button',{name:'Connect with Plaid fallback'}).isEnabled(),true);
+        assert.equal(await page.evaluate(()=>window.syntheticLink.token),'synthetic-link-token');
+        await page.evaluate(()=>window.syntheticLink.onSuccess('synthetic-public-token'));
+        await host.getByText('Plaid slots used: 2/10').waitFor();
+        assert.equal(calls.filter(x=>x.endsWith('/exchange')).length,1,'successful SDK handoff exchanges exactly once');
         // A delayed response for one owner must never be shown after a user
         // switch, even when the panel remains mounted on the same page.
         holdAccounts=true;
