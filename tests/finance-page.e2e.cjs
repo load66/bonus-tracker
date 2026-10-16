@@ -333,7 +333,7 @@ const base=()=>({
       await section.getByText('Bank activity not yet available',{exact:false}).waitFor();
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       await section.getByLabel('Account').selectOption('plaid:'+A);
-      await section.getByText('An empty history does not prove this bank had no activity',{exact:false}).waitFor();
+      await section.getByText('An empty history does not prove the account had no transactions',{exact:false}).waitFor();
       plaidState.transactions=savedPlaidTransactions;
       plaidState.accounts[0].transactionSyncStatus='ready';
       await page.evaluate(()=>window.btRefreshFinancesPage?.());
@@ -370,30 +370,12 @@ const base=()=>({
       const restoreTarget=section.getByRole('button',{name:'Restore',exact:true});
       await restoreTarget.scrollIntoViewIfNeeded();
       await page.waitForFunction(()=>document.querySelector('#bt-finances-page')?.getAttribute('aria-busy')==='false');
-      const restoreClickInfo=await restoreTarget.evaluate(button=>{
-        const original=button.onclick;
-        window.__btRestoreClickCount=0;
-        button.onclick=function(...args){window.__btRestoreClickCount++;return original?.apply(this,args)};
-        const rect=button.getBoundingClientRect();
-        const hit=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);
-        return {hasHandler:typeof original==='function',disabled:button.disabled,
-                pointerTarget:hit?.tagName,pointerText:hit?.textContent?.slice(0,70)};
-      });
-      await restoreTarget.click();
-      await page.waitForFunction(()=>(
-        document.querySelector('#bt-finances-page')?.textContent||''
-      ).includes('Account restored to discovery.') || (
-        document.querySelector('#bt-finances-page')?.textContent||''
-      ).includes('Changes were not saved.'),null,{timeout:8000}).catch(()=>{});
-      if(state.removedAccounts[B]!==undefined){
-        const messages=await section.locator('.finance-page-notice,.finance-page-connection-success').allTextContents();
-        throw Error('Restore did not update synthetic account: '+JSON.stringify({
-          recentRequests:requests.slice(-6).map(r=>({path:r.path,method:r.method})),messages,
-          removedButtons:await section.getByRole('button',{name:'Restore',exact:true}).count(),
-          restoreClickInfo,clickCount:await page.evaluate(()=>window.__btRestoreClickCount),
-          pageErrors:errors.slice(-5),visibleAccounts:state.accounts.map(a=>a.key)
-        }));
-      }
+      await Promise.all([
+        page.waitForResponse(response=>new URL(response.url()).pathname.endsWith('/simplefin/accounts/'+B+'/restore')
+          && response.request().method()==='POST' && response.status()===200,{timeout:12000}),
+        restoreTarget.click()
+      ]);
+      await section.getByText('Account restored to discovery.',{exact:false}).waitFor();
       assert.equal(state.removedAccounts[B],undefined,'Restoration clears exact account exclusion');
       // Simulate a real SimpleFIN pending row with posted=0, visible but not booked.
       state.transactions[A]['pending-zero']={id:'pending-zero',posted:0,transactedAt:NOW-70,
