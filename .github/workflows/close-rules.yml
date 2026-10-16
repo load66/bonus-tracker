@@ -108,11 +108,14 @@ jobs:
       - name: Check financial observation arithmetic and data scope
         run: node tests/finance-overview.test.js
 
+      - name: Verify bank bonus evidence classification and cycle isolation
+        run: node tests/bonus-evidence.test.js
+
       - name: Run real browser end-to-end tests
         env:
           NODE_PATH: ${{ runner.temp }}/bonus-tracker-browser-tests/node_modules
           BT_BROWSER_RESULTS: ${{ runner.temp }}/bonus-tracker-browser-results
-        run: node tests/finance-page.e2e.cjs && node tests/bank-sync.e2e.cjs && node tests/browser-e2e.cjs
+        run: node tests/bonus-evidence.e2e.cjs && node tests/finance-page.e2e.cjs && node tests/bank-sync.e2e.cjs && node tests/browser-e2e.cjs
 
       - name: Save browser verification evidence
         if: always()
