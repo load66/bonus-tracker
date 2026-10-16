@@ -274,7 +274,7 @@
   function periodControl(parent){
     const wrap=el('div',undefined,parent,'finance-page-period');
     for(const days of (view==='transactions'?[30,60,90,365,36500]:[30,60,90]))
-      action(wrap,days===36500?'All history':days===365?'1 year':days+' days',()=>{period=days;paint()},'finance-page-chip'+(period===days?' is-active':''));
+      action(wrap,days===36500?'All history':days===365?'1 year':days+' days',()=>{period=days;paint()},'finance-page-chip'+((view==='transactions'?period:Math.min(period,90))===days?' is-active':''));
   }
   function metric(grid,label,value,note){
     const tile=el('div',undefined,grid,'finance-page-tile');el('span',label,tile);el('strong',value,tile);
@@ -661,7 +661,7 @@
       action(host,'Add bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');return;
     }
     const summaryState=window.BTFinanceUnified.safeForSummary(currentCombined);
-    const calculated=window.BTFinanceOverview?.summarize(summaryState,{days:period});
+    const calculated=window.BTFinanceOverview?.summarize(summaryState,{days:Math.min(period,90)});
     const trustedTotals=!summaryState.incompleteProviders&&!summaryState.excludedForReview;
     const summary={...calculated,
       complete:!!calculated?.complete&&trustedTotals,
