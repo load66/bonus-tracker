@@ -36,6 +36,7 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    await dialog.getByRole('button',{name:'Show balances',exact:true}).click();await dialog.locator('p').filter({hasText:/Balance:\s*.*200/}).first().waitFor();
    await dialog.getByLabel('Monitor transactions (read-only)',{exact:true}).check();
    await dialog.getByRole('button',{name:'Save monitoring preferences',exact:true}).click();
+   await dialog.getByText('Monitoring preferences saved.',{exact:false}).waitFor();
    assert.deepEqual(state.monitoredAccounts,[account.key]);assert.deepEqual(state.mappings,{});
    await dialog.getByRole('button',{name:'Check for transactions',exact:true}).click();await dialog.getByText('Possible bonus · review',{exact:true}).waitFor();
    await dialog.getByText('Observed credits',{exact:true}).waitFor();
