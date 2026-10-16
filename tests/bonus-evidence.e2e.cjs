@@ -123,9 +123,25 @@ return result;
         assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'no automatic payout completion');
         await page.evaluate(()=>{rcvPrompt=null;R()});
         await page.getByRole('button',{name:'Finances',exact:true}).click();
-        await page.getByRole('button',{name:'Tracker',exact:true}).click();
+        await page.getByRole('region',{name:'My finances'}).waitFor({state:'visible'});
+        // An immediate switch while the private dashboard is still mounting
+        // can race another app re-render. Complete the route change first.
+        const tracker=page.getByRole('button',{name:'Tracker',exact:true});
         const reopened=page.getByRole('region',{name:'Bank bonus activity evidence'});
-        await reopened.getByRole('button',{name:'Review bank activity',exact:true}).waitFor();
+        let trackerReady=false;
+        for(let attempt=0;attempt<2;attempt++){
+          await tracker.click();
+          try{
+            await reopened.getByRole('button',{name:'Review bank activity',exact:true}).waitFor({timeout:7000});
+            trackerReady=true;break;
+          }catch{
+            if(attempt===1){
+              const selected=await page.locator('.tabs .tb[aria-current="page"]').allTextContents().catch(()=>[]);
+              throw Error(browserName+' Tracker evidence panel unavailable after tab navigation. Selected='+selected.join('|'));
+            }
+          }
+        }
+        assert.ok(trackerReady,'Tracker activity review must survive private finance redraw');
         assert.equal(await reopened.locator('.bonus-evidence-card').count(),0,'evidence must be cleared when leaving the Tracker');
         await reopened.getByRole('button',{name:'Review bank activity',exact:true}).click();
         await reopened.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor();
