@@ -489,7 +489,9 @@
     const title=el('div',undefined,head,'finance-page-accounts-title');
     el('h3','Accounts',title);
     el('span',String((currentCombined?.accounts||[]).length),title,'finance-page-account-count');
-    action(head,'Manage connections',()=>window.btOpenBankSync?.(),'finance-page-button');
+    const accountActions=el('div',undefined,head,'finance-page-account-actions');
+    action(accountActions,'Add bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');
+    action(accountActions,'Manage connections',()=>window.btOpenBankSync?.(),'finance-page-button');
     const controls=el('div',undefined,card,'finance-page-account-filters');
     const search=el('input',undefined,controls,'finance-page-search');search.type='search';
     search.placeholder='Find a bank or account (e.g. X Money)';
