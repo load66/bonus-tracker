@@ -303,6 +303,25 @@ const base=()=>({
       assert.equal(requests.some(r=>r.path.endsWith('/plaid/link-token')||r.path.endsWith('/plaid/exchange')),false,
         'Monitoring an existing Plaid connection never creates a new lifetime Item');
       await section.getByText('X Money Bonus',{exact:true}).waitFor();
+      // All provider-returned rows within the 90-day retention window must be
+      // reachable, not silently truncated at the former 250-row UI cap.
+      for(let index=0;index<260;index++){
+        const id='history-'+String(index).padStart(3,'0');
+        plaidState.transactions[A][id]={id,posted:NOW-500-index*1000,pending:false,
+          amount:'-1.00',currency:'USD',merchant:'History item '+index,
+          description:'Synthetic Plaid history item '+index,category:'other',
+          categorySource:'automatic',confidence:'low',signals:[]};
+      }
+      await page.evaluate(()=>window.btRefreshFinancesPage?.());
+      await section.getByRole('button',{name:'Transactions',exact:true}).click();
+      await section.getByRole('button',{name:/^Show 100 more transactions/}).waitFor();
+      await section.getByRole('button',{name:/^Show 100 more transactions/}).click();
+      await section.getByRole('button',{name:/^Show 64 more transactions/}).waitFor();
+      await section.getByRole('button',{name:/^Show 64 more transactions/}).click();
+      assert.equal(await section.locator('.finance-page-transaction').count(),264,
+        'All 260 additional Plaid rows plus 4 preexisting rows are accessible by paging');
+      assert.equal(await section.getByRole('button',{name:/^Show \d+ more transactions/}).count(),0,
+        'No provider-returned history remains inaccessible after the final page');
       assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'no tracker writes');
       assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-access')),true);
       assert.deepEqual(errors,[]);console.log(name+': finance overview, transactions, account management, privacy and responsive navigation passed');
