@@ -133,6 +133,15 @@
         row.signals=[...new Set([...(Array.isArray(row.signals)?row.signals:[]),'matched_internal_transfer'])];
       }
     }
+    // An automatic wording-only transfer is not a verified internal movement.
+    // Keep it in the review queue unless the backend or this adapter paired it.
+    for(const entry of entries){
+      const row=entry.row;
+      if(row.category==='transfer'&&row.categorySource!=='user'&&
+          !(Array.isArray(row.signals)&&row.signals.includes('matched_internal_transfer'))){
+        row.category='unreviewed';
+      }
+    }
     return result;
   }
   function safeForSummary(unified){
