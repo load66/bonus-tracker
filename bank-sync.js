@@ -2,7 +2,7 @@
 (function(){
   'use strict';
   const API='https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin';
-  let panel=null,data=null,busy=false,generation=0,returnFocus=null;
+  let panel=null,data=null,busy=false,generation=0,returnFocus=null,hideBalances=false;
   const el=(tag,text,parent)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(parent)parent.append(n);return n;};
   const stamp=t=>typeof t==='number'&&t>0?new Date(t*1000).toLocaleString():'Not available';
   const money=(a,c)=>{if(a===null||a===undefined||a===''||!Number.isFinite(Number(a)))return 'Unavailable';try{return new Intl.NumberFormat(undefined,{style:'currency',currency:c||'USD'}).format(Number(a));}catch{return String(a)+' '+String(c||'');}};
@@ -22,7 +22,7 @@
   function message(s){const n=panel?.querySelector('#bank-sync-message');if(n)n.textContent=s;}
   async function run(work){if(busy)return;busy=true;panel?.querySelectorAll('button,select,textarea').forEach(n=>n.disabled=true);try{await work();}catch(e){message(e.message);}finally{busy=false;panel?.querySelectorAll('button,select,textarea').forEach(n=>n.disabled=false);}}
   function button(parent,label,fn,cls='btn-s'){const b=el('button',label,parent);b.type='button';b.className=cls;b.onclick=()=>run(fn);return b;}
-  function close(){if(busy)return;generation++;panel?.remove();panel=null;data=null;returnFocus?.focus();}
+  function close(){if(busy)return;generation++;panel?.remove();panel=null;data=null;hideBalances=false;returnFocus?.focus();}
   function paint(){
     if(!panel)return;
     const body=panel.querySelector('.bank-sync-body');body.replaceChildren();
@@ -56,13 +56,13 @@
     button(status,'Refresh status',async()=>{data=await request();paint();});
     button(status,'Check for transactions',async()=>{data=await request('/sync',{method:'POST'});paint();message('Sync requested. Provider data refreshes at most daily; earlier checks may show previously saved data. Check Last synced for confirmation.');});
     button(status,'Refresh accounts',async()=>{data=await request('/discover',{method:'POST'});paint();});
-    el('h3','Connected accounts',body);el('p',String((data.accounts||[]).length)+' accounts available · '+String(Object.keys(data.mappings||{}).length)+' linked to bonuses',body);
+    el('h3','Connected accounts',body);el('p',String((data.accounts||[]).length)+' accounts available · '+String(Object.keys(data.mappings||{}).length)+' linked to bonuses',body);button(body,hideBalances?'Show balances':'Hide balances',async()=>{hideBalances=!hideBalances;paint();});
     el('p','All discovered accounts appear here. Bonus monitoring is optional and currently runs only for linked accounts. Link only checking or savings accounts to their matching open bonus cycle. Changing a link clears that account’s previous bonus evidence.',body);
     const available=active(),selects=[];
     for(const a of data.accounts||[]){
       const card=el('section',undefined,body);card.className='bank-sync-card';
       el('h4',[a.bank,a.name].filter(Boolean).join(' · ')||'Bank account',card);
-      el('p','Balance: '+money(a.balance,a.currency)+' · As of '+stamp(a.balanceDate),card);if(a.balanceDate&&data.lastSuccess&&a.balanceDate>data.lastSuccess)el('p','Balance timestamp is newer than the last recorded transaction sync; these are separate provider updates.',card);
+      el('p','Balance: '+(hideBalances?'••••••':money(a.balance,a.currency))+' · As of '+stamp(a.balanceDate),card);if(a.balanceDate&&data.lastSuccess&&a.balanceDate>data.lastSuccess)el('p','Balance timestamp is newer than the last recorded transaction sync; these are separate provider updates.',card);
       const label=el('label','Link to bonus (optional)',card),select=el('select',undefined,card);select.id='bank-sync-cycle-'+a.key;label.htmlFor=select.id;select.dataset.account=a.key;
       const empty=el('option','No bonus linked',select);empty.value='';
       const current=data.mappings?.[a.key];
