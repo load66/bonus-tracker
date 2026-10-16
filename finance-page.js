@@ -479,8 +479,10 @@
       action(host,'Add bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');return;
     }
     const summaryState=window.BTFinanceUnified.safeForSummary(currentCombined);
-    const summary=window.BTFinanceOverview?.summarize(summaryState,{days:period});
+    const calculated=window.BTFinanceOverview?.summarize(summaryState,{days:period});
+    const summary={...calculated,complete:!!calculated?.complete&&!summaryState.incompleteProviders&&!summaryState.excludedForReview};
     hero(host,summary);
+    if(summaryState.incompleteProviders)el('p','Financial activity is partial: one linked provider has not completed a recent sync.',host,'finance-page-caution');
     if(view==='bonuses'){
       const sourceSelector=el('section',undefined,host,'finance-page-connection');
       const sourceSelect=select(sourceSelector,'Review connection',{
