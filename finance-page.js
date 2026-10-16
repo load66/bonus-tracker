@@ -233,12 +233,9 @@
   function accounts(host){
     const card=el('section',undefined,host,'finance-page-card');
     const head=el('div',undefined,card,'finance-page-section-head');el('h3','Accounts',head);
-    const providerLink=el('a','Add bank ↗',head,'finance-page-button finance-page-provider-link');
-    providerLink.href='https://beta-bridge.simplefin.org/';
-    providerLink.target='_blank';providerLink.rel='noopener noreferrer';
-    providerLink.setAttribute('aria-label','Add bank through SimpleFIN Bridge');
+    action(head,'Add bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-provider-link');
     action(head,'Manage connections',()=>window.btOpenBankSync?.(),'finance-page-button finance-page-primary');
-    el('p','Add banks in SimpleFIN Bridge, then use Manage connections → Refresh accounts after adding bank. Discovery can be limited to once daily. Set account types and balance treatment below; Net Worth stays unavailable if data is incomplete.',card);
+    el('p','Use Add bank for secure guided setup. Bank authorization opens on SimpleFIN; return to BonusTracker to discover accounts without disconnecting existing banks. Discovery can be limited to once daily. Set account types and balance treatment below; Net Worth stays unavailable if data is incomplete.',card);
     const controls=el('div',undefined,card,'finance-page-filters');
     const search=el('input',undefined,controls,'finance-page-search');search.type='search';search.placeholder='Search accounts';search.setAttribute('aria-label','Search accounts');search.value=accountSearch;
     const list=el('div',undefined,card,'finance-page-account-groups');
@@ -291,7 +288,8 @@
     if(!data.configured){statusMessage(host,'Financial connections unavailable','Secure account syncing is not configured on the server.');return}
     if(!data.connected){
       statusMessage(host,'Connect your first institution','Add a supported institution through SimpleFIN. BonusTracker cannot initiate payments, trades, or transfers.');
-      action(host,'Manage financial connections',()=>window.btOpenBankSync?.(),'finance-page-button finance-page-primary');return;
+      action(host,'Connect a bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');
+      action(host,'Manage financial connections',()=>window.btOpenBankSync?.(),'finance-page-button');return;
     }
     const summary=window.BTFinanceOverview?.summarize(data,{days:period});
     hero(host,summary);
