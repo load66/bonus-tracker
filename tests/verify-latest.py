@@ -123,6 +123,8 @@ controller=text('controller.js')
 professional=text('professional-upgrades.js')
 for token in ('tcV3MakeSuggestedTimers','tcApplyReviewed','rModal'):
     if token not in controller+professional: fail(f'legacy analyzer/professional hook missing: {token}')
+if 'if(explicitBonus&&!r.tiered)' not in professional:
+    fail('generic bonus extraction can overwrite a bank-specific tier target')
 for token in ('wellsSuggestedTimers','Can this bonus be earned again? *','Future eligibility','Separate fee schedule','Fee Schedule','requirementSummaryForEntry','polishAnalyzerDom','tcApplyReviewed','After '+"'+fM(e.bonus||0)+'"+' posts'):
     if token not in runtime_fix: fail(f'professional Wells runtime behavior missing: {token}')
 

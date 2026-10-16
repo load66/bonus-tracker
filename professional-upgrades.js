@@ -401,7 +401,9 @@
     ];
     let explicitBonus=0,explicitBonusSource='';
     for(const pat of bonusPatterns){const m=rawText.match(pat);if(m){explicitBonus=parseFloat(m[1].replace(/,/g,''))||0;explicitBonusSource=(list.find(x=>x.includes(m[0]))||m[0]);break}}
-    if(explicitBonus){r.bonus=explicitBonus;r.selectedBonus=explicitBonus;setSource(r,'Bonus',explicitBonusSource,'high','extracted')}
+    // A bank-specific tier parser owns the selected target. Wrapper timing differs by browser,
+    // so the generic first-dollar match must never replace an established highest tier.
+    if(explicitBonus&&!r.tiered){r.bonus=explicitBonus;r.selectedBonus=explicitBonus;setSource(r,'Bonus',explicitBonusSource,'high','extracted')}
 
     if(reqLines.length){
       const reqSource=String(r.fieldSources?.['Requirement amount']?.source||r.reqSource||'');

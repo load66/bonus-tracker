@@ -18,7 +18,8 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
     if(url.pathname.endsWith('/monitoring')){state.monitoredAccounts=req.postDataJSON().accounts;if(!state.monitoredAccounts.length&&!Object.keys(state.mappings).length)state.transactions={};}
     if(url.pathname.endsWith('/sync')){state.transactions[account.key]={t1:{id:'t1',posted:1792133900,amount:'200',description:'Promotional Bonus <script>alert(1)</script>',kind:'possible_bonus',observedAt:1792134000},t2:{id:'t2',posted:1792133800,amount:'-20',description:'Coffee',kind:'withdrawal',observedAt:1792134000},t3:{id:'t3',posted:1792133700,amount:'40',description:'Transfer from savings',kind:'other_deposit',observedAt:1792134000}};}
     if(method==='DELETE')state={configured:true,connected:false,evidenceOnly:true};
-    if(url.pathname.endsWith('/connect'))state=seed();
+    if(url.pathname.endsWith('/reconnect')){state.status='connected';delete state.error;state.nextSyncAt=0;}
+    else if(url.pathname.endsWith('/connect'))state=seed();
     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(state)});
    });
    await page.addInitScript(({entry})=>{const RealDate=Date,now=Date.parse('2026-10-16T07:00:00Z');window.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[now]))}static now(){return now}};localStorage.setItem('bt_e_v4',JSON.stringify([entry]));localStorage.setItem('bonus-ai-auth',JSON.stringify({access_token:'synthetic-access',refresh_token:'synthetic-refresh',expires_at:4102444800}));},{entry});
@@ -62,6 +63,17 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
     assert.ok(geometry.modalWidth<=geometry.width&&geometry.scrollWidth<=geometry.clientWidth+1&&geometry.footerBottom<=geometry.height,name+' layout at '+width+': '+JSON.stringify(geometry));
     await dialog.getByText('Possible bonus · review',{exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,name+'-simplefin-activity-'+width+'.png')});
    }
+   state.status='attention';state.error='SimpleFIN access was rejected.';
+   await dialog.getByRole('button',{name:'Refresh status',exact:true}).click();
+   await dialog.getByText('Connection needs attention',{exact:true}).waitFor();
+   const reconnect=dialog.getByText('Reconnect SimpleFIN',{exact:true});await reconnect.click();
+   await dialog.getByLabel('New SimpleFIN setup token',{exact:true}).fill('synthetic-replacement-token');
+   await dialog.getByRole('button',{name:'Reconnect securely',exact:true}).click();
+   await dialog.getByText('Connection active',{exact:true}).waitFor();
+   assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened},'reconnect retains bonus links');
+   assert.deepEqual(state.monitoredAccounts,[account.key],'reconnect retains monitoring');
+   assert.ok(requests.some(r=>r.path.endsWith('/reconnect')&&JSON.parse(r.body).setup_token==='synthetic-replacement-token'));
+   assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-replacement-token')),false);
    assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before);
    await dialog.getByRole('button',{name:'Done',exact:true}).click();
    state={configured:true,connected:false,evidenceOnly:true};await page.evaluate(()=>btOpenBankSync());await page.getByLabel('SimpleFIN setup token',{exact:true}).waitFor();
