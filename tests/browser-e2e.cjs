@@ -493,7 +493,7 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>{bonusPipelineMetrics=window.__dashboardMetrics;delete window.__dashboardMetrics;R();});
     for(const width of [320,390]){
       await page.setViewportSize({width,height:844});
-      for(const name of ['Tracker','Bank Bonuses','Tax','Datapoints','T&C Archive']){
+      for(const name of ['Tracker','Bank Bonuses','Finances','Tax','Datapoints','T&C Archive']){
         await button(name).click();
         check(name+' fits '+width+'px mobile width',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
         check(name+' navigation starts at the top at '+width+'px',await page.locator('.scroll').evaluate(e=>e.scrollTop===0));
