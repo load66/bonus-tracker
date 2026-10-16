@@ -382,6 +382,7 @@
   function transactions(host){
     const card=el('section',undefined,host,'finance-page-card finance-page-transactions-card');
     const head=el('div',undefined,card,'finance-page-section-head finance-page-transactions-head');el('h3','Transactions',head);
+    action(head,'Refresh activity',refreshActivity,'finance-page-preview-link');
     const controls=el('div',undefined,card,'finance-page-transaction-tools');
     const searchWrap=el('div',undefined,controls,'finance-page-search-wrap');
     el('span','⌕',searchWrap,'finance-page-search-icon');
