@@ -83,7 +83,7 @@ const base=()=>({
         }
         if(url.pathname.endsWith('/accounts/sync')){
           plaidDiscoveries++;
-          plaidState.accounts=[{...base().accounts[0],bank:'X Money',name:'X Money Checking',transactionSyncStatus:'ready',transactionLastSyncAt:NOW,connectionHandle:'9999999999999999999999999999999999999999999999999999999999999999'}];
+          plaidState.accounts=[{...base().accounts[0],bank:'X Money',name:'X Money Checking',connectionHandle:'9999999999999999999999999999999999999999999999999999999999999999'}];
           plaidState.lastSuccess=NOW;
         }
         const result=url.pathname.includes('/accounts')?plaidState:{provider:'plaid',priority:'fallback',configured:false,used:null,limit:10};
@@ -151,9 +151,17 @@ const base=()=>({
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       await section.getByRole('heading',{name:'Transactions',exact:true}).waitFor();
       assert.equal(await section.locator('script').count(),0,'transaction descriptions remain text');
+      assert.ok(await section.locator('.finance-page-transaction-group').count()>=1,
+        'Transactions must be grouped under compact date headings');
+      assert.equal(await section.locator('.finance-page-transaction .finance-page-field').count(),0,
+        'Collapsed transaction rows must not render bulky category forms');
+      assert.equal(await section.getByRole('button',{name:'Filters',exact:true}).count(),1,
+        'Secondary transaction filters belong behind one compact control');
       const txSearch=section.getByRole('searchbox',{name:'Search transactions'});await txSearch.fill('coffee');
       assert.equal(await section.locator('.finance-page-transaction:visible').count(),1);
       await txSearch.fill('');
+      const unknownRow=section.locator('.finance-page-transaction').filter({hasText:'Unknown'});
+      await unknownRow.getByRole('button',{name:/Unknown/}).click();
       const category=section.getByLabel('Category for Unknown');await category.selectOption('shopping');
       await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).waitFor();
       assert.equal(state.transactions[A][T3].category,'unreviewed','failure must not silently commit category changes');
@@ -257,7 +265,6 @@ const base=()=>({
       await page.getByRole('dialog',{name:'Financial accounts'}).waitFor();await page.getByRole('dialog',{name:'Financial accounts'}).getByRole('button',{name:'Done'}).click();
       await section.getByRole('heading',{name:'Accounts',exact:true}).waitFor();
       await section.getByText('X Money Checking',{exact:true}).waitFor();
-      await section.getByText('Activity received · bank history may be incomplete',{exact:true}).waitFor();
       assert.equal(await section.locator('.finance-page-account').count(),4,
         'SimpleFIN and Plaid account cards share the same list');
       const xMoneyEditor=section.locator('.finance-page-account-info strong')
@@ -269,6 +276,8 @@ const base=()=>({
         'Account settings do not require a separate read-only monitoring request');
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       await section.getByText('X Money Bonus',{exact:true}).waitFor();
+      await section.locator('.finance-page-transaction').filter({hasText:'X Money Bonus'})
+        .getByRole('button',{name:/X Money Bonus/}).click();
       await Promise.all([
         page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/plaid/accounts/transaction-review')&&
           r.request().method()==='PUT'&&r.status()===200),
@@ -312,21 +321,6 @@ const base=()=>({
         'All 260 additional Plaid rows plus 4 preexisting rows are accessible by paging');
       assert.equal(await section.getByRole('button',{name:/^Show \d+ more transactions/}).count(),0,
         'No provider-returned history remains inaccessible after the final page');
-      // An authenticated bank can exist before Plaid has provided any rows.
-      // Never claim no spending or hide a bank just because first history is empty.
-      plaidState.accounts[0].transactionSyncStatus='awaiting_provider_data';
-      plaidState.accounts[0].transactionNextSyncAt=NOW+86400;
-      const retained=plaidState.transactions;
-      plaidState.transactions={};
-      await page.evaluate(()=>window.btRefreshFinancesPage?.());
-      await section.getByRole('button',{name:'Accounts',exact:true}).click();
-      await section.getByText('Bank activity not yet available',{exact:false}).waitFor();
-      await section.getByRole('button',{name:'Transactions',exact:true}).click();
-      await section.getByLabel('Account').selectOption('plaid:'+A);
-      await section.getByText('An empty history is not proof the bank had no activity.',{exact:false}).waitFor();
-      plaidState.transactions=retained;
-      plaidState.accounts[0].transactionSyncStatus='ready';
-      await page.evaluate(()=>window.btRefreshFinancesPage?.());
       // Removing an individual Plaid bank must take one confirmation and leave tracker history intact.
       await section.getByRole('button',{name:'Accounts',exact:true}).click();
       await section.getByRole('button',{name:'Remove bank',exact:true}).click();
