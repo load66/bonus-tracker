@@ -163,6 +163,8 @@ const base=()=>({
       const txSearch=section.getByRole('searchbox',{name:'Search transactions'});await txSearch.fill('coffee');
       assert.equal(await section.locator('.finance-page-transaction:visible').count(),1);
       await txSearch.fill('');
+      const unknownRow=section.locator('.finance-page-transaction').filter({hasText:'Unknown'});
+      await unknownRow.getByRole('button',{name:/Unknown/}).click();
       const category=section.getByLabel('Category for Unknown');await category.selectOption('shopping');
       await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).waitFor();
       assert.equal(state.transactions[A][T3].category,'unreviewed','failure must not silently commit category changes');
@@ -277,6 +279,7 @@ const base=()=>({
         'Account settings do not require a separate read-only monitoring request');
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       await section.getByText('X Money Bonus',{exact:true}).waitFor();
+      await section.locator('.finance-page-transaction').filter({hasText:'X Money Bonus'}).getByRole('button',{name:/X Money Bonus/}).click();
       await Promise.all([
         page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/plaid/accounts/transaction-review')&&
           r.request().method()==='PUT'&&r.status()===200),
@@ -399,7 +402,8 @@ const base=()=>({
         category:'unreviewed',categorySource:'automatic',confidence:'low',signals:[]};
       await page.evaluate(()=>window.btRefreshFinancesPage?.());
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
-      await section.locator('.finance-page-filters select').nth(2).selectOption('pending');
+      await section.getByRole('button',{name:'Filters',exact:true}).click();
+      await section.getByLabel('Status').selectOption('pending');
       await section.getByText('Unsettled purchase',{exact:true}).waitFor();
       await section.getByRole('button',{name:'Clear all filters'}).click();
       assert.ok((await section.locator('.finance-page-transaction').allTextContents()).some(x=>x.includes('Unsettled')));
