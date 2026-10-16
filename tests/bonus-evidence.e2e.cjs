@@ -160,8 +160,13 @@ return result;
         // Large queues must remain accessible, not permanently clipped to
         // 5 pending / 10 total entries. The first few remain compact.
         extra=14;
-        await reopened.getByRole('button',{name:'Hide reviewed items'}).click();
-        await reopened.getByRole('button',{name:'Refresh',exact:true}).click();
+        const reviewClick=async name=>reopened.evaluate((root,label)=>{
+          const btn=[...root.querySelectorAll('button')].find(n=>n.textContent.trim()===label);
+          if(!btn||btn.disabled)throw Error('Evidence review button not actionable: '+label);
+          btn.click();
+        },name);
+        await reviewClick('Hide reviewed items');
+        await reviewClick('Refresh');
         await reopened.getByRole('button',{name:'Show 5 more to review'}).waitFor();
         assert.equal(await reopened.locator('.bonus-evidence-row').count(),5,
           'first render remains compact even with many pending deposits');
@@ -185,10 +190,10 @@ return result;
         assert.equal(await reopened.getByRole('button',{name:/^Show \d+ more to review$/}).count(),0,
           'no pending evidence should become stranded behind paging');
         assert.equal(await reopened.locator('img').count(),0,'long queues must safely escape untrusted descriptions');
-        await reopened.getByRole('button',{name:'Show reviewed / dismissed'}).click();
+        await reviewClick('Show reviewed / dismissed');
         assert.equal(await reopened.getByRole('button',{name:'Undo review'}).count(),1,
           'resolved receipts must remain reachable even with many pending entries');
-        await reopened.getByRole('button',{name:'Hide reviewed items'}).click();
+        await reviewClick('Hide reviewed items');
         await page.setViewportSize({width:320,height:760});
         const geometry=await reopened.evaluate(n=>({viewport:innerWidth,width:n.getBoundingClientRect().width,content:n.scrollWidth}));
         assert.ok(geometry.width<=geometry.viewport+1&&geometry.content<=geometry.width+1,
