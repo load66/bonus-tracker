@@ -80,6 +80,19 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    assert.equal(await dialog.locator('input[type="password"]').count(),0,'No bank passwords collected in the guided flow');
    assert.equal(await dialog.locator('#bank-sync-token').count(),0,'Adding an institution never requires another setup token');
    assert.equal(requests.some(r=>r.path.endsWith('/discover')),false,'Guided wizard must not silently query provider');
+   for(const width of [320,390,430]){
+    await page.setViewportSize({width,height:760});
+    const fit=await dialog.evaluate(d=>{
+      const modal=d.querySelector('.bank-sync-modal'),body=d.querySelector('.bank-sync-body');
+      const rect=modal.getBoundingClientRect();
+      return {width:innerWidth,modalWidth:rect.width,scrollWidth:body.scrollWidth,clientWidth:body.clientWidth,
+        footerBottom:d.querySelector('footer').getBoundingClientRect().bottom};
+    });
+    assert.ok(fit.modalWidth<=fit.width+1&&fit.scrollWidth<=fit.clientWidth+1&&fit.footerBottom<=760+1,
+      name+' guided Add Bank mobile layout '+width+': '+JSON.stringify(fit));
+    await page.screenshot({path:path.join(output,name+'-guided-add-bank-'+width+'.png')});
+   }
+   await page.setViewportSize({width:390,height:844});
    await dialog.getByRole('button',{name:'Refresh accounts after adding bank'}).click();
    await dialog.getByRole('heading',{name:'Ready to organize your accounts'}).waitFor();
    await dialog.getByText('Found 1 new account').waitFor();
