@@ -350,6 +350,12 @@ const base=()=>({
       assert.ok(requests.some(r=>r.path.endsWith('/simplefin/accounts/'+B)&&r.method==='DELETE'));
       await page.waitForFunction(()=>document.querySelector('#bt-finances-page')?.getAttribute('aria-busy')==='false');
       await section.locator('summary',{hasText:'Removed accounts (1)'}).click();
+      const restoreClickInfo=await section.getByRole('button',{name:'Restore',exact:true}).evaluate(button=>{
+        const original=button.onclick;
+        window.__btRestoreClickCount=0;
+        button.onclick=function(...args){window.__btRestoreClickCount++;return original?.apply(this,args)};
+        return {hasHandler:typeof original==='function',disabled:button.disabled};
+      });
       await section.getByRole('button',{name:'Restore',exact:true}).click();
       await page.waitForFunction(()=>(
         document.querySelector('#bt-finances-page')?.textContent||''
@@ -361,7 +367,8 @@ const base=()=>({
         throw Error('Restore did not update synthetic account: '+JSON.stringify({
           recentRequests:requests.slice(-6).map(r=>({path:r.path,method:r.method})),messages,
           removedButtons:await section.getByRole('button',{name:'Restore',exact:true}).count(),
-          visibleAccounts:state.accounts.map(a=>a.key)
+          restoreClickInfo,clickCount:await page.evaluate(()=>window.__btRestoreClickCount),
+          pageErrors:errors.slice(-5),visibleAccounts:state.accounts.map(a=>a.key)
         }));
       }
       assert.equal(state.removedAccounts[B],undefined,'Restoration clears exact account exclusion');
