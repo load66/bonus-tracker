@@ -112,4 +112,16 @@ result=summarize(classified,{now:NOW});
 assert.equal(result.cashAvailable,false,'stale deposit balances cannot produce a cash total');
 assert.equal(result.netWorthAvailable,false,'stale balances cannot produce net worth');
 
+
+const pendingZero={...row('-18.99',0,'withdrawal'),pending:true,
+  transactedAt:NOW-90,observedAt:NOW,category:'shopping'};
+const pendingOnly=summarize({
+  accounts:[account('pending-account')],monitoredAccounts:['pending-account'],
+  transactions:{'pending-account':{'auth-only':pendingZero}},lastSuccess:NOW
+},{now:NOW,days:30});
+assert.equal(pendingOnly.pending,1,
+  'BATCH 1 RED: pending transactions with posted=0 and valid transactedAt count as pending observations');
+assert.equal(pendingOnly.observations,0,
+  'Pending authorizations must never inflate posted cash flow');
+
 console.log('Financial observations passed: strict scope, multi-currency safety, exact cents, availability, coverage, privacy and non-mutation');
