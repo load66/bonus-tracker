@@ -15,7 +15,7 @@
     subscription:'Subscription',transfer:'Transfer',refund:'Refund',bonus:'Bank bonus',other:'Other'
   };
   let currentRoot=null,sequence=0,hidden=false,data=null,otherData=null,busy=false,view='overview',period=90;
-  let transactionSearch='',transactionAccount='',transactionCategory='',transactionStatus='';
+  let transactionSearch='',transactionAccount='',transactionCategory='',transactionStatus='',transactionVisibleLimit=100;
   let accountSearch='',accountType='',saveNotice='',accountDraftProfiles={},currentCombined=null;
   let activityNotice='',monitoringNotice='',connectionNotice='';
   const dirtyAccounts=new Set(),expandedAccountSettings=new Set(),monitoringDraft={};
@@ -423,11 +423,11 @@
     activityPrompt(host);
     const controls=el('div',undefined,card,'finance-page-filters');
     const search=el('input',undefined,controls,'finance-page-search');search.type='search';search.placeholder='Search transactions';search.setAttribute('aria-label','Search transactions');search.value=transactionSearch;
-    search.oninput=()=>{transactionSearch=search.value.trim().toLowerCase();renderRows()};
+    search.oninput=()=>{transactionSearch=search.value.trim().toLowerCase();transactionVisibleLimit=100;renderRows()};
     const accountValues={'':'All accounts'};for(const a of sortedAccounts())accountValues[a.key]=[a.bank,a.name,a.sourceLabel].filter(Boolean).join(' · ');
-    select(controls,'Account',accountValues,transactionAccount,value=>{transactionAccount=value;renderRows()});
-    select(controls,'Category',{'':'All categories',...CATEGORIES},transactionCategory,value=>{transactionCategory=value;renderRows()});
-    select(controls,'Status',{'':'Posted and pending',posted:'Posted',pending:'Pending'},transactionStatus,value=>{transactionStatus=value;renderRows()});
+    select(controls,'Account',accountValues,transactionAccount,value=>{transactionAccount=value;transactionVisibleLimit=100;renderRows()});
+    select(controls,'Category',{'':'All categories',...CATEGORIES},transactionCategory,value=>{transactionCategory=value;transactionVisibleLimit=100;renderRows()});
+    select(controls,'Status',{'':'Posted and pending',posted:'Posted',pending:'Pending'},transactionStatus,value=>{transactionStatus=value;transactionVisibleLimit=100;renderRows()});
     const list=el('div',undefined,card,'finance-page-transactions');
     function renderRows(){
       list.replaceChildren();const cutoff=Math.floor(Date.now()/1000)-period*86400;
@@ -441,7 +441,7 @@
       if(!filtered.length){el('p',activityCoverage().enabled?
         'No matching posted transactions yet. Check the selected account, date range, and next provider sync.':
         'Transactions have not been enabled. Choose which accounts to monitor above.',list);return}
-      for(const row of filtered.slice(0,250)){
+      for(const row of filtered.slice(0,transactionVisibleLimit)){
         const article=el('article',undefined,list,'finance-page-transaction');
         const top=el('div',undefined,article,'finance-page-transaction-top'),copy=el('div',undefined,top);
         el('strong',row.merchant||'Transaction',copy);
@@ -461,7 +461,12 @@
         el('small',row.categorySource==='user'?'Confirmed by you':'Automatic · '+(row.confidence||'low')+' confidence',article,'finance-page-source');
         if(row.changedAt)el('small','Provider changed this transaction on '+stamp(row.changedAt)+'. A previous correction was cleared for review.',article,'finance-page-warning');
       }
-      if(filtered.length>250)el('p','Showing the latest 250 matching transactions.',list);
+      if(filtered.length>transactionVisibleLimit){
+        const remaining=filtered.length-transactionVisibleLimit;
+        action(list,'Show '+Math.min(100,remaining)+' more transactions · '+remaining+' remaining',()=>{
+          transactionVisibleLimit+=100;renderRows();
+        },'finance-page-button finance-page-show-more');
+      }
     }
     renderRows();
   }
