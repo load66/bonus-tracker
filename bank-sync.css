@@ -44,3 +44,19 @@
 .bank-connect-bottom{padding:5px 0}
 .bank-connect-flow a:focus-visible,.bank-connect-flow button:focus-visible{outline:3px solid #b7dbff;outline-offset:3px}
 @media(max-width:370px){.bank-connect-header,.bank-connect-stage{padding:12px}.bank-connect-steps{gap:5px}.bank-connect-steps li{padding:8px 6px}.bank-connect-actions a{width:100%}}
+
+/* Simple one-screen connect flow; explanations live under Help. */
+.bank-connect-flow{gap:10px}
+.bank-connect-header{padding:14px 15px}
+.bank-connect-header h3{font-size:19px!important}
+.bank-connect-header p{margin:4px 0 0;font-size:12px}
+.bank-connect-stage{padding:13px 14px}
+.bank-connect-stage p{margin:5px 0;font-size:12px}
+.bank-connect-flow .bank-connect-link{flex:1 1 160px;min-width:0}
+.bank-connect-flow .bank-connect-finish{width:100%;min-height:48px}
+.bank-connect-fallback,.bank-connect-security-details{padding:12px 13px;border:1px solid #46617f;border-radius:12px;background:#14253c}
+.bank-connect-fallback>summary,.bank-connect-security-details>summary{cursor:pointer;font-size:13px;font-weight:700;color:#bcd9ff;min-height:30px;display:flex;align-items:center}
+.bank-connect-fallback[open],.bank-connect-security-details[open]{background:#172a43}
+.bank-sync-add-institution{padding:13px}
+.bank-sync-add-institution .bank-sync-links{margin-top:5px}
+@media(max-width:380px){.bank-connect-header,.bank-connect-stage{padding:11px}.bank-connect-flow .bank-connect-link{width:100%;margin:2px 0}}
