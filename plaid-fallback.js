@@ -49,6 +49,72 @@
     const message=elem('p','',host,'plaid-trial-message');
     message.setAttribute('role','status');
     const body=elem('div',undefined,host,'plaid-trial-control');
+    const accountsArea=elem('div',undefined,host,'plaid-trial-accounts');
+    let amountsVisible=false;
+    function renderAccounts(snapshot){
+      if(!host.isConnected)return;
+      accountsArea.replaceChildren();
+      elem('h5','Connected fallback accounts',accountsArea);
+      const items=Array.isArray(snapshot.accounts)?snapshot.accounts:[];
+      if(!items.length){
+        elem('p','Your Plaid connection is secured. Discover accounts before choosing which ones to monitor.',accountsArea);
+      }
+      const selected=new Set(snapshot.monitoredAccounts||[]);
+      const options=elem('div',undefined,accountsArea,'plaid-trial-account-list');
+      for(const account of items){
+        const label=elem('label',undefined,options,'plaid-trial-check');
+        const check=elem('input',undefined,label);check.type='checkbox';
+        check.value=account.key;check.checked=selected.has(account.key);
+        elem('span',[account.bank,account.name].filter(Boolean).join(' · '),label);
+      }
+      if(items.length){
+        action(accountsArea,'Save monitored accounts',async()=>{
+          const choices=[...options.querySelectorAll('input:checked')].map(n=>n.value);
+          message.textContent='Saving monitoring preferences…';
+          try{
+            const result=await api('/accounts/monitoring',{method:'PUT',body:JSON.stringify({accounts:choices})});
+            message.textContent='Monitoring preferences saved. No bonus milestones were changed.';
+            renderAccounts(result);
+          }catch(error){message.textContent=error.message;}
+        });
+      }
+      action(accountsArea,items.length?'Sync selected activity':'Discover connected accounts',async()=>{
+        message.textContent='Requesting read-only account status…';
+        try{
+          const result=await api('/accounts/sync',{method:'POST'});
+          message.textContent=result.error||'Latest available provider data loaded. Review possible bonuses manually.';
+          renderAccounts(result);
+        }catch(error){message.textContent=error.message;}
+      });
+      const signals=Object.values(snapshot.transactions||{}).flatMap(rows=>Object.values(rows||{}))
+        .filter(row=>!row.pending&&Array.isArray(row.signals)&&row.signals.some(v=>
+          ['possible_bonus','possible_direct_deposit','possible_fee','possible_reversal'].includes(v)));
+      if(signals.length){
+        const review=elem('div',undefined,accountsArea,'plaid-trial-observations');
+        elem('h5','Unverified activity for review',review);
+        action(review,amountsVisible?'Hide amounts':'Show amounts',()=>{
+          amountsVisible=!amountsVisible;renderAccounts(snapshot);
+        });
+        for(const row of signals.slice(0,5)){
+          const label=elem('p',undefined,review);
+          const flags=row.signals.filter(v=>v.startsWith('possible_'))
+            .map(v=>v.replace(/^possible_/,'').replaceAll('_',' '));
+          const amount=amountsVisible?(' · '+row.amount+' '+(row.currency||'USD')):' · ••••••';
+          label.textContent=(row.merchant||row.description||'Transaction')+
+            ' · '+flags.join(', ')+amount;
+        }
+        elem('p','These observations do not verify qualifying deposits or bonus payouts. Confirm official promotion rules in Tracker.',review);
+      }
+      if(snapshot.error)elem('p',snapshot.error,accountsArea,'plaid-trial-caution');
+      if(snapshot.stale)elem('p','Provider data is stale or not yet synchronized.',accountsArea,'plaid-trial-caution');
+    }
+    async function loadAccounts(){
+      if(!host.isConnected)return;
+      try{
+        const snapshot=await api('/accounts');
+        if(host.isConnected&&snapshot.configured)renderAccounts(snapshot);
+      }catch(error){if(host.isConnected)message.textContent=error.message}
+    }
     const linkedNames=new Set((Array.isArray(linkedAccounts)?linkedAccounts:[])
       .map(a=>String(a.bank||'').trim().toLowerCase()).filter(Boolean));
     const status=()=>api().then(data=>{
@@ -62,6 +128,7 @@
         return;
       }
       elem('p','Every new Plaid login permanently uses 1 of 10 slots, even if disconnected later. Never re-link unnecessarily.',body,'plaid-trial-caution');
+      if(Array.isArray(data.connected)&&data.connected.length)loadAccounts();
       if((data.remaining||0)<=0){
         elem('p','No unused Plaid Trial slots remain. Use SimpleFIN or manual entry. Paid upgrades are disabled.',body);
         return;
