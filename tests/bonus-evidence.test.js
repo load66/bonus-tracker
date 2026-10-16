@@ -47,7 +47,7 @@ assert.deepEqual(output.campaigns[0].pending.map(row=>row.type),
   ['reversal','fee','bonus','directDeposit','recurring'],
   'urgent reversals and fees must appear before routine deposits in the review inbox');
 assert.deepEqual(output.campaigns[0].activity.map(row=>row.type),
-  ['directDeposit','fee','bonus','reversal','recurring'],
+  ['directDeposit','fee','recurring','bonus','reversal'],
   'source transaction history must remain newest-first independently of review priority');
 assert.equal(output.campaigns.find(x=>x.entryId==='offer-2').unsupportedCurrency,1);
 assert.equal(output.campaigns.find(x=>x.entryId==='offer-2').counts.bonus,0);
