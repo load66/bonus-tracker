@@ -327,6 +327,7 @@
       if(x.undated)extra.push(x.undated+' without bank as-of date');
       if(x.missing)extra.push(x.missing+' missing balance');
       if(x.unsupportedCurrency)extra.push(x.unsupportedCurrency+' other currency');
+      if(x.unclassified)extra.push(x.unclassified+' account type unclassified');
       return x.covered+' of '+x.eligible+' eligible accounts'+(extra.length?' · '+extra.join(' · '):'');
     };
     metric(grid,'Cash'+(summary.cashAvailable?'':' · partial'),
