@@ -2,7 +2,7 @@
 const fs=require('fs'),vm=require('vm');
 function assert(ok,msg){if(!ok)throw new Error(msg)}
 const sw=fs.readFileSync('sw.js','utf8');
-assert(sw.includes("const V = 'bt-v3.4.74-unified2'"),'Service-worker release cache is stale');
+assert(sw.includes("const V = 'bt-v3.4.74-plaid-compact1'"),'Service-worker release cache is stale');
 assert(sw.includes('installCompleteCache')&&!/cache\.addAll\(ASSETS\)\.catch/.test(sw),'Atomic cache install hardening missing');
 assert(sw.includes("if(req.mode==='navigate')")&&sw.includes("status:503"),'Navigation-only HTML fallback / asset failure response missing');
 assert(sw.includes('responseMatches(url.pathname,res)'),'Asset content-type validation missing');

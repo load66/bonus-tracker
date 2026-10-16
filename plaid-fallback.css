@@ -51,3 +51,22 @@
 .plaid-trial-advanced[open]{padding-bottom:11px}
 .plaid-trial-fallback :is(button,input,select,summary):focus-visible{outline:3px solid #aad4ff;outline-offset:2px}
 .plaid-trial-account-card select{appearance:none;-webkit-appearance:none;padding-right:32px;background-image:linear-gradient(45deg,transparent 50%,#b9d3f2 50%),linear-gradient(135deg,#b9d3f2 50%,transparent 50%);background-position:calc(100% - 17px) 50%,calc(100% - 12px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+
+/* Bank linking is a one-decision flow: put detailed tools behind disclosure. */
+.plaid-trial-fallback{padding:13px 14px}
+.plaid-trial-fallback h4{margin-bottom:4px;font-size:1rem}
+.plaid-trial-fallback .plaid-trial-subtitle{font-size:12px;line-height:1.35;margin:2px 0 10px}
+.plaid-trial-fallback .plaid-trial-counter{font-size:12px;margin:4px 0 2px;color:#bddefc!important}
+.plaid-trial-fallback .plaid-trial-capacity{height:4px;margin:6px 0 10px}
+.plaid-trial-fallback .plaid-trial-disclosure{font-size:12px;line-height:1.5;margin:4px 0 8px;color:#bdcfe5}
+.plaid-trial-fallback .plaid-trial-control{gap:7px}
+.plaid-trial-fallback .plaid-trial-control label{gap:5px;font-size:12px}
+.plaid-trial-fallback .plaid-trial-control input[type=text]{min-height:46px}
+.plaid-trial-fallback .plaid-trial-action{min-height:48px}
+.plaid-trial-fallback .plaid-trial-accounts{display:block;padding:0;border-top:0;margin-top:10px;gap:0}
+.plaid-trial-fallback .plaid-trial-accounts:not([open])>:not(summary){display:none!important}
+.plaid-trial-fallback .plaid-trial-accounts>summary{min-height:48px;display:flex;align-items:center;cursor:pointer;font-size:13px}
+.plaid-trial-fallback .plaid-trial-accounts[open]{padding-bottom:10px}
+.plaid-trial-fallback .plaid-trial-accounts .plaid-trial-account-list{display:grid;gap:9px;margin-top:6px}
+.plaid-trial-fallback .plaid-trial-advanced[hidden]{display:none!important}
+@media(max-width:390px){.plaid-trial-fallback{padding:11px 12px}}
