@@ -4,7 +4,7 @@
   const API='https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin';
   let panel=null,data=null,busy=false,generation=0,returnFocus=null,hideBalances=false,accountFilter='',view='accounts',wizardResult=null,changed=false;
   const el=(tag,text,parent)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(parent)parent.append(n);return n;};
-  const stamp=t=>typeof t==='number'&&t>0?new Date(t*1000).toLocaleString():'Not available';
+  const stamp=t=>typeof t==='number'&&t>0?new Date(t*1000).toLocaleString():'Not synced';
   const money=(a,c)=>{if(a===null||a===undefined||a===''||!Number.isFinite(Number(a)))return 'Unavailable';if(!c)return String(a)+' (currency unknown)';try{return new Intl.NumberFormat(undefined,{style:'currency',currency:c}).format(Number(a));}catch{return String(a)+' '+String(c);}};
   const active=()=>typeof entries!=='undefined'&&Array.isArray(entries)?entries.filter(e=>!e.closed&&e.id&&e.opened):[];
   const snapshot=d=>window.BTFinanceOverview?.summarize(d)||null;
@@ -53,67 +53,62 @@
     a.className='bank-connect-link'+(primary?' bank-connect-link-primary':'');
     return a;
   }
+  async function discoverAccounts(){
+    if(!data?.connected){view='add-bank';paint();message('Connect SimpleFIN first.');return;}
+    const old=new Set((data.accounts||[]).map(a=>a.key));
+    data=await request('/discover',{method:'POST'});
+    const added=(data.accounts||[]).filter(a=>!old.has(a.key)).length;
+    if(added)accountFilter='';
+    const due=data.nextDiscoveryAt&&data.nextDiscoveryAt*1000>Date.now();
+    wizardResult=added?'Found '+added+' new account'+(added===1?'':'s')+'.':
+      due?'No new accounts yet. Next provider check: '+new Date(data.nextDiscoveryAt*1000).toLocaleString()+'.':
+      'No new accounts returned. Confirm the bank is authorized in SimpleFIN.';
+    paint();
+    message(wizardResult);
+    if(added)window.btRefreshFinancesPage?.();
+  }
   function connectFlow(body){
     const connected=Boolean(data?.connected);
     const shell=el('section',undefined,body);shell.className='bank-connect-flow';
     const top=el('div',undefined,shell);top.className='bank-connect-header';
     el('span','SECURE BANK CONNECTION',top).className='bank-connect-kicker';
-    el('h3',connected?'Add a financial institution':'Connect your first bank',top);
-    el('p','Complete authorization through SimpleFIN, then return to BonusTracker to manage your connected accounts.',top);
-    const steps=el('ol',undefined,shell);steps.className='bank-connect-steps';
-    for(const [n,label] of [['01','Open secure connection'],['02',connected?'Authorize your bank':'Get a one-time token'],['03',connected?'Find your accounts':'Finish in BonusTracker']]){
-      const li=el('li',undefined,steps);
-      el('b',n,li);el('span',label,li);
-    }
+    el('h3',connected?'Add a bank':'Connect your first bank',top);
+    el('p',connected?'Your linked accounts stay connected.':'Your login and verification stay with the bank.',top);
     const external=el('section',undefined,shell);external.className='bank-connect-stage';
-    el('h4','1. Open the bank connection',external);
-    el('p','Sign in with your SimpleFIN account and choose Financial Institutions → Add a bank. Your bank credentials and any verification codes are entered only on the provider or bank’s secure site.',external);
+    el('h4','1 · Authorize your bank',external);
     const links=el('div',undefined,external);links.className='bank-connect-actions';
-    secureLink(links,'Continue securely to SimpleFIN ↗','https://beta-bridge.simplefin.org/',true);
+    secureLink(links,'Open SimpleFIN ↗','https://beta-bridge.simplefin.org/',true);
     secureLink(links,'Check supported banks ↗','https://beta-bridge.simplefin.org/search-institutions');
-    el('p','SimpleFIN requires a separate provider authorization screen. BonusTracker never asks for your bank password or verification code.',external).className='bank-connect-security';
+    el('p','In SimpleFIN, go to Financial Institutions and add your bank.',external);
     const finish=el('section',undefined,shell);finish.className='bank-connect-stage';
     if(connected){
-      el('h4','2. Return and find your newly authorized accounts',finish);
-      el('p','After adding the bank in SimpleFIN, return to this window and select Find my accounts. We keep your existing linked bonuses, transaction history and monitoring settings.',finish);
-      const btn=button(finish,'I authorized my bank — Find my accounts',async()=>{
-        const old=new Set((data.accounts||[]).map(a=>a.key));
-        data=await request('/discover',{method:'POST'});
-        const added=(data.accounts||[]).filter(a=>!old.has(a.key)).length;
-        if(added)accountFilter='';
-        wizardResult=added?'Found '+added+' new account'+(added===1?'':'s')+'.':'No new accounts were returned.';
-        paint();
-        message(added
-          ?'New accounts found. Review their monitoring and bonus links before saving.'
-          :'No accounts appeared yet. Confirm the bank is authorized in SimpleFIN. Discovery may be limited to once per 24 hours.');
-      },'btn-p');
-      btn.classList.add('bank-connect-finish');
-      el('p','SimpleFIN may limit discovery to one request per 24 hours. Newly authorized banks can also take time to appear; this button does not force the bank to refresh sooner.',finish);
-      if(wizardResult){
-        const notice=el('p',wizardResult,finish);notice.className='bank-connect-outcome';notice.setAttribute('role','status');
-      }
+      el('h4','2 · Discover accounts',finish);
+      el('p','Return here after bank authorization.',finish);
+      const btn=button(finish,'Discover accounts',discoverAccounts,'btn-p');btn.classList.add('bank-connect-finish');
+      if(wizardResult){const notice=el('p',wizardResult,finish);notice.className='bank-connect-outcome';notice.setAttribute('role','status');}
     }else{
-      el('h4','2. Authorize BonusTracker using a one-time token',finish);
-      el('p','After authorizing your bank, choose Apps → New Connection in SimpleFIN, then copy the one-time setup token. Return here to finish linking BonusTracker.',finish);
+      el('h4','2 · Link BonusTracker once',finish);
+      el('p','In SimpleFIN, select Apps → New Connection, then paste your one-time token below.',finish);
       secureLink(finish,'Get my SimpleFIN setup token ↗','https://bridge.simplefin.org/simplefin/create');
       const label=el('label','One-time SimpleFIN setup token',finish),input=el('textarea',undefined,label);
-      input.id='bank-sync-token';input.autocomplete='off';input.spellcheck=false;input.rows=3;
-      input.placeholder='Paste the one-time token from SimpleFIN';
+      input.id='bank-sync-token';input.autocomplete='off';input.spellcheck=false;input.rows=2;
+      input.placeholder='Paste setup token';
       const btn=button(finish,'Connect my accounts securely',async()=>{
         const token=input.value.trim();input.value='';
-        if(!token)throw Error('Paste the one-time setup token from SimpleFIN.');
+        if(!token)throw Error('Paste your one-time SimpleFIN setup token.');
         data=await request('/connect',{method:'POST',body:JSON.stringify({setup_token:token})});
         wizardResult='Connected. '+(data.accounts||[]).length+' account'+((data.accounts||[]).length===1?'':'s')+' available.';
-        paint();
-        message('SimpleFIN connection saved securely. Review accounts and enable monitoring only where needed.');
-      },'btn-p');
-      btn.classList.add('bank-connect-finish');
-      el('p','The setup token is single-use and exchanged securely by the BonusTracker backend. Do not share it in messages, screenshots or email.',finish);
+        paint();message(wizardResult);window.btRefreshFinancesPage?.();
+      },'btn-p');btn.classList.add('bank-connect-finish');
     }
     const fallback=el('details',undefined,shell);fallback.className='bank-connect-fallback';
-    el('summary','Plaid Trial fallback · only when SimpleFIN is unsupported',fallback);
+    el('summary','Not listed? Try Plaid fallback',fallback);
     const fallbackBody=el('div',undefined,fallback);
     window.BTLinkPlaidTrial?.mount(fallbackBody,data?.accounts||[]);
+    const help=el('details',undefined,shell);help.className='bank-connect-security-details';
+    el('summary','Connection help & security',help);
+    el('p','Bank credentials never go into BonusTracker. Adding a bank does not disconnect an existing one.',help);
+    el('p','SimpleFIN may allow discovery only once every 24 hours. A missing balance is not zero.',help);
     const back=el('div',undefined,shell);back.className='bank-connect-bottom';
     button(back,connected?'Back to connected accounts':'Back to connection options',async()=>{view='accounts';wizardResult=null;paint();});
     if(connected&&wizardResult)button(back,'Review account settings',async()=>{view='accounts';wizardResult=null;paint();},'btn-p');
@@ -133,20 +128,16 @@
     if(view==='add-bank'){connectFlow(body);return;}
     if(!data.connected){
       el('h3','Connect a financial institution',body);
+      el('p','SimpleFIN authorization is secure and separate. Connect once; add banks any time.',body);
       button(body,'Guided secure bank connection',async()=>{view='add-bank';wizardResult=null;paint();},'btn-p');
-      el('p','Check supported institutions before subscribing. Authorize only accounts you intend to share. SimpleFIN manages bank authorization and billing separately.',body);
-      const links=el('div',undefined,body);links.className='bank-sync-links';
-      for(const [label,url] of [['1. Add banks in SimpleFIN','https://beta-bridge.simplefin.org/'],['2. Get setup token','https://bridge.simplefin.org/simplefin/create'],['Check supported banks','https://beta-bridge.simplefin.org/search-institutions']]){const a=el('a',label,links);a.href=url;a.target='_blank';a.rel='noopener noreferrer';}
-      el('p','First add your banks under Financial Institutions in SimpleFIN. Then use Apps → New Connection to create a one-time setup token for BonusTracker. Paste that token here. Bank logins are completed in SimpleFIN, not BonusTracker. Never share bank passwords or tokens in chat.',body);
-      const label=el('label','SimpleFIN setup token',body),input=el('textarea',undefined,label);input.id='bank-sync-token';input.autocomplete='off';input.spellcheck=false;input.rows=3;
-      button(body,'Connect SimpleFIN',async()=>{const token=input.value.trim();input.value='';if(!token)throw Error('Paste the setup token from SimpleFIN.');data=await request('/connect',{method:'POST',body:JSON.stringify({setup_token:token})});paint();if(data.error)message(data.error);},'btn-p');
-      if(data.error)el('p',data.error,body);return;
+      if(data.error)el('p',data.error,body);
+      return;
     }
     const status=el('section',undefined,body);status.className='bank-sync-card';
     el('h3',data.status==='attention'?'Connection needs attention':'Connection active',status);
-    el('p','Last synced: '+stamp(data.lastSuccess),status);
-    el('p','Next sync: '+stamp(data.nextSyncAt)+'. Bank updates can take several days to appear.',status);
-    el('p','Balances and transactions may be delayed. A connection alone does not confirm a completed transaction sync.',status);
+    el('p','Last sync: '+stamp(data.lastSuccess),status);
+    if(Number.isFinite(data.nextSyncAt)&&data.nextSyncAt>0)el('p','Next check: '+stamp(data.nextSyncAt),status);
+
     if(data.error)el('p',data.error,status);
     for(const warning of data.warnings||[])el('p',warning,status);
     if(data.missingAccounts?.length)el('p','A selected account was missing from the latest response. Its saved evidence is retained; this does not mean it is closed.',status);
@@ -155,9 +146,9 @@
     // The institution chooser lives in the SimpleFIN Bridge, not BonusTracker.
     // Keep the external authorization clearly separated from this read-only app.
     const addSection=el('section',undefined,body);addSection.className='bank-sync-card bank-sync-add-institution';
-    el('h3','Add another bank',addSection);
-    button(addSection,'Connect a bank — guided setup',async()=>{view='add-bank';wizardResult=null;paint();},'btn-p');
-    el('p','New banks are authorized inside your existing SimpleFIN Bridge account—not from the account list below. You do not need to disconnect your current BonusTracker connection.',addSection);
+    el('h3','Add or find an account',addSection);
+    button(addSection,'Add bank',async()=>{view='add-bank';wizardResult=null;paint();},'btn-p');
+
     const addLinks=el('div',undefined,addSection);addLinks.className='bank-sync-links';
     const addLink=el('a','Add bank in SimpleFIN ↗',addLinks);
     addLink.href='https://beta-bridge.simplefin.org/';addLink.target='_blank';addLink.rel='noopener noreferrer';
@@ -165,17 +156,9 @@
     const supportedLink=el('a','Check supported banks',addLinks);
     supportedLink.href='https://beta-bridge.simplefin.org/search-institutions';
     supportedLink.target='_blank';supportedLink.rel='noopener noreferrer';
-    el('p','1. Open SimpleFIN and choose Financial Institutions → New Connection. 2. Authorize the new bank. 3. Return here and choose Refresh accounts. The provider may limit account discovery to one refresh every 24 hours.',addSection);
-    button(addSection,'Refresh accounts after adding bank',async()=>{
-      const existingKeys=new Set((data.accounts||[]).map(a=>a.key));
-      data=await request('/discover',{method:'POST'});
-      const newlyFound=(data.accounts||[]).filter(a=>!existingKeys.has(a.key)).length;
-      if(newlyFound)accountFilter=''; // Make newly discovered accounts visible even after searching the old bank.
-      paint();
-      message(newlyFound
-        ?'Found '+newlyFound+' new account'+(newlyFound===1?'':'s')+'. Select monitoring and link any appropriate bank bonus, then save your preferences.'
-        :'No new accounts appeared. Confirm the bank was added in SimpleFIN. Discovery can be limited to once per day, and provider updates may be delayed.');
-    },'btn-p');
+
+    button(addSection,'Discover accounts',discoverAccounts,'btn-p');
+    el('p','Already authorized a bank? Discover accounts. New provider accounts may take up to a day.',addSection);
 
     if(data.status==='attention'&&data.error){
       const recovery=el('details',undefined,status),summary=el('summary','Reconnect SimpleFIN',recovery);
@@ -286,7 +269,7 @@
     });
   }
   function open(mode='accounts'){
-    if(panel){view=mode==='add-bank'?'add-bank':'accounts';wizardResult=null;paint();return;}
+    if(panel){view=mode==='add-bank'?'add-bank':'accounts';wizardResult=null;paint();if(mode==='discover')run(discoverAccounts);return;}
     returnFocus=document.activeElement;generation++;data=null;changed=false;view=mode==='add-bank'?'add-bank':'accounts';wizardResult=null;
     panel=el('div');panel.className='ov bank-sync-overlay';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-labelledby','bank-sync-title');
     const modal=el('section',undefined,panel);modal.className='bank-sync-modal';
@@ -294,7 +277,7 @@
     const body=el('div',undefined,modal);body.className='bank-sync-body';
     const footer=el('footer',undefined,modal);const msg=el('p','',footer);msg.id='bank-sync-message';msg.setAttribute('role','status');
     const done=el('button','Done',footer);done.className='btn-s';done.type='button';done.onclick=close;
-    document.body.append(panel);paint();done.focus();if(window.BTBonusAuth?.connected())run(async()=>{data=await request();paint();});
+    document.body.append(panel);paint();done.focus();if(window.BTBonusAuth?.connected())run(async()=>{data=await request();if(mode==='discover')await discoverAccounts();else paint();});
   }
   function install(){
     const menu=document.querySelector('.header-data-panel');if(!menu||menu.querySelector('[data-bank-sync]'))return;
@@ -302,6 +285,7 @@
   }
   window.btOpenBankSync=open;
   window.btOpenBankConnectFlow=()=>open('add-bank');
+  window.btDiscoverBankAccounts=()=>open('discover');
   window.btRegisterPostRender?.('simplefin-bank-sync',install);install();
   document.addEventListener('keydown',e=>{if(!panel)return;if(e.key==='Escape'){close();return;}if(e.key==='Tab'){const controls=[...panel.querySelectorAll('button,input,select,textarea,a[href]')].filter(n=>!n.disabled&&n.getClientRects().length);const first=controls[0],last=controls.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}});
   window.addEventListener('storage',e=>{if(e.key==='bonus-ai-auth'&&panel){generation++;data=null;paint();}});
