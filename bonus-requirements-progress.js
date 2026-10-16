@@ -72,7 +72,7 @@
     return {
       mode:'structured',scopeVerified:scoped,requirements,
       notice:scoped
-        ?'Only candidates from explicitly matched products are counted. Confirm payroll source, amount, timing, recurring periods, companion accounts, waiver rules and bank acceptance before marking requirements complete.'
+        ?'Only candidates from explicitly matched products are counted. Confirm deposit origin, amount, timing, recurring periods, companion accounts, waiver rules and bank acceptance before marking requirements complete.'
         :'Deposit progress needs an unambiguous checking or savings product match from verified promotion rules. Candidate credits alone are not qualifying-deposit proof.'
     };
   }
