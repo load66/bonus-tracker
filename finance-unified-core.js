@@ -88,7 +88,7 @@
   }
   // Pair uniquely reciprocal posted movements across providers, without
   // changing raw observations or overriding user-confirmed categories.
-  function matchedTransfers(transactions){
+  function matchedTransfers(transactions,accountCurrencies){
     const result=Object.fromEntries(Object.entries(transactions).map(([account,records])=>
       [account,Object.fromEntries(Object.entries(records).map(([id,row])=>[id,{...row}]))]));
     const entries=[],amounts=new Map();
@@ -118,7 +118,8 @@
     for(const bucket of amounts.values())for(const plus of bucket.positive)for(const minus of bucket.negative){
       const p=entries[plus],m=entries[minus];
       if(p.account===m.account||Math.abs(p.row.posted-m.row.posted)>3*86400||
-          !(p.hinted||m.hinted))continue;
+          !p.hinted||!m.hinted||
+          !accountCurrencies.get(p.account)||accountCurrencies.get(p.account)!==accountCurrencies.get(m.account))continue;
       if(!partners.has(plus))partners.set(plus,[]);
       if(!partners.has(minus))partners.set(minus,[]);
       partners.get(plus).push(minus);partners.get(minus).push(plus);
@@ -151,7 +152,7 @@
     const accounts=unified.accounts.filter(a=>!duplicates.has(a.key));
     const allowed=new Set(accounts.map(a=>a.key));
     const keep=obj=>Object.fromEntries(Object.entries(obj||{}).filter(([k])=>allowed.has(k)));
-    return {...unified,accounts,transactions:matchedTransfers(keep(unified.transactions)),mappings:keep(unified.mappings),
+    return {...unified,accounts,transactions:matchedTransfers(keep(unified.transactions),new Map(accounts.map(a=>[a.key,a.currency]))),mappings:keep(unified.mappings),
       monitoredAccounts:unified.monitoredAccounts.filter(k=>allowed.has(k)),
       accountProfiles:keep(unified.accountProfiles),balanceHistory:keep(unified.balanceHistory),
       incompleteProviders:Object.values(unified.providerState).some(s=>s.connected&&
