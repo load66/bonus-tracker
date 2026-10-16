@@ -70,8 +70,8 @@ const base=()=>({
       await section.getByText('Cash Flow',{exact:true}).locator('..').getByText(/185/).waitFor();
       await section.locator('.finance-page-caution')
         .filter({hasText:'Cash Flow is partial'}).first().waitFor({state:'visible'});
-      assert.ok((await section.locator('.finance-page-caution').allTextContents()).some(s=>s.includes('Cash Flow is partial')),
-        'reconciliation caveat required after the synthetic transaction snapshot finishes rendering');
+      // The awaited visibility assertion above is authoritative; do not reread
+      // an asynchronously replaced DOM node in a second non-waiting assertion.
       const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
       await section.getByRole('button',{name:'Hide amounts',exact:true}).click();
       assert.equal(await section.locator('.finance-page-tile strong').first().innerText(),'••••••');
