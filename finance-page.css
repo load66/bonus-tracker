@@ -105,6 +105,7 @@
 }
 
 .finance-page-accounts-title{display:flex;align-items:center;gap:9px}.finance-page-accounts-title h3{margin:0}.finance-page-account-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;min-height:22px;border-radius:999px;background:#294769;color:#cae1ff;font-size:11px;font-weight:750;padding:0 5px}
+.finance-page-account-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}.finance-page-account-actions .finance-page-button{min-height:40px;padding:7px 10px}
 
 /* Financial bonus evidence stays inside Finances, never inside the Tracker layout. */
 .finance-page .finance-page-nav{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -155,4 +156,58 @@
 @media(max-width:390px){
 .finance-page .finance-page-activity-setup{padding:12px}
 .finance-page .finance-page-activity-setup .finance-page-quick-actions{gap:8px}
+}
+
+/* Compact transaction ledger: scan first, edit on demand. */
+.finance-page-hero-compact{padding:10px 14px;margin-bottom:9px;background:#111d30;border-color:#344c68;box-shadow:none}
+.finance-page-hero-compact h2{font-size:20px;margin:0}
+.finance-page-hero-compact .finance-page-button{min-height:38px;padding:7px 11px;background:transparent;border-color:#496681;color:#cfe2f7}
+.finance-page-transactions-card{padding:14px;background:#0a1627;border-color:#2b415b;box-shadow:none}
+.finance-page-transactions-head{margin-bottom:12px}
+.finance-page-transactions-head h3{font-size:20px;margin:0}
+.finance-page-transaction-tools{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;margin-bottom:8px}
+.finance-page-search-wrap{position:relative;min-width:0}
+.finance-page-search-wrap .finance-page-search{min-height:46px;padding-left:40px;border-radius:999px;background:#142238;border-color:#425874}
+.finance-page-search-icon{position:absolute;z-index:1;left:15px;top:50%;transform:translateY(-50%);color:#9eb0c6;font-size:24px;line-height:1;pointer-events:none}
+.finance-page-transaction-filters{position:relative}
+.finance-page-filter-button{display:flex;align-items:center;justify-content:center;min-height:46px;box-sizing:border-box;padding:0 14px;border:1px solid #425874;border-radius:999px;background:#142238;color:#d6e3f3;font-size:12px;font-weight:750;cursor:pointer;list-style:none}
+.finance-page-filter-button::-webkit-details-marker{display:none}
+.finance-page-transaction-filters[open] .finance-page-filter-button{background:#294968;color:#fff;border-color:#7296bb}
+.finance-page-filter-fields{position:absolute;right:0;z-index:4;width:min(330px,calc(100vw - 48px));padding:12px;margin-top:6px;background:#14243a;border:1px solid #526b89;border-radius:14px;box-shadow:0 16px 40px #0009}
+.finance-page-filter-fields .finance-page-field{margin-bottom:9px}
+.finance-page-filter-range>span{display:block;color:#a9bfd8;font-size:10px;margin-bottom:6px}
+.finance-page-filter-range .finance-page-period{justify-content:flex-start}
+.finance-page-transactions{display:block}
+.finance-page-transaction-group{margin:0}
+.finance-page-transaction-date{margin:0;padding:18px 1px 8px;color:#aebed2;font-size:12px;font-weight:650;letter-spacing:.01em}
+.finance-page-transaction{padding:0;border:0;border-radius:0;background:transparent;border-bottom:1px solid #26384c}
+.finance-page-transaction-summary{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:11px;width:100%;min-height:72px;padding:9px 1px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
+.finance-page-transaction-summary:hover{background:#122036}
+.finance-page-transaction-summary:focus-visible{outline:2px solid #9ac8ff;outline-offset:2px;border-radius:10px}
+.finance-page-transaction-icon{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:#33445a;color:#d7e3f0;font-size:16px;font-weight:750}
+.finance-page-transaction-copy{display:block;min-width:0}
+.finance-page-transaction-copy strong,.finance-page-transaction-copy small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.finance-page-transaction-copy strong{color:#f5f8fc;font-size:14px;line-height:1.35}
+.finance-page-transaction-copy small{color:#98aabe;font-size:11px;line-height:1.4;margin-top:4px}
+.finance-page-transaction-value{text-align:right;min-width:78px}
+.finance-page-transaction-value b,.finance-page-transaction-value small{display:block;white-space:nowrap;font-variant-numeric:tabular-nums}
+.finance-page-transaction-value b{color:#f5f8fc;font-size:14px}
+.finance-page-transaction-value b.is-credit{color:#52c878}
+.finance-page-transaction-value small{color:#98aabe;font-size:10px;margin-top:4px}
+.finance-page-transaction-detail{padding:0 0 14px 53px}
+.finance-page-transaction-detail .finance-page-description{margin:0 0 5px!important}
+.finance-page-detail-meta{display:block;color:#8fa5bd;font-size:10px;line-height:1.5;overflow-wrap:anywhere}
+.finance-page-transaction-detail>.finance-page-field{max-width:270px;margin-top:10px}
+.finance-page-transaction.is-open{background:#0f1d30}
+.finance-page-show-more{width:100%;margin-top:12px}
+@media(max-width:390px){
+  .finance-page-hero-compact{padding:9px 11px}
+  .finance-page-transactions-card{margin-left:-2px;margin-right:-2px;padding:12px 10px;border-left:0;border-right:0;border-radius:0}
+  .finance-page-filter-button{padding:0 12px}
+  .finance-page-transaction-summary{grid-template-columns:38px minmax(0,1fr) auto;gap:9px;min-height:68px}
+  .finance-page-transaction-icon{width:36px;height:36px}
+  .finance-page-transaction-copy strong{font-size:13px}
+  .finance-page-transaction-value{min-width:70px}
+  .finance-page-transaction-value b{font-size:13px}
+  .finance-page-transaction-detail{padding-left:47px}
 }
