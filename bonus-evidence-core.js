@@ -43,6 +43,7 @@
     const transactions=safeState.transactions&&typeof safeState.transactions==='object'?safeState.transactions:{};
     const missing=new Set(Array.isArray(safeState.missingAccounts)?safeState.missingAccounts:[]);
     const grouped=new Map(),invalidLinks=[];
+    const evidenceReviews=safeState.evidenceReviews&&typeof safeState.evidenceReviews==='object'?safeState.evidenceReviews:{};
     const validEntries=new Map(open.map(e=>[String(e.id),e]));
     for(const [key,mapping] of Object.entries(mappings)){
       const entry=mapping&&validEntries.get(String(mapping.entryId));
@@ -54,7 +55,7 @@
       if(!group){
         group={entryId:String(entry.id),bank:entry.bank,opened:entry.opened,
           linkedAccounts:[],activity:[],counts:{bonus:0,directDeposit:0,fee:0,reversal:0,recurring:0},
-          missingAccounts:0,unsupportedCurrency:0};
+          missingAccounts:0,unsupportedCurrency:0,review:{unreviewed:0,reviewed:0,dismissed:0}};
         grouped.set(String(entry.id),group);
       }
       const account=accountByKey.get(key);
@@ -73,7 +74,12 @@
         const type=evidenceType(row);
         if(!type)continue;
         group.counts[type]++;
+        const saved=evidenceReviews[key]&&evidenceReviews[key][String(row.id||'')];
+        const reviewStatus=saved&&['reviewed','dismissed'].includes(saved.status)?saved.status:'unreviewed';
+        group.review[reviewStatus]++;
         group.activity.push({
+          reviewStatus,reviewedAt:saved?.reviewedAt||null,
+          requirementId:reviewStatus==='reviewed'?saved?.requirementId||null:null,
           type,id:String(row.id||''),accountKey:key,
           amount:String(row.amount),posted:row.posted,
           description:String(row.description||row.merchant||'Bank transaction').slice(0,220)
@@ -82,20 +88,26 @@
     }
     const campaigns=[...grouped.values()].map(group=>{
       group.activity.sort((a,b)=>b.posted-a.posted||a.accountKey.localeCompare(b.accountKey));
-      group.latest=group.activity.slice(0,5);
-      group.needsReview=group.counts.bonus+group.counts.directDeposit+group.counts.fee+group.counts.reversal+group.counts.recurring>0;
+      group.pending=group.activity.filter(a=>a.reviewStatus==='unreviewed');
+      group.resolved=group.activity.filter(a=>a.reviewStatus!=='unreviewed');
+      group.latest=group.pending.slice(0,5);
+      group.needsReview=group.pending.length>0;
       return group;
     }).sort((a,b)=>{
-      const score=g=>g.counts.reversal*8+g.counts.fee*5+g.counts.bonus*4+g.counts.directDeposit*3+g.counts.recurring;
+      const score=g=>g.pending.reduce((n,a)=>n+({reversal:8,fee:5,bonus:4,directDeposit:3,recurring:1}[a.type]||0),0);
       return score(b)-score(a)||a.bank.localeCompare(b.bank);
     });
     const total={bonus:0,directDeposit:0,fee:0,reversal:0,recurring:0};
-    for(const c of campaigns)for(const type of Object.keys(total))total[type]+=c.counts[type];
+    const review={unreviewed:0,reviewed:0,dismissed:0};
+    for(const c of campaigns){
+      for(const type of Object.keys(total))total[type]+=c.counts[type];
+      for(const status of Object.keys(review))review[status]+=c.review[status];
+    }
     const linkedIds=new Set(campaigns.map(c=>c.entryId));
     return {
       linkedCampaigns:campaigns.length,unlinkedOpenCampaigns:open.filter(e=>!linkedIds.has(String(e.id))).length,
       openCampaigns:open.length,invalidLinks:invalidLinks.length,campaigns,
-      counts:total,
+      counts:total,review,
       lastSuccess:Number.isFinite(safeState.lastSuccess)?safeState.lastSuccess:null,
       staleSync:!Number.isFinite(safeState.lastSuccess)||now-safeState.lastSuccess>2*DAY,
       evidenceOnly:true
