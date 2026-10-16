@@ -4,10 +4,13 @@ on:
   pull_request:
     paths:
       - 'tests/simplefin-prod-health.cjs'
+      - 'tests/wait-deployed-simplefin.cjs'
       - 'tests/bank-sync.e2e.cjs'
       - 'tests/bonus-evidence.e2e.cjs'
       - 'tests/finance-page.e2e.cjs'
       - '.github/workflows/simplefin-production-audit.yml'
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -30,12 +33,18 @@ jobs:
       - name: Verify live web assets and private API authorization
         run: node tests/simplefin-prod-health.cjs
 
+      - name: Verify audited release is actually published
+        if: github.event_name != 'pull_request'
+        run: node tests/wait-deployed-simplefin.cjs
+
       - name: Install real browsers for independent production testing
+        if: github.event_name != 'pull_request'
         run: |
           npm install --prefix "$RUNNER_TEMP/simplefin-production-browser" --no-save playwright@1.58.2
           "$RUNNER_TEMP/simplefin-production-browser/node_modules/.bin/playwright" install --with-deps chromium firefox webkit
 
       - name: Test deployed website in Chromium, Firefox and WebKit
+        if: github.event_name != 'pull_request'
         env:
           NODE_PATH: ${{ runner.temp }}/simplefin-production-browser/node_modules
           BT_BROWSER_RESULTS: ${{ runner.temp }}/simplefin-production-evidence
