@@ -1,0 +1,15 @@
+/* Compact fallback guidance lives inside the existing Add Bank wizard. */
+.plaid-trial-fallback{margin:12px 0 0;padding:14px;border:1px solid rgba(147,167,195,.23);border-radius:12px;background:rgba(9,18,33,.56);color:var(--text,#edf3fa);min-width:0;overflow-wrap:anywhere}
+.plaid-trial-fallback h4{margin:0 0 8px;font-size:1rem;line-height:1.35}
+.plaid-trial-fallback p{margin:8px 0;color:var(--muted,#b7c5d5);line-height:1.5;font-size:.88rem}
+.plaid-trial-counter{font-weight:700;font-variant-numeric:tabular-nums;color:var(--text,#edf3fa)!important}
+.plaid-trial-caution{border-left:3px solid #e6ad57;padding:6px 10px;background:rgba(230,173,87,.08)}
+.plaid-trial-control{display:grid;gap:10px;min-width:0}
+.plaid-trial-control label{display:grid;gap:6px;font-size:.9rem;line-height:1.4;min-width:0}
+.plaid-trial-control input[type=text]{box-sizing:border-box;display:block;width:100%;min-width:0;padding:11px 12px;border:1px solid #54687e;border-radius:8px;background:#121e2d;color:#f7fafc;font-size:16px}
+.plaid-trial-control .plaid-trial-check{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+.plaid-trial-check input{width:19px;height:19px;flex:none;margin:1px 0 0;accent-color:#2eaa8b}
+.plaid-trial-action{min-height:44px;width:100%;white-space:normal;text-align:center}
+.plaid-trial-action:disabled{opacity:.65}
+.plaid-trial-message:not(:empty){padding:8px;border-radius:6px;background:#23364a;color:#eef4fc!important}
+@media(max-width:390px){.plaid-trial-fallback{padding:12px}.plaid-trial-fallback h4{font-size:.96rem}}
