@@ -64,7 +64,7 @@
         continue;
       }
       const supported=account.currency==='USD';
-      group.linkedAccounts.push({key,name:String(account.name||'Financial account'),bank:String(account.bank||'')});
+      group.linkedAccounts.push({key,name:String(account.name||'Financial account'),bank:String(account.bank||''),productId:typeof mapping.productId==='string'?mapping.productId:null});
       if(!supported){group.unsupportedCurrency++;continue;}
       const rows=transactions[key]&&typeof transactions[key]==='object'&&!Array.isArray(transactions[key])
         ?Object.values(transactions[key]):[];

@@ -58,8 +58,32 @@ const base=()=>({
         window.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[now]))}static now(){return now}};
         localStorage.setItem('bt_e_v4','[]');localStorage.setItem('bonus-ai-auth',JSON.stringify({access_token:'synthetic-access',refresh_token:'synthetic-refresh',expires_at:4102444800}));
       });
-      await page.goto(process.env.BT_BROWSER_SITE_URL||'http://127.0.0.1:'+server.address().port+'/');await page.getByRole('button',{name:'Finances',exact:true}).click();
-      const section=page.getByRole('region',{name:'My finances'});await section.getByRole('heading',{name:'Financial overview'}).waitFor();
+      await page.goto(process.env.BT_BROWSER_SITE_URL||'http://127.0.0.1:'+server.address().port+'/');
+      // Cloud startup can redraw the root while the user is first navigating.
+      // A redraw is not evidence that the Finance page is unavailable. Check
+      // the fully bootstrapped shell and repeat a lost navigation at most twice.
+      await page.waitForFunction(()=>typeof window.BTBonusAuth?.connected==='function'&&
+        window.BTBonusAuth.connected()&&typeof window.btRefreshFinancesPage==='function',null,{timeout:12000});
+      const financeTab=page.getByRole('button',{name:'Finances',exact:true});
+      const section=page.getByRole('region',{name:'My finances'});
+      let opened=false;
+      for(let attempt=0;attempt<3;attempt++){
+        await financeTab.click();
+        try{
+          await section.getByRole('heading',{name:'Financial overview'}).waitFor({timeout:7000});
+          opened=true;break;
+        }catch{
+          const observed=await section.locator('h2,h3').allTextContents().catch(()=>[]);
+          if(observed.some(text=>/sign in to view finances|accounts unavailable|connections unavailable/i.test(text)))
+            throw Error(name+' Finances page returned a real connection/auth error: '+observed.join(' | '));
+          if(attempt===2){
+            const current=await page.locator('.tabs .tb[aria-current="page"]').allTextContents().catch(()=>[]);
+            throw Error(name+' Finances tab did not open after startup redraws; current='+current.join('|')+
+              '; headings='+observed.join('|')+'; pageerrors='+errors.join(';'));
+          }
+        }
+      }
+      assert.ok(opened,name+' Finances navigation must become available after bootstrap');
       assert.equal(await section.locator('img').count(),0,'provider aliases must be text, never HTML');
       // Playwright's filter waits for actual content, unlike immediate text snapshots.
       // Amounts can contain spacing; the user-facing status must be Unavailable.
@@ -70,8 +94,8 @@ const base=()=>({
       await section.getByText('Cash Flow',{exact:true}).locator('..').getByText(/185/).waitFor();
       await section.locator('.finance-page-caution')
         .filter({hasText:'Cash Flow is partial'}).first().waitFor({state:'visible'});
-      assert.ok((await section.locator('.finance-page-caution').allTextContents()).some(s=>s.includes('Cash Flow is partial')),
-        'reconciliation caveat required after the synthetic transaction snapshot finishes rendering');
+      // The awaited visibility assertion above is authoritative; do not reread
+      // an asynchronously replaced DOM node in a second non-waiting assertion.
       const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
       await section.getByRole('button',{name:'Hide amounts',exact:true}).click();
       assert.equal(await section.locator('.finance-page-tile strong').first().innerText(),'••••••');
@@ -125,13 +149,20 @@ const base=()=>({
           const geometry=await section.evaluate(e=>({window:innerWidth,scroll:e.scrollWidth,box:e.getBoundingClientRect().width}));
           assert.ok(geometry.scroll<=geometry.window+1&&geometry.box<=geometry.window+1,name+' '+target[0]+' overflow at '+width+': '+JSON.stringify(geometry));
           assert.equal(await page.locator('.tabs .tb').count(),6);
-          await page.waitForFunction(()=>[...document.querySelectorAll('.tabs .tb')].length===6&&
-            [...document.querySelectorAll('.tabs .tb')].every(e=>e.getBoundingClientRect().height>=44),null,{timeout:12000});
-          const navSizes=await page.locator('.tabs .tb').evaluateAll(rows=>rows.map(e=>({
-            title:e.textContent.trim(),height:e.getBoundingClientRect().height,
-            minHeight:getComputedStyle(e).minHeight,display:getComputedStyle(e).display
-          })));
-          assert.ok(navSizes.every(x=>x.height>=44),name+' mobile navigation tap target: '+JSON.stringify(navSizes));
+          // One atomic snapshot: the root can repaint between an await and a
+          // second query, which otherwise measures detached buttons at 0px.
+          const navHandle=await page.waitForFunction(()=>{
+            const rows=[...document.querySelectorAll('.tabs .tb')];
+            if(rows.length!==6)return false;
+            const sized=rows.map(e=>({
+              title:e.textContent.trim(),height:e.getBoundingClientRect().height,
+              minHeight:getComputedStyle(e).minHeight,display:getComputedStyle(e).display
+            }));
+            return sized.every(x=>x.height>=44)?sized:false;
+          },null,{timeout:15000});
+          const navSizes=await navHandle.jsonValue();
+          assert.ok(navSizes.length===6&&navSizes.every(x=>x.height>=44),
+            name+' mobile navigation tap target: '+JSON.stringify(navSizes));
           await page.screenshot({path:path.join(output,name+'-finances-'+target[1]+'-'+width+'.png')});
         }
       }

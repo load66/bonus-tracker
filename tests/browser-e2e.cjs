@@ -480,8 +480,18 @@ async function exercise(name,engine,url){
     });
     for(const width of [320,390,430,1024]){
       await page.setViewportSize({width,height:844});
-      check('complete dashboard summary at '+width+'px',await page.locator('.ops-hero .hero-note').evaluate(e=>
-        e.textContent==='$5,100 collected in 2026 • 2 open • 16 cooling down'&&e.scrollWidth<=e.clientWidth+1&&e.scrollHeight<=e.clientHeight+1&&getComputedStyle(e).whiteSpace==='normal'));
+      const dashboardSummary=await page.locator('.ops-hero .hero-note').evaluate(e=>({
+        text:e.textContent,scrollWidth:e.scrollWidth,clientWidth:e.clientWidth,
+        scrollHeight:e.scrollHeight,clientHeight:e.clientHeight,
+        whiteSpace:getComputedStyle(e).whiteSpace,
+        width:e.getBoundingClientRect().width,visible:getComputedStyle(e).display!=='none'
+      }));
+      const dashboardFits=dashboardSummary.text==='$5,100 collected in 2026 • 2 open • 16 cooling down'
+        &&dashboardSummary.scrollWidth<=dashboardSummary.clientWidth+1
+        &&dashboardSummary.scrollHeight<=dashboardSummary.clientHeight+1
+        &&dashboardSummary.whiteSpace==='normal';
+      if(!dashboardFits)console.error(name+' dashboard summary details at '+width+'px: '+JSON.stringify(dashboardSummary));
+      check('complete dashboard summary at '+width+'px',dashboardFits);
       check('release version stays inside header at '+width+'px',await page.locator('.hdr .app-version').evaluate(e=>{
         const r=e.getBoundingClientRect(),h=e.closest('.hdr').getBoundingClientRect();
         return e.textContent==='v'+window.BT_APP_VERSION&&r.width>0&&r.height>0&&r.top>=h.top&&r.bottom<=h.bottom&&r.left>=0&&r.right<=innerWidth&&getComputedStyle(e).position==='static';

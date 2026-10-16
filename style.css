@@ -4993,3 +4993,7 @@ select option{background:#0D1420;color:var(--text)}
 .eligibility-rule-grid .fg{min-width:0}
 .eligibility-rule-grid textarea{width:100%;resize:vertical}
 @media(max-width:480px){.eligibility-rule-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Firefox mobile can paint glyph extents taller than a tight 1.4 line box.
+ * Give the operations summary adequate vertical room without hiding text. */
+.ops-hero .hero-note{line-height:1.8!important;overflow-wrap:anywhere}
