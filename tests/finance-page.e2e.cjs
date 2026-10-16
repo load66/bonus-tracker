@@ -256,16 +256,10 @@ const base=()=>({
       const xMoneyEditor=section.locator('.finance-page-account-info strong')
         .filter({hasText:/^X Money Checking$/}).locator('xpath=../../..');
       await xMoneyEditor.locator('details.finance-page-account-settings > summary').click();
-      await xMoneyEditor.getByRole('checkbox',{name:'Monitor transactions for X Money Checking via Plaid'}).uncheck();
-      await Promise.all([
-        page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/plaid/accounts/monitoring')&&
-          r.request().method()==='PUT'&&r.status()===200),
-        section.getByRole('button',{name:'Save account settings'}).click()
-      ]);
-      assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts/monitoring')&&r.method==='PUT'&&
-        Array.isArray(r.body.accounts)&&r.body.accounts.length===0),
-        'Plaid monitoring must be saved to Plaid, without touching SimpleFIN monitoring');
-      assert.equal(requests.filter(r=>r.path.endsWith('/simplefin/monitoring')).length,0);
+      assert.equal(await xMoneyEditor.getByRole('checkbox').count(),0,
+        'Connected banks must not require a manual monitoring toggle');
+      assert.equal(requests.some(r=>r.path.endsWith('/plaid/accounts/monitoring')),false,
+        'Account settings do not require a separate read-only monitoring request');
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       await section.getByText('X Money Bonus',{exact:true}).waitFor();
       await Promise.all([
@@ -279,29 +273,18 @@ const base=()=>({
       assert.ok((await section.locator('.finance-page-transaction').allTextContents()).some(t=>t.includes('Plaid')),
         'A Plaid-origin transaction must appear with a source label in the combined feed');
       assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts')));
-      // A connected bank with monitoring disabled must guide account selection,
-      // not produce a generic failed-save alert on Refresh activity.
-      state.monitoredAccounts=[];plaidState.monitoredAccounts=[];
-      await page.evaluate(()=>window.btRefreshFinancesPage?.());
-      await section.getByRole('heading',{name:'Finances'}).waitFor();
-      await section.getByRole('button',{name:'Set up activity'}).waitFor();
-      await section.getByRole('button',{name:'Set up activity'}).click();
-      await section.getByRole('heading',{name:'Transaction monitoring is off'}).waitFor();
-      assert.equal(await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).count(),0,
-        'Refresh activity must not say unsaved changes when monitoring was never enabled');
-      await section.getByRole('button',{name:'Enable activity for all 4 accounts'}).click();
+      // Refreshing activity must sync both connected providers with no consent toggles.
+      const activityStart=requests.length;
+      await section.getByRole('button',{name:'Refresh activity'}).click();
       await page.waitForFunction(()=>{
         const text=document.querySelector('#bt-finances-page')?.textContent||'';
-        return text.includes('4 accounts enabled for read-only monitoring.');
+        return text.includes('Latest available activity checked')||text.includes('Next check');
       },null,{timeout:15000});
-      assert.deepEqual(new Set(state.monitoredAccounts),new Set([A,B,C]),
-        'All SimpleFIN accounts require an explicit read-only monitoring opt-in');
-      assert.deepEqual(plaidState.monitoredAccounts,[A],
-        'Plaid source monitoring must be enabled independently, without new Plaid Link');
-      assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts/sync')&&r.method==='POST'),
-        'Enabling monitored Plaid accounts must immediately request existing Item transactions');
+      const activityRequests=requests.slice(activityStart);
+      assert.ok(activityRequests.some(r=>r.path.endsWith('/simplefin/sync')&&r.method==='POST'));
+      assert.ok(activityRequests.some(r=>r.path.endsWith('/plaid/accounts/sync')&&r.method==='POST'));
       assert.equal(requests.some(r=>r.path.endsWith('/plaid/link-token')||r.path.endsWith('/plaid/exchange')),false,
-        'Monitoring an existing Plaid connection never creates a new lifetime Item');
+        'Automatic refresh must not open new Plaid connections or consume Trial slots');
       await section.getByText('X Money Bonus',{exact:true}).waitFor();
       // All provider-returned rows within the 90-day retention window must be
       // reachable, not silently truncated at the former 250-row UI cap.
