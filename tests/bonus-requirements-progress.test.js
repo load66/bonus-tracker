@@ -78,3 +78,36 @@ assert.equal(recurring.requirements[0].reviewedCalendarMonths,1);
 assert.equal(recurring.requirements[0].verifiedMet,false,'recurring months are observations not payout confirmation');
 
 console.log('Bonus requirement candidate engine passed: evidence-backed scope, exact cents, reviewed links, recurring periods, invalid rules, multi-product exclusions and no completion writes');
+
+
+const multiRules={...schema,accounts:[
+  {id:'checking',label:'Premium Checking',role:'primary',required:true},
+  {id:'share',label:'Member Share Savings',role:'companion',required:true}
+]};
+const matched={...group,
+  linkedAccounts:[{key:A,productId:'checking'},{key:B,productId:'share'}],
+  activity:[...group.activity,
+    {id:'companion-credit',accountKey:B,type:'directDeposit',
+     amount:'2000.00',posted:NOW-60,reviewStatus:'reviewed',
+     requirementId:'direct-deposit-main'}]
+};
+const matchedReport=evaluate(entry,matched,()=>({ok:true,mode:'structured',rules:multiRules}));
+assert.equal(matchedReport.scopeVerified,true,'multi-product promo supports reviewed explicit checking/share account match');
+assert.equal(matchedReport.requirements[0].applicable,true);
+assert.equal(matchedReport.requirements[0].reviewedCount,1,'share savings activity must not inflate checking deposit count');
+assert.equal(matchedReport.requirements[0].reviewedAmount,'500.10','share savings deposits must be excluded from checking progress');
+assert.equal(matchedReport.requirements[0].candidateCount,2,'count only checking candidates');
+assert.equal(matchedReport.requirements[0].verifiedMet,false,'matched product is still not proof of bank qualification');
+const noShareLinked={...matched,linkedAccounts:[{key:A,productId:'checking'}]};
+const partial=evaluate(entry,noShareLinked,()=>({ok:true,mode:'structured',rules:multiRules}));
+assert.equal(partial.requirements[0].reviewedAmount,'500.10','candidate progress can be shown for matched checking while companion needs manual review');
+const duplicateChecking={...matched,linkedAccounts:[{key:A,productId:'checking'},{key:B,productId:'checking'}]};
+const ambiguousProduct=evaluate(entry,duplicateChecking,()=>({ok:true,mode:'structured',rules:multiRules}));
+assert.equal(ambiguousProduct.scopeVerified,false,'same bank product matched to multiple provider accounts must not be inferred');
+assert.equal(ambiguousProduct.requirements[0].manual,true,'ambiguous product mapping cannot create progress');
+const unknownProduct={...matched,linkedAccounts:[{key:A,productId:'wrong-id'},{key:B,productId:'share'}]};
+const unknownReport=evaluate(entry,unknownProduct,()=>({ok:true,mode:'structured',rules:multiRules}));
+assert.equal(unknownReport.requirements[0].manual,true,'unknown product id must never silently count toward checking requirements');
+const missingPrimary={...matched,missingAccounts:1};
+assert.equal(evaluate(entry,missingPrimary,()=>({ok:true,mode:'structured',rules:multiRules})).requirements[0].manual,true);
+assert.equal(JSON.stringify(state),snap?JSON.stringify(JSON.parse(snap).state):'','multi-product projection leaves saved bonus and bank records unchanged');
