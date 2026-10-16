@@ -118,3 +118,13 @@
   .finance-page .finance-page-nav-button{padding:8px 3px;font-size:10px;overflow-wrap:anywhere;line-height:1.25}
   .finance-page .bonus-evidence{padding:11px}
 }
+
+/* Unified money workspace: one screen, source labels rather than provider panels. */
+.finance-page-hero .finance-page-quick-actions .finance-page-button{flex:1 1 130px}
+.finance-page-account-source{color:#a8c7e9;letter-spacing:.01em}
+.finance-page-account-settings .finance-page-monitor{display:flex;align-items:center;gap:10px;margin:9px 0 7px;cursor:pointer;font-size:13px;font-weight:650;color:#e3efff;min-height:44px}
+.finance-page-account-settings .finance-page-monitor input{width:20px;height:20px;accent-color:#9ac6ff;flex-shrink:0}
+.finance-page-account-settings .finance-page-edit-type{display:inline-flex;align-items:center;justify-content:center;min-height:40px;border:1px solid #4a698a;border-radius:9px;background:#1b3654;color:#d9e9ff;font-size:12px;margin:8px 0}
+.finance-page-account-settings .finance-page-correction .finance-page-field{margin-top:6px}
+.finance-page-card .finance-page-account-source{display:block;font-size:11px;margin-top:3px}
+@media(max-width:390px){.finance-page-hero .finance-page-quick-actions .finance-page-button{flex-basis:105px;font-size:11px}}
