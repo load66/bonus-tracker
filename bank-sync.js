@@ -3,6 +3,7 @@
   'use strict';
   const API='https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin';
   let panel=null,data=null,busy=false,generation=0,returnFocus=null,hideBalances=false,accountFilter='',view='accounts',wizardResult=null,changed=false;
+  const maskAmounts=()=>hideBalances||window.btFinanceAmountsHidden?.()===true;
   const el=(tag,text,parent)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(parent)parent.append(n);return n;};
   const stamp=t=>typeof t==='number'&&t>0?new Date(t*1000).toLocaleString():'Not synced';
   const money=(a,c)=>{if(a===null||a===undefined||a===''||!Number.isFinite(Number(a)))return 'Unavailable';if(!c)return String(a)+' (currency unknown)';try{return new Intl.NumberFormat(undefined,{style:'currency',currency:c}).format(Number(a));}catch{return String(a)+' '+String(c);}};
@@ -172,10 +173,10 @@
     el('h3','Financial activity · last 30 days',overview);
     if(totals?.hasActivity){
       const metrics=el('div',undefined,overview);metrics.className='bank-sync-summary-grid';
-      for(const [label,value] of [['Observed credits',hideBalances?'••••••':money(totals.credits,'USD')],['Observed debits',hideBalances?'••••••':money(totals.debits,'USD')],['Posted transactions',String(totals.observations)],['Bonus candidates',String(totals.candidates)]]){
+      for(const [label,value] of [['Observed credits',maskAmounts()?'••••••':money(totals.credits,'USD')],['Observed debits',maskAmounts()?'••••••':money(totals.debits,'USD')],['Posted transactions',String(totals.observations)],['Bonus candidates',String(totals.candidates)]]){
         const metric=el('div',undefined,metrics);metric.className='bank-sync-summary-metric';el('small',label,metric);el('strong',value,metric);
       }
-      el('p','Net observed movement: '+(hideBalances?'••••••':money(totals.net,'USD'))+'. This is not verified cash flow.',overview);
+      el('p','Net observed movement: '+(maskAmounts()?'••••••':money(totals.net,'USD'))+'. This is not verified cash flow.',overview);
       if(totals.reversals)el('p',String(totals.reversals)+' possible reversal entries need review.',overview);
     }else el('p',totals?.hasSync?'No recent posted USD observations. This does not mean there was no account activity.':'Connected accounts sync automatically. Initial transactions may still be processing.',overview);
     el('p','Partial posted transaction observations only. Credits include transfers and refunds; debits include transfers and purchases. These are not verified income, expenses or net worth.',overview);
@@ -183,7 +184,8 @@
     if(totals?.unusable)el('p',String(totals.unusable)+' amounts were omitted because they could not be summed safely.',overview);
     if(totals?.usdAccounts&&totals.sourceAccounts<totals.usdAccounts)el('p','Transaction data is incomplete for one or more selected USD accounts.',overview);
     if(totals?.missingAccounts)el('p','At least one selected account was missing from the latest saved account list.',overview);
-    el('h3','Connected accounts',body);el('p',String((data.accounts||[]).length)+' accounts · automatic read-only sync · '+String(Object.keys(data.mappings||{}).length)+' bonus links',body);button(body,hideBalances?'Show balances':'Hide balances',async()=>{hideBalances=!hideBalances;paint();});
+    el('h3','Connected accounts',body);el('p',String((data.accounts||[]).length)+' accounts · automatic read-only sync · '+String(Object.keys(data.mappings||{}).length)+' bonus links',body);if(window.btFinanceAmountsHidden?.())el('p','Amounts are hidden in Finances. Use Show amounts in Finances to reveal them.',body);
+    else button(body,hideBalances?'Show balances':'Hide balances',async()=>{hideBalances=!hideBalances;paint();});
     el('p','Transactions from supported accounts sync automatically. Bonus links remain optional; financial activity is not proof of a qualifying direct deposit.',body);
     const available=active(),selects=[],monitored=new Set(data.monitoredAccounts||[]),accountCards=[];
     let search=null;
@@ -193,7 +195,7 @@
       const accountName=[a.bank,a.name].filter(Boolean).join(' · ')||'Bank account';
       el('h4',accountName,card);accountCards.push({card,name:accountName.toLowerCase()});
       card.hidden=!!accountFilter&&!accountName.toLowerCase().includes(accountFilter);
-      el('p','Balance: '+(hideBalances?'••••••':money(a.balance,a.currency))+' · Available Balance: '+(hideBalances?'••••••':money(a.availableBalance,a.currency))+' · Last Updated: '+stamp(a.balanceDate),card);if(a.balanceDate&&data.lastSuccess&&a.balanceDate>data.lastSuccess)el('p','Balance timestamp is newer than the last recorded transaction sync; these are separate provider updates.',card);
+      el('p','Balance: '+(maskAmounts()?'••••••':money(a.balance,a.currency))+' · Available Balance: '+(maskAmounts()?'••••••':money(a.availableBalance,a.currency))+' · Last Updated: '+stamp(a.balanceDate),card);if(a.balanceDate&&data.lastSuccess&&a.balanceDate>data.lastSuccess)el('p','Balance timestamp is newer than the last recorded transaction sync; these are separate provider updates.',card);
       const label=el('label','Link to bonus (optional)',card),select=el('select',undefined,card);select.id='bank-sync-cycle-'+a.key;label.htmlFor=select.id;select.dataset.account=a.key;
       const empty=el('option','No bonus linked',select);empty.value='';
       const current=data.mappings?.[a.key];
@@ -246,7 +248,7 @@
       for(const row of rows.slice(0,100)){
         shown++;const article=el('article',undefined,section);article.className='bank-sync-transaction';
         el('strong',row.pending?'Pending':row.kind==='possible_bonus'?'Possible bonus · review':row.kind==='possible_reversal'?'Possible bonus reversal · review':Number(row.amount)>0?'Deposit':'Withdrawal',article);
-        el('p',(hideBalances?'••••••':money(row.amount,a.currency))+' · '+(row.pending?'pending':'posted')+' '+stamp(row.posted),article);el('p',row.description,article);
+        el('p',(maskAmounts()?'••••••':money(row.amount,a.currency))+' · '+(row.pending?'pending':'posted')+' '+stamp(row.posted),article);el('p',row.description,article);
         if(row.category)el('small','Category: '+String(row.category).replaceAll('_',' ')+(row.categorySource==='user'?' · confirmed':' · automatic'),article);
         if(row.changedAt)el('small','Provider changed this transaction: '+stamp(row.changedAt),article);
       }
