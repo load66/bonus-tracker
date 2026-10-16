@@ -71,8 +71,10 @@
     el('p','1. Open SimpleFIN and choose Financial Institutions → New Connection. 2. Authorize the new bank. 3. Return here and choose Refresh accounts. The provider may limit account discovery to one refresh every 24 hours.',addSection);
     button(addSection,'Refresh accounts after adding bank',async()=>{
       const existingKeys=new Set((data.accounts||[]).map(a=>a.key));
-      data=await request('/discover',{method:'POST'});paint();
+      data=await request('/discover',{method:'POST'});
       const newlyFound=(data.accounts||[]).filter(a=>!existingKeys.has(a.key)).length;
+      if(newlyFound)accountFilter=''; // Make newly discovered accounts visible even after searching the old bank.
+      paint();
       message(newlyFound
         ?'Found '+newlyFound+' new account'+(newlyFound===1?'':'s')+'. Select monitoring and link any appropriate bank bonus, then save your preferences.'
         :'No new accounts appeared. Confirm the bank was added in SimpleFIN. Discovery can be limited to once per day, and provider updates may be delayed.');
