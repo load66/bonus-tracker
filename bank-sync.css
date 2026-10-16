@@ -8,3 +8,14 @@
 .bank-sync-modal .bank-sync-monitor-label{display:flex;align-items:center;gap:12px;padding:12px 10px;margin:12px 0;border:1px solid #4b6688;border-radius:10px;background:#102039;color:#edf4ff;cursor:pointer}
 .bank-sync-modal .bank-sync-monitor-label input[type="checkbox"]{display:inline-block;flex:0 0 20px;width:20px;height:20px;min-height:20px;max-width:20px;padding:0;margin:0;accent-color:#9ec8ff}
 .bank-sync-modal .bank-sync-monitor-label span{flex:1;min-width:0;line-height:1.45}
+
+/* Read-only financial observations, deliberately separate from banking balances. */
+.bank-finance-overview{margin:14px 0;padding:15px;border:1px solid #54709a;border-radius:14px;background:linear-gradient(155deg,#1b2d48,#132238);overflow-wrap:anywhere}
+.bank-finance-overview-header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.bank-finance-overview-header h3{margin:0!important;font-size:17px!important;color:#f5f8ff}
+.bank-finance-overview-header button{margin:0!important}
+.bank-finance-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:12px 0}
+.bank-finance-metric{min-width:0;padding:11px;border:1px solid #465d7e;background:#101d32;border-radius:11px;display:flex;flex-direction:column;gap:6px}
+.bank-finance-metric span{font-size:11px;color:#b5c9e4;font-weight:600}
+.bank-finance-metric strong{font-size:clamp(15px,3.5vw,19px);line-height:1.25;letter-spacing:-.02em;color:#f2f7ff;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+@media(min-width:650px){.bank-finance-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
