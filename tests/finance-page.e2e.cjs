@@ -66,10 +66,14 @@ const base=()=>({
       plaidState.transactions={[A]:{'plaid-income':{id:'plaid-income',amount:'50.00',posted:NOW-180,pending:false,
         kind:'other_deposit',description:'X Money synthetic ACH bonus',merchant:'X Money Bonus',
         category:'income',categorySource:'user',confidence:'high',signals:['possible_bonus']}}};
-      let plaidDiscoveries=0;
+      let plaidDiscoveries=0,failPlaidFetch=false;
       await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/plaid**',async route=>{
         const req=route.request(),url=new URL(req.url());
         const body=req.postDataJSON?.()||{};requests.push({path:url.pathname,method:req.method(),body});
+        if(failPlaidFetch&&url.pathname.endsWith('/accounts')&&req.method()==='GET'){
+          await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({detail:'Synthetic Plaid outage'})});
+          return;
+        }
         if(url.pathname.endsWith('/transaction-review')){
           plaidState.transactions[body.account][body.transaction].category=body.category;
           plaidState.transactions[body.account][body.transaction].categorySource='user';
@@ -311,6 +315,72 @@ const base=()=>({
         'All 260 additional Plaid rows plus 4 preexisting rows are accessible by paging');
       assert.equal(await section.getByRole('button',{name:/^Show \d+ more transactions/}).count(),0,
         'No provider-returned history remains inaccessible after the final page');
+
+      // BATCH 1 RED: isolated, synthetic UI regressions. Collect independent defects
+      // instead of stopping at the first assertion. No connection/account is modified.
+      const batch1Red=[];
+      async function expectBatch1(label,check){
+        try{await check()}catch(error){batch1Red.push(label+': '+String(error.message||error).slice(0,170))}
+      }
+      const missingAccountKey='z'.repeat(64);
+      state.transactions[A]['batch1-pending-simplefin']={
+        id:'batch1-pending-simplefin',posted:0,transactedAt:NOW-80,observedAt:NOW,
+        pending:true,amount:'-12.34',description:'Synthetic pending purchase',
+        merchant:'Synthetic pending purchase',category:'shopping',categorySource:'automatic',confidence:'low',signals:[]};
+      plaidState.transactions[A]['batch1-pending-plaid']={
+        id:'batch1-pending-plaid',posted:NOW-70,pending:true,amount:'-4.56',
+        description:'Synthetic Plaid pending',merchant:'Synthetic Plaid pending',
+        category:'shopping',categorySource:'automatic',confidence:'low',signals:[]};
+      state.transactions[missingAccountKey]={
+        orphan:{id:'orphan',posted:NOW-100,pending:false,amount:'-8.25',
+          description:'Former account synthetic purchase',merchant:'Former account synthetic purchase',
+          category:'shopping',categorySource:'automatic',confidence:'low',signals:[]}};
+      plaidState.transactions[A]['batch1-old-row']={
+        id:'batch1-old-row',posted:NOW-125*86400,pending:false,amount:'-5.00',
+        description:'Historic synthetic purchase',merchant:'Historic synthetic purchase',
+        category:'shopping',categorySource:'automatic',confidence:'low',signals:[]};
+      await page.evaluate(()=>window.btRefreshFinancesPage?.());
+      await section.getByRole('heading',{name:'Finances'}).waitFor();
+      await section.getByRole('button',{name:'Transactions',exact:true}).click();
+      await expectBatch1('pending dates and first-row sorting',async()=>{
+        await section.getByText('Synthetic pending purchase',{exact:true}).first().waitFor({timeout:1800});
+        const first=await section.locator('.finance-page-transaction').first().innerText();
+        assert.ok(first.includes('Pending'),'Pending authorizations should sort first');
+      });
+      await expectBatch1('account no longer reported',async()=>{
+        await section.getByText('Former account synthetic purchase',{exact:true}).first().waitFor({timeout:1800});
+        await section.getByText('Account no longer reported',{exact:false}).first().waitFor({timeout:1800});
+      });
+      await expectBatch1('full retained history selectable',async()=>{
+        await section.getByRole('button',{name:'All history',exact:true}).click({timeout:1800});
+        await section.getByText('Historic synthetic purchase',{exact:true}).first().waitFor({timeout:1800});
+      });
+      await expectBatch1('filter chips count and clear',async()=>{
+        await section.getByLabel('Status',{exact:true}).selectOption('pending');
+        assert.ok(await section.locator('.finance-page-active-filter').count()>0,
+          'Active filter chips must be visible');
+        await section.getByRole('button',{name:'Clear all',exact:true}).waitFor({timeout:1800});
+        await section.getByText(/\d+ of \d+ transactions shown/).first().waitFor({timeout:1800});
+        await section.getByRole('button',{name:'Clear all',exact:true}).click();
+      });
+      await expectBatch1('opt-out available without mandatory activation',async()=>{
+        await section.getByRole('button',{name:'Accounts',exact:true}).click();
+        const toggle=section.getByRole('checkbox',{name:/Sync transactions for X Money Checking/});
+        assert.equal(await toggle.isChecked(),true,'All discovered accounts start enabled');
+      });
+      failPlaidFetch=true;
+      await Promise.all([
+        page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/plaid/accounts')
+          &&r.request().method()==='GET'&&r.status()===503),
+        page.evaluate(()=>window.btRefreshFinancesPage?.())
+      ]);
+      await expectBatch1('failed second provider warning and retry',async()=>{
+        await section.getByText('Plaid activity unavailable',{exact:false}).first().waitFor({timeout:1800});
+        await section.getByRole('button',{name:'Retry Plaid',exact:true}).waitFor({timeout:1800});
+      });
+      failPlaidFetch=false;
+      await page.evaluate(()=>window.btRefreshFinancesPage?.());
+      await section.getByRole('heading',{name:'Finances'}).waitFor();
       // Removing an individual Plaid bank must take one confirmation and leave tracker history intact.
       await section.getByRole('button',{name:'Accounts',exact:true}).click();
       await section.getByRole('button',{name:'Remove bank',exact:true}).click();
@@ -326,7 +396,9 @@ const base=()=>({
       assert.equal(plaidState.connected,false);
       assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'no tracker writes');
       assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-access')),true);
-      assert.deepEqual(errors,[]);console.log(name+': finance overview, transactions, account management, privacy and responsive navigation passed');
+      assert.deepEqual(errors,[]);
+      assert.deepEqual(batch1Red,[],name+' BATCH 1 RED synthetic defects: '+batch1Red.join(' | '));
+      console.log(name+': finance overview, transactions, account management, privacy and responsive navigation passed');
     }finally{await browser.close()}
   }}finally{server.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
