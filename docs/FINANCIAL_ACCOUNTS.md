@@ -4,7 +4,7 @@
 
 BonusTracker's **Financial accounts** integration is a read-only view of accounts
 the user has connected through SimpleFIN Bridge (primary) or Plaid Trial (fallback). It can show account
-balances and observed posted transactions **independently** of a bank-bonus
+balances and observed posted/pending transactions **independently** of a bank-bonus
 campaign. Bank-bonus eligibility, deadlines and milestone status remain owned
 by the canonical tracker lifecycle engines.
 
@@ -30,13 +30,12 @@ qualifying direct-deposit or bonus-payout evidence without review.
 - `POST /connect`: one-time SimpleFIN setup token, securely exchanged and
   encrypted server-side.
 - `POST /discover`: bounded account discovery, provider refresh rate limited.
-- Read-only transaction monitoring starts automatically for every discovered account.
-  The existing `PUT /monitoring` compatibility route remains available internally,
-  but the Finances UI does not require an additional opt-in toggle.
+- Monitoring starts automatically for newly discovered accounts. Each account can be paused through its Account settings; explicit opt-outs survive subsequent discovery and syncing. Paused activity is not stored.
+- Accounts → Account settings → Remove this account deletes its active saved financial records, retaining a minimal marker so discovery will not re-add it. Other accounts at the same institution stay connected. Removed accounts can be restored without relinking the whole bank.
 - `PUT /selection`: optional account-to-open-bonus linkage.
 - `POST /sync`: bounded read-only provider transaction retrieval, with a
-  24-hour owner/provider budget and background checks for already-connected
-  owners. A new bank may be discovered during a cooldown but its transactions
+  six-hour SimpleFIN and three-hour Plaid scheduled refresh windows, with two-hour and
+  thirty-minute manual cooldowns respectively, and background checks for connected owners. A new bank may be discovered during a cooldown but its transactions
   can remain pending until the next eligible provider window. No app action
   initiates payments or transfers.
 - `DELETE /` (SimpleFIN): disconnect all SimpleFIN institutions and remove
@@ -71,8 +70,8 @@ qualifying direct-deposit or bonus-payout evidence without review.
 - The provider may return delayed, incomplete or corrected transactions.
   Absence of transactions does not prove that a bonus was unpaid, a fee was
   waived, or a recurring requirement was met.
-- Pending transactions are excluded from observed posted activity. The backend
-  retains 90 days of previous posted observations and tracks corrections.
+- Pending transactions are visible and labeled but excluded from posted totals and bonus confirmations. SimpleFIN `posted=0` uses the transaction date or first observation for display, and clears disappeared pending rows only after complete retrieval. Plaid reconciles `removed` and `pending_transaction_id` transitions.
+- SimpleFIN provider retrieval stays restricted to the latest 90 days. Already-observed history uses encrypted monthly 200-row shards, referenced by a conditional-write manifest and verified by encrypted readback. This cannot recreate previously deleted or unavailable provider activity.
 - **Hide balances** also masks observation summary amounts and individual
   transaction amounts in the current panel, without modifying persisted data.
 - **No data / unknown / stale** are distinct states. Do not show false totals
@@ -104,3 +103,7 @@ available-balance mapping, internal-transfer reconciliation, an auditable
 category engine with user corrections, historical completeness markers, and
 separate asset/liability semantics before showing reliable **income,
 expenses, cash flow, net worth or investment performance**.
+
+## Removing one account
+
+The account-specific **Remove this account** action is different from disconnecting a Plaid Item or SimpleFIN Bridge. It removes the account from Finances, deletes its active saved transactions, settings, mapping/review records and balances, and prevents automatic rediscovery through an encrypted, owner-private exclusion. A restore control makes it eligible for discovery and new synchronization again, but cannot recover data already erased from the active transaction manifest. It never closes the actual bank account or changes bonus-tracker lifecycle records. Prior immutable encrypted shard objects may remain transiently before cleanup.
