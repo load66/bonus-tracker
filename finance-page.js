@@ -14,7 +14,7 @@
     entertainment:'Entertainment',fees:'Fees',taxes:'Taxes',travel:'Travel',
     subscription:'Subscription',transfer:'Transfer',refund:'Refund',bonus:'Bank bonus',other:'Other'
   };
-  let currentRoot=null,sequence=0,hidden=false,data=null,busy=false,view='overview',period=30;
+  let currentRoot=null,sequence=0,hidden=false,data=null,otherData=null,busy=false,view='overview',period=30;
   let transactionSearch='',transactionAccount='',transactionCategory='',transactionStatus='';
   let accountSearch='',accountType='',saveNotice='',accountDraftProfiles={};
   const el=(tag,text,parent,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;if(parent)parent.append(n);return n};
@@ -97,6 +97,54 @@
     }catch(error){if(error.name==='AbortError')throw Error('The request timed out. Refresh before retrying.');throw error}
     finally{clearTimeout(timer)}
   }
+  async function loadOtherSource(rev){
+    // One authenticated read to surface linked accounts across both providers.
+    // Never combine totals: overlapping bank connections would double-count balances.
+    const otherSource=provider==='plaid'?'simplefin':'plaid';
+    const auth=window.BTBonusAuth;if(!auth?.connected())return;
+    const token=await auth.token();
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
+    try{
+      const response=await fetch(BASE+(otherSource==='plaid'?'/plaid/accounts':'/simplefin'),{
+        headers:{Authorization:'Bearer '+token},credentials:'omit',cache:'no-store',signal:controller.signal});
+      if(!response.ok)return;
+      const snapshot=await response.json();
+      if(rev!==sequence||!auth.connected()||window.BTBonusAuth!==auth)return;
+      const latest=await auth.token().catch(()=>null);
+      if(rev!==sequence||!sameSessionToken(token,latest))return;
+      otherData={provider:otherSource,snapshot};
+      if(data&&currentRoot?.isConnected)paint();
+    }catch(_error){/* Other provider may not be configured; primary accounts remain available. */}
+    finally{clearTimeout(timer)}
+  }
+  function switchSource(source,preserveSearch=false){
+    if(provider===source)return;
+    provider=source;hidden=true;transactionAccount='';transactionSearch='';
+    if(!preserveSearch)accountSearch='';
+    accountType='';saveNotice='';refresh();
+  }
+  function discoverSelected(){
+    if(provider==='plaid')return change(()=>request('/sync',{method:'POST'}));
+    window.btDiscoverBankAccounts?.();
+  }
+  function connectedSources(host){
+    const other=otherData?.snapshot;
+    if(!other?.connected)return;
+    const accounts=other.accounts||[],source=otherData.provider;
+    const panel=el('section',undefined,host,'finance-page-other-source');
+    const heading=el('div',undefined,panel,'finance-page-source-head');
+    el('strong',source==='plaid'?'Plaid connected banks':'SimpleFIN connected banks',heading);
+    el('small',accounts.length+' account'+(accounts.length===1?'':'s'),heading);
+    if(accounts.length){
+      const names=[...new Set(accounts.map(a=>a.bank||a.name).filter(Boolean))].slice(0,4);
+      el('p',names.join(' · ')+(new Set(accounts.map(a=>a.bank||a.name).filter(Boolean)).size>4?' · +more':''),panel);
+    }else{
+      el('p','Bank linked · accounts not yet discovered',panel);
+    }
+    const row=el('div',undefined,panel,'finance-page-quick-actions');
+    action(row,'View '+(source==='plaid'?'Plaid':'SimpleFIN')+' accounts',
+      ()=>switchSource(source,true),'finance-page-button finance-page-primary');
+  }
   async function change(work,commitAccountProfiles=false){
     if(busy)return;
     busy=true;saveNotice='';paint();
@@ -129,8 +177,7 @@
     el('p',(data.accounts||[]).length+' accounts · '+banks.size+' institutions',box,'finance-page-count');
     const actions=el('div',undefined,box,'finance-page-quick-actions');
     action(actions,'Add bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');
-    action(actions,provider==='plaid'?'Manage Plaid banks':'Discover accounts',
-      ()=>provider==='plaid'?window.btOpenBankConnectFlow?.():window.btDiscoverBankAccounts?.(),
+    action(actions,'Discover accounts',discoverSelected,
       'finance-page-button');
     const meta=el('div',undefined,box,'finance-page-meta');
     el('span',data.status==='attention'?'Needs attention':'Connected',meta);
@@ -284,11 +331,18 @@
         for(const account of accounts){shown++;accountEditor(group,account)}
       }
       if(!shown){
+        const matchingOther=(otherData?.snapshot?.accounts||[]).filter(a=>[a.bank,a.name,a.accountType,a.accountSubtype].filter(Boolean).join(' ').toLowerCase().includes(accountSearch));
+        if(accountSearch&&matchingOther.length){
+          const found=el('div',undefined,list,'finance-page-other-source');
+          el('h4','Found in '+(otherData.provider==='plaid'?'Plaid':'SimpleFIN'),found);
+          el('p',matchingOther.slice(0,4).map(a=>[a.bank,a.name].filter(Boolean).join(' · ')).join(' | '),found);
+          action(found,'View matching accounts',()=>switchSource(otherData.provider,true),'finance-page-button finance-page-primary');return;
+        }
         el('h4',accountSearch?'No matching account':'No accounts discovered',list);
         el('p',/\bx\s*money\b|\bxmoney\b/i.test(accountSearch)?'X Money is not in the imported accounts. Check support with your connection provider, then connect it before discovering again.':'New accounts must first be authorized with your connection provider.',list,'finance-page-hint');
         const quick=el('div',undefined,list,'finance-page-quick-actions');
         action(quick,'Add bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');
-        action(quick,'Discover accounts',()=>window.btDiscoverBankAccounts?.(),'finance-page-button');
+        action(quick,'Discover accounts',discoverSelected,'finance-page-button');
       }
     }
     function accountEditor(parent,account){
@@ -325,31 +379,32 @@
     const sourceBox=el('section',undefined,host,'finance-page-connection');
     const sourceSelect=select(sourceBox,'Connection source',{
       simplefin:'SimpleFIN · Primary',plaid:'Plaid · Fallback'},provider,value=>{
-        provider=value;hidden=true;transactionAccount='';transactionSearch='';
-        accountSearch='';accountType='';saveNotice='';refresh();
+        switchSource(value);
       });
     sourceSelect.setAttribute('aria-label','Finance connection source');sourceSelect.disabled=busy;
 
     const notice=el('p',saveNotice,host,'finance-page-notice');notice.setAttribute('role',saveNotice?'alert':'status');
-    if(!data){statusMessage(host,'Loading financial accounts','Retrieving your private, read-only account summary.');return}
-    if(!data.configured){statusMessage(host,'Financial connections unavailable','Secure account syncing is not configured on the server.');return}
+    if(!data){statusMessage(host,'Loading accounts','Checking secure connections…');return}
+    if(!data.configured){statusMessage(host,'Connection not ready','Choose another source or manage your bank connection.');connectedSources(host);return}
     if(!data.connected){
-      statusMessage(host,'No accounts connected',provider==='plaid'?'Plaid fallback accounts will appear here after linking and discovery.':'Connect your bank once, then discover its accounts.');
-      action(host,'Connect a bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');
-      action(host,'Discover accounts',()=>window.btDiscoverBankAccounts?.(),'finance-page-button');return;
+      statusMessage(host,'No accounts connected',provider==='plaid'?'Your Plaid accounts appear after the first discovery.':'Connect your bank once, then find its accounts.');
+      connectedSources(host);
+      action(host,'Add bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');
+      action(host,'Discover accounts',discoverSelected,'finance-page-button');return;
     }
     const summary=window.BTFinanceOverview?.summarize(data,{days:period});
     hero(host,summary);
+    connectedSources(host);
     if(view==='transactions')transactions(host);else if(view==='accounts')accounts(host);else overview(host,summary);
   }
   async function mount(){
     const host=document.getElementById('bt-finances-page');if(!host||host===currentRoot)return;
-    currentRoot=host;data=null;const rev=++sequence;paint();
+    currentRoot=host;data=null;otherData=null;const rev=++sequence;paint();
     if(!window.BTBonusAuth?.connected()){
       host.replaceChildren();statusMessage(host,'Sign in to view finances','Use your existing BonusTracker sign-in to load private financial records.');
       action(host,'Sign in / manage accounts',()=>window.btOpenBankSync?.(),'finance-page-button finance-page-primary');return;
     }
-    try{const result=await request();if(rev!==sequence||host!==currentRoot||!host.isConnected)return;data=result;paint()}
+    try{const result=await request();if(rev!==sequence||host!==currentRoot||!host.isConnected)return;data=result;paint();loadOtherSource(rev)}
     catch(error){if(rev!==sequence||host!==currentRoot||!host.isConnected)return;host.replaceChildren();statusMessage(host,'Accounts unavailable',error.message);action(host,'Try again',refresh)}
   }
   function refresh(){currentRoot=null;data=null;accountDraftProfiles={};sequence++;mount()}
