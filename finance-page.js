@@ -15,7 +15,7 @@
   };
   let currentRoot=null,sequence=0,hidden=false,data=null,busy=false,view='overview',period=30;
   let transactionSearch='',transactionAccount='',transactionCategory='',transactionStatus='';
-  let accountSearch='',accountType='',saveNotice='';
+  let accountSearch='',accountType='',saveNotice='',accountDraftProfiles={};
   const el=(tag,text,parent,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;if(parent)parent.append(n);return n};
   const stamp=t=>Number.isFinite(t)&&t>0?new Date(t*1000).toLocaleString():'Unavailable';
   const date=t=>Number.isFinite(t)&&t>0?new Date(t*1000).toLocaleDateString():'Unavailable';
@@ -39,8 +39,18 @@
     const card=el('section',undefined,host,'finance-page-card');el('h3',title,card);el('p',message,card);return card;
   }
   function profile(account){
-    data.accountProfiles ||= {};
-    return data.accountProfiles[account.key] ||= {kind:'unclassified',balanceMode:'exclude',order:499};
+    // Keep unsaved edits in memory, separate from the last server-confirmed data.
+    // Network errors and cloud redraws must not silently revert user selections
+    // or leak unconfirmed classifications into the financial summary.
+    if(!Object.prototype.hasOwnProperty.call(accountDraftProfiles,account.key)){
+      const saved=data?.accountProfiles?.[account.key]||{};
+      accountDraftProfiles[account.key]={
+        kind:saved.kind||'unclassified',
+        balanceMode:saved.balanceMode||'exclude',
+        order:Number.isInteger(saved.order)?saved.order:499
+      };
+    }
+    return accountDraftProfiles[account.key];
   }
   function sortedAccounts(){
     return [...(data.accounts||[])].sort((a,b)=>(profile(a).order??499)-(profile(b).order??499)
@@ -59,11 +69,12 @@
     }catch(error){if(error.name==='AbortError')throw Error('The request timed out. Refresh before retrying.');throw error}
     finally{clearTimeout(timer)}
   }
-  async function change(work){
+  async function change(work,commitAccountProfiles=false){
     if(busy)return;
     busy=true;saveNotice='';paint();
     try{
       data=await work();
+      if(commitAccountProfiles)accountDraftProfiles={};
       saveNotice='';
     }catch(error){
       // Account organization drafts stay on this page for retry. Transaction
@@ -271,7 +282,7 @@
     action(card,'Save account organization',()=>change(()=>{
       const profiles={};sortedAccounts().forEach((account,index)=>{const p=profile(account);profiles[account.key]={kind:p.kind||'unclassified',balanceMode:p.balanceMode||'exclude',order:index}});
       return request('/account-profiles',{method:'PUT',body:JSON.stringify({profiles})});
-    }),'finance-page-button finance-page-primary');
+    },true),'finance-page-button finance-page-primary');
   }
   function paint(){
     const host=currentRoot;if(!host||!host.isConnected)return;host.replaceChildren();
@@ -296,7 +307,7 @@
     try{const result=await request();if(rev!==sequence||host!==currentRoot||!host.isConnected)return;data=result;paint()}
     catch(error){if(rev!==sequence||host!==currentRoot||!host.isConnected)return;host.replaceChildren();statusMessage(host,'Accounts unavailable',error.message);action(host,'Try again',refresh)}
   }
-  function refresh(){currentRoot=null;data=null;sequence++;mount()}
+  function refresh(){currentRoot=null;data=null;accountDraftProfiles={};sequence++;mount()}
   window.btRefreshFinancesPage=refresh;
   window.btRegisterPostRender?.('finance-page',mount);
   window.addEventListener('storage',event=>{if(event.key==='bonus-ai-auth')refresh()});
