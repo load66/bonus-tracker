@@ -166,7 +166,7 @@ return result;
         assert.equal(await reopened.locator('.bonus-evidence-row').count(),5,
           'first render remains compact even with many pending deposits');
         async function advanceQueue(expected){
-          const next=reopened.getByRole('button',{name:/^Show \\d+ more to review$/});
+          const next=reopened.getByRole('button',{name:/^Show \d+ more to review$/});
           await next.click({timeout:5000}).catch(async e=>{
             // The button may be replaced by the successful rerender before
             // Playwright finishes its own click-stability bookkeeping.
@@ -177,10 +177,10 @@ return result;
         }
         await advanceQueue(10);
         await advanceQueue(15);
-        assert.equal(await reopened.getByRole('button',{name:/^Show \\d+ more to review$/}).count(),1,
+        assert.equal(await reopened.getByRole('button',{name:/^Show \d+ more to review$/}).count(),1,
           'remaining pending history must be reachable');
         await advanceQueue(17);
-        assert.equal(await reopened.getByRole('button',{name:/^Show \\d+ more to review$/}).count(),0,
+        assert.equal(await reopened.getByRole('button',{name:/^Show \d+ more to review$/}).count(),0,
           'no pending evidence should become stranded behind paging');
         assert.equal(await reopened.locator('img').count(),0,'long queues must safely escape untrusted descriptions');
         await reopened.getByRole('button',{name:'Show reviewed / dismissed'}).click();
