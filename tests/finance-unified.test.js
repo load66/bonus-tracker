@@ -45,4 +45,16 @@ assert.equal(excluded.excludedForReview,2);
 assert.equal(finance.summarize(excluded,{now,days:30}).income,null);
 assert.equal(simple.accounts[0].key,a,'source snapshots stay unchanged');
 assert.equal(twin.accounts[0].key,b,'the second provider is never overwritten');
+
+const missingKey='f'.repeat(64);
+const historyAfterAccountDisappears=structuredClone(simple);
+historyAfterAccountDisappears.transactions[missingKey]={
+  orphan:{id:'orphan',amount:'-8.25',posted:now-200,pending:false,
+    description:'Synthetic former-account purchase',category:'shopping'}};
+const missing=core.combine({simplefin:historyAfterAccountDisappears});
+assert.ok(missing.transactions['simplefin:'+missingKey]?.orphan,
+  'BATCH 1 RED: archived transactions must remain accessible after provider stops reporting an account');
+assert.ok(missing.accounts.some(x=>x.key==='simplefin:'+missingKey&&x.noLongerReported),
+  'BATCH 1 RED: orphan activity must be labeled Account no longer reported');
+
 console.log('Unified Finance: provider isolation, type inference, full account/transaction aggregation, exact cents, stale-balance safety and overlap controls passed');
