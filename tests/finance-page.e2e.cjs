@@ -49,6 +49,7 @@ const base=()=>({
           await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({detail:'Synthetic account save temporarily unavailable.'})});
           return;
         }
+        if(url.pathname.endsWith('/monitoring'))state.monitoredAccounts=body.accounts;
         if(url.pathname.endsWith('/transaction-review'))state.transactions[body.account][body.transaction].category=body.category,state.transactions[body.account][body.transaction].categorySource=body.category==='unreviewed'?'automatic':'user';
         if(url.pathname.endsWith('/account-profiles')){
           state.accountProfiles=body.profiles;
@@ -118,7 +119,7 @@ const base=()=>({
       // Missing money must remain unknown rather than incorrectly becoming $0.00.
       await section.locator('.finance-page-tile strong')
         .filter({hasText:/^\s*—\s*$/}).first().waitFor({state:'visible'});
-      await section.getByText('4 accounts',{exact:false}).waitFor();
+      await section.locator('.finance-page-count').filter({hasText:'4 accounts'}).waitFor();
       await section.getByRole('heading',{name:'Connected accounts',exact:true}).waitFor();
       await section.getByRole('heading',{name:'Recent transactions',exact:true}).waitFor();
       const previews=section.locator('.finance-page-preview-card');
@@ -278,6 +279,49 @@ const base=()=>({
       assert.ok((await section.locator('.finance-page-transaction').allTextContents()).some(t=>t.includes('Plaid')),
         'A Plaid-origin transaction must appear with a source label in the combined feed');
       assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts')));
+      // A connected bank with monitoring disabled must guide account selection,
+      // not produce a generic failed-save alert on Refresh activity.
+      state.monitoredAccounts=[];plaidState.monitoredAccounts=[];
+      await page.evaluate(()=>window.btRefreshFinancesPage?.());
+      await section.getByRole('heading',{name:'Finances'}).waitFor();
+      await section.getByRole('button',{name:'Set up activity'}).waitFor();
+      await section.getByRole('button',{name:'Set up activity'}).click();
+      await section.getByRole('heading',{name:'Transaction monitoring is off'}).waitFor();
+      assert.equal(await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).count(),0,
+        'Refresh activity must not say unsaved changes when monitoring was never enabled');
+      await section.getByRole('button',{name:'Enable activity for all 4 accounts'}).click();
+      await page.waitForFunction(()=>{
+        const text=document.querySelector('#bt-finances-page')?.textContent||'';
+        return text.includes('4 accounts enabled for read-only monitoring.');
+      },null,{timeout:15000});
+      assert.deepEqual(new Set(state.monitoredAccounts),new Set([A,B,C]),
+        'All SimpleFIN accounts require an explicit read-only monitoring opt-in');
+      assert.deepEqual(plaidState.monitoredAccounts,[A],
+        'Plaid source monitoring must be enabled independently, without new Plaid Link');
+      assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts/sync')&&r.method==='POST'),
+        'Enabling monitored Plaid accounts must immediately request existing Item transactions');
+      assert.equal(requests.some(r=>r.path.endsWith('/plaid/link-token')||r.path.endsWith('/plaid/exchange')),false,
+        'Monitoring an existing Plaid connection never creates a new lifetime Item');
+      await section.getByText('X Money Bonus',{exact:true}).waitFor();
+      // All provider-returned rows within the 90-day retention window must be
+      // reachable, not silently truncated at the former 250-row UI cap.
+      for(let index=0;index<260;index++){
+        const id='history-'+String(index).padStart(3,'0');
+        plaidState.transactions[A][id]={id,posted:NOW-500-index*1000,pending:false,
+          amount:'-1.00',currency:'USD',merchant:'History item '+index,
+          description:'Synthetic Plaid history item '+index,category:'other',
+          categorySource:'automatic',confidence:'low',signals:[]};
+      }
+      await page.evaluate(()=>window.btRefreshFinancesPage?.());
+      await section.getByRole('button',{name:'Transactions',exact:true}).click();
+      await section.getByRole('button',{name:/^Show 100 more transactions/}).waitFor();
+      await section.getByRole('button',{name:/^Show 100 more transactions/}).click();
+      await section.getByRole('button',{name:/^Show 64 more transactions/}).waitFor();
+      await section.getByRole('button',{name:/^Show 64 more transactions/}).click();
+      assert.equal(await section.locator('.finance-page-transaction').count(),264,
+        'All 260 additional Plaid rows plus 4 preexisting rows are accessible by paging');
+      assert.equal(await section.getByRole('button',{name:/^Show \d+ more transactions/}).count(),0,
+        'No provider-returned history remains inaccessible after the final page');
       assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'no tracker writes');
       assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-access')),true);
       assert.deepEqual(errors,[]);console.log(name+': finance overview, transactions, account management, privacy and responsive navigation passed');

@@ -143,3 +143,16 @@
 .finance-page-preview-copy small{font-size:10px;color:#acc1dc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .finance-page-preview-value{font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:700;text-align:right}
 @media(max-width:390px){.finance-page-preview-row{min-height:49px}.finance-page-preview-copy strong{font-size:11px}.finance-page-preview-value{font-size:12px}}
+
+/* Explicit opt-in activity setup and durable bank-link result. */
+.finance-page .finance-page-activity-setup{border-color:#5079a5;background:#182b44}
+.finance-page .finance-page-activity-setup h3{font-size:16px;margin:0 0 7px}
+.finance-page .finance-page-activity-setup p{font-size:12px;line-height:1.5;margin:4px 0 9px}
+.finance-page .finance-page-activity-setup .finance-page-quick-actions{margin:10px 0 4px}
+.finance-page .finance-page-connection-success,
+.finance-page .finance-page-activity-result{padding:12px 14px;margin:10px 0;border:1px solid #5079a5;border-radius:12px;background:#18314a;color:#dceefe;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.finance-page .finance-page-connection-success{border-color:#489c82;background:#15362e}
+@media(max-width:390px){
+.finance-page .finance-page-activity-setup{padding:12px}
+.finance-page .finance-page-activity-setup .finance-page-quick-actions{gap:8px}
+}

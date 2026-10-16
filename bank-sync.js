@@ -283,6 +283,18 @@
     const menu=document.querySelector('.header-data-panel');if(!menu||menu.querySelector('[data-bank-sync]'))return;
     const b=el('button',undefined,menu);b.type='button';b.dataset.bankSync='';el('strong','Financial accounts',b);el('small','Connections, balances and monitored activity',b);b.onclick=()=>{document.getElementById('bt-data-menu').open=false;open();};
   }
+  // The connection wizard stays open while Plaid's hosted Link closes.
+  // Present a durable success in the modal's visible footer and ensure Done
+  // refreshes Finances after this separate provider's write.
+  window.addEventListener('bt:plaid-bank-connected',event=>{
+    if(!panel||!window.BTBonusAuth?.connected())return;
+    const detail=event?.detail||{},n=Number(detail.count);
+    changed=true;
+    message(detail.status==='ready'?
+      'Plaid bank connected'+(Number.isInteger(n)&&n>=0?' · '+n+' account'+(n===1?'':'s')+' found':'')+
+        '. See Finances → Transactions to enable activity.':
+      'Plaid authorization saved. Account discovery needs attention; use Connected accounts to review it.');
+  });
   window.btOpenBankSync=open;
   window.btOpenBankConnectFlow=()=>open('add-bank');
   window.btDiscoverBankAccounts=()=>open('discover');

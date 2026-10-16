@@ -68,7 +68,7 @@
     message.setAttribute('role','status');
     const body=elem('div',undefined,host,'plaid-trial-control');
     const accountsArea=elem('details',undefined,host,'plaid-trial-accounts plaid-trial-advanced');
-    let amountsVisible=false,linkActive=false;
+    let amountsVisible=false,linkActive=false,exchangeInFlight=false,connectionComplete=false;
     function renderAccounts(snapshot){
       if(!host.isConnected)return;
       const expanded=accountsArea.open;
@@ -121,8 +121,21 @@
           message.textContent='Saving monitoring preferences…';
           try{
             const result=await api('/accounts/monitoring',{method:'PUT',body:JSON.stringify({accounts:choices})});
-            message.textContent='Monitoring preferences saved. No bonus milestones were changed.';
             renderAccounts(result);
+            message.textContent='Monitoring saved. Checking for available posted transactions…';
+            try{
+              const synced=await api('/accounts/sync',{method:'POST'});
+              renderAccounts(synced);
+              const count=Object.values(synced.transactions||{}).reduce(
+                (total,rows)=>total+Object.keys(rows||{}).length,0);
+              message.textContent=synced.error?'Monitoring saved · '+synced.error:
+                'Monitoring saved · '+count+' posted transaction'+(count===1?'':'s')+
+                ' available. Review all activity in Finances.';
+              window.btRefreshFinancesPage?.();
+            }catch(error){
+              message.textContent='Monitoring saved; account activity can be reviewed after the next provider check. '+error.message;
+              window.btRefreshFinancesPage?.();
+            }
           }catch(error){message.textContent=error.message;}
         });
       }
@@ -243,27 +256,49 @@
           if(!host.isConnected)return;
           const link=window.Plaid.create({token:result.linkToken,
             onSuccess:async publicToken=>{
+              // Plaid may close the Link overlay while this async exchange runs.
+              // Keep CTA disabled, show a durable completion and never re-exchange.
+              exchangeInFlight=true;
               message.textContent='Saving the bank connection securely…';
               try{
-                await api('/exchange',{method:'POST',body:JSON.stringify({session:result.session,publicToken})});
-                linkActive=false;
-                message.textContent='Bank linked. Discovering accounts securely…';
+                await api('/exchange',{method:'POST',body:JSON.stringify({
+                  session:result.session,publicToken
+                })});
+                connectionComplete=true;
+                message.textContent='Bank connected. Discovering accounts…';
+                let statusCode='pending',count=0;
                 try{
                   const synced=await api('/accounts/sync',{method:'POST'});
-                  await status();
-                  const count=(synced.accounts||[]).length;
-                  message.textContent=count?'Connected · '+count+' account'+(count===1?'':'s')+' discovered. Enable monitoring only for the accounts you choose.':
-                    (synced.error||'Connected, but the provider has not returned accounts yet. Use Discover connected accounts later.');
-                  window.btRefreshFinancesPage?.();
-                }catch(discoveryError){
-                  await status();
-                  message.textContent='Bank linked, but account discovery needs another check: '+discoveryError.message;
-                  window.btRefreshFinancesPage?.();
+                  count=(synced.accounts||[]).length;
+                  statusCode=synced.error?'pending':'ready';
+                  message.textContent=synced.error?
+                    'Bank connected. Account discovery needs attention: '+synced.error:
+                    'Bank connected · '+count+' account'+(count===1?'':'s')+
+                    ' discovered. Enable read-only monitoring in Finances for transaction history.';
+                }catch(error){
+                  message.textContent='Bank connected. Account discovery was delayed: '+error.message+
+                    '. Check connected accounts instead of reconnecting.';
                 }
-              }catch(error){message.textContent=error.message+
-                ' Do not retry the bank login automatically; a permanent slot may already be consumed.';}
+                // Do not depend on this wizard remaining mounted: Main app redraws
+                // and the Plaid overlay can remove the original confirmation.
+                window.dispatchEvent(new CustomEvent('bt:plaid-bank-connected',{
+                  detail:{status:statusCode,count}
+                }));
+                try{await status()}catch(_error){/* Confirmation remains visible. */}
+              }catch(error){
+                message.textContent=error.message+
+                  ' Check connected accounts before trying again; a permanent slot may already be consumed.';
+              }finally{
+                exchangeInFlight=false;linkActive=false;
+                delete go.dataset.keepDisabled;
+                if(go.isConnected)go.disabled=connectionComplete;
+              }
             },
-            onExit:()=>{linkActive=false;delete go.dataset.keepDisabled;go.disabled=false;message.textContent='Link closed. Capacity stays reserved until lifetime usage is reconciled; no automatic retry was started.';}
+            onExit:()=>{
+              if(exchangeInFlight||connectionComplete)return;
+              linkActive=false;delete go.dataset.keepDisabled;go.disabled=false;
+              message.textContent='Plaid Link closed. Check your connections before starting another login.';
+            }
           });
           go.dataset.keepDisabled="true";link.open();
         }catch(error){linkActive=false;delete go.dataset.keepDisabled;message.textContent=error.message}
