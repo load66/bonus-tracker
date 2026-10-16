@@ -5,7 +5,7 @@
   let panel=null,data=null,busy=false,generation=0,returnFocus=null,hideBalances=false,accountFilter='';
   const el=(tag,text,parent)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(parent)parent.append(n);return n;};
   const stamp=t=>typeof t==='number'&&t>0?new Date(t*1000).toLocaleString():'Not available';
-  const money=(a,c)=>{if(a===null||a===undefined||a===''||!Number.isFinite(Number(a)))return 'Unavailable';try{return new Intl.NumberFormat(undefined,{style:'currency',currency:c||'USD'}).format(Number(a));}catch{return String(a)+' '+String(c||'');}};
+  const money=(a,c)=>{if(a===null||a===undefined||a===''||!Number.isFinite(Number(a)))return 'Unavailable';if(!c)return String(a)+' (currency unknown)';try{return new Intl.NumberFormat(undefined,{style:'currency',currency:c}).format(Number(a));}catch{return String(a)+' '+String(c);}};
   const active=()=>typeof entries!=='undefined'&&Array.isArray(entries)?entries.filter(e=>!e.closed&&e.id&&e.opened):[];
   function snapshot(d){
     const watched=new Set([...(d.monitoredAccounts||[]),...Object.keys(d.mappings||{})]);
