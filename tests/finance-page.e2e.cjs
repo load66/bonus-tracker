@@ -149,13 +149,20 @@ const base=()=>({
           const geometry=await section.evaluate(e=>({window:innerWidth,scroll:e.scrollWidth,box:e.getBoundingClientRect().width}));
           assert.ok(geometry.scroll<=geometry.window+1&&geometry.box<=geometry.window+1,name+' '+target[0]+' overflow at '+width+': '+JSON.stringify(geometry));
           assert.equal(await page.locator('.tabs .tb').count(),6);
-          await page.waitForFunction(()=>[...document.querySelectorAll('.tabs .tb')].length===6&&
-            [...document.querySelectorAll('.tabs .tb')].every(e=>e.getBoundingClientRect().height>=44),null,{timeout:12000});
-          const navSizes=await page.locator('.tabs .tb').evaluateAll(rows=>rows.map(e=>({
-            title:e.textContent.trim(),height:e.getBoundingClientRect().height,
-            minHeight:getComputedStyle(e).minHeight,display:getComputedStyle(e).display
-          })));
-          assert.ok(navSizes.every(x=>x.height>=44),name+' mobile navigation tap target: '+JSON.stringify(navSizes));
+          // One atomic snapshot: the root can repaint between an await and a
+          // second query, which otherwise measures detached buttons at 0px.
+          const navHandle=await page.waitForFunction(()=>{
+            const rows=[...document.querySelectorAll('.tabs .tb')];
+            if(rows.length!==6)return false;
+            const sized=rows.map(e=>({
+              title:e.textContent.trim(),height:e.getBoundingClientRect().height,
+              minHeight:getComputedStyle(e).minHeight,display:getComputedStyle(e).display
+            }));
+            return sized.every(x=>x.height>=44)?sized:false;
+          },null,{timeout:15000});
+          const navSizes=await navHandle.jsonValue();
+          assert.ok(navSizes.length===6&&navSizes.every(x=>x.height>=44),
+            name+' mobile navigation tap target: '+JSON.stringify(navSizes));
           await page.screenshot({path:path.join(output,name+'-finances-'+target[1]+'-'+width+'.png')});
         }
       }
