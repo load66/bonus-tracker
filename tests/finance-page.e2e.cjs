@@ -58,8 +58,32 @@ const base=()=>({
         window.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[now]))}static now(){return now}};
         localStorage.setItem('bt_e_v4','[]');localStorage.setItem('bonus-ai-auth',JSON.stringify({access_token:'synthetic-access',refresh_token:'synthetic-refresh',expires_at:4102444800}));
       });
-      await page.goto(process.env.BT_BROWSER_SITE_URL||'http://127.0.0.1:'+server.address().port+'/');await page.getByRole('button',{name:'Finances',exact:true}).click();
-      const section=page.getByRole('region',{name:'My finances'});await section.getByRole('heading',{name:'Financial overview'}).waitFor();
+      await page.goto(process.env.BT_BROWSER_SITE_URL||'http://127.0.0.1:'+server.address().port+'/');
+      // Cloud startup can redraw the root while the user is first navigating.
+      // A redraw is not evidence that the Finance page is unavailable. Check
+      // the fully bootstrapped shell and repeat a lost navigation at most twice.
+      await page.waitForFunction(()=>typeof window.BTBonusAuth?.connected==='function'&&
+        window.BTBonusAuth.connected()&&typeof window.btRefreshFinancesPage==='function',null,{timeout:12000});
+      const financeTab=page.getByRole('button',{name:'Finances',exact:true});
+      const section=page.getByRole('region',{name:'My finances'});
+      let opened=false;
+      for(let attempt=0;attempt<3;attempt++){
+        await financeTab.click();
+        try{
+          await section.getByRole('heading',{name:'Financial overview'}).waitFor({timeout:7000});
+          opened=true;break;
+        }catch{
+          const observed=await section.locator('h2,h3').allTextContents().catch(()=>[]);
+          if(observed.some(text=>/sign in to view finances|accounts unavailable|connections unavailable/i.test(text)))
+            throw Error(name+' Finances page returned a real connection/auth error: '+observed.join(' | '));
+          if(attempt===2){
+            const current=await page.locator('.tabs .tb[aria-current="page"]').allTextContents().catch(()=>[]);
+            throw Error(name+' Finances tab did not open after startup redraws; current='+current.join('|')+
+              '; headings='+observed.join('|')+'; pageerrors='+errors.join(';'));
+          }
+        }
+      }
+      assert.ok(opened,name+' Finances navigation must become available after bootstrap');
       assert.equal(await section.locator('img').count(),0,'provider aliases must be text, never HTML');
       // Playwright's filter waits for actual content, unlike immediate text snapshots.
       // Amounts can contain spacing; the user-facing status must be Unavailable.
