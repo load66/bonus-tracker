@@ -492,18 +492,51 @@
     else if(view==='accounts')accounts(host);
     else overview(host,summary);
   }
+  let sessionIdentity=null,mountCall=0;
   async function mount(){
     const host=document.getElementById('bt-finances-page');if(!host||host===currentRoot)return;
-    window.BTBonusEvidence?.dispose();
-    currentRoot=host;data=null;otherData=null;const rev=++sequence;paint();
-    if(!window.BTBonusAuth?.connected()){
-      host.replaceChildren();statusMessage(host,'Sign in to view finances','Use your existing BonusTracker sign-in to load private financial records.');
+    const call=++mountCall,auth=window.BTBonusAuth;
+    if(!auth?.connected()){
+      window.BTBonusEvidence?.dispose();
+      sessionIdentity=null;currentRoot=host;data=null;otherData=null;sequence++;
+      host.replaceChildren();statusMessage(host,'Sign in to view finances','Sign in securely to view linked financial accounts.');
       action(host,'Sign in / manage accounts',()=>window.btOpenBankSync?.(),'finance-page-button finance-page-primary');return;
     }
-    try{const result=await request();if(rev!==sequence||host!==currentRoot||!host.isConnected)return;data=result;paint();loadOtherSource(rev)}
-    catch(error){if(rev!==sequence||host!==currentRoot||!host.isConnected)return;host.replaceChildren();statusMessage(host,'Accounts unavailable',error.message);action(host,'Try again',refresh)}
+    let identity=null;
+    try{const token=await auth.token();identity=sessionOwner(token)||token}
+    catch(_error){/* Never render another owner's cached financial data on auth errors. */}
+    if(call!==mountCall||!host.isConnected||!auth.connected()||window.BTBonusAuth!==auth)return;
+    if(!identity){
+      window.BTBonusEvidence?.dispose();sessionIdentity=null;data=null;otherData=null;currentRoot=host;
+      host.replaceChildren();statusMessage(host,'Session needs attention','Sign in again before viewing financial records.');return;
+    }
+    if(identity===sessionIdentity&&data){
+      // Main app redraws must not destroy in-progress review, filters or account
+      // snapshots for the same owner. Preserve any in-flight second-provider read.
+      currentRoot=host;paint();return;
+    }
+    window.BTBonusEvidence?.dispose();
+    sessionIdentity=identity;currentRoot=host;data=null;otherData=null;
+    accountDraftProfiles={};dirtyAccounts.clear();
+    Object.keys(monitoringDraft).forEach(k=>delete monitoringDraft[k]);
+    const rev=++sequence;paint();
+    try{
+      const result=await request();
+      if(rev!==sequence||host!==currentRoot||!host.isConnected)return;
+      data=result;paint();loadOtherSource(rev);
+    }catch(error){
+      if(rev!==sequence||host!==currentRoot||!host.isConnected)return;
+      // A broken SimpleFIN connection must not hide already-authorized Plaid
+      // accounts. Fall back to the other source while explaining partial data.
+      data={configured:false,connected:false,accounts:[],error:String(error.message||'Connection unavailable')};
+      paint();loadOtherSource(rev);
+    }
   }
-  function refresh(){window.BTBonusEvidence?.dispose();currentRoot=null;data=null;accountDraftProfiles={};dirtyAccounts.clear();Object.keys(monitoringDraft).forEach(k=>delete monitoringDraft[k]);sequence++;mount()}
+  function refresh(){
+    window.BTBonusEvidence?.dispose();currentRoot=null;data=null;otherData=null;sessionIdentity=null;
+    accountDraftProfiles={};dirtyAccounts.clear();
+    Object.keys(monitoringDraft).forEach(k=>delete monitoringDraft[k]);sequence++;mount();
+  }
   window.btRefreshFinancesPage=refresh;
   window.btRegisterPostRender?.('finance-page',mount);
   window.addEventListener('storage',event=>{if(event.key==='bonus-ai-auth')refresh()});
