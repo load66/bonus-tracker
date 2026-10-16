@@ -96,6 +96,11 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before);
    await dialog.getByRole('button',{name:'Done',exact:true}).click();
    state={configured:true,connected:false,evidenceOnly:true};await page.evaluate(()=>btOpenBankSync());await page.getByLabel('SimpleFIN setup token',{exact:true}).waitFor();
+   const firstBankLink=page.getByRole('link',{name:'1. Add banks in SimpleFIN'});
+   assert.equal(await firstBankLink.getAttribute('href'),'https://beta-bridge.simplefin.org/');
+   assert.equal(await firstBankLink.getAttribute('target'),'_blank');
+   assert.equal(await page.getByRole('link',{name:'2. Get setup token'}).getAttribute('href'),
+     'https://bridge.simplefin.org/simplefin/create');
    await page.getByLabel('SimpleFIN setup token',{exact:true}).fill('synthetic-one-time-token');await page.getByRole('button',{name:'Connect SimpleFIN',exact:true}).click();await page.getByText('Connection active',{exact:true}).waitFor();
    assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-one-time-token')),false);
    assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before);
