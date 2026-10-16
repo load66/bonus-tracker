@@ -37,11 +37,6 @@
   function manage(){
     if(typeof window.btOpenBankSync==='function')window.btOpenBankSync();
   }
-  function openTracker(id){
-    if(typeof openAccountFromActionCenter==='function'){
-      openAccountFromActionCenter(String(id));
-    }
-  }
   function reviewPayout(id){
     if(typeof openRcv==='function')openRcv(String(id)); // Existing explicit confirmation flow.
   }
@@ -262,9 +257,10 @@
           el('p',progress.notice,panel,'bonus-evidence-note');
         }
       }
-      const row=el('div',undefined,card,'bonus-evidence-card-actions');
-      button(row,'Open tracker',()=>openTracker(group.entryId));
-      if(group.counts.bonus)button(row,'Review payout',()=>reviewPayout(group.entryId),'bonus-evidence-button primary');
+      if(group.counts.bonus){
+        const row=el('div',undefined,card,'bonus-evidence-card-actions');
+        button(row,'Review payout',()=>reviewPayout(group.entryId),'bonus-evidence-button primary');
+      }
     }
     if(report.campaigns.length>4)button(root,showAll?'Show fewer':'Show all '+report.campaigns.length+' linked bonuses',()=>{showAll=!showAll;update()});
     const footer=el('p','Reviewing or linking a candidate to a requirement is not confirmation that it qualifies. The bank’s source, timing and account rules must still be checked. No milestone, payout, closure or eligibility status is changed automatically.',root,'bonus-evidence-disclaimer');
