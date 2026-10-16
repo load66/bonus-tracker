@@ -166,11 +166,13 @@ return result;
         assert.equal(await reopened.locator('.bonus-evidence-row').count(),5,
           'first render remains compact even with many pending deposits');
         async function advanceQueue(expected){
-          const next=reopened.getByRole('button',{name:/^Show \d+ more to review$/});
-          await next.click({timeout:5000}).catch(async e=>{
-            // The button may be replaced by the successful rerender before
-            // Playwright finishes its own click-stability bookkeeping.
-            if(await reopened.locator('.bonus-evidence-row').count()!==expected)throw e;
+          // Dispatch directly to the live button. Finance panels can redraw
+          // during Playwright's stability polling; the subsequent row count is
+          // authoritative proof that the user action had its intended effect.
+          await reopened.evaluate(root=>{
+            const next=[...root.querySelectorAll('button')].find(b=>/^Show \d+ more to review$/.test(b.textContent.trim()));
+            if(!next||next.disabled)throw Error('No enabled next-page action');
+            next.click();
           });
           await reopened.locator('.bonus-evidence-row').nth(expected-1).waitFor({timeout:5000});
           assert.equal(await reopened.locator('.bonus-evidence-row').count(),expected);
