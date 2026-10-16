@@ -7,23 +7,7 @@
   const stamp=t=>typeof t==='number'&&t>0?new Date(t*1000).toLocaleString():'Not available';
   const money=(a,c)=>{if(a===null||a===undefined||a===''||!Number.isFinite(Number(a)))return 'Unavailable';if(!c)return String(a)+' (currency unknown)';try{return new Intl.NumberFormat(undefined,{style:'currency',currency:c}).format(Number(a));}catch{return String(a)+' '+String(c);}};
   const active=()=>typeof entries!=='undefined'&&Array.isArray(entries)?entries.filter(e=>!e.closed&&e.id&&e.opened):[];
-  function snapshot(d){
-    const watched=new Set([...(d.monitoredAccounts||[]),...Object.keys(d.mappings||{})]);
-    const cutoff=Date.now()/1000-30*86400,now=Date.now()/1000;
-    let credits=0,debits=0,transactions=0,candidates=0;const excluded=new Set();
-    for(const a of d.accounts||[]){
-      if(!watched.has(a.key))continue;
-      const currency=String(a.currency||'').toUpperCase();
-      if(currency!=='USD'){excluded.add(currency||'Unknown currency');continue;}
-      for(const t of Object.values(d.transactions?.[a.key]||{})){
-        const posted=Number(t.posted),amount=Number(t.amount);
-        if(!Number.isFinite(posted)||!Number.isFinite(amount)||posted<cutoff||posted>now+300)continue;
-        transactions++;if(amount>0)credits+=amount;else if(amount<0)debits+=-amount;
-        if(t.kind==='possible_bonus')candidates++;
-      }
-    }
-    return {credits,debits,transactions,candidates,excluded:[...excluded]};
-  }
+  const snapshot=d=>window.BTFinanceOverview?.summarize(d)||null;
   async function request(path='',options={}){
     const auth=window.BTBonusAuth;if(!auth?.connected())throw Error('Sign in with your existing BonusTracker account first.');
     const rev=generation,token=await auth.token();
@@ -76,14 +60,19 @@
     const totals=snapshot(data);
     const overview=el('section',undefined,body);overview.className='bank-sync-card';
     el('h3','Financial activity · last 30 days',overview);
-    if(totals.transactions){
+    if(totals?.hasActivity){
       const metrics=el('div',undefined,overview);metrics.className='bank-sync-summary-grid';
-      for(const [label,value] of [['Observed credits',hideBalances?'••••••':money(totals.credits,'USD')],['Observed debits',hideBalances?'••••••':money(totals.debits,'USD')],['Posted transactions',String(totals.transactions)],['Bonus candidates',String(totals.candidates)]]){
+      for(const [label,value] of [['Observed credits',hideBalances?'••••••':money(totals.credits,'USD')],['Observed debits',hideBalances?'••••••':money(totals.debits,'USD')],['Posted transactions',String(totals.observations)],['Bonus candidates',String(totals.candidates)]]){
         const metric=el('div',undefined,metrics);metric.className='bank-sync-summary-metric';el('small',label,metric);el('strong',value,metric);
       }
-      el('p','Partial transaction observations only. Credits include transfers and refunds; debits include transfers and purchases. These are not verified income, expenses or net worth.',overview);
-    }else el('p','No recent posted transaction evidence has been retrieved. This does not mean there was no account activity.',overview);
-    if(totals.excluded.length)el('p','Non-USD activity excluded from totals: '+totals.excluded.join(', '),overview);
+      el('p','Net observed movement: '+(hideBalances?'••••••':money(totals.net,'USD'))+'. This is not verified cash flow.',overview);
+      if(totals.reversals)el('p',String(totals.reversals)+' possible reversal entries need review.',overview);
+    }else el('p',totals?.hasSync?'No recent posted USD observations. This does not mean there was no account activity.':'No successful transaction retrieval yet. Enable monitoring and check after the next eligible provider sync.',overview);
+    el('p','Partial posted transaction observations only. Credits include transfers and refunds; debits include transfers and purchases. These are not verified income, expenses or net worth.',overview);
+    if(totals?.otherCurrencies?.length)el('p','Non-USD activity excluded from totals: '+totals.otherCurrencies.join(', '),overview);
+    if(totals?.unusable)el('p',String(totals.unusable)+' amounts were omitted because they could not be summed safely.',overview);
+    if(totals?.usdAccounts&&totals.sourceAccounts<totals.usdAccounts)el('p','Transaction data is incomplete for one or more selected USD accounts.',overview);
+    if(totals?.missingAccounts)el('p','At least one selected account was missing from the latest saved account list.',overview);
     el('h3','Connected accounts',body);el('p',String((data.accounts||[]).length)+' connected · '+String((data.monitoredAccounts||[]).length)+' monitored · '+String(Object.keys(data.mappings||{}).length)+' linked to bonuses',body);button(body,hideBalances?'Show balances':'Hide balances',async()=>{hideBalances=!hideBalances;paint();});
     el('p','Choose which accounts to monitor for read-only posted transactions, independently of bank bonuses. Link a checking or savings account to its matching bonus only when the account is eligible. Financial activity is not proof of a qualifying direct deposit.',body);
     const available=active(),selects=[],monitors=[],monitored=new Set(data.monitoredAccounts||[]),accountCards=[];
@@ -131,7 +120,7 @@
       for(const row of rows.slice(0,100)){
         shown++;const article=el('article',undefined,section);article.className='bank-sync-transaction';
         el('strong',row.kind==='possible_bonus'?'Possible bonus · review':row.kind==='possible_reversal'?'Possible bonus reversal · review':Number(row.amount)>0?'Deposit':'Withdrawal',article);
-        el('p',money(row.amount,a.currency)+' · posted '+stamp(row.posted),article);el('p',row.description,article);
+        el('p',(hideBalances?'••••••':money(row.amount,a.currency))+' · posted '+stamp(row.posted),article);el('p',row.description,article);
         if(row.changedAt)el('small','Provider changed this transaction: '+stamp(row.changedAt),article);
       }
       if(rows.length>100)el('p','Showing the latest 100 transactions for this account.',section);
