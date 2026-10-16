@@ -105,6 +105,7 @@
 }
 
 .finance-page-accounts-title{display:flex;align-items:center;gap:9px}.finance-page-accounts-title h3{margin:0}.finance-page-account-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;min-height:22px;border-radius:999px;background:#294769;color:#cae1ff;font-size:11px;font-weight:750;padding:0 5px}
+.finance-page-account-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}.finance-page-account-actions .finance-page-button{min-height:40px;padding:7px 10px}
 
 /* Financial bonus evidence stays inside Finances, never inside the Tracker layout. */
 .finance-page .finance-page-nav{grid-template-columns:repeat(4,minmax(0,1fr))}
