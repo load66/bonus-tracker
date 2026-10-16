@@ -22,10 +22,15 @@ const KEY='a'.repeat(64);
         const context=await browser.newContext({serviceWorkers:'block',viewport:{width:390,height:760}});
         const page=await context.newPage(),calls=[],errors=[];
         page.on('pageerror',err=>errors.push(err.message));
-        let monitored=[],syncs=0;
+        let monitored=[],syncs=0,holdAccounts=false,accountWaiting,releaseAccount;
         await page.route('https://api-production-00f74.up.railway.app/**',route=>route.abort());
-        await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/plaid**',route=>{
+        await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/plaid**',async route=>{
           const request=route.request(),url=new URL(request.url());
+          if(holdAccounts&&url.pathname.endsWith('/accounts')){
+            holdAccounts=false;
+            const gate=new Promise(resolve=>{releaseAccount=resolve});
+            accountWaiting();await gate;
+          }
           calls.push(request.method()+' '+url.pathname);
           let result;
           if(url.pathname.endsWith('/monitoring')){
@@ -49,7 +54,8 @@ const KEY='a'.repeat(64);
           return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(result)});
         });
         await page.addInitScript(()=>{
-          window.BTBonusAuth={connected:()=>true,token:async()=> 'synthetic-auth'};
+          window.syntheticToken='synthetic-auth';
+          window.BTBonusAuth={connected:()=>true,token:async()=>window.syntheticToken};
         });
         await page.goto('http://127.0.0.1:'+server.address().port+'/');
         await page.evaluate(()=>window.BTLinkPlaidTrial.mount(document.getElementById('target'),[]));
@@ -85,6 +91,17 @@ const KEY='a'.repeat(64);
           assert.ok(size.scroll<=size.page+1,name+' overflow at '+width+': '+JSON.stringify(size));
           assert.ok(size.buttons.every(x=>x>=44),name+' insufficient button targets');
         }
+        // A delayed response for one owner must never be shown after a user
+        // switch, even when the panel remains mounted on the same page.
+        holdAccounts=true;
+        const waiting=new Promise(resolve=>{accountWaiting=resolve});
+        await page.evaluate(()=>window.BTLinkPlaidTrial.mount(document.getElementById('target'),[]));
+        await waiting;
+        await page.evaluate(()=>{window.syntheticToken='different-owner'});
+        releaseAccount();
+        await host.getByText('Sign-in changed. Reopen bank connections.',{exact:true}).waitFor();
+        assert.equal(await host.getByText('Synthetic Bank · Checking',{exact:true}).count(),0,
+          'another owner must never see a stale account response');
         assert.deepEqual(errors,[]);
         console.log(name+': Plaid Trial opt-in account controls, masked evidence and quota-safe actions passed');
       }finally{await browser.close()}

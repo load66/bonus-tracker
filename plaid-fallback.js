@@ -15,6 +15,13 @@
     const button=elem('button',label,host,'btn-s plaid-trial-action');
     button.type='button';button.addEventListener('click',fn);return button;
   };
+  function sessionIdentity(token){
+    try{
+      const value=JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+      return typeof value?.sub==='string'&&value.sub
+        ?JSON.stringify([value.iss||'',value.sub]):null;
+    }catch{return null}
+  }
   async function api(path='',options={}){
     const auth=window.BTBonusAuth;
     if(!auth?.connected())throw Error('Sign in before viewing private bank connections.');
@@ -23,6 +30,12 @@
       headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'}});
     const data=await response.json().catch(()=>({}));
     if(!response.ok)throw Error(typeof data.detail==='string'?data.detail:'Plaid fallback is unavailable.');
+    if(window.BTBonusAuth!==auth||!auth.connected())
+      throw Error('Sign-in changed. Reopen bank connections.');
+    const current=await auth.token().catch(()=>null);
+    if(!auth.connected()||!current||(current!==token&&
+      (!sessionIdentity(token)||sessionIdentity(token)!==sessionIdentity(current))))
+      throw Error('Sign-in changed. Reopen bank connections.');
     return data;
   }
   function loadLink(){
@@ -144,7 +157,7 @@
       const duplicate=elem('label',undefined,body,'plaid-trial-check');
       const relink=elem('input',undefined,duplicate);relink.type='checkbox';
       elem('span','Allow another Plaid login for this bank even if already connected through Plaid.',duplicate);
-      const go=action(body,'Connect with Plaid (last fallback)',async()=>{
+      const go=action(body,'Connect with Plaid fallback',async()=>{
         const institution=name.value.trim();
         if(institution.length<2){message.textContent='Enter the institution name first.';return}
         if(linkedNames.has(institution.toLowerCase())){
