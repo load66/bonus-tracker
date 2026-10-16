@@ -62,14 +62,18 @@ const base=()=>({
         await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(state)});
       });
       const plaidState=base();plaidState.accounts=[];plaidState.lastSuccess=null;plaidState.nextSyncAt=0;
-      plaidState.transactions={[A]:{bonus:{id:'plaid-income',amount:'50.00',posted:NOW-180,pending:false,
+      plaidState.transactions={[A]:{'plaid-income':{id:'plaid-income',amount:'50.00',posted:NOW-180,pending:false,
         kind:'other_deposit',description:'X Money synthetic ACH bonus',merchant:'X Money Bonus',
         category:'income',categorySource:'user',confidence:'high',signals:['possible_bonus']}}};
       let plaidDiscoveries=0;
       await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/plaid**',async route=>{
         const req=route.request(),url=new URL(req.url());
         const body=req.postDataJSON?.()||{};requests.push({path:url.pathname,method:req.method(),body});
-        if(url.pathname.endsWith('/transaction-review'))plaidState.transactions[body.account][body.transaction].category=body.category;
+        if(url.pathname.endsWith('/transaction-review')){
+          plaidState.transactions[body.account][body.transaction].category=body.category;
+          plaidState.transactions[body.account][body.transaction].categorySource='user';
+        }
+        if(url.pathname.endsWith('/monitoring'))plaidState.monitoredAccounts=body.accounts;
         if(url.pathname.endsWith('/accounts/sync')){
           plaidDiscoveries++;
           plaidState.accounts=[{...base().accounts[0],bank:'X Money',name:'X Money Checking'}];
@@ -227,8 +231,23 @@ const base=()=>({
       await section.getByText('X Money Checking',{exact:true}).waitFor();
       assert.equal(await section.locator('.finance-page-account').count(),4,
         'SimpleFIN and Plaid account cards share the same list');
+      const xMoneyEditor=section.locator('.finance-page-account-info strong')
+        .filter({hasText:/^X Money Checking$/}).locator('xpath=../../..');
+      await xMoneyEditor.locator('details.finance-page-account-settings > summary').click();
+      await xMoneyEditor.getByRole('checkbox',{name:'Monitor transactions for X Money Checking via Plaid'}).uncheck();
+      await section.getByRole('button',{name:'Save account settings'}).click();
+      await page.waitForFunction(()=>!!window.__bankWizardRefreshCount || true);
+      assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts/monitoring')&&r.method==='PUT'&&
+        Array.isArray(r.body.accounts)&&r.body.accounts.length===0),
+        'Plaid monitoring must be saved to Plaid, without touching SimpleFIN monitoring');
+      assert.equal(requests.filter(r=>r.path.endsWith('/simplefin/monitoring')).length,0);
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       await section.getByText('X Money Bonus',{exact:true}).waitFor();
+      await section.getByLabel('Category for X Money Bonus').selectOption('bonus');
+      await page.waitForFunction(()=>!!document.querySelector('.finance-page'));
+      assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts/transaction-review')&&r.body.account===A&&
+        r.body.transaction==='plaid-income'&&r.body.category==='bonus'),
+        'Plaid category corrections must route only to Plaid using its original account and transaction identifiers');
       assert.ok((await section.locator('.finance-page-transaction').allTextContents()).some(t=>t.includes('Plaid')),
         'A Plaid-origin transaction must appear with a source label in the combined feed');
       assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts')));
