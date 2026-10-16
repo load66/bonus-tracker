@@ -127,7 +127,7 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-replacement-token')),false);
    assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before);
    await dialog.getByRole('button',{name:'Done',exact:true}).click();
-   state={configured:true,connected:false,evidenceOnly:true};await page.evaluate(()=>btOpenBankSync());await page.getByLabel('SimpleFIN setup token',{exact:true}).waitFor();
+   state={configured:true,connected:false,evidenceOnly:true};await page.evaluate(()=>btOpenBankSync());await page.getByRole('button',{name:'Guided secure bank connection'}).waitFor();
    await page.getByRole('button',{name:'Guided secure bank connection'}).click();
    await page.getByText('Connect your first bank',{exact:true}).waitFor();
    const firstBankLink=page.getByRole('link',{name:'Open SimpleFIN'});
