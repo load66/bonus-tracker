@@ -218,7 +218,7 @@ const base=()=>({
       await page.getByRole('dialog',{name:'Financial accounts'}).waitFor();await page.getByRole('dialog',{name:'Financial accounts'}).getByRole('button',{name:'Done'}).click();
       await section.getByRole('heading',{name:'Accounts',exact:true}).waitFor();
       await section.getByRole('combobox',{name:'Finance connection source'}).selectOption('plaid');
-      await section.getByText('Fallback Checking',{exact:true}).waitFor();
+      await section.getByText('X Money Checking',{exact:true}).waitFor();
       assert.equal(await section.locator('.finance-page-account').count(),1,'Plaid must have its own account snapshot');
       assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts')));
       await section.getByRole('combobox',{name:'Finance connection source'}).selectOption('simplefin');
