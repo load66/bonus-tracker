@@ -137,7 +137,7 @@ const covered=summarize({
 },{now:financeAt});
 assert.equal(covered.netWorthAvailable,false,'stale inclusion must not be called complete');
 assert.equal(covered.observedNetWorth,'365.05','negative credit balance increases net worth; excluded account contributes zero');
-assert.deepEqual(covered.netWorthCoverage,{eligible:3,covered:3,stale:1,undated:0,missing:0,unsupportedCurrency:0});
+assert.deepEqual(covered.netWorthCoverage,{eligible:3,covered:3,stale:1,undated:0,missing:0,unsupportedCurrency:0,unclassified:0});
 assert.equal(covered.excludedFromNetWorth,1);
 assert.equal(covered.netWorthHistory[0].value,'335.00','historic liability debt retains its sign');
 
@@ -155,6 +155,14 @@ assert.equal(unknown.observedNetWorth,'100.00','known subtotal is displayed with
 assert.equal(unknown.netWorthCoverage.covered,1);
 assert.equal(unknown.netWorthCoverage.missing,1);
 
+const unclassified=summarize({
+  accounts:[financeAccount('known','checking','100.00'),financeAccount('unknown','unclassified','700.00')],
+  accountProfiles:{unknown:{kind:'unclassified',balanceMode:'asset'}}
+},{now:NOW});
+assert.equal(unclassified.observedNetWorth,'100.00','unclassified account cannot silently join net-worth subtotal');
+assert.equal(unclassified.netWorthCoverage.eligible,2);
+assert.equal(unclassified.netWorthCoverage.covered,1,'coverage cannot count an unclassified balance as included');
+assert.equal(unclassified.netWorthCoverage.unclassified,1);
 const cardCredit=summarize({accounts:[financeAccount('credit','credit_card','-30.00')]},{now:NOW});
 assert.equal(cardCredit.netWorth,'30.00','credit-card overpayment is a net-worth asset');
 const spendingState={
