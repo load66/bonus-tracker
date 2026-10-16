@@ -435,6 +435,7 @@
   }
   async function mount(){
     const host=document.getElementById('bt-finances-page');if(!host||host===currentRoot)return;
+    window.BTBonusEvidence?.dispose();
     currentRoot=host;data=null;otherData=null;const rev=++sequence;paint();
     if(!window.BTBonusAuth?.connected()){
       host.replaceChildren();statusMessage(host,'Sign in to view finances','Use your existing BonusTracker sign-in to load private financial records.');
@@ -443,7 +444,7 @@
     try{const result=await request();if(rev!==sequence||host!==currentRoot||!host.isConnected)return;data=result;paint();loadOtherSource(rev)}
     catch(error){if(rev!==sequence||host!==currentRoot||!host.isConnected)return;host.replaceChildren();statusMessage(host,'Accounts unavailable',error.message);action(host,'Try again',refresh)}
   }
-  function refresh(){currentRoot=null;data=null;accountDraftProfiles={};sequence++;mount()}
+  function refresh(){window.BTBonusEvidence?.dispose();currentRoot=null;data=null;accountDraftProfiles={};sequence++;mount()}
   window.btRefreshFinancesPage=refresh;
   window.btRegisterPostRender?.('finance-page',mount);
   window.addEventListener('storage',event=>{if(event.key==='bonus-ai-auth')refresh()});
