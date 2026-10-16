@@ -235,16 +235,22 @@ const base=()=>({
         .filter({hasText:/^X Money Checking$/}).locator('xpath=../../..');
       await xMoneyEditor.locator('details.finance-page-account-settings > summary').click();
       await xMoneyEditor.getByRole('checkbox',{name:'Monitor transactions for X Money Checking via Plaid'}).uncheck();
-      await section.getByRole('button',{name:'Save account settings'}).click();
-      await page.waitForFunction(()=>!!window.__bankWizardRefreshCount || true);
+      await Promise.all([
+        page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/plaid/accounts/monitoring')&&
+          r.request().method()==='PUT'&&r.status()===200),
+        section.getByRole('button',{name:'Save account settings'}).click()
+      ]);
       assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts/monitoring')&&r.method==='PUT'&&
         Array.isArray(r.body.accounts)&&r.body.accounts.length===0),
         'Plaid monitoring must be saved to Plaid, without touching SimpleFIN monitoring');
       assert.equal(requests.filter(r=>r.path.endsWith('/simplefin/monitoring')).length,0);
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       await section.getByText('X Money Bonus',{exact:true}).waitFor();
-      await section.getByLabel('Category for X Money Bonus').selectOption('bonus');
-      await page.waitForFunction(()=>!!document.querySelector('.finance-page'));
+      await Promise.all([
+        page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/plaid/accounts/transaction-review')&&
+          r.request().method()==='PUT'&&r.status()===200),
+        section.getByLabel('Category for X Money Bonus').selectOption('bonus')
+      ]);
       assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts/transaction-review')&&r.body.account===A&&
         r.body.transaction==='plaid-income'&&r.body.category==='bonus'),
         'Plaid category corrections must route only to Plaid using its original account and transaction identifiers');
