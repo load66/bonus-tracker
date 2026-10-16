@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="./mobile-analyzer.css?v=3.4.74">
 <link rel="stylesheet" href="./bank-bonuses.css?v=3.4.74">
 <link rel="stylesheet" href="./bonus-ai.css?v=3.4.74">
-<link rel="stylesheet" href="./mobile-ui.css?v=3.4.74">
+<link rel="stylesheet" href="./mobile-ui.css?v=3.4.74-webkitnav1">
 <link rel="stylesheet" href="./cloud-backup.css?v=3.4.74">
 <link rel="stylesheet" href="./research-tabs.css?v=3.4.74">
 <link rel="stylesheet" href="./bank-sync.css?v=3.4.74-addbank1">
@@ -32,7 +32,7 @@
     refreshed=true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=3.4.74-product1',{updateViaCache:'none'}).then(reg=>{
+  navigator.serviceWorker.register('./sw.js?v=3.4.74-product2',{updateViaCache:'none'}).then(reg=>{
     const activate=worker=>{try{worker&&worker.postMessage({type:'SKIP_WAITING'})}catch{}};
     if(reg.waiting)activate(reg.waiting);
     reg.addEventListener('updatefound',()=>{
