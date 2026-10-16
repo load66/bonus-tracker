@@ -19,7 +19,7 @@
         const posted=Number(t.posted),amount=Number(t.amount);
         if(!Number.isFinite(posted)||!Number.isFinite(amount)||posted<cutoff||posted>now+300)continue;
         transactions++;if(amount>0)credits+=amount;else if(amount<0)debits+=-amount;
-        if(t.kind==='possible_bonus'||t.kind==='possible_reversal')candidates++;
+        if(t.kind==='possible_bonus')candidates++;
       }
     }
     return {credits,debits,transactions,candidates,excluded:[...excluded]};
