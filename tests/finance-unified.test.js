@@ -118,4 +118,14 @@ assert.equal(unrelatedSafe.transactions['plaid:'+b].received.category,'income',
   'an unrelated payroll deposit cannot be treated as a credit-card payment merely because amounts match');
 assert.equal(unrelatedSafe.transactions['simplefin:'+a].sent.category,'unreviewed',
   'unpaired automatic transfer requires review');
+const payrollCoincidence={...plaid,transactions:{[b]:{
+  salary:{id:'salary',amount:'35.01',posted:now-195,description:'Employer payroll deposit',
+    category:'income',categorySource:'automatic',signals:['possible_direct_deposit']}
+}}};
+const protectedIncome=core.safeForSummary(core.combine({simplefin:outgoing,plaid:payrollCoincidence}));
+assert.equal(protectedIncome.transactions['plaid:'+b].salary.category,'income',
+  'a coincidental equal payroll amount must never be paired as a card payment');
+assert.equal(protectedIncome.transactions['simplefin:'+a].sent.category,'unreviewed');
+assert.equal(finance.summarize(protectedIncome,{now,days:30}).income,'35.01');
+
 console.log('Unified Finance: provider isolation, type inference, full account/transaction aggregation, exact cents, stale-balance safety and overlap controls passed');
