@@ -13,7 +13,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: pages
+  # Isolate production deployments from PR test queues; GitHub keeps only one pending run per group.
+  group: bonus-tracker-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:

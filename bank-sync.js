@@ -2,11 +2,28 @@
 (function(){
   'use strict';
   const API='https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin';
-  let panel=null,data=null,busy=false,generation=0,returnFocus=null,hideBalances=false;
+  let panel=null,data=null,busy=false,generation=0,returnFocus=null,hideBalances=false,accountFilter='';
   const el=(tag,text,parent)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(parent)parent.append(n);return n;};
   const stamp=t=>typeof t==='number'&&t>0?new Date(t*1000).toLocaleString():'Not available';
-  const money=(a,c)=>{if(a===null||a===undefined||a===''||!Number.isFinite(Number(a)))return 'Unavailable';try{return new Intl.NumberFormat(undefined,{style:'currency',currency:c||'USD'}).format(Number(a));}catch{return String(a)+' '+String(c||'');}};
+  const money=(a,c)=>{if(a===null||a===undefined||a===''||!Number.isFinite(Number(a)))return 'Unavailable';if(!c)return String(a)+' (currency unknown)';try{return new Intl.NumberFormat(undefined,{style:'currency',currency:c}).format(Number(a));}catch{return String(a)+' '+String(c);}};
   const active=()=>typeof entries!=='undefined'&&Array.isArray(entries)?entries.filter(e=>!e.closed&&e.id&&e.opened):[];
+  function snapshot(d){
+    const watched=new Set([...(d.monitoredAccounts||[]),...Object.keys(d.mappings||{})]);
+    const cutoff=Date.now()/1000-30*86400,now=Date.now()/1000;
+    let credits=0,debits=0,transactions=0,candidates=0;const excluded=new Set();
+    for(const a of d.accounts||[]){
+      if(!watched.has(a.key))continue;
+      const currency=String(a.currency||'').toUpperCase();
+      if(currency!=='USD'){excluded.add(currency||'Unknown currency');continue;}
+      for(const t of Object.values(d.transactions?.[a.key]||{})){
+        const posted=Number(t.posted),amount=Number(t.amount);
+        if(!Number.isFinite(posted)||!Number.isFinite(amount)||posted<cutoff||posted>now+300)continue;
+        transactions++;if(amount>0)credits+=amount;else if(amount<0)debits+=-amount;
+        if(t.kind==='possible_bonus')candidates++;
+      }
+    }
+    return {credits,debits,transactions,candidates,excluded:[...excluded]};
+  }
   async function request(path='',options={}){
     const auth=window.BTBonusAuth;if(!auth?.connected())throw Error('Sign in with your existing BonusTracker account first.');
     const rev=generation,token=await auth.token();
@@ -22,7 +39,7 @@
   function message(s){const n=panel?.querySelector('#bank-sync-message');if(n)n.textContent=s;}
   async function run(work){if(busy)return;busy=true;panel?.querySelectorAll('button,select,textarea,input').forEach(n=>n.disabled=true);try{await work();}catch(e){message(e.message);}finally{busy=false;panel?.querySelectorAll('button,select,textarea,input').forEach(n=>n.disabled=false);}}
   function button(parent,label,fn,cls='btn-s'){const b=el('button',label,parent);b.type='button';b.className=cls;b.onclick=()=>run(fn);return b;}
-  function close(){if(busy)return;generation++;panel?.remove();panel=null;data=null;hideBalances=false;returnFocus?.focus();}
+  function close(){if(busy)return;generation++;panel?.remove();panel=null;data=null;hideBalances=false;accountFilter='';returnFocus?.focus();}
   function paint(){
     if(!panel)return;
     const body=panel.querySelector('.bank-sync-body');body.replaceChildren();
@@ -56,12 +73,27 @@
     button(status,'Refresh status',async()=>{data=await request();paint();});
     button(status,'Check for transactions',async()=>{data=await request('/sync',{method:'POST'});paint();message('Sync requested. Provider data refreshes at most daily; earlier checks may show previously saved data. Check Last synced for confirmation.');});
     button(status,'Refresh accounts',async()=>{data=await request('/discover',{method:'POST'});paint();});
+    const totals=snapshot(data);
+    const overview=el('section',undefined,body);overview.className='bank-sync-card';
+    el('h3','Financial activity · last 30 days',overview);
+    if(totals.transactions){
+      const metrics=el('div',undefined,overview);metrics.className='bank-sync-summary-grid';
+      for(const [label,value] of [['Observed credits',hideBalances?'••••••':money(totals.credits,'USD')],['Observed debits',hideBalances?'••••••':money(totals.debits,'USD')],['Posted transactions',String(totals.transactions)],['Bonus candidates',String(totals.candidates)]]){
+        const metric=el('div',undefined,metrics);metric.className='bank-sync-summary-metric';el('small',label,metric);el('strong',value,metric);
+      }
+      el('p','Partial transaction observations only. Credits include transfers and refunds; debits include transfers and purchases. These are not verified income, expenses or net worth.',overview);
+    }else el('p','No recent posted transaction evidence has been retrieved. This does not mean there was no account activity.',overview);
+    if(totals.excluded.length)el('p','Non-USD activity excluded from totals: '+totals.excluded.join(', '),overview);
     el('h3','Connected accounts',body);el('p',String((data.accounts||[]).length)+' connected · '+String((data.monitoredAccounts||[]).length)+' monitored · '+String(Object.keys(data.mappings||{}).length)+' linked to bonuses',body);button(body,hideBalances?'Show balances':'Hide balances',async()=>{hideBalances=!hideBalances;paint();});
     el('p','Choose which accounts to monitor for read-only posted transactions, independently of bank bonuses. Link a checking or savings account to its matching bonus only when the account is eligible. Financial activity is not proof of a qualifying direct deposit.',body);
-    const available=active(),selects=[],monitors=[],monitored=new Set(data.monitoredAccounts||[]);
+    const available=active(),selects=[],monitors=[],monitored=new Set(data.monitoredAccounts||[]),accountCards=[];
+    let search=null;
+    if(data.accounts?.length){search=el('input',undefined,body);search.type='search';search.setAttribute('aria-label','Search connected accounts');search.placeholder='Search banks and accounts';search.value=accountFilter;}
     for(const a of data.accounts||[]){
       const card=el('section',undefined,body);card.className='bank-sync-card';
-      el('h4',[a.bank,a.name].filter(Boolean).join(' · ')||'Bank account',card);
+      const accountName=[a.bank,a.name].filter(Boolean).join(' · ')||'Bank account';
+      el('h4',accountName,card);accountCards.push({card,name:accountName.toLowerCase()});
+      card.hidden=!!accountFilter&&!accountName.toLowerCase().includes(accountFilter);
       el('p','Balance: '+(hideBalances?'••••••':money(a.balance,a.currency))+' · As of '+stamp(a.balanceDate),card);if(a.balanceDate&&data.lastSuccess&&a.balanceDate>data.lastSuccess)el('p','Balance timestamp is newer than the last recorded transaction sync; these are separate provider updates.',card);
       const monitorLabel=el('label',undefined,card);monitorLabel.className='bank-sync-monitor-label';
       const checkbox=el('input',undefined,monitorLabel);checkbox.type='checkbox';checkbox.checked=monitored.has(a.key);checkbox.dataset.account=a.key;
@@ -73,6 +105,7 @@
       if(current&&!available.some(e=>String(e.id)===current.entryId&&e.opened===current.opened&&e.bank===current.bank))el('p','The saved cycle changed or is no longer open. Choose a current cycle or remove this match.',card);
       selects.push(select);
     }
+    if(search)search.oninput=()=>{accountFilter=search.value.trim().toLowerCase();for(const item of accountCards)item.card.hidden=!!accountFilter&&!item.name.includes(accountFilter);};
     if(!data.accounts?.length)el('p','No accounts were returned. Refresh the account list after checking SimpleFIN.',body);
     if(data.accounts?.length)button(body,'Save monitoring preferences',async()=>{
       const accounts=monitors.filter(c=>c.checked).map(c=>c.dataset.account);

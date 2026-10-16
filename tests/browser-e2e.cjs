@@ -243,7 +243,12 @@ async function exercise(name,engine,url){
     check('personal discovery fits narrow mobile viewport',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
     await page.evaluate(()=>{undoState=null;clearTimeout(undoTimer);R()});
     await page.getByPlaceholder('Search bank bonuses…').fill('');
-    await page.locator('.radar-card').first().scrollIntoViewIfNeeded();
+    // Radar re-renders after source/area updates; retry a detached card rather than
+    // treating a transient DOM replacement as a failed bank-data invariant.
+    for(let attempt=0;attempt<3;attempt++){
+      try{await page.locator('.radar-card').first().scrollIntoViewIfNeeded({timeout:5000});break;}
+      catch(e){if(!/not attached|detached/i.test(String(e))||attempt===2)throw e;await page.locator('.radar-card').first().waitFor({state:'visible'});}
+    }
     await page.screenshot({path:path.join(output,name+'-offers-compact.png')});
     await page.getByRole('button',{name:'All banks',exact:true}).click();
     feedInvalid=true;await button('Check updates').click();
