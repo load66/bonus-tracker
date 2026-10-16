@@ -63,7 +63,7 @@
       const card=el('section',undefined,body);card.className='bank-sync-card';
       el('h4',[a.bank,a.name].filter(Boolean).join(' · ')||'Bank account',card);
       el('p','Reported balance: '+money(a.balance,a.currency)+' · dated '+stamp(a.balanceDate),card);
-      const label=el('label','Bonus cycle',card),select=el('select',undefined,label);select.dataset.account=a.key;
+      const label=el('label','Bonus cycle',card),select=el('select',undefined,card);select.id='bank-sync-cycle-'+a.key;label.htmlFor=select.id;select.dataset.account=a.key;
       const empty=el('option','Do not track this account',select);empty.value='';
       const current=data.mappings?.[a.key];
       for(const e of available){const option=el('option',e.bank+' · '+(e.accountType||'personal')+' · opened '+e.opened,select);option.value=String(e.id);if(current?.entryId===String(e.id)&&current.opened===e.opened&&current.bank===e.bank)option.selected=true;}
