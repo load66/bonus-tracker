@@ -13,8 +13,8 @@
     let credits=0,debits=0,transactions=0,candidates=0;const excluded=new Set();
     for(const a of d.accounts||[]){
       if(!watched.has(a.key))continue;
-      const currency=String(a.currency||'USD').toUpperCase();
-      if(currency!=='USD'){excluded.add(currency);continue;}
+      const currency=String(a.currency||'').toUpperCase();
+      if(currency!=='USD'){excluded.add(currency||'Unknown currency');continue;}
       for(const t of Object.values(d.transactions?.[a.key]||{})){
         const posted=Number(t.posted),amount=Number(t.amount);
         if(!Number.isFinite(posted)||!Number.isFinite(amount)||posted<cutoff||posted>now+300)continue;
