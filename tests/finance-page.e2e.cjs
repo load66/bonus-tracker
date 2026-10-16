@@ -119,7 +119,7 @@ const base=()=>({
       // Missing money must remain unknown rather than incorrectly becoming $0.00.
       await section.locator('.finance-page-tile strong')
         .filter({hasText:/^\s*—\s*$/}).first().waitFor({state:'visible'});
-      await section.getByText('4 accounts',{exact:false}).waitFor();
+      await section.locator('.finance-page-count').filter({hasText:'4 accounts'}).waitFor();
       await section.getByRole('heading',{name:'Connected accounts',exact:true}).waitFor();
       await section.getByRole('heading',{name:'Recent transactions',exact:true}).waitFor();
       const previews=section.locator('.finance-page-preview-card');
