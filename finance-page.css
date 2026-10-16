@@ -56,3 +56,50 @@
 .finance-page-connection p{margin:8px 0 0;font-size:12px;line-height:1.5;color:#aabfd9}
 .finance-page .finance-page-select{appearance:none;-webkit-appearance:none;background-color:#0c192b;background-image:linear-gradient(45deg,transparent 50%,#b9d3f2 50%),linear-gradient(135deg,#b9d3f2 50%,transparent 50%);background-position:calc(100% - 17px) 50%,calc(100% - 12px) 50%;background-size:5px 5px;background-repeat:no-repeat;font-size:16px;min-height:48px}
 .finance-page select:focus-visible{outline:3px solid #aad4ff;outline-offset:3px}
+
+/* Compact financial cockpit, with both source connections discoverable. */
+.finance-page{padding-top:8px}
+.finance-page-hero{padding:16px 16px 13px;background:linear-gradient(155deg,#1b3251,#111e31)}
+.finance-page-hero-head{align-items:center}.finance-page-hero .finance-page-count{font-size:12px;margin:4px 0 10px;color:#abc2db}
+.finance-page-hero h2{font-size:24px;margin:2px 0}
+.finance-page-quick-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px}
+.finance-page-quick-actions .finance-page-button{flex:1 1 145px;min-width:0;margin:0;font-size:13px}
+.finance-page-meta{margin-top:10px;gap:6px}
+.finance-page-meta span{font-size:10px;padding:5px 9px}
+.finance-page-connection{padding:9px 12px;margin-bottom:10px}
+.finance-page-connection .finance-page-field{display:flex;align-items:center;gap:10px}
+.finance-page-connection .finance-page-field>span{margin:0;flex:0 0 auto}
+.finance-page-connection .finance-page-select{min-height:44px;flex:1;max-width:100%;font-size:13px}
+.finance-page-hint{font-size:11px!important;line-height:1.5!important;color:#9bb4d2!important}
+.finance-page-other-source{padding:12px 13px;margin-bottom:12px;border:1px solid #47688b;border-radius:13px;background:#172940}
+.finance-page-source-head{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#ecf5ff}
+.finance-page-source-head strong{font-size:13px}.finance-page-source-head small{font-size:11px;color:#9ec6f5}
+.finance-page-other-source p{margin:5px 0;font-size:11px;overflow-wrap:anywhere}
+.finance-page-other-source .finance-page-quick-actions{margin:7px 0 0}
+.finance-page-more{margin:12px 0 0;padding:0;border:1px solid #415b7d;border-radius:14px;overflow:hidden}
+.finance-page-more>summary{padding:15px 16px;color:#bcd9ff;font-size:13px;font-weight:700;cursor:pointer;min-height:44px;box-sizing:border-box}
+.finance-page-more[open]{padding-bottom:10px}.finance-page-more .finance-page-card{margin:10px}
+.finance-page-account-filters{margin:11px 0 14px}
+.finance-page-account-filters .finance-page-search{margin:0}
+.finance-page-filter-details{margin:10px 0 0;padding:8px 10px;border:1px solid #38506e;border-radius:10px;font-size:12px;color:#bcd4f0}
+.finance-page-filter-details summary,.finance-page-account-settings summary{cursor:pointer;min-height:36px;display:flex;align-items:center;font-size:12px;color:#bcd9ff}
+.finance-page-filter-details .finance-page-field{margin:6px 0}
+.finance-page-account-editor{padding:0;border-top:1px solid #324a67}
+.finance-page-account-editor:first-of-type{border-top:0}
+.finance-page-account{border:0;background:transparent;padding:13px 2px 5px}
+.finance-page-account-settings{margin:0 0 10px;padding:0 4px}
+.finance-page-account-settings[open]{padding-bottom:10px}
+.finance-page-account-balances b{font-size:15px}
+.finance-page-save{margin-top:12px;width:100%}
+.finance-page .finance-page-caution{font-size:11px;line-height:1.4;padding:8px 10px}
+.finance-page h3{margin-bottom:6px}
+.finance-page-more:focus-visible,.finance-page-more summary:focus-visible,.finance-page-account-settings summary:focus-visible{outline:3px solid #aad4ff;outline-offset:2px}
+@media(max-width:390px){
+.finance-page-hero,.finance-page-card{padding:13px}
+.finance-page-connection{padding:8px 9px}
+.finance-page-connection .finance-page-field>span{font-size:11px}
+.finance-page-quick-actions{gap:6px}
+.finance-page-quick-actions .finance-page-button{flex-basis:125px;font-size:12px}
+.finance-page-account{align-items:center;flex-direction:row}
+.finance-page-account-balances{text-align:right}
+}
