@@ -118,11 +118,18 @@ const base=()=>({
 
       await section.getByRole('button',{name:'Accounts',exact:true}).click();
       await section.getByRole('heading',{name:'Accounts',exact:true}).waitFor();
-      const addBank=section.getByRole('link',{name:'Add bank through SimpleFIN Bridge'});
-      await addBank.waitFor();
-      assert.equal(await addBank.getAttribute('href'),'https://beta-bridge.simplefin.org/');
-      assert.equal(await addBank.getAttribute('target'),'_blank');
-      assert.equal(await addBank.getAttribute('rel'),'noopener noreferrer');
+      const addBank=section.getByRole('button',{name:'Add bank',exact:true});
+      await addBank.click();
+      const wizard=page.getByRole('dialog',{name:'Financial accounts'});
+      await wizard.getByText('SECURE BANK CONNECTION',{exact:true}).waitFor();
+      const bridge=wizard.getByRole('link',{name:'Continue securely to SimpleFIN'});
+      assert.equal(await bridge.getAttribute('href'),'https://beta-bridge.simplefin.org/');
+      assert.equal(await bridge.getAttribute('target'),'_blank');
+      assert.equal(await bridge.getAttribute('rel'),'noopener noreferrer');
+      assert.equal(await wizard.locator('input[type=password]').count(),0,'BonusTracker never collects bank passwords');
+      assert.equal(await wizard.locator('input[type=tel]').count(),0,'BonusTracker never collects bank MFA codes');
+      await wizard.getByRole('button',{name:'Back to connected accounts'}).click();
+      await wizard.getByRole('button',{name:'Done'}).click();
       assert.ok((await section.innerText()).includes('Discovery can be limited to once daily'),
         'Explain provider discovery delay when adding a bank');
       assert.equal(await section.locator('.finance-page-account').count(),3);
