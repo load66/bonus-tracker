@@ -5,7 +5,8 @@ const root=path.resolve(__dirname,'..'),output=process.env.BT_BROWSER_RESULTS||'
 const mime={'.html':'text/html','.js':'application/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml'};
 const server=http.createServer(async(req,res)=>{try{const pathname=new URL(req.url,'http://localhost').pathname;const p=path.resolve(root,'.'+(pathname==='/'?'/index.html':pathname));if(!p.startsWith(root+path.sep))throw Error();res.setHeader('Content-Type',mime[path.extname(p)]||'text/plain');res.end(await fs.readFile(p));}catch{res.writeHead(404);res.end();}});
 const account={key:'a'.repeat(64),name:'Checking <img src=x>',bank:'Synthetic Bank',currency:'USD',balance:'200',balanceDate:1792134000};
-const opened='2026-10-01',entry={id:'synthetic-cycle',bank:'Synthetic Bank',accountType:'personal',opened,bonus:200};
+const {fixture}=require('./fixtures/financial-rules.cjs');
+const opened='2026-10-01',entry={...fixture(),id:'synthetic-cycle',bank:'Synthetic Bank',accountType:'personal',opened};
 const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connected',accounts:[account],mappings:{},transactions:{},monitoredAccounts:[],lastSuccess:1792134000,nextSyncAt:1792220400});
 (async()=>{
  await fs.mkdir(output,{recursive:true});await new Promise(r=>server.listen(0,'127.0.0.1',r));
@@ -55,8 +56,10 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    await dialog.getByRole('button',{name:'Show balances',exact:true}).click();
    await dialog.getByText('These are not verified income, expenses or net worth.',{exact:false}).waitFor();
    await dialog.getByLabel('Link to bonus (optional)',{exact:true}).selectOption(cycleId);
+   const product=dialog.getByLabel('Bonus product (verified terms)',{exact:true});
+   await product.selectOption('checking');
    await dialog.getByRole('button',{name:'Save account matches',exact:true}).click();await dialog.getByText('Bonus links saved.',{exact:false}).waitFor();
-   assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened});
+   assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened,productId:'checking'});
    assert.equal(await dialog.locator('script').count(),0);
    for(const width of [320,390,430]){
     await page.setViewportSize({width,height:760});await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
@@ -72,7 +75,7 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    await dialog.getByLabel('New SimpleFIN setup token',{exact:true}).fill('synthetic-replacement-token');
    await dialog.getByRole('button',{name:'Reconnect securely',exact:true}).click();
    await dialog.getByText('Connection active',{exact:true}).waitFor();
-   assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened},'reconnect retains bonus links');
+   assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened,productId:'checking'},'reconnect retains verified product mapping');
    assert.deepEqual(state.monitoredAccounts,[account.key],'reconnect retains monitoring');
    assert.ok(requests.some(r=>r.path.endsWith('/reconnect')&&JSON.parse(r.body).setup_token==='synthetic-replacement-token'));
    assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-replacement-token')),false);
