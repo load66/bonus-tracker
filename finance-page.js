@@ -258,6 +258,39 @@
     const line=document.createElementNS(svg.namespaceURI,'polyline');line.setAttribute('points',coords.map(x=>x.join(',')).join(' '));line.setAttribute('class','finance-page-line');svg.append(line);parent.append(svg);
     const labels=el('div',undefined,parent,'finance-page-chart-labels');el('span',date(points[0].at),labels);el('strong',amount(points.at(-1).value,'USD'),labels);el('span',date(points.at(-1).at),labels);
   }
+  function compactAccountPreview(host){
+    const card=el('section',undefined,host,'finance-page-card finance-page-preview-card');
+    const head=el('div',undefined,card,'finance-page-section-head');
+    el('h3','Connected accounts',head);
+    action(head,'View all',()=>{view='accounts';paint()},'finance-page-preview-link');
+    const accounts=sortedAccounts();
+    if(!accounts.length){el('p','Connect a bank to view its accounts.',card,'finance-page-hint');return}
+    const list=el('div',undefined,card,'finance-page-preview-list');
+    for(const account of accounts.slice(0,4)){
+      const line=el('div',undefined,list,'finance-page-preview-row');
+      const copy=el('div',undefined,line,'finance-page-preview-copy');
+      el('strong',account.bank||'Financial institution',copy);
+      el('small',(account.name||'Account')+' · '+account.sourceLabel,copy);
+      el('b',amount(account.balance,account.currency),line,'finance-page-preview-value');
+    }
+    if(accounts.length>4)el('p','+'+(accounts.length-4)+' more accounts',card,'finance-page-hint');
+  }
+  function compactActivityPreview(host){
+    const card=el('section',undefined,host,'finance-page-card finance-page-preview-card');
+    const head=el('div',undefined,card,'finance-page-section-head');
+    el('h3','Recent transactions',head);
+    action(head,'View all',()=>{view='transactions';paint()},'finance-page-preview-link');
+    const rows=flattenTransactions().filter(row=>Number.isFinite(row.posted)&&row.posted>0).slice(0,5);
+    if(!rows.length){el('p','Transaction activity appears here after account monitoring is enabled.',card,'finance-page-hint');return}
+    const list=el('div',undefined,card,'finance-page-preview-list');
+    for(const row of rows){
+      const item=el('div',undefined,list,'finance-page-preview-row');
+      const copy=el('div',undefined,item,'finance-page-preview-copy');
+      el('strong',row.merchant||row.description||'Transaction',copy);
+      el('small',(row.account.bank||'Bank')+' · '+row.account.sourceLabel+' · '+date(row.posted),copy);
+      el('b',amount(row.amount,row.account.currency),item,'finance-page-preview-value');
+    }
+  }
   function overview(host,summary){
     const position=el('section',undefined,host,'finance-page-card');
     el('h3','All accounts',position);
@@ -273,6 +306,7 @@
     metric(grid,'Net worth',summary.netWorthAvailable?amount(summary.netWorth,'USD'):'—');
     if(!summary.netWorthAvailable)el('p','Net worth requires complete, correctly categorized, recently verified USD balances. An unknown amount is not $0.00.',position,'finance-page-hint');
     if(currentCombined?.possibleDuplicates?.length)el('p','Overlapping bank connections are excluded from reported totals pending review.',position,'finance-page-caution');
+    compactAccountPreview(host);
     const activity=el('section',undefined,host,'finance-page-card');
     const activityHead=el('div',undefined,activity,'finance-page-section-head');el('h3','Cash flow',activityHead);periodControl(activityHead);
     const activityGrid=el('div',undefined,activity,'finance-page-grid');
@@ -281,6 +315,7 @@
     metric(activityGrid,'Net flow',summary.hasActivity?amount(summary.cashFlow,'USD'):'—');
     metric(activityGrid,'Savings rate',summary.savingsRate===null?'—':summary.savingsRate.toFixed(1)+'%');
     if(!summary.complete)el('p','Cash Flow is partial: review '+summary.unreviewed+' uncategorized transaction'+(summary.unreviewed===1?'':'s')+'.',activity,'finance-page-caution');
+    compactActivityPreview(host);
     const more=el('details',undefined,host,'finance-page-more');
     el('summary','More insights · trends, spending & review',more);
     const trend=el('section',undefined,more,'finance-page-card');el('h3','Net worth trend',trend);trendChart(trend,summary.netWorthHistory||[]);
