@@ -16,3 +16,8 @@
 .bank-sync-summary-metric strong{font-size:18px;color:#f5f9ff;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
 .bank-sync-modal input[type="search"]{font-size:16px;margin:12px 0 4px}
 .bank-sync-card[hidden]{display:none!important}
+
+/* Account creation happens in SimpleFIN; make the provider shortcut prominent and touch accessible. */
+.bank-sync-add-institution{border-color:#688cb6;background:#192c47}
+.bank-sync-add-institution .bank-sync-add-bank-link{background:#b7d6ff;color:#09213e;border:1px solid #d5e7ff;text-decoration:none;border-radius:10px;font-weight:750;min-height:44px;padding:11px 14px}
+.bank-sync-add-institution .bank-sync-links{display:flex;flex-wrap:wrap;gap:5px}
