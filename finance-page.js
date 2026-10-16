@@ -530,12 +530,19 @@
       if(account.availableBalance!==null&&account.availableBalance!==undefined)el('small','Available '+amount(account.availableBalance,account.currency),balances);
       const settings=el('details',undefined,article,'finance-page-account-settings');
       settings.open=expandedAccountSettings.has(account.key);
+      // Summary activation precedes the asynchronous native toggle event. Save
+      // the intended state immediately so an account-sync redraw cannot close
+      // the editor before an in-progress correction is made.
+      const summary=el('summary','Account settings',settings);
+      summary.addEventListener('click',()=>{
+        if(settings.open)expandedAccountSettings.delete(account.key);
+        else expandedAccountSettings.add(account.key);
+      });
       settings.addEventListener('toggle',()=>{
         if(!settings.isConnected)return;
         if(settings.open)expandedAccountSettings.add(account.key);
         else expandedAccountSettings.delete(account.key);
       });
-      el('summary','Account settings',settings);
       const fields=el('div',undefined,settings,'finance-page-account-fields');
       el('small','Transactions sync automatically when available. Bonus payouts still require verification.',fields,'finance-page-hint');
       el('small','Account type: '+(TYPES[p.kind]||'Unclassified'),fields,'finance-page-hint');
