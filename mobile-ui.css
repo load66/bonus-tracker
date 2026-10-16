@@ -39,7 +39,7 @@
   .ops-hero .hero-kicker{grid-column:1;grid-row:1;align-self:end;overflow-wrap:anywhere}
   .ops-hero .hero-value{grid-column:1;grid-row:2;margin-top:0;align-self:start}
   .ops-hero .hero-side{grid-column:2;grid-row:1 / span 2;align-self:center}
-  .ops-hero .hero-note{grid-column:1 / -1;grid-row:3;margin-top:4px}
+  .ops-hero .hero-note{grid-column:1 / -1;grid-row:3;margin-top:4px;min-height:1.65em;align-self:stretch;line-height:1.5!important;white-space:normal!important;overflow:visible!important}
   .hero-chip{padding:7px 9px!important;font-size:11px!important;box-shadow:none!important}
   .tracker-overview .ops-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px!important;margin-top:8px;padding:0;background:transparent}
   .tracker-overview .ops-stats .st{min-height:58px;padding:10px 12px!important;border-radius:12px}
