@@ -629,6 +629,7 @@
   }
   function paint(){
     const host=currentRoot;if(!host||!host.isConnected)return;
+    host.setAttribute('aria-busy',busy?'true':'false');
     if(view!=='bonuses')window.BTBonusEvidence?.dispose();
     host.replaceChildren();
     currentCombined=unified();
