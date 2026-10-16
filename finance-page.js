@@ -227,7 +227,7 @@
     providerLink.target='_blank';providerLink.rel='noopener noreferrer';
     providerLink.setAttribute('aria-label','Add bank through SimpleFIN Bridge');
     action(head,'Manage connections',()=>window.btOpenBankSync?.(),'finance-page-button finance-page-primary');
-    el('p','Add banks in SimpleFIN Bridge, then use Manage connections → Refresh accounts after adding bank. Provider discovery can be limited to once daily. Set account types and balance treatment below; Net Worth stays unavailable if data is incomplete.',card);
+    el('p','Add banks in SimpleFIN Bridge, then use Manage connections → Refresh accounts after adding bank. Discovery can be limited to once daily. Set account types and balance treatment below; Net Worth stays unavailable if data is incomplete.',card);
     const controls=el('div',undefined,card,'finance-page-filters');
     const search=el('input',undefined,controls,'finance-page-search');search.type='search';search.placeholder='Search accounts';search.setAttribute('aria-label','Search accounts');search.value=accountSearch;
     const list=el('div',undefined,card,'finance-page-account-groups');
