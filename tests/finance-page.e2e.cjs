@@ -34,7 +34,7 @@ const base=()=>({
   try{for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
     const browser=await engine.launch();try{
       const context=await browser.newContext({serviceWorkers:'block',viewport:{width:390,height:844},timezoneId:'America/Chicago'});
-      const page=await context.newPage(),errors=[],requests=[];let state=base(),rejectCategoryOnce=true,rejectAccountSaveOnce=true;page.on('pageerror',e=>errors.push(e.message));
+      const page=await context.newPage(),errors=[],requests=[];let state=base(),rejectCategoryOnce=true,rejectAccountSaveOnce=true,redrawOnSuccessfulSave=name==='webkit';page.on('pageerror',e=>errors.push(e.message));
       // During production smoke, NEVER send synthetic session headers to any live API.
       if(process.env.BT_BROWSER_SITE_URL)await page.route('https://api-production-00f74.up.railway.app/**',route=>route.abort());
       await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin**',async route=>{
@@ -50,7 +50,15 @@ const base=()=>({
           return;
         }
         if(url.pathname.endsWith('/transaction-review'))state.transactions[body.account][body.transaction].category=body.category,state.transactions[body.account][body.transaction].categorySource=body.category==='unreviewed'?'automatic':'user';
-        if(url.pathname.endsWith('/account-profiles'))state.accountProfiles=body.profiles;
+        if(url.pathname.endsWith('/account-profiles')){
+          state.accountProfiles=body.profiles;
+          if(redrawOnSuccessfulSave){
+            redrawOnSuccessfulSave=false;
+            // Simulate a normal same-owner cloud/UI redraw while the write
+            // is in flight, before the accepted response is delivered.
+            await page.evaluate(()=>window.btRefreshFinancesPage?.());
+          }
+        }
         await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(state)});
       });
       await page.addInitScript(()=>{
@@ -157,6 +165,7 @@ const base=()=>({
       ]);
       await section.getByRole('alert').waitFor({state:'hidden'});
       assert.equal(state.accountProfiles[B].balanceMode,'exclude','successful retry must persist organization');
+      assert.equal(redrawOnSuccessfulSave,false,'WebKit must exercise a same-user redraw before successful save response');
       assert.ok(requests.some(r=>r.path.endsWith('/account-profiles')));
 
       for(const target of [['Overview','overview'],['Transactions','transactions'],['Accounts','accounts']]){
