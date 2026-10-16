@@ -57,12 +57,12 @@
     button(status,'Check for transactions',async()=>{data=await request('/sync',{method:'POST'});paint();message('Sync requested. Provider data refreshes at most daily; earlier checks may show previously saved data. Check Last synced for confirmation.');});
     button(status,'Refresh accounts',async()=>{data=await request('/discover',{method:'POST'});paint();});
     el('h3','Connected accounts',body);el('p',String((data.accounts||[]).length)+' accounts available · '+String(Object.keys(data.mappings||{}).length)+' linked to bonuses',body);
-    el('p','Accounts appear here even without a bonus. Link an eligible checking or savings account only to its matching open bonus cycle. Changing a link clears that account’s previous bonus evidence.',body);
+    el('p','All discovered accounts appear here. Bonus monitoring is optional and currently runs only for linked accounts. Link only checking or savings accounts to their matching open bonus cycle. Changing a link clears that account’s previous bonus evidence.',body);
     const available=active(),selects=[];
     for(const a of data.accounts||[]){
       const card=el('section',undefined,body);card.className='bank-sync-card';
       el('h4',[a.bank,a.name].filter(Boolean).join(' · ')||'Bank account',card);
-      el('p','Balance: '+money(a.balance,a.currency)+' · As of '+stamp(a.balanceDate),card);
+      el('p','Balance: '+money(a.balance,a.currency)+' · As of '+stamp(a.balanceDate),card);if(a.balanceDate&&data.lastSuccess&&a.balanceDate>data.lastSuccess)el('p','Balance timestamp is newer than the last recorded transaction sync; these are separate provider updates.',card);
       const label=el('label','Link to bonus (optional)',card),select=el('select',undefined,card);select.id='bank-sync-cycle-'+a.key;label.htmlFor=select.id;select.dataset.account=a.key;
       const empty=el('option','No bonus linked',select);empty.value='';
       const current=data.mappings?.[a.key];
@@ -93,7 +93,7 @@
       }
       if(rows.length>100)el('p','Showing the latest 100 transactions for this account.',section);
     }
-    if(!shown)el('p','No bonus activity to review. Unlinked accounts remain available above; bonus monitoring starts only after a valid bonus link.',body);
+    if(!shown)el('p','No linked bonus activity to review. Connected account balances remain available above. Independent transaction history is not enabled yet.',body);
     button(body,'Disconnect and remove sync data',async()=>{
       if(!(await window.btConfirmDialog('Stop background syncing and remove this app’s saved bank-sync data? Your tracker entries stay intact. To revoke the token at SimpleFIN or cancel billing, also use your SimpleFIN account.',{title:'Disconnect SimpleFIN?',confirmLabel:'Disconnect',danger:true})))return;
       data=await request('',{method:'DELETE'});paint();message('Disconnected. Manage token revocation and subscription billing in SimpleFIN.');
