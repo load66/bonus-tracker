@@ -141,7 +141,7 @@ const base=()=>({
       await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).waitFor();
       assert.equal(state.transactions[A][T3].category,'unreviewed','failure must not silently commit category changes');
       await section.getByLabel('Category for Unknown').selectOption('shopping');
-      await section.getByText('Confirmed by you',{exact:true}).waitFor();
+      await section.getByText('Confirmed by you',{exact:true}).first().waitFor();
       await section.getByRole('alert').waitFor({state:'hidden'});
       assert.equal(state.transactions[A][T3].category,'shopping','retry must save category');
       assert.ok(requests.some(r=>r.path.endsWith('/transaction-review')&&r.body.category==='shopping'));
