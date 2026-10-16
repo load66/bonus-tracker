@@ -38,9 +38,10 @@ const KEY='a'.repeat(64);
             result={provider:'plaid',configured:true,connected:true,
               accounts:[{key:KEY,bank:'Synthetic Bank',name:'Checking',balance:'200'}],
               monitoredAccounts:monitored,lastSuccess:1792134000,stale:false,
-              transactions:{[KEY]:{'opaque':{amount:'500',currency:'USD',
-                description:'Example payroll',signals:['possible_direct_deposit'],
-                pending:false}}},authoritativeMilestones:false};
+              transactions:monitored.includes(KEY)&&syncs>0?{[KEY]:{'opaque':{
+                amount:'500',currency:'USD',description:'Example payroll',
+                signals:['possible_direct_deposit'],pending:false}}}:{},
+              authoritativeMilestones:false};
           }else{
             result={provider:'plaid',configured:true,used:1,reserved:0,remaining:9,limit:10,
               connected:[{institution:'Synthetic Bank'}],paidUpgradeAllowed:false};
@@ -56,14 +57,10 @@ const KEY='a'.repeat(64);
         await host.getByText('Plaid slots used: 1/10').waitFor();
         await host.getByText('Connected fallback accounts').waitFor();
         assert.equal(await host.getByRole('checkbox').count(),4);
-        const visibleSnapshot=await host.innerText();
-        assert.ok(visibleSnapshot.includes('••••••'),'transaction amount masked by default; rendered='+JSON.stringify(visibleSnapshot));
-        assert.equal((await host.innerText()).includes(' · 500 USD'),false);
         assert.equal(calls.some(x=>x.includes('link-token')||x.includes('/exchange')),false,
           'Opening the provider view must never consume a Plaid Item');
-        await host.getByRole('button',{name:'Show amounts'}).click();
-        assert.ok((await host.innerText()).includes('500 USD'),'user must explicitly reveal money');
-        await host.getByRole('button',{name:'Hide amounts'}).click();
+        assert.equal(await host.getByRole('button',{name:'Show amounts'}).count(),0,
+          'Unmonitored accounts must not reveal transaction data');
         await host.getByRole('checkbox').last().check();
         await host.getByRole('button',{name:'Save monitored accounts'}).click();
         await host.getByText('Monitoring preferences saved.',{exact:false}).waitFor();
@@ -71,7 +68,14 @@ const KEY='a'.repeat(64);
         assert.equal(syncs,0,'provider sync only on deliberate user action');
         await host.getByRole('button',{name:'Sync selected activity'}).click();
         await host.getByText('Latest available provider data loaded.',{exact:false}).waitFor();
+        await host.getByRole('button',{name:'Show amounts'}).waitFor();
         assert.equal(syncs,1);
+        const visibleSnapshot=await host.innerText();
+        assert.ok(visibleSnapshot.includes('••••••'),'transaction amount masked by default; rendered='+JSON.stringify(visibleSnapshot));
+        assert.equal(visibleSnapshot.includes(' · 500 USD'),false);
+        await host.getByRole('button',{name:'Show amounts'}).click();
+        assert.ok((await host.innerText()).includes('500 USD'),'user must explicitly reveal money');
+        await host.getByRole('button',{name:'Hide amounts'}).click();
         for(const width of [320,390,430]){
           await page.setViewportSize({width,height:760});
           const size=await host.evaluate(n=>({
