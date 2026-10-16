@@ -73,8 +73,8 @@
       }
     }
     const synced=Object.values(providerState).filter(x=>x.connected);
-    const lastSuccess=synced.length&&synced.every(x=>Number.isFinite(x.lastSuccess))
-      ?Math.min(...synced.map(x=>x.lastSuccess)):null;
+    const completedSyncs=synced.filter(x=>Number.isFinite(x.lastSuccess)&&x.lastSuccess>0);
+    const lastSuccess=completedSyncs.length?Math.max(...completedSyncs.map(x=>x.lastSuccess)):null;
     return {accounts,transactions,mappings,monitoredAccounts,accountProfiles,balanceHistory,
       providerState,possibleDuplicates,connected:accounts.length>0||synced.length>0,
       configured:Object.values(providerState).some(x=>x.available),
@@ -91,7 +91,8 @@
     return {...unified,accounts,transactions:keep(unified.transactions),mappings:keep(unified.mappings),
       monitoredAccounts:unified.monitoredAccounts.filter(k=>allowed.has(k)),
       accountProfiles:keep(unified.accountProfiles),balanceHistory:keep(unified.balanceHistory),
-      incompleteProviders:Object.values(unified.providerState).some(s=>!s.available||s.stale),
+      incompleteProviders:Object.values(unified.providerState).some(s=>s.connected&&
+        (s.stale||!Number.isFinite(s.lastSuccess)||s.lastSuccess<=0)),
       excludedForReview:duplicates.size};
   }
   return Object.freeze({combine,safeForSummary,detectedType,key});
