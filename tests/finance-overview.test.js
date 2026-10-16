@@ -188,6 +188,17 @@ assert.equal(spend.cashFlow,'600.49','cash flow includes bonus income but exclud
 assert.equal(spend.complete,false,'unattributed refunds prevent a false complete report');
 assert.equal(spend.monthly[0].bonusIncome,'100.50');
 
+const confirmedCredit=summarize({
+  lastSuccess:NOW,accounts:[financeAccount('cash','checking','50.00')],
+  monitoredAccounts:['cash'],transactions:{cash:{
+    purchase:{amount:'-20.00',category:'groceries',posted:NOW-300},
+    correctedRefund:{amount:'5.00',category:'groceries',categorySource:'user',posted:NOW-200}
+  }}
+},{now:NOW});
+assert.equal(confirmedCredit.expenses,'15.00','user-confirmed positive category credit offsets spending');
+assert.equal(confirmedCredit.refunds,'5.00');
+assert.equal(confirmedCredit.spending.groceries,'15.00');
+
 const octoberInChicago=Date.parse('2026-11-01T04:30:00Z')/1000;
 const localMonth=summarize({
   accounts:[financeAccount('c','checking','1.00')],
