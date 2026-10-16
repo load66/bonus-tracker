@@ -88,7 +88,12 @@
     }
     const campaigns=[...grouped.values()].map(group=>{
       group.activity.sort((a,b)=>b.posted-a.posted||a.accountKey.localeCompare(b.accountKey));
-      group.pending=group.activity.filter(a=>a.reviewStatus==='unreviewed');
+      // Prioritize potentially costly reversals and fees above routine deposits,
+      // while preserving newest-first ordering within each urgency tier.
+      const urgency={reversal:5,fee:4,bonus:3,directDeposit:2,recurring:1};
+      group.pending=group.activity.filter(a=>a.reviewStatus==='unreviewed')
+        .sort((a,b)=>(urgency[b.type]||0)-(urgency[a.type]||0)
+          ||b.posted-a.posted||a.accountKey.localeCompare(b.accountKey)||a.id.localeCompare(b.id));
       group.resolved=group.activity.filter(a=>a.reviewStatus!=='unreviewed');
       group.latest=group.pending.slice(0,5);
       group.needsReview=group.pending.length>0;
