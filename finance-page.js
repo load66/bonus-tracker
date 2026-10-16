@@ -90,7 +90,7 @@
       if(!response.ok)throw Error(typeof result.detail==='string'?result.detail:'Financial request could not be completed.');
       // Check owner continuity on every response, including a user switch
       // that did not trigger a Finances redraw. Token refresh alone is safe.
-      if(source!==selectedSource)throw Error('Invalid bank connection route.');
+      if(source!=='simplefin'&&source!=='plaid')throw Error('Invalid bank connection route.');
       if(window.BTBonusAuth!==auth||!auth.connected())
         throw Error('Sign-in changed. Reload Finances.');
       const latest=await auth.token().catch(()=>null);
@@ -480,7 +480,11 @@
     }
     const summaryState=window.BTFinanceUnified.safeForSummary(currentCombined);
     const calculated=window.BTFinanceOverview?.summarize(summaryState,{days:period});
-    const summary={...calculated,complete:!!calculated?.complete&&!summaryState.incompleteProviders&&!summaryState.excludedForReview};
+    const trustedTotals=!summaryState.incompleteProviders&&!summaryState.excludedForReview;
+    const summary={...calculated,
+      complete:!!calculated?.complete&&trustedTotals,
+      cashAvailable:!!calculated?.cashAvailable&&trustedTotals,
+      netWorthAvailable:!!calculated?.netWorthAvailable&&trustedTotals};
     hero(host,summary);
     if(summaryState.incompleteProviders)el('p','Financial activity is partial: one linked provider has not completed a recent sync.',host,'finance-page-caution');
     if(view==='bonuses'){
