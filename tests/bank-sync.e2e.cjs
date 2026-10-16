@@ -158,6 +158,14 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    assert.equal(state.connected,false,'confirmed disconnect must change connection state');
    assert.equal(requests.filter(r=>r.method==='DELETE').length,1,'disconnect must send one authenticated DELETE');
    assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'disconnect must preserve tracker entry history');
+   // A successful Plaid hosted-Link exchange must leave a visible confirmation
+   // in the bank wizard footer even if its own embedded panel redraws.
+   await page.evaluate(()=>window.dispatchEvent(new CustomEvent('bt:plaid-bank-connected',{
+     detail:{status:'ready',count:2}
+   })));
+   await page.locator('#bank-sync-message').getByText('Plaid bank connected · 2 accounts found.',{exact:false}).waitFor();
+   assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,
+     'Connection result never changes a Tracker milestone');
    assert.deepEqual(errors,[]);console.log(name+': SimpleFIN connect, sync, matches, reconnection, cancel/confirm disconnect, privacy and mobile checks passed');
   }finally{await browser.close();}
  }}finally{server.close();}
