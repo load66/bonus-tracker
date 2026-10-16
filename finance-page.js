@@ -108,12 +108,35 @@
       const response=await fetch(BASE+(otherSource==='plaid'?'/plaid/accounts':'/simplefin'),{
         headers:{Authorization:'Bearer '+token},credentials:'omit',cache:'no-store',signal:controller.signal});
       if(!response.ok)return;
-      const snapshot=await response.json();
+      let snapshot=await response.json();
       if(rev!==sequence||!auth.connected()||window.BTBonusAuth!==auth)return;
       const latest=await auth.token().catch(()=>null);
       if(rev!==sequence||!sameSessionToken(token,latest))return;
       otherData={provider:otherSource,snapshot};
       if(data&&currentRoot?.isConnected)paint();
+      // A prior Plaid Link may have authorized a bank without initial account
+      // discovery. Recover read-only accounts once, never repeat a Link/exchange.
+      if(otherSource==='plaid'&&snapshot.connected&&!(snapshot.accounts||[]).length
+          &&!snapshot.lastSuccess&&!snapshot.error
+          &&(!snapshot.nextSyncAt||snapshot.nextSyncAt<=Date.now()/1000)){
+        const latestBeforeSync=await auth.token().catch(()=>null);
+        if(rev!==sequence||!auth.connected()||!sameSessionToken(token,latestBeforeSync))return;
+        const syncController=new AbortController(),syncTimer=setTimeout(()=>syncController.abort(),65000);
+        try{
+          const synced=await fetch(BASE+'/plaid/accounts/sync',{
+            method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+            credentials:'omit',cache:'no-store',signal:syncController.signal});
+          if(synced.ok){
+            const recovered=await synced.json();
+            const latestAfterSync=await auth.token().catch(()=>null);
+            if(rev===sequence&&auth.connected()&&sameSessionToken(token,latestAfterSync)){
+              snapshot=recovered;otherData={provider:otherSource,snapshot};
+              if(data&&currentRoot?.isConnected)paint();
+            }
+          }
+        }catch(_error){/* Recovery failure stays visible as not-yet-discovered. */}
+        finally{clearTimeout(syncTimer)}
+      }
     }catch(_error){/* Other provider may not be configured; primary accounts remain available. */}
     finally{clearTimeout(timer)}
   }
