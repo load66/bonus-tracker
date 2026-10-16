@@ -20,7 +20,7 @@
     }catch(e){if(e.name==='AbortError')throw Error('The request timed out. Refresh status before trying again.');throw e;}finally{clearTimeout(timer);}
   }
   function message(s){const n=panel?.querySelector('#bank-sync-message');if(n)n.textContent=s;}
-  async function run(work){if(busy)return;busy=true;panel?.querySelectorAll('button,select,textarea').forEach(n=>n.disabled=true);try{await work();}catch(e){message(e.message);}finally{busy=false;panel?.querySelectorAll('button,select,textarea').forEach(n=>n.disabled=false);}}
+  async function run(work){if(busy)return;busy=true;panel?.querySelectorAll('button,select,textarea,input').forEach(n=>n.disabled=true);try{await work();}catch(e){message(e.message);}finally{busy=false;panel?.querySelectorAll('button,select,textarea,input').forEach(n=>n.disabled=false);}}
   function button(parent,label,fn,cls='btn-s'){const b=el('button',label,parent);b.type='button';b.className=cls;b.onclick=()=>run(fn);return b;}
   function close(){if(busy)return;generation++;panel?.remove();panel=null;data=null;hideBalances=false;returnFocus?.focus();}
   function paint(){
@@ -56,13 +56,16 @@
     button(status,'Refresh status',async()=>{data=await request();paint();});
     button(status,'Check for transactions',async()=>{data=await request('/sync',{method:'POST'});paint();message('Sync requested. Provider data refreshes at most daily; earlier checks may show previously saved data. Check Last synced for confirmation.');});
     button(status,'Refresh accounts',async()=>{data=await request('/discover',{method:'POST'});paint();});
-    el('h3','Connected accounts',body);el('p',String((data.accounts||[]).length)+' accounts available · '+String(Object.keys(data.mappings||{}).length)+' linked to bonuses',body);button(body,hideBalances?'Show balances':'Hide balances',async()=>{hideBalances=!hideBalances;paint();});
-    el('p','All discovered accounts appear here. Bonus monitoring is optional and currently runs only for linked accounts. Link only checking or savings accounts to their matching open bonus cycle. Changing a link clears that account’s previous bonus evidence.',body);
-    const available=active(),selects=[];
+    el('h3','Connected accounts',body);el('p',String((data.accounts||[]).length)+' connected · '+String((data.monitoredAccounts||[]).length)+' monitored · '+String(Object.keys(data.mappings||{}).length)+' linked to bonuses',body);button(body,hideBalances?'Show balances':'Hide balances',async()=>{hideBalances=!hideBalances;paint();});
+    el('p','Choose which accounts to monitor for read-only posted transactions, independently of bank bonuses. Link a checking or savings account to its matching bonus only when the account is eligible. Financial activity is not proof of a qualifying direct deposit.',body);
+    const available=active(),selects=[],monitors=[],monitored=new Set(data.monitoredAccounts||[]);
     for(const a of data.accounts||[]){
       const card=el('section',undefined,body);card.className='bank-sync-card';
       el('h4',[a.bank,a.name].filter(Boolean).join(' · ')||'Bank account',card);
       el('p','Balance: '+(hideBalances?'••••••':money(a.balance,a.currency))+' · As of '+stamp(a.balanceDate),card);if(a.balanceDate&&data.lastSuccess&&a.balanceDate>data.lastSuccess)el('p','Balance timestamp is newer than the last recorded transaction sync; these are separate provider updates.',card);
+      const monitorLabel=el('label',undefined,card);monitorLabel.className='bank-sync-monitor-label';
+      const checkbox=el('input',undefined,monitorLabel);checkbox.type='checkbox';checkbox.checked=monitored.has(a.key);checkbox.dataset.account=a.key;
+      el('span','Monitor transactions (read-only)',monitorLabel);monitors.push(checkbox);
       const label=el('label','Link to bonus (optional)',card),select=el('select',undefined,card);select.id='bank-sync-cycle-'+a.key;label.htmlFor=select.id;select.dataset.account=a.key;
       const empty=el('option','No bonus linked',select);empty.value='';
       const current=data.mappings?.[a.key];
@@ -71,20 +74,27 @@
       selects.push(select);
     }
     if(!data.accounts?.length)el('p','No accounts were returned. Refresh the account list after checking SimpleFIN.',body);
+    if(data.accounts?.length)button(body,'Save monitoring preferences',async()=>{
+      const accounts=monitors.filter(c=>c.checked).map(c=>c.dataset.account);
+      data=await request('/monitoring',{method:'PUT',body:JSON.stringify({accounts})});paint();
+      message('Monitoring preferences saved. Only the selected accounts will be retrieved for independent activity, subject to the daily provider limit.');
+    },'btn-p');
     button(body,'Save account matches',async()=>{
       const mappings={};for(const s of selects){const entry=available.find(e=>String(e.id)===s.value);if(entry)mappings[s.dataset.account]={entryId:String(entry.id),bank:entry.bank,opened:entry.opened};}
-      data=await request('/selection',{method:'PUT',body:JSON.stringify({mappings})});paint();message('Account matches saved. The next scheduled check will read selected accounts only.');
+      data=await request('/selection',{method:'PUT',body:JSON.stringify({mappings})});paint();message('Bonus links saved. Monitored accounts and linked bonus accounts are included in the next eligible check.');
     },'btn-p');
-    el('h3','Observed activity',body);
-    el('p','Posted transactions only. Deposits can include transfers, payroll, interest and refunds. These are evidence—not confirmed qualifying deposits. Bonus candidates require review; tracker milestones stay unchanged during the trial.',body);
+    el('h3','Recent transactions',body);
+    el('p','Only available, posted transactions are shown (up to 90 days of retained observations). Transfers, dividends and refunds may appear as deposits. Bonus candidates require review; this section never changes tracker milestones.',body);
     let shown=0;
     for(const a of data.accounts||[]){
-      const mapping=data.mappings?.[a.key];if(!mapping)continue;
-      const valid=available.find(e=>String(e.id)===mapping.entryId&&e.opened===mapping.opened&&e.bank===mapping.bank);
-      if(!valid)continue;
-      const section=el('section',undefined,body);section.className='bank-sync-card';el('h4',mapping.bank+' · '+a.name,section);
-      const rows=Object.values(data.transactions?.[a.key]||{}).filter(r=>r.posted>=Date.parse(mapping.opened+'T00:00:00Z')/1000).sort((a,b)=>b.posted-a.posted);
-      if(!rows.length)el('p','No posted activity is available for this cycle yet. Missing data does not prove an unpaid bonus.',section);
+      const mapping=data.mappings?.[a.key];const watched=monitored.has(a.key);
+      const valid=mapping&&available.find(e=>String(e.id)===mapping.entryId&&e.opened===mapping.opened&&e.bank===mapping.bank);
+      if(!watched&&!valid)continue;
+      const section=el('section',undefined,body);section.className='bank-sync-card';el('h4',[a.bank,a.name].filter(Boolean).join(' · '),section);
+      if(valid)el('p','Linked bonus: '+mapping.bank+' · opened '+mapping.opened+'. Bonus eligibility must be verified separately.',section);
+      const cutoff=!watched&&valid?Date.parse(mapping.opened+'T00:00:00Z')/1000:0;
+      const rows=Object.values(data.transactions?.[a.key]||{}).filter(r=>r.posted>=cutoff).sort((a,b)=>b.posted-a.posted);
+      if(!rows.length)el('p','No posted transactions retrieved yet. This does not establish a zero balance, absent income or unpaid bonus.',section);
       for(const row of rows.slice(0,100)){
         shown++;const article=el('article',undefined,section);article.className='bank-sync-transaction';
         el('strong',row.kind==='possible_bonus'?'Possible bonus · review':row.kind==='possible_reversal'?'Possible bonus reversal · review':Number(row.amount)>0?'Deposit':'Withdrawal',article);
@@ -93,7 +103,7 @@
       }
       if(rows.length>100)el('p','Showing the latest 100 transactions for this account.',section);
     }
-    if(!shown)el('p','No linked bonus activity to review. Connected account balances remain available above. Independent transaction history is not enabled yet.',body);
+    if(!shown)el('p','No transactions are available for monitored or bonus-linked accounts. Use Check for transactions after enabling monitoring; provider updates are limited to once daily.',body);
     button(body,'Disconnect and remove sync data',async()=>{
       if(!(await window.btConfirmDialog('Stop background syncing and remove this app’s saved bank-sync data? Your tracker entries stay intact. To revoke the token at SimpleFIN or cancel billing, also use your SimpleFIN account.',{title:'Disconnect SimpleFIN?',confirmLabel:'Disconnect',danger:true})))return;
       data=await request('',{method:'DELETE'});paint();message('Disconnected. Manage token revocation and subscription billing in SimpleFIN.');
@@ -111,7 +121,7 @@
   }
   function install(){
     const menu=document.querySelector('.header-data-panel');if(!menu||menu.querySelector('[data-bank-sync]'))return;
-    const b=el('button',undefined,menu);b.type='button';b.dataset.bankSync='';el('strong','Financial accounts',b);el('small','Connect SimpleFIN and review bank activity',b);b.onclick=()=>{document.getElementById('bt-data-menu').open=false;open();};
+    const b=el('button',undefined,menu);b.type='button';b.dataset.bankSync='';el('strong','Financial accounts',b);el('small','Connections, balances and monitored activity',b);b.onclick=()=>{document.getElementById('bt-data-menu').open=false;open();};
   }
   window.btOpenBankSync=open;
   window.btRegisterPostRender?.('simplefin-bank-sync',install);install();
