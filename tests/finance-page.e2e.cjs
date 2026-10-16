@@ -63,7 +63,7 @@ const base=()=>({
       // A redraw is not evidence that the Finance page is unavailable. Check
       // the fully bootstrapped shell and repeat a lost navigation at most twice.
       await page.waitForFunction(()=>typeof window.BTBonusAuth?.connected==='function'&&
-        window.BTBonusAuth.connected()&&typeof window.btRefreshFinancesPage==='function',{timeout:12000});
+        window.BTBonusAuth.connected()&&typeof window.btRefreshFinancesPage==='function',null,{timeout:12000});
       const financeTab=page.getByRole('button',{name:'Finances',exact:true});
       const section=page.getByRole('region',{name:'My finances'});
       let opened=false;
