@@ -335,7 +335,9 @@
   function accounts(host){
     const card=el('section',undefined,host,'finance-page-card');
     const head=el('div',undefined,card,'finance-page-section-head');
-    el('h3','Accounts · '+(data.accounts||[]).length,head);
+    const title=el('div',undefined,head,'finance-page-accounts-title');
+    el('h3','Accounts',title);
+    el('span',String((data.accounts||[]).length),title,'finance-page-account-count');
     action(head,'Manage connections',()=>window.btOpenBankSync?.(),'finance-page-button');
     const controls=el('div',undefined,card,'finance-page-account-filters');
     const search=el('input',undefined,controls,'finance-page-search');search.type='search';
