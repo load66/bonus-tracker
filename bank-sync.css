@@ -21,3 +21,26 @@
 .bank-sync-add-institution{border-color:#688cb6;background:#192c47}
 .bank-sync-add-institution .bank-sync-add-bank-link{background:#b7d6ff;color:#09213e;border:1px solid #d5e7ff;text-decoration:none;border-radius:10px;font-weight:750;min-height:44px;padding:11px 14px}
 .bank-sync-add-institution .bank-sync-links{display:flex;flex-wrap:wrap;gap:5px}
+
+/* Provider-secure connection wizard: first-class branded experience, no bank credential inputs. */
+.bank-connect-flow{display:grid;gap:13px;padding:3px 0 16px}
+.bank-connect-header{padding:16px 15px 13px;border:1px solid #6b8fbe;background:linear-gradient(155deg,#243d60,#132840);border-radius:15px}
+.bank-connect-kicker{font-size:10px;letter-spacing:.14em;color:#b1d5ff;font-weight:800}
+.bank-connect-header h3{margin:6px 0!important;color:#f6faff!important;font-size:20px!important;line-height:1.25}
+.bank-connect-header p{margin:8px 0 0;color:#d2e0f3;font-size:13px}
+.bank-connect-steps{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:0;padding:0}
+.bank-connect-steps li{min-width:0;display:flex;flex-direction:column;gap:7px;padding:10px 8px;background:#14243a;border:1px solid #496483;border-radius:11px;color:#d8e9ff}
+.bank-connect-steps li b{font-size:12px;color:#a8cfff}
+.bank-connect-steps li span{font-size:11px;font-weight:650;line-height:1.35;overflow-wrap:anywhere}
+.bank-connect-stage{min-width:0;padding:15px;background:#182a44;border:1px solid #456282;border-radius:13px}
+.bank-connect-stage h4{font-size:15px!important;font-weight:800!important;color:#eef7ff!important;margin:0 0 9px!important;line-height:1.4}
+.bank-connect-stage p{line-height:1.55;font-size:12px}
+.bank-connect-actions,.bank-connect-bottom{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.bank-connect-link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin:5px 0;padding:10px 12px;border-radius:10px;background:#253e60;color:#e2efff!important;border:1px solid #789fcf;text-decoration:none!important;font-size:12px;font-weight:750;line-height:1.35;text-align:center;box-sizing:border-box}
+.bank-connect-link-primary{background:#b9d9ff!important;color:#0c2546!important;border-color:#d7e9ff!important}
+.bank-connect-security{border-left:3px solid #7dc4ad;padding:9px 10px;border-radius:7px;background:#15372f!important;color:#daf6eb!important}
+.bank-connect-flow .bank-connect-finish{width:100%;font-size:13px;font-weight:800;min-height:48px;margin-top:9px}
+.bank-connect-outcome{padding:11px;background:#14362d;border:1px solid #4f9c7c;border-radius:10px;color:#c4efdf!important}
+.bank-connect-bottom{padding:5px 0}
+.bank-connect-flow a:focus-visible,.bank-connect-flow button:focus-visible{outline:3px solid #b7dbff;outline-offset:3px}
+@media(max-width:370px){.bank-connect-header,.bank-connect-stage{padding:12px}.bank-connect-steps{gap:5px}.bank-connect-steps li{padding:8px 6px}.bank-connect-actions a{width:100%}}
