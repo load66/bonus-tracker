@@ -14,7 +14,7 @@
     const subtype=canonical(account.accountSubtype).replaceAll(' ','_');
     const type=canonical(account.accountType).replaceAll(' ','_');
     const name=canonical(account.name);
-    const aliases={depository:'',credit:'credit_card',credit_card:'credit_card',investment:'brokerage',student:'loan',auto:'loan',mortgage:'mortgage',loan:'loan',brokerage:'brokerage',retirement:'retirement',401k:'retirement',ira:'retirement',checking:'checking',savings:'savings',money_market:'savings'};
+    const aliases={depository:'',credit:'credit_card',credit_card:'credit_card',investment:'brokerage',student:'loan',auto:'loan',mortgage:'mortgage',loan:'loan',brokerage:'brokerage',retirement:'retirement','401k':'retirement',ira:'retirement',checking:'checking',savings:'savings',money_market:'savings'};
     if(TYPES.has(subtype))return subtype;
     if(Object.hasOwn(aliases,subtype)&&aliases[subtype])return aliases[subtype];
     if(TYPES.has(type))return type;
