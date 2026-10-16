@@ -34,9 +34,19 @@ const base=()=>({
   try{for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
     const browser=await engine.launch();try{
       const context=await browser.newContext({serviceWorkers:'block',viewport:{width:390,height:844},timezoneId:'America/Chicago'});
-      const page=await context.newPage(),errors=[],requests=[];let state=base();page.on('pageerror',e=>errors.push(e.message));
+      const page=await context.newPage(),errors=[],requests=[];let state=base(),rejectCategoryOnce=true,rejectAccountSaveOnce=true;page.on('pageerror',e=>errors.push(e.message));
       await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin**',async route=>{
         const req=route.request(),url=new URL(req.url()),body=req.postDataJSON?.()||{};requests.push({path:url.pathname,method:req.method(),body});
+        if(url.pathname.endsWith('/transaction-review')&&rejectCategoryOnce){
+          rejectCategoryOnce=false;
+          await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({detail:'Synthetic category save temporarily unavailable.'})});
+          return;
+        }
+        if(url.pathname.endsWith('/account-profiles')&&rejectAccountSaveOnce){
+          rejectAccountSaveOnce=false;
+          await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({detail:'Synthetic account save temporarily unavailable.'})});
+          return;
+        }
         if(url.pathname.endsWith('/transaction-review'))state.transactions[body.account][body.transaction].category=body.category,state.transactions[body.account][body.transaction].categorySource=body.category==='unreviewed'?'automatic':'user';
         if(url.pathname.endsWith('/account-profiles'))state.accountProfiles=body.profiles;
         await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(state)});
@@ -66,7 +76,12 @@ const base=()=>({
       assert.equal(await section.locator('.finance-page-transaction:visible').count(),1);
       await txSearch.fill('');
       const category=section.getByLabel('Category for Unknown');await category.selectOption('shopping');
+      await section.getByRole('alert').getByText('Changes were not saved.',{exact:false}).waitFor();
+      assert.equal(state.transactions[A][T3].category,'unreviewed','failure must not silently commit category changes');
+      await section.getByLabel('Category for Unknown').selectOption('shopping');
       await section.getByText('Confirmed by you',{exact:true}).waitFor();
+      await section.getByRole('alert').waitFor({state:'hidden'});
+      assert.equal(state.transactions[A][T3].category,'shopping','retry must save category');
       assert.ok(requests.some(r=>r.path.endsWith('/transaction-review')&&r.body.category==='shopping'));
 
       await section.getByRole('button',{name:'Accounts',exact:true}).click();
@@ -75,8 +90,14 @@ const base=()=>({
       const accountSearch=section.getByRole('searchbox',{name:'Search accounts'});await accountSearch.fill('other credit union');
       assert.equal(await section.locator('.finance-page-account:visible').count(),1);await accountSearch.fill('');
       const creditEditor=section.locator('.finance-page-account-info strong').filter({hasText:/^Credit Card$/}).locator('xpath=../../..');
-      await creditEditor.getByLabel('Net worth treatment').selectOption('liability');
+      await creditEditor.getByLabel('Net worth treatment').selectOption('exclude');
       await section.getByRole('button',{name:'Save account organization'}).click();
+      await section.getByRole('alert').getByText('Changes were not saved.',{exact:false}).waitFor();
+      assert.equal(state.accountProfiles[B].balanceMode,'liability','failed account save must leave encrypted server state unchanged');
+      assert.equal(await section.getByLabel('Net worth treatment').nth(1).inputValue(),'exclude','unsaved draft remains available for retry');
+      await section.getByRole('button',{name:'Save account organization'}).click();
+      await section.getByRole('alert').waitFor({state:'hidden'});
+      assert.equal(state.accountProfiles[B].balanceMode,'exclude','successful retry must persist organization');
       assert.ok(requests.some(r=>r.path.endsWith('/account-profiles')));
 
       for(const target of [['Overview','overview'],['Transactions','transactions'],['Accounts','accounts']]){
