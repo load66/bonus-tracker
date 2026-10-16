@@ -350,14 +350,19 @@ const base=()=>({
       assert.ok(requests.some(r=>r.path.endsWith('/simplefin/accounts/'+B)&&r.method==='DELETE'));
       await page.waitForFunction(()=>document.querySelector('#bt-finances-page')?.getAttribute('aria-busy')==='false');
       await section.locator('summary',{hasText:'Removed accounts (1)'}).click();
-      const restoreClickInfo=await section.getByRole('button',{name:'Restore',exact:true}).evaluate(button=>{
+      const restoreTarget=section.getByRole('button',{name:'Restore',exact:true});
+      await restoreTarget.scrollIntoViewIfNeeded();
+      await page.waitForFunction(()=>document.querySelector('#bt-finances-page')?.getAttribute('aria-busy')==='false');
+      const restoreClickInfo=await restoreTarget.evaluate(button=>{
         const original=button.onclick;
         window.__btRestoreClickCount=0;
         button.onclick=function(...args){window.__btRestoreClickCount++;return original?.apply(this,args)};
-        const info={hasHandler:typeof original==='function',disabled:button.disabled};
-        button.click();
-        return info;
+        const rect=button.getBoundingClientRect();
+        const hit=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);
+        return {hasHandler:typeof original==='function',disabled:button.disabled,
+                pointerTarget:hit?.tagName,pointerText:hit?.textContent?.slice(0,70)};
       });
+      await restoreTarget.click();
       await page.waitForFunction(()=>(
         document.querySelector('#bt-finances-page')?.textContent||''
       ).includes('Account restored to discovery.') || (
