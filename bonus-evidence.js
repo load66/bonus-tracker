@@ -284,6 +284,9 @@
   }
   window.BTBonusEvidence=Object.freeze({mount,dispose});
   window.btRegisterPostRender?.('finance-only-bonus-evidence-cleanup',()=>{
-    if(!document.getElementById('bt-bonus-evidence'))dispose();
+    // Main-app redraws replace the Finance DOM before its authenticated mount
+    // completes. Preserve the in-memory review state only while Finances itself
+    // remains the active tab; switching away revokes it immediately.
+    if(!document.getElementById('bt-finances-page'))dispose();
   });
 })();
