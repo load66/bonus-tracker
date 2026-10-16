@@ -2,7 +2,7 @@
 (function(){
   'use strict';
   const API='https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin';
-  let panel=null,data=null,busy=false,generation=0,returnFocus=null,hideBalances=false,accountFilter='',view='accounts',wizardResult=null;
+  let panel=null,data=null,busy=false,generation=0,returnFocus=null,hideBalances=false,accountFilter='',view='accounts',wizardResult=null,changed=false;
   const el=(tag,text,parent)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(parent)parent.append(n);return n;};
   const stamp=t=>typeof t==='number'&&t>0?new Date(t*1000).toLocaleString():'Not available';
   const money=(a,c)=>{if(a===null||a===undefined||a===''||!Number.isFinite(Number(a)))return 'Unavailable';if(!c)return String(a)+' (currency unknown)';try{return new Intl.NumberFormat(undefined,{style:'currency',currency:c}).format(Number(a));}catch{return String(a)+' '+String(c);}};
@@ -17,6 +17,7 @@
       const d=await r.json().catch(()=>({}));
       if(!r.ok)throw Error(typeof d.detail==='string'?d.detail:'Bank syncing could not complete. Try again.');
       if(rev!==generation||!auth.connected())throw Error('Sign-in changed. Reopen bank syncing.');
+      if(options.method&&options.method.toUpperCase()!=='GET')changed=true;
       return d;
     }catch(e){if(e.name==='AbortError')throw Error('The request timed out. Refresh status before trying again.');throw e;}finally{clearTimeout(timer);}
   }
@@ -37,7 +38,15 @@
     }
   }
   function button(parent,label,fn,cls='btn-s'){const b=el('button',label,parent);b.type='button';b.className=cls;b.onclick=()=>run(fn);return b;}
-  function close(){if(busy)return;generation++;panel?.remove();panel=null;data=null;hideBalances=false;accountFilter='';view='accounts';wizardResult=null;returnFocus?.focus();window.btRefreshFinancesPage?.();}
+  function close(){
+    if(busy)return;
+    const mustRefresh=changed;
+    generation++;panel?.remove();panel=null;data=null;changed=false;hideBalances=false;accountFilter='';view='accounts';wizardResult=null;
+    returnFocus?.focus();
+    // Opening a connection wizard or reading status must never disturb pending
+    // financial edits in the parent view. Refresh only after a real mutation.
+    if(mustRefresh)window.btRefreshFinancesPage?.();
+  }
   function secureLink(parent,label,url,primary=false){
     const a=el('a',label,parent);
     a.href=url;a.target='_blank';a.rel='noopener noreferrer';
@@ -113,7 +122,7 @@
       const form=el('form',undefined,body),emailLabel=el('label','Email',form),email=el('input',undefined,emailLabel);email.type='email';email.autocomplete='username';email.required=true;
       const passLabel=el('label','Password',form),pass=el('input',undefined,passLabel);pass.type='password';pass.autocomplete='current-password';pass.required=true;
       const submit=el('button','Sign in',form);submit.type='submit';submit.className='btn-p';
-      form.onsubmit=e=>{e.preventDefault();const password=pass.value;pass.value='';run(async()=>{await window.BTBonusAuth.signIn(email.value.trim(),password);data=await request();paint();});};return;
+      form.onsubmit=e=>{e.preventDefault();const password=pass.value;pass.value='';run(async()=>{await window.BTBonusAuth.signIn(email.value.trim(),password);changed=true;data=await request();paint();});};return;
     }
     if(!data){button(body,'Load connection status',async()=>{data=await request();paint();});return;}
     if(!data.configured){el('h3','Server setup is not ready',body);el('p','Bank syncing is awaiting secure server configuration. You do not need to buy a subscription yet.',body);return;}
@@ -274,7 +283,7 @@
   }
   function open(mode='accounts'){
     if(panel){view=mode==='add-bank'?'add-bank':'accounts';wizardResult=null;paint();return;}
-    returnFocus=document.activeElement;generation++;data=null;view=mode==='add-bank'?'add-bank':'accounts';wizardResult=null;
+    returnFocus=document.activeElement;generation++;data=null;changed=false;view=mode==='add-bank'?'add-bank':'accounts';wizardResult=null;
     panel=el('div');panel.className='ov bank-sync-overlay';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-labelledby','bank-sync-title');
     const modal=el('section',undefined,panel);modal.className='bank-sync-modal';
     const header=el('header',undefined,modal);el('h2','Financial accounts',header).id='bank-sync-title';el('p','Balances, connections and bonus monitoring',header);
