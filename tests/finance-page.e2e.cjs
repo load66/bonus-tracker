@@ -290,7 +290,6 @@ const base=()=>({
       assert.equal(await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).count(),0,
         'Refresh activity must not say unsaved changes when monitoring was never enabled');
       await section.getByRole('button',{name:'Enable activity for all 4 accounts'}).click();
-      await section.getByText('account',{exact:false}).first().waitFor();
       await page.waitForFunction(()=>{
         const text=document.querySelector('#bt-finances-page')?.textContent||'';
         return text.includes('4 accounts enabled for read-only monitoring.');
