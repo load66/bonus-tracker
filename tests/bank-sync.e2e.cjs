@@ -5,7 +5,8 @@ const root=path.resolve(__dirname,'..'),output=process.env.BT_BROWSER_RESULTS||'
 const mime={'.html':'text/html','.js':'application/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml'};
 const server=http.createServer(async(req,res)=>{try{const pathname=new URL(req.url,'http://localhost').pathname;const p=path.resolve(root,'.'+(pathname==='/'?'/index.html':pathname));if(!p.startsWith(root+path.sep))throw Error();res.setHeader('Content-Type',mime[path.extname(p)]||'text/plain');res.end(await fs.readFile(p));}catch{res.writeHead(404);res.end();}});
 const account={key:'a'.repeat(64),name:'Checking <img src=x>',bank:'Synthetic Bank',currency:'USD',balance:'200',balanceDate:1792134000};
-const opened='2026-10-01',entry={id:'synthetic-cycle',bank:'Synthetic Bank',accountType:'personal',opened,bonus:200};
+const {fixture}=require('./fixtures/financial-rules.cjs');
+const opened='2026-10-01',entry={...fixture(),id:'synthetic-cycle',bank:'Synthetic Bank',accountType:'personal',opened};
 const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connected',accounts:[account],mappings:{},transactions:{},monitoredAccounts:[],lastSuccess:1792134000,nextSyncAt:1792220400});
 (async()=>{
  await fs.mkdir(output,{recursive:true});await new Promise(r=>server.listen(0,'127.0.0.1',r));
@@ -41,10 +42,12 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    assert.equal(await dialog.getByLabel('Monitor transactions (read-only)',{exact:true}).isVisible(),true);
    await dialog.getByRole('button',{name:'Hide balances',exact:true}).click();await dialog.getByText('Balance: ••••••',{exact:false}).waitFor();
    await dialog.getByRole('button',{name:'Show balances',exact:true}).click();await dialog.locator('p').filter({hasText:/Balance:\s*.*200/}).first().waitFor();
+   assert.equal(await dialog.getByLabel('Bonus product (verified terms)',{exact:true}).isDisabled(),true,'unlinked account cannot select a promotion product');
    await dialog.getByLabel('Monitor transactions (read-only)',{exact:true}).check();
    await dialog.getByRole('button',{name:'Save monitoring preferences',exact:true}).click();
    await dialog.getByText('Monitoring preferences saved.',{exact:false}).waitFor();
    assert.deepEqual(state.monitoredAccounts,[account.key]);assert.deepEqual(state.mappings,{});
+   assert.equal(await dialog.getByLabel('Bonus product (verified terms)',{exact:true}).isDisabled(),true,'unverified product choices must stay disabled after async form operations');
    await dialog.getByRole('button',{name:'Check for transactions',exact:true}).click();await dialog.getByText('Possible bonus · review',{exact:true}).waitFor();
    await dialog.getByText('Observed credits',{exact:true}).waitFor();
    await dialog.getByText('Bonus candidates',{exact:true}).waitFor();
@@ -59,8 +62,10 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    await dialog.getByRole('button',{name:'Show balances',exact:true}).click();
    await dialog.getByText('These are not verified income, expenses or net worth.',{exact:false}).waitFor();
    await dialog.getByLabel('Link to bonus (optional)',{exact:true}).selectOption(cycleId);
+   assert.equal(await dialog.getByLabel('Bonus product (verified terms)',{exact:true}).isEnabled(),true,'validated promotion products can be selected');
+   await dialog.getByLabel('Bonus product (verified terms)',{exact:true}).selectOption('checking');
    await dialog.getByRole('button',{name:'Save account matches',exact:true}).click();await dialog.getByText('Bonus links saved.',{exact:false}).waitFor();
-   assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened});
+   assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened,productId:'checking'});
    const bridge=dialog.getByRole('link',{name:'Add bank in SimpleFIN',exact:false});
    assert.equal(await bridge.getAttribute('href'),'https://beta-bridge.simplefin.org/');
    assert.equal(await bridge.getAttribute('target'),'_blank');
@@ -70,7 +75,7 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    await dialog.getByRole('button',{name:'Refresh accounts after adding bank'}).click();
    await dialog.getByText('Newly Added CU · Savings',{exact:true}).waitFor();
    assert.equal(state.accounts.length,2,'new provider accounts must appear without replacing the existing connection');
-   assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened},'account discovery preserves the original bank bonus link');
+   assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened,productId:'checking'},'account discovery preserves the original verified product association');
    assert.deepEqual(state.monitoredAccounts,[account.key],'new accounts must not be automatically monitored');
    assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'adding bank preserves tracker history');
    assert.equal(requests.filter(r=>r.path.endsWith('/discover')).length,1,'account discovery should be an explicit single request');
@@ -89,7 +94,7 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    await dialog.getByLabel('New SimpleFIN setup token',{exact:true}).fill('synthetic-replacement-token');
    await dialog.getByRole('button',{name:'Reconnect securely',exact:true}).click();
    await dialog.getByText('Connection active',{exact:true}).waitFor();
-   assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened},'reconnect retains bonus links');
+   assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened,productId:'checking'},'reconnect retains verified product association');
    assert.deepEqual(state.monitoredAccounts,[account.key],'reconnect retains monitoring');
    assert.ok(requests.some(r=>r.path.endsWith('/reconnect')&&JSON.parse(r.body).setup_token==='synthetic-replacement-token'));
    assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-replacement-token')),false);
