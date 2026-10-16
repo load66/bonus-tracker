@@ -207,7 +207,7 @@ return result;
           if(path.endsWith('/evidence-review'))plaidReviews[body.transaction]={status:body.decision,reviewedAt:NOW,requirementId:body.requirementId||null};
           await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(sample(cycleId,plaidReviews,0))});
         });
-        await finances.getByRole('combobox',{name:'Finance connection source'}).selectOption('plaid');
+        await finances.getByRole('combobox',{name:'Bank activity connection source'}).selectOption('plaid');
         await reopened.getByRole('button',{name:'Review bank activity',exact:true}).waitFor();
         await reopened.getByRole('button',{name:'Review bank activity',exact:true}).click();
         await reopened.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor();
