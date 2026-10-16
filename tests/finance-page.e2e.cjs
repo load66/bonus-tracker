@@ -276,6 +276,8 @@ const base=()=>({
         'Account settings do not require a separate read-only monitoring request');
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       await section.getByText('X Money Bonus',{exact:true}).waitFor();
+      await section.locator('.finance-page-transaction').filter({hasText:'X Money Bonus'})
+        .getByRole('button',{name:/X Money Bonus/}).click();
       await Promise.all([
         page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/plaid/accounts/transaction-review')&&
           r.request().method()==='PUT'&&r.status()===200),
