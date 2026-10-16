@@ -57,6 +57,13 @@
     button(status,'Refresh status',async()=>{data=await request();paint();});
     button(status,'Check for transactions',async()=>{data=await request('/sync',{method:'POST'});paint();message('Sync requested. Provider data refreshes at most daily; earlier checks may show previously saved data. Check Last synced for confirmation.');});
     button(status,'Refresh accounts',async()=>{data=await request('/discover',{method:'POST'});paint();});
+    if(data.status==='attention'&&data.error){
+      const recovery=el('details',undefined,status),summary=el('summary','Reconnect SimpleFIN',recovery);
+      summary.title='Replace an expired or revoked connection';
+      el('p','Use a new one-time SimpleFIN setup token to replace the connection. Saved account settings, transaction evidence and bonus links are retained.',recovery);
+      const label=el('label','New SimpleFIN setup token',recovery),input=el('textarea',undefined,label);input.autocomplete='off';input.spellcheck=false;input.rows=3;
+      button(recovery,'Reconnect securely',async()=>{const token=input.value.trim();input.value='';if(!token)throw Error('Paste the new setup token from SimpleFIN.');data=await request('/reconnect',{method:'POST',body:JSON.stringify({setup_token:token})});paint();message(data.error||'Connection replaced. Refresh accounts, then check for transactions when the next provider update is available. Revoke the old token in SimpleFIN if it remains active.');},'btn-p');
+    }
     const totals=snapshot(data);
     const overview=el('section',undefined,body);overview.className='bank-sync-card';
     el('h3','Financial activity · last 30 days',overview);
@@ -83,7 +90,7 @@
       const accountName=[a.bank,a.name].filter(Boolean).join(' · ')||'Bank account';
       el('h4',accountName,card);accountCards.push({card,name:accountName.toLowerCase()});
       card.hidden=!!accountFilter&&!accountName.toLowerCase().includes(accountFilter);
-      el('p','Balance: '+(hideBalances?'••••••':money(a.balance,a.currency))+' · As of '+stamp(a.balanceDate),card);if(a.balanceDate&&data.lastSuccess&&a.balanceDate>data.lastSuccess)el('p','Balance timestamp is newer than the last recorded transaction sync; these are separate provider updates.',card);
+      el('p','Balance: '+(hideBalances?'••••••':money(a.balance,a.currency))+' · Available Balance: '+(hideBalances?'••••••':money(a.availableBalance,a.currency))+' · Last Updated: '+stamp(a.balanceDate),card);if(a.balanceDate&&data.lastSuccess&&a.balanceDate>data.lastSuccess)el('p','Balance timestamp is newer than the last recorded transaction sync; these are separate provider updates.',card);
       const monitorLabel=el('label',undefined,card);monitorLabel.className='bank-sync-monitor-label';
       const checkbox=el('input',undefined,monitorLabel);checkbox.type='checkbox';checkbox.checked=monitored.has(a.key);checkbox.dataset.account=a.key;
       el('span','Monitor transactions (read-only)',monitorLabel);monitors.push(checkbox);
@@ -98,6 +105,8 @@
     if(!data.accounts?.length)el('p','No accounts were returned. Refresh the account list after checking SimpleFIN.',body);
     if(data.accounts?.length)button(body,'Save monitoring preferences',async()=>{
       const accounts=monitors.filter(c=>c.checked).map(c=>c.dataset.account);
+      const removed=(data.monitoredAccounts||[]).filter(key=>!accounts.includes(key));
+      if(removed.length&&!(await window.btConfirmDialog('Turning off monitoring removes this app’s saved transaction history for the selected account'+(removed.length===1?'':'s')+'. Bank bonus evidence remains only when the account is still linked to a bonus.',{title:'Stop transaction monitoring?',confirmLabel:'Stop monitoring',danger:true})))return;
       data=await request('/monitoring',{method:'PUT',body:JSON.stringify({accounts})});paint();
       message('Monitoring preferences saved. Only the selected accounts will be retrieved for independent activity, subject to the daily provider limit.');
     },'btn-p');
@@ -106,7 +115,7 @@
       data=await request('/selection',{method:'PUT',body:JSON.stringify({mappings})});paint();message('Bonus links saved. Monitored accounts and linked bonus accounts are included in the next eligible check.');
     },'btn-p');
     el('h3','Recent transactions',body);
-    el('p','Only available, posted transactions are shown (up to 90 days of retained observations). Transfers, dividends and refunds may appear as deposits. Bonus candidates require review; this section never changes tracker milestones.',body);
+    el('p','Available posted and pending transactions are shown for the provider’s retained window. Pending activity is excluded from totals. Transfers, dividends and refunds can appear as deposits. Bonus candidates require review; this section never changes tracker milestones.',body);
     let shown=0;
     for(const a of data.accounts||[]){
       const mapping=data.mappings?.[a.key];const watched=monitored.has(a.key);
@@ -119,8 +128,9 @@
       if(!rows.length)el('p','No posted transactions retrieved yet. This does not establish a zero balance, absent income or unpaid bonus.',section);
       for(const row of rows.slice(0,100)){
         shown++;const article=el('article',undefined,section);article.className='bank-sync-transaction';
-        el('strong',row.kind==='possible_bonus'?'Possible bonus · review':row.kind==='possible_reversal'?'Possible bonus reversal · review':Number(row.amount)>0?'Deposit':'Withdrawal',article);
-        el('p',(hideBalances?'••••••':money(row.amount,a.currency))+' · posted '+stamp(row.posted),article);el('p',row.description,article);
+        el('strong',row.pending?'Pending':row.kind==='possible_bonus'?'Possible bonus · review':row.kind==='possible_reversal'?'Possible bonus reversal · review':Number(row.amount)>0?'Deposit':'Withdrawal',article);
+        el('p',(hideBalances?'••••••':money(row.amount,a.currency))+' · '+(row.pending?'pending':'posted')+' '+stamp(row.posted),article);el('p',row.description,article);
+        if(row.category)el('small','Category: '+String(row.category).replaceAll('_',' ')+(row.categorySource==='user'?' · confirmed':' · automatic'),article);
         if(row.changedAt)el('small','Provider changed this transaction: '+stamp(row.changedAt),article);
       }
       if(rows.length>100)el('p','Showing the latest 100 transactions for this account.',section);

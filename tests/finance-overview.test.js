@@ -58,4 +58,58 @@ assert.equal(result.credits,'0.01');
 assert.equal(result.debits,'0.01');
 assert.equal(result.net,'0.00','no floating point rounding drift');
 
+const classified={
+  lastSuccess:NOW,
+  accounts:[
+    {...account('cash'),balance:'1000.00',balanceDate:NOW-60},
+    {...account('savings'),balance:'500.00',balanceDate:NOW-60},
+    {...account('card'),balance:'200.00',balanceDate:NOW-60}
+  ],
+  accountProfiles:{
+    cash:{kind:'checking',balanceMode:'asset',order:0},savings:{kind:'savings',balanceMode:'asset',order:1},
+    card:{kind:'credit_card',balanceMode:'liability',order:2}
+  },
+  balanceHistory:{
+    cash:[{observedAt:NOW-DAY,at:NOW-DAY,balance:'900.00',currency:'USD'},{observedAt:NOW,at:NOW,balance:'1000.00',currency:'USD'}],
+    savings:[{observedAt:NOW-DAY,at:NOW-DAY,balance:'500.00',currency:'USD'},{observedAt:NOW,at:NOW,balance:'500.00',currency:'USD'}],
+    card:[{observedAt:NOW-DAY,at:NOW-DAY,balance:'250.00',currency:'USD'},{observedAt:NOW,at:NOW,balance:'200.00',currency:'USD'}]
+  },
+  monitoredAccounts:['cash'],mappings:{},transactions:{cash:{
+    income:{...row('1000.00'),category:'income',categorySource:'automatic',confidence:'high'},
+    expense:{...row('-100.00'),category:'groceries',categorySource:'user',confidence:'confirmed'},
+    transfer:{...row('-500.00'),category:'transfer',categorySource:'automatic',confidence:'high'},
+    pending:{...row('-10.00'),category:'shopping',categorySource:'automatic',confidence:'low',pending:true},
+    review:{...row('-20.00'),category:'unreviewed',categorySource:'automatic',confidence:'low'}
+  }}
+};
+result=summarize(classified,{now:NOW});
+assert.equal(result.cash,'1500.00','cash includes only classified deposit accounts with current USD balances');
+assert.equal(result.assets,'1500.00');
+assert.equal(result.liabilities,'200.00');
+assert.equal(result.netWorth,'1300.00');
+assert.deepEqual(result.netWorthHistory.map(x=>x.value),['1150.00','1300.00']);
+assert.equal(result.income,'1000.00');
+assert.equal(result.expenses,'100.00');
+assert.equal(result.cashFlow,'900.00');
+assert.equal(result.transfers,1,'transfers are excluded from income, expenses and cash flow');
+assert.equal(result.pending,1,'pending activity is visible but excluded from totals');
+assert.equal(result.unreviewed,1);
+assert.equal(result.complete,false);
+assert.equal(result.savingsRate,null,'savings rate is unavailable while transaction coverage needs review');
+classified.transactions.cash.review.category='shopping';
+classified.transactions.cash.review.categorySource='user';
+classified.transactions.cash.review.confidence='confirmed';
+result=summarize(classified,{now:NOW});
+assert.equal(result.expenses,'120.00');
+assert.equal(result.savingsRate,88);
+classified.monitoredAccounts.push('card');
+delete classified.transactions.cash.review;
+result=summarize(classified,{now:NOW});
+assert.equal(result.complete,false,'an uncovered selected account cannot be masked by another account with history');
+classified.monitoredAccounts.pop();
+classified.accounts[1].balanceDate=NOW-8*DAY;
+result=summarize(classified,{now:NOW});
+assert.equal(result.cashAvailable,false,'stale deposit balances cannot produce a cash total');
+assert.equal(result.netWorthAvailable,false,'stale balances cannot produce net worth');
+
 console.log('Financial observations passed: strict scope, multi-currency safety, exact cents, availability, coverage, privacy and non-mutation');
