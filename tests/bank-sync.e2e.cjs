@@ -23,10 +23,11 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    await page.addInitScript(({entry})=>{localStorage.setItem('bt_e_v4',JSON.stringify([entry]));localStorage.setItem('bonus-ai-auth',JSON.stringify({access_token:'synthetic-access',refresh_token:'synthetic-refresh',expires_at:4102444800}));},{entry});
    await page.goto('http://127.0.0.1:'+server.address().port+'/');await page.waitForFunction(()=>typeof btOpenBankSync==='function');
    const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
+   const cycleId=await page.evaluate(()=>entries[0].id);assert.ok(cycleId,'Loaded tracker cycle must have an ID');
    await page.evaluate(()=>btOpenBankSync());const dialog=page.getByRole('dialog',{name:'Bank sync · trial'});await dialog.getByText('SimpleFIN connected',{exact:true}).waitFor();
    assert.equal(await dialog.locator('img').count(),0);
-   await dialog.getByLabel('Bonus cycle',{exact:true}).selectOption('synthetic-cycle');await dialog.getByRole('button',{name:'Save account matches',exact:true}).click();await dialog.getByText('Account matches saved.',{exact:false}).waitFor();
-   assert.deepEqual(state.mappings[account.key],{entryId:entry.id,bank:entry.bank,opened});
+   await dialog.getByLabel('Bonus cycle',{exact:true}).selectOption(cycleId);await dialog.getByRole('button',{name:'Save account matches',exact:true}).click();await dialog.getByText('Account matches saved.',{exact:false}).waitFor();
+   assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened});
    await dialog.getByRole('button',{name:'Check for transactions',exact:true}).click();await dialog.getByText('Possible bonus · review',{exact:true}).waitFor();
    assert.equal(await dialog.locator('script').count(),0);
    for(const width of [320,390,430]){await page.setViewportSize({width,height:760});const fit=await dialog.evaluate(d=>{const m=d.querySelector('.bank-sync-modal'),b=d.querySelector('.bank-sync-body');return m.getBoundingClientRect().width<=innerWidth&&b.scrollWidth<=b.clientWidth+1&&d.querySelector('footer').getBoundingClientRect().bottom<=innerHeight;});assert.ok(fit,name+' layout at '+width);await page.screenshot({path:path.join(output,name+'-simplefin-'+width+'.png')});}
