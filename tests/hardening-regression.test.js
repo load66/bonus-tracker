@@ -7,6 +7,7 @@ assert(sw.includes('installCompleteCache')&&!/cache\.addAll\(ASSETS\)\.catch/.te
 assert(sw.includes("if(req.mode==='navigate')")&&sw.includes("status:503"),'Navigation-only HTML fallback / asset failure response missing');
 assert(sw.includes('responseMatches(url.pathname,res)'),'Asset content-type validation missing');
 const workflow=fs.readFileSync('.github/workflows/close-rules.yml','utf8');
+assert(workflow.includes('group: bonus-tracker-${{ github.workflow }}-${{ github.ref }}'),'PR checks must not cancel queued production deployments');
 assert(/permissions:\n  contents: read\n/.test(workflow),'Workflow top-level permissions are not read-only');
 assert(/deploy:[\s\S]*permissions:[\s\S]*pages: write[\s\S]*id-token: write/.test(workflow),'Pages write permissions are not scoped to deploy');
 assert(workflow.indexOf('Package the exact verified site')<workflow.indexOf('deploy:'),'Verified artifact is not packaged before deploy');
