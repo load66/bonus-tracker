@@ -19,3 +19,35 @@
 .bank-connect-fallback>summary:focus-visible{outline:2px solid #77c8f9;outline-offset:2px}
 .bank-connect-fallback[open]>summary{border-bottom:1px solid rgba(148,163,184,.2)}
 .bank-connect-fallback .plaid-trial-fallback{margin:0;border:0;border-radius:0 0 12px 12px;background:transparent}
+
+.plaid-trial-accounts{min-width:0;margin-top:10px;padding-top:8px;border-top:1px solid rgba(148,163,184,.18);display:grid;gap:8px}
+.plaid-trial-accounts h5{font-size:.91rem;margin:6px 0 2px;color:#e4edf9}
+.plaid-trial-account-list{display:grid;gap:9px;min-width:0}
+.plaid-trial-accounts button{min-height:44px;white-space:normal;padding:9px;border-radius:9px}
+.plaid-trial-observations{display:grid;gap:6px;min-width:0;padding:9px;border-radius:9px;background:rgba(38,52,73,.48)}
+.plaid-trial-observations p{font-size:.84rem;overflow-wrap:anywhere}
+
+.plaid-trial-account-card{display:grid;gap:9px;padding:10px;border:1px solid rgba(148,163,184,.24);border-radius:10px;min-width:0}
+.plaid-trial-account-card label{display:grid;gap:6px;font-size:.86rem;min-width:0}
+.plaid-trial-account-card .plaid-trial-check{display:flex}
+.plaid-trial-account-card select{min-height:44px;width:100%;min-width:0;box-sizing:border-box;background:#121e2d;color:#f7fafc;border:1px solid #54687e;border-radius:8px;padding:8px;font-size:16px}
+
+/* WebKit's intrinsic select width must not enlarge narrow grid tracks. */
+.plaid-trial-control,.plaid-trial-account-list,.plaid-trial-account-card{grid-template-columns:minmax(0,1fr)}
+.plaid-trial-fallback *{box-sizing:border-box}
+.plaid-trial-account-card select{max-width:100%;text-overflow:ellipsis}
+.plaid-trial-check span{min-width:0}
+
+/* Native WebKit select text can report an overflowing internal scroll area.
+   Clip it at each field group; the platform picker remains outside layout. */
+.plaid-trial-control,.plaid-trial-account-card,.plaid-trial-observations{overflow:hidden}
+
+.plaid-trial-capacity{height:7px;border-radius:99px;background:#263c54;overflow:hidden;margin:8px 0 14px}
+.plaid-trial-capacity[hidden]{display:none}
+.plaid-trial-capacity span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#72b9ff,#75d6bf)}
+.plaid-trial-next-step{padding:10px 12px!important;border-radius:10px;background:#152e47;color:#d8e9fa!important;border:1px solid #3e6287;font-size:13px!important}
+.plaid-trial-advanced{border:1px solid #42546d;border-radius:10px;padding:0 11px;background:#111e30}
+.plaid-trial-advanced summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-size:13px;font-weight:600;color:#c6d8ef;line-height:1.4}
+.plaid-trial-advanced[open]{padding-bottom:11px}
+.plaid-trial-fallback :is(button,input,select,summary):focus-visible{outline:3px solid #aad4ff;outline-offset:2px}
+.plaid-trial-account-card select{appearance:none;-webkit-appearance:none;padding-right:32px;background-image:linear-gradient(45deg,transparent 50%,#b9d3f2 50%),linear-gradient(135deg,#b9d3f2 50%,transparent 50%);background-position:calc(100% - 17px) 50%,calc(100% - 12px) 50%;background-size:5px 5px;background-repeat:no-repeat}

@@ -50,7 +50,7 @@ return result;
         let cycleId=entry.id,reviews={},extra=0;
         page.on('pageerror',err=>errors.push(err.message));
         // During production smoke, NEVER send synthetic session headers to any live API.
-      if(process.env.BT_BROWSER_SITE_URL)await page.route('https://api-production-00f74.up.railway.app/**',route=>route.abort());
+      await page.route('https://api-production-00f74.up.railway.app/**',route=>route.abort());
       await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin**',async route=>{
           const path=new URL(route.request().url()).pathname,method=route.request().method();
           const payload=method==='PUT'&&route.request().postData()?route.request().postDataJSON():null;
@@ -76,8 +76,17 @@ return result;
         cycleId=await page.evaluate(()=>entries[0].id);
         const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
         assert.equal(requests.length,0,'private bank evidence must load only after explicit review');
-        await section.getByRole('button',{name:'Review bank activity',exact:true}).click();
-        await section.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor();
+        await page.waitForFunction(()=>window.BTBonusAuth?.connected());
+        let ready=false;
+        for(let attempt=0;attempt<2;attempt++){
+          await section.getByRole('button',{name:'Review bank activity',exact:true}).click();
+          try{await section.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor({timeout:7000});ready=true;break}
+          catch{
+            const alerts=await section.getByRole('alert').allTextContents();
+            if(alerts.length||attempt===1)throw Error(browserName+' activity load failed: '+JSON.stringify({alerts,text:await section.innerText(),requests}));
+          }
+        }
+        assert.ok(ready,'explicit evidence review survives startup redraw');
         await section.getByText('Possible direct deposit',{exact:true}).waitFor();
         assert.ok((await section.innerText()).includes('Possible bonus payout'));
         assert.ok((await section.innerText()).includes('Possible bank fee'));
@@ -123,7 +132,7 @@ return result;
         assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'no automatic payout completion');
         await page.evaluate(()=>{rcvPrompt=null;R()});
         await page.getByRole('button',{name:'Finances',exact:true}).click();
-        await page.getByRole('region',{name:'My finances'}).waitFor({state:'visible'});
+        await page.getByRole('region',{name:'My finances'}).getByRole('heading',{name:'Financial overview'}).waitFor();
         // An immediate switch while the private dashboard is still mounting
         // can race another app re-render. Complete the route change first.
         const tracker=page.getByRole('button',{name:'Tracker',exact:true});
@@ -144,7 +153,8 @@ return result;
         assert.ok(trackerReady,'Tracker activity review must survive private finance redraw');
         assert.equal(await reopened.locator('.bonus-evidence-card').count(),0,'evidence must be cleared when leaving the Tracker');
         await reopened.getByRole('button',{name:'Review bank activity',exact:true}).click();
-        await reopened.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor();
+        try{await reopened.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor({timeout:10000})}
+        catch{throw Error(browserName+' Tracker reload failed: '+JSON.stringify({text:await reopened.innerText(),requests,selected:await page.locator('.tabs .tb[aria-current="page"]').allTextContents()}))}
         await reopened.getByRole('button',{name:'Show reviewed / dismissed',exact:true}).click();
         assert.equal(await reopened.getByRole('button',{name:'Undo review',exact:true}).count(),1,
           'a dismissed receipt persists across a cleared and reloaded session');
@@ -178,6 +188,21 @@ return result;
         assert.ok(geometry.width<=geometry.viewport+1&&geometry.content<=geometry.width+1,
           browserName+' long review queue overflows 320px: '+JSON.stringify(geometry));
         assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before);
+        const plaidReviews={};
+        await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/plaid/accounts**',async route=>{
+          const req=route.request(),path=new URL(req.url()).pathname;
+          const body=req.method()==='PUT'?req.postDataJSON():null;
+          requests.push({path,method:req.method(),body});
+          if(path.endsWith('/evidence-review'))plaidReviews[body.transaction]={status:body.decision,reviewedAt:NOW,requirementId:body.requirementId||null};
+          await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(sample(cycleId,plaidReviews,0))});
+        });
+        await reopened.getByRole('combobox',{name:'Bank activity connection source'}).selectOption('plaid');
+        await reopened.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor();
+        await reopened.getByRole('button',{name:'Mark reviewed',exact:true}).first().click();
+        await reopened.getByText('Review saved. Promotion requirements remain unconfirmed.').waitFor();
+        assert.equal(Object.keys(plaidReviews).length,1);
+        assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts/evidence-review')&&r.method==='PUT'));
+        assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'Plaid reviews never write promotion milestones');
         assert.deepEqual(errors,[],'no browser errors');
         console.log(browserName+': safe bonus evidence, privacy, exact tracker matching, manual payout and mobile layout passed');
       }finally{await browser.close();}

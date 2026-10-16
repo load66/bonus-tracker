@@ -1,7 +1,8 @@
 /* Authenticated financial workspace. Private financial records are never written to browser storage. */
 (function(){
   'use strict';
-  const ENDPOINT='https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin';
+  const BASE='https://api-production-00f74.up.railway.app/api/bonus-tracker';
+  let provider='simplefin';
   const TYPES={
     unclassified:'Choose account type',checking:'Checking',savings:'Savings',credit_card:'Credit card',
     brokerage:'Brokerage',retirement:'Retirement',loan:'Loan',mortgage:'Mortgage',
@@ -74,14 +75,15 @@
   }
   async function request(path='',options={}){
     const auth=window.BTBonusAuth;if(!auth?.connected())throw Error('Sign in to view finances.');
-    const rev=sequence,token=await auth.token(),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),65000);
+    const source=provider,rev=sequence,token=await auth.token(),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),65000);
     try{
-      const response=await fetch(ENDPOINT+path,{...options,credentials:'omit',cache:'no-store',
+      const response=await fetch(BASE+(source==='plaid'?'/plaid/accounts':'/simplefin')+path,{...options,credentials:'omit',cache:'no-store',
         headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},signal:controller.signal});
       const result=await response.json().catch(()=>({}));
       if(!response.ok)throw Error(typeof result.detail==='string'?result.detail:'Financial request could not be completed.');
       // Check owner continuity on every response, including a user switch
       // that did not trigger a Finances redraw. Token refresh alone is safe.
+      if(source!==provider)throw Error('Connection source changed. Reload finances.');
       if(window.BTBonusAuth!==auth||!auth.connected())
         throw Error('Sign-in changed. Reload Finances.');
       const latest=await auth.token().catch(()=>null);
@@ -309,11 +311,19 @@
   }
   function paint(){
     const host=currentRoot;if(!host||!host.isConnected)return;host.replaceChildren();
+    const sourceBox=el('section',undefined,host,'finance-page-connection');
+    const sourceSelect=select(sourceBox,'Connection source',{
+      simplefin:'SimpleFIN · Primary',plaid:'Plaid · Fallback'},provider,value=>{
+        provider=value;hidden=true;transactionAccount='';transactionSearch='';
+        accountSearch='';accountType='';saveNotice='';refresh();
+      });
+    sourceSelect.setAttribute('aria-label','Finance connection source');sourceSelect.disabled=busy;
+    el('p',provider==='plaid'?'Showing fallback accounts only. Use SimpleFIN first when adding a bank.':'Showing your primary accounts. Choose Plaid to view fallback accounts.',sourceBox);
     const notice=el('p',saveNotice,host,'finance-page-notice');notice.setAttribute('role',saveNotice?'alert':'status');
     if(!data){statusMessage(host,'Loading financial accounts','Retrieving your private, read-only account summary.');return}
     if(!data.configured){statusMessage(host,'Financial connections unavailable','Secure account syncing is not configured on the server.');return}
     if(!data.connected){
-      statusMessage(host,'Connect your first institution','Add a supported institution through SimpleFIN. BonusTracker cannot initiate payments, trades, or transfers.');
+      statusMessage(host,'Connect your first institution',provider==='plaid'?'Use Plaid only for institutions SimpleFIN cannot connect. Add Bank contains fallback setup.':'Add a supported institution through SimpleFIN. BonusTracker cannot initiate payments, trades, or transfers.');
       action(host,'Connect a bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');
       action(host,'Manage financial connections',()=>window.btOpenBankSync?.(),'finance-page-button');return;
     }

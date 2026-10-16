@@ -49,3 +49,10 @@
 /* The provider handles authorizing a bank. This is an external shortcut, not an in-app bank login. */
 .finance-page-provider-link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;box-sizing:border-box;text-decoration:none;border-radius:11px}
 .finance-page-provider-link:focus-visible{outline:3px solid #aad4ff;outline-offset:3px}
+
+/* Clear provider context, shared field styling and visible keyboard focus. */
+.finance-page-connection{padding:12px 14px;margin:0 0 14px;border:1px solid #344d6c;border-radius:14px;background:#101e32}
+.finance-page-connection .finance-page-field>span{font-size:12px;font-weight:650;margin-bottom:7px;color:#c1d3eb}
+.finance-page-connection p{margin:8px 0 0;font-size:12px;line-height:1.5;color:#aabfd9}
+.finance-page .finance-page-select{appearance:none;-webkit-appearance:none;background-color:#0c192b;background-image:linear-gradient(45deg,transparent 50%,#b9d3f2 50%),linear-gradient(135deg,#b9d3f2 50%,transparent 50%);background-position:calc(100% - 17px) 50%,calc(100% - 12px) 50%;background-size:5px 5px;background-repeat:no-repeat;font-size:16px;min-height:48px}
+.finance-page select:focus-visible{outline:3px solid #aad4ff;outline-offset:3px}

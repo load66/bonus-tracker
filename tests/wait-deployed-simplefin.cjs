@@ -9,7 +9,7 @@ const fs=require('node:fs/promises');
 const crypto=require('node:crypto');
 const assert=require('node:assert/strict');
 const base='https://load66.github.io/bonus-tracker/';
-const files=['index.html','style.css','sw.js'];
+const files=['index.html','style.css','sw.js','plaid-fallback.js','plaid-fallback.css','finance-page.js','finance-page.css','bonus-evidence.js','bonus-evidence.css'];
 const hash=buffer=>crypto.createHash('sha256').update(buffer).digest('hex');
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 (async()=>{

@@ -6,6 +6,10 @@ on:
     paths:
       - 'bank-sync.js'
       - 'bonus-evidence-core.js'
+      - 'bonus-evidence.js'
+      - 'plaid-fallback.js'
+      - 'plaid-fallback.css'
+      - 'tests/plaid-fallback.e2e.cjs'
       - 'bonus-requirements-progress.js'
       - 'finance-page.js'
       - 'tests/bank-sync.e2e.cjs'
@@ -48,6 +52,7 @@ jobs:
           node tests/bonus-evidence.e2e.cjs
           node tests/finance-page.e2e.cjs
           node tests/bank-sync.e2e.cjs
+          node tests/plaid-fallback.e2e.cjs
           node tests/browser-e2e.cjs
 
       - name: Preserve browser screenshots
