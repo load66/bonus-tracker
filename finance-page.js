@@ -263,6 +263,8 @@
       if(status?.connected)el('span',label+': '+stamp(status.lastSuccess),meta);
     }
     if(currentCombined?.possibleDuplicates?.length)el('p','Possible duplicate account connections detected. Review both before relying on combined totals.',box,'finance-page-warning');
+    const transactionGaps=(currentCombined?.accounts||[]).filter(a=>a.source==='plaid'&&['awaiting_first_sync','awaiting_provider_data','pending_only','needs_attention'].includes(a.transactionSyncStatus));
+    if(transactionGaps.length)el('p',transactionGaps.length+' Plaid account'+(transactionGaps.length===1?'':'s')+' awaiting complete transaction history. See Accounts for details.',box,'finance-page-caution');
     if(Object.keys(currentCombined?.sourceErrors||{}).length)el('p','One provider needs attention. Account data may be incomplete.',box,'finance-page-warning');
     const nav=el('nav',undefined,host,'finance-page-nav');nav.setAttribute('aria-label','Finance sections');
     for(const [id,label] of [['overview','Overview'],['transactions','Transactions'],['accounts','Accounts'],['bonuses','Bonuses']]){
@@ -386,6 +388,16 @@
       possible_fee:'Possible fee',possible_recurring:'Possible recurring payment',matched_internal_transfer:'Matched transfer',
       possible_transfer:'Possible transfer',possible_refund:'Possible refund'})[value]||value.replaceAll('_',' ');
   }
+  function transactionCoverage(account){
+    if(!account||account.source!=='plaid')return '';
+    const status=account.transactionSyncStatus;
+    if(status==='awaiting_first_sync')return 'First activity check pending';
+    if(status==='awaiting_provider_data')return 'Bank activity not yet available · next check '+stamp(account.transactionNextSyncAt);
+    if(status==='pending_only')return 'Pending activity received · posted history may arrive later';
+    if(status==='needs_attention')return 'Transaction history needs attention · next check '+stamp(account.transactionNextSyncAt);
+    if(status==='ready')return 'Activity received · bank history may be incomplete';
+    return '';
+  }
   function transactions(host){
     const card=el('section',undefined,host,'finance-page-card');
     const head=el('div',undefined,card,'finance-page-section-head');el('h3','Transactions',head);periodControl(head);
@@ -422,7 +434,13 @@
           if(value)action(activeFilters,name+': '+(name==='Search'?value:name==='Account'?(accountValues[value]||'Previous account'):name==='Category'?(CATEGORIES[value]||value):value)+' ×',()=>{clear();transactionVisibleLimit=100;transactions(host);card.remove()},'finance-page-chip');
         }
       }
-      if(!filtered.length){el('p','No matching transactions are available yet. Check the account, date range or next bank sync.',list);return}
+      if(!filtered.length){
+        const selected=currentCombined?.accounts?.find(a=>a.key===transactionAccount);
+        const coverage=transactionCoverage(selected);
+        el('p',coverage||'No matching transactions are available yet. Check the account, date range or next bank sync.',list,'finance-page-hint');
+        if(coverage)el('small','An empty history does not prove this bank had no activity; provider data may arrive later.',list,'finance-page-hint');
+        return;
+      }
       for(const row of filtered.slice(0,transactionVisibleLimit)){
         const article=el('article',undefined,list,'finance-page-transaction');
         const top=el('div',undefined,article,'finance-page-transaction-top'),copy=el('div',undefined,top);
@@ -572,6 +590,8 @@
       const top=el('div',undefined,article,'finance-page-account');
       const info=el('div',undefined,top,'finance-page-account-info');el('strong',account.name||'Financial account',info);
       el('small',account.sourceLabel+' · '+(TYPES[p.kind]||'Type unknown')+' · Automatic sync',info,'finance-page-account-source');
+      const historyStatus=transactionCoverage(account);
+      if(historyStatus)el('small',historyStatus,info,'finance-page-hint');
       if(account.possibleDuplicate)el('small','Possible duplicate connection · excluded from consolidated totals',info,'finance-page-warning');
       if(!(Number.isFinite(account.balanceDate)&&account.balanceDate>0))el('small','Balance time not provided',info,'finance-page-hint');
       const balances=el('div',undefined,top,'finance-page-account-balances');
