@@ -356,7 +356,9 @@ const base=()=>({
         button.onclick=function(...args){window.__btRestoreClickCount++;return original?.apply(this,args)};
         return {hasHandler:typeof original==='function',disabled:button.disabled};
       });
-      await section.getByRole('button',{name:'Restore',exact:true}).click();
+      // Dispatch on the exact current button, avoiding a detached-node mouse race
+      // during the fixture's asynchronous multi-provider re-render.
+      await section.getByRole('button',{name:'Restore',exact:true}).evaluate(button=>button.click());
       await page.waitForFunction(()=>(
         document.querySelector('#bt-finances-page')?.textContent||''
       ).includes('Account restored to discovery.') || (
