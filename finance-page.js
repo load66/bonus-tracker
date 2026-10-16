@@ -638,7 +638,7 @@
       const p=profile(account),article=el('article',undefined,parent,'finance-page-account-editor');
       const top=el('div',undefined,article,'finance-page-account');
       const info=el('div',undefined,top,'finance-page-account-info');el('strong',account.name||'Financial account',info);
-      el('small',account.sourceLabel+' · '+(TYPES[p.kind]||'Type unknown')+' · Automatic sync',info,'finance-page-account-source');
+      el('small',account.sourceLabel+' · '+(TYPES[p.kind]||'Type unknown')+' · '+((sourceSnapshot(account.source)?.monitoredAccounts||[]).includes(account.rawKey)?'Monitoring on':'Monitoring paused'),info,'finance-page-account-source');
       const historyStatus=transactionCoverage(account);
       if(historyStatus)el('small',historyStatus,info,'finance-page-hint');
       if(account.possibleDuplicate)el('small','Possible duplicate connection · excluded from consolidated totals',info,'finance-page-warning');
