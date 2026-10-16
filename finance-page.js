@@ -56,6 +56,21 @@
     return [...(data.accounts||[])].sort((a,b)=>(profile(a).order??499)-(profile(b).order??499)
       ||String(a.bank||'').localeCompare(String(b.bank||''))||String(a.name||'').localeCompare(String(b.name||'')));
   }
+  function sessionOwner(jwt){
+    if(typeof jwt!=='string')return null;
+    const part=jwt.split('.')[1];
+    if(!part)return null;
+    try{
+      const value=JSON.parse(atob(part.replace(/-/g,'+').replace(/_/g,'/')));
+      return typeof value?.sub==='string'&&value.sub?value.sub:null;
+    }catch{return null}
+  }
+  function sameSessionToken(original,current){
+    if(typeof current!=='string'||!current)return false;
+    if(current===original)return true;
+    const first=sessionOwner(original),latest=sessionOwner(current);
+    return Boolean(first&&latest&&first===latest);
+  }
   async function request(path='',options={}){
     const auth=window.BTBonusAuth;if(!auth?.connected())throw Error('Sign in to view finances.');
     const rev=sequence,token=await auth.token(),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),65000);
@@ -64,7 +79,17 @@
         headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},signal:controller.signal});
       const result=await response.json().catch(()=>({}));
       if(!response.ok)throw Error(typeof result.detail==='string'?result.detail:'Financial request could not be completed.');
-      if(rev!==sequence||!auth.connected())throw Error('Sign-in changed. Reload Finances.');
+      if(!auth.connected())throw Error('Sign-in changed. Reload Finances.');
+      if(rev!==sequence){
+        // Full cloud/app redraws can replace the Finances DOM while a server
+        // write is in progress. Once the write succeeded, accept it only if
+        // the authenticated account is still the same. Rotated JWTs retain
+        // the same owner id; a real user switch never gets another user's data.
+        const latest=await auth.token().catch(()=>null);
+        if(!sameSessionToken(token,latest))throw Error('Sign-in changed. Reload Finances.');
+        if((options.method||'GET').toUpperCase()==='GET')
+          throw Error('Finances view refreshed. Retrieve the latest account status.');
+      }
       return result;
     }catch(error){if(error.name==='AbortError')throw Error('The request timed out. Refresh before retrying.');throw error}
     finally{clearTimeout(timer)}
