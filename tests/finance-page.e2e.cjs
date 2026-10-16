@@ -188,8 +188,19 @@ const base=()=>({
       assert.equal(await creditEditor.getByLabel('Correct account type').count(),0,
         'Account types already known must not require redundant classification');
       await creditEditor.getByLabel('Net worth treatment').selectOption('exclude');
+      assert.equal(await creditEditor.getByLabel('Net worth treatment').inputValue(),'exclude');
       await section.getByRole('button',{name:'Save account settings'}).click();
-      await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).waitFor();
+      try{
+        await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).waitFor({timeout:12000});
+      }catch(e){
+        const debug=await section.innerText().catch(()=>'(Finances unmounted)');
+        throw Error(name+' failed-save verification: '+JSON.stringify({
+          attempts:requests.filter(x=>x.path.endsWith('/account-profiles')),
+          creditMode:state.accountProfiles[B]?.balanceMode,
+          financeText:debug.slice(0,1500),
+          expectedError:String(e.message).slice(0,150)
+        }));
+      }
       assert.equal(state.accountProfiles[B].balanceMode,'liability','failed account save must leave encrypted server state unchanged');
       assert.equal(await creditEditor.getByLabel('Net worth treatment').inputValue(),'exclude','unsaved draft remains available for retry');
       await Promise.all([
