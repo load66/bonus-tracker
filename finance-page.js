@@ -486,7 +486,7 @@
         el('span',iconFor(row),top,'finance-page-transaction-icon').setAttribute('aria-hidden','true');
         const copy=el('span',undefined,top,'finance-page-transaction-copy');
         el('strong',row.merchant||row.description||'Transaction',copy);
-        el('small',[(CATEGORIES[row.category]||'Needs review'),row.account.name||row.account.bank].filter(Boolean).join(' · '),copy);
+        el('small',[(CATEGORIES[row.category]||'Needs review'),row.account.name||row.account.bank,row.account.sourceLabel].filter(Boolean).join(' · '),copy);
         const value=el('span',undefined,top,'finance-page-transaction-value');
         el('b',shownAmount(row),value,Number(row.amount)>0?'is-credit':'');
         if(row.pending)el('small','Pending',value);
