@@ -85,3 +85,22 @@ const many=summarize(most,[entry('offer-1')],NOW);
 assert.equal(many.campaigns[0].counts.directDeposit,12);
 assert.equal(many.campaigns[0].latest.length,5,'compact activity card must stay bounded');
 console.log('Bank bonus evidence classifier passed: exact-cycle linkage, directions, pending, currencies, privacy, invalid links, and no tracker mutations');
+
+
+const reviewed={...state,evidenceReviews:{
+  [A]:{
+    pay:{status:'reviewed',reviewedAt:NOW,requirementId:'dd_first'},
+    bonus:{status:'dismissed',reviewedAt:NOW,requirementId:null},
+    fee:{status:'reviewed',reviewedAt:NOW,requirementId:null}
+  }
+}};
+const reviewReport=summarize(reviewed,tracked,NOW);
+assert.deepEqual(reviewReport.review,{unreviewed:2,reviewed:2,dismissed:1},
+  'inbox receipts are categorized without removing historical bank evidence');
+assert.equal(reviewReport.campaigns[0].pending.length,2,'resolved entries disappear from the outstanding queue');
+assert.equal(reviewReport.campaigns[0].resolved.length,3,'previously reviewed or dismissed entries remain available');
+assert.equal(reviewReport.campaigns[0].activity.find(a=>a.id==='pay').requirementId,'dd_first');
+assert.equal(reviewReport.campaigns[0].activity.find(a=>a.id==='bonus').reviewStatus,'dismissed');
+assert.equal(reviewReport.campaigns[0].activity.find(a=>a.id==='fee').reviewStatus,'reviewed');
+assert.equal(JSON.stringify(reviewed),JSON.stringify({...state,evidenceReviews:reviewed.evidenceReviews}),
+  'review projection must never write to private state or tracker records');
