@@ -348,6 +348,7 @@ const base=()=>({
       assert.ok(state.accounts.some(a=>a.key===A));
       assert.ok(state.removedAccounts[B]);
       assert.ok(requests.some(r=>r.path.endsWith('/simplefin/accounts/'+B)&&r.method==='DELETE'));
+      await page.waitForFunction(()=>document.querySelector('#bt-finances-page')?.getAttribute('aria-busy')==='false');
       await section.locator('summary',{hasText:'Removed accounts (1)'}).click();
       await section.getByRole('button',{name:'Restore',exact:true}).click();
       await page.waitForFunction(()=>(
