@@ -16,6 +16,10 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
       if(process.env.BT_BROWSER_SITE_URL)await page.route('https://api-production-00f74.up.railway.app/**',route=>route.abort());
       await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin**',async route=>{
     const req=route.request(),url=new URL(req.url()),method=req.method();requests.push({method,path:url.pathname,body:req.postData()});
+    if(url.pathname.endsWith('/discover')){
+      const other={key:'b'.repeat(64),name:'Savings',bank:'Newly Added CU',currency:'USD',balance:'100',balanceDate:1792134000};
+      if(!state.accounts.some(a=>a.key===other.key))state.accounts.push(other);
+    }
     if(url.pathname.endsWith('/selection')){state.mappings=req.postDataJSON().mappings;}
     if(url.pathname.endsWith('/monitoring')){state.monitoredAccounts=req.postDataJSON().accounts;if(!state.monitoredAccounts.length&&!Object.keys(state.mappings).length)state.transactions={};}
     if(url.pathname.endsWith('/sync')){state.transactions[account.key]={t1:{id:'t1',posted:1792133900,amount:'200',description:'Promotional Bonus <script>alert(1)</script>',kind:'possible_bonus',observedAt:1792134000},t2:{id:'t2',posted:1792133800,amount:'-20',description:'Coffee',kind:'withdrawal',observedAt:1792134000},t3:{id:'t3',posted:1792133700,amount:'40',description:'Transfer from savings',kind:'other_deposit',observedAt:1792134000}};}
@@ -57,6 +61,19 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    await dialog.getByLabel('Link to bonus (optional)',{exact:true}).selectOption(cycleId);
    await dialog.getByRole('button',{name:'Save account matches',exact:true}).click();await dialog.getByText('Bonus links saved.',{exact:false}).waitFor();
    assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened});
+   const bridge=dialog.getByRole('link',{name:'Add bank in SimpleFIN',exact:false});
+   assert.equal(await bridge.getAttribute('href'),'https://beta-bridge.simplefin.org/');
+   assert.equal(await bridge.getAttribute('target'),'_blank');
+   assert.equal(await bridge.getAttribute('rel'),'noopener noreferrer');
+   await dialog.getByText('Financial Institutions → New Connection',{exact:false}).waitFor();
+   assert.equal(requests.some(r=>r.path.endsWith('/discover')),false,'Add bank provider link must not silently sync data or alter accounts');
+   await dialog.getByRole('button',{name:'Refresh accounts after adding bank'}).click();
+   await dialog.getByText('Newly Added CU · Savings',{exact:true}).waitFor();
+   assert.equal(state.accounts.length,2,'new provider accounts must appear without replacing the existing connection');
+   assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened},'account discovery preserves the original bank bonus link');
+   assert.deepEqual(state.monitoredAccounts,[account.key],'new accounts must not be automatically monitored');
+   assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'adding bank preserves tracker history');
+   assert.equal(requests.filter(r=>r.path.endsWith('/discover')).length,1,'account discovery should be an explicit single request');
    assert.equal(await dialog.locator('script').count(),0);
    for(const width of [320,390,430]){
     await page.setViewportSize({width,height:760});await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
