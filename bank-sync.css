@@ -8,3 +8,11 @@
 .bank-sync-modal .bank-sync-monitor-label{display:flex;align-items:center;gap:12px;padding:12px 10px;margin:12px 0;border:1px solid #4b6688;border-radius:10px;background:#102039;color:#edf4ff;cursor:pointer}
 .bank-sync-modal .bank-sync-monitor-label input[type="checkbox"]{display:inline-block;flex:0 0 20px;width:20px;height:20px;min-height:20px;max-width:20px;padding:0;margin:0;accent-color:#9ec8ff}
 .bank-sync-modal .bank-sync-monitor-label span{flex:1;min-width:0;line-height:1.45}
+
+/* Observed activity snapshot: compact, non-authoritative financial figures. */
+.bank-sync-summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+.bank-sync-summary-metric{display:flex;flex-direction:column;gap:8px;min-width:0;padding:12px;background:#0b182b;border:1px solid #3c5474;border-radius:11px}
+.bank-sync-summary-metric small{font-size:12px;color:#bdcde2;line-height:1.4}
+.bank-sync-summary-metric strong{font-size:18px;color:#f5f9ff;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.bank-sync-modal input[type="search"]{font-size:16px;margin:12px 0 4px}
+.bank-sync-card[hidden]{display:none!important}
