@@ -61,7 +61,11 @@ const base=()=>({
         }
         await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(state)});
       });
-      const plaidState=base();plaidState.accounts=[];plaidState.lastSuccess=null;plaidState.nextSyncAt=0;let plaidDiscoveries=0;
+      const plaidState=base();plaidState.accounts=[];plaidState.lastSuccess=null;plaidState.nextSyncAt=0;
+      plaidState.transactions={[A]:{bonus:{id:'plaid-income',amount:'50.00',posted:NOW-180,pending:false,
+        kind:'other_deposit',description:'X Money synthetic ACH bonus',merchant:'X Money Bonus',
+        category:'income',categorySource:'user',confidence:'high',signals:['possible_bonus']}}};
+      let plaidDiscoveries=0;
       await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/plaid**',async route=>{
         const req=route.request(),url=new URL(req.url());
         const body=req.postDataJSON?.()||{};requests.push({path:url.pathname,method:req.method(),body});
@@ -110,9 +114,10 @@ const base=()=>({
       // Missing money must remain unknown rather than incorrectly becoming $0.00.
       await section.locator('.finance-page-tile strong')
         .filter({hasText:/^\s*—\s*$/}).first().waitFor({state:'visible'});
-      await section.getByText('Income',{exact:true}).locator('..').getByText(/200/).waitFor();
+      await section.getByText('4 accounts',{exact:false}).waitFor();
+      await section.getByText('Income',{exact:true}).locator('..').getByText(/250/).waitFor();
       await section.getByText('Expenses',{exact:true}).locator('..').getByText(/15/).waitFor();
-      await section.getByText('Net flow',{exact:true}).locator('..').getByText(/185/).waitFor();
+      await section.getByText('Net flow',{exact:true}).locator('..').getByText(/235/).waitFor();
       await section.locator('.finance-page-caution')
         .filter({hasText:'Cash Flow is partial'}).first().waitFor({state:'visible'});
       // The awaited visibility assertion above is authoritative; do not reread
@@ -137,7 +142,6 @@ const base=()=>({
       assert.equal(state.transactions[A][T3].category,'shopping','retry must save category');
       assert.ok(requests.some(r=>r.path.endsWith('/transaction-review')&&r.body.category==='shopping'));
 
-      await section.getByText('X Money',{exact:false}).first().waitFor();
       assert.equal(plaidDiscoveries,1,'existing linked Plaid bank must recover its accounts without a new Item');
       assert.equal(requests.some(r=>r.path.endsWith('/link-token')||r.path.endsWith('/exchange')),false,'discovery must never reconnect the bank');
       await section.getByRole('button',{name:'Accounts',exact:true}).click();
@@ -163,27 +167,30 @@ const base=()=>({
       await wizard.getByRole('button',{name:'Done'}).click();
       assert.equal(await page.evaluate(()=>window.__bankWizardRefreshCount),0,
         'Closing an unchanged provider authorization wizard must not refresh or interrupt financial edits');
-      await section.getByText('X Money',{exact:false}).first().waitFor();
-      assert.equal(await section.locator('.finance-page-account').count(),3);
+      await section.getByText('X Money Checking',{exact:true}).waitFor();
+      assert.equal(await section.locator('.finance-page-account').count(),4);
+      assert.equal(await section.getByRole('combobox',{name:'Finance connection source'}).count(),0,
+        'The Finance dashboard is unified and must not require a provider switch');
+      assert.ok((await section.locator('.finance-page-account-source').allTextContents()).some(t=>t.includes('Plaid')));
       const accountSearch=section.getByRole('searchbox',{name:'Search accounts'});
       await accountSearch.fill('x money');
-      await section.getByRole('button',{name:'View matching accounts'}).waitFor();
-      await section.getByRole('button',{name:'View matching accounts'}).click();
+      assert.equal(await section.locator('.finance-page-account:visible').count(),1);
       await section.getByText('X Money Checking',{exact:true}).waitFor();
-      await section.getByLabel('Finance connection source').selectOption('simplefin');
-      await section.getByRole('button',{name:'Accounts',exact:true}).click();
-      const restoredSearch=section.getByRole('searchbox',{name:'Search accounts'});await restoredSearch.fill('other credit union');
-      assert.equal(await section.locator('.finance-page-account:visible').count(),1);await restoredSearch.fill('');
+      await accountSearch.fill('other credit union');
+      assert.equal(await section.locator('.finance-page-account:visible').count(),1);
+      await accountSearch.fill('');
       const creditEditor=section.locator('.finance-page-account-info strong').filter({hasText:/^Credit Card$/}).locator('xpath=../../..');
       await creditEditor.locator('details.finance-page-account-settings > summary').click();
+      assert.equal(await creditEditor.getByLabel('Correct account type').count(),0,
+        'Account types already known must not require redundant classification');
       await creditEditor.getByLabel('Net worth treatment').selectOption('exclude');
-      await section.getByRole('button',{name:'Save account organization'}).click();
+      await section.getByRole('button',{name:'Save account settings'}).click();
       await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).waitFor();
       assert.equal(state.accountProfiles[B].balanceMode,'liability','failed account save must leave encrypted server state unchanged');
       assert.equal(await creditEditor.getByLabel('Net worth treatment').inputValue(),'exclude','unsaved draft remains available for retry');
       await Promise.all([
         page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/account-profiles')&&r.request().method()==='PUT'&&r.status()===200),
-        section.getByRole('button',{name:'Save account organization'}).click()
+        section.getByRole('button',{name:'Save account settings'}).click()
       ]);
       await section.getByRole('alert').waitFor({state:'hidden'});
       assert.equal(state.accountProfiles[B].balanceMode,'exclude','successful retry must persist organization');
@@ -217,13 +224,14 @@ const base=()=>({
       await section.getByRole('button',{name:'Manage connections',exact:true}).click();
       await page.getByRole('dialog',{name:'Financial accounts'}).waitFor();await page.getByRole('dialog',{name:'Financial accounts'}).getByRole('button',{name:'Done'}).click();
       await section.getByRole('heading',{name:'Accounts',exact:true}).waitFor();
-      await section.getByRole('combobox',{name:'Finance connection source'}).selectOption('plaid');
       await section.getByText('X Money Checking',{exact:true}).waitFor();
-      assert.equal(await section.locator('.finance-page-account').count(),1,'Plaid must have its own account snapshot');
+      assert.equal(await section.locator('.finance-page-account').count(),4,
+        'SimpleFIN and Plaid account cards share the same list');
+      await section.getByRole('button',{name:'Transactions',exact:true}).click();
+      await section.getByText('X Money Bonus',{exact:true}).waitFor();
+      assert.ok((await section.locator('.finance-page-transaction').allTextContents()).some(t=>t.includes('Plaid')),
+        'A Plaid-origin transaction must appear with a source label in the combined feed');
       assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts')));
-      await section.getByRole('combobox',{name:'Finance connection source'}).selectOption('simplefin');
-      await section.getByText('Checking <img src=x>',{exact:true}).waitFor();
-      assert.equal(await section.locator('.finance-page-account').count(),3);
       assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'no tracker writes');
       assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-access')),true);
       assert.deepEqual(errors,[]);console.log(name+': finance overview, transactions, account management, privacy and responsive navigation passed');
