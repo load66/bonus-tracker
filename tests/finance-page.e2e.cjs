@@ -51,7 +51,6 @@ const seed={
         await page.getByRole('button',{name:'Finances',exact:true}).click();
         const section=page.getByRole('region',{name:'My finances'});
         await section.getByRole('heading',{name:'Financial overview'}).waitFor();
-        await section.getByText('Connected accounts',{exact:false}).count().catch(()=>{});
         await section.locator('.finance-page-account').first().waitFor();
         assert.equal(await section.locator('img').count(),0,'provider aliases must be text, never HTML');
         assert.equal(await section.locator('.finance-page-account').count(),3);
