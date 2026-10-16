@@ -92,7 +92,7 @@ const base=()=>({
         }
         if(url.pathname.endsWith('/accounts/sync')){
           plaidDiscoveries++;
-          plaidState.accounts=[{...base().accounts[0],bank:'X Money',name:'X Money Checking',connectionHandle:'9999999999999999999999999999999999999999999999999999999999999999'}];
+          plaidState.accounts=[{...base().accounts[0],bank:'X Money',name:'X Money Checking',transactionSyncStatus:'ready',transactionLastSyncAt:NOW,connectionHandle:'9999999999999999999999999999999999999999999999999999999999999999'}];
           plaidState.lastSuccess=NOW;
         }
         const result=url.pathname.includes('/accounts')?plaidState:{provider:'plaid',priority:'fallback',configured:false,used:null,limit:10};
@@ -320,6 +320,20 @@ const base=()=>({
         'All 260 additional Plaid rows plus 4 preexisting rows are accessible by paging');
       assert.equal(await section.getByRole('button',{name:/^Show \d+ more transactions/}).count(),0,
         'No provider-returned history remains inaccessible after the final page');
+      // Account discovery is not a guarantee that Plaid delivered transactions.
+      plaidState.accounts[0].transactionSyncStatus='awaiting_provider_data';
+      plaidState.accounts[0].transactionNextSyncAt=NOW+3*3600;
+      const savedPlaidTransactions=plaidState.transactions;
+      plaidState.transactions={};
+      await page.evaluate(()=>window.btRefreshFinancesPage?.());
+      await section.getByRole('button',{name:'Accounts',exact:true}).click();
+      await section.getByText('Bank activity not yet available',{exact:false}).waitFor();
+      await section.getByRole('button',{name:'Transactions',exact:true}).click();
+      await section.getByLabel('Account').selectOption('plaid:'+A);
+      await section.getByText('An empty history does not prove this bank had no activity',{exact:false}).waitFor();
+      plaidState.transactions=savedPlaidTransactions;
+      plaidState.accounts[0].transactionSyncStatus='ready';
+      await page.evaluate(()=>window.btRefreshFinancesPage?.());
       // Removing an individual Plaid bank must take one confirmation and leave tracker history intact.
       await section.getByRole('button',{name:'Accounts',exact:true}).click();
       await section.getByRole('button',{name:'Remove bank',exact:true}).click();
