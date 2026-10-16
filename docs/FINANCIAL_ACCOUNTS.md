@@ -71,8 +71,20 @@ qualifying direct-deposit or bonus-payout evidence without review.
 - The provider may return delayed, incomplete or corrected transactions.
   Absence of transactions does not prove that a bonus was unpaid, a fee was
   waived, or a recurring requirement was met.
-- Pending transactions are excluded from observed posted activity. The backend
-  retains 90 days of previous posted observations and tracks corrections.
+- Pending transactions are **visible** as pending in Plaid account history but
+  excluded from posted spending, income, balances, and all bonus candidate
+  qualification. Plaid-linked posted replacements supersede pending IDs.
+  The backend retains 90 days of observed activity and tracks corrections.
+- Every newly linked Plaid bank receives a separately budgeted initial
+  `/transactions/sync` request, even while another Plaid bank is in the
+  owner's daily refresh window. An empty first response means **awaiting
+  provider history**, not zero transactions.
+- Per-account transaction history status, first-sync date and next eligible
+  date are returned without exposing Plaid IDs or credentials.
+- The background worker picks up newly linked and discovered Items without
+  needing the user to navigate to Finances. A failed Item does not discard
+  a different bank's successful sync. Existing Items remain on the daily
+  provider budget; no paid refresh or extra Trial Item is used.
 - **Hide balances** also masks observation summary amounts and individual
   transaction amounts in the current panel, without modifying persisted data.
 - **No data / unknown / stale** are distinct states. Do not show false totals

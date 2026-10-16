@@ -16,6 +16,13 @@ Verification: backend unit/route tests cover encryption, owner isolation, URL re
 
 ## Plaid Trial fallback (2026-10 automatic sync)
 
-SimpleFIN remains the primary provider. Plaid is an optional fallback for institutions SimpleFIN cannot connect. A successful Plaid authorization creates a permanent lifetime Trial Item; the global ten-Item allowance **never increases again** when an Item is disconnected. The app automatically discovers authorized Plaid accounts and imports eligible transactions in the next permitted daily sync. Plaid backfill is bounded and provider data may be incomplete or delayed.
+SimpleFIN remains the primary provider. Plaid is an optional fallback for institutions SimpleFIN cannot connect. A successful Plaid authorization creates a permanent lifetime Trial Item; the global ten-Item allowance **never increases again** when an Item is disconnected. The app independently discovers each newly authorized Plaid bank and
+attempts that Item's initial read-only history sync even if a different Plaid
+bank is in its daily cooldown. If Plaid's first response is empty, the account
+shows **Awaiting bank activity** until later provider data arrives. Each Item
+is tracked separately for scheduled follow-up and error recovery; existing
+connected Items retain daily provider throttling. Pending transactions appear
+as pending but never count as posted spending or bonus evidence. Backfill is
+bounded, bank data can still be delayed, and no paid refresh endpoint is called.
 
 Finances → Accounts exposes a direct, per-bank **Remove bank** control for Plaid. The confirmed removal invokes Plaid Item revocation, purges saved data for that Item, and preserves bank-bonus tracker records. The SimpleFIN disconnect removes all Bridge-connected institutions and requires separate provider-side token revocation. Neither operation closes an actual bank account, confirms a bank bonus, or makes transfers.
