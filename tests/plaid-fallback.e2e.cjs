@@ -95,7 +95,8 @@ const KEY='a'.repeat(64);
           await page.setViewportSize({width,height:760});
           const size=await host.evaluate(n=>({
             page:innerWidth,scroll:n.scrollWidth,
-            buttons:[...n.querySelectorAll('button')].map(b=>b.getBoundingClientRect().height)
+            buttons:[...n.querySelectorAll('button')].map(b=>b.getBoundingClientRect().height),
+            overflow:[...n.querySelectorAll('*')].filter(e=>e.getBoundingClientRect().right>innerWidth).map(e=>({tag:e.tagName,cls:e.className,width:e.getBoundingClientRect().width,text:e.textContent.slice(0,50)}))
           }));
           assert.ok(size.scroll<=size.page+1,name+' overflow at '+width+': '+JSON.stringify(size));
           assert.ok(size.buttons.every(x=>x>=44),name+' insufficient button targets');

@@ -31,3 +31,9 @@
 .plaid-trial-account-card label{display:grid;gap:6px;font-size:.86rem;min-width:0}
 .plaid-trial-account-card .plaid-trial-check{display:flex}
 .plaid-trial-account-card select{min-height:44px;width:100%;min-width:0;box-sizing:border-box;background:#121e2d;color:#f7fafc;border:1px solid #54687e;border-radius:8px;padding:8px;font-size:16px}
+
+/* WebKit's intrinsic select width must not enlarge narrow grid tracks. */
+.plaid-trial-control,.plaid-trial-account-list,.plaid-trial-account-card{grid-template-columns:minmax(0,1fr)}
+.plaid-trial-fallback *{box-sizing:border-box}
+.plaid-trial-account-card select{max-width:100%;text-overflow:ellipsis}
+.plaid-trial-check span{min-width:0}

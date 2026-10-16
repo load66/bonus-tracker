@@ -50,7 +50,7 @@ return result;
         let cycleId=entry.id,reviews={},extra=0;
         page.on('pageerror',err=>errors.push(err.message));
         // During production smoke, NEVER send synthetic session headers to any live API.
-      if(process.env.BT_BROWSER_SITE_URL)await page.route('https://api-production-00f74.up.railway.app/**',route=>route.abort());
+      await page.route('https://api-production-00f74.up.railway.app/**',route=>route.abort());
       await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin**',async route=>{
           const path=new URL(route.request().url()).pathname,method=route.request().method();
           const payload=method==='PUT'&&route.request().postData()?route.request().postDataJSON():null;
@@ -76,8 +76,17 @@ return result;
         cycleId=await page.evaluate(()=>entries[0].id);
         const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
         assert.equal(requests.length,0,'private bank evidence must load only after explicit review');
-        await section.getByRole('button',{name:'Review bank activity',exact:true}).click();
-        await section.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor();
+        await page.waitForFunction(()=>window.BTBonusAuth?.connected());
+        let ready=false;
+        for(let attempt=0;attempt<2;attempt++){
+          await section.getByRole('button',{name:'Review bank activity',exact:true}).click();
+          try{await section.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor({timeout:7000});ready=true;break}
+          catch{
+            const alerts=await section.getByRole('alert').allTextContents();
+            if(alerts.length||attempt===1)throw Error(browserName+' activity load failed: '+JSON.stringify({alerts,text:await section.innerText(),requests}));
+          }
+        }
+        assert.ok(ready,'explicit evidence review survives startup redraw');
         await section.getByText('Possible direct deposit',{exact:true}).waitFor();
         assert.ok((await section.innerText()).includes('Possible bonus payout'));
         assert.ok((await section.innerText()).includes('Possible bank fee'));
