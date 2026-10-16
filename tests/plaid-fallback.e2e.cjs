@@ -56,7 +56,8 @@ const KEY='a'.repeat(64);
         await host.getByText('Plaid slots used: 1/10').waitFor();
         await host.getByText('Connected fallback accounts').waitFor();
         assert.equal(await host.getByRole('checkbox').count(),4);
-        assert.ok((await host.innerText()).includes('••••••'),'transaction amount masked by default');
+        const visibleSnapshot=await host.innerText();
+        assert.ok(visibleSnapshot.includes('••••••'),'transaction amount masked by default; rendered='+JSON.stringify(visibleSnapshot));
         assert.equal((await host.innerText()).includes(' · 500 USD'),false);
         assert.equal(calls.some(x=>x.includes('link-token')||x.includes('/exchange')),false,
           'Opening the provider view must never consume a Plaid Item');
