@@ -130,6 +130,9 @@ const base=()=>({
       assert.equal(await wizard.locator('input[type=tel]').count(),0,'BonusTracker never collects bank MFA codes');
       await wizard.getByRole('button',{name:'Back to connected accounts'}).click();
       await wizard.getByRole('button',{name:'Done'}).click();
+      // Closing the accounts dialog refreshes the underlying Finances page.
+      // Wait for the new page's Accounts content before checking its guidance.
+      await section.getByText('Use Add bank for secure guided setup.',{exact:false}).waitFor();
       assert.ok((await section.innerText()).includes('Discovery can be limited to once daily'),
         'Explain provider discovery delay when adding a bank');
       assert.equal(await section.locator('.finance-page-account').count(),3);
