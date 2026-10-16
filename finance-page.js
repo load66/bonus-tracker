@@ -213,7 +213,7 @@
     if(data.error)el('p',data.error,box,'finance-page-warning');
     if(data.missingAccounts?.length)el('p','Some linked accounts did not appear in the latest update.',box,'finance-page-warning');
     const nav=el('nav',undefined,host,'finance-page-nav');nav.setAttribute('aria-label','Finance sections');
-    for(const [id,label] of [['overview','Overview'],['transactions','Transactions'],['accounts','Accounts']]){
+    for(const [id,label] of [['overview','Overview'],['transactions','Transactions'],['accounts','Accounts'],['bonuses','Bonuses']]){
       const b=action(nav,label,()=>{view=id;paint()},'finance-page-nav-button'+(view===id?' is-active':''));
       b.setAttribute('aria-current',view===id?'page':'false');
     }
@@ -404,7 +404,9 @@
     },true),'finance-page-button finance-page-save');
   }
   function paint(){
-    const host=currentRoot;if(!host||!host.isConnected)return;host.replaceChildren();
+    const host=currentRoot;if(!host||!host.isConnected)return;
+    if(view!=='bonuses')window.BTBonusEvidence?.dispose();
+    host.replaceChildren();
     const sourceBox=el('section',undefined,host,'finance-page-connection');
     const sourceSelect=select(sourceBox,'Connection source',{
       simplefin:'SimpleFIN · Primary',plaid:'Plaid · Fallback'},provider,value=>{
@@ -424,7 +426,12 @@
     const summary=window.BTFinanceOverview?.summarize(data,{days:period});
     hero(host,summary);
     connectedSources(host);
-    if(view==='transactions')transactions(host);else if(view==='accounts')accounts(host);else overview(host,summary);
+    if(view==='bonuses'){
+      const review=el('section',undefined,host,'finance-page-bonus-host');
+      if(!window.BTBonusEvidence?.mount(review,provider))statusMessage(review,'Bonus activity not ready','Reload Finances to review linked bonus activity.');
+    }else if(view==='transactions')transactions(host);
+    else if(view==='accounts')accounts(host);
+    else overview(host,summary);
   }
   async function mount(){
     const host=document.getElementById('bt-finances-page');if(!host||host===currentRoot)return;
