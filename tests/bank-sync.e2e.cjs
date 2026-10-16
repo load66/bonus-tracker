@@ -16,7 +16,7 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
     const req=route.request(),url=new URL(req.url()),method=req.method();requests.push({method,path:url.pathname,body:req.postData()});
     if(url.pathname.endsWith('/selection')){state.mappings=req.postDataJSON().mappings;}
     if(url.pathname.endsWith('/monitoring')){state.monitoredAccounts=req.postDataJSON().accounts;if(!state.monitoredAccounts.length&&!Object.keys(state.mappings).length)state.transactions={};}
-    if(url.pathname.endsWith('/sync')){state.transactions[account.key]={t1:{id:'t1',posted:1792133900,amount:'200',description:'Promotional Bonus <script>alert(1)</script>',kind:'possible_bonus',observedAt:1792134000}};}
+    if(url.pathname.endsWith('/sync')){state.transactions[account.key]={t1:{id:'t1',posted:1792133900,amount:'200',description:'Promotional Bonus <script>alert(1)</script>',kind:'possible_bonus',observedAt:1792134000},t2:{id:'t2',posted:1792133800,amount:'-20',description:'Coffee',kind:'withdrawal',observedAt:1792134000},t3:{id:'t3',posted:1792133700,amount:'40',description:'Transfer from savings',kind:'other_deposit',observedAt:1792134000}};}
     if(method==='DELETE')state={configured:true,connected:false,evidenceOnly:true};
     if(url.pathname.endsWith('/connect'))state=seed();
     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(state)});
@@ -33,6 +33,17 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    await dialog.getByRole('button',{name:'Save monitoring preferences',exact:true}).click();
    assert.deepEqual(state.monitoredAccounts,[account.key]);assert.deepEqual(state.mappings,{});
    await dialog.getByRole('button',{name:'Check for transactions',exact:true}).click();await dialog.getByText('Possible bonus · review',{exact:true}).waitFor();
+   const financial=dialog.locator('.bank-finance-overview');
+   await financial.getByText('Financial overview',{exact:true}).waitFor();
+   await financial.getByText('Money in',{exact:true}).locator('..').getByText(/240/).waitFor();
+   await financial.getByText('Money out',{exact:true}).locator('..').getByText(/20/).waitFor();
+   await financial.getByText('Net observed',{exact:true}).locator('..').getByText(/220/).waitFor();
+   await financial.getByText('Transactions',{exact:true}).locator('..').getByText('3',{exact:true}).waitFor();
+   assert.ok((await financial.innerText()).includes('not verified income'));
+   await dialog.getByRole('button',{name:'Hide balances',exact:true}).click();
+   assert.equal(await financial.locator('.bank-finance-metric strong').first().innerText(),'••••••','privacy toggle masks observed totals');
+   assert.equal(await dialog.locator('.bank-sync-transaction p').first().innerText().then(x=>x.includes('••••••')),true,'privacy toggle masks individual activity');
+   await dialog.getByRole('button',{name:'Show balances',exact:true}).click();
    await dialog.getByLabel('Link to bonus (optional)',{exact:true}).selectOption(cycleId);
    await dialog.getByRole('button',{name:'Save account matches',exact:true}).click();await dialog.getByText('Bonus links saved.',{exact:false}).waitFor();
    assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened});
