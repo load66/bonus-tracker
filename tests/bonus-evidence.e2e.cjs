@@ -16,7 +16,7 @@ const server=http.createServer(async(req,res)=>{
 });
 const NOW=1792134000,accountKey='a'.repeat(64),opened='2026-10-01';
 const entry={id:'bonus-evidence-test',bank:'Synthetic Bank',accountType:'personal',opened,bonus:200};
-const sample=(cycleId,reviews={})=>({
+const sample=(cycleId,reviews={},extra=0)=>{const result=({
   configured:true,connected:true,evidenceOnly:true,status:'connected',lastSuccess:NOW,nextSyncAt:NOW+86400,
   accounts:[{key:accountKey,name:'Checking <img src=x onerror=alert(1)>',bank:'Synthetic Bank',currency:'USD',balance:'250.00',balanceDate:NOW}],
   mappings:{[accountKey]:{entryId:cycleId,bank:entry.bank,opened}},
@@ -29,6 +29,15 @@ const sample=(cycleId,reviews={})=>({
     e:{id:'e',amount:'200.00',posted:NOW-140,description:'Pending Bonus',signals:['possible_bonus'],kind:'possible_bonus',pending:true}
   }}
 });
+for(let i=0;i<extra;i++){
+  result.transactions[accountKey]['more'+i]={
+    id:'more'+i,posted:NOW-200-i,amount:String(200+i)+'.00',
+    kind:'other_deposit',description:'Synthetic ACH Payroll '+i,
+    signals:['possible_direct_deposit'],pending:false
+  };
+}
+return result;
+};
 (async()=>{
   await fs.mkdir(output,{recursive:true});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -38,7 +47,7 @@ const sample=(cycleId,reviews={})=>({
       try{
         const context=await browser.newContext({serviceWorkers:'block',viewport:{width:390,height:844},timezoneId:'America/Chicago'});
         const page=await context.newPage(),errors=[],requests=[];
-        let cycleId=entry.id,reviews={};
+        let cycleId=entry.id,reviews={},extra=0;
         page.on('pageerror',err=>errors.push(err.message));
         // During production smoke, NEVER send synthetic session headers to any live API.
       if(process.env.BT_BROWSER_SITE_URL)await page.route('https://api-production-00f74.up.railway.app/**',route=>route.abort());
@@ -53,7 +62,7 @@ const sample=(cycleId,reviews={})=>({
               requirementId:payload.requirementId||null
             };
           }
-          await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(sample(cycleId,reviews))});
+          await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(sample(cycleId,reviews,extra))});
         });
         await page.addInitScript(({entry})=>{
           const RealDate=Date,now=Date.parse('2026-10-16T07:00:00Z');
@@ -125,6 +134,34 @@ const sample=(cycleId,reviews={})=>({
           'a dismissed receipt persists across a cleared and reloaded session');
         assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,
           'reviewing evidence must never change canonical tracker records');
+        // Large queues must remain accessible, not permanently clipped to
+        // 5 pending / 10 total entries. The first few remain compact.
+        extra=14;
+        await reopened.getByRole('button',{name:'Hide reviewed items'}).click();
+        await reopened.getByRole('button',{name:'Refresh',exact:true}).click();
+        await reopened.getByRole('button',{name:'Show 5 more to review'}).waitFor();
+        assert.equal(await reopened.locator('.bonus-evidence-row').count(),5,
+          'first render remains compact even with many pending deposits');
+        await reopened.getByRole('button',{name:'Show 5 more to review'}).click();
+        assert.equal(await reopened.locator('.bonus-evidence-row').count(),10);
+        await reopened.getByRole('button',{name:'Show 5 more to review'}).click();
+        assert.equal(await reopened.locator('.bonus-evidence-row').count(),15);
+        const remainder=await reopened.getByRole('button',{name:/Show \d+ more to review/}).allTextContents();
+        assert.equal(remainder.length,1,'remaining pending history must be reachable');
+        await reopened.getByRole('button',{name:/Show \d+ more to review/}).click();
+        assert.equal(await reopened.getByRole('button',{name:/Show \d+ more to review/}).count(),0,
+          'no pending evidence should become stranded behind paging');
+        assert.equal(await reopened.locator('.bonus-evidence-row').count(),17);
+        assert.equal(await reopened.locator('img').count(),0,'long queues must safely escape untrusted descriptions');
+        await reopened.getByRole('button',{name:'Show reviewed / dismissed'}).click();
+        assert.equal(await reopened.getByRole('button',{name:'Undo review'}).count(),1,
+          'resolved receipts must remain reachable even with many pending entries');
+        await reopened.getByRole('button',{name:'Hide reviewed items'}).click();
+        await page.setViewportSize({width:320,height:760});
+        const geometry=await reopened.evaluate(n=>({viewport:innerWidth,width:n.getBoundingClientRect().width,content:n.scrollWidth}));
+        assert.ok(geometry.width<=geometry.viewport+1&&geometry.content<=geometry.width+1,
+          browserName+' long review queue overflows 320px: '+JSON.stringify(geometry));
+        assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before);
         assert.deepEqual(errors,[],'no browser errors');
         console.log(browserName+': safe bonus evidence, privacy, exact tracker matching, manual payout and mobile layout passed');
       }finally{await browser.close();}

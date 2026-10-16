@@ -47,3 +47,7 @@
 .bonus-evidence-progress-row>small{font-size:11px;line-height:1.5;color:#bcdbfb}
 .bonus-evidence-row .bonus-evidence-button{min-height:44px}
 @media(max-width:360px){.bonus-evidence-review-actions>.bonus-evidence-button{flex:1 1 125px}}
+
+/* Compact, fully reachable review history: initial 5 rows, then explicit batches. */
+.bonus-evidence-paging{display:flex;gap:8px;flex-wrap:wrap;padding:8px 0 2px}
+.bonus-evidence-paging>.bonus-evidence-button{flex:1 1 145px;max-width:100%}

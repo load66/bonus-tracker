@@ -43,6 +43,12 @@ assert.deepEqual(output.counts,{bonus:1,directDeposit:1,fee:1,reversal:1,recurri
 assert.equal(output.campaigns[0].entryId,'offer-1');
 assert.equal(output.campaigns[0].linkedAccounts.length,2,'multiple correctly linked accounts share a campaign');
 assert.equal(output.campaigns[0].activity.length,5,'no pending, future, before opening, wrong sign or unflagged activity');
+assert.deepEqual(output.campaigns[0].pending.map(row=>row.type),
+  ['reversal','fee','bonus','directDeposit','recurring'],
+  'urgent reversals and fees must appear before routine deposits in the review inbox');
+assert.deepEqual(output.campaigns[0].activity.map(row=>row.type),
+  ['directDeposit','fee','recurring','bonus','reversal'],
+  'source transaction history must remain newest-first independently of review priority');
 assert.equal(output.campaigns.find(x=>x.entryId==='offer-2').unsupportedCurrency,1);
 assert.equal(output.campaigns.find(x=>x.entryId==='offer-2').counts.bonus,0);
 assert.equal(output.campaigns[0].counts.directDeposit,1,'bonus flagged as DD should not count twice');
