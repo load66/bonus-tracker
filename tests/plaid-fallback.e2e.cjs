@@ -133,7 +133,7 @@ const KEY='a'.repeat(64);
         assert.equal(calls.filter(x=>x.includes('link-token')).length,0,'Duplicate override alone must not start linking');
         await nameField.fill('Other Bank');
         assert.equal(await host.getByText('This bank is already connected · Review').isVisible(),false);
-        assert.equal(await host.getByRole('checkbox').count(),1,'Duplicate override resets when bank name changes');
+        assert.equal(await host.getByRole('checkbox').count(),0,'The duplicate override is hidden again when switching banks');
         await connect.click();
         await page.waitForFunction(()=>!!window.syntheticLink);
         assert.equal(await connect.isDisabled(),true);
