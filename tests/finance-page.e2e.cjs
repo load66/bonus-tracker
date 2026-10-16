@@ -75,9 +75,15 @@ const base=()=>({
           plaidState.transactions[body.account][body.transaction].categorySource='user';
         }
         if(url.pathname.endsWith('/monitoring'))plaidState.monitoredAccounts=body.accounts;
+        if(url.pathname.endsWith('/accounts/items/9999999999999999999999999999999999999999999999999999999999999999')&&req.method()==='DELETE'){
+          plaidState.connected=false;plaidState.accounts=[];plaidState.transactions={};
+          plaidState.monitoredAccounts=[];
+          await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({disconnected:true})});
+          return;
+        }
         if(url.pathname.endsWith('/accounts/sync')){
           plaidDiscoveries++;
-          plaidState.accounts=[{...base().accounts[0],bank:'X Money',name:'X Money Checking'}];
+          plaidState.accounts=[{...base().accounts[0],bank:'X Money',name:'X Money Checking',connectionHandle:'9999999999999999999999999999999999999999999999999999999999999999'}];
           plaidState.lastSuccess=NOW;
         }
         const result=url.pathname.includes('/accounts')?plaidState:{provider:'plaid',priority:'fallback',configured:false,used:null,limit:10};
@@ -305,6 +311,19 @@ const base=()=>({
         'All 260 additional Plaid rows plus 4 preexisting rows are accessible by paging');
       assert.equal(await section.getByRole('button',{name:/^Show \d+ more transactions/}).count(),0,
         'No provider-returned history remains inaccessible after the final page');
+      // Removing an individual Plaid bank must take one confirmation and leave tracker history intact.
+      await section.getByRole('button',{name:'Accounts',exact:true}).click();
+      await section.getByRole('button',{name:'Remove bank',exact:true}).click();
+      const removeConfirm=page.getByRole('dialog',{name:'Remove connected bank?'});
+      await removeConfirm.getByRole('button',{name:'Cancel'}).click();
+      assert.equal(plaidState.connected,true,'Cancellation must retain Plaid credentials');
+      await section.getByRole('button',{name:'Remove bank',exact:true}).click();
+      await page.getByRole('dialog',{name:'Remove connected bank?'})
+        .getByRole('button',{name:'Remove bank',exact:true}).click();
+      await section.getByText('Bank removed.',{exact:false}).waitFor();
+      assert.ok(requests.some(r=>r.path.endsWith('/accounts/items/9999999999999999999999999999999999999999999999999999999999999999')&&r.method==='DELETE'),
+        'One confirm must disconnect the exact Plaid connection');
+      assert.equal(plaidState.connected,false);
       assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'no tracker writes');
       assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-access')),true);
       assert.deepEqual(errors,[]);console.log(name+': finance overview, transactions, account management, privacy and responsive navigation passed');
