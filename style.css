@@ -4958,7 +4958,7 @@ select option{background:#0D1420;color:var(--text)}
 .bt-notice-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:#DDE7F6}
 .bt-notice-body{margin-top:3px;font-size:11px;line-height:1.45;color:#AEBBD0;white-space:pre-line}
 @keyframes btNoticeIn{from{opacity:0;transform:translateY(-7px)}to{opacity:1;transform:none}}
-.bt-confirm-overlay{position:fixed;inset:0;z-index:10020;display:flex;align-items:flex-end;justify-content:center;padding:18px 12px max(calc(env(safe-area-inset-bottom) + 12px),18px);background:rgba(2,5,10,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.bt-confirm-overlay{position:fixed;inset:0;z-index:30000;display:flex;align-items:flex-end;justify-content:center;padding:18px 12px max(calc(env(safe-area-inset-bottom) + 12px),18px);background:rgba(2,5,10,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .bt-confirm-sheet{width:min(100%,520px);max-height:min(78dvh,680px);overflow:auto;background:linear-gradient(180deg,#121C2A,#0B121D);border:1px solid #30415A;border-radius:20px;padding:18px;box-shadow:0 28px 90px rgba(0,0,0,.68)}
 .bt-confirm-kicker{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#7890B3;font-weight:800}
 .bt-confirm-sheet h3{margin:4px 0 10px;color:#F5F8FC;font-size:18px}

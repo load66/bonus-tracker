@@ -40,7 +40,9 @@ const sample=(cycleId)=>({
         const page=await context.newPage(),errors=[],requests=[];
         let cycleId=entry.id;
         page.on('pageerror',err=>errors.push(err.message));
-        await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin**',async route=>{
+        // During production smoke, NEVER send synthetic session headers to any live API.
+      if(process.env.BT_BROWSER_SITE_URL)await page.route('https://api-production-00f74.up.railway.app/**',route=>route.abort());
+      await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin**',async route=>{
           requests.push({path:new URL(route.request().url()).pathname,method:route.request().method()});
           await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(sample(cycleId))});
         });
@@ -50,7 +52,7 @@ const sample=(cycleId)=>({
           localStorage.setItem('bt_e_v4',JSON.stringify([entry]));
           localStorage.setItem('bonus-ai-auth',JSON.stringify({access_token:'synthetic-access',refresh_token:'synthetic-refresh',expires_at:4102444800}));
         },{entry});
-        await page.goto('http://127.0.0.1:'+server.address().port+'/');
+        await page.goto(process.env.BT_BROWSER_SITE_URL||'http://127.0.0.1:'+server.address().port+'/');
         const section=page.getByRole('region',{name:'Bank bonus activity evidence'});
         await section.getByRole('button',{name:'Review bank activity',exact:true}).waitFor();
         cycleId=await page.evaluate(()=>entries[0].id);

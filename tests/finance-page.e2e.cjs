@@ -35,6 +35,8 @@ const base=()=>({
     const browser=await engine.launch();try{
       const context=await browser.newContext({serviceWorkers:'block',viewport:{width:390,height:844},timezoneId:'America/Chicago'});
       const page=await context.newPage(),errors=[],requests=[];let state=base(),rejectCategoryOnce=true,rejectAccountSaveOnce=true;page.on('pageerror',e=>errors.push(e.message));
+      // During production smoke, NEVER send synthetic session headers to any live API.
+      if(process.env.BT_BROWSER_SITE_URL)await page.route('https://api-production-00f74.up.railway.app/**',route=>route.abort());
       await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin**',async route=>{
         const req=route.request(),url=new URL(req.url()),body=req.postDataJSON?.()||{};requests.push({path:url.pathname,method:req.method(),body});
         if(url.pathname.endsWith('/transaction-review')&&rejectCategoryOnce){
@@ -56,10 +58,13 @@ const base=()=>({
         window.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[now]))}static now(){return now}};
         localStorage.setItem('bt_e_v4','[]');localStorage.setItem('bonus-ai-auth',JSON.stringify({access_token:'synthetic-access',refresh_token:'synthetic-refresh',expires_at:4102444800}));
       });
-      await page.goto('http://127.0.0.1:'+server.address().port+'/');await page.getByRole('button',{name:'Finances',exact:true}).click();
+      await page.goto(process.env.BT_BROWSER_SITE_URL||'http://127.0.0.1:'+server.address().port+'/');await page.getByRole('button',{name:'Finances',exact:true}).click();
       const section=page.getByRole('region',{name:'My finances'});await section.getByRole('heading',{name:'Financial overview'}).waitFor();
       assert.equal(await section.locator('img').count(),0,'provider aliases must be text, never HTML');
-      assert.ok((await section.locator('.finance-page-tile strong').allTextContents()).includes('Unavailable'),'incomplete net-worth inputs remain unavailable');
+      // Playwright's filter waits for actual content, unlike immediate text snapshots.
+      // Amounts can contain spacing; the user-facing status must be Unavailable.
+      await section.locator('.finance-page-tile strong')
+        .filter({hasText:/^\s*Unavailable\s*$/}).first().waitFor({state:'visible'});
       await section.getByText('Income',{exact:true}).locator('..').getByText(/200/).waitFor();
       await section.getByText('Expenses',{exact:true}).locator('..').getByText(/15/).waitFor();
       await section.getByText('Cash Flow',{exact:true}).locator('..').getByText(/185/).waitFor();
@@ -95,7 +100,10 @@ const base=()=>({
       await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).waitFor();
       assert.equal(state.accountProfiles[B].balanceMode,'liability','failed account save must leave encrypted server state unchanged');
       assert.equal(await creditEditor.getByLabel('Net worth treatment').inputValue(),'exclude','unsaved draft remains available for retry');
-      await section.getByRole('button',{name:'Save account organization'}).click();
+      await Promise.all([
+        page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/account-profiles')&&r.request().method()==='PUT'&&r.status()===200),
+        section.getByRole('button',{name:'Save account organization'}).click()
+      ]);
       await section.getByRole('alert').waitFor({state:'hidden'});
       assert.equal(state.accountProfiles[B].balanceMode,'exclude','successful retry must persist organization');
       assert.ok(requests.some(r=>r.path.endsWith('/account-profiles')));
