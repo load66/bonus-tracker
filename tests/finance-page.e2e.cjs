@@ -118,12 +118,23 @@ const base=()=>({
 
       await section.getByRole('button',{name:'Accounts',exact:true}).click();
       await section.getByRole('heading',{name:'Accounts',exact:true}).waitFor();
-      const addBank=section.getByRole('link',{name:'Add bank through SimpleFIN Bridge'});
+      const addBank=section.getByRole('button',{name:'Add bank',exact:true});
       await addBank.waitFor();
-      assert.equal(await addBank.getAttribute('href'),'https://beta-bridge.simplefin.org/');
-      assert.equal(await addBank.getAttribute('target'),'_blank');
-      assert.equal(await addBank.getAttribute('rel'),'noopener noreferrer');
-      assert.ok((await section.innerText()).includes('Discovery can be limited to once daily'),
+      await addBank.click();
+      const onboarding=page.getByRole('dialog',{name:'Financial accounts'});
+      await onboarding.getByRole('heading',{name:'Add a bank'}).waitFor();
+      const provider=onboarding.getByRole('link',{name:'Continue to secure SimpleFIN'});
+      assert.equal(await provider.getAttribute('href'),'https://beta-bridge.simplefin.org/');
+      assert.equal(await provider.getAttribute('target'),'_blank');
+      assert.equal(await provider.getAttribute('rel'),'noopener noreferrer');
+      assert.equal(await onboarding.locator('input[type="password"]').count(),0,
+        'Never collect bank credentials inside the BonusTracker add-bank wizard');
+      assert.equal(await onboarding.locator('#bank-sync-token').count(),0,
+        'Existing connection does not require another one-time setup token');
+      await onboarding.getByText('provider may limit discovery to once every 24 hours.',{exact:false}).waitFor();
+      await onboarding.getByRole('button',{name:'Back to account management'}).click();
+      await onboarding.getByRole('button',{name:'Done'}).click();
+      assert.ok((await section.innerText()).includes('discovery may be limited to once daily'),
         'Explain provider discovery delay when adding a bank');
       assert.equal(await section.locator('.finance-page-account').count(),3);
       const accountSearch=section.getByRole('searchbox',{name:'Search accounts'});await accountSearch.fill('other credit union');
