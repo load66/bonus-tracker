@@ -5,7 +5,7 @@
   'use strict';
   const API='https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin';
   const TYPES=window.BTBonusEvidenceCore?.REASONS||{};
-  let snapshot=null,loading=false,error='',showAll=false,hideAmounts=true,rev=0;
+  let snapshot=null,loading=false,saving=false,error='',saveNotice='',showAll=false,showResolved=false,hideAmounts=true,rev=0;
   const el=(tag,text,parent,cls)=>{
     const n=document.createElement(tag);
     if(text!==undefined)n.textContent=text;
@@ -25,7 +25,7 @@
   };
   const activeEntries=()=>typeof entries!=='undefined'&&Array.isArray(entries)?entries.filter(e=>e&&!e.closed):[];
   function reset(){
-    snapshot=null;loading=false;error='';showAll=false;hideAmounts=true;rev++;
+    snapshot=null;loading=false;saving=false;error='';saveNotice='';showAll=false;showResolved=false;hideAmounts=true;rev++;
   }
   function update(){
     const root=document.getElementById('bt-bonus-evidence');
@@ -70,6 +70,43 @@
       if(call===rev){loading=false;update();}
     }
   }
+  async function submitReview(group,activity,decision,requirementId=null){
+    if(saving||!snapshot?.connected)return;
+    const call=++rev;
+    saving=true;error='';saveNotice='';update();
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
+    try{
+      const auth=window.BTBonusAuth;
+      if(!auth?.connected())throw Error('Sign in to review your bank activity.');
+      const token=await auth.token();
+      if(rev!==call||!auth.connected())return;
+      const response=await fetch(API+'/evidence-review',{
+        method:'PUT',credentials:'omit',cache:'no-store',
+        headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+        signal:controller.signal,
+        body:JSON.stringify({
+          account:activity.accountKey,transaction:activity.id,
+          entryId:group.entryId,bank:group.bank,opened:group.opened,
+          decision,requirementId:decision==='reviewed'&&requirementId?requirementId:null
+        })
+      });
+      const payload=await response.json().catch(()=>({}));
+      if(!response.ok)throw Error(typeof payload.detail==='string'?payload.detail:'The review was not saved.');
+      if(call!==rev||!auth.connected()||!document.getElementById('bt-bonus-evidence'))return;
+      snapshot=payload;
+      saveNotice=decision==='clear'?'Review reopened.':decision==='dismissed'?'Not relevant saved.':'Review saved. Promotion requirements remain unconfirmed.';
+    }catch(e){
+      if(call===rev)error=(e.name==='AbortError'?'Review request timed out. ':String(e.message||'Review not saved. '))
+        +'No bonus milestones were changed. Please retry.';
+    }finally{
+      clearTimeout(timer);
+      if(call===rev){saving=false;update();}
+    }
+  }
+  function requirementReport(group){
+    const entry=activeEntries().find(e=>String(e.id)===group.entryId&&e.opened===group.opened&&e.bank===group.bank);
+    return window.BTBonusRequirementProgress?.evaluate(entry,group,window.BTFinancialRules?.validate)||null;
+  }
   function paint(root){
     root.replaceChildren();
     const top=el('div',undefined,root,'bonus-evidence-toolbar');
@@ -86,6 +123,7 @@
       button(actions,'Clear',()=>{reset();update()});
     }
     if(error){const message=el('p',error,root,'bonus-evidence-message');message.setAttribute('role','alert');}
+    if(saveNotice){const message=el('p',saveNotice,root,'bonus-evidence-note');message.setAttribute('role','status');}
     if(!snapshot){return;}
     if(!window.BTBonusAuth?.connected()){reset();update();return;}
     if(!snapshot.connected){
@@ -99,10 +137,10 @@
     }
     const metrics=el('div',undefined,root,'bonus-evidence-metrics');
     for(const [label,value] of [
-      ['Linked bonuses',report.linkedCampaigns],
-      ['Possible direct deposits',report.counts.directDeposit],
-      ['Possible payouts',report.counts.bonus],
-      ['Fees / reversals',report.counts.fee+report.counts.reversal]
+      ['To review',report.review.unreviewed],
+      ['Reviewed',report.review.reviewed],
+      ['Dismissed',report.review.dismissed],
+      ['Linked bonuses',report.linkedCampaigns]
     ]){
       const tile=el('div',undefined,metrics,'bonus-evidence-metric');
       el('b',String(value),tile);el('small',label,tile);
@@ -121,6 +159,9 @@
     const heading=el('div',undefined,root,'bonus-evidence-list-title');
     el('h3','Linked bonus campaigns',heading);
     el('small','Last synced: '+fmtDate(report.lastSuccess),heading);
+    const queueActions=el('div',undefined,root,'bonus-evidence-controls');
+    button(queueActions,showResolved?'Hide reviewed items':'Show reviewed / dismissed',()=>{showResolved=!showResolved;update()});
+    if(!report.review.unreviewed)el('p','No new flagged evidence to review. Keep checking sync freshness and promotion requirements.',root,'bonus-evidence-note');
     const campaigns=showAll?report.campaigns:report.campaigns.slice(0,4);
     for(const group of campaigns){
       const card=el('article',undefined,root,'bonus-evidence-card');
@@ -134,24 +175,66 @@
       }
       if(group.missingAccounts)el('p','A linked account was missing from the latest provider response. Check your connection.',card,'bonus-evidence-warning');
       if(group.unsupportedCurrency)el('p','A linked non-USD or unknown-currency account was excluded from this USD evidence review.',card,'bonus-evidence-warning');
-      if(!group.activity.length)el('p','No flagged posted transactions observed since this bonus was opened. This does not confirm requirements are unmet.',card,'bonus-evidence-note');
+      el('p',group.review.unreviewed+' needs review · '+group.review.reviewed+' reviewed · '+group.review.dismissed+' dismissed',card,'bonus-evidence-note');
+      const visibleActivity=showResolved?group.pending.concat(group.resolved).slice(0,10):group.pending.slice(0,5);
+      if(!visibleActivity.length)el('p',group.activity.length?'No new evidence in this campaign.':'No flagged posted transactions observed since this bonus was opened. This does not confirm requirements are unmet.',card,'bonus-evidence-note');
       else{
         const list=el('div',undefined,card,'bonus-evidence-activity');
-        for(const activity of group.latest){
+        const progress=requirementReport(group);
+        const eligibleRules=progress?.scopeVerified?progress.requirements.filter(r=>r.applicable):[];
+        for(const activity of visibleActivity){
           const line=el('div',undefined,list,'bonus-evidence-row');
           const note=el('div',undefined,line);
           el('strong',TYPES[activity.type]||'Possible bank activity',note);
           el('small',fmtDate(activity.posted)+' · '+activity.description,note);
           el('b',hideAmounts?'••••••':fmtMoney(activity.amount),line);
+          const actionRow=el('div',undefined,line,'bonus-evidence-review-actions');
+          if(activity.reviewStatus==='unreviewed'){
+            let choice=null;
+            if(activity.type==='directDeposit'&&eligibleRules.length){
+              const lbl=el('label','Requirement (optional)',actionRow,'bonus-evidence-review-label');
+              choice=el('select',undefined,lbl,'bonus-evidence-rule-select');
+              const none=el('option','Reviewed only — no requirement',choice);none.value='';
+              for(const rule of eligibleRules){const option=el('option',rule.text.slice(0,100),choice);option.value=rule.id;}
+            }
+            const mark=button(actionRow,'Mark reviewed',()=>submitReview(group,activity,'reviewed',choice?.value||null),'bonus-evidence-button primary');
+            const dismiss=button(actionRow,'Not relevant',()=>submitReview(group,activity,'dismissed'));
+            mark.disabled=saving;dismiss.disabled=saving;
+          }else{
+            el('small',activity.reviewStatus==='dismissed'?'Not relevant':('Reviewed'+(activity.requirementId?' · Requirement '+activity.requirementId:'')),actionRow);
+            const undo=button(actionRow,'Undo review',()=>submitReview(group,activity,'clear'));
+            undo.disabled=saving;
+          }
         }
-        if(group.activity.length>group.latest.length)el('small',group.activity.length-group.latest.length+' more flagged transactions available in Finances.',card,'bonus-evidence-note');
+        if(group.activity.length>visibleActivity.length)el('small','More transaction evidence is available. Show reviewed items or open Finances for history.',card,'bonus-evidence-note');
+      }
+      const progress=requirementReport(group);
+      if(progress){
+        const panel=el('section',undefined,card,'bonus-evidence-progress');
+        el('strong','Requirement candidate progress',panel);
+        if(progress.mode!=='structured'){
+          el('p','Verified, structured promotion rules are needed for deposit progress. Review the official T&C and import the updated rule package.',panel,'bonus-evidence-note');
+        }else{
+          for(const rule of progress.requirements){
+            const entry=el('div',undefined,panel,'bonus-evidence-progress-row');
+            el('strong',rule.text,entry);
+            if(rule.applicable){
+              const count=rule.reviewedCount+' reviewed candidate'+(rule.reviewedCount===1?'':'s');
+              const goal=rule.targetCount?' / '+rule.targetCount+' required deposit(s)':'';
+              const amount=rule.targetAmount?' · Candidate amount '+(hideAmounts?'••••••':fmtMoney(rule.reviewedAmount))+' / '+(hideAmounts?'••••••':fmtMoney(rule.targetAmount)):'';
+              el('small',count+goal+amount,entry);
+              if(rule.recurrence==='calendar-month')el('small',rule.reviewedCalendarMonths+' observed calendar months; recurring qualification still needs verification.',entry);
+            }else el('small','Manual check needed for this requirement.',entry);
+          }
+          el('p',progress.notice,panel,'bonus-evidence-note');
+        }
       }
       const row=el('div',undefined,card,'bonus-evidence-card-actions');
       button(row,'Open tracker',()=>openTracker(group.entryId));
       if(group.counts.bonus)button(row,'Review payout',()=>reviewPayout(group.entryId),'bonus-evidence-button primary');
     }
     if(report.campaigns.length>4)button(root,showAll?'Show fewer':'Show all '+report.campaigns.length+' linked bonuses',()=>{showAll=!showAll;update()});
-    const footer=el('p','Review-only evidence. Direct deposits still need to satisfy the exact promotion terms. No requirements, payouts, closing dates or eligibility statuses are changed automatically.',root,'bonus-evidence-disclaimer');
+    const footer=el('p','Reviewing or linking a candidate to a requirement is not confirmation that it qualifies. The bank’s source, timing and account rules must still be checked. No milestone, payout, closure or eligibility status is changed automatically.',root,'bonus-evidence-disclaimer');
     footer.setAttribute('role','note');
     const privacy=el('div',undefined,root,'bonus-evidence-privacy');
     button(privacy,hideAmounts?'Show transaction amounts':'Hide transaction amounts',()=>{hideAmounts=!hideAmounts;update()});
