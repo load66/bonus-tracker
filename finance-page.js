@@ -17,7 +17,7 @@
   let currentRoot=null,sequence=0,hidden=false,data=null,otherData=null,busy=false,view='overview',period=90;
   let transactionSearch='',transactionAccount='',transactionCategory='',transactionStatus='',transactionVisibleLimit=100;
   let accountSearch='',accountType='',saveNotice='',accountDraftProfiles={},currentCombined=null;
-  let activityNotice='',monitoringNotice='',connectionNotice='';
+  let activityNotice='',monitoringNotice='',connectionNotice='',secondaryError='';
   const dirtyAccounts=new Set(),expandedAccountSettings=new Set(),monitoringDraft={};
   const sourceSnapshot=source=>source===provider?data:otherData?.provider===source?otherData.snapshot:null;
   const unified=()=>window.BTFinanceUnified?.combine({simplefin:sourceSnapshot('simplefin'),plaid:sourceSnapshot('plaid')})||null;
@@ -28,6 +28,7 @@
   const el=(tag,text,parent,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;if(parent)parent.append(n);return n};
   const stamp=t=>Number.isFinite(t)&&t>0?new Date(t*1000).toLocaleString():'Not synced';
   const date=t=>Number.isFinite(t)&&t>0?new Date(t*1000).toLocaleDateString():'—';
+  const activityDate=row=>Number(row?.pending ? (row?.transactedAt||row?.displayAt||row?.observedAt||row?.posted) : (row?.posted||row?.displayAt||row?.observedAt))||0;
   function money(value,code='USD'){
     if(value===null||value===undefined||value===''||!Number.isFinite(Number(value)))return '—';
     if(!code)return String(value)+' (currency unknown)';
@@ -115,12 +116,12 @@
     try{
       const response=await fetch(BASE+(otherSource==='plaid'?'/plaid/accounts':'/simplefin'),{
         headers:{Authorization:'Bearer '+token},credentials:'omit',cache:'no-store',signal:controller.signal});
-      if(!response.ok)return;
+      if(!response.ok)throw Error('The '+sourceLabel(otherSource)+' connection could not be loaded.');
       let snapshot=await response.json();
       if(rev!==sequence||!auth.connected()||window.BTBonusAuth!==auth)return;
       const latest=await auth.token().catch(()=>null);
       if(rev!==sequence||!sameSessionToken(token,latest))return;
-      otherData={provider:otherSource,snapshot};
+      otherData={provider:otherSource,snapshot};secondaryError='';
       if(data&&currentRoot?.isConnected)paint();
       // A prior Plaid Link may have authorized a bank without initial account
       // discovery. Recover read-only accounts once, never repeat a Link/exchange.
@@ -145,7 +146,12 @@
         }catch(_error){/* Recovery failure stays visible as not-yet-discovered. */}
         finally{clearTimeout(syncTimer)}
       }
-    }catch(_error){/* Other provider may not be configured; primary accounts remain available. */}
+    }catch(error){
+      if(rev===sequence&&auth.connected()){
+        secondaryError=sourceLabel(otherSource)+' could not be loaded: '+String(error?.message||'Connection timed out.');
+        if(data&&currentRoot?.isConnected)paint();
+      }
+    }
     finally{clearTimeout(timer)}
   }
   function switchSource(source,preserveSearch=false){
@@ -231,10 +237,13 @@
   function flattenTransactions(){
     const accounts=new Map((currentCombined?.accounts||[]).map(a=>[a.key,a])),rows=[];
     for(const [accountKey,records] of Object.entries(currentCombined?.transactions||{})){
-      const account=accounts.get(accountKey);if(!account)continue;
+      const source=accountKey.startsWith('plaid:')?'plaid':'simplefin';
+      const account=accounts.get(accountKey)||{key:accountKey,rawKey:accountKey.split(':').slice(1).join(':'),
+        bank:'Previously connected account',name:'History only',currency:'',source,
+        sourceLabel:sourceLabel(source),historicalOnly:true};
       for(const row of Object.values(records||{}))rows.push({...row,accountKey,account,source:account.source});
     }
-    return rows.sort((a,b)=>b.posted-a.posted);
+    return rows.sort((a,b)=>activityDate(b)-activityDate(a));
   }
   function hero(host,summary){
     const box=el('section',undefined,host,'finance-page-hero');
@@ -266,7 +275,8 @@
   }
   function periodControl(parent){
     const wrap=el('div',undefined,parent,'finance-page-period');
-    for(const days of [30,60,90])action(wrap,days+' days',()=>{period=days;paint()},'finance-page-chip'+(period===days?' is-active':''));
+    for(const days of (view==='transactions'?[30,60,90,365,36500]:[30,60,90]))
+      action(wrap,days===36500?'All history':days===365?'1 year':days+' days',()=>{period=days;paint()},'finance-page-chip'+((view==='transactions'?period:Math.min(period,90))===days?' is-active':''));
   }
   function metric(grid,label,value,note){
     const tile=el('div',undefined,grid,'finance-page-tile');el('span',label,tile);el('strong',value,tile);
@@ -303,14 +313,14 @@
     const head=el('div',undefined,card,'finance-page-section-head');
     el('h3','Recent transactions',head);
     action(head,'View all',()=>{view='transactions';paint()},'finance-page-preview-link');
-    const rows=flattenTransactions().filter(row=>Number.isFinite(row.posted)&&row.posted>0).slice(0,5);
+    const rows=flattenTransactions().filter(row=>activityDate(row)>0).slice(0,5);
     if(!rows.length){el('p','Transactions will appear as each bank finishes syncing.',card,'finance-page-hint');return}
     const list=el('div',undefined,card,'finance-page-preview-list');
     for(const row of rows){
       const item=el('div',undefined,list,'finance-page-preview-row');
       const copy=el('div',undefined,item,'finance-page-preview-copy');
       el('strong',row.merchant||row.description||'Transaction',copy);
-      el('small',(row.account.bank||'Bank')+' · '+row.account.sourceLabel+' · '+date(row.posted),copy);
+      el('small',(row.account.bank||'Bank')+' · '+row.account.sourceLabel+' · '+date(activityDate(row)),copy);
       el('b',amount(row.amount,row.account.currency),item,'finance-page-preview-value');
     }
   }
@@ -399,28 +409,43 @@
     select(controls,'Account',accountValues,transactionAccount,value=>{transactionAccount=value;transactionVisibleLimit=100;renderRows()});
     select(controls,'Category',{'':'All categories',...CATEGORIES},transactionCategory,value=>{transactionCategory=value;transactionVisibleLimit=100;renderRows()});
     select(controls,'Status',{'':'Posted and pending',posted:'Posted',pending:'Pending'},transactionStatus,value=>{transactionStatus=value;transactionVisibleLimit=100;renderRows()});
+    const activeFilters=el('div',undefined,card,'finance-page-quick-actions');
+    const count=el('p','',card,'finance-page-hint');
     const list=el('div',undefined,card,'finance-page-transactions');
     function renderRows(){
-      list.replaceChildren();const cutoff=Math.floor(Date.now()/1000)-period*86400;
+      list.replaceChildren();activeFilters.replaceChildren();const cutoff=Math.floor(Date.now()/1000)-period*86400;
       const filtered=flattenTransactions().filter(row=>{
-        const hay=(row.merchant+' '+row.description+' '+row.account.bank+' '+row.account.name).toLowerCase();
-        return row.posted>=cutoff&&row.posted<=Math.floor(Date.now()/1000)+300&&(!transactionSearch||hay.includes(transactionSearch))
+        const hay=((row.merchant||'')+' '+(row.description||'')+' '+row.account.bank+' '+row.account.name).toLowerCase();
+        const at=activityDate(row);
+        return at>=cutoff&&at<=Math.floor(Date.now()/1000)+300&&(!transactionSearch||hay.includes(transactionSearch))
           &&(!transactionAccount||row.accountKey===transactionAccount)
           &&(!transactionCategory||row.category===transactionCategory)
           &&(!transactionStatus||(transactionStatus==='pending')===!!row.pending);
       });
+      count.textContent='Showing '+Math.min(filtered.length,transactionVisibleLimit)+' of '+filtered.length+' transactions';
+      if(transactionSearch||transactionAccount||transactionCategory||transactionStatus){
+        action(activeFilters,'Clear all filters',()=>{
+          transactionSearch='';transactionAccount='';transactionCategory='';transactionStatus='';transactionVisibleLimit=100;
+          transactions(host);card.remove();
+        },'finance-page-chip');
+        for(const [name,value,clear] of [
+          ['Search',transactionSearch,()=>transactionSearch=''],['Account',transactionAccount,()=>transactionAccount=''],
+          ['Category',transactionCategory,()=>transactionCategory=''],['Status',transactionStatus,()=>transactionStatus='']]){
+          if(value)action(activeFilters,name+': '+(name==='Search'?value:name==='Account'?(accountValues[value]||'Previous account'):name==='Category'?(CATEGORIES[value]||value):value)+' ×',()=>{clear();transactionVisibleLimit=100;transactions(host);card.remove()},'finance-page-chip');
+        }
+      }
       if(!filtered.length){
         const selected=currentCombined?.accounts?.find(a=>a.key===transactionAccount);
         const coverage=transactionCoverage(selected);
         el('p',coverage||'No matching transactions are available yet. Check the account, date range or next bank sync.',list,'finance-page-hint');
-        if(coverage)el('small','An empty history is not proof the bank had no activity. Plaid Trial syncs are limited to a daily provider window.',list,'finance-page-hint');
+        if(coverage)el('small','An empty history does not prove this bank had no activity; provider data may arrive later.',list,'finance-page-hint');
         return;
       }
       for(const row of filtered.slice(0,transactionVisibleLimit)){
         const article=el('article',undefined,list,'finance-page-transaction');
         const top=el('div',undefined,article,'finance-page-transaction-top'),copy=el('div',undefined,top);
         el('strong',row.merchant||'Transaction',copy);
-        el('small',[row.account.bank,row.account.name,row.account.sourceLabel,date(row.posted),row.pending?'Pending':'Posted'].filter(Boolean).join(' · '),copy);
+        el('small',[row.account.bank,row.account.name,row.account.sourceLabel,date(activityDate(row)),row.pending?'Pending':'Posted'].filter(Boolean).join(' · '),copy);
         el('b',amount(row.amount,row.account.currency),top);
         el('p',row.description,article,'finance-page-description');
         if(row.stalePending)el('p','Pending status has not been observed recently. Confirm it with the institution.',article,'finance-page-warning');
@@ -445,6 +470,52 @@
     }
     renderRows();
   }
+  async function updateAccountMonitoring(account,enable){
+    const source=account.source;
+    const snapshot=sourceSnapshot(source);
+    if(!snapshot?.connected)return;
+    const selection=new Set(snapshot.monitoredAccounts||[]);
+    if(enable)selection.add(account.rawKey);else selection.delete(account.rawKey);
+    await change(async()=>{
+      const result=await request('/monitoring',{method:'PUT',body:JSON.stringify({accounts:[...selection]})},source);
+      monitoringNotice=(account.name||'Account')+(enable?' monitoring resumed.':' monitoring paused.');
+      return {financeSource:source,snapshot:result};
+    });
+  }
+  async function removeSingleAccount(account){
+    if(busy)return;
+    const allowed=await window.btConfirmDialog('Remove '+(account.name||'this account')+' from Finances? Its saved transactions and account settings will be erased. Your other '+(account.bank||'bank')+' accounts stay connected. This does not close the real account or change bank-bonus tracker records.',{
+      title:'Remove one account?',confirmLabel:'Remove account',danger:true
+    });
+    if(!allowed)return;
+    const source=account.source;
+    await change(async()=>{
+      const path=source==='plaid'?'/individual/'+encodeURIComponent(account.rawKey):'/accounts/'+encodeURIComponent(account.rawKey);
+      const snapshot=await request(path,{method:'DELETE'},source);
+      connectionNotice=(account.name||'Account')+' removed from Finances. Other accounts remain connected.';
+      expandedAccountSettings.delete(account.key);
+      delete accountDraftProfiles[account.key];dirtyAccounts.delete(account.key);
+      if(transactionAccount===account.key)transactionAccount='';
+      return {financeSource:source,snapshot};
+    });
+  }
+  async function restoreSingleAccount(source,rawKey){
+    if(busy)return;
+    busy=true;
+    saveNotice='';
+    paint();
+    try{
+      const path=source==='plaid'?'/individual/'+encodeURIComponent(rawKey)+'/restore':'/accounts/'+encodeURIComponent(rawKey)+'/restore';
+      const snapshot=await request(path,{method:'POST'},source);
+      applySource(source,snapshot);
+      connectionNotice='Account restored to discovery. Use Discover accounts to bring it back into Finances.';
+    }catch(error){
+      saveNotice='Restore was not saved. '+String(error?.message||'Please retry.');
+    }finally{
+      busy=false;
+      paint();
+    }
+  }
   async function disconnectBank(source,handle,name){
     if(busy)return;
     const plaid=source==='plaid';
@@ -462,6 +533,8 @@
       await request(plaid?'/items/'+encodeURIComponent(handle):'',{method:'DELETE'},source);
       const latest=await request('',{},source);
       applySource(source,latest);
+      if(transactionAccount.startsWith(source+':') &&
+          !(latest.accounts||[]).some(a=>source+':'+a.key===transactionAccount))transactionAccount='';
       accountDraftProfiles={};dirtyAccounts.clear();expandedAccountSettings.clear();
       connectionNotice=(plaid?'Bank removed.':'SimpleFIN disconnected.')+' Saved bonus tracker entries were not changed.';
     }catch(error){
@@ -536,7 +609,9 @@
       });
       el('summary','Account settings',settings);
       const fields=el('div',undefined,settings,'finance-page-account-fields');
-      el('small','Transactions sync automatically when available. Bonus payouts still require verification.',fields,'finance-page-hint');
+      const syncing=(sourceSnapshot(account.source)?.monitoredAccounts||[]).includes(account.rawKey);
+      el('small',syncing?'Transaction monitoring is on.':'Transaction monitoring is paused.',fields,'finance-page-hint');
+      action(fields,syncing?'Pause monitoring':'Resume monitoring',()=>updateAccountMonitoring(account,!syncing),'finance-page-button');
       el('small','Account type: '+(TYPES[p.kind]||'Unclassified'),fields,'finance-page-hint');
       const typeFields=el('div',undefined,fields,'finance-page-correction');
       function editor(){select(typeFields,'Correct account type',TYPES,p.kind,value=>{p.kind=value;dirtyAccounts.add(account.key)},'finance-page-select')}
@@ -545,6 +620,7 @@
       select(fields,'Net worth treatment',{exclude:'Exclude',asset:'Asset',liability:'Liability'},p.balanceMode||'exclude',value=>{p.balanceMode=value;dirtyAccounts.add(account.key)},'finance-page-select');
       const reorder=el('div',undefined,settings,'finance-page-reorder');
       action(reorder,'Move up',()=>move(account,-1));action(reorder,'Move down',()=>move(account,1));
+      action(fields,'Remove this account',()=>removeSingleAccount(account),'finance-page-button');
     }
     function move(account,direction){
       const rows=sortedAccounts(),index=rows.findIndex(a=>a.key===account.key),target=index+direction;
@@ -554,6 +630,28 @@
       profile(other).order=current;dirtyAccounts.add(account.key);dirtyAccounts.add(other.key);render();
     }
     render();
+    const removed=el('details',undefined,card,'finance-page-filter-details');
+    const removedEntries=[];
+    for(const source of ['simplefin','plaid'])for(const [key,label] of Object.entries(sourceSnapshot(source)?.removedAccounts||{}))
+      removedEntries.push({source,key,label});
+    el('summary','Removed accounts ('+removedEntries.length+')',removed);
+    if(removedEntries.length)for(const item of removedEntries){
+      const line=el('div',undefined,removed,'finance-page-quick-actions');
+      el('span',[item.label.bank,item.label.name,sourceLabel(item.source)].filter(Boolean).join(' · '),line);
+      // Preserve the activation if a parent redraw detaches the button
+      // between a touch/mouse press and the eventual click event. Keep
+      // keyboard activation via click; guard against double submission.
+      let activated=false;
+      const activate=()=>{
+        if(activated)return;
+        activated=true;
+        restoreSingleAccount(item.source,item.key);
+      };
+      const restoreButton=action(line,'Restore',activate,'finance-page-button');
+      restoreButton.addEventListener('pointerdown',event=>{
+        if(event.isPrimary&&event.button===0)activate();
+      });
+    }else el('p','No removed accounts.',removed,'finance-page-hint');
     action(card,'Save account settings',()=>change(async()=>{
       const sources=[...new Set([...dirtyAccounts].map(k=>k.split(':')[0]))];
       for(const source of sources){
@@ -575,6 +673,7 @@
   }
   function paint(){
     const host=currentRoot;if(!host||!host.isConnected)return;
+    host.setAttribute('aria-busy',busy?'true':'false');
     if(view!=='bonuses')window.BTBonusEvidence?.dispose();
     host.replaceChildren();
     currentCombined=unified();
@@ -585,7 +684,7 @@
       action(host,'Add bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');return;
     }
     const summaryState=window.BTFinanceUnified.safeForSummary(currentCombined);
-    const calculated=window.BTFinanceOverview?.summarize(summaryState,{days:period});
+    const calculated=window.BTFinanceOverview?.summarize(summaryState,{days:Math.min(period,90)});
     const trustedTotals=!summaryState.incompleteProviders&&!summaryState.excludedForReview;
     const summary={...calculated,
       complete:!!calculated?.complete&&trustedTotals,
@@ -595,6 +694,11 @@
     if(connectionNotice){const banner=el('p',connectionNotice,host,'finance-page-connection-success');banner.setAttribute('role','status');}
     if(monitoringNotice){const banner=el('p',monitoringNotice,host,'finance-page-activity-result');banner.setAttribute('role','status');}
     if(activityNotice){const banner=el('p',activityNotice,host,'finance-page-activity-result');banner.setAttribute('role','status');}
+    if(secondaryError){
+      const banner=el('section',undefined,host,'finance-page-caution');
+      el('span',secondaryError+' Your other bank records are still available.',banner);
+      action(banner,'Retry connection',()=>{secondaryError='';loadOtherSource(sequence);paint()},'finance-page-button');
+    }
     if(summaryState.incompleteProviders)el('p','Financial activity is partial: one linked provider has not completed a recent sync.',host,'finance-page-caution');
     if(view==='bonuses'){
       const sourceSelector=el('section',undefined,host,'finance-page-connection');
@@ -614,7 +718,7 @@
     if(!auth?.connected()){
       window.BTBonusEvidence?.dispose();
       sessionIdentity=null;lastAuthenticatedOwner=null;expandedAccountSettings.clear();monitoringNotice='';activityNotice='';connectionNotice='';
-      currentRoot=host;data=null;otherData=null;sequence++;
+      currentRoot=host;data=null;otherData=null;secondaryError='';sequence++;
       host.replaceChildren();statusMessage(host,'Sign in to view finances','Sign in securely to view linked financial accounts.');
       action(host,'Sign in / manage accounts',()=>window.btOpenBankSync?.(),'finance-page-button finance-page-primary');return;
     }
@@ -635,7 +739,7 @@
     if(lastAuthenticatedOwner&&lastAuthenticatedOwner!==identity){
       expandedAccountSettings.clear();monitoringNotice='';activityNotice='';connectionNotice='';
     }
-    lastAuthenticatedOwner=identity;sessionIdentity=identity;currentRoot=host;data=null;otherData=null;
+    lastAuthenticatedOwner=identity;sessionIdentity=identity;currentRoot=host;data=null;otherData=null;secondaryError='';
     accountDraftProfiles={};dirtyAccounts.clear();
     Object.keys(monitoringDraft).forEach(k=>delete monitoringDraft[k]);
     const rev=++sequence;paint();
@@ -652,7 +756,7 @@
     }
   }
   function refresh(){
-    window.BTBonusEvidence?.dispose();currentRoot=null;data=null;otherData=null;sessionIdentity=null;
+    window.BTBonusEvidence?.dispose();currentRoot=null;data=null;otherData=null;secondaryError='';sessionIdentity=null;
     accountDraftProfiles={};dirtyAccounts.clear();
     Object.keys(monitoringDraft).forEach(k=>delete monitoringDraft[k]);sequence++;mount();
   }

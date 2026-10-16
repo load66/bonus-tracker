@@ -49,6 +49,15 @@ const base=()=>({
           await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({detail:'Synthetic account save temporarily unavailable.'})});
           return;
         }
+        if(url.pathname.endsWith('/accounts/'+B)&&req.method()==='DELETE'){
+          state.removedAccounts={...(state.removedAccounts||{}),[B]:{name:'Credit Card',bank:'Other Credit Union'}};
+          state.accounts=state.accounts.filter(account=>account.key!==B);
+          state.monitoredAccounts=state.monitoredAccounts.filter(key=>key!==B);
+          delete state.transactions[B];delete state.accountProfiles[B];
+        }
+        if(url.pathname.endsWith('/accounts/'+B+'/restore')&&req.method()==='POST'){
+          delete state.removedAccounts[B];
+        }
         if(url.pathname.endsWith('/monitoring'))state.monitoredAccounts=body.accounts;
         if(url.pathname.endsWith('/transaction-review'))state.transactions[body.account][body.transaction].category=body.category,state.transactions[body.account][body.transaction].categorySource=body.category==='unreviewed'?'automatic':'user';
         if(url.pathname.endsWith('/account-profiles')){
@@ -257,7 +266,6 @@ const base=()=>({
       await page.getByRole('dialog',{name:'Financial accounts'}).waitFor();await page.getByRole('dialog',{name:'Financial accounts'}).getByRole('button',{name:'Done'}).click();
       await section.getByRole('heading',{name:'Accounts',exact:true}).waitFor();
       await section.getByText('X Money Checking',{exact:true}).waitFor();
-      await section.getByText('Activity received · bank history may be incomplete',{exact:true}).waitFor();
       assert.equal(await section.locator('.finance-page-account').count(),4,
         'SimpleFIN and Plaid account cards share the same list');
       const xMoneyEditor=section.locator('.finance-page-account-info strong')
@@ -312,19 +320,18 @@ const base=()=>({
         'All 260 additional Plaid rows plus 4 preexisting rows are accessible by paging');
       assert.equal(await section.getByRole('button',{name:/^Show \d+ more transactions/}).count(),0,
         'No provider-returned history remains inaccessible after the final page');
-      // An authenticated bank can exist before Plaid has provided any rows.
-      // Never claim no spending or hide a bank just because first history is empty.
+      // Account discovery is not a guarantee that Plaid delivered transactions.
       plaidState.accounts[0].transactionSyncStatus='awaiting_provider_data';
-      plaidState.accounts[0].transactionNextSyncAt=NOW+86400;
-      const retained=plaidState.transactions;
+      plaidState.accounts[0].transactionNextSyncAt=NOW+3*3600;
+      const savedPlaidTransactions=plaidState.transactions;
       plaidState.transactions={};
       await page.evaluate(()=>window.btRefreshFinancesPage?.());
       await section.getByRole('button',{name:'Accounts',exact:true}).click();
       await section.getByText('Bank activity not yet available',{exact:false}).waitFor();
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       await section.getByLabel('Account').selectOption('plaid:'+A);
-      await section.getByText('An empty history is not proof the bank had no activity.',{exact:false}).waitFor();
-      plaidState.transactions=retained;
+      await section.getByText('An empty history does not prove this bank had no activity',{exact:false}).waitFor();
+      plaidState.transactions=savedPlaidTransactions;
       plaidState.accounts[0].transactionSyncStatus='ready';
       await page.evaluate(()=>window.btRefreshFinancesPage?.());
       // Removing an individual Plaid bank must take one confirmation and leave tracker history intact.
@@ -340,6 +347,62 @@ const base=()=>({
       assert.ok(requests.some(r=>r.path.endsWith('/accounts/items/9999999999999999999999999999999999999999999999999999999999999999')&&r.method==='DELETE'),
         'One confirm must disconnect the exact Plaid connection');
       assert.equal(plaidState.connected,false);
+      // Removing one credit card must never disconnect its institution's other accounts.
+      const cardGroup=section.locator('.finance-page-institution').filter({hasText:'Other Credit Union'});
+      await cardGroup.locator('summary',{hasText:'Account settings'}).click();
+      await cardGroup.getByRole('button',{name:'Remove this account'}).click();
+      const singleConfirm=page.getByRole('dialog',{name:'Remove one account?'});
+      await singleConfirm.getByRole('button',{name:'Cancel'}).click();
+      assert.ok(state.accounts.some(a=>a.key===B),'Cancel must keep the selected credit card');
+      await cardGroup.getByRole('button',{name:'Remove this account'}).click();
+      await page.getByRole('dialog',{name:'Remove one account?'})
+        .getByRole('button',{name:'Remove account'}).click();
+      await section.getByText('Credit Card removed from Finances.',{exact:false}).waitFor();
+      assert.equal(state.accounts.length,2,'Other SimpleFIN accounts remain connected');
+      assert.ok(state.accounts.some(a=>a.key===A));
+      assert.ok(state.removedAccounts[B]);
+      assert.ok(requests.some(r=>r.path.endsWith('/simplefin/accounts/'+B)&&r.method==='DELETE'));
+      await page.waitForFunction(()=>document.querySelector('#bt-finances-page')?.getAttribute('aria-busy')==='false');
+      await section.locator('summary',{hasText:'Removed accounts (1)'}).click();
+      const restoreTarget=section.getByRole('button',{name:'Restore',exact:true});
+      await restoreTarget.scrollIntoViewIfNeeded();
+      await page.waitForFunction(()=>document.querySelector('#bt-finances-page')?.getAttribute('aria-busy')==='false');
+      const restoreClickInfo=await restoreTarget.evaluate(button=>{
+        const original=button.onclick;
+        window.__btRestoreClickCount=0;
+        button.onclick=function(...args){window.__btRestoreClickCount++;return original?.apply(this,args)};
+        const rect=button.getBoundingClientRect();
+        const hit=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);
+        return {hasHandler:typeof original==='function',disabled:button.disabled,
+                pointerTarget:hit?.tagName,pointerText:hit?.textContent?.slice(0,70)};
+      });
+      await restoreTarget.click();
+      await page.waitForFunction(()=>(
+        document.querySelector('#bt-finances-page')?.textContent||''
+      ).includes('Account restored to discovery.') || (
+        document.querySelector('#bt-finances-page')?.textContent||''
+      ).includes('Changes were not saved.'),null,{timeout:8000}).catch(()=>{});
+      if(state.removedAccounts[B]!==undefined){
+        const messages=await section.locator('.finance-page-notice,.finance-page-connection-success').allTextContents();
+        throw Error('Restore did not update synthetic account: '+JSON.stringify({
+          recentRequests:requests.slice(-6).map(r=>({path:r.path,method:r.method})),messages,
+          removedButtons:await section.getByRole('button',{name:'Restore',exact:true}).count(),
+          restoreClickInfo,clickCount:await page.evaluate(()=>window.__btRestoreClickCount),
+          pageErrors:errors.slice(-5),visibleAccounts:state.accounts.map(a=>a.key)
+        }));
+      }
+      assert.equal(state.removedAccounts[B],undefined,'Restoration clears exact account exclusion');
+      // Simulate a real SimpleFIN pending row with posted=0, visible but not booked.
+      state.transactions[A]['pending-zero']={id:'pending-zero',posted:0,transactedAt:NOW-70,
+        observedAt:NOW-50,displayAt:NOW-70,pending:true,amount:'-4.90',
+        description:'Unsettled synthetic purchase',merchant:'Unsettled purchase',
+        category:'unreviewed',categorySource:'automatic',confidence:'low',signals:[]};
+      await page.evaluate(()=>window.btRefreshFinancesPage?.());
+      await section.getByRole('button',{name:'Transactions',exact:true}).click();
+      await section.locator('.finance-page-filters select').nth(2).selectOption('pending');
+      await section.getByText('Unsettled purchase',{exact:true}).waitFor();
+      await section.getByRole('button',{name:'Clear all filters'}).click();
+      assert.ok((await section.locator('.finance-page-transaction').allTextContents()).some(x=>x.includes('Unsettled')));
       assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'no tracker writes');
       assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-access')),true);
       assert.deepEqual(errors,[]);console.log(name+': finance overview, transactions, account management, privacy and responsive navigation passed');

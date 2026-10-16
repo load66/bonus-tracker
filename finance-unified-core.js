@@ -57,6 +57,17 @@
           }
         }
       }
+      // Retain historical transaction groups if an institution temporarily omits
+      // a previously discovered account. They are not eligible for financial totals.
+      for(const [rawKey,records] of Object.entries(state.transactions||{})){
+        const composite=key(source,rawKey);
+        if(accountKeys.has(composite)||!records||typeof records!=='object')continue;
+        transactions[composite]={};
+        for(const [id,row] of Object.entries(records)){
+          if(!row||typeof row!=='object')continue;
+          transactions[composite][id]={...row,id:row.id||id,source,accountKey:composite};
+        }
+      }
     }
     // Provider account IDs are intentionally opaque and cannot be compared across
     // institutions. Never silently declare similar accounts identical.

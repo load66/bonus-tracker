@@ -45,10 +45,13 @@
       if(!records||typeof records!=='object'||Array.isArray(records))continue;
       sourceAccounts++;
       for(const row of Object.values(records)){
-        if(!row||typeof row!=='object'||!Number.isFinite(row.posted)||row.posted<cutoff||row.posted>now+300)continue;
+        if(!row||typeof row!=='object')continue;
+        const at=row.pending?(row.transactedAt||row.displayAt||row.observedAt||row.posted):row.posted;
+        if(!Number.isFinite(at)||at<cutoff||at>now+300)continue;
         const n=cents(row.amount);
         if(n===null){unusable++;continue}
         if(row.pending){pending++;continue}
+        if(!Number.isFinite(row.posted)||row.posted<=0)continue;
         observations++;
         if(n>0n)credits+=n; else if(n<0n)debits-=n;
         if(row.kind==='possible_bonus'&&n>0n)candidates++;
