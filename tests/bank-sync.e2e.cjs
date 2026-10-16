@@ -12,7 +12,9 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
  try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
   const browser=await engine.launch();try{
    const context=await browser.newContext({serviceWorkers:'block',viewport:{width:390,height:844},timezoneId:'America/Chicago'});const page=await context.newPage();let state=seed(),requests=[],errors=[];page.on('pageerror',e=>errors.push(e.message));
-   await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin**',async route=>{
+   // During production smoke, NEVER send synthetic session headers to any live API.
+      if(process.env.BT_BROWSER_SITE_URL)await page.route('https://api-production-00f74.up.railway.app/**',route=>route.abort());
+      await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin**',async route=>{
     const req=route.request(),url=new URL(req.url()),method=req.method();requests.push({method,path:url.pathname,body:req.postData()});
     if(url.pathname.endsWith('/selection')){state.mappings=req.postDataJSON().mappings;}
     if(url.pathname.endsWith('/monitoring')){state.monitoredAccounts=req.postDataJSON().accounts;if(!state.monitoredAccounts.length&&!Object.keys(state.mappings).length)state.transactions={};}
@@ -23,7 +25,7 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(state)});
    });
    await page.addInitScript(({entry})=>{const RealDate=Date,now=Date.parse('2026-10-16T07:00:00Z');window.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[now]))}static now(){return now}};localStorage.setItem('bt_e_v4',JSON.stringify([entry]));localStorage.setItem('bonus-ai-auth',JSON.stringify({access_token:'synthetic-access',refresh_token:'synthetic-refresh',expires_at:4102444800}));},{entry});
-   await page.goto('http://127.0.0.1:'+server.address().port+'/');await page.waitForFunction(()=>typeof btOpenBankSync==='function');
+   await page.goto(process.env.BT_BROWSER_SITE_URL||'http://127.0.0.1:'+server.address().port+'/');await page.waitForFunction(()=>typeof btOpenBankSync==='function');
    const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
    const cycleId=await page.evaluate(()=>entries[0].id);assert.ok(cycleId,'Loaded tracker cycle must have an ID');
    await page.evaluate(()=>btOpenBankSync());const dialog=page.getByRole('dialog',{name:'Financial accounts'});await dialog.getByText('Connection active',{exact:true}).waitFor();
