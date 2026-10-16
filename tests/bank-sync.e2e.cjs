@@ -7,7 +7,7 @@ const server=http.createServer(async(req,res)=>{try{const pathname=new URL(req.u
 const account={key:'a'.repeat(64),name:'Checking <img src=x>',bank:'Synthetic Bank',currency:'USD',balance:'200',balanceDate:1792134000};
 const {fixture}=require('./fixtures/financial-rules.cjs');
 const opened='2026-10-01',entry={...fixture(),id:'synthetic-cycle',bank:'Synthetic Bank',accountType:'personal',opened};
-const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connected',accounts:[account],mappings:{},transactions:{},monitoredAccounts:[],lastSuccess:1792134000,nextSyncAt:1792220400});
+const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connected',accounts:[account],mappings:{},transactions:{},monitoredAccounts:[account.key],lastSuccess:1792134000,nextSyncAt:1792220400});
 (async()=>{
  await fs.mkdir(output,{recursive:true});await new Promise(r=>server.listen(0,'127.0.0.1',r));
  try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
@@ -20,6 +20,7 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
     if(url.pathname.endsWith('/discover')){
       const other={key:'b'.repeat(64),name:'Savings',bank:'Newly Added CU',currency:'USD',balance:'100',balanceDate:1792134000};
       if(!state.accounts.some(a=>a.key===other.key))state.accounts.push(other);
+      state.monitoredAccounts=state.accounts.map(a=>a.key);
     }
     if(url.pathname.endsWith('/selection')){state.mappings=req.postDataJSON().mappings;}
     if(url.pathname.endsWith('/monitoring')){state.monitoredAccounts=req.postDataJSON().accounts;if(!state.monitoredAccounts.length&&!Object.keys(state.mappings).length)state.transactions={};}
@@ -42,16 +43,15 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    assert.equal(await dialog.locator('img').count(),0);
    const accountSearch=dialog.getByRole('searchbox',{name:'Search connected accounts'});
    await accountSearch.fill('no matching institution');
-   assert.equal(await dialog.getByLabel('Monitor transactions (read-only)',{exact:true}).isVisible(),false);
+   assert.equal(await dialog.getByLabel('Monitor transactions (read-only)',{exact:true}).count(),0);
    await accountSearch.fill('Synthetic Bank');
-   assert.equal(await dialog.getByLabel('Monitor transactions (read-only)',{exact:true}).isVisible(),true);
+   assert.equal(await dialog.getByLabel('Monitor transactions (read-only)',{exact:true}).count(),0);
    await dialog.getByRole('button',{name:'Hide balances',exact:true}).click();await dialog.getByText('Balance: ••••••',{exact:false}).waitFor();
    await dialog.getByRole('button',{name:'Show balances',exact:true}).click();await dialog.locator('p').filter({hasText:/Balance:\s*.*200/}).first().waitFor();
    assert.equal(await dialog.getByLabel('Bonus product (verified terms)',{exact:true}).isDisabled(),true,'unlinked account cannot select a promotion product');
-   await dialog.getByLabel('Monitor transactions (read-only)',{exact:true}).check();
-   await dialog.getByRole('button',{name:'Save monitoring preferences',exact:true}).click();
-   await dialog.getByText('Monitoring preferences saved.',{exact:false}).waitFor();
-   assert.deepEqual(state.monitoredAccounts,[account.key]);assert.deepEqual(state.mappings,{});
+   assert.deepEqual(state.monitoredAccounts,[account.key],'Connected accounts are enrolled automatically');
+   assert.equal(requests.some(r=>r.path.endsWith('/monitoring')),false,
+     'No manual monitoring request is required');
    assert.equal(await dialog.getByLabel('Bonus product (verified terms)',{exact:true}).isDisabled(),true,'unverified product choices must stay disabled after async form operations');
    await dialog.getByRole('button',{name:'Check for transactions',exact:true}).click();await dialog.getByText('Possible bonus · review',{exact:true}).waitFor();
    await dialog.getByText('Observed credits',{exact:true}).waitFor();
@@ -103,7 +103,7 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    await dialog.getByText('Newly Added CU · Savings',{exact:true}).waitFor();
    assert.equal(state.accounts.length,2,'new provider accounts must appear without replacing the existing connection');
    assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened,productId:'checking'},'account discovery preserves the original verified product association');
-   assert.deepEqual(state.monitoredAccounts,[account.key],'new accounts must not be automatically monitored');
+   assert.deepEqual(new Set(state.monitoredAccounts),new Set([account.key,'b'.repeat(64)]),'New accounts must be monitored automatically');
    assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'adding bank preserves tracker history');
    assert.equal(requests.filter(r=>r.path.endsWith('/discover')).length,2,'manual refresh is still an explicit separate request');
    assert.equal(await dialog.locator('script').count(),0);
