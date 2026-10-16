@@ -1,5 +1,5 @@
-/* Tracker-specific bank activity review. No account data in local/session storage.
- * Read-only: only the existing milestone dialogs may change a tracker record.
+/* Owner-private bonus activity review, mounted exclusively in Finances.
+ * Only the existing explicit Tracker milestone dialogs may change a bonus record.
  */
 (function(){
   'use strict';
@@ -71,7 +71,7 @@
       const payload=await response.json().catch(()=>({}));
       if(!response.ok)throw Error(typeof payload.detail==='string'?payload.detail:'Bank activity could not be retrieved.');
       if(!(await sameOwner(auth,token))){snapshot=null;throw Error('Sign-in changed. Reopen bank activity.');}
-      if(call!==rev||!auth.connected()||!document.getElementById('bt-bonus-evidence'))return;
+      if(call!==rev||!auth.connected()||!document.getElementById('bt-bonus-evidence')?.closest('#bt-finances-page'))return;
       snapshot=payload;error='';
     }catch(e){
       if(call!==rev)return;
@@ -104,7 +104,7 @@
       const payload=await response.json().catch(()=>({}));
       if(!response.ok)throw Error(typeof payload.detail==='string'?payload.detail:'The review was not saved.');
       if(!(await sameOwner(auth,token))){snapshot=null;throw Error('Sign-in changed. Reopen bank activity.');}
-      if(call!==rev||!auth.connected()||!document.getElementById('bt-bonus-evidence'))return;
+      if(call!==rev||!auth.connected()||!document.getElementById('bt-bonus-evidence')?.closest('#bt-finances-page'))return;
       snapshot=payload;
       saveNotice=decision==='clear'?'Review reopened.':decision==='dismissed'?'Not relevant saved.':'Review saved. Promotion requirements remain unconfirmed.';
     }catch(e){
@@ -123,17 +123,9 @@
     root.replaceChildren();
     const top=el('div',undefined,root,'bonus-evidence-toolbar');
     const title=el('div',undefined,top,'bonus-evidence-heading');
-    el('strong','Bank Activity Review',title);
-    el('small','Check potential deposits, bonus credits, fees and reversals',title);
-    const sourceLabel=el('label','Connection source',root,'bonus-evidence-review-label');
-    const sourceSelect=el('select',undefined,sourceLabel,'bonus-evidence-rule-select');
-    sourceSelect.setAttribute('aria-label','Bank activity connection source');
-    for(const [value,label] of [['simplefin','SimpleFIN · Primary'],['plaid','Plaid · Fallback']]){
-      const option=el('option',label,sourceSelect);option.value=value;option.selected=value===provider;
-    }
-    sourceSelect.disabled=saving;
-    sourceSelect.onchange=()=>{provider=sourceSelect.value;reset();update();refresh()};
-    el('p','Review one connection source at a time. SimpleFIN is primary; Plaid covers banks it cannot connect.',root,'bonus-evidence-provider-help');
+    el('strong','Bonus activity',title);
+    el('small','Direct deposits · bonus credits · fees · reversals',title);
+    el('p',(provider==='plaid'?'Plaid':'SimpleFIN')+' · '+ 'Read-only evidence for linked bonus accounts',root,'bonus-evidence-provider-help');
     const actions=el('div',undefined,top,'bonus-evidence-controls');
     if(!snapshot){
       const open=button(actions,loading?'Checking…':'Review bank activity',refresh,'bonus-evidence-button primary');
@@ -280,21 +272,22 @@
     const privacy=el('div',undefined,root,'bonus-evidence-privacy');
     button(privacy,hideAmounts?'Show transaction amounts':'Hide transaction amounts',()=>{hideAmounts=!hideAmounts;update()});
   }
-  function install(){
-    const anchor=document.querySelector('.tracker-overview');
-    if(!anchor){
-      // Clear private financial responses when leaving the Tracker tab.
-      if(snapshot||loading||error)reset();
-      return;
-    }
-    let root=document.getElementById('bt-bonus-evidence');
-    if(!root){
-      root=el('section');root.id='bt-bonus-evidence';
-      root.className='bonus-evidence';root.setAttribute('aria-label','Bank bonus activity evidence');
-      anchor.after(root);
-    }
-    paint(root);
+  function dispose(){
+    // Revoke in-flight requests and discard private account evidence on route changes.
+    if(snapshot||loading||saving||error||saveNotice)reset();
   }
-  window.btRegisterPostRender?.('bonus-evidence-review',install);
-  install();
+  function mount(root, source='simplefin'){
+    // Never inject bank activity into Tracker or any other app section.
+    if(!root?.closest('#bt-finances-page'))return false;
+    const next=source==='plaid'?'plaid':'simplefin';
+    if(provider!==next){provider=next;reset();}
+    root.id='bt-bonus-evidence';root.className='bonus-evidence';
+    root.setAttribute('role','region');
+    root.setAttribute('aria-label','Bank bonus activity evidence');
+    paint(root);return true;
+  }
+  window.BTBonusEvidence=Object.freeze({mount,dispose});
+  window.btRegisterPostRender?.('finance-only-bonus-evidence-cleanup',()=>{
+    if(!document.getElementById('bt-bonus-evidence'))dispose();
+  });
 })();
