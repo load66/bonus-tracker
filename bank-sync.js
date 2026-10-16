@@ -56,7 +56,32 @@
     button(status,'Refresh status',async()=>{data=await request();paint();});
     button(status,'Check for transactions',async()=>{data=await request('/sync',{method:'POST'});paint();message('Sync requested. Provider data refreshes at most daily; earlier checks may show previously saved data. Check Last synced for confirmation.');});
     button(status,'Refresh accounts',async()=>{data=await request('/discover',{method:'POST'});paint();});
-    el('h3','Connected accounts',body);el('p',String((data.accounts||[]).length)+' connected · '+String((data.monitoredAccounts||[]).length)+' monitored · '+String(Object.keys(data.mappings||{}).length)+' linked to bonuses',body);button(body,hideBalances?'Show balances':'Hide balances',async()=>{hideBalances=!hideBalances;paint();});
+
+    const overview=window.BTFinanceOverview?.summarize(data);
+    const snapshot=el('section',undefined,body);snapshot.className='bank-finance-overview';snapshot.setAttribute('aria-label','Financial activity overview');
+    const snapshotHeader=el('div',undefined,snapshot);snapshotHeader.className='bank-finance-overview-header';
+    el('h3','Financial overview',snapshotHeader);
+    button(snapshotHeader,hideBalances?'Show balances':'Hide balances',async()=>{hideBalances=!hideBalances;paint();});
+    el('p','Last 30 days · posted USD transactions from monitored or bonus-linked accounts only.',snapshot);
+    if(overview?.hasActivity){
+      const tiles=el('div',undefined,snapshot);tiles.className='bank-finance-grid';
+      for(const item of [
+        ['Money in',overview.credits],['Money out',overview.debits],
+        ['Net observed',overview.net],['Transactions',String(overview.observations)]
+      ]){
+        const tile=el('div',undefined,tiles);tile.className='bank-finance-metric';
+        el('span',item[0],tile);
+        el('strong',item[0]==='Transactions'?item[1]:(hideBalances?'••••••':money(item[1],'USD')),tile);
+      }
+      if(overview.candidates)el('p',String(overview.candidates)+' possible bonus or reversal entries need individual review.',snapshot);
+    }else{
+      el('p',overview?.hasSync?'No posted USD transactions observed during this period. This is not proof of zero activity.':'Transaction activity not yet synced. Enable monitoring on an account, then run an eligible transaction check.',snapshot);
+    }
+    if(overview?.otherCurrencyAccounts)el('p','Non-USD accounts are excluded from the USD totals.',snapshot);
+    if(overview?.missingAccounts)el('p','One or more monitored accounts were absent from the latest provider response. Previously observed evidence is retained.',snapshot);
+    if(overview?.hasSync&&Date.now()/1000-overview.lastSync>2*86400)el('p','Activity may be out of date. Review Last synced and the connection status.',snapshot);
+    el('p','These are observed gross credits and debits, not verified income, spending, cash flow or net worth. Transfers may appear on both sides; no balances are combined.',snapshot);
+    el('h3','Connected accounts',body);el('p',String((data.accounts||[]).length)+' connected · '+String((data.monitoredAccounts||[]).length)+' monitored · '+String(Object.keys(data.mappings||{}).length)+' linked to bonuses',body);
     el('p','Choose which accounts to monitor for read-only posted transactions, independently of bank bonuses. Link a checking or savings account to its matching bonus only when the account is eligible. Financial activity is not proof of a qualifying direct deposit.',body);
     const available=active(),selects=[],monitors=[],monitored=new Set(data.monitoredAccounts||[]);
     for(const a of data.accounts||[]){
@@ -98,7 +123,7 @@
       for(const row of rows.slice(0,100)){
         shown++;const article=el('article',undefined,section);article.className='bank-sync-transaction';
         el('strong',row.kind==='possible_bonus'?'Possible bonus · review':row.kind==='possible_reversal'?'Possible bonus reversal · review':Number(row.amount)>0?'Deposit':'Withdrawal',article);
-        el('p',money(row.amount,a.currency)+' · posted '+stamp(row.posted),article);el('p',row.description,article);
+        el('p',(hideBalances?'••••••':money(row.amount,a.currency))+' · posted '+stamp(row.posted),article);el('p',row.description,article);
         if(row.changedAt)el('small','Provider changed this transaction: '+stamp(row.changedAt),article);
       }
       if(rows.length>100)el('p','Showing the latest 100 transactions for this account.',section);
