@@ -112,7 +112,7 @@ const base=()=>({
         .filter({hasText:/^\s*—\s*$/}).first().waitFor({state:'visible'});
       await section.getByText('Income',{exact:true}).locator('..').getByText(/200/).waitFor();
       await section.getByText('Expenses',{exact:true}).locator('..').getByText(/15/).waitFor();
-      await section.getByText('Cash Flow',{exact:true}).locator('..').getByText(/185/).waitFor();
+      await section.getByText('Net flow',{exact:true}).locator('..').getByText(/185/).waitFor();
       await section.locator('.finance-page-caution')
         .filter({hasText:'Cash Flow is partial'}).first().waitFor({state:'visible'});
       // The awaited visibility assertion above is authoritative; do not reread
