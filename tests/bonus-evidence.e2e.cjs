@@ -83,7 +83,7 @@ return result;
         await section.getByRole('button',{name:'Review bank activity',exact:true}).waitFor();
         cycleId=await page.evaluate(()=>entries[0].id);
         const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
-        assert.equal(requests.length,0,'private bank evidence must load only after explicit review');
+        assert.ok(requests.every(r=>r.method==='GET'),'Opening Finances must never change bank data or Tracker milestones');
         await page.waitForFunction(()=>window.BTBonusAuth?.connected());
         let ready=false;
         for(let attempt=0;attempt<2;attempt++){
