@@ -107,3 +107,7 @@ expenses, cash flow, net worth or investment performance**.
 ## Removing one account
 
 The account-specific **Remove this account** action is different from disconnecting a Plaid Item or SimpleFIN Bridge. It removes the account from Finances, deletes its active saved transactions, settings, mapping/review records and balances, and prevents automatic rediscovery through an encrypted, owner-private exclusion. A restore control makes it eligible for discovery and new synchronization again, but cannot recover data already erased from the active transaction manifest. It never closes the actual bank account or changes bonus-tracker lifecycle records. Prior immutable encrypted shard objects may remain transiently before cleanup.
+
+## Plaid first-sync coverage (current provider integration)
+
+Each newly linked Plaid Item has its own bounded initial transaction request, independent of another Item's owner-wide refresh window. A zero-row first response is **awaiting provider history**, not a zero-activity assertion. Account cards expose the provider's first-sync, next-check, and pending-only/attention status without returning Plaid raw identifiers. The scheduler checks due newly linked Items without requiring the user to reopen the Finance tab. A failed Item does not discard a different Item's successful read-only import; no paid refresh endpoint or additional Trial Item is invoked. Batch 1 retains this behavior while keeping previously observed posted history in encrypted shards. Pending entries remain out of settled totals and eligibility evidence.
