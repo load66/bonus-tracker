@@ -353,7 +353,7 @@
     metric(activityGrid,'Bonus income',summary.hasActivity?amount(summary.bonusIncome,'USD'):'—','Separate from regular income');
     metric(activityGrid,'Expenses',summary.hasActivity?amount(summary.expenses,'USD'):'—','After attributable refunds; excludes paired transfers');
     metric(activityGrid,'Net flow',summary.hasActivity?amount(summary.cashFlow,'USD'):'—');
-    metric(activityGrid,'Savings rate',summary.savingsRate===null?'—':summary.savingsRate.toFixed(1)+'%');
+    metric(activityGrid,'Savings rate',hidden?'••••••':(summary.savingsRate===null?'—':summary.savingsRate.toFixed(1)+'%'));
     if(!summary.complete)el('p','Cash Flow is partial · '+summary.unreviewed+' uncategorized · '+summary.unattributedRefunds+' unattributed refunds. Bank coverage or sync may also be incomplete.',activity,'finance-page-caution');
     compactActivityPreview(host);
     const more=el('details',undefined,host,'finance-page-more');
