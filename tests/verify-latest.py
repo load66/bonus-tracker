@@ -133,7 +133,7 @@ for token in ('conditional eligibility rules plus coupon/offer-enrollment cooldo
 app_source=text('app.js')
 if 'Tools Folder' in app_source or 'bt_tools_folder_btn' in app_source:
     fail('removed Tools popup/floating button is still present')
-for token in ("['tracker','bonuses','tax','tips','storage']","['Tracker','Bank Bonuses','Tax','Datapoints','T&C Archive']","function getChurnSuggestions","window.churnReadyDate"):
+for token in ("['tracker','bonuses','finances','tax','tips','storage']","['Tracker','Bank Bonuses','Finances','Tax','Datapoints','T&C Archive']","function getChurnSuggestions","window.churnReadyDate"):
     if token not in app_source: fail(f'direct T&C Archive / churn suggestion architecture missing: {token}')
 
 semantic_status=text('semantic-status.js')
