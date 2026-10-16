@@ -376,7 +376,7 @@ async function exercise(name,engine,url){
     const newPhoneContext=await browser.newContext({viewport:{width:390,height:844},timezoneId:'America/Chicago'});
     const newPhone=await newPhoneContext.newPage();
     await newPhone.goto(url);await newPhone.waitForFunction(()=>navigator.serviceWorker.controller&&window.__btFullRegressionReport?.total===18&&!window.__btFullRegressionReport.pending);
-    await newPhone.evaluate(objects=>{
+    const installRecoveryFixture=objects=>{
       localStorage.setItem('bonus-ai-auth',JSON.stringify({access_token:'synthetic-owner-token',refresh_token:'synthetic-refresh',expires_at:Date.now()/1000+3600}));
       const prior=window.fetch;
       window.fetch=async(input,options={})=>{
@@ -385,7 +385,16 @@ async function exercise(name,engine,url){
         const ident=url.split('/').pop();const body=objects[ident]||{backups:Object.values(objects).map(x=>x.backup),total:Object.keys(objects).length,nextOffset:null};
         return new Response(JSON.stringify(body),{headers:{'Content-Type':'application/json'}});
       };
-    },cloudRecords);
+    };
+    // A service-worker controllerchange may reload a newly opened phone between
+    // the readiness check and evaluate(). Install the fixture for every document,
+    // then initialize the current one; never waive any recovery assertions.
+    await newPhone.addInitScript(installRecoveryFixture,cloudRecords);
+    try{await newPhone.evaluate(installRecoveryFixture,cloudRecords);}
+    catch(e){
+      if(!/Execution context was destroyed/.test(String(e)))throw e;
+      await newPhone.waitForFunction(()=>navigator.serviceWorker.controller&&window.__btFullRegressionReport?.total===18&&!window.__btFullRegressionReport.pending);
+    }
     check('new phone begins without account records',await newPhone.evaluate(()=>entries.length===0));
     await newPhone.locator('#bt-cloud-open').click();try{await newPhone.getByRole('button',{name:'Preview recovery',exact:true}).first().click();}catch(e){console.error(name+' catalog diagnostics:',await newPhone.evaluate(()=>({status:document.querySelector('#cloud-status')?.textContent,connected:BTBonusAuth.connected(),version:BT_APP_VERSION,body:document.querySelector('.cloud-modal')?.innerText})));throw e;}
     await newPhone.getByRole('button',{name:'Restore this version',exact:true}).waitFor();
