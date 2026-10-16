@@ -136,7 +136,9 @@
     const included=profileEntries.filter(x=>x.profile.balanceMode!=='exclude');
     const eligible=included.filter(x=>x.profile.kind!=='unclassified'&&
       ['asset','liability'].includes(x.profile.balanceMode));
-    const cashCoverage=coverage(cashEntries,now),netWorthCoverage=coverage(included,now);
+    const cashCoverage=coverage(cashEntries,now),rawNetWorthCoverage=coverage(eligible,now);
+    const netWorthCoverage=Object.freeze({...rawNetWorthCoverage,eligible:included.length,
+      unclassified:included.length-eligible.length});
     const cashReady=cashEntries.length>0&&cashEntries.every(x=>x.account.currency==='USD'&&x.balance);
     const cash=cashReady?cashEntries.reduce((sum,x)=>sum+x.balance.amount,0n):null;
     const netWorthReady=included.length>0&&eligible.length===included.length
