@@ -602,13 +602,14 @@
     else if(view==='accounts')accounts(host);
     else overview(host,summary);
   }
-  let sessionIdentity=null,mountCall=0;
+  let sessionIdentity=null,lastAuthenticatedOwner=null,mountCall=0;
   async function mount(){
     const host=document.getElementById('bt-finances-page');if(!host||host===currentRoot)return;
     const call=++mountCall,auth=window.BTBonusAuth;
     if(!auth?.connected()){
       window.BTBonusEvidence?.dispose();
-      sessionIdentity=null;currentRoot=host;data=null;otherData=null;sequence++;
+      sessionIdentity=null;lastAuthenticatedOwner=null;monitoringNotice='';activityNotice='';connectionNotice='';
+      currentRoot=host;data=null;otherData=null;sequence++;
       host.replaceChildren();statusMessage(host,'Sign in to view finances','Sign in securely to view linked financial accounts.');
       action(host,'Sign in / manage accounts',()=>window.btOpenBankSync?.(),'finance-page-button finance-page-primary');return;
     }
@@ -626,7 +627,10 @@
       currentRoot=host;paint();return;
     }
     window.BTBonusEvidence?.dispose();
-    sessionIdentity=identity;currentRoot=host;data=null;otherData=null;monitoringNotice='';activityNotice='';connectionNotice='';
+    if(lastAuthenticatedOwner&&lastAuthenticatedOwner!==identity){
+      monitoringNotice='';activityNotice='';connectionNotice='';
+    }
+    lastAuthenticatedOwner=identity;sessionIdentity=identity;currentRoot=host;data=null;otherData=null;
     accountDraftProfiles={};dirtyAccounts.clear();
     Object.keys(monitoringDraft).forEach(k=>delete monitoringDraft[k]);
     const rev=++sequence;paint();
