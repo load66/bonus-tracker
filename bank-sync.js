@@ -122,7 +122,31 @@
       const current=data.mappings?.[a.key];
       for(const e of available){const option=el('option',e.bank+' · '+(e.accountType||'personal')+' · opened '+e.opened,select);option.value=String(e.id);if(current?.entryId===String(e.id)&&current.opened===e.opened&&current.bank===e.bank)option.selected=true;}
       if(current&&!available.some(e=>String(e.id)===current.entryId&&e.opened===current.opened&&e.bank===current.bank))el('p','The saved cycle changed or is no longer open. Choose a current cycle or remove this match.',card);
-      selects.push(select);
+      // Explicit user selection only. Never infer product from provider account name.
+      const productLabel=el('label','Bonus product (verified terms)',card);
+      const productSelect=el('select',undefined,card);
+      productSelect.id='bank-sync-product-'+a.key;productLabel.htmlFor=productSelect.id;
+      const productHelp=el('small',undefined,card);
+      const fillProducts=()=>{
+        productSelect.replaceChildren();
+        const none=el('option','Not assigned — review manually',productSelect);none.value='';
+        const selected=available.find(e=>String(e.id)===select.value);
+        const verified=selected?window.BTFinancialRules?.validate(selected):null;
+        const products=verified?.ok&&verified.mode==='structured'&&Array.isArray(verified.rules?.accounts)
+          ?verified.rules.accounts:[];
+        for(const product of products){
+          const option=el('option',product.label+(product.required?' (required)':' (optional)'),productSelect);
+          option.value=product.id;
+        }
+        const sameCycle=current?.entryId===String(selected?.id)&&current?.opened===selected?.opened&&current?.bank===selected?.bank;
+        if(sameCycle&&products.some(p=>p.id===current.productId))productSelect.value=current.productId;
+        productSelect.disabled=!products.length;
+        productHelp.textContent=products.length
+          ?'Choose the checking, savings or membership product. This supports safe candidate progress, not automatic promotion completion.'
+          :'No verified product list. Import official T&C before enabling product-specific deposit progress.';
+      };
+      select.addEventListener('change',fillProducts);fillProducts();
+      selects.push({cycle:select,product:productSelect});
     }
     if(search)search.oninput=()=>{accountFilter=search.value.trim().toLowerCase();for(const item of accountCards)item.card.hidden=!!accountFilter&&!item.name.includes(accountFilter);};
     if(!data.accounts?.length)el('p','No accounts were returned. Refresh the account list after checking SimpleFIN.',body);
@@ -134,7 +158,7 @@
       message('Monitoring preferences saved. Only the selected accounts will be retrieved for independent activity, subject to the daily provider limit.');
     },'btn-p');
     button(body,'Save account matches',async()=>{
-      const mappings={};for(const s of selects){const entry=available.find(e=>String(e.id)===s.value);if(entry)mappings[s.dataset.account]={entryId:String(entry.id),bank:entry.bank,opened:entry.opened};}
+      const mappings={};for(const {cycle,product} of selects){const entry=available.find(e=>String(e.id)===cycle.value);if(entry){const mapping={entryId:String(entry.id),bank:entry.bank,opened:entry.opened};if(!product.disabled&&product.value)mapping.productId=product.value;mappings[cycle.dataset.account]=mapping;}}
       data=await request('/selection',{method:'PUT',body:JSON.stringify({mappings})});paint();message('Bonus links saved. Monitored accounts and linked bonus accounts are included in the next eligible check.');
     },'btn-p');
     el('h3','Recent transactions',body);
