@@ -481,12 +481,21 @@
     });
   }
   async function restoreSingleAccount(source,rawKey){
-    await change(async()=>{
+    if(busy)return;
+    busy=true;
+    saveNotice='';
+    paint();
+    try{
       const path=source==='plaid'?'/individual/'+encodeURIComponent(rawKey)+'/restore':'/accounts/'+encodeURIComponent(rawKey)+'/restore';
       const snapshot=await request(path,{method:'POST'},source);
+      applySource(source,snapshot);
       connectionNotice='Account restored to discovery. Use Discover accounts to bring it back into Finances.';
-      return {financeSource:source,snapshot};
-    });
+    }catch(error){
+      saveNotice='Restore was not saved. '+String(error?.message||'Please retry.');
+    }finally{
+      busy=false;
+      paint();
+    }
   }
   async function disconnectBank(source,handle,name){
     if(busy)return;
