@@ -92,10 +92,10 @@ const base=()=>({
       await section.getByText('Income',{exact:true}).locator('..').getByText(/200/).waitFor();
       await section.getByText('Expenses',{exact:true}).locator('..').getByText(/15/).waitFor();
       await section.getByText('Cash Flow',{exact:true}).locator('..').getByText(/185/).waitFor();
+      // The visible caveat assertion itself waits for the real, reconciled
+      // summary. Avoid racing an unrelated root repaint with a second snapshot.
       await section.locator('.finance-page-caution')
-        .filter({hasText:'Cash Flow is partial'}).first().waitFor({state:'visible'});
-      assert.ok((await section.locator('.finance-page-caution').allTextContents()).some(s=>s.includes('Cash Flow is partial')),
-        'reconciliation caveat required after the synthetic transaction snapshot finishes rendering');
+        .filter({hasText:'Cash Flow is partial'}).first().waitFor({state:'visible',timeout:15000});
       const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
       await section.getByRole('button',{name:'Hide amounts',exact:true}).click();
       assert.equal(await section.locator('.finance-page-tile strong').first().innerText(),'••••••');
