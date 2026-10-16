@@ -108,7 +108,7 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/bonus-tracker-browser-tests/node_modules
           BT_BROWSER_RESULTS: ${{ runner.temp }}/bonus-tracker-browser-results
-        run: node tests/browser-e2e.cjs
+        run: node tests/bank-sync.e2e.cjs && node tests/browser-e2e.cjs
 
       - name: Save browser verification evidence
         if: always()

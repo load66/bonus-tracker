@@ -16,7 +16,7 @@ const sandbox={
   td:()=> '2026-08-10',
   dB:(a,b)=>Math.floor((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/864e5),
   fD:d=>new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
-  reqDeadline:e=>e.opened&&e.reqDays?new Date(new Date(e.opened+'T00:00:00').getTime()+e.reqDays*864e5).toISOString().slice(0,10):'',
+  reqDeadline:e=>{if(!e.opened||!e.reqDays)return '';const d=new Date(e.opened+'T12:00:00');d.setDate(d.getDate()+e.reqDays);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')},
   esc:s=>String(s),
   status:e=>e._rawStatus||(e.closed?'WAITING TO CHURN!':'CUSTOM TIMER'),
   timerCountdownDays:t=>Math.floor((new Date(t.date+'T00:00:00')-new Date('2026-08-10T00:00:00'))/864e5),
@@ -52,8 +52,8 @@ sandbox.window=sandbox;sandbox.globalThis=sandbox;
 vm.createContext(sandbox);
 vm.runInContext(src,sandbox,{filename:'semantic-status.js'});
 
-assert(sandbox.btSemanticStatusVersion==='3.4.73-status1','Semantic status patch version missing');
-assert(sandbox.btLifecycleStatusVersion==='3.4.73-status1','Lifecycle status version missing');
+assert(sandbox.btSemanticStatusVersion==='3.4.74-status1','Semantic status patch version missing');
+assert(sandbox.btLifecycleStatusVersion==='3.4.74-status1','Lifecycle status version missing');
 assert(sandbox.btSemanticTimerKind({text:'$3,000 EDD requirement deadline'})==='requirement','Citi EDD timer not classified as requirement');
 assert(sandbox.btSemanticTimerKind({text:'Deposit new money / funding deadline'})==='funding','Funding timer misclassified');
 assert(sandbox.btSemanticTimerKind({text:'Maintain required balance / hold check'})==='hold','Balance hold timer misclassified');
