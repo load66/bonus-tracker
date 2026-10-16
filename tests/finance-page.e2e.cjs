@@ -118,6 +118,13 @@ const base=()=>({
 
       await section.getByRole('button',{name:'Accounts',exact:true}).click();
       await section.getByRole('heading',{name:'Accounts',exact:true}).waitFor();
+      // Merely opening and closing the provider wizard must not trigger an
+      // unnecessary Finances reload while the user may be editing categories.
+      await page.evaluate(()=>{
+        window.__bankWizardRefreshCount=0;
+        const original=window.btRefreshFinancesPage;
+        window.btRefreshFinancesPage=(...args)=>{window.__bankWizardRefreshCount++;return original?.(...args)};
+      });
       const addBank=section.getByRole('button',{name:'Add bank',exact:true});
       await addBank.click();
       const wizard=page.getByRole('dialog',{name:'Financial accounts'});
@@ -130,8 +137,8 @@ const base=()=>({
       assert.equal(await wizard.locator('input[type=tel]').count(),0,'BonusTracker never collects bank MFA codes');
       await wizard.getByRole('button',{name:'Back to connected accounts'}).click();
       await wizard.getByRole('button',{name:'Done'}).click();
-      // Closing the accounts dialog refreshes the underlying Finances page.
-      // Wait for the new page's Accounts content before checking its guidance.
+      assert.equal(await page.evaluate(()=>window.__bankWizardRefreshCount),0,
+        'Closing an unchanged provider authorization wizard must not refresh or interrupt financial edits');
       await section.getByText('Use Add bank for secure guided setup.',{exact:false}).waitFor();
       assert.ok((await section.innerText()).includes('Discovery can be limited to once daily'),
         'Explain provider discovery delay when adding a bank');
