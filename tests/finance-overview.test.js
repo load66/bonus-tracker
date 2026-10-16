@@ -113,3 +113,11 @@ assert.equal(result.cashAvailable,false,'stale deposit balances cannot produce a
 assert.equal(result.netWorthAvailable,false,'stale balances cannot produce net worth');
 
 console.log('Financial observations passed: strict scope, multi-currency safety, exact cents, availability, coverage, privacy and non-mutation');
+
+// Pending posted=0 must be visible as pending, not counted as settled cash flow.
+const pendingZero=summarize({...state,transactions:{checking:{pendingZero:{
+  posted:0,transactedAt:NOW-50,observedAt:NOW-30,amount:'-17.50',pending:true}},other:{},unselected:{}}},
+  {now:NOW});
+assert.equal(pendingZero.pending,1,'Pending zero-posted activity is counted for display');
+assert.equal(pendingZero.observations,0,'Unposted transactions never enter cash-flow totals');
+assert.equal(pendingZero.credits,null);
