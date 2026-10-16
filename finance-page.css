@@ -103,3 +103,5 @@
 .finance-page-account{align-items:center;flex-direction:row}
 .finance-page-account-balances{text-align:right}
 }
+
+.finance-page-accounts-title{display:flex;align-items:center;gap:9px}.finance-page-accounts-title h3{margin:0}.finance-page-account-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;min-height:22px;border-radius:999px;background:#294769;color:#cae1ff;font-size:11px;font-weight:750;padding:0 5px}
