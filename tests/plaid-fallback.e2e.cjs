@@ -8,8 +8,8 @@ const server=http.createServer(async(req,res)=>{
     const name=new URL(req.url,'http://localhost').pathname;
     if(!['/','/plaid-fallback.js','/plaid-fallback.css'].includes(name))throw Error();
     const filename=name==='/'?null:path.join(root,name.slice(1));
-    const contents=filename?await fs.readFile(filename):Buffer.from('<!doctype html><html><head><link rel="stylesheet" href="/plaid-fallback.css"></head><body><section id="target"></section><script src="/plaid-fallback.js"></script></body></html>');
-    res.setHeader('content-type',name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html');res.end(contents);
+    const contents=filename?await fs.readFile(filename):Buffer.from('<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="/plaid-fallback.css"></head><body><section id="target"></section><script src="/plaid-fallback.js"></script></body></html>');
+    res.setHeader('content-type',name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css; charset=utf-8':'text/html; charset=utf-8');res.end(contents);
   }catch{res.writeHead(404);res.end()}
 });
 const KEY='a'.repeat(64);
