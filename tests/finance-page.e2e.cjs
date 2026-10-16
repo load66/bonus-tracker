@@ -134,6 +134,7 @@ const base=()=>({
       await onboarding.getByText('provider may limit discovery to once every 24 hours.',{exact:false}).waitFor();
       await onboarding.getByRole('button',{name:'Back to account management'}).click();
       await onboarding.getByRole('button',{name:'Done'}).click();
+      await section.getByText('Account discovery may be limited to once daily.',{exact:false}).waitFor({state:'visible',timeout:15000});
       assert.ok((await section.innerText()).includes('discovery may be limited to once daily'),
         'Explain provider discovery delay when adding a bank');
       assert.equal(await section.locator('.finance-page-account').count(),3);
