@@ -18,15 +18,15 @@
   let transactionSearch='',transactionAccount='',transactionCategory='',transactionStatus='';
   let accountSearch='',accountType='',saveNotice='',accountDraftProfiles={};
   const el=(tag,text,parent,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;if(parent)parent.append(n);return n};
-  const stamp=t=>Number.isFinite(t)&&t>0?new Date(t*1000).toLocaleString():'Unavailable';
-  const date=t=>Number.isFinite(t)&&t>0?new Date(t*1000).toLocaleDateString():'Unavailable';
+  const stamp=t=>Number.isFinite(t)&&t>0?new Date(t*1000).toLocaleString():'Not synced';
+  const date=t=>Number.isFinite(t)&&t>0?new Date(t*1000).toLocaleDateString():'—';
   function money(value,code='USD'){
-    if(value===null||value===undefined||value===''||!Number.isFinite(Number(value)))return 'Unavailable';
+    if(value===null||value===undefined||value===''||!Number.isFinite(Number(value)))return '—';
     if(!code)return String(value)+' (currency unknown)';
     try{return new Intl.NumberFormat(undefined,{style:'currency',currency:code}).format(Number(value))}
     catch{return String(value)+' '+code}
   }
-  function amount(value,code){return hidden&&value!==null?'••••••':money(value,code)}
+  function amount(value,code){return hidden&&value!==null&&value!==undefined&&value!==''&&Number.isFinite(Number(value))?'••••••':money(value,code)}
   function action(parent,text,onClick,cls='finance-page-button'){
     const b=el('button',text,parent,cls);b.type='button';b.disabled=busy;b.onclick=onClick;return b;
   }
@@ -123,17 +123,21 @@
   function hero(host,summary){
     const box=el('section',undefined,host,'finance-page-hero');
     const head=el('div',undefined,box,'finance-page-hero-head'),copy=el('div',undefined,head);
-    el('span','MY FINANCES',copy,'finance-page-kicker');el('h2','Financial overview',copy);
+    el('span','MY MONEY',copy,'finance-page-kicker');el('h2','Finances',copy);
     action(head,hidden?'Show amounts':'Hide amounts',()=>{hidden=!hidden;paint()});
-    el('p',(data.accounts||[]).length+' connected account'+((data.accounts||[]).length===1?'':'s')+
-      ' · '+(data.monitoredAccounts||[]).length+' monitored',box);
+    const banks=new Set((data.accounts||[]).map(a=>a.bank).filter(Boolean));
+    el('p',(data.accounts||[]).length+' accounts · '+banks.size+' institutions',box,'finance-page-count');
+    const actions=el('div',undefined,box,'finance-page-quick-actions');
+    action(actions,'Add bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');
+    action(actions,provider==='plaid'?'Manage Plaid banks':'Discover accounts',
+      ()=>provider==='plaid'?window.btOpenBankConnectFlow?.():window.btDiscoverBankAccounts?.(),
+      'finance-page-button');
     const meta=el('div',undefined,box,'finance-page-meta');
-    el('span','Connection Status: '+(data.status==='attention'?'Needs attention':'Active'),meta);
-    el('span','Last Synced: '+stamp(data.lastSuccess),meta);
-    el('span','Next Sync: '+stamp(data.nextSyncAt),meta);
+    el('span',data.status==='attention'?'Needs attention':'Connected',meta);
+    el('span','Last sync: '+stamp(data.lastSuccess),meta);
+    if(Number.isFinite(data.nextSyncAt)&&data.nextSyncAt>0)el('span','Next: '+stamp(data.nextSyncAt),meta);
     if(data.error)el('p',data.error,box,'finance-page-warning');
-    for(const warning of data.warnings||[])el('p',warning,box,'finance-page-warning');
-    if(data.missingAccounts?.length)el('p','A monitored account was absent from the latest provider response. Saved history remains available.',box,'finance-page-warning');
+    if(data.missingAccounts?.length)el('p','Some linked accounts did not appear in the latest update.',box,'finance-page-warning');
     const nav=el('nav',undefined,host,'finance-page-nav');nav.setAttribute('aria-label','Finance sections');
     for(const [id,label] of [['overview','Overview'],['transactions','Transactions'],['accounts','Accounts']]){
       const b=action(nav,label,()=>{view=id;paint()},'finance-page-nav-button'+(view===id?' is-active':''));
@@ -160,37 +164,34 @@
   }
   function overview(host,summary){
     const position=el('section',undefined,host,'finance-page-card');
-    const heading=el('div',undefined,position,'finance-page-section-head');el('h3','Financial position',heading);
+    el('h3','Balances',position);
     const grid=el('div',undefined,position,'finance-page-grid');
-    metric(grid,'Cash',summary.cashAvailable?amount(summary.cash,'USD'):'Unavailable',summary.cashAvailable?summary.cashAccountCount+' deposit accounts':'Classify fresh checking and savings accounts');
-    metric(grid,'Assets',summary.netWorthAvailable?amount(summary.assets,'USD'):'Unavailable',summary.netWorthAvailable?'Included accounts':'Complete account classification required');
-    metric(grid,'Liabilities',summary.netWorthAvailable?amount(summary.liabilities,'USD'):'Unavailable',summary.netWorthAvailable?'Included accounts':'Complete account classification required');
-    metric(grid,'Net Worth',summary.netWorthAvailable?amount(summary.netWorth,'USD'):'Unavailable',summary.netWorthAvailable?'Assets less liabilities':'Excluded or stale balances remain');
-    if(!summary.netWorthAvailable)el('p','Net Worth appears only when every connected account has a confirmed type, balance treatment, USD balance, and recent update.',position);
-    const trend=el('section',undefined,host,'finance-page-card');el('h3','Net Worth trend',trend);trendChart(trend,summary.netWorthHistory||[]);
-
+    metric(grid,'Cash',summary.cashAvailable?amount(summary.cash,'USD'):'—');
+    metric(grid,'Assets',summary.netWorthAvailable?amount(summary.assets,'USD'):'—');
+    metric(grid,'Liabilities',summary.netWorthAvailable?amount(summary.liabilities,'USD'):'—');
+    metric(grid,'Net worth',summary.netWorthAvailable?amount(summary.netWorth,'USD'):'—');
+    if(!summary.netWorthAvailable)el('p','— means not enough verified data, not $0.00. Review account types under Accounts.',position,'finance-page-hint');
     const activity=el('section',undefined,host,'finance-page-card');
-    const activityHead=el('div',undefined,activity,'finance-page-section-head');el('h3','Cash Flow',activityHead);periodControl(activityHead);
+    const activityHead=el('div',undefined,activity,'finance-page-section-head');el('h3','Cash flow',activityHead);periodControl(activityHead);
     const activityGrid=el('div',undefined,activity,'finance-page-grid');
-    metric(activityGrid,'Income',summary.hasActivity?amount(summary.income,'USD'):'Unavailable');
-    metric(activityGrid,'Expenses',summary.hasActivity?amount(summary.expenses,'USD'):'Unavailable');
-    metric(activityGrid,'Cash Flow',summary.hasActivity?amount(summary.cashFlow,'USD'):'Unavailable');
-    metric(activityGrid,'Savings Rate',summary.savingsRate===null?'Unavailable':summary.savingsRate.toFixed(1)+'%');
-    if(!summary.complete)el('p','Cash Flow is partial. '+summary.unreviewed+' transaction'+(summary.unreviewed===1?' needs':'s need')+' review; transfers, refunds, bonuses, pending items, and unavailable activity are excluded.',activity,'finance-page-caution');
-    if(summary.pending)el('p',summary.pending+' pending transaction'+(summary.pending===1?' is':'s are')+' shown in Transactions and excluded from totals.',activity);
-    if(summary.otherCurrencies?.length)el('p','Other currencies excluded from USD totals: '+summary.otherCurrencies.join(', '),activity);
-
-    const monthly=el('section',undefined,host,'finance-page-card');el('h3','Monthly summary',monthly);
-    if(!summary.monthly?.length)el('p','No categorized monthly activity is available yet.',monthly);
+    metric(activityGrid,'Income',summary.hasActivity?amount(summary.income,'USD'):'—');
+    metric(activityGrid,'Expenses',summary.hasActivity?amount(summary.expenses,'USD'):'—');
+    metric(activityGrid,'Net flow',summary.hasActivity?amount(summary.cashFlow,'USD'):'—');
+    metric(activityGrid,'Savings rate',summary.savingsRate===null?'—':summary.savingsRate.toFixed(1)+'%');
+    if(!summary.complete)el('p','Cash Flow is partial: review '+summary.unreviewed+' uncategorized transaction'+(summary.unreviewed===1?'':'s')+'.',activity,'finance-page-caution');
+    const more=el('details',undefined,host,'finance-page-more');
+    el('summary','More insights · trends, spending & review',more);
+    const trend=el('section',undefined,more,'finance-page-card');el('h3','Net worth trend',trend);trendChart(trend,summary.netWorthHistory||[]);
+    const monthly=el('section',undefined,more,'finance-page-card');el('h3','Monthly activity',monthly);
+    if(!summary.monthly?.length)el('p','No categorized monthly activity yet.',monthly);
     else for(const item of summary.monthly){
       const line=el('article',undefined,monthly,'finance-page-month');
       el('strong',new Date(item.month+'-02T00:00:00').toLocaleDateString(undefined,{month:'short',year:'numeric'}),line);
-      const values=el('div',undefined,line);el('span','Income '+amount(item.income,'USD'),values);el('span','Expenses '+amount(item.expenses,'USD'),values);el('b','Cash Flow '+amount(item.cashFlow,'USD'),values);
+      const values=el('div',undefined,line);el('span','Income '+amount(item.income,'USD'),values);el('span','Expenses '+amount(item.expenses,'USD'),values);el('b','Net '+amount(item.cashFlow,'USD'),values);
     }
-
-    const spending=el('section',undefined,host,'finance-page-card');el('h3','Spending by category',spending);
+    const spending=el('section',undefined,more,'finance-page-card');el('h3','Spending',spending);
     const categories=Object.entries(summary.spending||{}).sort((a,b)=>Number(b[1])-Number(a[1]));
-    if(!categories.length)el('p','No categorized expenses are available for this period. Review transactions to build an accurate spending view.',spending);
+    if(!categories.length)el('p','No categorized expenses yet.',spending);
     else{
       const max=Math.max(...categories.map(([,v])=>Number(v)));
       const chart=el('div',undefined,spending,'finance-page-bars');
@@ -201,16 +202,15 @@
         bar.style.width=Math.max(3,Number(value)/max*100)+'%';
       }
     }
-
-    const attention=el('section',undefined,host,'finance-page-card');el('h3','Financial review',attention);
+    const attention=el('section',undefined,more,'finance-page-card');el('h3','Needs review',attention);
     const signals=flattenTransactions().filter(r=>!r.pending&&Array.isArray(r.signals)&&r.signals.some(x=>['possible_direct_deposit','possible_bonus','possible_reversal','possible_fee','possible_recurring'].includes(x)));
-    if(!signals.length)el('p','No review signals are available in the retained transaction window.',attention);
+    if(!signals.length)el('p','No flagged transactions in the available data.',attention);
     else for(const row of signals.slice(0,8)){
       const line=el('article',undefined,attention,'finance-page-review-row'),copy=el('div',undefined,line);
       el('strong',row.merchant||row.description,copy);el('small',row.account.bank+' · '+date(row.posted)+' · '+row.signals.map(signalLabel).join(' · '),copy);
       el('b',amount(row.amount,row.account.currency),line);
     }
-    el('p','Review signals are observations. They never complete a bank bonus requirement or mark a bonus paid.',attention,'finance-page-caution');
+    el('p','A flagged transaction is not confirmation of bonus eligibility.',attention,'finance-page-hint');
   }
   function signalLabel(value){
     return ({possible_direct_deposit:'Possible direct deposit',possible_bonus:'Possible bonus',possible_reversal:'Possible reversal',
@@ -220,7 +220,7 @@
   function transactions(host){
     const card=el('section',undefined,host,'finance-page-card');
     const head=el('div',undefined,card,'finance-page-section-head');el('h3','Transactions',head);periodControl(head);
-    el('p','Original descriptions remain visible. Automatic categories are suggestions; confirmed corrections are encrypted with your financial data.',card);
+    el('p','Search, filter or correct a category.',card,'finance-page-hint');
     const controls=el('div',undefined,card,'finance-page-filters');
     const search=el('input',undefined,controls,'finance-page-search');search.type='search';search.placeholder='Search transactions';search.setAttribute('aria-label','Search transactions');search.value=transactionSearch;
     search.oninput=()=>{transactionSearch=search.value.trim().toLowerCase();renderRows()};
@@ -260,19 +260,22 @@
   }
   function accounts(host){
     const card=el('section',undefined,host,'finance-page-card');
-    const head=el('div',undefined,card,'finance-page-section-head');el('h3','Accounts',head);
-    action(head,'Add bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-provider-link');
-    action(head,'Manage connections',()=>window.btOpenBankSync?.(),'finance-page-button finance-page-primary');
-    el('p','Use Add bank for secure guided setup. Bank authorization opens on SimpleFIN; return to BonusTracker to discover accounts without disconnecting existing banks. Discovery can be limited to once daily. Set account types and balance treatment below; Net Worth stays unavailable if data is incomplete.',card);
-    const controls=el('div',undefined,card,'finance-page-filters');
-    const search=el('input',undefined,controls,'finance-page-search');search.type='search';search.placeholder='Search accounts';search.setAttribute('aria-label','Search accounts');search.value=accountSearch;
+    const head=el('div',undefined,card,'finance-page-section-head');
+    el('h3','Accounts · '+(data.accounts||[]).length,head);
+    action(head,'Manage connections',()=>window.btOpenBankSync?.(),'finance-page-button');
+    const controls=el('div',undefined,card,'finance-page-account-filters');
+    const search=el('input',undefined,controls,'finance-page-search');search.type='search';
+    search.placeholder='Find a bank or account (e.g. X Money)';
+    search.setAttribute('aria-label','Search accounts');search.value=accountSearch;
+    const filters=el('details',undefined,controls,'finance-page-filter-details');
+    el('summary','Filter by account type',filters);
+    select(filters,'Type',{'':'All account types',...TYPES},accountType,value=>{accountType=value;render()});
     const list=el('div',undefined,card,'finance-page-account-groups');
-    select(controls,'Type',{'':'All account types',...TYPES},accountType,value=>{accountType=value;render()});
     search.oninput=()=>{accountSearch=search.value.trim().toLowerCase();render()};
     function render(){
       list.replaceChildren();let shown=0;const institutions={};
       for(const account of sortedAccounts()){
-        const p=profile(account),name=[account.bank,account.name].filter(Boolean).join(' · ').toLowerCase();
+        const p=profile(account),name=[account.bank,account.name,account.accountType,account.accountSubtype].filter(Boolean).join(' · ').toLowerCase();
         if((accountSearch&&!name.includes(accountSearch))||(accountType&&p.kind!==accountType))continue;
         (institutions[account.bank||'Other institution'] ||= []).push(account);
       }
@@ -280,21 +283,29 @@
         const group=el('section',undefined,list,'finance-page-institution');el('h4',institution,group);
         for(const account of accounts){shown++;accountEditor(group,account)}
       }
-      if(!shown)el('p','No accounts match these filters.',list);
+      if(!shown){
+        el('h4',accountSearch?'No matching account':'No accounts discovered',list);
+        el('p',/\bx\s*money\b|\bxmoney\b/i.test(accountSearch)?'X Money is not in the imported accounts. Check support with your connection provider, then connect it before discovering again.':'New accounts must first be authorized with your connection provider.',list,'finance-page-hint');
+        const quick=el('div',undefined,list,'finance-page-quick-actions');
+        action(quick,'Add bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');
+        action(quick,'Discover accounts',()=>window.btDiscoverBankAccounts?.(),'finance-page-button');
+      }
     }
     function accountEditor(parent,account){
       const p=profile(account),article=el('article',undefined,parent,'finance-page-account-editor');
       const top=el('div',undefined,article,'finance-page-account');
       const info=el('div',undefined,top,'finance-page-account-info');el('strong',account.name||'Financial account',info);
-      el('small','Last Updated: '+stamp(account.balanceDate),info);
-      el('small',(data.monitoredAccounts||[]).includes(account.key)?'Transaction monitoring on':'Transaction monitoring off',info);
+      const monitored=(data.monitoredAccounts||[]).includes(account.key);
+      el('small',(monitored?'Monitoring on':'Balance only')+' · '+(Number.isFinite(account.balanceDate)&&account.balanceDate>0?'Updated '+date(account.balanceDate):'Balance date unverified'),info);
       const balances=el('div',undefined,top,'finance-page-account-balances');
       el('b',amount(account.balance,account.currency),balances);
-      el('small','Available Balance: '+amount(account.availableBalance,account.currency),balances);
-      const fields=el('div',undefined,article,'finance-page-account-fields');
+      if(account.availableBalance!==null&&account.availableBalance!==undefined)el('small','Available '+amount(account.availableBalance,account.currency),balances);
+      const settings=el('details',undefined,article,'finance-page-account-settings');
+      el('summary','Account settings',settings);
+      const fields=el('div',undefined,settings,'finance-page-account-fields');
       select(fields,'Account type',TYPES,p.kind,value=>{p.kind=value},'finance-page-select');
       select(fields,'Net worth treatment',{exclude:'Exclude',asset:'Asset',liability:'Liability'},p.balanceMode||'exclude',value=>{p.balanceMode=value},'finance-page-select');
-      const reorder=el('div',undefined,article,'finance-page-reorder');
+      const reorder=el('div',undefined,settings,'finance-page-reorder');
       action(reorder,'Move up',()=>move(account,-1));action(reorder,'Move down',()=>move(account,1));
     }
     function move(account,direction){
@@ -307,7 +318,7 @@
     action(card,'Save account organization',()=>change(()=>{
       const profiles={};sortedAccounts().forEach((account,index)=>{const p=profile(account);profiles[account.key]={kind:p.kind||'unclassified',balanceMode:p.balanceMode||'exclude',order:index}});
       return request('/account-profiles',{method:'PUT',body:JSON.stringify({profiles})});
-    },true),'finance-page-button finance-page-primary');
+    },true),'finance-page-button finance-page-save');
   }
   function paint(){
     const host=currentRoot;if(!host||!host.isConnected)return;host.replaceChildren();
@@ -318,14 +329,14 @@
         accountSearch='';accountType='';saveNotice='';refresh();
       });
     sourceSelect.setAttribute('aria-label','Finance connection source');sourceSelect.disabled=busy;
-    el('p',provider==='plaid'?'Showing fallback accounts only. Use SimpleFIN first when adding a bank.':'Showing your primary accounts. Choose Plaid to view fallback accounts.',sourceBox);
+
     const notice=el('p',saveNotice,host,'finance-page-notice');notice.setAttribute('role',saveNotice?'alert':'status');
     if(!data){statusMessage(host,'Loading financial accounts','Retrieving your private, read-only account summary.');return}
     if(!data.configured){statusMessage(host,'Financial connections unavailable','Secure account syncing is not configured on the server.');return}
     if(!data.connected){
-      statusMessage(host,'Connect your first institution',provider==='plaid'?'Use Plaid only for institutions SimpleFIN cannot connect. Add Bank contains fallback setup.':'Add a supported institution through SimpleFIN. BonusTracker cannot initiate payments, trades, or transfers.');
+      statusMessage(host,'No accounts connected',provider==='plaid'?'Plaid fallback accounts will appear here after linking and discovery.':'Connect your bank once, then discover its accounts.');
       action(host,'Connect a bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');
-      action(host,'Manage financial connections',()=>window.btOpenBankSync?.(),'finance-page-button');return;
+      action(host,'Discover accounts',()=>window.btDiscoverBankAccounts?.(),'finance-page-button');return;
     }
     const summary=window.BTFinanceOverview?.summarize(data,{days:period});
     hero(host,summary);
