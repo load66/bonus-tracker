@@ -19,3 +19,10 @@
 .bank-connect-fallback>summary:focus-visible{outline:2px solid #77c8f9;outline-offset:2px}
 .bank-connect-fallback[open]>summary{border-bottom:1px solid rgba(148,163,184,.2)}
 .bank-connect-fallback .plaid-trial-fallback{margin:0;border:0;border-radius:0 0 12px 12px;background:transparent}
+
+.plaid-trial-accounts{min-width:0;margin-top:10px;padding-top:8px;border-top:1px solid rgba(148,163,184,.18);display:grid;gap:8px}
+.plaid-trial-accounts h5{font-size:.91rem;margin:6px 0 2px;color:#e4edf9}
+.plaid-trial-account-list{display:grid;gap:9px;min-width:0}
+.plaid-trial-accounts button{min-height:44px;white-space:normal;padding:9px;border-radius:9px}
+.plaid-trial-observations{display:grid;gap:6px;min-width:0;padding:9px;border-radius:9px;background:rgba(38,52,73,.48)}
+.plaid-trial-observations p{font-size:.84rem;overflow-wrap:anywhere}
