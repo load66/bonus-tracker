@@ -233,12 +233,13 @@
   function accounts(host){
     const card=el('section',undefined,host,'finance-page-card');
     const head=el('div',undefined,card,'finance-page-section-head');el('h3','Accounts',head);
-    const providerLink=el('a','Add bank ↗',head,'finance-page-button finance-page-provider-link');
+    action(head,'Add bank',()=>window.btOpenBankSync?.({flow:'add'}),'finance-page-button finance-page-primary');
+    const providerLink=el('a','SimpleFIN ↗',head,'finance-page-button finance-page-provider-link');
     providerLink.href='https://beta-bridge.simplefin.org/';
     providerLink.target='_blank';providerLink.rel='noopener noreferrer';
     providerLink.setAttribute('aria-label','Add bank through SimpleFIN Bridge');
     action(head,'Manage connections',()=>window.btOpenBankSync?.(),'finance-page-button finance-page-primary');
-    el('p','Add banks in SimpleFIN Bridge, then use Manage connections → Refresh accounts after adding bank. Discovery can be limited to once daily. Set account types and balance treatment below; Net Worth stays unavailable if data is incomplete.',card);
+    el('p','Select Add bank for a guided secure connection and account discovery. Bank authorization stays at SimpleFIN. Use Manage connections to choose account types, monitor activity and link verified bonus campaigns. Account discovery may be limited to once daily.',card);
     const controls=el('div',undefined,card,'finance-page-filters');
     const search=el('input',undefined,controls,'finance-page-search');search.type='search';search.placeholder='Search accounts';search.setAttribute('aria-label','Search accounts');search.value=accountSearch;
     const list=el('div',undefined,card,'finance-page-account-groups');
