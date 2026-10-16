@@ -16,7 +16,14 @@
   };
   let currentRoot=null,sequence=0,hidden=false,data=null,otherData=null,busy=false,view='overview',period=30;
   let transactionSearch='',transactionAccount='',transactionCategory='',transactionStatus='';
-  let accountSearch='',accountType='',saveNotice='',accountDraftProfiles={};
+  let accountSearch='',accountType='',saveNotice='',accountDraftProfiles={},currentCombined=null;
+  const dirtyAccounts=new Set(),monitoringDraft={};
+  const sourceSnapshot=source=>source===provider?data:otherData?.provider===source?otherData.snapshot:null;
+  const unified=()=>window.BTFinanceUnified?.combine({simplefin:sourceSnapshot('simplefin'),plaid:sourceSnapshot('plaid')})||null;
+  function applySource(source,snapshot){
+    if(source===provider)data=snapshot;
+    else if(otherData?.provider===source)otherData={provider:source,snapshot};
+  }
   const el=(tag,text,parent,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;if(parent)parent.append(n);return n};
   const stamp=t=>Number.isFinite(t)&&t>0?new Date(t*1000).toLocaleString():'Not synced';
   const date=t=>Number.isFinite(t)&&t>0?new Date(t*1000).toLocaleDateString():'—';
@@ -44,9 +51,9 @@
     // Network errors and cloud redraws must not silently revert user selections
     // or leak unconfirmed classifications into the financial summary.
     if(!Object.prototype.hasOwnProperty.call(accountDraftProfiles,account.key)){
-      const saved=data?.accountProfiles?.[account.key]||{};
+      const saved=sourceSnapshot(account.source)?.accountProfiles?.[account.rawKey]||{};
       accountDraftProfiles[account.key]={
-        kind:saved.kind||'unclassified',
+        kind:saved.kind&&saved.kind!=='unclassified'?saved.kind:(account.detectedType||'unclassified'),
         balanceMode:saved.balanceMode||'exclude',
         order:Number.isInteger(saved.order)?saved.order:499
       };
@@ -54,7 +61,7 @@
     return accountDraftProfiles[account.key];
   }
   function sortedAccounts(){
-    return [...(data.accounts||[])].sort((a,b)=>(profile(a).order??499)-(profile(b).order??499)
+    return [...(currentCombined?.accounts||[])].sort((a,b)=>(profile(a).order??499)-(profile(b).order??499)
       ||String(a.bank||'').localeCompare(String(b.bank||''))||String(a.name||'').localeCompare(String(b.name||'')));
   }
   function sessionOwner(jwt){
@@ -73,9 +80,9 @@
     const first=sessionOwner(original),latest=sessionOwner(current);
     return Boolean(first&&latest&&first===latest);
   }
-  async function request(path='',options={}){
+  async function request(path='',options={},selectedSource=provider){
     const auth=window.BTBonusAuth;if(!auth?.connected())throw Error('Sign in to view finances.');
-    const source=provider,rev=sequence,token=await auth.token(),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),65000);
+    const source=selectedSource,rev=sequence,token=await auth.token(),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),65000);
     try{
       const response=await fetch(BASE+(source==='plaid'?'/plaid/accounts':'/simplefin')+path,{...options,credentials:'omit',cache:'no-store',
         headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},signal:controller.signal});
@@ -83,7 +90,7 @@
       if(!response.ok)throw Error(typeof result.detail==='string'?result.detail:'Financial request could not be completed.');
       // Check owner continuity on every response, including a user switch
       // that did not trigger a Finances redraw. Token refresh alone is safe.
-      if(source!==provider)throw Error('Connection source changed. Reload finances.');
+      if(source!=='simplefin'&&source!=='plaid')throw Error('Invalid bank connection route.');
       if(window.BTBonusAuth!==auth||!auth.connected())
         throw Error('Sign-in changed. Reload Finances.');
       const latest=await auth.token().catch(()=>null);
@@ -146,9 +153,20 @@
     if(!preserveSearch)accountSearch='';
     accountType='';saveNotice='';refresh();
   }
-  function discoverSelected(){
-    if(provider==='plaid')return change(()=>request('/sync',{method:'POST'}));
-    window.btDiscoverBankAccounts?.();
+  function discoverSelected(){window.btDiscoverBankAccounts?.();}
+  function refreshActivity(){
+    return change(async()=>{
+      const sources=['simplefin','plaid'].filter(source=>{
+        const state=sourceSnapshot(source);
+        return state?.connected&&(state.monitoredAccounts||[]).length>0;
+      });
+      if(!sources.length)throw Error('Enable activity monitoring on an account first.');
+      for(const source of sources){
+        const state=await request('/sync',{method:'POST'},source);
+        applySource(source,state);
+      }
+      return data;
+    });
   }
   function connectedSources(host){
     const other=otherData?.snapshot;
@@ -176,8 +194,10 @@
     if(busy)return;
     busy=true;saveNotice='';paint();
     try{
-      data=await work();
-      if(commitAccountProfiles)accountDraftProfiles={};
+      const saved=await work();
+      if(saved&&saved.financeSource)applySource(saved.financeSource,saved.snapshot);
+      else if(saved)data=saved;
+      if(commitAccountProfiles){accountDraftProfiles={};dirtyAccounts.clear();Object.keys(monitoringDraft).forEach(k=>delete monitoringDraft[k]);}
       saveNotice='';
     }catch(error){
       // Account organization drafts stay on this page for retry. Transaction
@@ -188,10 +208,10 @@
     }
   }
   function flattenTransactions(){
-    const accounts=new Map((data.accounts||[]).map(a=>[a.key,a])),rows=[];
-    for(const [accountKey,records] of Object.entries(data.transactions||{})){
+    const accounts=new Map((currentCombined?.accounts||[]).map(a=>[a.key,a])),rows=[];
+    for(const [accountKey,records] of Object.entries(currentCombined?.transactions||{})){
       const account=accounts.get(accountKey);if(!account)continue;
-      for(const row of Object.values(records||{}))rows.push({...row,accountKey,account});
+      for(const row of Object.values(records||{}))rows.push({...row,accountKey,account,source:account.source});
     }
     return rows.sort((a,b)=>b.posted-a.posted);
   }
@@ -200,20 +220,22 @@
     const head=el('div',undefined,box,'finance-page-hero-head'),copy=el('div',undefined,head);
     el('span','MY MONEY',copy,'finance-page-kicker');el('h2','Finances',copy);
     action(head,hidden?'Show amounts':'Hide amounts',()=>{hidden=!hidden;paint()});
-    const banks=new Set((data.accounts||[]).map(a=>a.bank).filter(Boolean));
-    el('p',(data.accounts||[]).length+' accounts · '+banks.size+' institutions',box,'finance-page-count');
+    const banks=new Set((currentCombined?.accounts||[]).map(a=>String(a.bank||'').trim().toLowerCase()).filter(Boolean));
+    el('p',(currentCombined?.accounts||[]).length+' accounts · '+banks.size+' institutions · '+(currentCombined?.sourceCount||0)+' secure connections',box,'finance-page-count');
     const actions=el('div',undefined,box,'finance-page-quick-actions');
     action(actions,'Add bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');
-    action(actions,'Discover accounts',discoverSelected,
-      'finance-page-button');
+    action(actions,'Discover accounts',discoverSelected,'finance-page-button');
+    action(actions,'Refresh activity',refreshActivity,'finance-page-button');
     const meta=el('div',undefined,box,'finance-page-meta');
-    el('span',data.status==='attention'?'Needs attention':'Connected',meta);
-    el('span','Last sync: '+stamp(data.lastSuccess),meta);
-    if(Number.isFinite(data.nextSyncAt)&&data.nextSyncAt>0)el('span','Next: '+stamp(data.nextSyncAt),meta);
-    if(data.error)el('p',data.error,box,'finance-page-warning');
-    if(data.missingAccounts?.length)el('p','Some linked accounts did not appear in the latest update.',box,'finance-page-warning');
+    el('span',currentCombined?.sourceCount?'Connected':'Not linked',meta);
+    for(const [source,label] of [['simplefin','SimpleFIN'],['plaid','Plaid']]){
+      const status=currentCombined?.providerState?.[source];
+      if(status?.connected)el('span',label+': '+stamp(status.lastSuccess),meta);
+    }
+    if(currentCombined?.possibleDuplicates?.length)el('p','Possible duplicate account connections detected. Review both before relying on combined totals.',box,'finance-page-warning');
+    if(Object.keys(currentCombined?.sourceErrors||{}).length)el('p','One provider needs attention. Account data may be incomplete.',box,'finance-page-warning');
     const nav=el('nav',undefined,host,'finance-page-nav');nav.setAttribute('aria-label','Finance sections');
-    for(const [id,label] of [['overview','Overview'],['transactions','Transactions'],['accounts','Accounts']]){
+    for(const [id,label] of [['overview','Overview'],['transactions','Transactions'],['accounts','Accounts'],['bonuses','Bonuses']]){
       const b=action(nav,label,()=>{view=id;paint()},'finance-page-nav-button'+(view===id?' is-active':''));
       b.setAttribute('aria-current',view===id?'page':'false');
     }
@@ -236,15 +258,55 @@
     const line=document.createElementNS(svg.namespaceURI,'polyline');line.setAttribute('points',coords.map(x=>x.join(',')).join(' '));line.setAttribute('class','finance-page-line');svg.append(line);parent.append(svg);
     const labels=el('div',undefined,parent,'finance-page-chart-labels');el('span',date(points[0].at),labels);el('strong',amount(points.at(-1).value,'USD'),labels);el('span',date(points.at(-1).at),labels);
   }
+  function compactAccountPreview(host){
+    const card=el('section',undefined,host,'finance-page-card finance-page-preview-card');
+    const head=el('div',undefined,card,'finance-page-section-head');
+    el('h3','Connected accounts',head);
+    action(head,'View all',()=>{view='accounts';paint()},'finance-page-preview-link');
+    const accounts=sortedAccounts();
+    if(!accounts.length){el('p','Connect a bank to view its accounts.',card,'finance-page-hint');return}
+    const list=el('div',undefined,card,'finance-page-preview-list');
+    for(const account of accounts.slice(0,4)){
+      const line=el('div',undefined,list,'finance-page-preview-row');
+      const copy=el('div',undefined,line,'finance-page-preview-copy');
+      el('strong',account.bank||'Financial institution',copy);
+      el('small',(account.name||'Account')+' · '+account.sourceLabel,copy);
+      el('b',amount(account.balance,account.currency),line,'finance-page-preview-value');
+    }
+    if(accounts.length>4)el('p','+'+(accounts.length-4)+' more accounts',card,'finance-page-hint');
+  }
+  function compactActivityPreview(host){
+    const card=el('section',undefined,host,'finance-page-card finance-page-preview-card');
+    const head=el('div',undefined,card,'finance-page-section-head');
+    el('h3','Recent transactions',head);
+    action(head,'View all',()=>{view='transactions';paint()},'finance-page-preview-link');
+    const rows=flattenTransactions().filter(row=>Number.isFinite(row.posted)&&row.posted>0).slice(0,5);
+    if(!rows.length){el('p','Transaction activity appears here after account monitoring is enabled.',card,'finance-page-hint');return}
+    const list=el('div',undefined,card,'finance-page-preview-list');
+    for(const row of rows){
+      const item=el('div',undefined,list,'finance-page-preview-row');
+      const copy=el('div',undefined,item,'finance-page-preview-copy');
+      el('strong',row.merchant||row.description||'Transaction',copy);
+      el('small',(row.account.bank||'Bank')+' · '+row.account.sourceLabel+' · '+date(row.posted),copy);
+      el('b',amount(row.amount,row.account.currency),item,'finance-page-preview-value');
+    }
+  }
   function overview(host,summary){
     const position=el('section',undefined,host,'finance-page-card');
-    el('h3','Balances',position);
+    el('h3','All accounts',position);
     const grid=el('div',undefined,position,'finance-page-grid');
-    metric(grid,'Cash',summary.cashAvailable?amount(summary.cash,'USD'):'—');
+    const cash=(currentCombined?.accounts||[]).filter(a=>['checking','savings'].includes(profile(a).kind));
+    const exact=window.BTFinanceOverview;
+    const canReport=cash.length>0&&cash.every(a=>a.currency==='USD'&&exact.cents(a.balance)!==null&&!a.possibleDuplicate);
+    const reported=canReport?cash.reduce((total,a)=>total+exact.cents(a.balance),0n):null;
+    metric(grid,'Cash (reported)',canReport?amount(exact.decimal(reported),'USD'):'—','Provider balances may be delayed');
+    metric(grid,'Cash (verified)',summary.cashAvailable?amount(summary.cash,'USD'):'—');
     metric(grid,'Assets',summary.netWorthAvailable?amount(summary.assets,'USD'):'—');
     metric(grid,'Liabilities',summary.netWorthAvailable?amount(summary.liabilities,'USD'):'—');
     metric(grid,'Net worth',summary.netWorthAvailable?amount(summary.netWorth,'USD'):'—');
-    if(!summary.netWorthAvailable)el('p','— means not enough verified data, not $0.00. Review account types under Accounts.',position,'finance-page-hint');
+    if(!summary.netWorthAvailable)el('p','Net worth requires complete, correctly categorized, recently verified USD balances. An unknown amount is not $0.00.',position,'finance-page-hint');
+    if(currentCombined?.possibleDuplicates?.length)el('p','Overlapping bank connections are excluded from reported totals pending review.',position,'finance-page-caution');
+    compactAccountPreview(host);
     const activity=el('section',undefined,host,'finance-page-card');
     const activityHead=el('div',undefined,activity,'finance-page-section-head');el('h3','Cash flow',activityHead);periodControl(activityHead);
     const activityGrid=el('div',undefined,activity,'finance-page-grid');
@@ -253,6 +315,7 @@
     metric(activityGrid,'Net flow',summary.hasActivity?amount(summary.cashFlow,'USD'):'—');
     metric(activityGrid,'Savings rate',summary.savingsRate===null?'—':summary.savingsRate.toFixed(1)+'%');
     if(!summary.complete)el('p','Cash Flow is partial: review '+summary.unreviewed+' uncategorized transaction'+(summary.unreviewed===1?'':'s')+'.',activity,'finance-page-caution');
+    compactActivityPreview(host);
     const more=el('details',undefined,host,'finance-page-more');
     el('summary','More insights · trends, spending & review',more);
     const trend=el('section',undefined,more,'finance-page-card');el('h3','Net worth trend',trend);trendChart(trend,summary.netWorthHistory||[]);
@@ -294,11 +357,11 @@
   function transactions(host){
     const card=el('section',undefined,host,'finance-page-card');
     const head=el('div',undefined,card,'finance-page-section-head');el('h3','Transactions',head);periodControl(head);
-    el('p','Search, filter or correct a category.',card,'finance-page-hint');
+    el('p','All connected institutions · categorized provider activity.',card,'finance-page-hint');
     const controls=el('div',undefined,card,'finance-page-filters');
     const search=el('input',undefined,controls,'finance-page-search');search.type='search';search.placeholder='Search transactions';search.setAttribute('aria-label','Search transactions');search.value=transactionSearch;
     search.oninput=()=>{transactionSearch=search.value.trim().toLowerCase();renderRows()};
-    const accountValues={'':'All accounts'};for(const a of sortedAccounts())accountValues[a.key]=[a.bank,a.name].filter(Boolean).join(' · ');
+    const accountValues={'':'All accounts'};for(const a of sortedAccounts())accountValues[a.key]=[a.bank,a.name,a.sourceLabel].filter(Boolean).join(' · ');
     select(controls,'Account',accountValues,transactionAccount,value=>{transactionAccount=value;renderRows()});
     select(controls,'Category',{'':'All categories',...CATEGORIES},transactionCategory,value=>{transactionCategory=value;renderRows()});
     select(controls,'Status',{'':'Posted and pending',posted:'Posted',pending:'Pending'},transactionStatus,value=>{transactionStatus=value;renderRows()});
@@ -317,13 +380,18 @@
         const article=el('article',undefined,list,'finance-page-transaction');
         const top=el('div',undefined,article,'finance-page-transaction-top'),copy=el('div',undefined,top);
         el('strong',row.merchant||'Transaction',copy);
-        el('small',[row.account.bank,row.account.name,date(row.posted),row.pending?'Pending':'Posted'].filter(Boolean).join(' · '),copy);
+        el('small',[row.account.bank,row.account.name,row.account.sourceLabel,date(row.posted),row.pending?'Pending':'Posted'].filter(Boolean).join(' · '),copy);
         el('b',amount(row.amount,row.account.currency),top);
         el('p',row.description,article,'finance-page-description');
         if(row.stalePending)el('p','Pending status has not been observed recently. Confirm it with the institution.',article,'finance-page-warning');
         const badges=el('div',undefined,article,'finance-page-badges');
         for(const signal of row.signals||[])el('span',signalLabel(signal),badges);
-        const category=select(article,'Category',CATEGORIES,row.category,value=>change(()=>request('/transaction-review',{method:'PUT',body:JSON.stringify({account:row.accountKey,transaction:row.id,category:value})})));
+        const category=select(article,'Category',CATEGORIES,row.category,value=>change(async()=>{
+          const snapshot=await request('/transaction-review',{method:'PUT',body:JSON.stringify({
+            account:row.account.rawKey,transaction:row.id,category:value
+          })},row.source);
+          return {financeSource:row.source,snapshot};
+        }));
         category.setAttribute('aria-label','Category for '+(row.merchant||row.description));
         el('small',row.categorySource==='user'?'Confirmed by you':'Automatic · '+(row.confidence||'low')+' confidence',article,'finance-page-source');
         if(row.changedAt)el('small','Provider changed this transaction on '+stamp(row.changedAt)+'. A previous correction was cleared for review.',article,'finance-page-warning');
@@ -337,7 +405,7 @@
     const head=el('div',undefined,card,'finance-page-section-head');
     const title=el('div',undefined,head,'finance-page-accounts-title');
     el('h3','Accounts',title);
-    el('span',String((data.accounts||[]).length),title,'finance-page-account-count');
+    el('span',String((currentCombined?.accounts||[]).length),title,'finance-page-account-count');
     action(head,'Manage connections',()=>window.btOpenBankSync?.(),'finance-page-button');
     const controls=el('div',undefined,card,'finance-page-account-filters');
     const search=el('input',undefined,controls,'finance-page-search');search.type='search';
@@ -351,7 +419,7 @@
     function render(){
       list.replaceChildren();let shown=0;const institutions={};
       for(const account of sortedAccounts()){
-        const p=profile(account),name=[account.bank,account.name,account.accountType,account.accountSubtype].filter(Boolean).join(' · ').toLowerCase();
+        const p=profile(account),name=[account.bank,account.name,account.accountType,account.accountSubtype,account.sourceLabel].filter(Boolean).join(' · ').toLowerCase();
         if((accountSearch&&!name.includes(accountSearch))||(accountType&&p.kind!==accountType))continue;
         (institutions[account.bank||'Other institution'] ||= []).push(account);
       }
@@ -360,15 +428,8 @@
         for(const account of accounts){shown++;accountEditor(group,account)}
       }
       if(!shown){
-        const matchingOther=(otherData?.snapshot?.accounts||[]).filter(a=>[a.bank,a.name,a.accountType,a.accountSubtype].filter(Boolean).join(' ').toLowerCase().includes(accountSearch));
-        if(accountSearch&&matchingOther.length){
-          const found=el('div',undefined,list,'finance-page-other-source');
-          el('h4','Found in '+(otherData.provider==='plaid'?'Plaid':'SimpleFIN'),found);
-          el('p',matchingOther.slice(0,4).map(a=>[a.bank,a.name].filter(Boolean).join(' · ')).join(' | '),found);
-          action(found,'View matching accounts',()=>switchSource(otherData.provider,true),'finance-page-button finance-page-primary');return;
-        }
-        el('h4',accountSearch?'No matching account':'No accounts discovered',list);
-        el('p',/\bx\s*money\b|\bxmoney\b/i.test(accountSearch)?'X Money is not in the imported accounts. Check support with your connection provider, then connect it before discovering again.':'New accounts must first be authorized with your connection provider.',list,'finance-page-hint');
+        el('h4',accountSearch?'No matching accounts':'No connected accounts found',list);
+        el('p',accountSearch?'Check the institution name or try Discover accounts.':'Authorize a bank securely and discover its accounts.',list,'finance-page-hint');
         const quick=el('div',undefined,list,'finance-page-quick-actions');
         action(quick,'Add bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');
         action(quick,'Discover accounts',discoverSelected,'finance-page-button');
@@ -378,16 +439,29 @@
       const p=profile(account),article=el('article',undefined,parent,'finance-page-account-editor');
       const top=el('div',undefined,article,'finance-page-account');
       const info=el('div',undefined,top,'finance-page-account-info');el('strong',account.name||'Financial account',info);
-      const monitored=(data.monitoredAccounts||[]).includes(account.key);
-      el('small',(monitored?'Monitoring on':'Balance only')+' · '+(Number.isFinite(account.balanceDate)&&account.balanceDate>0?'Updated '+date(account.balanceDate):'Balance date unverified'),info);
+      const monitored=Object.hasOwn(monitoringDraft,account.key)?monitoringDraft[account.key]
+        :(currentCombined?.monitoredAccounts||[]).includes(account.key);
+      el('small',account.sourceLabel+' · '+(TYPES[p.kind]||'Type unknown')+' · '+(monitored?'Activity on':'Balance only'),info,'finance-page-account-source');
+      if(account.possibleDuplicate)el('small','Possible duplicate connection · excluded from consolidated totals',info,'finance-page-warning');
+      if(!(Number.isFinite(account.balanceDate)&&account.balanceDate>0))el('small','Balance time not provided',info,'finance-page-hint');
       const balances=el('div',undefined,top,'finance-page-account-balances');
       el('b',amount(account.balance,account.currency),balances);
       if(account.availableBalance!==null&&account.availableBalance!==undefined)el('small','Available '+amount(account.availableBalance,account.currency),balances);
       const settings=el('details',undefined,article,'finance-page-account-settings');
       el('summary','Account settings',settings);
       const fields=el('div',undefined,settings,'finance-page-account-fields');
-      select(fields,'Account type',TYPES,p.kind,value=>{p.kind=value},'finance-page-select');
-      select(fields,'Net worth treatment',{exclude:'Exclude',asset:'Asset',liability:'Liability'},p.balanceMode||'exclude',value=>{p.balanceMode=value},'finance-page-select');
+      const monitoringLabel=el('label',undefined,fields,'finance-page-monitor');
+      const monitoring=el('input',undefined,monitoringLabel);monitoring.type='checkbox';
+      monitoring.checked=monitored;monitoring.setAttribute('aria-label','Monitor transactions for '+account.name+' via '+account.sourceLabel);
+      el('span','Monitor transactions (read-only)',monitoringLabel);
+      monitoring.onchange=()=>{monitoringDraft[account.key]=monitoring.checked;dirtyAccounts.add(account.key)};
+      el('small','Activity monitoring is optional. It does not move funds or confirm bonus requirements.',fields,'finance-page-hint');
+      el('small','Account type: '+(TYPES[p.kind]||'Unclassified'),fields,'finance-page-hint');
+      const typeFields=el('div',undefined,fields,'finance-page-correction');
+      function editor(){select(typeFields,'Correct account type',TYPES,p.kind,value=>{p.kind=value;dirtyAccounts.add(account.key)},'finance-page-select')}
+      if(p.kind==='unclassified')editor();
+      else action(fields,'Correct type',()=>{typeFields.replaceChildren();editor()},'finance-page-edit-type');
+      select(fields,'Net worth treatment',{exclude:'Exclude',asset:'Asset',liability:'Liability'},p.balanceMode||'exclude',value=>{p.balanceMode=value;dirtyAccounts.add(account.key)},'finance-page-select');
       const reorder=el('div',undefined,settings,'finance-page-reorder');
       action(reorder,'Move up',()=>move(account,-1));action(reorder,'Move down',()=>move(account,1));
     }
@@ -395,48 +469,115 @@
       const rows=sortedAccounts(),index=rows.findIndex(a=>a.key===account.key),target=index+direction;
       if(target<0||target>=rows.length)return;
       rows.forEach((a,i)=>{const p=profile(a);p.order=i});
-      const other=rows[target],current=profile(account).order;profile(account).order=profile(other).order;profile(other).order=current;render();
+      const other=rows[target],current=profile(account).order;profile(account).order=profile(other).order;
+      profile(other).order=current;dirtyAccounts.add(account.key);dirtyAccounts.add(other.key);render();
     }
     render();
-    action(card,'Save account organization',()=>change(()=>{
-      const profiles={};sortedAccounts().forEach((account,index)=>{const p=profile(account);profiles[account.key]={kind:p.kind||'unclassified',balanceMode:p.balanceMode||'exclude',order:index}});
-      return request('/account-profiles',{method:'PUT',body:JSON.stringify({profiles})});
+    action(card,'Save account settings',()=>change(async()=>{
+      const sources=[...new Set([...dirtyAccounts].map(k=>k.split(':')[0]))];
+      for(const source of sources){
+        const original=sourceSnapshot(source);
+        if(!original?.connected)throw Error('Reopen connected accounts before saving.');
+        const profiles={};
+        const accounts=currentCombined.accounts.filter(a=>a.source===source);
+        for(const account of accounts){
+          const p=profile(account);
+          profiles[account.rawKey]={kind:p.kind||'unclassified',
+            balanceMode:p.balanceMode||'exclude',order:p.order??499};
+        }
+        const latest=await request('/account-profiles',{method:'PUT',body:JSON.stringify({profiles})},source);
+        applySource(source,latest);
+        const monitorChanges=accounts.some(a=>Object.hasOwn(monitoringDraft,a.key));
+        if(monitorChanges){
+          const existing=new Set(sourceSnapshot(source)?.monitoredAccounts||[]);
+          for(const account of accounts){
+            if(!Object.hasOwn(monitoringDraft,account.key))continue;
+            if(monitoringDraft[account.key])existing.add(account.rawKey);
+            else existing.delete(account.rawKey);
+          }
+          const updated=await request('/monitoring',{method:'PUT',body:JSON.stringify({accounts:[...existing]})},source);
+          applySource(source,updated);
+        }
+      }
+      return data;
     },true),'finance-page-button finance-page-save');
   }
   function paint(){
-    const host=currentRoot;if(!host||!host.isConnected)return;host.replaceChildren();
-    const sourceBox=el('section',undefined,host,'finance-page-connection');
-    const sourceSelect=select(sourceBox,'Connection source',{
-      simplefin:'SimpleFIN · Primary',plaid:'Plaid · Fallback'},provider,value=>{
-        switchSource(value);
-      });
-    sourceSelect.setAttribute('aria-label','Finance connection source');sourceSelect.disabled=busy;
-
+    const host=currentRoot;if(!host||!host.isConnected)return;
+    if(view!=='bonuses')window.BTBonusEvidence?.dispose();
+    host.replaceChildren();
+    currentCombined=unified();
     const notice=el('p',saveNotice,host,'finance-page-notice');notice.setAttribute('role',saveNotice?'alert':'status');
     if(!data){statusMessage(host,'Loading accounts','Checking secure connections…');return}
-    if(!data.configured){statusMessage(host,'Connection not ready','Choose another source or manage your bank connection.');connectedSources(host);return}
-    if(!data.connected){
-      statusMessage(host,'No accounts connected',provider==='plaid'?'Your Plaid accounts appear after the first discovery.':'Connect your bank once, then find its accounts.');
-      connectedSources(host);
-      action(host,'Add bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');
-      action(host,'Discover accounts',discoverSelected,'finance-page-button');return;
+    if(!currentCombined?.connected){
+      statusMessage(host,'Connect a bank','All of your supported accounts will appear in one dashboard.');
+      action(host,'Add bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');return;
     }
-    const summary=window.BTFinanceOverview?.summarize(data,{days:period});
+    const summaryState=window.BTFinanceUnified.safeForSummary(currentCombined);
+    const calculated=window.BTFinanceOverview?.summarize(summaryState,{days:period});
+    const trustedTotals=!summaryState.incompleteProviders&&!summaryState.excludedForReview;
+    const summary={...calculated,
+      complete:!!calculated?.complete&&trustedTotals,
+      cashAvailable:!!calculated?.cashAvailable&&trustedTotals,
+      netWorthAvailable:!!calculated?.netWorthAvailable&&trustedTotals};
     hero(host,summary);
-    connectedSources(host);
-    if(view==='transactions')transactions(host);else if(view==='accounts')accounts(host);else overview(host,summary);
+    if(summaryState.incompleteProviders)el('p','Financial activity is partial: one linked provider has not completed a recent sync.',host,'finance-page-caution');
+    if(view==='bonuses'){
+      const sourceSelector=el('section',undefined,host,'finance-page-connection');
+      const sourceSelect=select(sourceSelector,'Review connection',{
+        simplefin:'SimpleFIN',plaid:'Plaid'},provider,switchSource);
+      sourceSelect.setAttribute('aria-label','Bank activity connection source');
+      const review=el('section',undefined,host,'finance-page-bonus-host');
+      if(!window.BTBonusEvidence?.mount(review,provider))statusMessage(review,'Bonus activity not ready','Reload Finances to review linked bonus activity.');
+    }else if(view==='transactions')transactions(host);
+    else if(view==='accounts')accounts(host);
+    else overview(host,summary);
   }
+  let sessionIdentity=null,mountCall=0;
   async function mount(){
     const host=document.getElementById('bt-finances-page');if(!host||host===currentRoot)return;
-    currentRoot=host;data=null;otherData=null;const rev=++sequence;paint();
-    if(!window.BTBonusAuth?.connected()){
-      host.replaceChildren();statusMessage(host,'Sign in to view finances','Use your existing BonusTracker sign-in to load private financial records.');
+    const call=++mountCall,auth=window.BTBonusAuth;
+    if(!auth?.connected()){
+      window.BTBonusEvidence?.dispose();
+      sessionIdentity=null;currentRoot=host;data=null;otherData=null;sequence++;
+      host.replaceChildren();statusMessage(host,'Sign in to view finances','Sign in securely to view linked financial accounts.');
       action(host,'Sign in / manage accounts',()=>window.btOpenBankSync?.(),'finance-page-button finance-page-primary');return;
     }
-    try{const result=await request();if(rev!==sequence||host!==currentRoot||!host.isConnected)return;data=result;paint();loadOtherSource(rev)}
-    catch(error){if(rev!==sequence||host!==currentRoot||!host.isConnected)return;host.replaceChildren();statusMessage(host,'Accounts unavailable',error.message);action(host,'Try again',refresh)}
+    let identity=null;
+    try{const token=await auth.token();identity=sessionOwner(token)||token}
+    catch(_error){/* Never render another owner's cached financial data on auth errors. */}
+    if(call!==mountCall||!host.isConnected||!auth.connected()||window.BTBonusAuth!==auth)return;
+    if(!identity){
+      window.BTBonusEvidence?.dispose();sessionIdentity=null;data=null;otherData=null;currentRoot=host;
+      host.replaceChildren();statusMessage(host,'Session needs attention','Sign in again before viewing financial records.');return;
+    }
+    if(identity===sessionIdentity&&data){
+      // Main app redraws must not destroy in-progress review, filters or account
+      // snapshots for the same owner. Preserve any in-flight second-provider read.
+      currentRoot=host;paint();return;
+    }
+    window.BTBonusEvidence?.dispose();
+    sessionIdentity=identity;currentRoot=host;data=null;otherData=null;
+    accountDraftProfiles={};dirtyAccounts.clear();
+    Object.keys(monitoringDraft).forEach(k=>delete monitoringDraft[k]);
+    const rev=++sequence;paint();
+    try{
+      const result=await request();
+      if(rev!==sequence||host!==currentRoot||!host.isConnected)return;
+      data=result;paint();loadOtherSource(rev);
+    }catch(error){
+      if(rev!==sequence||host!==currentRoot||!host.isConnected)return;
+      // A broken SimpleFIN connection must not hide already-authorized Plaid
+      // accounts. Fall back to the other source while explaining partial data.
+      data={configured:false,connected:false,accounts:[],error:String(error.message||'Connection unavailable')};
+      paint();loadOtherSource(rev);
+    }
   }
-  function refresh(){currentRoot=null;data=null;accountDraftProfiles={};sequence++;mount()}
+  function refresh(){
+    window.BTBonusEvidence?.dispose();currentRoot=null;data=null;otherData=null;sessionIdentity=null;
+    accountDraftProfiles={};dirtyAccounts.clear();
+    Object.keys(monitoringDraft).forEach(k=>delete monitoringDraft[k]);sequence++;mount();
+  }
   window.btRefreshFinancesPage=refresh;
   window.btRegisterPostRender?.('finance-page',mount);
   window.addEventListener('storage',event=>{if(event.key==='bonus-ai-auth')refresh()});

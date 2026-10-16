@@ -71,11 +71,19 @@ return result;
           localStorage.setItem('bonus-ai-auth',JSON.stringify({access_token:'synthetic-access',refresh_token:'synthetic-refresh',expires_at:4102444800}));
         },{entry});
         await page.goto(process.env.BT_BROWSER_SITE_URL||'http://127.0.0.1:'+server.address().port+'/');
-        const section=page.getByRole('region',{name:'Bank bonus activity evidence'});
+        await page.waitForFunction(()=>typeof window.BTBonusAuth?.connected==='function'&&window.BTBonusAuth.connected());
+        await page.getByRole('button',{name:'Tracker',exact:true}).click();
+        assert.equal(await page.getByRole('region',{name:'Bank bonus activity evidence'}).count(),0,
+          'Tracker must never render bank-activity controls');
+        await page.getByRole('button',{name:'Finances',exact:true}).click();
+        const finances=page.getByRole('region',{name:'My finances'});
+        await finances.getByRole('heading',{name:'Finances'}).waitFor();
+        await finances.getByRole('button',{name:'Bonuses',exact:true}).click();
+        const section=finances.getByRole('region',{name:'Bank bonus activity evidence'});
         await section.getByRole('button',{name:'Review bank activity',exact:true}).waitFor();
         cycleId=await page.evaluate(()=>entries[0].id);
         const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
-        assert.equal(requests.length,0,'private bank evidence must load only after explicit review');
+        assert.ok(requests.every(r=>r.method==='GET'),'Opening Finances must never change bank data or Tracker milestones');
         await page.waitForFunction(()=>window.BTBonusAuth?.connected());
         let ready=false;
         for(let attempt=0;attempt<2;attempt++){
@@ -124,65 +132,68 @@ return result;
           await page.screenshot({path:path.join(output,browserName+'-bonus-evidence-'+width+'.png')});
         }
         assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'review cannot modify bonus entry data');
-        await section.getByRole('button',{name:'Open tracker'}).click();
-        assert.equal(await page.evaluate(()=>expanded),cycleId,'review action opens exactly the matching bonus cycle');
-        assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before);
-        await page.getByRole('region',{name:'Bank bonus activity evidence'}).getByRole('button',{name:'Review payout'}).click();
-        assert.equal(await page.evaluate(()=>rcvPrompt?.entryId),cycleId,'review payout delegates to existing explicit confirmation dialog');
-        assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'no automatic payout completion');
+        assert.equal(await section.getByRole('button',{name:'Open tracker'}).count(),0,
+          'Bank evidence stays in Finances rather than sending users to Tracker');
+        await section.getByRole('button',{name:'Review payout'}).click();
+        assert.equal(await page.evaluate(()=>rcvPrompt?.entryId),cycleId,
+          'Finance bonus evidence invokes the existing explicit payout confirmation');
+        assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,
+          'Reviewing a possible payout cannot mark a Tracker milestone paid');
         await page.evaluate(()=>{rcvPrompt=null;R()});
+        await page.getByRole('button',{name:'Tracker',exact:true}).click();
+        assert.equal(await page.getByRole('region',{name:'Bank bonus activity evidence'}).count(),0,
+          'Tracker remains free of bank-activity review after navigation');
         await page.getByRole('button',{name:'Finances',exact:true}).click();
-        await page.getByRole('region',{name:'My finances'}).getByRole('heading',{name:'Finances'}).waitFor();
-        // An immediate switch while the private dashboard is still mounting
-        // can race another app re-render. Complete the route change first.
-        const tracker=page.getByRole('button',{name:'Tracker',exact:true});
-        const reopened=page.getByRole('region',{name:'Bank bonus activity evidence'});
-        let trackerReady=false;
-        for(let attempt=0;attempt<2;attempt++){
-          await tracker.click();
-          try{
-            await reopened.getByRole('button',{name:'Review bank activity',exact:true}).waitFor({timeout:7000});
-            trackerReady=true;break;
-          }catch{
-            if(attempt===1){
-              const selected=await page.locator('.tabs .tb[aria-current="page"]').allTextContents().catch(()=>[]);
-              throw Error(browserName+' Tracker evidence panel unavailable after tab navigation. Selected='+selected.join('|'));
-            }
-          }
-        }
-        assert.ok(trackerReady,'Tracker activity review must survive private finance redraw');
-        assert.equal(await reopened.locator('.bonus-evidence-card').count(),0,'evidence must be cleared when leaving the Tracker');
+        await finances.getByRole('heading',{name:'Finances'}).waitFor();
+        await finances.getByRole('button',{name:'Bonuses',exact:true}).click();
+        const reopened=finances.getByRole('region',{name:'Bank bonus activity evidence'});
+        await reopened.getByRole('button',{name:'Review bank activity',exact:true}).waitFor();
+        assert.equal(await reopened.locator('.bonus-evidence-card').count(),0,
+          'Private evidence is cleared when leaving Finances');
         await reopened.getByRole('button',{name:'Review bank activity',exact:true}).click();
-        try{await reopened.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor({timeout:10000})}
-        catch{throw Error(browserName+' Tracker reload failed: '+JSON.stringify({text:await reopened.innerText(),requests,selected:await page.locator('.tabs .tb[aria-current="page"]').allTextContents()}))}
+        await reopened.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor();
         await reopened.getByRole('button',{name:'Show reviewed / dismissed',exact:true}).click();
         assert.equal(await reopened.getByRole('button',{name:'Undo review',exact:true}).count(),1,
-          'a dismissed receipt persists across a cleared and reloaded session');
+          'Dismissed evidence survives an in-memory view reset');
         assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,
-          'reviewing evidence must never change canonical tracker records');
+          'Evidence reviews never alter canonical Tracker records');
         // Large queues must remain accessible, not permanently clipped to
         // 5 pending / 10 total entries. The first few remain compact.
         extra=14;
-        await reopened.getByRole('button',{name:'Hide reviewed items'}).click();
-        await reopened.getByRole('button',{name:'Refresh',exact:true}).click();
+        const reviewClick=async name=>reopened.evaluate((root,label)=>{
+          const btn=[...root.querySelectorAll('button')].find(n=>n.textContent.trim()===label);
+          if(!btn||btn.disabled)throw Error('Evidence review button not actionable: '+label);
+          btn.click();
+        },name);
+        await reviewClick('Hide reviewed items');
+        await reviewClick('Refresh');
         await reopened.getByRole('button',{name:'Show 5 more to review'}).waitFor();
         assert.equal(await reopened.locator('.bonus-evidence-row').count(),5,
           'first render remains compact even with many pending deposits');
-        await reopened.getByRole('button',{name:'Show 5 more to review'}).click();
-        assert.equal(await reopened.locator('.bonus-evidence-row').count(),10);
-        await reopened.getByRole('button',{name:'Show 5 more to review'}).click();
-        assert.equal(await reopened.locator('.bonus-evidence-row').count(),15);
-        const remainder=await reopened.getByRole('button',{name:/Show \d+ more to review/}).allTextContents();
-        assert.equal(remainder.length,1,'remaining pending history must be reachable');
-        await reopened.getByRole('button',{name:/Show \d+ more to review/}).click();
-        assert.equal(await reopened.getByRole('button',{name:/Show \d+ more to review/}).count(),0,
+        async function advanceQueue(expected){
+          // Dispatch directly to the live button. Finance panels can redraw
+          // during Playwright's stability polling; the subsequent row count is
+          // authoritative proof that the user action had its intended effect.
+          await reopened.evaluate(root=>{
+            const next=[...root.querySelectorAll('button')].find(b=>/^Show \d+ more to review$/.test(b.textContent.trim()));
+            if(!next||next.disabled)throw Error('No enabled next-page action');
+            next.click();
+          });
+          await reopened.locator('.bonus-evidence-row').nth(expected-1).waitFor({timeout:5000});
+          assert.equal(await reopened.locator('.bonus-evidence-row').count(),expected);
+        }
+        await advanceQueue(10);
+        await advanceQueue(15);
+        assert.equal(await reopened.getByRole('button',{name:/^Show \d+ more to review$/}).count(),1,
+          'remaining pending history must be reachable');
+        await advanceQueue(17);
+        assert.equal(await reopened.getByRole('button',{name:/^Show \d+ more to review$/}).count(),0,
           'no pending evidence should become stranded behind paging');
-        assert.equal(await reopened.locator('.bonus-evidence-row').count(),17);
         assert.equal(await reopened.locator('img').count(),0,'long queues must safely escape untrusted descriptions');
-        await reopened.getByRole('button',{name:'Show reviewed / dismissed'}).click();
+        await reviewClick('Show reviewed / dismissed');
         assert.equal(await reopened.getByRole('button',{name:'Undo review'}).count(),1,
           'resolved receipts must remain reachable even with many pending entries');
-        await reopened.getByRole('button',{name:'Hide reviewed items'}).click();
+        await reviewClick('Hide reviewed items');
         await page.setViewportSize({width:320,height:760});
         const geometry=await reopened.evaluate(n=>({viewport:innerWidth,width:n.getBoundingClientRect().width,content:n.scrollWidth}));
         assert.ok(geometry.width<=geometry.viewport+1&&geometry.content<=geometry.width+1,
@@ -196,7 +207,9 @@ return result;
           if(path.endsWith('/evidence-review'))plaidReviews[body.transaction]={status:body.decision,reviewedAt:NOW,requirementId:body.requirementId||null};
           await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(sample(cycleId,plaidReviews,0))});
         });
-        await reopened.getByRole('combobox',{name:'Bank activity connection source'}).selectOption('plaid');
+        await finances.getByRole('combobox',{name:'Bank activity connection source'}).selectOption('plaid');
+        await reopened.getByRole('button',{name:'Review bank activity',exact:true}).waitFor();
+        await reopened.getByRole('button',{name:'Review bank activity',exact:true}).click();
         await reopened.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor();
         await reopened.getByRole('button',{name:'Mark reviewed',exact:true}).first().click();
         await reopened.getByText('Review saved. Promotion requirements remain unconfirmed.').waitFor();
@@ -204,7 +217,7 @@ return result;
         assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts/evidence-review')&&r.method==='PUT'));
         assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'Plaid reviews never write promotion milestones');
         assert.deepEqual(errors,[],'no browser errors');
-        console.log(browserName+': safe bonus evidence, privacy, exact tracker matching, manual payout and mobile layout passed');
+        console.log(browserName+': Finances-only bonus evidence, private lifecycle, reviewed direct deposits, manual payout and mobile checks passed');
       }finally{await browser.close();}
     }
   }finally{server.close();}

@@ -61,11 +61,19 @@ const base=()=>({
         }
         await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(state)});
       });
-      const plaidState=base();plaidState.accounts=[];plaidState.lastSuccess=null;plaidState.nextSyncAt=0;let plaidDiscoveries=0;
+      const plaidState=base();plaidState.accounts=[];plaidState.lastSuccess=null;plaidState.nextSyncAt=0;
+      plaidState.transactions={[A]:{'plaid-income':{id:'plaid-income',amount:'50.00',posted:NOW-180,pending:false,
+        kind:'other_deposit',description:'X Money synthetic ACH bonus',merchant:'X Money Bonus',
+        category:'income',categorySource:'user',confidence:'high',signals:['possible_bonus']}}};
+      let plaidDiscoveries=0;
       await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/plaid**',async route=>{
         const req=route.request(),url=new URL(req.url());
         const body=req.postDataJSON?.()||{};requests.push({path:url.pathname,method:req.method(),body});
-        if(url.pathname.endsWith('/transaction-review'))plaidState.transactions[body.account][body.transaction].category=body.category;
+        if(url.pathname.endsWith('/transaction-review')){
+          plaidState.transactions[body.account][body.transaction].category=body.category;
+          plaidState.transactions[body.account][body.transaction].categorySource='user';
+        }
+        if(url.pathname.endsWith('/monitoring'))plaidState.monitoredAccounts=body.accounts;
         if(url.pathname.endsWith('/accounts/sync')){
           plaidDiscoveries++;
           plaidState.accounts=[{...base().accounts[0],bank:'X Money',name:'X Money Checking'}];
@@ -110,9 +118,20 @@ const base=()=>({
       // Missing money must remain unknown rather than incorrectly becoming $0.00.
       await section.locator('.finance-page-tile strong')
         .filter({hasText:/^\s*—\s*$/}).first().waitFor({state:'visible'});
-      await section.getByText('Income',{exact:true}).locator('..').getByText(/200/).waitFor();
+      await section.getByText('4 accounts',{exact:false}).waitFor();
+      await section.getByRole('heading',{name:'Connected accounts',exact:true}).waitFor();
+      await section.getByRole('heading',{name:'Recent transactions',exact:true}).waitFor();
+      const previews=section.locator('.finance-page-preview-card');
+      assert.equal(await previews.count(),2,'Account and transaction previews belong on the Finance home dashboard');
+      const accountPreview=await previews.first().innerText();
+      assert.ok(accountPreview.includes('X Money')&&accountPreview.includes('Plaid')&&accountPreview.includes('SimpleFIN'),
+        'One compact account preview must show banks from both connected sources');
+      assert.ok((await previews.nth(1).innerText()).includes('X Money Bonus'),
+        'Recent Finance activity must include Plaid transactions');
+
+      await section.getByText('Income',{exact:true}).locator('..').getByText(/250/).waitFor();
       await section.getByText('Expenses',{exact:true}).locator('..').getByText(/15/).waitFor();
-      await section.getByText('Net flow',{exact:true}).locator('..').getByText(/185/).waitFor();
+      await section.getByText('Net flow',{exact:true}).locator('..').getByText(/235/).waitFor();
       await section.locator('.finance-page-caution')
         .filter({hasText:'Cash Flow is partial'}).first().waitFor({state:'visible'});
       // The awaited visibility assertion above is authoritative; do not reread
@@ -132,12 +151,11 @@ const base=()=>({
       await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).waitFor();
       assert.equal(state.transactions[A][T3].category,'unreviewed','failure must not silently commit category changes');
       await section.getByLabel('Category for Unknown').selectOption('shopping');
-      await section.getByText('Confirmed by you',{exact:true}).waitFor();
+      await section.getByText('Confirmed by you',{exact:true}).first().waitFor();
       await section.getByRole('alert').waitFor({state:'hidden'});
       assert.equal(state.transactions[A][T3].category,'shopping','retry must save category');
       assert.ok(requests.some(r=>r.path.endsWith('/transaction-review')&&r.body.category==='shopping'));
 
-      await section.getByText('X Money',{exact:false}).first().waitFor();
       assert.equal(plaidDiscoveries,1,'existing linked Plaid bank must recover its accounts without a new Item');
       assert.equal(requests.some(r=>r.path.endsWith('/link-token')||r.path.endsWith('/exchange')),false,'discovery must never reconnect the bank');
       await section.getByRole('button',{name:'Accounts',exact:true}).click();
@@ -163,27 +181,41 @@ const base=()=>({
       await wizard.getByRole('button',{name:'Done'}).click();
       assert.equal(await page.evaluate(()=>window.__bankWizardRefreshCount),0,
         'Closing an unchanged provider authorization wizard must not refresh or interrupt financial edits');
-      await section.getByText('X Money',{exact:false}).first().waitFor();
-      assert.equal(await section.locator('.finance-page-account').count(),3);
+      await section.getByText('X Money Checking',{exact:true}).waitFor();
+      assert.equal(await section.locator('.finance-page-account').count(),4);
+      assert.equal(await section.getByRole('combobox',{name:'Finance connection source'}).count(),0,
+        'The Finance dashboard is unified and must not require a provider switch');
+      assert.ok((await section.locator('.finance-page-account-source').allTextContents()).some(t=>t.includes('Plaid')));
       const accountSearch=section.getByRole('searchbox',{name:'Search accounts'});
       await accountSearch.fill('x money');
-      await section.getByRole('button',{name:'View matching accounts'}).waitFor();
-      await section.getByRole('button',{name:'View matching accounts'}).click();
+      assert.equal(await section.locator('.finance-page-account:visible').count(),1);
       await section.getByText('X Money Checking',{exact:true}).waitFor();
-      await section.getByLabel('Finance connection source').selectOption('simplefin');
-      await section.getByRole('button',{name:'Accounts',exact:true}).click();
-      const restoredSearch=section.getByRole('searchbox',{name:'Search accounts'});await restoredSearch.fill('other credit union');
-      assert.equal(await section.locator('.finance-page-account:visible').count(),1);await restoredSearch.fill('');
+      await accountSearch.fill('other credit union');
+      assert.equal(await section.locator('.finance-page-account:visible').count(),1);
+      await accountSearch.fill('');
       const creditEditor=section.locator('.finance-page-account-info strong').filter({hasText:/^Credit Card$/}).locator('xpath=../../..');
       await creditEditor.locator('details.finance-page-account-settings > summary').click();
+      assert.equal(await creditEditor.getByLabel('Correct account type').count(),0,
+        'Account types already known must not require redundant classification');
       await creditEditor.getByLabel('Net worth treatment').selectOption('exclude');
-      await section.getByRole('button',{name:'Save account organization'}).click();
-      await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).waitFor();
+      assert.equal(await creditEditor.getByLabel('Net worth treatment').inputValue(),'exclude');
+      await section.getByRole('button',{name:'Save account settings'}).click();
+      try{
+        await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).waitFor({timeout:12000});
+      }catch(e){
+        const debug=await section.innerText().catch(()=>'(Finances unmounted)');
+        throw Error(name+' failed-save verification: '+JSON.stringify({
+          attempts:requests.filter(x=>x.path.endsWith('/account-profiles')),
+          creditMode:state.accountProfiles[B]?.balanceMode,
+          financeText:debug.slice(0,1500),
+          expectedError:String(e.message).slice(0,150)
+        }));
+      }
       assert.equal(state.accountProfiles[B].balanceMode,'liability','failed account save must leave encrypted server state unchanged');
       assert.equal(await creditEditor.getByLabel('Net worth treatment').inputValue(),'exclude','unsaved draft remains available for retry');
       await Promise.all([
         page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/account-profiles')&&r.request().method()==='PUT'&&r.status()===200),
-        section.getByRole('button',{name:'Save account organization'}).click()
+        section.getByRole('button',{name:'Save account settings'}).click()
       ]);
       await section.getByRole('alert').waitFor({state:'hidden'});
       assert.equal(state.accountProfiles[B].balanceMode,'exclude','successful retry must persist organization');
@@ -217,13 +249,35 @@ const base=()=>({
       await section.getByRole('button',{name:'Manage connections',exact:true}).click();
       await page.getByRole('dialog',{name:'Financial accounts'}).waitFor();await page.getByRole('dialog',{name:'Financial accounts'}).getByRole('button',{name:'Done'}).click();
       await section.getByRole('heading',{name:'Accounts',exact:true}).waitFor();
-      await section.getByRole('combobox',{name:'Finance connection source'}).selectOption('plaid');
       await section.getByText('X Money Checking',{exact:true}).waitFor();
-      assert.equal(await section.locator('.finance-page-account').count(),1,'Plaid must have its own account snapshot');
+      assert.equal(await section.locator('.finance-page-account').count(),4,
+        'SimpleFIN and Plaid account cards share the same list');
+      const xMoneyEditor=section.locator('.finance-page-account-info strong')
+        .filter({hasText:/^X Money Checking$/}).locator('xpath=../../..');
+      await xMoneyEditor.locator('details.finance-page-account-settings > summary').click();
+      await xMoneyEditor.getByRole('checkbox',{name:'Monitor transactions for X Money Checking via Plaid'}).uncheck();
+      await Promise.all([
+        page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/plaid/accounts/monitoring')&&
+          r.request().method()==='PUT'&&r.status()===200),
+        section.getByRole('button',{name:'Save account settings'}).click()
+      ]);
+      assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts/monitoring')&&r.method==='PUT'&&
+        Array.isArray(r.body.accounts)&&r.body.accounts.length===0),
+        'Plaid monitoring must be saved to Plaid, without touching SimpleFIN monitoring');
+      assert.equal(requests.filter(r=>r.path.endsWith('/simplefin/monitoring')).length,0);
+      await section.getByRole('button',{name:'Transactions',exact:true}).click();
+      await section.getByText('X Money Bonus',{exact:true}).waitFor();
+      await Promise.all([
+        page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/plaid/accounts/transaction-review')&&
+          r.request().method()==='PUT'&&r.status()===200),
+        section.getByLabel('Category for X Money Bonus').selectOption('bonus')
+      ]);
+      assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts/transaction-review')&&r.body.account===A&&
+        r.body.transaction==='plaid-income'&&r.body.category==='bonus'),
+        'Plaid category corrections must route only to Plaid using its original account and transaction identifiers');
+      assert.ok((await section.locator('.finance-page-transaction').allTextContents()).some(t=>t.includes('Plaid')),
+        'A Plaid-origin transaction must appear with a source label in the combined feed');
       assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts')));
-      await section.getByRole('combobox',{name:'Finance connection source'}).selectOption('simplefin');
-      await section.getByText('Checking <img src=x>',{exact:true}).waitFor();
-      assert.equal(await section.locator('.finance-page-account').count(),3);
       assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'no tracker writes');
       assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-access')),true);
       assert.deepEqual(errors,[]);console.log(name+': finance overview, transactions, account management, privacy and responsive navigation passed');

@@ -105,3 +105,41 @@
 }
 
 .finance-page-accounts-title{display:flex;align-items:center;gap:9px}.finance-page-accounts-title h3{margin:0}.finance-page-account-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;min-height:22px;border-radius:999px;background:#294769;color:#cae1ff;font-size:11px;font-weight:750;padding:0 5px}
+
+/* Financial bonus evidence stays inside Finances, never inside the Tracker layout. */
+.finance-page .finance-page-nav{grid-template-columns:repeat(4,minmax(0,1fr))}
+.finance-page .bonus-evidence{margin:0 0 14px;padding:14px;border-color:#455f81;border-radius:14px;background:#142238}
+.finance-page .bonus-evidence-heading strong{font-size:16px}
+.finance-page .bonus-evidence .bonus-evidence-toolbar{align-items:flex-start}
+.finance-page .bonus-evidence-provider-help{margin:5px 0 12px!important}
+.finance-page .bonus-evidence-card{min-width:0}
+@media(max-width:390px){
+  .finance-page .finance-page-nav{gap:4px;padding:4px}
+  .finance-page .finance-page-nav-button{padding:8px 3px;font-size:10px;overflow-wrap:anywhere;line-height:1.25}
+  .finance-page .bonus-evidence{padding:11px}
+}
+
+/* Unified money workspace: one screen, source labels rather than provider panels. */
+.finance-page-hero .finance-page-quick-actions .finance-page-button{flex:1 1 130px}
+.finance-page-account-source{color:#a8c7e9;letter-spacing:.01em}
+.finance-page-account-settings .finance-page-monitor{display:flex;align-items:center;gap:10px;margin:9px 0 7px;cursor:pointer;font-size:13px;font-weight:650;color:#e3efff;min-height:44px}
+.finance-page-account-settings .finance-page-monitor input{width:20px;height:20px;accent-color:#9ac6ff;flex-shrink:0}
+.finance-page-account-settings .finance-page-edit-type{display:inline-flex;align-items:center;justify-content:center;min-height:40px;border:1px solid #4a698a;border-radius:9px;background:#1b3654;color:#d9e9ff;font-size:12px;margin:8px 0}
+.finance-page-account-settings .finance-page-correction .finance-page-field{margin-top:6px}
+.finance-page-card .finance-page-account-source{display:block;font-size:11px;margin-top:3px}
+@media(max-width:390px){.finance-page-hero .finance-page-quick-actions .finance-page-button{flex-basis:105px;font-size:11px}}
+
+/* Finance overview: consolidated institutional balances and recent activity. */
+.finance-page .finance-page-preview-card{margin-top:12px}
+.finance-page .finance-page-preview-card .finance-page-section-head{gap:10px}
+.finance-page .finance-page-preview-link{background:transparent;border:0;padding:6px 8px;min-height:44px;color:#a9ceff;font:inherit;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer}
+.finance-page .finance-page-preview-link:hover{text-decoration:underline}
+.finance-page .finance-page-preview-link:focus-visible{outline:2px solid #cde6ff;outline-offset:2px;border-radius:8px}
+.finance-page-preview-list{display:flex;flex-direction:column;margin:3px 0 0}
+.finance-page-preview-row{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #304862;min-height:54px;padding:8px 0}
+.finance-page-preview-row:last-child{border-bottom:0}
+.finance-page-preview-copy{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.finance-page-preview-copy strong{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#eff7ff}
+.finance-page-preview-copy small{font-size:10px;color:#acc1dc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.finance-page-preview-value{font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:700;text-align:right}
+@media(max-width:390px){.finance-page-preview-row{min-height:49px}.finance-page-preview-copy strong{font-size:11px}.finance-page-preview-value{font-size:12px}}
