@@ -97,10 +97,10 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    await dialog.getByText('Found 1 new account.',{exact:true}).waitFor();
    assert.equal(state.accounts.length,2,'guided discovery adds newly authorized accounts');
    await dialog.getByRole('button',{name:'Review account settings'}).click();
-   await dialog.getByText('Newly Added CU · Savings',{exact:true}).waitFor();
+   await dialog.locator('h4').getByText('Newly Added CU · Savings',{exact:true}).waitFor();
    assert.equal(requests.filter(r=>r.path.endsWith('/discover')).length,1,'guided add-bank discovery requires a deliberate click');
    await dialog.getByRole('button',{name:'Discover accounts',exact:true}).click();
-   await dialog.getByText('Newly Added CU · Savings',{exact:true}).waitFor();
+   await dialog.locator('h4').getByText('Newly Added CU · Savings',{exact:true}).waitFor();
    assert.equal(state.accounts.length,2,'new provider accounts must appear without replacing the existing connection');
    assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened,productId:'checking'},'account discovery preserves the original verified product association');
    assert.deepEqual(new Set(state.monitoredAccounts),new Set([account.key,'b'.repeat(64)]),'New accounts must be monitored automatically');
