@@ -62,6 +62,7 @@ const base=()=>({
       const section=page.getByRole('region',{name:'My finances'});await section.getByRole('heading',{name:'Financial overview'}).waitFor();
       assert.equal(await section.locator('img').count(),0,'provider aliases must be text, never HTML');
       await section.locator('.finance-page-tile strong').filter({hasText:'Unavailable'}).first().waitFor();
+      await section.locator('.finance-page-tile strong').filter({hasText:'Unavailable'}).first().waitFor({state:'visible'});
       assert.ok((await section.locator('.finance-page-tile strong').allTextContents()).includes('Unavailable'),'incomplete net-worth inputs remain unavailable');
       await section.getByText('Income',{exact:true}).locator('..').getByText(/200/).waitFor();
       await section.getByText('Expenses',{exact:true}).locator('..').getByText(/15/).waitFor();
