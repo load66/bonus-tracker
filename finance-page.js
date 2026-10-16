@@ -222,8 +222,12 @@
   function accounts(host){
     const card=el('section',undefined,host,'finance-page-card');
     const head=el('div',undefined,card,'finance-page-section-head');el('h3','Accounts',head);
+    const providerLink=el('a','Add bank ↗',head,'finance-page-button finance-page-provider-link');
+    providerLink.href='https://beta-bridge.simplefin.org/';
+    providerLink.target='_blank';providerLink.rel='noopener noreferrer';
+    providerLink.setAttribute('aria-label','Add bank through SimpleFIN Bridge');
     action(head,'Manage connections',()=>window.btOpenBankSync?.(),'finance-page-button finance-page-primary');
-    el('p','Set each account type and balance treatment. Net Worth stays unavailable until every connected account is classified and included.',card);
+    el('p','Add banks in SimpleFIN Bridge, then use Manage connections → Refresh accounts after adding bank. Provider discovery can be limited to once daily. Set account types and balance treatment below; Net Worth stays unavailable if data is incomplete.',card);
     const controls=el('div',undefined,card,'finance-page-filters');
     const search=el('input',undefined,controls,'finance-page-search');search.type='search';search.placeholder='Search accounts';search.setAttribute('aria-label','Search accounts');search.value=accountSearch;
     const list=el('div',undefined,card,'finance-page-account-groups');
