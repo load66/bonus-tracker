@@ -198,6 +198,10 @@ const base=()=>({
         'Closing an unchanged provider authorization wizard must not refresh or interrupt financial edits');
       await section.getByText('X Money Checking',{exact:true}).waitFor();
       assert.equal(await section.locator('.finance-page-account').count(),4);
+      assert.equal(await section.locator('.finance-page-account-settings[open]').count(),0,
+        'Account organization controls must stay collapsed until the account row is opened');
+      assert.equal(await section.getByRole('button',{name:'Filters',exact:true}).count(),1,
+        'Account type filtering belongs behind one compact control');
       assert.equal(await section.getByRole('combobox',{name:'Finance connection source'}).count(),0,
         'The Finance dashboard is unified and must not require a provider switch');
       assert.ok((await section.locator('.finance-page-account-source').allTextContents()).some(t=>t.includes('Plaid')));
@@ -208,8 +212,8 @@ const base=()=>({
       await accountSearch.fill('other credit union');
       assert.equal(await section.locator('.finance-page-account:visible').count(),1);
       await accountSearch.fill('');
-      const creditEditor=section.locator('.finance-page-account-info strong').filter({hasText:/^Credit Card$/}).locator('xpath=../../..');
-      await creditEditor.locator('details.finance-page-account-settings > summary').click();
+      const creditEditor=section.locator('.finance-page-account-editor').filter({hasText:/Credit Card/});
+      await creditEditor.locator('summary.finance-page-account').click();
       assert.equal(await creditEditor.getByLabel('Correct account type').count(),0,
         'Account types already known must not require redundant classification');
       await creditEditor.getByLabel('Net worth treatment').selectOption('exclude');
@@ -267,9 +271,8 @@ const base=()=>({
       await section.getByText('X Money Checking',{exact:true}).waitFor();
       assert.equal(await section.locator('.finance-page-account').count(),4,
         'SimpleFIN and Plaid account cards share the same list');
-      const xMoneyEditor=section.locator('.finance-page-account-info strong')
-        .filter({hasText:/^X Money Checking$/}).locator('xpath=../../..');
-      await xMoneyEditor.locator('details.finance-page-account-settings > summary').click();
+      const xMoneyEditor=section.locator('.finance-page-account-editor').filter({hasText:/X Money Checking/});
+      await xMoneyEditor.locator('summary.finance-page-account').click();
       assert.equal(await xMoneyEditor.getByRole('checkbox').count(),0,
         'Connected banks must not require a manual monitoring toggle');
       assert.equal(requests.some(r=>r.path.endsWith('/plaid/accounts/monitoring')),false,
@@ -323,6 +326,7 @@ const base=()=>({
         'No provider-returned history remains inaccessible after the final page');
       // Removing an individual Plaid bank must take one confirmation and leave tracker history intact.
       await section.getByRole('button',{name:'Accounts',exact:true}).click();
+      await section.getByRole('button',{name:'Connection options for X Money'}).click();
       await section.getByRole('button',{name:'Remove bank',exact:true}).click();
       const removeConfirm=page.getByRole('dialog',{name:'Remove connected bank?'});
       await removeConfirm.getByRole('button',{name:'Cancel'}).click();
