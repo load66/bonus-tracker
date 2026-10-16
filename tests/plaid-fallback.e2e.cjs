@@ -37,7 +37,7 @@ const KEY='a'.repeat(64);
             monitored=request.postDataJSON().accounts;
           }
           if(url.pathname.endsWith('/selection'))mappings=request.postDataJSON().mappings;
-          if(url.pathname.endsWith('/sync'))syncs++;
+          if(url.pathname.endsWith('/sync')){syncs++;monitored=[KEY];}
           if(url.pathname.endsWith('/link-token')){
             const body=request.postDataJSON();
             assert.equal(body.institution,'Other Bank');
@@ -83,22 +83,20 @@ const KEY='a'.repeat(64);
         assert.equal(await host.getByRole('checkbox').count(),0,'No repeated Plaid acknowledgements or expanded account settings on first view');
         assert.equal(await host.getByRole('button',{name:'Connect via Plaid · uses 1 lifetime slot'}).count(),1);
         await accountsToggle.click();
-        assert.equal(await host.getByRole('checkbox').count(),1,'Only account monitoring remains as a checkbox');
+        assert.equal(await host.getByRole('checkbox').count(),0,
+          'Read-only transaction history must not require an enable checkbox');
         assert.equal(calls.some(x=>x.includes('link-token')||x.includes('/exchange')),false,
           'Opening the provider view must never consume a Plaid Item');
-        assert.equal(await host.getByRole('button',{name:'Show amounts'}).count(),0,
-          'Unmonitored accounts must not reveal transaction data');
-        await host.getByRole('checkbox').last().check();
-        await host.getByRole('button',{name:'Save monitored accounts'}).click();
-        await host.getByText('Monitoring saved · 1 posted transaction available.',{exact:false}).waitFor();
-        assert.deepEqual(monitored,[KEY]);
-        assert.equal(syncs,1,'monitored selection immediately requests read-only activity, without another Plaid Item');
+        await host.getByRole('button',{name:'Refresh transactions'}).click();
+        await host.getByText('Latest available provider data loaded.',{exact:false}).waitFor();
+        assert.deepEqual(monitored,[KEY],'The provider automatically makes linked accounts available');
+        assert.equal(syncs,1,'Activity fetch does not create a new Plaid Item');
         await host.getByRole('combobox',{name:'Bonus campaign for Checking'}).selectOption('cycle-one');
         await host.getByRole('combobox',{name:'Bonus product for Checking'}).selectOption('checking');
         await host.getByRole('button',{name:'Save bonus links'}).click();
         await host.getByText('Bonus links saved.',{exact:false}).waitFor();
         assert.deepEqual(mappings[KEY],{entryId:'cycle-one',bank:'Synthetic Bank',opened:'2026-10-01',productId:'checking'});
-        await host.getByRole('button',{name:'Sync selected activity'}).click();
+        await host.getByRole('button',{name:'Refresh transactions'}).click();
         await host.getByText('Latest available provider data loaded.',{exact:false}).waitFor();
         await host.getByRole('button',{name:'Show amounts'}).waitFor();
         assert.equal(syncs,2);
@@ -135,7 +133,7 @@ const KEY='a'.repeat(64);
         assert.equal(calls.filter(x=>x.includes('link-token')).length,0,'Duplicate override alone must not start linking');
         await nameField.fill('Other Bank');
         assert.equal(await host.getByText('This bank is already connected · Review').isVisible(),false);
-        assert.equal(await host.getByRole('checkbox').count(),1,'Duplicate override resets when bank name changes');
+        assert.equal(await host.getByRole('checkbox').count(),0,'The duplicate override is hidden again when switching banks');
         await connect.click();
         await page.waitForFunction(()=>!!window.syntheticLink);
         assert.equal(await connect.isDisabled(),true);

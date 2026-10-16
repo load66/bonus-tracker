@@ -97,7 +97,7 @@
         const token=input.value.trim();input.value='';
         if(!token)throw Error('Paste your one-time SimpleFIN setup token.');
         data=await request('/connect',{method:'POST',body:JSON.stringify({setup_token:token})});
-        wizardResult='Connected. '+(data.accounts||[]).length+' account'+((data.accounts||[]).length===1?'':'s')+' available.';
+        wizardResult='Connected. '+(data.accounts||[]).length+' account'+((data.accounts||[]).length===1?'':'s')+' found. Transactions sync automatically.';
         paint();message('Secure connection saved.');window.btRefreshFinancesPage?.();
       },'btn-p');btn.classList.add('bank-connect-finish');
     }
@@ -165,7 +165,7 @@
       summary.title='Replace an expired or revoked connection';
       el('p','Use a new one-time SimpleFIN setup token to replace the connection. Saved account settings, transaction evidence and bonus links are retained.',recovery);
       const label=el('label','New SimpleFIN setup token',recovery),input=el('textarea',undefined,label);input.autocomplete='off';input.spellcheck=false;input.rows=3;
-      button(recovery,'Reconnect securely',async()=>{const token=input.value.trim();input.value='';if(!token)throw Error('Paste the new setup token from SimpleFIN.');data=await request('/reconnect',{method:'POST',body:JSON.stringify({setup_token:token})});paint();message(data.error||'Connection replaced. Refresh accounts, then check for transactions when the next provider update is available. Revoke the old token in SimpleFIN if it remains active.');},'btn-p');
+      button(recovery,'Reconnect securely',async()=>{const token=input.value.trim();input.value='';if(!token)throw Error('Paste the new setup token from SimpleFIN.');data=await request('/reconnect',{method:'POST',body:JSON.stringify({setup_token:token})});paint();message(data.error||'Connection replaced. Transactions continue syncing automatically when the provider allows. Revoke the old token in SimpleFIN if it remains active.');},'btn-p');
     }
     const totals=snapshot(data);
     const overview=el('section',undefined,body);overview.className='bank-sync-card';
@@ -177,15 +177,15 @@
       }
       el('p','Net observed movement: '+(hideBalances?'••••••':money(totals.net,'USD'))+'. This is not verified cash flow.',overview);
       if(totals.reversals)el('p',String(totals.reversals)+' possible reversal entries need review.',overview);
-    }else el('p',totals?.hasSync?'No recent posted USD observations. This does not mean there was no account activity.':'No successful transaction retrieval yet. Enable monitoring and check after the next eligible provider sync.',overview);
+    }else el('p',totals?.hasSync?'No recent posted USD observations. This does not mean there was no account activity.':'Connected accounts sync automatically. Initial transactions may still be processing.',overview);
     el('p','Partial posted transaction observations only. Credits include transfers and refunds; debits include transfers and purchases. These are not verified income, expenses or net worth.',overview);
     if(totals?.otherCurrencies?.length)el('p','Non-USD activity excluded from totals: '+totals.otherCurrencies.join(', '),overview);
     if(totals?.unusable)el('p',String(totals.unusable)+' amounts were omitted because they could not be summed safely.',overview);
     if(totals?.usdAccounts&&totals.sourceAccounts<totals.usdAccounts)el('p','Transaction data is incomplete for one or more selected USD accounts.',overview);
     if(totals?.missingAccounts)el('p','At least one selected account was missing from the latest saved account list.',overview);
-    el('h3','Connected accounts',body);el('p',String((data.accounts||[]).length)+' connected · '+String((data.monitoredAccounts||[]).length)+' monitored · '+String(Object.keys(data.mappings||{}).length)+' linked to bonuses',body);button(body,hideBalances?'Show balances':'Hide balances',async()=>{hideBalances=!hideBalances;paint();});
-    el('p','Choose which accounts to monitor for read-only posted transactions, independently of bank bonuses. Link a checking or savings account to its matching bonus only when the account is eligible. Financial activity is not proof of a qualifying direct deposit.',body);
-    const available=active(),selects=[],monitors=[],monitored=new Set(data.monitoredAccounts||[]),accountCards=[];
+    el('h3','Connected accounts',body);el('p',String((data.accounts||[]).length)+' accounts · automatic read-only sync · '+String(Object.keys(data.mappings||{}).length)+' bonus links',body);button(body,hideBalances?'Show balances':'Hide balances',async()=>{hideBalances=!hideBalances;paint();});
+    el('p','Transactions from supported accounts sync automatically. Bonus links remain optional; financial activity is not proof of a qualifying direct deposit.',body);
+    const available=active(),selects=[],monitored=new Set(data.monitoredAccounts||[]),accountCards=[];
     let search=null;
     if(data.accounts?.length){search=el('input',undefined,body);search.type='search';search.setAttribute('aria-label','Search connected accounts');search.placeholder='Search banks and accounts';search.value=accountFilter;}
     for(const a of data.accounts||[]){
@@ -194,9 +194,6 @@
       el('h4',accountName,card);accountCards.push({card,name:accountName.toLowerCase()});
       card.hidden=!!accountFilter&&!accountName.toLowerCase().includes(accountFilter);
       el('p','Balance: '+(hideBalances?'••••••':money(a.balance,a.currency))+' · Available Balance: '+(hideBalances?'••••••':money(a.availableBalance,a.currency))+' · Last Updated: '+stamp(a.balanceDate),card);if(a.balanceDate&&data.lastSuccess&&a.balanceDate>data.lastSuccess)el('p','Balance timestamp is newer than the last recorded transaction sync; these are separate provider updates.',card);
-      const monitorLabel=el('label',undefined,card);monitorLabel.className='bank-sync-monitor-label';
-      const checkbox=el('input',undefined,monitorLabel);checkbox.type='checkbox';checkbox.checked=monitored.has(a.key);checkbox.dataset.account=a.key;
-      el('span','Monitor transactions (read-only)',monitorLabel);monitors.push(checkbox);
       const label=el('label','Link to bonus (optional)',card),select=el('select',undefined,card);select.id='bank-sync-cycle-'+a.key;label.htmlFor=select.id;select.dataset.account=a.key;
       const empty=el('option','No bonus linked',select);empty.value='';
       const current=data.mappings?.[a.key];
@@ -230,16 +227,9 @@
     }
     if(search)search.oninput=()=>{accountFilter=search.value.trim().toLowerCase();for(const item of accountCards)item.card.hidden=!!accountFilter&&!item.name.includes(accountFilter);};
     if(!data.accounts?.length)el('p','No accounts were returned. Refresh the account list after checking SimpleFIN.',body);
-    if(data.accounts?.length)button(body,'Save monitoring preferences',async()=>{
-      const accounts=monitors.filter(c=>c.checked).map(c=>c.dataset.account);
-      const removed=(data.monitoredAccounts||[]).filter(key=>!accounts.includes(key));
-      if(removed.length&&!(await window.btConfirmDialog('Turning off monitoring removes this app’s saved transaction history for the selected account'+(removed.length===1?'':'s')+'. Bank bonus evidence remains only when the account is still linked to a bonus.',{title:'Stop transaction monitoring?',confirmLabel:'Stop monitoring',danger:true})))return;
-      data=await request('/monitoring',{method:'PUT',body:JSON.stringify({accounts})});paint();
-      message('Monitoring preferences saved. Only the selected accounts will be retrieved for independent activity, subject to the daily provider limit.');
-    },'btn-p');
     button(body,'Save account matches',async()=>{
       const mappings={};for(const {cycle,product} of selects){const entry=available.find(e=>String(e.id)===cycle.value);if(entry){const mapping={entryId:String(entry.id),bank:entry.bank,opened:entry.opened};if(product.value&&[...product.options].some(option=>option.value===product.value&&option.value!==''))mapping.productId=product.value;mappings[cycle.dataset.account]=mapping;}}
-      data=await request('/selection',{method:'PUT',body:JSON.stringify({mappings})});paint();message('Bonus links saved. Monitored accounts and linked bonus accounts are included in the next eligible check.');
+      data=await request('/selection',{method:'PUT',body:JSON.stringify({mappings})});paint();message('Bonus links saved. Account transactions continue syncing automatically.');
     },'btn-p');
     el('h3','Recent transactions',body);
     el('p','Available posted and pending transactions are shown for the provider’s retained window. Pending activity is excluded from totals. Transfers, dividends and refunds can appear as deposits. Bonus candidates require review; this section never changes tracker milestones.',body);
@@ -262,7 +252,7 @@
       }
       if(rows.length>100)el('p','Showing the latest 100 transactions for this account.',section);
     }
-    if(!shown)el('p','No transactions are available for monitored or bonus-linked accounts. Use Check for transactions after enabling monitoring; provider updates are limited to once daily.',body);
+    if(!shown)el('p','No transactions are available yet. Connected accounts sync automatically as the provider returns data, subject to the daily limit.',body);
     button(body,'Disconnect and remove sync data',async()=>{
       if(!(await window.btConfirmDialog('Stop background syncing and remove this app’s saved bank-sync data? Your tracker entries stay intact. To revoke the token at SimpleFIN or cancel billing, also use your SimpleFIN account.',{title:'Disconnect SimpleFIN?',confirmLabel:'Disconnect',danger:true})))return;
       data=await request('',{method:'DELETE'});paint();message('Disconnected. Manage token revocation and subscription billing in SimpleFIN.');
@@ -292,7 +282,7 @@
     changed=true;
     message(detail.status==='ready'?
       'Plaid bank connected'+(Number.isInteger(n)&&n>=0?' · '+n+' account'+(n===1?'':'s')+' found':'')+
-        '. See Finances → Transactions to enable activity.':
+        '. Transactions are syncing automatically in Finances.':
       'Plaid authorization saved. Account discovery needs attention; use Connected accounts to review it.');
   });
   window.btOpenBankSync=open;
