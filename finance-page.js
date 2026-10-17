@@ -12,12 +12,18 @@
     unreviewed:'Needs review',income:'Income',housing:'Housing',utilities:'Utilities',groceries:'Groceries',
     dining:'Dining',transportation:'Transportation',shopping:'Shopping',health:'Health',
     entertainment:'Entertainment',fees:'Fees',taxes:'Taxes',travel:'Travel',
-    subscription:'Subscription',transfer:'Transfer',refund:'Refund',verification:'Account verification',bonus:'Bank bonus',other:'Other'
+    subscription:'Subscription',transfer:'Transfer',refund:'Refund',verification:'Account verification',loan:'Loan payment',bonus:'Bank bonus',other:'Other'
   };
   // Keep 'bonus' as a persisted category for canonical tracker/evidence logic;
   // Finances displays it as income without exposing a bonus-only UI control.
   const FINANCE_CATEGORIES=Object.fromEntries(Object.entries(CATEGORIES).filter(([key])=>key!=='bonus'));
   const financeCategory=key=>key==='bonus'?'Income':(FINANCE_CATEGORIES[key]||'Needs review');
+  function displayMerchant(row){
+    const merchant=String(row.merchant||'').trim();
+    if(!merchant||/^(transaction|transfer|purchase|payment|debit|credit)$/i.test(merchant))
+      return row.description||merchant||'Transaction';
+    return merchant;
+  }
   const AMOUNTS_PREF='bt_finance_hide_amounts';
   // Preference only; account information and financial transactions stay server-side.
   let hidePreference=true;
@@ -442,10 +448,11 @@
         const id=rowIdentity(row),open=expandedTransaction===id;
         const article=el('article',undefined,group,'finance-page-transaction'+(open?' is-open':''));
         const top=el('button',undefined,article,'finance-page-transaction-summary');top.type='button';
-        top.setAttribute('aria-expanded',String(open));top.setAttribute('aria-label',(row.merchant||row.description||'Transaction')+' details');
+        top.setAttribute('aria-expanded',String(open));top.setAttribute('aria-label',displayMerchant(row)+' details');
         el('span',iconFor(row),top,'finance-page-transaction-icon').setAttribute('aria-hidden','true');
         const copy=el('span',undefined,top,'finance-page-transaction-copy');
-        el('strong',row.merchant||row.description||'Transaction',copy);
+        el('strong',displayMerchant(row),copy);
+        if(row.categorySource==='ai')el('small','Auto',copy,'finance-page-auto-tag');
         el('small',[financeCategory(row.category),row.account.name||row.account.bank].filter(Boolean).join(' · '),copy);
         const value=el('span',undefined,top,'finance-page-transaction-value');
         el('b',shownAmount(row),value,Number(row.amount)>0?'is-credit':'');
@@ -458,12 +465,18 @@
         if(row.stalePending)el('p','Pending status has not been observed recently. Confirm it with the institution.',detail,'finance-page-warning');
         const visibleSignals=(row.signals||[]).filter(signal=>signal!=='possible_bonus');
         if(visibleSignals.length){const badges=el('div',undefined,detail,'finance-page-badges');for(const signal of visibleSignals)el('span',signalLabel(signal),badges);}
+        const similarLabel=el('label',undefined,detail,'finance-page-learn-label');
+        const similar=el('input',undefined,similarLabel);similar.type='checkbox';similar.checked=false;
+        el('span','Apply to similar transactions',similarLabel);
         const category=select(detail,'Category',FINANCE_CATEGORIES,row.category==='bonus'?'income':row.category,value=>change(async()=>{
-          const snapshot=await request('/transaction-review',{method:'PUT',body:JSON.stringify({account:row.account.rawKey,transaction:row.id,category:value})},row.source);
+          const snapshot=await request('/transaction-review',{method:'PUT',body:JSON.stringify({account:row.account.rawKey,transaction:row.id,category:value,applySimilar:similar.checked})},row.source);
           return {financeSource:row.source,snapshot};
         }));
         category.setAttribute('aria-label','Category for '+(row.merchant||row.description));
-        el('small',row.categorySource==='user'?'Confirmed by you':'Automatic · '+(row.confidence||'low')+' confidence',detail,'finance-page-source');
+        el('small',row.categorySource==='user'?'Confirmed by you':
+          row.categorySource==='user_rule'?'Saved merchant rule':
+          row.categorySource==='ai'?'Auto suggestion · review anytime':
+          'Automatic · '+(row.confidence||'low')+' confidence',detail,'finance-page-source');
         if(row.changedAt)el('small','Provider changed this transaction on '+stamp(row.changedAt)+'. A previous correction was cleared for review.',detail,'finance-page-warning');
       }
       if(filtered.length>transactionVisibleLimit){
@@ -585,6 +598,7 @@
       }else if(account.transactionSyncStatus==='needs_attention'){
         el('small','History sync needs attention',info,'finance-page-warning');
       }
+      if(account.invalidTransactionRows>0)el('small',account.invalidTransactionRows+' bank transaction'+(account.invalidTransactionRows===1?' was':'s were')+' skipped during sync. Review your statement.',info,'finance-page-warning');
       if(p.hidden)el('small','Hidden from Finance totals and activity',info,'finance-page-loading-hint');
       if(account.possibleDuplicate)el('small','Possible duplicate · excluded from totals',info,'finance-page-warning');
       const balances=el('span',undefined,top,'finance-page-account-balances');
