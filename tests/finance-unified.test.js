@@ -362,6 +362,12 @@ assert.equal(plaidLoanSummary.netWorth,'-250000.00');
 const classificationCases=[
   {account:{name:'Example Employer 401(k) Retirement Savings Plan',bank:'Example Plan Administrator',
     accountType:'depository',accountSubtype:'savings'},expected:'retirement'},
+  {account:{name:'Account',bank:'Example Plan Provider',
+    accountType:'investment',accountSubtype:'401(k)'},expected:'retirement'},
+  {account:{name:'Plan 2',bank:'Example Plan Provider',
+    accountType:'investment',accountSubtype:'403(b)'},expected:'retirement'},
+  {account:{name:'Plan 3',bank:'Example Plan Provider',
+    accountType:'investment',accountSubtype:'retirement plan'},expected:'retirement'},
   {account:{name:'Example Employer 403(b) Savings Plan',bank:'Example Financial',
     accountType:'investment',accountSubtype:'individual'},expected:'retirement'},
   {account:{name:'457(b) Deferred Compensation Plan',bank:'Example Custodian',
