@@ -9,7 +9,7 @@
     other_asset:'Other asset',other_liability:'Other liability'
   };
   const CATEGORIES={
-    unreviewed:'Needs review',income:'Income',housing:'Housing',utilities:'Utilities',groceries:'Groceries',
+    unreviewed:'Needs review',income:'Income',housing:'Housing',loan:'Loan payment',utilities:'Utilities',groceries:'Groceries',
     dining:'Dining',transportation:'Transportation',shopping:'Shopping',health:'Health',
     entertainment:'Entertainment',fees:'Fees',taxes:'Taxes',travel:'Travel',
     subscription:'Subscription',transfer:'Transfer',refund:'Refund',verification:'Account verification',bonus:'Bank bonus',other:'Other'
