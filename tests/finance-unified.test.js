@@ -44,6 +44,23 @@ assert.equal(excluded.accounts.length,0,'suspected same-account links must not e
 assert.equal(excluded.excludedForReview,2);
 assert.equal(finance.summarize(excluded,{now,days:30}).income,null);
 
+const historyLoading=structuredClone(plaid);
+historyLoading.accounts[0].historyComplete=false;
+historyLoading.accounts[0].transactionSyncStatus='history_still_loading';
+const partialHistory=core.safeForSummary(core.combine({simplefin:simple,plaid:historyLoading}));
+assert.equal(partialHistory.historyIncomplete,true,'late provider history is explicitly incomplete');
+const verifiedHistory=structuredClone(historyLoading);
+verifiedHistory.accounts[0].historyComplete=true;
+verifiedHistory.accounts[0].transactionSyncStatus='ready';
+assert.equal(core.safeForSummary(core.combine({simplefin:simple,plaid:verifiedHistory})).historyIncomplete,false);
+const malformedSimple=structuredClone(simple);
+malformedSimple.warnings=['Synthetic malformed transaction row'];
+malformedSimple.status='attention';
+assert.equal(core.safeForSummary(core.combine({simplefin:malformedSimple,plaid})).incompleteProviders,true);
+const malformedPlaid=structuredClone(plaid);
+malformedPlaid.accounts[0].invalidTransactionRows=1;
+assert.equal(core.safeForSummary(core.combine({simplefin:simple,plaid:malformedPlaid})).malformedActivity,true);
+
 const hiddenBank=structuredClone(simple);
 hiddenBank.accountProfiles[a].hidden=true;
 const combinedHidden=core.combine({simplefin:hiddenBank,plaid});
