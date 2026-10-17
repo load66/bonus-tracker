@@ -49,6 +49,7 @@
         const n=cents(row.amount);
         if(n===null){unusable++;continue}
         if(row.pending){pending++;continue}
+        if(row.excludedFromTotals===true)continue;
         observations++;
         if(n>0n)credits+=n; else if(n<0n)debits-=n;
         if(row.kind==='possible_bonus'&&n>0n)candidates++;
