@@ -805,3 +805,31 @@
   .finance-page .finance-spending-donut-center strong{font-size:16px}
   .finance-page .finance-spending-confirm-actions{gap:8px}
 }
+
+
+/* v3.4.81 account segregation and compact investment-aware ledger */
+.finance-page .finance-page-overview-balance-cards{display:grid;gap:12px;min-width:0}
+.finance-page .finance-page-investments-card{display:grid;gap:12px;background:linear-gradient(155deg,#122720,#111a25)}
+.finance-page .finance-page-investments-card>h3{font-size:14px;margin:0;color:#bde2d5}
+.finance-page .finance-page-investment-splits,.finance-page .finance-page-investment-history,
+.finance-page .finance-page-overview-liability-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.finance-page .finance-page-investments-card .finance-page-tile{padding:11px;border:1px solid #2e443d;border-radius:11px;min-width:0}
+.finance-page .finance-page-investments-card .finance-page-tile strong{font-size:clamp(13px,4vw,20px);overflow-wrap:anywhere}
+.finance-page .finance-page-overview-liability-cards .finance-page-tile{padding:13px;border:1px solid #303f49;border-radius:12px;min-width:0}
+.finance-page .finance-page-overview-liability-cards .finance-page-tile strong{font-size:clamp(14px,4vw,21px)}
+.finance-page .finance-page-investment-subtotal{font-size:11px;color:#a5bfb6}
+.finance-page .finance-page-transaction-scopes{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;padding:5px 1px 13px}
+.finance-page .finance-page-transaction-scopes::-webkit-scrollbar{display:none}
+.finance-page .finance-page-transaction-scopes .finance-page-chip{flex:0 0 auto;white-space:nowrap;min-height:37px;border-radius:18px;padding:8px 12px;font-size:12px}
+.finance-page .finance-page-transaction-scopes .finance-page-chip.is-active{background:#275a4a;color:#a2f4d2;border-color:#4e9c7a}
+.finance-page .finance-page-transaction-group>.finance-page-transaction-date{position:sticky;top:53px;z-index:9;background:#101821;box-shadow:0 -6px 0 #101821;padding:8px 2px}
+.finance-page .finance-page-transaction-category.is-neutral{color:#b7c5d2;background:#242b33;border:1px solid #343e4b}
+.finance-page .finance-page-pending-label{color:#b7b7ad;font-size:10px}
+.finance-page .finance-page-transfer-pair{padding:12px;background:#17242a;border:1px solid #364850;border-radius:12px}
+.finance-page .finance-page-transfer-pair h3{margin:0 0 10px;font-size:13px}
+.finance-page .finance-page-transfer-pair .finance-page-preview-row{padding:9px 0}
+@media(max-width:420px){
+ .finance-page .finance-page-overview-liability-cards,.finance-page .finance-page-investment-history{gap:7px}
+ .finance-page .finance-page-overview-liability-cards .finance-page-tile{padding:9px}
+ .finance-page .finance-page-transaction-scopes{margin:0 -6px;padding-inline:6px}
+}
