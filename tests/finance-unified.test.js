@@ -142,7 +142,7 @@ assert.equal(core.safeForSummary(core.combine({simplefin:rediscovered,plaid:othe
   'Discovery must not reactivate a disabled account');
 rediscovered.accountProfiles[a].syncEnabled=true;
 const restored=core.safeForSummary(core.combine({simplefin:rediscovered,plaid:otherCard}));
-assert.equal(restored.accounts.some(a=>a.key==='simplefin:'+a),true,'Sync back on restores saved card');
+assert.equal(restored.accounts.some(entry=>entry.key==='simplefin:'+a),true,'Sync back on restores saved card');
 assert.ok(restored.transactions['simplefin:'+a].one,'Prior transaction history remains intact');
 
 console.log('Unified Finance: provider isolation, type inference, full account/transaction aggregation, exact cents, stale-balance safety and overlap controls passed');
