@@ -54,6 +54,7 @@
   function effective(row){
     const match=categorize(row),signals=[...(row?.signals||[])];
     if(match?.signal&&!signals.includes(match.signal))signals.push(match.signal);
+    if(match?.category==='transfer'&&!signals.includes('transfer'))signals.push('transfer');
     return {...row,category:match?.category||row?.category||'unreviewed',signals};
   }
   function label(row){
