@@ -100,8 +100,9 @@
         const then=Math.max(Date.now()+195000,(data.nextGuidedDiscoveryAt||0)*1000+15000);
         const current=generation;
         setTimeout(()=>{
-          if(panel&&generation===current&&awaitingReturn&&document.visibilityState==='visible'&&!busy)
-            run(()=>discoverAccounts(true));
+          if(panel&&generation===current&&awaitingReturn&&document.visibilityState==='visible'&&!busy){
+            guidedTries++;lastReturnCheck=Date.now();run(()=>discoverAccounts(true));
+          }
         },Math.min(360000,then-Date.now()));
       }
     }
@@ -109,6 +110,7 @@
     message(wizardResult);
   }
   function triggerReturnCheck(){
+    if(!panel&&awaitingReturn&&window.BTBonusAuth?.connected()){open('add-bank');return}
     if(!panel||view!=='add-bank'||wizardStage!=='simplefin'||!data?.connected||
        !awaitingReturn||busy||document.visibilityState==='hidden')return;
     if(Date.now()-lastReturnCheck<160000)return;
@@ -404,7 +406,7 @@
     document.body.append(panel);paint();done.focus();if(window.BTBonusAuth?.connected())run(async()=>{
       data=await request();if(mode==='discover')await discoverAccounts();else paint();
       if(mode==='add-bank')checkPlaidCapacity().then(()=>{if(panel)paint()}).catch(()=>{});
-    });
+    }).then(()=>{if(mode==='add-bank'&&awaitingReturn)setTimeout(triggerReturnCheck,0)});
   }
   function install(){
     const menu=document.querySelector('.header-data-panel');if(!menu||menu.querySelector('[data-bank-sync]'))return;
@@ -425,7 +427,7 @@
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')triggerReturnCheck()});
   window.addEventListener('focus',triggerReturnCheck);
   window.btOpenBankSync=open;
-  window.btOpenBankConnectFlow=()=>{wizardStage=selectedBank?'route':'choose';rememberStep();open('add-bank')};
+  window.btOpenBankConnectFlow=()=>{wizardStage=awaitingReturn?'simplefin':selectedBank?'route':'choose';rememberStep();open('add-bank')};
   window.btDiscoverBankAccounts=()=>open('discover');
   window.btRegisterPostRender?.('simplefin-bank-sync',install);install();
   document.addEventListener('keydown',e=>{if(!panel)return;if(e.key==='Escape'){close();return;}if(e.key==='Tab'){const controls=[...panel.querySelectorAll('button,input,select,textarea,a[href]')].filter(n=>!n.disabled&&n.getClientRects().length);const first=controls[0],last=controls.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}});
