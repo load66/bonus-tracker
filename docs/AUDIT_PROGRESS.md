@@ -1,10 +1,20 @@
 # Audit progress
 
-Active agent: codex (Finance removal inventory; codex/remove-finance)
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- Release checkpoint (2026-10-17): Finance frontend removed via PR #162, merge `28d110b3330da4d0d3e6a8b00c3984ba0f248e6e`; v3.5.1 and service-worker cache `bt-v3.5.1-retire1`.
+- Main-branch Verify and Deploy https://github.com/load66/bonus-tracker/actions/runs/39079048818 PASS: bonus/cloud/UI suites and Playwright Chromium, Firefox and WebKit. Main-branch Pages build/deploy https://github.com/load66/bonus-tracker/actions/runs/39079048358 PASS on the same merge commit.
+- Backend PR https://github.com/load66/Trading-Journal-AI/pull/229 merged, and Railway production SUCCESS on exact backend merge commit. Backend full pytest 377 passed, journal frontend build/tests PASS.
+- Owner separately authorized retirement of the optional provider-backed Tracker bank-activity review; manual bank-bonus workflows, rules, cloud backups, and journal remain supported.
+- Frontend Finance-only browser preferences are removed by migration; no bank or journal data purged by the agent. The permanent Plaid slot ledger is preserved.
+- Owner-only action remains: review dry-run and, if desired, execute guarded Finance R2 cleanup using backend `docs/FINANCE_RETIREMENT_RUNBOOK.md`. Agent MUST NOT invoke the destructive route.
+- Verification gap: live Pages `sw.js` content was not fetchable from this runtime; GitHub source and Pages deployment CI confirm the new asset version.
+- Status: implementation/release complete; historical queued Finance work below is superseded.
+
 
 - Owner decision (2026-10-17): supersede Finance/Plaid enhancement queue with full Finance retirement, subject to manual revocation and a protected Tracker-evidence decision.
 - Source of truth for read-only inventory and owner checklist: backend draft PR https://github.com/load66/Trading-Journal-AI/pull/229.
