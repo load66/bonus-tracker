@@ -191,3 +191,46 @@ assert.equal(core.ledgerRows(ledgerAll,{scope:'transfers'}).length,1,'Transfer f
 const overridden=structuredClone(segregatedSimple);
 overridden.accountProfiles['invest-1']={kind:'checking',balanceMode:'asset'};
 assert.equal(core.combine({simplefin:overridden}).accountProfiles['simplefin:invest-1'].kind,'checking','Manual type choice wins');
+
+
+// Net worth includes investment accounts and wallet balances by default.
+assert.equal(core.detectedType({bank:'PayPal',name:'PayPal Balance',accountType:'wallet'}),'other_asset');
+const assetSource={connected:true,lastSuccess:now,accounts:[
+  {key:'cash-1',bank:'Lafayette FCU',name:'Checking',currency:'USD',balance:'100.00',balanceDate:now-60},
+  {key:'broker-1',bank:'Robinhood',name:'Robinhood individual (6105)',currency:'USD',balance:'2100.00',balanceDate:now-60},
+  {key:'wallet-1',bank:'PayPal',name:'PayPal Balance',accountType:'wallet',currency:'USD',balance:'80.00',balanceDate:now-60}
+],monitoredAccounts:['cash-1','broker-1','wallet-1'],transactions:{},accountProfiles:{
+  'cash-1':{kind:'checking',balanceMode:'asset'}
+}};
+const defaults=core.safeForSummary(core.combine({simplefin:assetSource}));
+const netDefault=finance.summarize(defaults,{now});
+assert.equal(netDefault.netWorth,'2280.00','Wallet and individual investment account enter net worth by default');
+assert.equal(netDefault.cash,'100.00','Wallet and brokerage never inflate checking cash');
+assert.equal(netDefault.netWorthExclusions.length,0);
+const optedOut=structuredClone(assetSource);
+optedOut.accountProfiles['wallet-1']={kind:'other_asset',balanceMode:'exclude',balanceModeUserSet:true};
+assert.equal(finance.summarize(core.safeForSummary(core.combine({simplefin:optedOut})),{now}).netWorth,'2200.00',
+  'User-selected wallet exclusion remains unchanged');
+const legacyDefault=structuredClone(assetSource);
+legacyDefault.accountProfiles['broker-1']={kind:'unclassified',balanceMode:'exclude'};
+assert.equal(finance.summarize(core.safeForSummary(core.combine({simplefin:legacyDefault})),{now}).netWorth,'2280.00',
+  'Legacy unclassified auto-exclusion follows newly detected investment type');
+const legacyManual=structuredClone(assetSource);
+legacyManual.accountProfiles['broker-1']={kind:'brokerage',balanceMode:'exclude'};
+assert.equal(finance.summarize(core.safeForSummary(core.combine({simplefin:legacyManual})),{now}).netWorth,'180.00',
+  'Ambiguous old explicit exclusions must not be silently reversed');
+
+// Scan rendered literal UI copy, not internal state property identifiers.
+const fs=require('node:fs'),path=require('node:path');
+const frontend=fs.readFileSync(path.join(__dirname,'../finance-page.js'),'utf8');
+const forbidden=/\b(?:provider|observation|verified|unverified|timestamp|snapshot|capped|evidence)\b/i;
+const rendered=/\b(?:el|action|statusMessage|metric)\(\s*[^,\n]+,\s*(['"])([^'"\n]{1,230})\1/g;
+let checkedCopy=0;
+for(const match of frontend.matchAll(rendered)){
+  const value=match[2];
+  if(!/[A-Za-z]/.test(value))continue;
+  checkedCopy++;
+  assert.equal(forbidden.test(value),false,'Finance label contains internal jargon: '+value);
+  assert.ok(value.length<=90,'Finance visible copy exceeds 90 characters: '+value);
+}
+assert.ok(checkedCopy>80,'Copy quality test must scan a meaningful set of visible labels');
