@@ -26,16 +26,28 @@
     return amount!==null&&Number.isFinite(at)&&at>0&&at<=now+300&&at>=now-STALE_BALANCE_DAYS*DAY
       ?{amount,at}:null;
   }
-  const financialInstitution=/(?:\bcapital\s*one\b|\bchase\b|\bamerican\s*express\b|\bamex\b|\bdiscover\b|\bciti(?:bank)?\b|\brobinhood\b|\bfidelity\b|\bschwab\b|\bvanguard\b|\bsynchrony\b|\bbarclays\b)/i;
-  const financialAction=/(?:\b(?:pmt|pymt|payment|autopay|epay|crcardpmt|ccpmt)\b)/i;
-  const investmentInstitution=/(?:\brobinhood\b|\bfidelity\b|\bschwab\b|\bvanguard\b|\bbrokerage\b|\binvestment\b|\b401k\b|\broth\s*ira\b|\bira\b)/i;
-  const contributionAction=/(?:\b(?:contribution|contribute|deposit|funding|transfer)\b)/i;
+  const financialDestination=/\b(?:bank|fcu|credit\s+union|savings?|checking|brokerage|invest(?:ing|ment)|ira|citibank|citi\s*bank|u\.?\s*s\.?\s*bank|capital\s+one|chase|wells\s+fargo|bofa|amex|american\s+express|discover|synchrony|lafayette\s+fcu|navy\s+federal|paypal|venmo|cash\s*app|zelle|x\s*money|onepay|one\s+pay|robinhood|fidelity|schwab|vanguard)\b/i;
+  const issuer=/\b(?:capital\s+one|chase|american\s+express|amex|discover|citi(?:bank)?|u\.?\s*s\.?\s*bank|robinhood|fidelity|schwab|vanguard)\b/i;
+  const payment=/\b(?:pmt|pymt|payment|autopay|epay|crcardpmt|ccpmt)\b/i;
+  const bareIssuer=/^\s*(?:capital\s+one|u\.?\s*s\.?\s*bank|citibank|citi\s*bank|amex|american\s+express|discover)\s*$/i;
+  const investment=/\b(?:robinhood|fidelity|schwab|vanguard|brokerage|investment|ira|401k)\b/i;
+  const investAction=/\b(?:contribution|contribute|deposit|funding|transfer)\b/i;
   function financialMovement(row){
-    const text=String(row.description||'')+' '+String(row.merchant||'');
-    return row.kind==='card_payment'||row.kind==='investment_contribution'||
+    if(['user','user_rule'].includes(row.categorySource))return row.category==='transfer';
+    const text=String(row.description||row.merchant||'').trim();
+    const directed=/^\s*(?:to|from)\s+(.+)$/i.exec(text);
+    const n=cents(row.amount);
+    return row.category==='transfer'||row.kind==='card_payment'||row.kind==='investment_contribution'||
       (row.signals||[]).includes('matched_internal_transfer')||
-      (financialInstitution.test(text)&&financialAction.test(text))||
-      (investmentInstitution.test(text)&&contributionAction.test(text));
+      (directed&&financialDestination.test(directed[1]))||
+      (n!==null&&n<0n&&(bareIssuer.test(text)||(issuer.test(text)&&payment.test(text))))||
+      (investment.test(text)&&investAction.test(text));
+  }
+  function possibleFinancialMovement(row){
+    if(['user','user_rule'].includes(row.categorySource)||row.category!=='unreviewed')return false;
+    const text=String(row.description||row.merchant||'').trim(),n=cents(row.amount);
+    return n!==null&&n<0n&&(n<=-100000n||n%100n===0n)&&
+      (/^\s*(?:to|from)\s+/i.test(text)||financialDestination.test(text));
   }
   function summarize(state={},options={}){
     const now=Number.isFinite(options.now)?Math.floor(options.now):Math.floor(Date.now()/1000);
@@ -66,22 +78,22 @@
         if(row.kind==='possible_bonus'&&n>0n)candidates++;
         if(row.kind==='possible_reversal'&&n<0n)reversals++;
         const category=String(row.category||'unreviewed');
-        if(category==='income'&&n>0n)income+=n;
+        if(category==='income'&&n>0n&&!financialMovement(row))income+=n;
         else if(n<0n&&!['transfer','verification','refund'].includes(category)&&
-                !financialMovement(row)){
+                !financialMovement(row)&&!possibleFinancialMovement(row)){
           const amount=-n,label=SPENDING.has(category)?category:'unreviewed';
           expenses+=amount;spending[label]=(spending[label]||0n)+amount;
           if(label==='unreviewed')uncategorized++;
-        }else if(category==='transfer')transfers++;
+        }else if(category==='transfer'||financialMovement(row))transfers++;
         if(category==='unreviewed'||(category==='bonus'&&row.categorySource!=='user')||(!['user','user_rule'].includes(row.categorySource)&&row.confidence!=='high'))unreviewed++;
         if(Array.isArray(row.signals)&&row.signals.includes('possible_recurring'))recurring++;
         // Use the same local calendar basis as the day-grouped Finance ledger.
         const local=new Date(row.posted*1000);
         const key=String(local.getFullYear())+'-'+String(local.getMonth()+1).padStart(2,'0');
         const month=monthly[key]||(monthly[key]={income:0n,expenses:0n});
-        if(category==='income'&&n>0n)month.income+=n;
+        if(category==='income'&&n>0n&&!financialMovement(row))month.income+=n;
         if(n<0n&&!['transfer','verification','refund'].includes(category)&&
-           !financialMovement(row))month.expenses-=n;
+           !financialMovement(row)&&!possibleFinancialMovement(row))month.expenses-=n;
       }
     }
 
