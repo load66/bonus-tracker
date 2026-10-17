@@ -172,3 +172,22 @@ for(const category of ['transfer','card_payment','investment_transfer']){
 }
 const kindMovements=[weekday(8,9),weekday(9,9),weekday(10,9)].map(at=>({...row(at,'-500.00','subscription','Recurring funding'),kind:'investment_contribution'}));
 assert.equal(I.recurring(kindMovements,NOW).length,0,'Investment contribution kinds are always financial movements');
+
+
+// No matching opposite leg yet: an X Money "Payment" stays neutral even if
+// Plaid upstream categorizes the credit as income. Saved user decisions win.
+const provisionalPayment={posted:Math.floor(NOW/1000)-86400*6,amount:'1000.00',
+  merchant:'Payment',description:'Payment',bank:'X money',category:'income',
+  categorySource:'automatic',pending:false,signals:[]};
+const unpaired=G.effective(provisionalPayment);
+assert.equal(unpaired.category,'unreviewed','Generic inbound Payment waits for bank counterpart');
+assert.equal(G.label(provisionalPayment),'Possible transfer');
+assert.ok(unpaired.signals.includes('possible_transfer'));
+assert.equal(I.spent([provisionalPayment],I.monthKey(NOW)).income,'0.00',
+  'Unmatched Payment cannot count as Income, even five days later');
+assert.equal(I.recurring([provisionalPayment],NOW).length,0);
+const reviewedPayment={...provisionalPayment,categorySource:'user',category:'income'};
+assert.equal(G.effective(reviewedPayment).category,'income','Manual Income choice remains authoritative');
+const confirmedPayment={...provisionalPayment,categorySource:'user_rule',category:'transfer'};
+assert.equal(G.effective(confirmedPayment).category,'transfer',
+  'Confirmed similar-description transfer rule is never overridden by heuristics');
