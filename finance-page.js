@@ -303,7 +303,7 @@
       el('p',next>Date.now()/1000
         ?'Bank linked · next account check '+stamp(next)
         :'Bank linked · accounts not yet discovered',panel);
-      if(other.error)el('p','Account check needs attention. Open Plaid to review the connection.',panel,'finance-page-warning');
+      if(other.error)el('p','This bank needs attention. Check the connection in Accounts.',panel,'finance-page-warning');
     }
     const row=el('div',undefined,panel,'finance-page-quick-actions');
     action(row,'View '+(source==='plaid'?'Plaid':'SimpleFIN')+' accounts',
@@ -463,7 +463,7 @@
     const rows=flattenTransactions().filter(row=>Number.isFinite(row.posted)&&row.posted>0).slice(0,5);
     if(!rows.length){
       const loading=(currentCombined?.accounts||[]).some(a=>a.transactionSyncStatus==='history_still_loading'||a.transactionSyncStatus==='awaiting_first_sync');
-      el('p',loading?'History still loading. Your bank is preparing transactions.':'Transactions will appear as each bank finishes syncing.',card,'finance-page-hint');return
+      el('p',loading?'Importing transaction history for 1 bank. Updates automatically.':'Transactions will appear as each bank finishes syncing.',card,'finance-page-hint');return
     }
     const list=el('div',undefined,card,'finance-page-preview-list');
     for(const row of rows){
@@ -572,7 +572,7 @@
     metric(activityGrid,'Expenses',summary.hasActivity?amount(summary.expenses,'USD'):'—');
     metric(activityGrid,'Net flow',summary.hasActivity?amount(summary.cashFlow,'USD'):'—');
     metric(activityGrid,'Savings rate',summary.savingsRate===null?'—':summary.savingsRate.toFixed(1)+'%');
-    if(!summary.complete)el('p','Cash Flow is partial: review '+summary.unreviewed+' uncategorized transaction'+(summary.unreviewed===1?'':'s')+'.',activity,'finance-page-caution');
+    if(!summary.complete)el('p','Spending needs a closer look: categorize '+summary.unreviewed+' uncategorized transaction'+(summary.unreviewed===1?'':'s')+'.',activity,'finance-page-caution');
     compactActivityPreview(host);
     spendingDonut(host,summary);
     const more=el('details',undefined,host,'finance-page-more');
@@ -601,13 +601,13 @@
     const attention=el('section',undefined,more,'finance-page-card');el('h3','Needs review',attention);
     const cutoff=Math.floor(Date.now()/1000)-period*86400;
     const signals=flattenTransactions().filter(r=>!r.pending&&r.posted>=cutoff&&r.posted<=Math.floor(Date.now()/1000)+300&&Array.isArray(r.signals)&&r.signals.some(x=>['possible_direct_deposit','possible_reversal','possible_fee','possible_recurring'].includes(x)));
-    if(!signals.length)el('p','No flagged transactions in the available data.',attention);
+    if(!signals.length)el('p','No transactions need attention.',attention);
     else for(const row of signals.slice(0,8)){
       const line=el('article',undefined,attention,'finance-page-review-row'),copy=el('div',undefined,line);
       el('strong',row.merchant||row.description,copy);el('small',row.account.bank+' · '+date(row.posted)+' · '+row.signals.map(signalLabel).join(' · '),copy);
       el('b',amount(row.amount,row.account.currency),line);
     }
-    el('p','Review flagged activity against your bank statement.',attention,'finance-page-hint');
+    el('p','Compare anything unusual with your bank statement.',attention,'finance-page-hint');
   }
   function spendMonth(month){
     return window.BTFinanceInsights?.spent(flattenTransactions(),month)||
@@ -829,7 +829,7 @@
         el('h4',displayMerchant(row),detail);
         el('p',row.description||'No additional description supplied.',detail,'finance-page-description');
         el('small',[row.account.bank,row.account.name,row.account.sourceLabel,date(row.posted),row.pending?'Pending':'Posted'].filter(Boolean).join(' · '),detail,'finance-page-detail-meta');
-        if(row.stalePending)el('p','Pending status has not been observed recently. Confirm it with the institution.',detail,'finance-page-warning');
+        if(row.stalePending)el('p','This pending charge has not updated recently. Check your bank.',detail,'finance-page-warning');
         const visibleSignals=(row.signals||[]).filter(signal=>signal!=='possible_bonus');
         if(visibleSignals.length){const badges=el('div',undefined,detail,'finance-page-badges');for(const signal of visibleSignals)el('span',signalLabel(signal),badges);}
         const similarLabel=el('label',undefined,detail,'finance-page-learn-label');
@@ -844,7 +844,7 @@
           row.categorySource==='user_rule'?'Saved merchant rule':
           row.categorySource==='ai'?'Auto suggestion · review anytime':
           'Automatic · '+(row.confidence||'low')+' confidence',detail,'finance-page-source');
-        if(row.changedAt)el('small','Provider changed this transaction on '+stamp(row.changedAt)+'. A previous correction was cleared for review.',detail,'finance-page-warning');
+        if(row.changedAt)el('small','Your bank updated this transaction on '+stamp(row.changedAt)+'. A previous correction was cleared for review.',detail,'finance-page-warning');
         const saved=financePrefs.transactionMeta?.[row.settingKey]||{};
         const edit=el('div',undefined,detail,'finance-page-transaction-edits');
         const nameLabel=el('label',undefined,edit,'finance-page-field');
@@ -1015,9 +1015,9 @@
       const info=el('span',undefined,top,'finance-page-account-info');el('strong',account.name||'Financial account',info);
       el('small',(TYPES[p.kind]||'Type unknown')+' · '+account.sourceLabel,info,'finance-page-account-source');
       if(account.transactionSyncStatus==='history_still_loading'||account.transactionSyncStatus==='awaiting_first_sync'){
-        el('small','History still loading'+(Number.isFinite(account.transactionNextSyncAt)?' · Next check '+stamp(account.transactionNextSyncAt):''),info,'finance-page-loading-hint');
+        el('small','Importing transaction history'+(Number.isFinite(account.transactionNextSyncAt)?' · Next check '+stamp(account.transactionNextSyncAt):''),info,'finance-page-loading-hint');
       }else if(account.transactionSyncStatus==='needs_attention'){
-        el('small','History sync needs attention',info,'finance-page-warning');
+        el('small','Transaction import needs attention',info,'finance-page-warning');
       }
       if(account.invalidTransactionRows>0)el('small',account.invalidTransactionRows+' bank transaction'+(account.invalidTransactionRows===1?' was':'s were')+' skipped during sync. Review your statement.',info,'finance-page-warning');
       if(p.hidden)el('small','Hidden from Finance totals and activity',info,'finance-page-loading-hint');
