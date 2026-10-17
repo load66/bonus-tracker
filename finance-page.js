@@ -1693,7 +1693,14 @@
         loading?'Waiting for history.':
         archiveLoading?'Loading earlier months.':settingsNotice;
       if(needsAttention)action(row,'Check accounts',()=>{view='accounts';paint()});
-      if(needsAttention&&sourceSnapshot('simplefin')?.status==='attention')action(row,'Open SimpleFIN',()=>window.open('https://bridge.simplefin.org/','_blank','noopener'),'finance-page-button');
+      const sf=sourceSnapshot('simplefin');
+      if(needsAttention&&sf?.status==='attention'){
+        const failure=String(sf.error||'');
+        if(/access (?:was )?rejected|authorization rejected|invalid access/i.test(failure))
+          action(row,'Reconnect',()=>window.btOpenBankSync?.(),'finance-page-button');
+        else if(sf.accounts?.some(account=>account.attentionKind==='bank_login'))
+          action(row,'Fix on SimpleFIN',()=>window.open('https://bridge.simplefin.org/','_blank','noopener'),'finance-page-button');
+      }
     }
     if(view==='transactions')transactions(host);
     else if(view==='accounts')accounts(host);
