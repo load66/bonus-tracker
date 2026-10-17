@@ -209,21 +209,11 @@
  .fab,.bt-floating-actions,.floating-actions,.bt-tools-floating,.bt-floating-archive{bottom:calc(94px + env(safe-area-inset-bottom,0px))!important}
 }
 
-/* Explicit Tracker review access; isolated bottom-sheet never obscures its close control. */
-.bt-tracker-review-access{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 14px 12px}
-.bt-tracker-review-access button{border:1px solid #4c6484;background:#172b46;color:#e3efff;border-radius:12px;padding:10px 13px;font-weight:700;font-size:12px}
-.bt-tracker-review-access small{font-size:10px;color:#9eb4d0}
-.bt-tracker-evidence-overlay{position:fixed;inset:0;z-index:100100;background:rgba(7,15,30,.82);display:flex;align-items:flex-end;justify-content:center}
-.bt-tracker-evidence-sheet{width:100%;max-width:720px;max-height:calc(100dvh - 24px);min-height:260px;background:#101d30;color:#ecf4ff;border-radius:22px 22px 0 0;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 0 70px #0009}
-.bt-tracker-evidence-header{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 18px;background:#101d30;z-index:1;border-radius:22px 22px 0 0}
-.bt-tracker-evidence-header button{border:1px solid #6d88a6;border-radius:10px;padding:8px 14px;background:#223c5b;color:#fff}
-.bt-tracker-evidence-content{overflow-y:auto;overscroll-behavior:contain;padding:0 14px 16px}
-@media(max-width:390px){.bt-tracker-review-access{flex-wrap:wrap}.bt-tracker-review-access small{flex-basis:100%}}
-/* v3.4.85: six independent equal-width bottom tabs, never a shared text row.
+/* v3.5.1: five equal-width bottom tabs, no Finance surface.
    Visual names are short; full names are retained as accessible button labels. */
 .tabs{
   display:grid;
-  grid-template-columns:repeat(6,minmax(0,1fr));
+  grid-template-columns:repeat(5,minmax(0,1fr));
   width:100%;min-width:0;box-sizing:border-box;
   align-items:stretch;column-gap:3px;
 }

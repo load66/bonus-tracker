@@ -2,8 +2,8 @@
 const {test,expect}=require('@playwright/test');
 const {spawn}=require('node:child_process');
 const path=require('node:path');
-const all=['bonus-evidence.e2e.cjs','finance-page.e2e.cjs','bank-sync.e2e.cjs','plaid-fallback.e2e.cjs','browser-e2e.cjs'];
-const live=['bank-sync.e2e.cjs','bonus-evidence.e2e.cjs','finance-page.e2e.cjs'];
+const all=['browser-e2e.cjs'];
+const live=['browser-e2e.cjs'];
 for(const file of process.env.BT_BROWSER_SITE_URL?live:all){
  test(file,async({},info)=>{
   const result=await new Promise(resolve=>{

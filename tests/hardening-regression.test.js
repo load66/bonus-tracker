@@ -6,7 +6,7 @@ const index=fs.readFileSync('index.html','utf8');
 const cacheVersion=sw.match(/^const V = 'bt-v([^']+)';/m)?.[1];
 const registrationVersion=index.match(/serviceWorker\.register\('\.\/sw\.js\?v=([^']+)'/)?.[1];
 assert(cacheVersion&&registrationVersion===cacheVersion,'Service-worker cache and registration must share the current fingerprint');
-assert(index.includes('./finance-page.js?v='+cacheVersion)&&index.includes('./finance-page.css?v='+cacheVersion),'Finance runtime assets must refresh with the service worker');
+assert(!index.includes('finance-page.js')&&!sw.includes('finance-page.js'),'Retired Finance runtime assets must be absent from service worker');
 assert(sw.includes('installCompleteCache')&&!/cache\.addAll\(ASSETS\)\.catch/.test(sw),'Atomic cache install hardening missing');
 assert(sw.includes("if(req.mode==='navigate')")&&sw.includes("status:503"),'Navigation-only HTML fallback / asset failure response missing');
 assert(sw.includes('responseMatches(url.pathname,res)'),'Asset content-type validation missing');

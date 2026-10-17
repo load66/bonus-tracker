@@ -1,10 +1,17 @@
 # Audit progress
 
-Active agent: none
+Active agent: codex (Finance removal inventory; codex/remove-finance)
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- Owner decision (2026-10-17): supersede Finance/Plaid enhancement queue with full Finance retirement, subject to manual revocation and a protected Tracker-evidence decision.
+- Source of truth for read-only inventory and owner checklist: backend draft PR https://github.com/load66/Trading-Journal-AI/pull/229.
+- Phase: owner confirmed manual provider disconnections and authorized retirement of Tracker bank-activity review. Finance frontend modules, navigation, provider UI, evidence panel, obsolete suites/workflow removed on branch; no production deployment or R2 purge yet.
+- Unmerged Finance PRs abandoned without merge: #157, #123, #113, #109, #108, #106, #105, #99, #98, #97.
+- Next step: backend full CI, merge and Railway SUCCESS; then remaining frontend units and three-browser checks, merge, Pages and live service-worker audit. Owner alone runs guarded R2 purge.
+
 
 - Backend production: v3.4.98 SimpleFIN automatic linked-bank ingestion, PR https://github.com/load66/Trading-Journal-AI/pull/226
 - Railway SUCCESS: merge commit 26dc4b2076f89157d6fe8356a90eaa244ac59cc3
