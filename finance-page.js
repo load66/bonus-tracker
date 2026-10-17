@@ -521,6 +521,145 @@
     }
     el('p','Review flagged activity against your bank statement.',attention,'finance-page-hint');
   }
+  function spendMonth(month){
+    return window.BTFinanceInsights?.spent(flattenTransactions(),month)||
+      {month,total:'0.00',income:'0.00',uncategorized:0,categories:[],byDay:{}};
+  }
+  function moveSpendingMonth(delta){
+    const insight=window.BTFinanceInsights;
+    const next=insight.monthShift(spendingMonth,delta),now=insight.monthKey(Date.now());
+    if(next>now||next<insight.monthShift(now,-23))return;
+    spendingMonth=next;paint();loadArchiveMonth(next);
+  }
+  function sectionTitle(host,title,description){
+    const section=el('section',undefined,host,'finance-page-card finance-page-insights');
+    el('h3',title,section);
+    if(description)el('p',description,section,'finance-page-hint');
+    return section;
+  }
+  function spendingView(host){
+    const insight=window.BTFinanceInsights;
+    if(!insight){statusMessage(host,'Spending unavailable','Refresh Finances to load spending charts.');return}
+    const value=spendMonth(spendingMonth),previous=spendMonth(insight.monthShift(spendingMonth,-1));
+    const root=el('section',undefined,host,'finance-page-spending-view');
+    const head=el('div',undefined,root,'finance-page-month-picker');
+    action(head,'‹ Previous month',()=>moveSpendingMonth(-1),'finance-page-chip');
+    el('strong',new Date(spendingMonth+'-02T12:00:00').toLocaleDateString(undefined,
+      {month:'long',year:'numeric'}),head);
+    const future=insight.monthShift(spendingMonth,1)>insight.monthKey(Date.now());
+    const next=action(head,'Next month ›',()=>moveSpendingMonth(1),'finance-page-chip');next.disabled=future;
+    const overview=sectionTitle(root,'Spending this month');
+    el('strong',amount(value.total,'USD'),overview,'finance-page-big-number');
+    el('small','Based on categorized purchases from connected accounts',overview);
+    if(value.uncategorized>0)el('p',value.uncategorized+' transactions need a category. Spending is partial.',overview,'finance-page-hint');
+    const delta=Number(value.total)-Number(previous.total);
+    el('p',Math.abs(delta).toFixed(2)+' '+(delta>=0?'more':'less')+' than last month (full-month comparison)',overview,'finance-page-hint');
+    spendingDonut(root,{spending:Object.fromEntries(value.categories.map(x=>[x.category,x.amount])),
+      complete:!value.uncategorized&&!archiveLoading});
+    const budgetCard=sectionTitle(root,'Monthly budgets','Optional limits saved securely to your account');
+    const categories=[...new Set([...value.categories.map(x=>x.category),...Object.keys(financePrefs.budgets||{})])];
+    if(!categories.length)categories.push('groceries','dining','shopping','utilities');
+    let budgetTotal=0,budgetSpend=0;
+    for(const name of categories){
+      const actual=Number(value.categories.find(x=>x.category===name)?.amount||0);
+      const planned=Number(financePrefs.budgets?.[name]?.amount||0);
+      if(planned>0){budgetTotal+=planned;budgetSpend+=actual}
+      const line=el('div',undefined,budgetCard,'finance-page-budget-row');
+      const label=el('div',undefined,line,'finance-page-section-head');
+      el('strong',financeCategory(name),label);
+      el('span',amount(actual.toFixed(2),'USD')+(planned>0?' / '+amount(planned.toFixed(2),'USD'):''),label);
+      const track=el('div',undefined,line,'finance-page-budget-track');
+      const progress=el('span',undefined,track,'finance-page-budget-progress');
+      progress.style.width=(planned>0?Math.min(100,actual/planned*100):0)+'%';
+      progress.dataset.level=planned>0&&actual>=planned?'over':planned>0&&actual>=planned*.8?'near':'ok';
+      const control=el('label',undefined,line,'finance-page-budget-editor');
+      el('span','Budget',control);
+      const input=el('input',undefined,control);input.type='number';input.min='0';input.max='10000000';input.step='.01';
+      input.value=planned>0?String(planned):'';input.placeholder='Optional';
+      input.setAttribute('aria-label','Monthly budget for '+financeCategory(name));
+      input.disabled=!preferenceAvailable;
+      input.onchange=()=>{
+        const amountValue=input.value.trim();
+        if(!amountValue)saveSetting('budgets',name,null);
+        else saveSetting('budgets',name,{amount:amountValue});
+      };
+    }
+    if(budgetTotal>0)el('strong',amount(Math.max(0,budgetTotal-budgetSpend).toFixed(2),'USD')+' left to spend',budgetCard);
+    const halfYear=sectionTitle(root,'Income and spending','Last six months · available transactions only');
+    for(let offset=5;offset>=0;offset--){
+      const month=insight.monthShift(spendingMonth,-offset),fig=spendMonth(month),line=el('div',undefined,halfYear,'finance-page-income-compare');
+      const label=el('span',new Date(month+'-02T12:00:00').toLocaleDateString(undefined,{month:'short'}),line);
+      const bars=el('div',undefined,line,'finance-page-compare-bars');
+      const max=Math.max(1,Number(fig.income),Number(fig.total));
+      for(const [type,v] of [['income',fig.income],['spending',fig.total]]){
+        const bar=el('span',undefined,bars,'finance-page-compare-bar is-'+type);
+        bar.style.width=Math.min(100,Number(v)/max*100)+'%';bar.title=type+': '+amount(v,'USD');
+      }
+      el('small','In '+amount(fig.income,'USD')+' · Out '+amount(fig.total,'USD'),line);
+    }
+  }
+  function recurringView(host){
+    const insight=window.BTFinanceInsights;
+    if(!insight){statusMessage(host,'Recurring unavailable','Refresh Finances to load recurring payments.');return}
+    const raw=insight.recurring(flattenTransactions(),Date.now());
+    const list=raw.filter(item=>!financePrefs.recurring?.[item.key]?.dismissed);
+    const upcoming=insight.upcoming(list,Date.now(),14);
+    const visible=sectionTitle(host,'Upcoming payments','Estimated from patterns in available account history');
+    if(!upcoming.length)el('p','No upcoming recurring charges have been identified yet.',visible);
+    else{
+      let due=0;
+      for(const item of upcoming){
+        due+=Number(item.lastAmount);
+        const line=el('div',undefined,visible,'finance-page-preview-row');
+        el('strong',item.merchant,line);el('small',date(item.nextAt),line);
+        el('b',amount(item.lastAmount,'USD'),line);
+      }
+      el('strong',amount(due.toFixed(2),'USD')+' expected in the next 14 days',visible);
+    }
+    const calendar=sectionTitle(host,'This month','Upcoming expected charge dates');
+    const now=new Date(),month=insight.monthKey(now.getTime());
+    const calendarRows=list.filter(item=>insight.monthKey(item.nextAt*1000)===month);
+    if(!calendarRows.length)el('p','No expected charges this month.',calendar);
+    for(const item of calendarRows){
+      const row=el('div',undefined,calendar,'finance-page-preview-row');
+      el('strong',date(item.nextAt),row);el('span',item.merchant,row);el('b',amount(item.lastAmount,'USD'),row);
+    }
+    const groups=[
+      ['Subscriptions',item=>item.category==='subscription'||item.category==='entertainment'],
+      ['Bills and utilities',item=>['utilities','housing','loan'].includes(item.category)],
+      ['Income',item=>item.direction==='income'],
+      ['Other',()=>true]
+    ];
+    const assigned=new Set();
+    for(const [title,predicate] of groups){
+      const matches=list.filter(item=>!assigned.has(item.key)&&predicate(item));
+      if(!matches.length)continue;
+      for(const item of matches)assigned.add(item.key);
+      const group=sectionTitle(host,title);
+      for(const item of matches){
+        const itemRule=financePrefs.recurring?.[item.key]||{};
+        const detail=el('details',undefined,group,'finance-page-recurring-item');
+        const line=el('summary',undefined,detail,'finance-page-recurring-summary');
+        el('span',(itemRule.name||item.merchant).slice(0,1).toUpperCase(),line,'finance-page-transaction-icon');
+        const text=el('span',undefined,line,'finance-page-recurring-info');
+        el('strong',itemRule.name||item.merchant,text);
+        el('small',item.frequency+' · Next '+date(item.nextAt),text);
+        el('b',amount(item.lastAmount,'USD'),line);
+        el('small',item.status==='possibly_canceled'?'Possibly canceled':item.status==='price_increased'?'Price increased':'Active',detail,'finance-page-recurring-status');
+        const controls=el('div',undefined,detail,'finance-page-recurring-controls');
+        const label=el('label',undefined,controls);el('span','Rename',label);
+        const input=el('input',undefined,label);input.value=itemRule.name||item.merchant;input.maxLength=90;
+        action(controls,'Save name',()=>saveSetting('recurring',item.key,{...itemRule,name:input.value.trim()}));
+        action(controls,'Not recurring',()=>saveSetting('recurring',item.key,{...itemRule,dismissed:true}));
+        action(controls,'Confirm recurring',()=>saveSetting('recurring',item.key,{...itemRule,confirmed:true}));
+        const history=el('div',undefined,detail,'finance-page-recurring-history');
+        for(const charge of item.history.slice(-8).reverse()){
+          const line=el('p',undefined,history);el('span',date(charge.posted),line);el('b',amount(charge.amount,'USD'),line);
+        }
+      }
+    }
+    el('small','These are estimates, not confirmed bills or scheduled payments.',host,'finance-page-hint');
+  }
   function signalLabel(value){
     return ({possible_direct_deposit:'Possible direct deposit',possible_bonus:'Possible bonus',possible_reversal:'Possible reversal',
       possible_fee:'Possible fee',possible_recurring:'Possible recurring payment',matched_internal_transfer:'Matched transfer',
