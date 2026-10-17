@@ -37,6 +37,19 @@ const base=()=>({
       const page=await context.newPage(),errors=[],requests=[];let state=base(),rejectCategoryOnce=true,rejectAccountSaveOnce=true,redrawOnSuccessfulSave=name==='webkit';page.on('pageerror',e=>errors.push(e.message));
       // During production smoke, NEVER send synthetic session headers to any live API.
       if(process.env.BT_BROWSER_SITE_URL)await page.route('https://api-production-00f74.up.railway.app/**',route=>route.abort());
+      let preferences={version:1,revision:0,budgets:{},duplicates:{},recurring:{},transactionMeta:{},accountAliases:{}};
+      await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/finances/**',async route=>{
+        const req=route.request(),body=req.postDataJSON?.()||{};
+        if(req.method()==='PUT'){
+          if(body.revision!==preferences.revision){
+            await route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({detail:'Synthetic stale revision'})});return;
+          }
+          if(body.value===null)delete preferences[body.section][body.key];
+          else preferences[body.section][body.key]=body.value;
+          preferences.revision++;
+        }
+        await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(preferences)});
+      });
       await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin**',async route=>{
         const req=route.request(),url=new URL(req.url()),body=req.postDataJSON?.()||{};requests.push({path:url.pathname,method:req.method(),body});
         if(url.pathname.endsWith('/transaction-review')&&rejectCategoryOnce){
@@ -136,7 +149,7 @@ const base=()=>({
       const previews=section.locator('.finance-page-preview-card');
       assert.equal(await previews.count(),2,'Account and transaction previews belong on the Finance home dashboard');
       assert.deepEqual((await section.locator('.finance-page-nav button').allTextContents()).map(t=>t.trim()),
-        ['Overview','Transactions','Accounts'],'Only the three financial sections are user-visible');
+        ['Overview','Spending','Recurring','Transactions','Accounts'],'The five financial sections are user-visible');
       assert.equal(await section.locator('.finance-page-bonus-host').count(),0,
         'Bonus evidence workspace remains unmounted while internal evidence handling is retained');
       const accountPreview=await previews.first().innerText();
@@ -155,7 +168,7 @@ const base=()=>({
       await section.getByText('Expenses',{exact:true}).locator('..').getByText(/15/).waitFor();
       await section.getByText('Net flow',{exact:true}).locator('..').getByText(/235/).waitFor();
       await section.locator('.finance-page-caution')
-        .filter({hasText:'Cash Flow is partial'}).first().waitFor({state:'visible'});
+        .filter({hasText:'Spending needs a closer look'}).first().waitFor({state:'visible'});
       // The awaited visibility assertion above is authoritative; do not reread
       // an asynchronously replaced DOM node in a second non-waiting assertion.
       const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
@@ -169,6 +182,18 @@ const base=()=>({
       assert.equal(await section.locator('.finance-page-hero-cash-value').count(),1,
         'Only one Cash total appears in the Finance Overview hero');
 
+      await section.getByRole('button',{name:'Spending',exact:true}).click();
+      await section.getByRole('heading',{name:'Spending this month',exact:true}).waitFor();
+      await section.getByRole('heading',{name:'Monthly budgets',exact:true}).waitFor();
+      await section.getByRole('button',{name:'Recurring',exact:true}).click();
+      await section.getByRole('heading',{name:'Upcoming payments',exact:true}).waitFor();
+      await section.getByRole('heading',{name:'This month',exact:true}).waitFor();
+      await page.emulateMedia({colorScheme:'light'});
+      assert.ok(await section.getByRole('heading',{name:'Upcoming payments'}).isVisible(),
+        'Finance dark cards remain readable in light device settings');
+      await page.emulateMedia({colorScheme:'dark'});
+      assert.ok(await section.getByRole('heading',{name:'This month'}).isVisible(),
+        'Finance cards remain readable in dark device settings');
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       await section.getByRole('heading',{name:'Transactions',exact:true}).waitFor();
       assert.equal(await section.locator('script').count(),0,'transaction descriptions remain text');
@@ -343,6 +368,10 @@ const base=()=>({
       assert.ok((await section.locator('.finance-page-transaction').allTextContents()).some(t=>t.includes('Plaid')),
         'A Plaid-origin transaction must appear with a source label in the combined feed');
       assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts')));
+      // Modal transaction details intentionally cover the ledger until closed.
+      // Close them before using a toolbar action behind the sheet.
+      const detailSheet=section.getByRole('dialog',{name:'Transaction details for X Money Bonus'});
+      if(await detailSheet.count())await detailSheet.getByRole('button',{name:'Close',exact:true}).click();
       // Refreshing activity must sync both connected providers with no consent toggles.
       const activityStart=requests.length;
       await section.getByRole('button',{name:'Refresh activity'}).click();

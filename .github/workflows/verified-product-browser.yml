@@ -12,6 +12,8 @@ on:
       - 'tests/plaid-fallback.e2e.cjs'
       - 'bonus-requirements-progress.js'
       - 'finance-page.js'
+      - 'finance-insights-core.js'
+      - 'tests/finance-insights.test.js'
       - 'tests/bank-sync.e2e.cjs'
       - 'tests/bonus-evidence.e2e.cjs'
       - 'tests/finance-page.e2e.cjs'

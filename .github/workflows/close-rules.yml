@@ -106,7 +106,7 @@ jobs:
           "$RUNNER_TEMP/bonus-tracker-browser-tests/node_modules/.bin/playwright" install --with-deps chromium firefox webkit
 
       - name: Check financial observation arithmetic and data scope
-        run: node tests/finance-session.test.js && node tests/finance-overview.test.js && node tests/finance-unified.test.js
+        run: node tests/finance-session.test.js && node tests/finance-overview.test.js && node tests/finance-unified.test.js && node tests/finance-insights.test.js && node tests/finance-copy.test.js
 
       - name: Verify bank bonus evidence inbox and promotion-scoped candidate progress
         run: node tests/bonus-evidence.test.js && node tests/bonus-requirements-progress.test.js

@@ -26,3 +26,8 @@ as pending but never count as posted spending or bonus evidence. Backfill is
 bounded, bank data can still be delayed, and no paid refresh endpoint is called.
 
 Finances → Accounts exposes a direct, per-bank **Remove bank** control for Plaid. The confirmed removal invokes Plaid Item revocation, purges saved data for that Item, and preserves bank-bonus tracker records. The SimpleFIN disconnect removes all Bridge-connected institutions and requires separate provider-side token revocation. Neither operation closes an actual bank account, confirms a bank bonus, or makes transfers.
+
+
+## v3.4.77 history archive clarification
+
+Earlier references to a 90-day *maximum retention* apply to the provider's recent sync window and hot state, not the optional encrypted monthly history archive. Successfully observed older entries migrate non-destructively into owner-scoped verified encrypted R2 history shards, and the authenticated Finances screen can fetch available archived months for up to 24 months. Newly connected banks may not supply earlier statements, so an empty archived month must never be interpreted as proof of zero activity. User-confirmed bonus milestones remain unchanged.

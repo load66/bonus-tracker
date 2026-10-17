@@ -156,3 +156,17 @@ or provider coverage is uncertain. Neither this release nor earlier versions
 certifies complete reconciled cash flow, all assets/liabilities, or bonus
 qualification. Safe reconciliation requires explicit verified account
 identities and user confirmation, not name-based automatic deduplication.
+
+
+## Finances v3.4.77 — storage and user controls (supersedes older retention/UI limits)
+
+- SimpleFIN remains the primary connection; Plaid Trial is fallback only and retains its deployment-wide, irreversible ten lifetime Item budget. Reading history never creates a Plaid Item.
+- Existing owner-encrypted transactions remain intact. The hot financial state contains approximately the last 90 days; older observed transactions are first written to owner-scoped monthly encrypted R2 objects at `bonus-tracker-{simplefin|plaid}/v1/{owner}/history/YYYY-MM.enc` using conditional writes and readback, *before* being removed from the hot object. The Finance screen can request available archived months for up to 24 months. This does not fabricate pre-connection history or guarantee that institutions supplied two years of past transactions.
+- Daily account-balance observations are retained for the most recent 90 days, then compacted to one per ISO calendar week through the last 731 days; stale/missing balances are not zero.
+- Owner-private, encrypted finance preferences reside independently at `bonus-tracker-finances/v1/{owner}/preferences.enc`: monthly budgets, optional account nicknames, confirmed duplicate accounts with one primary source, recurring merchant preferences, and notes/exclusions for specific transactions. A conditional-write revision prevents silent lost edits.
+- Default net-worth treatments are Asset for cash and investment products, Liability for credit cards and loans; saved user choices win. Partial net worth shows exactly how many eligible accounts contribute. Unknown valuations remain unknown.
+- A possible duplicate needs matching four-digit mask, compatible account type, and institution similarity before offering confirmation. No two accounts are automatically merged. The user can select the preferred source or confirm that they are distinct; duplicate transactions are removed from the *combined view only*, preserving both encrypted originals.
+- The Finance-only UI has five sections: Overview, Spending, Recurring, Transactions, and Accounts. No Bonuses section is introduced and the canonical bank-bonus evidence and milestone engines remain independent.
+- Recurring estimates are heuristic, never verified payment schedules. Budgets and categorization do not initiate payments or change bank records. Cash-flow numbers are labeled incomplete when providers have not returned complete historical coverage.
+- Amounts are visible by default on first v3.4.77 use. The user can hide amounts; only the v2 hide/show boolean persists on the device, not financial records. The legacy hidden-by-default preference is ignored.
+- API archive reads and finance settings changes remain authenticated and Cache-Control: no-store. Never cache transaction responses in the service worker. Every release requires backend full pytest, frontend full suite, and Chromium/Firefox/WebKit at 390 × 844; deploy backend first.

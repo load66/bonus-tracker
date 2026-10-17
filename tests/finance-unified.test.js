@@ -33,7 +33,10 @@ assert.equal(core.detectedType({name:'Account 001'}),'unclassified');
 const safe=core.safeForSummary(u),summary=finance.summarize(safe,{now,days:30});
 assert.equal(summary.income,'450.00','exact-cents reporting includes unique transactions from both providers');
 assert.equal(summary.cashAvailable,false,'Plaid has no provider-verified balance timestamp');
-assert.equal(summary.netWorthAvailable,false,'unknown balance freshness must not fabricate net worth');
+assert.equal(summary.netWorthAvailable,true,'a fresh known account contributes to partial net worth');
+assert.equal(summary.netWorthBasedOn,1);
+assert.equal(summary.netWorthTotalAccounts,2);
+assert.equal(summary.netWorthPartial,true);
 assert.equal(u.accounts[0].balance,'501.25');
 const twin=structuredClone(plaid);twin.accounts[0].bank='River Bank';twin.accounts[0].name='Checking 4321';twin.accounts[0].balance='501.25';
 const ambiguous=core.combine({simplefin:simple,plaid:twin});
@@ -85,4 +88,43 @@ assert.equal(finance.summarize(safeHidden,{now,days:30}).income,'50.00',
 assert.equal(hiddenBank.transactions[a].one.amount,'400.00','account history remains recoverable');
 assert.equal(simple.accounts[0].key,a,'source snapshots stay unchanged');
 assert.equal(twin.accounts[0].key,b,'the second provider is never overwritten');
+
+const maskedSimple=structuredClone(simple);
+maskedSimple.accounts[0].bank='Chase Bank';
+maskedSimple.accounts[0].name='Checking ••1234';
+maskedSimple.accounts[0].mask='1234';
+const maskedPlaid=structuredClone(plaid);
+maskedPlaid.accounts[0].bank='JPMorgan Chase';
+maskedPlaid.accounts[0].name='Total checking';
+maskedPlaid.accounts[0].mask='1234';
+maskedPlaid.accounts[0].balance='501.25';
+maskedPlaid.accounts[0].balanceDate=now-90;
+maskedPlaid.transactions[b]={
+  dup:{id:'txn-dup',posted:now-400,amount:'400.00',description:'Synthetic deposit',pending:false,category:'income'},
+  unique:{id:'txn-unique',posted:now-240,amount:'-12.00',description:'Synthetic lunch',pending:false,category:'dining'}
+};
+maskedSimple.transactions[a].one.description='Synthetic deposit';
+const proposed=core.combine({simplefin:maskedSimple,plaid:maskedPlaid});
+assert.equal(proposed.possibleDuplicates.length,1,'Chase and JPMorgan Chase match by last 4 and account type');
+assert.equal(proposed.accounts.every(x=>x.confirmableDuplicate),true);
+assert.equal(core.safeForSummary(proposed).accounts.length,0,'no automatic merge without confirmation');
+const pair='simplefin:'+a+'|plaid:'+b;
+const userChoice=core.combine({simplefin:maskedSimple,plaid:maskedPlaid},
+  {duplicates:{[pair]:{primary:'simplefin:'+a}}});
+const selected=core.safeForSummary(userChoice);
+assert.equal(selected.accounts.length,1,'confirmed duplicate counts one balance');
+assert.equal(Object.values(selected.transactions['simplefin:'+a]).length,2,
+  'matching cross-provider deposit is deduplicated but unique purchase preserved');
+assert.equal(selected.transactions['simplefin:'+a]['merged:plaid:'+b+':unique'].originalAccountKey,'plaid:'+b);
+const distinct=core.safeForSummary(core.combine(
+  {simplefin:maskedSimple,plaid:maskedPlaid},{duplicates:{[pair]:{separate:true}}}));
+assert.equal(distinct.accounts.length,2,'user-confirmed distinct accounts remain separately counted');
+const defaultProfiles=core.combine({simplefin:{...simple,accountProfiles:{}},plaid:{...plaid,accountProfiles:{}}});
+assert.equal(defaultProfiles.accountProfiles['simplefin:'+a].balanceMode,'asset');
+assert.equal(defaultProfiles.accountProfiles['plaid:'+b].balanceMode,'asset');
+const nicknamed=core.combine({simplefin:maskedSimple,plaid:maskedPlaid},
+  {accountAliases:{['simplefin:'+a]:{name:'Primary checking'}}});
+assert.equal(nicknamed.accounts[0].name,'Primary checking');
+assert.equal(nicknamed.accounts[0].rawName,'Checking ••1234');
+
 console.log('Unified Finance: provider isolation, type inference, full account/transaction aggregation, exact cents, stale-balance safety and overlap controls passed');
