@@ -130,4 +130,17 @@ const excludedAll=structuredClone(correctedLiabilities);
 for(const p of Object.values(excludedAll.accountProfiles))p.balanceMode='exclude';
 assert.equal(summarize(excludedAll,{now:NOW}).netWorthAvailable,false,'zero included accounts is unknown, not zero');
 
+
+const loanPaymentState={
+  lastSuccess:NOW,
+  accounts:[{...account('loan-cash'),balance:'500.00',balanceDate:NOW}],
+  monitoredAccounts:['loan-cash'],
+  accountProfiles:{'loan-cash':{kind:'checking',balanceMode:'asset',order:0}},
+  transactions:{'loan-cash':{payment:{...row('-150.00'),category:'loan',confidence:'high',categorySource:'automatic'}}}
+};
+const loanSummary=summarize(loanPaymentState,{now:NOW});
+assert.equal(loanSummary.expenses,'150.00','categorized real loan payments count as expenses');
+assert.equal(loanSummary.spending.loan,'150.00','loan category appears in spending summary');
+assert.equal(loanSummary.cashFlow,'-150.00','loan payment is not excluded as a transfer by default');
+
 console.log('Financial observations passed: strict scope, multi-currency safety, exact cents, availability, coverage, privacy and non-mutation');
