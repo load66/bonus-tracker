@@ -33,7 +33,7 @@
     refreshed=true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=3.4.74-accounts1',{updateViaCache:'none'}).then(reg=>{
+  navigator.serviceWorker.register('./sw.js?v=3.4.74-finance3only1',{updateViaCache:'none'}).then(reg=>{
     const activate=worker=>{try{worker&&worker.postMessage({type:'SKIP_WAITING'})}catch{}};
     if(reg.waiting)activate(reg.waiting);
     reg.addEventListener('updatefound',()=>{
@@ -92,7 +92,7 @@
 <script src="./plaid-fallback.js?v=3.4.74-activity3"></script>
 <script src="./bank-sync.js?v=3.4.74-activity3"></script>
 <script src="./finance-unified-core.js?v=3.4.74-unified2"></script>
-<script src="./finance-page.js?v=3.4.74-accounts1"></script>
+<script src="./finance-page.js?v=3.4.74-finance3only1"></script>
 <script src="./bonus-evidence-core.js?v=3.4.74-product3"></script>
 <script src="./bonus-requirements-progress.js?v=3.4.74-product3"></script>
 <script src="./bonus-evidence.js?v=3.4.74-unified2"></script>
