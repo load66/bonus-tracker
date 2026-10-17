@@ -1519,7 +1519,20 @@
           const known=window.BTFinanceOverview.summarize(window.BTFinanceUnified.safeForSummary(currentCombined));
           if(known.staleOrUnavailableCash>0)el('small',known.staleOrUnavailableCash+' account'+(known.staleOrUnavailableCash===1?'':'s')+' not updated',head,'finance-page-coverage-label');
         }
-        for(const a of rows){
+        let lastInvestmentKind='';
+        for(const a of title==='Investments'?rows.slice().sort((a,b)=>
+          (profile(a).kind==='brokerage'?0:1)-(profile(b).kind==='brokerage'?0:1)):rows){
+          if(title==='Investments'&&profile(a).kind!==lastInvestmentKind){
+            lastInvestmentKind=profile(a).kind;
+            const subset=rows.filter(item=>profile(item).kind===lastInvestmentKind);
+            const cents=subset.map(item=>window.BTFinanceOverview.cents(item.balance));
+            const available=cents.filter(value=>value!==null);
+            const subtotal=available.length?window.BTFinanceOverview.decimal(
+              available.reduce((sum,value)=>sum+value,0n)):null;
+            const section=el('div',undefined,group,'finance-page-investment-subgroup');
+            el('strong',lastInvestmentKind==='retirement'?'Retirement':'Brokerage',section);
+            el('b',subtotal!==null?amount(subtotal,'USD'):'Not updated',section);
+          }
           const bankKey=a.source+':'+(a.connectionHandle||a.bank);
           if((a.transactionSyncStatus==='needs_attention'||(a.source==='simplefin'&&sourceSnapshot('simplefin')?.status==='attention'))&&!broken.has(bankKey)){
             broken.add(bankKey);const alert=el('div',undefined,group,'finance-connection-error');
