@@ -185,3 +185,21 @@ pendingFinancialMovements.transactions.cash.paycard={...row('-200.00'),descripti
 pendingFinancialMovements.transactions.cash.invest={...row('-1000.00'),description:'Robinhood IRA contribution',category:'unreviewed'};
 const movementSummary=summarize(pendingFinancialMovements,{now:NOW});
 assert.equal(movementSummary.expenses,'411.17','Unreviewed bank payments and IRA contributions cannot increase expenses before the next server sync');
+
+const realBankDescriptions=structuredClone(withUnknown);
+const classifiedExamples=[
+  ['To Brokerage','-2000'],['To Citibank','-251'],
+  ['From Lafayette Fcu','500'],['To Personal Checking','-7379.04'],
+  ['From Personal Savings','7379.04'],['To Paypal','-428.17'],
+  ['U.S. Bank','-820.77'],['Capital One','-200'],
+  ['T-Mobile','-157.62'],['Apple','-249.52']
+];
+classifiedExamples.forEach(([description,amount],index)=>{
+  realBankDescriptions.transactions.cash['bank'+index]={
+    ...row(amount),description,merchant:description,category:Number(amount)>0?'income':'unreviewed',
+    categorySource:'automatic'
+  };
+});
+const safeReal=summarize(realBankDescriptions,{now:NOW});
+assert.equal(safeReal.expenses,'818.31','Overview excludes all eight bank flows and counts T-Mobile and Apple plus the preexisting sample');
+assert.equal(safeReal.income,unknownSummary.income,'From-bank deposits are transfers, not income');
