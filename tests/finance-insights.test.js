@@ -35,4 +35,13 @@ const missed=I.recurring(monthly,new Date(2027,3,1).getTime());
 assert.equal(missed[0].status,'possibly_canceled');
 assert.equal(I.recurring([row(new Date(2026,9,1).getTime(),'-90','transfer')],NOW).length,0);
 assert.equal(I.upcoming(recurring,new Date(2026,9,25).getTime()).length,1);
+
+const cardPayments=[row(new Date(2026,7,15).getTime(),'-200.00','transfer','Capital One payment'),
+  row(new Date(2026,8,15).getTime(),'-200.00','transfer','Capital One payment'),
+  row(new Date(2026,9,15).getTime(),'-200.00','transfer','Capital One payment')];
+const recurringTransfers=I.recurring(cardPayments,NOW);
+assert.equal(recurringTransfers.length,1,'Card payments remain visible as expected bills');
+assert.equal(recurringTransfers[0].category,'transfer');
+assert.equal(I.spent(cardPayments,'2026-10').total,'0.00','Card payments cannot inflate subscriptions or spending');
+
 console.log('Finance insights passed: spending exclusions, month navigation, monthly, biweekly, yearly, price increases and missed bills.');
