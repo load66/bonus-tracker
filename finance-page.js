@@ -392,6 +392,7 @@
       },'finance-page-nav-button'+(view===id?' is-active':''));
       b.setAttribute('aria-current',view===id?'page':'false');
     }
+    queueMicrotask(()=>{if(!nav.isConnected)return;const active=nav.querySelector('[aria-current=page]');if(active&&active.offsetLeft+active.offsetWidth>nav.scrollLeft+nav.clientWidth)nav.scrollLeft=active.offsetLeft+active.offsetWidth-nav.clientWidth+12;});
     return summary;
   }
   function periodControl(parent){
@@ -934,7 +935,7 @@
   }
   function accountAmount(account){
     const value=window.BTFinanceOverview.cents(account.balance),p=profile(account);
-    return value!==null&&p.balanceMode==='liability'?amount(window.BTFinanceOverview.decimal(-value),account.currency):amount(account.balance,account.currency);
+    return value!==null&&['credit_card','loan','mortgage','other_liability'].includes(p.kind)?amount(window.BTFinanceOverview.decimal(-value),account.currency):amount(account.balance,account.currency);
   }
   function accountIcon(parent,account){
     return el('span',String(account.bank||account.name||'A').trim().slice(0,1).toUpperCase(),parent,'finance-page-account-icon');

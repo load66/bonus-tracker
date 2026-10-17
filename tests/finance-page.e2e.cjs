@@ -169,6 +169,7 @@ const base=()=>({
       assert.equal(await net.isChecked(),false,'Failed saves preserve the editable draft');
       await modal.getByRole('button',{name:'Save account settings',exact:true}).click();await modal.waitFor({state:'hidden'});
       assert.equal(state.accountProfiles[B].balanceMode,'exclude');
+      assert.equal(await section.getByRole('button',{name:'Credit Card',exact:true}).locator('b').innerText(),'−$200.00','Excluding a card from net worth must not turn debt into a positive balance');
       assert.equal(redrawOnSuccessfulSave,false,'WebKit exercises same-owner redraw before successful save response');
       await section.getByRole('button',{name:'Checking <img src=x>',exact:true}).click();
       modal=page.getByRole('dialog',{name:'Checking <img src=x>',exact:true});
@@ -211,6 +212,7 @@ const base=()=>({
         await section.getByRole('button',{name:label,exact:true}).click();
         for(const colorScheme of ['dark','light']){
           await page.emulateMedia({colorScheme});await page.setViewportSize({width:390,height:844});
+          await page.evaluate(()=>window.scrollTo(0,0));
           const geometry=await section.evaluate(e=>({width:innerWidth,scroll:e.scrollWidth,box:e.getBoundingClientRect().width}));
           assert.ok(geometry.scroll<=geometry.width+1&&geometry.box<=geometry.width+1,name+' '+label+' mobile overflow');
           await page.screenshot({path:path.join(output,name+'-'+label+'-'+colorScheme+'-390.png')});
