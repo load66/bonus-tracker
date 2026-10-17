@@ -44,4 +44,30 @@ assert.equal(recurringTransfers.length,1,'Card payments remain visible as expect
 assert.equal(recurringTransfers[0].category,'transfer');
 assert.equal(I.spent(cardPayments,'2026-10').total,'0.00','Card payments cannot inflate subscriptions or spending');
 
+
+const unknowns=[
+ row(new Date(2026,9,16).getTime(),'-200.00','unreviewed','Synthetic unknown purchase'),
+ row(new Date(2026,9,16).getTime(),'-1000.00','unreviewed','Unidentified debit'),
+ row(new Date(2026,9,17).getTime(),'-200.00','subscription','Capital One CRCARDPMT'),
+ row(new Date(2026,9,17).getTime(),'-130.00','transfer','Synthetic ACH transfer'),
+ row(new Date(2026,9,17).getTime(),'-0.37','verification','Synthetic verification'),
+ {...row(new Date(2026,9,17).getTime(),'-99.00','unreviewed'),excludedFromTotals:true}
+];
+const unknownResult=I.spent(unknowns,'2026-10');
+assert.equal(unknownResult.total,'1200.00','Every posted unknown debit is spending unless safely excluded');
+assert.equal(unknownResult.uncategorized,2);
+assert.equal(unknownResult.categories[0].count,2);
+assert.equal(unknownResult.categories[0].amount,'1200.00');
+assert.equal(I.eligibleRows(unknowns,'2026-10').length,2);
+assert.equal(I.merchantTotals(unknowns,'2026-10').length,2);
+assert.equal(I.spent([...unknowns,row(new Date(2026,8,20).getTime(),'-15','groceries')],'2026-09').total,'15.00');
+assert.deepEqual(I.monthlyTrend(unknowns,'2026-10').map(x=>x.month),['2026-10'],
+  'Never manufacture zero-valued months without provider observations');
+assert.equal(I.budgetState('125.00','200.00',10,30).remaining,'75.00');
+assert.equal(I.budgetState('125.00','200.00',10,30).projected,'375.00');
+assert.equal(I.budgetState('160.00','200.00',10,30).level,'near');
+assert.equal(I.budgetState('200.01','200.00',10,30).level,'over');
+assert.equal(I.budgetState('50.00','0.00',10,30),null);
+assert.equal(I.monthShift('2026-10',-1),'2026-09');
+
 console.log('Finance insights passed: spending exclusions, month navigation, monthly, biweekly, yearly, price increases and missed bills.');
