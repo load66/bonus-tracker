@@ -206,7 +206,9 @@
       for(const row of Object.values(rows)){
         const value=toCents(row.amount);
         if(row.pending||value===null||value===0n||
-          !Number.isFinite(row.posted)||['user','user_rule'].includes(row.categorySource))continue;
+          !Number.isFinite(row.posted)||['user','user_rule'].includes(row.categorySource)||
+          ['income','refund','bonus','verification'].includes(row.category)||
+          (row.signals||[]).some(s=>['paycheck','possible_direct_deposit','possible_refund','verification'].includes(s)))continue;
         transferRows.push({account:key,row,value});
       }
     }
