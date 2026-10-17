@@ -339,7 +339,7 @@
     }
   }
   function flattenTransactions(){
-    const accounts=new Map((currentCombined?.accounts||[]).filter(a=>!profile(a).hidden&&profile(a).syncEnabled!==false&&!a.removedAt).map(a=>[a.key,a])),rows=[];
+    const accounts=new Map((currentCombined?.accounts||[]).filter(a=>!profile(a).hidden&&profile(a).syncEnabled!==false).map(a=>[a.key,a])),rows=[];
     const sourceAccounts=new Map((currentCombined?.accounts||[]).map(a=>[a.key,a]));
     // The confirmed primary prevents duplicate charges, while unique
     // secondary-bank records keep their original link for editing.
@@ -1839,7 +1839,7 @@
     const account=rows[0],modal=sheet(account.bank||'Bank',true);
     modal.classList.add('finance-connection-sheet');
     el('p','Connected via '+account.sourceLabel,modal);
-    el('p','Choose which accounts to sync. Turning Sync off also removes an account from Finance totals and lists.',modal,'finance-page-hint');
+    el('p','Sync off hides this account from Finance totals and lists.',modal,'finance-page-hint');
     const staged=new Map(),original=new Map(),feedback=new Map();
     let saving=false;
     const footer=el('div',undefined,modal,'finance-connection-save-footer');
