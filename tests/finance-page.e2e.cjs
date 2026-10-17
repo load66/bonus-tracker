@@ -140,6 +140,11 @@ const base=()=>({
       assert.ok((await previews.nth(1).innerText()).includes('X Money Bonus'),
         'Recent Finance activity must include Plaid transactions');
 
+      // Amounts stay masked by default, including on first sign-in.
+      await section.getByRole('button',{name:'Show amounts',exact:true}).waitFor();
+      assert.equal(await section.locator('.finance-page-tile strong').first().innerText(),'••••••');
+      await section.getByRole('button',{name:'Show amounts',exact:true}).click();
+      assert.equal(await page.evaluate(()=>localStorage.getItem('bt_finance_hide_amounts')),'false');
       await section.getByText('Income',{exact:true}).locator('..').getByText(/250/).waitFor();
       await section.getByText('Expenses',{exact:true}).locator('..').getByText(/15/).waitFor();
       await section.getByText('Net flow',{exact:true}).locator('..').getByText(/235/).waitFor();
@@ -151,6 +156,9 @@ const base=()=>({
       await section.getByRole('button',{name:'Hide amounts',exact:true}).click();
       assert.equal(await section.locator('.finance-page-tile strong').first().innerText(),'••••••');
       await section.getByRole('button',{name:'Show amounts',exact:true}).click();
+      assert.equal(await page.evaluate(()=>localStorage.getItem('bt_finance_hide_amounts')),'false');
+      assert.equal(await section.getByText('Cash',{exact:true}).count(),1,
+        'Only one Cash tile should appear on Finance Overview');
 
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       await section.getByRole('heading',{name:'Transactions',exact:true}).waitFor();
