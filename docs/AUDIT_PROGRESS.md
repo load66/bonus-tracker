@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: codex — Finance retirement/cash accuracy hotfix — branch codex/finance-cash-retirement-fix
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
