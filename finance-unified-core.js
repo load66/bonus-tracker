@@ -11,27 +11,27 @@
   const TYPES=new Set(['checking','savings','credit_card','brokerage','retirement','loan','mortgage','other_asset','other_liability']);
   const canonical=value=>String(value||'').toLowerCase().normalize('NFKC').replace(/[^a-z0-9]+/g,' ').trim();
   function detectedType(account){
-    const subtype=canonical(account.accountSubtype).replaceAll(' ','_');
-    const type=canonical(account.accountType).replaceAll(' ','_');
-    const name=canonical(account.name);
-    const bank=canonical(account.bank);
+    const subtype=canonical(account.accountSubtype).replaceAll(' ','_'),type=canonical(account.accountType).replaceAll(' ','_');
+    const name=canonical(account.name),bank=canonical(account.bank);
     const broker=/\b(robinhood|fidelity|schwab|vanguard|e trade|etrade|interactive brokers|webull|tastytrade|coinbase|kraken)\b/.test(bank);
-    const investments=new Set(['individual','joint','investing','investment','investments','stocks','stock','crypto','securities','trading','brokerage']);
-    if(investments.has(subtype)||investments.has(type))return 'brokerage';
-    const aliases={depository:'',credit:'credit_card',credit_card:'credit_card',investment:'brokerage',student:'loan',auto:'loan',mortgage:'mortgage',loan:'loan',brokerage:'brokerage',retirement:'retirement','401k':'retirement',ira:'retirement',checking:'checking',savings:'savings',money_market:'savings'};
-    if(TYPES.has(subtype))return subtype;
-    if(Object.hasOwn(aliases,subtype)&&aliases[subtype])return aliases[subtype];
-    if(TYPES.has(type))return type;
-    if(Object.hasOwn(aliases,type)&&aliases[type])return aliases[type];
-    for(const [pattern,kind] of [[/\b(checking|current account)\b/,'checking'],[/\b(savings|money market|high yield)\b/,'savings'],[/\b(credit card|charge card)\b/,'credit_card'],[/\b(mortgage)\b/,'mortgage'],[/\b(401k|ira|roth|retirement)\b/,'retirement'],[/\b(brokerage|investment)\b/,'brokerage'],[/\b(loan)\b/,'loan']]){
-      if(pattern.test(name))return kind;
-    }
-    // Brokerage brands are investment accounts unless product metadata identifies
-    // an actual deposit or credit product; never classify a generic broker as Other.
-    if(broker&&!/\b(checking|savings|cash management|credit card|mortgage|loan)\b/.test(name)
-        && !['depository','credit'].includes(type))return 'brokerage';
+    // Product evidence outranks generic investment subtype; manual saved kind wins in combine().
+    if(/\b(credit card|charge card)\b/.test(name)||subtype==='credit_card'||type==='credit_card'||type==='credit')return 'credit_card';
+    if(/\b(mortgage|home loan)\b/.test(name)||subtype==='mortgage')return 'mortgage';
+    if(/\b(loan|line of credit)\b/.test(name)||['loan','student','auto'].includes(subtype))return 'loan';
+    if(/\b(checking|cash management|cash account|spend account|current account)\b/.test(name)||
+       ['checking','cash_management','cash'].includes(subtype))return 'checking';
+    if(/\b(savings|money market|high yield)\b/.test(name)||
+       ['savings','money_market','money_market_fund'].includes(subtype))return 'savings';
+    if(/\b(roth|traditional ira|sep ira|simple ira|ira|401k|401 k|403b|retirement|pension)\b/.test(name)||
+       ['retirement','ira','roth','roth_ira','401k','401_k','403b'].includes(subtype))return 'retirement';
+    if(/\b(brokerage|investments?|investing|stocks?|crypto)\b/.test(name)||
+       ['individual','joint','investing','investment','investments','stocks','stock','crypto','securities','trading','brokerage','hsa_investing'].includes(subtype)||
+       ['investment','investments','brokerage','crypto'].includes(type))return 'brokerage';
+    if(broker&&type!=='depository')return 'brokerage';
     return 'unclassified';
   }
+  const investmentKind=kind=>kind==='brokerage'||kind==='retirement';
+  const cashKind=kind=>kind==='checking'||kind==='savings';
   const key=(source,rawKey)=>source+':'+String(rawKey);
   const DEFAULT_TREATMENT={checking:'asset',savings:'asset',brokerage:'asset',
     retirement:'asset',other_asset:'asset',credit_card:'liability',loan:'liability',
@@ -204,5 +204,5 @@
         ['history_still_loading','awaiting_first_sync','awaiting_provider_data','needs_attention'].includes(a.transactionSyncStatus))),
       excludedForReview:duplicates.size,hiddenAccounts:hidden.size,confirmedDuplicates:secondary.size};
   }
-  return Object.freeze({combine,safeForSummary,detectedType,key});
+  return Object.freeze({combine,safeForSummary,detectedType,investmentKind,cashKind,key});
 });
