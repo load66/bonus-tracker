@@ -72,14 +72,18 @@
     const cashReady=cashEntries.length>0&&cashEntries.every(x=>x.account.currency==='USD'&&x.balance);
     const cash=cashReady?cashEntries.reduce((sum,x)=>sum+x.balance.amount,0n):null;
     const included=profileEntries.filter(x=>x.profile.balanceMode!=='exclude');
-    const netWorthReady=accounts.length>0&&included.length===accounts.length&&included.every(x=>x.account.currency==='USD'&&x.balance&&x.profile.kind!=='unclassified');
+    const netWorthReady=included.length>0&&included.every(x=>x.account.currency==='USD'&&x.balance&&x.profile.kind!=='unclassified');
     let assets=0n,liabilities=0n;
     if(netWorthReady)for(const x of included){
       if(x.profile.balanceMode==='asset')assets+=x.balance.amount;
-      else if(x.profile.balanceMode==='liability')liabilities+=x.balance.amount<0n?-x.balance.amount:x.balance.amount;
+      else if(x.profile.balanceMode==='liability'){
+        // A negative credit-card/loan balance is a credit owed to the user, not a debt.
+        if(x.balance.amount<0n)assets-=x.balance.amount;
+        else liabilities+=x.balance.amount;
+      }
     }
     const netWorthHistory=[];
-    if(accounts.length&&included.length===accounts.length&&included.every(x=>x.account.currency==='USD'&&x.profile.kind!=='unclassified')){
+    if(included.length>0&&included.every(x=>x.account.currency==='USD'&&x.profile.kind!=='unclassified')){
       const balanceHistory=state.balanceHistory&&typeof state.balanceHistory==='object'?state.balanceHistory:{};
       const times=[...new Set(accounts.flatMap(a=>(Array.isArray(balanceHistory[a.key])?balanceHistory[a.key]:[])
         .map(row=>row?.observedAt).filter(Number.isFinite)))].sort((a,b)=>a-b);
@@ -91,7 +95,7 @@
             .sort((a,b)=>b.observedAt-a.observedAt);
           const latest=rows[0],value=latest&&at-latest.observedAt<=STALE_BALANCE_DAYS*DAY?cents(latest.balance):null;
           if(value===null){valid=false;break}
-          point+=x.profile.balanceMode==='liability'?-(value<0n?-value:value):value;
+          point+=x.profile.balanceMode==='liability'?-value:value;
         }
         if(valid)netWorthHistory.push({at,value:decimal(point)});
       }
