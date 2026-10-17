@@ -6,7 +6,7 @@
   let addFlowPending=false,addFlowFound=[],addFlowDraft=new Set(),addFlowRetry=null,
     addFlowDebounce=null,addFlowRetryIndex=0,addFlowBusy=false,
     addFlowBudgetStopped=false,addFlowMessage='',addFlowNextRetryAt=null,
-    addFlowReturnSeen=false;
+    addFlowReturnSeen=false,lastAddFlowReturnAt=0;
   const ADD_BANK_RETRIES=[30000,60000,120000,180000,240000];
   function clearAddFlowTimers(){
     if(addFlowRetry!==null)clearTimeout(addFlowRetry);
@@ -80,8 +80,9 @@
   }
   function onReturnToApp(){
     if(!addFlowPending||!panel||addFlowFound.length||addFlowBudgetStopped||
-      addFlowBusy||addFlowReturnSeen||!window.BTBonusAuth?.connected())return;
-    addFlowReturnSeen=true;
+      addFlowBusy||addFlowReturnSeen||!window.BTBonusAuth?.connected()||
+      Date.now()-lastAddFlowReturnAt<4000)return;
+    addFlowReturnSeen=true;lastAddFlowReturnAt=Date.now();
     if(addFlowDebounce!==null)clearTimeout(addFlowDebounce);
     addFlowDebounce=setTimeout(()=>{
       addFlowDebounce=null;
@@ -229,7 +230,7 @@
     el('p','Bank credentials never go into BonusTracker. Adding a bank does not disconnect an existing one.',help);
     el('p','SimpleFIN may allow discovery only once every 24 hours. A missing balance is not zero.',help);
     const back=el('div',undefined,shell);back.className='bank-connect-bottom';
-    button(back,connected?'Back to connected accounts':'Back to connection options',async()=>{view='accounts';wizardResult=null;paint();});
+    button(back,connected?'Back to connected accounts':'Back to connection options',async()=>{resetAddFlow();view='accounts';wizardResult=null;paint();});
     if(connected&&wizardResult)button(back,'Review account settings',async()=>{view='accounts';wizardResult=null;paint();},'btn-p');
   }
   function paint(){
