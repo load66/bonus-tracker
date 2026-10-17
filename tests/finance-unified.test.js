@@ -120,3 +120,19 @@ const ambig=core.safeForSummary(core.combine({simplefin:movementsA,plaid:collisi
 assert.equal(ambig.transactions['simplefin:'+a].out.category,'subscription','Ambiguous pairs are not asserted as self-transfers');
 
 console.log('Unified Finance: provider isolation, type inference, full account/transaction aggregation, exact cents, stale-balance safety and overlap controls passed');
+
+const nonroundA=structuredClone(simple),nonroundB=structuredClone(plaid);
+nonroundA.transactions[a]={
+  transfer:{id:'t-7379',amount:'-7379.04',description:'To Personal Checking',
+    posted:now-7200,pending:false,category:'unreviewed',categorySource:'automatic'}
+};
+nonroundB.transactions[b]={
+  transfer:{id:'r-7379',amount:'7379.04',description:'From Personal Savings',
+    posted:now-3600,pending:false,category:'income',categorySource:'automatic'}
+};
+const nonround=core.safeForSummary(core.combine({simplefin:nonroundA,plaid:nonroundB}));
+assert.equal(nonround.transactions['simplefin:'+a].transfer.category,'transfer');
+assert.equal(nonround.transactions['plaid:'+b].transfer.category,'transfer');
+assert.ok(nonround.transactions['simplefin:'+a].transfer.signals.includes('matched_internal_transfer'));
+assert.equal(finance.summarize(nonround,{now}).expenses,'0.00');
+assert.equal(finance.summarize(nonround,{now}).income,'0.00');
