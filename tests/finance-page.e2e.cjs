@@ -139,6 +139,25 @@ const base=()=>({
       assert.equal(await worth.locator('.finance-page-period button').count(),0,
         'Chart range chips stay hidden until there are two points');
       assert.equal(await worth.getByText('Chart builds as your accounts sync.').count(),1);
+
+      // A bank login warning is institution-scoped; harmless capped-date notices are not red.
+      state.accounts[0].attentionKind='bank_login';
+      state.accounts[0].attentionReason='Bank login required; sign in again';
+      state.notices=['Requested date range exceeds limit of 90 days and was capped.'];
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      await section.getByRole('button',{name:'Accounts',exact:true}).click();
+      assert.equal(await section.locator('.finance-connection-error').count(),1,
+        'Only the bank with a real login issue receives an alert');
+      assert.equal(await section.getByRole('button',{name:'Fix on SimpleFIN'}).count(),1);
+      assert.equal(await section.getByRole('button',{name:'Reconnect',exact:true}).count(),0,
+        'A bank login does not require reconnecting the SimpleFIN connection');
+      delete state.accounts[0].attentionKind;
+      delete state.accounts[0].attentionReason;
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      await section.getByRole('button',{name:'Accounts',exact:true}).click();
+      assert.equal(await section.locator('.finance-connection-error').count(),0,
+        'The next healthy response clears stale red bank banners');
+      await section.getByRole('button',{name:'Overview',exact:true}).click();
       const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
       assert.equal(await section.locator('img').count(),0,'Bank aliases render as escaped text');
       assert.deepEqual((await section.locator('.finance-page-nav button').allTextContents()).map(x=>x.trim()),['Overview','Spending','Recurring','Transactions','Accounts']);
