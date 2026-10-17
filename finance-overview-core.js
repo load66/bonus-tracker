@@ -7,7 +7,7 @@
 })(typeof window!=='undefined'?window:null,function(){
   'use strict';
   const DAY=86400,MAX_DAYS=731,STALE_BALANCE_DAYS=7;
-  const SPENDING=new Set(['housing','loan','utilities','groceries','dining','transportation','shopping','health','entertainment','fees','taxes','travel','subscription','other']);
+  const SPENDING=new Set(['housing','loan','utilities','groceries','dining','transportation','shopping','health','entertainment','fees','taxes','travel','subscription','other','unreviewed']);
   function cents(value){
     const m=/^([+-]?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(value??'').trim());
     if(!m)return null;
@@ -25,6 +25,12 @@
     const amount=cents(account?.balance),at=account?.balanceDate;
     return amount!==null&&Number.isFinite(at)&&at>0&&at<=now+300&&at>=now-STALE_BALANCE_DAYS*DAY
       ?{amount,at}:null;
+  }
+  function internalPayment(row){
+    if((row.signals||[]).includes('matched_internal_transfer'))return true;
+    const t=String(row.description||'')+' '+String(row.merchant||'');
+    return /\b(capital\s*one|chase|amex|american\s*express|discover|citi(?:bank)?|robinhood|fidelity|schwab|vanguard|synchrony|barclays)\b/i.test(t)
+      &&/\b(pmt|pymt|payment|autopay|epay|crcardpmt|contribution|funding)\b/i.test(t);
   }
   function summarize(state={},options={}){
     const now=Number.isFinite(options.now)?Math.floor(options.now):Math.floor(Date.now()/1000);
@@ -56,7 +62,7 @@
         if(row.kind==='possible_reversal'&&n<0n)reversals++;
         const category=String(row.category||'unreviewed');
         if(category==='income'&&n>0n)income+=n;
-        else if(SPENDING.has(category)&&n<0n){
+        else if(n<0n&&SPENDING.has(category)&&!internalPayment(row)){
           const amount=-n;expenses+=amount;spending[category]=(spending[category]||0n)+amount;
         }else if(category==='transfer')transfers++;
         if(category==='unreviewed'||(category==='bonus'&&row.categorySource!=='user')||(!['user','user_rule'].includes(row.categorySource)&&row.confidence!=='high'))unreviewed++;
@@ -66,14 +72,16 @@
         const key=String(local.getFullYear())+'-'+String(local.getMonth()+1).padStart(2,'0');
         const month=monthly[key]||(monthly[key]={income:0n,expenses:0n});
         if(category==='income'&&n>0n)month.income+=n;
-        if(SPENDING.has(category)&&n<0n)month.expenses-=n;
+        if(SPENDING.has(category)&&n<0n&&!internalPayment(row))month.expenses-=n;
       }
     }
 
     const profileEntries=accounts.filter(account=>!profiles[account.key]?.removed).map(account=>({account,profile:profiles[account.key]||{kind:'unclassified',balanceMode:'exclude'},balance:freshBalance(account,now)}));
     const cashEntries=profileEntries.filter(x=>['checking','savings'].includes(x.profile.kind));
-    const cashReady=cashEntries.length>0&&cashEntries.every(x=>x.account.currency==='USD'&&x.balance);
-    const cash=cashReady?cashEntries.reduce((sum,x)=>sum+x.balance.amount,0n):null;
+    const cashKnown=cashEntries.filter(x=>x.account.currency==='USD'&&x.balance);
+    const cashReady=cashKnown.length>0;
+    const cash=cashReady?cashKnown.reduce((sum,x)=>sum+x.balance.amount,0n):null;
+    const cashIncomplete=cashEntries.length-cashKnown.length;
     const included=profileEntries.filter(x=>x.profile.balanceMode!=='exclude');
     const usable=included.filter(x=>x.account.currency==='USD'&&x.balance&&x.profile.kind!=='unclassified');
     const netWorthReady=usable.length>0;
@@ -123,11 +131,12 @@
       spending:Object.fromEntries(Object.entries(spending).map(([k,v])=>[k,decimal(v)])),
       monthly:Object.entries(monthly).sort().map(([month,v])=>({month,income:decimal(v.income),expenses:decimal(v.expenses),cashFlow:decimal(v.income-v.expenses)})),
       cashAvailable:cashReady,cash:cashReady?decimal(cash):null,
-      cashAccountCount:cashEntries.length,staleOrUnavailableCash:cashEntries.filter(x=>x.account.currency!=='USD'||!x.balance).length,
+      cashAccountCount:cashEntries.length,staleOrUnavailableCash:cashIncomplete,
       netWorthAvailable:netWorthReady,netWorthBasedOn:usable.length,netWorthTotalAccounts:included.length,
       netWorthPartial:usable.length<included.length,assets:netWorthReady?decimal(assets):null,
       liabilities:netWorthReady?decimal(liabilities):null,netWorth:netWorthReady?decimal(assets-liabilities):null,
       netWorthHistory:netWorthHistory.slice(-90),
+      netWorthExclusions:profileEntries.filter(x=>x.profile.balanceMode==='exclude'||!x.balance||x.account.currency!=='USD'||x.profile.kind==='unclassified').map(x=>({name:String(x.account.name||x.account.bank||'Account'),reason:x.profile.balanceMode==='exclude'?'excluded in account settings':x.profile.kind==='unclassified'?'account type not set':x.account.currency!=='USD'?'non-USD balance':'balance not updated'})),
       classifiedAccounts:profileEntries.filter(x=>x.profile.kind!=='unclassified').length,
       excludedFromNetWorth:profileEntries.filter(x=>x.profile.balanceMode==='exclude').length
     });
