@@ -135,7 +135,7 @@ const base=()=>({
       assert.equal(noBreak.nowrap,'nowrap','Datapoints stays on one line in the 390px bottom bar');
       assert.ok(noBreak.height<=noBreak.lineHeight*1.5,'Datapoints label does not wrap');
       const investmentCard=section.locator('.finance-overview-investments');
-      assert.equal((await investmentCard.locator('> strong').innerText()).trim(),'—');
+      assert.equal((await investmentCard.locator('strong').first().innerText()).trim(),'—');
       assert.equal((await investmentCard.locator('> small').first().innerText()).trim(),'Brokerage — · Retirement —',
         'Unknown investment balances must never appear as zero');
       await section.getByRole('button',{name:'Hide amounts',exact:true}).waitFor();
