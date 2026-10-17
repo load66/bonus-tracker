@@ -6,7 +6,7 @@
   if(root)root.BTFinanceOverview=api;
 })(typeof window!=='undefined'?window:null,function(){
   'use strict';
-  const DAY=86400,MAX_DAYS=90,STALE_BALANCE_DAYS=7;
+  const DAY=86400,MAX_DAYS=731,STALE_BALANCE_DAYS=7;
   const SPENDING=new Set(['housing','loan','utilities','groceries','dining','transportation','shopping','health','entertainment','fees','taxes','travel','subscription','other']);
   function cents(value){
     const m=/^([+-]?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(value??'').trim());
@@ -49,6 +49,7 @@
         const n=cents(row.amount);
         if(n===null){unusable++;continue}
         if(row.pending){pending++;continue}
+        if(row.excludedFromTotals===true)continue;
         observations++;
         if(n>0n)credits+=n; else if(n<0n)debits-=n;
         if(row.kind==='possible_bonus'&&n>0n)candidates++;
@@ -74,9 +75,10 @@
     const cashReady=cashEntries.length>0&&cashEntries.every(x=>x.account.currency==='USD'&&x.balance);
     const cash=cashReady?cashEntries.reduce((sum,x)=>sum+x.balance.amount,0n):null;
     const included=profileEntries.filter(x=>x.profile.balanceMode!=='exclude');
-    const netWorthReady=included.length>0&&included.every(x=>x.account.currency==='USD'&&x.balance&&x.profile.kind!=='unclassified');
+    const usable=included.filter(x=>x.account.currency==='USD'&&x.balance&&x.profile.kind!=='unclassified');
+    const netWorthReady=usable.length>0;
     let assets=0n,liabilities=0n;
-    if(netWorthReady)for(const x of included){
+    if(netWorthReady)for(const x of usable){
       if(x.profile.balanceMode==='asset')assets+=x.balance.amount;
       else if(x.profile.balanceMode==='liability'){
         // A negative credit-card/loan balance is a credit owed to the user, not a debt.
@@ -85,13 +87,13 @@
       }
     }
     const netWorthHistory=[];
-    if(included.length>0&&included.every(x=>x.account.currency==='USD'&&x.profile.kind!=='unclassified')){
+    if(usable.length>0){
       const balanceHistory=state.balanceHistory&&typeof state.balanceHistory==='object'?state.balanceHistory:{};
-      const times=[...new Set(accounts.flatMap(a=>(Array.isArray(balanceHistory[a.key])?balanceHistory[a.key]:[])
+      const times=[...new Set(usable.flatMap(x=>(Array.isArray(balanceHistory[x.account.key])?balanceHistory[x.account.key]:[])
         .map(row=>row?.observedAt).filter(Number.isFinite)))].sort((a,b)=>a-b);
       for(const at of times){
         let point=0n,valid=true;
-        for(const x of included){
+        for(const x of usable){
           const rows=(Array.isArray(balanceHistory[x.account.key])?balanceHistory[x.account.key]:[])
             .filter(row=>Number.isFinite(row?.observedAt)&&row.observedAt<=at&&row.currency==='USD')
             .sort((a,b)=>b.observedAt-a.observedAt);
@@ -122,7 +124,8 @@
       monthly:Object.entries(monthly).sort().map(([month,v])=>({month,income:decimal(v.income),expenses:decimal(v.expenses),cashFlow:decimal(v.income-v.expenses)})),
       cashAvailable:cashReady,cash:cashReady?decimal(cash):null,
       cashAccountCount:cashEntries.length,staleOrUnavailableCash:cashEntries.filter(x=>x.account.currency!=='USD'||!x.balance).length,
-      netWorthAvailable:netWorthReady,assets:netWorthReady?decimal(assets):null,
+      netWorthAvailable:netWorthReady,netWorthBasedOn:usable.length,netWorthTotalAccounts:included.length,
+      netWorthPartial:usable.length<included.length,assets:netWorthReady?decimal(assets):null,
       liabilities:netWorthReady?decimal(liabilities):null,netWorth:netWorthReady?decimal(assets-liabilities):null,
       netWorthHistory:netWorthHistory.slice(-90),
       classifiedAccounts:profileEntries.filter(x=>x.profile.kind!=='unclassified').length,
