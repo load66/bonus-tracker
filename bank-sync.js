@@ -82,13 +82,15 @@
     const old=new Set((data.accounts||[]).map(a=>a.key));
     wizardResult=guided?'Looking for your new bank…':null;paint();
     data=await request(guided?'/discover-guided':'/discover',{method:'POST'});
-    foundAccounts=(data.accounts||[]).filter(a=>!old.has(a.key));
-    const expected=selectedBank.trim().toLowerCase();
-    const matching=foundAccounts.filter(a=>!expected||String(a.bank||'').toLowerCase().includes(expected)||
-      expected.includes(String(a.bank||'').toLowerCase())&&String(a.bank||'').length>2);
+    const added=(data.accounts||[]).filter(a=>!old.has(a.key));
+    const canonical=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+    const expected=canonical(selectedBank);
+    // Only claim the requested bank is found; unrelated discoveries remain available in Accounts.
+    foundAccounts=added.filter(a=>!expected||canonical(a.bank).includes(expected)||
+      (canonical(a.bank).length>2&&expected.includes(canonical(a.bank))));
     if(foundAccounts.length){
       accountFilter='';wizardStage='found';awaitingReturn=false;rememberStep();
-      const display=(matching.length?matching:foundAccounts);
+      const display=foundAccounts;
       wizardResult='Found '+(display[0].bank||selectedBank||'bank')+' · '+display.length+
         ' account'+(display.length===1?'':'s')+'.';
       window.btRefreshFinancesPage?.();
