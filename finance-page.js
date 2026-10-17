@@ -1362,7 +1362,7 @@
       return row.category==='transfer'||['matched_internal_transfer','card_payment','investment_transfer'].some(s=>signals.includes(s));
     }
     function shownAmount(row){
-      if(confirmedMovement(row))return '⇄ '+amount(String(row.amount).replace(/^-/,'').replace(/^\+/ ,''),row.account.currency);
+      if(confirmedMovement(row))return '⇄ '+amount(String(row.amount).replace(/^[+-]/,''),row.account.currency);
       const formatted=amount(row.amount,row.account.currency);
       return !hidden&&Number(row.amount)>0&&formatted!=='—'?'+'+formatted:formatted;
     }
