@@ -92,6 +92,8 @@ const base=()=>({
       await page.addInitScript(()=>{
         const RealDate=Date,now=Date.parse('2026-10-16T07:00:00Z');
         window.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[now]))}static now(){return now}};
+        // Legacy hide preference must no longer force amounts off on startup.
+        localStorage.setItem('bt_finance_hide_amounts','true');
         localStorage.setItem('bt_e_v4','[]');localStorage.setItem('bonus-ai-auth',JSON.stringify({access_token:'synthetic-access',refresh_token:'synthetic-refresh',expires_at:4102444800}));
       });
       await page.goto(process.env.BT_BROWSER_SITE_URL||'http://127.0.0.1:'+server.address().port+'/');
@@ -131,8 +133,8 @@ const base=()=>({
       await section.getByRole('heading',{name:'Spending by category',exact:true}).waitFor();
       assert.equal(await section.locator('.finance-page-donut').count(),1,
         'The Finance Overview has a lightweight accessible category donut');
-      assert.ok((await section.locator('.finance-page-donut-legend').innerText()).includes('••••••'),
-        'The amount privacy toggle must also mask donut legend amounts');
+      assert.ok(!(await section.locator('.finance-page-donut-legend').innerText()).includes('••••••'),
+        'Category donut amounts show by default');
       const previews=section.locator('.finance-page-preview-card');
       assert.equal(await previews.count(),2,'Account and transaction previews belong on the Finance home dashboard');
       assert.deepEqual((await section.locator('.finance-page-nav button').allTextContents()).map(t=>t.trim()),
@@ -145,11 +147,12 @@ const base=()=>({
       assert.ok((await previews.nth(1).innerText()).includes('X Money Bonus'),
         'Recent Finance activity must include Plaid transactions');
 
-      // Amounts stay masked by default, including on first sign-in.
-      await section.getByRole('button',{name:'Show amounts',exact:true}).waitFor();
-      assert.equal(await section.locator('.finance-page-hero-cash-value').innerText(),'••••••');
-      await section.getByRole('button',{name:'Show amounts',exact:true}).click();
-      assert.equal(await page.evaluate(()=>localStorage.getItem('bt_finance_hide_amounts')),'false');
+      // Financial amounts show by default, even when a stale older-version
+      // screenshot privacy preference remains in browser storage.
+      await section.getByRole('button',{name:'Hide amounts',exact:true}).waitFor();
+      assert.notEqual(await section.locator('.finance-page-hero-cash-value').innerText(),'••••••');
+      assert.equal(await page.evaluate(()=>localStorage.getItem('bt_finance_hide_amounts')),'true',
+        'Screenshot-only visibility must not rewrite the old stored preference');
       await section.getByText('Income',{exact:true}).locator('..').getByText(/250/).waitFor();
       await section.getByText('Expenses',{exact:true}).locator('..').getByText(/15/).waitFor();
       await section.getByText('Net flow',{exact:true}).locator('..').getByText(/235/).waitFor();
@@ -160,8 +163,12 @@ const base=()=>({
       const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
       await section.getByRole('button',{name:'Hide amounts',exact:true}).click();
       assert.equal(await section.locator('.finance-page-hero-cash-value').innerText(),'••••••');
+      assert.ok((await section.locator('.finance-page-donut-legend').innerText()).includes('••••••'),
+        'Screenshot privacy masks spending breakdown as well as the cash balance');
       await section.getByRole('button',{name:'Show amounts',exact:true}).click();
-      assert.equal(await page.evaluate(()=>localStorage.getItem('bt_finance_hide_amounts')),'false');
+      assert.notEqual(await section.locator('.finance-page-hero-cash-value').innerText(),'••••••');
+      assert.equal(await page.evaluate(()=>localStorage.getItem('bt_finance_hide_amounts')),'true',
+        'Temporary toggle does not persist across reloads');
       assert.equal(await section.locator('.finance-page-hero-cash-value').count(),1,
         'Only one Cash total appears in the Finance Overview hero');
 
