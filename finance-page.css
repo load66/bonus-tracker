@@ -613,3 +613,89 @@
   .finance-page .finance-page-period-nowrap{width:100%}
   .finance-page .finance-page-account-info strong{font-size:12px}
 }
+
+
+/* Finances v3.4.80: original mobile-first spending studio. */
+.finance-spend-v2{display:grid;gap:15px;min-width:0}
+.finance-spend-v2>.finance-page-card,.finance-spend-v2>.finance-spend-top{margin:0}
+.finance-spend-top{background:linear-gradient(150deg,#13241f 0%,#121923 74%);border:1px solid #29443e;border-radius:22px;padding:18px 17px 22px;overflow:hidden}
+.finance-spend-month{display:flex;justify-content:center;align-items:center;gap:12px;margin-bottom:20px}
+.finance-spend-month h2{margin:0;flex:1;text-align:center;font-size:17px;letter-spacing:-.025em}
+.finance-spend-month-arrow{width:44px;height:44px;min-width:44px;border:1px solid #35463e;border-radius:50%;background:#1a2a28;color:#d7e9e2;font-size:28px;line-height:1;display:grid;place-content:center}
+.finance-spend-month-arrow:disabled{opacity:.3}
+.finance-spend-mode{display:flex;gap:5px;background:#101a1b;border:1px solid #263834;border-radius:12px;padding:4px;margin-bottom:22px}
+.finance-spend-mode button{width:50%;flex:1;border-radius:9px;border:0;min-height:40px;font-size:13px;font-weight:700}
+.finance-spend-mode .is-active{background:#21453a;color:#9df0cf}
+.finance-spend-kicker{display:block;color:#99aeb0;font-size:11px;letter-spacing:.11em;font-weight:700}
+.finance-spend-total{display:block;color:#f4faf7;font-size:clamp(35px,9vw,51px);font-weight:780;line-height:1.15;letter-spacing:-.05em;margin-top:7px;font-variant-numeric:tabular-nums}
+.finance-spend-change{font-size:12px;color:#a9c5bc;margin:7px 0 0}
+.finance-spend-v2 .finance-page-insights{padding:17px;min-width:0}
+.finance-spend-v2 .finance-page-insights h3{font-size:16px;font-weight:760;letter-spacing:-.02em;margin:0 0 10px}
+.finance-spend-v2 .finance-page-spending-line{display:block;width:100%;height:auto;overflow:visible;margin:10px 0}
+.finance-spend-v2 .finance-page-spending-line .is-current{stroke:#59e1b6}
+.finance-spend-v2 .finance-page-spending-line .is-previous{stroke:#858d9c;stroke-dasharray:5 5}
+.finance-spend-v2 .finance-page-spending-line .is-today-dot{fill:#59e1b6;stroke:#102820;stroke-width:3}
+.finance-spend-v2 .finance-page-spending-line .is-grid{stroke:#29343b;stroke-width:.6}
+.finance-spend-donut{width:min(194px,63vw);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;margin:18px auto 22px}
+.finance-spend-donut-hole{width:72%;height:72%;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px;border-radius:50%;background:#121923}
+.finance-spend-donut-hole small{color:#8da3a6}
+.finance-spend-donut-hole strong{color:#f4faf7;font-size:17px;letter-spacing:-.025em;font-variant-numeric:tabular-nums}
+.finance-spend-category-list{display:grid;gap:1px}
+.finance-spend-category-row{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:11px;width:100%;min-height:71px;text-align:left;padding:12px 2px;border:0;border-top:1px solid #26313a;background:transparent;color:#edf4f3}
+.finance-spend-category-row.is-uncategorized{background:#272015;border:1px solid #5f4932;border-radius:12px;padding-inline:9px}
+.finance-spend-category-icon{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;font-weight:800;color:#071713;font-size:15px}
+.finance-spend-category-copy{min-width:0;display:grid;gap:3px}
+.finance-spend-category-copy strong{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.finance-spend-category-copy small{display:block;color:#9aa8b5;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.finance-spend-category-amount{text-align:right;display:grid;gap:3px;justify-items:end;white-space:nowrap;font-variant-numeric:tabular-nums}
+.finance-spend-category-amount strong{font-size:13px}
+.finance-spend-category-amount small{color:#899ba1}
+.finance-spend-merchant-row{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:11px;width:100%;min-height:68px;padding:12px 0;text-align:left;border:0;border-bottom:1px solid #28303a;background:transparent;color:#eaf4f0}
+.finance-spend-merchant-initial{width:35px;height:35px;border-radius:50%;display:grid;place-content:center;background:#21352f;color:#9bdcc6;font-weight:750}
+.finance-spend-merchant-row>div{min-width:0;display:grid;gap:2px}
+.finance-spend-merchant-row strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.finance-spend-merchant-row small{font-size:11px;color:#91a4b0}
+.finance-spend-merchant-row b{font-size:13px;white-space:nowrap}
+.finance-spend-budget-row{border-top:1px solid #29313a;padding:14px 0;display:grid;gap:8px}
+.finance-spend-budget-row .finance-page-section-head{display:flex;flex-wrap:wrap;gap:10px}
+.finance-spend-budget-row .finance-page-section-head b{font-size:12px;font-variant-numeric:tabular-nums}
+.finance-spend-budget-row .finance-page-field{display:grid;gap:6px}
+.finance-spend-budget-row .finance-page-budget-progress[data-level=over]{background:#ff777d}
+.finance-spend-budget-row .finance-page-budget-progress[data-level=near]{background:#f4b961}
+.finance-spend-budget-row .finance-page-budget-progress[data-level=ok]{background:#5bdcab}
+.finance-month-bars{display:flex;align-items:end;gap:8px;overflow-x:auto;min-height:166px;padding:16px 0 8px;scrollbar-width:thin}
+.finance-month-bar-col{flex:1 0 35px;min-width:35px;display:grid;gap:5px;justify-items:center;color:#9eacb9;font-size:10px}
+.finance-month-bar-outer{height:126px;width:100%;display:flex;align-items:end;justify-content:center;gap:3px;border-bottom:1px solid #44525b}
+.finance-month-bar-spending,.finance-month-bar-income,.finance-month-bar-spend{display:block;width:40%;min-height:0;border-radius:4px 4px 0 0;background:#59d6aa}
+.finance-month-bar-income{background:#658dce}
+.finance-month-bar-spend{width:55%}
+.finance-month-bar-col small{font-size:10px}
+.finance-page .finance-spend-ledger-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;padding:12px 0;border-bottom:1px solid #29313a}
+.finance-spend-ledger-row div{display:grid;gap:4px;min-width:0}
+.finance-spend-ledger-row strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.finance-spend-ledger-row small{color:#9aabb8}
+.finance-spend-ledger-row b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.finance-spend-day{color:#9aabb8;font-size:12px;margin:16px 0 4px}
+.finance-review-sheet{padding-bottom:calc(26px + env(safe-area-inset-bottom))}
+.finance-review-content{display:grid;gap:13px;margin:12px 0 15px}
+.finance-review-card{padding:18px;background:linear-gradient(145deg,#15241e,#161d26);border:1px solid #335146;border-radius:17px;display:grid;gap:8px}
+.finance-review-card h3{margin:0;font-size:19px}
+.finance-review-card small{color:#a8b7bd}
+.finance-review-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.finance-page .finance-review-choice{min-width:0;min-height:52px;white-space:normal;background:#202a30;border:1px solid #394b4c;border-radius:12px;color:#e9f7ee;font-weight:700;font-size:12px;padding:9px}
+.finance-page .finance-review-choice:active{background:#2b5e4a}
+.finance-review-footer{display:flex;gap:8px;justify-content:space-between}
+.finance-page .finance-page-quick-actions .finance-page-round-action svg{display:block;flex:none;width:52px;height:52px;box-sizing:content-box;stroke:currentColor;fill:none}
+.finance-page .finance-page-quick-actions .finance-page-round-action svg path{fill:none;stroke:#69dfbb;stroke-width:1.8}
+.finance-page .finance-page-quick-actions .finance-page-round-action{display:grid;justify-items:center;align-content:start;gap:7px;color:#c5d6d1}
+.finance-page .finance-page-meta{font-size:12px;color:#98acae}
+.finance-page .finance-page-preview-value.is-credit{color:#65dcb0}
+@media(max-width:420px){
+ .finance-spend-v2 .finance-page-insights{padding:14px}
+ .finance-spend-category-row{gap:8px;grid-template-columns:34px minmax(0,1fr) auto}
+ .finance-spend-category-icon{width:32px;height:32px}
+ .finance-spend-category-copy small{font-size:10px}
+ .finance-spend-category-amount strong{font-size:12px}
+ .finance-spend-month{gap:8px}
+ .finance-month-bar-col{flex:0 0 40px}
+}
