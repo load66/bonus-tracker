@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.4.92: exclude transfers, card payments and investment funding from recurring.
+// Version 3.4.93: exclude transfers, card payments and investment funding from recurring.
 
-const V = 'bt-v3.4.92-recurring-exclusion1';
+const V = 'bt-v3.4.93-cross-provider1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
