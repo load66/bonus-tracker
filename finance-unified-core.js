@@ -93,7 +93,11 @@
       monitoredAccounts:unified.monitoredAccounts.filter(k=>allowed.has(k)),
       accountProfiles:keep(unified.accountProfiles),balanceHistory:keep(unified.balanceHistory),
       incompleteProviders:Object.values(unified.providerState).some(s=>s.connected&&
-        (s.stale||!Number.isFinite(s.lastSuccess)||s.lastSuccess<=0)),
+        (s.stale||!Number.isFinite(s.lastSuccess)||s.lastSuccess<=0))||
+        Object.keys(unified.sourceErrors||{}).length>0,
+      historyIncomplete:accounts.some(a=>a.source==='plaid'&&(
+        a.historyComplete===false||
+        ['history_still_loading','awaiting_first_sync','awaiting_provider_data','needs_attention'].includes(a.transactionSyncStatus))),
       excludedForReview:duplicates.size,hiddenAccounts:hidden.size};
   }
   return Object.freeze({combine,safeForSummary,detectedType,key});
