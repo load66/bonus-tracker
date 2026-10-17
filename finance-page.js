@@ -373,19 +373,25 @@
         if(status?.connected)el('span',label+': '+stamp(status.lastSuccess),meta);
       }
       if(summary.hiddenAccounts)el('p',summary.hiddenAccounts+' hidden account'+(summary.hiddenAccounts===1?' is':'s are')+' excluded from Finances totals. Show them under Accounts.',box,'finance-page-hint');
-      if(currentCombined?.possibleDuplicates?.length)el('p','Possible duplicate account connections detected. Review both before relying on combined totals.',box,'finance-page-warning');
-      if(Object.keys(currentCombined?.sourceErrors||{}).length)el('p','One provider needs attention. Account data may be incomplete.',box,'finance-page-warning');
+      if(currentCombined?.possibleDuplicates?.length)el('small','Review possible matching accounts in Accounts',box,'finance-page-hint');
     }
     const nav=el('nav',undefined,host,'finance-page-nav');nav.setAttribute('aria-label','Finance sections');
-    for(const [id,label] of [['overview','Overview'],['transactions','Transactions'],['accounts','Accounts']]){
-      const b=action(nav,label,()=>{view=id;paint()},'finance-page-nav-button'+(view===id?' is-active':''));
+    for(const [id,label] of [['overview','Overview'],['spending','Spending'],['recurring','Recurring'],['transactions','Transactions'],['accounts','Accounts']]){
+      const b=action(nav,label,()=>{
+        view=id;paint();
+        if(id==='recurring')requestArchiveWindow(731);
+        if(id==='spending')loadArchiveMonth(spendingMonth);
+        if(id==='transactions'&&period>90)requestArchiveWindow(period);
+      },'finance-page-nav-button'+(view===id?' is-active':''));
       b.setAttribute('aria-current',view===id?'page':'false');
     }
     return summary;
   }
   function periodControl(parent){
     const wrap=el('div',undefined,parent,'finance-page-period');
-    for(const days of [30,60,90])action(wrap,days+' days',()=>{period=days;paint()},'finance-page-chip'+(period===days?' is-active':''));
+    for(const days of [30,90,180,365,730])action(wrap,days===730?'24 months':days+' days',()=>{
+      period=days;paint();if(days>90)requestArchiveWindow(days);
+    },'finance-page-chip'+(period===days?' is-active':''));
   }
   function metric(grid,label,value,note){
     const tile=el('div',undefined,grid,'finance-page-tile');el('span',label,tile);el('strong',value,tile);
@@ -935,17 +941,32 @@
     const summary={...calculated,
       complete:!!calculated?.complete&&trustedTotals&&!summaryState.historyIncomplete&&!summaryState.malformedActivity,
       cashAvailable:!!calculated?.cashAvailable&&trustedTotals,
-      netWorthAvailable:!!calculated?.netWorthAvailable&&trustedTotals,
+      netWorthAvailable:!!calculated?.netWorthAvailable,
+      netWorthPartial:!!calculated?.netWorthPartial||!trustedTotals,
       hiddenAccounts:summaryState.hiddenAccounts||0};
     hero(host,summary);
     if(connectionNotice){const banner=el('p',connectionNotice,host,'finance-page-connection-success');banner.setAttribute('role','status');}
     if(monitoringNotice){const banner=el('p',monitoringNotice,host,'finance-page-activity-result');banner.setAttribute('role','status');}
     if(activityNotice){const banner=el('p',activityNotice,host,'finance-page-activity-result');banner.setAttribute('role','status');}
-    if(summaryState.incompleteProviders)el('p','Financial activity is partial: one connected bank reported missing, delayed, or invalid transaction data.',host,'finance-page-caution');
-    if(summaryState.historyIncomplete)el('p','History still loading. Some linked banks have not finished preparing past transactions, so cash flow is partial.',host,'finance-page-caution');
-    if(summaryState.malformedActivity)el('p','Some bank transactions could not be read safely. Cash flow is partial until those records can be recovered.',host,'finance-page-caution');
+    const needsAttention=summaryState.incompleteProviders||summaryState.malformedActivity;
+    const loading=summaryState.historyIncomplete;
+    if(needsAttention||loading||settingsNotice||archiveLoading){
+      const row=el('details',undefined,host,'finance-page-status-row');
+      const count=(currentCombined?.accounts||[]).filter(a=>a.transactionSyncStatus==='needs_attention').length;
+      const label=needsAttention?(count||1)+' bank'+((count||1)===1?'':'s')+' needs attention':
+        loading?'Importing transaction history for 1 bank. Updates automatically.':
+        archiveLoading?'Loading earlier transactions…':settingsNotice;
+      el('summary',label,row);
+      const detail=el('p',undefined,row);
+      detail.textContent=needsAttention?'Open Accounts to check the connection or refresh your accounts.':
+        loading?'Transaction imports continue automatically. Earlier months may be incomplete.':
+        archiveLoading?'Previously imported months are being loaded securely.':settingsNotice;
+      if(needsAttention)action(row,'Check accounts',()=>{view='accounts';paint()});
+    }
     if(view==='transactions')transactions(host);
     else if(view==='accounts')accounts(host);
+    else if(view==='spending')spendingView(host);
+    else if(view==='recurring')recurringView(host);
     else overview(host,summary);
   }
   let sessionIdentity=null,lastAuthenticatedOwner=null,mountCall=0;
