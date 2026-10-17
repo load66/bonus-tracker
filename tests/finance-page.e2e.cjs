@@ -121,11 +121,25 @@ const base=()=>({
       }
       assert.ok(opened,name+' Finances navigation must become available after bootstrap');
       assert.equal(await section.locator('img').count(),0,'provider aliases must be text, never HTML');
+      await section.locator('.finance-page-count').filter({hasText:'4 accounts'}).waitFor();
+      await section.getByRole('heading',{name:'Connections',exact:true}).waitFor();
+      await section.getByRole('button',{name:/View SimpleFIN/}).waitFor();
+      await section.getByRole('button',{name:/View Plaid/}).waitFor();
+      assert.equal(await section.getByRole('button',{name:'Bonuses',exact:true}).count(),0,
+        'Finance must not expose a Bonuses section');
+      assert.equal(await section.getByText('Bonus activity',{exact:true}).count(),0,
+        'Finance overflow menu must not expose bonus activity');
+      assert.equal(await section.getByRole('region',{name:'Bank bonus activity evidence'}).count(),0,
+        'Finance bonus evidence stays background-only');
+      assert.equal(await section.locator('.finance-page-total-value').innerText(),'••••••',
+        'The Finance hub must open with private balances masked');
+      const insights=section.locator('.finance-page-insights');
+      assert.equal(await insights.getAttribute('open'),null,'Detailed analytics stay collapsed on the compact Finance home');
+      await insights.locator('summary').click();
       // Playwright's filter waits for actual content, unlike immediate text snapshots.
       // Missing money must remain unknown rather than incorrectly becoming $0.00.
       await section.locator('.finance-page-tile strong')
         .filter({hasText:/^\s*—\s*$/}).first().waitFor({state:'visible'});
-      await section.locator('.finance-page-count').filter({hasText:'4 accounts'}).waitFor();
       await section.getByRole('heading',{name:'Connected accounts',exact:true}).waitFor();
       await section.getByRole('heading',{name:'Recent transactions',exact:true}).waitFor();
       const previews=section.locator('.finance-page-preview-card');
@@ -144,11 +158,11 @@ const base=()=>({
       // The awaited visibility assertion above is authoritative; do not reread
       // an asynchronously replaced DOM node in a second non-waiting assertion.
       const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
-      await section.getByRole('button',{name:'Hide amounts',exact:true}).click();
-      assert.equal(await section.locator('.finance-page-tile strong').first().innerText(),'••••••');
       await section.getByRole('button',{name:'Show amounts',exact:true}).click();
+      assert.notEqual(await section.locator('.finance-page-tile strong').first().innerText(),'••••••');
+      await section.getByRole('button',{name:'Hide amounts',exact:true}).click();
 
-      await section.getByRole('button',{name:'Transactions',exact:true}).click();
+      await section.getByRole('button',{name:'Activity',exact:true}).click();
       await section.getByRole('heading',{name:'Transactions',exact:true}).waitFor();
       assert.equal(await section.locator('script').count(),0,'transaction descriptions remain text');
       assert.ok(await section.locator('.finance-page-transaction-group').count()>=1,
@@ -241,7 +255,7 @@ const base=()=>({
       assert.equal(redrawOnSuccessfulSave,false,'WebKit must exercise a same-user redraw before successful save response');
       assert.ok(requests.some(r=>r.path.endsWith('/account-profiles')));
 
-      for(const target of [['Overview','overview'],['Transactions','transactions'],['Accounts','accounts']]){
+      for(const target of [['Home','overview'],['Activity','transactions'],['Accounts','accounts']]){
         await section.getByRole('button',{name:target[0],exact:true}).click();
         for(const width of [320,390,430]){
           await page.setViewportSize({width,height:760});
@@ -277,17 +291,17 @@ const base=()=>({
         'Connected banks must not require a manual monitoring toggle');
       assert.equal(requests.some(r=>r.path.endsWith('/plaid/accounts/monitoring')),false,
         'Account settings do not require a separate read-only monitoring request');
-      await section.getByRole('button',{name:'Transactions',exact:true}).click();
+      await section.getByRole('button',{name:'Activity',exact:true}).click();
       await section.getByText('X Money Bonus',{exact:true}).waitFor();
       await section.locator('.finance-page-transaction').filter({hasText:'X Money Bonus'})
         .getByRole('button',{name:/X Money Bonus/}).click();
       await Promise.all([
         page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/plaid/accounts/transaction-review')&&
           r.request().method()==='PUT'&&r.status()===200),
-        section.getByLabel('Category for X Money Bonus').selectOption('bonus')
+        section.getByLabel('Category for X Money Bonus').selectOption('refund')
       ]);
       assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts/transaction-review')&&r.body.account===A&&
-        r.body.transaction==='plaid-income'&&r.body.category==='bonus'),
+        r.body.transaction==='plaid-income'&&r.body.category==='refund'),
         'Plaid category corrections must route only to Plaid using its original account and transaction identifiers');
       assert.ok((await section.locator('.finance-page-transaction').allTextContents()).some(t=>t.includes('Plaid')),
         'A Plaid-origin transaction must appear with a source label in the combined feed');
@@ -315,7 +329,7 @@ const base=()=>({
           categorySource:'automatic',confidence:'low',signals:[]};
       }
       await page.evaluate(()=>window.btRefreshFinancesPage?.());
-      await section.getByRole('button',{name:'Transactions',exact:true}).click();
+      await section.getByRole('button',{name:'Activity',exact:true}).click();
       await section.getByRole('button',{name:/^Show 100 more transactions/}).waitFor();
       await section.getByRole('button',{name:/^Show 100 more transactions/}).click();
       await section.getByRole('button',{name:/^Show 64 more transactions/}).waitFor();
