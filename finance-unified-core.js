@@ -45,6 +45,9 @@
     return 'unclassified';
   }
   const key=(source,rawKey)=>source+':'+String(rawKey);
+  // Defensive compatibility: backend status GET migrates historical informational
+  // warnings, but an older cached response must not surface them as errors.
+  const SIMPLEFIN_INFO_NOTICE=/(?:date\s*range.*(?:limit|capp)|requested\s*date\s*range|partial\s*(?:data|history|transaction)|history\s*(?:truncat|limit)|older\s*transactions\s*(?:unavailable|not\s*available)|90[-\s]?day\s*(?:limit|window))/i;
   const DEFAULT_TREATMENT={checking:'asset',savings:'asset',brokerage:'asset',
     retirement:'asset',other_asset:'asset',credit_card:'liability',loan:'liability',
     mortgage:'liability',other_liability:'liability'};
@@ -68,10 +71,16 @@
     for(const source of PROVIDERS){
       const state=sources[source];
       if(!state||!state.connected){providerState[source]={connected:false,available:!!state,stale:false};continue}
+      const rawWarnings=Array.isArray(state.warnings)?state.warnings:[];
+      const actionable=source==='simplefin'?rawWarnings.filter(w=>!SIMPLEFIN_INFO_NOTICE.test(String(w))):rawWarnings;
+      const historicalNoticeOnly=source==='simplefin'&&state.status==='attention'&&rawWarnings.length>0
+        &&actionable.length===0&&!state.error&&!(state.missingAccounts||[]).length
+        &&!Object.keys(state.institutionIssues||{}).length
+        &&!(state.accounts||[]).some(a=>Number(a.invalidTransactionRows)>0);
       providerState[source]={connected:true,available:true,stale:!!state.stale,lastSuccess:state.lastSuccess||null,
         nextSyncAt:state.nextSyncAt||null,accountCount:(state.accounts||[]).length,
-        warningCount:Array.isArray(state.warnings)?state.warnings.length:0,
-        needsAttention:state.status==='attention'};
+        warningCount:actionable.length,
+        needsAttention:state.status==='attention'&&!historicalNoticeOnly};
       const accountKeys=new Set();
       for(const account of state.accounts||[]){
         if(!account||typeof account.key!=='string'||!account.key)continue;
