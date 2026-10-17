@@ -212,6 +212,29 @@ const base=()=>({
       assert.ok((await cardSheet.innerText()).includes('PayPal Mastercard ··8532'));
       assert.ok((await cardSheet.innerText()).includes('$63.87 owed'));
       await cardSheet.getByRole('button',{name:'Close'}).click();
+      // Already-linked SimpleFIN mortgage: negative source balance is debt, not an asset.
+      const M='m'.repeat(64),syncsBeforeMortgage=requests.filter(x=>x.method==='POST'&&/\/(?:sync|connect)$/.test(x.path)).length;
+      state.accounts.push({key:M,bank:'Synthetic Home Servicer',name:'Synthetic Home Mortgage',
+        accountType:'loan',accountSubtype:'loan',currency:'USD',balance:'-185000.00',
+        balanceDate:NOW-60});
+      state.transactions[M]={};state.monitoredAccounts.push(M);
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      const mortgageRow=section.getByRole('button',{name:'View Other accounts'});
+      await mortgageRow.getByText(/185,000\.00/).waitFor();
+      assert.ok((await mortgageRow.innerText()).includes('Mortgage debt'));
+      await section.getByRole('button',{name:'Accounts',exact:true}).click();
+      await section.getByRole('button',{name:/Synthetic Home Mortgage/}).click();
+      const loanDetails=page.getByRole('dialog',{name:'Synthetic Home Mortgage'});
+      await loanDetails.getByText('$185,000.00 owed',{exact:true}).waitFor();
+      await loanDetails.getByRole('heading',{name:'Debt remaining'}).waitFor();
+      await loanDetails.getByText(/Rate, escrow, due dates/).waitFor();
+      await loanDetails.getByRole('button',{name:'Close'}).click();
+      await section.getByRole('button',{name:'Overview',exact:true}).click();
+      assert.equal(requests.filter(x=>x.method==='POST'&&/\/(?:sync|connect)$/.test(x.path)).length,syncsBeforeMortgage,
+        'Viewing an existing mortgage requires no new provider sync or bank connection');
+      state.accounts=state.accounts.filter(a=>a.key!==M);
+      delete state.transactions[M];state.monitoredAccounts=state.monitoredAccounts.filter(key=>key!==M);
+      await page.evaluate(()=>window.btRefreshFinancesPage());
       state.accounts=state.accounts.filter(a=>a.key!==D);
       delete state.accountProfiles[D];
       state.accounts.find(a=>a.key===B).balance='200.00';
