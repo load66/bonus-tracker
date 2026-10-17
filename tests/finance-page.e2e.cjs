@@ -128,6 +128,11 @@ const base=()=>({
       await section.locator('.finance-page-count').filter({hasText:'4 accounts'}).waitFor();
       await section.getByRole('heading',{name:'Connected accounts',exact:true}).waitFor();
       await section.getByRole('heading',{name:'Recent transactions',exact:true}).waitFor();
+      await section.getByRole('heading',{name:'Spending by category',exact:true}).waitFor();
+      assert.equal(await section.locator('.finance-page-donut').count(),1,
+        'The Finance Overview has a lightweight accessible category donut');
+      assert.ok((await section.locator('.finance-page-donut-legend').innerText()).includes('••••••'),
+        'The amount privacy toggle must also mask donut legend amounts');
       const previews=section.locator('.finance-page-preview-card');
       assert.equal(await previews.count(),2,'Account and transaction previews belong on the Finance home dashboard');
       assert.deepEqual((await section.locator('.finance-page-nav button').allTextContents()).map(t=>t.trim()),
@@ -174,8 +179,11 @@ const base=()=>({
       await txSearch.fill('');
       const unknownRow=section.locator('.finance-page-transaction').filter({hasText:'Unknown'});
       await unknownRow.getByRole('button',{name:/Unknown/}).click();
+      await section.getByRole('checkbox',{name:'Apply to similar transactions'}).check();
       const category=section.getByLabel('Category for Unknown');await category.selectOption('shopping');
       await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).waitFor();
+      assert.ok(requests.some(r=>r.path.endsWith('/transaction-review')&&r.body.applySimilar===true),
+        'Opt-in merchant learning must be explicitly transmitted and never enabled by default');
       assert.equal(state.transactions[A][T3].category,'unreviewed','failure must not silently commit category changes');
       await section.getByLabel('Category for Unknown').selectOption('shopping');
       await section.getByText('Confirmed by you',{exact:true}).first().waitFor();
@@ -353,12 +361,19 @@ const base=()=>({
           description:'Synthetic Plaid history item '+index,category:'other',
           categorySource:'automatic',confidence:'low',signals:[]};
       }
+      // Generic provider titles fall back to the original description.
+      plaidState.transactions[A]['history-000'].merchant='Transaction';
+      plaidState.transactions[A]['history-000'].categorySource='ai';
+      plaidState.transactions[A]['history-000'].category='shopping';
       // A bonus-classified transaction remains intact in provider data, but
       // its Finance-only presentation remains Needs review, never verified income.
       plaidState.transactions[A]['plaid-income'].category='bonus';
       await page.evaluate(()=>window.btRefreshFinancesPage?.());
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       await section.getByText('X Money Bonus',{exact:true}).waitFor();
+      const correctedName=section.locator('.finance-page-transaction').filter({hasText:'Synthetic Plaid history item 0'});
+      await correctedName.getByText('Auto',{exact:true}).waitFor();
+      assert.ok((await correctedName.innerText()).includes('Synthetic Plaid history item 0'));
       const preservedBonus=section.locator('.finance-page-transaction').filter({hasText:'X Money Bonus'});
       assert.ok((await preservedBonus.innerText()).includes('Needs review'),
         'Finance must not claim unverified promotional credits are income');
