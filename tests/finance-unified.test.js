@@ -413,13 +413,13 @@ for(const source of ['simplefin','plaid']){
   const sourceState={connected:true,accounts:[
     {key:retirementKey,bank:'Example Plan Administrator',name:'Example Employer 401(k) Retirement Savings Plan',
       accountType:'depository',accountSubtype:'savings',currency:'USD',
-      balance:'59280.56',balanceDate:now-100,observedAt:now-100},
+      balance:'13755.42',balanceDate:now-100,observedAt:now-100},
     {key:cashKey,bank:'Example Bank',name:'Everyday Savings',
       accountType:'depository',accountSubtype:'savings',currency:'USD',
-      balance:'1055.84',balanceDate:now-100,observedAt:now-100},
+      balance:'1044.21',balanceDate:now-100,observedAt:now-100},
     {key:brokerKey,bank:'Example Brokerage',name:'Individual Brokerage',
       accountType:'investment',accountSubtype:'individual',currency:'USD',
-      balance:'2500.00',balanceDate:now-100,observedAt:now-100}
+      balance:'2450.35',balanceDate:now-100,observedAt:now-100}
   ],monitoredAccounts:[retirementKey,cashKey,brokerKey],
   transactions:{},accountProfiles:{},lastSuccess:now-30};
   const raw=JSON.stringify(sourceState);
@@ -430,11 +430,11 @@ for(const source of ['simplefin','plaid']){
   assert.equal(classified.accountProfiles[ret.key].kind,'retirement');
   assert.equal(classified.accountProfiles[ret.key].includeSpending,false);
   const out=finance.summarize(core.safeForSummary(classified),{now,days:30});
-  assert.equal(out.cash,'1055.84',source+' cash includes deposits only');
-  assert.equal(out.investments,'61780.56',source+' investments include retirement and brokerage');
-  assert.equal(out.investmentRetirement,'59280.56',source+' retirement subgroup is correct');
-  assert.equal(out.investmentBrokerage,'2500.00',source+' brokerage subgroup is correct');
-  assert.equal(out.netWorth,'62836.40',source+' overall net worth remains correct');
+  assert.equal(out.cash,'1044.21',source+' cash includes deposits only');
+  assert.equal(out.investments,'16205.77',source+' investments include retirement and brokerage');
+  assert.equal(out.investmentRetirement,'13755.42',source+' retirement subgroup is correct');
+  assert.equal(out.investmentBrokerage,'2450.35',source+' brokerage subgroup is correct');
+  assert.equal(out.netWorth,'17249.98',source+' overall net worth remains correct');
   const repeat=finance.summarize(core.safeForSummary(core.combine(inputs)),{now,days:30});
   assert.equal(repeat.cash,out.cash);
   assert.equal(repeat.investments,out.investments);
