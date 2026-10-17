@@ -354,14 +354,14 @@ const base=()=>({
           categorySource:'automatic',confidence:'low',signals:[]};
       }
       // A bonus-classified transaction remains intact in provider data, but
-      // its Finance-only presentation is ordinary income, never a bonus card.
+      // its Finance-only presentation remains Needs review, never verified income.
       plaidState.transactions[A]['plaid-income'].category='bonus';
       await page.evaluate(()=>window.btRefreshFinancesPage?.());
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       await section.getByText('X Money Bonus',{exact:true}).waitFor();
       const preservedBonus=section.locator('.finance-page-transaction').filter({hasText:'X Money Bonus'});
-      assert.ok((await preservedBonus.innerText()).includes('Income'),
-        'Finance labels preserved internal bonus classification as Income');
+      assert.ok((await preservedBonus.innerText()).includes('Needs review'),
+        'Finance must not claim unverified promotional credits are income');
       assert.equal(plaidState.transactions[A]['plaid-income'].category,'bonus',
         'Finance presentation must not rewrite canonical bonus category data');
       await section.getByRole('button',{name:/^Show 100 more transactions/}).waitFor();
