@@ -15,7 +15,7 @@
     subscription:'Subscription',transfer:'Transfer',refund:'Refund',verification:'Account verification',bonus:'Bank bonus',other:'Other'
   };
   // Keep 'bonus' as a persisted category for canonical tracker/evidence logic;
-  // Finances displays it as income without exposing a bonus-only UI control.
+  // Finances requires review before labeling it income; do not expose a bonus-only UI control.
   const FINANCE_CATEGORIES=Object.fromEntries(Object.entries(CATEGORIES).filter(([key])=>key!=='bonus'));
   const financeCategory=key=>key==='bonus'?'Needs review':(FINANCE_CATEGORIES[key]||'Needs review');
   const AMOUNTS_PREF='bt_finance_hide_amounts';
