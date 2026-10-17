@@ -1275,6 +1275,7 @@
           item.nextAt?' · Next '+date(item.nextAt):''),info);
         el('b',amount(item.lastAmount,'USD'),line);
         el('small',item.status==='possibly_ended'?'Possibly ended':
+          item.status==='late'?'Overdue · awaiting next observation':
           item.status==='price_increased'?'Amount increased':'Active',detail,'finance-page-recurring-status');
         const controls=el('div',undefined,detail,'finance-page-recurring-controls');
         const label=el('label',undefined,controls);el('span','Rename',label);
@@ -1314,7 +1315,7 @@
       el('summary','Possibly ended ('+ended.length+')',collapsed);
       recurringRows(collapsed,ended);
     }
-    el('small','Only consistent streams with at least three occurrences, or two with a confirmed rule, appear. Bank activity may be incomplete.',host,'finance-page-hint');
+    el('small','Three consistent payments required (two with a confirmed rule). History may be partial.',host,'finance-page-hint');
   }
   function signalLabel(value){
     return ({possible_direct_deposit:'Possible direct deposit',possible_bonus:'Possible bonus',possible_reversal:'Possible reversal',
