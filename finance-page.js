@@ -1154,11 +1154,11 @@
     if(transfer)return transfer;
     if(!transactionIsInvestment(row))return financeCategory(row.category);
     const text=String(row.description||'').toLowerCase();
-    if(/\\bdividends?\\b/.test(text))return 'Dividend';
-    if(/\\binterest\\b/.test(text))return 'Interest';
-    if(/\\b(?:buy|bought|purchase of shares)\\b/.test(text))return 'Buy';
-    if(/\\b(?:sell|sold|sale of shares)\\b/.test(text))return 'Sell';
-    if(/\\b(?:contribution|deposit|funding)\\b/.test(text))return 'Contribution';
+    if(/\bdividends?\b/.test(text))return 'Dividend';
+    if(/\binterest\b/.test(text))return 'Interest';
+    if(/\b(?:buy|bought|purchase of shares)\b/.test(text))return 'Buy';
+    if(/\b(?:sell|sold|sale of shares)\b/.test(text))return 'Sell';
+    if(/\b(?:contribution|deposit|funding)\b/.test(text))return 'Contribution';
     return 'Investment';
   }
   function transactions(host){
