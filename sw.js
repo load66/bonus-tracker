@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.4.88: preserve Finance overview and remove retired add-on modules.
+// Version 3.4.89: preserve Finance overview and remove retired add-on modules.
 
-const V = 'bt-v3.4.88-addon-removal1';
+const V = 'bt-v3.4.89-addon-removal1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
