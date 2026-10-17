@@ -825,7 +825,7 @@
     function confirmTransfers(parent){
       if(!possibleTransfers.length||spendingMode==='income')return;
       const panel=card(parent,'Confirm transfers',possibleTransfers.length+' financial-looking movement'+(possibleTransfers.length===1?'':'s')+' excluded pending your review');
-      el('p','These amounts are excluded from spending until you confirm them. No bank records are changed.',panel,'finance-page-hint');
+      el('p','Review these amounts before adding them to spending.',panel,'finance-page-hint');
       for(const row of possibleTransfers.slice(0,30)){
         const item=el('section',undefined,panel,'finance-spending-confirm-row');
         const label=el('div',undefined,item,'finance-spending-confirm-copy');
@@ -1213,7 +1213,7 @@
         button.classList.toggle('is-active',selected);
         button.setAttribute('aria-pressed',String(selected));
       });
-      if(!filtered.length){el('p','No matching transactions are available yet. Check the account, date range or next bank sync.',list);return}
+      if(!filtered.length){el('p','No matching transactions. Try another search.',list);return}
       let group=null,lastDay='';
       for(const row of filtered.slice(0,transactionVisibleLimit)){
         const currentDay=dayKey(row.posted);
@@ -1494,7 +1494,7 @@
         const members=pair.map(key=>currentCombined.accounts.find(a=>a.key===key));
         const section=el('section',undefined,review,'finance-page-card');
         el('p',members.map(a=>accountTitle(a)+' via '+a.sourceLabel).join(' / '),section);
-        el('small','Confirm whether these are the same account. Only the preferred connection supplies the balance.',section);
+        el('small','Choose which account to count.',section);
         const choices={'':'Choose preferred connection'};for(const a of members)choices[a.key]=a.sourceLabel+' · '+accountTitle(a);
         const chooser=select(section,'Same account — preferred connection',choices,financePrefs.duplicates?.[id]?.primary||'',value=>{if(value)saveSetting('duplicates',id,{primary:value})});
         chooser.disabled=!preferenceAvailable;
@@ -1571,7 +1571,7 @@
         }
         for(const a of rows){
           const bankKey=a.source+':'+(a.connectionHandle||a.bank);
-          const problem=a.source==='simplefin'?a.institutionStatus==='needs_attention':
+          const problem=a.source==='simplefin'?Boolean(a.attentionKind||a.institutionReasonCode):
             a.transactionSyncStatus==='needs_attention';
           if(problem&&!broken.has(bankKey)){
             broken.add(bankKey);
@@ -1580,14 +1580,16 @@
             el('span','⚠',alert,'finance-connection-alert-icon');
             const copy=el('span',undefined,alert,'finance-connection-alert-copy');
             el('strong',a.bank+' needs attention',copy);
-            const detail=String(a.institutionReason||a.transactionSyncError||'').trim();
+            const detail=String(a.attentionReason||a.institutionReason||a.transactionSyncError||'').trim();
             if(detail){
-              const short=a.institutionReasonCode==='bank_login'?'Sign in again':
-                a.institutionReasonCode==='access_rejected'?'Access expired':
-                a.institutionReasonCode==='missing_account'?'Account not found':'Check connection';
+              const issue=a.attentionKind||a.institutionReasonCode;
+              const short=issue==='bank_login'?'Sign in again':
+                ['rejected','access_rejected'].includes(issue)?'Access expired':
+                issue==='missing_account'?'Account not found':'Check connection';
               el('small',short,copy);
             }
-            const actionKind=a.source==='simplefin'?a.institutionAction:null;
+            const actionKind=a.source==='simplefin'?(a.institutionAction||
+              (a.attentionKind==='rejected'?'reconnect':a.attentionKind==='bank_login'?'fix_on_simplefin':null)):null;
             if(actionKind==='reconnect')action(alert,'Reconnect',()=>reconnectAccount(a));
             else if(actionKind==='fix_on_simplefin')action(alert,'Fix on SimpleFIN',
               ()=>window.open('https://bridge.simplefin.org/','_blank','noopener'));
@@ -1618,7 +1620,7 @@
     const institutions=new Map();
     for(const account of sortedAccounts(true)){const key=account.source+':'+(account.connectionHandle||account.bank);if(!institutions.has(key))institutions.set(key,[]);institutions.get(key).push(account)}
     for(const rows of institutions.values()){
-      const account=rows[0],broken=rows.some(a=>a.source==='simplefin'?a.institutionStatus==='needs_attention':a.transactionSyncStatus==='needs_attention'),loading=rows.some(a=>a.historyComplete===false);
+      const account=rows[0],broken=rows.some(a=>a.source==='simplefin'?Boolean(a.attentionKind||a.institutionReasonCode):a.transactionSyncStatus==='needs_attention'),loading=rows.some(a=>a.historyComplete===false);
       const card=action(section,'',()=>openConnection(rows),'finance-page-connection-card');accountIcon(card,account);
       const text=el('span',undefined,card);el('strong',account.bank||'Bank',text);el('small','via '+account.sourceLabel+' · '+rows.filter(a=>!a.removedAt).length+' accounts',text);
       el('small',syncLabel(sourceSnapshot(account.source)?.lastSuccess),text);el('span',rows.every(a=>a.institutionRemoved||a.connectionStatus==='disconnected')?'Disconnected':broken?'Needs attention':loading?'Syncing':'Connected',card,'finance-page-status-pill');
@@ -1633,9 +1635,9 @@
       const label=el('label',undefined,line);el('span','Sync',label);const input=el('input',undefined,label);input.type='checkbox';input.setAttribute('role','switch');input.checked=p.syncEnabled!==false;input.setAttribute('aria-label','Sync '+accountTitle(a));input.onchange=async()=>{await saveAccountProfile(a,{syncEnabled:input.checked});if(saveNotice)input.checked=!input.checked};
     }
     action(modal,'Refresh now',async()=>{try{const snapshot=await request('/sync',{method:'POST'},account.source);applySource(account.source,snapshot);connectionNotice='Refresh complete.';modal.close();paint()}catch(error){el('p',error.message,modal)}});
-    if(account.source==='plaid'||account.institutionAction==='reconnect')
+    if(account.source==='plaid'||account.institutionAction==='reconnect'||account.attentionKind==='rejected')
       action(modal,'Reconnect',()=>{modal.close();reconnectAccount(account)});
-    else if(account.institutionAction==='fix_on_simplefin')
+    else if(account.institutionAction==='fix_on_simplefin'||account.attentionKind==='bank_login')
       action(modal,'Fix on SimpleFIN',()=>window.open('https://bridge.simplefin.org/','_blank','noopener'));
     if(account.source==='plaid')action(modal,'Choose which accounts to share',()=>{modal.close();reconnectAccount(account)});
     action(modal,'Disconnect bank',()=>disconnectConnection(account,modal),'finance-page-button finance-danger');
@@ -1689,7 +1691,7 @@
     const loading=summaryState.historyIncomplete;
     if(needsAttention||loading||settingsNotice||archiveLoading){
       const row=el('details',undefined,host,'finance-page-status-row');
-      const count=(currentCombined?.accounts||[]).filter(a=>a.source==='simplefin'?a.institutionStatus==='needs_attention':a.transactionSyncStatus==='needs_attention').length;
+      const count=(currentCombined?.accounts||[]).filter(a=>a.source==='simplefin'?Boolean(a.attentionKind||a.institutionReasonCode):a.transactionSyncStatus==='needs_attention').length;
       const label=needsAttention?'Needs attention':loading?'Waiting for history':
         archiveLoading?'Syncing':settingsNotice;
       el('summary',label,row);
