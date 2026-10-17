@@ -136,3 +136,63 @@ assert.equal(nonround.transactions['plaid:'+b].transfer.category,'transfer');
 assert.ok(nonround.transactions['simplefin:'+a].transfer.signals.includes('matched_internal_transfer'));
 assert.equal(finance.summarize(nonround,{now}).expenses,'0.00');
 assert.equal(finance.summarize(nonround,{now}).income,'0.00');
+
+const accountSamples=[
+  ['Robinhood individual (6105)','investment','individual','brokerage'],
+  ['Robinhood Roth IRA (9372)','investment','ira','retirement'],
+  ['Robinhood Checking (2033)','investment','individual','checking'],
+  ['Robinhood Savings (0793)','investment','individual','savings'],
+  ['X Money Cash Management','depository','checking','checking'],
+  ['Robinhood Credit Card','credit','credit_card','credit_card'],
+  ['Fidelity 401(k)','investment','401k','retirement']
+];
+for(const [name,accountType,accountSubtype,expected] of accountSamples){
+  assert.equal(core.detectedType({name,bank:'Robinhood',accountType,accountSubtype}),expected,name);
+}
+const cashAccount={key:'cash',name:'Checking (2033)',bank:'Robinhood',balance:'3000',currency:'USD',balanceDate:now-50,
+  accountType:'depository',accountSubtype:'checking'};
+const investAccount={key:'invest',name:'Robinhood individual (6105)',bank:'Robinhood',balance:'8000',currency:'USD',balanceDate:now-50,
+  accountType:'investment',accountSubtype:'individual'};
+const retirementAccount={key:'roth',name:'Robinhood Roth IRA (9372)',bank:'Robinhood',balance:'5000',currency:'USD',balanceDate:now-50,
+  accountType:'investment',accountSubtype:'ira'};
+const investmentProvider={connected:true,accounts:[cashAccount,investAccount,retirementAccount],
+ monitoredAccounts:['cash','invest','roth'],lastSuccess:now,
+ transactions:{cash:{out:{id:'out',description:'To Brokerage',amount:'-2000.00',
+     category:'transfer',signals:['investment_transfer'],posted:now-60,pending:false}},
+  invest:{buy:{id:'buy',description:'Buy NVDA',amount:'-4800.00',category:'shopping',posted:now-55,pending:false},
+    in:{id:'in',description:'From Checking',amount:'2000.00',category:'transfer',posted:now-60,pending:false}},
+  roth:{div:{id:'div',description:'Dividend',amount:'55.00',category:'income',posted:now-55,pending:false}}},
+ balanceHistory:{cash:[{observedAt:now-100,balance:'3000',currency:'USD'}],
+  invest:[{observedAt:now-86400,balance:'7900',currency:'USD'},{observedAt:now-50,balance:'8000',currency:'USD'}],
+  roth:[{observedAt:now-86400,balance:'4990',currency:'USD'},{observedAt:now-50,balance:'5000',currency:'USD'}]}
+};
+const investCombined=core.combine({simplefin:investmentProvider});
+const investmentSafe=core.safeForSummary(investCombined);
+const overviewInvest=finance.summarize(investmentSafe,{now});
+assert.equal(overviewInvest.cash,'3000.00','Cash excludes $13,000 brokerage and retirement assets');
+assert.equal(overviewInvest.investments,'13000.00');
+assert.equal(overviewInvest.brokerageTotal,'8000.00');
+assert.equal(overviewInvest.retirementTotal,'5000.00');
+assert.equal(overviewInvest.investmentChangeSinceSync,'110.00');
+assert.equal(overviewInvest.investedThisMonth,'2000.00');
+assert.equal(overviewInvest.income,'0.00','Investment dividends must not become household income');
+assert.equal(overviewInvest.expenses,'0.00','Investment stock purchases must not become household spending');
+assert.equal(overviewInvest.investmentIncome,'55.00');
+const investAll=Object.entries(investmentSafe.transactions).flatMap(([accountKey,txs])=>
+ Object.values(txs).map(row=>({...row,accountKey,
+   account:investCombined.accounts.find(a=>a.key===accountKey),
+   accountKind:investmentSafe.accountProfiles[accountKey].kind})));
+const everyday=core.transactionFeed(investAll);
+assert.ok(everyday.every(r=>['checking','savings','credit_card'].includes(r.accountKind)),'Default excludes brokerage trade rows');
+assert.equal(everyday.length,1,'Checking-to-brokerage transfer is shown once');
+assert.ok(everyday[0].pairedWith,'Matched transfer displays both linked sides');
+const onlyInvestment=core.transactionFeed(investAll,'investments');
+assert.ok(onlyInvestment.some(r=>r.description==='Buy NVDA'),'Investment filter exposes brokerage purchases');
+assert.ok(onlyInvestment.some(r=>r.description==='Dividend'),'Investment filter exposes dividends');
+assert.equal(core.investmentActivity(onlyInvestment.find(r=>r.description==='Buy NVDA')),'Buy');
+assert.equal(core.investmentActivity(onlyInvestment.find(r=>r.description==='Dividend')),'Dividend');
+assert.equal(core.transactionFeed(investAll,'transfers').length,1,'Matched transfer is not duplicated');
+const manuallyTyped=structuredClone(investmentProvider);
+manuallyTyped.accountProfiles={invest:{kind:'checking',balanceMode:'asset',includeSpending:true}};
+const manual=core.combine({simplefin:manuallyTyped});
+assert.equal(manual.accounts.find(a=>a.rawKey==='invest').kind,'checking','Manual account type must win over detected broker metadata');
