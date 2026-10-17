@@ -138,7 +138,7 @@ assert.equal(finance.summarize(disabledView,{now,days:30}).netWorth,'-63.87','Cr
 const rediscovered=structuredClone(syncOffCard);
 rediscovered.accounts.push({key:'z'.repeat(64),name:'New checking',bank:'Robinhood',
   currency:'USD',balance:'25.00',balanceDate:now-30});
-assert.equal(core.safeForSummary(core.combine({simplefin:rediscovered,plaid:otherCard})).accounts.some(a=>a.key==='simplefin:'+a),false,
+assert.equal(core.safeForSummary(core.combine({simplefin:rediscovered,plaid:otherCard})).accounts.some(entry=>entry.key==='simplefin:'+a),false,
   'Discovery must not reactivate a disabled account');
 rediscovered.accountProfiles[a].syncEnabled=true;
 const restored=core.safeForSummary(core.combine({simplefin:rediscovered,plaid:otherCard}));
