@@ -141,6 +141,7 @@
     const duplicates=new Set();
     const secondary=new Map();
     for(const pair of unified.possibleDuplicates||[]){
+      if(pair.some(key=>unified.accountProfiles?.[key]?.syncEnabled===false||unified.accountProfiles?.[key]?.hidden))continue;
       const id=pair.slice().sort((a,b)=>a.startsWith('simplefin:')?-1:b.startsWith('simplefin:')?1:0).join('|');
       const decision=unified.duplicateDecisions?.[id];
       if(decision?.separate===true){
