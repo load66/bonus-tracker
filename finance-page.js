@@ -1373,10 +1373,15 @@
     const rowIdentity=row=>[row.source,row.accountKey,row.id].join(':');
     const dayKey=value=>new Date(value*1000).toLocaleDateString('en-CA');
     const dayLabel=value=>new Date(value*1000).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+    function isNeutralTransfer(row){return !!row.transferPairId||window.BTFinanceTransfer?.label(row)==='Possible transfer'||row.category==='transfer'}
     function shownAmount(row){
-      if(row.transferPairId)return amount(Math.abs(Number(row.amount)).toFixed(2),row.account.currency);
+      if(isNeutralTransfer(row))return '⇄ '+amount(Math.abs(Number(row.amount)).toFixed(2),row.account.currency);
       const formatted=amount(row.amount,row.account.currency);
       return !hidden&&Number(row.amount)>0&&formatted!=='—'?'+'+formatted:formatted;
+    }
+    function waitingLabel(row){
+      const days=(Date.now()/1000-Number(row.posted))/86400;
+      return days>=5?'Waiting for the other side · Review after 5 days':'Waiting for the other side';
     }
     function renderRows(){
       list.replaceChildren();const cutoff=Math.floor(Date.now()/1000)-period*86400;
@@ -1426,21 +1431,27 @@
           return bank&&!title.toLowerCase().startsWith(bank.toLowerCase())?bank+' '+title:title;
         };
         const pairedName=row.transferPairId&&otherAccount
-          ?(Number(row.amount)<0?named(row.account)+' ⇄ '+named(otherAccount):
-            named(otherAccount)+' ⇄ '+named(row.account)):displayMerchant(row);
-        el('strong',pairedName,copy);
+          ?(Number(row.amount)<0?named(row.account)+' → '+named(otherAccount):
+            named(otherAccount)+' → '+named(row.account)):displayMerchant(row);
+        el('strong',pairedName,copy,row.transferPairId?'finance-transfer-pair-title':'');
         el('span',transactionActivityLabel(row),copy,'finance-page-transaction-category'+(neutralChip(row)?' is-neutral':''));
         if(row.categorySource==='ai')el('small','Auto',copy,'finance-page-auto-tag');
-        el('small',accountTitle(row.account),copy);
+        el('small',named(row.account),copy,'finance-transfer-bank-line');
+        if(window.BTFinanceTransfer?.label(row)==='Possible transfer')
+          el('small',waitingLabel(row),copy,'finance-transfer-waiting');
         const value=el('span',undefined,top,'finance-page-transaction-value');
-        el('b',shownAmount(row),value,row.transferPairId||row.category==='transfer'?'is-transfer':Number(row.amount)>0?'is-credit':'');
+        el('b',shownAmount(row),value,isNeutralTransfer(row)?'is-transfer':Number(row.amount)>0?'is-credit':'');
         if(row.pending)el('small','Pending',value);
         top.onclick=()=>openDetail(row);
         if(window.BTFinanceTransfer?.label(row)==='Possible transfer'){
-          action(article,'Confirm transfer',async()=>{
+          const wrap=el('div',undefined,article,'finance-transfer-confirm-controls');
+          const label=el('label',undefined,wrap,'finance-transfer-similar');
+          const checkbox=el('input',undefined,label);checkbox.type='checkbox';
+          el('span','Apply to similar',label);
+          action(wrap,'Confirm transfer',async()=>{
             await change(async()=>{
               const snapshot=await request('/transaction-review',{method:'PUT',
-                body:JSON.stringify({account:row.account.rawKey,transaction:row.id,category:'transfer',applySimilar:false})},row.source);
+                body:JSON.stringify({account:row.account.rawKey,transaction:row.id,category:'transfer',applySimilar:checkbox.checked})},row.source);
               return {financeSource:row.source,snapshot};
             });
           },'finance-page-button finance-page-confirm-transfer');
@@ -1451,6 +1462,8 @@
         detail.classList.add('finance-page-transaction-detail');
         el('h4',displayMerchant(row),detail);
         el('p',row.description||'No additional description supplied.',detail,'finance-page-description');
+        if(window.BTFinanceTransfer?.label(row)==='Possible transfer')
+          el('p',waitingLabel(row)+'. No income is counted until the movement is reviewed.',detail,'finance-page-hint');
         if(row.transferOtherAccountKey){
           const other=currentCombined.accounts.find(a=>a.key===row.transferOtherAccountKey);
           if(other)el('p','Matched opposite entry at '+accountTitle(other)+'. Both sides are preserved in bank history.',detail,'finance-page-hint');
@@ -1479,7 +1492,7 @@
           action(detail,'Confirm transfer',async()=>{
             await change(async()=>{
               const snapshot=await request('/transaction-review',{method:'PUT',
-                body:JSON.stringify({account:row.account.rawKey,transaction:row.id,category:'transfer',applySimilar:false})},row.source);
+                body:JSON.stringify({account:row.account.rawKey,transaction:row.id,category:'transfer',applySimilar:similar.checked})},row.source);
               return {financeSource:row.source,snapshot};
             });
             if(!saveNotice)detail.close();
