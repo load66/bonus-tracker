@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
 // Version 3.4.84: Finance mobile visual consistency and privacy controls.
 
-const V = 'bt-v3.4.84-evidence1';
+const V = 'bt-v3.4.85-bottomnav1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',

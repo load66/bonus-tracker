@@ -127,13 +127,51 @@ const base=()=>({
       const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
       assert.equal(await section.locator('img').count(),0,'Bank aliases render as escaped text');
       assert.deepEqual((await section.locator('.finance-page-nav button').allTextContents()).map(x=>x.trim()),['Overview','Spending','Recurring','Transactions','Accounts']);
-      const datapoints=page.locator('.tabs .tb').filter({hasText:'Datapoints'});
-      const noBreak=await datapoints.locator('span').evaluate(el=>({
-        height:el.getBoundingClientRect().height,lineHeight:parseFloat(getComputedStyle(el).lineHeight),
-        nowrap:getComputedStyle(el).whiteSpace
-      }));
-      assert.equal(noBreak.nowrap,'nowrap','Datapoints stays on one line in the 390px bottom bar');
-      assert.ok(noBreak.height<=noBreak.lineHeight*1.5,'Datapoints label does not wrap');
+      // Regression: six bottom tabs must have separate, equal-width hit targets
+      // and readable names at the narrowest supported phone widths.
+      for(const width of [320,390,430]){
+        await page.setViewportSize({width,height:844});
+        const geometry=await page.locator('.tabs').evaluate(tabs=>{
+          const bar=tabs.getBoundingClientRect();
+          const buttons=[...tabs.querySelectorAll(':scope > .tb')];
+          return {
+            display:getComputedStyle(tabs).display,
+            bar:{left:bar.left,right:bar.right,width:bar.width},
+            labels:buttons.map(button=>{
+              const text=button.querySelector('span'),slot=button.getBoundingClientRect(),
+                label=text.getBoundingClientRect();
+              return {name:button.getAttribute('aria-label'),text:text.textContent,
+                slot:{left:slot.left,right:slot.right,width:slot.width},
+                label:{left:label.left,right:label.right,width:label.width},
+                scrollWidth:text.scrollWidth,clientWidth:text.clientWidth,
+                whitespace:getComputedStyle(text).whiteSpace};
+            })
+          };
+        });
+        assert.equal(geometry.display,'grid','Navigation uses six independent grid tracks at '+width);
+        assert.deepEqual(geometry.labels.map(v=>v.name),
+          ['Tracker','Bank Bonuses','Finances','Tax','Datapoints','T&C Archive']);
+        assert.deepEqual(geometry.labels.map(v=>v.text),
+          ['Tracker','Bonuses','Finances','Tax','Data','Archive']);
+        assert.equal(geometry.labels.length,6);
+        const widths=geometry.labels.map(v=>v.slot.width);
+        assert.ok(Math.max(...widths)-Math.min(...widths)<1.1,'Unequal tab widths at '+width);
+        for(let i=0;i<geometry.labels.length;i++){
+          const cur=geometry.labels[i],next=geometry.labels[i+1];
+          assert.ok(cur.slot.left>=geometry.bar.left-1&&cur.slot.right<=geometry.bar.right+1,
+            'Tab escapes viewport at '+width+': '+cur.name);
+          assert.equal(cur.whitespace,'nowrap','Label wraps inside a word: '+cur.name+' at '+width);
+          assert.ok(cur.scrollWidth<=cur.clientWidth+1,'Text is clipped: '+cur.name+' at '+width);
+          assert.ok(cur.label.left>=cur.slot.left-1&&cur.label.right<=cur.slot.right+1,
+            'Label leaves its tab: '+cur.name+' at '+width);
+          if(next){
+            assert.ok(cur.slot.right<=next.slot.left+.25,'Tab slots overlap at '+width);
+            assert.ok(cur.label.right<=next.label.left+.25,'Tab labels overlap at '+width);
+          }
+        }
+        await page.screenshot({path:path.join(output,name+'-bottom-tabs-'+width+'.png')});
+      }
+      await page.setViewportSize({width:390,height:844});
       const investmentCard=section.locator('.finance-overview-investments');
       assert.equal((await investmentCard.locator('strong').first().innerText()).trim(),'—');
       assert.equal((await investmentCard.locator('> small').first().innerText()).trim(),'Brokerage — · Retirement —',
