@@ -64,7 +64,7 @@
   function money(value,code='USD'){
     if(value===null||value===undefined||value===''||!Number.isFinite(Number(value)))return '—';
     if(!code)return String(value)+' (currency unknown)';
-    try{return new Intl.NumberFormat(undefined,{style:'currency',currency:code}).format(Number(value)).replace(/^-/,'−')}
+    try{return new Intl.NumberFormat(code==='USD'?'en-US':undefined,{style:'currency',currency:code}).format(Number(value)).replace(/^-/,'−')}
     catch{return String(value)+' '+code}
   }
   function amount(value,code){return hidden&&value!==null&&value!==undefined&&value!==''&&Number.isFinite(Number(value))?'••••••':money(value,code)}
