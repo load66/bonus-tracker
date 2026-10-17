@@ -123,3 +123,23 @@ assert.equal(output.campaigns[0].linkedAccounts.find(a=>a.key===A).productId,nul
   'legacy links remain unclassified without changing recorded activity');
 assert.equal(output.campaigns[0].review.unreviewed,5,
   'adding explicit product selectors cannot mark bonus evidence reviewed automatically');
+
+
+const {combine}=require('../finance-unified-core.js');
+const hybrid=combine({
+  simplefin:{connected:true,lastSuccess:NOW,accounts:[{key:A,name:'Checking',bank:'First Community',currency:'USD'}],
+    mappings:{[A]:{entryId:'offer-1',bank:'First Community',opened:'2026-10-01'}},
+    evidenceReviews:{[A]:{pay:{status:'reviewed',requirementId:'first-dd'}}},
+    transactions:{[A]:{pay:{...row('pay','1061.24',['possible_direct_deposit']),description:'Schreiber Foods'}}}},
+  plaid:{connected:true,lastSuccess:NOW,accounts:[{key:B,name:'Checking',bank:'Other CU',currency:'USD'}],
+    mappings:{[B]:{entryId:'other',bank:'Other CU',opened:'2026-10-01'}},
+    transactions:{[B]:{wages:{...row('wages','600.00',['possible_direct_deposit']),plaidCategoryDetailed:'INCOME_WAGES'}}}}
+});
+const hybridReport=summarize(hybrid,[entry('offer-1'),entry('other','Other CU')],NOW);
+assert.equal(hybridReport.linkedCampaigns,2);
+assert.equal(hybridReport.counts.directDeposit,2,'read-only unified candidate counts include both sources');
+assert.equal(hybridReport.campaigns.find(g=>g.entryId==='offer-1').review.reviewed,1);
+assert.equal(hybridReport.campaigns.find(g=>g.entryId==='offer-1').activity[0].description,'Schreiber Foods');
+assert.equal(hybridReport.campaigns.find(g=>g.entryId==='other').linkedAccounts[0].key,'plaid:'+B);
+assert.equal(hybridReport.campaigns.find(g=>g.entryId==='offer-1').observations.length,1);
+console.log('Combined-provider evidence and recurring Schreiber candidate passed');
