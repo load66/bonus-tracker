@@ -64,7 +64,7 @@
     return !!left&&!!right&&(left===right||left.includes(right)||right.includes(left));
   }
   function combine(sources={},preferences={}){
-    const accounts=[],transactions={},mappings={},monitoredAccounts=[],accountProfiles={},balanceHistory={},flags=[],providerState={};
+    const accounts=[],transactions={},mappings={},monitoredAccounts=[],accountProfiles={},balanceHistory={},evidenceReviews={},missingAccounts=[],flags=[],providerState={};
     for(const source of PROVIDERS){
       const state=sources[source];
       if(!state||!state.connected){providerState[source]={connected:false,available:!!state,stale:false};continue}
@@ -94,6 +94,8 @@
           removed:!!account.removedAt,includeSpending:saved.includeSpending??['checking','savings','credit_card'].includes(kind)};
         if((state.monitoredAccounts||[]).includes(account.key))monitoredAccounts.push(composite);
         if(state.mappings?.[account.key])mappings[composite]=state.mappings[account.key];
+        if(state.evidenceReviews?.[account.key])evidenceReviews[composite]=state.evidenceReviews[account.key];
+        if((state.missingAccounts||[]).includes(account.key))missingAccounts.push(composite);
         if(Array.isArray(state.balanceHistory?.[account.key]))balanceHistory[composite]=state.balanceHistory[account.key];
         if(state.transactions?.[account.key]&&typeof state.transactions[account.key]==='object'){
           transactions[composite]={};
@@ -128,7 +130,7 @@
     const synced=Object.values(providerState).filter(x=>x.connected);
     const completedSyncs=synced.filter(x=>Number.isFinite(x.lastSuccess)&&x.lastSuccess>0);
     const lastSuccess=completedSyncs.length?Math.max(...completedSyncs.map(x=>x.lastSuccess)):null;
-    return {accounts,transactions,mappings,monitoredAccounts,accountProfiles,balanceHistory,
+    return {accounts,transactions,mappings,monitoredAccounts,accountProfiles,balanceHistory,evidenceReviews,missingAccounts,
       duplicateDecisions:preferences.duplicates||{},
       providerState,possibleDuplicates,connected:accounts.length>0||synced.length>0,
       configured:Object.values(providerState).some(x=>x.available),
