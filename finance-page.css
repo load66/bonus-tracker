@@ -365,3 +365,23 @@
 @media (prefers-reduced-motion:reduce){
   .finance-page .finance-page-auto-tag,.finance-page .finance-page-learn-label{transition:none}
 }
+
+/* Exact-value labels; lightweight proportional donut, all Finance-scoped. */
+.finance-page .finance-page-spending-breakdown{display:grid;grid-template-columns:minmax(128px,190px) minmax(0,1fr);
+  align-items:center;gap:18px;padding:12px 2px 4px}
+.finance-page .finance-page-donut{aspect-ratio:1;width:100%;border-radius:50%;position:relative;
+  border:1px solid var(--finance-border,#1E212C)}
+.finance-page .finance-page-donut:after{content:'';position:absolute;inset:27%;border-radius:50%;
+  background:var(--finance-card,#12141C);border:1px solid var(--finance-border,#1E212C)}
+.finance-page .finance-page-donut-legend{display:grid;gap:8px;min-width:0}
+.finance-page .finance-page-donut-item{display:grid;grid-template-columns:10px minmax(0,1fr) auto;
+  align-items:center;gap:9px;font-size:12px;color:var(--finance-muted,#A0A6B8)}
+.finance-page .finance-page-donut-item strong{color:var(--finance-text,#F2F3F7);font-variant-numeric:tabular-nums}
+.finance-page .finance-page-donut-dot{width:10px;height:10px;border-radius:50%}
+@media(max-width:420px){
+  .finance-page .finance-page-spending-breakdown{grid-template-columns:112px minmax(0,1fr);gap:12px}
+  .finance-page .finance-page-donut-item{gap:5px;font-size:11px}
+}
+@media(max-width:350px){
+  .finance-page .finance-page-spending-breakdown{grid-template-columns:96px minmax(0,1fr);gap:8px}
+}
