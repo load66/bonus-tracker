@@ -887,3 +887,16 @@
     border-radius:24px 24px 0 0;
   }
 }
+
+/* Finance v3.4.83 — neutral movement, rules and optional provider logos. */
+.finance-page .finance-page-transaction-summary.is-transfer .finance-page-transaction-value b,
+.finance-page .finance-page-transaction-value .is-transfer{color:#a8b5c3!important;font-weight:680}
+.finance-page .finance-page-transaction-summary.is-transfer{border-color:#35454e}
+.finance-page .finance-page-merchant-logo{width:30px;height:30px;flex:0 0 30px;object-fit:contain;align-self:center;border-radius:8px;background:#ecf0f3;padding:2px}
+.finance-page .finance-page-money-moved{display:block;text-align:left;font-size:11px!important;color:#aeb9c3!important;white-space:normal;min-height:32px;margin-top:6px}
+.finance-page .finance-page-transfer-confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 12px;border-top:1px solid #364652;background:#192630;font-size:11px;color:#c8d2d9}
+.finance-page .finance-page-rule-row{display:grid;gap:9px;border-bottom:1px solid #2e414e;padding:15px 0}
+.finance-page .finance-page-rule-row>small{font-size:11px;color:#abbac8}
+.finance-page .finance-page-rule-actions{display:flex;gap:8px}
+.finance-page .finance-page-rule-actions button{min-width:90px}
+@media(max-width:390px){.finance-page .finance-page-merchant-logo{width:26px;height:26px;flex-basis:26px}.finance-page .finance-page-rule-actions button{min-width:72px}}
