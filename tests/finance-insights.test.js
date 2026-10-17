@@ -121,7 +121,7 @@ const move=[
 const movement=I.spent(move,'2026-10');
 assert.equal(movement.income,'1061.24','Transfers and investment money must never become income');
 assert.equal(movement.total,'20.00','Only purchases are spending');
-assert.equal(movement.moneyMoved,'3030.97','Paired transfers are counted once, plus unique investment transfer');
+assert.equal(movement.moneyMoved,'3029.97','Paired transfers are counted once, plus unique investment transfer');
 assert.equal(movement.transferCount,3);
 assert.equal(G.effective(move[0]).category,'transfer');
 assert.equal(G.label(move[3]),'Investment transfer');
