@@ -223,7 +223,7 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    await dialog.getByRole('button',{name:'Reconnect securely',exact:true}).click();
    await dialog.getByText('Connection active',{exact:true}).waitFor();
    assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened,productId:'checking'},'reconnect retains verified product association');
-   assert.deepEqual(new Set(state.monitoredAccounts),new Set([account.key,'b'.repeat(64)]),'reconnect retains automatic monitoring for both banks');
+   assert.deepEqual(new Set(state.monitoredAccounts),new Set([account.key,'b'.repeat(64),'c'.repeat(64)]),'reconnect retains saved monitoring for all three linked accounts');
    assert.ok(requests.some(r=>r.path.endsWith('/reconnect')&&JSON.parse(r.body).setup_token==='synthetic-replacement-token'));
    assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-replacement-token')),false);
    assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before);
