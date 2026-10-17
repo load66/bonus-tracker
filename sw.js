@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.4.80: refresh mobile bank offer discovery and personal prioritization.
+// Version 3.4.81: refresh mobile bank offer discovery and personal prioritization.
 
-const V = 'bt-v3.4.80-finances1';
+const V = 'bt-v3.4.81-finances1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
