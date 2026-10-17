@@ -1256,7 +1256,8 @@
     }
     const calendar=sectionTitle(host,'This month','Upcoming expected charge dates');
     const now=new Date(),month=insight.monthKey(now.getTime());
-    const calendarRows=list.filter(item=>insight.monthKey(item.nextAt*1000)===month);
+    const calendarRows=list.filter(item=>item.direction==='expense'&&item.nextAt*1000>=Date.now()&&
+      !['possibly_ended','possibly_canceled'].includes(item.status)&&insight.monthKey(item.nextAt*1000)===month);
     if(!calendarRows.length)el('p','No expected charges this month.',calendar);
     for(const item of calendarRows){
       const row=el('div',undefined,calendar,'finance-page-preview-row');
@@ -1281,9 +1282,11 @@
         el('span',(itemRule.name||item.merchant).slice(0,1).toUpperCase(),line,'finance-page-transaction-icon');
         const text=el('span',undefined,line,'finance-page-recurring-info');
         el('strong',itemRule.name||item.merchant,text);
-        el('small',item.frequency+' · Next '+date(item.nextAt),text);
+        const ended=['possibly_ended','possibly_canceled'].includes(item.status)||item.nextAt*1000<Date.now();
+        el('small',ended?item.frequency+' · Possibly ended · Last '+date(item.lastAt):
+          item.frequency+' · Next '+date(item.nextAt),text);
         el('b',amount(item.lastAmount,'USD'),line);
-        el('small',item.status==='possibly_canceled'?'Possibly canceled':item.status==='price_increased'?'Price increased':'Active',detail,'finance-page-recurring-status');
+        el('small',ended?'Possibly ended':item.status==='price_increased'?'Price increased':'Active',detail,'finance-page-recurring-status');
         const controls=el('div',undefined,detail,'finance-page-recurring-controls');
         const label=el('label',undefined,controls);el('span','Rename',label);
         const input=el('input',undefined,label);input.value=itemRule.name||item.merchant;input.maxLength=90;
@@ -1354,7 +1357,12 @@
     const rowIdentity=row=>[row.source,row.accountKey,row.id].join(':');
     const dayKey=value=>new Date(value*1000).toLocaleDateString('en-CA');
     const dayLabel=value=>new Date(value*1000).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+    function confirmedMovement(row){
+      const signals=row.signals||[];
+      return row.category==='transfer'||['matched_internal_transfer','card_payment','investment_transfer'].some(s=>signals.includes(s));
+    }
     function shownAmount(row){
+      if(confirmedMovement(row))return '⇄ '+amount(String(row.amount).replace(/^-/,'').replace(/^\+/ ,''),row.account.currency);
       const formatted=amount(row.amount,row.account.currency);
       return !hidden&&Number(row.amount)>0&&formatted!=='—'?'+'+formatted:formatted;
     }
@@ -1398,14 +1406,14 @@
         const copy=el('span',undefined,top,'finance-page-transaction-copy');
         const otherAccount=row.transferOtherAccountKey&&currentCombined.accounts.find(a=>a.key===row.transferOtherAccountKey);
         const pairedName=row.transferPairId&&otherAccount
-          ?Number(row.amount)<0?accountTitle(row.account)+' → '+accountTitle(otherAccount):accountTitle(otherAccount)+' → '+accountTitle(row.account)
+          ?accountTitle(row.account)+' ⇄ '+accountTitle(otherAccount)
           :displayMerchant(row);
         el('strong',pairedName,copy);
         el('span',transactionActivityLabel(row),copy,'finance-page-transaction-category'+(neutralChip(row)?' is-neutral':''));
         if(row.categorySource==='ai')el('small','Auto',copy,'finance-page-auto-tag');
         el('small',accountTitle(row.account),copy);
         const value=el('span',undefined,top,'finance-page-transaction-value');
-        el('b',shownAmount(row),value,row.category==='transfer'?'is-transfer':Number(row.amount)>0?'is-credit':'');
+        el('b',shownAmount(row),value,confirmedMovement(row)?'is-transfer':Number(row.amount)>0?'is-credit':'');
         if(row.pending)el('small','Pending',value);
         top.onclick=()=>openDetail(row);
       }
