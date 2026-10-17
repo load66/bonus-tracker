@@ -119,6 +119,32 @@ collision.transactions[b].same={id:'same',amount:'1000.00',posted:now-86400,pend
 const ambig=core.safeForSummary(core.combine({simplefin:movementsA,plaid:collision}));
 assert.equal(ambig.transactions['simplefin:'+a].out.category,'subscription','Ambiguous pairs are not asserted as self-transfers');
 
+const syncOffCard=structuredClone(simple);
+syncOffCard.accounts[0]={...syncOffCard.accounts[0],bank:'Robinhood',name:'Robinhood Credit Card',accountType:'credit',
+  accountSubtype:'credit_card',balance:'-283.27',balanceDate:now-30};
+syncOffCard.accountProfiles[a]={kind:'credit_card',balanceMode:'liability',syncEnabled:false};
+syncOffCard.transactions[a].one.amount='500.00';
+const otherCard=structuredClone(plaid);
+otherCard.accounts[0]={...otherCard.accounts[0],bank:'PayPal',name:'PayPal Mastercard',accountType:'credit',
+  accountSubtype:'credit_card',balance:'63.87',balanceDate:now-30};
+otherCard.accountProfiles[b]={kind:'credit_card',balanceMode:'liability',syncEnabled:true};
+const disabledCombined=core.combine({simplefin:syncOffCard,plaid:otherCard});
+const disabledView=core.safeForSummary(disabledCombined);
+assert.equal(disabledCombined.accounts.length,2,'Sync off preserves editable account evidence');
+assert.equal(disabledView.accounts.length,1,'Sync-off credit card does not appear in Finance summaries');
+assert.equal(disabledView.notSyncingAccounts,1);
+assert.equal(disabledView.transactions['simplefin:'+a],undefined,'Disabled card history must not flow into spending/recurring');
+assert.equal(finance.summarize(disabledView,{now,days:30}).netWorth,'-63.87','Credit-card exclusion changes net worth');
+const rediscovered=structuredClone(syncOffCard);
+rediscovered.accounts.push({key:'z'.repeat(64),name:'New checking',bank:'Robinhood',
+  currency:'USD',balance:'25.00',balanceDate:now-30});
+assert.equal(core.safeForSummary(core.combine({simplefin:rediscovered,plaid:otherCard})).accounts.some(a=>a.key==='simplefin:'+a),false,
+  'Discovery must not reactivate a disabled account');
+rediscovered.accountProfiles[a].syncEnabled=true;
+const restored=core.safeForSummary(core.combine({simplefin:rediscovered,plaid:otherCard}));
+assert.equal(restored.accounts.some(a=>a.key==='simplefin:'+a),true,'Sync back on restores saved card');
+assert.ok(restored.transactions['simplefin:'+a].one,'Prior transaction history remains intact');
+
 console.log('Unified Finance: provider isolation, type inference, full account/transaction aggregation, exact cents, stale-balance safety and overlap controls passed');
 
 const brokerNames=[
