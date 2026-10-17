@@ -92,7 +92,7 @@ assert.equal(disabledSafe.accounts.length,1,'Sync-off credit card excluded from 
 assert.equal(disabledSafe.transactions['plaid:'+b],undefined,'Sync-off transactions not used in recurring/spending');
 assert.equal(disabledSafe.notSyncingAccounts,1);
 const disabledSummary=finance.summarize(disabledSafe,{now,days:30});
-assert.equal(disabledSummary.creditCards,'0.00','Credit-card balance must not leak into displayed totals');
+assert.equal(disabledSummary.netWorthGroups.creditCards,'0.00','Credit-card balance must not leak into displayed totals');
 assert.equal(disabledSummary.netWorth,'501.25','Sync-off card credit cannot increase net worth');
 assert.equal(disabledSummary.income,'400.00','Sync-off transaction credits cannot count as income');
 assert.equal(plaid.accountProfiles[b].syncEnabled,undefined,'Provider source was not modified');
