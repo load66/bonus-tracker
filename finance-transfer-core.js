@@ -68,6 +68,7 @@
   }
   const isTransfer=row=>{
     const item=effective(row);
+    if(['user','user_rule'].includes(item.categorySource)&&item.category!=='transfer')return false;
     return item.category==='transfer'||item.signals.some(s=>['matched_internal_transfer','investment_transfer','card_payment'].includes(s));
   };
   return Object.freeze({categorize,effective,label,isTransfer,amountCents});
