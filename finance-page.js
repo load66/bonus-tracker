@@ -639,7 +639,7 @@
       const copy=el('div',undefined,row,'finance-overview-detail-copy');
       el('strong',kind==='creditCards'&&account?accountTitle(account):item.name,copy);
       el('small',[item.bank,item.balanceDate?syncLabel(item.balanceDate):'Balance update unknown',
-        item.provisional?'Provider observation only':null].filter(Boolean).join(' · '),copy);
+        item.provisional?'Balance may be delayed':null].filter(Boolean).join(' · '),copy);
       el('b',kind==='creditCards'?creditCardNetAmount(item.amount):amount(item.amount,'USD'),row);
       if(account)action(row,'View',()=>{dialog.close();openAccount(account)},'finance-page-button');
     }
@@ -1761,7 +1761,7 @@
         for(const a of disabled){row(off,a);
           const actions=el('div',undefined,off,'finance-page-disabled-actions');
           action(actions,'Turn sync back on',async()=>{await saveAccountProfile(a,{syncEnabled:true});
-            if(!saveNotice)connectionNotice='Saved · '+accountTitle(a)+' included in totals';},'finance-page-button finance-page-primary');
+            if(!saveNotice){connectionNotice='Saved · '+accountTitle(a)+' included in totals';paint()}},'finance-page-button finance-page-primary');
           action(actions,'Remove account',()=>removeAccount(a,off),'finance-page-button finance-danger');
         }
       }
@@ -1894,6 +1894,7 @@
       const link=el('a','SimpleFIN Bridge',p);link.href='https://bridge.simplefin.org/';
       link.target='_blank';link.rel='noopener noreferrer';
     }
+    modal.append(footer); // Keep sticky Save / Cancel after all sheet content.
     updateFooter();
   }
   function disconnectConnection(account,parent){
