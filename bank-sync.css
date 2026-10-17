@@ -81,3 +81,22 @@
 .bank-connect-toggle span{font-size:12px}
 .finance-guided-bank-sheet button:focus-visible,.finance-guided-bank-sheet a:focus-visible{outline:2px solid #b9dcff;outline-offset:3px}
 @media(max-width:350px){.bank-connect-bank-choices{grid-template-columns:1fr}.bank-sync-overlay:has(.finance-guided-bank-sheet) .bank-sync-modal{height:96dvh}}
+
+/* v3.4.83 — guided Add Bank inside the existing Finance connection sheet. */
+.bank-sync-overlay .finance-guided-bank-sheet{gap:12px;max-width:100%;min-width:0}
+.finance-guided-bank-sheet .bank-connect-progress{display:flex;gap:8px;align-items:center;margin-top:10px;color:#9fd3c2;font-size:17px}
+.finance-guided-bank-sheet .bank-connect-progress span{line-height:1}
+.finance-guided-bank-sheet .bank-connect-bank-search{width:100%;box-sizing:border-box;padding:13px 14px;margin:12px 0;border:1px solid #587084;border-radius:12px;background:#101e2b;color:#f0f8fd;font-size:16px}
+.finance-guided-bank-sheet .bank-connect-bank-choices{display:grid;gap:6px;max-height:43dvh;overflow:auto}
+.finance-guided-bank-sheet .bank-connect-bank-choice{width:100%;min-height:45px;text-align:left;border:1px solid #3d556a;border-radius:12px;background:#1b3042;color:#eaf3fa;font-size:13px;font-weight:650;padding:10px 13px}
+.finance-guided-bank-sheet .bank-connect-bank-choice:hover{background:#294558}
+.finance-guided-bank-sheet .bank-connect-route{width:100%;min-height:49px;text-align:center;margin:10px 0 5px;border-radius:12px;font-weight:720}
+.finance-guided-bank-sheet .bank-connect-route:disabled{opacity:.5}
+.finance-guided-bank-sheet .bank-connect-stage>small{display:block;color:#b2c2ce;margin:3px 0 9px;font-size:11px;line-height:1.45}
+.finance-guided-bank-sheet .bank-connect-stage textarea{box-sizing:border-box;display:block;width:100%;background:#101e2b;color:#f0f8fd;border:1px solid #607b8e;border-radius:10px;padding:12px;min-height:70px;font-size:13px;resize:vertical}
+.finance-guided-bank-sheet .bank-connect-stage .btn-p{min-height:48px;width:100%;margin-top:10px}
+.finance-guided-bank-sheet .bank-connect-found-account{padding:12px 0;display:grid;gap:6px;border-bottom:1px solid #2f4659}
+.finance-guided-bank-sheet .bank-connect-found-account>small{color:#a8b9c5}
+.finance-guided-bank-sheet .bank-connect-toggle{display:flex;align-items:center;gap:8px;font-size:12px}
+.finance-guided-bank-sheet .bank-connect-toggle input{width:18px;height:18px}
+@media(max-width:390px){.finance-guided-bank-sheet .bank-connect-bank-choices{max-height:37dvh}.finance-guided-bank-sheet .bank-connect-stage{padding:12px}}
