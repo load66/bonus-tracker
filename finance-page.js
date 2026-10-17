@@ -654,7 +654,8 @@
     const summary={...calculated,
       complete:!!calculated?.complete&&trustedTotals,
       cashAvailable:!!calculated?.cashAvailable&&trustedTotals,
-      netWorthAvailable:!!calculated?.netWorthAvailable&&trustedTotals};
+      netWorthAvailable:!!calculated?.netWorthAvailable&&trustedTotals,
+      hiddenAccounts:summaryState.hiddenAccounts||0};
     hero(host,summary);
     if(connectionNotice){const banner=el('p',connectionNotice,host,'finance-page-connection-success');banner.setAttribute('role','status');}
     if(monitoringNotice){const banner=el('p',monitoringNotice,host,'finance-page-activity-result');banner.setAttribute('role','status');}
