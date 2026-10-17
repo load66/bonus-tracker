@@ -29,7 +29,7 @@
       && !/\b(?:there is|there's)\s+no\s+(?:cash\s+)?bonus\b|\bnot\s+(?:a|an)\s+(?:cash\s+)?bonus\s+offer\b/i.test(s)
   }
   function wrapList(){
-    if(window.__tcV31AcademyRegistryWrapped)return;
+    if(window.__btAcademyRegistryWrapped)return;
     if(typeof window.tcV3KnownProfiles!=='function'||typeof window.tcV3MatchKnownProfile!=='function')return;
     const baseList=window.tcV3KnownProfiles;
     const baseMatch=window.tcV3MatchKnownProfile;
@@ -45,9 +45,9 @@
       if(matchesAcademySavedOffer(raw) && (!base?.known || academyScore >= (base.score||0))) return {...ACADEMY,score:academyScore,known:true};
       return base;
     };
-    window.__tcV31AcademyRegistryWrapped=true;
+    window.__btAcademyRegistryWrapped=true;
   }
-  window.tcV31AcademyProfile=ACADEMY;
-  window.tcV31AcademyRegistryVersion=VER;
+  window.btAcademyProfile=ACADEMY;
+  window.btAcademyRegistryVersion=VER;
   setTimeout(wrapList,100);setTimeout(wrapList,600);setTimeout(wrapList,1500);
 })();
