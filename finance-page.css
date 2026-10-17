@@ -263,3 +263,88 @@
   .finance-page-account-balances small{max-width:86px;overflow:hidden;text-overflow:ellipsis}
   .finance-page-account-detail,.finance-page-account-fields,.finance-page-account-settings>.finance-page-reorder{margin-left:44px;margin-right:4px}
 }
+
+
+/* v3.4.75 — finance-only premium dark surface. Other BonusTracker tabs stay unchanged. */
+.finance-page{
+  --finance-bg:#07080C;--finance-card:#12141C;--finance-border:#1E212C;
+  --finance-text:#F2F3F7;--finance-muted:#A0A6B8;--finance-accent:#5BE3B0;
+  font-family:Manrope,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:var(--finance-bg);color:var(--finance-text);border-radius:16px;
+  padding:14px 12px calc(28px + env(safe-area-inset-bottom));
+}
+.finance-page .finance-page-hero,
+.finance-page .finance-page-card,
+.finance-page .finance-page-accounts-card,
+.finance-page .finance-page-institution-menu-body{
+  background:var(--finance-card);border:1px solid var(--finance-border);
+  border-radius:17px;box-shadow:none;color:var(--finance-text);
+}
+.finance-page h2,.finance-page h3,.finance-page h4,
+.finance-page .finance-page-account-info strong,
+.finance-page .finance-page-transaction-copy strong{color:var(--finance-text)}
+.finance-page p,.finance-page small,.finance-page .finance-page-account-info small,
+.finance-page .finance-page-transaction-copy small,
+.finance-page .finance-page-detail-meta{color:var(--finance-muted)}
+.finance-page .finance-page-hero{background:linear-gradient(170deg,#161b25,#12141C 80%)}
+.finance-page .finance-page-hero h2{font-size:clamp(23px,5vw,29px);letter-spacing:-.035em}
+.finance-page .finance-page-kicker{color:var(--finance-accent)}
+.finance-page .finance-page-nav,
+.finance-page .finance-page-account-icon,
+.finance-page .finance-page-transaction-icon,
+.finance-page .finance-page-tile,
+.finance-page .finance-page-search,
+.finance-page .finance-page-select,
+.finance-page .finance-page-account-tools .finance-page-search{
+  background:#0D1017;border-color:var(--finance-border);color:var(--finance-text)
+}
+.finance-page .finance-page-nav-button{color:var(--finance-muted);min-height:44px}
+.finance-page .finance-page-nav-button.is-active{
+  color:var(--finance-accent);background:#18241f;box-shadow:none
+}
+.finance-page .finance-page-button,
+.finance-page .finance-page-chip,
+.finance-page .finance-page-filter-button{
+  background:#1A2028;border:1px solid #313844;color:var(--finance-text);
+  min-height:44px;border-radius:999px
+}
+.finance-page .finance-page-primary,
+.finance-page .finance-page-chip.is-active{
+  color:#07130E;background:var(--finance-accent);border-color:var(--finance-accent)
+}
+.finance-page button:focus-visible,.finance-page input:focus-visible,
+.finance-page select:focus-visible{outline:2px solid var(--finance-accent);outline-offset:3px}
+.finance-page .finance-page-meta span{
+  background:#131a20;border-color:#26322f;color:var(--finance-muted)
+}
+.finance-page .finance-page-tile span{color:var(--finance-muted)}
+.finance-page .finance-page-tile strong{color:var(--finance-text)}
+.finance-page .finance-page-preview-row,
+.finance-page .finance-page-transaction,
+.finance-page .finance-page-account-editor,
+.finance-page .finance-page-institution-head{border-color:var(--finance-border)}
+.finance-page .finance-page-transaction,
+.finance-page .finance-page-account-settings[open],
+.finance-page .finance-page-transaction.is-open{background:#0C0F15}
+.finance-page .finance-page-transaction-value b.is-credit,
+.finance-page .finance-page-loading-hint{color:var(--finance-accent)}
+.finance-page .finance-page-bar{background:var(--finance-accent)}
+.finance-page .finance-page-line{stroke:var(--finance-accent)}
+.finance-page .finance-page-line-area{fill:#5BE3B019}
+.finance-page .finance-page-transaction-date{background:var(--finance-card);color:var(--finance-muted)}
+.finance-page .finance-page-warning{color:#FFC58B!important}
+.finance-page .finance-page-caution{background:#242015;border-color:#453b2b;color:#f3dfb6!important}
+.finance-page .finance-page-account-settings>summary.finance-page-account:hover{background:#171b23}
+.finance-page .finance-page-quick-actions .finance-page-button{min-height:44px}
+@media(max-width:390px){
+  .finance-page{padding-left:7px;padding-right:7px}
+  .finance-page .finance-page-accounts-card,.finance-page .finance-page-transactions-card{
+    background:var(--finance-card);border:1px solid var(--finance-border);
+    border-radius:15px;margin:0 0 14px
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .finance-page *, .finance-page *::before, .finance-page *::after{
+    transition-duration:0ms!important;animation-duration:0ms!important
+  }
+}
