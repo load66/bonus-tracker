@@ -24,11 +24,10 @@
       return row.description||merchant||'Transaction';
     return merchant;
   }
-  const AMOUNTS_PREF='bt_finance_hide_amounts';
-  // Preference only; account information and financial transactions stay server-side.
-  let hidePreference=true;
-  try{hidePreference=localStorage.getItem(AMOUNTS_PREF)!=='false'}catch(_error){}
-  let currentRoot=null,sequence=0,hidden=hidePreference,data=null,otherData=null,busy=false,view='overview',period=90;
+  // Amounts are visible when Finances opens. Hiding is an in-memory,
+  // screenshot-only choice and intentionally resets on page reload.
+  // Ignore older persisted privacy preferences without modifying stored data.
+  let currentRoot=null,sequence=0,hidden=false,data=null,otherData=null,busy=false,view='overview',period=90;
   let transactionSearch='',transactionAccount='',transactionCategory='',transactionStatus='',transactionVisibleLimit=100,expandedTransaction='';
   let accountSearch='',accountType='',showHiddenAccounts=false,saveNotice='',accountDraftProfiles={},currentCombined=null;
   let activityNotice='',monitoringNotice='',connectionNotice='';
@@ -257,7 +256,6 @@
     if(!compact)el('span','MY MONEY',copy,'finance-page-kicker');el('h2','Finances',copy);
     action(head,hidden?'Show amounts':'Hide amounts',()=>{
       hidden=!hidden;
-      try{localStorage.setItem(AMOUNTS_PREF,String(hidden))}catch(_error){}
       paint();
     });
     if(!compact){
