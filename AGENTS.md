@@ -1,3 +1,23 @@
+# Agent rules
+
+This file is the single source of truth for every coding agent working in this repository (Claude Code, ChatGPT/Codex, others). Agent-specific files such as `CLAUDE.md` only point here and add tool-specific notes; they never add or relax rules.
+
+## Multi-agent coordination
+
+- Only one agent works on this repository at a time.
+- Before starting, read the **Active agent** line in `docs/AUDIT_PROGRESS.md`. If it names another agent, stop and ask the user instead of starting work.
+- When starting, set **Active agent** to your agent name, the release and your branch, and commit that on your branch with your first change.
+- Use branch prefixes `claude/` (Claude Code) or `codex/` (ChatGPT/Codex). Never push work to another agent's branch.
+- When done, update the **Handoff** section (deployed versions, in progress, exact next step) and set `Active agent: none`, bundled with your final change on the release branch. No standalone checkpoint commits to `main`.
+- `docs/AUDIT_PROGRESS.md` is public-safe: versions, commit hashes, PR links, sanitized issue titles and test status only. Never account names, numbers, amounts, transactions, secrets, logs, or details of unfixed security issues (write "Security review pending").
+- The Finances backend lives in `load66/Trading-Journal-AI`; its `AGENTS.md` carries the same coordination rules plus backend data-safety rules.
+
+## Finances data safety
+
+- Never delete, reset or overwrite real financial history; migrations are additive and recoverable. Manual user decisions always override automation.
+- Never call real provider APIs in tests (mock SimpleFIN, Plaid and Groq). Never log tokens or private transactions.
+- Every frontend release bumps the app version and the service-worker cache, passes the test suites, and is verified on GitHub Pages after deploy.
+
 # Bonus Tracker maintenance and imports
 
 Before generating, changing or reviewing a bonus import, read `docs/IMPORT_STANDARD.md` and `docs/financial-rules-v1.md` from the current repository state. Do not rely on conversation memory or old sample files for the schema. The generation standard is normative; the deployed importer is authoritative for supported fields and versions.
