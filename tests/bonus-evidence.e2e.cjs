@@ -77,7 +77,7 @@ return result;
           'Tracker must never render bank-activity controls');
         await page.getByRole('button',{name:'Finances',exact:true}).click();
         const finances=page.getByRole('region',{name:'My finances'});
-        await finances.getByRole('heading',{name:'Finances'}).waitFor();
+        await finances.locator('.finance-overview-net-hero').waitFor();
         assert.equal(await finances.getByRole('button',{name:'Bonuses',exact:true}).count(),0,
           'Bonus evidence controls must not appear in the production Finance navigation');
         assert.equal(await finances.getByRole('region',{name:'Bank bonus activity evidence'}).count(),0,
@@ -175,7 +175,7 @@ return result;
         assert.equal(await page.getByRole('region',{name:'Bank bonus activity evidence'}).count(),0,
           'Tracker remains free of bank-activity review after navigation');
         await page.getByRole('button',{name:'Finances',exact:true}).click();
-        await finances.getByRole('heading',{name:'Finances'}).waitFor();
+        await finances.locator('.finance-overview-net-hero').waitFor();
         assert.equal(await finances.getByRole('button',{name:'Bonuses',exact:true}).count(),0);
         await page.evaluate(()=>{
           const shell=document.createElement('section');shell.id='bt-finances-page';
