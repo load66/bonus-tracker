@@ -362,7 +362,8 @@
     if(!compact){
       el('span','Cash',box,'finance-page-hero-cash-label');
       el('strong',summary.cashAvailable?amount(summary.cash,'USD'):'—',box,'finance-page-hero-cash-value');
-      el('small',summary.cashAvailable?'Recent bank balances':'Cash balance is not available yet',box,'finance-page-hero-cash-status');
+      el('small',summary.cashAvailable?'Available, recently updated cash balances':'Cash balance is not available yet',box,'finance-page-hero-cash-status');
+      if(summary.staleOrUnavailableCash>0)el('small',summary.staleOrUnavailableCash+' account'+(summary.staleOrUnavailableCash===1?' not updated':'s not updated'),box,'finance-page-hint');
       const banks=new Set(sortedAccounts().map(a=>String(a.bank||'').trim().toLowerCase()).filter(Boolean));
       el('p',sortedAccounts().length+' accounts · '+banks.size+' institutions · '+(currentCombined?.sourceCount||0)+' secure connections',box,'finance-page-count');
       const actions=el('div',undefined,box,'finance-page-quick-actions');
@@ -375,11 +376,9 @@
       quick('Discover accounts','M10 4a6 6 0 1 0 0 12 6 6 0 0 0 0-12M15 15l5 5',discoverSelected);
       quick('Refresh activity','M20 7v5h-5M4 17v-5h5M5.5 8a7 7 0 0 1 12-3L20 8M4 16l2.5 3a7 7 0 0 0 12-3',refreshActivity);
       const meta=el('div',undefined,box,'finance-page-meta');
-      el('span',currentCombined?.sourceCount?'Connected':'Not linked',meta);
-      for(const [source,label] of [['simplefin','SimpleFIN'],['plaid','Plaid']]){
-        const status=currentCombined?.providerState?.[source];
-        if(status?.connected)el('span',label+': '+stamp(status.lastSuccess),meta);
-      }
+      const last=currentCombined?.lastSuccess;
+      const age=Number.isFinite(last)&&last>0?Math.max(0,Math.floor((Date.now()/1000-last)/3600)):null;
+      el('span',age===null?'Not synced yet':age<1?'Synced less than 1h ago':'Synced '+age+'h ago',meta);
       if(summary.hiddenAccounts)el('p',summary.hiddenAccounts+' hidden account'+(summary.hiddenAccounts===1?' is':'s are')+' excluded from Finances totals. Show them under Accounts.',box,'finance-page-hint');
       if(currentCombined?.possibleDuplicates?.length)el('small','Review possible matching accounts in Accounts',box,'finance-page-hint');
     }
@@ -411,7 +410,7 @@
   }
   function trendChart(parent,points){
     if(hidden){el('p','Balance trend hidden',parent);return}
-    if(points.length<2){el('p','Net Worth history will appear after at least two complete balance snapshots.',parent);return}
+    if(points.length<2){el('p','Your net worth chart will start filling in after a few days of syncing.',parent);return}
     const values=points.map(p=>Number(p.value)),min=Math.min(...values),max=Math.max(...values),range=max-min||1;
     const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 320 110');svg.setAttribute('role','img');svg.setAttribute('aria-label','Net Worth trend');svg.classList.add('finance-page-line-chart');
     const coords=values.map((value,index)=>[10+index*(300/Math.max(1,values.length-1)),95-(value-min)/range*75]);
@@ -426,7 +425,7 @@
     const head=el('div',undefined,card,'finance-page-section-head');
     el('h3','Spending by category',head);
     if(!summary.complete)el('span','Partial',head,'finance-page-coverage-pill');
-    if(!rows.length){el('p','Category spending will appear as transactions are categorized.',card,'finance-page-hint');return}
+    if(!rows.length){el('p','Spending will appear when posted transactions are available.',card,'finance-page-hint');return}
     const total=rows.reduce((sum,[,value])=>sum+Number(value),0);
     if(!Number.isFinite(total)||total<=0){el('p','Spending breakdown is not available.',card);return}
     const colors=['#5BE3B0','#49BFA1','#378F83','#306A68','#425D68','#5F6880','#7A7990','#A0A6B8'];
@@ -448,7 +447,7 @@
       el('span',financeCategory(category),item,'finance-page-donut-label');
       el('strong',amount(value,'USD'),item);
     }
-    if(!summary.complete)el('p','Only categorized posted transactions are included. Your bank history may still be loading.',card,'finance-page-hint');
+    if(!summary.complete)el('p','Includes uncategorized purchases. Transfers are excluded; history may still be loading.',card,'finance-page-hint');
   }
   function compactAccountPreview(host){
     const card=el('section',undefined,host,'finance-page-card finance-page-preview-card');
@@ -486,7 +485,8 @@
       const copy=el('div',undefined,item,'finance-page-preview-copy');
       el('strong',row.merchant||row.description||'Transaction',copy);
       el('small',(row.account.bank||'Bank')+' · '+row.account.sourceLabel+' · '+date(row.posted),copy);
-      el('b',amount(row.amount,row.account.currency),item,'finance-page-preview-value');
+      const formatted=amount(row.amount,row.account.currency);el('b',!hidden&&Number(row.amount)>0?'+'+formatted:formatted,item,'finance-page-preview-value'+(Number(row.amount)>0?' is-credit':''));
+      el('small',financeCategory(row.category),copy,'finance-page-transaction-category');
     }
   }
   function cumulativeSpendingChart(host,current,previous){
@@ -518,7 +518,8 @@
     const net=sectionTitle(host,'Net worth');
     el('strong',summary.netWorthAvailable?amount(summary.netWorth,'USD'):'—',net,'finance-page-big-number');
     el('small','Based on '+(summary.netWorthBasedOn||0)+' of '+(summary.netWorthTotalAccounts||0)+' accounts',net,'finance-page-coverage-label');
-    if(summary.netWorthPartial)el('small','Other balances are not available yet.',net,'finance-page-hint');
+    if(summary.netWorthExclusions?.length)el('small','Left out: '+summary.netWorthExclusions.map(x=>x.name+' ('+x.reason+')').join('; '),net,'finance-page-hint');
+    else if(summary.netWorthPartial)el('small','Some balances are not available yet.',net,'finance-page-hint');
     const cutoff=Math.floor(Date.now()/1000)-30*86400;
     const lastMonth=(summary.netWorthHistory||[]).filter(x=>x.at<=cutoff).at(-1);
     if(!hidden&&!summary.netWorthPartial&&summary.netWorthAvailable&&lastMonth){
@@ -552,8 +553,10 @@
       const activity=sectionTitle(host,'Spent this month');
       el('strong',amount(spent.total,'USD'),activity,'finance-page-big-number');
       const delta=Number(spent.total)-Number(priorThrough.total);
-      el('small',amount(Math.abs(delta).toFixed(2),'USD')+' '+(delta<=0?'less':'more')+
-        ' than last month at this point',activity,'finance-page-hint');
+      if(priorThrough.hasData){
+        el('small',Math.abs(delta)<.005?'Same as last month so far':amount(Math.abs(delta).toFixed(2),'USD')+' '+(delta<0?'less':'more')+
+          ' than last month at this point',activity,'finance-page-hint');
+      }
       cumulativeSpendingChart(activity,spent,prior);
       const upcoming=insight.upcoming(insight.recurring(rows,Date.now()),Date.now(),14);
       const card=sectionTitle(host,'Upcoming','Expected charges in the next 14 days');
@@ -1318,11 +1321,15 @@
         if(!rows.length)continue;
         const group=el('section',undefined,list,'finance-page-institution');
         const head=el('div',undefined,group,'finance-page-institution-head');el('h4',title,head);
-        const usd=rows.filter(a=>a.currency==='USD'),values=usd.map(a=>window.BTFinanceOverview.cents(a.balance));
+        const usd=rows.filter(a=>a.currency==='USD');
+        const now=Math.floor(Date.now()/1000);
+        const qualified=title==='Cash'?usd.filter(a=>Number.isFinite(a.balanceDate)&&a.balanceDate>now-7*86400&&a.balanceDate<=now+300):usd;
+        const values=qualified.map(a=>window.BTFinanceOverview.cents(a.balance));
         const subtotal=values.length&&values.every(x=>x!==null)?window.BTFinanceOverview.decimal(values.reduce((sum,x)=>sum+x,0n)):null;
         const owed=title==='Credit cards'&&subtotal!==null;
         const subtotalCents=owed?window.BTFinanceOverview.cents(subtotal):null;
         el('b',(usd.length!==rows.length?'USD subtotal · ':'')+(owed?amount(window.BTFinanceOverview.decimal(subtotalCents<0n?-subtotalCents:subtotalCents),'USD')+(subtotalCents<0n?' credit':' owed'):amount(subtotal,'USD')),head);
+        if(title==='Cash'&&qualified.length!==rows.length)el('small',(rows.length-qualified.length)+' account'+(rows.length-qualified.length===1?' not updated':'s not updated'),group,'finance-page-hint');
         for(const a of rows){
           const bankKey=a.source+':'+(a.connectionHandle||a.bank);
           if((a.transactionSyncStatus==='needs_attention'||(a.source==='simplefin'&&sourceSnapshot('simplefin')?.status==='attention'))&&!broken.has(bankKey)){
@@ -1415,7 +1422,7 @@
     const trustedTotals=!summaryState.incompleteProviders&&!summaryState.excludedForReview;
     const summary={...calculated,
       complete:!!calculated?.complete&&trustedTotals&&!summaryState.historyIncomplete&&!summaryState.malformedActivity,
-      cashAvailable:!!calculated?.cashAvailable&&trustedTotals,
+      cashAvailable:!!calculated?.cashAvailable,
       netWorthAvailable:!!calculated?.netWorthAvailable,
       netWorthPartial:!!calculated?.netWorthPartial||!trustedTotals,
       hiddenAccounts:summaryState.hiddenAccounts||0};
