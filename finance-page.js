@@ -370,6 +370,30 @@
         :'From '+summary.cashIncludedCount+' cash account'+(summary.cashIncludedCount===1?'':'s'))
         :'No current cash account balances yet';
       el('small',cashNote,box,'finance-page-hero-cash-status');
+      const portfolio=el('div',undefined,box,'finance-overview-holdings');
+      const investmentCard=el('section',undefined,portfolio,'finance-overview-asset-card finance-overview-investments');
+      el('span','Investments',investmentCard);
+      el('strong',summary.investments!==null?amount(summary.investments,'USD'):'—',investmentCard);
+      el('small','Brokerage '+amount(summary.investmentBrokerage,'USD')+' · Retirement '+amount(summary.investmentRetirement,'USD'),investmentCard);
+      if(summary.investmentChangeLastSync!==null)
+        el('small','Since previous snapshot: '+amount(summary.investmentChangeLastSync,'USD'),investmentCard);
+      if(summary.investmentChange1M!==null)
+        el('small','1M: '+amount(summary.investmentChange1M,'USD'),investmentCard);
+      el('small','Invested this month '+amount(summary.investedThisMonth,'USD')+
+        ' · Investment income '+amount(summary.investmentIncome,'USD'),investmentCard);
+      if(summary.investmentAccounts?.length){
+        const detail=el('details',undefined,investmentCard,'finance-overview-account-breakdown');
+        el('summary','Investment accounts ('+summary.investmentAccounts.length+')',detail);
+        for(const holding of summary.investmentAccounts){
+          const line=el('div',undefined,detail,'finance-overview-account-balance');
+          el('span',holding.name+' · '+(holding.kind==='retirement'?'Retirement':'Brokerage'),line);
+          el('b',holding.value===null?'Not updated':amount(holding.value,'USD'),line);
+        }
+      }
+      const creditCard=el('section',undefined,portfolio,'finance-overview-asset-card');
+      el('span','Credit cards',creditCard);el('strong',summary.liabilities!==null?amount(summary.liabilities,'USD')+' owed':'—',creditCard);
+      const worth=el('section',undefined,portfolio,'finance-overview-asset-card');
+      el('span','Net worth',worth);el('strong',summary.netWorthAvailable?amount(summary.netWorth,'USD'):'—',worth);
       const banks=new Set(sortedAccounts().map(a=>String(a.bank||'').trim().toLowerCase()).filter(Boolean));
       el('p',sortedAccounts().length+' accounts · '+banks.size+' institutions · '+(currentCombined?.sourceCount||0)+' secure connections',box,'finance-page-count');
       const actions=el('div',undefined,box,'finance-page-quick-actions');
