@@ -98,7 +98,7 @@ const base=()=>({
         const result=url.pathname.includes('/accounts')?plaidState:{provider:'plaid',priority:'fallback',configured:false,used:null,limit:10};
         await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(result)});
       });
-      let prefs={version:1,revision:0,budgets:{},duplicates:{},recurring:{},transactionMeta:{}};
+      let prefs={version:1,revision:0,budgets:{},duplicates:{},recurring:{},transactionMeta:{},rules:{}};
       await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/finances**',async route=>{
         if(route.request().method()==='PUT'){const body=route.request().postDataJSON();prefs[body.section][body.key]=body.value;prefs.revision++}
         await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(prefs)});
