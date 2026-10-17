@@ -191,14 +191,22 @@
       if(matches[i].length!==1)continue;
       const j=matches[i][0];
       if(j<=i||matches[j].length!==1||matches[j][0]!==i)continue;
+      const pairId=['internal',transferRows[i].account,transferRows[j].account,
+        String(transferRows[i].row.id),String(transferRows[j].row.id)].join(':');
+      const investments=key=>['brokerage','retirement'].includes(unified.accountProfiles?.[key]?.kind);
+      const investmentMove=investments(transferRows[i].account)||investments(transferRows[j].account);
       for(const index of [i,j]){
+        const other=index===i?j:i;
         const row=transferRows[index].row;
         row.category='transfer';row.confidence='high';
-        row.signals=[...new Set([...(row.signals||[]),'matched_internal_transfer'])];
+        row.transferPairId=pairId;row.transferOtherAccountKey=transferRows[other].account;
+        row.signals=[...new Set([...(row.signals||[]),'matched_internal_transfer',
+          ...(investmentMove?['investment_transfer']:[])])];
       }
     }
     for(const [key, rows] of Object.entries(transactions)){
-      if(unified.accountProfiles?.[key]?.includeSpending===false){
+      if(unified.accountProfiles?.[key]?.includeSpending===false||
+         ['brokerage','retirement'].includes(unified.accountProfiles?.[key]?.kind)){
         transactions[key]=Object.fromEntries(Object.entries(rows).map(([i,row])=>[i,{...row,excludedFromTotals:true}]));
       }
     }
