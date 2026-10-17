@@ -1233,6 +1233,11 @@
       'Plaid authorization saved. Account discovery needs attention; manage this bank in Finances.';
     activityNotice='';refresh();
   });
+  window.addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&expandedTransaction&&currentRoot?.isConnected){
+      expandedTransaction='';paint();
+    }
+  });
   window.btRefreshFinancesPage=refresh;
   window.btRegisterPostRender?.('finance-page',mount);
   window.addEventListener('storage',event=>{if(event.key==='bonus-ai-auth')refresh()});
