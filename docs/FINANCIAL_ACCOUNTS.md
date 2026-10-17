@@ -198,3 +198,24 @@ Existing spending, recurring estimates, category corrections, merchant learning,
 24-month encrypted monthly history, revision-safe Finance preferences, Trial guards,
 cloud recovery, and bonus engines are preserved. Tests are entirely synthetic and do
 not verify actual bank connectivity or production categorization accuracy.
+
+## Finance v3.4.90 — descriptive transaction and recurring presentation
+
+- Source-reported balances and transaction evidence remain immutable. Finance identifies
+  unique reciprocal transfer pairs across distinct linked accounts, shows one neutral
+  transaction row with two masked account names and an unsigned amount, and preserves
+  both underlying provider legs for account history/editing.
+- Bank-to-bank transfers (including From/To financial institution descriptors), personal
+  savings/checking moves, contributions and card payments are excluded from spending
+  and paycheck income. An unmatched generic financial payment is suggested for
+  manual transfer review, not presumed employer income.
+- Recurring candidates require three consistent occurrences, or two plus a saved user
+  confirmation. Accounts transfers and card payments have their own sections.
+  Overdue streams appear as "Possibly ended" without a past Next date.
+- Promotional credits are identified as Bonus / possible payout evidence for the
+  user's review; Finance never marks a Tracker payout as received.
+- Transaction history notices disclose the exact Plaid banks, last historical check
+  and next eligible check where provided, independently of actionable connection errors.
+- All release regression data is synthetic. Exact live income deltas require a
+  separate authorized same-scope before/after snapshot and cannot be inferred from
+  fixtures or provider connection freshness alone.
