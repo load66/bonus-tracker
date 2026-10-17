@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.4.97: SimpleFIN add-bank return discovery and account sync.
+// Version 3.4.98: Automatic SimpleFIN and Plaid bank account/transaction ingestion.
 
-const V = 'bt-v3.4.97-simplefin1';
+const V = 'bt-v3.4.98-autobanks1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
