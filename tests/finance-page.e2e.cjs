@@ -426,6 +426,38 @@ const base=()=>({
           await page.screenshot({path:path.join(output,name+'-'+label+'-'+colorScheme+'-390.png')});
         }
       }
+      // v3.4.90 synthetic real-description regression: pairs collapse to one unsigned row.
+      const D='1'.repeat(64),out450='2'.repeat(64),in450='3'.repeat(64);
+      state.accounts[0].bank='Robinhood';state.accounts[0].name='Robinhood Checking';state.accounts[0].mask='2033';
+      state.accounts.push({key:D,bank:'Robinhood',name:'Robinhood Savings',mask:'0793',
+        currency:'USD',balance:'900.00',balanceDate:NOW-300});
+      state.accountProfiles[D]={kind:'savings',balanceMode:'asset'};
+      state.monitoredAccounts.push(D);
+      state.transactions[D]={[out450]:{id:out450,amount:'-450.00',posted:NOW-210,pending:false,
+        category:'unreviewed',categorySource:'automatic',description:'To Robinhood Checking'}};
+      state.transactions[A][in450]={id:in450,amount:'450.00',posted:NOW-190,pending:false,
+        category:'income',categorySource:'automatic',description:'From Robinhood Savings'};
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      await section.getByRole('button',{name:'Transactions',exact:true}).click();
+      const transfer450=section.locator('.finance-page-transaction.is-matched-transfer').filter({hasText:'$450.00'});
+      await transfer450.waitFor();
+      assert.equal(await transfer450.count(),1,'Matched $450 appears once');
+      assert.ok((await transfer450.innerText()).includes('Robinhood Savings ··0793 ⇄ Robinhood Checking ··2033'));
+      assert.ok(!(await transfer450.innerText()).includes('+$450.00'),'Matched pair is unsigned');
+
+      // Bank-specific history progress is separate from an authentication failure.
+      plaidState.accounts[0].historyComplete=false;
+      plaidState.accounts[0].transactionSyncStatus='history_still_loading';
+      plaidState.accounts[0].transactionLastSyncAt=NOW-700;
+      plaidState.accounts[0].transactionNextSyncAt=NOW+86400;
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      await section.getByText('1 bank updating transaction history',{exact:true}).waitFor();
+      assert.equal(await section.getByText('Waiting for history',{exact:true}).count(),0,
+        'Do not label every Finance account as waiting for history');
+      await section.locator('.finance-history-status>summary').click();
+      assert.ok((await section.locator('.finance-history-status').innerText()).includes('X Money'));
+      assert.ok((await section.locator('.finance-history-status').innerText()).includes('Next eligible'));
+      await section.getByRole('button',{name:'Accounts',exact:true}).click();
       await section.getByRole('button',{name:'Manage connections',exact:true}).click();
       await section.getByRole('heading',{name:'Manage connections',exact:true}).waitFor();
       await section.getByRole('button',{name:/X Money.*via Plaid/}).click();
