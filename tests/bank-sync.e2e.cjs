@@ -92,7 +92,7 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    assert.equal(await dialog.locator('input[type=password]').count(),0,'Provider sign-in must remain at provider');
    await external.evaluate(node=>node.onclick());
    await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
-   await dialog.getByText('Found Newly Added CU · 1 account.',{exact:true}).waitFor();
+   await dialog.getByRole('heading',{name:'Found Newly Added CU · 1 account.',exact:true}).waitFor();
    assert.equal(state.accounts.length,2,'Return-to-app guided discovery imports new account');
    assert.equal(requests.filter(r=>r.path.endsWith('/discover-guided')).length,1,'Return triggers one bounded guided discovery');
    await dialog.getByText('Sync activity',{exact:true}).waitFor();
