@@ -209,5 +209,73 @@
         ['history_still_loading','awaiting_first_sync','awaiting_provider_data','needs_attention'].includes(a.transactionSyncStatus))),
       excludedForReview:duplicates.size,hiddenAccounts:hidden.size,confirmedDuplicates:secondary.size};
   }
-  return Object.freeze({combine,safeForSummary,detectedType,key});
+  const INVESTMENT_TYPES=new Set(['brokerage','retirement']);
+  function ledgerRows(rows,options={}){
+    const scope=options.scope||'cash_cards',search=String(options.search||'').toLowerCase().trim();
+    const candidates=(rows||[]).filter(row=>{
+      if(!row||!row.account)return false;
+      const kind=row.account.kind||row.account.detectedType||'unclassified';
+      const investment=INVESTMENT_TYPES.has(kind);
+      const transfer=row.category==='transfer'||(row.signals||[]).some(v=>['matched_internal_transfer','investment_transfer','card_payment'].includes(v));
+      if(scope==='cash_cards'&&investment)return false;
+      if(scope==='investments'&&!investment)return false;
+      if(scope==='transfers'&&!transfer)return false;
+      if(scope==='uncategorized'&&row.category!=='unreviewed')return false;
+      if(scope==='pending'&&!row.pending)return false;
+      if(search&&!['merchant','description','note','amount'].some(k=>String(row[k]||'').toLowerCase().includes(search))
+       &&!String(row.account.name||'').toLowerCase().includes(search))return false;
+      if(options.account&&row.accountKey!==options.account)return false;
+      if(options.category&&row.category!==options.category)return false;
+      if(options.status&&Boolean(row.pending)!==(options.status==='pending'))return false;
+      if(Number.isFinite(options.from)&&row.posted<options.from)return false;
+      if(Number.isFinite(options.to)&&row.posted>options.to)return false;
+      const magnitude=Math.abs(Number(row.amount));
+      if(options.min!==undefined&&options.min!==''&&magnitude<Number(options.min))return false;
+      if(options.max!==undefined&&options.max!==''&&magnitude>Number(options.max))return false;
+      return true;
+    }).sort((a,b)=>b.posted-a.posted);
+    const byAmount=new Map();
+    for(let index=0;index<candidates.length;index++){
+      const row=candidates[index];
+      if(row.pending||!(row.signals||[]).includes('matched_internal_transfer'))continue;
+      const amt=String(row.amount),m=/^([+-]?)(\d+)(?:\.(\d{1,2}))?$/.exec(amt);
+      if(!m)continue;
+      const cents=(m[1]==='-'?-1n:1n)*(BigInt(m[2])*100n+BigInt((m[3]||'').padEnd(2,'0')||'0'));
+      if(!cents)continue;
+      const amount=cents<0n?-cents:cents,k=String(amount);
+      if(!byAmount.has(k))byAmount.set(k,[]);
+      byAmount.get(k).push({index,cents});
+    }
+    const suppress=new Set(),linked=new Map();
+    for(const members of byAmount.values()){
+      const proposed=new Map();
+      for(const a of members){
+        const from=candidates[a.index];
+        const targets=members.filter(b=>b.index!==a.index&&a.cents===-b.cents&&
+          from.accountKey!==candidates[b.index].accountKey&&
+          Math.abs(from.posted-candidates[b.index].posted)<=3*86400);
+        proposed.set(a.index,targets.map(v=>v.index));
+      }
+      for(const a of members){
+        const matches=proposed.get(a.index)||[];
+        if(matches.length!==1)continue;
+        const b=matches[0];
+        if((proposed.get(b)||[]).length!==1||(proposed.get(b)||[])[0]!==a.index)continue;
+        if(suppress.has(a.index)||suppress.has(b))continue;
+        const left=candidates[a.index],right=candidates[b];
+        const preferred=Number(left.amount)<0?a.index:b;
+        const other=preferred===a.index?b:a.index;
+        suppress.add(other);linked.set(preferred,candidates[other]);
+      }
+    }
+    return candidates.flatMap((row,i)=>{
+      if(suppress.has(i))return [];
+      const paired=linked.get(i);
+      if(!paired)return [row];
+      return [{...row,pairedSide:paired,transferSides:[row,paired],transferSummary:
+        (Number(row.amount)<0?row.account:paired.account).name+' → '+
+        (Number(row.amount)<0?paired.account:row.account).name}];
+    });
+  }
+  return Object.freeze({combine,safeForSummary,detectedType,ledgerRows,key});
 });
