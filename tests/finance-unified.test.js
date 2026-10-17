@@ -196,3 +196,25 @@ const manuallyTyped=structuredClone(investmentProvider);
 manuallyTyped.accountProfiles={invest:{kind:'checking',balanceMode:'asset',includeSpending:true}};
 const manual=core.combine({simplefin:manuallyTyped});
 assert.equal(manual.accounts.find(a=>a.rawKey==='invest').kind,'checking','Manual account type must win over detected broker metadata');
+
+
+const includedDefaults={connected:true,lastSuccess:now,
+  accounts:[
+    {key:'wallet',name:'PayPal balance',bank:'PayPal',balance:'425.25',currency:'USD',
+      balanceDate:now-30,accountType:'wallet',accountSubtype:'wallet'},
+    {key:'individual',name:'Robinhood individual (6105)',bank:'Robinhood',balance:'3600.00',
+      currency:'USD',balanceDate:now-30,accountType:'investment',accountSubtype:'individual'}],
+  monitoredAccounts:['wallet','individual'],transactions:{},accountProfiles:{}
+};
+const autoCombined=core.combine({simplefin:includedDefaults});
+const autoSummary=finance.summarize(core.safeForSummary(autoCombined),{now});
+assert.equal(autoSummary.cash,'425.25','PayPal wallet cash balance included automatically');
+assert.equal(autoSummary.investments,'3600.00','Robinhood investment included automatically');
+assert.equal(autoSummary.netWorth,'4025.25','New cash and investment accounts count in net worth');
+assert.equal(autoSummary.netWorthExclusions.length,0,'No false exclusions with inferred accounts');
+const optedOut=structuredClone(includedDefaults);
+optedOut.accountProfiles={individual:{kind:'brokerage',balanceMode:'exclude',order:4}};
+const manualSummary=finance.summarize(core.safeForSummary(core.combine({simplefin:optedOut})),{now});
+assert.equal(manualSummary.netWorth,'425.25','Explicitly saved exclusion stays excluded');
+assert.equal(manualSummary.netWorthExclusions[0].reason,'excluded by settings');
+assert.equal(manualSummary.netWorthExclusions[0].accountKey,'simplefin:individual');
