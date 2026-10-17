@@ -130,4 +130,19 @@ const excludedAll=structuredClone(correctedLiabilities);
 for(const p of Object.values(excludedAll.accountProfiles))p.balanceMode='exclude';
 assert.equal(summarize(excludedAll,{now:NOW}).netWorthAvailable,false,'zero included accounts is unknown, not zero');
 
+const unconfirmedPromotion={
+  lastSuccess:NOW,
+  accounts:[account('bonus-checking')],
+  monitoredAccounts:['bonus-checking'],
+  transactions:{'bonus-checking':{
+    credit:{...row('400.00',NOW-90,'possible_bonus'),
+      category:'bonus',categorySource:'automatic',confidence:'high'}
+  }}
+};
+const promotionSummary=summarize(unconfirmedPromotion,{now:NOW});
+assert.equal(promotionSummary.credits,'400.00','observed credit remains recorded');
+assert.equal(promotionSummary.income,'0.00','an unconfirmed promotion must not be counted as income');
+assert.equal(promotionSummary.unreviewed,1,'automatic bonus inference still requires user review');
+assert.equal(promotionSummary.complete,false,'a guessed promotion cannot certify cash-flow completeness');
+
 console.log('Financial observations passed: strict scope, multi-currency safety, exact cents, availability, coverage, privacy and non-mutation');
