@@ -16,7 +16,7 @@ permissions:
 concurrency:
   # Scheduled verification has a separate queue and cannot replace a release.
   group: bonus-tracker-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'schedule' && 'scheduled' || 'release' }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   plan:

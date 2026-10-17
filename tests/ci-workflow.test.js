@@ -10,7 +10,7 @@ assert.equal(inventory().length,new Set(Object.values(groups).flat()).size,'No u
 const workflow=fs.readFileSync('.github/workflows/close-rules.yml','utf8'),browser=fs.readFileSync('.github/workflows/verified-product-browser.yml','utf8'),audit=fs.readFileSync('.github/workflows/simplefin-production-audit.yml','utf8');
 assert.ok(workflow.includes("cron: '23 8 * * *'"));assert.ok(!workflow.includes("cron: '23 * * * *'"));
 assert.ok(workflow.includes("github.event_name == 'schedule' && 'scheduled' || 'release'"),'Nightly never shares release concurrency');
-assert.ok(workflow.includes('cancel-in-progress: false'));
+assert.ok(workflow.includes("cancel-in-progress: ${{ github.event_name == 'pull_request' }}"),'Only superseded PRs can cancel; releases and schedules cannot');
 assert.ok(workflow.includes('needs: [plan, units]')&&workflow.includes('needs: [plan, units, browsers]'),'Every browser waits for unit areas and release waits for all browsers');
 assert.ok(workflow.includes('fail-fast: false')&&audit.includes('fail-fast: false'));
 assert.ok(browser.includes('mcr.microsoft.com/playwright:v1.58.2-noble'));
