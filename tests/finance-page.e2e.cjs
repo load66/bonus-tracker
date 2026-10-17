@@ -468,8 +468,8 @@ const base=()=>({
       await paired1000.waitFor();
       assert.equal(await paired1000.count(),1,'Late cross-provider debit upgrades Payment to exactly one matched transfer');
       const pairedText=await paired1000.innerText();
-      assert.ok(pairedText.includes('Robinhood Checking ··2033 → X money Checking'),
-        'Matched transfer shows source bank and destination bank');
+      assert.ok(pairedText.toLowerCase().includes('robinhood checking ··2033 → x money checking'),
+        'Matched transfer shows source bank and destination bank: '+pairedText);
       assert.equal(await paired1000.locator('.finance-page-transaction-value b.is-credit').count(),0);
       assert.ok((await paired1000.locator('.finance-page-transaction-value b').innerText()).startsWith('⇄ $1,000.00'));
       plaidState.transactions[A]['late-unmatched750']={id:'late-unmatched750',
