@@ -130,6 +130,10 @@ const base=()=>({
       await section.getByRole('heading',{name:'Recent transactions',exact:true}).waitFor();
       const previews=section.locator('.finance-page-preview-card');
       assert.equal(await previews.count(),2,'Account and transaction previews belong on the Finance home dashboard');
+      assert.deepEqual((await section.locator('.finance-page-nav button').allTextContents()).map(t=>t.trim()),
+        ['Overview','Transactions','Accounts'],'Only the three financial sections are user-visible');
+      assert.equal(await section.locator('.finance-page-bonus-host').count(),0,
+        'Bonus evidence workspace remains unmounted while internal evidence handling is retained');
       const accountPreview=await previews.first().innerText();
       assert.ok(accountPreview.includes('X Money')&&accountPreview.includes('Plaid')&&accountPreview.includes('SimpleFIN'),
         'One compact account preview must show banks from both connected sources');
@@ -281,13 +285,17 @@ const base=()=>({
       await section.getByText('X Money Bonus',{exact:true}).waitFor();
       await section.locator('.finance-page-transaction').filter({hasText:'X Money Bonus'})
         .getByRole('button',{name:/X Money Bonus/}).click();
+      assert.equal(await section.getByText('Possible bonus',{exact:true}).count(),0,
+        'Bonus-only review badges must not leak into the Finance transaction view');
+      assert.equal(await section.getByLabel('Category for X Money Bonus').locator('option[value="bonus"]').count(),0,
+        'Bonus category remains in backend data but is not an exposed Finance control');
       await Promise.all([
         page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/plaid/accounts/transaction-review')&&
           r.request().method()==='PUT'&&r.status()===200),
-        section.getByLabel('Category for X Money Bonus').selectOption('bonus')
+        section.getByLabel('Category for X Money Bonus').selectOption('shopping')
       ]);
       assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts/transaction-review')&&r.body.account===A&&
-        r.body.transaction==='plaid-income'&&r.body.category==='bonus'),
+        r.body.transaction==='plaid-income'&&r.body.category==='shopping'),
         'Plaid category corrections must route only to Plaid using its original account and transaction identifiers');
       assert.ok((await section.locator('.finance-page-transaction').allTextContents()).some(t=>t.includes('Plaid')),
         'A Plaid-origin transaction must appear with a source label in the combined feed');
@@ -314,8 +322,17 @@ const base=()=>({
           description:'Synthetic Plaid history item '+index,category:'other',
           categorySource:'automatic',confidence:'low',signals:[]};
       }
+      // A bonus-classified transaction remains intact in provider data, but
+      // its Finance-only presentation is ordinary income, never a bonus card.
+      plaidState.transactions[A]['plaid-income'].category='bonus';
       await page.evaluate(()=>window.btRefreshFinancesPage?.());
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
+      await section.getByText('X Money Bonus',{exact:true}).waitFor();
+      const preservedBonus=section.locator('.finance-page-transaction').filter({hasText:'X Money Bonus'});
+      assert.ok((await preservedBonus.innerText()).includes('Income'),
+        'Finance labels preserved internal bonus classification as Income');
+      assert.equal(plaidState.transactions[A]['plaid-income'].category,'bonus',
+        'Finance presentation must not rewrite canonical bonus category data');
       await section.getByRole('button',{name:/^Show 100 more transactions/}).waitFor();
       await section.getByRole('button',{name:/^Show 100 more transactions/}).click();
       await section.getByRole('button',{name:/^Show 64 more transactions/}).waitFor();
