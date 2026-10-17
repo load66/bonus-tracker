@@ -53,6 +53,16 @@ const expected={
   'one-off-address':'unreviewed','grocery':'groceries'
 };
 for(const row of rows)assert.equal(transfer.effective(row).category,expected[row.id],row.id);
+// Capitalization must never change the category, and an account is not a person.
+for(const description of ['ZELLE FROM ALPHA BETA','zelle from alpha beta']){
+  const classified=transfer.effective({...rows[2],description});
+  assert.equal(classified.category,'transfer');
+  assert.ok(classified.signals.includes('possible_p2p'));
+}
+const bankMovement=transfer.effective({...rows[2],description:'FROM PERSONAL SAVINGS'});
+assert.equal(bankMovement.category,'transfer');
+assert.ok(!bankMovement.signals.includes('possible_p2p'));
+
 const monthly=insight.spent(rows,'2026-10');
 assert.equal(monthly.income,'547.00');
 assert.equal(monthly.total,'383.34');
