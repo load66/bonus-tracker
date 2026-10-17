@@ -31,7 +31,7 @@
 @media(min-width:650px){.finance-page-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:360px){.finance-page{padding:8px 0 20px}.finance-page-card,.finance-page-hero{padding:12px}.finance-page-account{align-items:flex-start;flex-direction:column}.finance-page-balance{text-align:left;max-width:100%}.tabs .tb span{font-size:8px;line-height:1.2;text-align:center}}
 .tabs .tb{min-width:0}
-.tabs .tb span{overflow-wrap:anywhere;text-align:center}
+.tabs .tb span{white-space:nowrap;word-break:normal;overflow-wrap:normal;text-align:center;max-width:none}
 
 /* Phase 2 financial workspace */
 .finance-page-notice:empty{display:none}.finance-page-notice{position:sticky;top:4px;z-index:3;padding:9px 12px;border-radius:10px;background:#452d18;color:#ffe0b0;border:1px solid #9d713e}
@@ -886,4 +886,39 @@
     max-width:100vw;width:100vw;max-height:78dvh;margin:auto 0 0;
     border-radius:24px 24px 0 0;
   }
+}
+
+/* Finance v3.4.83 — sticky tab scroller, subtle overflow cue and private amount control. */
+.finance-page .finance-page-nav-shell{
+  --finance-nav-fade-right:0px;
+  position:sticky;top:0;z-index:50;display:flex;align-items:center;
+  width:100%;min-width:0;box-sizing:border-box;
+  margin:0 0 12px;background:#07080C;border-bottom:1px solid #252933;
+  box-shadow:0 -24px 0 0 #07080C;
+}
+.finance-page .finance-page-nav-shell.has-eye{--finance-nav-fade-right:46px}
+.finance-page .finance-page-nav-shell>.finance-page-nav{
+  position:relative;top:auto;z-index:auto;flex:1 1 auto;min-width:0;
+  width:auto;margin:0;border:0;box-shadow:none;background:transparent;
+}
+.finance-page .finance-page-nav-shell.can-scroll-right::after{
+  content:"";position:absolute;top:1px;bottom:1px;
+  right:var(--finance-nav-fade-right);width:28px;pointer-events:none;
+  background:linear-gradient(to right,transparent,#07080C 94%);
+}
+.finance-page .finance-page-nav-privacy{
+  flex:0 0 46px;display:grid;place-items:center;min-width:46px;
+  height:44px;min-height:44px;margin:0;background:#07080C;
+  color:#b7c8d4;border:0;border-left:1px solid #252933;border-radius:0;
+  cursor:pointer;
+}
+.finance-page .finance-page-nav-privacy svg{
+  width:20px;height:20px;stroke:currentColor;fill:none;
+  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
+}
+.finance-page .finance-page-nav-privacy:focus-visible{
+  outline:3px solid #8fd4ff;outline-offset:-3px;border-radius:8px;
+}
+@media(max-width:390px){
+  .tabs .tb span{white-space:nowrap!important;overflow-wrap:normal!important;word-break:normal!important}
 }

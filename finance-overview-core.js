@@ -156,6 +156,9 @@
         monthAgo:historical(30*DAY)};
     });
     const investmentValid=investmentAccounts.filter(x=>x.value!==null);
+    // An incomplete set of investment balances cannot be presented as a known total.
+    // Zero is valid only when every included investment account has a usable balance.
+    const investmentReady=investmentAccounts.length>0&&investmentValid.length===investmentAccounts.length;
     const investmentValue=investmentValid.reduce((v,x)=>v+x.value,0n);
     const investmentByKind={brokerage:0n,retirement:0n};
     for(const x of investmentValid)investmentByKind[x.kind]+=x.value;
@@ -198,7 +201,7 @@
       cashAvailable:cashReady,cash:cashReady?decimal(cash):null,
       cashAccountCount:cashEntries.length,cashIncludedCount:readyCash.length,
       cashPartial:cashMissing>0,staleOrUnavailableCash:cashMissing,
-      investments:investmentValid.length?decimal(investmentValue):null,
+      investments:investmentReady?decimal(investmentValue):null,
       investmentAccounts:investmentAccounts.map(x=>({key:x.key,name:x.name,kind:x.kind,
         value:x.value!==null?decimal(x.value):null,asOf:x.asOf})),
       investmentBrokerage:decimal(investmentByKind.brokerage),

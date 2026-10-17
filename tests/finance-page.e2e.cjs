@@ -127,6 +127,17 @@ const base=()=>({
       const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
       assert.equal(await section.locator('img').count(),0,'Bank aliases render as escaped text');
       assert.deepEqual((await section.locator('.finance-page-nav button').allTextContents()).map(x=>x.trim()),['Overview','Spending','Recurring','Transactions','Accounts']);
+      const datapoints=page.locator('.tabs .tb').filter({hasText:'Datapoints'});
+      const noBreak=await datapoints.locator('span').evaluate(el=>({
+        height:el.getBoundingClientRect().height,lineHeight:parseFloat(getComputedStyle(el).lineHeight),
+        nowrap:getComputedStyle(el).whiteSpace
+      }));
+      assert.equal(noBreak.nowrap,'nowrap','Datapoints stays on one line in the 390px bottom bar');
+      assert.ok(noBreak.height<=noBreak.lineHeight*1.5,'Datapoints label does not wrap');
+      const investmentCard=section.locator('.finance-overview-investments');
+      assert.equal((await investmentCard.locator('strong').first().innerText()).trim(),'—');
+      assert.equal((await investmentCard.locator('> small').first().innerText()).trim(),'Brokerage — · Retirement —',
+        'Unknown investment balances must never appear as zero');
       await section.getByRole('button',{name:'Hide amounts',exact:true}).waitFor();
       await section.getByRole('button',{name:'Hide amounts',exact:true}).click();
       assert.equal(await section.locator('.finance-page-hero-cash-value').innerText(),'••••••');
@@ -151,7 +162,11 @@ const base=()=>({
       await page.screenshot({path:path.join(output,name+'-Net-worth-review-dark-390.png')});
       await review.getByRole('button',{name:'Close',exact:true}).click();
       await section.getByRole('button',{name:'Spending',exact:true}).click();
+      assert.equal(await section.locator('.finance-page-hero').count(),0,'The large Finances hero belongs on Overview only');
+      assert.equal(await section.locator('.finance-page-nav-privacy').count(),1,'Compact eye control appears alongside tabs');
+      assert.equal(await section.getByRole('button',{name:'Hide amounts',exact:true}).count(),1);
       await section.getByRole('heading',{name:'October 2026'}).waitFor();
+      await section.getByText('October vs September',{exact:true}).waitFor();
       assert.ok((await section.locator('.finance-spending-value').innerText()).includes('$25.00'),'Eligible unknown debit is included in the October spending total');
       assert.ok(await section.getByRole('button',{name:'Review',exact:true}).count(),'Uncategorized category includes a review action');
       assert.equal(await section.locator('.finance-spending-today-dot').count(),1);
@@ -278,15 +293,23 @@ const base=()=>({
       await section.getByRole('button',{name:/^Show 64 more/}).click();
       assert.equal(await section.locator('.finance-page-transaction').count(),264);
       for(const label of ['Overview','Spending','Recurring','Transactions','Accounts']){
-        const tabs=section.locator('.finance-page-nav');
-        assert.equal(await tabs.evaluate(el=>getComputedStyle(el).position),'sticky','Finance tabs must stick beneath the main header');
+        await section.getByRole('button',{name:label,exact:true}).click();
+        const tabs=section.locator('.finance-page-nav-shell');
+        assert.equal(await tabs.evaluate(el=>getComputedStyle(el).position),'sticky','Finance tab shell must stick beneath the main header');
         assert.equal(await tabs.evaluate(el=>getComputedStyle(el).borderTopLeftRadius),'0px','No transparent rounded gap above the sticky Finance tabs');
+        if(label==='Overview'){
+          assert.equal(await section.locator('.finance-page-hero').count(),1);
+          const fade=await tabs.evaluate(el=>({hasClass:el.classList.contains('can-scroll-right'),nav:el.querySelector('nav')}));
+          assert.ok(fade.nav,'Finance tabs remain inside the scrollable row');
+        }else{
+          assert.equal(await section.locator('.finance-page-hero').count(),0,'No bulky header outside Overview');
+          assert.equal(await section.locator('.finance-page-nav-privacy').count(),1);
+        }
         if(label==='Overview'){
           const periods=section.locator('.finance-page-period-nowrap').first();
           assert.ok(await periods.count(),'Cash-flow period controls exist');
           assert.equal(await periods.evaluate(el=>getComputedStyle(el).flexWrap),'nowrap');
         }
-        await section.getByRole('button',{name:label,exact:true}).click();
         for(const colorScheme of ['dark','light']){
           await page.emulateMedia({colorScheme});await page.setViewportSize({width:390,height:844});
           await page.evaluate(()=>window.scrollTo(0,0));
