@@ -6,7 +6,9 @@
   if(root)root.BTFinanceOverview=api;
 })(typeof window!=='undefined'?window:null,function(){
   'use strict';
-  const DAY=86400,MAX_DAYS=731,STALE_BALANCE_DAYS=7;
+  const DAY=86400,MAX_DAYS=731,STALE_BALANCE_DAYS=7,LONG_BALANCE_DAYS=35;
+  const longBalanceKinds=new Set(['mortgage','loan','other_liability','retirement']);
+  const freshnessDays=kind=>longBalanceKinds.has(kind)?LONG_BALANCE_DAYS:STALE_BALANCE_DAYS;
   const SPENDING=new Set(['housing','loan','utilities','groceries','dining','transportation','shopping','health','entertainment','fees','taxes','travel','subscription','other','unreviewed']);
   function cents(value){
     const m=/^([+-]?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(value??'').trim());
@@ -21,18 +23,34 @@
     const neg=value<0n,abs=neg?-value:value;
     return (neg?'-':'')+String(abs/100n)+'.'+String(abs%100n).padStart(2,'0');
   }
-  function freshBalance(account,now){
+  // SimpleFIN does not standardize liability signs across institutions.
+  // Mortgage and installment-loan balances denote remaining debt regardless
+  // of whether the source reports a positive or negative amount. Do not
+  // normalize credit-card overpayments: their signed treatment is distinct.
+  function signedBalance(kind,mode,amount){
+    if(mode!=='liability')return amount;
+    return ['mortgage','loan'].includes(kind)?(amount<0n?amount:-amount):-amount;
+  }
+  function freshBalance(account,now,kind){
     const amount=cents(account?.balance),at=account?.balanceDate;
-    return amount!==null&&Number.isFinite(at)&&at>0&&at<=now+300&&at>=now-STALE_BALANCE_DAYS*DAY
-      ?{amount,at}:null;
+    return amount!==null&&Number.isFinite(at)&&at>0&&at<=now+300&&at>=now-freshnessDays(kind)*DAY
+      ?{amount,at,asOf:now-at>STALE_BALANCE_DAYS*DAY}:null;
+  }
+  function observedBalance(account,now,kind){
+    // Cached Plaid observations count provisionally, never as provider dates.
+    const amount=cents(account?.balance),at=account?.observedAt;
+    return amount!==null&&Number.isFinite(at)&&at>0&&at<=now+300&&at>=now-freshnessDays(kind)*DAY
+      ?{amount,at,provisional:true,asOf:now-at>STALE_BALANCE_DAYS*DAY}:null;
   }
   const financialInstitution=/(?:\bcapital\s*one\b|\bchase\b|\bamerican\s*express\b|\bamex\b|\bdiscover\b|\bciti(?:bank)?\b|\brobinhood\b|\bfidelity\b|\bschwab\b|\bvanguard\b|\bsynchrony\b|\bbarclays\b)/i;
   const financialAction=/(?:\b(?:pmt|pymt|payment|autopay|epay|crcardpmt|ccpmt)\b)/i;
+  const housingMemo=/\b(?:mortgage|mortg|mtge?|home\s*mtg|home\s+loan|rent|landlord|apartment\s+lease|mr\.?\s*cooper|loancare|newrez|shellpoin(?:t)?|rocket\s+mortgage|pennymac|freedom\s+mortgage|dovenmuehle|cenlar|nationstar|lakeview\s+loan|carrington\s+mortgage|roundpoint|sps\s+servicing)\b/i;
   const investmentInstitution=/(?:\brobinhood\b|\bfidelity\b|\bschwab\b|\bvanguard\b|\bbrokerage\b|\binvestment\b|\b401k\b|\broth\s*ira\b|\bira\b)/i;
   const contributionAction=/(?:\b(?:contribution|contribute|deposit|funding|transfer)\b)/i;
   function financialMovement(row){
     if(['user','user_rule'].includes(row.categorySource))return row.category==='transfer';
     const text=String(row.description||'')+' '+String(row.merchant||'');
+    if(cents(row.amount)<0n&&housingMemo.test(text))return false;
     return row.kind==='card_payment'||row.kind==='investment_contribution'||
       (row.signals||[]).includes('matched_internal_transfer')||
       (financialInstitution.test(text)&&financialAction.test(text))||
@@ -71,7 +89,7 @@
         const category=String(item.category||'unreviewed');
         if(category==='income'&&n>0n)income+=n;
         else if(n<0n&&!['transfer','verification','refund'].includes(category)&&
-                !financialMovement(item)&&!item.signals?.includes('possible_transfer')){
+                !financialMovement(item)&&(!item.signals?.includes('possible_transfer')||category==='housing')){
           const amount=-n,label=SPENDING.has(category)?category:'unreviewed';
           expenses+=amount;spending[label]=(spending[label]||0n)+amount;
           if(label==='unreviewed')uncategorized++;
@@ -84,25 +102,23 @@
         const month=monthly[key]||(monthly[key]={income:0n,expenses:0n});
         if(category==='income'&&n>0n)month.income+=n;
         if(n<0n&&!['transfer','verification','refund'].includes(category)&&
-           !financialMovement(item)&&!item.signals?.includes('possible_transfer'))month.expenses-=n;
+           !financialMovement(item)&&(!item.signals?.includes('possible_transfer')||category==='housing'))month.expenses-=n;
       }
     }
 
-    const profileEntries=accounts.filter(account=>!profiles[account.key]?.removed).map(account=>({account,profile:profiles[account.key]||{kind:'unclassified',balanceMode:'exclude'},balance:freshBalance(account,now)}));
+    const profileEntries=accounts.filter(account=>!profiles[account.key]?.removed).map(account=>{
+      const profile=profiles[account.key]||{kind:'unclassified',balanceMode:'exclude'};
+      const balance=freshBalance(account,now,profile.kind)||observedBalance(account,now,profile.kind);
+      return {account,profile,balance};
+    });
     const cashEntries=profileEntries.filter(x=>['checking','savings'].includes(x.profile.kind));
     const readyCash=cashEntries.filter(x=>x.account.currency==='USD'&&x.balance);
     const cashReady=readyCash.length>0;
     const cash=readyCash.length?readyCash.reduce((sum,x)=>sum+x.balance.amount,0n):null;
     const cashMissing=cashEntries.length-readyCash.length;
     const included=profileEntries.filter(x=>x.profile.balanceMode!=='exclude');
-    // Plaid supplies observedAt but not necessarily an authoritative balanceDate.
-    // Show recently observed card debt without pretending its provider freshness was certified.
-    const usable=included.map(x=>{
-      if(x.balance||x.profile.kind!=='credit_card'||x.account.currency!=='USD')return x;
-      const value=cents(x.account.balance),at=x.account.observedAt;
-      return value!==null&&Number.isFinite(at)&&at>0&&at<=now+300&&at>=now-STALE_BALANCE_DAYS*DAY
-        ?{...x,balance:{amount:value,at,provisional:true}}:x;
-    }).filter(x=>x.account.currency==='USD'&&x.balance&&x.profile.kind!=='unclassified');
+    // A Plaid observation is usable for every product type, but not bank-dated.
+    const usable=included.filter(x=>x.account.currency==='USD'&&x.balance&&x.profile.kind!=='unclassified');
     const exclusions=profileEntries.filter(x=>x.profile.balanceMode==='exclude'||
       x.account.currency!=='USD'||x.profile.kind==='unclassified'||!usable.some(u=>u.account.key===x.account.key))
       .map(x=>({key:x.account.key,name:x.account.name||x.account.bank||'Account',
@@ -117,7 +133,7 @@
     const groupAccounts={cash:[],investments:[],creditCards:[],other:[]};
     for(const x of usable){
       const kind=x.profile.kind,mode=x.profile.balanceMode;
-      const signed=mode==='liability'?-x.balance.amount:x.balance.amount;
+      const signed=signedBalance(kind,mode,x.balance.amount);
       // Product type, never the sign of its balance, determines the row.
       const category=kind==='credit_card'?'creditCards':
         mode==='asset'&&['checking','savings'].includes(kind)?'cash':
@@ -127,7 +143,7 @@
         key:x.account.key,name:x.account.name||x.account.bank||'Account',
         bank:x.account.bank||'',kind,amount:decimal(signed),
         balanceDate:x.balance.at,provisional:x.balance.provisional===true,
-        includedInNetWorth:true
+        asOf:x.balance.asOf===true,includedInNetWorth:true
       });
     }
     const netWorthGroups=Object.fromEntries(Object.entries(groups).map(([k,v])=>[k,decimal(v)]));
@@ -146,9 +162,8 @@
     if(netWorthReady)for(const x of usable){
       if(x.profile.balanceMode==='asset')assets+=x.balance.amount;
       else if(x.profile.balanceMode==='liability'){
-        // A negative credit-card/loan balance is a credit owed to the user, not a debt.
-        if(x.balance.amount<0n)assets-=x.balance.amount;
-        else liabilities+=x.balance.amount;
+        const signed=signedBalance(x.profile.kind,'liability',x.balance.amount);
+        if(signed>0n)assets+=signed;else liabilities-=signed;
       }
     }
     const netWorthHistory=[];
@@ -162,9 +177,9 @@
           const rows=(Array.isArray(balanceHistory[x.account.key])?balanceHistory[x.account.key]:[])
             .filter(row=>Number.isFinite(row?.observedAt)&&row.observedAt<=at&&row.currency==='USD')
             .sort((a,b)=>b.observedAt-a.observedAt);
-          const latest=rows[0],value=latest&&at-latest.observedAt<=STALE_BALANCE_DAYS*DAY?cents(latest.balance):null;
+          const latest=rows[0],value=latest&&at-latest.observedAt<=freshnessDays(x.profile.kind)*DAY?cents(latest.balance):null;
           if(value===null){valid=false;break}
-          point+=x.profile.balanceMode==='liability'?-value:value;
+          point+=signedBalance(x.profile.kind,x.profile.balanceMode,value);
         }
         if(valid)netWorthHistory.push({at,value:decimal(point)});
       }
@@ -264,7 +279,7 @@
       monthly:Object.entries(monthly).sort().map(([month,v])=>({month,income:decimal(v.income),expenses:decimal(v.expenses),cashFlow:decimal(v.income-v.expenses)})),
       cashAvailable:cashReady,cash:cashReady?decimal(cash):null,
       cashAccountCount:cashEntries.length,cashIncludedCount:readyCash.length,
-      cashPartial:cashMissing>0,staleOrUnavailableCash:cashMissing,
+      cashPartial:cashMissing>0||readyCash.some(x=>x.balance.provisional===true),staleOrUnavailableCash:cashMissing,
       investments:investmentReady?decimal(investmentValue):null,
       investmentAccounts:investmentAccounts.map(x=>({key:x.key,name:x.name,kind:x.kind,
         value:x.value!==null?decimal(x.value):null,asOf:x.asOf})),
@@ -286,5 +301,5 @@
       excludedFromNetWorth:profileEntries.filter(x=>x.profile.balanceMode==='exclude').length
     });
   }
-  return Object.freeze({summarize,cents,decimal});
+  return Object.freeze({summarize,cents,decimal,signedBalance});
 });

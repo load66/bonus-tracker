@@ -1,4 +1,4 @@
-/* Finances 3.4.81: finance-only transfer guard. Source bank evidence remains untouched. */
+/* Finances 3.4.95: finance-only transfer guard. Source bank evidence remains untouched. */
 (function(root,factory){
   'use strict';const api=factory();
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
@@ -10,6 +10,7 @@
   const issuer=/\b(?:capital\s*one|u\.?\s*s\.?\s*bank|citibank|citi|amex|american\s*express|discover|chase|synchrony|wells\s*fargo|bofa|bank\s*of\s*america|robinhood|fidelity|schwab|vanguard)\b/i;
   const bareIssuer=/^\s*(?:capital\s*one|u\.?\s*s\.?\s*bank|citibank|citi|amex|american\s*express|discover|chase|synchrony|wells\s*fargo|bofa|bank\s*of\s*america)\s*$/i;
   const payment=/\b(?:pmt|pymt|payment|autopay|epay|crcardpmt|ccpmt|cardmember\s*payment)\b/i;
+  const housingMemo=/\b(?:mortgage|mortg|mtge?|home\s*mtg|home\s+loan|rent|landlord|apartment\s+lease|mr\.?\s*cooper|loancare|newrez|shellpoin(?:t)?|rocket\s+mortgage|pennymac|freedom\s+mortgage|dovenmuehle|cenlar|nationstar|lakeview\s+loan|carrington\s+mortgage|roundpoint|sps\s+servicing)\b/i;
   const investAction=/\b(?:contribution|contribute|deposit|funding|transfer|add\s*cash)\b/i;
   const fromTo=/^\s*(?:to|from)\s+(.+?)\s*$/i;
   const phone=/\b(?:t[-\s]?mobile|verizon|at&t|at\s*&\s*t)\b/i;
@@ -29,6 +30,8 @@
     const value=amountCents(row.amount),text=String(row.description||row.merchant||'').trim();
     if(value===null||value===0n||row.pending)return null;
     if((row.signals||[]).includes('matched_internal_transfer'))return {category:'transfer',signal:'matched_internal_transfer'};
+    // Explicit mortgage/housing payments outrank generic issuer/payment markers.
+    if(value<0n&&housingMemo.test(text))return {category:'housing'};
     if(value>0n&&
        (row.kind==='possible_bonus'||/\b(?:promotional\s+bonus|promotion(?:al)?\s+reward|bank\s+bonus|signup\s+bonus)\b/i.test(text)))
       return {category:'bonus',signal:'possible_bonus'};
@@ -75,7 +78,8 @@
       });
       return {...row,category,signals};
     }
-    const match=categorize(row),signals=[...(row?.signals||[])];
+    const match=categorize(row),signals=(row?.signals||[]).filter(signal=>
+      match?.category!=='housing'||!['card_payment','possible_transfer','transfer','plaid_transfer'].includes(signal));
     if(match?.signal&&!signals.includes(match.signal))signals.push(match.signal);
     return {...row,category:match?.category||row?.category||'unreviewed',signals};
   }

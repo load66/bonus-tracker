@@ -314,3 +314,44 @@ const nonTransferIncome=core.safeForSummary(core.combine({simplefin:crossSimple,
 assert.equal(nonTransferIncome.transactions['plaid:'+b].payment.category,'income');
 assert.equal(nonTransferIncome.transactions['plaid:'+b].payment.transferPairId,undefined,
   'Ordinary non-payroll income is not erased solely because another account has an equal debit');
+
+// A generic SimpleFIN loan subtype must not conceal an explicit mortgage product.
+const mortgageSimple=structuredClone(simple);
+mortgageSimple.accounts[0]={...mortgageSimple.accounts[0],bank:'Synthetic Mortgage Servicer',
+  name:'30-year Home Mortgage',accountType:'loan',accountSubtype:'loan',
+  balance:'-182345.67',balanceDate:now-200};
+mortgageSimple.accountProfiles={};
+mortgageSimple.transactions[a]={};
+const mortgageCombined=core.combine({simplefin:mortgageSimple});
+const connectedMortgage=mortgageCombined.accounts[0];
+assert.equal(connectedMortgage.kind,'mortgage');
+assert.equal(mortgageCombined.accountProfiles[connectedMortgage.key].balanceMode,'liability');
+assert.equal(mortgageCombined.accountProfiles[connectedMortgage.key].includeSpending,false);
+const mortgageTotal=finance.summarize(core.safeForSummary(mortgageCombined),{now});
+assert.equal(mortgageTotal.liabilities,'182345.67');
+assert.equal(mortgageTotal.netWorth,'-182345.67');
+assert.equal(core.detectedType({name:'Home Loan',accountType:'loan',accountSubtype:'loan'}),'mortgage');
+assert.equal(core.detectedType({name:'Personal installment loan',accountSubtype:'loan'}),'loan');
+const mortgageOverride=structuredClone(mortgageSimple);
+mortgageOverride.accountProfiles={[a]:{kind:'loan',balanceMode:'exclude',includeSpending:false}};
+const overriddenMortgage=core.combine({simplefin:mortgageOverride});
+assert.equal(overriddenMortgage.accounts[0].kind,'loan','Saved account-type correction must win');
+assert.equal(overriddenMortgage.accountProfiles['simplefin:'+a].balanceMode,'exclude',
+  'Explicit net-worth exclusion is preserved');
+
+
+// Mortgage names are often just the servicer with no product subtype.
+for(const mortgageName of ['Mr. Cooper ··1234','LoanCare','Newrez-Shellpoint','Pennymac',
+  'Cenlar','Nationstar','Lakeview Loan','RoundPoint','SPS Servicing','Home MTG 1234','HELOC']){
+  assert.equal(core.detectedType({name:mortgageName,accountType:'',accountSubtype:''}),
+    'mortgage',mortgageName+' must not disappear into unclassified');
+}
+// Plaid and SimpleFIN mortgage conventions must never create positive assets
+// from ordinary outstanding debt, even when source signs differ.
+const plaidLoan=structuredClone(plaid);
+plaidLoan.accounts[0]={...plaidLoan.accounts[0],bank:'Synthetic Servicer',
+  name:'30-year mortgage',balance:'250000.00',balanceDate:now-100,accountType:'loan',accountSubtype:'mortgage'};
+plaidLoan.accountProfiles={};
+const plaidLoanSummary=finance.summarize(core.safeForSummary(core.combine({plaid:plaidLoan})),{now});
+assert.equal(plaidLoanSummary.liabilities,'250000.00');
+assert.equal(plaidLoanSummary.netWorth,'-250000.00');
