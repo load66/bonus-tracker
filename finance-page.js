@@ -917,10 +917,16 @@
     const p=profile(account),last=String(account.mask||account.last4||'');
     let name=String(p.displayName||account.name||TYPES[p.kind]||'Account').trim();
     // Strip only an explicit mask, never a meaningful number in a product name.
-    name=name.replace(/(?:[·•*x]{2,}|ending\s*(?:in)?\s*)\s*\d{4}\s*$/i,'').trim();
+    for(let i=0;i<4;i++){
+      const cleaned=name.replace(/(?:[·•*x]{2,}|ending\s*(?:in)?\s*)\s*\d{4}\s*$/i,'')
+        .replace(/\s*\(\s*(?:[·•*x]{0,2})\d{4}\s*\)\s*$/i,'').trim();
+      if(cleaned===name)break;
+      name=cleaned;
+    }
     if(/^\d{4}$/.test(last))name=name.replace(new RegExp('[ ·•*x]+'+last+'\\s*$','i'),'').trim();
     const bank=String(account.bank||'').trim();
     if(bank&&name.toLowerCase().startsWith((bank+' '+bank).toLowerCase()))name=name.slice(bank.length+1);
+    if(bank&&/^(?:credit\s*card|visa|mastercard)$/i.test(name))name=bank+' '+name;
     return name+(/^\d{4}$/.test(last)?' ··'+last:'');
   }
   function syncLabel(at){
@@ -932,7 +938,9 @@
   }
   function accountAmount(account){
     const value=window.BTFinanceOverview.cents(account.balance),p=profile(account);
-    return value!==null&&['credit_card','loan','mortgage','other_liability'].includes(p.kind)?amount(window.BTFinanceOverview.decimal(-value),account.currency):amount(account.balance,account.currency);
+    if(value!==null&&['credit_card','loan','mortgage','other_liability'].includes(p.kind))
+      return amount(window.BTFinanceOverview.decimal(value<0n?-value:value),account.currency)+(value<0n?' credit':' owed');
+    return amount(account.balance,account.currency);
   }
   function accountIcon(parent,account){
     return el('span',String(account.bank||account.name||'A').trim().slice(0,1).toUpperCase(),parent,'finance-page-account-icon');
@@ -1083,7 +1091,17 @@
       accountIcon(button,account);const info=el('span',undefined,button,'finance-page-account-info');
       el('strong',accountTitle(account),info);el('small',account.bank+' · via '+account.sourceLabel,info,'finance-page-account-source');
       el('small',syncLabel(account.transactionLastSyncAt||sourceSnapshot(account.source)?.lastSuccess),info);
-      if(account.historyComplete===false)el('small','History still loading',info,'finance-page-loading-hint');
+      if(account.source==='plaid'){
+        const last=Number(account.transactionLastSyncAt)||0,next=Number(account.transactionNextSyncAt)||0,now=Date.now()/1000;
+        const hours=seconds=>Math.max(0,Math.round(seconds/3600));
+        if(account.historyComplete===true&&!Object.values(currentCombined?.transactions?.[account.key]||{}).length)
+          el('small','No transactions yet',info,'finance-page-loading-hint');
+        else if(account.historyComplete===false){
+          const overdue=last&&now-last>86400;
+          el('small',overdue?'Still waiting on '+account.bank+' — last checked '+hours(now-last)+'h ago, next check in '+hours(next-now)+'h':'History still loading',info,'finance-page-loading-hint');
+          if(overdue)action(wrap,'Refresh',refreshActivity,'finance-page-button');
+        }
+      }
       if(account.invalidTransactionRows>0)el('small',account.invalidTransactionRows+' transactions could not be read',info,'finance-page-warning');
       const balance=el('span',undefined,button,'finance-page-account-balances');el('b',accountAmount(account),balance);
       if(account.removedAt)action(wrap,'Restore',()=>change(async()=>{await accountAction(account,'restore');return sourceSnapshot(account.source)}));
@@ -1106,11 +1124,14 @@
         const head=el('div',undefined,group,'finance-page-institution-head');el('h4',title,head);
         const usd=rows.filter(a=>a.currency==='USD'),values=usd.map(a=>window.BTFinanceOverview.cents(a.balance));
         const subtotal=values.length&&values.every(x=>x!==null)?window.BTFinanceOverview.decimal(values.reduce((sum,x)=>sum+x,0n)):null;
-        el('b',(usd.length!==rows.length?'USD subtotal · ':'')+amount(subtotal,'USD'),head);
+        el('b',(usd.length!==rows.length?'USD subtotal · ':'')+amount(subtotal,'USD')+
+          (title==='Credit cards'&&subtotal!==null?(values.reduce((sum,x)=>sum+x,0n)<0n?' credit':' owed'):''),head);
         for(const a of rows){
           const bankKey=a.source+':'+(a.connectionHandle||a.bank);
           if(a.transactionSyncStatus==='needs_attention'&&!broken.has(bankKey)){
-            broken.add(bankKey);const alert=el('div',undefined,group,'finance-connection-error');el('span',a.bank+' · Fix connection',alert);action(alert,'Reconnect',()=>reconnectAccount(a));
+            broken.add(bankKey);const alert=el('div',undefined,group,'finance-connection-error');
+            el('span',a.source==='simplefin'?a.bank+' needs you to sign in again on SimpleFIN':a.bank+' needs connection attention',alert);
+            action(alert,a.source==='simplefin'?'Reconnect SimpleFIN':'Reconnect',()=>reconnectAccount(a));
           }
           row(group,a);
         }
@@ -1182,7 +1203,7 @@
     window.BTBonusEvidence?.dispose();
     host.replaceChildren();
     currentCombined=unified();
-    const notice=el('p',saveNotice,host,'finance-page-notice');notice.setAttribute('role',saveNotice?'alert':'status');
+    if(saveNotice){const notice=el('p',saveNotice,host,'finance-page-notice');notice.setAttribute('role','alert');}
     if(!data){const skeleton=statusMessage(host,'Loading accounts','Checking secure connections…');skeleton.classList.add('finance-skeleton');skeleton.setAttribute('aria-busy','true');return}
     if(!currentCombined?.connected){
       statusMessage(host,data?.error?'Bank connections unavailable':'Connect a bank',data?.error||'All of your supported accounts will appear in one dashboard.');
