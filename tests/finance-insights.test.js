@@ -193,11 +193,11 @@ assert.equal(G.effective(confirmedPayment).category,'transfer',
   'Confirmed similar-description transfer rule is never overridden by heuristics');
 
 // P1 review precedence: an explicit category can contradict old automatic hints.
-const reviewedPayment={...xmoneyPayment,category:'income',categorySource:'user',
+const reviewedWalletIncome={...xmoneyPayment,category:'income',categorySource:'user',
   signals:['possible_transfer']};
-assert.equal(G.effective(reviewedPayment).category,'income');
-assert.ok(!G.effective(reviewedPayment).signals.includes('possible_transfer'));
-assert.equal(I.spent([reviewedPayment],'2026-10').income,'1000.00',
+assert.equal(G.effective(reviewedWalletIncome).category,'income');
+assert.ok(!G.effective(reviewedWalletIncome).signals.includes('possible_transfer'));
+assert.equal(I.spent([reviewedWalletIncome],'2026-10').income,'1000.00',
   'Manual Income confirmation cannot remain silently excluded');
 const reviewedPurchase={...oct(16,'-45.00','shopping','To Account Vendor'),
   description:'To Citibank',categorySource:'user',signals:['possible_transfer','transfer'],
