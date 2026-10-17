@@ -360,17 +360,18 @@
     }
     return rows.sort((a,b)=>b.posted-a.posted);
   }
+  function togglePrivacy(){
+    hidden=!hidden;
+    try{localStorage.setItem(AMOUNTS_PREF,String(hidden))}catch(_error){}
+    paint();
+  }
   function hero(host,summary){
     const compact=view!=='overview';
-    const box=el('section',undefined,host,'finance-page-hero'+(compact?' finance-page-hero-compact':''));
-    const head=el('div',undefined,box,'finance-page-hero-head'),copy=el('div',undefined,head);
-    if(!compact)el('span','MY MONEY',copy,'finance-page-kicker');el('h2','Finances',copy);
-    action(head,hidden?'Show amounts':'Hide amounts',()=>{
-      hidden=!hidden;
-      try{localStorage.setItem(AMOUNTS_PREF,String(hidden))}catch(_error){}
-      paint();
-    });
     if(!compact){
+      const box=el('section',undefined,host,'finance-page-hero');
+      const head=el('div',undefined,box,'finance-page-hero-head'),copy=el('div',undefined,head);
+      el('span','MY MONEY',copy,'finance-page-kicker');el('h2','Finances',copy);
+      action(head,hidden?'Show amounts':'Hide amounts',togglePrivacy);
       el('span','Cash',box,'finance-page-hero-cash-label');
       el('strong',summary.cashAvailable?amount(summary.cash,'USD'):'—',box,'finance-page-hero-cash-value');
       const unavailable=summary.staleOrUnavailableCash||0;
@@ -383,12 +384,14 @@
       const investmentCard=el('section',undefined,portfolio,'finance-overview-asset-card finance-overview-investments');
       el('span','Investments',investmentCard);
       el('strong',summary.investments!==null?amount(summary.investments,'USD'):'—',investmentCard);
-      el('small','Brokerage '+amount(summary.investmentBrokerage,'USD')+' · Retirement '+amount(summary.investmentRetirement,'USD'),investmentCard);
+      const investmentKnown=summary.investments!==null;
+      el('small','Brokerage '+(investmentKnown?amount(summary.investmentBrokerage,'USD'):'—')+
+        ' · Retirement '+(investmentKnown?amount(summary.investmentRetirement,'USD'):'—'),investmentCard);
       if(summary.investmentChangeLastSync!==null)
         el('small','Since last update '+amount(summary.investmentChangeLastSync,'USD'),investmentCard);
       if(summary.investmentChange1M!==null)
         el('small','1M: '+amount(summary.investmentChange1M,'USD'),investmentCard);
-      el('small','Invested this month '+amount(summary.investedThisMonth,'USD')+
+      if(investmentKnown)el('small','Invested this month '+amount(summary.investedThisMonth,'USD')+
         ' · Investment income '+amount(summary.investmentIncome,'USD'),investmentCard);
       if(summary.investmentAccounts?.length){
         const detail=el('details',undefined,investmentCard,'finance-overview-account-breakdown');
@@ -423,7 +426,8 @@
       if(summary.hiddenAccounts)el('p',summary.hiddenAccounts+' hidden account'+(summary.hiddenAccounts===1?' is':'s are')+' excluded from Finances totals. Show them under Accounts.',box,'finance-page-hint');
       if(currentCombined?.possibleDuplicates?.length)el('small','Review possible matching accounts in Accounts',box,'finance-page-hint');
     }
-    const nav=el('nav',undefined,host,'finance-page-nav');nav.setAttribute('aria-label','Finance sections');
+    const navShell=el('div',undefined,host,'finance-page-nav-shell');
+    const nav=el('nav',undefined,navShell,'finance-page-nav');nav.setAttribute('aria-label','Finance sections');
     for(const [id,label] of [['overview','Overview'],['spending','Spending'],['recurring','Recurring'],['transactions','Transactions'],['accounts','Accounts']]){
       const b=action(nav,label,()=>{
         view=id;paint();
@@ -433,9 +437,36 @@
       },'finance-page-nav-button'+(view===id?' is-active':''));
       b.setAttribute('aria-current',view===id?'page':'false');
     }
-    // Finance navigation leads the scrollable workspace and sticks directly below the app header.
-    host.insertBefore(nav,host.firstChild);
-    queueMicrotask(()=>{if(!nav.isConnected)return;const active=nav.querySelector('[aria-current=page]');if(active&&active.offsetLeft+active.offsetWidth>nav.scrollLeft+nav.clientWidth)nav.scrollLeft=active.offsetLeft+active.offsetWidth-nav.clientWidth+12;});
+    if(compact){
+      const privacy=action(navShell,'',togglePrivacy,'finance-page-nav-privacy');
+      privacy.setAttribute('aria-label',hidden?'Show amounts':'Hide amounts');
+      privacy.title=hidden?'Show amounts':'Hide amounts';
+      privacy.setAttribute('aria-pressed',String(hidden));
+      const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+      svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');
+      const lens=document.createElementNS(svg.namespaceURI,'path');
+      lens.setAttribute('d','M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7Z');
+      const pupil=document.createElementNS(svg.namespaceURI,'circle');
+      pupil.setAttribute('cx','12');pupil.setAttribute('cy','12');pupil.setAttribute('r','3');
+      svg.append(lens,pupil);
+      if(hidden){
+        const slash=document.createElementNS(svg.namespaceURI,'path');
+        slash.setAttribute('d','M3 3l18 18');svg.append(slash);
+      }
+      privacy.append(svg);
+    }
+    // Keep the eye visible while the tab list scrolls. Fade only when more tabs remain.
+    const updateOverflow=()=>navShell.classList.toggle('can-scroll-right',
+      nav.scrollWidth-nav.clientWidth-nav.scrollLeft>4);
+    nav.addEventListener('scroll',updateOverflow,{passive:true});
+    host.insertBefore(navShell,host.firstChild);
+    queueMicrotask(()=>{
+      if(!nav.isConnected)return;
+      const active=nav.querySelector('[aria-current=page]');
+      if(active&&active.offsetLeft+active.offsetWidth>nav.scrollLeft+nav.clientWidth)
+        nav.scrollLeft=active.offsetLeft+active.offsetWidth-nav.clientWidth+12;
+      updateOverflow();
+    });
     return summary;
   }
   function periodControl(parent){
@@ -589,7 +620,9 @@
     el('small','Day 1',details);
     el('strong','Day '+day+' · '+amount(now.at(-1)?.toFixed(2)||'0.00','USD'),details);
     el('small','Day '+days,details);
-    el('small','Mint: '+current.month+' · Gray dashed: previous month',host,'finance-page-hint');
+    const displayMonth=month=>new Intl.DateTimeFormat('en-US',{month:'long'}).format(
+      new Date(month+'-02T12:00:00'));
+    el('small',displayMonth(current.month)+' vs '+displayMonth(previous.month),host,'finance-page-hint');
   }
   function showNetWorthReview(exclusions){
     const modal=sheet('Accounts to review');
