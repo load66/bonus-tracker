@@ -124,6 +124,21 @@ const base=()=>({
       }
       await openFinances();
       await section.locator('.finance-page-count').filter({hasText:'4 accounts'}).waitFor();
+      const worth=section.locator('.finance-networth-card');
+      await worth.waitFor();
+      assert.equal(await worth.getByRole('heading',{name:'Net worth'}).count(),1);
+      const omitted=worth.getByRole('button',{name:/Review \d+ accounts not included in net worth/});
+      await omitted.waitFor();
+      await omitted.click();
+      const worthSheet=page.getByRole('dialog',{name:'Accounts not included'});
+      await worthSheet.waitFor();
+      assert.ok((await worthSheet.innerText()).includes('Excluded'));
+      assert.ok(!(await worthSheet.innerText()).match(/\b(?:provider|observation|verified|timestamp|snapshot|capped|evidence)\b/i));
+      await page.screenshot({path:path.join(output,name+'-Net-worth-review-dark-390.png')});
+      await worthSheet.getByRole('button',{name:'Close'}).click();
+      assert.equal(await worth.locator('.finance-page-period button').count(),0,
+        'Chart range chips stay hidden until there are two points');
+      assert.equal(await worth.getByText('Chart builds as your accounts sync.').count(),1);
       const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
       assert.equal(await section.locator('img').count(),0,'Bank aliases render as escaped text');
       assert.deepEqual((await section.locator('.finance-page-nav button').allTextContents()).map(x=>x.trim()),['Overview','Spending','Recurring','Transactions','Accounts']);
@@ -280,6 +295,8 @@ const base=()=>({
         if(await next.count())await next.click();
       }
       assert.equal(await section.locator('.finance-page-transaction').count(),264);
+      await section.getByRole('button',{name:'Overview',exact:true}).click();
+      const cashBeforeInvestments=await section.locator('.finance-page-hero-cash-value').innerText();
       // Live synthetic account refresh: investment products stay separate from Cash.
       const D='g'.repeat(64),E='h'.repeat(64);
       state.accounts.push(
@@ -306,8 +323,8 @@ const base=()=>({
       await section.locator('.finance-page-investments-card').getByText('Investments',{exact:true}).waitFor();
       assert.ok((await section.locator('.finance-page-investments-card').innerText()).includes('$3,000.00'),
         'Investments sum brokerage and Roth IRA, not cash');
-      assert.ok((await section.locator('.finance-page-hero-cash-value').innerText()).includes('$1,250.50'),
-        'Cash hero excludes Robinhood brokerage and Roth IRA balances');
+      assert.equal(await section.locator('.finance-page-hero-cash-value').innerText(),cashBeforeInvestments,
+        'Cash hero must not change when brokerage or retirement accounts are added');
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       assert.ok(await section.locator('[data-scope="cash_cards"].is-active').count(),
         'Default Transactions scope is Cash & cards');
@@ -341,6 +358,11 @@ const base=()=>({
           assert.equal(await periods.evaluate(el=>getComputedStyle(el).flexWrap),'nowrap');
         }
         await section.getByRole('button',{name:label,exact:true}).click();
+        const visibleCopy=await section.innerText();
+        assert.ok(!/\b(?:provider|observation|verified|timestamp|snapshot|capped|evidence)\b/i.test(visibleCopy),
+          'Finances '+label+' must use plain language');
+        const statuses=await section.locator('.finance-page-hint, .finance-page-loading-hint, .finance-page-month-change, .finance-page-hero-cash-status, .finance-page-meta, .finance-page-status-row>summary').allInnerTexts();
+        for(const note of statuses)assert.ok(note.trim().length<=90,'Finance '+label+' long status: '+note);
         for(const colorScheme of ['dark','light']){
           await page.emulateMedia({colorScheme});await page.setViewportSize({width:390,height:844});
           await page.evaluate(()=>window.scrollTo(0,0));
