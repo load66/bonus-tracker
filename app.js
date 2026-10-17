@@ -3981,10 +3981,32 @@ function bonusPipelineMetrics(rows,year){
 function renderCardProgressLine(e){
   if(!e||e.closed)return'';
   const tasks=Array.isArray(e.checklist)?e.checklist.filter(x=>x&&String(x.text||'').trim()):[];
-  if(!tasks.length)return'';
-  const done=tasks.filter(x=>x.done).length;
-  const pct=Math.round(done/tasks.length*100);
-  return '<div class="card-progressline"><span>'+done+' of '+tasks.length+' tasks complete</span><i><b style="width:'+pct+'%"></b></i></div>'
+  // Checklist items are user tasks, not evidence that the bonus requirements
+  // or payout have been verified. Keep those two lifecycle gates outstanding.
+  const done=tasks.filter(x=>x.done).length+Number(!!e.reqMet)+Number(!!e.bonusRecd);
+  const total=tasks.length+2;
+  const pct=Math.round(done/total*100);
+  const report=window.BTBonusEvidence?.progressForEntry?.(e);
+  const depositPending=report?.requirements?.some(x=>x.kind==='direct-deposit'&&
+    x.candidateCount>x.reviewedCount);
+  const next=depositPending?'Deposits: review pending':!e.reqMet?'Requirements: confirmation pending':
+    !e.bonusRecd?'Payout: review pending':'All tracked milestones reviewed';
+  return '<div class="card-progressline"><span>'+done+' of '+total+
+    ' steps verified · '+esc(next)+'</span><i><b style="width:'+pct+'%"></b></i></div>';
+}
+function renderCardEvidenceAlerts(e){
+  if(!e||e.closed)return'';
+  const alerts=window.BTBonusEvidence?.cardAlerts?.(e)||[];
+  if(!e.reqMet&&e.opened&&Number(e.reqDays)>0){
+    const days=daysToDeadline(e);
+    if(Number.isFinite(days)&&days>=0&&days<=7)
+      alerts.push('Requirement deadline in '+days+' day'+(days===1?'':'s')+' · review pending');
+  }
+  if(lifecycleViewForEntry(e).code==='READY_TO_CLOSE'&&safeCloseDate(e))
+    alerts.push('Earliest safe close date reached · verify fees and account status');
+  if(!alerts.length)return'';
+  return '<div class="bt-tracker-alerts" role="status">'+[...new Set(alerts)].slice(0,5)
+    .map(line=>'<div class="bt-tracker-alert">'+esc(line)+'</div>').join('')+'</div>';
 }
 function openAccountFromActionCenter(id){
   if(!entries.some(e=>e.id===id))return;
@@ -6448,6 +6470,7 @@ entries=sortE(entries);R();
 
 
     h += quickBtn('purple',I.quick,'Quick Add','showTemplates=!showTemplates;R()');
+    h += '<button class="bt-review-activity-launch" type="button" onclick="btOpenTrackerEvidence()" aria-label="Review bank activity for open bonus accounts">Review bank activity</button>';
 
     h += '</div>';
 
@@ -6478,7 +6501,7 @@ entries=sortE(entries);R();
       h += `<div class="card u-${urg}" data-bt-entry-id="${profileSectionAttr(e.id)}">`;
       h += `<div class="card-h" onclick="expanded=expanded==='${e.id}'?null:'${e.id}';R()">`;
       h += `<div class="card-logo-col">${bankLogo(e.bank)}${accountTypeChipHtml(e)}${e.churn?churnTagHtml(e.bank,e.churn):''}</div>`;
-      h += `<div class="card-left"><div class="card-name">${esc(e.bank)}</div><div class="card-row">${statusBadgeHtml(e,countdown)}</div>${renderCardProgressLine(e)}</div>`;
+      h += `<div class="card-left"><div class="card-name">${esc(e.bank)}</div><div class="card-row">${statusBadgeHtml(e,countdown)}</div>${renderCardProgressLine(e)}${renderCardEvidenceAlerts(e)}</div>`;
       h += '<div class="card-right"><div class="card-right-main">';
       if(e.bonus) h += `<div class="card-bonus"><span>Bonus</span>${fM(e.bonus)}</div>`;
       h += `<div class="card-id">${esc(getEntryDisplayId(e))}</div></div>`;
