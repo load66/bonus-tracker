@@ -460,6 +460,62 @@ const base=()=>({
       await section.getByRole('button',{name:'Accounts',exact:true}).click();
       await section.getByRole('button',{name:'Manage connections',exact:true}).click();
       await section.getByRole('heading',{name:'Manage connections',exact:true}).waitFor();
+      // v3.4.91: bank Sync switches are staged, saved atomically and excluded
+      // from every Finance total without requiring an activity refresh.
+      const otherBank=section.getByRole('button',{name:/Other Credit Union.*via SimpleFIN/});
+      await otherBank.click();
+      modal=page.getByRole('dialog',{name:'Other Credit Union',exact:true});
+      const syncSwitch=modal.getByRole('switch',{name:'Sync Robinhood Credit Card ··4010'});
+      const savedBefore=state.accountProfiles[B].syncEnabled;
+      const writesBefore=requests.filter(x=>x.path.endsWith('/account-profiles')).length;
+      assert.equal(await modal.getByRole('button',{name:'Save changes',exact:true}).isDisabled(),true);
+      await syncSwitch.uncheck();
+      await modal.getByText('Will stop syncing',{exact:true}).waitFor();
+      assert.equal(await modal.getByRole('button',{name:'Save changes (1)',exact:true}).isEnabled(),true);
+      assert.equal(state.accountProfiles[B].syncEnabled,savedBefore,'Staging never writes provider profile');
+      assert.equal(requests.filter(x=>x.path.endsWith('/account-profiles')).length,writesBefore);
+      await page.setViewportSize({width:390,height:844});
+      const footer=modal.locator('.finance-page-sync-footer');
+      await footer.scrollIntoViewIfNeeded();
+      const geometry=await footer.evaluate(e=>({top:e.getBoundingClientRect().top,
+        bottom:e.getBoundingClientRect().bottom,height:innerHeight}));
+      assert.ok(geometry.bottom<=geometry.height+1&&geometry.top>=0,'390px sticky Save footer visible inside sheet');
+      await modal.getByRole('button',{name:'Cancel',exact:true}).click();
+      await modal.waitFor({state:'hidden'});
+      assert.equal(state.accountProfiles[B].syncEnabled,savedBefore,'Cancel must discard unsaved switches');
+      await otherBank.click();
+      modal=page.getByRole('dialog',{name:'Other Credit Union',exact:true});
+      await modal.getByRole('switch',{name:'Sync Robinhood Credit Card ··4010'}).uncheck();
+      await modal.getByRole('button',{name:'Close',exact:true}).click();
+      let discard=page.getByRole('dialog',{name:'Discard changes?',exact:true});
+      await discard.getByRole('button',{name:'Cancel',exact:true}).click();
+      assert.equal(await modal.isVisible(),true,'Rejecting discard keeps bank settings open');
+      await modal.getByRole('button',{name:'Close',exact:true}).click();
+      discard=page.getByRole('dialog',{name:'Discard changes?',exact:true});
+      await discard.getByRole('button',{name:'Discard changes',exact:true}).click();
+      assert.equal(state.accountProfiles[B].syncEnabled,savedBefore);
+      await otherBank.click();
+      modal=page.getByRole('dialog',{name:'Other Credit Union',exact:true});
+      await modal.getByRole('switch',{name:'Sync Robinhood Credit Card ··4010'}).uncheck();
+      const refreshBefore=requests.filter(x=>x.path.endsWith('/sync')&&x.method==='POST').length;
+      await modal.getByRole('button',{name:'Save changes (1)',exact:true}).click();
+      await modal.waitFor({state:'hidden'});
+      assert.equal(state.accountProfiles[B].syncEnabled,false,'Single Save persists sync-off');
+      assert.equal(requests.filter(x=>x.path.endsWith('/sync')&&x.method==='POST').length,refreshBefore,
+        'Saving sync choice must not call Refresh');
+      await page.locator('.finance-page-save-toast').getByText(/hidden from totals/).waitFor();
+      await section.getByRole('button',{name:'Back to accounts'}).click();
+      await section.locator('.finance-page-not-syncing>summary').click();
+      assert.equal(await section.getByRole('button',{name:'Robinhood Credit Card ··4010',exact:true}).count(),0,
+        'Sync-off card is hidden from active bank lists');
+      await section.getByText('Excluded from totals and reports').waitFor();
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      await section.locator('.finance-page-not-syncing>summary').click();
+      assert.equal(state.accountProfiles[B].syncEnabled,false,'Refreshing cannot re-enable the account');
+      await section.getByRole('button',{name:'Turn sync back on'}).click();
+      assert.equal(state.accountProfiles[B].syncEnabled,true,'Restoring sync re-enables saved account');
+      await section.getByRole('button',{name:'Robinhood Credit Card ··4010',exact:true}).waitFor();
+      await section.getByRole('button',{name:'Manage connections',exact:true}).click();
       await section.getByRole('button',{name:/X Money.*via Plaid/}).click();
       modal=page.getByRole('dialog',{name:'X Money',exact:true});
       await modal.getByRole('button',{name:'Choose which accounts to share',exact:true}).click();
