@@ -25,6 +25,8 @@
     // Retirement plan and account-type evidence is stronger than words such
     // as "savings", "cash", "individual", or a generic depository subtype.
     if(retirementSubtype.has(subtype)||retirementSubtype.has(type)||
+       retirementProduct.test(subtype.replaceAll('_',' '))||
+       retirementProduct.test(type.replaceAll('_',' '))||
        retirementProduct.test(name))return 'retirement';
     if(/\b(?:credit\s+card|charge\s+card)\b/.test(name)||
        ['credit_card','credit'].includes(subtype)||
