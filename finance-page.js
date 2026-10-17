@@ -610,13 +610,15 @@
         ['Invested this month',summary.investmentContributions],
         ['Withdrawn this month',summary.investmentWithdrawals],
         ['Market change',summary.investmentMarketChange],
-        ['Investment income',summary.investmentIncome]
+        ['Investment income',summary.investmentIncome],
+        ['Since last update · balance movement',summary.investmentChangeLastSync]
       ];
       for(const [label,value] of details){
         const line=el('div',undefined,metrics,'finance-overview-investment-metric');
         el('span',label,line);
         el('strong',value===null?'—':amount(value,'USD'),line);
       }
+      el('small','Since last update is raw balance movement and may include deposits or withdrawals; it is not market gain.',dialog,'finance-page-hint');
       if(summary.investmentMarketChange===null)el('p',
         'Market change is hidden because complete period balance and contribution/withdrawal coverage has not been verified. Balance movement alone is not investment performance.',
         dialog,'finance-page-hint');
