@@ -7,7 +7,7 @@
   'use strict';
   const DAY=86400000;
   const SPEND=new Set(['housing','loan','utilities','groceries','dining','transportation','shopping','health','entertainment','fees','taxes','travel','subscription','other']);
-  const excluded=new Set(['verification','transfer','refund','bonus','unreviewed']);
+  const excluded=new Set(['verification','refund','bonus','unreviewed']);
   function cents(value){
     const match=/^([+-]?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(value??'').trim());
     if(!match)return null;

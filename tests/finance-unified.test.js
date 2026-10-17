@@ -87,4 +87,33 @@ assert.equal(finance.summarize(safeHidden,{now,days:30}).income,'50.00',
 assert.equal(hiddenBank.transactions[a].one.amount,'400.00','account history remains recoverable');
 assert.equal(simple.accounts[0].key,a,'source snapshots stay unchanged');
 assert.equal(twin.accounts[0].key,b,'the second provider is never overwritten');
+
+assert.equal(core.detectedType({bank:'Robinhood',name:'Robinhood individual',accountSubtype:'individual'}),'brokerage');
+assert.equal(core.detectedType({bank:'Fidelity',name:'Stocks and crypto',accountSubtype:'crypto'}),'brokerage');
+assert.equal(core.detectedType({bank:'Schwab',name:'Main brokerage'}),'brokerage');
+assert.equal(core.detectedType({bank:'Robinhood',name:'Robinhood Credit Card',accountSubtype:'credit_card'}),'credit_card');
+const movementsA=structuredClone(simple),movementsB=structuredClone(plaid);
+movementsA.transactions[a]={
+  out:{id:'out',amount:'-1000.00',posted:now-2*86400,pending:false,category:'subscription',categorySource:'automatic',description:'Internal sweep',merchant:'Internal sweep'},
+  user:{id:'user',amount:'-200.00',posted:now-250,pending:false,category:'shopping',categorySource:'user',description:'User correction'}
+};
+movementsB.transactions[b]={
+  in:{id:'in',amount:'1000.00',posted:now-86400,pending:false,category:'income',categorySource:'automatic',description:'Received transfer'},
+  other:{id:'other',amount:'200.00',posted:now-250,pending:false,category:'income',categorySource:'automatic',description:'Received payment'}
+};
+const rawMovement=core.combine({simplefin:movementsA,plaid:movementsB});
+const reconciled=core.safeForSummary(rawMovement);
+assert.equal(reconciled.transactions['simplefin:'+a].out.category,'transfer');
+assert.equal(reconciled.transactions['plaid:'+b].in.category,'transfer');
+assert.ok(reconciled.transactions['simplefin:'+a].out.signals.includes('matched_internal_transfer'));
+assert.equal(reconciled.transactions['simplefin:'+a].user.category,'shopping','Manual categories remain authoritative');
+assert.equal(rawMovement.transactions['simplefin:'+a].out.category,'subscription','Provider records are not mutated');
+const totals=finance.summarize(reconciled,{now,days:30});
+assert.equal(totals.expenses,'200.00','Reconciled transfers do not inflate spending');
+assert.equal(totals.income,'200.00','Reconciled incoming transfers are not income');
+const collision=structuredClone(movementsB);
+collision.transactions[b].same={id:'same',amount:'1000.00',posted:now-86400,pending:false,category:'income',categorySource:'automatic'};
+const ambig=core.safeForSummary(core.combine({simplefin:movementsA,plaid:collision}));
+assert.equal(ambig.transactions['simplefin:'+a].out.category,'subscription','Ambiguous pairs are not asserted as self-transfers');
+
 console.log('Unified Finance: provider isolation, type inference, full account/transaction aggregation, exact cents, stale-balance safety and overlap controls passed');

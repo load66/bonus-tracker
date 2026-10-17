@@ -14,6 +14,10 @@
     const subtype=canonical(account.accountSubtype).replaceAll(' ','_');
     const type=canonical(account.accountType).replaceAll(' ','_');
     const name=canonical(account.name);
+    const bank=canonical(account.bank);
+    const broker=/\b(robinhood|fidelity|schwab|vanguard|e trade|etrade|interactive brokers|webull|tastytrade|coinbase|kraken)\b/.test(bank);
+    const investments=new Set(['individual','joint','investing','investment','investments','stocks','stock','crypto','securities','trading','brokerage']);
+    if(investments.has(subtype)||investments.has(type))return 'brokerage';
     const aliases={depository:'',credit:'credit_card',credit_card:'credit_card',investment:'brokerage',student:'loan',auto:'loan',mortgage:'mortgage',loan:'loan',brokerage:'brokerage',retirement:'retirement','401k':'retirement',ira:'retirement',checking:'checking',savings:'savings',money_market:'savings'};
     if(TYPES.has(subtype))return subtype;
     if(Object.hasOwn(aliases,subtype)&&aliases[subtype])return aliases[subtype];
@@ -22,6 +26,10 @@
     for(const [pattern,kind] of [[/\b(checking|current account)\b/,'checking'],[/\b(savings|money market|high yield)\b/,'savings'],[/\b(credit card|charge card)\b/,'credit_card'],[/\b(mortgage)\b/,'mortgage'],[/\b(401k|ira|roth|retirement)\b/,'retirement'],[/\b(brokerage|investment)\b/,'brokerage'],[/\b(loan)\b/,'loan']]){
       if(pattern.test(name))return kind;
     }
+    // Brokerage brands are investment accounts unless product metadata identifies
+    // an actual deposit or credit product; never classify a generic broker as Other.
+    if(broker&&!/\b(checking|savings|cash management|credit card|mortgage|loan)\b/.test(name)
+        && !['depository','credit'].includes(type))return 'brokerage';
     return 'unclassified';
   }
   const key=(source,rawKey)=>source+':'+String(rawKey);
@@ -131,7 +139,7 @@
     // A confirmed duplicate uses one primary account and one balance; unique
     // secondary-provider rows remain visible with their original source keys.
     // Fingerprints require same amount, same local day, and normalized bank text.
-    const transactions=Object.fromEntries(Object.entries(keep(unified.transactions)).map(([k,v])=>[k,{...v}]));
+    const transactions=Object.fromEntries(Object.entries(keep(unified.transactions)).map(([k,v])=>[k,Object.fromEntries(Object.entries(v).map(([id,row])=>[id,{...row,signals:[...(row.signals||[])]}]))]));
     for(const [other,primary] of secondary){
       if(!allowed.has(primary))continue;
       const target=transactions[primary]||{};
@@ -145,6 +153,39 @@
         target['merged:'+other+':'+ident]={...row,originalAccountKey:other};
       }
       transactions[primary]=target;
+    }
+    // Reconcile unique, reciprocal account movements without mutating provider
+    // evidence. Pair each debit to exactly one credit in another linked account,
+    // within three days, for a round-dollar amount. Preserve user corrections.
+    const transferRows=[];
+    const toCents=value=>{
+      const m=/^([+-]?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(value??'').trim());
+      if(!m)return null;
+      let v=BigInt(m[2])*100n+BigInt((m[3]||'').padEnd(2,'0')||'0');
+      return m[1]==='-'?-v:v;
+    };
+    for(const [key,rows] of Object.entries(transactions)){
+      for(const row of Object.values(rows)){
+        const value=toCents(row.amount);
+        if(row.pending||value===null||value===0n||value%100n!==0n||
+          !Number.isFinite(row.posted)||['user','user_rule'].includes(row.categorySource))continue;
+        transferRows.push({account:key,row,value});
+      }
+    }
+    const matches=transferRows.map((left,i)=>transferRows.flatMap((right,j)=>{
+      if(i===j||left.account===right.account||left.value!==-right.value||
+         Math.abs(left.row.posted-right.row.posted)>3*86400)return [];
+      return [j];
+    }));
+    for(let i=0;i<matches.length;i++){
+      if(matches[i].length!==1)continue;
+      const j=matches[i][0];
+      if(j<=i||matches[j].length!==1||matches[j][0]!==i)continue;
+      for(const index of [i,j]){
+        const row=transferRows[index].row;
+        row.category='transfer';row.confidence='high';
+        row.signals=[...new Set([...(row.signals||[]),'matched_internal_transfer'])];
+      }
     }
     for(const [key, rows] of Object.entries(transactions)){
       if(unified.accountProfiles?.[key]?.includeSpending===false){

@@ -554,3 +554,62 @@
 .finance-page-round-action{display:flex;flex-direction:column;align-items:center;gap:8px;border:0;background:transparent;color:#A0A6B8;min-width:76px;min-height:76px;padding:8px;font:inherit;font-size:11px;cursor:pointer}
 .finance-page-round-action svg{width:22px;height:22px;padding:14px;border-radius:50%;background:#1E212C;color:#5BE3B0}
 .finance-health-dot{display:block;flex:0 0 8px;width:8px;height:8px;border-radius:50%;background:#5BE3B0}.finance-health-dot.is-warning{background:#ffb8bd}
+
+/* Finance 3.4.79: solid sticky workspace tabs and compact mobile ledger. */
+.finance-page .finance-page-nav{
+  top:0;z-index:50;margin:0 0 12px;border-radius:0;
+  box-sizing:border-box;background:#07080C;
+  border:0;border-bottom:1px solid #252933;
+  box-shadow:0 -24px 0 0 #07080C;
+  padding:7px 4px;
+}
+.finance-page .finance-page-status-row{
+  position:relative;z-index:0;margin:0 0 12px;
+  overflow:visible;
+}
+.finance-page .finance-page-period-nowrap{
+  display:flex;flex-flow:row nowrap;align-items:center;
+  max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;
+  overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+}
+.finance-page .finance-page-period-nowrap::-webkit-scrollbar{display:none}
+.finance-page .finance-page-period-nowrap .finance-page-chip{
+  flex:0 0 auto;white-space:nowrap;padding-inline:11px;
+}
+.finance-page .finance-page-donut-item{
+  min-width:0;grid-template-columns:10px minmax(0,1fr) auto;
+}
+.finance-page .finance-page-donut-label{
+  display:block;min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;
+}
+.finance-page .finance-page-donut-item strong{
+  min-width:max-content;white-space:nowrap;text-align:right;
+}
+.finance-page .finance-page-account-info strong{
+  white-space:normal;overflow:visible;overflow-wrap:normal;
+  word-break:normal;line-height:1.35;
+}
+.finance-page .finance-page-transaction-category{
+  display:inline-flex;align-items:center;margin-top:5px;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  border-radius:7px;padding:2px 7px;
+  background:#173229;color:#7BE2B8;border:1px solid #23513F;
+  font-size:10px;line-height:1.45;font-weight:700;
+}
+.finance-page .finance-page-transaction-category.is-neutral{
+  background:#1A2028;color:#BFC9D6;border-color:#313844;
+}
+.finance-page .finance-page-sync-refresh{
+  flex:0 0 auto;padding:5px 10px;min-height:36px;
+  font-size:11px;
+}
+.finance-page .finance-page-account-balances{
+  min-width:0;overflow-wrap:normal;white-space:normal;
+}
+@media(max-width:420px){
+  .finance-page .finance-page-nav{margin-top:0}
+  .finance-page .finance-page-period-nowrap{width:100%}
+  .finance-page .finance-page-account-info strong{font-size:12px}
+}
