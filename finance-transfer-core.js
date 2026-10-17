@@ -1,4 +1,4 @@
-/* Finances 3.4.81: finance-only transfer guard. Source bank evidence remains untouched. */
+/* Finances 3.4.83: finance-only transfer guard. Source bank evidence remains untouched. */
 (function(root,factory){
   'use strict';const api=factory();
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
@@ -12,6 +12,7 @@
   const payment=/\b(?:pmt|pymt|payment|autopay|epay|crcardpmt|ccpmt|cardmember\s*payment)\b/i;
   const investAction=/\b(?:contribution|contribute|deposit|funding|transfer|add\s*cash)\b/i;
   const fromTo=/^\s*(?:to|from)\s+(.+?)\s*$/i;
+  const accountArrow=/^\s*(?:savings|checking|brokerage|investment|retirement|cash\s*account)\s*(?:\(\d{4}\)|[·*x]+\d{4})?\s*(?:→|->| to )\s*(?:savings|checking|brokerage|investment|retirement|cash\s*account)\s*(?:\(\d{4}\)|[·*x]+\d{4})?\s*$/i;
   const phone=/\b(?:t[-\s]?mobile|verizon|at&t|at\s*&\s*t)\b/i;
   const subscription=/\b(?:icloud|apple\s*(?:subscription|bill|\.com\/bill)|netflix|spotify)\b/i;
   const shopping=/\b(?:apple|amazon|walmart|target|costco|best buy|ebay|etsy)\b/i;
@@ -29,9 +30,10 @@
     const value=amountCents(row.amount),text=String(row.description||row.merchant||'').trim();
     if(value===null||value===0n||row.pending)return null;
     if((row.signals||[]).includes('matched_internal_transfer'))return {category:'transfer',signal:'matched_internal_transfer'};
+    if(accountArrow.test(text))return {category:'transfer',signal:investor.test(text)?'investment_transfer':'matched_internal_transfer'};
     const direction=fromTo.exec(text);
     if(direction&&destination.test(direction[1]))
-      return {category:'transfer',signal:investor.test(direction[1])?'investment_transfer':'transfer'};
+      return {category:'transfer',signal:investor.test(direction[1])?'investment_transfer':'ownership_unconfirmed'};
     if(value<0n&&bareIssuer.test(text))return {category:'transfer',signal:'card_payment'};
     if(issuer.test(text)&&payment.test(text))return {category:'transfer',signal:'card_payment'};
     if(investor.test(text)&&investAction.test(text))return {category:'transfer',signal:'investment_transfer'};
@@ -56,11 +58,17 @@
   }
   function label(row){
     const item=effective(row),signals=item.signals;
+    if(signals.includes('paycheck')&&item.category==='income')return 'Paycheck';
+    if(signals.includes('possible_paycheck')&&item.category==='unreviewed')return 'Possible paycheck';
     if(signals.includes('card_payment'))return 'Card payment';
     if(signals.includes('investment_transfer'))return 'Investment transfer';
     if(item.category==='transfer')return 'Transfer';
     if(signals.includes('possible_transfer')&&item.category==='unreviewed')return 'Possible transfer';
     return null;
   }
-  return Object.freeze({categorize,effective,label,amountCents});
+  const isTransfer=row=>{
+    const item=effective(row);
+    return item.category==='transfer'||item.signals.some(s=>['matched_internal_transfer','investment_transfer','card_payment'].includes(s));
+  };
+  return Object.freeze({categorize,effective,label,isTransfer,amountCents});
 });
