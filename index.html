@@ -17,9 +17,9 @@
 <link rel="stylesheet" href="./mobile-ui.css?v=3.4.85-bottomnav1">
 <link rel="stylesheet" href="./cloud-backup.css?v=3.4.74">
 <link rel="stylesheet" href="./research-tabs.css?v=3.4.74">
-<link rel="stylesheet" href="./bank-sync.css?v=3.4.98-auto1">
+<link rel="stylesheet" href="./bank-sync.css?v=3.4.99-classify1">
 <link rel="stylesheet" href="./plaid-fallback.css?v=3.4.74-plaid-compact1">
-<link rel="stylesheet" href="./finance-page.css?v=3.4.98-auto1">
+<link rel="stylesheet" href="./finance-page.css?v=3.4.99-classify1">
 <link rel="stylesheet" href="./bonus-evidence.css?v=3.4.74-plaid-live2">
 </head>
 <body>
@@ -33,7 +33,7 @@
     refreshed=true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=3.4.98-auto1',{updateViaCache:'none'}).then(reg=>{
+  navigator.serviceWorker.register('./sw.js?v=3.4.99-classify1',{updateViaCache:'none'}).then(reg=>{
     const activate=worker=>{try{worker&&worker.postMessage({type:'SKIP_WAITING'})}catch{}};
     if(reg.waiting)activate(reg.waiting);
     reg.addEventListener('updatefound',()=>{
@@ -53,11 +53,11 @@
 <script src="./eligibility-gate.js?v=3.4.74"></script>
 <script src="./ui-feedback.js?v=3.4.74-feedback1"></script>
 <script src="./community-reports.js?v=3.4.74"></script>
-<script src="./app.js?v=3.4.98-auto1"></script>
+<script src="./app.js?v=3.4.99-classify1"></script>
 <script src="./source-resolver.js?v=3.4.74"></script>
 <script src="./engine.js?v=3.4.74"></script>
 <script src="./bank-rules.js?v=3.4.74"></script>
-<script src="./bank-rules-wells-consumer.js?v=3.4.98-auto1"></script>
+<script src="./bank-rules-wells-consumer.js?v=3.4.99-classify1"></script>
 <script src="./bank-rules-fourleaf.js?v=3.4.74"></script>
 <script src="./bank-rules-capitalone.js?v=3.4.74"></script>
 <script src="./bank-rules-boa-business.js?v=3.4.74"></script>
@@ -68,33 +68,33 @@
 <script src="./bank-rules-academy.js?v=3.4.74"></script>
 <script src="./churn-profile-memory.js?v=3.4.74"></script>
 <script src="./profile-registry.js?v=3.4.74"></script>
-<script src="./profile-registry-academy.js?v=3.4.98-auto1"></script>
+<script src="./profile-registry-academy.js?v=3.4.99-classify1"></script>
 <script src="./controller.js?v=3.4.74"></script>
 <script src="./professional-upgrades.js?v=3.4.74"></script>
-<script src="./close-rules-integration.js?v=3.4.98-auto1"></script>
+<script src="./close-rules-integration.js?v=3.4.99-classify1"></script>
 <script src="./wells-professional-runtime.js?v=3.4.74"></script>
 <script src="./eligibility-editor.js?v=3.4.74"></script>
-<script src="./churn-close-policy.js?v=3.4.98-auto1"></script>
+<script src="./churn-close-policy.js?v=3.4.99-classify1"></script>
 <script src="./semantic-status.js?v=3.4.74-status1"></script>
 <script src="./entry-link-import.js?v=3.4.74-conditional1"></script>
 <script src="./fee-review-migration.js?v=3.4.74-feereview1"></script>
 <script src="./smart-attention.js?v=3.4.74-action1"></script>
 <script src="./bank-bonuses.js?v=3.4.74-scope2"></script>
 <script src="./bonus-ai-auth.js?v=3.4.74"></script>
-<script src="./cloud-backup-core.js?v=3.4.98-auto1"></script>
+<script src="./cloud-backup-core.js?v=3.4.99-classify1"></script>
 <script src="./cloud-backup.js?v=3.4.74"></script>
 <script src="./bonus-ai.js?v=3.4.74"></script>
-<script src="./finance-transfer-core.js?v=3.4.98-auto1"></script>
-<script src="./finance-overview-core.js?v=3.4.98-auto1"></script>
-<script src="./plaid-fallback.js?v=3.4.98-auto1"></script>
-<script src="./bank-sync.js?v=3.4.98-auto1"></script>
-<script src="./finance-unified-core.js?v=3.4.85-bottomnav1"></script>
-<script src="./finance-insights-core.js?v=3.4.98-auto1"></script>
-<script src="./finance-reconcile-core.js?v=3.4.98-auto1"></script>
-<script src="./finance-page.js?v=3.4.98-auto1"></script>
+<script src="./finance-transfer-core.js?v=3.4.99-classify1"></script>
+<script src="./finance-overview-core.js?v=3.4.99-classify1"></script>
+<script src="./plaid-fallback.js?v=3.4.99-classify1"></script>
+<script src="./bank-sync.js?v=3.4.99-classify1"></script>
+<script src="./finance-unified-core.js?v=3.4.99-classify1"></script>
+<script src="./finance-insights-core.js?v=3.4.99-classify1"></script>
+<script src="./finance-reconcile-core.js?v=3.4.99-classify1"></script>
+<script src="./finance-page.js?v=3.4.99-classify1"></script>
 <script src="./bonus-evidence-core.js?v=3.4.85-bottomnav1"></script>
 <script src="./bonus-requirements-progress.js?v=3.4.85-bottomnav1"></script>
 <script src="./bonus-evidence.js?v=3.4.85-bottomnav1"></script>
-<script src="./mobile-analyzer.js?v=3.4.98-auto1"></script>
+<script src="./mobile-analyzer.js?v=3.4.99-classify1"></script>
 </body>
 </html>

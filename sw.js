@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.4.98: SimpleFIN add-bank return discovery and account sync.
+// Version 3.4.99: Product-aware retirement and investment categorization.
 
-const V = 'bt-v3.4.98-auto1';
+const V = 'bt-v3.4.99-classify1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
