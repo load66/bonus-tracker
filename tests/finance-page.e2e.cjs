@@ -368,6 +368,10 @@ const base=()=>({
       assert.ok((await section.locator('.finance-page-transaction').allTextContents()).some(t=>t.includes('Plaid')),
         'A Plaid-origin transaction must appear with a source label in the combined feed');
       assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts')));
+      // Modal transaction details intentionally cover the ledger until closed.
+      // Close them before using a toolbar action behind the sheet.
+      const detailSheet=section.getByRole('dialog',{name:'Transaction details for X Money Bonus'});
+      if(await detailSheet.count())await detailSheet.getByRole('button',{name:'Close',exact:true}).click();
       // Refreshing activity must sync both connected providers with no consent toggles.
       const activityStart=requests.length;
       await section.getByRole('button',{name:'Refresh activity'}).click();
