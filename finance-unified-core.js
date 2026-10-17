@@ -188,7 +188,8 @@
       }
     }
     for(const [key, rows] of Object.entries(transactions)){
-      if(unified.accountProfiles?.[key]?.includeSpending===false){
+      if(unified.accountProfiles?.[key]?.includeSpending===false||
+         investmentKind(unified.accountProfiles?.[key]?.kind)){
         transactions[key]=Object.fromEntries(Object.entries(rows).map(([i,row])=>[i,{...row,excludedFromTotals:true}]));
       }
     }
