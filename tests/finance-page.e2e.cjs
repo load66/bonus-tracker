@@ -400,6 +400,45 @@ const base=()=>({
       await section.getByRole('button',{name:/^Show 100 more/}).click();
       await section.getByRole('button',{name:/^Show 64 more/}).click();
       assert.equal(await section.locator('.finance-page-transaction').count(),264);
+      // Realistic bank labels: a positive card Payment and its unique checking
+      // debit form one neutral movement. Schreiber payroll stays income;
+      // Lafayette bank transfers never appear as a recurring paycheck.
+      state.transactions[B]={payment:{id:'card-payment-1000',posted:NOW-100,pending:false,
+        amount:'1000.00',merchant:'Payment',description:'Payment',
+        category:'income',categorySource:'automatic',signals:[]}};
+      plaidState.transactions[A]['check-payment-1000']={id:'check-payment-1000',posted:NOW-110,
+        pending:false,amount:'-1000.00',merchant:'Account debit',description:'Account debit',
+        category:'unreviewed',categorySource:'automatic',signals:[]};
+      for(const month of [7,8,9]){
+        const at=Math.floor(Date.parse('2026-'+String(month).padStart(2,'0')+'-01T15:00:00Z')/1000);
+        state.transactions[A]['schreiber-'+month]={id:'schreiber-'+month,posted:at,pending:false,
+          amount:'1700.00',merchant:'Schreiber Foods',description:'SCHREIBER FOODS PAYROLL',
+          category:'income',categorySource:'automatic',signals:['possible_direct_deposit']};
+        state.transactions[A]['lafayette-'+month]={id:'lafayette-'+month,posted:at+500,pending:false,
+          amount:'500.00',merchant:'From Lafayette Fcu',description:'From Lafayette Fcu',
+          category:'income',categorySource:'automatic',signals:[]};
+      }
+      for(const month of [6,7]){
+        state.transactions[A]['old-bill-'+month]={id:'old-bill-'+month,
+          posted:Math.floor(Date.parse('2026-'+String(month).padStart(2,'0')+'-05T15:00:00Z')/1000),
+          pending:false,amount:'-27.00',merchant:'Ended example bill',description:'Ended example bill',
+          category:'utilities',categorySource:'automatic',signals:[]};
+      }
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      await section.getByRole('button',{name:'Transactions',exact:true}).click();
+      await section.locator('.finance-page-transaction-view-chips button').filter({hasText:'Transfers'}).click();
+      const paired=section.locator('.finance-page-transaction').filter({hasText:'$1,000.00'});
+      assert.equal(await paired.count(),1,'Two equal bank legs render as one transaction');
+      const movement=await paired.locator('.finance-page-transaction-value b').innerText();
+      assert.equal(movement,'⇄ $1,000.00','Transfer money amount must be neutral, without credit/debit signs');
+      await section.getByRole('button',{name:'Recurring',exact:true}).click();
+      await section.locator('.finance-page-recurring-item').filter({hasText:'Schreiber Foods'}).waitFor();
+      assert.equal(await section.locator('.finance-page-recurring-item').filter({hasText:'From Lafayette Fcu'}).count(),0,
+        'Lafayette FCU transfers must not recur as income');
+      const staleBill=section.locator('.finance-page-recurring-item').filter({hasText:'Ended example bill'});
+      assert.ok((await staleBill.locator('summary small').innerText()).includes('Possibly ended'));
+      assert.equal((await staleBill.locator('summary small').innerText()).includes('Next '),false,
+        'Past forecast dates must not be advertised as next bills');
       for(const label of ['Overview','Spending','Recurring','Transactions','Accounts']){
         await section.getByRole('button',{name:label,exact:true}).click();
         const tabs=section.locator('.finance-page-nav-shell');
