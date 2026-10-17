@@ -74,7 +74,7 @@
         const kind=saved.kind&&saved.kind!=='unclassified'?saved.kind:detected;
         accountProfiles[composite]={kind,balanceMode:saved.balanceMode||DEFAULT_TREATMENT[kind]||'exclude',
           order:Number.isInteger(saved.order)?saved.order:499,hidden:saved.hidden===true,
-          removed:!!account.removedAt,includeSpending:saved.includeSpending??['checking','credit_card'].includes(kind)};
+          removed:!!account.removedAt,includeSpending:saved.includeSpending??['checking','savings','credit_card'].includes(kind)};
         if((state.monitoredAccounts||[]).includes(account.key))monitoredAccounts.push(composite);
         if(state.mappings?.[account.key])mappings[composite]=state.mappings[account.key];
         if(Array.isArray(state.balanceHistory?.[account.key]))balanceHistory[composite]=state.balanceHistory[account.key];
@@ -204,5 +204,62 @@
         ['history_still_loading','awaiting_first_sync','awaiting_provider_data','needs_attention'].includes(a.transactionSyncStatus))),
       excludedForReview:duplicates.size,hiddenAccounts:hidden.size,confirmedDuplicates:secondary.size};
   }
-  return Object.freeze({combine,safeForSummary,detectedType,investmentKind,cashKind,key});
+  // Presentation-only classification. Source rows and their review receipts are immutable.
+  function investmentActivity(row){
+    if(!investmentKind(row?.accountKind||row?.account?.kind||''))return null;
+    const description=String(row.description||row.merchant||'');
+    if(/\bdividend\b/i.test(description))return 'Dividend';
+    if(/\binterest\b/i.test(description))return 'Interest';
+    if(/\b(?:buy|bought|purchase of shares)\b/i.test(description))return 'Buy';
+    if(/\b(?:sell|sold)\b/i.test(description))return 'Sell';
+    if(/\b(?:deposit|contribution|contribute|funding)\b/i.test(description))return 'Contribution';
+    return 'Investment activity';
+  }
+  function transactionFeed(records,scope='cash_cards'){
+    const rows=(records||[]).filter(row=>row&&!row.account?.removedAt);
+    const group=kind=>investmentKind(kind)?'investment':(cashKind(kind)||kind==='credit_card'?'cash_cards':'other');
+    const enriched=rows.map((row,i)=>({...row,accountKind:row.accountKind||row.account?.kind||'',
+      originalIndex:i}));const used=new Set(),combined=[];
+    const cents=value=>{
+      const v=/^([+-]?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(value??''));
+      if(!v)return null;let out=BigInt(v[2])*100n+BigInt((v[3]||'').padEnd(2,'0')||'0');
+      return v[1]==='-'?-out:out;
+    };
+    // Collapse only unambiguous reciprocal account transfers; never merge
+    // multiple equal payments or user-corrected merchant spending.
+    const candidates=enriched.map((row,i)=>({row,i,amount:cents(row.amount)}));
+    for(const x of candidates){
+      if(used.has(x.i))continue;
+      const eligible=x.amount!==null&&x.amount!==0n&&!x.row.pending&&
+        (x.row.category==='transfer'||(x.row.signals||[]).includes('matched_internal_transfer'));
+      if(!eligible){combined.push(x.row);continue}
+      const others=candidates.filter(y=>y.i!==x.i&&y.row.accountKey!==x.row.accountKey&&
+        !used.has(y.i)&&!y.row.pending&&y.amount===-x.amount&&
+        Math.abs(y.row.posted-x.row.posted)<=3*86400&&
+        (y.row.category==='transfer'||(y.row.signals||[]).includes('matched_internal_transfer')));
+      if(others.length!==1){combined.push(x.row);continue}
+      const counterpart=others[0],opposites=candidates.filter(y=>y.i!==counterpart.i&&
+        y.row.accountKey!==counterpart.row.accountKey&&y.amount===-counterpart.amount&&
+        Math.abs(y.row.posted-counterpart.row.posted)<=3*86400&&
+        (y.row.category==='transfer'||(y.row.signals||[]).includes('matched_internal_transfer')));
+      if(opposites.length!==1||opposites[0].i!==x.i){combined.push(x.row);continue}
+      const outgoing=x.amount<0n?x.row:counterpart.row,incoming=x.amount>0n?x.row:counterpart.row;
+      used.add(x.i);used.add(counterpart.i);
+      combined.push({...outgoing,pairedWith:incoming,mergedTransfer:true,category:'transfer',
+        merchant:(outgoing.account?.name||'Account')+' → '+(incoming.account?.name||'Account')});
+    }
+    const filtered=combined.filter(row=>{
+      const category=String(row.category||'unreviewed');
+      const movement=category==='transfer'||(row.signals||[]).includes('matched_internal_transfer');
+      const inv=investmentKind(row.accountKind),linkedInv=investmentKind(row.pairedWith?.accountKind||row.pairedWith?.account?.kind||'');
+      if(scope==='all')return true;
+      if(scope==='investments')return inv||linkedInv;
+      if(scope==='transfers')return movement;
+      if(scope==='uncategorized')return category==='unreviewed'&&!movement&&!inv;
+      if(scope==='pending')return row.pending===true;
+      return group(row.accountKind)==='cash_cards'||group(row.pairedWith?.accountKind||'')==='cash_cards';
+    });
+    return filtered.sort((a,b)=>b.posted-a.posted||a.originalIndex-b.originalIndex);
+  }
+  return Object.freeze({combine,safeForSummary,detectedType,investmentKind,cashKind,investmentActivity,transactionFeed,key});
 });
