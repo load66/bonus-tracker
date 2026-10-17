@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.4.84: Finance mobile visual consistency and privacy controls.
+// v3.4.85-no-learning1: remove legacy floating Learning Inbox launcher.
 
-const V = 'bt-v3.4.85-bottomnav1';
+const V = 'bt-v3.4.85-no-learning1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
