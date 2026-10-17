@@ -12,7 +12,7 @@
     unreviewed:'Uncategorized',income:'Income',housing:'Housing',utilities:'Utilities',groceries:'Groceries',
     dining:'Dining',transportation:'Transportation',shopping:'Shopping',health:'Health',
     entertainment:'Entertainment',fees:'Fees',taxes:'Taxes',travel:'Travel',
-    subscription:'Subscription',transfer:'Transfer',refund:'Refund',verification:'Account verification',loan:'Loan payment',bonus:'Bank bonus',other:'Other'
+    subscription:'Subscriptions',transfer:'Transfer',refund:'Refund',verification:'Account verification',loan:'Loan payment',bonus:'Bank bonus',other:'Other'
   };
   // Keep 'bonus' as a persisted category for canonical tracker/evidence logic;
   // Finances never treats an unconfirmed promotional credit as verified income.
@@ -397,7 +397,7 @@
   }
   function periodControl(parent){
     const wrap=el('div',undefined,parent,'finance-page-period');
-    for(const days of [30,90,180,365,730])action(wrap,days===730?'24 months':days+' days',()=>{
+    for(const days of [30,90,180,365,730])action(wrap,({30:'30D',90:'90D',180:'6M',365:'1Y',730:'2Y'})[days],()=>{
       period=days;paint();if(days>90)requestArchiveWindow(days);
     },'finance-page-chip'+(period===days?' is-active':''));
   }
@@ -441,7 +441,7 @@
     for(const [i,[category,value]] of rows.entries()){
       const item=el('div',undefined,legend,'finance-page-donut-item');
       const marker=el('span',undefined,item,'finance-page-donut-dot');marker.style.background=colors[i%colors.length];
-      el('span',financeCategory(category),item);
+      el('span',financeCategory(category),item,'finance-page-donut-label');
       el('strong',amount(value,'USD'),item);
     }
     if(!summary.complete)el('p','Only categorized posted transactions are included. Your bank history may still be loading.',card,'finance-page-hint');
@@ -726,7 +726,7 @@
     }
     const groups=[
       ['Subscriptions',item=>item.category==='subscription'||item.category==='entertainment'],
-      ['Bills and utilities',item=>['utilities','housing','loan'].includes(item.category)],
+      ['Bills & payments',item=>['utilities','housing','loan','transfer'].includes(item.category)],
       ['Income',item=>item.direction==='income'],
       ['Other',()=>true]
     ];
@@ -822,7 +822,9 @@
         const copy=el('span',undefined,top,'finance-page-transaction-copy');
         el('strong',displayMerchant(row),copy);
         if(row.categorySource==='ai')el('small','Auto',copy,'finance-page-auto-tag');
-        el('small',[financeCategory(row.category),row.account.name||row.account.bank].filter(Boolean).join(' · '),copy);
+        const metadata=el('span',undefined,copy,'finance-page-transaction-meta');
+        el('small',financeCategory(row.category),metadata,'finance-page-category-chip');
+        el('small',row.account.name||row.account.bank,metadata,'finance-page-transaction-account');
         const value=el('span',undefined,top,'finance-page-transaction-value');
         el('b',shownAmount(row),value,Number(row.amount)>0?'is-credit':'');
         if(row.pending)el('small','Pending',value);
