@@ -120,3 +120,60 @@ const ambig=core.safeForSummary(core.combine({simplefin:movementsA,plaid:collisi
 assert.equal(ambig.transactions['simplefin:'+a].out.category,'subscription','Ambiguous pairs are not asserted as self-transfers');
 
 console.log('Unified Finance: provider isolation, type inference, full account/transaction aggregation, exact cents, stale-balance safety and overlap controls passed');
+
+const brokerNames=[
+  {bank:'Robinhood',name:'Robinhood individual (6105)',accountSubtype:'individual',expected:'brokerage'},
+  {bank:'Robinhood',name:'Robinhood Roth IRA (9372)',accountSubtype:'individual',expected:'retirement'},
+  {bank:'Robinhood',name:'Checking (2033)',accountSubtype:'individual',expected:'checking'},
+  {bank:'Robinhood',name:'Savings (0793)',accountSubtype:'individual',expected:'savings'},
+  {bank:'Coinbase',name:'Digital assets',accountType:'investment',expected:'brokerage'},
+  {bank:'Schwab',name:'Schwab Cash Management',accountType:'investment',expected:'checking'},
+];
+for(const entry of brokerNames)assert.equal(core.detectedType(entry),entry.expected,entry.name);
+const investSimple=structuredClone(simple),investPlaid=structuredClone(plaid);
+investSimple.accounts[0].balance='1200.00';
+investSimple.accounts[0].name='Checking (2033)';
+investSimple.transactions[a]={
+  move:{id:'move',amount:'-7379.04',posted:now-3600,category:'unreviewed',
+    categorySource:'automatic',description:'To Personal Checking',pending:false},
+  fund:{id:'fund',amount:'-2000.00',posted:now-1200,category:'unreviewed',
+    categorySource:'automatic',description:'To Brokerage',pending:false}
+};
+investPlaid.accounts[0]={...investPlaid.accounts[0],bank:'Robinhood',name:'Robinhood individual (6105)',
+  accountSubtype:'individual',accountType:'investment',balance:'15000.00',balanceDate:now-90};
+investPlaid.accountProfiles={};
+investPlaid.transactions[b]={
+  paired:{id:'paired',amount:'7379.04',posted:now-1000,category:'income',
+    categorySource:'automatic',description:'From Personal Savings',pending:false},
+  incoming:{id:'incoming',amount:'2000.00',posted:now-150,category:'income',
+    categorySource:'automatic',description:'From Personal Checking',pending:false},
+  dividend:{id:'dividend',amount:'3.50',posted:now-140,category:'income',
+    categorySource:'automatic',description:'Dividend paid',pending:false},
+  bought:{id:'bought',amount:'-500.00',posted:now-130,category:'shopping',
+    categorySource:'automatic',description:'Bought NVDA shares',pending:false}
+};
+const investmentState=core.safeForSummary(core.combine({simplefin:investSimple,plaid:investPlaid}));
+const positions=investmentState.accounts.find(x=>x.name.includes('individual'));
+assert.equal(positions.kind,'brokerage');
+assert.equal(investmentState.accountProfiles[positions.key].includeSpending,false);
+const pairedDebit=investmentState.transactions['simplefin:'+a].move;
+const pairedCredit=investmentState.transactions['plaid:'+b].paired;
+assert.equal(pairedDebit.category,'transfer');
+assert.equal(pairedCredit.category,'transfer');
+assert.equal(pairedDebit.transferPairId,pairedCredit.transferPairId,'Non-round same-amount transfers across providers collapse into one pair');
+const contributed=investmentState.transactions['simplefin:'+a].fund;
+assert.ok(contributed.signals.includes('investment_transfer'));
+assert.equal(contributed.category,'transfer');
+const investments=finance.summarize(investmentState,{now,days:30});
+assert.equal(investments.cash,'1200.00','Cash excludes Robinhood individual account');
+assert.equal(investments.investments,'15000.00','Investment value separated from cash');
+assert.equal(investments.investmentBrokerage,'15000.00');
+assert.equal(investments.investmentRetirement,'0.00');
+assert.equal(investments.investmentIncome,'3.50');
+assert.equal(investments.investedThisMonth,'2000.00');
+assert.equal(investments.expenses,'0.00','Trades in brokerage and checking transfers are not expenses');
+assert.equal(investments.income,'0.00','Brokerage dividends and transfers are not household income');
+const manualInvest=structuredClone(investPlaid);manualInvest.accountProfiles={
+  [b]:{kind:'checking',balanceMode:'asset',includeSpending:true}
+};
+assert.equal(core.combine({simplefin:investSimple,plaid:manualInvest}).accounts.find(x=>x.rawKey===b).kind,'checking','Manual account choice always wins');
