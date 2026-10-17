@@ -87,10 +87,11 @@ assert.equal(result.cash,'1500.00','cash includes only classified deposit accoun
 assert.equal(result.assets,'1500.00');
 assert.equal(result.liabilities,'200.00');
 assert.equal(result.netWorth,'1300.00');
+assert.equal(result.uncategorized,1);
 assert.deepEqual(result.netWorthHistory.map(x=>x.value),['1150.00','1300.00']);
 assert.equal(result.income,'1000.00');
-assert.equal(result.expenses,'100.00');
-assert.equal(result.cashFlow,'900.00');
+assert.equal(result.expenses,'120.00','Uncategorized debit is included in expenses immediately');
+assert.equal(result.cashFlow,'880.00');
 assert.equal(result.transfers,1,'transfers are excluded from income, expenses and cash flow');
 assert.equal(result.pending,1,'pending activity is visible but excluded from totals');
 assert.equal(result.unreviewed,1);
@@ -120,7 +121,10 @@ assert.equal(result.complete,false,'an uncovered selected account cannot be mask
 classified.monitoredAccounts.pop();
 classified.accounts[1].balanceDate=NOW-8*DAY;
 result=summarize(classified,{now:NOW});
-assert.equal(result.cashAvailable,false,'stale deposit balances cannot produce a cash total');
+assert.equal(result.cashAvailable,true,'Known fresh cash accounts still contribute to a partial total');
+assert.equal(result.cash,'1000.00');
+assert.equal(result.staleOrUnavailableCash,1);
+assert.equal(result.cashPartial,true);
 assert.equal(result.netWorthAvailable,true,'fresh balances still support a partial subtotal');
 assert.equal(result.netWorthPartial,true,'stale balances keep net worth explicitly partial');
 
@@ -158,3 +162,20 @@ assert.equal(promotionSummary.unreviewed,1,'automatic bonus inference still requ
 assert.equal(promotionSummary.complete,false,'a guessed promotion cannot certify cash-flow completeness');
 
 console.log('Financial observations passed: strict scope, multi-currency safety, exact cents, availability, coverage, privacy and non-mutation');
+
+const cardWithoutBankDate=structuredClone(classified);
+cardWithoutBankDate.accounts[1].balanceDate=NOW;
+cardWithoutBankDate.accounts[2].balanceDate=null;
+cardWithoutBankDate.accounts[2].observedAt=NOW-100;
+const observedCard=summarize(cardWithoutBankDate,{now:NOW});
+assert.equal(observedCard.liabilities,'200.00','Include recently observed Robinhood credit-card debt with a partial-status warning');
+assert.equal(observedCard.netWorthPartial,true,'Non-authoritative Plaid observation must not become a verified balance timestamp');
+assert.equal(observedCard.provisionalBalances.length,1);
+assert.equal(observedCard.cash,'1500.00');
+const withUnknown=structuredClone(classified);
+withUnknown.monitoredAccounts=['cash'];
+withUnknown.transactions.cash.unknown={...row('-311.17'),category:'unreviewed',confidence:'low'};
+const unknownSummary=summarize(withUnknown,{now:NOW});
+assert.equal(unknownSummary.expenses,'411.17');
+assert.equal(unknownSummary.spending.unreviewed,'311.17');
+assert.equal(unknownSummary.uncategorized,1);
