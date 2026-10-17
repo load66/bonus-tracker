@@ -29,14 +29,14 @@
     retirement:'asset',other_asset:'asset',credit_card:'liability',loan:'liability',
     mortgage:'liability',other_liability:'liability'};
   function bankFamily(value){
-    const t=canonical(value).replace(/\\b(jp morgan|jpmorgan|chase national|national association|n a|bank|financial|services|inc|co)\\b/g,' ').replace(/\\s+/g,' ').trim();
-    return /\\bchase\\b/.test(canonical(value))?'chase':t;
+    const t=canonical(value).replace(/\b(jp morgan|jpmorgan|chase national|national association|n a|bank|financial|services|inc|co)\b/g,' ').replace(/\s+/g,' ').trim();
+    return /\bchase\b/.test(canonical(value))?'chase':t;
   }
   function last4(account){
     const raw=String(account.mask||account.last4||'');
-    if(/^\\d{4}$/.test(raw))return raw;
+    if(/^\d{4}$/.test(raw))return raw;
     const name=String(account.rawName||account.name||'');
-    const matched=name.match(/(?:\\*{2,}|x{2,}|•{2,}|\\bending\\s*(?:in)?\\s*)\\s*(\\d{4})\\b/i);
+    const matched=name.match(/(?:\*{2,}|x{2,}|•{2,}|\bending\s*(?:in)?\s*)\s*(\d{4})\b/i);
     return matched?matched[1]:null;
   }
   function sameInstitution(a,b){
