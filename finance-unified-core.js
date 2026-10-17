@@ -25,6 +25,9 @@
     if(deposit)return 'checking';
     if(savings)return 'savings';
     if(retirement)return 'retirement';
+    // Some SimpleFIN institutions report mortgage subtype as generic "loan".
+    // A descriptive mortgage product name must win over that generic subtype.
+    if(/\b(?:mortgage|home\s+loan|home\s+equity\s+loan)\b/.test(name))return 'mortgage';
     const investments=new Set(['individual','joint','investing','investment','investments','stocks','stock','crypto','securities','trading','brokerage']);
     if(investments.has(subtype)||investments.has(type))return 'brokerage';
     const aliases={depository:'',credit:'credit_card',credit_card:'credit_card',investment:'brokerage',student:'loan',auto:'loan',mortgage:'mortgage',loan:'loan',brokerage:'brokerage',retirement:'retirement','401k':'retirement',ira:'retirement',checking:'checking',savings:'savings',money_market:'savings'};
