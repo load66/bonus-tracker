@@ -388,7 +388,7 @@ const base=()=>({
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       await section.locator('.finance-page-transaction').filter({hasText:'X Money Bonus'}).getByRole('button').click();
       modal=page.getByRole('dialog',{name:'Transaction details for X Money Bonus',exact:true});
-      assert.equal(await modal.getByLabel('Category for X Money Bonus').locator('option[value=bonus]').count(),0);
+      assert.equal(await modal.getByLabel('Category for X Money Bonus').locator('option[value=bonus]').count(),1,'Bonus review category remains selectable');
       await modal.getByLabel('Category for X Money Bonus').selectOption('shopping');await modal.waitFor({state:'hidden'});
       assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts/transaction-review')&&r.body.transaction==='plaid-income'));
       // Full provider history stays reachable, including generic merchant titles and AI tags.
