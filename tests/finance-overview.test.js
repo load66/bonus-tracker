@@ -393,6 +393,8 @@ housingExpense.transactions.cash={mortgage:{
   category:'housing',categorySource:'automatic',confidence:'high',
   description:'CHASE MORTGAGE PMT',merchant:'CHASE',signals:['card_payment']
 }};
+assert.equal(require('../finance-transfer-core.js').effective(housingExpense.transactions.cash.mortgage).category,'housing');
+assert.equal(require('../finance-transfer-core.js').label(housingExpense.transactions.cash.mortgage),null);
 assert.equal(summarize(housingExpense,{now:NOW}).expenses,'1425.37');
 assert.equal(summarize(housingExpense,{now:NOW}).spending.housing,'1425.37');
 housingExpense.transactions.cash.mortgage.category='transfer';
