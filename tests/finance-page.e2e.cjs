@@ -169,6 +169,22 @@ const base=()=>({
             assert.ok(cur.label.right<=next.label.left+.25,'Tab labels overlap at '+width);
           }
         }
+        const card=section.locator('.finance-overview-account-card');
+        const metrics=await card.evaluate(node=>({
+          inside:node.getBoundingClientRect().left>=-1&&node.getBoundingClientRect().right<=innerWidth+1,
+          lines:[...node.querySelectorAll('.finance-overview-category-row')].map(row=>{
+            const box=row.getBoundingClientRect(),label=row.querySelector('.finance-overview-row-info'),
+              value=row.querySelector('.finance-overview-row-value').getBoundingClientRect(),
+              note=label.querySelector('small');
+            const lineHeight=note?parseFloat(getComputedStyle(note).lineHeight):1;
+            return {height:box.height,inside:value.right<=box.right+1,
+              gap:value.left-label.getBoundingClientRect().right,
+              lines:note?note.getBoundingClientRect().height/lineHeight:0};
+          })
+        }));
+        assert.ok(metrics.inside&&metrics.lines.every(x=>x.height<=75&&x.inside&&x.gap>=-1&&x.lines<=2.2),
+          name+' Finance rows overflow or collide at '+width+': '+JSON.stringify(metrics));
+        await page.screenshot({path:path.join(output,name+'-finance-overview-'+width+'.png')});
         await page.screenshot({path:path.join(output,name+'-bottom-tabs-'+width+'.png')});
       }
       await page.setViewportSize({width:390,height:844});
@@ -207,6 +223,19 @@ const base=()=>({
       assert.ok(sheetGeometry.left>=-1&&sheetGeometry.right<=sheetGeometry.width+1,'Review sheet stays inside 390px viewport');
       await page.screenshot({path:path.join(output,name+'-Net-worth-review-dark-390.png')});
       await review.getByRole('button',{name:'Close',exact:true}).click();
+      state.accounts[0].balanceDate=NOW-9*86400;
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      await section.locator('.finance-overview-net-hero').waitFor();
+      await section.getByRole('button',{name:'View Cash accounts'}).click();
+      const cashDetails=page.getByRole('dialog',{name:'Cash accounts'});
+      await cashDetails.getByText('1 account not updated.',{exact:false}).waitFor();
+      assert.ok((await cashDetails.innerText()).includes('NOT included in this total'));
+      assert.ok(await cashDetails.getByRole('button',{name:'Refresh'}).count());
+      assert.ok(await cashDetails.getByRole('button',{name:'Reconnect'}).count());
+      await cashDetails.getByRole('button',{name:'Close'}).click();
+      state.accounts[0].balanceDate=NOW-400;
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      await section.locator('.finance-overview-net-hero').waitFor();
       await section.getByRole('button',{name:'Spending',exact:true}).click();
       assert.equal(await section.locator('.finance-overview-net-hero').count(),0,'The large Finances hero belongs on Overview only');
       assert.equal(await section.locator('.finance-page-nav-privacy').count(),1,'Compact eye control appears alongside tabs');
