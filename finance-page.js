@@ -483,7 +483,7 @@
     const head=el('div',undefined,card,'finance-page-section-head');
     el('h3','Recent transactions',head);
     action(head,'View all',()=>{view='transactions';paint()},'finance-page-preview-link');
-    const rows=flattenTransactions().filter(row=>Number.isFinite(row.posted)&&row.posted>0).slice(0,5);
+    const rows=window.BTFinanceUnified.transactionFeed(flattenTransactions().map(row=>({...row,accountKind:profile(row.account).kind}))).filter(row=>Number.isFinite(row.posted)&&row.posted>0).slice(0,5);
     if(!rows.length){
       const loading=(currentCombined?.accounts||[]).some(a=>a.transactionSyncStatus==='history_still_loading'||a.transactionSyncStatus==='awaiting_first_sync');
       el('p',loading?'Importing transaction history for 1 bank. Updates automatically.':'Transactions will appear as each bank finishes syncing.',card,'finance-page-hint');return
