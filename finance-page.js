@@ -438,6 +438,7 @@
       b.setAttribute('aria-current',view===id?'page':'false');
     }
     if(compact){
+      navShell.classList.add('has-eye');
       const privacy=action(navShell,'',togglePrivacy,'finance-page-nav-privacy');
       privacy.setAttribute('aria-label',hidden?'Show amounts':'Hide amounts');
       privacy.title=hidden?'Show amounts':'Hide amounts';
