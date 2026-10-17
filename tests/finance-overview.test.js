@@ -143,4 +143,19 @@ assert.equal(loanSummary.expenses,'150.00','categorized real loan payments count
 assert.equal(loanSummary.spending.loan,'150.00','loan category appears in spending summary');
 assert.equal(loanSummary.cashFlow,'-150.00','loan payment is not excluded as a transfer by default');
 
+
+const partialPlaidHistory={
+  lastSuccess:NOW,
+  accounts:[{...account('plaid-checking'),source:'plaid',historyComplete:false}],
+  monitoredAccounts:['plaid-checking'],
+  transactions:{'plaid-checking':{posted:{...row('250.00'),category:'income',confidence:'high',categorySource:'automatic'}}}
+};
+const partiallyCovered=summarize(partialPlaidHistory,{now:NOW});
+assert.equal(partiallyCovered.income,'250.00','observed categorized rows remain visible');
+assert.equal(partiallyCovered.historyIncomplete,true,'Plaid historical readiness remains explicit');
+assert.equal(partiallyCovered.complete,false,'categorized activity is not proof of history completeness');
+assert.equal(partiallyCovered.savingsRate,null,'savings rate must not claim incomplete provider history');
+partialPlaidHistory.accounts[0].historyComplete=true;
+assert.equal(summarize(partialPlaidHistory,{now:NOW}).complete,true,'confirmed Plaid history releases the coverage gate');
+
 console.log('Financial observations passed: strict scope, multi-currency safety, exact cents, availability, coverage, privacy and non-mutation');
