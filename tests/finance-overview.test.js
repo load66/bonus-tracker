@@ -158,4 +158,18 @@ assert.equal(partiallyCovered.savingsRate,null,'savings rate must not claim inco
 partialPlaidHistory.accounts[0].historyComplete=true;
 assert.equal(summarize(partialPlaidHistory,{now:NOW}).complete,true,'confirmed Plaid history releases the coverage gate');
 
+
+const unconfirmedCredit={
+  lastSuccess:NOW,
+  accounts:[account('promotion-checking')],
+  monitoredAccounts:['promotion-checking'],
+  transactions:{'promotion-checking':{credit:{...row('200.00'),category:'bonus',
+    kind:'possible_bonus',confidence:'high',categorySource:'automatic'}}}
+};
+const promotionalSummary=summarize(unconfirmedCredit,{now:NOW});
+assert.equal(promotionalSummary.income,'0.00','unreviewed promotion credits are not verified income');
+assert.equal(promotionalSummary.unreviewed,1,'unconfirmed credits remain in the review queue');
+assert.equal(promotionalSummary.complete,false,'automatic bonus detection cannot certify financial classifications');
+assert.equal(promotionalSummary.candidates,1,'internal bonus evidence remains available');
+
 console.log('Financial observations passed: strict scope, multi-currency safety, exact cents, availability, coverage, privacy and non-mutation');
