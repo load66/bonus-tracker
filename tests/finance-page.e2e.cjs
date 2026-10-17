@@ -136,7 +136,16 @@ const base=()=>({
       assert.equal(await page.evaluate(()=>localStorage.getItem('bt_finance_hide_v2')),'false');
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       const search=section.getByRole('searchbox',{name:'Search transactions'});await search.fill('coffee');
-      assert.equal(await section.locator('.finance-page-transaction').count(),1);await search.fill('');
+      assert.equal(await section.locator('.finance-page-transaction').count(),1);
+      const compactRow=section.locator('.finance-page-transaction-summary').first();
+      assert.equal(await compactRow.locator('.finance-page-transaction-icon').count(),0,'Transaction avatars must not consume merchant space');
+      const compactGeometry=await compactRow.evaluate(row=>({
+        columns:getComputedStyle(row).gridTemplateColumns.trim().split(/\s+/).length,
+        merchantInset:row.querySelector('.finance-page-transaction-copy').getBoundingClientRect().left-row.getBoundingClientRect().left
+      }));
+      assert.equal(compactGeometry.columns,2,'Transaction rows should contain only description and amount');
+      assert.ok(compactGeometry.merchantInset<=12,'Merchant text must align near the left edge');
+      await search.fill('');
       const unknown=section.locator('.finance-page-transaction').filter({hasText:'Unknown'});
       await unknown.getByRole('button').click();
       let modal=page.getByRole('dialog',{name:'Transaction details for Unknown',exact:true});

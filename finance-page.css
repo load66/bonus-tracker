@@ -184,7 +184,7 @@
 .finance-page-transaction-group{margin:0}
 .finance-page-transaction-date{margin:0;padding:18px 1px 8px;color:#aebed2;font-size:12px;font-weight:650;letter-spacing:.01em}
 .finance-page-transaction{padding:0;border:0;border-radius:0;background:transparent;border-bottom:1px solid #26384c}
-.finance-page-transaction-summary{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:11px;width:100%;min-height:72px;padding:9px 1px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
+.finance-page-transaction-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:11px;width:100%;min-height:72px;padding:9px 1px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
 .finance-page-transaction-summary:hover{background:#122036}
 .finance-page-transaction-summary:focus-visible{outline:2px solid #9ac8ff;outline-offset:2px;border-radius:10px}
 .finance-page-transaction-icon{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:#33445a;color:#d7e3f0;font-size:16px;font-weight:750}
@@ -207,7 +207,7 @@
   .finance-page-hero-compact{padding:9px 11px}
   .finance-page-transactions-card{margin-left:-2px;margin-right:-2px;padding:12px 10px;border-left:0;border-right:0;border-radius:0}
   .finance-page-filter-button{padding:0 12px}
-  .finance-page-transaction-summary{grid-template-columns:38px minmax(0,1fr) auto;gap:9px;min-height:68px}
+  .finance-page-transaction-summary{grid-template-columns:minmax(0,1fr) auto;gap:9px;min-height:68px}
   .finance-page-transaction-icon{width:36px;height:36px}
   .finance-page-transaction-copy strong{font-size:13px}
   .finance-page-transaction-value{min-width:70px}

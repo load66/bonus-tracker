@@ -31,4 +31,8 @@ assert.equal(F.summarize(U.safeForSummary(U.combine({simplefin:removed})),{now})
 assert.equal(Object.keys(removed.transactions[A]).length,2);
 const fs=require('node:fs');const page=fs.readFileSync(require('node:path').join(__dirname,'../finance-page.js'),'utf8');
 for(const phrase of ['Not assigned — review manually','Import official T&C','verified terms'])assert.ok(!page.includes(phrase));
+assert.ok(!page.includes('function iconFor(row)'),'Transaction placeholder icon generator is removed');
+assert.ok(!page.includes("el('span',iconFor(row)"),'Transaction rows omit placeholder icons');
+const financeCss=fs.readFileSync(require('node:path').join(__dirname,'../finance-page.css'),'utf8');
+assert.ok(financeCss.includes('.finance-page-transaction-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;'),'Merchant and amount use a two-column compact layout');
 console.log('Finance account management: duplicate confirmation, nonmutation, removal history, include switches, hidden accounts and copy passed');
