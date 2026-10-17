@@ -14,6 +14,10 @@
     entertainment:'Entertainment',fees:'Fees',taxes:'Taxes',travel:'Travel',
     subscription:'Subscription',transfer:'Transfer',refund:'Refund',bonus:'Bank bonus',other:'Other'
   };
+  // Keep 'bonus' as a persisted category for canonical tracker/evidence logic;
+  // Finances displays it as income without exposing a bonus-only UI control.
+  const FINANCE_CATEGORIES=Object.fromEntries(Object.entries(CATEGORIES).filter(([key])=>key!=='bonus'));
+  const financeCategory=key=>key==='bonus'?'Income':(FINANCE_CATEGORIES[key]||'Needs review');
   let currentRoot=null,sequence=0,hidden=false,data=null,otherData=null,busy=false,view='overview',period=90;
   let transactionSearch='',transactionAccount='',transactionCategory='',transactionStatus='',transactionVisibleLimit=100,expandedTransaction='';
   let accountSearch='',accountType='',saveNotice='',accountDraftProfiles={},currentCombined=null;
@@ -259,7 +263,7 @@
       if(Object.keys(currentCombined?.sourceErrors||{}).length)el('p','One provider needs attention. Account data may be incomplete.',box,'finance-page-warning');
     }
     const nav=el('nav',undefined,host,'finance-page-nav');nav.setAttribute('aria-label','Finance sections');
-    for(const [id,label] of [['overview','Overview'],['transactions','Transactions'],['accounts','Accounts'],['bonuses','Bonuses']]){
+    for(const [id,label] of [['overview','Overview'],['transactions','Transactions'],['accounts','Accounts']]){
       const b=action(nav,label,()=>{view=id;paint()},'finance-page-nav-button'+(view===id?' is-active':''));
       b.setAttribute('aria-current',view===id?'page':'false');
     }
@@ -365,14 +369,14 @@
     }
     const attention=el('section',undefined,more,'finance-page-card');el('h3','Needs review',attention);
     const cutoff=Math.floor(Date.now()/1000)-period*86400;
-    const signals=flattenTransactions().filter(r=>!r.pending&&r.posted>=cutoff&&r.posted<=Math.floor(Date.now()/1000)+300&&Array.isArray(r.signals)&&r.signals.some(x=>['possible_direct_deposit','possible_bonus','possible_reversal','possible_fee','possible_recurring'].includes(x)));
+    const signals=flattenTransactions().filter(r=>!r.pending&&r.posted>=cutoff&&r.posted<=Math.floor(Date.now()/1000)+300&&Array.isArray(r.signals)&&r.signals.some(x=>['possible_direct_deposit','possible_reversal','possible_fee','possible_recurring'].includes(x)));
     if(!signals.length)el('p','No flagged transactions in the available data.',attention);
     else for(const row of signals.slice(0,8)){
       const line=el('article',undefined,attention,'finance-page-review-row'),copy=el('div',undefined,line);
       el('strong',row.merchant||row.description,copy);el('small',row.account.bank+' · '+date(row.posted)+' · '+row.signals.map(signalLabel).join(' · '),copy);
       el('b',amount(row.amount,row.account.currency),line);
     }
-    el('p','A flagged transaction is not confirmation of bonus eligibility.',attention,'finance-page-hint');
+    el('p','Review flagged activity against your bank statement.',attention,'finance-page-hint');
   }
   function signalLabel(value){
     return ({possible_direct_deposit:'Possible direct deposit',possible_bonus:'Possible bonus',possible_reversal:'Possible reversal',
@@ -393,7 +397,7 @@
     const filterFields=el('div',undefined,filterPanel,'finance-page-filter-fields');
     const accountValues={'':'All accounts'};for(const a of sortedAccounts())accountValues[a.key]=[a.bank,a.name,a.sourceLabel].filter(Boolean).join(' · ');
     select(filterFields,'Account',accountValues,transactionAccount,value=>{transactionAccount=value;transactionVisibleLimit=100;renderRows()});
-    select(filterFields,'Category',{'':'All categories',...CATEGORIES},transactionCategory,value=>{transactionCategory=value;transactionVisibleLimit=100;renderRows()});
+    select(filterFields,'Category',{'':'All categories',...FINANCE_CATEGORIES},transactionCategory,value=>{transactionCategory=value;transactionVisibleLimit=100;renderRows()});
     select(filterFields,'Status',{'':'Posted and pending',posted:'Posted',pending:'Pending'},transactionStatus,value=>{transactionStatus=value;transactionVisibleLimit=100;renderRows()});
     const range=el('div',undefined,filterFields,'finance-page-filter-range');el('span','History',range);periodControl(range);
     const list=el('div',undefined,card,'finance-page-transactions');
@@ -403,7 +407,7 @@
     function iconFor(row){
       if((row.signals||[]).some(s=>s==='matched_internal_transfer'||s==='possible_transfer')||row.category==='transfer')return '↔';
       if(row.category==='income'||row.category==='bonus'||Number(row.amount)>0)return '$';
-      return (CATEGORIES[row.category]||'Transaction').slice(0,1).toUpperCase();
+      return financeCategory(row.category).slice(0,1).toUpperCase();
     }
     function shownAmount(row){
       const formatted=amount(row.amount,row.account.currency);
@@ -433,7 +437,7 @@
         el('span',iconFor(row),top,'finance-page-transaction-icon').setAttribute('aria-hidden','true');
         const copy=el('span',undefined,top,'finance-page-transaction-copy');
         el('strong',row.merchant||row.description||'Transaction',copy);
-        el('small',[(CATEGORIES[row.category]||'Needs review'),row.account.name||row.account.bank].filter(Boolean).join(' · '),copy);
+        el('small',[financeCategory(row.category),row.account.name||row.account.bank].filter(Boolean).join(' · '),copy);
         const value=el('span',undefined,top,'finance-page-transaction-value');
         el('b',shownAmount(row),value,Number(row.amount)>0?'is-credit':'');
         if(row.pending)el('small','Pending',value);
@@ -443,8 +447,9 @@
         el('p',row.description||'No additional description supplied.',detail,'finance-page-description');
         el('small',[row.account.bank,row.account.name,row.account.sourceLabel,date(row.posted),row.pending?'Pending':'Posted'].filter(Boolean).join(' · '),detail,'finance-page-detail-meta');
         if(row.stalePending)el('p','Pending status has not been observed recently. Confirm it with the institution.',detail,'finance-page-warning');
-        if((row.signals||[]).length){const badges=el('div',undefined,detail,'finance-page-badges');for(const signal of row.signals)el('span',signalLabel(signal),badges);}
-        const category=select(detail,'Category',CATEGORIES,row.category,value=>change(async()=>{
+        const visibleSignals=(row.signals||[]).filter(signal=>signal!=='possible_bonus');
+        if(visibleSignals.length){const badges=el('div',undefined,detail,'finance-page-badges');for(const signal of visibleSignals)el('span',signalLabel(signal),badges);}
+        const category=select(detail,'Category',FINANCE_CATEGORIES,row.category==='bonus'?'income':row.category,value=>change(async()=>{
           const snapshot=await request('/transaction-review',{method:'PUT',body:JSON.stringify({account:row.account.rawKey,transaction:row.id,category:value})},row.source);
           return {financeSource:row.source,snapshot};
         }));
@@ -566,7 +571,7 @@
       const detail=el('div',undefined,settings,'finance-page-account-detail');
       if(!(Number.isFinite(account.balanceDate)&&account.balanceDate>0))el('small','Balance time not provided',detail,'finance-page-hint');
       const fields=el('div',undefined,settings,'finance-page-account-fields');
-      el('small','Transactions sync automatically when available. Bonus payouts still require verification.',fields,'finance-page-hint');
+      el('small','Transactions sync automatically when available.',fields,'finance-page-hint');
       el('small','Account type: '+(TYPES[p.kind]||'Unclassified'),fields,'finance-page-hint');
       const typeFields=el('div',undefined,fields,'finance-page-correction');
       function editor(){select(typeFields,'Correct account type',TYPES,p.kind,value=>{p.kind=value;dirtyAccounts.add(account.key);updateSave()},'finance-page-select')}
@@ -606,7 +611,9 @@
   }
   function paint(){
     const host=currentRoot;if(!host||!host.isConnected)return;
-    if(view!=='bonuses')window.BTBonusEvidence?.dispose();
+    // An old in-memory Bonuses selection falls back to Finance Overview.
+    if(view==='bonuses')view='overview';
+    window.BTBonusEvidence?.dispose();
     host.replaceChildren();
     currentCombined=unified();
     const notice=el('p',saveNotice,host,'finance-page-notice');notice.setAttribute('role',saveNotice?'alert':'status');
@@ -627,14 +634,7 @@
     if(monitoringNotice){const banner=el('p',monitoringNotice,host,'finance-page-activity-result');banner.setAttribute('role','status');}
     if(activityNotice){const banner=el('p',activityNotice,host,'finance-page-activity-result');banner.setAttribute('role','status');}
     if(summaryState.incompleteProviders)el('p','Financial activity is partial: one linked provider has not completed a recent sync.',host,'finance-page-caution');
-    if(view==='bonuses'){
-      const sourceSelector=el('section',undefined,host,'finance-page-connection');
-      const sourceSelect=select(sourceSelector,'Review connection',{
-        simplefin:'SimpleFIN',plaid:'Plaid'},provider,switchSource);
-      sourceSelect.setAttribute('aria-label','Bank activity connection source');
-      const review=el('section',undefined,host,'finance-page-bonus-host');
-      if(!window.BTBonusEvidence?.mount(review,provider))statusMessage(review,'Bonus activity not ready','Reload Finances to review linked bonus activity.');
-    }else if(view==='transactions')transactions(host);
+    if(view==='transactions')transactions(host);
     else if(view==='accounts')accounts(host);
     else overview(host,summary);
   }

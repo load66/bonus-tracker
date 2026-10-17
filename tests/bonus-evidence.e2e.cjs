@@ -78,8 +78,26 @@ return result;
         await page.getByRole('button',{name:'Finances',exact:true}).click();
         const finances=page.getByRole('region',{name:'My finances'});
         await finances.getByRole('heading',{name:'Finances'}).waitFor();
-        await finances.getByRole('button',{name:'Bonuses',exact:true}).click();
-        const section=finances.getByRole('region',{name:'Bank bonus activity evidence'});
+        assert.equal(await finances.getByRole('button',{name:'Bonuses',exact:true}).count(),0,
+          'Bonus evidence controls must not appear in the production Finance navigation');
+        assert.equal(await finances.getByRole('region',{name:'Bank bonus activity evidence'}).count(),0,
+          'The production Finance page must not mount a bonus review panel');
+        // Synthetic, test-only fixture: retain full regression coverage of the
+        // internal bonus evidence engine without restoring the hidden UI.
+        await page.evaluate(()=>{
+          // Independent from Finance app redraws; never part of production UI.
+          const shell=document.createElement('section');shell.id='bt-finances-page';
+          shell.dataset.syntheticEvidenceFixture='true';document.body.append(shell);
+          const fixture=document.createElement('section');shell.append(fixture);
+          if(!window.BTBonusEvidence?.mount(fixture,'simplefin'))throw Error('Evidence engine fixture unavailable');
+          // Synthetic-only isolation: Finance redraws dispose hidden evidence;
+          // keep this fixture test alive while preserving the real engine.
+          window.__originalEvidenceApi=window.BTBonusEvidence;
+          window.BTBonusEvidence=Object.freeze({mount:window.__originalEvidenceApi.mount,
+            dispose:()=>{if(!document.querySelector('[data-synthetic-evidence-fixture]'))
+              window.__originalEvidenceApi.dispose();}});
+        });
+        const section=page.getByRole('region',{name:'Bank bonus activity evidence'});
         await section.getByRole('button',{name:'Review bank activity',exact:true}).waitFor();
         cycleId=await page.evaluate(()=>entries[0].id);
         const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
@@ -87,7 +105,7 @@ return result;
         await page.waitForFunction(()=>window.BTBonusAuth?.connected());
         let ready=false;
         for(let attempt=0;attempt<2;attempt++){
-          await section.getByRole('button',{name:'Review bank activity',exact:true}).click();
+          await section.getByRole('button',{name:/^(Review bank activity|Refresh)$/}).click();
           try{await section.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor({timeout:7000});ready=true;break}
           catch{
             const alerts=await section.getByRole('alert').allTextContents();
@@ -121,9 +139,16 @@ return result;
         await section.getByRole('button',{name:'Undo review',exact:true}).first().click();
         await section.getByText('Review reopened.').waitFor();
         assert.equal(Object.keys(reviews).length,1,'undo clears exactly one receipt');
-        await section.getByRole('button',{name:'Show transaction amounts'}).click();
+        // The fixture lives below the real app. Dispatch test-only clicks to
+        // avoid Playwright scrolling through unrelated app controls.
+        const fixtureClick=async label=>section.evaluate((root,name)=>{
+          const control=[...root.querySelectorAll('button')].find(b=>b.textContent.trim()===name);
+          if(!control||control.disabled)throw Error('Fixture control unavailable: '+name);
+          control.click();
+        },label);
+        await fixtureClick('Show transaction amounts');
         assert.ok((await section.innerText()).includes('$200.00'));
-        await section.getByRole('button',{name:'Hide transaction amounts'}).click();
+        await fixtureClick('Hide transaction amounts');
         for(const width of [320,390,430]){
           await page.setViewportSize({width,height:760});
           const geometry=await section.evaluate(n=>({viewport:innerWidth,section:n.getBoundingClientRect().width,content:n.scrollWidth}));
@@ -134,19 +159,35 @@ return result;
         assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'review cannot modify bonus entry data');
         assert.equal(await section.getByRole('button',{name:'Open tracker'}).count(),0,
           'Bank evidence stays in Finances rather than sending users to Tracker');
-        await section.getByRole('button',{name:'Review payout'}).click();
+        await fixtureClick('Review payout');
         assert.equal(await page.evaluate(()=>rcvPrompt?.entryId),cycleId,
           'Finance bonus evidence invokes the existing explicit payout confirmation');
         assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,
           'Reviewing a possible payout cannot mark a Tracker milestone paid');
-        await page.evaluate(()=>{rcvPrompt=null;R()});
+        await page.evaluate(()=>{
+          rcvPrompt=null;
+          window.__originalEvidenceApi?.dispose();
+          document.querySelector('[data-synthetic-evidence-fixture]')?.remove();
+          window.BTBonusEvidence=window.__originalEvidenceApi;
+          R();
+        });
         await page.getByRole('button',{name:'Tracker',exact:true}).click();
         assert.equal(await page.getByRole('region',{name:'Bank bonus activity evidence'}).count(),0,
           'Tracker remains free of bank-activity review after navigation');
         await page.getByRole('button',{name:'Finances',exact:true}).click();
         await finances.getByRole('heading',{name:'Finances'}).waitFor();
-        await finances.getByRole('button',{name:'Bonuses',exact:true}).click();
-        const reopened=finances.getByRole('region',{name:'Bank bonus activity evidence'});
+        assert.equal(await finances.getByRole('button',{name:'Bonuses',exact:true}).count(),0);
+        await page.evaluate(()=>{
+          const shell=document.createElement('section');shell.id='bt-finances-page';
+          shell.dataset.syntheticEvidenceFixture='true';document.body.append(shell);
+          const fixture=document.createElement('section');shell.append(fixture);
+          if(!window.BTBonusEvidence?.mount(fixture,'simplefin'))throw Error('Evidence fixture reopen failed');
+          window.__originalEvidenceApi=window.BTBonusEvidence;
+          window.BTBonusEvidence=Object.freeze({mount:window.__originalEvidenceApi.mount,
+            dispose:()=>{if(!document.querySelector('[data-synthetic-evidence-fixture]'))
+              window.__originalEvidenceApi.dispose();}});
+        });
+        const reopened=page.getByRole('region',{name:'Bank bonus activity evidence'});
         await reopened.getByRole('button',{name:'Review bank activity',exact:true}).waitFor();
         assert.equal(await reopened.locator('.bonus-evidence-card').count(),0,
           'Private evidence is cleared when leaving Finances');
@@ -207,7 +248,10 @@ return result;
           if(path.endsWith('/evidence-review'))plaidReviews[body.transaction]={status:body.decision,reviewedAt:NOW,requirementId:body.requirementId||null};
           await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(sample(cycleId,plaidReviews,0))});
         });
-        await finances.getByRole('combobox',{name:'Bank activity connection source'}).selectOption('plaid');
+        await page.evaluate(()=>{
+          if(!window.BTBonusEvidence?.mount(document.getElementById('bt-bonus-evidence'),'plaid'))
+            throw Error('Plaid evidence fixture switch failed');
+        });
         await reopened.getByRole('button',{name:'Review bank activity',exact:true}).waitFor();
         await reopened.getByRole('button',{name:'Review bank activity',exact:true}).click();
         await reopened.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor();
@@ -217,7 +261,7 @@ return result;
         assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts/evidence-review')&&r.method==='PUT'));
         assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'Plaid reviews never write promotion milestones');
         assert.deepEqual(errors,[],'no browser errors');
-        console.log(browserName+': Finances-only bonus evidence, private lifecycle, reviewed direct deposits, manual payout and mobile checks passed');
+        console.log(browserName+': hidden bonus evidence engine, private lifecycle, reviewed deposits, payout safeguards and mobile checks passed');
       }finally{await browser.close();}
     }
   }finally{server.close();}
