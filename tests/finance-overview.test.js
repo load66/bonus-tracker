@@ -164,7 +164,7 @@ const partialExcluded=structuredClone(classified);
 partialExcluded.accounts[1].balanceDate=NOW;
 partialExcluded.transactions.cash.expense.excludedFromTotals=true;
 const partialExcludedResult=summarize(partialExcluded,{now:NOW});
-assert.equal(partialExcludedResult.expenses,'20.00','excluded purchase is absent from spending');
+assert.equal(partialExcludedResult.expenses,'0.00','excluded purchase is absent from spending');
 assert.equal(partialExcludedResult.income,'1000.00','exclusion does not affect unrelated income');
 assert.equal(summarize(partialExcluded,{now:NOW,days:731}).days,731,'24-month retention is allowed');
 
