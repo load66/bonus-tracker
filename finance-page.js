@@ -2184,6 +2184,39 @@
       paint();loadOtherSource(rev);loadSettings(rev);
     }
   }
+  let passiveReadAt=0,passiveBusy=false;
+  async function passiveFinanceRefresh(){
+    // Local R2 snapshot polling only: never calls SimpleFIN/Plaid providers.
+    // Preserve owner drafts and review dialogs; do not reset the workspace.
+    if(passiveBusy||busy||dirtyAccounts.size||
+       !currentRoot?.isConnected||!data||!window.BTBonusAuth?.connected()||
+       document.visibilityState==='hidden'||Date.now()-passiveReadAt<60000||
+       document.querySelector('dialog.finance-modal[open]'))return;
+    passiveReadAt=Date.now();passiveBusy=true;
+    const rev=sequence;
+    try{
+      const source=provider;
+      const next=await request('',{},source);
+      const other=source==='plaid'?'simplefin':'plaid';
+      const nextOther=await request('',{},other).catch(()=>null);
+      if(rev!==sequence||!currentRoot?.isConnected)return;
+      const previousKeys=new Set((currentCombined?.accounts||[]).map(a=>a.key));
+      applySource(source,next);
+      if(nextOther)otherData={provider:other,snapshot:nextOther};
+      const nowKeys=(window.BTFinanceUnified?.combine({
+        simplefin:sourceWithArchive('simplefin'),plaid:sourceWithArchive('plaid')},financePrefs)?.accounts||[]);
+      const added=nowKeys.filter(a=>!previousKeys.has(a.key)).length;
+      if(added)connectionNotice=added+' new bank account'+(added===1?'':'s')+
+        ' automatically connected. Transactions will appear when available.';
+      paint();
+    }catch(_error){/* Preserve prior verified account snapshot and any owner edits. */}
+    finally{passiveBusy=false;}
+  }
+  window.addEventListener('focus',passiveFinanceRefresh);
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='visible')passiveFinanceRefresh();
+  });
+  setInterval(passiveFinanceRefresh,60000);
   function refresh(){
     window.BTBonusEvidence?.dispose();currentRoot=null;data=null;otherData=null;sessionIdentity=null;
     accountDraftProfiles={};dirtyAccounts.clear();
