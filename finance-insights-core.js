@@ -20,18 +20,58 @@
   function monthKey(ms){const d=new Date(ms);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
   function monthShift(value,offset){const d=new Date(value+'-01T12:00:00');d.setMonth(d.getMonth()+offset);return monthKey(d.getTime())}
   const noSpend=new Set(['transfer','verification','refund']);
-  const issuer=/(?:capital\s*one|chase|american\s*express|amex|discover|citi(?:bank)?|robinhood|fidelity|schwab|vanguard|e\s*\*?\s*trade)/i;
-  const cardPayment=/(?:\b(?:pmt|payment|autopay|epay|crcardpmt|ccpmt)\b|credit\s*card\s*payment)/i;
-  const investing=/(?:\brobinhood\b|\bfidelity\b|\bschwab\b|\bvanguard\b|\bbrokerage\b|\binvestment\b|\b401k\b|\broth\s*ira\b|\bira\b)/i;
-  const contribute=/(?:\b(?:contribution|contribute|deposit|funding|transfer)\b)/i;
+  const financialDestination=/\b(?:bank|fcu|credit\s+union|savings?|checking|brokerage|invest(?:ing|ment)|ira|citibank|citi\s*bank|u\.?\s*s\.?\s*bank|capital\s+one|chase|wells\s+fargo|bofa|bank\s+of\s+america|amex|american\s+express|discover|synchrony|lafayette\s+fcu|navy\s+federal|paypal|pay\s+pal|venmo|cash\s*app|zelle|x\s*money|one\s*pay|onepay|robinhood|fidelity|schwab|vanguard)\b/i;
+  const investmentDestination=/\b(?:brokerage|invest(?:ing|ment)|ira|robinhood|fidelity|schwab|vanguard)\b/i;
+  const issuer=/\b(?:capital\s+one|chase|american\s+express|amex|discover|citi(?:bank)?|u\.?\s*s\.?\s*bank|robinhood|fidelity|schwab|vanguard|e\s*\*?\s*trade)\b/i;
+  const cardPayment=/\b(?:pmt|payment|autopay|epay|crcardpmt|ccpmt)\b/i;
+  const bareIssuer=/^\s*(?:capital\s+one|u\.?\s*s\.?\s*bank|citibank|citi\s*bank|amex|american\s+express|discover)\s*$/i;
+  const investing=/\b(?:robinhood|fidelity|schwab|vanguard|brokerage|investment|401k|roth\s*ira|ira)\b/i;
+  const contribute=/\b(?:contribution|contribute|deposit|funding|transfer)\b/i;
+  const providerSignals=['card_payment','investment_transfer','matched_internal_transfer'];
+  const direct=/^\s*(to|from)\s+(.+)$/i;
+  function movementKind(row){
+    if(['user','user_rule'].includes(row.categorySource))return noSpend.has(row.category)?row.category:null;
+    const value=cents(row.amount),text=String(row.description||row.merchant||'').trim(),match=direct.exec(text);
+    if(row.category==='transfer'||(row.signals||[]).includes('matched_internal_transfer')){
+      if((row.signals||[]).includes('card_payment'))return 'card_payment';
+      if((row.signals||[]).includes('investment_transfer'))return 'investment_transfer';
+      return 'transfer';
+    }
+    if(row.category==='verification')return 'verification';
+    if(match&&financialDestination.test(match[2])){
+      if(match[1].toLowerCase()==='to'&&investmentDestination.test(match[2]))return 'investment_transfer';
+      return 'transfer';
+    }
+    if(value!==null&&value<0n&&(bareIssuer.test(text)||(issuer.test(text)&&cardPayment.test(text))))return 'card_payment';
+    if(investing.test(text)&&contribute.test(text))return 'investment_transfer';
+    return null;
+  }
+  function possibleTransfer(row,value){
+    if(['user','user_rule'].includes(row.categorySource)||value===null||value>=0n||
+       row.category!=='unreviewed')return false;
+    if(movementKind(row))return false;
+    const text=String(row.description||row.merchant||'').trim();
+    return (direct.test(text)||financialDestination.test(text))&&(value<=-100000n||value%100n===0n);
+  }
+  const knownMerchant=[
+    ['subscription',/\b(?:apple\s*(?:\.com\s*\/\s*bill|com\s*\/\s*bill|icloud|i\s*cloud)|icloud|netflix|spotify|youtube premium|hulu)\b/i],
+    ['utilities',/\b(?:t[ -]?mobile|verizon|at\s*&\s*t|att wireless)\b/i],
+    ['groceries',/\b(?:walmart|costco|kroger|aldi|whole foods|safeway|trader joe|sam.?s club|grocery|supermarket)\b/i],
+    ['dining',/\b(?:starbucks|mcdonald|chipotle|doordash|restaurant|coffee|panera|taco bell)\b/i],
+    ['transportation',/\b(?:shell|exxon|chevron|quiktrip|casey.?s|gas station|fuel)\b/i],
+    ['shopping',/\b(?:apple|amazon|target|best buy|ebay|etsy)\b/i]
+  ];
   function spendingCategory(row,value){
     if(row.excludedFromTotals===true||row.pending===true||value===null||value>=0n)return null;
+    if(movementKind(row)||possibleTransfer(row,value))return null;
     const category=String(row.category||'unreviewed').toLowerCase();
-    const description=String(row.description||'')+' '+String(row.merchant||'');
-    if(noSpend.has(category)||row.kind==='card_payment'||row.kind==='investment_contribution'||
-       (row.signals||[]).includes('matched_internal_transfer')||
-       (issuer.test(description)&&cardPayment.test(description))||
-       (investing.test(description)&&contribute.test(description)))return null;
+    if(noSpend.has(category)||row.kind==='card_payment'||row.kind==='investment_contribution')return null;
+    if(['user','user_rule'].includes(row.categorySource))return SPEND.has(category)?category:'unreviewed';
+    const text=String(row.description||row.merchant||'');
+    // Deterministic merchant lookups cover stale automatic rows awaiting next sync.
+    if(category==='unreviewed'){
+      for(const [name,regex] of knownMerchant)if(regex.test(text))return name;
+    }
     return SPEND.has(category)?category:'unreviewed';
   }
   const seenMonth=(rows,month)=>rows.some(row=>!row.pending&&!row.excludedFromTotals&&
@@ -39,7 +79,7 @@
   const monthDays=month=>{const [year,number]=month.split('-').map(Number);return new Date(year,number,0).getDate()};
   function spent(rows,month){
     const amounts={},byDay={},incomeByDay={},counts={},merchantGroups=new Map();
-    const purchases=new Map(),refunds=[];
+    const purchases=new Map(),refunds=[],possibleTransfers=[];
     let total=0n,income=0n,uncategorized=0,records=0,refundOffset=0n;
     const valid=(rows||[]).filter(row=>row&&!row.pending&&!row.excludedFromTotals&&
       Number.isFinite(row.posted)&&monthKey(row.posted*1000)===month&&cents(row.amount)!==null);
@@ -50,7 +90,7 @@
         if(row.category==='refund')refunds.push({row,value:v,day});
         continue;
       }
-      if(!category)continue;
+      if(!category){if(possibleTransfer(row,v))possibleTransfers.push(row);continue}
       const expense=-v;
       total+=expense;records++;amounts[category]=(amounts[category]||0n)+expense;
       byDay[day]=(byDay[day]||0n)+expense;counts[category]=(counts[category]||0)+1;
@@ -75,7 +115,7 @@
     const merchants=[...merchantGroups.values()].filter(g=>g.value>0n)
       .map(g=>({merchant:g.merchant,amount:fmt(g.value),count:g.count,key:merchant(g.rows[0])}))
       .sort((a,b)=>Number(b.amount)-Number(a.amount));
-    return {month,hasData:valid.length>0,total:fmt(total),income:fmt(income),uncategorized,records,
+    return {month,hasData:valid.length>0,total:fmt(total),income:fmt(income),uncategorized,records,possibleTransfers,
       refundOffsets:fmt(refundOffset),categories,merchants,
       byDay:Object.fromEntries(Object.entries(byDay).map(([key,value])=>[key,fmt(value)])),
       incomeByDay:Object.fromEntries(Object.entries(incomeByDay).map(([key,value])=>[key,fmt(value)]))};
@@ -138,5 +178,5 @@
   function upcoming(items,now=Date.now(),days=14){
     return (items||[]).filter(x=>x.direction==='expense'&&x.status!=='possibly_canceled'&&x.nextAt*1000>=now-DAY&&x.nextAt*1000<=now+days*DAY).slice(0,5);
   }
-  return Object.freeze({spent,history,budget,spendingCategory,seenMonth,monthDays,merchant,recurring,upcoming,monthKey,monthShift,cents,fmt,SPEND});
+  return Object.freeze({spent,history,budget,spendingCategory,movementKind,possibleTransfer,seenMonth,monthDays,merchant,recurring,upcoming,monthKey,monthShift,cents,fmt,SPEND});
 });
