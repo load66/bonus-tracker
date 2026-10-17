@@ -28,62 +28,45 @@
     },delay);
   }
   async function checkAddedBank(){
-    if(!addFlowPending||!panel||addFlowBusy||addFlowBudgetStopped)return;
+    if(!addFlowPending||!panel||addFlowBusy)return;
     clearAddFlowTimers();
-    const currentEpoch=addFlowEpoch;
-    addFlowBusy=true;addFlowMessage='Looking for your new bank…';paint();
+    const epoch=addFlowEpoch;
+    addFlowBusy=true;
+    addFlowMessage='Checking connected banks…';
+    paint();
     try{
-      const reply=await request('/discover-now',{method:'POST'});
-      if(!addFlowPending||currentEpoch!==addFlowEpoch)return;
+      // This reads encrypted saved state only. The server performs provider
+      // discovery and transaction ingestion on its own hourly schedule.
+      const reply=await request();
+      if(!addFlowPending||epoch!==addFlowEpoch)return;
       data=reply;
-      addFlowNextRetryAt=reply.nextRetryAt||null;
-      if(reply.found&&Number(reply.newAccounts)>0&&Array.isArray(reply.discoveredAccounts)&&reply.discoveredAccounts.length){
-        addFlowFound=reply.discoveredAccounts;
-        // A previous account search must not hide a newly linked institution.
+      addFlowNextRetryAt=reply.nextAutoRefreshAt||null;
+      const found=Array.isArray(reply.recentDiscoveredAccounts)?
+        reply.recentDiscoveredAccounts:[];
+      addFlowFound=found;
+      if(found.length){
         accountFilter='';
-        addFlowDraft=new Set(addFlowFound.map(a=>a.key));
-        addFlowMessage='Found '+(reply.bank||reply.banks?.join(', ')||'bank')+' · '+addFlowFound.length+' account'+(addFlowFound.length===1?'':'s');
-        changed=true;window.btRefreshFinancesPage?.();
+        addFlowMessage='Connected '+found.length+
+          ' new account'+(found.length===1?'':'s')+
+          ' · Automatic transaction syncing is enabled.';
+        changed=true;
+        window.btRefreshFinancesPage?.();
+      }else if(reply.autoRefreshStatus==='limit'){
+        addFlowBudgetStopped=true;
+        addFlowMessage='Automatic bank updates are waiting for the daily request limit to reset.';
+        clearAddFlowTimers();
       }else{
-        addFlowMessage='SimpleFIN is still connecting your bank — we’ll check again.';
+        addFlowMessage='Your bank is connecting. Accounts and available transactions import automatically.'+
+          (addFlowNextRetryAt?' Next check: '+stamp(addFlowNextRetryAt)+'.':'');
         addBankRetry();
       }
     }catch(error){
-      if(!addFlowPending||currentEpoch!==addFlowEpoch)return;
-      addFlowMessage=String(error.message||'Discovery could not be verified.');
-      if(/daily limit reached|429/i.test(addFlowMessage)){
-        const reset=/resume at (\d{9,11})/.exec(addFlowMessage);
-        if(reset){addFlowNextRetryAt=Number(reset[1]);addFlowMessage='Daily limit reached. Updates resume at '+new Date(addFlowNextRetryAt*1000).toLocaleString()+'.';}
-        addFlowBudgetStopped=true;clearAddFlowTimers();
-      }else addBankRetry();
-    }finally{addFlowBusy=false;paint();}
-  }
-  async function saveAddedBank(){
-    if(!addFlowFound.length||addFlowBusy)return;
-    const original=Array.isArray(data?.monitoredAccounts)?data.monitoredAccounts:[];
-    const wanted=[...new Set([...original.filter(key=>!addFlowFound.some(a=>a.key===key)),
-      ...[...addFlowDraft]])];
-    addFlowBusy=true;addFlowMessage='Saving your new account settings…';paint();
-    try{
-      data=await request('/monitoring',{method:'PUT',body:JSON.stringify({accounts:wanted})});
-      addFlowMessage='Syncing your first transactions…';paint();
-      const on=[...addFlowDraft];
-      if(on.length){
-        const result=await request('/first-sync',{method:'POST',body:JSON.stringify({accounts:on})});
-        data=result;
-        addFlowMessage=result.syncStatus==='synced'?'First transactions synced.':
-          result.syncStatus==='waiting'&&result.reason==='budget_exhausted'?
-            'Waiting for first update. Daily request limit reached.':
-          result.syncStatus==='waiting'?'Waiting for first update. Bank transaction history is not ready.':
-          'Account settings saved. No new transactions were requested.';
-        if(result.syncStatus==='waiting'&&result.nextRetryAt)
-          addFlowMessage+=' Updates resume at '+new Date(result.nextRetryAt*1000).toLocaleString()+'.';
-      }else addFlowMessage='Settings saved. Sync is off for the new accounts.';
-      addFlowPending=false;addFlowFound=[];addFlowDraft=new Set();clearAddFlowTimers();changed=true;window.btRefreshFinancesPage?.();
-    }catch(error){
-      // Keep draft choices across network/save errors; do not report success.
-      addFlowMessage='Save not confirmed: '+String(error.message||'Check your connection.');
-    }finally{addFlowBusy=false;paint();}
+      if(!addFlowPending||epoch!==addFlowEpoch)return;
+      addFlowMessage='Bank status unavailable. Automatic server syncing continues.';
+      addBankRetry();
+    }finally{
+      addFlowBusy=false;paint();
+    }
   }
   function onReturnToApp(){
     if(!addFlowPending||!panel||addFlowFound.length||addFlowBudgetStopped||
@@ -101,7 +84,10 @@
     else if(document.visibilityState==='visible')onReturnToApp();
   });
   window.addEventListener('blur',()=>{if(addFlowPending)addFlowReturnSeen=false});
-  window.addEventListener('focus',onReturnToApp);
+  window.addEventListener('focus',()=>{
+    if(addFlowPending)onReturnToApp();
+    else if(window.BTBonusAuth?.connected())window.btRefreshFinancesPage?.();
+  });
   const el=(tag,text,parent)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(parent)parent.append(n);return n;};
   const stamp=t=>typeof t==='number'&&t>0?new Date(t*1000).toLocaleString():'Not synced';
   const money=(a,c)=>{if(a===null||a===undefined||a===''||!Number.isFinite(Number(a)))return 'Unavailable';if(!c)return String(a)+' (currency unknown)';try{return new Intl.NumberFormat(undefined,{style:'currency',currency:c}).format(Number(a));}catch{return String(a)+' '+String(c);}};
@@ -152,20 +138,6 @@
     a.className='bank-connect-link'+(primary?' bank-connect-link-primary':'');
     return a;
   }
-  async function discoverAccounts(){
-    if(!data?.connected){view='add-bank';paint();message('Connect SimpleFIN first.');return;}
-    const old=new Set((data.accounts||[]).map(a=>a.key));
-    data=await request('/discover',{method:'POST'});
-    const added=(data.accounts||[]).filter(a=>!old.has(a.key)).length;
-    if(added)accountFilter='';
-    const due=data.nextDiscoveryAt&&data.nextDiscoveryAt*1000>Date.now();
-    wizardResult=added?'Found '+added+' new account'+(added===1?'':'s')+'.':
-      due?'No new accounts yet. Next provider check: '+new Date(data.nextDiscoveryAt*1000).toLocaleString()+'.':
-      'No new accounts returned. Confirm the bank is authorized in SimpleFIN.';
-    paint();
-    message(added?'Accounts added to your connection.':'No additional accounts discovered.');
-    if(added)window.btRefreshFinancesPage?.();
-  }
   function connectFlow(body){
     const connected=Boolean(data?.connected);
     const shell=el('section',undefined,body);shell.className='bank-connect-flow';
@@ -181,7 +153,8 @@
       el('p','2 · Add your bank',external);
       el('p','3 · Come back to this app',external);
       button(links,'Open SimpleFIN ↗',()=>{
-        resetAddFlow();addFlowPending=true;addFlowMessage='After adding your bank, return here.';
+        resetAddFlow();addFlowPending=true;
+        addFlowMessage='Add your bank in SimpleFIN. BonusTracker checks automatically when you return.';
         window.open('https://bridge.simplefin.org/','_blank','noopener');
         paint();
       },'btn-p');
@@ -205,18 +178,15 @@
       if(addFlowBudgetStopped){
         el('p','Daily request limit reached. Automatic checks are paused.',finish);
       }else if(addFlowFound.length){
+        el('p','Available bank accounts are added to Finances automatically.',finish);
         for(const account of addFlowFound){
-          const label=el('label',undefined,finish);label.className='bank-connect-account-option';
-          const toggle=el('input',undefined,label);toggle.type='checkbox';
-          toggle.checked=addFlowDraft.has(account.key);toggle.disabled=addFlowBusy;
-          toggle.onchange=()=>{if(toggle.checked)addFlowDraft.add(account.key);else addFlowDraft.delete(account.key)};
-          el('span',(account.bank||'Bank')+' · '+(account.name||'Account')+' · Sync',label);
+          el('p',(account.bank||'Bank')+' · '+(account.name||'Account')+
+            ' · '+(data?.autoRefreshStatus==='complete'?'Importing automatically':'Waiting for activity'),finish);
         }
-        button(finish,'Save',saveAddedBank,'btn-p').disabled=addFlowBusy;
       }else if(addFlowPending){
-        button(finish,'Check again',checkAddedBank,'btn-p').disabled=addFlowBusy;
+        el('p','No approval, setup token or manual discovery is required.',finish);
       }
-      button(finish,'Cancel',()=>{resetAddFlow();view='accounts';paint();});
+      button(finish,'Back to accounts',()=>{resetAddFlow();view='accounts';paint();});
     }else{
       el('h4','2 · Link BonusTracker once',finish);
       el('p','In SimpleFIN, select Apps → New Connection, then paste your one-time token below.',finish);
@@ -241,7 +211,7 @@
     const help=el('details',undefined,shell);help.className='bank-connect-security-details';
     el('summary','Connection help & security',help);
     el('p','Bank credentials never go into BonusTracker. Adding a bank does not disconnect an existing one.',help);
-    el('p','SimpleFIN may allow discovery only once every 24 hours. A missing balance is not zero.',help);
+    el('p','Automatic read-only discovery and transaction refresh runs about hourly within the shared daily provider limit. A missing balance is not zero.',help);
     const back=el('div',undefined,shell);back.className='bank-connect-bottom';
     button(back,connected?'Back to connected accounts':'Back to connection options',async()=>{resetAddFlow();view='accounts';wizardResult=null;paint();});
     if(connected&&wizardResult)button(back,'Review account settings',async()=>{view='accounts';wizardResult=null;paint();},'btn-p');
@@ -275,23 +245,24 @@
     for(const warning of data.warnings||[])el('p',warning,status);
     if(data.missingAccounts?.length)el('p','A selected account was missing from the latest response. Its saved evidence is retained; this does not mean it is closed.',status);
     button(status,'Refresh status',async()=>{data=await request();paint();});
-    button(status,'Check for transactions',async()=>{data=await request('/sync',{method:'POST'});paint();message('Sync requested. Provider data refreshes at most daily; earlier checks may show previously saved data. Check Last synced for confirmation.');});
+    el('p','Accounts and available transactions sync automatically. No discovery or transaction-refresh action is required.',status);
     // The institution chooser lives in the SimpleFIN Bridge, not BonusTracker.
     // Keep the external authorization clearly separated from this read-only app.
     const addSection=el('section',undefined,body);addSection.className='bank-sync-card bank-sync-add-institution';
     el('h3','Add or find an account',addSection);
     button(addSection,'Add bank',async()=>{view='add-bank';wizardResult=null;paint();},'btn-p');
 
-    const addLinks=el('div',undefined,addSection);addLinks.className='bank-sync-links';
-    const addLink=el('a','Add bank in SimpleFIN ↗',addLinks);
-    addLink.href='https://beta-bridge.simplefin.org/';addLink.target='_blank';addLink.rel='noopener noreferrer';
-    addLink.className='bank-sync-add-bank-link';
-    const supportedLink=el('a','Check supported banks',addLinks);
-    supportedLink.href='https://beta-bridge.simplefin.org/search-institutions';
-    supportedLink.target='_blank';supportedLink.rel='noopener noreferrer';
-
-    button(addSection,'Discover accounts',discoverAccounts,'btn-p');
-    el('p','Already authorized a bank? Discover accounts. New provider accounts may take up to a day.',addSection);
+    el('p','Once you authorize an institution in SimpleFIN Bridge, BonusTracker detects its accounts and imports available activity automatically.',addSection);
+    const autoUpdated=Number(data.lastAutoRefreshAt);
+    el('small',autoUpdated?'Last automatic check: '+stamp(autoUpdated):
+      'Automatic bank checking is enabled.',addSection);
+    if(data.nextAutoRefreshAt)el('small','Next scheduled check: '+stamp(data.nextAutoRefreshAt),addSection);
+    if(data.autoRefreshStatus==='limit')el('p','Provider daily request limit reached; automatic updates resume after the rolling limit resets.',addSection);
+    if(Array.isArray(data.recentDiscoveredAccounts)&&data.recentDiscoveredAccounts.length){
+      const notice=el('p','New accounts found · '+data.recentDiscoveredAccounts.length+
+        ' · Transactions import automatically',addSection);
+      notice.setAttribute('role','status');
+    }
 
     if(data.status==='attention'&&data.error){
       const recovery=el('details',undefined,status),summary=el('summary','Reconnect SimpleFIN',recovery);
@@ -423,7 +394,7 @@
     });
   }
   function open(mode='accounts'){
-    if(panel){resetAddFlow();view=mode==='add-bank'?'add-bank':'accounts';wizardResult=null;paint();if(mode==='discover')run(discoverAccounts);return;}
+    if(panel){resetAddFlow();view=mode==='add-bank'?'add-bank':'accounts';wizardResult=null;paint();return;}
     returnFocus=document.activeElement;generation++;resetAddFlow();data=null;changed=false;view=mode==='add-bank'?'add-bank':'accounts';wizardResult=null;
     panel=el('div');panel.className='ov bank-sync-overlay';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-labelledby','bank-sync-title');
     const modal=el('section',undefined,panel);modal.className='bank-sync-modal';
@@ -431,7 +402,7 @@
     const body=el('div',undefined,modal);body.className='bank-sync-body';
     const footer=el('footer',undefined,modal);const msg=el('p','',footer);msg.id='bank-sync-message';msg.setAttribute('role','status');
     const done=el('button','Done',footer);done.className='btn-s';done.type='button';done.onclick=close;
-    document.body.append(panel);paint();done.focus();if(window.BTBonusAuth?.connected())run(async()=>{data=await request();if(mode==='discover')await discoverAccounts();else paint();});
+    document.body.append(panel);paint();done.focus();if(window.BTBonusAuth?.connected())run(async()=>{data=await request();paint();});
   }
   function install(){
     const menu=document.querySelector('.header-data-panel');if(!menu||menu.querySelector('[data-bank-sync]'))return;
@@ -451,7 +422,7 @@
   });
   window.btOpenBankSync=open;
   window.btOpenBankConnectFlow=()=>open('add-bank');
-  window.btDiscoverBankAccounts=()=>open('discover');
+  window.btDiscoverBankAccounts=()=>open('accounts'); // Legacy callers: status only; never a provider discovery request.
   window.btRegisterPostRender?.('simplefin-bank-sync',install);install();
   document.addEventListener('keydown',e=>{if(!panel)return;if(e.key==='Escape'){close();return;}if(e.key==='Tab'){const controls=[...panel.querySelectorAll('button,input,select,textarea,a[href]')].filter(n=>!n.disabled&&n.getClientRects().length);const first=controls[0],last=controls.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}});
   window.addEventListener('storage',e=>{if(e.key==='bonus-ai-auth'&&panel){generation++;resetAddFlow();data=null;paint();}});
