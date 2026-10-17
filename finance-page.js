@@ -1190,7 +1190,7 @@
           &&(!transactionMin||Math.abs(Number(row.amount))>=Number(transactionMin))
           &&(!transactionMax||Math.abs(Number(row.amount))<=Number(transactionMax));
       });
-      if(!filtered.length){el('p','No matching transactions are available yet. Check the account, date range or next bank sync.',list);return}
+      if(!filtered.length){el('p','No transactions match these filters.',list);return}
       let group=null,lastDay='';
       for(const row of filtered.slice(0,transactionVisibleLimit)){
         const currentDay=dayKey(row.posted);
@@ -1384,7 +1384,7 @@
     el('p','Past transactions stay in reports unless you choose to delete history.',modal);
     const remove=async deleteHistory=>{
       if(deleteHistory){
-        const confirmed=await confirmFinance('Permanently delete this account’s saved transactions and balance history? This cannot be undone after the Undo window.',{title:'Delete history?',confirmLabel:'Delete history',danger:true});
+        const confirmed=await confirmFinance('Delete this account’s saved history? This cannot be undone.',{title:'Delete history?',confirmLabel:'Delete history',danger:true});
         if(!confirmed)return;
       }
       try{
@@ -1470,7 +1470,7 @@
         const members=pair.map(key=>currentCombined.accounts.find(a=>a.key===key));
         const section=el('section',undefined,review,'finance-page-card');
         el('p',members.map(a=>accountTitle(a)+' via '+a.sourceLabel).join(' / '),section);
-        el('small','Confirm whether these are the same account. Only the preferred connection supplies the balance.',section);
+        el('small','Do these connections belong to the same account?',section);
         const choices={'':'Choose preferred connection'};for(const a of members)choices[a.key]=a.sourceLabel+' · '+accountTitle(a);
         const chooser=select(section,'Same account — preferred connection',choices,financePrefs.duplicates?.[id]?.primary||'',value=>{if(value)saveSetting('duplicates',id,{primary:value})});
         chooser.disabled=!preferenceAvailable;
@@ -1603,7 +1603,7 @@
     const modal=sheet('Disconnect '+account.bank+'?');
     el('p','Only this bank will stop syncing. Other banks stay connected.',modal);
     const disconnect=async deleteHistory=>{
-      if(deleteHistory&&!await confirmFinance('Permanently delete the saved transactions and balance history for every account at this bank?',{title:'Delete bank history?',confirmLabel:'Delete history'}))return;
+      if(deleteHistory&&!await confirmFinance('Delete saved history for every account at this bank?',{title:'Delete bank history?',confirmLabel:'Delete history'}))return;
       try{
         const path=account.source==='simplefin'?'/institution-action':'/items/'+encodeURIComponent(account.connectionHandle)+(deleteHistory?'?delete_history=true':'');
         const options=account.source==='simplefin'?{method:'POST',body:JSON.stringify({handle:account.connectionHandle,deleteHistory})}:{method:'DELETE'};
