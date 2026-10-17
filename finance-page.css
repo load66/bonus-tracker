@@ -554,3 +554,17 @@
 .finance-page-round-action{display:flex;flex-direction:column;align-items:center;gap:8px;border:0;background:transparent;color:#A0A6B8;min-width:76px;min-height:76px;padding:8px;font:inherit;font-size:11px;cursor:pointer}
 .finance-page-round-action svg{width:22px;height:22px;padding:14px;border-radius:50%;background:#1E212C;color:#5BE3B0}
 .finance-health-dot{display:block;flex:0 0 8px;width:8px;height:8px;border-radius:50%;background:#5BE3B0}.finance-health-dot.is-warning{background:#ffb8bd}
+
+/* v3.4.79 — mobile Finance polish; no global tab styles. */
+.finance-page .finance-page-donut-item{min-width:0}
+.finance-page .finance-page-donut-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.finance-page .finance-page-donut-item strong{min-width:max-content;white-space:nowrap;text-align:right}
+.finance-page .finance-page-period{flex-wrap:nowrap;min-width:0;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;justify-content:flex-start}
+.finance-page .finance-page-period::-webkit-scrollbar{display:none}
+.finance-page .finance-page-period .finance-page-chip{flex:0 0 auto;white-space:nowrap}
+.finance-page .finance-page-nav{z-index:30;background:#0A0D13;isolation:isolate;margin-top:0}
+.finance-page .finance-page-status-row{position:relative;z-index:0;min-height:44px}
+.finance-page .finance-page-transaction-copy{min-width:0}
+.finance-page .finance-page-transaction-meta{display:flex;gap:7px;align-items:center;min-width:0;overflow:hidden;margin-top:5px}
+.finance-page .finance-page-category-chip{display:inline-flex;flex:0 0 auto;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:3px 7px;border:1px solid #33463F;border-radius:999px;background:#17251F;color:#9FE3C3;font-size:10px;margin:0}
+.finance-page .finance-page-transaction-account{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0}
