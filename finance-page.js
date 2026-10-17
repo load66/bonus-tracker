@@ -1546,12 +1546,12 @@
         }
         for(const a of rows){
           const bankKey=a.source+':'+(a.connectionHandle||a.bank);
-          if((a.source==='simplefin'?!!a.syncIssue:a.transactionSyncStatus==='needs_attention')&&!broken.has(bankKey)){
+          if((a.source==='simplefin'?!!a.attentionKind:a.transactionSyncStatus==='needs_attention')&&!broken.has(bankKey)){
             broken.add(bankKey);const alert=el('div',undefined,group,'finance-connection-error');
             el('span','Needs attention · '+a.bank,alert);
             if(a.source==='simplefin'){
-              if(a.syncIssue?.type==='bank_login')action(alert,'Fix on SimpleFIN',()=>window.open('https://bridge.simplefin.org/','_blank','noopener'));
-              if(a.syncIssue?.type==='access_rejected')action(alert,'Reconnect',()=>reconnectAccount(a));
+              if(a.attentionKind==='bank_login')action(alert,'Fix on SimpleFIN',()=>window.open('https://bridge.simplefin.org/','_blank','noopener'));
+              if(a.attentionKind==='rejected')action(alert,'Reconnect',()=>reconnectAccount(a));
             }else action(alert,'Reconnect',()=>reconnectAccount(a));
           }
           row(group,a);
@@ -1659,7 +1659,7 @@
         loading?'Transaction imports continue automatically. Earlier months may be incomplete.':
         archiveLoading?'Previously imported months are being loaded securely.':settingsNotice;
       if(needsAttention)action(row,'Check accounts',()=>{view='accounts';paint()});
-      if(needsAttention&&(currentCombined?.accounts||[]).some(a=>a.source==='simplefin'&&a.syncIssue?.type==='bank_login'))
+      if(needsAttention&&(currentCombined?.accounts||[]).some(a=>a.source==='simplefin'&&a.attentionKind==='bank_login'))
         action(row,'Fix on SimpleFIN',()=>window.open('https://bridge.simplefin.org/','_blank','noopener'),'finance-page-button');
     }
     if(view==='transactions')transactions(host);
