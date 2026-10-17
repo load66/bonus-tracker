@@ -122,8 +122,11 @@ expenses, cash flow, net worth or investment performance**.
 
 These enhancements are Finance-only and remain independent of the Tracker lifecycle:
 
-- Financial amounts default to hidden on this device. The browser stores only the
-  `bt_finance_hide_amounts` boolean preference, not account or transaction data.
+- Finance balances, transactions, charts, cash flow and account values are visible by
+  default. Hide amounts is a temporary screenshot privacy toggle that masks all
+  Finance amounts for this page session only; it is not saved to browser storage.
+  A previously stored `bt_finance_hide_amounts` preference is ignored. Reloading
+  restores visible amounts. No financial information is stored in browser preferences.
 - One Cash figure uses fresh, classified checking/savings balances. A missing,
   stale, or inconsistent balance remains unknown; it is never interpreted as zero.
 - Net-worth calculations omit accounts explicitly marked `exclude`. A credit
