@@ -28,6 +28,7 @@
        ['individual','joint','investing','investment','investments','stocks','stock','crypto','securities','trading','brokerage','hsa_investing'].includes(subtype)||
        ['investment','investments','brokerage','crypto'].includes(type))return 'brokerage';
     if(broker&&type!=='depository')return 'brokerage';
+    if(/\b(paypal|venmo|cash app|onepay|one pay|x money)\b/.test(bank+' '+name)&&!['credit','loan'].includes(type))return 'checking';
     return 'unclassified';
   }
   const investmentKind=kind=>kind==='brokerage'||kind==='retirement';
