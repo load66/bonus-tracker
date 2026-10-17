@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: codex — v3.4.95 production release verification — branch codex/finance-pages-gate-v3-4-95
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
@@ -8,7 +8,7 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 - Deployed: frontend v3.4.94 on main (prior verified Pages release)
 - In progress: frontend v3.4.95 release candidate on PR #149; code and tests complete
-- Next step: merge passing frontend PR #149, then verify exact production Pages assets and authorization
+- Next step: restore main push verification and Pages production audit after source release #149
 
 ## Release 1 (v3.4.94)
 
