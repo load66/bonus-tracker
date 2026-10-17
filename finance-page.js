@@ -874,6 +874,35 @@
     const accountActions=el('div',undefined,head,'finance-page-account-actions');
     action(accountActions,'Add bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');
     action(accountActions,'Manage connections',()=>window.btOpenBankSync?.(),'finance-page-button');
+    const matches=(currentCombined?.possibleDuplicates||[]);
+    if(matches.length){
+      const review=el('section',undefined,card,'finance-page-match-review');
+      el('h4','Possible matching accounts',review);
+      el('p','Confirm once before combining balances and transactions.',review,'finance-page-hint');
+      const byKey=new Map((currentCombined?.accounts||[]).map(a=>[a.key,a]));
+      for(const pair of matches){
+        const entries=pair.map(key=>byKey.get(key)).filter(Boolean);
+        if(entries.length!==2)continue;
+        const ordered=entries.slice().sort((a,b)=>a.source==='simplefin'?-1:1);
+        const id=ordered.map(x=>x.key).join('|');
+        const decision=financePrefs.duplicates?.[id];
+        const row=el('div',undefined,review,'finance-page-match-row');
+        el('strong',ordered.map(x=>x.bank+' · '+x.name+' ('+x.sourceLabel+')').join(' / '),row);
+        if(!entries.every(x=>x.confirmableDuplicate)){
+          el('small','The bank has not supplied enough matching account details. Keep both connections separate until verified.',row,'finance-page-hint');
+          continue;
+        }
+        const choice=select(row,'Keep balances from',
+          Object.fromEntries(ordered.map(x=>[x.key,x.sourceLabel+' · '+x.name])),
+          decision?.primary||ordered[0].key,()=>{},'finance-page-select');
+        if(decision?.primary)el('small','Same account confirmed · '+byKey.get(decision.primary)?.sourceLabel+' preferred',row);
+        else if(decision?.separate)el('small','You confirmed these are different accounts.',row);
+        const buttons=el('div',undefined,row,'finance-page-quick-actions');
+        const yes=action(buttons,'Same account',()=>saveSetting('duplicates',id,{primary:choice.value}));
+        const no=action(buttons,'Different accounts',()=>saveSetting('duplicates',id,{separate:true}));
+        yes.disabled=!preferenceAvailable;no.disabled=!preferenceAvailable;
+      }
+    }
     const controls=el('div',undefined,card,'finance-page-account-filters finance-page-account-tools');
     const searchWrap=el('div',undefined,controls,'finance-page-search-wrap');
     el('span','⌕',searchWrap,'finance-page-search-icon');
