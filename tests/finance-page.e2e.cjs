@@ -427,13 +427,13 @@ const base=()=>({
         }
       }
       // v3.4.90 synthetic real-description regression: pairs collapse to one unsigned row.
-      const D='1'.repeat(64),out450='2'.repeat(64),in450='3'.repeat(64);
+      const savingsAccountKey='1'.repeat(64),out450='2'.repeat(64),in450='3'.repeat(64);
       state.accounts[0].bank='Robinhood';state.accounts[0].name='Robinhood Checking';state.accounts[0].mask='2033';
-      state.accounts.push({key:D,bank:'Robinhood',name:'Robinhood Savings',mask:'0793',
+      state.accounts.push({key:savingsAccountKey,bank:'Robinhood',name:'Robinhood Savings',mask:'0793',
         currency:'USD',balance:'900.00',balanceDate:NOW-300});
-      state.accountProfiles[D]={kind:'savings',balanceMode:'asset'};
-      state.monitoredAccounts.push(D);
-      state.transactions[D]={[out450]:{id:out450,amount:'-450.00',posted:NOW-210,pending:false,
+      state.accountProfiles[savingsAccountKey]={kind:'savings',balanceMode:'asset'};
+      state.monitoredAccounts.push(savingsAccountKey);
+      state.transactions[savingsAccountKey]={[out450]:{id:out450,amount:'-450.00',posted:NOW-210,pending:false,
         category:'unreviewed',categorySource:'automatic',description:'To Robinhood Checking'}};
       state.transactions[A][in450]={id:in450,amount:'450.00',posted:NOW-190,pending:false,
         category:'income',categorySource:'automatic',description:'From Robinhood Savings'};
