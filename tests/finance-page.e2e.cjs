@@ -92,7 +92,7 @@ const base=()=>({
       await page.addInitScript(()=>{
         const RealDate=Date,now=Date.parse('2026-10-16T07:00:00Z');
         window.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[now]))}static now(){return now}};
-        localStorage.setItem('bt_e_v4','[]');localStorage.setItem('bonus-ai-auth',JSON.stringify({access_token:'synthetic-access',refresh_token:'synthetic-refresh',expires_at:4102444800}));
+        localStorage.setItem('bt_e_v4','[]');localStorage.setItem('bt_finance_hide_amounts','true');localStorage.setItem('bonus-ai-auth',JSON.stringify({access_token:'synthetic-access',refresh_token:'synthetic-refresh',expires_at:4102444800}));
       });
       await page.goto(process.env.BT_BROWSER_SITE_URL||'http://127.0.0.1:'+server.address().port+'/');
       // Cloud startup can redraw the root while the user is first navigating.
@@ -128,6 +128,11 @@ const base=()=>({
       await section.locator('.finance-page-count').filter({hasText:'4 accounts'}).waitFor();
       await section.getByRole('heading',{name:'Connected accounts',exact:true}).waitFor();
       await section.getByRole('heading',{name:'Recent transactions',exact:true}).waitFor();
+      await section.getByRole('heading',{name:'Spending by category',exact:true}).waitFor();
+      assert.equal(await section.locator('.finance-page-donut').count(),1,
+        'The Finance Overview has a lightweight accessible category donut');
+      assert.ok(!(await section.locator('.finance-page-donut-legend').innerText()).includes('••••••'),
+        'Spending breakdown amounts must start visible despite an old hidden preference');
       const previews=section.locator('.finance-page-preview-card');
       assert.equal(await previews.count(),2,'Account and transaction previews belong on the Finance home dashboard');
       assert.deepEqual((await section.locator('.finance-page-nav button').allTextContents()).map(t=>t.trim()),
@@ -140,11 +145,12 @@ const base=()=>({
       assert.ok((await previews.nth(1).innerText()).includes('X Money Bonus'),
         'Recent Finance activity must include Plaid transactions');
 
-      // Amounts stay masked by default, including on first sign-in.
-      await section.getByRole('button',{name:'Show amounts',exact:true}).waitFor();
-      assert.equal(await section.locator('.finance-page-hero-cash-value').innerText(),'••••••');
-      await section.getByRole('button',{name:'Show amounts',exact:true}).click();
-      assert.equal(await page.evaluate(()=>localStorage.getItem('bt_finance_hide_amounts')),'false');
+      // Money starts visible on every launch; a previous "hide" preference
+      // does not survive a reload and never overrides the new default.
+      await section.getByRole('button',{name:'Hide amounts',exact:true}).waitFor();
+      assert.notEqual(await section.locator('.finance-page-hero-cash-value').innerText(),'••••••');
+      assert.equal(await page.evaluate(()=>localStorage.getItem('bt_finance_hide_amounts')),'true',
+        'Legacy hidden preference remains intact but is no longer applied');
       await section.getByText('Income',{exact:true}).locator('..').getByText(/250/).waitFor();
       await section.getByText('Expenses',{exact:true}).locator('..').getByText(/15/).waitFor();
       await section.getByText('Net flow',{exact:true}).locator('..').getByText(/235/).waitFor();
@@ -155,8 +161,11 @@ const base=()=>({
       const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
       await section.getByRole('button',{name:'Hide amounts',exact:true}).click();
       assert.equal(await section.locator('.finance-page-hero-cash-value').innerText(),'••••••');
+      assert.ok((await section.locator('.finance-page-donut-legend').innerText()).includes('••••••'),
+        'Hide for screenshot also masks spending breakdown values');
       await section.getByRole('button',{name:'Show amounts',exact:true}).click();
-      assert.equal(await page.evaluate(()=>localStorage.getItem('bt_finance_hide_amounts')),'false');
+      assert.equal(await page.evaluate(()=>localStorage.getItem('bt_finance_hide_amounts')),'true',
+        'Screenshot-only toggling never persists a hidden preference');
       assert.equal(await section.locator('.finance-page-hero-cash-value').count(),1,
         'Only one Cash total appears in the Finance Overview hero');
 
@@ -174,8 +183,11 @@ const base=()=>({
       await txSearch.fill('');
       const unknownRow=section.locator('.finance-page-transaction').filter({hasText:'Unknown'});
       await unknownRow.getByRole('button',{name:/Unknown/}).click();
+      await section.getByRole('checkbox',{name:'Apply to similar transactions'}).check();
       const category=section.getByLabel('Category for Unknown');await category.selectOption('shopping');
       await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).waitFor();
+      assert.ok(requests.some(r=>r.path.endsWith('/transaction-review')&&r.body.applySimilar===true),
+        'Opt-in merchant learning must be explicitly transmitted and never enabled by default');
       assert.equal(state.transactions[A][T3].category,'unreviewed','failure must not silently commit category changes');
       await section.getByLabel('Category for Unknown').selectOption('shopping');
       await section.getByText('Confirmed by you',{exact:true}).first().waitFor();
@@ -353,12 +365,19 @@ const base=()=>({
           description:'Synthetic Plaid history item '+index,category:'other',
           categorySource:'automatic',confidence:'low',signals:[]};
       }
+      // Provider generic titles display their useful original description.
+      plaidState.transactions[A]['history-000'].merchant='Transaction';
+      plaidState.transactions[A]['history-000'].categorySource='ai';
+      plaidState.transactions[A]['history-000'].category='shopping';
       // A bonus-classified transaction remains intact in provider data, but
       // its Finance-only presentation remains Needs review, never verified income.
       plaidState.transactions[A]['plaid-income'].category='bonus';
       await page.evaluate(()=>window.btRefreshFinancesPage?.());
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       await section.getByText('X Money Bonus',{exact:true}).waitFor();
+      const correctedName=section.locator('.finance-page-transaction').filter({hasText:'Synthetic Plaid history item 0'});
+      await correctedName.getByText('Auto',{exact:true}).waitFor();
+      assert.ok((await correctedName.innerText()).includes('Synthetic Plaid history item 0'));
       const preservedBonus=section.locator('.finance-page-transaction').filter({hasText:'X Money Bonus'});
       assert.ok((await preservedBonus.innerText()).includes('Needs review'),
         'Finance must not claim unverified promotional credits are income');
@@ -397,6 +416,32 @@ const base=()=>({
       assert.equal(plaidState.connected,false);
       assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'no tracker writes');
       assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-access')),true);
+      await section.getByRole('button',{name:'Hide amounts',exact:true}).click();
+      await section.getByRole('button',{name:'Show amounts',exact:true}).waitFor();
+      await page.reload();
+      await page.waitForFunction(()=>typeof window.BTBonusAuth?.connected==='function'&&
+        window.BTBonusAuth.connected()&&typeof window.btRefreshFinancesPage==='function',null,{timeout:12000});
+      const financeAfterReload=page.getByRole('button',{name:'Finances',exact:true});
+      // The application can redraw its top-level navigation while completing
+      // startup. Retry a lost click, but never ignore a genuine auth failure.
+      let amountsRestored=false;
+      for(let attempt=0;attempt<3;attempt++){
+        await financeAfterReload.click();
+        try{
+          await section.getByRole('button',{name:'Hide amounts',exact:true})
+            .waitFor({timeout:7000});
+          amountsRestored=true;break;
+        }catch{
+          const headings=await section.locator('h2,h3').allTextContents().catch(()=>[]);
+          if(headings.some(t=>/sign in to view finances|session needs attention|connections unavailable/i.test(t)))
+            throw Error(name+' Finances reload returned an auth/connection error: '+headings.join(' | '));
+          if(attempt===2)
+            throw Error(name+' Finances reload did not restore visible amounts; headings='+headings.join(' | '));
+        }
+      }
+      assert.equal(amountsRestored,true,'Amounts appear on reload without requiring an unhide click');
+      assert.equal(await page.evaluate(()=>localStorage.getItem('bt_finance_hide_amounts')),'true',
+        'Old saved flag stays ignored even across reloads');
       assert.deepEqual(errors,[]);console.log(name+': finance overview, transactions, account management, privacy and responsive navigation passed');
     }finally{await browser.close()}
   }}finally{server.close()}
