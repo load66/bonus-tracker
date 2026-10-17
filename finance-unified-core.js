@@ -37,6 +37,9 @@
     }
     // Brokerage brands are investment accounts unless product metadata identifies
     // an actual deposit or credit product; never classify a generic broker as Other.
+    if(/\b(?:paypal|venmo|onepay|one pay|x money)\b/.test(bank)&&
+       !/\b(?:credit|card|loan|invest|stock|crypto)\b/.test(name)&&
+       !['credit','investment','loan'].includes(type))return 'checking';
     if(broker&&!/\b(checking|savings|cash management|credit card|mortgage|loan)\b/.test(name)
         && !['depository','credit'].includes(type))return 'brokerage';
     return 'unclassified';
@@ -81,7 +84,12 @@
           detectedType:detected,kind:saved.kind&&saved.kind!=='unclassified'?saved.kind:detected,
           name:saved.displayName||account.name,originalName:account.name});
         const kind=saved.kind&&saved.kind!=='unclassified'?saved.kind:detected;
-        accountProfiles[composite]={kind,balanceMode:saved.balanceMode||DEFAULT_TREATMENT[kind]||'exclude',
+        accountProfiles[composite]={kind,
+          // An old auto-generated unclassified exclusion is not a user opt-out.
+          // Preserve explicit saved selections made for a recognized account type.
+          balanceMode:(saved.kind&&saved.kind!=='unclassified')
+            ?(saved.balanceMode||DEFAULT_TREATMENT[kind]||'exclude')
+            :(DEFAULT_TREATMENT[kind]||saved.balanceMode||'exclude'),
           order:Number.isInteger(saved.order)?saved.order:499,hidden:saved.hidden===true,
           removed:!!account.removedAt,includeSpending:saved.includeSpending??['checking','savings','credit_card'].includes(kind)};
         if((state.monitoredAccounts||[]).includes(account.key))monitoredAccounts.push(composite);
