@@ -136,7 +136,7 @@ const base=()=>({
       const previews=section.locator('.finance-page-preview-card');
       assert.equal(await previews.count(),2,'Account and transaction previews belong on the Finance home dashboard');
       assert.deepEqual((await section.locator('.finance-page-nav button').allTextContents()).map(t=>t.trim()),
-        ['Overview','Transactions','Accounts'],'Only the three financial sections are user-visible');
+        ['Overview','Spending','Recurring','Transactions','Accounts'],'The five financial sections are user-visible');
       assert.equal(await section.locator('.finance-page-bonus-host').count(),0,
         'Bonus evidence workspace remains unmounted while internal evidence handling is retained');
       const accountPreview=await previews.first().innerText();
