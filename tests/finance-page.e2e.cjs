@@ -266,7 +266,8 @@ const base=()=>({
       await section.getByRole('button',{name:'Hide hidden accounts'}).click();
       assert.equal(await section.locator('.finance-page-account').count(),3);
       await section.getByRole('button',{name:/Show hidden accounts/}).click();
-      await checkingEditor.locator('summary.finance-page-account').click();
+      const restoreDetails=checkingEditor.locator('details.finance-page-account-settings');
+      if(!(await restoreDetails.evaluate(e=>e.open)))await checkingEditor.locator('summary.finance-page-account').click();
       await checkingEditor.getByRole('button',{name:'Show account in Finances'}).click();
       await Promise.all([
         page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/account-profiles')&&r.status()===200),
