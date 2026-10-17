@@ -265,7 +265,7 @@
 }
 
 
-/* v3.4.75 — finance-only premium dark surface. Other BonusTracker tabs stay unchanged. */
+/* v3.4.76 — finance-only premium dark surface. Other BonusTracker tabs stay unchanged. */
 .finance-page{
   --finance-bg:#07080C;--finance-card:#12141C;--finance-border:#1E212C;
   --finance-text:#F2F3F7;--finance-muted:#A0A6B8;--finance-accent:#5BE3B0;
