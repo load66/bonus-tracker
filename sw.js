@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.4.83: Finance mobile visual consistency and privacy controls.
+// Version 3.4.84: six equal-width bottom navigation tabs at phone sizes.
 
-const V = 'bt-v3.4.83-mobilepolish1';
+const V = 'bt-v3.4.84-bottomnav1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
