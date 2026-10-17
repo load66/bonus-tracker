@@ -217,10 +217,9 @@ for token in (
     'actions/setup-python@v5',
     "python-version: '3.12'",
     'python3 tests/verify-latest.py',
-    'node tests/close-rules.test.js',
-    'node tests/full-app-smoke.test.js',
-    'node tests/professional-ops.test.js',
-    'node tests/eligibility-gate.test.js',
+    'node tests/ci-units.cjs ${{ matrix.area }}',
+    'needs: [plan, units]',
+    'needs: [plan, units, browsers]',
     'needs: verify',
     'actions/configure-pages@v5',
     'enablement: true',
@@ -229,6 +228,9 @@ for token in (
     'name: github-pages'
 ):
     if token not in workflow: fail(f'verify/deploy workflow missing: {token}')
+unit_registry=text('tests/ci-units.cjs')
+for critical in ('close-rules.test.js','full-app-smoke.test.js','professional-ops.test.js','eligibility-gate.test.js','persistence-transaction.test.js'):
+    if critical not in unit_registry: fail(f'CI suite inventory missing: {critical}')
 if workflow.find('needs: verify')>workflow.find('actions/deploy-pages@v4'):
     fail('Pages deploy is not gated behind verification')
 

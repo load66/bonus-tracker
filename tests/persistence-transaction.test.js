@@ -47,6 +47,6 @@ assert(apply.indexOf('commitPortableRestorePlan(plan)')<apply.indexOf('entries=p
 assert(!/\bsv\(SK,entries\)/.test(apply),'Restore still performs an unverified direct entry save');
 
 const workflow=fs.readFileSync('.github/workflows/close-rules.yml','utf8');
-assert(workflow.includes('node tests/persistence-transaction.test.js'),'CI does not gate deploy on transactional restore regression');
+assert(workflow.includes('node tests/ci-units.cjs ${{ matrix.area }}')&&workflow.includes('needs: [plan, units, browsers]')&&require('./ci-units.cjs').groups.cloud.includes('persistence-transaction.test.js'),'CI does not gate deploy on transactional restore regression');
 
 console.log('Persistence transaction passed: verified multi-key commit, rollback after injected failure, deletion verification, and commit-before-live-state restore ordering');

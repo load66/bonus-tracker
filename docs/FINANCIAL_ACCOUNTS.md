@@ -156,3 +156,45 @@ or provider coverage is uncertain. Neither this release nor earlier versions
 certifies complete reconciled cash flow, all assets/liabilities, or bonus
 qualification. Safe reconciliation requires explicit verified account
 identities and user confirmation, not name-based automatic deduplication.
+
+## Finance v3.4.78 — account and connection management
+
+This section supersedes conflicting privacy/retention wording above. Financial amounts
+start **visible** as explicitly requested. The eye toggle persists only a boolean privacy
+preference (`bt_finance_hide_v2`); all financial records remain server-side. Hiding masks
+values, comparisons and chart geometry. Both device color preferences use the scoped
+Finance palette; other app tabs and the bonus engine remain unchanged.
+
+Account profiles are additive patches. Display names, type, inclusion in spending and
+net worth, sync choice and visibility are independent. Missing legacy fields preserve
+existing values. Hiding removes balances and activity from Finance views and summaries;
+removal stops that account's future imports but keeps earlier transactions in reports.
+Persistent owner-scoped exclusions survive discovery. Removed/hidden accounts can be
+restored without creating a bank connection. Unknown balances remain unknown; available
+net worth is explicitly partial if included balances are missing or stale.
+
+`POST /simplefin/account-action` and `POST /plaid/accounts/account-action` accept remove,
+restore and explicitly confirmed delete-history actions. A unique removal receipt and
+10-second Undo window protect account-history deletion. Choosing keep-history never
+purges saved data. Explicit delete-history removes only that account's hot and encrypted
+monthly transaction/balance history; a cutoff prevents restored accounts from importing
+the deleted interval again. Tracker entries and canonical bonus mappings never change.
+SimpleFIN `/institution-action` excludes only the chosen institution. Upstream sharing
+and subscription controls remain in SimpleFIN Bridge.
+
+Plaid reconnect/account selection uses `/plaid/items/{handle}/link-token` in update mode
+with the EXISTING Item; no new reservation, public-token exchange or Trial increment is
+performed. The completion route refreshes shared accounts. Disconnect persists a
+`disconnectingAt` state BEFORE revocation, excludes it from all sync loops, replaces
+credentials with a tombstone, then performs idempotent local cleanup. History stays by
+default; deleting it requires a separate explicit user choice. Lifetime counts never fall.
+
+Confirmed cross-bank duplicates choose one primary balance and deduplicate matched
+transaction multiplicities; unique secondary rows retain their original editing route.
+Unconfirmed matches remain outside trusted totals. Similar institution names plus mask
+and type produce review candidates, never automatic identity declarations.
+
+Existing spending, recurring estimates, category corrections, merchant learning,
+24-month encrypted monthly history, revision-safe Finance preferences, Trial guards,
+cloud recovery, and bonus engines are preserved. Tests are entirely synthetic and do
+not verify actual bank connectivity or production categorization accuracy.

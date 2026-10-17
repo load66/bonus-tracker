@@ -7,126 +7,102 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    - cron: '23 * * * *'
+    - cron: '23 8 * * *'
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
-  # Isolate production deployments from PR test queues; GitHub keeps only one pending run per group.
-  group: bonus-tracker-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  # Scheduled verification has a separate queue and cannot replace a release.
+  group: bonus-tracker-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'schedule' && 'scheduled' || 'release' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  verify:
-    name: Verify latest release
+  plan:
+    name: Select verification scope
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      areas: ${{ steps.scope.outputs.areas }}
+      browsers: ${{ steps.scope.outputs.browsers }}
+      finance_only: ${{ steps.scope.outputs.finance_only }}
     steps:
-      - name: Checkout latest main files
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-
       - name: Verify latest release files
         run: python3 tests/verify-latest.py
-
       - name: Check every JavaScript file
         run: find . -name '*.js' -not -path './.git/*' -print0 | xargs -0 -n1 node --check
-
-      - name: Run close-rule tests
-        run: node tests/close-rules.test.js
-
-      - name: Run full app smoke and analyzer tests
-        run: node tests/full-app-smoke.test.js
-
-      - name: Run structured financial-rule and import tests
-        run: node tests/financial-rules.test.js && node tests/structured-import.test.js
-
-      - name: Run Ask AI grounding and closure guidance tests
-        run: node tests/bonus-ai.test.js && node tests/bonus-ai-auth.test.js
-
-      - name: Run entry-file import and replacement safety tests
-        run: node tests/entry-file-import.test.js
-
-      - name: Run transactional persistence and restore tests
-        run: node tests/persistence-transaction.test.js && node tests/cloud-recovery.test.js && node tests/cloud-protection.test.js
-
-      - name: Run canonical semantic status tests
-        run: node tests/semantic-status.test.js
-
-      - name: Run imported fee-review migration tests
-        run: node tests/fee-review-migration.test.js
-
-      - name: Run smart Needs Attention coverage tests
-        run: node tests/smart-attention.test.js
-
-      - name: Run professional operations UI tests
-        run: node tests/professional-ops.test.js
-
-      - name: Run integrated account lifecycle and restore tests
-        env:
-          TZ: America/Chicago
-        run: node tests/end-to-end.test.js
-
-      - name: Run operations interaction tests
-        run: node tests/operations-interactions.test.js
-
-      - name: Run next-action consistency and data preservation tests
-        run: node tests/next-actions.test.js && node tests/specific-actions.test.js && node tests/research-tabs.test.js
-
-      - name: Run churn eligibility evidence tests
-        run: node tests/eligibility-gate.test.js
-
-      - name: Run universal 2-day churn buffer tests
-        run: node tests/churn-buffer.test.js && node tests/countdown-options.test.js
-
-      - name: Run hardening regression tests
-        env:
-          TZ: America/Chicago
-        run: node tests/hardening-regression.test.js
-
-      - name: Verify bank-only feed filtering
-        run: python3 -B tests/bank-feed.test.py && node tests/bank-feed.test.js
-
-      - name: Refresh bank bonus RSS metadata
-        if: github.event_name != 'pull_request'
-        run: python3 scripts/update-bank-feed.py
-
-      - name: Install isolated browser test dependencies
-        run: |
-          npm install --prefix "$RUNNER_TEMP/bonus-tracker-browser-tests" --no-save playwright@1.58.2
-          "$RUNNER_TEMP/bonus-tracker-browser-tests/node_modules/.bin/playwright" install --with-deps chromium firefox webkit
-
-      - name: Check financial observation arithmetic and data scope
-        run: node tests/finance-session.test.js && node tests/finance-overview.test.js && node tests/finance-unified.test.js
-
-      - name: Verify bank bonus evidence inbox and promotion-scoped candidate progress
-        run: node tests/bonus-evidence.test.js && node tests/bonus-requirements-progress.test.js
-
-      - name: Run real browser end-to-end tests
-        env:
-          NODE_PATH: ${{ runner.temp }}/bonus-tracker-browser-tests/node_modules
-          BT_BROWSER_RESULTS: ${{ runner.temp }}/bonus-tracker-browser-results
-        run: node tests/bonus-evidence.e2e.cjs && node tests/finance-page.e2e.cjs && node tests/bank-sync.e2e.cjs && node tests/plaid-fallback.e2e.cjs && node tests/browser-e2e.cjs
-
-      - name: Save browser verification evidence
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Select full or Finance PR coverage
+        id: scope
+        uses: actions/github-script@v7
         with:
-          name: browser-verification-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/bonus-tracker-browser-results
-          if-no-files-found: ignore
+          script: |
+            const {plan}=require('./tests/ci-scope.cjs');
+            let files=[],complete=true;
+            if(context.eventName==='pull_request'){
+              const rows=await github.paginate(github.rest.pulls.listFiles,{...context.repo,pull_number:context.issue.number,per_page:100});
+              files=rows.map(row=>row.filename);
+              complete=files.length===context.payload.pull_request.changed_files;
+            }
+            const selected=plan(context.eventName,files,complete);
+            core.setOutput('areas',JSON.stringify(selected.areas));
+            core.setOutput('browsers',JSON.stringify(selected.browsers));
+            core.setOutput('finance_only',String(selected.financeOnly));
+            core.summary.addRaw('Verification scope: '+(selected.financeOnly?'Finance PR':'Full')+'; browsers: '+selected.browsers.join(', ')).write();
 
+  units:
+    name: Unit tests / ${{ matrix.area }}
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        area: ${{ fromJSON(needs.plan.outputs.areas) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run every suite in this area with a per-suite timeout
+        run: node tests/ci-units.cjs ${{ matrix.area }}
+        env:
+          TZ: America/Chicago
+
+  browsers:
+    name: Browser checks / ${{ matrix.browser }}
+    needs: [plan, units]
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: ${{ fromJSON(needs.plan.outputs.browsers) }}
+    uses: ./.github/workflows/verified-product-browser.yml
+    with:
+      browser: ${{ matrix.browser }}
+
+  verify:
+    name: Verify latest release
+    needs: [plan, units, browsers]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact verified source
+        uses: actions/checkout@v4
+      - name: Refresh bank bonus RSS metadata
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: python3 scripts/update-bank-feed.py
       - name: Package the exact verified site
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-pages-artifact@v4
         with:
           path: .
@@ -134,9 +110,10 @@ jobs:
 
   deploy:
     name: Deploy verified release to GitHub Pages
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: verify
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       pages: write
@@ -149,7 +126,6 @@ jobs:
         uses: actions/configure-pages@v5
         with:
           enablement: true
-
       - name: Deploy verified site
         id: deployment
         uses: actions/deploy-pages@v4

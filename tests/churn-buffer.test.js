@@ -78,12 +78,12 @@ assert(saved.length>0,'Existing-entry normalization was not persisted');
 const workflow=fs.readFileSync('.github/workflows/close-rules.yml','utf8');
 const index=fs.readFileSync('index.html','utf8');
 const sw=fs.readFileSync('sw.js','utf8');
-assert(workflow.includes('node tests/churn-buffer.test.js'),'Pages deploy is not gated by the churn-buffer regression test');
-assert(workflow.includes('node tests/eligibility-gate.test.js'),'Pages deploy is not gated by the eligibility evidence regression test');
+assert(workflow.includes('node tests/ci-units.cjs ${{ matrix.area }}')&&require('./ci-units.cjs').groups.bonus.includes('churn-buffer.test.js'),'Pages deploy is not gated by the churn-buffer regression test');
+assert(workflow.includes('needs: [plan, units, browsers]')&&require('./ci-units.cjs').groups.bonus.includes('eligibility-gate.test.js'),'Pages deploy is not gated by the eligibility evidence regression test');
 assert(index.includes('./churn-close-policy.js?v=3.4.74-conditional1'),'Index does not force-refresh the evidence-gated churn policy');
 assert(index.includes('./eligibility-gate.js?v=3.4.74'),'Index does not load the churn evidence validator');
-assert(index.includes('./sw.js?v=3.4.76-finances2'),'Index does not force-refresh the evidence-gated service worker');
-assert(sw.includes("const V = 'bt-v3.4.76-finances2'"),'Service worker cache version is stale');
+assert(index.includes('./sw.js?v=3.4.78-finances4'),'Index does not force-refresh the evidence-gated service worker');
+assert(sw.includes("const V = 'bt-v3.4.78-finances4'"),'Service worker cache version is stale');
 assert(sw.includes("'./eligibility-gate.js'"),'Eligibility gate is missing from the offline cache');
 
 console.log('Eligibility countdown passed: T&C evidence chooses the exact clock and unit, unverified rules fail closed, and the 2-day safety buffer is separate from official eligibility');
