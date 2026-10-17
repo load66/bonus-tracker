@@ -1476,7 +1476,7 @@
             if(!saveNotice)detail.close();
           },'finance-page-button finance-page-primary');
         }
-        if(row.category==='bonus')el('p','Possible bank bonus payout · review it in Tracker evidence before marking a bonus received.',detail,'finance-page-hint');
+        if(row.category==='bonus')el('p','Possible bank bonus. Review in Tracker before marking it received.',detail,'finance-page-hint');
         const saved=financePrefs.transactionMeta?.[row.settingKey]||{};
         const edit=el('div',undefined,detail,'finance-page-transaction-edits');
         const nameLabel=el('label',undefined,edit,'finance-page-field');
