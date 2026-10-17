@@ -31,7 +31,7 @@
 @media(min-width:650px){.finance-page-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:360px){.finance-page{padding:8px 0 20px}.finance-page-card,.finance-page-hero{padding:12px}.finance-page-account{align-items:flex-start;flex-direction:column}.finance-page-balance{text-align:left;max-width:100%}.tabs .tb span{font-size:8px;line-height:1.2;text-align:center}}
 .tabs .tb{min-width:0}
-.tabs .tb span{white-space:nowrap;word-break:normal;overflow-wrap:normal;text-align:center;max-width:none}
+/* Global bottom navigation sizing is owned by mobile-ui.css. */
 
 /* Phase 2 financial workspace */
 .finance-page-notice:empty{display:none}.finance-page-notice{position:sticky;top:4px;z-index:3;padding:9px 12px;border-radius:10px;background:#452d18;color:#ffe0b0;border:1px solid #9d713e}
@@ -918,7 +918,4 @@
 }
 .finance-page .finance-page-nav-privacy:focus-visible{
   outline:3px solid #8fd4ff;outline-offset:-3px;border-radius:8px;
-}
-@media(max-width:390px){
-  .tabs .tb span{white-space:nowrap!important;overflow-wrap:normal!important;word-break:normal!important}
 }
