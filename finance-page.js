@@ -1288,6 +1288,12 @@
         const article=el('article',undefined,group,'finance-page-transaction'+(open?' is-open':''));
         const top=el('button',undefined,article,'finance-page-transaction-summary');top.type='button';
         top.setAttribute('aria-expanded',String(open));top.setAttribute('aria-label',displayMerchant(row)+' details');
+        const logoUrl=String(row.merchantLogoUrl||'');
+        if(/^https:\/\/(?:plaid-merchant-logos|plaid-counterparty-logos|plaid-category-icons)\.plaid\.com\/[a-zA-Z0-9_%./-]+$/.test(logoUrl)){
+          const image=el('img',undefined,top,'finance-page-merchant-logo');
+          image.src=logoUrl;image.alt='';image.loading='lazy';image.referrerPolicy='no-referrer';
+          image.onerror=()=>image.remove();
+        }
         const copy=el('span',undefined,top,'finance-page-transaction-copy');
         const otherAccount=row.transferOtherAccountKey&&currentCombined.accounts.find(a=>a.key===row.transferOtherAccountKey);
         const pairedName=row.transferPairId&&otherAccount
