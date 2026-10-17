@@ -101,7 +101,7 @@ movementsA.transactions[a]={
   user:{id:'user',amount:'-200.00',posted:now-250,pending:false,category:'shopping',categorySource:'user',description:'User correction'}
 };
 movementsB.transactions[b]={
-  in:{id:'in',amount:'1000.00',posted:now-86400,pending:false,category:'income',categorySource:'automatic',description:'Received transfer'},
+  in:{id:'in',amount:'1000.00',posted:now-86400,pending:false,category:'income',categorySource:'automatic',description:'Payment',merchant:'Payment'},
   other:{id:'other',amount:'200.00',posted:now-250,pending:false,category:'income',categorySource:'automatic',description:'Received payment'}
 };
 const rawMovement=core.combine({simplefin:movementsA,plaid:movementsB});

@@ -47,7 +47,7 @@
       const row=resolve(raw);
       const v=cents(row.amount),day=new Date(row.posted*1000).getDate(),category=spendingCategory(row,v);
       if(v>0n){
-        if(row.category==='income'){income+=v;incomeByDay[day]=(incomeByDay[day]||0n)+v}
+        if(row.category==='income'&&!row.signals?.some(signal=>['matched_internal_transfer','possible_transfer','investment_transfer','card_payment'].includes(signal))){income+=v;incomeByDay[day]=(incomeByDay[day]||0n)+v}
         if(row.category==='refund')refunds.push({row,value:v,day});
         continue;
       }
@@ -99,45 +99,61 @@
       percent,level:actual>limit?'over':actual*5n>=limit*4n?'near':'ok'};
   }
   const INTERVALS=[['weekly',7,2],['biweekly',14,3],['monthly',30.44,6],['quarterly',91.3,12],['yearly',365.25,25]];
-  function recurring(rows,now=Date.now()){
+  const abs=n=>n<0n?-n:n;
+  function recurring(rows,now=Date.now(),rules={}){
     const groups=new Map();
-    for(const row of rows||[]){
-      if(row.pending||row.excludedFromTotals||!Number.isFinite(row.posted)||row.posted*1000>now+DAY)continue;
-      const n=cents(row.amount);
+    for(const original of rows||[]){
+      if(!original||original.pending||original.excludedFromTotals||
+         !Number.isFinite(original.posted)||original.posted*1000>now+DAY)continue;
+      const row=resolve(original),n=cents(row.amount);
       if(n===null||n===0n||excluded.has(row.category)||row.category==='bonus')continue;
-      const key=merchant(row)+'|'+(n>0n?'credit':'debit');
-      if(!merchant(row)||merchant(row)==='transaction'||merchant(row)==='transfer')continue;
+      const signals=row.signals||[],label=getGuard()?.label(row);
+      const type=signals.includes('card_payment')||row.kind==='card_payment'?'card_payment':
+        row.category==='transfer'||signals.some(s=>['matched_internal_transfer','investment_transfer','transfer','possible_transfer'].includes(s))
+          ?'transfer':n>0n?'income':'expense';
+      // Transfers and card payments are never recurring bills or wages.
+      const name=merchant(row);
+      if(!name||['transaction','transfer','payment'].includes(name)&&type!=='card_payment')continue;
+      const key=name+'|'+(n>0n?'credit':'debit');
       if(!groups.has(key))groups.set(key,[]);
-      groups.get(key).push({at:row.posted*1000,cents:n,row});
+      groups.get(key).push({at:row.posted*1000,cents:n,row,type});
     }
     const out=[];
     for(const [key,entries] of groups){
       entries.sort((a,b)=>a.at-b.at);
-      if(entries.length<2)continue;
+      const rule=rules[key]||{};
+      if(entries.length<(rule.confirmed===true?2:3))continue;
+      // Different financial transaction types should never share one stream.
+      if(entries.some(entry=>entry.type!==entries[0].type))continue;
       const diffs=entries.slice(1).map((v,i)=>(v.at-entries[i].at)/DAY);
       const candidates=INTERVALS.map(([name,days,tolerance])=>({
         name,days,score:diffs.filter(d=>Math.abs(d-days)<=tolerance).length,
         error:diffs.reduce((sum,d)=>sum+Math.abs(d-days),0)
       })).sort((a,b)=>b.score-a.score||a.error-b.error);
       const match=candidates[0];
-      if(match.score<1||match.score/Math.max(1,diffs.length)<.6)continue;
-      const last=entries.at(-1),previous=entries.at(-2),abs=n=>(n<0n?-n:n);
+      if(match.score/Math.max(1,diffs.length)<.8)continue;
+      const last=entries.at(-1),previous=entries.at(-2),value=abs(last.cents);
       const avg=entries.reduce((sum,x)=>sum+abs(x.cents),0n)/BigInt(entries.length);
-      const deviation=avg>0n?Number(abs(abs(last.cents)-avg)*10000n/avg)/100:0;
-      if(deviation>30)continue;
-      const priceIncreased=abs(last.cents)>abs(previous.cents)*11n/10n;
+      // Paychecks vary with hours; ordinary recurring debits should be stable.
+      const tolerance=entries[0].type==='income'?25n:20n;
+      if(avg===0n||entries.some(entry=>abs(abs(entry.cents)-avg)*100n>avg*tolerance))continue;
       const next=last.at+Math.round(match.days*DAY);
-      const missed=now>next+match.days*DAY*.5;
-      out.push({key,merchant:entries.at(-1).row.merchant||entries.at(-1).row.description,
-        category:entries.at(-1).row.category,frequency:match.name,
-        average:fmt(avg),lastAmount:fmt(abs(last.cents)),lastAt:Math.round(last.at/1000),
-        nextAt:Math.round(next/1000),status:missed?'possibly_canceled':priceIncreased?'price_increased':'active',
-        direction:last.cents>0n?'income':'expense',history:entries.map(e=>({posted:Math.round(e.at/1000),amount:fmt(e.cents)}))});
+      const ended=now>next+match.days*DAY;
+      const late=now>next&&!ended;
+      const priceIncreased=value>abs(previous.cents)*11n/10n;
+      out.push({key,merchant:last.row.merchant||last.row.description,
+        category:last.row.category,frequency:match.name,
+        average:fmt(avg),lastAmount:fmt(value),lastAt:Math.round(last.at/1000),
+        nextAt:ended||late?null:Math.round(next/1000),
+        status:ended?'possibly_ended':late?'late':priceIncreased?'price_increased':'active',
+        direction:last.cents>0n?'income':'expense',type:entries[0].type,
+        history:entries.map(e=>({posted:Math.round(e.at/1000),amount:fmt(e.cents)}))});
     }
-    return out.sort((a,b)=>a.nextAt-b.nextAt);
+    return out.sort((a,b)=>(a.nextAt??Infinity)-(b.nextAt??Infinity));
   }
   function upcoming(items,now=Date.now(),days=14){
-    return (items||[]).filter(x=>x.direction==='expense'&&x.status!=='possibly_canceled'&&x.nextAt*1000>=now-DAY&&x.nextAt*1000<=now+days*DAY).slice(0,5);
+    return (items||[]).filter(x=>x.type==='expense'&&x.status!=='possibly_ended'&&
+      Number.isFinite(x.nextAt)&&x.nextAt*1000>=now&&x.nextAt*1000<=now+days*DAY).slice(0,5);
   }
   return Object.freeze({spent,history,budget,spendingCategory,seenMonth,monthDays,merchant,recurring,upcoming,monthKey,monthShift,cents,fmt,SPEND});
 });
