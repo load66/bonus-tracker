@@ -568,7 +568,7 @@
   }
   function showNetWorthReview(exclusions){
     const modal=sheet('Accounts to review');
-    const intro=el('p',exclusions.length+' account'+(exclusions.length===1?'':'s')+' not included',modal,'finance-net-worth-review-intro');
+    const intro=el('p',exclusions.length+' account'+(exclusions.length===1?'':'s')+' to review',modal,'finance-net-worth-review-intro');
     for(const item of exclusions){
       const account=currentCombined?.accounts?.find(a=>a.key===item.key);
       const row=el('div',undefined,modal,'finance-net-worth-review-item');
@@ -576,6 +576,7 @@
       el('strong',item.name,copy);
       const reason=item.reason==='excluded by settings'?'Excluded':
         item.reason==='balance not updated'?'Not updated':
+        item.reason==='provisional balance'?'Needs update':
         item.reason==='non-USD balance'?'Other currency':'Check account type';
       el('small',reason,copy);
       if(account&&reason==='Excluded'){
@@ -584,7 +585,7 @@
           await saveAccountProfile(account,{balanceMode:liability?'liability':'asset'});
           if(!saveNotice){modal.close();paint()}
         },'finance-page-button finance-page-primary');
-      }else if(account&&reason==='Not updated'){
+      }else if(account&&(reason==='Not updated'||reason==='Needs update')){
         action(row,'Refresh',async()=>{await refreshActivity();modal.close()},'finance-page-button');
       }else if(account){
         action(row,'Review',()=>{modal.close();openAccount(account)},'finance-page-button');
@@ -695,7 +696,7 @@
       for(const name of summary.provisionalBalances||[]){
         const account=currentCombined?.accounts?.find(a=>a.name===name);
         if(account&&!review.some(item=>item.key===account.key))
-          review.push({key:account.key,name,reason:'balance not updated'});
+          review.push({key:account.key,name,reason:'provisional balance'});
       }
       action(heroCard,'Some balances not updated · Review',()=>showNetWorthReview(review),'finance-net-worth-review-button');
     }
