@@ -54,7 +54,7 @@
     }
     return scriptPromise;
   }
-  function mount(host,linkedAccounts=[]){
+  function mount(host,linkedAccounts=[],preferredBank=''){
     if(!host)return;
     host.replaceChildren();
     host.classList.add('plaid-trial-fallback');
@@ -212,6 +212,7 @@
         .map(a=>String(a?.institution||'').trim().toLowerCase()).filter(Boolean));
       const label=elem('label','Bank name',body),name=elem('input',undefined,label);
       name.type='text';name.maxLength=100;name.placeholder='Search bank name (e.g. One Pay)';
+      name.value=String(preferredBank||'').slice(0,100);
       elem('p','Continue only if SimpleFIN could not connect this bank. A completed new Plaid login uses 1 permanent slot.',body,'plaid-trial-disclosure');
       const advanced=elem('details',undefined,body,'plaid-trial-advanced');
       advanced.hidden=true;
