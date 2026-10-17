@@ -13,23 +13,28 @@
   function detectedType(account){
     const subtype=canonical(account.accountSubtype).replaceAll(' ','_');
     const type=canonical(account.accountType).replaceAll(' ','_');
-    const name=canonical(account.name);
-    const bank=canonical(account.bank);
-    const broker=/\b(robinhood|fidelity|schwab|vanguard|e trade|etrade|interactive brokers|webull|tastytrade|coinbase|kraken)\b/.test(bank);
-    const investments=new Set(['individual','joint','investing','investment','investments','stocks','stock','crypto','securities','trading','brokerage']);
-    if(investments.has(subtype)||investments.has(type))return 'brokerage';
-    const aliases={depository:'',credit:'credit_card',credit_card:'credit_card',investment:'brokerage',student:'loan',auto:'loan',mortgage:'mortgage',loan:'loan',brokerage:'brokerage',retirement:'retirement','401k':'retirement',ira:'retirement',checking:'checking',savings:'savings',money_market:'savings'};
+    const name=canonical(account.name),bank=canonical(account.bank);
+    const combined=name+' '+subtype.replaceAll('_',' ');
+    // Explicit provider metadata and product names are stronger than brand.
+    if(type==='credit'||type==='credit_card'||subtype==='credit_card'||/\b(credit card|charge card)\b/.test(name))return 'credit_card';
+    if(type==='loan'||['loan','mortgage','student','auto'].includes(subtype)||/\b(mortgage|vehicle loan|auto loan)\b/.test(name))
+      return /mortgage/.test(combined)?'mortgage':'loan';
+    if(/\b(checking|current account|spend account)\b/.test(combined)||subtype==='checking')return 'checking';
+    if(/\b(savings|money market|high yield|cash management)\b/.test(combined)||
+       ['savings','money_market','cash_management'].includes(subtype))return subtype==='cash_management'?'checking':'savings';
+    if(/\b(roth\s*ira|traditional\s*ira|retirement|401\s*k|401k|403b|pension|sep\s*ira)\b/.test(combined)
+        ||['ira','roth_ira','401k','retirement','401a','403b'].includes(subtype))return 'retirement';
+    if(/\b(hsa)\b/.test(combined)&&/\b(invest|brokerage|stock)\b/.test(combined))return 'brokerage';
+    const investments=new Set(['individual','joint','investing','investment','investments','stocks','stock',
+      'crypto','securities','trading','brokerage']);
+    if(investments.has(subtype)||investments.has(type)||/\b(brokerage|stocks|investing|investments|crypto)\b/.test(combined))
+      return 'brokerage';
+    const broker=/\b(robinhood|fidelity|schwab|vanguard|e trade|etrade|webull|coinbase|kraken|interactive brokers)\b/.test(bank);
+    if(broker&&type!=='depository'&&type!=='credit'&&!/\b(cash|checking|savings|card|loan|mortgage)\b/.test(name))
+      return 'brokerage';
+    if(type==='depository')return /saving|money market/.test(name)?'savings':'checking';
     if(TYPES.has(subtype))return subtype;
-    if(Object.hasOwn(aliases,subtype)&&aliases[subtype])return aliases[subtype];
     if(TYPES.has(type))return type;
-    if(Object.hasOwn(aliases,type)&&aliases[type])return aliases[type];
-    for(const [pattern,kind] of [[/\b(checking|current account)\b/,'checking'],[/\b(savings|money market|high yield)\b/,'savings'],[/\b(credit card|charge card)\b/,'credit_card'],[/\b(mortgage)\b/,'mortgage'],[/\b(401k|ira|roth|retirement)\b/,'retirement'],[/\b(brokerage|investment)\b/,'brokerage'],[/\b(loan)\b/,'loan']]){
-      if(pattern.test(name))return kind;
-    }
-    // Brokerage brands are investment accounts unless product metadata identifies
-    // an actual deposit or credit product; never classify a generic broker as Other.
-    if(broker&&!/\b(checking|savings|cash management|credit card|mortgage|loan)\b/.test(name)
-        && !['depository','credit'].includes(type))return 'brokerage';
     return 'unclassified';
   }
   const key=(source,rawKey)=>source+':'+String(rawKey);
