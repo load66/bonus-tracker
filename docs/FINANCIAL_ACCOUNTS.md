@@ -242,3 +242,24 @@ not verify actual bank connectivity or production categorization accuracy.
   provider transaction-review endpoint; no browser persistence or bonus changes.
 - Frontend and backend release versions are 3.4.93; backend CI, Railway production,
   frontend CI and Pages deployment must be verified independently in that order.
+
+## Finance v3.4.95 — existing SimpleFIN mortgages and loan debt
+
+- A linked SimpleFIN account with a mortgage/home-loan product name is classified as
+  `mortgage` even if its generic subtype is `loan`. Explicit saved owner type and
+  balance exclusions still win. Connecting again is not required.
+- Mortgage and installment-loan balances can arrive as positive or negative values.
+  When explicitly classified as those products, Finance shows the magnitude as
+  outstanding debt and subtracts it from the net-worth subtotal. Source balances,
+  signs, timestamps and provider transaction history are never rewritten. Credit-card
+  signed credits and other product categories retain their established behavior.
+- Only fresh balance-date observations (seven days or less) join net worth;
+  stale/invalid/unknown values remain omitted and cause a partial-net-worth warning.
+  The debt-history chart presents outstanding balance magnitude without inferring
+  principal paid, amortization, interest, escrow, PMI, payment due date, or home value.
+- Mortgage/loan transactions stay out of household spending and bank-bonus evidence
+  by default unless the owner explicitly opts to include spending. Loan balances
+  are not property equity: Finance does not infer a residence's market value.
+- Regression suites use synthetic positive- and negative-signed loans, stale dates,
+  owner overrides and a mock linked SimpleFIN UI; no real provider, paid API,
+  original connection or owner private financial data is touched.
