@@ -15,7 +15,7 @@
   const retirementProduct=/\b(?:401\s*\(?k\)?|403\s*\(?b\)?|457\s*\(?b\)?|ira|roth|sep\s*ira|simple\s*ira|retirement|pension|thrift\s+savings\s+plan|defined\s+contribution|profit\s+sharing\s+plan)\b/;
   const retirementSubtype=new Set(['retirement','401k','403b','457b','ira','roth_ira','traditional_ira','sep_ira','simple_ira','pension','thrift_savings_plan']);
   const brokerageSubtype=new Set(['individual','joint','investing','investment','investments','stocks','stock','crypto','securities','trading','brokerage','managed','custodial','mutual_fund','mutual_funds']);
-  const brokerageProduct=/\b(?:brokerage|trading|investments?|investment\s+account|securities|mutual\s+funds?|stock\s+portfolio|trading\s+account)\b/;
+  const brokerageProduct=/\b(?:brokerage|trading|investments?|securities|mutual\s+funds?|stock\s+portfolio|trading\s+account|portfolio|exchange\s+traded\s+funds?|etf|managed\s+funds?)\b/;
   const checkingProduct=/\b(?:checking|current\s+account|cash\s+management|spend\s+account)\b/;
   const savingsProduct=/\b(?:savings|money\s+market|high\s+yield)\b/;
   function detectedType(account){
@@ -44,9 +44,11 @@
     // "Retirement Savings Plan" was already returned as retirement above.
     if(checkingProduct.test(name))return 'checking';
     if(brokerageProduct.test(name))return 'brokerage';
+    const explicitInvestmentSubtype=['stocks','stock','crypto','securities','trading','brokerage','mutual_fund','mutual_funds'].includes(subtype);
     // Named savings deposits remain cash at a brokerage, even if the
     // institution supplies a generic "individual" investment subtype.
-    if(savingsProduct.test(name)&&!(/\b(?:plan|portfolio|fund)\b/.test(name))&&
+    if(savingsProduct.test(name)&&!explicitInvestmentSubtype&&
+       !(/\b(?:plan|portfolio|fund)\b/.test(name))&&
        !(/\b(?:money\s+market)\b/.test(name)&&investmentMetadata))return 'savings';
     if(investmentMetadata){
       // A genuine named savings deposit remains cash; generic brokerage
