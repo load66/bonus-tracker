@@ -206,3 +206,23 @@ const legacyWorth=finance.summarize(core.safeForSummary(legacyView),{now});
 const manualWorth=finance.summarize(core.safeForSummary(manualView),{now});
 assert.equal(legacyWorth.netWorth,'16200.00','Cash plus investments determine total Net worth when included');
 assert.equal(manualWorth.netWorth,'1200.00','Legacy wallet/investment exclusions change totals only when genuinely automatic');
+
+
+const payrollChecking=structuredClone(simple), payrollOther=structuredClone(plaid);
+payrollChecking.transactions[a]={
+  paycheck:{id:'schreiber-pay',amount:'1061.24',description:'Schreiber Foods',
+    posted:now-100,category:'income',categorySource:'automatic',signals:['paycheck'],pending:false}
+};
+payrollOther.transactions[b]={
+  expense:{id:'genuine-expense',amount:'-1061.24',description:'Synthetic Home Improvement Purchase',
+    posted:now-140,category:'shopping',categorySource:'automatic',pending:false}
+};
+const payrollSafe=core.safeForSummary(core.combine({simplefin:payrollChecking,plaid:payrollOther}));
+assert.equal(payrollSafe.transactions['simplefin:'+a].paycheck.category,'income',
+  'A paycheck must not be mistaken for a same-amount transfer to another bank');
+assert.equal(payrollSafe.transactions['plaid:'+b].expense.category,'shopping',
+  'Coincidentally equal spending must remain a purchase');
+assert.equal(finance.summarize(payrollSafe,{now,days:30}).income,'1061.24',
+  'Verified payroll remains income even when a same-value debit happened');
+assert.equal(finance.summarize(payrollSafe,{now,days:30}).expenses,'1061.24',
+  'A real purchase is not neutral just because its amount equals payroll');
