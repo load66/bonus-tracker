@@ -759,13 +759,41 @@
       }
     }
     const actualCategory=row=>I.spendingCategory(row,I.cents(row.amount));
+    const possibleTransfers=rows.filter(row=>inMonth(row)&&I.possibleTransfer(row));
+    function confirmTransfers(parent){
+      if(!possibleTransfers.length||spendingMode==='income')return;
+      const panel=card(parent,'Confirm transfers',possibleTransfers.length+' financial-looking movement'+(possibleTransfers.length===1?'':'s')+' excluded pending your review');
+      el('p','These amounts are excluded from spending until you confirm them. No bank records are changed.',panel,'finance-page-hint');
+      for(const row of possibleTransfers.slice(0,30)){
+        const item=el('section',undefined,panel,'finance-spending-confirm-row');
+        const label=el('div',undefined,item,'finance-spending-confirm-copy');
+        el('strong',row.description||displayMerchant(row),label);
+        el('small',signedFinanceAmount(row)+' · '+(row.account?.name||row.account?.bank||''),label);
+        const controls=el('div',undefined,item,'finance-spending-confirm-actions');
+        const apply=el('label',undefined,controls,'finance-spending-apply-similar');
+        const similar=el('input',undefined,apply);similar.type='checkbox';
+        el('span','Apply to similar',apply);
+        for(const [title,category] of [['Transfer','transfer'],['Spending','other']]){
+          action(controls,title,async()=>{
+            await change(async()=>{
+              const snapshot=await request('/transaction-review',{
+                method:'PUT',body:JSON.stringify({
+                  account:row.account.rawKey,transaction:row.id,category,applySimilar:similar.checked
+                })},row.source);
+              return {financeSource:row.source,snapshot};
+            });
+          },'finance-page-button'+(category==='transfer'?' finance-page-primary':''));
+        }
+      }
+      if(possibleTransfers.length>30)el('small','Showing first 30; review more after saving these.',panel,'finance-page-hint');
+    }
     const inMonth=row=>I.monthKey(row.posted*1000)===spendingMonth;
     const matchingRows=cat=>rows.filter(row=>inMonth(row)&&actualCategory(row)===cat);
     function categoriesList(parent){
       const chart=card(parent,'Category breakdown');
       if(!current.categories.length){el('p',current.hasData?'No spending transactions in this month.':'No transaction history for this month.',chart,'finance-page-hint');return}
       const donut=el('div',undefined,chart,'finance-spending-donut-row');
-      const circle=el('div',undefined,donut,'finance-page-donut finance-spending-donut');
+      const circle=el('div',undefined,donut,'finance-spending-donut');
       let from=0;
       const segments=current.categories.map((v,i)=>{
         const next=from+v.percentage;
@@ -787,9 +815,9 @@
         el('strong',financeCategory(item.category),desc);
         const old=previous.categories.find(v=>v.category===item.category);
         let note=item.count+' transaction'+(item.count===1?'':'s')+' · '+item.percentage.toFixed(0)+'%';
-        if(previous.hasData&&old){
+        if(previous.hasData&&old&&item.category!=='unreviewed'){
           const change=Number(item.amount)-Number(old.amount);
-          if(change!==0)note+=' · '+moneyText(Math.abs(change).toFixed(2))+(change>0?' more':' less');
+          if(change!==0)note+=' · Category '+moneyText(Math.abs(change).toFixed(2))+(change>0?' more':' less')+' vs '+monthLabel(previousMonth);
           else note+=' · No change';
         }
         el('small',note,desc);
@@ -913,7 +941,7 @@
     toggle.setAttribute('aria-label','Spending or income');
     for(const [id,label] of [['spending','Spending'],['income','Income']])
       action(toggle,label,()=>{spendingMode=id;paint()},'finance-page-chip'+(spendingMode===id?' is-active':''));
-    el('small','Excludes transfers and account verification',hero,'finance-page-hint');
+    el('small','Excludes transfers, card payments, investment transfers and verification deposits',hero,'finance-page-hint');
     const line=card(root,'Daily '+(spendingMode==='income'?'income':'spending'),'Cumulative this month vs last month');
     cumulativeSpendingChart(line,current,previous,spendingMode,activeDate);
     if(spendingMode==='income'){
@@ -930,6 +958,7 @@
         el('b',moneyText(item.amount.toFixed(2)),entry);
       }
     }else{
+      confirmTransfers(root);
       categoriesList(root);
       if(current.uncategorized>0){
         const review=el('div',undefined,root,'finance-spending-review-banner');
@@ -1041,7 +1070,20 @@
   function signalLabel(value){
     return ({possible_direct_deposit:'Possible direct deposit',possible_bonus:'Possible bonus',possible_reversal:'Possible reversal',
       possible_fee:'Possible fee',possible_recurring:'Possible recurring payment',matched_internal_transfer:'Matched transfer',
-      possible_transfer:'Possible transfer',possible_refund:'Possible refund'})[value]||value.replaceAll('_',' ');
+      possible_transfer:'Possible transfer',card_payment:'Card payment',investment_transfer:'Investment transfer',possible_refund:'Possible refund'})[value]||value.replaceAll('_',' ');
+  }
+  function displayTransactionCategory(row){
+    const I=window.BTFinanceInsights;
+    const signals=row.signals||[];
+    const kind=I?.financialKind?.(row);
+    if(row.category==='transfer'||kind==='transfer'||kind==='card_payment'||kind==='investment_transfer'){
+      if(kind==='investment_transfer'||signals.includes('investment_transfer'))return 'Investment transfer';
+      if(kind==='card_payment'||signals.includes('card_payment'))return 'Card payment';
+      return 'Transfer';
+    }
+    if(I?.possibleTransfer?.(row))return 'Possible transfer';
+    const effective=I?.spendingCategory?.(row,I.cents(row.amount));
+    return financeCategory(effective||row.category);
   }
   function transactions(host){
     const card=el('section',undefined,host,'finance-page-card finance-page-transactions-card');
@@ -1099,7 +1141,8 @@
         top.setAttribute('aria-expanded',String(open));top.setAttribute('aria-label',displayMerchant(row)+' details');
         const copy=el('span',undefined,top,'finance-page-transaction-copy');
         el('strong',displayMerchant(row),copy);
-        el('span',financeCategory(row.category),copy,'finance-page-transaction-category'+(['transfer','verification'].includes(row.category)?' is-neutral':''));
+        const chip=displayTransactionCategory(row);
+        el('span',chip,copy,'finance-page-transaction-category'+(['Transfer','Card payment','Investment transfer','Possible transfer','Account verification'].includes(chip)?' is-neutral':''));
         if(row.categorySource==='ai')el('small','Auto',copy,'finance-page-auto-tag');
         el('small',row.account.name||row.account.bank||'Account',copy);
         const value=el('span',undefined,top,'finance-page-transaction-value');
@@ -1112,6 +1155,7 @@
         detail.classList.add('finance-page-transaction-detail');
         el('h4',displayMerchant(row),detail);
         el('p',row.description||'No additional description supplied.',detail,'finance-page-description');
+        el('small',displayTransactionCategory(row),detail,'finance-page-transaction-category');
         el('small',[row.account.bank,row.account.name,row.account.sourceLabel,date(row.posted),row.pending?'Pending':'Posted'].filter(Boolean).join(' · '),detail,'finance-page-detail-meta');
         if(row.stalePending)el('p','This pending charge has not updated recently. Check your bank.',detail,'finance-page-warning');
         const visibleSignals=(row.signals||[]).filter(signal=>signal!=='possible_bonus');
