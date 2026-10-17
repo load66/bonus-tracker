@@ -38,6 +38,7 @@
       (investmentInstitution.test(text)&&contributionAction.test(text));
   }
   function summarize(state={},options={}){
+    const guard=typeof window!=='undefined'?window.BTFinanceTransfer:typeof require==='function'?require('./finance-transfer-core.js'):null;
     const now=Number.isFinite(options.now)?Math.floor(options.now):Math.floor(Date.now()/1000);
     const days=Number.isInteger(options.days)&&options.days>=1&&options.days<=MAX_DAYS?options.days:30;
     const accounts=Array.isArray(state.accounts)?state.accounts:[];
@@ -65,15 +66,16 @@
         if(n>0n)credits+=n; else if(n<0n)debits-=n;
         if(row.kind==='possible_bonus'&&n>0n)candidates++;
         if(row.kind==='possible_reversal'&&n<0n)reversals++;
-        const category=String(row.category||'unreviewed');
+        const item=guard?.effective(row)||row;
+        const category=String(item.category||'unreviewed');
         if(category==='income'&&n>0n)income+=n;
         else if(n<0n&&!['transfer','verification','refund'].includes(category)&&
-                !financialMovement(row)){
+                !financialMovement(item)&&!item.signals?.includes('possible_transfer')){
           const amount=-n,label=SPENDING.has(category)?category:'unreviewed';
           expenses+=amount;spending[label]=(spending[label]||0n)+amount;
           if(label==='unreviewed')uncategorized++;
         }else if(category==='transfer')transfers++;
-        if(category==='unreviewed'||(category==='bonus'&&row.categorySource!=='user')||(!['user','user_rule'].includes(row.categorySource)&&row.confidence!=='high'))unreviewed++;
+        if((category==='unreviewed'&&!item.signals?.includes('possible_transfer'))||(category==='bonus'&&row.categorySource!=='user')||(!['user','user_rule'].includes(row.categorySource)&&row.confidence!=='high'))unreviewed++;
         if(Array.isArray(row.signals)&&row.signals.includes('possible_recurring'))recurring++;
         // Use the same local calendar basis as the day-grouped Finance ledger.
         const local=new Date(row.posted*1000);
@@ -81,7 +83,7 @@
         const month=monthly[key]||(monthly[key]={income:0n,expenses:0n});
         if(category==='income'&&n>0n)month.income+=n;
         if(n<0n&&!['transfer','verification','refund'].includes(category)&&
-           !financialMovement(row))month.expenses-=n;
+           !financialMovement(item)&&!item.signals?.includes('possible_transfer'))month.expenses-=n;
       }
     }
 
