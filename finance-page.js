@@ -42,7 +42,7 @@
   try{const saved=localStorage.getItem(TRANSACTION_FILTER_KEY);if(TX_FILTERS.includes(saved))transactionView=saved}catch(_error){}
   let transactionMin='',transactionMax='';
   let accountSearch='',accountType='',showHiddenAccounts=false,saveNotice='',accountDraftProfiles={},currentCombined=null;
-  let activityNotice='',monitoringNotice='',connectionNotice='';
+  let activityNotice='',monitoringNotice='',connectionNotice='',activeFinanceViolations=[];
   const dirtyAccounts=new Set(),expandedAccountSettings=new Set(),monitoringDraft={};
   const sourceSnapshot=source=>source===provider?data:otherData?.provider===source?otherData.snapshot:null;
   function sourceWithArchive(source){
@@ -681,7 +681,7 @@
     icon.append(path);
     if(hidden){const slash=document.createElementNS(icon.namespaceURI,'path');slash.setAttribute('d','M3 3l18 18');icon.append(slash)}
     eye.append(icon);
-    el('strong',summary.netWorthAvailable?amount(summary.netWorth,'USD'):'—',
+    el('strong',summary.netWorthNeedsReview?'Needs review':summary.netWorthAvailable?amount(summary.netWorth,'USD'):'—',
       heroCard,'finance-overview-worth-number');
     const history=summary.netWorthHistory||[],cutoff=Date.now()/1000-30*86400,
       baseline=history.filter(x=>x.at<=cutoff).at(-1);
@@ -742,7 +742,7 @@
       }
       const value=el('span',undefined,row,'finance-overview-row-value');
       const classified=summary.netWorthGroupAccounts?.[kind]||[];
-      el('strong',summary.netWorthAvailable&&classified.length?(kind==='creditCards'?creditCardNetAmount(groups[kind]):amount(groups[kind],'USD')):'—',value);
+      el('strong',summary.netWorthNeedsReview?'Needs review':summary.netWorthAvailable&&classified.length?(kind==='creditCards'?creditCardNetAmount(groups[kind]):amount(groups[kind],'USD')):'—',value);
       el('span','›',value,'finance-overview-chevron');
     }
     const quick=el('div',undefined,host,'finance-overview-actions');
@@ -771,7 +771,7 @@
   function legacyOverview(host,summary){
     const net=sectionTitle(host,'Net worth');
     net.classList.add('finance-net-worth-card');
-    el('strong',summary.netWorthAvailable?amount(summary.netWorth,'USD'):'—',net,'finance-page-big-number');
+    el('strong',summary.netWorthNeedsReview?'Needs review':summary.netWorthAvailable?amount(summary.netWorth,'USD'):'—',net,'finance-page-big-number');
     const history=summary.netWorthHistory||[];
     const cutoff=Math.floor(Date.now()/1000)-30*86400;
     const lastMonth=history.filter(x=>x.at<=cutoff).at(-1);
@@ -803,8 +803,8 @@
     }
     trendChart(net,points);
     const breakdown=el('div',undefined,net,'finance-page-net-worth-split');
-    metric(breakdown,'Assets',summary.netWorthAvailable?amount(summary.assets,'USD'):'—');
-    metric(breakdown,'Liabilities',summary.netWorthAvailable?amount(summary.liabilities,'USD'):'—');
+    metric(breakdown,'Assets',summary.netWorthNeedsReview?'Needs review':summary.netWorthAvailable?amount(summary.assets,'USD'):'—');
+    metric(breakdown,'Liabilities',summary.netWorthNeedsReview?'Needs review':summary.netWorthAvailable?amount(summary.liabilities,'USD'):'—');
     const insight=window.BTFinanceInsights;
     if(insight){
       const month=insight.monthKey(Date.now()),previous=insight.monthShift(month,-1);
@@ -849,8 +849,8 @@
     const activity=el('section',undefined,host,'finance-page-card');
     const activityHead=el('div',undefined,activity,'finance-page-section-head');el('h3','Cash flow',activityHead);periodControl(activityHead);
     const activityGrid=el('div',undefined,activity,'finance-page-grid');
-    metric(activityGrid,'Income',summary.hasActivity?amount(summary.income,'USD'):'—');
-    metric(activityGrid,'Expenses',summary.hasActivity?amount(summary.expenses,'USD'):'—');
+    metric(activityGrid,'Income',summary.ledgerNeedsReview?'Needs review':summary.hasActivity?amount(summary.income,'USD'):'—');
+    metric(activityGrid,'Expenses',summary.ledgerNeedsReview?'Needs review':summary.hasActivity?amount(summary.expenses,'USD'):'—');
     metric(activityGrid,'Net flow',summary.hasActivity?amount(summary.cashFlow,'USD'):'—');
     metric(activityGrid,'Savings rate',hidden?'••••••':summary.savingsRate===null?'—':summary.savingsRate.toFixed(1)+'%');
     if(summary.uncategorized>0)el('p','Includes '+summary.uncategorized+' uncategorized outflow'+(summary.uncategorized===1?'':'s')+'. Review when convenient.',activity,'finance-page-caution');
@@ -1133,7 +1133,7 @@
     const values=el('div',undefined,hero,'finance-spending-value');
     el('span',spendingMode==='income'?'Received':'Spent',values);
     const shown=spendingMode==='income'?current.income:current.total;
-    el('strong',moneyText(shown),values);
+    el('strong',activeFinanceViolations.some(code=>/^(?:SPENDING_|CLASSIFICATION_|DUPLICATE_|INVALID_|TRANSFER_PAIR_)/.test(code))?'Needs review':moneyText(shown),values);
     if(previous.hasData){
       const earlier=spendingMode==='income'?previous.income:previous.total;
       const delta=Number(shown)-Number(earlier);
@@ -1738,6 +1738,7 @@
     el('h3','Data health',healthHead);
     const off=diagnostics.filter(entry=>entry.status==='off');
     const matched=diagnostics.filter(entry=>entry.status==='reconciled').length;
+    if(activeFinanceViolations.length)el('p','Some Finance totals need review before they can be shown.',dataHealth,'finance-page-warning');
     const unknown=diagnostics.filter(entry=>entry.status==='unknown').length;
     el('small',off.length+' needs review · '+matched+' matched · '+unknown+' need more history',dataHealth);
     if(off.length){
@@ -2046,14 +2047,24 @@
     }
     const summaryState=window.BTFinanceUnified.safeForSummary(currentCombined);
     const calculated=window.BTFinanceOverview?.summarize(summaryState,{days:period});
+    activeFinanceViolations=window.BTFinanceOverview?.checkInvariants(summaryState,calculated)||[];
+    for(const code of activeFinanceViolations)console.warn('finance_data_health',code);
+    const netWorthNeedsReview=activeFinanceViolations.some(code=>code.startsWith('NET_WORTH_'));
+    const ledgerNeedsReview=activeFinanceViolations.some(code=>!code.startsWith('NET_WORTH_'));
     const trustedTotals=!summaryState.incompleteProviders&&!summaryState.excludedForReview;
     const summary={...calculated,
+      netWorthNeedsReview,ledgerNeedsReview,
       complete:!!calculated?.complete&&trustedTotals&&!summaryState.historyIncomplete&&!summaryState.malformedActivity,
       cashAvailable:!!calculated?.cashAvailable,
-      netWorthAvailable:!!calculated?.netWorthAvailable,
-      netWorthPartial:!!calculated?.netWorthPartial||!trustedTotals,
+      netWorthAvailable:!!calculated?.netWorthAvailable&&!netWorthNeedsReview,
+      netWorthPartial:!!calculated?.netWorthPartial||!trustedTotals||netWorthNeedsReview,
       hiddenAccounts:summaryState.hiddenAccounts||0};
     hero(host,summary);
+    if(activeFinanceViolations.length){
+      const warning=el('aside',undefined,host,'finance-page-status-row is-attention');
+      el('strong','Some totals need review',warning);
+      action(warning,'Open Data health',()=>{view='accounts';paint()},'finance-page-button');
+    }
     if(connectionNotice){const banner=el('p',connectionNotice,host,'finance-page-connection-success');banner.setAttribute('role','status');}
     if(monitoringNotice){const banner=el('p',monitoringNotice,host,'finance-page-activity-result');banner.setAttribute('role','status');}
     if(activityNotice){const banner=el('p',activityNotice,host,'finance-page-activity-result');banner.setAttribute('role','status');}
