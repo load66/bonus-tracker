@@ -17,7 +17,7 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
       if(process.env.BT_BROWSER_SITE_URL)await page.route('https://api-production-00f74.up.railway.app/**',route=>route.abort());
       await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin**',async route=>{
     const req=route.request(),url=new URL(req.url()),method=req.method();requests.push({method,path:url.pathname,body:req.postData()});
-    if(url.pathname.endsWith('/discover')){
+    if(url.pathname.endsWith('/discover')||url.pathname.endsWith('/discover-guided')){
       const other={key:'b'.repeat(64),name:'Savings',bank:'Newly Added CU',currency:'USD',balance:'100',balanceDate:1792134000};
       if(!state.accounts.some(a=>a.key===other.key))state.accounts.push(other);
       state.monitoredAccounts=state.accounts.map(a=>a.key);
@@ -78,35 +78,36 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    await dialog.getByText('Already authorized a bank?',{exact:false}).waitFor();
    assert.equal(requests.some(r=>r.path.endsWith('/discover')),false,'Add bank provider link must not silently sync data or alter accounts');
    await dialog.getByRole('button',{name:'Add bank',exact:true}).click();
-   await dialog.getByText('SECURE BANK CONNECTION',{exact:true}).waitFor();
-   const fallback=dialog.locator('details.bank-connect-fallback');
-   await fallback.locator('summary').click();
-   await fallback.getByText('Trial capacity not verified').waitFor();
-   await fallback.getByText('Plaid linking is locked until the free Trial plan', {exact:false}).waitFor();
-   assert.equal(await fallback.getByRole('button',{name:'Connect with Plaid (last fallback)'}).count(),0,
-     'No link control when backend quota or monitoring is unverified');
+   await dialog.getByText('ADD BANK · SECURE CONNECTION',{exact:true}).waitFor();
+   await dialog.getByRole('searchbox',{name:'Search banks'}).fill('Newly Added CU');
+   await dialog.getByRole('button',{name:'Choose Newly Added CU'}).click();
+   await dialog.getByRole('button',{name:'Connect with SimpleFIN · recommended'}).waitFor();
+   const plaidRoute=dialog.getByRole('button',{name:/Plaid Trial slots unavailable/});
+   assert.equal(await plaidRoute.isDisabled(),true,'Unavailable Plaid capacity must never create a new Item');
+   await dialog.getByRole('button',{name:'Connect with SimpleFIN · recommended'}).click();
+   const external=dialog.getByRole('link',{name:'Open SimpleFIN in new tab'});
+   assert.equal(await external.getAttribute('href'),'https://beta-bridge.simplefin.org/');
+   assert.equal(await external.getAttribute('target'),'_blank');
+   assert.equal(await external.getAttribute('rel'),'noopener noreferrer');
+   assert.equal(await dialog.locator('input[type=password]').count(),0,'Provider sign-in must remain at provider');
+   await external.evaluate(node=>node.onclick());
+   await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+   await dialog.getByRole('heading',{name:'Found Newly Added CU · 1 account.',exact:true}).waitFor();
+   assert.equal(state.accounts.length,2,'Return-to-app guided discovery imports new account');
+   assert.equal(requests.filter(r=>r.path.endsWith('/discover-guided')).length,1,'Return triggers one bounded guided discovery');
+   await dialog.getByText('Sync activity',{exact:true}).waitFor();
+   await dialog.getByRole('button',{name:'Done · view connected accounts'}).click();
+   await dialog.locator('h4').getByText('Newly Added CU · Savings',{exact:true}).first().waitFor();
+   await dialog.getByRole('button',{name:'Discover accounts',exact:true}).click();
+   await dialog.locator('h4').getByText('Newly Added CU · Savings',{exact:true}).first().waitFor();
+   assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened,productId:'checking'},
+     'New discovery preserves bonus link and old account');
+   assert.deepEqual(new Set(state.monitoredAccounts),new Set([account.key,'b'.repeat(64)]),
+     'Previously linked accounts remain monitored');
+   assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,
+     'Adding a bank must preserve tracker records');
    assert.deepEqual(plaidCalls.filter(c=>c.includes('link-token')),[],
-     'Opening Add Bank must never consume a Plaid Trial Item');
-   const firstExternal=dialog.getByRole('link',{name:'Open SimpleFIN'});
-   assert.equal(await firstExternal.getAttribute('href'),'https://beta-bridge.simplefin.org/');
-   assert.equal(await firstExternal.getAttribute('target'),'_blank');
-   assert.equal(await firstExternal.getAttribute('rel'),'noopener noreferrer');
-   assert.equal(await dialog.locator('input[type=password]').count(),0,'provider credentials are never gathered inside the bank wizard');
-   assert.equal(await dialog.locator('input[type=tel]').count(),0,'bank verification codes are never gathered inside the bank wizard');
-   await dialog.getByRole('button',{name:'Discover accounts',exact:true}).click();
-   await dialog.getByText('Found 1 new account.',{exact:true}).waitFor();
-   assert.equal(state.accounts.length,2,'guided discovery adds newly authorized accounts');
-   await dialog.getByRole('button',{name:'Review account settings'}).click();
-   await dialog.locator('h4').getByText('Newly Added CU · Savings',{exact:true}).first().waitFor();
-   assert.equal(requests.filter(r=>r.path.endsWith('/discover')).length,1,'guided add-bank discovery requires a deliberate click');
-   await dialog.getByRole('button',{name:'Discover accounts',exact:true}).click();
-   await dialog.locator('h4').getByText('Newly Added CU · Savings',{exact:true}).first().waitFor();
-   assert.equal(state.accounts.length,2,'new provider accounts must appear without replacing the existing connection');
-   assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened,productId:'checking'},'account discovery preserves the original verified product association');
-   assert.deepEqual(new Set(state.monitoredAccounts),new Set([account.key,'b'.repeat(64)]),'New accounts must be monitored automatically');
-   assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'adding bank preserves tracker history');
-   assert.equal(requests.filter(r=>r.path.endsWith('/discover')).length,2,'manual refresh is still an explicit separate request');
-   assert.equal(await dialog.locator('script').count(),0);
+     'Guided Add Bank must not open a new Plaid Item or reserve a Trial slot');
    for(const width of [320,390,430]){
     await page.setViewportSize({width,height:760});await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     const geometry=await dialog.evaluate(d=>{const m=d.querySelector('.bank-sync-modal'),b=d.querySelector('.bank-sync-body');return {modalWidth:m.getBoundingClientRect().width,scrollWidth:b.scrollWidth,clientWidth:b.clientWidth,footerBottom:d.querySelector('footer').getBoundingClientRect().bottom,width:innerWidth,height:innerHeight,overflow:[...b.querySelectorAll('*')].filter(e=>e.getBoundingClientRect().right>b.getBoundingClientRect().right+1).slice(0,8).map(e=>({tag:e.tagName,cls:e.className,width:e.getBoundingClientRect().width,right:e.getBoundingClientRect().right,text:e.textContent.slice(0,90)}))};});
@@ -127,23 +128,28 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-replacement-token')),false);
    assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before);
    await dialog.getByRole('button',{name:'Done',exact:true}).click();
-   state={configured:true,connected:false,evidenceOnly:true};await page.evaluate(()=>btOpenBankSync());await page.getByRole('button',{name:'Guided secure bank connection'}).waitFor();
+   state={configured:true,connected:false,evidenceOnly:true};
+   await page.evaluate(()=>btOpenBankSync());
    await page.getByRole('button',{name:'Guided secure bank connection'}).click();
-   await page.getByText('Connect your first bank',{exact:true}).waitFor();
-   const firstBankLink=page.getByRole('link',{name:'Open SimpleFIN'});
-   assert.equal(await firstBankLink.getAttribute('href'),'https://beta-bridge.simplefin.org/');
-   assert.equal(await firstBankLink.getAttribute('target'),'_blank');
-   const tokenLink=page.getByRole('link',{name:'Get my SimpleFIN setup token'});
+   await page.getByRole('heading',{name:'Find your bank'}).waitFor();
+   await page.getByRole('searchbox',{name:'Search banks'}).fill('Chase');
+   await page.getByRole('button',{name:'Choose Chase'}).click();
+   await page.getByRole('button',{name:'Connect with SimpleFIN · recommended'}).click();
+   const tokenLink=page.getByRole('link',{name:'Create setup token'});
    assert.equal(await tokenLink.getAttribute('href'),'https://bridge.simplefin.org/simplefin/create');
-   assert.equal(await page.locator('.bank-connect-flow input[type=password]').count(),0,'first-bank onboarding must not collect bank credentials');
-   await page.getByLabel('One-time SimpleFIN setup token',{exact:true}).fill('synthetic-one-time-token');
-   await page.getByRole('button',{name:'Connect my accounts securely',exact:true}).click();
-   await page.getByText('Connected. 1 account found. Transactions sync automatically.',{exact:true}).waitFor();
-   await page.getByRole('button',{name:'Review account settings'}).click();
+   assert.equal(await page.locator('.bank-connect-flow input[type=password]').count(),0,'onboarding never asks for provider credentials');
+   const submit=page.getByRole('button',{name:'Connect securely',exact:true});
+   assert.equal(await submit.isDisabled(),true,'Cannot submit without a valid setup token');
+   await page.getByLabel('SimpleFIN setup token').fill('synthetic-one-time-token');
+   assert.equal(await submit.isDisabled(),true,'Invalid setup token must not cause a provider request');
+   await page.getByLabel('SimpleFIN setup token').fill('aHR0cHM6Ly9icmlkZ2Uuc2ltcGxlZmluLm9yZy9zaW1wbGVmaW4vY2xhaW0vc3ludGhldGlj');
+   assert.equal(await submit.isEnabled(),true,'Valid encoded claim URL is accepted');
+   await submit.click();
+   await page.getByRole('button',{name:'Done · view connected accounts'}).click();
    await page.getByText('Connection active',{exact:true}).waitFor();
-   assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-one-time-token')),false);
+   assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('aHR0cHM6Ly9icmlkZ2Uuc2ltcGxlZmluLm9yZy9zaW1wbGVmaW4vY2xhaW0vc3ludGhldGlj')),false);
    assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before);
-   assert.ok(requests.some(r=>r.path.endsWith('/connect')&&JSON.parse(r.body).setup_token==='synthetic-one-time-token'));
+   assert.ok(requests.some(r=>r.path.endsWith('/connect')&&JSON.parse(r.body).setup_token==='aHR0cHM6Ly9icmlkZ2Uuc2ltcGxlZmluLm9yZy9zaW1wbGVmaW4vY2xhaW0vc3ludGhldGlj'));
    // Cancellation must never remove the connection or saved tracker campaign.
    await page.getByRole('button',{name:'Disconnect and remove sync data'}).click();
    let confirmation=page.getByRole('dialog',{name:'Disconnect SimpleFIN?'});

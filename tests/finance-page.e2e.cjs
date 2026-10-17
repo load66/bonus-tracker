@@ -126,7 +126,7 @@ const base=()=>({
       await section.locator('.finance-page-count').filter({hasText:'4 accounts'}).waitFor();
       const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
       assert.equal(await section.locator('img').count(),0,'Bank aliases render as escaped text');
-      assert.deepEqual((await section.locator('.finance-page-nav button').allTextContents()).map(x=>x.trim()),['Overview','Spending','Recurring','Transactions','Accounts']);
+      assert.deepEqual((await section.locator('.finance-page-nav button').allTextContents()).map(x=>x.trim()),['Overview','Spending','Recurring','Transactions','Accounts','Rules']);
       await section.getByRole('button',{name:'Hide amounts',exact:true}).waitFor();
       await section.getByRole('button',{name:'Hide amounts',exact:true}).click();
       assert.equal(await section.locator('.finance-page-hero-cash-value').innerText(),'••••••');

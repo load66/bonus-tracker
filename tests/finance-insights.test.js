@@ -40,8 +40,8 @@ const cardPayments=[row(new Date(2026,7,15).getTime(),'-200.00','transfer','Capi
   row(new Date(2026,8,15).getTime(),'-200.00','transfer','Capital One payment'),
   row(new Date(2026,9,15).getTime(),'-200.00','transfer','Capital One payment')];
 const recurringTransfers=I.recurring(cardPayments,NOW);
-assert.equal(recurringTransfers.length,1,'Card payments remain visible as expected bills');
-assert.equal(recurringTransfers[0].category,'transfer');
+assert.equal(recurringTransfers.length,0,'Card payments are transfers, not real recurring bills');
+assert.equal(recurringTransfers.length,0,'Transfers never appear as recurring income or expenses');
 assert.equal(I.spent(cardPayments,'2026-10').total,'0.00','Card payments cannot inflate subscriptions or spending');
 
 console.log('Finance insights passed: spending exclusions, month navigation, monthly, biweekly, yearly, price increases and missed bills.');
@@ -109,3 +109,31 @@ assert.equal(G.label({...imported[0]}),'Investment transfer');
 assert.equal(G.label({...imported[6]}),'Card payment');
 assert.equal(G.label({...imported[1]}),'Transfer');
 assert.equal(G.effective({...imported[0],category:'shopping',categorySource:'user'}).category,'shopping','User decisions override auto patterns');
+
+const move=[
+  {...oct(3,'903.00','unreviewed','Savings (0793) → Checking (2033)'),description:'Savings (0793) → Checking (2033)',accountKey:'checking',id:'credit903',categorySource:'automatic',transferPairId:'t903'},
+  {...oct(3,'-903.00','transfer','Checking withdrawal'),description:'Checking withdrawal',accountKey:'savings',id:'debit903',categorySource:'automatic',transferPairId:'t903'},
+  {...oct(5,'1223.97','unreviewed','Savings (0793) → Checking (2033)'),description:'Savings (0793) → Checking (2033)',accountKey:'checking',id:'credit1223',categorySource:'automatic'},
+  {...oct(6,'903.00','unreviewed','From Schwab Brokerage'),description:'From Schwab Brokerage',accountKey:'checking',id:'schwab903',categorySource:'automatic'},
+  {...oct(10,'1061.24','income','Schreiber Foods'),description:'Schreiber Foods',merchant:'Schreiber Foods',signals:['paycheck'],accountKey:'checking',id:'pay',categorySource:'automatic'},
+  {...oct(11,'-20.00','groceries','Market'),description:'Market',accountKey:'checking',id:'market'}
+];
+const movement=I.spent(move,'2026-10');
+assert.equal(movement.income,'1061.24','Transfers and investment money must never become income');
+assert.equal(movement.total,'20.00','Only purchases are spending');
+assert.equal(movement.moneyMoved,'3029.97','Paired transfers are counted once, plus unique investment transfer');
+assert.equal(movement.transferCount,3);
+assert.equal(G.effective(move[0]).category,'transfer');
+assert.equal(G.label(move[3]),'Investment transfer');
+assert.equal(G.label(move[4]),'Paycheck');
+assert.equal(I.recurring([
+ {...move[4],posted:unix(new Date(2026,9,1).getTime())},
+ {...move[4],posted:unix(new Date(2026,9,15).getTime())}
+],NOW)[0].incomeType,'Paycheck','Paycheck recurrence appears as income');
+
+
+const transferLabels=require('../finance-transfer-core.js');
+const correctedPayment={amount:'-100.00',description:'Chase AUTOPAY',
+  category:'other',categorySource:'user',signals:['card_payment'],pending:false};
+assert.equal(transferLabels.isTransfer(correctedPayment),false,'Manual spending overrides stale card-payment signals');
+assert.equal(transferLabels.label(correctedPayment),null,'Manual spending label overrides stale card-payment chip');

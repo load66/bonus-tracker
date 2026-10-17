@@ -31,6 +31,7 @@
   const investmentInstitution=/(?:\brobinhood\b|\bfidelity\b|\bschwab\b|\bvanguard\b|\bbrokerage\b|\binvestment\b|\b401k\b|\broth\s*ira\b|\bira\b)/i;
   const contributionAction=/(?:\b(?:contribution|contribute|deposit|funding|transfer)\b)/i;
   function financialMovement(row){
+    if(['user','user_rule'].includes(row.categorySource)&&row.category!=='transfer')return false;
     const text=String(row.description||'')+' '+String(row.merchant||'');
     return row.kind==='card_payment'||row.kind==='investment_contribution'||
       (row.signals||[]).includes('matched_internal_transfer')||
@@ -68,14 +69,16 @@
         if(row.kind==='possible_reversal'&&n<0n)reversals++;
         const item=guard?.effective(row)||row;
         const category=String(item.category||'unreviewed');
+        const confirmedPayment=['user','user_rule'].includes(item.categorySource)&&category!=='transfer';
+        const possibleMove=!confirmedPayment&&item.signals?.includes('possible_transfer');
         if(category==='income'&&n>0n)income+=n;
         else if(n<0n&&!['transfer','verification','refund'].includes(category)&&
-                !financialMovement(item)&&!item.signals?.includes('possible_transfer')){
+                !financialMovement(item)&&!possibleMove){
           const amount=-n,label=SPENDING.has(category)?category:'unreviewed';
           expenses+=amount;spending[label]=(spending[label]||0n)+amount;
           if(label==='unreviewed')uncategorized++;
         }else if(category==='transfer')transfers++;
-        if((category==='unreviewed'&&!item.signals?.includes('possible_transfer'))||(category==='bonus'&&row.categorySource!=='user')||(!['user','user_rule'].includes(row.categorySource)&&row.confidence!=='high'))unreviewed++;
+        if((category==='unreviewed'&&!possibleMove)||(category==='bonus'&&row.categorySource!=='user')||(!['user','user_rule'].includes(row.categorySource)&&row.confidence!=='high'))unreviewed++;
         if(Array.isArray(row.signals)&&row.signals.includes('possible_recurring'))recurring++;
         // Use the same local calendar basis as the day-grouped Finance ledger.
         const local=new Date(row.posted*1000);
@@ -83,7 +86,7 @@
         const month=monthly[key]||(monthly[key]={income:0n,expenses:0n});
         if(category==='income'&&n>0n)month.income+=n;
         if(n<0n&&!['transfer','verification','refund'].includes(category)&&
-           !financialMovement(item)&&!item.signals?.includes('possible_transfer'))month.expenses-=n;
+           !financialMovement(item)&&!possibleMove)month.expenses-=n;
       }
     }
 

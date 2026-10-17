@@ -101,7 +101,27 @@
             if(!row||typeof row!=='object')continue;
             const identity=row.id||txnKey;
             const meta=preferences.transactionMeta?.[source+':'+account.key+':'+String(identity)]||{};
-            transactions[composite][String(txnKey)]={...row,id:identity,source,accountKey:composite,
+            // User-owned global rules apply across providers, archived history,
+            // and new imports; an explicit per-row category is still authoritative.
+            const ruleKey=canonical(row.description||row.merchant).slice(0,90);
+            const rule=preferences.rules?.[ruleKey];
+            const manual=['user','user_rule'].includes(row.categorySource);
+            const useRule=!manual&&!row.pending&&!['possible_bonus','possible_reversal'].includes(row.kind)&&
+              row.category!=='bonus'&&rule&&typeof rule==='object'&&
+              typeof rule.category==='string'&&
+              (rule.category!=='income'||Number(row.amount)>0);
+            const transferSignals=new Set(['matched_internal_transfer','investment_transfer','possible_transfer',
+              'card_payment','ownership_unconfirmed','plaid_transfer']);
+            const signals=useRule?
+              (row.signals||[]).filter(s=>rule.category==='transfer'||!transferSignals.has(s)):row.signals;
+            transactions[composite][String(txnKey)]={
+              ...row,id:identity,source,accountKey:composite,
+              category:useRule?rule.category:row.category,
+              categorySource:useRule?'user_rule':row.categorySource,
+              confidence:useRule?'confirmed':row.confidence,
+              signals:[...new Set([...(signals||[]),
+                ...(useRule&&rule.employer?['paycheck']:[]),
+                ...(useRule&&rule.ownAccount?['ownership_confirmed']:[])])],
               merchant:meta.name||row.merchant,note:meta.note||'',
               excludedFromTotals:meta.exclude===true,markedRecurring:meta.markRecurring===true};
           }
@@ -186,7 +206,9 @@
       for(const row of Object.values(rows)){
         const value=toCents(row.amount);
         if(row.pending||value===null||value===0n||
-          !Number.isFinite(row.posted)||['user','user_rule'].includes(row.categorySource))continue;
+          !Number.isFinite(row.posted)||['user','user_rule'].includes(row.categorySource)||
+          ['refund','bonus','verification'].includes(row.category)||
+          (row.signals||[]).some(s=>['paycheck','possible_direct_deposit','possible_refund','verification'].includes(s)))continue;
         transferRows.push({account:key,row,value});
       }
     }
