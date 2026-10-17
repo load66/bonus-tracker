@@ -1,7 +1,7 @@
-/* Version 3.4.83: Finance mobile presentation polish; existing tracker engines preserved. */
+/* Version 3.4.84: Tracker bonus evidence and conservative candidate progress. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.83';
+const APP_VERSION='3.4.84';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -3978,6 +3978,18 @@ function bonusPipelineMetrics(rows,year){
   out.active=out.awaiting+out.inProgress+out.actionNeeded;
   return out
 }
+function renderTrackerEvidenceAlerts(e){
+  if(!e||e.closed)return'';
+  const hint=window.BTTrackerEvidenceHints?.[e.id],items=[];
+  if(hint&&hint.bank===e.bank&&hint.opened===e.opened){
+    if(hint.balanceRisk)items.push('Balance below hold minimum · review history');
+    if(hint.fee)items.push('Fee on linked bonus account · review');
+  }
+  const days=e.opened&&!e.reqMet&&!e.bonusRecd?daysToDeadline(e):null;
+  if(Number.isFinite(days)&&days>=0&&days<=7)items.push('Requirements pending · '+days+' days until deadline');
+  if(e.bonusRecd&&status(e)==='SAFE TO CLOSE'&&safeCloseDate(e))items.push('Safe-close date reached · verify bank conditions');
+  return items.length?'<div class="bt-tracker-alerts" role="note">'+items.map(s=>'<span>'+esc(s)+'</span>').join('')+'</div>':'';
+}
 function renderCardProgressLine(e){
   if(!e||e.closed)return'';
   const tasks=Array.isArray(e.checklist)?e.checklist.filter(x=>x&&String(x.text||'').trim()):[];
@@ -6488,6 +6500,7 @@ entries=sortE(entries);R();
       if(e.bonus) h += `<div class="card-bonus"><span>Bonus</span>${fM(e.bonus)}</div>`;
       h += `<div class="card-id">${esc(getEntryDisplayId(e))}</div></div>`;
       h += '</div></div>';
+      h += renderTrackerEvidenceAlerts(e);
 
       if(isX){
         h += '<div class="card-exp">';

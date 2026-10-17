@@ -224,6 +224,20 @@
       };
       select.addEventListener('change',fillProducts);fillProducts();
       selects.push({cycle:select,product:productSelect});
+      const first=Number(a.firstSeenAt),possible=available.filter(e=>{
+        const opened=Date.parse(e.opened+'T00:00:00Z')/1000;
+        return String(a.bank||'').trim().toLowerCase()===String(e.bank||'').trim().toLowerCase()&&
+          first>0&&Number.isFinite(opened)&&first>=opened&&first-opened<=30*86400;
+      });
+      if(!current&&monitored.has(a.key)&&possible.length===1){
+        const match=possible[0];
+        button(card,'Link to '+match.bank+' bonus?',async()=>{
+          const mappings={...data.mappings,[a.key]:{entryId:String(match.id),bank:match.bank,opened:match.opened}};
+          data=await request('/selection',{method:'PUT',body:JSON.stringify({mappings})});
+          paint();message('Bonus linked after confirmation. Review account-product assignment separately.');
+        },'btn-s');
+        el('small','Suggested from the exact institution name and first-discovery date, not a verified opening date.',card);
+      }
     }
     if(search)search.oninput=()=>{accountFilter=search.value.trim().toLowerCase();for(const item of accountCards)item.card.hidden=!!accountFilter&&!item.name.includes(accountFilter);};
     if(!data.accounts?.length)el('p','No accounts were returned. Refresh the account list after checking SimpleFIN.',body);

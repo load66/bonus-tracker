@@ -1742,6 +1742,10 @@
     else if(view==='spending')spendingView(host);
     else if(view==='recurring')recurringView(host);
     else overview(host,summary);
+    if(view==='accounts'||view==='overview'){
+      const evidence=el('section',undefined,host,'finance-bonus-evidence-section');
+      window.BTBonusEvidence?.mount(evidence);
+    }
   }
   let sessionIdentity=null,lastAuthenticatedOwner=null,mountCall=0;
   async function mount(){

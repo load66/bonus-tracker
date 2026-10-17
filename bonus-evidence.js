@@ -143,6 +143,18 @@
       return;
     }
     const report=window.BTBonusEvidenceCore?.summarize(snapshot,activeEntries());
+    if(report?.campaigns){
+      const alerts={};
+      for(const campaign of report.campaigns){
+        const entry=activeEntries().find(e=>String(e.id)===campaign.entryId&&e.bank===campaign.bank&&e.opened===campaign.opened);
+        if(!entry)continue;
+        const progress=requirementReport(campaign);
+        alerts[campaign.entryId]={bank:campaign.bank,opened:campaign.opened,
+          fee:campaign.activity.some(a=>a.type==='fee'&&a.reviewStatus!=='dismissed'),
+          balanceRisk:(progress?.requirements||[]).some(r=>r.balance?.status==='at risk')};
+      }
+      window.BTTrackerEvidenceHints=alerts;
+    }
     if(!report){
       el('p','Bank evidence tools are not available. Reload BonusTracker.',root,'bonus-evidence-note');return;
     }
