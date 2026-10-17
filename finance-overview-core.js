@@ -104,12 +104,16 @@
     }
     const missingAccounts=[...selected].filter(k=>!accounts.some(a=>a&&a.key===k)).length;
     const covered=usd.every(a=>history[a.key]&&typeof history[a.key]==='object'&&!Array.isArray(history[a.key]));
-    const complete=observations>0&&unreviewed===0&&unusable===0&&missingAccounts===0&&covered;
+    // Categorized rows do NOT imply complete provider history. Plaid explicitly
+    // reports when historical transactions have finished becoming available.
+    const historyIncomplete=state.incompleteProviders===true||accounts.some(a=>
+      a&&a.source==='plaid'&&a.historyComplete!==true);
+    const complete=observations>0&&unreviewed===0&&unusable===0&&missingAccounts===0&&covered&&!historyIncomplete;
     return Object.freeze({
       days,currency:'USD',connectedAccounts:accounts.length,selectedAccounts:selected.size,
       usdAccounts:usd.length,otherCurrencyAccounts:accounts.filter(a=>a&&selected.has(a.key)&&a.currency!=='USD').length,
       missingAccounts,otherCurrencies:[...new Set(accounts.filter(a=>a&&selected.has(a.key)&&a.currency!=='USD').map(a=>a.currency||'Unknown currency'))].sort(),
-      sourceAccounts,observations,candidates,reversals,unusable,pending,unreviewed,transfers,recurring,
+      sourceAccounts,observations,candidates,reversals,unusable,pending,unreviewed,transfers,recurring,historyIncomplete,
       hasSync:Number.isFinite(state.lastSuccess)&&state.lastSuccess>0,
       hasActivity:observations>0&&Number.isFinite(state.lastSuccess)&&state.lastSuccess>0,
       lastSync:Number.isFinite(state.lastSuccess)?state.lastSuccess:null,
