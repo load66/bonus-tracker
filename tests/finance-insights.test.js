@@ -41,9 +41,7 @@ const cardPayments=[row(new Date(2026,7,15).getTime(),'-200.00','transfer','Capi
   row(new Date(2026,8,15).getTime(),'-200.00','transfer','Capital One payment'),
   row(new Date(2026,9,15).getTime(),'-200.00','transfer','Capital One payment')];
 const recurringTransfers=I.recurring(cardPayments,NOW);
-assert.equal(recurringTransfers.length,1,'Card payments remain visible as expected bills');
-assert.equal(recurringTransfers[0].category,'transfer');
-assert.equal(recurringTransfers[0].type,'card_payment');
+assert.equal(recurringTransfers.length,0,'Card payments must not be inferred as recurring bills');
 assert.equal(I.upcoming(recurringTransfers,NOW).length,0,'Card payments are a separate section, never upcoming bills');
 assert.equal(I.spent(cardPayments,'2026-10').total,'0.00','Card payments cannot inflate subscriptions or spending');
 
@@ -125,7 +123,7 @@ const savings=[weekday(8,9),weekday(9,9),weekday(10,9)]
 const checking=[weekday(8,9),weekday(9,9),weekday(10,9)]
   .map(at=>row(at,'997.39','income','From Personal Checking'));
 const selfTransfers=I.recurring([...lafayette,...regions,...savings,...checking],NOW);
-assert.ok(selfTransfers.every(x=>x.type==='transfer'),'All from/to-bank streams stay recurring transfers, not Income/Bills');
+assert.equal(selfTransfers.length,0,'All from/to-bank streams must stay out of recurring, Income and Bills');
 assert.equal(I.upcoming(selfTransfers,NOW).length,0);
 const septemberRows=[...lafayette,...regions,...savings,...checking]
   .filter(x=>I.monthKey(x.posted*1000)==='2026-09');
@@ -163,4 +161,14 @@ assert.equal(G.effective(bonus).category,'bonus','Promotional bank credit is Bon
 assert.equal(I.spent([bonus],'2026-10').income,'0.00','Unconfirmed bonus stays out of payroll income');
 const cardRecurring=[weekday(8,14),weekday(9,14),weekday(10,14)]
   .map(at=>row(at,'-820.77','unreviewed','U.S. Bank'));
-assert.equal(I.recurring(cardRecurring,NOW)[0].type,'card_payment');
+assert.equal(I.recurring(cardRecurring,NOW).length,0,'Bare bank-name card payments are not recurring bills');
+for(const signal of ['matched_internal_transfer','possible_transfer','card_payment','investment_transfer']){
+  const repeats=[weekday(8,9),weekday(9,9),weekday(10,9)].map(at=>({...row(at,'500.00','income','Lafayette credit'),signals:[signal]}));
+  assert.equal(I.recurring(repeats,NOW).length,0,signal+' must exclude recurring even if categorized Income');
+}
+for(const category of ['transfer','card_payment','investment_transfer']){
+  const repeats=[weekday(8,9),weekday(9,9),weekday(10,9)].map(at=>row(at,'-500.00',category,'Bank account movement'));
+  assert.equal(I.recurring(repeats,NOW).length,0,category+' must not produce recurring bills');
+}
+const kindMovements=[weekday(8,9),weekday(9,9),weekday(10,9)].map(at=>({...row(at,'-500.00','subscription','Recurring funding'),kind:'investment_contribution'}));
+assert.equal(I.recurring(kindMovements,NOW).length,0,'Investment contribution kinds are always financial movements');
