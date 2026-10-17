@@ -92,8 +92,11 @@
     return {...unified,accounts,transactions:keep(unified.transactions),mappings:keep(unified.mappings),
       monitoredAccounts:unified.monitoredAccounts.filter(k=>allowed.has(k)),
       accountProfiles:keep(unified.accountProfiles),balanceHistory:keep(unified.balanceHistory),
-      incompleteProviders:Object.values(unified.providerState).some(s=>s.connected&&
-        (s.stale||!Number.isFinite(s.lastSuccess)||s.lastSuccess<=0)),
+      // A recent successful sync cannot override a newer provider failure or
+      // an excluded unresolved overlap. These figures remain partial.
+      incompleteProviders:duplicates.size>0||Object.keys(unified.sourceErrors||{}).length>0||
+        Object.values(unified.providerState).some(s=>s.connected&&
+          (s.stale||!Number.isFinite(s.lastSuccess)||s.lastSuccess<=0)),
       excludedForReview:duplicates.size,hiddenAccounts:hidden.size};
   }
   return Object.freeze({combine,safeForSummary,detectedType,key});
