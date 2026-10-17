@@ -16,6 +16,15 @@
     const name=canonical(account.name);
     const bank=canonical(account.bank);
     const broker=/\b(robinhood|fidelity|schwab|vanguard|e trade|etrade|interactive brokers|webull|tastytrade|coinbase|kraken)\b/.test(bank);
+    const retirement=/\b(?:roth|traditional|ira|401\s*k|401k|retirement)\b/.test(name)||/(?:^|_)(?:roth_?ira|ira|401k|retirement)(?:$|_)/.test(subtype);
+    const deposit=/\b(?:checking|current account|cash management|cash account|spend account)\b/.test(name)
+      ||['checking','cash_management','cash'].includes(subtype);
+    const savings=/\b(?:savings|money market|high yield)\b/.test(name)
+      ||['savings','money_market'].includes(subtype);
+    if(/\b(?:credit card|charge card)\b/.test(name)||['credit_card','credit'].includes(subtype))return 'credit_card';
+    if(deposit)return 'checking';
+    if(savings)return 'savings';
+    if(retirement)return 'retirement';
     const investments=new Set(['individual','joint','investing','investment','investments','stocks','stock','crypto','securities','trading','brokerage']);
     if(investments.has(subtype)||investments.has(type))return 'brokerage';
     const aliases={depository:'',credit:'credit_card',credit_card:'credit_card',investment:'brokerage',student:'loan',auto:'loan',mortgage:'mortgage',loan:'loan',brokerage:'brokerage',retirement:'retirement','401k':'retirement',ira:'retirement',checking:'checking',savings:'savings',money_market:'savings'};
@@ -74,7 +83,7 @@
         const kind=saved.kind&&saved.kind!=='unclassified'?saved.kind:detected;
         accountProfiles[composite]={kind,balanceMode:saved.balanceMode||DEFAULT_TREATMENT[kind]||'exclude',
           order:Number.isInteger(saved.order)?saved.order:499,hidden:saved.hidden===true,
-          removed:!!account.removedAt,includeSpending:saved.includeSpending??['checking','credit_card'].includes(kind)};
+          removed:!!account.removedAt,includeSpending:saved.includeSpending??['checking','savings','credit_card'].includes(kind)};
         if((state.monitoredAccounts||[]).includes(account.key))monitoredAccounts.push(composite);
         if(state.mappings?.[account.key])mappings[composite]=state.mappings[account.key];
         if(Array.isArray(state.balanceHistory?.[account.key]))balanceHistory[composite]=state.balanceHistory[account.key];
