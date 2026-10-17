@@ -7,7 +7,7 @@
   'use strict';
   const DAY=86400000;
   const SPEND=new Set(['housing','loan','utilities','groceries','dining','transportation','shopping','health','entertainment','fees','taxes','travel','subscription','other','unreviewed']);
-  const excluded=new Set(['verification','refund','bonus','unreviewed']);
+  const excluded=new Set(['verification','refund','bonus','unreviewed','transfer']);
   function cents(value){
     const match=/^([+-]?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(value??'').trim());
     if(!match)return null;
@@ -40,12 +40,21 @@
   function spent(rows,month){
     const amounts={},byDay={},incomeByDay={},counts={},merchantGroups=new Map();
     const purchases=new Map(),refunds=[];
-    let total=0n,income=0n,uncategorized=0,records=0,refundOffset=0n;
+    let total=0n,income=0n,uncategorized=0,records=0,refundOffset=0n,moneyMoved=0n,transferCount=0;
+    const seenTransferPairs=new Set();
     const valid=(rows||[]).filter(row=>row&&!row.pending&&!row.excludedFromTotals&&
       Number.isFinite(row.posted)&&monthKey(row.posted*1000)===month&&cents(row.amount)!==null);
     for(const raw of valid){
       const row=resolve(raw);
       const v=cents(row.amount),day=new Date(row.posted*1000).getDate(),category=spendingCategory(row,v);
+      const guard=getGuard();
+      if(guard?.isTransfer(row)||row.category==='transfer'){
+        const key=row.transferPairId||[row.accountKey,row.id].join(':');
+        if(!seenTransferPairs.has(key)){
+          seenTransferPairs.add(key);moneyMoved+=v<0n?-v:v;transferCount++;
+        }
+        continue;
+      }
       if(v>0n){
         if(row.category==='income'){income+=v;incomeByDay[day]=(incomeByDay[day]||0n)+v}
         if(row.category==='refund')refunds.push({row,value:v,day});
@@ -76,7 +85,7 @@
     const merchants=[...merchantGroups.values()].filter(g=>g.value>0n)
       .map(g=>({merchant:g.merchant,amount:fmt(g.value),count:g.count,key:merchant(g.rows[0])}))
       .sort((a,b)=>Number(b.amount)-Number(a.amount));
-    return {month,hasData:valid.length>0,total:fmt(total),income:fmt(income),uncategorized,records,
+    return {month,hasData:valid.length>0,total:fmt(total),income:fmt(income),moneyMoved:fmt(moneyMoved),transferCount,uncategorized,records,
       refundOffsets:fmt(refundOffset),categories,merchants,
       byDay:Object.fromEntries(Object.entries(byDay).map(([key,value])=>[key,fmt(value)])),
       incomeByDay:Object.fromEntries(Object.entries(incomeByDay).map(([key,value])=>[key,fmt(value)]))};
@@ -98,13 +107,15 @@
     return {limit:fmt(limit),spent:fmt(actual),left:fmt(left),projected:fmt(projected),
       percent,level:actual>limit?'over':actual*5n>=limit*4n?'near':'ok'};
   }
-  const INTERVALS=[['weekly',7,2],['biweekly',14,3],['monthly',30.44,6],['quarterly',91.3,12],['yearly',365.25,25]];
+  const INTERVALS=[['weekly',7,2],['biweekly',14,3],['semi-monthly',15.2,3.5],['monthly',30.44,6],['quarterly',91.3,12],['yearly',365.25,25]];
   function recurring(rows,now=Date.now()){
     const groups=new Map();
-    for(const row of rows||[]){
+    for(const raw of rows||[]){
+      const row=resolve(raw);
       if(row.pending||row.excludedFromTotals||!Number.isFinite(row.posted)||row.posted*1000>now+DAY)continue;
       const n=cents(row.amount);
-      if(n===null||n===0n||excluded.has(row.category)||row.category==='bonus')continue;
+      if(n===null||n===0n||excluded.has(row.category)||row.category==='bonus'||
+         getGuard()?.isTransfer(row)||row.signals?.includes('possible_transfer'))continue;
       const key=merchant(row)+'|'+(n>0n?'credit':'debit');
       if(!merchant(row)||merchant(row)==='transaction'||merchant(row)==='transfer')continue;
       if(!groups.has(key))groups.set(key,[]);
@@ -132,7 +143,9 @@
         category:entries.at(-1).row.category,frequency:match.name,
         average:fmt(avg),lastAmount:fmt(abs(last.cents)),lastAt:Math.round(last.at/1000),
         nextAt:Math.round(next/1000),status:missed?'possibly_canceled':priceIncreased?'price_increased':'active',
-        direction:last.cents>0n?'income':'expense',history:entries.map(e=>({posted:Math.round(e.at/1000),amount:fmt(e.cents)}))});
+        direction:last.cents>0n?'income':'expense',
+        incomeType:last.cents>0n&&last.row.signals?.includes('paycheck')?'Paycheck':'Other income',
+        history:entries.map(e=>({posted:Math.round(e.at/1000),amount:fmt(e.cents)}))});
     }
     return out.sort((a,b)=>a.nextAt-b.nextAt);
   }
