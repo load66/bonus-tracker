@@ -60,11 +60,16 @@
   function isTransfer(row){
     return row.category==='transfer'||(row.signals||[]).some(x=>['matched_internal_transfer','possible_transfer','investment_transfer','plaid_transfer','card_payment'].includes(x));
   }
-  function newMoney(row){return cents(row.amount)>0n&&row.externalBankConfirmed===true&&!isTransfer(row)&&row.kind!=='possible_bonus';}
+  function newMoney(row){
+    const flags=row.signals||[];
+    const outside=row.externalBankConfirmed===true||flags.includes('paycheck')||flags.includes('possible_direct_deposit');
+    return cents(row.amount)>0n&&outside&&!isTransfer(row)&&row.kind!=='possible_bonus';
+  }
   function debitPurchase(row){
     const channel=String(row.paymentChannel||'').toLowerCase();
     return cents(row.amount)<0n&&!isTransfer(row)&&row.category!=='fees'&&
       ((row.transactionType==='debit_card')||(row.signals||[]).includes('debit_card_purchase')||
+      /\b(?:debit card|point of sale|pos purchase)\b/i.test(String(row.description||''))||
       (['in store','online'].includes(channel)&&
         /^(FOOD_AND_DRINK|GENERAL_MERCHANDISE|TRANSPORTATION|SHOPS|RECREATION)_/.test(row.plaidCategoryDetailed)));
   }

@@ -78,7 +78,7 @@
           group.rawActivity.push({accountKey:key,id:String(row.id||''),amount:String(row.amount),posted:row.posted,
             category:String(row.category||''),kind:String(row.kind||''),signals:flags.slice(),
             paymentChannel:String(row.paymentChannel||''),plaidCategoryDetailed:String(row.plaidCategoryDetailed||''),
-            transactionType:String(row.transactionType||''),externalBankConfirmed:row.externalBankConfirmed===true});
+            transactionType:String(row.transactionType||''),description:String(row.description||'').slice(0,200),externalBankConfirmed:row.externalBankConfirmed===true});
         }
         if(!type)continue;
         group.counts[type]++;
