@@ -34,6 +34,7 @@
   let preferenceAvailable=false,archiveLoading=false,settingsNotice='';
   const archives={simplefin:{},plaid:{}},archivesPending=new Set();
   let transactionSearch='',transactionAccount='',transactionCategory='',transactionStatus='',transactionVisibleLimit=100,expandedTransaction='';
+  let transactionMin='',transactionMax='';
   let accountSearch='',accountType='',showHiddenAccounts=false,saveNotice='',accountDraftProfiles={},currentCombined=null;
   let activityNotice='',monitoringNotice='',connectionNotice='';
   const dirtyAccounts=new Set(),expandedAccountSettings=new Set(),monitoringDraft={};
@@ -769,6 +770,12 @@
     select(filterFields,'Category',{'':'All categories',...FINANCE_CATEGORIES},transactionCategory,value=>{transactionCategory=value;transactionVisibleLimit=100;renderRows()});
     select(filterFields,'Status',{'':'Posted and pending',posted:'Posted',pending:'Pending'},transactionStatus,value=>{transactionStatus=value;transactionVisibleLimit=100;renderRows()});
     const range=el('div',undefined,filterFields,'finance-page-filter-range');el('span','History',range);periodControl(range);
+    for(const [name,type] of [['Minimum amount','min'],['Maximum amount','max']]){
+      const label=el('label',undefined,filterFields,'finance-page-field');el('span',name,label);
+      const input=el('input',undefined,label,'finance-page-search');input.type='number';
+      input.min='0';input.step='.01';input.value=type==='min'?transactionMin:transactionMax;
+      input.oninput=()=>{if(type==='min')transactionMin=input.value;else transactionMax=input.value;renderRows()};
+    }
     const list=el('div',undefined,card,'finance-page-transactions');
     const rowIdentity=row=>[row.source,row.accountKey,row.id].join(':');
     const dayKey=value=>new Date(value*1000).toLocaleDateString('en-CA');
@@ -789,7 +796,9 @@
         return row.posted>=cutoff&&row.posted<=Math.floor(Date.now()/1000)+300&&(!transactionSearch||hay.includes(transactionSearch))
           &&(!transactionAccount||row.accountKey===transactionAccount)
           &&(!transactionCategory||row.category===transactionCategory)
-          &&(!transactionStatus||(transactionStatus==='pending')===!!row.pending);
+          &&(!transactionStatus||(transactionStatus==='pending')===!!row.pending)
+          &&(!transactionMin||Math.abs(Number(row.amount))>=Number(transactionMin))
+          &&(!transactionMax||Math.abs(Number(row.amount))<=Number(transactionMax));
       });
       if(!filtered.length){el('p','No matching transactions are available yet. Check the account, date range or next bank sync.',list);return}
       let group=null,lastDay='';
@@ -814,6 +823,10 @@
         top.onclick=()=>{expandedTransaction=open?'':id;renderRows()};
         if(!open)continue;
         const detail=el('div',undefined,article,'finance-page-transaction-detail');
+        detail.setAttribute('role','dialog');
+        detail.setAttribute('aria-label','Transaction details for '+displayMerchant(row));
+        action(detail,'Close',()=>{expandedTransaction='';renderRows()},'finance-page-preview-link finance-page-sheet-close');
+        el('h4',displayMerchant(row),detail);
         el('p',row.description||'No additional description supplied.',detail,'finance-page-description');
         el('small',[row.account.bank,row.account.name,row.account.sourceLabel,date(row.posted),row.pending?'Pending':'Posted'].filter(Boolean).join(' · '),detail,'finance-page-detail-meta');
         if(row.stalePending)el('p','Pending status has not been observed recently. Confirm it with the institution.',detail,'finance-page-warning');
@@ -832,6 +845,31 @@
           row.categorySource==='ai'?'Auto suggestion · review anytime':
           'Automatic · '+(row.confidence||'low')+' confidence',detail,'finance-page-source');
         if(row.changedAt)el('small','Provider changed this transaction on '+stamp(row.changedAt)+'. A previous correction was cleared for review.',detail,'finance-page-warning');
+        const saved=financePrefs.transactionMeta?.[row.settingKey]||{};
+        const edit=el('div',undefined,detail,'finance-page-transaction-edits');
+        const nameLabel=el('label',undefined,edit,'finance-page-field');
+        el('span','Merchant name',nameLabel);
+        const merchant=el('input',undefined,nameLabel,'finance-page-search');
+        merchant.value=saved.name||displayMerchant(row);merchant.maxLength=90;
+        const noteLabel=el('label',undefined,edit,'finance-page-field');
+        el('span','Note',noteLabel);
+        const note=el('textarea',undefined,noteLabel,'finance-page-search');
+        note.value=saved.note||'';note.maxLength=500;note.rows=2;
+        const toggle=(label,checked)=>{
+          const wrap=el('label',undefined,edit,'finance-page-learn-label');
+          const input=el('input',undefined,wrap);input.type='checkbox';input.checked=checked;
+          el('span',label,wrap);return input;
+        };
+        const exclude=toggle('Exclude from totals',saved.exclude===true);
+        const recurring=toggle('Mark recurring',saved.markRecurring===true);
+        const saveMeta=action(edit,'Save transaction details',()=>{
+          saveSetting('transactionMeta',row.settingKey,{
+            name:merchant.value.trim(),note:note.value.trim(),
+            exclude:exclude.checked,markRecurring:recurring.checked
+          });
+        },'finance-page-button finance-page-primary');
+        saveMeta.disabled=!preferenceAvailable;
+
       }
       if(filtered.length>transactionVisibleLimit){
         const remaining=filtered.length-transactionVisibleLimit;
