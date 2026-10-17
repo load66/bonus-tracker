@@ -551,3 +551,6 @@
 .finance-page .finance-page-transaction-date{position:sticky;top:64px;z-index:1;background:#07080C;padding:12px 0}
 .finance-page .finance-page-account-balances{text-align:right;margin-left:auto}
 @media(max-width:400px){.finance-page .finance-page-account{flex-direction:row;align-items:center;gap:10px}.finance-page .finance-page-account-info strong{font-size:12px}.finance-page .finance-page-account-balances{max-width:36%;overflow-wrap:anywhere;white-space:normal}}
+.finance-page-round-action{display:flex;flex-direction:column;align-items:center;gap:8px;border:0;background:transparent;color:#A0A6B8;min-width:76px;min-height:76px;padding:8px;font:inherit;font-size:11px;cursor:pointer}
+.finance-page-round-action svg{width:22px;height:22px;padding:14px;border-radius:50%;background:#1E212C;color:#5BE3B0}
+.finance-health-dot{display:block;flex:0 0 8px;width:8px;height:8px;border-radius:50%;background:#5BE3B0}.finance-health-dot.is-warning{background:#ffb8bd}

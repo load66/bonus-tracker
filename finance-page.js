@@ -365,9 +365,14 @@
       const banks=new Set(sortedAccounts().map(a=>String(a.bank||'').trim().toLowerCase()).filter(Boolean));
       el('p',sortedAccounts().length+' accounts · '+banks.size+' institutions · '+(currentCombined?.sourceCount||0)+' secure connections',box,'finance-page-count');
       const actions=el('div',undefined,box,'finance-page-quick-actions');
-      action(actions,'Add bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');
-      action(actions,'Discover accounts',discoverSelected,'finance-page-button');
-      action(actions,'Refresh activity',refreshActivity,'finance-page-button');
+      const quick=(label,path,run)=>{
+        const button=action(actions,'',run,'finance-page-round-action');button.setAttribute('aria-label',label);
+        const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('aria-hidden','true');
+        const shape=document.createElementNS(icon.namespaceURI,'path');shape.setAttribute('d',path);shape.setAttribute('fill','none');shape.setAttribute('stroke','currentColor');shape.setAttribute('stroke-width','1.7');shape.setAttribute('stroke-linecap','round');shape.setAttribute('stroke-linejoin','round');icon.append(shape);button.append(icon);el('span',label,button);
+      };
+      quick('Add bank','M12 5v14M5 12h14',()=>window.btOpenBankConnectFlow?.());
+      quick('Discover accounts','M10 4a6 6 0 1 0 0 12 6 6 0 0 0 0-12M15 15l5 5',discoverSelected);
+      quick('Refresh activity','M20 7v5h-5M4 17v-5h5M5.5 8a7 7 0 0 1 12-3L20 8M4 16l2.5 3a7 7 0 0 0 12-3',refreshActivity);
       const meta=el('div',undefined,box,'finance-page-meta');
       el('span',currentCombined?.sourceCount?'Connected':'Not linked',meta);
       for(const [source,label] of [['simplefin','SimpleFIN'],['plaid','Plaid']]){
@@ -442,20 +447,23 @@
   }
   function compactAccountPreview(host){
     const card=el('section',undefined,host,'finance-page-card finance-page-preview-card');
-    const head=el('div',undefined,card,'finance-page-section-head');
-    el('h3','Connected accounts',head);
-    action(head,'View all',()=>{view='accounts';paint()},'finance-page-preview-link');
-    const accounts=sortedAccounts();
-    if(!accounts.length){el('p','Connect a bank to view its accounts.',card,'finance-page-hint');return}
-    const list=el('div',undefined,card,'finance-page-preview-list');
-    for(const account of accounts.slice(0,4)){
-      const line=el('div',undefined,list,'finance-page-preview-row');
-      const copy=el('div',undefined,line,'finance-page-preview-copy');
-      el('strong',account.bank||'Financial institution',copy);
-      el('small',(account.name||'Account')+' · '+account.sourceLabel,copy);
-      el('b',amount(account.balance,account.currency),line,'finance-page-preview-value');
+    const head=el('div',undefined,card,'finance-page-section-head');el('h3','Connections',head);
+    action(head,'Manage connections',()=>{view='connections';paint()},'finance-page-preview-link');
+    const institutions=new Map();
+    for(const account of sortedAccounts()){
+      const key=account.source+':'+(account.connectionHandle||account.bank);
+      if(!institutions.has(key))institutions.set(key,[]);institutions.get(key).push(account);
     }
-    if(accounts.length>4)el('p','+'+(accounts.length-4)+' more accounts',card,'finance-page-hint');
+    if(!institutions.size)el('p','Connect a bank to view your accounts.',card);
+    for(const rows of [...institutions.values()].slice(0,5)){
+      const account=rows[0],attention=rows.some(a=>a.transactionSyncStatus==='needs_attention')||currentCombined.providerState[account.source]?.needsAttention;
+      const line=el('div',undefined,card,'finance-page-preview-row');
+      const dot=el('span',undefined,line,'finance-health-dot'+(attention?' is-warning':''));dot.setAttribute('aria-hidden','true');
+      const copy=el('div',undefined,line,'finance-page-preview-copy');el('strong',account.bank||'Bank',copy);
+      el('small','via '+account.sourceLabel+' · '+rows.length+' account'+(rows.length===1?'':'s'),copy);
+      el('small',attention?'Needs attention':syncLabel(sourceSnapshot(account.source)?.lastSuccess),copy);
+      if(attention)action(line,'Reconnect',()=>reconnectAccount(account),'finance-page-preview-link');
+    }
   }
   function compactActivityPreview(host){
     const card=el('section',undefined,host,'finance-page-card finance-page-preview-card');
