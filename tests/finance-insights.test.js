@@ -47,7 +47,7 @@ assert.equal(I.spent(cardPayments,'2026-10').total,'0.00','Card payments cannot 
 console.log('Finance insights passed: spending exclusions, month navigation, monthly, biweekly, yearly, price increases and missed bills.');
 
 const oct=(d,amt,category='unreviewed',merchant='Unknown vendor')=>row(new Date(2026,9,d,12).getTime(),amt,category,merchant);
-const unknowns=[oct(2,'-100.00'),oct(3,'-22.50'),oct(4,'-35.00','transfer','Chase EPAY'),oct(5,'-0.21','verification','ACCT VERIFY'),oct(6,'-90.00','loan','Payment'),oct(7,'70.00','refund','Unknown vendor'),oct(8,'-15.00','unreviewed','Another seller'),{...oct(9,'-17.00'),excludedFromTotals:true}];
+const unknowns=[oct(2,'-100.00'),oct(3,'-22.50','unreviewed','Second unknown'),oct(4,'-35.00','transfer','Chase EPAY'),oct(5,'-0.21','verification','ACCT VERIFY'),oct(6,'-90.00','loan','Payment'),oct(7,'70.00','refund','Unknown vendor'),oct(8,'-15.00','unreviewed','Another seller'),{...oct(9,'-17.00'),excludedFromTotals:true}];
 const counted=I.spent(unknowns,'2026-10');
 assert.equal(counted.uncategorized,3,'Counts every unknown debit even without category labels');
 assert.equal(counted.total,'157.50','Unknown debits are spending; transfers and verification do not inflate it; matching refund offsets purchase');
