@@ -422,8 +422,24 @@ const base=()=>({
       await page.waitForFunction(()=>typeof window.BTBonusAuth?.connected==='function'&&
         window.BTBonusAuth.connected()&&typeof window.btRefreshFinancesPage==='function',null,{timeout:12000});
       const financeAfterReload=page.getByRole('button',{name:'Finances',exact:true});
-      await financeAfterReload.click();
-      await section.getByRole('button',{name:'Hide amounts',exact:true}).waitFor();
+      // The application can redraw its top-level navigation while completing
+      // startup. Retry a lost click, but never ignore a genuine auth failure.
+      let amountsRestored=false;
+      for(let attempt=0;attempt<3;attempt++){
+        await financeAfterReload.click();
+        try{
+          await section.getByRole('button',{name:'Hide amounts',exact:true})
+            .waitFor({timeout:7000});
+          amountsRestored=true;break;
+        }catch{
+          const headings=await section.locator('h2,h3').allTextContents().catch(()=>[]);
+          if(headings.some(t=>/sign in to view finances|session needs attention|connections unavailable/i.test(t)))
+            throw Error(name+' Finances reload returned an auth/connection error: '+headings.join(' | '));
+          if(attempt===2)
+            throw Error(name+' Finances reload did not restore visible amounts; headings='+headings.join(' | '));
+        }
+      }
+      assert.equal(amountsRestored,true,'Amounts appear on reload without requiring an unhide click');
       assert.equal(await page.evaluate(()=>localStorage.getItem('bt_finance_hide_amounts')),'true',
         'Old saved flag stays ignored even across reloads');
       assert.deepEqual(errors,[]);console.log(name+': finance overview, transactions, account management, privacy and responsive navigation passed');
