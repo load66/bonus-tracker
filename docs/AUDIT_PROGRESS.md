@@ -1,14 +1,14 @@
 # Audit progress
 
-Active agent: codex — Release 1 mortgage/balance accuracy — branch codex/finance-balances
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
 
-- Deployed: frontend v3.4.94 merged to main at 6da0fedd8be3555d846d9649c42aa2ff0370f6a0 (GitHub Pages status: to be verified)
-- In progress: Finance v3.4.95 mortgage/loan and Plaid balance accuracy
-- Next step: full unit/browser PR CI; verify backend Railway v3.4.95 before frontend merge/deploy
+- Deployed: frontend v3.4.94 on main (prior verified Pages release)
+- In progress: frontend v3.4.95 release candidate on PR #149; code and tests complete
+- Next step: merge passing frontend PR #149, then verify exact production Pages assets and authorization
 
 ## Release 1 (v3.4.94)
 
@@ -23,6 +23,8 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 - Issue: P1 — Housing payment memos misclassified as transfers
 - Issue: P2 — Mortgage servicer accounts with missing product subtype
 - Issue: P0 — Prevent outstanding mortgage debt from becoming an asset due to provider balance sign
-- Test status: Synthetic exact-cent unit cases and connected-SimpleFIN browser checks added; PR CI pending
+- Test status: PASS — PR CI 39050206863 (Finance, bonus, cloud, UI; Chromium, Firefox, WebKit)
 - Backend PR: https://github.com/load66/Trading-Journal-AI/pull/220
-- Frontend deployment: pending backend Railway verification and three-browser CI
+- Backend deployment: SUCCESS — Railway commit 3f4e0980c3a758cf00340704ffbdbab5d762537c
+- Frontend PR: https://github.com/load66/bonus-tracker/pull/149
+- Frontend deployment: pending PR merge and GitHub Pages production audit
