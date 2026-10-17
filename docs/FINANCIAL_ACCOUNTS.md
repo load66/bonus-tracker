@@ -219,3 +219,26 @@ not verify actual bank connectivity or production categorization accuracy.
 - All release regression data is synthetic. Exact live income deltas require a
   separate authorized same-scope before/after snapshot and cannot be inferred from
   fixtures or provider connection freshness alone.
+
+
+## Finance v3.4.93 — cross-provider, no-double-count transfer contract
+
+- Finance's unified read-only adapter recomputes unique reciprocal movements across
+  SimpleFIN and Plaid every time either private provider snapshot changes. It requires
+  opposite signs, exact-cent absolute amounts, different account keys, timestamps
+  no more than three days apart and exactly one candidate in **each** direction.
+  A second equal-amount candidate prevents automatic pairing.
+- Provider evidence and manually reviewed categories (including learned user rules)
+  are immutable. Payroll, bonuses, refunds, account-verification and pending rows
+  are excluded from automatic self-transfer matching.
+- A generic positive `Payment` received at a linked bank is provisional
+  `possible_transfer` rather than confirmed income. The UI displays a gray,
+  unsigned amount and `Waiting for the other side`, with confirmation offered
+  even after five days. No spending/income/recurring total counts such rows.
+- Verified reciprocal pairs receive `matched_internal_transfer` in the temporary
+  unified projection, retain both original provider transactions for audit, and
+  display as a single neutral source-to-destination row. Confirmation optionally
+  writes an `applySimilar` merchant rule through the existing authenticated
+  provider transaction-review endpoint; no browser persistence or bonus changes.
+- Frontend and backend release versions are 3.4.93; backend CI, Railway production,
+  frontend CI and Pages deployment must be verified independently in that order.
