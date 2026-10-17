@@ -1,7 +1,7 @@
-/* Version 3.4.86: secure Plaid bonus account suggestion parity. */
+/* Version 3.4.87: remove retired profile library and T&C inbox add-ons. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.86';
+const APP_VERSION='3.4.87';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -4732,7 +4732,7 @@ function doAddNew(){
   overwritePrompt=null;modal=null;expanded=next.id;tab='tracker';search='';showInlineAZ=false;inlineResult=null;
   R();
 }
-function getBackupStorageKeys(){return[SK,TK,DD_KEY,REQ_KEY,OFFER_HIST_KEY,TC_ARCHIVE_KEY,PHONE_KEY,DP_USER_KEY,COMMUNITY_DP_KEY,COMMUNITY_DP_SEED_KEY,PROFILE_EVT_KEY,BK_KEY,'bt_tc_learning_inbox_v320',ANALYZER_MEMORY_KEY,ANALYZER_TRAINING_KEY,ANALYZER_RULES_KEY]}
+function getBackupStorageKeys(){return[SK,TK,DD_KEY,REQ_KEY,OFFER_HIST_KEY,TC_ARCHIVE_KEY,PHONE_KEY,DP_USER_KEY,COMMUNITY_DP_KEY,COMMUNITY_DP_SEED_KEY,PROFILE_EVT_KEY,BK_KEY,ANALYZER_MEMORY_KEY,ANALYZER_TRAINING_KEY,ANALYZER_RULES_KEY]}
 function parseBackupStorageValue(raw){try{return JSON.parse(raw)}catch{return raw}}
 function storageValueForRestore(val){return typeof val==='string'?val:JSON.stringify(val)}
 function countBackupEntries(d){if(Array.isArray(d?.entries))return d.entries.length;const arr=backupArrayFromStorage(d,SK);return arr.length}
@@ -5806,7 +5806,6 @@ entries=sortE(entries);R();
       analyzerProReady: typeof tcOpenPro === 'function' && typeof tcRunPro === 'function' && typeof tcApplyPro === 'function',
       analyzerTimerReady: typeof tcCreateTimers === 'function' || typeof tcV3CreateTimers === 'function',
       analyzerSourceReady: typeof tcV3ResolveSource === 'function' && typeof tcV3SaveSourceForCurrentEntry === 'function',
-      profileLibraryReady: typeof tcV31OpenProfileLibrary === 'function' || typeof tcV32OpenLearningInbox === 'function',
       bankActionsReady: typeof openBankActions === 'function' && typeof runBankAction === 'function',
       timerModalReady: typeof openTimerEditor === 'function' && typeof saveTimerEditor === 'function'
     };
@@ -6075,7 +6074,7 @@ entries=sortE(entries);R();
   const BACKUP_KIND='bonus-tracker-full-device-backup';
   const APP_PREFIX='bt_';
   const KNOWN_KEYS=[
-    'bt_e_v4','bt_t_v4','bt_dd_methods','bt_bank_reqs','bt_last_backup','bt_last_restore','bt_phone_book_v1','bt_user_datapoints_v1','bt_community_datapoints_v1','bt_community_datapoints_seed_v2','bt_profile_events_v1','bt_tc_learning_inbox_v320'
+    'bt_e_v4','bt_t_v4','bt_dd_methods','bt_bank_reqs','bt_last_backup','bt_last_restore','bt_phone_book_v1','bt_user_datapoints_v1','bt_community_datapoints_v1','bt_community_datapoints_seed_v2','bt_profile_events_v1'
   ];
 
   function addStyle(){
@@ -6086,7 +6085,6 @@ entries=sortE(entries);R();
   function cleanup(){
     const menu=document.getElementById('bt_tools_folder_menu');
     if(!menu||menu.hasAttribute('hidden')) document.getElementById('bt_tools_backdrop')?.remove();
-    ['v32_inbox_btn','v31_profile_btn'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.style.pointerEvents='none';}});
   }
   function buttonInfo(){
     return Array.from(document.querySelectorAll('button,a,[role="button"],input[type="button"],input[type="submit"]')).map((el,i)=>{
@@ -6102,7 +6100,7 @@ entries=sortE(entries);R();
   function safeJson(v,d){try{return JSON.parse(v)}catch{return d}}
   function storageSnapshot(){
     const out={};
-    for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k!=='bonus-ai-auth')out[k]=localStorage.getItem(k);}
+    for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k!=='bonus-ai-auth'&&!k.startsWith('bt_tc_learning_inbox_'))out[k]=localStorage.getItem(k);}
     try{if(Array.isArray(entries))out.bt_e_v4=JSON.stringify(entries)}catch{}
     return out;
   }
@@ -6114,7 +6112,6 @@ entries=sortE(entries);R();
       taxOrTimers:countFrom(localStorageData,'bt_t_v4'),
       datapoints:countFrom(localStorageData,'bt_user_datapoints_v1'),
       phoneContacts:countFrom(localStorageData,'bt_phone_book_v1'),
-      tcSamples:countFrom(localStorageData,'bt_tc_learning_inbox_v320'),
       profileEvents:countFrom(localStorageData,'bt_profile_events_v1'),
       totalStorageKeys:Object.keys(localStorageData).length
     };
@@ -6132,7 +6129,7 @@ entries=sortE(entries);R();
     const payload=makeBackupPayload(reason);
     try{localStorage.setItem('bt_last_backup',new Date().toISOString().split('T')[0])}catch{}
     downloadJson(payload,'bonus-tracker-full-backup-'+todayStamp()+'.json');
-    setTimeout(()=>alert('Full backup saved. Keep this JSON file in iCloud Drive, Google Drive, or Files.\n\nSaved: '+payload.summary.entries+' banks, '+payload.summary.tcSamples+' T&C samples, '+payload.summary.datapoints+' datapoints.'),250);
+    setTimeout(()=>alert('Full backup saved. Keep this JSON file in iCloud Drive, Google Drive, or Files.\n\nSaved: '+payload.summary.entries+' banks, '+payload.summary.datapoints+' datapoints.'),250);
     return payload;
   }
   function validateBackup(obj){
@@ -6150,16 +6147,15 @@ entries=sortE(entries);R();
     if(!v.ok){alert(v.error);return false;}
     const storage=v.storage;
     const entryCount=countFrom(storage,'bt_e_v4');
-    const tcCount=countFrom(storage,'bt_tc_learning_inbox_v320');
-    const msg='Restore this backup?\n\nThis will replace the current app data on this phone.\n\nBackup contains:\n• '+entryCount+' bank entries\n• '+tcCount+' saved T&C samples\n• '+Object.keys(storage).length+' storage keys\n\nA current backup will download first as a safety copy.';
+    const msg='Restore this backup?\n\nThis will replace the current app data on this phone.\n\nBackup contains:\n• '+entryCount+' bank entries\n• '+Object.keys(storage).length+' storage keys\n\nA current backup will download first as a safety copy.';
     if(!(await window.btConfirmDialog(msg,{title:'Restore Backup',kicker:'Data safety',confirmLabel:'Restore Backup',danger:true})))return false;
     try{exportFullBackup('pre-restore-safety-copy')}catch{}
     setTimeout(()=>{
       try{
         const existing=[];
         for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k)existing.push(k);}
-        existing.forEach(k=>{if(k.startsWith(APP_PREFIX)||KNOWN_KEYS.includes(k))localStorage.removeItem(k);});
-        Object.entries(storage).forEach(([k,val])=>{if(k==='bonus-ai-auth')return;try{localStorage.setItem(k,String(val??''))}catch{}});
+        existing.forEach(k=>{if(k.startsWith('bt_tc_learning_inbox_'))return;if(k.startsWith(APP_PREFIX)||KNOWN_KEYS.includes(k))localStorage.removeItem(k);});
+        Object.entries(storage).forEach(([k,val])=>{if(k==='bonus-ai-auth'||k.startsWith('bt_tc_learning_inbox_'))return;try{localStorage.setItem(k,String(val??''))}catch{}});
         localStorage.setItem('bt_last_restore',new Date().toISOString());
         alert('Restore complete. The app will reload now.');
         location.reload();
