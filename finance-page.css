@@ -354,3 +354,14 @@
 .finance-page .finance-page-hero-cash-value{display:block;margin:3px 0 2px;color:var(--finance-text);font-size:clamp(31px,7vw,46px);font-weight:760;letter-spacing:-.055em;line-height:1.15;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .finance-page .finance-page-hero-cash-status{display:block;color:var(--finance-muted);font-size:11px;margin-bottom:12px}
 .finance-page .finance-page-loading-hint{color:var(--finance-accent)!important}
+
+/* Per-transaction smart categorization: finance-only, accessible, lightweight. */
+.finance-page .finance-page-auto-tag{display:inline-flex;align-self:flex-start;width:max-content;
+  padding:2px 7px;border:1px solid #5be3b080;background:#5be3b012;color:#5BE3B0;
+  border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.02em}
+.finance-page .finance-page-learn-label{display:flex;align-items:center;gap:10px;min-height:44px;
+  padding:8px 0;color:#F2F3F7;font-size:13px}
+.finance-page .finance-page-learn-label input{width:19px;height:19px;accent-color:#5BE3B0;flex:none}
+@media (prefers-reduced-motion:reduce){
+  .finance-page .finance-page-auto-tag,.finance-page .finance-page-learn-label{transition:none}
+}
