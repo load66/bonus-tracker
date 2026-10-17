@@ -189,6 +189,30 @@ const base=()=>({
         await page.screenshot({path:path.join(output,name+'-bottom-tabs-'+width+'.png')});
       }
       await page.setViewportSize({width:390,height:844});
+      // Real DOM regression: a credit card overpayment must never become Other.
+      const creditFixture='9'.repeat(64),oldCardBalance=state.accounts[1].balance;
+      state.accounts[1].balance='-283.27';
+      state.accounts.push({key:creditFixture,bank:'PayPal',name:'PayPal Mastercard',mask:'8532',
+        currency:'USD',balance:'63.87',balanceDate:NOW-300});
+      state.accountProfiles[creditFixture]={kind:'credit_card',balanceMode:'liability',order:3};
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      const creditRow=section.getByRole('button',{name:'View Credit cards accounts'});
+      await creditRow.getByText('$219.40 credit',{exact:true}).waitFor();
+      assert.equal(await section.getByRole('button',{name:'View Other accounts'}).count(),0,
+        'A card credit cannot produce an Other row');
+      await creditRow.click();
+      const creditSheet=page.getByRole('dialog',{name:'Credit cards accounts'});
+      assert.ok((await creditSheet.innerText()).includes('Robinhood Credit Card ··4010'));
+      assert.ok((await creditSheet.innerText()).includes('$283.27 credit'));
+      assert.ok((await creditSheet.innerText()).includes('PayPal Mastercard ··8532'));
+      assert.ok((await creditSheet.innerText()).includes('$63.87 owed'));
+      await page.screenshot({path:path.join(output,name+'-card-credit-390.png')});
+      await creditSheet.getByRole('button',{name:'Close'}).click();
+      state.accounts[1].balance=oldCardBalance;
+      state.accounts=state.accounts.filter(a=>a.key!==creditFixture);
+      delete state.accountProfiles[creditFixture];
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      await section.getByRole('button',{name:'View Credit cards accounts'}).getByText('$200.00 owed',{exact:true}).waitFor();
       const investmentCard=section.getByRole('button',{name:'View Investments accounts'});
       assert.equal(await investmentCard.locator('.finance-overview-row-value strong').innerText(),'—');
       assert.equal(await investmentCard.locator('.finance-overview-row-info small').innerText(),'Brokerage — · Retirement —');
