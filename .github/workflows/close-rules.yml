@@ -26,7 +26,6 @@ jobs:
     outputs:
       areas: ${{ steps.scope.outputs.areas }}
       browsers: ${{ steps.scope.outputs.browsers }}
-      finance_only: ${{ steps.scope.outputs.finance_only }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -39,7 +38,7 @@ jobs:
         run: python3 tests/verify-latest.py
       - name: Check every JavaScript file
         run: find . -name '*.js' -not -path './.git/*' -print0 | xargs -0 -n1 node --check
-      - name: Select full or Finance PR coverage
+      - name: Select remaining full verification coverage
         id: scope
         uses: actions/github-script@v7
         with:
@@ -54,8 +53,7 @@ jobs:
             const selected=plan(context.eventName,files,complete);
             core.setOutput('areas',JSON.stringify(selected.areas));
             core.setOutput('browsers',JSON.stringify(selected.browsers));
-            core.setOutput('finance_only',String(selected.financeOnly));
-            core.summary.addRaw('Verification scope: '+(selected.financeOnly?'Finance PR':'Full')+'; browsers: '+selected.browsers.join(', ')).write();
+            core.summary.addRaw('Verification scope: Full; browsers: '+selected.browsers.join(', ')).write();
 
   units:
     name: Unit tests / ${{ matrix.area }}
