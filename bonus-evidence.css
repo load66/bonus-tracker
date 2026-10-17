@@ -56,3 +56,11 @@
 .bonus-evidence .bonus-evidence-rule-select{appearance:none;-webkit-appearance:none;font-size:16px;min-height:48px;padding-right:32px;background-color:#102239;background-image:linear-gradient(45deg,transparent 50%,#b9d3f2 50%),linear-gradient(135deg,#b9d3f2 50%,transparent 50%);background-position:calc(100% - 17px) 50%,calc(100% - 12px) 50%;background-size:5px 5px;background-repeat:no-repeat}
 .bonus-evidence select:focus-visible{outline:3px solid #aad4ff;outline-offset:3px}
 .bonus-evidence-provider-help{font-size:12px!important;line-height:1.5;color:#aabfd9!important;margin:8px 0 14px!important}
+
+
+/* Explicit, read-only Tracker review sheet. Bank data remains in memory only. */
+.bonus-evidence-review-overlay{position:fixed;inset:0;z-index:4900;background:rgba(2,7,18,.78);display:flex;align-items:flex-end;justify-content:center;padding:0 0 env(safe-area-inset-bottom,0px);overflow:hidden}
+.bonus-evidence-review-sheet{background:#101b2b;border:1px solid #405573;border-radius:20px 20px 0 0;box-shadow:0 -14px 45px #0008;width:min(100%,650px);max-height:calc(94dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow-y:auto;overscroll-behavior:contain;padding:12px 12px 20px}
+.bonus-evidence-review-close{display:block;margin:0 0 8px auto}
+.bonus-evidence-review-sheet .bonus-evidence{margin:0}
+@media(max-width:430px){.bonus-evidence-review-sheet{width:100%;max-height:calc(93dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));padding:12px 8px 20px}}
