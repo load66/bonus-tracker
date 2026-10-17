@@ -119,6 +119,38 @@ collision.transactions[b].same={id:'same',amount:'1000.00',posted:now-86400,pend
 const ambig=core.safeForSummary(core.combine({simplefin:movementsA,plaid:collision}));
 assert.equal(ambig.transactions['simplefin:'+a].out.category,'subscription','Ambiguous pairs are not asserted as self-transfers');
 
+const paymentFromBank=structuredClone(simple),paymentOnCard=structuredClone(plaid);
+paymentFromBank.transactions[a]={debit:{id:'debit',amount:'-1000.00',posted:now-3600,pending:false,
+  category:'unreviewed',categorySource:'automatic',description:'Account debit',merchant:'Account debit'}};
+paymentOnCard.accounts[0]={...paymentOnCard.accounts[0],name:'Credit Card ending 4010',accountType:'credit',accountSubtype:'credit_card'};
+paymentOnCard.accountProfiles[b]={kind:'credit_card',balanceMode:'liability'};
+paymentOnCard.transactions[b]={payment:{id:'payment',amount:'1000.00',posted:now-1800,pending:false,
+  category:'income',categorySource:'automatic',description:'Payment',merchant:'Payment'}};
+const pairedPayment=core.safeForSummary(core.combine({simplefin:paymentFromBank,plaid:paymentOnCard}));
+const paymentDebit=pairedPayment.transactions['simplefin:'+a].debit;
+const paymentCredit=pairedPayment.transactions['plaid:'+b].payment;
+assert.equal(paymentDebit.category,'transfer','Outgoing $1,000 is a transfer, not spending');
+assert.equal(paymentCredit.category,'transfer','Incoming Payment +$1,000 is not Income');
+assert.equal(paymentDebit.transferPairId,paymentCredit.transferPairId,'Unique cross-bank Payment legs form one pair');
+assert.equal(finance.summarize(pairedPayment,{now,days:30}).income,'0.00','Payment transfers never inflate income');
+assert.equal(finance.summarize(pairedPayment,{now,days:30}).expenses,'0.00','Payment transfers never inflate spending');
+assert.equal(paymentOnCard.transactions[b].payment.category,'income','Pairing cannot mutate provider history');
+const payrollFromBank=structuredClone(simple),schreiberIncome=structuredClone(plaid);
+payrollFromBank.transactions[a]={debit:{id:'debit',amount:'-1000.00',posted:now-3600,pending:false,
+  category:'transfer',categorySource:'automatic',description:'Internal transfer'}};
+schreiberIncome.transactions[b]={salary:{id:'salary',amount:'1000.00',posted:now-1800,pending:false,
+  category:'income',categorySource:'automatic',description:'SCHREIBER FOODS PAYROLL',
+  merchant:'Schreiber Foods',signals:['possible_direct_deposit']}};
+const preservedPayroll=core.safeForSummary(core.combine({simplefin:payrollFromBank,plaid:schreiberIncome}));
+assert.equal(preservedPayroll.transactions['plaid:'+b].salary.category,'income','Schreiber payroll stays Income, even at the same amount as another transfer');
+assert.equal(preservedPayroll.transactions['plaid:'+b].salary.transferPairId,undefined,'A matching amount alone cannot absorb payroll');
+assert.equal(finance.summarize(preservedPayroll,{now,days:30}).income,'1000.00','Schreiber pay contributes to income');
+const twoPayments=structuredClone(paymentOnCard);
+twoPayments.transactions[b].another={...twoPayments.transactions[b].payment,id:'another'};
+const ambiguousPayment=core.safeForSummary(core.combine({simplefin:paymentFromBank,plaid:twoPayments}));
+assert.equal(ambiguousPayment.transactions['plaid:'+b].payment.transferPairId,undefined,'Ambiguous equal payment credits remain unpaired');
+assert.equal(ambiguousPayment.transactions['simplefin:'+a].debit.transferPairId,undefined,'Ambiguous equal payment debits remain unpaired');
+
 console.log('Unified Finance: provider isolation, type inference, full account/transaction aggregation, exact cents, stale-balance safety and overlap controls passed');
 
 const brokerNames=[
