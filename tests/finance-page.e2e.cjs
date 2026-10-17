@@ -442,9 +442,48 @@ const base=()=>({
       const transfer450=section.locator('.finance-page-transaction.is-matched-transfer').filter({hasText:'$450.00'});
       await transfer450.waitFor();
       assert.equal(await transfer450.count(),1,'Matched $450 appears once');
-      assert.ok((await transfer450.innerText()).includes('Robinhood Savings ··0793 ⇄ Robinhood Checking ··2033'));
+      assert.ok((await transfer450.innerText()).includes('Robinhood Savings ··0793 → Robinhood Checking ··2033'));
+      assert.ok((await transfer450.locator('.finance-page-transaction-value b').innerText()).startsWith('⇄ '));
       assert.ok(!(await transfer450.innerText()).includes('+$450.00'),'Matched pair is unsigned');
 
+      // Cross-provider ledger: Plaid arrives first, then SimpleFIN a day later.
+      plaidState.transactions[A]['x-money-payment']={id:'x-money-payment',
+        posted:NOW-500,pending:false,amount:'1000.00',merchant:'Payment',description:'Payment',
+        category:'income',categorySource:'automatic',signals:[]};
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      await section.getByRole('button',{name:'Transactions',exact:true}).click();
+      const waiting1000=section.locator('.finance-page-transaction').filter({hasText:'$1,000.00'});
+      await waiting1000.getByText('Waiting for the other side',{exact:true}).waitFor();
+      assert.equal(await waiting1000.count(),1,'Only one provisional X money Payment');
+      assert.equal((await waiting1000.locator('.finance-page-transaction-value b').innerText()).includes('+'),false,
+        'An unmatched credit must not be green income');
+      assert.equal(await waiting1000.locator('.finance-page-transaction-value b.is-credit').count(),0,
+        'Provisional transfer amount uses neutral styling');
+      state.transactions[A]['robinhood-late-1000']={id:'robinhood-late-1000',
+        posted:NOW-86400,pending:false,amount:'-1000.00',merchant:'Outgoing ACH',
+        description:'Outgoing ACH',category:'unreviewed',categorySource:'automatic',signals:[]};
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      await section.getByRole('button',{name:'Transactions',exact:true}).click();
+      const paired1000=section.locator('.finance-page-transaction.is-matched-transfer').filter({hasText:'$1,000.00'});
+      await paired1000.waitFor();
+      assert.equal(await paired1000.count(),1,'Late cross-provider debit upgrades Payment to exactly one matched transfer');
+      const pairedText=await paired1000.innerText();
+      assert.ok(pairedText.includes('Robinhood Checking ··2033 → X money Checking'),
+        'Matched transfer shows source bank and destination bank');
+      assert.equal(await paired1000.locator('.finance-page-transaction-value b.is-credit').count(),0);
+      assert.ok((await paired1000.locator('.finance-page-transaction-value b').innerText()).startsWith('⇄ $1,000.00'));
+      plaidState.transactions[A]['late-unmatched750']={id:'late-unmatched750',
+        posted:NOW-6*86400,pending:false,amount:'750.00',merchant:'Payment',
+        description:'Payment',category:'income',categorySource:'automatic',signals:[]};
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      await section.getByRole('button',{name:'Transactions',exact:true}).click();
+      const review750=section.locator('.finance-page-transaction').filter({hasText:'$750.00'});
+      await review750.getByText('Waiting for the other side · Review after 5 days').waitFor();
+      await review750.getByLabel('Apply to similar').check();
+      await review750.getByRole('button',{name:'Confirm transfer',exact:true}).click();
+      assert.ok(requests.some(r=>r.path.endsWith('/transaction-review')&&r.body.transaction==='late-unmatched750'&&
+        r.body.category==='transfer'&&r.body.applySimilar===true),
+        'Confirm transfer preserves opted-in similar merchant rule through Plaid');
       // Bank-specific history progress is separate from an authentication failure.
       plaidState.accounts[0].historyComplete=false;
       plaidState.accounts[0].transactionSyncStatus='history_still_loading';
