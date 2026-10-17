@@ -27,6 +27,11 @@ const delayed=structuredClone(plaid);delayed.lastSuccess=null;
 const partial=core.combine({simplefin:simple,plaid:delayed});
 assert.equal(partial.lastSuccess,now-90,'one delayed provider must not erase known financial activity');
 assert.equal(core.safeForSummary(partial).incompleteProviders,true);
+const failedAfterRecentSuccess={...simple,error:'Synthetic provider timeout'};
+const failedCombined=core.combine({simplefin:failedAfterRecentSuccess,plaid});
+assert.equal(failedCombined.sourceCount,2,'both providers remain visibly connected');
+assert.equal(core.safeForSummary(failedCombined).incompleteProviders,true,
+  'a provider error makes coverage partial even with a recent earlier success');
 assert.equal(core.detectedType({name:'Everyday Savings'}),'savings');
 assert.equal(core.detectedType({name:'Main checking'}),'checking');
 assert.equal(core.detectedType({name:'Account 001'}),'unclassified');
@@ -42,6 +47,7 @@ assert.ok(ambiguous.accounts.every(a=>a.possibleDuplicate));
 const excluded=core.safeForSummary(ambiguous);
 assert.equal(excluded.accounts.length,0,'suspected same-account links must not enter consolidated totals');
 assert.equal(excluded.excludedForReview,2);
+assert.equal(excluded.incompleteProviders,true,'unresolved overlaps prevent complete aggregate claims');
 assert.equal(finance.summarize(excluded,{now,days:30}).income,null);
 
 const hiddenBank=structuredClone(simple);
