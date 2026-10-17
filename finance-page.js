@@ -264,7 +264,6 @@
     if(!preserveSearch)accountSearch='';
     accountType='';saveNotice='';refresh();
   }
-  function discoverSelected(){window.btDiscoverBankAccounts?.();}
   const sourceLabel=source=>source==='plaid'?'Plaid':'SimpleFIN';
   function activityCoverage(){
     const accounts=currentCombined?.accounts||[],enabled=new Set(currentCombined?.monitoredAccounts||[]);
@@ -750,7 +749,6 @@
     const quick=el('div',undefined,host,'finance-overview-actions');
     const buttons=[
       ['+','Add bank',()=>window.btOpenBankConnectFlow?.()],
-      ['⌕','Discover',discoverSelected],
       ['↻','Refresh',refreshActivity]
     ];
     for(const [symbol,label,fn] of buttons){
