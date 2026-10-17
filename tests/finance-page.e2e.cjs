@@ -213,6 +213,35 @@ const base=()=>({
       delete state.accountProfiles[creditFixture];
       await page.evaluate(()=>window.btRefreshFinancesPage());
       await section.getByRole('button',{name:'View Credit cards accounts'}).getByText('$200.00 owed',{exact:true}).waitFor();
+      // Account kind, not the sign of a credit card's balance, determines its row.
+      const cardRow=section.getByRole('button',{name:'View Credit cards accounts'});
+      assert.equal(await cardRow.locator('.finance-overview-row-value strong').innerText(),'$200.00 owed');
+      state.accounts[1].balance='-283.27';
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      await cardRow.getByText('$283.27 credit',{exact:true}).waitFor();
+      assert.equal(await section.getByRole('button',{name:'View Other accounts'}).count(),0,
+        'A positive credit card asset must not create an Other category');
+      await cardRow.click();
+      const cardDialog=page.getByRole('dialog',{name:'Credit cards accounts'});
+      assert.ok((await cardDialog.innerText()).includes('Robinhood Credit Card ··4010'),
+        'Card detail must retain its masked account number');
+      assert.ok((await cardDialog.innerText()).includes('$283.27 credit'));
+      await cardDialog.getByRole('button',{name:'Close'}).click();
+      state.accounts[1].balance='200.00';
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      await cardRow.getByText('$200.00 owed',{exact:true}).waitFor();
+
+      // A cached legacy informational warning must not raise an Overview alarm.
+      state.status='attention';
+      state.warnings=['Requested date range exceeds limit of 90 days and was capped.',
+        'Partial history available for this account.'];
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      assert.equal(await section.locator('.finance-page-status-row summary').filter({hasText:'Needs attention'}).count(),0,
+        'Historical 90-day limit is a notice, not a connection failure');
+      state.status='connected';
+      state.warnings=[];
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      await section.getByRole('button',{name:'View Credit cards accounts'}).waitFor();
       const investmentCard=section.getByRole('button',{name:'View Investments accounts'});
       assert.equal(await investmentCard.locator('.finance-overview-row-value strong').innerText(),'—');
       assert.equal(await investmentCard.locator('.finance-overview-row-info small').innerText(),'Brokerage — · Retirement —');
