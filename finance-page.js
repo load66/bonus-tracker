@@ -169,12 +169,12 @@
       financePrefs=latest;preferenceAvailable=true;settingsNotice='';
     }catch(_error){
       if(rev!==sequence)return;
-      preferenceAvailable=false;settingsNotice='Saved Finance settings are unavailable. Changes are disabled.';
+      preferenceAvailable=false;settingsNotice='Settings are unavailable. Try again soon.';
     }
     if(currentRoot?.isConnected&&data)paint();
   }
   async function saveSetting(section,key,value){
-    if(!preferenceAvailable){settingsNotice='Saved settings are unavailable. Try again after syncing.';paint();return}
+    if(!preferenceAvailable){settingsNotice='Settings are unavailable. Try again soon.';paint();return}
     try{
       const saved=await settingsRequest('/preferences',{
         method:'PUT',body:JSON.stringify({revision:financePrefs.revision,section,key,value})});
@@ -193,7 +193,7 @@
         const payload=await request('/history/'+month,{},source);
         if(rev!==sequence)return;
         archives[source][month]=payload;refreshed=true;
-      }catch(_error){settingsNotice='Some earlier transactions could not be loaded. Try again.'}
+      }catch(_error){settingsNotice='Could not load earlier activity. Try again.'}
       finally{archivesPending.delete(key)}
     }
     archiveLoading=archivesPending.size>0;
@@ -509,7 +509,7 @@
       });
     };
     const now=cumulative(current,day),prev=cumulative(previous,Math.min(days,insights.monthDays(previous.month)));
-    if(!current.hasData&&!previous.hasData){el('p','Your daily chart will appear when transactions are available.',host,'finance-page-hint');return}
+    if(!current.hasData&&!previous.hasData){el('p','Your chart appears after your first transaction.',host,'finance-page-hint');return}
     const peak=Math.max(1,...now,...prev);
     const ns='http://www.w3.org/2000/svg';
     const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 340 155');
@@ -663,7 +663,7 @@
           const fill=el('span',undefined,bar,'finance-page-budget-progress');
           fill.hidden=hidden;fill.style.width=Number(item.amount)/max*100+'%';
         }
-      }else el('p','No categorized spending yet.',categories,'finance-page-hint');
+      }else el('p','Spending categories appear here.',categories,'finance-page-hint');
     }
     compactAccountPreview(host);
     const activity=el('section',undefined,host,'finance-page-card');
@@ -681,7 +681,7 @@
     el('summary','More insights · trends, spending & review',more);
     const trend=el('section',undefined,more,'finance-page-card');el('h3','Net worth trend',trend);trendChart(trend,summary.netWorthHistory||[]);
     const monthly=el('section',undefined,more,'finance-page-card');el('h3','Monthly activity',monthly);
-    if(!summary.monthly?.length)el('p','No categorized monthly activity yet.',monthly);
+    if(!summary.monthly?.length)el('p','Monthly activity appears here.',monthly);
     else for(const item of summary.monthly){
       const line=el('article',undefined,monthly,'finance-page-month');
       el('strong',new Date(item.month+'-02T00:00:00').toLocaleDateString(undefined,{month:'short',year:'numeric'}),line);
@@ -689,7 +689,7 @@
     }
     const spending=el('section',undefined,more,'finance-page-card');el('h3','Spending',spending);
     const categories=Object.entries(summary.spending||{}).sort((a,b)=>Number(b[1])-Number(a[1]));
-    if(!categories.length)el('p','No categorized expenses yet.',spending);
+    if(!categories.length)el('p','Spending categories appear here.',spending);
     else{
       const max=Math.max(...categories.map(([,v])=>Number(v)));
       const chart=el('div',undefined,spending,'finance-page-bars');
@@ -928,7 +928,7 @@
       const total=selected.reduce((sum,row)=>sum+Math.abs(Number(row.amount)||0),0);
       el('strong',moneyText(total.toFixed(2)),hdr,'finance-page-big-number');
       if(detail.type==='category'){
-        const trend=card(root,'Past six months','Months without bank data are omitted');
+        const trend=card(root,'Past six months','Showing months with activity');
         const dates=I.history(rows,spendingMonth,6).months;
         const chart=el('div',undefined,trend,'finance-spending-vertical-bars');
         const values=dates.map(v=>Number(v.categories.find(c=>c.category===detail.key)?.amount||0));
@@ -1330,11 +1330,11 @@
     return name+(/^\d{4}$/.test(last)?' ··'+last:'');
   }
   function syncLabel(at){
-    if(!Number.isFinite(at)||at<=0)return 'Not synced yet';
+    if(!Number.isFinite(at)||at<=0)return 'Not updated';
     const d=new Date(at*1000),now=new Date(),yesterday=new Date();yesterday.setDate(now.getDate()-1);
-    if(d.toDateString()===now.toDateString())return 'Synced '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
-    if(d.toDateString()===yesterday.toDateString())return 'Synced yesterday';
-    return 'Synced '+d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+    if(d.toDateString()===now.toDateString())return 'Updated '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
+    if(d.toDateString()===yesterday.toDateString())return 'Updated yesterday';
+    return 'Updated '+d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
   }
   function accountAmount(account){
     const value=window.BTFinanceOverview.cents(account.balance),p=profile(account);
