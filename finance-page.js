@@ -17,7 +17,7 @@
   // Bonus credits appear separately for review; they do not verify a tracker payout.
   const FINANCE_CATEGORIES={...CATEGORIES,bonus:'Bonus'};
   const financeCategory=key=>FINANCE_CATEGORIES[key]||'Needs review';
-  const categoryChip=row=>window.BTFinanceTransfer?.label(row)||financeCategory(row.category);
+  const categoryChip=row=>window.BTFinanceTransfer?.label(row)||financeCategory(window.BTFinanceTransfer?.effective(row)?.category||row.category);
   const neutralChip=row=>!!window.BTFinanceTransfer?.label(row)||['transfer','verification'].includes(row.category);
   function displayMerchant(row){
     const merchant=String(row.merchant||'').trim();
@@ -1325,7 +1325,7 @@
   function transactionActivityLabel(row){
     const transfer=window.BTFinanceTransfer?.label(row);
     if(transfer)return transfer;
-    if(!transactionIsInvestment(row))return financeCategory(row.category);
+    if(!transactionIsInvestment(row))return financeCategory(window.BTFinanceTransfer?.effective(row)?.category||row.category);
     const text=String(row.description||'').toLowerCase();
     if(/\bdividends?\b/.test(text))return 'Dividend';
     if(/\binterest\b/.test(text))return 'Interest';
