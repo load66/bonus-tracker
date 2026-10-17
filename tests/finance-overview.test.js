@@ -295,3 +295,49 @@ const manuallyCategorized=summarize(manualState,{now:NOW});
 assert.equal(manuallyCategorized.expenses,'25.00',
   'Confirmed purchases count even when earlier automatic signals identified a transfer');
 assert.equal(manuallyCategorized.cashFlow,'-25.00');
+
+// Mortgage balances are principal/debt observations, not spendable credits.
+// Lenders can use opposite signs for the same debt; amounts stay immutable.
+const mortgageFixture={
+  accounts:[
+    {key:'cash',name:'Main checking',currency:'USD',balance:'5000.00',balanceDate:NOW-45},
+    {key:'home',name:'Synthetic Mortgage',currency:'USD',balance:'-210000.00',balanceDate:NOW-45}
+  ],
+  monitoredAccounts:['cash','home'],
+  accountProfiles:{cash:{kind:'checking',balanceMode:'asset',includeSpending:true},
+    home:{kind:'mortgage',balanceMode:'liability',includeSpending:false}},
+  balanceHistory:{
+    cash:[{observedAt:NOW-2*DAY,balance:'4800.00',currency:'USD'},
+      {observedAt:NOW-DAY,balance:'5000.00',currency:'USD'}],
+    home:[{observedAt:NOW-2*DAY,balance:'-211000.00',currency:'USD'},
+      {observedAt:NOW-DAY,balance:'-210000.00',currency:'USD'}]
+  },
+  transactions:{cash:{},home:{synthetic:{amount:'-800.00',posted:NOW-90,category:'loan',
+    categorySource:'automatic',pending:false}}}
+};
+const mortgageUntouched=JSON.stringify(mortgageFixture);
+const mortgageDebts=summarize(mortgageFixture,{now:NOW});
+assert.equal(mortgageDebts.assets,'5000.00');
+assert.equal(mortgageDebts.liabilities,'210000.00');
+assert.equal(mortgageDebts.netWorth,'-205000.00');
+assert.equal(mortgageDebts.netWorthGroups.other,'-210000.00');
+assert.equal(mortgageDebts.netWorthGroupAccounts.other[0].kind,'mortgage');
+assert.equal(mortgageDebts.netWorthGroupAccounts.other[0].amount,'-210000.00');
+assert.deepEqual(mortgageDebts.netWorthHistory.map(x=>x.value),['-206200.00','-205000.00']);
+assert.equal(mortgageDebts.expenses,'0.00','Mortgage account payments are not duplicated in spending');
+assert.equal(JSON.stringify(mortgageFixture),mortgageUntouched,'Mortgage projection must never alter source data');
+const mortgagePositive=structuredClone(mortgageFixture);
+mortgagePositive.accounts[1].balance='210000.00';
+mortgagePositive.balanceHistory.home.forEach(row=>row.balance=row.balance.slice(1));
+const sameMortgage=summarize(mortgagePositive,{now:NOW});
+assert.equal(sameMortgage.liabilities,'210000.00');
+assert.equal(sameMortgage.netWorth,'-205000.00');
+assert.deepEqual(sameMortgage.netWorthHistory,mortgageDebts.netWorthHistory,
+  'Positive- and negative-signed loan balances must represent the same remaining debt');
+const mortgageStale=structuredClone(mortgageFixture);
+mortgageStale.accounts[1].balanceDate=NOW-9*DAY;
+const missingMortgage=summarize(mortgageStale,{now:NOW});
+assert.equal(missingMortgage.netWorthPartial,true,'Old mortgage balances cannot be treated as current');
+assert.equal(missingMortgage.netWorth,'5000.00','A stale mortgage is excluded, not interpreted as zero');
+assert.equal(missingMortgage.netWorthNotUpdated[0].kind,'mortgage');
+assert.equal(summarize({...mortgageFixture,accounts:[mortgageFixture.accounts[1]]},{now:NOW}).netWorth,'-210000.00');
