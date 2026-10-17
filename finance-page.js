@@ -194,14 +194,20 @@
     archiveLoading=archivesPending.size>0;
     if(refreshed&&rev===sequence&&currentRoot?.isConnected)paint();
   }
+  let archiveWindowPromise=null;
   function requestArchiveWindow(days){
-    const today=new Date(),limit=Math.min(24,Math.ceil(days/28)+1);
-    for(let index=0;index<limit;index++){
-      const d=new Date(today.getFullYear(),today.getMonth()-index,1);
-      const month=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-      // Archive reads are owner-authenticated and only for advertised months.
-      loadArchiveMonth(month);
-    }
+    // One bounded importer per signed-in view: prevents a burst of 24x2 R2
+    // requests after a tab switch and skips months not advertised by the bank.
+    if(archiveWindowPromise)return archiveWindowPromise;
+    const rev=sequence,today=new Date(),limit=Math.min(24,Math.ceil(days/31)+1);
+    archiveWindowPromise=(async()=>{
+      for(let index=0;index<limit&&rev===sequence;index++){
+        const d=new Date(today.getFullYear(),today.getMonth()-index,1);
+        const month=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+        await loadArchiveMonth(month);
+      }
+    })().finally(()=>{archiveWindowPromise=null});
+    return archiveWindowPromise;
   }
   async function loadOtherSource(rev){
     // One authenticated read to surface linked accounts across both providers.
