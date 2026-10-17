@@ -270,14 +270,14 @@
   function activityStatus(snapshot,previous){
     if(snapshot?.error)return 'Needs attention: '+snapshot.error;
     if(Number(snapshot?.lastSuccess)>Number(previous?.lastSuccess||0))
-      return 'Latest available activity checked';
+      return 'Up to date';
     const next=Number(snapshot?.nextSyncAt);
     if(Number.isFinite(next)&&next>Date.now()/1000)return 'Next check '+stamp(next);
-    return 'No new posted activity returned';
+    return 'No new transactions';
   }
   async function refreshActivity(){
     const coverage=activityCoverage();
-    if(!coverage.sources.length){view='transactions';activityNotice='No connected banks to sync.';paint();return;}
+    if(!coverage.sources.length){view='transactions';activityNotice='Connect a bank first.';paint();return;}
     if(busy)return;
     busy=true;activityNotice='';paint();
     const updates=[],errors=[];
@@ -413,8 +413,8 @@
       const synced=currentCombined?.lastSuccess;
       if(Number.isFinite(synced)&&synced>0){
         const elapsed=Math.max(0,Math.floor((Date.now()/1000-synced)/3600));
-        el('span','Synced '+(elapsed<1?'less than 1h':elapsed+'h')+' ago',meta);
-      }else el('span','Bank sync not available yet',meta);
+        el('span','Updated '+(elapsed<1?'recently':elapsed+'h ago'),meta);
+      }else el('span','Not updated',meta);
       if(summary.hiddenAccounts)el('p',summary.hiddenAccounts+' hidden account'+(summary.hiddenAccounts===1?' is':'s are')+' excluded from Finances totals. Show them under Accounts.',box,'finance-page-hint');
       if(currentCombined?.possibleDuplicates?.length)el('small','Review possible matching accounts in Accounts',box,'finance-page-hint');
     }
@@ -494,7 +494,7 @@
       el('span',financeCategory(category),item,'finance-page-donut-label');
       el('strong',amount(value,'USD'),item);
     }
-    if(!summary.complete)el('p','Only categorized posted transactions are included. Your bank history may still be loading.',card,'finance-page-hint');
+    if(!summary.complete)el('p','Spending will appear as your transactions arrive.',card,'finance-page-hint');
   }
   function compactAccountPreview(host){
     const card=el('section',undefined,host,'finance-page-card finance-page-preview-card');
@@ -528,7 +528,7 @@
     const rows=flattenTransactions().filter(row=>Number.isFinite(row.posted)&&row.posted>0).slice(0,5);
     if(!rows.length){
       const loading=(currentCombined?.accounts||[]).some(a=>a.transactionSyncStatus==='history_still_loading'||a.transactionSyncStatus==='awaiting_first_sync');
-      el('p',loading?'Importing transaction history for 1 bank. Updates automatically.':'Transactions will appear as each bank finishes syncing.',card,'finance-page-hint');return
+      el('p',loading?'Waiting for history':'Transactions will appear as each bank finishes syncing.',card,'finance-page-hint');return
     }
     const list=el('div',undefined,card,'finance-page-preview-list');
     for(const row of rows){
@@ -686,7 +686,7 @@
           const fill=el('span',undefined,bar,'finance-page-budget-progress');
           fill.hidden=hidden;fill.style.width=Number(item.amount)/max*100+'%';
         }
-      }else el('p','No categorized spending yet.',categories,'finance-page-hint');
+      }else el('p','Spending will appear here.',categories,'finance-page-hint');
     }
     compactAccountPreview(host);
     const activity=el('section',undefined,host,'finance-page-card');
@@ -697,14 +697,14 @@
     metric(activityGrid,'Net flow',summary.hasActivity?amount(summary.cashFlow,'USD'):'—');
     metric(activityGrid,'Savings rate',hidden?'••••••':summary.savingsRate===null?'—':summary.savingsRate.toFixed(1)+'%');
     if(summary.uncategorized>0)el('p','Includes '+summary.uncategorized+' uncategorized outflow'+(summary.uncategorized===1?'':'s')+'. Review when convenient.',activity,'finance-page-caution');
-    else if(!summary.complete)el('p','Some accounts or transactions still need review.',activity,'finance-page-caution');
+    else if(!summary.complete)el('p','Review your accounts.',activity,'finance-page-caution');
     compactActivityPreview(host);
     spendingDonut(host,summary);
     const more=el('details',undefined,host,'finance-page-more');
     el('summary','More insights · trends, spending & review',more);
     const trend=el('section',undefined,more,'finance-page-card');el('h3','Net worth trend',trend);trendChart(trend,summary.netWorthHistory||[]);
     const monthly=el('section',undefined,more,'finance-page-card');el('h3','Monthly activity',monthly);
-    if(!summary.monthly?.length)el('p','No categorized monthly activity yet.',monthly);
+    if(!summary.monthly?.length)el('p','Monthly trends will appear here.',monthly);
     else for(const item of summary.monthly){
       const line=el('article',undefined,monthly,'finance-page-month');
       el('strong',new Date(item.month+'-02T00:00:00').toLocaleDateString(undefined,{month:'short',year:'numeric'}),line);
@@ -1223,7 +1223,7 @@
           &&(!transactionMin||Math.abs(Number(row.amount))>=Number(transactionMin))
           &&(!transactionMax||Math.abs(Number(row.amount))<=Number(transactionMax));
       });
-      if(!filtered.length){el('p','No matching transactions are available yet. Check the account, date range or next bank sync.',list);return}
+      if(!filtered.length){el('p','No matching transactions. Try another filter.',list);return}
       let group=null,lastDay='';
       const seenPairs=new Set();
       for(const row of filtered.slice(0,transactionVisibleLimit)){
@@ -1456,12 +1456,12 @@
     const draw=days=>{plot.replaceChildren();
       const points=(currentCombined.balanceHistory?.[account.key]||[]).filter(x=>(x.observedAt||x.at)>Date.now()/1000-days*86400)
         .map(x=>({at:x.observedAt||x.at,value:profile(account).balanceMode==='liability'?String(-Number(x.balance)):x.balance}));
-      if(points.length<2)el('p','Your balance trend will appear after more syncs.',plot);else trendChart(plot,points);
+      if(points.length<2)el('p','Chart builds as your accounts sync.',plot);else trendChart(plot,points);
     };
     for(const [label,days] of [['1M',30],['3M',90],['1Y',365]])action(ranges,label,()=>draw(days),'finance-page-chip');draw(90);
     const recent=el('section',undefined,modal,'finance-page-card');el('h3','Recent transactions',recent);
     const rows=Object.values(currentCombined.transactions?.[account.key]||{}).sort((a,b)=>b.posted-a.posted).slice(0,5);
-    if(!rows.length)el('p',account.historyComplete===false?'History still loading':'No recent transactions',recent);
+    if(!rows.length)el('p',account.historyComplete===false?'Waiting for history':'No recent transactions',recent);
     for(const row of rows){const line=el('div',undefined,recent,'finance-page-preview-row');el('strong',displayMerchant(row),line);el('b',amount(row.amount,account.currency),line)}
     action(recent,'See all',()=>{transactionAccount=account.key;view='transactions';modal.close();paint()});
     const fields=el('section',undefined,modal,'finance-page-card');el('h3','Settings',fields);
@@ -1497,7 +1497,7 @@
         const members=pair.map(key=>currentCombined.accounts.find(a=>a.key===key));
         const section=el('section',undefined,review,'finance-page-card');
         el('p',members.map(a=>accountTitle(a)+' via '+a.sourceLabel).join(' / '),section);
-        el('small','Confirm whether these are the same account. Only the preferred connection supplies the balance.',section);
+        el('small','Choose the account to keep in your totals.',section);
         const choices={'':'Choose preferred connection'};for(const a of members)choices[a.key]=a.sourceLabel+' · '+accountTitle(a);
         const chooser=select(section,'Same account — preferred connection',choices,financePrefs.duplicates?.[id]?.primary||'',value=>{if(value)saveSetting('duplicates',id,{primary:value})});
         chooser.disabled=!preferenceAvailable;
@@ -1622,7 +1622,7 @@
       if(a.removedAt||p.hidden){action(line,'Restore',async()=>{try{if(a.removedAt)await accountAction(a,'restore');if(p.hidden)await saveAccountProfile(a,{hidden:false});modal.close()}catch(error){el('p',error.message,modal)}});continue}
       const label=el('label',undefined,line);el('span','Sync',label);const input=el('input',undefined,label);input.type='checkbox';input.setAttribute('role','switch');input.checked=p.syncEnabled!==false;input.setAttribute('aria-label','Sync '+accountTitle(a));input.onchange=async()=>{await saveAccountProfile(a,{syncEnabled:input.checked});if(saveNotice)input.checked=!input.checked};
     }
-    action(modal,'Refresh now',async()=>{try{const snapshot=await request('/sync',{method:'POST'},account.source);applySource(account.source,snapshot);connectionNotice='Refresh complete.';modal.close();paint()}catch(error){el('p',error.message,modal)}});
+    action(modal,'Refresh',async()=>{try{const snapshot=await request('/sync',{method:'POST'},account.source);applySource(account.source,snapshot);connectionNotice='Refresh complete.';modal.close();paint()}catch(error){el('p',error.message,modal)}});
     action(modal,'Reconnect',()=>{modal.close();reconnectAccount(account)});
     if(account.source==='plaid')action(modal,'Choose which accounts to share',()=>{modal.close();reconnectAccount(account)});
     action(modal,'Disconnect bank',()=>disconnectConnection(account,modal),'finance-page-button finance-danger');
@@ -1654,9 +1654,9 @@
     host.replaceChildren();
     currentCombined=unified();
     if(saveNotice){const notice=el('p',saveNotice,host,'finance-page-notice');notice.setAttribute('role','alert');}
-    if(!data){const skeleton=statusMessage(host,'Loading accounts','Checking secure connections…');skeleton.classList.add('finance-skeleton');skeleton.setAttribute('aria-busy','true');return}
+    if(!data){const skeleton=statusMessage(host,'Loading accounts','Loading accounts…');skeleton.classList.add('finance-skeleton');skeleton.setAttribute('aria-busy','true');return}
     if(!currentCombined?.connected){
-      statusMessage(host,data?.error?'Bank connections unavailable':'Connect a bank',data?.error||'All of your supported accounts will appear in one dashboard.');
+      statusMessage(host,data?.error?'Can’t load accounts':'Connect a bank',data?.error||'See your accounts in one place.');
       action(host,'Add bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');return;
     }
     const summaryState=window.BTFinanceUnified.safeForSummary(currentCombined);
@@ -1677,16 +1677,16 @@
     if(needsAttention||loading||settingsNotice||archiveLoading){
       const row=el('details',undefined,host,'finance-page-status-row');
       const count=(currentCombined?.accounts||[]).filter(a=>a.transactionSyncStatus==='needs_attention').length;
-      const label=needsAttention?(count||1)+' bank'+((count||1)===1?'':'s')+' needs attention':
-        loading?'Importing transaction history for 1 bank. Updates automatically.':
+      const label=needsAttention?'Needs attention':
+        loading?'Waiting for history':
         archiveLoading?'Loading earlier transactions…':settingsNotice;
       el('summary',label,row);
       const detail=el('p',undefined,row);
       const problem=Object.entries(currentCombined?.sourceErrors||{}).map(([src,err])=>sourceLabel(src)+': '+String(err).slice(0,120)).join(' · ')||
         ['simplefin','plaid'].flatMap(src=>(sourceSnapshot(src)?.warnings||[]).map(err=>sourceLabel(src)+': '+String(err).slice(0,120))).slice(0,2).join(' · ');
       detail.textContent=needsAttention?(problem||'Open Accounts to check the connection or refresh your accounts.'):
-        loading?'Transaction imports continue automatically. Earlier months may be incomplete.':
-        archiveLoading?'Previously imported months are being loaded securely.':settingsNotice;
+        loading?'Waiting for history.':
+        archiveLoading?'Loading earlier months.':settingsNotice;
       if(needsAttention)action(row,'Check accounts',()=>{view='accounts';paint()});
       if(needsAttention&&sourceSnapshot('simplefin')?.status==='attention')action(row,'Open SimpleFIN',()=>window.open('https://bridge.simplefin.org/','_blank','noopener'),'finance-page-button');
     }
