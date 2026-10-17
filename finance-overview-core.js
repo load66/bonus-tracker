@@ -7,7 +7,7 @@
 })(typeof window!=='undefined'?window:null,function(){
   'use strict';
   const DAY=86400,MAX_DAYS=731,STALE_BALANCE_DAYS=7;
-  const SPENDING=new Set(['housing','loan','utilities','groceries','dining','transportation','shopping','health','entertainment','fees','taxes','travel','subscription','other']);
+  const SPENDING=new Set(['housing','loan','utilities','groceries','dining','transportation','shopping','health','entertainment','fees','taxes','travel','subscription','other','unreviewed']);
   function cents(value){
     const m=/^([+-]?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(value??'').trim());
     if(!m)return null;
@@ -26,6 +26,17 @@
     return amount!==null&&Number.isFinite(at)&&at>0&&at<=now+300&&at>=now-STALE_BALANCE_DAYS*DAY
       ?{amount,at}:null;
   }
+  const financialInstitution=/(?:\bcapital\s*one\b|\bchase\b|\bamerican\s*express\b|\bamex\b|\bdiscover\b|\bciti(?:bank)?\b|\brobinhood\b|\bfidelity\b|\bschwab\b|\bvanguard\b|\bsynchrony\b|\bbarclays\b)/i;
+  const financialAction=/(?:\b(?:pmt|pymt|payment|autopay|epay|crcardpmt|ccpmt)\b)/i;
+  const investmentInstitution=/(?:\brobinhood\b|\bfidelity\b|\bschwab\b|\bvanguard\b|\bbrokerage\b|\binvestment\b|\b401k\b|\broth\s*ira\b|\bira\b)/i;
+  const contributionAction=/(?:\b(?:contribution|contribute|deposit|funding|transfer)\b)/i;
+  function financialMovement(row){
+    const text=String(row.description||'')+' '+String(row.merchant||'');
+    return row.kind==='card_payment'||row.kind==='investment_contribution'||
+      (row.signals||[]).includes('matched_internal_transfer')||
+      (financialInstitution.test(text)&&financialAction.test(text))||
+      (investmentInstitution.test(text)&&contributionAction.test(text));
+  }
   function summarize(state={},options={}){
     const now=Number.isFinite(options.now)?Math.floor(options.now):Math.floor(Date.now()/1000);
     const days=Number.isInteger(options.days)&&options.days>=1&&options.days<=MAX_DAYS?options.days:30;
@@ -38,7 +49,7 @@
     const history=state.transactions&&typeof state.transactions==='object'?state.transactions:{};
     const cutoff=now-days*DAY;
     let credits=0n,debits=0n,observations=0,candidates=0,reversals=0,unusable=0,pending=0;
-    let income=0n,expenses=0n,transfers=0,unreviewed=0,recurring=0,sourceAccounts=0;
+    let income=0n,expenses=0n,transfers=0,unreviewed=0,uncategorized=0,recurring=0,sourceAccounts=0;
     const spending={},monthly={};
     for(const account of usd){
       const records=history[account.key];
@@ -56,8 +67,11 @@
         if(row.kind==='possible_reversal'&&n<0n)reversals++;
         const category=String(row.category||'unreviewed');
         if(category==='income'&&n>0n)income+=n;
-        else if(SPENDING.has(category)&&n<0n){
-          const amount=-n;expenses+=amount;spending[category]=(spending[category]||0n)+amount;
+        else if(n<0n&&!['transfer','verification','refund'].includes(category)&&
+                !financialMovement(row)){
+          const amount=-n,label=SPENDING.has(category)?category:'unreviewed';
+          expenses+=amount;spending[label]=(spending[label]||0n)+amount;
+          if(label==='unreviewed')uncategorized++;
         }else if(category==='transfer')transfers++;
         if(category==='unreviewed'||(category==='bonus'&&row.categorySource!=='user')||(!['user','user_rule'].includes(row.categorySource)&&row.confidence!=='high'))unreviewed++;
         if(Array.isArray(row.signals)&&row.signals.includes('possible_recurring'))recurring++;
@@ -66,16 +80,33 @@
         const key=String(local.getFullYear())+'-'+String(local.getMonth()+1).padStart(2,'0');
         const month=monthly[key]||(monthly[key]={income:0n,expenses:0n});
         if(category==='income'&&n>0n)month.income+=n;
-        if(SPENDING.has(category)&&n<0n)month.expenses-=n;
+        if(n<0n&&!['transfer','verification','refund'].includes(category)&&
+           !financialMovement(row))month.expenses-=n;
       }
     }
 
     const profileEntries=accounts.filter(account=>!profiles[account.key]?.removed).map(account=>({account,profile:profiles[account.key]||{kind:'unclassified',balanceMode:'exclude'},balance:freshBalance(account,now)}));
     const cashEntries=profileEntries.filter(x=>['checking','savings'].includes(x.profile.kind));
-    const cashReady=cashEntries.length>0&&cashEntries.every(x=>x.account.currency==='USD'&&x.balance);
-    const cash=cashReady?cashEntries.reduce((sum,x)=>sum+x.balance.amount,0n):null;
+    const readyCash=cashEntries.filter(x=>x.account.currency==='USD'&&x.balance);
+    const cashReady=readyCash.length>0;
+    const cash=readyCash.length?readyCash.reduce((sum,x)=>sum+x.balance.amount,0n):null;
+    const cashMissing=cashEntries.length-readyCash.length;
     const included=profileEntries.filter(x=>x.profile.balanceMode!=='exclude');
-    const usable=included.filter(x=>x.account.currency==='USD'&&x.balance&&x.profile.kind!=='unclassified');
+    // Plaid supplies observedAt but not necessarily an authoritative balanceDate.
+    // Show recently observed card debt without pretending its provider freshness was certified.
+    const usable=included.map(x=>{
+      if(x.balance||x.profile.kind!=='credit_card'||x.account.currency!=='USD')return x;
+      const value=cents(x.account.balance),at=x.account.observedAt;
+      return value!==null&&Number.isFinite(at)&&at>0&&at<=now+300&&at>=now-STALE_BALANCE_DAYS*DAY
+        ?{...x,balance:{amount:value,at,provisional:true}}:x;
+    }).filter(x=>x.account.currency==='USD'&&x.balance&&x.profile.kind!=='unclassified');
+    const exclusions=profileEntries.filter(x=>x.profile.balanceMode==='exclude'||
+      x.account.currency!=='USD'||x.profile.kind==='unclassified'||!usable.some(u=>u.account.key===x.account.key))
+      .map(x=>({name:x.account.name||x.account.bank||'Account',
+        reason:x.profile.balanceMode==='exclude'?'excluded by settings':
+          x.account.currency!=='USD'?'non-USD balance':
+          x.profile.kind==='unclassified'?'account type needs review':'balance not updated'}));
+    const provisional=usable.filter(x=>x.balance.provisional).map(x=>x.account.name||'Credit card');
     const netWorthReady=usable.length>0;
     let assets=0n,liabilities=0n;
     if(netWorthReady)for(const x of usable){
@@ -111,7 +142,7 @@
       days,currency:'USD',connectedAccounts:accounts.length,selectedAccounts:selected.size,
       usdAccounts:usd.length,otherCurrencyAccounts:accounts.filter(a=>a&&selected.has(a.key)&&a.currency!=='USD').length,
       missingAccounts,otherCurrencies:[...new Set(accounts.filter(a=>a&&selected.has(a.key)&&a.currency!=='USD').map(a=>a.currency||'Unknown currency'))].sort(),
-      sourceAccounts,observations,candidates,reversals,unusable,pending,unreviewed,transfers,recurring,
+      sourceAccounts,observations,candidates,reversals,unusable,pending,unreviewed,uncategorized,transfers,recurring,
       hasSync:Number.isFinite(state.lastSuccess)&&state.lastSuccess>0,
       hasActivity:observations>0&&Number.isFinite(state.lastSuccess)&&state.lastSuccess>0,
       lastSync:Number.isFinite(state.lastSuccess)?state.lastSuccess:null,
@@ -123,9 +154,11 @@
       spending:Object.fromEntries(Object.entries(spending).map(([k,v])=>[k,decimal(v)])),
       monthly:Object.entries(monthly).sort().map(([month,v])=>({month,income:decimal(v.income),expenses:decimal(v.expenses),cashFlow:decimal(v.income-v.expenses)})),
       cashAvailable:cashReady,cash:cashReady?decimal(cash):null,
-      cashAccountCount:cashEntries.length,staleOrUnavailableCash:cashEntries.filter(x=>x.account.currency!=='USD'||!x.balance).length,
-      netWorthAvailable:netWorthReady,netWorthBasedOn:usable.length,netWorthTotalAccounts:included.length,
-      netWorthPartial:usable.length<included.length,assets:netWorthReady?decimal(assets):null,
+      cashAccountCount:cashEntries.length,cashIncludedCount:readyCash.length,
+      cashPartial:cashMissing>0,staleOrUnavailableCash:cashMissing,
+      netWorthAvailable:netWorthReady,netWorthBasedOn:usable.length,netWorthTotalAccounts:accounts.length,
+      netWorthPartial:usable.length<included.length||provisional.length>0,
+      netWorthExclusions:exclusions,provisionalBalances:provisional,assets:netWorthReady?decimal(assets):null,
       liabilities:netWorthReady?decimal(liabilities):null,netWorth:netWorthReady?decimal(assets-liabilities):null,
       netWorthHistory:netWorthHistory.slice(-90),
       classifiedAccounts:profileEntries.filter(x=>x.profile.kind!=='unclassified').length,

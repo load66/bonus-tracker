@@ -613,3 +613,175 @@
   .finance-page .finance-page-period-nowrap{width:100%}
   .finance-page .finance-page-account-info strong{font-size:12px}
 }
+
+
+/* Finances 3.4.80 — original spending workspace; scoped to Finance only. */
+.finance-page .finance-spending-3480{
+  display:grid;gap:15px;min-width:0;padding:0 0 26px;
+  font-family:Manrope,system-ui,sans-serif;
+}
+.finance-page .finance-spending-3480 *{box-sizing:border-box}
+.finance-page .finance-spending-month-header{
+  display:flex;align-items:center;justify-content:space-between;
+  background:#10151D;border:1px solid #25313C;border-radius:18px;
+  padding:5px 8px;min-height:58px;touch-action:pan-y
+}
+.finance-page .finance-spending-month-header h2{
+  color:#F2F7F8;font-size:16px;font-weight:760;letter-spacing:-.02em;
+  text-align:center;min-width:0;margin:0;
+}
+.finance-page .finance-spending-month-arrow{
+  flex:0 0 42px;width:42px;min-height:44px;
+  color:#BDEBDA;background:transparent;border:0;border-radius:12px;
+  font-size:27px;font-weight:300;cursor:pointer
+}
+.finance-page .finance-spending-month-arrow:disabled{opacity:.28}
+.finance-page .finance-spending-summary{
+  display:grid;gap:16px;padding:22px 20px 19px;
+  background:linear-gradient(155deg,#12342D,#101A23 72%);
+  border:1px solid #2A544B;border-radius:23px
+}
+.finance-page .finance-spending-value{display:grid;gap:2px}
+.finance-page .finance-spending-value>span{color:#B4D1C5;font-size:12px;font-weight:720}
+.finance-page .finance-spending-value>strong{
+  color:#F5FAF7;font-size:clamp(36px,9vw,52px);font-weight:780;
+  font-variant-numeric:tabular-nums;letter-spacing:-.05em;line-height:1.13;
+  overflow-wrap:anywhere
+}
+.finance-page .finance-spending-comparison{color:#B7DCCB;font-size:12px}
+.finance-page .finance-spending-mode{display:grid;grid-template-columns:1fr 1fr;gap:5px;background:#071712;padding:4px;border-radius:14px}
+.finance-page .finance-spending-mode .finance-page-chip{
+  min-height:41px;background:transparent;border:0;border-radius:10px;color:#ABC8BE;font-size:13px
+}
+.finance-page .finance-spending-mode .finance-page-chip.is-active{
+  background:#29584B;color:#F0FFF7;box-shadow:0 3px 9px #0003
+}
+.finance-page .finance-spending-panel{
+  border:1px solid #26323A;background:#111820;border-radius:22px;padding:18px;min-width:0
+}
+.finance-page .finance-spending-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 9px;margin-bottom:13px}
+.finance-page .finance-spending-heading h3{font-size:16px;letter-spacing:-.025em;color:#F3F7F8;margin:0}
+.finance-page .finance-spending-heading small{color:#99ABBA;font-size:10px}
+.finance-page .finance-spending-chart-space{display:block;width:100%;aspect-ratio:340/155}
+.finance-page .finance-spending-chart-space svg{display:block;width:100%;height:auto;overflow:visible}
+.finance-page .finance-spending-gridline{stroke:#35414D;stroke-width:.6}
+.finance-page .finance-spending-chart-footer{display:flex;align-items:center;justify-content:space-between;gap:5px;color:#BBC8D2;font-variant-numeric:tabular-nums;font-size:11px}
+.finance-page .finance-spending-chart-footer strong{font-size:12px;color:#79E4BC}
+.finance-page .finance-spending-donut-row{display:flex;justify-content:center;padding:7px 0 17px}
+.finance-page .finance-spending-donut{position:relative;width:174px;aspect-ratio:1;border-radius:50%;display:grid;place-items:center}
+.finance-page .finance-spending-donut::before{
+  content:'';position:absolute;inset:24px;background:#111820;border-radius:50%;
+}
+.finance-page .finance-spending-donut-center{position:relative;display:grid;text-align:center;gap:3px;font-variant-numeric:tabular-nums}
+.finance-page .finance-spending-donut-center small{color:#A4B4BF;font-size:10px}
+.finance-page .finance-spending-donut-center strong{font-size:19px;letter-spacing:-.04em}
+.finance-page .finance-spending-categories{display:grid}
+.finance-page .finance-spending-category-row{
+  display:flex;align-items:center;gap:8px;min-height:66px;
+  border-bottom:1px solid #24313A;padding:7px 0;min-width:0
+}
+.finance-page .finance-spending-category-row:last-child{border-bottom:0}
+.finance-page .finance-spending-category-row.is-review{background:linear-gradient(90deg,#49371F44,transparent);border-radius:11px;padding-inline:4px}
+.finance-page .finance-spending-category-action{
+  flex:1 1 auto;min-width:0;display:flex;gap:11px;align-items:center;
+  border:0;background:transparent;color:inherit;text-align:left;
+  font:inherit;cursor:pointer;padding:5px 0
+}
+.finance-page .finance-spending-category-symbol{
+  width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;
+  border-radius:12px;font-size:20px;font-weight:800
+}
+.finance-page .finance-spending-category-desc{min-width:0;flex:1 1 auto;display:grid;gap:3px}
+.finance-page .finance-spending-category-desc strong{font-size:12px;color:#EDF4F6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.finance-page .finance-spending-category-desc small{font-size:10px;color:#9BABB9;line-height:1.35;overflow-wrap:anywhere}
+.finance-page .finance-spending-category-amount{flex:0 0 auto;max-width:38%;text-align:right;font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.finance-page .finance-spending-review-cta{
+  flex:0 0 auto;min-height:36px;padding:0 10px;
+  background:#755025;color:#FFE1AE;border:1px solid #A87432;
+  border-radius:11px;font-size:11px;font-weight:760
+}
+.finance-page .finance-spending-review-banner{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:#26271F;border:1px solid #5E5133;
+  border-radius:16px;padding:14px;font-size:12px
+}
+.finance-page .finance-spending-review-banner strong{min-width:0}
+.finance-page .finance-spending-merchant-row{
+  display:flex;gap:12px;align-items:center;width:100%;min-height:59px;
+  background:transparent;border:0;border-bottom:1px solid #25313A;
+  text-align:left;padding:9px 1px;color:#F0F4F6;font:inherit
+}
+.finance-page button.finance-spending-merchant-row{cursor:pointer}
+.finance-page .finance-spending-merchant-row:last-child{border-bottom:0}
+.finance-page .finance-spending-merchant-initial{
+  flex:0 0 36px;width:36px;height:36px;border-radius:50%;
+  display:grid;place-items:center;background:#203E3A;color:#A4EAD3;font-size:14px;font-weight:800
+}
+.finance-page .finance-spending-merchant-copy{display:grid;min-width:0;gap:3px;flex:1}
+.finance-page .finance-spending-merchant-copy strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.finance-page .finance-spending-merchant-copy small{font-size:10px;color:#9AADB9}
+.finance-page .finance-spending-merchant-row>b{margin-left:auto;white-space:nowrap;text-align:right;font-size:12px;font-variant-numeric:tabular-nums}
+.finance-page .finance-spending-budget-settings>summary{padding:10px 4px;color:#A3EDD1;cursor:pointer;min-height:44px}
+.finance-page .finance-spending-budget-item{display:grid;gap:8px;padding:13px 0;border-bottom:1px solid #28333B}
+.finance-page .finance-spending-category-top{display:flex;justify-content:space-between;gap:9px;align-items:center;font-size:12px}
+.finance-page .finance-spending-category-top b{font-variant-numeric:tabular-nums;font-size:12px}
+.finance-page .finance-spending-budget-edit{display:flex;justify-content:space-between;align-items:center;gap:8px;color:#A9B8C3;font-size:11px}
+.finance-page .finance-spending-budget-edit input{
+  width:116px;max-width:50%;min-height:39px;background:#0C121A;border:1px solid #37464E;
+  color:#F6FCFA;border-radius:10px;padding:7px 10px;font:inherit;font-size:12px;text-align:right
+}
+.finance-page .finance-spending-vertical-bars{
+  display:flex;align-items:stretch;gap:7px;overflow-x:auto;min-height:157px;
+  padding:12px 0 3px;overscroll-behavior-x:contain
+}
+.finance-page .finance-spending-month-bar{
+  display:flex;flex:1 0 28px;flex-direction:column;align-items:center;justify-content:flex-end;
+  min-width:28px;max-width:54px;gap:7px;color:#9FABB6;font-size:10px
+}
+.finance-page .finance-spending-bar-track{
+  display:flex;flex-direction:column;justify-content:flex-end;
+  width:100%;height:112px;border-radius:7px 7px 3px 3px;background:#1B2530;overflow:hidden
+}
+.finance-page .finance-spending-bar-fill{display:block;width:100%;background:#61DEB3;border-radius:7px 7px 0 0}
+.finance-page .finance-spending-bar-pair{display:flex;align-items:flex-end;gap:3px;width:100%}
+.finance-page .finance-spending-bar-pair .finance-spending-bar-track{flex:1 1 0;min-width:0}
+.finance-page .finance-spending-bar-fill.is-income{background:#6797C7}
+.finance-page .finance-spending-review-progress{display:block;color:#96E9C5;font-size:12px;font-weight:800;letter-spacing:.06em;margin-bottom:12px}
+.finance-page .finance-spending-review-card{
+  display:grid;gap:10px;border:1px solid #355447;
+  background:linear-gradient(150deg,#182F2B,#111D28);border-radius:20px;
+  padding:24px 18px;margin:10px 0;touch-action:pan-y
+}
+.finance-page .finance-spending-review-card h3{font-size:18px;margin:0;overflow-wrap:anywhere}
+.finance-page .finance-spending-apply-similar{display:flex;align-items:center;gap:9px;color:#CDD9D5;font-size:12px;padding:11px 0}
+.finance-page .finance-spending-apply-similar input{width:18px;height:18px;accent-color:#61DEB3}
+.finance-page .finance-spending-review-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.finance-page .finance-spending-review-choice{min-height:47px;padding:9px 7px;text-align:center;
+  background:#1A2830;border:1px solid #334B51;border-radius:12px;color:#E7F5F0;font-size:12px;font-weight:710}
+.finance-page .finance-spending-review-choice:disabled{opacity:.5}
+.finance-page .finance-spending-review-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:15px}
+.finance-page .finance-spending-day{font-size:11px;color:#9FADB9;margin:15px 0 5px}
+.finance-page .finance-spending-ledger-row{display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:1px solid #2C3940;padding:12px 0;font-size:11px}
+.finance-page .finance-spending-ledger-row div{min-width:0;display:grid;gap:3px}
+.finance-page .finance-spending-ledger-row strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.finance-page .finance-spending-ledger-row small{color:#9CABB9}
+.finance-page .finance-spending-ledger-row b{white-space:nowrap;font-variant-numeric:tabular-nums}
+.finance-page .finance-spending-ledger-row b.is-credit{color:#63E0B0}
+.finance-page .finance-page-preview-value.is-credit{color:#63E0B0}
+.finance-page .finance-page-round-action svg{
+  display:block!important;width:47px!important;height:47px!important;
+  padding:11px!important;color:#85E9C4!important;border-radius:50%;
+  background:#20323C!important;fill:none!important;stroke:currentColor!important;
+}
+.finance-page .finance-page-round-action svg path{stroke:currentColor;fill:none;stroke-width:1.9}
+@media(max-width:420px){
+  .finance-page .finance-spending-3480{gap:12px}
+  .finance-page .finance-spending-panel{padding:15px}
+  .finance-page .finance-spending-category-row{gap:5px}
+  .finance-page .finance-spending-category-symbol{width:32px;height:32px;flex-basis:32px}
+  .finance-page .finance-spending-category-action{gap:8px}
+  .finance-page .finance-spending-category-amount{max-width:38%;font-size:11px}
+  .finance-page .finance-spending-category-desc strong{font-size:11px}
+  .finance-page .finance-spending-review-cta{padding:0 8px}
+}
+@media(prefers-reduced-motion:reduce){.finance-page .finance-spending-3480 *{scroll-behavior:auto!important}}

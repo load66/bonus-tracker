@@ -45,3 +45,30 @@ assert.equal(recurringTransfers[0].category,'transfer');
 assert.equal(I.spent(cardPayments,'2026-10').total,'0.00','Card payments cannot inflate subscriptions or spending');
 
 console.log('Finance insights passed: spending exclusions, month navigation, monthly, biweekly, yearly, price increases and missed bills.');
+
+const oct=(d,amt,category='unreviewed',merchant='Unknown vendor')=>row(new Date(2026,9,d,12).getTime(),amt,category,merchant);
+const unknowns=[oct(2,'-100.00'),oct(3,'-22.50','unreviewed','Second unknown'),oct(4,'-35.00','transfer','Chase EPAY'),oct(5,'-0.21','verification','ACCT VERIFY'),oct(6,'-90.00','loan','Payment'),oct(7,'70.00','refund','Unknown vendor'),oct(8,'-15.00','unreviewed','Another seller'),{...oct(9,'-17.00'),excludedFromTotals:true}];
+const counted=I.spent(unknowns,'2026-10');
+assert.equal(counted.uncategorized,3,'Counts every unknown debit even without category labels');
+assert.equal(counted.total,'157.50','Unknown debits are spending; transfers and verification do not inflate it; matching refund offsets purchase');
+assert.equal(counted.refundOffsets,'70.00');
+assert.equal(counted.categories.find(x=>x.category==='unreviewed').amount,'67.50');
+assert.equal(counted.records,4);
+assert.equal(counted.categories.find(x=>x.category==='unreviewed').count,3);
+assert.equal(I.spendingCategory(oct(5,'-0.21','verification'),-21n),null);
+assert.equal(I.spendingCategory(oct(1,'-50','transfer','Capital One AUTOPAY'),-5000n),null);
+assert.equal(I.spendingCategory(oct(1,'-50','unreviewed','Robinhood IRA contribution'),-5000n),null,'Broker/IRA contributions do not inflate spending while server classification catches up');
+const monthHistory=I.history([oct(2,'-10'),row(new Date(2026,7,2).getTime(),'-20','groceries')],'2026-10');
+assert.deepEqual(monthHistory.months.map(x=>x.month),['2026-08','2026-10'],'No false zero spending month for September');
+assert.equal(monthHistory.start,'2026-08');
+assert.equal(I.monthDays('2026-02'),28);
+assert.equal(I.monthDays('2028-02'),29);
+assert.equal(I.monthShift('2026-10',1),'2026-11');
+assert.deepEqual(I.budget('100.00','79.99',15,30),{
+  limit:'100.00',spent:'79.99',left:'20.01',projected:'159.98',percent:79.99,level:'ok'
+});
+assert.equal(I.budget('100.00','80.00',15,30).level,'near');
+assert.equal(I.budget('100.00','100.00',15,30).level,'near');
+assert.equal(I.budget('100.00','100.01',15,30).level,'over');
+assert.equal(I.budget('100.00','120.00',15,30).left,'0.00');
+assert.equal(I.budget('0','2.00',15,30),null);
