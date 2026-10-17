@@ -174,7 +174,10 @@ const base=()=>({
       await txSearch.fill('');
       const unknownRow=section.locator('.finance-page-transaction').filter({hasText:'Unknown'});
       await unknownRow.getByRole('button',{name:/Unknown/}).click();
+      await section.getByRole('checkbox',{name:'Apply to similar transactions'}).check();
       const category=section.getByLabel('Category for Unknown');await category.selectOption('shopping');
+      assert.ok(requests.some(r=>r.path.endsWith('/transaction-review')&&r.body.applySimilar===true),
+        'Opt-in merchant learning must be explicitly transmitted and never enabled by default');
       await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).waitFor();
       assert.equal(state.transactions[A][T3].category,'unreviewed','failure must not silently commit category changes');
       await section.getByLabel('Category for Unknown').selectOption('shopping');
@@ -353,12 +356,20 @@ const base=()=>({
           description:'Synthetic Plaid history item '+index,category:'other',
           categorySource:'automatic',confidence:'low',signals:[]};
       }
+      // A bland provider merchant title must fall back to the full bank wording.
+      // AI-origin suggestions show a small "Auto" label without editing data.
+      plaidState.transactions[A]['history-000'].merchant='Transaction';
+      plaidState.transactions[A]['history-000'].categorySource='ai';
+      plaidState.transactions[A]['history-000'].category='shopping';
       // A bonus-classified transaction remains intact in provider data, but
       // its Finance-only presentation is ordinary income, never a bonus card.
       plaidState.transactions[A]['plaid-income'].category='bonus';
       await page.evaluate(()=>window.btRefreshFinancesPage?.());
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       await section.getByText('X Money Bonus',{exact:true}).waitFor();
+      const correctedName=section.locator('.finance-page-transaction').filter({hasText:'Synthetic Plaid history item 0'});
+      await correctedName.getByText('Auto',{exact:true}).waitFor();
+      assert.ok((await correctedName.innerText()).includes('Synthetic Plaid history item 0'));
       const preservedBonus=section.locator('.finance-page-transaction').filter({hasText:'X Money Bonus'});
       assert.ok((await preservedBonus.innerText()).includes('Income'),
         'Finance labels preserved internal bonus classification as Income');
