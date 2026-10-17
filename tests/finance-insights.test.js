@@ -32,7 +32,9 @@ assert.equal(payroll[0].frequency,'biweekly');
 const yearly=[row(new Date(2024,9,4).getTime(),'-75','subscription','Synthetic yearly'),row(new Date(2025,9,4).getTime(),'-75','subscription','Synthetic yearly'),row(new Date(2026,9,4).getTime(),'-75','subscription','Synthetic yearly')];
 assert.equal(I.recurring(yearly,NOW)[0].frequency,'yearly');
 const missed=I.recurring(monthly,new Date(2027,3,1).getTime());
-assert.equal(missed[0].status,'possibly_canceled');
+assert.equal(missed[0].status,'possibly_ended');
+assert.ok(missed[0].nextAt*1000<new Date(2027,3,1).getTime());
+assert.equal(I.upcoming(missed,new Date(2027,3,1).getTime()).length,0,'Past predictions cannot appear as upcoming payments');
 assert.equal(I.recurring([row(new Date(2026,9,1).getTime(),'-90','transfer')],NOW).length,0);
 assert.equal(I.upcoming(recurring,new Date(2026,9,25).getTime()).length,1);
 
@@ -40,9 +42,24 @@ const cardPayments=[row(new Date(2026,7,15).getTime(),'-200.00','transfer','Capi
   row(new Date(2026,8,15).getTime(),'-200.00','transfer','Capital One payment'),
   row(new Date(2026,9,15).getTime(),'-200.00','transfer','Capital One payment')];
 const recurringTransfers=I.recurring(cardPayments,NOW);
-assert.equal(recurringTransfers.length,1,'Card payments remain visible as expected bills');
-assert.equal(recurringTransfers[0].category,'transfer');
+assert.equal(recurringTransfers.length,0,'Card payments are internal movements, not recurring bills');
 assert.equal(I.spent(cardPayments,'2026-10').total,'0.00','Card payments cannot inflate subscriptions or spending');
+
+const lafayette=[7,8,9].map(m=>({...row(new Date(2026,m,15).getTime(),'500.00','income','From Lafayette Fcu'),
+  description:'From Lafayette Fcu',categorySource:'automatic'}));
+assert.equal(I.recurring(lafayette,NOW).length,0,'Bank transfer named From Lafayette Fcu must not masquerade as recurring income');
+const internalSignals=['matched_internal_transfer','possible_transfer','card_payment','investment_transfer'];
+for(const signal of internalSignals){
+  const rows=[7,8,9].map(m=>({...row(new Date(2026,m,14).getTime(),'1000.00','income','A regular payment'),signals:[signal]}));
+  assert.equal(I.recurring(rows,NOW).length,0,signal+' excludes recurring regardless of category');
+}
+for(const category of ['transfer','card_payment','investment_transfer']){
+  const rows=[7,8,9].map(m=>row(new Date(2026,m,14).getTime(),'-1000.00',category,'Synthetic account movement'));
+  assert.equal(I.recurring(rows,NOW).length,0,category+' is not a recurring bill');
+}
+const schreiber=[7,8,9].map(m=>({...row(new Date(2026,m,13).getTime(),'1650.00','income','Schreiber Foods payroll'),
+  description:'SCHREIBER FOODS PAYROLL',signals:['possible_direct_deposit']}));
+assert.equal(I.recurring(schreiber,NOW)[0].direction,'income','Schreiber payroll remains recurring Income');
 
 console.log('Finance insights passed: spending exclusions, month navigation, monthly, biweekly, yearly, price increases and missed bills.');
 
