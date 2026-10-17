@@ -189,6 +189,8 @@
     // assumption based on a merchant name is needed. Match each direction
     // uniquely by exact cents and at most three days. Preserve manual reviews.
     const transferRows=[];
+    const nonTransfers=new Set(['groceries','dining','shopping','housing','utilities',
+      'transportation','health','entertainment','fees','taxes','travel','subscription','loan']);
     const toCents=value=>{
       const m=/^([+-]?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(value??'').trim());
       if(!m)return null;
@@ -207,8 +209,6 @@
           payroll)continue;
         // Equal-valued unrelated purchases and deposits are not proof of a
         // self-transfer. Preserve known household expenses and ordinary income.
-        const nonTransfers=new Set(['groceries','dining','shopping','housing','utilities',
-          'transportation','health','entertainment','fees','taxes','travel','subscription','loan']);
         if(value<0n&&nonTransfers.has(row.category))continue;
         if(value>0n&&row.category==='income'&&!(row.signals||[]).some(signal=>
           ['possible_transfer','transfer','plaid_transfer','investment_transfer'].includes(signal)))continue;
