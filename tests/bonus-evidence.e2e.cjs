@@ -90,6 +90,12 @@ return result;
           shell.dataset.syntheticEvidenceFixture='true';document.body.append(shell);
           const fixture=document.createElement('section');shell.append(fixture);
           if(!window.BTBonusEvidence?.mount(fixture,'simplefin'))throw Error('Evidence engine fixture unavailable');
+          // Synthetic-only isolation: Finance redraws dispose hidden evidence;
+          // keep this fixture test alive while preserving the real engine.
+          window.__originalEvidenceApi=window.BTBonusEvidence;
+          window.BTBonusEvidence=Object.freeze({mount:window.__originalEvidenceApi.mount,
+            dispose:()=>{if(!document.querySelector('[data-synthetic-evidence-fixture]'))
+              window.__originalEvidenceApi.dispose();}});
         });
         const section=page.getByRole('region',{name:'Bank bonus activity evidence'});
         await section.getByRole('button',{name:'Review bank activity',exact:true}).waitFor();
@@ -153,8 +159,9 @@ return result;
           'Reviewing a possible payout cannot mark a Tracker milestone paid');
         await page.evaluate(()=>{
           rcvPrompt=null;
-          window.BTBonusEvidence?.dispose();
+          window.__originalEvidenceApi?.dispose();
           document.querySelector('[data-synthetic-evidence-fixture]')?.remove();
+          window.BTBonusEvidence=window.__originalEvidenceApi;
           R();
         });
         await page.getByRole('button',{name:'Tracker',exact:true}).click();
@@ -168,6 +175,10 @@ return result;
           shell.dataset.syntheticEvidenceFixture='true';document.body.append(shell);
           const fixture=document.createElement('section');shell.append(fixture);
           if(!window.BTBonusEvidence?.mount(fixture,'simplefin'))throw Error('Evidence fixture reopen failed');
+          window.__originalEvidenceApi=window.BTBonusEvidence;
+          window.BTBonusEvidence=Object.freeze({mount:window.__originalEvidenceApi.mount,
+            dispose:()=>{if(!document.querySelector('[data-synthetic-evidence-fixture]'))
+              window.__originalEvidenceApi.dispose();}});
         });
         const reopened=page.getByRole('region',{name:'Bank bonus activity evidence'});
         await reopened.getByRole('button',{name:'Review bank activity',exact:true}).waitFor();
