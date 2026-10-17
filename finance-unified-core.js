@@ -13,7 +13,7 @@
   function detectedType(account){
     const subtype=canonical(account.accountSubtype).replaceAll(' ','_');
     const type=canonical(account.accountType).replaceAll(' ','_');
-    const name=canonical(account.name);
+    const name=canonical(account.rawName||account.name);
     const aliases={depository:'',credit:'credit_card',credit_card:'credit_card',investment:'brokerage',student:'loan',auto:'loan',mortgage:'mortgage',loan:'loan',brokerage:'brokerage',retirement:'retirement','401k':'retirement',ira:'retirement',checking:'checking',savings:'savings',money_market:'savings'};
     if(TYPES.has(subtype))return subtype;
     if(Object.hasOwn(aliases,subtype)&&aliases[subtype])return aliases[subtype];
@@ -35,7 +35,7 @@
   function last4(account){
     const raw=String(account.mask||account.last4||'');
     if(/^\\d{4}$/.test(raw))return raw;
-    const name=String(account.name||'');
+    const name=String(account.rawName||account.name||'');
     const matched=name.match(/(?:\\*{2,}|x{2,}|•{2,}|\\bending\\s*(?:in)?\\s*)\\s*(\\d{4})\\b/i);
     return matched?matched[1]:null;
   }
@@ -61,6 +61,7 @@
         const saved=state.accountProfiles?.[account.key]||{};
         const detected=detectedType(account);
         accounts.push({...account,key:composite,rawKey:account.key,source,sourceLabel:LABELS[source],
+          rawName:account.name,name:preferences.accountAliases?.[composite]?.name||account.name,
           detectedType:detected,kind:saved.kind&&saved.kind!=='unclassified'?saved.kind:detected});
         const kind=saved.kind&&saved.kind!=='unclassified'?saved.kind:detected;
         accountProfiles[composite]={kind,balanceMode:saved.balanceMode||DEFAULT_TREATMENT[kind]||'exclude',
@@ -89,7 +90,7 @@
       const a=accounts[i],b=accounts[j];
       if(a.source===b.source||a.currency!==b.currency)continue;
       const sameBank=canonical(a.bank)&&canonical(a.bank)===canonical(b.bank);
-      const sameName=canonical(a.name)&&canonical(a.name)===canonical(b.name);
+      const sameName=canonical(a.rawName||a.name)&&canonical(a.rawName||a.name)===canonical(b.rawName||b.name);
       const masked=last4(a)&&last4(a)===last4(b)&&
         a.kind&&b.kind&&a.kind===b.kind&&a.kind!=='unclassified'&&sameInstitution(a,b);
       if(masked||(sameBank&&sameName)){
