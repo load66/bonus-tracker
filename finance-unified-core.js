@@ -109,8 +109,7 @@
     const duplicates=new Set();
     const secondary=new Map();
     for(const pair of unified.possibleDuplicates||[]){
-      const sorted=pair.slice().sort();
-      const id=sorted.join('|');
+      const id=pair.slice().sort((a,b)=>a.startsWith('simplefin:')?-1:b.startsWith('simplefin:')?1:0).join('|');
       const decision=unified.duplicateDecisions?.[id];
       if(decision&&pair.includes(decision.primary)){
         secondary.set(pair.find(k=>k!==decision.primary),decision.primary);
