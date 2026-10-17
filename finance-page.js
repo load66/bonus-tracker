@@ -542,6 +542,26 @@
     el('small','Mint: '+current.month+' · Gray dashed: previous month',host,'finance-page-hint');
   }
   function overview(host,summary){
+    const inv=window.BTFinanceOverview?.investmentSummary?.(
+      window.BTFinanceUnified.safeForSummary(currentCombined),{now:Math.floor(Date.now()/1000)})||null;
+    const cards=el('div',undefined,host,'finance-page-overview-balance-cards');
+    const investmentCard=el('section',undefined,cards,'finance-page-card finance-page-investments-card');
+    el('h3','Investments',investmentCard);
+    el('strong',inv?.available?amount(inv.total,'USD'):'—',investmentCard,'finance-page-big-number');
+    if(inv){
+      const groups=el('div',undefined,investmentCard,'finance-page-investment-splits');
+      metric(groups,'Brokerage',amount(inv.brokerage,'USD'),null);
+      metric(groups,'Retirement',amount(inv.retirement,'USD'),null);
+      if(inv.missingCount)el('small',inv.missingCount+' investment account'+(inv.missingCount===1?'':'s')+' without a USD balance',investmentCard,'finance-page-hint');
+      const history=el('div',undefined,investmentCard,'finance-page-investment-history');
+      metric(history,'Since last sync',inv.lastSyncChange===null?'Not enough snapshots':amount(inv.lastSyncChange,'USD'));
+      metric(history,'1 month',inv.monthChange===null?'Not enough history':amount(inv.monthChange,'USD'));
+      el('small','Invested this month '+amount(inv.investedThisMonth,'USD'),investmentCard,'finance-page-hint');
+      el('small','Investment income '+amount(inv.investmentIncome,'USD')+' (excluded from everyday Income)',investmentCard,'finance-page-hint');
+    }
+    const loanCards=el('div',undefined,cards,'finance-page-overview-liability-cards');
+    metric(loanCards,'Credit cards',summary.netWorthAvailable?amount(summary.liabilities,'USD'):'—','Includes credit card and loan liabilities');
+    metric(loanCards,'Net worth',summary.netWorthAvailable?amount(summary.netWorth,'USD'):'—');
     const net=sectionTitle(host,'Net worth');
     el('strong',summary.netWorthAvailable?amount(summary.netWorth,'USD'):'—',net,'finance-page-big-number');
     el('small','Includes '+(summary.netWorthBasedOn||0)+' of '+(summary.netWorthTotalAccounts||0)+' accounts',net,'finance-page-coverage-label');
@@ -1451,6 +1471,15 @@
           values.length&&values.every(x=>x!==null)?window.BTFinanceOverview.decimal(values.reduce((sum,x)=>sum+x,0n)):null;
         const owed=title==='Credit cards'&&subtotal!==null;
         const subtotalCents=owed?window.BTFinanceOverview.cents(subtotal):null;
+        if(title==='Investments'){
+          for(const [label,kind] of [['Brokerage','brokerage'],['Retirement','retirement']]){
+            const members=usd.filter(account=>profile(account).kind===kind);
+            if(members.length){
+              const exact=members.reduce((total,account)=>total+Number(account.balance||0),0);
+              el('small',label+' · '+amount(exact.toFixed(2),'USD'),head,'finance-page-investment-subtotal');
+            }
+          }
+        }
         el('b',(usd.length!==rows.length?'USD subtotal · ':'')+(owed?amount(window.BTFinanceOverview.decimal(subtotalCents<0n?-subtotalCents:subtotalCents),'USD')+(subtotalCents<0n?' credit':' owed'):amount(subtotal,'USD')),head);
         if(title==='Cash'){
           const known=window.BTFinanceOverview.summarize(window.BTFinanceUnified.safeForSummary(currentCombined));
