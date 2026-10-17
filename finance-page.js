@@ -962,6 +962,36 @@
       }
     }else{
       categoriesList(root);
+      const suspects=rows.filter(row=>inMonth(row)&&row.category==='unreviewed'&&
+        row.signals?.includes('possible_transfer')&&!row.pending&&!row.excludedFromTotals&&Number(row.amount)<0);
+      if(suspects.length){
+        const pendingCard=card(root,'Confirm transfers',suspects.length+' possible account movements are excluded from spending until reviewed');
+        for(const candidate of suspects.slice(0,15)){
+          const line=el('div',undefined,pendingCard,'finance-spending-confirm-row');
+          const details=el('div',undefined,line,'finance-spending-confirm-copy');
+          el('strong',displayMerchant(candidate),details);
+          el('small',moneyText(Math.abs(Number(candidate.amount)).toFixed(2))+' · '+accountTitle(candidate.account),details);
+          const similar=el('label',undefined,line,'finance-spending-confirm-similar');
+          const checked=el('input',undefined,similar);checked.type='checkbox';
+          el('span','Apply to similar',similar);
+          const controls=el('div',undefined,line,'finance-spending-confirm-actions');
+          for(const [label,category] of [['Transfer','transfer'],['Spending','other']]){
+            const choice=action(controls,label,async()=>{
+              choice.disabled=true;
+              await change(async()=>{
+                const snapshot=await request('/transaction-review',{
+                  method:'PUT',body:JSON.stringify({
+                    account:candidate.account.rawKey,transaction:candidate.id,
+                    category,applySimilar:checked.checked
+                  })},candidate.source);
+                return {financeSource:candidate.source,snapshot};
+              });
+              if(saveNotice)choice.disabled=false;
+            },'finance-page-chip');
+          }
+        }
+        if(suspects.length>15)el('small','Review additional transfers in Transactions.',pendingCard,'finance-page-hint');
+      }
       if(current.uncategorized>0){
         const review=el('div',undefined,root,'finance-spending-review-banner');
         el('strong',current.uncategorized+' uncategorized transaction'+(current.uncategorized===1?'':'s'),review);
@@ -1169,7 +1199,8 @@
         const copy=el('span',undefined,top,'finance-page-transaction-copy');
         const otherAccount=row.transferOtherAccountKey&&currentCombined.accounts.find(a=>a.key===row.transferOtherAccountKey);
         const pairedName=row.transferPairId&&otherAccount
-          ?accountTitle(row.account)+' → '+accountTitle(otherAccount):displayMerchant(row);
+          ?Number(row.amount)<0?accountTitle(row.account)+' → '+accountTitle(otherAccount):accountTitle(otherAccount)+' → '+accountTitle(row.account)
+          :displayMerchant(row);
         el('strong',pairedName,copy);
         el('span',transactionActivityLabel(row),copy,'finance-page-transaction-category'+(neutralChip(row)?' is-neutral':''));
         if(row.categorySource==='ai')el('small','Auto',copy,'finance-page-auto-tag');
