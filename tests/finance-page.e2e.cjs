@@ -31,7 +31,7 @@ const base=()=>({
 });
 (async()=>{
   await fs.mkdir(output,{recursive:true});await new Promise(ok=>server.listen(0,'127.0.0.1',ok));
-  try{for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
+  try{for(const [name,engine] of require('./browser-select.cjs')({chromium,firefox,webkit})){
     const browser=await engine.launch();try{
       const context=await browser.newContext({serviceWorkers:'block',viewport:{width:390,height:844},timezoneId:'America/Chicago'});
       const page=await context.newPage(),errors=[],requests=[];let state=base(),rejectCategoryOnce=true,rejectAccountSaveOnce=true,redrawOnSuccessfulSave=name==='webkit';page.on('pageerror',e=>errors.push(e.message));

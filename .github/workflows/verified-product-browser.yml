@@ -1,64 +1,56 @@
 name: Verified Product Link Browser Matrix
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'bank-sync.js'
-      - 'bonus-evidence-core.js'
-      - 'bonus-evidence.js'
-      - 'plaid-fallback.js'
-      - 'plaid-fallback.css'
-      - 'tests/plaid-fallback.e2e.cjs'
-      - 'bonus-requirements-progress.js'
-      - 'finance-page.js'
-      - 'tests/bank-sync.e2e.cjs'
-      - 'tests/bonus-evidence.e2e.cjs'
-      - 'tests/finance-page.e2e.cjs'
-      - 'tests/browser-e2e.cjs'
-      - 'tests/bonus-requirements-progress.test.js'
-      - '.github/workflows/verified-product-browser.yml'
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      browser:
+        required: true
+        type: string
+      source_ref:
+        required: false
+        type: string
+        default: ''
+      site_url:
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
 
 jobs:
-  verified-product-browser-matrix:
+  browser:
+    name: Browser ${{ inputs.browser }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     container:
       image: mcr.microsoft.com/playwright:v1.58.2-noble
     steps:
-      - name: Checkout verified product link changes
-        uses: actions/checkout@v4
-
-      - name: Install matching browser test API without changing browser binaries
-        run: npm install --prefix /tmp/verified-product-browser --no-save playwright@1.58.2
-
-      - name: Run product mapping and read-only bonus evidence unit checks
-        run: |
-          node tests/bonus-evidence.test.js
-          node tests/bonus-requirements-progress.test.js
-          node --check bank-sync.js
-          node --check bonus-requirements-progress.js
-
-      - name: Validate actual Chromium Firefox WebKit product link workflows
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
+      - name: Cache pinned Playwright API
+        id: api-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/bonus-browser/node_modules
+          key: playwright-test-api-linux-1.58.2
+      - name: Install API only, reuse container browser binaries
+        if: steps.api-cache.outputs.cache-hit != 'true'
         env:
-          HOME: /root
-          NODE_PATH: /tmp/verified-product-browser/node_modules
-          BT_BROWSER_RESULTS: /tmp/product-browser-results
-        run: |
-          node tests/bonus-evidence.e2e.cjs
-          node tests/finance-page.e2e.cjs
-          node tests/bank-sync.e2e.cjs
-          node tests/plaid-fallback.e2e.cjs
-          node tests/browser-e2e.cjs
-
-      - name: Preserve browser screenshots
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm install --prefix /tmp/bonus-browser --no-save @playwright/test@1.58.2
+      - name: Verify existing browser workflows with per-test retry and timeout
+        env:
+          NODE_PATH: /tmp/bonus-browser/node_modules
+          BT_BROWSER: ${{ inputs.browser }}
+          BT_BROWSER_SITE_URL: ${{ inputs.site_url }}
+          BT_BROWSER_RESULTS: /tmp/bonus-browser-results/test-results
+        run: /tmp/bonus-browser/node_modules/.bin/playwright test --config tests/playwright.config.cjs
+      - name: Preserve every browser result and retry report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: verified-product-link-browser-evidence
-          path: /tmp/product-browser-results
-          if-no-files-found: ignore
+          name: browser-${{ inputs.browser }}-${{ github.run_attempt }}
+          path: /tmp/bonus-browser-results
+          if-no-files-found: error

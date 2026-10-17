@@ -42,7 +42,7 @@ return result;
   await fs.mkdir(output,{recursive:true});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   try{
-    for(const [browserName,engine] of Object.entries({chromium,firefox,webkit})){
+    for(const [browserName,engine] of require('./browser-select.cjs')({chromium,firefox,webkit})){
       const browser=await engine.launch();
       try{
         const context=await browser.newContext({serviceWorkers:'block',viewport:{width:390,height:844},timezoneId:'America/Chicago'});

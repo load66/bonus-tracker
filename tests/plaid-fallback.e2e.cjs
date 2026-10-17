@@ -16,7 +16,7 @@ const KEY='a'.repeat(64);
 (async()=>{
   await new Promise(done=>server.listen(0,'127.0.0.1',done));
   try{
-    for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
+    for(const [name,engine] of require('./browser-select.cjs')({chromium,firefox,webkit})){
       const browser=await engine.launch();
       try{
         const context=await browser.newContext({serviceWorkers:'block',viewport:{width:390,height:760}});

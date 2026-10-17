@@ -10,7 +10,7 @@ const opened='2026-10-01',entry={...fixture(),id:'synthetic-cycle',bank:'Synthet
 const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connected',accounts:[account],mappings:{},transactions:{},monitoredAccounts:[account.key],lastSuccess:1792134000,nextSyncAt:1792220400});
 (async()=>{
  await fs.mkdir(output,{recursive:true});await new Promise(r=>server.listen(0,'127.0.0.1',r));
- try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
+ try{for(const [name,engine]of require('./browser-select.cjs')({chromium,firefox,webkit})){
   const browser=await engine.launch();try{
    const context=await browser.newContext({serviceWorkers:'block',viewport:{width:390,height:844},timezoneId:'America/Chicago'});const page=await context.newPage();let state=seed(),requests=[],errors=[];page.on('pageerror',e=>errors.push(e.message));
    // During production smoke, NEVER send synthetic session headers to any live API.
