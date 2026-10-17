@@ -473,15 +473,96 @@
       el('b',amount(row.amount,row.account.currency),item,'finance-page-preview-value');
     }
   }
+  function cumulativeSpendingChart(host,current,previous){
+    const series=data=>{
+      let sum=0;
+      return Array.from({length:31},(_,i)=>{
+        sum+=Number(data.byDay?.[i+1]||0);
+        return Number.isFinite(sum)?sum:0;
+      });
+    };
+    const a=series(current),b=series(previous),maximum=Math.max(1,...a,...b);
+    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.setAttribute('viewBox','0 0 320 120');svg.setAttribute('role','img');
+    svg.setAttribute('aria-label','Cumulative daily spending this month compared with last month');
+    svg.classList.add('finance-page-spending-line');
+    for(const [values,label] of [[b,'previous'],[a,'current']]){
+      const poly=document.createElementNS(svg.namespaceURI,'polyline');
+      poly.setAttribute('points',values.map((v,i)=>(8+i*10.1)+','+(110-v/maximum*95)).join(' '));
+      poly.setAttribute('fill','none');
+      poly.setAttribute('class','is-'+label);
+      poly.setAttribute('stroke-width','2.5');
+      svg.append(poly);
+    }
+    host.append(svg);
+    el('small','Mint: this month · Gray: last month',host,'finance-page-hint');
+  }
   function overview(host,summary){
-    const position=el('section',undefined,host,'finance-page-card');
-    el('h3','All accounts',position);
-    const grid=el('div',undefined,position,'finance-page-grid');
-    metric(grid,'Assets',summary.netWorthAvailable?amount(summary.assets,'USD'):'—');
-    metric(grid,'Liabilities',summary.netWorthAvailable?amount(summary.liabilities,'USD'):'—');
-    metric(grid,'Net worth',summary.netWorthAvailable?amount(summary.netWorth,'USD'):'—');
-    if(!summary.netWorthAvailable)el('p','Net worth requires complete, correctly categorized, recently verified USD balances. An unknown amount is not $0.00.',position,'finance-page-hint');
-    if(currentCombined?.possibleDuplicates?.length)el('p','Overlapping bank connections are excluded from reported totals pending review.',position,'finance-page-caution');
+    const net=sectionTitle(host,'Net worth');
+    el('strong',summary.netWorthAvailable?amount(summary.netWorth,'USD'):'—',net,'finance-page-big-number');
+    el('small','Based on '+(summary.netWorthBasedOn||0)+' of '+(summary.netWorthTotalAccounts||0)+' accounts',net,'finance-page-coverage-label');
+    if(summary.netWorthPartial)el('small','Other balances are not available yet.',net,'finance-page-hint');
+    const cutoff=Math.floor(Date.now()/1000)-30*86400;
+    const lastMonth=(summary.netWorthHistory||[]).filter(x=>x.at<=cutoff).at(-1);
+    if(!summary.netWorthPartial&&summary.netWorthAvailable&&lastMonth){
+      const before=Number(lastMonth.value),current=Number(summary.netWorth);
+      if(Number.isFinite(before)&&Number.isFinite(current)){
+        const difference=current-before,pct=before!==0?Math.abs(difference/before*100).toFixed(1):null;
+        el('small',(difference>=0?'▲ ':'▼ ')+amount(Math.abs(difference).toFixed(2),'USD')+
+           (pct===null?'':' ('+pct+'%)')+' from last month',net,
+           'finance-page-month-change'+(difference<0?' is-negative':''));
+      }
+    }
+    const worthControls=el('div',undefined,net,'finance-page-period');
+    for(const label of ['1M','3M','6M','1Y','All']){
+      action(worthControls,label,()=>{worthRange=label;paint()},
+        'finance-page-chip'+(worthRange===label?' is-active':''));
+    }
+    const spans={'1M':30,'3M':90,'6M':183,'1Y':365,'All':10000};
+    const points=(summary.netWorthHistory||[]).filter(x=>x.at>=Math.floor(Date.now()/1000)-spans[worthRange]*86400);
+    trendChart(net,points);
+    const breakdown=el('div',undefined,net,'finance-page-net-worth-split');
+    metric(breakdown,'Assets',summary.netWorthAvailable?amount(summary.assets,'USD'):'—');
+    metric(breakdown,'Liabilities',summary.netWorthAvailable?amount(summary.liabilities,'USD'):'—');
+
+    const insight=window.BTFinanceInsights;
+    if(insight){
+      const month=insight.monthKey(Date.now()),previous=insight.monthShift(month,-1);
+      const today=new Date().getDate();
+      const rows=flattenTransactions();
+      const spent=insight.spent(rows,month),prior=insight.spent(rows,previous);
+      const priorThrough=insight.spent(rows.filter(row=>new Date(row.posted*1000).getDate()<=today),previous);
+      const activity=sectionTitle(host,'Spent this month');
+      el('strong',amount(spent.total,'USD'),activity,'finance-page-big-number');
+      const delta=Number(spent.total)-Number(priorThrough.total);
+      el('small',amount(Math.abs(delta).toFixed(2),'USD')+' '+(delta<=0?'less':'more')+
+        ' than last month at this point',activity,'finance-page-hint');
+      cumulativeSpendingChart(activity,spent,prior);
+      const upcoming=insight.upcoming(insight.recurring(rows,Date.now()),Date.now(),14);
+      const card=sectionTitle(host,'Upcoming','Expected charges in the next 14 days');
+      if(upcoming.length){
+        let sum=0;
+        for(const item of upcoming.slice(0,5)){
+          sum+=Number(item.lastAmount);
+          const line=el('div',undefined,card,'finance-page-preview-row');
+          el('strong',item.merchant,line);el('small',date(item.nextAt),line);
+          el('b',amount(item.lastAmount,'USD'),line);
+        }
+        el('strong','Total expected '+amount(sum.toFixed(2),'USD'),card);
+      }else el('p','Upcoming payments will appear as patterns are found.',card,'finance-page-hint');
+      const categories=sectionTitle(host,'Top spending categories');
+      if(spent.categories.length){
+        const max=Math.max(...spent.categories.map(x=>Number(x.amount)),1);
+        for(const item of spent.categories.slice(0,5)){
+          const line=el('div',undefined,categories,'finance-page-category-progress');
+          const title=el('div',undefined,line,'finance-page-section-head');
+          el('span',financeCategory(item.category),title);el('b',amount(item.amount,'USD'),title);
+          const bar=el('div',undefined,line,'finance-page-budget-track');
+          const fill=el('span',undefined,bar,'finance-page-budget-progress');
+          fill.style.width=Number(item.amount)/max*100+'%';
+        }
+      }else el('p','No categorized spending yet.',categories,'finance-page-hint');
+    }
     compactAccountPreview(host);
     const activity=el('section',undefined,host,'finance-page-card');
     const activityHead=el('div',undefined,activity,'finance-page-section-head');el('h3','Cash flow',activityHead);periodControl(activityHead);
