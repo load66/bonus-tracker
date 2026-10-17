@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.4.90: Finance recurring stream and historical-sync clarity.
+// Version 3.4.91: staged Sync controls and account exclusion from Finance totals.
 
-const V = 'bt-v3.4.90-recurring-transfer1';
+const V = 'bt-v3.4.91-sync-exclusion1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
