@@ -386,10 +386,10 @@
       const synced=currentCombined?.lastSuccess;
       if(Number.isFinite(synced)&&synced>0){
         const elapsed=Math.max(0,Math.floor((Date.now()/1000-synced)/3600));
-        el('span','Synced '+(elapsed<1?'less than 1h':elapsed+'h')+' ago',meta);
-      }else el('span','Bank sync not available yet',meta);
-      if(summary.hiddenAccounts)el('p',summary.hiddenAccounts+' hidden account'+(summary.hiddenAccounts===1?' is':'s are')+' excluded from Finances totals. Show them under Accounts.',box,'finance-page-hint');
-      if(currentCombined?.possibleDuplicates?.length)el('small','Review possible matching accounts in Accounts',box,'finance-page-hint');
+        el('span','Updated '+(elapsed<1?'just now':elapsed+'h ago'),meta);
+      }else el('span','Not updated',meta);
+      if(summary.hiddenAccounts)action(box,'Hidden accounts · Review',()=>{view='accounts';paint()},'finance-page-chip');
+      if(currentCombined?.possibleDuplicates?.length)action(box,'Matching accounts · Review',()=>{view='accounts';paint()},'finance-page-chip');
     }
     const nav=el('nav',undefined,host,'finance-page-nav');nav.setAttribute('aria-label','Finance sections');
     for(const [id,label] of [['overview','Overview'],['spending','Spending'],['recurring','Recurring'],['transactions','Transactions'],['accounts','Accounts']]){
@@ -419,7 +419,7 @@
   }
   function trendChart(parent,points){
     if(hidden){el('p','Balance trend hidden',parent);return}
-    if(points.length<2){el('p','Your net worth chart will start filling in after a few days of syncing.',parent);return}
+    if(points.length<2){el('p','Chart builds as your accounts sync.',parent);return}
     const values=points.map(p=>Number(p.value)),min=Math.min(...values),max=Math.max(...values),range=max-min||1;
     const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 320 110');svg.setAttribute('role','img');svg.setAttribute('aria-label','Net Worth trend');svg.classList.add('finance-page-line-chart');
     const coords=values.map((value,index)=>[10+index*(300/Math.max(1,values.length-1)),95-(value-min)/range*75]);
@@ -561,35 +561,66 @@
     el('small','Invested this month: '+amount(summary.investedThisMonth,'USD')+
       ' · Investment income: '+amount(summary.investmentIncome,'USD'),investments,'finance-page-hint');
     smallMetric('Credit cards',summary.netWorthAvailable?amount(summary.liabilities,'USD'):'—','Part of total liabilities');
-    smallMetric('Net worth',summary.netWorthAvailable?amount(summary.netWorth,'USD'):'—','Assets minus liabilities');
     const net=sectionTitle(host,'Net worth');
+    net.classList.add('finance-page-networth-card');
     el('strong',summary.netWorthAvailable?amount(summary.netWorth,'USD'):'—',net,'finance-page-big-number');
-    el('small','Includes '+(summary.netWorthBasedOn||0)+' of '+(summary.netWorthTotalAccounts||0)+' accounts',net,'finance-page-coverage-label');
+    const startOfMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1).getTime()/1000;
+    const baseline=(summary.netWorthHistory||[]).filter(x=>x.at<=startOfMonth).at(-1);
+    if(!hidden&&baseline&&summary.netWorthAvailable){
+      const change=Number(summary.netWorth)-Number(baseline.value);
+      if(Number.isFinite(change))el('small',(change>=0?'▲ ':'▼ ')+
+        amount(Math.abs(change).toFixed(2),'USD')+' this month',net,
+        'finance-page-month-change'+(change<0?' is-negative':''));
+    }
     if(summary.netWorthExclusions?.length){
-      const notes=summary.netWorthExclusions.slice(0,4).map(x=>x.name+' ('+x.reason+')');
-      el('small','Not included: '+notes.join(' · ')+(summary.netWorthExclusions.length>4?' and others':''),net,'finance-page-hint');
+      const omitted=summary.netWorthExclusions;
+      const status=el('div',undefined,net,'finance-page-networth-review');
+      el('span',omitted.length+' account'+(omitted.length===1?'':'s')+' not included',status);
+      action(status,'Review',()=>{
+        const modal=sheet('Accounts not included');
+        for(const item of omitted){
+          const line=el('div',undefined,modal,'finance-page-networth-review-item');
+          const info=el('div',undefined,line,'finance-page-networth-review-copy');
+          el('strong',item.name,info);
+          el('small',item.reason==='excluded by settings'?'Excluded':'Not updated',info);
+          const account=(currentCombined?.accounts||[]).find(a=>a.key===item.accountKey);
+          if(item.reason==='excluded by settings'&&account){
+            const label=el('label',undefined,line,'finance-setting-row');
+            const control=el('input',undefined,label);
+            control.type='checkbox';control.setAttribute('role','switch');
+            control.setAttribute('aria-label','Include '+item.name);
+            control.checked=false;
+            control.onchange=async()=>{
+              control.disabled=true;
+              const p=profile(account);
+              const mode=['credit_card','loan','mortgage','other_liability'].includes(p.kind)?'liability':'asset';
+              await saveAccountProfile(account,{balanceMode:mode});
+              if(!saveNotice)modal.close();else control.disabled=false;
+            };
+            el('span','Include',label);
+          }else action(line,'Refresh',async()=>{modal.close();await refreshActivity()},'finance-page-button');
+        }
+        action(modal,'Done',()=>modal.close(),'finance-page-button finance-page-primary');
+      },'finance-page-chip');
     }
-    if(summary.provisionalBalances?.length)
-      el('small','Credit card balances reflect the last provider observation; bank timestamp not verified.',net,'finance-page-hint');
-    const cutoff=Math.floor(Date.now()/1000)-30*86400;
-    const lastMonth=(summary.netWorthHistory||[]).filter(x=>x.at<=cutoff).at(-1);
-    if(!hidden&&!summary.netWorthPartial&&summary.netWorthAvailable&&lastMonth){
-      const before=Number(lastMonth.value),current=Number(summary.netWorth);
-      if(Number.isFinite(before)&&Number.isFinite(current)){
-        const difference=current-before,pct=before!==0?Math.abs(difference/before*100).toFixed(1):null;
-        el('small',(difference>=0?'▲ ':'▼ ')+amount(Math.abs(difference).toFixed(2),'USD')+
-           (pct===null?'':' ('+pct+'%)')+' from last month',net,
-           'finance-page-month-change'+(difference<0?' is-negative':''));
-      }
+    const history=summary.netWorthHistory||[];
+    if(history.length>=2){
+      const controls=el('div',undefined,net,'finance-page-period');
+      for(const label of ['1M','3M','6M','1Y','All'])
+        action(controls,label,()=>{worthRange=label;paint()},'finance-page-chip'+(worthRange===label?' is-active':''));
+      const spans={'1M':30,'3M':90,'6M':183,'1Y':365,'All':10000};
+      trendChart(net,history.filter(x=>x.at>=Math.floor(Date.now()/1000)-spans[worthRange]*86400));
+    }else{
+      const empty=el('div',undefined,net,'finance-page-networth-empty-chart');
+      const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+      svg.setAttribute('viewBox','0 0 320 90');svg.setAttribute('aria-hidden','true');
+      const line=document.createElementNS(svg.namespaceURI,'path');
+      line.setAttribute('d','M 4 64 C 50 60 66 65 101 55 S 168 63 208 45 S 275 51 316 28');
+      line.setAttribute('stroke','currentColor');line.setAttribute('stroke-width','2');
+      line.setAttribute('stroke-dasharray','4 7');line.setAttribute('fill','none');
+      svg.append(line);empty.append(svg);
+      el('span','Chart builds as your accounts sync.',empty);
     }
-    const worthControls=el('div',undefined,net,'finance-page-period');
-    for(const label of ['1M','3M','6M','1Y','All']){
-      action(worthControls,label,()=>{worthRange=label;paint()},
-        'finance-page-chip'+(worthRange===label?' is-active':''));
-    }
-    const spans={'1M':30,'3M':90,'6M':183,'1Y':365,'All':10000};
-    const points=(summary.netWorthHistory||[]).filter(x=>x.at>=Math.floor(Date.now()/1000)-spans[worthRange]*86400);
-    trendChart(net,points);
     const breakdown=el('div',undefined,net,'finance-page-net-worth-split');
     metric(breakdown,'Assets',summary.netWorthAvailable?amount(summary.assets,'USD'):'—');
     metric(breakdown,'Liabilities',summary.netWorthAvailable?amount(summary.liabilities,'USD'):'—');
@@ -1403,7 +1434,7 @@
     for(const [label,days] of [['1M',30],['3M',90],['1Y',365]])action(ranges,label,()=>draw(days),'finance-page-chip');draw(90);
     const recent=el('section',undefined,modal,'finance-page-card');el('h3','Recent transactions',recent);
     const rows=Object.values(currentCombined.transactions?.[account.key]||{}).sort((a,b)=>b.posted-a.posted).slice(0,5);
-    if(!rows.length)el('p',account.historyComplete===false?'History still loading':'No recent transactions',recent);
+    if(!rows.length)el('p',account.historyComplete===false?'Waiting for history':'No recent transactions',recent);
     for(const row of rows){const line=el('div',undefined,recent,'finance-page-preview-row');el('strong',displayMerchant(row),line);el('b',amount(row.amount,account.currency),line)}
     action(recent,'See all',()=>{transactionAccount=account.key;view='transactions';modal.close();paint()});
     const fields=el('section',undefined,modal,'finance-page-card');el('h3','Settings',fields);
