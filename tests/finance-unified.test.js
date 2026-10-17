@@ -338,3 +338,20 @@ const overriddenMortgage=core.combine({simplefin:mortgageOverride});
 assert.equal(overriddenMortgage.accounts[0].kind,'loan','Saved account-type correction must win');
 assert.equal(overriddenMortgage.accountProfiles['simplefin:'+a].balanceMode,'exclude',
   'Explicit net-worth exclusion is preserved');
+
+
+// Mortgage names are often just the servicer with no product subtype.
+for(const mortgageName of ['Mr. Cooper ··1234','LoanCare','Newrez-Shellpoint','Pennymac',
+  'Cenlar','Nationstar','Lakeview Loan','RoundPoint','SPS Servicing','Home MTG 1234','HELOC']){
+  assert.equal(core.detectedType({name:mortgageName,accountType:'',accountSubtype:''}),
+    'mortgage',mortgageName+' must not disappear into unclassified');
+}
+// Plaid and SimpleFIN mortgage conventions must never create positive assets
+// from ordinary outstanding debt, even when source signs differ.
+const plaidLoan=structuredClone(plaid);
+plaidLoan.accounts[0]={...plaidLoan.accounts[0],bank:'Synthetic Servicer',
+  name:'30-year mortgage',balance:'250000.00',balanceDate:now-100,accountType:'loan'};
+plaidLoan.accountProfiles={};
+const plaidLoanSummary=finance.summarize(core.safeForSummary(core.combine({plaid:plaidLoan})),{now});
+assert.equal(plaidLoanSummary.liabilities,'250000.00');
+assert.equal(plaidLoanSummary.netWorth,'-250000.00');
