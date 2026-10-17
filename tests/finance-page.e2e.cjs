@@ -167,7 +167,10 @@ const base=()=>({
       });
       assert.ok(donutGeometry.isVisible,'390px iPhone donut total must be fully within the center hole');
       assert.equal(donutGeometry.cover,'none','Legacy donut pseudo-overlay must not paint over the total');
-      assert.ok(donutGeometry.text.includes(',{name:'Set budgets'}).count()===0||await section.locator('.finance-spending-budget-settings').count(),'Budgets are editable on the spending page');
+      assert.ok(donutGeometry.text.includes('$'),'Donut center total remains readable');
+      assert.ok(await section.getByRole('button',{name:'Set budgets'}).count()===0||
+        await section.locator('.finance-spending-budget-settings').count(),
+        'Budgets are editable on the spending page');
       await section.getByRole('button',{name:'Previous spending month'}).click();
       await section.getByRole('heading',{name:'September 2026'}).waitFor();
       assert.equal(await section.locator('.finance-spending-comparison').count(),0,'Missing previous month does not create a fake $0 comparison');
