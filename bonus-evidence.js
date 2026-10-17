@@ -36,9 +36,11 @@
     if(root)paint(root);
   }
   function manage(){
+    window.btCloseTrackerEvidenceReview?.();
     if(typeof window.btOpenBankSync==='function')window.btOpenBankSync();
   }
   function reviewPayout(id,candidate){
+    window.btCloseTrackerEvidenceReview?.();
     if(candidate&&typeof window.btReviewBonusCandidate==='function')window.btReviewBonusCandidate(String(id),{amount:candidate.amount,posted:candidate.posted});
     else if(typeof openRcv==='function')openRcv(String(id));
   }
@@ -102,7 +104,7 @@
       const payload=await response.json().catch(()=>({}));
       if(!response.ok)throw Error(typeof payload.detail==='string'?payload.detail:'The review was not saved.');
       if(!(await sameOwner(auth,token))){snapshot=null;throw Error('Sign-in changed. Reopen bank activity.');}
-      if(call!==rev||!auth.connected()||!document.getElementById('bt-bonus-evidence')?.closest('#bt-finances-page'))return;
+      if(call!==rev||!auth.connected()||!document.getElementById('bt-bonus-evidence')?.closest('#bt-finances-page, #bt-tracker-evidence-modal'))return;
       sourceStates={...sourceStates,[source]:payload};snapshot=unified();
       saveNotice=decision==='clear'?'Review reopened.':decision==='dismissed'?'Not relevant saved.':'Review saved. Promotion requirements remain unconfirmed.';
     }catch(e){
