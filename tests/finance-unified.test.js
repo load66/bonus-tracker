@@ -78,6 +78,23 @@ malformedPlaid.accounts[0].invalidTransactionRows=2;
 assert.equal(core.safeForSummary(core.combine({simplefin:simple,plaid:malformedPlaid})).malformedActivity,true,
   'Plaid per-account malformed transaction counts must keep financial totals partial');
 
+// Old cached state must not turn informational provider limits into a bank alarm.
+const legacyNotice=structuredClone(simple);
+legacyNotice.status='attention';
+legacyNotice.warnings=['Requested date range exceeds limit of 90 days and was capped.',
+  'Partial history available for this account.'];
+const legacySafe=core.safeForSummary(core.combine({simplefin:legacyNotice}));
+assert.equal(legacySafe.incompleteProviders,false,
+  'Informational capped-range/partial-history notices never trigger Needs attention');
+const realAttention=structuredClone(legacyNotice);
+realAttention.warnings.push('Bank login required.');
+assert.equal(core.safeForSummary(core.combine({simplefin:realAttention})).incompleteProviders,true,
+  'Real login problems must remain actionable');
+const unknownAttention=structuredClone(simple);
+unknownAttention.status='attention';
+assert.equal(core.safeForSummary(core.combine({simplefin:unknownAttention})).incompleteProviders,true,
+  'Do not suppress otherwise-unexplained provider failures');
+
 const hiddenBank=structuredClone(simple);
 hiddenBank.accountProfiles[a].hidden=true;
 const combinedHidden=core.combine({simplefin:hiddenBank,plaid});
