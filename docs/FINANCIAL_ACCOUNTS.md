@@ -116,3 +116,41 @@ available-balance mapping, internal-transfer reconciliation, an auditable
 category engine with user corrections, historical completeness markers, and
 separate asset/liability semantics before showing reliable **income,
 expenses, cash flow, net worth or investment performance**.
+
+
+## Finance v3.4.75 — incremental safeguards
+
+These enhancements are Finance-only and remain independent of the Tracker lifecycle:
+
+- Financial amounts default to hidden on this device. The browser stores only the
+  `bt_finance_hide_amounts` boolean preference, not account or transaction data.
+- One Cash figure uses fresh, classified checking/savings balances. A missing,
+  stale, or inconsistent balance remains unknown; it is never interpreted as zero.
+- Net-worth calculations omit accounts explicitly marked `exclude`. A credit
+  balance on a liability product increases assets instead of becoming a debt.
+  This remains a partial snapshot, not proof of full personal net worth.
+- Finance account settings have an additive, reversible `hidden` attribute.
+  Hiding an account or institution excludes it from Finance lists and totals
+  while retaining encrypted provider activity, credentials, reviews, and all
+  tracker records. An older client omitting `hidden` does not undo a prior hide.
+  Hiding is NOT disconnecting a bank or removing a Plaid lifetime Item.
+- Plaid transaction status differentiates historical loading from readiness.
+  An initial update is not proof of complete history, and an empty history
+  is never declared complete. Newly awaiting Items use independent bounded
+  follow-up checks; no new Item or paid request is needed.
+- SimpleFIN malformed transaction rows are skipped with a warning instead of
+  invalidating all accounts. A disappeared pending row can be marked cleared
+  without deleting its encrypted original. Provider omissions of posted rows
+  remain inconclusive.
+- Account-verification transactions (including zero-value prenotes and
+  low-value matching test deposits) use a separate `verification` category
+  excluded from income, expense, and cash-flow aggregates.
+- Charts and month summaries use the device's local calendar; the underlying
+  immutable transaction timestamps remain unchanged.
+
+The Finance UI can label *categorized* observations as Income, Expenses and
+Net flow, but estimates remain partial whenever bank history, classification
+or provider coverage is uncertain. Neither this release nor earlier versions
+certifies complete reconciled cash flow, all assets/liabilities, or bonus
+qualification. Safe reconciliation requires explicit verified account
+identities and user confirmation, not name-based automatic deduplication.
