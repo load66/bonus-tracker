@@ -6,7 +6,7 @@
   let addFlowPending=false,addFlowFound=[],addFlowDraft=new Set(),addFlowRetry=null,
     addFlowDebounce=null,addFlowRetryIndex=0,addFlowBusy=false,
     addFlowBudgetStopped=false,addFlowMessage='',addFlowNextRetryAt=null,
-    addFlowReturnSeen=false,lastAddFlowReturnAt=0;
+    addFlowReturnSeen=false,lastAddFlowReturnAt=0,addFlowEpoch=0;
   const ADD_BANK_RETRIES=[30000,60000,120000,180000,240000];
   function clearAddFlowTimers(){
     if(addFlowRetry!==null)clearTimeout(addFlowRetry);
@@ -14,7 +14,7 @@
     addFlowRetry=null;addFlowDebounce=null;
   }
   function resetAddFlow(){
-    clearAddFlowTimers();addFlowPending=false;addFlowFound=[];addFlowDraft=new Set();
+    addFlowEpoch++;clearAddFlowTimers();addFlowPending=false;addFlowFound=[];addFlowDraft=new Set();
     addFlowRetryIndex=0;addFlowBusy=false;addFlowBudgetStopped=false;
     addFlowMessage='';addFlowNextRetryAt=null;addFlowReturnSeen=false;lastAddFlowReturnAt=0;
   }
@@ -30,9 +30,11 @@
   async function checkAddedBank(){
     if(!addFlowPending||!panel||addFlowBusy||addFlowBudgetStopped)return;
     clearAddFlowTimers();
+    const currentEpoch=addFlowEpoch;
     addFlowBusy=true;addFlowMessage='Looking for your new bank…';paint();
     try{
       const reply=await request('/discover-now',{method:'POST'});
+      if(!addFlowPending||currentEpoch!==addFlowEpoch)return;
       data=reply;
       addFlowNextRetryAt=reply.nextRetryAt||null;
       if(reply.found&&Number(reply.newAccounts)>0&&Array.isArray(reply.discoveredAccounts)&&reply.discoveredAccounts.length){
@@ -45,6 +47,7 @@
         addBankRetry();
       }
     }catch(error){
+      if(!addFlowPending||currentEpoch!==addFlowEpoch)return;
       addFlowMessage=String(error.message||'Discovery could not be verified.');
       if(/daily limit reached|429/i.test(addFlowMessage)){
         const reset=/resume at (\d{9,11})/.exec(addFlowMessage);
