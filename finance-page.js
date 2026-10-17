@@ -351,7 +351,7 @@
     metric(activityGrid,'Expenses',summary.hasActivity?amount(summary.expenses,'USD'):'—');
     metric(activityGrid,'Net flow',summary.hasActivity?amount(summary.cashFlow,'USD'):'—');
     metric(activityGrid,'Savings rate',summary.savingsRate===null?'—':summary.savingsRate.toFixed(1)+'%');
-    if(!summary.complete)el('p','Cash Flow is partial: review '+summary.unreviewed+' uncategorized transaction'+(summary.unreviewed===1?'':'s')+'.',activity,'finance-page-caution');
+    if(!summary.complete)el('p',summary.historyIncomplete?'Cash Flow is partial: one or more banks are still loading transaction history.':('Cash Flow is partial: review '+summary.unreviewed+' uncategorized transaction'+(summary.unreviewed===1?'':'s')+'.'),activity,'finance-page-caution');
     compactActivityPreview(host);
     const more=el('details',undefined,host,'finance-page-more');
     el('summary','More insights · trends, spending & review',more);
