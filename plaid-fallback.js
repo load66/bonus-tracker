@@ -110,6 +110,53 @@
             product.disabled=cycle.disabled||!products.length;
           };
           cycle.addEventListener('change',fillProducts);fillProducts();assignments.push({key:account.key,cycle,product});
+          // First discovery is NOT proof of the opening date. Offer an explicit
+          // one-tap review only for one exact institution/cycle/date-window match.
+          const firstSeen=Number(account.firstSeenAt);
+          const possibilities=available.filter(entry=>{
+            const opened=Date.parse(entry.opened+'T00:00:00Z')/1000;
+            return String(account.bank||'').trim().toLowerCase()===
+                String(entry.bank||'').trim().toLowerCase()&&
+              Number.isFinite(firstSeen)&&firstSeen>0&&Number.isFinite(opened)&&
+              firstSeen>=opened&&firstSeen-opened<=30*86400;
+          });
+          if(!saved&&(snapshot.monitoredAccounts||[]).includes(account.key)&&possibilities.length===1){
+            const suggested=possibilities[0];
+            action(card,'Link to '+suggested.bank+' bonus?',async()=>{
+              if(typeof window.btConfirmDialog!=='function'){
+                message.textContent='Opening-date verification is unavailable. Use the manual account selector.';
+                return;
+              }
+              const approved=await window.btConfirmDialog(
+                'Plaid first discovered this account after your tracked '+suggested.bank+
+                ' opening date. Discovery is not proof of account opening. Verify the real opening date ('+
+                suggested.opened+'), institution and account before linking.',{
+                  title:'Verify bonus-account match',confirmLabel:'I verified the opening date',
+                  cancelLabel:'Not sure — cancel'});
+              if(!approved)return;
+              try{
+                // Recheck after approval to avoid overwriting a link created on
+                // another device or assigning an outdated Tracker campaign.
+                const latest=await api('/accounts');
+                const entry=available.find(e=>String(e.id)===String(suggested.id)&&
+                  e.bank===suggested.bank&&e.opened===suggested.opened);
+                const found=(latest.accounts||[]).find(a=>a.key===account.key);
+                if(!entry||!found||latest.mappings?.[account.key]||
+                   !(latest.monitoredAccounts||[]).includes(account.key)){
+                  message.textContent='The account or bonus link changed. Refresh and review the selection.';
+                  renderAccounts(latest);return;
+                }
+                const mappings={...latest.mappings,[account.key]:{
+                  entryId:String(entry.id),bank:entry.bank,opened:entry.opened}};
+                const result=await api('/accounts/selection',{method:'PUT',
+                  body:JSON.stringify({mappings})});
+                message.textContent='Confirmed bonus-account link saved. Requirement qualification remains unverified.';
+                renderAccounts(result);
+              }catch(error){message.textContent='Link not saved: '+error.message;}
+            });
+            elem('p','Suggestion only. Confirm the actual opening date; no account is linked automatically.',
+              card,'plaid-trial-disclosure');
+          }
         }
       }
       if(assignments.length)action(accountsArea,'Save bonus links',async()=>{
