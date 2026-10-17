@@ -30,7 +30,7 @@
   try{hideChoice=localStorage.getItem(AMOUNTS_PREF)==='true'}catch(_error){}
   let currentRoot=null,sequence=0,hidden=hideChoice,data=null,otherData=null,busy=false,view='overview',period=90;
   let spendingMonth=new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
-  let worthRange='3M',financePrefs={version:1,revision:0,budgets:{},duplicates:{},recurring:{},transactionMeta:{}};
+  let worthRange='3M',financePrefs={version:1,revision:0,budgets:{},duplicates:{},recurring:{},transactionMeta:{},accountAliases:{}};
   let preferenceAvailable=false,archiveLoading=false,settingsNotice='';
   const archives={simplefin:{},plaid:{}},archivesPending=new Set();
   let transactionSearch='',transactionAccount='',transactionCategory='',transactionStatus='',transactionVisibleLimit=100,expandedTransaction='';
@@ -1125,7 +1125,7 @@
       window.BTBonusEvidence?.dispose();
       sessionIdentity=null;lastAuthenticatedOwner=null;expandedAccountSettings.clear();monitoringNotice='';activityNotice='';connectionNotice='';
       currentRoot=host;data=null;otherData=null;sequence++;
-      for(const key of ['simplefin','plaid'])archives[key]={};financePrefs={version:1,revision:0,budgets:{},duplicates:{},recurring:{},transactionMeta:{}};preferenceAvailable=false;
+      for(const key of ['simplefin','plaid'])archives[key]={};financePrefs={version:1,revision:0,budgets:{},duplicates:{},recurring:{},transactionMeta:{},accountAliases:{}};preferenceAvailable=false;
       host.replaceChildren();statusMessage(host,'Sign in to view finances','Sign in securely to view linked financial accounts.');
       action(host,'Sign in / manage accounts',()=>window.btOpenBankSync?.(),'finance-page-button finance-page-primary');return;
     }
@@ -1147,7 +1147,7 @@
       expandedAccountSettings.clear();monitoringNotice='';activityNotice='';connectionNotice='';
     }
     lastAuthenticatedOwner=identity;sessionIdentity=identity;currentRoot=host;data=null;otherData=null;
-    for(const key of ['simplefin','plaid'])archives[key]={};financePrefs={version:1,revision:0,budgets:{},duplicates:{},recurring:{},transactionMeta:{}};preferenceAvailable=false;
+    for(const key of ['simplefin','plaid'])archives[key]={};financePrefs={version:1,revision:0,budgets:{},duplicates:{},recurring:{},transactionMeta:{},accountAliases:{}};preferenceAvailable=false;
     accountDraftProfiles={};dirtyAccounts.clear();
     Object.keys(monitoringDraft).forEach(k=>delete monitoringDraft[k]);
     const rev=++sequence;paint();
