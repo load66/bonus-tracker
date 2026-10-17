@@ -274,6 +274,31 @@ assert.equal(positiveSummary.netWorthGroupAccounts.creditCards.length,2,
 assert.equal(positiveSummary.netWorthGroupAccounts.other.length,0,
   'Classification cannot use the sign or saved asset mode to change product type');
 
+// A credit card's category comes from its saved account type, never its balance sign.
+const creditCards=structuredClone(numbers);
+creditCards.accounts=[
+  {key:'robinhood',bank:'Robinhood',name:'Robinhood Credit Card',mask:'4010',
+   balance:'-283.27',balanceDate:NOW,currency:'USD'},
+  {key:'paypal-card',bank:'PayPal',name:'PayPal Mastercard',mask:'8532',
+   balance:'63.87',balanceDate:NOW,currency:'USD'}
+];
+creditCards.accountProfiles={
+  robinhood:{kind:'credit_card',balanceMode:'liability'},
+  'paypal-card':{kind:'credit_card',balanceMode:'liability'}
+};
+creditCards.monitoredAccounts=['robinhood','paypal-card'];
+creditCards.balanceHistory={};
+const cardCredits=summarize(creditCards,{now:NOW});
+assert.equal(cardCredits.netWorthGroups.creditCards,'219.40','Net credit card balance is $219.40 credit');
+assert.equal(cardCredits.netWorthGroups.other,'0.00','Credits cannot leak into Other assets');
+assert.equal(cardCredits.netWorthGroupAccounts.other.length,0,'No artificial Robinhood Other row');
+assert.deepEqual(cardCredits.netWorthGroupAccounts.creditCards.map(x=>[x.key,x.amount]),[
+  ['robinhood','283.27'],['paypal-card','-63.87']
+],'Each card stays under Credit cards with a signed amount');
+assert.equal(cardCredits.netWorth,'219.40','Reclassification cannot change net worth');
+assert.equal(cardCredits.assets,'283.27');
+assert.equal(cardCredits.liabilities,'63.87');
+
 const octoberStart=Math.floor(new Date(new Date(NOW*1000).getFullYear(),
   new Date(NOW*1000).getMonth(),1).getTime()/1000);
 const flow=structuredClone(numbers);
