@@ -367,65 +367,6 @@
   }
   function hero(host,summary){
     const compact=view!=='overview';
-    if(!compact){
-      const box=el('section',undefined,host,'finance-page-hero');
-      const head=el('div',undefined,box,'finance-page-hero-head'),copy=el('div',undefined,head);
-      el('span','MY MONEY',copy,'finance-page-kicker');el('h2','Finances',copy);
-      action(head,hidden?'Show amounts':'Hide amounts',togglePrivacy);
-      el('span','Cash',box,'finance-page-hero-cash-label');
-      el('strong',summary.cashAvailable?amount(summary.cash,'USD'):'—',box,'finance-page-hero-cash-value');
-      const unavailable=summary.staleOrUnavailableCash||0;
-      const cashNote=summary.cashAvailable?(unavailable
-        ?unavailable+' account'+(unavailable===1?'':'s')+' not updated'
-        :'From '+summary.cashIncludedCount+' cash account'+(summary.cashIncludedCount===1?'':'s'))
-        :'No current cash account balances yet';
-      el('small',cashNote,box,'finance-page-hero-cash-status');
-      const portfolio=el('div',undefined,box,'finance-overview-holdings');
-      const investmentCard=el('section',undefined,portfolio,'finance-overview-asset-card finance-overview-investments');
-      el('span','Investments',investmentCard);
-      el('strong',summary.investments!==null?amount(summary.investments,'USD'):'—',investmentCard);
-      const investmentKnown=summary.investments!==null;
-      el('small','Brokerage '+(investmentKnown?amount(summary.investmentBrokerage,'USD'):'—')+
-        ' · Retirement '+(investmentKnown?amount(summary.investmentRetirement,'USD'):'—'),investmentCard);
-      if(summary.investmentChangeLastSync!==null)
-        el('small','Since last update '+amount(summary.investmentChangeLastSync,'USD'),investmentCard);
-      if(summary.investmentChange1M!==null)
-        el('small','1M: '+amount(summary.investmentChange1M,'USD'),investmentCard);
-      if(investmentKnown)el('small','Invested this month '+amount(summary.investedThisMonth,'USD')+
-        ' · Investment income '+amount(summary.investmentIncome,'USD'),investmentCard);
-      if(summary.investmentAccounts?.length){
-        const detail=el('details',undefined,investmentCard,'finance-overview-account-breakdown');
-        el('summary','Investment accounts ('+summary.investmentAccounts.length+')',detail);
-        for(const holding of summary.investmentAccounts){
-          const line=el('div',undefined,detail,'finance-overview-account-balance');
-          el('span',holding.name+' · '+(holding.kind==='retirement'?'Retirement':'Brokerage'),line);
-          el('b',holding.value===null?'Not updated':amount(holding.value,'USD'),line);
-        }
-      }
-      const creditCard=el('section',undefined,portfolio,'finance-overview-asset-card');
-      el('span','Credit cards',creditCard);el('strong',summary.liabilities!==null?amount(summary.liabilities,'USD')+' owed':'—',creditCard);
-      const worth=el('section',undefined,portfolio,'finance-overview-asset-card');
-      el('span','Net worth',worth);el('strong',summary.netWorthAvailable?amount(summary.netWorth,'USD'):'—',worth);
-      const banks=new Set(sortedAccounts().map(a=>String(a.bank||'').trim().toLowerCase()).filter(Boolean));
-      el('p',sortedAccounts().length+' accounts · '+banks.size+' institutions · '+(currentCombined?.sourceCount||0)+' secure connections',box,'finance-page-count');
-      const actions=el('div',undefined,box,'finance-page-quick-actions');
-      const quick=(label,path,run)=>{
-        const button=action(actions,'',run,'finance-page-round-action');button.setAttribute('aria-label',label);
-        const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('aria-hidden','true');
-        const shape=document.createElementNS(icon.namespaceURI,'path');shape.setAttribute('d',path);shape.setAttribute('fill','none');shape.setAttribute('stroke','currentColor');shape.setAttribute('stroke-width','1.7');shape.setAttribute('stroke-linecap','round');shape.setAttribute('stroke-linejoin','round');icon.append(shape);button.append(icon);el('span',label,button);
-      };
-      quick('Add bank','M12 5v14M5 12h14',()=>window.btOpenBankConnectFlow?.());
-      quick('Discover accounts','M10 4a6 6 0 1 0 0 12 6 6 0 0 0 0-12M15 15l5 5',discoverSelected);
-      quick('Refresh activity','M20 7v5h-5M4 17v-5h5M5.5 8a7 7 0 0 1 12-3L20 8M4 16l2.5 3a7 7 0 0 0 12-3',refreshActivity);
-      const meta=el('div',undefined,box,'finance-page-meta');
-      const synced=currentCombined?.lastSuccess;
-      if(Number.isFinite(synced)&&synced>0){
-        const elapsed=Math.max(0,Math.floor((Date.now()/1000-synced)/3600));
-        el('span','Updated '+(elapsed<1?'recently':elapsed+'h ago'),meta);
-      }else el('span','Not updated',meta);
-      if(summary.hiddenAccounts)el('p',summary.hiddenAccounts+' hidden account'+(summary.hiddenAccounts===1?' is':'s are')+' excluded from Finances totals. Show them under Accounts.',box,'finance-page-hint');
-      if(currentCombined?.possibleDuplicates?.length)el('small','Review possible matching accounts in Accounts',box,'finance-page-hint');
-    }
     const navShell=el('div',undefined,host,'finance-page-nav-shell');
     const nav=el('nav',undefined,navShell,'finance-page-nav');nav.setAttribute('aria-label','Finance sections');
     for(const [id,label] of [['overview','Overview'],['spending','Spending'],['recurring','Recurring'],['transactions','Transactions'],['accounts','Accounts']]){
@@ -650,7 +591,161 @@
       }
     }
   }
+
+  function accountGroupSheet(kind,summary){
+    const labels={cash:'Cash',investments:'Investments',creditCards:'Credit cards',other:'Other'},
+      group=summary.netWorthGroupAccounts?.[kind]||[],
+      unavailable=summary.netWorthNotUpdated||[];
+    const dialog=sheet(labels[kind]+' accounts',true);
+    const total=summary.netWorthGroups?.[kind];
+    el('strong',total==null?'—':amount(total,'USD'),dialog,'finance-page-big-number');
+    if(kind==='cash'){
+      const missing=unavailable.filter(a=>['checking','savings'].includes(a.kind));
+      if(missing.length)el('p',missing.length+' account'+(missing.length===1?'':'s')+
+        ' not updated. Cash excludes their last-known balances until refreshed.',dialog,'finance-page-warning');
+    }
+    if(kind==='investments'){
+      const metrics=el('section',undefined,dialog,'finance-overview-investment-summary');
+      const details=[
+        ['Invested this month',summary.investmentContributions],
+        ['Withdrawn this month',summary.investmentWithdrawals],
+        ['Market change',summary.investmentMarketChange],
+        ['Investment income',summary.investmentIncome]
+      ];
+      for(const [label,value] of details){
+        const line=el('div',undefined,metrics,'finance-overview-investment-metric');
+        el('span',label,line);
+        el('strong',value===null?'—':amount(value,'USD'),line);
+      }
+      if(summary.investmentMarketChange===null)el('p',
+        'Market change is hidden because complete period balance and contribution/withdrawal coverage has not been verified. Balance movement alone is not investment performance.',
+        dialog,'finance-page-hint');
+      else el('small','Market change = portfolio balance change minus contributions plus withdrawals.',dialog,'finance-page-hint');
+      el('small','Invested and withdrawn amounts are only shown for recognized paired transactions; missing history is not interpreted as zero.',dialog,'finance-page-hint');
+    }
+    if(!group.length)el('p','No included balances in this group.',dialog,'finance-page-hint');
+    for(const item of group){
+      const account=currentCombined?.accounts?.find(a=>a.key===item.key);
+      const row=el('div',undefined,dialog,'finance-overview-detail-account');
+      const copy=el('div',undefined,row,'finance-overview-detail-copy');
+      el('strong',item.name,copy);
+      el('small',[item.bank,item.balanceDate?syncLabel(item.balanceDate):'Balance update unknown',
+        item.provisional?'Provider observation only':null].filter(Boolean).join(' · '),copy);
+      el('b',amount(item.amount,'USD'),row);
+      if(account)action(row,'View',()=>{dialog.close();openAccount(account)},'finance-page-button');
+    }
+    const matching=unavailable.filter(item=>kind==='cash'
+      ?['checking','savings'].includes(item.kind):
+      kind==='investments'?['brokerage','retirement'].includes(item.kind):
+      kind==='creditCards'?item.kind==='credit_card':
+      !['checking','savings','brokerage','retirement','credit_card'].includes(item.kind));
+    if(matching.length){
+      el('h3','Not updated ('+matching.length+')',dialog);
+      for(const item of matching){
+        const row=el('div',undefined,dialog,'finance-overview-stale-account');
+        const copy=el('div',undefined,row,'finance-overview-detail-copy');
+        el('strong',item.name,copy);
+        el('small',item.lastUpdated?'Last update '+stamp(item.lastUpdated):'No confirmed balance update',copy);
+        el('small','Last known balance: '+(item.lastKnownBalance===null?'unknown':amount(item.lastKnownBalance,'USD'))+
+          ' · NOT included in this total',copy);
+        const account=currentCombined?.accounts?.find(a=>a.key===item.key);
+        if(account){
+          action(row,'Refresh',()=>{dialog.close();refreshActivity()},'finance-page-button');
+          action(row,'Reconnect',()=>{dialog.close();reconnectAccount(account)},'finance-page-button');
+        }
+      }
+    }
+  }
   function overview(host,summary){
+    const groups=summary.netWorthGroups||{},missing=summary.netWorthNotUpdated||[];
+    const heroCard=el('section',undefined,host,'finance-overview-net-hero');
+    const header=el('div',undefined,heroCard,'finance-overview-hero-head');
+    el('span','Net worth',header);
+    const eye=action(header,'',togglePrivacy,'finance-overview-eye');
+    eye.setAttribute('aria-label',hidden?'Show amounts':'Hide amounts');
+    eye.setAttribute('aria-pressed',String(hidden));
+    const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('aria-hidden','true');
+    const path=document.createElementNS(icon.namespaceURI,'path');
+    path.setAttribute('d','M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z M9 12a3 3 0 1 0 6 0 3 3 0 0 0-6 0');
+    icon.append(path);
+    if(hidden){const slash=document.createElementNS(icon.namespaceURI,'path');slash.setAttribute('d','M3 3l18 18');icon.append(slash)}
+    eye.append(icon);
+    el('strong',summary.netWorthAvailable?amount(summary.netWorth,'USD'):'—',
+      heroCard,'finance-overview-worth-number');
+    const history=summary.netWorthHistory||[],cutoff=Date.now()/1000-30*86400,
+      baseline=history.filter(x=>x.at<=cutoff).at(-1);
+    if(!hidden&&baseline&&summary.netWorthAvailable){
+      const change=window.BTFinanceOverview.cents(summary.netWorth)-
+        window.BTFinanceOverview.cents(baseline.value);
+      if(change!==0n)el('small',(change>0n?'▲ ':'▼ ')+
+        amount(window.BTFinanceOverview.decimal(change<0n?-change:change),'USD')+
+        ' this month',heroCard,'finance-overview-worth-change'+(change<0n?' is-negative':''));
+    }
+    if(summary.netWorthPartial)el('small','Partial net worth · missing or provisional balances',heroCard,'finance-page-hint');
+    const card=el('section',undefined,host,'finance-overview-account-card');
+    const rows=[
+      ['cash','Cash','▣'],
+      ['investments','Investments','↗'],
+      ['creditCards','Credit cards','▤'],
+      ['other','Other','◇']
+    ];
+    for(const [kind,label,symbol] of rows){
+      if(kind==='other'&&(!groups.other||groups.other==='0.00'))continue;
+      const row=action(card,'',()=>accountGroupSheet(kind,summary),
+        'finance-overview-category-row');
+      row.setAttribute('aria-label','View '+label+' accounts');
+      const emblem=el('span',symbol,row,'finance-overview-row-icon finance-overview-icon-'+kind);
+      emblem.setAttribute('aria-hidden','true');
+      const info=el('span',undefined,row,'finance-overview-row-info');
+      el('strong',label,info);
+      if(kind==='cash'){
+        const n=missing.filter(a=>['checking','savings'].includes(a.kind)).length;
+        if(n)el('small',n+' account'+(n===1?'':'s')+' not updated',info);
+      }else if(kind==='investments'){
+        const holdings=summary.netWorthGroupAccounts?.investments||[];
+        const totals={brokerage:0n,retirement:0n};
+        for(const h of holdings){
+          const value=window.BTFinanceOverview.cents(h.amount);
+          if(value!==null&&totals[h.kind]!==undefined)totals[h.kind]+=value;
+        }
+        const short=v=>{const value=Number(v)/100;return Math.abs(value)>=1000?
+          '$'+(value/1000).toFixed(1)+'K':money(value.toFixed(2),'USD')};
+        el('small','Brokerage '+(hidden?'••••••':short(totals.brokerage))+
+          ' · Retirement '+(hidden?'••••••':short(totals.retirement)),info);
+      }else if(kind==='creditCards')el('small','Owed',info);
+      else{
+        const details=summary.netWorthGroupAccounts?.other||[];
+        el('small',details.length===1?(details[0].bank||details[0].name):'Other included assets and liabilities',info);
+      }
+      const value=el('span',undefined,row,'finance-overview-row-value');
+      el('strong',summary.netWorthAvailable?amount(groups[kind],'USD'):'—',value);
+      el('span','›',value,'finance-overview-chevron');
+    }
+    const quick=el('div',undefined,host,'finance-overview-actions');
+    const buttons=[
+      ['+','Add bank',()=>window.btOpenBankConnectFlow?.()],
+      ['⌕','Discover',discoverSelected],
+      ['↻','Refresh',refreshActivity]
+    ];
+    for(const [symbol,label,fn] of buttons){
+      const b=action(quick,'',fn,'finance-overview-action');
+      el('span',symbol,b);el('span',label,b);
+      b.setAttribute('aria-label',label);
+    }
+    const foot=el('div',undefined,host,'finance-overview-footer');
+    const visible=sortedAccounts(),banks=new Set(visible.map(a=>
+      String(a.bank||'').trim().toLowerCase()).filter(Boolean));
+    const count=action(foot,visible.length+' accounts at '+banks.size+' banks',()=>{
+      view='accounts';paint()},'finance-overview-count');
+    count.setAttribute('aria-label','View '+visible.length+' accounts at '+banks.size+' banks');
+    el('span',currentCombined?.lastSuccess?'Updated '+stamp(currentCombined.lastSuccess).replace(/^Updated /,''):'Not updated',foot);
+    const more=el('details',undefined,host,'finance-overview-more');
+    el('summary','More insights',more);
+    const body=el('div',undefined,more);
+    legacyOverview(body,summary);
+  }
+  function legacyOverview(host,summary){
     const net=sectionTitle(host,'Net worth');
     net.classList.add('finance-net-worth-card');
     el('strong',summary.netWorthAvailable?amount(summary.netWorth,'USD'):'—',net,'finance-page-big-number');
