@@ -174,13 +174,13 @@
           renderAccounts(result);
         }catch(error){message.textContent=error.message;}
       });
-      // Plaid has already started account discovery and transaction sync
-      // after Link success. The user should not need an extra button.
-      action(accountsArea,'Refresh status',async()=>{
+      // Plaid automatically starts discovery + history sync after Link.
+      // This is a voluntary diagnostic refresh, never an onboarding step.
+      action(accountsArea,'Refresh transactions',async()=>{
         try{
-          const result=await api('/accounts');
+          const result=await api('/accounts/sync',{method:'POST'});
           message.textContent=result.error||
-            'Connected banks and transaction status were refreshed.';
+            'Latest available provider activity loaded. Automatic sync remains enabled.';
           renderAccounts(result);
         }catch(error){message.textContent=error.message;}
       });
