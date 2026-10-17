@@ -1865,30 +1865,51 @@
     if(connectionNotice){const banner=el('p',connectionNotice,host,'finance-page-connection-success');banner.setAttribute('role','status');}
     if(monitoringNotice){const banner=el('p',monitoringNotice,host,'finance-page-activity-result');banner.setAttribute('role','status');}
     if(activityNotice){const banner=el('p',activityNotice,host,'finance-page-activity-result');banner.setAttribute('role','status');}
-    const needsAttention=summaryState.incompleteProviders||summaryState.malformedActivity;
-    const loading=summaryState.historyIncomplete;
-    if(needsAttention||loading||settingsNotice||archiveLoading){
-      const row=el('details',undefined,host,'finance-page-status-row');
-      const count=(currentCombined?.accounts||[]).filter(a=>a.transactionSyncStatus==='needs_attention').length;
-      const label=needsAttention?'Needs attention':
-        loading?'Waiting for history':
-        archiveLoading?'Loading earlier transactions…':settingsNotice;
-      el('summary',label,row);
-      const detail=el('p',undefined,row);
+    const brokenAccounts=(currentCombined?.accounts||[]).filter(a=>a.transactionSyncStatus==='needs_attention'||a.attentionKind);
+    const needsAttention=summaryState.incompleteProviders||summaryState.malformedActivity||brokenAccounts.length>0;
+    const waitingAccounts=(currentCombined?.accounts||[]).filter(a=>a.source==='plaid'&&
+      a.connectionStatus!=='disconnected'&&a.connectionStatus!=='disconnecting'&&
+      a.transactionSyncStatus!=='needs_attention'&&
+      (a.historyComplete===false||
+       ['history_still_loading','awaiting_first_sync','awaiting_provider_data'].includes(a.transactionSyncStatus)));
+    const waitingBanks=new Map();
+    for(const account of waitingAccounts){
+      const key=account.source+':'+(account.connectionHandle||account.bank);
+      if(!waitingBanks.has(key))waitingBanks.set(key,[]);
+      waitingBanks.get(key).push(account);
+    }
+    if(needsAttention){
+      const alert=el('details',undefined,host,'finance-page-status-row is-attention');
+      el('summary','Needs attention',alert);
       const problem=Object.entries(currentCombined?.sourceErrors||{}).map(([src,err])=>sourceLabel(src)+': '+String(err).slice(0,120)).join(' · ')||
-        ['simplefin','plaid'].flatMap(src=>(sourceSnapshot(src)?.warnings||[]).map(err=>sourceLabel(src)+': '+String(err).slice(0,120))).slice(0,2).join(' · ');
-      detail.textContent=needsAttention?(problem||'Open Accounts to check the connection or refresh your accounts.'):
-        loading?'Waiting for history.':
-        archiveLoading?'Loading earlier months.':settingsNotice;
-      if(needsAttention)action(row,'Check accounts',()=>{view='accounts';paint()});
-      const sf=sourceSnapshot('simplefin');
-      if(needsAttention&&sf?.status==='attention'){
-        const failure=String(sf.error||'');
-        if(/access (?:was )?rejected|authorization rejected|invalid access/i.test(failure))
-          action(row,'Reconnect',()=>window.btOpenBankSync?.(),'finance-page-button');
-        else if(sf.accounts?.some(account=>account.attentionKind==='bank_login'))
-          action(row,'Fix on SimpleFIN',()=>window.open('https://bridge.simplefin.org/','_blank','noopener'),'finance-page-button');
+        brokenAccounts.map(a=>(a.bank||'Bank')+' needs a connection check').slice(0,3).join(' · ');
+      el('p',problem||'Review the bank connection or refresh your accounts.',alert);
+      action(alert,'Check accounts',()=>{view='accounts';paint()},'finance-page-button');
+    }
+    if(waitingBanks.size){
+      const row=el('details',undefined,host,'finance-page-status-row finance-history-status');
+      el('summary',waitingBanks.size+' bank'+(waitingBanks.size===1?'':'s')+' updating transaction history',row);
+      el('p','Balances and available transactions still work. Some older Plaid activity may arrive later.',row);
+      for(const accounts of waitingBanks.values()){
+        const bank=el('div',undefined,row,'finance-history-bank');
+        const first=accounts[0];
+        el('strong',first.bank||'Linked bank',bank);
+        el('small',accounts.length+' account'+(accounts.length===1?'':'s')+' · '+
+          (accounts.some(a=>a.transactionSyncStatus==='awaiting_first_sync')?'Waiting for first update':
+          'Older transactions still loading'),bank);
+        const last=Math.max(0,...accounts.map(a=>Number(a.transactionLastSyncAt)||0));
+        const next=Math.min(...accounts.map(a=>Number(a.transactionNextSyncAt)||Infinity));
+        el('small','Last history check: '+(last?syncLabel(last).replace(/^Updated /,''):'Not available')+
+          ' · Next eligible: '+(Number.isFinite(next)?(next>Date.now()/1000?
+            new Date(next*1000).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):
+            'Ready to check'):'Not provided'),bank);
       }
+      action(row,'View accounts',()=>{view='accounts';paint()},'finance-page-button');
+    }
+    if(settingsNotice||archiveLoading){
+      const note=el('details',undefined,host,'finance-page-status-row');
+      el('summary',archiveLoading?'Loading earlier transactions…':settingsNotice,note);
+      el('p',archiveLoading?'Loading earlier months.':settingsNotice,note);
     }
     if(view==='transactions')transactions(host);
     else if(view==='accounts')accounts(host);
