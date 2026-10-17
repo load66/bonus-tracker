@@ -127,6 +127,21 @@ const base=()=>({
       const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
       assert.equal(await section.locator('img').count(),0,'Bank aliases render as escaped text');
       assert.deepEqual((await section.locator('.finance-page-nav button').allTextContents()).map(x=>x.trim()),['Overview','Spending','Recurring','Transactions','Accounts']);
+      // Full 390x844 Safari/Chromium/Firefox captures are retained as artifacts.
+      await page.screenshot({path:path.join(output,name+'-overview-390x844.png'),fullPage:true});
+      const worth=section.locator('.finance-page-networth-card');
+      assert.equal(await worth.count(),1,'Net worth is a single dedicated card');
+      assert.equal(await worth.locator('.finance-page-period').count(),0,
+        'History range chips stay hidden with fewer than two data points');
+      assert.equal(await worth.getByText('Chart builds as your accounts sync.').count(),1);
+      assert.ok(!(await worth.innerText()).includes('provider observation'),'Net worth has no technical disclaimer');
+      await worth.getByRole('button',{name:'Review',exact:true}).click();
+      const worthReview=page.getByRole('dialog',{name:'Accounts not included'});
+      await worthReview.waitFor();
+      assert.ok((await worthReview.innerText()).includes('Excluded'));
+      assert.ok(await worthReview.getByRole('switch',{name:/Include Brokerage/}).count());
+      await page.screenshot({path:path.join(output,name+'-networth-review-390x844.png'),fullPage:true});
+      await worthReview.getByRole('button',{name:'Done',exact:true}).click();
       await section.getByRole('button',{name:'Hide amounts',exact:true}).waitFor();
       await section.getByRole('button',{name:'Hide amounts',exact:true}).click();
       assert.equal(await section.locator('.finance-page-hero-cash-value').innerText(),'••••••');
@@ -136,6 +151,7 @@ const base=()=>({
       assert.equal(await page.evaluate(()=>localStorage.getItem('bt_finance_hide_v2')),'false');
       await section.getByRole('button',{name:'Spending',exact:true}).click();
       await section.getByRole('heading',{name:'October 2026'}).waitFor();
+      await page.screenshot({path:path.join(output,name+'-spending-390x844.png'),fullPage:true});
       assert.ok((await section.locator('.finance-spending-value').innerText()).includes('$25.00'),'Eligible unknown debit is included in the October spending total');
       assert.ok(await section.getByRole('button',{name:'Review',exact:true}).count(),'Uncategorized category includes a review action');
       assert.equal(await section.locator('.finance-spending-today-dot').count(),1);
@@ -163,6 +179,8 @@ const base=()=>({
       await section.getByText('Review complete',{exact:true}).waitFor();
       await section.getByRole('button',{name:'Back to Spending',exact:true}).click();
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
+      await page.screenshot({path:path.join(output,name+'-transactions-390x844.png'),fullPage:true});
+      assert.equal(await section.locator('.finance-page-transaction-scopes').count(),1);
       const search=section.getByRole('searchbox',{name:'Search transactions'});await search.fill('coffee');
       assert.equal(await section.locator('.finance-page-transaction').count(),1);
       assert.equal(await section.locator('.finance-page-transaction-category').count(),1,'Every transaction has a category chip');
@@ -212,6 +230,7 @@ const base=()=>({
 
       await section.getByRole('button',{name:'Accounts',exact:true}).click();
       await section.getByRole('heading',{name:/^Accounts \(\d+\)$/}).waitFor();
+      await page.screenshot({path:path.join(output,name+'-accounts-390x844.png'),fullPage:true});
       assert.ok((await section.getByText('Credit cards', {exact:true}).first().locator('..').innerText()).includes('$200.00 owed'),'Card group header and row both show owed debt');
       assert.equal(await section.locator('.finance-page-account:visible').count(),4);
       assert.equal(await section.getByRole('button',{name:'Robinhood Credit Card ··4010',exact:true}).count(),1,'Duplicated account masks normalize to one readable suffix');
