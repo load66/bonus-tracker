@@ -127,6 +127,11 @@ const checking=[weekday(8,9),weekday(9,9),weekday(10,9)]
 const selfTransfers=I.recurring([...lafayette,...regions,...savings,...checking],NOW);
 assert.ok(selfTransfers.every(x=>x.type==='transfer'),'All from/to-bank streams stay recurring transfers, not Income/Bills');
 assert.equal(I.upcoming(selfTransfers,NOW).length,0);
+const septemberRows=[...lafayette,...regions,...savings,...checking]
+  .filter(x=>I.monthKey(x.posted*1000)==='2026-09');
+const oldTaggedIncome=septemberRows.filter(x=>x.category==='income')
+  .reduce((sum,x)=>sum+I.cents(x.amount),0n);
+assert.equal(I.fmt(oldTaggedIncome),'2997.39','Synthetic before: the four $500 credits and $997.39 transfer were mislabeled income');
 assert.equal(I.spent([...lafayette,...regions,...savings,...checking],'2026-09').income,'0.00',
   'September trend does not include Lafayette, Regions or savings transfers');
 assert.equal(I.spent([...lafayette,...regions,...savings,...checking],'2026-09').total,'0.00',
