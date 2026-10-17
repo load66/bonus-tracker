@@ -980,3 +980,13 @@
 /* v3.4.89: compact, actionable stale-balance copy on the Finance hero. */
 .finance-overview-review-link{display:block;appearance:none;border:0;background:none;color:inherit;text-align:left;font:inherit;font-size:12px;line-height:1.45;padding:5px 0;margin:4px 0 0;cursor:pointer;text-decoration:underline;text-underline-offset:2px;max-width:100%}
 .finance-overview-review-link:focus-visible{outline:2px solid currentColor;outline-offset:2px;border-radius:3px}
+
+/* v3.4.90: Finance-only history progress and neutral reconciled transfers. */
+.finance-page .finance-history-bank{display:flex;flex-direction:column;gap:3px;padding:10px 0;border-top:1px solid rgba(127,145,166,.17);min-width:0;overflow-wrap:anywhere}
+.finance-page .finance-history-bank strong{font-size:13px;font-weight:650}
+.finance-page .finance-history-bank small{font-size:11px;color:var(--finance-muted,#9ba8ba);line-height:1.4}
+.finance-page .finance-history-status{border-color:rgba(127,145,166,.24)}
+.finance-page .finance-transaction-is-pair{color:var(--finance-muted,#9ba8ba)}
+.finance-page .finance-page-transaction.is-matched-transfer .finance-page-transaction-value b{color:var(--finance-muted,#9ba8ba)!important}
+.finance-page .finance-recurring-secondary{margin-top:10px}
+.finance-page .finance-recurring-secondary>summary{cursor:pointer;font-weight:600}
