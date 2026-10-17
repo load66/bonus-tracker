@@ -1263,6 +1263,7 @@
       let group=null,lastDay='';
       const seenPairs=new Set();
       for(const row of filtered.slice(0,transactionVisibleLimit)){
+        const transfer=!!window.BTFinanceTransfer?.isTransfer(row);
         if(row.transferPairId&&seenPairs.has(row.transferPairId))continue;
         if(row.transferPairId)seenPairs.add(row.transferPairId);
         const currentDay=dayKey(row.posted);
