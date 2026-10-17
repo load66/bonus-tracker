@@ -990,3 +990,5 @@
 .finance-page .finance-page-transaction.is-matched-transfer .finance-page-transaction-value b{color:var(--finance-muted,#9ba8ba)!important}
 .finance-page .finance-recurring-secondary{margin-top:10px}
 .finance-page .finance-recurring-secondary>summary{cursor:pointer;font-weight:600}
+
+.finance-page .finance-page-confirm-transfer{margin:0 12px 9px;font-size:11px;padding:7px 11px;min-height:30px;max-width:calc(100% - 24px)}
