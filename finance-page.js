@@ -637,8 +637,10 @@
       const row=el('div',undefined,dialog,'finance-overview-detail-account');
       const copy=el('div',undefined,row,'finance-overview-detail-copy');
       el('strong',kind==='creditCards'&&account?accountTitle(account):item.name,copy);
-      el('small',[item.bank,item.balanceDate?syncLabel(item.balanceDate):'Balance update unknown',
-        item.provisional?'Balance may be delayed':null].filter(Boolean).join(' · '),copy);
+      const balanceLabel=item.provisional?'Refresh suggested':item.asOf&&item.balanceDate?
+        'Balance as of '+new Date(item.balanceDate*1000).toLocaleDateString(undefined,{month:'short',day:'numeric'}):
+        item.balanceDate?syncLabel(item.balanceDate):'Balance update unknown';
+      el('small',[item.bank,balanceLabel].filter(Boolean).join(' · '),copy);
       el('b',kind==='creditCards'?creditCardNetAmount(item.amount):amount(item.amount,'USD'),row);
       if(account)action(row,'View',()=>{dialog.close();openAccount(account)},'finance-page-button');
     }
@@ -694,7 +696,7 @@
       const toReview=[
         ...(summary.netWorthNotUpdated||[]).map(item=>({...item,reason:'balance not updated'})),
         ...(summary.netWorthExclusions||[]).filter(item=>!['excluded by settings','balance not updated'].includes(item.reason)),
-        ...(summary.netWorthGroupAccounts?.creditCards||[]).filter(item=>item.provisional)
+        ...Object.values(summary.netWorthGroupAccounts||{}).flat().filter(item=>item.provisional)
           .map(item=>({key:item.key,name:item.name,reason:'provisional',lastUpdated:item.balanceDate}))
       ];
       action(heroCard,'Some balances not updated · Review',()=>showNetWorthReview(toReview),
@@ -1679,7 +1681,9 @@
     if(account.creditLimit!=null)el('small','Credit limit '+amount(account.creditLimit,account.currency),intro);
     if(account.availableBalance!=null&&!['loan','mortgage'].includes(p.kind))el('small','Available '+amount(account.availableBalance,account.currency),intro);
     if(['mortgage','loan'].includes(p.kind)){
-      el('small',account.balanceDate?'Loan balance · '+syncLabel(account.balanceDate):'Loan balance date unavailable',intro);
+      const dated=account.balanceDate&&Date.now()/1000-account.balanceDate>7*86400;
+      const label=account.balanceDate?(dated?'Balance as of '+new Date(account.balanceDate*1000).toLocaleDateString(undefined,{month:'short',day:'numeric'}):syncLabel(account.balanceDate)):'Loan balance date unavailable';
+      el('small',label,intro);
       el('small','Connected loan balance only. Rate, escrow, due dates and home value are not included.',intro);
     }else el('small',syncLabel(account.transactionLastSyncAt||sourceSnapshot(account.source)?.lastSuccess),intro);
     const chart=el('section',undefined,modal,'finance-page-card');el('h3',['mortgage','loan'].includes(p.kind)?'Debt remaining':'Balance history',chart);
