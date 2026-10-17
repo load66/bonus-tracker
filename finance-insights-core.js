@@ -55,7 +55,19 @@
     const out=[];
     for(const [key,entries] of groups){
       entries.sort((a,b)=>a.at-b.at);
-      if(entries.length<2)continue;
+      if(entries.length<2){
+        if(entries.length===1&&entries[0].row.markedRecurring){
+          const item=entries[0],amount=item.cents<0n?-item.cents:item.cents;
+          const next=item.at+Math.round(30.44*DAY);
+          out.push({key,merchant:item.row.merchant||item.row.description,
+            category:item.row.category,frequency:'monthly',average:fmt(amount),
+            lastAmount:fmt(amount),lastAt:Math.round(item.at/1000),
+            nextAt:Math.round(next/1000),status:now>next+15*DAY?'possibly_canceled':'active',
+            direction:item.cents>0n?'income':'expense',manuallyMarked:true,
+            history:[{posted:Math.round(item.at/1000),amount:fmt(item.cents)}]});
+        }
+        continue;
+      }
       const diffs=entries.slice(1).map((v,i)=>(v.at-entries[i].at)/DAY);
       const candidates=INTERVALS.map(([name,days,tolerance])=>({
         name,days,score:diffs.filter(d=>Math.abs(d-days)<=tolerance).length,
