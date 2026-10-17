@@ -130,3 +130,10 @@ assert.equal(I.recurring([
  {...move[4],posted:unix(new Date(2026,9,1).getTime())},
  {...move[4],posted:unix(new Date(2026,9,15).getTime())}
 ],NOW)[0].incomeType,'Paycheck','Paycheck recurrence appears as income');
+
+
+const transferLabels=require('../finance-transfer-core.js');
+const correctedPayment={amount:'-100.00',description:'Chase AUTOPAY',
+  category:'other',categorySource:'user',signals:['card_payment'],pending:false};
+assert.equal(transferLabels.isTransfer(correctedPayment),false,'Manual spending overrides stale card-payment signals');
+assert.equal(transferLabels.label(correctedPayment),null,'Manual spending label overrides stale card-payment chip');
