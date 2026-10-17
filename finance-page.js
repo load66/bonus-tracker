@@ -2212,11 +2212,13 @@
     }catch(_error){/* Preserve prior verified account snapshot and any owner edits. */}
     finally{passiveBusy=false;}
   }
-  window.addEventListener('focus',passiveFinanceRefresh);
-  document.addEventListener('visibilitychange',()=>{
-    if(document.visibilityState==='visible')passiveFinanceRefresh();
-  });
-  setInterval(passiveFinanceRefresh,60000);
+  if(typeof window.addEventListener==='function')
+    window.addEventListener('focus',passiveFinanceRefresh);
+  if(typeof document.addEventListener==='function')
+    document.addEventListener('visibilitychange',()=>{
+      if(document.visibilityState==='visible')passiveFinanceRefresh();
+    });
+  if(typeof setInterval==='function')setInterval(passiveFinanceRefresh,60000);
   function refresh(){
     window.BTBonusEvidence?.dispose();currentRoot=null;data=null;otherData=null;sessionIdentity=null;
     accountDraftProfiles={};dirtyAccounts.clear();
