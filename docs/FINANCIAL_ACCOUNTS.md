@@ -85,8 +85,8 @@ qualifying direct-deposit or bonus-payout evidence without review.
   needing the user to navigate to Finances. A failed Item does not discard
   a different bank's successful sync. Existing Items remain on the daily
   provider budget; no paid refresh or extra Trial Item is used.
-- **Hide balances** also masks observation summary amounts and individual
-  transaction amounts in the current panel, without modifying persisted data.
+- **Hide amounts** masks balance, summary, spending-chart and transaction amounts
+  throughout Finances only until the user shows them or reloads the app.
 - **No data / unknown / stale** are distinct states. Do not show false totals
   or an open-now connection inference when the provider is unavailable.
 
@@ -122,8 +122,10 @@ expenses, cash flow, net worth or investment performance**.
 
 These enhancements are Finance-only and remain independent of the Tracker lifecycle:
 
-- Financial amounts default to hidden on this device. The browser stores only the
-  `bt_finance_hide_amounts` boolean preference, not account or transaction data.
+- Financial amounts default to **visible** on the Finance screen. "Hide amounts"
+  temporarily masks money throughout Finances for screenshots. Reloading the PWA
+  restores visible amounts; the legacy `bt_finance_hide_amounts` preference is
+  ignored. Neither the mask nor financial records are persisted by this toggle.
 - One Cash figure uses fresh, classified checking/savings balances. A missing,
   stale, or inconsistent balance remains unknown; it is never interpreted as zero.
 - Net-worth calculations omit accounts explicitly marked `exclude`. A credit
