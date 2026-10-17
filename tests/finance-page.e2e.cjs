@@ -253,6 +253,28 @@ const base=()=>({
       assert.equal(redrawOnSuccessfulSave,false,'WebKit must exercise a same-user redraw before successful save response');
       assert.ok(requests.some(r=>r.path.endsWith('/account-profiles')));
 
+      // Hide one SimpleFIN account without removing its bank connection or history.
+      const checkingEditor=section.locator('.finance-page-account-editor').filter({hasText:'Checking <img src=x>'});
+      await checkingEditor.locator('summary.finance-page-account').click();
+      await checkingEditor.getByRole('button',{name:'Hide account from Finances'}).click();
+      await Promise.all([
+        page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/account-profiles')&&r.status()===200),
+        section.getByRole('button',{name:'Save account settings'}).click()
+      ]);
+      assert.equal(state.accountProfiles[A].hidden,true,'hide must persist as a profile, not a disconnection');
+      assert.equal(Object.keys(state.transactions[A]).length,3,'hiding cannot erase source activity');
+      await section.getByRole('button',{name:'Hide hidden accounts'}).click();
+      assert.equal(await section.locator('.finance-page-account').count(),3);
+      await section.getByRole('button',{name:/Show hidden accounts/}).click();
+      await checkingEditor.locator('summary.finance-page-account').click();
+      await checkingEditor.getByRole('button',{name:'Show account in Finances'}).click();
+      await Promise.all([
+        page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/account-profiles')&&r.status()===200),
+        section.getByRole('button',{name:'Save account settings'}).click()
+      ]);
+      assert.equal(state.accountProfiles[A].hidden,false,'restoring should reuse the saved account');
+      assert.equal(Object.keys(state.transactions[A]).length,3,'original history survives hide and restore');
+
       for(const target of [['Overview','overview'],['Transactions','transactions'],['Accounts','accounts']]){
         await section.getByRole('button',{name:target[0],exact:true}).click();
         for(const width of [320,390,430]){
