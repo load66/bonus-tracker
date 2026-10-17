@@ -141,7 +141,7 @@
     return out.sort((a,b)=>a.nextAt-b.nextAt);
   }
   function upcoming(items,now=Date.now(),days=14){
-    return (items||[]).filter(x=>x.direction==='expense'&&x.status!=='possibly_ended'&&x.status!=='possibly_canceled'&&x.nextAt*1000>=now-DAY&&x.nextAt*1000<=now+days*DAY).slice(0,5);
+    return (items||[]).filter(x=>x.direction==='expense'&&x.status!=='possibly_ended'&&x.status!=='possibly_canceled'&&x.nextAt*1000>=now&&x.nextAt*1000<=now+days*DAY).slice(0,5);
   }
   return Object.freeze({spent,history,budget,spendingCategory,seenMonth,monthDays,merchant,recurring,upcoming,monthKey,monthShift,cents,fmt,SPEND});
 });
