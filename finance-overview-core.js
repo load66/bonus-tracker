@@ -225,7 +225,7 @@
         !Number.isFinite(coverage?.from)||coverage.from>startPoint.observedAt||
         !Number.isFinite(coverage?.through)||coverage.through<now-86400)flowCoverage=false;
       for(const row of Object.values(history[key]||{})){
-        if(!row||row.pending||row.excludedFromTotals||!Number.isFinite(row.posted)||
+        if(!row||row.pending||!Number.isFinite(row.posted)||
           row.posted<monthStart||row.posted>now)continue;
         const value=cents(row.amount),flags=Array.isArray(row.signals)?row.signals:[];
         if(value===null)continue;
