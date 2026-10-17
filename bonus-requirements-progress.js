@@ -48,7 +48,7 @@
       const d=new Date(entry.opened+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+rule.timing.value);
       holdEnd=d.toISOString().slice(0,10);
     }
-    const breached=target!==null&&min!==null&&min<target;
+    const breached=target!==null&&observedBalance!==null&&observedBalance<target;
     const onTrack=observedBalance!==null&&target!==null&&observedBalance>=target;
     return {metric,observedDays:vals.length,observedBalance:observedBalance===null?null:decimal(observedBalance),
       targetBalance:target===null?null:decimal(target),holdEnd,
