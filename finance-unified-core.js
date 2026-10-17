@@ -31,7 +31,9 @@
       const state=sources[source];
       if(!state||!state.connected){providerState[source]={connected:false,available:!!state,stale:false};continue}
       providerState[source]={connected:true,available:true,stale:!!state.stale,lastSuccess:state.lastSuccess||null,
-        nextSyncAt:state.nextSyncAt||null,accountCount:(state.accounts||[]).length};
+        nextSyncAt:state.nextSyncAt||null,accountCount:(state.accounts||[]).length,
+        warningCount:Array.isArray(state.warnings)?state.warnings.length:0,
+        needsAttention:state.status==='attention'};
       const accountKeys=new Set();
       for(const account of state.accounts||[]){
         if(!account||typeof account.key!=='string'||!account.key)continue;
@@ -93,7 +95,12 @@
       monitoredAccounts:unified.monitoredAccounts.filter(k=>allowed.has(k)),
       accountProfiles:keep(unified.accountProfiles),balanceHistory:keep(unified.balanceHistory),
       incompleteProviders:Object.values(unified.providerState).some(s=>s.connected&&
-        (s.stale||!Number.isFinite(s.lastSuccess)||s.lastSuccess<=0)),
+        (s.stale||s.needsAttention||s.warningCount>0||!Number.isFinite(s.lastSuccess)||s.lastSuccess<=0))||
+        Object.keys(unified.sourceErrors||{}).length>0,
+      malformedActivity:accounts.some(a=>Number(a.invalidTransactionRows)>0),
+      historyIncomplete:accounts.some(a=>a.source==='plaid'&&(
+        a.historyComplete===false||
+        ['history_still_loading','awaiting_first_sync','awaiting_provider_data','needs_attention'].includes(a.transactionSyncStatus))),
       excludedForReview:duplicates.size,hiddenAccounts:hidden.size};
   }
   return Object.freeze({combine,safeForSummary,detectedType,key});
