@@ -121,7 +121,8 @@ classified.monitoredAccounts.pop();
 classified.accounts[1].balanceDate=NOW-8*DAY;
 result=summarize(classified,{now:NOW});
 assert.equal(result.cashAvailable,false,'stale deposit balances cannot produce a cash total');
-assert.equal(result.netWorthAvailable,false,'stale balances cannot produce net worth');
+assert.equal(result.netWorthAvailable,true,'fresh balances still support a partial subtotal');
+assert.equal(result.netWorthPartial,true,'stale balances keep net worth explicitly partial');
 
 
 const correctedLiabilities=structuredClone(classified);
