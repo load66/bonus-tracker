@@ -381,12 +381,13 @@
   }
   function open(mode='accounts'){
     if(panel){resetAddFlow();view=mode==='add-bank'?'add-bank':'accounts';wizardResult=null;
-      if(mode==='add-bank'||mode==='discover')addFlowPending=true;
+      const due=data?.connected&&(!data.lastAccountDiscoveryAt||
+        Date.now()/1000-data.lastAccountDiscoveryAt>=3600);
+      if(due)addFlowPending=true;
       paint();
-      if(addFlowPending&&data?.connected)checkAddedBank();
+      if(due)checkAddedBank();
       return;}
     returnFocus=document.activeElement;generation++;resetAddFlow();data=null;changed=false;view=mode==='add-bank'?'add-bank':'accounts';wizardResult=null;
-    if(mode==='add-bank'||mode==='discover')addFlowPending=true;
     panel=el('div');panel.className='ov bank-sync-overlay';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-labelledby','bank-sync-title');
     const modal=el('section',undefined,panel);modal.className='bank-sync-modal';
     const header=el('header',undefined,modal);el('h2','Financial accounts',header).id='bank-sync-title';el('p','Balances, connections and bonus monitoring',header);
@@ -399,7 +400,7 @@
       // check on return/open is automatic, never a Discover/Save interaction.
       const last=Number(data?.lastAccountDiscoveryAt)||0;
       const due=data?.connected&&(!last||Date.now()/1000-last>=3600);
-      if(data?.connected&&(mode==='add-bank'||mode==='discover'||due)){
+      if(due){
         addFlowPending=true;
         await checkAddedBank();
       }
