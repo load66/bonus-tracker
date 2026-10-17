@@ -1,14 +1,14 @@
 # Audit progress
 
-Active agent: codex — Finance retirement/cash accuracy hotfix — branch codex/finance-cash-retirement-fix
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
 
 - Source: SimpleFIN add-bank frontend v3.4.97 ready for merge, PR #155
-- In progress: v3.4.97 GitHub Pages release verification
-- Next step: merge PR #155 after final checkpoint CI; verify main Pages exact assets and production three-browser audit; then start queued Finance Categories v2 #156
+- In progress: Finance v3.4.98 retirement/cash product-aware classifier, PR #160 pending release verification
+- Next step: verify PR #160 CI/three-browser matrix, merge, confirm GitHub Pages exact assets and production audit; resume deferred releases
 
 ## Release 1 (v3.4.94)
 
@@ -50,3 +50,13 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 - Test status: Backend CI 39056471927 PASS; frontend four unit areas and Chromium/Firefox/WebKit PASS on 39057944836
 - Deployment status: Frontend pending main-branch Pages release and production asset/browser audit
 - Handoff: Active agent none after verified branch tests; queued next release is Finance Categories v2 issue #156
+
+## Finance v3.4.98 — account product classification
+
+- PR: https://github.com/load66/bonus-tracker/pull/160
+- Fix: retirement savings plans no longer enter cash solely because their names contain generic savings terms; investment and brokerage product evidence takes precedence while real deposits remain cash
+- Accuracy: existing provider account and history remain unchanged; explicit saved owner classifications and balance exclusions retain priority
+- Regression coverage: synthetic SimpleFIN/Plaid investment and cash group totals, exact cents, metadata contradictions, and 320/375/390px browser detail sheets
+- Version: 3.4.98, offline cache bt-v3.4.98-retirement1, unified classifier asset cache-busted
+- Status: pending exact merge commit and GitHub Pages production audit
+- Handoff: Active agent none once the source release candidate is staged; deferred categorization and auto-sync workstreams require a fresh ownership checkpoint
