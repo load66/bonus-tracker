@@ -161,7 +161,7 @@
     }).filter(x=>x.account.currency==='USD'&&x.balance&&x.profile.kind!=='unclassified');
     const exclusions=profileEntries.filter(x=>x.profile.balanceMode==='exclude'||
       x.account.currency!=='USD'||x.profile.kind==='unclassified'||!usable.some(u=>u.account.key===x.account.key))
-      .map(x=>({name:x.account.name||x.account.bank||'Account',
+      .map(x=>({name:x.account.name||x.account.bank||'Account',accountKey:x.account.key,
         reason:x.profile.balanceMode==='exclude'?'excluded by settings':
           x.account.currency!=='USD'?'non-USD balance':
           x.profile.kind==='unclassified'?'account type needs review':'balance not updated'}));
