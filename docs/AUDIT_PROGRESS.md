@@ -1,14 +1,14 @@
 # Audit progress
 
-Active agent: none
+Active agent: codex — Release 2 Accuracy & Reliability — branch codex/finance-accuracy
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
 
 - Source merged: frontend v3.4.95, main commit 5330ae2c7e416b333af30e5cb4caafd2729cf4a0
-- In progress: Pages production verification for merged Finance v3.4.95
-- Next step: run verified main-branch release workflow, then confirm published asset hashes and production browser audit
+- In progress: Release 2 finance reconciliation, golden ledger and sync robustness; prior v3.4.95 Pages audit pending
+- Next step: add exact-cent balance snapshot, reconciliation and regression coverage; validate v3.4.95 production gate before releasing
 
 ## Release 1 (v3.4.94)
 
