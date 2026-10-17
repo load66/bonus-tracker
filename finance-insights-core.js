@@ -7,7 +7,9 @@
   'use strict';
   const DAY=86400000;
   const SPEND=new Set(['housing','loan','utilities','groceries','dining','transportation','shopping','health','entertainment','fees','taxes','travel','subscription','other','unreviewed']);
-  const excluded=new Set(['verification','refund','bonus','unreviewed']);
+  const excluded=new Set(['verification','refund','bonus','unreviewed','transfer','card_payment','investment_transfer']);
+  const recurringTransferSignals=new Set(['matched_internal_transfer','possible_transfer','card_payment','investment_transfer','transfer']);
+  const recurringTransferKinds=new Set(['card_payment','investment_contribution','investment_transfer']);
   function cents(value){
     const match=/^([+-]?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(value??'').trim());
     if(!match)return null;
@@ -106,8 +108,10 @@
       if(!original||original.pending||original.excludedFromTotals||
          !Number.isFinite(original.posted)||original.posted*1000>now+DAY)continue;
       const row=resolve(original),n=cents(row.amount);
-      if(n===null||n===0n||excluded.has(row.category)||row.category==='bonus')continue;
-      const signals=row.signals||[],label=getGuard()?.label(row);
+      if(n===null||n===0n||excluded.has(String(row.category||'').toLowerCase())||
+         recurringTransferKinds.has(row.kind)||
+         (row.signals||[]).some(signal=>recurringTransferSignals.has(signal)))continue;
+      const signals=row.signals||[];
       const type=signals.includes('card_payment')||row.kind==='card_payment'?'card_payment':
         row.category==='transfer'||signals.some(s=>['matched_internal_transfer','investment_transfer','transfer','possible_transfer'].includes(s))
           ?'transfer':n>0n?'income':'expense';
