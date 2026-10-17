@@ -922,6 +922,7 @@
     let name=String(p.displayName||account.name||TYPES[p.kind]||'Account').trim();
     // Strip only an explicit mask, never a meaningful number in a product name.
     name=name.replace(/(?:[·•*x]{2,}|ending\s*(?:in)?\s*)\s*\d{4}\s*$/i,'').trim();
+    if(/^\d{4}$/.test(last))name=name.replace(new RegExp('[ ·•*x]+'+last+'\\s*$','i'),'').trim();
     const bank=String(account.bank||'').trim();
     if(bank&&name.toLowerCase().startsWith((bank+' '+bank).toLowerCase()))name=name.slice(bank.length+1);
     return name+(/^\d{4}$/.test(last)?' ··'+last:'');
