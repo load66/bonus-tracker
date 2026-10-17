@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: codex — Finance product-aware account classification v3.4.99 — branch codex/finance-product-classification-v3499
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
@@ -10,7 +10,7 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 - Railway SUCCESS: merge commit 26dc4b2076f89157d6fe8356a90eaa244ac59cc3
 - Frontend release candidate: v3.4.98 automatic account discovery and Finance snapshot polling, PR https://github.com/load66/bonus-tracker/pull/159
 - Frontend tests: finance, cloud, bonus, UI unit suites PASS; three-browser matrix pending final commit
-- Next step: verify final PR CI; squash merge to main; confirm Pages published asset and production browser checks
+- Next step: verify v3.4.99 full tests + browser, merge clean main release, verify Pages and resume queued categorization work
 - Paused separate branch: Finance Categories v2; do not combine release branches
 
 ## Release 1 (v3.4.94)
@@ -53,3 +53,13 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 - Test status: Backend CI 39056471927 PASS; frontend four unit areas and Chromium/Firefox/WebKit PASS on 39057944836
 - Deployment status: Frontend pending main-branch Pages release and production asset/browser audit
 - Handoff: Active agent none after verified branch tests; queued next release is Finance Categories v2 issue #156
+
+## Finance v3.4.99 — Cash versus Investments product inference
+
+- Scope: pure frontend classification of automatic account types from provider metadata and product descriptions
+- Classification: retirement plans outrank generic savings, brokerage portfolios and investment securities enter Investments, genuine deposit checking/savings stay Cash
+- Protections: manually saved product types override inference; source balances, reviews, connections and transaction history are immutable
+- Regression: synthetic SimpleFIN and Plaid accounts, exact-cent Cash, Investments, Retirement and Net Worth totals; three mobile widths and browser engines
+- Release: v3.4.99, service worker bt-v3.4.99-classify1, unified classifier asset cache-busted
+- Merge: pending PR, CI and GitHub Pages production audit; preserves merged v3.4.98 zero-click SimpleFIN/Plaid integration
+- Handoff: Active agent none after finished code changes, with final verification still required
