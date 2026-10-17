@@ -599,8 +599,8 @@
       }
     }
     const attention=el('section',undefined,more,'finance-page-card');el('h3','Needs review',attention);
-    const cutoff=Math.floor(Date.now()/1000)-period*86400;
-    const signals=flattenTransactions().filter(r=>!r.pending&&r.posted>=cutoff&&r.posted<=Math.floor(Date.now()/1000)+300&&Array.isArray(r.signals)&&r.signals.some(x=>['possible_direct_deposit','possible_reversal','possible_fee','possible_recurring'].includes(x)));
+    const reviewCutoff=Math.floor(Date.now()/1000)-period*86400;
+    const signals=flattenTransactions().filter(r=>!r.pending&&r.posted>=reviewCutoff&&r.posted<=Math.floor(Date.now()/1000)+300&&Array.isArray(r.signals)&&r.signals.some(x=>['possible_direct_deposit','possible_reversal','possible_fee','possible_recurring'].includes(x)));
     if(!signals.length)el('p','No transactions need attention.',attention);
     else for(const row of signals.slice(0,8)){
       const line=el('article',undefined,attention,'finance-page-review-row'),copy=el('div',undefined,line);
