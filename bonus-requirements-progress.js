@@ -154,7 +154,7 @@
     const scoped=byProduct.size>0;
     return {mode:'structured',scopeVerified:scoped,requirements,
       notice:scoped
-        ?'Candidate activity is not a qualifying requirement. Confirm funding origin, payment rail, daily or statement balance coverage, timing and bank acceptance before completing the requirement.'
+        ?'Candidate activity is not a qualifying requirement. Confirm deposit origin, payment rail, daily or statement balance coverage, timing and bank acceptance before completing the requirement.'
         :'Candidate progress needs an exact checking/savings product match to verified promotion rules. No account has been inferred from its name.'};
   }
   return Object.freeze({evaluate,cents,decimal,metricFor,holdEnd,balanceCandidate,
