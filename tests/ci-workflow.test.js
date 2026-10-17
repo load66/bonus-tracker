@@ -14,6 +14,7 @@ assert.ok(workflow.includes('cancel-in-progress: false'));
 assert.ok(workflow.includes('needs: [plan, units]')&&workflow.includes('needs: [plan, units, browsers]'),'Every browser waits for unit areas and release waits for all browsers');
 assert.ok(workflow.includes('fail-fast: false')&&audit.includes('fail-fast: false'));
 assert.ok(browser.includes('mcr.microsoft.com/playwright:v1.58.2-noble'));
+assert.ok(browser.includes("chownSync(require('node:os').homedir()"),'Firefox home ownership matches the container user without replacing HOME');
 for(const text of [workflow,browser,audit])assert.ok(!/playwright[^\n]* install(?: --with-deps)? (?:chromium|firefox|webkit)/.test(text),'Never download browser binaries each run');
 assert.ok(audit.indexOf('Production WebKit first')<audit.indexOf('remaining-browsers:'));
 assert.ok(audit.includes('needs: safari'),'Production Chromium/Firefox follow Safari');
