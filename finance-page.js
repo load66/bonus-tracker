@@ -711,15 +711,18 @@
         }
         const short=v=>{const value=Number(v)/100;return Math.abs(value)>=1000?
           '$'+(value/1000).toFixed(1)+'K':money(value.toFixed(2),'USD')};
-        el('small','Brokerage '+(hidden?'••••••':short(totals.brokerage))+
-          ' · Retirement '+(hidden?'••••••':short(totals.retirement)),info);
+        el('small','Brokerage '+(holdings.some(x=>x.kind==='brokerage')?
+          (hidden?'••••••':short(totals.brokerage)):'—')+
+          ' · Retirement '+(holdings.some(x=>x.kind==='retirement')?
+          (hidden?'••••••':short(totals.retirement)):'—'),info);
       }else if(kind==='creditCards')el('small','Owed',info);
       else{
         const details=summary.netWorthGroupAccounts?.other||[];
         el('small',details.length===1?(details[0].bank||details[0].name):'Other included assets and liabilities',info);
       }
       const value=el('span',undefined,row,'finance-overview-row-value');
-      el('strong',summary.netWorthAvailable?amount(groups[kind],'USD'):'—',value);
+      const classified=summary.netWorthGroupAccounts?.[kind]||[];
+      el('strong',summary.netWorthAvailable&&classified.length?amount(groups[kind],'USD'):'—',value);
       el('span','›',value,'finance-overview-chevron');
     }
     const quick=el('div',undefined,host,'finance-overview-actions');
