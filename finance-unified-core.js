@@ -205,6 +205,13 @@
           ['bonus','refund','verification'].includes(row.category)||
           (row.signals||[]).some(x=>['paycheck','possible_direct_deposit','possible_bonus','possible_refund'].includes(x))||
           payroll)continue;
+        // Equal-valued unrelated purchases and deposits are not proof of a
+        // self-transfer. Preserve known household expenses and ordinary income.
+        const nonTransfers=new Set(['groceries','dining','shopping','housing','utilities',
+          'transportation','health','entertainment','fees','taxes','travel','subscription','loan']);
+        if(value<0n&&nonTransfers.has(row.category))continue;
+        if(value>0n&&row.category==='income'&&!(row.signals||[]).some(signal=>
+          ['possible_transfer','transfer','plaid_transfer','investment_transfer'].includes(signal)))continue;
         transferRows.push({account:key,row,value});
       }
     }
