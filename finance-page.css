@@ -859,3 +859,55 @@
  .finance-page .finance-page-investment-metric{padding:12px}
  .finance-page .finance-page-transaction-scopes{margin-right:0}
 }
+
+
+/* Finances 3.4.82: one clear net worth card, details on demand. */
+.finance-page .finance-page-networth-card{
+  display:grid;gap:12px;min-width:0;overflow:visible;
+}
+.finance-page .finance-page-networth-card>.finance-page-big-number{
+  font-size:clamp(30px,8vw,44px);line-height:1.14;
+  margin-top:0;letter-spacing:-.045em;font-variant-numeric:tabular-nums;
+}
+.finance-page .finance-page-networth-card .finance-page-month-change{
+  margin:0;color:#6AE2B8;font-size:12px;font-weight:700;
+}
+.finance-page .finance-page-networth-card .finance-page-month-change.is-negative{color:#F4A58F}
+.finance-page .finance-page-networth-review{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:8px;min-height:40px;border-top:1px solid #293741;
+  padding-top:10px;color:#B4C5CA;font-size:12px;
+}
+.finance-page .finance-page-networth-review .finance-page-chip{white-space:nowrap;min-height:36px}
+.finance-page .finance-page-networth-review-item{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:13px;padding:14px 0;border-bottom:1px solid #26343D;
+}
+.finance-page .finance-page-networth-review-copy{min-width:0;display:grid;gap:4px}
+.finance-page .finance-page-networth-review-copy strong{
+  font-size:13px;font-weight:710;overflow-wrap:anywhere
+}
+.finance-page .finance-page-networth-review-copy small{font-size:11px;color:#A6B3B9}
+.finance-page .finance-page-networth-review-item .finance-setting-row{
+  flex:0 0 auto;display:flex;align-items:center;gap:8px;font-size:11px
+}
+.finance-page .finance-page-networth-empty-chart{
+  position:relative;display:flex;align-items:center;justify-content:center;
+  min-height:116px;color:#536775;background:linear-gradient(180deg,#111A22,#131C23);
+  border-radius:13px;overflow:hidden;
+}
+.finance-page .finance-page-networth-empty-chart svg{
+  display:block;position:absolute;inset:2px;width:100%;height:90px;opacity:.54
+}
+.finance-page .finance-page-networth-empty-chart span{
+  position:relative;z-index:1;align-self:flex-end;color:#A8B6BB;
+  font-size:11px;padding:8px 5px;text-align:center;
+}
+.finance-page .finance-page-net-worth-split{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px
+}
+.finance-page .finance-page-net-worth-split .finance-page-tile{min-width:0}
+@media(max-width:420px){
+  .finance-page .finance-page-networth-card{gap:10px}
+  .finance-page .finance-page-networth-review{font-size:11px}
+}
