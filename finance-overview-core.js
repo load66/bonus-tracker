@@ -169,8 +169,10 @@
     for(const account of accounts){
       for(const row of Object.values(history[account.key]||{})){
         const value=cents(row?.amount);
-        if(value===null||row.pending||row.excludedFromTotals||!Number.isFinite(row.posted)||row.posted<monthStart||row.posted>now)continue;
-        if(investmentEntries.some(x=>x.account.key===account.key)){
+        const investmentAccount=investmentEntries.some(x=>x.account.key===account.key);
+        if(value===null||row.pending||(row.excludedFromTotals&&!investmentAccount)||
+           !Number.isFinite(row.posted)||row.posted<monthStart||row.posted>now)continue;
+        if(investmentAccount){
           if(value>0n&&/\b(?:dividend|interest)\b/i.test(row.description||''))investmentIncome+=value;
         }else if(value<0n&&(row.signals||[]).includes('investment_transfer'))invested-=value;
       }
