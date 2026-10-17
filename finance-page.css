@@ -348,3 +348,9 @@
     transition-duration:0ms!important;animation-duration:0ms!important
   }
 }
+
+/* Cash first: masked by default, one hero balance rather than two competing tiles. */
+.finance-page .finance-page-hero-cash-label{display:block;margin-top:15px;color:var(--finance-muted);font-size:12px;font-weight:650}
+.finance-page .finance-page-hero-cash-value{display:block;margin:3px 0 2px;color:var(--finance-text);font-size:clamp(31px,7vw,46px);font-weight:760;letter-spacing:-.055em;line-height:1.15;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.finance-page .finance-page-hero-cash-status{display:block;color:var(--finance-muted);font-size:11px;margin-bottom:12px}
+.finance-page .finance-page-loading-hint{color:var(--finance-accent)!important}
