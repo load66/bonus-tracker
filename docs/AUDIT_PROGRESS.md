@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: codex — Finance product-aware account classification v3.4.99 — branch codex/finance-product-classification-v3499
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
