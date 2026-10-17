@@ -33,7 +33,7 @@
     refreshed=true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=3.4.85-bottomnav1',{updateViaCache:'none'}).then(reg=>{
+  navigator.serviceWorker.register('./sw.js?v=3.4.86-plaidlink1',{updateViaCache:'none'}).then(reg=>{
     const activate=worker=>{try{worker&&worker.postMessage({type:'SKIP_WAITING'})}catch{}};
     if(reg.waiting)activate(reg.waiting);
     reg.addEventListener('updatefound',()=>{
@@ -53,7 +53,7 @@
 <script src="./eligibility-gate.js?v=3.4.74"></script>
 <script src="./ui-feedback.js?v=3.4.74-feedback1"></script>
 <script src="./community-reports.js?v=3.4.74"></script>
-<script src="./app.js?v=3.4.85-bottomnav1"></script>
+<script src="./app.js?v=3.4.86-plaidlink1"></script>
 <script src="./source-resolver.js?v=3.4.74"></script>
 <script src="./engine.js?v=3.4.74"></script>
 <script src="./bank-rules.js?v=3.4.74"></script>
@@ -90,7 +90,7 @@
 <script src="./bonus-ai.js?v=3.4.74"></script>
 <script src="./finance-transfer-core.js?v=3.4.85-bottomnav1"></script>
 <script src="./finance-overview-core.js?v=3.4.85-bottomnav1"></script>
-<script src="./plaid-fallback.js?v=3.4.74-activity3"></script>
+<script src="./plaid-fallback.js?v=3.4.86-plaidlink1"></script>
 <script src="./bank-sync.js?v=3.4.74-activity3"></script>
 <script src="./finance-unified-core.js?v=3.4.85-bottomnav1"></script>
 <script src="./finance-insights-core.js?v=3.4.85-bottomnav1"></script>
