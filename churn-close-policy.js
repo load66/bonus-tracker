@@ -1,7 +1,7 @@
-/* BonusTracker v3.4.85 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
+/* BonusTracker v3.4.86 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
 (function(){
   'use strict';
-  const VER='3.4.85';
+  const VER='3.4.86';
   const SAFETY_BUFFER_DAYS=2;
 
   function decision(e){
