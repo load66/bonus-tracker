@@ -127,7 +127,7 @@
       netWorthAvailable:netWorthReady,netWorthBasedOn:usable.length,netWorthTotalAccounts:included.length,
       netWorthPartial:usable.length<included.length,assets:netWorthReady?decimal(assets):null,
       liabilities:netWorthReady?decimal(liabilities):null,netWorth:netWorthReady?decimal(assets-liabilities):null,
-      netWorthHistory:netWorthHistory.slice(-90),
+      netWorthHistory:netWorthHistory.slice(-731),
       classifiedAccounts:profileEntries.filter(x=>x.profile.kind!=='unclassified').length,
       excludedFromNetWorth:profileEntries.filter(x=>x.profile.balanceMode==='exclude').length
     });
