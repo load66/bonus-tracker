@@ -18,6 +18,8 @@
   // Finances never treats an unconfirmed promotional credit as verified income.
   const FINANCE_CATEGORIES=Object.fromEntries(Object.entries(CATEGORIES).filter(([key])=>key!=='bonus'));
   const financeCategory=key=>key==='bonus'?'Needs review':(FINANCE_CATEGORIES[key]||'Needs review');
+  const categoryChip=row=>window.BTFinanceTransfer?.label(row)||financeCategory(row.category);
+  const neutralChip=row=>!!window.BTFinanceTransfer?.label(row)||['transfer','verification'].includes(row.category);
   function displayMerchant(row){
     const merchant=String(row.merchant||'').trim();
     if(!merchant||/^(transaction|transfer|purchase|payment|debit|credit)$/i.test(merchant))
@@ -490,7 +492,7 @@
       const item=el('div',undefined,list,'finance-page-preview-row');
       const copy=el('div',undefined,item,'finance-page-preview-copy');
       el('strong',row.merchant||row.description||'Transaction',copy);
-      el('span',financeCategory(row.category),copy,'finance-page-transaction-category'+(['transfer','verification'].includes(row.category)?' is-neutral':''));
+      el('span',categoryChip(row),copy,'finance-page-transaction-category'+(neutralChip(row)?' is-neutral':''));
       el('small',(row.account.bank||'Bank')+' · '+date(row.posted),copy);
       el('b',signedFinanceAmount(row),item,'finance-page-preview-value'+(Number(row.amount)>0?' is-credit':''));
     }
@@ -765,7 +767,7 @@
       const chart=card(parent,'Category breakdown');
       if(!current.categories.length){el('p',current.hasData?'No spending transactions in this month.':'No transaction history for this month.',chart,'finance-page-hint');return}
       const donut=el('div',undefined,chart,'finance-spending-donut-row');
-      const circle=el('div',undefined,donut,'finance-page-donut finance-spending-donut');
+      const circle=el('div',undefined,donut,'finance-spending-donut');
       let from=0;
       const segments=current.categories.map((v,i)=>{
         const next=from+v.percentage;
@@ -789,8 +791,9 @@
         let note=item.count+' transaction'+(item.count===1?'':'s')+' · '+item.percentage.toFixed(0)+'%';
         if(previous.hasData&&old){
           const change=Number(item.amount)-Number(old.amount);
-          if(change!==0)note+=' · '+moneyText(Math.abs(change).toFixed(2))+(change>0?' more':' less');
-          else note+=' · No change';
+          if(change!==0&&Number(old.amount)>0)note+=' · '+(change>0?'↑ ':'↓ ')+Math.abs(change/Number(old.amount)*100).toFixed(0)+'% vs '+monthLabel(previousMonth);
+          else if(change!==0)note+=' · New vs '+monthLabel(previousMonth);
+          else note+=' · No change vs '+monthLabel(previousMonth);
         }
         el('small',note,desc);
         el('b',moneyText(item.amount),open,'finance-spending-category-amount');
@@ -1099,7 +1102,7 @@
         top.setAttribute('aria-expanded',String(open));top.setAttribute('aria-label',displayMerchant(row)+' details');
         const copy=el('span',undefined,top,'finance-page-transaction-copy');
         el('strong',displayMerchant(row),copy);
-        el('span',financeCategory(row.category),copy,'finance-page-transaction-category'+(['transfer','verification'].includes(row.category)?' is-neutral':''));
+        el('span',categoryChip(row),copy,'finance-page-transaction-category'+(neutralChip(row)?' is-neutral':''));
         if(row.categorySource==='ai')el('small','Auto',copy,'finance-page-auto-tag');
         el('small',row.account.name||row.account.bank||'Account',copy);
         const value=el('span',undefined,top,'finance-page-transaction-value');
