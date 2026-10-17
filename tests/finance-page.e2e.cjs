@@ -263,7 +263,7 @@ const base=()=>({
       state.accounts.push({key:RET,bank:'Example Plan Provider',
         name:'Example Employer 401(k) Retirement Savings Plan',
         accountType:'depository',accountSubtype:'savings',currency:'USD',
-        balance:'59280.56',balanceDate:NOW-200});
+        balance:'13755.42',balanceDate:NOW-200});
       state.monitoredAccounts.push(RET);
       state.transactions[RET]={};
       await page.evaluate(()=>window.btRefreshFinancesPage());
@@ -277,7 +277,7 @@ const base=()=>({
           'Retirement plan may not appear in cash accounts at '+width);
         await cashSheet.getByRole('button',{name:'Close'}).click();
         const retirementRow=section.getByRole('button',{name:'View Investments accounts'});
-        await retirementRow.getByText('$59,280.56',{exact:true}).waitFor();
+        await retirementRow.getByText('$13,755.42',{exact:true}).waitFor();
         await retirementRow.click();
         const investmentSheet=page.getByRole('dialog',{name:'Investments accounts'});
         assert.ok((await investmentSheet.innerText()).includes('401(k)'),
