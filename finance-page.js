@@ -616,6 +616,13 @@
     }
     el('p','Compare anything unusual with your bank statement.',attention,'finance-page-hint');
   }
+  function archiveMonthPending(month){
+    return ['simplefin','plaid'].some(source=>{
+      const state=sourceSnapshot(source);
+      return state?.connected&&(state.historyMonths||[]).includes(month)&&
+        !archives[source]?.[month];
+    });
+  }
   function spendMonth(month){
     return window.BTFinanceInsights?.spent(flattenTransactions(),month)||
       {month,total:'0.00',income:'0.00',uncategorized:0,categories:[],byDay:{}};
@@ -643,6 +650,12 @@
       {month:'long',year:'numeric'}),head);
     const future=insight.monthShift(spendingMonth,1)>insight.monthKey(Date.now());
     const next=action(head,'Next month ›',()=>moveSpendingMonth(1),'finance-page-chip');next.disabled=future;
+    if(archiveMonthPending(spendingMonth)){
+      statusMessage(root,'Importing earlier transactions',
+        'This month is still loading. Spending will appear after the bank history is ready.');
+      loadArchiveMonth(spendingMonth);
+      return;
+    }
     const overview=sectionTitle(root,'Spending this month');
     el('strong',amount(value.total,'USD'),overview,'finance-page-big-number');
     el('small','Based on categorized purchases from connected accounts',overview);
@@ -1129,7 +1142,9 @@
     const calculated=window.BTFinanceOverview?.summarize(summaryState,{days:period});
     const trustedTotals=!summaryState.incompleteProviders&&!summaryState.excludedForReview;
     const summary={...calculated,
-      complete:!!calculated?.complete&&trustedTotals&&!summaryState.historyIncomplete&&!summaryState.malformedActivity,
+      complete:!!calculated?.complete&&trustedTotals&&!summaryState.historyIncomplete&&!summaryState.malformedActivity&&
+        !(period>90&&Object.keys(archives).some(source=>(
+          sourceSnapshot(source)?.historyMonths||[]).some(month=>archiveMonthPending(month)))),
       cashAvailable:!!calculated?.cashAvailable&&trustedTotals,
       netWorthAvailable:!!calculated?.netWorthAvailable,
       netWorthPartial:!!calculated?.netWorthPartial||!trustedTotals,
