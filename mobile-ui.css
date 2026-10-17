@@ -204,7 +204,7 @@
 /* Tracker candidate alerts and action clearance above iPhone safe-area navigation. */
 .bt-tracker-alerts{padding:0 12px 10px;display:grid;gap:5px}
 .bt-tracker-alerts span{font-size:11px;line-height:1.4;color:#ffd6aa;background:#332b21;border:1px solid #816345;border-radius:9px;padding:7px 9px}
-.finance-bonus-evidence-section{max-width:100%;min-width:0;padding-bottom:12px}
+.bonus-review-panel{max-width:100%;min-width:0;padding-bottom:12px}
 @media(max-width:430px){
  .tabs{min-height:calc(66px + env(safe-area-inset-bottom))!important}
  .fab,.bt-floating-actions,.floating-actions,.bt-tools-floating,.bt-floating-archive{bottom:calc(94px + env(safe-area-inset-bottom,0px))!important}

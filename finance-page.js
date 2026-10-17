@@ -1743,7 +1743,7 @@
     else if(view==='recurring')recurringView(host);
     else overview(host,summary);
     if(view==='accounts'||view==='overview'){
-      const evidence=el('section',undefined,host,'finance-bonus-evidence-section');
+      const evidence=el('section',undefined,host,'bonus-review-panel');
       window.BTBonusEvidence?.mount(evidence);
     }
   }
