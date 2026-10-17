@@ -232,3 +232,67 @@ const legacyWorth=finance.summarize(core.safeForSummary(legacyView),{now});
 const manualWorth=finance.summarize(core.safeForSummary(manualView),{now});
 assert.equal(legacyWorth.netWorth,'16200.00','Cash plus investments determine total Net worth when included');
 assert.equal(manualWorth.netWorth,'1200.00','Legacy wallet/investment exclusions change totals only when genuinely automatic');
+
+
+// Cross-provider $1,000: the Plaid credit arrives before SimpleFIN's debit.
+// Every safeForSummary projection must automatically rebuild the reciprocal pair.
+const crossSimple=structuredClone(simple),crossPlaid=structuredClone(plaid);
+crossSimple.accounts[0].bank='Robinhood';crossSimple.accounts[0].name='Robinhood Checking ··2033';
+crossPlaid.accounts[0].bank='X money';crossPlaid.accounts[0].name='X money Checking';
+crossPlaid.transactions[b]={payment:{id:'payment',amount:'1000.00',posted:now-900,
+  pending:false,category:'income',categorySource:'automatic',merchant:'Payment',
+  description:'Payment',signals:[]}};
+crossSimple.transactions[a]={};
+const firstArrival=core.safeForSummary(core.combine({simplefin:crossSimple,plaid:crossPlaid}));
+assert.equal(firstArrival.transactions['plaid:'+b].payment.category,'unreviewed',
+  'A generic X money Payment is provisional, never household income');
+assert.ok(firstArrival.transactions['plaid:'+b].payment.signals.includes('possible_transfer'));
+assert.equal(firstArrival.transactions['plaid:'+b].payment.transferPairId,undefined);
+assert.equal(finance.summarize(firstArrival,{now,days:30}).income,'0.00',
+  'Provisional Payment cannot inflate Income while SimpleFIN catches up');
+crossSimple.transactions[a].debit={id:'robinhood-debit',amount:'-1000.00',posted:now-86400,
+  pending:false,category:'unreviewed',categorySource:'automatic',
+  merchant:'Outgoing ACH',description:'Outgoing ACH',signals:[]};
+const afterLateArrival=core.safeForSummary(core.combine({simplefin:crossSimple,plaid:crossPlaid}));
+const crossDebit=afterLateArrival.transactions['simplefin:'+a].debit;
+const crossCredit=afterLateArrival.transactions['plaid:'+b].payment;
+assert.equal(crossDebit.category,'transfer');
+assert.equal(crossCredit.category,'transfer');
+assert.equal(crossDebit.transferPairId,crossCredit.transferPairId,
+  'Opposite provider legs uniquely matched despite arriving a day apart');
+assert.equal(crossDebit.transferOtherAccountKey,'plaid:'+b);
+assert.equal(crossCredit.transferOtherAccountKey,'simplefin:'+a);
+assert.ok(crossDebit.signals.includes('matched_internal_transfer'));
+assert.ok(crossCredit.signals.includes('matched_internal_transfer'));
+assert.equal(finance.summarize(afterLateArrival,{now,days:30}).income,'0.00');
+assert.equal(finance.summarize(afterLateArrival,{now,days:30}).expenses,'0.00');
+assert.equal(crossPlaid.transactions[b].payment.category,'income',
+  'Original provider activity must remain immutable');
+const competing=structuredClone(crossSimple);
+competing.transactions[a].second={...competing.transactions[a].debit,id:'second',posted:now-83000};
+const ambiguousCross=core.safeForSummary(core.combine({simplefin:competing,plaid:crossPlaid}));
+assert.equal(ambiguousCross.transactions['plaid:'+b].payment.transferPairId,undefined,
+  'Two matching outflows must not produce an automatic match');
+assert.equal(ambiguousCross.transactions['plaid:'+b].payment.category,'unreviewed');
+const manuallyReviewed=structuredClone(crossPlaid);
+manuallyReviewed.transactions[b].payment.categorySource='user';
+manuallyReviewed.transactions[b].payment.category='income';
+const protectedCross=core.safeForSummary(core.combine({simplefin:crossSimple,plaid:manuallyReviewed}));
+assert.equal(protectedCross.transactions['plaid:'+b].payment.category,'income',
+  'Never overwrite a manual Income review, even with a matching debit');
+assert.equal(protectedCross.transactions['plaid:'+b].payment.transferPairId,undefined);
+const ruleReviewed=structuredClone(crossPlaid);
+ruleReviewed.transactions[b].payment.categorySource='user_rule';
+ruleReviewed.transactions[b].payment.category='transfer';
+const protectedRule=core.safeForSummary(core.combine({simplefin:crossSimple,plaid:ruleReviewed}));
+assert.equal(protectedRule.transactions['plaid:'+b].payment.category,'transfer');
+assert.equal(protectedRule.transactions['plaid:'+b].payment.transferPairId,undefined,
+  'Saved account rule must not be rewritten by an automatic pair');
+const payrollGuard=structuredClone(crossPlaid);
+payrollGuard.transactions[b].payment.description='Schreiber Foods Payroll';
+payrollGuard.transactions[b].payment.merchant='Schreiber Foods';
+payrollGuard.transactions[b].payment.signals=['possible_direct_deposit'];
+const salary=core.safeForSummary(core.combine({simplefin:crossSimple,plaid:payrollGuard}));
+assert.equal(salary.transactions['plaid:'+b].payment.category,'income',
+  'Schreiber payroll is not a self-transfer on an equal-amount day');
+assert.equal(salary.transactions['plaid:'+b].payment.transferPairId,undefined);
