@@ -26,16 +26,29 @@
     return amount!==null&&Number.isFinite(at)&&at>0&&at<=now+300&&at>=now-STALE_BALANCE_DAYS*DAY
       ?{amount,at}:null;
   }
-  const financialInstitution=/(?:\bcapital\s*one\b|\bchase\b|\bamerican\s*express\b|\bamex\b|\bdiscover\b|\bciti(?:bank)?\b|\brobinhood\b|\bfidelity\b|\bschwab\b|\bvanguard\b|\bsynchrony\b|\bbarclays\b)/i;
-  const financialAction=/(?:\b(?:pmt|pymt|payment|autopay|epay|crcardpmt|ccpmt)\b)/i;
-  const investmentInstitution=/(?:\brobinhood\b|\bfidelity\b|\bschwab\b|\bvanguard\b|\bbrokerage\b|\binvestment\b|\b401k\b|\broth\s*ira\b|\bira\b)/i;
-  const contributionAction=/(?:\b(?:contribution|contribute|deposit|funding|transfer)\b)/i;
+  const financialInstitution=/\b(?:bank|fcu|credit\s*union|savings?|checking|brokerage|investing|investment|ira|citibank|citi|u\.?\s*s\.?\s*bank|capital\s*one|chase|wells\s*fargo|bofa|bank\s*of\s*america|amex|american\s*express|discover|synchrony|lafayette|navy\s*federal|paypal|venmo|cash\s*app|zelle|x\s*money|one\s*pay|onepay|robinhood|fidelity|schwab|vanguard)\b/i;
+  const directed=/^\s*(?:to|from)\s+(.+?)\s*$/i;
+  const bareIssuer=/^\s*(?:capital\s*one|u\.?\s*s\.?\s*bank|citibank|citi|amex|american\s*express|discover)\s*$/i;
   function financialMovement(row){
-    const text=String(row.description||'')+' '+String(row.merchant||'');
-    return row.kind==='card_payment'||row.kind==='investment_contribution'||
-      (row.signals||[]).includes('matched_internal_transfer')||
-      (financialInstitution.test(text)&&financialAction.test(text))||
-      (investmentInstitution.test(text)&&contributionAction.test(text));
+    if(['user','user_rule'].includes(row.categorySource))return false;
+    const description=String(row.description||row.merchant||'').trim();
+    const text=description+' '+String(row.merchant||'');
+    const d=directed.exec(description);
+    if(d&&financialInstitution.test(d[1]))return true;
+    const amount=cents(row.amount);
+    if(amount!==null&&amount<0n&&bareIssuer.test(description))return true;
+    if(financialInstitution.test(text)&&/\b(?:pmt|payment|autopay|epay|crcardpmt|ccpmt)\b/i.test(text))return true;
+    if(/\b(?:robinhood|fidelity|schwab|vanguard|brokerage|investment|ira)\b/i.test(text)&&
+       /\b(?:contribution|contribute|deposit|funding|transfer)\b/i.test(text))return true;
+    if(row.kind==='card_payment'||row.kind==='investment_contribution'||
+       (row.signals||[]).includes('matched_internal_transfer'))return true;
+    const value=cents(row.amount);
+    if(value!==null&&value<0n&&String(row.category||'unreviewed')==='unreviewed'){
+      const abs=-value;
+      if((abs%100n===0n||abs>=100000n)&&(directed.test(description)||financialInstitution.test(description)||
+         (row.signals||[]).includes('possible_transfer')))return true;
+    }
+    return false;
   }
   function summarize(state={},options={}){
     const now=Number.isFinite(options.now)?Math.floor(options.now):Math.floor(Date.now()/1000);
@@ -66,7 +79,7 @@
         if(row.kind==='possible_bonus'&&n>0n)candidates++;
         if(row.kind==='possible_reversal'&&n<0n)reversals++;
         const category=String(row.category||'unreviewed');
-        if(category==='income'&&n>0n)income+=n;
+        if(category==='income'&&n>0n&&!financialMovement(row))income+=n;
         else if(n<0n&&!['transfer','verification','refund'].includes(category)&&
                 !financialMovement(row)){
           const amount=-n,label=SPENDING.has(category)?category:'unreviewed';
@@ -79,7 +92,7 @@
         const local=new Date(row.posted*1000);
         const key=String(local.getFullYear())+'-'+String(local.getMonth()+1).padStart(2,'0');
         const month=monthly[key]||(monthly[key]={income:0n,expenses:0n});
-        if(category==='income'&&n>0n)month.income+=n;
+        if(category==='income'&&n>0n&&!financialMovement(row))month.income+=n;
         if(n<0n&&!['transfer','verification','refund'].includes(category)&&
            !financialMovement(row))month.expenses-=n;
       }
