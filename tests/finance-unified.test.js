@@ -27,6 +27,11 @@ const delayed=structuredClone(plaid);delayed.lastSuccess=null;
 const partial=core.combine({simplefin:simple,plaid:delayed});
 assert.equal(partial.lastSuccess,now-90,'one delayed provider must not erase known financial activity');
 assert.equal(core.safeForSummary(partial).incompleteProviders,true);
+const failedAfterRecentSuccess={...simple,error:'Synthetic provider timeout'};
+const failedCombined=core.combine({simplefin:failedAfterRecentSuccess,plaid});
+assert.equal(failedCombined.sourceCount,2,'both providers remain visibly connected');
+assert.equal(core.safeForSummary(failedCombined).incompleteProviders,true,
+  'a provider error makes coverage partial even with a recent earlier success');
 assert.equal(core.detectedType({name:'Everyday Savings'}),'savings');
 assert.equal(core.detectedType({name:'Main checking'}),'checking');
 assert.equal(core.detectedType({name:'Account 001'}),'unclassified');
@@ -42,7 +47,19 @@ assert.ok(ambiguous.accounts.every(a=>a.possibleDuplicate));
 const excluded=core.safeForSummary(ambiguous);
 assert.equal(excluded.accounts.length,0,'suspected same-account links must not enter consolidated totals');
 assert.equal(excluded.excludedForReview,2);
+assert.equal(excluded.incompleteProviders,true,'unresolved overlaps prevent complete aggregate claims');
 assert.equal(finance.summarize(excluded,{now,days:30}).income,null);
+
+const hiddenBank=structuredClone(simple);
+hiddenBank.accountProfiles[a].hidden=true;
+const combinedHidden=core.combine({simplefin:hiddenBank,plaid});
+const safeHidden=core.safeForSummary(combinedHidden);
+assert.equal(combinedHidden.accounts.length,2,'hiding an account never removes its provider data');
+assert.equal(safeHidden.accounts.length,1,'hidden accounts do not appear in Finance totals');
+assert.equal(safeHidden.hiddenAccounts,1);
+assert.equal(finance.summarize(safeHidden,{now,days:30}).income,'50.00',
+  'transactions of hidden accounts must not enter income or spending summaries');
+assert.equal(hiddenBank.transactions[a].one.amount,'400.00','account history remains recoverable');
 assert.equal(simple.accounts[0].key,a,'source snapshots stay unchanged');
 assert.equal(twin.accounts[0].key,b,'the second provider is never overwritten');
 console.log('Unified Finance: provider isolation, type inference, full account/transaction aggregation, exact cents, stale-balance safety and overlap controls passed');

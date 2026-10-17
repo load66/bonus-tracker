@@ -44,7 +44,7 @@
           detectedType:detected,kind:saved.kind&&saved.kind!=='unclassified'?saved.kind:detected});
         const kind=saved.kind&&saved.kind!=='unclassified'?saved.kind:detected;
         accountProfiles[composite]={kind,balanceMode:saved.balanceMode||'exclude',
-          order:Number.isInteger(saved.order)?saved.order:499};
+          order:Number.isInteger(saved.order)?saved.order:499,hidden:saved.hidden===true};
         if((state.monitoredAccounts||[]).includes(account.key))monitoredAccounts.push(composite);
         if(state.mappings?.[account.key])mappings[composite]=state.mappings[account.key];
         if(Array.isArray(state.balanceHistory?.[account.key]))balanceHistory[composite]=state.balanceHistory[account.key];
@@ -85,15 +85,19 @@
     const duplicates=new Set(unified.possibleDuplicates.flat());
     // Omitting ambiguous accounts is explicit: consumers must disclose this
     // and must not use the result to claim a complete total/net worth.
-    const accounts=unified.accounts.filter(a=>!duplicates.has(a.key));
+    const hidden=new Set(unified.accounts.filter(a=>unified.accountProfiles?.[a.key]?.hidden).map(a=>a.key));
+    const accounts=unified.accounts.filter(a=>!duplicates.has(a.key)&&!hidden.has(a.key));
     const allowed=new Set(accounts.map(a=>a.key));
     const keep=obj=>Object.fromEntries(Object.entries(obj||{}).filter(([k])=>allowed.has(k)));
     return {...unified,accounts,transactions:keep(unified.transactions),mappings:keep(unified.mappings),
       monitoredAccounts:unified.monitoredAccounts.filter(k=>allowed.has(k)),
       accountProfiles:keep(unified.accountProfiles),balanceHistory:keep(unified.balanceHistory),
-      incompleteProviders:Object.values(unified.providerState).some(s=>s.connected&&
-        (s.stale||!Number.isFinite(s.lastSuccess)||s.lastSuccess<=0)),
-      excludedForReview:duplicates.size};
+      // A recent successful sync cannot override a newer provider failure or
+      // an excluded unresolved overlap. These figures remain partial.
+      incompleteProviders:duplicates.size>0||Object.keys(unified.sourceErrors||{}).length>0||
+        Object.values(unified.providerState).some(s=>s.connected&&
+          (s.stale||!Number.isFinite(s.lastSuccess)||s.lastSuccess<=0)),
+      excludedForReview:duplicates.size,hiddenAccounts:hidden.size};
   }
   return Object.freeze({combine,safeForSummary,detectedType,key});
 });

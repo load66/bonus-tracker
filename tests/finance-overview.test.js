@@ -112,4 +112,64 @@ result=summarize(classified,{now:NOW});
 assert.equal(result.cashAvailable,false,'stale deposit balances cannot produce a cash total');
 assert.equal(result.netWorthAvailable,false,'stale balances cannot produce net worth');
 
+
+const correctedLiabilities=structuredClone(classified);
+correctedLiabilities.accounts[1].balanceDate=NOW;
+correctedLiabilities.accountProfiles.savings.balanceMode='exclude';
+correctedLiabilities.accounts[2].balance='-50.00';
+correctedLiabilities.balanceHistory.card=[{observedAt:NOW,at:NOW,balance:'-50.00',currency:'USD'}];
+result=summarize(correctedLiabilities,{now:NOW});
+assert.equal(result.netWorthAvailable,true,'intentionally excluded accounts do not block net worth');
+assert.equal(result.assets,'1050.00','a credit balance on a liability account counts as an asset');
+assert.equal(result.liabilities,'0.00','a credit balance is not an absolute-valued liability');
+assert.equal(result.netWorth,'1050.00');
+assert.equal(result.excludedFromNetWorth,1);
+assert.equal(result.netWorthHistory.at(-1).value,'1050.00','history handles account credits and exclusions');
+
+const excludedAll=structuredClone(correctedLiabilities);
+for(const p of Object.values(excludedAll.accountProfiles))p.balanceMode='exclude';
+assert.equal(summarize(excludedAll,{now:NOW}).netWorthAvailable,false,'zero included accounts is unknown, not zero');
+
+
+const loanPaymentState={
+  lastSuccess:NOW,
+  accounts:[{...account('loan-cash'),balance:'500.00',balanceDate:NOW}],
+  monitoredAccounts:['loan-cash'],
+  accountProfiles:{'loan-cash':{kind:'checking',balanceMode:'asset',order:0}},
+  transactions:{'loan-cash':{payment:{...row('-150.00'),category:'loan',confidence:'high',categorySource:'automatic'}}}
+};
+const loanSummary=summarize(loanPaymentState,{now:NOW});
+assert.equal(loanSummary.expenses,'150.00','categorized real loan payments count as expenses');
+assert.equal(loanSummary.spending.loan,'150.00','loan category appears in spending summary');
+assert.equal(loanSummary.cashFlow,'-150.00','loan payment is not excluded as a transfer by default');
+
+
+const partialPlaidHistory={
+  lastSuccess:NOW,
+  accounts:[{...account('plaid-checking'),source:'plaid',historyComplete:false}],
+  monitoredAccounts:['plaid-checking'],
+  transactions:{'plaid-checking':{posted:{...row('250.00'),category:'income',confidence:'high',categorySource:'automatic'}}}
+};
+const partiallyCovered=summarize(partialPlaidHistory,{now:NOW});
+assert.equal(partiallyCovered.income,'250.00','observed categorized rows remain visible');
+assert.equal(partiallyCovered.historyIncomplete,true,'Plaid historical readiness remains explicit');
+assert.equal(partiallyCovered.complete,false,'categorized activity is not proof of history completeness');
+assert.equal(partiallyCovered.savingsRate,null,'savings rate must not claim incomplete provider history');
+partialPlaidHistory.accounts[0].historyComplete=true;
+assert.equal(summarize(partialPlaidHistory,{now:NOW}).complete,true,'confirmed Plaid history releases the coverage gate');
+
+
+const unconfirmedCredit={
+  lastSuccess:NOW,
+  accounts:[account('promotion-checking')],
+  monitoredAccounts:['promotion-checking'],
+  transactions:{'promotion-checking':{credit:{...row('200.00'),category:'bonus',
+    kind:'possible_bonus',confidence:'high',categorySource:'automatic'}}}
+};
+const promotionalSummary=summarize(unconfirmedCredit,{now:NOW});
+assert.equal(promotionalSummary.income,'0.00','unreviewed promotion credits are not verified income');
+assert.equal(promotionalSummary.unreviewed,1,'unconfirmed credits remain in the review queue');
+assert.equal(promotionalSummary.complete,false,'automatic bonus detection cannot certify financial classifications');
+assert.equal(promotionalSummary.candidates,1,'internal bonus evidence remains available');
+
 console.log('Financial observations passed: strict scope, multi-currency safety, exact cents, availability, coverage, privacy and non-mutation');

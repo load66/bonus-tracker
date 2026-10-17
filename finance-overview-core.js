@@ -7,7 +7,7 @@
 })(typeof window!=='undefined'?window:null,function(){
   'use strict';
   const DAY=86400,MAX_DAYS=90,STALE_BALANCE_DAYS=7;
-  const SPENDING=new Set(['housing','utilities','groceries','dining','transportation','shopping','health','entertainment','fees','taxes','travel','subscription','other']);
+  const SPENDING=new Set(['housing','loan','utilities','groceries','dining','transportation','shopping','health','entertainment','fees','taxes','travel','subscription','other']);
   function cents(value){
     const m=/^([+-]?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(value??'').trim());
     if(!m)return null;
@@ -58,9 +58,11 @@
         else if(SPENDING.has(category)&&n<0n){
           const amount=-n;expenses+=amount;spending[category]=(spending[category]||0n)+amount;
         }else if(category==='transfer')transfers++;
-        if(category==='unreviewed'||(row.categorySource!=='user'&&row.confidence!=='high'))unreviewed++;
+        if(category==='unreviewed'||category==='bonus'||(row.categorySource!=='user'&&row.confidence!=='high'))unreviewed++;
         if(Array.isArray(row.signals)&&row.signals.includes('possible_recurring'))recurring++;
-        const key=new Date(row.posted*1000).toISOString().slice(0,7);
+        // Use the same local calendar basis as the day-grouped Finance ledger.
+        const local=new Date(row.posted*1000);
+        const key=String(local.getFullYear())+'-'+String(local.getMonth()+1).padStart(2,'0');
         const month=monthly[key]||(monthly[key]={income:0n,expenses:0n});
         if(category==='income'&&n>0n)month.income+=n;
         if(SPENDING.has(category)&&n<0n)month.expenses-=n;
@@ -72,14 +74,18 @@
     const cashReady=cashEntries.length>0&&cashEntries.every(x=>x.account.currency==='USD'&&x.balance);
     const cash=cashReady?cashEntries.reduce((sum,x)=>sum+x.balance.amount,0n):null;
     const included=profileEntries.filter(x=>x.profile.balanceMode!=='exclude');
-    const netWorthReady=accounts.length>0&&included.length===accounts.length&&included.every(x=>x.account.currency==='USD'&&x.balance&&x.profile.kind!=='unclassified');
+    const netWorthReady=included.length>0&&included.every(x=>x.account.currency==='USD'&&x.balance&&x.profile.kind!=='unclassified');
     let assets=0n,liabilities=0n;
     if(netWorthReady)for(const x of included){
       if(x.profile.balanceMode==='asset')assets+=x.balance.amount;
-      else if(x.profile.balanceMode==='liability')liabilities+=x.balance.amount<0n?-x.balance.amount:x.balance.amount;
+      else if(x.profile.balanceMode==='liability'){
+        // A negative credit-card/loan balance is a credit owed to the user, not a debt.
+        if(x.balance.amount<0n)assets-=x.balance.amount;
+        else liabilities+=x.balance.amount;
+      }
     }
     const netWorthHistory=[];
-    if(accounts.length&&included.length===accounts.length&&included.every(x=>x.account.currency==='USD'&&x.profile.kind!=='unclassified')){
+    if(included.length>0&&included.every(x=>x.account.currency==='USD'&&x.profile.kind!=='unclassified')){
       const balanceHistory=state.balanceHistory&&typeof state.balanceHistory==='object'?state.balanceHistory:{};
       const times=[...new Set(accounts.flatMap(a=>(Array.isArray(balanceHistory[a.key])?balanceHistory[a.key]:[])
         .map(row=>row?.observedAt).filter(Number.isFinite)))].sort((a,b)=>a-b);
@@ -91,19 +97,23 @@
             .sort((a,b)=>b.observedAt-a.observedAt);
           const latest=rows[0],value=latest&&at-latest.observedAt<=STALE_BALANCE_DAYS*DAY?cents(latest.balance):null;
           if(value===null){valid=false;break}
-          point+=x.profile.balanceMode==='liability'?-(value<0n?-value:value):value;
+          point+=x.profile.balanceMode==='liability'?-value:value;
         }
         if(valid)netWorthHistory.push({at,value:decimal(point)});
       }
     }
     const missingAccounts=[...selected].filter(k=>!accounts.some(a=>a&&a.key===k)).length;
     const covered=usd.every(a=>history[a.key]&&typeof history[a.key]==='object'&&!Array.isArray(history[a.key]));
-    const complete=observations>0&&unreviewed===0&&unusable===0&&missingAccounts===0&&covered;
+    // Categorized rows do NOT imply complete provider history. Plaid explicitly
+    // reports when historical transactions have finished becoming available.
+    const historyIncomplete=state.incompleteProviders===true||accounts.some(a=>
+      a&&a.source==='plaid'&&a.historyComplete!==true);
+    const complete=observations>0&&unreviewed===0&&unusable===0&&missingAccounts===0&&covered&&!historyIncomplete;
     return Object.freeze({
       days,currency:'USD',connectedAccounts:accounts.length,selectedAccounts:selected.size,
       usdAccounts:usd.length,otherCurrencyAccounts:accounts.filter(a=>a&&selected.has(a.key)&&a.currency!=='USD').length,
       missingAccounts,otherCurrencies:[...new Set(accounts.filter(a=>a&&selected.has(a.key)&&a.currency!=='USD').map(a=>a.currency||'Unknown currency'))].sort(),
-      sourceAccounts,observations,candidates,reversals,unusable,pending,unreviewed,transfers,recurring,
+      sourceAccounts,observations,candidates,reversals,unusable,pending,unreviewed,transfers,recurring,historyIncomplete,
       hasSync:Number.isFinite(state.lastSuccess)&&state.lastSuccess>0,
       hasActivity:observations>0&&Number.isFinite(state.lastSuccess)&&state.lastSuccess>0,
       lastSync:Number.isFinite(state.lastSuccess)?state.lastSuccess:null,
