@@ -16,7 +16,7 @@
   function resetAddFlow(){
     clearAddFlowTimers();addFlowPending=false;addFlowFound=[];addFlowDraft=new Set();
     addFlowRetryIndex=0;addFlowBusy=false;addFlowBudgetStopped=false;
-    addFlowMessage='';addFlowNextRetryAt=null;addFlowReturnSeen=false;
+    addFlowMessage='';addFlowNextRetryAt=null;addFlowReturnSeen=false;lastAddFlowReturnAt=0;
   }
   function addBankRetry(){
     if(!addFlowPending||addFlowFound.length||addFlowBudgetStopped||addFlowRetryIndex>=ADD_BANK_RETRIES.length)return;
