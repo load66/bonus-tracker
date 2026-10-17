@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.5.1: Finance and bank-activity review removed.
+// Version 3.5.2: Finance and bank-activity review removed.
 
-const V = 'bt-v3.5.1-retire1';
+const V = 'bt-v3.5.2-safety1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
