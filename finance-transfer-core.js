@@ -29,6 +29,15 @@
     const value=amountCents(row.amount),text=String(row.description||row.merchant||'').trim();
     if(value===null||value===0n||row.pending)return null;
     if((row.signals||[]).includes('matched_internal_transfer'))return {category:'transfer',signal:'matched_internal_transfer'};
+    if(value>0n&&
+       (row.kind==='possible_bonus'||/\b(?:promotional\s+bonus|promotion(?:al)?\s+reward|bank\s+bonus|signup\s+bonus)\b/i.test(text)))
+      return {category:'bonus',signal:'possible_bonus'};
+    // A generic positive "Payment" from a linked financial account is not paycheck evidence.
+    // Await a unique opposite-bank leg, or let the user confirm a transfer.
+    const bank=String(row.account?.bank||row.bank||'');
+    if(value>0n&&/^payment(?:\s+received)?$/i.test(text)&&
+       /\b(?:x\s*money|bank|fcu|credit\s*union|robinhood|one\s*pay|onepay)\b/i.test(bank))
+      return {category:'unreviewed',signal:'possible_transfer'};
     const direction=fromTo.exec(text);
     if(direction&&destination.test(direction[1]))
       return {category:'transfer',signal:investor.test(direction[1])?'investment_transfer':'transfer'};
