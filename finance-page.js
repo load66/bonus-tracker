@@ -1751,7 +1751,7 @@
             window.BTFinanceReconcile.cents(issue.difference)),'USD'))+' — review'),()=>{
           const modal=sheet('Balance reconciliation',true);
           el('h3',accountTitle(account),modal);
-          el('p','This account's recent transactions do not explain its latest balance. Review the activity below.',modal,'finance-page-warning');
+          el('p','Recent transactions do not explain this account balance. Review the activity below.',modal,'finance-page-warning');
           el('small','Transactions are shown for review; no bank data has been changed.',modal);
           for(const transaction of issue.transactions){
             const entry=el('div',undefined,modal,'finance-page-detail-account');
