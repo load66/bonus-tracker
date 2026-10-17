@@ -211,9 +211,11 @@
         // self-transfer. Preserve known household expenses and ordinary income.
         const directMovement=/\b(?:internal\s+(?:sweep|transfer|move)|outgoing\s+ach|ach\s+transfer|to\s+(?:bank|checking|savings))\b/i.test(description);
         if(value<0n&&nonTransfers.has(row.category)&&!directMovement)continue;
-        if(value>0n&&row.category==='income'&&!(row.signals||[]).some(signal=>
-          ['possible_transfer','transfer','plaid_transfer','investment_transfer'].includes(signal)))continue;
-        transferRows.push({account:key,row,value});
+        // Ordinary income can be a competing candidate, preventing a false
+        // unique match, but must never itself be auto-classified as transfer.
+        const matchable=!(value>0n&&row.category==='income'&&!(row.signals||[]).some(signal=>
+          ['possible_transfer','transfer','plaid_transfer','investment_transfer'].includes(signal)));
+        transferRows.push({account:key,row,value,matchable});
       }
     }
     const matches=transferRows.map((left,i)=>transferRows.flatMap((right,j)=>{
@@ -224,7 +226,8 @@
     for(let i=0;i<matches.length;i++){
       if(matches[i].length!==1)continue;
       const j=matches[i][0];
-      if(j<=i||matches[j].length!==1||matches[j][0]!==i)continue;
+      if(j<=i||matches[j].length!==1||matches[j][0]!==i||
+        !transferRows[i].matchable||!transferRows[j].matchable)continue;
       const pairId=['internal',transferRows[i].account,transferRows[j].account,
         String(transferRows[i].row.id),String(transferRows[j].row.id)].join(':');
       const investments=key=>['brokerage','retirement'].includes(unified.accountProfiles?.[key]?.kind);
