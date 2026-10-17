@@ -1727,9 +1727,40 @@
     if(account.source==='simplefin'){const tip=el('p','To stop sharing this account at the bank connection too, update ',modal);const link=el('a','SimpleFIN Bridge',tip);link.href='https://bridge.simplefin.org/';link.target='_blank';link.rel='noopener noreferrer'}
   }
   function accounts(host){
+    const safe=window.BTFinanceUnified.safeForSummary(currentCombined);
+    const diagnostics=window.BTFinanceReconcile?.reconcileAll(safe)||[];
+    const healthByKey=new Map(diagnostics.map(row=>[row.key,row]));
     const card=el('section',undefined,host,'finance-page-card finance-page-accounts-card');
     const head=el('div',undefined,card,'finance-page-section-head');el('h3','Accounts ('+sortedAccounts().length+')',head);
     const add=action(head,'+',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');add.setAttribute('aria-label','Add account');
+    const dataHealth=el('section',undefined,card,'finance-page-card finance-page-data-health');
+    const healthHead=el('div',undefined,dataHealth,'finance-page-section-head');
+    el('h3','Data health',healthHead);
+    const off=diagnostics.filter(entry=>entry.status==='off');
+    const matched=diagnostics.filter(entry=>entry.status==='reconciled').length;
+    const unknown=diagnostics.filter(entry=>entry.status==='unknown').length;
+    el('small',off.length+' needs review · '+matched+' matched · '+unknown+' need more history',dataHealth);
+    if(off.length){
+      for(const issue of off){
+        const account=currentCombined.accounts.find(row=>row.key===issue.key);
+        if(!account)continue;
+        action(dataHealth,(accountTitle(account)+' · Off by '+
+          (hidden?'••••••':amount(window.BTFinanceReconcile.decimal(
+            window.BTFinanceReconcile.cents(issue.difference)<0n?
+            -window.BTFinanceReconcile.cents(issue.difference):
+            window.BTFinanceReconcile.cents(issue.difference)),'USD'))+' — review'),()=>{
+          const modal=sheet('Balance reconciliation',true);
+          el('h3',accountTitle(account),modal);
+          el('p','The reported balance and posted transactions do not match over this observation window.',modal,'finance-page-warning');
+          el('small','Transactions are shown for review; no bank data has been changed.',modal);
+          for(const transaction of issue.transactions){
+            const entry=el('div',undefined,modal,'finance-page-detail-account');
+            el('span',transaction.description||transaction.merchant||'Bank transaction',entry);
+            el('strong',amount(transaction.amount,account.currency),entry);
+          }
+        },'finance-page-button');
+      }
+    }else el('small',unknown?'No mismatches verified; some accounts still need complete history.':'No balance mismatches detected.',dataHealth,'finance-page-hint');
     if(currentCombined.possibleDuplicates?.length){
       const review=el('details',undefined,card,'finance-page-matching-accounts');el('summary','Review matching accounts',review);
       for(const pair of currentCombined.possibleDuplicates){
@@ -1757,6 +1788,15 @@
       accountIcon(button,account);const info=el('span',undefined,button,'finance-page-account-info');
       el('strong',accountTitle(account),info);el('small',account.bank+' · via '+account.sourceLabel,info,'finance-page-account-source');
       el('small',syncLabel(account.transactionLastSyncAt||sourceSnapshot(account.source)?.lastSuccess),info);
+      const health=healthByKey.get(account.key);
+      if(health){
+        const label=health.status==='reconciled'?'Matches bank ✓':
+          health.status==='off'?'Off by '+(hidden?'••••••':amount(window.BTFinanceReconcile.decimal(
+            window.BTFinanceReconcile.cents(health.difference)<0n?
+              -window.BTFinanceReconcile.cents(health.difference):window.BTFinanceReconcile.cents(health.difference)),'USD'))+' — review':
+          'Not enough history yet';
+        el('small',label,info,health.status==='off'?'finance-page-warning':'finance-page-coverage-label');
+      }
       if(account.source==='plaid'&&account.historyComplete===false){
         const now=Math.floor(Date.now()/1000),recent=Number(account.transactionLastSyncAt||0);
         const hrs=recent?Math.max(0,Math.floor((now-recent)/3600)):null;
