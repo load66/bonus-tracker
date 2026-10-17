@@ -128,6 +128,11 @@ const base=()=>({
       await section.locator('.finance-page-count').filter({hasText:'4 accounts'}).waitFor();
       await section.getByRole('heading',{name:'Connected accounts',exact:true}).waitFor();
       await section.getByRole('heading',{name:'Recent transactions',exact:true}).waitFor();
+      await section.getByRole('heading',{name:'Spending by category',exact:true}).waitFor();
+      assert.equal(await section.locator('.finance-page-donut').count(),1,
+        'The Finance Overview has a lightweight accessible category donut');
+      assert.ok((await section.locator('.finance-page-donut-legend').innerText()).includes('••••••'),
+        'The amount privacy toggle must also mask donut legend amounts');
       const previews=section.locator('.finance-page-preview-card');
       assert.equal(await previews.count(),2,'Account and transaction previews belong on the Finance home dashboard');
       assert.deepEqual((await section.locator('.finance-page-nav button').allTextContents()).map(t=>t.trim()),
