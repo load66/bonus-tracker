@@ -2219,8 +2219,10 @@
       if(document.visibilityState==='visible')passiveFinanceRefresh();
     });
   // Node's non-DOM test runtime must not retain a background timer.
-  if(typeof document.addEventListener==='function'&&typeof setInterval==='function')
-    setInterval(passiveFinanceRefresh,60000);
+  if(typeof document.addEventListener==='function'&&typeof setInterval==='function'){
+    const passiveTimer=setInterval(passiveFinanceRefresh,60000);
+    if(typeof passiveTimer?.unref==='function')passiveTimer.unref();
+  }
   function refresh(){
     window.BTBonusEvidence?.dispose();currentRoot=null;data=null;otherData=null;sessionIdentity=null;
     accountDraftProfiles={};dirtyAccounts.clear();
