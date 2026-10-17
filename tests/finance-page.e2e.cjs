@@ -293,6 +293,7 @@ const base=()=>({
       await section.getByRole('button',{name:/^Show 64 more/}).click();
       assert.equal(await section.locator('.finance-page-transaction').count(),264);
       for(const label of ['Overview','Spending','Recurring','Transactions','Accounts']){
+        await section.getByRole('button',{name:label,exact:true}).click();
         const tabs=section.locator('.finance-page-nav-shell');
         assert.equal(await tabs.evaluate(el=>getComputedStyle(el).position),'sticky','Finance tab shell must stick beneath the main header');
         assert.equal(await tabs.evaluate(el=>getComputedStyle(el).borderTopLeftRadius),'0px','No transparent rounded gap above the sticky Finance tabs');
@@ -309,7 +310,6 @@ const base=()=>({
           assert.ok(await periods.count(),'Cash-flow period controls exist');
           assert.equal(await periods.evaluate(el=>getComputedStyle(el).flexWrap),'nowrap');
         }
-        await section.getByRole('button',{name:label,exact:true}).click();
         for(const colorScheme of ['dark','light']){
           await page.emulateMedia({colorScheme});await page.setViewportSize({width:390,height:844});
           await page.evaluate(()=>window.scrollTo(0,0));
