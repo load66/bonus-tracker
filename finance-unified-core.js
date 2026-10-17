@@ -79,7 +79,8 @@
         const kind=saved.kind&&saved.kind!=='unclassified'?saved.kind:detected;
         accountProfiles[composite]={kind,balanceMode:saved.balanceMode||DEFAULT_TREATMENT[kind]||'exclude',
           order:Number.isInteger(saved.order)?saved.order:499,hidden:saved.hidden===true,
-          removed:!!account.removedAt,includeSpending:saved.includeSpending??['checking','credit_card'].includes(kind)};
+          removed:!!account.removedAt,includeSpending:!INVESTMENT_TYPES.has(kind)&&
+            (saved.includeSpending??['checking','credit_card','savings'].includes(kind))};
         if((state.monitoredAccounts||[]).includes(account.key))monitoredAccounts.push(composite);
         if(state.mappings?.[account.key])mappings[composite]=state.mappings[account.key];
         if(Array.isArray(state.balanceHistory?.[account.key]))balanceHistory[composite]=state.balanceHistory[account.key];
