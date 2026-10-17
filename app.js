@@ -4081,7 +4081,7 @@ function updateViewSearch(kind,value,cursor){
   const input=document.getElementById(id);
   if(input){input.focus({preventScroll:true});const position=Number.isInteger(cursor)?Math.min(cursor,input.value.length):input.value.length;input.setSelectionRange(position,position);}
 }
-function R(){captureProfileSectionState();const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;
+function R(){if(tab!=='tracker')window.btCloseTrackerEvidenceReview?.();captureProfileSectionState();const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;
   if(typeof window.btCaptureRadarDisclosures==='function')window.btCaptureRadarDisclosures();
   if(tab==='profiles'||tab==='health')tab='tracker';
   try{if(!window.__btAutoCleanupV384){entries=sortE(normalizeLifecycleEntries(entries));sv(SK,entries);window.__btAutoCleanupV384=true}}catch{}
@@ -4099,7 +4099,7 @@ function R(){captureProfileSectionState();const el=document.querySelector('.scro
     overview+='<div class="stats ops-stats"><div class="st"><div class="n">'+fM(metrics.collected)+'</div><div class="l">Collected</div></div><div class="st"><div class="n">'+fM(metrics.awaiting)+'</div><div class="l">Awaiting</div></div><div class="st"><div class="n">'+fM(metrics.inProgress)+'</div><div class="l">In Progress</div></div><div class="st"><div class="n">'+fM(metrics.actionNeeded)+'</div><div class="l">Action Needed</div></div></div>'
   }
   h+='</div></div><div class="scroll">';
-  if(tab==='tracker'){h+='<section class="tracker-overview" aria-label="Bonus totals">'+overview+'</section>';const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted)}
+  if(tab==='tracker'){h+='<section class="tracker-overview" aria-label="Bonus totals">'+overview+'</section>';h+='<div class="bt-tracker-review-access"><button type="button" onclick="btOpenTrackerEvidenceReview()">Review bank activity</button><small>Read-only suggestions · never marks bonuses complete</small></div>';const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted)}
   else if(tab==='archive'){const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted,true)}
   else if(tab==='finances')h+='<section id="bt-finances-page" class="finance-page" aria-label="My finances"></section>';
   else if(tab==='tax')h+=rTax();
@@ -6597,3 +6597,43 @@ const btOriginalToggleCk=toggleCk;
 toggleCk=function(id,i){return btVerifiedMutation(()=>btOriginalToggleCk(id,i));};
 const btOriginalToggleTimer=toggleTimer;
 toggleTimer=function(id,timerId){return btVerifiedMutation(()=>btOriginalToggleTimer(id,timerId));};
+
+/* Opt-in Tracker-only evidence review. No provider request on page load. */
+function btCloseTrackerEvidenceReview(){
+  window.BTBonusEvidence?.dispose();
+  document.getElementById('bt-tracker-evidence-modal')?.remove();
+}
+function btOpenTrackerEvidenceReview(){
+  if(tab!=='tracker')return;
+  btCloseTrackerEvidenceReview();
+  const overlay=document.createElement('div');
+  overlay.id='bt-tracker-evidence-modal';
+  overlay.className='bt-tracker-evidence-overlay';
+  overlay.setAttribute('role','dialog');
+  overlay.setAttribute('aria-modal','true');
+  overlay.setAttribute('aria-label','Review linked bank activity');
+  const sheet=document.createElement('div');
+  sheet.className='bt-tracker-evidence-sheet';
+  const header=document.createElement('div');
+  header.className='bt-tracker-evidence-header';
+  const title=document.createElement('strong');
+  title.textContent='Bonus evidence review';
+  const close=document.createElement('button');
+  close.type='button';close.textContent='Close';close.setAttribute('aria-label','Close evidence review');
+  close.addEventListener('click',btCloseTrackerEvidenceReview);
+  header.append(title,close);
+  const content=document.createElement('section');
+  content.className='bt-tracker-evidence-content';
+  sheet.append(header,content);
+  overlay.append(sheet);
+  overlay.addEventListener('click',event=>{if(event.target===overlay)btCloseTrackerEvidenceReview()});
+  document.body.append(overlay);
+  if(!window.BTBonusEvidence?.mount(content)){
+    btCloseTrackerEvidenceReview();
+    window.btNotify?.('Evidence review is unavailable. Reopen this panel after signing in.');
+    return;
+  }
+  close.focus();
+}
+window.btOpenTrackerEvidenceReview=btOpenTrackerEvidenceReview;
+window.btCloseTrackerEvidenceReview=btCloseTrackerEvidenceReview;

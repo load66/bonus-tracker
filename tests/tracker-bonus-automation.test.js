@@ -56,3 +56,6 @@ assert.ok(evidence.includes('reviewPayout(group.entryId,candidate)')&&evidence.i
 assert.ok(sync.includes('Link to '+String.fromCharCode(39))&&sync.includes('firstSeenAt'),'One-tap exact-cycle suggestion missing');
 assert.ok(mobile.includes('env(safe-area-inset-bottom'),'Mobile bottom clearance missing');
 console.log('Tracker automation: combined providers, linked employer, balances, external money, posted debit, confirmation, alerts and safe area passed');
+
+assert.ok(source.includes('function btOpenTrackerEvidenceReview()')&&source.includes('bt-tracker-evidence-modal'),'Evidence review must require a Tracker-only explicit modal action');
+assert.ok(evidence.includes("closest('#bt-tracker-evidence-modal, [data-synthetic-evidence-fixture]')"),'Private evidence must not mount in the Finance page automatically');

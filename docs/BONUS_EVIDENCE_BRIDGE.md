@@ -4,7 +4,7 @@
 
 Open the **Tracker** tab, tap **Review bank activity**, and sign in with the
 same BonusTracker cloud account if prompted. BonusTracker requests a read-only
-SimpleFIN snapshot only after that tap and shows a compact, opt-in review panel.
+combined SimpleFIN + Plaid snapshots only after that tap and shows a compact, opt-in review panel.
 
 - Review counts of **possible direct deposits**, **possible bonus payouts**,
   **possible service fees** and **possible reversals** for accounts already linked
@@ -22,7 +22,7 @@ SimpleFIN snapshot only after that tap and shows a compact, opt-in review panel.
 
 ## Evidence semantics
 
-The read-only panel uses public (owner-authorized) SimpleFIN transaction signals:
+The read-only panel uses owner-authorized SimpleFIN and Plaid transaction signals:
 
 | Signal | Required direction | Display |
 |---|---|---|
@@ -52,7 +52,7 @@ accounts and stale links are **review gaps**, not proof of an unpaid bonus.
 ## Security
 
 - The frontend calls only the existing owner-scoped
-  `GET /api/bonus-tracker/simplefin` endpoint with the user's bearer session.
+  `GET /api/bonus-tracker/simplefin` and `GET /api/bonus-tracker/plaid/accounts` endpoints with the user's bearer session.
 - No provider setup token, raw provider account ID or connection ID is
   handled by the new integration.
 - Descriptions, institution names, dates and errors are rendered with

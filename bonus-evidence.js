@@ -67,7 +67,7 @@
         return [source,payload];
       }));
       if(!(await sameOwner(auth,token)))throw Error('Sign-in changed. Reopen bank activity.');
-      if(call!==rev||!auth.connected()||!document.getElementById('bt-bonus-evidence')?.closest('#bt-finances-page'))return;
+      if(call!==rev||!auth.connected()||!document.getElementById('bt-bonus-evidence')?.closest('#bt-finances-page, #bt-tracker-evidence-modal'))return;
       const updated={};
       for(const result of results)if(result.status==='fulfilled')updated[result.value[0]]=result.value[1];
       if(!Object.keys(updated).length)throw Error('Neither provider is available. Try again.');
@@ -298,8 +298,8 @@
     if(snapshot||loading||saving||error||saveNotice)reset();
   }
   function mount(root){
-    // Never inject bank activity into Tracker or any other app section.
-    if(!root?.closest('#bt-finances-page'))return false;
+    // Mount only inside an explicit Tracker review dialog or synthetic Finance regression fixture.
+    if(!root?.closest('#bt-tracker-evidence-modal, [data-synthetic-evidence-fixture]'))return false;
     root.id='bt-bonus-evidence';root.className='bonus-evidence';
     root.setAttribute('role','region');
     root.setAttribute('aria-label','Bank bonus activity evidence');
@@ -310,6 +310,6 @@
     // Main-app redraws replace the Finance DOM before its authenticated mount
     // completes. Preserve the in-memory review state only while Finances itself
     // remains the active tab; switching away revokes it immediately.
-    if(!document.getElementById('bt-finances-page'))dispose();
+    if(!document.getElementById('bt-tracker-evidence-modal')&&!document.querySelector('[data-synthetic-evidence-fixture]'))dispose();
   });
 })();
