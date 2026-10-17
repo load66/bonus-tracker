@@ -153,7 +153,7 @@
     // Omitting ambiguous accounts is explicit: consumers must disclose this
     // and must not use the result to claim a complete total/net worth.
     const hidden=new Set(unified.accounts.filter(a=>unified.accountProfiles?.[a.key]?.hidden||
-      unified.accountProfiles?.[a.key]?.syncEnabled===false||a.removedAt).map(a=>a.key));
+      unified.accountProfiles?.[a.key]?.syncEnabled===false).map(a=>a.key));
     const accounts=unified.accounts.filter(a=>!duplicates.has(a.key)&&!secondary.has(a.key)&&!hidden.has(a.key));
     const allowed=new Set(accounts.map(a=>a.key));
     const keep=obj=>Object.fromEntries(Object.entries(obj||{}).filter(([k])=>allowed.has(k)));
