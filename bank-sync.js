@@ -192,6 +192,12 @@
     const finish=el('section',undefined,shell);finish.className='bank-connect-stage';
     if(connected){
       el('h4','Find your newly linked accounts',finish);
+      // First-time Bridge connection still deserves its own visible,
+      // verified confirmation; adding a subsequent bank uses addFlowMessage.
+      if(wizardResult&&!addFlowMessage){
+        const notice=el('p',wizardResult,finish);
+        notice.className='bank-connect-outcome';notice.setAttribute('role','status');
+      }
       if(addFlowMessage){
         const notice=el('p',addFlowMessage,finish);
         notice.className='bank-connect-outcome';notice.setAttribute('role','status');
