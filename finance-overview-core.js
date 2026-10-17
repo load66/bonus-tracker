@@ -119,7 +119,7 @@
       const signed=mode==='liability'?-x.balance.amount:x.balance.amount;
       const category=mode==='asset'&&['checking','savings'].includes(kind)?'cash':
         mode==='asset'&&['brokerage','retirement'].includes(kind)?'investments':
-        mode==='liability'&&kind==='credit_card'&&x.balance.amount>=0n?'creditCards':'other';
+        kind==='credit_card'?'creditCards':'other';
       groups[category]+=signed;
       groupAccounts[category].push({
         key:x.account.key,name:x.account.name||x.account.bank||'Account',
