@@ -353,7 +353,7 @@ const base=()=>({
       assert.ok((await section.locator('.finance-page-transaction').allInnerTexts()).some(t=>t.includes('NVDA')),
         'Investments scope shows brokerage buys');
       await section.locator('[data-scope="all"]').click();
-      const transfers=section.locator('.finance-page-transaction').filter({hasText:'To Brokerage'});
+      const transfers=section.locator('.finance-page-transaction').filter({hasText:'Investment transfer'});
       assert.equal(await transfers.count(),1,'Cash-to-brokerage paired transfer displays once in All');
       await transfers.first().getByRole('button').click();
       const pair=page.getByRole('dialog',{name:/Transaction details/});
