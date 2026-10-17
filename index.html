@@ -33,7 +33,7 @@
     refreshed=true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=3.4.86-plaidlink1',{updateViaCache:'none'}).then(reg=>{
+  navigator.serviceWorker.register('./sw.js?v=3.4.87-addon-removal1',{updateViaCache:'none'}).then(reg=>{
     const activate=worker=>{try{worker&&worker.postMessage({type:'SKIP_WAITING'})}catch{}};
     if(reg.waiting)activate(reg.waiting);
     reg.addEventListener('updatefound',()=>{
@@ -53,7 +53,7 @@
 <script src="./eligibility-gate.js?v=3.4.74"></script>
 <script src="./ui-feedback.js?v=3.4.74-feedback1"></script>
 <script src="./community-reports.js?v=3.4.74"></script>
-<script src="./app.js?v=3.4.86-plaidlink1"></script>
+<script src="./app.js?v=3.4.87-addon-removal1"></script>
 <script src="./source-resolver.js?v=3.4.74"></script>
 <script src="./engine.js?v=3.4.74"></script>
 <script src="./bank-rules.js?v=3.4.74"></script>
@@ -68,14 +68,10 @@
 <script src="./bank-rules-academy.js?v=3.4.74"></script>
 <script src="./churn-profile-memory.js?v=3.4.74"></script>
 <script src="./profile-registry.js?v=3.4.74"></script>
-<script src="./profile-registry-academy.js?v=3.4.74"></script>
-<script src="./profile-db.js?v=3.4.74"></script>
+<script src="./profile-registry-academy.js?v=3.4.87-addon-removal1"></script>
 <script src="./controller.js?v=3.4.74"></script>
-<script src="./profile-library-selftest.js?v=3.4.74"></script>
-<script src="./profile-library-selftest-academy.js?v=3.4.74"></script>
-<script src="./learning-inbox-conflict.js?v=3.4.74"></script>
 <script src="./professional-upgrades.js?v=3.4.74"></script>
-<script src="./close-rules-integration.js?v=3.4.74"></script>
+<script src="./close-rules-integration.js?v=3.4.87-addon-removal1"></script>
 <script src="./wells-professional-runtime.js?v=3.4.74"></script>
 <script src="./eligibility-editor.js?v=3.4.74"></script>
 <script src="./churn-close-policy.js?v=3.4.86-plaidlink1"></script>
@@ -85,7 +81,7 @@
 <script src="./smart-attention.js?v=3.4.74-action1"></script>
 <script src="./bank-bonuses.js?v=3.4.74-scope2"></script>
 <script src="./bonus-ai-auth.js?v=3.4.74"></script>
-<script src="./cloud-backup-core.js?v=3.4.74"></script>
+<script src="./cloud-backup-core.js?v=3.4.87-addon-removal1"></script>
 <script src="./cloud-backup.js?v=3.4.74"></script>
 <script src="./bonus-ai.js?v=3.4.74"></script>
 <script src="./finance-transfer-core.js?v=3.4.85-bottomnav1"></script>
@@ -98,6 +94,6 @@
 <script src="./bonus-evidence-core.js?v=3.4.85-bottomnav1"></script>
 <script src="./bonus-requirements-progress.js?v=3.4.85-bottomnav1"></script>
 <script src="./bonus-evidence.js?v=3.4.85-bottomnav1"></script>
-<script src="./mobile-analyzer.js?v=3.4.86-plaidlink1"></script>
+<script src="./mobile-analyzer.js?v=3.4.87-addon-removal1"></script>
 </body>
 </html>
