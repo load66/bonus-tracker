@@ -67,7 +67,9 @@
         const result=await request('/first-sync',{method:'POST',body:JSON.stringify({accounts:on})});
         data=result;
         addFlowMessage=result.syncStatus==='synced'?'First transactions synced.':
-          result.syncStatus==='waiting'?'Waiting for first update. Daily request limit reached.':
+          result.syncStatus==='waiting'&&result.reason==='budget_exhausted'?
+            'Waiting for first update. Daily request limit reached.':
+          result.syncStatus==='waiting'?'Waiting for first update. Bank transaction history is not ready.':
           'Account settings saved. No new transactions were requested.';
         if(result.syncStatus==='waiting'&&result.nextRetryAt)
           addFlowMessage+=' Updates resume at '+new Date(result.nextRetryAt*1000).toLocaleString()+'.';
