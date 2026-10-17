@@ -392,6 +392,8 @@
       },'finance-page-nav-button'+(view===id?' is-active':''));
       b.setAttribute('aria-current',view===id?'page':'false');
     }
+    // Finance navigation leads the scrollable workspace and sticks directly below the app header.
+    host.insertBefore(nav,host.firstChild);
     queueMicrotask(()=>{if(!nav.isConnected)return;const active=nav.querySelector('[aria-current=page]');if(active&&active.offsetLeft+active.offsetWidth>nav.scrollLeft+nav.clientWidth)nav.scrollLeft=active.offsetLeft+active.offsetWidth-nav.clientWidth+12;});
     return summary;
   }
@@ -1209,7 +1211,7 @@
     window.BTBonusEvidence?.dispose();
     host.replaceChildren();
     currentCombined=unified();
-    const notice=el('p',saveNotice,host,'finance-page-notice');notice.setAttribute('role',saveNotice?'alert':'status');
+    if(saveNotice){const notice=el('p',saveNotice,host,'finance-page-notice');notice.setAttribute('role','alert');}
     if(!data){const skeleton=statusMessage(host,'Loading accounts','Checking secure connections…');skeleton.classList.add('finance-skeleton');skeleton.setAttribute('aria-busy','true');return}
     if(!currentCombined?.connected){
       statusMessage(host,data?.error?'Bank connections unavailable':'Connect a bank',data?.error||'All of your supported accounts will appear in one dashboard.');
