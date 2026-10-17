@@ -14,10 +14,9 @@
     entertainment:'Entertainment',fees:'Fees',taxes:'Taxes',travel:'Travel',
     subscription:'Subscriptions',transfer:'Transfer',refund:'Refund',verification:'Account verification',loan:'Loan payment',bonus:'Bank bonus',other:'Other'
   };
-  // Keep 'bonus' as a persisted category for canonical tracker/evidence logic;
-  // Finances never treats an unconfirmed promotional credit as verified income.
-  const FINANCE_CATEGORIES=Object.fromEntries(Object.entries(CATEGORIES).filter(([key])=>key!=='bonus'));
-  const financeCategory=key=>key==='bonus'?'Needs review':(FINANCE_CATEGORIES[key]||'Needs review');
+  // Bonus credits appear separately for review; they do not verify a tracker payout.
+  const FINANCE_CATEGORIES={...CATEGORIES,bonus:'Bonus'};
+  const financeCategory=key=>FINANCE_CATEGORIES[key]||'Needs review';
   const categoryChip=row=>window.BTFinanceTransfer?.label(row)||financeCategory(row.category);
   const neutralChip=row=>!!window.BTFinanceTransfer?.label(row)||['transfer','verification'].includes(row.category);
   function displayMerchant(row){
@@ -1149,7 +1148,7 @@
     if(spendingMode==='income'){
       const income=card(root,'Income sources');
       const byMerchant=new Map();
-      for(const row of rows.filter(row=>inMonth(row)&&row.category==='income'&&!row.pending&&!row.excludedFromTotals&&Number(row.amount)>0)){
+      for(const row of rows.filter(row=>inMonth(row)&&window.BTFinanceTransfer.effective(row).category==='income'&&!row.pending&&!row.excludedFromTotals&&Number(row.amount)>0)){
         const key=I.merchant(row),group=byMerchant.get(key)||{name:displayMerchant(row),amount:0,count:0};
         group.amount+=Number(row.amount);group.count++;byMerchant.set(key,group);
       }
@@ -1239,10 +1238,11 @@
   function recurringView(host){
     const insight=window.BTFinanceInsights;
     if(!insight){statusMessage(host,'Recurring unavailable','Refresh Finances to load recurring payments.');return}
-    const raw=insight.recurring(flattenTransactions(),Date.now());
-    const list=raw.filter(item=>!financePrefs.recurring?.[item.key]?.dismissed);
-    const upcoming=insight.upcoming(list,Date.now(),14);
-    const visible=sectionTitle(host,'Upcoming payments','Estimated from patterns in available account history');
+    const list=insight.recurring(flattenTransactions(),Date.now(),financePrefs.recurring)
+      .filter(item=>!financePrefs.recurring?.[item.key]?.dismissed);
+    const active=list.filter(item=>item.status!=='possibly_ended');
+    const upcoming=insight.upcoming(active,Date.now(),14);
+    const visible=sectionTitle(host,'Upcoming payments','Estimated external bills, never account transfers');
     if(!upcoming.length)el('p','No upcoming recurring charges have been identified yet.',visible);
     else{
       let due=0;
@@ -1254,36 +1254,28 @@
       }
       el('strong',amount(due.toFixed(2),'USD')+' expected in the next 14 days',visible);
     }
-    const calendar=sectionTitle(host,'This month','Upcoming expected charge dates');
-    const now=new Date(),month=insight.monthKey(now.getTime());
-    const calendarRows=list.filter(item=>insight.monthKey(item.nextAt*1000)===month);
-    if(!calendarRows.length)el('p','No expected charges this month.',calendar);
+    const calendar=sectionTitle(host,'This month','Upcoming external charge dates only');
+    const month=insight.monthKey(Date.now());
+    const calendarRows=active.filter(item=>item.type==='expense'&&item.nextAt&&
+      item.nextAt*1000>=Date.now()&&insight.monthKey(item.nextAt*1000)===month);
+    if(!calendarRows.length)el('p','No upcoming charges this month.',calendar);
     for(const item of calendarRows){
-      const row=el('div',undefined,calendar,'finance-page-preview-row');
-      el('strong',date(item.nextAt),row);el('span',item.merchant,row);el('b',amount(item.lastAmount,'USD'),row);
+      const line=el('div',undefined,calendar,'finance-page-preview-row');
+      el('strong',date(item.nextAt),line);el('span',item.merchant,line);el('b',amount(item.lastAmount,'USD'),line);
     }
-    const groups=[
-      ['Subscriptions',item=>item.category==='subscription'||item.category==='entertainment'],
-      ['Bills & payments',item=>['utilities','housing','loan','transfer'].includes(item.category)],
-      ['Income',item=>item.direction==='income'],
-      ['Other',()=>true]
-    ];
-    const assigned=new Set();
-    for(const [title,predicate] of groups){
-      const matches=list.filter(item=>!assigned.has(item.key)&&predicate(item));
-      if(!matches.length)continue;
-      for(const item of matches)assigned.add(item.key);
-      const group=sectionTitle(host,title);
-      for(const item of matches){
+    function recurringRows(parent,items){
+      for(const item of items){
         const itemRule=financePrefs.recurring?.[item.key]||{};
-        const detail=el('details',undefined,group,'finance-page-recurring-item');
+        const detail=el('details',undefined,parent,'finance-page-recurring-item');
         const line=el('summary',undefined,detail,'finance-page-recurring-summary');
         el('span',(itemRule.name||item.merchant).slice(0,1).toUpperCase(),line,'finance-page-transaction-icon');
-        const text=el('span',undefined,line,'finance-page-recurring-info');
-        el('strong',itemRule.name||item.merchant,text);
-        el('small',item.frequency+' · Next '+date(item.nextAt),text);
+        const info=el('span',undefined,line,'finance-page-recurring-info');
+        el('strong',itemRule.name||item.merchant,info);
+        el('small',item.frequency+(item.status==='possibly_ended'?' · Possibly ended':
+          item.nextAt?' · Next '+date(item.nextAt):''),info);
         el('b',amount(item.lastAmount,'USD'),line);
-        el('small',item.status==='possibly_canceled'?'Possibly canceled':item.status==='price_increased'?'Price increased':'Active',detail,'finance-page-recurring-status');
+        el('small',item.status==='possibly_ended'?'Possibly ended':
+          item.status==='price_increased'?'Amount increased':'Active',detail,'finance-page-recurring-status');
         const controls=el('div',undefined,detail,'finance-page-recurring-controls');
         const label=el('label',undefined,controls);el('span','Rename',label);
         const input=el('input',undefined,label);input.value=itemRule.name||item.merchant;input.maxLength=90;
@@ -1292,11 +1284,37 @@
         action(controls,'Confirm recurring',()=>saveSetting('recurring',item.key,{...itemRule,confirmed:true}));
         const history=el('div',undefined,detail,'finance-page-recurring-history');
         for(const charge of item.history.slice(-8).reverse()){
-          const line=el('p',undefined,history);el('span',date(charge.posted),line);el('b',amount(charge.amount,'USD'),line);
+          const row=el('p',undefined,history);el('span',date(charge.posted),row);el('b',amount(charge.amount,'USD'),row);
         }
       }
     }
-    el('small','These are estimates, not confirmed bills or scheduled payments.',host,'finance-page-hint');
+    const groups=[
+      ['Subscriptions',item=>item.type==='expense'&&['subscription','entertainment'].includes(item.category)],
+      ['Bills & payments',item=>item.type==='expense'],
+      ['Income',item=>item.type==='income'],
+    ];
+    const assigned=new Set();
+    for(const [title,predicate] of groups){
+      const matches=active.filter(item=>!assigned.has(item.key)&&predicate(item));
+      if(!matches.length)continue;
+      matches.forEach(item=>assigned.add(item.key));
+      recurringRows(sectionTitle(host,title),matches);
+    }
+    const cards=active.filter(item=>item.type==='card_payment');
+    if(cards.length)recurringRows(sectionTitle(host,'Card payments','Payments toward credit cards, not spending'),cards);
+    const transfers=active.filter(item=>item.type==='transfer');
+    if(transfers.length){
+      const collapsed=el('details',undefined,host,'finance-page-card finance-recurring-secondary');
+      el('summary','Recurring transfers ('+transfers.length+')',collapsed);
+      recurringRows(collapsed,transfers);
+    }
+    const ended=list.filter(item=>item.status==='possibly_ended');
+    if(ended.length){
+      const collapsed=el('details',undefined,host,'finance-page-card finance-recurring-secondary');
+      el('summary','Possibly ended ('+ended.length+')',collapsed);
+      recurringRows(collapsed,ended);
+    }
+    el('small','Only consistent streams with at least three occurrences, or two with a confirmed rule, appear. Bank activity may be incomplete.',host,'finance-page-hint');
   }
   function signalLabel(value){
     return ({possible_direct_deposit:'Possible direct deposit',possible_bonus:'Possible bonus',possible_reversal:'Possible reversal',
@@ -1355,6 +1373,7 @@
     const dayKey=value=>new Date(value*1000).toLocaleDateString('en-CA');
     const dayLabel=value=>new Date(value*1000).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
     function shownAmount(row){
+      if(row.transferPairId)return amount(Math.abs(Number(row.amount)).toFixed(2),row.account.currency);
       const formatted=amount(row.amount,row.account.currency);
       return !hidden&&Number(row.amount)>0&&formatted!=='—'?'+'+formatted:formatted;
     }
@@ -1380,10 +1399,14 @@
       });
       if(!filtered.length){el('p','No matching transactions. Try another filter.',list);return}
       let group=null,lastDay='';
-      const seenPairs=new Set();
-      for(const row of filtered.slice(0,transactionVisibleLimit)){
+      const seenPairs=new Set(),displayed=[];
+      for(const row of filtered){
         if(row.transferPairId&&seenPairs.has(row.transferPairId))continue;
         if(row.transferPairId)seenPairs.add(row.transferPairId);
+        displayed.push(row);
+        if(displayed.length>=transactionVisibleLimit)break;
+      }
+      for(const row of displayed){
         const currentDay=dayKey(row.posted);
         if(currentDay!==lastDay){
           group=el('section',undefined,list,'finance-page-transaction-group');
@@ -1392,20 +1415,24 @@
           lastDay=currentDay;
         }
         const id=rowIdentity(row),open=expandedTransaction===id;
-        const article=el('article',undefined,group,'finance-page-transaction'+(open?' is-open':''));
+        const article=el('article',undefined,group,'finance-page-transaction'+(open?' is-open':'')+(row.transferPairId?' is-matched-transfer':''));
         const top=el('button',undefined,article,'finance-page-transaction-summary');top.type='button';
         top.setAttribute('aria-expanded',String(open));top.setAttribute('aria-label',displayMerchant(row)+' details');
         const copy=el('span',undefined,top,'finance-page-transaction-copy');
         const otherAccount=row.transferOtherAccountKey&&currentCombined.accounts.find(a=>a.key===row.transferOtherAccountKey);
+        const named=account=>{
+          const title=accountTitle(account),bank=String(account.bank||'').trim();
+          return bank&&!title.toLowerCase().startsWith(bank.toLowerCase())?bank+' '+title:title;
+        };
         const pairedName=row.transferPairId&&otherAccount
-          ?Number(row.amount)<0?accountTitle(row.account)+' → '+accountTitle(otherAccount):accountTitle(otherAccount)+' → '+accountTitle(row.account)
-          :displayMerchant(row);
+          ?(Number(row.amount)<0?named(row.account)+' ⇄ '+named(otherAccount):
+            named(otherAccount)+' ⇄ '+named(row.account)):displayMerchant(row);
         el('strong',pairedName,copy);
         el('span',transactionActivityLabel(row),copy,'finance-page-transaction-category'+(neutralChip(row)?' is-neutral':''));
         if(row.categorySource==='ai')el('small','Auto',copy,'finance-page-auto-tag');
         el('small',accountTitle(row.account),copy);
         const value=el('span',undefined,top,'finance-page-transaction-value');
-        el('b',shownAmount(row),value,row.category==='transfer'?'is-transfer':Number(row.amount)>0?'is-credit':'');
+        el('b',shownAmount(row),value,row.transferPairId||row.category==='transfer'?'is-transfer':Number(row.amount)>0?'is-credit':'');
         if(row.pending)el('small','Pending',value);
         top.onclick=()=>openDetail(row);
       }
@@ -1438,6 +1465,17 @@
           row.categorySource==='ai'?'Auto suggestion · review anytime':
           'Automatic · '+(row.confidence||'low')+' confidence',detail,'finance-page-source');
         if(row.changedAt)el('small','Your bank updated this transaction on '+stamp(row.changedAt)+'. A previous correction was cleared for review.',detail,'finance-page-warning');
+        if(window.BTFinanceTransfer?.label(row)==='Possible transfer'){
+          action(detail,'Confirm transfer',async()=>{
+            await change(async()=>{
+              const snapshot=await request('/transaction-review',{method:'PUT',
+                body:JSON.stringify({account:row.account.rawKey,transaction:row.id,category:'transfer',applySimilar:false})},row.source);
+              return {financeSource:row.source,snapshot};
+            });
+            if(!saveNotice)detail.close();
+          },'finance-page-button finance-page-primary');
+        }
+        if(row.category==='bonus')el('p','Possible bank bonus payout · review it in Tracker evidence before marking a bonus received.',detail,'finance-page-hint');
         const saved=financePrefs.transactionMeta?.[row.settingKey]||{};
         const edit=el('div',undefined,detail,'finance-page-transaction-edits');
         const nameLabel=el('label',undefined,edit,'finance-page-field');
