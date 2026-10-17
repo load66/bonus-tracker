@@ -34,7 +34,7 @@
   let worthRange='3M',financePrefs={version:1,revision:0,budgets:{},duplicates:{},recurring:{},transactionMeta:{}};
   let preferenceAvailable=false,archiveLoading=false,settingsNotice='';
   const archives={simplefin:{},plaid:{}},archivesPending=new Set();
-  let transactionSearch='',transactionAccount='',transactionCategory='',transactionStatus='',transactionVisibleLimit=100,expandedTransaction='';
+  let transactionSearch='',transactionAccount='',transactionCategory='',transactionStatus='',transactionVisibleLimit=50,expandedTransaction='';
   let transactionScope='cash_cards';
   try{const savedScope=localStorage.getItem('bt_finance_tx_scope_v1');if(['all','cash_cards','investments','transfers','uncategorized','pending'].includes(savedScope))transactionScope=savedScope}catch(_error){}
 
@@ -1106,10 +1106,21 @@
     const card=el('section',undefined,host,'finance-page-card finance-page-transactions-card');
     const head=el('div',undefined,card,'finance-page-section-head finance-page-transactions-head');el('h3','Transactions',head);
     action(head,'Refresh activity',refreshActivity,'finance-page-preview-link');
+    const chips=el('div',undefined,card,'finance-page-transaction-scopes');
+    chips.setAttribute('role','group');chips.setAttribute('aria-label','Transaction scope');
+    for(const [id,title] of [['all','All'],['cash_cards','Cash & cards'],['investments','Investments'],
+      ['transfers','Transfers'],['uncategorized','Uncategorized'],['pending','Pending']]){
+      const chip=action(chips,title,()=>{
+        transactionScope=id;transactionVisibleLimit=50;
+        try{localStorage.setItem('bt_finance_tx_scope_v1',id)}catch(_error){}
+        paint();
+      },'finance-page-chip'+(transactionScope===id?' is-active':''));
+      chip.setAttribute('aria-pressed',String(transactionScope===id));
+    }
     const controls=el('div',undefined,card,'finance-page-transaction-tools');
     const searchWrap=el('div',undefined,controls,'finance-page-search-wrap');
     el('span','⌕',searchWrap,'finance-page-search-icon');
-    const search=el('input',undefined,searchWrap,'finance-page-search');search.type='search';search.placeholder='Search transactions';search.setAttribute('aria-label','Search transactions');search.value=transactionSearch;
+    const search=el('input',undefined,searchWrap,'finance-page-search');search.type='search';search.placeholder='Search merchant, amount or note';search.setAttribute('aria-label','Search transactions');search.value=transactionSearch;
     search.oninput=()=>{transactionSearch=search.value.trim().toLowerCase();transactionVisibleLimit=100;renderRows()};
     const filterPanel=el('details',undefined,controls,'finance-page-transaction-filters');
     const filterSummary=el('summary','Filters',filterPanel,'finance-page-filter-button');filterSummary.setAttribute('role','button');
@@ -1135,8 +1146,12 @@
     }
     function renderRows(){
       list.replaceChildren();const cutoff=Math.floor(Date.now()/1000)-period*86400;
-      const filtered=flattenTransactions().filter(row=>{
-        const hay=(row.merchant+' '+row.description+' '+row.account.bank+' '+row.account.name).toLowerCase();
+      const all=flattenTransactions().map(row=>({...row,accountKind:profile(row.account).kind}));
+      const scoped=window.BTFinanceUnified.transactionFeed(all,transactionScope);
+      const filtered=scoped.filter(row=>{
+        const hay=([row.merchant,row.description,row.account.bank,row.account.name,row.account.mask,
+          row.note,row.amount,row.pairedWith?.description,row.pairedWith?.account?.name]
+          .filter(Boolean).join(' ')).toLowerCase();
         return row.posted>=cutoff&&row.posted<=Math.floor(Date.now()/1000)+300&&(!transactionSearch||hay.includes(transactionSearch))
           &&(!transactionAccount||row.accountKey===transactionAccount)
           &&(!transactionCategory||row.category===transactionCategory)
@@ -1158,12 +1173,15 @@
         top.setAttribute('aria-expanded',String(open));top.setAttribute('aria-label',displayMerchant(row)+' details');
         const copy=el('span',undefined,top,'finance-page-transaction-copy');
         el('strong',displayMerchant(row),copy);
-        el('span',financeCategory(row.category),copy,'finance-page-transaction-category'+(['transfer','verification'].includes(row.category)?' is-neutral':''));
+        el('span',window.BTFinanceUnified.investmentActivity(row)||financeRowCategory(row),copy,'finance-page-transaction-category'+(window.BTFinanceInsights?.movementKind(row)||window.BTFinanceInsights?.possibleTransfer(row,window.BTFinanceInsights.cents(row.amount))?' is-neutral':''));
         if(row.categorySource==='ai')el('small','Auto',copy,'finance-page-auto-tag');
-        el('small',row.account.name||row.account.bank||'Account',copy);
+        const mask=String(row.account?.mask||row.account?.last4||'').trim();
+        el('small',(row.account.name||row.account.bank||'Account')+
+          (/^\d{4}$/.test(mask)?' ··'+mask:'')+
+          (row.pairedWith?' → '+(row.pairedWith.account?.name||'Account'):''),copy);
         const value=el('span',undefined,top,'finance-page-transaction-value');
         el('b',shownAmount(row),value,Number(row.amount)>0?'is-credit':'');
-        if(row.pending)el('small','Pending',value);
+        if(row.pending)el('small','Pending',value,'finance-page-pending-tag');
         top.onclick=()=>openDetail(row);
       }
       function openDetail(row){
@@ -1171,6 +1189,13 @@
         detail.classList.add('finance-page-transaction-detail');
         el('h4',displayMerchant(row),detail);
         el('p',row.description||'No additional description supplied.',detail,'finance-page-description');
+        if(row.pairedWith){
+          const second=el('section',undefined,detail,'finance-page-card');
+          el('h4','Matched transfer · both account entries',second);
+          el('p',row.description+' · '+signedFinanceAmount(row)+' · '+(row.account.name||'Account'),second);
+          el('p',row.pairedWith.description+' · '+signedFinanceAmount(row.pairedWith)+
+            ' · '+(row.pairedWith.account?.name||'Account'),second);
+        }
         el('small',[row.account.bank,row.account.name,row.account.sourceLabel,date(row.posted),row.pending?'Pending':'Posted'].filter(Boolean).join(' · '),detail,'finance-page-detail-meta');
         if(row.stalePending)el('p','This pending charge has not updated recently. Check your bank.',detail,'finance-page-warning');
         const visibleSignals=(row.signals||[]).filter(signal=>signal!=='possible_bonus');
@@ -1206,7 +1231,7 @@
           const input=el('input',undefined,wrap);input.type='checkbox';input.checked=checked;
           el('span',label,wrap);return input;
         };
-        const exclude=toggle('Exclude from totals',saved.exclude===true);
+        const exclude=toggle('Exclude from spending',saved.exclude===true);
         const recurring=toggle('Mark recurring',saved.markRecurring===true);
         const saveMeta=action(edit,'Save transaction details',()=>{
           saveSetting('transactionMeta',row.settingKey,{
@@ -1219,9 +1244,18 @@
       }
       if(filtered.length>transactionVisibleLimit){
         const remaining=filtered.length-transactionVisibleLimit;
-        action(list,'Show '+Math.min(100,remaining)+' more transactions · '+remaining+' remaining',()=>{
-          transactionVisibleLimit+=100;renderRows();
+        action(list,'Show '+Math.min(50,remaining)+' more transactions · '+remaining+' remaining',()=>{
+          transactionVisibleLimit+=50;renderRows();
         },'finance-page-button finance-page-show-more');
+        const sentinel=el('div',undefined,list,'finance-page-scroll-sentinel');
+        if('IntersectionObserver' in window){
+          const observer=new IntersectionObserver(entries=>{
+            if(entries.some(e=>e.isIntersecting)&&sentinel.isConnected&&transactionVisibleLimit<filtered.length){
+              observer.disconnect();transactionVisibleLimit+=50;renderRows();
+            }
+          },{rootMargin:'120px'});
+          observer.observe(sentinel);
+        }
       }
     }
     renderRows();
