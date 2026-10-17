@@ -1,14 +1,14 @@
 # Audit progress
 
-Active agent: none
+Active agent: codex — SimpleFIN add-bank release — branch codex/simplefin-add-bank
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
 
 - Source merged: frontend v3.4.95, main commit 5330ae2c7e416b333af30e5cb4caafd2729cf4a0
-- In progress: Release 2 v3.4.96 frontend implementation completed on PR #154; backend-first release pending
-- Next step: after backend Railway success, merge frontend PR #154, run main release and verify exact GitHub Pages assets and browser audit
+- In progress: SimpleFIN budgeted discovery and return-to-app connection flow
+- Next step: P1 mock regression tests, backend-first CI and Railway release; then frontend three-browser verification
 
 ## Release 1 (v3.4.94)
 
