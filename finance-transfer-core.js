@@ -58,6 +58,9 @@
   }
   function label(row){
     const item=effective(row),signals=item.signals;
+    // A person's correction overrides stale provider/pattern labels as well as totals.
+    if(['user','user_rule'].includes(item.categorySource)&&item.category!=='transfer')
+      return item.category==='income'&&signals.includes('paycheck')?'Paycheck':null;
     if(signals.includes('paycheck')&&item.category==='income')return 'Paycheck';
     if(signals.includes('possible_paycheck')&&item.category==='unreviewed')return 'Possible paycheck';
     if(signals.includes('card_payment'))return 'Card payment';
