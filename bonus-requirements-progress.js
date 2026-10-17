@@ -82,7 +82,8 @@
     }
     const requirements=(rules.requirements||[]).map(r=>{
       const source=sources.get(r.accountId),kind=r.kind,eligible=Boolean(source),
-        applicable=eligible&&['direct-deposit','balance-hold','new-money','transactions'].includes(kind);
+        applicable=eligible&&['direct-deposit','new-money','transactions'].includes(kind)||
+        eligible&&kind==='balance-hold'&&!!metricFor(r)&&Array.isArray(group.balanceHistory?.[source]);
       const positive=(group.activity||[]).filter(a=>a.accountKey===source&&a.type==='directDeposit'&&a.reviewStatus!=='dismissed');
       const raw=(group.rawActivity||[]).filter(a=>a.accountKey===source&&a.posted<=now+300);
       const candidates=kind==='direct-deposit'?positive:kind==='new-money'?raw.filter(newMoney):kind==='transactions'?raw.filter(debitPurchase):[];
@@ -102,7 +103,7 @@
     });
     return {mode:'structured',scopeVerified:sources.size>0,requirements,
       notice:sources.size?
-        'Candidates are observations only. Verify source, bank acceptance, complete daily/statement history, purchase network, thresholds and timing before confirming any requirement.':
+        'Confirm deposit origin, bank acceptance, complete daily/statement history, purchase network, thresholds and timing before completing any requirement; candidates are observations only.':
         'Unambiguous account-to-product mapping and verified promotion terms are required; never infer qualification from credits alone.'};
   }
   return Object.freeze({evaluate,cents,decimal,metricFor,newMoney,debitPurchase,balanceCandidate});

@@ -4,8 +4,9 @@
 (function(){
   'use strict';
   const BASE='https://api-production-00f74.up.railway.app/api/bonus-tracker';
-  let provider='simplefin';
-  const endpoint=()=>BASE+(provider==='plaid'?'/plaid/accounts':'/simplefin');
+  const providers=['simplefin','plaid'];
+  const endpoint=source=>BASE+(source==='plaid'?'/plaid/accounts':'/simplefin');
+  let sourceStates={};
   const TYPES=window.BTBonusEvidenceCore?.REASONS||{};
   let snapshot=null,loading=false,saving=false,error='',saveNotice='',showAll=false,showResolved=false,hideAmounts=true,rev=0;
   const pendingLimits=new Map(),resolvedLimits=new Map();
@@ -28,7 +29,7 @@
   };
   const activeEntries=()=>typeof entries!=='undefined'&&Array.isArray(entries)?entries.filter(e=>e&&!e.closed):[];
   function reset(){
-    snapshot=null;loading=false;saving=false;error='';saveNotice='';showAll=false;showResolved=false;hideAmounts=true;pendingLimits.clear();resolvedLimits.clear();rev++;
+    sourceStates={};snapshot=null;loading=false;saving=false;error='';saveNotice='';showAll=false;showResolved=false;hideAmounts=true;pendingLimits.clear();resolvedLimits.clear();rev++;
   }
   function update(){
     const root=document.getElementById('bt-bonus-evidence');
@@ -37,8 +38,9 @@
   function manage(){
     if(typeof window.btOpenBankSync==='function')window.btOpenBankSync();
   }
-  function reviewPayout(id){
-    if(typeof openRcv==='function')openRcv(String(id)); // Existing explicit confirmation flow.
+  function reviewPayout(id,candidate){
+    if(candidate&&typeof window.btReviewBonusCandidate==='function')window.btReviewBonusCandidate(String(id),{amount:candidate.amount,posted:candidate.posted});
+    else if(typeof openRcv==='function')openRcv(String(id));
   }
   async function sameOwner(auth,token){
     if(window.BTBonusAuth!==auth||!auth.connected())return false;
@@ -47,37 +49,38 @@
     const identity=value=>{try{const row=JSON.parse(atob(value.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));return row.sub?JSON.stringify([row.iss||'',row.sub]):null}catch{return null}};
     return Boolean(identity(token)&&identity(token)===identity(current));
   }
+  function unified(){if(!window.BTFinanceUnified?.combine)throw Error('Finance unification unavailable.');return window.BTFinanceUnified.combine(sourceStates);}
   async function refresh(){
     if(loading)return;
     const auth=window.BTBonusAuth;
-    if(!auth?.connected()){
-      snapshot=null;error='Sign in to review your linked bank activity.';update();return;
-    }
-    const call=++rev;
-    loading=true;error='';update();
+    if(!auth?.connected()){reset();error='Sign in to review your linked bank activity.';update();return;}
+    const call=++rev;loading=true;error='';update();
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
     try{
       const token=await auth.token();
       if(call!==rev||!auth.connected())return;
-      const response=await fetch(endpoint(),{
-        method:'GET',cache:'no-store',credentials:'omit',
-        headers:{Authorization:'Bearer '+token},signal:controller.signal
-      });
-      const payload=await response.json().catch(()=>({}));
-      if(!response.ok)throw Error(typeof payload.detail==='string'?payload.detail:'Bank activity could not be retrieved.');
-      if(!(await sameOwner(auth,token))){snapshot=null;throw Error('Sign-in changed. Reopen bank activity.');}
+      const results=await Promise.allSettled(providers.map(async source=>{
+        const response=await fetch(endpoint(source),{method:'GET',cache:'no-store',credentials:'omit',
+          headers:{Authorization:'Bearer '+token},signal:controller.signal});
+        const payload=await response.json().catch(()=>({}));
+        if(!response.ok)throw Error('Provider unavailable.');
+        return [source,payload];
+      }));
+      if(!(await sameOwner(auth,token)))throw Error('Sign-in changed. Reopen bank activity.');
       if(call!==rev||!auth.connected()||!document.getElementById('bt-bonus-evidence')?.closest('#bt-finances-page'))return;
-      snapshot=payload;error='';
-    }catch(e){
-      if(call!==rev)return;
-      error=e.name==='AbortError'?'Bank activity request timed out. Try again.':String(e.message||'Bank activity unavailable.');
-    }finally{
-      clearTimeout(timer);
-      if(call===rev){loading=false;update();}
-    }
+      const updated={};
+      for(const result of results)if(result.status==='fulfilled')updated[result.value[0]]=result.value[1];
+      if(!Object.keys(updated).length)throw Error('Neither provider is available. Try again.');
+      sourceStates=updated;snapshot=unified();
+      error=results.some(result=>result.status==='rejected')?'One provider did not respond. Evidence is incomplete; missing transactions do not prove unpaid bonuses.':'';
+    }catch(e){if(call===rev)error=e.name==='AbortError'?'Bank activity timed out.':String(e.message||'Bank activity unavailable.');}
+    finally{clearTimeout(timer);if(call===rev){loading=false;update();}}
   }
   async function submitReview(group,activity,decision,requirementId=null){
     if(saving||!snapshot?.connected)return;
+    const source=String(activity.accountKey).split(':')[0];
+    if(!providers.includes(source))return;
+    const rawAccount=activity.accountKey.slice(source.length+1);
     const call=++rev;
     saving=true;error='';saveNotice='';update();
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
@@ -86,12 +89,12 @@
       if(!auth?.connected())throw Error('Sign in to review your bank activity.');
       const token=await auth.token();
       if(rev!==call||!auth.connected())return;
-      const response=await fetch(endpoint()+'/evidence-review',{
+      const response=await fetch(endpoint(source)+'/evidence-review',{
         method:'PUT',credentials:'omit',cache:'no-store',
         headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
         signal:controller.signal,
         body:JSON.stringify({
-          account:activity.accountKey,transaction:activity.id,
+          account:rawAccount,transaction:activity.id,
           entryId:group.entryId,bank:group.bank,opened:group.opened,
           decision,requirementId:decision==='reviewed'&&requirementId?requirementId:null
         })
@@ -100,7 +103,7 @@
       if(!response.ok)throw Error(typeof payload.detail==='string'?payload.detail:'The review was not saved.');
       if(!(await sameOwner(auth,token))){snapshot=null;throw Error('Sign-in changed. Reopen bank activity.');}
       if(call!==rev||!auth.connected()||!document.getElementById('bt-bonus-evidence')?.closest('#bt-finances-page'))return;
-      snapshot=payload;
+      sourceStates={...sourceStates,[source]:payload};snapshot=unified();
       saveNotice=decision==='clear'?'Review reopened.':decision==='dismissed'?'Not relevant saved.':'Review saved. Promotion requirements remain unconfirmed.';
     }catch(e){
       if(call===rev)error=(e.name==='AbortError'?'Review request timed out. ':String(e.message||'Review not saved. '))
@@ -120,7 +123,7 @@
     const title=el('div',undefined,top,'bonus-evidence-heading');
     el('strong','Bonus activity',title);
     el('small','Direct deposits · bonus credits · fees · reversals',title);
-    el('p',(provider==='plaid'?'Plaid':'SimpleFIN')+' · '+ 'Read-only evidence for linked bonus accounts',root,'bonus-evidence-provider-help');
+    el('p','SimpleFIN + Plaid · Read-only evidence for linked bonus accounts',root,'bonus-evidence-provider-help');
     const actions=el('div',undefined,top,'bonus-evidence-controls');
     if(!snapshot){
       const open=button(actions,loading?'Checking…':'Review bank activity',refresh,'bonus-evidence-button primary');
@@ -135,7 +138,7 @@
     if(!snapshot){return;}
     if(!window.BTBonusAuth?.connected()){reset();update();return;}
     if(!snapshot.connected){
-      el('p',provider==='plaid'?'No connected Plaid fallback institution. Use Add Bank after trying SimpleFIN first.':'No connected financial institution. Link your SimpleFIN accounts to review bank-bonus evidence.',root,'bonus-evidence-note');
+      el('p','No connected financial institution in either provider. Link an account to review bonus evidence.',root,'bonus-evidence-note');
       button(root,'Manage connected accounts',manage);
       return;
     }
@@ -159,7 +162,7 @@
       button(root,'Manage bonus-account links',manage);
     }
     if(report.invalidLinks)el('p',report.invalidLinks+' saved account link'+(report.invalidLinks===1?' needs':'s need')+' review because its bank, opening date or campaign no longer matches.',root,'bonus-evidence-warning');
-    if(report.staleSync)el('p','Transaction data may be missing or stale. A missing payout or deposit here does not prove it was not received.',root,'bonus-evidence-warning');
+    if(report.staleSync||report.incompleteProviders)el('p','Transaction data may be missing or stale. A missing payout or deposit here does not prove it was not received.',root,'bonus-evidence-warning');
     if(!report.linkedCampaigns){
       el('p','No matching open bonus campaigns have linked bank accounts yet.',root,'bonus-evidence-note');
       return;
@@ -247,6 +250,15 @@
             const entry=el('div',undefined,panel,'bonus-evidence-progress-row');
             el('strong',rule.text,entry);
             if(rule.applicable){
+              if(rule.balance){const b=rule.balance;
+                el('small',b.status+' · '+b.observedDays+' observed days · '+b.metric,entry);
+                el('small',b.safeToMove,entry);
+                if(b.observedBalance!==null)el('small','Observed '+(hideAmounts?'••••••':fmtMoney(b.observedBalance))+' / '+(hideAmounts?'••••••':fmtMoney(b.targetBalance))+' · complete balance history unverified',entry);
+                continue;
+              }
+              if(rule.kind==='new-money'||rule.kind==='transactions'){
+                el('small',rule.candidateCount+' '+(rule.kind==='transactions'?'debit-purchase':'confirmed external-funding')+' candidate(s) · review pending',entry);continue;
+              }
               const count=rule.reviewedCount+' reviewed candidate'+(rule.reviewedCount===1?'':'s');
               const goal=rule.targetCount?' / '+rule.targetCount+' required deposit(s)':'';
               const amount=rule.targetAmount?' · Candidate amount '+(hideAmounts?'••••••':fmtMoney(rule.reviewedAmount))+' / '+(hideAmounts?'••••••':fmtMoney(rule.targetAmount)):'';
@@ -259,7 +271,8 @@
       }
       if(group.counts.bonus){
         const row=el('div',undefined,card,'bonus-evidence-card-actions');
-        button(row,'Review payout',()=>reviewPayout(group.entryId),'bonus-evidence-button primary');
+        const candidate=group.activity.find(a=>a.type==='bonus'&&a.reviewStatus!=='dismissed');
+        button(row,'Review payout',()=>reviewPayout(group.entryId,candidate),'bonus-evidence-button primary');
       }
     }
     if(report.campaigns.length>4)button(root,showAll?'Show fewer':'Show all '+report.campaigns.length+' linked bonuses',()=>{showAll=!showAll;update()});
@@ -272,11 +285,9 @@
     // Revoke in-flight requests and discard private account evidence on route changes.
     if(snapshot||loading||saving||error||saveNotice)reset();
   }
-  function mount(root, source='simplefin'){
+  function mount(root){
     // Never inject bank activity into Tracker or any other app section.
     if(!root?.closest('#bt-finances-page'))return false;
-    const next=source==='plaid'?'plaid':'simplefin';
-    if(provider!==next){provider=next;reset();}
     root.id='bt-bonus-evidence';root.className='bonus-evidence';
     root.setAttribute('role','region');
     root.setAttribute('aria-label','Bank bonus activity evidence');

@@ -56,3 +56,5 @@
 .bonus-evidence .bonus-evidence-rule-select{appearance:none;-webkit-appearance:none;font-size:16px;min-height:48px;padding-right:32px;background-color:#102239;background-image:linear-gradient(45deg,transparent 50%,#b9d3f2 50%),linear-gradient(135deg,#b9d3f2 50%,transparent 50%);background-position:calc(100% - 17px) 50%,calc(100% - 12px) 50%;background-size:5px 5px;background-repeat:no-repeat}
 .bonus-evidence select:focus-visible{outline:3px solid #aad4ff;outline-offset:3px}
 .bonus-evidence-provider-help{font-size:12px!important;line-height:1.5;color:#aabfd9!important;margin:8px 0 14px!important}
+
+.bonus-evidence-progress-row small{overflow-wrap:anywhere}

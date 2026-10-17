@@ -3981,10 +3981,9 @@ function bonusPipelineMetrics(rows,year){
 function renderCardProgressLine(e){
   if(!e||e.closed)return'';
   const tasks=Array.isArray(e.checklist)?e.checklist.filter(x=>x&&String(x.text||'').trim()):[];
-  if(!tasks.length)return'';
-  const done=tasks.filter(x=>x.done).length;
-  const pct=Math.round(done/tasks.length*100);
-  return '<div class="card-progressline"><span>'+done+' of '+tasks.length+' tasks complete</span><i><b style="width:'+pct+'%"></b></i></div>'
+  const done=tasks.filter(x=>x.done).length+(e.reqMet?1:0)+(e.bonusRecd?1:0),total=tasks.length+2;
+  const pending=e.reqMet?(e.bonusRecd?'Milestones recorded':'Bonus: review pending'):'Deposits / requirements: review pending';
+  return '<div class="card-progressline"><span>'+done+' of '+total+' tasks complete · '+esc(pending)+'</span><i><b style="width:'+Math.round(done/total*100)+'%"></b></i></div>'
 }
 function openAccountFromActionCenter(id){
   if(!entries.some(e=>e.id===id))return;
@@ -4365,6 +4364,8 @@ function rRcv(){
   if(!p)return'';
   let h='<div class="cbg" onclick="skipRcv()"><div class="rcv-box" onclick="event.stopPropagation()">';
   h+='<h3>🎉 Bonus Received</h3><div class="sub">This marks '+esc(p.bank)+' as received. Requirement met and closing stay tracked as separate lifecycle steps.</div>';
+  h+='<label>Actual bonus amount ($)</label><input class="dd-input" type="number" min="0" step="0.01" id="rcv_amount" oninput="if(rcvPrompt)rcvPrompt.bonus=Number(this.value)" value="'+esc(String(p.bonus||0))+'" onclick="event.stopPropagation()">';
+  if(p.fromCandidate)h+='<p class="sub">Possible payout only. Review before confirming. The Tax tab will display the confirmed amount and date for review.</p>';
   h+='<label>Bonus Received Date</label><input class="dd-input" type="date" id="rcv_date" oninput="if(rcvPrompt)rcvPrompt.date=this.value" value="'+(p.date||'')+'" onclick="event.stopPropagation()">';
   h+='<label>Requirement Met Date</label><input class="dd-input" type="date" id="rcv_req_date" oninput="if(rcvPrompt)rcvPrompt.reqDate=this.value" value="'+(p.reqDate||p.date||'')+'" onclick="event.stopPropagation()">';
   h+='<label>Triggering DD / Method</label><input class="dd-input" id="rcv_dp" oninput="if(rcvPrompt)rcvPrompt.dp=this.value" value="'+esc(p.dp||'')+'" placeholder="e.g. Employer DD, ACH push, debit transactions" onclick="event.stopPropagation()">';
@@ -5068,7 +5069,8 @@ function toggleDDChip(m){if(!ddPrompt)return;const i=ddPrompt.sel.indexOf(m);if(
 function submitDD(){if(!ddPrompt)return;const c=document.getElementById('dd_custom');const all=[...ddPrompt.sel];if(c&&c.value)c.value.split(',').forEach(x=>{const t=x.trim();if(t)all.push(t)});all.forEach(m=>addDD(ddPrompt.bank,m,ddPrompt.bonus,td()));ddPrompt=null;R()}
 function skipDD(){ddPrompt=null;R()}
 function confirmMarkReceived(id){const e=entries.find(x=>x.id===id);if(!e)return;cfm={title:e.bonusRecd?'Update Bonus Received?':'Mark Bonus Received?',msg:(e.bonusRecd?'Update the bonus received date for ':'Mark the bonus as received for ')+e.bank+'?\n\nYou can review received date, requirement met date, and the triggering method before saving.',green:true,action:()=>{cfm=null;openRcv(id)}};R()}
-function openRcv(id){const e=entries.find(x=>x.id===id);if(!e)return;rcvPrompt={entryId:id,bank:e.bank,date:e.bonusRecd||td(),reqDate:e.reqMet||td(),dp:e.dataPoint||'',bonus:e.bonus||0,hasExisting:!!e.bonusRecd};R()}
+function openRcv(id,candidate=null){const e=entries.find(x=>x.id===id);if(!e)return;const observed=candidate&&Number(candidate.amount)>0&&Number.isFinite(candidate.posted);rcvPrompt={entryId:id,bank:e.bank,date:observed?new Date(candidate.posted*1000).toISOString().slice(0,10):e.bonusRecd||td(),reqDate:e.reqMet||td(),dp:e.dataPoint||'',bonus:observed?Number(candidate.amount):e.bonus||0,fromCandidate:!!observed,hasExisting:!!e.bonusRecd};R()}
+window.btReviewBonusCandidate=(id,candidate)=>openRcv(id,candidate);
 function rcvNext(){}
 function rcvSubmit(){
   const p=rcvPrompt;
@@ -5079,6 +5081,8 @@ function rcvSubmit(){
   if(d)p.date=d.value;
   if(r)p.reqDate=r.value;
   if(dp)p.dp=dp.value;
+  const amt=document.getElementById('rcv_amount');if(amt)p.bonus=Number(amt.value);
+  if(!Number.isFinite(p.bonus)||p.bonus<=0){alert('Review and confirm the actual bonus amount.');return}
   if(!p.date){alert('Received date required');return}
   const e=entries.find(x=>x.id===p.entryId);
   const warnings=bonusReceiveWarnings(e,p.date);
@@ -5094,6 +5098,7 @@ function rcvSubmit(){
   entries=entries.map(e=>{
     if(e.id===p.entryId){
       e.bonusRecd=p.date;
+      e.bonus=p.bonus;
       e.reqMet=p.reqDate||e.reqMet||p.date;
       if(p.dp)e.dataPoint=p.dp;
       appendEntryHistory(e,'bonus_received','Bonus received '+fD(p.date)+(p.reqDate?' · requirement met '+fD(p.reqDate):'')+'.');
