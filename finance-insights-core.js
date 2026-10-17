@@ -30,8 +30,9 @@
     const item=resolve(row);
     if(item.excludedFromTotals===true||item.pending===true||value===null||value>=0n)return null;
     const category=String(item.category||'unreviewed').toLowerCase();
-    if(noSpend.has(category)||item.kind==='card_payment'||item.kind==='investment_contribution'||
-       (item.signals||[]).some(s=>['matched_internal_transfer','possible_transfer','card_payment','investment_transfer'].includes(s)))return null;
+    const confirmedPayment=['user','user_rule'].includes(item.categorySource)&&category!=='transfer';
+    if(noSpend.has(category)||(!confirmedPayment&&(item.kind==='card_payment'||item.kind==='investment_contribution'||
+       (item.signals||[]).some(s=>['matched_internal_transfer','possible_transfer','card_payment','investment_transfer'].includes(s)))))return null;
     return SPEND.has(category)?category:'unreviewed';
   }
   const seenMonth=(rows,month)=>rows.some(row=>!row.pending&&!row.excludedFromTotals&&
