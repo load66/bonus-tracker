@@ -84,7 +84,7 @@
           detectedType:detected,kind:saved.kind&&saved.kind!=='unclassified'?saved.kind:detected,
           name:saved.displayName||account.name,originalName:account.name});
         const kind=saved.kind&&saved.kind!=='unclassified'?saved.kind:detected;
-        accountProfiles[composite]={kind,
+        accountProfiles[composite]={kind,syncEnabled:saved.syncEnabled!==false,
           // An old auto-generated unclassified exclusion is not a user opt-out.
           // Preserve explicit saved selections made for a recognized account type.
           balanceMode:(saved.kind&&saved.kind!=='unclassified')
@@ -141,6 +141,7 @@
     const duplicates=new Set();
     const secondary=new Map();
     for(const pair of unified.possibleDuplicates||[]){
+      if(pair.some(key=>unified.accountProfiles?.[key]?.syncEnabled===false||unified.accountProfiles?.[key]?.hidden))continue;
       const id=pair.slice().sort((a,b)=>a.startsWith('simplefin:')?-1:b.startsWith('simplefin:')?1:0).join('|');
       const decision=unified.duplicateDecisions?.[id];
       if(decision?.separate===true){
@@ -151,7 +152,8 @@
     }
     // Omitting ambiguous accounts is explicit: consumers must disclose this
     // and must not use the result to claim a complete total/net worth.
-    const hidden=new Set(unified.accounts.filter(a=>unified.accountProfiles?.[a.key]?.hidden).map(a=>a.key));
+    const hidden=new Set(unified.accounts.filter(a=>unified.accountProfiles?.[a.key]?.hidden||
+      unified.accountProfiles?.[a.key]?.syncEnabled===false).map(a=>a.key));
     const accounts=unified.accounts.filter(a=>!duplicates.has(a.key)&&!secondary.has(a.key)&&!hidden.has(a.key));
     const allowed=new Set(accounts.map(a=>a.key));
     const keep=obj=>Object.fromEntries(Object.entries(obj||{}).filter(([k])=>allowed.has(k)));
@@ -230,7 +232,10 @@
       historyIncomplete:accounts.some(a=>a.source==='plaid'&&(
         a.historyComplete===false||
         ['history_still_loading','awaiting_first_sync','awaiting_provider_data','needs_attention'].includes(a.transactionSyncStatus))),
-      excludedForReview:duplicates.size,hiddenAccounts:hidden.size,confirmedDuplicates:secondary.size};
+      excludedForReview:duplicates.size,
+      hiddenAccounts:unified.accounts.filter(a=>unified.accountProfiles?.[a.key]?.hidden).length,
+      notSyncingAccounts:unified.accounts.filter(a=>unified.accountProfiles?.[a.key]?.syncEnabled===false).length,
+      confirmedDuplicates:secondary.size};
   }
   return Object.freeze({combine,safeForSummary,detectedType,key});
 });
