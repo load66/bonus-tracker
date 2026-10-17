@@ -252,8 +252,12 @@ return result;
           if(!window.BTBonusEvidence?.mount(document.getElementById('bt-bonus-evidence'),'plaid'))
             throw Error('Plaid evidence fixture switch failed');
         });
-        await reopened.getByRole('button',{name:'Review bank activity',exact:true}).waitFor();
-        await reopened.getByRole('button',{name:'Review bank activity',exact:true}).click();
+        // Mounting a new fixture can retain the previous read-only snapshot.
+        // Refresh explicitly in either state rather than assuming the initial
+        // "Review bank activity" button exists after an earlier review.
+        const reload=reopened.getByRole('button',{name:/^(Review bank activity|Refresh)$/});
+        await reload.waitFor();
+        await reload.click();
         await reopened.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor();
         await reopened.getByRole('button',{name:'Mark reviewed',exact:true}).first().click();
         await reopened.getByText('Review saved. Promotion requirements remain unconfirmed.').waitFor();
