@@ -489,30 +489,50 @@
       el('small',financeCategory(row.category),copy,'finance-page-transaction-category');
     }
   }
-  function cumulativeSpendingChart(host,current,previous){
+  function cumulativeSpendingChart(host,current,previous,month){
     if(hidden){el('p','Spending trend hidden',host);return}
-    const series=data=>{
+    const selected=month||window.BTFinanceInsights.monthKey(Date.now()),parts=selected.split('-').map(Number);
+    const days=new Date(parts[0],parts[1],0).getDate();
+    const isCurrent=selected===window.BTFinanceInsights.monthKey(Date.now());
+    const lastDay=isCurrent?Math.min(days,new Date().getDate()):days;
+    const series=(data,length)=>{
       let sum=0;
-      return Array.from({length:31},(_,i)=>{
-        sum+=Number(data.byDay?.[i+1]||0);
+      return Array.from({length},(_,i)=>{
+        sum+=Number(data?.byDay?.[i+1]||0);
         return Number.isFinite(sum)?sum:0;
       });
     };
-    const a=series(current),b=series(previous),maximum=Math.max(1,...a,...b);
+    const a=series(current,lastDay),b=previous?.hasData===false?[]:series(previous,days);
+    const maximum=Math.max(1,...a,...b);
     const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svg.setAttribute('viewBox','0 0 320 120');svg.setAttribute('role','img');
-    svg.setAttribute('aria-label','Cumulative daily spending this month compared with last month');
+    svg.setAttribute('viewBox','0 0 320 132');
+    svg.setAttribute('role','img');
+    svg.setAttribute('aria-label','Cumulative daily spending: mint this month, dashed gray last month');
     svg.classList.add('finance-page-spending-line');
+    const x=i=>10+(i/Math.max(1,days-1))*300,y=v=>108-v/maximum*87;
+    const grid=document.createElementNS(svg.namespaceURI,'line');
+    grid.setAttribute('x1','10');grid.setAttribute('x2','310');grid.setAttribute('y1','108');grid.setAttribute('y2','108');
+    grid.setAttribute('class','is-grid');svg.append(grid);
     for(const [values,label] of [[b,'previous'],[a,'current']]){
+      if(!values.length)continue;
       const poly=document.createElementNS(svg.namespaceURI,'polyline');
-      poly.setAttribute('points',values.map((v,i)=>(8+i*10.1)+','+(110-v/maximum*95)).join(' '));
+      poly.setAttribute('points',values.map((v,i)=>x(i)+','+y(v)).join(' '));
       poly.setAttribute('fill','none');
       poly.setAttribute('class','is-'+label);
-      poly.setAttribute('stroke-width','2.5');
-      svg.append(poly);
+      poly.setAttribute('stroke-width','2.5');svg.append(poly);
+    }
+    if(a.length){
+      const cx=x(a.length-1),cy=y(a.at(-1));
+      const dot=document.createElementNS(svg.namespaceURI,'circle');
+      dot.setAttribute('cx',String(cx));dot.setAttribute('cy',String(cy));dot.setAttribute('r','5');
+      dot.setAttribute('class','is-today-dot');svg.append(dot);
     }
     host.append(svg);
-    el('small','Mint: this month · Gray: last month',host,'finance-page-hint');
+    const labels=el('div',undefined,host,'finance-page-chart-labels');
+    el('small','Day 1',labels);
+    if(isCurrent)el('strong','Today '+amount(a.at(-1).toFixed(2),'USD'),labels);
+    el('small','Day '+days,labels);
+    el('small','Mint: selected month · Dashed gray: previous month',host,'finance-page-hint');
   }
   function overview(host,summary){
     const net=sectionTitle(host,'Net worth');
@@ -795,7 +815,7 @@
     const chartCard=sectionTitle(root,spendingMode==='income'?'Income over time':'Spending over time');
     const currentSeries=spendingMode==='income'?value.incomeByDay:value.byDay;
     const priorSeries=spendingMode==='income'?previous.incomeByDay:previous.byDay;
-    cumulativeSpendingChart(chartCard,{byDay:currentSeries},{byDay:priorSeries},month);
+    cumulativeSpendingChart(chartCard,{byDay:currentSeries},{byDay:priorSeries,hasData:previous.hasData},month);
     el('small','Excludes transfers, card payments and verification deposits',chartCard,'finance-page-hint');
     const breakdown=sectionTitle(root,spendingMode==='income'?'Income sources':'Category breakdown');
     let categories=spendingMode==='spending'?value.categories:
