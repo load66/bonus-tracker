@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),{spawnSync}=require('node:child_process');
 const groups={
- finance:['finance-session.test.js','finance-reconcile.test.js','finance-invariants.test.js','finance-overview.test.js','finance-unified.test.js','finance-insights.test.js','finance-account-management.test.js','finance-copy.test.js','bonus-evidence.test.js','bonus-requirements-progress.test.js','tracker-bonus-automation.test.js'],
+ finance:['finance-session.test.js','finance-reconcile.test.js','finance-invariants.test.js','finance-golden-ledger.test.js','finance-overview.test.js','finance-unified.test.js','finance-insights.test.js','finance-account-management.test.js','finance-copy.test.js','bonus-evidence.test.js','bonus-requirements-progress.test.js','tracker-bonus-automation.test.js'],
  bonus:['close-rules.test.js','financial-rules.test.js','structured-import.test.js','entry-file-import.test.js','eligibility-gate.test.js','churn-buffer.test.js','countdown-options.test.js','fee-review-migration.test.js','bonus-ai.test.js','bonus-ai-auth.test.js','bank-feed.test.js','bank-feed.test.py'],
  cloud:['persistence-transaction.test.js','cloud-recovery.test.js','cloud-protection.test.js'],
  ui:['full-app-smoke.test.js','semantic-status.test.js','smart-attention.test.js','professional-ops.test.js','end-to-end.test.js','operations-interactions.test.js','next-actions.test.js','specific-actions.test.js','research-tabs.test.js','hardening-regression.test.js','ci-workflow.test.js']
