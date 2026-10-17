@@ -1890,7 +1890,7 @@
     if(waitingBanks.size){
       const row=el('details',undefined,host,'finance-page-status-row finance-history-status');
       el('summary',waitingBanks.size+' bank'+(waitingBanks.size===1?'':'s')+' updating transaction history',row);
-      el('p','Balances and available transactions still work. Some older Plaid activity may arrive later.',row);
+      el('p','Balances work. Some transactions may still be syncing.',row);
       for(const accounts of waitingBanks.values()){
         const bank=el('div',undefined,row,'finance-history-bank');
         const first=accounts[0];
