@@ -50,6 +50,52 @@
     }
     return false;
   }
+  function investmentSummary(state={},options={}){
+    const now=Number.isFinite(options.now)?options.now:Math.floor(Date.now()/1000);
+    const accounts=Array.isArray(state.accounts)?state.accounts:[];
+    const profiles=state.accountProfiles||{},history=state.balanceHistory||{};
+    let total=0n,brokerage=0n,retirement=0n,eligible=0,missing=0,lastSyncChange=0n,monthChange=0n;
+    let lastSyncKnown=0,monthKnown=0,investmentIncome=0n,invested=0n;
+    const month=new Date(now*1000).getMonth(),year=new Date(now*1000).getFullYear();
+    const midnight=new Date(year,month,1).getTime()/1000;
+    for(const account of accounts){
+      const kind=profiles[account.key]?.kind||account.kind||account.detectedType;
+      if(!['brokerage','retirement'].includes(kind)||profiles[account.key]?.hidden)continue;
+      eligible++;
+      const v=cents(account.balance);
+      if(v===null||account.currency!=='USD'){missing++;continue}
+      total+=v;
+      if(kind==='retirement')retirement+=v;else brokerage+=v;
+      const points=(Array.isArray(history[account.key])?history[account.key]:[])
+        .filter(r=>Number.isFinite(r?.observedAt||r?.at)&&cents(r.balance)!==null&&r.currency==='USD')
+        .map(r=>({at:r.observedAt||r.at,value:cents(r.balance)})).sort((a,b)=>a.at-b.at);
+      if(points.length>=2){lastSyncChange+=points.at(-1).value-points.at(-2).value;lastSyncKnown++}
+      const lastMonth=points.filter(p=>p.at<=now-30*DAY).at(-1);
+      if(lastMonth){monthChange+=v-lastMonth.value;monthKnown++}
+    }
+    for(const [key,rows] of Object.entries(state.transactions||{})){
+      const account=accounts.find(a=>a.key===key);
+      if(!account)continue;
+      const kind=profiles[key]?.kind||account.kind||account.detectedType;
+      for(const row of Object.values(rows||{})){
+        if(!row||row.pending||row.excludedFromTotals||row.posted<midnight||row.posted>now)continue;
+        const value=cents(row.amount);if(value===null)continue;
+        if(['brokerage','retirement'].includes(kind)){
+          if(value>0n&&/\b(?:dividend|interest)\b/i.test(String(row.description||'')))investmentIncome+=value;
+        }else if(['checking','savings'].includes(kind)&&value<0n&&!['user','user_rule'].includes(row.categorySource)){
+          const text=String(row.description||'');
+          if(/^\s*to\s+/i.test(text)&&/\b(brokerage|ira|roth|401k|investing|robinhood|fidelity|schwab|vanguard)\b/i.test(text))
+            invested-=value;
+          else if((row.signals||[]).includes('investment_transfer'))invested-=value;
+        }
+      }
+    }
+    return Object.freeze({available:eligible>0&&eligible>missing,total:eligible>missing?decimal(total):null,
+      accountCount:eligible,missingCount:missing,brokerage:decimal(brokerage),retirement:decimal(retirement),
+      lastSyncChange:lastSyncKnown===eligible?decimal(lastSyncChange):null,
+      monthChange:monthKnown===eligible?decimal(monthChange):null,
+      investedThisMonth:decimal(invested),investmentIncome:decimal(investmentIncome)});
+  }
   function summarize(state={},options={}){
     const now=Number.isFinite(options.now)?Math.floor(options.now):Math.floor(Date.now()/1000);
     const days=Number.isInteger(options.days)&&options.days>=1&&options.days<=MAX_DAYS?options.days:30;
@@ -178,5 +224,5 @@
       excludedFromNetWorth:profileEntries.filter(x=>x.profile.balanceMode==='exclude').length
     });
   }
-  return Object.freeze({summarize,cents,decimal});
+  return Object.freeze({summarize,investmentSummary,cents,decimal});
 });
