@@ -3982,11 +3982,7 @@ function bonusPipelineMetrics(rows,year){
 }
 function renderTrackerEvidenceAlerts(e){
   if(!e||e.closed)return'';
-  const hint=window.BTTrackerEvidenceHints?.[e.id],items=[];
-  if(hint&&hint.bank===e.bank&&hint.opened===e.opened){
-    if(hint.balanceRisk)items.push('Balance below hold minimum · review history');
-    if(hint.fee)items.push('Fee on linked bonus account · review');
-  }
+  const items=[];
   const days=e.opened&&!e.reqMet&&!e.bonusRecd?daysToDeadline(e):null;
   if(Number.isFinite(days)&&days>=0&&days<=7)items.push('Requirements pending · '+days+' days until deadline');
   if(e.bonusRecd&&status(e)==='SAFE TO CLOSE'&&safeCloseDate(e))items.push('Safe-close date reached · verify bank conditions');
