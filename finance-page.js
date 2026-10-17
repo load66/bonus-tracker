@@ -1542,6 +1542,7 @@
     el('h2',title,head);
     async function attemptClose(){if(typeof dialog.financeBeforeClose==='function'&&
       !await dialog.financeBeforeClose())return;dialog.close()}
+    dialog.financeRequestClose=attemptClose;
     action(head,'Close',()=>{void attemptClose()});
     dialog.addEventListener('close',()=>{dialog.remove();if(previous?.isConnected)previous.focus()},{once:true});
     dialog.addEventListener('click',event=>{if(event.target===dialog){const r=dialog.getBoundingClientRect();if(event.clientY<r.top||event.clientY>r.bottom||event.clientX<r.left||event.clientX>r.right)void attemptClose()}});
@@ -1796,17 +1797,104 @@
   }
   function openConnection(rows){
     const account=rows[0],modal=sheet(account.bank||'Bank',true);
+    modal.classList.add('finance-connection-sheet');
     el('p','Connected via '+account.sourceLabel,modal);
-    for(const a of rows){const p=profile(a),line=el('div',undefined,modal,'finance-setting-row');
-      el('span',accountTitle(a),line);
-      if(a.removedAt||p.hidden){action(line,'Restore',async()=>{try{if(a.removedAt)await accountAction(a,'restore');if(p.hidden)await saveAccountProfile(a,{hidden:false});modal.close()}catch(error){el('p',error.message,modal)}});continue}
-      const label=el('label',undefined,line);el('span','Sync',label);const input=el('input',undefined,label);input.type='checkbox';input.setAttribute('role','switch');input.checked=p.syncEnabled!==false;input.setAttribute('aria-label','Sync '+accountTitle(a));input.onchange=async()=>{await saveAccountProfile(a,{syncEnabled:input.checked});if(saveNotice)input.checked=!input.checked};
+    el('p','Choose which accounts to sync. Turning Sync off also removes an account from Finance totals and lists.',modal,'finance-page-hint');
+    const staged=new Map(),original=new Map(),feedback=new Map();
+    let saving=false;
+    const footer=el('div',undefined,modal,'finance-connection-save-footer');
+    const countChanges=()=>[...staged].filter(([key,enabled])=>enabled!==original.get(key)).length;
+    const cancel=action(footer,'Cancel',()=>{void modal.financeRequestClose()},'finance-page-button');
+    const save=action(footer,'Save changes',async()=>{
+      const changed=[...staged].filter(([key,enabled])=>enabled!==original.get(key));
+      if(!changed.length||saving)return;
+      saving=true;save.disabled=true;cancel.disabled=true;save.textContent='Saving…';
+      try{
+        const profiles={};
+        for(const [key,syncEnabled] of changed){
+          const a=rows.find(item=>item.rawKey===key);
+          if(!a)continue;
+          const saved=sourceSnapshot(a.source)?.accountProfiles?.[key]||{},p=profile(a);
+          profiles[key]={...saved,kind:p.kind,balanceMode:p.balanceMode,order:p.order??499,
+            hidden:p.hidden===true,displayName:p.displayName||'',includeSpending:p.includeSpending,
+            syncEnabled};
+        }
+        const snapshot=await request('/account-profiles',{method:'PUT',body:JSON.stringify({profiles})},account.source);
+        applySource(account.source,snapshot);
+        accountDraftProfiles={};dirtyAccounts.clear();
+        const names=changed.map(([key])=>accountTitle(rows.find(item=>item.rawKey===key)));
+        const stopped=changed.filter(([,enabled])=>!enabled).length;
+        const started=changed.length-stopped;
+        const message=changed.length===1
+          ?'Saved · '+names[0]+(stopped?' hidden from totals':' included in totals')
+          :'Saved · '+stopped+' stopped syncing, '+started+' started syncing';
+        connectionNotice=message;
+        modal.financeBeforeClose=null;modal.close();paint();
+        const toast=el('aside',message,document.body,'finance-page-save-toast');toast.setAttribute('role','status');
+        setTimeout(()=>toast.remove(),5000);
+      }catch(error){
+        const message=String(error?.message||'Please retry.');
+        el('p','Changes were not saved. '+message,modal,'finance-page-warning');
+      }finally{
+        saving=false;
+        if(modal.open){cancel.disabled=false;updateFooter()}
+      }
+    },'finance-page-button finance-page-primary');
+    modal.append(footer);
+    const updateFooter=()=>{
+      const count=countChanges();
+      save.disabled=saving||count===0;
+      save.textContent=saving?'Saving…':count?'Save changes ('+count+')':'Save changes';
+      for(const [key,indicator] of feedback){
+        const changed=staged.get(key)!==original.get(key);
+        indicator.textContent=changed?(staged.get(key)?'Will start syncing':'Will stop syncing'):'';
+        indicator.closest('.finance-connection-sync-row')?.classList.toggle('is-unsaved',changed);
+      }
+    };
+    modal.financeBeforeClose=async()=>{
+      if(saving)return false;
+      return countChanges()===0||await confirmFinance('Discard changes?',{
+        title:'Discard changes?',confirmLabel:'Discard changes',danger:true});
+    };
+    for(const a of rows){
+      const p=profile(a),line=el('div',undefined,modal,'finance-setting-row finance-connection-sync-row');
+      const title=el('div',undefined,line,'finance-connection-sync-copy');
+      el('strong',accountTitle(a),title);
+      const hint=el('small','',title,'finance-connection-unsaved');
+      if(a.removedAt||p.hidden){
+        action(line,'Restore',async()=>{try{if(a.removedAt)await accountAction(a,'restore');
+          if(p.hidden)await saveAccountProfile(a,{hidden:false});modal.financeBeforeClose=null;modal.close()}
+        catch(error){el('p',error.message,modal,'finance-page-warning')}});
+        continue;
+      }
+      original.set(a.rawKey,p.syncEnabled!==false);
+      staged.set(a.rawKey,p.syncEnabled!==false);feedback.set(a.rawKey,hint);
+      const label=el('label',undefined,line,'finance-connection-sync-control');
+      el('span','Sync',label);
+      const input=el('input',undefined,label);input.type='checkbox';input.setAttribute('role','switch');
+      input.checked=p.syncEnabled!==false;input.setAttribute('aria-label','Sync '+accountTitle(a));
+      input.onchange=()=>{staged.set(a.rawKey,input.checked);updateFooter()};
     }
-    action(modal,'Refresh',async()=>{try{const snapshot=await request('/sync',{method:'POST'},account.source);applySource(account.source,snapshot);connectionNotice='Refresh complete.';modal.close();paint()}catch(error){el('p',error.message,modal)}});
-    action(modal,'Reconnect',()=>{modal.close();reconnectAccount(account)});
-    if(account.source==='plaid')action(modal,'Choose which accounts to share',()=>{modal.close();reconnectAccount(account)});
-    action(modal,'Disconnect bank',()=>disconnectConnection(account,modal),'finance-page-button finance-danger');
-    if(account.source==='simplefin'){const p=el('p','To revoke sharing or manage your subscription, visit ',modal);const link=el('a','SimpleFIN Bridge',p);link.href='https://bridge.simplefin.org/';link.target='_blank';link.rel='noopener noreferrer'}
+    action(modal,'Refresh',async()=>{
+      if(countChanges()){const discard=await modal.financeBeforeClose();if(!discard)return}
+      try{
+        const snapshot=await request('/sync',{method:'POST'},account.source);
+        applySource(account.source,snapshot);connectionNotice='Refresh complete.';
+        modal.financeBeforeClose=null;modal.close();paint();
+      }catch(error){el('p',error.message,modal,'finance-page-warning')}
+    });
+    action(modal,'Reconnect',async()=>{if(!await modal.financeBeforeClose())return;
+      modal.financeBeforeClose=null;modal.close();reconnectAccount(account)});
+    if(account.source==='plaid')action(modal,'Choose which accounts to share',async()=>{
+      if(!await modal.financeBeforeClose())return;modal.financeBeforeClose=null;modal.close();reconnectAccount(account)});
+    action(modal,'Disconnect bank',async()=>{if(!await modal.financeBeforeClose())return;
+      disconnectConnection(account,modal)},'finance-page-button finance-danger');
+    if(account.source==='simplefin'){
+      const p=el('p','To revoke sharing or manage your subscription, visit ',modal);
+      const link=el('a','SimpleFIN Bridge',p);link.href='https://bridge.simplefin.org/';
+      link.target='_blank';link.rel='noopener noreferrer';
+    }
+    updateFooter();
   }
   function disconnectConnection(account,parent){
     const modal=sheet('Disconnect '+account.bank+'?');
