@@ -15,9 +15,9 @@
     subscription:'Subscription',transfer:'Transfer',refund:'Refund',verification:'Account verification',loan:'Loan payment',bonus:'Bank bonus',other:'Other'
   };
   // Keep 'bonus' as a persisted category for canonical tracker/evidence logic;
-  // Finances displays it as income without exposing a bonus-only UI control.
+  // Unconfirmed promotional credits remain for review without exposing bonus-only UI.
   const FINANCE_CATEGORIES=Object.fromEntries(Object.entries(CATEGORIES).filter(([key])=>key!=='bonus'));
-  const financeCategory=key=>key==='bonus'?'Income':(FINANCE_CATEGORIES[key]||'Needs review');
+  const financeCategory=key=>key==='bonus'?'Needs review':(FINANCE_CATEGORIES[key]||'Needs review');
   function displayMerchant(row){
     const merchant=String(row.merchant||'').trim();
     if(!merchant||/^(transaction|transfer|purchase|payment|debit|credit)$/i.test(merchant))
