@@ -29,13 +29,15 @@
        retirementProduct.test(type.replaceAll('_',' '))||
        retirementProduct.test(name))return 'retirement';
     if(/\b(?:credit\s+card|charge\s+card)\b/.test(name)||
-       ['credit_card','credit'].includes(subtype)||
-       type==='credit')return 'credit_card';
+       ['credit_card','credit'].includes(subtype))return 'credit_card';
     const mortgageNames=/\b(?:mortgage|mortg|mtge?|home\s*mtg|home\s+loan|home\s+equity\s+loan|heloc|mr\s+cooper|loancare|newrez|shellpoin(?:t)?|rocket\s+mortgage|pennymac|freedom\s+mortgage|dovenmuehle|cenlar|nationstar|lakeview\s+loan|carrington\s+mortgage|roundpoint|sps\s+servicing)\b/;
     if(mortgageNames.test(name)||mortgageNames.test(bank)||
        subtype==='mortgage'||type==='mortgage')return 'mortgage';
     if(['loan','student','auto','personal_loan','student_loan','auto_loan'].includes(subtype)||
        type==='loan'||/\b(?:personal\s+loan|student\s+loan|auto\s+loan)\b/.test(name))return 'loan';
+    // "credit" can also describe a mortgage or loan in provider metadata.
+    // Only after specific debt products are resolved may it mean a card.
+    if(type==='credit')return 'credit_card';
     const checking=checkingProduct.test(name)||['checking','current','cash_management'].includes(subtype);
     const savings=savingsProduct.test(name)||['savings','money_market','high_yield'].includes(subtype);
     const investmentMetadata=type==='investment'||type==='brokerage'||
