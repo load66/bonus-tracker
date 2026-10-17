@@ -135,7 +135,7 @@
       const last=entries.at(-1),previous=entries.at(-2),value=abs(last.cents);
       const avg=entries.reduce((sum,x)=>sum+abs(x.cents),0n)/BigInt(entries.length);
       // Paychecks vary with hours; ordinary recurring debits should be stable.
-      const tolerance=entries[0].type==='income'?25n:15n;
+      const tolerance=entries[0].type==='income'?25n:20n;
       if(avg===0n||entries.some(entry=>abs(abs(entry.cents)-avg)*100n>avg*tolerance))continue;
       const next=last.at+Math.round(match.days*DAY);
       const ended=now>next+match.days*DAY;
