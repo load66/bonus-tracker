@@ -14,7 +14,7 @@ const base=()=>({
   configured:true,connected:true,status:'connected',evidenceOnly:true,lastSuccess:NOW,nextSyncAt:NOW+86400,
   accounts:[
     {key:A,bank:'Synthetic CU',name:'Checking <img src=x>',currency:'USD',balance:'1250.50',availableBalance:'1200.50',balanceDate:NOW-400},
-    {key:B,bank:'Other Credit Union',name:'Credit Card 4010',mask:'4010',currency:'USD',balance:'200.00',availableBalance:'800.00',balanceDate:NOW-300},
+    {key:B,bank:'Other Credit Union',name:'Robinhood Credit Card **4010 (4010)',mask:'4010',currency:'USD',balance:'200.00',availableBalance:'800.00',balanceDate:NOW-300},
     {key:C,bank:'Overseas Bank',name:'Brokerage',currency:'EUR',balance:'500',availableBalance:null,balanceDate:NOW}
   ],
   accountProfiles:{
@@ -161,6 +161,7 @@ const base=()=>({
       await section.getByRole('heading',{name:'Accounts',exact:true}).waitFor();
       assert.ok((await section.getByText('Credit cards', {exact:true}).first().locator('..').innerText()).includes('$200.00 owed'),'Card group header and row both show owed debt');
       assert.equal(await section.locator('.finance-page-account:visible').count(),4);
+      assert.equal(await section.getByRole('button',{name:'Robinhood Credit Card ··4010',exact:true}).count(),1,'Duplicated account masks normalize to one readable suffix');
       assert.equal(await section.locator('select').count(),1,'No bonus dropdowns in account lists');
       const accountSearch=section.getByRole('searchbox',{name:'Search accounts'});
       await accountSearch.fill('x money');assert.equal(await section.locator('.finance-page-account:visible').count(),1);await accountSearch.fill('');
@@ -171,8 +172,8 @@ const base=()=>({
       assert.equal(await wizard.locator('input[type=password],input[type=tel]').count(),0);
       assert.equal(await wizard.getByRole('link',{name:'Open SimpleFIN'}).getAttribute('rel'),'noopener noreferrer');
       await wizard.getByRole('button',{name:'Back to connected accounts'}).click();await wizard.getByRole('button',{name:'Done',exact:true}).click();
-      await section.getByRole('button',{name:'Credit Card ··4010',exact:true}).click();
-      modal=page.getByRole('dialog',{name:'Credit Card ··4010',exact:true});
+      await section.getByRole('button',{name:'Robinhood Credit Card ··4010',exact:true}).click();
+      modal=page.getByRole('dialog',{name:'Robinhood Credit Card ··4010',exact:true});
       const net=modal.getByRole('switch',{name:'Include in net worth'});await net.uncheck();
       await modal.getByRole('button',{name:'Save account settings',exact:true}).click();
       await modal.getByText(/Changes were not saved/).waitFor();
@@ -180,7 +181,7 @@ const base=()=>({
       assert.equal(await net.isChecked(),false,'Failed saves preserve the editable draft');
       await modal.getByRole('button',{name:'Save account settings',exact:true}).click();await modal.waitFor({state:'hidden'});
       assert.equal(state.accountProfiles[B].balanceMode,'exclude');
-      assert.equal(await section.getByRole('button',{name:'Credit Card ··4010',exact:true}).locator('b').innerText(),'$200.00 owed','Credit card debt wording remains consistent regardless of net-worth inclusion');
+      assert.equal(await section.getByRole('button',{name:'Robinhood Credit Card ··4010',exact:true}).locator('b').innerText(),'$200.00 owed','Credit card debt wording remains consistent regardless of net-worth inclusion');
       assert.equal(redrawOnSuccessfulSave,false,'WebKit exercises same-owner redraw before successful save response');
       await section.getByRole('button',{name:'Checking <img src=x>',exact:true}).click();
       modal=page.getByRole('dialog',{name:'Checking <img src=x>',exact:true});
@@ -193,9 +194,9 @@ const base=()=>({
       await modal.getByRole('button',{name:'Unhide account',exact:true}).click();await modal.waitFor({state:'hidden'});
       assert.equal(state.accountProfiles[A].hidden,false);
       // Removing one account keeps siblings, historical reports, and a 10-second Undo.
-      await section.getByRole('button',{name:'Credit Card ··4010',exact:true}).click();
-      modal=page.getByRole('dialog',{name:'Credit Card ··4010',exact:true});await modal.getByRole('button',{name:'Remove account',exact:true}).click();
-      const confirm=page.getByRole('dialog',{name:'Remove Credit Card ··4010?',exact:true});
+      await section.getByRole('button',{name:'Robinhood Credit Card ··4010',exact:true}).click();
+      modal=page.getByRole('dialog',{name:'Robinhood Credit Card ··4010',exact:true});await modal.getByRole('button',{name:'Remove account',exact:true}).click();
+      const confirm=page.getByRole('dialog',{name:'Remove Robinhood Credit Card ··4010?',exact:true});
       await confirm.getByRole('button',{name:'Remove account',exact:true}).click();
       await page.getByRole('button',{name:'Undo',exact:true}).waitFor();
       assert.equal(state.accounts.find(a=>a.key===B).removedAt,NOW);
