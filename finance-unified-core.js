@@ -31,7 +31,9 @@
       const state=sources[source];
       if(!state||!state.connected){providerState[source]={connected:false,available:!!state,stale:false};continue}
       providerState[source]={connected:true,available:true,stale:!!state.stale,lastSuccess:state.lastSuccess||null,
-        nextSyncAt:state.nextSyncAt||null,accountCount:(state.accounts||[]).length};
+        nextSyncAt:state.nextSyncAt||null,accountCount:(state.accounts||[]).length,
+        warningCount:Array.isArray(state.warnings)?state.warnings.length:0,
+        needsAttention:state.status==='attention'};
       const accountKeys=new Set();
       for(const account of state.accounts||[]){
         if(!account||typeof account.key!=='string'||!account.key)continue;
@@ -44,7 +46,7 @@
           detectedType:detected,kind:saved.kind&&saved.kind!=='unclassified'?saved.kind:detected});
         const kind=saved.kind&&saved.kind!=='unclassified'?saved.kind:detected;
         accountProfiles[composite]={kind,balanceMode:saved.balanceMode||'exclude',
-          order:Number.isInteger(saved.order)?saved.order:499};
+          order:Number.isInteger(saved.order)?saved.order:499,hidden:saved.hidden===true};
         if((state.monitoredAccounts||[]).includes(account.key))monitoredAccounts.push(composite);
         if(state.mappings?.[account.key])mappings[composite]=state.mappings[account.key];
         if(Array.isArray(state.balanceHistory?.[account.key]))balanceHistory[composite]=state.balanceHistory[account.key];
@@ -85,15 +87,21 @@
     const duplicates=new Set(unified.possibleDuplicates.flat());
     // Omitting ambiguous accounts is explicit: consumers must disclose this
     // and must not use the result to claim a complete total/net worth.
-    const accounts=unified.accounts.filter(a=>!duplicates.has(a.key));
+    const hidden=new Set(unified.accounts.filter(a=>unified.accountProfiles?.[a.key]?.hidden).map(a=>a.key));
+    const accounts=unified.accounts.filter(a=>!duplicates.has(a.key)&&!hidden.has(a.key));
     const allowed=new Set(accounts.map(a=>a.key));
     const keep=obj=>Object.fromEntries(Object.entries(obj||{}).filter(([k])=>allowed.has(k)));
     return {...unified,accounts,transactions:keep(unified.transactions),mappings:keep(unified.mappings),
       monitoredAccounts:unified.monitoredAccounts.filter(k=>allowed.has(k)),
       accountProfiles:keep(unified.accountProfiles),balanceHistory:keep(unified.balanceHistory),
       incompleteProviders:Object.values(unified.providerState).some(s=>s.connected&&
-        (s.stale||!Number.isFinite(s.lastSuccess)||s.lastSuccess<=0)),
-      excludedForReview:duplicates.size};
+        (s.stale||s.needsAttention||s.warningCount>0||!Number.isFinite(s.lastSuccess)||s.lastSuccess<=0))||
+        Object.keys(unified.sourceErrors||{}).length>0,
+      malformedActivity:accounts.some(a=>Number(a.invalidTransactionRows)>0),
+      historyIncomplete:accounts.some(a=>a.source==='plaid'&&(
+        a.historyComplete===false||
+        ['history_still_loading','awaiting_first_sync','awaiting_provider_data','needs_attention'].includes(a.transactionSyncStatus))),
+      excludedForReview:duplicates.size,hiddenAccounts:hidden.size};
   }
   return Object.freeze({combine,safeForSummary,detectedType,key});
 });

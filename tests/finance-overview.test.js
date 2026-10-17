@@ -112,4 +112,37 @@ result=summarize(classified,{now:NOW});
 assert.equal(result.cashAvailable,false,'stale deposit balances cannot produce a cash total');
 assert.equal(result.netWorthAvailable,false,'stale balances cannot produce net worth');
 
+
+const correctedLiabilities=structuredClone(classified);
+correctedLiabilities.accounts[1].balanceDate=NOW;
+correctedLiabilities.accountProfiles.savings.balanceMode='exclude';
+correctedLiabilities.accounts[2].balance='-50.00';
+correctedLiabilities.balanceHistory.card=[{observedAt:NOW,at:NOW,balance:'-50.00',currency:'USD'}];
+result=summarize(correctedLiabilities,{now:NOW});
+assert.equal(result.netWorthAvailable,true,'intentionally excluded accounts do not block net worth');
+assert.equal(result.assets,'1050.00','a credit balance on a liability account counts as an asset');
+assert.equal(result.liabilities,'0.00','a credit balance is not an absolute-valued liability');
+assert.equal(result.netWorth,'1050.00');
+assert.equal(result.excludedFromNetWorth,1);
+assert.equal(result.netWorthHistory.at(-1).value,'1050.00','history handles account credits and exclusions');
+
+const excludedAll=structuredClone(correctedLiabilities);
+for(const p of Object.values(excludedAll.accountProfiles))p.balanceMode='exclude';
+assert.equal(summarize(excludedAll,{now:NOW}).netWorthAvailable,false,'zero included accounts is unknown, not zero');
+
+const unconfirmedPromotion={
+  lastSuccess:NOW,
+  accounts:[account('bonus-checking')],
+  monitoredAccounts:['bonus-checking'],
+  transactions:{'bonus-checking':{
+    credit:{...row('400.00',NOW-90,'possible_bonus'),
+      category:'bonus',categorySource:'automatic',confidence:'high'}
+  }}
+};
+const promotionSummary=summarize(unconfirmedPromotion,{now:NOW});
+assert.equal(promotionSummary.credits,'400.00','observed credit remains recorded');
+assert.equal(promotionSummary.income,'0.00','an unconfirmed promotion must not be counted as income');
+assert.equal(promotionSummary.unreviewed,1,'automatic bonus inference still requires user review');
+assert.equal(promotionSummary.complete,false,'a guessed promotion cannot certify cash-flow completeness');
+
 console.log('Financial observations passed: strict scope, multi-currency safety, exact cents, availability, coverage, privacy and non-mutation');

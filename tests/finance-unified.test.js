@@ -43,6 +43,46 @@ const excluded=core.safeForSummary(ambiguous);
 assert.equal(excluded.accounts.length,0,'suspected same-account links must not enter consolidated totals');
 assert.equal(excluded.excludedForReview,2);
 assert.equal(finance.summarize(excluded,{now,days:30}).income,null);
+
+const historyLoading=structuredClone(plaid);
+historyLoading.accounts[0].historyComplete=false;
+historyLoading.accounts[0].transactionSyncStatus='history_still_loading';
+const partialHistory=core.safeForSummary(core.combine({simplefin:simple,plaid:historyLoading}));
+assert.equal(partialHistory.historyIncomplete,true,
+  'Plaid historical backfill is incomplete despite a successful last-sync timestamp');
+assert.equal(partialHistory.incompleteProviders,false,
+  'A successful connection timestamp is distinct from complete transaction history');
+const verifiedHistory=structuredClone(historyLoading);
+verifiedHistory.accounts[0].historyComplete=true;
+verifiedHistory.accounts[0].transactionSyncStatus='ready';
+assert.equal(core.safeForSummary(core.combine({simplefin:simple,plaid:verifiedHistory})).historyIncomplete,false,
+  'Completed Plaid historical sync allows cash-flow completeness to be evaluated');
+const providerError=structuredClone(plaid);
+providerError.error='Synthetic transient provider failure';
+assert.equal(core.safeForSummary(core.combine({simplefin:simple,plaid:providerError})).incompleteProviders,true,
+  'Source errors must invalidate claimed aggregate completeness even with old success timestamps');
+
+const malformedSimple=structuredClone(simple);
+malformedSimple.warnings=['Synthetic provider row was skipped'];
+malformedSimple.status='attention';
+const malformedSafe=core.safeForSummary(core.combine({simplefin:malformedSimple,plaid}));
+assert.equal(malformedSafe.incompleteProviders,true,
+  'a successful sync with invalid or skipped rows must not certify complete data');
+const malformedPlaid=structuredClone(plaid);
+malformedPlaid.accounts[0].invalidTransactionRows=2;
+assert.equal(core.safeForSummary(core.combine({simplefin:simple,plaid:malformedPlaid})).malformedActivity,true,
+  'Plaid per-account malformed transaction counts must keep financial totals partial');
+
+const hiddenBank=structuredClone(simple);
+hiddenBank.accountProfiles[a].hidden=true;
+const combinedHidden=core.combine({simplefin:hiddenBank,plaid});
+const safeHidden=core.safeForSummary(combinedHidden);
+assert.equal(combinedHidden.accounts.length,2,'hiding an account never removes its provider data');
+assert.equal(safeHidden.accounts.length,1,'hidden accounts do not appear in Finance totals');
+assert.equal(safeHidden.hiddenAccounts,1);
+assert.equal(finance.summarize(safeHidden,{now,days:30}).income,'50.00',
+  'transactions of hidden accounts must not enter income or spending summaries');
+assert.equal(hiddenBank.transactions[a].one.amount,'400.00','account history remains recoverable');
 assert.equal(simple.accounts[0].key,a,'source snapshots stay unchanged');
 assert.equal(twin.accounts[0].key,b,'the second provider is never overwritten');
 console.log('Unified Finance: provider isolation, type inference, full account/transaction aggregation, exact cents, stale-balance safety and overlap controls passed');

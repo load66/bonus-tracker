@@ -140,6 +140,11 @@ const base=()=>({
       assert.ok((await previews.nth(1).innerText()).includes('X Money Bonus'),
         'Recent Finance activity must include Plaid transactions');
 
+      // Amounts stay masked by default, including on first sign-in.
+      await section.getByRole('button',{name:'Show amounts',exact:true}).waitFor();
+      assert.equal(await section.locator('.finance-page-hero-cash-value').innerText(),'••••••');
+      await section.getByRole('button',{name:'Show amounts',exact:true}).click();
+      assert.equal(await page.evaluate(()=>localStorage.getItem('bt_finance_hide_amounts')),'false');
       await section.getByText('Income',{exact:true}).locator('..').getByText(/250/).waitFor();
       await section.getByText('Expenses',{exact:true}).locator('..').getByText(/15/).waitFor();
       await section.getByText('Net flow',{exact:true}).locator('..').getByText(/235/).waitFor();
@@ -149,8 +154,11 @@ const base=()=>({
       // an asynchronously replaced DOM node in a second non-waiting assertion.
       const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
       await section.getByRole('button',{name:'Hide amounts',exact:true}).click();
-      assert.equal(await section.locator('.finance-page-tile strong').first().innerText(),'••••••');
+      assert.equal(await section.locator('.finance-page-hero-cash-value').innerText(),'••••••');
       await section.getByRole('button',{name:'Show amounts',exact:true}).click();
+      assert.equal(await page.evaluate(()=>localStorage.getItem('bt_finance_hide_amounts')),'false');
+      assert.equal(await section.locator('.finance-page-hero-cash-value').count(),1,
+        'Only one Cash total appears in the Finance Overview hero');
 
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       await section.getByRole('heading',{name:'Transactions',exact:true}).waitFor();
@@ -245,6 +253,29 @@ const base=()=>({
       assert.equal(redrawOnSuccessfulSave,false,'WebKit must exercise a same-user redraw before successful save response');
       assert.ok(requests.some(r=>r.path.endsWith('/account-profiles')));
 
+      // Hide one SimpleFIN account without removing its bank connection or history.
+      const checkingEditor=section.locator('.finance-page-account-editor').filter({hasText:'Checking <img src=x>'});
+      await checkingEditor.locator('summary.finance-page-account').click();
+      await checkingEditor.getByRole('button',{name:'Hide account from Finances'}).click();
+      await Promise.all([
+        page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/account-profiles')&&r.status()===200),
+        section.getByRole('button',{name:'Save account settings'}).click()
+      ]);
+      assert.equal(state.accountProfiles[A].hidden,true,'hide must persist as a profile, not a disconnection');
+      assert.equal(Object.keys(state.transactions[A]).length,3,'hiding cannot erase source activity');
+      await section.getByRole('button',{name:'Hide hidden accounts'}).click();
+      assert.equal(await section.locator('.finance-page-account').count(),3);
+      await section.getByRole('button',{name:/Show hidden accounts/}).click();
+      const restoreDetails=checkingEditor.locator('details.finance-page-account-settings');
+      if(!(await restoreDetails.evaluate(e=>e.open)))await checkingEditor.locator('summary.finance-page-account').click();
+      await checkingEditor.getByRole('button',{name:'Show account in Finances'}).click();
+      await Promise.all([
+        page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/account-profiles')&&r.status()===200),
+        section.getByRole('button',{name:'Save account settings'}).click()
+      ]);
+      assert.equal(state.accountProfiles[A].hidden,false,'restoring should reuse the saved account');
+      assert.equal(Object.keys(state.transactions[A]).length,3,'original history survives hide and restore');
+
       for(const target of [['Overview','overview'],['Transactions','transactions'],['Accounts','accounts']]){
         await section.getByRole('button',{name:target[0],exact:true}).click();
         for(const width of [320,390,430]){
@@ -323,14 +354,23 @@ const base=()=>({
           categorySource:'automatic',confidence:'low',signals:[]};
       }
       // A bonus-classified transaction remains intact in provider data, but
-      // its Finance-only presentation is ordinary income, never a bonus card.
+      // its Finance-only presentation remains Needs review, never verified income.
       plaidState.transactions[A]['plaid-income'].category='bonus';
       await page.evaluate(()=>window.btRefreshFinancesPage?.());
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       await section.getByText('X Money Bonus',{exact:true}).waitFor();
       const preservedBonus=section.locator('.finance-page-transaction').filter({hasText:'X Money Bonus'});
-      assert.ok((await preservedBonus.innerText()).includes('Income'),
-        'Finance labels preserved internal bonus classification as Income');
+      assert.ok((await preservedBonus.innerText()).includes('Needs review'),
+        'Finance must not claim unverified promotional credits are income');
+      // Transaction expansion intentionally survives Finance section switches.
+      // Clicking a previously open row would CLOSE it, so normalize to open.
+      const bonusToggle=preservedBonus.getByRole('button',{name:/X Money Bonus/});
+      if(await bonusToggle.getAttribute('aria-expanded')!=='true')await bonusToggle.click();
+      const bonusCategory=section.getByLabel('Category for X Money Bonus');
+      await bonusCategory.waitFor({state:'visible'});
+      assert.equal(await bonusCategory.inputValue(),'unreviewed',
+        'An unconfirmed promotional credit must not preselect Income in the editor');
+      if(await bonusToggle.getAttribute('aria-expanded')==='true')await bonusToggle.click();
       assert.equal(plaidState.transactions[A]['plaid-income'].category,'bonus',
         'Finance presentation must not rewrite canonical bonus category data');
       await section.getByRole('button',{name:/^Show 100 more transactions/}).waitFor();
