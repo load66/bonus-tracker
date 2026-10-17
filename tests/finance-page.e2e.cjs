@@ -139,6 +139,22 @@ const base=()=>({
       assert.ok((await section.locator('.finance-spending-value').innerText()).includes('$25.00'),'Eligible unknown debit is included in the October spending total');
       assert.ok(await section.getByRole('button',{name:'Review',exact:true}).count(),'Uncategorized category includes a review action');
       assert.equal(await section.locator('.finance-spending-today-dot').count(),1);
+      const donutCenter=section.locator('.finance-spending-donut-center strong');
+      assert.equal(await donutCenter.count(),1,'Exactly one Spending donut center total');
+      assert.equal((await donutCenter.innerText()).trim(),'$25.00');
+      const donutGeometry=await donutCenter.evaluate(el=>{
+        const outer=el.closest('.finance-spending-donut'),inner=el.parentElement;
+        const a=el.getBoundingClientRect(),b=inner.getBoundingClientRect(),c=outer.getBoundingClientRect();
+        return {visible:getComputedStyle(el).visibility==='visible',opacity:Number(getComputedStyle(el).opacity),
+          inside:a.left>=b.left-1&&a.right<=b.right+1&&a.left>=c.left&&a.right<=c.right,
+          fits:el.scrollWidth<=el.clientWidth+1,
+          oldPseudo:getComputedStyle(outer,'::after').content};
+      });
+      assert.ok(donutGeometry.visible&&donutGeometry.opacity>0&&donutGeometry.inside&&donutGeometry.fits,
+        '390px Safari Spending donut center must display the entire total: '+JSON.stringify(donutGeometry));
+      assert.ok(['none','normal','""'].includes(donutGeometry.oldPseudo),
+        'Old finance-page-donut pseudo-overlay must not obscure new Spending donut');
+
       assert.ok(await section.getByRole('button',{name:'Set budgets'}).count()===0||await section.locator('.finance-spending-budget-settings').count(),'Budgets are editable on the spending page');
       await section.getByRole('button',{name:'Previous spending month'}).click();
       await section.getByRole('heading',{name:'September 2026'}).waitFor();
