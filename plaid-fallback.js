@@ -174,14 +174,7 @@
           renderAccounts(result);
         }catch(error){message.textContent=error.message;}
       });
-      action(accountsArea,items.length?'Refresh transactions':'Discover connected accounts',async()=>{
-        message.textContent='Requesting read-only account status…';
-        try{
-          const result=await api('/accounts/sync',{method:'POST'});
-          message.textContent=result.error||'Latest available provider data loaded. Review possible bonuses manually.';
-          renderAccounts(result);
-        }catch(error){message.textContent=error.message;}
-      });
+      elem('p','Newly linked Plaid institutions are imported automatically. History may still be loading while the bank prepares transactions.',accountsArea);
       const signals=Object.values(snapshot.transactions||{}).flatMap(rows=>Object.values(rows||{}))
         .filter(row=>!row.pending&&Array.isArray(row.signals)&&row.signals.some(v=>
           ['possible_bonus','possible_direct_deposit','possible_fee','possible_reversal'].includes(v)));
@@ -304,19 +297,21 @@
                   session:result.session,publicToken
                 })});
                 connectionComplete=true;
-                message.textContent='Bank connected. Discovering accounts…';
+                message.textContent='Bank connected. Automatic account and transaction import has started.';
                 let statusCode='pending',count=0;
+                // The backend queues its first import as part of /exchange.
+                // Read status only; never issue a second provider sync or
+                // require the owner to click Discover.
                 try{
-                  const synced=await api('/accounts/sync',{method:'POST'});
-                  count=(synced.accounts||[]).length;
-                  statusCode=synced.error?'pending':'ready';
-                  message.textContent=synced.error?
-                    'Bank connected. Account discovery needs attention: '+synced.error:
-                    'Bank connected · '+count+' account'+(count===1?'':'s')+
-                    ' discovered. Transactions sync automatically and will appear in Finances when available.';
-                }catch(error){
-                  message.textContent='Bank connected. Account discovery was delayed: '+error.message+
-                    '. Check connected accounts instead of reconnecting.';
+                  const snapshot=await api('/accounts');
+                  count=(snapshot.accounts||[]).length;
+                  statusCode=count&&!snapshot.error?'ready':'pending';
+                  message.textContent=count?
+                    'Connected · '+count+' account'+(count===1?'':'s')+
+                      ' found. Available transactions import automatically.':
+                    'Bank connection saved. Account import is running automatically.';
+                }catch(_error){
+                  message.textContent='Bank connection saved. Server-side import will continue automatically.';
                 }
                 // Do not depend on this wizard remaining mounted: Main app redraws
                 // and the Plaid overlay can remove the original confirmation.
