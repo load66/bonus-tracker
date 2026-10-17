@@ -60,7 +60,9 @@
         }else if(category==='transfer')transfers++;
         if(category==='unreviewed'||(row.categorySource!=='user'&&row.confidence!=='high'))unreviewed++;
         if(Array.isArray(row.signals)&&row.signals.includes('possible_recurring'))recurring++;
-        const key=new Date(row.posted*1000).toISOString().slice(0,7);
+        // Use the same local calendar basis as the day-grouped Finance ledger.
+        const local=new Date(row.posted*1000);
+        const key=String(local.getFullYear())+'-'+String(local.getMonth()+1).padStart(2,'0');
         const month=monthly[key]||(monthly[key]={income:0n,expenses:0n});
         if(category==='income'&&n>0n)month.income+=n;
         if(SPENDING.has(category)&&n<0n)month.expenses-=n;
