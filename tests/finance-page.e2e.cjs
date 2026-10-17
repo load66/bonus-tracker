@@ -176,9 +176,9 @@ const base=()=>({
       await unknownRow.getByRole('button',{name:/Unknown/}).click();
       await section.getByRole('checkbox',{name:'Apply to similar transactions'}).check();
       const category=section.getByLabel('Category for Unknown');await category.selectOption('shopping');
+      await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).waitFor();
       assert.ok(requests.some(r=>r.path.endsWith('/transaction-review')&&r.body.applySimilar===true),
         'Opt-in merchant learning must be explicitly transmitted and never enabled by default');
-      await section.getByRole('alert').filter({hasText:'Changes were not saved.'}).waitFor();
       assert.equal(state.transactions[A][T3].category,'unreviewed','failure must not silently commit category changes');
       await section.getByLabel('Category for Unknown').selectOption('shopping');
       await section.getByText('Confirmed by you',{exact:true}).first().waitFor();
