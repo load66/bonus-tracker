@@ -819,3 +819,43 @@
 .finance-page .finance-spending-confirm-controls .finance-page-button{
   flex:1 1 85px;min-height:42px;
 }
+
+/* Finances v3.4.81 — household spending separate from investment portfolio. */
+.finance-page .finance-page-investment-dashboard{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
+  margin:12px 0;min-width:0;
+}
+.finance-page .finance-page-investment-metric{
+  min-width:0;border:1px solid #2A3841;background:#111C24;
+  padding:15px;border-radius:17px;display:grid;gap:8px;
+}
+.finance-page .finance-page-investment-metric:first-child{grid-column:1/-1}
+.finance-page .finance-page-investment-metric h3{margin:0;font-size:12px;font-weight:700;color:#A5B7BF}
+.finance-page .finance-page-investment-metric .finance-page-big-number{
+  display:block;font-size:clamp(20px,5.7vw,28px);line-height:1.15;letter-spacing:-.035em;overflow-wrap:anywhere
+}
+.finance-page .finance-page-investment-metric small{overflow-wrap:anywhere}
+.finance-page .finance-page-transaction-scopes{
+  display:flex;gap:7px;overflow-x:auto;flex-wrap:nowrap;
+  padding:2px 0 12px;scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;
+}
+.finance-page .finance-page-transaction-scopes::-webkit-scrollbar{display:none}
+.finance-page .finance-page-transaction-scopes .finance-page-chip{
+  flex:0 0 auto;white-space:nowrap;min-height:40px;padding:8px 13px;
+  border-radius:14px;
+}
+.finance-page .finance-page-transaction-group .finance-page-transaction-date{
+  position:sticky;top:54px;z-index:3;background:#111820;
+  box-shadow:0 -3px 0 #111820;padding:8px 4px;
+}
+.finance-page .finance-page-pending-tag{
+  display:inline-block;background:#33363A;color:#D1C7A9;
+  border-radius:7px;font-size:10px;padding:2px 6px;
+}
+.finance-page .finance-page-scroll-sentinel{min-height:4px}
+@media(max-width:420px){
+ .finance-page .finance-page-investment-dashboard{gap:8px}
+ .finance-page .finance-page-investment-metric{padding:12px}
+ .finance-page .finance-page-transaction-scopes{margin-right:0}
+}
