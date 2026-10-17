@@ -152,7 +152,9 @@
         const names=BANK_OPTIONS.filter(bank=>!typed||bank.toLowerCase().includes(typed.toLowerCase())).slice(0,9);
         if(typed.length>=2&&!names.some(n=>n.toLowerCase()===typed.toLowerCase()))names.push(typed);
         for(const bank of names){
-          const choice=button(list,'◉  '+bank,async()=>{
+          const initials=bank.replace(/[^A-Za-z0-9 ]/g,' ').trim().split(/\s+/).filter(Boolean)
+            .slice(0,2).map(part=>part[0].toUpperCase()).join('').slice(0,2);
+          const choice=button(list,initials+'  '+bank,async()=>{
             selectedBank=bank;wizardStage='route';rememberStep();paint();
           },'bank-connect-bank-choice');
           choice.setAttribute('aria-label','Choose '+bank);
