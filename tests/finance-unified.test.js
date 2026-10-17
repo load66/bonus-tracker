@@ -177,3 +177,32 @@ const manualInvest=structuredClone(investPlaid);manualInvest.accountProfiles={
   [b]:{kind:'checking',balanceMode:'asset',includeSpending:true}
 };
 assert.equal(core.combine({simplefin:investSimple,plaid:manualInvest}).accounts.find(x=>x.rawKey===b).kind,'checking','Manual account choice always wins');
+
+
+const wallet=structuredClone(plaid);
+wallet.accounts=[{...wallet.accounts[0],bank:'PayPal',name:'PayPal balance',balance:'500.00',
+  accountType:'depository',accountSubtype:'',balanceDate:now-75}];
+wallet.transactions={[b]:{}};
+wallet.accountProfiles={[b]:{kind:'unclassified',balanceMode:'exclude'}};
+const walletView=core.combine({simplefin:simple,plaid:wallet});
+assert.equal(walletView.accounts.find(x=>x.source==='plaid').kind,'checking');
+assert.equal(walletView.accountProfiles['plaid:'+b].balanceMode,'asset','Legacy automatic wallet exclusion is restored');
+const walletCash=finance.summarize(core.safeForSummary(walletView),{now});
+assert.equal(walletCash.cash,'1001.25','Spendable wallet is included in Cash');
+assert.equal(walletCash.netWorth,'1001.25','Wallet balance participates in Net worth');
+const walletManual=structuredClone(wallet);
+walletManual.accountProfiles[b]={kind:'checking',balanceMode:'exclude'};
+const walletManualView=core.combine({simplefin:simple,plaid:walletManual});
+assert.equal(walletManualView.accountProfiles['plaid:'+b].balanceMode,'exclude','Manual wallet exclusion stays excluded');
+const brokerageLegacy=structuredClone(investPlaid);
+brokerageLegacy.accountProfiles={[b]:{kind:'unclassified',balanceMode:'exclude'}};
+const legacyView=core.combine({simplefin:investSimple,plaid:brokerageLegacy});
+assert.equal(legacyView.accountProfiles['plaid:'+b].balanceMode,'asset','Auto-excluded investment returns to Net worth');
+const manualBroker=structuredClone(investPlaid);
+manualBroker.accountProfiles={[b]:{kind:'brokerage',balanceMode:'exclude'}};
+const manualView=core.combine({simplefin:investSimple,plaid:manualBroker});
+assert.equal(manualView.accountProfiles['plaid:'+b].balanceMode,'exclude','Explicit brokerage exclusion remains authoritative');
+const legacyWorth=finance.summarize(core.safeForSummary(legacyView),{now});
+const manualWorth=finance.summarize(core.safeForSummary(manualView),{now});
+assert.equal(legacyWorth.netWorth,'16200.00','Cash plus investments determine total Net worth when included');
+assert.equal(manualWorth.netWorth,'1200.00','Legacy wallet/investment exclusions change totals only when genuinely automatic');
