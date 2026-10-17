@@ -60,3 +60,24 @@
 .bank-sync-add-institution{padding:13px}
 .bank-sync-add-institution .bank-sync-links{margin-top:5px}
 @media(max-width:380px){.bank-connect-header,.bank-connect-stage{padding:11px}.bank-connect-flow .bank-connect-link{width:100%;margin:2px 0}}
+
+
+/* Finances v3.4.83: one-screen-at-a-time bank onboarding. */
+.bank-sync-overlay:has(.finance-guided-bank-sheet){display:flex;align-items:flex-end;justify-content:center;padding:0}
+.bank-sync-overlay:has(.finance-guided-bank-sheet) .bank-sync-modal{width:min(620px,100%);height:min(740px,92dvh);border-radius:24px 24px 0 0;border-bottom:0}
+.finance-guided-bank-sheet{display:grid;gap:12px;padding:13px 0 20px}
+.bank-connect-progress{display:flex;gap:8px;margin-top:12px;color:#92a6c4;font-size:16px}
+.bank-connect-progress span[aria-label$="current"]{color:#b9deff}
+.finance-guided-bank-sheet .bank-connect-stage{display:grid;gap:10px}
+.bank-connect-bank-search{font-size:16px!important}
+.bank-connect-bank-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-height:330px;overflow:auto}
+.bank-sync-modal .bank-connect-bank-choice{display:flex;align-items:center;text-align:left;justify-content:flex-start;padding:11px;min-height:53px;border:1px solid #526887;border-radius:11px;background:#1b2c44;color:#eef5ff;font-weight:650;margin:0}
+.bank-sync-modal .bank-connect-route{display:block;width:100%;min-height:53px;margin:2px 0}
+.bank-connect-found-account{border:1px solid #4c698b;padding:10px 12px;background:#142238;border-radius:12px;display:grid;gap:5px}
+.bank-connect-found-account strong{font-size:13px}
+.bank-connect-found-account small{font-size:11px;color:#a8c0e0}
+.bank-sync-modal .bank-connect-toggle{display:flex;align-items:center;gap:9px;margin:7px 0 0}
+.bank-sync-modal .bank-connect-toggle input[type="checkbox"]{display:inline-block;width:20px;min-width:20px;max-width:20px;height:20px;min-height:20px;padding:0;margin:0;accent-color:#91c5fa}
+.bank-connect-toggle span{font-size:12px}
+.finance-guided-bank-sheet button:focus-visible,.finance-guided-bank-sheet a:focus-visible{outline:2px solid #b9dcff;outline-offset:3px}
+@media(max-width:350px){.bank-connect-bank-choices{grid-template-columns:1fr}.bank-sync-overlay:has(.finance-guided-bank-sheet) .bank-sync-modal{height:96dvh}}
