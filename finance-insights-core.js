@@ -86,7 +86,7 @@
     for(const row of valid){
       const v=cents(row.amount),day=new Date(row.posted*1000).getDate(),category=spendingCategory(row,v);
       if(v>0n){
-        if(row.category==='income'){income+=v;incomeByDay[day]=(incomeByDay[day]||0n)+v}
+        if(row.category==='income'&&!movementKind(row)){income+=v;incomeByDay[day]=(incomeByDay[day]||0n)+v}
         if(row.category==='refund')refunds.push({row,value:v,day});
         continue;
       }
