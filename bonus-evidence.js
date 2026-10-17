@@ -30,6 +30,8 @@
   const activeEntries=()=>typeof entries!=='undefined'&&Array.isArray(entries)?entries.filter(e=>e&&!e.closed):[];
   function reset(){
     sourceStates={};snapshot=null;loading=false;saving=false;error='';saveNotice='';showAll=false;showResolved=false;hideAmounts=true;pendingLimits.clear();resolvedLimits.clear();rev++;
+    // Discard per-entry private hints when this evidence session is closed.
+    window.BTTrackerEvidenceHints={};
   }
   function update(){
     const root=document.getElementById('bt-bonus-evidence');

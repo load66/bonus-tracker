@@ -232,11 +232,28 @@
       if(!current&&monitored.has(a.key)&&possible.length===1){
         const match=possible[0];
         button(card,'Link to '+match.bank+' bonus?',async()=>{
-          const mappings={...data.mappings,[a.key]:{entryId:String(match.id),bank:match.bank,opened:match.opened}};
+          // First discovery is not an opening date. Require the user to verify
+          // the exact real-world opening date before authorizing a saved link.
+          const question='This bank has not supplied a verified account-opening date. '+match.bank+
+            ' was first discovered after the tracked bonus opening. Check your bank records and confirm this account actually opened on '+
+            match.opened+'. Continue only if the account, institution and bonus cycle all match.';
+          if(typeof window.btConfirmDialog!=='function')return;
+          const approved=await window.btConfirmDialog(question,{
+            title:'Verify the bonus account',confirmLabel:'I verified the opening date',
+            cancelLabel:'Not sure — cancel'
+          });
+          if(!approved)return;
+          const target=active().find(e=>String(e.id)===String(match.id)&&
+            e.bank===match.bank&&e.opened===match.opened);
+          const account=data?.accounts?.find(item=>item.key===a.key);
+          if(!target||!account||data.mappings?.[a.key]){
+            message('The account or bonus cycle changed. Refresh and review before linking.');return;
+          }
+          const mappings={...data.mappings,[a.key]:{entryId:String(target.id),bank:target.bank,opened:target.opened}};
           data=await request('/selection',{method:'PUT',body:JSON.stringify({mappings})});
-          paint();message('Bonus linked after confirmation. Review account-product assignment separately.');
+          paint();message('Confirmed bonus link saved. Promotion qualifications remain unverified.');
         },'btn-s');
-        el('small','Suggested from the exact institution name and first-discovery date, not a verified opening date.',card);
+        el('small','Suggestion only: first-discovery date is not proof of account opening. Date confirmation is required.',card);
       }
     }
     if(search)search.oninput=()=>{accountFilter=search.value.trim().toLowerCase();for(const item of accountCards)item.card.hidden=!!accountFilter&&!item.name.includes(accountFilter);};
