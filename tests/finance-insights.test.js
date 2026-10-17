@@ -138,11 +138,16 @@ assert.equal(I.spent(payrollRows,'2026-10').income,'1880.00');
 assert.equal(I.recurring(payrollRows.slice(1),NOW).length,0,'Unconfirmed 2-point patterns are not recurring');
 assert.equal(I.recurring(payrollRows.slice(1),NOW,{'schreiber foods payroll|credit':{confirmed:true}}).length,1,
   'A user-confirmed rule may make a consistent two-point stream recurring');
-const discontinued=[weekday(7,10),weekday(8,10),weekday(9,10)]
+const discontinued=[weekday(6,10),weekday(7,10),weekday(8,10)]
   .map(at=>row(at,'-19.99','subscription','Old subscription'));
 const ended=I.recurring(discontinued,NOW);
 assert.equal(ended[0].status,'possibly_ended');
 assert.equal(ended[0].nextAt,null);
+const lateStream=[weekday(7,10),weekday(8,10),weekday(9,10)]
+  .map(at=>row(at,'-19.99','subscription','Recent subscription'));
+const late=I.recurring(lateStream,NOW);
+assert.equal(late[0].status,'late');
+assert.equal(late[0].nextAt,null,'A grace-period stream cannot display a past Next date');
 const xmoneyPayment={...row(weekday(10,13),'1000.00','income','Payment'),
   description:'Payment',account:{bank:'X money',name:'Checking'}};
 assert.ok(G.effective(xmoneyPayment).signals.includes('possible_transfer'),'Unpaired +$1000 bank payment prompts confirmation');
