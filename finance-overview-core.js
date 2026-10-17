@@ -31,6 +31,7 @@
   const investmentInstitution=/(?:\brobinhood\b|\bfidelity\b|\bschwab\b|\bvanguard\b|\bbrokerage\b|\binvestment\b|\b401k\b|\broth\s*ira\b|\bira\b)/i;
   const contributionAction=/(?:\b(?:contribution|contribute|deposit|funding|transfer)\b)/i;
   function financialMovement(row){
+    if(['user','user_rule'].includes(row.categorySource))return row.category==='transfer';
     const text=String(row.description||'')+' '+String(row.merchant||'');
     return row.kind==='card_payment'||row.kind==='investment_contribution'||
       (row.signals||[]).includes('matched_internal_transfer')||

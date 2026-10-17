@@ -189,6 +189,8 @@
     // assumption based on a merchant name is needed. Match each direction
     // uniquely by exact cents and at most three days. Preserve manual reviews.
     const transferRows=[];
+    const nonTransfers=new Set(['groceries','dining','shopping','housing','utilities',
+      'transportation','health','entertainment','fees','taxes','travel','subscription','loan']);
     const toCents=value=>{
       const m=/^([+-]?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(value??'').trim());
       if(!m)return null;
@@ -205,7 +207,15 @@
           ['bonus','refund','verification'].includes(row.category)||
           (row.signals||[]).some(x=>['paycheck','possible_direct_deposit','possible_bonus','possible_refund'].includes(x))||
           payroll)continue;
-        transferRows.push({account:key,row,value});
+        // Equal-valued unrelated purchases and deposits are not proof of a
+        // self-transfer. Preserve known household expenses and ordinary income.
+        const directMovement=/\b(?:internal\s+(?:sweep|transfer|move)|outgoing\s+ach|ach\s+transfer|to\s+(?:bank|checking|savings))\b/i.test(description);
+        if(value<0n&&nonTransfers.has(row.category)&&!directMovement)continue;
+        // Ordinary income can be a competing candidate, preventing a false
+        // unique match, but must never itself be auto-classified as transfer.
+        const matchable=!(value>0n&&row.category==='income'&&!(row.signals||[]).some(signal=>
+          ['possible_transfer','transfer','plaid_transfer','investment_transfer'].includes(signal)));
+        transferRows.push({account:key,row,value,matchable});
       }
     }
     const matches=transferRows.map((left,i)=>transferRows.flatMap((right,j)=>{
@@ -216,7 +226,8 @@
     for(let i=0;i<matches.length;i++){
       if(matches[i].length!==1)continue;
       const j=matches[i][0];
-      if(j<=i||matches[j].length!==1||matches[j][0]!==i)continue;
+      if(j<=i||matches[j].length!==1||matches[j][0]!==i||
+        !transferRows[i].matchable||!transferRows[j].matchable)continue;
       const pairId=['internal',transferRows[i].account,transferRows[j].account,
         String(transferRows[i].row.id),String(transferRows[j].row.id)].join(':');
       const investments=key=>['brokerage','retirement'].includes(unified.accountProfiles?.[key]?.kind);

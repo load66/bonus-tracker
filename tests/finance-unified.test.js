@@ -296,3 +296,21 @@ const salary=core.safeForSummary(core.combine({simplefin:crossSimple,plaid:payro
 assert.equal(salary.transactions['plaid:'+b].payment.category,'income',
   'Schreiber payroll is not a self-transfer on an equal-amount day');
 assert.equal(salary.transactions['plaid:'+b].payment.transferPairId,undefined);
+
+// Equal-value spending and an unrelated wallet Payment are not reciprocal transfers.
+const unrelatedSpend=structuredClone(crossSimple);
+unrelatedSpend.transactions[a].debit={...unrelatedSpend.transactions[a].debit,
+  category:'groceries',merchant:'Synthetic Grocery Store',description:'Synthetic Grocery Store'};
+const unrelatedResult=core.safeForSummary(core.combine({simplefin:unrelatedSpend,plaid:crossPlaid}));
+assert.equal(unrelatedResult.transactions['simplefin:'+a].debit.category,'groceries');
+assert.equal(unrelatedResult.transactions['plaid:'+b].payment.category,'unreviewed');
+assert.equal(unrelatedResult.transactions['plaid:'+b].payment.transferPairId,undefined,
+  'A grocery purchase cannot be erased by an equal-value deposit in another account');
+assert.equal(finance.summarize(unrelatedResult,{now,days:30}).expenses,'1000.00');
+const unrelatedIncome=structuredClone(crossPlaid);
+unrelatedIncome.transactions[b].payment={...unrelatedIncome.transactions[b].payment,
+  category:'income',merchant:'Dividend income',description:'Dividend income'};
+const nonTransferIncome=core.safeForSummary(core.combine({simplefin:crossSimple,plaid:unrelatedIncome}));
+assert.equal(nonTransferIncome.transactions['plaid:'+b].payment.category,'income');
+assert.equal(nonTransferIncome.transactions['plaid:'+b].payment.transferPairId,undefined,
+  'Ordinary non-payroll income is not erased solely because another account has an equal debit');

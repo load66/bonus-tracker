@@ -61,6 +61,20 @@
     return null;
   }
   function effective(row){
+    // Confirmed user categories win over stale provider/automatic hints, across
+    // both the ledger and all reports. This changes presentation only.
+    if(row&&['user','user_rule'].includes(row.categorySource)){
+      const category=row.category||'unreviewed';
+      const signals=(row.signals||[]).filter(signal=>{
+        if(signal==='matched_internal_transfer'||signal==='possible_transfer')return false;
+        if(['transfer','card_payment','investment_transfer','plaid_transfer'].includes(signal)&&category!=='transfer')return false;
+        if(['paycheck','possible_direct_deposit'].includes(signal)&&category!=='income')return false;
+        if(signal==='possible_bonus'&&category!=='bonus')return false;
+        if(signal==='possible_refund'&&category!=='refund')return false;
+        return true;
+      });
+      return {...row,category,signals};
+    }
     const match=categorize(row),signals=[...(row?.signals||[])];
     if(match?.signal&&!signals.includes(match.signal))signals.push(match.signal);
     return {...row,category:match?.category||row?.category||'unreviewed',signals};

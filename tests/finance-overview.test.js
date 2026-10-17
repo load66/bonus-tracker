@@ -285,3 +285,13 @@ assert.equal(unverifiedResult.investmentMarketChange,null,
 assert.equal(unverifiedResult.investmentContributions,'500.00',
   'observed paired transfers remain separately reviewable when performance is hidden');
 console.log('Net-worth groups reconcile with credit balances in Credit cards, genuine Other assets, stale balances and flow-adjusted investments');
+
+// User-reviewed spending overrides stale matching hints and description heuristics.
+const manualState=structuredClone(classified);
+manualState.transactions.cash={confirmed:{...row('-25.00'),
+  category:'shopping',categorySource:'user',merchant:'To Citibank',description:'To Citibank',
+  signals:['possible_transfer','investment_transfer']}};
+const manuallyCategorized=summarize(manualState,{now:NOW});
+assert.equal(manuallyCategorized.expenses,'25.00',
+  'Confirmed purchases count even when earlier automatic signals identified a transfer');
+assert.equal(manuallyCategorized.cashFlow,'-25.00');

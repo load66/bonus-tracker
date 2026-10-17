@@ -32,7 +32,8 @@
     const item=resolve(row);
     if(item.excludedFromTotals===true||item.pending===true||value===null||value>=0n)return null;
     const category=String(item.category||'unreviewed').toLowerCase();
-    if(noSpend.has(category)||item.kind==='card_payment'||item.kind==='investment_contribution'||
+    const reviewed=['user','user_rule'].includes(item.categorySource);
+    if(noSpend.has(category)||(!reviewed&&(item.kind==='card_payment'||item.kind==='investment_contribution'))||
        (item.signals||[]).some(s=>['matched_internal_transfer','possible_transfer','card_payment','investment_transfer'].includes(s)))return null;
     return SPEND.has(category)?category:'unreviewed';
   }
@@ -109,7 +110,7 @@
          !Number.isFinite(original.posted)||original.posted*1000>now+DAY)continue;
       const row=resolve(original),n=cents(row.amount);
       if(n===null||n===0n||excluded.has(String(row.category||'').toLowerCase())||
-         recurringTransferKinds.has(row.kind)||
+         (!['user','user_rule'].includes(row.categorySource)&&recurringTransferKinds.has(row.kind))||
          (row.signals||[]).some(signal=>recurringTransferSignals.has(signal)))continue;
       const signals=row.signals||[];
       const type=signals.includes('card_payment')||row.kind==='card_payment'?'card_payment':
