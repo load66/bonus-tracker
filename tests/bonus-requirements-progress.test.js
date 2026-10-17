@@ -111,3 +111,26 @@ assert.equal(unknownReport.requirements[0].manual,true,'unknown product id must 
 const missingPrimary={...matched,missingAccounts:1};
 assert.equal(evaluate(entry,missingPrimary,()=>({ok:true,mode:'structured',rules:multiRules})).requirements[0].manual,true);
 assert.equal(JSON.stringify(state),snap?JSON.stringify(JSON.parse(snap).state):'','multi-product projection leaves saved bonus and bank records unchanged');
+
+const futureGroup={...group,
+  linkedAccounts:[{key:A,productId:'checking'}],
+  balanceHistory:{[A]:[{at:NOW-2*86400,balance:'1600.00'},
+    {at:NOW-86400,balance:'1450.00'}]},
+  rawActivity:[
+    {accountKey:A,amount:'500.00',posted:NOW-100,externalBankConfirmed:true,signals:[],category:'income'},
+    {accountKey:A,amount:'600.00',posted:NOW-100,externalBankConfirmed:true,signals:['matched_internal_transfer'],category:'transfer'},
+    {accountKey:A,amount:'-15.00',posted:NOW-100,transactionType:'debit_card',category:'shopping'},
+    {accountKey:A,amount:'-8.00',posted:NOW-100,category:'fees'}]
+};
+const kinds=evaluate(entry,futureGroup,()=>({ok:true,mode:'structured',rules:{...schema,
+ requirements:[
+  {id:'hold',accountId:'checking',kind:'balance-hold',text:'Minimum daily balance $1500',amount:1500,
+    evidence:{quote:'Minimum daily balance $1500'},timing:{basis:'opened',unit:'calendar-days',value:30}},
+  {id:'fresh',accountId:'checking',kind:'new-money',text:'External new money',amount:500},
+  {id:'debits',accountId:'checking',kind:'transactions',text:'Debit card purchases',count:2}]
+}}),NOW).requirements;
+assert.equal(kinds[0].balance.status,'at risk');
+assert.equal(kinds[0].balance.holdEnd,'2026-10-31');
+assert.equal(kinds[1].candidateCount,1);
+assert.equal(kinds[2].candidateCount,1);
+assert.ok(kinds.every(x=>x.verifiedMet===false));

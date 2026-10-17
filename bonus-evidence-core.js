@@ -54,7 +54,7 @@
       let group=grouped.get(String(entry.id));
       if(!group){
         group={entryId:String(entry.id),bank:entry.bank,opened:entry.opened,
-          linkedAccounts:[],activity:[],counts:{bonus:0,directDeposit:0,fee:0,reversal:0,recurring:0},
+          linkedAccounts:[],activity:[],rawActivity:[],balanceHistory:{},counts:{bonus:0,directDeposit:0,fee:0,reversal:0,recurring:0},
           missingAccounts:0,unsupportedCurrency:0,review:{unreviewed:0,reviewed:0,dismissed:0}};
         grouped.set(String(entry.id),group);
       }
@@ -64,7 +64,8 @@
         continue;
       }
       const supported=account.currency==='USD';
-      group.linkedAccounts.push({key,name:String(account.name||'Financial account'),bank:String(account.bank||''),productId:typeof mapping.productId==='string'?mapping.productId:null});
+      group.linkedAccounts.push({key,name:String(account.name||'Financial account'),bank:String(account.bank||''),productId:typeof mapping.productId==='string'?mapping.productId:null,kind:String(account.kind||account.detectedType||account.accountSubtype||account.accountType||'')});
+      group.balanceHistory[key]=Array.isArray(safeState.balanceHistory?.[key])?safeState.balanceHistory[key].filter(point=>point&&Number.isFinite(point.at)&&point.currency==='USD').map(point=>({at:point.at,balance:point.balance,observedAt:point.observedAt})):[];
       if(!supported){group.unsupportedCurrency++;continue;}
       const rows=transactions[key]&&typeof transactions[key]==='object'&&!Array.isArray(transactions[key])
         ?Object.values(transactions[key]):[];
@@ -72,6 +73,13 @@
       for(const row of rows){
         if(!row||!Number.isFinite(row.posted)||row.posted<openedAt||row.posted>now+300)continue;
         const type=evidenceType(row);
+        if(!row.pending&&sign(row.amount)!==null){
+          const flags=Array.isArray(row.signals)?row.signals:[];
+          group.rawActivity.push({accountKey:key,id:String(row.id||''),amount:String(row.amount),posted:row.posted,
+            category:String(row.category||''),kind:String(row.kind||''),signals:flags.slice(),
+            paymentChannel:String(row.paymentChannel||''),plaidCategoryDetailed:String(row.plaidCategoryDetailed||''),
+            transactionType:String(row.transactionType||''),externalBankConfirmed:row.externalBankConfirmed===true});
+        }
         if(!type)continue;
         group.counts[type]++;
         const saved=evidenceReviews[key]&&evidenceReviews[key][String(row.id||'')];
@@ -114,6 +122,7 @@
       openCampaigns:open.length,invalidLinks:invalidLinks.length,campaigns,
       counts:total,review,
       lastSuccess:Number.isFinite(safeState.lastSuccess)?safeState.lastSuccess:null,
+      incompleteProviders:Object.values(safeState.providerState||{}).some(p=>p.connected&&(p.stale||p.needsAttention||!p.lastSuccess)),
       staleSync:!Number.isFinite(safeState.lastSuccess)||now-safeState.lastSuccess>2*DAY,
       evidenceOnly:true
     };

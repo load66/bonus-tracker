@@ -123,3 +123,15 @@ assert.equal(output.campaigns[0].linkedAccounts.find(a=>a.key===A).productId,nul
   'legacy links remain unclassified without changing recorded activity');
 assert.equal(output.campaigns[0].review.unreviewed,5,
   'adding explicit product selectors cannot mark bonus evidence reviewed automatically');
+
+const {combine}=require('../finance-unified-core.js');
+const combined=combine({simplefin:state,plaid:{connected:true,lastSuccess:NOW,
+ accounts:[{key:'plaid-one',name:'Checking',bank:'Other Bank',currency:'USD'}],
+ mappings:{'plaid-one':{entryId:'offer-3',bank:'No Link Bank',opened:'2026-10-01'}},
+ evidenceReviews:{'plaid-one':{p:{status:'reviewed',requirementId:'dd-one'}}},
+ transactions:{'plaid-one':{p:row('p','1061.24',['possible_direct_deposit'])}}
+}});
+assert.equal(combined.mappings['simplefin:'+A].entryId,'offer-1');
+assert.equal(combined.mappings['plaid:plaid-one'].entryId,'offer-3');
+assert.equal(combined.evidenceReviews['plaid:plaid-one'].p.status,'reviewed');
+assert.equal(summarize(combined,tracked,NOW).linkedCampaigns,3);
