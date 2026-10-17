@@ -735,7 +735,8 @@
       }else if(kind==='creditCards')el('small','Net across cards',info);
       else{
         const details=summary.netWorthGroupAccounts?.other||[];
-        el('small',details.length===1?(details[0].bank||details[0].name):'Other included assets and liabilities',info);
+        el('small',details.length===1&&details[0].kind==='mortgage'?'Mortgage debt · '+(details[0].bank||'Loan'):
+          details.length===1?(details[0].bank||details[0].name):'Other included assets and liabilities',info);
       }
       const value=el('span',undefined,row,'finance-overview-row-value');
       const classified=summary.netWorthGroupAccounts?.[kind]||[];
@@ -1582,7 +1583,11 @@
   function accountAmount(account){
     const value=window.BTFinanceOverview.cents(account.balance),p=profile(account);
     if(value!==null&&p.kind==='credit_card')return amount(window.BTFinanceOverview.decimal(value<0n?-value:value),account.currency)+(value<0n?' credit':' owed');
-    return value!==null&&['loan','mortgage','other_liability'].includes(p.kind)?amount(window.BTFinanceOverview.decimal(value),account.currency):amount(account.balance,account.currency);
+    if(value!==null&&['loan','mortgage'].includes(p.kind)){
+      const signed=window.BTFinanceOverview.signedBalance(p.kind,'liability',value);
+      return amount(window.BTFinanceOverview.decimal(-signed),account.currency)+' owed';
+    }
+    return value!==null&&p.kind==='other_liability'?amount(window.BTFinanceOverview.decimal(value),account.currency):amount(account.balance,account.currency);
   }
   function accountIcon(parent,account){
     return el('span',String(account.bank||account.name||'A').trim().slice(0,1).toUpperCase(),parent,'finance-page-account-icon');
@@ -1672,13 +1677,21 @@
     const intro=el('section',undefined,modal,'finance-page-account-intro');accountIcon(intro,account);
     el('p',account.bank||'Bank',intro);el('strong',accountAmount(account),intro,'finance-page-big-number');
     if(account.creditLimit!=null)el('small','Credit limit '+amount(account.creditLimit,account.currency),intro);
-    if(account.availableBalance!=null)el('small','Available '+amount(account.availableBalance,account.currency),intro);
-    el('small',syncLabel(account.transactionLastSyncAt||sourceSnapshot(account.source)?.lastSuccess),intro);
-    const chart=el('section',undefined,modal,'finance-page-card');el('h3','Balance history',chart);
+    if(account.availableBalance!=null&&!['loan','mortgage'].includes(p.kind))el('small','Available '+amount(account.availableBalance,account.currency),intro);
+    if(['mortgage','loan'].includes(p.kind)){
+      el('small',account.balanceDate?'Loan balance · '+syncLabel(account.balanceDate):'Loan balance date unavailable',intro);
+      el('small','Connected loan balance only. Rate, escrow, due dates and home value are not included.',intro);
+    }else el('small',syncLabel(account.transactionLastSyncAt||sourceSnapshot(account.source)?.lastSuccess),intro);
+    const chart=el('section',undefined,modal,'finance-page-card');el('h3',['mortgage','loan'].includes(p.kind)?'Debt remaining':'Balance history',chart);
     const ranges=el('div',undefined,chart,'finance-page-period'),plot=el('div',undefined,chart);
     const draw=days=>{plot.replaceChildren();
       const points=(currentCombined.balanceHistory?.[account.key]||[]).filter(x=>(x.observedAt||x.at)>Date.now()/1000-days*86400)
-        .map(x=>({at:x.observedAt||x.at,value:profile(account).balanceMode==='liability'?String(-Number(x.balance)):x.balance}));
+        .map(x=>{
+          const raw=window.BTFinanceOverview.cents(x.balance);
+          if(['mortgage','loan'].includes(p.kind))return {at:x.observedAt||x.at,
+            value:raw===null?null:window.BTFinanceOverview.decimal(-window.BTFinanceOverview.signedBalance(p.kind,'liability',raw))};
+          return {at:x.observedAt||x.at,value:p.balanceMode==='liability'?String(-Number(x.balance)):x.balance};
+        }).filter(x=>x.value!==null);
       if(points.length<2)el('p','Chart builds as your accounts sync.',plot);else trendChart(plot,points);
     };
     for(const [label,days] of [['1M',30],['3M',90],['1Y',365]])action(ranges,label,()=>draw(days),'finance-page-chip');draw(90);
@@ -1772,14 +1785,22 @@
         if(!rows.length)continue;
         const group=el('section',undefined,list,'finance-page-institution');
         const head=el('div',undefined,group,'finance-page-institution-head');el('h4',title,head);
-        const usd=rows.filter(a=>a.currency==='USD'),values=usd.map(a=>window.BTFinanceOverview.cents(a.balance));
+        const usd=rows.filter(a=>a.currency==='USD'),values=usd.map(a=>{
+          const value=window.BTFinanceOverview.cents(a.balance);
+          if(value===null)return null;
+          return ['loan','mortgage'].includes(profile(a).kind)
+            ?-window.BTFinanceOverview.signedBalance(profile(a).kind,'liability',value):value;
+        });
         const safeCash=title==='Cash'?window.BTFinanceOverview.summarize(
           window.BTFinanceUnified.safeForSummary(currentCombined)).cash:null;
         const subtotal=title==='Cash'?safeCash:
           values.length&&values.every(x=>x!==null)?window.BTFinanceOverview.decimal(values.reduce((sum,x)=>sum+x,0n)):null;
         const owed=title==='Credit cards'&&subtotal!==null;
         const subtotalCents=owed?window.BTFinanceOverview.cents(subtotal):null;
-        el('b',(usd.length!==rows.length?'USD subtotal · ':'')+(owed?amount(window.BTFinanceOverview.decimal(subtotalCents<0n?-subtotalCents:subtotalCents),'USD')+(subtotalCents<0n?' credit':' owed'):amount(subtotal,'USD')),head);
+        const headline=owed?amount(window.BTFinanceOverview.decimal(subtotalCents<0n?-subtotalCents:subtotalCents),'USD')+(subtotalCents<0n?' credit':' owed'):
+          title==='Loans'&&subtotal!==null?amount(subtotal,'USD')+' owed':amount(subtotal,'USD');
+        el('b',(usd.length!==rows.length?'USD subtotal · ':'')+headline,head);
+        if(title==='Loans')el('small','Linked balances only · home value not included',head,'finance-page-coverage-label');
         if(title==='Cash'){
           const known=window.BTFinanceOverview.summarize(window.BTFinanceUnified.safeForSummary(currentCombined));
           if(known.staleOrUnavailableCash>0)el('small',known.staleOrUnavailableCash+' account'+(known.staleOrUnavailableCash===1?'':'s')+' not updated',head,'finance-page-coverage-label');
