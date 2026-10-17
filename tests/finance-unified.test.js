@@ -44,6 +44,24 @@ assert.equal(excluded.accounts.length,0,'suspected same-account links must not e
 assert.equal(excluded.excludedForReview,2);
 assert.equal(finance.summarize(excluded,{now,days:30}).income,null);
 
+const historyLoading=structuredClone(plaid);
+historyLoading.accounts[0].historyComplete=false;
+historyLoading.accounts[0].transactionSyncStatus='history_still_loading';
+const partialHistory=core.safeForSummary(core.combine({simplefin:simple,plaid:historyLoading}));
+assert.equal(partialHistory.historyIncomplete,true,
+  'Plaid historical backfill is incomplete despite a successful last-sync timestamp');
+assert.equal(partialHistory.incompleteProviders,false,
+  'A successful connection timestamp is distinct from complete transaction history');
+const verifiedHistory=structuredClone(historyLoading);
+verifiedHistory.accounts[0].historyComplete=true;
+verifiedHistory.accounts[0].transactionSyncStatus='ready';
+assert.equal(core.safeForSummary(core.combine({simplefin:simple,plaid:verifiedHistory})).historyIncomplete,false,
+  'Completed Plaid historical sync allows cash-flow completeness to be evaluated');
+const providerError=structuredClone(plaid);
+providerError.error='Synthetic transient provider failure';
+assert.equal(core.safeForSummary(core.combine({simplefin:simple,plaid:providerError})).incompleteProviders,true,
+  'Source errors must invalidate claimed aggregate completeness even with old success timestamps');
+
 const hiddenBank=structuredClone(simple);
 hiddenBank.accountProfiles[a].hidden=true;
 const combinedHidden=core.combine({simplefin:hiddenBank,plaid});
