@@ -256,6 +256,42 @@ const base=()=>({
         assert.ok(await investments.getByText(label,{exact:true}).count());
       assert.ok((await investments.innerText()).includes('complete period balance'));
       await investments.getByRole('button',{name:'Close'}).click();
+      // A new provider account can contain the word "Savings" inside a
+      // 401(k) retirement product. Both overview and detail sheets must
+      // automatically place it under Investments, never Cash.
+      const RET='r'.repeat(64);
+      state.accounts.push({key:RET,bank:'Example Plan Provider',
+        name:'Example Employer 401(k) Retirement Savings Plan',
+        accountType:'depository',accountSubtype:'savings',currency:'USD',
+        balance:'13755.42',balanceDate:NOW-200});
+      state.monitoredAccounts.push(RET);
+      state.transactions[RET]={};
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      for(const width of [320,375,390]){
+        await page.setViewportSize({width,height:844});
+        const cashRow=section.getByRole('button',{name:'View Cash accounts'});
+        await cashRow.waitFor({state:'visible'});
+        await cashRow.click();
+        const cashSheet=page.getByRole('dialog',{name:'Cash accounts'});
+        const cashContent=await cashSheet.innerText();
+        assert.ok(cashContent.includes('Checking'),'Cash retains real checking deposits at '+width);
+        assert.equal(cashContent.includes('401(k)'),false,
+          'Retirement plan may not appear in cash accounts at '+width);
+        await cashSheet.getByRole('button',{name:'Close'}).click();
+        const retirementRow=section.getByRole('button',{name:'View Investments accounts'});
+        await retirementRow.waitFor({state:'visible'});
+        await retirementRow.click();
+        const investmentSheet=page.getByRole('dialog',{name:'Investments accounts'});
+        assert.ok((await investmentSheet.innerText()).includes('401(k)'),
+          'Retirement plan must appear under Investments at '+width);
+        await investmentSheet.getByRole('button',{name:'Close'}).click();
+        const overflow=await section.evaluate(node=>node.scrollWidth-document.documentElement.clientWidth);
+        assert.ok(overflow<=1,'Retirement account introduces horizontal overflow at '+width);
+      }
+      state.accounts=state.accounts.filter(a=>a.key!==RET);
+      state.monitoredAccounts=state.monitoredAccounts.filter(k=>k!==RET);
+      delete state.transactions[RET];
+      await page.evaluate(()=>window.btRefreshFinancesPage());
       await section.getByRole('button',{name:'Hide amounts',exact:true}).waitFor();
       await section.getByRole('button',{name:'Hide amounts',exact:true}).click();
       assert.equal(await section.locator('.finance-overview-worth-number').innerText(),'••••••');
