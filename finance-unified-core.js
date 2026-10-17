@@ -32,6 +32,7 @@
     const broker=/\b(robinhood|fidelity|schwab|vanguard|e trade|etrade|webull|coinbase|kraken|interactive brokers)\b/.test(bank);
     if(broker&&type!=='depository'&&type!=='credit'&&!/\b(cash|checking|savings|card|loan|mortgage)\b/.test(name))
       return 'brokerage';
+    if(/\b(paypal|venmo|cash app|wallet)\b/.test(combined)&&/\b(balance|wallet|cash)\b/.test(name+' '+type+' '+subtype))return 'other_asset';
     if(type==='depository')return /saving|money market/.test(name)?'savings':'checking';
     if(TYPES.has(subtype))return subtype;
     if(TYPES.has(type))return type;
@@ -63,8 +64,12 @@
       if(!state||!state.connected){providerState[source]={connected:false,available:!!state,stale:false};continue}
       providerState[source]={connected:true,available:true,stale:!!state.stale,lastSuccess:state.lastSuccess||null,
         nextSyncAt:state.nextSyncAt||null,accountCount:(state.accounts||[]).length,
-        warningCount:Array.isArray(state.warnings)?state.warnings.length:0,
-        needsAttention:state.status==='attention'};
+        warningCount:Array.isArray(state.warnings)?state.warnings.filter(w=>
+          !/date range|capped|partial data|history (?:may be|is) incomplete/i.test(String(w))).length:0,
+        needsAttention:state.status==='attention'&&(
+          source!=='simplefin'||Boolean(state.providerHealth)||
+          (state.accounts||[]).some(a=>a.institutionStatus==='needs_attention')||
+          Boolean(state.error)||Boolean((state.missingAccounts||[]).length))};
       const accountKeys=new Set();
       for(const account of state.accounts||[]){
         if(!account||typeof account.key!=='string'||!account.key)continue;
@@ -77,7 +82,12 @@
           detectedType:detected,kind:saved.kind&&saved.kind!=='unclassified'?saved.kind:detected,
           name:saved.displayName||account.name,originalName:account.name});
         const kind=saved.kind&&saved.kind!=='unclassified'?saved.kind:detected;
-        accountProfiles[composite]={kind,balanceMode:saved.balanceMode||DEFAULT_TREATMENT[kind]||'exclude',
+        const autoLegacyExclusion=saved.balanceMode==='exclude'&&saved.balanceModeUserSet!==true&&
+          (!saved.kind||saved.kind==='unclassified')&&Boolean(DEFAULT_TREATMENT[kind]);
+        accountProfiles[composite]={kind,
+          balanceMode:autoLegacyExclusion?DEFAULT_TREATMENT[kind]:
+            (saved.balanceMode||DEFAULT_TREATMENT[kind]||'exclude'),
+          balanceModeUserSet:saved.balanceModeUserSet===true,
           order:Number.isInteger(saved.order)?saved.order:499,hidden:saved.hidden===true,
           removed:!!account.removedAt,includeSpending:!INVESTMENT_TYPES.has(kind)&&
             (saved.includeSpending??['checking','credit_card','savings'].includes(kind))};
