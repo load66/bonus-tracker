@@ -62,6 +62,17 @@ providerError.error='Synthetic transient provider failure';
 assert.equal(core.safeForSummary(core.combine({simplefin:simple,plaid:providerError})).incompleteProviders,true,
   'Source errors must invalidate claimed aggregate completeness even with old success timestamps');
 
+const malformedSimple=structuredClone(simple);
+malformedSimple.warnings=['Synthetic provider row was skipped'];
+malformedSimple.status='attention';
+const malformedSafe=core.safeForSummary(core.combine({simplefin:malformedSimple,plaid}));
+assert.equal(malformedSafe.incompleteProviders,true,
+  'a successful sync with invalid or skipped rows must not certify complete data');
+const malformedPlaid=structuredClone(plaid);
+malformedPlaid.accounts[0].invalidTransactionRows=2;
+assert.equal(core.safeForSummary(core.combine({simplefin:simple,plaid:malformedPlaid})).malformedActivity,true,
+  'Plaid per-account malformed transaction counts must keep financial totals partial');
+
 const hiddenBank=structuredClone(simple);
 hiddenBank.accountProfiles[a].hidden=true;
 const combinedHidden=core.combine({simplefin:hiddenBank,plaid});
