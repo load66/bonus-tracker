@@ -24,16 +24,35 @@
       return row.description||merchant||'Transaction';
     return merchant;
   }
-  // Amounts are visible when Finances opens. Hiding is an in-memory,
-  // screenshot-only choice and intentionally resets on page reload.
-  // Ignore older persisted privacy preferences without modifying stored data.
-  let currentRoot=null,sequence=0,hidden=false,data=null,otherData=null,busy=false,view='overview',period=90;
+  // v2 is a privacy preference only; legacy hidden-by-default is not migrated.
+  const AMOUNTS_PREF='bt_finance_hide_v2';
+  let hideChoice=false;
+  try{hideChoice=localStorage.getItem(AMOUNTS_PREF)==='true'}catch(_error){}
+  let currentRoot=null,sequence=0,hidden=hideChoice,data=null,otherData=null,busy=false,view='overview',period=90;
+  let spendingMonth=new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
+  let worthRange='3M',financePrefs={version:1,revision:0,budgets:{},duplicates:{},recurring:{},transactionMeta:{}};
+  let preferenceAvailable=false,archiveLoading=false,settingsNotice='';
+  const archives={simplefin:{},plaid:{}},archivesPending=new Set();
   let transactionSearch='',transactionAccount='',transactionCategory='',transactionStatus='',transactionVisibleLimit=100,expandedTransaction='';
   let accountSearch='',accountType='',showHiddenAccounts=false,saveNotice='',accountDraftProfiles={},currentCombined=null;
   let activityNotice='',monitoringNotice='',connectionNotice='';
   const dirtyAccounts=new Set(),expandedAccountSettings=new Set(),monitoringDraft={};
   const sourceSnapshot=source=>source===provider?data:otherData?.provider===source?otherData.snapshot:null;
-  const unified=()=>window.BTFinanceUnified?.combine({simplefin:sourceSnapshot('simplefin'),plaid:sourceSnapshot('plaid')})||null;
+  function sourceWithArchive(source){
+    const snapshot=sourceSnapshot(source);
+    if(!snapshot)return snapshot;
+    const months=Object.values(archives[source]||{});
+    if(!months.length)return snapshot;
+    const transactions={...snapshot.transactions};
+    for(const payload of months){
+      for(const [key,rows] of Object.entries(payload.transactions||{})){
+        transactions[key]={...rows,...transactions[key]};
+      }
+    }
+    return {...snapshot,transactions};
+  }
+  const unified=()=>window.BTFinanceUnified?.combine({
+    simplefin:sourceWithArchive('simplefin'),plaid:sourceWithArchive('plaid')},financePrefs)||null;
   function applySource(source,snapshot){
     if(source===provider)data=snapshot;
     else if(otherData?.provider===source)otherData={provider:source,snapshot};
@@ -68,7 +87,10 @@
       const saved=sourceSnapshot(account.source)?.accountProfiles?.[account.rawKey]||{};
       accountDraftProfiles[account.key]={
         kind:saved.kind&&saved.kind!=='unclassified'?saved.kind:(account.detectedType||'unclassified'),
-        balanceMode:saved.balanceMode||'exclude',
+        balanceMode:saved.balanceMode||({
+          checking:'asset',savings:'asset',brokerage:'asset',retirement:'asset',
+          other_asset:'asset',credit_card:'liability',loan:'liability',mortgage:'liability',
+          other_liability:'liability'})[saved.kind||account.detectedType]||'exclude',
         order:Number.isInteger(saved.order)?saved.order:499,hidden:saved.hidden===true
       };
     }
@@ -117,6 +139,68 @@
       return result;
     }catch(error){if(error.name==='AbortError')throw Error('The request timed out. Refresh before retrying.');throw error}
     finally{clearTimeout(timer)}
+  }
+  async function settingsRequest(path='',options={}){
+    const auth=window.BTBonusAuth;if(!auth?.connected())throw Error('Sign in again to save Finance settings.');
+    const token=await auth.token(),rev=sequence;
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
+    try{
+      const response=await fetch(BASE+'/finances'+path,{
+        ...options,headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
+        credentials:'omit',cache:'no-store',signal:controller.signal});
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok)throw Error(result.detail||'Could not save Finance settings.');
+      if(!auth.connected()||window.BTBonusAuth!==auth||!sameSessionToken(token,await auth.token()))
+        throw Error('Sign-in changed; refresh Finances.');
+      if(rev!==sequence)throw Error('Finances was reloaded; refresh the latest settings.');
+      return result;
+    }finally{clearTimeout(timer)}
+  }
+  async function loadSettings(rev){
+    try{
+      const latest=await settingsRequest('/preferences');
+      if(rev!==sequence)return;
+      financePrefs=latest;preferenceAvailable=true;settingsNotice='';
+    }catch(_error){
+      if(rev!==sequence)return;
+      preferenceAvailable=false;settingsNotice='Saved Finance settings are unavailable. Changes are disabled.';
+    }
+    if(currentRoot?.isConnected&&data)paint();
+  }
+  async function saveSetting(section,key,value){
+    if(!preferenceAvailable){settingsNotice='Saved settings are unavailable. Try again after syncing.';paint();return}
+    try{
+      const saved=await settingsRequest('/preferences',{
+        method:'PUT',body:JSON.stringify({revision:financePrefs.revision,section,key,value})});
+      financePrefs=saved;settingsNotice='';paint();
+    }catch(error){settingsNotice='Change not saved. '+String(error.message||'Try again.');paint()}
+  }
+  async function loadArchiveMonth(month){
+    if(!/^\\d{4}-(0[1-9]|1[0-2])$/.test(month))return;
+    const rev=sequence;let refreshed=false;
+    for(const source of ['simplefin','plaid']){
+      const snapshot=sourceSnapshot(source);
+      const key=source+'|'+month;
+      if(!snapshot?.connected||!(snapshot.historyMonths||[]).includes(month)||archives[source][month]||archivesPending.has(key))continue;
+      archivesPending.add(key);archiveLoading=true;
+      try{
+        const payload=await request('/history/'+month,{},source);
+        if(rev!==sequence)return;
+        archives[source][month]=payload;refreshed=true;
+      }catch(_error){settingsNotice='Some earlier transactions could not be loaded. Try again.'}
+      finally{archivesPending.delete(key)}
+    }
+    archiveLoading=archivesPending.size>0;
+    if(refreshed&&rev===sequence&&currentRoot?.isConnected)paint();
+  }
+  function requestArchiveWindow(days){
+    const today=new Date(),limit=Math.min(24,Math.ceil(days/28)+1);
+    for(let index=0;index<limit;index++){
+      const d=new Date(today.getFullYear(),today.getMonth()-index,1);
+      const month=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+      // Archive reads are owner-authenticated and only for advertised months.
+      loadArchiveMonth(month);
+    }
   }
   async function loadOtherSource(rev){
     // One authenticated read to surface linked accounts across both providers.
@@ -256,6 +340,7 @@
     if(!compact)el('span','MY MONEY',copy,'finance-page-kicker');el('h2','Finances',copy);
     action(head,hidden?'Show amounts':'Hide amounts',()=>{
       hidden=!hidden;
+      try{localStorage.setItem(AMOUNTS_PREF,String(hidden))}catch(_error){}
       paint();
     });
     if(!compact){
@@ -719,6 +804,7 @@
       window.BTBonusEvidence?.dispose();
       sessionIdentity=null;lastAuthenticatedOwner=null;expandedAccountSettings.clear();monitoringNotice='';activityNotice='';connectionNotice='';
       currentRoot=host;data=null;otherData=null;sequence++;
+      for(const key of ['simplefin','plaid'])archives[key]={};financePrefs={version:1,revision:0,budgets:{},duplicates:{},recurring:{},transactionMeta:{}};preferenceAvailable=false;
       host.replaceChildren();statusMessage(host,'Sign in to view finances','Sign in securely to view linked financial accounts.');
       action(host,'Sign in / manage accounts',()=>window.btOpenBankSync?.(),'finance-page-button finance-page-primary');return;
     }
@@ -740,19 +826,20 @@
       expandedAccountSettings.clear();monitoringNotice='';activityNotice='';connectionNotice='';
     }
     lastAuthenticatedOwner=identity;sessionIdentity=identity;currentRoot=host;data=null;otherData=null;
+    for(const key of ['simplefin','plaid'])archives[key]={};financePrefs={version:1,revision:0,budgets:{},duplicates:{},recurring:{},transactionMeta:{}};preferenceAvailable=false;
     accountDraftProfiles={};dirtyAccounts.clear();
     Object.keys(monitoringDraft).forEach(k=>delete monitoringDraft[k]);
     const rev=++sequence;paint();
     try{
       const result=await request();
       if(rev!==sequence||host!==currentRoot||!host.isConnected)return;
-      data=result;paint();loadOtherSource(rev);
+      data=result;paint();loadOtherSource(rev);loadSettings(rev);
     }catch(error){
       if(rev!==sequence||host!==currentRoot||!host.isConnected)return;
       // A broken SimpleFIN connection must not hide already-authorized Plaid
       // accounts. Fall back to the other source while explaining partial data.
       data={configured:false,connected:false,accounts:[],error:String(error.message||'Connection unavailable')};
-      paint();loadOtherSource(rev);
+      paint();loadOtherSource(rev);loadSettings(rev);
     }
   }
   function refresh(){
