@@ -1,10 +1,16 @@
 # Audit progress
 
-Active agent: codex — Finance Categories v2 — codex/finance-categories-v2
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- Backend Categories v2 base: v3.5.0, Railway SUCCESS at ed0d5314e7e5adfb367466b361995728c2ea3d7d
+- Backend P2P follow-up: PR https://github.com/load66/Trading-Journal-AI/pull/227, CI 39072838689 PASS; Railway verification before frontend release
+- Frontend Categories v2: v3.5.0, PR https://github.com/load66/bonus-tracker/pull/157, CI 39072801255 PASS (Finance/UI/Bonus/Cloud and Chromium/Firefox/WebKit)
+- Handoff: final merge and Pages cache/version verification pending; no data migrations or new Plaid Items
+- Next step: complete backend-first merge/deploy, verify Pages v3.5.0, then start Plaid fast sync
 
 - In progress: Categories v2 frontend rebase and CI on v3.4.99 baseline, PR https://github.com/load66/bonus-tracker/pull/157
 - Verified backend: v3.5.0 PR https://github.com/load66/Trading-Journal-AI/pull/224, Railway SUCCESS commit ed0d5314e7e5adfb367466b361995728c2ea3d7d
