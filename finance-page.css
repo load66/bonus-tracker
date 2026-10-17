@@ -848,3 +848,42 @@
   .finance-page .finance-overview-asset-card>strong{font-size:18px}
   .finance-page .finance-spending-donut-center strong{font-size:17px!important}
 }
+
+
+/* Minimal consumer-facing Net worth design and review bottom sheet. */
+.finance-page .finance-net-worth-card{display:flex;flex-direction:column;gap:3px}
+.finance-page .finance-net-worth-card>h3{margin:0;font-size:16px;font-weight:720;letter-spacing:-.015em}
+.finance-page .finance-net-worth-card>.finance-page-big-number{margin:7px 0 3px;line-height:1.07;font-size:clamp(32px,8.5vw,46px)}
+.finance-page .finance-net-worth-status{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin:11px 0 6px;min-height:40px;border-radius:12px;
+  padding:7px 12px;background:#1C252C;color:#CFD8DF;font-size:11px;
+}
+.finance-page .finance-net-worth-review-button{
+  min-height:34px;padding:5px 12px;border:1px solid #3F605B;
+  border-radius:10px;background:#23463F;color:#AEF7D3;
+  font-size:11px;font-weight:700
+}
+.finance-page .finance-net-worth-empty-chart{
+  display:grid;justify-items:center;align-items:center;gap:1px;
+  margin:13px 0 4px;min-height:115px;border-radius:13px;
+  background:linear-gradient(180deg,#1B252E,#151C24);
+  overflow:hidden;color:#638779;padding:10px 14px;
+}
+.finance-page .finance-net-worth-empty-chart svg{height:60px;width:100%;max-width:320px;opacity:.42}
+.finance-page .finance-net-worth-empty-chart span{color:#A6B8BC;font-size:11px;text-align:center}
+.finance-page .finance-net-worth-review-intro{font-size:12px;color:#A7B4BD;margin:0 0 12px}
+.finance-page .finance-net-worth-review-item{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  min-height:65px;border-bottom:1px solid #2A333F;padding:12px 0;
+}
+.finance-page .finance-net-worth-review-copy{display:grid;gap:4px;min-width:0}
+.finance-page .finance-net-worth-review-copy strong{font-size:12px;overflow-wrap:anywhere}
+.finance-page .finance-net-worth-review-copy small{font-size:11px;color:#AEBCC6}
+.finance-page .finance-net-worth-review-item button{flex:0 0 auto;min-height:38px;font-size:11px}
+@media(max-width:420px){
+  .finance-page .finance-modal:not(.finance-modal-full){
+    max-width:100vw;width:100vw;max-height:78dvh;margin:auto 0 0;
+    border-radius:24px 24px 0 0;
+  }
+}
