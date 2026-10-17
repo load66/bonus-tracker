@@ -139,8 +139,8 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
      window.__openedBankLink={url,target,features};return null;
    }});
    await dialog.getByRole('button',{name:'Open SimpleFIN ↗'}).click();
-   const opened=await page.evaluate(()=>window.__openedBankLink);
-   assert.deepEqual(opened,{url:'https://bridge.simplefin.org/',target:'_blank',features:'noopener'});
+   const openedBridgeInfo=await page.evaluate(()=>window.__openedBankLink);
+   assert.deepEqual(openedBridgeInfo,{url:'https://bridge.simplefin.org/',target:'_blank',features:'noopener'});
    await page.evaluate(()=>{
      window.dispatchEvent(new Event('blur'));
      window.dispatchEvent(new Event('focus'));
