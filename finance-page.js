@@ -824,7 +824,7 @@
         el('strong',displayMerchant(row),copy);
         el('span',financeCategory(row.category),copy,'finance-page-transaction-category'+(['transfer','verification'].includes(row.category)?' is-neutral':''));
         if(row.categorySource==='ai')el('small','Auto',copy,'finance-page-auto-tag');
-        el('small',[financeCategory(row.category),row.account.name||row.account.bank].filter(Boolean).join(' · '),copy);
+        el('small',row.account.name||row.account.bank||'Account',copy);
         const value=el('span',undefined,top,'finance-page-transaction-value');
         el('b',shownAmount(row),value,Number(row.amount)>0?'is-credit':'');
         if(row.pending)el('small','Pending',value);
@@ -1238,11 +1238,13 @@
         archiveLoading?'Loading earlier transactions…':settingsNotice;
       el('summary',label,row);
       const detail=el('p',undefined,row);
-      const problem=Object.entries(currentCombined?.sourceErrors||{}).map(([src,err])=>sourceLabel(src)+': '+String(err).slice(0,120)).join(' · ');
+      const problem=Object.entries(currentCombined?.sourceErrors||{}).map(([src,err])=>sourceLabel(src)+': '+String(err).slice(0,120)).join(' · ')||
+        ['simplefin','plaid'].flatMap(src=>(sourceSnapshot(src)?.warnings||[]).map(err=>sourceLabel(src)+': '+String(err).slice(0,120))).slice(0,2).join(' · ');
       detail.textContent=needsAttention?(problem||'Open Accounts to check the connection or refresh your accounts.'):
         loading?'Transaction imports continue automatically. Earlier months may be incomplete.':
         archiveLoading?'Previously imported months are being loaded securely.':settingsNotice;
       if(needsAttention)action(row,'Check accounts',()=>{view='accounts';paint()});
+      if(needsAttention&&sourceSnapshot('simplefin')?.status==='attention')action(row,'Open SimpleFIN',()=>window.open('https://bridge.simplefin.org/','_blank','noopener'),'finance-page-button');
     }
     if(view==='transactions')transactions(host);
     else if(view==='accounts')accounts(host);
