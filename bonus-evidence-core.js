@@ -54,7 +54,7 @@
       let group=grouped.get(String(entry.id));
       if(!group){
         group={entryId:String(entry.id),bank:entry.bank,opened:entry.opened,
-          linkedAccounts:[],activity:[],counts:{bonus:0,directDeposit:0,fee:0,reversal:0,recurring:0},
+          linkedAccounts:[],activity:[],observations:[],counts:{bonus:0,directDeposit:0,fee:0,reversal:0,recurring:0},
           missingAccounts:0,unsupportedCurrency:0,review:{unreviewed:0,reviewed:0,dismissed:0}};
         grouped.set(String(entry.id),group);
       }
@@ -71,6 +71,21 @@
       const openedAt=openingTimestamp(entry.opened);
       for(const row of rows){
         if(!row||!Number.isFinite(row.posted)||row.posted<openedAt||row.posted>now+300)continue;
+        if(!row.pending&&sign(row.amount)!==null){
+          // Compact, owner-private posted observations for candidate-only new-money
+          // and debit-purchase checks. Never persisted as tracker records.
+          group.observations.push({
+            id:String(row.id||''),accountKey:key,amount:String(row.amount),
+            posted:row.posted,description:String(row.description||'').slice(0,220),
+            category:String(row.category||''),kind:String(row.kind||''),
+            signals:Array.isArray(row.signals)?row.signals.slice(0,20):[],
+            transferOtherAccountKey:String(row.transferOtherAccountKey||''),
+            paymentChannel:String(row.paymentChannel||''),
+            paymentMethod:String(row.paymentMethod||''),
+            transactionCode:String(row.transactionCode||''),
+            externalOriginVerified:row.externalOriginVerified===true
+          });
+        }
         const type=evidenceType(row);
         if(!type)continue;
         group.counts[type]++;
@@ -88,6 +103,7 @@
     }
     const campaigns=[...grouped.values()].map(group=>{
       group.activity.sort((a,b)=>b.posted-a.posted||a.accountKey.localeCompare(b.accountKey));
+      group.observations.sort((a,b)=>b.posted-a.posted||a.accountKey.localeCompare(b.accountKey));
       // Prioritize potentially costly reversals and fees above routine deposits,
       // while preserving newest-first ordering within each urgency tier.
       const urgency={reversal:5,fee:4,bonus:3,directDeposit:2,recurring:1};
