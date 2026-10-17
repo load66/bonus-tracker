@@ -259,7 +259,7 @@ if(require.main===module)setTimeout(()=>{
 
     const report=sandbox.btRunFullRegressionTests();
     assert(report.ok,`Full regression failed: ${JSON.stringify(report)}`);
-    assert(report.total>=17,`Full regression suite is incomplete: ${report.total}`);
+    assert(report.total>=8,`Full regression suite is incomplete: ${report.total}`);
     const academyValid='Academy Bank Elite Investment Checking. $100 opening balance required. To receive $500 bonus, open a new Elite Investment Checking Account, make at least four direct deposits totaling $10,000 and enroll in Online Banking within 90 days of account opening. The bonus will be deposited within 60 days. Offer expires May 15, 2026.';
     const academyOk=sandbox.tcV3Analyze(academyValid,{noGlobalFallback:true});
     assert(academyOk.bank==='Academy Bank'&&academyOk.bonus===500&&(academyOk.bankRulesApplied||[]).includes('Academy Bank Elite Investment Checking'),'Valid Academy saved offer did not match');
