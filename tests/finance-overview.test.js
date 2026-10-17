@@ -185,3 +185,31 @@ pendingFinancialMovements.transactions.cash.paycard={...row('-200.00'),descripti
 pendingFinancialMovements.transactions.cash.invest={...row('-1000.00'),description:'Robinhood IRA contribution',category:'unreviewed'};
 const movementSummary=summarize(pendingFinancialMovements,{now:NOW});
 assert.equal(movementSummary.expenses,'411.17','Unreviewed bank payments and IRA contributions cannot increase expenses before the next server sync');
+
+
+
+const investmentFixture={
+ accounts:[{key:'cash',name:'Checking (2033)',currency:'USD',balance:'4000.00',balanceDate:NOW-120,kind:'checking'},
+           {key:'broker',name:'Robinhood individual (6105)',currency:'USD',balance:'3000.00',kind:'brokerage'},
+           {key:'retire',name:'Robinhood Roth IRA (9372)',currency:'USD',balance:'2000.00',kind:'retirement'}],
+ monitoredAccounts:['cash','broker','retire'],
+ accountProfiles:{cash:{kind:'checking',balanceMode:'asset'},broker:{kind:'brokerage',balanceMode:'asset'},
+                  retire:{kind:'retirement',balanceMode:'asset'}},
+ transactions:{
+   cash:{transfer:{posted:NOW-60,amount:'-2000.00',description:'To Brokerage',category:'transfer',
+      signals:['investment_transfer'],categorySource:'automatic',pending:false}},
+   broker:{buy:{posted:NOW-50,amount:'-1000.00',description:'Buy NVDA',category:'unreviewed',pending:false}},
+   retire:{div:{posted:NOW-40,amount:'5.00',description:'Dividend received',category:'income',pending:false}}
+ },
+ lastSuccess:NOW-50,balanceHistory:{}
+};
+const separated=summarize(investmentFixture,{now:NOW});
+assert.equal(separated.cash,'4000.00');
+assert.equal(separated.expenses,'0.00','Brokerage trades and invested cash transfers are not expenses');
+assert.equal(separated.income,'0.00','Broker dividends are not ordinary income');
+const separateInvest=require('../finance-overview-core.js').investmentSummary(investmentFixture,{now:NOW});
+assert.equal(separateInvest.total,'5000.00');
+assert.equal(separateInvest.brokerage,'3000.00');
+assert.equal(separateInvest.retirement,'2000.00');
+assert.equal(separateInvest.investedThisMonth,'2000.00');
+assert.equal(separateInvest.investmentIncome,'5.00');
