@@ -170,7 +170,7 @@ assert.equal(investments.investments,'15000.00','Investment value separated from
 assert.equal(investments.investmentBrokerage,'15000.00');
 assert.equal(investments.investmentRetirement,'0.00');
 assert.equal(investments.investmentIncome,'3.50');
-assert.equal(investments.investedThisMonth,'2000.00');
+assert.equal(investments.investedThisMonth,'9379.04','Both matched cash-to-brokerage funding and direct deposits to brokerage count as investment transfers');
 assert.equal(investments.expenses,'0.00','Trades in brokerage and checking transfers are not expenses');
 assert.equal(investments.income,'0.00','Brokerage dividends and transfers are not household income');
 const manualInvest=structuredClone(investPlaid);manualInvest.accountProfiles={
