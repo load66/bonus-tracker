@@ -99,7 +99,7 @@
     const projected=used*BigInt(totalDays)/BigInt(Math.max(1,Math.min(totalDays,today)));
     const remaining=limit>used?limit-used:0n;
     return {used:fmt(used),limit:fmt(limit),remaining:fmt(remaining),
-      percentage:ratio,level:ratio>100?'over':ratio>=80?'near':'ok',
+      percentage:ratio,level:used>limit?'over':used*5n>=limit*4n?'near':'ok',
       projected:fmt(projected)};
   }
   const INTERVALS=[['weekly',7,2],['biweekly',14,3],['monthly',30.44,6],['quarterly',91.3,12],['yearly',365.25,25]];
