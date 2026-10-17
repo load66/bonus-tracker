@@ -6,6 +6,7 @@
   const BASE='https://api-production-00f74.up.railway.app/api/bonus-tracker';
   const endpoint=source=>BASE+(source==='plaid'?'/plaid/accounts':'/simplefin');
   let sourceSnapshots={simplefin:null,plaid:null};
+  let trackerOverlay=null;
   const combined=()=>window.BTFinanceUnified?.combine(sourceSnapshots)||null;
   const TYPES=window.BTBonusEvidenceCore?.REASONS||{};
   let snapshot=null,loading=false,saving=false,error='',saveNotice='',showAll=false,showResolved=false,hideAmounts=true,rev=0;
@@ -34,11 +35,13 @@
   function update(){
     const root=document.getElementById('bt-bonus-evidence');
     if(root)paint(root);
+    if(trackerOverlay&&document.querySelector('.tracker-overview')&&typeof R==='function')R();
   }
   function manage(){
     if(typeof window.btOpenBankSync==='function')window.btOpenBankSync();
   }
   function reviewPayout(id){
+    if(trackerOverlay)closeTrackerOverlay();
     if(typeof openRcv==='function')openRcv(String(id)); // Existing explicit confirmation flow.
   }
   async function sameOwner(auth,token){
@@ -73,7 +76,7 @@
         }catch(e){return {source,error:e};}
       }));
       if(!(await sameOwner(auth,token))){snapshot=null;throw Error('Sign-in changed. Reopen bank activity.');}
-      if(call!==rev||!auth.connected()||!document.getElementById('bt-bonus-evidence')?.closest('#bt-finances-page'))return;
+      if(call!==rev||!auth.connected()||!document.getElementById('bt-bonus-evidence')?.closest('#bt-finances-page, #bt-tracker-review'))return;
       const faults=[];
       for(const item of outcomes){
         if(item.payload)sources[item.source]=item.payload;
@@ -118,7 +121,7 @@
       const payload=await response.json().catch(()=>({}));
       if(!response.ok)throw Error(typeof payload.detail==='string'?payload.detail:'The review was not saved.');
       if(!(await sameOwner(auth,token))){snapshot=null;throw Error('Sign-in changed. Reopen bank activity.');}
-      if(call!==rev||!auth.connected()||!document.getElementById('bt-bonus-evidence')?.closest('#bt-finances-page'))return;
+      if(call!==rev||!auth.connected()||!document.getElementById('bt-bonus-evidence')?.closest('#bt-finances-page, #bt-tracker-review'))return;
       sourceSnapshots[source]=payload;
       snapshot=combined();
       saveNotice=decision==='clear'?'Review reopened.':decision==='dismissed'?'Not relevant saved.':'Review saved. Promotion requirements remain unconfirmed.';
@@ -305,18 +308,72 @@
   }
   function mount(root, source='simplefin'){
     // Never inject bank activity into Tracker or any other app section.
-    if(!root?.closest('#bt-finances-page'))return false;
+    if(!root?.closest('#bt-finances-page, #bt-tracker-review'))return false;
     // All reads combine providers. Caller source no longer restricts evidence.
     root.id='bt-bonus-evidence';root.className='bonus-evidence';
     root.setAttribute('role','region');
     root.setAttribute('aria-label','Bank bonus activity evidence');
     paint(root);return true;
   }
-  window.BTBonusEvidence=Object.freeze({mount,dispose});
+
+  function closeTrackerOverlay(){
+    if(!trackerOverlay)return;
+    trackerOverlay.remove();trackerOverlay=null;reset();
+  }
+  function openTrackerEvidence(){
+    if(trackerOverlay){trackerOverlay.querySelector('.bonus-evidence-review-close')?.focus();return;}
+    if(!document.querySelector('.tracker-overview'))return;
+    const sheet=el('div',undefined,document.body,'bonus-evidence-review-overlay');
+    sheet.id='bt-tracker-review';
+    sheet.setAttribute('role','dialog');sheet.setAttribute('aria-modal','true');
+    sheet.setAttribute('aria-label','Review linked bank activity');
+    const wrapper=el('div',undefined,sheet,'bonus-evidence-review-sheet');
+    const close=button(wrapper,'Close bank activity',closeTrackerOverlay,
+      'bonus-evidence-button bonus-evidence-review-close');
+    close.setAttribute('aria-label','Close bank activity review');
+    const panel=el('section',undefined,wrapper);
+    trackerOverlay=sheet;
+    mount(panel);
+    close.focus();
+    // Explicit user click authorized this GET; opening Tracker itself never does.
+    refresh();
+  }
+  function cardEvidence(entry){
+    if(!snapshot?.connected||!entry||!entry.id||entry.closed)return null;
+    const report=window.BTBonusEvidenceCore?.summarize(snapshot,[entry]);
+    const group=report?.campaigns?.find(g=>g.entryId===String(entry.id)&&g.bank===entry.bank&&g.opened===entry.opened);
+    if(!group)return null;
+    return {group,progress:requirementReport(group)};
+  }
+  function cardAlerts(entry){
+    const value=cardEvidence(entry),alerts=[];
+    if(!value)return alerts;
+    const {group,progress}=value;
+    if(group.pending.some(a=>a.type==='fee'))alerts.push('Possible bank fee · review transaction');
+    if(group.pending.some(a=>a.type==='reversal'))alerts.push('Possible bonus reversal · review');
+    if(group.pending.some(a=>a.type==='directDeposit'))alerts.push('Deposits: review pending');
+    for(const r of progress?.requirements||[]){
+      if(r.kind!=='balance-hold'||!r.balance||r.balance.status==='manual review')continue;
+      if(r.balance.status==='at risk')alerts.push('Balance below observed hold minimum · verify');
+      else if(r.balance.status==='on track'&&r.targetAmount){
+        const account=value.group.linkedAccounts.find(a=>a.productId===
+          progress?.productId||a.key===value.group.linkedAccounts[0]?.key);
+        const source=snapshot.accounts?.find(a=>a.key===account?.key);
+        const available=Number(source?.availableBalance??source?.balance),minimum=Number(r.targetAmount);
+        if(Number.isFinite(available)&&Number.isFinite(minimum)&&minimum>0
+          &&available>=minimum&&available<minimum*1.05)alerts.push('Balance near hold minimum · review');
+      }
+    }
+    return [...new Set(alerts)].slice(0,4);
+  }
+  function progressForEntry(entry){return cardEvidence(entry)?.progress||null;}
+  window.BTBonusEvidence=Object.freeze({mount,dispose,openTrackerEvidence,cardAlerts,progressForEntry});
+  window.btOpenTrackerEvidence=openTrackerEvidence;
   window.btRegisterPostRender?.('finance-only-bonus-evidence-cleanup',()=>{
     // Main-app redraws replace the Finance DOM before its authenticated mount
     // completes. Preserve the in-memory review state only while Finances itself
     // remains the active tab; switching away revokes it immediately.
-    if(!document.getElementById('bt-finances-page'))dispose();
+    if(trackerOverlay&&!document.querySelector('.tracker-overview'))closeTrackerOverlay();
+    if(!document.getElementById('bt-finances-page')&&!trackerOverlay)dispose();
   });
 })();
