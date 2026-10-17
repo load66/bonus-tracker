@@ -20,18 +20,48 @@
   function monthKey(ms){const d=new Date(ms);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
   function monthShift(value,offset){const d=new Date(value+'-01T12:00:00');d.setMonth(d.getMonth()+offset);return monthKey(d.getTime())}
   const noSpend=new Set(['transfer','verification','refund']);
-  const issuer=/(?:capital\s*one|chase|american\s*express|amex|discover|citi(?:bank)?|robinhood|fidelity|schwab|vanguard|e\s*\*?\s*trade)/i;
-  const cardPayment=/(?:\b(?:pmt|payment|autopay|epay|crcardpmt|ccpmt)\b|credit\s*card\s*payment)/i;
-  const investing=/(?:\brobinhood\b|\bfidelity\b|\bschwab\b|\bvanguard\b|\bbrokerage\b|\binvestment\b|\b401k\b|\broth\s*ira\b|\bira\b)/i;
-  const contribute=/(?:\b(?:contribution|contribute|deposit|funding|transfer)\b)/i;
+  const financial=/\b(?:bank|fcu|credit\s*union|savings?|checking|brokerage|investing|investment|ira|citibank|citi|u\.?\s*s\.?\s*bank|capital\s*one|chase|wells\s*fargo|bofa|bank\s*of\s*america|amex|american\s*express|discover|synchrony|lafayette|navy\s*federal|paypal|venmo|cash\s*app|zelle|x\s*money|one\s*pay|onepay|robinhood|fidelity|schwab|vanguard)\b/i;
+  const destination=/^\s*(?:to|from)\s+(.+?)\s*$/i;
+  const brokerage=/\b(?:brokerage|investing|investment|ira|roth|401k|robinhood|fidelity|schwab|vanguard)\b/i;
+  const bareIssuer=/^\s*(?:capital\s*one|u\.?\s*s\.?\s*bank|citibank|citi|amex|american\s*express|discover)\s*$/i;
+  const payment=/\b(?:pmt|pymt|payment|autopay|epay|crcardpmt|ccpmt)\b/i;
+  const subscriptions=/\b(?:apple\s*(?:\.com|com|bill|icloud)|icloud|netflix|spotify|hulu|youtube\s*premium)\b/i;
+  const telecom=/\b(?:t\s*[- ]?mobile|verizon|at\s*&\s*t|att\s*wireless)\b/i;
+  const shopping=/\b(?:apple|amazon|walmart|target|costco)\b/i;
+  function financialKind(row){
+    if(!row||['user','user_rule'].includes(row.categorySource))return null;
+    const text=String(row.description||'')+' '+String(row.merchant||'');
+    const primary=String(row.description||row.merchant||'').trim();
+    const directed=destination.exec(primary);
+    if(directed&&financial.test(directed[1])){
+      return brokerage.test(directed[1])?'investment_transfer':'transfer';
+    }
+    const value=cents(row.amount);
+    if(value!==null&&value<0n&&bareIssuer.test(primary))return 'card_payment';
+    if(financial.test(text)&&payment.test(text))return 'card_payment';
+    if(brokerage.test(text)&&/\b(?:contribution|contribute|deposit|funding|transfer)\b/i.test(text))return 'investment_transfer';
+    return null;
+  }
+  function possibleTransfer(row,value=cents(row?.amount)){
+    if(!row||value===null||value>=0n||row.pending||row.excludedFromTotals||['user','user_rule'].includes(row.categorySource)
+       ||String(row.category||'unreviewed')!=='unreviewed'||financialKind(row))return false;
+    const text=String(row.description||row.merchant||'').trim();
+    const magnitude=value<0n?-value:value;
+    const round=magnitude%100n===0n;
+    return (round||magnitude>=100000n)&&
+      (destination.test(text)||financial.test(text)||(row.signals||[]).includes('possible_transfer'));
+  }
   function spendingCategory(row,value){
-    if(row.excludedFromTotals===true||row.pending===true||value===null||value>=0n)return null;
+    if(!row||row.excludedFromTotals===true||row.pending===true||value===null||value>=0n)return null;
     const category=String(row.category||'unreviewed').toLowerCase();
-    const description=String(row.description||'')+' '+String(row.merchant||'');
     if(noSpend.has(category)||row.kind==='card_payment'||row.kind==='investment_contribution'||
-       (row.signals||[]).includes('matched_internal_transfer')||
-       (issuer.test(description)&&cardPayment.test(description))||
-       (investing.test(description)&&contribute.test(description)))return null;
+       (row.signals||[]).includes('matched_internal_transfer')||financialKind(row)||possibleTransfer(row,value))return null;
+    if(category==='unreviewed'&&!['user','user_rule'].includes(row.categorySource)){
+      const text=String(row.description||row.merchant||'');
+      if(subscriptions.test(text))return 'subscription';
+      if(telecom.test(text))return 'utilities';
+      if(shopping.test(text))return 'shopping';
+    }
     return SPEND.has(category)?category:'unreviewed';
   }
   const seenMonth=(rows,month)=>rows.some(row=>!row.pending&&!row.excludedFromTotals&&
@@ -46,7 +76,7 @@
     for(const row of valid){
       const v=cents(row.amount),day=new Date(row.posted*1000).getDate(),category=spendingCategory(row,v);
       if(v>0n){
-        if(row.category==='income'){income+=v;incomeByDay[day]=(incomeByDay[day]||0n)+v}
+        if(row.category==='income'&&!financialKind(row)){income+=v;incomeByDay[day]=(incomeByDay[day]||0n)+v}
         if(row.category==='refund')refunds.push({row,value:v,day});
         continue;
       }
@@ -138,5 +168,5 @@
   function upcoming(items,now=Date.now(),days=14){
     return (items||[]).filter(x=>x.direction==='expense'&&x.status!=='possibly_canceled'&&x.nextAt*1000>=now-DAY&&x.nextAt*1000<=now+days*DAY).slice(0,5);
   }
-  return Object.freeze({spent,history,budget,spendingCategory,seenMonth,monthDays,merchant,recurring,upcoming,monthKey,monthShift,cents,fmt,SPEND});
+  return Object.freeze({spent,history,budget,spendingCategory,financialKind,possibleTransfer,seenMonth,monthDays,merchant,recurring,upcoming,monthKey,monthShift,cents,fmt,SPEND});
 });
