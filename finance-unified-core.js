@@ -14,7 +14,7 @@
     const subtype=canonical(account.accountSubtype).replaceAll(' ','_');
     const type=canonical(account.accountType).replaceAll(' ','_');
     const name=canonical(account.name);
-    const aliases={depository:'',credit:'credit_card',credit_card:'credit_card',investment:'brokerage',student:'loan',auto:'loan',mortgage:'mortgage',loan:'loan',brokerage:'brokerage',retirement:'retirement','401k':'retirement',ira:'retirement',checking:'checking',savings:'savings',money_market:'savings'};
+    const aliases={depository:'',credit:'credit_card',credit_card:'credit_card',investment:'brokerage',investing:'brokerage',stocks:'brokerage',crypto:'brokerage',individual:'brokerage',joint:'brokerage',student:'loan',auto:'loan',mortgage:'mortgage',loan:'loan',brokerage:'brokerage',retirement:'retirement','401k':'retirement',ira:'retirement',checking:'checking',savings:'savings',money_market:'savings'};
     if(TYPES.has(subtype))return subtype;
     if(Object.hasOwn(aliases,subtype)&&aliases[subtype])return aliases[subtype];
     if(TYPES.has(type))return type;
@@ -22,6 +22,9 @@
     for(const [pattern,kind] of [[/\b(checking|current account)\b/,'checking'],[/\b(savings|money market|high yield)\b/,'savings'],[/\b(credit card|charge card)\b/,'credit_card'],[/\b(mortgage)\b/,'mortgage'],[/\b(401k|ira|roth|retirement)\b/,'retirement'],[/\b(brokerage|investment)\b/,'brokerage'],[/\b(loan)\b/,'loan']]){
       if(pattern.test(name))return kind;
     }
+    const bank=canonical(account.bank);
+    if(/\b(robinhood|fidelity|schwab|vanguard|e trade|etrade)\b/.test(bank))return 'brokerage';
+    if(/\b(individual|joint|investing|stocks|crypto|securities)\b/.test(name))return 'brokerage';
     return 'unclassified';
   }
   const key=(source,rawKey)=>source+':'+String(rawKey);
@@ -81,6 +84,34 @@
               excludedFromTotals:meta.exclude===true,markedRecurring:meta.markRecurring===true};
           }
         }
+      }
+    }
+    // Reconcile unique cross-bank transfers on derived data only. User
+    // corrections and provider records remain unchanged.
+    const posted=[];
+    for(const [accountKey,entries] of Object.entries(transactions))for(const row of Object.values(entries)){
+      const match=/^([+-]?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(row.amount||''));
+      if(!match||row.pending||['user','user_rule'].includes(row.categorySource)||
+         ['verification','refund','bonus'].includes(row.category))continue;
+      const absolute=BigInt(match[2])*100n+BigInt((match[3]||'').padEnd(2,'0')||'0');
+      if(!absolute||!Number.isFinite(row.posted))continue;
+      posted.push({accountKey,row,cents:match[1]==='-'?-absolute:absolute});
+    }
+    for(const item of posted){
+      const n=item.cents;
+      const round=n%100n===0n&&(n<0n?-n:n)>=2500n;
+      const hint=item.row.category==='transfer'||(item.row.signals||[]).includes('possible_transfer');
+      if(!round&&!hint)continue;
+      const matches=posted.filter(other=>other!==item&&other.accountKey!==item.accountKey&&
+        other.cents===-n&&Math.abs(other.row.posted-item.row.posted)<=3*86400);
+      if(matches.length!==1)continue;
+      const other=matches[0];
+      const reciprocal=posted.filter(x=>x!==other&&x.accountKey!==other.accountKey&&
+        x.cents===-other.cents&&Math.abs(x.row.posted-other.row.posted)<=3*86400);
+      if(reciprocal.length!==1||reciprocal[0]!==item)continue;
+      for(const candidate of [item.row,other.row]){
+        candidate.category='transfer';candidate.confidence='high';
+        candidate.signals=[...new Set([...(candidate.signals||[]),'matched_internal_transfer'])];
       }
     }
     // Provider account IDs are intentionally opaque and cannot be compared across
