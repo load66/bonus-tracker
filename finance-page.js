@@ -20,6 +20,16 @@
   const financeCategory=key=>key==='bonus'?'Needs review':(FINANCE_CATEGORIES[key]||'Needs review');
   const categoryChip=row=>window.BTFinanceTransfer?.label(row)||financeCategory(row.category);
   const neutralChip=row=>!!window.BTFinanceTransfer?.isTransfer(row)||row.category==='verification';
+  const ruleKey=value=>String(value||'').toLowerCase().normalize('NFKC')
+    .replace(/[^a-z0-9]+/g,' ').trim().slice(0,90);
+  async function saveCategoryRule(row,category){
+    if(!preferenceAvailable)return;
+    const key=ruleKey(row.description||row.merchant);
+    if(key.length<2||category==='bonus')return;
+    await saveSetting('rules',key,{category,
+      employer:category==='income'&&row.signals?.some(s=>['paycheck','possible_paycheck'].includes(s))===true,
+      ownAccount:category==='transfer'&&row.signals?.includes('ownership_unconfirmed')===true});
+  }
   function displayMerchant(row){
     if(/^\s*(?:savings|checking|brokerage|investment)\s*(?:\(\d{4}\)|[·*x]+\d{4})?\s*(?:→|->)/i.test(row.description||''))return row.description.trim();
     const merchant=String(row.merchant||'').trim();
@@ -34,7 +44,7 @@
   let currentRoot=null,sequence=0,hidden=hideChoice,data=null,otherData=null,busy=false,view='overview',period=90;
   let spendingMonth=new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
   let spendingMode='spending',spendingDetail=null,reviewQueue=[],reviewIndex=0,reviewMonth='';
-  let worthRange='3M',financePrefs={version:1,revision:0,budgets:{},duplicates:{},recurring:{},transactionMeta:{}};
+  let worthRange='3M',financePrefs={version:1,revision:0,budgets:{},duplicates:{},recurring:{},transactionMeta:{},rules:{}};
   let preferenceAvailable=false,archiveLoading=false,settingsNotice='';
   const archives={simplefin:{},plaid:{}},archivesPending=new Set();
   let transactionSearch='',transactionAccount='',transactionCategory='',transactionStatus='',transactionVisibleLimit=100,expandedTransaction='';
@@ -425,7 +435,7 @@
       if(currentCombined?.possibleDuplicates?.length)el('small','Review possible matching accounts in Accounts',box,'finance-page-hint');
     }
     const nav=el('nav',undefined,host,'finance-page-nav');nav.setAttribute('aria-label','Finance sections');
-    for(const [id,label] of [['overview','Overview'],['spending','Spending'],['recurring','Recurring'],['transactions','Transactions'],['accounts','Accounts']]){
+    for(const [id,label] of [['overview','Overview'],['spending','Spending'],['recurring','Recurring'],['transactions','Transactions'],['accounts','Accounts'],['rules','Rules']]){
       const b=action(nav,label,()=>{
         view=id;paint();
         if(id==='recurring')requestArchiveWindow(731);
@@ -770,6 +780,7 @@
       })},row.source);
       return {financeSource:row.source,snapshot};
     });
+    if(!saveNotice&&applySimilar)await saveCategoryRule(row,category);
   }
   function showTransfers(){view='transactions';transactionView='Transfers';transactionVisibleLimit=100;paint();}
   function compactAccount(account){
@@ -1314,19 +1325,20 @@
         const visibleSignals=(row.signals||[]).filter(signal=>signal!=='possible_bonus');
         if(visibleSignals.length){const badges=el('div',undefined,detail,'finance-page-badges');for(const signal of visibleSignals)el('span',signalLabel(signal),badges);}
         const similarLabel=el('label',undefined,detail,'finance-page-learn-label');
-        const similar=el('input',undefined,similarLabel);similar.type='checkbox';similar.checked=false;
+        const similar=el('input',undefined,similarLabel);similar.type='checkbox';similar.checked=true;
         el('span','Apply to similar transactions',similarLabel);
         const category=select(detail,'Category',FINANCE_CATEGORIES,row.category==='bonus'?'unreviewed':row.category,async value=>{await change(async()=>{
           const snapshot=await request('/transaction-review',{method:'PUT',body:JSON.stringify({account:row.account.rawKey,transaction:row.id,category:value,applySimilar:similar.checked})},row.source);
           return {financeSource:row.source,snapshot};
         });
           if(saveNotice){el('p',saveNotice,detail,'finance-page-warning');category.value=row.category}
-          else detail.close();
+          else {if(similar.checked)await saveCategoryRule(row,value);detail.close();}
         });
         category.setAttribute('aria-label','Category for '+(row.merchant||row.description));
         el('small',row.categorySource==='user'?'Confirmed by you':
           row.categorySource==='user_rule'?'Saved merchant rule':
           row.categorySource==='ai'?'Auto suggestion · review anytime':
+          row.categorySource==='plaid'?'Plaid category · review anytime':
           'Automatic · '+(row.confidence||'low')+' confidence',detail,'finance-page-source');
         if(row.changedAt)el('small','Your bank updated this transaction on '+stamp(row.changedAt)+'. A previous correction was cleared for review.',detail,'finance-page-warning');
         const saved=financePrefs.transactionMeta?.[row.settingKey]||{};
@@ -1692,6 +1704,27 @@
     action(modal,'Disconnect and delete history',()=>disconnect(true),'finance-page-button finance-danger');
     action(modal,'Cancel',()=>modal.close());
   }
+  function rulesView(host){
+    const list=sectionTitle(host,'Category rules','Your corrections apply to matching past and future transactions.');
+    const items=Object.entries(financePrefs.rules||{}).sort(([a],[b])=>a.localeCompare(b));
+    if(!items.length){el('p','No saved rules yet. Review a transaction to teach the app how to categorize it.',list,'finance-page-hint');return}
+    for(const [pattern,rule] of items){
+      const row=el('section',undefined,list,'finance-page-rule-row');
+      const name=el('label',undefined,row,'finance-page-field');el('span','Merchant or description',name);
+      const input=el('input',undefined,name,'finance-page-search');input.value=pattern;input.maxLength=90;
+      const category=select(row,'Category',FINANCE_CATEGORIES,rule.category,()=>{});
+      el('small',rule.employer?'Employer rule':rule.ownAccount?'Own-account rule':'Merchant category rule',row);
+      const buttons=el('div',undefined,row,'finance-page-rule-actions');
+      action(buttons,'Save',async()=>{
+        const changed=ruleKey(input.value);if(changed.length<2){settingsNotice='Enter a merchant or description to save this rule.';paint();return}
+        const updated={category:category.value,employer:category.value==='income'&&rule.employer===true,
+          ownAccount:category.value==='transfer'&&rule.ownAccount===true};
+        if(changed!==pattern){await saveSetting('rules',changed,updated);if(!settingsNotice)await saveSetting('rules',pattern,null)}
+        else await saveSetting('rules',pattern,updated);
+      },'finance-page-chip');
+      action(buttons,'Delete',()=>saveSetting('rules',pattern,null),'finance-page-chip');
+    }
+  }
   function paint(){
     const host=currentRoot;if(!host||!host.isConnected)return;
     // An old in-memory Bonuses selection falls back to Finance Overview.
@@ -1743,7 +1776,8 @@
           action(row,'Fix on SimpleFIN',()=>window.open('https://bridge.simplefin.org/','_blank','noopener'),'finance-page-button');
       }
     }
-    if(view==='transactions')transactions(host);
+    if(view==='rules')rulesView(host);
+    else if(view==='transactions')transactions(host);
     else if(view==='accounts')accounts(host);
     else if(view==='connections')connections(host);
     else if(view==='spending')spendingView(host);
@@ -1759,7 +1793,7 @@
       closeFinanceDialogs();
       sessionIdentity=null;lastAuthenticatedOwner=null;expandedAccountSettings.clear();monitoringNotice='';activityNotice='';connectionNotice='';
       currentRoot=host;data=null;otherData=null;sequence++;
-      for(const key of ['simplefin','plaid'])archives[key]={};financePrefs={version:1,revision:0,budgets:{},duplicates:{},recurring:{},transactionMeta:{}};preferenceAvailable=false;
+      for(const key of ['simplefin','plaid'])archives[key]={};financePrefs={version:1,revision:0,budgets:{},duplicates:{},recurring:{},transactionMeta:{},rules:{}};preferenceAvailable=false;
       host.replaceChildren();statusMessage(host,'Sign in to view finances','Sign in securely to view linked financial accounts.');
       action(host,'Sign in / manage accounts',()=>window.btOpenBankSync?.(),'finance-page-button finance-page-primary');return;
     }
@@ -1783,7 +1817,7 @@
       expandedAccountSettings.clear();monitoringNotice='';activityNotice='';connectionNotice='';
     }
     lastAuthenticatedOwner=identity;sessionIdentity=identity;currentRoot=host;data=null;otherData=null;
-    for(const key of ['simplefin','plaid'])archives[key]={};financePrefs={version:1,revision:0,budgets:{},duplicates:{},recurring:{},transactionMeta:{}};preferenceAvailable=false;
+    for(const key of ['simplefin','plaid'])archives[key]={};financePrefs={version:1,revision:0,budgets:{},duplicates:{},recurring:{},transactionMeta:{},rules:{}};preferenceAvailable=false;
     accountDraftProfiles={};dirtyAccounts.clear();
     Object.keys(monitoringDraft).forEach(k=>delete monitoringDraft[k]);
     const rev=++sequence;paint();
