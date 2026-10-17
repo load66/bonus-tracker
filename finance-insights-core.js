@@ -139,12 +139,13 @@
       if(avg===0n||entries.some(entry=>abs(abs(entry.cents)-avg)*100n>avg*tolerance))continue;
       const next=last.at+Math.round(match.days*DAY);
       const ended=now>next+match.days*DAY;
+      const late=now>next&&!ended;
       const priceIncreased=value>abs(previous.cents)*11n/10n;
       out.push({key,merchant:last.row.merchant||last.row.description,
         category:last.row.category,frequency:match.name,
         average:fmt(avg),lastAmount:fmt(value),lastAt:Math.round(last.at/1000),
-        nextAt:ended?null:Math.round(next/1000),
-        status:ended?'possibly_ended':priceIncreased?'price_increased':'active',
+        nextAt:ended||late?null:Math.round(next/1000),
+        status:ended?'possibly_ended':late?'late':priceIncreased?'price_increased':'active',
         direction:last.cents>0n?'income':'expense',type:entries[0].type,
         history:entries.map(e=>({posted:Math.round(e.at/1000),amount:fmt(e.cents)}))});
     }
