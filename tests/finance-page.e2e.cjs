@@ -187,8 +187,35 @@ const base=()=>({
           name+' Finance rows overflow or collide at '+width+': '+JSON.stringify(metrics));
         await page.screenshot({path:path.join(output,name+'-finance-overview-'+width+'.png')});
         await page.screenshot({path:path.join(output,name+'-bottom-tabs-'+width+'.png')});
+        // Both navigational destinations must be reachable by actual taps at each width.
+        await page.getByRole('button',{name:'T&C Archive',exact:true}).click();
+        assert.ok(await page.getByRole('button',{name:'T&C Archive',exact:true}).count());
+        await page.getByRole('button',{name:'Tracker',exact:true}).click();
+        assert.ok(await page.getByRole('button',{name:'Tracker',exact:true}).count());
+        await openFinances();
       }
       await page.setViewportSize({width:390,height:844});
+      // Net card credit is a product-type classification, independent of sign.
+      const D='g'.repeat(64);
+      state.accounts.find(a=>a.key===B).balance='-283.27';
+      state.accounts.push({key:D,bank:'PayPal',name:'PayPal Mastercard',mask:'8532',
+        currency:'USD',balance:'63.87',balanceDate:NOW-300});
+      state.accountProfiles[D]={kind:'credit_card',balanceMode:'liability'};
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      const cardsRow=section.getByRole('button',{name:'View Credit cards accounts'});
+      await cardsRow.getByText('$219.40 credit',{exact:true}).waitFor();
+      assert.equal(await section.getByRole('button',{name:'View Other accounts'}).count(),0);
+      await cardsRow.click();
+      const cardSheet=page.getByRole('dialog',{name:'Credit cards accounts'});
+      assert.ok((await cardSheet.innerText()).includes('Robinhood Credit Card ··4010'));
+      assert.ok((await cardSheet.innerText()).includes('$283.27 credit'));
+      assert.ok((await cardSheet.innerText()).includes('PayPal Mastercard ··8532'));
+      assert.ok((await cardSheet.innerText()).includes('$63.87 owed'));
+      await cardSheet.getByRole('button',{name:'Close'}).click();
+      state.accounts=state.accounts.filter(a=>a.key!==D);
+      delete state.accountProfiles[D];
+      state.accounts.find(a=>a.key===B).balance='200.00';
+      await page.evaluate(()=>window.btRefreshFinancesPage());
       const investmentCard=section.getByRole('button',{name:'View Investments accounts'});
       assert.equal(await investmentCard.locator('.finance-overview-row-value strong').innerText(),'—');
       assert.equal(await investmentCard.locator('.finance-overview-row-info small').innerText(),'Brokerage — · Retirement —');
@@ -227,6 +254,11 @@ const base=()=>({
       state.accounts[0].balanceDate=NOW-9*86400;
       await page.evaluate(()=>window.btRefreshFinancesPage());
       await section.locator('.finance-overview-net-hero').waitFor();
+      await section.getByRole('button',{name:'Some balances not updated · Review'}).click();
+      const overdue=page.getByRole('dialog',{name:'Accounts to review'});
+      assert.ok((await overdue.innerText()).includes('Checking <img src=x>'));
+      assert.ok(await overdue.getByRole('button',{name:'Refresh'}).count());
+      await overdue.getByRole('button',{name:'Close'}).click();
       await section.getByRole('button',{name:'View Cash accounts'}).click();
       const cashDetails=page.getByRole('dialog',{name:'Cash accounts'});
       await cashDetails.getByText('1 account not updated.',{exact:false}).waitFor();

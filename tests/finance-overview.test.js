@@ -217,21 +217,21 @@ const numbers={
     {key:'cash',bank:'Checking CU',name:'Cash account',balance:'6555.84',balanceDate:NOW,currency:'USD'},
     {key:'broker',bank:'Brokerage CU',name:'Brokerage',balance:'11400.00',balanceDate:NOW,currency:'USD'},
     {key:'retirement',bank:'Retirement CU',name:'401k',balance:'18276.34',balanceDate:NOW,currency:'USD'},
-    {key:'credit',bank:'Card Issuer',name:'Card',balance:'63.87',balanceDate:NOW,currency:'USD'},
-    {key:'paypal',bank:'PayPal',name:'Wallet',balance:'283.27',balanceDate:NOW,currency:'USD'},
+    {key:'credit',bank:'PayPal',name:'PayPal Mastercard',mask:'8532',balance:'63.87',balanceDate:NOW,currency:'USD'},
+    {key:'robinhood',bank:'Robinhood',name:'Robinhood Credit Card',mask:'4010',balance:'-283.27',balanceDate:NOW,currency:'USD'},
     {key:'stale',bank:'Cash Bank',name:'Stale checking',balance:'800.00',balanceDate:NOW-9*DAY,currency:'USD'}
   ],
-  monitoredAccounts:['cash','broker','retirement','credit','paypal','stale'],
+  monitoredAccounts:['cash','broker','retirement','credit','robinhood','stale'],
   accountProfiles:{
     cash:{kind:'checking',balanceMode:'asset'},broker:{kind:'brokerage',balanceMode:'asset'},
     retirement:{kind:'retirement',balanceMode:'asset'},credit:{kind:'credit_card',balanceMode:'liability'},
-    paypal:{kind:'other_asset',balanceMode:'asset'},stale:{kind:'checking',balanceMode:'asset'}
+    robinhood:{kind:'credit_card',balanceMode:'liability'},stale:{kind:'checking',balanceMode:'asset'}
   },transactions:{}
 };
 const overviewTotals=summarize(numbers,{now:NOW});
 assert.equal(overviewTotals.netWorth,'36451.58');
 assert.deepEqual(overviewTotals.netWorthGroups,{
-  cash:'6555.84',investments:'29676.34',creditCards:'-63.87',other:'283.27'
+  cash:'6555.84',investments:'29676.34',creditCards:'219.40',other:'0.00'
 });
 assert.equal(Object.values(overviewTotals.netWorthGroups)
   .reduce((v,n)=>v+require('../finance-overview-core.js').cents(n),0n),
@@ -239,8 +239,21 @@ assert.equal(Object.values(overviewTotals.netWorthGroups)
 assert.equal(overviewTotals.netWorthNotUpdated.length,1);
 assert.equal(overviewTotals.netWorthNotUpdated[0].lastKnownIncluded,false);
 assert.equal(overviewTotals.netWorthNotUpdated[0].lastKnownBalance,'800.00');
-assert.equal(overviewTotals.netWorthGroupAccounts.other[0].name,'Wallet',
-  'PayPal is explicitly included in the Other row, not lost from the presentation');
+assert.equal(overviewTotals.netWorthGroupAccounts.other.length,0,
+  'Other is empty when the only extra balance belongs to a credit card');
+assert.deepEqual(overviewTotals.netWorthGroupAccounts.creditCards.map(a=>[a.key,a.amount]),
+  [['credit','-63.87'],['robinhood','283.27']],
+  'Positive credit balances remain inside Credit cards, with a separate signed entry per card');
+const genuineOther=structuredClone(numbers);
+genuineOther.accounts.push({key:'wallet',name:'Separate wallet',bank:'Wallet',currency:'USD',
+  balance:'27.50',balanceDate:NOW});
+genuineOther.accountProfiles.wallet={kind:'other_asset',balanceMode:'asset'};
+const genuineSummary=summarize(genuineOther,{now:NOW});
+assert.equal(genuineSummary.netWorthGroups.other,'27.50','Real other assets still appear under Other');
+assert.equal(genuineSummary.netWorth,'36479.08');
+assert.equal(Object.values(genuineSummary.netWorthGroups)
+  .reduce((sum,value)=>sum+require('../finance-overview-core.js').cents(value),0n),
+  require('../finance-overview-core.js').cents(genuineSummary.netWorth));
 
 const octoberStart=Math.floor(new Date(new Date(NOW*1000).getFullYear(),
   new Date(NOW*1000).getMonth(),1).getTime()/1000);
@@ -271,4 +284,4 @@ assert.equal(unverifiedResult.investmentMarketChange,null,
   'investment balance delta is not performance without complete transaction coverage');
 assert.equal(unverifiedResult.investmentContributions,'500.00',
   'observed paired transfers remain separately reviewable when performance is hidden');
-console.log('Net-worth groups reconcile with PayPal/Other, stale balances excluded, and cash-flow-adjusted market change is gated');
+console.log('Net-worth groups reconcile with credit balances in Credit cards, genuine Other assets, stale balances and flow-adjusted investments');

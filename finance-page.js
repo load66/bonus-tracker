@@ -568,7 +568,7 @@
   }
   function showNetWorthReview(exclusions){
     const modal=sheet('Accounts to review');
-    const intro=el('p',exclusions.length+' account'+(exclusions.length===1?'':'s')+' not included',modal,'finance-net-worth-review-intro');
+    const intro=el('p',exclusions.length+' account'+(exclusions.length===1?'':'s')+' to review',modal,'finance-net-worth-review-intro');
     for(const item of exclusions){
       const account=currentCombined?.accounts?.find(a=>a.key===item.key);
       const row=el('div',undefined,modal,'finance-net-worth-review-item');
@@ -576,15 +576,16 @@
       el('strong',item.name,copy);
       const reason=item.reason==='excluded by settings'?'Excluded':
         item.reason==='balance not updated'?'Not updated':
-        item.reason==='non-USD balance'?'Other currency':'Check account type';
+        item.reason==='non-USD balance'?'Other currency':item.reason==='provisional'?'Refresh suggested':'Check account type';
       el('small',reason,copy);
+      if(Number.isFinite(item.lastUpdated)&&item.lastUpdated>0)el('small',syncLabel(item.lastUpdated),copy);
       if(account&&reason==='Excluded'){
         action(row,'Include',async()=>{
           const kind=profile(account).kind,liability=['credit_card','loan','mortgage','other_liability'].includes(kind);
           await saveAccountProfile(account,{balanceMode:liability?'liability':'asset'});
           if(!saveNotice){modal.close();paint()}
         },'finance-page-button finance-page-primary');
-      }else if(account&&reason==='Not updated'){
+      }else if(account&&['Not updated','Refresh suggested'].includes(reason)){
         action(row,'Refresh',async()=>{await refreshActivity();modal.close()},'finance-page-button');
       }else if(account){
         action(row,'Review',()=>{modal.close();openAccount(account)},'finance-page-button');
@@ -592,13 +593,19 @@
     }
   }
 
+  function creditCardNetAmount(signed){
+    const cents=window.BTFinanceOverview.cents(signed);
+    if(cents===null)return '—';
+    const displayed=amount(window.BTFinanceOverview.decimal(cents<0n?-cents:cents),'USD');
+    return hidden?displayed:displayed+(cents>0n?' credit':cents<0n?' owed':'');
+  }
   function accountGroupSheet(kind,summary){
     const labels={cash:'Cash',investments:'Investments',creditCards:'Credit cards',other:'Other'},
       group=summary.netWorthGroupAccounts?.[kind]||[],
       unavailable=summary.netWorthNotUpdated||[];
     const dialog=sheet(labels[kind]+' accounts',true);
     const total=summary.netWorthGroups?.[kind];
-    el('strong',total==null||!group.length?'—':amount(total,'USD'),dialog,'finance-page-big-number');
+    el('strong',total==null||!group.length?'—':kind==='creditCards'?creditCardNetAmount(total):amount(total,'USD'),dialog,'finance-page-big-number');
     if(kind==='cash'){
       const missing=unavailable.filter(a=>['checking','savings'].includes(a.kind));
       if(missing.length)el('p',missing.length+' account'+(missing.length===1?'':'s')+
@@ -630,10 +637,10 @@
       const account=currentCombined?.accounts?.find(a=>a.key===item.key);
       const row=el('div',undefined,dialog,'finance-overview-detail-account');
       const copy=el('div',undefined,row,'finance-overview-detail-copy');
-      el('strong',item.name,copy);
+      el('strong',kind==='creditCards'&&account?accountTitle(account):item.name,copy);
       el('small',[item.bank,item.balanceDate?syncLabel(item.balanceDate):'Balance update unknown',
         item.provisional?'Provider observation only':null].filter(Boolean).join(' · '),copy);
-      el('b',amount(item.amount,'USD'),row);
+      el('b',kind==='creditCards'?creditCardNetAmount(item.amount):amount(item.amount,'USD'),row);
       if(account)action(row,'View',()=>{dialog.close();openAccount(account)},'finance-page-button');
     }
     const matching=unavailable.filter(item=>kind==='cash'
@@ -684,7 +691,16 @@
         amount(window.BTFinanceOverview.decimal(change<0n?-change:change),'USD')+
         ' this month',heroCard,'finance-overview-worth-change'+(change<0n?' is-negative':''));
     }
-    if(summary.netWorthPartial)el('small','Partial net worth · missing or provisional balances',heroCard,'finance-page-hint');
+    if(summary.netWorthPartial){
+      const toReview=[
+        ...(summary.netWorthNotUpdated||[]).map(item=>({...item,reason:'balance not updated'})),
+        ...(summary.netWorthExclusions||[]).filter(item=>!['excluded by settings','balance not updated'].includes(item.reason)),
+        ...(summary.netWorthGroupAccounts?.creditCards||[]).filter(item=>item.provisional)
+          .map(item=>({key:item.key,name:item.name,reason:'provisional',lastUpdated:item.balanceDate}))
+      ];
+      action(heroCard,'Some balances not updated · Review',()=>showNetWorthReview(toReview),
+        'finance-overview-review-link');
+    }
     const card=el('section',undefined,host,'finance-overview-account-card');
     const rows=[
       ['cash','Cash','▣'],
@@ -717,14 +733,14 @@
           (hidden?'••••••':short(totals.brokerage)):'—')+
           ' · Retirement '+(holdings.some(x=>x.kind==='retirement')?
           (hidden?'••••••':short(totals.retirement)):'—'),info);
-      }else if(kind==='creditCards')el('small','Owed',info);
+      }else if(kind==='creditCards')el('small','Net across cards',info);
       else{
         const details=summary.netWorthGroupAccounts?.other||[];
         el('small',details.length===1?(details[0].bank||details[0].name):'Other included assets and liabilities',info);
       }
       const value=el('span',undefined,row,'finance-overview-row-value');
       const classified=summary.netWorthGroupAccounts?.[kind]||[];
-      el('strong',summary.netWorthAvailable&&classified.length?amount(groups[kind],'USD'):'—',value);
+      el('strong',summary.netWorthAvailable&&classified.length?(kind==='creditCards'?creditCardNetAmount(groups[kind]):amount(groups[kind],'USD')):'—',value);
       el('span','›',value,'finance-overview-chevron');
     }
     const quick=el('div',undefined,host,'finance-overview-actions');
@@ -744,7 +760,7 @@
     const count=action(foot,visible.length+' accounts at '+banks.size+' banks',()=>{
       view='accounts';paint()},'finance-overview-count');
     count.setAttribute('aria-label','View '+visible.length+' accounts at '+banks.size+' banks');
-    el('span',currentCombined?.lastSuccess?'Updated '+stamp(currentCombined.lastSuccess).replace(/^Updated /,''):'Not updated',foot);
+    el('span',currentCombined?.lastSuccess?syncLabel(currentCombined.lastSuccess):'Not updated',foot);
     const more=el('details',undefined,host,'finance-overview-more');
     el('summary','More insights',more);
     const body=el('div',undefined,more);
