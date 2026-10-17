@@ -25,10 +25,32 @@
     const v=BigInt(m[2])*100n+BigInt((m[3]||'').padEnd(2,'0')||'0');
     return m[1]==='-'?-v:v;
   };
+  const lender=/\b(?:loan\s+proceeds?|loan\s+disbursement|personal\s+loan|cash\s+advance|loan\s+advance|loan|advance|disbursement|sofi\s+lending|one\s+finance|upstart|avant|lendingclub|oportun|earnest)\b/i;
+  const insurer=/\b(?:progressive|prog\s+advanced|geico|state\s+farm|allstate|liberty\s+mutual|usaa\s+insurance|nationwide|farmers|aaa\s+insurance|ins\s+prem|insurance\s+prem(?:ium)?|auto\s+ins|home\s+ins)\b/i;
+  const ownerAction=/\b(?:transfr|transfer|ach\s*transfer|ach\s*xfer|xfer|zelle\s+from)\b/i;
+  const p2p=/^\s*(?:(?:zelle|venmo|cash\s*app|p2p)\s+(?:from\s+)?|from\s+)([A-Za-z][a-z]+(?:\s+[A-Za-z][a-z]+){1,2})\s*$/i;
+  const p2pExclude=/\b(?:llc|inc|ltd|corp|company|payroll|salary|wages|deposit|loan|lending|bank|fcu)\b/i;
+  let privateOwnerNames=[];
+  function configureOwnerNames(value){
+    privateOwnerNames=Array.isArray(value)?value.filter(n=>typeof n==='string'&&
+      /^[A-Za-z]+(?: [A-Za-z]+){1,3}$/.test(n.trim())&&n.length<=100).map(n=>n.trim().toLowerCase()):[];
+  }
+  function ownTransfer(text){
+    if(!ownerAction.test(text))return false;
+    const normalized=' '+text.toLowerCase()+' ';
+    return privateOwnerNames.some(name=>{
+      const at=normalized.indexOf(name);
+      if(at<0)return false;
+      const before=normalized[at-1]||' ',after=normalized[at+name.length]||' ';
+      return !/[a-z]/.test(before)&&!/[a-z]/.test(after);
+    });
+  }
   function categorize(row){
     if(!row||['user','user_rule'].includes(row.categorySource))return null;
     const value=amountCents(row.amount),text=String(row.description||row.merchant||'').trim();
     if(value===null||value===0n||row.pending)return null;
+    if(value>0n&&lender.test(text))return {category:'loan_proceeds',signal:'possible_loan_proceeds'};
+    if(ownTransfer(text))return {category:'transfer',signal:'owner_transfer_unpaired'};
     if((row.signals||[]).includes('matched_internal_transfer'))return {category:'transfer',signal:'matched_internal_transfer'};
     // Explicit mortgage/housing payments outrank generic issuer/payment markers.
     if(value<0n&&housingMemo.test(text))return {category:'housing'};
@@ -41,6 +63,7 @@
     if(value>0n&&/^payment(?:\s+received)?$/i.test(text)&&
        /\b(?:x\s*money|bank|fcu|credit\s*union|robinhood|one\s*pay|onepay|checking|savings)\b/i.test(bank))
       return {category:'unreviewed',signal:'possible_transfer'};
+    if(value>0n&&p2p.test(text)&&!p2pExclude.test(text))return {category:'transfer',signal:'possible_p2p'};
     const direction=fromTo.exec(text);
     if(direction&&destination.test(direction[1]))
       return {category:'transfer',signal:investor.test(direction[1])?'investment_transfer':'transfer'};
@@ -55,6 +78,7 @@
        (direction||destination.test(text)))return {category:'unreviewed',signal:'possible_transfer'};
     if(value<0n){
       if(subscription.test(text))return {category:'subscription'};
+      if(insurer.test(text)&&!groceries.test(text)&&!shopping.test(text))return {category:'insurance'};
       if(phone.test(text))return {category:'utilities'};
       if(groceries.test(text))return {category:'groceries'};
       if(dining.test(text))return {category:'dining'};
@@ -87,9 +111,11 @@
     const item=effective(row),signals=item.signals;
     if(signals.includes('card_payment'))return 'Card payment';
     if(signals.includes('investment_transfer'))return 'Investment transfer';
+    if(item.category==='transfer'&&item.signals?.some(s=>['owner_transfer_unpaired','possible_p2p'].includes(s))&&
+       !item.signals.includes('matched_internal_transfer'))return 'Possible transfer';
     if(item.category==='transfer')return 'Transfer';
     if(signals.includes('possible_transfer')&&item.category==='unreviewed')return 'Possible transfer';
     return null;
   }
-  return Object.freeze({categorize,effective,label,amountCents});
+  return Object.freeze({categorize,effective,label,amountCents,configureOwnerNames});
 });

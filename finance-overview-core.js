@@ -9,7 +9,7 @@
   const DAY=86400,MAX_DAYS=731,STALE_BALANCE_DAYS=7,LONG_BALANCE_DAYS=35;
   const longBalanceKinds=new Set(['mortgage','loan','other_liability','retirement']);
   const freshnessDays=kind=>longBalanceKinds.has(kind)?LONG_BALANCE_DAYS:STALE_BALANCE_DAYS;
-  const SPENDING=new Set(['housing','loan','utilities','groceries','dining','transportation','shopping','health','entertainment','fees','taxes','travel','subscription','other','unreviewed']);
+  const SPENDING=new Set(['housing','loan','utilities','groceries','dining','transportation','shopping','insurance','health','entertainment','fees','taxes','travel','subscription','other','unreviewed']);
   function cents(value){
     const m=/^([+-]?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(value??'').trim());
     if(!m)return null;
@@ -88,7 +88,7 @@
         const item=guard?.effective(row)||row;
         const category=String(item.category||'unreviewed');
         if(category==='income'&&n>0n)income+=n;
-        else if(n<0n&&!['transfer','verification','refund'].includes(category)&&
+        else if(n<0n&&!['transfer','verification','refund','loan_proceeds'].includes(category)&&
                 !financialMovement(item)&&(!item.signals?.includes('possible_transfer')||category==='housing')){
           const amount=-n,label=SPENDING.has(category)?category:'unreviewed';
           expenses+=amount;spending[label]=(spending[label]||0n)+amount;
@@ -101,7 +101,7 @@
         const key=String(local.getFullYear())+'-'+String(local.getMonth()+1).padStart(2,'0');
         const month=monthly[key]||(monthly[key]={income:0n,expenses:0n});
         if(category==='income'&&n>0n)month.income+=n;
-        if(n<0n&&!['transfer','verification','refund'].includes(category)&&
+        if(n<0n&&!['transfer','verification','refund','loan_proceeds'].includes(category)&&
            !financialMovement(item)&&(!item.signals?.includes('possible_transfer')||category==='housing'))month.expenses-=n;
       }
     }

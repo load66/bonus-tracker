@@ -6,8 +6,8 @@
 })(typeof window!=='undefined'?window:null,function(){
   'use strict';
   const DAY=86400000;
-  const SPEND=new Set(['housing','loan','utilities','groceries','dining','transportation','shopping','health','entertainment','fees','taxes','travel','subscription','other','unreviewed']);
-  const excluded=new Set(['verification','refund','bonus','unreviewed','transfer','card_payment','investment_transfer']);
+  const SPEND=new Set(['housing','loan','utilities','groceries','dining','transportation','shopping','insurance','health','entertainment','fees','taxes','travel','subscription','other','unreviewed']);
+  const excluded=new Set(['verification','refund','bonus','loan_proceeds','unreviewed','transfer','card_payment','investment_transfer']);
   const recurringTransferSignals=new Set(['matched_internal_transfer','possible_transfer','card_payment','investment_transfer','transfer']);
   const recurringTransferKinds=new Set(['card_payment','investment_contribution','investment_transfer']);
   function cents(value){
@@ -21,7 +21,7 @@
   const merchant=row=>String(row.merchant||row.description||'Unknown merchant').toLowerCase().replace(/\b\d+\b/g,' ').replace(/[^\p{L}\p{N}]+/gu,' ').trim().replace(/\s+/g,' ').slice(0,64);
   function monthKey(ms){const d=new Date(ms);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
   function monthShift(value,offset){const d=new Date(value+'-01T12:00:00');d.setMonth(d.getMonth()+offset);return monthKey(d.getTime())}
-  const noSpend=new Set(['transfer','verification','refund']);
+  const noSpend=new Set(['transfer','verification','refund','loan_proceeds']);
   const issuer=/(?:capital\s*one|chase|american\s*express|amex|discover|citi(?:bank)?|robinhood|fidelity|schwab|vanguard|e\s*\*?\s*trade)/i;
   const cardPayment=/(?:\b(?:pmt|payment|autopay|epay|crcardpmt|ccpmt)\b|credit\s*card\s*payment)/i;
   const investing=/(?:\brobinhood\b|\bfidelity\b|\bschwab\b|\bvanguard\b|\bbrokerage\b|\binvestment\b|\b401k\b|\broth\s*ira\b|\bira\b)/i;

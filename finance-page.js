@@ -12,13 +12,22 @@
     unreviewed:'Uncategorized',income:'Income',housing:'Housing',utilities:'Utilities',groceries:'Groceries',
     dining:'Dining',transportation:'Transportation',shopping:'Shopping',health:'Health',
     entertainment:'Entertainment',fees:'Fees',taxes:'Taxes',travel:'Travel',
-    subscription:'Subscriptions',transfer:'Transfer',refund:'Refund',verification:'Account verification',loan:'Loan payment',bonus:'Bank bonus',other:'Other'
+    subscription:'Subscriptions',insurance:'Insurance',transfer:'Transfer',loan_proceeds:'Loan money',refund:'Refund',verification:'Account verification',loan:'Loan payment',bonus:'Bank bonus',other:'Other'
   };
   // Bonus credits appear separately for review; they do not verify a tracker payout.
   const FINANCE_CATEGORIES={...CATEGORIES,bonus:'Bonus'};
   const financeCategory=key=>FINANCE_CATEGORIES[key]||'Needs review';
   const categoryChip=row=>window.BTFinanceTransfer?.label(row)||financeCategory(window.BTFinanceTransfer?.effective(row)?.category||row.category);
-  const neutralChip=row=>!!window.BTFinanceTransfer?.label(row)||['transfer','verification'].includes(row.category);
+  const neutralChip=row=>!!window.BTFinanceTransfer?.label(row)||
+    ['transfer','verification','loan_proceeds','unreviewed'].includes(window.BTFinanceTransfer?.effective(row)?.category||row.category);
+  function creditStyle(row){
+    const item=window.BTFinanceTransfer?.effective(row)||row;
+    if(row.transferPairId||item.category==='transfer'||
+       item.signals?.some(signal=>['possible_transfer','matched_internal_transfer','owner_transfer_unpaired','possible_p2p'].includes(signal)))
+      return 'is-transfer';
+    if(Number(row.amount)>0)return item.category==='income'?'is-credit':'is-neutral-credit';
+    return '';
+  }
   function displayMerchant(row){
     const merchant=String(row.merchant||'').trim();
     if(!merchant||/^(transaction|transfer|purchase|payment|debit|credit)$/i.test(merchant))
@@ -174,6 +183,7 @@
       const latest=await settingsRequest('/preferences');
       if(rev!==sequence)return;
       financePrefs=latest;preferenceAvailable=true;settingsNotice='';
+      window.BTFinanceTransfer?.configureOwnerNames(financePrefs.ownerNames?.primary?.names||[]);
     }catch(_error){
       if(rev!==sequence)return;
       preferenceAvailable=false;settingsNotice='Saved Finance settings are unavailable. Changes are disabled.';
@@ -185,7 +195,8 @@
     try{
       const saved=await settingsRequest('/preferences',{
         method:'PUT',body:JSON.stringify({revision:financePrefs.revision,section,key,value})});
-      financePrefs=saved;settingsNotice='';paint();
+      financePrefs=saved;settingsNotice='';
+      window.BTFinanceTransfer?.configureOwnerNames(financePrefs.ownerNames?.primary?.names||[]);paint();
     }catch(error){settingsNotice='Change not saved. '+String(error.message||'Try again.');paint()}
   }
   async function loadArchiveMonth(month){
@@ -513,7 +524,7 @@
       el('strong',row.merchant||row.description||'Transaction',copy);
       el('span',categoryChip(row),copy,'finance-page-transaction-category'+(neutralChip(row)?' is-neutral':''));
       el('small',(row.account.bank||'Bank')+' · '+date(row.posted),copy);
-      el('b',signedFinanceAmount(row),item,'finance-page-preview-value'+(Number(row.amount)>0?' is-credit':''));
+      el('b',signedFinanceAmount(row),item,'finance-page-preview-value '+creditStyle(row));
     }
   }
   function cumulativeSpendingChart(host,current,previous,mode='spending',activeDay=null){
@@ -985,8 +996,8 @@
         if(day!==dateStamp){dateStamp=day;el('h4',dayLabel(row.posted),parent,'finance-spending-day')}
         const line=el('div',undefined,parent,'finance-spending-ledger-row');
         const text=el('div',undefined,line);el('strong',displayMerchant(row),text);
-        el('small',financeCategory(row.category)+' · '+(row.account?.name||row.account?.bank||''),text);
-        el('b',signedFinanceAmount(row),line,Number(row.amount)>0?'is-credit':'');
+        el('small',categoryChip(row)+' · '+(row.account?.name||row.account?.bank||''),text);
+        el('b',signedFinanceAmount(row),line,creditStyle(row));
       }
     }
     const actualCategory=row=>I.spendingCategory(row,I.cents(row.amount));
@@ -1446,7 +1457,7 @@
         if(window.BTFinanceTransfer?.label(row)==='Possible transfer')
           el('small',waitingLabel(row),copy,'finance-transfer-waiting');
         const value=el('span',undefined,top,'finance-page-transaction-value');
-        el('b',shownAmount(row),value,isNeutralTransfer(row)?'is-transfer':Number(row.amount)>0?'is-credit':'');
+        el('b',shownAmount(row),value,creditStyle(row));
         if(row.pending)el('small','Pending',value);
         top.onclick=()=>openDetail(row);
         if(window.BTFinanceTransfer?.label(row)==='Possible transfer'){
@@ -1765,6 +1776,21 @@
         },'finance-page-button');
       }
     }else el('small',unknown?'No mismatches verified; some accounts still need complete history.':'No balance mismatches detected.',dataHealth,'finance-page-hint');
+    const ownNames=el('details',undefined,card,'finance-page-owner-rule');
+    el('summary','Recognize transfers between your accounts',ownNames);
+    el('small','Optional: names used in your transfers are saved in private Finance settings.',ownNames);
+    const ownLabel=el('label',undefined,ownNames,'finance-page-field');
+    el('span','Your name or aliases (comma-separated)',ownLabel);
+    const ownInput=el('input',undefined,ownLabel,'finance-page-search');
+    ownInput.type='text';ownInput.autocomplete='off';ownInput.maxLength=409;
+    ownInput.value=(financePrefs.ownerNames?.primary?.names||[]).join(', ');
+    ownInput.disabled=!preferenceAvailable;
+    const ownSave=action(ownNames,'Save private transfer names',()=>{
+      const names=ownInput.value.split(',').map(value=>value.trim()).filter(Boolean);
+      if(names.length>4){settingsNotice='Enter no more than four names.';paint();return;}
+      saveSetting('ownerNames','primary',names.length?{names}:null);
+    });
+    ownSave.disabled=!preferenceAvailable;
     if(currentCombined.possibleDuplicates?.length){
       const review=el('details',undefined,card,'finance-page-matching-accounts');el('summary','Review matching accounts',review);
       for(const pair of currentCombined.possibleDuplicates){
@@ -2141,6 +2167,7 @@
     const call=++mountCall,auth=window.BTBonusAuth;
     if(!auth?.connected()){
       window.BTBonusEvidence?.dispose();
+      window.BTFinanceTransfer?.configureOwnerNames([]);
       closeFinanceDialogs();
       sessionIdentity=null;lastAuthenticatedOwner=null;expandedAccountSettings.clear();monitoringNotice='';activityNotice='';connectionNotice='';
       currentRoot=host;data=null;otherData=null;sequence++;
@@ -2163,6 +2190,7 @@
       currentRoot=host;paint();return;
     }
     window.BTBonusEvidence?.dispose();
+    window.BTFinanceTransfer?.configureOwnerNames([]);
     if(lastAuthenticatedOwner&&lastAuthenticatedOwner!==identity){
       closeFinanceDialogs();
       expandedAccountSettings.clear();monitoringNotice='';activityNotice='';connectionNotice='';
@@ -2224,7 +2252,7 @@
     if(typeof passiveTimer?.unref==='function')passiveTimer.unref();
   }
   function refresh(){
-    window.BTBonusEvidence?.dispose();currentRoot=null;data=null;otherData=null;sessionIdentity=null;
+    window.BTBonusEvidence?.dispose();window.BTFinanceTransfer?.configureOwnerNames([]);currentRoot=null;data=null;otherData=null;sessionIdentity=null;
     accountDraftProfiles={};dirtyAccounts.clear();
     Object.keys(monitoringDraft).forEach(k=>delete monitoringDraft[k]);sequence++;mount();
   }

@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.4.99: Product-aware retirement and investment categorization.
+// Version 3.5.0: Finance Categories v2 and product-aware classification.
 
-const V = 'bt-v3.4.99-classify1';
+const V = 'bt-v3.5.0-categories2';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',

@@ -1026,3 +1026,13 @@
 .finance-page .finance-transfer-similar input{width:18px;height:18px;accent-color:#8fbed4}
 .finance-page .finance-transfer-confirm-controls .finance-page-confirm-transfer{margin:0;max-width:none}
 @media(max-width:390px){.finance-page .finance-transfer-confirm-controls{gap:6px}.finance-page .finance-transfer-pair-title{font-size:12px}}
+
+/* A credit is green only when its confirmed/effective category is Income. */
+.finance-page .finance-page-transaction-value b.is-neutral-credit,
+.finance-page .finance-spending-ledger-row b.is-neutral-credit,
+.finance-page .finance-page-preview-value.is-neutral-credit{color:#a6b2c2!important}
+.finance-page .finance-spending-ledger-row b.is-transfer,
+.finance-page .finance-page-preview-value.is-transfer{color:#a6b2c2!important}
+.finance-page .finance-page-owner-rule{padding:10px 0;min-width:0}
+.finance-page .finance-page-owner-rule>summary{cursor:pointer;font-size:13px;font-weight:700;color:#d6e7fb}
+.finance-page .finance-page-owner-rule .finance-page-search{max-width:100%;box-sizing:border-box}

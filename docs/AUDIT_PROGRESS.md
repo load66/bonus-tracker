@@ -1,10 +1,15 @@
 # Audit progress
 
-Active agent: none
+Active agent: codex — Finance Categories v2 — codex/finance-categories-v2
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- In progress: Categories v2 frontend rebase and CI on v3.4.99 baseline, PR https://github.com/load66/bonus-tracker/pull/157
+- Verified backend: v3.5.0 PR https://github.com/load66/Trading-Journal-AI/pull/224, Railway SUCCESS commit ed0d5314e7e5adfb367466b361995728c2ea3d7d
+- Frontend candidate: v3.5.0, service worker bt-v3.5.0-categories2; synthetic category / Data health and three-browser CI required
+- Next step: verify PR #157 CI then release Pages and compare live worker version
 
 - Backend production: v3.4.98 SimpleFIN automatic linked-bank ingestion, PR https://github.com/load66/Trading-Journal-AI/pull/226
 - Railway SUCCESS: merge commit 26dc4b2076f89157d6fe8356a90eaa244ac59cc3
