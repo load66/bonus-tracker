@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.4.94: exclude transfers, card payments and investment funding from recurring.
+// Version 3.4.95: SimpleFIN mortgage debt and loan balance reporting.
 
-const V = 'bt-v3.4.94-review-precedence1';
+const V = 'bt-v3.4.95-mortgage1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
