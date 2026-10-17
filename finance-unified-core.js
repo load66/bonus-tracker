@@ -139,7 +139,8 @@
     // A confirmed duplicate uses one primary account and one balance; unique
     // secondary-provider rows remain visible with their original source keys.
     // Fingerprints require same amount, same local day, and normalized bank text.
-    const transactions=Object.fromEntries(Object.entries(keep(unified.transactions)).map(([k,v])=>[k,Object.fromEntries(Object.entries(v).map(([id,row])=>[id,{...row,signals:[...(row.signals||[])]}]))]));
+    const Transfer=typeof window!=='undefined'?window.BTFinanceTransfer:typeof require==='function'?require('./finance-transfer-core.js'):null;
+    const transactions=Object.fromEntries(Object.entries(keep(unified.transactions)).map(([k,v])=>[k,Object.fromEntries(Object.entries(v).map(([id,row])=>[id,Transfer?Transfer.effective(row):{...row,signals:[...(row.signals||[])]}]))]));
     for(const [other,primary] of secondary){
       if(!allowed.has(primary))continue;
       const target=transactions[primary]||{};
@@ -167,7 +168,7 @@
     for(const [key,rows] of Object.entries(transactions)){
       for(const row of Object.values(rows)){
         const value=toCents(row.amount);
-        if(row.pending||value===null||value===0n||value%100n!==0n||
+        if(row.pending||value===null||value===0n||
           !Number.isFinite(row.posted)||['user','user_rule'].includes(row.categorySource))continue;
         transferRows.push({account:key,row,value});
       }
