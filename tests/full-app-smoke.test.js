@@ -59,11 +59,11 @@ module.exports={sandbox,document,app,storage,errors};
 if(require.main===module)setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.87',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.4.87',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.88',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.4.88',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.13',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
-    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.87',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
-    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.87',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
+    assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.88',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
+    assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.88',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.13',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
     assert(sandbox.BTEligibilityGate?.VERSION==='1.3.0',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
     assert(sandbox.btLifecycleStatusVersion==='3.4.74-status1',`Unexpected lifecycle status version ${sandbox.btLifecycleStatusVersion}`);
@@ -82,6 +82,11 @@ if(require.main===module)setTimeout(()=>{
     assert(app.innerHTML.includes('Active bonuses'),'Active bonus summary did not render');
     assert(app.innerHTML.includes('Action Center'),'Lifecycle Action Center did not render');
     sandbox.R();
+    for(const retired of ['learning-inbox-conflict.js','profile-library-selftest.js','profile-library-selftest-academy.js','profile-db.js']){
+      assert(!html.includes('src="./'+retired+'"')&&!fs.readFileSync('sw.js','utf8').includes("'./"+retired+"'"),'Retired add-on remains loaded or cached: '+retired);
+    }
+    assert(!app.innerHTML.includes('v31_profile_btn')&&!app.innerHTML.includes('v32_inbox_btn'),'Retired floating shortcuts must be absent');
+    assert(app.innerHTML.includes('aria-label="Tracker"')&&app.innerHTML.includes('aria-label="T&C Archive"'),'Tracker and archive navigation remains');
     assert(app.innerHTML.includes('aria-label="T&C Archive"')&&app.innerHTML.includes('<span>Archive</span>'),'Archive tab retains its accessible full name');
     const appSource=fs.readFileSync('app.js','utf8');
     const timerClickMatches=appSource.match(/onclick="event\.stopPropagation\(\);toggleTimer\(/g)||[];
@@ -254,7 +259,7 @@ if(require.main===module)setTimeout(()=>{
 
     const report=sandbox.btRunFullRegressionTests();
     assert(report.ok,`Full regression failed: ${JSON.stringify(report)}`);
-    assert(report.total>=17,`Full regression suite is incomplete: ${report.total}`);
+    assert(report.total===8,`Core close-rule checks must remain complete: ${report.total}`);
     const academyValid='Academy Bank Elite Investment Checking. $100 opening balance required. To receive $500 bonus, open a new Elite Investment Checking Account, make at least four direct deposits totaling $10,000 and enroll in Online Banking within 90 days of account opening. The bonus will be deposited within 60 days. Offer expires May 15, 2026.';
     const academyOk=sandbox.tcV3Analyze(academyValid,{noGlobalFallback:true});
     assert(academyOk.bank==='Academy Bank'&&academyOk.bonus===500&&(academyOk.bankRulesApplied||[]).includes('Academy Bank Elite Investment Checking'),'Valid Academy saved offer did not match');

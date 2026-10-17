@@ -130,6 +130,7 @@ const base=()=>({
       // Regression: six bottom tabs must have separate, equal-width hit targets
       // and readable names at the narrowest supported phone widths.
       for(const width of [320,390,430]){
+        assert.equal(await page.locator('#v31_profile_btn,#v32_inbox_btn,#v31_overlay,#v32_overlay').count(),0,'Retired floating add-ons visible at '+width+'px');
         await page.setViewportSize({width,height:844});
         const geometry=await page.locator('.tabs').evaluate(tabs=>{
           const bar=tabs.getBoundingClientRect();

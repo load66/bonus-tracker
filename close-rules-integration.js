@@ -201,7 +201,7 @@
   window.feeCheckSave=function(){const p=typeof feeCheckPrompt!=='undefined'?feeCheckPrompt:window.feeCheckPrompt;if(!p)return;const id=p.entryId,months=Math.max(1,parseInt(p.months,10)||6),feeAmt=Math.max(0,parseFloat(p.feeAmount)||0);entries=entries.map(e=>{if(e.id!==id)return e;const x={...e},end=x.opened?addM(x.opened,months):'',days=x.opened&&end?dB(x.opened,end):months*30;x.minHoldDays=days;x.closeFeeCountdownDays=String(days);x.closeRuleBasis='opened';x.closeBufferDays=5;x.closeRestrictionType='manual-fixed';x.closeRuleSource='manual';x.earlyCloseFee=feeAmt;x.earlyTerminationFeeText=feeAmt?'$'+feeAmt.toLocaleString():'';x.closeRuleText=`Manual early-close hold: keep the account open for ${months} month${months===1?'':'s'} from the opened date${feeAmt?' to avoid a $'+feeAmt.toLocaleString()+' fee':''}.`;x.closeRuleSourceSentence=x.closeRuleText;x.fieldSources=(x.fieldSources&&typeof x.fieldSources==='object')?x.fieldSources:{};const meta={kind:'manual',confidence:'verified',source:'Set manually in the Early Closure Fee timer.',updatedAt:new Date().toISOString()};x.fieldSources.closeFeeCountdownDays=meta;x.fieldSources.closeRuleText=meta;x.fieldSources.closeRuleBasis=meta;return normalizeEntry(x)});entries=sortE(entries);sv(SK,entries);feeCheckPrompt=null;R()};
 
   function analyzerWrappersReady(){
-    return ['__tcV3BankRulesWrapped','__tcV3WellsConsumerRulesWrapped','__tcV3CapitalOneRulesWrapped','__tcV3BoaBusinessRulesWrapped','__tcV3PncRulesWrapped','__tcV3RegionsRulesWrapped','__tcV3EquityRulesWrapped','__tcV3BuseyRulesWrapped','__tcV3AcademyRulesWrapped','__tcV3ProfileRegistryWrapped','__tcV31AcademyRegistryWrapped'].every(k=>!!window[k])
+    return ['__tcV3BankRulesWrapped','__tcV3WellsConsumerRulesWrapped','__tcV3CapitalOneRulesWrapped','__tcV3BoaBusinessRulesWrapped','__tcV3PncRulesWrapped','__tcV3RegionsRulesWrapped','__tcV3EquityRulesWrapped','__tcV3BuseyRulesWrapped','__tcV3AcademyRulesWrapped','__tcV3ProfileRegistryWrapped','__tcV3AcademyRegistryWrapped'].every(k=>!!window[k])
   }
   window.btRunFullRegressionTests=function(opts={}){
     const suites=[];
@@ -209,7 +209,6 @@
     if(!analyzerWrappersReady()&&!opts.force){
       const report={version:VER,passed:close.passed,total:close.total,ok:true,pending:true,suites,ranAt:new Date().toISOString()};window.__btFullRegressionReport=report;return report
     }
-    try{if(typeof window.tcV31RunAnalyzerSelfTest==='function'){const a=window.tcV31RunAnalyzerSelfTest();suites.push({name:'Bank analyzer',...a})}}catch(err){suites.push({name:'Bank analyzer',ok:false,passed:0,total:1,error:err?.message||String(err)})}
     const passed=suites.reduce((n,x)=>n+Number(x.passed||0),0),total=suites.reduce((n,x)=>n+Number(x.total||0),0);
     const report={version:VER,passed,total,ok:suites.every(x=>x.ok!==false),pending:false,suites,ranAt:new Date().toISOString()};window.__btFullRegressionReport=report;try{localStorage.setItem('bt_last_regression_v1',JSON.stringify(report))}catch{}return report
   };
