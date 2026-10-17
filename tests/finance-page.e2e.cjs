@@ -139,6 +139,174 @@ const base=()=>({
       assert.ok((await section.locator('.finance-spending-value').innerText()).includes('$25.00'),'Eligible unknown debit is included in the October spending total');
       assert.ok(await section.getByRole('button',{name:'Review',exact:true}).count(),'Uncategorized category includes a review action');
       assert.equal(await section.locator('.finance-spending-today-dot').count(),1);
+      const donut=section.locator('.finance-spending-donut').first();
+      const donutGeometry=await donut.evaluate(circle=>{
+        const center=circle.querySelector('.finance-spending-donut-center strong');
+        const ring=circle.getBoundingClientRect(),box=center?.getBoundingClientRect();
+        const cover=getComputedStyle(circle,'::after').content;
+        return {text:center?.textContent||'',cover,
+          isVisible:!!box&&box.width>0&&box.height>0&&box.left>=ring.left&&box.right<=ring.right&&
+            box.top>=ring.top&&box.bottom<=ring.bottom,
+          zIndex:getComputedStyle(center?.parentElement).zIndex};
+      });
+      assert.ok(donutGeometry.isVisible,'390px iPhone donut total must be fully within the center hole');
+      assert.equal(donutGeometry.cover,'none','Legacy donut pseudo-overlay must not paint over the total');
+      assert.ok(donutGeometry.text.includes('
+      assert.ok(await section.getByRole('button',{name:'Set budgets'}).count()===0||await section.locator('.finance-spending-budget-settings').count(),'Budgets are editable on the spending page');
+      await section.getByRole('button',{name:'Previous spending month'}).click();
+      await section.getByRole('heading',{name:'September 2026'}).waitFor();
+      assert.equal(await section.locator('.finance-spending-comparison').count(),0,'Missing previous month does not create a fake $0 comparison');
+      await section.getByRole('button',{name:'Next spending month'}).click();
+      await section.getByRole('heading',{name:'October 2026'}).waitFor();
+      await section.getByRole('button',{name:'Review',exact:true}).click();
+      await section.getByText('1 of 1',{exact:true}).waitFor();
+      await section.getByRole('button',{name:'Skip',exact:true}).click();
+      await section.getByText('Review complete',{exact:true}).waitFor();
+      await section.getByRole('button',{name:'Back to Spending',exact:true}).click();
+      await section.getByRole('button',{name:'Transactions',exact:true}).click();
+      const search=section.getByRole('searchbox',{name:'Search transactions'});await search.fill('coffee');
+      assert.equal(await section.locator('.finance-page-transaction').count(),1);
+      assert.equal(await section.locator('.finance-page-transaction-category').count(),1,'Every transaction has a category chip');
+      const compactRow=section.locator('.finance-page-transaction-summary').first();
+      assert.equal(await compactRow.locator('.finance-page-transaction-icon').count(),0,'Transaction avatars must not consume merchant space');
+      const compactGeometry=await compactRow.evaluate(row=>({
+        columns:getComputedStyle(row).gridTemplateColumns.trim().split(/\s+/).length,
+        merchantInset:row.querySelector('.finance-page-transaction-copy').getBoundingClientRect().left-row.getBoundingClientRect().left
+      }));
+      assert.equal(compactGeometry.columns,2,'Transaction rows should contain only description and amount');
+      assert.ok(compactGeometry.merchantInset<=12,'Merchant text must align near the left edge');
+      await search.fill('');
+      const unknown=section.locator('.finance-page-transaction').filter({hasText:'Unknown'});
+      await unknown.getByRole('button').click();
+      let modal=page.getByRole('dialog',{name:'Transaction details for Unknown',exact:true});
+      await modal.getByRole('checkbox',{name:'Apply to similar transactions'}).check();
+      await modal.getByLabel('Category for Unknown').selectOption('shopping');
+      await modal.getByText(/Changes were not saved/).waitFor();
+      assert.equal(state.transactions[A][T3].category,'unreviewed');
+      await modal.getByLabel('Category for Unknown').selectOption('shopping');
+      await modal.waitFor({state:'hidden'});assert.equal(state.transactions[A][T3].category,'shopping');
+      assert.ok(requests.some(r=>r.body.applySimilar===true));
+      // Exercise the new one-card Spending Quick Review, including provider save,
+      // apply-to-similar propagation and private encrypted budget settings.
+      state.transactions[A][T3].category='unreviewed';
+      state.transactions[A][T3].categorySource='automatic';
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      await section.getByRole('button',{name:'Spending',exact:true}).click();
+      await section.getByRole('button',{name:'Quick Review',exact:true}).click();
+      await section.getByText('1 of 1',{exact:true}).waitFor();
+      await section.getByRole('checkbox',{name:'Apply to similar transactions'}).check();
+      const reviewRequests=requests.length;
+      await section.locator('.finance-spending-review-choice[data-category="groceries"]').click();
+      await section.getByText('Review complete',{exact:true}).waitFor();
+      assert.equal(state.transactions[A][T3].category,'groceries','Quick Review saves merchant category through its actual provider');
+      assert.ok(requests.slice(reviewRequests).some(r=>r.path.endsWith('/transaction-review')&&r.body.applySimilar===true&&r.body.category==='groceries'),
+        'Quick Review passes Apply to similar to the persistent provider rule');
+      await section.getByRole('button',{name:'Back to Spending',exact:true}).click();
+      await section.locator('.finance-spending-budget-settings > summary').click();
+      const budget=section.getByLabel('Monthly budget for Groceries');
+      await budget.fill('100.00');await budget.press('Tab');
+      await section.getByText(/Left to spend/).first().waitFor();
+      assert.equal(prefs.budgets.groceries.amount,'100.00','Monthly category budgets are stored through the secure backend preference route');
+      await section.locator('.finance-spending-category-action').filter({hasText:'Groceries'}).first().click();
+      await section.getByRole('heading',{name:'Past six months'}).waitFor();
+      await section.getByRole('button',{name:'‹ Back to Spending'}).click();
+
+      await section.getByRole('button',{name:'Accounts',exact:true}).click();
+      await section.getByRole('heading',{name:/^Accounts \(\d+\)$/}).waitFor();
+      assert.ok((await section.getByText('Credit cards', {exact:true}).first().locator('..').innerText()).includes('$200.00 owed'),'Card group header and row both show owed debt');
+      assert.equal(await section.locator('.finance-page-account:visible').count(),4);
+      assert.equal(await section.getByRole('button',{name:'Robinhood Credit Card ··4010',exact:true}).count(),1,'Duplicated account masks normalize to one readable suffix');
+      assert.equal(await section.locator('select').count(),1,'No bonus dropdowns in account lists');
+      const accountSearch=section.getByRole('searchbox',{name:'Search accounts'});
+      await accountSearch.fill('x money');assert.equal(await section.locator('.finance-page-account:visible').count(),1);await accountSearch.fill('');
+      // Secure bank authorization wizard still never collects bank passwords or MFA.
+      await section.getByRole('button',{name:'Add account',exact:true}).click();
+      const wizard=page.getByRole('dialog',{name:'Financial accounts'});
+      await wizard.getByText('SECURE BANK CONNECTION',{exact:true}).waitFor();
+      assert.equal(await wizard.locator('input[type=password],input[type=tel]').count(),0);
+      assert.equal(await wizard.getByRole('link',{name:'Open SimpleFIN'}).getAttribute('rel'),'noopener noreferrer');
+      await wizard.getByRole('button',{name:'Back to connected accounts'}).click();await wizard.getByRole('button',{name:'Done',exact:true}).click();
+      await section.getByRole('button',{name:'Robinhood Credit Card ··4010',exact:true}).click();
+      modal=page.getByRole('dialog',{name:'Robinhood Credit Card ··4010',exact:true});
+      const net=modal.getByRole('switch',{name:'Include in net worth'});await net.uncheck();
+      await modal.getByRole('button',{name:'Save account settings',exact:true}).click();
+      await modal.getByText(/Changes were not saved/).waitFor();
+      assert.equal(state.accountProfiles[B].balanceMode,'liability');
+      assert.equal(await net.isChecked(),false,'Failed saves preserve the editable draft');
+      await modal.getByRole('button',{name:'Save account settings',exact:true}).click();await modal.waitFor({state:'hidden'});
+      assert.equal(state.accountProfiles[B].balanceMode,'exclude');
+      assert.equal(await section.getByRole('button',{name:'Robinhood Credit Card ··4010',exact:true}).locator('b').innerText(),'$200.00 owed','Credit card debt wording remains consistent regardless of net-worth inclusion');
+      assert.equal(redrawOnSuccessfulSave,false,'WebKit exercises same-owner redraw before successful save response');
+      await section.getByRole('button',{name:'Checking <img src=x>',exact:true}).click();
+      modal=page.getByRole('dialog',{name:'Checking <img src=x>',exact:true});
+      await modal.getByRole('button',{name:'Hide account',exact:true}).click();await modal.waitFor({state:'hidden'});
+      assert.equal(state.accountProfiles[A].hidden,true);assert.equal(Object.keys(state.transactions[A]).length,3);
+      assert.equal(await section.locator('.finance-page-account:visible').count(),3);
+      await section.locator('.finance-page-hidden-accounts>summary').click();
+      await section.getByRole('button',{name:'Checking <img src=x>',exact:true}).click();
+      modal=page.getByRole('dialog',{name:'Checking <img src=x>',exact:true});
+      await modal.getByRole('button',{name:'Unhide account',exact:true}).click();await modal.waitFor({state:'hidden'});
+      assert.equal(state.accountProfiles[A].hidden,false);
+      // Removing one account keeps siblings, historical reports, and a 10-second Undo.
+      await section.getByRole('button',{name:'Robinhood Credit Card ··4010',exact:true}).click();
+      modal=page.getByRole('dialog',{name:'Robinhood Credit Card ··4010',exact:true});await modal.getByRole('button',{name:'Remove account',exact:true}).click();
+      const confirm=page.getByRole('dialog',{name:'Remove Robinhood Credit Card ··4010?',exact:true});
+      await confirm.getByRole('button',{name:'Remove account',exact:true}).click();
+      await page.getByRole('button',{name:'Undo',exact:true}).waitFor();
+      assert.equal(state.accounts.find(a=>a.key===B).removedAt,NOW);
+      assert.equal(state.accounts.find(a=>a.key===A).removedAt,undefined,'Sibling remains connected');
+      await page.getByRole('button',{name:'Undo',exact:true}).click();
+      await page.locator('.finance-undo').waitFor({state:'hidden'});
+      assert.equal(state.accounts.find(a=>a.key===B).removedAt,null);
+      // Transactions are editable through their original bank, even in one unified list.
+      await section.getByRole('button',{name:'Transactions',exact:true}).click();
+      await section.locator('.finance-page-transaction').filter({hasText:'X Money Bonus'}).getByRole('button').click();
+      modal=page.getByRole('dialog',{name:'Transaction details for X Money Bonus',exact:true});
+      assert.equal(await modal.getByLabel('Category for X Money Bonus').locator('option[value=bonus]').count(),0);
+      await modal.getByLabel('Category for X Money Bonus').selectOption('shopping');await modal.waitFor({state:'hidden'});
+      assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts/transaction-review')&&r.body.transaction==='plaid-income'));
+      // Full provider history stays reachable, including generic merchant titles and AI tags.
+      for(let i=0;i<260;i++){const id='history-'+i;plaidState.transactions[A][id]={id,posted:NOW-500-i*1000,pending:false,amount:'-1.00',merchant:i===0?'Transaction':'History item '+i,description:'Synthetic history item '+i,category:'other',categorySource:i===0?'ai':'automatic',confidence:'medium',signals:[]}}
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      await section.getByRole('button',{name:'Transactions',exact:true}).click();
+      await section.getByText('Synthetic history item 0',{exact:true}).waitFor();
+      assert.equal(await section.locator('.finance-page-auto-tag').count(),1);
+      await section.getByRole('button',{name:/^Show 100 more/}).click();
+      await section.getByRole('button',{name:/^Show 64 more/}).click();
+      assert.equal(await section.locator('.finance-page-transaction').count(),264);
+      for(const label of ['Overview','Spending','Recurring','Transactions','Accounts']){
+        const tabs=section.locator('.finance-page-nav');
+        assert.equal(await tabs.evaluate(el=>getComputedStyle(el).position),'sticky','Finance tabs must stick beneath the main header');
+        assert.equal(await tabs.evaluate(el=>getComputedStyle(el).borderTopLeftRadius),'0px','No transparent rounded gap above the sticky Finance tabs');
+        if(label==='Overview'){
+          const periods=section.locator('.finance-page-period-nowrap').first();
+          assert.ok(await periods.count(),'Cash-flow period controls exist');
+          assert.equal(await periods.evaluate(el=>getComputedStyle(el).flexWrap),'nowrap');
+        }
+        await section.getByRole('button',{name:label,exact:true}).click();
+        for(const colorScheme of ['dark','light']){
+          await page.emulateMedia({colorScheme});await page.setViewportSize({width:390,height:844});
+          await page.evaluate(()=>window.scrollTo(0,0));
+          const geometry=await section.evaluate(e=>({width:innerWidth,scroll:e.scrollWidth,box:e.getBoundingClientRect().width}));
+          assert.ok(geometry.scroll<=geometry.width+1&&geometry.box<=geometry.width+1,name+' '+label+' mobile overflow');
+          await page.screenshot({path:path.join(output,name+'-'+label+'-'+colorScheme+'-390.png')});
+        }
+      }
+      await section.getByRole('button',{name:'Manage connections',exact:true}).click();
+      await section.getByRole('heading',{name:'Manage connections',exact:true}).waitFor();
+      await section.getByRole('button',{name:/X Money.*via Plaid/}).click();
+      modal=page.getByRole('dialog',{name:'X Money',exact:true});
+      await modal.getByRole('button',{name:'Choose which accounts to share',exact:true}).click();
+      await page.waitForFunction(()=>window.__existingItemUpdated===true);
+      assert.equal(requests.some(r=>r.path.endsWith('/plaid/link-token')||r.path.endsWith('/exchange')),false,'No new Plaid Item was created');
+      assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'Tracker records remain byte-for-byte intact');
+      if(errors.length)console.error('UNHANDLED_FINANCE_PAGE_ERRORS',JSON.stringify(errors));
+      assert.deepEqual(errors,[], 'Uncaught Finance UI errors: '+errors.join(' | '));console.log(name+': Finance lifecycle, privacy, categorization, 264-row history, both device settings, 390x844 and Trial safety passed');
+    }finally{await browser.close()}
+  }}finally{server.close()}
+})().catch(e=>{console.error(e);process.exitCode=1});
+),'Donut total remains readable');
+
       assert.ok(await section.getByRole('button',{name:'Set budgets'}).count()===0||await section.locator('.finance-spending-budget-settings').count(),'Budgets are editable on the spending page');
       await section.getByRole('button',{name:'Previous spending month'}).click();
       await section.getByRole('heading',{name:'September 2026'}).waitFor();
