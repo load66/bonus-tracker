@@ -134,3 +134,60 @@ assert.equal(nonRoundSafe.transactions['plaid:'+b].credit.category,'transfer');
 assert.equal(finance.summarize(nonRoundSafe,{now,days:30}).expenses,'0.00',
   'Cross-provider non-round transfers never appear in Overview expenses');
 assert.equal(nonRoundA.transactions[a].debit.category,'unreviewed','Provider rows remain immutable');
+
+
+
+// Real investment-account names: retirement must win over individual/joint.
+assert.equal(core.detectedType({bank:'Robinhood',name:'Robinhood individual (6105)'}),'brokerage');
+assert.equal(core.detectedType({bank:'Robinhood',name:'Robinhood Roth IRA (9372)',accountSubtype:'individual'}),'retirement');
+assert.equal(core.detectedType({bank:'Robinhood',name:'Checking (2033)'}),'checking');
+assert.equal(core.detectedType({bank:'Robinhood',name:'Savings (0793)'}),'savings');
+assert.equal(core.detectedType({bank:'Fidelity',name:'HSA investing'}),'brokerage');
+assert.equal(core.detectedType({bank:'Webull',name:'Individual'}),'brokerage');
+assert.equal(core.detectedType({bank:'Coinbase',name:'Crypto'}),'brokerage');
+const investedAccounts=[
+  {key:'invest-1',bank:'Robinhood',name:'Robinhood individual (6105)',currency:'USD',balance:'3000.00'},
+  {key:'invest-2',bank:'Robinhood',name:'Robinhood Roth IRA (9372)',currency:'USD',balance:'2000.00'}
+];
+const segregatedSimple=structuredClone(simple);
+segregatedSimple.accounts=[{...simple.accounts[0],bank:'Robinhood',name:'Checking (2033)'},...investedAccounts];
+segregatedSimple.accountProfiles={
+ [a]:{kind:'checking',balanceMode:'asset'},'invest-1':{kind:'brokerage',balanceMode:'asset'},
+ 'invest-2':{kind:'retirement',balanceMode:'asset'}
+};
+segregatedSimple.transactions[a]={
+ out:{id:'out',amount:'-2000.00',posted:now-100,pending:false,category:'transfer',
+      categorySource:'automatic',signals:['investment_transfer'],description:'To Brokerage'},
+ purchase:{id:'purchase',amount:'-11.00',posted:now-200,pending:false,category:'shopping',description:'Target'}
+};
+segregatedSimple.transactions['invest-1']={
+ activity:{id:'activity',amount:'-750.00',posted:now-100,pending:false,category:'unreviewed',description:'Buy NVDA shares'},
+ incoming:{id:'incoming',amount:'2000.00',posted:now-100,pending:false,category:'transfer',signals:['matched_internal_transfer'],description:'From Personal Checking'}
+};
+const segregatedSafe=core.safeForSummary(core.combine({simplefin:segregatedSimple}));
+const overviewSeg=finance.summarize(segregatedSafe,{now,days:30});
+assert.equal(overviewSeg.cash,'501.25','Cash total excludes 5000 in investments');
+assert.equal(overviewSeg.expenses,'11.00','Investment trades and transfers excluded from expenses');
+assert.equal(overviewSeg.income,'0.00','Brokerage deposits never count as income');
+const invest=finance.investmentSummary(segregatedSafe,{now});
+assert.equal(invest.total,'5000.00');
+assert.equal(invest.brokerage,'3000.00');
+assert.equal(invest.retirement,'2000.00');
+assert.equal(invest.investedThisMonth,'2000.00','To Brokerage reduces cash, not spending');
+const ledgerAll=core.ledgerRows([
+ {account:segregatedSafe.accounts[0],accountKey:'simplefin:'+a,
+  amount:'-7379.04',posted:now-100,category:'transfer',signals:['matched_internal_transfer'],id:'cashout'},
+ {account:segregatedSafe.accounts[1],accountKey:'simplefin:invest-1',
+  amount:'7379.04',posted:now-100,category:'transfer',signals:['matched_internal_transfer'],id:'investin'},
+ {account:segregatedSafe.accounts[1],accountKey:'simplefin:invest-1',
+  amount:'-40.00',posted:now-300,category:'unreviewed',description:'Buy NVDA',id:'buy'}
+],{scope:'all'});
+assert.equal(ledgerAll.length,2,'Unique reciprocal checking to brokerage transfer shows once');
+assert.equal(ledgerAll[0].transferSides.length,2,'Tap transfer exposes both sides');
+assert.equal(core.ledgerRows(ledgerAll,{scope:'cash_cards'}).length,1,'Default hides brokerage activity');
+assert.equal(core.ledgerRows(ledgerAll,{scope:'investments'}).length,1,'Investments filter shows brokerage activity');
+assert.equal(core.ledgerRows(ledgerAll,{scope:'all',search:'NVDA'}).length,1,'Search includes merchant description');
+assert.equal(core.ledgerRows(ledgerAll,{scope:'transfers'}).length,1,'Transfer filter isolates paired transfer');
+const overridden=structuredClone(segregatedSimple);
+overridden.accountProfiles['invest-1']={kind:'checking',balanceMode:'asset'};
+assert.equal(core.combine({simplefin:overridden}).accountProfiles['simplefin:invest-1'].kind,'checking','Manual type choice wins');
