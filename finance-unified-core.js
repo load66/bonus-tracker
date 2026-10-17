@@ -139,7 +139,7 @@
     // A confirmed duplicate uses one primary account and one balance; unique
     // secondary-provider rows remain visible with their original source keys.
     // Fingerprints require same amount, same local day, and normalized bank text.
-    const transactions=Object.fromEntries(Object.entries(keep(unified.transactions)).map(([k,v])=>[k,{...v}]));
+    const transactions=Object.fromEntries(Object.entries(keep(unified.transactions)).map(([k,v])=>[k,Object.fromEntries(Object.entries(v).map(([id,row])=>[id,{...row,signals:[...(row.signals||[])]}]))]));
     for(const [other,primary] of secondary){
       if(!allowed.has(primary))continue;
       const target=transactions[primary]||{};
