@@ -238,6 +238,6 @@ assert.ok(checkedCopy>80,'Copy quality test must scan a meaningful set of visibl
 const appVersionSource=fs.readFileSync(path.join(__dirname,'../app.js'),'utf8');
 const pageVersionSource=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
 const swVersionSource=fs.readFileSync(path.join(__dirname,'../sw.js'),'utf8');
-assert.match(appVersionSource,/const APP_VERSION='3\\.4\\.82'/,'App version 3.4.82');
-assert.match(swVersionSource,/bt-v3\\.4\\.82-finances1/,'Service-worker cache 3.4.82');
-assert.match(pageVersionSource,/finance-page\\.js\\?v=3\\.4\\.82-finances1/,'Finance UI current release');
+assert.match(appVersionSource,/const APP_VERSION='3\.4\.82'/,'App version 3.4.82');
+assert.match(swVersionSource,/bt-v3\.4\.82-finances1/,'Service-worker cache 3.4.82');
+assert.match(pageVersionSource,/finance-page\.js\\?v=3\.4\.82-finances1/,'Finance UI current release');
