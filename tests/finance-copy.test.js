@@ -37,6 +37,10 @@ assert.ok(!src.includes("'Credit card balances reflect the last provider observa
 assert.ok(!src.includes("'Not included: '+notes.join"));
 assert.ok(css.includes('.finance-net-worth-review-item'));
 assert.ok(css.includes('.finance-net-worth-empty-chart'));
+assert.ok(src.includes("'Card payments'"),'Recurring card payments are labeled separately');
+assert.ok(src.includes("'Recurring transfers ('"),'Recurring transfers belong in a collapsed section');
+assert.ok(src.includes("'Possibly ended ('"),'Expired expected dates are relegated to a collapsed section');
+assert.ok(src.includes("' ⇄ '"),'Matched ledger rows are neutral transfers');
 assert.ok(unified.includes("DEFAULT_TREATMENT[kind]||saved.balanceMode"),
   'Legacy automatic exclusions should not override recognized asset defaults');
 console.log('Finance copy audit passed: '+checked+' labels checked, short Net worth status, review sheet and quiet chart');
