@@ -99,7 +99,7 @@ return result;
         await page.waitForFunction(()=>window.BTBonusAuth?.connected());
         let ready=false;
         for(let attempt=0;attempt<2;attempt++){
-          await section.getByRole('button',{name:'Review bank activity',exact:true}).click();
+          await section.getByRole('button',{name:/^(Review bank activity|Refresh)$/}).click();
           try{await section.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor({timeout:7000});ready=true;break}
           catch{
             const alerts=await section.getByRole('alert').allTextContents();
