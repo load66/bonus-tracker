@@ -444,7 +444,7 @@ async function exercise(name,engine,url){
     await page.getByLabel('Source',{exact:true}).selectOption('reddit');
     check('source filter returns dated Reddit reports',await page.locator('.research-report .research-source').first().getAttribute('href').then(u=>u.includes('reddit.com')));
     await page.getByText('Filter reports',{exact:true}).click();
-    for(const width of [320,390,430]){
+    for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
       check('datapoint mobile width '+width,await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&[...document.querySelectorAll('.research-report')].every(e=>e.scrollWidth<=e.clientWidth+1)));
       if(width===390){await page.locator('.research-report').first().scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,name+'-datapoints-mobile.png')})}
@@ -467,7 +467,7 @@ async function exercise(name,engine,url){
     await termsBank.locator(':scope > summary').click();
     await termsBank.getByText('Read original saved terms',{exact:true}).click();
     check('archive reveals original evidence',(await termsBank.innerText()).includes('E2E Verification Bank checking promotional terms'));
-    for(const width of [320,390,430]){
+    for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
       check('archive mobile width '+width,await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&[...document.querySelectorAll('.archive-raw')].every(e=>e.scrollWidth<=e.clientWidth+1)));
       if(width===390){await page.locator('.archive-raw').first().scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,name+'-terms-archive-mobile.png')})}
@@ -478,7 +478,7 @@ async function exercise(name,engine,url){
       window.__dashboardMetrics=bonusPipelineMetrics;
       bonusPipelineMetrics=(...args)=>({...window.__dashboardMetrics(...args),active:575,collected:5100,openCount:2,cooldownCount:16,readyCloseCount:0,actionCount:0});R();
     });
-    for(const width of [320,390,430,1024]){
+    for(const width of [320,375,390,430,1024]){
       await page.setViewportSize({width,height:844});
       const dashboardSummary=await page.locator('.ops-hero .hero-note').evaluate(e=>({
         text:e.textContent,scrollWidth:e.scrollWidth,clientWidth:e.clientWidth,
@@ -501,9 +501,12 @@ async function exercise(name,engine,url){
       if(width===430)await page.screenshot({path:path.join(output,name+'-dashboard-header.png')});
     }
     await page.evaluate(()=>{bonusPipelineMetrics=window.__dashboardMetrics;delete window.__dashboardMetrics;R();});
-    for(const width of [320,390]){
+    check('Finance tab is absent',await page.getByRole('button',{name:'Finances',exact:true}).count()===0);
+    check('Tracker bank activity review is absent',await page.getByRole('button',{name:'Review bank activity',exact:true}).count()===0);
+    check('removed Finance URLs return safe Tracker state',await page.evaluate(()=>{switchMainTab('finances');return document.querySelector('[aria-label="Tracker"][aria-current="page"]')!==null}));
+    for(const width of [320,375,390]){
       await page.setViewportSize({width,height:844});
-      for(const name of ['Tracker','Bank Bonuses','Finances','Tax','Datapoints','T&C Archive']){
+      for(const name of ['Tracker','Bank Bonuses','Tax','Datapoints','T&C Archive']){
         await button(name).click();
         check(name+' fits '+width+'px mobile width',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
         check(name+' navigation starts at the top at '+width+'px',await page.locator('.scroll').evaluate(e=>e.scrollTop===0));
@@ -547,7 +550,7 @@ async function exercise(name,engine,url){
       e.customTimers=[{id:'long-requirement',text:'Establish $500+ monthly qualified direct deposits and retain the required membership savings balance',startDate:'2026-09-11',date:'2026-10-26',daysRequired:45,done:false}];
       expanded=null;R();
     });
-    for(const width of [320,390,1024]){
+    for(const width of [320,375,390,1024]){
       await page.setViewportSize({width,height:844});
       const card=page.locator('.card-h').first();
       check('full recurring requirement at '+width+'px',(await card.locator('.bt-card-deadline p').innerText())==='Establish $500+ monthly qualified direct deposits and retain the required membership savings balance');
@@ -617,7 +620,7 @@ async function exercise(name,engine,url){
     await page.getByRole('heading',{name:'Replace an old entry?',exact:true}).waitFor();
     check('personal Chase import selects only old personal Chase',await page.evaluate(()=>replacementPickerPrompt.selectedId==='CHA-P-01'&&replacementPickerPrompt.candidates.length===1));
     const originalViewport=page.viewportSize();
-    for(const width of [320,390]){
+    for(const width of [320,375,390]){
       await page.setViewportSize({width,height:700});
       check('replacement picker fits '+width+'px',await page.locator('.replacement-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
       check('replacement card is readable at '+width+'px',await page.locator('.replacement-account').evaluateAll(rows=>rows.every(e=>e.scrollWidth<=e.clientWidth+1)));
