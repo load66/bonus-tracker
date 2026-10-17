@@ -58,7 +58,7 @@
         else if(SPENDING.has(category)&&n<0n){
           const amount=-n;expenses+=amount;spending[category]=(spending[category]||0n)+amount;
         }else if(category==='transfer')transfers++;
-        if(category==='unreviewed'||(row.categorySource!=='user'&&row.confidence!=='high'))unreviewed++;
+        if(category==='unreviewed'||(category==='bonus'&&row.categorySource!=='user')||(row.categorySource!=='user'&&row.confidence!=='high'))unreviewed++;
         if(Array.isArray(row.signals)&&row.signals.includes('possible_recurring'))recurring++;
         // Use the same local calendar basis as the day-grouped Finance ledger.
         const local=new Date(row.posted*1000);
