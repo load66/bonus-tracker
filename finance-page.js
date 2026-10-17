@@ -1946,7 +1946,7 @@
         const snapshot=await request(path,options,account.source);
         applySource(account.source,account.source==='simplefin'?snapshot:await request('',{},account.source));
         connectionNotice='Bank disconnected. '+(deleteHistory?'History deleted.':'History kept.');
-        modal.close();if(parent.open)parent.close();paint();
+        modal.close();if(parent?.open)parent.close();paint();
       }catch(error){el('p','Disconnect could not be confirmed. '+error.message,modal,'finance-page-warning')}
     };
     action(modal,'Disconnect and keep history',()=>disconnect(false),'finance-page-button finance-page-primary');
