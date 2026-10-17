@@ -403,6 +403,9 @@ const base=()=>({
       await bankSheet.locator('.finance-connection-save-footer').getByRole('button',{name:'Cancel',exact:true}).click();
       await section.getByRole('button',{name:'Back to accounts',exact:true}).click();
       // Bank Manage changes stay local until explicit Save. Cancel must discard.
+      await section.getByRole('button',{name:'Overview',exact:true}).click();
+      const withCardWorth=Number((await section.locator('.finance-overview-worth-number').innerText()).replace(/[^0-9.-]/g,''));
+      await section.getByRole('button',{name:'Accounts',exact:true}).click();
       await section.getByRole('button',{name:'Manage connections',exact:true}).click();
       await section.locator('.finance-page-connection-card').filter({hasText:'Other Credit Union'}).click();
       let bankSheet=page.getByRole('dialog',{name:'Other Credit Union',exact:true});
@@ -444,13 +447,14 @@ const base=()=>({
         'Sync-off account remains reachable under collapsed Not syncing');
       assert.equal(await section.locator('.finance-page-not-syncing').evaluate(x=>x.open),false);
       await section.getByRole('button',{name:'Overview',exact:true}).click();
-      assert.equal(await section.locator('.finance-overview-worth-number').innerText(),'$1,250.50',
+      const withoutCardWorth=Number((await section.locator('.finance-overview-worth-number').innerText()).replace(/[^0-9.-]/g,''));
+      assert.equal((withoutCardWorth-withCardWorth).toFixed(2),'200.00',
         'Sync-off card debt must immediately disappear from net worth without Refresh');
       assert.equal(await section.locator('.finance-overview-category-row[aria-label="View Credit cards accounts"] strong').last().innerText(),'—',
         'Sync-off card must disappear from credit card subtotal immediately');
       await page.evaluate(()=>window.btRefreshFinancesPage());
       await section.locator('.finance-overview-worth-number').waitFor();
-      assert.equal(await section.locator('.finance-overview-worth-number').innerText(),'$1,250.50',
+      assert.equal(Number((await section.locator('.finance-overview-worth-number').innerText()).replace(/[^0-9.-]/g,'')),withoutCardWorth,
         'Sync-off exclusion remains in force after app refresh');
       await section.getByRole('button',{name:'Accounts',exact:true}).click();
       await section.locator('.finance-page-not-syncing>summary').click();
@@ -458,7 +462,7 @@ const base=()=>({
       await section.getByRole('button',{name:'Robinhood Credit Card ··4010',exact:true}).waitFor();
       assert.equal(state.accountProfiles[B].syncEnabled,true,'Explicit reenable persists as a profile');
       await section.getByRole('button',{name:'Overview',exact:true}).click();
-      assert.equal(await section.locator('.finance-overview-worth-number').innerText(),'$1,050.50',
+      assert.equal(Number((await section.locator('.finance-overview-worth-number').innerText()).replace(/[^0-9.-]/g,'')),withCardWorth,
         'Reenabled card returns its correct debt to net worth without Refresh');
       await section.getByRole('button',{name:'Accounts',exact:true}).click();
       // Secure bank authorization wizard still never collects bank passwords or MFA.
