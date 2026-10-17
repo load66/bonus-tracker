@@ -274,9 +274,63 @@ const base=()=>({
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       await section.getByText('Synthetic history item 0',{exact:true}).waitFor();
       assert.equal(await section.locator('.finance-page-auto-tag').count(),1);
-      await section.getByRole('button',{name:/^Show 100 more/}).click();
-      await section.getByRole('button',{name:/^Show 64 more/}).click();
+      await section.locator('.finance-page-transaction').first().waitFor();
+      for(let index=0;index<5&&await section.locator('.finance-page-transaction').count()<264;index++){
+        const next=section.getByRole('button',{name:/^(Load|Show) \d+ more/});
+        if(await next.count())await next.click();
+      }
       assert.equal(await section.locator('.finance-page-transaction').count(),264);
+      // Live synthetic account refresh: investment products stay separate from Cash.
+      const D='g'.repeat(64),E='h'.repeat(64);
+      state.accounts.push(
+        {key:D,bank:'Robinhood',name:'Robinhood individual (6105)',accountSubtype:'individual',
+         currency:'USD',balance:'2000.00',balanceDate:NOW-200},
+        {key:E,bank:'Robinhood',name:'Robinhood Roth IRA (9372)',accountSubtype:'ira',
+         currency:'USD',balance:'1000.00',balanceDate:NOW-200}
+      );
+      state.accountProfiles[D]={kind:'brokerage',balanceMode:'asset'};
+      state.accountProfiles[E]={kind:'retirement',balanceMode:'asset'};
+      state.transactions[D]={
+        in:{id:'in',description:'From Personal Checking',amount:'2000.00',posted:NOW-60,pending:false,
+            category:'transfer',categorySource:'automatic',signals:['matched_internal_transfer']},
+        buy:{id:'buy',description:'Buy NVDA shares',merchant:'NVDA',amount:'-100.00',posted:NOW-50,
+             pending:false,category:'unreviewed',categorySource:'automatic',signals:[]}
+      };
+      state.transactions[E]={div:{id:'div',description:'Dividend received',amount:'5.00',
+        posted:NOW-70,pending:false,category:'income',signals:[]}};
+      state.transactions[A].investment={id:'investment',description:'To Brokerage',amount:'-2000.00',
+        posted:NOW-60,pending:false,category:'transfer',categorySource:'automatic',
+        signals:['matched_internal_transfer','investment_transfer']};
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      await section.getByRole('button',{name:'Overview',exact:true}).click();
+      await section.locator('.finance-page-investments-card').getByText('Investments',{exact:true}).waitFor();
+      assert.ok((await section.locator('.finance-page-investments-card').innerText()).includes('$3,000.00'),
+        'Investments sum brokerage and Roth IRA, not cash');
+      assert.ok((await section.locator('.finance-page-hero-cash-value').innerText()).includes('$1,250.50'),
+        'Cash hero excludes Robinhood brokerage and Roth IRA balances');
+      await section.getByRole('button',{name:'Transactions',exact:true}).click();
+      assert.ok(await section.locator('[data-scope="cash_cards"].is-active').count(),
+        'Default Transactions scope is Cash & cards');
+      assert.equal(await section.getByText('Buy NVDA shares',{exact:true}).count(),0,
+        'Everyday transaction scope excludes brokerage trade');
+      await section.locator('[data-scope="investments"]').click();
+      assert.ok((await section.locator('.finance-page-transaction').allInnerTexts()).some(t=>t.includes('NVDA')),
+        'Investments scope shows brokerage buys');
+      await section.locator('[data-scope="all"]').click();
+      const transfers=section.locator('.finance-page-transaction').filter({hasText:'To Brokerage'});
+      assert.equal(await transfers.count(),1,'Cash-to-brokerage paired transfer displays once in All');
+      await transfers.first().getByRole('button').click();
+      const pair=page.getByRole('dialog',{name:/Transaction details/});
+      assert.ok(await pair.getByText('Both sides of this transfer').count());
+      await pair.getByRole('button',{name:'Close'}).click();
+      await section.locator('[data-scope="investments"]').click();
+      const searchInvestments=section.getByRole('searchbox',{name:'Search transactions'});
+      await searchInvestments.fill('NVDA');
+      assert.equal(await section.locator('.finance-page-transaction').count(),1,
+        'Search merchant filters investment activity');
+      await searchInvestments.fill('');
+      await section.locator('[data-scope="cash_cards"]').click();
+
       for(const label of ['Overview','Spending','Recurring','Transactions','Accounts']){
         const tabs=section.locator('.finance-page-nav');
         assert.equal(await tabs.evaluate(el=>getComputedStyle(el).position),'sticky','Finance tabs must stick beneath the main header');
