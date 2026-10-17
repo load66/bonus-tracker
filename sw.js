@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.4.86: suggested Plaid bonus mapping with user verification.
+// Version 3.4.87: reconciled Finance Overview and actionable stale accounts.
 
-const V = 'bt-v3.4.86-plaidlink1';
+const V = 'bt-v3.4.87-finance-overview1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',

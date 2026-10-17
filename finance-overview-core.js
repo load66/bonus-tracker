@@ -109,6 +109,36 @@
           x.account.currency!=='USD'?'non-USD balance':
           x.profile.kind==='unclassified'?'account type needs review':'balance not updated'}));
     const provisional=usable.filter(x=>x.balance.provisional).map(x=>x.account.name||'Credit card');
+
+    // The four Overview amounts are a partition of the SAME included balances
+    // used for net worth; stale/raw balances must never leak into these rows.
+    const groups={cash:0n,investments:0n,creditCards:0n,other:0n};
+    const groupAccounts={cash:[],investments:[],creditCards:[],other:[]};
+    for(const x of usable){
+      const kind=x.profile.kind,mode=x.profile.balanceMode;
+      const signed=mode==='liability'?-x.balance.amount:x.balance.amount;
+      const category=mode==='asset'&&['checking','savings'].includes(kind)?'cash':
+        mode==='asset'&&['brokerage','retirement'].includes(kind)?'investments':
+        mode==='liability'&&kind==='credit_card'&&x.balance.amount>=0n?'creditCards':'other';
+      groups[category]+=signed;
+      groupAccounts[category].push({
+        key:x.account.key,name:x.account.name||x.account.bank||'Account',
+        bank:x.account.bank||'',kind,amount:decimal(signed),
+        balanceDate:x.balance.at,provisional:x.balance.provisional===true,
+        includedInNetWorth:true
+      });
+    }
+    const netWorthGroups=Object.fromEntries(Object.entries(groups).map(([k,v])=>[k,decimal(v)]));
+    const netWorthNotUpdated=profileEntries.filter(x=>x.profile.balanceMode!=='exclude'&&
+      x.account.currency==='USD'&&x.profile.kind!=='unclassified'&&
+      !usable.some(y=>y.account.key===x.account.key)).map(x=>({
+      key:x.account.key,name:x.account.name||x.account.bank||'Account',
+      bank:x.account.bank||'',kind:x.profile.kind,
+      lastUpdated:Number.isFinite(x.account.balanceDate)?x.account.balanceDate:
+        Number.isFinite(x.account.observedAt)?x.account.observedAt:null,
+      lastKnownIncluded:false,
+      lastKnownBalance:cents(x.account.balance)!==null?decimal(cents(x.account.balance)):null
+    }));
     const netWorthReady=usable.length>0;
     let assets=0n,liabilities=0n;
     if(netWorthReady)for(const x of usable){
@@ -180,6 +210,38 @@
         }else if(value<0n&&(row.signals||[]).includes('investment_transfer'))invested-=value;
       }
     }
+
+    // Transfers must never be reported as investment performance. Missing
+    // full-period cash-flow coverage makes market change unavailable.
+    let verifiedContributions=0n,verifiedWithdrawals=0n,verifiedFlowRows=0,flowCoverage=true;
+    const beginnings=new Map();
+    for(const x of investmentEntries){
+      const key=x.account.key,points=Array.isArray(balanceSeries[key])?balanceSeries[key]:[];
+      const startPoint=points.filter(p=>p&&Number.isFinite(p.observedAt)&&p.observedAt<=monthStart&&
+        p.currency==='USD'&&cents(p.balance)!==null).sort((a,b)=>b.observedAt-a.observedAt)[0];
+      beginnings.set(key,startPoint?cents(startPoint.balance):null);
+      const coverage=state.investmentFlowCoverage?.[key];
+      if(!startPoint||!x.balance||coverage?.complete!==true||
+        !Number.isFinite(coverage?.from)||coverage.from>startPoint.observedAt||
+        !Number.isFinite(coverage?.through)||coverage.through<now-86400)flowCoverage=false;
+      for(const row of Object.values(history[key]||{})){
+        if(!row||row.pending||!Number.isFinite(row.posted)||
+          row.posted<monthStart||row.posted>now)continue;
+        const value=cents(row.amount),flags=Array.isArray(row.signals)?row.signals:[];
+        if(value===null)continue;
+        const movement=flags.includes('investment_transfer')||row.kind==='investment_contribution';
+        if(movement&&row.transferPairId&&row.transferOtherAccountKey){
+          if(value>0n)verifiedContributions+=value;
+          if(value<0n)verifiedWithdrawals-=value;
+          verifiedFlowRows++;
+        }else if(movement||row.category==='transfer')flowCoverage=false;
+      }
+    }
+    const investmentPerformanceReady=flowCoverage&&investmentEntries.length>0&&
+      investmentEntries.every(x=>beginnings.get(x.account.key)!==null&&x.balance?.amount!==null);
+    const delta=investmentPerformanceReady?investmentEntries.reduce((v,x)=>
+      v+x.balance.amount-beginnings.get(x.account.key),0n):null;
+    const investmentMarketChange=delta===null?null:decimal(delta-verifiedContributions+verifiedWithdrawals);
     const missingAccounts=[...selected].filter(k=>!accounts.some(a=>a&&a.key===k)).length;
     const covered=usd.every(a=>history[a.key]&&typeof history[a.key]==='object'&&!Array.isArray(history[a.key]));
     const complete=observations>0&&unreviewed===0&&unusable===0&&missingAccounts===0&&covered;
@@ -207,9 +269,14 @@
       investmentBrokerage:decimal(investmentByKind.brokerage),
       investmentRetirement:decimal(investmentByKind.retirement),
       investmentChangeLastSync:sumChange('last'),investmentChange1M:sumChange('monthAgo'),
-      investedThisMonth:decimal(invested),investmentIncome:decimal(investmentIncome),
+      investedThisMonth:verifiedFlowRows?decimal(verifiedContributions):null,
+      investmentIncome:decimal(investmentIncome),
+      investmentContributions:verifiedFlowRows?decimal(verifiedContributions):null,
+      investmentWithdrawals:verifiedFlowRows?decimal(verifiedWithdrawals):null,
+      investmentMarketChange,investmentPerformanceReady,
       netWorthAvailable:netWorthReady,netWorthBasedOn:usable.length,netWorthTotalAccounts:accounts.length,
       netWorthPartial:usable.length<included.length||provisional.length>0,
+      netWorthGroups,netWorthGroupAccounts:groupAccounts,netWorthNotUpdated,
       netWorthExclusions:exclusions,provisionalBalances:provisional,assets:netWorthReady?decimal(assets):null,
       liabilities:netWorthReady?decimal(liabilities):null,netWorth:netWorthReady?decimal(assets-liabilities):null,
       netWorthHistory:netWorthHistory.slice(-90),

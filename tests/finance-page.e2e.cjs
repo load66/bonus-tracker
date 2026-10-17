@@ -119,11 +119,11 @@ const base=()=>({
       async function openFinances(){
         for(let attempt=0;attempt<3;attempt++){
           await page.getByRole('button',{name:'Finances',exact:true}).click();
-          try{await section.getByRole('heading',{name:'Finances',exact:true}).waitFor({timeout:7000});return}catch(error){if(attempt===2)throw error}
+          try{await section.locator('.finance-overview-net-hero').waitFor({timeout:7000});return}catch(error){if(attempt===2)throw error}
         }
       }
       await openFinances();
-      await section.locator('.finance-page-count').filter({hasText:'4 accounts'}).waitFor();
+      await section.locator('.finance-overview-count').filter({hasText:'4 accounts at'}).waitFor();
       const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
       assert.equal(await section.locator('img').count(),0,'Bank aliases render as escaped text');
       assert.deepEqual((await section.locator('.finance-page-nav button').allTextContents()).map(x=>x.trim()),['Overview','Spending','Recurring','Transactions','Accounts']);
@@ -169,20 +169,44 @@ const base=()=>({
             assert.ok(cur.label.right<=next.label.left+.25,'Tab labels overlap at '+width);
           }
         }
+        const card=section.locator('.finance-overview-account-card');
+        const metrics=await card.evaluate(node=>({
+          inside:node.getBoundingClientRect().left>=-1&&node.getBoundingClientRect().right<=innerWidth+1,
+          lines:[...node.querySelectorAll('.finance-overview-category-row')].map(row=>{
+            const box=row.getBoundingClientRect(),label=row.querySelector('.finance-overview-row-info'),
+              value=row.querySelector('.finance-overview-row-value').getBoundingClientRect(),
+              note=label.querySelector('small');
+            const lineHeight=note?parseFloat(getComputedStyle(note).lineHeight):1;
+            return {height:box.height,inside:value.right<=box.right+1,
+              gap:value.left-label.getBoundingClientRect().right,
+              lines:note?note.getBoundingClientRect().height/lineHeight:0};
+          })
+        }));
+        assert.ok(metrics.inside&&metrics.lines.every(x=>x.height<=75&&x.inside&&x.gap>=-1&&x.lines<=2.2),
+          name+' Finance rows overflow or collide at '+width+': '+JSON.stringify(metrics));
+        await page.screenshot({path:path.join(output,name+'-finance-overview-'+width+'.png')});
         await page.screenshot({path:path.join(output,name+'-bottom-tabs-'+width+'.png')});
       }
       await page.setViewportSize({width:390,height:844});
-      const investmentCard=section.locator('.finance-overview-investments');
-      assert.equal((await investmentCard.locator('strong').first().innerText()).trim(),'—');
-      assert.equal((await investmentCard.locator('> small').first().innerText()).trim(),'Brokerage — · Retirement —',
-        'Unknown investment balances must never appear as zero');
+      const investmentCard=section.getByRole('button',{name:'View Investments accounts'});
+      assert.equal(await investmentCard.locator('.finance-overview-row-value strong').innerText(),'—');
+      assert.equal(await investmentCard.locator('.finance-overview-row-info small').innerText(),'Brokerage — · Retirement —');
+      assert.equal(await section.locator('.finance-overview-category-row').count(),3);
+      assert.equal(await section.locator('.finance-overview-account-card').count(),1);
+      await investmentCard.click();
+      const investments=page.getByRole('dialog',{name:'Investments accounts'});
+      for(const label of ['Invested this month','Withdrawn this month','Market change','Investment income','Since last update · balance movement'])
+        assert.ok(await investments.getByText(label,{exact:true}).count());
+      assert.ok((await investments.innerText()).includes('complete period balance'));
+      await investments.getByRole('button',{name:'Close'}).click();
       await section.getByRole('button',{name:'Hide amounts',exact:true}).waitFor();
       await section.getByRole('button',{name:'Hide amounts',exact:true}).click();
-      assert.equal(await section.locator('.finance-page-hero-cash-value').innerText(),'••••••');
+      assert.equal(await section.locator('.finance-overview-worth-number').innerText(),'••••••');
       assert.equal(await section.locator('.finance-page-line-chart').count(),0,'Hidden chart geometry cannot disclose balances');
       await page.reload();await openFinances();
       await section.getByRole('button',{name:'Show amounts',exact:true}).click();
       assert.equal(await page.evaluate(()=>localStorage.getItem('bt_finance_hide_v2')),'false');
+      await section.locator('.finance-overview-more>summary').click();
       const worth=section.locator('.finance-net-worth-card');
       await worth.getByText('Net worth',{exact:true}).waitFor();
       assert.ok(await worth.getByText('Chart builds as your accounts sync.',{exact:true}).count());
@@ -199,8 +223,21 @@ const base=()=>({
       assert.ok(sheetGeometry.left>=-1&&sheetGeometry.right<=sheetGeometry.width+1,'Review sheet stays inside 390px viewport');
       await page.screenshot({path:path.join(output,name+'-Net-worth-review-dark-390.png')});
       await review.getByRole('button',{name:'Close',exact:true}).click();
+      state.accounts[0].balanceDate=NOW-9*86400;
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      await section.locator('.finance-overview-net-hero').waitFor();
+      await section.getByRole('button',{name:'View Cash accounts'}).click();
+      const cashDetails=page.getByRole('dialog',{name:'Cash accounts'});
+      await cashDetails.getByText('1 account not updated.',{exact:false}).waitFor();
+      assert.ok((await cashDetails.innerText()).includes('NOT included in this total'));
+      assert.ok(await cashDetails.getByRole('button',{name:'Refresh'}).count());
+      assert.ok(await cashDetails.getByRole('button',{name:'Reconnect'}).count());
+      await cashDetails.getByRole('button',{name:'Close'}).click();
+      state.accounts[0].balanceDate=NOW-400;
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      await section.locator('.finance-overview-net-hero').waitFor();
       await section.getByRole('button',{name:'Spending',exact:true}).click();
-      assert.equal(await section.locator('.finance-page-hero').count(),0,'The large Finances hero belongs on Overview only');
+      assert.equal(await section.locator('.finance-overview-net-hero').count(),0,'The large Finances hero belongs on Overview only');
       assert.equal(await section.locator('.finance-page-nav-privacy').count(),1,'Compact eye control appears alongside tabs');
       assert.equal(await section.getByRole('button',{name:'Hide amounts',exact:true}).count(),1);
       await section.getByRole('heading',{name:'October 2026'}).waitFor();
@@ -336,11 +373,11 @@ const base=()=>({
         assert.equal(await tabs.evaluate(el=>getComputedStyle(el).position),'sticky','Finance tab shell must stick beneath the main header');
         assert.equal(await tabs.evaluate(el=>getComputedStyle(el).borderTopLeftRadius),'0px','No transparent rounded gap above the sticky Finance tabs');
         if(label==='Overview'){
-          assert.equal(await section.locator('.finance-page-hero').count(),1);
+          assert.equal(await section.locator('.finance-overview-net-hero').count(),1);
           const fade=await tabs.evaluate(el=>({hasClass:el.classList.contains('can-scroll-right'),nav:el.querySelector('nav')}));
           assert.ok(fade.nav,'Finance tabs remain inside the scrollable row');
         }else{
-          assert.equal(await section.locator('.finance-page-hero').count(),0,'No bulky header outside Overview');
+          assert.equal(await section.locator('.finance-overview-net-hero').count(),0,'No bulky header outside Overview');
           assert.equal(await section.locator('.finance-page-nav-privacy').count(),1);
         }
         if(label==='Overview'){

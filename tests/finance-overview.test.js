@@ -208,3 +208,67 @@ const completeInvestments=summarize({...investmentBalances,
 },{now:NOW});
 assert.equal(completeInvestments.investments,'9800.00',
   'Only fully observed investment account balances may be shown as an investment total');
+
+
+// Dashboard accounting identity: EVERY displayed signed bucket sums to net worth.
+const numbers={
+  lastSuccess:NOW,
+  accounts:[
+    {key:'cash',bank:'Checking CU',name:'Cash account',balance:'6555.84',balanceDate:NOW,currency:'USD'},
+    {key:'broker',bank:'Brokerage CU',name:'Brokerage',balance:'11400.00',balanceDate:NOW,currency:'USD'},
+    {key:'retirement',bank:'Retirement CU',name:'401k',balance:'18276.34',balanceDate:NOW,currency:'USD'},
+    {key:'credit',bank:'Card Issuer',name:'Card',balance:'63.87',balanceDate:NOW,currency:'USD'},
+    {key:'paypal',bank:'PayPal',name:'Wallet',balance:'283.27',balanceDate:NOW,currency:'USD'},
+    {key:'stale',bank:'Cash Bank',name:'Stale checking',balance:'800.00',balanceDate:NOW-9*DAY,currency:'USD'}
+  ],
+  monitoredAccounts:['cash','broker','retirement','credit','paypal','stale'],
+  accountProfiles:{
+    cash:{kind:'checking',balanceMode:'asset'},broker:{kind:'brokerage',balanceMode:'asset'},
+    retirement:{kind:'retirement',balanceMode:'asset'},credit:{kind:'credit_card',balanceMode:'liability'},
+    paypal:{kind:'other_asset',balanceMode:'asset'},stale:{kind:'checking',balanceMode:'asset'}
+  },transactions:{}
+};
+const overviewTotals=summarize(numbers,{now:NOW});
+assert.equal(overviewTotals.netWorth,'36451.58');
+assert.deepEqual(overviewTotals.netWorthGroups,{
+  cash:'6555.84',investments:'29676.34',creditCards:'-63.87',other:'283.27'
+});
+assert.equal(Object.values(overviewTotals.netWorthGroups)
+  .reduce((v,n)=>v+require('../finance-overview-core.js').cents(n),0n),
+  require('../finance-overview-core.js').cents(overviewTotals.netWorth));
+assert.equal(overviewTotals.netWorthNotUpdated.length,1);
+assert.equal(overviewTotals.netWorthNotUpdated[0].lastKnownIncluded,false);
+assert.equal(overviewTotals.netWorthNotUpdated[0].lastKnownBalance,'800.00');
+assert.equal(overviewTotals.netWorthGroupAccounts.other[0].name,'Wallet',
+  'PayPal is explicitly included in the Other row, not lost from the presentation');
+
+const octoberStart=Math.floor(new Date(new Date(NOW*1000).getFullYear(),
+  new Date(NOW*1000).getMonth(),1).getTime()/1000);
+const flow=structuredClone(numbers);
+flow.accounts=flow.accounts.filter(a=>['cash','broker'].includes(a.key));
+flow.accounts.find(a=>a.key==='broker').balance='1800.00';
+flow.accountProfiles={cash:flow.accountProfiles.cash,broker:flow.accountProfiles.broker};
+flow.monitoredAccounts=['cash','broker'];
+flow.balanceHistory={broker:[
+  {observedAt:octoberStart-3600,currency:'USD',balance:'1500.00'},
+  {observedAt:NOW,currency:'USD',balance:'1800.00'}
+]};
+flow.transactions={broker:{
+  transferIn:{id:'in',amount:'500.00',posted:octoberStart+86400,pending:false,
+    signals:['investment_transfer'],transferPairId:'p1',transferOtherAccountKey:'cash'},
+  transferOut:{id:'out',amount:'-100.00',posted:octoberStart+172800,pending:false,
+    signals:['investment_transfer'],transferPairId:'p2',transferOtherAccountKey:'cash'}
+}};
+flow.investmentFlowCoverage={broker:{complete:true,from:octoberStart-3600,through:NOW}};
+const perf=summarize(flow,{now:NOW});
+assert.equal(perf.investmentMarketChange,'-100.00',
+  'market change must remove contributions and restore withdrawals: 300 - 500 + 100');
+assert.equal(perf.investmentContributions,'500.00');
+assert.equal(perf.investmentWithdrawals,'100.00');
+const unverified=structuredClone(flow);delete unverified.investmentFlowCoverage;
+const unverifiedResult=summarize(unverified,{now:NOW});
+assert.equal(unverifiedResult.investmentMarketChange,null,
+  'investment balance delta is not performance without complete transaction coverage');
+assert.equal(unverifiedResult.investmentContributions,'500.00',
+  'observed paired transfers remain separately reviewable when performance is hidden');
+console.log('Net-worth groups reconcile with PayPal/Other, stale balances excluded, and cash-flow-adjusted market change is gated');
