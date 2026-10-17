@@ -199,7 +199,9 @@
     const transferEvidence=row=>row.category==='transfer'||
       ['card_payment','investment_contribution'].includes(row.kind)||
       (row.signals||[]).some(signal=>transferSignals.has(signal))||
-      Transfer?.effective(row)?.category==='transfer';
+      Transfer?.effective(row)?.category==='transfer'||
+      /\b(?:internal\s+(?:sweep|transfer)|received\s+transfer|account\s+transfer|bank\s+transfer)\b/i
+        .test([row.merchant,row.description].filter(Boolean).join(' '));
     // A bank may label an incoming credit-card payment only "Payment". When
     // its opposite is uniquely present in another account, it is one movement,
     // not new income. Never infer a match for payroll, bonuses or refunds.
@@ -212,7 +214,7 @@
          Math.abs(left.row.posted-right.row.posted)>3*86400||
          isPayroll(left.row)||isPayroll(right.row)||
          [left.row,right.row].some(row=>['bonus','refund','verification'].includes(row.category)))return [];
-      const credit=left.value>0n?left:right,debit=left.value<0n?left:right;
+      const credit=left.value>0n?left:right;
       const creditIsCard=unified.accountProfiles?.[credit.account]?.kind==='credit_card';
       if(!transferEvidence(left.row)&&!transferEvidence(right.row)&&
          !(creditIsCard&&genericPayment(credit.row)))return [];
