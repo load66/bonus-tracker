@@ -184,7 +184,7 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    await page.getByRole('button',{name:'Guided secure bank connection'}).click();
    await page.getByText('Connect your first bank',{exact:true}).waitFor();
    const firstBankLink=page.getByRole('link',{name:'Open SimpleFIN'});
-   assert.equal(await firstBankLink.getAttribute('href'),'https://beta-bridge.simplefin.org/');
+   assert.equal(await firstBankLink.getAttribute('href'),'https://bridge.simplefin.org/');
    assert.equal(await firstBankLink.getAttribute('target'),'_blank');
    const tokenLink=page.getByRole('link',{name:'Get my SimpleFIN setup token'});
    assert.equal(await tokenLink.getAttribute('href'),'https://bridge.simplefin.org/simplefin/create');
