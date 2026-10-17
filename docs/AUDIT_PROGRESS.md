@@ -8,9 +8,9 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 - Owner decision (2026-10-17): supersede Finance/Plaid enhancement queue with full Finance retirement, subject to manual revocation and a protected Tracker-evidence decision.
 - Source of truth for read-only inventory and owner checklist: backend draft PR https://github.com/load66/Trading-Journal-AI/pull/229.
-- Phase: owner actions pending; no Finance code removal, live provider calls, data purge or deployment in this checkpoint.
+- Phase: owner confirmed manual provider disconnections and authorized retirement of Tracker bank-activity review. Finance frontend modules, navigation, provider UI, evidence panel, obsolete suites/workflow removed on branch; no production deployment or R2 purge yet.
 - Unmerged Finance PRs abandoned without merge: #157, #123, #113, #109, #108, #106, #105, #99, #98, #97.
-- Next step: owner manually revokes Plaid Items and disconnects SimpleFIN, confirms empty Accounts in chat, and decides how to handle Tracker → Review bank activity; then backend-first implementation.
+- Next step: backend full CI, merge and Railway SUCCESS; then remaining frontend units and three-browser checks, merge, Pages and live service-worker audit. Owner alone runs guarded R2 purge.
 
 
 - Backend production: v3.4.98 SimpleFIN automatic linked-bank ingestion, PR https://github.com/load66/Trading-Journal-AI/pull/226
