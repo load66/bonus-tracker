@@ -1436,6 +1436,15 @@
         el('b',shownAmount(row),value,row.transferPairId||row.category==='transfer'?'is-transfer':Number(row.amount)>0?'is-credit':'');
         if(row.pending)el('small','Pending',value);
         top.onclick=()=>openDetail(row);
+        if(window.BTFinanceTransfer?.label(row)==='Possible transfer'){
+          action(article,'Confirm transfer',async()=>{
+            await change(async()=>{
+              const snapshot=await request('/transaction-review',{method:'PUT',
+                body:JSON.stringify({account:row.account.rawKey,transaction:row.id,category:'transfer',applySimilar:false})},row.source);
+              return {financeSource:row.source,snapshot};
+            });
+          },'finance-page-button finance-page-confirm-transfer');
+        }
       }
       function openDetail(row){
         const detail=sheet('Transaction details for '+displayMerchant(row));
