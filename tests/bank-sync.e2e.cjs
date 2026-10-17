@@ -71,6 +71,30 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    await dialog.getByLabel('Bonus product (verified terms)',{exact:true}).selectOption('checking');
    await dialog.getByRole('button',{name:'Save account matches',exact:true}).click();await dialog.getByText('Bonus links saved.',{exact:false}).waitFor();
    assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened,productId:'checking'});
+   // An account's first-discovery date is not its opening date. A suggestion
+   // requires an explicit second confirmation before any mapping is saved.
+   state.mappings={};
+   state.accounts[0].firstSeenAt=Date.parse('2026-10-16T00:00:00Z')/1000;
+   await dialog.getByRole('button',{name:'Refresh status',exact:true}).click();
+   const suggested=dialog.getByRole('button',{name:'Link to Synthetic Bank bonus?'});
+   await suggested.waitFor();
+   const beforeLinkWrites=requests.filter(r=>r.path.endsWith('/selection')).length;
+   await suggested.click();
+   let openingCheck=page.getByRole('dialog',{name:'Verify the bonus account'});
+   await openingCheck.getByText('first discovered',{exact:false}).waitFor();
+   await openingCheck.getByRole('button',{name:'Not sure — cancel'}).click();
+   assert.equal(requests.filter(r=>r.path.endsWith('/selection')).length,beforeLinkWrites,
+     'cancelled suggestion cannot write a bonus mapping');
+   await suggested.click();
+   openingCheck=page.getByRole('dialog',{name:'Verify the bonus account'});
+   await openingCheck.getByRole('button',{name:'I verified the opening date'}).click();
+   await dialog.getByText('Confirmed bonus link saved.',{exact:false}).waitFor();
+   assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened},
+     'link after date review retains the exact bank/opened/entryId triplet');
+   await dialog.getByLabel('Bonus product (verified terms)',{exact:true}).selectOption('checking');
+   await dialog.getByRole('button',{name:'Save account matches',exact:true}).click();
+   assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened,productId:'checking'});
+
    const bridge=dialog.getByRole('link',{name:'Add bank in SimpleFIN',exact:false});
    assert.equal(await bridge.getAttribute('href'),'https://beta-bridge.simplefin.org/');
    assert.equal(await bridge.getAttribute('target'),'_blank');
