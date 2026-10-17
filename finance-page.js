@@ -489,30 +489,51 @@
       el('b',amount(row.amount,row.account.currency),item,'finance-page-preview-value');
     }
   }
-  function cumulativeSpendingChart(host,current,previous){
-    if(hidden){el('p','Spending trend hidden',host);return}
-    const series=data=>{
-      let sum=0;
-      return Array.from({length:31},(_,i)=>{
-        sum+=Number(data.byDay?.[i+1]||0);
-        return Number.isFinite(sum)?sum:0;
+  function cumulativeSpendingChart(host,current,previous,mode='spending',activeDay=null){
+    if(hidden){el('p','Trend hidden while amounts are hidden',host);return}
+    const insights=window.BTFinanceInsights,days=insights.monthDays(current.month);
+    const day=Math.min(days,Math.max(1,activeDay||days));
+    const daily=month=>mode==='income'?month.incomeByDay:month.byDay;
+    const cumulative=(source,count)=>{
+      let sum=0;return Array.from({length:count},(_,i)=>{
+        sum+=Number(daily(source)?.[i+1]||0);return Math.max(0,sum);
       });
     };
-    const a=series(current),b=series(previous),maximum=Math.max(1,...a,...b);
-    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svg.setAttribute('viewBox','0 0 320 120');svg.setAttribute('role','img');
-    svg.setAttribute('aria-label','Cumulative daily spending this month compared with last month');
-    svg.classList.add('finance-page-spending-line');
-    for(const [values,label] of [[b,'previous'],[a,'current']]){
-      const poly=document.createElementNS(svg.namespaceURI,'polyline');
-      poly.setAttribute('points',values.map((v,i)=>(8+i*10.1)+','+(110-v/maximum*95)).join(' '));
-      poly.setAttribute('fill','none');
-      poly.setAttribute('class','is-'+label);
-      poly.setAttribute('stroke-width','2.5');
-      svg.append(poly);
+    const now=cumulative(current,day),prev=cumulative(previous,Math.min(days,insights.monthDays(previous.month)));
+    if(!current.hasData&&!previous.hasData){el('p','Your daily chart will appear when transactions are available.',host,'finance-page-hint');return}
+    const peak=Math.max(1,...now,...prev);
+    const ns='http://www.w3.org/2000/svg';
+    const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 340 155');
+    svg.setAttribute('role','img');svg.setAttribute('aria-label','Cumulative daily '+mode+' compared with previous month');
+    svg.classList.add('finance-spending-cumulative');
+    const make=(tag,attributes,css)=>{
+      const node=document.createElementNS(ns,tag);
+      for(const [name,value] of Object.entries(attributes))node.setAttribute(name,String(value));
+      if(css)node.setAttribute('class',css);
+      svg.append(node);return node;
+    };
+    for(let i=0;i<4;i++)make('line',{x1:13,y1:15+i*33,x2:326,y2:15+i*33},'finance-spending-gridline');
+    const plotted=arr=>arr.map((v,i)=>{
+      const x=13+i*313/Math.max(1,days-1),y=112-v/peak*95;
+      return [x,y];
+    });
+    if(previous.hasData){
+      make('polyline',{points:plotted(prev).map(v=>v.join(',')).join(' '),
+        fill:'none',stroke:'#7C8796','stroke-width':2.5,'stroke-dasharray':'5 5'},'finance-spending-previous-line');
     }
-    host.append(svg);
-    el('small','Mint: this month · Gray: last month',host,'finance-page-hint');
+    if(current.hasData){
+      const p=plotted(now);
+      make('polyline',{points:p.map(v=>v.join(',')).join(' '),
+        fill:'none',stroke:'#5BE3B0','stroke-width':3,'stroke-linecap':'round'},'finance-spending-current-line');
+      const last=p.at(-1);
+      make('circle',{cx:last[0],cy:last[1],r:5,fill:'#5BE3B0',stroke:'#09131A','stroke-width':2},'finance-spending-today-dot');
+    }
+    el('span',undefined,host,'finance-spending-chart-space').append(svg);
+    const details=el('div',undefined,host,'finance-spending-chart-footer');
+    el('small','Day 1',details);
+    el('strong','Day '+day+' · '+amount(now.at(-1)?.toFixed(2)||'0.00','USD'),details);
+    el('small','Day '+days,details);
+    el('small','Mint: '+current.month+' · Gray dashed: previous month',host,'finance-page-hint');
   }
   function overview(host,summary){
     const net=sectionTitle(host,'Net worth');
