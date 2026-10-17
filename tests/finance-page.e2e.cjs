@@ -134,6 +134,22 @@ const base=()=>({
       await page.reload();await openFinances();
       await section.getByRole('button',{name:'Show amounts',exact:true}).click();
       assert.equal(await page.evaluate(()=>localStorage.getItem('bt_finance_hide_v2')),'false');
+      const worth=section.locator('.finance-net-worth-card');
+      await worth.getByText('Net worth',{exact:true}).waitFor();
+      assert.ok(await worth.getByText('Chart builds as your accounts sync.',{exact:true}).count());
+      assert.equal(await worth.locator('.finance-page-period button').count(),0,'Hide date chips until two points');
+      assert.ok(await worth.getByText(/account.*not included/).count());
+      assert.equal(/\\b(provider|observation|verified|timestamp|snapshot|capped|evidence)\\b/i.test(await worth.innerText()),false);
+      await worth.getByRole('button',{name:'Review',exact:true}).click();
+      const review=page.getByRole('dialog',{name:'Accounts to review'});
+      await review.getByText('Excluded',{exact:true}).waitFor();
+      assert.equal(/\\b(provider|observation|verified|timestamp|snapshot|capped|evidence)\\b/i.test(await review.innerText()),false);
+      await page.setViewportSize({width:390,height:844});
+      const sheetGeometry=await review.evaluate(el=>({left:el.getBoundingClientRect().left,
+        right:el.getBoundingClientRect().right,width:innerWidth}));
+      assert.ok(sheetGeometry.left>=-1&&sheetGeometry.right<=sheetGeometry.width+1,'Review sheet stays inside 390px viewport');
+      await page.screenshot({path:path.join(output,name+'-Net-worth-review-dark-390.png')});
+      await review.getByRole('button',{name:'Close',exact:true}).click();
       await section.getByRole('button',{name:'Spending',exact:true}).click();
       await section.getByRole('heading',{name:'October 2026'}).waitFor();
       assert.ok((await section.locator('.finance-spending-value').innerText()).includes('$25.00'),'Eligible unknown debit is included in the October spending total');
