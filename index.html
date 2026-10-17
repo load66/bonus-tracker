@@ -9,6 +9,8 @@
 <link rel="manifest" href="./manifest.json?v=3.4.74">
 <link rel="apple-touch-icon" href="./icon.svg?v=3.4.74">
 <title>Bank Bonus Tracker</title>
+<!-- Defensive guard for older cached learning-launcher scripts during PWA upgrades. -->
+<style>#v32_inbox_btn{display:none!important}</style>
 <link rel="stylesheet" href="./style.css?v=3.4.85-bottomnav1">
 <link rel="stylesheet" href="./close-rules.css?v=3.4.74">
 <link rel="stylesheet" href="./mobile-analyzer.css?v=3.4.74">
@@ -33,7 +35,7 @@
     refreshed=true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=3.4.85-bottomnav1',{updateViaCache:'none'}).then(reg=>{
+  navigator.serviceWorker.register('./sw.js?v=3.4.85-no-learning1',{updateViaCache:'none'}).then(reg=>{
     const activate=worker=>{try{worker&&worker.postMessage({type:'SKIP_WAITING'})}catch{}};
     if(reg.waiting)activate(reg.waiting);
     reg.addEventListener('updatefound',()=>{
@@ -73,7 +75,7 @@
 <script src="./controller.js?v=3.4.74"></script>
 <script src="./profile-library-selftest.js?v=3.4.74"></script>
 <script src="./profile-library-selftest-academy.js?v=3.4.74"></script>
-<script src="./learning-inbox-conflict.js?v=3.4.74"></script>
+<script src="./learning-inbox-conflict.js?v=3.4.85-no-learning1"></script>
 <script src="./professional-upgrades.js?v=3.4.74"></script>
 <script src="./close-rules-integration.js?v=3.4.74"></script>
 <script src="./wells-professional-runtime.js?v=3.4.74"></script>
