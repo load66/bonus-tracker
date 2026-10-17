@@ -185,3 +185,26 @@ pendingFinancialMovements.transactions.cash.paycard={...row('-200.00'),descripti
 pendingFinancialMovements.transactions.cash.invest={...row('-1000.00'),description:'Robinhood IRA contribution',category:'unreviewed'};
 const movementSummary=summarize(pendingFinancialMovements,{now:NOW});
 assert.equal(movementSummary.expenses,'411.17','Unreviewed bank payments and IRA contributions cannot increase expenses before the next server sync');
+
+const investmentBalances={
+  lastSuccess:NOW,accounts:[
+    {...account('broker'),balance:'9200.00',balanceDate:NOW-60},
+    {...account('retirement'),balance:null,balanceDate:NOW-60}
+  ],
+  accountProfiles:{
+    broker:{kind:'brokerage',balanceMode:'asset'},
+    retirement:{kind:'retirement',balanceMode:'asset'}
+  },
+  monitoredAccounts:['broker','retirement'],mappings:{},
+  transactions:{broker:{},retirement:{}}
+};
+const incompleteInvestments=summarize(investmentBalances,{now:NOW});
+assert.equal(incompleteInvestments.investments,null,
+  'Known brokerage alone is not a complete investment total when retirement balance is unknown');
+assert.equal(summarize({...investmentBalances,accounts:[]},{now:NOW}).investments,null,
+  'No investment accounts means unavailable, not a known zero');
+const completeInvestments=summarize({...investmentBalances,
+  accounts:[investmentBalances.accounts[0],{...investmentBalances.accounts[1],balance:'600.00'}]
+},{now:NOW});
+assert.equal(completeInvestments.investments,'9800.00',
+  'Only fully observed investment account balances may be shown as an investment total');
