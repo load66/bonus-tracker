@@ -327,9 +327,22 @@
   }
   function flattenTransactions(){
     const accounts=new Map(sortedAccounts().map(a=>[a.key,a])),rows=[];
-    for(const [accountKey,records] of Object.entries(currentCombined?.transactions||{})){
-      const account=accounts.get(accountKey);if(!account)continue;
-      for(const row of Object.values(records||{}))rows.push({...row,accountKey,account,source:account.source});
+    const sourceAccounts=new Map((currentCombined?.accounts||[]).map(a=>[a.key,a]));
+    // The confirmed primary prevents duplicate charges, while unique
+    // secondary-bank records keep their original link for editing.
+    const summarized=window.BTFinanceUnified.safeForSummary(currentCombined);
+    for(const [accountKey,records] of Object.entries(summarized.transactions||{})){
+      const visibleAccount=accounts.get(accountKey);if(!visibleAccount)continue;
+      for(const row of Object.values(records||{})){
+        const account=sourceAccounts.get(row.originalAccountKey)||visibleAccount;
+        const source=account.source,rawKey=account.rawKey;
+        const preferenceKey=source+':'+rawKey+':'+String(row.id);
+        const meta=financePrefs.transactionMeta?.[preferenceKey]||{};
+        rows.push({...row,accountKey,account,source,
+          settingKey:preferenceKey,merchant:meta.name||row.merchant,
+          note:meta.note||'',excludedFromTotals:meta.exclude===true,
+          markedRecurring:meta.markRecurring===true});
+      }
     }
     return rows.sort((a,b)=>b.posted-a.posted);
   }
