@@ -312,7 +312,7 @@ const mortgageFixture={
     home:[{observedAt:NOW-2*DAY,balance:'-211000.00',currency:'USD'},
       {observedAt:NOW-DAY,balance:'-210000.00',currency:'USD'}]
   },
-  transactions:{cash:{},home:{synthetic:{amount:'-800.00',posted:NOW-90,category:'loan',
+  transactions:{cash:{salary:{amount:'50.00',posted:NOW-90,category:'income',categorySource:'user',pending:false}},home:{synthetic:{amount:'-800.00',posted:NOW-90,category:'loan',
     categorySource:'automatic',pending:false}}}
 };
 const mortgageUntouched=JSON.stringify(mortgageFixture);
