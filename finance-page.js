@@ -24,7 +24,7 @@
   try{hidePreference=localStorage.getItem(AMOUNTS_PREF)!=='false'}catch(_error){}
   let currentRoot=null,sequence=0,hidden=hidePreference,data=null,otherData=null,busy=false,view='overview',period=90;
   let transactionSearch='',transactionAccount='',transactionCategory='',transactionStatus='',transactionVisibleLimit=100,expandedTransaction='';
-  let accountSearch='',accountType='',saveNotice='',accountDraftProfiles={},currentCombined=null;
+  let accountSearch='',accountType='',showHiddenAccounts=false,saveNotice='',accountDraftProfiles={},currentCombined=null;
   let activityNotice='',monitoringNotice='',connectionNotice='';
   const dirtyAccounts=new Set(),expandedAccountSettings=new Set(),monitoringDraft={};
   const sourceSnapshot=source=>source===provider?data:otherData?.provider===source?otherData.snapshot:null;
@@ -64,13 +64,13 @@
       accountDraftProfiles[account.key]={
         kind:saved.kind&&saved.kind!=='unclassified'?saved.kind:(account.detectedType||'unclassified'),
         balanceMode:saved.balanceMode||'exclude',
-        order:Number.isInteger(saved.order)?saved.order:499
+        order:Number.isInteger(saved.order)?saved.order:499,hidden:saved.hidden===true
       };
     }
     return accountDraftProfiles[account.key];
   }
-  function sortedAccounts(){
-    return [...(currentCombined?.accounts||[])].sort((a,b)=>(profile(a).order??499)-(profile(b).order??499)
+  function sortedAccounts(includeHidden=false){
+    return [...(currentCombined?.accounts||[])].filter(a=>includeHidden||!profile(a).hidden).sort((a,b)=>(profile(a).order??499)-(profile(b).order??499)
       ||String(a.bank||'').localeCompare(String(b.bank||''))||String(a.name||'').localeCompare(String(b.name||'')));
   }
   function sessionOwner(jwt){
@@ -237,7 +237,7 @@
     }
   }
   function flattenTransactions(){
-    const accounts=new Map((currentCombined?.accounts||[]).map(a=>[a.key,a])),rows=[];
+    const accounts=new Map(sortedAccounts().map(a=>[a.key,a])),rows=[];
     for(const [accountKey,records] of Object.entries(currentCombined?.transactions||{})){
       const account=accounts.get(accountKey);if(!account)continue;
       for(const row of Object.values(records||{}))rows.push({...row,accountKey,account,source:account.source});
@@ -258,8 +258,8 @@
       el('span','Cash',box,'finance-page-hero-cash-label');
       el('strong',summary.cashAvailable?amount(summary.cash,'USD'):'—',box,'finance-page-hero-cash-value');
       el('small',summary.cashAvailable?'Recent bank balances':'Cash balance is not available yet',box,'finance-page-hero-cash-status');
-      const banks=new Set((currentCombined?.accounts||[]).map(a=>String(a.bank||'').trim().toLowerCase()).filter(Boolean));
-      el('p',(currentCombined?.accounts||[]).length+' accounts · '+banks.size+' institutions · '+(currentCombined?.sourceCount||0)+' secure connections',box,'finance-page-count');
+      const banks=new Set(sortedAccounts().map(a=>String(a.bank||'').trim().toLowerCase()).filter(Boolean));
+      el('p',sortedAccounts().length+' accounts · '+banks.size+' institutions · '+(currentCombined?.sourceCount||0)+' secure connections',box,'finance-page-count');
       const actions=el('div',undefined,box,'finance-page-quick-actions');
       action(actions,'Add bank',()=>window.btOpenBankConnectFlow?.(),'finance-page-button finance-page-primary');
       action(actions,'Discover accounts',discoverSelected,'finance-page-button');
@@ -270,6 +270,7 @@
         const status=currentCombined?.providerState?.[source];
         if(status?.connected)el('span',label+': '+stamp(status.lastSuccess),meta);
       }
+      if(summary.hiddenAccounts)el('p',summary.hiddenAccounts+' hidden account'+(summary.hiddenAccounts===1?' is':'s are')+' excluded from Finances totals. Show them under Accounts.',box,'finance-page-hint');
       if(currentCombined?.possibleDuplicates?.length)el('p','Possible duplicate account connections detected. Review both before relying on combined totals.',box,'finance-page-warning');
       if(Object.keys(currentCombined?.sourceErrors||{}).length)el('p','One provider needs attention. Account data may be incomplete.',box,'finance-page-warning');
     }
@@ -515,13 +516,17 @@
     const filters=el('details',undefined,controls,'finance-page-filter-details finance-page-account-filter');
     const filterSummary=el('summary','Filters',filters,'finance-page-filter-button');filterSummary.setAttribute('role','button');
     select(filters,'Type',{'':'All account types',...TYPES},accountType,value=>{accountType=value;render()});
+    const visibilityAction=action(card,'Show hidden accounts',()=>{showHiddenAccounts=!showHiddenAccounts;render()},'finance-page-button finance-page-visibility-toggle');
     const list=el('div',undefined,card,'finance-page-account-groups');
     const save=action(card,'Save account settings',saveAccounts,'finance-page-button finance-page-primary finance-page-save');
     function updateSave(){save.hidden=dirtyAccounts.size===0}
     search.oninput=()=>{accountSearch=search.value.trim().toLowerCase();render()};
     function render(){
       list.replaceChildren();let shown=0;const institutions={};
-      for(const account of sortedAccounts()){
+      const hiddenCount=(currentCombined?.accounts||[]).filter(a=>profile(a).hidden).length;
+      visibilityAction.hidden=hiddenCount===0;
+      visibilityAction.textContent=showHiddenAccounts?'Hide hidden accounts':'Show hidden accounts ('+hiddenCount+')';
+      for(const account of sortedAccounts(showHiddenAccounts)){
         const p=profile(account),name=[account.bank,account.name,account.accountType,account.accountSubtype,account.sourceLabel].filter(Boolean).join(' · ').toLowerCase();
         if((accountSearch&&!name.includes(accountSearch))||(accountType&&p.kind!==accountType))continue;
         const connection=account.bank||'Other institution';
@@ -536,11 +541,15 @@
         el('h4',accounts[0].bank||'Other institution',institutionCopy);
         el('small',accounts[0].sourceLabel+' · '+accounts.length+' account'+(accounts.length===1?'':'s'),institutionCopy);
         const source=accounts[0].source,handle=accounts[0].connectionHandle;
-        if((source==='plaid'&&handle)||(source==='simplefin'&&!simplefinRemovalShown)){
+        {
           const menu=el('details',undefined,label,'finance-page-institution-menu');
           const menuSummary=el('summary','•••',menu,'finance-page-institution-menu-button');
           menuSummary.setAttribute('role','button');menuSummary.setAttribute('aria-label','Connection options for '+(accounts[0].bank||'institution'));
           const menuBody=el('div',undefined,menu,'finance-page-institution-menu-body');
+          action(menuBody,'Hide institution',()=>{
+            for(const a of accounts){profile(a).hidden=true;dirtyAccounts.add(a.key)}
+            showHiddenAccounts=true;updateSave();render();
+          },'finance-page-button');
           if(source==='plaid'&&handle)action(menuBody,'Remove bank',()=>disconnectBank(source,handle,accounts[0].bank),'finance-page-button');
           else{
             action(menuBody,'Disconnect SimpleFIN',()=>disconnectBank(source,null,'all SimpleFIN banks'),'finance-page-button');
@@ -576,6 +585,7 @@
       }else if(account.transactionSyncStatus==='needs_attention'){
         el('small','History sync needs attention',info,'finance-page-warning');
       }
+      if(p.hidden)el('small','Hidden from Finance totals and activity',info,'finance-page-loading-hint');
       if(account.possibleDuplicate)el('small','Possible duplicate · excluded from totals',info,'finance-page-warning');
       const balances=el('span',undefined,top,'finance-page-account-balances');
       el('b',amount(account.balance,account.currency),balances);
@@ -591,11 +601,14 @@
       if(p.kind==='unclassified')editor();
       else action(fields,'Correct type',()=>{typeFields.replaceChildren();editor()},'finance-page-edit-type');
       select(fields,'Net worth treatment',{exclude:'Exclude',asset:'Asset',liability:'Liability'},p.balanceMode||'exclude',value=>{p.balanceMode=value;dirtyAccounts.add(account.key);updateSave()},'finance-page-select');
+      action(fields,p.hidden?'Show account in Finances':'Hide account from Finances',()=>{
+        p.hidden=!p.hidden;showHiddenAccounts=true;dirtyAccounts.add(account.key);updateSave();render();
+      },'finance-page-button');
       const reorder=el('div',undefined,settings,'finance-page-reorder');
       action(reorder,'Move up',()=>move(account,-1));action(reorder,'Move down',()=>move(account,1));
     }
     function move(account,direction){
-      const rows=sortedAccounts(),index=rows.findIndex(a=>a.key===account.key),target=index+direction;
+      const rows=sortedAccounts(true),index=rows.findIndex(a=>a.key===account.key),target=index+direction;
       if(target<0||target>=rows.length)return;
       rows.forEach((a,i)=>{const p=profile(a);p.order=i});
       const other=rows[target],current=profile(account).order;profile(account).order=profile(other).order;
@@ -613,7 +626,7 @@
         for(const account of accounts){
           const p=profile(account);
           profiles[account.rawKey]={kind:p.kind||'unclassified',
-            balanceMode:p.balanceMode||'exclude',order:p.order??499};
+            balanceMode:p.balanceMode||'exclude',order:p.order??499,hidden:p.hidden===true};
         }
         const latest=await request('/account-profiles',{method:'PUT',body:JSON.stringify({profiles})},source);
         applySource(source,latest);
