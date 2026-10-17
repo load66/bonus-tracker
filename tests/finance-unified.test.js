@@ -120,3 +120,17 @@ const ambig=core.safeForSummary(core.combine({simplefin:movementsA,plaid:collisi
 assert.equal(ambig.transactions['simplefin:'+a].out.category,'subscription','Ambiguous pairs are not asserted as self-transfers');
 
 console.log('Unified Finance: provider isolation, type inference, full account/transaction aggregation, exact cents, stale-balance safety and overlap controls passed');
+
+
+
+const nonRoundA=structuredClone(simple),nonRoundB=structuredClone(plaid);
+nonRoundA.transactions[a]={debit:{id:'debit',amount:'-7379.04',posted:now-86400,pending:false,
+  category:'unreviewed',categorySource:'automatic',description:'To Personal Checking'}};
+nonRoundB.transactions[b]={credit:{id:'credit',amount:'7379.04',posted:now-86390,pending:false,
+  category:'unreviewed',categorySource:'automatic',description:'From Personal Savings'}};
+const nonRoundSafe=core.safeForSummary(core.combine({simplefin:nonRoundA,plaid:nonRoundB}));
+assert.equal(nonRoundSafe.transactions['simplefin:'+a].debit.category,'transfer');
+assert.equal(nonRoundSafe.transactions['plaid:'+b].credit.category,'transfer');
+assert.equal(finance.summarize(nonRoundSafe,{now,days:30}).expenses,'0.00',
+  'Cross-provider non-round transfers never appear in Overview expenses');
+assert.equal(nonRoundA.transactions[a].debit.category,'unreviewed','Provider rows remain immutable');
