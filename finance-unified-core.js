@@ -73,7 +73,10 @@
           for(const [txnKey,row] of Object.entries(state.transactions[account.key])){
             if(!row||typeof row!=='object')continue;
             const identity=row.id||txnKey;
-            transactions[composite][String(txnKey)]={...row,id:identity,source,accountKey:composite};
+            const meta=preferences.transactionMeta?.[source+':'+account.key+':'+String(identity)]||{};
+            transactions[composite][String(txnKey)]={...row,id:identity,source,accountKey:composite,
+              merchant:meta.name||row.merchant,note:meta.note||'',
+              excludedFromTotals:meta.exclude===true,markedRecurring:meta.markRecurring===true};
           }
         }
       }
