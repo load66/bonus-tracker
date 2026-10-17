@@ -111,3 +111,48 @@ assert.equal(unknownReport.requirements[0].manual,true,'unknown product id must 
 const missingPrimary={...matched,missingAccounts:1};
 assert.equal(evaluate(entry,missingPrimary,()=>({ok:true,mode:'structured',rules:multiRules})).requirements[0].manual,true);
 assert.equal(JSON.stringify(state),snap?JSON.stringify(JSON.parse(snap).state):'','multi-product projection leaves saved bonus and bank records unchanged');
+
+
+const scope={...group,linkedAccounts:[{key:A,productId:'checking'}],
+  observations:[
+    {id:'money1',accountKey:A,amount:'1000.00',posted:NOW-100,category:'transfer',transferOtherAccountKey:B},
+    {id:'money2',accountKey:A,amount:'700.00',posted:NOW-101,category:'transfer',transferOtherAccountKey:A},
+    {id:'purchase1',accountKey:A,amount:'-12.30',posted:NOW-120,paymentMethod:'debit_card',category:'groceries'},
+    {id:'purchase2',accountKey:A,amount:'-20.00',posted:NOW-130,category:'shopping'},
+    {id:'pendingPurchase',accountKey:A,amount:'-25.00',posted:NOW-150,pending:true,paymentMethod:'debit_card'}
+]};
+const coverage=[
+  {at:Date.parse('2026-10-01T12:00:00Z')/1000,observedAt:NOW,balance:'1200.00',currency:'USD'},
+  {at:Date.parse('2026-10-02T12:00:00Z')/1000,observedAt:NOW,balance:'900.00',currency:'USD'},
+  {at:Date.parse('2026-10-03T12:00:00Z')/1000,observedAt:NOW,balance:'1100.00',currency:'USD'}
+];
+const scopedSchema={...schema,requirements:[
+  {id:'hold',accountId:'checking',kind:'balance-hold',text:'Maintain minimum daily balance $1,000',
+    amount:1000,metric:'minimum-daily-balance',timing:{basis:'opened',unit:'calendar-days',value:2}},
+  {id:'fund',accountId:'checking',kind:'new-money',text:'Deposit $1,000 new money',amount:1000},
+  {id:'card',accountId:'checking',kind:'transactions',text:'Make one debit-card purchase',count:1}
+]};
+const candidate=evaluate(entry,scope,()=>({mode:'structured',ok:true,rules:scopedSchema}),{
+  accounts:[{key:A,bank:'Synthetic CU'},{key:B,bank:'Outside Credit Union'}],
+  balanceHistory:{[A]:coverage}
+});
+assert.deepEqual(candidate.requirements.map(r=>r.verifiedMet),[false,false,false]);
+const hold=candidate.requirements[0];
+assert.equal(hold.balance.metric,'minimum-daily-balance');
+assert.equal(hold.balance.status,'at risk','one sub-minimum observed point triggers risk');
+assert.equal(hold.balance.holdEndDate,'2026-10-03');
+assert.equal(hold.balance.coverageDays,3);
+assert.equal(candidate.requirements[1].candidateCount,1,'same-bank internal funding excluded');
+assert.equal(candidate.requirements[1].candidateAmount,'1000.00');
+assert.equal(candidate.requirements[2].candidateCount,1,'posted debit only, not general shopping or pending');
+assert.equal(candidate.requirements[2].candidateStatus,'review pending');
+assert.equal(entry.reqMet,undefined,'candidate analysis never mutates milestones');
+assert.equal(candidate.requirements[0].balance.safeMoveDate,'2026-10-03');
+const sparse=evaluate(entry,scope,()=>({mode:'structured',ok:true,rules:scopedSchema}),{
+  accounts:[{key:A,bank:'Synthetic CU'},{key:B,bank:'Synthetic CU'}],
+  balanceHistory:{[A]:coverage.slice(0,1)}
+});
+assert.equal(sparse.requirements[0].balance.coverageComplete,false);
+assert.equal(sparse.requirements[1].candidateCount,0,'intra-institution transfers never count as new money');
+assert.equal(sparse.requirements[0].verifiedMet,false);
+console.log('Candidate-only balance, external money and posted debit purchase rules passed');
