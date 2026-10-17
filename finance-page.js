@@ -1397,10 +1397,17 @@
         const group=el('section',undefined,list,'finance-page-institution');
         const head=el('div',undefined,group,'finance-page-institution-head');el('h4',title,head);
         const usd=rows.filter(a=>a.currency==='USD'),values=usd.map(a=>window.BTFinanceOverview.cents(a.balance));
-        const subtotal=values.length&&values.every(x=>x!==null)?window.BTFinanceOverview.decimal(values.reduce((sum,x)=>sum+x,0n)):null;
+        const safeCash=title==='Cash'?window.BTFinanceOverview.summarize(
+          window.BTFinanceUnified.safeForSummary(currentCombined)).cash:null;
+        const subtotal=title==='Cash'?safeCash:
+          values.length&&values.every(x=>x!==null)?window.BTFinanceOverview.decimal(values.reduce((sum,x)=>sum+x,0n)):null;
         const owed=title==='Credit cards'&&subtotal!==null;
         const subtotalCents=owed?window.BTFinanceOverview.cents(subtotal):null;
         el('b',(usd.length!==rows.length?'USD subtotal · ':'')+(owed?amount(window.BTFinanceOverview.decimal(subtotalCents<0n?-subtotalCents:subtotalCents),'USD')+(subtotalCents<0n?' credit':' owed'):amount(subtotal,'USD')),head);
+        if(title==='Cash'){
+          const known=window.BTFinanceOverview.summarize(window.BTFinanceUnified.safeForSummary(currentCombined));
+          if(known.staleOrUnavailableCash>0)el('small',known.staleOrUnavailableCash+' account'+(known.staleOrUnavailableCash===1?'':'s')+' not updated',head,'finance-page-coverage-label');
+        }
         for(const a of rows){
           const bankKey=a.source+':'+(a.connectionHandle||a.bank);
           if((a.transactionSyncStatus==='needs_attention'||(a.source==='simplefin'&&sourceSnapshot('simplefin')?.status==='attention'))&&!broken.has(bankKey)){
@@ -1493,7 +1500,7 @@
     const trustedTotals=!summaryState.incompleteProviders&&!summaryState.excludedForReview;
     const summary={...calculated,
       complete:!!calculated?.complete&&trustedTotals&&!summaryState.historyIncomplete&&!summaryState.malformedActivity,
-      cashAvailable:!!calculated?.cashAvailable&&trustedTotals,
+      cashAvailable:!!calculated?.cashAvailable,
       netWorthAvailable:!!calculated?.netWorthAvailable,
       netWorthPartial:!!calculated?.netWorthPartial||!trustedTotals,
       hiddenAccounts:summaryState.hiddenAccounts||0};
