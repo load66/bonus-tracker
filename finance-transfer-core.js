@@ -29,7 +29,7 @@
   const insurer=/\b(?:progressive|prog\s+advanced|geico|state\s+farm|allstate|liberty\s+mutual|usaa\s+insurance|nationwide|farmers|aaa\s+insurance|ins\s+prem|insurance\s+prem(?:ium)?|auto\s+ins|home\s+ins)\b/i;
   const ownerAction=/\b(?:transfr|transfer|ach\s*transfer|ach\s*xfer|xfer|zelle\s+from)\b/i;
   const p2p=/^\s*(?:(?:zelle|venmo|cash\s*app|p2p)\s+(?:from\s+)?|from\s+)([A-Za-z][a-z]+(?:\s+[A-Za-z][a-z]+){1,2})\s*$/i;
-  const p2pExclude=/\b(?:llc|inc|ltd|corp|company|payroll|salary|wages|deposit|loan|lending|bank|fcu)\b/i;
+  const p2pExclude=/\b(?:llc|inc|ltd|corp|company|payroll|salary|wages|deposit|loan|lending|bank|fcu|savings|checking|account|brokerage|investment|retirement|personal)\b/i;
   let privateOwnerNames=[];
   function configureOwnerNames(value){
     privateOwnerNames=Array.isArray(value)?value.filter(n=>typeof n==='string'&&
