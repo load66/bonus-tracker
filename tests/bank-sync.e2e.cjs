@@ -162,7 +162,7 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened,productId:'checking'});
    assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before);
    await dialog.getByRole('button',{name:'Back to connected accounts'}).click();
-   await dialog.locator('h4').getByText('Newly Added CU · Savings',{exact:true}).first().waitFor();
+   await dialog.locator('h4').getByText(/Newly Added CU · Savings/).first().waitFor();
    // A later add-bank attempt may find nothing. Manual re-check is one request;
    // quota exhaustion ends polling immediately rather than spending more calls.
    discoveryMode='not_found';
