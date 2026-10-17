@@ -7,7 +7,7 @@
 })(typeof window!=='undefined'?window:null,function(){
   'use strict';
   const DAY=86400,MAX_DAYS=90,STALE_BALANCE_DAYS=7;
-  const SPENDING=new Set(['housing','utilities','groceries','dining','transportation','shopping','health','entertainment','fees','taxes','travel','subscription','other']);
+  const SPENDING=new Set(['housing','loan','utilities','groceries','dining','transportation','shopping','health','entertainment','fees','taxes','travel','subscription','other']);
   function cents(value){
     const m=/^([+-]?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(value??'').trim());
     if(!m)return null;
@@ -58,7 +58,7 @@
         else if(SPENDING.has(category)&&n<0n){
           const amount=-n;expenses+=amount;spending[category]=(spending[category]||0n)+amount;
         }else if(category==='transfer')transfers++;
-        if(category==='unreviewed'||(category==='bonus'&&row.categorySource!=='user')||(row.categorySource!=='user'&&row.confidence!=='high'))unreviewed++;
+        if(category==='unreviewed'||(category==='bonus'&&!['user','user_rule'].includes(row.categorySource))||(!['user','user_rule'].includes(row.categorySource)&&row.confidence!=='high'))unreviewed++;
         if(Array.isArray(row.signals)&&row.signals.includes('possible_recurring'))recurring++;
         // Use the same local calendar basis as the day-grouped Finance ledger.
         const local=new Date(row.posted*1000);
