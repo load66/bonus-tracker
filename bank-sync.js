@@ -242,6 +242,7 @@
     button(addSection,'Add bank in SimpleFIN ↗',startAutoBankLink,'btn-p');
 
     el('p','Newly linked SimpleFIN banks are discovered automatically. No manual discovery, Sync switches or Save required.',addSection);
+    if(addFlowMessage){const note=el('p',addFlowMessage,addSection);note.setAttribute('role','status');}
     el('p','Last account check: '+stamp(data.lastAccountDiscoveryAt),addSection);
     el('p','Next activity check: '+stamp(data.nextSyncAt),addSection);
     if(data.lastNewAccountsAt)
