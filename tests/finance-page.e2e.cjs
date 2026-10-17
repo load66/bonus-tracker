@@ -104,6 +104,18 @@ const base=()=>({
         await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(prefs)});
       });
       await page.addInitScript(()=>{
+        // Observe *all* startup insertions, including buttons hidden milliseconds later.
+        window.__legacyLearningButtonInsertions=0;
+        document.addEventListener('DOMContentLoaded',()=>{
+          const inspect=node=>{
+            if(node.nodeType!==1)return;
+            if(node.id==='v32_inbox_btn')window.__legacyLearningButtonInsertions++;
+            window.__legacyLearningButtonInsertions+=node.querySelectorAll?.('#v32_inbox_btn').length||0;
+          };
+          inspect(document.body);
+          new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(inspect)))
+            .observe(document.body,{childList:true,subtree:true});
+        },{once:true});
         window.Plaid={create:opts=>({open(){opts.onSuccess('ignored-existing-item-token',{})},destroy(){}})};
         const RealDate=Date,now=Date.parse('2026-10-16T07:00:00Z');
         window.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[now]))}static now(){return now}};
@@ -365,7 +377,17 @@ const base=()=>({
       assert.equal(requests.some(r=>r.path.endsWith('/plaid/link-token')||r.path.endsWith('/exchange')),false,'No new Plaid Item was created');
       assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'Tracker records remain byte-for-byte intact');
       if(errors.length)console.error('UNHANDLED_FINANCE_PAGE_ERRORS',JSON.stringify(errors));
-      assert.deepEqual(errors,[], 'Uncaught Finance UI errors: '+errors.join(' | '));console.log(name+': Finance lifecycle, privacy, categorization, 264-row history, both device settings, 390x844 and Trial safety passed');
+      const learning=await page.evaluate(()=>({
+        created:window.__legacyLearningButtonInsertions||0,
+        remains:document.getElementById('v32_inbox_btn')!==null,
+        api:typeof window.tcV32OpenLearningInbox,
+        dataStillAccessible:typeof window.tcV32Inbox
+      }));
+      assert.equal(learning.created,0,'T&C Learning Inbox launcher must never flash after boot or refresh');
+      assert.equal(learning.remains,false,'No legacy floating learning launcher in the visible app');
+      assert.equal(learning.api,'function','Learning reports remain available programmatically');
+      assert.equal(learning.dataStillAccessible,'function','Saved learning data remains accessible');
+      assert.deepEqual(errors,[], 'Uncaught Finance UI errors: '+errors.join(' | '));console.log(name+': Finance lifecycle, privacy, categorization, 264-row history, no learning-button flash and Trial safety passed');
     }finally{await browser.close()}
   }}finally{server.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
