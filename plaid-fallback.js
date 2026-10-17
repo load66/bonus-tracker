@@ -174,11 +174,13 @@
           renderAccounts(result);
         }catch(error){message.textContent=error.message;}
       });
-      action(accountsArea,items.length?'Refresh transactions':'Discover connected accounts',async()=>{
-        message.textContent='Requesting read-only account status…';
+      // Plaid automatically starts discovery + history sync after Link.
+      // This is a voluntary diagnostic refresh, never an onboarding step.
+      action(accountsArea,'Refresh transactions',async()=>{
         try{
           const result=await api('/accounts/sync',{method:'POST'});
-          message.textContent=result.error||'Latest available provider data loaded. Review possible bonuses manually.';
+          message.textContent=result.error||
+            'Latest available provider activity loaded. Automatic sync remains enabled.';
           renderAccounts(result);
         }catch(error){message.textContent=error.message;}
       });

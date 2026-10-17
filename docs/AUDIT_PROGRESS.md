@@ -6,9 +6,12 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
-- Source: SimpleFIN add-bank frontend v3.4.97 ready for merge, PR #155
-- In progress: v3.4.97 GitHub Pages release verification
-- Next step: merge PR #155 after final checkpoint CI; verify main Pages exact assets and production three-browser audit; then start queued Finance Categories v2 #156
+- Backend production: v3.4.98 SimpleFIN automatic linked-bank ingestion, PR https://github.com/load66/Trading-Journal-AI/pull/226
+- Railway SUCCESS: merge commit 26dc4b2076f89157d6fe8356a90eaa244ac59cc3
+- Frontend release candidate: v3.4.98 automatic account discovery and Finance snapshot polling, PR https://github.com/load66/bonus-tracker/pull/159
+- Frontend tests: finance, cloud, bonus, UI unit suites PASS; three-browser matrix pending final commit
+- Next step: verify final PR CI; squash merge to main; confirm Pages published asset and production browser checks
+- Paused separate branch: Finance Categories v2; do not combine release branches
 
 ## Release 1 (v3.4.94)
 

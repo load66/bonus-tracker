@@ -264,7 +264,6 @@
     if(!preserveSearch)accountSearch='';
     accountType='';saveNotice='';refresh();
   }
-  function discoverSelected(){window.btDiscoverBankAccounts?.();}
   const sourceLabel=source=>source==='plaid'?'Plaid':'SimpleFIN';
   function activityCoverage(){
     const accounts=currentCombined?.accounts||[],enabled=new Set(currentCombined?.monitoredAccounts||[]);
@@ -750,7 +749,6 @@
     const quick=el('div',undefined,host,'finance-overview-actions');
     const buttons=[
       ['+','Add bank',()=>window.btOpenBankConnectFlow?.()],
-      ['⌕','Discover',discoverSelected],
       ['↻','Refresh',refreshActivity]
     ];
     for(const [symbol,label,fn] of buttons){
@@ -2185,6 +2183,45 @@
       data={configured:false,connected:false,accounts:[],error:String(error.message||'Connection unavailable')};
       paint();loadOtherSource(rev);loadSettings(rev);
     }
+  }
+  let passiveReadAt=0,passiveBusy=false;
+  async function passiveFinanceRefresh(){
+    // Local R2 snapshot polling only: never calls SimpleFIN/Plaid providers.
+    // Preserve owner drafts and review dialogs; do not reset the workspace.
+    if(passiveBusy||busy||dirtyAccounts.size||
+       !currentRoot?.isConnected||!data||!window.BTBonusAuth?.connected()||
+       document.visibilityState==='hidden'||Date.now()-passiveReadAt<60000||
+       document.querySelector('dialog.finance-modal[open]'))return;
+    passiveReadAt=Date.now();passiveBusy=true;
+    const rev=sequence;
+    try{
+      const source=provider;
+      const next=await request('',{},source);
+      const other=source==='plaid'?'simplefin':'plaid';
+      const nextOther=await request('',{},other).catch(()=>null);
+      if(rev!==sequence||!currentRoot?.isConnected)return;
+      const previousKeys=new Set((currentCombined?.accounts||[]).map(a=>a.key));
+      applySource(source,next);
+      if(nextOther)otherData={provider:other,snapshot:nextOther};
+      const nowKeys=(window.BTFinanceUnified?.combine({
+        simplefin:sourceWithArchive('simplefin'),plaid:sourceWithArchive('plaid')},financePrefs)?.accounts||[]);
+      const added=nowKeys.filter(a=>!previousKeys.has(a.key)).length;
+      if(added)connectionNotice=added+' new bank account'+(added===1?'':'s')+
+        ' automatically connected. Transactions will appear when available.';
+      paint();
+    }catch(_error){/* Preserve prior verified account snapshot and any owner edits. */}
+    finally{passiveBusy=false;}
+  }
+  if(typeof window.addEventListener==='function')
+    window.addEventListener('focus',passiveFinanceRefresh);
+  if(typeof document.addEventListener==='function')
+    document.addEventListener('visibilitychange',()=>{
+      if(document.visibilityState==='visible')passiveFinanceRefresh();
+    });
+  // Node's non-DOM test runtime must not retain a background timer.
+  if(typeof document.addEventListener==='function'&&typeof setInterval==='function'){
+    const passiveTimer=setInterval(passiveFinanceRefresh,60000);
+    if(typeof passiveTimer?.unref==='function')passiveTimer.unref();
   }
   function refresh(){
     window.BTBonusEvidence?.dispose();currentRoot=null;data=null;otherData=null;sessionIdentity=null;

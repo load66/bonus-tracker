@@ -89,7 +89,7 @@ const KEY='a'.repeat(64);
         assert.equal(calls.some(x=>x.includes('link-token')||x.includes('/exchange')),false,
           'Opening the provider view must never consume a Plaid Item');
         await host.getByRole('button',{name:'Refresh transactions'}).click();
-        await host.getByText('Latest available provider data loaded.',{exact:false}).waitFor();
+        await host.getByText('Latest available provider activity loaded.',{exact:false}).waitFor();
         assert.deepEqual(monitored,[KEY],'The provider automatically makes linked accounts available');
         assert.equal(syncs,1,'Activity fetch does not create a new Plaid Item');
         const suggestion=host.getByRole('button',{name:'Link to Synthetic Bank bonus?'});
@@ -110,7 +110,7 @@ const KEY='a'.repeat(64);
         await host.getByText('Bonus links saved.',{exact:false}).waitFor();
         assert.deepEqual(mappings[KEY],{entryId:'cycle-one',bank:'Synthetic Bank',opened:'2026-10-01',productId:'checking'});
         await host.getByRole('button',{name:'Refresh transactions'}).click();
-        await host.getByText('Latest available provider data loaded.',{exact:false}).waitFor();
+        await host.getByText('Latest available provider activity loaded.',{exact:false}).waitFor();
         await host.getByRole('button',{name:'Show amounts'}).waitFor();
         assert.equal(syncs,2);
         const visibleSnapshot=await host.innerText();
