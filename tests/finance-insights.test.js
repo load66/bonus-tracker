@@ -57,7 +57,7 @@ assert.equal(counted.records,4);
 assert.equal(counted.categories.find(x=>x.category==='unreviewed').count,3);
 assert.equal(I.spendingCategory(oct(5,'-0.21','verification'),-21n),null);
 assert.equal(I.spendingCategory(oct(1,'-50','transfer','Capital One AUTOPAY'),-5000n),null);
-assert.equal(I.spendingCategory(oct(1,'-50','unreviewed','Robinhood IRA contribution'),-5000n),'unreviewed','Broker contributions require a real transfer category or reliable type signal');
+assert.equal(I.spendingCategory(oct(1,'-50','unreviewed','Robinhood IRA contribution'),-5000n),null,'Broker/IRA contributions do not inflate spending while server classification catches up');
 const monthHistory=I.history([oct(2,'-10'),row(new Date(2026,7,2).getTime(),'-20','groceries')],'2026-10');
 assert.deepEqual(monthHistory.months.map(x=>x.month),['2026-08','2026-10'],'No false zero spending month for September');
 assert.equal(monthHistory.start,'2026-08');

@@ -22,12 +22,16 @@
   const noSpend=new Set(['transfer','verification','refund']);
   const issuer=/(?:capital\s*one|chase|american\s*express|amex|discover|citi(?:bank)?|robinhood|fidelity|schwab|vanguard|e\s*\*?\s*trade)/i;
   const cardPayment=/(?:\b(?:pmt|payment|autopay|epay|crcardpmt|ccpmt)\b|credit\s*card\s*payment)/i;
+  const investing=/(?:\brobinhood\b|\bfidelity\b|\bschwab\b|\bvanguard\b|\bbrokerage\b|\binvestment\b|\b401k\b|\broth\s*ira\b|\bira\b)/i;
+  const contribute=/(?:\b(?:contribution|contribute|deposit|funding|transfer)\b)/i;
   function spendingCategory(row,value){
     if(row.excludedFromTotals===true||row.pending===true||value===null||value>=0n)return null;
     const category=String(row.category||'unreviewed').toLowerCase();
+    const description=String(row.description||'')+' '+String(row.merchant||'');
     if(noSpend.has(category)||row.kind==='card_payment'||row.kind==='investment_contribution'||
        (row.signals||[]).includes('matched_internal_transfer')||
-       (issuer.test(row.description||row.merchant||'')&&cardPayment.test(row.description||row.merchant||'')))return null;
+       (issuer.test(description)&&cardPayment.test(description))||
+       (investing.test(description)&&contribute.test(description)))return null;
     return SPEND.has(category)?category:'unreviewed';
   }
   const seenMonth=(rows,month)=>rows.some(row=>!row.pending&&!row.excludedFromTotals&&
@@ -91,7 +95,7 @@
     const left=limit>actual?limit-actual:0n;
     const projected=actual*BigInt(days)/BigInt(clampedDay);
     return {limit:fmt(limit),spent:fmt(actual),left:fmt(left),projected:fmt(projected),
-      percent,level:percent>100?'over':percent>=80?'near':'ok'};
+      percent,level:actual>limit?'over':actual*5n>=limit*4n?'near':'ok'};
   }
   const INTERVALS=[['weekly',7,2],['biweekly',14,3],['monthly',30.44,6],['quarterly',91.3,12],['yearly',365.25,25]];
   function recurring(rows,now=Date.now()){

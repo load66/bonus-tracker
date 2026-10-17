@@ -26,6 +26,17 @@
     return amount!==null&&Number.isFinite(at)&&at>0&&at<=now+300&&at>=now-STALE_BALANCE_DAYS*DAY
       ?{amount,at}:null;
   }
+  const financialInstitution=/(?:\bcapital\s*one\b|\bchase\b|\bamerican\s*express\b|\bamex\b|\bdiscover\b|\bciti(?:bank)?\b|\brobinhood\b|\bfidelity\b|\bschwab\b|\bvanguard\b|\bsynchrony\b|\bbarclays\b)/i;
+  const financialAction=/(?:\b(?:pmt|pymt|payment|autopay|epay|crcardpmt|ccpmt)\b)/i;
+  const investmentInstitution=/(?:\brobinhood\b|\bfidelity\b|\bschwab\b|\bvanguard\b|\bbrokerage\b|\binvestment\b|\b401k\b|\broth\s*ira\b|\bira\b)/i;
+  const contributionAction=/(?:\b(?:contribution|contribute|deposit|funding|transfer)\b)/i;
+  function financialMovement(row){
+    const text=String(row.description||'')+' '+String(row.merchant||'');
+    return row.kind==='card_payment'||row.kind==='investment_contribution'||
+      (row.signals||[]).includes('matched_internal_transfer')||
+      (financialInstitution.test(text)&&financialAction.test(text))||
+      (investmentInstitution.test(text)&&contributionAction.test(text));
+  }
   function summarize(state={},options={}){
     const now=Number.isFinite(options.now)?Math.floor(options.now):Math.floor(Date.now()/1000);
     const days=Number.isInteger(options.days)&&options.days>=1&&options.days<=MAX_DAYS?options.days:30;
@@ -57,8 +68,7 @@
         const category=String(row.category||'unreviewed');
         if(category==='income'&&n>0n)income+=n;
         else if(n<0n&&!['transfer','verification','refund'].includes(category)&&
-                row.kind!=='card_payment'&&row.kind!=='investment_contribution'&&
-                !(row.signals||[]).includes('matched_internal_transfer')){
+                !financialMovement(row)){
           const amount=-n,label=SPENDING.has(category)?category:'unreviewed';
           expenses+=amount;spending[label]=(spending[label]||0n)+amount;
           if(label==='unreviewed')uncategorized++;
@@ -71,8 +81,7 @@
         const month=monthly[key]||(monthly[key]={income:0n,expenses:0n});
         if(category==='income'&&n>0n)month.income+=n;
         if(n<0n&&!['transfer','verification','refund'].includes(category)&&
-           row.kind!=='card_payment'&&row.kind!=='investment_contribution'&&
-           !(row.signals||[]).includes('matched_internal_transfer'))month.expenses-=n;
+           !financialMovement(row))month.expenses-=n;
       }
     }
 

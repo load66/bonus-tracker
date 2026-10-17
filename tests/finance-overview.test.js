@@ -179,3 +179,9 @@ const unknownSummary=summarize(withUnknown,{now:NOW});
 assert.equal(unknownSummary.expenses,'411.17');
 assert.equal(unknownSummary.spending.unreviewed,'311.17');
 assert.equal(unknownSummary.uncategorized,1);
+
+const pendingFinancialMovements=structuredClone(withUnknown);
+pendingFinancialMovements.transactions.cash.paycard={...row('-200.00'),description:'Capital One CRCARDPMT',category:'unreviewed'};
+pendingFinancialMovements.transactions.cash.invest={...row('-1000.00'),description:'Robinhood IRA contribution',category:'unreviewed'};
+const movementSummary=summarize(pendingFinancialMovements,{now:NOW});
+assert.equal(movementSummary.expenses,'411.17','Unreviewed bank payments and IRA contributions cannot increase expenses before the next server sync');

@@ -173,6 +173,31 @@ const base=()=>({
       await modal.getByLabel('Category for Unknown').selectOption('shopping');
       await modal.waitFor({state:'hidden'});assert.equal(state.transactions[A][T3].category,'shopping');
       assert.ok(requests.some(r=>r.body.applySimilar===true));
+      // Exercise the new one-card Spending Quick Review, including provider save,
+      // apply-to-similar propagation and private encrypted budget settings.
+      state.transactions[A][T3].category='unreviewed';
+      state.transactions[A][T3].categorySource='automatic';
+      await page.evaluate(()=>window.btRefreshFinancesPage());
+      await section.getByRole('button',{name:'Spending',exact:true}).click();
+      await section.getByRole('button',{name:'Quick Review',exact:true}).click();
+      await section.getByText('1 of 1',{exact:true}).waitFor();
+      await section.getByRole('checkbox',{name:'Apply to similar transactions'}).check();
+      const reviewRequests=requests.length;
+      await section.locator('.finance-spending-review-choice[data-category="groceries"]').click();
+      await section.getByText('Review complete',{exact:true}).waitFor();
+      assert.equal(state.transactions[A][T3].category,'groceries','Quick Review saves merchant category through its actual provider');
+      assert.ok(requests.slice(reviewRequests).some(r=>r.path.endsWith('/transaction-review')&&r.body.applySimilar===true&&r.body.category==='groceries'),
+        'Quick Review passes Apply to similar to the persistent provider rule');
+      await section.getByRole('button',{name:'Back to Spending',exact:true}).click();
+      await section.locator('.finance-spending-budget-settings > summary').click();
+      const budget=section.getByLabel('Monthly budget for Groceries');
+      await budget.fill('100.00');await budget.press('Tab');
+      await section.getByText(/Left to spend/).first().waitFor();
+      assert.equal(prefs.budgets.groceries.amount,'100.00','Monthly category budgets are stored through the secure backend preference route');
+      await section.locator('.finance-spending-category-action').filter({hasText:'Groceries'}).first().click();
+      await section.getByRole('heading',{name:'Past six months'}).waitFor();
+      await section.getByRole('button',{name:'‹ Back to Spending'}).click();
+
       await section.getByRole('button',{name:'Accounts',exact:true}).click();
       await section.getByRole('heading',{name:/^Accounts \(\d+\)$/}).waitFor();
       assert.ok((await section.getByText('Credit cards', {exact:true}).first().locator('..').innerText()).includes('$200.00 owed'),'Card group header and row both show owed debt');
