@@ -22,7 +22,7 @@ const KEY='a'.repeat(64);
         const context=await browser.newContext({serviceWorkers:'block',viewport:{width:390,height:760}});
         const page=await context.newPage(),calls=[],errors=[];
         page.on('pageerror',err=>errors.push(err.message));
-        let monitored=[],mappings={},used=1,syncs=0,holdAccounts=false,accountWaiting,releaseAccount;
+        let monitored=[KEY],mappings={},used=1,syncs=1,holdAccounts=false,accountWaiting,releaseAccount;
         await page.route('https://api-production-00f74.up.railway.app/**',route=>route.abort());
         await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/plaid**',async route=>{
           const request=route.request(),url=new URL(request.url());
@@ -88,10 +88,11 @@ const KEY='a'.repeat(64);
           'Read-only transaction history must not require an enable checkbox');
         assert.equal(calls.some(x=>x.includes('link-token')||x.includes('/exchange')),false,
           'Opening the provider view must never consume a Plaid Item');
-        await host.getByRole('button',{name:'Refresh transactions'}).click();
-        await host.getByText('Latest available provider data loaded.',{exact:false}).waitFor();
-        assert.deepEqual(monitored,[KEY],'The provider automatically makes linked accounts available');
-        assert.equal(syncs,1,'Activity fetch does not create a new Plaid Item');
+        assert.equal(await host.getByRole('button',{name:'Refresh transactions'}).count(),0);
+        assert.equal(await host.getByRole('button',{name:'Discover connected accounts'}).count(),0);
+        assert.deepEqual(monitored,[KEY],'Accounts arrive from server-side sync without owner intervention');
+        assert.equal(calls.filter(x=>x.endsWith('/accounts/sync')).length,0,
+          'Browser UI must not trigger Plaid provider requests');
         const suggestion=host.getByRole('button',{name:'Link to Synthetic Bank bonus?'});
         await suggestion.waitFor();
         await page.evaluate(()=>{window.btConfirmDialog=async()=>false;});
@@ -109,17 +110,15 @@ const KEY='a'.repeat(64);
         await host.getByRole('button',{name:'Save bonus links'}).click();
         await host.getByText('Bonus links saved.',{exact:false}).waitFor();
         assert.deepEqual(mappings[KEY],{entryId:'cycle-one',bank:'Synthetic Bank',opened:'2026-10-01',productId:'checking'});
-        await host.getByRole('button',{name:'Refresh transactions'}).click();
-        await host.getByText('Latest available provider data loaded.',{exact:false}).waitFor();
         await host.getByRole('button',{name:'Show amounts'}).waitFor();
-        assert.equal(syncs,2);
+        assert.equal(calls.filter(x=>x.endsWith('/accounts/sync')).length,0);
         const visibleSnapshot=await host.innerText();
         assert.ok(visibleSnapshot.includes('••••••'),'transaction amount masked by default; rendered='+JSON.stringify(visibleSnapshot));
         assert.equal(visibleSnapshot.includes(' · 500 USD'),false);
         await host.getByRole('button',{name:'Show amounts'}).click();
         assert.ok((await host.innerText()).includes('500 USD'),'user must explicitly reveal money');
         await host.getByRole('button',{name:'Hide amounts'}).click();
-        for(const width of [320,390,430]){
+        for(const width of [320,375,390,430]){
           await page.setViewportSize({width,height:760});
           const size=await host.evaluate(n=>({
             page:innerWidth,scroll:n.scrollWidth,
@@ -155,11 +154,12 @@ const KEY='a'.repeat(64);
         await page.evaluate(()=>{window.syntheticLink.onSuccess('synthetic-public-token');window.syntheticLink.onExit();});
         await host.getByText('Plaid Trial · 2/10 used').waitFor();
         assert.equal(calls.filter(x=>x.endsWith('/exchange')).length,1,'successful SDK handoff exchanges exactly once');
-        await page.waitForFunction(()=>document.querySelector('#target')?.textContent?.includes('discovered.'));
-        assert.equal(syncs,3,'successful Plaid link triggers one automatic, read-only account discovery');
+        await page.waitForFunction(()=>document.querySelector('#target')?.textContent?.includes('Available transactions import automatically.'));
+        assert.equal(calls.filter(x=>x.endsWith('/accounts/sync')).length,0,
+          'Plaid backend starts first read-only import at exchange, without a browser sync');
         const event=await page.evaluate(()=>window.bankSuccessEvents.at(-1));
         assert.deepEqual(event,{status:'ready',count:1},'successful bank connection must be reported to Finances');
-        assert.equal((await host.locator('.plaid-trial-message').innerText()).startsWith('Bank connected'),true,
+        assert.equal((await host.locator('.plaid-trial-message').innerText()).includes('Connected'),true,
           'Plaid Link closing cannot erase a successful bank-connection confirmation');
         assert.equal(calls.filter(x=>x.endsWith('/link-token')).length,1,'discovery never creates another lifetime Item');
         // A delayed response for one owner must never be shown after a user
