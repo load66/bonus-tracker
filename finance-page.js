@@ -304,6 +304,37 @@
     const line=document.createElementNS(svg.namespaceURI,'polyline');line.setAttribute('points',coords.map(x=>x.join(',')).join(' '));line.setAttribute('class','finance-page-line');svg.append(line);parent.append(svg);
     const labels=el('div',undefined,parent,'finance-page-chart-labels');el('span',date(points[0].at),labels);el('strong',amount(points.at(-1).value,'USD'),labels);el('span',date(points.at(-1).at),labels);
   }
+  function spendingDonut(host,summary){
+    const rows=Object.entries(summary.spending||{}).filter(([,value])=>
+      Number.isFinite(Number(value))&&Number(value)>0).sort((a,b)=>Number(b[1])-Number(a[1]));
+    const card=el('section',undefined,host,'finance-page-card finance-page-spending-card');
+    const head=el('div',undefined,card,'finance-page-section-head');
+    el('h3','Spending by category',head);
+    if(!summary.complete)el('span','Partial',head,'finance-page-coverage-pill');
+    if(!rows.length){el('p','Category spending will appear as transactions are categorized.',card,'finance-page-hint');return}
+    const total=rows.reduce((sum,[,value])=>sum+Number(value),0);
+    if(!Number.isFinite(total)||total<=0){el('p','Spending breakdown is not available.',card);return}
+    const colors=['#5BE3B0','#49BFA1','#378F83','#306A68','#425D68','#5F6880','#7A7990','#A0A6B8'];
+    let start=0;
+    const stops=rows.map(([,value],i)=>{
+      const end=start+Number(value)/total*100;
+      const stop=colors[i%colors.length]+' '+start.toFixed(4)+'% '+end.toFixed(4)+'%';
+      start=end;return stop;
+    });
+    const display=el('div',undefined,card,'finance-page-spending-breakdown');
+    const circle=el('div',undefined,display,'finance-page-donut');
+    circle.style.background='conic-gradient('+stops.join(',')+')';
+    circle.setAttribute('role','img');
+    circle.setAttribute('aria-label','Distribution of categorized spending'+(summary.complete?'':' · partial history'));
+    const legend=el('div',undefined,display,'finance-page-donut-legend');
+    for(const [i,[category,value]] of rows.entries()){
+      const item=el('div',undefined,legend,'finance-page-donut-item');
+      const marker=el('span',undefined,item,'finance-page-donut-dot');marker.style.background=colors[i%colors.length];
+      el('span',financeCategory(category),item);
+      el('strong',amount(value,'USD'),item);
+    }
+    if(!summary.complete)el('p','Only categorized posted transactions are included. Your bank history may still be loading.',card,'finance-page-hint');
+  }
   function compactAccountPreview(host){
     const card=el('section',undefined,host,'finance-page-card finance-page-preview-card');
     const head=el('div',undefined,card,'finance-page-section-head');
@@ -359,6 +390,7 @@
     metric(activityGrid,'Savings rate',summary.savingsRate===null?'—':summary.savingsRate.toFixed(1)+'%');
     if(!summary.complete)el('p','Cash Flow is partial: review '+summary.unreviewed+' uncategorized transaction'+(summary.unreviewed===1?'':'s')+'.',activity,'finance-page-caution');
     compactActivityPreview(host);
+    spendingDonut(host,summary);
     const more=el('details',undefined,host,'finance-page-more');
     el('summary','More insights · trends, spending & review',more);
     const trend=el('section',undefined,more,'finance-page-card');el('h3','Net worth trend',trend);trendChart(trend,summary.netWorthHistory||[]);
