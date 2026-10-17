@@ -39,6 +39,8 @@
       addFlowNextRetryAt=reply.nextRetryAt||null;
       if(reply.found&&Number(reply.newAccounts)>0&&Array.isArray(reply.discoveredAccounts)&&reply.discoveredAccounts.length){
         addFlowFound=reply.discoveredAccounts;
+        // A previous account search must not hide a newly linked institution.
+        accountFilter='';
         addFlowDraft=new Set(addFlowFound.map(a=>a.key));
         addFlowMessage='Found '+(reply.bank||reply.banks?.join(', ')||'bank')+' · '+addFlowFound.length+' account'+(addFlowFound.length===1?'':'s');
         changed=true;window.btRefreshFinancesPage?.();
