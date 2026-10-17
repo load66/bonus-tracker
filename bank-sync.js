@@ -379,7 +379,11 @@
     });
   }
   function open(mode='accounts'){
-    if(panel){resetAddFlow();view=mode==='add-bank'?'add-bank':'accounts';wizardResult=null;paint();if(mode==='discover'){addFlowPending=true;run(checkAddedBank);}return;}
+    if(panel){resetAddFlow();view=mode==='add-bank'?'add-bank':'accounts';wizardResult=null;
+      if(mode==='add-bank'||mode==='discover')addFlowPending=true;
+      paint();
+      if(addFlowPending&&data?.connected)checkAddedBank();
+      return;}
     returnFocus=document.activeElement;generation++;resetAddFlow();data=null;changed=false;view=mode==='add-bank'?'add-bank':'accounts';wizardResult=null;
     if(mode==='add-bank'||mode==='discover')addFlowPending=true;
     panel=el('div');panel.className='ov bank-sync-overlay';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-labelledby','bank-sync-title');
@@ -388,8 +392,17 @@
     const body=el('div',undefined,modal);body.className='bank-sync-body';
     const footer=el('footer',undefined,modal);const msg=el('p','',footer);msg.id='bank-sync-message';msg.setAttribute('role','status');
     const done=el('button','Done',footer);done.className='btn-s';done.type='button';done.onclick=close;
-    document.body.append(panel);paint();done.focus();if(window.BTBonusAuth?.connected())run(async()=>{data=await request();paint();
-      if(mode==='add-bank'||mode==='discover')await checkAddedBank();});
+    document.body.append(panel);paint();done.focus();if(window.BTBonusAuth?.connected())run(async()=>{
+      data=await request();paint();
+      // A bank may already have been authorized externally. One owner-scoped
+      // check on return/open is automatic, never a Discover/Save interaction.
+      const last=Number(data?.lastAccountDiscoveryAt)||0;
+      const due=data?.connected&&(!last||Date.now()/1000-last>=3600);
+      if(data?.connected&&(mode==='add-bank'||mode==='discover'||due)){
+        addFlowPending=true;
+        await checkAddedBank();
+      }
+    });
   }
   function install(){
     const menu=document.querySelector('.header-data-panel');if(!menu||menu.querySelector('[data-bank-sync]'))return;
