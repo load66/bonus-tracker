@@ -376,8 +376,8 @@ const base=()=>({
       await correctedName.getByText('Auto',{exact:true}).waitFor();
       assert.ok((await correctedName.innerText()).includes('Synthetic Plaid history item 0'));
       const preservedBonus=section.locator('.finance-page-transaction').filter({hasText:'X Money Bonus'});
-      assert.ok((await preservedBonus.innerText()).includes('Income'),
-        'Finance labels preserved internal bonus classification as Income');
+      assert.ok((await preservedBonus.innerText()).includes('Needs review'),
+        'Finances never represents an unconfirmed promotional credit as income');
       assert.equal(plaidState.transactions[A]['plaid-income'].category,'bonus',
         'Finance presentation must not rewrite canonical bonus category data');
       await section.getByRole('button',{name:/^Show 100 more transactions/}).waitFor();
