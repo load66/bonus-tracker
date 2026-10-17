@@ -24,14 +24,14 @@
   const cardPayment=/(?:\b(?:pmt|payment|autopay|epay|crcardpmt|ccpmt)\b|credit\s*card\s*payment)/i;
   const investing=/(?:\brobinhood\b|\bfidelity\b|\bschwab\b|\bvanguard\b|\bbrokerage\b|\binvestment\b|\b401k\b|\broth\s*ira\b|\bira\b)/i;
   const contribute=/(?:\b(?:contribution|contribute|deposit|funding|transfer)\b)/i;
+  const getGuard=()=>typeof window!=='undefined'?window.BTFinanceTransfer:typeof require==='function'?require('./finance-transfer-core.js'):null;
+  const resolve=row=>getGuard()?.effective(row)||row;
   function spendingCategory(row,value){
-    if(row.excludedFromTotals===true||row.pending===true||value===null||value>=0n)return null;
-    const category=String(row.category||'unreviewed').toLowerCase();
-    const description=String(row.description||'')+' '+String(row.merchant||'');
-    if(noSpend.has(category)||row.kind==='card_payment'||row.kind==='investment_contribution'||
-       (row.signals||[]).includes('matched_internal_transfer')||
-       (issuer.test(description)&&cardPayment.test(description))||
-       (investing.test(description)&&contribute.test(description)))return null;
+    const item=resolve(row);
+    if(item.excludedFromTotals===true||item.pending===true||value===null||value>=0n)return null;
+    const category=String(item.category||'unreviewed').toLowerCase();
+    if(noSpend.has(category)||item.kind==='card_payment'||item.kind==='investment_contribution'||
+       (item.signals||[]).some(s=>['matched_internal_transfer','possible_transfer','card_payment','investment_transfer'].includes(s)))return null;
     return SPEND.has(category)?category:'unreviewed';
   }
   const seenMonth=(rows,month)=>rows.some(row=>!row.pending&&!row.excludedFromTotals&&
@@ -43,7 +43,8 @@
     let total=0n,income=0n,uncategorized=0,records=0,refundOffset=0n;
     const valid=(rows||[]).filter(row=>row&&!row.pending&&!row.excludedFromTotals&&
       Number.isFinite(row.posted)&&monthKey(row.posted*1000)===month&&cents(row.amount)!==null);
-    for(const row of valid){
+    for(const raw of valid){
+      const row=resolve(raw);
       const v=cents(row.amount),day=new Date(row.posted*1000).getDate(),category=spendingCategory(row,v);
       if(v>0n){
         if(row.category==='income'){income+=v;incomeByDay[day]=(incomeByDay[day]||0n)+v}

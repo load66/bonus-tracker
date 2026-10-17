@@ -72,3 +72,40 @@ assert.equal(I.budget('100.00','100.00',15,30).level,'near');
 assert.equal(I.budget('100.00','100.01',15,30).level,'over');
 assert.equal(I.budget('100.00','120.00',15,30).left,'0.00');
 assert.equal(I.budget('0','2.00',15,30),null);
+
+
+const G=require('../finance-transfer-core.js');
+const real=[
+ ['To Brokerage','-2000.00','transfer','investment_transfer'],
+ ['To Citibank','-251.00','transfer','transfer'],
+ ['From Lafayette Fcu','500.00','transfer','transfer'],
+ ['To Personal Checking','-7379.04','transfer','transfer'],
+ ['From Personal Savings','7379.04','transfer','transfer'],
+ ['To Paypal','-428.17','transfer','transfer'],
+ ['U.S. Bank','-820.77','transfer','card_payment'],
+ ['Capital One','-200.00','transfer','card_payment'],
+ ['T-Mobile','-157.62','utilities',null],
+ ['Apple','-249.52','shopping',null],
+];
+const imported=real.map(([description,amount],i)=>({...oct(10,amount,'unreviewed',description),description,categorySource:'automatic'}));
+for(let i=0;i<real.length;i++){
+  const [description,,category,signal]=real[i],normalized=G.effective(imported[i]);
+  assert.equal(normalized.category,category,description+' category');
+  if(signal)assert.ok(normalized.signals.includes(signal),description+' transfer signal');
+  assert.equal(I.spendingCategory(imported[i],I.cents(imported[i].amount)),i>=8?category:null,description+' exclusion');
+}
+const corrected=I.spent(imported,'2026-10');
+assert.equal(corrected.total,'407.14','Only T-Mobile and Apple contribute to Spending among exact real-description fixtures');
+assert.equal(corrected.uncategorized,0);
+assert.equal(corrected.categories.find(v=>v.category==='utilities').amount,'157.62');
+assert.equal(corrected.categories.find(v=>v.category==='shopping').amount,'249.52');
+const ambiguous={...oct(12,'-2000','unreviewed','To Unrecognized Wallet'),description:'To Unrecognized Wallet',categorySource:'automatic'};
+assert.equal(G.effective(ambiguous).category,'unreviewed');
+assert.ok(G.effective(ambiguous).signals.includes('possible_transfer'));
+assert.equal(I.spendingCategory(ambiguous,I.cents(ambiguous.amount)),null,'Unknown financial-looking large move held for confirmation');
+const corner={...oct(13,'-29.89','unreviewed','Corner local store'),description:'Corner local store'};
+assert.equal(I.spendingCategory(corner,I.cents(corner.amount)),'unreviewed','Small unclear purchase remains real spending');
+assert.equal(G.label({...imported[0]}),'Investment transfer');
+assert.equal(G.label({...imported[6]}),'Card payment');
+assert.equal(G.label({...imported[1]}),'Transfer');
+assert.equal(G.effective({...imported[0],category:'shopping',categorySource:'user'}).category,'shopping','User decisions override auto patterns');

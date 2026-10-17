@@ -38,6 +38,7 @@
       (investmentInstitution.test(text)&&contributionAction.test(text));
   }
   function summarize(state={},options={}){
+    const guard=typeof window!=='undefined'?window.BTFinanceTransfer:typeof require==='function'?require('./finance-transfer-core.js'):null;
     const now=Number.isFinite(options.now)?Math.floor(options.now):Math.floor(Date.now()/1000);
     const days=Number.isInteger(options.days)&&options.days>=1&&options.days<=MAX_DAYS?options.days:30;
     const accounts=Array.isArray(state.accounts)?state.accounts:[];
@@ -65,15 +66,16 @@
         if(n>0n)credits+=n; else if(n<0n)debits-=n;
         if(row.kind==='possible_bonus'&&n>0n)candidates++;
         if(row.kind==='possible_reversal'&&n<0n)reversals++;
-        const category=String(row.category||'unreviewed');
+        const item=guard?.effective(row)||row;
+        const category=String(item.category||'unreviewed');
         if(category==='income'&&n>0n)income+=n;
         else if(n<0n&&!['transfer','verification','refund'].includes(category)&&
-                !financialMovement(row)){
+                !financialMovement(item)&&!item.signals?.includes('possible_transfer')){
           const amount=-n,label=SPENDING.has(category)?category:'unreviewed';
           expenses+=amount;spending[label]=(spending[label]||0n)+amount;
           if(label==='unreviewed')uncategorized++;
         }else if(category==='transfer')transfers++;
-        if(category==='unreviewed'||(category==='bonus'&&row.categorySource!=='user')||(!['user','user_rule'].includes(row.categorySource)&&row.confidence!=='high'))unreviewed++;
+        if((category==='unreviewed'&&!item.signals?.includes('possible_transfer'))||(category==='bonus'&&row.categorySource!=='user')||(!['user','user_rule'].includes(row.categorySource)&&row.confidence!=='high'))unreviewed++;
         if(Array.isArray(row.signals)&&row.signals.includes('possible_recurring'))recurring++;
         // Use the same local calendar basis as the day-grouped Finance ledger.
         const local=new Date(row.posted*1000);
@@ -81,7 +83,7 @@
         const month=monthly[key]||(monthly[key]={income:0n,expenses:0n});
         if(category==='income'&&n>0n)month.income+=n;
         if(n<0n&&!['transfer','verification','refund'].includes(category)&&
-           !financialMovement(row))month.expenses-=n;
+           !financialMovement(item)&&!item.signals?.includes('possible_transfer'))month.expenses-=n;
       }
     }
 
@@ -102,7 +104,7 @@
     }).filter(x=>x.account.currency==='USD'&&x.balance&&x.profile.kind!=='unclassified');
     const exclusions=profileEntries.filter(x=>x.profile.balanceMode==='exclude'||
       x.account.currency!=='USD'||x.profile.kind==='unclassified'||!usable.some(u=>u.account.key===x.account.key))
-      .map(x=>({name:x.account.name||x.account.bank||'Account',
+      .map(x=>({key:x.account.key,name:x.account.name||x.account.bank||'Account',
         reason:x.profile.balanceMode==='exclude'?'excluded by settings':
           x.account.currency!=='USD'?'non-USD balance':
           x.profile.kind==='unclassified'?'account type needs review':'balance not updated'}));
@@ -135,6 +137,46 @@
         if(valid)netWorthHistory.push({at,value:decimal(point)});
       }
     }
+    const investmentEntries=profileEntries.filter(x=>['brokerage','retirement'].includes(x.profile.kind));
+    const balanceSeries=state.balanceHistory&&typeof state.balanceHistory==='object'?state.balanceHistory:{};
+    const investmentAccounts=investmentEntries.map(x=>{
+      const raw=cents(x.account.balance),historyPoints=Array.isArray(balanceSeries[x.account.key])?balanceSeries[x.account.key]
+        .filter(v=>Number.isFinite(v?.observedAt)&&v.currency==='USD'&&cents(v.balance)!==null)
+        .sort((a,b)=>a.observedAt-b.observedAt):[];
+      const observation=x.account.balanceDate||x.account.observedAt||null;
+      const usable=x.account.currency==='USD'&&raw!==null;
+      const historical=offset=>{
+        const limit=now-offset;
+        const candidate=historyPoints.filter(v=>v.observedAt<=limit).at(-1);
+        return candidate?cents(candidate.balance):null;
+      };
+      return {key:x.account.key,name:x.account.name||'Investment account',kind:x.profile.kind,
+        value:usable?raw:null,asOf:observation,
+        last:historyPoints.length>1?cents(historyPoints.at(-2).balance):null,
+        monthAgo:historical(30*DAY)};
+    });
+    const investmentValid=investmentAccounts.filter(x=>x.value!==null);
+    const investmentValue=investmentValid.reduce((v,x)=>v+x.value,0n);
+    const investmentByKind={brokerage:0n,retirement:0n};
+    for(const x of investmentValid)investmentByKind[x.kind]+=x.value;
+    const sumChange=which=>{
+      if(!investmentValid.length||investmentValid.some(x=>x[which]===null))return null;
+      return decimal(investmentValid.reduce((acc,x)=>acc+x.value-x[which],0n));
+    };
+    const currentMonth=new Date(now*1000),monthStart=Math.floor(new Date(
+      currentMonth.getFullYear(),currentMonth.getMonth(),1).getTime()/1000);
+    let invested=0n,investmentIncome=0n;
+    for(const account of accounts){
+      for(const row of Object.values(history[account.key]||{})){
+        const value=cents(row?.amount);
+        const investmentAccount=investmentEntries.some(x=>x.account.key===account.key);
+        if(value===null||row.pending||(row.excludedFromTotals&&!investmentAccount)||
+           !Number.isFinite(row.posted)||row.posted<monthStart||row.posted>now)continue;
+        if(investmentAccount){
+          if(value>0n&&/\b(?:dividend|interest)\b/i.test(row.description||''))investmentIncome+=value;
+        }else if(value<0n&&(row.signals||[]).includes('investment_transfer'))invested-=value;
+      }
+    }
     const missingAccounts=[...selected].filter(k=>!accounts.some(a=>a&&a.key===k)).length;
     const covered=usd.every(a=>history[a.key]&&typeof history[a.key]==='object'&&!Array.isArray(history[a.key]));
     const complete=observations>0&&unreviewed===0&&unusable===0&&missingAccounts===0&&covered;
@@ -156,6 +198,13 @@
       cashAvailable:cashReady,cash:cashReady?decimal(cash):null,
       cashAccountCount:cashEntries.length,cashIncludedCount:readyCash.length,
       cashPartial:cashMissing>0,staleOrUnavailableCash:cashMissing,
+      investments:investmentValid.length?decimal(investmentValue):null,
+      investmentAccounts:investmentAccounts.map(x=>({key:x.key,name:x.name,kind:x.kind,
+        value:x.value!==null?decimal(x.value):null,asOf:x.asOf})),
+      investmentBrokerage:decimal(investmentByKind.brokerage),
+      investmentRetirement:decimal(investmentByKind.retirement),
+      investmentChangeLastSync:sumChange('last'),investmentChange1M:sumChange('monthAgo'),
+      investedThisMonth:decimal(invested),investmentIncome:decimal(investmentIncome),
       netWorthAvailable:netWorthReady,netWorthBasedOn:usable.length,netWorthTotalAccounts:accounts.length,
       netWorthPartial:usable.length<included.length||provisional.length>0,
       netWorthExclusions:exclusions,provisionalBalances:provisional,assets:netWorthReady?decimal(assets):null,

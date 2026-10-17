@@ -16,6 +16,15 @@
     const name=canonical(account.name);
     const bank=canonical(account.bank);
     const broker=/\b(robinhood|fidelity|schwab|vanguard|e trade|etrade|interactive brokers|webull|tastytrade|coinbase|kraken)\b/.test(bank);
+    const retirement=/\b(?:roth|traditional|ira|401\s*k|401k|retirement)\b/.test(name)||/(?:^|_)(?:roth_?ira|ira|401k|retirement)(?:$|_)/.test(subtype);
+    const deposit=/\b(?:checking|current account|cash management|cash account|spend account)\b/.test(name)
+      ||['checking','cash_management','cash'].includes(subtype);
+    const savings=/\b(?:savings|money market|high yield)\b/.test(name)
+      ||['savings','money_market'].includes(subtype);
+    if(/\b(?:credit card|charge card)\b/.test(name)||['credit_card','credit'].includes(subtype))return 'credit_card';
+    if(deposit)return 'checking';
+    if(savings)return 'savings';
+    if(retirement)return 'retirement';
     const investments=new Set(['individual','joint','investing','investment','investments','stocks','stock','crypto','securities','trading','brokerage']);
     if(investments.has(subtype)||investments.has(type))return 'brokerage';
     const aliases={depository:'',credit:'credit_card',credit_card:'credit_card',investment:'brokerage',student:'loan',auto:'loan',mortgage:'mortgage',loan:'loan',brokerage:'brokerage',retirement:'retirement','401k':'retirement',ira:'retirement',checking:'checking',savings:'savings',money_market:'savings'};
@@ -28,6 +37,9 @@
     }
     // Brokerage brands are investment accounts unless product metadata identifies
     // an actual deposit or credit product; never classify a generic broker as Other.
+    if(/\b(?:paypal|venmo|onepay|one pay|x money)\b/.test(bank)&&
+       !/\b(?:credit|card|loan|invest|stock|crypto)\b/.test(name)&&
+       !['credit','investment','loan'].includes(type))return 'checking';
     if(broker&&!/\b(checking|savings|cash management|credit card|mortgage|loan)\b/.test(name)
         && !['depository','credit'].includes(type))return 'brokerage';
     return 'unclassified';
@@ -72,9 +84,14 @@
           detectedType:detected,kind:saved.kind&&saved.kind!=='unclassified'?saved.kind:detected,
           name:saved.displayName||account.name,originalName:account.name});
         const kind=saved.kind&&saved.kind!=='unclassified'?saved.kind:detected;
-        accountProfiles[composite]={kind,balanceMode:saved.balanceMode||DEFAULT_TREATMENT[kind]||'exclude',
+        accountProfiles[composite]={kind,
+          // An old auto-generated unclassified exclusion is not a user opt-out.
+          // Preserve explicit saved selections made for a recognized account type.
+          balanceMode:(saved.kind&&saved.kind!=='unclassified')
+            ?(saved.balanceMode||DEFAULT_TREATMENT[kind]||'exclude')
+            :(DEFAULT_TREATMENT[kind]||saved.balanceMode||'exclude'),
           order:Number.isInteger(saved.order)?saved.order:499,hidden:saved.hidden===true,
-          removed:!!account.removedAt,includeSpending:saved.includeSpending??['checking','credit_card'].includes(kind)};
+          removed:!!account.removedAt,includeSpending:saved.includeSpending??['checking','savings','credit_card'].includes(kind)};
         if((state.monitoredAccounts||[]).includes(account.key))monitoredAccounts.push(composite);
         if(state.mappings?.[account.key])mappings[composite]=state.mappings[account.key];
         if(Array.isArray(state.balanceHistory?.[account.key]))balanceHistory[composite]=state.balanceHistory[account.key];
@@ -139,7 +156,8 @@
     // A confirmed duplicate uses one primary account and one balance; unique
     // secondary-provider rows remain visible with their original source keys.
     // Fingerprints require same amount, same local day, and normalized bank text.
-    const transactions=Object.fromEntries(Object.entries(keep(unified.transactions)).map(([k,v])=>[k,Object.fromEntries(Object.entries(v).map(([id,row])=>[id,{...row,signals:[...(row.signals||[])]}]))]));
+    const Transfer=typeof window!=='undefined'?window.BTFinanceTransfer:typeof require==='function'?require('./finance-transfer-core.js'):null;
+    const transactions=Object.fromEntries(Object.entries(keep(unified.transactions)).map(([k,v])=>[k,Object.fromEntries(Object.entries(v).map(([id,row])=>[id,Transfer?Transfer.effective(row):{...row,signals:[...(row.signals||[])]}]))]));
     for(const [other,primary] of secondary){
       if(!allowed.has(primary))continue;
       const target=transactions[primary]||{};
@@ -167,7 +185,7 @@
     for(const [key,rows] of Object.entries(transactions)){
       for(const row of Object.values(rows)){
         const value=toCents(row.amount);
-        if(row.pending||value===null||value===0n||value%100n!==0n||
+        if(row.pending||value===null||value===0n||
           !Number.isFinite(row.posted)||['user','user_rule'].includes(row.categorySource))continue;
         transferRows.push({account:key,row,value});
       }
@@ -181,14 +199,22 @@
       if(matches[i].length!==1)continue;
       const j=matches[i][0];
       if(j<=i||matches[j].length!==1||matches[j][0]!==i)continue;
+      const pairId=['internal',transferRows[i].account,transferRows[j].account,
+        String(transferRows[i].row.id),String(transferRows[j].row.id)].join(':');
+      const investments=key=>['brokerage','retirement'].includes(unified.accountProfiles?.[key]?.kind);
+      const investmentMove=investments(transferRows[i].account)||investments(transferRows[j].account);
       for(const index of [i,j]){
+        const other=index===i?j:i;
         const row=transferRows[index].row;
         row.category='transfer';row.confidence='high';
-        row.signals=[...new Set([...(row.signals||[]),'matched_internal_transfer'])];
+        row.transferPairId=pairId;row.transferOtherAccountKey=transferRows[other].account;
+        row.signals=[...new Set([...(row.signals||[]),'matched_internal_transfer',
+          ...(investmentMove?['investment_transfer']:[])])];
       }
     }
     for(const [key, rows] of Object.entries(transactions)){
-      if(unified.accountProfiles?.[key]?.includeSpending===false){
+      if(unified.accountProfiles?.[key]?.includeSpending===false||
+         ['brokerage','retirement'].includes(unified.accountProfiles?.[key]?.kind)){
         transactions[key]=Object.fromEntries(Object.entries(rows).map(([i,row])=>[i,{...row,excludedFromTotals:true}]));
       }
     }

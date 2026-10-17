@@ -785,3 +785,105 @@
   .finance-page .finance-spending-review-cta{padding:0 8px}
 }
 @media(prefers-reduced-motion:reduce){.finance-page .finance-spending-3480 *{scroll-behavior:auto!important}}
+
+
+/* Finance 3.4.81: spendable cash and investments, confirm transfers, and donut text. */
+.finance-page .finance-spending-donut{isolation:isolate;overflow:visible!important}
+.finance-page .finance-spending-donut::after{content:none!important;display:none!important}
+.finance-page .finance-spending-donut::before{z-index:0;inset:24px;background:#111820}
+.finance-page .finance-spending-donut-center{
+  position:relative;z-index:2;display:flex;flex-direction:column;
+  justify-content:center;align-items:center;width:125px;max-width:100%;
+  min-height:56px;overflow:visible;color:#f5faf7!important;
+}
+.finance-page .finance-spending-donut-center strong{
+  display:block;position:relative;z-index:3;max-width:100%;
+  color:#f5faf7!important;font-size:clamp(14px,4vw,19px)!important;
+  line-height:1.2;white-space:nowrap;letter-spacing:-.05em;
+}
+.finance-page .finance-overview-holdings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0 7px}
+.finance-page .finance-overview-asset-card{
+  min-width:0;display:flex;flex-direction:column;gap:6px;
+  background:#121d23;border:1px solid #315043;border-radius:15px;padding:12px 10px;
+}
+.finance-page .finance-overview-asset-card>span{color:#a5cbbd;font-size:11px;font-weight:700}
+.finance-page .finance-overview-asset-card>strong{font-variant-numeric:tabular-nums;font-size:16px;overflow-wrap:anywhere;letter-spacing:-.025em}
+.finance-page .finance-overview-asset-card>small{font-size:10px;line-height:1.4;color:#b4c2c7;overflow-wrap:anywhere}
+.finance-page .finance-overview-account-breakdown{margin-top:6px;font-size:10px}
+.finance-page .finance-overview-account-breakdown summary{cursor:pointer;min-height:36px;color:#89dcc0;padding-top:5px}
+.finance-page .finance-overview-account-balance{display:flex;justify-content:space-between;gap:8px;padding:5px 0;font-size:10px}
+.finance-page .finance-overview-account-balance>span{min-width:0;overflow-wrap:anywhere}
+.finance-page .finance-overview-account-balance>b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.finance-page .finance-spending-confirm-row{padding:14px 2px;display:grid;gap:9px;border-bottom:1px solid #2a3840}
+.finance-page .finance-spending-confirm-copy{display:grid;gap:4px;min-width:0}
+.finance-page .finance-spending-confirm-copy strong{font-size:13px;overflow-wrap:anywhere}
+.finance-page .finance-spending-confirm-copy small{font-size:11px;color:#b2bdc8}
+.finance-page .finance-spending-confirm-similar{display:flex;align-items:center;gap:8px;color:#aebcca;font-size:11px}
+.finance-page .finance-spending-confirm-similar input{width:17px;height:17px;accent-color:#5be3b0}
+.finance-page .finance-spending-confirm-actions{display:flex;gap:8px;flex-wrap:wrap}
+.finance-page .finance-spending-confirm-actions button{min-height:37px;padding:6px 15px}
+.finance-page .finance-page-transaction-view-chips{
+  display:flex;gap:7px;padding:0 0 12px;overflow-x:auto;overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;max-width:100%;
+}
+.finance-page .finance-page-transaction-view-chips::-webkit-scrollbar{display:none}
+.finance-page .finance-page-transaction-view-chips button{flex:0 0 auto;white-space:nowrap;min-height:38px}
+.finance-page .finance-page-transaction-date{
+  position:sticky;top:56px;z-index:5;padding:8px 4px!important;
+  background:#131a21!important;box-shadow:0 1px 0 #334149;
+}
+.finance-page .finance-page-pending-chip{font-size:10px;color:#c4bccf;margin-left:8px}
+.finance-page .finance-page-transaction-value .is-transfer{
+  color:#aeb9c1!important;font-weight:690;
+}
+.finance-page .finance-page-investment-subgroup{display:flex;align-items:center;justify-content:space-between;
+  gap:6px;margin:12px 0 3px;padding:7px 2px;border-bottom:1px solid #2d4148;
+  font-size:12px;color:#bfd8cb
+}
+.finance-page .finance-page-investment-subgroup>b{color:#dcece4;font-variant-numeric:tabular-nums}
+@media(max-width:420px){
+  .finance-page .finance-overview-holdings{grid-template-columns:1fr 1fr;gap:8px}
+  .finance-page .finance-overview-investments{grid-column:1 / -1}
+  .finance-page .finance-overview-asset-card{padding:12px}
+  .finance-page .finance-overview-asset-card>strong{font-size:18px}
+  .finance-page .finance-spending-donut-center strong{font-size:17px!important}
+}
+
+
+/* Minimal consumer-facing Net worth design and review bottom sheet. */
+.finance-page .finance-net-worth-card{display:flex;flex-direction:column;gap:3px}
+.finance-page .finance-net-worth-card>h3{margin:0;font-size:16px;font-weight:720;letter-spacing:-.015em}
+.finance-page .finance-net-worth-card>.finance-page-big-number{margin:7px 0 3px;line-height:1.07;font-size:clamp(32px,8.5vw,46px)}
+.finance-page .finance-net-worth-status{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin:11px 0 6px;min-height:40px;border-radius:12px;
+  padding:7px 12px;background:#1C252C;color:#CFD8DF;font-size:11px;
+}
+.finance-page .finance-net-worth-review-button{
+  min-height:34px;padding:5px 12px;border:1px solid #3F605B;
+  border-radius:10px;background:#23463F;color:#AEF7D3;
+  font-size:11px;font-weight:700
+}
+.finance-page .finance-net-worth-empty-chart{
+  display:grid;justify-items:center;align-items:center;gap:1px;
+  margin:13px 0 4px;min-height:115px;border-radius:13px;
+  background:linear-gradient(180deg,#1B252E,#151C24);
+  overflow:hidden;color:#638779;padding:10px 14px;
+}
+.finance-page .finance-net-worth-empty-chart svg{height:60px;width:100%;max-width:320px;opacity:.42}
+.finance-page .finance-net-worth-empty-chart span{color:#A6B8BC;font-size:11px;text-align:center}
+.finance-page .finance-net-worth-review-intro{font-size:12px;color:#A7B4BD;margin:0 0 12px}
+.finance-page .finance-net-worth-review-item{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  min-height:65px;border-bottom:1px solid #2A333F;padding:12px 0;
+}
+.finance-page .finance-net-worth-review-copy{display:grid;gap:4px;min-width:0}
+.finance-page .finance-net-worth-review-copy strong{font-size:12px;overflow-wrap:anywhere}
+.finance-page .finance-net-worth-review-copy small{font-size:11px;color:#AEBCC6}
+.finance-page .finance-net-worth-review-item button{flex:0 0 auto;min-height:38px;font-size:11px}
+@media(max-width:420px){
+  .finance-page .finance-modal:not(.finance-modal-full){
+    max-width:100vw;width:100vw;max-height:78dvh;margin:auto 0 0;
+    border-radius:24px 24px 0 0;
+  }
+}
