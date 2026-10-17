@@ -1,7 +1,7 @@
-/* Bonus Tracker v3.4.97 — mobile analyzer viewport and scroll guard. */
+/* Bonus Tracker v3.4.98 — mobile analyzer viewport and scroll guard. */
 (function(){
   'use strict';
-  const VER='3.4.97';
+  const VER='3.4.98';
   let lastOverlay=null;
   function syncVisualViewport(){
     const vv=window.visualViewport;
