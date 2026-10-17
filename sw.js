@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.4.89: keep credit balances on cards and shorten finance status copy.
+// Version 3.4.90: neutral paired transfers and recurring-history exclusions.
 
-const V = 'bt-v3.4.89-credit-balance1';
+const V = 'bt-v3.4.90-finance-recurring1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
