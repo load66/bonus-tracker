@@ -742,6 +742,8 @@
       return line;
     }
     function ledger(parent,matches){
+      const dayKey=value=>new Date(value*1000).toLocaleDateString('en-CA');
+      const dayLabel=value=>new Date(value*1000).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
       const sorted=matches.slice().sort((a,b)=>b.posted-a.posted);
       if(!sorted.length){el('p','No transactions recorded for this selection.',parent,'finance-page-hint');return}
       let dateStamp='';
