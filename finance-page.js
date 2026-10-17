@@ -110,7 +110,7 @@
     return accountDraftProfiles[account.key];
   }
   function sortedAccounts(includeHidden=false){
-    return [...(currentCombined?.accounts||[])].filter(a=>includeHidden||(!profile(a).hidden&&!a.removedAt)).sort((a,b)=>(profile(a).order??499)-(profile(b).order??499)
+    return [...(currentCombined?.accounts||[])].filter(a=>includeHidden||(!profile(a).hidden&&!a.removedAt&&profile(a).syncEnabled!==false)).sort((a,b)=>(profile(a).order??499)-(profile(b).order??499)
       ||String(a.bank||'').localeCompare(String(b.bank||''))||String(a.name||'').localeCompare(String(b.name||'')));
   }
   function sessionOwner(jwt){
@@ -339,7 +339,7 @@
     }
   }
   function flattenTransactions(){
-    const accounts=new Map((currentCombined?.accounts||[]).filter(a=>!profile(a).hidden).map(a=>[a.key,a])),rows=[];
+    const accounts=new Map((currentCombined?.accounts||[]).filter(a=>!profile(a).hidden&&profile(a).syncEnabled!==false).map(a=>[a.key,a])),rows=[];
     const sourceAccounts=new Map((currentCombined?.accounts||[]).map(a=>[a.key,a]));
     // The confirmed primary prevents duplicate charges, while unique
     // secondary-bank records keep their original link for editing.
@@ -638,7 +638,7 @@
       const copy=el('div',undefined,row,'finance-overview-detail-copy');
       el('strong',kind==='creditCards'&&account?accountTitle(account):item.name,copy);
       el('small',[item.bank,item.balanceDate?syncLabel(item.balanceDate):'Balance update unknown',
-        item.provisional?'Provider observation only':null].filter(Boolean).join(' · '),copy);
+        item.provisional?'Balance may be delayed':null].filter(Boolean).join(' · '),copy);
       el('b',kind==='creditCards'?creditCardNetAmount(item.amount):amount(item.amount,'USD'),row);
       if(account)action(row,'View',()=>{dialog.close();openAccount(account)},'finance-page-button');
     }
@@ -1579,9 +1579,11 @@
     const dialog=el('dialog',undefined,document.body,'finance-page finance-modal'+(full?' finance-modal-full':''));
     dialog.setAttribute('aria-label',title);
     const head=el('div',undefined,dialog,'finance-page-section-head finance-modal-head');
-    el('h2',title,head);action(head,'Close',()=>dialog.close());
+    const tryClose=()=>{if(dialog.beforeFinanceClose?.()===false)return;dialog.close()};
+    el('h2',title,head);action(head,'Close',tryClose);
+    dialog.addEventListener('cancel',event=>{if(dialog.beforeFinanceClose?.()===false)event.preventDefault()});
     dialog.addEventListener('close',()=>{dialog.remove();if(previous?.isConnected)previous.focus()},{once:true});
-    dialog.addEventListener('click',event=>{if(event.target===dialog){const r=dialog.getBoundingClientRect();if(event.clientY<r.top||event.clientY>r.bottom||event.clientX<r.left||event.clientX>r.right)dialog.close()}});
+    dialog.addEventListener('click',event=>{if(event.target===dialog){const r=dialog.getBoundingClientRect();if(event.clientY<r.top||event.clientY>r.bottom||event.clientX<r.left||event.clientX>r.right)tryClose()}});
     dialog.showModal();return dialog;
   }
   function confirmFinance(message,options={}){
