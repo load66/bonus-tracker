@@ -6,9 +6,9 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
-- Source merged: frontend v3.4.95, main commit 5330ae2c7e416b333af30e5cb4caafd2729cf4a0
-- In progress: Release 2 v3.4.96 frontend implementation completed on PR #154; backend-first release pending
-- Next step: after backend Railway success, merge frontend PR #154, run main release and verify exact GitHub Pages assets and browser audit
+- Source: SimpleFIN add-bank frontend v3.4.97 ready for merge, PR #155
+- In progress: v3.4.97 GitHub Pages release verification
+- Next step: merge PR #155 after final checkpoint CI; verify main Pages exact assets and production three-browser audit; then start queued Finance Categories v2 #156
 
 ## Release 1 (v3.4.94)
 
@@ -40,3 +40,13 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 - Issue: P1 — Cross-provider ledger lacks pinned cents baseline
 - Test status: Backend 631 tests and build PASS (CI 39053785663); frontend four unit areas and Chromium/Firefox/WebKit PASS (CI 39053638068); final doc-only CI pending
 - Deployment: pending complete CI, merge, Railway and GitHub Pages verification
+
+## SimpleFIN v3.4.97 Add Bank release
+
+- Issue: https://github.com/load66/bonus-tracker/issues/153
+- Backend PR: https://github.com/load66/Trading-Journal-AI/pull/223
+- Backend Railway: SUCCESS exact merge commit 827cc014330e0fa612256855a8f0c8d5fc83df85
+- Frontend PR: https://github.com/load66/bonus-tracker/pull/155
+- Test status: Backend CI 39056471927 PASS; frontend four unit areas and Chromium/Firefox/WebKit PASS on 39057944836
+- Deployment status: Frontend pending main-branch Pages release and production asset/browser audit
+- Handoff: Active agent none after verified branch tests; queued next release is Finance Categories v2 issue #156

@@ -60,3 +60,16 @@
 .bank-sync-add-institution{padding:13px}
 .bank-sync-add-institution .bank-sync-links{margin-top:5px}
 @media(max-width:380px){.bank-connect-header,.bank-connect-stage{padding:11px}.bank-connect-flow .bank-connect-link{width:100%;margin:2px 0}}
+
+
+/* SimpleFIN add-bank: compact, touch-friendly draft monitoring choices. */
+.bank-sync-modal .bank-connect-account-option{
+  display:flex;align-items:center;gap:11px;padding:10px 12px;
+  border:1px solid #516f91;background:#12223b;border-radius:10px;
+  min-width:0;cursor:pointer;overflow-wrap:anywhere
+}
+.bank-sync-modal .bank-connect-account-option input[type="checkbox"]{
+  display:block;flex:0 0 21px;width:21px;min-width:21px;max-width:21px;
+  height:21px;min-height:21px;padding:0;margin:0;accent-color:#b7d6ff
+}
+.bank-sync-modal .bank-connect-account-option span{flex:1;min-width:0;line-height:1.45}

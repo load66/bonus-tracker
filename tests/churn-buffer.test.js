@@ -80,7 +80,7 @@ const index=fs.readFileSync('index.html','utf8');
 const sw=fs.readFileSync('sw.js','utf8');
 assert(workflow.includes('node tests/ci-units.cjs ${{ matrix.area }}')&&require('./ci-units.cjs').groups.bonus.includes('churn-buffer.test.js'),'Pages deploy is not gated by the churn-buffer regression test');
 assert(workflow.includes('needs: [plan, units, browsers]')&&require('./ci-units.cjs').groups.bonus.includes('eligibility-gate.test.js'),'Pages deploy is not gated by the eligibility evidence regression test');
-assert(index.includes('./churn-close-policy.js?v=3.4.96-accuracy1'),'Index does not force-refresh the evidence-gated churn policy');
+assert(index.includes('./churn-close-policy.js?v=3.4.97-simplefin1'),'Index does not force-refresh the evidence-gated churn policy');
 assert(index.includes('./eligibility-gate.js?v=3.4.74'),'Index does not load the churn evidence validator');
 const swVersion=sw.match(/^const V = 'bt-v([^']+)';/m)?.[1];
 assert(swVersion&&index.includes('./sw.js?v='+swVersion),'Index does not force-refresh the evidence-gated service worker');

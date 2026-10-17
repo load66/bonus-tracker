@@ -132,6 +132,12 @@ const base=()=>({
       for(const width of [320,375,390,430]){
         assert.equal(await page.locator('#v31_profile_btn,#v32_inbox_btn,#v31_overlay,#v32_overlay').count(),0,'Retired floating add-ons visible at '+width+'px');
         await page.setViewportSize({width,height:844});
+        // Responsive navigation can be replaced during a viewport redraw.
+        // Require a connected, styled bar before measuring its six grid slots.
+        await page.waitForFunction(()=>{
+          const tabs=document.querySelector('.tabs');
+          return tabs?.isConnected&&getComputedStyle(tabs).display==='grid';
+        },null,{timeout:12000});
         const geometry=await page.locator('.tabs').evaluate(tabs=>{
           const bar=tabs.getBoundingClientRect();
           const buttons=[...tabs.querySelectorAll(':scope > .tb')];
@@ -373,7 +379,7 @@ const base=()=>({
       const wizard=page.getByRole('dialog',{name:'Financial accounts'});
       await wizard.getByText('SECURE BANK CONNECTION',{exact:true}).waitFor();
       assert.equal(await wizard.locator('input[type=password],input[type=tel]').count(),0);
-      assert.equal(await wizard.getByRole('link',{name:'Open SimpleFIN'}).getAttribute('rel'),'noopener noreferrer');
+      assert.equal(await wizard.getByRole('button',{name:'Open SimpleFIN ↗'}).count(),1,'Connected SimpleFIN opens Bridge through an explicit no-opener button');
       await wizard.getByRole('button',{name:'Back to connected accounts'}).click();await wizard.getByRole('button',{name:'Done',exact:true}).click();
       await section.getByRole('button',{name:'Robinhood Credit Card ··4010',exact:true}).click();
       modal=page.getByRole('dialog',{name:'Robinhood Credit Card ··4010',exact:true});

@@ -12,18 +12,41 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
  await fs.mkdir(output,{recursive:true});await new Promise(r=>server.listen(0,'127.0.0.1',r));
  try{for(const [name,engine]of require('./browser-select.cjs')({chromium,firefox,webkit})){
   const browser=await engine.launch();try{
-   const context=await browser.newContext({serviceWorkers:'block',viewport:{width:390,height:844},timezoneId:'America/Chicago'});const page=await context.newPage();let state=seed(),requests=[],errors=[];page.on('pageerror',e=>errors.push(e.message));
+   const context=await browser.newContext({serviceWorkers:'block',viewport:{width:390,height:844},timezoneId:'America/Chicago'});const page=await context.newPage();let state=seed(),requests=[],errors=[],discoveryMode='found',saveFailure=false;page.on('pageerror',e=>errors.push(e.message));
    // During production smoke, NEVER send synthetic session headers to any live API.
       if(process.env.BT_BROWSER_SITE_URL)await page.route('https://api-production-00f74.up.railway.app/**',route=>route.abort());
       await page.route('https://api-production-00f74.up.railway.app/api/bonus-tracker/simplefin**',async route=>{
     const req=route.request(),url=new URL(req.url()),method=req.method();requests.push({method,path:url.pathname,body:req.postData()});
+    if(url.pathname.endsWith('/discover-now')){
+      if(discoveryMode==='budget'){
+        await route.fulfill({status:429,contentType:'application/json',body:JSON.stringify({detail:'Daily limit reached; updates resume at 1792220400.'})});
+        return;
+      }
+      const other={key:(discoveryMode==='found_second'?'c':'b').repeat(64),name:'Savings <script>unsafe</script>',bank:'Newly Added CU',currency:'USD',balance:'100',balanceDate:1792134000,discovered:true};
+      if(['found','found_second'].includes(discoveryMode)&&!state.accounts.some(a=>a.key===other.key))state.accounts.push(other);
+      const found=['found','found_second'].includes(discoveryMode);
+      await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({...state,found,
+        newAccounts:found?1:0,bank:found?'Newly Added CU':'',
+        discoveredAccounts:found?[other]:[],nextRetryAt:1792134090,budgetRemaining:found?23:22})});
+      return;
+    }
+    if(url.pathname.endsWith('/first-sync')){
+      const accounts=req.postDataJSON().accounts;
+      await route.fulfill({status:200,contentType:'application/json',
+        body:JSON.stringify({...state,syncStatus:accounts.length?'synced':'not_enabled',budgetRemaining:22})});
+      return;
+    }
     if(url.pathname.endsWith('/discover')){
       const other={key:'b'.repeat(64),name:'Savings',bank:'Newly Added CU',currency:'USD',balance:'100',balanceDate:1792134000};
       if(!state.accounts.some(a=>a.key===other.key))state.accounts.push(other);
       state.monitoredAccounts=state.accounts.map(a=>a.key);
     }
     if(url.pathname.endsWith('/selection')){state.mappings=req.postDataJSON().mappings;}
-    if(url.pathname.endsWith('/monitoring')){state.monitoredAccounts=req.postDataJSON().accounts;if(!state.monitoredAccounts.length&&!Object.keys(state.mappings).length)state.transactions={};}
+    if(url.pathname.endsWith('/monitoring')){
+      if(saveFailure){await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({detail:'Mock save unavailable'})});return;}
+      state.monitoredAccounts=req.postDataJSON().accounts;
+      if(!state.monitoredAccounts.length&&!Object.keys(state.mappings).length)state.transactions={};
+    }
     if(url.pathname.endsWith('/sync')){state.transactions[account.key]={t1:{id:'t1',posted:1792133900,amount:'200',description:'Promotional Bonus <script>alert(1)</script>',kind:'possible_bonus',observedAt:1792134000},t2:{id:'t2',posted:1792133800,amount:'-20',description:'Coffee',kind:'withdrawal',observedAt:1792134000},t3:{id:'t3',posted:1792133700,amount:'40',description:'Transfer from savings',kind:'other_deposit',observedAt:1792134000}};}
     if(method==='DELETE')state={configured:true,connected:false,evidenceOnly:true};
     if(url.pathname.endsWith('/reconnect')){state.status='connected';delete state.error;state.nextSyncAt=0;}
@@ -103,35 +126,89 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    assert.equal(requests.some(r=>r.path.endsWith('/discover')),false,'Add bank provider link must not silently sync data or alter accounts');
    await dialog.getByRole('button',{name:'Add bank',exact:true}).click();
    await dialog.getByText('SECURE BANK CONNECTION',{exact:true}).waitFor();
-   const fallback=dialog.locator('details.bank-connect-fallback');
-   await fallback.locator('summary').click();
-   await fallback.getByText('Trial capacity not verified').waitFor();
-   await fallback.getByText('Plaid linking is locked until the free Trial plan', {exact:false}).waitFor();
-   assert.equal(await fallback.getByRole('button',{name:'Connect with Plaid (last fallback)'}).count(),0,
-     'No link control when backend quota or monitoring is unverified');
+   assert.equal(await dialog.locator('details.bank-connect-fallback').count(),0,
+     'Adding a SimpleFIN institution must not offer Plaid or consume a Trial Item');
    assert.deepEqual(plaidCalls.filter(c=>c.includes('link-token')),[],
-     'Opening Add Bank must never consume a Plaid Trial Item');
-   const firstExternal=dialog.getByRole('link',{name:'Open SimpleFIN'});
-   assert.equal(await firstExternal.getAttribute('href'),'https://beta-bridge.simplefin.org/');
-   assert.equal(await firstExternal.getAttribute('target'),'_blank');
-   assert.equal(await firstExternal.getAttribute('rel'),'noopener noreferrer');
-   assert.equal(await dialog.locator('input[type=password]').count(),0,'provider credentials are never gathered inside the bank wizard');
-   assert.equal(await dialog.locator('input[type=tel]').count(),0,'bank verification codes are never gathered inside the bank wizard');
-   await dialog.getByRole('button',{name:'Discover accounts',exact:true}).click();
-   await dialog.getByText('Found 1 new account.',{exact:true}).waitFor();
-   assert.equal(state.accounts.length,2,'guided discovery adds newly authorized accounts');
-   await dialog.getByRole('button',{name:'Review account settings'}).click();
-   await dialog.locator('h4').getByText('Newly Added CU · Savings',{exact:true}).first().waitFor();
-   assert.equal(requests.filter(r=>r.path.endsWith('/discover')).length,1,'guided add-bank discovery requires a deliberate click');
-   await dialog.getByRole('button',{name:'Discover accounts',exact:true}).click();
-   await dialog.locator('h4').getByText('Newly Added CU · Savings',{exact:true}).first().waitFor();
-   assert.equal(state.accounts.length,2,'new provider accounts must appear without replacing the existing connection');
-   assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened,productId:'checking'},'account discovery preserves the original verified product association');
-   assert.deepEqual(new Set(state.monitoredAccounts),new Set([account.key,'b'.repeat(64)]),'New accounts must be monitored automatically');
-   assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'adding bank preserves tracker history');
-   assert.equal(requests.filter(r=>r.path.endsWith('/discover')).length,2,'manual refresh is still an explicit separate request');
+     'Adding through SimpleFIN must not consume a Plaid Trial Item');
+   assert.equal(await dialog.locator('input[type=password]').count(),0);
+   assert.equal(await dialog.locator('input[type=tel]').count(),0);
+   assert.equal(await dialog.getByText('1 · Sign in to SimpleFIN').count(),1);
+   assert.equal(await dialog.getByText('2 · Add your bank').count(),1);
+   assert.equal(await dialog.getByText('3 · Come back to this app').count(),1);
+   await page.evaluate(()=>{window.open=(url,target,features)=>{
+     window.__openedBankLink={url,target,features};return null;
+   }});
+   await dialog.getByRole('button',{name:'Open SimpleFIN ↗'}).click();
+   const openedBridgeInfo=await page.evaluate(()=>window.__openedBankLink);
+   assert.deepEqual(openedBridgeInfo,{url:'https://bridge.simplefin.org/',target:'_blank',features:'noopener'});
+   await page.evaluate(()=>{
+     window.dispatchEvent(new Event('blur'));
+     window.dispatchEvent(new Event('focus'));
+     document.dispatchEvent(new Event('visibilitychange'));
+   });
+   await dialog.getByText('Found Newly Added CU · 1 account').waitFor();
+   assert.equal(requests.filter(r=>r.path.endsWith('/discover-now')).length,1,
+     'Blur, focus and visibilitychange count as exactly one return-to-app discovery');
+   assert.equal(await dialog.locator('script').count(),0,'Bank provider names must remain escaped');
+   const newToggle=dialog.locator('.bank-connect-account-option input');
+   assert.equal(await newToggle.isChecked(),true,'Newly discovered draft Sync toggles start ON');
+   assert.equal(state.monitoredAccounts.includes('b'.repeat(64)),false,
+     'Discovery cannot silently enable monitoring before Save');
+   await dialog.getByRole('button',{name:'Save',exact:true}).click();
+   await dialog.getByText('First transactions synced.').waitFor();
+   assert.equal(requests.filter(r=>r.path.endsWith('/first-sync')).length,1,
+     'Exactly one first transaction request is made after explicit Save');
+   assert.deepEqual(new Set(state.monitoredAccounts),new Set([account.key,'b'.repeat(64)]));
+   assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened,productId:'checking'});
+   assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before);
+   await dialog.getByRole('button',{name:'Back to connected accounts'}).click();
+   await dialog.locator('h4').getByText(/Newly Added CU · Savings/).first().waitFor();
+   // A later add-bank attempt may find nothing. Manual re-check is one request;
+   // quota exhaustion ends polling immediately rather than spending more calls.
+   discoveryMode='not_found';
+   await dialog.getByRole('button',{name:'Add bank',exact:true}).click();
+   await dialog.getByRole('button',{name:'Open SimpleFIN ↗'}).click();
+   await page.evaluate(()=>{window.dispatchEvent(new Event('blur'));window.dispatchEvent(new Event('focus'))});
+   await dialog.getByText('SimpleFIN is still connecting your bank — we’ll check again.').waitFor();
+   const beforeManual=requests.filter(r=>r.path.endsWith('/discover-now')).length;
+   await dialog.getByRole('button',{name:'Check again'}).click();
+   await dialog.getByText('SimpleFIN is still connecting your bank — we’ll check again.').waitFor();
+   assert.equal(requests.filter(r=>r.path.endsWith('/discover-now')).length,beforeManual+1);
+   discoveryMode='budget';
+   await dialog.getByRole('button',{name:'Check again'}).click();
+   await dialog.getByText('Daily limit reached. Updates resume at', {exact:false}).waitFor();
+   const stopped=requests.filter(r=>r.path.endsWith('/discover-now')).length;
+   await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+   await page.waitForTimeout(350);
+   assert.equal(requests.filter(r=>r.path.endsWith('/discover-now')).length,stopped,
+     '429 stops every return-to-app follow-up until another flow begins');
+   await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
+   assert.equal(requests.filter(r=>r.path.endsWith('/first-sync')).length,1,
+     'Cancel must not start a transaction sync');
+   assert.deepEqual(new Set(state.monitoredAccounts),new Set([account.key,'b'.repeat(64)]));
+
+   // Failed Save must leave the selected draft visible, unchanged in storage,
+   // with no false success banner; retrying Save is deliberate.
+   discoveryMode='found_second';
+   await dialog.getByRole('button',{name:'Add bank',exact:true}).click();
+   await dialog.getByRole('button',{name:'Open SimpleFIN ↗'}).click();
+   await page.evaluate(()=>{window.dispatchEvent(new Event('blur'));window.dispatchEvent(new Event('focus'))});
+   await dialog.locator('.bank-connect-account-option input').waitFor();
+   const draft=dialog.locator('.bank-connect-account-option input');
+   assert.equal(await draft.isChecked(),true);
+   saveFailure=true;
+   await dialog.getByRole('button',{name:'Save',exact:true}).click();
+   await dialog.getByText('Save not confirmed: Mock save unavailable').waitFor();
+   assert.equal(await draft.isChecked(),true);
+   assert.equal(state.monitoredAccounts.includes('c'.repeat(64)),false);
+   saveFailure=false;
+   await dialog.getByRole('button',{name:'Save',exact:true}).click();
+   await dialog.getByText('First transactions synced.').waitFor();
+   assert.equal(state.monitoredAccounts.includes('c'.repeat(64)),true);
+   assert.equal(requests.filter(r=>r.path.endsWith('/first-sync')).length,2);
+   await dialog.getByRole('button',{name:'Back to connected accounts'}).click();
    assert.equal(await dialog.locator('script').count(),0);
-   for(const width of [320,390,430]){
+   for(const width of [320,375,390,430]){
     await page.setViewportSize({width,height:760});await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     const geometry=await dialog.evaluate(d=>{const m=d.querySelector('.bank-sync-modal'),b=d.querySelector('.bank-sync-body');return {modalWidth:m.getBoundingClientRect().width,scrollWidth:b.scrollWidth,clientWidth:b.clientWidth,footerBottom:d.querySelector('footer').getBoundingClientRect().bottom,width:innerWidth,height:innerHeight,overflow:[...b.querySelectorAll('*')].filter(e=>e.getBoundingClientRect().right>b.getBoundingClientRect().right+1).slice(0,8).map(e=>({tag:e.tagName,cls:e.className,width:e.getBoundingClientRect().width,right:e.getBoundingClientRect().right,text:e.textContent.slice(0,90)}))};});
     await page.screenshot({path:path.join(output,name+'-simplefin-'+width+'.png')});
@@ -146,7 +223,7 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    await dialog.getByRole('button',{name:'Reconnect securely',exact:true}).click();
    await dialog.getByText('Connection active',{exact:true}).waitFor();
    assert.deepEqual(state.mappings[account.key],{entryId:cycleId,bank:entry.bank,opened,productId:'checking'},'reconnect retains verified product association');
-   assert.deepEqual(new Set(state.monitoredAccounts),new Set([account.key,'b'.repeat(64)]),'reconnect retains automatic monitoring for both banks');
+   assert.deepEqual(new Set(state.monitoredAccounts),new Set([account.key,'b'.repeat(64),'c'.repeat(64)]),'reconnect retains saved monitoring for all three linked accounts');
    assert.ok(requests.some(r=>r.path.endsWith('/reconnect')&&JSON.parse(r.body).setup_token==='synthetic-replacement-token'));
    assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('synthetic-replacement-token')),false);
    assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before);
@@ -155,7 +232,7 @@ const seed=()=>({configured:true,connected:true,evidenceOnly:true,status:'connec
    await page.getByRole('button',{name:'Guided secure bank connection'}).click();
    await page.getByText('Connect your first bank',{exact:true}).waitFor();
    const firstBankLink=page.getByRole('link',{name:'Open SimpleFIN'});
-   assert.equal(await firstBankLink.getAttribute('href'),'https://beta-bridge.simplefin.org/');
+   assert.equal(await firstBankLink.getAttribute('href'),'https://bridge.simplefin.org/');
    assert.equal(await firstBankLink.getAttribute('target'),'_blank');
    const tokenLink=page.getByRole('link',{name:'Get my SimpleFIN setup token'});
    assert.equal(await tokenLink.getAttribute('href'),'https://bridge.simplefin.org/simplefin/create');
