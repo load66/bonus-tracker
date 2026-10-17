@@ -195,7 +195,7 @@ const base=()=>({
       assert.equal(await section.locator('.finance-overview-account-card').count(),1);
       await investmentCard.click();
       const investments=page.getByRole('dialog',{name:'Investments accounts'});
-      for(const label of ['Invested this month','Withdrawn this month','Market change','Investment income'])
+      for(const label of ['Invested this month','Withdrawn this month','Market change','Investment income','Since last update · balance movement'])
         assert.ok(await investments.getByText(label,{exact:true}).count());
       assert.ok((await investments.innerText()).includes('complete period balance'));
       await investments.getByRole('button',{name:'Close'}).click();
