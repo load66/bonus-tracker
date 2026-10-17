@@ -307,3 +307,31 @@ not verify actual bank connectivity or production categorization accuracy.
   both repositories and an explicit expectation explanation.
 - No real bank calls, bulk categorization or account data mutations occur in
   these tests; existing category and transfer review precedence remains intact.
+
+## Finance v3.4.98 — product-aware Cash versus Investments
+
+- **Cash** includes supported checking, savings and genuinely spendable
+  deposit-account balances. A retirement savings **plan** is not a cash
+  account simply because its name contains the word "savings".
+- **Investments** includes brokerage accounts and retirement products
+  such as 401(k), 403(b), 457(b), IRA, pension and thrift savings plans.
+  Provider retirement metadata and clear retirement product descriptions
+  outrank generic `savings`, `cash` or `individual` account descriptors.
+- Explicit account product labels and types take precedence over guessing
+  from the institution's name. For example, a checking or savings deposit
+  held at a brokerage remains Cash; a managed portfolio at that brokerage
+  remains Investments. Where evidence is inadequate, mark the account
+  unclassified for review rather than invent a product.
+- Source bank balances and linked transaction history are never rekeyed,
+  deleted or rewritten. The automatically inferred account group is
+  recalculated on each read. Owner-saved account kind and balance
+  inclusion/exclusion remain authoritative.
+- Cash, Investments and Net Worth share the same included provider balances
+  and exact-cent arithmetic. Moving a misidentified automatic account
+  between Cash and Investments must not change its underlying value or
+  inflate total Net Worth.
+- The unified Finance classifier asset is cache-busted with each release,
+  including when the core's previous asset URL lagged behind the app version.
+- Synthetic regression cases cover conflicting source type/subtype,
+  retirement savings plans, brokerage cash, genuine deposits, opaque
+  accounts, explicit owner overrides and both SimpleFIN/Plaid projections.
