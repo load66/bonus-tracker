@@ -34,5 +34,5 @@ assert.equal(I.recurring(yearly,NOW)[0].frequency,'yearly');
 const missed=I.recurring(monthly,new Date(2027,3,1).getTime());
 assert.equal(missed[0].status,'possibly_canceled');
 assert.equal(I.recurring([row(new Date(2026,9,1).getTime(),'-90','transfer')],NOW).length,0);
-assert.equal(I.upcoming(recurring,NOW).length,1);
+assert.equal(I.upcoming(recurring,new Date(2026,9,25).getTime()).length,1);
 console.log('Finance insights passed: spending exclusions, month navigation, monthly, biweekly, yearly, price increases and missed bills.');
