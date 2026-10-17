@@ -104,7 +104,8 @@
     const mappings=state.mappings&&typeof state.mappings==='object'?state.mappings:{};
     const profiles=state.accountProfiles&&typeof state.accountProfiles==='object'?state.accountProfiles:{};
     const selected=new Set([...monitored,...Object.keys(mappings)]);
-    const usd=accounts.filter(a=>a&&a.currency==='USD'&&selected.has(a.key));
+    const usd=accounts.filter(a=>a&&a.currency==='USD'&&selected.has(a.key)&&
+      !['brokerage','retirement'].includes(profiles[a.key]?.kind||a.kind||a.detectedType));
     const history=state.transactions&&typeof state.transactions==='object'?state.transactions:{};
     const cutoff=now-days*DAY;
     let credits=0n,debits=0n,observations=0,candidates=0,reversals=0,unusable=0,pending=0;
