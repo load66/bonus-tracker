@@ -192,9 +192,30 @@
         transferRows.push({account:key,row,value});
       }
     }
+    const transferSignals=new Set(['matched_internal_transfer','possible_transfer','card_payment','investment_transfer']);
+    const isPayroll=row=>(row.signals||[]).includes('possible_direct_deposit')||
+      /\b(?:schreiber(?:\s+foods)?|payroll|paycheck|salary|wages?|employer\s+direct\s+deposit)\b/i
+        .test([row.merchant,row.description].filter(Boolean).join(' '));
+    const transferEvidence=row=>row.category==='transfer'||
+      ['card_payment','investment_contribution'].includes(row.kind)||
+      (row.signals||[]).some(signal=>transferSignals.has(signal))||
+      Transfer?.effective(row)?.category==='transfer';
+    // A bank may label an incoming credit-card payment only "Payment". When
+    // its opposite is uniquely present in another account, it is one movement,
+    // not new income. Never infer a match for payroll, bonuses or refunds.
+    const genericPayment=row=>/^(?:payment|payment received|received payment|card payment|credit card payment|autopay|epay|pmt|pymt)$/i
+      .test(String(row.merchant||row.description||'').trim())||
+      /^(?:payment|payment received|received payment|card payment|credit card payment)$/i
+        .test(String(row.description||'').trim());
     const matches=transferRows.map((left,i)=>transferRows.flatMap((right,j)=>{
       if(i===j||left.account===right.account||left.value!==-right.value||
-         Math.abs(left.row.posted-right.row.posted)>3*86400)return [];
+         Math.abs(left.row.posted-right.row.posted)>3*86400||
+         isPayroll(left.row)||isPayroll(right.row)||
+         [left.row,right.row].some(row=>['bonus','refund','verification'].includes(row.category)))return [];
+      const credit=left.value>0n?left:right,debit=left.value<0n?left:right;
+      const creditIsCard=unified.accountProfiles?.[credit.account]?.kind==='credit_card';
+      if(!transferEvidence(left.row)&&!transferEvidence(right.row)&&
+         !(creditIsCard&&genericPayment(credit.row)))return [];
       return [j];
     }));
     for(let i=0;i<matches.length;i++){
