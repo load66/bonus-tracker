@@ -95,10 +95,15 @@
       const saved=sourceSnapshot(account.source)?.accountProfiles?.[account.rawKey]||{};
       accountDraftProfiles[account.key]={
         kind:saved.kind&&saved.kind!=='unclassified'?saved.kind:(account.detectedType||'unclassified'),
-        balanceMode:saved.balanceMode||({
-          checking:'asset',savings:'asset',brokerage:'asset',retirement:'asset',
-          other_asset:'asset',credit_card:'liability',loan:'liability',mortgage:'liability',
-          other_liability:'liability'})[saved.kind||account.detectedType]||'exclude',
+        balanceMode:(saved.kind&&saved.kind!=='unclassified')
+          ?saved.balanceMode||({
+              checking:'asset',savings:'asset',brokerage:'asset',retirement:'asset',
+              other_asset:'asset',credit_card:'liability',loan:'liability',mortgage:'liability',
+              other_liability:'liability'})[saved.kind]||'exclude'
+          :({
+              checking:'asset',savings:'asset',brokerage:'asset',retirement:'asset',
+              other_asset:'asset',credit_card:'liability',loan:'liability',mortgage:'liability',
+              other_liability:'liability'})[account.detectedType]||saved.balanceMode||'exclude',
         order:Number.isInteger(saved.order)?saved.order:499,hidden:saved.hidden===true,displayName:saved.displayName||'',
         syncEnabled:saved.syncEnabled!==false,includeSpending:saved.includeSpending??['checking','credit_card'].includes(saved.kind||account.detectedType)
       };
