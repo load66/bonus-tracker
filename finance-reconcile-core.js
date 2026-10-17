@@ -84,7 +84,8 @@
         const result=reconcile({...account,kind:p.kind||account.kind},
           histories[account.key],transactions[account.key],
           {historyComplete:account.source==='plaid'?account.historyComplete===true:
-            options.simplefinHistoryComplete===true,
+            (options.simplefinHistoryComplete!==false && !!transactions[account.key] &&
+             !state.incompleteProviders && !state.historyIncomplete),
            historyLoading:account.transactionSyncStatus==='history_still_loading'||
              account.transactionSyncStatus==='needs_attention'||state.historyIncomplete===true});
         return {key:account.key,kind:p.kind||account.kind||'unclassified',...result};
