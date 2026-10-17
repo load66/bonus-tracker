@@ -362,10 +362,15 @@ const base=()=>({
       const preservedBonus=section.locator('.finance-page-transaction').filter({hasText:'X Money Bonus'});
       assert.ok((await preservedBonus.innerText()).includes('Needs review'),
         'Finance must not claim unverified promotional credits are income');
-      await preservedBonus.getByRole('button',{name:/X Money Bonus/}).click();
-      assert.equal(await section.getByLabel('Category for X Money Bonus').inputValue(),'unreviewed',
+      // Transaction expansion intentionally survives Finance section switches.
+      // Clicking a previously open row would CLOSE it, so normalize to open.
+      const bonusToggle=preservedBonus.getByRole('button',{name:/X Money Bonus/});
+      if(await bonusToggle.getAttribute('aria-expanded')!=='true')await bonusToggle.click();
+      const bonusCategory=section.getByLabel('Category for X Money Bonus');
+      await bonusCategory.waitFor({state:'visible'});
+      assert.equal(await bonusCategory.inputValue(),'unreviewed',
         'An unconfirmed promotional credit must not preselect Income in the editor');
-      await preservedBonus.getByRole('button',{name:/X Money Bonus/}).click();
+      if(await bonusToggle.getAttribute('aria-expanded')==='true')await bonusToggle.click();
       assert.equal(plaidState.transactions[A]['plaid-income'].category,'bonus',
         'Finance presentation must not rewrite canonical bonus category data');
       await section.getByRole('button',{name:/^Show 100 more transactions/}).waitFor();
