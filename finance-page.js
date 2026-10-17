@@ -759,7 +759,6 @@
       }
     }
     const actualCategory=row=>I.spendingCategory(row,I.cents(row.amount));
-    const possibleTransfers=rows.filter(row=>inMonth(row)&&I.possibleTransfer(row));
     function confirmTransfers(parent){
       if(!possibleTransfers.length||spendingMode==='income')return;
       const panel=card(parent,'Confirm transfers',possibleTransfers.length+' financial-looking movement'+(possibleTransfers.length===1?'':'s')+' excluded pending your review');
@@ -788,6 +787,7 @@
       if(possibleTransfers.length>30)el('small','Showing first 30; review more after saving these.',panel,'finance-page-hint');
     }
     const inMonth=row=>I.monthKey(row.posted*1000)===spendingMonth;
+    const possibleTransfers=rows.filter(row=>inMonth(row)&&I.possibleTransfer(row));
     const matchingRows=cat=>rows.filter(row=>inMonth(row)&&actualCategory(row)===cat);
     function categoriesList(parent){
       const chart=card(parent,'Category breakdown');
