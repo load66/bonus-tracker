@@ -161,7 +161,15 @@
     // secondary-provider rows remain visible with their original source keys.
     // Fingerprints require same amount, same local day, and normalized bank text.
     const Transfer=typeof window!=='undefined'?window.BTFinanceTransfer:typeof require==='function'?require('./finance-transfer-core.js'):null;
-    const transactions=Object.fromEntries(Object.entries(keep(unified.transactions)).map(([k,v])=>[k,Object.fromEntries(Object.entries(v).map(([id,row])=>[id,Transfer?Transfer.effective(row):{...row,signals:[...(row.signals||[])]}]))]));
+    const banks=new Map(unified.accounts.map(account=>[account.key,account.bank||'']));
+    // Provider rows do not carry their account's bank. Add it to the read-only
+    // unified projection so a generic Plaid "Payment" at X Money can be held
+    // neutral while SimpleFIN's opposite leg arrives on a later sync.
+    const transactions=Object.fromEntries(Object.entries(keep(unified.transactions)).map(([k,v])=>
+      [k,Object.fromEntries(Object.entries(v).map(([id,row])=>{
+        const enriched={...row,bank:banks.get(k)||'',signals:[...(row.signals||[])]};
+        return [id,Transfer?Transfer.effective(enriched):enriched];
+      }))]));
     for(const [other,primary] of secondary){
       if(!allowed.has(primary))continue;
       const target=transactions[primary]||{};
@@ -176,9 +184,10 @@
       }
       transactions[primary]=target;
     }
-    // Reconcile unique, reciprocal account movements without mutating provider
-    // evidence. Pair each debit to exactly one credit in another linked account,
-    // within three days, for a round-dollar amount. Preserve user corrections.
+    // Rebuild cross-provider pairings on every projection. Plaid and SimpleFIN
+    // may arrive days apart; no extra sync, persistent provider mutation, or
+    // assumption based on a merchant name is needed. Match each direction
+    // uniquely by exact cents and at most three days. Preserve manual reviews.
     const transferRows=[];
     const toCents=value=>{
       const m=/^([+-]?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(value??'').trim());
@@ -189,8 +198,13 @@
     for(const [key,rows] of Object.entries(transactions)){
       for(const row of Object.values(rows)){
         const value=toCents(row.amount);
+        const description=[row.merchant,row.description].filter(Boolean).join(' ');
+        const payroll=/\b(?:schreiber(?:\s+foods)?|payroll|paycheck|salary|wages?|employer\s+direct\s+deposit)\b/i.test(description);
         if(row.pending||value===null||value===0n||
-          !Number.isFinite(row.posted)||['user','user_rule'].includes(row.categorySource))continue;
+          !Number.isFinite(row.posted)||['user','user_rule'].includes(row.categorySource)||
+          ['bonus','refund','verification'].includes(row.category)||
+          (row.signals||[]).some(x=>['paycheck','possible_direct_deposit','possible_bonus','possible_refund'].includes(x))||
+          payroll)continue;
         transferRows.push({account:key,row,value});
       }
     }

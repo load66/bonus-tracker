@@ -36,7 +36,7 @@
     // Await a unique opposite-bank leg, or let the user confirm a transfer.
     const bank=String(row.account?.bank||row.bank||'');
     if(value>0n&&/^payment(?:\s+received)?$/i.test(text)&&
-       /\b(?:x\s*money|bank|fcu|credit\s*union|robinhood|one\s*pay|onepay)\b/i.test(bank))
+       /\b(?:x\s*money|bank|fcu|credit\s*union|robinhood|one\s*pay|onepay|checking|savings)\b/i.test(bank))
       return {category:'unreviewed',signal:'possible_transfer'};
     const direction=fromTo.exec(text);
     if(direction&&destination.test(direction[1]))
@@ -44,8 +44,10 @@
     if(value<0n&&bareIssuer.test(text))return {category:'transfer',signal:'card_payment'};
     if(issuer.test(text)&&payment.test(text))return {category:'transfer',signal:'card_payment'};
     if(investor.test(text)&&investAction.test(text))return {category:'transfer',signal:'investment_transfer'};
-    if(row.category==='transfer')return {category:'transfer',signal:'transfer'};
+    // 'possible_transfer' from a provider is not a confirmed transfer.
+    // A generic Payment can be provisionally categorized as Income upstream.
     if((row.signals||[]).includes('possible_transfer'))return {category:'unreviewed',signal:'possible_transfer'};
+    if(row.category==='transfer')return {category:'transfer',signal:'transfer'};
     if(value<0n&&(value%100n===0n||-value>=100000n)&&
        (direction||destination.test(text)))return {category:'unreviewed',signal:'possible_transfer'};
     if(value<0n){
