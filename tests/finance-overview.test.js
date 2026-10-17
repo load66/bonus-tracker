@@ -102,6 +102,17 @@ classified.transactions.cash.review.confidence='confirmed';
 result=summarize(classified,{now:NOW});
 assert.equal(result.expenses,'120.00');
 assert.equal(result.savingsRate,88);
+classified.transactions.cash.review.categorySource='user_rule';
+result=summarize(classified,{now:NOW});
+assert.equal(result.complete,true,'merchant rules learned from user corrections count as reviewed');
+assert.equal(result.unreviewed,0,'a confirmed user rule must not be mislabeled as unreviewed');
+classified.transactions.cash.review.categorySource='ai';
+classified.transactions.cash.review.confidence='medium';
+result=summarize(classified,{now:NOW});
+assert.equal(result.complete,false,'an unconfirmed AI suggestion never certifies complete spending');
+classified.transactions.cash.review.categorySource='user';
+classified.transactions.cash.review.confidence='confirmed';
+
 classified.monitoredAccounts.push('card');
 delete classified.transactions.cash.review;
 result=summarize(classified,{now:NOW});
