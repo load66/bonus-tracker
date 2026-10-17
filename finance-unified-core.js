@@ -91,7 +91,8 @@
             ?(saved.balanceMode||DEFAULT_TREATMENT[kind]||'exclude')
             :(DEFAULT_TREATMENT[kind]||saved.balanceMode||'exclude'),
           order:Number.isInteger(saved.order)?saved.order:499,hidden:saved.hidden===true,
-          removed:!!account.removedAt,includeSpending:saved.includeSpending??['checking','savings','credit_card'].includes(kind)};
+          removed:!!account.removedAt,syncEnabled:saved.syncEnabled!==false,
+          includeSpending:saved.includeSpending??['checking','savings','credit_card'].includes(kind)};
         if((state.monitoredAccounts||[]).includes(account.key))monitoredAccounts.push(composite);
         if(state.mappings?.[account.key])mappings[composite]=state.mappings[account.key];
         if(state.evidenceReviews?.[account.key])evidenceReviews[composite]=state.evidenceReviews[account.key];
@@ -151,7 +152,8 @@
     }
     // Omitting ambiguous accounts is explicit: consumers must disclose this
     // and must not use the result to claim a complete total/net worth.
-    const hidden=new Set(unified.accounts.filter(a=>unified.accountProfiles?.[a.key]?.hidden).map(a=>a.key));
+    const hidden=new Set(unified.accounts.filter(a=>unified.accountProfiles?.[a.key]?.hidden||
+      unified.accountProfiles?.[a.key]?.syncEnabled===false||a.removedAt).map(a=>a.key));
     const accounts=unified.accounts.filter(a=>!duplicates.has(a.key)&&!secondary.has(a.key)&&!hidden.has(a.key));
     const allowed=new Set(accounts.map(a=>a.key));
     const keep=obj=>Object.fromEntries(Object.entries(obj||{}).filter(([k])=>allowed.has(k)));
@@ -230,7 +232,9 @@
       historyIncomplete:accounts.some(a=>a.source==='plaid'&&(
         a.historyComplete===false||
         ['history_still_loading','awaiting_first_sync','awaiting_provider_data','needs_attention'].includes(a.transactionSyncStatus))),
-      excludedForReview:duplicates.size,hiddenAccounts:hidden.size,confirmedDuplicates:secondary.size};
+      excludedForReview:duplicates.size,hiddenAccounts:hidden.size,
+      notSyncingAccounts:unified.accounts.filter(a=>unified.accountProfiles?.[a.key]?.syncEnabled===false).length,
+      confirmedDuplicates:secondary.size};
   }
   return Object.freeze({combine,safeForSummary,detectedType,key});
 });
