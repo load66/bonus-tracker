@@ -683,6 +683,8 @@
     eye.append(icon);
     el('strong',summary.netWorthNeedsReview?'Needs review':summary.netWorthAvailable?amount(summary.netWorth,'USD'):'—',
       heroCard,'finance-overview-worth-number');
+    if(summary.netWorthPartial)el('small','Partial · some balances need a check',heroCard,'finance-page-coverage-label');
+    if(summary.oldestIncludedSync)el('small','As of '+stamp(summary.oldestIncludedSync),heroCard,'finance-page-coverage-label');
     const history=summary.netWorthHistory||[],cutoff=Date.now()/1000-30*86400,
       baseline=history.filter(x=>x.at<=cutoff).at(-1);
     if(!hidden&&baseline&&summary.netWorthAvailable){
@@ -1134,6 +1136,9 @@
     el('span',spendingMode==='income'?'Received':'Spent',values);
     const shown=spendingMode==='income'?current.income:current.total;
     el('strong',activeFinanceViolations.some(code=>/^(?:SPENDING_|CLASSIFICATION_|DUPLICATE_|INVALID_|TRANSFER_PAIR_)/.test(code))?'Needs review':moneyText(shown),values);
+    if(activeFinanceViolations.length||!currentCombined||
+       window.BTFinanceReconcile?.reconcileAll(window.BTFinanceUnified.safeForSummary(currentCombined))?.some(x=>x.status!=='reconciled'))
+      el('small','Partial · some accounts need a check',values,'finance-page-coverage-label');
     if(previous.hasData){
       const earlier=spendingMode==='income'?previous.income:previous.total;
       const delta=Number(shown)-Number(earlier);
@@ -2051,15 +2056,26 @@
     for(const code of activeFinanceViolations)console.warn('finance_data_health',code);
     const netWorthNeedsReview=activeFinanceViolations.some(code=>code.startsWith('NET_WORTH_'));
     const ledgerNeedsReview=activeFinanceViolations.some(code=>!code.startsWith('NET_WORTH_'));
+    const balanceChecks=window.BTFinanceReconcile?.reconcileAll(summaryState)||[];
+    const unmatchedBalances=balanceChecks.some(check=>check.status!=='reconciled');
+    const includedSources=new Set((summaryState.accounts||[])
+      .filter(a=>summaryState.accountProfiles?.[a.key]?.balanceMode!=='exclude')
+      .map(a=>a.source));
+    const syncTimes=[...includedSources].map(source=>currentCombined.providerState?.[source]?.lastSuccess);
+    const oldestIncludedSync=syncTimes.length&&syncTimes.every(at=>Number.isFinite(at)&&at>0)?Math.min(...syncTimes):null;
     const trustedTotals=!summaryState.incompleteProviders&&!summaryState.excludedForReview;
     const summary={...calculated,
-      netWorthNeedsReview,ledgerNeedsReview,
-      complete:!!calculated?.complete&&trustedTotals&&!summaryState.historyIncomplete&&!summaryState.malformedActivity,
+      netWorthNeedsReview,ledgerNeedsReview,oldestIncludedSync,
+      partialData:unmatchedBalances||!trustedTotals||summaryState.historyIncomplete||summaryState.malformedActivity,
+      complete:!!calculated?.complete&&trustedTotals&&!summaryState.historyIncomplete&&!summaryState.malformedActivity&&!unmatchedBalances&&!activeFinanceViolations.length,
       cashAvailable:!!calculated?.cashAvailable,
       netWorthAvailable:!!calculated?.netWorthAvailable&&!netWorthNeedsReview,
-      netWorthPartial:!!calculated?.netWorthPartial||!trustedTotals||netWorthNeedsReview,
+      netWorthPartial:!!calculated?.netWorthPartial||!trustedTotals||netWorthNeedsReview||unmatchedBalances,
       hiddenAccounts:summaryState.hiddenAccounts||0};
     hero(host,summary);
+    const freshness=el('small',undefined,host,'finance-page-coverage-label');
+    freshness.textContent=(oldestIncludedSync?'As of '+stamp(oldestIncludedSync):'Sync time unavailable')+
+      (summary.partialData?' · Partial':'');
     if(activeFinanceViolations.length){
       const warning=el('aside',undefined,host,'finance-page-status-row is-attention');
       el('strong','Some totals need review',warning);
