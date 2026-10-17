@@ -1,7 +1,9 @@
-/* Version 3.4.99: automatic account product classification for Finance. */
+/* Version 3.5.1: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.99';
+const APP_VERSION='3.5.1';
+// Remove only obsolete Finance UI preferences; never clear Tracker or backups.
+try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -4066,7 +4068,8 @@ function renderActionCenter(){
   return h+'</div></div>'
 }
 function switchMainTab(value){
-  if(!['tracker','bonuses','finances','tax','tips','storage','archive'].includes(value))return;
+  if(value==='finances'){tab='tracker';R();window.btNotify?.('Finance has been removed. Your bank-bonus records remain available in Tracker.');return;}
+  if(!['tracker','bonuses','tax','tips','storage','archive'].includes(value))return;
   tab=value;search='';_sp=0;
   const current=document.querySelector('.scroll');if(current)current.scrollTop=0;
   R();
@@ -4081,7 +4084,7 @@ function updateViewSearch(kind,value,cursor){
   const input=document.getElementById(id);
   if(input){input.focus({preventScroll:true});const position=Number.isInteger(cursor)?Math.min(cursor,input.value.length):input.value.length;input.setSelectionRange(position,position);}
 }
-function R(){if(tab!=='tracker')window.btCloseTrackerEvidenceReview?.();captureProfileSectionState();const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;
+function R(){if(tab==='finances')tab='tracker';captureProfileSectionState();const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;
   if(typeof window.btCaptureRadarDisclosures==='function')window.btCaptureRadarDisclosures();
   if(tab==='profiles'||tab==='health')tab='tracker';
   try{if(!window.__btAutoCleanupV384){entries=sortE(normalizeLifecycleEntries(entries));sv(SK,entries);window.__btAutoCleanupV384=true}}catch{}
@@ -4091,7 +4094,7 @@ function R(){if(tab!=='tracker')window.btCloseTrackerEvidenceReview?.();captureP
   h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div class="hdr-brand"><h1><em>Bonus</em>Tracker</h1><span class="app-version" aria-label="App version">v'+APP_VERSION+'</span></div>';
   if(tab==='tracker')h+='<div class="yr-pills">';
   if(tab==='tracker')[thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});
-  h+=tab==='tracker'?'</div>':'<span class="mobile-page-caption">'+esc({bonuses:'Bank offers',finances:'Finances',tax:'Tax',tips:'Datapoints',storage:'Terms archive',archive:'Account archive'}[tab]||'')+'</span>';
+  h+=tab==='tracker'?'</div>':'<span class="mobile-page-caption">'+esc({bonuses:'Bank offers',tax:'Tax',tips:'Datapoints',storage:'Terms archive',archive:'Account archive'}[tab]||'')+'</span>';
   h+='<details id="bt-data-menu" class="header-data-menu"><summary aria-label="Data and backup menu" title="Data and backup menu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></summary><div class="header-data-panel" role="group" aria-label="Data and recovery actions"><h3>Data & recovery</h3><button onclick="this.closest(\'details\').open=false;switchMainTab(\'archive\')"><strong>Archived accounts</strong><small>Completed, non-repeatable offers and their history</small></button><button onclick="this.closest(\'details\').open=false;btOpenCloudBackup()"><strong>Cloud backup & recovery</strong><small>Automatic protection and recovery versions</small></button><button onclick="this.closest(\'details\').open=false;exportBackup()"><strong>Export backup file</strong><small>Download an additional recovery copy</small></button><button onclick="this.closest(\'details\').open=false;importBackup()"><strong>Import backup file</strong><small>Review and restore a downloaded copy</small></button><button class="data-menu-danger" onclick="this.closest(\'details\').open=false;resetAllData()"><strong>Reset this device</strong><small>Requires confirmation and a safety backup</small></button></div></details></div>';
 
   if(tab==='tracker'){
@@ -4099,9 +4102,8 @@ function R(){if(tab!=='tracker')window.btCloseTrackerEvidenceReview?.();captureP
     overview+='<div class="stats ops-stats"><div class="st"><div class="n">'+fM(metrics.collected)+'</div><div class="l">Collected</div></div><div class="st"><div class="n">'+fM(metrics.awaiting)+'</div><div class="l">Awaiting</div></div><div class="st"><div class="n">'+fM(metrics.inProgress)+'</div><div class="l">In Progress</div></div><div class="st"><div class="n">'+fM(metrics.actionNeeded)+'</div><div class="l">Action Needed</div></div></div>'
   }
   h+='</div></div><div class="scroll">';
-  if(tab==='tracker'){h+='<section class="tracker-overview" aria-label="Bonus totals">'+overview+'</section>';h+='<div class="bt-tracker-review-access"><button type="button" onclick="btOpenTrackerEvidenceReview()">Review bank activity</button><small>Read-only suggestions · never marks bonuses complete</small></div>';const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted)}
+  if(tab==='tracker'){h+='<section class="tracker-overview" aria-label="Bonus totals">'+overview+'</section>';const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted)}
   else if(tab==='archive'){const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted,true)}
-  else if(tab==='finances')h+='<section id="bt-finances-page" class="finance-page" aria-label="My finances"></section>';
   else if(tab==='tax')h+=rTax();
   else if(tab==='tips')h+=rTips();
   else if(tab==='storage')h+=rTermsStorage();
@@ -4109,7 +4111,7 @@ function R(){if(tab!=='tracker')window.btCloseTrackerEvidenceReview?.();captureP
   h+='</div>';
   if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';
   h+='<div class="tabs">';
-  ['tracker','bonuses','finances','tax','tips','storage'].forEach((t,i)=>{const full=['Tracker','Bank Bonuses','Finances','Tax','Datapoints','T&C Archive'][i],short=['Tracker','Bonuses','Finances','Tax','Data','Archive'][i];h+='<button class="tb'+(tab===t?' on':'')+'" aria-label="'+full+'" aria-current="'+(tab===t?'page':'false')+'" onclick="switchMainTab(\''+t+'\')">'+[I.grid,I.tips,I.profile,I.doc,I.tips,I.lock][i]+'<span>'+short+'</span></button>'});
+  ['tracker','bonuses','tax','tips','storage'].forEach((t,i)=>{const full=['Tracker','Bank Bonuses','Tax','Datapoints','T&C Archive'][i],short=['Tracker','Bonuses','Tax','Data','Archive'][i];h+='<button class="tb'+(tab===t?' on':'')+'" aria-label="'+full+'" aria-current="'+(tab===t?'page':'false')+'" onclick="switchMainTab(\''+t+'\')">'+[I.grid,I.tips,I.doc,I.tips,I.lock][i]+'<span>'+short+'</span></button>'});
   h+='</div>';
   if(modal)h+=rModal();if(cfm)h+=rCfm();if(ddPrompt)h+=rDD();if(rcvPrompt)h+=rRcv();if(reqPrompt)h+=rReqMet();if(closePrompt)h+=rClose();if(overwritePrompt)h+=rOverwrite();if(matchPickerPrompt)h+=rMatchPicker();if(replacementPickerPrompt)h+=rReplacementPicker();if(feeCheckPrompt)h+=rFeeCheck();if(timerEditModal)h+=rTimerEdit();if(dpEditor)h+=rDpEditor();if(timerChoicePrompt)h+=rTimerChoicePrompt();
   if(undoState)h+='<div class="undo-bar"><span>'+esc(undoState.undoLabel||('Change saved for '+undoState.bank+' — Undo restores everything for 60 seconds.'))+'</span><button onclick="undoClose()">Undo</button></div>';
@@ -6594,42 +6596,4 @@ toggleCk=function(id,i){return btVerifiedMutation(()=>btOriginalToggleCk(id,i));
 const btOriginalToggleTimer=toggleTimer;
 toggleTimer=function(id,timerId){return btVerifiedMutation(()=>btOriginalToggleTimer(id,timerId));};
 
-/* Opt-in Tracker-only evidence review. No provider request on page load. */
-function btCloseTrackerEvidenceReview(){
-  window.BTBonusEvidence?.dispose();
-  document.getElementById('bt-tracker-evidence-modal')?.remove();
-}
-function btOpenTrackerEvidenceReview(){
-  if(tab!=='tracker')return;
-  btCloseTrackerEvidenceReview();
-  const overlay=document.createElement('div');
-  overlay.id='bt-tracker-evidence-modal';
-  overlay.className='bt-tracker-evidence-overlay';
-  overlay.setAttribute('role','dialog');
-  overlay.setAttribute('aria-modal','true');
-  overlay.setAttribute('aria-label','Review linked bank activity');
-  const sheet=document.createElement('div');
-  sheet.className='bt-tracker-evidence-sheet';
-  const header=document.createElement('div');
-  header.className='bt-tracker-evidence-header';
-  const title=document.createElement('strong');
-  title.textContent='Bonus evidence review';
-  const close=document.createElement('button');
-  close.type='button';close.textContent='Close';close.setAttribute('aria-label','Close evidence review');
-  close.addEventListener('click',btCloseTrackerEvidenceReview);
-  header.append(title,close);
-  const content=document.createElement('section');
-  content.className='bt-tracker-evidence-content';
-  sheet.append(header,content);
-  overlay.append(sheet);
-  overlay.addEventListener('click',event=>{if(event.target===overlay)btCloseTrackerEvidenceReview()});
-  document.body.append(overlay);
-  if(!window.BTBonusEvidence?.mount(content)){
-    btCloseTrackerEvidenceReview();
-    window.btNotify?.('Evidence review is unavailable. Reopen this panel after signing in.');
-    return;
-  }
-  close.focus();
-}
-window.btOpenTrackerEvidenceReview=btOpenTrackerEvidenceReview;
-window.btCloseTrackerEvidenceReview=btCloseTrackerEvidenceReview;
+/* Finance and provider-linked Tracker evidence have been retired. */
