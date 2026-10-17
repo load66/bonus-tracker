@@ -1,14 +1,14 @@
 # Audit progress
 
-Active agent: codex — Release 2 Accuracy & Reliability — branch codex/finance-accuracy
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
 
 - Source merged: frontend v3.4.95, main commit 5330ae2c7e416b333af30e5cb4caafd2729cf4a0
-- In progress: Release 2 Finance v3.4.96 accuracy, exact-cent gold ledger and Data health PR #154
-- Next step: finish full CI and browser gates; merge backend first, verify Railway, then frontend Pages production audit
+- In progress: Release 2 v3.4.96 frontend implementation completed on PR #154; backend-first release pending
+- Next step: after backend Railway success, merge frontend PR #154, run main release and verify exact GitHub Pages assets and browser audit
 
 ## Release 1 (v3.4.94)
 
@@ -38,5 +38,5 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 - Issue: P0 — Unverified totals lack runtime invariant checks
 - Issue: P1 — Sync errors can conceal missing accounts or reviews
 - Issue: P1 — Cross-provider ledger lacks pinned cents baseline
-- Test status: Backend 631 tests pass; frontend Finance, UI, cloud and bonus tests pass; CI browser/release completion pending
+- Test status: Backend 631 tests and build PASS (CI 39053785663); frontend four unit areas and Chromium/Firefox/WebKit PASS (CI 39053638068); final doc-only CI pending
 - Deployment: pending complete CI, merge, Railway and GitHub Pages verification
