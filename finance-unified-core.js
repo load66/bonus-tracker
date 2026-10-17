@@ -10,42 +10,61 @@
   const LABELS={simplefin:'SimpleFIN',plaid:'Plaid'};
   const TYPES=new Set(['checking','savings','credit_card','brokerage','retirement','loan','mortgage','other_asset','other_liability']);
   const canonical=value=>String(value||'').toLowerCase().normalize('NFKC').replace(/[^a-z0-9]+/g,' ').trim();
+  // Prioritize product evidence, not provider names or account-balance signs.
+  // A retirement savings plan is an INVESTMENT even when it contains "savings".
+  const retirementProduct=/\b(?:401\s*\(?k\)?|403\s*\(?b\)?|457\s*\(?b\)?|ira|roth|sep\s*ira|simple\s*ira|retirement|pension|thrift\s+savings\s+plan|defined\s+contribution|profit\s+sharing\s+plan)\b/;
+  const retirementSubtype=new Set(['retirement','401k','403b','457b','ira','roth_ira','traditional_ira','sep_ira','simple_ira','pension','thrift_savings_plan']);
+  const brokerageSubtype=new Set(['individual','joint','investing','investment','investments','stocks','stock','crypto','securities','trading','brokerage','managed','custodial','mutual_fund','mutual_funds']);
+  const brokerageProduct=/\b(?:brokerage|trading|investments?|investment\s+account|securities|mutual\s+funds?|stock\s+portfolio|trading\s+account)\b/;
+  const checkingProduct=/\b(?:checking|current\s+account|cash\s+management|spend\s+account)\b/;
+  const savingsProduct=/\b(?:savings|money\s+market|high\s+yield)\b/;
   function detectedType(account){
-    const subtype=canonical(account.accountSubtype).replaceAll(' ','_');
-    const type=canonical(account.accountType).replaceAll(' ','_');
-    const name=canonical(account.name);
-    const bank=canonical(account.bank);
-    const broker=/\b(robinhood|fidelity|schwab|vanguard|e trade|etrade|interactive brokers|webull|tastytrade|coinbase|kraken)\b/.test(bank);
-    const retirement=/\b(?:roth|traditional|ira|401\s*k|401k|retirement)\b/.test(name)||/(?:^|_)(?:roth_?ira|ira|401k|retirement)(?:$|_)/.test(subtype);
-    const deposit=/\b(?:checking|current account|cash management|cash account|spend account)\b/.test(name)
-      ||['checking','cash_management','cash'].includes(subtype);
-    const savings=/\b(?:savings|money market|high yield)\b/.test(name)
-      ||['savings','money_market'].includes(subtype);
-    if(/\b(?:credit card|charge card)\b/.test(name)||['credit_card','credit'].includes(subtype))return 'credit_card';
-    if(deposit)return 'checking';
-    if(savings)return 'savings';
-    if(retirement)return 'retirement';
-    // Some SimpleFIN institutions report mortgage subtype as generic "loan".
-    // A descriptive mortgage product name must win over that generic subtype.
+    const name=canonical(account.name),subtype=canonical(account.accountSubtype).replaceAll(' ','_'),
+      type=canonical(account.accountType).replaceAll(' ','_'),bank=canonical(account.bank);
+    const broker=/\b(?:robinhood|fidelity|schwab|vanguard|e trade|etrade|interactive brokers|webull|tastytrade|coinbase|kraken)\b/.test(bank);
+    // Retirement plan and account-type evidence is stronger than words such
+    // as "savings", "cash", "individual", or a generic depository subtype.
+    if(retirementSubtype.has(subtype)||retirementSubtype.has(type)||
+       retirementProduct.test(name))return 'retirement';
+    if(/\b(?:credit\s+card|charge\s+card)\b/.test(name)||
+       ['credit_card','credit'].includes(subtype)||
+       type==='credit')return 'credit_card';
     const mortgageNames=/\b(?:mortgage|mortg|mtge?|home\s*mtg|home\s+loan|home\s+equity\s+loan|heloc|mr\s+cooper|loancare|newrez|shellpoin(?:t)?|rocket\s+mortgage|pennymac|freedom\s+mortgage|dovenmuehle|cenlar|nationstar|lakeview\s+loan|carrington\s+mortgage|roundpoint|sps\s+servicing)\b/;
-    if(mortgageNames.test(name)||mortgageNames.test(bank))return 'mortgage';
-    const investments=new Set(['individual','joint','investing','investment','investments','stocks','stock','crypto','securities','trading','brokerage']);
-    if(investments.has(subtype)||investments.has(type))return 'brokerage';
-    const aliases={depository:'',credit:'credit_card',credit_card:'credit_card',investment:'brokerage',student:'loan',auto:'loan',mortgage:'mortgage',loan:'loan',brokerage:'brokerage',retirement:'retirement','401k':'retirement',ira:'retirement',checking:'checking',savings:'savings',money_market:'savings'};
+    if(mortgageNames.test(name)||mortgageNames.test(bank)||
+       subtype==='mortgage'||type==='mortgage')return 'mortgage';
+    if(['loan','student','auto','personal_loan','student_loan','auto_loan'].includes(subtype)||
+       type==='loan'||/\b(?:personal\s+loan|student\s+loan|auto\s+loan)\b/.test(name))return 'loan';
+    const checking=checkingProduct.test(name)||['checking','current','cash_management'].includes(subtype);
+    const savings=savingsProduct.test(name)||['savings','money_market','high_yield'].includes(subtype);
+    const investmentMetadata=type==='investment'||type==='brokerage'||
+       brokerageSubtype.has(subtype)||brokerageSubtype.has(type);
+    // Specific checking/savings products at brokerages are cash accounts.
+    // "Retirement Savings Plan" was already returned as retirement above.
+    if(checkingProduct.test(name))return 'checking';
+    if(brokerageProduct.test(name))return 'brokerage';
+    if(investmentMetadata){
+      // A genuine named savings deposit remains cash; generic brokerage
+      // "cash" and "savings" words are not evidence of a deposit product.
+      if(/\b(?:savings\s+account|high\s+yield\s+savings|money\s+market\s+deposit)\b/.test(name))return 'savings';
+      return 'brokerage';
+    }
+    if(checking)return 'checking';
+    if(savings)return 'savings';
+    const aliases={depository:'',credit:'credit_card',credit_card:'credit_card',
+      investment:'brokerage',student:'loan',auto:'loan',mortgage:'mortgage',
+      loan:'loan',brokerage:'brokerage',retirement:'retirement',
+      '401k':'retirement',ira:'retirement',checking:'checking',
+      savings:'savings',money_market:'savings'};
     if(TYPES.has(subtype))return subtype;
     if(Object.hasOwn(aliases,subtype)&&aliases[subtype])return aliases[subtype];
     if(TYPES.has(type))return type;
     if(Object.hasOwn(aliases,type)&&aliases[type])return aliases[type];
-    for(const [pattern,kind] of [[/\b(checking|current account)\b/,'checking'],[/\b(savings|money market|high yield)\b/,'savings'],[/\b(credit card|charge card)\b/,'credit_card'],[/\b(mortgage)\b/,'mortgage'],[/\b(401k|ira|roth|retirement)\b/,'retirement'],[/\b(brokerage|investment)\b/,'brokerage'],[/\b(loan)\b/,'loan']]){
-      if(pattern.test(name))return kind;
-    }
-    // Brokerage brands are investment accounts unless product metadata identifies
-    // an actual deposit or credit product; never classify a generic broker as Other.
+    if(/\b(?:cash\s+account|cash\s+balance)\b/.test(name)&&type==='depository')return 'checking';
     if(/\b(?:paypal|venmo|onepay|one pay|x money)\b/.test(bank)&&
        !/\b(?:credit|card|loan|invest|stock|crypto)\b/.test(name)&&
        !['credit','investment','loan'].includes(type))return 'checking';
-    if(broker&&!/\b(checking|savings|cash management|credit card|mortgage|loan)\b/.test(name)
-        && !['depository','credit'].includes(type))return 'brokerage';
+    if(broker&&!/\b(?:checking|savings|cash\s+management|credit\s+card|mortgage|loan)\b/.test(name)&&
+       !['depository','credit'].includes(type))return 'brokerage';
     return 'unclassified';
   }
   const key=(source,rawKey)=>source+':'+String(rawKey);
