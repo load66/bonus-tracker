@@ -47,6 +47,8 @@
     }catch(error){
       addFlowMessage=String(error.message||'Discovery could not be verified.');
       if(/daily limit reached|429/i.test(addFlowMessage)){
+        const reset=/resume at (\d{9,11})/.exec(addFlowMessage);
+        if(reset){addFlowNextRetryAt=Number(reset[1]);addFlowMessage='Daily limit reached. Updates resume at '+new Date(addFlowNextRetryAt*1000).toLocaleString()+'.';}
         addFlowBudgetStopped=true;clearAddFlowTimers();
       }else addBankRetry();
     }finally{addFlowBusy=false;paint();}
@@ -70,7 +72,7 @@
         if(result.syncStatus==='waiting'&&result.nextRetryAt)
           addFlowMessage+=' Updates resume at '+new Date(result.nextRetryAt*1000).toLocaleString()+'.';
       }else addFlowMessage='Settings saved. Sync is off for the new accounts.';
-      addFlowPending=false;clearAddFlowTimers();changed=true;window.btRefreshFinancesPage?.();
+      addFlowPending=false;addFlowFound=[];addFlowDraft=new Set();clearAddFlowTimers();changed=true;window.btRefreshFinancesPage?.();
     }catch(error){
       // Keep draft choices across network/save errors; do not report success.
       addFlowMessage='Save not confirmed: '+String(error.message||'Check your connection.');
