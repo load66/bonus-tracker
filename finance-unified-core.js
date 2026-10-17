@@ -209,7 +209,8 @@
           payroll)continue;
         // Equal-valued unrelated purchases and deposits are not proof of a
         // self-transfer. Preserve known household expenses and ordinary income.
-        if(value<0n&&nonTransfers.has(row.category))continue;
+        const directMovement=/\b(?:internal\s+(?:sweep|transfer|move)|outgoing\s+ach|ach\s+transfer|to\s+(?:bank|checking|savings))\b/i.test(description);
+        if(value<0n&&nonTransfers.has(row.category)&&!directMovement)continue;
         if(value>0n&&row.category==='income'&&!(row.signals||[]).some(signal=>
           ['possible_transfer','transfer','plaid_transfer','investment_transfer'].includes(signal)))continue;
         transferRows.push({account:key,row,value});
