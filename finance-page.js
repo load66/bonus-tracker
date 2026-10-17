@@ -17,7 +17,7 @@
   // Keep 'bonus' as a persisted category for canonical tracker/evidence logic;
   // Finances displays it as income without exposing a bonus-only UI control.
   const FINANCE_CATEGORIES=Object.fromEntries(Object.entries(CATEGORIES).filter(([key])=>key!=='bonus'));
-  const financeCategory=key=>key==='bonus'?'Income':(FINANCE_CATEGORIES[key]||'Needs review');
+  const financeCategory=key=>key==='bonus'?'Needs review':(FINANCE_CATEGORIES[key]||'Needs review');
   const AMOUNTS_PREF='bt_finance_hide_amounts';
   // Preference only; account information and financial transactions stay server-side.
   let hidePreference=true;
@@ -458,7 +458,7 @@
         if(row.stalePending)el('p','Pending status has not been observed recently. Confirm it with the institution.',detail,'finance-page-warning');
         const visibleSignals=(row.signals||[]).filter(signal=>signal!=='possible_bonus');
         if(visibleSignals.length){const badges=el('div',undefined,detail,'finance-page-badges');for(const signal of visibleSignals)el('span',signalLabel(signal),badges);}
-        const category=select(detail,'Category',FINANCE_CATEGORIES,row.category==='bonus'?'income':row.category,value=>change(async()=>{
+        const category=select(detail,'Category',FINANCE_CATEGORIES,row.category==='bonus'?'unreviewed':row.category,value=>change(async()=>{
           const snapshot=await request('/transaction-review',{method:'PUT',body:JSON.stringify({account:row.account.rawKey,transaction:row.id,category:value})},row.source);
           return {financeSource:row.source,snapshot};
         }));
