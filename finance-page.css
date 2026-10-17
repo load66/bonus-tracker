@@ -354,3 +354,34 @@
 .finance-page .finance-page-hero-cash-value{display:block;margin:3px 0 2px;color:var(--finance-text);font-size:clamp(31px,7vw,46px);font-weight:760;letter-spacing:-.055em;line-height:1.15;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .finance-page .finance-page-hero-cash-status{display:block;color:var(--finance-muted);font-size:11px;margin-bottom:12px}
 .finance-page .finance-page-loading-hint{color:var(--finance-accent)!important}
+
+/* Per-transaction smart categorization: finance-only, accessible, lightweight. */
+.finance-page .finance-page-auto-tag{display:inline-flex;align-self:flex-start;width:max-content;
+  padding:2px 7px;border:1px solid #5be3b080;background:#5be3b012;color:#5BE3B0;
+  border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.02em}
+.finance-page .finance-page-learn-label{display:flex;align-items:center;gap:10px;min-height:44px;
+  padding:8px 0;color:#F2F3F7;font-size:13px}
+.finance-page .finance-page-learn-label input{width:19px;height:19px;accent-color:#5BE3B0;flex:none}
+@media (prefers-reduced-motion:reduce){
+  .finance-page .finance-page-auto-tag,.finance-page .finance-page-learn-label{transition:none}
+}
+
+/* Exact-value labels; lightweight proportional donut, all Finance-scoped. */
+.finance-page .finance-page-spending-breakdown{display:grid;grid-template-columns:minmax(128px,190px) minmax(0,1fr);
+  align-items:center;gap:18px;padding:12px 2px 4px}
+.finance-page .finance-page-donut{aspect-ratio:1;width:100%;border-radius:50%;position:relative;
+  border:1px solid var(--finance-border,#1E212C)}
+.finance-page .finance-page-donut:after{content:'';position:absolute;inset:27%;border-radius:50%;
+  background:var(--finance-card,#12141C);border:1px solid var(--finance-border,#1E212C)}
+.finance-page .finance-page-donut-legend{display:grid;gap:8px;min-width:0}
+.finance-page .finance-page-donut-item{display:grid;grid-template-columns:10px minmax(0,1fr) auto;
+  align-items:center;gap:9px;font-size:12px;color:var(--finance-muted,#A0A6B8)}
+.finance-page .finance-page-donut-item strong{color:var(--finance-text,#F2F3F7);font-variant-numeric:tabular-nums}
+.finance-page .finance-page-donut-dot{width:10px;height:10px;border-radius:50%}
+@media(max-width:420px){
+  .finance-page .finance-page-spending-breakdown{grid-template-columns:112px minmax(0,1fr);gap:12px}
+  .finance-page .finance-page-donut-item{gap:5px;font-size:11px}
+}
+@media(max-width:350px){
+  .finance-page .finance-page-spending-breakdown{grid-template-columns:96px minmax(0,1fr);gap:8px}
+}
