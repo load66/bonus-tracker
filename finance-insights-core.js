@@ -6,8 +6,8 @@
 })(typeof window!=='undefined'?window:null,function(){
   'use strict';
   const DAY=86400000;
-  const SPEND=new Set(['housing','loan','utilities','groceries','dining','transportation','shopping','health','entertainment','fees','taxes','travel','subscription','other']);
-  const excluded=new Set(['verification','refund','bonus','unreviewed']);
+  const SPEND=new Set(['housing','loan','utilities','groceries','dining','transportation','shopping','health','entertainment','fees','taxes','travel','subscription','other','unreviewed']);
+  const excluded=new Set(['verification','refund','bonus']);
   function cents(value){
     const match=/^([+-]?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(value??'').trim());
     if(!match)return null;
@@ -19,26 +19,88 @@
   const merchant=row=>String(row.merchant||row.description||'Unknown merchant').toLowerCase().replace(/\b\d+\b/g,' ').replace(/[^\p{L}\p{N}]+/gu,' ').trim().replace(/\s+/g,' ').slice(0,64);
   function monthKey(ms){const d=new Date(ms);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
   function monthShift(value,offset){const d=new Date(value+'-01T12:00:00');d.setMonth(d.getMonth()+offset);return monthKey(d.getTime())}
+  const issuer=/\b(capital\s*one|chase|amex|american\s*express|discover|citi(?:bank)?|robinhood|fidelity|schwab|vanguard|synchrony|barclays|wells\s*fargo)\b/i;
+  const payment=/\b(pmt|pymt|payment|autopay|epay|crcardpmt|card\s*payment)\b/i;
+  const investment=/\b(robinhood|fidelity|schwab|vanguard|brokerage|401k|roth\s*ira|investment|ira)\b/i;
+  const contribution=/\b(contribution|contribute|deposit|funding|transfer)\b/i;
+  function expenseCategory(row){
+    if(!row||row.pending||row.excludedFromTotals)return null;
+    const v=cents(row.amount);
+    if(v===null||v>=0n)return null;
+    const category=String(row.category||'unreviewed');
+    if(['transfer','verification','refund','bonus','income'].includes(category))return null;
+    if((row.signals||[]).includes('matched_internal_transfer'))return null;
+    const description=String(row.description||'')+' '+String(row.merchant||'');
+    // Protect bank payments that have yet to be recategorized by the server.
+    if(issuer.test(description)&&payment.test(description))return null;
+    if(investment.test(description)&&contribution.test(description))return null;
+    return SPEND.has(category)?category:'unreviewed';
+  }
+  function eligibleRows(rows,month,mode='spending'){
+    return (rows||[]).filter(row=>{
+      if(!Number.isFinite(row?.posted)||monthKey(row.posted*1000)!==month||
+         row.pending||row.excludedFromTotals)return false;
+      return mode==='spending'?expenseCategory(row)!==null:
+        cents(row.amount)>0n&&row.category==='income';
+    });
+  }
   function spent(rows,month){
-    const amounts={},byDay={},incomeByDay={};
-    let total=0n,income=0n,uncategorized=0,records=0;
+    const amounts={},byDay={},incomeByDay={},counts={};
+    let total=0n,income=0n,uncategorized=0,records=0,observations=0;
     for(const row of rows||[]){
-      if(row.pending||row.excludedFromTotals||!Number.isFinite(row.posted)||monthKey(row.posted*1000)!==month)continue;
-      const v=cents(row.amount),category=String(row.category||'unreviewed');
+      if(row?.pending||row?.excludedFromTotals||!Number.isFinite(row?.posted)||
+         monthKey(row.posted*1000)!==month)continue;
+      const v=cents(row.amount);
       if(v===null)continue;
+      observations++;
       const day=new Date(row.posted*1000).getDate();
-      if(v>0n&&category==='income'){income+=v;incomeByDay[day]=(incomeByDay[day]||0n)+v}
-      if(category==='unreviewed')uncategorized++;
-      if(v>=0n||!SPEND.has(category)||excluded.has(category))continue;
+      if(v>0n&&row.category==='income'){
+        income+=v;incomeByDay[day]=(incomeByDay[day]||0n)+v;
+      }
+      const category=expenseCategory(row);
+      if(!category)continue;
       const expense=-v;
       total+=expense;records++;
+      if(category==='unreviewed')uncategorized++;
       amounts[category]=(amounts[category]||0n)+expense;
+      counts[category]=(counts[category]||0)+1;
       byDay[day]=(byDay[day]||0n)+expense;
     }
-    return {month,total:fmt(total),income:fmt(income),uncategorized,records,
-      categories:Object.entries(amounts).map(([category,value])=>({category,amount:fmt(value),percentage:total?Number(value*10000n/total)/100:0})).sort((a,b)=>Number(b.amount)-Number(a.amount)),
+    return {month,total:fmt(total),income:fmt(income),uncategorized,records,observations,
+      hasData:observations>0,
+      categories:Object.entries(amounts).map(([category,value])=>({category,amount:fmt(value),count:counts[category],
+        percentage:total?Number(value*10000n/total)/100:0})).sort((a,b)=>Number(b.amount)-Number(a.amount)),
       byDay:Object.fromEntries(Object.entries(byDay).map(([key,value])=>[key,fmt(value)])),
       incomeByDay:Object.fromEntries(Object.entries(incomeByDay).map(([key,value])=>[key,fmt(value)]))};
+  }
+  function merchantTotals(rows,month){
+    const groups=new Map();
+    for(const row of eligibleRows(rows,month)){
+      const label=String(row.merchant||row.description||'Unknown merchant').trim()||'Unknown merchant';
+      const key=merchant(row)||label.toLowerCase();
+      const entry=groups.get(key)||{merchant:label,amount:0n,count:0,rows:[]};
+      entry.amount-=cents(row.amount);entry.count++;entry.rows.push(row);groups.set(key,entry);
+    }
+    return [...groups.values()].map(g=>({...g,amount:fmt(g.amount)}))
+      .sort((a,b)=>Number(b.amount)-Number(a.amount));
+  }
+  function monthlyTrend(rows,throughMonth,months=24){
+    const out=[];
+    for(let i=months-1;i>=0;i--){
+      const month=monthShift(throughMonth,-i),value=spent(rows,month);
+      if(value.hasData)out.push(value);
+    }
+    return out;
+  }
+  function budgetState(spentAmount,budgetAmount,today,totalDays){
+    const used=cents(spentAmount),limit=cents(budgetAmount);
+    if(used===null||limit===null||limit<=0n)return null;
+    const ratio=Number(used*10000n/limit)/100;
+    const projected=used*BigInt(totalDays)/BigInt(Math.max(1,Math.min(totalDays,today)));
+    const remaining=limit>used?limit-used:0n;
+    return {used:fmt(used),limit:fmt(limit),remaining:fmt(remaining),
+      percentage:ratio,level:ratio>100?'over':ratio>=80?'near':'ok',
+      projected:fmt(projected)};
   }
   const INTERVALS=[['weekly',7,2],['biweekly',14,3],['monthly',30.44,6],['quarterly',91.3,12],['yearly',365.25,25]];
   function recurring(rows,now=Date.now()){
@@ -81,5 +143,5 @@
   function upcoming(items,now=Date.now(),days=14){
     return (items||[]).filter(x=>x.direction==='expense'&&x.status!=='possibly_canceled'&&x.nextAt*1000>=now-DAY&&x.nextAt*1000<=now+days*DAY).slice(0,5);
   }
-  return Object.freeze({spent,recurring,upcoming,monthKey,monthShift,cents,fmt,SPEND});
+  return Object.freeze({spent,recurring,upcoming,monthKey,monthShift,cents,fmt,SPEND,expenseCategory,eligibleRows,merchantTotals,monthlyTrend,budgetState});
 });
