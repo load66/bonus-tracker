@@ -59,8 +59,8 @@ module.exports={sandbox,document,app,storage,errors};
 if(require.main===module)setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.4.86',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.4.86',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.4.87',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.4.87',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.13',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
     assert(sandbox.tcV3WellsConsumerRulesVersion==='3.4.86',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
     assert(sandbox.btChurnCloseDatePolicyVersion==='3.4.86',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
@@ -82,6 +82,11 @@ if(require.main===module)setTimeout(()=>{
     assert(app.innerHTML.includes('Active bonuses'),'Active bonus summary did not render');
     assert(app.innerHTML.includes('Action Center'),'Lifecycle Action Center did not render');
     sandbox.R();
+    for(const path of ['profile-library-selftest.js','profile-library-selftest-academy.js','learning-inbox-conflict.js','profile-db.js']){
+      assert(!html.includes('src="./'+path+'"')&&!fs.readFileSync('sw.js','utf8').includes("'./"+path+"'"),'Retired add-on still loaded or cached: '+path);
+    }
+    assert(!app.innerHTML.includes('v31_profile_btn')&&!app.innerHTML.includes('v32_inbox_btn'),'Retired floating shortcuts must not render');
+    assert(app.innerHTML.includes('aria-label="Tracker"')&&app.innerHTML.includes('aria-label="T&C Archive"'),'Tracker and archive tabs remain visible');
     assert(app.innerHTML.includes('aria-label="T&C Archive"')&&app.innerHTML.includes('<span>Archive</span>'),'Archive tab retains its accessible full name');
     const appSource=fs.readFileSync('app.js','utf8');
     const timerClickMatches=appSource.match(/onclick="event\.stopPropagation\(\);toggleTimer\(/g)||[];
