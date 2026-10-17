@@ -652,7 +652,7 @@
     const calculated=window.BTFinanceOverview?.summarize(summaryState,{days:period});
     const trustedTotals=!summaryState.incompleteProviders&&!summaryState.excludedForReview;
     const summary={...calculated,
-      complete:!!calculated?.complete&&trustedTotals,
+      complete:!!calculated?.complete&&trustedTotals&&!summaryState.historyIncomplete,
       cashAvailable:!!calculated?.cashAvailable&&trustedTotals,
       netWorthAvailable:!!calculated?.netWorthAvailable&&trustedTotals,
       hiddenAccounts:summaryState.hiddenAccounts||0};
@@ -661,6 +661,7 @@
     if(monitoringNotice){const banner=el('p',monitoringNotice,host,'finance-page-activity-result');banner.setAttribute('role','status');}
     if(activityNotice){const banner=el('p',activityNotice,host,'finance-page-activity-result');banner.setAttribute('role','status');}
     if(summaryState.incompleteProviders)el('p','Financial activity is partial: one linked provider has not completed a recent sync.',host,'finance-page-caution');
+    if(summaryState.historyIncomplete)el('p','History still loading. Some linked banks have not finished preparing past transactions, so cash flow is partial.',host,'finance-page-caution');
     if(view==='transactions')transactions(host);
     else if(view==='accounts')accounts(host);
     else overview(host,summary);
