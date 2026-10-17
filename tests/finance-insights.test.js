@@ -72,3 +72,34 @@ assert.equal(I.budget('100.00','100.00',15,30).level,'near');
 assert.equal(I.budget('100.00','100.01',15,30).level,'over');
 assert.equal(I.budget('100.00','120.00',15,30).left,'0.00');
 assert.equal(I.budget('0','2.00',15,30),null);
+
+
+
+const realWordings=[
+  ['To Brokerage','-2000'],['To Citibank','-251'],
+  ['From Lafayette Fcu','500'],['To Personal Checking','-7379.04'],
+  ['From Personal Savings','7379.04'],['To Paypal','-428.17'],
+  ['U.S. Bank','-820.77'],['Capital One','-200'],
+  ['T-Mobile','-157.62'],['Apple','-249.52']
+];
+const realRows=realWordings.map(([description,amount],i)=>({
+  ...oct(11+i%6,amount,'unreviewed',description),description,merchant:description,
+  categorySource:'automatic',signals:[]
+}));
+assert.equal(I.financialKind(realRows[0]),'investment_transfer');
+assert.equal(I.financialKind(realRows[1]),'transfer');
+assert.equal(I.financialKind(realRows[5]),'transfer');
+assert.equal(I.financialKind(realRows[6]),'card_payment');
+assert.equal(I.financialKind(realRows[7]),'card_payment');
+assert.equal(I.spendingCategory(realRows[8],I.cents(realRows[8].amount)),'utilities');
+assert.equal(I.spendingCategory(realRows[9],I.cents(realRows[9].amount)),'shopping');
+assert.equal(I.spent(realRows,'2026-10').total,'407.14','Only T-Mobile and Apple purchases count');
+assert.equal(I.spent(realRows,'2026-10').uncategorized,0,'No transfers artificially inflate Uncategorized');
+const highRisk={...oct(10,'-2000','unreviewed','To another external account'),
+  description:'To another external account',categorySource:'automatic'};
+assert.equal(I.possibleTransfer(highRisk),true,'Large uncertain outgoing move needs review');
+assert.equal(I.spendingCategory(highRisk,I.cents(highRisk.amount)),null,'Unconfirmed possible transfer excluded');
+const confirmedSpending={...highRisk,category:'other',categorySource:'user'};
+assert.equal(I.spendingCategory(confirmedSpending,I.cents(confirmedSpending.amount)),'other','User-confirmed spending is included');
+assert.equal(I.possibleTransfer(confirmedSpending),false,'Reviewed spending leaves Confirm transfers');
+assert.equal(I.spendingCategory(oct(8,'-13.51','unreviewed','Local bakery'),-1351n),'unreviewed','Small purchases count');
