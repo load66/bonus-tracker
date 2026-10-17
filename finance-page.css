@@ -785,3 +785,23 @@
   .finance-page .finance-spending-review-cta{padding:0 8px}
 }
 @media(prefers-reduced-motion:reduce){.finance-page .finance-spending-3480 *{scroll-behavior:auto!important}}
+
+
+/* Finance 3.4.81: one donut center and an explicit uncertain-transfer review. */
+.finance-page .finance-spending-donut:after{content:none!important;display:none!important}
+.finance-page .finance-spending-donut{isolation:isolate;overflow:visible;min-width:174px;max-width:174px}
+.finance-page .finance-spending-donut::before{z-index:0;inset:24px}
+.finance-page .finance-spending-donut-center{z-index:1;isolation:isolate;display:flex;flex-direction:column;align-items:center;justify-content:center;width:122px;max-width:122px;min-height:70px;box-sizing:border-box;overflow:visible}
+.finance-page .finance-spending-donut-center strong{display:block;max-width:118px;overflow:visible;font-size:clamp(13px,4vw,19px);line-height:1.2;white-space:nowrap;font-variant-numeric:tabular-nums;letter-spacing:-.055em}
+.finance-page .finance-spending-confirm-row{display:grid;gap:10px;border-top:1px solid #34404a;padding:12px 0}
+.finance-page .finance-spending-confirm-copy{min-width:0;display:grid;gap:5px}
+.finance-page .finance-spending-confirm-copy strong{overflow-wrap:anywhere;font-size:13px}
+.finance-page .finance-spending-confirm-copy small{color:#afbbc5;font-size:12px}
+.finance-page .finance-spending-confirm-actions{display:flex;flex-flow:row wrap;align-items:center;gap:7px}
+.finance-page .finance-spending-confirm-actions button{min-height:40px;flex:0 0 auto}
+.finance-page .finance-spending-confirm-actions label{display:flex;align-items:center;gap:6px;width:100%;color:#adbfc4;font-size:12px}
+.finance-page .finance-spending-confirm-actions input{width:18px;height:18px;accent-color:#5be3b0}
+@media(max-width:420px){
+  .finance-page .finance-spending-donut-center strong{font-size:16px}
+  .finance-page .finance-spending-confirm-actions{gap:8px}
+}
