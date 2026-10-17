@@ -35,4 +35,11 @@ const missed=I.recurring(monthly,new Date(2027,3,1).getTime());
 assert.equal(missed[0].status,'possibly_canceled');
 assert.equal(I.recurring([row(new Date(2026,9,1).getTime(),'-90','transfer')],NOW).length,0);
 assert.equal(I.upcoming(recurring,new Date(2026,9,25).getTime()).length,1);
+const manuallyMarked=I.recurring([{
+  ...row(new Date(2026,9,16).getTime(),'-22.00','utilities','Synthetic water'),
+  markedRecurring:true
+}],NOW);
+assert.equal(manuallyMarked.length,1,'a user-marked single bill enters recurring insights');
+assert.equal(manuallyMarked[0].manuallyMarked,true,'manual recurring history is distinguished from observed patterns');
+
 console.log('Finance insights passed: spending exclusions, month navigation, monthly, biweekly, yearly, price increases and missed bills.');
