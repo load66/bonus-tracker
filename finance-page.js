@@ -792,11 +792,6 @@
     const rowIdentity=row=>[row.source,row.accountKey,row.id].join(':');
     const dayKey=value=>new Date(value*1000).toLocaleDateString('en-CA');
     const dayLabel=value=>new Date(value*1000).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
-    function iconFor(row){
-      if((row.signals||[]).some(s=>s==='matched_internal_transfer'||s==='possible_transfer')||row.category==='transfer')return '↔';
-      if(row.category==='income'||row.category==='bonus'||Number(row.amount)>0)return '$';
-      return financeCategory(row.category).slice(0,1).toUpperCase();
-    }
     function shownAmount(row){
       const formatted=amount(row.amount,row.account.currency);
       return !hidden&&Number(row.amount)>0&&formatted!=='—'?'+'+formatted:formatted;
@@ -824,7 +819,6 @@
         const article=el('article',undefined,group,'finance-page-transaction'+(open?' is-open':''));
         const top=el('button',undefined,article,'finance-page-transaction-summary');top.type='button';
         top.setAttribute('aria-expanded',String(open));top.setAttribute('aria-label',displayMerchant(row)+' details');
-        el('span',iconFor(row),top,'finance-page-transaction-icon').setAttribute('aria-hidden','true');
         const copy=el('span',undefined,top,'finance-page-transaction-copy');
         el('strong',displayMerchant(row),copy);
         if(row.categorySource==='ai')el('small','Auto',copy,'finance-page-auto-tag');
