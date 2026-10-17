@@ -301,7 +301,7 @@ assert.equal(manuallyCategorized.cashFlow,'-25.00');
 const mortgageFixture={
   accounts:[
     {key:'cash',name:'Main checking',currency:'USD',balance:'5000.00',balanceDate:NOW-45},
-    {key:'home',name:'Synthetic Mortgage',currency:'USD',balance:'-210000.00',balanceDate:NOW-45}
+    {key:'home',name:'Synthetic Mortgage',currency:'USD',balance:'-210000.00',balanceDate:NOW-20*DAY}
   ],
   monitoredAccounts:['cash','home'],
   accountProfiles:{cash:{kind:'checking',balanceMode:'asset',includeSpending:true},
@@ -335,9 +335,66 @@ assert.equal(sameMortgage.netWorth,'-205000.00');
 assert.deepEqual(sameMortgage.netWorthHistory,mortgageDebts.netWorthHistory,
   'Positive- and negative-signed loan balances must represent the same remaining debt');
 const mortgageStale=structuredClone(mortgageFixture);
-mortgageStale.accounts[1].balanceDate=NOW-9*DAY;
+mortgageStale.accounts[1].balanceDate=NOW-40*DAY;
 const missingMortgage=summarize(mortgageStale,{now:NOW});
 assert.equal(missingMortgage.netWorthPartial,true,'Old mortgage balances cannot be treated as current');
 assert.equal(missingMortgage.netWorth,'5000.00','A stale mortgage is excluded, not interpreted as zero');
 assert.equal(missingMortgage.netWorthNotUpdated[0].kind,'mortgage');
 assert.equal(summarize({...mortgageFixture,accounts:[mortgageFixture.accounts[1]]},{now:NOW}).netWorth,'-210000.00');
+
+
+// Mortgage/retirement debt snapshots remain current for 35 days, unlike deposits.
+const mortgageAsOf=summarize(mortgageFixture,{now:NOW});
+assert.equal(mortgageAsOf.netWorth,'-205000.00');
+assert.equal(mortgageAsOf.netWorthGroupAccounts.other[0].asOf,true);
+assert.equal(mortgageAsOf.netWorthGroupAccounts.other[0].balanceDate,NOW-20*DAY);
+const checkingExpired=structuredClone(mortgageFixture);
+checkingExpired.accounts[0].balanceDate=NOW-8*DAY;
+const checkingPartial=summarize(checkingExpired,{now:NOW});
+assert.equal(checkingPartial.netWorth,'-210000.00');
+assert.equal(checkingPartial.cashAvailable,false);
+assert.equal(checkingPartial.netWorthNotUpdated[0].kind,'checking');
+const mortgageTooOld=structuredClone(mortgageFixture);
+mortgageTooOld.accounts[1].balanceDate=NOW-40*DAY;
+assert.equal(summarize(mortgageTooOld,{now:NOW}).netWorth,'5000.00');
+
+// Plaid does not supply provider balanceDate; observation is provisional,
+// counted with a warning rather than invented bank freshness.
+const plaidMortgage=structuredClone(mortgageFixture);
+plaidMortgage.accounts[1].balance='249950.12';
+plaidMortgage.accounts[1].balanceDate=null;
+plaidMortgage.accounts[1].observedAt=NOW-100;
+const plaidMortgageResult=summarize(plaidMortgage,{now:NOW});
+assert.equal(plaidMortgageResult.liabilities,'249950.12');
+assert.equal(plaidMortgageResult.netWorth,'-244950.12');
+assert.equal(plaidMortgageResult.netWorthGroupAccounts.other[0].provisional,true);
+assert.equal(plaidMortgageResult.netWorthPartial,true);
+assert.ok(plaidMortgageResult.provisionalBalances.includes('Synthetic Mortgage'));
+const plaidChecking=structuredClone(mortgageFixture);
+plaidChecking.accounts[0].balance='1234.56';
+plaidChecking.accounts[0].balanceDate=null;
+plaidChecking.accounts[0].observedAt=NOW-100;
+const plaidCheckingResult=summarize(plaidChecking,{now:NOW});
+assert.equal(plaidCheckingResult.cash,'1234.56');
+assert.equal(plaidCheckingResult.assets,'1234.56');
+assert.equal(plaidCheckingResult.netWorth,'-208765.44');
+assert.equal(plaidCheckingResult.cashPartial,true);
+assert.equal(plaidCheckingResult.netWorthPartial,true);
+const staleObservation=structuredClone(plaidChecking);
+staleObservation.accounts[0].observedAt=NOW-8*DAY;
+assert.equal(summarize(staleObservation,{now:NOW}).cashAvailable,false);
+
+// Bank mortgage debits belong in spending, even if legacy bank-supplied signals
+// imply an issuer card payment. Owner-reviewed transfer still wins.
+const housingExpense=structuredClone(mortgageFixture);
+housingExpense.monitoredAccounts=['cash'];
+housingExpense.transactions.cash={mortgage:{
+  id:'synthetic-mtg-pmt',amount:'-1425.37',posted:NOW-100,pending:false,
+  category:'housing',categorySource:'automatic',confidence:'high',
+  description:'CHASE MORTGAGE PMT',merchant:'CHASE',signals:['card_payment']
+}};
+assert.equal(summarize(housingExpense,{now:NOW}).expenses,'1425.37');
+assert.equal(summarize(housingExpense,{now:NOW}).spending.housing,'1425.37');
+housingExpense.transactions.cash.mortgage.category='transfer';
+housingExpense.transactions.cash.mortgage.categorySource='user';
+assert.equal(summarize(housingExpense,{now:NOW}).expenses,'0.00');
