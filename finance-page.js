@@ -385,6 +385,7 @@
     const nav=el('nav',undefined,host,'finance-page-nav');nav.setAttribute('aria-label','Finance sections');
     for(const [id,label] of [['overview','Overview'],['spending','Spending'],['recurring','Recurring'],['transactions','Transactions'],['accounts','Accounts']]){
       const b=action(nav,label,()=>{
+        if(view!==id)expandedTransaction='';
         view=id;paint();
         if(id==='recurring')requestArchiveWindow(731);
         if(id==='spending')loadArchiveMonth(spendingMonth);
