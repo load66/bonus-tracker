@@ -78,7 +78,17 @@ return result;
         await page.getByRole('button',{name:'Finances',exact:true}).click();
         const finances=page.getByRole('region',{name:'My finances'});
         await finances.getByRole('heading',{name:'Finances'}).waitFor();
-        await finances.getByRole('button',{name:'Bonuses',exact:true}).click();
+        assert.equal(await finances.getByRole('button',{name:'Bonuses',exact:true}).count(),0,
+          'Bonus evidence controls must not appear in the production Finance navigation');
+        assert.equal(await finances.getByRole('region',{name:'Bank bonus activity evidence'}).count(),0,
+          'The production Finance page must not mount a bonus review panel');
+        // Synthetic, test-only fixture: retain full regression coverage of the
+        // internal bonus evidence engine without restoring the hidden UI.
+        await page.evaluate(()=>{
+          const host=document.getElementById('bt-finances-page');
+          const fixture=document.createElement('section');host.append(fixture);
+          if(!window.BTBonusEvidence?.mount(fixture,'simplefin'))throw Error('Evidence engine fixture unavailable');
+        });
         const section=finances.getByRole('region',{name:'Bank bonus activity evidence'});
         await section.getByRole('button',{name:'Review bank activity',exact:true}).waitFor();
         cycleId=await page.evaluate(()=>entries[0].id);
@@ -145,7 +155,12 @@ return result;
           'Tracker remains free of bank-activity review after navigation');
         await page.getByRole('button',{name:'Finances',exact:true}).click();
         await finances.getByRole('heading',{name:'Finances'}).waitFor();
-        await finances.getByRole('button',{name:'Bonuses',exact:true}).click();
+        assert.equal(await finances.getByRole('button',{name:'Bonuses',exact:true}).count(),0);
+        await page.evaluate(()=>{
+          const host=document.getElementById('bt-finances-page');
+          const fixture=document.createElement('section');host.append(fixture);
+          if(!window.BTBonusEvidence?.mount(fixture,'simplefin'))throw Error('Evidence fixture reopen failed');
+        });
         const reopened=finances.getByRole('region',{name:'Bank bonus activity evidence'});
         await reopened.getByRole('button',{name:'Review bank activity',exact:true}).waitFor();
         assert.equal(await reopened.locator('.bonus-evidence-card').count(),0,
@@ -207,7 +222,10 @@ return result;
           if(path.endsWith('/evidence-review'))plaidReviews[body.transaction]={status:body.decision,reviewedAt:NOW,requirementId:body.requirementId||null};
           await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(sample(cycleId,plaidReviews,0))});
         });
-        await finances.getByRole('combobox',{name:'Bank activity connection source'}).selectOption('plaid');
+        await page.evaluate(()=>{
+          if(!window.BTBonusEvidence?.mount(document.getElementById('bt-bonus-evidence'),'plaid'))
+            throw Error('Plaid evidence fixture switch failed');
+        });
         await reopened.getByRole('button',{name:'Review bank activity',exact:true}).waitFor();
         await reopened.getByRole('button',{name:'Review bank activity',exact:true}).click();
         await reopened.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor();
@@ -217,7 +235,7 @@ return result;
         assert.ok(requests.some(r=>r.path.endsWith('/plaid/accounts/evidence-review')&&r.method==='PUT'));
         assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'Plaid reviews never write promotion milestones');
         assert.deepEqual(errors,[],'no browser errors');
-        console.log(browserName+': Finances-only bonus evidence, private lifecycle, reviewed direct deposits, manual payout and mobile checks passed');
+        console.log(browserName+': hidden bonus evidence engine, private lifecycle, reviewed deposits, payout safeguards and mobile checks passed');
       }finally{await browser.close();}
     }
   }finally{server.close();}
