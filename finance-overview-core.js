@@ -301,5 +301,82 @@
       excludedFromNetWorth:profileEntries.filter(x=>x.profile.balanceMode==='exclude').length
     });
   }
-  return Object.freeze({summarize,cents,decimal,signedBalance});
+  // Pure, privacy-safe runtime audit. Only violation codes may be logged.
+  // A separate coverage warning handles genuinely absent provider history.
+  function checkInvariants(state={},summary={}){
+    const violations=new Set();
+    const sum=(values)=>{
+      let total=0n;
+      for(const value of values){const n=cents(value);if(n===null)return null;total+=n}
+      return total;
+    };
+    const present=value=>value!==null&&value!==undefined;
+    if(present(summary.netWorth)&&present(summary.assets)&&present(summary.liabilities)){
+      const worth=cents(summary.netWorth),assets=cents(summary.assets),liabilities=cents(summary.liabilities);
+      if(worth===null||assets===null||liabilities===null||worth!==assets-liabilities)
+        violations.add('NET_WORTH_MISMATCH');
+      const groups=summary.netWorthGroups||{};
+      const grouped=sum(['cash','investments','creditCards','other'].map(k=>groups[k]));
+      if(grouped===null||worth!==grouped)violations.add('NET_WORTH_GROUP_MISMATCH');
+    }
+    if(present(summary.expenses)){
+      const spendingSum=sum(Object.values(summary.spending||{}));
+      if(spendingSum===null||spendingSum!==cents(summary.expenses))
+        violations.add('SPENDING_CATEGORY_MISMATCH');
+    }
+    const keys=new Set((state.accounts||[]).filter(a=>a?.currency==='USD').map(a=>a.key));
+    const selected=new Set([...(state.monitoredAccounts||[]),...Object.keys(state.mappings||{})]);
+    const profiles=state.accountProfiles||{};
+    const ledgers=state.transactions||{};
+    const byPair=new Map();
+    const guard=typeof window!=='undefined'?window.BTFinanceTransfer:typeof require==='function'?require('./finance-transfer-core.js'):null;
+    const now=Number.isFinite(state.auditNow)?state.auditNow:Math.floor(Date.now()/1000);
+    const days=Number.isInteger(summary.days)?summary.days:30;
+    for(const key of selected){
+      if(!keys.has(key)||profiles[key]?.syncEnabled===false||profiles[key]?.removed)continue;
+      const ids=new Set();
+      for(const [index,raw] of Object.entries(ledgers[key]||{})){
+        if(!raw||typeof raw!=='object')continue;
+        const id=String(raw.id??index);
+        if(ids.has(id))violations.add('DUPLICATE_TRANSACTION_ID');
+        ids.add(id);
+        if(raw.pending||!Number.isFinite(raw.posted)||raw.posted>now+300)continue;
+        const n=cents(raw.amount);
+        if(n===null){violations.add('INVALID_POSTED_AMOUNT');continue}
+        const item=guard?.effective(raw)||raw;
+        if((item.signals||[]).includes('matched_internal_transfer')){
+          const pair=String(item.transferPairId||'');
+          if(!pair)violations.add('TRANSFER_PAIR_MISSING');
+          else{
+            const list=byPair.get(pair)||[];
+            list.push({account:key,amount:n});
+            byPair.set(pair,list);
+          }
+        }
+        if(raw.posted<now-days*DAY||raw.excludedFromTotals===true||
+          profiles[key]?.includeSpending===false)continue;
+        const category=String(item.category||'unreviewed');
+        const isIncome=category==='income'&&n>0n;
+        const isTransfer=category==='transfer'||!!item.transferPairId;
+        const isVerification=category==='verification';
+        const isRefund=category==='refund';
+        const isSpending=n<0n&&!isTransfer&&!isVerification&&!isRefund&&
+          !financialMovement(item)&&(!(item.signals||[]).includes('possible_transfer')||category==='housing');
+        const counted=[isIncome,isTransfer,isVerification,isRefund,isSpending].filter(Boolean).length;
+        // Not-yet-categorized credits are excluded from confirmed totals.
+        // Overlapping categories are a data-integrity defect.
+        if(counted>1)violations.add('CLASSIFICATION_CONFLICT');
+        if(counted===0&&category!=='unreviewed'&&category!=='bonus'&&
+           category!=='excluded'&&category!=='possible_transfer'&&n!==0n)
+          violations.add('CLASSIFICATION_GAP');
+      }
+    }
+    for(const paired of byPair.values()){
+      if(paired.length!==2||paired[0].account===paired[1].account||
+         paired[0].amount!==-paired[1].amount)
+        violations.add('TRANSFER_PAIR_INVALID');
+    }
+    return [...violations].sort();
+  }
+  return Object.freeze({summarize,checkInvariants,cents,decimal,signedBalance});
 });

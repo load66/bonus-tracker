@@ -272,3 +272,38 @@ not verify actual bank connectivity or production categorization accuracy.
   from a balance or a payment memo.
 - Regression tests use synthetic balances, categories and bank names only;
   provider tokens, real transactions and connected-bank state are untouched.
+
+## Finance v3.4.96 — accuracy and resilience
+
+- Plaid `/accounts/get` observations now retain append-only account balance snapshots
+  with the existing SimpleFIN 90-day daily, then 24-month weekly compaction.
+  An `observedAt` timestamp marks when **our app saw the data**, not when the
+  financial institution last updated it. No provider timestamp is invented.
+- `finance-reconcile-core.js` checks exact-cent agreement between the two latest
+  spaced balance observations and posted ledger activity, tolerating date-only
+  posting boundaries by testing a one-day extension. The result is
+  `reconciled`, `off` or `unknown`. Unknown includes missing snapshots,
+  incomplete transaction coverage, pending-only windows and unverified
+  liability-sign directions. An observation match is **not a statement-level
+  verification**.
+- Accounts → Data health shows actionable discrepancies without overwriting
+  source transactions. Failed provider reads retain prior histories, reviews
+  and balances. A temporarily absent Plaid account stays visible and marked
+  for attention until it reappears.
+- Finance runtime invariants compare net worth with assets less liabilities,
+  grouped totals, spending subtotals and exact paired transfer legs. They also
+  detect duplicate posted transaction identities and invalid row classifications.
+  On violations, the affected headline is suppressed as `Needs review` and
+  the screen links to Data health. Console diagnostics log **codes only**,
+  never private amounts, names or transaction IDs.
+- Home and Spending show the oldest included source sync time and label totals
+  `Partial` when connected accounts are stale, missing or unreconciled.
+  Partial values are not presented as bank-certified reconciliations.
+- The two repositories pin the same synthetic
+  `tests/fixtures/golden-ledger.json` baseline with immutable FNV64 digest
+  `889078fa7fb897d3`. Hand-written expected cents live in the frontend unit
+  suite; the backend unit suite exercises real data normalization/serialization
+  behind mocked provider boundaries. A digest change requires review in
+  both repositories and an explicit expectation explanation.
+- No real bank calls, bulk categorization or account data mutations occur in
+  these tests; existing category and transfer review precedence remains intact.
