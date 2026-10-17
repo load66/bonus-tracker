@@ -103,6 +103,53 @@
     const cashReady=readyCash.length>0;
     const cash=readyCash.length?readyCash.reduce((sum,x)=>sum+x.balance.amount,0n):null;
     const cashMissing=cashEntries.length-readyCash.length;
+
+    const investingEntries=profileEntries.filter(x=>['brokerage','retirement'].includes(x.profile.kind));
+    const investBalances=investingEntries.filter(x=>x.account.currency==='USD'&&x.balance);
+    const investmentTotal=investBalances.length?investBalances.reduce((sum,x)=>sum+x.balance.amount,0n):null;
+    const brokerageTotal=investBalances.filter(x=>x.profile.kind==='brokerage').reduce((sum,x)=>sum+x.balance.amount,0n);
+    const retirementTotal=investBalances.filter(x=>x.profile.kind==='retirement').reduce((sum,x)=>sum+x.balance.amount,0n);
+    const investmentHistory=state.balanceHistory||{};
+    const previousTotals=(cutoff)=>{
+      let sum=0n;
+      for(const item of investBalances){
+        const rows=(investmentHistory[item.account.key]||[])
+          .filter(p=>Number.isFinite(p.observedAt)&&p.observedAt<=cutoff&&p.currency==='USD')
+          .sort((a,b)=>b.observedAt-a.observedAt);
+        const value=rows.length?cents(rows[0].balance):null;
+        if(value===null)return null;
+        sum+=value;
+      }
+      return sum;
+    };
+    const previousSyncTotals=(()=>{
+      if(!investBalances.length)return null;
+      let sum=0n;
+      for(const item of investBalances){
+        const rows=(investmentHistory[item.account.key]||[]).filter(p=>
+          Number.isFinite(p.observedAt)&&p.currency==='USD').sort((a,b)=>b.observedAt-a.observedAt);
+        const value=rows.length>1?cents(rows[1].balance):null;
+        if(value===null)return null;
+        sum+=value;
+      }
+      return sum;
+    })();
+    const lastMonthInvestment=previousTotals(now-30*DAY);
+    const monthStart=new Date(new Date(now*1000).getFullYear(),new Date(now*1000).getMonth(),1).getTime()/1000;
+    let investedMonth=0n,investmentIncome=0n;
+    for(const account of accounts){
+      const kind=profiles[account.key]?.kind||account.kind;
+      for(const row of Object.values(history[account.key]||{})){
+        if(!row||row.pending||row.excludedFromTotals||row.posted<monthStart||row.posted>now+300)continue;
+        const n=cents(row.amount),description=String(row.description||row.merchant||'');
+        if(n===null)continue;
+        if(['checking','savings'].includes(kind)&&n<0n&&
+          /^\s*to\s+(?:brokerage|invest(?:ing|ment)|ira|robinhood|fidelity|schwab|vanguard)\b/i.test(description))investedMonth-=n;
+        if(['brokerage','retirement'].includes(kind)&&n>0n&&
+           /\b(?:dividend|interest)\b/i.test(description))investmentIncome+=n;
+      }
+    }
+
     const included=profileEntries.filter(x=>x.profile.balanceMode!=='exclude');
     // Plaid supplies observedAt but not necessarily an authoritative balanceDate.
     // Show recently observed card debt without pretending its provider freshness was certified.
@@ -168,6 +215,13 @@
       cashAvailable:cashReady,cash:cashReady?decimal(cash):null,
       cashAccountCount:cashEntries.length,cashIncludedCount:readyCash.length,
       cashPartial:cashMissing>0,staleOrUnavailableCash:cashMissing,
+      investments:investmentTotal===null?null:decimal(investmentTotal),
+      investmentsAvailable:investmentTotal!==null,
+      investmentsMissing:investingEntries.length-investBalances.length,
+      brokerageTotal:decimal(brokerageTotal),retirementTotal:decimal(retirementTotal),
+      investmentChangeSinceSync:previousSyncTotals===null||investmentTotal===null?null:decimal(investmentTotal-previousSyncTotals),
+      investmentChange1M:lastMonthInvestment===null||investmentTotal===null?null:decimal(investmentTotal-lastMonthInvestment),
+      investedThisMonth:decimal(investedMonth),investmentIncome:decimal(investmentIncome),
       netWorthAvailable:netWorthReady,netWorthBasedOn:usable.length,netWorthTotalAccounts:accounts.length,
       netWorthPartial:usable.length<included.length||provisional.length>0,
       netWorthExclusions:exclusions,provisionalBalances:provisional,assets:netWorthReady?decimal(assets):null,
