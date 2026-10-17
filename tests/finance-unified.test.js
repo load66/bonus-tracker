@@ -355,3 +355,86 @@ plaidLoan.accountProfiles={};
 const plaidLoanSummary=finance.summarize(core.safeForSummary(core.combine({plaid:plaidLoan})),{now});
 assert.equal(plaidLoanSummary.liabilities,'250000.00');
 assert.equal(plaidLoanSummary.netWorth,'-250000.00');
+
+
+// Product-aware classification regression: investment/retirement evidence
+// outranks generic "savings", even when providers omit or mislabel subtypes.
+const classificationCases=[
+  {account:{name:'Example Employer 401(k) Retirement Savings Plan',bank:'Example Plan Administrator',
+    accountType:'depository',accountSubtype:'savings'},expected:'retirement'},
+  {account:{name:'Example Employer 403(b) Savings Plan',bank:'Example Financial',
+    accountType:'investment',accountSubtype:'individual'},expected:'retirement'},
+  {account:{name:'457(b) Deferred Compensation Plan',bank:'Example Custodian',
+    accountType:'investment',accountSubtype:''},expected:'retirement'},
+  {account:{name:'Roth IRA Savings',bank:'Example Financial',
+    accountType:'depository',accountSubtype:'savings'},expected:'retirement'},
+  {account:{name:'Traditional IRA',bank:'Example Custodian',
+    accountType:'investment',accountSubtype:'individual'},expected:'retirement'},
+  {account:{name:'Employee Savings Plan',bank:'Example Custodian',
+    accountType:'investment',accountSubtype:'individual'},expected:'brokerage'},
+  {account:{name:'Individual brokerage cash',bank:'Example Brokerage',
+    accountType:'investment',accountSubtype:'individual'},expected:'brokerage'},
+  {account:{name:'Trading Portfolio',bank:'Example Custodian',
+    accountType:'depository',accountSubtype:''},expected:'brokerage'},
+  {account:{name:'Securities account',bank:'Example Broker',
+    accountType:'investment',accountSubtype:''},expected:'brokerage'},
+  {account:{name:'Savings (synthetic)',bank:'Example Brokerage',
+    accountType:'investment',accountSubtype:'individual'},expected:'savings'},
+  {account:{name:'Investor Checking',bank:'Example Brokerage',
+    accountType:'investment',accountSubtype:'individual'},expected:'checking'},
+  {account:{name:'Savings Account',bank:'Example Credit Union',
+    accountType:'depository',accountSubtype:'savings'},expected:'savings'},
+  {account:{name:'Checking Account',bank:'Example Credit Union',
+    accountType:'depository',accountSubtype:'checking'},expected:'checking'},
+  {account:{name:'Mortgage Loan',bank:'Example Servicer',
+    accountType:'loan',accountSubtype:'loan'},expected:'mortgage'},
+  {account:{name:'Example Credit Card',bank:'Example Financial',
+    accountType:'credit',accountSubtype:'credit_card'},expected:'credit_card'},
+  {account:{name:'Generic Account',bank:'Example Financial',
+    accountType:'unknown',accountSubtype:''},expected:'unclassified'}
+];
+for(const {account,expected} of classificationCases)
+  assert.equal(core.detectedType(account),expected,'Product-aware inference: '+account.name);
+
+// Correct grouping must be read-only, idempotent and persistent across reloads;
+// provider balances remain unchanged and net worth is not inflated.
+for(const source of ['simplefin','plaid']){
+  const retirementKey='r'.repeat(64),cashKey='c'.repeat(64),brokerKey='i'.repeat(64);
+  const sourceState={connected:true,accounts:[
+    {key:retirementKey,bank:'Example Plan Administrator',name:'Example Employer 401(k) Retirement Savings Plan',
+      accountType:'depository',accountSubtype:'savings',currency:'USD',
+      balance:'59280.56',balanceDate:now-100,observedAt:now-100},
+    {key:cashKey,bank:'Example Bank',name:'Everyday Savings',
+      accountType:'depository',accountSubtype:'savings',currency:'USD',
+      balance:'1055.84',balanceDate:now-100,observedAt:now-100},
+    {key:brokerKey,bank:'Example Brokerage',name:'Individual Brokerage',
+      accountType:'investment',accountSubtype:'individual',currency:'USD',
+      balance:'2500.00',balanceDate:now-100,observedAt:now-100}
+  ],monitoredAccounts:[retirementKey,cashKey,brokerKey],
+  transactions:{},accountProfiles:{},lastSuccess:now-30};
+  const raw=JSON.stringify(sourceState);
+  const inputs=source==='simplefin'?{simplefin:sourceState}:{plaid:sourceState};
+  const classified=core.combine(inputs);
+  const ret=classified.accounts.find(a=>a.rawKey===retirementKey);
+  assert.equal(ret.kind,'retirement',source+' retirement is not savings');
+  assert.equal(classified.accountProfiles[ret.key].kind,'retirement');
+  assert.equal(classified.accountProfiles[ret.key].includeSpending,false);
+  const out=finance.summarize(core.safeForSummary(classified),{now,days:30});
+  assert.equal(out.cash,'1055.84',source+' cash includes deposits only');
+  assert.equal(out.investments,'61780.56',source+' investments include retirement and brokerage');
+  assert.equal(out.investmentRetirement,'59280.56',source+' retirement subgroup is correct');
+  assert.equal(out.investmentBrokerage,'2500.00',source+' brokerage subgroup is correct');
+  assert.equal(out.netWorth,'62836.40',source+' overall net worth remains correct');
+  const repeat=finance.summarize(core.safeForSummary(core.combine(inputs)),{now,days:30});
+  assert.equal(repeat.cash,out.cash);
+  assert.equal(repeat.investments,out.investments);
+  assert.equal(JSON.stringify(sourceState),raw,'Read-only classifier must not rewrite provider data');
+  // A verified owner-saved account type must always outrank automatic inference.
+  sourceState.accountProfiles[retirementKey]={
+    kind:'savings',balanceMode:'exclude',includeSpending:false};
+  const ownerOverride=core.combine(inputs);
+  assert.equal(ownerOverride.accountProfiles[ret.key].kind,'savings',
+    'Explicit saved account category is preserved, not silently replaced');
+  assert.equal(ownerOverride.accountProfiles[ret.key].balanceMode,'exclude',
+    'Manual net-worth exclusion is preserved');
+}
