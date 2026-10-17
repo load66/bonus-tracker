@@ -72,3 +72,39 @@ assert.equal(I.budget('100.00','100.00',15,30).level,'near');
 assert.equal(I.budget('100.00','100.01',15,30).level,'over');
 assert.equal(I.budget('100.00','120.00',15,30).left,'0.00');
 assert.equal(I.budget('0','2.00',15,30),null);
+
+const described=(description,amount,category='unreviewed')=>({
+  ...oct(12,amount,category,description),description,categorySource:'automatic'
+});
+const fromRealDescriptions=[
+  described('To Brokerage','-2000'),
+  described('To Citibank','-251'),
+  described('From Lafayette Fcu','500','income'),
+  described('To Personal Checking','-7379.04'),
+  described('From Personal Savings','7379.04','income'),
+  described('To Paypal','-428.17'),
+  described('U.S. Bank','-820.77'),
+  described('Capital One','-200'),
+  described('T-Mobile','-157.62'),
+  described('Apple','-249.52')
+];
+const real=I.spent(fromRealDescriptions,'2026-10');
+assert.equal(real.total,'407.14','Only T-Mobile and Apple are real purchases in the exact supplied sample');
+assert.equal(real.income,'0.00','From Lafayette Fcu and From Personal Savings are not income');
+assert.equal(real.uncategorized,0,'Known merchants are immediately categorized while awaiting backend sync');
+assert.equal(real.categories.find(x=>x.category==='utilities').amount,'157.62');
+assert.equal(real.categories.find(x=>x.category==='shopping').amount,'249.52');
+for(const tx of fromRealDescriptions.slice(0,8)){
+  assert.equal(I.spendingCategory(tx,I.cents(tx.amount)),null,tx.description+' must not inflate spending');
+}
+assert.equal(I.movementKind(fromRealDescriptions[0]),'investment_transfer');
+assert.equal(I.movementKind(fromRealDescriptions[6]),'card_payment');
+const uncertain=described('To My Wallet','-2000.00');
+const afterSafeguard=I.spent([...fromRealDescriptions,uncertain],'2026-10');
+assert.equal(afterSafeguard.total,'407.14');
+assert.equal(afterSafeguard.possibleTransfers.length,1);
+assert.equal(afterSafeguard.possibleTransfers[0].description,'To My Wallet');
+const reviewed={...uncertain,category:'other',categorySource:'user'};
+assert.equal(I.spendingCategory(reviewed,I.cents(reviewed.amount)),'other',
+ 'Explicitly confirmed spending must be included, not permanently blocked by the safety heuristic');
+assert.equal(I.spendingCategory(described('Coffee shop','-6.75'),-675n),'dining');
