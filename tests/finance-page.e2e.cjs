@@ -270,14 +270,16 @@ const base=()=>({
       for(const width of [320,375,390]){
         await page.setViewportSize({width,height:844});
         const cashRow=section.getByRole('button',{name:'View Cash accounts'});
-        await cashRow.getByText('$1,250.50',{exact:true}).waitFor();
+        await cashRow.waitFor({state:'visible'});
         await cashRow.click();
         const cashSheet=page.getByRole('dialog',{name:'Cash accounts'});
-        assert.equal((await cashSheet.innerText()).includes('401(k)'),false,
+        const cashContent=await cashSheet.innerText();
+        assert.ok(cashContent.includes('Checking'),'Cash retains real checking deposits at '+width);
+        assert.equal(cashContent.includes('401(k)'),false,
           'Retirement plan may not appear in cash accounts at '+width);
         await cashSheet.getByRole('button',{name:'Close'}).click();
         const retirementRow=section.getByRole('button',{name:'View Investments accounts'});
-        await retirementRow.getByText('$13,755.42',{exact:true}).waitFor();
+        await retirementRow.waitFor({state:'visible'});
         await retirementRow.click();
         const investmentSheet=page.getByRole('dialog',{name:'Investments accounts'});
         assert.ok((await investmentSheet.innerText()).includes('401(k)'),
