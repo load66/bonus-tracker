@@ -1,7 +1,7 @@
-/* Version 3.4.83: Finance mobile presentation polish; existing tracker engines preserved. */
+/* Version 3.4.84: Equal-width, overlap-safe six-tab bottom navigation. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.4.83';
+const APP_VERSION='3.4.84';
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
 const OFFER_HIST_KEY='bt_offer_history_v1';
 const TC_ARCHIVE_KEY='bt_tc_archive_v1';
@@ -4097,7 +4097,7 @@ function R(){captureProfileSectionState();const el=document.querySelector('.scro
   h+='</div>';
   if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';
   h+='<div class="tabs">';
-  ['tracker','bonuses','finances','tax','tips','storage'].forEach((t,i)=>{h+='<button class="tb'+(tab===t?' on':'')+'" aria-current="'+(tab===t?'page':'false')+'" onclick="switchMainTab(\''+t+'\')">'+[I.grid,I.tips,I.profile,I.doc,I.tips,I.lock][i]+'<span>'+['Tracker','Bank Bonuses','Finances','Tax','Datapoints','T&C Archive'][i]+'</span></button>'});
+  ['tracker','bonuses','finances','tax','tips','storage'].forEach((t,i)=>{const full=['Tracker','Bank Bonuses','Finances','Tax','Datapoints','T&C Archive'][i],short=['Tracker','Bonuses','Finances','Tax','Data','Archive'][i];h+='<button class="tb'+(tab===t?' on':'')+'" aria-label="'+full+'" aria-current="'+(tab===t?'page':'false')+'" onclick="switchMainTab(\''+t+'\')">'+[I.grid,I.tips,I.profile,I.doc,I.tips,I.lock][i]+'<span>'+short+'</span></button>'});
   h+='</div>';
   if(modal)h+=rModal();if(cfm)h+=rCfm();if(ddPrompt)h+=rDD();if(rcvPrompt)h+=rRcv();if(reqPrompt)h+=rReqMet();if(closePrompt)h+=rClose();if(overwritePrompt)h+=rOverwrite();if(matchPickerPrompt)h+=rMatchPicker();if(replacementPickerPrompt)h+=rReplacementPicker();if(feeCheckPrompt)h+=rFeeCheck();if(timerEditModal)h+=rTimerEdit();if(dpEditor)h+=rDpEditor();if(timerChoicePrompt)h+=rTimerChoicePrompt();
   if(undoState)h+='<div class="undo-bar"><span>'+esc(undoState.undoLabel||('Change saved for '+undoState.bank+' — Undo restores everything for 60 seconds.'))+'</span><button onclick="undoClose()">Undo</button></div>';
