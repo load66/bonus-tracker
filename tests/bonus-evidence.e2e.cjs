@@ -139,9 +139,16 @@ return result;
         await section.getByRole('button',{name:'Undo review',exact:true}).first().click();
         await section.getByText('Review reopened.').waitFor();
         assert.equal(Object.keys(reviews).length,1,'undo clears exactly one receipt');
-        await section.getByRole('button',{name:'Show transaction amounts'}).click();
+        // The fixture lives below the real app. Dispatch test-only clicks to
+        // avoid Playwright scrolling through unrelated app controls.
+        const fixtureClick=async label=>section.evaluate((root,name)=>{
+          const control=[...root.querySelectorAll('button')].find(b=>b.textContent.trim()===name);
+          if(!control||control.disabled)throw Error('Fixture control unavailable: '+name);
+          control.click();
+        },label);
+        await fixtureClick('Show transaction amounts');
         assert.ok((await section.innerText()).includes('$200.00'));
-        await section.getByRole('button',{name:'Hide transaction amounts'}).click();
+        await fixtureClick('Hide transaction amounts');
         for(const width of [320,390,430]){
           await page.setViewportSize({width,height:760});
           const geometry=await section.evaluate(n=>({viewport:innerWidth,section:n.getBoundingClientRect().width,content:n.scrollWidth}));
@@ -152,7 +159,7 @@ return result;
         assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,'review cannot modify bonus entry data');
         assert.equal(await section.getByRole('button',{name:'Open tracker'}).count(),0,
           'Bank evidence stays in Finances rather than sending users to Tracker');
-        await section.getByRole('button',{name:'Review payout'}).click();
+        await fixtureClick('Review payout');
         assert.equal(await page.evaluate(()=>rcvPrompt?.entryId),cycleId,
           'Finance bonus evidence invokes the existing explicit payout confirmation');
         assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,
