@@ -242,3 +242,33 @@ not verify actual bank connectivity or production categorization accuracy.
   provider transaction-review endpoint; no browser persistence or bonus changes.
 - Frontend and backend release versions are 3.4.93; backend CI, Railway production,
   frontend CI and Pages deployment must be verified independently in that order.
+
+## Finance v3.4.95 — mortgage, loan and balance accuracy
+
+- Balances use their product's reporting cadence: checking, savings, credit cards and
+  brokerage accounts are current for seven days; mortgages, installment loans,
+  other liabilities and retirement accounts are current for 35 days. Older
+  balances are shown as needing an update rather than represented as zero.
+  A balance 8–35 days old in a long-window category is labeled "Balance as of"
+  with the date, rather than as a just-updated balance.
+- Plaid accounts can supply an observed balance without a provider-certified
+  balance date. Recent observations in any classified account type can contribute
+  provisionally to cash, assets, liabilities and net worth, but remain flagged
+  "Refresh suggested", and the resulting totals are marked partial. No bank date
+  is invented and original provider rows remain unchanged.
+- A recognized mortgage or installment loan represents an outstanding debt, not
+  a credit/asset merely because a provider uses a negative balance sign. Such
+  debts enter Finance net worth as negative amounts regardless of sign, with
+  exact cents; credit-card signs retain their existing semantics because
+  SimpleFIN credit-card conventions have not been independently established.
+- Mortgage servicer names and common loan abbreviations are recognized even
+  when the account type is missing or generic. Previously saved owner type and
+  net-worth opt-out settings retain priority.
+- Housing payment descriptions are not auto-excluded as card transfers solely
+  because they contain an issuer name or payment verb; owner-confirmed transfers
+  and intentionally matched internal transfers retain their safeguards.
+- Product data is not a mortgage statement: home value, equity, amortization,
+  interest rate, PMI, escrow breakdown and payment due date are not inferred
+  from a balance or a payment memo.
+- Regression tests use synthetic balances, categories and bank names only;
+  provider tokens, real transactions and connected-bank state are untouched.
