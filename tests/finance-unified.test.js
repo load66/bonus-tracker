@@ -78,6 +78,30 @@ malformedPlaid.accounts[0].invalidTransactionRows=2;
 assert.equal(core.safeForSummary(core.combine({simplefin:simple,plaid:malformedPlaid})).malformedActivity,true,
   'Plaid per-account malformed transaction counts must keep financial totals partial');
 
+const disabledCard=structuredClone(plaid);
+disabledCard.accounts[0]={...disabledCard.accounts[0],name:'Robinhood Credit Card 4010',
+  balance:'-283.27',accountType:'credit',accountSubtype:'credit_card',balanceDate:now-100};
+disabledCard.accountProfiles[b]={kind:'credit_card',balanceMode:'liability',syncEnabled:false};
+disabledCard.transactions[b]={cardIncome:{id:'cardIncome',amount:'900.00',posted:now-300,
+  pending:false,category:'income',merchant:'Synthetic card credit',categorySource:'automatic'}};
+const disabledUnified=core.combine({simplefin:simple,plaid:disabledCard});
+assert.equal(disabledUnified.accounts.length,2,'Disabled account retained in directory for reactivation');
+assert.equal(disabledUnified.accountProfiles['plaid:'+b].syncEnabled,false);
+const disabledSafe=core.safeForSummary(disabledUnified);
+assert.equal(disabledSafe.accounts.length,1,'Sync-off credit card excluded from every summary');
+assert.equal(disabledSafe.transactions['plaid:'+b],undefined,'Sync-off transactions not used in recurring/spending');
+assert.equal(disabledSafe.notSyncingAccounts,1);
+const disabledSummary=finance.summarize(disabledSafe,{now,days:30});
+assert.equal(disabledSummary.creditCards,'0.00','Credit-card balance must not leak into displayed totals');
+assert.equal(disabledSummary.netWorth,'501.25','Sync-off card credit cannot increase net worth');
+assert.equal(disabledSummary.income,'400.00','Sync-off transaction credits cannot count as income');
+assert.equal(plaid.accountProfiles[b].syncEnabled,undefined,'Provider source was not modified');
+const resumedCard=structuredClone(disabledCard);
+resumedCard.accountProfiles[b].syncEnabled=true;
+const resumedSafe=core.safeForSummary(core.combine({simplefin:simple,plaid:resumedCard}));
+assert.equal(resumedSafe.accounts.length,2,'Reenabling Sync restores account to Finance');
+assert.equal(finance.summarize(resumedSafe,{now,days:30}).income,'1300.00','Reenabled activity restored without losing saved history');
+assert.equal(finance.summarize(resumedSafe,{now,days:30}).netWorth,'784.52','Credit balance restored to net worth');
 const hiddenBank=structuredClone(simple);
 hiddenBank.accountProfiles[a].hidden=true;
 const combinedHidden=core.combine({simplefin:hiddenBank,plaid});
