@@ -7,7 +7,9 @@
   'use strict';
   const DAY=86400000;
   const SPEND=new Set(['housing','loan','utilities','groceries','dining','transportation','shopping','health','entertainment','fees','taxes','travel','subscription','other','unreviewed']);
-  const excluded=new Set(['verification','refund','bonus','unreviewed']);
+  const excluded=new Set(['verification','refund','bonus','unreviewed','transfer','card_payment','investment_transfer']);
+  const recurringTransferSignals=new Set(['matched_internal_transfer','possible_transfer','card_payment','investment_transfer']);
+  const recurringTransferKinds=new Set(['card_payment','investment_contribution','investment_transfer']);
   function cents(value){
     const match=/^([+-]?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(value??'').trim());
     if(!match)return null;
@@ -102,13 +104,15 @@
   function recurring(rows,now=Date.now()){
     const groups=new Map();
     for(const row of rows||[]){
-      if(row.pending||row.excludedFromTotals||!Number.isFinite(row.posted)||row.posted*1000>now+DAY)continue;
-      const n=cents(row.amount);
-      if(n===null||n===0n||excluded.has(row.category)||row.category==='bonus')continue;
-      const key=merchant(row)+'|'+(n>0n?'credit':'debit');
-      if(!merchant(row)||merchant(row)==='transaction'||merchant(row)==='transfer')continue;
+      if(!row||row.pending||row.excludedFromTotals||!Number.isFinite(row.posted)||row.posted*1000>now+DAY)continue;
+      const item=resolve(row),n=cents(item.amount);
+      if(n===null||n===0n||excluded.has(String(item.category||'').toLowerCase())||
+        recurringTransferKinds.has(item.kind)||
+        (item.signals||[]).some(signal=>recurringTransferSignals.has(signal)))continue;
+      const name=merchant(item),key=name+'|'+(n>0n?'credit':'debit');
+      if(!name||name==='transaction'||name==='transfer')continue;
       if(!groups.has(key))groups.set(key,[]);
-      groups.get(key).push({at:row.posted*1000,cents:n,row});
+      groups.get(key).push({at:item.posted*1000,cents:n,row:item});
     }
     const out=[];
     for(const [key,entries] of groups){
@@ -127,17 +131,17 @@
       if(deviation>30)continue;
       const priceIncreased=abs(last.cents)>abs(previous.cents)*11n/10n;
       const next=last.at+Math.round(match.days*DAY);
-      const missed=now>next+match.days*DAY*.5;
+      const missed=now>next;
       out.push({key,merchant:entries.at(-1).row.merchant||entries.at(-1).row.description,
         category:entries.at(-1).row.category,frequency:match.name,
         average:fmt(avg),lastAmount:fmt(abs(last.cents)),lastAt:Math.round(last.at/1000),
-        nextAt:Math.round(next/1000),status:missed?'possibly_canceled':priceIncreased?'price_increased':'active',
+        nextAt:Math.round(next/1000),status:missed?'possibly_ended':priceIncreased?'price_increased':'active',
         direction:last.cents>0n?'income':'expense',history:entries.map(e=>({posted:Math.round(e.at/1000),amount:fmt(e.cents)}))});
     }
     return out.sort((a,b)=>a.nextAt-b.nextAt);
   }
   function upcoming(items,now=Date.now(),days=14){
-    return (items||[]).filter(x=>x.direction==='expense'&&x.status!=='possibly_canceled'&&x.nextAt*1000>=now-DAY&&x.nextAt*1000<=now+days*DAY).slice(0,5);
+    return (items||[]).filter(x=>x.direction==='expense'&&x.status!=='possibly_ended'&&x.status!=='possibly_canceled'&&x.nextAt*1000>=now-DAY&&x.nextAt*1000<=now+days*DAY).slice(0,5);
   }
   return Object.freeze({spent,history,budget,spendingCategory,seenMonth,monthDays,merchant,recurring,upcoming,monthKey,monthShift,cents,fmt,SPEND});
 });
