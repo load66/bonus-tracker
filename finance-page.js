@@ -255,6 +255,9 @@
       paint();
     });
     if(!compact){
+      el('span','Cash',box,'finance-page-hero-cash-label');
+      el('strong',summary.cashAvailable?amount(summary.cash,'USD'):'—',box,'finance-page-hero-cash-value');
+      el('small',summary.cashAvailable?'Recent bank balances':'Cash balance is not available yet',box,'finance-page-hero-cash-status');
       const banks=new Set((currentCombined?.accounts||[]).map(a=>String(a.bank||'').trim().toLowerCase()).filter(Boolean));
       el('p',(currentCombined?.accounts||[]).length+' accounts · '+banks.size+' institutions · '+(currentCombined?.sourceCount||0)+' secure connections',box,'finance-page-count');
       const actions=el('div',undefined,box,'finance-page-quick-actions');
@@ -334,8 +337,6 @@
     const position=el('section',undefined,host,'finance-page-card');
     el('h3','All accounts',position);
     const grid=el('div',undefined,position,'finance-page-grid');
-    metric(grid,'Cash',summary.cashAvailable?amount(summary.cash,'USD'):'—',
-      summary.cashAvailable?'Recent bank balances':'Waiting for recent bank balances');
     metric(grid,'Assets',summary.netWorthAvailable?amount(summary.assets,'USD'):'—');
     metric(grid,'Liabilities',summary.netWorthAvailable?amount(summary.liabilities,'USD'):'—');
     metric(grid,'Net worth',summary.netWorthAvailable?amount(summary.netWorth,'USD'):'—');
