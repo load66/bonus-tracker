@@ -41,7 +41,7 @@ const cardPayments=[row(new Date(2026,7,15).getTime(),'-200.00','transfer','Capi
   row(new Date(2026,9,15).getTime(),'-200.00','transfer','Capital One payment')];
 const recurringTransfers=I.recurring(cardPayments,NOW);
 assert.equal(recurringTransfers.length,0,'Card payments are transfers, not real recurring bills');
-assert.equal(recurringTransfers[0].category,'transfer');
+assert.equal(recurringTransfers.length,0,'Transfers never appear as recurring income or expenses');
 assert.equal(I.spent(cardPayments,'2026-10').total,'0.00','Card payments cannot inflate subscriptions or spending');
 
 console.log('Finance insights passed: spending exclusions, month navigation, monthly, biweekly, yearly, price increases and missed bills.');
