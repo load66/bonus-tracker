@@ -30,6 +30,7 @@
   try{hideChoice=localStorage.getItem(AMOUNTS_PREF)==='true'}catch(_error){}
   let currentRoot=null,sequence=0,hidden=hideChoice,data=null,otherData=null,busy=false,view='overview',period=90;
   let spendingMonth=new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
+  let spendingMode='spending',spendingDetail=null,reviewQueue=[],reviewIndex=0,reviewMonth='';
   let worthRange='3M',financePrefs={version:1,revision:0,budgets:{},duplicates:{},recurring:{},transactionMeta:{}};
   let preferenceAvailable=false,archiveLoading=false,settingsNotice='';
   const archives={simplefin:{},plaid:{}},archivesPending=new Set();
@@ -641,64 +642,295 @@
     return section;
   }
   function spendingView(host){
-    const insight=window.BTFinanceInsights;
-    if(!insight){statusMessage(host,'Spending unavailable','Refresh Finances to load spending charts.');return}
-    const value=spendMonth(spendingMonth),previous=spendMonth(insight.monthShift(spendingMonth,-1));
-    const root=el('section',undefined,host,'finance-page-spending-view');
-    const head=el('div',undefined,root,'finance-page-month-picker');
-    action(head,'‹ Previous month',()=>moveSpendingMonth(-1),'finance-page-chip');
-    el('strong',new Date(spendingMonth+'-02T12:00:00').toLocaleDateString(undefined,
-      {month:'long',year:'numeric'}),head);
-    const future=insight.monthShift(spendingMonth,1)>insight.monthKey(Date.now());
-    const next=action(head,'Next month ›',()=>moveSpendingMonth(1),'finance-page-chip');next.disabled=future;
-    const overview=sectionTitle(root,'Spending this month');
-    el('strong',amount(value.total,'USD'),overview,'finance-page-big-number');
-    el('small','Based on categorized purchases from connected accounts',overview);
-    if(value.uncategorized>0)el('p',value.uncategorized+' transactions need a category. Spending is partial.',overview,'finance-page-hint');
-    const delta=Number(value.total)-Number(previous.total);
-    el('p',Math.abs(delta).toFixed(2)+' '+(delta>=0?'more':'less')+' than last month (full-month comparison)',overview,'finance-page-hint');
-    spendingDonut(root,{spending:Object.fromEntries(value.categories.map(x=>[x.category,x.amount])),
-      complete:!value.uncategorized&&!archiveLoading});
-    const budgetCard=sectionTitle(root,'Monthly budgets','Optional limits saved securely to your account');
-    const categories=[...new Set([...value.categories.map(x=>x.category),...Object.keys(financePrefs.budgets||{})])];
-    if(!categories.length)categories.push('groceries','dining','shopping','utilities');
-    let budgetTotal=0,budgetSpend=0;
-    for(const name of categories){
-      const actual=Number(value.categories.find(x=>x.category===name)?.amount||0);
-      const planned=Number(financePrefs.budgets?.[name]?.amount||0);
-      if(planned>0){budgetTotal+=planned;budgetSpend+=actual}
-      const line=el('div',undefined,budgetCard,'finance-page-budget-row');
-      const label=el('div',undefined,line,'finance-page-section-head');
-      el('strong',financeCategory(name),label);
-      el('span',amount(actual.toFixed(2),'USD')+(planned>0?' / '+amount(planned.toFixed(2),'USD'):''),label);
-      const track=el('div',undefined,line,'finance-page-budget-track');
-      const progress=el('span',undefined,track,'finance-page-budget-progress');
-      progress.style.width=hidden?'0%':(planned>0?Math.min(100,actual/planned*100):0)+'%';
-      progress.dataset.level=planned>0&&actual>=planned?'over':planned>0&&actual>=planned*.8?'near':'ok';
-      const control=el('label',undefined,line,'finance-page-budget-editor');
-      el('span','Budget',control);
-      const input=el('input',undefined,control);input.type='number';input.min='0';input.max='10000000';input.step='.01';
-      input.value=planned>0?String(planned):'';input.placeholder='Optional';
-      input.setAttribute('aria-label','Monthly budget for '+financeCategory(name));
-      input.disabled=!preferenceAvailable;
-      input.onchange=()=>{
-        const amountValue=input.value.trim();
-        if(!amountValue)saveSetting('budgets',name,null);
-        else saveSetting('budgets',name,{amount:amountValue});
-      };
+    const I=window.BTFinanceInsights;
+    if(!I){statusMessage(host,'Spending unavailable','Refresh Finances to load spending charts.');return}
+    const rows=flattenTransactions(),current=I.spent(rows,spendingMonth),
+      previousMonth=I.monthShift(spendingMonth,-1),previous=I.spent(rows,previousMonth),
+      history=I.history(rows,spendingMonth,24),today=new Date(),
+      inCurrentMonth=spendingMonth===I.monthKey(Date.now()),
+      monthDate=new Date(spendingMonth+'-02T12:00:00'),
+      monthName=monthDate.toLocaleDateString(undefined,{month:'long',year:'numeric'}),
+      activeDate=inCurrentMonth?today.getDate():I.monthDays(spendingMonth),
+      moneyText=v=>amount(v,'USD'),
+      colorFor=(key,index=0)=>({
+        groceries:'#53D9A3',dining:'#FFB778',shopping:'#8FA7FF',housing:'#BAA0FF',
+        utilities:'#6DC6E8',transportation:'#E7AE6E',subscription:'#BA8BDA',
+        health:'#F19AA5',unreviewed:'#FFC878',fees:'#F2A9A0'
+      })[key]||['#7ADCC5','#B6A6F0','#73B1E8','#D4AD8F'][index%4],
+      symbolFor=key=>({
+        groceries:'▧',dining:'♨',shopping:'▤',housing:'⌂',utilities:'ϟ',
+        transportation:'↗',subscription:'♫',health:'✚',unreviewed:'?',
+        fees:'!',travel:'✈',loan:'¤',taxes:'§',entertainment:'★',other:'•'
+      })[key]||'•',
+      monthLabel=m=>new Date(m+'-02T12:00:00').toLocaleDateString(undefined,{month:'long',year:'numeric'}),
+      root=el('div',undefined,host,'finance-spending-3480');
+    function swipe(element,back,forward){
+      let startX=0,startY=0;
+      element.addEventListener('touchstart',e=>{startX=e.changedTouches[0].clientX;startY=e.changedTouches[0].clientY},{passive:true});
+      element.addEventListener('touchend',e=>{
+        if(e.target.closest('button,input,a,select'))return;
+        const dx=e.changedTouches[0].clientX-startX,dy=e.changedTouches[0].clientY-startY;
+        if(Math.abs(dx)>65&&Math.abs(dx)>Math.abs(dy)*1.4)(dx>0?back:forward)();
+      },{passive:true});
     }
-    if(budgetTotal>0)el('strong',amount(Math.max(0,budgetTotal-budgetSpend).toFixed(2),'USD')+' left to spend',budgetCard);
-    const halfYear=sectionTitle(root,'Income and spending','Last six months · available transactions only');
-    for(let offset=5;offset>=0;offset--){
-      const month=insight.monthShift(spendingMonth,-offset),fig=spendMonth(month),line=el('div',undefined,halfYear,'finance-page-income-compare');
-      const label=el('span',new Date(month+'-02T12:00:00').toLocaleDateString(undefined,{month:'short'}),line);
-      const bars=el('div',undefined,line,'finance-page-compare-bars');
-      const max=Math.max(1,Number(fig.income),Number(fig.total));
-      for(const [type,v] of [['income',fig.income],['spending',fig.total]]){
-        const bar=el('span',undefined,bars,'finance-page-compare-bar is-'+type);
-        bar.style.width=hidden?'0%':Math.min(100,Number(v)/max*100)+'%';bar.title=type+': '+amount(v,'USD');
+    function card(parent,heading,sub=''){
+      const box=el('section',undefined,parent,'finance-page-card finance-spending-panel');
+      const header=el('div',undefined,box,'finance-spending-heading');
+      el('h3',heading,header);if(sub)el('small',sub,header);
+      return box;
+    }
+    function budgetRow(parent,category,actual,day=activeDate){
+      const stored=financePrefs.budgets?.[category],limit=stored?.amount;
+      const metrics=limit?I.budget(limit,actual,day,I.monthDays(spendingMonth)):null;
+      const line=el('div',undefined,parent,'finance-spending-budget-item');
+      const head=el('div',undefined,line,'finance-spending-category-top');
+      el('strong',financeCategory(category),head);
+      el('b',moneyText(actual)+(metrics?' / '+moneyText(metrics.limit):''),head);
+      if(metrics){
+        const track=el('div',undefined,line,'finance-page-budget-track');
+        const progress=el('span',undefined,track,'finance-page-budget-progress');
+        progress.style.width=hidden?'0%':Math.min(100,metrics.percent)+'%';
+        progress.dataset.level=metrics.level;
+        el('small','Left to spend '+moneyText(metrics.left)+' · Projected month-end '+moneyText(metrics.projected),line,'finance-page-hint');
       }
-      el('small','In '+amount(fig.income,'USD')+' · Out '+amount(fig.total,'USD'),line);
+      const edit=el('label',undefined,line,'finance-spending-budget-edit');
+      el('span','Monthly budget',edit);
+      const input=el('input',undefined,edit);input.type='number';input.min='0';
+      input.step='.01';input.max='10000000';input.placeholder='Set amount';
+      input.value=limit||'';input.disabled=!preferenceAvailable;
+      input.setAttribute('aria-label','Monthly budget for '+financeCategory(category));
+      input.onchange=()=>saveSetting('budgets',category,input.value.trim()?{amount:input.value.trim()}:null);
+      return line;
+    }
+    function ledger(parent,matches){
+      const sorted=matches.slice().sort((a,b)=>b.posted-a.posted);
+      if(!sorted.length){el('p','No transactions recorded for this selection.',parent,'finance-page-hint');return}
+      let dateStamp='';
+      for(const row of sorted){
+        const day=dayKey(row.posted);
+        if(day!==dateStamp){dateStamp=day;el('h4',dayLabel(row.posted),parent,'finance-spending-day')}
+        const line=el('div',undefined,parent,'finance-spending-ledger-row');
+        const text=el('div',undefined,line);el('strong',displayMerchant(row),text);
+        el('small',financeCategory(row.category)+' · '+(row.account?.name||row.account?.bank||''),text);
+        el('b',shownAmount(row),line,Number(row.amount)>0?'is-credit':'');
+      }
+    }
+    const actualCategory=row=>I.spendingCategory(row,I.cents(row.amount));
+    const inMonth=row=>I.monthKey(row.posted*1000)===spendingMonth;
+    const matchingRows=cat=>rows.filter(row=>inMonth(row)&&actualCategory(row)===cat);
+    function categoriesList(parent){
+      const chart=card(parent,'Category breakdown');
+      if(!current.categories.length){el('p',current.hasData?'No spending transactions in this month.':'No transaction history for this month.',chart,'finance-page-hint');return}
+      const donut=el('div',undefined,chart,'finance-spending-donut-row');
+      const circle=el('div',undefined,donut,'finance-page-donut finance-spending-donut');
+      let from=0;
+      const segments=current.categories.map((v,i)=>{
+        const next=from+v.percentage;
+        const entry=colorFor(v.category,i)+' '+from+'% '+next+'%';
+        from=next;return entry;
+      });
+      circle.style.background=hidden?'#29323D':'conic-gradient('+segments.join(',')+')';
+      circle.setAttribute('aria-label','Spending categories and proportions');
+      circle.setAttribute('role','img');
+      const inner=el('div',undefined,circle,'finance-spending-donut-center');
+      el('small','Total spent',inner);el('strong',moneyText(current.total),inner);
+      const list=el('div',undefined,chart,'finance-spending-categories');
+      for(const [i,item] of current.categories.entries()){
+        const row=el('div',undefined,list,'finance-spending-category-row'+(item.category==='unreviewed'?' is-review':''));
+        const open=action(row,'',()=>{spendingDetail={type:'category',key:item.category};paint()},'finance-spending-category-action');
+        const marker=el('span',symbolFor(item.category),open,'finance-spending-category-symbol');
+        marker.style.background=colorFor(item.category,i)+'24';marker.style.color=colorFor(item.category,i);
+        const desc=el('div',undefined,open,'finance-spending-category-desc');
+        el('strong',financeCategory(item.category),desc);
+        const old=previous.categories.find(v=>v.category===item.category);
+        let note=item.count+' transaction'+(item.count===1?'':'s')+' · '+item.percentage.toFixed(0)+'%';
+        if(previous.hasData&&old){
+          const change=Number(item.amount)-Number(old.amount);
+          if(change!==0)note+=' · '+moneyText(Math.abs(change).toFixed(2))+(change>0?' more':' less');
+          else note+=' · No change';
+        }
+        el('small',note,desc);
+        el('b',moneyText(item.amount),open,'finance-spending-category-amount');
+        if(item.category==='unreviewed')action(row,'Review',()=>startReview(),'finance-spending-review-cta');
+      }
+    }
+    function reviewScreen(){
+      const cardBox=card(root,'Quick Review','Help sort uncategorized transactions into the right categories');
+      if(reviewMonth!==spendingMonth){
+        reviewMonth=spendingMonth;
+        reviewQueue=rows.filter(row=>inMonth(row)&&actualCategory(row)==='unreviewed')
+          .sort((a,b)=>b.posted-a.posted).map(row=>row.settingKey);
+        reviewIndex=0;
+      }
+      const target=reviewQueue[reviewIndex];
+      const tx=rows.find(row=>row.settingKey===target);
+      if(!target||!tx){
+        el('strong','Review complete',cardBox,'finance-page-big-number');
+        el('p','No more transactions in this review session.',cardBox);
+        action(cardBox,'Back to Spending',()=>{spendingDetail=null;paint()},'finance-page-button finance-page-primary');
+        return;
+      }
+      el('span',(reviewIndex+1)+' of '+reviewQueue.length,cardBox,'finance-spending-review-progress');
+      const merchantCard=el('div',undefined,cardBox,'finance-spending-review-card');
+      el('span',date(tx.posted),merchantCard,'finance-page-hint');
+      el('h3',displayMerchant(tx),merchantCard);
+      el('strong',shownAmount(tx),merchantCard,'finance-page-big-number');
+      const toggle=el('label',undefined,cardBox,'finance-spending-apply-similar');
+      const similar=el('input',undefined,toggle);similar.type='checkbox';similar.checked=false;
+      el('span','Apply to similar transactions',toggle);
+      const choices=el('div',undefined,cardBox,'finance-spending-review-grid');
+      const options=[['groceries','Groceries'],['dining','Dining'],['shopping','Shopping'],['utilities','Bills'],
+        ['housing','Housing'],['transportation','Transport'],['subscription','Subscriptions'],
+        ['health','Health'],['transfer','Transfer'],['verification','Verification'],['other','Other']];
+      let committing=false;
+      for(const [id,label] of options){
+        const button=action(choices,label,async()=>{
+          if(committing)return;committing=true;
+          choices.querySelectorAll('button').forEach(b=>b.disabled=true);
+          let saved=false;
+          try{
+            await change(async()=>{
+              const snapshot=await request('/transaction-review',{
+                method:'PUT',body:JSON.stringify({
+                  account:tx.account.rawKey,transaction:tx.id,category:id,applySimilar:similar.checked
+                })
+              },tx.source);
+              saved=true;
+              return {financeSource:tx.source,snapshot};
+            });
+          }catch(error){settingsNotice='Review not saved. '+String(error.message||'Retry.')}
+          if(saved&&!saveNotice){reviewIndex++;spendingDetail={type:'review'};paint()}
+          else {committing=false;choices.querySelectorAll('button').forEach(b=>b.disabled=false)}
+        },'finance-spending-review-choice');
+        button.dataset.category=id;
+      }
+      const controls=el('div',undefined,cardBox,'finance-spending-review-actions');
+      action(controls,'Skip',()=>{reviewIndex++;paint()},'finance-page-chip');
+      action(controls,'Done',()=>{spendingDetail=null;paint()},'finance-page-button finance-page-primary');
+      swipe(merchantCard,()=>{reviewIndex=Math.max(0,reviewIndex-1);paint()},()=>{reviewIndex++;paint()});
+    }
+    function startReview(){
+      reviewMonth='';spendingDetail={type:'review'};paint();
+    }
+    function detailScreen(){
+      const detail=spendingDetail;
+      const title=detail.type==='category'?financeCategory(detail.key):detail.key;
+      action(root,'‹ Back to Spending',()=>{spendingDetail=null;paint()},'finance-page-chip');
+      const hdr=card(root,title,'Transactions for '+monthName);
+      let selected=[];
+      if(detail.type==='category')selected=matchingRows(detail.key);
+      else selected=rows.filter(row=>inMonth(row)&&I.merchant(row)===detail.key&&actualCategory(row));
+      const total=selected.reduce((sum,row)=>sum+Math.abs(Number(row.amount)||0),0);
+      el('strong',moneyText(total.toFixed(2)),hdr,'finance-page-big-number');
+      if(detail.type==='category'){
+        const trend=card(root,'Past six months','Months without bank data are omitted');
+        const dates=I.history(rows,spendingMonth,6).months;
+        const chart=el('div',undefined,trend,'finance-spending-vertical-bars');
+        const values=dates.map(v=>Number(v.categories.find(c=>c.category===detail.key)?.amount||0));
+        const peak=Math.max(1,...values);
+        dates.forEach((value,i)=>{
+          const bar=el('div',undefined,chart,'finance-spending-month-bar');
+          const tube=el('div',undefined,bar,'finance-spending-bar-track');
+          const fill=el('span',undefined,tube,'finance-spending-bar-fill');
+          fill.style.height=(values[i]/peak*100)+'%';fill.style.background=colorFor(detail.key);
+          el('small',new Date(value.month+'-02T12:00:00').toLocaleDateString(undefined,{month:'short'}),bar);
+          bar.title=moneyText(values[i].toFixed(2));
+        });
+        const budgetCard=card(root,'Category budget');
+        budgetRow(budgetCard,detail.key,selected.reduce((sum,row)=>sum+Math.max(0,-Number(row.amount)),0).toFixed(2));
+      }
+      const transactions=card(root,'Transactions',selected.length+' item'+(selected.length===1?'':'s'));
+      ledger(transactions,selected);
+    }
+    if(spendingDetail?.type==='review'){reviewScreen();return}
+    if(spendingDetail){detailScreen();return}
+    const picker=el('div',undefined,root,'finance-spending-month-header');
+    const prev=action(picker,'‹',()=>moveSpendingMonth(-1),'finance-spending-month-arrow');
+    prev.setAttribute('aria-label','Previous spending month');
+    const title=el('h2',monthName,picker);
+    title.tabIndex=0;title.setAttribute('aria-label','Month '+monthName);
+    title.onkeydown=e=>{if(e.key==='ArrowLeft')moveSpendingMonth(-1);if(e.key==='ArrowRight')moveSpendingMonth(1)};
+    const next=action(picker,'›',()=>moveSpendingMonth(1),'finance-spending-month-arrow');
+    next.setAttribute('aria-label','Next spending month');
+    next.disabled=I.monthShift(spendingMonth,1)>I.monthKey(Date.now());
+    swipe(picker,()=>moveSpendingMonth(-1),()=>moveSpendingMonth(1));
+    const hero=el('section',undefined,root,'finance-spending-summary');
+    const values=el('div',undefined,hero,'finance-spending-value');
+    el('span',spendingMode==='income'?'Received':'Spent',values);
+    const shown=spendingMode==='income'?current.income:current.total;
+    el('strong',moneyText(shown),values);
+    if(previous.hasData){
+      const earlier=spendingMode==='income'?previous.income:previous.total;
+      const delta=Number(shown)-Number(earlier);
+      const comparison=delta===0?'Same as '+monthLabel(previousMonth):
+        moneyText(Math.abs(delta).toFixed(2))+(delta>0?' more':' less')+' than '+monthLabel(previousMonth);
+      el('small',comparison,values,'finance-spending-comparison');
+    }
+    const toggle=el('div',undefined,hero,'finance-spending-mode');toggle.setAttribute('role','group');
+    toggle.setAttribute('aria-label','Spending or income');
+    for(const [id,label] of [['spending','Spending'],['income','Income']])
+      action(toggle,label,()=>{spendingMode=id;paint()},'finance-page-chip'+(spendingMode===id?' is-active':''));
+    el('small','Excludes transfers and account verification',hero,'finance-page-hint');
+    const line=card(root,'Daily '+(spendingMode==='income'?'income':'spending'),'Cumulative this month vs last month');
+    cumulativeSpendingChart(line,current,previous,spendingMode,activeDate);
+    if(spendingMode==='income'){
+      const income=card(root,'Income sources');
+      const byMerchant=new Map();
+      for(const row of rows.filter(row=>inMonth(row)&&row.category==='income'&&!row.pending&&!row.excludedFromTotals&&Number(row.amount)>0)){
+        const key=I.merchant(row),group=byMerchant.get(key)||{name:displayMerchant(row),amount:0,count:0};
+        group.amount+=Number(row.amount);group.count++;byMerchant.set(key,group);
+      }
+      for(const item of [...byMerchant.values()].sort((a,b)=>b.amount-a.amount)){
+        const entry=el('div',undefined,income,'finance-spending-merchant-row');
+        el('span',item.name.charAt(0).toUpperCase(),entry,'finance-spending-merchant-initial');
+        el('strong',item.name,entry);
+        el('b',moneyText(item.amount.toFixed(2)),entry);
+      }
+    }else{
+      categoriesList(root);
+      if(current.uncategorized>0){
+        const review=el('div',undefined,root,'finance-spending-review-banner');
+        el('strong',current.uncategorized+' uncategorized transaction'+(current.uncategorized===1?'':'s'),review);
+        action(review,'Quick Review',startReview,'finance-page-button finance-page-primary');
+      }
+      const merchants=card(root,'Top merchants this month');
+      if(!current.merchants.length)el('p','No merchant expenses in this period.',merchants,'finance-page-hint');
+      for(const m of current.merchants.slice(0,7)){
+        const entry=action(merchants,'',()=>{spendingDetail={type:'merchant',key:m.key};paint()},'finance-spending-merchant-row');
+        el('span',m.merchant.charAt(0).toUpperCase(),entry,'finance-spending-merchant-initial');
+        const info=el('span',undefined,entry,'finance-spending-merchant-copy');el('strong',m.merchant,info);
+        el('small',m.count+' transaction'+(m.count===1?'':'s'),info);
+        el('b',moneyText(m.amount),entry);
+      }
+      const budgets=card(root,'Budgets','Set monthly limits that stay saved to your account');
+      const configure=el('details',undefined,budgets,'finance-spending-budget-settings');
+      el('summary',Object.keys(financePrefs.budgets||{}).length?'Edit budgets':'Set budgets',configure);
+      const categories=[...new Set([...current.categories.map(x=>x.category),...Object.keys(financePrefs.budgets||{}),'groceries','dining','shopping','utilities'])];
+      for(const category of categories){
+        const spentValue=current.categories.find(c=>c.category===category)?.amount||'0.00';
+        if(financePrefs.budgets?.[category])budgetRow(budgets,category,spentValue);
+        else budgetRow(configure,category,spentValue);
+      }
+    }
+    const trend=card(root,'Monthly trend','Only months with actual bank activity are shown');
+    if(history.start)el('small','Data starts '+monthLabel(history.start),trend,'finance-page-hint');
+    const chart=el('div',undefined,trend,'finance-spending-vertical-bars finance-spending-trend');
+    if(!history.months.length)el('p','Monthly comparisons will appear when bank history is available.',trend);
+    else{
+      const items=history.months.slice(-8);
+      const peak=Math.max(1,...items.flatMap(v=>[Number(v.total),Number(v.income)]));
+      for(const month of items){
+        const item=el('div',undefined,chart,'finance-spending-month-bar');
+        const pair=el('div',undefined,item,'finance-spending-bar-pair');
+        for(const [type,value] of [['spending',month.total],['income',month.income]]){
+          const tube=el('div',undefined,pair,'finance-spending-bar-track');
+          const fill=el('span',undefined,tube,'finance-spending-bar-fill is-'+type);
+          fill.style.height=Math.max(2,Number(value)/peak*100)+'%';
+          tube.title=type+': '+moneyText(value);
+        }
+        el('small',new Date(month.month+'-02T12:00:00').toLocaleDateString(undefined,{month:'short'}),item);
+      }
+      el('small','Mint: Spending · Blue: Income',trend,'finance-page-hint');
     }
   }
   function recurringView(host){
