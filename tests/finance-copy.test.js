@@ -40,7 +40,8 @@ assert.ok(css.includes('.finance-net-worth-empty-chart'));
 assert.ok(src.includes("'Card payments'"),'Recurring card payments are labeled separately');
 assert.ok(src.includes("'Recurring transfers ('"),'Recurring transfers belong in a collapsed section');
 assert.ok(src.includes("'Possibly ended ('"),'Expired expected dates are relegated to a collapsed section');
-assert.ok(src.includes("' ⇄ '"),'Matched ledger rows are neutral transfers');
+assert.ok(src.includes("' → '"),'Paired ledger titles must show source → destination');
+assert.ok(src.includes("'⇄ '"),'Matched and provisional amounts must stay unsigned and neutral');
 assert.ok(unified.includes("DEFAULT_TREATMENT[kind]||saved.balanceMode"),
   'Legacy automatic exclusions should not override recognized asset defaults');
 console.log('Finance copy audit passed: '+checked+' labels checked, short Net worth status, review sheet and quiet chart');
