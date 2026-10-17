@@ -174,11 +174,13 @@
           renderAccounts(result);
         }catch(error){message.textContent=error.message;}
       });
-      action(accountsArea,items.length?'Refresh transactions':'Discover connected accounts',async()=>{
-        message.textContent='Requesting read-only account status…';
+      // Plaid has already started account discovery and transaction sync
+      // after Link success. The user should not need an extra button.
+      action(accountsArea,'Refresh status',async()=>{
         try{
-          const result=await api('/accounts/sync',{method:'POST'});
-          message.textContent=result.error||'Latest available provider data loaded. Review possible bonuses manually.';
+          const result=await api('/accounts');
+          message.textContent=result.error||
+            'Connected banks and transaction status were refreshed.';
           renderAccounts(result);
         }catch(error){message.textContent=error.message;}
       });
