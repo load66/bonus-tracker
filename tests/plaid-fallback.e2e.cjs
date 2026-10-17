@@ -52,7 +52,8 @@ const KEY='a'.repeat(64);
             ||url.pathname.endsWith('/monitoring')||url.pathname.endsWith('/selection')
             ||url.pathname.endsWith('/sync')){
             result={provider:'plaid',configured:true,connected:true,
-              accounts:[{key:KEY,bank:'Synthetic Bank',name:'Checking',balance:'200'}],
+              accounts:[{key:KEY,bank:'Synthetic Bank',name:'Checking',balance:'200',
+                firstSeenAt:Date.parse('2026-10-10T12:00:00Z')/1000}],
               mappings,monitoredAccounts:monitored,lastSuccess:1792134000,stale:false,
               transactions:monitored.includes(KEY)&&syncs>0?{[KEY]:{'opaque':{
                 amount:'500',currency:'USD',description:'Example payroll',
@@ -91,6 +92,18 @@ const KEY='a'.repeat(64);
         await host.getByText('Latest available provider data loaded.',{exact:false}).waitFor();
         assert.deepEqual(monitored,[KEY],'The provider automatically makes linked accounts available');
         assert.equal(syncs,1,'Activity fetch does not create a new Plaid Item');
+        const suggestion=host.getByRole('button',{name:'Link to Synthetic Bank bonus?'});
+        await suggestion.waitFor();
+        await page.evaluate(()=>{window.btConfirmDialog=async()=>false;});
+        await suggestion.click();
+        assert.deepEqual(mappings,{},'declining a suggestion cannot write any bonus mapping');
+        await page.evaluate(()=>{window.btConfirmDialog=async()=>true;});
+        await suggestion.click();
+        await host.getByText('Confirmed bonus-account link saved.',{exact:false}).waitFor();
+        assert.deepEqual(mappings[KEY],{entryId:'cycle-one',bank:'Synthetic Bank',opened:'2026-10-01'},
+          'suggestion uses exact bank, entry and opened identity only after explicit confirmation');
+        assert.equal(calls.some(x=>x.includes('link-token')||x.includes('/exchange')),false,
+          'suggested mapping reuses authorized bank and never consumes a Plaid Item');
         await host.getByRole('combobox',{name:'Bonus campaign for Checking'}).selectOption('cycle-one');
         await host.getByRole('combobox',{name:'Bonus product for Checking'}).selectOption('checking');
         await host.getByRole('button',{name:'Save bonus links'}).click();
