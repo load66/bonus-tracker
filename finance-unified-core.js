@@ -156,7 +156,7 @@
     }
     // Reconcile unique, reciprocal account movements without mutating provider
     // evidence. Pair each debit to exactly one credit in another linked account,
-    // within three days, for a round-dollar amount. Preserve user corrections.
+    // within three days, even for cents, regardless of bank or provider. Preserve user corrections.
     const transferRows=[];
     const toCents=value=>{
       const m=/^([+-]?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(value??'').trim());
@@ -167,7 +167,7 @@
     for(const [key,rows] of Object.entries(transactions)){
       for(const row of Object.values(rows)){
         const value=toCents(row.amount);
-        if(row.pending||value===null||value===0n||value%100n!==0n||
+        if(row.pending||value===null||value===0n||
           !Number.isFinite(row.posted)||['user','user_rule'].includes(row.categorySource))continue;
         transferRows.push({account:key,row,value});
       }
