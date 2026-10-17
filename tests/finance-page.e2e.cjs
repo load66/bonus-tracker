@@ -142,7 +142,7 @@ const base=()=>({
 
       // Amounts stay masked by default, including on first sign-in.
       await section.getByRole('button',{name:'Show amounts',exact:true}).waitFor();
-      assert.equal(await section.locator('.finance-page-tile strong').first().innerText(),'••••••');
+      assert.equal(await section.locator('.finance-page-hero-cash-value').innerText(),'••••••');
       await section.getByRole('button',{name:'Show amounts',exact:true}).click();
       assert.equal(await page.evaluate(()=>localStorage.getItem('bt_finance_hide_amounts')),'false');
       await section.getByText('Income',{exact:true}).locator('..').getByText(/250/).waitFor();
@@ -154,11 +154,11 @@ const base=()=>({
       // an asynchronously replaced DOM node in a second non-waiting assertion.
       const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
       await section.getByRole('button',{name:'Hide amounts',exact:true}).click();
-      assert.equal(await section.locator('.finance-page-tile strong').first().innerText(),'••••••');
+      assert.equal(await section.locator('.finance-page-hero-cash-value').innerText(),'••••••');
       await section.getByRole('button',{name:'Show amounts',exact:true}).click();
       assert.equal(await page.evaluate(()=>localStorage.getItem('bt_finance_hide_amounts')),'false');
-      assert.equal(await section.getByText('Cash',{exact:true}).count(),1,
-        'Only one Cash tile should appear on Finance Overview');
+      assert.equal(await section.locator('.finance-page-hero-cash-value').count(),1,
+        'Only one Cash total appears in the Finance Overview hero');
 
       await section.getByRole('button',{name:'Transactions',exact:true}).click();
       await section.getByRole('heading',{name:'Transactions',exact:true}).waitFor();
