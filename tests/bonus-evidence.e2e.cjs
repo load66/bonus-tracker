@@ -85,11 +85,13 @@ return result;
         // Synthetic, test-only fixture: retain full regression coverage of the
         // internal bonus evidence engine without restoring the hidden UI.
         await page.evaluate(()=>{
-          const host=document.getElementById('bt-finances-page');
-          const fixture=document.createElement('section');host.append(fixture);
+          // Independent from Finance app redraws; never part of production UI.
+          const shell=document.createElement('section');shell.id='bt-finances-page';
+          shell.dataset.syntheticEvidenceFixture='true';document.body.append(shell);
+          const fixture=document.createElement('section');shell.append(fixture);
           if(!window.BTBonusEvidence?.mount(fixture,'simplefin'))throw Error('Evidence engine fixture unavailable');
         });
-        const section=finances.getByRole('region',{name:'Bank bonus activity evidence'});
+        const section=page.getByRole('region',{name:'Bank bonus activity evidence'});
         await section.getByRole('button',{name:'Review bank activity',exact:true}).waitFor();
         cycleId=await page.evaluate(()=>entries[0].id);
         const before=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
@@ -149,7 +151,12 @@ return result;
           'Finance bonus evidence invokes the existing explicit payout confirmation');
         assert.equal(await page.evaluate(()=>localStorage.getItem('bt_e_v4')),before,
           'Reviewing a possible payout cannot mark a Tracker milestone paid');
-        await page.evaluate(()=>{rcvPrompt=null;R()});
+        await page.evaluate(()=>{
+          rcvPrompt=null;
+          window.BTBonusEvidence?.dispose();
+          document.querySelector('[data-synthetic-evidence-fixture]')?.remove();
+          R();
+        });
         await page.getByRole('button',{name:'Tracker',exact:true}).click();
         assert.equal(await page.getByRole('region',{name:'Bank bonus activity evidence'}).count(),0,
           'Tracker remains free of bank-activity review after navigation');
@@ -157,11 +164,12 @@ return result;
         await finances.getByRole('heading',{name:'Finances'}).waitFor();
         assert.equal(await finances.getByRole('button',{name:'Bonuses',exact:true}).count(),0);
         await page.evaluate(()=>{
-          const host=document.getElementById('bt-finances-page');
-          const fixture=document.createElement('section');host.append(fixture);
+          const shell=document.createElement('section');shell.id='bt-finances-page';
+          shell.dataset.syntheticEvidenceFixture='true';document.body.append(shell);
+          const fixture=document.createElement('section');shell.append(fixture);
           if(!window.BTBonusEvidence?.mount(fixture,'simplefin'))throw Error('Evidence fixture reopen failed');
         });
-        const reopened=finances.getByRole('region',{name:'Bank bonus activity evidence'});
+        const reopened=page.getByRole('region',{name:'Bank bonus activity evidence'});
         await reopened.getByRole('button',{name:'Review bank activity',exact:true}).waitFor();
         assert.equal(await reopened.locator('.bonus-evidence-card').count(),0,
           'Private evidence is cleared when leaving Finances');
