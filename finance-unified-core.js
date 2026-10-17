@@ -114,7 +114,9 @@
     for(const pair of unified.possibleDuplicates||[]){
       const id=pair.slice().sort((a,b)=>a.startsWith('simplefin:')?-1:b.startsWith('simplefin:')?1:0).join('|');
       const decision=unified.duplicateDecisions?.[id];
-      if(decision&&pair.includes(decision.primary)){
+      if(decision?.separate===true){
+        // Explicitly confirmed distinct accounts both belong in totals.
+      }else if(decision&&pair.includes(decision.primary)){
         secondary.set(pair.find(k=>k!==decision.primary),decision.primary);
       }else pair.forEach(k=>duplicates.add(k));
     }
