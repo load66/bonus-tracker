@@ -248,12 +248,11 @@ return result;
           if(path.endsWith('/evidence-review'))plaidReviews[body.transaction]={status:body.decision,reviewedAt:NOW,requirementId:body.requirementId||null};
           await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(sample(cycleId,plaidReviews,0))});
         });
-        await page.evaluate(()=>{
-          if(!window.BTBonusEvidence?.mount(document.getElementById('bt-bonus-evidence'),'plaid'))
-            throw Error('Plaid evidence fixture switch failed');
-        });
-        await reopened.getByRole('button',{name:'Review bank activity',exact:true}).waitFor();
-        await reopened.getByRole('button',{name:'Review bank activity',exact:true}).click();
+        // Provider switching is no longer a state reset: both sources are
+        // included in one explicit refresh and each review writes only to the
+        // transaction's originating provider.
+        await reopened.getByRole('button',{name:'Refresh',exact:true}).waitFor();
+        await reopened.getByRole('button',{name:'Refresh',exact:true}).click();
         await reopened.getByRole('heading',{name:'Linked bonus campaigns'}).waitFor();
         await reopened.getByRole('button',{name:'Mark reviewed',exact:true}).first().click();
         await reopened.getByText('Review saved. Promotion requirements remain unconfirmed.').waitFor();
