@@ -18,6 +18,7 @@ for(const phrase of [
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
 assert(html.includes('./finance-insights-core.js?v=3.4.77-finances3'));
+assert(html.includes('./finance-unified-core.js?v=3.4.77-finances3'));
 assert(html.includes('./finance-page.js?v=3.4.77-finances3'));
 assert(html.includes('./sw.js?v=3.4.77-finances3'));
 assert(sw.includes("const V = 'bt-v3.4.77-finances3'"));
