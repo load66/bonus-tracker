@@ -681,6 +681,8 @@
     return !hidden&&Number(row.amount)>0&&result!=='—'?'+'+result:result;
   }
   function spendingView(host){
+    const dayKey=value=>new Date(value*1000).toLocaleDateString('en-CA');
+    const dayLabel=value=>new Date(value*1000).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
     const I=window.BTFinanceInsights;
     if(!I){statusMessage(host,'Spending unavailable','Refresh Finances to load spending charts.');return}
     const rows=flattenTransactions(),current=I.spent(rows,spendingMonth),
