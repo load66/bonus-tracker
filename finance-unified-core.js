@@ -42,6 +42,10 @@
     // "Retirement Savings Plan" was already returned as retirement above.
     if(checkingProduct.test(name))return 'checking';
     if(brokerageProduct.test(name))return 'brokerage';
+    // Named savings deposits remain cash at a brokerage, even if the
+    // institution supplies a generic "individual" investment subtype.
+    if(savingsProduct.test(name)&&!(/\b(?:plan|portfolio|fund)\b/.test(name))&&
+       !(/\b(?:money\s+market)\b/.test(name)&&investmentMetadata))return 'savings';
     if(investmentMetadata){
       // A genuine named savings deposit remains cash; generic brokerage
       // "cash" and "savings" words are not evidence of a deposit product.
