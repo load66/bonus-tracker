@@ -140,7 +140,8 @@
     for(const account of accounts){
       const kind=profiles[account.key]?.kind||account.kind;
       for(const row of Object.values(history[account.key]||{})){
-        if(!row||row.pending||row.excludedFromTotals||row.posted<monthStart||row.posted>now+300)continue;
+        if(!row||row.pending||row.posted<monthStart||row.posted>now+300||
+           (row.excludedFromTotals&&!['brokerage','retirement'].includes(kind)))continue;
         const n=cents(row.amount),description=String(row.description||row.merchant||'');
         if(n===null)continue;
         if(['checking','savings'].includes(kind)&&n<0n&&
