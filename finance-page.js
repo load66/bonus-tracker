@@ -598,7 +598,7 @@
       unavailable=summary.netWorthNotUpdated||[];
     const dialog=sheet(labels[kind]+' accounts',true);
     const total=summary.netWorthGroups?.[kind];
-    el('strong',total==null?'—':amount(total,'USD'),dialog,'finance-page-big-number');
+    el('strong',total==null||!group.length?'—':amount(total,'USD'),dialog,'finance-page-big-number');
     if(kind==='cash'){
       const missing=unavailable.filter(a=>['checking','savings'].includes(a.kind));
       if(missing.length)el('p',missing.length+' account'+(missing.length===1?'':'s')+
