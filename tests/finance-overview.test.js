@@ -242,6 +242,38 @@ assert.equal(overviewTotals.netWorthNotUpdated[0].lastKnownBalance,'800.00');
 assert.equal(overviewTotals.netWorthGroupAccounts.other[0].name,'Wallet',
   'PayPal is explicitly included in the Other row, not lost from the presentation');
 
+// A credit/overpayment does NOT convert a credit card into an Other asset.
+const creditBalanceCards={
+  lastSuccess:NOW,
+  accounts:[
+    {key:'robinhood-card',bank:'Robinhood',name:'Robinhood Credit Card',mask:'4010',
+      currency:'USD',balance:'-283.27',balanceDate:NOW},
+    {key:'paypal-card',bank:'PayPal',name:'PayPal Mastercard',mask:'8532',
+      currency:'USD',balance:'63.87',balanceDate:NOW}
+  ],
+  accountProfiles:{
+    'robinhood-card':{kind:'credit_card',balanceMode:'liability'},
+    'paypal-card':{kind:'credit_card',balanceMode:'liability'}
+  },
+  monitoredAccounts:[],transactions:{}
+};
+const cardCredit=summarize(creditBalanceCards,{now:NOW});
+assert.equal(cardCredit.netWorth,'219.40','Card credit minus owed debt adds $219.40 to net worth');
+assert.equal(cardCredit.netWorthGroups.creditCards,'219.40','Net credit is kept in Credit cards');
+assert.equal(cardCredit.netWorthGroups.other,'0.00','No phantom Other asset from card credits');
+assert.deepEqual(cardCredit.netWorthGroupAccounts.creditCards.map(x=>[x.name,x.amount]),[
+  ['Robinhood Credit Card','283.27'],['PayPal Mastercard','-63.87']
+]);
+assert.equal(cardCredit.netWorthGroupAccounts.other.length,0);
+const positiveCard=structuredClone(creditBalanceCards);
+positiveCard.accounts[0].balance='283.27';
+positiveCard.accountProfiles['robinhood-card'].balanceMode='asset';
+const positiveSummary=summarize(positiveCard,{now:NOW});
+assert.equal(positiveSummary.netWorthGroupAccounts.creditCards.length,2,
+  'A credit card with a positive provider balance still appears in Credit cards');
+assert.equal(positiveSummary.netWorthGroupAccounts.other.length,0,
+  'Classification cannot use the sign or saved asset mode to change product type');
+
 const octoberStart=Math.floor(new Date(new Date(NOW*1000).getFullYear(),
   new Date(NOW*1000).getMonth(),1).getTime()/1000);
 const flow=structuredClone(numbers);
