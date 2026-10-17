@@ -507,13 +507,17 @@
     }
     if(!institutions.size)el('p','Connect a bank to view your accounts.',card);
     for(const rows of [...institutions.values()].slice(0,5)){
-      const account=rows[0],attention=rows.some(a=>a.transactionSyncStatus==='needs_attention')||currentCombined.providerState[account.source]?.needsAttention;
+      const account=rows[0],attention=rows.some(a=>a.attentionKind||a.transactionSyncStatus==='needs_attention'||a.invalidTransactionRows>0);
       const line=el('div',undefined,card,'finance-page-preview-row');
       const dot=el('span',undefined,line,'finance-health-dot'+(attention?' is-warning':''));dot.setAttribute('aria-hidden','true');
       const copy=el('div',undefined,line,'finance-page-preview-copy');el('strong',account.bank||'Bank',copy);
       el('small','via '+account.sourceLabel+' · '+rows.length+' account'+(rows.length===1?'':'s'),copy);
       el('small',attention?'Needs attention':syncLabel(sourceSnapshot(account.source)?.lastSuccess),copy);
-      if(attention)action(line,'Reconnect',()=>reconnectAccount(account),'finance-page-preview-link');
+      if(attention){
+        const issue=rows.find(a=>a.attentionKind);
+        if(issue?.attentionKind==='rejected')action(line,'Reconnect',()=>reconnectAccount(issue),'finance-page-preview-link');
+        else if(issue?.attentionKind==='bank_login')action(line,'Fix on SimpleFIN',()=>window.open('https://bridge.simplefin.org/','_blank','noopener'),'finance-page-preview-link');
+      }
     }
   }
   function compactActivityPreview(host){
@@ -1514,13 +1518,10 @@
       el('strong',accountTitle(account),info);el('small',account.bank+' · via '+account.sourceLabel,info,'finance-page-account-source');
       el('small',syncLabel(account.transactionLastSyncAt||sourceSnapshot(account.source)?.lastSuccess),info);
       if(account.source==='plaid'&&account.historyComplete===false){
-        const now=Math.floor(Date.now()/1000),first=Number(account.transactionFirstSyncAt||account.transactionLastSyncAt||0);
-        const recent=Number(account.transactionLastSyncAt||0),next=Number(account.transactionNextSyncAt||0);
-        const since=timestamp=>!timestamp?'not checked yet':Math.max(0,Math.floor((now-timestamp)/3600))+'h ago';
-        const until=next>now?Math.max(1,Math.ceil((next-now)/3600))+'h':'due now';
-        const label=first&&now-first>86400
-          ?'Still waiting on '+(account.bank||'bank')+' — last checked '+since(recent)+', next check '+(next>now?'in '+until:until)
-          :'History still loading — last checked '+since(recent);
+        const now=Math.floor(Date.now()/1000),recent=Number(account.transactionLastSyncAt||0);
+        const hrs=recent?Math.max(0,Math.floor((now-recent)/3600)):null;
+        const label=hrs===null?'Waiting for first history from '+(account.bank||'bank'):
+          'Waiting for history · Last checked '+(hrs<1?'recently':hrs+'h ago');
         el('small',label,info,'finance-page-loading-hint');
         action(wrap,'Refresh',refreshActivity,'finance-page-button finance-page-sync-refresh');
       }else if(account.source==='plaid'&&account.historyComplete===true&&
@@ -1574,14 +1575,13 @@
             el('b',subtotal!==null?amount(subtotal,'USD'):'Not updated',section);
           }
           const bankKey=a.source+':'+(a.connectionHandle||a.bank);
-          if((a.transactionSyncStatus==='needs_attention'||(a.source==='simplefin'&&sourceSnapshot('simplefin')?.status==='attention'))&&!broken.has(bankKey)){
-            broken.add(bankKey);const alert=el('div',undefined,group,'finance-connection-error');
-            const snap=sourceSnapshot(a.source),reason=[snap?.error,...(snap?.warnings||[]),a.transactionSyncError].filter(Boolean).join(' ');
-            const signIn=/auth|login|log in|sign in|reconnect|credential|consent|expired/i.test(reason);
-            el('span',signIn?a.bank+' needs you to sign in again on '+a.sourceLabel:
-              a.bank+' needs attention'+(reason?' — '+reason.slice(0,130):''),alert);
-            if(a.source==='simplefin')action(alert,'Open SimpleFIN',()=>window.open('https://bridge.simplefin.org/','_blank','noopener'));
-            else action(alert,'Reconnect',()=>reconnectAccount(a));
+          if((a.attentionKind||a.transactionSyncStatus==='needs_attention'||(a.source!=='simplefin'&&sourceSnapshot(a.source)?.status==='attention'))&&!broken.has(bankKey)){
+            broken.add(bankKey);
+            const alert=el('div',undefined,group,'finance-connection-error');
+            el('span',a.bank+' needs attention',alert);
+            if(a.attentionKind==='rejected')action(alert,'Reconnect',()=>reconnectAccount(a));
+            else if(a.attentionKind==='bank_login')action(alert,'Fix on SimpleFIN',()=>window.open('https://bridge.simplefin.org/','_blank','noopener'));
+            else if(a.source!=='simplefin')action(alert,'Review',()=>reconnectAccount(a));
           }
           row(group,a);
         }
