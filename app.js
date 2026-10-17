@@ -5744,9 +5744,11 @@ function importBackup(){
         if(!ok)return;
         try{
           await window.btCloudBeforeDestructive?.('pre-restore');
-          await exportBackup(false,buildPortableBackupPayload(),'BankBonusTracker_PreRestore_'+backupTimestamp()+'.json')
+          await exportBackup(false,buildPortableBackupPayload(),'BankBonusTracker_PreRestore_'+backupTimestamp()+'.json');
+        }catch(err){
+          alert('Restore stopped: the safety backup could not be completed. Your existing data was not replaced.');
+          return;
         }
-        catch{}
         applyPortableRestore(data)
       }
       catch(err){
