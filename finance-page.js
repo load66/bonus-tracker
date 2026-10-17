@@ -801,7 +801,8 @@
     top.addEventListener('touchend',e=>{const dx=(e.changedTouches[0]?.screenX||0)-touch;if(Math.abs(dx)>80)moveSpendingMonth(dx<0?1:-1)},{passive:true});
     const toggle=el('div',undefined,top,'finance-spend-mode');
     for(const [key,label] of [['spending','Spending'],['income','Income']]){
-      action(toggle,label,()=>{spendingMode=key;paint()},'finance-page-chip'+(spendingMode===key?' is-active':''));
+      const choice=action(toggle,label,()=>{spendingMode=key;paint()},'finance-page-chip'+(spendingMode===key?' is-active':''));
+      choice.setAttribute('aria-label','Show '+label.toLowerCase()+' analytics');
     }
     const active=spendingMode==='income'?value.income:value.total;
     const before=spendingMode==='income'?previous.income:previous.total;
