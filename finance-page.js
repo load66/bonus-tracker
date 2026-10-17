@@ -1738,7 +1738,7 @@
       if(account.removedAt)action(wrap,'Restore',()=>change(async()=>{await accountAction(account,'restore');return sourceSnapshot(account.source)}));
     }
     function render(){
-      list.replaceChildren();const groups={Cash:[], 'Credit cards':[], Investments:[], Loans:[], Other:[]},inactive=[];
+      list.replaceChildren();const groups={Cash:[], 'Credit cards':[], Investments:[], Loans:[], Other:[]},inactive=[],notSyncing=[];
       const broken=new Set();
       const secondaries=new Set(Object.entries(financePrefs.duplicates||{}).filter(([,decision])=>decision.primary).flatMap(([pair,decision])=>pair.split('|').filter(k=>k!==decision.primary)));
       for(const a of sortedAccounts(true)){
@@ -1746,6 +1746,7 @@
         const p=profile(a),match=[a.bank,accountTitle(a)].join(' ').toLowerCase();
         if(accountSearch&&!match.includes(accountSearch)||accountType&&p.kind!==accountType)continue;
         if(a.removedAt||p.hidden){inactive.push(a);continue}
+        if(p.syncEnabled===false){notSyncing.push(a);continue}
         const group=['checking','savings'].includes(p.kind)?'Cash':p.kind==='credit_card'?'Credit cards':['brokerage','retirement'].includes(p.kind)?'Investments':['loan','mortgage','other_liability'].includes(p.kind)?'Loans':'Other';
         groups[group].push(a);
       }
@@ -1792,7 +1793,22 @@
         }
       }
       if(inactive.length){const hidden=el('details',undefined,list,'finance-page-hidden-accounts');el('summary','Hidden and removed ('+inactive.length+')',hidden);for(const a of inactive)row(hidden,a)}
-      if(!Object.values(groups).some(x=>x.length)&&!inactive.length)el('p',accountSearch?'No matching accounts':'Add a bank to see your accounts here.',list);
+      if(notSyncing.length){
+        const group=el('details',undefined,list,'finance-page-not-syncing');
+        el('summary','Not syncing ('+notSyncing.length+')',group);
+        for(const a of notSyncing){
+          const line=el('div',undefined,group,'finance-page-not-syncing-row');
+          el('strong',accountTitle(a),line);
+          el('small',a.bank+' · via '+a.sourceLabel+' · Excluded from totals and reports',line);
+          const actions=el('div',undefined,line,'finance-page-not-syncing-actions');
+          action(actions,'Turn sync back on',async()=>{
+            await saveAccountProfile(a,{syncEnabled:true});
+            if(!saveNotice)showFinanceToast('Saved · '+accountTitle(a)+' included in totals');
+          },'finance-page-button finance-page-primary');
+          action(actions,'Remove account',()=>removeAccount(a,null),'finance-page-button');
+        }
+      }
+      if(!Object.values(groups).some(x=>x.length)&&!inactive.length&&!notSyncing.length)el('p',accountSearch?'No matching accounts':'Add a bank to see your accounts here.',list);
     }
     render();
   }
