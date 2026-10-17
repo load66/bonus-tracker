@@ -30,6 +30,15 @@ assert.ok(src.includes("'Excluded'")&&src.includes("'Not updated'"));
 assert.ok(src.includes("modal=sheet('Accounts to review')"));
 assert.ok(!src.includes("'Credit card balances reflect the last provider observation"));
 assert.ok(!src.includes("'Not included: '+notes.join"));
+assert.ok(src.includes("'Some balances not updated · Review'"),
+  'Incomplete balances must open a review list with human-readable copy');
+assert.ok(src.includes("function cardPosition(value)"),
+  'Card credits must be shown as credit and card liabilities as owed');
+assert.ok(src.includes("kind==='creditCards'?cardPosition(groups[kind]):amount(groups[kind],'USD')"),
+  'Credit card row should show credit or owed instead of misleading signs');
+assert.ok(src.includes("el('span',syncLabel(currentCombined?.lastSuccess),foot)"),
+  'Last synced must be compact and use relative day labels');
+assert.ok(!src.includes("Partial net worth · missing or provisional balances"));
 assert.ok(css.includes('.finance-net-worth-review-item'));
 assert.ok(css.includes('.finance-net-worth-empty-chart'));
 assert.ok(unified.includes("DEFAULT_TREATMENT[kind]||saved.balanceMode"),
