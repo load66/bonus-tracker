@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex · v3.6.7 · codex/v3.6.7-tappable-hero-months
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.7 monthly hero chart PR #177 (`codex/v3.6.7-tappable-hero-months`): tappable and keyboard-accessible month buttons, 44×44px minimum swipeable targets, selected receipt panel with bank/product, received date, amount, account-detail navigation and explicit empty month, single Tax-backed monthly source, filtered by year and Personal/Business. Tests: https://github.com/load66/bonus-tracker/actions/runs/39114463767 PASS (bonus/cloud/UI, Chromium, WebKit, release); selected-month 390px screenshots retained in browser CI artifacts. No backend or financial storage changes. Next: merge PR #177, verify exact main CI and Pages publish commit.
 
 - v3.6.6 frontend PR #176: single detail header and 5-step progress strip, stage-correct fixed Ask AI + action footer with Manage under •••, unified legacy churn date, compact Tracker rows, refined Requirements/Timers, ready-to-close phone editor, individual Data rows, safe verified/partial Railway usage display, bonus-feed reward parsing/dedup/baseline, and parallel Chromium/WebKit browser gate. PR CI https://github.com/load66/bonus-tracker/actions/runs/39113301874 PASS: bonus/cloud/UI, Chromium, WebKit, release validation. Mobile 390px screenshot artifacts available in CI. No real financial records or Railway credentials changed. Backend PR #234 deployed at `99e1a1d39dab51b9d6c7169f6a319a6a53bb9585`. Next: merge PR #176, verify exact main CI and GitHub Pages; next separate requested chart release adds tappable hero months without altering verified v3.6.6 history or calculations.
 
