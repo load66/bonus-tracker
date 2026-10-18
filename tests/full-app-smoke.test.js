@@ -190,13 +190,13 @@ if(require.main===module)setTimeout(()=>{
       const sample={id:'UI-STATE-3',bank:'State Bank',accountType:'personal',opened:'2026-09-01',closed:'',bonus:100,checklist:[{text:'Test requirement',done:false}],customTimers:[],notes:'',churnable:true};
       entries=[sample];expanded=sample.id;search='';
       setProfileSectionOpen(sample.id,'lifecycle',true);
-      const before=window.rTracker(entries).includes('data-section-key="lifecycle" open');
+      const before=window.rTracker(entries).includes('bt360-steps')&&!window.rTracker(entries).includes('data-section-key="lifecycle" open');
       toggleCk(sample.id,0);
-      const after=expanded===sample.id&&profileSectionIsOpen(sample.id,'lifecycle')&&document.getElementById('app').innerHTML.includes('data-section-key="lifecycle" open');
+      const after=expanded===sample.id&&profileSectionIsOpen(sample.id,'lifecycle')&&document.getElementById('app').innerHTML.includes('bt360-steps')&&document.getElementById('app').innerHTML.includes('aria-checked="true"');
       entries=oldEntries;expanded=oldExpanded;search=oldSearch;
       return before&&after;
     })()`,sandbox);
-    assert(activeRendererState,'Lifecycle & Tasks collapses after checklist toggle in the active renderer');
+    assert(activeRendererState,'Redesigned Requirements must preserve completed checklist after rerender without reintroducing legacy lifecycle');
     const contrastCss=fs.readFileSync('style.css','utf8');
     assert(contrastCss.includes('v3.4.29 interaction + dark prompt contrast hardening'),'Dark prompt contrast hardening marker missing');
     for(const selector of ['.cbox,.dd-box,.rcv-box,.ow-box,.fee-box,.close-modal','.dd-input,.rcv-box input','.crow .c-c','.crow .c-g','.ckb.dn']){
