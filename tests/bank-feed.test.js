@@ -110,3 +110,30 @@ assert.ok(ids.length<=8&&ids.every(id=>typeof id==='string'),'Priority envelope 
 assert.ok(!JSON.stringify(ids).includes('reviewDate'));
 assert.equal(JSON.stringify([...storage]),before,'Availability verification cannot rewrite saved terms');
 console.log('Official scope projection passed: exact offer identity, source trust, expiry, state constraints and public-only priority identifiers');
+
+const canonicalNow=new Date(Date.now()-120000).toISOString();
+const canonical={schemaVersion:2,checkedAt:canonicalNow,offers:[{
+  title:'Chase $400 Checking Bonus',url:'https://www.doctorofcredit.com/chase-synthetic/',
+  publishedAt:canonicalNow,bank:'chase',product:'checking',amount:400,region:'unknown',
+  offerKey:'chase|checking|400|unknown',groupKey:'chase|checking|400|unknown',
+  firstSeen:canonicalNow,badges:['New','Increased'],changeLabel:'$300 → $400',
+  links:[
+    {url:'https://www.doctorofcredit.com/chase-synthetic/',sourceId:'doc',title:'Chase $400 Checking Bonus'},
+    {url:'https://www.hustlermoneyblog.com/chase-synthetic/',sourceId:'hmb',title:'JPMorgan Chase $400 Checking Bonus'}
+  ]
+}]};
+const canonicalProjection=priority.validate(canonical);
+assert.equal(canonicalProjection.offers.length,1);
+assert.equal(canonicalProjection.offers[0].links.length,2);
+assert.equal(canonicalProjection.offers[0].bank,'chase');
+assert.equal(canonicalProjection.offers[0].amount,400);
+assert.equal(priority.group(canonicalProjection.offers).length,1);
+assert.equal(priority.filter(canonicalProjection.offers,'chase','all',{amount:'300'}).length,1);
+assert.equal(priority.filter(canonicalProjection.offers,'chase','all',{amount:'500'}).length,0);
+const withAlien={...canonicalProjection.offers[0],links:[
+ {url:'https://www.doctorofcredit.com/chase-synthetic/',sourceId:'doc',title:'Chase $400 Checking Bonus'},
+ {url:'javascript:alert(1)',sourceId:'hmb',title:'Bad link'}]};
+assert.equal(priority.validate({...canonical,offers:[{...canonical.offers[0],links:withAlien.links}]}).offers[0].links.length,1,'Unsafe links must not render');
+assert.equal(priority.evidence({...canonical.offers[0],title:'Chase $500 Checking Bonus'},evidence),null,'Different reward may not borrow the same source evidence');
+assert.equal(JSON.stringify([...storage]),before,'Canonical multi-source offers mutated tracker data');
+console.log('Canonical offer UI passed: compact identity, two safe sources, extracted amount filters and data isolation');
