@@ -49,7 +49,7 @@ async function exercise(name,engine,url){
     const previousFetch=window.fetch.bind(window);
     window.fetch=(input,options={})=>{
       const url=String(typeof input==='string'?input:input?.url||input);
-      if(url.endsWith('/api/bonus-tracker/usage'))return Promise.resolve(new Response(JSON.stringify({
+      if(url.includes('/api/bonus-tracker/usage'))return Promise.resolve(new Response(JSON.stringify({
         month:'2026-10',checkedAt:'2026-10-11T17:00:00Z',
         railway:{status:'not_configured',services:[],costSoFar:null,projectedMonthEnd:null},
         r2:{status:'unavailable',usedBytes:null,freeBytes:10000000000}
@@ -855,13 +855,15 @@ async function exercise(name,engine,url){
     await page.evaluate(fixture=>{
       window.__hostingPreviousFetch=window.fetch;
       window.__hostingUsageFixture=fixture;
-      window.fetch=async (input,options)=>String(typeof input==='string'?input:input.url).endsWith('/api/bonus-tracker/usage')
+      window.__hostingRequestUrls=[];
+      window.fetch=async (input,options)=>{const url=String(typeof input==='string'?input:input.url);if(url.includes('/api/bonus-tracker/usage'))window.__hostingRequestUrls.push(url);return url.includes('/api/bonus-tracker/usage')
         ?new Response(JSON.stringify(window.__hostingUsageFixture),{status:200,headers:{'Content-Type':'application/json'}})
-        :window.__hostingPreviousFetch(input,options);
+        :window.__hostingPreviousFetch(input,options);};
     },syntheticUsage);
     await button('Settings').click();
     check('header ellipsis opens actual Settings',await page.getByRole('dialog',{name:'Settings'}).isVisible());
     await page.evaluate(async()=>BT360.refreshUsage(true));
+    check('forced usage retry sends backend refresh=1',await page.evaluate(()=>window.__hostingRequestUrls.some(u=>u.endsWith('/api/bonus-tracker/usage?refresh=1'))));
     await page.getByText('Near limit',{exact:true}).waitFor();
     check('hosting usage card uses mocked nonzero Railway estimate',(await page.locator('.bt360-sheet').innerText()).includes('HOSTING & USAGE')&&
       (await page.locator('.bt360-sheet').innerText()).includes('leaps-alpaca-live'));
@@ -874,12 +876,18 @@ async function exercise(name,engine,url){
     await page.evaluate(x=>{window.__hostingUsageFixture=x},partialUsage);
     await page.evaluate(async()=>BT360.refreshUsage(true));
     check('partial usage never presents incomplete total as zero',await page.locator('.bt360-sheet').innerText().then(t=>t.includes('Total is incomplete')||t.toLowerCase().includes('total is incomplete'))&&await page.locator('.bt360-sheet').innerText().then(t=>t.includes('Not reported by Railway')&&t.includes('leaps-alpaca-live')&&!t.includes('$0.00')));
-    const reasonCodes=['token_missing','token_unauthorized','workspace_not_found','project_not_visible','estimate_missing','measurement_missing','rate_limited','timeout','railway_unreachable','response_changed'];
+    const reasonCodes=['token_missing','token_unauthorized','permission_denied','workspace_not_found','project_not_visible','estimate_missing','measurement_missing','rate_limited','timeout','railway_unreachable','response_changed'];
     for(const code of reasonCodes){
       await page.evaluate(([x,c])=>{window.__hostingUsageFixture={...x,railway:{status:'unavailable',reasonCode:c,reason:'REMOTE-SENSITIVE-RESPONSE'}}},[syntheticUsage,code]);
       await page.evaluate(async()=>BT360.refreshUsage(true));
       check('unavailable '+code+' is safe and never becomes $0.00',await page.locator('.bt360-sheet').innerText().then(t=>!t.includes('$0.00')&&!t.includes('REMOTE-SENSITIVE-RESPONSE')&&t.includes('View Railway usage')));
     }
+    await page.evaluate(x=>{window.__hostingUsageFixture={...x,railway:{status:'unavailable',reasonCode:'permission_denied',reason:'REMOTE-SENSITIVE-RESPONSE',deniedFields:['metrics','SECRET_REMOTE_VALUE'],failedStep:'metrics'}}},syntheticUsage);
+    await page.evaluate(async()=>BT360.refreshUsage(true));
+    check('permission diagnostics whitelist fixed steps only',await page.locator('.bt360-sheet').innerText().then(t=>t.includes('Denied field: metrics')&&t.includes('Failed check: metrics')&&!t.includes('SECRET_REMOTE_VALUE')&&!t.includes('REMOTE-SENSITIVE-RESPONSE')));
+    await page.evaluate(x=>{window.__hostingUsageFixture={...x,railway:{...x.railway,status:'partial',costSoFar:2.31,projectedMonthEnd:null,projectionNote:'Projection not available from Railway',knownCostSubtotal:2.31,deniedFields:['estimatedUsage','SECRET_REMOTE_VALUE'],missing:[{service:'api',metric:'CPU_USAGE',kind:'estimate'}]}}},syntheticUsage);
+    await page.evaluate(async()=>BT360.refreshUsage(true));
+    check('partial billing preserves verified total and explains missing projection',await page.locator('.bt360-sheet').innerText().then(t=>t.includes('Verified $2.31')&&t.includes('Projection not available from Railway')&&t.includes('estimatedUsage')&&!t.includes('SECRET_REMOTE_VALUE')));
     await page.evaluate(x=>{window.__hostingUsageFixture={...x,railway:{...x.railway,costSoFar:0,projectedMonthEnd:0,services:x.railway.services.map(a=>({...a,costSoFar:0}))}}},syntheticUsage);
     await page.evaluate(async()=>BT360.refreshUsage(true));
     check('genuine verified zero is not hidden',await page.locator('.bt360-sheet').innerText().then(t=>t.includes('Verified $0.00')));
