@@ -1,27 +1,59 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-10-18T14:36:19.518297+00:00",
+  "checkedAt": "2026-10-18T15:05:54.843733+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-10-18T14:36:19.518297+00:00",
+      "checkedAt": "2026-10-18T15:05:54.843733+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-10-18T14:36:19.518297+00:00",
+      "checkedAt": "2026-10-18T15:05:54.843733+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-10-18T14:36:19.518297+00:00",
+      "checkedAt": "2026-10-18T15:05:54.843733+00:00",
       "status": "ok"
     }
   ],
   "offers": [
+    {
+      "title": "[MI only] United Financial Credit Union $100 Referral Bonus – Direct Deposit Not Required",
+      "url": "https://www.doctorofcredit.com/mi-only-united-financial-credit-union-100-referral-bonus-direct-deposit-not-required/",
+      "publishedAt": "2026-10-18T15:00:44+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "united financial credit union|unknown|100|MI|84254fdee82f",
+      "bank": "united financial credit union",
+      "product": "unknown",
+      "amount": 100,
+      "region": "MI",
+      "offerKey": "united financial credit union|unknown|100|MI|84254fdee82f",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-18T15:05:54.843733+00:00",
+      "lastSeen": "2026-10-18T15:00:44+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/mi-only-united-financial-credit-union-100-referral-bonus-direct-deposit-not-required/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[MI only] United Financial Credit Union $100 Referral Bonus – Direct Deposit Not Required",
+          "publishedAt": "2026-10-18T15:00:44+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
     {
       "title": "[IA only] Community Bank & Trust $300 Checking Bonus",
       "url": "https://www.doctorofcredit.com/ia-only-community-bank-trust-300-checking-bonus-direct-deposit-not-required-2/",
