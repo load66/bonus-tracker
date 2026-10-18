@@ -80,6 +80,47 @@ assert.match(sandbox.BT360.feeDetail(conditionalNoFee),/Not confirmed/,'Conditio
 const archiveRecord={...legacy,closed:'2026-10-17',bonusRecd:'2026-10-17'};
 assert.match(sandbox.BT360.detailPanels(archiveRecord),/Fees &amp; waivers|Fees & waivers/,'Churn and closed record details retain fee section');
 assert.match(sandbox.BT360.detailPanels(archiveRecord),/\$25 early-close fee/);
+
+// Closed repeatable offers may display prior bank records as clearly marked
+// historical references. They never certify the current fee or churn eligibility.
+const savedArchiveBefore=storage.get('bt_tc_archive_v1');
+const priorFee={
+ bank:'Synthetic Cooldown Bank',accountType:'personal',entryId:'CD-P-OLD',opened:'2025-01-02',
+ monthlyFeeAmountText:'$12 per month',monthlyFeeWaiverText:'Waived with $500 qualifying deposits or $1,500 balance',
+ earlyTerminationFeeText:'Early closure fee: $25 within 90 days of opening.',
+ feeScheduleSourceUrl:'https://example.test/prior-fees'
+};
+storage.set('bt_tc_archive_v1',JSON.stringify({test:{current:priorFee,versions:[]}}));
+const cooldown={
+ id:'CD-P-NEW',bank:'Synthetic Cooldown Bank',accountType:'personal',bonus:400,
+ opened:'2025-08-01',closed:'2026-08-01',churnability:'repeatable',churn:'1',
+ financialRules:null,earlyCloseFee:0
+};
+const last=sandbox.BT360.feeSnapshot(cooldown);
+assert.equal(last.monthly,'$12');
+assert.equal(last.closeMain,'$25 early-close fee');
+assert.match(last.monthlyReference,/Last saved: offer opened 2025-01-02/);
+assert.match(last.closeNote,/not a new closure clearance/);
+assert.match(sandbox.BT360.feeDetail(cooldown),/historical reference only/);
+assert.match(sandbox.BT360.feeDetail(cooldown),/View saved close terms/);
+assert.equal(sandbox.BT360.feeSnapshot({...cooldown,closed:''}).monthly,'Not confirmed','Active accounts cannot inherit old fees');
+assert.equal(sandbox.BT360.feeSnapshot({...cooldown,accountType:'business'}).monthly,'No saved fee amount','Never mix personal and business terms');
+const originalStructured={...cooldown,financialRules:{accounts:[{role:'primary',label:'Different Checking',fee:{amount:19}}],closure:{}}};
+assert.equal(sandbox.BT360.feeSnapshot(originalStructured).monthly,'$19','Current enrolled structured fee wins');
+const trulyMissing={...cooldown,bank:'Another Synthetic Bank',churn:'',churnability:'repeatable'};
+const missing=sandbox.BT360.feeDetail(trulyMissing);
+assert.match(missing,/No saved fee amount/);
+assert.match(missing,/No saved close-fee amount/);
+assert.doesNotMatch(missing,/Not confirmed|Review/,'Cooldown fee presentation uses known-history wording');
+const archives=sandbox.BT360.archive([trulyMissing]);
+assert.match(archives,/Last saved/);
+assert.match(archives,/Details/);
+assert.doesNotMatch(archives,/Needs review · verify eligibility rules/);
+const simpleOld={...cooldown,bank:'Old Profile Bank',financialRules:null,
+ monthlyFee:{value:'$8 with e-statements / $11 paper',amount:8,source:'Old enrolled product fee schedule'}};
+assert.equal(sandbox.BT360.feeSnapshot(simpleOld).monthly,'$8','Prior legacy fee object is restored');
+if(savedArchiveBefore===undefined)storage.delete('bt_tc_archive_v1');
+else storage.set('bt_tc_archive_v1',savedArchiveBefore);
 assert.equal(JSON.stringify([...storage]),before,'Fee projections never write stored records');
 
 const timers=sandbox.BT360.timerRows(e);
