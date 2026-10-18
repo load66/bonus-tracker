@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.3';
+const APP_VERSION='3.6.4';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4079,8 +4079,13 @@ function updateViewSearch(kind,value,cursor){
   if(kind==='tracker')search=value;
   else if(kind==='datapoints')dpSearch=value;
   else storageSearch=value;
+  // Keep the actual focused input node attached while rebuilding result rows.
+  // Chromium's fill/keyboard action can blur an input detached in its own
+  // synchronous input event even if a new input receives focus temporarily.
+  const active=document.activeElement?.id===id?document.activeElement:null;
   R();
-  const input=document.getElementById(id);
+  let input=document.getElementById(id);
+  if(active&&input&&active!==input&&!active.isConnected){input.replaceWith(active);input=active;}
   if(input){input.focus({preventScroll:true});const position=Number.isInteger(cursor)?Math.min(cursor,input.value.length):input.value.length;input.setSelectionRange(position,position);}
 }
 function R(){const focusedBeforeRender=document.activeElement;const searchFocus=focusedBeforeRender&&['archive-search','tracker-search','datapoints-search','radar-search','terms-search'].includes(focusedBeforeRender.id)?{id:focusedBeforeRender.id,start:focusedBeforeRender.selectionStart,end:focusedBeforeRender.selectionEnd}:null;if(tab==='finances')tab='tracker';captureProfileSectionState();const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;
