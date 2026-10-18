@@ -1,0 +1,43 @@
+name: Publish bank offers every six hours
+
+on:
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bonus-tracker-bank-feed-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Update and commit canonical bank offers
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Regenerate canonical offers from RSS and retained state
+        run: python3 scripts/update-bank-feed.py
+      - name: Publish updated offer JSON to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- data/bank-bonuses.json; then
+            echo "Offer feed unchanged."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/bank-bonuses.json
+          git commit -m "data: refresh canonical bank offers"
+          git pull --rebase origin main
+          git push origin HEAD:main
