@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.1';
+const APP_VERSION='3.6.2';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4069,7 +4069,7 @@ function switchMainTab(value){
   if(!['tracker','bonuses','tax','tips','storage','archive'].includes(value))return;
   if(value==='storage'&&window.BT360){window.BT360.goArchive('saved');return}
   if(value==='archive'&&window.BT360){window.BT360.goArchive('waiting');return}
-  expanded=null;tab=value;search='';_sp=0;
+  window.bt362AddOpen=false;expanded=null;tab=value;search='';_sp=0;
   const current=document.querySelector('.scroll');if(current)current.scrollTop=0;
   R();
 }
@@ -4093,9 +4093,8 @@ function R(){if(tab==='finances')tab='tracker';captureProfileSectionState();cons
   document.body.classList.toggle('bt360-detail-active',bt360Detail);
   let h='',overview='';
   h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div class="hdr-brand"><h1><em>Bonus</em>Tracker</h1><span class="app-version" aria-label="App version">v'+APP_VERSION+'</span></div>';
-  if(tab==='tracker')h+='<div class="yr-pills">';
-  if(tab==='tracker')[thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});
-  h+=tab==='tracker'?'</div>':'<span class="mobile-page-caption">'+esc({bonuses:'Bank offers',tax:'Tax',tips:'Datapoints',storage:'Terms archive',archive:'Account archive'}[tab]||'')+'</span>';
+  if(tab==='tracker')h+='<label class="bt362-year-pill">Year <select id="bt362-year" aria-label="Collected year" onchange="dashYear=Number(this.value);R()">'+[thisYr-1,thisYr,thisYr+1].map(y=>'<option value="'+y+'"'+(dashYear===y?' selected':'')+'>'+y+'</option>').join('')+'</select></label>';
+  else h+='<span class="mobile-page-caption">'+esc({bonuses:'Bank offers',tax:'Tax',tips:'Datapoints',storage:'Terms archive',archive:'Account archive'}[tab]||'')+'</span>';
   h+='<button type="button" class="bt360-header-bell" aria-label="Notifications" onclick="BT360.openNotifications()"><svg width="19" height="19" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></button><button type="button" class="bt360-header-settings" aria-label="Settings" onclick="BT360.openSettings()">•••</button>';
   h+='<details id="bt-data-menu" class="header-data-menu"><summary aria-label="Data and backup menu" title="Data and backup menu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></summary><div class="header-data-panel" role="group" aria-label="Data and recovery actions"><h3>Data & recovery</h3><button onclick="this.closest(\'details\').open=false;switchMainTab(\'archive\')"><strong>Archived accounts</strong><small>Completed, non-repeatable offers and their history</small></button><button onclick="this.closest(\'details\').open=false;btOpenCloudBackup()"><strong>Cloud backup & recovery</strong><small>Automatic protection and recovery versions</small></button><button onclick="this.closest(\'details\').open=false;exportBackup()"><strong>Export backup file</strong><small>Download an additional recovery copy</small></button><button onclick="this.closest(\'details\').open=false;importBackup()"><strong>Import backup file</strong><small>Review and restore a downloaded copy</small></button><button class="data-menu-danger" onclick="this.closest(\'details\').open=false;resetAllData()"><strong>Reset this device</strong><small>Requires confirmation and a safety backup</small></button></div></details></div>';
 
@@ -4110,7 +4109,10 @@ function R(){if(tab==='finances')tab='tracker';captureProfileSectionState();cons
   else if(tab==='storage')h+=rTermsStorage();
   else if(tab==='bonuses')h+=typeof rBankBonuses==='function'?rBankBonuses():'<p>Bank bonus feed is loading.</p>';
   h+='</div>';
-  if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';
+  if(tab==='tracker'&&!bt360Detail){
+    if(window.bt362AddOpen)h+='<div class="bt362-add-menu" role="group" aria-label="Add bonus actions"><button type="button" onclick="window.bt362AddOpen=false;showTemplates=!showTemplates;showAnalyzer=false;R()">Quick Add</button><button type="button" onclick="window.bt362AddOpen=false;showAnalyzer=!showAnalyzer;showTemplates=false;R()">Review promo terms</button><button type="button" onclick="window.bt362AddOpen=false;openAdd()">Add account manually</button></div>';
+    h+='<button class="fab bt362-add-fab" type="button" aria-label="Add bonus" aria-expanded="'+!!window.bt362AddOpen+'" onclick="window.bt362AddOpen=!window.bt362AddOpen;R()">+</button>';
+  }
   h+='<div class="tabs">';
   ['tracker','bonuses','tax','tips','archive'].forEach((t,i)=>{const full=['Tracker','Bank Bonuses','Tax','Datapoints','Archive'][i],short=['Tracker','Bonuses','Tax','Data','Archive'][i];h+='<button class="tb'+(tab===t?' on':'')+'" aria-label="'+full+'" aria-current="'+(tab===t?'page':'false')+'" onclick="switchMainTab(\''+t+'\')">'+[I.grid,I.tips,I.doc,I.tips,I.lock][i]+'<span>'+short+'</span></button>'});
   h+='</div>';
@@ -4282,19 +4284,20 @@ function renderCommunityReport(item){
 function rTips(){
  const groups=buildDatapointGroups(),catalog=window.BTCommunityCatalog||{};
  dpFiltersOpen=document.querySelector('.research-filters')?.open??dpFiltersOpen;
- let h='<div class="research-shell dp-shell"><header class="research-intro dp-summary"><span class="research-eyebrow">COMMUNITY EXPERIENCE</span><h2>Bank datapoints</h2><p>A datapoint is someone’s report of what happened. Compare the account, method and date before using it.</p><button class="research-text-button" onclick="switchMainTab(\'storage\')">View saved bank terms →</button><button class="dp-add research-new-report" onclick="newDPReport()">+ Add a report</button></header>';
+ let h='<div class="research-shell dp-shell bt362-data-view">';
  h+='<input class="sinput dp-search" id="datapoints-search" aria-label="Search datapoints" placeholder="Search bank, method, or note..." value="'+esc(dpSearch)+'" oninput="updateViewSearch(\'datapoints\',this.value,this.selectionStart)">';
- h+='<div class="research-switch" role="group" aria-label="Report view">'+[['all','All reports'],['personal','My saved notes']].map(([v,t])=>'<button aria-pressed="'+(dpFilters.view===v)+'" onclick="setDPFilter(\'view\',\''+v+'\')">'+t+'</button>').join('')+'</div>';
  h+='<div class="bt360-data-pills" role="group" aria-label="Datapoint outcomes">'+[['all','All reports'],['worked','Counted'],['failed','Didn\'t count']].map(([v,t])=>'<button type="button" aria-pressed="'+(dpFilters.result===v)+'" class="'+(dpFilters.result===v?'active':'')+'" onclick="setDPFilter(\'result\',\''+v+'\')">'+t+'</button>').join('')+'</div>';
- h+='<details class="research-filters"'+(dpFiltersOpen?' open':'')+'><summary>Filter reports</summary><div class="research-filter-grid">';
+ h+='<div class="research-coverage"><b>'+groups.reduce((n,g)=>n+g.community.length,0)+' reports &amp; summaries</b><span>'+groups.length+' bank'+(groups.length===1?'':'s')+' shown · Catalog checked '+esc(catalog.checkedAt?fD(catalog.checkedAt):'date unavailable')+'</span></div>';
+ h+='<div class="bt362-data-actions"><button type="button" class="dp-add research-new-report" onclick="newDPReport()">+ Add a report</button><button type="button" class="research-text-button" onclick="switchMainTab(\'storage\')">Saved bank terms ›</button></div>';
+ h+='<details class="research-filters"'+(dpFiltersOpen?' open':'')+'><summary>More filters and saved notes</summary>';
+ h+='<div class="research-switch" role="group" aria-label="Report view">'+[['all','All reports'],['personal','My saved notes']].map(([v,t])=>'<button aria-pressed="'+(dpFilters.view===v)+'" onclick="setDPFilter(\'view\',\''+v+'\')">'+t+'</button>').join('')+'</div>';
+ h+='<div class="research-filter-grid">';
  h+=dpSelect('scope','Banks',[['all','All banks'],['mine','My tracked banks']]);
  h+=dpSelect('type','Account type',[['all','All account types'],['personal','Personal'],['business','Business']]);
  h+=dpSelect('result','Result',[['all','All results'],['worked','Reported success'],['failed','Reported failure'],['mixed','Mixed reports'],['pending','Still waiting'],['unknown','Not recorded']]);
  h+=dpSelect('source','Source',[['all','All sources'],['reddit','Reddit'],['doc','Doctor of Credit']]);
  h+=dpSelect('dated','Dates',[['all','All dates'],['recent','Dated within 90 days']]);
  h+='</div><button class="research-text-button" onclick="resetDPFilters()">Reset filters</button><p class="research-caveat">Filters apply to community reports. Your saved notes stay visible.</p></details>';
- h+='<div class="research-coverage"><b>'+groups.reduce((n,g)=>n+g.community.length,0)+' reports &amp; summaries</b><span>'+groups.length+' bank'+(groups.length===1?'':'s')+' shown · Catalog checked '+esc(catalog.checkedAt?fD(catalog.checkedAt):'date unavailable')+'</span></div>';
- h+='<details class="research-help"><summary>How to read these reports</summary><p>Reported success means a person received a payment or reported a qualifying result. Mixed reports means people had different results. Still waiting does not mean failure.</p><p>DD means direct deposit, such as a paycheck. An ACH push is a bank transfer started from the sending account. A bank transfer is not automatically a qualifying direct deposit.</p><p>'+esc(catalog.coverage||'Coverage is limited to sources shown.')+'</p><p>Source checked is the research date, not the transaction date. Community reports never change your saved offer rules or deadlines.</p></details>';
  if(!groups.length)h+='<div class="research-empty">No matching reports. Try another bank or reset the filters.</div>';
  groups.forEach(g=>{
  const open=dpExpandedBankKey===g.key,last=dpReportDate(g.community[0]||{});
@@ -4306,7 +4309,9 @@ function rTips(){
  h+='</div>';
  }h+='</section>';
  });
- h+='<details class="research-help"><summary>Find more reports</summary><p>Open these sources to look for reports published after the catalog date.</p><a class="research-source" href="https://www.reddit.com/r/churning/search/?q=Bank%20Bonus%20Weekly&amp;restrict_sr=1&amp;sort=new" target="_blank" rel="noopener noreferrer">Reddit bank bonus threads ↗</a><a class="research-source" href="https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/" target="_blank" rel="noopener noreferrer">Doctor of Credit transfer reports ↗</a></details></div>';
+ h+='<details class="research-help"><summary>Find more reports</summary><p>Open these sources to look for reports published after the catalog date.</p><a class="research-source" href="https://www.reddit.com/r/churning/search/?q=Bank%20Bonus%20Weekly&amp;restrict_sr=1&amp;sort=new" target="_blank" rel="noopener noreferrer">Reddit bank bonus threads ↗</a><a class="research-source" href="https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/" target="_blank" rel="noopener noreferrer">Doctor of Credit transfer reports ↗</a></details>';
+ h+='<details class="research-help"><summary>How to read these reports</summary><p>Reported success means a person received a payment or reported a qualifying result. Mixed reports means people had different results. Still waiting does not mean failure.</p><p>DD means direct deposit, such as a paycheck. An ACH push is a bank transfer started from the sending account. A bank transfer is not automatically a qualifying direct deposit.</p><p>'+esc(catalog.coverage||'Coverage is limited to sources shown.')+'</p><p>Source checked is the research date, not the transaction date. Community reports never change your saved offer rules or deadlines.</p></details>';
+ h+='</div>';
  h+='<p class="bt360-footnote">Reports never change your eligibility or requirements.</p>';
  return h;
 }
@@ -6483,12 +6488,6 @@ entries=sortE(entries);R();
       h+='<button type="button" class="btn-s" onclick="BT360.back()">Back to Archive</button><div class="sec">Archived accounts</div><div class="sub">Completed, non-repeatable offers. Records, received bonuses and enrolled terms remain available for history, tax and recovery.</div>';
     }else{
     if(!expanded)h+='<div class="bt360-search-tools"><button class="bt360-link" onclick="BT360.resetStage();R()">All accounts</button></div>';
-    if(!expanded)h += '<div class="qbar tracker-quick-actions">';
-
-
-    if(!expanded)h += quickBtn('purple',I.quick,'Quick Add','showTemplates=!showTemplates;R()');
-
-    if(!expanded)h += '</div>';
 
     if(showTemplates&&!expanded){
       h += '<div class="sec">Quick add templates</div><div class="tgrid">';
@@ -6501,7 +6500,6 @@ entries=sortE(entries);R();
     }
     if(!expanded)h += `<input class="sinput" type="text" id="${archiveView?'archive-search':'tracker-search'}" aria-label="${archiveView?'Search archived accounts':'Search accounts'}" placeholder="${archiveView?'Search archived accounts...':'Search accounts...'}" value="${esc(search)}" oninput="updateViewSearch('tracker',this.value,this.selectionStart)">`;
     if(!archiveView){
-    if(!expanded)h += `<button class="tc-btn" onclick="showAnalyzer=!showAnalyzer;R()">${I.spark}<span>${showAnalyzer?'Hide analyzer':'Review promo terms'}</span></button>`;
     if(showAnalyzer&&!expanded) h += rAnalyzer();
     h += '<details class="bt360-legacy-actions"'+(legacyActionsOpen?' open':'')+' ontoggle="legacyActionsOpen=this.open"><summary>All Action Center tools</summary>'+renderActionCenter()+'</details>';
     }

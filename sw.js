@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.1: fix escaped panel heading markup and badge rendering.
+// Version 3.6.2: remaining Tracker, Bonuses, Data, and Settings mockup polish.
 
-const V = 'bt-v3.6.1-panel1';
+const V = 'bt-v3.6.2-ui1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',

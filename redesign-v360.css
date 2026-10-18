@@ -1,4 +1,4 @@
-/* BonusTracker v3.6.0: presentation only. Canonical calculations and records are untouched. */
+/* BonusTracker v3.6.2: presentation only. Canonical calculations and records are untouched. */
 @font-face{font-family:Manrope;src:url('./fonts/manrope-latin-400-normal.woff2') format('woff2');font-weight:400;font-display:swap}
 @font-face{font-family:Manrope;src:url('./fonts/manrope-latin-600-normal.woff2') format('woff2');font-weight:600 900;font-display:swap}
 :root{color-scheme:dark;--bg:#07080C;--card:#12141C;--card2:#15171F;--border:#1E212C;--text:#F2F3F7;--muted:#A0A6B8;--sub:#A0A6B8;--mint:#5BE3B0;--good:#5BE3B0;--amber:#FFB86B;--bad:#FF8A8A;--blue:#8FB4FF;--violet:#C7A6FF}
@@ -181,3 +181,40 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var
 .bt360-data-pills{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;margin:10px 0}
 .bt360-data-pills button{flex:none;border:1px solid #1E212C;background:#15171F;color:#A0A6B8;border-radius:99px;min-height:36px;padding:6px 12px;font-weight:800;font-size:11px}
 .bt360-data-pills button.active{background:#123327;color:#5BE3B0;border-color:#234C3E}
+
+/* v3.6.2 mobile mockup refinement — presentation only. */
+.bt362-year-pill{display:inline-flex;align-items:center;gap:7px;background:#15171F;border:1px solid #303443;border-radius:999px;padding:5px 9px;color:#8A90A3;font-size:10px;font-weight:800;min-width:0}
+.bt362-year-pill select{appearance:auto;color:#F2F3F7;background:transparent;border:0;padding:3px 1px;font-size:12px;font-family:inherit;font-weight:800;max-width:82px;cursor:pointer}
+.bt362-year-pill select:focus-visible{outline:2px solid #5BE3B0;outline-offset:3px}
+.bt362-year-pill option{background:#15171F;color:#F2F3F7}
+.bt362-add-fab{display:flex!important;opacity:1!important;pointer-events:auto!important;transform:none!important;align-items:center;justify-content:center;position:fixed!important;right:20px!important;bottom:calc(90px + env(safe-area-inset-bottom))!important;width:54px!important;height:54px!important;min-height:54px!important;border-radius:18px!important;box-shadow:0 8px 24px #5BE3B03D!important;font-size:29px!important;z-index:16!important}
+.bt362-add-menu{position:fixed;right:18px;bottom:calc(156px + env(safe-area-inset-bottom));width:min(255px,calc(100vw - 32px));padding:8px;background:#15171F;border:1px solid #394055;box-shadow:0 10px 26px #0009;border-radius:16px;z-index:17;display:grid;gap:4px}
+.bt362-add-menu button{font-family:inherit;background:transparent;color:#F2F3F7;text-align:left;font-size:13px;font-weight:750;border:0;border-radius:10px;padding:13px 12px;min-height:44px}
+.bt362-add-menu button:hover,.bt362-add-menu button:focus-visible{background:#243347;outline-color:#5BE3B0}
+.bt362-offer-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 4px 4px}
+.bt362-offer-head h2{font-size:17px;margin:0;color:#F2F3F7}
+.bt362-offer-head button,.bt362-offer-stale button{min-height:36px}
+.bt362-offer-stale{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #755B32;background:#292216;color:#FFB86B;border-radius:12px;padding:9px 10px;font-size:11px;line-height:1.5;margin:10px 0}
+.bt362-offer-stale span{min-width:0;flex:1;overflow-wrap:anywhere}
+.bt362-offer-stale button{flex:none;border:1px solid #755B32;background:transparent;color:#FFE0A5;border-radius:8px;padding:6px 10px;font-weight:800}
+.bt362-about-sources,.bt362-offer-filter-disclosure{background:#12141C;border:1px solid #1E212C;border-radius:12px;margin:7px 0 10px;color:#A0A6B8}
+.bt362-about-sources>summary,.bt362-offer-filter-disclosure>summary{list-style:disclosure-closed;cursor:pointer;min-height:42px;padding:11px 14px;font-size:12px;font-weight:800;color:#D1D5E1}
+.bt362-about-sources[open]>summary,.bt362-offer-filter-disclosure[open]>summary{list-style:disclosure-open}
+.bt362-about-body{padding:0 12px 12px;font-size:11px;line-height:1.5}
+.bt362-about-body p{margin:7px 0}
+.bt362-offer-filter-disclosure .radar-filters{margin:0;border:0;border-top:1px solid #292C38;background:transparent;padding:10px}
+.radar-card-compact{padding:11px 12px!important;border-radius:15px!important;margin:8px 0!important;min-width:0}
+.radar-card-compact .radar-card-meta{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:6px 0}
+.radar-card-compact .radar-geo{font-size:10px}
+.radar-card-compact .radar-area-note{display:none}
+.radar-card-compact .radar-tracker-context{font-size:11px;padding:7px 10px;margin:5px 0;border-radius:10px}
+.radar-card-compact .radar-tracker-context p{font-size:10px;margin:4px 0}
+.radar-card-compact .radar-offer-link{min-height:36px;display:inline-flex;align-items:center;padding:6px 0;font-size:11px}
+.bt362-group-note{margin:1px 5px 9px;color:#A0A6B8;font-size:11px;line-height:1.5}
+.bt362-data-view .dp-search{margin-top:2px}
+.bt362-data-view .research-coverage{margin:7px 0;display:flex;align-items:center;flex-wrap:wrap;gap:7px;font-size:11px}
+.bt362-data-view .research-coverage b{font-size:12px}
+.bt362-data-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 9px}
+.bt362-data-actions button{min-height:36px;padding:7px 10px;font-size:11px;max-width:52%;white-space:normal}
+.bt362-data-view .research-help{margin-top:12px}
+@media(max-width:430px){.bt362-year-pill{margin-left:auto}.hdr-row{gap:6px!important}.bt362-offer-head{padding-top:6px}.radar-card-compact .bt360-offer-title{gap:8px}.radar-card-compact .bt360-offer-title strong{font-size:12px;max-width:100px;white-space:normal}}

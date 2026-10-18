@@ -1,4 +1,4 @@
-/* Release 3.6.1 presentation-only; preserved canonical rules and calculations. */
+/* Release 3.6.2 presentation-only; preserved canonical rules and calculations. */
 /* BonusTracker v3.5.2 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
 (function(){
   'use strict';

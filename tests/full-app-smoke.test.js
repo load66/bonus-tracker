@@ -59,8 +59,21 @@ module.exports={sandbox,document,app,storage,errors};
 if(require.main===module)setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.6.1',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.6.1',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.6.2',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.6.2',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    const trackerRender=sandbox.BT360;
+    assert(trackerRender.stages([]).includes('aria-label="Filter by stage"'),'Stage group missing');
+    assert(!/class="bt360-stage stage-/.test(trackerRender.stages([])),'Zero-count stage chip leaked');
+    const initialSuggestions=sandbox.getAttentionSuggestions;
+    try{
+      const rows=[{id:'fixture-a',bank:'Synthetic Bank',accountType:'personal',bonus:100},{id:'fixture-b',bank:'Synthetic Bank 2',accountType:'personal',bonus:200}];
+      const task=(id)=>({entryId:id,bank:'Synthetic Bank',stageLabel:'Review',stageCode:'ACTION_NEEDED',task:{title:'Verify requirements'}});
+      sandbox.getAttentionSuggestions=()=>[task('fixture-a')];
+      assert(trackerRender.tasks(rows).includes('>1 task</span>'),'Singular Needs you label is wrong');
+      sandbox.getAttentionSuggestions=()=>[task('fixture-a'),task('fixture-b')];
+      assert(trackerRender.tasks(rows).includes('>2 tasks</span>'),'Plural Needs you label is wrong');
+    }finally{sandbox.getAttentionSuggestions=initialSuggestions}
+
     // v3.6.1: panel titles must remain escaped text; trusted badge markup
     // belongs in the accessory slot rather than appearing as literal tags.
     const needsMarkup=sandbox.BT360.tasks([]);

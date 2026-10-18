@@ -78,7 +78,7 @@ async function exercise(name,engine,url){
   const record=async()=>page.evaluate(()=>JSON.parse(localStorage.getItem('bt_e_v4')||'[]')[0]);
   const check=(label,condition)=>{assert.ok(condition,label);checks.push(label)};
   const importEntry=async object=>{
-    await button('Quick Add').click();
+    await page.locator('.bt362-add-fab').click();await button('Quick Add').click();
     const chooser=page.waitForEvent('filechooser');
     await page.getByRole('button',{name:/Import Entry File JSON/}).click();
     await (await chooser).setFiles({name:'verification.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(object))});
@@ -102,6 +102,9 @@ async function exercise(name,engine,url){
   try{
     await page.goto(url);await settleStartup();
     await page.getByText('No accounts yet',{exact:true}).waitFor();
+    check('year selector is a single pill and zero-count stages hidden',await page.locator('#bt362-year').count()===1&&await page.locator('.yr-btn').count()===0&&await page.locator('.bt360-stage').count()===0);
+    check('Tracker floating add replaces bulky Quick Add bar',await page.locator('.bt362-add-fab').isVisible()&&await page.locator('.tracker-quick-actions').count()===0);
+
     const beforeNotifications=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     await button('Notifications').click();
     check('header bell opens read-only notification center',await page.getByRole('dialog',{name:'Notification center'}).isVisible()&&await page.getByText('No current tasks needing attention.').isVisible());
@@ -134,7 +137,7 @@ async function exercise(name,engine,url){
     check('customer exclusion wording survives rerender',await page.locator('#elig-customer').inputValue()==='Not eligible for current checking account owners.');
 
     await button('Cancel').click();
-    await button('Quick Add').click();await button('CI Citi $300').click();
+    await page.locator('.bt362-add-fab').click();await button('Quick Add').click();await button('CI Citi $300').click();
     check('Quick Add exposes bank/account/bonus',await page.locator('input[oninput*="\'bank\'"]').isVisible()&&await page.locator('select[onchange*="\'accountType\'"]').isVisible()&&await page.locator('input[oninput*="\'bonus\'"]').isVisible());
     await button('4 Review').click();check('unverified template cannot be saved',await button('💾 Add account').isDisabled());await button('Cancel').click();
     await importEntry(payload);
@@ -191,7 +194,7 @@ async function exercise(name,engine,url){
     check('tax CSV downloads with correct amount and dates',taxCSV.includes('E2E Verification Bank')&&taxCSV.includes('"325"')&&taxCSV.includes('Apr 15, 2026'));
     await button('Tracker').click();
     await button('Settings').click();
-    check('data tools are in the header menu',await page.getByRole('button',{name:'Export backup file',exact:false}).isVisible()&&await page.getByRole('button',{name:'Reset this device',exact:false}).isVisible()&&await page.locator('.tracker-quick-actions button').count()===1);
+    check('data tools are in the header menu',await page.getByRole('button',{name:'Export backup file',exact:false}).isVisible()&&await page.getByRole('button',{name:'Reset this device',exact:false}).isVisible()&&await page.locator('.tracker-quick-actions button').count()===0);
     const backupEvent=page.waitForEvent('download');await page.getByRole('button',{name:'Export backup file',exact:false}).click();
     const backupFile=path.join(output,name+'-backup.json');await (await backupEvent).saveAs(backupFile);
     const backup=JSON.parse(await fs.readFile(backupFile,'utf8'));
@@ -221,16 +224,21 @@ async function exercise(name,engine,url){
     await page.getByPlaceholder('Search accounts...').fill('Does not exist');await page.getByText('No matching accounts',{exact:true}).waitFor();await page.getByPlaceholder('Search accounts...').fill('');
     check('search keeps stored record',(await record()).id===id);
     await page.setViewportSize({width:390,height:844});
+    await page.screenshot({path:path.join(output,name+'-v362-tracker-390.png')});
     check('mobile layout fits viewport',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
     const storedBeforeRadar=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     await page.evaluate(()=>{const base=entries[0];entries.push({...base,id:'radar-us-bank',bank:'U.S. Bank',closed:'2026-05-01'});sv(SK,entries);R()});
     const storedDuringRadar=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     await button('Bank Bonuses').click();
     await page.getByText(/Synthetic Checking/).waitFor();
+    await page.screenshot({path:path.join(output,name+'-v362-bonuses-390.png')});
+    check('offers group by verified tracker review status without assuming personal eligibility',await page.locator('.radar-group-heading').count()>0&&(await page.getByText('About sources',{exact:true}).count())===1);
     check('bank feed renders escaped discovery title',(await page.locator('.radar-card img').count())===0&&(await page.locator('.radar-card').filter({hasText:'Synthetic Checking'}).innerText()).includes('<img'));
-    check('bank feed warns when source check is stale',(await page.locator('#app').innerText()).includes('Updates are stale'));
+    check('bank feed warns when source check is stale',await page.locator('.bt362-offer-stale').isVisible());
+    await page.locator('.bt362-about-sources summary').click();
     check('bank bonus tab fits mobile viewport',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
-    check('partial source outage is disclosed',(await page.locator('#app').innerText()).includes('Some sources are unavailable'));
+    check('partial source outage is disclosed',(await page.locator('.bt362-about-sources').innerText()).includes('Update unavailable'));
+    await page.locator('.bt362-offer-filter-disclosure summary').click();
     await page.getByLabel('Availability',{exact:true}).selectOption('nationwide');
     check('nationwide filter requires explicit source label',await page.locator('.radar-card').count()===1&&(await page.locator('.radar-card').innerText()).includes('Wells Fargo'));
     check('compact offers show geography and one source link',await page.locator('.radar-card').evaluateAll(cards=>cards.every(card=>card.querySelectorAll('h3').length===1&&card.querySelectorAll('.radar-offer-link').length===1&&card.querySelector('.radar-geo'))));
@@ -450,8 +458,8 @@ async function exercise(name,engine,url){
     await page.locator('.card-h').first().click();
     const lifecycle=page.locator('.profile-section[data-section-key="lifecycle"]').first();
     if(!await lifecycle.evaluate(e=>e.open))await lifecycle.locator('summary').click();
-    await button('2025').click();
-    await button('2026').click();
+    await page.locator('#bt362-year').selectOption('2025');
+    await page.locator('#bt362-year').selectOption('2026');
     check('expanded Lifecycle & Tasks survives year navigation',await page.locator('.profile-section[data-section-key="lifecycle"]').first().evaluate(e=>e.open));
     // The focused detail intentionally hides the Tracker list search; navigate back first.
     await page.getByRole('button',{name:'Back to accounts'}).click();
@@ -459,6 +467,9 @@ async function exercise(name,engine,url){
     check('tracker search keeps cursor through consecutive keystrokes',await page.getByPlaceholder('Search accounts...').inputValue()==='E2E'&&await page.evaluate(()=>document.activeElement.id==='tracker-search'));
     await page.getByPlaceholder('Search accounts...').fill('');
     await button('Datapoints').click();
+    await page.setViewportSize({width:390,height:844});
+    await page.screenshot({path:path.join(output,name+'-v362-data-390.png')});
+    check('Data starts with search and collapses reading help after report list',await page.locator('.dp-summary').count()===0&&await page.locator('.bt362-data-view > .dp-search').count()===1&&await page.locator('.research-help').filter({hasText:'How to read these reports'}).evaluate(x=>!x.open));
     await page.getByPlaceholder('Search bank, method, or note...').pressSequentially('E2E');
     check('datapoint search keeps focus while typing',await page.getByPlaceholder('Search bank, method, or note...').inputValue()==='E2E'&&await page.evaluate(()=>document.activeElement.id==='datapoints-search'));
     check('datapoint bank is keyboard accessible',await page.locator('button.dp-head').getAttribute('aria-expanded')!==null);
@@ -466,12 +477,12 @@ async function exercise(name,engine,url){
     await page.locator('button.dp-head').first().click();
     check('community report shows event and checked dates',await page.locator('.research-report').first().innerText().then(t=>t.includes('Bonus paid')&&t.includes('Source checked')&&t.includes('Reported success')));
     check('datapoints no longer offers account deletion',await page.getByRole('button',{name:'Delete bank',exact:true}).count()===0);
-    await page.getByText('Filter reports',{exact:true}).click();
+    await page.getByText('More filters and saved notes',{exact:true}).click();
     await page.getByLabel('Result',{exact:true}).selectOption('worked');
     check('filter panel stays open after a selection',await page.locator('.research-filters').evaluate(e=>e.open));
     await page.getByLabel('Source',{exact:true}).selectOption('reddit');
     check('source filter returns dated Reddit reports',await page.locator('.research-report .research-source').first().getAttribute('href').then(u=>u.includes('reddit.com')));
-    await page.getByText('Filter reports',{exact:true}).click();
+    await page.getByText('More filters and saved notes',{exact:true}).click();
     for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
       check('datapoint mobile width '+width,await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&[...document.querySelectorAll('.research-report')].every(e=>e.scrollWidth<=e.clientWidth+1)));
@@ -696,6 +707,7 @@ async function exercise(name,engine,url){
         :window.__hostingPreviousFetch(input,options);
     },syntheticUsage);
     await button('Settings').click();
+    check('header ellipsis opens actual Settings',await page.getByRole('dialog',{name:'Settings'}).isVisible());
     await page.evaluate(async()=>BT360.refreshUsage(true));
     await page.getByText('Near limit',{exact:true}).waitFor();
     check('hosting usage card uses mocked nonzero Railway estimate',(await page.locator('.bt360-sheet').innerText()).includes('HOSTING & USAGE')&&
@@ -703,7 +715,7 @@ async function exercise(name,engine,url){
     for(const width of [320,375,390,430,1024]){
       await page.setViewportSize({width,height:844});
       check('hosting and Settings fit '+width+'px',await page.locator('.bt360-sheet').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&[...e.querySelectorAll('.bt360-panel,.bt360-usage-top,.bt360-usage-r2')].every(n=>n.scrollWidth<=n.clientWidth+1)));
-      if(width===390)await page.screenshot({path:path.join(output,name+'-hosting-settings-390.png')});
+      if(width===390){await page.screenshot({path:path.join(output,name+'-hosting-settings-390.png')});await page.screenshot({path:path.join(output,name+'-v362-settings-390.png')});}
     }
     check('hosting usage views leave bank records unchanged',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,bankingBeforeHosting));
     await page.getByRole('button',{name:'Close settings'}).click();
