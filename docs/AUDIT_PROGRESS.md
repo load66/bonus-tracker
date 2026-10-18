@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: ChatGPT Codex | six-hour offer feed v3.6.3 | codex/v3.6.3-bank-feed-lifecycle
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
