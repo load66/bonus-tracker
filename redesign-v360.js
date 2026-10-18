@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.23 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.24 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt360_audience_session',noticeKey='bt360_notice_session';
@@ -344,13 +344,23 @@ function payoutReminderRow(e){
  const chip=projected?date(projected):base?'Timing in terms':'After qualification';
  return '<details class="bt3611-timer-row bt3613-payout" data-source="saved-payout"><summary><span class="bt3611-timer-icon" aria-hidden="true">'+timerSvg('payout')+'</span><span class="bt3611-timer-body"><b>Bonus pending</b><small>'+safe(subtitle)+'</small></span><span class="bt360-chip">'+safe(chip)+'</span></summary><div class="bt3611-timer-full">'+safe(wording)+'<p>From saved payout terms · not a recorded payment</p></div></details>';
 }
+// The enrolled structured rule is authoritative over a legacy day counter.
+// If its clock is not calculable (business days, cycles, unknown start), do
+// not substitute an apparently exact date from an unrelated legacy field.
+function firstUnmetRequirementDate(e){
+ if(e.reqMet||e.bonusRecd||e.closed)return '';
+ const rules=Array.isArray(e.financialRules?.requirements)?e.financialRules.requirements:[];
+ if(rules.length)return rules.map(r=>detailRequirementDate(e,r)).filter(Boolean).sort()[0]||'';
+ return typeof reqDeadline==='function'?(reqDeadline(e)||''):'';
+}
 function requirementCountdown(e){
- const due=typeof reqDeadline==='function'?reqDeadline(e):'';
+ const due=firstUnmetRequirementDate(e);
  if(!due)return '';
  const days=dB(td(),due);
  return days<0?'Overdue '+Math.abs(days)+' days':days===0?'Due today':days+' days left';
 }
 function derivedRequirementTimers(e,timers){
+ if(e.reqMet||e.bonusRecd||e.closed)return '';
  const requirements=Array.isArray(e.financialRules?.requirements)?e.financialRules.requirements:[];
  const dueDates=new Set();
  return requirements.map(rule=>{
@@ -672,7 +682,10 @@ function detailPanels(e){
  const code=stage(e).code,ready=code==='READY_TO_CLOSE',closed=!!e.closed;
  const at=closed?4:ready?4:code==='HOLD_OPEN'||code==='BONUS_RECEIVED'?3:code==='REQUIREMENTS_MET'||code==='AWAITING_BONUS'?2:1;
  const labels=['Opened','Tasks','Payout','Hold','Close'];
- let h='<div class="bt360-steps '+(ready?'bt3611-ready':'')+'" aria-label="Account lifecycle"><div class="bt3611-step-bars">'+labels.map((name,i)=>'<span class="'+(i<at?'done ':'')+(at===i?'current':'')+'"'+(at===i?' aria-current="step"':'')+'>'+name+'</span>').join('')+'</div><div class="bt3611-stage-summary"><b>'+safe(ready?'Review closing checks before closing':code==='IN_PROGRESS'?'Complete offer requirements':stage(e).label)+'</b><em class="bt360-chip '+(ready?'positive':'warning')+'">'+safe(ready?'Ready to close':(!closed&&reqDeadline(e)?requirementCountdown(e):stage(e).label))+'</em></div></div>';
+ const due=firstUnmetRequirementDate(e);
+ const stageSummary=ready?'Review closing checks before closing':due?'Requirements due '+date(due):code==='IN_PROGRESS'?'Complete offer requirements':stage(e).label;
+ const stageChip=ready?'Ready to close':due?requirementCountdown(e):stage(e).label;
+ let h='<div class="bt360-steps '+(ready?'bt3611-ready':'')+'" aria-label="Account lifecycle"><div class="bt3611-step-bars">'+labels.map((name,i)=>'<span class="'+(i<at?'done ':'')+(at===i?'current':'')+'"'+(at===i?' aria-current="step"':'')+'>'+name+'</span>').join('')+'</div><div class="bt3611-stage-summary"><b>'+safe(stageSummary)+'</b><em class="bt360-chip '+(ready?'positive':'warning')+'">'+safe(stageChip)+'</em></div></div>';
  const hasExtraWork=Array.isArray(e.checklist)&&e.checklist.length>0;
  const savedWorkStart=h.length;
  if(!closed&&(!ready||hasExtraWork)){
