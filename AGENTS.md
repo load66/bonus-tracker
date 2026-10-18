@@ -12,6 +12,14 @@ This file is the single source of truth for every coding agent working in this r
 - `docs/AUDIT_PROGRESS.md` is public-safe: versions, commit hashes, PR links, sanitized issue titles and test status only. Never account names, numbers, amounts, transactions, secrets, logs, or details of unfixed security issues (write "Security review pending").
 - The Finances backend lives in `load66/Trading-Journal-AI`; its `AGENTS.md` carries the same coordination rules plus backend data-safety rules.
 
+## Playwright and CI policy (owner preference)
+
+- Use **Chromium only** for Playwright in local development, pull requests, main/release verification, nightly checks and production smoke tests. Do **not** run Firefox or WebKit or recreate a three-browser matrix without a new explicit owner instruction.
+- Preserve the full existing Chromium assertion suite: Tracker workflows, canonical rules, cloud recovery, data safety, and visual checks at 320, 375, 390, 430px and desktop. Do not lower assertions, disable failures or silently skip coverage to make CI faster.
+- Run relevant unit suites first; keep a single reusable Chromium Playwright job after unit tests pass, retaining retries, deterministic mocks, failure artifacts and zero uncaught console errors.
+- Use the pinned official Playwright container and version-keyed Node API cache. Never reinstall browser binaries or unrelated dependencies on every run.
+- Browser testing policy is an infrastructure change, not permission to change Finance retirement, data storage, eligibility, lifecycle or financial behavior.
+
 ## Finances data safety
 
 - Never delete, reset or overwrite real financial history; migrations are additive and recoverable. Manual user decisions always override automation.
@@ -26,7 +34,7 @@ For every new offer import, verify the applicable official promotion and fee sch
 
 Keep eligibility, closure and date decisions in the canonical engines. AI explains validated results and identifies gaps; it does not override them. Preserve the single active rTracker renderer, per-entry section state, normal replacement review and transactional persistence. Do not rewrite existing financial records from new public terms or automatically upgrade legacy records.
 
-When editing schema or rules, test financial-rules and structured-import fixtures plus the affected existing suites and three-browser release checks. Update the generation document, rule contract and discoverable import skill together; do not release mismatched schema instructions.
+When editing schema or rules, test financial-rules and structured-import fixtures plus the affected existing suites and Chromium-only Playwright release checks. Update the generation document, rule contract and discoverable import skill together; do not release mismatched schema instructions.
 
 Cloud recovery must preserve exact stored values, verify SHA-256/readback, keep per-owner immutable versions with verified bounded retention (three distinct states plus current checkpoint, maximum four after cleanup) and never export authentication or R2 credentials. Extend backend backup allowlists and restore tests whenever adding a persistent tracker key. Never claim a phone's records are protected before its first verified upload. Scheduled checkpoints protect already uploaded state; offline phone changes are not available to a server. Keep safety snapshots and transactional rollback before destructive restore/reset operations.
 
