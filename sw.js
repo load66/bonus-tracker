@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.10: Railway usage diagnostics after mobile layout release.
+// Version 3.6.11: Railway usage diagnostics after mobile layout release.
 
-const V = 'bt-v3.6.10-precision1';
+const V = 'bt-v3.6.11-precision1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
