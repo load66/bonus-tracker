@@ -286,12 +286,16 @@
       const link=x.links[0],date=x.match?.date;
       const verifiedAmount=amountFor(x);
       const verifiedRequirement=x.evidence?.status==='evidence-found'&&!x.evidence?.stale?x.evidence.fields?.qualifying_activity?.value:null;
-      h+='<article class="radar-card radar-card-compact radar-priority-'+x.priorityGroup+'"><div class="bt360-offer-title">'+bankLogo(x.title,true)+'<div class="bt360-grow"><h3>'+escape(x.title)+'</h3><p>'+escape(verifiedRequirement||'Requirements need review')+'</p></div><strong>'+(verifiedAmount===null?'Needs review':'$'+verifiedAmount.toLocaleString('en-US'))+'</strong></div><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+'</div>';
+      const bankLabel=(x.bank||'').replace(/\b\w/g,c=>c.toUpperCase()).replace(/^Us Bank$/,'U.S. Bank');
+      const label=bankLabel&&x.product&&x.amount!==null?bankLabel+' · '+x.product+' · $'+x.amount.toLocaleString('en-US'):x.title;
+      const badges=x.badges?.length?'<div class="radar-offer-badges">'+x.badges.map(b=>'<span>'+escape(b)+'</span>').join('')+(x.changeLabel?'<span>'+escape(x.changeLabel)+'</span>':'')+'</div>':'';
+      h+='<article class="radar-card radar-card-compact radar-priority-'+x.priorityGroup+'"><div class="bt360-offer-title">'+bankLogo(x.title,true)+'<div class="bt360-grow"><h3>'+escape(label)+'</h3>'+badges+'<p>'+escape(verifiedRequirement||'Requirements need review')+'</p></div><strong>'+(verifiedAmount===null?(x.amount===null?'Needs review':'$'+x.amount.toLocaleString('en-US')+'*'):'$'+verifiedAmount.toLocaleString('en-US'))+'</strong></div><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+'</div>';
       if(x.match)h+='<div class="radar-tracker-context"><b>'+escape(x.match.label)+'</b>'+(date?'<time datetime="'+date+'">'+escape(typeof fD==='function'?fD(date):date)+'</time>':'')+'<p>'+escape(x.match.detail)+'</p></div>';
       h+='<p class="radar-area-note">'+escape(x.geo.detail)+'</p>';
       const proof=x.geo.proof||availabilityFor(x,officialCatalog);
       if(proof?.sourceUrl){let body='';for(const q of [...(proof.rules||[]).map(r=>r.quote),...(proof.nationwideQuote?[proof.nationwideQuote]:[]),...(proof.conditions||[])])body+='<blockquote>'+escape(q)+'</blockquote>';body+='<a href="'+escape(proof.sourceUrl)+'" target="_blank" rel="noopener noreferrer">Official promotion ↗</a>';h+=disclosure('availability:'+x.url,'Official check · '+new Date(proof.checkedAt).toLocaleString(),body).replace('class="mobile-disclosure"','class="mobile-disclosure radar-official-proof"');}
-      h+='<a class="radar-offer-link" href="'+escape(link.url)+'" target="_blank" rel="noopener noreferrer">Review offer · '+escape(link.source)+' ↗</a></article>';
+      h+='<details class="radar-offer-original"><summary>Original headline &amp; sources</summary><p>'+escape(x.title)+'</p>'+(verifiedAmount===null&&x.amount!==null?'<p>* Headline amount is source-reported; verify official terms before applying.</p>':'')+'</details>';
+      h+=(x.links?.length?x.links:[link]).map(l=>'<a class="radar-offer-link" href="'+escape(l.url)+'" target="_blank" rel="noopener noreferrer">Review offer · '+escape(l.source)+' ↗</a>').join('')+'</article>';
     });
     return h;
   };
