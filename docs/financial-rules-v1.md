@@ -61,6 +61,10 @@ Use complete `text` for conditional branches, tier-specific definitions and bank
 
 Repeat eligibility remains in the existing `eligibilityRules` contract and evidence gate. Do not duplicate or recalculate its clock here. Multiple applicable restrictions and closure prerequisites remain authoritative in the existing engine.
 
+## Fee-free closure presentation and source completeness
+
+A verified unconditional early-closing fee of $0 is stored as `closure.earlyCloseFee: 0` only when the applicable official fee-schedule excerpt explicitly supports no fee. The user-facing display is **No early-closing fee**, not a generic fee-review warning. Positive or conditional fees keep their source-backed window. A schedule's silence does not prove zero and must follow the supported financialRules v2 manual-review/unknown pathway; use **No early-closing fee listed in verified terms** rather than presenting a source omission as a bank promise. A no-fee finding does not clear bonus forfeiture, keep-open requirements or other closure checks. See [NEW_BANK_IMPORT_PLAYBOOK.md](NEW_BANK_IMPORT_PLAYBOOK.md) for the required bank-specific research and JSON field coverage workflow.
+
 ## Validation and maintenance
 
 Run `node scripts/validate-entry.cjs /absolute/path/ENTRY.json`. It validates strict intake, review/save projection, retained original fee text, current rule compatibility and bounded AI context in an isolated in-memory app. It never reads a user's account storage. It accepts only schema v3 for new generated imports. Nonzero exit means no finalized delivery.

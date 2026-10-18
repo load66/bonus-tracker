@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.29 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.30 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt3628_audience_session',noticeKey='bt360_notice_session';
@@ -532,7 +532,7 @@ function feeSnapshot(e){
    e.closeRuleText,e.analysis?.closeRuleText);
  const savedCloseTerms=[closure.feeEvidence?.quote,e.earlyTerminationFeeText,e.analysis?.earlyTerminationFeeText,e.closeRuleText,e.analysis?.closeRuleText]
   .map(v=>String(v||'').trim()).filter(Boolean);
- let closeMain='Not confirmed',closeNote='No explicit early-close fee evidence',closeKnown=false;
+ let closeMain='Not confirmed',closeNote='No explicit early-close fee evidence',closeKnown=false,noEarlyCloseFee=false;
  const legacyFee=original(e.earlyTerminationFeeText,e.analysis?.earlyTerminationFeeText,e.closeRuleText,e.analysis?.closeRuleText);
  const isNoFee=v=>/no (?:early[- ]?)?(?:account[- ]?)?(?:clos(?:e|ing|ure)|terminat(?:ion|ing)) fee|(?:early[- ]?)?(?:closing|termination) fee\s*(?::|is)?\s*(?:none|\$0\b|waived)/i.test(v);
  const hasConditionalWindow=v=>/\b(?:after|only if|unless|until|before|within|first \d+)\b/i.test(v);
@@ -545,7 +545,7 @@ function feeSnapshot(e){
  if(typedFee!==null&&typedFee>0&&closure.feeEvidence?.quote){
   closeMain=amount(typedFee)+' early-close fee';closeNote='Saved structured fee evidence';closeKnown=true;
  }else if(typedFee===0&&isNoFee(closure.feeEvidence?.quote||'')&&!hasConditionalWindow(closure.feeEvidence.quote)){
-  closeMain='$0 early-close fee';closeNote='Explicitly stated in saved fee schedule';closeKnown=true;
+  closeMain='No early-closing fee';closeNote='Confirmed in saved fee schedule';closeKnown=true;noEarlyCloseFee=true;
  }else if(appearsBonusClawback){
   closeMain='Not separately stated';closeNote='Saved bonus clawback: up to '+amount(Number(e.earlyCloseFee))+' · not a bank service fee';closeKnown=false;
  }else if(positiveLegacy){
@@ -560,7 +560,7 @@ function feeSnapshot(e){
    ||legacyFee.match(/(\$\s*[\d,]+(?:\.\d{1,2})?)\s*(?:early[- ]?|account[- ]?)?(?:clos(?:ing|ure)|terminat(?:ion|ing))\s+fee/i)
    ||legacyFee.match(/(\$\s*[\d,]+(?:\.\d{1,2})?)\s*(?:early\s+)?fee\s+if\s+(?:the\s+)?(?:account\s+)?clos(?:ed|ing)/i);
   if(match){closeMain=match[1].replace(/\s/g,'')+' early-close fee';closeNote='From saved legacy fee terms · review fee window';closeKnown=true}
-  else if(isNoFee(legacyFee)&&!hasConditionalWindow(legacyFee)){closeMain='$0 early-close fee';closeNote='Explicit no-fee wording in saved terms';closeKnown=true}
+  else if(isNoFee(legacyFee)&&!hasConditionalWindow(legacyFee)){closeMain='No early-closing fee';closeNote='Confirmed by saved no-fee terms';closeKnown=true;noEarlyCloseFee=true}
   else if(isNoFee(legacyFee)){closeNote='Saved no-fee wording is conditional · review closing date'}
  }
  if(explicitClawback&&!appearsBonusClawback)closeNote+=' · Bonus clawback is separate';
@@ -572,7 +572,7 @@ function feeSnapshot(e){
  const closeTerms=[...new Set(savedCloseTerms)].join('\n\n');
  const source=String(e.feeScheduleSourceUrl||'').trim();
  return {monthly,monthlyKnown,companions,summary:summary||'Waiver conditions not confirmed',terms:[...new Set(terms)].join('\n\n'),
-  closeMain,closeNote,closeKnown,closeTerms,historical:historicalProjection.historical,historicalSource:historicalProjection.source,source:/^https:\/\/[^<>"'\s]+$/i.test(source)?source:'',explicitClawback};
+  closeMain,closeNote,closeKnown,noEarlyCloseFee,closeTerms,historical:historicalProjection.historical,historicalSource:historicalProjection.source,source:/^https:\/\/[^<>"'\s]+$/i.test(source)?source:'',explicitClawback};
 }
 function feeDetail(e){
  const x=feeSnapshot(e);
@@ -688,11 +688,15 @@ function closeCheckPresentation(e){
  const remaining=hold?dB(td(),hold):null;
  const hasHold=Number(e.minHoldDays)>0;
  const holdMet=hasHold&&Number.isFinite(remaining)&&remaining<=0;
+ const closure=e.financialRules?.closure;
+ const paidPayoutOnly=!hasHold&&!!e.bonusRecd&&closure?.restrictionType==='payout-only'
+  &&closure?.minHoldDays===0&&/\b(?:until|through|after|once|when|before)\b.{0,90}\bbonus\b/i.test(String(closure?.evidence?.quote||''))
+  &&/\bbonus\b/i.test(String(e.closeRuleText||closure?.text||''));
  const fee=feeSnapshot(e);
- const zeroFeeConfirmed=fee.closeKnown&&fee.closeMain==='$0 early-close fee';
+ const zeroFeeConfirmed=fee.closeKnown&&fee.noEarlyCloseFee;
  const retentionSaved=retentionEvidenceCleared(e,holdMet);
  return [
-  {ok:holdMet,label:'Minimum hold met',detail:hasHold?(holdMet?'Open '+Number(e.minHoldDays)+' days · cleared '+date(hold):'Hold until '+(hold?date(hold):'Needs review')):'No documented minimum hold · Needs review'},
+  {ok:holdMet||paidPayoutOnly,label:'Minimum hold met',detail:hasHold?(holdMet?'Open '+Number(e.minHoldDays)+' days · cleared '+date(hold):'Hold until '+(hold?date(hold):'Needs review')):paidPayoutOnly?'No separate fixed hold · payout-only condition satisfied':'No documented minimum hold · Needs review'},
   {ok:zeroFeeConfirmed,label:'Early close fee window cleared',detail:zeroFeeConfirmed?'Explicit no-fee terms saved':fee.closeKnown?fee.closeMain+' · verify the applicable fee window before closing':fee.closeNote+' · Needs review'},
   {ok:retentionSaved,label:'Bonus kept after closing',detail:retentionSaved?'Bonus received · saved restriction evidence supports closing':'Confirm bonus repayment restrictions in saved terms'},
   {ok:false,label:'Close with $0 balance',detail:'Confirm account balance with the bank before closing'}
@@ -927,10 +931,10 @@ async function backUpNow(){
 function settings(){
  const toggles=[['deadlines','Deadlines','3 and 1 day before'],['payouts','Payouts and close dates','When ready'],['eligible','Eligible again','7 days before and on the day']];
  const buttons=toggles.map(([k,label,description])=>'<button class="bt360-settings-row" role="switch" aria-checked="'+noticePrefs[k]+'" onclick="BT360.setNotice(\''+k+'\')"><span><b>'+label+'</b><small>'+description+'</small></span><i class="bt360-toggle '+(noticePrefs[k]?'checked':'')+'"></i></button>').join('');
- return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.29</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
+ return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.30</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
  cloudSettingsCard()+
  usageCard()+
- panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.29. Push delivery is not active.</p>')+
+ panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.30. Push delivery is not active.</p>')+
  panel('Data','<button class="bt360-settings-row" onclick="BT360.closeSettings();exportBackup()">Export backup file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.closeSettings();importBackup()">Restore from file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.openPhonebook()">Bank phone numbers <span>›</span></button>')+
  '<button class="bt360-reset" onclick="BT360.closeSettings();resetAllData()">Reset this device <small>Two confirmations and a safety backup</small></button></section></div>';
 }

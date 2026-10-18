@@ -2,6 +2,10 @@
 
 Adopted October 13, 2026; revised October 14, 2026. Applies to every future BonusTracker import for Philip, including new conversations. Compatibility baseline: BonusTracker v3.4.50, strict numeric schemaVersion 3, and financialRules version 1 or 2. Existing schema v1/v2 records remain compatible; they are not the standard for new generated files. This document is a generation standard, not an importable offer or a claim that any bank's terms have been verified today.
 
+## Mandatory per-bank research and autofill
+
+Read [NEW_BANK_IMPORT_PLAYBOOK.md](NEW_BANK_IMPORT_PLAYBOOK.md) alongside this standard and the current financial-rule contract before generating any new bank/product/cycle file, whether the user pastes all T&C or provides only a bank name or offer link. The assistant researches the specific applicable official promotion, enrolled terms and complete bank/companion fee schedules, checks every churn restriction and current-customer exception, and fills all **source-verifiable** supported bank-card fields (requirements, timing, fees, waivers, payout, closure, future eligibility). The user need not manually research the bank. When the user opens, edits, closes, or reopens an account, recalculate projections from the same canonical engines using confirmed events; never invent activity or reuse another bank's rules. Officially documented unconditional **no early-closing fee** is displayed plainly and clears its fee check; an unlisted fee remains unconfirmed, and a fee-free closure does not mean no bonus clawback.
+
 ## Responsibility and release rule
 
 The assistant researches the official promotion and fee schedule, resolves the applicable product and enrollment terms, generates the JSON, and verifies its import and calculations. The user supplies the offer/enrolled terms and actual account events. The user should not have to fill in researched rules manually afterward.
