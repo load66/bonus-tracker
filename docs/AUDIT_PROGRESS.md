@@ -6,6 +6,8 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.6.29 curated bank-brand marks and bank-first Needs you (`codex/v3.6.29-bank-logo-registry`): nineteen locally stored source-credited vector institution marks, strict name-family matching, initials fallback for unknown banks and failed loads, all existing bankLogo views updated. Needs you cards lead with the bank name, show bonus value only in the right column, task below the bank, account type + saved date underneath. Existing stage/action handlers and canonical records, evidence and financial rules unchanged. Frontend app and SW cache advanced to 3.6.29; read-only synthetic UI regression added. Next: full bonus/cloud/UI, Chromium/WebKit PR CI, merge on green, verify exact main GitHub Pages deployment. No backend changes.
+
 - v3.6.28 unified account view (`codex/v3.6.28-unified-audience`): All accounts is the default for Tracker, notifications, Archive, Bank Offers and Tax, with optional Personal or Business filters. Show source type beside rows and details; keep stored financial records, product classification, eligibility and matching separate. Business or personal call-to-close numbers come from account type rather than the view. Read-only UI migration from older session-scoped filter; unit and browser verification required before release.
 
 

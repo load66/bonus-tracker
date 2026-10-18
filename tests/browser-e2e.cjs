@@ -164,7 +164,9 @@ async function exercise(name,engine,url){
     check('customer exclusion wording survives rerender',await page.locator('#elig-customer').inputValue()==='Not eligible for current checking account owners.');
 
     await button('Cancel').click();
-    await page.locator('.bt362-add-fab').click();await button('Quick Add').click();await button('CI Citi $300').click();
+    await page.locator('.bt362-add-fab').click();await button('Quick Add').click();
+    check('Quick Add Citi identity uses locally stored bank logo',await page.getByRole('button',{name:'Citi $300',exact:true}).locator('img[src="./bank-logos/citi.svg"]').count()===1);
+    await button('Citi $300').click();
     check('Quick Add exposes bank/account/bonus',await page.locator('input[oninput*="\'bank\'"]').isVisible()&&await page.locator('select[onchange*="\'accountType\'"]').isVisible()&&await page.locator('input[oninput*="\'bonus\'"]').isVisible());
     await button('4 Review').click();check('unverified template cannot be saved',await button('💾 Add account').isDisabled());await button('Cancel').click();
     await importEntry(payload);
@@ -554,7 +556,9 @@ async function exercise(name,engine,url){
     await page.locator('.radar-card h3').filter({hasText:'Synthetic Checking'}).first().waitFor();
     await page.screenshot({path:path.join(output,name+'-v362-bonuses-390.png')});
     check('offers group by verified tracker review status without assuming personal eligibility',await page.locator('.radar-group-heading').count()>0&&(await page.getByText('About sources',{exact:true}).count())===1);
-    check('bank feed renders escaped discovery title',(await page.locator('.radar-card img').count())===0&&(await page.locator('.radar-card').filter({hasText:'Synthetic Checking'}).innerText()).includes('<img'));
+    check('bank feed renders escaped discovery title and permits only bundled bank logos',
+      (await page.locator('.radar-card img').evaluateAll(images=>images.every(img=>/^\.\/bank-logos\/[a-z0-9-]+\.svg$/.test(img.getAttribute('src')||''))))
+      &&(await page.locator('.radar-card').filter({hasText:'Synthetic Checking'}).innerText()).includes('<img'));
     check('bank feed warns when source check is stale',await page.locator('.bt362-offer-stale').isVisible());
     await page.locator('.bt362-about-sources summary').click();
     check('bank bonus tab fits mobile viewport',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
