@@ -390,24 +390,29 @@ def build_payload(now, previous=None):
                                -dt.datetime.fromisoformat(o['publishedAt']).timestamp(), o['id']))
     return {'schemaVersion': 3, 'checkedAt': max(checks), 'sources': states,
             'endedOffers': [{'family': f, 'amount': a, 'at': when}
-                           for (f, a), when in sorted(tombstones.items())],
+                           for (f, a), when in sorted(tombstones.items(), key=lambda p: (p[0][0], str(p[0][1])))],
             'offers': merged[:200]}
 
 def main():
     now = dt.datetime.now(dt.timezone.utc)
     previous = {}
+    # Scheduled writers use the committed file, not a potentially older Pages copy.
     try:
-        previous = json.loads(download(PUBLISHED))
-        if previous.get('schemaVersion') not in (1, 2) or not isinstance(previous.get('offers'), list):
+        previous = json.loads(OUTPUT.read_text(encoding='utf-8'))
+        if previous.get('schemaVersion') not in (1, 2, 3) or not isinstance(previous.get('offers'), list):
             previous = {}
-    except Exception:
-        pass
-    payload = build_payload(now, previous)  # Discovery needs no paid AI calls; Tracker AI is on demand.
+    except (OSError, ValueError):
+        try:
+            previous = json.loads(download(PUBLISHED))
+            if previous.get('schemaVersion') not in (1, 2, 3) or not isinstance(previous.get('offers'), list):
+                previous = {}
+        except Exception:
+            previous = {}
+    payload = build_payload(now, previous)
     payload = attach_availability(payload, previous)
     OUTPUT.parent.mkdir(exist_ok=True)
     OUTPUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-    print('Bank-only feed:', len(payload['offers']), 'items; source checked', payload['checkedAt'])
-    print('Source status:', ', '.join(s['name'] + ': ' + s['status'] for s in payload['sources']))
+    print('Bank offer feed:', len(payload['offers']), 'canonical offers; latest source', payload['checkedAt'])
 
 if __name__ == '__main__':
     main()
