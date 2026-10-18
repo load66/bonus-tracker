@@ -47,6 +47,7 @@ assert.match(fees,/Monthly fee<\/span><div><b[^>]*>\$15<\/b>/);
 assert.match(fees,/ANY: \$500\+ electronic deposits/);
 assert.match(fees,/View saved fee terms/);
 assert.match(fees,/Fee waived with \$500 electronic deposits/,'Original fee quote stays available');
+assert.match(sandbox.BT360.feeDetail(require('./fixtures/financial-rules.cjs').fixture()),/Required companion: Share Savings: \$10 · membership minimum \$50/,'Companion account costs remain distinct from primary checking fee');
 assert.match(fees,/Early close fee<\/span><div><b class="bt3611-amber">Not confirmed<\/b>/);
 assert.doesNotMatch(fees,/>This month<|Waiver not confirmed/,'Only the two requested fee rows appear');
 assert.doesNotMatch(fees,/Waiver on track/,'Never claim a monthly waiver from unlinked evidence');
