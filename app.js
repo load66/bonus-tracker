@@ -4079,6 +4079,7 @@ function updateViewSearch(kind,value,cursor){
   if(kind==='tracker')search=value;
   else if(kind==='datapoints')dpSearch=value;
   else storageSearch=value;
+  if(kind==='tracker'&&tab==='archive')window.BT360?.setArchiveToolsOpen(true);
   R();
   const input=document.getElementById(id);
   if(input){input.focus({preventScroll:true});const position=Number.isInteger(cursor)?Math.min(cursor,input.value.length):input.value.length;input.setSelectionRange(position,position);}

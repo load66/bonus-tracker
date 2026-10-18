@@ -135,10 +135,10 @@ function archive(rows){
  const row=(x,offer)=>'<div class="bt360-list-row">'+bankLogo(x.e.bank,true)+'<span class="bt360-grow"><b>'+safe(x.e.bank)+'</b><small>'+(x.info?safe(date(x.info.eligible)+' · '+x.info.label):'Needs review · verify eligibility rules')+'</small></span>'+(offer?'<button class="bt360-chip positive" onclick="BT360.viewOffers('+arg(x.e.bank)+')">View offers</button>':'<button class="bt360-chip" onclick="BT360.openArchived('+arg(x.e.id)+')">'+(x.info?Math.max(0,dB(td(),x.info.eligible))+' days':'Review')+'</button>')+'</div>';
  h+=panel('Eligible now',ready.length?'<div class="bt360-list">'+ready.map(x=>row(x,true)).join('')+'</div>':'<p class="bt360-muted">No verified eligibility dates reached.</p>');
  h+=panel('Cooling down',cooling.length?'<div class="bt360-list">'+cooling.map(x=>row(x,false)).join('')+'</div>':'<p class="bt360-muted">No accounts cooling down.</p>','<span class="bt360-subtitle">soonest first</span>');
- h+='<details class="bt360-archived-tools"'+(legacyArchiveOpen?' open':'')+' ontoggle="BT360.setArchiveToolsOpen(this.open)"><summary>Completed, non-repeatable accounts · edit and review</summary>'+window.rTracker(rows,true)+'</details>';
+ h+='<details class="bt360-archived-tools"'+(legacyArchiveOpen?' open':'')+' ontoggle="BT360.setArchiveToolsOpen(this.open,this)"><summary>Completed, non-repeatable accounts · edit and review</summary>'+window.rTracker(rows,true)+'</details>';
  return h;
 }
-function setArchiveToolsOpen(value){legacyArchiveOpen=!!value}
+function setArchiveToolsOpen(value,element){if(element&&!element.isConnected)return;legacyArchiveOpen=!!value}
 function openArchived(id){const e=entries.find(x=>x.id===id);if(!e)return;expanded=id;if(isArchivedTrackerEntry(e)){window.bt360ArchiveDetailId=id;tab='archive'}else{tab='tracker'}R()}
 function viewOffers(bank){expanded=null;tab='bonuses';R();const v=document.getElementById('radar-search');if(v&&typeof window.btRadarSearch==='function')window.btRadarSearch(bank)}
 const HOST_SETTINGS='bt_hosting_usage_settings_v1';
