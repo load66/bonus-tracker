@@ -426,6 +426,8 @@ async function exercise(name,engine,url){
     // Restore native fetch before verifying real service-worker offline navigation.
     await page.evaluate(()=>{window.fetch=window.__bonusAITest.nativeFetch;delete window.__bonusAITest;});
 
+    // Reopen focused detail after testing cloud protection on the Tracker hero.
+    await page.locator('.card-h').first().click();
     const lifecycle=page.locator('.profile-section[data-section-key="lifecycle"]').first();
     if(!await lifecycle.evaluate(e=>e.open))await lifecycle.locator('summary').click();
     await button('2025').click();
