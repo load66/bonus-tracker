@@ -115,7 +115,7 @@ assert.doesNotMatch(legacyMarkup,/>This month<|Waiver on track/);
 assert.equal((legacyMarkup.match(/class="bt3613-fee-line"/g)||[]).length,2);
 const savedZero={...legacy,earlyTerminationFeeText:'No early closing fee.',monthlyFeeAmountText:'No monthly service fee',
   monthlyFeeNoMonthlyServiceFee:true,avoidMonthlyFeeText:''};
-assert.match(sandbox.BT360.feeDetail(savedZero),/\$0 early-close fee/);
+assert.match(sandbox.BT360.feeDetail(savedZero),/No early-closing fee/);
 assert.match(sandbox.BT360.feeDetail(savedZero),/>Monthly fee<\/span><div><b[^>]*>\$0<\/b>/);
 const clawback={...legacy,earlyTerminationFeeText:'If the account is closed within six months, the bank will deduct the $900 bonus at closing.'};
 assert.match(sandbox.BT360.feeDetail(clawback),/Not confirmed/,'Clawback is not fabricated as a fee');
@@ -142,8 +142,8 @@ const estimatedList=sandbox.BT360.archive([estimatedPast]);
 assert.match(estimatedList,/<b>0<\/b><small>Eligible now<\/small>/,'Unverified historic dates must not certify current eligibility');
 
 /* v3.6.27: all computable saved dates show a countdown, with verification status. */
-assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.6\.29';/,'The on-screen app version reflects this release');
-assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.6\.29-logos1/,'The version label is refreshed on clients');
+assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.6\.30';/,'The on-screen app version reflects this release');
+assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.6\.30-logos1/,'The version label is refreshed on clients');
 const archiveFutureDate='2030-01-01';
 const projectedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,verified:false});
 assert(projectedFuture&&projectedFuture.days>0&&projectedFuture.caption==='days · estimate','Unverified saved future date shows an estimated countdown');
@@ -260,6 +260,10 @@ assert.equal(feeCheck(conditionalClosing).ok,false,'Conditional fee-free terms a
 assert.match(feeCheck(conditionalClosing).detail,/conditional|Needs review/i);
 const explicitFree={...conditionalClosing,earlyTerminationFeeText:'No early closing fee.'};
 assert.equal(feeCheck(explicitFree).ok,true,'Explicit unconditional no-fee evidence may be shown as cleared');
+assert.match(feeCheck(explicitFree).detail,/Explicit no-fee terms saved/);
+assert.equal(sandbox.BT360.closeCheckPresentation(explicitFree).find(x=>x.label==='Minimum hold met').ok,true,'Verified payout-only closure with posted bonus must not need a fictitious fixed hold');
+const pendingPayout={...explicitFree,bonusRecd:''};
+assert.equal(sandbox.BT360.closeCheckPresentation(pendingPayout).find(x=>x.label==='Minimum hold met').ok,false,'Payout-only restriction stays pending until confirmed receipt');
 const feeCharged={...conditionalClosing,earlyCloseFee:25,earlyTerminationFeeText:'$25 early closing fee for accounts closed within 180 days.'};
 assert.equal(feeCheck(feeCharged).ok,false,'Positive early-close charges require window review even when a hold timer runs out');
 assert.match(feeCheck(feeCharged).detail,/fee window before closing/);
@@ -277,6 +281,7 @@ const noRetentionEvidence={...payoutForRetention,closeRuleText:'',closeRuleSourc
 assert.equal(retained(noRetentionEvidence).ok,false,'No saved closure evidence cannot prove the bonus will be retained');
 const feeOnlyRetention={...noRetentionEvidence,closeRuleText:'No early closing fee.'};
 assert.equal(retained(feeOnlyRetention).ok,false,'An early-close service fee is not evidence against bonus clawback');
+assert.equal(sandbox.BT360.closeCheckPresentation(feeOnlyRetention).find(x=>x.label==='Bonus kept after closing').ok,false,'No-fee alone cannot prove no clawback');
 const explicitRetention={...noRetentionEvidence,closeRuleText:'No bonus clawback applies after closing.'};
 assert.equal(retained(explicitRetention).ok,true,'Explicit saved no-clawback evidence may confirm retention');
 assert.equal(retained({...payoutForRetention,bonusRecd:''}).ok,false,'Without received payout the retention check stays open');
