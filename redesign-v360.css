@@ -288,8 +288,9 @@ body.bt360-detail-active .scroll{padding-bottom:calc(180px + env(safe-area-inset
 .bt360-detail-footer>button:first-child{min-height:48px}
 
 /* v3.6.7 selectable monthly receipt chart: 44+px hit areas, no zero bars. */
-.bt367-month-chart{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px;margin-top:11px;align-items:stretch;min-width:0}
+.bt367-month-chart{display:grid;grid-template-columns:repeat(12,minmax(44px,1fr));gap:4px;margin-top:11px;align-items:stretch;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scrollbar-width:thin}
 .bt367-month-hit{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-height:102px;width:100%;padding:0 0 3px;position:relative;border:1px solid transparent;border-radius:9px;background:transparent;color:#81899C;cursor:pointer;touch-action:manipulation}
+.bt367-month-hit{scroll-snap-align:start}
 .bt367-month-hit:focus-visible{outline:2px solid #8FB4FF;outline-offset:2px}
 .bt367-month-hit.current:not(.selected){background:rgba(91,227,176,.07);border-color:rgba(91,227,176,.16)}
 .bt367-month-hit.selected{background:rgba(91,227,176,.11);border-color:#347A68}
