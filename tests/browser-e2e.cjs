@@ -263,7 +263,7 @@ async function exercise(name,engine,url){
     check('expanded waiver displays the exact original saved terms',await page.locator('.bt3611-full-terms p').innerText().then(t=>t.includes('Original terms: fee waived with electronic deposits, daily balance or linked checking.')));
     await page.locator('.bt3611-full-terms > summary').click();
     check('early close fee is amber without inferred zero',await page.locator('.bt3613-fee-line').last().locator('.bt3611-amber').innerText()==='Not confirmed');
-    check('no invented monthly waiver result',await page.locator('.bt3613-fee-line').nth(1).innerText().then(t=>t.includes('Waiver not confirmed')&&!t.includes('Waiver on track')));
+    check('only monthly fee and early close fee; no invented waiver confirmation',await page.locator('.bt3613-fee-line').allInnerTexts().then(rows=>rows.length===2&&rows[0].includes('Monthly fee')&&rows[1].includes('Early close fee')&&!rows.join(' ').includes('Waiver on track')&&!rows.join(' ').includes('Waiver confirmed')));
     check('each key date explains a specific uncertainty',await page.locator('.bt3613-date-row').evaluateAll(rows=>rows.length===2&&rows.every(x=>!x.textContent.trim().startsWith('Needs review'))));
     check('no developer vocabulary is visible in the rendered app',
       !/\b(?:null|structured rule|anchor|verified \$0|provenance)\b/i.test(await page.locator('#app').innerText()));
