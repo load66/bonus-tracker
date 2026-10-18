@@ -6524,6 +6524,7 @@ entries=sortE(entries);R();
       h+=bankActionSheetButton(e.id,'timer','⏱️','Add timer','Set a reminder or deadline');
     }
     h+=bankActionSheetButton(e.id,'askai','✦','Ask AI','Questions about this bonus');
+    if(window.BT360)h+='<details class="bt366-advanced-actions"><summary>Advanced tracker tools</summary>'+renderActionCenter()+'</details>';
     h+=bankActionSheetButton(e.id,'delete','🗑️','Delete account','Remove this account record',true);
     h+='<button class="bt-ba-mini cancel" onclick="event.stopPropagation();closeBankActions()"><span><b>Cancel</b></span></button>';
     h+='</div></div></div>';
@@ -6534,6 +6535,7 @@ entries=sortE(entries);R();
     const archiveView=arguments[1]===true;
     sorted=sorted.filter(e=>isArchivedTrackerEntry(e)===archiveView || (archiveView&&window.bt360ArchiveDetailId===e.id));
     if(window.BT360)sorted=sorted.filter(e=>window.BT360.scope(e));
+    if(window.BT360&&!archiveView)sorted=sorted.filter(e=>!e.closed||e.id===expanded);
     const q=search.toLowerCase();
     const filtered=q?sorted.filter(e=>(e.bank||'').toLowerCase().includes(q)||(e.id||'').toLowerCase().includes(q)):sorted;
     const f=!q&&expanded&&sorted.some(e=>e.id===expanded)?sorted.filter(e=>e.id===expanded):(window.BT360?.selectedStage&&!archiveView?filtered.filter(e=>lifecycleViewForEntry(e).code===window.BT360.selectedStage):filtered);
@@ -6557,7 +6559,7 @@ entries=sortE(entries);R();
     if(!expanded)h += `<input class="sinput" type="text" id="${archiveView?'archive-search':'tracker-search'}" aria-label="${archiveView?'Search archived accounts':'Search accounts'}" placeholder="${archiveView?'Search archived accounts...':'Search accounts...'}" value="${esc(search)}" oninput="updateViewSearch('tracker',this.value,this.selectionStart)">`;
     if(!archiveView){
     if(showAnalyzer&&!expanded) h += '<section id="bt-promo-terms-panel" class="bt362-tool-panel" tabindex="-1">'+rAnalyzer()+'</section>';
-    h += '<details class="bt360-legacy-actions"'+(legacyActionsOpen?' open':'')+' ontoggle="legacyActionsOpen=this.open"><summary>All Action Center tools</summary>'+renderActionCenter()+'</details>';
+    if(!window.BT360)h += '<details class="bt360-legacy-actions"'+(legacyActionsOpen?' open':'')+' ontoggle="legacyActionsOpen=this.open"><summary>All Action Center tools</summary>'+renderActionCenter()+'</details>';
     }
 
     if(!f.length){
@@ -6568,8 +6570,10 @@ entries=sortE(entries);R();
 
     f.forEach(e=>{
       const isX=expanded===e.id, nr=nextReopen(e), countdown=getCountdown(e), urg=getUrg(e);
+      if(!isX&&window.BT360&&!archiveView){h+=window.BT360.compactRow(e);return;}
       if(isX&&window.BT360)h+=window.BT360.detailHead(e);
       h += `<div class="card u-${urg}${isX?' bt360-detail-card':''}" data-bt-entry-id="${profileSectionAttr(e.id)}">`;
+      if(!isX||!window.BT360){
       h += `<div class="card-h" onclick="expanded=expanded==='${e.id}'?null:'${e.id}';R()">`;
       h += `<div class="card-logo-col">${bankLogo(e.bank)}${accountTypeChipHtml(e)}${e.churn?churnTagHtml(e.bank,e.churn):''}</div>`;
       h += `<div class="card-left"><div class="card-name">${esc(e.bank)}</div><div class="card-row">${statusBadgeHtml(e,countdown)}</div>${renderCardProgressLine(e)}</div>`;
@@ -6578,10 +6582,12 @@ entries=sortE(entries);R();
       h += `<div class="card-id">${esc(getEntryDisplayId(e))}</div></div>`;
       h += '</div></div>';
       h += renderTrackerEvidenceAlerts(e);
+      }
 
       if(isX){
         h += '<div class="card-exp">';
         if(window.BT360)h+=window.BT360.detailPanels(e);
+        if(!window.BT360){
         h += '<button type="button" class="bonus-ai-open" aria-label="Ask AI about this bonus" onclick="btOpenBonusAI(\''+esc(e.id)+'\')">Ask AI</button>';
         h += renderBankProfileSummary(e);
         h += renderClosePlan(e);
@@ -6616,19 +6622,21 @@ entries=sortE(entries);R();
           h += '</div>';
         }
         h += '</div></details>';
+        }
 
         let historyHtml='';
-        if(e.notes) historyHtml += `<div class="card-notes" style="white-space:pre-wrap;font-size:12px;line-height:1.6">${esc(e.notes)}</div>`;
+        if(e.notes&&!window.BT360) historyHtml += `<div class="card-notes" style="white-space:pre-wrap;font-size:12px;line-height:1.6">${esc(e.notes)}</div>`;
         historyHtml += renderEntryHistory(e);
         historyHtml += renderAnalyzerHistory(e);
         historyHtml += renderOfferHistory(e);
         historyHtml += renderAnalyzedTermsCard(e);
         if(historyHtml)h += '<details class="profile-section" data-entry-id="'+profileSectionAttr(e.id)+'" data-section-key="history"'+profileSectionOpenAttr(e.id,'history')+' ontoggle="handleProfileSectionToggle(this)"><summary><span>Activity & Analysis</span><em>View</em></summary><div class="profile-section-body">'+historyHtml+'</div></details>';
 
-        h += '<div class="card-btns">';
+        if(!window.BT360){h += '<div class="card-btns">';
         if(!e.closed&&e.bonusRecd) h += actionBtn('cls',I.lock,'Record closure',`event.stopPropagation();startCloseFlow('${e.id}','actual')`);
-        if(!window.BT360) h += actionBtn('edit',I.quick,'Manage',`event.stopPropagation();openBankActions('${e.id}')`);
-        h += '</div></div>';
+        h += actionBtn('edit',I.quick,'Manage',`event.stopPropagation();openBankActions('${e.id}')`);
+        h += '</div>'}
+        h += '</div>';
       }
 
       h += '</div>';
