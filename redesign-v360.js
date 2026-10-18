@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.13 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.14 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt360_audience_session',noticeKey='bt360_notice_session';
@@ -301,46 +301,100 @@ function waiverCondition(c){
  return raw.replace(/^(?:maintain|receive|keep|have|make)\s+/i,'').replace(/[.]$/,'')||'Other condition';
 }
 function feeSnapshot(e){
- const primary=e.financialRules?.accounts?.find(a=>a?.role==='primary')||null,fee=primary?.fee;
- let monthly=typeof fee?.amount==='number'?amount(fee.amount):String(e.monthlyFeeAmountText||e.monthlyFeeYNText||'').trim();
- const matched=monthly.match(/\$\s*[\d,]+(?:\.\d+)?/);
- if(matched)monthly=matched[0].replace(/\s/g,'');
- else if(/^(no|none|fee.free)$/i.test(monthly))monthly='$0';
- else monthly='Not confirmed';
- const waiver=fee?.waiver;
- let summary='Waiver terms not confirmed';
- if(waiver&&Array.isArray(waiver.conditions)&&waiver.conditions.length){
-  summary=(waiver.operator==='all'?'ALL':'ANY')+': '+waiver.conditions.map(waiverCondition).join(waiver.operator==='all'?' + ':' · ');
- }else if(String(e.monthlyFeeWaiverText||e.avoidMonthlyFeeText||'').trim()){
-  const text=String(e.monthlyFeeWaiverText||e.avoidMonthlyFeeText).trim();
-  summary=(/\bor\b/i.test(text)?'ANY':'ALL')+': '+text.replace(/^(?:the\s+)?(?:monthly\s+)?(?:fee|maintenance fee)[^.]{0,35}?(?:waived|avoided)[^.]{0,25}?(?:if|with|when)\s+/i,'').replace(/\s+(?:or)\s+/gi,' · ').replace(/\s+(?:and)\s+/gi,' + ').replace(/[.]$/,'');
- }
- const terms=[e.monthlyFeeWaiverText,e.avoidMonthlyFeeText,waiver?.evidence?.quote,fee?.evidence?.quote,e.feeScheduleRaw].map(v=>String(v||'').trim()).filter(Boolean);
- const closure=e.financialRules?.closure;
- const quote=String(closure?.feeEvidence?.quote||e.earlyTerminationFeeText||'').trim();
- let closeMain='Not confirmed',closeNote='Verify early-close fee schedule',closeKnown=false;
- const safeDate=typeof safeCloseDate==='function'?safeCloseDate(e):'';
- if(typeof closure?.earlyCloseFee==='number'&&closure.feeEvidence?.quote){
-  if(closure.earlyCloseFee>0){closeMain=amount(closure.earlyCloseFee)+' early-close fee';closeNote='From verified fee terms';closeKnown=true}
-  else if(/no .{0,30}(?:early|clos|terminat).{0,20}fee|\$0|fee.free/i.test(quote)){
-   closeMain=safeDate&&Number(closure.minHoldDays)>0?'None after '+date(safeDate):'No early-close fee';
-   closeNote=safeDate&&Number(closure.minHoldDays)>0?(Number(closure.minHoldDays)+' days from '+(closure.basis==='bonus'?'payout':closure.basis==='reqmet'?'requirements':'opening')):'Confirmed by saved fee terms';
-   closeKnown=true;
+ // Read-only view of each enrolled record, including pre-financialRules imports.
+ // A current bank product page is not evidence of a historical account's terms.
+ const primary=e.financialRules?.accounts?.find(a=>a?.role==='primary')||null;
+ const fee=primary?.fee,closure=e.financialRules?.closure||{};
+ const original=(...items)=>items.map(x=>String(x??'').trim()).find(Boolean)||'';
+ const monthlyRaw=original(e.monthlyFeeAmountText,e.analysis?.monthlyFeeAmountText,e.monthlyFeeYNText,e.analysis?.monthlyFeeYNText);
+ const monthlyQuote=original(fee?.evidence?.quote,monthlyRaw);
+ let monthly='Not confirmed',monthlyKnown=false;
+ if(typeof fee?.amount==='number'&&Number.isFinite(fee.amount)&&fee.amount>=0){
+  monthly=amount(fee.amount);monthlyKnown=true;
+ }else{
+  // These are *fee amount* fields. Do not mistake a $500 waiver threshold
+  // for a $500 account maintenance fee.
+  const explicit=monthlyRaw.match(/^\s*\$\s*[\d,]+(?:\.\d{1,2})?\s*(?:(?:\/\s*month|monthly|per month).*)?$/i)
+   ||monthlyRaw.match(/(?:monthly|maintenance|service)\s*(?:fee|charge)[\s:\-]*(?:of\s*)?(\$\s*[\d,]+(?:\.\d{1,2})?)/i)
+   ||monthlyRaw.match(/^\s*(?:yes[,:\s]*)?(\$\s*[\d,]+(?:\.\d{1,2})?)\s*(?:monthly|fee|per month)/i);
+  const found=explicit?.[1]||explicit?.[0]?.match(/\$\s*[\d,]+(?:\.\d{1,2})?/)?.[0];
+  if(found){monthly=found.replace(/\s/g,'');monthlyKnown=true}
+  else if(/^(?:no|none|fee[- ]?free|\$0(?:\.00)?|no monthly (?:service )?fee)$/i.test(monthlyRaw)
+    ||(e.monthlyFeeNoMonthlyServiceFee===true&&/no (?:monthly|service|maintenance) fee|\$0/i.test(monthlyQuote))){
+   monthly='$0';monthlyKnown=true;
   }
- }else if(Number(e.earlyCloseFee)>0&&quote){
-  closeMain=amount(e.earlyCloseFee)+' early-close fee';closeNote='From saved terms · confirm applicable window';closeKnown=true;
  }
- let monthStatus='Waiver not confirmed',monthNote='No verified monthly activity saved';
- if(monthly==='$0'){monthStatus='No fee to waive';monthNote='Monthly maintenance fee is $0'}
- else if(e.monthlyFeeChecked){monthStatus='Fee review recorded';monthNote='Manually checked · current period not verified'}
- return {monthly,summary,terms:[...new Set(terms)].join('\n\n'),closeMain,closeNote,closeKnown,monthStatus,monthNote};
+ const waiver=fee?.waiver;
+ let summary='',waiverSource='';
+ if(waiver?.conditions?.length){
+  summary=(waiver.operator==='all'?'ALL':waiver.operator==='any'?'ANY':'')+(waiver.operator==='all'||waiver.operator==='any'?': ':'')+waiver.conditions.map(waiverCondition).join(waiver.operator==='all'?' + ':' · ');
+  waiverSource=original(waiver?.evidence?.quote);
+ }else{
+  const text=original(e.monthlyFeeWaiverText,e.analysis?.monthlyFeeWaiverText,e.avoidMonthlyFeeText,e.analysis?.avoidMonthlyFeeText);
+  if(text){
+   const operator=/\s+or\s+|\bany (?:one|of)\b/i.test(text)?'ANY':/\s+and\s+|\ball of\b/i.test(text)?'ALL':'';
+   summary=(operator?operator+': ':'')+text.replace(/^(?:the\s+)?(?:monthly\s+)?(?:fee|maintenance fee)[^.]{0,35}?(?:waived|avoided)[^.]{0,25}?(?:if|with|when)\s+/i,'')
+    .replace(/\s+or\s+/gi,' · ').replace(/\s+and\s+/gi,' + ').replace(/[.]$/,'');
+   waiverSource=text;
+  }
+ }
+ const companions=(Array.isArray(e.financialRules?.accounts)?e.financialRules.accounts:[])
+  .filter(a=>a?.role!=='primary'&&a?.required===true).map(a=>{
+   const f=a.fee,label=String(a.label||'Companion account');
+   const charge=typeof f?.amount==='number'&&Number.isFinite(f.amount)?amount(f.amount):'Fee not confirmed';
+   const minimum=typeof a.minimumBalance?.amount==='number'?' · membership minimum '+amount(a.minimumBalance.amount):'';
+   const waivers=f?.waiver?.conditions?.length?' · waiver '+(f.waiver.operator==='all'?'ALL: ':f.waiver.operator==='any'?'ANY: ':'')+f.waiver.conditions.map(waiverCondition).join(f.waiver.operator==='all'?' + ':' · '):'';
+   return label+': '+charge+minimum+waivers;
+  });
+ const terms=[monthlyQuote,waiverSource,e.monthlyFeeWaiverText,e.avoidMonthlyFeeText,fee?.evidence?.quote,e.feeScheduleRaw]
+  .map(v=>String(v||'').trim()).filter(Boolean);
+ const quote=original(closure.feeEvidence?.quote,e.earlyTerminationFeeText,e.analysis?.earlyTerminationFeeText,
+   e.closeRuleText,e.analysis?.closeRuleText);
+ const savedCloseTerms=[closure.feeEvidence?.quote,e.earlyTerminationFeeText,e.analysis?.earlyTerminationFeeText,e.closeRuleText,e.analysis?.closeRuleText]
+  .map(v=>String(v||'').trim()).filter(Boolean);
+ let closeMain='Not confirmed',closeNote='No explicit early-close fee evidence',closeKnown=false;
+ const legacyFee=original(e.earlyTerminationFeeText,e.analysis?.earlyTerminationFeeText,e.closeRuleText,e.analysis?.closeRuleText);
+ const isNoFee=v=>/no (?:early[- ]?)?(?:account[- ]?)?(?:clos(?:e|ing|ure)|terminat(?:ion|ing)) fee|(?:early[- ]?)?(?:closing|termination) fee\s*(?::|is)?\s*(?:none|\$0\b|waived)/i.test(v);
+ const hasConditionalWindow=v=>/\b(?:after|only if|unless|until|before|within|first \d+)\b/i.test(v);
+ const explicitClawback=/\b(?:clawback|forfeit|forfeiture|deduct|repay|return)\b.{0,80}\bbonus\b|\bbonus\b.{0,80}\b(?:clawback|forfeit|deduct|repay|return)\b/i.test(savedCloseTerms.join(' '));
+ const typedFee=typeof closure.earlyCloseFee==='number'&&Number.isFinite(closure.earlyCloseFee)?closure.earlyCloseFee:null;
+ if(typedFee!==null&&typedFee>0&&closure.feeEvidence?.quote){
+  closeMain=amount(typedFee)+' early-close fee';closeNote='Saved structured fee evidence';closeKnown=true;
+ }else if(typedFee===0&&isNoFee(closure.feeEvidence?.quote||'')&&!hasConditionalWindow(closure.feeEvidence.quote)){
+  closeMain='$0 early-close fee';closeNote='Explicitly stated in saved fee schedule';closeKnown=true;
+ }else if(Number(e.earlyCloseFee)>0&&Number.isFinite(Number(e.earlyCloseFee))){
+  closeMain=amount(Number(e.earlyCloseFee))+' early-close fee';
+  closeNote=legacyFee?'From saved legacy terms · confirm applicable window':'Saved amount · fee window not verified';
+  closeKnown=!!legacyFee;
+ }else if(legacyFee){
+  // Old imports may have exact fee text without a structured rule. Accept
+  // only amounts explicitly tied to closing, never promotion dollar amounts.
+  const match=legacyFee.match(/(?:early[- ]?|account[- ]?)?(?:clos(?:ing|ure)|terminat(?:ion|ing))\s+fee\s*(?:is|of|:)?\s*(\$\s*[\d,]+(?:\.\d{1,2})?)/i)
+   ||legacyFee.match(/(?:early[- ]?|account[- ]?)?(?:clos(?:e|ing|ure)|terminat(?:ion|ing))[^.;\n]{0,45}?(\$\s*[\d,]+(?:\.\d{1,2})?)\s*fee/i)
+   ||legacyFee.match(/(\$\s*[\d,]+(?:\.\d{1,2})?)\s*(?:early[- ]?|account[- ]?)?(?:clos(?:ing|ure)|terminat(?:ion|ing))\s+fee/i)
+   ||legacyFee.match(/(\$\s*[\d,]+(?:\.\d{1,2})?)\s*(?:early\s+)?fee\s+if\s+(?:the\s+)?(?:account\s+)?clos(?:ed|ing)/i);
+  if(match){closeMain=match[1].replace(/\s/g,'')+' early-close fee';closeNote='From saved legacy fee terms · review fee window';closeKnown=true}
+  else if(isNoFee(legacyFee)&&!hasConditionalWindow(legacyFee)){closeMain='$0 early-close fee';closeNote='Explicit no-fee wording in saved terms';closeKnown=true}
+  else if(isNoFee(legacyFee)){closeNote='Saved no-fee wording is conditional · review closing date'}
+ }
+ if(explicitClawback)closeNote+=' · Bonus clawback is separate';
+ const closeTerms=[...new Set(savedCloseTerms)].join('\n\n');
+ const source=String(e.feeScheduleSourceUrl||'').trim();
+ return {monthly,monthlyKnown,companions,summary:summary||'Waiver conditions not confirmed',terms:[...new Set(terms)].join('\n\n'),
+  closeMain,closeNote,closeKnown,closeTerms,source:/^https:\/\/[^<>"'\s]+$/i.test(source)?source:'',explicitClawback};
 }
 function feeDetail(e){
  const x=feeSnapshot(e);
+ const monthlyExtra=x.monthly==='$0'?'No monthly maintenance fee in saved terms':(x.summary==='Waiver conditions not confirmed'?x.summary:'Waived if '+x.summary);
  return '<div class="bt3613-fees">'
-  +'<div class="bt3613-fee-line"><span>Monthly fee</span><div><b>'+safe(x.monthly)+'</b><small class="bt3613-waiver-clamp">Waived if '+safe(x.summary)+'</small>'+(x.terms?'<details class="bt3611-full-terms"><summary>View full terms</summary><p>'+safe(x.terms)+'</p></details>':'')+'</div></div>'
-  +'<div class="bt3613-fee-line"><span>This month</span><div><b class="'+(x.monthStatus==='Waiver not confirmed'?'bt3611-amber':'')+'">'+safe(x.monthStatus)+'</b><small>'+safe(x.monthNote)+'</small></div></div>'
-  +'<div class="bt3613-fee-line"><span>Early close fee</span><div><b class="'+(x.closeKnown?'':'bt3611-amber')+'">'+safe(x.closeMain)+'</b><small>'+safe(x.closeNote)+'</small></div></div></div>';
+  +'<div class="bt3613-fee-line"><span>Monthly fee</span><div><b class="'+(x.monthlyKnown?'':'bt3611-amber')+'">'+safe(x.monthly)+'</b><small class="bt3613-waiver-clamp">'+safe(monthlyExtra)+'</small>'
+  +(x.companions.length?'<small class="bt3614-companion">Required companion: '+safe(x.companions.join(' | '))+'</small>':'')
+  +(x.terms?'<details class="bt3611-full-terms"><summary>View saved fee terms</summary><p>'+safe(x.terms)+'</p></details>':'')
+  +(x.source?'<a class="bt360-link bt3614-fee-source" href="'+safe(x.source)+'" target="_blank" rel="noopener noreferrer">Fee schedule ↗</a>':'')
+  +'</div></div>'
+  +'<div class="bt3613-fee-line"><span>Early close fee</span><div><b class="'+(x.closeKnown?'':'bt3611-amber')+'">'+safe(x.closeMain)+'</b><small>'+safe(x.closeNote)+'</small>'
+  +(x.closeTerms?'<details class="bt3611-full-terms"><summary>View saved close terms</summary><p>'+safe(x.closeTerms)+'</p></details>':'')
+  +'</div></div></div>';
 }
 function closeDateInfo(e){
  const close=e.financialRules?.closure,source=String(close?.evidence?.quote||e.closeRuleText||e.earlyTerminationFeeText||'').trim();
@@ -416,12 +470,13 @@ function detailPanels(e){
  if(!closed&&(!ready||hasExtraWork)){
   const req=requirementRows(e);
   h+=panel('Requirements',(!req.count?'<p class="bt360-muted">No checklist tasks saved yet.</p>':req.html)+'<div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></div>');
-  h+=panel('Fees & waivers',feeDetail(e));
   const rows=timerRows(e);
   h+=panel('Timers',rows||'<p class="bt360-muted">No saved deadlines.</p>','<button type="button" class="bt360-link bt3613-add-timer" onclick="runBankAction('+arg(e.id)+',\'timer\')">+ Add</button>');
  }
  const readyWork=ready?h.slice(savedWorkStart):'';
  if(ready)h=h.slice(0,savedWorkStart);
+ // Close-ready cards must lead with close checks, while all states keep fee history.
+ if(!ready)h+=panel('Fees & waivers',feeDetail(e));
  if(!closed&&(e.dataPoint||e.completeBonusText||e.notes))h+='<details class="bt366-offer-notes"><summary>Offer notes</summary><p>'+safe([e.dataPoint,e.completeBonusText,e.notes].filter(Boolean).join('\n\n'))+'</p></details>';
  if(ready||code==='HOLD_OPEN'||code==='BONUS_RECEIVED'){
   const check=closeReadiness(e);
@@ -441,6 +496,7 @@ function detailPanels(e){
   ];
   h+='<div data-bt-hold>'+panel(ready?'Close checks':'Hold & close checks',items.map(item=>'<div class="bt360-check '+(item.ok?'done':'unknown')+'"><span class="bt3611-check-icon">'+(item.ok?'✓':'')+'</span><div><b>'+safe(item.label)+'</b><small>'+safe(item.detail)+'</small></div></div>').join(''))+'</div>';
  }
+ if(ready)h+=panel('Fees & waivers',feeDetail(e));
  if(ready){
   const phoneRow=getPhoneBook().find(row=>{try{return bankIdentity(row.bank).family===bankIdentity(e.bank).family}catch{return row.bank===e.bank}});
   const phone=phoneRow?.[audience]||'';
@@ -622,10 +678,10 @@ async function backUpNow(){
 function settings(){
  const toggles=[['deadlines','Deadlines','3 and 1 day before'],['payouts','Payouts and close dates','When ready'],['eligible','Eligible again','7 days before and on the day']];
  const buttons=toggles.map(([k,label,description])=>'<button class="bt360-settings-row" role="switch" aria-checked="'+noticePrefs[k]+'" onclick="BT360.setNotice(\''+k+'\')"><span><b>'+label+'</b><small>'+description+'</small></span><i class="bt360-toggle '+(noticePrefs[k]?'checked':'')+'"></i></button>').join('');
- return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.13</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
+ return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.14</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
  cloudSettingsCard()+
  usageCard()+
- panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.13. Push delivery is not active.</p>')+
+ panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.14. Push delivery is not active.</p>')+
  panel('Data','<button class="bt360-settings-row" onclick="BT360.closeSettings();exportBackup()">Export backup file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.closeSettings();importBackup()">Restore from file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.openPhonebook()">Bank phone numbers <span>›</span></button>')+
  '<button class="bt360-reset" onclick="BT360.closeSettings();resetAllData()">Reset this device <small>Two confirmations and a safety backup</small></button></section></div>';
 }
@@ -654,6 +710,6 @@ function openPhonebook(){closeSettings();window.bt360PhonebookOpen=true;R()}
 function closePhonebook(){window.bt360PhonebookOpen=false;R()}
 function openSettings(){window.bt360SettingsOpen=true;R();refreshUsage()}
 function closeSettings(){window.bt360SettingsOpen=false;R()}
-window.BT360={get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
+window.BT360={feeSnapshot,get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
 if(typeof R==='function')R();
 })();

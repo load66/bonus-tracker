@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.13';
+const APP_VERSION='3.6.14';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -208,7 +208,9 @@ function loadTermsArchive(){
   return raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{}
 }
 function saveTermsArchive(rows){
-  sv(TC_ARCHIVE_KEY,rows&&typeof rows==='object'?rows:{})
+  const saved=sv(TC_ARCHIVE_KEY,rows&&typeof rows==='object'?rows:{});
+  if(saved)window.BTTermsHistory?.queueSync?.();
+  return saved;
 }
 function termsArchiveKey(entry){return offerHistoryKey(entry)}
 function termsArchiveSourceText(e){
@@ -216,44 +218,50 @@ function termsArchiveSourceText(e){
 }
 function termsArchiveSnapshot(e,source){
   if(!e||!e.bank||!e.opened)return null;
+  // An incomplete old T&C is still worth preserving; never invent verification.
   const raw=termsArchiveSourceText(e);
-  if(raw.length<120)return null;
   let verified=false;
-  try{verified=!!window.BTEligibilityGate?.validate?.({...e,tcSourceRaw:raw})?.ok}catch{}
-  if(!verified)return null;
+  if(raw.length>=120)try{verified=!!window.BTEligibilityGate?.validate?.({...e,tcSourceRaw:raw})?.ok}catch{}
+  const copied=v=>v&&typeof v==='object'?JSON.parse(JSON.stringify(v)):v;
   return{
     id:'tc_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7),
     bank:e.bank||'',
     accountType:normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'personal',
-    entryId:e.id||'',
-    opened:e.opened||'',
-    bonus:Number(e.bonus||0),
-    capturedAt:td(),
-    termsVerifiedAt:e.termsVerifiedAt||e.eligibilityVerifiedAt||td(),
-    source:source||'new-cycle',
-    schemaVersion:parseInt(e.schemaVersion||0,10)||0,
-    promoSourceUrl:e.promoSourceUrl||'',
-    feeScheduleSourceUrl:e.feeScheduleSourceUrl||'',
-    tcSourceRaw:raw,
-    eligibilityRules:Array.isArray(e.eligibilityRules)?e.eligibilityRules.map(r=>({...r})):[],
-    eligibilityEvidenceText:e.eligibilityEvidenceText||'',
-    eligibilityEvidenceSource:e.eligibilityEvidenceSource||'',
+    entryId:e.id||'',opened:e.opened||'',bonus:Number(e.bonus||0),
+    capturedAt:td(),termsVerifiedAt:e.termsVerifiedAt||e.eligibilityVerifiedAt||'',
+    evidenceStatus:verified?'eligibility-evidence-validated':'saved-unverified',
+    source:source||'account-cycle',schemaVersion:parseInt(e.schemaVersion||0,10)||0,
+    promoSourceUrl:e.promoSourceUrl||'',feeScheduleSourceUrl:e.feeScheduleSourceUrl||'',
+    tcSourceRaw:raw,feeScheduleRaw:e.feeScheduleRaw||'',
+    financialRules:copied(e.financialRules)||null,
+    eligibilityRules:copied(Array.isArray(e.eligibilityRules)?e.eligibilityRules:[]),
+    eligibilityEvidenceText:e.eligibilityEvidenceText||'',eligibilityEvidenceSource:e.eligibilityEvidenceSource||'',
     currentCustomerEvidenceText:e.currentCustomerEvidenceText||'',
-    completeBonusText:e.completeBonusText||'',
-    monthlyFeeYNText:e.monthlyFeeYNText||'',
-    monthlyFeeAmountText:e.monthlyFeeAmountText||'',
-    monthlyFeeWaiverText:e.monthlyFeeWaiverText||'',
-    avoidMonthlyFeeText:e.avoidMonthlyFeeText||'',
-    earlyTerminationFeeText:e.earlyTerminationFeeText||'',
-    closeRuleText:e.closeRuleText||'',
-    closeRuleBasis:e.closeRuleBasis||'',
+    couponEnrollmentDate:e.couponEnrollmentDate||'',offerEnrollmentDate:e.offerEnrollmentDate||'',
+    churn:e.churn||'',churnability:e.churnability||'',sourceEligibilityBasis:e.sourceEligibilityBasis||'',
+    churnPeriodValue:e.churnPeriodValue||0,churnPeriodUnit:e.churnPeriodUnit||'',
+    churnRuleText:e.churnRuleText||'',eligibilityText:e.eligibilityText||'',
+    completeBonusText:e.completeBonusText||'',payoutTimingText:e.payoutTimingText||'',
+    monthlyFeeYNText:e.monthlyFeeYNText||'',monthlyFeeAmountText:e.monthlyFeeAmountText||'',
+    monthlyFeeFrequency:e.monthlyFeeFrequency||'',
+    monthlyFeeWaiverText:e.monthlyFeeWaiverText||'',avoidMonthlyFeeText:e.avoidMonthlyFeeText||'',
+    monthlyFeeNoMonthlyServiceFee:e.monthlyFeeNoMonthlyServiceFee===true,
+    earlyTerminationFeeText:e.earlyTerminationFeeText||'',closeRuleText:e.closeRuleText||'',
+    closeRuleBasis:e.closeRuleBasis||'',closeRestrictionType:e.closeRestrictionType||'',
     minHoldDays:parseInt(e.minHoldDays||0,10)||0,
-    earlyCloseFee:Number(e.earlyCloseFee||0),
+    earlyCloseFee:typeof e.earlyCloseFee==='number'?e.earlyCloseFee:null,
     expirationDateText:e.expirationDateText||''
   }
 }
+// Stable comparison excludes timestamp, random id and editing provenance.
+// A corrected fee schedule or churn rule becomes a *new saved revision*.
+function termsArchiveSignature(x){
+  if(!x||typeof x!=='object')return'';
+  const {id,capturedAt,source,replacedAt,replacedByOpened,revisionAt,...meaning}=x;
+  return JSON.stringify(meaning);
+}
 function termsCycleToken(x){
-  return [String(x?.entryId||''),String(x?.opened||''),String(x?.termsVerifiedAt||''),String(x?.tcSourceRaw||'').slice(0,180)].join('|')
+  return [String(x?.entryId||''),String(x?.opened||''),termsArchiveSignature(x)].join('|')
 }
 function saveTermsArchiveForNewCycle(e,source){
   const snap=termsArchiveSnapshot(e,source);
@@ -261,15 +269,43 @@ function saveTermsArchiveForNewCycle(e,source){
   const all=loadTermsArchive(),key=termsArchiveKey(snap);
   const bucket=(all[key]&&typeof all[key]==='object')?all[key]:{bank:snap.bank,accountType:snap.accountType,current:null,versions:[]};
   const cur=bucket.current&&typeof bucket.current==='object'?bucket.current:null;
-  if(cur&&cur.entryId===snap.entryId&&cur.opened===snap.opened)return false;
+  if(cur&&cur.entryId===snap.entryId&&cur.opened===snap.opened&&termsArchiveSignature(cur)===termsArchiveSignature(snap))return false;
   let versions=Array.isArray(bucket.versions)?bucket.versions:[];
   if(cur){
-    const archived={...cur,replacedAt:td(),replacedByOpened:snap.opened};
-    const token=termsCycleToken(archived);
-    versions=[archived,...versions.filter(v=>termsCycleToken(v)!==token)].slice(0,12);
+    const previous={...cur,replacedAt:td(),replacedByOpened:snap.opened,revisionAt:td()};
+    const token=termsCycleToken(previous);
+    versions=[previous,...versions.filter(v=>termsCycleToken(v)!==token)];
+    // Do not silently drop old T&C versions. Backup size limits will surface an
+    // explicit save error rather than erasing a past enrolled promotion.
   }
   bucket.bank=snap.bank;bucket.accountType=snap.accountType;bucket.current=snap;bucket.versions=versions;
-  all[key]=bucket;saveTermsArchive(all);return true
+  all[key]=bucket;return saveTermsArchive(all);
+}
+function backfillStoredTermsArchive(){
+ // Non-destructive migration: read existing Tracker and churn records, add only
+ // missing archived revisions. Never change dates, amounts or saved rules.
+ if(!Array.isArray(entries)||!entries.length)return 0;
+ const all=loadTermsArchive();let added=0;
+ for(const e of entries){
+  const snap=termsArchiveSnapshot(e,'legacy-enrolled-record-backfill');
+  if(!snap)continue;
+  const key=termsArchiveKey(snap);
+  const bucket=all[key]&&typeof all[key]==='object'?all[key]:{bank:snap.bank,accountType:snap.accountType,current:null,versions:[]};
+  const cur=bucket.current&&typeof bucket.current==='object'?bucket.current:null;
+  const versions=Array.isArray(bucket.versions)?bucket.versions:[];
+  const exists=[cur,...versions].some(v=>v&&v.entryId===snap.entryId&&v.opened===snap.opened&&termsArchiveSignature(v)===termsArchiveSignature(snap));
+  if(exists)continue;
+  if(!cur){bucket.current=snap;}
+  else if(String(snap.opened)>String(cur.opened)){
+   bucket.versions=[cur,...versions];bucket.current=snap;
+  }else{
+   bucket.versions=[snap,...versions];
+  }
+  // Retain existing history: no reordering of eligibility clocks or overwrites.
+  all[key]=bucket;added++;
+ }
+ if(added&&!saveTermsArchive(all))return 0;
+ return added;
 }
 function termsArchiveRows(){
   const all=loadTermsArchive();
@@ -300,23 +336,33 @@ function termsDisplayBuckets(){
 }
 function renderTermsCycle(x,previous=false){
  const raw=termsArchiveSourceText(x),promo=safeExternalUrl(x.promoSourceUrl),fee=safeExternalUrl(x.feeScheduleSourceUrl),rules=Array.isArray(x.eligibilityRules)?x.eligibilityRules:[];
- let h='<div class="archive-cycle"><div class="research-report-top"><span class="research-kind">'+(previous?'Previous offer':'Saved offer')+'</span><b>'+(x.bonus?esc(fM(x.bonus)):'Bonus not saved')+'</b></div><dl class="research-dates"><div><dt>Account opened</dt><dd>'+esc(x.opened?fD(x.opened):'Not saved')+'</dd></div><div><dt>Terms saved / reviewed</dt><dd>'+esc((x.termsVerifiedAt||x.capturedAt)?fD(String(x.termsVerifiedAt||x.capturedAt).slice(0,10)):'Not recorded')+'</dd></div></dl>';
- if(!raw)h+='<p class="research-caveat">Original terms have not been saved for this account. Notes below may be incomplete.</p>';
- const facts=[['Bonus requirements',x.completeBonusText],['Monthly fee',x.monthlyFeeAmountText||x.monthlyFeeYNText],['How to avoid the fee',x.monthlyFeeWaiverText||x.avoidMonthlyFeeText],['Closing the account',x.closeRuleText||x.earlyTerminationFeeText],['Offer deadline',x.expirationDateText]];
- if(facts.some(([,v])=>v)||rules.length){h+='<details class="research-help"><summary>Saved requirements & fees</summary><dl class="archive-facts">';facts.forEach(([k,v])=>{if(v)h+='<div><dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd></div>'});if(rules.length)h+='<div><dt>When another bonus may be available</dt><dd>'+rules.map(r=>esc(eligibilityRuleStorageLabel(r))).join('<br>')+'</dd></div>';h+='</dl><p class="research-caveat">Saved account information; the original offer text controls. Missing details require review.</p></details>'}
- if(promo||fee){h+='<div class="archive-links">';if(promo)h+='<a class="research-source" href="'+esc(promo)+'" target="_blank" rel="noopener noreferrer">Promotion source ↗</a>';if(fee)h+='<a class="research-source" href="'+esc(fee)+'" target="_blank" rel="noopener noreferrer">Fee schedule ↗</a>';h+='</div><p class="research-caveat">Live pages can change. The saved text below belongs to this offer.</p>'}
- if(raw)h+='<details class="research-help archive-original"><summary>Read original saved terms</summary><div class="archive-raw">'+esc(raw)+'</div></details>';
+ const copy=x.financialRules&&typeof x.financialRules==='object'?x.financialRules:null;
+ const feeRaw=String(x.feeScheduleRaw||'').trim();
+ let h='<div class="archive-cycle"><div class="research-report-top"><span class="research-kind">'+(previous?'Previous saved version':'Saved offer')+'</span><b>'+(x.bonus?esc(fM(x.bonus)):'Bonus not saved')+'</b></div><dl class="research-dates"><div><dt>Account opened</dt><dd>'+esc(x.opened?fD(x.opened):'Not saved')+'</dd></div><div><dt>Terms saved / reviewed</dt><dd>'+esc((x.termsVerifiedAt||x.capturedAt)?fD(String(x.termsVerifiedAt||x.capturedAt).slice(0,10)):'Not recorded')+'</dd></div>'
+  +'<div><dt>Evidence status</dt><dd>'+esc(x.evidenceStatus==='eligibility-evidence-validated'?'Saved eligibility evidence validated':'Enrolled source requires review')+'</dd></div></dl>';
+ if(!raw)h+='<p class="research-caveat">Original promotion text is missing for this historical cycle. Saved facts remain available but must not be treated as verified.</p>';
+ const facts=[['Bonus requirements',x.completeBonusText],['Monthly fee',x.monthlyFeeAmountText||x.monthlyFeeYNText],['How to avoid the fee',x.monthlyFeeWaiverText||x.avoidMonthlyFeeText],['Early-close fee wording',x.earlyTerminationFeeText],['Closing / bonus retention',x.closeRuleText],['Payout timing',x.payoutTimingText],['Offer deadline',x.expirationDateText]];
+ if(facts.some(([,v])=>v)||rules.length){
+  h+='<details class="research-help"><summary>Saved requirements & fees</summary><dl class="archive-facts">';
+  facts.forEach(([k,v])=>{if(v)h+='<div><dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd></div>'});
+  if(rules.length)h+='<div><dt>Repeat eligibility · separate clocks</dt><dd>'+rules.map(r=>esc(eligibilityRuleStorageLabel(r))+(r?.evidenceText?'<small>'+esc(r.evidenceText)+'</small>':'')).join('<hr>')+'</dd></div>';
+  h+='</dl><p class="research-caveat">Each rule belongs to this saved cycle. Current bank offers do not change its dates or fees.</p></details>';
+ }
+ if(copy)h+='<details class="research-help archive-original"><summary>Read complete structured terms · accounts, fees and churn</summary><div class="archive-raw">'+esc(JSON.stringify(copy,null,2))+'</div></details>';
+ if(feeRaw)h+='<details class="research-help archive-original"><summary>Read original saved fee schedule</summary><div class="archive-raw">'+esc(feeRaw)+'</div></details>';
+ if(promo||fee){h+='<div class="archive-links">';if(promo)h+='<a class="research-source" href="'+esc(promo)+'" target="_blank" rel="noopener noreferrer">Promotion source ↗</a>';if(fee)h+='<a class="research-source" href="'+esc(fee)+'" target="_blank" rel="noopener noreferrer">Fee schedule ↗</a>';h+='</div><p class="research-caveat">Live pages may change. Only the saved text describes this recorded cycle.</p>'}
+ if(raw)h+='<details class="research-help archive-original"><summary>Read original saved promotion</summary><div class="archive-raw">'+esc(raw)+'</div></details>';
  return h+'</div>';
 }
 function rTermsStorage(){
  const q=String(storageSearch||'').trim().toLowerCase();
  const match=x=>[x.bank,x.accountType,x.opened,x.tcSourceRaw,x.completeBonusText,x.closeRuleText,x.avoidMonthlyFeeText].join(' ').toLowerCase().includes(q);
  const rows=termsDisplayBuckets().filter(b=>!q||[b.current,...b.versions].some(match));
- let h='<div class="research-shell archive-shell"><header class="research-intro"><span class="research-eyebrow">YOUR OFFER RECORDS</span><h2>T&C Archive</h2><p>The bank’s terms for each account and bonus cycle, kept together so you can find them later.</p><button class="research-text-button" onclick="switchMainTab(\'tips\')">View community experiences →</button></header><input class="sinput" type="text" id="terms-search" aria-label="Search stored terms" placeholder="Search stored T&C..." value="'+esc(storageSearch||'')+'" oninput="updateViewSearch(\'terms\',this.value,this.selectionStart)"><div class="research-coverage"><b>'+rows.length+' account group'+(rows.length===1?'':'s')+'</b><span>Original text and previous offers stay saved</span></div><details class="research-help"><summary>About saved terms</summary><p>Terms remain tied to the enrolled offer. Current promotions and community reports do not replace your original terms.</p></details>';
+ let h='<div class="research-shell archive-shell"><header class="research-intro"><span class="research-eyebrow">YOUR OFFER RECORDS</span><h2>T&C Archive</h2><p>The bank’s terms for each account and bonus cycle, kept together so you can find them later.</p><button class="research-text-button" onclick="BTTermsHistory.open()">Cloud T&C history ↗</button></header><input class="sinput" type="text" id="terms-search" aria-label="Search stored terms" placeholder="Search stored T&C..." value="'+esc(storageSearch||'')+'" oninput="updateViewSearch(\'terms\',this.value,this.selectionStart)"><div class="research-coverage"><b>'+rows.length+' account group'+(rows.length===1?'':'s')+'</b><span>Original text and previous offers stay saved</span></div><details class="research-help"><summary>About saved terms</summary><p>Terms remain tied to the enrolled offer. Current promotions and community reports do not replace your original terms.</p></details>';
  rows.forEach(bucket=>{
   const x=bucket.current||{},versions=bucket.versions||[];
   h+='<details class="archive-bank"><summary>'+bankLogo(x.bank||bucket.bank,true)+'<span><b>'+esc(x.bank||bucket.bank)+'</b><small>'+esc(x.accountType==='business'?'Business':'Personal')+' · '+(termsArchiveSourceText(x)?'Terms saved':'Terms not saved')+'</small></span><span class="archive-chevron" aria-hidden="true">⌄</span></summary><div class="archive-bank-body">'+renderTermsCycle(x);
-  if(versions.length){h+='<details class="research-help archive-history"><summary>Previous T&C cycles <span>'+versions.length+'</span></summary>';versions.forEach(v=>h+='<details class="research-help"><summary>'+esc(v.opened?fD(v.opened):'Date not recorded')+(v.bonus?' · '+esc(fM(v.bonus)):'')+'</summary>'+renderTermsCycle(v,true)+'</details>');h+='</details>'}
+  if(versions.length){h+='<details class="research-help archive-history"><summary>Previous T&C cycles and revisions <span>'+versions.length+'</span></summary>';versions.forEach(v=>h+='<details class="research-help"><summary>'+esc(v.opened?fD(v.opened):'Date not recorded')+(v.bonus?' · '+esc(fM(v.bonus)):'')+'</summary>'+renderTermsCycle(v,true)+'</details>');h+='</details>'}
   h+='</div></details>';
  });
  if(!rows.length)h+='<div class="research-empty">'+(q?'No saved terms match your search.':'Your saved offers will appear here after you add an account.')+'</div>';
@@ -4688,7 +4734,7 @@ function saveEntry(){
   }
   entries=sortE(entries);
   if(!saveEntriesStrict(entries)){entries=beforeEntries;return false}
-  if(savedEntry){syncProfileEventsFromEntry(savedEntry);refreshSavedReqFromEntry(savedEntry);learnAnalyzerMemoryFromEntry(savedEntry);if(!modal._edit)saveTermsArchiveForNewCycle(savedEntry,modal._entryFileImport?'verified-json-new-cycle':'new-cycle')}
+  if(savedEntry){syncProfileEventsFromEntry(savedEntry);refreshSavedReqFromEntry(savedEntry);learnAnalyzerMemoryFromEntry(savedEntry);saveTermsArchiveForNewCycle(savedEntry,modal._edit?'updated-enrolled-terms':modal._entryFileImport?'verified-json-new-cycle':'new-cycle')}
   closeModal();
   return true;
   }catch(error){
@@ -6675,6 +6721,10 @@ entries=sortE(entries);R();
 (function(){try{const st=document.createElement('style');st.textContent="\n/* legacy fee box compatibility */\n.monthly-fee-plan.safe{border-color:#bbf7d0;background:#f0fdf4}\n.monthly-fee-plan.warn{border-color:#fde68a;background:#fffbeb}\n.monthly-fee-plan .tc-label{letter-spacing:.11em}\n";document.head.appendChild(st)}catch{}})();
 
 window.btStorageWritesReady=true;
+// Archive existing enrolled cycles on upgrade, including previously closed ones.
+// Cloud recovery already allowlists this key and queues an upload after local save.
+setTimeout(()=>{try{backfillStoredTermsArchive()}catch{}},1000);
+
 
 function btVerifiedMutation(action){
   let before,previousEntries;

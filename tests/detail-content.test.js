@@ -43,14 +43,44 @@ assert.doesNotMatch(requirements.html,/No checklist tasks saved yet/);
 assert.match(sandbox.BT360.detailPanels(e),/Direct deposits totaling \$10,000/);
 
 const fees=sandbox.BT360.feeDetail(e);
-assert.match(fees,/Monthly fee<\/span><div><b>\$15<\/b>/);
+assert.match(fees,/Monthly fee<\/span><div><b[^>]*>\$15<\/b>/);
 assert.match(fees,/ANY: \$500\+ electronic deposits/);
-assert.match(fees,/View full terms/);
+assert.match(fees,/View saved fee terms/);
 assert.match(fees,/Fee waived with \$500 electronic deposits/,'Original fee quote stays available');
+assert.match(sandbox.BT360.feeDetail(require('./fixtures/financial-rules.cjs').fixture()),/Required companion: Share Savings: \$10 · membership minimum \$50/,'Companion account costs remain distinct from primary checking fee');
 assert.match(fees,/Early close fee<\/span><div><b class="bt3611-amber">Not confirmed<\/b>/);
-assert.match(fees,/Waiver not confirmed/,'Waiver remains unconfirmed without recorded activity');
+assert.doesNotMatch(fees,/>This month<|Waiver not confirmed/,'Only the two requested fee rows appear');
 assert.doesNotMatch(fees,/Waiver on track/,'Never claim a monthly waiver from unlinked evidence');
 assert.match(fees,/bt3611-amber/);
+
+// Legacy imported terms must still render after migrating to v3.6.14.
+const legacy={...e,financialRules:{accounts:[{role:'primary'}],closure:{}},
+ monthlyFeeAmountText:'$8 per month',monthlyFeeWaiverText:'',
+ avoidMonthlyFeeText:'Waived with $500 ACH direct deposits or $1,500 average balance',
+ earlyCloseFee:0,earlyTerminationFeeText:'Early account closing: $25 fee if closed within 180 days of opening.',
+ closeRuleText:'',feeScheduleSourceUrl:'https://www.regions.com/personal-banking/checking/lifegreen-checking-account'};
+const legacyMarkup=sandbox.BT360.feeDetail(legacy);
+assert.match(legacyMarkup,/Monthly fee<\/span><div><b[^>]*>\$8<\/b>/);
+assert.match(legacyMarkup,/ANY: Waived with \$500 ACH direct deposits · \$1,500 average balance/);
+assert.match(legacyMarkup,/\$25 early-close fee/,'Explicit old close-fee text is recovered');
+assert.match(legacyMarkup,/View saved close terms/);
+assert.match(legacyMarkup,/Fee schedule/);
+assert.doesNotMatch(legacyMarkup,/>This month<|Waiver on track/);
+assert.equal((legacyMarkup.match(/class="bt3613-fee-line"/g)||[]).length,2);
+const savedZero={...legacy,earlyTerminationFeeText:'No early closing fee.',monthlyFeeAmountText:'No monthly service fee',
+  monthlyFeeNoMonthlyServiceFee:true,avoidMonthlyFeeText:''};
+assert.match(sandbox.BT360.feeDetail(savedZero),/\$0 early-close fee/);
+assert.match(sandbox.BT360.feeDetail(savedZero),/>Monthly fee<\/span><div><b[^>]*>\$0<\/b>/);
+const clawback={...legacy,earlyTerminationFeeText:'If the account is closed within six months, the bank will deduct the $900 bonus at closing.'};
+assert.match(sandbox.BT360.feeDetail(clawback),/Not confirmed/,'Clawback is not fabricated as a fee');
+assert.match(sandbox.BT360.feeDetail(clawback),/Bonus clawback is separate/);
+assert.doesNotMatch(sandbox.BT360.feeDetail(clawback),/\$900 early-close fee/);
+const conditionalNoFee={...legacy,earlyTerminationFeeText:'No early close fee after 180 days.'};
+assert.match(sandbox.BT360.feeDetail(conditionalNoFee),/Not confirmed/,'Conditional no-fee wording cannot imply a free early closure');
+const archiveRecord={...legacy,closed:'2026-10-17',bonusRecd:'2026-10-17'};
+assert.match(sandbox.BT360.detailPanels(archiveRecord),/Fees &amp; waivers|Fees & waivers/,'Churn and closed record details retain fee section');
+assert.match(sandbox.BT360.detailPanels(archiveRecord),/\$25 early-close fee/);
+assert.equal(JSON.stringify([...storage]),before,'Fee projections never write stored records');
 
 const timers=sandbox.BT360.timerRows(e);
 assert.match(timers,/Requirement due/);
@@ -64,7 +94,7 @@ const details=sandbox.BT360.detailPanels(e);
 assert.match(details,/After bonus posts/,'Close date explains the payout trigger without making up a date');
 assert.match(details,/After bonus payment/,'Eligibility displays the pending known start event');
 assert.doesNotMatch(details,/Set rule/,'Known rules awaiting payout should not require needless editing');
-assert.match(details,/This month/);
+assert.doesNotMatch(details,/>This month</);
 const payoutOnly={...e,customTimers:[],payoutTimingText:'Expected within 15 days after requirements',financialRules:{...e.financialRules,payout:{text:'Expected within 15 days after requirements',timing:{basis:'reqmet',value:15,unit:'calendar-days'}}}};
 assert.match(sandbox.BT360.timerRows(payoutOnly),/Bonus pending/);
 assert.match(sandbox.BT360.timerRows(payoutOnly),/After qualification/);
@@ -84,7 +114,7 @@ try{
  assert.doesNotMatch(needs,/>Needs review<\/span>/,'No generic review badge replacing lifecycle stage');
 }finally{sandbox.getAttentionSuggestions=priorSuggestions}
 
-console.log('Bonus detail v3.6.13 passed: Chase requirement, due date, zero recorded progress, compact timers, fee summary, unconfirmed close fee, rule editor, read-only data');
+console.log('Bonus detail v3.6.14 passed: Chase requirement, due date, zero recorded progress, compact timers, fee summary, unconfirmed close fee, rule editor, read-only data');
 
 
 /* The Manage sheet must be read-only and use the same underlying action handlers. */
