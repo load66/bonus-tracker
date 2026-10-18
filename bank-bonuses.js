@@ -78,7 +78,7 @@
       const e=x.evidence,fields=e&&e.fields||{},has=Object.keys(fields).length>0;
       const state=e&&e.stale?'stale':e&&e.checkState==='queued'?'queued':has?'present':'missing';
       const amount=amountFor(x);
-      return (availability==='all'||x.availability===availability)&&(!q||normalize(x.title).includes(normalize(q)))&&
+      return (availability==='all'||x.availability===availability)&&(!q||normalize(x.title+' '+(x.bank||'')+' '+(x.product||'')).includes(normalize(q)))&&
         (!options.evidence||options.evidence==='all'||options.evidence===state||options.evidence==='changed'&&e&&e.changes.length>0)&&
         (!options.fees||options.fees==='all'||options.fees==='present'&&!!fields.monthly_fee||options.fees==='missing'&&!fields.monthly_fee)&&
         (!options.activity||options.activity==='all'||options.activity==='present'&&!!fields.qualifying_activity||options.activity==='missing'&&!fields.qualifying_activity)&&
@@ -200,6 +200,7 @@
       return{...offer,geo,match,priorityGroup:group,index};
     }).filter(x=>x.geo.kind!=='expired'&&(filter==='all'||filter==='tracker'&&!!x.match||filter==='area'&&x.geo.kind!=='outside'))
       .sort((a,b)=>({ready:0,next:1,explore:2,review:3,outside:4}[a.priorityGroup]-{ready:0,next:1,explore:2,review:3,outside:4}[b.priorityGroup])||
+        (['ready','explore'].includes(a.priorityGroup)?(Number(b.badges?.includes('Increased'))-Number(a.badges?.includes('Increased'))||Number(b.badges?.includes('New'))-Number(a.badges?.includes('New'))):0)||
         (a.priorityGroup==='next'?(a.match.date.localeCompare(b.match.date)):0)||
         ({listed:0,nationwide:0,conditional:1,unknown:1,outside:2}[a.geo.kind]-{listed:0,nationwide:0,conditional:1,unknown:1,outside:2}[b.geo.kind])||
         (Date.parse(b.publishedAt)-Date.parse(a.publishedAt))||a.index-b.index);
