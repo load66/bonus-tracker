@@ -121,6 +121,26 @@ try{
  if(termsBackup===undefined)storage.delete('bt_tc_archive_v1');
  else storage.set('bt_tc_archive_v1',termsBackup);
 }
+
+// Archived offers without a calculated date remain informational. Avoid a
+// noisy "Review" action or an invented reopen clock for a saved past bonus.
+const missingDate={...archiveRecord,id:'SYN-UNDATE-1',bank:'Synthetic Cooling Bank',
+ accountType:'personal',opened:'2025-01-01',closed:'2026-08-01',
+ churnable:true,eligibilityRules:[],eligibilityEvidenceText:'',churnPeriodValue:0};
+const priorInfo=sandbox.eligibleInfo;
+sandbox.eligibleInfo=()=>null;
+try{
+ const archiveView=sandbox.BT360.archive([missingDate]);
+ assert.match(archiveView,/Last saved · eligibility date unavailable/,'Cooling-down row shows prior bonus context');
+ assert.match(archiveView,/Details<\/button>/,'Undated historic entry opens details, not review');
+ assert.doesNotMatch(archiveView,/Needs review · verify eligibility rules/);
+ const pane=sandbox.BT360.detailPanels(missingDate);
+ assert.match(pane,/Date unavailable/,'Unknown repeat date stays unknown');
+ assert.match(pane,/Last saved bonus · no verified reopening date recorded/);
+ assert.doesNotMatch(pane,/>Set rule<\/button>/,'Historical information does not need a generic verification action');
+}finally{sandbox.eligibleInfo=priorInfo}
+assert.equal(JSON.stringify([...storage]),before,'Cooldown archive copy is display-only');
+
 const legacyCompanion={...legacy,financialRules:null,monthlyFeeAmountText:'$10',
  monthlyFeeYNText:'Personal checking: $0 monthly maintenance fee. Required Share Savings: $10/month if the $50 minimum balance is not maintained.',
  monthlyFeeWaiverText:'Keep $50 in Share Savings to avoid the fee.'};
