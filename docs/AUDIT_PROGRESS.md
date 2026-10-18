@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: codex · v3.6.12 · codex/v3.6.12-dark-manage-sheet
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.12 dark Manage sheet queued in draft PR https://github.com/load66/bonus-tracker/pull/186 (`codex/v3.6.12-dark-manage-sheet`), dependent on v3.6.11 PR #185. Restyles source-rendered Account Actions with human lifecycle labels, 34px SVG icons, a grouped dark list, separate destructive control, safe-area layering and footer suppression. Existing handlers and secondary actions retained in disclosure. Added 320/390/430px browser checks, a 390px CI screenshot and visual report. Bonus/cloud/UI unit groups PASS. Chromium/WebKit pass the new Manage assertions but the full browser run FAILS at the inherited 320px detail task/timer/waiver assertion; merge/deploy blocked. Exact next steps: resolve inherited detail-layout failure in #185, merge and verify #185, rebase #186, rerun full browser matrix, then merge #186 and verify main Pages. No backend or stored-record change.
+
 
 - v3.6.11 bonus-detail content presentation PR https://github.com/load66/bonus-tracker/pull/185 (`codex/v3.6.11-detail-content-style`): read-only financial requirement projection, compact countdown and fee summaries with expandable original terms, eligibility editor entry point, simplified lifecycle/closure view and Activity in account actions. Frontend application and service-worker cache bumped; canonical bonus, eligibility and financial engines unchanged, no saved records rewritten. Synthetic unit suites bonus/cloud/UI PASS on release-candidate CI. Chromium and WebKit 390px top/bottom visual screenshots, mobile behavior and source safety checks are release-gated by PR CI. Next: await full PR success, merge, then verify exact main GitHub Pages deployment. No backend release.
 
