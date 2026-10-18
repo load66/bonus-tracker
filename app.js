@@ -4079,13 +4079,27 @@ function updateViewSearch(kind,value,cursor){
   if(kind==='tracker')search=value;
   else if(kind==='datapoints')dpSearch=value;
   else storageSearch=value;
-  // Keep the actual focused input node attached while rebuilding result rows.
-  // Chromium's fill/keyboard action can blur an input detached in its own
-  // synchronous input event even if a new input receives focus temporarily.
+  // Search results change, but the focused search input must NEVER leave the
+  // live document during its own input event. Replacing the entire app blurs
+  // Chromium's fill/keyboard action even when focus is restored afterwards.
+  // Refresh only siblings AFTER the existing Tracker/Archive search input.
   const active=document.activeElement?.id===id?document.activeElement:null;
+  if(kind==='tracker'&&active&&!expanded&&typeof window.rTracker==='function'){
+    const freshRoot=document.createElement('div');
+    freshRoot.innerHTML=window.rTracker(sortE(entries),tab==='archive');
+    const freshInput=freshRoot.querySelector('#'+id);
+    const parent=active.parentNode;
+    if(freshInput&&parent){
+      for(let node=active.nextSibling;node;){const next=node.nextSibling;node.remove();node=next;}
+      while(freshInput.nextSibling)parent.appendChild(freshInput.nextSibling);
+      active.focus({preventScroll:true});
+      const position=Number.isInteger(cursor)?Math.min(cursor,active.value.length):active.value.length;
+      active.setSelectionRange(position,position);
+      return;
+    }
+  }
   R();
-  let input=document.getElementById(id);
-  if(active&&input&&active!==input&&!active.isConnected){input.replaceWith(active);input=active;}
+  const input=document.getElementById(id);
   if(input){input.focus({preventScroll:true});const position=Number.isInteger(cursor)?Math.min(cursor,input.value.length):input.value.length;input.setSelectionRange(position,position);}
 }
 function openTrackerTool(kind){
