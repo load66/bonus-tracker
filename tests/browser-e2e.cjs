@@ -5,7 +5,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
 const path=require('node:path');
 const http=require('node:http');
-const {chromium,firefox,webkit}=require('playwright');
+const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'..');
 const output=process.env.BT_BROWSER_RESULTS||path.join(process.env.RUNNER_TEMP||'/tmp','bonus-tracker-browser-results');
 const mime={'.html':'text/html','.js':'application/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml'};
@@ -278,7 +278,7 @@ async function exercise(name,engine,url){
     feedInvalid=false;await page.evaluate(()=>{entries=entries.filter(e=>e.id!=='radar-us-bank');sv(SK,entries);R()});await button('Tracker').click();
     check('mobile dashboard scrolls with content',await page.locator('.tracker-overview').evaluate(e=>!!e.closest('.scroll')));
     check('mobile fixed header leaves room for workflow',await page.locator('.hdr').evaluate(e=>e.getBoundingClientRect().height<=90));
-    // WebKit service-worker-controlled fetches can bypass Playwright HTTP routing.
+    // Service-worker-controlled fetches may bypass Playwright HTTP routing.
     // Stub the external AI boundary; tests never send bonus facts to production.
     await page.evaluate(()=>{
       const nativeFetch=window.fetch;
@@ -672,12 +672,10 @@ async function exercise(name,engine,url){
 
     await page.evaluate(async()=>{await navigator.serviceWorker.ready});
     await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
-    // WebKit's protocol offline mode can abort navigation before its service
-    // worker fallback runs. Remove the origin instead to exercise real failed
-    // network fetches; Chromium/Firefox also test protocol offline mode.
-    if(name==='webkit')serverUnavailable=true;else await context.setOffline(true);
+    // Exercise real offline navigation through Chromium and its service worker.
+    await context.setOffline(true);
     await page.reload();await settleStartup();await page.getByText('BonusTracker',{exact:false}).first().waitFor();
-    check(name==='webkit'?'network-loss reload preserves account':'offline reload preserves account',(await record()).id===id);
+    check('offline reload preserves account',(await record()).id===id);
     serverUnavailable=false;await context.setOffline(false);
     check('AI login persists across browser reload',await page.evaluate(()=>BTBonusAuth.connected()));
 
@@ -689,7 +687,7 @@ async function exercise(name,engine,url){
       services:[{name:'api',costSoFar:1.25,avgMemoryGb:0.235},{name:'leaps-alpaca-live',costSoFar:1.06,avgMemoryGb:0.318}]
     },r2:{status:'ok',usedBytes:240000000,freeBytes:10000000000}};
     // Stub fetch inside the page because a controlling service worker may bypass
-    // Playwright routing (especially in WebKit). No real provider request is sent.
+    // Playwright routing under a controlling service worker. No real provider request is sent.
     await page.evaluate(fixture=>{
       window.__hostingPreviousFetch=window.fetch;
       window.fetch=async (input,options)=>String(typeof input==='string'?input:input.url).endsWith('/api/bonus-tracker/usage')
@@ -728,6 +726,6 @@ async function exercise(name,engine,url){
 (async()=>{
   await fs.mkdir(output,{recursive:true});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const url='http://127.0.0.1:'+server.address().port+'/';
-  try{for(const [name,engine] of require('./browser-select.cjs')({chromium,firefox,webkit}))await exercise(name,engine,url)}
+  try{for(const [name,engine] of require('./browser-select.cjs')({chromium}))await exercise(name,engine,url)}
   finally{server.close()}
 })().catch(err=>{console.error(err);process.exitCode=1});

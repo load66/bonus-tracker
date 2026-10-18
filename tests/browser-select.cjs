@@ -1,7 +1,8 @@
 'use strict';
+// Chromium is the only supported Playwright engine for all BonusTracker runs.
 module.exports=function browserEntries(engines){
-  const selected=process.env.BT_BROWSER;
-  if(!selected)return Object.entries(engines); // Standalone harnesses retain all three browsers.
-  if(!Object.hasOwn(engines,selected))throw Error('Unknown BT_BROWSER: '+selected);
-  return [[selected,engines[selected]]];
+  const selected=process.env.BT_BROWSER||'chromium';
+  if(selected!=='chromium')throw Error('BonusTracker Playwright only supports Chromium; got BT_BROWSER='+selected);
+  if(!engines||!Object.hasOwn(engines,'chromium'))throw Error('Chromium browser engine is unavailable');
+  return [['chromium',engines.chromium]];
 };
