@@ -164,7 +164,7 @@ def identity(title):
     regions=[]
     for bracket in re.findall(r'\[([^\]]+)\]|\(([^\)]+)\)', text):
         inner=' '.join(bracket)
-        codes=[w for w in re.findall(r'\b[A-Z]{2}\b', inner.upper()) if w in STATE_CODES]
+        codes=[w for w in re.findall(r'\b[A-Z]{2}\b', inner) if w in STATE_CODES]
         regions.extend(codes)
     region=','.join(sorted(set(regions))) if regions else 'nationwide' if re.search(r'\bnationwide\b|\ball 50 states\b',text,re.I) else 'unknown'
     key='|'.join((bank or 'unknown',product,str(amount) if amount is not None else '?',region))
