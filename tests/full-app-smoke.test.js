@@ -59,8 +59,8 @@ module.exports={sandbox,document,app,storage,errors};
 if(require.main===module)setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.5.2',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.5.2',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.6.0',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.6.0',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.13',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
     assert(sandbox.tcV3WellsConsumerRulesVersion==='3.5.2',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
     assert(sandbox.btChurnCloseDatePolicyVersion==='3.5.2',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
@@ -79,15 +79,15 @@ if(require.main===module)setTimeout(()=>{
       assert(!/CUSTOM TIMER|Custom Timer|Deadline Active|WORKING|WAITING TO CHURN|TIME TO CHURN/.test(html),'Legacy/internal lifecycle status leaked to full app card: '+html);
     }
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
-    assert(app.innerHTML.includes('Active bonuses'),'Active bonus summary did not render');
+    assert(app.innerHTML.includes('COLLECTED IN'),'Collected-year summary did not render');
     assert(app.innerHTML.includes('Action Center'),'Lifecycle Action Center did not render');
     sandbox.R();
     for(const retired of ['learning-inbox-conflict.js','profile-library-selftest.js','profile-library-selftest-academy.js','profile-db.js']){
       assert(!html.includes('src="./'+retired+'"')&&!fs.readFileSync('sw.js','utf8').includes("'./"+retired+"'"),'Retired add-on remains loaded or cached: '+retired);
     }
     assert(!app.innerHTML.includes('v31_profile_btn')&&!app.innerHTML.includes('v32_inbox_btn'),'Retired floating shortcuts must be absent');
-    assert(app.innerHTML.includes('aria-label="Tracker"')&&app.innerHTML.includes('aria-label="T&C Archive"'),'Tracker and archive navigation remains');
-    assert(app.innerHTML.includes('aria-label="T&C Archive"')&&app.innerHTML.includes('<span>Archive</span>'),'Archive tab retains its accessible full name');
+    assert(app.innerHTML.includes('aria-label="Tracker"')&&app.innerHTML.includes('aria-label="Archive"'),'Tracker and combined archive navigation remains');
+    assert(app.innerHTML.includes('aria-label="Archive"')&&app.innerHTML.includes('<span>Archive</span>'),'Archive tab retains its accessible name');
     const appSource=fs.readFileSync('app.js','utf8');
     const timerClickMatches=appSource.match(/onclick="event\.stopPropagation\(\);toggleTimer\(/g)||[];
     assert(timerClickMatches.length>=2,'Mini timer checkboxes can still bubble to the card header and collapse the expanded entry');

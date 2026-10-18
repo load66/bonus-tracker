@@ -106,7 +106,9 @@ async function testOperations(){
   assert.equal(run('search'),'');assert.equal(scrolled,true);assert.equal(focused,true);
   document.querySelectorAll=oldQuery;
   sandbox.getAttentionSuggestions=suggestions;
-  run(`search='No such bank';R()`);
+  // The mockup's focused account detail replaces the searchable list. Return
+  // to the list before testing the unchanged search/no-match semantics.
+  run(`expanded=null;search='No such bank';R()`);
   assert.match(document.getElementById('app').innerHTML,/No matching accounts/);
   assert.doesNotMatch(document.getElementById('app').innerHTML,/No accounts yet/);
   run(`search='';entries=[];R()`);

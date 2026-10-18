@@ -1,7 +1,7 @@
 /* Public offer discovery with read-only tracker prioritization. Never changes account records. */
 (function(){
   'use strict';
-  let feed=null,loading=false,error='',attempted=false,query='',availabilityFilter='all',evidenceFilter='all',feeFilter='all',activityFilter='all',amountFilter='all';
+  let feed=null,loading=false,error='',attempted=false,query='',categoryFilter='all',availabilityFilter='all',evidenceFilter='all',feeFilter='all',activityFilter='all',amountFilter='all';
   const evidenceOpen=new Set();
   const sourceNames={doc:'Doctor of Credit',fm:'Frequent Miler',hmb:'Hustler Money Blog'};
   const sourceHosts={'www.doctorofcredit.com':'doc','frequentmiler.com':'fm','www.hustlermoneyblog.com':'hmb'};
@@ -235,9 +235,10 @@
     finally{clearTimeout(timeout);loading=false;if(typeof R==='function'&&typeof tab!=='undefined'&&tab==='bonuses')R();}
   }
   window.btRefreshBankBonuses=refresh;
+  window.btRadarOfferPill=function(value){if(!['all','checking','savings','business','near'].includes(value))return;categoryFilter=value;if(value==='business')window.BT360?.setAudience('business');else R();};
   window.rBankBonuses=function(){
     if(!attempted){attempted=true;setTimeout(refresh,0);}
-    let h='<section class="radar-intro"><h2>Bank offers</h2><p>Review source terms before applying.</p>';
+    let h=(window.BT360?.segments()||'')+'<section class="radar-intro"><h2>Bank offers</h2><p>Review source terms before applying.</p>';
     h+='<div class="radar-toolbar"><span>'+(feed?'Last checked '+escape(new Date(feed.checkedAt).toLocaleString()):'Checking offers…')+'</span><button type="button" class="ph-mini ph-save" onclick="btRefreshBankBonuses()" '+(loading?'disabled':'')+'>'+(loading?'Checking…':'Check updates')+'</button></div></section>';
     if(error)h+='<p role="status" class="radar-warning">'+escape(error)+'</p>';
     if(feed&&Date.now()-Date.parse(feed.checkedAt)>24*60*60*1000)h+='<p role="status" class="radar-warning">Updates are stale: the source has not been successfully checked in over 24 hours.</p>';
@@ -248,22 +249,31 @@
     if(officialError)h+='<p class="radar-warning">'+escape(officialError)+'</p>';
     if(feed.sources.length)h+=disclosure('source-times','Source check times','<div class="radar-sources">'+feed.sources.map(s=>'<p>'+escape(s.name)+' · '+(s.status==='ok'?'Checked':'Update unavailable')+(s.checkedAt?' '+escape(new Date(s.checkedAt).toLocaleString()):' · no successful check yet')+'</p>').join('')+'</div>');
     if(feed.sources.some(s=>s.status!=='ok'))h+='<p role="status" class="radar-warning">Some sources are unavailable. Saved offers retain their last successful check time.</p>';
+    h+='<div class="bt360-offer-pills" role="group" aria-label="Offer types">'+[['all','All'],['checking','Checking'],['savings','Savings'],['business','Business'],['near','Near me']].map(([v,label])=>'<button type="button" aria-pressed="'+(categoryFilter===v)+'" class="'+(categoryFilter===v?'active':'')+'" onclick="btRadarOfferPill(\''+v+'\')">'+label+'</button>').join('')+'</div>';
     h+='<section class="radar-filters radar-personal-filters" aria-label="Offer preferences"><label for="radar-search">Find an offer</label><input id="radar-search" class="sinput" placeholder="Search bank bonuses…" value="'+escape(query)+'" oninput="btRadarSearch(this.value,this.selectionStart)"><div class="radar-filter-grid"><div><label for="radar-area">Your area</label><select id="radar-area" onchange="btRadarArea(this.value)"><option value=""'+(!area?' selected':'')+'>Choose a state</option>'+Object.entries(states).map(([code,name])=>'<option value="'+code+'"'+(area===code?' selected':'')+'>'+name+'</option>').join('')+'</select></div><div><label for="radar-availability">Availability</label><select id="radar-availability" onchange="btRadarAvailability(this.value)">'+[['all','All bank offers'],['nationwide','Reported nationwide'],['regional','Reported regional'],['unknown','Availability unclear']].map(([v,l])=>'<option value="'+v+'"'+(availabilityFilter===v?' selected':'')+'>'+l+'</option>').join('')+'</select></div></div><div class="radar-priority-tabs" role="group" aria-label="Offer priority">'+[['all','For you'],['tracker','Churn matches'],['area','Hide out-of-area']].map(([v,l])=>'<button type="button" aria-pressed="'+(priorityFilter===v)+'" onclick="btRadarPriority(\''+v+'\')">'+l+'</button>').join('')+'</div><p>Sorted by tracker review dates and reported availability. Verify eligibility before applying.</p></section>';
     const context=trackerContext();
+    if(window.BT360)context.rows=context.rows.filter(e=>window.BT360.scope(e));
     const upcoming=context.rows.filter(e=>e.closed&&!context.nonrepeat(e)&&context.ready(e)).sort((a,b)=>context.ready(a).localeCompare(context.ready(b)));
     const names=[...new Set(upcoming.map(e=>e.bank))].slice(0,3);
     if(names.length)h+='<div class="radar-quick radar-churn-shortcuts" aria-label="Your churn list">'+names.map(name=>'<button type="button" class="ph-mini" onclick="btRadarSearch('+escape(JSON.stringify(context.family(name)))+')">'+escape(name)+'</button>').join('')+'<button type="button" class="ph-mini" onclick="btRadarSearch(\'\')">All banks</button></div>';
     else h+='<div class="radar-quick"><button type="button" class="ph-mini" onclick="btRadarSearch(\'\')">All banks</button></div>';
     if(!feed.offers.length)return h+'<p>No bank offers available.</p>';
-    const visible=prioritize(filtered(feed.offers,query,availabilityFilter,{evidence:evidenceFilter,fees:feeFilter,activity:activityFilter,amount:amountFilter}),context.rows,area,context,priorityFilter);
+    let matches=filtered(feed.offers,query,availabilityFilter,{evidence:evidenceFilter,fees:feeFilter,activity:activityFilter,amount:amountFilter});
+    if(categoryFilter==='checking')matches=matches.filter(x=>/\bchecking\b/i.test(x.title));
+    if(categoryFilter==='savings')matches=matches.filter(x=>/\bsavings?\b/i.test(x.title));
+    if(categoryFilter==='business')matches=matches.filter(x=>/\b(business|commercial|biz)\b/i.test(x.title));
+    if(categoryFilter==='near'&&area)matches=matches.filter(x=>geography(x,area).kind!=='outside');
+    const visible=prioritize(matches,context.rows,area,context,priorityFilter);
     h+='<div class="radar-count">'+visible.length+' matching offer posts · '+feed.offers.length+' source posts checked</div>';
     if(!visible.length)h+='<p>No offers match these filters. Adjust your search or filters.</p>';
-    const groupLabels={ready:'Tracker date reached',next:'Next in your churn list',explore:'Other offers to explore',review:'Tracker restrictions to review',outside:'Outside your selected area'};
+    const groupLabels={ready:'Eligible for you · review current terms',next:'Not eligible yet',explore:'Other offers · review eligibility',review:'Needs review',outside:'Outside your selected area'};
     let lastGroup='';
     visible.forEach(x=>{
       if(x.priorityGroup!==lastGroup){lastGroup=x.priorityGroup;h+='<h2 class="radar-group-heading">'+groupLabels[lastGroup]+'</h2>';}
       const link=x.links[0],date=x.match?.date;
-      h+='<article class="radar-card radar-card-compact radar-priority-'+x.priorityGroup+'"><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+'</div><h3>'+escape(x.title)+'</h3>';
+      const verifiedAmount=amountFor(x);
+      const verifiedRequirement=x.evidence?.status==='evidence-found'&&!x.evidence?.stale?x.evidence.fields?.qualifying_activity?.value:null;
+      h+='<article class="radar-card radar-card-compact radar-priority-'+x.priorityGroup+'"><div class="bt360-offer-title">'+bankLogo(x.title,true)+'<div class="bt360-grow"><h3>'+escape(x.title)+'</h3><p>'+escape(verifiedRequirement||'Requirements need review')+'</p></div><strong>'+(verifiedAmount===null?'Needs review':'$'+verifiedAmount.toLocaleString('en-US'))+'</strong></div><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+'</div>';
       if(x.match)h+='<div class="radar-tracker-context"><b>'+escape(x.match.label)+'</b>'+(date?'<time datetime="'+date+'">'+escape(typeof fD==='function'?fD(date):date)+'</time>':'')+'<p>'+escape(x.match.detail)+'</p></div>';
       h+='<p class="radar-area-note">'+escape(x.geo.detail)+'</p>';
       const proof=x.geo.proof||availabilityFor(x,officialCatalog);

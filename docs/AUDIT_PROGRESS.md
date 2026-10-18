@@ -6,6 +6,11 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- BonusTracker v3.6.0 mockup UI (Finance remains removed): frontend PR https://github.com/load66/bonus-tracker/pull/165. Tracker, focused detail, Bonuses, Tax, Data, combined Archive and Settings; Personal/Business scopes; owner hosting usage card and read-only notification center. App and service-worker cache `bt-v3.6.0-ui1`.
+- Full PR release CI https://github.com/load66/bonus-tracker/actions/runs/39086571663 PASS, including bonus/cloud/UI unit groups, release verification, and Playwright Chromium, Firefox and WebKit (284 browser checks on each engine). Synthetic provider/backup/usage test fixtures only, no live financial reset/restore.
+- Backend usage endpoint and GraphQL correction: https://github.com/load66/Trading-Journal-AI/pull/231 and https://github.com/load66/Trading-Journal-AI/pull/232; Railway production SUCCESS at `d83172974cc46de6bd4ccff7dd99b80b8332d85b`; backend CI 385 passed. Railway API token not created or modified; owner must configure `RAILWAY_API_TOKEN` for real estimates.
+- Next step: merge green frontend PR #165, verify main-branch Pages deployment and exact published v3.6.0/service-worker assets. Retain cross-browser release tests per AGENTS.md; optional Chromium-only checks can be a future PR-speed improvement.
+
 - BonusTracker v3.5.2 release audit: PR https://github.com/load66/bonus-tracker/pull/164. Downloaded-file restore now stops when its cloud safety backup or file export fails; device reset clears its local cloud-protection setting, not server backups or login.
 - Failing-before synthetic regression: https://github.com/load66/bonus-tracker/actions/runs/39080914103 (downloaded restore continued after failed safety backup). Passing PR full CI: https://github.com/load66/bonus-tracker/actions/runs/39081160600 (bonus/cloud/UI and Chromium, Firefox, WebKit).
 - Independent local baseline check: exact v3.5.1 Pages deployment artifact, Node bonus/cloud/UI suites and release verification PASS after restoring the workflow files excluded from the published package. PR candidate verification executed in isolated GitHub Actions workers, not against production user data.

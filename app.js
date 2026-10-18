@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.5.2';
+const APP_VERSION='3.6.0';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -3297,6 +3297,7 @@ let profileSearch='',activeProfileKey='';
 let inlineUiState={};
 let profileSectionUiState={};
 let actionCenterOpen=false;
+let legacyActionsOpen=false;
 function toggleActionCenter(){actionCenterOpen=!actionCenterOpen;R();document.getElementById('bt-action-center-toggle')?.focus({preventScroll:true})}
 function profileSectionStateKey(entryId,sectionKey){return String(entryId||'')+'::'+String(sectionKey||'')}
 function profileSectionAttr(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
@@ -4066,7 +4067,9 @@ function renderActionCenter(){
 function switchMainTab(value){
   if(value==='finances'){tab='tracker';R();window.btNotify?.('Finance has been removed. Your bank-bonus records remain available in Tracker.');return;}
   if(!['tracker','bonuses','tax','tips','storage','archive'].includes(value))return;
-  tab=value;search='';_sp=0;
+  if(value==='storage'&&window.BT360){window.BT360.goArchive('saved');return}
+  if(value==='archive'&&window.BT360){window.BT360.goArchive('waiting');return}
+  expanded=null;tab=value;search='';_sp=0;
   const current=document.querySelector('.scroll');if(current)current.scrollTop=0;
   R();
 }
@@ -4086,20 +4089,22 @@ function R(){if(tab==='finances')tab='tracker';captureProfileSectionState();cons
   try{if(!window.__btAutoCleanupV384){entries=sortE(normalizeLifecycleEntries(entries));sv(SK,entries);window.__btAutoCleanupV384=true}}catch{}
   sanitizeAllTimers(false);
   const sorted=sortE(entries),thisYr=new Date().getFullYear(),metrics=bonusPipelineMetrics(sorted,dashYear);
+  const bt360Detail=!!(expanded&&sorted.some(e=>e.id===expanded)&&(['tracker','archive'].includes(tab)));
+  document.body.classList.toggle('bt360-detail-active',bt360Detail);
   let h='',overview='';
   h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div class="hdr-brand"><h1><em>Bonus</em>Tracker</h1><span class="app-version" aria-label="App version">v'+APP_VERSION+'</span></div>';
   if(tab==='tracker')h+='<div class="yr-pills">';
   if(tab==='tracker')[thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});
   h+=tab==='tracker'?'</div>':'<span class="mobile-page-caption">'+esc({bonuses:'Bank offers',tax:'Tax',tips:'Datapoints',storage:'Terms archive',archive:'Account archive'}[tab]||'')+'</span>';
+  h+='<button type="button" class="bt360-header-bell" aria-label="Notifications" onclick="BT360.openNotifications()"><svg width="19" height="19" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></button><button type="button" class="bt360-header-settings" aria-label="Settings" onclick="BT360.openSettings()">•••</button>';
   h+='<details id="bt-data-menu" class="header-data-menu"><summary aria-label="Data and backup menu" title="Data and backup menu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></summary><div class="header-data-panel" role="group" aria-label="Data and recovery actions"><h3>Data & recovery</h3><button onclick="this.closest(\'details\').open=false;switchMainTab(\'archive\')"><strong>Archived accounts</strong><small>Completed, non-repeatable offers and their history</small></button><button onclick="this.closest(\'details\').open=false;btOpenCloudBackup()"><strong>Cloud backup & recovery</strong><small>Automatic protection and recovery versions</small></button><button onclick="this.closest(\'details\').open=false;exportBackup()"><strong>Export backup file</strong><small>Download an additional recovery copy</small></button><button onclick="this.closest(\'details\').open=false;importBackup()"><strong>Import backup file</strong><small>Review and restore a downloaded copy</small></button><button class="data-menu-danger" onclick="this.closest(\'details\').open=false;resetAllData()"><strong>Reset this device</strong><small>Requires confirmation and a safety backup</small></button></div></details></div>';
 
-  if(tab==='tracker'){
-    overview+='<div class="hero ops-hero"><div class="hero-copy"><div class="hero-kicker">Active bonuses</div><div class="hero-value">'+fM(metrics.active)+'</div><div class="hero-note">'+fM(metrics.collected)+' collected in '+dashYear+' • '+metrics.openCount+' open • '+metrics.cooldownCount+' cooling down</div></div><div class="hero-side"><div class="hero-chip">'+metrics.readyCloseCount+' ready to close</div><div class="hero-chip secondary">'+metrics.actionCount+' urgent'+'</div></div></div>';
-    overview+='<div class="stats ops-stats"><div class="st"><div class="n">'+fM(metrics.collected)+'</div><div class="l">Collected</div></div><div class="st"><div class="n">'+fM(metrics.awaiting)+'</div><div class="l">Awaiting</div></div><div class="st"><div class="n">'+fM(metrics.inProgress)+'</div><div class="l">In Progress</div></div><div class="st"><div class="n">'+fM(metrics.actionNeeded)+'</div><div class="l">Action Needed</div></div></div>'
+  if(tab==='tracker'&&!bt360Detail){
+    overview=window.BT360?window.BT360.home(sorted,dashYear,metrics):'<div class="hero ops-hero"><div class="hero-value">'+fM(metrics.active)+'</div></div>';
   }
   h+='</div></div><div class="scroll">';
   if(tab==='tracker'){h+='<section class="tracker-overview" aria-label="Bonus totals">'+overview+'</section>';const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted)}
-  else if(tab==='archive'){const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted,true)}
+  else if(tab==='archive'){h+=window.BT360?window.BT360.archive(sorted):rTrackerLegacy(sorted,true)}
   else if(tab==='tax')h+=rTax();
   else if(tab==='tips')h+=rTips();
   else if(tab==='storage')h+=rTermsStorage();
@@ -4107,8 +4112,11 @@ function R(){if(tab==='finances')tab='tracker';captureProfileSectionState();cons
   h+='</div>';
   if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';
   h+='<div class="tabs">';
-  ['tracker','bonuses','tax','tips','storage'].forEach((t,i)=>{const full=['Tracker','Bank Bonuses','Tax','Datapoints','T&C Archive'][i],short=['Tracker','Bonuses','Tax','Data','Archive'][i];h+='<button class="tb'+(tab===t?' on':'')+'" aria-label="'+full+'" aria-current="'+(tab===t?'page':'false')+'" onclick="switchMainTab(\''+t+'\')">'+[I.grid,I.tips,I.doc,I.tips,I.lock][i]+'<span>'+short+'</span></button>'});
+  ['tracker','bonuses','tax','tips','archive'].forEach((t,i)=>{const full=['Tracker','Bank Bonuses','Tax','Datapoints','Archive'][i],short=['Tracker','Bonuses','Tax','Data','Archive'][i];h+='<button class="tb'+(tab===t?' on':'')+'" aria-label="'+full+'" aria-current="'+(tab===t?'page':'false')+'" onclick="switchMainTab(\''+t+'\')">'+[I.grid,I.tips,I.doc,I.tips,I.lock][i]+'<span>'+short+'</span></button>'});
   h+='</div>';
+  if(window.bt360PhonebookOpen)h+='<div class="bt360-sheet-backdrop" onclick="BT360.closePhonebook()"><section class="bt360-sheet" onclick="event.stopPropagation()"><button onclick="BT360.closePhonebook()">← Settings</button>'+rPhone()+'</section></div>';
+  if(window.bt360SettingsOpen&&window.BT360)h+=window.BT360.settings();
+  if(window.BT360?.notificationsOpen)h+=window.BT360.notifications(sorted);
   if(modal)h+=rModal();if(cfm)h+=rCfm();if(ddPrompt)h+=rDD();if(rcvPrompt)h+=rRcv();if(reqPrompt)h+=rReqMet();if(closePrompt)h+=rClose();if(overwritePrompt)h+=rOverwrite();if(matchPickerPrompt)h+=rMatchPicker();if(replacementPickerPrompt)h+=rReplacementPicker();if(feeCheckPrompt)h+=rFeeCheck();if(timerEditModal)h+=rTimerEdit();if(dpEditor)h+=rDpEditor();if(timerChoicePrompt)h+=rTimerChoicePrompt();
   if(undoState)h+='<div class="undo-bar"><span>'+esc(undoState.undoLabel||('Change saved for '+undoState.bank+' — Undo restores everything for 60 seconds.'))+'</span><button onclick="undoClose()">Undo</button></div>';
   document.getElementById('app').innerHTML=h;
@@ -4242,7 +4250,21 @@ function rTrackerLegacy(sorted){
 
   return h;
 }
-function rTax(){const yrs=[];for(let y=2025;y<=2040;y++)yrs.push(y);const yrE=taxEntriesForYear(taxYear);const yrA=yrE.reduce((s,e)=>s+(e.bonus||0),0);const allA=entries.filter(e=>taxReady(e)).reduce((s,e)=>s+(e.bonus||0),0);let h='<div class="sec">Tax Year</div><div class="ybar">';yrs.forEach(y=>{const a=completedYrTotal(y);h+='<button class="ypill'+(taxYear===y?' on':'')+'" onclick="taxYear='+y+';R()">'+y+(a?' · '+fM(a):'')+'</button>'});h+='</div><div class="ytotal">'+fM(yrA)+'</div><div class="ysub">'+taxYear+' — '+yrE.length+' received bonus'+(yrE.length!==1?'es':'')+'</div>';h+='<button class="export-btn" onclick="promptExportYear()">Export tax CSV</button>';if(!yrE.length)return h+'<div class="empty"><div class="em">📋</div><p>No received bonuses in '+taxYear+'</p></div>';yrE.forEach(e=>{h+='<div class="tax-c"><div class="tax-top"><div class="tax-bank">'+bankLogo(e.bank,true)+' '+esc(e.bank)+'</div><div class="tax-amt">'+fM(e.bonus)+'</div></div><div class="tax-dates">'+(e.opened?'<span>Open: '+fD(e.opened)+'</span>':'')+'<span>Received: '+fD(e.bonusRecd)+'</span>'+(e.closed?'<span>Closed: '+fD(e.closed)+'</span>':'<span>Account: Open</span>')+'</div></div>'});h+='<div class="sec" style="margin-top:16px">All-Time</div><div class="ytotal">'+fM(allA)+'</div>';return h}
+function rTax(){
+ const yrs=[];for(let y=2025;y<=2040;y++)yrs.push(y);
+ const audience=window.BT360?.audience||'personal';
+ const yrE=taxEntriesForYear(taxYear).filter(e=>!window.BT360||window.BT360.scope(e));
+ const yrA=yrE.reduce((sum,e)=>sum+Number(e.bonus||0),0);
+ let h=(window.BT360?.segments()||'')+'<div class="bt360-page-copy">Bonus income by year</div><div class="ybar bt360-tax-years">';
+ yrs.forEach(y=>{h+='<button class="ypill'+(taxYear===y?' on':'')+'" onclick="taxYear='+y+';R()">'+y+'</button>'});
+ h+='</div><section class="bt360-tax-summary"><span>'+audience.toUpperCase()+' · '+taxYear+'</span><strong>'+fM(yrA)+'</strong><small>'+yrE.length+' bonuses received · open and closed accounts</small></section>';
+ h+='<button class="export-btn bt360-primary" onclick="promptExportYear()">Export tax CSV</button><div class="sec">Received in '+taxYear+' <small>by date</small></div>';
+ if(!yrE.length)h+='<div class="bt360-empty">No received bonuses in '+taxYear+'.</div>';
+ yrE.slice().sort((a,b)=>String(b.bonusRecd||'').localeCompare(String(a.bonusRecd||''))).forEach(e=>{
+  h+='<div class="bt360-list-row bt360-tax-row">'+bankLogo(e.bank,true)+'<div class="bt360-grow"><b>'+esc(e.bank)+'</b><small>Received '+fD(e.bonusRecd)+' · '+(e.closed?'closed':'open')+'</small></div><strong>'+fM(e.bonus)+'</strong></div>';
+ });
+ return h+'<p class="bt360-footnote">Bank bonuses are usually reported as interest. Check your 1099 forms.</p>';
+}
 function dpSelect(key,label,options){return '<label class="research-filter">'+esc(label)+'<select aria-label="'+esc(label)+'" onchange="setDPFilter(\''+key+'\',this.value)">'+options.map(([v,t])=>'<option value="'+v+'"'+(dpFilters[key]===v?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select></label>'}
 function renderCommunityReport(item){
  const curated=(window.BTCommunityCatalog?.reports||[]).some(x=>x.id===item.id),link=safeExternalUrl(item.link),date=dpReportDate(item);
@@ -4263,6 +4285,7 @@ function rTips(){
  let h='<div class="research-shell dp-shell"><header class="research-intro dp-summary"><span class="research-eyebrow">COMMUNITY EXPERIENCE</span><h2>Bank datapoints</h2><p>A datapoint is someone’s report of what happened. Compare the account, method and date before using it.</p><button class="research-text-button" onclick="switchMainTab(\'storage\')">View saved bank terms →</button><button class="dp-add research-new-report" onclick="newDPReport()">+ Add a report</button></header>';
  h+='<input class="sinput dp-search" id="datapoints-search" aria-label="Search datapoints" placeholder="Search bank, method, or note..." value="'+esc(dpSearch)+'" oninput="updateViewSearch(\'datapoints\',this.value,this.selectionStart)">';
  h+='<div class="research-switch" role="group" aria-label="Report view">'+[['all','All reports'],['personal','My saved notes']].map(([v,t])=>'<button aria-pressed="'+(dpFilters.view===v)+'" onclick="setDPFilter(\'view\',\''+v+'\')">'+t+'</button>').join('')+'</div>';
+ h+='<div class="bt360-data-pills" role="group" aria-label="Datapoint outcomes">'+[['all','All reports'],['worked','Counted'],['failed','Didn\'t count']].map(([v,t])=>'<button type="button" aria-pressed="'+(dpFilters.result===v)+'" class="'+(dpFilters.result===v?'active':'')+'" onclick="setDPFilter(\'result\',\''+v+'\')">'+t+'</button>').join('')+'</div>';
  h+='<details class="research-filters"'+(dpFiltersOpen?' open':'')+'><summary>Filter reports</summary><div class="research-filter-grid">';
  h+=dpSelect('scope','Banks',[['all','All banks'],['mine','My tracked banks']]);
  h+=dpSelect('type','Account type',[['all','All account types'],['personal','Personal'],['business','Business']]);
@@ -4284,6 +4307,7 @@ function rTips(){
  }h+='</section>';
  });
  h+='<details class="research-help"><summary>Find more reports</summary><p>Open these sources to look for reports published after the catalog date.</p><a class="research-source" href="https://www.reddit.com/r/churning/search/?q=Bank%20Bonus%20Weekly&amp;restrict_sr=1&amp;sort=new" target="_blank" rel="noopener noreferrer">Reddit bank bonus threads ↗</a><a class="research-source" href="https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/" target="_blank" rel="noopener noreferrer">Doctor of Credit transfer reports ↗</a></details></div>';
+ h+='<p class="bt360-footnote">Reports never change your eligibility or requirements.</p>';
  return h;
 }
 function rPhone(){const rows=getPhoneBook();const q=(phoneSearch||'').toLowerCase().trim();const filtered=q?rows.filter(r=>r.bank.toLowerCase().includes(q)||r.personal.toLowerCase().includes(q)||r.business.toLowerCase().includes(q)):rows;let h='<div class="sec">Customer Service Numbers</div>';h+='<input class="sinput" placeholder="Search banks or phone numbers..." value="'+esc(phoneSearch||'')+'" oninput="phoneSearch=this.value;R()" id="phs">';h+='<button class="tc-btn" style="height:auto;padding:14px 16px;margin-bottom:10px" onclick="showPhoneAdd=!showPhoneAdd;R()">'+I.phone+'<span>'+(showPhoneAdd?'Hide add bank form':'Add new bank phone')+'</span></button>';if(showPhoneAdd){h+='<div class="ph-add-card"><div class="ph-top"><div><div class="nm">Add Bank</div><div class="ph-help">Create a phone entry manually with separate personal and business numbers.</div></div></div><div class="fg" style="margin-bottom:8px"><label>Bank Name</label><input id="ph_new_bank" class="ph-field" placeholder="e.g. Guaranty Bank"></div><div class="ph-edit-grid"><div><span class="ph-label">Personal</span><input id="ph_new_personal" class="ph-field" placeholder="1-800-000-0000"></div><div><span class="ph-label">Business</span><input id="ph_new_business" class="ph-field" placeholder="1-800-000-0000"></div></div><div class="ph-actions"><button class="ph-mini ph-save" onclick="addPhoneTabRow()">Save</button><button class="ph-mini ph-reset" onclick="showPhoneAdd=false;R()">Cancel</button></div></div>'}if(!filtered.length)return h+'<div class="empty"><div class="em">📞</div><p>No phone entries found.</p></div>';filtered.forEach((row,idx)=>{const bankEnc=encodeURIComponent(row.bank);const isCustom=!!row.custom&&!hasDefaultPhone(row.bank);h+='<div class="ph-card">'+bankLogo(row.bank,false)+'<div style="flex:1"><div class="ph-top"><div><div class="nm">'+esc(row.bank)+'</div><div class="ph-help">Edit and save personal/business numbers from this tab.</div></div>'+(isCustom?'<span class="tag b">Custom</span>':'')+'</div><div class="ph-edit-grid"><div><span class="ph-label">Personal</span><input id="ph_p_'+idx+'" class="ph-field" value="'+esc(row.personal||'')+'" placeholder="No personal number"></div><div><span class="ph-label">Business</span><input id="ph_b_'+idx+'" class="ph-field" value="'+esc(row.business||'')+'" placeholder="No business number"></div></div><div class="ph-actions"><button class="ph-mini ph-save" onclick="savePhoneTabRow(\''+bankEnc+'\','+idx+','+(isCustom?'true':'false')+')">Save</button>'+(hasDefaultPhone(row.bank)?'<button class="ph-mini ph-reset" onclick="resetPhoneTabRow(\''+bankEnc+'\')">Reset</button>':'<button class="ph-mini ph-del" onclick="deletePhoneTabRow(\''+bankEnc+'\')">Delete</button>')+(row.personal?'<a href="tel:'+esc(row.personal)+'" class="ph-mini ph-reset" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Call Personal</a>':'')+(row.business?'<a href="tel:'+esc(row.business)+'" class="ph-mini ph-reset" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Call Business</a>':'')+'</div></div></div>'});return h}
@@ -4730,7 +4754,7 @@ function doAddNew(){
   overwritePrompt=null;modal=null;expanded=next.id;tab='tracker';search='';showInlineAZ=false;inlineResult=null;
   R();
 }
-function getBackupStorageKeys(){return[SK,TK,DD_KEY,REQ_KEY,OFFER_HIST_KEY,TC_ARCHIVE_KEY,PHONE_KEY,DP_USER_KEY,COMMUNITY_DP_KEY,COMMUNITY_DP_SEED_KEY,PROFILE_EVT_KEY,BK_KEY,ANALYZER_MEMORY_KEY,ANALYZER_TRAINING_KEY,ANALYZER_RULES_KEY]}
+function getBackupStorageKeys(){return[SK,TK,DD_KEY,REQ_KEY,OFFER_HIST_KEY,TC_ARCHIVE_KEY,PHONE_KEY,DP_USER_KEY,COMMUNITY_DP_KEY,COMMUNITY_DP_SEED_KEY,PROFILE_EVT_KEY,BK_KEY,ANALYZER_MEMORY_KEY,ANALYZER_TRAINING_KEY,ANALYZER_RULES_KEY,'bt_hosting_usage_settings_v1']}
 function parseBackupStorageValue(raw){try{return JSON.parse(raw)}catch{return raw}}
 function storageValueForRestore(val){return typeof val==='string'?val:JSON.stringify(val)}
 function countBackupEntries(d){if(Array.isArray(d?.entries))return d.entries.length;const arr=backupArrayFromStorage(d,SK);return arr.length}
@@ -6447,24 +6471,26 @@ entries=sortE(entries);R();
 
   function rTracker(sorted){
     const archiveView=arguments[1]===true;
-    sorted=sorted.filter(e=>isArchivedTrackerEntry(e)===archiveView);
+    sorted=sorted.filter(e=>isArchivedTrackerEntry(e)===archiveView || (archiveView&&window.bt360ArchiveDetailId===e.id));
+    if(window.BT360)sorted=sorted.filter(e=>window.BT360.scope(e));
     const q=search.toLowerCase();
-    const f=q?sorted.filter(e=>(e.bank||'').toLowerCase().includes(q)||(e.id||'').toLowerCase().includes(q)):sorted;
+    const filtered=q?sorted.filter(e=>(e.bank||'').toLowerCase().includes(q)||(e.id||'').toLowerCase().includes(q)):sorted;
+    const f=!q&&expanded&&sorted.some(e=>e.id===expanded)?sorted.filter(e=>e.id===expanded):(window.BT360?.selectedStage&&!archiveView?filtered.filter(e=>lifecycleViewForEntry(e).code===window.BT360.selectedStage):filtered);
     let h='';
     const bkd=daysSinceBk();
 
     if(archiveView){
-      h+='<button type="button" class="btn-s" onclick="switchMainTab(\'tracker\')">Back to Tracker</button><div class="sec">Archived accounts</div><div class="sub">Completed, non-repeatable offers. Records, received bonuses and enrolled terms remain available for history, tax and recovery.</div>';
+      h+='<button type="button" class="btn-s" onclick="BT360.back()">Back to Archive</button><div class="sec">Archived accounts</div><div class="sub">Completed, non-repeatable offers. Records, received bonuses and enrolled terms remain available for history, tax and recovery.</div>';
     }else{
-    h += '<button id="bt-cloud-open" class="cloud-status-button" onclick="btOpenCloudBackup()">Cloud backup · Not enabled</button>';
-    h += '<div class="qbar tracker-quick-actions">';
+    if(!expanded)h+='<div class="bt360-search-tools"><button class="bt360-link" onclick="BT360.resetStage();R()">All accounts</button></div>';
+    if(!expanded)h += '<div class="qbar tracker-quick-actions">';
 
 
-    h += quickBtn('purple',I.quick,'Quick Add','showTemplates=!showTemplates;R()');
+    if(!expanded)h += quickBtn('purple',I.quick,'Quick Add','showTemplates=!showTemplates;R()');
 
-    h += '</div>';
+    if(!expanded)h += '</div>';
 
-    if(showTemplates){
+    if(showTemplates&&!expanded){
       h += '<div class="sec">Quick add templates</div><div class="tgrid">';
       TEMPLATES.forEach((t,i)=>{
         h += `<button class="tbtn" onclick="addFromTpl(${i})">${bankLogo(t.bank,true)}<div class="t-info"><div class="nm">${esc(t.bank)}</div><div class="bn">${fM(t.bonus)}</div></div></button>`;
@@ -6473,22 +6499,23 @@ entries=sortE(entries);R();
     }
 
     }
-    h += `<input class="sinput" type="text" id="${archiveView?'archive-search':'tracker-search'}" aria-label="${archiveView?'Search archived accounts':'Search accounts'}" placeholder="${archiveView?'Search archived accounts...':'Search accounts...'}" value="${esc(search)}" oninput="updateViewSearch('tracker',this.value,this.selectionStart)">`;
+    if(!expanded)h += `<input class="sinput" type="text" id="${archiveView?'archive-search':'tracker-search'}" aria-label="${archiveView?'Search archived accounts':'Search accounts'}" placeholder="${archiveView?'Search archived accounts...':'Search accounts...'}" value="${esc(search)}" oninput="updateViewSearch('tracker',this.value,this.selectionStart)">`;
     if(!archiveView){
-    h += `<button class="tc-btn" onclick="showAnalyzer=!showAnalyzer;R()">${I.spark}<span>${showAnalyzer?'Hide analyzer':'Review promo terms'}</span></button>`;
-    if(showAnalyzer) h += rAnalyzer();
-    h += renderActionCenter();
+    if(!expanded)h += `<button class="tc-btn" onclick="showAnalyzer=!showAnalyzer;R()">${I.spark}<span>${showAnalyzer?'Hide analyzer':'Review promo terms'}</span></button>`;
+    if(showAnalyzer&&!expanded) h += rAnalyzer();
+    h += '<details class="bt360-legacy-actions"'+(legacyActionsOpen?' open':'')+' ontoggle="legacyActionsOpen=this.open"><summary>All Action Center tools</summary>'+renderActionCenter()+'</details>';
     }
 
     if(!f.length){
       return h + (archiveView?'<div class="empty">'+(search?'No archived account matches your search.':'No completed, non-repeatable accounts to archive.')+'</div>':renderAccountEmptyState(search)) + rBankActions();
     }
 
-    if(!archiveView)h += '<div class="sec">Bonus Accounts</div>';
+    if(!archiveView&&!expanded)h += '<div class="sec bt360-account-title">Accounts</div>';
 
     f.forEach(e=>{
       const isX=expanded===e.id, nr=nextReopen(e), countdown=getCountdown(e), urg=getUrg(e);
-      h += `<div class="card u-${urg}" data-bt-entry-id="${profileSectionAttr(e.id)}">`;
+      if(isX&&window.BT360)h+=window.BT360.detailHead(e);
+      h += `<div class="card u-${urg}${isX?' bt360-detail-card':''}" data-bt-entry-id="${profileSectionAttr(e.id)}">`;
       h += `<div class="card-h" onclick="expanded=expanded==='${e.id}'?null:'${e.id}';R()">`;
       h += `<div class="card-logo-col">${bankLogo(e.bank)}${accountTypeChipHtml(e)}${e.churn?churnTagHtml(e.bank,e.churn):''}</div>`;
       h += `<div class="card-left"><div class="card-name">${esc(e.bank)}</div><div class="card-row">${statusBadgeHtml(e,countdown)}</div>${renderCardProgressLine(e)}</div>`;
@@ -6500,6 +6527,7 @@ entries=sortE(entries);R();
 
       if(isX){
         h += '<div class="card-exp">';
+        if(window.BT360)h+=window.BT360.detailPanels(e);
         h += '<button type="button" class="bonus-ai-open" aria-label="Ask AI about this bonus" onclick="btOpenBonusAI(\''+esc(e.id)+'\')">Ask AI</button>';
         h += renderBankProfileSummary(e);
         h += renderClosePlan(e);

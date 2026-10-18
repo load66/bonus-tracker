@@ -138,8 +138,11 @@ for token in ('conditional eligibility rules plus coupon/offer-enrollment cooldo
 app_source=text('app.js')
 if 'Tools Folder' in app_source or 'bt_tools_folder_btn' in app_source:
     fail('removed Tools popup/floating button is still present')
-for token in ("['tracker','bonuses','tax','tips','storage']","['Tracker','Bank Bonuses','Tax','Datapoints','T&C Archive']","function getChurnSuggestions","window.churnReadyDate"):
-    if token not in app_source: fail(f'direct T&C Archive / churn suggestion architecture missing: {token}')
+# v3.6.0 combines both account history and saved terms under Archive.
+for token in ("['tracker','bonuses','tax','tips','archive']","['Tracker','Bank Bonuses','Tax','Datapoints','Archive']","function getChurnSuggestions","window.churnReadyDate"):
+    if token not in app_source: fail(f'combined Archive / churn suggestion architecture missing: {token}')
+for token in ('window.BT360','archivePane','function archive(rows)','const eligibleInfo=e=>','function usageCard','function hostSettings'):
+    if token not in text('redesign-v360.js'): fail(f'v3.6.0 Archive/usage design missing: {token}')
 
 semantic_status=text('semantic-status.js')
 for token in ("const VER='3.4.74-status1'","const STAGES=Object.freeze","function lifecycleStageForEntry","ACTION_NEEDED:'ACTION_NEEDED'","IN_PROGRESS:'IN_PROGRESS'","AWAITING_BONUS:'AWAITING_BONUS'","HOLD_OPEN:'HOLD_OPEN'","READY_TO_CLOSE:'READY_TO_CLOSE'","COOLDOWN:'COOLDOWN'","ELIGIBLE:'ELIGIBLE'","window.btLifecycleStageForEntry=lifecycleStageForEntry"):
@@ -148,8 +151,10 @@ for forbidden in ("label:'Custom Timer'","label:'Deadline Active'"):
     if forbidden in semantic_status and "timerStatusMetaSemantic" not in semantic_status:
         fail(f'legacy timer status leaked into lifecycle UI architecture: {forbidden}')
 
-for token in ('function bonusPipelineMetrics','function renderActionCenter','Active bonuses','Action Center','function timelineRowsForEntry','Activity Timeline','renderCardProgressLine'):
+for token in ('function bonusPipelineMetrics','function renderActionCenter','Action Center','function timelineRowsForEntry','Activity Timeline','renderCardProgressLine'):
     if token not in app_source: fail(f'professional operations UI missing: {token}')
+for token in ('COLLECTED IN ','function hero(rows,year,metrics)','function tasks(rows)','function stages(rows)'):
+    if token not in text('redesign-v360.js'): fail(f'mockup operations presentation missing: {token}')
 feedback=text('ui-feedback.js')
 for token in ("const VER='3.4.74-feedback1'",'function notify','function confirmDialog','window.btConfirmDialog=confirmDialog'):
     if token not in feedback: fail(f'professional feedback surface missing: {token}')

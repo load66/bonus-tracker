@@ -43,6 +43,20 @@ async function exercise(name,engine,url){
   page.on('pageerror',err=>errors.push(String(err)));
   page.on('console',msg=>{if(msg.type()==='warning')warnings.push(msg.text());if(msg.type()==='error'&&!/Failed to load resource|net::ERR|404 \(Not Found\)/i.test(msg.text()))errors.push(msg.text())});
   await page.addInitScript(()=>{const RealDate=Date;const now=Date.parse('2026-10-11T17:00:00Z');window.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[now]))}static now(){return now}}});
+  // Never contact live owner-only Railway usage during synthetic auth tests.
+  // Install for every document so service-worker reloads remain fully mocked.
+  await page.addInitScript(()=>{
+    const previousFetch=window.fetch.bind(window);
+    window.fetch=(input,options={})=>{
+      const url=String(typeof input==='string'?input:input?.url||input);
+      if(url.endsWith('/api/bonus-tracker/usage'))return Promise.resolve(new Response(JSON.stringify({
+        month:'2026-10',checkedAt:'2026-10-11T17:00:00Z',
+        railway:{status:'not_configured',services:[],costSoFar:null,projectedMonthEnd:null},
+        r2:{status:'unavailable',usedBytes:null,freeBytes:10000000000}
+      }),{status:200,headers:{'Content-Type':'application/json'}}));
+      return previousFetch(input,options);
+    };
+  });
   await page.addInitScript(()=>{
     const native=window.fetch.bind(window);window.__availabilityPriorityRequests=[];
     window.fetch=async function(input,options={}){
@@ -56,6 +70,7 @@ async function exercise(name,engine,url){
     };
   });
   const button=text=>page.getByRole('button',{name:text,exact:true});
+  const openAdvancedActions=async()=>{const detail=page.locator('details.bt360-legacy-actions');if(await detail.count()&&!await detail.evaluate(el=>el.open))await detail.locator('summary').click();};
   const wait=async fn=>{await page.waitForFunction(fn,{},{timeout:15000})};
   // Startup wrappers and controller renders are scheduled through 1.8 seconds.
   // Wait beyond that initialization window after navigation; retain all assertions.
@@ -87,6 +102,11 @@ async function exercise(name,engine,url){
   try{
     await page.goto(url);await settleStartup();
     await page.getByText('No accounts yet',{exact:true}).waitFor();
+    const beforeNotifications=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
+    await button('Notifications').click();
+    check('header bell opens read-only notification center',await page.getByRole('dialog',{name:'Notification center'}).isVisible()&&await page.getByText('No current tasks needing attention.').isVisible());
+    await page.getByRole('button',{name:'Close notifications'}).click();
+    check('notification center leaves records unchanged',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,beforeNotifications));
     check('Action Center defaults collapsed',await page.locator('#bt-action-center-toggle').getAttribute('aria-expanded')==='false'&&!await page.locator('#bt-action-center-body').isVisible());
     await page.waitForFunction(()=>window.__btFullRegressionReport&&!window.__btFullRegressionReport.pending&&window.__btFullRegressionReport.total===8);
     const diagnostics=await page.evaluate(()=>window.btRunFullRegressionTests({force:true}));
@@ -125,13 +145,13 @@ async function exercise(name,engine,url){
     await wait(()=>JSON.parse(localStorage.getItem('bt_e_v4')).length===1);
     check('90-day deadline is exact',await page.evaluate(()=>reqDeadline(entries[0]))==='2026-05-01');
     const beforeDisclosure=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
-    await page.locator('#bt-action-center-toggle').click();
+    await openAdvancedActions();await page.locator('#bt-action-center-toggle').click();
     check('header expands Action Center',await page.locator('#bt-action-center-toggle').getAttribute('aria-expanded')==='true'&&await page.locator('.ops-action-row').first().isVisible());
     await page.evaluate(()=>R());
     check('Action Center remains open through render',await page.locator('#bt-action-center-body').isVisible());
-    await page.locator('#bt-action-center-toggle').press('Enter');
+    await openAdvancedActions();await page.locator('#bt-action-center-toggle').press('Enter');
     check('keyboard collapses Action Center',!await page.locator('#bt-action-center-body').isVisible());
-    await page.locator('#bt-action-center-toggle').press('Space');
+    await openAdvancedActions();await page.locator('#bt-action-center-toggle').press('Space');
     check('keyboard expands Action Center without record changes',await page.locator('#bt-action-center-body').isVisible()&&await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===beforeDisclosure);
     check('compact action tiles omit duplicate explanations',await page.locator('.ops-action-center .ops-action-explanation').count()===0&&await page.locator('.ops-action-center .ops-date-proof').count()===0);
     await page.locator('.ops-action-row').first().click();
@@ -142,7 +162,7 @@ async function exercise(name,engine,url){
     const id=(await record()).id;
     await page.reload();await settleStartup();check('reload preserves identity and notes',(await record()).id===id&&(await record()).notes===payload.entry.notes);
     check('refresh resets Action Center to collapsed',await page.locator('#bt-action-center-toggle').getAttribute('aria-expanded')==='false');
-    await page.locator('#bt-action-center-toggle').click();
+    await openAdvancedActions();await page.locator('#bt-action-center-toggle').click();
     await edit();await button('3 Fees & Close').click();
     await page.getByPlaceholder('Personal notes; terms review does not overwrite them').fill('Keep <img src=x onerror=alert(1)> & "quotes"');
     await button('4 Review').click();await button('💾 Save changes').click();
@@ -169,7 +189,7 @@ async function exercise(name,engine,url){
     const taxCSV=await fs.readFile(taxFile,'utf8');
     check('tax CSV downloads with correct amount and dates',taxCSV.includes('E2E Verification Bank')&&taxCSV.includes('"325"')&&taxCSV.includes('Apr 15, 2026'));
     await button('Tracker').click();
-    await page.locator('#bt-data-menu>summary').click();
+    await button('Settings').click();
     check('data tools are in the header menu',await page.getByRole('button',{name:'Export backup file',exact:false}).isVisible()&&await page.getByRole('button',{name:'Reset this device',exact:false}).isVisible()&&await page.locator('.tracker-quick-actions button').count()===1);
     const backupEvent=page.waitForEvent('download');await page.getByRole('button',{name:'Export backup file',exact:false}).click();
     const backupFile=path.join(output,name+'-backup.json');await (await backupEvent).saveAs(backupFile);
@@ -179,24 +199,24 @@ async function exercise(name,engine,url){
     check('eligibility uses payout plus exact months and buffer',await page.evaluate(()=>btOfficialEligibilityDate(entries[0])==='2027-04-15'&&nextReopen(entries[0])==='2027-04-17'));
     await button('Undo').click();check('undo restores account and notes',!(await record()).closed&&(await record()).notes===backup.entries[0].notes);
     await close();
-    await page.locator('#bt-data-menu>summary').click();
-    const chooser=page.waitForEvent('filechooser');await page.getByRole('button',{name:'Import backup file',exact:false}).click();await (await chooser).setFiles(backupFile);
+    await button('Settings').click();
+    const chooser=page.waitForEvent('filechooser');await page.getByRole('button',{name:'Restore from file',exact:false}).click();await (await chooser).setFiles(backupFile);
     const safetyDownload=page.waitForEvent('download');await button('Restore Backup').click();await safetyDownload;
     await page.getByRole('heading',{name:'Restore Complete'}).waitFor();await button('Confirm').click();
     check('restore recovers open state and saved details',!(await record()).closed&&(await record()).id===id&&(await record()).notes===backup.entries[0].notes);
     // Exercise the real archive menu without changing financial records.
     await page.evaluate(()=>{entries.push({id:'archive-e2e',bank:'Archived E2E Bank',closed:'2026-10-01',bonusRecd:'2026-09-01',bonus:100,churnable:false,churnability:'not-repeatable',notes:'Preserved archive note',history:[],customTimers:[],checklist:[]});R()});
     check('closed nonrepeatable account hidden from tracker',await page.locator('[data-bt-entry-id="archive-e2e"]').count()===0);
-    await page.locator('#bt-data-menu>summary').click();await page.getByRole('button',{name:'Archived accounts',exact:false}).click();
+    await button('Archive').click();await page.locator('details.bt360-archived-tools > summary').click();
     check('archive menu reveals retained account',await page.locator('[data-bt-entry-id="archive-e2e"]').count()===1&&await page.locator('[data-bt-entry-id="'+id+'"]').count()===0);
     await page.locator('#archive-search').fill('Archived E2E');
     check('archive search remains focused after rerender',await page.locator('#archive-search').evaluate(el=>el===document.activeElement));
     await page.locator('[data-bt-entry-id="archive-e2e"] .card-h').click();
     check('archive preserves expanded history',await page.locator('[data-bt-entry-id="archive-e2e"] .card-exp').count()===1);
-    await page.getByRole('button',{name:'Back to Tracker',exact:true}).click();
+    await page.getByRole('button',{name:'Back to Archive',exact:true}).click();await button('Tracker').click();
     check('archive navigation retains records',await page.evaluate(()=>entries.some(e=>e.id==='archive-e2e'&&e.notes==='Preserved archive note')));
     await page.evaluate(()=>{entries=entries.filter(e=>e.id!=='archive-e2e');R()});
-    await button('Datapoints').click();check('successful method appears in datapoints',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));await button('T&C Archive').click();check('terms archive contains original promotion',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));await button('Tracker').click();
+    await button('Datapoints').click();check('successful method appears in datapoints',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));await button('Archive').click();await button('Saved terms').click();check('terms archive contains original promotion',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));await button('Tracker').click();
     await page.getByPlaceholder('Search accounts...').fill('Does not exist');await page.getByText('No matching accounts',{exact:true}).waitFor();await page.getByPlaceholder('Search accounts...').fill('');
     check('search keeps stored record',(await record()).id===id);
     await page.setViewportSize({width:390,height:844});
@@ -330,6 +350,9 @@ async function exercise(name,engine,url){
     await page.evaluate(prior=>{const e=entries[0];for(const f of prior){if(f.present)e[f.key]=f.value;else delete e[f.key];}},feeFields);
     await page.getByRole('button',{name:'Close AI',exact:true}).click();
     check('asking AI preserves all saved account data',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
+    // Cloud protection remains on the Tracker hero after entering and leaving a focused detail.
+    await page.getByRole('button',{name:'Back to accounts'}).click();
+    check('returning from account detail reveals cloud backup controls',await page.locator('#bt-cloud-open').isVisible());
     // Test cloud recovery in two independent browser profiles; no production records are contacted.
     await page.evaluate(()=>{
       window.__cloudFixture={objects:{},calls:[],failure:false};
@@ -422,11 +445,15 @@ async function exercise(name,engine,url){
     // Restore native fetch before verifying real service-worker offline navigation.
     await page.evaluate(()=>{window.fetch=window.__bonusAITest.nativeFetch;delete window.__bonusAITest;});
 
+    // Reopen focused detail after testing cloud protection on the Tracker hero.
+    await page.locator('.card-h').first().click();
     const lifecycle=page.locator('.profile-section[data-section-key="lifecycle"]').first();
     if(!await lifecycle.evaluate(e=>e.open))await lifecycle.locator('summary').click();
     await button('2025').click();
     await button('2026').click();
     check('expanded Lifecycle & Tasks survives year navigation',await page.locator('.profile-section[data-section-key="lifecycle"]').first().evaluate(e=>e.open));
+    // The focused detail intentionally hides the Tracker list search; navigate back first.
+    await page.getByRole('button',{name:'Back to accounts'}).click();
     await page.getByPlaceholder('Search accounts...').pressSequentially('E2E');
     check('tracker search keeps cursor through consecutive keystrokes',await page.getByPlaceholder('Search accounts...').inputValue()==='E2E'&&await page.evaluate(()=>document.activeElement.id==='tracker-search'));
     await page.getByPlaceholder('Search accounts...').fill('');
@@ -459,7 +486,7 @@ async function exercise(name,engine,url){
     check('report editor footer stays within mobile viewport',await page.locator('.research-editor-footer').evaluate(e=>{const r=e.getBoundingClientRect();return r.bottom<=innerHeight+1&&r.top>0}));
     await button('Save report').click();
     check('source report save preserves activity date',await page.evaluate(()=>loadCommunityDatapoints().some(x=>x.bank==='E2E Report Bank'&&x.eventDate==='2026-09-30'&&x.outcome==='worked')));
-    await button('T&C Archive').click();
+    await button('Archive').click();await button('Saved terms').click();
     await page.getByPlaceholder('Search stored T&C...').pressSequentially('E2E');
     check('terms search keeps focus while typing',await page.getByPlaceholder('Search stored T&C...').inputValue()==='E2E'&&await page.evaluate(()=>document.activeElement.id==='terms-search'));
     const termsBank=page.locator('.archive-bank').first();
@@ -475,45 +502,44 @@ async function exercise(name,engine,url){
 
     await button('Tracker').click();
     await page.evaluate(()=>{
-      window.__dashboardMetrics=bonusPipelineMetrics;
-      bonusPipelineMetrics=(...args)=>({...window.__dashboardMetrics(...args),active:575,collected:5100,openCount:2,cooldownCount:16,readyCloseCount:0,actionCount:0});R();
+      window.__dashboardEntries=entries;
+      entries=[...entries,{id:'synthetic-dashboard-amount',bank:'Visual Overflow Fixture',accountType:'personal',bonus:1234567,opened:'2026-01-02',bonusRecd:'2026-10-01',closed:'',customTimers:[],checklist:[]}];R();
     });
     for(const width of [320,375,390,430,1024]){
       await page.setViewportSize({width,height:844});
-      const dashboardSummary=await page.locator('.ops-hero .hero-note').evaluate(e=>({
-        text:e.textContent,scrollWidth:e.scrollWidth,clientWidth:e.clientWidth,
+      const expected=await page.evaluate(()=>fM(entries.filter(e=>e.accountType==='personal'&&e.bonusRecd&&e.bonusRecd.slice(0,4)==='2026').reduce((a,e)=>a+Number(e.bonus||0),0)));
+      const summary=await page.locator('.bt360-hero').evaluate(e=>({
+        text:e.innerText,scrollWidth:e.scrollWidth,clientWidth:e.clientWidth,
         scrollHeight:e.scrollHeight,clientHeight:e.clientHeight,
-        whiteSpace:getComputedStyle(e).whiteSpace,
-        width:e.getBoundingClientRect().width,visible:getComputedStyle(e).display!=='none'
+        bars:e.querySelectorAll('.bt360-monthbars>span').length,
+        amount:e.querySelector('.bt360-hero-amount')?.innerText,
+        amountFits:(()=>{const a=e.querySelector('.bt360-hero-amount');return a&&a.scrollWidth<=a.clientWidth+1})()
       }));
-      const dashboardFits=dashboardSummary.text==='$5,100 collected in 2026 • 2 open • 16 cooling down'
-        &&dashboardSummary.scrollWidth<=dashboardSummary.clientWidth+1
-        &&dashboardSummary.scrollHeight<=dashboardSummary.clientHeight+1
-        &&dashboardSummary.whiteSpace==='normal';
-      if(!dashboardFits)console.error(name+' dashboard summary details at '+width+'px: '+JSON.stringify(dashboardSummary));
+      const dashboardFits=summary.text.includes('COLLECTED IN 2026')&&summary.amount===expected
+        &&summary.bars===12&&summary.scrollWidth<=summary.clientWidth+1&&summary.amountFits;
+      if(!dashboardFits)console.error(name+' collected-year hero at '+width+'px: '+JSON.stringify(summary));
       check('complete dashboard summary at '+width+'px',dashboardFits);
       check('release version stays inside header at '+width+'px',await page.locator('.hdr .app-version').evaluate(e=>{
         const r=e.getBoundingClientRect(),h=e.closest('.hdr').getBoundingClientRect();
         return e.textContent==='v'+window.BT_APP_VERSION&&r.width>0&&r.height>0&&r.top>=h.top&&r.bottom<=h.bottom&&r.left>=0&&r.right<=innerWidth&&getComputedStyle(e).position==='static';
       }));
-      check('dashboard text and chips fit at '+width+'px',await page.locator('.ops-hero').evaluate(e=>
-        e.scrollWidth<=e.clientWidth+1&&[...e.querySelectorAll('.hero-kicker,.hero-chip')].every(n=>n.scrollWidth<=n.clientWidth+1&&n.scrollHeight<=n.clientHeight+1)));
+      check('dashboard text and chips fit at '+width+'px',await page.locator('.bt360-hero').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&[...e.querySelectorAll('.bt360-kicker,.bt360-backup')].every(n=>n.scrollWidth<=n.clientWidth+1)));
       if(width===430)await page.screenshot({path:path.join(output,name+'-dashboard-header.png')});
     }
-    await page.evaluate(()=>{bonusPipelineMetrics=window.__dashboardMetrics;delete window.__dashboardMetrics;R();});
+    await page.evaluate(()=>{entries=window.__dashboardEntries;delete window.__dashboardEntries;R();});
     check('Finance tab is absent',await page.getByRole('button',{name:'Finances',exact:true}).count()===0);
     check('Tracker bank activity review is absent',await page.getByRole('button',{name:'Review bank activity',exact:true}).count()===0);
     check('removed Finance URLs return safe Tracker state',await page.evaluate(()=>{switchMainTab('finances');return document.querySelector('[aria-label="Tracker"][aria-current="page"]')!==null}));
     for(const width of [320,375,390]){
       await page.setViewportSize({width,height:844});
-      for(const name of ['Tracker','Bank Bonuses','Tax','Datapoints','T&C Archive']){
+      for(const name of ['Tracker','Bank Bonuses','Tax','Datapoints','Archive']){
         await button(name).click();
         check(name+' fits '+width+'px mobile width',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
         check(name+' navigation starts at the top at '+width+'px',await page.locator('.scroll').evaluate(e=>e.scrollTop===0));
         check(name+' shows version at '+width+'px',await page.locator('.hdr .app-version').isVisible());
         if(name==='Tracker'){
-          check('action tile buttons retain mobile touch area at '+width+'px',await page.locator('.ops-action-tile .ops-next-action').evaluateAll(rows=>rows.length>0&&rows.every(e=>e.getBoundingClientRect().height>=44)));
-          check('compact tiles fit at '+width+'px',await page.locator('.ops-action-tile').evaluateAll(rows=>rows.every(e=>e.scrollWidth<=e.clientWidth+1)));
+          check('action tile buttons retain mobile touch area at '+width+'px',await page.locator('.bt360-featured .bt360-actions button').evaluateAll(rows=>rows.length>0&&rows.every(e=>e.getBoundingClientRect().height>=44)));
+          check('compact tiles fit at '+width+'px',await page.locator('.bt360-featured').evaluateAll(rows=>rows.every(e=>e.scrollWidth<=e.clientWidth+1)));
         }
       }
     }
@@ -541,7 +567,7 @@ async function exercise(name,engine,url){
     const mobileLifecycle=page.locator('.profile-section[data-section-key="lifecycle"]').first();
     if(await mobileLifecycle.evaluate(e=>e.open))await mobileLifecycle.locator('summary').click();
     await page.evaluate(()=>{undoState=null;clearTimeout(undoTimer);R()});
-    await page.locator('.ops-action-center').scrollIntoViewIfNeeded();
+    await openAdvancedActions();await page.locator('.ops-action-center').scrollIntoViewIfNeeded();
     await page.screenshot({path:path.join(output,name+'-mobile-verified.png')});
     // Long saved requirements must remain readable without changing account storage.
     await page.evaluate(()=>{
@@ -565,6 +591,7 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>{
       entries.push({...entries[0],id:'E2E-TILE-02',bank:'E2E Citi',bonus:325,reqMet:'2026-08-10',payoutTimingText:'Bonus expected after requirements are completed',customTimers:[]});R();
     });
+    await openAdvancedActions();
     check('mobile Action Center uses two compact columns',await page.locator('.ops-action-tile').evaluateAll(rows=>rows.length===2&&Math.abs(rows[0].getBoundingClientRect().top-rows[1].getBoundingClientRect().top)<2));
     check('every Action Center tile shows specific next action',await page.locator('.ops-action-tile').evaluateAll(rows=>rows.every(e=>{const s=e.querySelector('.ops-tile-status');return s&&s.textContent.trim()&&!/d left|Date needs review/.test(s.textContent)})));
     check('recurring and payout tasks remain distinct',await page.locator('.ops-tile-status').allTextContents().then(rows=>rows.some(t=>t.includes('Establish $500+ monthly qualified direct deposits'))&&rows.includes('Confirm bonus payment')));
@@ -574,10 +601,10 @@ async function exercise(name,engine,url){
     await button('Review deposits').click();
     check('deposit action opens exact task and preserves data',await page.locator('.ops-task-current').isVisible()&&(await page.locator('.ops-task-current').innerText()).includes('$500+')&&await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===taskStorage);
     check('one task review does not open whole-offer completion',await page.evaluate(()=>!reqPrompt&&!rcvPrompt));
-    await page.locator('#bt-action-center-toggle').click();
+    await openAdvancedActions();await page.locator('#bt-action-center-toggle').click();
     check('collapsed Action Center remains compact on mobile',await page.locator('.ops-action-center').evaluate(e=>e.getBoundingClientRect().height<100)&&!await page.locator('.ops-action-list').isVisible());
     await page.locator('.ops-action-center').screenshot({path:path.join(output,name+'-action-center-collapsed.png')});
-    await page.locator('#bt-action-center-toggle').click();
+    await openAdvancedActions();await page.locator('#bt-action-center-toggle').click();
     await page.evaluate(()=>{entries=window.__cardTextOriginal;delete window.__cardTextOriginal;R();});
     await page.setViewportSize({width:390,height:844});
     check('card layout leaves saved records unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
@@ -603,6 +630,8 @@ async function exercise(name,engine,url){
     },require('./fixtures/financial-rules.cjs').reviewFixture());
     for(const [key,value] of Object.entries(reviewProbe))check('financial v2 browser '+key,value);
     await button('Cancel').click();
+    // Quick Add belongs to the Tracker list, not the focused account detail.
+    await page.getByRole('button',{name:'Back to accounts'}).click();
     const fileSource=require('./fixtures/financial-rules.cjs').reviewFixture();
     await importEntry({kind:'BonusTrackerEntry',schemaVersion:3,verification:{promoSourceUrl:fileSource.promoSourceUrl,feeScheduleSourceUrl:fileSource.feeScheduleSourceUrl,termsVerifiedAt:fileSource.termsVerifiedAt},entry:fileSource});
     check('actual v3 file chooser reaches review after confirmation',await page.getByRole('heading',{name:'Add account',exact:true}).isVisible());
@@ -651,6 +680,37 @@ async function exercise(name,engine,url){
     check(name==='webkit'?'network-loss reload preserves account':'offline reload preserves account',(await record()).id===id);
     serverUnavailable=false;await context.setOffline(false);
     check('AI login persists across browser reload',await page.evaluate(()=>BTBonusAuth.connected()));
+
+    // Synthetic-only owner usage response: assert the live Settings visual at
+    // 320/375/390/430 and desktop without contacting Railway or R2.
+    const bankingBeforeHosting=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
+    const syntheticUsage={month:'2026-10',checkedAt:'2026-10-17T19:10:00Z',railway:{
+      status:'ok',costSoFar:2.31,projectedMonthEnd:4.50,
+      services:[{name:'api',costSoFar:1.25,avgMemoryGb:0.235},{name:'leaps-alpaca-live',costSoFar:1.06,avgMemoryGb:0.318}]
+    },r2:{status:'ok',usedBytes:240000000,freeBytes:10000000000}};
+    // Stub fetch inside the page because a controlling service worker may bypass
+    // Playwright routing (especially in WebKit). No real provider request is sent.
+    await page.evaluate(fixture=>{
+      window.__hostingPreviousFetch=window.fetch;
+      window.fetch=async (input,options)=>String(typeof input==='string'?input:input.url).endsWith('/api/bonus-tracker/usage')
+        ?new Response(JSON.stringify(fixture),{status:200,headers:{'Content-Type':'application/json'}})
+        :window.__hostingPreviousFetch(input,options);
+    },syntheticUsage);
+    await button('Settings').click();
+    await page.evaluate(async()=>BT360.refreshUsage(true));
+    await page.getByText('Near limit',{exact:true}).waitFor();
+    check('hosting usage card uses mocked nonzero Railway estimate',(await page.locator('.bt360-sheet').innerText()).includes('HOSTING & USAGE')&&
+      (await page.locator('.bt360-sheet').innerText()).includes('leaps-alpaca-live'));
+    for(const width of [320,375,390,430,1024]){
+      await page.setViewportSize({width,height:844});
+      check('hosting and Settings fit '+width+'px',await page.locator('.bt360-sheet').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&[...e.querySelectorAll('.bt360-panel,.bt360-usage-top,.bt360-usage-r2')].every(n=>n.scrollWidth<=n.clientWidth+1)));
+      if(width===390)await page.screenshot({path:path.join(output,name+'-hosting-settings-390.png')});
+    }
+    check('hosting usage views leave bank records unchanged',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,bankingBeforeHosting));
+    await page.getByRole('button',{name:'Close settings'}).click();
+    await page.evaluate(()=>{window.fetch=window.__hostingPreviousFetch;delete window.__hostingPreviousFetch});
+    await page.setViewportSize({width:1280,height:900});
+
     await page.evaluate(()=>BTBonusAuth.disconnect());
     check('AI sign-out removes remembered session',await page.evaluate(()=>!localStorage.getItem('bonus-ai-auth')&&!BTBonusAuth.connected()));
     check('no uncaught application errors',errors.length===0);
