@@ -6467,24 +6467,26 @@ entries=sortE(entries);R();
 
   function rTracker(sorted){
     const archiveView=arguments[1]===true;
-    sorted=sorted.filter(e=>isArchivedTrackerEntry(e)===archiveView);
+    sorted=sorted.filter(e=>isArchivedTrackerEntry(e)===archiveView || (archiveView&&window.bt360ArchiveDetailId===e.id));
+    if(window.BT360)sorted=sorted.filter(e=>window.BT360.scope(e));
     const q=search.toLowerCase();
-    const f=q?sorted.filter(e=>(e.bank||'').toLowerCase().includes(q)||(e.id||'').toLowerCase().includes(q)):sorted;
+    const filtered=q?sorted.filter(e=>(e.bank||'').toLowerCase().includes(q)||(e.id||'').toLowerCase().includes(q)):sorted;
+    const f=expanded&&sorted.some(e=>e.id===expanded)?sorted.filter(e=>e.id===expanded):(window.BT360?.selectedStage&&!archiveView?filtered.filter(e=>lifecycleViewForEntry(e).code===window.BT360.selectedStage):filtered);
     let h='';
     const bkd=daysSinceBk();
 
     if(archiveView){
-      h+='<button type="button" class="btn-s" onclick="switchMainTab(\'tracker\')">Back to Tracker</button><div class="sec">Archived accounts</div><div class="sub">Completed, non-repeatable offers. Records, received bonuses and enrolled terms remain available for history, tax and recovery.</div>';
+      h+='<button type="button" class="btn-s" onclick="BT360.back()">Back to Archive</button><div class="sec">Archived accounts</div><div class="sub">Completed, non-repeatable offers. Records, received bonuses and enrolled terms remain available for history, tax and recovery.</div>';
     }else{
-    h += '<button id="bt-cloud-open" class="cloud-status-button" onclick="btOpenCloudBackup()">Cloud backup · Not enabled</button>';
-    h += '<div class="qbar tracker-quick-actions">';
+    if(!expanded)h+='<div class="bt360-search-tools"><button class="bt360-link" onclick="BT360.resetStage();R()">All accounts</button></div>';
+    if(!expanded)h += '<div class="qbar tracker-quick-actions">';
 
 
-    h += quickBtn('purple',I.quick,'Quick Add','showTemplates=!showTemplates;R()');
+    if(!expanded)h += quickBtn('purple',I.quick,'Quick Add','showTemplates=!showTemplates;R()');
 
-    h += '</div>';
+    if(!expanded)h += '</div>';
 
-    if(showTemplates){
+    if(showTemplates&&!expanded){
       h += '<div class="sec">Quick add templates</div><div class="tgrid">';
       TEMPLATES.forEach((t,i)=>{
         h += `<button class="tbtn" onclick="addFromTpl(${i})">${bankLogo(t.bank,true)}<div class="t-info"><div class="nm">${esc(t.bank)}</div><div class="bn">${fM(t.bonus)}</div></div></button>`;
@@ -6493,22 +6495,23 @@ entries=sortE(entries);R();
     }
 
     }
-    h += `<input class="sinput" type="text" id="${archiveView?'archive-search':'tracker-search'}" aria-label="${archiveView?'Search archived accounts':'Search accounts'}" placeholder="${archiveView?'Search archived accounts...':'Search accounts...'}" value="${esc(search)}" oninput="updateViewSearch('tracker',this.value,this.selectionStart)">`;
+    if(!expanded)h += `<input class="sinput" type="text" id="${archiveView?'archive-search':'tracker-search'}" aria-label="${archiveView?'Search archived accounts':'Search accounts'}" placeholder="${archiveView?'Search archived accounts...':'Search accounts...'}" value="${esc(search)}" oninput="updateViewSearch('tracker',this.value,this.selectionStart)">`;
     if(!archiveView){
-    h += `<button class="tc-btn" onclick="showAnalyzer=!showAnalyzer;R()">${I.spark}<span>${showAnalyzer?'Hide analyzer':'Review promo terms'}</span></button>`;
-    if(showAnalyzer) h += rAnalyzer();
-    h += renderActionCenter();
+    if(!expanded)h += `<button class="tc-btn" onclick="showAnalyzer=!showAnalyzer;R()">${I.spark}<span>${showAnalyzer?'Hide analyzer':'Review promo terms'}</span></button>`;
+    if(showAnalyzer&&!expanded) h += rAnalyzer();
+    if(!expanded)h += '<details class="bt360-legacy-actions"><summary>All Action Center tools</summary>'+renderActionCenter()+'</details>';
     }
 
     if(!f.length){
       return h + (archiveView?'<div class="empty">'+(search?'No archived account matches your search.':'No completed, non-repeatable accounts to archive.')+'</div>':renderAccountEmptyState(search)) + rBankActions();
     }
 
-    if(!archiveView)h += '<div class="sec">Bonus Accounts</div>';
+    if(!archiveView&&!expanded)h += '<div class="sec bt360-account-title">Accounts</div>';
 
     f.forEach(e=>{
       const isX=expanded===e.id, nr=nextReopen(e), countdown=getCountdown(e), urg=getUrg(e);
-      h += `<div class="card u-${urg}" data-bt-entry-id="${profileSectionAttr(e.id)}">`;
+      if(isX&&window.BT360)h+=window.BT360.detailHead(e);
+      h += `<div class="card u-${urg}${isX?' bt360-detail-card':''}" data-bt-entry-id="${profileSectionAttr(e.id)}">`;
       h += `<div class="card-h" onclick="expanded=expanded==='${e.id}'?null:'${e.id}';R()">`;
       h += `<div class="card-logo-col">${bankLogo(e.bank)}${accountTypeChipHtml(e)}${e.churn?churnTagHtml(e.bank,e.churn):''}</div>`;
       h += `<div class="card-left"><div class="card-name">${esc(e.bank)}</div><div class="card-row">${statusBadgeHtml(e,countdown)}</div>${renderCardProgressLine(e)}</div>`;
@@ -6520,6 +6523,7 @@ entries=sortE(entries);R();
 
       if(isX){
         h += '<div class="card-exp">';
+        if(window.BT360)h+=window.BT360.detailPanels(e);
         h += '<button type="button" class="bonus-ai-open" aria-label="Ask AI about this bonus" onclick="btOpenBonusAI(\''+esc(e.id)+'\')">Ask AI</button>';
         h += renderBankProfileSummary(e);
         h += renderClosePlan(e);
