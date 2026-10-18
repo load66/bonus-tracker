@@ -16,7 +16,7 @@ function run(area){
  let failed=false;
  for(const file of groups[area]){
   const start=Date.now(),python=file.endsWith('.py');
-  const result=spawnSync(python?'python3':process.execPath,[...(python?['-B']:[]),'tests/'+file],{cwd:path.resolve(__dirname,'..'),encoding:'utf8',timeout:60000,env:process.env});
+  const result=spawnSync(python?(process.env.BT_TEST_PYTHON||'python3'):process.execPath,[...(python?['-B']:[]),'tests/'+file],{cwd:path.resolve(__dirname,'..'),encoding:'utf8',timeout:60000,env:process.env});
   process.stdout.write(result.stdout||'');process.stderr.write(result.stderr||'');
   console.log(file+': '+(Date.now()-start)+' ms');
   if(result.error||result.status!==0){failed=true;console.error(file+' failed'+(result.error?' or timed out: '+result.error.message:''))}

@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.2 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.3 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt360_audience_session',noticeKey='bt360_notice_session';
@@ -75,19 +75,19 @@ function eligibleSoon(rows){
 }
 function home(rows,year,metrics){if(!usageData&&!usageLoading&&window.BTBonusAuth?.connected?.())setTimeout(()=>refreshUsage(),0);return segments()+usageBanner()+hero(rows,year,metrics)+stages(rows)+tasks(rows)+eligibleSoon(rows)}
 function detailHead(e){
- const s=stage(e),enrolled=e.offerEnrollmentDate||e.couponEnrollmentDate||'';
- return '<div class="bt360-detail-header"><div class="bt360-detail-bar"><button onclick="BT360.back()" aria-label="Back to accounts">‹</button><span>'+safe(audience==='business'?'Business':'Personal')+' · '+safe(s.label)+'</span><button onclick="openBankActions('+arg(e.id)+')" aria-label="More account actions">•••</button></div><div class="bt360-detail-identity">'+bankLogo(e.bank,true)+'<div class="bt360-grow"><h2>'+safe(e.bank)+'</h2><p>Opened '+safe(date(e.opened))+(enrolled?' · enrolled '+safe(date(enrolled)):'')+'</p></div><strong>'+amount(e.bonus)+'</strong></div></div>'
+ const s=stage(e),enrolled=e.bonusRecd||'';
+ return '<div class="bt360-detail-header"><div class="bt360-detail-bar"><button onclick="BT360.back()" aria-label="Back to accounts">‹</button><span>'+safe(normalizeAccountType(e.accountType)==='business'?'Business':'Personal')+' · '+safe(s.label)+'</span><button onclick="openBankActions('+arg(e.id)+')" aria-label="More account actions">•••</button></div><div class="bt360-detail-identity">'+bankLogo(e.bank,true)+'<div class="bt360-grow"><h2>'+safe(e.bank)+'</h2><p>Opened '+safe(date(e.opened))+(enrolled?' · Received '+safe(date(enrolled)):'')+'</p></div><strong>'+amount(e.bonus)+'</strong></div></div>'
 }
 function detailPanels(e){
  const s=stage(e),ready=s.code==='READY_TO_CLOSE';
  const milestones=[['Opened',!!e.opened],['Tasks',!!e.reqMet],['Payout',!!e.bonusRecd],['Hold',!!(e.bonusRecd&&(ready||e.closed))],['Close',!!e.closed]];
- let h='<div class="bt360-steps" aria-label="Account lifecycle">'+milestones.map(([label,done])=>'<span class="'+(done?'done':'')+'">'+label+'</span>').join('')+'</div>';
+ const current=e.closed?-1:ready?4:!e.opened?0:!e.reqMet?1:!e.bonusRecd?2:3;
+ let h='<div class="bt360-steps" aria-label="Account lifecycle">'+milestones.map(([label,done],i)=>'<span class="'+(i===current?'current':done?'done':'')+'"'+(i===current?' aria-current="step"':'')+'>'+label+'</span>').join('')+'</div>';
  if(ready){
  const check=closeReadiness(e);
  h+=panel('Close checks',check.items.map(item=>'<div class="bt360-check '+(item.ok?'done':item.level==='danger'?'danger':'unknown')+'"><span>'+(item.ok?'✓':'!')+'</span><div><b>'+safe(item.label)+'</b><small>'+safe(item.detail||'Needs review')+'</small></div></div>').join(''));
- const bankPhone=getPhoneBook().find(row=>{try{return bankIdentity(row.bank).family===bankIdentity(e.bank).family}catch{return row.bank===e.bank}});
- const phone=bankPhone?.[audience]||'';
- if(phone)h+=panel('CALL TO CLOSE','<p class="bt360-muted">'+safe(audience==='business'?'Business':'Personal')+' banking line · saved for '+safe(e.bank)+'</p><a class="bt360-primary bt360-call" href="tel:'+safe(phone.replace(/[^+\d]/g,''))+'">☎ '+safe(phone)+'</a><small class="bt360-muted">Shown only when ready to close.</small>');
+ const bankPhone=phoneRow(e),type=normalizeAccountType(e.accountType),phone=e.phoneNum||bankPhone?.[type]||'';
+ h+=panel('CALL TO CLOSE','<p class="bt360-muted">'+safe(type==='business'?'Business':'Personal')+' banking line · '+safe(e.bank)+'</p>'+(phone?'<a class="bt360-primary bt360-call" href="tel:'+safe(phone.replace(/[^+\d]/g,''))+'">☎ '+safe(phone)+'</a>':'<button class="bt360-primary bt360-call" onclick="BT360.editPhone('+arg(e.id)+')">Add bank phone number</button>'));
  const ei=eligibleInfo(e);h+=panel('After closing',infoRow('Eligible again',ei?date(ei.eligible):'Needs review',ei?.label||'Eligibility terms not verified')+(ei?.more?.length>1?ei.more.map(r=>infoRow('Also checked',date(r.eligibleDate),r.period?.value+' '+r.period?.unit+' from '+window.BTEligibilityGate.anchorLabel(r.basis))).join(''):''));
  }else{
  const checks=Array.isArray(e.checklist)?e.checklist:[];
@@ -100,13 +100,24 @@ function detailPanels(e){
  h+=panel('Key dates',infoRow('Safe to close',safeClose?date(safeClose):'Needs review')+infoRow('Eligible again',ei?date(ei.eligible):'Needs review',ei?.label||'No verified rule/anchor'));
  }
  h+='<button class="bt360-source" onclick="BT360.showTerms('+arg(e.bank)+')">'+(e.termsVerifiedAt?'Official terms verified '+safe(date(String(e.termsVerifiedAt).slice(0,10))):'Terms need review')+' · View saved source ›</button>';
+ return h
+}
+function detailFooter(e){
+ const ready=stage(e).code==='READY_TO_CLOSE';
  let action='Record deposit',command='openBankActions('+arg(e.id)+')';
  if(!e.reqMet){action='Confirm requirements';command='openReqMet('+arg(e.id)+')'}
  else if(!e.bonusRecd){action='Confirm received';command='openRcv('+arg(e.id)+')'}
  else if(ready){action='Mark account closed';command='startCloseFlow('+arg(e.id)+',\'actual\')'}
  else {action='Review close checks';command='openBankActions('+arg(e.id)+')'}
- h+='<div class="bt360-detail-footer"><button onclick="btOpenBonusAI('+arg(e.id)+')">Ask AI</button><button class="bt360-primary" aria-label="'+safe(action+' for '+e.bank)+'" onclick="'+command+'">'+action+'</button></div>';
- return h
+ return '<div class="bt360-detail-footer"><button aria-label="Ask AI about this bonus" onclick="btOpenBonusAI('+arg(e.id)+')">Ask AI</button><button class="bt360-primary" aria-label="'+safe(action+' for '+e.bank)+'" onclick="'+command+'">'+action+'</button></div>';
+}
+function phoneRow(e){return getPhoneBook().find(row=>{if(row.bank===e.bank)return true;try{const family=bankIdentity(e.bank).family;return !!family&&bankIdentity(row.bank).family===family}catch{return false}})}
+function editPhone(id){
+ const e=entries.find(x=>x.id===id);if(!e)return;
+ const row=phoneRow(e),type=normalizeAccountType(e.accountType);
+ phoneSearch=row?.bank||e.bank;showPhoneAdd=!row;openPhonebook();
+ if(!row){const field=document.getElementById('ph_new_bank');if(field)field.value=e.bank}
+ document.getElementById(row?(type==='business'?'ph_b_0':'ph_p_0'):'ph_new_'+type)?.focus();
 }
 function showTerms(bank){archivePane='saved';storageSearch=String(bank||'');expanded=null;tab='archive';R()}
 function back(){expanded=null;window.bt360ArchiveDetailId=null;R();const el=document.querySelector('.scroll');if(el)el.scrollTop=0}
@@ -124,10 +135,10 @@ function archive(rows){
  const row=(x,offer)=>'<div class="bt360-list-row">'+bankLogo(x.e.bank,true)+'<span class="bt360-grow"><b>'+safe(x.e.bank)+'</b><small>'+(x.info?safe(date(x.info.eligible)+' · '+x.info.label):'Needs review · verify eligibility rules')+'</small></span>'+(offer?'<button class="bt360-chip positive" onclick="BT360.viewOffers('+arg(x.e.bank)+')">View offers</button>':'<button class="bt360-chip" onclick="BT360.openArchived('+arg(x.e.id)+')">'+(x.info?Math.max(0,dB(td(),x.info.eligible))+' days':'Review')+'</button>')+'</div>';
  h+=panel('Eligible now',ready.length?'<div class="bt360-list">'+ready.map(x=>row(x,true)).join('')+'</div>':'<p class="bt360-muted">No verified eligibility dates reached.</p>');
  h+=panel('Cooling down',cooling.length?'<div class="bt360-list">'+cooling.map(x=>row(x,false)).join('')+'</div>':'<p class="bt360-muted">No accounts cooling down.</p>','<span class="bt360-subtitle">soonest first</span>');
- h+='<details class="bt360-archived-tools"'+(legacyArchiveOpen?' open':'')+' ontoggle="BT360.setArchiveToolsOpen(this.open)"><summary>Completed, non-repeatable accounts · edit and review</summary>'+window.rTracker(rows,true)+'</details>';
+ h+='<details class="bt360-archived-tools"'+(legacyArchiveOpen?' open':'')+' ontoggle="BT360.setArchiveToolsOpen(this.open,this)"><summary>Completed, non-repeatable accounts · edit and review</summary>'+window.rTracker(rows,true)+'</details>';
  return h;
 }
-function setArchiveToolsOpen(value){legacyArchiveOpen=!!value}
+function setArchiveToolsOpen(value,element){if(element&&!element.isConnected)return;legacyArchiveOpen=!!value}
 function openArchived(id){const e=entries.find(x=>x.id===id);if(!e)return;expanded=id;if(isArchivedTrackerEntry(e)){window.bt360ArchiveDetailId=id;tab='archive'}else{tab='tracker'}R()}
 function viewOffers(bank){expanded=null;tab='bonuses';R();const v=document.getElementById('radar-search');if(v&&typeof window.btRadarSearch==='function')window.btRadarSearch(bank)}
 const HOST_SETTINGS='bt_hosting_usage_settings_v1';
@@ -222,10 +233,10 @@ async function backUpNow(){
 function settings(){
  const toggles=[['deadlines','Deadlines','3 and 1 day before'],['payouts','Payouts and close dates','When ready'],['eligible','Eligible again','7 days before and on the day']];
  const buttons=toggles.map(([k,label,description])=>'<button class="bt360-settings-row" role="switch" aria-checked="'+noticePrefs[k]+'" onclick="BT360.setNotice(\''+k+'\')"><span><b>'+label+'</b><small>'+description+'</small></span><i class="bt360-toggle '+(noticePrefs[k]?'checked':'')+'"></i></button>').join('');
- return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.2</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
+ return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.3</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
  cloudSettingsCard()+
  usageCard()+
- panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.2. Push delivery is not active.</p>')+
+ panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.3. Push delivery is not active.</p>')+
  panel('Data','<button class="bt360-settings-row" onclick="BT360.closeSettings();exportBackup()">Export backup file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.closeSettings();importBackup()">Restore from file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.openPhonebook()">Bank phone numbers <span>›</span></button>')+
  '<button class="bt360-reset" onclick="BT360.closeSettings();resetAllData()">Reset this device <small>Two confirmations and a safety backup</small></button></section></div>';
 }
@@ -243,6 +254,6 @@ function openPhonebook(){closeSettings();window.bt360PhonebookOpen=true;R()}
 function closePhonebook(){window.bt360PhonebookOpen=false;R()}
 function openSettings(){window.bt360SettingsOpen=true;R();refreshUsage()}
 function closeSettings(){window.bt360SettingsOpen=false;R()}
-window.BT360={get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,segments,setAudience,setStage,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,back,archive,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
+window.BT360={get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,segments,setAudience,setStage,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,detailFooter,editPhone,back,archive,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
 if(typeof R==='function')R();
 })();

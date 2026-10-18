@@ -78,9 +78,15 @@ jobs:
           TZ: America/Chicago
 
   browsers:
-    name: Browser checks / Chromium
+    name: Browser checks / ${{ matrix.browser }}
     needs: [plan, units]
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: ${{ fromJSON(needs.plan.outputs.browsers) }}
     uses: ./.github/workflows/verified-product-browser.yml
+    with:
+      browser: ${{ matrix.browser }}
 
   verify:
     name: Verify latest release
