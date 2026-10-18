@@ -247,7 +247,7 @@ async function exercise(name,engine,url){
     await page.screenshot({path:path.join(output,name+'-v363-bonuses-390.png')});
     check('offer title is compact without unverified amount review badge',await page.locator('.radar-card h3').filter({hasText:'Wells Fargo Checking · $325'}).count()===1&&!await page.locator('.bt360-offer-title').filter({hasText:'Needs review'}).count());
     check('offers group by verified tracker review status without assuming personal eligibility',await page.locator('.radar-group-heading').count()>0&&(await page.getByText('About sources',{exact:true}).count())===1);
-    check('bank feed renders escaped discovery title',(await page.locator('.radar-card img').count())===0&&(await page.locator('.radar-card').filter({hasText:'Synthetic Checking'}).innerText()).includes('<img'));
+    check('bank feed preserves an escaped source title without injecting HTML',(await page.locator('.radar-card img').count())===0&&(await page.locator('.radar-card').filter({hasText:'Synthetic Checking'}).locator('.radar-original-title p').textContent()).includes('<img'));
     check('bank feed warns when source check is stale',await page.locator('.bt362-offer-stale').isVisible());
     await page.locator('.bt362-about-sources summary').click();
     check('bank bonus tab fits mobile viewport',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
