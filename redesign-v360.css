@@ -524,3 +524,20 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
 /* v3.6.14: fee schedule is an optional source link, not an inferred verification badge. */
 .bt3614-fee-source{display:inline-block;margin-top:4px;min-height:28px;text-decoration:none}
 .bt3613-fee-line .bt3611-full-terms p{white-space:pre-wrap;overflow-wrap:anywhere}
+
+
+/* Owner-only immutable historical T&C cloud drawer. */
+.bt-terms-cloud-backdrop{position:fixed;inset:0;z-index:31000;background:rgba(0,0,0,.82);display:flex;align-items:flex-end;justify-content:center}
+.bt-terms-cloud-sheet{background:#12141C;border:1px solid #343746;border-radius:20px 20px 0 0;color:#ECEFF6;width:min(100%,740px);max-height:calc(100dvh - 40px);padding:20px 18px calc(20px + env(safe-area-inset-bottom));overflow:auto;overscroll-behavior:contain}
+.bt-terms-cloud-sheet header{display:flex;gap:12px;align-items:center;justify-content:space-between}
+.bt-terms-cloud-sheet header h2{font-size:19px;margin:0}
+.bt-terms-cloud-sheet header button{background:#242832;border:0;border-radius:99px;color:inherit;width:40px;height:40px;font-size:25px}
+.bt-terms-cloud-sheet p{font-size:12px;line-height:1.6;color:#ADB4C5;margin:14px 0}
+.bt-terms-cloud-actions{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+.bt-terms-cloud-actions button,.bt-terms-cloud-row{border-radius:10px;padding:12px;background:#1D2935;border:1px solid #344659;color:#92E7C8;text-align:left;font-size:12px;min-height:43px}
+.bt-terms-cloud-actions button:disabled,.bt-terms-cloud-row:disabled{opacity:.55}
+#bt-terms-cloud-list{display:flex;flex-direction:column;gap:7px;margin-top:12px}
+#bt-terms-cloud-list p{margin:0 0 5px}
+#bt-terms-cloud-detail{margin-top:17px}
+#bt-terms-cloud-detail h3{font-size:14px}
+#bt-terms-cloud-detail pre{white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;font:11px/1.5 ui-monospace,monospace;background:#0A0C11;padding:12px;border:1px solid #333845;border-radius:10px;max-height:40vh;overflow:auto}
