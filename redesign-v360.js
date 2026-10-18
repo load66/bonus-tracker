@@ -314,6 +314,14 @@ function detailPanels(e){
   const rows=timerRows(e);
   h+=panel('Timers',(rows||'<p class="bt360-muted">No custom timers set.</p>')+'<button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'timer\')">+ Add timer</button>');
  }
+ // Saved checklist work must remain accessible after payout without cluttering clean ready-to-close records.
+ if(ready&&!closed&&Array.isArray(e.checklist)&&e.checklist.length){
+  const existing=requirementRows(e);
+  h+=panel('Requirements',existing.html+'<div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></div>');
+  h+=panel('Fees & waivers',feeDetail(e));
+  const reminders=timerRows(e);
+  h+=panel('Timers',(reminders||'<p class="bt360-muted">No custom timers set.</p>')+'<button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'timer\')">+ Add timer</button>');
+ }
  if(!closed&&(e.dataPoint||e.completeBonusText||e.notes))h+='<details class="bt366-offer-notes"><summary>Offer notes</summary><p>'+safe([e.dataPoint,e.completeBonusText,e.notes].filter(Boolean).join('\n\n'))+'</p></details>';
  if(ready||code==='HOLD_OPEN'||code==='BONUS_RECEIVED'){
   const check=closeReadiness(e);
