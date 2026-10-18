@@ -346,7 +346,7 @@ async function exercise(name,engine,url){
     check('zero month says No bonuses',await page.locator('.bt367-month-detail').innerText().then(t=>t.includes('No bonuses')));
     await page.getByRole('button',{name:'Close month details'}).click();
     await page.getByRole('button',{name:'Business',exact:true}).click();
-    check('Business filter updates monthly chart using Tax data',await page.getByRole('button',{name:'April: $700, 1 bonuses'}).count()===1
+    check('Business filter updates monthly chart using Tax data',await page.getByRole('button',{name:'April: $700, 1 bonus'}).count()===1
       &&await page.evaluate(()=>BT360.heroMonthData(entries,2026)[3].total===700));
     await page.getByRole('button',{name:'Personal',exact:true}).click();
     await page.locator('#bt362-year').selectOption('2025');
