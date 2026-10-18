@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.30: researched import playbook and no-fee closure clarity.
+// Version 3.6.31: close status, eligibility prerequisite, and fee-evidence safety.
 
-const V = 'bt-v3.6.30-import1';
+const V = 'bt-v3.6.31-decision1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',

@@ -64,16 +64,23 @@ assert(sandbox.nextReopen(unresolvedStructured)==='','Structured unresolved T&C 
 assert(sandbox.nextReopen({...sixMonths,churnPeriodValue:180,churnPeriodUnit:'days'})==='','Mismatched 180-day period passed a 6-month T&C rule');
 
 const current={...verified,closed:'',eligibilityEvidenceText:'New checking customers only. '+evidence};
-assert(sandbox.btApplicationReadyDate(current)==='','Application-ready date exists even though current-customer terms require closure');
-assert(sandbox.btApplicationReadyDate({...current,closed:'2027-08-10'})==='2027-08-16','Required early closure incorrectly moved the safe eligibility date');
-assert(sandbox.btApplicationReadyDate({...current,closed:'2027-08-25'})==='2027-08-25','Later required closure was not respected');
+assert(sandbox.btApplicationReadyDate(current)==='2027-08-16','New-customer wording hid a verified cooldown');
+const mustClose={...current,eligibilityEvidenceText:current.eligibilityEvidenceText+' You must close the account before reapplying.'};
+assert(sandbox.btApplicationReadyDate(mustClose)==='','Application-ready date exists even though terms require closure');
+assert(sandbox.btApplicationReadyDate({...mustClose,closed:'2027-08-10'})==='2027-08-16','Required early closure incorrectly moved the safe eligibility date');
+assert(sandbox.btApplicationReadyDate({...mustClose,closed:'2027-08-25'})==='2027-08-25','Later required closure was not respected');
 
 assert(sandbox.entries[0].churnBasis==='bonus'&&sandbox.entries[0].sourceEligibilityBasis==='bonus-received'&&sandbox.entries[0].churnBufferDays===2&&sandbox.entries[0].eligibilityVerified===true,'Existing source-backed entry was not normalized correctly');
 assert(sandbox.entries[0].churnTrackingPolicy==='source-bonus-received-plus-2-day-buffer','Source tracking policy was not persisted');
 assert(sandbox.entries[1].churnBufferDays===0,'Non-repeatable saved entry retained a churn buffer');
 assert(/12 months after bonus payout received/.test(sandbox.btFutureEligibilityText(sandbox.entries[0]))&&/2-day safety buffer/.test(sandbox.btFutureEligibilityText(sandbox.entries[0])),'Future eligibility text does not disclose exact source basis + safety buffer');
 assert(/T&C verification required/.test(sandbox.btFutureEligibilityText({churn:'1',churnable:true,churnability:'repeatable'})),'Missing T&C evidence is not surfaced for review');
-assert(saved.length>0,'Existing-entry normalization was not persisted');
+assert(saved.length===0,'Page load must not rewrite stored eligibility stamps');
+
+const pastVerified={bonusRecd:'2024-08-14',closed:'2024-08-18',churn:'1',churnPeriodValue:12,churnPeriodUnit:'months',churnable:true,churnability:'repeatable',sourceEligibilityBasis:'bonus-received',eligibilityEvidenceText:evidence,eligibilityEvidenceSource:'official-promotion-terms'};
+assert(sandbox.btVerifiedApplicationReached(pastVerified)===true,'A verified application-ready date in the past was not treated as reached');
+const legacyPassed={closed:'2020-01-01',churn:'1',churnable:true,churnability:'repeatable'};
+assert(sandbox.daysLeft(legacyPassed)===0&&sandbox.btVerifiedApplicationReached(legacyPassed)===false,'A passed legacy churn estimate was treated as verified eligibility');
 
 const workflow=fs.readFileSync('.github/workflows/close-rules.yml','utf8');
 const index=fs.readFileSync('index.html','utf8');

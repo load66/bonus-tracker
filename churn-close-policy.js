@@ -1,4 +1,4 @@
-/* Release 3.6.30 presentation-only; preserved canonical rules and calculations. */
+/* Release 3.6.31 decision safety; eligibility stamps are not written on page load. */
 /* BonusTracker v3.5.2 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
 (function(){
   'use strict';
@@ -126,7 +126,7 @@
   }
   function basisDate(e){
     const b=sourceBasis(e);
-    if(b==='enrollment')return e?.couponEnrollmentDate||e?.offerEnrollmentDate||e?.opened||'';
+    if(b==='enrollment')return e?.couponEnrollmentDate||e?.offerEnrollmentDate||'';
     return b==='offer'?(e?.bonusOfferReceived||e?.offerReceivedDate||''):b==='ownership-ended'?(e?.closed||''):b==='bonus'?(e?.bonusRecd||''):b==='opened'?(e?.opened||''):b==='closed'?(e?.closed||''):'';
   }
   function official(e){
@@ -154,6 +154,14 @@
     return'';
   }
   function ready(e){return next(e)}
+  function verifiedApplicationReached(e){
+    const readyDate=applicationReady(e);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(readyDate||'')))return false;
+    let today='';
+    try{if(typeof td==='function')today=td()}catch{}
+    try{if(!today&&typeof window.td==='function')today=window.td()}catch{}
+    return /^\d{4}-\d{2}-\d{2}$/.test(String(today||''))&&readyDate<=today;
+  }
   function left(e){
     const d=ready(e);if(!d)return null;
     try{if(typeof dB==='function'&&typeof td==='function')return Math.max(0,dB(td(),d))}catch{}
@@ -167,6 +175,7 @@
     window.nextReopen=next;window.churnReadyDate=ready;window.daysLeft=left;
     window.btOfficialEligibilityDate=official;
     window.btApplicationReadyDate=applicationReady;
+    window.btVerifiedApplicationReached=verifiedApplicationReached;
     window.btChurnSafetyBufferDays=SAFETY_BUFFER_DAYS;
     window.btEligibilityBasisFor=sourceBasis;
     window.btEligibilityVerification=verification;
@@ -219,10 +228,7 @@
     window.btFutureEligibilityText=eligibilityText;
     window.btChurnCloseDatePolicyVersion=VER;
     try{
-      if(typeof entries!=='undefined'&&Array.isArray(entries)){
-        entries=entries.map(normalize);
-        if(typeof sv==='function'&&typeof SK!=='undefined')sv(SK,entries);
-      }
+      if(typeof entries!=='undefined'&&Array.isArray(entries))entries=entries.map(normalize);
     }catch{}
   }
   install();setTimeout(install,300);setTimeout(install,1400);

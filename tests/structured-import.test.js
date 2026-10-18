@@ -74,7 +74,7 @@ console.log('Structured import passed: strict intake, full review projection, ac
 const review=require('./fixtures/financial-rules.cjs').reviewFixture();const reviewPayload={kind:'BonusTrackerEntry',schemaVersion:3,verification:{promoSourceUrl:review.promoSourceUrl,feeScheduleSourceUrl:review.feeScheduleSourceUrl,termsVerifiedAt:review.termsVerifiedAt},entry:review};
 sandbox.btStageEntryPayload(reviewPayload);const reviewed=sandbox.collectModalEntryData();
 assert.equal(reviewed.financialRules.closure.earlyCloseFee,null);assert.equal(reviewed.closeRuleBasis,'manual');assert.equal(reviewed.closeRestrictionType,'manual-review');assert.equal(sandbox.BTFinancialRules.validate(reviewed).ok,true);
-const afterPayout={...reviewed,reqMet:'2026-04-01',bonusRecd:'2026-04-15',monthlyFeeChecked:true};assert.equal(sandbox.closeReadiness(afterPayout).cls,'danger');assert(!sandbox.safeCloseDate(afterPayout),'Manual review cannot show a safe close date');assert(sandbox.BTBonusAI.contextFor(afterPayout).some(f=>f.id==='financialrules'&&/fee unconfirmed/.test(f.text)));
+const afterPayout={...reviewed,reqMet:'2026-04-01',bonusRecd:'2026-04-15',monthlyFeeChecked:true};assert.equal(sandbox.closeReadiness(afterPayout).cls,'danger');assert(!sandbox.safeCloseDate(afterPayout),'Manual review cannot show a safe close date');assert.notEqual(sandbox.status(afterPayout),'SAFE TO CLOSE','Unresolved closure fee must not be marked safe to close');assert(sandbox.BTBonusAI.contextFor(afterPayout).some(f=>f.id==='financialrules'&&/fee unconfirmed/.test(f.text)));
 assert.throws(()=>sandbox.btParseEntryFileText(JSON.stringify({kind:'BonusTrackerResearchDraft',importable:false,bank:'Synthetic'}),'draft.json'),/review draft/);
 
 (async()=>{

@@ -179,6 +179,14 @@
     if(/current-tc|official|verified-json|analyzer-reviewed/.test(d))return d;
     return'';
   }
+  function explicitClosePrerequisite(text){
+    return splitEvidence(text).some(s=>{
+      const q=stripAbbreviationDots(s);
+      return /\bmust\s+(?:also\s+)?(?:be\s+)?clos(?:e|ed|ing)\b/i.test(q)
+        || /\bclos(?:e|ed|ing)\b[^.;]{0,80}\bbefore\b[^.;]{0,60}\b(?:re)?apply/i.test(q)
+        || /\bbefore\b[^.;]{0,50}\b(?:re)?apply[^.;]{0,80}\bclos(?:e|ed|ing)\b/i.test(q);
+    });
+  }
   function currentCustomerRestriction(text){
     const sentence=splitEvidence(clean(text)).find(s=>{
       const q=stripAbbreviationDots(s);
@@ -290,7 +298,7 @@
       basis:single?.basis||'',period:single?.period||null,
       evidenceSentence:single?.evidenceSentence||'',evidenceText:single?.evidenceText||evidenceText(e),
       evidenceSource:single?.evidenceSource||evidenceSource(e),
-      currentCustomerExcluded:current.excluded,currentCustomerSentence:current.sentence,mustCloseBeforeReapply:current.excluded
+      currentCustomerExcluded:current.excluded,currentCustomerSentence:current.sentence,mustCloseBeforeReapply:explicitClosePrerequisite(scope)
     };
   }
   function applyPeriod(date,period,addD,addM){
@@ -403,7 +411,7 @@
 
   return{
     VERSION,SAFETY_BUFFER_DAYS,normalizeBasis,normalizeUnit,normalizeCondition,legacyBasisKey,decision,periodFromEntry,periodFromRule,extractDurations,equivalentPeriod,
-    evidenceText,evidenceSource,rawTerms,currentCustomerRestriction,discoverTimedRestrictions,ruleConditionState,normalizedRules,validate,stamp,officialEligibilityDates,
+    evidenceText,evidenceSource,rawTerms,currentCustomerRestriction,explicitClosePrerequisite,discoverTimedRestrictions,ruleConditionState,normalizedRules,validate,stamp,officialEligibilityDates,
     officialEligibilityDate,controllingRule,safeEligibilityDate,applicationReadyDate,periodLabel,anchorLabel,summary
   };
 });

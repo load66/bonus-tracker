@@ -107,11 +107,23 @@ const hold={bank:'Hold Bank',bonus:250,bonusRecd:'2026-08-10',_rawStatus:'WAITIN
 assert(stage(hold).code==='HOLD_OPEN','Waiting-to-close state did not map to Hold Open');
 const ready={bank:'Ready Bank',bonus:250,bonusRecd:'2026-08-10',_rawStatus:'SAFE TO CLOSE',customTimers:[]};
 assert(stage(ready).code==='READY_TO_CLOSE','Safe-to-close state did not map to Ready to Close');
+sandbox.BTFinancialRules={validate:()=>({ok:true,mode:'structured',rules:{closure:{restrictionType:'manual-review',earlyCloseFee:null}}})};
+const unresolved={...ready,bank:'Unresolved Fee Bank'};
+assert(stage(unresolved).code==='BONUS_RECEIVED','Unconfirmed early-close fee was shown as Ready to Close');
+delete sandbox.BTFinancialRules;
 
 const cooldown={bank:'Cooldown Bank',closed:'2026-08-01',_daysLeft:120,_churnReadyDate:'2026-12-08'};
 assert(stage(cooldown).code==='COOLDOWN','Closed repeatable bank did not map to Cooldown');
 const eligible={bank:'Eligible Bank',closed:'2026-08-01',_daysLeft:-1,_churnReadyDate:'2026-08-09'};
 assert(stage(eligible).code==='ELIGIBLE','Closed repeatable entry past its eligibility date did not map to Eligible');
+sandbox.btVerifiedApplicationReached=()=>false;
+const estimate={bank:'Estimate Bank',closed:'2026-08-01',_daysLeft:0,_churnReadyDate:'2026-08-01'};
+assert(stage(estimate).code==='COOLDOWN','Passed unverified eligibility estimate was labeled Eligible');
+assert(stage(estimate).support==='Estimate passed · eligibility not verified','Passed estimate support still implied eligibility: '+stage(estimate).support);
+sandbox.btVerifiedApplicationReached=()=>true;
+const verifiedReady={bank:'Verified Ready Bank',closed:'2026-08-01',_daysLeft:40,_churnReadyDate:'2026-12-08'};
+assert(stage(verifiedReady).code==='ELIGIBLE','Verified application-ready date was not labeled Eligible');
+delete sandbox.btVerifiedApplicationReached;
 const archived={bank:'Archive Bank',closed:'2026-08-01',_nonRepeatable:true};
 assert(stage(archived).code==='ARCHIVED','Non-repeatable closed bank did not map to Archived');
 
