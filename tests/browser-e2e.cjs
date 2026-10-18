@@ -257,6 +257,15 @@ async function exercise(name,engine,url){
     await page.getByRole('button',{name:/^Confirm received/}).click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('OK').click();
     check('bonus receipt updates close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
     check('ready-to-close highlights Close milestone',await page.locator('.bt360-steps span.current').innerText()==='Close');
+    check('close-ready prioritizes checks and keeps historical work available below',
+      await page.locator('.bt360-detail-card .bt360-panel-title h3').first().innerText()==='Close checks'
+      &&await page.locator('.bt3611-ready-extras').count()===1
+      &&!(await page.locator('.bt3611-ready-extras').evaluate(e=>e.open)));
+    await page.getByRole('button',{name:'More account actions'}).click();
+    await page.locator('.bt-ba-mini').filter({hasText:'Activity'}).click();
+    check('Activity opens from the header menu without a detail section',await page.getByRole('dialog',{name:'Activity'}).isVisible()
+      &&await page.locator('.bt360-detail-card').getByText('Activity & Analysis',{exact:true}).count()===0);
+    await page.getByRole('button',{name:'Close activity'}).click();
     check('missing phone offers bank-specific editor only when ready',await page.getByRole('button',{name:'Add bank phone number'}).isVisible());
     const sticky=await page.evaluate(()=>{
       const bar=document.querySelector('.bt360-detail-footer').getBoundingClientRect();
