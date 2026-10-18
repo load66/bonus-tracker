@@ -13,7 +13,7 @@
   function paint(){
     const cfg=read(),state=protection(),date=cfg.lastAt?new Date(cfg.lastAt).toLocaleString():'No verified cloud backup yet';
     const button=document.getElementById('bt-cloud-open');
-    if(button){button.dataset.state=state.tone;button.innerHTML='<span class="cloud-top"><strong>Cloud protection</strong><span class="cloud-pill"></span></span><span class="cloud-dashboard-summary"></span><span class="cloud-dashboard-date"></span>';button.querySelector('.cloud-pill').textContent='Automatic backup '+(cfg.enabled?'ON':'OFF');button.querySelector('.cloud-dashboard-summary').textContent=state.title;button.querySelector('.cloud-dashboard-date').textContent='Last verified cloud backup: '+date;button.setAttribute('aria-label','Cloud backup. Automatic backup '+(cfg.enabled?'on':'off')+'. '+state.title+'. Last verified cloud backup: '+date);}
+    if(button){const short=state.tone==='protected'||state.tone==='success'?'Protected':state.tone==='off'?'Backup off':state.tone==='danger'?'Backup alert':'Syncing';button.dataset.state=state.tone;button.innerHTML='<span class="bt360-cloud-icon" aria-hidden="true">'+(state.tone==='protected'||state.tone==='success'?'✓':'!')+'</span><span class="cloud-dashboard-summary"></span>';button.querySelector('.cloud-dashboard-summary').textContent=short;button.setAttribute('aria-label','Cloud backup. Automatic backup '+(cfg.enabled?'on':'off')+'. '+state.title+'. Last verified cloud backup: '+date);}
     if(!panel)return;
     const card=panel.querySelector('#cloud-protection');card.dataset.state=state.tone;
     panel.querySelector('#cloud-state').textContent=state.title;panel.querySelector('#cloud-summary').textContent=state.detail;
