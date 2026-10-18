@@ -10,9 +10,12 @@ const FIELDS=[
  'closeRuleBasis','minHoldDays','earlyCloseFee','expirationDateText','payoutTimingText',
  'requiredDaysText','eligibilityText','sourceEligibilityBasis','churnPeriodValue',
  'churnPeriodUnit','couponEnrollmentDate','offerEnrollmentDate','closeRestrictionType',
- 'closeBufferDays','tcSourceId','tcSourceUpdatedAt'
+ 'closeBufferDays','closeFeeCountdownDays','closedWithNegativeBalance','eligibilityScope',
+ 'eligibilityAnchorEvidenceText','reapplicationAction','monthlyFeeFrequency','monthlyFeeWaiverType',
+ 'monthlyFeeWaiverAmountText','monthlyFeeNoMonthlyServiceFee','tcSourceId','tcSourceUpdatedAt'
 ];
-const numeric=new Set(['bonus','schemaVersion','minHoldDays','earlyCloseFee','churnPeriodValue','closeBufferDays']);
+const numeric=new Set(['bonus','schemaVersion','minHoldDays','earlyCloseFee','churnPeriodValue','closeBufferDays','closeFeeCountdownDays']);
+const booleans=new Set(['closedWithNegativeBalance','monthlyFeeNoMonthlyServiceFee']);
 function snapshot(entry){
  if(!entry||typeof entry!=='object'||!String(entry.bank||'').trim())return null;
  const id=String(entry.entryId||entry.id||'').trim();
@@ -24,13 +27,14 @@ function snapshot(entry){
   if(key==='accountType')value=/^(?:b|business)$/i.test(String(entry.accountType||''))?'business':'personal';
   if(key==='tcSourceRaw')value=entry.tcSourceRaw||entry.analysis?.rawText||entry.analyzedTC||'';
   if(key==='source'&&!value)value='saved-account';
-  if(key==='capturedAt'&&!value)value=entry.termsVerifiedAt||entry.opened||'';
   if(key==='financialRules'&&(!value||typeof value!=='object'||Array.isArray(value)))continue;
   if(key==='eligibilityRules'&&!Array.isArray(value))continue;
   if(numeric.has(key)){
    if(value===undefined||value===null||value==='')continue;
    const n=Number(value);if(!Number.isFinite(n))continue;
    value=n;
+  }else if(booleans.has(key)){
+   if(typeof value!=='boolean')continue;
   }else if(key!=='financialRules'&&key!=='eligibilityRules'){
    if(value===undefined||value===null)continue;
    value=String(value);
