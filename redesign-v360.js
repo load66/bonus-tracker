@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.20 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.21 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt360_audience_session',noticeKey='bt360_notice_session';
@@ -344,6 +344,26 @@ function payoutReminderRow(e){
  const chip=projected?date(projected):base?'Timing in terms':'After qualification';
  return '<details class="bt3611-timer-row bt3613-payout" data-source="saved-payout"><summary><span class="bt3611-timer-icon" aria-hidden="true">'+timerSvg('payout')+'</span><span class="bt3611-timer-body"><b>Bonus pending</b><small>'+safe(subtitle)+'</small></span><span class="bt360-chip">'+safe(chip)+'</span></summary><div class="bt3611-timer-full">'+safe(wording)+'<p>From saved payout terms · not a recorded payment</p></div></details>';
 }
+function requirementCountdown(e){
+ const due=typeof reqDeadline==='function'?reqDeadline(e):'';
+ if(!due)return '';
+ const days=dB(td(),due);
+ return days<0?'Overdue '+Math.abs(days)+' days':days===0?'Due today':days+' days left';
+}
+function derivedRequirementTimers(e,timers){
+ const requirements=Array.isArray(e.financialRules?.requirements)?e.financialRules.requirements:[];
+ const dueDates=new Set();
+ return requirements.map(rule=>{
+  const due=detailRequirementDate(e,rule);
+  if(!due||dueDates.has(due))return '';
+  // A saved manual reminder already represents this deadline: do not double-display it.
+  if(timers.some(t=>String(t.date||'')===due&&/requirement|deposit|qualify|funding/i.test(String(t.text||''))))return '';
+  dueDates.add(due);
+  const heading=requirementTitle(rule);
+  const elapsed=dB(td(),due),chip=elapsed<0?'Overdue '+Math.abs(elapsed)+'d':elapsed===0?'Today':elapsed+' days';
+  return '<details class="bt3611-timer-row bt3621-derived" data-source="saved-requirement"><summary><span class="bt3611-timer-icon" aria-hidden="true">'+timerSvg('date')+'</span><span class="bt3611-timer-body"><b>Requirement due</b><small>'+safe(date(due))+' · from saved offer terms</small></span><span class="bt360-chip '+(elapsed<0?'warning':'')+'">'+safe(chip)+'</span></summary><div class="bt3611-timer-full">'+safe(heading)+(rule.text?'<p>'+safe(rule.text)+'</p>':'')+'<p>Derived from saved requirements · not an added reminder</p></div></details>';
+ }).join('');
+}
 function timerRows(e){
  const timers=Array.isArray(e.customTimers)?e.customTimers:[];
  const rows=timers.map(t=>{
@@ -351,7 +371,7 @@ function timerRows(e){
   return '<details class="bt3611-timer-row"><summary><span class="bt3611-timer-icon" aria-hidden="true">'+timerSvg(kind)+'</span><span class="bt3611-timer-body"><b>'+safe(title)+'</b><small>'+safe(timerFriendlyDate(t,e))+'</small></span><span class="bt360-chip '+(!t.date?'warning':'')+'">'+safe(timerChip(t))+'</span></summary><div class="bt3611-timer-full">'+safe(detail)+(t.startDate&&t.daysRequired?'<p>Started '+safe(date(t.startDate))+' · '+Number(t.daysRequired)+' days · due '+safe(date(t.date))+'</p>':'')+'<button class="bt360-link" type="button" onclick="openTimerEditor('+arg(e.id)+','+arg(t.id)+')">Edit timer</button></div></details>';
  }).join('');
  const hasPayout=timers.some(t=>/payout|bonus watch|bonus pending/i.test(String(t.text||'')));
- return rows+(!hasPayout?payoutReminderRow(e):'');
+ return rows+derivedRequirementTimers(e,timers)+(!hasPayout?payoutReminderRow(e):'');
 }
 function waiverCondition(c){
  if(c?.operator&&Array.isArray(c.conditions))return c.conditions.map(waiverCondition).join(c.operator==='all'?' + ':' · ');
@@ -619,12 +639,12 @@ function detailPanels(e){
  const code=stage(e).code,ready=code==='READY_TO_CLOSE',closed=!!e.closed;
  const at=closed?4:ready?4:code==='HOLD_OPEN'||code==='BONUS_RECEIVED'?3:code==='REQUIREMENTS_MET'||code==='AWAITING_BONUS'?2:1;
  const labels=['Opened','Tasks','Payout','Hold','Close'];
- let h='<div class="bt360-steps '+(ready?'bt3611-ready':'')+'" aria-label="Account lifecycle"><div class="bt3611-step-bars">'+labels.map((name,i)=>'<span class="'+(i<at?'done ':'')+(at===i?'current':'')+'"'+(at===i?' aria-current="step"':'')+'>'+name+'</span>').join('')+'</div><div class="bt3611-stage-summary"><b>'+safe(ready?'Review closing checks before closing':code==='IN_PROGRESS'?'Complete offer requirements':stage(e).label)+'</b><em class="bt360-chip '+(ready?'positive':'warning')+'">'+safe(ready?'Ready to close':(!closed&&reqDeadline(e)?Math.max(0,dB(td(),reqDeadline(e)))+' days left':stage(e).label))+'</em></div></div>';
+ let h='<div class="bt360-steps '+(ready?'bt3611-ready':'')+'" aria-label="Account lifecycle"><div class="bt3611-step-bars">'+labels.map((name,i)=>'<span class="'+(i<at?'done ':'')+(at===i?'current':'')+'"'+(at===i?' aria-current="step"':'')+'>'+name+'</span>').join('')+'</div><div class="bt3611-stage-summary"><b>'+safe(ready?'Review closing checks before closing':code==='IN_PROGRESS'?'Complete offer requirements':stage(e).label)+'</b><em class="bt360-chip '+(ready?'positive':'warning')+'">'+safe(ready?'Ready to close':(!closed&&reqDeadline(e)?requirementCountdown(e):stage(e).label))+'</em></div></div>';
  const hasExtraWork=Array.isArray(e.checklist)&&e.checklist.length>0;
  const savedWorkStart=h.length;
  if(!closed&&(!ready||hasExtraWork)){
   const req=requirementRows(e);
-  h+=panel('Requirements',(!req.count?'<p class="bt360-muted">No checklist tasks saved yet.</p>':req.html)+'<div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></div>');
+  h+=panel('Requirements',(!req.count?'<p class="bt360-muted">No requirements or checklist tasks saved yet.</p>':req.html)+'<div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></div>',req.count?'<button type="button" class="bt360-link bt3621-confirm-all" onclick="openReqMet('+arg(e.id)+')">'+(e.reqMet?'Review confirmation':'Confirm all')+'</button>':'');
   const rows=timerRows(e);
   h+=panel('Timers',rows||'<p class="bt360-muted">No saved deadlines.</p>','<button type="button" class="bt360-link bt3613-add-timer" onclick="runBankAction('+arg(e.id)+',\'timer\')">+ Add</button>');
  }
