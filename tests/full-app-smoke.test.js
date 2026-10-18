@@ -101,7 +101,7 @@ if(require.main===module)setTimeout(()=>{
     }
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
     assert(app.innerHTML.includes('COLLECTED IN'),'Collected-year summary did not render');
-    assert(app.innerHTML.includes('Action Center'),'Lifecycle Action Center did not render');
+    assert(app.innerHTML.includes('Needs you')&&!app.innerHTML.includes('All Action Center tools'),'Compact task summary must render without the redundant legacy Action Center disclosure');
     sandbox.R();
     for(const retired of ['learning-inbox-conflict.js','profile-library-selftest.js','profile-library-selftest-academy.js','profile-db.js']){
       assert(!html.includes('src="./'+retired+'"')&&!fs.readFileSync('sw.js','utf8').includes("'./"+retired+"'"),'Retired add-on remains loaded or cached: '+retired);
