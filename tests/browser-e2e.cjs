@@ -297,6 +297,7 @@ async function exercise(name,engine,url){
     await page.getByRole('checkbox',{name:'E2E checklist task',exact:true}).click();
     check('checklist completion persists in redesigned Requirements',(await record()).checklist.some(x=>x.text==='E2E checklist task'&&x.done)&&await page.locator('.bt360-panel').filter({hasText:'Requirements'}).count()>0);
     check('checklist exposes accessible completion state',await page.getByRole('checkbox',{name:'E2E checklist task',exact:true}).getAttribute('aria-checked')==='true');
+    check('ready saved-work disclosure stays expanded after checklist update',await page.locator('.bt3611-ready-extras').evaluate(e=>e.open));
     await page.evaluate(()=>{
       const e=entries[0];window.__layoutOriginal={checklist:e.checklist.map(x=>({...x})),customTimers:e.customTimers.map(x=>({...x})),monthlyFeeWaiverText:e.monthlyFeeWaiverText};
       e.checklist[0].text='Complete qualifying electronic deposits and retain the supporting confirmation for the full statement period';
@@ -304,7 +305,7 @@ async function exercise(name,engine,url){
       e.monthlyFeeWaiverText='The monthly fee is waived when qualifying electronic deposits reach the required amount in each statement period, or when the opening balance threshold is met each day, or when a qualifying linked relationship is maintained.';
       R();
     });
-    await page.locator('.bt3611-ready-extras > summary').click();
+    if(!await page.locator('.bt3611-ready-extras').evaluate(e=>e.open)) await page.locator('.bt3611-ready-extras > summary').click();
     for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
       check('detail task, timer and waiver remain readable at '+width+'px',await page.evaluate(()=>{
