@@ -149,6 +149,8 @@ if(require.main===module)setTimeout(()=>{
         beforeOpen:lifecycleTagOpen(before),
         afterOpen:lifecycleTagOpen(after),
         stateAfter:profileSectionIsOpen(id,'lifecycle'),
+        beforeModern:before.includes('bt360-steps')&&before.includes('Requirements'),
+        afterModern:after.includes('bt360-steps')&&after.includes('Requirements')&&after.includes('aria-checked="true"'),
         checked:!!entries[0].checklist[0].done,
         expandedStill:expanded===id
       };
@@ -158,10 +160,10 @@ if(require.main===module)setTimeout(()=>{
     assert(sectionStateRegression.attrBefore===' open','profileSectionOpenAttr did not report open before render: '+sectionStateRegression.attrBefore);
     assert(sectionStateRegression.rendererHasSectionState,'Registered window.rTracker is not the section-state-aware renderer');
     assert(sectionStateRegression.stateBefore,'Centralized lifecycle state was not open before toggle');
-    assert(sectionStateRegression.directOpen,'Registered active tracker renderer ignored centralized lifecycle open state: '+sectionStateRegression.directTag);
-    assert(sectionStateRegression.beforeOpen,'R() did not preserve active renderer lifecycle open state');
+    assert(!sectionStateRegression.directOpen,'Removed 7-step lifecycle must not render even when its saved section state is open');
+    assert(sectionStateRegression.beforeModern,'R() must render the single 5-step strip and Requirements section');
     assert(sectionStateRegression.stateAfter,'Centralized lifecycle state was lost after checklist toggle/full render cycle');
-    assert(sectionStateRegression.afterOpen,'Lifecycle section collapsed after checklist toggle/full render cycle');
+    assert(sectionStateRegression.afterModern,'Requirements checkbox and 5-step strip must remain after checklist toggle');
     assert(sectionStateRegression.checked,'Checklist state did not toggle during lifecycle persistence regression');
     assert(sectionStateRegression.expandedStill,'Bank card did not remain expanded during lifecycle persistence regression');
     assert(appSource.split('function rTracker(sorted)').length-1===1,'Active tracker renderer count is not exactly one');
