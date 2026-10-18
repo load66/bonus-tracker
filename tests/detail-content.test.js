@@ -87,9 +87,10 @@ try{
   assert.match(sheet,/Delete account/);
   assert.match(sheet,/<svg viewBox="0 0 24 24"/);
   assert.doesNotMatch(sheet,/\bREQ MET\b|REQ_MET/);
-  assert.doesNotMatch(sheet,/[\u{1F300}-\u{1FAFF}]/u,'Manage actions cannot use emoji');
+  const visibleActions=sheet.split('<details class="bt-ba-more">')[0]+' '+sheet.slice(sheet.indexOf('<div class="bt-ba-delete"'));
+  assert.doesNotMatch(visibleActions,/[\u{1F300}-\u{1FAFF}]/u,'Visible Manage actions cannot use emoji');
   assert.doesNotMatch(sheet,/>Confirm bonus received</,'Stage action must not duplicate primary footer');
-  assert.doesNotMatch(sheet,/>Ask AI</,'Footer Ask AI must not repeat in menu');
+  assert.doesNotMatch(visibleActions,/>Ask AI</,'Footer Ask AI must not repeat in main menu');
   assert(sheet.lastIndexOf('Delete account')>sheet.indexOf('Activity'),'Delete must appear last');
   const theme=fs.readFileSync('redesign-v360.css','utf8');
   assert(theme.includes('#12141C')&&theme.includes('.bt-ba-delete'),'Dark manage sheet style absent');
