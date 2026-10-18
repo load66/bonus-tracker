@@ -315,11 +315,13 @@
       const verifiedAmount=amountFor(x);
       const verifiedRequirement=x.evidence?.status==='evidence-found'&&!x.evidence?.stale?x.evidence.fields?.qualifying_activity?.value:null;
       h+='<article class="radar-card radar-card-compact radar-priority-'+x.priorityGroup+'"><div class="bt360-offer-title">'+bankLogo(x.bank||x.title,true)+'<div class="bt360-grow"><h3>'+escape(x.displayTitle||x.title)+'</h3><p>'+escape(verifiedRequirement||'Requirements need review')+'</p></div><strong>'+(verifiedAmount===null?'Needs review':'$'+verifiedAmount.toLocaleString('en-US'))+'</strong></div><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+'</div>';
+      if(x.badges?.length)h+='<div class="bt363-badges">'+x.badges.map(label=>'<span class="bt363-badge">'+escape(label)+(x.change?.type===label?' · $'+x.change.from.toLocaleString('en-US')+' → $'+x.change.to.toLocaleString('en-US'):'')+'</span>').join('')+'</div>';
       if(x.match)h+='<div class="radar-tracker-context"><b>'+escape(x.match.label)+'</b>'+(date?'<time datetime="'+date+'">'+escape(typeof fD==='function'?fD(date):date)+'</time>':'')+'<p>'+escape(x.match.detail)+'</p></div>';
       h+='<p class="radar-area-note">'+escape(x.geo.detail)+'</p>';
       const proof=x.geo.proof||availabilityFor(x,officialCatalog);
       if(proof?.sourceUrl){let body='';for(const q of [...(proof.rules||[]).map(r=>r.quote),...(proof.nationwideQuote?[proof.nationwideQuote]:[]),...(proof.conditions||[])])body+='<blockquote>'+escape(q)+'</blockquote>';body+='<a href="'+escape(proof.sourceUrl)+'" target="_blank" rel="noopener noreferrer">Official promotion ↗</a>';h+=disclosure('availability:'+x.url,'Official check · '+new Date(proof.checkedAt).toLocaleString(),body).replace('class="mobile-disclosure"','class="mobile-disclosure radar-official-proof"');}
-      h+='<a class="radar-offer-link" href="'+escape(link.url)+'" target="_blank" rel="noopener noreferrer">Review offer · '+escape(link.source)+' ↗</a></article>';
+      if(x.id)h+='<details class="bt363-offer-details"><summary>Original headline</summary><p>'+escape(x.title)+'</p>'+(x.expiresAt?'<p>Reported offer ends '+escape(x.expiresAt)+'</p>':'')+'</details>';
+      h+='<div class="bt363-offer-links">'+x.links.map(link=>'<a class="radar-offer-link" href="'+escape(link.url)+'" target="_blank" rel="noopener noreferrer">Review · '+escape(link.source)+' ↗</a>').join('')+'</div></article>';
     });
     return h;
   };
