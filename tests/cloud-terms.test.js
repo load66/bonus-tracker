@@ -49,6 +49,7 @@ assert.equal(typeof sandbox.btImportEntryFileObject,'function');
 assert.equal(typeof sandbox.BTFinancialRules.validate,'function');
 assert.equal(typeof sandbox.BTTermsHistory.open,'function');
 assert.equal(typeof sandbox.BTTermsHistory.sync,'function');
+assert.equal(typeof sandbox.BTTermsHistory.queueSync,'function','Archived term changes should trigger independent authenticated R2 sync');
 assert.equal(typeof sandbox.BTCloudCore.restore,'function');
 assert.equal(typeof sandbox.BTTermsCore.collect,'function');
 assert.equal(JSON.stringify([...storage]),beforeStorage,'Historical display and import inspection must not write records');
