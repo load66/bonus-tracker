@@ -306,7 +306,7 @@ function detailPanels(e){
  const at=closed?4:ready?4:code==='HOLD_OPEN'||code==='BONUS_RECEIVED'?3:code==='REQUIREMENTS_MET'||code==='AWAITING_BONUS'?2:1;
  const labels=['Opened','Tasks','Payout','Hold','Close'];
  let h='<div class="bt360-steps '+(ready?'bt3611-ready':'')+'" aria-label="Account lifecycle"><div class="bt3611-step-bars">'+labels.map((name,i)=>'<span class="'+(i<at?'done ':'')+(at===i?'current':'')+'"'+(at===i?' aria-current="step"':'')+'>'+name+'</span>').join('')+'</div><div class="bt3611-stage-summary"><b>'+safe(ready?'All close restrictions cleared':code==='IN_PROGRESS'?'Complete offer requirements':stage(e).label)+'</b><em class="bt360-chip '+(ready?'positive':'warning')+'">'+safe(ready?'Ready to close':(!closed&&reqDeadline(e)?Math.max(0,dB(td(),reqDeadline(e)))+' days left':stage(e).label))+'</em></div></div>';
- const hasExtraWork=Array.isArray(e.checklist)&&e.checklist.length>0;
+ const hasExtraWork=(Array.isArray(e.checklist)&&e.checklist.length>0)||(Array.isArray(e.customTimers)&&e.customTimers.length>0);
  const savedWorkStart=h.length;
  if(!closed&&(!ready||hasExtraWork)){
   const req=requirementRows(e);
