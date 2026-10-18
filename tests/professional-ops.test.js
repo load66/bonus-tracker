@@ -2,13 +2,17 @@
 const fs=require('fs');
 function assert(ok,msg){if(!ok)throw new Error(msg)}
 const app=fs.readFileSync('app.js','utf8');
+const redesigned=fs.readFileSync('redesign-v360.js','utf8');
 const css=fs.readFileSync('style.css','utf8');
 const index=fs.readFileSync('index.html','utf8');
 const feedback=fs.readFileSync('ui-feedback.js','utf8');
 const entryImport=fs.readFileSync('entry-link-import.js','utf8');
 const attention=fs.readFileSync('smart-attention.js','utf8');
-for(const token of ['function bonusPipelineMetrics','Active bonuses','Collected','Awaiting','In Progress','Action Needed','function renderActionCenter','function renderCardProgressLine']){
+for(const token of ['function bonusPipelineMetrics','Collected','Awaiting','In Progress','Action Needed','function renderActionCenter','function renderCardProgressLine']){
   assert(app.includes(token),'Professional dashboard/card architecture missing: '+token);
+}
+for(const token of ['COLLECTED IN ','function hero(rows,year,metrics)','function tasks(rows)']){
+  assert(redesigned.includes(token),'Redesigned operations UI missing: '+token);
 }
 for(const token of ['function timelineRowsForEntry','Activity Timeline','account_opened','Requirements completed','Bonus received','Account closed']){
   assert(app.includes(token),'Activity timeline missing: '+token);
