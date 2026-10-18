@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: ChatGPT Codex | v3.6.4 feed-browser hotfix | codex/v3.6.4-feed-browser-hotfix
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
