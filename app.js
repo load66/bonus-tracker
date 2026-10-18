@@ -4083,7 +4083,7 @@ function updateViewSearch(kind,value,cursor){
   const input=document.getElementById(id);
   if(input){input.focus({preventScroll:true});const position=Number.isInteger(cursor)?Math.min(cursor,input.value.length):input.value.length;input.setSelectionRange(position,position);}
 }
-function R(){if(tab==='finances')tab='tracker';captureProfileSectionState();const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;
+function R(){const focusedBeforeRender=document.activeElement;const searchFocus=focusedBeforeRender&&['archive-search','tracker-search','datapoints-search','radar-search','terms-search'].includes(focusedBeforeRender.id)?{id:focusedBeforeRender.id,start:focusedBeforeRender.selectionStart,end:focusedBeforeRender.selectionEnd}:null;if(tab==='finances')tab='tracker';captureProfileSectionState();const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;
   if(typeof window.btCaptureRadarDisclosures==='function')window.btCaptureRadarDisclosures();
   if(tab==='profiles'||tab==='health')tab='tracker';
   try{if(!window.__btAutoCleanupV384){entries=sortE(normalizeLifecycleEntries(entries));sv(SK,entries);window.__btAutoCleanupV384=true}}catch{}
@@ -4124,6 +4124,7 @@ function R(){if(tab==='finances')tab='tracker';captureProfileSectionState();cons
   document.getElementById('app').innerHTML=h;
   const ns=document.querySelector('.scroll');if(ns)ns.scrollTop=_sp;
   btRunPostRenderHooks()
+  if(searchFocus){const field=document.getElementById(searchFocus.id);if(field){field.focus({preventScroll:true});try{field.setSelectionRange(searchFocus.start,searchFocus.end)}catch{}}}
 }
 function rTrackerLegacy(sorted){
   const archiveView=arguments[1]===true;
