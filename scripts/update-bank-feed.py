@@ -173,6 +173,8 @@ def identity(title):
 def post_row(title, link, published, source, categories=(), summary=''):
     values = identity(title)
     expire = expiry_from_text(title, summary)
+    if values['amount'] is None or values['product']=='unknown':
+        values['offerKey']+='|'+hashlib.sha256(link.encode()).hexdigest()[:12]
     row = {'title':title[:300], 'url':link, 'publishedAt':published.isoformat(),
            'source':source['name'], 'sourceId':source['id'],
            'availability':availability(title, categories, summary),
@@ -209,7 +211,8 @@ def rehydrate(row):
         if not source: continue
         try: stamp=dt.datetime.fromisoformat(x['publishedAt']).astimezone(dt.timezone.utc)
         except (TypeError,ValueError,KeyError): continue
-        if identity(x['title'])['offerKey']!=item['offerKey']: continue
+        link_key=identity(x['title'])['offerKey']
+        if link_key!=item['offerKey'] and not item['offerKey'].startswith(link_key+'|'): continue
         links.append({'url':x['url'],'sourceId':source['id'],'source':source['name'],
                       'title':x['title'][:300],'publishedAt':stamp.isoformat()})
     if links: item['links']=links
@@ -220,7 +223,7 @@ def merge_offers(previous, fresh, now):
     posts=[x for x in (rehydrate(r) for r in previous) if x is not None]+fresh
     groups={}
     for item in posts:
-        if not item.get('bank') or item['amount'] is None or item['product']=='unknown': continue
+        if not item.get('bank'): continue
         stamp=dt.datetime.fromisoformat(item['publishedAt'])
         if stamp>now or now-stamp>dt.timedelta(days=90): continue
         groups.setdefault(item['offerKey'],[]).append(item)
@@ -236,7 +239,8 @@ def merge_offers(previous, fresh, now):
         links={}
         for item in items:
             for link in item.get('links',[]):
-                if identity(link['title'])['offerKey']!=key: continue
+                link_key=identity(link['title'])['offerKey']
+                if key!=link_key and not key.startswith(link_key+'|'): continue
                 prev=links.get(link['url'])
                 if not prev or link['publishedAt']>prev['publishedAt']:links[link['url']]=link
         first=min(i.get('firstSeen',i['publishedAt']) for i in items)
@@ -248,7 +252,9 @@ def merge_offers(previous, fresh, now):
     # A newer post for a different reward supersedes an older amount only for
     # the same bank/product/region (never across business/consumer or states).
     by_family={}
-    for item in merged:by_family.setdefault((item['bank'],item['product'],item['region']),[]).append(item)
+    for item in merged:
+        family=(item['bank'],item['product'],item['region']) if item['amount'] is not None and item['product']!='unknown' else (item['offerKey'],)
+        by_family.setdefault(family,[]).append(item)
     output=[]
     for family,items in by_family.items():
         items.sort(key=lambda x:(x['publishedAt'],x['offerKey']),reverse=True)
@@ -292,7 +298,8 @@ def parse_feed(raw, now, source=None):
         except (TypeError,ValueError,AttributeError):continue
         if published>now or now-published>dt.timedelta(days=90): continue
         row=post_row(title,link,published,source,cats,summary)
-        if row['amount'] is None or not row['bank'] or row['product']=='unknown':continue
+        row['firstSeen']=now.isoformat()
+        if not row['bank']:continue
         previous=offers.get(row['offerKey'])
         if not previous or row['publishedAt']>previous['publishedAt']:offers[row['offerKey']]=row
     return sorted(offers.values(),key=lambda x:x['publishedAt'],reverse=True)
