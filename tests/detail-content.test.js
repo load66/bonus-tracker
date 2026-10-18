@@ -107,13 +107,14 @@ assert.equal(sandbox.BT360.feeSnapshot({...cooldown,closed:''}).monthly,'Not con
 assert.equal(sandbox.BT360.feeSnapshot({...cooldown,accountType:'business'}).monthly,'No saved fee amount','Never mix personal and business terms');
 const originalStructured={...cooldown,financialRules:{accounts:[{role:'primary',label:'Different Checking',fee:{amount:19}}],closure:{}}};
 assert.equal(sandbox.BT360.feeSnapshot(originalStructured).monthly,'$19','Current enrolled structured fee wins');
-const trulyMissing={...cooldown,bank:'Another Synthetic Bank',churn:'',churnability:'repeatable'};
+const trulyMissing={...cooldown,bank:'Another Synthetic Bank',churn:'',churnability:'repeatable',eligibilityText:'Previous bonus within 12 months is not eligible.'};
 const missing=sandbox.BT360.feeDetail(trulyMissing);
 assert.match(missing,/No saved fee amount/);
 assert.match(missing,/No saved close-fee amount/);
 assert.doesNotMatch(missing,/Not confirmed|Review/,'Cooldown fee presentation uses known-history wording');
 const archives=sandbox.BT360.archive([trulyMissing]);
 assert.match(archives,/Last saved/);
+assert.match(archives,/Previous bonus within 12 months is not eligible/,'Last saved churn wording is visible in cooldown summary');
 assert.match(archives,/Details/);
 assert.doesNotMatch(archives,/Needs review · verify eligibility rules/);
 const simpleOld={...cooldown,bank:'Old Profile Bank',financialRules:null,
