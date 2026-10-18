@@ -59,8 +59,16 @@ module.exports={sandbox,document,app,storage,errors};
 if(require.main===module)setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.6.0',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.6.0',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.6.1',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.6.1',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    // v3.6.1: panel titles must remain escaped text; trusted badge markup
+    // belongs in the accessory slot rather than appearing as literal tags.
+    const needsMarkup=sandbox.BT360.tasks([]);
+    assert(needsMarkup.includes('<h3>Needs you</h3><span class="bt360-count">0 tasks</span>'),'Needs you count badge is rendered as text instead of markup');
+    assert(!needsMarkup.includes('&lt;span'),'Needs you shows escaped HTML in the visible heading');
+    const archiveMarkup=sandbox.BT360.archive([]);
+    assert(archiveMarkup.includes('<h3>Cooling down</h3><span class="bt360-subtitle">soonest first</span>'),'Archive subtitle is rendered as literal HTML');
+    assert(!archiveMarkup.includes('Cooling down &lt;span'),'Archive heading exposes escaped HTML');
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.13',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
     assert(sandbox.tcV3WellsConsumerRulesVersion==='3.5.2',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
     assert(sandbox.btChurnCloseDatePolicyVersion==='3.5.2',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);

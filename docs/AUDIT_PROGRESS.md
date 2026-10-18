@@ -6,6 +6,8 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.6.1 panel title rendering patch: `codex/v3.6.1-panel-title-release` based on post-PR166 main. Correct three literal-tag header displays (Needs you count, Eligible soon subtitle and Archive cooling subtitle) without disabling escaped heading titles. App/mobile `3.6.1`, service-worker cache `bt-v3.6.1-panel1`, all affected asset cache tags updated. Added smoke test and Chromium Playwright regression assertion; preserved storage, Finance retirement, rules and backups. Next step: PR CI, merge, verify exact production Pages commit; never claim live user backups were tested.
+
 - Chromium-only Playwright CI update: `codex/chromium-only-playwright-ci` (PR pending creation), no app code or saved account data changed. One Chromium job follows bonus/cloud/UI units on PR, main and nightly. Pinned Playwright image/API cache; preserved 284 browser assertions, mobile layouts, retries, trace/artifact collection, and zero-console-error requirement. `AGENTS.md`, `docs/CI.md`, and `tests/ci-workflow.test.js` updated to prohibit Firefox and WebKit. Next step: PR verification, merge, exact main-run/Pages checks.
 
 - BonusTracker v3.6.0 mockup UI (Finance remains removed): frontend PR https://github.com/load66/bonus-tracker/pull/165. Tracker, focused detail, Bonuses, Tax, Data, combined Archive and Settings; Personal/Business scopes; owner hosting usage card and read-only notification center. App and service-worker cache `bt-v3.6.0-ui1`.
