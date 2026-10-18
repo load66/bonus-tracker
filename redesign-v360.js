@@ -5,7 +5,7 @@ const scopeKey='bt360_audience_session',noticeKey='bt360_notice_session';
 let audience='personal', archivePane='waiting', noticePrefs={deadlines:false,payouts:false,eligible:false}, selectedStage='';
 try{audience=sessionStorage.getItem(scopeKey)==='business'?'business':'personal'}catch{}
 try{const v=JSON.parse(sessionStorage.getItem(noticeKey)||'{}');for(const k of Object.keys(noticePrefs))noticePrefs[k]=v[k]===true}catch{}
-const safe=v=>typeof esc==='function'?esc(String(v??'')):String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const safe=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 const arg=v=>JSON.stringify(String(v??'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
 const stage=e=>{try{return lifecycleViewForEntry(e)}catch{return {code:'IN_PROGRESS',label:'In progress'}}};
 const amount=v=>fM(Number(v||0)), date=v=>v?fD(v):'Needs review';
