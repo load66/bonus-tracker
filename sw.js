@@ -1,5 +1,5 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.27: archived eligibility countdowns and accurate visible version.
+// Version 3.6.27: archived countdowns and accurate visible version.
 
 const V = 'bt-v3.6.27-archive1';
 const ASSETS = [
