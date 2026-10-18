@@ -244,6 +244,65 @@ async function exercise(name,engine,url){
     await page.getByRole('button',{name:'Back to Archive',exact:true}).click();await button('Tracker').click();
     check('archive navigation retains records',await page.evaluate(()=>entries.some(e=>e.id==='archive-e2e'&&e.notes==='Preserved archive note')));
     await page.evaluate(()=>{entries=entries.filter(e=>e.id!=='archive-e2e');R()});
+
+    // Real-device regression fixtures: no production records or providers.
+    const mappedActions=await page.evaluate(()=>{
+      const previous=window.btLifecycleStageForEntry,results={};
+      const codes=['IN_PROGRESS','ACTION_NEEDED','REQUIREMENTS_MET','AWAITING_BONUS','HOLD_OPEN','BONUS_RECEIVED','READY_TO_CLOSE'];
+      try{
+        for(const code of codes){
+          window.btLifecycleStageForEntry=()=>({code,label:code});
+          results[code]=BT360.primaryAction({id:'synthetic-stage',bank:'Fixture Bank',
+            checklist:[{text:'First task',done:true},{text:'Second task',done:false}],reqMet:'',bonusRecd:''}).label;
+        }
+      }finally{window.btLifecycleStageForEntry=previous}
+      return results;
+    });
+    check('stage action mapping never confirms payout during In progress',
+      mappedActions.IN_PROGRESS==='Open next task'&&mappedActions.ACTION_NEEDED==='Open next task'
+      &&mappedActions.REQUIREMENTS_MET==='Confirm received'&&mappedActions.AWAITING_BONUS==='Confirm received'
+      &&mappedActions.HOLD_OPEN==='View hold'&&mappedActions.BONUS_RECEIVED==='View hold'
+      &&mappedActions.READY_TO_CLOSE==='Mark account closed');
+    await page.evaluate(()=>{
+      window.__designEntries=JSON.parse(JSON.stringify(entries));
+      entries.push({id:'e2e-lafayette',bank:'Lafayette FCU',accountType:'personal',bonus:250,opened:'2026-10-01',closed:'',reqMet:'',bonusRecd:'',churn:'1',
+        churnable:true,churnability:'repeatable',checklist:[{text:'Open membership savings',done:true},{text:'Set qualifying direct deposit',done:false}],customTimers:[]});
+      const legacy=[['Bank of America','2026-01-16'],['Spruce','2026-04-23'],['Simmons','2026-04-29'],['Eligible soon fixture','2025-11-10']];
+      for(const [bank,closed] of legacy){
+        entries.push({id:'e2e-legacy-'+bank.toLowerCase().replaceAll(' ','-'),bank,accountType:'personal',bonus:400,opened:'2025-01-01',closed,bonusRecd:'2025-07-01',reqMet:'2025-06-01',churn:'1',churnable:true,churnability:'repeatable',checklist:[],customTimers:[]});
+      }
+      R();
+    });
+    check('cooldown records not rendered as full Tracker cards',await page.locator('[data-bt-entry-id^="e2e-legacy-"]').count()===0);
+    check('open Lafayette appears as one compact row',await page.locator('[data-bt-entry-id="e2e-lafayette"] .bt366-compact-row').count()===1);
+    await page.setViewportSize({width:390,height:844});
+    await page.locator('.scroll').evaluate(el=>el.scrollTop=el.scrollHeight);
+    check('last row is clear of floating add button',await page.evaluate(()=>{
+      const rows=[...document.querySelectorAll('.bt366-compact-row')],fab=document.querySelector('.bt362-add-fab');
+      return rows.length>0&&fab&&rows.at(-1).getBoundingClientRect().bottom<fab.getBoundingClientRect().top-8;
+    }));
+    await page.screenshot({path:path.join(output,name+'-v366-tracker-390.png')});
+    await page.locator('[data-bt-entry-id="e2e-lafayette"] .bt366-compact-row').click();
+    check('Lafayette has one new detail header and one progress strip',
+      await page.locator('.bt360-detail-header').count()===1&&await page.locator('.bt360-steps').count()===1&&await page.locator('.bt360-steps span').count()===5);
+    check('Lafayette with 1 of 2 tasks opens next task instead of confirming payout',
+      await page.locator('.bt360-detail-footer .bt360-primary').innerText()==='Open next task');
+    await page.screenshot({path:path.join(output,name+'-v366-lafayette-detail-390.png')});
+    await page.getByRole('button',{name:'Back to accounts'}).click();
+    const legacyDates=await page.evaluate(()=>{
+      return entries.filter(e=>e.id.startsWith('e2e-legacy-')).map(e=>({bank:e.bank,tracker:window.churnReadyDate?.(e),archive:BT360.eligibleInfo(e)?.eligible,label:BT360.eligibleInfo(e)?.label}));
+    });
+    check('Archive and Tracker reuse identical supported legacy dates',
+      legacyDates.every(x=>x.tracker&&x.tracker===x.archive&&x.label.includes('not verified'))
+      &&legacyDates.find(x=>x.bank==='Bank of America')?.archive==='2027-01-18'
+      &&legacyDates.find(x=>x.bank==='Spruce')?.archive==='2027-04-25'
+      &&legacyDates.find(x=>x.bank==='Simmons')?.archive==='2027-05-01');
+    await button('Archive').click();
+    check('legacy eligibility dates visible in Archive',await page.getByText('Jan 18, 2027',{exact:false}).count()>0&&await page.getByText('Apr 25, 2027',{exact:false}).count()>0);
+    await page.screenshot({path:path.join(output,name+'-v366-archive-390.png')});
+    await page.evaluate(()=>{entries=window.__designEntries;delete window.__designEntries;expanded=null;R()});
+    await button('Tracker').click();
+
     await button('Datapoints').click();check('successful method appears in datapoints',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));await button('Archive').click();await button('Saved terms').click();check('terms archive contains original promotion',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));await button('Tracker').click();
     await page.getByPlaceholder('Search accounts...').fill('Does not exist');await page.getByText('No matching accounts',{exact:true}).waitFor();await page.getByPlaceholder('Search accounts...').fill('');
     check('search keeps stored record',(await record()).id===id);
