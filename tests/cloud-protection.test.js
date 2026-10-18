@@ -92,11 +92,36 @@ async function hostingUsage(){
  payload=make(6);await model.refreshUsage(true);
  assert.match(model.usageCard(),/Over plan/);
  payload=make(0,'not_configured');await model.refreshUsage(true);
- assert.match(model.usageCard(),/Add a Railway API token/);
+ assert.match(model.usageCard(),/Add a Railway (?:API|account) token/);
  assert.doesNotMatch(model.usageCard(),/Cost so far/);
  payload=make(0,'unavailable');await model.refreshUsage(true);
- assert.match(model.usageCard(),/Costs cannot be verified/);
+ assert.match(model.usageCard(),/Railway changed its billing data format/);
  assert(!/Cost so far/.test(model.usageCard()));
+ const allReasonCodes=['token_missing','token_unauthorized','workspace_not_found','project_not_visible',
+  'estimate_missing','measurement_missing','rate_limited','timeout','railway_unreachable','response_changed'];
+ for(const code of allReasonCodes){
+  payload={...make(0,'unavailable'),railway:{status:'unavailable',reasonCode:code,
+    reason:'PRIVATE_REMOTE_RESPONSE_DO_NOT_RENDER',costSoFar:null,projectedMonthEnd:null}};
+  await model.refreshUsage(true);
+  const card=model.usageCard();
+  assert.doesNotMatch(card,/PRIVATE_REMOTE_RESPONSE_DO_NOT_RENDER|synthetic-owner-token/);
+  assert.doesNotMatch(card,/Verified \$0\.00/,'Missing data must never masquerade as zero');
+  assert.match(card,/Try again/);
+  assert.match(card,/View Railway usage/);
+ }
+ payload={...make(0),railway:{status:'partial',verifiedAt:'2026-10-17T12:00:00Z',
+  costSoFar:null,projectedMonthEnd:null,knownCostSubtotal:2.15,
+  services:[{name:'synthetic-api',costSoFar:2.15,avgMemoryGb:0.2},
+   {name:'synthetic-journal',costSoFar:null,avgMemoryGb:null}],
+  missing:[{service:'synthetic-journal',kind:'usage',metric:'NETWORK_TX_GB'}]}};
+ await model.refreshUsage(true);
+ assert.match(model.usageCard(),/Not reported by Railway/);
+ assert.match(model.usageCard(),/total is incomplete/);
+ assert.doesNotMatch(model.usageCard(),/\$0\.00/);
+ payload={...make(0),railway:{status:'ok',verifiedAt:'2026-10-17T12:00:00Z',
+  costSoFar:0,projectedMonthEnd:0,services:[{name:'synthetic-api',costSoFar:0,avgMemoryGb:0}]}};
+ await model.refreshUsage(true);
+ assert.match(model.usageCard(),/Verified \$0\.00/);
  promptValue='7.50';model.setHostingAmount('allowance');
  assert.equal(model.hostSettings().allowance,7.5);
  promptValue='6';model.setHostingAmount('alertAt');

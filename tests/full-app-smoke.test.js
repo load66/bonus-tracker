@@ -59,8 +59,8 @@ module.exports={sandbox,document,app,storage,errors};
 if(require.main===module)setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.6.5',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.6.5',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.6.6',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.6.6',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     const trackerRender=sandbox.BT360;
     assert(trackerRender.stages([]).includes('aria-label="Filter by stage"'),'Stage group missing');
     assert(!/class="bt360-stage stage-/.test(trackerRender.stages([])),'Zero-count stage chip leaked');
@@ -101,7 +101,7 @@ if(require.main===module)setTimeout(()=>{
     }
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
     assert(app.innerHTML.includes('COLLECTED IN'),'Collected-year summary did not render');
-    assert(app.innerHTML.includes('Action Center'),'Lifecycle Action Center did not render');
+    assert(app.innerHTML.includes('Needs you')&&!app.innerHTML.includes('All Action Center tools'),'Compact task summary must render without the redundant legacy Action Center disclosure');
     sandbox.R();
     for(const retired of ['learning-inbox-conflict.js','profile-library-selftest.js','profile-library-selftest-academy.js','profile-db.js']){
       assert(!html.includes('src="./'+retired+'"')&&!fs.readFileSync('sw.js','utf8').includes("'./"+retired+"'"),'Retired add-on remains loaded or cached: '+retired);
@@ -149,6 +149,8 @@ if(require.main===module)setTimeout(()=>{
         beforeOpen:lifecycleTagOpen(before),
         afterOpen:lifecycleTagOpen(after),
         stateAfter:profileSectionIsOpen(id,'lifecycle'),
+        beforeModern:before.includes('bt360-steps')&&before.includes('Requirements'),
+        afterModern:after.includes('bt360-steps')&&after.includes('Requirements')&&after.includes('aria-checked="true"'),
         checked:!!entries[0].checklist[0].done,
         expandedStill:expanded===id
       };
@@ -158,10 +160,10 @@ if(require.main===module)setTimeout(()=>{
     assert(sectionStateRegression.attrBefore===' open','profileSectionOpenAttr did not report open before render: '+sectionStateRegression.attrBefore);
     assert(sectionStateRegression.rendererHasSectionState,'Registered window.rTracker is not the section-state-aware renderer');
     assert(sectionStateRegression.stateBefore,'Centralized lifecycle state was not open before toggle');
-    assert(sectionStateRegression.directOpen,'Registered active tracker renderer ignored centralized lifecycle open state: '+sectionStateRegression.directTag);
-    assert(sectionStateRegression.beforeOpen,'R() did not preserve active renderer lifecycle open state');
+    assert(!sectionStateRegression.directOpen,'Removed 7-step lifecycle must not render even when its saved section state is open');
+    assert(sectionStateRegression.beforeModern,'R() must render the single 5-step strip and Requirements section');
     assert(sectionStateRegression.stateAfter,'Centralized lifecycle state was lost after checklist toggle/full render cycle');
-    assert(sectionStateRegression.afterOpen,'Lifecycle section collapsed after checklist toggle/full render cycle');
+    assert(sectionStateRegression.afterModern,'Requirements checkbox and 5-step strip must remain after checklist toggle');
     assert(sectionStateRegression.checked,'Checklist state did not toggle during lifecycle persistence regression');
     assert(sectionStateRegression.expandedStill,'Bank card did not remain expanded during lifecycle persistence regression');
     assert(appSource.split('function rTracker(sorted)').length-1===1,'Active tracker renderer count is not exactly one');
@@ -188,13 +190,13 @@ if(require.main===module)setTimeout(()=>{
       const sample={id:'UI-STATE-3',bank:'State Bank',accountType:'personal',opened:'2026-09-01',closed:'',bonus:100,checklist:[{text:'Test requirement',done:false}],customTimers:[],notes:'',churnable:true};
       entries=[sample];expanded=sample.id;search='';
       setProfileSectionOpen(sample.id,'lifecycle',true);
-      const before=window.rTracker(entries).includes('data-section-key="lifecycle" open');
+      const before=window.rTracker(entries).includes('bt360-steps')&&!window.rTracker(entries).includes('data-section-key="lifecycle" open');
       toggleCk(sample.id,0);
-      const after=expanded===sample.id&&profileSectionIsOpen(sample.id,'lifecycle')&&document.getElementById('app').innerHTML.includes('data-section-key="lifecycle" open');
+      const after=expanded===sample.id&&profileSectionIsOpen(sample.id,'lifecycle')&&document.getElementById('app').innerHTML.includes('bt360-steps')&&document.getElementById('app').innerHTML.includes('aria-checked="true"');
       entries=oldEntries;expanded=oldExpanded;search=oldSearch;
       return before&&after;
     })()`,sandbox);
-    assert(activeRendererState,'Lifecycle & Tasks collapses after checklist toggle in the active renderer');
+    assert(activeRendererState,'Redesigned Requirements must preserve completed checklist after rerender without reintroducing legacy lifecycle');
     const contrastCss=fs.readFileSync('style.css','utf8');
     assert(contrastCss.includes('v3.4.29 interaction + dark prompt contrast hardening'),'Dark prompt contrast hardening marker missing');
     for(const selector of ['.cbox,.dd-box,.rcv-box,.ow-box,.fee-box,.close-modal','.dd-input,.rcv-box input','.crow .c-c','.crow .c-g','.ckb.dn']){

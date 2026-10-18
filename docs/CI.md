@@ -1,9 +1,6 @@
 # Verification and releases
 
-BonusTracker uses Playwright **Chromium only** for pull requests, main pushes,
-manual runs, nightly checks, and production release verification. Firefox and
-WebKit are intentionally not scheduled. This owner-selected policy supersedes
-the previous three-browser matrix.
+BonusTracker runs Playwright **Chromium and WebKit** (iPhone Safari engine) for pull requests, main pushes, manual runs, nightly checks and release verification, per the owner's v3.6.6 instruction. Firefox remains excluded.
 
 `Verify and Deploy BonusTracker` first checks structural release and cache
 integrity (including every JavaScript file), then runs every remaining unit suite
@@ -12,13 +9,13 @@ in the three areas: **bonus rules/imports, cloud backup, and UI**.
 or duplicated suite fails verification. Each suite has a 60-second deadline.
 Finance is retired and never gets a testing or navigation entry.
 
-The single browser job waits for all unit areas to pass. It uses the pinned
+The parallel Chromium/WebKit browser jobs wait for all unit areas to pass. It uses the pinned
 `mcr.microsoft.com/playwright:v1.58.2-noble` image and the matching
 `@playwright/test@1.58.2` Node API. Browser binaries come from that image;
 CI never downloads or installs them. The Node API is separately cached using
 its pinned version. The container user's home directory remains writable.
 
-All existing Chromium browser harness assertions remain enabled. The standalone
+All existing Chromium and WebKit browser harness assertions remain enabled. The standalone
 harness defaults to Chromium, and an unsupported `BT_BROWSER` selection is
 rejected. Each Playwright harness has a 180-second timeout and one isolated
 retry, with a 165-second child-process deadline. All attempts and failure
@@ -32,7 +29,7 @@ group. It verifies without republishing. Only superseded pull-request
 runs may be canceled; release pushes and scheduled runs cannot cancel one
 another.
 
-Deployment waits for the complete unit, Chromium, and release verification
+Deployment waits for the complete unit, Chromium, WebKit, and release verification
 gate and publishes the exact verified source artifact. Synthetic provider
 and cloud mocks are used by all browser tests; tests never connect real banks.
 
@@ -40,4 +37,4 @@ Local unit areas: `node tests/ci-units.cjs bonus` (or `cloud`/`ui`).
 Browser harness: use the pinned API with
 `BT_BROWSER=chromium playwright test --config tests/playwright.config.cjs`,
 with `NODE_PATH` pointing to the pinned `@playwright/test` install.
-Direct `node tests/browser-e2e.cjs` also selects Chromium alone.
+Direct `node tests/browser-e2e.cjs` defaults to Chromium; set `BT_BROWSER=webkit` to check iPhone Safari's engine.

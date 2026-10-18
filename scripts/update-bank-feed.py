@@ -111,7 +111,7 @@ BANK_ALIASES = {
     'jpmorgan chase bank': 'chase', 'jpmorgan chase': 'chase',
     'chase bank': 'chase', 'chase': 'chase',
     'us bank': 'us bank', 'u s bank': 'us bank',
-    'bank of america': 'bank of america',
+    'bank of america': 'bank of america', 'bofa': 'bank of america', 'boa': 'bank of america',
     'wells fargo': 'wells fargo',
     'american express': 'american express',
 }
@@ -151,12 +151,30 @@ def bank_identity(title):
 def identity(title):
     text = plain(title)
     bank = bank_identity(text)
-    # Multiple different monetary prizes in one headline are ambiguous: do not
-    # silently choose one for a purportedly exact offer identity.
-    rewards = [int(v.replace(',', '')) for v in re.findall(r'\$\s*(\d[\d,]*)', text)]
-    amount = rewards[0] if len(rewards)==1 and 0 < rewards[0] < 100000 else None
+    # Only the advertised bonus is the reward. A deposit/balance requirement
+    # later in parentheses is not another bonus. Tiered "X or Y" offers use
+    # the maximum as a clearly qualified "up to" amount.
+    reward_head = re.split(r'\(\s*(?:\$\s*[\d,]+\s*)?(?:direct deposit|deposit required|funding required|minimum balance)', text, 1, flags=re.I)[0]
+    reward_pair = re.search(r'\$\s*(\d[\d,]*)\s*(?:or|/)\s*\$\s*(\d[\d,]*)', reward_head, re.I)
+    is_upper = bool(reward_pair)
+    if reward_pair:
+        amount = max(int(x.replace(',', '')) for x in reward_pair.groups())
+    else:
+        positions = list(re.finditer(r'\$\s*(\d[\d,]*)', reward_head))
+        reward = None
+        for match in positions:
+            following = reward_head[match.end():match.end()+65]
+            # Avoid attributing a deposit requirement to the bonus when the
+            # actual reward appears later in the same headline.
+            if re.match(r'\s*(?:direct deposits?|deposit required|funding required|minimum balance|balance required)', following, re.I):
+                continue
+            reward = int(match.group(1).replace(',', ''))
+            break
+        amount = reward
+    if amount is not None and not 0 < amount < 100000:
+        amount = None
     if re.search(r'\b(?:checking\s*(?:&|and|\+)\s*savings|checking\s*/\s*savings|combo)\b', text, re.I):
-        product='combo'
+        product='checking'  # Same checking promotion may be described as a checking/savings combo
     elif re.search(r'\b(?:business|commercial|biz)\b', text, re.I): product='business'
     elif re.search(r'\bsavings?\b', text, re.I): product='savings'
     elif re.search(r'\bchecking\b', text, re.I): product='checking'
@@ -168,7 +186,8 @@ def identity(title):
         regions.extend(codes)
     region=','.join(sorted(set(regions))) if regions else 'nationwide' if re.search(r'\bnationwide\b|\ball 50 states\b',text,re.I) else 'unknown'
     key='|'.join((bank or 'unknown',product,str(amount) if amount is not None else '?',region))
-    return {'bank':bank,'product':product,'amount':amount,'region':region,'offerKey':key}
+    return {'bank':bank,'product':product,'amount':amount,'region':region,'offerKey':key,
+            'rewardIsUpperBound':is_upper}
 
 def post_row(title, link, published, source, categories=(), summary=''):
     values = identity(title)
@@ -216,11 +235,14 @@ def rehydrate(row):
         links.append({'url':x['url'],'sourceId':source['id'],'source':source['name'],
                       'title':x['title'][:300],'publishedAt':stamp.isoformat()})
     if links: item['links']=links
+    item['firstSeenBaseline']=bool(row.get('firstSeenBaseline', True))  # Existing pre-v3.6.6 snapshots are baseline
     return item
 
-def merge_offers(previous, fresh, now, retired=()):
+def merge_offers(previous, fresh, now, retired=(), baseline=False):
     # Source post dates, not scrape time, determine lifecycle and "New" status.
     posts=[x for x in (rehydrate(r) for r in previous) if x is not None]+fresh
+    if baseline:
+        for item in posts: item['firstSeenBaseline']=True
     tombstones={r.get('offerKey'):r.get('endedAt') for r in retired if isinstance(r,dict) and isinstance(r.get('offerKey'),str) and isinstance(r.get('endedAt'),str)}
     groups={}
     for item in posts:
@@ -249,6 +271,7 @@ def merge_offers(previous, fresh, now, retired=()):
         result.update(firstSeen=first,lastSeen=current['publishedAt'],expiresAt=expiry,
                       links=sorted(links.values(),key=lambda x:x['publishedAt'],reverse=True))
         result['groupKey']=key
+        result['firstSeenBaseline']=any(i.get('firstSeenBaseline', False) for i in items)
         merged.append(result)
     # A newer post for a different reward supersedes an older amount only for
     # the same bank/product/region (never across business/consumer or states).
@@ -266,6 +289,7 @@ def merge_offers(previous, fresh, now, retired=()):
             current['previousAmount']=old['amount']
             current['change']=('Increased' if current['amount']>old['amount'] else 'Decreased')
             current['firstSeen']=min(current['firstSeen'],old['firstSeen'])
+            current['firstSeenBaseline']=current.get('firstSeenBaseline',False) or old.get('firstSeenBaseline',False)
             current['changeLabel']='$'+str(old['amount'])+' → $'+str(current['amount'])
         for item in items:
             if item is not current and item in older: continue
@@ -273,7 +297,7 @@ def merge_offers(previous, fresh, now, retired=()):
             except (ValueError,TypeError): days=100
             badges=[]
             if item.get('change'):badges.append(item['change'])
-            elif days<=7:badges.append('New')
+            elif days<=7 and not item.get('firstSeenBaseline'):badges.append('New')
             if item.get('isUpdate'):badges.append('Updated')
             if item.get('expiresAt'):
                 delta=(dt.date.fromisoformat(item['expiresAt'])-now.date()).days
@@ -338,7 +362,8 @@ def build_payload(now, previous=None):
     for r in retired:
         if r['offerKey'] not in latest or r['endedAt']>latest[r['offerKey']]['endedAt']:latest[r['offerKey']]=r
     retired=list(latest.values())[:200]
-    rows=merge_offers(previous.get('offers',[]),fresh,now,retired)
+    rows=merge_offers(previous.get('offers',[]),fresh,now,retired,
+                      baseline=not bool(previous.get('checkedAt') or previous.get('offers')))
     return {'schemaVersion':2,'checkedAt':max(checks),'sources':states,'offers':rows,'retired':retired}
 
 def main():

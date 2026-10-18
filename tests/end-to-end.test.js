@@ -104,7 +104,8 @@ setTimeout(()=>{
     const beforeArchiveView=storage.get('bt_e_v4');
     assert.doesNotMatch(run('rTracker(entries)'),/data-bt-entry-id="'+run('oneTimeId')+'"/,'Closed one-time offer must not crowd Tracker');
     assert.match(run('rTracker(entries,true)'),/One Time Verification Bank/,'Archive must retain the complete account card');
-    assert.match(run('rTracker(entries)'),/Verification Bank/,'Repeatable cooldown stays visible');
+    assert.doesNotMatch(run('rTracker(entries)'),/data-bt-entry-id="'+run('testId')+'"/,'Closed repeatable cooldown must not occupy main Tracker cards');
+    assert.match(run('BT360.archive(entries)'),/Verification Bank/,'Repeatable cooldown stays visible in Archive waiting to churn');
     run("switchMainTab('archive');search='One Time';R()");
     assert.match(document.getElementById('app').innerHTML,/archive-search/);
     assert.match(document.getElementById('app').innerHTML,/One Time Verification Bank/);

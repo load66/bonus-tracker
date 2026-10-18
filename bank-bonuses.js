@@ -46,7 +46,7 @@
         const links=Array.isArray(x.links)?x.links.slice(0,20).flatMap(link=>{try{const u=new URL(link.url),id=sourceHosts[u.hostname];return id&&u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&!u.search&&!u.hash&&u.pathname!=='/'&&typeof link.title==='string'&&link.title.length<=300?[{url:u.href,source:sourceNames[id],sourceId:id,title:link.title}]:[]}catch{return[]}}):[];
         if(!links.some(l=>l.url===u.href))links.unshift({url:u.href,source:sourceNames[id],sourceId:id,title:x.title});
         const badges=Array.isArray(x.badges)?x.badges.filter(v=>['New','Increased','Decreased','Updated','Ending soon'].includes(v)).slice(0,4):[];
-        const offer={title:x.title,url:u.href,publishedAt:x.publishedAt,source:sourceNames[id],sourceId:id,availability:['nationwide','regional'].includes(x.availability)?x.availability:'unknown',groupKey:details.offerKey||(typeof x.groupKey==='string'&&x.groupKey.length<1000?x.groupKey:normalize(x.title)),...details,amount,expiresAt,badges,links,changeLabel:typeof x.changeLabel==='string'&&/^\$[\d,]+ → \$[\d,]+$/.test(x.changeLabel)?x.changeLabel:''};
+        const offer={title:x.title,url:u.href,publishedAt:x.publishedAt,source:sourceNames[id],sourceId:id,availability:['nationwide','regional'].includes(x.availability)?x.availability:'unknown',groupKey:details.offerKey||(typeof x.groupKey==='string'&&x.groupKey.length<1000?x.groupKey:normalize(x.title)),...details,amount,rewardIsUpperBound:x.rewardIsUpperBound===true,expiresAt,badges,links,changeLabel:typeof x.changeLabel==='string'&&/^\$[\d,]+ → \$[\d,]+$/.test(x.changeLabel)?x.changeLabel:''};
         offer.evidence=evidenceFor(offer,data.verification);offers.push(offer);
       }catch{}
     }
@@ -206,7 +206,7 @@
         (Date.parse(b.publishedAt)-Date.parse(a.publishedAt))||a.index-b.index);
   }
   function trackerContext(){
-    try{return {rows:typeof entries!=='undefined'?entries:[],family:name=>typeof normalizeBankFamily==='function'?normalizeBankFamily(name):normalize(name),audience:e=>typeof entryBankType==='function'&&entryBankType(e)==='B'?'business':'personal',nonrepeat:e=>typeof isNonRepeatableEntry==='function'&&isNonRepeatableEntry(e),ready:e=>typeof nextReopen==='function'?nextReopen(e):'',today:typeof td==='function'?td():new Date().toISOString().slice(0,10)};}catch{return{rows:[]};}
+    try{return {rows:typeof entries!=='undefined'?entries:[],family:name=>typeof normalizeBankFamily==='function'?normalizeBankFamily(name):normalize(name),audience:e=>typeof entryBankType==='function'&&entryBankType(e)==='B'?'business':'personal',nonrepeat:e=>typeof isNonRepeatableEntry==='function'&&isNonRepeatableEntry(e),ready:e=>typeof window.churnReadyDate==='function'?window.churnReadyDate(e):'',today:typeof td==='function'?td():new Date().toISOString().slice(0,10)};}catch{return{rows:[]};}
   }
   window.btRadarArea=function(value){area=Object.hasOwn(states,value)?value:'';R();};
   window.btRadarPriority=function(value){priorityFilter=['all','tracker','area'].includes(value)?value:'all';R();};
@@ -287,7 +287,7 @@
       const verifiedAmount=amountFor(x);
       const verifiedRequirement=x.evidence?.status==='evidence-found'&&!x.evidence?.stale?x.evidence.fields?.qualifying_activity?.value:null;
       const bankLabel=(x.bank||'').replace(/\b\w/g,c=>c.toUpperCase()).replace(/^Us Bank$/,'U.S. Bank');
-      const label=bankLabel&&x.product&&x.amount!==null?bankLabel+' · '+x.product+' · $'+x.amount.toLocaleString('en-US'):x.title;
+      const label=bankLabel&&x.product&&x.amount!==null?bankLabel+' · '+(x.product==='checking'?'Checking':x.product==='business'?'Business':x.product==='savings'?'Savings':x.product)+' · '+(x.rewardIsUpperBound?'up to ':'')+'\u0024'+x.amount.toLocaleString('en-US'):x.title;
       const badges=x.badges?.length?'<div class="radar-offer-badges">'+x.badges.map(b=>'<span>'+escape(b)+'</span>').join('')+(x.changeLabel?'<span>'+escape(x.changeLabel)+'</span>':'')+'</div>':'';
       h+='<article class="radar-card radar-card-compact radar-priority-'+x.priorityGroup+'"><div class="bt360-offer-title">'+bankLogo(x.title,true)+'<div class="bt360-grow"><h3>'+escape(label)+'</h3>'+badges+'<p>'+escape(verifiedRequirement||'Requirements need review')+'</p></div><strong>'+(verifiedAmount===null?(x.amount===null?'Needs review':'$'+x.amount.toLocaleString('en-US')+'*'):'$'+verifiedAmount.toLocaleString('en-US'))+'</strong></div><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+'</div>';
       if(x.match)h+='<div class="radar-tracker-context"><b>'+escape(x.match.label)+'</b>'+(date?'<time datetime="'+date+'">'+escape(typeof fD==='function'?fD(date):date)+'</time>':'')+'<p>'+escape(x.match.detail)+'</p></div>';

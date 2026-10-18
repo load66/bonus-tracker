@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.5';
+const APP_VERSION='3.6.6';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4142,7 +4142,14 @@ function R(){const focusedBeforeRender=document.activeElement;const searchFocus=
   else if(tab==='tips')h+=rTips();
   else if(tab==='storage')h+=rTermsStorage();
   else if(tab==='bonuses')h+=typeof rBankBonuses==='function'?rBankBonuses():'<p>Bank bonus feed is loading.</p>';
+  // The action bar is a sibling of .scroll, never inside clipped account content.
+  let detailActionBar='';
+  if(bt360Detail&&window.BT360?.detailFooter){
+    const record=sorted.find(e=>e.id===expanded);
+    if(record)detailActionBar=window.BT360.detailFooter(record);
+  }
   h+='</div>';
+  h+=detailActionBar;
   if(tab==='tracker'&&!bt360Detail){
     if(window.bt362AddOpen)h+='<div class="bt362-add-menu" role="group" aria-label="Add bonus actions"><button type="button" onclick="openTrackerTool(\'quick-add\')">Quick Add</button><button type="button" onclick="openTrackerTool(\'promo-terms\')">Review promo terms</button><button type="button" onclick="window.bt362AddOpen=false;openAdd()">Add account manually</button></div>';
     h+='<button class="fab bt362-add-fab" type="button" aria-label="Add bonus" aria-expanded="'+!!window.bt362AddOpen+'" onclick="window.bt362AddOpen=!window.bt362AddOpen;R()">+</button>';
@@ -4324,6 +4331,7 @@ function rTips(){
  h+='<div class="bt360-data-pills" role="group" aria-label="Datapoint outcomes">'+[['all','All reports'],['worked','Counted'],['failed','Didn\'t count']].map(([v,t])=>'<button type="button" aria-pressed="'+(dpFilters.result===v)+'" class="'+(dpFilters.result===v?'active':'')+'" onclick="setDPFilter(\'result\',\''+v+'\')">'+t+'</button>').join('')+'</div>';
  h+='<div class="research-coverage"><b>'+groups.reduce((n,g)=>n+g.community.length,0)+' reports &amp; summaries</b><span>'+groups.length+' bank'+(groups.length===1?'':'s')+' shown · Catalog checked '+esc(catalog.checkedAt?fD(catalog.checkedAt):'date unavailable')+'</span></div>';
  h+='<div class="bt362-data-actions"><button type="button" class="dp-add research-new-report" onclick="newDPReport()">+ Add a report</button><button type="button" class="research-text-button" onclick="switchMainTab(\'storage\')">Saved bank terms ›</button></div>';
+ h+='<div class="bt366-dp-toggle"><span class="bt360-muted">'+(window.bt366GroupData?'Grouped by bank':'Individual reports')+'</span><button type="button" aria-pressed="'+!!window.bt366GroupData+'" onclick="window.bt366GroupData=!window.bt366GroupData;R()">'+(window.bt366GroupData?'Show individual reports':'Group by bank')+'</button></div>';
  h+='<details class="research-filters"'+(dpFiltersOpen?' open':'')+'><summary>More filters and saved notes</summary>';
  h+='<div class="research-switch" role="group" aria-label="Report view">'+[['all','All reports'],['personal','My saved notes']].map(([v,t])=>'<button aria-pressed="'+(dpFilters.view===v)+'" onclick="setDPFilter(\'view\',\''+v+'\')">'+t+'</button>').join('')+'</div>';
  h+='<div class="research-filter-grid">';
@@ -4334,6 +4342,18 @@ function rTips(){
  h+=dpSelect('dated','Dates',[['all','All dates'],['recent','Dated within 90 days']]);
  h+='</div><button class="research-text-button" onclick="resetDPFilters()">Reset filters</button><p class="research-caveat">Filters apply to community reports. Your saved notes stay visible.</p></details>';
  if(!groups.length)h+='<div class="research-empty">No matching reports. Try another bank or reset the filters.</div>';
+ if(!window.bt366GroupData){
+   const items=groups.flatMap(g=>[
+     ...g.community.map(x=>({g,x,kind:'community',when:dpReportDate(x)||x.threadDate||''})),
+     ...g.user.map(x=>({g,x,kind:'personal',when:x.lastConfirmedAt||''}))
+   ]).sort((a,b)=>String(b.when).localeCompare(String(a.when)));
+   items.forEach(({g,x,kind})=>{
+     const report=kind==='community',label=!report?'My note':x.outcome==='worked'?'Counted':x.outcome==='failed'?"Didn't count":x.outcome==='mixed'?'Mixed reports':x.outcome==='pending'?'Pending':'Not verified';
+     const desc=report?(x.sourceName||'Community')+' · '+(x.reportedAt||x.threadDate||x.eventDate?fD(x.reportedAt||x.threadDate||x.eventDate):'Date not reported'):'My saved note · '+(x.lastConfirmedAt?fD(x.lastConfirmedAt):'Date unavailable');
+     const detail=report?renderCommunityReport(x):'<article class="research-report personal"><h3>'+esc(x.method||'Saved method')+'</h3><p>'+esc(x.note||'No notes saved.')+'</p><button class="ph-mini" onclick="openUserDPEditor('+profileSectionAttr(JSON.stringify(x.id))+')">Edit note</button></article>';
+     h+='<details class="bt366-dp-item"><summary>'+bankLogo(g.bank,true)+'<span class="bt366-dp-main"><b>'+esc(g.bank)+'</b><small>'+esc(x.method||'Method not specified')+'</small><small>'+esc(desc)+'</small></span><span class="bt360-chip '+(report&&x.outcome==='worked'?'positive':report&&x.outcome==='failed'?'warning':'')+'">'+esc(label)+'</span></summary>'+detail+'</details>';
+   });
+ }else{
  groups.forEach(g=>{
  const open=dpExpandedBankKey===g.key,last=dpReportDate(g.community[0]||{});
  h+='<section class="dp-bank research-bank"><button class="dp-head" type="button" aria-expanded="'+open+'" onclick="toggleDPBank(\''+g.key+'\')">'+bankLogo(g.bank,true)+'<span class="dp-info"><span class="dp-name">'+esc(g.bank)+'</span><span class="dp-meta">'+g.community.length+' community · '+g.user.length+' saved'+(g.accountType==='business'?' · Business':'')+(g.entryCount?' · Tracked':'')+'</span>'+(last?'<span class="research-latest">Latest dated result '+esc(fD(last))+'</span>':'')+'</span><span class="dp-arrow" aria-hidden="true">'+(open?'−':'+')+'</span></button>';
@@ -4344,6 +4364,7 @@ function rTips(){
  h+='</div>';
  }h+='</section>';
  });
+ }
  h+='<details class="research-help"><summary>Find more reports</summary><p>Open these sources to look for reports published after the catalog date.</p><a class="research-source" href="https://www.reddit.com/r/churning/search/?q=Bank%20Bonus%20Weekly&amp;restrict_sr=1&amp;sort=new" target="_blank" rel="noopener noreferrer">Reddit bank bonus threads ↗</a><a class="research-source" href="https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/" target="_blank" rel="noopener noreferrer">Doctor of Credit transfer reports ↗</a></details>';
  h+='<details class="research-help"><summary>How to read these reports</summary><p>Reported success means a person received a payment or reported a qualifying result. Mixed reports means people had different results. Still waiting does not mean failure.</p><p>DD means direct deposit, such as a paycheck. An ACH push is a bank transfer started from the sending account. A bank transfer is not automatically a qualifying direct deposit.</p><p>'+esc(catalog.coverage||'Coverage is limited to sources shown.')+'</p><p>Source checked is the research date, not the transaction date. Community reports never change your saved offer rules or deadlines.</p></details>';
  h+='</div>';
@@ -6503,6 +6524,7 @@ entries=sortE(entries);R();
       h+=bankActionSheetButton(e.id,'timer','⏱️','Add timer','Set a reminder or deadline');
     }
     h+=bankActionSheetButton(e.id,'askai','✦','Ask AI','Questions about this bonus');
+    if(window.BT360)h+='<details class="bt366-advanced-actions"><summary>Advanced tracker tools</summary>'+renderActionCenter()+'</details>';
     h+=bankActionSheetButton(e.id,'delete','🗑️','Delete account','Remove this account record',true);
     h+='<button class="bt-ba-mini cancel" onclick="event.stopPropagation();closeBankActions()"><span><b>Cancel</b></span></button>';
     h+='</div></div></div>';
@@ -6513,6 +6535,9 @@ entries=sortE(entries);R();
     const archiveView=arguments[1]===true;
     sorted=sorted.filter(e=>isArchivedTrackerEntry(e)===archiveView || (archiveView&&window.bt360ArchiveDetailId===e.id));
     if(window.BT360)sorted=sorted.filter(e=>window.BT360.scope(e));
+    // Cooldown accounts are kept in Archive > Waiting to churn; the Tracker
+    // lists only open account cards. The eligibility summaries still use all entries.
+    if(window.BT360&&!archiveView)sorted=sorted.filter(e=>!e.closed||e.id===expanded);
     const q=search.toLowerCase();
     const filtered=q?sorted.filter(e=>(e.bank||'').toLowerCase().includes(q)||(e.id||'').toLowerCase().includes(q)):sorted;
     const f=!q&&expanded&&sorted.some(e=>e.id===expanded)?sorted.filter(e=>e.id===expanded):(window.BT360?.selectedStage&&!archiveView?filtered.filter(e=>lifecycleViewForEntry(e).code===window.BT360.selectedStage):filtered);
@@ -6536,7 +6561,7 @@ entries=sortE(entries);R();
     if(!expanded)h += `<input class="sinput" type="text" id="${archiveView?'archive-search':'tracker-search'}" aria-label="${archiveView?'Search archived accounts':'Search accounts'}" placeholder="${archiveView?'Search archived accounts...':'Search accounts...'}" value="${esc(search)}" oninput="updateViewSearch('tracker',this.value,this.selectionStart)">`;
     if(!archiveView){
     if(showAnalyzer&&!expanded) h += '<section id="bt-promo-terms-panel" class="bt362-tool-panel" tabindex="-1">'+rAnalyzer()+'</section>';
-    h += '<details class="bt360-legacy-actions"'+(legacyActionsOpen?' open':'')+' ontoggle="legacyActionsOpen=this.open"><summary>All Action Center tools</summary>'+renderActionCenter()+'</details>';
+    if(!window.BT360&&!expanded)h += '<details class="bt360-legacy-actions"'+(legacyActionsOpen?' open':'')+' ontoggle="legacyActionsOpen=this.open"><summary>All Action Center tools</summary>'+renderActionCenter()+'</details>';
     }
 
     if(!f.length){
@@ -6547,8 +6572,10 @@ entries=sortE(entries);R();
 
     f.forEach(e=>{
       const isX=expanded===e.id, nr=nextReopen(e), countdown=getCountdown(e), urg=getUrg(e);
+      if(!isX&&window.BT360&&!archiveView){h+=window.BT360.compactRow(e);return;}
       if(isX&&window.BT360)h+=window.BT360.detailHead(e);
       h += `<div class="card u-${urg}${isX?' bt360-detail-card':''}" data-bt-entry-id="${profileSectionAttr(e.id)}">`;
+      if(!isX||!window.BT360){
       h += `<div class="card-h" onclick="expanded=expanded==='${e.id}'?null:'${e.id}';R()">`;
       h += `<div class="card-logo-col">${bankLogo(e.bank)}${accountTypeChipHtml(e)}${e.churn?churnTagHtml(e.bank,e.churn):''}</div>`;
       h += `<div class="card-left"><div class="card-name">${esc(e.bank)}</div><div class="card-row">${statusBadgeHtml(e,countdown)}</div>${renderCardProgressLine(e)}</div>`;
@@ -6557,10 +6584,12 @@ entries=sortE(entries);R();
       h += `<div class="card-id">${esc(getEntryDisplayId(e))}</div></div>`;
       h += '</div></div>';
       h += renderTrackerEvidenceAlerts(e);
+      }
 
       if(isX){
         h += '<div class="card-exp">';
         if(window.BT360)h+=window.BT360.detailPanels(e);
+        if(!window.BT360){
         h += '<button type="button" class="bonus-ai-open" aria-label="Ask AI about this bonus" onclick="btOpenBonusAI(\''+esc(e.id)+'\')">Ask AI</button>';
         h += renderBankProfileSummary(e);
         h += renderClosePlan(e);
@@ -6595,19 +6624,21 @@ entries=sortE(entries);R();
           h += '</div>';
         }
         h += '</div></details>';
+        }
 
         let historyHtml='';
-        if(e.notes) historyHtml += `<div class="card-notes" style="white-space:pre-wrap;font-size:12px;line-height:1.6">${esc(e.notes)}</div>`;
+        if(e.notes&&!window.BT360) historyHtml += `<div class="card-notes" style="white-space:pre-wrap;font-size:12px;line-height:1.6">${esc(e.notes)}</div>`;
         historyHtml += renderEntryHistory(e);
         historyHtml += renderAnalyzerHistory(e);
         historyHtml += renderOfferHistory(e);
         historyHtml += renderAnalyzedTermsCard(e);
         if(historyHtml)h += '<details class="profile-section" data-entry-id="'+profileSectionAttr(e.id)+'" data-section-key="history"'+profileSectionOpenAttr(e.id,'history')+' ontoggle="handleProfileSectionToggle(this)"><summary><span>Activity & Analysis</span><em>View</em></summary><div class="profile-section-body">'+historyHtml+'</div></details>';
 
-        h += '<div class="card-btns">';
+        if(!window.BT360){h += '<div class="card-btns">';
         if(!e.closed&&e.bonusRecd) h += actionBtn('cls',I.lock,'Record closure',`event.stopPropagation();startCloseFlow('${e.id}','actual')`);
         h += actionBtn('edit',I.quick,'Manage',`event.stopPropagation();openBankActions('${e.id}')`);
-        h += '</div></div>';
+        h += '</div>'}
+        h += '</div>';
       }
 
       h += '</div>';
