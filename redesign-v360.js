@@ -6,7 +6,7 @@ let audience='personal', archivePane='waiting', noticePrefs={deadlines:false,pay
 try{audience=sessionStorage.getItem(scopeKey)==='business'?'business':'personal'}catch{}
 try{const v=JSON.parse(sessionStorage.getItem(noticeKey)||'{}');for(const k of Object.keys(noticePrefs))noticePrefs[k]=v[k]===true}catch{}
 const safe=v=>typeof esc==='function'?esc(String(v??'')):String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-const arg=v=>safe(JSON.stringify(String(v||'')));
+const arg=v=>JSON.stringify(String(v??'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
 const stage=e=>{try{return lifecycleViewForEntry(e)}catch{return {code:'IN_PROGRESS',label:'In progress'}}};
 const amount=v=>fM(Number(v||0)), date=v=>v?fD(v):'Needs review';
 const eligibleInfo=e=>{
@@ -104,7 +104,7 @@ function detailPanels(e){
  else if(!e.bonusRecd){action='Confirm received';command='openRcv('+arg(e.id)+')'}
  else if(ready){action='Mark account closed';command='startCloseFlow('+arg(e.id)+',\'actual\')'}
  else {action='Review close checks';command='openBankActions('+arg(e.id)+')'}
- h+='<div class="bt360-detail-footer"><button onclick="btOpenBonusAI('+arg(e.id)+')">Ask AI</button><button class="bt360-primary" onclick="'+command+'">'+action+'</button></div>';
+ h+='<div class="bt360-detail-footer"><button onclick="btOpenBonusAI('+arg(e.id)+')">Ask AI</button><button class="bt360-primary" aria-label="'+safe(action+' for '+e.bank)+'" onclick="'+command+'">'+action+'</button></div>';
  return h
 }
 function showTerms(bank){archivePane='saved';storageSearch=String(bank||'');expanded=null;tab='archive';R()}
