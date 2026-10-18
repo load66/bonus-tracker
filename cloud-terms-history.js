@@ -3,7 +3,7 @@
 'use strict';
 const API='https://api-production-00f74.up.railway.app/api/bonus-tracker/terms';
 const uploaded=new Set();
-let inFlight=null,panel=null,notice='',verified=0,pending=0;
+let inFlight=null,panel=null,notice='',verified=0,pending=0,debounce=null;
 const core=window.BTTermsCore;
 function escapeHtml(value){return String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function connected(){return !!window.BTBonusAuth?.connected?.()}
@@ -48,6 +48,13 @@ async function sync(){
   }finally{inFlight=null}
  })();
  return inFlight;
+}
+function queueSync(){
+ // An authenticated archive upload is independent of optional rolling backups.
+ // Coalesce rapid fee/terms edits; offline/unauthenticated changes remain local.
+ if(!connected()||navigator.onLine===false)return;
+ clearTimeout(debounce);
+ debounce=setTimeout(()=>{debounce=null;sync().catch(()=>{});},2000);
 }
 function drawStatus(){
  if(!panel)return;
@@ -123,6 +130,8 @@ function open(){
  }else reloadList();
  panel.querySelector('#bt-terms-cloud-close').focus();
 }
-window.BTTermsHistory={sync,open,readRecord,list,get status(){return{verified,pending,notice}},collect:sources};
+window.BTTermsHistory={sync,queueSync,open,readRecord,list,get status(){return{verified,pending,notice}},collect:sources};
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&panel){event.preventDefault();close()}});
+window.addEventListener('online',queueSync);
+setTimeout(queueSync,2500);
 })();
