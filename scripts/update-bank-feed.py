@@ -218,9 +218,10 @@ def rehydrate(row):
     if links: item['links']=links
     return item
 
-def merge_offers(previous, fresh, now):
+def merge_offers(previous, fresh, now, retired=()):
     # Source post dates, not scrape time, determine lifecycle and "New" status.
     posts=[x for x in (rehydrate(r) for r in previous) if x is not None]+fresh
+    tombstones={r.get('offerKey'):r.get('endedAt') for r in retired if isinstance(r,dict) and isinstance(r.get('offerKey'),str) and isinstance(r.get('endedAt'),str)}
     groups={}
     for item in posts:
         if not item.get('bank'): continue
@@ -231,7 +232,7 @@ def merge_offers(previous, fresh, now):
     for key,items in groups.items():
         items.sort(key=lambda r:(r['publishedAt'],bool(r.get('isUpdate'))),reverse=True)
         current=items[0]
-        if current.get('ended'): continue
+        if current.get('ended') or (tombstones.get(key) and current['publishedAt']<=tombstones[key]): continue
         expiry=current.get('expiresAt') or next((r['expiresAt'] for r in items if r.get('expiresAt')),None)
         if expiry and expiry<now.date().isoformat(): continue
         newest=dt.datetime.fromisoformat(current['publishedAt'])
@@ -330,8 +331,15 @@ def build_payload(now, previous=None):
     states=[state for _,state in results]
     checks=[s['checkedAt'] for s in states if s.get('checkedAt')]
     if not checks:raise ValueError('No source is available and no last-good snapshot exists')
-    rows=merge_offers(previous.get('offers',[]),fresh,now)
-    return {'schemaVersion':2,'checkedAt':max(checks),'sources':states,'offers':rows}
+    retired=[r for r in previous.get('retired',[]) if isinstance(r,dict) and isinstance(r.get('offerKey'),str) and isinstance(r.get('endedAt'),str)
+             and r['endedAt']>= (now-dt.timedelta(days=90)).isoformat()]
+    retired.extend({'offerKey':r['offerKey'],'endedAt':r['publishedAt']} for r in fresh if r.get('ended'))
+    latest={}
+    for r in retired:
+        if r['offerKey'] not in latest or r['endedAt']>latest[r['offerKey']]['endedAt']:latest[r['offerKey']]=r
+    retired=list(latest.values())[:200]
+    rows=merge_offers(previous.get('offers',[]),fresh,now,retired)
+    return {'schemaVersion':2,'checkedAt':max(checks),'sources':states,'offers':rows,'retired':retired}
 
 def main():
     now = dt.datetime.now(dt.timezone.utc)
