@@ -6,6 +6,8 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.6.10 usage precision PR pending (`codex/v3.6.10-usage-partial-precision`): optional missing memory data no longer hides a verified projection; positive R2 usage below 0.01 GB displays as less than 0.01 GB. Synthetic cloud and browser regressions added; local bonus, cloud, UI and release checks PASS. No backend, stored records or credential changes. Next: Chromium/WebKit PR verification, merge, main CI and Pages; Railway account credential still requires owner rotation.
+
 - v3.6.9 Railway usage UI integration on `codex/v3.6.8-usage-release-integration`: built on main v3.6.8 mobile layout PR #181, preserving its 320/375/390/430px regressions, account details and CSS. Safely carry over allowlisted Railway usage diagnostics, missing-projection handling, and manual `?refresh=1` from PR #178 plus mock-only cloud unit test; app/cache `3.6.9` / `bt-v3.6.9-usage1`. Backend `c86b65858336ebc3099ec9cf570fe7bfbcbc91ec` deployed SUCCESS. CI and Pages verification pending. No financial records, eligibility calculations or provider integration changed.
 
 - v3.6.8 mobile account-detail layout PR #181 (`codex/v3.6.8-detail-layout-reliability`): checkbox styles no longer shrink task editor text; timer countdown and long fee terms fit narrow screens; due-date controls wrap. Synthetic 320/375/390/430 px regression checks, app and service-worker cache bumped. PR CI https://github.com/load66/bonus-tracker/actions/runs/39116225469 PASS: bonus/cloud/UI units, Chromium, WebKit, release verification. No stored records or backend change. Next: merge, verify exact main CI and Pages publish; hosting usage credential requires owner rotation.

@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.9 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.10 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt360_audience_session',noticeKey='bt360_notice_session';
@@ -239,6 +239,7 @@ function saveHostSettings(next){
 let usageData=null,usageLoading=false,usageFetchedAt=0,usageError='';
 function cleanCost(v){return typeof v==='number'&&Number.isFinite(v)&&v>=0?v:null}
 function fmtCost(v){return v===null?'Unavailable':'$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function fmtStorage(bytes){return bytes>0&&bytes<5000000?'Less than 0.01 GB':(bytes/1000000000).toFixed(2)+' GB'}
 async function refreshUsage(force=false){
  if(usageLoading)return;
  if(!force&&Date.now()-usageFetchedAt<60*60*1000)return;
@@ -313,7 +314,7 @@ function usageCard(){
  else if(!window.BTBonusAuth?.connected?.())content='<p class="bt360-muted">Sign in to Cloud protection to view hosting usage.</p><button class="bt360-link" onclick="BT360.closeSettings();btOpenCloudBackup()">Open Cloud protection</button>';
  else if(ok||partial){
    if(partial)content+=current!==null
-     ?'<p class="bt360-usage-warning">Verified month-to-date cost is complete. '+PROJECTION_UNAVAILABLE+'.</p>'
+     ?'<p class="bt360-usage-warning">Verified month-to-date cost is complete. '+(projected===null?PROJECTION_UNAVAILABLE+'.':'Railway omitted some optional details; the projection is available.')+'</p>'
      :'<p class="bt360-usage-warning">Railway provided incomplete usage data. The total is incomplete; missing values are not zero.</p>';
    if(partial&&railway.reasonCode==='permission_denied')content+='<p class="bt360-muted">'+safe(usageReason(railway,'permission_denied'))+'</p>';
    if(ok&&current!==null&&projected!==null){
@@ -322,7 +323,7 @@ function usageCard(){
      content+='<div class="bt360-usage-plan"><div><span>Projected / allowance</span><b>'+fmtCost(projected)+' / '+fmtCost(cfg.allowance)+'</b></div><div class="bt360-track"><i style="width:'+Math.min(100,ratio*100)+'%"></i></div></div>';
    } else {
      const subtotal=cleanCost(railway?.knownCostSubtotal);
-     content+='<div class="bt360-usage-top"><div><span>Complete cost total</span><strong>'+(current===null?missingLabel:'Verified '+fmtCost(current))+'</strong><small>Verified subtotal: '+(subtotal===null?missingLabel:fmtCost(subtotal))+'</small><small>'+(projected===null?PROJECTION_UNAVAILABLE:'Projected billing usage: Verified '+fmtCost(projected))+'</small></div></div>';
+     content+='<div class="bt360-usage-top"><div><span>'+(current===null?'Complete cost total':'Cost so far')+'</span><strong>'+(current===null?missingLabel:'Verified '+fmtCost(current))+'</strong><small>Verified subtotal: '+(subtotal===null?missingLabel:fmtCost(subtotal))+'</small><small>'+(projected===null?PROJECTION_UNAVAILABLE:'Projected billing usage: Verified '+fmtCost(projected))+'</small></div></div>';
    }
    const services=Array.isArray(railway.services)?railway.services:[];
    if(services.length)content+='<div class="bt360-usage-services">'+services.map(x=>{
@@ -342,7 +343,7 @@ function usageCard(){
  if(!ok&&!partial&&usageError)content+='<p class="bt360-muted">'+safe(usageError)+'</p>';
  content+='<div class="bt360-usage-controls"><button class="bt360-link" onclick="BT360.refreshUsage(true)">Try again</button><a href="'+RAILWAY_USAGE_URL+'" target="_blank" rel="noopener noreferrer">View Railway usage ↗</a></div>';
  content+='<div class="bt360-usage-config"><button onclick="BT360.setHostingAmount(\'allowance\')">Plan allowance <b>'+fmtCost(cfg.allowance)+'</b> ✎</button><button onclick="BT360.setHostingAmount(\'alertAt\')">Alert at <b>'+fmtCost(cfg.alertAt)+'</b> ✎</button></div>';
- content+='<div class="bt360-usage-r2"><b>R2 storage</b><span>'+(r2?.status==='ok'&&typeof r2.usedBytes==='number'?Number(r2.usedBytes/1000000000).toFixed(2)+' GB / 10 GB free':'Usage unavailable')+'</span></div>';
+ content+='<div class="bt360-usage-r2"><b>R2 storage</b><span>'+(r2?.status==='ok'&&typeof r2.usedBytes==='number'&&Number.isFinite(r2.usedBytes)&&r2.usedBytes>=0?fmtStorage(r2.usedBytes)+' / 10 GB free':'Usage unavailable')+'</span></div>';
  content+='<p class="bt360-muted">Last checked '+(usageData?.checkedAt?new Date(usageData.checkedAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'not yet')+'</p>';
  return panel('HOSTING & USAGE · '+month,content);
 }
@@ -363,10 +364,10 @@ async function backUpNow(){
 function settings(){
  const toggles=[['deadlines','Deadlines','3 and 1 day before'],['payouts','Payouts and close dates','When ready'],['eligible','Eligible again','7 days before and on the day']];
  const buttons=toggles.map(([k,label,description])=>'<button class="bt360-settings-row" role="switch" aria-checked="'+noticePrefs[k]+'" onclick="BT360.setNotice(\''+k+'\')"><span><b>'+label+'</b><small>'+description+'</small></span><i class="bt360-toggle '+(noticePrefs[k]?'checked':'')+'"></i></button>').join('');
- return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.9</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
+ return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.10</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
  cloudSettingsCard()+
  usageCard()+
- panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.9. Push delivery is not active.</p>')+
+ panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.10. Push delivery is not active.</p>')+
  panel('Data','<button class="bt360-settings-row" onclick="BT360.closeSettings();exportBackup()">Export backup file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.closeSettings();importBackup()">Restore from file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.openPhonebook()">Bank phone numbers <span>›</span></button>')+
  '<button class="bt360-reset" onclick="BT360.closeSettings();resetAllData()">Reset this device <small>Two confirmations and a safety backup</small></button></section></div>';
 }

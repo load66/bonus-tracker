@@ -88,6 +88,8 @@ async function hostingUsage(){
  assert.match(usageUrls.at(-1),/\/usage\?refresh=1$/,'Try again bypasses the backend cache');
  assert.match(model.usageCard(),/Within plan/);
  assert.match(model.usageCard(),/R2 storage/);
+ payload={...payload,r2:{status:'ok',usedBytes:1200000}};await model.refreshUsage(true);
+ assert.match(model.usageCard(),/Less than 0\.01 GB/,'Positive R2 usage must not round to zero');
  assert.match(model.usageCard(),/api/);
  payload=make(4.5);await model.refreshUsage(true);
  assert.match(model.usageCard(),/Near limit/);
@@ -135,6 +137,15 @@ async function hostingUsage(){
  assert.match(deniedCard,/Railway doesn(?:'|&#39;)t allow this token to read estimatedUsage\./);
  assert.match(deniedCard,/month-end projection \(not permitted for this token\)/);
  assert.doesNotMatch(deniedCard,/\$0\.00|rejected the token|PRIVATE_REMOTE/);
+ payload={...make(0),railway:{status:'partial',verifiedAt:'2026-10-17T12:00:00Z',reasonCode:'measurement_missing',
+  costSoFar:2.31,knownCostSubtotal:2.31,projectedMonthEnd:3.47,
+  services:[{name:'synthetic-api',costSoFar:2.31,avgMemoryGb:null}],
+  missing:[{service:'project',kind:'measurement_missing',metric:'average_memory'}]}};
+ await model.refreshUsage(true);
+ const knownProjection=model.usageCard();
+ assert.match(knownProjection,/Verified \$2\.31/);
+ assert.match(knownProjection,/Projected billing usage: Verified \$3\.47/);
+ assert.doesNotMatch(knownProjection,/Projection not available from Railway|total is incomplete/);
  payload={...make(0,'unavailable'),railway:{status:'unavailable',reasonCode:'permission_denied',
   deniedFields:['<img src=x>'],costSoFar:null,projectedMonthEnd:null}};
  await model.refreshUsage(true);
