@@ -183,26 +183,60 @@ function usageBanner(){
 function saveBannerMonth(month){
  try{const settings={...hostSettings(),lastBannerMonth:month};window.BTPersistence.commit(localStorage,{[HOST_SETTINGS]:JSON.stringify(settings)});return true}catch{return false}
 }
+const USAGE_REASONS={
+ token_missing:'Add a Railway account token to the backend as RAILWAY_API_TOKEN.',
+ token_unauthorized:'Railway rejected the token. Create an account token (not a project token) and replace RAILWAY_API_TOKEN.',
+ workspace_not_found:'This account token cannot access a Railway workspace.',
+ project_not_visible:"This token can't see the trading-journal-ai project.",
+ estimate_missing:'Railway did not report a complete billing estimate.',
+ measurement_missing:'Railway omitted one or more service measurements.',
+ rate_limited:'Railway is limiting requests. Try again in a few minutes.',
+ timeout:"Couldn't reach Railway before the request timed out. Try again.",
+ railway_unreachable:"Couldn't reach Railway. Try again.",
+ response_changed:"Railway changed its billing data format; usage can't be verified until updated."
+};
+const RAILWAY_USAGE_URL='https://railway.com/workspace/usage';
 function usageCard(){
  const month=new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'});
  const cfg=hostSettings(),railway=usageData?.railway,r2=usageData?.r2;
  const current=cleanCost(railway?.costSoFar),projected=cleanCost(railway?.projectedMonthEnd);
+ const status=railway?.status,partial=status==='partial',ok=status==='ok';
+ const verifiedTime=railway?.verifiedAt&&Number.isFinite(Date.parse(railway.verifiedAt))
+   ?new Date(railway.verifiedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})
+   :'not verified';
+ const missingLabel='Not reported by Railway';
  let content='';
  if(usageLoading)content='<p class="bt360-muted">Checking Railway and R2 usage…</p>';
  else if(!window.BTBonusAuth?.connected?.())content='<p class="bt360-muted">Sign in to Cloud protection to view hosting usage.</p><button class="bt360-link" onclick="BT360.closeSettings();btOpenCloudBackup()">Open Cloud protection</button>';
- else if(railway?.status==='not_configured')content='<p class="bt360-usage-warning">Add a Railway API token to see usage.</p><p class="bt360-muted">Create a read-only API token under Railway account settings. Add it to the backend service as RAILWAY_API_TOKEN, then redeploy. Never paste it into BonusTracker.</p>';
- else if(!railway||railway.status!=='ok'||current===null||projected===null)content='<p class="bt360-usage-warning">Railway usage unavailable. Costs cannot be verified.</p><button class="bt360-link" onclick="BT360.refreshUsage(true)">Try again</button>';
- else {
-  const ratio=projected/cfg.allowance,label=ratio>1?'Over plan':ratio>=0.8?'Near limit':'Within plan',tone=ratio>1?'bad':ratio>=0.8?'warning':'positive';
-  content='<div class="bt360-usage-top"><div><span>Cost so far</span><strong>'+fmtCost(current)+'</strong><small>about '+fmtCost(projected)+' by month end</small></div><span class="bt360-chip '+tone+'">'+label+'</span></div>';
-  content+='<div class="bt360-usage-plan"><div><span>Projected / allowance</span><b>'+fmtCost(projected)+' / '+fmtCost(cfg.allowance)+'</b></div><div class="bt360-track"><i style="width:'+Math.min(100,ratio*100)+'%;background:'+(ratio>1?'#FF8A8A':ratio>=0.8?'#FFB86B':'#5BE3B0')+'"></i></div></div>';
-  const services=Array.isArray(railway.services)?railway.services:[];
-  content+='<div class="bt360-usage-services">'+services.map(x=>'<div><span>'+safe(x.name)+'</span><span>'+fmtCost(cleanCost(x.costSoFar))+' <small>'+(x.avgMemoryGb!=null?Number(x.avgMemoryGb*1024).toFixed(0)+' MB avg':'Memory unavailable')+'</small></span></div>').join('')+'</div>';
+ else if(ok||partial){
+   if(partial)content+='<p class="bt360-usage-warning">Railway provided incomplete usage data. The total is incomplete; missing values are not zero.</p>';
+   if(ok&&current!==null&&projected!==null){
+     const ratio=projected/cfg.allowance,label=ratio>1?'Over plan':ratio>=0.8?'Near limit':'Within plan',tone=ratio>1?'bad':ratio>=0.8?'warning':'positive';
+     content+='<div class="bt360-usage-top"><div><span>Cost so far</span><strong>Verified '+fmtCost(current)+'</strong><small>Projected '+fmtCost(projected)+' by billing period end</small></div><span class="bt360-chip '+tone+'">'+label+'</span></div>';
+     content+='<div class="bt360-usage-plan"><div><span>Projected / allowance</span><b>'+fmtCost(projected)+' / '+fmtCost(cfg.allowance)+'</b></div><div class="bt360-track"><i style="width:'+Math.min(100,ratio*100)+'%"></i></div></div>';
+   } else {
+     const subtotal=cleanCost(railway?.knownCostSubtotal);
+     content+='<div class="bt360-usage-top"><div><span>Complete cost total</span><strong>'+(current===null?missingLabel:'Verified '+fmtCost(current))+'</strong><small>Verified subtotal: '+(subtotal===null?missingLabel:fmtCost(subtotal))+'</small><small>Projected billing usage: '+(projected===null?missingLabel:'Verified '+fmtCost(projected))+'</small></div></div>';
+   }
+   const services=Array.isArray(railway.services)?railway.services:[];
+   if(services.length)content+='<div class="bt360-usage-services">'+services.map(x=>{
+     const value=cleanCost(x.costSoFar);
+     return '<div><span>'+safe(x.name)+'</span><span>'+(value===null?missingLabel:'Verified '+fmtCost(value))+' <small>'+(x.avgMemoryGb!=null?Number(x.avgMemoryGb*1024).toFixed(0)+' MB avg':'Avg RAM not reported')+'</small></span></div>';
+   }).join('')+'</div>';
+   if(partial&&Array.isArray(railway.missing)&&railway.missing.length){
+     const names={CPU_USAGE:'CPU',MEMORY_USAGE_GB:'memory',NETWORK_TX_GB:'network egress',average_memory:'average RAM'};
+     content+='<div class="bt360-usage-missing"><b>Missing from Railway</b>'+railway.missing.slice(0,30).map(x=>'<p>'+safe(x.service)+' · '+safe(names[x.metric]||x.metric)+' ('+safe(x.kind)+')</p>').join('')+'</div>';
+   }
+   content+='<p class="bt360-muted">Verified from Railway '+safe(verifiedTime)+' · usage before plan credit and base fee</p>';
+ }else{
+   const code=typeof railway?.reasonCode==='string'?railway.reasonCode:(status==='not_configured'?'token_missing':'response_changed');
+   content+='<p class="bt360-usage-warning">'+safe(USAGE_REASONS[code]||USAGE_REASONS.response_changed)+'</p>';
  }
- if(!content)content='<p class="bt360-muted">Usage information is not available.</p>';
+ if(!ok&&!partial&&usageError)content+='<p class="bt360-muted">'+safe(usageError)+'</p>';
+ content+='<div class="bt360-usage-controls"><button class="bt360-link" onclick="BT360.refreshUsage(true)">Try again</button><a href="'+RAILWAY_USAGE_URL+'" target="_blank" rel="noopener noreferrer">View Railway usage ↗</a></div>';
  content+='<div class="bt360-usage-config"><button onclick="BT360.setHostingAmount(\'allowance\')">Plan allowance <b>'+fmtCost(cfg.allowance)+'</b> ✎</button><button onclick="BT360.setHostingAmount(\'alertAt\')">Alert at <b>'+fmtCost(cfg.alertAt)+'</b> ✎</button></div>';
  content+='<div class="bt360-usage-r2"><b>R2 storage</b><span>'+(r2?.status==='ok'&&typeof r2.usedBytes==='number'?Number(r2.usedBytes/1000000000).toFixed(2)+' GB / 10 GB free':'Usage unavailable')+'</span></div>';
- content+='<p class="bt360-muted">Updated '+(usageData?.checkedAt?new Date(usageData.checkedAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'not yet')+' · estimates from Railway and Cloudflare</p>';
+ content+='<p class="bt360-muted">Last checked '+(usageData?.checkedAt?new Date(usageData.checkedAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'not yet')+'</p>';
  return panel('HOSTING & USAGE · '+month,content);
 }
 function setNotice(key){if(!(key in noticePrefs))return;noticePrefs[key]=!noticePrefs[key];try{sessionStorage.setItem(noticeKey,JSON.stringify(noticePrefs))}catch{}R()}
