@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.28';
+const APP_VERSION='3.6.29';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -1402,10 +1402,28 @@ function getBrand(name){
   
 }
 
+// Curated local copies of identifiable institution marks. Exact family prefixes
+// prevent a similarly named bank from inheriting another institution's logo.
+const BT_BANK_LOGO_ASSETS=[
+ [/^(?:jpmorgan chase|jp morgan chase|chase)(?: |$)/,'chase'],
+ [/^(?:citibank|citi)(?: |$)/,'citi'],
+ [/^wells fargo(?: |$)/,'wells-fargo'],
+ [/^(?:bank of america|boa)(?: |$)/,'bank-of-america'],
+ [/^td bank(?: |$)/,'td-bank'],
+ [/^bmo(?: |$)/,'bmo'],
+ [/^discover(?: |$)/,'discover'],
+ [/^hsbc(?: |$)/,'hsbc']
+];
+function bankLogoAsset(name){
+  const normalized=String(name||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  return BT_BANK_LOGO_ASSETS.find(([pattern])=>pattern.test(normalized))?.[1]||'';
+}
 function bankLogo(name,sm){
-  const b=getBrand(name);
-  const cls=sm?'blogo sm':'blogo';
-  return`<div class="${cls}" style="background:${b.bg};color:${b.fg}"><span>${esc(b.abbr)}</span></div>`
+  const b=getBrand(name),asset=bankLogoAsset(name);
+  const cls=(sm?'blogo sm':'blogo')+' bt3729-bankmark'+(asset?' has-logo':'');
+  const start=`<div class="${cls}" style="background:${asset?'#F7F9FC':b.bg};color:${b.fg}" aria-hidden="true">`;
+  if(!asset)return start+`<span>${esc(b.abbr)}</span></div>`;
+  return start+`<img alt="" loading="lazy" decoding="async" src="./bank-logos/${asset}.svg" onerror="this.onerror=null;this.parentElement.classList.add('logo-missing')"><span class="bt3729-logo-fallback">${esc(b.abbr)}</span></div>`;
 }
 
 function churnTagHtml(bank,churn){
