@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex — v3.6.25 — codex/v3.6.25-offer-audience-ui
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.25 Bank Offers audience and compact feed (`codex/v3.6.25-offer-audience-ui`): Personal/Business segmented views filter public offer posts consistently using structured product and title, without applying eligibility. Business category switches audience; switching back resets stale Business pill. Search, existing filter controls, area, priority, official evidence, original headlines and all external offer links retained; group rows follow PDF's compact visual hierarchy. Synthetic offer-audience UI regressions. No saved financial or rules changes. Full PR CI + exact main Pages publication required.
+
 
 - v3.6.24 anchored Bonus Detail requirement dates (`codex/v3.6.23-detail-deadline-clarity`): the lifecycle banner uses the earliest calculable deadline from saved structured terms, without guessing calendar dates from unsupported business-day or statement-cycle timing. Synthetic deadline timers disappear when requirements are confirmed or bonus is received; saved manual reminders remain intact. Rebases the previously tested v3.6.23 deadline patch on top of v3.6.23 retention safeguards. Read-only, no saved evidence or engine changes. Fresh bonus/UI/cloud, Chromium/WebKit, Pages checks required.
 

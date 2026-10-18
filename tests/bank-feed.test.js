@@ -2,6 +2,41 @@
 const assert=require('assert');
 const {sandbox,app,storage}=require('./full-app-smoke.test.js');
 const before=JSON.stringify([...storage]);
+
+// Offer discovery uses the selected Personal/Business audience, not the
+// account's unrelated category pill or an old bank-cooldown decision.
+const offersAPI=sandbox.BTBankBonusFeed;
+const sampleOffers=[
+ {title:'Synthetic Consumer Checking $300',product:'checking',bank:'Synthetic Consumer'},
+ {title:'Synthetic Biz Savings $400',product:'savings',bank:'Synthetic Biz'},
+ {title:'Synthetic Business account offer',product:'checking',bank:'Synthetic Business'},
+ {title:'Synthetic No-Type $200',product:'',bank:'Synthetic'},
+ {title:'Synthetic Structured Savings Reward',product:'savings',bank:'Structured'}
+];
+assert.equal(offersAPI.offerAudience(sampleOffers[0]),'personal');
+assert.equal(offersAPI.offerAudience(sampleOffers[1]),'business','Business wording overrides generic Savings product metadata');
+assert.equal(offersAPI.offerAudience(sampleOffers[2]),'business','Business wording overrides Checking metadata');
+assert.equal(offersAPI.offerAudience(sampleOffers[3]),'unverified','Unknown product cannot be labeled personal with confidence');
+assert.deepEqual(Array.from(offersAPI.offersForAudience(sampleOffers,'business'),x=>x.title),[sampleOffers[1].title,sampleOffers[2].title]);
+assert.deepEqual(Array.from(offersAPI.offersForAudience(sampleOffers,'personal'),x=>x.title),[sampleOffers[0].title,sampleOffers[3].title,sampleOffers[4].title]);
+assert.equal(offersAPI.matchesCategory(sampleOffers[4],'savings'),true,'Structured product metadata filters savings even if title omits Savings keyword');
+assert.equal(offersAPI.matchesCategory(sampleOffers[1],'checking'),false,'A business savings post must not appear in Checking');
+assert.equal(offersAPI.matchesCategory(sampleOffers[1],'business'),true,'Business includes savings, not just Checking');
+assert.equal(offersAPI.matchesCategory(sampleOffers[2],'checking'),true,'Business Checking appears in business account Checking filter');
+assert.equal(offersAPI.checkedAge('not a date'),'check time unavailable');
+const savedAudience=sandbox.BT360.audience;
+const originalAudienceSetting=storage.get('bt360_audience_session');
+try{
+ sandbox.BT360.setAudience('personal');
+ sandbox.btRadarOfferPill('business');
+ assert.equal(sandbox.BT360.audience,'business','Business category must switch the account type correctly');
+ assert.match(sandbox.rBankBonuses(),/Bank offers/);
+ sandbox.BT360.setAudience('personal');
+ assert.equal(sandbox.BT360.audience,'personal');
+ // Category resets on returning to Personal rather than hiding all consumer posts.
+ assert.equal(offersAPI.offersForAudience(sampleOffers,'personal').some(x=>x.bank==='Synthetic Consumer'),true);
+}finally{sandbox.BT360.setAudience(savedAudience);if(originalAudienceSetting===undefined)storage.delete('bt360_audience_session');else storage.set('bt360_audience_session',originalAudienceSetting);}
+
 const safe={schemaVersion:1,checkedAt:'2026-10-11T12:00:00Z',offers:[{title:'Bank <img onerror=alert(1)> $500 Bonus',url:'https://www.doctorofcredit.com/bank-bonus/',publishedAt:'2026-10-10T12:00:00Z'}]};
 assert.equal(sandbox.BTBankBonusFeed.validate(safe).offers.length,1);
 assert.equal(sandbox.BTBankBonusFeed.validate({...safe,offers:[{...safe.offers[0],url:'javascript:alert(1)'}]}).offers.length,0);

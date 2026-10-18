@@ -56,6 +56,35 @@
     if(rawUsage&&typeof rawUsage==='object')for(const key of ['newExtractions','providerRequests','reportedTokens','dailyAccountedTokens','dailyTokenBudget','cycleLimit','retries','throttled','cacheHits','queued','failed','unsupported','documentsChecked','documentFailures'])if(Number.isSafeInteger(rawUsage[key])&&rawUsage[key]>=0&&rawUsage[key]<=10000000)usage[key]=rawUsage[key];
     return {checkedAt:data.checkedAt,offers,sources,usage,verificationStatus:data.verification&&data.verification.status==='complete'?'complete':data.verification&&data.verification.status==='pending'?'pending':'unavailable'};
   }
+
+  // Separate offer audiences from public offer identity; never infer eligibility
+  // or apply a consumer cooldown to a business offer (or vice versa).
+  function offerAudience(offer){
+    const text=normalize([offer?.title,offer?.product].filter(Boolean).join(' '));
+    if(/\b(business|biz|commercial|merchant|sole proprietor)\b/.test(text))return 'business';
+    if(/\b(checking|savings?|deposit|bank account|certificate of deposit)\b/.test(text))return 'personal';
+    return 'unverified';
+  }
+  function offersForAudience(rows,selected){
+    return rows.filter(offer=>selected==='business'?offerAudience(offer)==='business':offerAudience(offer)!=='business');
+  }
+  function matchesCategory(offer,category){
+    if(category==='all'||category==='near')return true;
+    if(category==='business')return offerAudience(offer)==='business';
+    const text=normalize([offer?.product,offer?.title].filter(Boolean).join(' '));
+    return category==='checking'?/\bchecking\b/.test(text):category==='savings'?/\bsavings?\b/.test(text):false;
+  }
+  function checkedAge(value){
+    const n=Date.parse(value),age=Date.now()-n;
+    if(!Number.isFinite(n)||age<0)return 'check time unavailable';
+    const minutes=Math.floor(age/60000);
+    if(minutes<1)return 'checked just now';
+    if(minutes<60)return 'checked '+minutes+'m ago';
+    const hours=Math.floor(minutes/60);
+    if(hours<24)return 'checked '+hours+'h ago';
+    return 'checked '+Math.floor(hours/24)+'d ago';
+  }
+
   function grouped(rows){
     const groups=new Map();
     for(const row of rows){
@@ -208,6 +237,8 @@
   function trackerContext(){
     try{return {rows:typeof entries!=='undefined'?entries:[],family:name=>typeof normalizeBankFamily==='function'?normalizeBankFamily(name):normalize(name),audience:e=>typeof entryBankType==='function'&&entryBankType(e)==='B'?'business':'personal',nonrepeat:e=>typeof isNonRepeatableEntry==='function'&&isNonRepeatableEntry(e),ready:e=>typeof window.churnReadyDate==='function'?window.churnReadyDate(e):'',today:typeof td==='function'?td():new Date().toISOString().slice(0,10)};}catch{return{rows:[]};}
   }
+  window.btRadarAudienceChanged=function(next){if(next!=='business'&&categoryFilter==='business')categoryFilter='all';};
+  window.btRadarOpenFilters=function(){const d=document.querySelector('.bt362-offer-filter-disclosure');if(!d)return;d.open=true;filtersExpanded=true;d.scrollIntoView?.({block:'nearest'});d.querySelector?.('select')?.focus?.({preventScroll:true});};
   window.btRadarArea=function(value){area=Object.hasOwn(states,value)?value:'';R();};
   window.btRadarPriority=function(value){priorityFilter=['all','tracker','area'].includes(value)?value:'all';R();};
 
@@ -247,10 +278,18 @@
     finally{clearTimeout(timeout);loading=false;if(typeof R==='function'&&typeof tab!=='undefined'&&tab==='bonuses')R();}
   }
   window.btRefreshBankBonuses=refresh;
-  window.btRadarOfferPill=function(value){if(!['all','checking','savings','business','near'].includes(value))return;categoryFilter=value;if(value==='business')window.BT360?.setAudience('business');else R();};
+  window.btRadarOfferPill=function(value){
+    if(!['all','checking','savings','business','near'].includes(value))return;
+    categoryFilter=value;
+    if(value==='business'&&window.BT360?.audience!=='business')window.BT360?.setAudience('business');
+    else R();
+  };
   window.rBankBonuses=function(){
     if(!attempted){attempted=true;setTimeout(refresh,0);}
-    let h=(window.BT360?.segments()||'')+'<div class="bt362-offer-head"><h2>Bank offers</h2><button type="button" class="ph-mini ph-save" onclick="btRefreshBankBonuses()" '+(loading?'disabled':'')+'>'+(loading?'Checking…':'Check updates')+'</button></div>';
+    const audience=window.BT360?.audience==='business'?'business':'personal';
+    const scoped=feed?offersForAudience(feed.offers,audience):[];
+    const audienceCount=feed?grouped(scoped).length:0;
+    let h='<div class="bt362-offer-head"><div class="bt362-offer-headline"><h2>Bank offers</h2><p>'+escape(states[area]||'Location not selected')+(feed?' · '+audienceCount+' offer'+(audienceCount===1?'':'s')+' · '+checkedAge(feed.checkedAt):' · update pending')+'</p></div><button type="button" class="ph-mini ph-save" onclick="btRefreshBankBonuses()" '+(loading?'disabled':'')+'>'+(loading?'Checking…':'Check updates')+'</button></div>'+(window.BT360?.segments()||'');
     const sourceStale=!!(feed&&(!Number.isFinite(Date.parse(feed.checkedAt))||Date.now()-Date.parse(feed.checkedAt)>86400000));
     const sourceFailed=!!(feed?.sources?.some(s=>s.status!=='ok'));
     if(sourceStale||sourceFailed||error||officialError)h+='<div class="bt362-offer-stale" role="status"><span>'+escape(error||officialError||(sourceStale?'Source information is stale. Review dates before applying.':'Some source updates are unavailable.'))+'</span><button type="button" onclick="btRefreshBankBonuses()">Refresh</button></div>';
@@ -261,8 +300,8 @@
     if(feed.sources.length)h+='<div class="radar-sources">'+feed.sources.map(s=>'<p>'+escape(s.name)+' · '+(s.status==='ok'?'Checked':'Update unavailable')+(s.checkedAt?' '+escape(new Date(s.checkedAt).toLocaleString()):' · no successful check yet')+'</p>').join('')+'</div>';
     if(officialError)h+='<p>'+escape(officialError)+'</p>';
     h+='</div></details>';
+    h+='<input id="radar-search" class="sinput bt362-search" aria-label="Search banks and offers" placeholder="Search banks and offers" value="'+escape(query)+'" oninput="btRadarSearch(this.value,this.selectionStart)">';
     h+='<div class="bt360-offer-pills" role="group" aria-label="Offer types">'+[['all','All'],['checking','Checking'],['savings','Savings'],['business','Business'],['near','Near me']].map(([v,label])=>'<button type="button" aria-pressed="'+(categoryFilter===v)+'" class="'+(categoryFilter===v?'active':'')+'" onclick="btRadarOfferPill(\''+v+'\')">'+label+'</button>').join('')+'</div>';
-    h+='<input id="radar-search" class="sinput" placeholder="Search bank bonuses…" value="'+escape(query)+'" oninput="btRadarSearch(this.value,this.selectionStart)">';
     h+='<details class="bt362-offer-filter-disclosure"'+(filtersExpanded?' open':'')+'><summary>Offer filters</summary><section class="radar-filters radar-personal-filters" aria-label="Offer preferences"><div class="radar-filter-grid"><div><label for="radar-area">Your area</label><select id="radar-area" onchange="btRadarArea(this.value)"><option value=""'+(!area?' selected':'')+'>Choose a state</option>'+Object.entries(states).map(([code,name])=>'<option value="'+code+'"'+(area===code?' selected':'')+'>'+name+'</option>').join('')+'</select></div><div><label for="radar-availability">Availability</label><select id="radar-availability" onchange="btRadarAvailability(this.value)">'+[['all','All bank offers'],['nationwide','Reported nationwide'],['regional','Reported regional'],['unknown','Availability unclear']].map(([v,l])=>'<option value="'+v+'"'+(availabilityFilter===v?' selected':'')+'>'+l+'</option>').join('')+'</select></div></div><div class="radar-priority-tabs" role="group" aria-label="Offer priority">'+[['all','For you'],['tracker','Churn matches'],['area','Hide out-of-area']].map(([v,l])=>'<button type="button" aria-pressed="'+(priorityFilter===v)+'" onclick="btRadarPriority(\''+v+'\')">'+l+'</button>').join('')+'</div><p>Sorted by tracker review dates and reported availability. Verify eligibility before applying.</p></section></details>';
     const context=trackerContext();
     if(window.BT360)context.rows=context.rows.filter(e=>window.BT360.scope(e));
@@ -271,35 +310,42 @@
     if(names.length)h+='<div class="radar-quick radar-churn-shortcuts" aria-label="Your churn list">'+names.map(name=>'<button type="button" class="ph-mini" onclick="btRadarSearch('+escape(JSON.stringify(context.family(name)))+')">'+escape(name)+'</button>').join('')+'<button type="button" class="ph-mini" onclick="btRadarSearch(\'\')">All banks</button></div>';
     else h+='<div class="radar-quick"><button type="button" class="ph-mini" onclick="btRadarSearch(\'\')">All banks</button></div>';
     if(!feed.offers.length)return h+'<p>No bank offers available.</p>';
-    let matches=filtered(feed.offers,query,availabilityFilter,{evidence:evidenceFilter,fees:feeFilter,activity:activityFilter,amount:amountFilter});
-    if(categoryFilter==='checking')matches=matches.filter(x=>/\bchecking\b/i.test(x.title));
-    if(categoryFilter==='savings')matches=matches.filter(x=>/\bsavings?\b/i.test(x.title));
-    if(categoryFilter==='business')matches=matches.filter(x=>/\b(business|commercial|biz)\b/i.test(x.title));
+    let matches=filtered(scoped,query,availabilityFilter,{evidence:evidenceFilter,fees:feeFilter,activity:activityFilter,amount:amountFilter});
+    matches=matches.filter(offer=>matchesCategory(offer,categoryFilter));
     if(categoryFilter==='near'&&area)matches=matches.filter(x=>geography(x,area).kind!=='outside');
     const visible=prioritize(matches,context.rows,area,context,priorityFilter);
-    h+='<div class="radar-count">'+visible.length+' matching offer posts · '+feed.offers.length+' source posts checked</div>';
+    h+='<div class="radar-count">'+visible.length+' matching '+escape(audience)+' offers · '+feed.offers.length+' source posts checked <button type="button" class="bt362-filter-jump" onclick="btRadarOpenFilters()">Filters</button></div>';
     if(!visible.length)h+='<p>No offers match these filters. Adjust your search or filters.</p>';
     const groupLabels={ready:'Eligible for you',next:'Not eligible yet',explore:'Other offers · eligibility unverified',review:'Needs eligibility review',outside:'Outside your selected area'};
     let lastGroup='';
+    const counts={};visible.forEach(offer=>{counts[offer.priorityGroup]=(counts[offer.priorityGroup]||0)+1});
     visible.forEach(x=>{
-      if(x.priorityGroup!==lastGroup){lastGroup=x.priorityGroup;h+='<h2 class="radar-group-heading">'+groupLabels[lastGroup]+'</h2>'+(lastGroup==='ready'?'<p class="bt362-group-note">Tracker review date reached · personal eligibility requires verifying current terms.</p>':lastGroup==='next'?'<p class="bt362-group-note">Your tracker shows a future review date, not an approved application date.</p>':'');}
+      if(x.priorityGroup!==lastGroup){
+        if(lastGroup)h+='</div>';
+        lastGroup=x.priorityGroup;
+        h+='<div class="bt362-group-title"><h2 class="radar-group-heading">'+groupLabels[lastGroup]+'</h2><span>'+counts[lastGroup]+'</span></div>'+(lastGroup==='ready'?'<p class="bt362-group-note">Tracker review date reached · personal eligibility requires verifying current terms.</p>':lastGroup==='next'?'<p class="bt362-group-note">Your tracker shows a future review date, not an approved application date.</p>':'');
+        h+='<div class="bt362-offer-group" role="list">';
+      }
       const link=x.links[0],date=x.match?.date;
       const verifiedAmount=amountFor(x);
       const verifiedRequirement=x.evidence?.status==='evidence-found'&&!x.evidence?.stale?x.evidence.fields?.qualifying_activity?.value:null;
       const bankLabel=(x.bank||'').replace(/\b\w/g,c=>c.toUpperCase()).replace(/^Us Bank$/,'U.S. Bank');
       const label=bankLabel&&x.product&&x.amount!==null?bankLabel+' · '+(x.product==='checking'?'Checking':x.product==='business'?'Business':x.product==='savings'?'Savings':x.product)+' · '+(x.rewardIsUpperBound?'up to ':'')+'\u0024'+x.amount.toLocaleString('en-US'):x.title;
       const badges=x.badges?.length?'<div class="radar-offer-badges">'+x.badges.map(b=>'<span>'+escape(b)+'</span>').join('')+(x.changeLabel?'<span>'+escape(x.changeLabel)+'</span>':'')+'</div>':'';
-      h+='<article class="radar-card radar-card-compact radar-priority-'+x.priorityGroup+'"><div class="bt360-offer-title">'+bankLogo(x.title,true)+'<div class="bt360-grow"><h3>'+escape(label)+'</h3>'+badges+'<p>'+escape(verifiedRequirement||'Requirements need review')+'</p></div><strong>'+(verifiedAmount===null?(x.amount===null?'Needs review':'$'+x.amount.toLocaleString('en-US')+'*'):'$'+verifiedAmount.toLocaleString('en-US'))+'</strong></div><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+'</div>';
+      h+='<article role="listitem" class="radar-card radar-card-compact bt362-offer-row radar-priority-'+x.priorityGroup+'"><div class="bt360-offer-title">'+bankLogo(x.title,true)+'<div class="bt360-grow"><h3>'+escape(label)+'</h3>'+badges+'<p>'+escape(verifiedRequirement||'Requirements need review')+'</p></div><strong>'+(verifiedAmount===null?(x.amount===null?'Needs review':'$'+x.amount.toLocaleString('en-US')+'*'):'$'+verifiedAmount.toLocaleString('en-US'))+'</strong></div><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+'</div>';
       if(x.match)h+='<div class="radar-tracker-context"><b>'+escape(x.match.label)+'</b>'+(date?'<time datetime="'+date+'">'+escape(typeof fD==='function'?fD(date):date)+'</time>':'')+'<p>'+escape(x.match.detail)+'</p></div>';
       h+='<p class="radar-area-note">'+escape(x.geo.detail)+'</p>';
       const proof=x.geo.proof||availabilityFor(x,officialCatalog);
       if(proof?.sourceUrl){let body='';for(const q of [...(proof.rules||[]).map(r=>r.quote),...(proof.nationwideQuote?[proof.nationwideQuote]:[]),...(proof.conditions||[])])body+='<blockquote>'+escape(q)+'</blockquote>';body+='<a href="'+escape(proof.sourceUrl)+'" target="_blank" rel="noopener noreferrer">Official promotion ↗</a>';h+=disclosure('availability:'+x.url,'Official check · '+new Date(proof.checkedAt).toLocaleString(),body).replace('class="mobile-disclosure"','class="mobile-disclosure radar-official-proof"');}
-      h+='<details class="radar-offer-original"><summary>Original headline &amp; sources</summary><p>'+escape(x.title)+'</p>'+(verifiedAmount===null&&x.amount!==null?'<p>* Headline amount is source-reported; verify official terms before applying.</p>':'')+'</details>';
+      const sourceKey='offer-source:'+x.url;
+      h+='<details class="radar-offer-original" data-radar-key="'+escape(sourceKey)+'"'+(evidenceOpen.has(sourceKey)?' open':'')+' ontoggle="btRadarEvidenceToggle('+escape(JSON.stringify(sourceKey))+',this.open,this)"><summary>Original headline &amp; sources</summary><p>'+escape(x.title)+'</p>'+(verifiedAmount===null&&x.amount!==null?'<p>* Headline amount is source-reported; verify official terms before applying.</p>':'')+'</details>';
+      h+='<p class="bt362-source-line">'+escape(x.source)+' · '+escape(new Date(x.publishedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}))+'</p>';
       h+=(x.links?.length?x.links:[link]).map(l=>'<a class="radar-offer-link" href="'+escape(l.url)+'" target="_blank" rel="noopener noreferrer">Review offer · '+escape(l.source)+' ↗</a>').join('')+'</article>';
     });
+    if(lastGroup)h+='</div>';
     return h;
   };
-  window.BTBankBonusFeed={validate:valid,group:grouped,filter:filtered,evidence:evidenceFor,amount:amountFor,geography,match:trackerMatch,prioritize,availability:availabilityFor,priorityIdentifiers};
+  window.BTBankBonusFeed={validate:valid,group:grouped,filter:filtered,offerAudience,offersForAudience,matchesCategory,checkedAge,evidence:evidenceFor,amount:amountFor,geography,match:trackerMatch,prioritize,availability:availabilityFor,priorityIdentifiers};
   // While the tab stays open, refresh the published snapshot without re-entering anything.
   const officialPoll=setInterval(()=>{if(typeof tab!=='undefined'&&tab==='bonuses')refreshOfficial();},60000);
   if(officialPoll&&typeof officialPoll.unref==='function')officialPoll.unref();
