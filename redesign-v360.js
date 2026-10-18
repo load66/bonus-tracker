@@ -107,7 +107,7 @@ function detailPanels(e){
  else if(!e.bonusRecd){action='Confirm received';command='openRcv('+arg(e.id)+')'}
  else if(ready){action='Mark account closed';command='startCloseFlow('+arg(e.id)+',\'actual\')'}
  else {action='Review close checks';command='openBankActions('+arg(e.id)+')'}
- h+='<div class="bt360-detail-footer"><button onclick="btOpenBonusAI('+arg(e.id)+')">Ask AI</button><button class="bt360-primary" aria-label="'+safe(action+' for '+e.bank)+'" onclick="'+command+'">'+action+'</button></div>';
+ h+='<div class="bt360-detail-footer" role="group" aria-label="Account actions"><button onclick="btOpenBonusAI('+arg(e.id)+')">Ask AI</button><button class="bt360-manage" onclick="openBankActions('+arg(e.id)+')">Manage</button><button class="bt360-primary" aria-label="'+safe(action+' for '+e.bank)+'" onclick="'+command+'">'+action+'</button></div>';
  return h
 }
 function showTerms(bank){archivePane='saved';storageSearch=String(bank||'');expanded=null;tab='archive';R()}
@@ -186,7 +186,7 @@ function saveBannerMonth(month){
  try{const settings={...hostSettings(),lastBannerMonth:month};window.BTPersistence.commit(localStorage,{[HOST_SETTINGS]:JSON.stringify(settings)});return true}catch{return false}
 }
 const USAGE_REASONS={
- token_missing:'Add a Railway account token to the backend as RAILWAY_API_TOKEN.',
+ token_missing:'Add a Railway API token (account token, not project token) to the backend as RAILWAY_API_TOKEN.',
  token_unauthorized:'Railway rejected the token. Create an account token (not a project token) and replace RAILWAY_API_TOKEN.',
  workspace_not_found:'This account token cannot access a Railway workspace.',
  project_not_visible:"This token can't see the trading-journal-ai project.",
