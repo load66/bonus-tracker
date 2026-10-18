@@ -651,6 +651,30 @@ async function exercise(name,engine,url){
     check(name==='webkit'?'network-loss reload preserves account':'offline reload preserves account',(await record()).id===id);
     serverUnavailable=false;await context.setOffline(false);
     check('AI login persists across browser reload',await page.evaluate(()=>BTBonusAuth.connected()));
+
+    // Synthetic-only owner usage response: assert the live Settings visual at
+    // 320/375/390/430 and desktop without contacting Railway or R2.
+    const bankingBeforeHosting=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
+    const syntheticUsage={month:'2026-10',checkedAt:'2026-10-17T19:10:00Z',railway:{
+      status:'ok',costSoFar:2.31,projectedMonthEnd:4.50,
+      services:[{name:'api',costSoFar:1.25,avgMemoryGb:0.235},{name:'leaps-alpaca-live',costSoFar:1.06,avgMemoryGb:0.318}]
+    },r2:{status:'ok',usedBytes:240000000,freeBytes:10000000000}};
+    await page.route('**/api/bonus-tracker/usage',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(syntheticUsage)}));
+    await button('Settings').click();
+    await page.evaluate(async()=>BT360.refreshUsage(true));
+    await page.getByText('Near limit',{exact:true}).waitFor();
+    check('hosting usage card uses mocked nonzero Railway estimate',(await page.locator('.bt360-sheet').innerText()).includes('HOSTING & USAGE')&&
+      (await page.locator('.bt360-sheet').innerText()).includes('leaps-alpaca-live'));
+    for(const width of [320,375,390,430,1024]){
+      await page.setViewportSize({width,height:844});
+      check('hosting and Settings fit '+width+'px',await page.locator('.bt360-sheet').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&[...e.querySelectorAll('.bt360-panel,.bt360-usage-top,.bt360-usage-r2')].every(n=>n.scrollWidth<=n.clientWidth+1)));
+      if(width===390)await page.screenshot({path:path.join(output,name+'-hosting-settings-390.png')});
+    }
+    check('hosting usage views leave bank records unchanged',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,bankingBeforeHosting));
+    await page.getByRole('button',{name:'Close settings'}).click();
+    await page.unroute('**/api/bonus-tracker/usage');
+    await page.setViewportSize({width:1280,height:900});
+
     await page.evaluate(()=>BTBonusAuth.disconnect());
     check('AI sign-out removes remembered session',await page.evaluate(()=>!localStorage.getItem('bonus-ai-auth')&&!BTBonusAuth.connected()));
     check('no uncaught application errors',errors.length===0);
