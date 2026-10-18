@@ -331,6 +331,9 @@ async function exercise(name,engine,url){
     await page.evaluate(prior=>{const e=entries[0];for(const f of prior){if(f.present)e[f.key]=f.value;else delete e[f.key];}},feeFields);
     await page.getByRole('button',{name:'Close AI',exact:true}).click();
     check('asking AI preserves all saved account data',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
+    // Cloud protection remains on the Tracker hero after entering and leaving a focused detail.
+    await page.getByRole('button',{name:'Back to accounts'}).click();
+    check('returning from account detail reveals cloud backup controls',await page.locator('#bt-cloud-open').isVisible());
     // Test cloud recovery in two independent browser profiles; no production records are contacted.
     await page.evaluate(()=>{
       window.__cloudFixture={objects:{},calls:[],failure:false};
