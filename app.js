@@ -4284,19 +4284,20 @@ function renderCommunityReport(item){
 function rTips(){
  const groups=buildDatapointGroups(),catalog=window.BTCommunityCatalog||{};
  dpFiltersOpen=document.querySelector('.research-filters')?.open??dpFiltersOpen;
- let h='<div class="research-shell dp-shell"><header class="research-intro dp-summary"><span class="research-eyebrow">COMMUNITY EXPERIENCE</span><h2>Bank datapoints</h2><p>A datapoint is someone’s report of what happened. Compare the account, method and date before using it.</p><button class="research-text-button" onclick="switchMainTab(\'storage\')">View saved bank terms →</button><button class="dp-add research-new-report" onclick="newDPReport()">+ Add a report</button></header>';
+ let h='<div class="research-shell dp-shell bt362-data-view">';
  h+='<input class="sinput dp-search" id="datapoints-search" aria-label="Search datapoints" placeholder="Search bank, method, or note..." value="'+esc(dpSearch)+'" oninput="updateViewSearch(\'datapoints\',this.value,this.selectionStart)">';
- h+='<div class="research-switch" role="group" aria-label="Report view">'+[['all','All reports'],['personal','My saved notes']].map(([v,t])=>'<button aria-pressed="'+(dpFilters.view===v)+'" onclick="setDPFilter(\'view\',\''+v+'\')">'+t+'</button>').join('')+'</div>';
  h+='<div class="bt360-data-pills" role="group" aria-label="Datapoint outcomes">'+[['all','All reports'],['worked','Counted'],['failed','Didn\'t count']].map(([v,t])=>'<button type="button" aria-pressed="'+(dpFilters.result===v)+'" class="'+(dpFilters.result===v?'active':'')+'" onclick="setDPFilter(\'result\',\''+v+'\')">'+t+'</button>').join('')+'</div>';
- h+='<details class="research-filters"'+(dpFiltersOpen?' open':'')+'><summary>Filter reports</summary><div class="research-filter-grid">';
+ h+='<div class="research-coverage"><b>'+groups.reduce((n,g)=>n+g.community.length,0)+' reports &amp; summaries</b><span>'+groups.length+' bank'+(groups.length===1?'':'s')+' shown · Catalog checked '+esc(catalog.checkedAt?fD(catalog.checkedAt):'date unavailable')+'</span></div>';
+ h+='<div class="bt362-data-actions"><button type="button" class="dp-add research-new-report" onclick="newDPReport()">+ Add a report</button><button type="button" class="research-text-button" onclick="switchMainTab(\'storage\')">Saved bank terms ›</button></div>';
+ h+='<details class="research-filters"'+(dpFiltersOpen?' open':'')+'><summary>More filters and saved notes</summary>';
+ h+='<div class="research-switch" role="group" aria-label="Report view">'+[['all','All reports'],['personal','My saved notes']].map(([v,t])=>'<button aria-pressed="'+(dpFilters.view===v)+'" onclick="setDPFilter(\'view\',\''+v+'\')">'+t+'</button>').join('')+'</div>';
+ h+='<div class="research-filter-grid">';
  h+=dpSelect('scope','Banks',[['all','All banks'],['mine','My tracked banks']]);
  h+=dpSelect('type','Account type',[['all','All account types'],['personal','Personal'],['business','Business']]);
  h+=dpSelect('result','Result',[['all','All results'],['worked','Reported success'],['failed','Reported failure'],['mixed','Mixed reports'],['pending','Still waiting'],['unknown','Not recorded']]);
  h+=dpSelect('source','Source',[['all','All sources'],['reddit','Reddit'],['doc','Doctor of Credit']]);
  h+=dpSelect('dated','Dates',[['all','All dates'],['recent','Dated within 90 days']]);
  h+='</div><button class="research-text-button" onclick="resetDPFilters()">Reset filters</button><p class="research-caveat">Filters apply to community reports. Your saved notes stay visible.</p></details>';
- h+='<div class="research-coverage"><b>'+groups.reduce((n,g)=>n+g.community.length,0)+' reports &amp; summaries</b><span>'+groups.length+' bank'+(groups.length===1?'':'s')+' shown · Catalog checked '+esc(catalog.checkedAt?fD(catalog.checkedAt):'date unavailable')+'</span></div>';
- h+='<details class="research-help"><summary>How to read these reports</summary><p>Reported success means a person received a payment or reported a qualifying result. Mixed reports means people had different results. Still waiting does not mean failure.</p><p>DD means direct deposit, such as a paycheck. An ACH push is a bank transfer started from the sending account. A bank transfer is not automatically a qualifying direct deposit.</p><p>'+esc(catalog.coverage||'Coverage is limited to sources shown.')+'</p><p>Source checked is the research date, not the transaction date. Community reports never change your saved offer rules or deadlines.</p></details>';
  if(!groups.length)h+='<div class="research-empty">No matching reports. Try another bank or reset the filters.</div>';
  groups.forEach(g=>{
  const open=dpExpandedBankKey===g.key,last=dpReportDate(g.community[0]||{});
@@ -4308,7 +4309,9 @@ function rTips(){
  h+='</div>';
  }h+='</section>';
  });
- h+='<details class="research-help"><summary>Find more reports</summary><p>Open these sources to look for reports published after the catalog date.</p><a class="research-source" href="https://www.reddit.com/r/churning/search/?q=Bank%20Bonus%20Weekly&amp;restrict_sr=1&amp;sort=new" target="_blank" rel="noopener noreferrer">Reddit bank bonus threads ↗</a><a class="research-source" href="https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/" target="_blank" rel="noopener noreferrer">Doctor of Credit transfer reports ↗</a></details></div>';
+ h+='<details class="research-help"><summary>Find more reports</summary><p>Open these sources to look for reports published after the catalog date.</p><a class="research-source" href="https://www.reddit.com/r/churning/search/?q=Bank%20Bonus%20Weekly&amp;restrict_sr=1&amp;sort=new" target="_blank" rel="noopener noreferrer">Reddit bank bonus threads ↗</a><a class="research-source" href="https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/" target="_blank" rel="noopener noreferrer">Doctor of Credit transfer reports ↗</a></details>';
+ h+='<details class="research-help"><summary>How to read these reports</summary><p>Reported success means a person received a payment or reported a qualifying result. Mixed reports means people had different results. Still waiting does not mean failure.</p><p>DD means direct deposit, such as a paycheck. An ACH push is a bank transfer started from the sending account. A bank transfer is not automatically a qualifying direct deposit.</p><p>'+esc(catalog.coverage||'Coverage is limited to sources shown.')+'</p><p>Source checked is the research date, not the transaction date. Community reports never change your saved offer rules or deadlines.</p></details>';
+ h+='</div>';
  h+='<p class="bt360-footnote">Reports never change your eligibility or requirements.</p>';
  return h;
 }
