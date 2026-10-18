@@ -289,8 +289,8 @@ async function exercise(name,engine,url){
         const panel=document.querySelector('.bt360-detail-card'),task=panel.querySelector('.bt360-check .bt366-row-edit'),timer=panel.querySelector('.bt3611-timer-body'),fee=panel.querySelector('.bt360-info-long');
         if(!task||!timer||!fee)return false;
         const owner=task.parentElement,check=owner.querySelector('[role="checkbox"]'),a=check.getBoundingClientRect(),b=task.getBoundingClientRect();
-        return task.clientWidth>=120&&timer.clientWidth>=120&&a.right<=b.left+1&&b.right<=owner.getBoundingClientRect().right+1&&
-          fee.scrollWidth<=fee.clientWidth+1&&panel.scrollWidth<=panel.clientWidth+1&&getComputedStyle(fee.querySelector('div')).textAlign==='right';
+        return task.clientWidth>=120&&timer.clientWidth>=120&&timer.querySelector('b')?.getBoundingClientRect().height<=(parseFloat(getComputedStyle(timer.querySelector('b')).lineHeight)||16)+2&&a.right<=b.left+1&&b.right<=owner.getBoundingClientRect().right+1&&
+          fee.scrollWidth<=fee.clientWidth+1&&panel.scrollWidth<=panel.clientWidth+1&&getComputedStyle(fee.querySelector('div')).textAlign==='left';
       }));
     }
     await page.evaluate(()=>{const e=entries[0],v=window.__layoutOriginal;e.checklist=v.checklist;e.customTimers=v.customTimers;e.monthlyFeeWaiverText=v.monthlyFeeWaiverText;delete window.__layoutOriginal;R()});
