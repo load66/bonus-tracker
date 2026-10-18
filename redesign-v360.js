@@ -340,7 +340,7 @@ function detailPanels(e){
  }
  const eligibility=eligibleInfo(e),safeClose=typeof safeCloseDate==='function'?safeCloseDate(e):'';
  const title=ready?'After closing':closed?'Eligibility':'Key dates';
- h+='<div data-bt-eligibility>'+panel(title,(!closed&&!ready?dateActionRow(e,'Safe to close',safeClose?date(safeClose):'','From saved close restrictions','close'):'')+dateActionRow(e,'Eligible again',eligibility?date(eligibility.eligible):'',eligibility?.label||'Confirm the saved eligibility rule','eligibility')+(eligibility?.more?.length?eligibility.more.map(r=>infoRow('Also checked',r.date?date(r.date):'Needs review',r.label||'')).join(''):''))+'</div>';
+ h+='<div data-bt-eligibility>'+panel(title,(!closed&&!ready?dateActionRow(e,'Safe to close',safeClose?date(safeClose):'','From saved close restrictions','close'):'')+dateActionRow(e,'Eligible again',eligibility?date(eligibility.eligible):'',eligibility?.label||'Confirm the saved eligibility rule','eligibility')+(eligibility?.more?.length?eligibility.more.filter(r=>r.id!==eligibility.controlling?.id&&r.eligibleDate).map(r=>infoRow('Also checked',date(r.eligibleDate),r.label||'Saved eligibility rule')).join(''):''))+'</div>';
  h+='<button class="bt360-source" onclick="BT360.showTerms('+arg(e.bank)+')">'+(e.termsVerifiedAt?'Official terms reviewed '+safe(date(String(e.termsVerifiedAt).slice(0,10))):'Terms need review')+' · View saved source ›</button>';
  return h;
 }
