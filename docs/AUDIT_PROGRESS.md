@@ -6,7 +6,7 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
-- v3.6.21 bonus detail interaction consistency (PR pending): derived read-only requirement deadline rows from verified stored structured timing when no equivalent manually saved timer exists; explicit Confirm all opens original completion dialog; accurate overdue/due-today labels and empty-state copy. Preserves original evidence, user tasks, stored records, rule engines and chart. Synthetic detail regression added. CI Chromium/WebKit and main Pages verification pending.
+- v3.6.21 bonus detail interaction consistency (PR pending): derived read-only requirement deadline rows from verified stored structured timing when no equivalent manually saved timer exists; explicit Confirm all opens original completion dialog; accurate overdue/due-today labels and empty-state copy. Preserves original evidence, user tasks, stored records, rule engines and chart. Synthetic detail regression added, including checklist-only guard and safe dialog link. CI Chromium/WebKit and main Pages verification pending.
 
 
 - v3.6.20 archive and close-review presentation (`codex/v3.6.20-archive-safe-ui`): display verified eligibility within 60 days as a distinct archive group without duplication in cooling down; make ready-to-close summary avoid implying manual checks have been completed. Tracker bar graph, stored records, financial and eligibility engines unchanged. First CI revealed service-worker dependency cache parity failure; corrected versioned churn-policy URL. Release candidate pending rerun of full CI, Chromium/WebKit and Pages deployment verification.

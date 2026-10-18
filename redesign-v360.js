@@ -644,7 +644,7 @@ function detailPanels(e){
  const savedWorkStart=h.length;
  if(!closed&&(!ready||hasExtraWork)){
   const req=requirementRows(e);
-  h+=panel('Requirements',(!req.count?'<p class="bt360-muted">No requirements or checklist tasks saved yet.</p>':req.html)+'<div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></div>',req.count?'<button type="button" class="bt360-link bt3621-confirm-all" onclick="openReqMet('+arg(e.id)+')">'+(e.reqMet?'Review confirmation':'Confirm all')+'</button>':'');
+  h+=panel('Requirements',(!req.count?'<p class="bt360-muted">No requirements or checklist tasks saved yet.</p>':req.html)+'<div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></div>',(Array.isArray(e.financialRules?.requirements)&&e.financialRules.requirements.length>0||!!String(e.completeBonusText||'').trim()||Number(e.reqDays)>0)?'<button type="button" class="bt360-link bt3621-confirm-all" onclick="openReqMet('+arg(e.id)+')">'+(e.reqMet?'Review confirmation':hasExtraWork?'Confirm requirements':'Confirm all')+'</button>':'');
   const rows=timerRows(e);
   h+=panel('Timers',rows||'<p class="bt360-muted">No saved deadlines.</p>','<button type="button" class="bt360-link bt3613-add-timer" onclick="runBankAction('+arg(e.id)+',\'timer\')">+ Add</button>');
  }

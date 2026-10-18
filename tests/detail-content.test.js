@@ -53,7 +53,10 @@ assert.match(generated,/not an added reminder/);
 assert.match(generated,/Receive qualifying direct deposits totaling \$10,000/,'Original evidence text remains accessible');
 const manual=sandbox.BT360.timerRows(e);
 assert.doesNotMatch(manual,/data-source="saved-requirement"/,'Manually scheduled matching requirement deadline is not duplicated');
-assert.match(sandbox.BT360.detailPanels(e),/bt3621-confirm-all[^>]*onclick="openReqMet\('CHA-P-01'\)"/,'Confirm all opens the existing canonical completion dialog');
+assert.match(sandbox.BT360.detailPanels(e),/bt3621-confirm-all[^>]*onclick="openReqMet\(&quot;CHA-P-01&quot;\)"/,'Confirm all opens the existing canonical completion dialog');
+const tasksOnly={...e,reqDays:0,completeBonusText:'',checklist:[{text:'Call bank',done:false}],financialRules:{...e.financialRules,requirements:[]}};
+assert.doesNotMatch(sandbox.BT360.detailPanels(tasksOnly),/bt3621-confirm-all/,'Checklist-only records must not expose the offer-level completion action');
+assert.match(sandbox.BT360.detailPanels(tasksOnly),/Call bank/,'Standalone checklist tasks remain fully accessible');
 assert.match(sandbox.BT360.detailPanels(e),/\+ Add task/,'Existing checklist action remains available');
 
 const fees=sandbox.BT360.feeDetail(e);
