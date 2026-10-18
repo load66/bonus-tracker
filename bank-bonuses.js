@@ -311,10 +311,10 @@
     let lastGroup='';
     visible.forEach(x=>{
       if(x.priorityGroup!==lastGroup){lastGroup=x.priorityGroup;h+='<h2 class="radar-group-heading">'+groupLabels[lastGroup]+'</h2>'+(lastGroup==='ready'?'<p class="bt362-group-note">Tracker review date reached · personal eligibility requires verifying current terms.</p>':lastGroup==='next'?'<p class="bt362-group-note">Your tracker shows a future review date, not an approved application date.</p>':'');}
-      const link=x.links[0],date=x.match?.date;
+      const date=x.match?.date;
       const verifiedAmount=amountFor(x);
       const verifiedRequirement=x.evidence?.status==='evidence-found'&&!x.evidence?.stale?x.evidence.fields?.qualifying_activity?.value:null;
-      h+='<article class="radar-card radar-card-compact radar-priority-'+x.priorityGroup+'"><div class="bt360-offer-title">'+bankLogo(x.title,true)+'<div class="bt360-grow"><h3>'+escape(x.title)+'</h3><p>'+escape(verifiedRequirement||'Requirements need review')+'</p></div><strong>'+(verifiedAmount===null?'Needs review':'$'+verifiedAmount.toLocaleString('en-US'))+'</strong></div><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+'</div>';
+      h+='<article class="radar-card radar-card-compact radar-priority-'+x.priorityGroup+'"><div class="bt360-offer-title">'+bankLogo(x.bank||x.title,true)+'<div class="bt360-grow"><h3>'+escape(x.displayTitle||x.title)+'</h3><p>'+escape(verifiedRequirement||'Requirements need review')+'</p></div><strong>'+(verifiedAmount===null?'Needs review':'$'+verifiedAmount.toLocaleString('en-US'))+'</strong></div><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+'</div>';
       if(x.match)h+='<div class="radar-tracker-context"><b>'+escape(x.match.label)+'</b>'+(date?'<time datetime="'+date+'">'+escape(typeof fD==='function'?fD(date):date)+'</time>':'')+'<p>'+escape(x.match.detail)+'</p></div>';
       h+='<p class="radar-area-note">'+escape(x.geo.detail)+'</p>';
       const proof=x.geo.proof||availabilityFor(x,officialCatalog);
