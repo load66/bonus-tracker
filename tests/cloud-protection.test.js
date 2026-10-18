@@ -102,7 +102,7 @@ async function hostingUsage(){
  assert.match(model.usageCard(),/Railway changed its billing data format/);
  assert(!/Cost so far/.test(model.usageCard()));
  const allReasonCodes=['token_missing','token_unauthorized','workspace_not_found','project_not_visible',
-  'estimate_missing','measurement_missing','rate_limited','timeout','railway_unreachable','response_changed','permission_denied'];
+  'estimate_missing','measurement_missing','rate_limited','timeout','railway_unreachable','response_changed','permission_denied','request_blocked'];
  for(const code of allReasonCodes){
   payload={...make(0,'unavailable'),railway:{status:'unavailable',reasonCode:code,
     reason:'PRIVATE_REMOTE_RESPONSE_DO_NOT_RENDER',costSoFar:null,projectedMonthEnd:null}};

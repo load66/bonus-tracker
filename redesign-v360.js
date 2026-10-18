@@ -287,6 +287,7 @@ const USAGE_REASONS={
  timeout:"Couldn't reach Railway before the request timed out. Try again.",
  railway_unreachable:"Couldn't reach Railway. Try again.",
  permission_denied:"Railway doesn't allow this token to read a required field.",
+ request_blocked:"Railway's network blocked the request before checking the token. Try again later.",
  response_changed:"Railway changed its billing data format; usage can't be verified until updated."
 };
 // Field names come from this fixed list only; remote reason text is never rendered.
