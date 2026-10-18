@@ -4556,7 +4556,7 @@ function rRcv(){
   h+='<label>Actual bonus amount ($)</label><input class="dd-input" type="number" min="0" step="0.01" id="rcv_amount" oninput="if(rcvPrompt)rcvPrompt.bonus=Number(this.value)" value="'+esc(String(p.bonus||0))+'" onclick="event.stopPropagation()">';
   if(p.fromCandidate)h+='<p class="sub">Possible payout only. Review before confirming. The Tax tab will display the confirmed amount and date for review.</p>';
   h+='<label>Bonus Received Date</label><input class="dd-input" type="date" id="rcv_date" oninput="if(rcvPrompt)rcvPrompt.date=this.value" value="'+(p.date||'')+'" onclick="event.stopPropagation()">';
-  h+='<label>Requirement Met Date</label><input class="dd-input" type="date" id="rcv_req_date" oninput="if(rcvPrompt)rcvPrompt.reqDate=this.value" value="'+(p.reqDate||p.date||'')+'" onclick="event.stopPropagation()">';
+  h+='<label>Requirement Met Date</label><input class="dd-input" type="date" id="rcv_req_date" oninput="if(rcvPrompt)rcvPrompt.reqDate=this.value" value="'+(p.reqDate||'')+'" onclick="event.stopPropagation()">';
   h+='<label>Triggering DD / Method</label><input class="dd-input" id="rcv_dp" oninput="if(rcvPrompt)rcvPrompt.dp=this.value" value="'+esc(p.dp||'')+'" placeholder="e.g. Employer DD, ACH push, debit transactions" onclick="event.stopPropagation()">';
   h+='<div class="crow"><button class="c-c" onclick="skipRcv()">Cancel</button>'+(p.hasExisting?'<button class="c-r" onclick="confirmClearRcv()">Clear</button>':'')+'<button class="c-g" onclick="rcvSubmit()">Save</button></div>';
   h+='</div></div>';
