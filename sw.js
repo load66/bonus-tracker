@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.3: canonical retained bank-bonus offers and six-hour publishing.
+// Version 3.6.4: canonical feed release plus stable input focus after rerender.
 
-const V = 'bt-v3.6.3-feed1';
+const V = 'bt-v3.6.4-feed2';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
