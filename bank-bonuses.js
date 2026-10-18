@@ -206,7 +206,7 @@
         (Date.parse(b.publishedAt)-Date.parse(a.publishedAt))||a.index-b.index);
   }
   function trackerContext(){
-    try{return {rows:typeof entries!=='undefined'?entries:[],family:name=>typeof normalizeBankFamily==='function'?normalizeBankFamily(name):normalize(name),audience:e=>typeof entryBankType==='function'&&entryBankType(e)==='B'?'business':'personal',nonrepeat:e=>typeof isNonRepeatableEntry==='function'&&isNonRepeatableEntry(e),ready:e=>typeof nextReopen==='function'?nextReopen(e):'',today:typeof td==='function'?td():new Date().toISOString().slice(0,10)};}catch{return{rows:[]};}
+    try{return {rows:typeof entries!=='undefined'?entries:[],family:name=>typeof normalizeBankFamily==='function'?normalizeBankFamily(name):normalize(name),audience:e=>typeof entryBankType==='function'&&entryBankType(e)==='B'?'business':'personal',nonrepeat:e=>typeof isNonRepeatableEntry==='function'&&isNonRepeatableEntry(e),ready:e=>typeof window.churnReadyDate==='function'?window.churnReadyDate(e):'',today:typeof td==='function'?td():new Date().toISOString().slice(0,10)};}catch{return{rows:[]};}
   }
   window.btRadarArea=function(value){area=Object.hasOwn(states,value)?value:'';R();};
   window.btRadarPriority=function(value){priorityFilter=['all','tracker','area'].includes(value)?value:'all';R();};
