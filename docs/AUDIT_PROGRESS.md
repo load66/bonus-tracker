@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: ChatGPT/Codex · v3.6.14 cloud sign-in archive reliability · codex/v3.6.14-fee-history-projection
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
