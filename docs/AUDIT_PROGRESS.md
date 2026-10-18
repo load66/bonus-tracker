@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT Codex | six-hour offer feed v3.6.3 | codex/v3.6.3-bank-feed-lifecycle
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.3 canonical bank-offer feed, branch `codex/v3.6.3-bank-feed-lifecycle`: six-hour scheduled refresh writes retained JSON to main and publishes GitHub Pages in that same workflow, replacing discarded release-job-only metadata. Canonical bank alias/product/reward/region keys, source-provenance links, explicit expiry/ended tombstones and 90-day no-post retention; latest original headline, New/Increased/Decreased/Updated/Ending soon badges. No feed monitoring, alerts, health checks or new feed-status UI; no financial records touched. Last-good 2026-10-14 snapshot migrated from 24 source rows to 21 canonical rows (3 duplicates merged), historical checkedAt retained. App 3.6.3, SW `bt-v3.6.3-feed1`. Next: full bonus/cloud/UI + Chromium tests, merge on green, verify Pages and scheduled publication, report any owner-limited connectivity or branch permission gaps.
 
 - BonusTracker v3.6.2 remaining mockup release: PR pending on `codex/v3.6.2-remaining-mockup`, built on verified v3.6.1; no rework of `panel()` fix. Personal/Business Tracker stage chips hide zero-count states, Needs you task count pluralized, single year selector replaces three buttons, FAB menu exposes Quick Add, promo-term analyzer, and manual entry; data is untouched. Bonuses grouped by supported tracker date and uncertainty (not personal eligibility claims), compact offer rows, About sources disclosure, one amber stale alert; existing official evidence and geography checks retained. Data opens search-first with compact outcome pills, filters and education collapsed below reports. Settings header ellipsis and owner-authenticated hosting endpoint unchanged; live costs display only from valid backend response. Mobile 390px screenshot assertions for Tracker, Bonuses, Data and Settings, synthetic hosting amounts only in tests. Core rules, cloud backups, Finance retirement untouched. Next step: complete bonus/cloud/UI unit suites, Chromium Playwright, deploy verified Pages; report exact commit and screenshot artifacts.
 
