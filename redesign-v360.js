@@ -321,13 +321,15 @@ function lastSavedCooldownFeeRecord(entry){
   if(Array.isArray(b.versions))saved.push(...b.versions);
  });
  const matching=saved.filter(sameFamily);
- const sameCycle=matching.filter(x=>String(x.entryId||x.id||'')===String(entry.id||'')
+ const sameCycle=matching.filter(x=>!!String(entry.id||'').trim()
+  &&String(x.entryId||x.id||'')===String(entry.id)
   &&(!entry.opened||!x.opened||String(x.opened)===String(entry.opened)))
   .sort((a,b)=>String(b.termsVerifiedAt||b.capturedAt||'').localeCompare(String(a.termsVerifiedAt||a.capturedAt||'')))[0]||null;
  const lastKnown=matching.sort((a,b)=>
   String(b.opened||'').localeCompare(String(a.opened||''))
   ||String(b.termsVerifiedAt||b.capturedAt||'').localeCompare(String(a.termsVerifiedAt||a.capturedAt||'')))[0]||null;
- const profile=typeof profileReqForBank==='function'?profileReqForBank(entry):null;
+ const possibleProfile=typeof profileReqForBank==='function'?profileReqForBank(entry):null;
+ const profile=sameFamily(possibleProfile)?possibleProfile:null;
  const record={...entry};
  const keys=['monthlyFeeAmountText','monthlyFeeYNText','monthlyFeeWaiverText','avoidMonthlyFeeText',
   'monthlyFeeNoMonthlyServiceFee','earlyTerminationFeeText','closeRuleText',
