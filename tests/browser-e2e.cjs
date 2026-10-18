@@ -234,7 +234,7 @@ async function exercise(name,engine,url){
               {kind:'relationship',text:'Linked checking'}]}}}],
           closure:{earlyCloseFee:null}
         },
-        checklist:[],monthlyFeeAmountText:'$15',
+        checklist:[],monthlyFeeAmountText:'$15',closeRestrictionType:'manual-review',closeRuleBasis:'manual',closeRuleText:'',
         monthlyFeeWaiverText:'Original terms: fee waived with electronic deposits, daily balance or linked checking.',
         earlyTerminationFeeText:'',
         customTimers:[{id:'bonus-90',text:'Bonus requirement deadline · original reminder to qualify',
