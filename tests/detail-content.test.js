@@ -363,7 +363,13 @@ assert.match(chaseMark,/bank-logos\/chase\.svg/,'Chase variants share their loca
 assert.match(sandbox.bankLogo('Citi Checking',true),/bank-logos\/citi\.svg/);
 assert.match(sandbox.bankLogo('Wells Fargo Everyday',true),/bank-logos\/wells-fargo\.svg/);
 assert.match(sandbox.bankLogo('Bank of America Business Advantage',true),/bank-logos\/bank-of-america\.svg/);
-assert.doesNotMatch(sandbox.bankLogo('Citizens Bank',true),/<img /,'Similar bank names may not borrow Citi marks');
+assert.match(sandbox.bankLogo('Citizens Bank',true),/bank-logos\/citizens-bank\.svg/,'Citizens receives its own logo, never Citi');
+assert.doesNotMatch(sandbox.bankLogo('Citizen City Credit Union',true),/<img /,'Similar generic words do not borrow institution marks');
+assert.match(sandbox.bankLogo('PNC Virtual Wallet',true),/bank-logos\/pnc\.svg/);
+assert.match(sandbox.bankLogo('U.S. Bank Smartly',true),/bank-logos\/us-bank\.svg/);
+assert.match(sandbox.bankLogo('Regions Bank',true),/bank-logos\/regions-bank\.svg/);
+assert.match(sandbox.bankLogo('Huntington National Bank',true),/bank-logos\/huntington-bank\.svg/);
+assert.doesNotMatch(sandbox.bankLogo('Fidelity Bank',true),/<img /,'Independent Fidelity-named bank must not inherit brokerage logo');
 assert.doesNotMatch(sandbox.bankLogo('Central Bank of America',true),/<img /,'Embedded names are not authoritative identities');
 assert.match(sandbox.bankLogo('Unknown Local Credit Union',true),/blogo/,'Unknown institutions retain initials fallback');
 const originalAttention=sandbox.getAttentionSuggestions;
