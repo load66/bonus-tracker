@@ -177,7 +177,7 @@ async function exercise(name,engine,url){
       const e=entries[0];
       window.__chaseViewBaseline=JSON.stringify(e);
       Object.assign(e,{
-        id:'CHA-P-01',bank:'Chase Total Checking',opened:'2026-10-15',
+        id:'CHA-P-01',bank:'Chase Total Checking',bonus:300,opened:'2026-10-15',
         reqDays:90,requiredDaysText:'90 calendar days',
         financialRules:{
           requirements:[{id:'direct-deposits',kind:'direct-deposit',amount:10000,
