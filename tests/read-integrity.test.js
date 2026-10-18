@@ -171,6 +171,14 @@ setTimeout(()=>{
     assert(noProof.close.status!=='ready','An unsupported legacy zero fee was treated as verified no-fee');
     const verifiedNoFee=decisionFor({earlyCloseFee:0,closeRestrictionType:'payout-only',closeRuleText:'Keep the account open until the bonus posts.',earlyTerminationFeeText:'No early closing fee.'});
     assert(verifiedNoFee.close.status==='ready','Explicit saved unconditional no-fee wording did not permit a satisfied payout-only hold');
+    const feeOnly=decisionFor({earlyCloseFee:0,closeRestrictionType:'none',earlyTerminationFeeText:'No early closing fee.',closeRuleText:''});
+    assert(feeOnly.close.status!=='ready','No service fee was mistaken for no bonus clawback');
+    const noPayoutHoldProof=decisionFor({earlyCloseFee:0,closeRestrictionType:'payout-only',earlyTerminationFeeText:'No early closing fee.',closeRuleText:''});
+    assert(noPayoutHoldProof.close.status!=='ready','Payout-only claim without source wording was treated as a verified close rule');
+    const noReqDate={bank:'Synthetic Paid Payout Only',opened:'2026-01-01',bonusRecd:'2026-05-01',reqMet:'',earlyCloseFee:0,closeRestrictionType:'payout-only',closeRuleBasis:'bonus',closeRuleText:'Keep the account open until the bonus posts.',earlyTerminationFeeText:'No early closing fee.',customTimers:[]};
+    assert(sandbox.btEvaluateAccount(noReqDate).close.status==='ready','Payout-only term needlessly requires an invented requirements date');
+    assert(sandbox.closeReadiness(noReqDate).label!=='Do Not Close Yet','Close Check still demands a non-contractual requirements-completion date');
+    assert(sandbox.closeReadiness({...noReqDate,earlyTerminationFeeText:''}).label==='Do Not Close Yet','Close Check overruled the canonical unverified-fee restriction');
     const zeroBuffer=run('(function(){modal={bank:"Synthetic Zero Buffer",accountType:"personal",closeBufferDays:0,earlyCloseFee:null,customTimers:[],history:[]};return collectModalEntryData()})()');
     assert(zeroBuffer.closeBufferDays===0,'Explicit 0-day close buffer was replaced on edit');
     console.log('Read integrity passed');
