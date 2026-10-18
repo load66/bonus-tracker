@@ -65,4 +65,41 @@ assert.doesNotMatch(details,/\b(?:null|structured rule|anchor|verified \$0|prove
 assert.equal(typeof sandbox.BT360.openRuleEditor,'function');
 assert.equal(typeof sandbox.BT360.openActivity,'function');
 assert.equal(JSON.stringify([...storage]),before,'The new detail functions may not write account data');
-console.log('Bonus detail v3.6.11 passed: Chase requirement, due date, zero recorded progress, compact timers, fee summary, unconfirmed close fee, rule editor, read-only data');
+console.log('Bonus detail v3.6.12 passed: Chase requirement, due date, zero recorded progress, compact timers, fee summary, unconfirmed close fee, rule editor, read-only data');
+
+
+/* The Manage sheet must be read-only and use the same underlying action handlers. */
+const vm=require('node:vm'),fs=require('node:fs');
+const sheetRecord={...e,id:'CHA-P-01',bank:'Chase',reqMet:'2026-10-18',bonusRecd:'',closed:'',checklist:[],customTimers:[]};
+const originalEntries=vm.runInContext('entries',sandbox),previousPrompt=sandbox.__btBankActionPrompt;
+sandbox.__manageFixture=sheetRecord;
+vm.runInContext('entries=[__manageFixture];window.__btBankActionPrompt=__manageFixture.id;',sandbox);
+try{
+  const sheet=sandbox.rBankActions();
+  assert.match(sheet,/role="dialog" aria-modal="true" aria-label="Account actions"/);
+  assert.match(sheet,/bt-ba-backdrop/);
+  assert.match(sheet,/bt-ba-stage/);
+  assert.match(sheet,/Update completion date/);
+  assert.match(sheet,/Edit account/);
+  assert.match(sheet,/Add task/);
+  assert.match(sheet,/Add timer/);
+  assert.match(sheet,/Activity/);
+  assert.match(sheet,/Delete account/);
+  assert.match(sheet,/<svg viewBox="0 0 24 24"/);
+  assert.doesNotMatch(sheet,/\bREQ MET\b|REQ_MET/);
+  assert.doesNotMatch(sheet,/[\u{1F300}-\u{1FAFF}]/u,'Manage actions cannot use emoji');
+  assert.doesNotMatch(sheet,/>Confirm bonus received</,'Stage action must not duplicate primary footer');
+  assert.doesNotMatch(sheet,/>Ask AI</,'Footer Ask AI must not repeat in menu');
+  assert(sheet.lastIndexOf('Delete account')>sheet.indexOf('Activity'),'Delete must appear last');
+  const theme=fs.readFileSync('redesign-v360.css','utf8');
+  assert(theme.includes('#12141C')&&theme.includes('.bt-ba-delete'),'Dark manage sheet style absent');
+  assert(theme.includes('env(safe-area-inset-bottom'),'iPhone safe-area inset missing');
+  assert.equal(JSON.stringify([...storage]),before,'Previewing Manage wrote storage');
+  assert.equal(typeof sandbox.runBankAction,'function','Existing handler must be retained');
+}finally{
+  sandbox.__originalEntries=originalEntries;
+  vm.runInContext('entries=__originalEntries;window.__btBankActionPrompt=null;',sandbox);
+  delete sandbox.__originalEntries;delete sandbox.__manageFixture;
+  sandbox.__btBankActionPrompt=previousPrompt;
+}
+console.log('Manage sheet v3.6.12 passed: human stage, SVG icons, safe-area layout contract, no duplicate actions or storage writes');
