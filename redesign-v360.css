@@ -601,3 +601,5 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
  .bt3719-task-right{max-width:32%}
  .bt3719-soon .bt3719-section-title .bt360-link{font-size:10px}
 }
+
+.bt3719-feature-note{display:block;color:#8f96a8;font-size:11px;line-height:1.4;margin:10px 0 0 54px}
