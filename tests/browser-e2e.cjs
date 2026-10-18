@@ -669,7 +669,14 @@ async function exercise(name,engine,url){
       status:'ok',costSoFar:2.31,projectedMonthEnd:4.50,
       services:[{name:'api',costSoFar:1.25,avgMemoryGb:0.235},{name:'leaps-alpaca-live',costSoFar:1.06,avgMemoryGb:0.318}]
     },r2:{status:'ok',usedBytes:240000000,freeBytes:10000000000}};
-    await page.route('**/api/bonus-tracker/usage',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(syntheticUsage)}));
+    // Stub fetch inside the page because a controlling service worker may bypass
+    // Playwright routing (especially in WebKit). No real provider request is sent.
+    await page.evaluate(fixture=>{
+      window.__hostingPreviousFetch=window.fetch;
+      window.fetch=async (input,options)=>String(typeof input==='string'?input:input.url).endsWith('/api/bonus-tracker/usage')
+        ?new Response(JSON.stringify(fixture),{status:200,headers:{'Content-Type':'application/json'}})
+        :window.__hostingPreviousFetch(input,options);
+    },syntheticUsage);
     await button('Settings').click();
     await page.evaluate(async()=>BT360.refreshUsage(true));
     await page.getByText('Near limit',{exact:true}).waitFor();
@@ -682,7 +689,7 @@ async function exercise(name,engine,url){
     }
     check('hosting usage views leave bank records unchanged',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,bankingBeforeHosting));
     await page.getByRole('button',{name:'Close settings'}).click();
-    await page.unroute('**/api/bonus-tracker/usage');
+    await page.evaluate(()=>{window.fetch=window.__hostingPreviousFetch;delete window.__hostingPreviousFetch});
     await page.setViewportSize({width:1280,height:900});
 
     await page.evaluate(()=>BTBonusAuth.disconnect());
