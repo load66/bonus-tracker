@@ -163,3 +163,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var
 .bt360-backup[data-state="danger"],.bt360-backup[data-state="warn"]{background:#2F231B!important;color:#FFB86B!important}
 .bt360-backup[data-state="success"]{background:#123327!important;color:#5BE3B0!important}
 @media(max-width:360px){.bt360-usage-config{grid-template-columns:1fr}.bt360-usage-top strong{font-size:26px}}
+
+/* Keep all existing year choices reachable at every viewport. */
+.yr-btn:not(.on){display:inline-flex!important;align-items:center;justify-content:center}
+@media(max-width:640px){.hdr-row{flex-wrap:wrap!important}.yr-pills{order:3;flex:0 0 100%;display:flex;gap:6px;justify-content:flex-start;overflow-x:auto;scrollbar-width:none}.yr-btn{flex:none;min-width:52px!important;height:34px;min-height:34px!important}}
