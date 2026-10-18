@@ -389,21 +389,9 @@
     fn.__btSemanticStatus=true;window.hydrateTimersFromOpened=fn;
     try{hydrateTimersFromOpened=fn}catch{}
   }
-  function migrate(){
-    try{
-      if(typeof entries!=='undefined'&&Array.isArray(entries)){
-        let changed=false;
-        entries=entries.map(e=>{
-          if(!e||typeof e!=='object')return e;
-          const before=JSON.stringify(e.customTimers||[]);
-          const next={...e,customTimers:normalizeTimerListSemantic(e.customTimers||[])};
-          if(before!==JSON.stringify(next.customTimers))changed=true;
-          return next;
-        });
-        if(changed&&typeof sv==='function'&&typeof SK!=='undefined')sv(SK,entries);
-      }
-    }catch{}
-  }
+  // Legacy timer compatibility is a read-only presentation projection.
+  // Startup must never rewrite the saved account collection.
+  function migrate(){return false;}
   function install(){
     window.normalizeTimer=normalizeTimerSemantic;
     window.normalizeTimerList=normalizeTimerListSemantic;
@@ -436,7 +424,7 @@
     if(window.collectModalEntryData===baseCollectModalEntryData)wrapEntryFunction('collectModalEntryData',baseCollectModalEntryData);
     wrapSuggested();wrapHydrate();migrate();
   }
-  function refresh(){migrate();try{if(typeof R==='function')R()}catch{}}
+  function refresh(){try{if(typeof R==='function')R()}catch{}}
   install();
   setTimeout(refresh,180);
   setTimeout(refresh,1200);
