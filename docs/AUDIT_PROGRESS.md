@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex — v3.6.24 — codex/v3.6.23-detail-deadline-clarity
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.24 anchored Bonus Detail requirement dates (`codex/v3.6.23-detail-deadline-clarity`): the lifecycle banner uses the earliest calculable deadline from saved structured terms, without guessing calendar dates from unsupported business-day or statement-cycle timing. Synthetic deadline timers disappear when requirements are confirmed or bonus is received; saved manual reminders remain intact. Rebases the previously tested v3.6.23 deadline patch on top of v3.6.23 retention safeguards. Read-only, no saved evidence or engine changes. Fresh bonus/UI/cloud, Chromium/WebKit, Pages checks required.
+
 
 - v3.6.23 bonus-retention close-check presentation (`codex/v3.6.23-bonus-retention-evidence`): bonus paid alone is not proof against clawback. A green retained-bonus check requires saved payout-only closure wording with bonus recorded, supported minimum-open wording with hold elapsed, or explicit no-clawback evidence. No source, missing payout or manual review remains unresolved. Synthetic unit coverage added, full bonus/cloud/UI and Chromium/WebKit CI and main Pages verification pending. No stored data or financial engine changes.
 

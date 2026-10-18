@@ -59,6 +59,24 @@ assert.doesNotMatch(sandbox.BT360.detailPanels(tasksOnly),/bt3621-confirm-all/,'
 assert.match(sandbox.BT360.detailPanels(tasksOnly),/Call bank/,'Standalone checklist tasks remain fully accessible');
 assert.match(sandbox.BT360.detailPanels(e),/\+ Add task/,'Existing checklist action remains available');
 
+/* v3.6.24: anchored requirement deadlines appear in the lifecycle banner
+   without overriding unsupported clocks or completed milestones. */
+const structuredOnly={...e,reqDays:0,requiredDaysText:'',customTimers:[]};
+const structuredBanner=sandbox.BT360.detailPanels(structuredOnly);
+assert.match(structuredBanner,/Requirements due Jan 13, 2027/,'Structured deadline drives the lifecycle summary without legacy reqDays');
+assert.match(structuredBanner,/\d+ days left/,'Deadline badge uses the anchored countdown');
+const doneRequirement={...structuredOnly,reqMet:'2026-10-17'};
+assert.doesNotMatch(sandbox.BT360.timerRows(doneRequirement),/data-source="saved-requirement"/,'Completed requirements cannot generate overdue pending reminders');
+assert.doesNotMatch(sandbox.BT360.detailPanels(doneRequirement),/Requirements due Jan 13, 2027/,'Completed requirement does not show as pending in lifecycle header');
+const paidRequirement={...structuredOnly,bonusRecd:'2026-10-17'};
+assert.doesNotMatch(sandbox.BT360.timerRows(paidRequirement),/data-source="saved-requirement"/,'Received bonus suppresses derived requirement reminders');
+const unanchoredTiming={...e,reqDays:90,requiredDaysText:'90 days',financialRules:{...e.financialRules,requirements:[{...e.financialRules.requirements[0],timing:{basis:'opened',unit:'business-days',value:90}}]}};
+assert.doesNotMatch(sandbox.BT360.detailPanels(unanchoredTiming),/Requirements due Jan 13, 2027/,'Do not invent calendar date from unsupported structured business-day clock');
+assert.doesNotMatch(sandbox.BT360.timerRows({...unanchoredTiming,customTimers:[]}),/data-source="saved-requirement"/,'Unsupported clock never generates a dated timer');
+const beforeBannerEntry=JSON.stringify(structuredOnly);
+sandbox.BT360.detailPanels(structuredOnly);
+assert.equal(JSON.stringify(structuredOnly),beforeBannerEntry,'Rendering deadline summaries never mutates saved entries');
+
 const fees=sandbox.BT360.feeDetail(e);
 assert.match(fees,/Monthly fee<\/span><div><b[^>]*>\$15<\/b>/);
 assert.match(fees,/ANY: \$500\+ electronic deposits/);
