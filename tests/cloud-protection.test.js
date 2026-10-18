@@ -56,7 +56,7 @@ async function hostingUsage(){
   getItem:key=>mem.get(key)||null,setItem:(key,value)=>mem.set(key,String(value)),removeItem:key=>mem.delete(key)
  };
  const localSession={getItem:()=>null,setItem:()=>{}};
- let payload=null,authorized=[],promptValue=null,writes=0;
+ let payload=null,authorized=[],usageUrls=[],promptValue=null,writes=0;
  const fake={
   window:null,localStorage:store,sessionStorage:localSession,Date,
   document:{getElementById:()=>null,querySelector:()=>null},
@@ -68,6 +68,7 @@ async function hostingUsage(){
   BTBonusAuth:{connected:()=>true,token:async()=> 'synthetic-owner-token'},
   fetch:async(url,options)=>{
    assert.match(url,/bonus-tracker\/usage/);
+   usageUrls.push(url);
    authorized.push(options.headers.Authorization);
    return {ok:true,status:200,json:async()=>payload};
   }
@@ -81,7 +82,10 @@ async function hostingUsage(){
   railway:{status,costSoFar:status==='ok'?projection/2:null,projectedMonthEnd:status==='ok'?projection:null,
            services:status==='ok'?[{name:'api',costSoFar:projection/3,avgMemoryGb:0.24},{name:'leaps-alpaca-live',costSoFar:projection/6,avgMemoryGb:0.42}]:[]},
   r2:{status:'ok',usedBytes:420000000,freeBytes:10000000000}});
- payload=make(3);await model.refreshUsage(true);
+ payload=make(3);await model.refreshUsage();
+ assert.doesNotMatch(usageUrls.at(-1),/refresh=1/,'automatic loads use the backend cache');
+ await model.refreshUsage(true);
+ assert.match(usageUrls.at(-1),/\/usage\?refresh=1$/,'Try again bypasses the backend cache');
  assert.match(model.usageCard(),/Within plan/);
  assert.match(model.usageCard(),/R2 storage/);
  assert.match(model.usageCard(),/api/);
@@ -98,7 +102,7 @@ async function hostingUsage(){
  assert.match(model.usageCard(),/Railway changed its billing data format/);
  assert(!/Cost so far/.test(model.usageCard()));
  const allReasonCodes=['token_missing','token_unauthorized','workspace_not_found','project_not_visible',
-  'estimate_missing','measurement_missing','rate_limited','timeout','railway_unreachable','response_changed'];
+  'estimate_missing','measurement_missing','rate_limited','timeout','railway_unreachable','response_changed','permission_denied'];
  for(const code of allReasonCodes){
   payload={...make(0,'unavailable'),railway:{status:'unavailable',reasonCode:code,
     reason:'PRIVATE_REMOTE_RESPONSE_DO_NOT_RENDER',costSoFar:null,projectedMonthEnd:null}};
@@ -118,6 +122,25 @@ async function hostingUsage(){
  assert.match(model.usageCard(),/Not reported by Railway/);
  assert.match(model.usageCard(),/total is incomplete/);
  assert.doesNotMatch(model.usageCard(),/\$0\.00/);
+ // v3.6.8: a denied month-end estimate keeps the verified cost and names the field from a fixed list.
+ payload={...make(0),railway:{status:'partial',verifiedAt:'2026-10-17T12:00:00Z',reasonCode:'permission_denied',
+  reason:'PRIVATE_REMOTE_RESPONSE_DO_NOT_RENDER',deniedFields:['estimatedUsage'],
+  costSoFar:1.84,knownCostSubtotal:1.84,projectedMonthEnd:null,projectionNote:'PRIVATE_REMOTE_NOTE',
+  services:[{name:'synthetic-api',costSoFar:1.84,avgMemoryGb:0.2}],
+  missing:[{service:'project',kind:'permission_denied',metric:'estimatedUsage'}]}};
+ await model.refreshUsage(true);
+ let deniedCard=model.usageCard();
+ assert.match(deniedCard,/Verified \$1\.84/);
+ assert.match(deniedCard,/Projection not available from Railway/);
+ assert.match(deniedCard,/Railway doesn(?:'|&#39;)t allow this token to read estimatedUsage\./);
+ assert.match(deniedCard,/month-end projection \(not permitted for this token\)/);
+ assert.doesNotMatch(deniedCard,/\$0\.00|rejected the token|PRIVATE_REMOTE/);
+ payload={...make(0,'unavailable'),railway:{status:'unavailable',reasonCode:'permission_denied',
+  deniedFields:['<img src=x>'],costSoFar:null,projectedMonthEnd:null}};
+ await model.refreshUsage(true);
+ deniedCard=model.usageCard();
+ assert.match(deniedCard,/read a required field/);
+ assert.doesNotMatch(deniedCard,/<img/);
  payload={...make(0),railway:{status:'ok',verifiedAt:'2026-10-17T12:00:00Z',
   costSoFar:0,projectedMonthEnd:0,services:[{name:'synthetic-api',costSoFar:0,avgMemoryGb:0}]}};
  await model.refreshUsage(true);
