@@ -4144,7 +4144,7 @@ function R(){const focusedBeforeRender=document.activeElement;const searchFocus=
   else if(tab==='bonuses')h+=typeof rBankBonuses==='function'?rBankBonuses():'<p>Bank bonus feed is loading.</p>';
   // The action bar is a sibling of .scroll, never inside clipped account content.
   let detailActionBar='';
-  if(bt360Detail&&window.BT360?.detailFooter){
+  if(bt360Detail&&!window.__btBankActionPrompt&&window.BT360?.detailFooter){
     const record=sorted.find(e=>e.id===expanded);
     if(record)detailActionBar=window.BT360.detailFooter(record);
   }
@@ -6296,33 +6296,7 @@ entries=sortE(entries);R();
 
   window.__btBankActionPrompt=window.__btBankActionPrompt||null;
 
-  function ensureBankActionCompactStyle(){
-    if(document.getElementById('bt_source_bank_actions_compact_style'))return;
-    const st=document.createElement('style');
-    st.id='bt_source_bank_actions_compact_style';
-    st.textContent=`
-      .bt-ba-compact{padding:10px 14px calc(12px + var(--safe-b))!important;max-height:72dvh!important;overflow-y:auto!important;border-radius:18px 18px 0 0!important;}
-      .bt-ba-compact .m-bar{margin-bottom:8px!important;height:4px!important;width:34px!important;}
-      .bt-ba-compact .m-hdr{margin-bottom:8px!important;}
-      .bt-ba-compact .m-hdr h2{font-size:15px!important;line-height:1.1!important;}
-      .bt-ba-identity{display:flex;align-items:center;gap:8px;margin:4px 0 8px;padding:6px 8px;border-radius:12px;background:#F8FAFC;border:1px solid #E2E8F0;}
-      .bt-ba-identity .blogo{width:30px!important;height:30px!important;border-radius:9px!important;font-size:11px!important;}
-      .bt-ba-identity .card-name{font-size:13px!important;line-height:1.1!important;}
-      .bt-ba-status{font-size:9px!important;color:#64748B;font-weight:900;letter-spacing:.3px;margin-top:1px;text-transform:uppercase;}
-      .bt-ba-list{display:grid;grid-template-columns:1fr;gap:6px;}
-      .bt-ba-mini{width:100%;border:0;border-radius:12px;background:#F8FAFC;color:#0F172A;padding:8px 10px;font-family:'DM Sans',system-ui,sans-serif;text-align:left;box-shadow:inset 0 0 0 1px #E2E8F0;display:flex;align-items:center;gap:8px;min-height:46px;cursor:pointer;}
-      .bt-ba-mini:active{transform:scale(.985);}
-      .bt-ba-mini .ico{width:24px;height:24px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:#EFF6FF;font-size:14px;flex-shrink:0;}
-      .bt-ba-mini b{display:block;font-size:12px;line-height:1.05;color:inherit;}
-      .bt-ba-mini small{display:block;margin-top:2px;font-size:9px;line-height:1.15;color:#94A3B8;font-weight:700;}
-      .bt-ba-mini.danger{background:#FEF2F2;color:#DC2626;box-shadow:inset 0 0 0 1px #FECACA;}
-      .bt-ba-mini.danger .ico{background:#FEE2E2;}
-      .bt-ba-mini.cancel{justify-content:center;text-align:center;background:#E2E8F0;color:#334155;min-height:40px;}
-      .bt-ba-mini.cancel .ico{display:none;}
-      @media(min-width:520px){.bt-ba-compact{max-width:420px!important;border-radius:18px!important;padding-bottom:14px!important}.bt-ba-list{grid-template-columns:1fr 1fr}.bt-ba-mini.danger,.bt-ba-mini.cancel{grid-column:1/-1}}
-    `;
-    document.head.appendChild(st);
-  }
+  function ensureBankActionCompactStyle(){ /* styles now live in redesign-v360.css */ }
 
   function saveEntries(){
     try{
@@ -6503,33 +6477,66 @@ entries=sortE(entries);R();
   function bankActionSheetButton(id,action,icon,title,sub,danger=false){
     return `<button class="bt-ba-mini ${danger?'danger':''}" onclick="event.stopPropagation();runBankAction('${id}','${action}')"><span class="ico">${icon}</span><span><b>${esc(title)}</b>${sub?`<small>${esc(sub)}</small>`:''}</span></button>`;
   }
+
+  function bankActionIcon(name){
+    const shapes={
+      check:'<circle cx="12" cy="12" r="9"/><path d="m8 12 2.6 2.6L16 9"/>',
+      edit:'<path d="m4 20 4.5-1 10.7-10.7a2.1 2.1 0 0 0-3-3L5.5 16 4 20Z"/><path d="m14 6 4 4"/>',
+      task:'<path d="M8 6h12M8 12h8M8 18h12"/><path d="m3 5 1 1 2-2M3 12h3M4.5 10.5v3M3 18h3"/>',
+      timer:'<circle cx="12" cy="13" r="8"/><path d="M12 13V9m0 4 3 2M9 2h6M12 5V3"/>',
+      activity:'<path d="M3 12h4l3-7 4 14 3-7h4"/>',
+      trash:'<path d="M4 7h16M10 4h4M6 7l1 13h10l1-13M10 11v5m4-5v5"/>',
+      reopen:'<path d="M3 11a9 9 0 1 1 3 7M3 4v7h7"/>',
+      receipt:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3ZM9 8h6M9 12h5"/>',
+      close:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+      ai:'<path d="m12 2 1.7 6.3L20 10l-6.3 1.7L12 18l-1.7-6.3L4 10l6.3-1.7L12 2ZM20 17l.6 2.4L23 20l-2.4.6L20 23l-.6-2.4L17 20l2.4-.6L20 17Z"/>'
+    };
+    return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">'+(shapes[name]||shapes.task)+'</svg>';
+  }
+  function bankActionsHumanStage(e){
+    const stage=window.btLifecycleStageForEntry?.(e);
+    if(stage?.label&&!/^[A-Z_ ]{4,}$/.test(stage.label))return stage.label;
+    const code=String(stage?.code||status(e)||'');
+    const names={'REQ MET':'Requirements met',REQUIREMENTS_MET:'Requirements met',
+      READY_TO_CLOSE:'Ready to close',READY:'Ready to close',
+      AWAITING_BONUS:'Awaiting bonus',BONUS_RECEIVED:'Bonus received',
+      IN_PROGRESS:'In progress',ACTION_NEEDED:'Action needed',
+      HOLD_OPEN:'Holding open',COOLDOWN:'Cooling down',
+      ELIGIBLE:'Eligible again',CLOSED:'Closed'};
+    return names[code]||'Review account';
+  }
   function rBankActions(){
     const e=entries.find(x=>x.id===window.__btBankActionPrompt);
     if(!e)return'';
-    ensureBankActionCompactStyle();
-    let h='<div class="ov" onclick="closeBankActions()"><div class="modal bt-ba-compact" onclick="event.stopPropagation()">';
-    h+='<div class="m-bar"></div><div class="m-hdr"><h2>Account actions</h2><span class="m-id">'+esc(getEntryDisplayId(e)||e.id||'')+'</span></div>';
-    h+='<div class="bt-ba-identity">'+bankLogo(e.bank,true)+'<div><div class="card-name">'+esc(e.bank)+'</div><div class="bt-ba-status">'+esc(status(e)||'')+'</div></div></div>';
-    h+='<div class="bt-ba-list">';
-    const st=status(e);
-    if(e.closed){
-      h+=bankActionSheetButton(e.id,'clearclose','↩️','Reopen account record','Clear the recorded closure date');
-      h+=bankActionSheetButton(e.id,'edit','✏️','Edit account','Details, dates, bonus, rules');
-    }else{
-      if(!e.bonusRecd)h+=bankActionSheetButton(e.id,'reqmet','✅',e.reqMet?'Update completion date':'Confirm requirements','Record the completion date');
-      if(!e.bonusRecd)h+=bankActionSheetButton(e.id,'received','🎁','Confirm bonus received','Bonus received date');
-      if(e.bonusRecd)h+=bankActionSheetButton(e.id,'recordclose','🔒','Record closure','Record actual closure');
-      if(e.bonusRecd)h+=bankActionSheetButton(e.id,'received','🎁','Update bonus receipt','Amount, date and deposit method');
-      h+=bankActionSheetButton(e.id,'edit','✏️','Edit account','Details, dates, bonus, rules');
-      h+=bankActionSheetButton(e.id,'checklist','✅','Add task','Track a requirement');
-      h+=bankActionSheetButton(e.id,'timer','⏱️','Add timer','Set a reminder or deadline');
+    const primary=window.BT360?.primaryAction?.(e);
+    const label=String(primary?.label||'');
+    const footerDeposit=label==='Record deposit';
+    const footerReceived=label==='Confirm received';
+    const footerClose=label==='Mark account closed';
+    const footerAI=!e.closed&&!footerClose&&window.BT360?.detailFooter
+      &&String(window.BT360.detailFooter(e)).includes('>Ask AI</button>');
+    let h='<div class="bt-ba-backdrop" role="presentation" onclick="closeBankActions()"><section class="modal bt-ba-compact" role="dialog" aria-modal="true" aria-label="Account actions" onclick="event.stopPropagation()">';
+    h+='<div class="m-bar" aria-hidden="true"></div><div class="bt-ba-head"><div class="bt-ba-identity">'+bankLogo(e.bank,true)+'<div class="bt-ba-bank"><div class="bt-ba-name">'+esc(e.bank||'Account')+'</div><span class="bt-ba-stage">'+esc(bankActionsHumanStage(e))+'</span></div></div><button class="bt-ba-close" type="button" aria-label="Close account actions" onclick="closeBankActions()">×</button></div>';
+    h+='<div class="bt-ba-list" role="group" aria-label="Account tools">';
+    if(!e.closed&&!footerDeposit)h+=bankActionSheetButton(e.id,'reqmet',bankActionIcon('check'),'Update completion date','Record the completion date');
+    h+=bankActionSheetButton(e.id,'edit',bankActionIcon('edit'),'Edit account','Details, dates, bonus, rules');
+    if(!e.closed){
+      h+=bankActionSheetButton(e.id,'checklist',bankActionIcon('task'),'Add task','Track a requirement');
+      h+=bankActionSheetButton(e.id,'timer',bankActionIcon('timer'),'Add timer','Set a reminder or deadline');
     }
-    if(window.BT360)h+=bankActionSheetButton(e.id,'activity','◷','Activity','History, reviews and saved evidence');
-    h+=bankActionSheetButton(e.id,'askai','✦','Ask AI','Questions about this bonus');
-    if(window.BT360)h+='<details class="bt366-advanced-actions"><summary>Advanced tracker tools</summary>'+renderActionCenter()+'</details>';
-    h+=bankActionSheetButton(e.id,'delete','🗑️','Delete account','Remove this account record',true);
-    h+='<button class="bt-ba-mini cancel" onclick="event.stopPropagation();closeBankActions()"><span><b>Cancel</b></span></button>';
-    h+='</div></div></div>';
+    h+=bankActionSheetButton(e.id,'activity',bankActionIcon('activity'),'Activity','History, reviews and saved evidence');
+    let extras='';
+    if(e.closed)extras+=bankActionSheetButton(e.id,'clearclose',bankActionIcon('reopen'),'Reopen account record','Clear the recorded closure date');
+    if(!e.closed&&e.bonusRecd){
+      if(!footerClose)extras+=bankActionSheetButton(e.id,'recordclose',bankActionIcon('close'),'Record closure','Record actual closure');
+      extras+=bankActionSheetButton(e.id,'received',bankActionIcon('receipt'),'Update bonus receipt','Amount, date and deposit method');
+    }else if(!e.closed&&!footerReceived)extras+=bankActionSheetButton(e.id,'received',bankActionIcon('receipt'),'Confirm bonus received','Bonus received date');
+    if(!footerAI)extras+=bankActionSheetButton(e.id,'askai',bankActionIcon('ai'),'Ask AI','Questions about this bonus');
+    h+='<details class="bt-ba-more"><summary>More account controls</summary><div class="bt-ba-more-body">'+extras
+      +'<details class="bt366-advanced-actions"><summary>Advanced tracker tools</summary>'+renderActionCenter()+'</details></div></details>';
+    h+='</div><div class="bt-ba-delete" role="group" aria-label="Delete account action">';
+    h+=bankActionSheetButton(e.id,'delete',bankActionIcon('trash'),'Delete account','Remove this account record',true);
+    h+='</div></section></div>';
     return h;
   }
 
