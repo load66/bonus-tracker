@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.10 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.11 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt360_audience_session',noticeKey='bt360_notice_session';
@@ -25,7 +25,7 @@ const eligibleInfo=e=>{
  }catch{}
  const fallback=window.btLegacyChurnFallbackDate?.(e);
  if(fallback===eligible)return {eligible,controlling:null,more:[],verified:false,label:'from saved churn rule · not verified'};
- return {eligible,controlling:null,more:[],verified:false,label:'from saved churn calculation · not verified'};
+ return {eligible,controlling:null,more:[],verified:false,label:'from saved churn rule · not verified'};
 };
 function scope(e){const type=typeof entryBankType==='function'?entryBankType(e):String(e?.accountType||'personal').toLowerCase();return (type==='B'||type==='business'?'business':'personal')===audience}
 function segments(){return '<div class="bt360-segments" role="group" aria-label="Account type"><button type="button" aria-pressed="'+(audience==='personal')+'" class="'+(audience==='personal'?'active':'')+'" onclick="BT360.setAudience(\'personal\')">Personal</button><button type="button" aria-pressed="'+(audience==='business')+'" class="'+(audience==='business'?'active':'')+'" onclick="BT360.setAudience(\'business\')">Business</button></div>'}
@@ -213,11 +213,11 @@ function timerShortTitle(t){
  if(/funding|fund new money/.test(label))return 'Funding due';
  return String(t.text||'Reminder').trim().replace(/[:.].*$/,'').slice(0,65)||'Reminder';
 }
-function timerFriendlyDate(t){
+function timerFriendlyDate(t,e){
  if(!t.date)return 'Date needs review';
  if(t.startDate&&Number(t.daysRequired)>0){
-  const basis=String(t.startDate||'')+'';
-  return date(t.date)+' · '+Number(t.daysRequired)+' days after '+(basis?'start':'start');
+  const basis=t.startDate===e?.opened?'opening':'saved start';
+  return date(t.date)+' · '+Number(t.daysRequired)+' days after '+basis;
  }
  return date(t.date)+' · saved reminder';
 }
@@ -232,7 +232,7 @@ function timerRows(e){
  return timers.map(t=>{
   const title=timerShortTitle(t),detail=String(t.text||'Timer');
   const icon=/payout|bonus/i.test(title)?'▣':/close|hold/i.test(title)?'⌂':'◷';
-  return '<details class="bt3611-timer-row"><summary><span class="bt3611-timer-icon" aria-hidden="true">'+icon+'</span><span class="bt3611-timer-body"><b>'+safe(title)+'</b><small>'+safe(timerFriendlyDate(t))+'</small></span><span class="bt360-chip '+(!t.date?'warning':'')+'">'+safe(timerChip(t))+'</span></summary><div class="bt3611-timer-full">'+safe(detail)+(t.startDate&&t.daysRequired?'<p>Started '+safe(date(t.startDate))+' · '+Number(t.daysRequired)+' days · due '+safe(date(t.date))+'</p>':'')+'<button class="bt360-link" type="button" onclick="openTimerEditor('+arg(e.id)+','+arg(t.id)+')">Edit timer</button></div></details>';
+  return '<details class="bt3611-timer-row"><summary><span class="bt3611-timer-icon" aria-hidden="true">'+icon+'</span><span class="bt3611-timer-body"><b>'+safe(title)+'</b><small>'+safe(timerFriendlyDate(t,e))+'</small></span><span class="bt360-chip '+(!t.date?'warning':'')+'">'+safe(timerChip(t))+'</span></summary><div class="bt3611-timer-full">'+safe(detail)+(t.startDate&&t.daysRequired?'<p>Started '+safe(date(t.startDate))+' · '+Number(t.daysRequired)+' days · due '+safe(date(t.date))+'</p>':'')+'<button class="bt360-link" type="button" onclick="openTimerEditor('+arg(e.id)+','+arg(t.id)+')">Edit timer</button></div></details>';
  }).join('');
 }
 function waiverCondition(c){
@@ -273,7 +273,7 @@ function feeDetail(e){
   if(closure.earlyCloseFee>0){close=amount(closure.earlyCloseFee)+' early close fee';known=true}
   else if(/no .{0,30}(early|clos|terminat).{0,20}fee|\$0|fee.free/i.test(closure.feeEvidence.quote)){close='No early close fee stated';known=true}
  }else if(Number(e.earlyCloseFee)>0){close=amount(e.earlyCloseFee)+' early close fee';known=true}
- return '<div class="bt3611-fees">'+infoRow('Monthly fee',monthly)+'<div class="bt360-info-row bt3611-waiver-row"><span>Waived if</span><div><b class="bt3611-waiver-summary">'+safe(short)+'</b>'+(terms?'<details class="bt3611-full-terms"><summary>View full terms</summary><p>'+safe(terms)+'</p></details>':'')+'</div></div>'+'<div class="bt360-info-row"><span>Early close fee</span><div><b class="'+(!known?'bt3611-amber':'')+'">'+safe(close)+'</b></div></div></div>';
+ return '<div class="bt3611-fees">'+infoRow('Monthly fee',monthly)+'<div class="bt360-info-row bt360-info-long bt3611-waiver-row"><span>Waived if</span><div><b class="bt3611-waiver-summary">'+safe(short)+'</b>'+(terms?'<details class="bt3611-full-terms"><summary>View full terms</summary><p>'+safe(terms)+'</p></details>':'')+'</div></div>'+'<div class="bt360-info-row"><span>Early close fee</span><div><b class="'+(!known?'bt3611-amber':'')+'">'+safe(close)+'</b></div></div></div>';
 }
 function dateActionRow(e,label,value,desc,kind){
  return '<div class="bt360-info-row bt3611-date-row"><span>'+safe(label)+'</span><div><b>'+safe(value||'Needs review')+'</b>'+(desc?'<small>'+safe(desc)+'</small>':'')+(!value?'<button type="button" class="bt3611-set-rule" onclick="BT360.openRuleEditor('+arg(e.id)+','+arg(kind)+')">Set rule</button>':'')+'</div></div>';
@@ -497,10 +497,10 @@ async function backUpNow(){
 function settings(){
  const toggles=[['deadlines','Deadlines','3 and 1 day before'],['payouts','Payouts and close dates','When ready'],['eligible','Eligible again','7 days before and on the day']];
  const buttons=toggles.map(([k,label,description])=>'<button class="bt360-settings-row" role="switch" aria-checked="'+noticePrefs[k]+'" onclick="BT360.setNotice(\''+k+'\')"><span><b>'+label+'</b><small>'+description+'</small></span><i class="bt360-toggle '+(noticePrefs[k]?'checked':'')+'"></i></button>').join('');
- return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.10</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
+ return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.11</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
  cloudSettingsCard()+
  usageCard()+
- panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.10. Push delivery is not active.</p>')+
+ panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.11. Push delivery is not active.</p>')+
  panel('Data','<button class="bt360-settings-row" onclick="BT360.closeSettings();exportBackup()">Export backup file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.closeSettings();importBackup()">Restore from file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.openPhonebook()">Bank phone numbers <span>›</span></button>')+
  '<button class="bt360-reset" onclick="BT360.closeSettings();resetAllData()">Reset this device <small>Two confirmations and a safety backup</small></button></section></div>';
 }
