@@ -335,7 +335,8 @@ function feeSnapshotRaw(e){
   summary=(waiver.operator==='all'?'ALL':waiver.operator==='any'?'ANY':'')+(waiver.operator==='all'||waiver.operator==='any'?': ':'')+waiver.conditions.map(waiverCondition).join(waiver.operator==='all'?' + ':' · ');
   waiverSource=original(waiver?.evidence?.quote);
  }else{
-  const text=original(e.monthlyFeeWaiverText,e.analysis?.monthlyFeeWaiverText,e.avoidMonthlyFeeText,e.analysis?.avoidMonthlyFeeText);
+  const text=original(e.monthlyFeeWaiverText,e.analysis?.monthlyFeeWaiverText,e.avoidMonthlyFeeText,e.analysis?.avoidMonthlyFeeText,
+   Array.isArray(e.waivers)?e.waivers.join(' or '):'');
   if(text){
    const operator=/\s+or\s+|\bany (?:one|of)\b/i.test(text)?'ANY':/\s+and\s+|\ball of\b/i.test(text)?'ALL':'';
    summary=(operator?operator+': ':'')+text.replace(/^(?:the\s+)?(?:monthly\s+)?(?:fee|maintenance fee)[^.]{0,35}?(?:waived|avoided)[^.]{0,25}?(?:if|with|when)\s+/i,'')
@@ -355,7 +356,8 @@ function feeSnapshotRaw(e){
   .map(v=>String(v||'').trim()).filter(Boolean);
  const quote=original(closure.feeEvidence?.quote,e.earlyTerminationFeeText,e.analysis?.earlyTerminationFeeText,
    e.closeRuleText,e.analysis?.closeRuleText);
- const savedCloseTerms=[closure.feeEvidence?.quote,e.earlyTerminationFeeText,e.analysis?.earlyTerminationFeeText,e.closeRuleText,e.analysis?.closeRuleText]
+ const savedCloseTerms=[closure.feeEvidence?.quote,e.earlyTerminationFeeText,e.analysis?.earlyTerminationFeeText,e.closeRuleText,e.analysis?.closeRuleText,
+  /clos(?:e|ing|ure)|terminat|bonus (?:forfeit|repay)/i.test(String(e.early||''))?e.early:'']
   .map(v=>String(v||'').trim()).filter(Boolean);
  let closeMain='Not confirmed',closeNote='No explicit early-close fee evidence',closeKnown=false;
  const legacyFee=original(e.earlyTerminationFeeText,e.analysis?.earlyTerminationFeeText,e.closeRuleText,e.analysis?.closeRuleText);
@@ -408,6 +410,12 @@ function lastFeeSources(e){
   if(Array.isArray(bucket.versions))pool.push(...bucket.versions);
  }
  if(typeof entries!=='undefined'&&Array.isArray(entries))pool.push(...entries);
+ try{
+  // Pre-redesign bank profiles may hold the most recent legacy fee text.
+  // They are reference-only and never used to infer the enrolled product.
+  const profile=typeof profileReqForBank==='function'?profileReqForBank(e):null;
+  if(profile&&feeAudience(profile)===feeAudience(e))pool.push({...profile,bank:e.bank,_savedBankProfile:true});
+ }catch{}
  const wantedBank=feeIdentity(e.bank),wantedProduct=feeProduct(e),wantedAudience=feeAudience(e);
  const matches=pool.filter(r=>{
   if(!r||typeof r!=='object'||feeIdentity(r.bank)!==wantedBank
@@ -442,7 +450,8 @@ function feeSnapshot(e){
  let monthlySource='',closeSource='';
  for(const ref of candidates){
   const prior=feeSnapshotRaw(ref);
-  const label=(ref.opened?'offer opened '+ref.opened:'saved offer')+
+  const label=ref._savedBankProfile?'saved bank profile · product/date not confirmed':
+   (ref.opened?'offer opened '+ref.opened:'saved offer')+
    (ref.opened&&e.opened&&ref.opened===e.opened?' · same cycle':' · prior reference');
   if(!x.monthlyKnown&&prior.monthlyKnown&&!monthlySource){
    x.monthly=prior.monthly;x.monthlyKnown=true;
