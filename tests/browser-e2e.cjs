@@ -184,6 +184,9 @@ async function exercise(name,engine,url){
     });
     check('Chase structured requirement shows target and exact due date',await page.locator('.bt371-requirement').innerText().then(s=>s.includes('Direct deposits totaling $10,000 · due Jan 13, 2027')&&s.includes('$0 of $10,000 · 0 recorded')));
     check('Chase requirement has progress and a checkbox with no misleading empty message',await page.locator('.bt371-requirement .bt371-progress').count()===1&&await page.locator('.bt371-requirement [role="checkbox"]').count()===1&&await page.getByText('No checklist tasks saved yet').count()===0);
+    await page.evaluate(()=>{document.querySelector('.scroll').scrollTop=0});
+    await page.locator('#bt_notice_host .bt-notice').first().waitFor({state:'hidden',timeout:7000}).catch(()=>{});
+    await page.screenshot({path:path.join(output,name+'-chase-in-progress-390.png')});
     check('timer title fits one line and omits raw editor labels',await page.locator('.bt371-timer summary b').evaluate(e=>e.scrollWidth<=e.clientWidth+1)&&!/(Due Date:|Start \+ Days:)/.test(await page.locator('.bt371-timer summary').innerText()));
     await page.locator('.bt371-timer summary').click();
     check('timer detail retains original description',await page.locator('.bt371-timer-detail').innerText().then(s=>s.includes('Complete qualifying direct deposits during the promotional period')));
@@ -192,7 +195,9 @@ async function exercise(name,engine,url){
     check('full saved waiver wording expands unchanged',await page.locator('.bt371-fee-row p').innerText()==='Chase Total Checking monthly service fee waived with any ONE of: $500 electronic deposits; $1,500 daily beginning balance; $5,000 average beginning day balance; linked qualifying checking account.');
     check('unknown close fee has customer wording',await page.locator('.bt360-detail-card').innerText().then(s=>s.includes('Not stated in terms · Needs review')));
     check('no internal copy in rendered detail',await page.locator('.bt360-detail-card').innerText().then(s=>!/(\bnull\b|structured rule|\banchor\b|verified \$0|\bprovenance\b)/i.test(s)));
-    await page.screenshot({path:path.join(output,name+'-chase-in-progress-390.png')});
+    await page.getByText('View full terms').click();
+    await page.locator('.bt360-panel').filter({hasText:'Fees & waivers'}).scrollIntoViewIfNeeded();
+    await page.screenshot({path:path.join(output,name+'-chase-fees-dates-390.png')});
     await page.getByRole('button',{name:'Set rule'}).first().click();
     check('Set rule opens this entry editor',await page.evaluate(()=>modal?.id==='CHA-P-01'&&modal?._edit===true));
     await button('Cancel').click();
@@ -239,7 +244,11 @@ async function exercise(name,engine,url){
     });
     check('ready-to-close synthetic entry shows Close stage and checks',await page.locator('.bt360-steps span.current').innerText()==='Close'&&await page.locator('[data-bt-hold] .bt360-check').count()>0);
     check('ready detail has no internal copy',await page.locator('.bt360-detail-card').innerText().then(s=>!/(\bnull\b|structured rule|\banchor\b|verified \$0|\bprovenance\b)/i.test(s)));
+    await page.evaluate(()=>{document.querySelector('.scroll').scrollTop=0});
+    await page.locator('#bt_notice_host .bt-notice').first().waitFor({state:'hidden',timeout:7000}).catch(()=>{});
     await page.screenshot({path:path.join(output,name+'-ready-to-close-390.png')});
+    await page.locator('.bt371-call').scrollIntoViewIfNeeded();
+    await page.screenshot({path:path.join(output,name+'-ready-close-actions-390.png')});
     await page.evaluate(()=>{const previous=window.__readyScreenshotOriginal;entries=previous.entries;expanded=previous.expanded;delete window.__readyScreenshotOriginal;R()});
     await page.getByRole('button',{name:'Add bank phone number'}).click();
     check('phone editor carries bank name and account type',await page.locator('#ph_new_bank').inputValue()==='E2E Verification Bank'&&await page.locator('#ph_new_personal').isVisible());
