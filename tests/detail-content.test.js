@@ -359,10 +359,10 @@ console.log('Manage sheet v3.6.13 passed: human stage, SVG icons, safe-area layo
 
 /* v3.6.29: bank-first attention hierarchy and verified local logo registry. */
 const chaseMark=sandbox.bankLogo('Chase Total Checking',true);
-assert.match(chaseMark,/bank-logos\\/chase\\.svg/,'Chase variants share their local institution mark');
-assert.match(sandbox.bankLogo('Citi Checking',true),/bank-logos\\/citi\\.svg/);
-assert.match(sandbox.bankLogo('Wells Fargo Everyday',true),/bank-logos\\/wells-fargo\\.svg/);
-assert.match(sandbox.bankLogo('Bank of America Business Advantage',true),/bank-logos\\/bank-of-america\\.svg/);
+assert.match(chaseMark,/bank-logos\/chase\.svg/,'Chase variants share their local institution mark');
+assert.match(sandbox.bankLogo('Citi Checking',true),/bank-logos\/citi\.svg/);
+assert.match(sandbox.bankLogo('Wells Fargo Everyday',true),/bank-logos\/wells-fargo\.svg/);
+assert.match(sandbox.bankLogo('Bank of America Business Advantage',true),/bank-logos\/bank-of-america\.svg/);
 assert.doesNotMatch(sandbox.bankLogo('Citizens Bank',true),/<img /,'Similar bank names may not borrow Citi marks');
 assert.doesNotMatch(sandbox.bankLogo('Central Bank of America',true),/<img /,'Embedded names are not authoritative identities');
 assert.match(sandbox.bankLogo('Unknown Local Credit Union',true),/blogo/,'Unknown institutions retain initials fallback');
@@ -375,12 +375,12 @@ try{
  const chaseRow={...e,id:'logo-chase',bank:'Chase',bonus:900,checklist:[],financialRules:{...e.financialRules,requirements:[]}};
  const citiRow={...e,id:'logo-citi',bank:'Citi',bonus:325,checklist:[],reqMet:'2026-10-10'};
  const attention=sandbox.BT360.tasks([chaseRow,citiRow]);
- assert.match(attention,/bt3729-bank-name">Chase<\\/b>/,'Bank name leads the featured card');
- assert.match(attention,/bt3729-bank-name">Citi<\\/b>/,'Bank name leads regular card');
- assert.match(attention,/Receive \\$10,000 in qualifying direct deposits/,'Requirement remains under bank');
+ assert.match(attention,/bt3729-bank-name">Chase<\/b>/,'Bank name leads the featured card');
+ assert.match(attention,/bt3729-bank-name">Citi<\/b>/,'Bank name leads regular card');
+ assert.match(attention,/Receive \$10,000 in qualifying direct deposits/,'Requirement remains under bank');
  assert.match(attention,/Personal · Due Oct 22, 2026/,'Account type and due date share the metadata line');
- assert.equal((attention.match(/\\$900/g)||[]).length,1,'Featured bonus amount must not repeat in subtitles');
- assert.equal((attention.match(/\\$325/g)||[]).length,1,'Regular bonus amount must not repeat in subtitles');
+ assert.equal((attention.match(/\$900/g)||[]).length,1,'Featured bonus amount must not repeat in subtitles');
+ assert.equal((attention.match(/\$325/g)||[]).length,1,'Regular bonus amount must not repeat in subtitles');
  assert.match(attention,/onclick="runNextAccountAction/,'Existing action handler retained');
  assert.match(attention,/onclick="openAccountFromActionCenter/,'Existing detail handler retained');
 }finally{sandbox.getAttentionSuggestions=originalAttention;}
