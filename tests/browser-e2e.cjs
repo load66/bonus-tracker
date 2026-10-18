@@ -164,7 +164,9 @@ async function exercise(name,engine,url){
     check('customer exclusion wording survives rerender',await page.locator('#elig-customer').inputValue()==='Not eligible for current checking account owners.');
 
     await button('Cancel').click();
-    await page.locator('.bt362-add-fab').click();await button('Quick Add').click();await button('CI Citi $300').click();
+    await page.locator('.bt362-add-fab').click();await button('Quick Add').click();
+    check('Quick Add Citi identity uses locally stored bank logo',await page.getByRole('button',{name:'Citi $300',exact:true}).locator('img[src="./bank-logos/citi.svg"]').count()===1);
+    await button('Citi $300').click();
     check('Quick Add exposes bank/account/bonus',await page.locator('input[oninput*="\'bank\'"]').isVisible()&&await page.locator('select[onchange*="\'accountType\'"]').isVisible()&&await page.locator('input[oninput*="\'bonus\'"]').isVisible());
     await button('4 Review').click();check('unverified template cannot be saved',await button('💾 Add account').isDisabled());await button('Cancel').click();
     await importEntry(payload);
