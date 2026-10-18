@@ -541,3 +541,6 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
 #bt-terms-cloud-detail{margin-top:17px}
 #bt-terms-cloud-detail h3{font-size:14px}
 #bt-terms-cloud-detail pre{white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;font:11px/1.5 ui-monospace,monospace;background:#0A0C11;padding:12px;border:1px solid #333845;border-radius:10px;max-height:40vh;overflow:auto}
+
+/* Historical fee amounts are reference-only for closed repeatable offers. */
+.bt3617-history-note{display:block;color:var(--muted);font-size:11px;line-height:1.45;margin-top:4px}
