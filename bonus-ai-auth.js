@@ -39,5 +39,11 @@
     }
     return refreshPromise;
   }
-  window.BTBonusAuth={connected:()=>!!session(),token,signIn:(email,password)=>exchange('password',{email,password}),disconnect:clear};
+  // A successful sign-in activates immutable T&C archival even if rotating recovery backup is off.
+  async function signIn(email,password){
+    const access=await exchange('password',{email,password});
+    try{window.BTTermsHistory?.queueSync?.()}catch{}
+    return access;
+  }
+  window.BTBonusAuth={connected:()=>!!session(),token,signIn,disconnect:clear};
 })();
