@@ -46,7 +46,7 @@
         const links=Array.isArray(x.links)?x.links.slice(0,20).flatMap(link=>{try{const u=new URL(link.url),id=sourceHosts[u.hostname];return id&&u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&!u.search&&!u.hash&&u.pathname!=='/'&&typeof link.title==='string'&&link.title.length<=300?[{url:u.href,source:sourceNames[id],sourceId:id,title:link.title}]:[]}catch{return[]}}):[];
         if(!links.some(l=>l.url===u.href))links.unshift({url:u.href,source:sourceNames[id],sourceId:id,title:x.title});
         const badges=Array.isArray(x.badges)?x.badges.filter(v=>['New','Increased','Decreased','Updated','Ending soon'].includes(v)).slice(0,4):[];
-        const offer={title:x.title,url:u.href,publishedAt:x.publishedAt,source:sourceNames[id],sourceId:id,availability:['nationwide','regional'].includes(x.availability)?x.availability:'unknown',groupKey:details.offerKey||(typeof x.groupKey==='string'&&x.groupKey.length<1000?x.groupKey:normalize(x.title)),...details,amount,expiresAt,badges,links,changeLabel:typeof x.changeLabel==='string'&&/^\$[\d,]+ → \$[\d,]+$/.test(x.changeLabel)?x.changeLabel:''};
+        const offer={title:x.title,url:u.href,publishedAt:x.publishedAt,source:sourceNames[id],sourceId:id,availability:['nationwide','regional'].includes(x.availability)?x.availability:'unknown',groupKey:details.offerKey||(typeof x.groupKey==='string'&&x.groupKey.length<1000?x.groupKey:normalize(x.title)),...details,amount,rewardIsUpperBound:x.rewardIsUpperBound===true,expiresAt,badges,links,changeLabel:typeof x.changeLabel==='string'&&/^\$[\d,]+ → \$[\d,]+$/.test(x.changeLabel)?x.changeLabel:''};
         offer.evidence=evidenceFor(offer,data.verification);offers.push(offer);
       }catch{}
     }
@@ -287,7 +287,26 @@
       const verifiedAmount=amountFor(x);
       const verifiedRequirement=x.evidence?.status==='evidence-found'&&!x.evidence?.stale?x.evidence.fields?.qualifying_activity?.value:null;
       const bankLabel=(x.bank||'').replace(/\b\w/g,c=>c.toUpperCase()).replace(/^Us Bank$/,'U.S. Bank');
-      const label=bankLabel&&x.product&&x.amount!==null?bankLabel+' · '+x.product+' · $'+x.amount.toLocaleString('en-US'):x.title;
+      const label=bankLabel&&x.product&&x.amount!==null?bankLabel+' · '+(x.product==='checking'?'Checking':x.product==='business'?'Business':x.product==='savings'?'Savings':x.product)+' · '+(x.rewardIsUpperBound?'up to ':'')+'
+      const badges=x.badges?.length?'<div class="radar-offer-badges">'+x.badges.map(b=>'<span>'+escape(b)+'</span>').join('')+(x.changeLabel?'<span>'+escape(x.changeLabel)+'</span>':'')+'</div>':'';
+      h+='<article class="radar-card radar-card-compact radar-priority-'+x.priorityGroup+'"><div class="bt360-offer-title">'+bankLogo(x.title,true)+'<div class="bt360-grow"><h3>'+escape(label)+'</h3>'+badges+'<p>'+escape(verifiedRequirement||'Requirements need review')+'</p></div><strong>'+(verifiedAmount===null?(x.amount===null?'Needs review':'$'+x.amount.toLocaleString('en-US')+'*'):'$'+verifiedAmount.toLocaleString('en-US'))+'</strong></div><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+'</div>';
+      if(x.match)h+='<div class="radar-tracker-context"><b>'+escape(x.match.label)+'</b>'+(date?'<time datetime="'+date+'">'+escape(typeof fD==='function'?fD(date):date)+'</time>':'')+'<p>'+escape(x.match.detail)+'</p></div>';
+      h+='<p class="radar-area-note">'+escape(x.geo.detail)+'</p>';
+      const proof=x.geo.proof||availabilityFor(x,officialCatalog);
+      if(proof?.sourceUrl){let body='';for(const q of [...(proof.rules||[]).map(r=>r.quote),...(proof.nationwideQuote?[proof.nationwideQuote]:[]),...(proof.conditions||[])])body+='<blockquote>'+escape(q)+'</blockquote>';body+='<a href="'+escape(proof.sourceUrl)+'" target="_blank" rel="noopener noreferrer">Official promotion ↗</a>';h+=disclosure('availability:'+x.url,'Official check · '+new Date(proof.checkedAt).toLocaleString(),body).replace('class="mobile-disclosure"','class="mobile-disclosure radar-official-proof"');}
+      h+='<details class="radar-offer-original"><summary>Original headline &amp; sources</summary><p>'+escape(x.title)+'</p>'+(verifiedAmount===null&&x.amount!==null?'<p>* Headline amount is source-reported; verify official terms before applying.</p>':'')+'</details>';
+      h+=(x.links?.length?x.links:[link]).map(l=>'<a class="radar-offer-link" href="'+escape(l.url)+'" target="_blank" rel="noopener noreferrer">Review offer · '+escape(l.source)+' ↗</a>').join('')+'</article>';
+    });
+    return h;
+  };
+  window.BTBankBonusFeed={validate:valid,group:grouped,filter:filtered,evidence:evidenceFor,amount:amountFor,geography,match:trackerMatch,prioritize,availability:availabilityFor,priorityIdentifiers};
+  // While the tab stays open, refresh the published snapshot without re-entering anything.
+  const officialPoll=setInterval(()=>{if(typeof tab!=='undefined'&&tab==='bonuses')refreshOfficial();},60000);
+  if(officialPoll&&typeof officialPoll.unref==='function')officialPoll.unref();
+  const poll=setInterval(()=>{if(typeof tab!=='undefined'&&tab==='bonuses')refresh();},15*60*1000);
+  if(poll&&typeof poll.unref==='function')poll.unref();
+})();
++x.amount.toLocaleString('en-US'):x.title;
       const badges=x.badges?.length?'<div class="radar-offer-badges">'+x.badges.map(b=>'<span>'+escape(b)+'</span>').join('')+(x.changeLabel?'<span>'+escape(x.changeLabel)+'</span>':'')+'</div>':'';
       h+='<article class="radar-card radar-card-compact radar-priority-'+x.priorityGroup+'"><div class="bt360-offer-title">'+bankLogo(x.title,true)+'<div class="bt360-grow"><h3>'+escape(label)+'</h3>'+badges+'<p>'+escape(verifiedRequirement||'Requirements need review')+'</p></div><strong>'+(verifiedAmount===null?(x.amount===null?'Needs review':'$'+x.amount.toLocaleString('en-US')+'*'):'$'+verifiedAmount.toLocaleString('en-US'))+'</strong></div><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+'</div>';
       if(x.match)h+='<div class="radar-tracker-context"><b>'+escape(x.match.label)+'</b>'+(date?'<time datetime="'+date+'">'+escape(typeof fD==='function'?fD(date):date)+'</time>':'')+'<p>'+escape(x.match.detail)+'</p></div>';
