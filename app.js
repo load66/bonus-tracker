@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.18';
+const APP_VERSION='3.6.19';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4166,7 +4166,11 @@ function openTrackerTool(kind){
     panel.focus({preventScroll:true});
   });
 }
-function R(){const focusedBeforeRender=document.activeElement;const searchFocus=focusedBeforeRender&&['archive-search','tracker-search','datapoints-search','radar-search','terms-search'].includes(focusedBeforeRender.id)?{id:focusedBeforeRender.id,start:focusedBeforeRender.selectionStart,end:focusedBeforeRender.selectionEnd}:null;if(tab==='finances')tab='tracker';captureProfileSectionState();const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;
+function R(){
+  // Never paint the legacy renderer during script startup. The redesign module
+  // initializes after the canonical model and performs the first full render.
+  if(!window.BT360)return;
+  const focusedBeforeRender=document.activeElement;const searchFocus=focusedBeforeRender&&['archive-search','tracker-search','datapoints-search','radar-search','terms-search'].includes(focusedBeforeRender.id)?{id:focusedBeforeRender.id,start:focusedBeforeRender.selectionStart,end:focusedBeforeRender.selectionEnd}:null;if(tab==='finances')tab='tracker';captureProfileSectionState();const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;
   if(typeof window.btCaptureRadarDisclosures==='function')window.btCaptureRadarDisclosures();
   if(tab==='profiles'||tab==='health')tab='tracker';
   try{if(!window.__btAutoCleanupV384){entries=sortE(normalizeLifecycleEntries(entries));sv(SK,entries);window.__btAutoCleanupV384=true}}catch{}
@@ -5913,7 +5917,7 @@ function buildTaxCSV(yr){
 function exportCSV(yr){const csv=buildTaxCSV(yr),blob=new Blob([csv],{type:'text/csv;charset=utf-8'});downloadBlob(blob,'BonusTracker_'+yr+'.csv')}
 function promptExportYear(){const raw=window.prompt('Enter the year you want to export:', String(taxYear||new Date().getFullYear()));if(raw===null)return;const yr=parseInt(String(raw).trim(),10);if(!Number.isFinite(yr)||yr<1900||yr>2100){alert('Please enter a valid 4-digit year.');return}exportCSV(yr)}
 function loadFeed(){feedLoading=true;R();fetch('https://api.allorigins.win/get?url='+encodeURIComponent('https://www.doctorofcredit.com/category/bank-account-bonuses/feed/')).then(r=>r.json()).then(d=>{const p=new DOMParser(),x=p.parseFromString(d.contents,'text/xml'),items=x.querySelectorAll('item');feedItems=[];items.forEach((it,i)=>{if(i>=12)return;feedItems.push({title:it.querySelector('title')?.textContent||'',link:it.querySelector('link')?.textContent||'',date:it.querySelector('pubDate')?.textContent||''})});feedLoading=false;R()}).catch(()=>{feedItems=null;feedLoading=false;R()})}
-entries=sortE(entries);R();
+entries=sortE(entries); // First visible render is owned by BT360 at the end of the script bundle.
 
 /* === Consolidated core module: Core UI stability (moved into app.js in v3.3.36) === */
 /*
