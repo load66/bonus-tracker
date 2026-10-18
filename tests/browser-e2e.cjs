@@ -548,7 +548,7 @@ async function exercise(name,engine,url){
     const mobileLifecycle=page.locator('.profile-section[data-section-key="lifecycle"]').first();
     if(await mobileLifecycle.evaluate(e=>e.open))await mobileLifecycle.locator('summary').click();
     await page.evaluate(()=>{undoState=null;clearTimeout(undoTimer);R()});
-    await page.locator('.ops-action-center').scrollIntoViewIfNeeded();
+    await openAdvancedActions();await page.locator('.ops-action-center').scrollIntoViewIfNeeded();
     await page.screenshot({path:path.join(output,name+'-mobile-verified.png')});
     // Long saved requirements must remain readable without changing account storage.
     await page.evaluate(()=>{
@@ -572,6 +572,7 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>{
       entries.push({...entries[0],id:'E2E-TILE-02',bank:'E2E Citi',bonus:325,reqMet:'2026-08-10',payoutTimingText:'Bonus expected after requirements are completed',customTimers:[]});R();
     });
+    await openAdvancedActions();
     check('mobile Action Center uses two compact columns',await page.locator('.ops-action-tile').evaluateAll(rows=>rows.length===2&&Math.abs(rows[0].getBoundingClientRect().top-rows[1].getBoundingClientRect().top)<2));
     check('every Action Center tile shows specific next action',await page.locator('.ops-action-tile').evaluateAll(rows=>rows.every(e=>{const s=e.querySelector('.ops-tile-status');return s&&s.textContent.trim()&&!/d left|Date needs review/.test(s.textContent)})));
     check('recurring and payout tasks remain distinct',await page.locator('.ops-tile-status').allTextContents().then(rows=>rows.some(t=>t.includes('Establish $500+ monthly qualified direct deposits'))&&rows.includes('Confirm bonus payment')));
