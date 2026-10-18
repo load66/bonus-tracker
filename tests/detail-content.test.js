@@ -120,6 +120,22 @@ assert.doesNotMatch(archives,/Needs review · verify eligibility rules/);
 const simpleOld={...cooldown,bank:'Old Profile Bank',financialRules:null,
  monthlyFee:{value:'$8 with e-statements / $11 paper',amount:8,source:'Old enrolled product fee schedule'}};
 assert.equal(sandbox.BT360.feeSnapshot(simpleOld).monthly,'$8','Prior legacy fee object is restored');
+// Bank-level requirements from the old UI are a last resort when cycle archives are empty.
+const savedProfileBefore=storage.get('bt_bank_reqs');
+storage.set('bt_bank_reqs',JSON.stringify({
+ old:{bank:'Synthetic Old Profile CU',accountType:'personal',
+  monthlyFee:{amount:6,value:'$6 monthly with paper statements',source:'Saved account disclosure'},
+  waivers:['$500 ACH direct deposit','$1,500 balance'],
+  earlyTerminationFeeText:'Early closing fee: $18 within 120 days.'}
+}));
+const profileAccount={...cooldown,bank:'Synthetic Old Profile CU'};
+const profileReference=sandbox.BT360.feeSnapshot(profileAccount);
+assert.equal(profileReference.monthly,'$6');
+assert.equal(profileReference.closeMain,'$18 early-close fee');
+assert.match(profileReference.monthlyReference,/saved bank profile · product\/date not confirmed/);
+assert.match(profileReference.summary,/ACH direct deposit/);
+if(savedProfileBefore===undefined)storage.delete('bt_bank_reqs');
+else storage.set('bt_bank_reqs',savedProfileBefore);
 if(savedArchiveBefore===undefined)storage.delete('bt_tc_archive_v1');
 else storage.set('bt_tc_archive_v1',savedArchiveBefore);
 assert.equal(JSON.stringify([...storage]),before,'Fee projections never write stored records');
