@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex — v3.6.20 — codex/v3.6.20-archive-safe-ui
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.20 archive and close-review presentation (`codex/v3.6.20-archive-safe-ui`): display verified eligibility within 60 days as a distinct archive group without duplication in cooling down; make ready-to-close summary avoid implying manual checks have been completed. Tracker bar graph, stored records, financial and eligibility engines unchanged. Release candidate pending full CI, Chromium/WebKit and Pages deployment verification.
 
 - v3.6.19 mobile Main mockup and first-paint fix (`codex/v3.6.19-dashboard-mockup-first-paint`): the first visible render is deferred until full BT360 startup, with a branded skeleton and versioned service worker. Needs you is an unboxed heading with standalone prioritized action tile and separate compact rows; Eligible soon is similarly unboxed. Deadline/action presentation reads canonical getAttentionSuggestions; recorded task/structured-rule progress is display-only and never implies bank transactions were observed. Unit and Chromium/WebKit initial-DOM-flicker regression and mobile layout checks required before merge, then exact main Pages publication. No financial/churn/JSON data changes.
 
