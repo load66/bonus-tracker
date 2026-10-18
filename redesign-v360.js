@@ -11,20 +11,21 @@ const arg=v=>JSON.stringify(String(v??'')).replace(/&/g,'&amp;').replace(/</g,'&
 const stage=e=>{try{return lifecycleViewForEntry(e)}catch{return {code:'IN_PROGRESS',label:'In progress'}}};
 const amount=v=>fM(Number(v||0)), date=v=>v?fD(v):'Needs review';
 const eligibleInfo=e=>{
- if(!e?.closed)return null;
- const eligible=window.churnReadyDate?.(e)||'';
- if(!/^\d{4}-\d{2}-\d{2}$/.test(eligible))return null;
+ if(!e)return null;
  const gate=window.BTEligibilityGate;
+ const verifiedProjected=gate?.safeEligibilityDate?.(e,addD,addM)||'';
+ const eligible=verifiedProjected||(e.closed?window.churnReadyDate?.(e)||'':'');
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(eligible))return null;
  try{
   const check=gate?.validate?.(e);
-  if(check?.ok&&check.decision==='repeatable'){
+  if(check?.ok&&check.decision==='repeatable'&&eligible===verifiedProjected){
    const controlling=gate.controllingRule(e,addD,addM);
    const more=gate.officialEligibilityDates(e,addD,addM).filter(r=>r.conditionState==='active');
    return {eligible,controlling,more,verified:true,label:controlling?gate.periodLabel(controlling.period)+' from '+gate.anchorLabel(controlling.basis)+' + '+gate.SAFETY_BUFFER_DAYS+' days':'verified saved churn rule'};
   }
  }catch{}
- const fallback=window.btLegacyChurnFallbackDate?.(e);
- if(fallback===eligible)return {eligible,controlling:null,more:[],verified:false,label:'from saved churn rule · not verified'};
+ const fallback=e.closed?window.btLegacyChurnFallbackDate?.(e):'';
+ if(e.closed&&fallback===eligible)return {eligible,controlling:null,more:[],verified:false,label:'from saved churn rule · not verified'};
  return {eligible,controlling:null,more:[],verified:false,label:'from saved churn rule · not verified'};
 };
 function scope(e){const type=typeof entryBankType==='function'?entryBankType(e):String(e?.accountType||'personal').toLowerCase();return (type==='B'||type==='business'?'business':'personal')===audience}
@@ -193,7 +194,7 @@ function requirementRows(e){
   const isMoney=['direct-deposit','new-money'].includes(r.kind)&&Number.isFinite(value)&&value>0;
   const heading=requirementTitle(r)+(due?' · due '+date(due):'');
   const stat=isMoney?(done?'Confirmed · transaction amounts not recorded':amount(0)+' of '+amount(value)+' · 0 recorded'):(done?'Requirement confirmed':due?'Due '+date(due):'Review saved offer terms');
-  const meter=isMoney?'<div class="bt3611-req-track" role="progressbar" aria-label="Requirement completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+(done?100:0)+'"><i style="width:'+(done?100:0)+'%"></i></div>':'';
+  const meter=isMoney?'<div class="bt3611-req-track" role="progressbar" aria-label="Recorded requirement amount" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i style="width:0%"></i></div>':'';
   return '<div class="bt360-check bt3611-requirement '+(done?'done':'')+'"><button type="button" role="checkbox" aria-label="Confirm '+safe(requirementTitle(r))+'" aria-checked="'+done+'" onclick="openReqMet('+arg(e.id)+')">'+(done?'✓':'')+'</button><div class="bt3611-req-body"><b>'+safe(heading)+'</b>'+meter+'<small>'+safe(stat)+'</small><details class="bt3611-evidence"><summary>Requirement details</summary><p>'+safe(r.text||'')+'</p></details></div></div>';
  }).join('');
  if(!list.length&&(legacy||Number(e.reqDays)>0)){
@@ -315,7 +316,19 @@ function detailPanels(e){
  if(!closed&&(e.dataPoint||e.completeBonusText||e.notes))h+='<details class="bt366-offer-notes"><summary>Offer notes</summary><p>'+safe([e.dataPoint,e.completeBonusText,e.notes].filter(Boolean).join('\n\n'))+'</p></details>';
  if(ready||code==='HOLD_OPEN'||code==='BONUS_RECEIVED'){
   const check=closeReadiness(e);
-  h+='<div data-bt-hold>'+panel(ready?'Close checks':'Hold & close checks',check.items.map(item=>'<div class="bt360-check '+(item.ok?'done':item.level==='danger'?'danger':'unknown')+'"><span class="bt3611-check-icon">'+(item.ok?'✓':'')+'</span><div><b>'+safe(item.label)+'</b><small>'+safe(item.detail||'Needs review')+'</small></div></div>').join(''))+'</div>';
+  const financial=e.financialRules?.closure,hold=typeof safeCloseDate==='function'?safeCloseDate(e):'',remaining=hold?dB(td(),hold):null;
+  const hasHold=Number(e.minHoldDays)>0;
+  const holdMet=hasHold&&Number.isFinite(remaining)&&remaining<=0;
+  const feeKnown=typeof financial?.earlyCloseFee==='number'&&!!financial?.feeEvidence?.quote;
+  const feeCleared=feeKnown&&(financial.earlyCloseFee===0||holdMet);
+  const retentionSaved=!!e.bonusRecd&&['payout-only','minimum-open','none'].includes(String(financial?.restrictionType||e.closeRestrictionType||''));
+  const items=[
+   {ok:holdMet,label:'Minimum hold met',detail:hasHold?(holdMet?'Open '+Number(e.minHoldDays)+' days · cleared '+date(hold):'Hold until '+(hold?date(hold):'Needs review')):'No documented minimum hold · Needs review'},
+   {ok:feeCleared,label:'Early close fee window cleared',detail:feeKnown?(financial.earlyCloseFee===0?'No early close fee in saved terms':amount(financial.earlyCloseFee)+' fee · review after hold'):'Early close fee not stated · Needs review'},
+   {ok:retentionSaved,label:'Bonus kept after closing',detail:retentionSaved?'Bonus received · saved closure terms reviewed':'Confirm any repayment restriction in saved terms'},
+   {ok:false,label:'Close with $0 balance',detail:'Confirm account balance with the bank before closing'}
+  ];
+  h+='<div data-bt-hold>'+panel(ready?'Close checks':'Hold & close checks',items.map(item=>'<div class="bt360-check '+(item.ok?'done':'unknown')+'"><span class="bt3611-check-icon">'+(item.ok?'✓':'')+'</span><div><b>'+safe(item.label)+'</b><small>'+safe(item.detail)+'</small></div></div>').join(''))+'</div>';
  }
  if(ready){
   const phoneRow=getPhoneBook().find(row=>{try{return bankIdentity(row.bank).family===bankIdentity(e.bank).family}catch{return row.bank===e.bank}});
