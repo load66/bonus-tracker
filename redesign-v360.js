@@ -102,20 +102,47 @@ function hero(rows,year,metrics){
  }
  return '<section class="bt360-hero"><div class="bt360-hero-top"><div class="bt360-kicker">COLLECTED IN '+year+'</div><button id="bt-cloud-open" class="cloud-status-button bt360-backup" onclick="btOpenCloudBackup()"><span class="bt360-cloud-icon" aria-hidden="true">✓</span><span class="cloud-dashboard-summary">Cloud backup</span></button></div><strong class="bt360-hero-amount">'+amount(total)+'</strong><p>'+amount(progress)+' in progress · '+amount(awaiting)+' awaiting</p><div class="bt367-month-chart" role="group" aria-label="Collected by month in '+year+'">'+bars+'</div>'+detail+'</section>';
 }
+function attentionStatus(x){
+ const code=String(x.stageCode||'IN_PROGRESS');
+ const labels={ACTION_NEEDED:'Action needed',IN_PROGRESS:'In progress',REQUIREMENTS_MET:'Requirements met',AWAITING_BONUS:'Awaiting bonus',BONUS_RECEIVED:'Bonus received',HOLD_OPEN:'Hold open',READY_TO_CLOSE:'Ready to close',COOLDOWN:'Cooldown',ELIGIBLE:'Eligible again',ARCHIVED:'Archived'};
+ return {code,label:labels[code]||String(x.stageLabel||'Review account')};
+}
+function attentionDateNote(x){
+ const c=x?.dateContext||{};
+ if(c.confirmed&&c.date)return 'Due '+date(c.date);
+ if(x.stageCode==='AWAITING_BONUS'||x.stageCode==='REQUIREMENTS_MET')return 'Payout date not confirmed';
+ if(x.stageCode==='HOLD_OPEN'||x.stageCode==='BONUS_RECEIVED'||x.stageCode==='READY_TO_CLOSE')return 'Review close date';
+ if(x.stageCode==='COOLDOWN'||x.stageCode==='ELIGIBLE')return 'Review eligibility date';
+ if(x.stageCode==='IN_PROGRESS'||x.stageCode==='ACTION_NEEDED')return 'Requirement date not confirmed';
+ return 'Date not confirmed';
+}
+function attentionChip(x){
+ const stage=attentionStatus(x);
+ const theme=['BONUS_RECEIVED','READY_TO_CLOSE','ELIGIBLE'].includes(stage.code)?'positive':['IN_PROGRESS','REQUIREMENTS_MET'].includes(stage.code)?'progress':'warning';
+ return '<span class="bt360-chip bt3613-attention-stage '+theme+'">'+safe(stage.label)+'</span>';
+}
 function tasks(rows){
  let suggestions=[];try{suggestions=window.getAttentionSuggestions?.()||[]}catch{}
  suggestions=suggestions.filter(x=>rows.some(e=>e.id===x.entryId&&scope(e)));
- const top=suggestions[0];
- const id=x=>arg(x.entryId);
+ const top=suggestions[0],id=x=>arg(x.entryId);
  const title=x=>safe(x.task?.title||x.stageLabel||'Review account');
- const name=x=>safe(x.bank||'Bank');
- const chip=x=>{const d=x.dateContext;return d?.confirmed&&d.date?'<span class="bt360-chip warning">'+safe(date(d.date))+'</span>':'<span class="bt360-chip warning">Needs review</span>'};
  let html='';
- if(top){const entry=rows.find(e=>e.id===top.entryId);
- html+='<div class="bt360-featured"><div class="bt360-feature-head">'+bankLogo(top.bank,true)+'<div class="bt360-grow"><b>'+title(top)+'</b><p>'+name(top)+(entry?.bonus?' · '+amount(entry.bonus)+' bonus':'')+'</p></div>'+chip(top)+'</div>';
- if(entry?.checklist?.length){const done=entry.checklist.filter(t=>t.done).length;html+='<div class="bt360-task-progress"><span>Recorded tasks</span><b>'+done+' of '+entry.checklist.length+'</b><div class="bt360-track"><i style="width:'+Math.round(done/entry.checklist.length*100)+'%"></i></div></div>'}
- html+='<div class="bt360-actions"><button class="bt360-primary" onclick="runNextAccountAction('+id(top)+')">Open task</button><button class="bt360-secondary" onclick="openAccountFromActionCenter('+id(top)+')">Details</button></div></div>'}
- if(suggestions.length>1){html+='<div class="bt360-list">';suggestions.slice(1,9).forEach(x=>{html+='<button class="bt360-list-row" onclick="openAccountFromActionCenter('+id(x)+')">'+bankLogo(x.bank,true)+'<span class="bt360-grow"><b>'+title(x)+'</b><small>'+name(x)+'</small></span><span class="bt360-chip '+(x.stageCode==='READY_TO_CLOSE'?'positive':'warning')+'">'+safe(x.stageLabel||'Review')+'</span></button>'});html+='</div>'}
+ if(top){
+  const entry=rows.find(e=>e.id===top.entryId);
+  html+='<div class="bt360-featured"><div class="bt360-feature-head">'+bankLogo(top.bank,true)+'<div class="bt360-grow"><b>'+title(top)+'</b><p>'+safe(top.bank||'Bank')+(entry?.bonus?' · '+amount(entry.bonus)+' bonus':'')+'</p><small class="bt3613-attention-note">'+safe(attentionDateNote(top))+'</small></div>'+attentionChip(top)+'</div>';
+  if(entry?.checklist?.length){
+   const done=entry.checklist.filter(t=>t.done).length;
+   html+='<div class="bt360-task-progress"><span>Recorded tasks</span><b>'+done+' of '+entry.checklist.length+'</b><div class="bt360-track"><i style="width:'+Math.round(done/entry.checklist.length*100)+'%"></i></div></div>';
+  }
+  html+='<div class="bt360-actions"><button class="bt360-primary" onclick="runNextAccountAction('+id(top)+')">Open task</button><button class="bt360-secondary" onclick="openAccountFromActionCenter('+id(top)+')">Details</button></div></div>';
+ }
+ if(suggestions.length>1){
+  html+='<div class="bt360-list">';
+  suggestions.slice(1,9).forEach(x=>{
+   html+='<button class="bt360-list-row" onclick="openAccountFromActionCenter('+id(x)+')">'+bankLogo(x.bank,true)+'<span class="bt360-grow"><b>'+title(x)+'</b><small>'+safe(x.bank||'Bank')+'</small><small class="bt3613-attention-note">'+safe(attentionDateNote(x))+'</small></span>'+attentionChip(x)+'</button>';
+  });
+  html+='</div>';
+ }
  if(!suggestions.length)html='<div class="bt360-empty">No immediate tasks for '+audience+' accounts.</div>';
  return panel('Needs you',html,'<span class="bt360-count">'+suggestions.length+' '+(suggestions.length===1?'task':'tasks')+'</span>');
 }
