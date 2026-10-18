@@ -169,7 +169,7 @@ async function exercise(name,engine,url){
     const taxCSV=await fs.readFile(taxFile,'utf8');
     check('tax CSV downloads with correct amount and dates',taxCSV.includes('E2E Verification Bank')&&taxCSV.includes('"325"')&&taxCSV.includes('Apr 15, 2026'));
     await button('Tracker').click();
-    await page.locator('#bt-data-menu>summary').click();
+    await button('Settings').click();
     check('data tools are in the header menu',await page.getByRole('button',{name:'Export backup file',exact:false}).isVisible()&&await page.getByRole('button',{name:'Reset this device',exact:false}).isVisible()&&await page.locator('.tracker-quick-actions button').count()===1);
     const backupEvent=page.waitForEvent('download');await page.getByRole('button',{name:'Export backup file',exact:false}).click();
     const backupFile=path.join(output,name+'-backup.json');await (await backupEvent).saveAs(backupFile);
@@ -179,24 +179,24 @@ async function exercise(name,engine,url){
     check('eligibility uses payout plus exact months and buffer',await page.evaluate(()=>btOfficialEligibilityDate(entries[0])==='2027-04-15'&&nextReopen(entries[0])==='2027-04-17'));
     await button('Undo').click();check('undo restores account and notes',!(await record()).closed&&(await record()).notes===backup.entries[0].notes);
     await close();
-    await page.locator('#bt-data-menu>summary').click();
-    const chooser=page.waitForEvent('filechooser');await page.getByRole('button',{name:'Import backup file',exact:false}).click();await (await chooser).setFiles(backupFile);
+    await button('Settings').click();
+    const chooser=page.waitForEvent('filechooser');await page.getByRole('button',{name:'Restore from file',exact:false}).click();await (await chooser).setFiles(backupFile);
     const safetyDownload=page.waitForEvent('download');await button('Restore Backup').click();await safetyDownload;
     await page.getByRole('heading',{name:'Restore Complete'}).waitFor();await button('Confirm').click();
     check('restore recovers open state and saved details',!(await record()).closed&&(await record()).id===id&&(await record()).notes===backup.entries[0].notes);
     // Exercise the real archive menu without changing financial records.
     await page.evaluate(()=>{entries.push({id:'archive-e2e',bank:'Archived E2E Bank',closed:'2026-10-01',bonusRecd:'2026-09-01',bonus:100,churnable:false,churnability:'not-repeatable',notes:'Preserved archive note',history:[],customTimers:[],checklist:[]});R()});
     check('closed nonrepeatable account hidden from tracker',await page.locator('[data-bt-entry-id="archive-e2e"]').count()===0);
-    await page.locator('#bt-data-menu>summary').click();await page.getByRole('button',{name:'Archived accounts',exact:false}).click();
+    await button('Archive').click();await page.locator('details.bt360-archived-tools > summary').click();
     check('archive menu reveals retained account',await page.locator('[data-bt-entry-id="archive-e2e"]').count()===1&&await page.locator('[data-bt-entry-id="'+id+'"]').count()===0);
     await page.locator('#archive-search').fill('Archived E2E');
     check('archive search remains focused after rerender',await page.locator('#archive-search').evaluate(el=>el===document.activeElement));
     await page.locator('[data-bt-entry-id="archive-e2e"] .card-h').click();
     check('archive preserves expanded history',await page.locator('[data-bt-entry-id="archive-e2e"] .card-exp').count()===1);
-    await page.getByRole('button',{name:'Back to Tracker',exact:true}).click();
+    await page.getByRole('button',{name:'Back to Archive',exact:true}).click();await button('Tracker').click();
     check('archive navigation retains records',await page.evaluate(()=>entries.some(e=>e.id==='archive-e2e'&&e.notes==='Preserved archive note')));
     await page.evaluate(()=>{entries=entries.filter(e=>e.id!=='archive-e2e');R()});
-    await button('Datapoints').click();check('successful method appears in datapoints',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));await button('T&C Archive').click();check('terms archive contains original promotion',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));await button('Tracker').click();
+    await button('Datapoints').click();check('successful method appears in datapoints',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));await button('Archive').click();await button('Saved terms').click();check('terms archive contains original promotion',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));await button('Tracker').click();
     await page.getByPlaceholder('Search accounts...').fill('Does not exist');await page.getByText('No matching accounts',{exact:true}).waitFor();await page.getByPlaceholder('Search accounts...').fill('');
     check('search keeps stored record',(await record()).id===id);
     await page.setViewportSize({width:390,height:844});
@@ -459,7 +459,7 @@ async function exercise(name,engine,url){
     check('report editor footer stays within mobile viewport',await page.locator('.research-editor-footer').evaluate(e=>{const r=e.getBoundingClientRect();return r.bottom<=innerHeight+1&&r.top>0}));
     await button('Save report').click();
     check('source report save preserves activity date',await page.evaluate(()=>loadCommunityDatapoints().some(x=>x.bank==='E2E Report Bank'&&x.eventDate==='2026-09-30'&&x.outcome==='worked')));
-    await button('T&C Archive').click();
+    await button('Archive').click();await button('Saved terms').click();
     await page.getByPlaceholder('Search stored T&C...').pressSequentially('E2E');
     check('terms search keeps focus while typing',await page.getByPlaceholder('Search stored T&C...').inputValue()==='E2E'&&await page.evaluate(()=>document.activeElement.id==='terms-search'));
     const termsBank=page.locator('.archive-bank').first();
@@ -475,45 +475,44 @@ async function exercise(name,engine,url){
 
     await button('Tracker').click();
     await page.evaluate(()=>{
-      window.__dashboardMetrics=bonusPipelineMetrics;
-      bonusPipelineMetrics=(...args)=>({...window.__dashboardMetrics(...args),active:575,collected:5100,openCount:2,cooldownCount:16,readyCloseCount:0,actionCount:0});R();
+      window.__dashboardEntries=entries;
+      entries=[...entries,{id:'synthetic-dashboard-amount',bank:'Visual Overflow Fixture',accountType:'personal',bonus:1234567,opened:'2026-01-02',bonusRecd:'2026-10-01',closed:'',customTimers:[],checklist:[]}];R();
     });
     for(const width of [320,375,390,430,1024]){
       await page.setViewportSize({width,height:844});
-      const dashboardSummary=await page.locator('.ops-hero .hero-note').evaluate(e=>({
-        text:e.textContent,scrollWidth:e.scrollWidth,clientWidth:e.clientWidth,
+      const expected=await page.evaluate(()=>fM(entries.filter(e=>e.accountType==='personal'&&e.bonusRecd&&e.bonusRecd.slice(0,4)==='2026').reduce((a,e)=>a+Number(e.bonus||0),0)));
+      const summary=await page.locator('.bt360-hero').evaluate(e=>({
+        text:e.innerText,scrollWidth:e.scrollWidth,clientWidth:e.clientWidth,
         scrollHeight:e.scrollHeight,clientHeight:e.clientHeight,
-        whiteSpace:getComputedStyle(e).whiteSpace,
-        width:e.getBoundingClientRect().width,visible:getComputedStyle(e).display!=='none'
+        bars:e.querySelectorAll('.bt360-monthbars>span').length,
+        amount:e.querySelector('.bt360-hero-amount')?.innerText,
+        amountFits:(()=>{const a=e.querySelector('.bt360-hero-amount');return a&&a.scrollWidth<=a.clientWidth+1})()
       }));
-      const dashboardFits=dashboardSummary.text==='$5,100 collected in 2026 • 2 open • 16 cooling down'
-        &&dashboardSummary.scrollWidth<=dashboardSummary.clientWidth+1
-        &&dashboardSummary.scrollHeight<=dashboardSummary.clientHeight+1
-        &&dashboardSummary.whiteSpace==='normal';
-      if(!dashboardFits)console.error(name+' dashboard summary details at '+width+'px: '+JSON.stringify(dashboardSummary));
+      const dashboardFits=summary.text.includes('COLLECTED IN 2026')&&summary.amount===expected
+        &&summary.bars===12&&summary.scrollWidth<=summary.clientWidth+1&&summary.amountFits;
+      if(!dashboardFits)console.error(name+' collected-year hero at '+width+'px: '+JSON.stringify(summary));
       check('complete dashboard summary at '+width+'px',dashboardFits);
       check('release version stays inside header at '+width+'px',await page.locator('.hdr .app-version').evaluate(e=>{
         const r=e.getBoundingClientRect(),h=e.closest('.hdr').getBoundingClientRect();
         return e.textContent==='v'+window.BT_APP_VERSION&&r.width>0&&r.height>0&&r.top>=h.top&&r.bottom<=h.bottom&&r.left>=0&&r.right<=innerWidth&&getComputedStyle(e).position==='static';
       }));
-      check('dashboard text and chips fit at '+width+'px',await page.locator('.ops-hero').evaluate(e=>
-        e.scrollWidth<=e.clientWidth+1&&[...e.querySelectorAll('.hero-kicker,.hero-chip')].every(n=>n.scrollWidth<=n.clientWidth+1&&n.scrollHeight<=n.clientHeight+1)));
+      check('dashboard text and chips fit at '+width+'px',await page.locator('.bt360-hero').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&[...e.querySelectorAll('.bt360-kicker,.bt360-backup')].every(n=>n.scrollWidth<=n.clientWidth+1)));
       if(width===430)await page.screenshot({path:path.join(output,name+'-dashboard-header.png')});
     }
-    await page.evaluate(()=>{bonusPipelineMetrics=window.__dashboardMetrics;delete window.__dashboardMetrics;R();});
+    await page.evaluate(()=>{entries=window.__dashboardEntries;delete window.__dashboardEntries;R();});
     check('Finance tab is absent',await page.getByRole('button',{name:'Finances',exact:true}).count()===0);
     check('Tracker bank activity review is absent',await page.getByRole('button',{name:'Review bank activity',exact:true}).count()===0);
     check('removed Finance URLs return safe Tracker state',await page.evaluate(()=>{switchMainTab('finances');return document.querySelector('[aria-label="Tracker"][aria-current="page"]')!==null}));
     for(const width of [320,375,390]){
       await page.setViewportSize({width,height:844});
-      for(const name of ['Tracker','Bank Bonuses','Tax','Datapoints','T&C Archive']){
+      for(const name of ['Tracker','Bank Bonuses','Tax','Datapoints','Archive']){
         await button(name).click();
         check(name+' fits '+width+'px mobile width',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
         check(name+' navigation starts at the top at '+width+'px',await page.locator('.scroll').evaluate(e=>e.scrollTop===0));
         check(name+' shows version at '+width+'px',await page.locator('.hdr .app-version').isVisible());
         if(name==='Tracker'){
-          check('action tile buttons retain mobile touch area at '+width+'px',await page.locator('.ops-action-tile .ops-next-action').evaluateAll(rows=>rows.length>0&&rows.every(e=>e.getBoundingClientRect().height>=44)));
-          check('compact tiles fit at '+width+'px',await page.locator('.ops-action-tile').evaluateAll(rows=>rows.every(e=>e.scrollWidth<=e.clientWidth+1)));
+          check('action tile buttons retain mobile touch area at '+width+'px',await page.locator('.bt360-featured .bt360-actions button').evaluateAll(rows=>rows.length>0&&rows.every(e=>e.getBoundingClientRect().height>=44)));
+          check('compact tiles fit at '+width+'px',await page.locator('.bt360-featured').evaluateAll(rows=>rows.every(e=>e.scrollWidth<=e.clientWidth+1)));
         }
       }
     }
