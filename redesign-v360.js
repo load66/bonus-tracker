@@ -432,7 +432,7 @@ function lastSavedChurnText(e){
  return String(found?.churnRuleText||found?.eligibilityEvidenceText||found?.eligibilityText||'').trim();
 }
 function shortSavedRule(e){
- const rule=lastSavedChurnText(e).replace(/\\s+/g,' ').trim();
+ const rule=lastSavedChurnText(e).replace(/\s+/g,' ').trim();
  return rule.length>160?rule.slice(0,157)+'…':rule;
 }
 function feeSnapshot(e){
