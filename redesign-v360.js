@@ -338,6 +338,14 @@ function feeSnapshot(e){
    waiverSource=text;
   }
  }
+ const companions=(Array.isArray(e.financialRules?.accounts)?e.financialRules.accounts:[])
+  .filter(a=>a?.role!=='primary'&&a?.required===true).map(a=>{
+   const f=a.fee,label=String(a.label||'Companion account');
+   const charge=typeof f?.amount==='number'&&Number.isFinite(f.amount)?amount(f.amount):'Fee not confirmed';
+   const minimum=typeof a.minimumBalance?.amount==='number'?' · membership minimum '+amount(a.minimumBalance.amount):'';
+   const waivers=f?.waiver?.conditions?.length?' · waiver '+(f.waiver.operator==='all'?'ALL: ':f.waiver.operator==='any'?'ANY: ':'')+f.waiver.conditions.map(waiverCondition).join(f.waiver.operator==='all'?' + ':' · '):'';
+   return label+': '+charge+minimum+waivers;
+  });
  const terms=[monthlyQuote,waiverSource,e.monthlyFeeWaiverText,e.avoidMonthlyFeeText,fee?.evidence?.quote,e.feeScheduleRaw]
   .map(v=>String(v||'').trim()).filter(Boolean);
  const quote=original(closure.feeEvidence?.quote,e.earlyTerminationFeeText,e.analysis?.earlyTerminationFeeText,
@@ -372,7 +380,7 @@ function feeSnapshot(e){
  if(explicitClawback)closeNote+=' · Bonus clawback is separate';
  const closeTerms=[...new Set(savedCloseTerms)].join('\n\n');
  const source=String(e.feeScheduleSourceUrl||'').trim();
- return {monthly,monthlyKnown,summary:summary||'Waiver conditions not confirmed',terms:[...new Set(terms)].join('\n\n'),
+ return {monthly,monthlyKnown,companions,summary:summary||'Waiver conditions not confirmed',terms:[...new Set(terms)].join('\n\n'),
   closeMain,closeNote,closeKnown,closeTerms,source:/^https:\/\/[^<>"'\s]+$/i.test(source)?source:'',explicitClawback};
 }
 function feeDetail(e){
@@ -380,6 +388,7 @@ function feeDetail(e){
  const monthlyExtra=x.monthly==='$0'?'No monthly maintenance fee in saved terms':(x.summary==='Waiver conditions not confirmed'?x.summary:'Waived if '+x.summary);
  return '<div class="bt3613-fees">'
   +'<div class="bt3613-fee-line"><span>Monthly fee</span><div><b class="'+(x.monthlyKnown?'':'bt3611-amber')+'">'+safe(x.monthly)+'</b><small class="bt3613-waiver-clamp">'+safe(monthlyExtra)+'</small>'
+  +(x.companions.length?'<small class="bt3614-companion">Required companion: '+safe(x.companions.join(' | '))+'</small>':'')
   +(x.terms?'<details class="bt3611-full-terms"><summary>View saved fee terms</summary><p>'+safe(x.terms)+'</p></details>':'')
   +(x.source?'<a class="bt360-link bt3614-fee-source" href="'+safe(x.source)+'" target="_blank" rel="noopener noreferrer">Fee schedule ↗</a>':'')
   +'</div></div>'
