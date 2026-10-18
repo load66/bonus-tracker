@@ -49,7 +49,7 @@ async function exercise(name,engine,url){
     const previousFetch=window.fetch.bind(window);
     window.fetch=(input,options={})=>{
       const url=String(typeof input==='string'?input:input?.url||input);
-      if(url.endsWith('/api/bonus-tracker/usage'))return Promise.resolve(new Response(JSON.stringify({
+      if(url.split('?')[0].endsWith('/api/bonus-tracker/usage'))return Promise.resolve(new Response(JSON.stringify({
         month:'2026-10',checkedAt:'2026-10-11T17:00:00Z',
         railway:{status:'not_configured',services:[],costSoFar:null,projectedMonthEnd:null},
         r2:{status:'unavailable',usedBytes:null,freeBytes:10000000000}
@@ -855,7 +855,7 @@ async function exercise(name,engine,url){
     await page.evaluate(fixture=>{
       window.__hostingPreviousFetch=window.fetch;
       window.__hostingUsageFixture=fixture;
-      window.fetch=async (input,options)=>String(typeof input==='string'?input:input.url).endsWith('/api/bonus-tracker/usage')
+      window.fetch=async (input,options)=>String(typeof input==='string'?input:input.url).split('?')[0].endsWith('/api/bonus-tracker/usage')
         ?new Response(JSON.stringify(window.__hostingUsageFixture),{status:200,headers:{'Content-Type':'application/json'}})
         :window.__hostingPreviousFetch(input,options);
     },syntheticUsage);
