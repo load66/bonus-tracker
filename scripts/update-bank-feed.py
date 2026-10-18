@@ -235,7 +235,7 @@ def rehydrate(row):
         links.append({'url':x['url'],'sourceId':source['id'],'source':source['name'],
                       'title':x['title'][:300],'publishedAt':stamp.isoformat()})
     if links: item['links']=links
-    item['firstSeenBaseline']=bool(row.get('firstSeenBaseline'))
+    item['firstSeenBaseline']=bool(row.get('firstSeenBaseline', True))  # Existing pre-v3.6.6 snapshots are baseline
     return item
 
 def merge_offers(previous, fresh, now, retired=(), baseline=False):
@@ -271,6 +271,7 @@ def merge_offers(previous, fresh, now, retired=(), baseline=False):
         result.update(firstSeen=first,lastSeen=current['publishedAt'],expiresAt=expiry,
                       links=sorted(links.values(),key=lambda x:x['publishedAt'],reverse=True))
         result['groupKey']=key
+        result['firstSeenBaseline']=any(i.get('firstSeenBaseline', False) for i in items)
         merged.append(result)
     # A newer post for a different reward supersedes an older amount only for
     # the same bank/product/region (never across business/consumer or states).
@@ -288,6 +289,7 @@ def merge_offers(previous, fresh, now, retired=(), baseline=False):
             current['previousAmount']=old['amount']
             current['change']=('Increased' if current['amount']>old['amount'] else 'Decreased')
             current['firstSeen']=min(current['firstSeen'],old['firstSeen'])
+            current['firstSeenBaseline']=current.get('firstSeenBaseline',False) or old.get('firstSeenBaseline',False)
             current['changeLabel']='$'+str(old['amount'])+' → $'+str(current['amount'])
         for item in items:
             if item is not current and item in older: continue
