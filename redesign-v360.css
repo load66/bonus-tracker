@@ -1,4 +1,4 @@
-/* BonusTracker v3.6.6: presentation only. Canonical calculations and records are untouched. */
+/* BonusTracker v3.6.7: presentation only. Canonical calculations and records are untouched. */
 @font-face{font-family:Manrope;src:url('./fonts/manrope-latin-400-normal.woff2') format('woff2');font-weight:400;font-display:swap}
 @font-face{font-family:Manrope;src:url('./fonts/manrope-latin-600-normal.woff2') format('woff2');font-weight:600 900;font-display:swap}
 :root{color-scheme:dark;--bg:#07080C;--card:#12141C;--card2:#15171F;--border:#1E212C;--text:#F2F3F7;--muted:#A0A6B8;--sub:#A0A6B8;--mint:#5BE3B0;--good:#5BE3B0;--amber:#FFB86B;--bad:#FF8A8A;--blue:#8FB4FF;--violet:#C7A6FF}
@@ -233,7 +233,7 @@ body.bt360-detail-active .scroll{padding-bottom:calc(178px + env(safe-area-inset
 .radar-offer-original p{color:#A0A6B8;font-size:11px;line-height:1.5}
 .radar-card-compact .radar-offer-link{margin-right:12px;min-height:36px;overflow-wrap:anywhere}
 
-/* v3.6.6: safe compact diagnostics, individual reports and clean disclosure labels. */
+/* v3.6.7: safe compact diagnostics, individual reports and clean disclosure labels. */
 .bt360-usage-controls{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin:12px 0}
 .bt360-usage-controls a{color:#8FB4FF;font-size:11px;text-decoration:underline;text-underline-offset:3px;min-height:36px;display:inline-flex;align-items:center}
 .bt360-usage-missing{margin-top:12px;padding:9px 12px;background:#211D20;border:1px solid #44332A;border-radius:12px;color:#FFB86B;font-size:11px;overflow-wrap:anywhere}
@@ -259,7 +259,7 @@ body.bt360-detail-active .scroll{padding-bottom:calc(178px + env(safe-area-inset
 .bt360-detail-footer>.bt360-primary{min-width:0;padding-inline:7px;font-size:11px}
 @media(max-width:390px){.bt360-detail-footer{gap:6px}.bt360-detail-footer>button{font-size:11px}.bt360-detail-footer>.bt360-primary{font-size:10px}}
 
-/* v3.6.6 canonical mobile tracker and single account-detail presentation. */
+/* v3.6.7 canonical mobile tracker and single account-detail presentation. */
 .bt366-compact-account{padding:0!important;margin:0 0 9px!important;border:1px solid #292C38!important;border-radius:16px!important;overflow:hidden;background:#12141C!important}
 .bt366-compact-row{display:flex!important;min-width:0;width:100%;gap:10px;align-items:center;text-align:left;padding:11px 12px!important;min-height:75px;border:0!important;background:transparent!important;color:#F2F3F7;cursor:pointer}
 .bt366-compact-row>.blogo{height:39px!important;width:39px!important;min-width:39px!important;border-radius:12px!important}
