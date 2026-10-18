@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.16 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.17 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt360_audience_session',noticeKey='bt360_notice_session';
@@ -300,7 +300,63 @@ function waiverCondition(c){
  if(c?.kind==='transactions')return (c.count||'Qualifying')+' transactions';
  return raw.replace(/^(?:maintain|receive|keep|have|make)\s+/i,'').replace(/[.]$/,'')||'Other condition';
 }
+// Closed / cooling-down accounts display retained historical facts. The
+// projection never writes a record or changes canonical churn/close decisions.
+// Offer-specific evidence wins; last-known bank profiles are clearly labeled.
+function lastSavedCooldownFeeRecord(entry){
+ if(!entry?.closed)return {record:entry,historical:false,source:''};
+ const sameFamily=(v)=>{
+  if(!v||!v.bank)return false;
+  if(typeof entryBankIdentity==='function'){
+   try{return entryBankIdentity(v).key===entryBankIdentity(entry).key}catch{}
+  }
+  return String(v.bank).toLowerCase()===String(entry.bank).toLowerCase()
+   &&String(v.accountType||'personal')===String(entry.accountType||'personal');
+ };
+ const buckets=typeof loadTermsArchive==='function'?loadTermsArchive():{};
+ const saved=[];
+ Object.values(buckets||{}).forEach(b=>{
+  if(!b||typeof b!=='object')return;
+  if(b.current)saved.push(b.current);
+  if(Array.isArray(b.versions))saved.push(...b.versions);
+ });
+ const matching=saved.filter(sameFamily);
+ const sameCycle=matching.filter(x=>!!String(entry.id||'').trim()
+  &&String(x.entryId||x.id||'')===String(entry.id)
+  &&(!entry.opened||!x.opened||String(x.opened)===String(entry.opened)))
+  .sort((a,b)=>String(b.termsVerifiedAt||b.capturedAt||'').localeCompare(String(a.termsVerifiedAt||a.capturedAt||'')))[0]||null;
+ const lastKnown=matching.sort((a,b)=>
+  String(b.opened||'').localeCompare(String(a.opened||''))
+  ||String(b.termsVerifiedAt||b.capturedAt||'').localeCompare(String(a.termsVerifiedAt||a.capturedAt||'')))[0]||null;
+ const possibleProfile=typeof profileReqForBank==='function'?profileReqForBank(entry):null;
+ const profile=sameFamily(possibleProfile)?possibleProfile:null;
+ const record={...entry};
+ const keys=['monthlyFeeAmountText','monthlyFeeYNText','monthlyFeeWaiverText','avoidMonthlyFeeText',
+  'monthlyFeeNoMonthlyServiceFee','earlyTerminationFeeText','closeRuleText',
+  'feeScheduleRaw','feeScheduleSourceUrl','promoSourceUrl'];
+ let source='';
+ for(const key of keys){
+  const existing=record[key];
+  if(existing!==undefined&&existing!==null&&existing!==''&&existing!==false)continue;
+  for(const [candidate,label] of [[sameCycle,'saved enrolled terms'],[lastKnown,'last saved bank terms'],[profile,'last saved bank profile']]){
+   if(!candidate)continue;
+   const value=candidate[key];
+   if(value===undefined||value===null||value===''||value===false)continue;
+   record[key]=value;
+   if(!source)source=label;
+   break;
+  }
+ }
+ // Structured rules must always come from this enrollment; a new offer's
+ // closure or churn rules cannot be applied to a different cycle.
+ if(!record.financialRules&&sameCycle?.financialRules)record.financialRules=sameCycle.financialRules;
+ if(Number(record.earlyCloseFee||0)===0&&Number(sameCycle?.earlyCloseFee)>0)
+  record.earlyCloseFee=Number(sameCycle.earlyCloseFee);
+ return {record,historical:true,source:source||'saved account terms'};
+}
 function feeSnapshot(e){
+ const historicalProjection=lastSavedCooldownFeeRecord(e);
+ e=historicalProjection.record;
  // Read-only view of each enrolled record, including pre-financialRules imports.
  // A current bank product page is not evidence of a historical account's terms.
  const primary=e.financialRules?.accounts?.find(a=>a?.role==='primary')||null;
@@ -308,8 +364,12 @@ function feeSnapshot(e){
  const original=(...items)=>items.map(x=>String(x??'').trim()).find(Boolean)||'';
  const monthlyRaw=original(e.monthlyFeeAmountText,e.analysis?.monthlyFeeAmountText,e.monthlyFeeYNText,e.analysis?.monthlyFeeYNText);
  const monthlyQuote=original(fee?.evidence?.quote,monthlyRaw);
+ // Some legacy imports stored a required share/savings charge in the
+ // generic monthly-fee field. Honor the explicit checking product amount.
+ const checkingNoFee=!fee&&/\b(?:personal\s+)?checking\s*:\s*\$0\s*(?:monthly|maintenance|service)?/i.test(String(e.monthlyFeeYNText||''));
  let monthly='Not confirmed',monthlyKnown=false;
- if(typeof fee?.amount==='number'&&Number.isFinite(fee.amount)&&fee.amount>=0){
+ if(checkingNoFee){monthly='$0';monthlyKnown=true}
+ else if(typeof fee?.amount==='number'&&Number.isFinite(fee.amount)&&fee.amount>=0){
   monthly=amount(fee.amount);monthlyKnown=true;
  }else{
   // These are *fee amount* fields. Do not mistake a $500 waiver threshold
@@ -346,6 +406,10 @@ function feeSnapshot(e){
    const waivers=f?.waiver?.conditions?.length?' · waiver '+(f.waiver.operator==='all'?'ALL: ':f.waiver.operator==='any'?'ANY: ':'')+f.waiver.conditions.map(waiverCondition).join(f.waiver.operator==='all'?' + ':' · '):'';
    return label+': '+charge+minimum+waivers;
   });
+ if(checkingNoFee&&!companions.length){
+  const share=String(e.monthlyFeeYNText||'').match(/(?:required\s+)?(?:share\s+savings|savings)\s*:\s*(\$\s*[\d,.]+\s*\/\s*month)[^.;]*/i);
+  if(share)companions.push('Share Savings: '+share[1].replace(/\s+/g,' ')+' · '+String(e.monthlyFeeWaiverText||'').trim());
+ }
  const terms=[monthlyQuote,waiverSource,e.monthlyFeeWaiverText,e.avoidMonthlyFeeText,fee?.evidence?.quote,e.feeScheduleRaw]
   .map(v=>String(v||'').trim()).filter(Boolean);
  const quote=original(closure.feeEvidence?.quote,e.earlyTerminationFeeText,e.analysis?.earlyTerminationFeeText,
@@ -356,13 +420,19 @@ function feeSnapshot(e){
  const legacyFee=original(e.earlyTerminationFeeText,e.analysis?.earlyTerminationFeeText,e.closeRuleText,e.analysis?.closeRuleText);
  const isNoFee=v=>/no (?:early[- ]?)?(?:account[- ]?)?(?:clos(?:e|ing|ure)|terminat(?:ion|ing)) fee|(?:early[- ]?)?(?:closing|termination) fee\s*(?::|is)?\s*(?:none|\$0\b|waived)/i.test(v);
  const hasConditionalWindow=v=>/\b(?:after|only if|unless|until|before|within|first \d+)\b/i.test(v);
- const explicitClawback=/\b(?:clawback|forfeit|forfeiture|deduct|repay|return)\b.{0,80}\bbonus\b|\bbonus\b.{0,80}\b(?:clawback|forfeit|deduct|repay|return)\b/i.test(savedCloseTerms.join(' '));
+ const clawbackEvidence=[...savedCloseTerms,e.financialRules?.closure?.text,e.notes].filter(Boolean).join(' ');
+ const explicitClawback=/\b(?:clawback|forfeit|forfeiture|deduct|repay|return)\b.{0,80}\bbonus\b|\bbonus\b.{0,80}\b(?:clawback|forfeit|deduct|repay|return)\b|\b\d+\s*(?:day|month|year)s?\s+clawback\b/i.test(clawbackEvidence);
+ const positiveLegacy=Number(e.earlyCloseFee)>0&&Number.isFinite(Number(e.earlyCloseFee));
+ const appearsBonusClawback=explicitClawback&&positiveLegacy&&Number(e.earlyCloseFee)===Number(e.bonus)
+  &&!/(?:early[- ]?|account[- ]?)?(?:clos(?:ing|ure)|terminat(?:ion|ing))\s+fee\s*(?:is|of|:)?\s*\$|(?:clos(?:ing|ure))\s+\$\s*[\d,]+\s+fee/i.test(savedCloseTerms.join(' '));
  const typedFee=typeof closure.earlyCloseFee==='number'&&Number.isFinite(closure.earlyCloseFee)?closure.earlyCloseFee:null;
  if(typedFee!==null&&typedFee>0&&closure.feeEvidence?.quote){
   closeMain=amount(typedFee)+' early-close fee';closeNote='Saved structured fee evidence';closeKnown=true;
  }else if(typedFee===0&&isNoFee(closure.feeEvidence?.quote||'')&&!hasConditionalWindow(closure.feeEvidence.quote)){
   closeMain='$0 early-close fee';closeNote='Explicitly stated in saved fee schedule';closeKnown=true;
- }else if(Number(e.earlyCloseFee)>0&&Number.isFinite(Number(e.earlyCloseFee))){
+ }else if(appearsBonusClawback){
+  closeMain='Not separately stated';closeNote='Saved bonus clawback: up to '+amount(Number(e.earlyCloseFee))+' · not a bank service fee';closeKnown=false;
+ }else if(positiveLegacy){
   closeMain=amount(Number(e.earlyCloseFee))+' early-close fee';
   closeNote=legacyFee?'From saved legacy terms · confirm applicable window':'Saved amount · fee window not verified';
   closeKnown=!!legacyFee;
@@ -377,22 +447,28 @@ function feeSnapshot(e){
   else if(isNoFee(legacyFee)&&!hasConditionalWindow(legacyFee)){closeMain='$0 early-close fee';closeNote='Explicit no-fee wording in saved terms';closeKnown=true}
   else if(isNoFee(legacyFee)){closeNote='Saved no-fee wording is conditional · review closing date'}
  }
- if(explicitClawback)closeNote+=' · Bonus clawback is separate';
+ if(explicitClawback&&!appearsBonusClawback)closeNote+=' · Bonus clawback is separate';
+ if(historicalProjection.historical){
+  if(monthly==='Not confirmed')monthly='Not listed in saved terms';
+  if(closeMain==='Not confirmed')closeMain='Not listed in saved terms';
+  if(closeNote==='No explicit early-close fee evidence')closeNote='Historical offer · no separate charge recorded';
+ }
  const closeTerms=[...new Set(savedCloseTerms)].join('\n\n');
  const source=String(e.feeScheduleSourceUrl||'').trim();
  return {monthly,monthlyKnown,companions,summary:summary||'Waiver conditions not confirmed',terms:[...new Set(terms)].join('\n\n'),
-  closeMain,closeNote,closeKnown,closeTerms,source:/^https:\/\/[^<>"'\s]+$/i.test(source)?source:'',explicitClawback};
+  closeMain,closeNote,closeKnown,closeTerms,historical:historicalProjection.historical,historicalSource:historicalProjection.source,source:/^https:\/\/[^<>"'\s]+$/i.test(source)?source:'',explicitClawback};
 }
 function feeDetail(e){
  const x=feeSnapshot(e);
- const monthlyExtra=x.monthly==='$0'?'No monthly maintenance fee in saved terms':(x.summary==='Waiver conditions not confirmed'?x.summary:'Waived if '+x.summary);
+ const monthlyExtra=x.monthly==='$0'?'No monthly maintenance fee in saved terms':(x.summary==='Waiver conditions not confirmed'?(x.historical?'No waiver conditions recorded':x.summary):'Waived if '+x.summary);
  return '<div class="bt3613-fees">'
-  +'<div class="bt3613-fee-line"><span>Monthly fee</span><div><b class="'+(x.monthlyKnown?'':'bt3611-amber')+'">'+safe(x.monthly)+'</b><small class="bt3613-waiver-clamp">'+safe(monthlyExtra)+'</small>'
+  +(x.historical?'<p class="bt3617-historical-note">Last saved · '+safe(x.historicalSource)+' · for historical reference</p>':'')
+  +'<div class="bt3613-fee-line"><span>Monthly fee</span><div><b class="'+(x.monthlyKnown||x.historical?'':'bt3611-amber')+'">'+safe(x.monthly)+'</b><small class="bt3613-waiver-clamp">'+safe(monthlyExtra)+'</small>'
   +(x.companions.length?'<small class="bt3614-companion">Required companion: '+safe(x.companions.join(' | '))+'</small>':'')
   +(x.terms?'<details class="bt3611-full-terms"><summary>View saved fee terms</summary><p>'+safe(x.terms)+'</p></details>':'')
   +(x.source?'<a class="bt360-link bt3614-fee-source" href="'+safe(x.source)+'" target="_blank" rel="noopener noreferrer">Fee schedule ↗</a>':'')
   +'</div></div>'
-  +'<div class="bt3613-fee-line"><span>Early close fee</span><div><b class="'+(x.closeKnown?'':'bt3611-amber')+'">'+safe(x.closeMain)+'</b><small>'+safe(x.closeNote)+'</small>'
+  +'<div class="bt3613-fee-line"><span>Early close fee</span><div><b class="'+(x.closeKnown||x.historical?'':'bt3611-amber')+'">'+safe(x.closeMain)+'</b><small>'+safe(x.closeNote)+'</small>'
   +(x.closeTerms?'<details class="bt3611-full-terms"><summary>View saved close terms</summary><p>'+safe(x.closeTerms)+'</p></details>':'')
   +'</div></div></div>';
 }
@@ -678,10 +754,10 @@ async function backUpNow(){
 function settings(){
  const toggles=[['deadlines','Deadlines','3 and 1 day before'],['payouts','Payouts and close dates','When ready'],['eligible','Eligible again','7 days before and on the day']];
  const buttons=toggles.map(([k,label,description])=>'<button class="bt360-settings-row" role="switch" aria-checked="'+noticePrefs[k]+'" onclick="BT360.setNotice(\''+k+'\')"><span><b>'+label+'</b><small>'+description+'</small></span><i class="bt360-toggle '+(noticePrefs[k]?'checked':'')+'"></i></button>').join('');
- return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.16</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
+ return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.17</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
  cloudSettingsCard()+
  usageCard()+
- panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.16. Push delivery is not active.</p>')+
+ panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.17. Push delivery is not active.</p>')+
  panel('Data','<button class="bt360-settings-row" onclick="BT360.closeSettings();exportBackup()">Export backup file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.closeSettings();importBackup()">Restore from file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.openPhonebook()">Bank phone numbers <span>›</span></button>')+
  '<button class="bt360-reset" onclick="BT360.closeSettings();resetAllData()">Reset this device <small>Two confirmations and a safety backup</small></button></section></div>';
 }
