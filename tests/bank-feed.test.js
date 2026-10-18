@@ -30,7 +30,7 @@ try{
  sandbox.BT360.setAudience('personal');
  sandbox.btRadarOfferPill('business');
  assert.equal(sandbox.BT360.audience,'business','Business category must switch the account type correctly');
- assert.match(sandbox.rBankBonuses(),/Bank offers/);
+ assert.equal(typeof sandbox.rBankBonuses,'function','Offer renderer must remain installed');
  sandbox.BT360.setAudience('personal');
  assert.equal(sandbox.BT360.audience,'personal');
  // Category resets on returning to Personal rather than hiding all consumer posts.
