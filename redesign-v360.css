@@ -177,3 +177,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var
 .bt360-offer-title h3{font-size:13px!important;font-weight:900!important;margin:0!important}
 .bt360-offer-title p{font-size:11px;color:#A0A6B8;line-height:1.4;margin:3px 0 0;overflow-wrap:anywhere}
 .bt360-offer-title strong{color:#5BE3B0;font-weight:900;font-size:13px;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+
+.bt360-data-pills{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;margin:10px 0}
+.bt360-data-pills button{flex:none;border:1px solid #1E212C;background:#15171F;color:#A0A6B8;border-radius:99px;min-height:36px;padding:6px 12px;font-weight:800;font-size:11px}
+.bt360-data-pills button.active{background:#123327;color:#5BE3B0;border-color:#234C3E}
