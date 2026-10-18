@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.24 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.25 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt360_audience_session',noticeKey='bt360_notice_session';
@@ -691,13 +691,17 @@ function detailPanels(e){
  if(!closed&&(!ready||hasExtraWork)){
   const req=requirementRows(e);
   h+=panel('Requirements',(!req.count?'<p class="bt360-muted">No requirements or checklist tasks saved yet.</p>':req.html)+'<div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></div>',(Array.isArray(e.financialRules?.requirements)&&e.financialRules.requirements.length>0||!!String(e.completeBonusText||'').trim()||Number(e.reqDays)>0)?'<button type="button" class="bt360-link bt3621-confirm-all" onclick="openReqMet('+arg(e.id)+')">'+(e.reqMet?'Review confirmation':hasExtraWork?'Confirm requirements':'Confirm all')+'</button>':'');
+  // Mockup order: Requirements, Fees & waivers, Timers. Read-only panel;
+  // no fee, timer, task or lifecycle handler is replaced.
+  if(!ready)h+=panel('Fees & waivers',feeDetail(e));
   const rows=timerRows(e);
   h+=panel('Timers',rows||'<p class="bt360-muted">No saved deadlines.</p>','<button type="button" class="bt360-link bt3613-add-timer" onclick="runBankAction('+arg(e.id)+',\'timer\')">+ Add</button>');
  }
  const readyWork=ready?h.slice(savedWorkStart):'';
  if(ready)h=h.slice(0,savedWorkStart);
- // Close-ready cards must lead with close checks, while all states keep fee history.
- if(!ready)h+=panel('Fees & waivers',feeDetail(e));
+ // Closed records retain saved historical fee presentation, while open
+ // in-progress accounts already showed their fee card before Timers.
+ if(closed&&!ready)h+=panel('Fees & waivers',feeDetail(e));
  if(!closed&&(e.dataPoint||e.completeBonusText||e.notes))h+='<details class="bt366-offer-notes"><summary>Offer notes</summary><p>'+safe([e.dataPoint,e.completeBonusText,e.notes].filter(Boolean).join('\n\n'))+'</p></details>';
  if(ready||code==='HOLD_OPEN'||code==='BONUS_RECEIVED'){
   const items=closeCheckPresentation(e);
