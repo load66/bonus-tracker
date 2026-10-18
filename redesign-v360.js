@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.1 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.2 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt360_audience_session',noticeKey='bt360_notice_session';
@@ -37,7 +37,7 @@ const pills=[
 ];
 function stages(rows){
  const counts={};rows.filter(e=>!e.closed&&scope(e)).forEach(e=>{const code=stage(e).code;counts[code]=(counts[code]||0)+1});
- return '<div class="bt360-stage-scroller" role="group" aria-label="Filter by stage">'+pills.map(([code,label])=>'<button type="button" class="bt360-stage stage-'+code.toLowerCase()+(selectedStage===code?' active':'')+'" aria-pressed="'+(selectedStage===code)+'" onclick="BT360.setStage(\''+code+'\')">'+(counts[code]||0)+' '+label+'</button>').join('')+'</div>';
+ return '<div class="bt360-stage-scroller" role="group" aria-label="Filter by stage">'+pills.filter(([code])=>counts[code]>0).map(([code,label])=>'<button type="button" class="bt360-stage stage-'+code.toLowerCase()+(selectedStage===code?' active':'')+'" aria-pressed="'+(selectedStage===code)+'" onclick="BT360.setStage(\''+code+'\')">'+(counts[code]||0)+' '+label+'</button>').join('')+'</div>';
 }
 function hero(rows,year,metrics){
  const subset=rows.filter(scope);
@@ -65,7 +65,7 @@ function tasks(rows){
  html+='<div class="bt360-actions"><button class="bt360-primary" onclick="runNextAccountAction('+id(top)+')">Open task</button><button class="bt360-secondary" onclick="openAccountFromActionCenter('+id(top)+')">Details</button></div></div>'}
  if(suggestions.length>1){html+='<div class="bt360-list">';suggestions.slice(1,9).forEach(x=>{html+='<button class="bt360-list-row" onclick="openAccountFromActionCenter('+id(x)+')">'+bankLogo(x.bank,true)+'<span class="bt360-grow"><b>'+title(x)+'</b><small>'+name(x)+'</small></span><span class="bt360-chip '+(x.stageCode==='READY_TO_CLOSE'?'positive':'warning')+'">'+safe(x.stageLabel||'Review')+'</span></button>'});html+='</div>'}
  if(!suggestions.length)html='<div class="bt360-empty">No immediate tasks for '+audience+' accounts.</div>';
- return panel('Needs you',html,'<span class="bt360-count">'+suggestions.length+' tasks</span>');
+ return panel('Needs you',html,'<span class="bt360-count">'+suggestions.length+' '+(suggestions.length===1?'task':'tasks')+'</span>');
 }
 function eligibleSoon(rows){
  const next=rows.filter(e=>e.closed&&scope(e)).map(e=>({e,info:eligibleInfo(e)})).filter(x=>x.info).map(x=>({...x,days:dB(td(),x.info.eligible)})).filter(x=>x.days>0&&x.days<=60).sort((a,b)=>a.days-b.days);
@@ -222,10 +222,10 @@ async function backUpNow(){
 function settings(){
  const toggles=[['deadlines','Deadlines','3 and 1 day before'],['payouts','Payouts and close dates','When ready'],['eligible','Eligible again','7 days before and on the day']];
  const buttons=toggles.map(([k,label,description])=>'<button class="bt360-settings-row" role="switch" aria-checked="'+noticePrefs[k]+'" onclick="BT360.setNotice(\''+k+'\')"><span><b>'+label+'</b><small>'+description+'</small></span><i class="bt360-toggle '+(noticePrefs[k]?'checked':'')+'"></i></button>').join('');
- return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.1</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
+ return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.2</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
  cloudSettingsCard()+
  usageCard()+
- panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.1. Push delivery is not active.</p>')+
+ panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.2. Push delivery is not active.</p>')+
  panel('Data','<button class="bt360-settings-row" onclick="BT360.closeSettings();exportBackup()">Export backup file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.closeSettings();importBackup()">Restore from file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.openPhonebook()">Bank phone numbers <span>›</span></button>')+
  '<button class="bt360-reset" onclick="BT360.closeSettings();resetAllData()">Reset this device <small>Two confirmations and a safety backup</small></button></section></div>';
 }
