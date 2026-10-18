@@ -34,6 +34,9 @@ const historyEntry=JSON.parse(JSON.stringify(e));
 historyEntry.id='SYNTHETIC-ARCHIVE-01';
 historyEntry.bank='Synthetic History Credit Union';
 historyEntry.opened='2026-08-15';
+historyEntry.churn='1';historyEntry.churnBasis='bonus';
+historyEntry.churnRuleText='Original enrolled text: prior bonus in past 12 months prevents eligibility.';
+historyEntry.churnDecisionSource='saved-original-disclosure';
 historyEntry.eligibilityRules.push({
  id:'closed-12m',basis:'account-closed',periodValue:12,periodUnit:'months',
  scope:'consumer-checking',evidenceText:'No new bonus if the checking account was closed within 12 months.',
@@ -54,6 +57,10 @@ const historyBucket=Object.values(historical).find(b=>b.current?.entryId==='SYNT
 assert(historyBucket,'Archive must retain the enrolled bank cycle');
 assert.equal(historyBucket.versions.length,1,'Fee revision must preserve previous terms');
 assert.equal(historyBucket.versions[0].feeScheduleRaw,historyEntry.feeScheduleRaw);
+assert.equal(historyBucket.versions[0].churn,'1');
+assert.equal(historyBucket.versions[0].churnBasis,'bonus');
+assert.equal(historyBucket.versions[0].churnRuleText,historyEntry.churnRuleText);
+assert.equal(historyBucket.versions[0].churnDecisionSource,'saved-original-disclosure');
 assert.equal(JSON.stringify(historyBucket.versions[0].financialRules),originalRules);
 assert.equal(JSON.stringify(historyBucket.versions[0].eligibilityRules),originalEligibility);
 assert.equal(historyBucket.current.eligibilityRules.length,2,'Distinct churn clocks survive revision');
