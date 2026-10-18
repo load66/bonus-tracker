@@ -1,12 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex · v3.6.6 · codex/v366-usage-ui-feed-webkit
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
 
-- v3.6.6 frontend PR #176: hosting usage verified/partial/unavailable presentation, fixed three-action bottom detail toolbar as sibling of scroll content (Manage included), stage-matched detail, ready-to-close phone editor, individual Data reports, bonus-feed reward/deposit parsing, deduplication, baseline-New handling, and Chromium/WebKit CI + 390px screenshots. Backend PR #234 merged as `99e1a1d39dab51b9d6c7169f6a319a6a53bb9585`, exact Railway deployment SUCCESS. Remaining: pass all PR CI, merge frontend, confirm exact main CI and GitHub Pages. No private financial data or Railway variables altered.
+- v3.6.6 frontend PR #176: single detail header and 5-step progress strip, stage-correct fixed Ask AI + action footer with Manage under •••, unified legacy churn date, compact Tracker rows, refined Requirements/Timers, ready-to-close phone editor, individual Data rows, safe verified/partial Railway usage display, bonus-feed reward parsing/dedup/baseline, and parallel Chromium/WebKit browser gate. PR CI https://github.com/load66/bonus-tracker/actions/runs/39113301874 PASS: bonus/cloud/UI, Chromium, WebKit, release validation. Mobile 390px screenshot artifacts available in CI. No real financial records or Railway credentials changed. Backend PR #234 deployed at `99e1a1d39dab51b9d6c7169f6a319a6a53bb9585`. Next: merge PR #176, verify exact main CI and GitHub Pages; next separate requested chart release adds tappable hero months without altering verified v3.6.6 history or calculations.
 
 - BonusTracker v3.6.5 concern release on `codex/v3.6.5-concern-fixes`, rebased onto the v3.6.4 Chromium focus hotfix and current retained bank-offer feed. Quick Add and Review promo terms reveal, scroll to, and focus their real panels; cloud protection is a compact outlined status instead of an oversized green pill. App/cache metadata is v3.6.5. Bonus, cloud, UI, syntax, and release verification pass locally; Chromium CI remains the release gate. No stored financial records changed.
 
