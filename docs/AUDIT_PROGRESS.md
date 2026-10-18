@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex · v3.6.16 legacy churn cloud projection · codex/v3.6.16-legacy-churn-r2-evidence
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.16 legacy-churn archive extension (`codex/v3.6.16-legacy-churn-r2-evidence`): add pre-structured repeat-bonus period, rule text, basis and decision provenance to immutable T&C cloud snapshots and local historical revisions; synthetic browserless coverage added. Preserve JSON v3 schema, all canonical financial/eligibility rules and existing snapshots. Requires backend PR #240 merged and exact Railway SUCCESS before frontend merge, then full bonus/cloud/UI, Chromium/WebKit and main Pages checks.
 
 - v3.6.15 signed-in T&C cloud hotfix (`codex/v3.6.15-auth-terms-autosync`): start owner-scoped immutable historical terms upload on successful sign-in regardless of rolling backup selection. Synthetic authentication test verifies the event, app and service-worker version/cache advanced, no tracker data/auth schema/eligibility/financial engine changes. Backend exact production commit already SUCCESS; frontend fresh unit, Chromium and WebKit CI and main Pages deploy pending. Next: pass PR CI, merge, verify main exact Pages publication.
 
