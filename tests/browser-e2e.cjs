@@ -892,6 +892,9 @@ async function exercise(name,engine,url){
     await page.evaluate(x=>{window.__hostingUsageFixture=x},partialUsage);
     await page.evaluate(async()=>BT360.refreshUsage(true));
     check('partial usage never presents incomplete total as zero',await page.locator('.bt360-sheet').innerText().then(t=>t.includes('Total is incomplete')||t.toLowerCase().includes('total is incomplete'))&&await page.locator('.bt360-sheet').innerText().then(t=>t.includes('Not reported by Railway')&&t.includes('leaps-alpaca-live')&&!t.includes('$0.00')));
+    await page.evaluate(x=>{window.__hostingUsageFixture={...x,r2:{status:'ok',usedBytes:1200000},railway:{status:'partial',verifiedAt:x.railway.verifiedAt,costSoFar:2.31,knownCostSubtotal:2.31,projectedMonthEnd:3.47,reasonCode:'measurement_missing',services:[{name:'api',costSoFar:2.31,avgMemoryGb:null}],missing:[{service:'project',metric:'average_memory',kind:'measurement_missing'}]}}},syntheticUsage);
+    await page.evaluate(async()=>BT360.refreshUsage(true));
+    check('optional usage gap preserves projection and positive R2 storage',await page.locator('.bt360-sheet').innerText().then(t=>t.includes('Verified $2.31')&&t.includes('Projected billing usage: Verified $3.47')&&t.includes('Less than 0.01 GB')&&!t.includes('Projection not available')));
     const reasonCodes=['token_missing','token_unauthorized','workspace_not_found','project_not_visible','estimate_missing','measurement_missing','rate_limited','timeout','railway_unreachable','response_changed'];
     for(const code of reasonCodes){
       await page.evaluate(([x,c])=>{window.__hostingUsageFixture={...x,railway:{status:'unavailable',reasonCode:c,reason:'REMOTE-SENSITIVE-RESPONSE'}}},[syntheticUsage,code]);
