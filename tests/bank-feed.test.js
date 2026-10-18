@@ -119,6 +119,7 @@ assert.equal(ordered.find(x=>x.title.startsWith('Unknown')).match.date,'');
 assert.equal(ordered.filter(x=>x.priorityGroup==='next').map(x=>x.match.date).join(','),'2026-11-01,2026-12-01');
 assert.equal(priority.match({title:'Chase $500 Checking Bonus'},rows,context),null,'Business cooldown must not be applied to a consumer offer');
 assert.equal(priority.match({title:'Ready Bank $2,500 Investing Bonus'},rows,context).kind,'review');
+assert.equal(priority.match({title:'Ready Bank synthetic unspecified reward'},rows,context).kind,'review','Unclassified product cannot get tracker ready grouping');
 assert.equal(priority.match({title:'Soon Bank $300 Checking Bonus'},[...rows,{bank:'Soon Bank',closed:'2026-01-01',reviewDate:'2027-01-01'}],context).date,'2027-01-01');
 assert.equal(priority.prioritize(discovery,rows,'MO',context,'area').some(x=>x.geo.kind==='outside'),false);
 assert.equal(priority.prioritize(discovery,rows,'MO',context,'tracker').every(x=>!!x.match),true);

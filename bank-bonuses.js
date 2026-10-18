@@ -205,14 +205,15 @@
   }
   function trackerMatch(offer,rows,context){
     if(!context||!Array.isArray(rows))return null;
-    const business=/\b(?:business|biz|commercial)\b/i.test(offer.title);
+    const classification=offerAudience(offer);
     const investment=/\b(?:investing|investment|brokerage|wealth)\b/i.test(offer.title);
-    const audience=business?'business':'personal';
+    const audience=classification==='business'?'business':'personal';
     const matches=rows.filter(e=>e&&e.bank&&titleMatches(e,offer.title,context)&&context.audience(e)===audience);
     if(!matches.length)return null;
     const families=new Set(matches.map(e=>context.family(e.bank)));
     if(families.size!==1)return{kind:'review',label:'Bank match needs review',detail:'Several tracked institutions match this headline.',date:''};
     const bank=matches[0].bank;
+    if(classification==='unverified')return{kind:'review',bank,label:'Product type needs review',detail:'Confirm consumer, business, and product scope before comparing bank history.',date:''};
     if(investment)return{kind:'review',bank,label:'Different product may apply',detail:'This investment or wealth offer needs a separate product review.',date:''};
     if(matches.some(e=>!e.closed))return{kind:'review',bank,label:'Account still open',detail:'An open '+audience+' account is in your tracker. Review current-customer restrictions.',date:''};
     if(matches.some(e=>context.nonrepeat(e)))return{kind:'review',bank,label:'Non-repeatable in tracker',detail:'Your completed offer is non-repeatable under its recorded terms. Do not assume a new headline changes that rule.',date:''};
@@ -314,7 +315,7 @@
     matches=matches.filter(offer=>matchesCategory(offer,categoryFilter));
     if(categoryFilter==='near'&&area)matches=matches.filter(x=>geography(x,area).kind!=='outside');
     const visible=prioritize(matches,context.rows,area,context,priorityFilter);
-    h+='<div class="radar-count">'+visible.length+' matching '+escape(audience)+' offers · '+feed.offers.length+' source posts checked <button type="button" class="bt362-filter-jump" onclick="btRadarOpenFilters()">Filters</button></div>';
+    h+='<div class="radar-count">'+visible.length+' matching offers · '+escape(audience)+' view · '+feed.offers.length+' source posts checked <button type="button" class="bt362-filter-jump" onclick="btRadarOpenFilters()">Filters</button></div>';
     if(!visible.length)h+='<p>No offers match these filters. Adjust your search or filters.</p>';
     const groupLabels={ready:'Eligible for you',next:'Not eligible yet',explore:'Other offers · eligibility unverified',review:'Needs eligibility review',outside:'Outside your selected area'};
     let lastGroup='';
@@ -332,7 +333,7 @@
       const bankLabel=(x.bank||'').replace(/\b\w/g,c=>c.toUpperCase()).replace(/^Us Bank$/,'U.S. Bank');
       const label=bankLabel&&x.product&&x.amount!==null?bankLabel+' · '+(x.product==='checking'?'Checking':x.product==='business'?'Business':x.product==='savings'?'Savings':x.product)+' · '+(x.rewardIsUpperBound?'up to ':'')+'\u0024'+x.amount.toLocaleString('en-US'):x.title;
       const badges=x.badges?.length?'<div class="radar-offer-badges">'+x.badges.map(b=>'<span>'+escape(b)+'</span>').join('')+(x.changeLabel?'<span>'+escape(x.changeLabel)+'</span>':'')+'</div>':'';
-      h+='<article role="listitem" class="radar-card radar-card-compact bt362-offer-row radar-priority-'+x.priorityGroup+'"><div class="bt360-offer-title">'+bankLogo(x.title,true)+'<div class="bt360-grow"><h3>'+escape(label)+'</h3>'+badges+'<p>'+escape(verifiedRequirement||'Requirements need review')+'</p></div><strong>'+(verifiedAmount===null?(x.amount===null?'Needs review':'$'+x.amount.toLocaleString('en-US')+'*'):'$'+verifiedAmount.toLocaleString('en-US'))+'</strong></div><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+'</div>';
+      h+='<article role="listitem" class="radar-card radar-card-compact bt362-offer-row radar-priority-'+x.priorityGroup+'"><div class="bt360-offer-title">'+bankLogo(x.title,true)+'<div class="bt360-grow"><h3>'+escape(label)+'</h3>'+badges+'<p>'+escape(verifiedRequirement||'Requirements need review')+'</p></div><strong>'+(verifiedAmount===null?(x.amount===null?'Needs review':'$'+x.amount.toLocaleString('en-US')+'*'):'$'+verifiedAmount.toLocaleString('en-US'))+'</strong></div><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+(offerAudience(x)==='unverified'?'<span class="radar-match-label">Product type unverified</span>':'')+'</div>';
       if(x.match)h+='<div class="radar-tracker-context"><b>'+escape(x.match.label)+'</b>'+(date?'<time datetime="'+date+'">'+escape(typeof fD==='function'?fD(date):date)+'</time>':'')+'<p>'+escape(x.match.detail)+'</p></div>';
       h+='<p class="radar-area-note">'+escape(x.geo.detail)+'</p>';
       const proof=x.geo.proof||availabilityFor(x,officialCatalog);
