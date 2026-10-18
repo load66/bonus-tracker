@@ -219,8 +219,8 @@ async function exercise(name,engine,url){
     check('expanded waiver displays the exact original saved terms',await page.locator('.bt3611-full-terms p').innerText().then(t=>t.includes('Original terms: fee waived with electronic deposits, daily balance or linked checking.')));
     await page.locator('.bt3611-full-terms > summary').click();
     check('early close fee is amber without inferred zero',await page.locator('.bt3611-amber').innerText()==='Not stated in terms · Needs review');
-    check('no developer vocabulary is visible anywhere on Chase detail',
-      !/\b(?:null|structured rule|anchor|verified \$0|provenance)\b/i.test(await page.locator('.bt360-detail-card').innerText()));
+    check('no developer vocabulary is visible in the rendered app',
+      !/\b(?:null|structured rule|anchor|verified \$0|provenance)\b/i.test(await page.locator('#app').innerText()));
     await page.evaluate(()=>{
       document.querySelector('.scroll').scrollTop=0;
       document.querySelectorAll('.bt-toast').forEach(el=>el.style.opacity='0');
