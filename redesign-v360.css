@@ -1,4 +1,4 @@
-/* BonusTracker v3.6.10: presentation only. Canonical calculations and records are untouched. */
+/* BonusTracker v3.6.11: presentation only. Canonical calculations and records are untouched. */
 @font-face{font-family:Manrope;src:url('./fonts/manrope-latin-400-normal.woff2') format('woff2');font-weight:400;font-display:swap}
 @font-face{font-family:Manrope;src:url('./fonts/manrope-latin-600-normal.woff2') format('woff2');font-weight:600 900;font-display:swap}
 :root{color-scheme:dark;--bg:#07080C;--card:#12141C;--card2:#15171F;--border:#1E212C;--text:#F2F3F7;--muted:#A0A6B8;--sub:#A0A6B8;--mint:#5BE3B0;--good:#5BE3B0;--amber:#FFB86B;--bad:#FF8A8A;--blue:#8FB4FF;--violet:#C7A6FF}
@@ -241,7 +241,7 @@ body.bt360-detail-active .scroll{padding-bottom:calc(178px + env(safe-area-inset
 .radar-offer-original p{color:#A0A6B8;font-size:11px;line-height:1.5}
 .radar-card-compact .radar-offer-link{margin-right:12px;min-height:36px;overflow-wrap:anywhere}
 
-/* v3.6.10: safe compact diagnostics, individual reports and clean disclosure labels. */
+/* v3.6.11: safe compact diagnostics, individual reports and clean disclosure labels. */
 .bt360-usage-controls{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin:12px 0}
 .bt360-usage-controls a{color:#8FB4FF;font-size:11px;text-decoration:underline;text-underline-offset:3px;min-height:36px;display:inline-flex;align-items:center}
 .bt360-usage-missing{margin-top:12px;padding:9px 12px;background:#211D20;border:1px solid #44332A;border-radius:12px;color:#FFB86B;font-size:11px;overflow-wrap:anywhere}
@@ -267,7 +267,7 @@ body.bt360-detail-active .scroll{padding-bottom:calc(178px + env(safe-area-inset
 .bt360-detail-footer>.bt360-primary{min-width:0;padding-inline:7px;font-size:11px}
 @media(max-width:390px){.bt360-detail-footer{gap:6px}.bt360-detail-footer>button{font-size:11px}.bt360-detail-footer>.bt360-primary{font-size:10px}}
 
-/* v3.6.10 canonical mobile tracker and single account-detail presentation. */
+/* v3.6.11 canonical mobile tracker and single account-detail presentation. */
 .bt366-compact-account{padding:0!important;margin:0 0 9px!important;border:1px solid #292C38!important;border-radius:16px!important;overflow:hidden;background:#12141C!important}
 .bt366-compact-row{display:flex!important;min-width:0;width:100%;gap:10px;align-items:center;text-align:left;padding:11px 12px!important;min-height:75px;border:0!important;background:transparent!important;color:#F2F3F7;cursor:pointer}
 .bt366-compact-row>.blogo{height:39px!important;width:39px!important;min-width:39px!important;border-radius:12px!important}
@@ -295,7 +295,7 @@ body.bt360-detail-active .scroll{padding-bottom:calc(180px + env(safe-area-inset
 .bt360-detail-card .card-h,.bt360-detail-card .bt-life,.bt360-detail-card .bt-life-step{display:none!important}
 .bt360-detail-footer>button:first-child{min-height:48px}
 
-/* v3.6.10 selectable monthly receipt chart: 44+px hit areas, no zero bars. */
+/* v3.6.11 selectable monthly receipt chart: 44+px hit areas, no zero bars. */
 .bt367-month-chart{display:grid;grid-template-columns:repeat(12,minmax(44px,1fr));gap:4px;margin-top:11px;align-items:stretch;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scrollbar-width:thin}
 .bt367-month-hit{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-height:102px;width:100%;padding:0 0 3px;position:relative;border:1px solid transparent;border-radius:9px;background:transparent;color:#81899C;cursor:pointer;touch-action:manipulation}
 .bt367-month-hit{scroll-snap-align:start}
@@ -323,3 +323,150 @@ body.bt360-detail-active .scroll{padding-bottom:calc(180px + env(safe-area-inset
 .bt367-month-row>strong{margin-left:auto;white-space:nowrap;font-size:12px;font-variant-numeric:tabular-nums}
 .bt367-month-empty{font-size:12px;color:#A0A6B8;padding:0 11px 13px}
 @media(max-width:390px){.bt367-month-chart{gap:1px}.bt367-month-hit{min-height:102px}.bt367-month-fill{width:min(100%,10px)}.bt367-month-value{font-size:8px}}
+
+
+/* v3.6.11 bonus detail: mockup hierarchy, read-only financial terms */
+.bt360-detail-identity .bt366-detail-id{display:none}
+.bt360-detail-card .bt360-panel{background:transparent!important;border:0!important;padding:0!important;border-radius:0!important;margin:0 0 19px!important}
+.bt360-detail-card .bt360-panel-title{margin:0 6px 9px}
+.bt360-detail-card .bt360-panel-title h3{font-size:16px;letter-spacing:-.2px}
+.bt360-detail-card .bt360-panel-body{padding:10px 16px;background:#12141C;border:1px solid #242732;border-radius:20px;overflow:hidden}
+.bt360-detail-card .card-exp{padding-bottom:calc(235px + env(safe-area-inset-bottom))!important}
+body.bt360-detail-active .scroll{padding-bottom:calc(208px + env(safe-area-inset-bottom))!important}
+.bt360-steps{display:block;padding:16px 14px 13px}
+.bt3611-step-bars{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.bt360-steps .bt3611-step-bars span{background:transparent!important;border-radius:0!important;text-align:left;font-size:10px;padding-top:9px;border-top-width:4px}
+.bt360-steps .bt3611-step-bars span.current{border-color:#F2F3F7;color:#F2F3F7}
+.bt360-steps .bt3611-step-bars span.done{color:#5BE3B0;border-color:#5BE3B0}
+.bt3611-stage-summary{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:17px;min-width:0}
+.bt3611-stage-summary b{font-size:12px;line-height:1.35;color:#F2F3F7;min-width:0}
+.bt3611-stage-summary .bt360-chip{flex:none}
+.bt360-check>button[role="checkbox"],.bt360-check>.bt3611-check-icon{border-radius:9px!important;background:#15171F!important;border:2px solid #343743!important;color:#F2F3F7!important;font-size:17px!important;font-weight:900}
+.bt360-check.done>button[role="checkbox"],.bt360-check.done>.bt3611-check-icon{background:#5BE3B0!important;border-color:#5BE3B0!important;color:#07150F!important}
+.bt360-check .bt3611-check-icon{flex:none}
+.bt3611-req-body{flex:1;min-width:0;padding-top:2px}
+.bt3611-req-body b{font-size:12px;line-height:1.4}
+.bt3611-req-body small{font-size:11px}
+.bt3611-req-track{width:100%;height:5px;margin-top:9px;margin-bottom:7px;border-radius:20px;overflow:hidden;background:#30333E}
+.bt3611-req-track i{display:block;height:100%;background:#5BE3B0;border-radius:20px}
+.bt3611-evidence{font-size:10px;color:#9FA4B2;margin-top:5px}
+.bt3611-evidence>summary{font-size:10px;color:#7D8799;cursor:pointer;padding:4px 0}
+.bt3611-evidence p{line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.bt3611-task .bt366-row-edit{min-width:0}
+.bt360-panel-actions{justify-content:flex-end;margin-top:3px}
+.bt360-panel-actions .bt360-link{font-size:11px;min-height:30px}
+.bt3611-timer-row{border-bottom:1px solid #242732;min-width:0}
+.bt3611-timer-row:last-of-type{border-bottom:0}
+.bt3611-timer-row>summary{list-style:none;display:flex;align-items:center;gap:10px;min-height:67px;cursor:pointer;min-width:0}
+.bt3611-timer-row>summary::-webkit-details-marker{display:none}
+.bt3611-timer-icon{width:32px;height:32px;flex:0 0 32px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:#35251F;color:#FF9E85;font-weight:900;font-size:16px}
+.bt3611-timer-row:nth-of-type(2n) .bt3611-timer-icon{background:#342818;color:#FFC45C}
+.bt3611-timer-body{min-width:0;flex:1}
+.bt3611-timer-body b{display:block;color:#F2F3F7;font-size:12px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bt3611-timer-body small{display:block;color:#A0A6B8;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:5px}
+.bt3611-timer-row .bt360-chip{flex:none;max-width:84px;overflow:hidden;text-overflow:ellipsis}
+.bt3611-timer-full{border-top:1px solid #242732;margin:0 0 12px 42px;padding:9px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;color:#A0A6B8;font-size:11px;line-height:1.5}
+.bt3611-timer-full p{margin-top:7px}
+.bt3611-fees .bt360-info-row{padding:13px 0}
+.bt3611-fees .bt360-info-row>span{white-space:nowrap}
+.bt3611-waiver-row.bt360-info-long>div{max-width:none;text-align:left;flex:1}
+.bt3611-waiver-summary{display:-webkit-box!important;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-clamp:2;overflow:hidden;line-height:1.5;max-height:3em;color:#F2F3F7}
+.bt3611-full-terms{margin-top:6px;text-align:right}
+.bt3611-full-terms>summary{font-size:11px;color:#5BE3B0;font-weight:900;cursor:pointer;padding:4px 0}
+.bt3611-full-terms p{text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;font-size:10px;line-height:1.6;margin:8px 0;color:#A0A6B8}
+.bt3611-amber{color:#FFB86B!important}
+.bt3611-date-row>div{max-width:65%}
+.bt3611-set-rule{display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:5px 10px;border:1px solid #45534D;border-radius:9px;background:#182C25;color:#5BE3B0;font-size:10px;font-weight:800;margin-top:7px}
+.bt3611-call{border:1px solid #254638;background:#0D1D18;border-radius:20px;padding:17px 16px;margin:0 0 20px}
+.bt3611-call>b{color:#5BE3B0;font-size:11px;letter-spacing:1px}
+.bt3611-call p{margin:10px 0 12px;color:#C2C9C6;font-size:12px}
+.bt3611-call small{display:block;font-size:10px;color:#8A9690;margin-top:9px}
+.bt3611-call .bt360-call{min-height:51px;font-size:16px}
+.bt3611-activity-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:flex-end;justify-content:center;z-index:1000}
+.bt3611-activity-sheet{width:100%;max-width:660px;max-height:90dvh;overflow:auto;background:#10121B;border:1px solid #29303A;border-radius:22px 22px 0 0;padding:18px 14px calc(28px + env(safe-area-inset-bottom))}
+.bt3611-activity-sheet header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.bt3611-activity-sheet h2{margin:0;font-size:18px}
+.bt3611-activity-sheet header button{width:42px;height:42px;background:#1B1E29;border:0;border-radius:50%;color:white;font-size:22px}
+.bt3611-activity-body{overflow-wrap:anywhere}
+@media(max-width:430px){
+ .bt360-detail-card .bt360-panel-body{padding:8px 14px}
+ .bt3611-stage-summary{gap:4px}
+ .bt3611-timer-row>summary{gap:7px}
+ .bt3611-timer-row .bt360-chip{padding:5px 6px;max-width:78px}
+ .bt3611-timer-body b{font-size:11px}
+ .bt3611-waiver-row.bt360-info-long>div{max-width:100%}
+}
+
+.bt360-detail-footer.bt3611-ready-footer{grid-template-columns:minmax(90px,1fr) minmax(0,2fr)}
+.bt360-detail-footer.bt3611-ready-footer .bt360-primary{background:#F1F2F6!important;color:#12131A!important}
+.bt3611-waiver-row.bt360-info-long{display:block}
+.bt3611-waiver-row.bt360-info-long>span{display:block;margin-bottom:5px}
+.bt3611-waiver-row.bt360-info-long>div{text-align:left;max-width:100%}
+
+/* Ready-to-close prioritizes close checks; retained tasks stay available below. */
+.bt3611-ready-extras{background:#11141b;border:1px solid #242b35;border-radius:16px;margin:14px 0 2px;padding:0 12px}
+.bt3611-ready-extras>summary{color:#5BE3B0;font-size:11px;font-weight:800;padding:13px 0;cursor:pointer;min-height:44px}
+.bt3611-ready-extras[open]{padding-bottom:10px}
+.bt3611-ready-extras .bt360-panel{margin:10px 0!important}
+
+
+/* v3.6.12: unified dark account-action sheets. Overrides all historical light action tiles. */
+.bt-ba-backdrop{position:fixed;inset:0;z-index:1400;background:rgba(0,0,0,.79);display:flex;align-items:flex-end;justify-content:center;isolation:isolate}
+.bt-ba-backdrop .bt-ba-compact{
+ width:100%!important;max-width:520px!important;min-width:0;box-sizing:border-box;
+ background:#12141C!important;color:#F2F3F7!important;
+ border:1px solid #1E212C!important;border-bottom:0!important;
+ border-radius:24px 24px 0 0!important;
+ max-height:calc(100dvh - 90px - env(safe-area-inset-bottom,0px))!important;
+ overflow-y:auto!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+ padding:10px 14px 17px!important;
+ margin:0 0 calc(72px + env(safe-area-inset-bottom,0px))!important;
+ box-shadow:0 -16px 50px rgba(0,0,0,.58);position:relative
+}
+.bt-ba-compact .m-bar{width:36px!important;height:4px!important;background:#474C5A!important;border-radius:999px!important;margin:0 auto 15px!important}
+.bt-ba-head{display:flex;align-items:center;gap:10px;padding:0 0 15px;min-width:0}
+.bt-ba-identity{display:flex;align-items:center;gap:11px;min-width:0;flex:1}
+.bt-ba-identity .blogo{width:42px!important;height:42px!important;min-width:42px!important;border-radius:12px!important;font-size:13px!important;flex:none}
+.bt-ba-bank{min-width:0;flex:1}
+.bt-ba-name{font-size:16px!important;line-height:1.3!important;font-weight:850!important;letter-spacing:-.02em;color:#F2F3F7!important;white-space:normal;overflow-wrap:anywhere}
+.bt-ba-stage{margin-top:5px;display:inline-block;max-width:100%;border-radius:999px;padding:4px 9px;background:#173329;border:1px solid #245442;color:#5BE3B0!important;font-size:10px;font-weight:800;line-height:1.2;letter-spacing:0;text-transform:none!important}
+.bt-ba-close{flex:none;width:40px;height:40px;border:1px solid #2D303B;border-radius:50%;display:grid;place-items:center;background:#1B1E27;color:#F2F3F7;font-size:23px;cursor:pointer}
+.bt-ba-list{display:block!important;grid-template-columns:none!important;gap:0!important;overflow:hidden;border:1px solid #242833;border-radius:17px;background:#15171F}
+.bt-ba-mini{width:100%;min-height:59px;display:flex;align-items:center;gap:12px;text-align:left;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:10px 12px;color:#F2F3F7!important;font-family:inherit;cursor:pointer;position:relative}
+.bt-ba-list>.bt-ba-mini+.bt-ba-mini:before,.bt-ba-list>.bt-ba-more:before{content:"";position:absolute;left:58px;right:12px;top:0;height:1px;background:#2B2E39}
+.bt-ba-mini:active{background:#222630!important;transform:none!important}
+.bt-ba-mini .ico{flex:0 0 34px;width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:#15171F!important;border:1px solid #2E323E;color:#AEB6C6!important;font-size:0!important}
+.bt-ba-mini .ico svg{width:19px;height:19px;display:block;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.bt-ba-mini>span:last-child{min-width:0;flex:1}
+.bt-ba-mini b{display:block;color:#F2F3F7!important;font-size:13px!important;font-weight:800;line-height:1.3!important}
+.bt-ba-mini small{display:block;margin-top:4px!important;font-size:10px!important;line-height:1.35!important;font-weight:500!important;color:#A0A6B8!important}
+.bt-ba-delete{margin-top:13px;border:1px solid #45272C;border-radius:16px;overflow:hidden;background:#1D171D}
+.bt-ba-delete .bt-ba-mini{min-height:62px;color:#FF898F!important}
+.bt-ba-delete .bt-ba-mini b{color:#FF898F!important}
+.bt-ba-delete .bt-ba-mini .ico{background:#322027!important;color:#FF898F!important}
+.bt-ba-more{position:relative;border-top:0;margin:0!important;padding:0!important;background:#15171F!important;color:#A0A6B8!important}
+.bt-ba-more>summary{cursor:pointer;min-height:45px;padding:12px 13px 12px 58px;font-size:11px;font-weight:750;list-style:none;color:#A0A6B8}
+.bt-ba-more>summary::-webkit-details-marker{display:none}
+.bt-ba-more>summary:after{content:"⌄";float:right;font-size:16px;margin-top:-3px}
+.bt-ba-more[open]>summary:after{content:"⌃"}
+.bt-ba-more-body{border-top:1px solid #2B2E39;background:#15171F}
+.bt-ba-more-body .bt-ba-mini+.bt-ba-mini{border-top:1px solid #292C37!important}
+.bt-ba-more .bt366-advanced-actions{border:0!important;border-top:1px solid #292C37!important;border-radius:0!important;margin:0!important;color:#F2F3F7!important}
+.bt-ba-more .bt366-advanced-actions>summary{min-height:43px;padding:12px!important}
+.bt-ba-compact button:focus-visible,.bt-ba-compact summary:focus-visible{outline:2px solid #5BE3B0;outline-offset:-2px}
+.bt-ba-backdrop~.bt360-detail-footer{display:none!important}
+body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
+@media(max-width:430px){.bt-ba-backdrop .bt-ba-compact{padding:10px 12px 16px!important}.bt-ba-head{gap:8px}.bt-ba-name{font-size:15px!important}}
+/* Other tracker prompt sheets use dark surfaces and a shared inset-card treatment. */
+.bt360-detail-active :is(.dd-box,.rcv-box,.fee-box,.close-modal,.ow-box,.cbox){background:#12141C!important;border:1px solid #1E212C!important;color:#F2F3F7!important}
+.bt360-detail-active :is(.dd-box,.rcv-box,.fee-box,.close-modal) :is(.inline-trigger,.dd-chip,.fee-mo-btn,.close-mode){background:#15171F!important;color:#F2F3F7!important;border:1px solid #2B2E39!important;box-shadow:none!important}
+.bt360-detail-active :is(.dd-box,.rcv-box,.fee-box,.close-modal) :is(input,textarea,select){background:#15171F!important;color:#F2F3F7!important;border-color:#363A45!important}
+
+
+/* Small phones: protect the timer headline's minimum readable width without hiding its countdown. */
+@media (max-width:360px) {
+ .bt3611-timer-row>summary{gap:5px!important}
+ .bt3611-timer-icon{width:28px!important;height:28px!important;flex:0 0 28px!important;font-size:14px!important}
+ .bt3611-timer-row .bt360-chip{max-width:67px!important;flex:0 0 auto;padding:4px 5px!important;font-size:9px!important}
+ .bt3611-timer-body{min-width:120px!important;flex:1 1 auto}
+}
