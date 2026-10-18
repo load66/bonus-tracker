@@ -3,7 +3,7 @@
 'use strict';
 const scopeKey='bt360_audience_session',noticeKey='bt360_notice_session';
 let legacyArchiveOpen=false;
-let audience='personal', archivePane='waiting', noticePrefs={deadlines:false,payouts:false,eligible:false}, selectedStage='';
+let audience='personal', archivePane='waiting', selectedHeroMonth=null, lastHeroYear=null, noticePrefs={deadlines:false,payouts:false,eligible:false}, selectedStage='';
 try{audience=sessionStorage.getItem(scopeKey)==='business'?'business':'personal'}catch{}
 try{const v=JSON.parse(sessionStorage.getItem(noticeKey)||'{}');for(const k of Object.keys(noticePrefs))noticePrefs[k]=v[k]===true}catch{}
 const safe=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -29,7 +29,7 @@ const eligibleInfo=e=>{
 };
 function scope(e){const type=typeof entryBankType==='function'?entryBankType(e):String(e?.accountType||'personal').toLowerCase();return (type==='B'||type==='business'?'business':'personal')===audience}
 function segments(){return '<div class="bt360-segments" role="group" aria-label="Account type"><button type="button" aria-pressed="'+(audience==='personal')+'" class="'+(audience==='personal'?'active':'')+'" onclick="BT360.setAudience(\'personal\')">Personal</button><button type="button" aria-pressed="'+(audience==='business')+'" class="'+(audience==='business'?'active':'')+'" onclick="BT360.setAudience(\'business\')">Business</button></div>'}
-function setAudience(v){if(v!=='business'&&v!=='personal')return;audience=v;selectedStage='';try{sessionStorage.setItem(scopeKey,audience)}catch{};R()}
+function setAudience(v){if(v!=='business'&&v!=='personal')return;audience=v;selectedStage='';selectedHeroMonth=null;try{sessionStorage.setItem(scopeKey,audience)}catch{};R()}
 function setStage(v){selectedStage=selectedStage===v?'':v;expanded=null;R()}
 function resetStage(){selectedStage=''}
 function infoRow(label,value,detail){return '<div class="bt360-info-row"><span>'+safe(label)+'</span><div><b>'+safe(value)+'</b>'+(detail?'<small>'+safe(detail)+'</small>':'')+'</div></div>'}
@@ -42,16 +42,63 @@ function stages(rows){
  const counts={};rows.filter(e=>!e.closed&&scope(e)).forEach(e=>{const code=stage(e).code;counts[code]=(counts[code]||0)+1});
  return '<div class="bt360-stage-scroller" role="group" aria-label="Filter by stage">'+pills.filter(([code])=>counts[code]>0).map(([code,label])=>'<button type="button" class="bt360-stage stage-'+code.toLowerCase()+(selectedStage===code?' active':'')+'" aria-pressed="'+(selectedStage===code)+'" onclick="BT360.setStage(\''+code+'\')">'+(counts[code]||0)+' '+label+'</button>').join('')+'</div>';
 }
+const HERO_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const HERO_LETTERS=['J','F','M','A','M','J','J','A','S','O','N','D'];
+function heroMonthData(rows,year){
+ // Reuse the Tax eligibility/date gates. In particular, future recorded
+ // receipts and unearned/zero bonuses must not inflate either view.
+ const yr=Number(year);
+ const eligible=rows.filter(e=>scope(e)&&taxReady(e)&&taxYearOf(e)===yr&&e.bonusRecd<=td());
+ return HERO_MONTHS.map((name,i)=>{
+  const accounts=eligible.filter(e=>Number(String(e.bonusRecd).slice(5,7))===i+1)
+     .sort((a,b)=>String(a.bonusRecd).localeCompare(String(b.bonusRecd))||String(a.bank).localeCompare(String(b.bank)));
+  return {name,index:i,total:accounts.reduce((sum,e)=>sum+Number(e.bonus),0),accounts};
+ });
+}
+function toggleHeroMonth(month){
+ if(!Number.isInteger(month)||month<0||month>11)return;
+ selectedHeroMonth=selectedHeroMonth===month?null:month;
+ R();
+ requestAnimationFrame(()=>document.querySelector('.bt367-month-hit[data-month="'+month+'"]')?.focus({preventScroll:true}));
+}
+function closeHeroMonth(){
+ const previous=selectedHeroMonth;selectedHeroMonth=null;R();
+ if(previous!==null)requestAnimationFrame(()=>document.querySelector('.bt367-month-hit[data-month="'+previous+'"]')?.focus({preventScroll:true}));
+}
+function clearHeroMonth(){selectedHeroMonth=null}
+function openHeroBonus(id){
+ const entry=entries.find(e=>e.id===id);
+ if(!entry)return;
+ selectedHeroMonth=null;
+ if(entry.closed){openArchived(id);return}
+ openAccountFromActionCenter(id);
+}
 function hero(rows,year,metrics){
+ if(lastHeroYear!==Number(year)){selectedHeroMonth=null;lastHeroYear=Number(year)}
  const subset=rows.filter(scope);
- const received=subset.filter(e=>e.bonusRecd&&String(e.bonusRecd).slice(0,4)===String(year));
- const total=received.reduce((n,e)=>n+Number(e.bonus||0),0);
+ const monthRows=heroMonthData(rows,year);
+ const received=monthRows.flatMap(x=>x.accounts);
+ const total=monthRows.reduce((sum,x)=>sum+x.total,0);
  const progress=subset.filter(e=>!e.closed&&!e.bonusRecd).reduce((n,e)=>{const s=stage(e).code;return s==='AWAITING_BONUS'||s==='REQUIREMENTS_MET'?n:n+Number(e.bonus||0)},0);
  const awaiting=subset.filter(e=>!e.closed&&!e.bonusRecd&&['AWAITING_BONUS','REQUIREMENTS_MET'].includes(stage(e).code)).reduce((n,e)=>n+Number(e.bonus||0),0);
- const months=Array.from({length:12},(_,i)=>received.filter(e=>Number(String(e.bonusRecd).slice(5,7))===i+1).reduce((n,e)=>n+Number(e.bonus||0),0));
- const peak=Math.max(...months,1);
- const bars=months.map((n,i)=>'<span class="'+(i===new Date().getMonth()?'current':'')+'" style="height:'+Math.max(5,Math.round(n/peak*100))+'%" title="'+safe(new Date(2020,i,1).toLocaleString('en-US',{month:'short'}))+' · '+safe(amount(n))+'"></span>').join('');
- return '<section class="bt360-hero"><div class="bt360-hero-top"><div class="bt360-kicker">COLLECTED IN '+year+'</div><button id="bt-cloud-open" class="cloud-status-button bt360-backup" onclick="btOpenCloudBackup()"><span class="bt360-cloud-icon" aria-hidden="true">✓</span><span class="cloud-dashboard-summary">Cloud backup</span></button></div><strong class="bt360-hero-amount">'+amount(total)+'</strong><p>'+amount(progress)+' in progress · '+amount(awaiting)+' awaiting</p><div class="bt360-monthbars" aria-label="Collected by month in '+year+'">'+bars+'</div><div class="bt360-monthlegend"><span>Jan</span><span>Collected by month</span><span>Dec</span></div></section>';
+ const peak=Math.max(1,...monthRows.map(x=>x.total));
+ const today=new Date(),isCurrentYear=Number(year)===today.getFullYear();
+ const bars=monthRows.map(x=>{
+  const selected=selectedHeroMonth===x.index,current=isCurrentYear&&today.getMonth()===x.index;
+  const percent=x.total>0?Math.max(3,Math.round(x.total/peak*100)):0;
+  const fill=x.total>0?'<span class="bt367-month-fill" style="height:'+percent+'%"></span>':'<span class="bt367-month-baseline" aria-hidden="true"></span>';
+  return '<button type="button" class="bt367-month-hit'+(selected?' selected':'')+(current?' current':'')+'" data-month="'+x.index+'" aria-pressed="'+selected+'" aria-label="'+x.name+': '+safe(amount(x.total))+', '+x.accounts.length+' bonuses" onclick="BT360.toggleHeroMonth('+x.index+')"><span class="bt367-month-track">'+(selected?'<span class="bt367-month-value">'+safe(amount(x.total))+'</span>':'')+fill+'</span><span class="bt367-month-letter">'+HERO_LETTERS[x.index]+'</span></button>';
+ }).join('');
+ let detail='';
+ if(selectedHeroMonth!==null){
+  const x=monthRows[selectedHeroMonth];
+  const rowsHtml=x.accounts.length?x.accounts.map(e=>
+   '<button type="button" class="bt367-month-row" onclick="BT360.openHeroBonus('+arg(e.id)+')">'
+   +bankLogo(e.bank,true)+'<span class="bt360-grow"><b>'+safe(e.bank)+'</b><small>'+safe(e.accountName||e.accountNickname||e.accountType||'Checking')+' · '+safe(date(e.bonusRecd))+'</small></span><strong>'+safe(amount(e.bonus))+'</strong></button>'
+  ).join(''):'<p class="bt367-month-empty">No bonuses</p>';
+  detail='<section class="bt367-month-detail" aria-label="'+x.name+' '+year+' collected bonuses"><div class="bt367-month-detail-head"><b>'+x.name+' '+year+' · '+amount(x.total)+' collected · '+x.accounts.length+' '+(x.accounts.length===1?'bonus':'bonuses')+'</b><button type="button" aria-label="Close month details" onclick="BT360.closeHeroMonth()">×</button></div><div class="bt367-month-list">'+rowsHtml+'</div></section>';
+ }
+ return '<section class="bt360-hero"><div class="bt360-hero-top"><div class="bt360-kicker">COLLECTED IN '+year+'</div><button id="bt-cloud-open" class="cloud-status-button bt360-backup" onclick="btOpenCloudBackup()"><span class="bt360-cloud-icon" aria-hidden="true">✓</span><span class="cloud-dashboard-summary">Cloud backup</span></button></div><strong class="bt360-hero-amount">'+amount(total)+'</strong><p>'+amount(progress)+' in progress · '+amount(awaiting)+' awaiting</p><div class="bt367-month-chart" role="group" aria-label="Collected by month in '+year+'">'+bars+'</div>'+detail+'</section>';
 }
 function tasks(rows){
  let suggestions=[];try{suggestions=window.getAttentionSuggestions?.()||[]}catch{}
@@ -332,6 +379,6 @@ function openPhonebook(){closeSettings();window.bt360PhonebookOpen=true;R()}
 function closePhonebook(){window.bt360PhonebookOpen=false;R()}
 function openSettings(){window.bt360SettingsOpen=true;R();refreshUsage()}
 function closeSettings(){window.bt360SettingsOpen=false;R()}
-window.BT360={get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,segments,setAudience,setStage,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,detailFooter,back,archive,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
+window.BT360={get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,detailFooter,back,archive,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
 if(typeof R==='function')R();
 })();
