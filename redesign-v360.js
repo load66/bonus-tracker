@@ -87,7 +87,7 @@ function hero(rows,year,metrics){
   const selected=selectedHeroMonth===x.index,current=isCurrentYear&&today.getMonth()===x.index;
   const percent=x.total>0?Math.max(3,Math.round(x.total/peak*100)):0;
   const fill=x.total>0?'<span class="bt367-month-fill" style="height:'+percent+'%"></span>':'<span class="bt367-month-baseline" aria-hidden="true"></span>';
-  return '<button type="button" class="bt367-month-hit'+(selected?' selected':'')+(current?' current':'')+'" data-month="'+x.index+'" aria-pressed="'+selected+'" aria-label="'+x.name+': '+safe(amount(x.total))+', '+x.accounts.length+' bonuses" onclick="BT360.toggleHeroMonth('+x.index+')"><span class="bt367-month-track">'+(selected?'<span class="bt367-month-value">'+safe(amount(x.total))+'</span>':'')+fill+'</span><span class="bt367-month-letter">'+HERO_LETTERS[x.index]+'</span></button>';
+  return '<button type="button" class="bt367-month-hit'+(selected?' selected':'')+(current?' current':'')+'" data-month="'+x.index+'" aria-pressed="'+selected+'" aria-label="'+x.name+': '+safe(amount(x.total))+', '+x.accounts.length+' '+(x.accounts.length===1?'bonus':'bonuses')+'" onclick="BT360.toggleHeroMonth('+x.index+')"><span class="bt367-month-track">'+(selected?'<span class="bt367-month-value">'+safe(amount(x.total))+'</span>':'')+fill+'</span><span class="bt367-month-letter">'+HERO_LETTERS[x.index]+'</span></button>';
  }).join('');
  let detail='';
  if(selectedHeroMonth!==null){
