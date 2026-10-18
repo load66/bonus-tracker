@@ -142,8 +142,8 @@ const estimatedList=sandbox.BT360.archive([estimatedPast]);
 assert.match(estimatedList,/<b>0<\/b><small>Eligible now<\/small>/,'Unverified historic dates must not certify current eligibility');
 
 /* v3.6.27: all computable saved dates show a countdown, with verification status. */
-assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.6\.27';/,'The on-screen app version reflects this release');
-assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.6\.27-archive1/,'The version label is refreshed on clients');
+assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.6\.28';/,'The on-screen app version reflects this release');
+assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.6\.28-unified1/,'The version label is refreshed on clients');
 const archiveFutureDate='2030-01-01';
 const projectedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,verified:false});
 assert(projectedFuture&&projectedFuture.days>0&&projectedFuture.caption==='days · estimate','Unverified saved future date shows an estimated countdown');
@@ -163,6 +163,33 @@ const beforeArchiveCountdown=JSON.stringify([...storage]);
 sandbox.BT360.archive([estimatedPast,cooldownNoDate]);
 assert.equal(JSON.stringify([...storage]),beforeArchiveCountdown,'Countdown presentation cannot mutate stored financial records');
 
+// Unified view regression: scope is a display filter only.
+const oldAudience=sandbox.BT360.audience;
+const samplePersonal={...estimatedPast,id:'VIEW-P-01',accountType:'personal'};
+const sampleBusiness={...estimatedPast,id:'VIEW-B-01',accountType:'business'};
+const beforeUnified=JSON.stringify([...storage]);
+const originalViewPreference=storage.get('bt3628_audience_session');
+try{
+ sandbox.BT360.setAudience('all');
+ assert(sandbox.BT360.scope(samplePersonal)&&sandbox.BT360.scope(sampleBusiness));
+ assert.match(sandbox.BT360.compactRow(sampleBusiness),/bt3628-kind business/);
+ assert.match(sandbox.BT360.detailHead(sampleBusiness),/Business ·/);
+ assert.match(sandbox.BT360.detailHead(samplePersonal),/Personal ·/);
+ const both=sandbox.BT360.archive([samplePersonal,sampleBusiness]);
+ assert.match(both,/bt3628-kind personal/);
+ assert.match(both,/bt3628-kind business/);
+ sandbox.BT360.setAudience('personal');
+ assert(sandbox.BT360.scope(samplePersonal)&&!sandbox.BT360.scope(sampleBusiness));
+ sandbox.BT360.setAudience('business');
+ assert(!sandbox.BT360.scope(samplePersonal)&&sandbox.BT360.scope(sampleBusiness));
+}finally{
+ sandbox.BT360.setAudience(oldAudience);
+ // The test sandbox shares its Map between sessionStorage and localStorage.
+ // Restore the legitimate UI-only selection preference before asserting no financial writes.
+ if(originalViewPreference===undefined)storage.delete('bt3628_audience_session');
+ else storage.set('bt3628_audience_session',originalViewPreference);
+}
+assert.equal(JSON.stringify([...storage]),beforeUnified,'View filters cannot mutate records');
 const archiveRecord={...legacy,closed:'2026-10-17',bonusRecd:'2026-10-17'};
 assert.match(sandbox.BT360.detailPanels(archiveRecord),/Fees &amp; waivers|Fees & waivers/,'Churn and closed record details retain fee section');
 assert.match(sandbox.BT360.detailPanels(archiveRecord),/\$25 early-close fee/);

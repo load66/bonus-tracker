@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.27: archived countdowns and accurate visible version.
+// Version 3.6.28: archived countdowns and accurate visible version.
 
-const V = 'bt-v3.6.27-archive1';
+const V = 'bt-v3.6.28-unified1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',

@@ -500,11 +500,13 @@ async function exercise(name,engine,url){
       return monthly===tax&&monthly>=850;
     }));
     await page.setViewportSize({width:390,height:844});
-    await page.getByRole('button',{name:'April: $850, 2 bonuses'}).click();
+    check('Combined All accounts view is active for the chart',await page.locator('.bt3628-audience-segments').getByRole('button',{name:'All accounts'}).getAttribute('aria-pressed')==='true');
+    await page.getByRole('button',{name:'April: $1,550, 3 bonuses'}).click();
     check('tapping month opens exact earned rows and highlights bar',await page.locator('.bt367-month-detail').isVisible()
-      &&await page.locator('.bt367-month-row').count()===2
+      &&await page.locator('.bt367-month-row').count()===3
+      &&await page.locator('.bt367-month-row').filter({hasText:'Synthetic Business Bank'}).count()===1
       &&await page.locator('.bt367-month-hit[data-month="3"]').getAttribute('aria-pressed')==='true'
-      &&(await page.locator('.bt367-month-detail').innerText()).includes('April 2026 · $850 collected · 2 bonuses'));
+      &&(await page.locator('.bt367-month-detail').innerText()).includes('April 2026 · $1,550 collected · 3 bonuses'));
     await page.screenshot({path:path.join(output,name+'-v367-hero-month-selected-390.png')});
     await page.locator('.bt367-month-row').filter({hasText:'Synthetic First Bank'}).click();
     check('month row opens its actual bonus detail',await page.locator('.bt360-detail-header').innerText().then(t=>t.includes('Synthetic First Bank')));
@@ -516,6 +518,16 @@ async function exercise(name,engine,url){
     check('same bar toggles closed',await page.locator('.bt367-month-detail').count()===0);
     await page.locator('.bt367-month-hit[data-month="1"]').click();
     check('zero month says No bonuses',await page.locator('.bt367-month-detail').innerText().then(t=>t.includes('No bonuses')));
+    await page.getByRole('button',{name:'Close month details'}).click();
+    await page.getByRole('button',{name:'Personal',exact:true}).click();
+    check('Personal filter preserves the original April receipt group',
+      await page.getByRole('button',{name:'April: $850, 2 bonuses'}).count()===1);
+    await page.getByRole('button',{name:'April: $850, 2 bonuses'}).click();
+    check('Personal month still shows exactly the two original rows',
+      await page.locator('.bt367-month-detail').isVisible()
+      &&await page.locator('.bt367-month-row').count()===2
+      &&await page.locator('.bt367-month-hit[data-month="3"]').getAttribute('aria-pressed')==='true'
+      &&(await page.locator('.bt367-month-detail').innerText()).includes('April 2026 · $850 collected · 2 bonuses'));
     await page.getByRole('button',{name:'Close month details'}).click();
     await page.getByRole('button',{name:'Business',exact:true}).click();
     check('Business filter updates monthly chart using Tax data',await page.getByRole('button',{name:'April: $700, 1 bonus'}).count()===1
