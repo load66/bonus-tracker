@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex · v3.6.17 cooldown saved-terms display · codex/v3.6.17-cooldown-last-saved-terms
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.17 cooldown historical display (`codex/v3.6.17-cooldown-last-saved-terms`): read-only same-cycle archived T&C fee/waiver projection, last saved same-audience cycle fallback when no account fee evidence, clear historical/not-current disclaimer, compact two fee rows, undated archived churn rows labeled Details instead of Review; no invented $0, no assumed reopen date or alteration to canonical eligibility/closure engines or JSON v3 import. Synthetic account and archived-record fixtures added; full bonus/cloud/UI, Chromium/WebKit and exact Pages gates pending.
 
 - v3.6.16 legacy-churn archive extension (`codex/v3.6.16-legacy-churn-r2-evidence`): add pre-structured repeat-bonus period, rule text, basis and decision provenance to immutable T&C cloud snapshots and local historical revisions; synthetic browserless coverage added. Preserve JSON v3 schema, all canonical financial/eligibility rules and existing snapshots. Requires backend PR #240 merged and exact Railway SUCCESS before frontend merge, then full bonus/cloud/UI, Chromium/WebKit and main Pages checks.
 
