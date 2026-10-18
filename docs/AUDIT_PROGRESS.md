@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: ChatGPT/Codex · v3.6.15 terms sign-in sync · codex/v3.6.15-auth-terms-autosync
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
