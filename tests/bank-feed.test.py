@@ -100,3 +100,101 @@ failed=m.attach_availability({'offers':[offer]}, {'availability':scoped['availab
 assert failed['availability']['status']=='unavailable' and failed['availability']['records']==scoped['availability']['records']
 m.download=original
 print('Official availability attachment passed: exact offer identity and unchanged evidence timestamps on outage')
+
+
+# Canonical lifecycle and cross-source fixtures: all synthetic, no provider calls.
+def rss(title, url, stamp, summary=''):
+    import html as html_module
+    return ('<rss><channel><item><title>' + html_module.escape(title) + '</title>'
+            '<link>' + html_module.escape(url) + '</link><pubDate>' + stamp
+            + '</pubDate><category>Bank Promotions</category>'
+            '<description>' + html_module.escape(summary) + '</description></item></channel></rss>').encode()
+
+def feeds(doc=None, hmb=None):
+    def synthetic(url):
+        if 'doctorofcredit.com' in url and doc:
+            return doc
+        if 'hustlermoneyblog.com' in url and hmb:
+            return hmb
+        raise OSError('synthetic source not configured')
+    return synthetic
+
+chase_doc='https://www.doctorofcredit.com/chase-400-checking-bonus/'
+chase_hmb='https://www.hustlermoneyblog.com/chase-total-checking-bonus/'
+t0=dt.datetime(2026,10,17,tzinfo=dt.timezone.utc)
+doc400=rss('JPMorgan Chase $400 Checking Bonus',chase_doc,'Thu, 15 Oct 2026 12:00:00 +0000')
+hmb400=rss('Chase Total Checking $400 Bonus',chase_hmb,'Fri, 16 Oct 2026 12:00:00 +0000')
+m.download=feeds(doc400,hmb400)
+merged=m.build_payload(t0)
+assert merged['schemaVersion']==3
+assert len(merged['offers'])==1, 'HMB and DoC must merge one real Chase offer'
+one=merged['offers'][0]
+assert one['bank']=='JPMorgan Chase' and one['product']=='checking' and one['amount']==400
+assert len(one['links'])==2 and {x['sourceId'] for x in one['links']}=={'doc','hmb'}
+assert one['title']=='Chase Total Checking $400 Bonus'
+assert one['displayTitle']=='JPMorgan Chase · Checking · $400'
+assert 'New' in one['badges']
+
+# A newer different reward replaces, rather than creating a parallel active offer.
+hmb500=rss('Chase Total Checking $500 Bonus',chase_hmb,'Sun, 18 Oct 2026 12:00:00 +0000')
+t1=t0+dt.timedelta(days=2)
+m.download=feeds(doc400,hmb500)
+increased=m.build_payload(t1,merged)
+assert len(increased['offers'])==1
+assert increased['offers'][0]['amount']==500
+assert increased['offers'][0]['badges'][0]=='Increased'
+assert increased['offers'][0]['change']['from']==400 and increased['offers'][0]['change']['to']==500
+assert all('400' not in x['title'] for x in increased['offers'][0]['links'])
+assert increased['offers'][0]['id']!=one['id']
+
+# Newest Update post controls headline; same product and amount retain identity.
+doc500=rss('(Update) JPMorgan Chase $500 Checking Bonus',chase_doc,'Mon, 19 Oct 2026 12:00:00 +0000',
+           'Offer ends 10/25/26.')
+t2=t1+dt.timedelta(days=1)
+m.download=feeds(doc500,hmb500)
+updated=m.build_payload(t2,increased)
+assert len(updated['offers'])==1
+assert updated['offers'][0]['id']==increased['offers'][0]['id']
+assert updated['offers'][0]['title'].startswith('(Update)')
+assert 'Updated' in updated['offers'][0]['badges']
+assert 'Ending soon' in updated['offers'][0]['badges']
+assert updated['offers'][0]['expiresAt']=='2026-10-25', 'Summary expiry was not parsed'
+assert len(updated['offers'][0]['links'])==2
+assert m.parse_expiry('Chase $400 Checking Bonus','Expires October 31, 2026')=='2026-10-31'
+assert m.parse_expiry('Chase $400 Checking Bonus','No expiry mentioned') is None
+
+# Explicit ended article removes this offer and its superseded earlier $400 post.
+ended=rss('(Expired) Chase Total Checking $500 Bonus',chase_hmb,'Tue, 20 Oct 2026 12:00:00 +0000')
+t3=t2+dt.timedelta(days=1)
+m.download=feeds(doc400,ended)
+retired=m.build_payload(t3,updated)
+assert retired['offers']==[], 'An ended offer cannot resurrect at its previous amount'
+assert retired['endedOffers'], 'Persist ending tombstone across refresh runs'
+m.download=feeds(doc400,None)
+assert m.build_payload(t3+dt.timedelta(days=1),retired)['offers']==[], 'Tombstone must survive next RSS refresh'
+
+# Region and product are part of identity; NEVER borrow evidence from another offer.
+savings=rss('Chase $500 Savings Bonus',chase_hmb,'Mon, 19 Oct 2026 12:00:00 +0000')
+checking_ca=rss('[CA Only] Chase $500 Checking Bonus',chase_doc,'Mon, 19 Oct 2026 12:00:00 +0000')
+m.download=feeds(checking_ca,savings)
+distinct=m.build_payload(t2)
+assert len(distinct['offers'])==2 and distinct['offers'][0]['id']!=distinct['offers'][1]['id']
+ca=next(o for o in distinct['offers'] if o['product']=='checking')
+save=next(o for o in distinct['offers'] if o['product']=='savings')
+assert ca['region']=='CA' and save['region']=='unknown'
+assert all(x['url']==ca['url'] for x in ca['links'])
+fake={'offerFingerprint':hashlib.sha256((ca['title']+'\n'+ca['url']).encode()).hexdigest(),
+      'offerTitle':ca['title'],'offerUrl':ca['url']}
+assert m.matching_evidence({ca['url']:fake}, {'offers':[save]},require_title=True)=={}
+assert m.matching_evidence({ca['url']:fake}, {'offers':[ca]},require_title=True)[ca['url']]['offerTitle']==ca['title']
+fake_bad={**fake,'offerTitle':save['title']}
+assert m.matching_evidence({ca['url']:fake_bad}, {'offers':[ca]},require_title=True)=={}
+
+# Keep an offer through an empty source refresh; expire after 90 days without a new post.
+m.download=offline
+kept=m.build_payload(t2+dt.timedelta(days=10),distinct)
+assert len(kept['offers'])==2
+old=m.build_payload(t2+dt.timedelta(days=91),distinct)
+assert old['offers']==[]
+m.download=original
+print('Canonical feed lifecycle passed: alias merge, 400→500, Update, expired tombstones, summary dates, source isolation, 90-day retention')
