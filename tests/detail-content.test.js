@@ -42,6 +42,23 @@ assert.match(requirements.html,/role="checkbox"/);
 assert.doesNotMatch(requirements.html,/No checklist tasks saved yet/);
 assert.match(sandbox.BT360.detailPanels(e),/Direct deposits totaling \$10,000/);
 
+
+// v3.6.21: projection-only derived deadlines and explicit global confirmation.
+const syntheticDerived={...e,customTimers:[]};
+const generated=sandbox.BT360.timerRows(syntheticDerived);
+assert.match(generated,/data-source="saved-requirement"/,'Saved structured requirement yields a timer even without manually added timers');
+assert.match(generated,/Requirement due/);
+assert.match(generated,/Jan 13, 2027 · from saved offer terms/);
+assert.match(generated,/not an added reminder/);
+assert.match(generated,/Receive qualifying direct deposits totaling \$10,000/,'Original evidence text remains accessible');
+const manual=sandbox.BT360.timerRows(e);
+assert.doesNotMatch(manual,/data-source="saved-requirement"/,'Manually scheduled matching requirement deadline is not duplicated');
+assert.match(sandbox.BT360.detailPanels(e),/bt3621-confirm-all[^>]*onclick="openReqMet\(&quot;CHA-P-01&quot;\)"/,'Confirm all opens the existing canonical completion dialog');
+const tasksOnly={...e,reqDays:0,completeBonusText:'',checklist:[{text:'Call bank',done:false}],financialRules:{...e.financialRules,requirements:[]}};
+assert.doesNotMatch(sandbox.BT360.detailPanels(tasksOnly),/bt3621-confirm-all/,'Checklist-only records must not expose the offer-level completion action');
+assert.match(sandbox.BT360.detailPanels(tasksOnly),/Call bank/,'Standalone checklist tasks remain fully accessible');
+assert.match(sandbox.BT360.detailPanels(e),/\+ Add task/,'Existing checklist action remains available');
+
 const fees=sandbox.BT360.feeDetail(e);
 assert.match(fees,/Monthly fee<\/span><div><b[^>]*>\$15<\/b>/);
 assert.match(fees,/ANY: \$500\+ electronic deposits/);

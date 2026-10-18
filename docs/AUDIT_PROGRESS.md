@@ -6,6 +6,9 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.6.21 bonus detail interaction consistency (PR pending): derived read-only requirement deadline rows from verified stored structured timing when no equivalent manually saved timer exists; explicit Confirm all opens original completion dialog; accurate overdue/due-today labels and empty-state copy. Preserves original evidence, user tasks, stored records, rule engines and chart. Synthetic detail regression added, including checklist-only guard and safe dialog link. CI Chromium/WebKit and main Pages verification pending.
+
+
 - v3.6.20 archive and close-review presentation (`codex/v3.6.20-archive-safe-ui`): display verified eligibility within 60 days as a distinct archive group without duplication in cooling down; make ready-to-close summary avoid implying manual checks have been completed. Tracker bar graph, stored records, financial and eligibility engines unchanged. First CI revealed service-worker dependency cache parity failure; corrected versioned churn-policy URL. Release candidate pending rerun of full CI, Chromium/WebKit and Pages deployment verification.
 
 - v3.6.19 mobile Main mockup and first-paint fix (`codex/v3.6.19-dashboard-mockup-first-paint`): the first visible render is deferred until full BT360 startup, with a branded skeleton and versioned service worker. Needs you is an unboxed heading with standalone prioritized action tile and separate compact rows; Eligible soon is similarly unboxed. Deadline/action presentation reads canonical getAttentionSuggestions; recorded task/structured-rule progress is display-only and never implies bank transactions were observed. Unit and Chromium/WebKit initial-DOM-flicker regression and mobile layout checks required before merge, then exact main Pages publication. No financial/churn/JSON data changes.
