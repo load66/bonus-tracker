@@ -329,8 +329,8 @@ async function exercise(name,engine,url){
         return nativeFetch.call(this,input,options);
       };
     });
-    if(!await button('Ask AI about this bonus').count())await page.locator('.card-h').first().click();
-    await button('Ask AI about this bonus').click();
+    if(!await page.locator('.bt360-detail-footer button').first().isVisible())await page.locator('.bt366-compact-row').first().click();
+    await page.locator('.bt360-detail-footer button').first().click();
     check('Tracker AI opens for one selected bank',(await page.locator('.bonus-ai-heading').innerText()).includes('E2E Verification Bank')&&await page.evaluate(()=>window.__bonusAITest.calls.length===0));
     check('local answers need no login',await page.locator('#bonus-ai-login').isHidden());
     for(const label of ['Monthly fee','Fee waivers','Direct deposit','Early-close fee','Companion account','Repeat eligibility']){await button(label).click();check('prefill: '+label,(await page.locator('#bonus-ai-question').inputValue()).length>20);}
@@ -478,13 +478,12 @@ async function exercise(name,engine,url){
     // Restore native fetch before verifying real service-worker offline navigation.
     await page.evaluate(()=>{window.fetch=window.__bonusAITest.nativeFetch;delete window.__bonusAITest;});
 
-    // Reopen focused detail after testing cloud protection on the Tracker hero.
-    await page.locator('.card-h').first().click();
-    const lifecycle=page.locator('.profile-section[data-section-key="lifecycle"]').first();
-    if(!await lifecycle.evaluate(e=>e.open))await lifecycle.locator('summary').click();
+    // Reopen detail and prove the compact/expanded views remain stable across years.
+    await page.locator('.bt366-compact-row').first().click();
+    check('detail contains one lifecycle strip after reload',await page.locator('.bt360-steps').count()===1);
     await page.locator('#bt362-year').selectOption('2025');
     await page.locator('#bt362-year').selectOption('2026');
-    check('expanded Lifecycle & Tasks survives year navigation',await page.locator('.profile-section[data-section-key="lifecycle"]').first().evaluate(e=>e.open));
+    check('year navigation preserves focused detail',await page.locator('.bt360-detail-header').count()===1&&await page.locator('.bt360-steps').count()===1);
     // The focused detail intentionally hides the Tracker list search; navigate back first.
     await page.getByRole('button',{name:'Back to accounts'}).click();
     await page.getByPlaceholder('Search accounts...').pressSequentially('E2E');
@@ -604,10 +603,8 @@ async function exercise(name,engine,url){
     check('mobile editor fits viewport and prevents input zoom',await page.locator('.modal').evaluate(e=>e.getBoundingClientRect().width<=window.innerWidth)&&await page.locator('.modal input').first().evaluate(e=>parseFloat(getComputedStyle(e).fontSize)>=16));
     await button('Cancel').click();
     check('mobile navigation and editor leave saved records unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
-    const mobileLifecycle=page.locator('.profile-section[data-section-key="lifecycle"]').first();
-    if(await mobileLifecycle.evaluate(e=>e.open))await mobileLifecycle.locator('summary').click();
     await page.evaluate(()=>{undoState=null;clearTimeout(undoTimer);R()});
-    await openAdvancedActions();await page.locator('.ops-action-center').scrollIntoViewIfNeeded();
+    check('mobile Tracker shows no old Action Center disclosure',await page.locator('.bt360-legacy-actions').count()===0);
     await page.screenshot({path:path.join(output,name+'-mobile-verified.png')});
     // Long saved requirements must remain readable without changing account storage.
     await page.evaluate(()=>{
@@ -618,33 +615,22 @@ async function exercise(name,engine,url){
     });
     for(const width of [320,375,390,1024]){
       await page.setViewportSize({width,height:844});
-      const card=page.locator('.card-h').first();
-      check('full recurring requirement at '+width+'px',(await card.locator('.bt-card-deadline p').innerText())==='Establish $500+ monthly qualified direct deposits and retain the required membership savings balance');
-      check('countdown and date separate at '+width+'px',(await card.locator('.bt-card-deadline-meta').innerText()).includes('Due Oct 26, 2026'));
-      check('card text wraps without clipping at '+width+'px',await card.evaluate(e=>{
-        const name=e.querySelector('.card-name'),support=e.querySelector('.card-subline');
-        return [name,support].every(n=>n.scrollWidth<=n.clientWidth+1&&n.scrollHeight<=n.clientHeight+1)&&support.getBoundingClientRect().width>e.getBoundingClientRect().width*.85&&document.documentElement.scrollWidth<=innerWidth;
-      }));
-      if(width===390)await card.screenshot({path:path.join(output,name+'-card-text.png')});
+      const row=page.locator('.bt366-compact-row').first();
+      check('long next step remains readable at '+width+'px',await row.evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
+      check('compact tile retains actual bank and stage at '+width+'px',(await row.innerText()).includes('Lafayette Federal Credit Union'));
+      if(width===390)await row.screenshot({path:path.join(output,name+'-card-text.png')});
     }
     await page.setViewportSize({width:390,height:844});
     await page.evaluate(()=>{
       entries.push({...entries[0],id:'E2E-TILE-02',bank:'E2E Citi',bonus:325,reqMet:'2026-08-10',payoutTimingText:'Bonus expected after requirements are completed',customTimers:[]});R();
     });
-    await openAdvancedActions();
-    check('mobile Action Center uses two compact columns',await page.locator('.ops-action-tile').evaluateAll(rows=>rows.length===2&&Math.abs(rows[0].getBoundingClientRect().top-rows[1].getBoundingClientRect().top)<2));
-    check('every Action Center tile shows specific next action',await page.locator('.ops-action-tile').evaluateAll(rows=>rows.every(e=>{const s=e.querySelector('.ops-tile-status');return s&&s.textContent.trim()&&!/d left|Date needs review/.test(s.textContent)})));
-    check('recurring and payout tasks remain distinct',await page.locator('.ops-tile-status').allTextContents().then(rows=>rows.some(t=>t.includes('Establish $500+ monthly qualified direct deposits'))&&rows.includes('Confirm bonus payment')));
-    check('compact recurring and payout buttons remain available',await button('Review deposits').count()===1&&await button('Confirm received').count()===1);
-    await page.locator('.ops-action-center').screenshot({path:path.join(output,name+'-action-tiles.png')});
+    check('both pending offers appear as independent compact account rows',await page.locator('.bt366-compact-row').count()===2);
+    check('a task row and an awaiting payout row stay distinct',await page.locator('.bt366-compact-row').allInnerTexts().then(t=>t.some(x=>x.includes('Establish $500+'))&&t.some(x=>x.includes('E2E Citi'))));
     const taskStorage=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
-    await button('Review deposits').click();
-    check('deposit action opens exact task and preserves data',await page.locator('.ops-task-current').isVisible()&&(await page.locator('.ops-task-current').innerText()).includes('$500+')&&await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===taskStorage);
-    check('one task review does not open whole-offer completion',await page.evaluate(()=>!reqPrompt&&!rcvPrompt));
-    await openAdvancedActions();await page.locator('#bt-action-center-toggle').click();
-    check('collapsed Action Center remains compact on mobile',await page.locator('.ops-action-center').evaluate(e=>e.getBoundingClientRect().height<100)&&!await page.locator('.ops-action-list').isVisible());
-    await page.locator('.ops-action-center').screenshot({path:path.join(output,name+'-action-center-collapsed.png')});
-    await openAdvancedActions();await page.locator('#bt-action-center-toggle').click();
+    await page.locator('.bt366-compact-row').first().click();
+    check('account has one primary action and no duplicate Manage',await page.locator('.bt360-detail-footer .bt360-primary').count()===1&&await page.getByRole('button',{name:'Manage',exact:true}).count()===0);
+    check('opening detail does not change account data',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,taskStorage));
+    await page.screenshot({path:path.join(output,name+'-action-tiles.png')});
     await page.evaluate(()=>{entries=window.__cardTextOriginal;delete window.__cardTextOriginal;R();});
     await page.setViewportSize({width:390,height:844});
     check('card layout leaves saved records unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
