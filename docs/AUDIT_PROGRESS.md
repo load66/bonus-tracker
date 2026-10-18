@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: codex · v3.6.13 · codex/v3.6.13-clear-status-dates
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.13 precise account status and mockup-style financial detail PR https://github.com/load66/bonus-tracker/pull/187 (`codex/v3.6.13-clear-status-dates`): canonical lifecycle badges no longer replaced by action-date uncertainty; compact source-bound monthly fees, waiver conditions and current-period evidence status; SVG timer and saved payout context; short Key dates with exact calculation basis or a specific missing-event/missing-rule explanation; terms verification dot; no financial record, rule engine, account transaction or provider changes. Synthetic bonus/cloud/UI and Chromium/WebKit 320/375/390/430px browser tests and screenshots PASS on https://github.com/load66/bonus-tracker/actions/runs/39125260559. Next: merge PR #187, verify exact main GitHub Pages deploy and current app v3.6.13.
+
 
 - v3.6.12 combined bonus-detail and dark Manage frontend release PR https://github.com/load66/bonus-tracker/pull/186 (`codex/v3.6.12-dark-manage-sheet`): includes the full v3.6.11 bonus-detail presentation and v3.6.12 dark Account Actions sheet with bank identity, human stage, SVG icons, no duplicate primary actions, separate Delete, safe-area footer suppression, and existing handlers retained. The inherited 320px timer label width regression is fixed without relaxing browser assertions. Synthetic bonus/cloud/UI tests and Chromium/WebKit 320/375/390/430px browser suite PASS; release verify PASS at https://github.com/load66/bonus-tracker/actions/runs/39123423780. Mobile sheet screenshots in Chromium/WebKit artifacts; no stored financial data, canonical bonus rules, or backend changed. Next: merge PR #186 (which includes #185, making separate #185 merge unnecessary), verify main Pages deployment and close superseded #185.
 
