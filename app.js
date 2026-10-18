@@ -3297,6 +3297,7 @@ let profileSearch='',activeProfileKey='';
 let inlineUiState={};
 let profileSectionUiState={};
 let actionCenterOpen=false;
+let legacyActionsOpen=false;
 function toggleActionCenter(){actionCenterOpen=!actionCenterOpen;R();document.getElementById('bt-action-center-toggle')?.focus({preventScroll:true})}
 function profileSectionStateKey(entryId,sectionKey){return String(entryId||'')+'::'+String(sectionKey||'')}
 function profileSectionAttr(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
@@ -6499,7 +6500,7 @@ entries=sortE(entries);R();
     if(!archiveView){
     if(!expanded)h += `<button class="tc-btn" onclick="showAnalyzer=!showAnalyzer;R()">${I.spark}<span>${showAnalyzer?'Hide analyzer':'Review promo terms'}</span></button>`;
     if(showAnalyzer&&!expanded) h += rAnalyzer();
-    if(!expanded)h += '<details class="bt360-legacy-actions"><summary>All Action Center tools</summary>'+renderActionCenter()+'</details>';
+    h += '<details class="bt360-legacy-actions"'+(legacyActionsOpen?' open':'')+' ontoggle="legacyActionsOpen=this.open"><summary>All Action Center tools</summary>'+renderActionCenter()+'</details>';
     }
 
     if(!f.length){
