@@ -12,6 +12,17 @@ These SVGs are non-affiliation visual identifiers. Their trademarks belong to th
 | bmo.svg | https://github.com/icongo/bank-logos/blob/main/logos/bmo.svg |
 | discover.svg | https://github.com/simple-icons/simple-icons/blob/develop/icons/discover.svg |
 | hsbc.svg | https://github.com/auraveni/global-bank-logos/blob/main/assets/bank/international-bank/hsbc.svg |
+| pnc.svg | https://github.com/Expensify/App/blob/main/assets/images/bank-icons/pnc.svg |
+| us-bank.svg | https://github.com/Expensify/App/blob/main/assets/images/bank-icons/us-bank.svg |
+| regions-bank.svg | https://github.com/Expensify/App/blob/main/assets/images/bank-icons/regions-bank.svg |
+| huntington-bank.svg | https://github.com/Expensify/App/blob/main/assets/images/bank-icons/huntington-bank.svg |
+| navy-federal-credit-union.svg | https://github.com/Expensify/App/blob/main/assets/images/bank-icons/navy-federal-credit-union.svg |
+| charles-schwab.svg | https://github.com/Expensify/App/blob/main/assets/images/bank-icons/charles-schwab.svg |
+| citizens-bank.svg | https://github.com/Expensify/App/blob/main/assets/images/bank-icons/citizens-bank.svg |
+| fidelity.svg | https://github.com/Expensify/App/blob/main/assets/images/bank-icons/fidelity.svg |
+| capital-one.svg | https://github.com/Expensify/App/blob/main/assets/images/bank-icons/capital-one.svg |
+| usaa.svg | https://github.com/Expensify/App/blob/main/assets/images/bank-icons/usaa.svg |
+| first-citizens-bank.svg | https://github.com/Expensify/App/blob/main/assets/images/bank-icons/first-citizens-bank.svg |
 
 The source SVGs were stripped of metadata when present; otherwise their paths/colors are retained. No screenshots or actual bank data are included. New bank logos must be sourced and reviewed individually. Never fuzzy-match unknown bank names onto existing assets.
 
@@ -24,6 +35,10 @@ Copyright (c) 2026 Bank Logos Collection
 ### IconGo bank-logos (MIT)
 
 Copyright (c) 2022 IconGo
+
+### Expensify App (MIT)
+
+Copyright (c) 2020 Expensify Inc.
 
 For both MIT-licensed sources, the following license applies:
 
