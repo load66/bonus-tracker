@@ -42,6 +42,7 @@ function segments(){
 function setAudience(value){
  if(!['all','personal','business'].includes(value))return;
  audience=value;selectedStage='';selectedHeroMonth=null;
+ if(expanded){const current=entries.find(e=>e.id===expanded);if(current&&!scope(current)){expanded=null;window.bt360ArchiveDetailId=null}}
  try{sessionStorage.setItem(scopeKey,audience)}catch{}
  if(typeof window.btRadarAudienceChanged==='function')window.btRadarAudienceChanged(value);
  R();
@@ -932,7 +933,7 @@ let notificationPanelOpen=false;
 function notifications(rows){
  let data=[];try{data=window.getAttentionSuggestions?.()||[]}catch{}
  const scoped=data.filter(x=>rows.some(e=>e.id===x.entryId&&scope(e)));
- const items=scoped.map(x=>'<button class="bt360-list-row" onclick="BT360.openNotification('+arg(x.entryId)+')">'+bankLogo(x.bank,true)+'<span class="bt360-grow"><b>'+safe(x.task?.title||x.stageLabel||'Review account')+'</b><small>'+safe(x.bank||'Bank')+' · '+safe(x.stageLabel||'Review')+'</small></span><span class="bt360-chip '+(x.stageCode==='READY_TO_CLOSE'?'positive':'warning')+'">'+safe(x.dateContext?.confirmed&&x.dateContext.date?date(x.dateContext.date):'Review')+'</span></button>').join('');
+ const items=scoped.map(x=>'<button class="bt360-list-row" onclick="BT360.openNotification('+arg(x.entryId)+')">'+bankLogo(x.bank,true)+'<span class="bt360-grow"><b>'+safe(x.task?.title||x.stageLabel||'Review account')+'</b><small>' +safe(x.bank||'Bank')+' · '+safe((rows.find(e=>e.id===x.entryId)&&accountAudience(rows.find(e=>e.id===x.entryId))==='business')?'Business':'Personal')+' · '+safe(x.stageLabel||'Review')+'</small></span><span class="bt360-chip '+(x.stageCode==='READY_TO_CLOSE'?'positive':'warning')+'">'+safe(x.dateContext?.confirmed&&x.dateContext.date?date(x.dateContext.date):'Review')+'</span></button>').join('');
  return '<div class="bt360-sheet-backdrop" onclick="BT360.closeNotifications()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Notification center" onclick="event.stopPropagation()"><header><div><h2>Notifications</h2><p>'+safe(audience==='all'?'All accounts':audience==='personal'?'Personal':'Business')+' · Tracker reminders</p></div><button aria-label="Close notifications" onclick="BT360.closeNotifications()">×</button></header>'+panel('Needs you',items?'<div class="bt360-list">'+items+'</div>':'<p class="bt360-muted">No current tasks needing attention.</p>')+'<p class="bt360-muted">These are tracker reminders, not push notifications. Push delivery will be enabled in a later release.</p></section></div>';
 }
 function openNotifications(){notificationPanelOpen=true;window.bt360SettingsOpen=false;R()}
