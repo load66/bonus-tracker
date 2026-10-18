@@ -402,3 +402,9 @@ body.bt360-detail-active .scroll{padding-bottom:calc(208px + env(safe-area-inset
 .bt3611-waiver-row.bt360-info-long{display:block}
 .bt3611-waiver-row.bt360-info-long>span{display:block;margin-bottom:5px}
 .bt3611-waiver-row.bt360-info-long>div{text-align:left;max-width:100%}
+
+/* Ready-to-close prioritizes close checks; retained tasks stay available below. */
+.bt3611-ready-extras{background:#11141b;border:1px solid #242b35;border-radius:16px;margin:14px 0 2px;padding:0 12px}
+.bt3611-ready-extras>summary{color:#5BE3B0;font-size:11px;font-weight:800;padding:13px 0;cursor:pointer;min-height:44px}
+.bt3611-ready-extras[open]{padding-bottom:10px}
+.bt3611-ready-extras .bt360-panel{margin:10px 0!important}
