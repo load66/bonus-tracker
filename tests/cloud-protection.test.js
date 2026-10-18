@@ -92,7 +92,7 @@ async function hostingUsage(){
  payload=make(6);await model.refreshUsage(true);
  assert.match(model.usageCard(),/Over plan/);
  payload=make(0,'not_configured');await model.refreshUsage(true);
- assert.match(model.usageCard(),/Add a Railway account token/);
+ assert.match(model.usageCard(),/Add a Railway (?:API|account) token/);
  assert.doesNotMatch(model.usageCard(),/Cost so far/);
  payload=make(0,'unavailable');await model.refreshUsage(true);
  assert.match(model.usageCard(),/Railway changed its billing data format/);
