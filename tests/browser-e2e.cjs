@@ -5,7 +5,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
 const path=require('node:path');
 const http=require('node:http');
-const {chromium}=require('playwright');
+const {chromium,webkit}=require('playwright');
 const root=path.resolve(__dirname,'..');
 const output=process.env.BT_BROWSER_RESULTS||path.join(process.env.RUNNER_TEMP||'/tmp','bonus-tracker-browser-results');
 const mime={'.html':'text/html','.js':'application/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml'};
@@ -173,10 +173,22 @@ async function exercise(name,engine,url){
     await wait(()=>modal===null&&!entrySaveBusy);
     check('edit preserves identity',(await record()).id===id);
     check('notes cannot inject HTML',await page.locator('img[src="x"]').count()===0);
+    await page.setViewportSize({width:390,height:844});
+    await page.evaluate(()=>{document.querySelector('.scroll').scrollTop=0});
+    check('detail uses one mockup header and current Tasks step',!await page.locator('.bt360-detail-card>.card-h').isVisible()&&await page.locator('.bt360-steps [aria-current="step"]').innerText()==='Tasks');
+    await page.screenshot({path:path.join(output,name+'-v363-detail-in-progress-390.png')});
     await button('Review deposits').click();await button('Confirm all requirements').click();await page.locator('#req_date').fill('2026-04-01');await button('Save').click();await button('OK').click();
     check('requirements and payout stay separate',(await record()).reqMet==='2026-04-01'&&!(await record()).bonusRecd);
     await button('Confirm received').click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('OK').click();
     check('bonus receipt updates close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
+    check('ready detail highlights Close and keeps missing-phone card',await page.locator('.bt360-steps [aria-current="step"]').innerText()==='Close'&&await button('Add bank phone number').count()===1);
+    await button('Add bank phone number').click();
+    check('missing phone opens existing personal editor for this bank',await page.locator('#ph_new_bank').inputValue()==='E2E Verification Bank'&&await page.locator('#ph_new_personal').evaluate(e=>e===document.activeElement));
+    await page.evaluate(()=>BT360.closePhonebook());
+    await page.evaluate(()=>{document.querySelector('.scroll').scrollTop=0});
+    await page.screenshot({path:path.join(output,name+'-v363-detail-ready-390.png')});
+    await page.evaluate(()=>{const s=document.querySelector('.scroll');s.scrollTop=s.scrollHeight});
+    check('detail content and footer reserve non-overlapping space above navigation',await page.evaluate(()=>{const scroll=document.querySelector('.scroll').getBoundingClientRect(),footer=document.querySelector('.bt360-detail-footer').getBoundingClientRect(),nav=document.querySelector('.tabs').getBoundingClientRect(),last=document.querySelector('.bt360-detail-card .card-btns').getBoundingClientRect();return scroll.bottom<=footer.top+1&&last.bottom<=footer.top&&footer.bottom<=nav.top+1&&nav.bottom<=innerHeight+1}));
     await button('Manage').click();await button('⏱️ Add timer Set a reminder or deadline').click();
     await button('Start + Days').click();await page.locator('#tem_text').fill('E2E manual reminder');await page.locator('#tem_start').fill('2026-03-08');await page.locator('#tem_days').fill('1');await button('Add timer').click();
     check('timer uses calendar days across DST',(await record()).customTimers.some(t=>t.text==='E2E manual reminder'&&t.date==='2026-03-09'));
@@ -230,8 +242,10 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>{const base=entries[0];entries.push({...base,id:'radar-us-bank',bank:'U.S. Bank',closed:'2026-05-01'});sv(SK,entries);R()});
     const storedDuringRadar=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     await button('Bank Bonuses').click();
-    await page.getByText(/Synthetic Checking/).waitFor();
+    await page.locator('.radar-card h3').filter({hasText:'Synthetic Checking'}).waitFor();
     await page.screenshot({path:path.join(output,name+'-v362-bonuses-390.png')});
+    await page.screenshot({path:path.join(output,name+'-v363-bonuses-390.png')});
+    check('offer title is compact without unverified amount review badge',await page.locator('.radar-card h3').filter({hasText:'Wells Fargo Checking · $325'}).count()===1&&!await page.locator('.bt360-offer-title').filter({hasText:'Needs review'}).count());
     check('offers group by verified tracker review status without assuming personal eligibility',await page.locator('.radar-group-heading').count()>0&&(await page.getByText('About sources',{exact:true}).count())===1);
     check('bank feed renders escaped discovery title',(await page.locator('.radar-card img').count())===0&&(await page.locator('.radar-card').filter({hasText:'Synthetic Checking'}).innerText()).includes('<img'));
     check('bank feed warns when source check is stale',await page.locator('.bt362-offer-stale').isVisible());
@@ -469,6 +483,11 @@ async function exercise(name,engine,url){
     await button('Datapoints').click();
     await page.setViewportSize({width:390,height:844});
     await page.screenshot({path:path.join(output,name+'-v362-data-390.png')});
+    await page.screenshot({path:path.join(output,name+'-v363-data-390.png')});
+    check('Data defaults to individual reports with outcome method source and date',await page.locator('.bt363-report-row').count()>0&&await page.locator('button.dp-head').count()===0&&await page.locator('.bt363-report-row summary').first().evaluate(e=>!!e.querySelector('.research-result')&&!!e.querySelector('.bt363-report-method')&&e.querySelector('small').textContent.includes(' · ')));
+    await page.getByText('More filters and saved notes',{exact:true}).click();
+    await page.getByLabel('Report layout',{exact:true}).selectOption('bank');
+    await page.getByText('More filters and saved notes',{exact:true}).click();
     check('Data starts with search and collapses reading help after report list',await page.locator('.dp-summary').count()===0&&await page.locator('.bt362-data-view > .dp-search').count()===1&&await page.locator('.research-help').filter({hasText:'How to read these reports'}).evaluate(x=>!x.open));
     await page.getByPlaceholder('Search bank, method, or note...').pressSequentially('E2E');
     check('datapoint search keeps focus while typing',await page.getByPlaceholder('Search bank, method, or note...').inputValue()==='E2E'&&await page.evaluate(()=>document.activeElement.id==='datapoints-search'));
@@ -739,6 +758,6 @@ async function exercise(name,engine,url){
 (async()=>{
   await fs.mkdir(output,{recursive:true});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const url='http://127.0.0.1:'+server.address().port+'/';
-  try{for(const [name,engine] of require('./browser-select.cjs')({chromium}))await exercise(name,engine,url)}
+  try{for(const [name,engine] of require('./browser-select.cjs')({chromium,webkit}))await exercise(name,engine,url)}
   finally{server.close()}
 })().catch(err=>{console.error(err);process.exitCode=1});

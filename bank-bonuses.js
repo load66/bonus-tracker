@@ -66,6 +66,18 @@
     const value=e.fields.bonus&&e.fields.bonus.value;
     return typeof value==='string'&&/^\$\s*(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{2})?$/.test(value.trim())?Number(value.replace(/[$,\s]/g,'')):null;
   }
+  // Display-only source wording. Never used for evidence, filtering or eligibility.
+  function displayTitle(offer){
+    const original=String(offer.title||'');
+    const clean=original.replace(/\[[^\]]*\]|\([^)]*\)/g,' ').replace(/\s*[–—]\s*(?:Ends?|Direct Deposit).*$/i,'').replace(/\bPromotions?:/gi,'').trim();
+    const before=clean.split(/\bbonus(?:es)?\b/i)[0],reward=before.match(/(?:up to\s+)?\$[\d,]+(?:\.\d{2})?/gi)||[];
+    const verified=amountFor(offer),money=verified===null?reward.join(/\$[\d,]+\s*[-–]/.test(before)?'–':' / '):'$'+verified.toLocaleString('en-US');
+    let name=clean.replace(/(?:up to\s+)?\$[\d,]+(?:\.\d{2})?/gi,'').replace(/\bbonus(?:es)?\b.*$/i,'').replace(/\b(?:Easy|Earn)\b/gi,'').replace(/[/:–—-]+/g,' ').replace(/\s+/g,' ').trim();
+    if(!name)name=clean.replace(/^.*?\bbonus\s+(?:with\s+)?(?:a\s+)?(?:new\s+)?/i,'').replace(/\s*\+.*$/,'').trim();
+    name=name.replace(/\s+Bank or Investing$/i,'').replace(/\s+Coupons?$/i,'').trim();
+    const requirement=original.match(/\(([^)]*(?:requires?|deposit|balance|activity)[^)]*)\)/i)?.[1]||original.match(/Direct Deposit Not Required/i)?.[0]||'';
+    return {title:money?(name||original)+' · '+money:original,reported:verified===null&&!!money,requirement};
+  }
   function filtered(rows,q,availability,options={}){
     return grouped(rows).filter(x=>{
       const e=x.evidence,fields=e&&e.fields||{},has=Object.keys(fields).length>0;
@@ -278,7 +290,9 @@
       const link=x.links[0],date=x.match?.date;
       const verifiedAmount=amountFor(x);
       const verifiedRequirement=x.evidence?.status==='evidence-found'&&!x.evidence?.stale?x.evidence.fields?.qualifying_activity?.value:null;
-      h+='<article class="radar-card radar-card-compact radar-priority-'+x.priorityGroup+'"><div class="bt360-offer-title">'+bankLogo(x.title,true)+'<div class="bt360-grow"><h3>'+escape(x.title)+'</h3><p>'+escape(verifiedRequirement||'Requirements need review')+'</p></div><strong>'+(verifiedAmount===null?'Needs review':'$'+verifiedAmount.toLocaleString('en-US'))+'</strong></div><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+'</div>';
+      const display=displayTitle(x);
+      h+='<article class="radar-card radar-card-compact radar-priority-'+x.priorityGroup+'"><div class="bt360-offer-title">'+bankLogo(x.title,true)+'<div class="bt360-grow"><h3>'+escape(display.title)+'</h3><p>'+escape(verifiedRequirement||(display.requirement?'Source: '+display.requirement:'See offer for deposit and activity requirements'))+'</p></div></div><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(display.reported?'<span>Source-reported amount</span>':'')+(x.priorityGroup==='review'?'<span>Needs review · eligibility</span>':'')+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+'</div>';
+      h+='<details class="radar-original-title"><summary>Source title</summary><p>'+escape(x.title)+'</p></details>';
       if(x.match)h+='<div class="radar-tracker-context"><b>'+escape(x.match.label)+'</b>'+(date?'<time datetime="'+date+'">'+escape(typeof fD==='function'?fD(date):date)+'</time>':'')+'<p>'+escape(x.match.detail)+'</p></div>';
       h+='<p class="radar-area-note">'+escape(x.geo.detail)+'</p>';
       const proof=x.geo.proof||availabilityFor(x,officialCatalog);
@@ -287,7 +301,7 @@
     });
     return h;
   };
-  window.BTBankBonusFeed={validate:valid,group:grouped,filter:filtered,evidence:evidenceFor,amount:amountFor,geography,match:trackerMatch,prioritize,availability:availabilityFor,priorityIdentifiers};
+  window.BTBankBonusFeed={validate:valid,group:grouped,filter:filtered,evidence:evidenceFor,amount:amountFor,displayTitle,geography,match:trackerMatch,prioritize,availability:availabilityFor,priorityIdentifiers};
   // While the tab stays open, refresh the published snapshot without re-entering anything.
   const officialPoll=setInterval(()=>{if(typeof tab!=='undefined'&&tab==='bonuses')refreshOfficial();},60000);
   if(officialPoll&&typeof officialPoll.unref==='function')officialPoll.unref();

@@ -1,9 +1,9 @@
 # Verification and releases
 
-BonusTracker uses Playwright **Chromium only** for pull requests, main pushes,
-manual runs, nightly checks, and production release verification. Firefox and
-WebKit are intentionally not scheduled. This owner-selected policy supersedes
-the previous three-browser matrix.
+BonusTracker uses Playwright **Chromium** for quick pull requests and
+**Chromium + WebKit** for main pushes, manual runs, nightly checks and release
+verification. The v3.6.3 owner instruction restores iPhone Safari engine coverage.
+Firefox remains unscheduled.
 
 `Verify and Deploy BonusTracker` first checks structural release and cache
 integrity (including every JavaScript file), then runs every remaining unit suite
@@ -12,7 +12,7 @@ in the three areas: **bonus rules/imports, cloud backup, and UI**.
 or duplicated suite fails verification. Each suite has a 60-second deadline.
 Finance is retired and never gets a testing or navigation entry.
 
-The single browser job waits for all unit areas to pass. It uses the pinned
+The reusable browser workflow waits for all unit areas to pass. It uses the pinned
 `mcr.microsoft.com/playwright:v1.58.2-noble` image and the matching
 `@playwright/test@1.58.2` Node API. Browser binaries come from that image;
 CI never downloads or installs them. The Node API is separately cached using
@@ -32,7 +32,7 @@ group. It verifies without republishing. Only superseded pull-request
 runs may be canceled; release pushes and scheduled runs cannot cancel one
 another.
 
-Deployment waits for the complete unit, Chromium, and release verification
+Deployment waits for the complete unit, Chromium, WebKit, and release verification
 gate and publishes the exact verified source artifact. Synthetic provider
 and cloud mocks are used by all browser tests; tests never connect real banks.
 

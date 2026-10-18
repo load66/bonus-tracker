@@ -12,7 +12,7 @@ assert(sw.includes("if(req.mode==='navigate')")&&sw.includes("status:503"),'Navi
 assert(sw.includes('responseMatches(url.pathname,res)'),'Asset content-type validation missing');
 const workflow=fs.readFileSync('.github/workflows/close-rules.yml','utf8');
 assert(workflow.includes('group: bonus-tracker-${{ github.workflow }}-${{ github.ref }}'),'PR checks must not cancel queued production deployments');
-assert(/permissions:\n  contents: read\n/.test(workflow),'Workflow top-level permissions are not read-only');
+assert(/permissions:\r?\n  contents: read\r?\n/.test(workflow),'Workflow top-level permissions are not read-only');
 assert(/deploy:[\s\S]*permissions:[\s\S]*pages: write[\s\S]*id-token: write/.test(workflow),'Pages write permissions are not scoped to deploy');
 assert(workflow.indexOf('Package the exact verified site')<workflow.indexOf('deploy:'),'Verified artifact is not packaged before deploy');
 assert(!/deploy:[\s\S]*Checkout the exact verified commit/.test(workflow),'Deploy job rebuilds/checks out instead of using verified artifact');

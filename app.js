@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.2';
+const APP_VERSION='3.6.3';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4109,6 +4109,7 @@ function R(){if(tab==='finances')tab='tracker';captureProfileSectionState();cons
   else if(tab==='storage')h+=rTermsStorage();
   else if(tab==='bonuses')h+=typeof rBankBonuses==='function'?rBankBonuses():'<p>Bank bonus feed is loading.</p>';
   h+='</div>';
+  if(bt360Detail&&window.BT360)h+=window.BT360.detailFooter(sorted.find(e=>e.id===expanded));
   if(tab==='tracker'&&!bt360Detail){
     if(window.bt362AddOpen)h+='<div class="bt362-add-menu" role="group" aria-label="Add bonus actions"><button type="button" onclick="window.bt362AddOpen=false;showTemplates=!showTemplates;showAnalyzer=false;R()">Quick Add</button><button type="button" onclick="window.bt362AddOpen=false;showAnalyzer=!showAnalyzer;showTemplates=false;R()">Review promo terms</button><button type="button" onclick="window.bt362AddOpen=false;openAdd()">Add account manually</button></div>';
     h+='<button class="fab bt362-add-fab" type="button" aria-label="Add bonus" aria-expanded="'+!!window.bt362AddOpen+'" onclick="window.bt362AddOpen=!window.bt362AddOpen;R()">+</button>';
@@ -4281,6 +4282,7 @@ function renderCommunityReport(item){
  if(!curated)h+='<div class="ph-actions"><button class="ph-mini" onclick="openCommunityDPEditor('+profileSectionAttr(JSON.stringify(item.id))+')">Edit report</button><button class="ph-mini" onclick="deleteCommunityDP('+profileSectionAttr(JSON.stringify(item.id))+')">Remove</button></div>';
  return h+'</article>';
 }
+let dpGroupByBank=false;
 function rTips(){
  const groups=buildDatapointGroups(),catalog=window.BTCommunityCatalog||{};
  dpFiltersOpen=document.querySelector('.research-filters')?.open??dpFiltersOpen;
@@ -4292,6 +4294,7 @@ function rTips(){
  h+='<details class="research-filters"'+(dpFiltersOpen?' open':'')+'><summary>More filters and saved notes</summary>';
  h+='<div class="research-switch" role="group" aria-label="Report view">'+[['all','All reports'],['personal','My saved notes']].map(([v,t])=>'<button aria-pressed="'+(dpFilters.view===v)+'" onclick="setDPFilter(\'view\',\''+v+'\')">'+t+'</button>').join('')+'</div>';
  h+='<div class="research-filter-grid">';
+ h+='<label class="research-filter">Layout<select aria-label="Report layout" onchange="dpGroupByBank=this.value===\'bank\';R()"><option value="reports"'+(!dpGroupByBank?' selected':'')+'>Individual reports</option><option value="bank"'+(dpGroupByBank?' selected':'')+'>Group by bank</option></select></label>';
  h+=dpSelect('scope','Banks',[['all','All banks'],['mine','My tracked banks']]);
  h+=dpSelect('type','Account type',[['all','All account types'],['personal','Personal'],['business','Business']]);
  h+=dpSelect('result','Result',[['all','All results'],['worked','Reported success'],['failed','Reported failure'],['mixed','Mixed reports'],['pending','Still waiting'],['unknown','Not recorded']]);
@@ -4300,6 +4303,11 @@ function rTips(){
  h+='</div><button class="research-text-button" onclick="resetDPFilters()">Reset filters</button><p class="research-caveat">Filters apply to community reports. Your saved notes stay visible.</p></details>';
  if(!groups.length)h+='<div class="research-empty">No matching reports. Try another bank or reset the filters.</div>';
  groups.forEach(g=>{
+ if(!dpGroupByBank){
+   g.community.forEach(x=>{const date=dpReportDate(x),label=x.outcome==='worked'?'Counted':x.outcome==='failed'?"Didn't count":dpOutcome(x);h+='<details class="bt363-report-row"><summary><span class="bt363-report-heading"><b>'+esc(g.bank)+'</b><span class="research-result '+esc(x.outcome||'unknown')+'">'+esc(label)+'</span></span><span class="bt363-report-method">'+esc(x.method)+'</span><small>'+esc(x.sourceName||'Source not provided')+' · '+esc(date?fD(date):'Date not provided')+'</small></summary>'+renderCommunityReport(x)+'</details>'});
+   g.user.forEach(x=>{h+='<article class="bt363-report-row"><b>'+esc(g.bank)+'</b><span class="research-kind">Personal record</span><p>'+esc(x.method)+'</p><small>Saved note · '+esc(x.lastConfirmedAt?fD(x.lastConfirmedAt):'Date not provided')+'</small><p>'+esc(x.note||'No notes saved.')+'</p><button class="ph-mini" onclick="openUserDPEditor('+profileSectionAttr(JSON.stringify(x.id))+')">Edit</button><button class="ph-mini" onclick="deleteUserDP('+profileSectionAttr(JSON.stringify(x.id))+')">Remove</button></article>'});
+   return;
+ }
  const open=dpExpandedBankKey===g.key,last=dpReportDate(g.community[0]||{});
  h+='<section class="dp-bank research-bank"><button class="dp-head" type="button" aria-expanded="'+open+'" onclick="toggleDPBank(\''+g.key+'\')">'+bankLogo(g.bank,true)+'<span class="dp-info"><span class="dp-name">'+esc(g.bank)+'</span><span class="dp-meta">'+g.community.length+' community · '+g.user.length+' saved'+(g.accountType==='business'?' · Business':'')+(g.entryCount?' · Tracked':'')+'</span>'+(last?'<span class="research-latest">Latest dated result '+esc(fD(last))+'</span>':'')+'</span><span class="dp-arrow" aria-hidden="true">'+(open?'−':'+')+'</span></button>';
  if(open){
@@ -6526,7 +6534,6 @@ entries=sortE(entries);R();
       if(isX){
         h += '<div class="card-exp">';
         if(window.BT360)h+=window.BT360.detailPanels(e);
-        h += '<button type="button" class="bonus-ai-open" aria-label="Ask AI about this bonus" onclick="btOpenBonusAI(\''+esc(e.id)+'\')">Ask AI</button>';
         h += renderBankProfileSummary(e);
         h += renderClosePlan(e);
         h += renderMonthlyFeePlan(e);

@@ -51,6 +51,12 @@ changedEvidence.records[offer.url].officialCheckedAt='2020-01-01';
 assert.equal(sandbox.BTBankBonusFeed.evidence(offer,changedEvidence).changes.length,0,'Stale changes must not appear current');
 assert.equal(JSON.stringify([...storage]),before,'Review and filters changed saved account storage');
 console.log('Evidence review passed: amount uncertainty, fee/activity filters, change validation and private-data isolation');
+const compact=sandbox.BTBankBonusFeed.displayTitle({title:'(Update) Wells Fargo Premier $2,500 Bank or Investing Bonus (Requires $250k In Cash/Assets)'});
+assert.equal(compact.title,'Wells Fargo Premier · $2,500');
+assert.equal(compact.requirement,'Requires $250k In Cash/Assets');
+assert.equal(compact.reported,true);
+assert.equal(sandbox.BTBankBonusFeed.amount({title:'Example $500 Bonus'}),null,'Display-only amounts cannot become verified evidence');
+assert.equal(sandbox.BTBankBonusFeed.displayTitle({title:'[MO] Example Bank $200-$500 Checking Bonus'}).title,'Example Bank Checking · $200–$500');
 
 const malformed=JSON.parse(JSON.stringify(evidence));
 malformed.records[offer.url].fields.bonus.value='';

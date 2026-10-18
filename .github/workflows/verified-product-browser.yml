@@ -3,6 +3,10 @@ name: Verified Product Link Browser Matrix
 on:
   workflow_call:
     inputs:
+      browser:
+        required: false
+        type: string
+        default: chromium
       source_ref:
         required: false
         type: string
@@ -17,7 +21,7 @@ permissions:
 
 jobs:
   browser:
-    name: Browser Chromium
+    name: Browser ${{ inputs.browser }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     container:
@@ -42,7 +46,7 @@ jobs:
       - name: Verify existing browser workflows with per-test retry and timeout
         env:
           NODE_PATH: /tmp/bonus-browser/node_modules
-          BT_BROWSER: chromium
+          BT_BROWSER: ${{ inputs.browser }}
           BT_BROWSER_SITE_URL: ${{ inputs.site_url }}
           BT_BROWSER_RESULTS: /tmp/bonus-browser-results/test-results
         run: /tmp/bonus-browser/node_modules/.bin/playwright test --config tests/playwright.config.cjs
@@ -50,6 +54,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: browser-chromium-${{ github.run_attempt }}
+          name: browser-${{ inputs.browser }}-${{ github.run_attempt }}
           path: /tmp/bonus-browser-results
           if-no-files-found: error
