@@ -69,6 +69,21 @@ async function exercise(name,engine,url){
       return native(input,options);
     };
   });
+  // Observe every app DOM replacement, including the instant before BT360
+  // exists; a snapshot after load alone cannot catch a legacy first-paint flash.
+  await page.addInitScript(()=>{
+    window.__btPaintAudit={legacy:false,redesign:false,firstAppRender:''};
+    const inspect=()=>{
+      const root=document.getElementById('app'),audit=window.__btPaintAudit;
+      if(!root||!audit)return;
+      if(root.querySelector('.ops-hero,.bt360-legacy-actions'))audit.legacy=true;
+      if(root.querySelector('.bt360-hero'))audit.redesign=true;
+      if(!audit.firstAppRender&&root.querySelector('.hdr')){
+        audit.firstAppRender=root.querySelector('.bt360-segments')?'redesign':'legacy';
+      }
+    };
+    new MutationObserver(inspect).observe(document,{childList:true,subtree:true});
+  });
   const button=text=>page.getByRole('button',{name:text,exact:true});
   const openAdvancedActions=async()=>{const more=page.getByRole('button',{name:'More account actions'});if(await more.count()){await more.click();return}const row=page.locator('.bt366-compact-row').first();if(await row.count()){await row.click();await page.getByRole('button',{name:'More account actions'}).click();}};
   const wait=async fn=>{await page.waitForFunction(fn,{},{timeout:15000})};
@@ -102,6 +117,7 @@ async function exercise(name,engine,url){
   };
   try{
     await page.goto(url);await settleStartup();
+    check('first visible Tracker paint never uses legacy dashboard',await page.evaluate(()=>window.__btPaintAudit?.redesign===true&&window.__btPaintAudit?.legacy===false&&window.__btPaintAudit?.firstAppRender==='redesign'));
     await page.getByText('No accounts yet',{exact:true}).waitFor();
     check('year selector is a single pill and zero-count stages hidden',await page.locator('#bt362-year').count()===1&&await page.locator('.yr-btn').count()===0&&await page.locator('.bt360-stage').count()===0);
     check('Tracker floating add replaces bulky Quick Add bar',await page.locator('.bt362-add-fab').isVisible()&&await page.locator('.tracker-quick-actions').count()===0);
@@ -157,6 +173,7 @@ async function exercise(name,engine,url){
     check('deadline wording is visible',await page.locator('input[oninput*="\'requiredDaysText\'"]').inputValue()==='90 calendar days');
     await button('4 Review').click();await button('💾 Add account').click();
     await wait(()=>JSON.parse(localStorage.getItem('bt_e_v4')).length===1);
+    check('Needs you uses unboxed PDF heading and standalone priority card',await page.locator('.bt3719-needs > .bt3719-section-title').count()===1&&await page.locator('.bt3719-needs > .bt360-featured').count()===1&&await page.locator('.bt3719-needs.bt360-panel').count()===0);
     check('v3.6.1 panel headings render badges instead of literal HTML',await page.locator('.bt360-panel-title').evaluateAll(rows=>rows.some(e=>e.querySelector('h3')?.textContent==='Needs you'&&e.querySelector('.bt360-count'))&&rows.every(e=>!e.querySelector('h3')?.textContent.includes('<span'))));
     check('90-day deadline is exact',await page.evaluate(()=>reqDeadline(entries[0]))==='2026-05-01');
     const beforeDisclosure=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
