@@ -279,6 +279,32 @@ function saveTermsArchiveForNewCycle(e,source){
   bucket.bank=snap.bank;bucket.accountType=snap.accountType;bucket.current=snap;bucket.versions=versions;
   all[key]=bucket;return saveTermsArchive(all);
 }
+function backfillStoredTermsArchive(){
+ // Non-destructive migration: read existing Tracker and churn records, add only
+ // missing archived revisions. Never change dates, amounts or saved rules.
+ if(!Array.isArray(entries)||!entries.length)return 0;
+ const all=loadTermsArchive();let added=0;
+ for(const e of entries){
+  const snap=termsArchiveSnapshot(e,'legacy-enrolled-record-backfill');
+  if(!snap)continue;
+  const key=termsArchiveKey(snap);
+  const bucket=all[key]&&typeof all[key]==='object'?all[key]:{bank:snap.bank,accountType:snap.accountType,current:null,versions:[]};
+  const cur=bucket.current&&typeof bucket.current==='object'?bucket.current:null;
+  const versions=Array.isArray(bucket.versions)?bucket.versions:[];
+  const exists=[cur,...versions].some(v=>v&&v.entryId===snap.entryId&&v.opened===snap.opened&&termsArchiveSignature(v)===termsArchiveSignature(snap));
+  if(exists)continue;
+  if(!cur){bucket.current=snap;}
+  else if(String(snap.opened)>String(cur.opened)){
+   bucket.versions=[cur,...versions];bucket.current=snap;
+  }else{
+   bucket.versions=[snap,...versions];
+  }
+  // Retain existing history: no reordering of eligibility clocks or overwrites.
+  all[key]=bucket;added++;
+ }
+ if(added&&!saveTermsArchive(all))return 0;
+ return added;
+}
 function termsArchiveRows(){
   const all=loadTermsArchive();
   return Object.values(all).filter(x=>x&&x.current).sort((a,b)=>String(a.current?.bank||a.bank||'').localeCompare(String(b.current?.bank||b.bank||'')))
@@ -6693,6 +6719,10 @@ entries=sortE(entries);R();
 (function(){try{const st=document.createElement('style');st.textContent="\n/* legacy fee box compatibility */\n.monthly-fee-plan.safe{border-color:#bbf7d0;background:#f0fdf4}\n.monthly-fee-plan.warn{border-color:#fde68a;background:#fffbeb}\n.monthly-fee-plan .tc-label{letter-spacing:.11em}\n";document.head.appendChild(st)}catch{}})();
 
 window.btStorageWritesReady=true;
+// Archive existing enrolled cycles on upgrade, including previously closed ones.
+// Cloud recovery already allowlists this key and queues an upload after local save.
+setTimeout(()=>{try{backfillStoredTermsArchive()}catch{}},1000);
+
 
 function btVerifiedMutation(action){
   let before,previousEntries;
