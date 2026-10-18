@@ -223,7 +223,7 @@ async function exercise(name,engine,url){
       !/\b(?:null|structured rule|anchor|verified \$0|provenance)\b/i.test(await page.locator('#app').innerText()));
     await page.evaluate(()=>{
       document.querySelector('.scroll').scrollTop=0;
-      document.querySelectorAll('.bt-toast').forEach(el=>el.style.opacity='0');
+      document.querySelectorAll('.bt-toast, .bt-notice').forEach(el=>el.style.opacity='0');
     });
     await page.screenshot({path:path.join(output,name+'-chase-bonus-detail-in-progress-390.png')});
     await page.evaluate(()=>document.querySelector('.scroll').scrollTop=document.querySelector('.scroll').scrollHeight);
@@ -271,7 +271,7 @@ async function exercise(name,engine,url){
     }));
     await page.evaluate(()=>{
       document.querySelector('.scroll').scrollTop=0;
-      document.querySelectorAll('.bt-toast').forEach(el=>el.style.opacity='0');
+      document.querySelectorAll('.bt-toast, .bt-notice').forEach(el=>el.style.opacity='0');
     });
     await page.screenshot({path:path.join(output,name+'-bonus-detail-ready-mockup-390.png')});
     await page.locator('.bt360-source').scrollIntoViewIfNeeded();
