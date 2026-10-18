@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex · v3.6.18 cooldown archive labels · codex/v3.6.18-cooldown-archive-labels
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.18 cooldown archive wording (codex/v3.6.18-cooldown-archive-labels): for undated historical repeat-bonus entries, show last-saved bonus and Details rather than generic Review, and display date unavailable rather than presenting an unverified eligibility rule as action-confirmed. Existing v3.6.17 saved fee projection, immutable T&C archive, JSON import and churn/closure engines unchanged. Synthetic no-date/read-only UI regression added. Bonus/cloud/UI, Chromium/WebKit and GitHub Pages checks pending.
 
 - v3.6.17 historical cooldown fee fallback (`codex/v3.6.17-cooldown-last-saved`): read-only two-row fee display for archived accounts uses exact-cycle T&C first, then clearly labeled latest saved terms or same-audience bank profile; never mutates data, financial/close/churn rules or existing JSON import format. Missing old amounts display 'Not listed in saved terms' (not invented $0). Keeps required share-savings fees distinct from checking and avoids presenting saved bonus clawback as a service fee. Synthetic regression tests added; verify CI and main Pages after merge. Prior October 14 backup is reference-only, never uploaded to public GitHub or production. 
 
