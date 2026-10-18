@@ -4111,7 +4111,7 @@ function R(){if(tab==='finances')tab='tracker';captureProfileSectionState();cons
   h+='</div>';
   if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';
   h+='<div class="tabs">';
-  ['tracker','bonuses','tax','tips','archive'].forEach((t,i)=>{const full=['Tracker','Bank Bonuses','Tax','Datapoints','Archive · T&C Archive'][i],short=['Tracker','Bonuses','Tax','Data','Archive'][i];h+='<button class="tb'+(tab===t?' on':'')+'" aria-label="'+full+'" aria-current="'+(tab===t?'page':'false')+'" onclick="switchMainTab(\''+t+'\')">'+[I.grid,I.tips,I.doc,I.tips,I.lock][i]+'<span>'+short+'</span></button>'});
+  ['tracker','bonuses','tax','tips','archive'].forEach((t,i)=>{const full=['Tracker','Bank Bonuses','Tax','Datapoints','Archive'][i],short=['Tracker','Bonuses','Tax','Data','Archive'][i];h+='<button class="tb'+(tab===t?' on':'')+'" aria-label="'+full+'" aria-current="'+(tab===t?'page':'false')+'" onclick="switchMainTab(\''+t+'\')">'+[I.grid,I.tips,I.doc,I.tips,I.lock][i]+'<span>'+short+'</span></button>'});
   h+='</div>';
   if(window.bt360PhonebookOpen)h+='<div class="bt360-sheet-backdrop" onclick="BT360.closePhonebook()"><section class="bt360-sheet" onclick="event.stopPropagation()"><button onclick="BT360.closePhonebook()">← Settings</button>'+rPhone()+'</section></div>';
   if(window.bt360SettingsOpen&&window.BT360)h+=window.BT360.settings();
