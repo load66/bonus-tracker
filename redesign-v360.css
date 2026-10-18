@@ -461,3 +461,12 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
 .bt360-detail-active :is(.dd-box,.rcv-box,.fee-box,.close-modal,.ow-box,.cbox){background:#12141C!important;border:1px solid #1E212C!important;color:#F2F3F7!important}
 .bt360-detail-active :is(.dd-box,.rcv-box,.fee-box,.close-modal) :is(.inline-trigger,.dd-chip,.fee-mo-btn,.close-mode){background:#15171F!important;color:#F2F3F7!important;border:1px solid #2B2E39!important;box-shadow:none!important}
 .bt360-detail-active :is(.dd-box,.rcv-box,.fee-box,.close-modal) :is(input,textarea,select){background:#15171F!important;color:#F2F3F7!important;border-color:#363A45!important}
+
+
+/* Small phones: protect the timer headline's minimum readable width without hiding its countdown. */
+@media (max-width:360px) {
+ .bt3611-timer-row>summary{gap:5px!important}
+ .bt3611-timer-icon{width:28px!important;height:28px!important;flex:0 0 28px!important;font-size:14px!important}
+ .bt3611-timer-row .bt360-chip{max-width:67px!important;flex:0 0 auto;padding:4px 5px!important;font-size:9px!important}
+ .bt3611-timer-body{min-width:120px!important;flex:1 1 auto}
+}
