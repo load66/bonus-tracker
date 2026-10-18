@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: bonus-tracker-bank-feed-publish
@@ -16,7 +18,10 @@ jobs:
   publish:
     name: Update and commit canonical bank offers
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,3 +46,17 @@ jobs:
           git commit -m "data: refresh canonical bank offers"
           git pull --rebase origin main
           git push origin HEAD:main
+      - name: Package refreshed site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: .
+          name: bank-feed-pages-${{ github.run_attempt }}
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: Publish refreshed feed to GitHub Pages
+        id: pages
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: bank-feed-pages-${{ github.run_attempt }}
