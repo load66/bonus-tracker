@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex · v3.6.19 dashboard mockup + first paint · codex/v3.6.19-dashboard-mockup-first-paint
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.19 mobile Main mockup and first-paint fix (`codex/v3.6.19-dashboard-mockup-first-paint`): the first visible render is deferred until full BT360 startup, with a branded skeleton and versioned service worker. Needs you is an unboxed heading with standalone prioritized action tile and separate compact rows; Eligible soon is similarly unboxed. Deadline/action presentation reads canonical getAttentionSuggestions; recorded task/structured-rule progress is display-only and never implies bank transactions were observed. Unit and Chromium/WebKit initial-DOM-flicker regression and mobile layout checks required before merge, then exact main Pages publication. No financial/churn/JSON data changes.
 
 - v3.6.18 cooldown churn reference clarity (`codex/v3.6.18-cooldown-churn-reference`): preserve historical fee display from v3.6.17; show last saved churn wording and bonus identity rather than a generic Review in date-unknown closed accounts. Legacy/unverified estimated dates are not counted as eligible now; canonical eligibility rules and dates are unchanged. Synthetic regression added, unit/Chromium/WebKit/Pages CI gated.
 
