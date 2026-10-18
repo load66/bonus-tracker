@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
 // Version 3.6.14: read-only saved fee history across active and archive views.
 
-const V = 'bt-v3.6.14-feehistory1';
+const V = 'bt-v3.6.14-feehistory2';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
