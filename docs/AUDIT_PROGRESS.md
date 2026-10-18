@@ -1,10 +1,16 @@
 # Audit progress
 
-Active agent: codex (BonusTracker full-flow audit; codex/bonustracker-restore-safety-audit)
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- BonusTracker v3.5.2 release audit: PR https://github.com/load66/bonus-tracker/pull/164. Downloaded-file restore now stops when its cloud safety backup or file export fails; device reset clears its local cloud-protection setting, not server backups or login.
+- Failing-before synthetic regression: https://github.com/load66/bonus-tracker/actions/runs/39080914103 (downloaded restore continued after failed safety backup). Passing PR full CI: https://github.com/load66/bonus-tracker/actions/runs/39081160600 (bonus/cloud/UI and Chromium, Firefox, WebKit).
+- Independent local baseline check: exact v3.5.1 Pages deployment artifact, Node bonus/cloud/UI suites and release verification PASS after restoring the workflow files excluded from the published package. PR candidate verification executed in isolated GitHub Actions workers, not against production user data.
+- Verification limits: real cloud-account backup/restore and destructive device reset were NOT attempted. Browser cloud requests and provider responses are synthetic; live Pages JavaScript response could not be independently fetched. Owner-only Finance R2 retirement is a separate, unexecuted procedure.
+- Next step: merge green frontend PR #164, verify Pages deploy on the merged commit and rerun local suites against the exact published v3.5.2 artifact. No backend change required.
 
 - Release checkpoint (2026-10-17): Finance frontend removed via PR #162, merge `28d110b3330da4d0d3e6a8b00c3984ba0f248e6e`; v3.5.1 and service-worker cache `bt-v3.5.1-retire1`.
 - Main-branch Verify and Deploy https://github.com/load66/bonus-tracker/actions/runs/39079048818 PASS: bonus/cloud/UI suites and Playwright Chromium, Firefox and WebKit. Main-branch Pages build/deploy https://github.com/load66/bonus-tracker/actions/runs/39079048358 PASS on the same merge commit.
