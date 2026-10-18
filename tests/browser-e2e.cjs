@@ -162,7 +162,7 @@ async function exercise(name,engine,url){
     const beforeDisclosure=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     check('Tracker no longer displays the legacy Action Center',await page.locator('.bt360-legacy-actions').count()===0);
     check('Tracker shows compact account row, not old full card',await page.locator('.bt366-compact-row').count()===1&&await page.locator('.bt366-compact-row .card-mini-chip').count()===0);
-    for(const section of ['Bonuses','Tax','Data','Archive','Tracker']){
+    for(const section of ['Bank Bonuses','Tax','Datapoints','Archive','Tracker']){
       await button(section).click();
       check(section+' rendered text uses customer wording',await page.locator('#app').innerText().then(s=>!/(\bnull\b|structured rule|\banchor\b|verified \$0|\bprovenance\b)/i.test(s)));
     }
