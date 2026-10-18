@@ -544,3 +544,60 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
 
 /* Archived/cooldown fee history is informational, never a current-offer certification. */
 .bt3617-historical-note{font-size:11px;color:var(--muted);margin:0 0 7px;line-height:1.4}
+
+
+/* v3.6.19 — first-page information hierarchy follows the supplied Main mockup.
+   One featured task, a distinct compact-list surface, and unboxed headings. */
+.bt3719-needs,.bt3719-soon{margin:2px 0 18px;min-width:0}
+.bt3719-section-title{display:flex;align-items:baseline;justify-content:flex-start;gap:9px;margin:8px 4px 11px;min-width:0}
+.bt3719-section-title h3{font-size:17px;line-height:1.25;font-weight:900;letter-spacing:-.35px;flex:none}
+.bt3719-section-title .bt360-count,.bt3719-section-title .bt360-subtitle{font-size:12px;font-weight:600;color:#9da3b4}
+.bt3719-needs .bt360-featured{
+ background:#12141c!important;
+ border:1px solid #513238!important;
+ border-radius:19px!important;
+ padding:15px 14px 14px!important;
+ margin:0 0 10px!important;
+ box-shadow:none!important;
+}
+.bt3719-needs .bt360-feature-head{gap:12px;align-items:center}
+.bt3719-needs .bt360-feature-head .blogo{height:42px!important;width:42px!important;min-width:42px!important;border-radius:12px!important}
+.bt3719-needs .bt360-feature-head b{font-size:15px;font-weight:900;line-height:1.4;letter-spacing:-.2px}
+.bt3719-needs .bt360-feature-head p{font-size:12px;line-height:1.4;margin:2px 0 0;color:#a0a6b8}
+.bt3719-needs .bt360-feature-head .bt360-chip{align-self:center;flex:none;max-width:35%;overflow:hidden;text-overflow:ellipsis}
+.bt3719-due.urgent{background:#342026!important;color:#ff8f96!important}
+.bt3719-due.soon{background:#392b1f!important;color:#ffbe7b!important}
+.bt3719-progress{margin:16px 0 12px;min-width:0}
+.bt3719-progress-label{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px;color:#a0a6b8;font-size:12px}
+.bt3719-progress-label b{color:#f2f3f7;font-size:12px;font-weight:900;font-variant-numeric:tabular-nums;text-align:right}
+.bt3719-progress .bt360-track{height:6px;background:#282a35;overflow:hidden;border-radius:999px}
+.bt3719-progress .bt360-track i{background:#5be3b0;border-radius:999px}
+.bt3719-needs .bt360-actions{gap:9px;margin-top:12px}
+.bt3719-needs .bt360-actions button{min-height:46px;border-radius:13px;font-size:13px;font-weight:900}
+.bt3719-needs .bt360-actions .bt360-primary{flex:1.4}
+.bt3719-needs .bt360-actions .bt360-secondary{flex:.7}
+.bt3719-attention-list,.bt3719-soon-list{border:1px solid #1e212c!important;border-radius:19px!important;background:#12141c!important;overflow:hidden}
+.bt3719-attention-list .bt360-list-row,.bt3719-soon-list .bt360-list-row{background:transparent!important;min-height:73px;padding:12px 14px;gap:12px;align-items:center}
+.bt3719-attention-list .bt360-list-row:not(:last-child),.bt3719-soon-list .bt360-list-row:not(:last-child){border-bottom:1px solid #20232c}
+.bt3719-attention-list .bt360-list-row .blogo,.bt3719-soon-list .bt360-list-row .blogo{height:40px!important;width:40px!important;min-width:40px!important}
+.bt3719-attention-list .bt360-list-row b,.bt3719-soon-list .bt360-list-row b{font-size:13px;line-height:1.4;font-weight:900;letter-spacing:-.1px}
+.bt3719-attention-list .bt360-list-row small,.bt3719-soon-list .bt360-list-row small{font-size:11px;line-height:1.45;color:#a0a6b8;margin-top:2px}
+.bt3719-attention-list .bt360-list-row .bt3719-task-context{color:#80889d}
+.bt3719-task-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:none;max-width:35%}
+.bt3719-task-right strong{font-size:13px;font-weight:900;font-variant-numeric:tabular-nums;color:#f2f3f7}
+.bt3719-attention-list .bt360-chip,.bt3719-soon-list .bt360-chip{font-size:10px;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.bt3719-soon .bt3719-section-title .bt360-link{margin-left:auto;font-size:12px;min-height:30px;padding:0}
+.bt3719-soon .bt360-list-row{min-height:68px}
+@media(max-width:359px){
+ .bt3719-section-title{gap:6px}
+ .bt3719-section-title h3{font-size:15px}
+ .bt3719-section-title .bt360-count,.bt3719-section-title .bt360-subtitle{font-size:10px}
+ .bt3719-needs .bt360-feature-head{gap:8px}
+ .bt3719-needs .bt360-feature-head b{font-size:13px}
+ .bt3719-needs .bt360-feature-head .bt360-chip{font-size:9px;padding:5px 6px}
+ .bt3719-attention-list .bt360-list-row{padding:10px 11px;gap:8px}
+ .bt3719-attention-list .bt360-list-row b{font-size:12px}
+ .bt3719-attention-list .bt360-list-row .blogo{min-width:36px!important;width:36px!important;height:36px!important}
+ .bt3719-task-right{max-width:32%}
+ .bt3719-soon .bt3719-section-title .bt360-link{font-size:10px}
+}
