@@ -169,7 +169,7 @@ async function exercise(name,engine,url){
     await page.locator('.bt366-compact-row').first().click();
     await page.setViewportSize({width:390,height:844});
     check('detail has exactly one header and one five-step strip',
-      await page.locator('.bt360-detail-header').count()===1&&await page.locator('.bt360-steps').count()===1&&await page.locator('.bt360-steps span').count()===5&&await page.locator('.bt360-detail-card .card-h').count()===0);
+      await page.locator('.bt360-detail-header').count()===1&&await page.locator('.bt360-steps').count()===1&&await page.locator('.bt371-steps-row span').count()===5&&await page.locator('.bt360-detail-card .card-h').count()===0);
     check('legacy LIFECYCLE strip and CHECKLIST label removed',await page.locator('.bt360-detail-card .bt-life').count()===0&&await page.getByText('Checklist',{exact:true}).count()===0);
     check('stage in progress never suggests bonus received',
       await page.locator('.bt360-detail-footer .bt360-primary').innerText().then(t=>t==='Record deposit'||t==='Open next task'));
@@ -345,7 +345,7 @@ async function exercise(name,engine,url){
     await page.screenshot({path:path.join(output,name+'-v366-tracker-390.png')});
     await page.locator('[data-bt-entry-id="e2e-lafayette"] .bt366-compact-row').click();
     check('Lafayette has one new detail header and one progress strip',
-      await page.locator('.bt360-detail-header').count()===1&&await page.locator('.bt360-steps').count()===1&&await page.locator('.bt360-steps span').count()===5);
+      await page.locator('.bt360-detail-header').count()===1&&await page.locator('.bt360-steps').count()===1&&await page.locator('.bt371-steps-row span').count()===5);
     check('Lafayette with 1 of 2 tasks opens next task instead of confirming payout',
       await page.locator('.bt360-detail-footer .bt360-primary').innerText()==='Open next task');
     await page.screenshot({path:path.join(output,name+'-v366-lafayette-detail-390.png')});
