@@ -89,7 +89,7 @@ async function exercise(name,engine,url){
   };
   const edit=async()=>{
     await openAdvancedActions();
-    await page.getByRole('button',{name:'✏️ Edit account Details, dates, bonus, rules',exact:true}).click();
+    await page.getByRole('button',{name:'Edit account Details, dates, bonus, rules',exact:true}).click();
   };
   const close=async()=>{
     const action=page.getByRole('button',{name:/^Mark account closed/});
@@ -172,6 +172,48 @@ async function exercise(name,engine,url){
     check('Manage is absent; account controls open from header menu',
       await page.getByRole('button',{name:'Manage',exact:true}).count()===0&&await page.getByRole('button',{name:'More account actions'}).count()===1);
     check('fixed bar is outside scrolling card',await page.locator('.bt360-detail-footer').evaluate(e=>e.parentElement?.id==='app'&&!e.closest('.scroll')));
+
+    // v3.6.12: Manage is a dark bottom sheet, with no sticky footer collision.
+    const beforeManage=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
+    await page.getByRole('button',{name:'More account actions'}).click();
+    const manage=page.getByRole('dialog',{name:'Account actions'});
+    check('Manage opens as an accessible dark sheet',await manage.isVisible()&&await manage.evaluate(e=>{
+      const c=getComputedStyle(e);return c.backgroundColor==='rgb(18, 20, 28)'&&c.borderTopLeftRadius==='24px';
+    }));
+    check('sheet suppresses sticky detail actions completely',await page.locator('.bt360-detail-footer').count()===0);
+    check('Manage shows human stage and never an internal code',
+      await manage.locator('.bt-ba-stage').innerText().then(t=>!/^\s*[A-Z_ ]{4,}\s*$/.test(t)&&t.trim().length>2));
+    check('Manage uses line SVG icons rather than emoji',
+      await manage.locator('.bt-ba-list > .bt-ba-mini .ico').evaluateAll(nodes=>nodes.length>=3&&nodes.every(n=>!!n.querySelector('svg')&&!/[\u{1F300}-\u{1FAFF}]/u.test(n.textContent))));
+    check('Manage action order and separate destructive group',
+      await manage.evaluate(e=>{
+        const names=[...e.querySelectorAll('.bt-ba-list>.bt-ba-mini b')].map(n=>n.textContent);
+        return names.includes('Edit account')&&names.includes('Add task')&&names.includes('Add timer')
+          &&names.includes('Activity')&&names.every(n=>!/^Ask AI$|^Confirm bonus received$/.test(n))
+          &&e.querySelector('.bt-ba-delete .bt-ba-mini b')?.textContent==='Delete account';
+      }));
+    for(const width of [320,390,430]){
+      await page.setViewportSize({width,height:844});
+      const last=manage.locator('.bt-ba-delete .bt-ba-mini');
+      await last.scrollIntoViewIfNeeded();
+      check('Manage fits above nav and Delete is fully tappable at '+width+'px',
+        await manage.evaluate(e=>{
+          const b=e.getBoundingClientRect(),n=document.querySelector('.tabs').getBoundingClientRect(),
+            d=e.querySelector('.bt-ba-delete .bt-ba-mini').getBoundingClientRect();
+          return b.width<=innerWidth+1&&e.scrollWidth<=e.clientWidth+1&&b.bottom<=n.top+3
+            &&d.top>=b.top-2&&d.bottom<=b.bottom+2&&d.height>=44;
+        }));
+      if(width===390)await page.screenshot({path:path.join(output,name+'-manage-sheet-390.png')});
+    }
+    await manage.locator('.bt-ba-delete .bt-ba-mini').click();
+    check('Delete still uses existing confirmation and does not delete automatically',
+      await page.locator('.cbox').isVisible()&&await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,beforeManage));
+    await button('Cancel').click();
+    await page.getByRole('button',{name:'Close account actions'}).click();
+    check('closing Manage restores sticky footer and unchanged record',
+      await page.locator('.bt360-detail-footer').isVisible()&&await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,beforeManage));
+    await page.setViewportSize({width:390,height:844});
+
     // Synthetic Chase v3.6.11 reference — in memory only, never written to storage.
     await page.evaluate(()=>{
       const e=entries[0];
@@ -289,10 +331,10 @@ async function exercise(name,engine,url){
     check('phone editor carries bank name and account type',await page.locator('#ph_new_bank').inputValue()==='E2E Verification Bank'&&await page.locator('#ph_new_personal').isVisible());
     await page.getByRole('button',{name:'← Settings'}).click();
 
-    await openAdvancedActions();await button('⏱️ Add timer Set a reminder or deadline').click();
+    await openAdvancedActions();await button('Add timer Set a reminder or deadline').click();
     await button('Start + Days').click();await page.locator('#tem_text').fill('E2E manual reminder');await page.locator('#tem_start').fill('2026-03-08');await page.locator('#tem_days').fill('1');await button('Add timer').click();
     check('timer uses calendar days across DST',(await record()).customTimers.some(t=>t.text==='E2E manual reminder'&&t.date==='2026-03-09'));
-    await openAdvancedActions();await button('✅ Add task Track a requirement').click();await page.getByPlaceholder('e.g. Make 1 debit card transaction').fill('E2E checklist task');await button('Save').click();
+    await openAdvancedActions();await button('Add task Track a requirement').click();await page.getByPlaceholder('e.g. Make 1 debit card transaction').fill('E2E checklist task');await button('Save').click();
     await page.locator('.bt3611-ready-extras > summary').click();
     await page.getByRole('checkbox',{name:'E2E checklist task',exact:true}).click();
     check('checklist completion persists in redesigned Requirements',(await record()).checklist.some(x=>x.text==='E2E checklist task'&&x.done)&&await page.locator('.bt360-panel').filter({hasText:'Requirements'}).count()>0);
@@ -550,7 +592,8 @@ async function exercise(name,engine,url){
     // Use the named account-menu action: the footer can switch from Ask AI to Keep open
     // as the lifecycle reconciles, so positional button clicks could navigate back.
     await page.getByRole('button',{name:'More account actions'}).click();
-    await page.locator('.bt-ba-mini').filter({hasText:'Ask AI'}).click();
+    await page.locator('.bt-ba-more > summary').click();
+    await page.locator('.bt-ba-more-body .bt-ba-mini').filter({hasText:'Ask AI'}).click();
     await page.locator('.bonus-ai-heading').waitFor({state:'visible'});
     check('Tracker AI opens for one selected bank',(await page.locator('.bonus-ai-heading').innerText()).includes('E2E Verification Bank')&&await page.evaluate(()=>window.__bonusAITest.calls.length===0));
     check('local answers need no login',await page.locator('#bonus-ai-login').isHidden());
