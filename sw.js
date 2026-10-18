@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.4: canonical feed release plus stable input focus after rerender.
+// Version 3.6.5: working tracker shortcuts and compact protection status.
 
-const V = 'bt-v3.6.4-feed2';
+const V = 'bt-v3.6.5-concern1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
