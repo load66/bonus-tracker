@@ -804,7 +804,7 @@ async function exercise(name,engine,url){
     const termsBank=page.locator('.archive-bank').first();
     check('terms bank starts collapsed',!(await termsBank.evaluate(e=>e.open)));
     await termsBank.locator(':scope > summary').click();
-    await termsBank.getByText('Read original saved terms',{exact:true}).click();
+    await termsBank.getByText('Read original saved promotion',{exact:true}).click();
     check('archive reveals original evidence',(await termsBank.innerText()).includes('E2E Verification Bank checking promotional terms'));
     for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
