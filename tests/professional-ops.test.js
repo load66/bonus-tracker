@@ -8,8 +8,11 @@ const index=fs.readFileSync('index.html','utf8');
 const feedback=fs.readFileSync('ui-feedback.js','utf8');
 const entryImport=fs.readFileSync('entry-link-import.js','utf8');
 const attention=fs.readFileSync('smart-attention.js','utf8');
-for(const token of ['function bonusPipelineMetrics','Collected','Awaiting','In Progress','Action Needed','function renderActionCenter','function renderCardProgressLine']){
-  assert(app.includes(token),'Professional dashboard/card architecture missing: '+token);
+for(const token of ['function bonusPipelineMetrics','function renderActionCenter','function renderCardProgressLine']){
+  assert(app.includes(token),'Canonical professional operations engine missing: '+token);
+}
+for(const token of ['COLLECTED IN ','in progress','awaiting','Action needed','function tasks(rows)','function stages(rows)']){
+  assert(redesigned.includes(token),'Mockup dashboard/stages/actions missing: '+token);
 }
 for(const token of ['COLLECTED IN ','function hero(rows,year,metrics)','function tasks(rows)']){
   assert(redesigned.includes(token),'Redesigned operations UI missing: '+token);
