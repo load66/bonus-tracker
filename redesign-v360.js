@@ -362,8 +362,12 @@ function feeSnapshot(e){
  const original=(...items)=>items.map(x=>String(x??'').trim()).find(Boolean)||'';
  const monthlyRaw=original(e.monthlyFeeAmountText,e.analysis?.monthlyFeeAmountText,e.monthlyFeeYNText,e.analysis?.monthlyFeeYNText);
  const monthlyQuote=original(fee?.evidence?.quote,monthlyRaw);
+ // Some legacy imports stored a required share/savings charge in the
+ // generic monthly-fee field. Honor the explicit checking product amount.
+ const checkingNoFee=!fee&&/\b(?:personal\s+)?checking\s*:\s*\$0\s*(?:monthly|maintenance|service)?/i.test(String(e.monthlyFeeYNText||''));
  let monthly='Not confirmed',monthlyKnown=false;
- if(typeof fee?.amount==='number'&&Number.isFinite(fee.amount)&&fee.amount>=0){
+ if(checkingNoFee){monthly='$0';monthlyKnown=true}
+ else if(typeof fee?.amount==='number'&&Number.isFinite(fee.amount)&&fee.amount>=0){
   monthly=amount(fee.amount);monthlyKnown=true;
  }else{
   // These are *fee amount* fields. Do not mistake a $500 waiver threshold
@@ -400,6 +404,10 @@ function feeSnapshot(e){
    const waivers=f?.waiver?.conditions?.length?' · waiver '+(f.waiver.operator==='all'?'ALL: ':f.waiver.operator==='any'?'ANY: ':'')+f.waiver.conditions.map(waiverCondition).join(f.waiver.operator==='all'?' + ':' · '):'';
    return label+': '+charge+minimum+waivers;
   });
+ if(checkingNoFee&&!companions.length){
+  const share=String(e.monthlyFeeYNText||'').match(/(?:required\s+)?(?:share\s+savings|savings)\s*:\s*(\$\s*[\d,.]+\s*\/\s*month)[^.;]*/i);
+  if(share)companions.push('Share Savings: '+share[1].replace(/\s+/g,' ')+' · '+String(e.monthlyFeeWaiverText||'').trim());
+ }
  const terms=[monthlyQuote,waiverSource,e.monthlyFeeWaiverText,e.avoidMonthlyFeeText,fee?.evidence?.quote,e.feeScheduleRaw]
   .map(v=>String(v||'').trim()).filter(Boolean);
  const quote=original(closure.feeEvidence?.quote,e.earlyTerminationFeeText,e.analysis?.earlyTerminationFeeText,
