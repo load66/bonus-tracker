@@ -43,3 +43,12 @@ try{
  assert.throws(()=>entries({firefox:2,webkit:3}),/Chromium browser engine is unavailable/);
 }finally{if(original===undefined)delete process.env.BT_BROWSER;else process.env.BT_BROWSER=original}
 console.log('CI coverage passed: all unit areas, Chromium-only Playwright, isolated nightly, pinned browser and retries');
+
+
+// Offer updates are a writer workflow, not an ephemeral release-step rewrite.
+const feedWriter=fs.readFileSync('.github/workflows/refresh-bank-feed.yml','utf8');
+assert.ok(feedWriter.includes("cron: '17 */6 * * *'"),'Bank offers must refresh every six hours');
+assert.ok(feedWriter.includes('python3 scripts/update-bank-feed.py'),'The publisher invokes the canonical RSS collector');
+assert.ok(feedWriter.includes('git push origin HEAD:main'),'The refreshed JSON is committed, not lost in a temporary CI workspace');
+assert.ok(feedWriter.includes('gh workflow run close-rules.yml --ref main'),'Updated feed receives verified Pages publication');
+assert.ok(!workflow.includes('python3 scripts/update-bank-feed.py'),'Release verification cannot alter an uncommitted feed snapshot');
