@@ -92,7 +92,7 @@ async function exercise(name,engine,url){
     await page.getByRole('button',{name:'✏️ Edit account Details, dates, bonus, rules',exact:true}).click();
   };
   const close=async()=>{
-    await page.getByRole('button',{name:'Mark account closed',exact:true}).click();
+    await page.getByRole('button',{name:/^Mark account closed/}).click();
     await page.locator('#cp_date').fill('2026-05-01');
     await page.locator('#cp_monthly_checked').selectOption('yes');
     await button('Next').click();await button('Next').click();await button('Review').click();await button('Save Closed').click();await button('OK').click();
@@ -183,7 +183,7 @@ async function exercise(name,engine,url){
     if(!await page.locator('.bt360-detail-footer .bt360-primary').count())await page.locator('.bt366-compact-row').first().click();
     await page.getByRole('button',{name:'Record deposit'}).click();await page.locator('#req_date').fill('2026-04-01');await button('Save').click();await button('OK').click();
     check('requirements and payout stay separate',(await record()).reqMet==='2026-04-01'&&!(await record()).bonusRecd);
-    await button('Confirm received').click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('OK').click();
+    await page.getByRole('button',{name:/^Confirm received/}).click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('OK').click();
     check('bonus receipt updates close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
     check('ready-to-close highlights Close milestone',await page.locator('.bt360-steps span.current').innerText()==='Close');
     check('missing phone offers bank-specific editor only when ready',await page.getByRole('button',{name:'Add bank phone number'}).isVisible());
