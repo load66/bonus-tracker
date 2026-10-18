@@ -173,7 +173,7 @@ async function exercise(name,engine,url){
       await page.getByRole('button',{name:'Manage',exact:true}).count()===0&&await page.getByRole('button',{name:'More account actions'}).count()===1);
     check('fixed bar is outside scrolling card',await page.locator('.bt360-detail-footer').evaluate(e=>e.parentElement?.id==='app'&&!e.closest('.scroll')));
 
-    // v3.6.12: Manage is a dark bottom sheet, with no sticky footer collision.
+    // v3.6.13: Manage is a dark bottom sheet, with no sticky footer collision.
     const beforeManage=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     await page.getByRole('button',{name:'More account actions'}).click();
     const manage=page.getByRole('dialog',{name:'Account actions'});
