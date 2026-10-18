@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT Codex | offer feed lifecycle v3.6.3 | codex/v3.6.3-offer-feed-lifecycle
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- BonusTracker v3.6.3 offer-feed lifecycle: branch `codex/v3.6.3-offer-feed-lifecycle` updates safe RSS identity and 90-day persistence, cross-source canonical links, newest headline/reward changes, explicit summary expiry and ended tombstones. A separate scheduled writer runs every six hours and commits the feed, dispatching exact verified Pages deployment; release packaging never refreshes an uncommitted snapshot. Frontend validates schema v3 and displays compact identity, guarded offer badges, multiple source links, and tracker-date-based review priority without rewriting eligibility. Synthetic cross-source/ended/expiry/no-evidence-borrowing regressions included; Chromium-only release policy unchanged. No feed monitoring, alerts, health checks, new status UI, data migration, or private financial edits. Next step: run PR unit/Chromium/release CI; merge only if green; verify scheduled writer and Pages.
 
 - BonusTracker v3.6.2 remaining mockup release: PR pending on `codex/v3.6.2-remaining-mockup`, built on verified v3.6.1; no rework of `panel()` fix. Personal/Business Tracker stage chips hide zero-count states, Needs you task count pluralized, single year selector replaces three buttons, FAB menu exposes Quick Add, promo-term analyzer, and manual entry; data is untouched. Bonuses grouped by supported tracker date and uncertainty (not personal eligibility claims), compact offer rows, About sources disclosure, one amber stale alert; existing official evidence and geography checks retained. Data opens search-first with compact outcome pills, filters and education collapsed below reports. Settings header ellipsis and owner-authenticated hosting endpoint unchanged; live costs display only from valid backend response. Mobile 390px screenshot assertions for Tracker, Bonuses, Data and Settings, synthetic hosting amounts only in tests. Core rules, cloud backups, Finance retirement untouched. Next step: complete bonus/cloud/UI unit suites, Chromium Playwright, deploy verified Pages; report exact commit and screenshot artifacts.
 
