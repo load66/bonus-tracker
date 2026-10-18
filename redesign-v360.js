@@ -237,13 +237,13 @@ function timerShortTitle(t){
  const label=String(t.text||'Timer').toLowerCase();
  if(/90|ninety/.test(label)&&/bonus|tier/.test(label))return 'Day 90 bonus tier';
  if(/requirement|qualifying|direct deposit|deposit deadline/.test(label))return 'Requirement due';
- if(/payout|bonus watch|bonus pending/.test(label))return 'Payout review';
+ if(/payout|bonus watch|bonus pending/.test(label))return 'Bonus pending';
  if(/close|hold|balance/.test(label))return 'Close review';
  if(/funding|fund new money/.test(label))return 'Funding due';
  return String(t.text||'Reminder').trim().replace(/[:.].*$/,'').slice(0,65)||'Reminder';
 }
 function timerFriendlyDate(t,e){
- if(!t.date)return 'Date needs review';
+ if(!t.date)return 'Date not set · saved reminder';
  if(t.startDate&&Number(t.daysRequired)>0){
   const basis=t.startDate===e?.opened?'opening':'saved start';
   return date(t.date)+' · '+Number(t.daysRequired)+' days after '+basis;
@@ -254,15 +254,38 @@ function timerChip(t){
  if(t.done)return 'Done';
  if(!t.date)return 'Set date';
  const days=dB(td(),t.date);
- return days<0?'Overdue '+Math.abs(days)+' days':days===0?'Today':days+' days';
+ return days<0?'Overdue '+Math.abs(days)+'d':days===0?'Today':days+' days';
+}
+function timerSvg(kind){
+ const paths={
+  date:'<circle cx="12" cy="13" r="8"/><path d="M12 13V9m0 4 3 2M9 2h6M12 5V3"/>',
+  payout:'<rect x="4" y="5" width="16" height="14" rx="2"/><path d="M4 10h16M9 14h6"/>',
+  close:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'
+ };
+ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(paths[kind]||paths.date)+'</svg>';
+}
+function payoutReminderRow(e){
+ if(e.bonusRecd)return '';
+ const payout=e.financialRules?.payout;
+ const wording=String(payout?.text||e.payoutTimingText||'').trim();
+ if(!wording)return '';
+ const time=payout?.timing,amount=Number(time?.value);
+ const units={'calendar-days':'days','business-days':'business days','months':'months','statement-cycles':'statement cycles'};
+ const interval=time&&Number.isInteger(amount)&&amount>0?amount+' '+(units[time.unit]||String(time.unit||'days')):'';
+ const subtitle=interval&&time?.basis==='reqmet'?'Expected within '+interval+' after requirements':wording.replace(/\s+/g,' ').slice(0,145);
+ const base=time?.basis==='reqmet'?e.reqMet:time?.basis==='opened'?e.opened:'';
+ const projected=base&&time?.unit==='calendar-days'&&Number.isInteger(amount)&&amount>0?addD(base,amount):'';
+ const chip=projected?date(projected):base?'Timing in terms':'After qualification';
+ return '<details class="bt3611-timer-row bt3613-payout" data-source="saved-payout"><summary><span class="bt3611-timer-icon" aria-hidden="true">'+timerSvg('payout')+'</span><span class="bt3611-timer-body"><b>Bonus pending</b><small>'+safe(subtitle)+'</small></span><span class="bt360-chip">'+safe(chip)+'</span></summary><div class="bt3611-timer-full">'+safe(wording)+'<p>From saved payout terms · not a recorded payment</p></div></details>';
 }
 function timerRows(e){
  const timers=Array.isArray(e.customTimers)?e.customTimers:[];
- return timers.map(t=>{
-  const title=timerShortTitle(t),detail=String(t.text||'Timer');
-  const icon=/payout|bonus/i.test(title)?'▣':/close|hold/i.test(title)?'⌂':'◷';
-  return '<details class="bt3611-timer-row"><summary><span class="bt3611-timer-icon" aria-hidden="true">'+icon+'</span><span class="bt3611-timer-body"><b>'+safe(title)+'</b><small>'+safe(timerFriendlyDate(t,e))+'</small></span><span class="bt360-chip '+(!t.date?'warning':'')+'">'+safe(timerChip(t))+'</span></summary><div class="bt3611-timer-full">'+safe(detail)+(t.startDate&&t.daysRequired?'<p>Started '+safe(date(t.startDate))+' · '+Number(t.daysRequired)+' days · due '+safe(date(t.date))+'</p>':'')+'<button class="bt360-link" type="button" onclick="openTimerEditor('+arg(e.id)+','+arg(t.id)+')">Edit timer</button></div></details>';
+ const rows=timers.map(t=>{
+  const title=timerShortTitle(t),detail=String(t.text||'Timer'),kind=/payout|bonus/i.test(title)?'payout':/close|hold/i.test(title)?'close':'date';
+  return '<details class="bt3611-timer-row"><summary><span class="bt3611-timer-icon" aria-hidden="true">'+timerSvg(kind)+'</span><span class="bt3611-timer-body"><b>'+safe(title)+'</b><small>'+safe(timerFriendlyDate(t,e))+'</small></span><span class="bt360-chip '+(!t.date?'warning':'')+'">'+safe(timerChip(t))+'</span></summary><div class="bt3611-timer-full">'+safe(detail)+(t.startDate&&t.daysRequired?'<p>Started '+safe(date(t.startDate))+' · '+Number(t.daysRequired)+' days · due '+safe(date(t.date))+'</p>':'')+'<button class="bt360-link" type="button" onclick="openTimerEditor('+arg(e.id)+','+arg(t.id)+')">Edit timer</button></div></details>';
  }).join('');
+ const hasPayout=timers.some(t=>/payout|bonus watch|bonus pending/i.test(String(t.text||'')));
+ return rows+(!hasPayout?payoutReminderRow(e):'');
 }
 function waiverCondition(c){
  if(c?.operator&&Array.isArray(c.conditions))return c.conditions.map(waiverCondition).join(c.operator==='all'?' + ':' · ');
