@@ -1,0 +1,66 @@
+name: Publish bank offers every six hours
+
+on:
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['Verify and Deploy BonusTracker']
+    types: [completed]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: bonus-tracker-bank-feed-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Update and commit canonical bank offers
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Regenerate canonical offers from RSS and retained state
+        run: python3 scripts/update-bank-feed.py
+      - name: Publish updated offer JSON to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- data/bank-bonuses.json; then
+            echo "Offer feed unchanged."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/bank-bonuses.json
+          git commit -m "data: refresh canonical bank offers"
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Package refreshed site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: .
+          name: bank-feed-pages-${{ github.run_attempt }}
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: Publish refreshed feed to GitHub Pages
+        id: pages
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: bank-feed-pages-${{ github.run_attempt }}

@@ -218,3 +218,11 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var
 .bt362-data-actions button{min-height:36px;padding:7px 10px;font-size:11px;max-width:52%;white-space:normal}
 .bt362-data-view .research-help{margin-top:12px}
 @media(max-width:430px){.bt362-year-pill{margin-left:auto}.hdr-row{gap:6px!important}.bt362-offer-head{padding-top:6px}.radar-card-compact .bt360-offer-title{gap:8px}.radar-card-compact .bt360-offer-title strong{font-size:12px;max-width:100px;white-space:normal}}
+
+/* v3.6.3 canonical offer badges and provenance — no feed-status UI. */
+.radar-offer-badges{display:flex;flex-wrap:wrap;gap:5px;margin:5px 0 2px}
+.radar-offer-badges span{border:1px solid #405944;background:#183327;color:#8CF0B8;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:800;white-space:normal}
+.radar-offer-original{border-top:1px solid #272C38;margin-top:8px;font-size:11px;overflow-wrap:anywhere}
+.radar-offer-original summary{color:#A0A6B8;min-height:36px;padding:9px 0;cursor:pointer;font-weight:650}
+.radar-offer-original p{color:#A0A6B8;font-size:11px;line-height:1.5}
+.radar-card-compact .radar-offer-link{margin-right:12px;min-height:36px;overflow-wrap:anywhere}

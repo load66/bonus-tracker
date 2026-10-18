@@ -39,7 +39,14 @@
         if(u.protocol!=='https:'||!id||u.username||u.password||u.port||u.search||u.hash||u.pathname==='/')continue;
         const expiry=x.title.match(/\bends?\s+(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b/i);
         if(expiry){const year=+expiry[3]<100?2000+(+expiry[3]):+expiry[3];const day=new Date(year,+expiry[1]-1,+expiry[2]+1);if(day.getTime()<=now)continue;}
-        const offer={title:x.title,url:u.href,publishedAt:x.publishedAt,source:sourceNames[id],sourceId:id,availability:['nationwide','regional'].includes(x.availability)?x.availability:'unknown',groupKey:typeof x.groupKey==='string'&&x.groupKey.length<1000?x.groupKey:normalize(x.title)};
+        const details=['bank','product','region','offerKey'].every(k=>typeof x[k]==='string'&&x[k].length<=120)?{bank:x.bank,product:x.product,region:x.region,offerKey:x.offerKey}:{};
+        const amount=Number.isSafeInteger(x.amount)&&x.amount>0&&x.amount<100000?x.amount:null;
+        const expiresAt=typeof x.expiresAt==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(x.expiresAt)?x.expiresAt:null;
+        if(expiresAt&&expiresAt<new Date(now).toISOString().slice(0,10))continue;
+        const links=Array.isArray(x.links)?x.links.slice(0,20).flatMap(link=>{try{const u=new URL(link.url),id=sourceHosts[u.hostname];return id&&u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&!u.search&&!u.hash&&u.pathname!=='/'&&typeof link.title==='string'&&link.title.length<=300?[{url:u.href,source:sourceNames[id],sourceId:id,title:link.title}]:[]}catch{return[]}}):[];
+        if(!links.some(l=>l.url===u.href))links.unshift({url:u.href,source:sourceNames[id],sourceId:id,title:x.title});
+        const badges=Array.isArray(x.badges)?x.badges.filter(v=>['New','Increased','Decreased','Updated','Ending soon'].includes(v)).slice(0,4):[];
+        const offer={title:x.title,url:u.href,publishedAt:x.publishedAt,source:sourceNames[id],sourceId:id,availability:['nationwide','regional'].includes(x.availability)?x.availability:'unknown',groupKey:details.offerKey||(typeof x.groupKey==='string'&&x.groupKey.length<1000?x.groupKey:normalize(x.title)),...details,amount,expiresAt,badges,links,changeLabel:typeof x.changeLabel==='string'&&/^\$[\d,]+ → \$[\d,]+$/.test(x.changeLabel)?x.changeLabel:''};
         offer.evidence=evidenceFor(offer,data.verification);offers.push(offer);
       }catch{}
     }
@@ -52,9 +59,9 @@
   function grouped(rows){
     const groups=new Map();
     for(const row of rows){
-      let group=groups.get(row.groupKey);
-      if(!group){group={...row,links:[]};groups.set(row.groupKey,group);}
-      if(!group.links.some(x=>x.url===row.url))group.links.push({url:row.url,source:row.source});
+      let group=groups.get(row.offerKey||row.groupKey);
+      if(!group){group={...row,links:[]};groups.set(row.offerKey||row.groupKey,group);}
+      for(const link of row.links?.length?row.links:[{url:row.url,source:row.source,title:row.title}])if(!group.links.some(x=>x.url===link.url))group.links.push(link);
       // Do not borrow one source's evidence for another title/offer identity.
       if(group.availability!==row.availability)group.availability='unknown';
     }
@@ -70,8 +77,8 @@
     return grouped(rows).filter(x=>{
       const e=x.evidence,fields=e&&e.fields||{},has=Object.keys(fields).length>0;
       const state=e&&e.stale?'stale':e&&e.checkState==='queued'?'queued':has?'present':'missing';
-      const amount=amountFor(x);
-      return (availability==='all'||x.availability===availability)&&(!q||normalize(x.title).includes(normalize(q)))&&
+      const amount=Number.isSafeInteger(x.amount)?x.amount:amountFor(x);
+      return (availability==='all'||x.availability===availability)&&(!q||normalize(x.title+' '+(x.bank||'')+' '+(x.product||'')).includes(normalize(q)))&&
         (!options.evidence||options.evidence==='all'||options.evidence===state||options.evidence==='changed'&&e&&e.changes.length>0)&&
         (!options.fees||options.fees==='all'||options.fees==='present'&&!!fields.monthly_fee||options.fees==='missing'&&!fields.monthly_fee)&&
         (!options.activity||options.activity==='all'||options.activity==='present'&&!!fields.qualifying_activity||options.activity==='missing'&&!fields.qualifying_activity)&&
@@ -193,6 +200,7 @@
       return{...offer,geo,match,priorityGroup:group,index};
     }).filter(x=>x.geo.kind!=='expired'&&(filter==='all'||filter==='tracker'&&!!x.match||filter==='area'&&x.geo.kind!=='outside'))
       .sort((a,b)=>({ready:0,next:1,explore:2,review:3,outside:4}[a.priorityGroup]-{ready:0,next:1,explore:2,review:3,outside:4}[b.priorityGroup])||
+        (['ready','explore'].includes(a.priorityGroup)?(Number(b.badges?.includes('Increased'))-Number(a.badges?.includes('Increased'))||Number(b.badges?.includes('New'))-Number(a.badges?.includes('New'))):0)||
         (a.priorityGroup==='next'?(a.match.date.localeCompare(b.match.date)):0)||
         ({listed:0,nationwide:0,conditional:1,unknown:1,outside:2}[a.geo.kind]-{listed:0,nationwide:0,conditional:1,unknown:1,outside:2}[b.geo.kind])||
         (Date.parse(b.publishedAt)-Date.parse(a.publishedAt))||a.index-b.index);
@@ -278,12 +286,16 @@
       const link=x.links[0],date=x.match?.date;
       const verifiedAmount=amountFor(x);
       const verifiedRequirement=x.evidence?.status==='evidence-found'&&!x.evidence?.stale?x.evidence.fields?.qualifying_activity?.value:null;
-      h+='<article class="radar-card radar-card-compact radar-priority-'+x.priorityGroup+'"><div class="bt360-offer-title">'+bankLogo(x.title,true)+'<div class="bt360-grow"><h3>'+escape(x.title)+'</h3><p>'+escape(verifiedRequirement||'Requirements need review')+'</p></div><strong>'+(verifiedAmount===null?'Needs review':'$'+verifiedAmount.toLocaleString('en-US'))+'</strong></div><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+'</div>';
+      const bankLabel=(x.bank||'').replace(/\b\w/g,c=>c.toUpperCase()).replace(/^Us Bank$/,'U.S. Bank');
+      const label=bankLabel&&x.product&&x.amount!==null?bankLabel+' · '+x.product+' · $'+x.amount.toLocaleString('en-US'):x.title;
+      const badges=x.badges?.length?'<div class="radar-offer-badges">'+x.badges.map(b=>'<span>'+escape(b)+'</span>').join('')+(x.changeLabel?'<span>'+escape(x.changeLabel)+'</span>':'')+'</div>':'';
+      h+='<article class="radar-card radar-card-compact radar-priority-'+x.priorityGroup+'"><div class="bt360-offer-title">'+bankLogo(x.title,true)+'<div class="bt360-grow"><h3>'+escape(label)+'</h3>'+badges+'<p>'+escape(verifiedRequirement||'Requirements need review')+'</p></div><strong>'+(verifiedAmount===null?(x.amount===null?'Needs review':'$'+x.amount.toLocaleString('en-US')+'*'):'$'+verifiedAmount.toLocaleString('en-US'))+'</strong></div><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+'</div>';
       if(x.match)h+='<div class="radar-tracker-context"><b>'+escape(x.match.label)+'</b>'+(date?'<time datetime="'+date+'">'+escape(typeof fD==='function'?fD(date):date)+'</time>':'')+'<p>'+escape(x.match.detail)+'</p></div>';
       h+='<p class="radar-area-note">'+escape(x.geo.detail)+'</p>';
       const proof=x.geo.proof||availabilityFor(x,officialCatalog);
       if(proof?.sourceUrl){let body='';for(const q of [...(proof.rules||[]).map(r=>r.quote),...(proof.nationwideQuote?[proof.nationwideQuote]:[]),...(proof.conditions||[])])body+='<blockquote>'+escape(q)+'</blockquote>';body+='<a href="'+escape(proof.sourceUrl)+'" target="_blank" rel="noopener noreferrer">Official promotion ↗</a>';h+=disclosure('availability:'+x.url,'Official check · '+new Date(proof.checkedAt).toLocaleString(),body).replace('class="mobile-disclosure"','class="mobile-disclosure radar-official-proof"');}
-      h+='<a class="radar-offer-link" href="'+escape(link.url)+'" target="_blank" rel="noopener noreferrer">Review offer · '+escape(link.source)+' ↗</a></article>';
+      h+='<details class="radar-offer-original"><summary>Original headline &amp; sources</summary><p>'+escape(x.title)+'</p>'+(verifiedAmount===null&&x.amount!==null?'<p>* Headline amount is source-reported; verify official terms before applying.</p>':'')+'</details>';
+      h+=(x.links?.length?x.links:[link]).map(l=>'<a class="radar-offer-link" href="'+escape(l.url)+'" target="_blank" rel="noopener noreferrer">Review offer · '+escape(l.source)+' ↗</a>').join('')+'</article>';
     });
     return h;
   };

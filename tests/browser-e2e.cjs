@@ -230,7 +230,7 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>{const base=entries[0];entries.push({...base,id:'radar-us-bank',bank:'U.S. Bank',closed:'2026-05-01'});sv(SK,entries);R()});
     const storedDuringRadar=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     await button('Bank Bonuses').click();
-    await page.getByText(/Synthetic Checking/).waitFor();
+    await page.locator('.radar-card h3').filter({hasText:'Synthetic Checking'}).first().waitFor();
     await page.screenshot({path:path.join(output,name+'-v362-bonuses-390.png')});
     check('offers group by verified tracker review status without assuming personal eligibility',await page.locator('.radar-group-heading').count()>0&&(await page.getByText('About sources',{exact:true}).count())===1);
     check('bank feed renders escaped discovery title',(await page.locator('.radar-card img').count())===0&&(await page.locator('.radar-card').filter({hasText:'Synthetic Checking'}).innerText()).includes('<img'));

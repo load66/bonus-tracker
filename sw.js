@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.2: remaining Tracker, Bonuses, Data, and Settings mockup polish.
+// Version 3.6.3: canonical retained bank-bonus offers and six-hour publishing.
 
-const V = 'bt-v3.6.2-ui1';
+const V = 'bt-v3.6.3-feed1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',

@@ -7,7 +7,7 @@ m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 for title in ('Chase $900 Checking Bonus', '[MO] Busey Bank $500 Bonus', 'Unitus Community Credit Union $300', 'Savings $100 Bonus'):
     assert m.bank_bonus(title, ['Bank Accounts']), title
-for title in ('Binance $200 bonus', 'TastyTrade Brokerage Bonus', 'Chase Credit Card $300 Bonus', 'Best Bank Bonuses Roundup', '[Expired] Bank $400 Bonus', 'Bank Fee Increase', 'Bank IRA $200 Bonus'):
+for title in ('Binance $200 bonus', 'TastyTrade Brokerage Bonus', 'Chase Credit Card $300 Bonus', 'Best Bank Bonuses Roundup', 'Bank Fee Increase', 'Bank IRA $200 Bonus'):
     assert not m.bank_bonus(title, ['Bank Accounts']), title
 assert not m.bank_bonus('Chase Checking $500 Bonus', ['Credit Cards'])
 now = dt.datetime(2026, 10, 13, tzinfo=dt.timezone.utc)
@@ -100,3 +100,74 @@ failed=m.attach_availability({'offers':[offer]}, {'availability':scoped['availab
 assert failed['availability']['status']=='unavailable' and failed['availability']['records']==scoped['availability']['records']
 m.download=original
 print('Official availability attachment passed: exact offer identity and unchanged evidence timestamps on outage')
+
+
+# Canonical identity / retention regressions run entirely against synthetic RSS.
+def rss(title, source, timestamp, summary=''):
+    return m.post_row(title,'https://'+source['hosts'][0]+'/synthetic-offer/',timestamp,source,['Bank Promotions'],summary)
+newer=now-dt.timedelta(hours=1)
+older=now-dt.timedelta(days=12)
+chase_hmb=rss('Chase Total Checking $400 Bonus',m.SOURCES[2],older)
+chase_doc=rss('(Update) JPMorgan Chase Total Checking $400 Bonus',m.SOURCES[0],newer)
+cross=m.merge_offers([], [chase_hmb,chase_doc],now)
+assert len(cross)==1 and len(cross[0]['links'])==2, cross
+assert cross[0]['title']==chase_doc['title']
+assert 'Updated' in cross[0]['badges']
+
+old_300=rss('Chase Total Checking $300 Bonus',m.SOURCES[2],older)
+new_400=rss('Chase Total Checking $400 Bonus',m.SOURCES[2],newer)
+changed=m.merge_offers([old_300], [new_400],now)
+assert len(changed)==1 and changed[0]['amount']==400
+assert 'Increased' in changed[0]['badges']
+assert changed[0]['changeLabel']=='$300 → $400'
+decreased=m.merge_offers([new_400], [rss('Chase Total Checking $250 Bonus',m.SOURCES[0],now)],now)
+assert decreased[0]['changeLabel']=='$400 → $250' and 'Decreased' in decreased[0]['badges']
+
+update=m.merge_offers([chase_hmb],[chase_doc],now)
+assert 'Updated' in update[0]['badges'] and update[0]['title']==chase_doc['title']
+assert m.merge_offers([chase_hmb],[rss('[Expired] Chase Total Checking $400 Bonus',m.SOURCES[2],now)],now)==[]
+assert m.merge_offers([chase_hmb],[rss('Chase Total Checking $400 Bonus (Ended)',m.SOURCES[0],now)],now)==[]
+assert m.expiry_from_text('Chase $400 Checking Bonus','Expires 10/21/26 after activation')=='2026-10-21'
+assert m.expiry_from_text('Chase $400 Checking Bonus','No expiration listed') is None
+expiring=rss('Chase Total Checking $400 Bonus',m.SOURCES[0],newer,'Ends 10/21/26')
+near=m.merge_offers([], [expiring],now)
+assert near[0]['expiresAt']=='2026-10-21' and 'Ending soon' in near[0]['badges']
+assert m.merge_offers([], [rss('Chase $400 Checking Bonus',m.SOURCES[0],older,'Expires 10/01/26')],now)==[]
+
+mo=rss('[MO] Chase Total Checking $400 Bonus',m.SOURCES[0],newer)
+ks=rss('[KS] Chase Total Checking $400 Bonus',m.SOURCES[2],newer)
+assert len(m.merge_offers([], [mo,ks],now))==2,'Different explicit regions must stay separate'
+biz=rss('Chase $400 Business Checking Bonus',m.SOURCES[0],newer)
+assert len(m.merge_offers([], [chase_doc,biz],now))==2,'Business and consumer offers must not merge'
+assert m.identity('U.S. Bank $400 Checking Bonus')['offerKey']==m.identity('US Bank $400 Checking Bonus')['offerKey']
+assert m.identity('JPMorgan Chase $400 Checking Bonus')['offerKey']==m.identity('Chase $400 Checking Bonus')['offerKey']
+
+retained=m.merge_offers([rss('Chase $400 Checking Bonus',m.SOURCES[0],now-dt.timedelta(days=70))],[],now)
+assert len(retained)==1, 'Old but still active post must survive RSS eviction'
+assert m.merge_offers([rss('Chase $400 Checking Bonus',m.SOURCES[0],now-dt.timedelta(days=91))],[],now)==[]
+# Direct-URL provenance: a valid verification record for an older source article
+# must not authenticate a newer article with the same canonical bank/product/amount.
+historical=chase_hmb
+replacement=chase_doc
+oldProof={'offerFingerprint':hashlib.sha256((historical['title']+'\n'+historical['url']).encode()).hexdigest(),
+          'offerTitle':historical['title'],'offerUrl':historical['url']}
+m.download=lambda _:json.dumps({'schemaVersion':1,'status':'complete',
+                                  'records':{historical['url']:oldProof}}).encode()
+projected=m.attach_verification({'offers':[replacement]}, {})
+assert projected['verification']['records']=={}, 'Official evidence borrowed from another source/headline'
+m.download=original
+print('Canonical feed regressions passed: cross-source merge, increase/decrease, updates, ended posts, summary expiry, retention, region separation and provenance')
+
+# No stale source item may resurrect an ended promotion after the tombstone is saved.
+ended_post=rss('[Expired] Chase Total Checking $400 Bonus',m.SOURCES[2],now)
+tomb=[{'offerKey':ended_post['offerKey'],'endedAt':ended_post['publishedAt']}]
+assert m.merge_offers([chase_hmb],[],now,tomb)==[]
+assert len(m.merge_offers([], [rss('Chase Total Checking $400 Bonus',m.SOURCES[0],now+dt.timedelta(hours=1))],now+dt.timedelta(hours=2),tomb))==1
+
+# A first-discovered older-dated post is still marked newly discovered.
+summary_rss='<rss><channel><item><title>Chase $400 Checking Bonus</title><link>https://www.doctorofcredit.com/synthetic/</link><pubDate>Sun, 11 Oct 2026 12:00:00 +0000</pubDate><description>Expires 10/21/26</description><category>Bank Accounts</category></item></channel></rss>'
+fresh_rows=m.parse_feed(summary_rss,now,m.SOURCES[0])
+assert fresh_rows[0]['expiresAt']=='2026-10-21'
+assert fresh_rows[0]['firstSeen']==now.isoformat()
+assert 'New' in m.merge_offers([],fresh_rows,now)[0]['badges']
+print('RSS lifecycle passed: persisted ended tombstones, reopen only on newer evidence, first-seen and summary expiry')
