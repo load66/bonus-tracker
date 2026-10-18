@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.21 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.22 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt360_audience_session',noticeKey='bt360_notice_session';
@@ -635,6 +635,25 @@ function openActivity(id){
 function closeActivity(){document.querySelector('.bt3611-activity-overlay')?.remove()}
 function setReadyExtrasOpen(id,value){readyExtrasState.set(id,!!value)}
 
+// Closing checklist is a read-only projection of the same enrolled fee evidence
+// used by Fees & waivers. A hold countdown is never proof that a positive or
+// conditional early-close charge has expired.
+function closeCheckPresentation(e){
+ const financial=e.financialRules?.closure;
+ const hold=typeof safeCloseDate==='function'?safeCloseDate(e):'';
+ const remaining=hold?dB(td(),hold):null;
+ const hasHold=Number(e.minHoldDays)>0;
+ const holdMet=hasHold&&Number.isFinite(remaining)&&remaining<=0;
+ const fee=feeSnapshot(e);
+ const zeroFeeConfirmed=fee.closeKnown&&fee.closeMain==='$0 early-close fee';
+ const retentionSaved=!!e.bonusRecd&&['payout-only','minimum-open','none'].includes(String(financial?.restrictionType||e.closeRestrictionType||''));
+ return [
+  {ok:holdMet,label:'Minimum hold met',detail:hasHold?(holdMet?'Open '+Number(e.minHoldDays)+' days · cleared '+date(hold):'Hold until '+(hold?date(hold):'Needs review')):'No documented minimum hold · Needs review'},
+  {ok:zeroFeeConfirmed,label:'Early close fee window cleared',detail:zeroFeeConfirmed?'Explicit no-fee terms saved':fee.closeKnown?fee.closeMain+' · verify the applicable fee window before closing':fee.closeNote+' · Needs review'},
+  {ok:retentionSaved,label:'Bonus kept after closing',detail:retentionSaved?'Bonus received · saved closure terms reviewed':'Confirm any repayment restriction in saved terms'},
+  {ok:false,label:'Close with $0 balance',detail:'Confirm account balance with the bank before closing'}
+ ];
+}
 function detailPanels(e){
  const code=stage(e).code,ready=code==='READY_TO_CLOSE',closed=!!e.closed;
  const at=closed?4:ready?4:code==='HOLD_OPEN'||code==='BONUS_RECEIVED'?3:code==='REQUIREMENTS_MET'||code==='AWAITING_BONUS'?2:1;
@@ -654,21 +673,7 @@ function detailPanels(e){
  if(!ready)h+=panel('Fees & waivers',feeDetail(e));
  if(!closed&&(e.dataPoint||e.completeBonusText||e.notes))h+='<details class="bt366-offer-notes"><summary>Offer notes</summary><p>'+safe([e.dataPoint,e.completeBonusText,e.notes].filter(Boolean).join('\n\n'))+'</p></details>';
  if(ready||code==='HOLD_OPEN'||code==='BONUS_RECEIVED'){
-  const check=closeReadiness(e);
-  const financial=e.financialRules?.closure,hold=typeof safeCloseDate==='function'?safeCloseDate(e):'',remaining=hold?dB(td(),hold):null;
-  const hasHold=Number(e.minHoldDays)>0;
-  const holdMet=hasHold&&Number.isFinite(remaining)&&remaining<=0;
-  const savedFee=String(e.earlyTerminationFeeText||'');
-  const noFeeSaved=/no (early |account[ -])?(?:close|closing|termination).{0,20}fee|\$0.{0,30}(?:fee|after)/i.test(savedFee);
-  const feeKnown=(typeof financial?.earlyCloseFee==='number'&&!!financial?.feeEvidence?.quote)||noFeeSaved;
-  const feeCleared=feeKnown&&(noFeeSaved||financial?.earlyCloseFee===0||holdMet);
-  const retentionSaved=!!e.bonusRecd&&['payout-only','minimum-open','none'].includes(String(financial?.restrictionType||e.closeRestrictionType||''));
-  const items=[
-   {ok:holdMet,label:'Minimum hold met',detail:hasHold?(holdMet?'Open '+Number(e.minHoldDays)+' days · cleared '+date(hold):'Hold until '+(hold?date(hold):'Needs review')):'No documented minimum hold · Needs review'},
-   {ok:feeCleared,label:'Early close fee window cleared',detail:feeKnown?(noFeeSaved?'No early close fee in saved terms':financial.earlyCloseFee===0?'No early close fee in saved terms':amount(financial.earlyCloseFee)+' fee · review after hold'):'Early close fee not stated · Needs review'},
-   {ok:retentionSaved,label:'Bonus kept after closing',detail:retentionSaved?'Bonus received · saved closure terms reviewed':'Confirm any repayment restriction in saved terms'},
-   {ok:false,label:'Close with $0 balance',detail:'Confirm account balance with the bank before closing'}
-  ];
+  const items=closeCheckPresentation(e);
   h+='<div data-bt-hold>'+panel(ready?'Close checks':'Hold & close checks',items.map(item=>'<div class="bt360-check '+(item.ok?'done':'unknown')+'"><span class="bt3611-check-icon">'+(item.ok?'✓':'')+'</span><div><b>'+safe(item.label)+'</b><small>'+safe(item.detail)+'</small></div></div>').join(''))+'</div>';
  }
  if(ready)h+=panel('Fees & waivers',feeDetail(e));
@@ -893,6 +898,6 @@ function openPhonebook(){closeSettings();window.bt360PhonebookOpen=true;R()}
 function closePhonebook(){window.bt360PhonebookOpen=false;R()}
 function openSettings(){window.bt360SettingsOpen=true;R();refreshUsage()}
 function closeSettings(){window.bt360SettingsOpen=false;R()}
-window.BT360={feeSnapshot,get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
+window.BT360={feeSnapshot,closeCheckPresentation,get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
 if(typeof R==='function')R();
 })();
