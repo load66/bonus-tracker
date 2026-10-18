@@ -311,11 +311,11 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>{
       window.__heroMonthSavedEntries=JSON.parse(JSON.stringify(entries));
       window.__heroMonthPreviousYear=dashYear;
-      entries.push(
+      entries=[
         {id:'hero-month-april-a',bank:'Synthetic First Bank',accountType:'personal',bonus:450,bonusRecd:'2026-04-12',opened:'2026-02-01',checklist:[],customTimers:[]},
         {id:'hero-month-april-b',bank:'Synthetic Second Bank',accountType:'personal',bonus:400,bonusRecd:'2026-04-22',opened:'2026-03-01',checklist:[],customTimers:[]},
         {id:'hero-month-business',bank:'Synthetic Business Bank',accountType:'business',bonus:700,bonusRecd:'2026-04-13',opened:'2026-02-01',checklist:[],customTimers:[]}
-      );
+      ];
       dashYear=2026;BT360.clearHeroMonth();R();
     });
     check('twelve month buttons start unselected',await page.locator('.bt367-month-hit').count()===12&&await page.locator('.bt367-month-hit[aria-pressed="true"]').count()===0);
