@@ -102,43 +102,41 @@ function showHold(){document.querySelector('[data-bt-hold]')?.scrollIntoView({be
 function showEligibility(){document.querySelector('[data-bt-eligibility]')?.scrollIntoView({behavior:'smooth',block:'center'})}
 function detailHead(e){
  const s=stage(e),enrolled=e.offerEnrollmentDate||e.couponEnrollmentDate||'';
- return '<div class="bt360-detail-header"><div class="bt360-detail-bar"><button onclick="BT360.back()" aria-label="Back to accounts">‹</button><span>'+safe(audience==='business'?'Business':'Personal')+' · '+safe(s.label)+'</span><button onclick="openBankActions('+arg(e.id)+')" aria-label="More account actions">•••</button></div><div class="bt360-detail-identity">'+bankLogo(e.bank,true)+'<div class="bt360-grow"><h2>'+safe(e.bank)+'</h2><p>Opened '+safe(date(e.opened))+(e.bonusRecd?' · Received '+safe(date(e.bonusRecd)):'')+(enrolled?' · Enrolled '+safe(date(enrolled)):'')+'</p></div><strong>'+amount(e.bonus)+'</strong></div></div>';
+ return '<div class="bt360-detail-header"><div class="bt360-detail-bar"><button onclick="BT360.back()" aria-label="Back to accounts">‹</button><span>'+safe(audience==='business'?'Business':'Personal')+' · '+safe(s.label)+'</span><button onclick="openBankActions('+arg(e.id)+')" aria-label="More account actions">•••</button></div><div class="bt360-detail-identity">'+bankLogo(e.bank,true)+'<div class="bt360-grow"><h2>'+safe(e.bank)+'</h2><p>Opened '+safe(date(e.opened))+(e.bonusRecd?' · Received '+safe(date(e.bonusRecd)):'')+(enrolled?' · Enrolled '+safe(date(enrolled)):'')+'</p><small class="bt366-detail-id">ID '+safe(typeof getEntryDisplayId==='function'?getEntryDisplayId(e):e.id)+'</small></div><strong>'+amount(e.bonus)+'</strong></div></div>';
 }
 function detailPanels(e){
- const s=stage(e),ready=s.code==='READY_TO_CLOSE';
- const milestones=[['Opened',!!e.opened],['Tasks',!!e.reqMet],['Payout',!!e.bonusRecd],['Hold',!!(e.bonusRecd&&(ready||e.closed))],['Close',!!e.closed]];
- const currentStep=ready?4:Math.max(0,milestones.findIndex(([,done])=>!done));
- let h='<div class="bt360-steps" aria-label="Account lifecycle">'+milestones.map(([label,done],i)=>'<span class="'+(done?'done ':'')+(i===currentStep?'current':'')+'"'+(i===currentStep?' aria-current="step"':'')+'>'+label+'</span>').join('')+'</div>';
- if(ready){
- const check=closeReadiness(e);
- h+=panel('Close checks',check.items.map(item=>'<div class="bt360-check '+(item.ok?'done':item.level==='danger'?'danger':'unknown')+'"><span>'+(item.ok?'✓':'!')+'</span><div><b>'+safe(item.label)+'</b><small>'+safe(item.detail||'Needs review')+'</small></div></div>').join(''));
- const bankPhone=getPhoneBook().find(row=>{try{return bankIdentity(row.bank).family===bankIdentity(e.bank).family}catch{return row.bank===e.bank}});
- const phone=bankPhone?.[audience]||'';
- if(phone)h+=panel('CALL TO CLOSE','<p class="bt360-muted">'+safe(audience==='business'?'Business':'Personal')+' banking line · saved for '+safe(e.bank)+'</p><a class="bt360-primary bt360-call" href="tel:'+safe(phone.replace(/[^+\d]/g,''))+'">☎ '+safe(phone)+'</a><small class="bt360-muted">Shown only when ready to close.</small>');
- else h+=panel('CALL TO CLOSE','<p class="bt360-muted">No '+safe(audience)+' number saved for '+safe(e.bank)+'.</p><button type="button" class="bt360-secondary" onclick="BT360.openPhoneForClose('+arg(e.bank)+')">Add bank phone number</button>');
- const ei=eligibleInfo(e);h+=panel('After closing',infoRow('Eligible again',ei?date(ei.eligible):'Needs review',ei?.label||'Eligibility terms not verified')+(ei?.more?.length>1?ei.more.map(r=>infoRow('Also checked',date(r.eligibleDate),r.period?.value+' '+r.period?.unit+' from '+window.BTEligibilityGate.anchorLabel(r.basis))).join(''):''));
- }else{
+ const code=stage(e).code,ready=code==='READY_TO_CLOSE',closed=!!e.closed;
+ const at=closed?4:ready?4:code==='HOLD_OPEN'||code==='BONUS_RECEIVED'?3:code==='REQUIREMENTS_MET'||code==='AWAITING_BONUS'?2:1;
+ const labels=['Opened','Tasks','Payout','Hold','Close'];
+ let h='<div class="bt360-steps" aria-label="Account lifecycle">'+labels.map((name,i)=>'<span class="'+(i<at?'done ':'')+(at===i?'current':'')+'"'+(at===i?' aria-current="step"':'')+'>'+name+'</span>').join('')+'</div>';
  const checks=Array.isArray(e.checklist)?e.checklist:[];
- h+=panel('Requirements',(!checks.length?'<p class="bt360-muted">'+safe(e.dataPoint||e.completeBonusText||'Check your saved requirements.')+'</p>':checks.map((c,i)=>'<div class="bt360-check '+(c.done?'done':'')+'"><button type="button" role="checkbox" aria-label="'+safe(c.text)+'" aria-checked="'+!!c.done+'" onclick="toggleCk('+arg(e.id)+','+i+')">'+(c.done?'✓':'')+'</button><div><b>'+safe(c.text)+'</b><small>'+(c.done?'Recorded':'Not yet confirmed')+'</small></div></div>').join(''))+'<button class="bt360-link" onclick="openReqMet('+arg(e.id)+')">Confirm all</button>');
- const fee=e.monthlyFeeAmountText||e.monthlyFeeYNText||'',waiver=e.monthlyFeeWaiverText||e.avoidMonthlyFeeText||'';
- h+=panel('Fees & waivers',infoRow('Monthly fee',fee||'Needs review')+infoRow('Waived if',waiver||'Needs review')+infoRow('This month','Needs review','No verified current-month fee evidence')+infoRow('Early close fee',e.earlyTerminationFeeText||'Needs review'));
- const timers=Array.isArray(e.customTimers)?e.customTimers:[];
- h+=panel('Timers',(!timers.length?'<p class="bt360-muted">No custom timers set.</p>':timers.map(t=>'<div class="bt360-check '+(t.done?'done':'')+'"><span>◷</span><div><b>'+safe(t.text||'Timer')+'</b><small>'+safe(timerMetaLine(t))+'</small></div></div>').join('')),'<button class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'timer\')">+ Add</button>');
- const ei=eligibleInfo(e),safeClose=typeof safeCloseDate==='function'?safeCloseDate(e):'';
- h+=panel('Key dates',infoRow('Safe to close',safeClose?date(safeClose):'Needs review')+infoRow('Eligible again',ei?date(ei.eligible):'Needs review',ei?.label||'No verified rule/anchor'));
+ if(!closed){
+  const rows=checks.map((c,i)=>'<div class="bt360-check '+(c.done?'done':'')+'"><button type="button" role="checkbox" aria-label="'+safe(c.text)+'" aria-checked="'+!!c.done+'" onclick="toggleCk('+arg(e.id)+','+i+')">'+(c.done?'✓':'')+'</button><button type="button" class="bt366-row-edit" onclick="runBankAction('+arg(e.id)+',\'checklist\')"><b>'+safe(c.text)+'</b><small>'+(c.done?'Recorded':'Tap to edit task')+'</small></button></div>').join('');
+  const due=typeof reqDeadline==='function'?reqDeadline(e):'';
+  h+=panel('Requirements',(!rows?'<p class="bt360-muted">No checklist tasks saved yet.</p>':rows)+(due?'<span class="bt360-chip warning">Due '+safe(date(due))+'</span>':'')+'<button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button>');
+  const timers=Array.isArray(e.customTimers)?e.customTimers:[];
+  h+=panel('Timers',(!timers.length?'<p class="bt360-muted">No custom timers set.</p>':timers.map(t=>'<div class="bt360-check '+(t.done?'done':'')+'"><button type="button" role="checkbox" aria-checked="'+!!t.done+'" aria-label="'+safe(t.text||'Timer')+'" onclick="toggleTimer('+arg(e.id)+','+arg(t.id)+')">'+(t.done?'✓':'◷')+'</button><button type="button" class="bt366-row-edit" onclick="openTimerEditor('+arg(e.id)+','+arg(t.id)+')"><b>'+safe(t.text||'Timer')+'</b><small>'+safe(timerMetaLine(t))+'</small></button><span class="bt360-chip">'+safe(timerCountdownMeta(t).text)+'</span></div>').join(''))+'<button class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'timer\')">+ Add timer</button>');
+  const fee=e.monthlyFeeAmountText||e.monthlyFeeYNText||'',waiver=e.monthlyFeeWaiverText||e.avoidMonthlyFeeText||'';
+  h+=panel('Fees & waivers',infoRow('Monthly fee',fee||'Needs review')+infoRow('Waived if',waiver||'Needs review')+infoRow('Early close fee',e.earlyTerminationFeeText||'Needs review'));
  }
+ if(e.dataPoint||e.completeBonusText||e.notes){
+  h+='<details class="bt366-offer-notes"><summary>Offer notes</summary><p>'+safe([e.dataPoint,e.completeBonusText,e.notes].filter(Boolean).join('\n\n'))+'</p></details>';
+ }
+ if(ready||code==='HOLD_OPEN'||code==='BONUS_RECEIVED'){
+  const check=closeReadiness(e);
+  h+='<div data-bt-hold>'+panel(ready?'Close checks':'Hold & close checks',check.items.map(item=>'<div class="bt360-check '+(item.ok?'done':item.level==='danger'?'danger':'unknown')+'"><span>'+(item.ok?'✓':'!')+'</span><div><b>'+safe(item.label)+'</b><small>'+safe(item.detail||'Needs review')+'</small></div></div>').join(''))+'</div>';
+ }
+ if(ready){
+  const phoneRow=getPhoneBook().find(row=>{try{return bankIdentity(row.bank).family===bankIdentity(e.bank).family}catch{return row.bank===e.bank}});
+  const phone=phoneRow?.[audience]||'';
+  h+=panel('Call to close',phone?'<p class="bt360-muted">'+safe(audience)+' banking line</p><a class="bt360-primary bt360-call" href="tel:'+safe(phone.replace(/[^+\d]/g,''))+'">☎ '+safe(phone)+'</a>':'<p class="bt360-muted">No '+safe(audience)+' number saved for '+safe(e.bank)+'.</p><button type="button" class="bt360-secondary" onclick="BT360.openPhoneForClose('+arg(e.bank)+')">Add bank phone number</button>');
+ }
+ const eligibility=eligibleInfo(e),safeClose=typeof safeCloseDate==='function'?safeCloseDate(e):'';
+ h+='<div data-bt-eligibility>'+panel(closed?'Eligibility':'Key dates',(!closed?infoRow('Safe to close',safeClose?date(safeClose):'Needs review'):'')+infoRow('Eligible again',eligibility?date(eligibility.eligible):'Needs review',eligibility?.label||'No supported rule or anchor'))+'</div>';
  h+='<button class="bt360-source" onclick="BT360.showTerms('+arg(e.bank)+')">'+(e.termsVerifiedAt?'Official terms verified '+safe(date(String(e.termsVerifiedAt).slice(0,10))):'Terms need review')+' · View saved source ›</button>';
-
- return h
-}
-function detailFooter(e){
- const ready=stage(e).code==='READY_TO_CLOSE';
- let action='Record deposit',command='openBankActions('+arg(e.id)+')';
- if(!e.reqMet){action='Confirm requirements';command='openReqMet('+arg(e.id)+')'}
- else if(!e.bonusRecd){action='Confirm received';command='openRcv('+arg(e.id)+')'}
- else if(ready){action='Mark account closed';command='startCloseFlow('+arg(e.id)+',\'actual\')'}
- else {action='Review close checks';command='openBankActions('+arg(e.id)+')'}
- return '<div class="bt360-detail-footer" role="group" aria-label="Account actions"><button onclick="btOpenBonusAI('+arg(e.id)+')">Ask AI</button><button class="bt360-manage" onclick="openBankActions('+arg(e.id)+')">Manage</button><button class="bt360-primary" aria-label="'+safe(action+' for '+e.bank)+'" onclick="'+command+'">'+action+'</button></div>';
+ const primary=primaryAction(e);
+ h+='<div class="bt360-detail-footer" role="group" aria-label="Account actions"><button onclick="btOpenBonusAI('+arg(e.id)+')">Ask AI</button><button class="bt360-primary" aria-label="'+safe(primary.label+' for '+e.bank)+'" onclick="'+primary.command+'">'+safe(primary.label)+'</button></div>';
+ return h;
 }
 function showTerms(bank){archivePane='saved';storageSearch=String(bank||'');expanded=null;tab='archive';R()}
 function back(){expanded=null;window.bt360ArchiveDetailId=null;R();const el=document.querySelector('.scroll');if(el)el.scrollTop=0}
@@ -160,7 +158,7 @@ function archive(rows){
  return h;
 }
 function setArchiveToolsOpen(value){legacyArchiveOpen=!!value}
-function openArchived(id){const e=entries.find(x=>x.id===id);if(!e)return;expanded=id;if(isArchivedTrackerEntry(e)){window.bt360ArchiveDetailId=id;tab='archive'}else{tab='tracker'}R()}
+function openArchived(id){const e=entries.find(x=>x.id===id);if(!e)return;expanded=id;if(e.closed){window.bt360ArchiveDetailId=id;tab='archive'}else{tab='tracker'}R()}
 function viewOffers(bank){expanded=null;tab='bonuses';R();const v=document.getElementById('radar-search');if(v&&typeof window.btRadarSearch==='function')window.btRadarSearch(bank)}
 const HOST_SETTINGS='bt_hosting_usage_settings_v1';
 const HOST_API='https://api-production-00f74.up.railway.app/api/bonus-tracker/usage';
