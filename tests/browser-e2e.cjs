@@ -663,7 +663,7 @@ async function exercise(name,engine,url){
       const summary=await page.locator('.bt360-hero').evaluate(e=>({
         text:e.innerText,scrollWidth:e.scrollWidth,clientWidth:e.clientWidth,
         scrollHeight:e.scrollHeight,clientHeight:e.clientHeight,
-        bars:e.querySelectorAll('.bt360-monthbars>span').length,
+        bars:e.querySelectorAll('.bt367-month-chart>.bt367-month-hit').length,
         amount:e.querySelector('.bt360-hero-amount')?.innerText,
         amountFits:(()=>{const a=e.querySelector('.bt360-hero-amount');return a&&a.scrollWidth<=a.clientWidth+1})()
       }));
