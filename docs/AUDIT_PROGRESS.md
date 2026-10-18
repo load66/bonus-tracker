@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex · v3.6.14 cloud sign-in archive reliability · codex/v3.6.14-fee-history-projection
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.14 sign-in auto-archive reliability follow-up on PR #188: a successful owner sign-in now queues immutable T&C upload even when rolling backup is disabled; synthetic sign-in regression and refreshed cache/asset tag added. Backend PR #239 merged, Railway production SUCCESS on `9d20446eadf5655957689c227f665cfa001dba44` (checked 2026-10-18). Frontend exact-head Chromium/WebKit and unit gates must pass before merge; then verify main Pages deployment. Stored entries, eligibility/financial calculations, and JSON import schema unchanged.
 
 - v3.6.14 historical T&C and fee presentation PR https://github.com/load66/bonus-tracker/pull/188 (`codex/v3.6.14-fee-history-projection`): two fee rows only, legacy and structured fee recovery across active/close-ready/archive/churn, read-only original terms, immutable cloud history upload/viewer independent of rolling backups, preserved JSON v3 import and canonical engines. Owner-scoped backend terms API PR https://github.com/load66/Trading-Journal-AI/pull/239 merged at `9d20446eadf5655957689c227f665cfa001dba44` (Railway exact-SUCCESS verification pending). Synthetic backend suite and frontend bonus/cloud/UI unit tests PASS, Chromium/WebKit checks release gated. No real owner records, tokens, bank providers or transactional engines mutated. Exact enrolled bank terms still require owner evidence; do not substitute new public T&C automatically. Next: final CI, Railway backend SUCCESS, frontend merge and Pages main deployment.
 
