@@ -208,7 +208,7 @@ function loadTermsArchive(){
   return raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{}
 }
 function saveTermsArchive(rows){
-  sv(TC_ARCHIVE_KEY,rows&&typeof rows==='object'?rows:{})
+  return sv(TC_ARCHIVE_KEY,rows&&typeof rows==='object'?rows:{});
 }
 function termsArchiveKey(entry){return offerHistoryKey(entry)}
 function termsArchiveSourceText(e){
@@ -216,44 +216,50 @@ function termsArchiveSourceText(e){
 }
 function termsArchiveSnapshot(e,source){
   if(!e||!e.bank||!e.opened)return null;
+  // An incomplete old T&C is still worth preserving; never invent verification.
   const raw=termsArchiveSourceText(e);
-  if(raw.length<120)return null;
   let verified=false;
-  try{verified=!!window.BTEligibilityGate?.validate?.({...e,tcSourceRaw:raw})?.ok}catch{}
-  if(!verified)return null;
+  if(raw.length>=120)try{verified=!!window.BTEligibilityGate?.validate?.({...e,tcSourceRaw:raw})?.ok}catch{}
+  const copied=v=>v&&typeof v==='object'?JSON.parse(JSON.stringify(v)):v;
   return{
     id:'tc_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7),
     bank:e.bank||'',
     accountType:normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'personal',
-    entryId:e.id||'',
-    opened:e.opened||'',
-    bonus:Number(e.bonus||0),
-    capturedAt:td(),
-    termsVerifiedAt:e.termsVerifiedAt||e.eligibilityVerifiedAt||td(),
-    source:source||'new-cycle',
-    schemaVersion:parseInt(e.schemaVersion||0,10)||0,
-    promoSourceUrl:e.promoSourceUrl||'',
-    feeScheduleSourceUrl:e.feeScheduleSourceUrl||'',
-    tcSourceRaw:raw,
-    eligibilityRules:Array.isArray(e.eligibilityRules)?e.eligibilityRules.map(r=>({...r})):[],
-    eligibilityEvidenceText:e.eligibilityEvidenceText||'',
-    eligibilityEvidenceSource:e.eligibilityEvidenceSource||'',
+    entryId:e.id||'',opened:e.opened||'',bonus:Number(e.bonus||0),
+    capturedAt:td(),termsVerifiedAt:e.termsVerifiedAt||e.eligibilityVerifiedAt||'',
+    evidenceStatus:verified?'eligibility-evidence-validated':'saved-unverified',
+    source:source||'account-cycle',schemaVersion:parseInt(e.schemaVersion||0,10)||0,
+    promoSourceUrl:e.promoSourceUrl||'',feeScheduleSourceUrl:e.feeScheduleSourceUrl||'',
+    tcSourceRaw:raw,feeScheduleRaw:e.feeScheduleRaw||'',
+    financialRules:copied(e.financialRules)||null,
+    eligibilityRules:copied(Array.isArray(e.eligibilityRules)?e.eligibilityRules:[]),
+    eligibilityEvidenceText:e.eligibilityEvidenceText||'',eligibilityEvidenceSource:e.eligibilityEvidenceSource||'',
     currentCustomerEvidenceText:e.currentCustomerEvidenceText||'',
-    completeBonusText:e.completeBonusText||'',
-    monthlyFeeYNText:e.monthlyFeeYNText||'',
-    monthlyFeeAmountText:e.monthlyFeeAmountText||'',
-    monthlyFeeWaiverText:e.monthlyFeeWaiverText||'',
-    avoidMonthlyFeeText:e.avoidMonthlyFeeText||'',
-    earlyTerminationFeeText:e.earlyTerminationFeeText||'',
-    closeRuleText:e.closeRuleText||'',
-    closeRuleBasis:e.closeRuleBasis||'',
+    couponEnrollmentDate:e.couponEnrollmentDate||'',offerEnrollmentDate:e.offerEnrollmentDate||'',
+    churn:e.churn||'',churnability:e.churnability||'',sourceEligibilityBasis:e.sourceEligibilityBasis||'',
+    churnPeriodValue:e.churnPeriodValue||0,churnPeriodUnit:e.churnPeriodUnit||'',
+    churnRuleText:e.churnRuleText||'',eligibilityText:e.eligibilityText||'',
+    completeBonusText:e.completeBonusText||'',payoutTimingText:e.payoutTimingText||'',
+    monthlyFeeYNText:e.monthlyFeeYNText||'',monthlyFeeAmountText:e.monthlyFeeAmountText||'',
+    monthlyFeeFrequency:e.monthlyFeeFrequency||'',
+    monthlyFeeWaiverText:e.monthlyFeeWaiverText||'',avoidMonthlyFeeText:e.avoidMonthlyFeeText||'',
+    monthlyFeeNoMonthlyServiceFee:e.monthlyFeeNoMonthlyServiceFee===true,
+    earlyTerminationFeeText:e.earlyTerminationFeeText||'',closeRuleText:e.closeRuleText||'',
+    closeRuleBasis:e.closeRuleBasis||'',closeRestrictionType:e.closeRestrictionType||'',
     minHoldDays:parseInt(e.minHoldDays||0,10)||0,
-    earlyCloseFee:Number(e.earlyCloseFee||0),
+    earlyCloseFee:typeof e.earlyCloseFee==='number'?e.earlyCloseFee:null,
     expirationDateText:e.expirationDateText||''
   }
 }
+// Stable comparison excludes timestamp, random id and editing provenance.
+// A corrected fee schedule or churn rule becomes a *new saved revision*.
+function termsArchiveSignature(x){
+  if(!x||typeof x!=='object')return'';
+  const {id,capturedAt,source,replacedAt,replacedByOpened,revisionAt,...meaning}=x;
+  return JSON.stringify(meaning);
+}
 function termsCycleToken(x){
-  return [String(x?.entryId||''),String(x?.opened||''),String(x?.termsVerifiedAt||''),String(x?.tcSourceRaw||'').slice(0,180)].join('|')
+  return [String(x?.entryId||''),String(x?.opened||''),termsArchiveSignature(x)].join('|')
 }
 function saveTermsArchiveForNewCycle(e,source){
   const snap=termsArchiveSnapshot(e,source);
@@ -261,15 +267,17 @@ function saveTermsArchiveForNewCycle(e,source){
   const all=loadTermsArchive(),key=termsArchiveKey(snap);
   const bucket=(all[key]&&typeof all[key]==='object')?all[key]:{bank:snap.bank,accountType:snap.accountType,current:null,versions:[]};
   const cur=bucket.current&&typeof bucket.current==='object'?bucket.current:null;
-  if(cur&&cur.entryId===snap.entryId&&cur.opened===snap.opened)return false;
+  if(cur&&cur.entryId===snap.entryId&&cur.opened===snap.opened&&termsArchiveSignature(cur)===termsArchiveSignature(snap))return false;
   let versions=Array.isArray(bucket.versions)?bucket.versions:[];
   if(cur){
-    const archived={...cur,replacedAt:td(),replacedByOpened:snap.opened};
-    const token=termsCycleToken(archived);
-    versions=[archived,...versions.filter(v=>termsCycleToken(v)!==token)].slice(0,12);
+    const previous={...cur,replacedAt:td(),replacedByOpened:snap.opened,revisionAt:td()};
+    const token=termsCycleToken(previous);
+    versions=[previous,...versions.filter(v=>termsCycleToken(v)!==token)];
+    // Do not silently drop old T&C versions. Backup size limits will surface an
+    // explicit save error rather than erasing a past enrolled promotion.
   }
   bucket.bank=snap.bank;bucket.accountType=snap.accountType;bucket.current=snap;bucket.versions=versions;
-  all[key]=bucket;saveTermsArchive(all);return true
+  all[key]=bucket;return saveTermsArchive(all);
 }
 function termsArchiveRows(){
   const all=loadTermsArchive();
@@ -4688,7 +4696,7 @@ function saveEntry(){
   }
   entries=sortE(entries);
   if(!saveEntriesStrict(entries)){entries=beforeEntries;return false}
-  if(savedEntry){syncProfileEventsFromEntry(savedEntry);refreshSavedReqFromEntry(savedEntry);learnAnalyzerMemoryFromEntry(savedEntry);if(!modal._edit)saveTermsArchiveForNewCycle(savedEntry,modal._entryFileImport?'verified-json-new-cycle':'new-cycle')}
+  if(savedEntry){syncProfileEventsFromEntry(savedEntry);refreshSavedReqFromEntry(savedEntry);learnAnalyzerMemoryFromEntry(savedEntry);saveTermsArchiveForNewCycle(savedEntry,modal._edit?'updated-enrolled-terms':modal._entryFileImport?'verified-json-new-cycle':'new-cycle')}
   closeModal();
   return true;
   }catch(error){
