@@ -1,41 +1,43 @@
 # Verification and releases
 
-`Verify and Deploy BonusTracker` checks structural release/cache integrity first,
-then runs unit suites in four areas: Finance, bonus rules/imports, cloud backup,
-and UI. `tests/ci-units.cjs` inventories every `.test.js` and `.test.py` file;
-a missing or duplicated assignment fails verification instead of silently dropping tests.
-Each suite has a 60-second deadline.
+BonusTracker uses Playwright **Chromium only** for pull requests, main pushes,
+manual runs, nightly checks, and production release verification. Firefox and
+WebKit are intentionally not scheduled. This owner-selected policy supersedes
+the previous three-browser matrix.
 
-Browser jobs wait for every selected unit area. Each uses
-`mcr.microsoft.com/playwright:v1.58.2-noble` and the exact matching
-`@playwright/test@1.58.2` API. Browser binaries come from the image; CI never
-installs them again. Only the small Node API is cached separately. Container
-home-directory ownership is aligned with the actual user for Firefox.
+`Verify and Deploy BonusTracker` first checks structural release and cache
+integrity (including every JavaScript file), then runs every remaining unit suite
+in the three areas: **bonus rules/imports, cloud backup, and UI**.
+`tests/ci-units.cjs` inventories all `.test.js` and `.test.py` files; a missing
+or duplicated suite fails verification. Each suite has a 60-second deadline.
+Finance is retired and never gets a testing or navigation entry.
 
-Every original browser harness remains intact. `BT_BROWSER` selects one engine
-per job; running a harness directly without it still checks all three.
-Each harness is a separate Playwright test with a 180-second timeout and one
-retry. A failed harness is retried alone, with its original assertions. JSON
-reports retain all attempts; tests passing only on retry produce a warning and
-appear in the job summary. Matrix fail-fast is disabled.
+The single browser job waits for all unit areas to pass. It uses the pinned
+`mcr.microsoft.com/playwright:v1.58.2-noble` image and the matching
+`@playwright/test@1.58.2` Node API. Browser binaries come from that image;
+CI never downloads or installs them. The Node API is separately cached using
+its pinned version. The container user's home directory remains writable.
 
-Only a PR whose complete file list matches the conservative Finance allowlist
-uses Finance units plus WebKit and Chromium. Any other PR, main push, manual
-verification, or nightly run executes every unit area and all three engines.
-CI files, app.js, missing file-list coverage, and unknown files always request
-full verification. WebKit is never omitted.
+All existing Chromium browser harness assertions remain enabled. The standalone
+harness defaults to Chromium, and an unsupported `BT_BROWSER` selection is
+rejected. Each Playwright harness has a 180-second timeout and one isolated
+retry, with a 165-second child-process deadline. All attempts and failure
+artifacts are retained, including screenshots, logs, and Playwright traces.
+Retry-only passes remain visible as warnings rather than hidden.
+Mobile visual checks cover 320, 375, 390, and 430 pixels, plus desktop.
+No assertion may be removed solely to accelerate CI.
 
-The nightly trigger is once daily at 08:23 UTC. It has a separate concurrency
-group and verifies without republishing. Releases cannot be canceled by another
-run; a new revision may cancel only its own superseded PR verification.
+The nightly trigger is once daily at 08:23 UTC, with its own concurrency
+group. It verifies without republishing. Only superseded pull-request
+runs may be canceled; release pushes and scheduled runs cannot cancel one
+another.
 
-Deployment waits for the aggregate verification gate and publishes the verified
-artifact. Production auditing starts after successful release verification,
-checks exact published asset hashes every 15 seconds for at most ten minutes,
-then runs WebKit first. Chromium and Firefox follow in parallel. Production
-browser tests retain the original synthetic mocks; they never connect a real bank.
+Deployment waits for the complete unit, Chromium, and release verification
+gate and publishes the exact verified source artifact. Synthetic provider
+and cloud mocks are used by all browser tests; tests never connect real banks.
 
-Local unit areas: `node tests/ci-units.cjs finance` (or bonus/cloud/ui).
-Browser harnesses: use the pinned API and `playwright test --config tests/playwright.config.cjs`,
-with `BT_BROWSER=webkit`, `chromium`, or `firefox`. Node module resolution must
-include the directory where the pinned API was installed.
+Local unit areas: `node tests/ci-units.cjs bonus` (or `cloud`/`ui`).
+Browser harness: use the pinned API with
+`BT_BROWSER=chromium playwright test --config tests/playwright.config.cjs`,
+with `NODE_PATH` pointing to the pinned `@playwright/test` install.
+Direct `node tests/browser-e2e.cjs` also selects Chromium alone.
