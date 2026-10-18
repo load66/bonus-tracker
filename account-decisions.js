@@ -76,6 +76,12 @@
     if(!Number.isFinite(n)||n<0)return true;
     if(n>0&&!(days>0&&baseDate(e)&&daysUntilSafe(e)===0))return true;
     if(n===0&&!verifiedStructured&&!savedZeroFeeEvidence(e))return true;
+    // Fee proof is not bonus-retention proof. A payout-only close rule must
+    // actually document the requirement to remain open until payout; the
+    // 'none' category needs affirmative saved no-clawback evidence.
+    const retention=String([structured?.evidence?.quote,e.closeRuleText,e.closeRuleSourceSentence].filter(Boolean).join(' '));
+    if(type==='payout-only'&&!/(?:remain|stay|keep)[^.]{0,100}open[^.]{0,150}(?:until|through|after|once|when)[^.]{0,100}(?:bonus|reward|payout|payment|credit)|(?:until|through|after|once|when)[^.]{0,100}(?:bonus|reward|payout|payment|credit)[^.]{0,130}(?:posts?|paid|received|deposited)/i.test(retention))return true;
+    if(type==='none'&&!/(?:no|without|not subject to)[^.]{0,90}(?:bonus|reward)[^.]{0,50}(?:clawback|repayment|forfeiture|reversal)|(?:no|without|not subject to)[^.]{0,90}(?:clawback|repayment|forfeiture|reversal)/i.test(retention))return true;
     return false;
   }
   function qualification(e){
