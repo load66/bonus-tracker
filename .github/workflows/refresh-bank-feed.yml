@@ -1,6 +1,11 @@
 name: Refresh bank bonus offers
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/update-bank-feed.py'
+      - '.github/workflows/refresh-bank-feed.yml'
   schedule:
     - cron: '17 */6 * * *'
   workflow_dispatch:
