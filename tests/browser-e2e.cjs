@@ -43,6 +43,20 @@ async function exercise(name,engine,url){
   page.on('pageerror',err=>errors.push(String(err)));
   page.on('console',msg=>{if(msg.type()==='warning')warnings.push(msg.text());if(msg.type()==='error'&&!/Failed to load resource|net::ERR|404 \(Not Found\)/i.test(msg.text()))errors.push(msg.text())});
   await page.addInitScript(()=>{const RealDate=Date;const now=Date.parse('2026-10-11T17:00:00Z');window.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[now]))}static now(){return now}}});
+  // Never contact live owner-only Railway usage during synthetic auth tests.
+  // Install for every document so service-worker reloads remain fully mocked.
+  await page.addInitScript(()=>{
+    const previousFetch=window.fetch.bind(window);
+    window.fetch=(input,options={})=>{
+      const url=String(typeof input==='string'?input:input?.url||input);
+      if(url.endsWith('/api/bonus-tracker/usage'))return Promise.resolve(new Response(JSON.stringify({
+        month:'2026-10',checkedAt:'2026-10-11T17:00:00Z',
+        railway:{status:'not_configured',services:[],costSoFar:null,projectedMonthEnd:null},
+        r2:{status:'unavailable',usedBytes:null,freeBytes:10000000000}
+      }),{status:200,headers:{'Content-Type':'application/json'}}));
+      return previousFetch(input,options);
+    };
+  });
   await page.addInitScript(()=>{
     const native=window.fetch.bind(window);window.__availabilityPriorityRequests=[];
     window.fetch=async function(input,options={}){
