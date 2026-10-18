@@ -70,40 +70,139 @@ def attach_availability(payload, previous):
     payload['availability']=snapshot
     return payload
 
+# This list deliberately identifies only known aliases. Unknown institutions remain
+# distinct unless their actual names normalize identically.
+BANK_ALIASES = (
+    ('JPMorgan Chase', ('jpmorgan chase', 'jp morgan chase', 'chase bank', 'chase')),
+    ('U.S. Bank', ('u.s. bank', 'us bank', 'u s bank', 'usbank')),
+    ('Wells Fargo', ('wells fargo',)),
+    ('Bank of America', ('bank of america', 'bofa')),
+    ('Citibank', ('citibank', 'citi bank', 'citi')),
+    ('Capital One', ('capital one',)),
+    ('Truist', ('truist',)),
+    ('American Express', ('american express', 'amex')),
+    ('PNC Bank', ('pnc bank', 'pnc')),
+    ('Huntington Bank', ('huntington',)),
+    ('Regions Bank', ('regions bank', 'regions')),
+    ('KeyBank', ('keybank', 'key bank')),
+    ('BMO', ('bmo bank', 'bmo')),
+    ('Fifth Third', ('fifth third',)),
+    ('SoFi', ('sofi',)),
+)
+STATE_CODES = set('AL AK AZ AR CA CO CT DE FL GA HI IA ID IL IN KS KY LA MA MD ME MI MN MO MS MT NC ND NE NH NJ NM NV NY OH OK OR PA RI SC SD TN TX UT VA VT WA WI WV WY DC'.split())
+CATEGORIES = {'bank accounts', 'bank promotions', 'bank account bonuses', 'bank bonuses'}
+
+def plain(value):
+    return re.sub(r'\s+', ' ', html.unescape(re.sub(r'<[^>]*>', ' ', value or ''))).strip()
+
+def ended_post(title):
+    return bool(re.search(r'\b(?:expired|ended|offer (?:is )?(?:over|closed)|no longer available)\b', plain(title), re.I))
+
 def bank_bonus(title, categories):
-    text = html.unescape(title).lower()
+    text = plain(title).lower()
     if re.search(r'\b(credit card|brokerage|crypto|binance|bitcoin|tastytrade|robinhood|investment|ira|stock)\b', text):
         return False
-    if re.search(r'\b(expired|ended|closed offer|roundup|round-up|best bank|weekly|monthly|recap)\b', text):
+    if re.search(r'\b(roundup|round-up|best bank|weekly|monthly|recap)\b', text) or ended_post(title):
         return False
-    bank = re.search(r'\b(checking|savings|bank|credit union|fcu|cu)\b', text)
-    reward = re.search(r'\bbonus\b|\$\s*[\d,]+', text)
-    allowed = {'bank accounts', 'bank promotions', 'bank account bonuses', 'bank bonuses'}
-    return bool(bank and reward and any(c.lower() in allowed for c in categories))
+    return bool(re.search(r'\b(checking|savings|bank|credit union|fcu|cu)\b', text)
+                and re.search(r'\bbonus\b|\$\s*[\d,]+', text)
+                and any(c.lower() in CATEGORIES for c in categories))
 
 def safe_link(link, source):
     try:
-        parsed = urlsplit(link)
-        return parsed.scheme == 'https' and parsed.hostname in source['hosts'] and not parsed.username and not parsed.password and parsed.port in (None, 443) and bool(parsed.path.strip('/')) and not parsed.query and not parsed.fragment
+        p = urlsplit(link)
+        return (p.scheme == 'https' and p.hostname in source['hosts'] and
+                not p.username and not p.password and p.port in (None, 443) and
+                bool(p.path.strip('/')) and not p.query and not p.fragment)
     except ValueError:
         return False
 
 def availability(title, categories, summary):
-    # Explicit source labels only. Bank identity never implies nationwide access.
-    text = html.unescape(re.sub('<[^>]+>', ' ', summary or ''))
+    # Geography comes from explicit source wording, never a bank's footprint.
+    text = plain(summary)
     if re.search(r'\b(?:not|isn.t|no longer)\s+(?:available\s+)?nationwide\b|\b(?:nationwide|all 50 states)\s+(?:except|excluding)\b', title + ' ' + text, re.I):
         return 'unknown'
     national = bool(re.search(r'\bnationwide\b|\ball 50 states\b', title, re.I) or any(re.fullmatch(r'nationwide(?: bank bonuses)?', c, re.I) for c in categories) or re.search(r'\b(?:availability|available|eligible locations?)\s*:?\s*(?:nationwide|in all 50 states)\b', text, re.I))
     regional = bool(re.search(r'^\s*\[[^\]]*(?:\b[A-Z]{2}\b|only|counties)[^\]]*\]', title) or any(re.fullmatch(r'[a-z]{2} bank bonuses', c.lower()) for c in categories) or re.search(r'\b(?:select states|select counties|regional|state residents only)\b', title, re.I))
-    if national and regional:
-        return 'unknown'
-    return 'nationwide' if national else 'regional' if regional else 'unknown'
+    return 'unknown' if national and regional else 'nationwide' if national else 'regional' if regional else 'unknown'
 
 def title_key(title):
-    text = html.unescape(title).lower().replace('u.s.', 'us').replace('u.s', 'us')
+    text = plain(title).lower().replace('u.s.', 'us').replace('u.s', 'us')
     text = re.sub(r'\b(?:earn|get|new|bonus|offer|offers|with|a|an|the|up to)\b', ' ', text)
-    # Retain amounts, product words, location, and dates; avoid fuzzy bank-only merging.
     return ' '.join(sorted(re.findall(r'[a-z0-9]+', text)))
+
+def parse_expiry(title, summary=''):
+    for value in (title, plain(summary)):
+        m = re.search(r'\b(?:ends?|expires?|expiration(?: date)?|valid through)\s*(?:on|:)?\s*(\d{1,2})/(\d{1,2})/(\d{2,4})\b', value, re.I)
+        if m:
+            try:
+                month, day, year = map(int, m.groups())
+                return dt.date(year + 2000 if year < 100 else year, month, day).isoformat()
+            except ValueError:
+                continue
+        m = re.search(r'\b(?:ends?|expires?|expiration(?: date)?|valid through)\s*(?:on|:)?\s*(\d{4})-(\d{2})-(\d{2})\b', value, re.I)
+        if m:
+            try:
+                return dt.date(*map(int, m.groups())).isoformat()
+            except ValueError:
+                continue
+        m = re.search(r'\b(?:ends?|expires?|expiration(?: date)?|valid through)\s*(?:on|:)?\s*([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})\b', value, re.I)
+        if m:
+            try:
+                return dt.datetime.strptime(' '.join(m.groups()), '%B %d %Y').date().isoformat()
+            except ValueError:
+                try:
+                    return dt.datetime.strptime(' '.join(m.groups()), '%b %d %Y').date().isoformat()
+                except ValueError:
+                    continue
+    return None
+
+def offer_identity(title, categories=(), summary=''):
+    text = plain(title)
+    # Determine region using explicit title restrictions. Unknown is NOT nationwide.
+    regions = []
+    for bracket in re.findall(r'\[([^\]]+)\]', text):
+        if re.search(r'\b(?:only|in branch|branch|residents?)\b', bracket, re.I) or re.search(r'\b[A-Z]{2}\b', bracket):
+            regions += [v for v in re.findall(r'\b[A-Z]{2}\b', bracket) if v in STATE_CODES]
+    if not regions:
+        for bracket in re.findall(r'\(([A-Z]{2}(?:\s*,\s*[A-Z]{2})*)\)', text):
+            regions += [v for v in re.findall(r'\b[A-Z]{2}\b', bracket) if v in STATE_CODES]
+    region = ','.join(sorted(set(regions))) if regions else ('US' if availability(text, categories, summary) == 'nationwide' else 'unknown')
+    low = text.lower()
+    if 'business' in low or re.search(r'\bcommercial\b', low):
+        product = 'business'
+    elif (re.search(r'\bchecking\b', low) and re.search(r'\bsavings?\b', low)) or re.search(r'\bcombo\b', low):
+        product = 'combo'
+    elif re.search(r'\bsavings?\b', low):
+        product = 'savings'
+    elif re.search(r'\bchecking\b', low):
+        product = 'checking'
+    else:
+        return None
+    nums = [int(n.replace(',', '')) for n in re.findall(r'\$\s*([\d,]+)(?![\d,])', text)]
+    # Ambiguous tiered headlines must never merge with a single-amount offer.
+    amount = nums[0] if len(nums) == 1 and 0 < nums[0] <= 100000 else None
+    normalized = re.sub(r'[^a-z0-9 ]+', ' ', low)
+    normalized = re.sub(r'\s+', ' ', normalized)
+    bank = next((name for name, aliases in BANK_ALIASES if any(re.search(r'\b' + re.escape(alias).replace(r'\ ', r'\s+') + r'\b', low) for alias in aliases)), None)
+    if not bank:
+        without = re.sub(r'^(?:\s*(?:\(update\)|\[update\]|update[:\-]?|earn|get|new)\s*)+', '', text, flags=re.I)
+        without = re.sub(r'^\s*\[[^\]]+\]\s*', '', without)
+        before = re.split(r'\$\s*[\d,]+|\b(?:checking|savings?|business|promo(?:tion)?s?|offer|bonus|account)\b', without, 1, flags=re.I)[0]
+        before = re.sub(r'\b(?:earn|up to|new|a|an|the)\b', ' ', before, flags=re.I)
+        bank = re.sub(r'[^\w\s&.-]', ' ', before).strip(' :-,.')
+        if len(bank) < 3 or len(bank) > 60:
+            return None
+        bank = re.sub(r'\s+', ' ', bank)
+    return {'bank': bank, 'product': product, 'amount': amount, 'region': region}
+
+def family_key(identity):
+    return '|'.join((identity['bank'].casefold(), identity['product'], identity['region']))
+
+def offer_id(identity, url=''):
+    # Unknown/tiered amounts are isolated by URL to prevent accidental coalescing.
+    key = family_key(identity) + '|' + (str(identity['amount']) if identity['amount'] is not None else 'unknown:' + url)
+    return hashlib.sha256(key.encode()).hexdigest()[:24]
 
 def parse_feed(raw, now, source=None):
     source = source or SOURCES[0]
@@ -113,12 +212,16 @@ def parse_feed(raw, now, source=None):
     items = root.findall('./channel/item')
     if not items:
         raise ValueError('Source returned no RSS items')
-    offers = {}
+    posts = {}
     for item in items:
-        title = html.unescape(item.findtext('title') or '').strip()
+        title = plain(item.findtext('title'))[:300]
         link = (item.findtext('link') or '').strip()
         cats = [c.text or '' for c in item.findall('category')]
-        if not bank_bonus(title, cats) or not safe_link(link, source):
+        ended = ended_post(title)
+        if not safe_link(link, source) or not (bank_bonus(title, cats) or ended and any(c.lower() in CATEGORIES for c in cats)):
+            continue
+        identity = offer_identity(title, cats, item.findtext('description'))
+        if not identity:
             continue
         try:
             published = email.utils.parsedate_to_datetime(item.findtext('pubDate')).astimezone(dt.timezone.utc)
@@ -126,17 +229,15 @@ def parse_feed(raw, now, source=None):
             continue
         if published > now or now - published > dt.timedelta(days=90):
             continue
-        # Discard explicit title expiry dates; do not invent one from article dates.
-        expiry = re.search(r'\bends?\s+(\d{1,2})/(\d{1,2})/(\d{2,4})\b', title, re.I)
-        if expiry:
-            try:
-                month, day, year = map(int, expiry.groups())
-                if dt.date(year + 2000 if year < 100 else year, month, day) < now.date():
-                    continue
-            except ValueError:
-                continue
-        offers[link] = {'title': title[:300], 'url': link, 'publishedAt': published.isoformat(), 'source': source['name'], 'sourceId': source['id'], 'availability': availability(title, cats, item.findtext('description')), 'groupKey': title_key(title)}
-    return sorted(offers.values(), key=lambda x: x['publishedAt'], reverse=True)
+        row = {'title': title, 'url': link, 'publishedAt': published.isoformat(), 'source': source['name'],
+               'sourceId': source['id'], 'availability': availability(title, cats, item.findtext('description')),
+               'groupKey': title_key(title), **identity,
+               'expiresAt': parse_expiry(title, item.findtext('description')),
+               'ended': ended, 'updated': bool(re.search(r'^\s*(?:\(update\)|\[update\]|update[:\-])', title, re.I))}
+        old = posts.get(link)
+        if not old or old['publishedAt'] < row['publishedAt']:
+            posts[link] = row
+    return sorted(posts.values(), key=lambda x: (x['publishedAt'], x['url']), reverse=True)
 
 def download(url):
     req = urllib.request.Request(url, headers={'User-Agent': 'BonusTracker/1.0 (RSS metadata reader)'})
