@@ -556,7 +556,9 @@ async function exercise(name,engine,url){
     await page.locator('.radar-card h3').filter({hasText:'Synthetic Checking'}).first().waitFor();
     await page.screenshot({path:path.join(output,name+'-v362-bonuses-390.png')});
     check('offers group by verified tracker review status without assuming personal eligibility',await page.locator('.radar-group-heading').count()>0&&(await page.getByText('About sources',{exact:true}).count())===1);
-    check('bank feed renders escaped discovery title',(await page.locator('.radar-card img').count())===0&&(await page.locator('.radar-card').filter({hasText:'Synthetic Checking'}).innerText()).includes('<img'));
+    check('bank feed renders escaped discovery title and permits only bundled bank logos',
+      (await page.locator('.radar-card img').evaluateAll(images=>images.every(img=>/^\.\/bank-logos\/[a-z0-9-]+\.svg$/.test(img.getAttribute('src')||''))))
+      &&(await page.locator('.radar-card').filter({hasText:'Synthetic Checking'}).innerText()).includes('<img'));
     check('bank feed warns when source check is stale',await page.locator('.bt362-offer-stale').isVisible());
     await page.locator('.bt362-about-sources summary').click();
     check('bank bonus tab fits mobile viewport',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
