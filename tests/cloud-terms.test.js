@@ -15,6 +15,10 @@ const source={
   {kind:'direct-deposit',amount:500},{kind:'balance-hold',metric:'minimum-beginning-day-balance',amount:1500}
  ]}}}],closure:{earlyCloseFee:25,minHoldDays:180}},
  eligibilityRules:[{basis:'account-closed',periodValue:24,periodUnit:'months'}],
+ churn:'1',churnability:'repeatable',churnBasis:'bonus',
+ churnRuleText:'No bonus if earlier bonus received during the past 12 months.',
+ churnReason:'Exact synthetic enrolled offer',churnDecisionSource:'original-promotion',
+ churnDecisionConfidence:'High',eligibilityVerifiedAt:'2026-10-15',
  extraSensitiveBankBalance:2000
 };
 const before=JSON.stringify(source);
@@ -27,6 +31,11 @@ assert.equal(data.tcSourceRaw,source.tcSourceRaw);
 assert.equal(data.feeScheduleRaw,source.feeScheduleRaw);
 assert.deepEqual(data.financialRules,source.financialRules);
 assert.deepEqual(data.eligibilityRules,source.eligibilityRules);
+assert.equal(data.churn,source.churn);
+assert.equal(data.churnBasis,'bonus');
+assert.equal(data.churnRuleText,source.churnRuleText);
+assert.equal(data.churnDecisionSource,source.churnDecisionSource);
+assert.equal(data.eligibilityVerifiedAt,'2026-10-15');
 assert.equal(data.extraSensitiveBankBalance,undefined,'Only approved T&C fields may be transmitted');
 assert.equal(JSON.stringify(source),before,'Cloud serialization is read-only');
 assert.equal(core.snapshot(source),raw,'Same historical terms must have deterministic content identity');

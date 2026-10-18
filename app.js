@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.15';
+const APP_VERSION='3.6.16';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -238,9 +238,12 @@ function termsArchiveSnapshot(e,source){
     eligibilityEvidenceText:e.eligibilityEvidenceText||'',eligibilityEvidenceSource:e.eligibilityEvidenceSource||'',
     currentCustomerEvidenceText:e.currentCustomerEvidenceText||'',
     couponEnrollmentDate:e.couponEnrollmentDate||'',offerEnrollmentDate:e.offerEnrollmentDate||'',
-    churn:e.churn||'',churnability:e.churnability||'',sourceEligibilityBasis:e.sourceEligibilityBasis||'',
+    churn:e.churn||'',churnability:e.churnability||'',churnBasis:e.churnBasis||'',
+    churnRuleText:e.churnRuleText||'',churnReason:e.churnReason||'',
+    churnDecisionSource:e.churnDecisionSource||'',churnDecisionConfidence:e.churnDecisionConfidence||'',
+    eligibilityVerifiedAt:e.eligibilityVerifiedAt||'',sourceEligibilityBasis:e.sourceEligibilityBasis||'',
     churnPeriodValue:e.churnPeriodValue||0,churnPeriodUnit:e.churnPeriodUnit||'',
-    churnRuleText:e.churnRuleText||'',eligibilityText:e.eligibilityText||'',
+    eligibilityText:e.eligibilityText||'',
     completeBonusText:e.completeBonusText||'',payoutTimingText:e.payoutTimingText||'',
     monthlyFeeYNText:e.monthlyFeeYNText||'',monthlyFeeAmountText:e.monthlyFeeAmountText||'',
     monthlyFeeFrequency:e.monthlyFeeFrequency||'',
