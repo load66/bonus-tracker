@@ -319,12 +319,14 @@ function detailPanels(e){
   const financial=e.financialRules?.closure,hold=typeof safeCloseDate==='function'?safeCloseDate(e):'',remaining=hold?dB(td(),hold):null;
   const hasHold=Number(e.minHoldDays)>0;
   const holdMet=hasHold&&Number.isFinite(remaining)&&remaining<=0;
-  const feeKnown=typeof financial?.earlyCloseFee==='number'&&!!financial?.feeEvidence?.quote;
-  const feeCleared=feeKnown&&(financial.earlyCloseFee===0||holdMet);
+  const savedFee=String(e.earlyTerminationFeeText||'');
+  const noFeeSaved=/no (early |account[ -])?(?:close|closing|termination).{0,20}fee|\$0.{0,30}(?:fee|after)/i.test(savedFee);
+  const feeKnown=(typeof financial?.earlyCloseFee==='number'&&!!financial?.feeEvidence?.quote)||noFeeSaved;
+  const feeCleared=feeKnown&&(noFeeSaved||financial?.earlyCloseFee===0||holdMet);
   const retentionSaved=!!e.bonusRecd&&['payout-only','minimum-open','none'].includes(String(financial?.restrictionType||e.closeRestrictionType||''));
   const items=[
    {ok:holdMet,label:'Minimum hold met',detail:hasHold?(holdMet?'Open '+Number(e.minHoldDays)+' days · cleared '+date(hold):'Hold until '+(hold?date(hold):'Needs review')):'No documented minimum hold · Needs review'},
-   {ok:feeCleared,label:'Early close fee window cleared',detail:feeKnown?(financial.earlyCloseFee===0?'No early close fee in saved terms':amount(financial.earlyCloseFee)+' fee · review after hold'):'Early close fee not stated · Needs review'},
+   {ok:feeCleared,label:'Early close fee window cleared',detail:feeKnown?(noFeeSaved?'No early close fee in saved terms':financial.earlyCloseFee===0?'No early close fee in saved terms':amount(financial.earlyCloseFee)+' fee · review after hold'):'Early close fee not stated · Needs review'},
    {ok:retentionSaved,label:'Bonus kept after closing',detail:retentionSaved?'Bonus received · saved closure terms reviewed':'Confirm any repayment restriction in saved terms'},
    {ok:false,label:'Close with $0 balance',detail:'Confirm account balance with the bank before closing'}
   ];
@@ -343,7 +345,7 @@ function detailPanels(e){
 }
 function detailFooter(e){
  const primary=primaryAction(e);
- return '<div class="bt360-detail-footer" role="group" aria-label="Account actions"><button type="button" onclick="'+(stage(e).code==='READY_TO_CLOSE'?'BT360.back()':'btOpenBonusAI('+arg(e.id)+')')+'">'+(stage(e).code==='READY_TO_CLOSE'?'Keep open':'Ask AI')+'</button><button type="button" class="bt360-primary" aria-label="'+safe(primary.label+' for '+e.bank)+'" onclick="'+primary.command+'">'+safe(primary.label)+'</button></div>';
+ return '<div class="bt360-detail-footer'+(stage(e).code==='READY_TO_CLOSE'?' bt3611-ready-footer':'')+'" role="group" aria-label="Account actions"><button type="button" onclick="'+(stage(e).code==='READY_TO_CLOSE'?'BT360.back()':'btOpenBonusAI('+arg(e.id)+')')+'">'+(stage(e).code==='READY_TO_CLOSE'?'Keep open':'Ask AI')+'</button><button type="button" class="bt360-primary" aria-label="'+safe(primary.label+' for '+e.bank)+'" onclick="'+primary.command+'">'+safe(primary.label)+'</button></div>';
 }
 function showTerms(bank){archivePane='saved';storageSearch=String(bank||'');expanded=null;tab='archive';R()}
 function back(){expanded=null;window.bt360ArchiveDetailId=null;R();const el=document.querySelector('.scroll');if(el)el.scrollTop=0}
