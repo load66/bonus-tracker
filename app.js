@@ -6482,6 +6482,7 @@ entries=sortE(entries);R();
     window.__btBankActionPrompt=null;
     if(!e){R();return}
     expanded=id;
+    if(action==='activity'){R();window.BT360?.openActivity(id);return}
     if(action==='askai'){R();window.btOpenBonusAI(id);return}
     if(action==='edit'){openEdit(id);return}
     if(action==='reqmet'){confirmMarkReqMet(id);return}
@@ -6523,6 +6524,7 @@ entries=sortE(entries);R();
       h+=bankActionSheetButton(e.id,'checklist','✅','Add task','Track a requirement');
       h+=bankActionSheetButton(e.id,'timer','⏱️','Add timer','Set a reminder or deadline');
     }
+    if(window.BT360)h+=bankActionSheetButton(e.id,'activity','◷','Activity','History, reviews and saved evidence');
     h+=bankActionSheetButton(e.id,'askai','✦','Ask AI','Questions about this bonus');
     if(window.BT360)h+='<details class="bt366-advanced-actions"><summary>Advanced tracker tools</summary>'+renderActionCenter()+'</details>';
     h+=bankActionSheetButton(e.id,'delete','🗑️','Delete account','Remove this account record',true);
@@ -6632,7 +6634,7 @@ entries=sortE(entries);R();
         historyHtml += renderAnalyzerHistory(e);
         historyHtml += renderOfferHistory(e);
         historyHtml += renderAnalyzedTermsCard(e);
-        if(historyHtml)h += '<details class="profile-section" data-entry-id="'+profileSectionAttr(e.id)+'" data-section-key="history"'+profileSectionOpenAttr(e.id,'history')+' ontoggle="handleProfileSectionToggle(this)"><summary><span>Activity & Analysis</span><em>View</em></summary><div class="profile-section-body">'+historyHtml+'</div></details>';
+        if(historyHtml&&!window.BT360)h += '<details class="profile-section" data-entry-id="'+profileSectionAttr(e.id)+'" data-section-key="history"'+profileSectionOpenAttr(e.id,'history')+' ontoggle="handleProfileSectionToggle(this)"><summary><span>Activity & Analysis</span><em>View</em></summary><div class="profile-section-body">'+historyHtml+'</div></details>';
 
         if(!window.BT360){h += '<div class="card-btns">';
         if(!e.closed&&e.bonusRecd) h += actionBtn('cls',I.lock,'Record closure',`event.stopPropagation();startCloseFlow('${e.id}','actual')`);
