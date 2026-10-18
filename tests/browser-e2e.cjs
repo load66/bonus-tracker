@@ -92,7 +92,10 @@ async function exercise(name,engine,url){
     await page.getByRole('button',{name:'✏️ Edit account Details, dates, bonus, rules',exact:true}).click();
   };
   const close=async()=>{
-    await page.getByRole('button',{name:/^Mark account closed/}).click();
+    const action=page.getByRole('button',{name:/^Mark account closed/});
+    if(!await action.count())await page.evaluate(()=>{expanded=entries[0].id;tab='tracker';R()});
+    if(await action.count())await action.click();
+    else{await page.getByRole('button',{name:'More account actions'}).click();await page.getByRole('button',{name:/Record closure/}).click();}
     await page.locator('#cp_date').fill('2026-05-01');
     await page.locator('#cp_monthly_checked').selectOption('yes');
     await button('Next').click();await button('Next').click();await button('Review').click();await button('Save Closed').click();await button('OK').click();
