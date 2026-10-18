@@ -39,7 +39,14 @@
         if(u.protocol!=='https:'||!id||u.username||u.password||u.port||u.search||u.hash||u.pathname==='/')continue;
         const expiry=x.title.match(/\bends?\s+(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b/i);
         if(expiry){const year=+expiry[3]<100?2000+(+expiry[3]):+expiry[3];const day=new Date(year,+expiry[1]-1,+expiry[2]+1);if(day.getTime()<=now)continue;}
-        const offer={title:x.title,url:u.href,publishedAt:x.publishedAt,source:sourceNames[id],sourceId:id,availability:['nationwide','regional'].includes(x.availability)?x.availability:'unknown',groupKey:typeof x.groupKey==='string'&&x.groupKey.length<1000?x.groupKey:normalize(x.title)};
+        const details=['bank','product','region','offerKey'].every(k=>typeof x[k]==='string'&&x[k].length<=120)?{bank:x.bank,product:x.product,region:x.region,offerKey:x.offerKey}:{};
+        const amount=Number.isSafeInteger(x.amount)&&x.amount>0&&x.amount<100000?x.amount:null;
+        const expiresAt=typeof x.expiresAt==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(x.expiresAt)?x.expiresAt:null;
+        if(expiresAt&&expiresAt<new Date(now).toISOString().slice(0,10))continue;
+        const links=Array.isArray(x.links)?x.links.slice(0,20).flatMap(link=>{try{const u=new URL(link.url),id=sourceHosts[u.hostname];return id&&u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&!u.search&&!u.hash&&u.pathname!=='/'&&typeof link.title==='string'&&link.title.length<=300?[{url:u.href,source:sourceNames[id],sourceId:id,title:link.title}]:[]}catch{return[]}}):[];
+        if(!links.some(l=>l.url===u.href))links.unshift({url:u.href,source:sourceNames[id],sourceId:id,title:x.title});
+        const badges=Array.isArray(x.badges)?x.badges.filter(v=>['New','Increased','Decreased','Updated','Ending soon'].includes(v)).slice(0,4):[];
+        const offer={title:x.title,url:u.href,publishedAt:x.publishedAt,source:sourceNames[id],sourceId:id,availability:['nationwide','regional'].includes(x.availability)?x.availability:'unknown',groupKey:details.offerKey||(typeof x.groupKey==='string'&&x.groupKey.length<1000?x.groupKey:normalize(x.title)),...details,amount,expiresAt,badges,links,changeLabel:typeof x.changeLabel==='string'&&/^\$[\d,]+ → \$[\d,]+$/.test(x.changeLabel)?x.changeLabel:''};
         offer.evidence=evidenceFor(offer,data.verification);offers.push(offer);
       }catch{}
     }
@@ -52,9 +59,9 @@
   function grouped(rows){
     const groups=new Map();
     for(const row of rows){
-      let group=groups.get(row.groupKey);
-      if(!group){group={...row,links:[]};groups.set(row.groupKey,group);}
-      if(!group.links.some(x=>x.url===row.url))group.links.push({url:row.url,source:row.source});
+      let group=groups.get(row.offerKey||row.groupKey);
+      if(!group){group={...row,links:[]};groups.set(row.offerKey||row.groupKey,group);}
+      for(const link of row.links?.length?row.links:[{url:row.url,source:row.source,title:row.title}])if(!group.links.some(x=>x.url===link.url))group.links.push(link);
       // Do not borrow one source's evidence for another title/offer identity.
       if(group.availability!==row.availability)group.availability='unknown';
     }
