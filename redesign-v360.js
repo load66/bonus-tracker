@@ -94,7 +94,7 @@ function hero(rows,year,metrics){
   const x=monthRows[selectedHeroMonth];
   const rowsHtml=x.accounts.length?x.accounts.map(e=>
    '<button type="button" class="bt367-month-row" onclick="BT360.openHeroBonus('+arg(e.id)+')">'
-   +bankLogo(e.bank,true)+'<span class="bt360-grow"><b>'+safe(e.bank)+'</b><small>'+safe(e.accountName||e.accountNickname||e.accountType||'Checking')+' · '+safe(date(e.bonusRecd))+'</small></span><strong>'+safe(amount(e.bonus))+'</strong></button>'
+   +bankLogo(e.bank,true)+'<span class="bt360-grow"><b>'+safe(e.bank)+'</b><small>'+safe(e.accountName||e.accountNickname||e.productName||e.acct||(scope(e)&&audience==='business'?'Business account':'Personal account'))+' · '+safe(date(e.bonusRecd))+'</small></span><strong>'+safe(amount(e.bonus))+'</strong></button>'
   ).join(''):'<p class="bt367-month-empty">No bonuses</p>';
   detail='<section class="bt367-month-detail" aria-label="'+x.name+' '+year+' collected bonuses"><div class="bt367-month-detail-head"><b>'+x.name+' '+year+' · '+amount(x.total)+' collected · '+x.accounts.length+' '+(x.accounts.length===1?'bonus':'bonuses')+'</b><button type="button" aria-label="Close month details" onclick="BT360.closeHeroMonth()">×</button></div><div class="bt367-month-list">'+rowsHtml+'</div></section>';
  }
