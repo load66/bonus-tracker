@@ -110,7 +110,10 @@ async function exercise(name,engine,url){
     await page.locator('.bt362-add-fab').click();await button('Review promo terms').click();
     check('Review promo terms scrolls its analyzer into view',await page.locator('#bt-promo-terms-panel').evaluate(e=>{const r=e.getBoundingClientRect();return r.top>=0&&r.top<innerHeight&&r.bottom>0&&!!e.querySelector('#az_input')}));
     await button('Close').click();
-    check('cloud protection status is compact',await page.locator('#bt-cloud-open').evaluate(e=>e.getBoundingClientRect().width<150&&!e.innerText.includes('Current data verified in the cloud')));
+    check('cloud protection status is compact',await page.locator('#bt-cloud-open').evaluate(e=>{
+      const box=e.getBoundingClientRect(),style=getComputedStyle(e);
+      return box.height<=32&&style.maxWidth==='42%'&&style.backgroundColor==='rgba(0, 0, 0, 0)'&&!e.innerText.includes('Current data verified in the cloud');
+    }));
 
     const beforeNotifications=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     await button('Notifications').click();
