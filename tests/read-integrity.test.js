@@ -155,6 +155,9 @@ setTimeout(()=>{
     run('entries.push('+JSON.stringify({id:'EVT-P-01',bank:'Synthetic Event Bank',opened:'2026-10-01',bonus:200,bonusRecd:'',reqMet:'',earlyCloseFee:null,customTimers:[],checklist:[],history:[]})+')');
     run('openRcv("EVT-P-01")');
     assert(run('rcvPrompt.reqDate')==='','Bonus dialog defaulted an unknown requirements date to today');
+    const receivedForm=sandbox.rRcv();
+    const reqInput=receivedForm.match(/id="rcv_req_date"[^>]*value="([^"]*)"/);
+    assert(reqInput&&reqInput[1]==='','Rendered bonus receipt form silently filled the unknown requirements date');
     run('rcvPrompt.date="2026-10-10";rcvPrompt.reqDate="";rcvPrompt.bonus=200;rcvSubmit()');
     const received=liveEntries().find(e=>e.id==='EVT-P-01');
     assert(received&&received.bonusRecd==='2026-10-10'&&received.reqMet==='','Saving a received bonus fabricated requirements completion');
