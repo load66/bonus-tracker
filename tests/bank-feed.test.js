@@ -7,7 +7,7 @@ assert.equal(sandbox.BTBankBonusFeed.validate(safe).offers.length,1);
 assert.equal(sandbox.BTBankBonusFeed.validate({...safe,offers:[{...safe.offers[0],url:'javascript:alert(1)'}]}).offers.length,0);
 assert.equal(sandbox.BTBankBonusFeed.validate({...safe,offers:[{...safe.offers[0],publishedAt:'2099-01-01'}]}).offers.length,0);
 assert.throws(()=>sandbox.BTBankBonusFeed.validate({...safe,checkedAt:'bad'}));
-assert.throws(()=>sandbox.BTBankBonusFeed.validate({...safe,schemaVersion:3}));
+assert.throws(()=>sandbox.BTBankBonusFeed.validate({...safe,schemaVersion:4}));
 const additional={...safe,schemaVersion:2,offers:[{...safe.offers[0],title:'U.S. Bank $450 Checking Bonus',url:'https://frequentmiler.com/us-bank-bonus/',groupKey:'bank us 450 checking',availability:'nationwide'},{...safe.offers[0],title:'US Bank $450 Checking Bonus',url:'https://www.hustlermoneyblog.com/us-bank-bonus/',groupKey:'bank us 450 checking',availability:'nationwide'},{...safe.offers[0],title:'US Bank $500 Checking Bonus',groupKey:'bank us 500 checking',availability:'unknown'}]};
 const multi=sandbox.BTBankBonusFeed.validate(additional);
 assert.equal(multi.offers.length,3);
@@ -110,3 +110,48 @@ assert.ok(ids.length<=8&&ids.every(id=>typeof id==='string'),'Priority envelope 
 assert.ok(!JSON.stringify(ids).includes('reviewDate'));
 assert.equal(JSON.stringify([...storage]),before,'Availability verification cannot rewrite saved terms');
 console.log('Official scope projection passed: exact offer identity, source trust, expiry, state constraints and public-only priority identifiers');
+
+
+// Schema v3 identity is assigned by the deterministic collector. The frontend
+// must preserve each source link and NEVER project another offer's evidence.
+const canonical={
+  schemaVersion:3,checkedAt:new Date().toISOString(),sources:[],
+  offers:[{
+    id:'a'.repeat(24),title:'Chase Total Checking $400 Bonus',
+    headline:'Chase Total Checking $400 Bonus',url:'https://www.hustlermoneyblog.com/chase-total-checking-bonus/',
+    publishedAt:new Date().toISOString(),bank:'JPMorgan Chase',product:'checking',amount:400,region:'unknown',
+    displayTitle:'JPMorgan Chase · Checking · $400',availability:'unknown',
+    groupKey:'a'.repeat(24),firstSeenAt:new Date().toISOString(),
+    badges:['New','Increased','Ending soon'],
+    change:{type:'Increased',from:300,to:400},expiresAt:null,
+    links:[
+      {title:'Chase Total Checking $400 Bonus',sourceId:'hmb',url:'https://www.hustlermoneyblog.com/chase-total-checking-bonus/',publishedAt:new Date().toISOString()},
+      {title:'JPMorgan Chase $400 Checking Bonus',sourceId:'doc',url:'https://www.doctorofcredit.com/chase-400-checking-bonus/',publishedAt:new Date().toISOString()}
+    ]
+  }]
+};
+const v3=priority.validate(canonical);
+assert.equal(v3.offers.length,1);
+assert.equal(priority.group(v3.offers).length,1);
+assert.equal(priority.group(v3.offers)[0].links.length,2);
+assert.equal(priority.amount(v3.offers[0]),400);
+assert.equal(v3.offers[0].displayTitle,'JPMorgan Chase · Checking · $400');
+assert.deepEqual(v3.offers[0].badges,['New','Increased','Ending soon']);
+const tampered=structuredClone(canonical);
+tampered.offers[0].links[1].url='https://www.doctorofcredit.com.evil.test/fake';
+assert.equal(priority.validate(tampered).offers[0].links.length,1,'Reject unsafe secondary source without dropping valid offer');
+const foreign={schemaVersion:1,status:'complete',records:{'https://www.doctorofcredit.com/chase-400-checking-bonus/':{
+ offerTitle:'JPMorgan Chase $400 Checking Bonus',offerUrl:'https://www.doctorofcredit.com/chase-400-checking-bonus/',status:'evidence-found'
+}}};
+assert.equal(priority.evidence(v3.offers[0],foreign),null,'A secondary source cannot supply evidence to the primary offer');
+const changed=structuredClone(canonical);
+changed.offers[0].amount=500;
+assert.equal(priority.validate(changed).offers.length,0,'Source headline amount must match canonical amount');
+const separate=structuredClone(canonical.offers[0]);
+separate.id='b'.repeat(24);separate.product='savings';separate.amount=500;separate.region='CA';
+separate.title='[CA] Chase $500 Savings Bonus';separate.displayTitle='JPMorgan Chase · Savings · $500';
+separate.url='https://www.doctorofcredit.com/chase-400-checking-bonus/';
+separate.links=[{title:separate.title,url:separate.url,sourceId:'doc',publishedAt:new Date().toISOString()}];
+assert.equal(priority.group(priority.validate({...canonical,offers:[...canonical.offers,separate]}).offers).length,2);
+assert.equal(JSON.stringify([...storage]),before,'Canonical offer validation must not mutate user records');
+console.log('Canonical JS offers passed: source links, strict amount, alias identity isolation, badges and no evidence borrowing');
