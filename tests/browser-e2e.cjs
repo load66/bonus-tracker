@@ -143,6 +143,7 @@ async function exercise(name,engine,url){
     check('deadline wording is visible',await page.locator('input[oninput*="\'requiredDaysText\'"]').inputValue()==='90 calendar days');
     await button('4 Review').click();await button('💾 Add account').click();
     await wait(()=>JSON.parse(localStorage.getItem('bt_e_v4')).length===1);
+    check('v3.6.1 panel headings render badges instead of literal HTML',await page.locator('.bt360-panel-title').evaluateAll(rows=>rows.some(e=>e.querySelector('h3')?.textContent==='Needs you'&&e.querySelector('.bt360-count'))&&rows.every(e=>!e.querySelector('h3')?.textContent.includes('<span'))));
     check('90-day deadline is exact',await page.evaluate(()=>reqDeadline(entries[0]))==='2026-05-01');
     const beforeDisclosure=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     await openAdvancedActions();await page.locator('#bt-action-center-toggle').click();
