@@ -42,4 +42,11 @@ try{
  delete process.env.BT_BROWSER;
  assert.throws(()=>entries({firefox:2,webkit:3}),/Chromium browser engine is unavailable/);
 }finally{if(original===undefined)delete process.env.BT_BROWSER;else process.env.BT_BROWSER=original}
+
+const publisher=fs.readFileSync('.github/workflows/refresh-bank-feed.yml','utf8');
+assert.ok(publisher.includes("cron: '23 */6 * * *'"),'RSS publisher must run once every 6 hours');
+assert.ok(publisher.includes('contents: write')&&publisher.includes('git push origin HEAD:main'),'RSS snapshots must persist in the repository');
+assert.ok(publisher.includes('actions/upload-pages-artifact@v4')&&publisher.includes('actions/deploy-pages@v4'),'RSS changes must reach Pages even when made by GITHUB_TOKEN');
+assert.ok(publisher.includes("github.event.workflow_run.conclusion == 'success'"),'Publish once after green main release');
+assert.ok(!workflow.includes('python3 scripts/update-bank-feed.py'),'Release verification may not overwrite the packaged site with an uncommitted RSS update');
 console.log('CI coverage passed: all unit areas, Chromium-only Playwright, isolated nightly, pinned browser and retries');
