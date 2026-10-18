@@ -88,6 +88,11 @@ async function exercise(name,engine,url){
   try{
     await page.goto(url);await settleStartup();
     await page.getByText('No accounts yet',{exact:true}).waitFor();
+    const beforeNotifications=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
+    await button('Notifications').click();
+    check('header bell opens read-only notification center',await page.getByRole('dialog',{name:'Notification center'}).isVisible()&&await page.getByText('No current tasks needing attention.').isVisible());
+    await page.getByRole('button',{name:'Close notifications'}).click();
+    check('notification center leaves records unchanged',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,beforeNotifications));
     check('Action Center defaults collapsed',await page.locator('#bt-action-center-toggle').getAttribute('aria-expanded')==='false'&&!await page.locator('#bt-action-center-body').isVisible());
     await page.waitForFunction(()=>window.__btFullRegressionReport&&!window.__btFullRegressionReport.pending&&window.__btFullRegressionReport.total===8);
     const diagnostics=await page.evaluate(()=>window.btRunFullRegressionTests({force:true}));
