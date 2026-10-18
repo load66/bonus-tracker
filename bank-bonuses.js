@@ -77,7 +77,7 @@
     return grouped(rows).filter(x=>{
       const e=x.evidence,fields=e&&e.fields||{},has=Object.keys(fields).length>0;
       const state=e&&e.stale?'stale':e&&e.checkState==='queued'?'queued':has?'present':'missing';
-      const amount=amountFor(x);
+      const amount=Number.isSafeInteger(x.amount)?x.amount:amountFor(x);
       return (availability==='all'||x.availability===availability)&&(!q||normalize(x.title+' '+(x.bank||'')+' '+(x.product||'')).includes(normalize(q)))&&
         (!options.evidence||options.evidence==='all'||options.evidence===state||options.evidence==='changed'&&e&&e.changes.length>0)&&
         (!options.fees||options.fees==='all'||options.fees==='present'&&!!fields.monthly_fee||options.fees==='missing'&&!fields.monthly_fee)&&
