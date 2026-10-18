@@ -157,3 +157,17 @@ projected=m.attach_verification({'offers':[replacement]}, {})
 assert projected['verification']['records']=={}, 'Official evidence borrowed from another source/headline'
 m.download=original
 print('Canonical feed regressions passed: cross-source merge, increase/decrease, updates, ended posts, summary expiry, retention, region separation and provenance')
+
+# No stale source item may resurrect an ended promotion after the tombstone is saved.
+ended_post=rss('[Expired] Chase Total Checking $400 Bonus',m.SOURCES[2],now)
+tomb=[{'offerKey':ended_post['offerKey'],'endedAt':ended_post['publishedAt']}]
+assert m.merge_offers([chase_hmb],[],now,tomb)==[]
+assert len(m.merge_offers([], [rss('Chase Total Checking $400 Bonus',m.SOURCES[0],now+dt.timedelta(hours=1))],now+dt.timedelta(hours=2),tomb))==1
+
+# A first-discovered older-dated post is still marked newly discovered.
+summary_rss='<rss><channel><item><title>Chase $400 Checking Bonus</title><link>https://www.doctorofcredit.com/synthetic/</link><pubDate>Sun, 11 Oct 2026 12:00:00 +0000</pubDate><description>Expires 10/21/26</description><category>Bank Accounts</category></item></channel></rss>'
+fresh_rows=m.parse_feed(summary_rss,now,m.SOURCES[0])
+assert fresh_rows[0]['expiresAt']=='2026-10-21'
+assert fresh_rows[0]['firstSeen']==now.isoformat()
+assert 'New' in m.merge_offers([],fresh_rows,now)[0]['badges']
+print('RSS lifecycle passed: persisted ended tombstones, reopen only on newer evidence, first-seen and summary expiry')
