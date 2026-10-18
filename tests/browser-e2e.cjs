@@ -611,6 +611,8 @@ async function exercise(name,engine,url){
     },require('./fixtures/financial-rules.cjs').reviewFixture());
     for(const [key,value] of Object.entries(reviewProbe))check('financial v2 browser '+key,value);
     await button('Cancel').click();
+    // Quick Add belongs to the Tracker list, not the focused account detail.
+    await page.getByRole('button',{name:'Back to accounts'}).click();
     const fileSource=require('./fixtures/financial-rules.cjs').reviewFixture();
     await importEntry({kind:'BonusTrackerEntry',schemaVersion:3,verification:{promoSourceUrl:fileSource.promoSourceUrl,feeScheduleSourceUrl:fileSource.feeScheduleSourceUrl,termsVerifiedAt:fileSource.termsVerifiedAt},entry:fileSource});
     check('actual v3 file chooser reaches review after confirmation',await page.getByRole('heading',{name:'Add account',exact:true}).isVisible());
