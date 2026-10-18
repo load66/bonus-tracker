@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex · v3.6.17 cooldown historical fee references · codex/v3.6.17-cooldown-last-saved-reference
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.17 cooldown last-saved presentation (`codex/v3.6.17-cooldown-last-saved-reference`): closed repeatable account fee cards read exact-cycle or older same-bank/audience historical amounts as labeled reference without mutating enrolled records or eligibility/closure engines. Recover legacy fee object and substitute explanatory missing-evidence wording instead of ambiguous Review. Unverified legacy churn date remains an estimate rather than proven eligibility. Synthetic tests cover cross-audience isolation and missing-data behavior; full UI/bonus/cloud, Chromium/WebKit and release verification required before merge. Backend unaffected.
 
 - v3.6.16 legacy-churn archive extension (`codex/v3.6.16-legacy-churn-r2-evidence`): add pre-structured repeat-bonus period, rule text, basis and decision provenance to immutable T&C cloud snapshots and local historical revisions; synthetic browserless coverage added. Preserve JSON v3 schema, all canonical financial/eligibility rules and existing snapshots. Requires backend PR #240 merged and exact Railway SUCCESS before frontend merge, then full bonus/cloud/UI, Chromium/WebKit and main Pages checks.
 
