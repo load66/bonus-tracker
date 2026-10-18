@@ -115,4 +115,4 @@ try{
   delete sandbox.__originalEntries;delete sandbox.__manageFixture;
   sandbox.__btBankActionPrompt=previousPrompt;
 }
-console.log('Manage sheet v3.6.12 passed: human stage, SVG icons, safe-area layout contract, no duplicate actions or storage writes');
+console.log('Manage sheet v3.6.13 passed: human stage, SVG icons, safe-area layout contract, no duplicate actions or storage writes');
