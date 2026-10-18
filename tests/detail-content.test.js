@@ -186,6 +186,23 @@ assert.equal(feeCheck(feeCharged).ok,false,'Positive early-close charges require
 assert.match(feeCheck(feeCharged).detail,/fee window before closing/);
 assert.equal(JSON.stringify([...storage]),before,'Close checks are pure view projections');
 
+
+// A payout must not silently clear the bonus-retention check without evidence.
+const payoutForRetention={...e,bonusRecd:'2026-10-12',
+ financialRules:{...e.financialRules,closure:{...e.financialRules.closure,restrictionType:'payout-only',
+  evidence:{source:'promotion',quote:'Keep the account open until the bonus posts.'}}}};
+const retained=entry=>sandbox.BT360.closeCheckPresentation(entry).find(item=>item.label==='Bonus kept after closing');
+assert.equal(retained(payoutForRetention).ok,true,'Payout-only evidence with received bonus can clear its documented restriction');
+const noRetentionEvidence={...payoutForRetention,closeRuleText:'',closeRuleSourceSentence:'',
+ closeRestrictionType:'none',financialRules:{...payoutForRetention.financialRules,closure:{...payoutForRetention.financialRules.closure,restrictionType:'none',evidence:null}}};
+assert.equal(retained(noRetentionEvidence).ok,false,'No saved closure evidence cannot prove the bonus will be retained');
+const feeOnlyRetention={...noRetentionEvidence,closeRuleText:'No early closing fee.'};
+assert.equal(retained(feeOnlyRetention).ok,false,'An early-close service fee is not evidence against bonus clawback');
+const explicitRetention={...noRetentionEvidence,closeRuleText:'No bonus clawback applies after closing.'};
+assert.equal(retained(explicitRetention).ok,true,'Explicit saved no-clawback evidence may confirm retention');
+assert.equal(retained({...payoutForRetention,bonusRecd:''}).ok,false,'Without received payout the retention check stays open');
+assert.equal(JSON.stringify([...storage]),before,'Retention evidence review does not write stored data');
+
 const timers=sandbox.BT360.timerRows(e);
 assert.match(timers,/Requirement due/);
 assert.match(timers,/Jan 13, 2027 · 90 days after opening/);
