@@ -362,7 +362,9 @@ function feeSnapshot(e){
   // Old imports may have exact fee text without a structured rule. Accept
   // only amounts explicitly tied to closing, never promotion dollar amounts.
   const match=legacyFee.match(/(?:early[- ]?|account[- ]?)?(?:clos(?:ing|ure)|terminat(?:ion|ing))\s+fee\s*(?:is|of|:)?\s*(\$\s*[\d,]+(?:\.\d{1,2})?)/i)
-   ||legacyFee.match(/(\$\s*[\d,]+(?:\.\d{1,2})?)\s*(?:early[- ]?|account[- ]?)?(?:clos(?:ing|ure)|terminat(?:ion|ing))\s+fee/i);
+   ||legacyFee.match(/(?:early[- ]?|account[- ]?)?(?:clos(?:e|ing|ure)|terminat(?:ion|ing))[^.;\n]{0,45}?(\$\s*[\d,]+(?:\.\d{1,2})?)\s*fee/i)
+   ||legacyFee.match(/(\$\s*[\d,]+(?:\.\d{1,2})?)\s*(?:early[- ]?|account[- ]?)?(?:clos(?:ing|ure)|terminat(?:ion|ing))\s+fee/i)
+   ||legacyFee.match(/(\$\s*[\d,]+(?:\.\d{1,2})?)\s*(?:early\s+)?fee\s+if\s+(?:the\s+)?(?:account\s+)?clos(?:ed|ing)/i);
   if(match){closeMain=match[1].replace(/\s/g,'')+' early-close fee';closeNote='From saved legacy fee terms · review fee window';closeKnown=true}
   else if(isNoFee(legacyFee)&&!hasConditionalWindow(legacyFee)){closeMain='$0 early-close fee';closeNote='Explicit no-fee wording in saved terms';closeKnown=true}
   else if(isNoFee(legacyFee)){closeNote='Saved no-fee wording is conditional · review closing date'}
