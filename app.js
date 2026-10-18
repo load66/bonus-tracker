@@ -4324,6 +4324,7 @@ function rTips(){
  h+='<div class="bt360-data-pills" role="group" aria-label="Datapoint outcomes">'+[['all','All reports'],['worked','Counted'],['failed','Didn\'t count']].map(([v,t])=>'<button type="button" aria-pressed="'+(dpFilters.result===v)+'" class="'+(dpFilters.result===v?'active':'')+'" onclick="setDPFilter(\'result\',\''+v+'\')">'+t+'</button>').join('')+'</div>';
  h+='<div class="research-coverage"><b>'+groups.reduce((n,g)=>n+g.community.length,0)+' reports &amp; summaries</b><span>'+groups.length+' bank'+(groups.length===1?'':'s')+' shown · Catalog checked '+esc(catalog.checkedAt?fD(catalog.checkedAt):'date unavailable')+'</span></div>';
  h+='<div class="bt362-data-actions"><button type="button" class="dp-add research-new-report" onclick="newDPReport()">+ Add a report</button><button type="button" class="research-text-button" onclick="switchMainTab(\'storage\')">Saved bank terms ›</button></div>';
+ h+='<div class="bt366-dp-toggle"><span class="bt360-muted">'+(window.bt366GroupData?'Grouped by bank':'Individual reports')+'</span><button type="button" aria-pressed="'+!!window.bt366GroupData+'" onclick="window.bt366GroupData=!window.bt366GroupData;R()">'+(window.bt366GroupData?'Show individual reports':'Group by bank')+'</button></div>';
  h+='<details class="research-filters"'+(dpFiltersOpen?' open':'')+'><summary>More filters and saved notes</summary>';
  h+='<div class="research-switch" role="group" aria-label="Report view">'+[['all','All reports'],['personal','My saved notes']].map(([v,t])=>'<button aria-pressed="'+(dpFilters.view===v)+'" onclick="setDPFilter(\'view\',\''+v+'\')">'+t+'</button>').join('')+'</div>';
  h+='<div class="research-filter-grid">';
@@ -4334,6 +4335,18 @@ function rTips(){
  h+=dpSelect('dated','Dates',[['all','All dates'],['recent','Dated within 90 days']]);
  h+='</div><button class="research-text-button" onclick="resetDPFilters()">Reset filters</button><p class="research-caveat">Filters apply to community reports. Your saved notes stay visible.</p></details>';
  if(!groups.length)h+='<div class="research-empty">No matching reports. Try another bank or reset the filters.</div>';
+ if(!window.bt366GroupData){
+   const items=groups.flatMap(g=>[
+     ...g.community.map(x=>({g,x,kind:'community',when:dpReportDate(x)||x.threadDate||''})),
+     ...g.user.map(x=>({g,x,kind:'personal',when:x.lastConfirmedAt||''}))
+   ]).sort((a,b)=>String(b.when).localeCompare(String(a.when)));
+   items.forEach(({g,x,kind})=>{
+     const report=kind==='community',label=!report?'My note':x.outcome==='worked'?'Counted':x.outcome==='failed'?"Didn't count":x.outcome==='mixed'?'Mixed reports':x.outcome==='pending'?'Pending':'Not verified';
+     const desc=report?(x.sourceName||'Community')+' · '+(x.reportedAt||x.threadDate||x.eventDate?fD(x.reportedAt||x.threadDate||x.eventDate):'Date not reported'):'My saved note · '+(x.lastConfirmedAt?fD(x.lastConfirmedAt):'Date unavailable');
+     const detail=report?renderCommunityReport(x):'<article class="research-report personal"><h3>'+esc(x.method||'Saved method')+'</h3><p>'+esc(x.note||'No notes saved.')+'</p><button class="ph-mini" onclick="openUserDPEditor('+profileSectionAttr(JSON.stringify(x.id))+')">Edit note</button></article>';
+     h+='<details class="bt366-dp-item"><summary>'+bankLogo(g.bank,true)+'<span class="bt366-dp-main"><b>'+esc(g.bank)+'</b><small>'+esc(x.method||'Method not specified')+'</small><small>'+esc(desc)+'</small></span><span class="bt360-chip '+(report&&x.outcome==='worked'?'positive':report&&x.outcome==='failed'?'warning':'')+'">'+esc(label)+'</span></summary>'+detail+'</details>';
+   });
+ }else{
  groups.forEach(g=>{
  const open=dpExpandedBankKey===g.key,last=dpReportDate(g.community[0]||{});
  h+='<section class="dp-bank research-bank"><button class="dp-head" type="button" aria-expanded="'+open+'" onclick="toggleDPBank(\''+g.key+'\')">'+bankLogo(g.bank,true)+'<span class="dp-info"><span class="dp-name">'+esc(g.bank)+'</span><span class="dp-meta">'+g.community.length+' community · '+g.user.length+' saved'+(g.accountType==='business'?' · Business':'')+(g.entryCount?' · Tracked':'')+'</span>'+(last?'<span class="research-latest">Latest dated result '+esc(fD(last))+'</span>':'')+'</span><span class="dp-arrow" aria-hidden="true">'+(open?'−':'+')+'</span></button>';
@@ -4344,6 +4357,7 @@ function rTips(){
  h+='</div>';
  }h+='</section>';
  });
+ }
  h+='<details class="research-help"><summary>Find more reports</summary><p>Open these sources to look for reports published after the catalog date.</p><a class="research-source" href="https://www.reddit.com/r/churning/search/?q=Bank%20Bonus%20Weekly&amp;restrict_sr=1&amp;sort=new" target="_blank" rel="noopener noreferrer">Reddit bank bonus threads ↗</a><a class="research-source" href="https://www.doctorofcredit.com/knowledge-base/list-methods-banks-count-direct-deposits/" target="_blank" rel="noopener noreferrer">Doctor of Credit transfer reports ↗</a></details>';
  h+='<details class="research-help"><summary>How to read these reports</summary><p>Reported success means a person received a payment or reported a qualifying result. Mixed reports means people had different results. Still waiting does not mean failure.</p><p>DD means direct deposit, such as a paycheck. An ACH push is a bank transfer started from the sending account. A bank transfer is not automatically a qualifying direct deposit.</p><p>'+esc(catalog.coverage||'Coverage is limited to sources shown.')+'</p><p>Source checked is the research date, not the transaction date. Community reports never change your saved offer rules or deadlines.</p></details>';
  h+='</div>';
