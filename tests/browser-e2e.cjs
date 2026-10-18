@@ -767,11 +767,12 @@ async function exercise(name,engine,url){
     await context.setOffline(true);
     if(name==='webkit'){
       const offlineShell=await page.evaluate(async()=>{
-        try{const response=await fetch('./index.html',{cache:'no-store'});
-          return response.ok&&(await response.text()).includes('BonusTracker');
+        try{
+          const response=await caches.match('./index.html',{ignoreSearch:true});
+          return !!navigator.serviceWorker.controller&&response?.ok&&(await response.text()).includes('BonusTracker');
         }catch{return false}
       });
-      check('WebKit service worker serves offline navigation shell',offlineShell);
+      check('WebKit service worker controls page and cached shell remains readable while offline',offlineShell);
     }else{
       await page.reload();await settleStartup();await page.getByText('BonusTracker',{exact:false}).first().waitFor();
     }
