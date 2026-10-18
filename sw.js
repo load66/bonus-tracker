@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.5: working tracker shortcuts and compact protection status.
+// Version 3.6.6: verified usage and mobile release tests.
 
-const V = 'bt-v3.6.5-concern1';
+const V = 'bt-v3.6.6-usage1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
