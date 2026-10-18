@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.12: Railway usage diagnostics after mobile layout release.
+// Version 3.6.13: Evidence-aware account statuses, compact fee checks and key dates.
 
-const V = 'bt-v3.6.12-sheet1';
+const V = 'bt-v3.6.13-status1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
