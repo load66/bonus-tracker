@@ -163,6 +163,26 @@ const beforeArchiveCountdown=JSON.stringify([...storage]);
 sandbox.BT360.archive([estimatedPast,cooldownNoDate]);
 assert.equal(JSON.stringify([...storage]),beforeArchiveCountdown,'Countdown presentation cannot mutate stored financial records');
 
+// Unified view regression: scope is a display filter only.
+const oldAudience=sandbox.BT360.audience;
+const samplePersonal={...estimatedPast,id:'VIEW-P-01',accountType:'personal'};
+const sampleBusiness={...estimatedPast,id:'VIEW-B-01',accountType:'business'};
+const beforeUnified=JSON.stringify([...storage]);
+try{
+ sandbox.BT360.setAudience('all');
+ assert(sandbox.BT360.scope(samplePersonal)&&sandbox.BT360.scope(sampleBusiness));
+ assert.match(sandbox.BT360.compactRow(sampleBusiness),/bt3628-kind business/);
+ assert.match(sandbox.BT360.detailHead(sampleBusiness),/Business ·/);
+ assert.match(sandbox.BT360.detailHead(samplePersonal),/Personal ·/);
+ const both=sandbox.BT360.archive([samplePersonal,sampleBusiness]);
+ assert.match(both,/bt3628-kind personal/);
+ assert.match(both,/bt3628-kind business/);
+ sandbox.BT360.setAudience('personal');
+ assert(sandbox.BT360.scope(samplePersonal)&&!sandbox.BT360.scope(sampleBusiness));
+ sandbox.BT360.setAudience('business');
+ assert(!sandbox.BT360.scope(samplePersonal)&&sandbox.BT360.scope(sampleBusiness));
+}finally{sandbox.BT360.setAudience(oldAudience)}
+assert.equal(JSON.stringify([...storage]),beforeUnified,'View filters cannot mutate records');
 const archiveRecord={...legacy,closed:'2026-10-17',bonusRecd:'2026-10-17'};
 assert.match(sandbox.BT360.detailPanels(archiveRecord),/Fees &amp; waivers|Fees & waivers/,'Churn and closed record details retain fee section');
 assert.match(sandbox.BT360.detailPanels(archiveRecord),/\$25 early-close fee/);

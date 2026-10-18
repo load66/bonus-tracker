@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex — v3.6.28 — codex/v3.6.28-unified-audience
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.28 unified account view (`codex/v3.6.28-unified-audience`): All accounts is the default for Tracker, notifications, Archive, Bank Offers and Tax, with optional Personal or Business filters. Show source type beside rows and details; keep stored financial records, product classification, eligibility and matching separate. Business or personal call-to-close numbers come from account type rather than the view. Read-only UI migration from older session-scoped filter; unit and browser verification required before release.
+
 
 - v3.6.27 archived eligibility countdowns (`codex/v3.6.27-archive-countdowns`): every closed account with a calculable saved eligibility date now displays the day count on the right, explicitly marking unverified dates as estimates. A passed unverified estimate stays review-needed; never counted as eligible now. Verified ready rows also retain View offers and details. Only verified dates appear in within-60-days, with unverified estimates in cooling; prevent duplicate rows between groups; missing dates still show Details. Read-only presentation, no storage or canonical eligibility engine changes. Synthetic regressions added; CI and Pages verification pending.
 

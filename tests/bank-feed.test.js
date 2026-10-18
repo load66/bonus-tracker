@@ -16,6 +16,7 @@ const sampleOffers=[
  {title:'Synthetic Structured Savings Reward',product:'savings',bank:'Structured'}
 ];
 assert.equal(offersAPI.offerAudience(sampleOffers[0]),'personal');
+assert.deepEqual(Array.from(offersAPI.offersForAudience(sampleOffers,'all'),x=>x.title),sampleOffers.map(x=>x.title),'All audience includes both products plus identity-unknown offers without classification changes');
 assert.equal(offersAPI.offerAudience(sampleOffers[1]),'business','Business wording overrides generic Savings product metadata');
 assert.equal(offersAPI.offerAudience(sampleOffers[2]),'business','Business wording overrides Checking metadata');
 assert.equal(offersAPI.offerAudience(sampleOffers[3]),'unverified','Unknown product cannot be labeled personal with confidence');
@@ -27,17 +28,18 @@ assert.equal(offersAPI.matchesCategory(sampleOffers[1],'business'),true,'Busines
 assert.equal(offersAPI.matchesCategory(sampleOffers[2],'checking'),true,'Business Checking appears in business account Checking filter');
 assert.equal(offersAPI.checkedAge('not a date'),'check time unavailable');
 const savedAudience=sandbox.BT360.audience;
-const originalAudienceSetting=storage.get('bt360_audience_session');
+assert.match(sandbox.BT360.segments(),/All accounts/,'Combined scope remains discoverable on every screen');
+const originalAudienceSetting=storage.get('bt3628_audience_session');
 try{
  sandbox.BT360.setAudience('personal');
  sandbox.btRadarOfferPill('business');
- assert.equal(sandbox.BT360.audience,'business','Business category must switch the account type correctly');
+ assert.equal(sandbox.BT360.audience,'all','The Business offer pill must keep the unified view, not switch the entire app to Business');
  assert.equal(typeof sandbox.rBankBonuses,'function','Offer renderer must remain installed');
  sandbox.BT360.setAudience('personal');
  assert.equal(sandbox.BT360.audience,'personal');
  // Category resets on returning to Personal rather than hiding all consumer posts.
  assert.equal(offersAPI.offersForAudience(sampleOffers,'personal').some(x=>x.bank==='Synthetic Consumer'),true);
-}finally{sandbox.BT360.setAudience(savedAudience);if(originalAudienceSetting===undefined)storage.delete('bt360_audience_session');else storage.set('bt360_audience_session',originalAudienceSetting);}
+}finally{sandbox.BT360.setAudience(savedAudience);if(originalAudienceSetting===undefined)storage.delete('bt3628_audience_session');else storage.set('bt3628_audience_session',originalAudienceSetting);}
 
 const safe={schemaVersion:1,checkedAt:'2026-10-11T12:00:00Z',offers:[{title:'Bank <img onerror=alert(1)> $500 Bonus',url:'https://www.doctorofcredit.com/bank-bonus/',publishedAt:'2026-10-10T12:00:00Z'}]};
 assert.equal(sandbox.BTBankBonusFeed.validate(safe).offers.length,1);

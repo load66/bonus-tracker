@@ -59,9 +59,11 @@ module.exports={sandbox,document,app,storage,errors};
 if(require.main===module)setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.6.27',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.6.27',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.6.28',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.6.28',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     const trackerRender=sandbox.BT360;
+    assert(trackerRender.audience==='all','Fresh installations and migrated personal/business sessions must show all accounts by default');
+    assert(trackerRender.segments().includes('All accounts')&&trackerRender.segments().includes('Personal')&&trackerRender.segments().includes('Business'),'Combined view and optional filters must be available');
     assert(trackerRender.stages([]).includes('aria-label="Filter by stage"'),'Stage group missing');
     assert(!/class="bt360-stage stage-/.test(trackerRender.stages([])),'Zero-count stage chip leaked');
     const initialSuggestions=sandbox.getAttentionSuggestions;

@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.27';
+const APP_VERSION='3.6.28';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4349,16 +4349,16 @@ function rTrackerLegacy(sorted){
 }
 function rTax(){
  const yrs=[];for(let y=2025;y<=2040;y++)yrs.push(y);
- const audience=window.BT360?.audience||'personal';
+ const audience=window.BT360?.audience||'all';
  const yrE=taxEntriesForYear(taxYear).filter(e=>!window.BT360||window.BT360.scope(e));
  const yrA=yrE.reduce((sum,e)=>sum+Number(e.bonus||0),0);
  let h=(window.BT360?.segments()||'')+'<div class="bt360-page-copy">Bonus income by year</div><div class="ybar bt360-tax-years">';
  yrs.forEach(y=>{h+='<button class="ypill'+(taxYear===y?' on':'')+'" onclick="taxYear='+y+';R()">'+y+'</button>'});
- h+='</div><section class="bt360-tax-summary"><span>'+audience.toUpperCase()+' · '+taxYear+'</span><strong>'+fM(yrA)+'</strong><small>'+yrE.length+' bonuses received · open and closed accounts</small></section>';
- h+='<button class="export-btn bt360-primary" onclick="promptExportYear()">Export tax CSV</button><div class="sec">Received in '+taxYear+' <small>by date</small></div>';
+ h+='</div><section class="bt360-tax-summary"><span>'+(audience==='all'?'PERSONAL + BUSINESS':audience.toUpperCase())+' · '+taxYear+'</span><strong>'+fM(yrA)+'</strong><small>'+yrE.length+' bonuses received · open and closed accounts</small></section>';
+ h+='<button class="export-btn bt360-primary" onclick="promptExportYear()">Export tax CSV</button><p class="bt360-footnote">CSV includes all Personal and Business bonuses, even when a view filter is active.</p><div class="sec">Received in '+taxYear+' <small>by date</small></div>';
  if(!yrE.length)h+='<div class="bt360-empty">No received bonuses in '+taxYear+'.</div>';
  yrE.slice().sort((a,b)=>String(b.bonusRecd||'').localeCompare(String(a.bonusRecd||''))).forEach(e=>{
-  h+='<div class="bt360-list-row bt360-tax-row">'+bankLogo(e.bank,true)+'<div class="bt360-grow"><b>'+esc(e.bank)+'</b><small>Received '+fD(e.bonusRecd)+' · '+(e.closed?'closed':'open')+'</small></div><strong>'+fM(e.bonus)+'</strong></div>';
+  h+='<div class="bt360-list-row bt360-tax-row">'+bankLogo(e.bank,true)+'<div class="bt360-grow"><b>'+esc(e.bank)+'</b><small>Received '+fD(e.bonusRecd)+' · '+(e.closed?'closed':'open')+' · '+(entryBankType(e)==='B'?'Business':'Personal')+'</small></div><strong>'+fM(e.bonus)+'</strong></div>';
  });
  return h+'<p class="bt360-footnote">Bank bonuses are usually reported as interest. Check your 1099 forms.</p>';
 }

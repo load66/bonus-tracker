@@ -66,7 +66,7 @@
     return 'unverified';
   }
   function offersForAudience(rows,selected){
-    return rows.filter(offer=>selected==='business'?offerAudience(offer)==='business':offerAudience(offer)!=='business');
+    return selected==='all'?rows.slice():rows.filter(offer=>selected==='business'?offerAudience(offer)==='business':offerAudience(offer)!=='business');
   }
   function matchesCategory(offer,category){
     if(category==='all'||category==='near')return true;
@@ -282,12 +282,12 @@
   window.btRadarOfferPill=function(value){
     if(!['all','checking','savings','business','near'].includes(value))return;
     categoryFilter=value;
-    if(value==='business'&&window.BT360?.audience!=='business')window.BT360?.setAudience('business');
+    if(value==='business'&&window.BT360?.audience==='personal')window.BT360?.setAudience('all');
     else R();
   };
   window.rBankBonuses=function(){
     if(!attempted){attempted=true;setTimeout(refresh,0);}
-    const audience=window.BT360?.audience==='business'?'business':'personal';
+    const audience=['all','personal','business'].includes(window.BT360?.audience)?window.BT360.audience:'all';
     const scoped=feed?offersForAudience(feed.offers,audience):[];
     const audienceCount=feed?grouped(scoped).length:0;
     let h='<div class="bt362-offer-head"><div class="bt362-offer-headline"><h2>Bank offers</h2><p>'+escape(states[area]||'Location not selected')+(feed?' · '+audienceCount+' offer'+(audienceCount===1?'':'s')+' · '+checkedAge(feed.checkedAt):' · update pending')+'</p></div><button type="button" class="ph-mini ph-save" onclick="btRefreshBankBonuses()" '+(loading?'disabled':'')+'>'+(loading?'Checking…':'Check updates')+'</button></div>'+(window.BT360?.segments()||'');
@@ -315,7 +315,7 @@
     matches=matches.filter(offer=>matchesCategory(offer,categoryFilter));
     if(categoryFilter==='near'&&area)matches=matches.filter(x=>geography(x,area).kind!=='outside');
     const visible=prioritize(matches,context.rows,area,context,priorityFilter);
-    h+='<div class="radar-count">'+visible.length+' matching offers · '+escape(audience)+' view · '+feed.offers.length+' source posts checked <button type="button" class="bt362-filter-jump" onclick="btRadarOpenFilters()">Filters</button></div>';
+    h+='<div class="radar-count">'+visible.length+' matching offers · '+escape(audience==='all'?'Personal + Business':audience)+' view · '+feed.offers.length+' source posts checked <button type="button" class="bt362-filter-jump" onclick="btRadarOpenFilters()">Filters</button></div>';
     if(!visible.length)h+='<p>No offers match these filters. Adjust your search or filters.</p>';
     const groupLabels={ready:'Eligible for you',next:'Not eligible yet',explore:'Other offers · eligibility unverified',review:'Needs eligibility review',outside:'Outside your selected area'};
     let lastGroup='';
@@ -332,8 +332,10 @@
       const verifiedRequirement=x.evidence?.status==='evidence-found'&&!x.evidence?.stale?x.evidence.fields?.qualifying_activity?.value:null;
       const bankLabel=(x.bank||'').replace(/\b\w/g,c=>c.toUpperCase()).replace(/^Us Bank$/,'U.S. Bank');
       const label=bankLabel&&x.product&&x.amount!==null?bankLabel+' · '+(x.product==='checking'?'Checking':x.product==='business'?'Business':x.product==='savings'?'Savings':x.product)+' · '+(x.rewardIsUpperBound?'up to ':'')+'\u0024'+x.amount.toLocaleString('en-US'):x.title;
+      const type=offerAudience(x);
+      const typeLabel=audience==='all'?'<span class="bt3628-kind '+(type==='business'?'business':type==='personal'?'personal':'unverified')+'">'+escape(type==='unverified'?'Type unverified':type==='business'?'Business':'Personal')+'</span>':'';
       const badges=x.badges?.length?'<div class="radar-offer-badges">'+x.badges.map(b=>'<span>'+escape(b)+'</span>').join('')+(x.changeLabel?'<span>'+escape(x.changeLabel)+'</span>':'')+'</div>':'';
-      h+='<article role="listitem" class="radar-card radar-card-compact bt362-offer-row radar-priority-'+x.priorityGroup+'"><div class="bt360-offer-title">'+bankLogo(x.title,true)+'<div class="bt360-grow"><h3>'+escape(label)+'</h3>'+badges+'<p>'+escape(verifiedRequirement||'Requirements need review')+'</p></div><strong>'+(verifiedAmount===null?(x.amount===null?'Needs review':'$'+x.amount.toLocaleString('en-US')+'*'):'$'+verifiedAmount.toLocaleString('en-US'))+'</strong></div><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+(offerAudience(x)==='unverified'?'<span class="radar-match-label">Product type unverified</span>':'')+'</div>';
+      h+='<article role="listitem" class="radar-card radar-card-compact bt362-offer-row radar-priority-'+x.priorityGroup+'"><div class="bt360-offer-title">'+bankLogo(x.title,true)+'<div class="bt360-grow"><h3>'+escape(label)+'</h3>'+typeLabel+badges+'<p>'+escape(verifiedRequirement||'Requirements need review')+'</p></div><strong>'+(verifiedAmount===null?(x.amount===null?'Needs review':'$'+x.amount.toLocaleString('en-US')+'*'):'$'+verifiedAmount.toLocaleString('en-US'))+'</strong></div><div class="radar-card-meta"><span class="radar-geo radar-geo-'+x.geo.kind+'">'+escape(x.geo.label)+'</span>'+(x.match?'<span class="radar-match-label">Tracker match</span>':'')+(offerAudience(x)==='unverified'?'<span class="radar-match-label">Product type unverified</span>':'')+'</div>';
       if(x.match)h+='<div class="radar-tracker-context"><b>'+escape(x.match.label)+'</b>'+(date?'<time datetime="'+date+'">'+escape(typeof fD==='function'?fD(date):date)+'</time>':'')+'<p>'+escape(x.match.detail)+'</p></div>';
       h+='<p class="radar-area-note">'+escape(x.geo.detail)+'</p>';
       const proof=x.geo.proof||availabilityFor(x,officialCatalog);
