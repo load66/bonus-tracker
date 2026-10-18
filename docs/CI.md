@@ -41,3 +41,9 @@ Browser harness: use the pinned API with
 `BT_BROWSER=chromium playwright test --config tests/playwright.config.cjs`,
 with `NODE_PATH` pointing to the pinned `@playwright/test` install.
 Direct `node tests/browser-e2e.cjs` also selects Chromium alone.
+
+## Bank offer publication
+
+`refresh-bank-feed.yml` collects source RSS articles every six hours (17 minutes after 00:00/06:00/12:00/18:00 UTC), and on its first code release. It commits `data/bank-bonuses.json` to `main` only when changed and dispatches the existing verified deployment workflow, because a GitHub Actions bot's own push does not trigger ordinary push workflows. The collector reads the committed snapshot before applying updates, preserves unexpired offers through source outages, expires offers only by explicit terms, ended announcements or 90 days since the newest post, and retains exact source-specific article links. No page-side alerts, monitoring panels or feed-health UI are introduced.
+
+The release workflow publishes the exact committed snapshot and does not refresh only its temporary checkout. Tests use synthetic RSS and never contact real financial providers.
