@@ -1,27 +1,420 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-10-14T20:36:23.885473+00:00",
+  "checkedAt": "2026-10-18T02:59:25.708925+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-10-14T20:36:23.885473+00:00",
+      "checkedAt": "2026-10-18T02:59:25.708925+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-10-14T20:36:23.885473+00:00",
+      "checkedAt": "2026-10-18T02:59:25.708925+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-10-14T20:36:23.885473+00:00",
+      "checkedAt": "2026-10-18T02:59:25.708925+00:00",
       "status": "ok"
     }
   ],
   "offers": [
+    {
+      "title": "[WI only] Summit Credit Union $200 Checking Bonus",
+      "url": "https://www.doctorofcredit.com/wi-only-summit-credit-union-100-checking-bonus/",
+      "publishedAt": "2026-10-17T19:55:44+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "summit credit union|checking|200|WI",
+      "bank": "summit credit union",
+      "product": "checking",
+      "amount": 200,
+      "region": "WI",
+      "offerKey": "summit credit union|checking|200|WI",
+      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
+      "lastSeen": "2026-10-17T19:55:44+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/wi-only-summit-credit-union-100-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[WI only] Summit Credit Union $200 Checking Bonus",
+          "publishedAt": "2026-10-17T19:55:44+00:00"
+        }
+      ],
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "[TN] US Community Credit Union $200 Checking Bonus",
+      "url": "https://www.doctorofcredit.com/tn-us-community-credit-union-250-checking-bonus/",
+      "publishedAt": "2026-10-17T19:45:36+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "us community credit union|checking|200|TN",
+      "bank": "us community credit union",
+      "product": "checking",
+      "amount": 200,
+      "region": "TN",
+      "offerKey": "us community credit union|checking|200|TN",
+      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
+      "lastSeen": "2026-10-17T19:45:36+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/tn-us-community-credit-union-250-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[TN] US Community Credit Union $200 Checking Bonus",
+          "publishedAt": "2026-10-17T19:45:36+00:00"
+        }
+      ],
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "[IA, IL, IN, KS, MI, MN, MO, OH, NE and WI only] Associated Bank $600 Checking Bonus",
+      "url": "https://www.doctorofcredit.com/il-in-mn-wi-only-associated-bank-500-checking-bonus/",
+      "publishedAt": "2026-10-17T19:31:40+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "associated bank|checking|600|IA,IL,IN,KS,MI,MN,MO,NE,OH,WI",
+      "bank": "associated bank",
+      "product": "checking",
+      "amount": 600,
+      "region": "IA,IL,IN,KS,MI,MN,MO,NE,OH,WI",
+      "offerKey": "associated bank|checking|600|IA,IL,IN,KS,MI,MN,MO,NE,OH,WI",
+      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
+      "lastSeen": "2026-10-17T19:31:40+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/il-in-mn-wi-only-associated-bank-500-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[IA, IL, IN, KS, MI, MN, MO, OH, NE and WI only] Associated Bank $600 Checking Bonus",
+          "publishedAt": "2026-10-17T19:31:40+00:00"
+        }
+      ],
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "[Burbank, CA] UMe Federal Credit Union $100 Referral Bonus",
+      "url": "https://www.doctorofcredit.com/burbank-ca-ume-federal-credit-union-100-referral-bonus/",
+      "publishedAt": "2026-10-17T19:00:42+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "ume federal credit union|unknown|100|CA|d229600625ee",
+      "bank": "ume federal credit union",
+      "product": "unknown",
+      "amount": 100,
+      "region": "CA",
+      "offerKey": "ume federal credit union|unknown|100|CA|d229600625ee",
+      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
+      "lastSeen": "2026-10-17T19:00:42+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/burbank-ca-ume-federal-credit-union-100-referral-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[Burbank, CA] UMe Federal Credit Union $100 Referral Bonus",
+          "publishedAt": "2026-10-17T19:00:42+00:00"
+        }
+      ],
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "U.S. Bank Business Checking Bonus: $400 or $1200 Offer (Nationwide) – Ends 1/13/27",
+      "url": "https://www.hustlermoneyblog.com/us-bank-business-checking-bonus/",
+      "publishedAt": "2026-10-17T17:26:11+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "nationwide",
+      "groupKey": "us bank|business|?|nationwide|c86f71c21da3",
+      "bank": "us bank",
+      "product": "business",
+      "amount": null,
+      "region": "nationwide",
+      "offerKey": "us bank|business|?|nationwide|c86f71c21da3",
+      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
+      "lastSeen": "2026-10-17T17:26:11+00:00",
+      "expiresAt": "2027-01-13",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/us-bank-business-checking-bonus/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "U.S. Bank Business Checking Bonus: $400 or $1200 Offer (Nationwide) – Ends 1/13/27",
+          "publishedAt": "2026-10-17T17:26:11+00:00"
+        }
+      ],
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "[MA, NH] NESC Credit Union $100 Checking Bonus",
+      "url": "https://www.doctorofcredit.com/ma-nh-nesc-credit-union-100-checking-bonus/",
+      "publishedAt": "2026-10-17T16:45:18+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "nesc credit union|checking|100|MA,NH",
+      "bank": "nesc credit union",
+      "product": "checking",
+      "amount": 100,
+      "region": "MA,NH",
+      "offerKey": "nesc credit union|checking|100|MA,NH",
+      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
+      "lastSeen": "2026-10-17T16:45:18+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/ma-nh-nesc-credit-union-100-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[MA, NH] NESC Credit Union $100 Checking Bonus",
+          "publishedAt": "2026-10-17T16:45:18+00:00"
+        }
+      ],
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "[MN, WI] Royal Credit Union $400 Checking Bonus",
+      "url": "https://www.doctorofcredit.com/mn-wi-royal-credit-union-200-checking-bonus/",
+      "publishedAt": "2026-10-17T16:15:18+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "royal credit union|checking|400|MN,WI",
+      "bank": "royal credit union",
+      "product": "checking",
+      "amount": 400,
+      "region": "MN,WI",
+      "offerKey": "royal credit union|checking|400|MN,WI",
+      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
+      "lastSeen": "2026-10-17T16:15:18+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/mn-wi-royal-credit-union-200-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[MN, WI] Royal Credit Union $400 Checking Bonus",
+          "publishedAt": "2026-10-17T16:15:18+00:00"
+        }
+      ],
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "Chase Bank Business Checking Bonus: $500 Offer Coupon – Ends 1/21/27",
+      "url": "https://www.hustlermoneyblog.com/chase-business-checking-bonus/",
+      "publishedAt": "2026-10-16T17:23:35+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "chase|business|500|unknown",
+      "bank": "chase",
+      "product": "business",
+      "amount": 500,
+      "region": "unknown",
+      "offerKey": "chase|business|500|unknown",
+      "firstSeen": "2026-10-11T23:35:15+00:00",
+      "lastSeen": "2026-10-16T17:23:35+00:00",
+      "expiresAt": "2027-01-21",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/chase-business-checking-bonus/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Chase Bank Business Checking Bonus: $500 Offer Coupon – Ends 1/21/27",
+          "publishedAt": "2026-10-16T17:23:35+00:00"
+        }
+      ],
+      "previousAmount": 30,
+      "change": "Increased",
+      "changeLabel": "$30 → $500",
+      "badges": [
+        "Increased"
+      ]
+    },
+    {
+      "title": "Wings Credit Union Promotions: $500 Checking Bonus (Nationwide) – Ends 12/31/26",
+      "url": "https://www.hustlermoneyblog.com/wings-credit-union-promotions/",
+      "publishedAt": "2026-10-16T16:35:19+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "nationwide",
+      "groupKey": "wings credit union|checking|500|nationwide",
+      "bank": "wings credit union",
+      "product": "checking",
+      "amount": 500,
+      "region": "nationwide",
+      "offerKey": "wings credit union|checking|500|nationwide",
+      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
+      "lastSeen": "2026-10-16T16:35:19+00:00",
+      "expiresAt": "2026-12-31",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/wings-credit-union-promotions/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Wings Credit Union Promotions: $500 Checking Bonus (Nationwide) – Ends 12/31/26",
+          "publishedAt": "2026-10-16T16:35:19+00:00"
+        }
+      ],
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "KeyBank Checking Account Bonus: $300 or $500 Offer – Ends 12/11/26",
+      "url": "https://www.hustlermoneyblog.com/keybank-checking-account-bonus/",
+      "publishedAt": "2026-10-16T16:01:49+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "keybank|checking|?|unknown|090797210b00",
+      "bank": "keybank",
+      "product": "checking",
+      "amount": null,
+      "region": "unknown",
+      "offerKey": "keybank|checking|?|unknown|090797210b00",
+      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
+      "lastSeen": "2026-10-16T16:01:49+00:00",
+      "expiresAt": "2026-12-11",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/keybank-checking-account-bonus/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "KeyBank Checking Account Bonus: $300 or $500 Offer – Ends 12/11/26",
+          "publishedAt": "2026-10-16T16:01:49+00:00"
+        }
+      ],
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "[MN, WI, MI, WI, FL, GA] Wings Credit Union $500 Checking Bonus + $50 Referral",
+      "url": "https://www.doctorofcredit.com/mn-wi-mi-fl-ga-wings-credit-union-300-checking-bonus/",
+      "publishedAt": "2026-10-16T15:00:50+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "wings credit union|checking|?|FL,GA,MI,MN,WI|5a4a979fd0f1",
+      "bank": "wings credit union",
+      "product": "checking",
+      "amount": null,
+      "region": "FL,GA,MI,MN,WI",
+      "offerKey": "wings credit union|checking|?|FL,GA,MI,MN,WI|5a4a979fd0f1",
+      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
+      "lastSeen": "2026-10-16T15:00:50+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/mn-wi-mi-fl-ga-wings-credit-union-300-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[MN, WI, MI, WI, FL, GA] Wings Credit Union $500 Checking Bonus + $50 Referral",
+          "publishedAt": "2026-10-16T15:00:50+00:00"
+        }
+      ],
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "Bank of America Business Checking: Up to a $2500 bonus (no direct deposit required)",
+      "url": "https://frequentmiler.com/bank-of-america-business-checking-up-to-a-2500-bonus-no-direct-deposit-required/",
+      "publishedAt": "2026-10-16T14:45:41+00:00",
+      "source": "Frequent Miler",
+      "sourceId": "fm",
+      "availability": "unknown",
+      "groupKey": "bank of america|business|2500|unknown",
+      "bank": "bank of america",
+      "product": "business",
+      "amount": 2500,
+      "region": "unknown",
+      "offerKey": "bank of america|business|2500|unknown",
+      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
+      "lastSeen": "2026-10-16T14:45:41+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://frequentmiler.com/bank-of-america-business-checking-up-to-a-2500-bonus-no-direct-deposit-required/",
+          "source": "Frequent Miler",
+          "sourceId": "fm",
+          "title": "Bank of America Business Checking: Up to a $2500 bonus (no direct deposit required)",
+          "publishedAt": "2026-10-16T14:45:41+00:00"
+        }
+      ],
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "Huntington Bank Promotions for October 2026: $400, $1,000 Checking Bonuses – Ends 2/11/27",
+      "url": "https://www.hustlermoneyblog.com/huntington-bank-promotions/",
+      "publishedAt": "2026-10-15T17:09:14+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "huntington bank|checking|?|unknown|6010aa0af757",
+      "bank": "huntington bank",
+      "product": "checking",
+      "amount": null,
+      "region": "unknown",
+      "offerKey": "huntington bank|checking|?|unknown|6010aa0af757",
+      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
+      "lastSeen": "2026-10-15T17:09:14+00:00",
+      "expiresAt": "2027-02-11",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/huntington-bank-promotions/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Huntington Bank Promotions for October 2026: $400, $1,000 Checking Bonuses – Ends 2/11/27",
+          "publishedAt": "2026-10-15T17:09:14+00:00"
+        }
+      ],
+      "badges": [
+        "New"
+      ]
+    },
     {
       "title": "Chase Total Checking Account $400 Bonus Coupon – Ends 1/27/27",
       "url": "https://www.hustlermoneyblog.com/chase-total-checking-bonus/",
@@ -39,17 +432,17 @@
       "lastSeen": "2026-10-14T17:27:04+00:00",
       "expiresAt": "2027-01-27",
       "isUpdate": false,
-      "badges": [
-        "New"
-      ],
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/chase-total-checking-bonus/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "Chase Total Checking Account $400 Bonus Coupon – Ends 1/27/27",
           "publishedAt": "2026-10-14T17:27:04+00:00"
         }
+      ],
+      "badges": [
+        "New"
       ]
     },
     {
@@ -59,27 +452,27 @@
       "source": "Hustler Money Blog",
       "sourceId": "hmb",
       "availability": "unknown",
-      "groupKey": "bank of america|business|?|unknown|bank-of-america-",
+      "groupKey": "bank of america|business|?|unknown|f025c18f3729",
       "bank": "bank of america",
       "product": "business",
       "amount": null,
       "region": "unknown",
-      "offerKey": "bank of america|business|?|unknown|bank-of-america-",
+      "offerKey": "bank of america|business|?|unknown|f025c18f3729",
       "firstSeen": "2026-10-14T17:04:04+00:00",
       "lastSeen": "2026-10-14T17:04:04+00:00",
       "expiresAt": null,
       "isUpdate": false,
-      "badges": [
-        "New"
-      ],
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/bank-of-america-business-checking-bonus/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "Bank of America® Business Advantage Banking Cash Bonus Offer",
           "publishedAt": "2026-10-14T17:04:04+00:00"
         }
+      ],
+      "badges": [
+        "New"
       ]
     },
     {
@@ -99,24 +492,24 @@
       "lastSeen": "2026-10-14T15:00:38+00:00",
       "expiresAt": "2026-12-31",
       "isUpdate": false,
-      "badges": [
-        "New"
-      ],
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/community-state-bank-promotions/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "Community State Bank Promotions: $400 Checking Bonus (IA) – Ends 12/31/26",
           "publishedAt": "2026-10-14T15:00:38+00:00"
         },
         {
           "url": "https://www.doctorofcredit.com/ia-community-state-bank-300-checking-bonus/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "[IA] Community State Bank $400 Checking Bonus",
           "publishedAt": "2026-10-11T20:00:29+00:00"
         }
+      ],
+      "badges": [
+        "New"
       ]
     },
     {
@@ -136,17 +529,17 @@
       "lastSeen": "2026-10-13T20:44:08+00:00",
       "expiresAt": null,
       "isUpdate": false,
-      "badges": [
-        "New"
-      ],
       "links": [
         {
           "url": "https://www.doctorofcredit.com/ca-in-branch-columbia-bank-250-checking-bonus/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "[CA, UT In Branch] Columbia Bank $250 Checking Bonus",
           "publishedAt": "2026-10-13T20:44:08+00:00"
         }
+      ],
+      "badges": [
+        "New"
       ]
     },
     {
@@ -156,28 +549,28 @@
       "source": "Doctor of Credit",
       "sourceId": "doc",
       "availability": "nationwide",
-      "groupKey": "wells fargo|unknown|?|unknown|wells-fargo-prem",
+      "groupKey": "wells fargo|unknown|?|unknown|3decf9cf0bc4",
       "bank": "wells fargo",
       "product": "unknown",
       "amount": null,
       "region": "unknown",
-      "offerKey": "wells fargo|unknown|?|unknown|wells-fargo-prem",
+      "offerKey": "wells fargo|unknown|?|unknown|3decf9cf0bc4",
       "firstSeen": "2026-10-13T20:00:37+00:00",
       "lastSeen": "2026-10-13T20:00:37+00:00",
       "expiresAt": null,
       "isUpdate": true,
-      "badges": [
-        "New",
-        "Updated"
-      ],
       "links": [
         {
           "url": "https://www.doctorofcredit.com/wells-fargo-premier-2500-bank-or-investing-bonus-requires-250000-in-cash-assets/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "(Update) Wells Fargo Premier $2,500 Bank or Investing Bonus (Requires $250k In Cash/Assets)",
           "publishedAt": "2026-10-13T20:00:37+00:00"
         }
+      ],
+      "badges": [
+        "New",
+        "Updated"
       ]
     },
     {
@@ -197,24 +590,24 @@
       "lastSeen": "2026-10-13T16:23:18+00:00",
       "expiresAt": "2027-01-27",
       "isUpdate": false,
-      "badges": [
-        "New"
-      ],
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/chase-900-bonus-coupons/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "Chase $900 Bonus Coupons Checking & Savings Combo – Ends 1/27/27",
           "publishedAt": "2026-10-13T16:23:18+00:00"
         },
         {
           "url": "https://frequentmiler.com/900-bonus-with-a-new-chase-checking-and-savings-account-september-25/",
-          "source": "Frequent Miler",
           "sourceId": "fm",
+          "source": "Frequent Miler",
           "title": "$900 bonus with a new Chase checking and savings account",
           "publishedAt": "2026-10-04T19:45:33+00:00"
         }
+      ],
+      "badges": [
+        "New"
       ]
     },
     {
@@ -234,24 +627,24 @@
       "lastSeen": "2026-10-13T15:05:42+00:00",
       "expiresAt": "2026-12-31",
       "isUpdate": false,
-      "badges": [
-        "New"
-      ],
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/wellby-financial-promotions/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "Wellby Financial Promotions: $100 Checking Bonus (TX) – Ends 12/31/26",
           "publishedAt": "2026-10-13T15:05:42+00:00"
         },
         {
           "url": "https://www.doctorofcredit.com/tx-wellby-financial-100-checking-bonus/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "[TX] Wellby Financial $100 Checking Bonus",
           "publishedAt": "2026-10-11T23:05:52+00:00"
         }
+      ],
+      "badges": [
+        "New"
       ]
     },
     {
@@ -261,28 +654,28 @@
       "source": "Hustler Money Blog",
       "sourceId": "hmb",
       "availability": "unknown",
-      "groupKey": "westerra credit union|checking|?|CO|westerra-credit-",
+      "groupKey": "westerra credit union|checking|?|CO|169e079ad286",
       "bank": "westerra credit union",
       "product": "checking",
       "amount": null,
       "region": "CO",
-      "offerKey": "westerra credit union|checking|?|CO|westerra-credit-",
+      "offerKey": "westerra credit union|checking|?|CO|169e079ad286",
       "firstSeen": "2026-10-13T13:54:58+00:00",
       "lastSeen": "2026-10-13T13:54:58+00:00",
       "expiresAt": "2026-10-31",
       "isUpdate": false,
-      "badges": [
-        "New",
-        "Ending soon"
-      ],
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/westerra-credit-union-promotions/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "Westerra Credit Union Promotions: $25, $100 Checking, Referral Bonuses (CO) – Ends 10/31/26",
           "publishedAt": "2026-10-13T13:54:58+00:00"
         }
+      ],
+      "badges": [
+        "New",
+        "Ending soon"
       ]
     },
     {
@@ -302,17 +695,17 @@
       "lastSeen": "2026-10-12T17:27:01+00:00",
       "expiresAt": "2027-02-02",
       "isUpdate": false,
-      "badges": [
-        "New"
-      ],
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/truist-bank-checking-bonus/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "Truist Bank $500 Checking Bonus – Ends 2/2/27",
           "publishedAt": "2026-10-12T17:27:01+00:00"
         }
+      ],
+      "badges": [
+        "New"
       ]
     },
     {
@@ -332,47 +725,17 @@
       "lastSeen": "2026-10-12T16:56:11+00:00",
       "expiresAt": null,
       "isUpdate": false,
-      "badges": [
-        "New"
-      ],
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/upgrade-savings-referral-bonus/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "Upgrade Premier Savings $200 Bonus + 3.30% APY",
           "publishedAt": "2026-10-12T16:56:11+00:00"
         }
-      ]
-    },
-    {
-      "title": "[YMMV] Chase Business Checking: $30 Bonus For Making 5 Invoices",
-      "url": "https://www.doctorofcredit.com/ymmv-chase-business-checking-30-bonus-for-making-5-invoices/",
-      "publishedAt": "2026-10-11T23:35:15+00:00",
-      "source": "Doctor of Credit",
-      "sourceId": "doc",
-      "availability": "unknown",
-      "groupKey": "chase|business|30|unknown",
-      "bank": "chase",
-      "product": "business",
-      "amount": 30,
-      "region": "unknown",
-      "offerKey": "chase|business|30|unknown",
-      "firstSeen": "2026-10-11T23:35:15+00:00",
-      "lastSeen": "2026-10-11T23:35:15+00:00",
-      "expiresAt": null,
-      "isUpdate": false,
+      ],
       "badges": [
         "New"
-      ],
-      "links": [
-        {
-          "url": "https://www.doctorofcredit.com/ymmv-chase-business-checking-30-bonus-for-making-5-invoices/",
-          "source": "Doctor of Credit",
-          "sourceId": "doc",
-          "title": "[YMMV] Chase Business Checking: $30 Bonus For Making 5 Invoices",
-          "publishedAt": "2026-10-11T23:35:15+00:00"
-        }
       ]
     },
     {
@@ -382,27 +745,27 @@
       "source": "Doctor of Credit",
       "sourceId": "doc",
       "availability": "regional",
-      "groupKey": "busey bank|checking|?|AZ,CO,FL,IL,IN,KS,MO,OK,TX|fl-il-in-mo-buse",
+      "groupKey": "busey bank|checking|?|AZ,CO,FL,IL,IN,KS,MO,OK,TX|747aa0f95960",
       "bank": "busey bank",
       "product": "checking",
       "amount": null,
       "region": "AZ,CO,FL,IL,IN,KS,MO,OK,TX",
-      "offerKey": "busey bank|checking|?|AZ,CO,FL,IL,IN,KS,MO,OK,TX|fl-il-in-mo-buse",
+      "offerKey": "busey bank|checking|?|AZ,CO,FL,IL,IN,KS,MO,OK,TX|747aa0f95960",
       "firstSeen": "2026-10-11T23:30:35+00:00",
       "lastSeen": "2026-10-11T23:30:35+00:00",
       "expiresAt": null,
       "isUpdate": false,
-      "badges": [
-        "New"
-      ],
       "links": [
         {
           "url": "https://www.doctorofcredit.com/fl-il-in-mo-busey-bank-300-checking-bonus/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "[AZ, CO, FL, IL, IN, KS, MO, OK, TX] Busey Bank $200-$500 Checking Bonus",
           "publishedAt": "2026-10-11T23:30:35+00:00"
         }
+      ],
+      "badges": [
+        "New"
       ]
     },
     {
@@ -422,17 +785,17 @@
       "lastSeen": "2026-10-11T23:15:12+00:00",
       "expiresAt": null,
       "isUpdate": false,
-      "badges": [
-        "New"
-      ],
       "links": [
         {
           "url": "https://www.doctorofcredit.com/co-westerra-credit-union-100-checking-bonus/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "[CO only] Westerra Credit Union $100 Checking Bonus – Direct Deposit Not Required",
           "publishedAt": "2026-10-11T23:15:12+00:00"
         }
+      ],
+      "badges": [
+        "New"
       ]
     },
     {
@@ -442,27 +805,27 @@
       "source": "Doctor of Credit",
       "sourceId": "doc",
       "availability": "unknown",
-      "groupKey": "chase|checking|?|unknown|chase-900-checki",
+      "groupKey": "chase|checking|?|unknown|d9fe8b4c4268",
       "bank": "chase",
       "product": "checking",
       "amount": null,
       "region": "unknown",
-      "offerKey": "chase|checking|?|unknown|chase-900-checki",
+      "offerKey": "chase|checking|?|unknown|d9fe8b4c4268",
       "firstSeen": "2026-10-11T22:04:05+00:00",
       "lastSeen": "2026-10-11T22:04:05+00:00",
       "expiresAt": null,
       "isUpdate": false,
-      "badges": [
-        "New"
-      ],
       "links": [
         {
           "url": "https://www.doctorofcredit.com/chase-900-checking-bonus-10000-direct-deposit-required/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "Chase $900 Checking Bonus ($10,000 Direct Deposit Required)",
           "publishedAt": "2026-10-11T22:04:05+00:00"
         }
+      ],
+      "badges": [
+        "New"
       ]
     },
     {
@@ -482,16 +845,16 @@
       "lastSeen": "2026-10-09T13:45:39+00:00",
       "expiresAt": null,
       "isUpdate": false,
-      "badges": [],
       "links": [
         {
           "url": "https://frequentmiler.com/bank-of-america-earn-up-to-a-500-bonus-with-a-new-checking-account/",
-          "source": "Frequent Miler",
           "sourceId": "fm",
+          "source": "Frequent Miler",
           "title": "Bank of America: Earn up to a $500 bonus with a new checking account",
           "publishedAt": "2026-10-09T13:45:39+00:00"
         }
-      ]
+      ],
+      "badges": []
     },
     {
       "title": "Earn $450 bonus with a new US Bank checking account",
@@ -510,16 +873,16 @@
       "lastSeen": "2026-09-11T20:45:04+00:00",
       "expiresAt": null,
       "isUpdate": false,
-      "badges": [],
       "links": [
         {
           "url": "https://frequentmiler.com/earn-450-bonus-with-a-new-us-bank-checking-account/",
-          "source": "Frequent Miler",
           "sourceId": "fm",
+          "source": "Frequent Miler",
           "title": "Earn $450 bonus with a new US Bank checking account",
           "publishedAt": "2026-09-11T20:45:04+00:00"
         }
-      ]
+      ],
+      "badges": []
     },
     {
       "title": "Wells Fargo: $400 / $550 / $825 bonus for new business checking account (no direct deposit required)",
@@ -528,26 +891,26 @@
       "source": "Frequent Miler",
       "sourceId": "fm",
       "availability": "unknown",
-      "groupKey": "wells fargo|business|?|unknown|wells-fargo-400-",
+      "groupKey": "wells fargo|business|?|unknown|f91ce59e1ece",
       "bank": "wells fargo",
       "product": "business",
       "amount": null,
       "region": "unknown",
-      "offerKey": "wells fargo|business|?|unknown|wells-fargo-400-",
+      "offerKey": "wells fargo|business|?|unknown|f91ce59e1ece",
       "firstSeen": "2026-09-11T15:45:30+00:00",
       "lastSeen": "2026-09-11T15:45:30+00:00",
       "expiresAt": null,
       "isUpdate": false,
-      "badges": [],
       "links": [
         {
           "url": "https://frequentmiler.com/wells-fargo-400-825-bonus-for-new-business-checking-account-no-direct-deposit-required/",
-          "source": "Frequent Miler",
           "sourceId": "fm",
+          "source": "Frequent Miler",
           "title": "Wells Fargo: $400 / $550 / $825 bonus for new business checking account (no direct deposit required)",
           "publishedAt": "2026-09-11T15:45:30+00:00"
         }
-      ]
+      ],
+      "badges": []
     },
     {
       "title": "American Express Rewards Checking: $300 bonus for new customers",
@@ -566,16 +929,16 @@
       "lastSeen": "2026-09-03T21:45:23+00:00",
       "expiresAt": null,
       "isUpdate": false,
-      "badges": [],
       "links": [
         {
           "url": "https://frequentmiler.com/ameircan-express-rewards-checking-bonus-for-new-customers/",
-          "source": "Frequent Miler",
           "sourceId": "fm",
+          "source": "Frequent Miler",
           "title": "American Express Rewards Checking: $300 bonus for new customers",
           "publishedAt": "2026-09-03T21:45:23+00:00"
         }
-      ]
+      ],
+      "badges": []
     },
     {
       "title": "Easy $400 bonus with a new Wells Fargo checking account",
@@ -594,16 +957,16 @@
       "lastSeen": "2026-08-21T23:45:47+00:00",
       "expiresAt": null,
       "isUpdate": false,
-      "badges": [],
       "links": [
         {
           "url": "https://frequentmiler.com/easy-400-bonus-with-a-new-wells-fargo-checking-account-july-2025/",
-          "source": "Frequent Miler",
           "sourceId": "fm",
+          "source": "Frequent Miler",
           "title": "Easy $400 bonus with a new Wells Fargo checking account",
           "publishedAt": "2026-08-21T23:45:47+00:00"
         }
-      ]
+      ],
+      "badges": []
     },
     {
       "title": "Earn up to a $735 bonus with a new SoFi checking/savings account",
@@ -612,68 +975,191 @@
       "source": "Frequent Miler",
       "sourceId": "fm",
       "availability": "unknown",
-      "groupKey": "earn up to a|savings|735|unknown",
-      "bank": "earn up to a",
-      "product": "savings",
+      "groupKey": "up to a|combo|735|unknown",
+      "bank": "up to a",
+      "product": "combo",
       "amount": 735,
       "region": "unknown",
-      "offerKey": "earn up to a|savings|735|unknown",
+      "offerKey": "up to a|combo|735|unknown",
       "firstSeen": "2026-07-24T18:45:04+00:00",
       "lastSeen": "2026-07-24T18:45:04+00:00",
       "expiresAt": null,
       "isUpdate": false,
-      "badges": [],
       "links": [
         {
           "url": "https://frequentmiler.com/earn-up-to-a-735-bonus-with-a-new-sofi-checking-savings-account/",
-          "source": "Frequent Miler",
           "sourceId": "fm",
+          "source": "Frequent Miler",
           "title": "Earn up to a $735 bonus with a new SoFi checking/savings account",
           "publishedAt": "2026-07-24T18:45:04+00:00"
         }
-      ]
-    },
+      ],
+      "badges": []
+    }
+  ],
+  "retired": [
     {
-      "title": "Bank of America Business Checking: Up to a $2500 bonus (no direct deposit required)",
-      "url": "https://frequentmiler.com/bank-of-america-business-checking-up-to-a-2500-bonus-no-direct-deposit-required/",
-      "publishedAt": "2026-07-17T13:45:14+00:00",
-      "source": "Frequent Miler",
-      "sourceId": "fm",
-      "availability": "unknown",
-      "groupKey": "bank of america|business|2500|unknown",
-      "bank": "bank of america",
-      "product": "business",
-      "amount": 2500,
-      "region": "unknown",
-      "offerKey": "bank of america|business|2500|unknown",
-      "firstSeen": "2026-07-17T13:45:14+00:00",
-      "lastSeen": "2026-07-17T13:45:14+00:00",
-      "expiresAt": null,
-      "isUpdate": false,
-      "badges": [],
-      "links": [
-        {
-          "url": "https://frequentmiler.com/bank-of-america-business-checking-up-to-a-2500-bonus-no-direct-deposit-required/",
-          "source": "Frequent Miler",
-          "sourceId": "fm",
-          "title": "Bank of America Business Checking: Up to a $2500 bonus (no direct deposit required)",
-          "publishedAt": "2026-07-17T13:45:14+00:00"
-        }
-      ]
+      "offerKey": "wells fargo|checking|500|unknown",
+      "endedAt": "2026-08-27T13:45:09+00:00"
     }
   ],
   "availability": {
     "schemaVersion": 1,
     "status": "complete",
-    "checkedAt": "2026-10-14T20:28:22.647886+00:00",
+    "checkedAt": "2026-10-18T02:39:01.169492+00:00",
     "records": {
+      "https://www.doctorofcredit.com/wi-only-summit-credit-union-100-checking-bonus/": {
+        "offerTitle": "[WI only] Summit Credit Union $200 Checking Bonus",
+        "offerUrl": "https://www.doctorofcredit.com/wi-only-summit-credit-union-100-checking-bonus/",
+        "offerFingerprint": "33d2fbff845280761f9078c4b48b4a18439199195e7a88f49dfa57271d1c94db",
+        "status": "needs-review",
+        "checkState": "unsupported",
+        "attemptedAt": "2026-10-18T02:38:59.669742+00:00",
+        "rules": [],
+        "conditions": [],
+        "reason": "Institution identity requires official-source onboarding."
+      },
+      "https://www.doctorofcredit.com/tn-us-community-credit-union-250-checking-bonus/": {
+        "offerTitle": "[TN] US Community Credit Union $200 Checking Bonus",
+        "offerUrl": "https://www.doctorofcredit.com/tn-us-community-credit-union-250-checking-bonus/",
+        "offerFingerprint": "9d74761b258e12dc8e44c05a77745d11ce058d886d1e2dfdc53361aa3f208238",
+        "status": "needs-review",
+        "checkState": "unsupported",
+        "attemptedAt": "2026-10-18T02:38:59.669714+00:00",
+        "rules": [],
+        "conditions": [],
+        "reason": "Institution identity requires official-source onboarding."
+      },
+      "https://www.doctorofcredit.com/il-in-mn-wi-only-associated-bank-500-checking-bonus/": {
+        "offerTitle": "[IA, IL, IN, KS, MI, MN, MO, OH, NE and WI only] Associated Bank $600 Checking Bonus",
+        "offerUrl": "https://www.doctorofcredit.com/il-in-mn-wi-only-associated-bank-500-checking-bonus/",
+        "offerFingerprint": "927977e9ec483d8d4da49992bc131f73359f7a60de1de18e28617d266ca6cd23",
+        "status": "needs-review",
+        "checkState": "unsupported",
+        "attemptedAt": "2026-10-18T02:38:59.665290+00:00",
+        "rules": [],
+        "conditions": [],
+        "reason": "Institution identity requires official-source onboarding."
+      },
+      "https://www.doctorofcredit.com/burbank-ca-ume-federal-credit-union-100-referral-bonus/": {
+        "offerTitle": "[Burbank, CA] UMe Federal Credit Union $100 Referral Bonus",
+        "offerUrl": "https://www.doctorofcredit.com/burbank-ca-ume-federal-credit-union-100-referral-bonus/",
+        "offerFingerprint": "d1185e9f370abb1be09035bf8840030235715592ea004464e8d0eb157bfe800a",
+        "status": "needs-review",
+        "checkState": "unsupported",
+        "attemptedAt": "2026-10-18T02:38:59.522128+00:00",
+        "rules": [],
+        "conditions": [],
+        "reason": "Institution identity requires official-source onboarding."
+      },
+      "https://www.hustlermoneyblog.com/us-bank-business-checking-bonus/": {
+        "offerTitle": "U.S. Bank Business Checking Bonus: $400 or $1200 Offer (Nationwide) – Ends 1/13/27",
+        "offerUrl": "https://www.hustlermoneyblog.com/us-bank-business-checking-bonus/",
+        "offerFingerprint": "39ead32bc32977808852f5dbbf425832d0dc7b5f9369ca558a53c4d20ecf803c",
+        "status": "needs-review",
+        "checkState": "failed",
+        "attemptedAt": "2026-10-18T02:38:59.517595+00:00",
+        "rules": [],
+        "conditions": [],
+        "reason": "Official promotion could not be reached; no eligibility is assumed.",
+        "institution": "us-bank"
+      },
+      "https://www.doctorofcredit.com/ma-nh-nesc-credit-union-100-checking-bonus/": {
+        "offerTitle": "[MA, NH] NESC Credit Union $100 Checking Bonus",
+        "offerUrl": "https://www.doctorofcredit.com/ma-nh-nesc-credit-union-100-checking-bonus/",
+        "offerFingerprint": "eb1b19b01bbca3810e89073768431a042912b27838d1f86e06a9bd8c6ce34077",
+        "status": "needs-review",
+        "checkState": "unsupported",
+        "attemptedAt": "2026-10-18T02:38:59.522758+00:00",
+        "rules": [],
+        "conditions": [],
+        "reason": "Institution identity requires official-source onboarding."
+      },
+      "https://www.doctorofcredit.com/mn-wi-royal-credit-union-200-checking-bonus/": {
+        "offerTitle": "[MN, WI] Royal Credit Union $400 Checking Bonus",
+        "offerUrl": "https://www.doctorofcredit.com/mn-wi-royal-credit-union-200-checking-bonus/",
+        "offerFingerprint": "f0ad43302a36fa0abfe56052eb10b0dac4eadc9826b3d13c34a32370d1e27da6",
+        "status": "needs-review",
+        "checkState": "unsupported",
+        "attemptedAt": "2026-10-18T02:38:59.669654+00:00",
+        "rules": [],
+        "conditions": [],
+        "reason": "Institution identity requires official-source onboarding."
+      },
+      "https://www.hustlermoneyblog.com/chase-business-checking-bonus/": {
+        "offerTitle": "Chase Bank Business Checking Bonus: $500 Offer Coupon – Ends 1/21/27",
+        "offerUrl": "https://www.hustlermoneyblog.com/chase-business-checking-bonus/",
+        "offerFingerprint": "cfbd83838d96ca1252b368ac3170a10b105705da572e3f0097cb0196f73e1d8b",
+        "status": "needs-review",
+        "checkState": "failed",
+        "attemptedAt": "2026-10-18T02:38:59.519057+00:00",
+        "rules": [],
+        "conditions": [],
+        "reason": "Official promotion could not be reached; no eligibility is assumed.",
+        "institution": "chase"
+      },
+      "https://www.hustlermoneyblog.com/wings-credit-union-promotions/": {
+        "offerTitle": "Wings Credit Union Promotions: $500 Checking Bonus (Nationwide) – Ends 12/31/26",
+        "offerUrl": "https://www.hustlermoneyblog.com/wings-credit-union-promotions/",
+        "offerFingerprint": "7b46d94aa95e4703e0e26dcecf3626c8002c3e8f66b7ebafb5bc8dc22d780fc9",
+        "status": "needs-review",
+        "checkState": "unsupported",
+        "attemptedAt": "2026-10-18T02:38:59.941655+00:00",
+        "rules": [],
+        "conditions": [],
+        "reason": "Institution identity requires official-source onboarding."
+      },
+      "https://www.hustlermoneyblog.com/keybank-checking-account-bonus/": {
+        "offerTitle": "KeyBank Checking Account Bonus: $300 or $500 Offer – Ends 12/11/26",
+        "offerUrl": "https://www.hustlermoneyblog.com/keybank-checking-account-bonus/",
+        "offerFingerprint": "530f2734ebd36d371033b03c450d87ef8f0488926d1102a523239925a7649651",
+        "status": "needs-review",
+        "checkState": "unsupported",
+        "attemptedAt": "2026-10-18T02:38:59.941637+00:00",
+        "rules": [],
+        "conditions": [],
+        "reason": "Institution identity requires official-source onboarding."
+      },
+      "https://www.doctorofcredit.com/mn-wi-mi-fl-ga-wings-credit-union-300-checking-bonus/": {
+        "offerTitle": "[MN, WI, MI, WI, FL, GA] Wings Credit Union $500 Checking Bonus + $50 Referral",
+        "offerUrl": "https://www.doctorofcredit.com/mn-wi-mi-fl-ga-wings-credit-union-300-checking-bonus/",
+        "offerFingerprint": "b5899a6b53bfae8f25709298206ceea9a8ad32f5e7d2fb9bfd25474ecee496c5",
+        "status": "needs-review",
+        "checkState": "unsupported",
+        "attemptedAt": "2026-10-18T02:38:59.665321+00:00",
+        "rules": [],
+        "conditions": [],
+        "reason": "Institution identity requires official-source onboarding."
+      },
+      "https://frequentmiler.com/bank-of-america-business-checking-up-to-a-2500-bonus-no-direct-deposit-required/": {
+        "offerTitle": "Bank of America Business Checking: Up to a $2500 bonus (no direct deposit required)",
+        "offerUrl": "https://frequentmiler.com/bank-of-america-business-checking-up-to-a-2500-bonus-no-direct-deposit-required/",
+        "offerFingerprint": "be2f9336b2f6c059573bf6ea265e934f8fc077ef3b79bf336988a9ea249553ac",
+        "status": "needs-review",
+        "checkState": "unsupported",
+        "attemptedAt": "2026-10-18T02:38:59.665230+00:00",
+        "rules": [],
+        "conditions": [],
+        "reason": "Institution identity requires official-source onboarding."
+      },
+      "https://www.hustlermoneyblog.com/huntington-bank-promotions/": {
+        "offerTitle": "Huntington Bank Promotions for October 2026: $400, $1,000 Checking Bonuses – Ends 2/11/27",
+        "offerUrl": "https://www.hustlermoneyblog.com/huntington-bank-promotions/",
+        "offerFingerprint": "1f58736b14a8624036bd76ec91068ad3b517e8421659a79b8b36cd7cb1905622",
+        "status": "needs-review",
+        "checkState": "unsupported",
+        "attemptedAt": "2026-10-18T02:38:59.941615+00:00",
+        "rules": [],
+        "conditions": [],
+        "reason": "Institution identity requires official-source onboarding."
+      },
       "https://www.hustlermoneyblog.com/chase-total-checking-bonus/": {
         "offerTitle": "Chase Total Checking Account $400 Bonus Coupon – Ends 1/27/27",
         "offerUrl": "https://www.hustlermoneyblog.com/chase-total-checking-bonus/",
         "offerFingerprint": "8c5ea882448d70e80e72cf585a6f197a586463d123f8a8bbab84dad41616c77a",
         "status": "needs-review",
         "checkState": "failed",
-        "attemptedAt": "2026-10-14T20:28:15.350777+00:00",
+        "attemptedAt": "2026-10-18T02:38:59.831233+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Official promotion could not be reached; no eligibility is assumed.",
@@ -685,7 +1171,7 @@
         "offerFingerprint": "4f7d7efa358710a3ea670584510602a72bdb88a086bb321561a7802db7efc755",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-14T20:28:15.350431+00:00",
+        "attemptedAt": "2026-10-18T02:38:59.669768+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -696,33 +1182,10 @@
         "offerFingerprint": "6baf1fc45008d0b18e35e851ad1e276816b1386c26c19c3eab743688ed76e741",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-14T20:28:15.351028+00:00",
+        "attemptedAt": "2026-10-18T02:38:59.941573+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
-      },
-      "https://www.doctorofcredit.com/ca-in-branch-columbia-bank-250-checking-bonus/": {
-        "offerTitle": "[CA, UT In Branch] Columbia Bank $250 Checking Bonus",
-        "offerUrl": "https://www.doctorofcredit.com/ca-in-branch-columbia-bank-250-checking-bonus/",
-        "offerFingerprint": "6b376d7ee624b52ae88665addc3cda756eb552298857a34ba8c60a25e60f0b73",
-        "status": "needs-review",
-        "checkState": "unsupported",
-        "attemptedAt": "2026-10-14T20:28:15.355588+00:00",
-        "rules": [],
-        "conditions": [],
-        "reason": "Institution identity requires official-source onboarding."
-      },
-      "https://www.doctorofcredit.com/wells-fargo-premier-2500-bank-or-investing-bonus-requires-250000-in-cash-assets/": {
-        "offerTitle": "(Update) Wells Fargo Premier $2,500 Bank or Investing Bonus (Requires $250k In Cash/Assets)",
-        "offerUrl": "https://www.doctorofcredit.com/wells-fargo-premier-2500-bank-or-investing-bonus-requires-250000-in-cash-assets/",
-        "offerFingerprint": "1308e30a1f991f5093a90705e43d8fbb9cc511d5d02edb507d280178f687c2a5",
-        "status": "needs-review",
-        "checkState": "checked",
-        "attemptedAt": "2026-10-14T20:28:16.833447+00:00",
-        "rules": [],
-        "conditions": [],
-        "reason": "Official pages did not establish this exact promotion.",
-        "institution": "wells"
       },
       "https://www.hustlermoneyblog.com/chase-900-bonus-coupons/": {
         "offerTitle": "Chase $900 Bonus Coupons Checking & Savings Combo – Ends 1/27/27",
@@ -730,184 +1193,11 @@
         "offerFingerprint": "7bf2464da55eb3efe0fc492f035fab2d65a0fac96d31add9a1f106cc7ddac2d0",
         "status": "needs-review",
         "checkState": "checked",
-        "attemptedAt": "2026-10-14T20:28:17.103134+00:00",
+        "attemptedAt": "2026-10-18T02:38:59.669796+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Official pages did not establish this exact promotion.",
         "institution": "chase"
-      },
-      "https://www.hustlermoneyblog.com/wellby-financial-promotions/": {
-        "offerTitle": "Wellby Financial Promotions: $100 Checking Bonus (TX) – Ends 12/31/26",
-        "offerUrl": "https://www.hustlermoneyblog.com/wellby-financial-promotions/",
-        "offerFingerprint": "2a15efc4fdf65dc22060a08622107bd48255c9dc5e6c45f6c5f4a77b67969c3b",
-        "status": "needs-review",
-        "checkState": "checked",
-        "attemptedAt": "2026-10-14T20:28:18.047762+00:00",
-        "rules": [],
-        "conditions": [],
-        "reason": "Official pages did not establish this exact promotion.",
-        "institution": "wellby"
-      },
-      "https://www.hustlermoneyblog.com/westerra-credit-union-promotions/": {
-        "offerTitle": "Westerra Credit Union Promotions: $25, $100 Checking, Referral Bonuses (CO) – Ends 10/31/26",
-        "offerUrl": "https://www.hustlermoneyblog.com/westerra-credit-union-promotions/",
-        "offerFingerprint": "25da1fd18510ae9c8222648f3149de009a594385d98b87800b5cb3c0208d798b",
-        "status": "needs-review",
-        "checkState": "checked",
-        "attemptedAt": "2026-10-14T20:28:18.752031+00:00",
-        "rules": [],
-        "conditions": [],
-        "reason": "Official pages did not establish this exact promotion.",
-        "institution": "westerra"
-      },
-      "https://www.hustlermoneyblog.com/truist-bank-checking-bonus/": {
-        "offerTitle": "Truist Bank $500 Checking Bonus – Ends 2/2/27",
-        "offerUrl": "https://www.hustlermoneyblog.com/truist-bank-checking-bonus/",
-        "offerFingerprint": "1a13f798c77bf950ca701dd94372b2674885ff89440a3ecc80c4ce448b6e6800",
-        "status": "verified",
-        "checkState": "checked",
-        "attemptedAt": "2026-10-14T20:28:17.153000+00:00",
-        "rules": [
-          {
-            "mode": "include",
-            "states": [
-              "AL",
-              "AR",
-              "DC",
-              "FL",
-              "GA",
-              "IN",
-              "KY",
-              "MD",
-              "MS",
-              "NC",
-              "NJ",
-              "OH",
-              "PA",
-              "SC",
-              "TN",
-              "TX",
-              "VA",
-              "WV"
-            ],
-            "quote": "The client must have a physical address in: AL, AR, FL, GA, IN, KY, MD, MS, NC, NJ, OH, PA, SC, TN, TX, VA, WV or DC."
-          }
-        ],
-        "conditions": [],
-        "reason": "Official geographic clauses checked; personal eligibility is not confirmed.",
-        "institution": "truist",
-        "nationwide": false,
-        "nationwideQuote": "",
-        "checkedAt": "2026-10-14T20:28:17.893710+00:00",
-        "expiresAt": "2026-10-15T20:28:17.893710+00:00",
-        "sourceUrl": "https://www.truist.com/checking/lp/promos/checking-promo4",
-        "sourceHash": "2a2a35096933653826408d4c340649e0279d398c0830a523b2a4d5e2a5a0f550"
-      },
-      "https://www.hustlermoneyblog.com/upgrade-savings-referral-bonus/": {
-        "offerTitle": "Upgrade Premier Savings $200 Bonus + 3.30% APY",
-        "offerUrl": "https://www.hustlermoneyblog.com/upgrade-savings-referral-bonus/",
-        "offerFingerprint": "4903b57930379939b8b6f66a0d90c515aff198831a52dbd7d989f3165a144577",
-        "status": "needs-review",
-        "checkState": "failed",
-        "attemptedAt": "2026-10-14T20:28:18.042372+00:00",
-        "rules": [],
-        "conditions": [],
-        "reason": "Official promotion could not be reached; no eligibility is assumed.",
-        "institution": "upgrade"
-      },
-      "https://www.doctorofcredit.com/ymmv-chase-business-checking-30-bonus-for-making-5-invoices/": {
-        "offerTitle": "[YMMV] Chase Business Checking: $30 Bonus For Making 5 Invoices",
-        "offerUrl": "https://www.doctorofcredit.com/ymmv-chase-business-checking-30-bonus-for-making-5-invoices/",
-        "offerFingerprint": "e6c6e456c9555f5e5c922abe6f54f7ff4cba1bf0a07f426bc68d345c8c22420d",
-        "status": "needs-review",
-        "checkState": "checked",
-        "attemptedAt": "2026-10-14T20:28:16.965243+00:00",
-        "rules": [],
-        "conditions": [],
-        "reason": "Official pages did not establish this exact promotion.",
-        "institution": "chase"
-      },
-      "https://www.doctorofcredit.com/fl-il-in-mo-busey-bank-300-checking-bonus/": {
-        "offerTitle": "[AZ, CO, FL, IL, IN, KS, MO, OK, TX] Busey Bank $200-$500 Checking Bonus",
-        "offerUrl": "https://www.doctorofcredit.com/fl-il-in-mo-busey-bank-300-checking-bonus/",
-        "offerFingerprint": "c01b91c9e4ba975d6b7c0740ad68efef2e26ffc923479585354e57d032bf6d9a",
-        "status": "needs-review",
-        "checkState": "checked",
-        "attemptedAt": "2026-10-14T20:28:15.876828+00:00",
-        "rules": [],
-        "conditions": [],
-        "reason": "Official pages did not establish this exact promotion.",
-        "institution": "busey"
-      },
-      "https://www.doctorofcredit.com/co-westerra-credit-union-100-checking-bonus/": {
-        "offerTitle": "[CO only] Westerra Credit Union $100 Checking Bonus – Direct Deposit Not Required",
-        "offerUrl": "https://www.doctorofcredit.com/co-westerra-credit-union-100-checking-bonus/",
-        "offerFingerprint": "e043acf291ff1da16c24d8c31b5f820b70651ea859be0f20aad6d8624d485f15",
-        "status": "needs-review",
-        "checkState": "checked",
-        "attemptedAt": "2026-10-14T20:28:15.731325+00:00",
-        "rules": [],
-        "conditions": [],
-        "reason": "No explicit promotional geographic scope was found.",
-        "institution": "westerra",
-        "checkedAt": "2026-10-14T20:28:17.112625+00:00",
-        "expiresAt": "2026-10-15T20:28:17.112625+00:00",
-        "sourceUrl": "https://www.westerracu.com/colorado-native",
-        "sourceHash": "ef7cc5bffd43c36f524f17da1f5432e7980d081f2230524386b9e906609fbc82"
-      },
-      "https://www.doctorofcredit.com/tx-wellby-financial-100-checking-bonus/": {
-        "offerTitle": "[TX] Wellby Financial $100 Checking Bonus",
-        "offerUrl": "https://www.doctorofcredit.com/tx-wellby-financial-100-checking-bonus/",
-        "offerFingerprint": "e239b76e3602be5e6c98dde93ec62228115f12233b2b1ac2dcf046220b067772",
-        "status": "needs-review",
-        "checkState": "checked",
-        "attemptedAt": "2026-10-14T20:28:16.557241+00:00",
-        "rules": [],
-        "conditions": [],
-        "reason": "No explicit promotional geographic scope was found.",
-        "institution": "wellby",
-        "checkedAt": "2026-10-14T20:28:18.653850+00:00",
-        "expiresAt": "2026-10-15T20:28:18.653850+00:00",
-        "sourceUrl": "https://www.wellbyfinancial.com/checking-account-offer/?utm_campaign=isd_promo_2026",
-        "sourceHash": "a77ca4f15f9092ec3900be42a92cc63c862b89dd92998cadd9bbb9f9167ea9c9"
-      },
-      "https://www.doctorofcredit.com/chase-900-checking-bonus-10000-direct-deposit-required/": {
-        "offerTitle": "Chase $900 Checking Bonus ($10,000 Direct Deposit Required)",
-        "offerUrl": "https://www.doctorofcredit.com/chase-900-checking-bonus-10000-direct-deposit-required/",
-        "offerFingerprint": "efbbf594629b614aca0fe16484fe50cdb28366b06a1e53ebd2e77cba0267d2a2",
-        "status": "needs-review",
-        "checkState": "checked",
-        "attemptedAt": "2026-10-14T20:28:15.357094+00:00",
-        "rules": [],
-        "conditions": [],
-        "reason": "Official pages did not establish this exact promotion.",
-        "institution": "chase"
-      },
-      "https://www.doctorofcredit.com/ia-community-state-bank-300-checking-bonus/": {
-        "offerTitle": "[IA] Community State Bank $400 Checking Bonus",
-        "offerUrl": "https://www.doctorofcredit.com/ia-community-state-bank-300-checking-bonus/",
-        "offerFingerprint": "392127f31b5c3060e5c8aedbfe25a8f2a5d33c5953c7ea7b4059f4c207c330b6",
-        "status": "verified",
-        "checkState": "checked",
-        "attemptedAt": "2026-10-14T20:28:16.228887+00:00",
-        "rules": [
-          {
-            "mode": "include",
-            "states": [
-              "IA"
-            ],
-            "quote": "Offer is available only to Iowa residents."
-          }
-        ],
-        "conditions": [],
-        "reason": "Official geographic clauses checked; personal eligibility is not confirmed.",
-        "institution": "community-state-ia",
-        "nationwide": false,
-        "nationwideQuote": "",
-        "checkedAt": "2026-10-14T20:28:17.049769+00:00",
-        "expiresAt": "2026-10-15T20:28:17.049769+00:00",
-        "sourceUrl": "https://www.bankcsb.com/bonus",
-        "sourceHash": "7ee881159a9b418e22868fcc985baf7735a2893b5a31528a47ee096627dac3c8"
       },
       "https://frequentmiler.com/bank-of-america-earn-up-to-a-500-bonus-with-a-new-checking-account/": {
         "offerTitle": "Bank of America: Earn up to a $500 bonus with a new checking account",
@@ -915,22 +1205,10 @@
         "offerFingerprint": "e578ceaa2de887a8ad3b51287c69594762815932759028a3349231b1db5f6750",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-14T20:28:15.351964+00:00",
+        "attemptedAt": "2026-10-18T02:38:59.517059+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
-      },
-      "https://frequentmiler.com/900-bonus-with-a-new-chase-checking-and-savings-account-september-25/": {
-        "offerTitle": "$900 bonus with a new Chase checking and savings account",
-        "offerUrl": "https://frequentmiler.com/900-bonus-with-a-new-chase-checking-and-savings-account-september-25/",
-        "offerFingerprint": "bc03c93f5005ce4a857634fcbe03e2f11441a90798f54753c46e2cc0d3de0c4f",
-        "status": "needs-review",
-        "checkState": "checked",
-        "attemptedAt": "2026-10-14T20:28:15.351366+00:00",
-        "rules": [],
-        "conditions": [],
-        "reason": "Official pages did not establish this exact promotion.",
-        "institution": "chase"
       },
       "https://frequentmiler.com/earn-450-bonus-with-a-new-us-bank-checking-account/": {
         "offerTitle": "Earn $450 bonus with a new US Bank checking account",
@@ -938,13 +1216,13 @@
         "offerFingerprint": "0a02f407ca33092bd5cc28f156ce38e3f8c6e372c0a486c7e53cb5c7c82186bf",
         "status": "needs-review",
         "checkState": "checked",
-        "attemptedAt": "2026-10-14T20:28:15.353093+00:00",
+        "attemptedAt": "2026-10-18T02:38:59.516625+00:00",
         "rules": [],
         "conditions": [],
         "reason": "No explicit promotional geographic scope was found.",
         "institution": "us-bank",
-        "checkedAt": "2026-10-14T20:28:15.637419+00:00",
-        "expiresAt": "2026-10-15T20:28:15.637419+00:00",
+        "checkedAt": "2026-10-18T02:38:59.743217+00:00",
+        "expiresAt": "2026-10-19T02:38:59.743217+00:00",
         "sourceUrl": "https://www.usbank.com/splash/checking/2026-all-market-checking-offer.html",
         "sourceHash": "f5edccbaecf25dacb337e679aa0984564d82897a8b20692b6c25bcdd2a6354b1"
       },
@@ -954,13 +1232,13 @@
         "offerFingerprint": "41bd413a48d538af35cefe98c744f3f91c7f667a77e9e6b56d2f072dcd4549b9",
         "status": "needs-review",
         "checkState": "checked",
-        "attemptedAt": "2026-10-14T20:28:15.355303+00:00",
+        "attemptedAt": "2026-10-18T02:38:59.517404+00:00",
         "rules": [],
         "conditions": [],
         "reason": "No explicit promotional geographic scope was found.",
         "institution": "wells",
-        "checkedAt": "2026-10-14T20:28:16.285450+00:00",
-        "expiresAt": "2026-10-15T20:28:16.285450+00:00",
+        "checkedAt": "2026-10-18T02:39:00.243969+00:00",
+        "expiresAt": "2026-10-19T02:39:00.243969+00:00",
         "sourceUrl": "https://accountoffers.wellsfargo.com/business-checking-bonus/",
         "sourceHash": "e9fdf259f81bd7d71a2c80a88c90667474ba3cd1cd67244736444c233e9650fc"
       },
@@ -970,7 +1248,7 @@
         "offerFingerprint": "3c1b658772c55eb06b4b487bc347f20bb857ac8dd79cb4382182f58299c63e93",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-14T20:28:15.351550+00:00",
+        "attemptedAt": "2026-10-18T02:38:59.665132+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -981,13 +1259,13 @@
         "offerFingerprint": "a2128e4da26996e6b201a00d4dc24f2ddded876eba84d1124ed814ba0f5738cb",
         "status": "needs-review",
         "checkState": "checked",
-        "attemptedAt": "2026-10-14T20:28:15.353326+00:00",
+        "attemptedAt": "2026-10-18T02:38:59.517999+00:00",
         "rules": [],
         "conditions": [],
         "reason": "No explicit promotional geographic scope was found.",
         "institution": "wells",
-        "checkedAt": "2026-10-14T20:28:16.151219+00:00",
-        "expiresAt": "2026-10-15T20:28:16.151219+00:00",
+        "checkedAt": "2026-10-18T02:39:00.488659+00:00",
+        "expiresAt": "2026-10-19T02:39:00.488659+00:00",
         "sourceUrl": "https://accountoffers.wellsfargo.com/welcomebonus/",
         "sourceHash": "6b1d0d4362bdf90f812d5d79952ee1e110fc136976549c14f06842998429d30d"
       },
@@ -997,18 +1275,7 @@
         "offerFingerprint": "a1b09b4bcfc3743e07cb35d2a4290bf3dc32756c77fc454ce96dc971d765800b",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-14T20:28:15.353191+00:00",
-        "rules": [],
-        "conditions": [],
-        "reason": "Institution identity requires official-source onboarding."
-      },
-      "https://frequentmiler.com/bank-of-america-business-checking-up-to-a-2500-bonus-no-direct-deposit-required/": {
-        "offerTitle": "Bank of America Business Checking: Up to a $2500 bonus (no direct deposit required)",
-        "offerUrl": "https://frequentmiler.com/bank-of-america-business-checking-up-to-a-2500-bonus-no-direct-deposit-required/",
-        "offerFingerprint": "be2f9336b2f6c059573bf6ea265e934f8fc077ef3b79bf336988a9ea249553ac",
-        "status": "needs-review",
-        "checkState": "unsupported",
-        "attemptedAt": "2026-10-14T20:28:15.351935+00:00",
+        "attemptedAt": "2026-10-18T02:38:59.665262+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -1016,10 +1283,10 @@
     },
     "coverage": {
       "total": 24,
-      "checked": 15,
-      "verified": 2,
-      "failed": 2,
-      "unsupported": 7,
+      "checked": 5,
+      "verified": 0,
+      "failed": 3,
+      "unsupported": 16,
       "queued": 0
     }
   }
