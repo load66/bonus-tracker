@@ -102,13 +102,17 @@ function detailPanels(e){
  h+=panel('Key dates',infoRow('Safe to close',safeClose?date(safeClose):'Needs review')+infoRow('Eligible again',ei?date(ei.eligible):'Needs review',ei?.label||'No verified rule/anchor'));
  }
  h+='<button class="bt360-source" onclick="BT360.showTerms('+arg(e.bank)+')">'+(e.termsVerifiedAt?'Official terms verified '+safe(date(String(e.termsVerifiedAt).slice(0,10))):'Terms need review')+' · View saved source ›</button>';
+
+ return h
+}
+function detailFooter(e){
+ const ready=stage(e).code==='READY_TO_CLOSE';
  let action='Record deposit',command='openBankActions('+arg(e.id)+')';
  if(!e.reqMet){action='Confirm requirements';command='openReqMet('+arg(e.id)+')'}
  else if(!e.bonusRecd){action='Confirm received';command='openRcv('+arg(e.id)+')'}
  else if(ready){action='Mark account closed';command='startCloseFlow('+arg(e.id)+',\'actual\')'}
  else {action='Review close checks';command='openBankActions('+arg(e.id)+')'}
- h+='<div class="bt360-detail-footer" role="group" aria-label="Account actions"><button onclick="btOpenBonusAI('+arg(e.id)+')">Ask AI</button><button class="bt360-manage" onclick="openBankActions('+arg(e.id)+')">Manage</button><button class="bt360-primary" aria-label="'+safe(action+' for '+e.bank)+'" onclick="'+command+'">'+action+'</button></div>';
- return h
+ return '<div class="bt360-detail-footer" role="group" aria-label="Account actions"><button onclick="btOpenBonusAI('+arg(e.id)+')">Ask AI</button><button class="bt360-manage" onclick="openBankActions('+arg(e.id)+')">Manage</button><button class="bt360-primary" aria-label="'+safe(action+' for '+e.bank)+'" onclick="'+command+'">'+action+'</button></div>';
 }
 function showTerms(bank){archivePane='saved';storageSearch=String(bank||'');expanded=null;tab='archive';R()}
 function back(){expanded=null;window.bt360ArchiveDetailId=null;R();const el=document.querySelector('.scroll');if(el)el.scrollTop=0}
@@ -290,6 +294,6 @@ function openPhonebook(){closeSettings();window.bt360PhonebookOpen=true;R()}
 function closePhonebook(){window.bt360PhonebookOpen=false;R()}
 function openSettings(){window.bt360SettingsOpen=true;R();refreshUsage()}
 function closeSettings(){window.bt360SettingsOpen=false;R()}
-window.BT360={get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,segments,setAudience,setStage,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,back,archive,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
+window.BT360={get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,segments,setAudience,setStage,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,detailFooter,back,archive,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
 if(typeof R==='function')R();
 })();
