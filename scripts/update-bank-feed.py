@@ -322,7 +322,8 @@ def build_payload(now, previous=None):
                 pass
     for post in fresh:
         if post['ended']:
-            key = (family_key(post), post['amount'])
+            # Ending the current version also removes earlier superseded amounts.
+            key = (family_key(post), None)
             tombstones[key] = max(tombstones.get(key, ''), post['publishedAt'])
     posts_by_url = {}
     for post in prior_posts(previous, now) + [x for x in fresh if not x['ended']]:
@@ -340,7 +341,7 @@ def build_payload(now, previous=None):
     previous_by_id = {o.get('id'): o for o in previous.get('offers', []) if o.get('id')}
     previous_by_family = {}
     for o in previous.get('offers', []):
-        identity = offer_identity(o.get('title') or o.get('headline') or '')
+        identity = o if all(k in o for k in ('bank', 'product', 'amount', 'region')) else offer_identity(o.get('title') or o.get('headline') or '')
         if identity:
             family = family_key(identity)
             if family not in previous_by_family or o.get('publishedAt', '') > previous_by_family[family].get('publishedAt', ''):
