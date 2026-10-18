@@ -6,6 +6,8 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.6.11 bonus detail presentation on `codex/v3.6.11-detail-presentation`: structured requirement rows, compact timers, short expandable fee terms, actionable rule links, menu Activity, and mockup-aligned strip. Synthetic fixture, copy, layout and editor browser checks added; local bonus/UI/cloud units and release verification pass. Next: Chromium/WebKit PR gate, screenshots and comparison report, merge, main CI and Pages verification. No stored account or rule-engine changes.
+
 - v3.6.10 usage precision PR pending (`codex/v3.6.10-usage-partial-precision`): optional missing memory data no longer hides a verified projection; positive R2 usage below 0.01 GB displays as less than 0.01 GB. Synthetic cloud and browser regressions added; local bonus, cloud, UI and release checks PASS. No backend, stored records or credential changes. Next: Chromium/WebKit PR verification, merge, main CI and Pages; Railway account credential still requires owner rotation.
 
 - v3.6.9 Railway usage UI integration on `codex/v3.6.8-usage-release-integration`: built on main v3.6.8 mobile layout PR #181, preserving its 320/375/390/430px regressions, account details and CSS. Safely carry over allowlisted Railway usage diagnostics, missing-projection handling, and manual `?refresh=1` from PR #178 plus mock-only cloud unit test; app/cache `3.6.9` / `bt-v3.6.9-usage1`. Backend `c86b65858336ebc3099ec9cf570fe7bfbcbc91ec` deployed SUCCESS. CI and Pages verification pending. No financial records, eligibility calculations or provider integration changed.
