@@ -307,6 +307,7 @@ function detailPanels(e){
  const labels=['Opened','Tasks','Payout','Hold','Close'];
  let h='<div class="bt360-steps '+(ready?'bt3611-ready':'')+'" aria-label="Account lifecycle"><div class="bt3611-step-bars">'+labels.map((name,i)=>'<span class="'+(i<at?'done ':'')+(at===i?'current':'')+'"'+(at===i?' aria-current="step"':'')+'>'+name+'</span>').join('')+'</div><div class="bt3611-stage-summary"><b>'+safe(ready?'All close restrictions cleared':code==='IN_PROGRESS'?'Complete offer requirements':stage(e).label)+'</b><em class="bt360-chip '+(ready?'positive':'warning')+'">'+safe(ready?'Ready to close':(!closed&&reqDeadline(e)?Math.max(0,dB(td(),reqDeadline(e)))+' days left':stage(e).label))+'</em></div></div>';
  const hasExtraWork=(Array.isArray(e.checklist)&&e.checklist.length>0)||(Array.isArray(e.customTimers)&&e.customTimers.length>0);
+ const savedWorkStart=h.length;
  if(!closed&&(!ready||hasExtraWork)){
   const req=requirementRows(e);
   h+=panel('Requirements',(!req.count?'<p class="bt360-muted">No checklist tasks saved yet.</p>':req.html)+'<div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></div>');
@@ -314,6 +315,8 @@ function detailPanels(e){
   const rows=timerRows(e);
   h+=panel('Timers',(rows||'<p class="bt360-muted">No custom timers set.</p>')+'<button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'timer\')">+ Add timer</button>');
  }
+ const readyWork=ready?h.slice(savedWorkStart):'';
+ if(ready)h=h.slice(0,savedWorkStart);
  if(!closed&&(e.dataPoint||e.completeBonusText||e.notes))h+='<details class="bt366-offer-notes"><summary>Offer notes</summary><p>'+safe([e.dataPoint,e.completeBonusText,e.notes].filter(Boolean).join('\n\n'))+'</p></details>';
  if(ready||code==='HOLD_OPEN'||code==='BONUS_RECEIVED'){
   const check=closeReadiness(e);
@@ -342,6 +345,7 @@ function detailPanels(e){
  const title=ready?'After closing':closed?'Eligibility':'Key dates';
  h+='<div data-bt-eligibility>'+panel(title,(!closed&&!ready?dateActionRow(e,'Safe to close',safeClose?date(safeClose):'','From saved close restrictions','close'):'')+dateActionRow(e,'Eligible again',eligibility?date(eligibility.eligible):'',eligibility?.label||'Confirm the saved eligibility rule','eligibility')+(eligibility?.more?.length?eligibility.more.filter(r=>r.id!==eligibility.controlling?.id&&r.eligibleDate).map(r=>infoRow('Also checked',date(r.eligibleDate),r.label||'Saved eligibility rule')).join(''):''))+'</div>';
  h+='<button class="bt360-source" onclick="BT360.showTerms('+arg(e.bank)+')">'+(e.termsVerifiedAt?'Official terms reviewed '+safe(date(String(e.termsVerifiedAt).slice(0,10))):'Terms need review')+' · View saved source ›</button>';
+ if(ready&&readyWork)h+='<details class="bt3611-ready-extras"><summary>Review saved tasks, fees and timers</summary>'+readyWork+'</details>';
  return h;
 }
 function detailFooter(e){
