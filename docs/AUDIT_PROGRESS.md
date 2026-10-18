@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex · v3.6.8 CI usage test fix · codex/v3.6.8-usage-test-query-match
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.8 browser usage test compatibility on `codex/v3.6.8-usage-test-query-match`: match hosting usage mock requests by path without the `?refresh=1` query, preserving complete Chromium/WebKit assertions and never contacting Railway in tests. No app functionality, canonical rules, or stored financial data changed. CI and PR merge remain release-gated. PR #178 is the separately maintained frontend usage feature.
+
 
 - v3.6.7 monthly hero chart PR #177 (`codex/v3.6.7-tappable-hero-months`): tappable and keyboard-accessible month buttons, 44×44px minimum swipeable targets, selected receipt panel with bank/product, received date, amount, account-detail navigation and explicit empty month, single Tax-backed monthly source, filtered by year and Personal/Business. Tests: https://github.com/load66/bonus-tracker/actions/runs/39114463767 PASS (bonus/cloud/UI, Chromium, WebKit, release); selected-month 390px screenshots retained in browser CI artifacts. No backend or financial storage changes. Next: merge PR #177, verify exact main CI and Pages publish commit.
 
