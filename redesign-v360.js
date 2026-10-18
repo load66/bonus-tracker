@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.18 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.19 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt360_audience_session',noticeKey='bt360_notice_session';
@@ -121,36 +121,102 @@ function attentionChip(x){
  const theme=['BONUS_RECEIVED','READY_TO_CLOSE','ELIGIBLE'].includes(stage.code)?'positive':['IN_PROGRESS','REQUIREMENTS_MET'].includes(stage.code)?'progress':'warning';
  return '<span class="bt360-chip bt3613-attention-stage '+theme+'">'+safe(stage.label)+'</span>';
 }
+function attentionUrgency(x){
+ const c=x?.dateContext||{},dt=c.confirmed?String(c.date||''):'';
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(dt))return null;
+ const days=dB(td(),dt);
+ // Only real requirement/deposit deadlines qualify as urgent;
+ // payout estimates and speculative churn dates are not deadlines.
+ if(!['ACTION_NEEDED','IN_PROGRESS'].includes(x.stageCode))return null;
+ return Number.isFinite(days)?days:null;
+}
+function actionBadge(x,featured=false){
+ const due=attentionUrgency(x);
+ if(featured&&due!==null&&due<=30){
+  const label=(due<0?'Overdue ': 'Due ')+date(x.dateContext.date);
+  return '<span class="bt360-chip bt3719-due '+(due<=7?'urgent':'soon')+'">'+safe(label)+'</span>';
+ }
+ return attentionChip(x);
+}
+function attentionCardProgress(entry){
+ if(!entry||entry.reqMet)return '';
+ const tasks=Array.isArray(entry.checklist)?entry.checklist.filter(t=>t&&String(t.text||'').trim()):[];
+ if(tasks.length){
+  const done=tasks.filter(t=>t.done).length;
+  const pct=Math.max(0,Math.min(100,Math.round(done/tasks.length*100)));
+  return '<div class="bt3719-progress"><div class="bt3719-progress-label"><span>Recorded so far</span><b>'+done+' of '+tasks.length+' tasks</b></div>'
+   +'<div class="bt360-track" role="progressbar" aria-label="Recorded checklist completion" aria-valuemin="0" aria-valuemax="'+tasks.length+'" aria-valuenow="'+done+'"><i style="width:'+pct+'%"></i></div></div>';
+ }
+ const financial=entry.financialRules?.requirements||[];
+ const requirement=financial.find(r=>['direct-deposit','new-money'].includes(r?.kind)&&Number.isFinite(Number(r.amount))&&Number(r.amount)>0);
+ if(!requirement)return '';
+ // There is no account-linked payment evidence in the Tracker. Zero means
+ // recorded in this Tracker, not that no deposit reached the bank.
+ const target=Number(requirement.amount);
+ return '<div class="bt3719-progress"><div class="bt3719-progress-label"><span>Recorded so far</span><b>$0 of '+safe(amount(target))+' · 0 recorded</b></div>'
+  +'<div class="bt360-track" role="progressbar" aria-label="Recorded requirement deposits" aria-valuemin="0" aria-valuemax="'+target+'" aria-valuenow="0"><i style="width:0%"></i></div></div>';
+}
+function dashboardAttentionOrder(a,b){
+ // Only display ordering changes. The canonical actions and their dates
+ // come directly from smart-attention.js and remain untouched.
+ const rank=x=>{
+  const days=attentionUrgency(x);
+  if(days!==null&&days<=14)return days<=0?-3:-2;
+  if(x.stageCode==='ACTION_NEEDED')return -1;
+  if(x.stageCode==='READY_TO_CLOSE')return 0;
+  if(x.stageCode==='ELIGIBLE')return 1;
+  if(x.stageCode==='AWAITING_BONUS')return 2;
+  if(x.stageCode==='IN_PROGRESS')return 3;
+  return 4;
+ };
+ const delta=rank(a)-rank(b);
+ if(delta)return delta;
+ const ad=attentionUrgency(a),bd=attentionUrgency(b);
+ if(ad!==null||bd!==null)return (ad??999999)-(bd??999999);
+ return (a.pri??99)-(b.pri??99)||(a.days??999999)-(b.days??999999);
+}
 function tasks(rows){
  let suggestions=[];try{suggestions=window.getAttentionSuggestions?.()||[]}catch{}
- suggestions=suggestions.filter(x=>rows.some(e=>e.id===x.entryId&&scope(e)));
+ suggestions=suggestions.filter(x=>rows.some(e=>e.id===x.entryId&&scope(e))).slice().sort(dashboardAttentionOrder);
  const top=suggestions[0],id=x=>arg(x.entryId);
  const title=x=>safe(x.task?.title||x.stageLabel||'Review account');
- let html='';
- if(top){
-  const entry=rows.find(e=>e.id===top.entryId);
-  html+='<div class="bt360-featured"><div class="bt360-feature-head">'+bankLogo(top.bank,true)+'<div class="bt360-grow"><b>'+title(top)+'</b><p>'+safe(top.bank||'Bank')+(entry?.bonus?' · '+amount(entry.bonus)+' bonus':'')+'</p><small class="bt3613-attention-note">'+safe(attentionDateNote(top))+'</small></div>'+attentionChip(top)+'</div>';
-  if(entry?.checklist?.length){
-   const done=entry.checklist.filter(t=>t.done).length;
-   html+='<div class="bt360-task-progress"><span>Recorded tasks</span><b>'+done+' of '+entry.checklist.length+'</b><div class="bt360-track"><i style="width:'+Math.round(done/entry.checklist.length*100)+'%"></i></div></div>';
-  }
-  html+='<div class="bt360-actions"><button class="bt360-primary" onclick="runNextAccountAction('+id(top)+')">Open task</button><button class="bt360-secondary" onclick="openAccountFromActionCenter('+id(top)+')">Details</button></div></div>';
- }
+ const heading='<div class="bt360-panel-title bt3719-section-title"><h3>Needs you</h3><span class="bt360-count">'+suggestions.length+' '+(suggestions.length===1?'task':'tasks')+'</span></div>';
+ if(!top)return '<section class="bt3719-needs">'+heading+'<div class="bt360-empty">No immediate tasks for '+audience+' accounts.</div></section>';
+ const entry=rows.find(e=>e.id===top.entryId);
+ let html='<section class="bt3719-needs">'+heading
+  +'<div class="bt360-featured"><div class="bt360-feature-head">'+bankLogo(top.bank,true)
+  +'<div class="bt360-grow"><b>'+title(top)+'</b><p>'+safe(top.bank||'Bank')+(entry?.bonus?' · '+amount(entry.bonus)+' bonus':'')+'</p></div>'
+  +actionBadge(top,true)+'</div>';
+ if(['ACTION_NEEDED','IN_PROGRESS'].includes(top.stageCode))html+=attentionCardProgress(entry);
+ else if(attentionDateNote(top))html+='<small class="bt3719-feature-note">'+safe(attentionDateNote(top))+'</small>';
+ html+='<div class="bt360-actions"><button class="bt360-primary" onclick="runNextAccountAction('+id(top)+')">Open task</button>'
+  +'<button class="bt360-secondary" onclick="openAccountFromActionCenter('+id(top)+')">Details</button></div></div>';
  if(suggestions.length>1){
-  html+='<div class="bt360-list">';
+  html+='<div class="bt360-list bt3719-attention-list">';
   suggestions.slice(1,9).forEach(x=>{
-   html+='<button class="bt360-list-row" onclick="openAccountFromActionCenter('+id(x)+')">'+bankLogo(x.bank,true)+'<span class="bt360-grow"><b>'+title(x)+'</b><small>'+safe(x.bank||'Bank')+'</small><small class="bt3613-attention-note">'+safe(attentionDateNote(x))+'</small></span>'+attentionChip(x)+'</button>';
+   const item=rows.find(e=>e.id===x.entryId);
+   const context=x.dateContext?.confirmed&&x.dateContext.date
+    ?(x.stageCode==='ELIGIBLE'?'Eligible since ':'Due ')+date(x.dateContext.date):attentionDateNote(x);
+   html+='<button class="bt360-list-row" onclick="openAccountFromActionCenter('+id(x)+')">'
+    +bankLogo(x.bank,true)+'<span class="bt360-grow"><b>'+title(x)+'</b><small>'+safe(x.bank||'Bank')+(item?.bonus?' · '+amount(item.bonus)+' bonus':'')+'</small>'
+    +'<small class="bt3719-task-context">'+safe(context)+'</small></span>'
+    +'<span class="bt3719-task-right">'+(item?.bonus?'<strong>'+safe(amount(item.bonus))+'</strong>':'')+actionBadge(x)+'</span></button>';
   });
   html+='</div>';
  }
- if(!suggestions.length)html='<div class="bt360-empty">No immediate tasks for '+audience+' accounts.</div>';
- return panel('Needs you',html,'<span class="bt360-count">'+suggestions.length+' '+(suggestions.length===1?'task':'tasks')+'</span>');
+ return html+'</section>';
 }
 function eligibleSoon(rows){
- const next=rows.filter(e=>e.closed&&scope(e)).map(e=>({e,info:eligibleInfo(e)})).filter(x=>x.info).map(x=>({...x,days:dB(td(),x.info.eligible)})).filter(x=>x.days>0&&x.days<=60).sort((a,b)=>a.days-b.days);
+ const next=rows.filter(e=>e.closed&&scope(e)).map(e=>({e,info:eligibleInfo(e)}))
+  .filter(x=>x.info?.verified).map(x=>({...x,days:dB(td(),x.info.eligible)}))
+  .filter(x=>x.days>0&&x.days<=60).sort((a,b)=>a.days-b.days);
  if(!next.length)return'';
- let h='<div class="bt360-list">'+next.map(x=>'<button class="bt360-list-row" onclick="BT360.goArchive(\'waiting\')">'+bankLogo(x.e.bank,true)+'<span class="bt360-grow"><b>'+safe(x.e.bank)+'</b><small>'+safe(date(x.info.eligible))+' · '+safe(x.info.label)+'</small></span><span class="bt360-chip">'+x.days+' days</span></button>').join('')+'</div>';
- return panel('Eligible soon',h,'<span class="bt360-subtitle">next 60 days</span><button class="bt360-link" onclick="BT360.goArchive(\'waiting\')">Waiting to churn</button>');
+ const heading='<div class="bt360-panel-title bt3719-section-title"><h3>Eligible soon</h3><span class="bt360-subtitle">next 60 days</span><button class="bt360-link" onclick="BT360.goArchive(\'waiting\')">Waiting to churn</button></div>';
+ const list='<div class="bt360-list bt3719-soon-list">'+next.map(x=>
+  '<button class="bt360-list-row" onclick="BT360.goArchive(\'waiting\')">'+bankLogo(x.e.bank,true)
+  +'<span class="bt360-grow"><b>'+safe(x.e.bank)+'</b><small>'+safe(date(x.info.eligible))+' · '+safe(x.info.label)+'</small></span>'
+  +'<span class="bt360-chip">'+x.days+' days</span></button>').join('')+'</div>';
+ return '<section class="bt3719-soon">'+heading+list+'</section>';
 }
 function home(rows,year,metrics){if(!usageData&&!usageLoading&&window.BTBonusAuth?.connected?.())setTimeout(()=>refreshUsage(),0);return segments()+usageBanner()+hero(rows,year,metrics)+stages(rows)+tasks(rows)+eligibleSoon(rows)}
 function compactRow(e){
@@ -774,10 +840,10 @@ async function backUpNow(){
 function settings(){
  const toggles=[['deadlines','Deadlines','3 and 1 day before'],['payouts','Payouts and close dates','When ready'],['eligible','Eligible again','7 days before and on the day']];
  const buttons=toggles.map(([k,label,description])=>'<button class="bt360-settings-row" role="switch" aria-checked="'+noticePrefs[k]+'" onclick="BT360.setNotice(\''+k+'\')"><span><b>'+label+'</b><small>'+description+'</small></span><i class="bt360-toggle '+(noticePrefs[k]?'checked':'')+'"></i></button>').join('');
- return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.18</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
+ return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.19</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
  cloudSettingsCard()+
  usageCard()+
- panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.18. Push delivery is not active.</p>')+
+ panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.19. Push delivery is not active.</p>')+
  panel('Data','<button class="bt360-settings-row" onclick="BT360.closeSettings();exportBackup()">Export backup file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.closeSettings();importBackup()">Restore from file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.openPhonebook()">Bank phone numbers <span>›</span></button>')+
  '<button class="bt360-reset" onclick="BT360.closeSettings();resetAllData()">Reset this device <small>Two confirmations and a safety backup</small></button></section></div>';
 }
