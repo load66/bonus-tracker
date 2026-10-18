@@ -536,7 +536,11 @@ async function exercise(name,engine,url){
       };
     });
     if(!await page.locator('.bt360-detail-footer button').first().isVisible())await page.locator('.bt366-compact-row').first().click();
-    await page.locator('.bt360-detail-footer button').first().click();
+    // Ready-to-close footer intentionally says Keep open; Ask AI remains in the actions menu.
+    if((await page.locator('.bt360-detail-footer button').first().innerText()).trim()==='Keep open'){
+      await page.getByRole('button',{name:'More account actions'}).click();
+      await page.locator('.bt-ba-mini').filter({hasText:'Ask AI'}).click();
+    }else await page.locator('.bt360-detail-footer button').first().click();
     check('Tracker AI opens for one selected bank',(await page.locator('.bonus-ai-heading').innerText()).includes('E2E Verification Bank')&&await page.evaluate(()=>window.__bonusAITest.calls.length===0));
     check('local answers need no login',await page.locator('#bonus-ai-login').isHidden());
     for(const label of ['Monthly fee','Fee waivers','Direct deposit','Early-close fee','Companion account','Repeat eligibility']){await button(label).click();check('prefill: '+label,(await page.locator('#bonus-ai-question').inputValue()).length>20);}
