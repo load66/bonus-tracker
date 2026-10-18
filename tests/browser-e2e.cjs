@@ -256,13 +256,15 @@ async function exercise(name,engine,url){
           &&!e.innerText.includes('Start + Days:')&&!e.innerText.includes('Due Date:');
       }));
     check('waiver summary has a two-line clamp and original terms are expandable',
-      await page.locator('.bt3611-waiver-summary').evaluate(e=>{
+      await page.locator('.bt3613-waiver-clamp').evaluate(e=>{
         const css=getComputedStyle(e);return css.webkitLineClamp==='2'&&e.scrollHeight<=parseFloat(css.lineHeight)*2+2
       })&&await page.locator('.bt3611-full-terms').count()===1);
     await page.locator('.bt3611-full-terms > summary').click();
     check('expanded waiver displays the exact original saved terms',await page.locator('.bt3611-full-terms p').innerText().then(t=>t.includes('Original terms: fee waived with electronic deposits, daily balance or linked checking.')));
     await page.locator('.bt3611-full-terms > summary').click();
-    check('early close fee is amber without inferred zero',await page.locator('.bt3611-amber').innerText()==='Not stated in terms · Needs review');
+    check('early close fee is amber without inferred zero',await page.locator('.bt3613-fee-line').last().locator('.bt3611-amber').innerText()==='Not confirmed');
+    check('no invented monthly waiver result',await page.locator('.bt3613-fee-line').nth(1).innerText().then(t=>t.includes('Waiver not confirmed')&&!t.includes('Waiver on track')));
+    check('each key date explains a specific uncertainty',await page.locator('.bt3613-date-row').evaluateAll(rows=>rows.length===2&&rows.every(x=>!x.textContent.trim().startsWith('Needs review'))));
     check('no developer vocabulary is visible in the rendered app',
       !/\b(?:null|structured rule|anchor|verified \$0|provenance)\b/i.test(await page.locator('#app').innerText()));
     await page.evaluate(()=>{
@@ -272,6 +274,7 @@ async function exercise(name,engine,url){
     await page.screenshot({path:path.join(output,name+'-chase-bonus-detail-in-progress-390.png')});
     await page.evaluate(()=>document.querySelector('.scroll').scrollTop=document.querySelector('.scroll').scrollHeight);
     await page.screenshot({path:path.join(output,name+'-chase-bonus-detail-in-progress-bottom-390.png')});
+    await page.screenshot({path:path.join(output,name+'-financial-summary-key-dates-390.png')});
     await page.getByRole('button',{name:'Set rule'}).first().click();
     check('Set rule opens existing account rule editor',await page.locator('.modal').isVisible()
       &&(await page.locator('.modal').innerText()).includes('Fees & Close'));
@@ -353,7 +356,7 @@ async function exercise(name,engine,url){
     for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
       const layout=await page.evaluate(()=>{
-        const panel=document.querySelector('.bt360-detail-card'),task=panel?.querySelector('.bt360-check .bt366-row-edit'),timer=panel?.querySelector('.bt3611-timer-body'),fee=panel?.querySelector('.bt360-info-long');
+        const panel=document.querySelector('.bt360-detail-card'),task=panel?.querySelector('.bt360-check .bt366-row-edit'),timer=panel?.querySelector('.bt3611-timer-body'),fee=panel?.querySelector('.bt3613-fee-line');
         if(!panel||!task||!timer||!fee)return {ok:false,reason:'missing node',panel:!!panel,task:!!task,timer:!!timer,fee:!!fee};
         const owner=task.parentElement,check=owner.querySelector('[role="checkbox"]'),a=check.getBoundingClientRect(),b=task.getBoundingClientRect();
         const title=timer.querySelector('b'),titleH=title?.getBoundingClientRect().height||0,lh=parseFloat(getComputedStyle(title).lineHeight)||16;
