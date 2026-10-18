@@ -1,12 +1,14 @@
 # Audit progress
 
-Active agent: ChatGPT Codex | v3.6.1 panel title HTML fix | codex/v3.6.1-panel-title-render
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
 
-- Chromium-only Playwright CI update: `codex/chromium-only-playwright-ci` (PR pending creation), no app code or saved account data changed. One Chromium job follows bonus/cloud/UI units on PR, main and nightly. Pinned Playwright image/API cache; preserved 284 browser assertions, mobile layouts, retries, trace/artifact collection, and zero-console-error requirement. `AGENTS.md`, `docs/CI.md`, and `tests/ci-workflow.test.js` updated to prohibit Firefox and WebKit. Next step: PR verification, merge, exact main-run/Pages checks.
+- v3.6.1 panel title rendering patch: branch `codex/v3.6.1-panel-title-render`. Fix three escaped literal `<span>` heading labels (Needs you count, Eligible soon period, Archive cooling subtitle) by using trusted panel accessory markup while keeping all heading titles escaped. App version `3.6.1`, service worker `bt-v3.6.1-panel1`, HTML cache-busted scripts; smoke and Playwright render assertions added. No financial rules or stored data modified. Next: CI pass, PR merge, exact main-branch Pages deployment and production assets verification.
+
+- Chromium-only Playwright CI update: PR https://github.com/load66/bonus-tracker/pull/166 merged as `b3d4f3b7af5b4245766ef319e676dea265eb2ebb`, no app code or saved account data changed. One Chromium job follows bonus/cloud/UI units on PR, main and nightly. Pinned Playwright image/API cache; preserved 284 browser assertions, mobile layouts, retries, trace/artifact collection, and zero-console-error requirement. `AGENTS.md`, `docs/CI.md`, and `tests/ci-workflow.test.js` updated to prohibit Firefox and WebKit. PR CI PASS in https://github.com/load66/bonus-tracker/actions/runs/39087640881. Main deployment verification follows.
 
 - BonusTracker v3.6.0 mockup UI (Finance remains removed): frontend PR https://github.com/load66/bonus-tracker/pull/165. Tracker, focused detail, Bonuses, Tax, Data, combined Archive and Settings; Personal/Business scopes; owner hosting usage card and read-only notification center. App and service-worker cache `bt-v3.6.0-ui1`.
 - Full PR release CI https://github.com/load66/bonus-tracker/actions/runs/39086571663 PASS, including bonus/cloud/UI unit groups, release verification, and Playwright Chromium, Firefox and WebKit (284 browser checks on each engine). Synthetic provider/backup/usage test fixtures only, no live financial reset/restore.
