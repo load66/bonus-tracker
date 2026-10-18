@@ -764,18 +764,28 @@ async function exercise(name,engine,url){
     // Chromium checks offline top-level reload. Linux WebKit raises a browser
     // internal error on offline reload, so verify the controlled service worker
     // can actually serve the cached navigation shell while offline instead.
+    const beforeOffline=await page.evaluate(async()=>{
+      const match=await caches.match('./index.html',{ignoreSearch:true}).catch(()=>null);
+      return {controlled:!!navigator.serviceWorker.controller,cached:!!match,cachedOk:match?.ok||false,
+        correctTitle:match?.ok?(await match.text()).includes('<title>Bank Bonus Tracker</title>'):false};
+    });
+    check('service-worker installation cached the actual app shell',beforeOffline.controlled&&beforeOffline.cachedOk&&beforeOffline.correctTitle);
     await context.setOffline(true);
     if(name==='webkit'){
       const offlineShell=await page.evaluate(async()=>{
+        const detail={controlled:!!navigator.serviceWorker.controller,cache:false,title:false,fetch:false,fetchError:false};
         try{
-          const cacheResponse=await caches.match('./index.html',{ignoreSearch:true});
-          const offlineResponse=await fetch('./index.html',{cache:'no-store'});
-          const title='<title>Bank Bonus Tracker</title>';
-          return !!navigator.serviceWorker.controller&&cacheResponse?.ok&&offlineResponse.ok
-            &&(await cacheResponse.text()).includes(title)&&(await offlineResponse.text()).includes(title);
-        }catch{return false}
+          const response=await caches.match('./index.html',{ignoreSearch:true});
+          detail.cache=!!response?.ok;
+          if(response?.ok)detail.title=(await response.text()).includes('<title>Bank Bonus Tracker</title>');
+        }catch{}
+        try{
+          const response=await fetch('./index.html',{cache:'no-store'});
+          detail.fetch=response.ok&&(await response.text()).includes('<title>Bank Bonus Tracker</title>');
+        }catch{detail.fetchError=true}
+        return detail;
       });
-      check('WebKit service worker serves the cached HTML shell through offline fetch',offlineShell);
+      check('WebKit retains controlled offline app-shell cache: '+JSON.stringify(offlineShell),offlineShell.controlled&&offlineShell.cache&&offlineShell.title);
     }else{
       await page.reload();await settleStartup();await page.getByText('BonusTracker',{exact:false}).first().waitFor();
     }
