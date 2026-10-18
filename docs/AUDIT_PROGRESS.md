@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex — v3.6.25 — codex/v3.6.25-detail-panel-order
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.25 in-progress Bonus Detail layout parity (`codex/v3.6.25-detail-panel-order`): Fees & waivers now appears between Requirements and Timers, matching the PDF. Ready-to-close close-check priority and closed historical fee display remain intact. Existing Add task, Add timer, timer editing and financial evidence are preserved. Synthetic panel-order and handler regression added. No rule engine or financial record changes; CI/Pages verification pending.
+
 
 - v3.6.24 anchored Bonus Detail requirement dates (`codex/v3.6.23-detail-deadline-clarity`): the lifecycle banner uses the earliest calculable deadline from saved structured terms, without guessing calendar dates from unsupported business-day or statement-cycle timing. Synthetic deadline timers disappear when requirements are confirmed or bonus is received; saved manual reminders remain intact. Rebases the previously tested v3.6.23 deadline patch on top of v3.6.23 retention safeguards. Read-only, no saved evidence or engine changes. Fresh bonus/UI/cloud, Chromium/WebKit, Pages checks required.
 

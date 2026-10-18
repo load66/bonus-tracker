@@ -77,6 +77,17 @@ const beforeBannerEntry=JSON.stringify(structuredOnly);
 sandbox.BT360.detailPanels(structuredOnly);
 assert.equal(JSON.stringify(structuredOnly),beforeBannerEntry,'Rendering deadline summaries never mutates saved entries');
 
+
+// v3.6.25: match in-progress PDF section ordering without hiding existing actions.
+const inProgressLayout=sandbox.BT360.detailPanels(e);
+const sectionHeadings=[...inProgressLayout.matchAll(/<h3>([^<]+)<\/h3>/g)].map(match=>match[1]);
+const reqIndex=sectionHeadings.indexOf('Requirements'),feeIndex=sectionHeadings.indexOf('Fees &amp; waivers'),timerIndex=sectionHeadings.indexOf('Timers');
+assert(reqIndex>=0&&feeIndex>reqIndex&&timerIndex>feeIndex,'In-progress detail order must be Requirements, Fees & waivers, Timers');
+assert.equal(sectionHeadings.filter(title=>title==='Fees &amp; waivers').length,1,'Monthly and early-close evidence must have exactly one fee section');
+assert.match(inProgressLayout,/\+ Add task/,'Task editor link survives panel reordering');
+assert.match(inProgressLayout,/openTimerEditor/,'Saved timer editing remains available after panel reordering');
+assert.match(inProgressLayout,/runBankAction\(&quot;CHA-P-01&quot;,'timer'\)/,'Add timer still opens the saved timer handler');
+
 const fees=sandbox.BT360.feeDetail(e);
 assert.match(fees,/Monthly fee<\/span><div><b[^>]*>\$15<\/b>/);
 assert.match(fees,/ANY: \$500\+ electronic deposits/);

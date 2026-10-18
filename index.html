@@ -18,7 +18,7 @@
 <link rel="stylesheet" href="./mobile-ui.css?v=3.5.2-safety1">
 <link rel="stylesheet" href="./cloud-backup.css?v=3.4.74">
 <link rel="stylesheet" href="./research-tabs.css?v=3.4.74">
-<link rel="stylesheet" href="./redesign-v360.css?v=3.6.24-deadline1">
+<link rel="stylesheet" href="./redesign-v360.css?v=3.6.25-panelorder1">
 </head>
 <body>
 <div class="app" id="app"><div class="bt-boot" role="status" aria-live="polite"><strong><em>Bonus</em>Tracker</strong>Loading dashboard…<span></span><span></span></div></div>
@@ -31,7 +31,7 @@
     refreshed=true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=3.6.24-deadline1',{updateViaCache:'none'}).then(reg=>{
+  navigator.serviceWorker.register('./sw.js?v=3.6.25-panelorder1',{updateViaCache:'none'}).then(reg=>{
     const activate=worker=>{try{worker&&worker.postMessage({type:'SKIP_WAITING'})}catch{}};
     if(reg.waiting)activate(reg.waiting);
     reg.addEventListener('updatefound',()=>{
@@ -72,7 +72,7 @@
 <script src="./close-rules-integration.js?v=3.4.99-classify1"></script>
 <script src="./wells-professional-runtime.js?v=3.4.74"></script>
 <script src="./eligibility-editor.js?v=3.4.74"></script>
-<script src="./churn-close-policy.js?v=3.6.24-deadline1"></script>
+<script src="./churn-close-policy.js?v=3.6.25-panelorder1"></script>
 <script src="./semantic-status.js?v=3.4.74-status1"></script>
 <script src="./entry-link-import.js?v=3.4.74-conditional1"></script>
 <script src="./fee-review-migration.js?v=3.4.74-feereview1"></script>
@@ -84,7 +84,7 @@
 <script src="./cloud-backup.js?v=3.4.74"></script>
 <script src="./cloud-terms-history.js?v=3.6.19-firstpaint1"></script>
 <script src="./bonus-ai.js?v=3.4.74"></script>
-<script src="./redesign-v360.js?v=3.6.24-deadline1"></script>
+<script src="./redesign-v360.js?v=3.6.25-panelorder1"></script>
 <script src="./mobile-analyzer.js?v=3.6.19-firstpaint1"></script>
 </body>
 </html>
