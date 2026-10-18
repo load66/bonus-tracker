@@ -75,6 +75,15 @@ assert.doesNotMatch(details,/\b(?:null|structured rule|anchor|verified \$0|prove
 assert.equal(typeof sandbox.BT360.openRuleEditor,'function');
 assert.equal(typeof sandbox.BT360.openActivity,'function');
 assert.equal(JSON.stringify([...storage]),before,'The new detail functions may not write account data');
+const priorSuggestions=sandbox.getAttentionSuggestions;
+sandbox.getAttentionSuggestions=()=>[{entryId:e.id,bank:e.bank,stageCode:'AWAITING_BONUS',stageLabel:'Awaiting Bonus',task:{title:'Confirm bonus payment'},dateContext:{date:'',confirmed:false}}];
+try{
+ const needs=sandbox.BT360.tasks([e]);
+ assert.match(needs,/Awaiting bonus/,'Show actual lifecycle stage instead of missing-date status');
+ assert.match(needs,/Payout date not confirmed/,'Missing payout clock must be separately explained');
+ assert.doesNotMatch(needs,/>Needs review<\/span>/,'No generic review badge replacing lifecycle stage');
+}finally{sandbox.getAttentionSuggestions=priorSuggestions}
+
 console.log('Bonus detail v3.6.13 passed: Chase requirement, due date, zero recorded progress, compact timers, fee summary, unconfirmed close fee, rule editor, read-only data');
 
 
