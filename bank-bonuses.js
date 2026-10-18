@@ -29,7 +29,7 @@
   const normalize=s=>String(s||'').toLowerCase().replace(/u\.s\.?/g,'us').replace(/[^a-z0-9]+/g,' ').trim();
   const escape=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function valid(data){
-    if(!data||![1,2].includes(data.schemaVersion)||!Number.isFinite(Date.parse(data.checkedAt))||!Array.isArray(data.offers)||data.offers.length>200)throw Error('Invalid feed');
+    if(!data||![1,2,3].includes(data.schemaVersion)||!Number.isFinite(Date.parse(data.checkedAt))||!Array.isArray(data.offers)||data.offers.length>200)throw Error('Invalid feed');
     const now=Date.now();
     const offers=[];
     for(const x of data.offers){
@@ -40,6 +40,38 @@
         const expiry=x.title.match(/\bends?\s+(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b/i);
         if(expiry){const year=+expiry[3]<100?2000+(+expiry[3]):+expiry[3];const day=new Date(year,+expiry[1]-1,+expiry[2]+1);if(day.getTime()<=now)continue;}
         const offer={title:x.title,url:u.href,publishedAt:x.publishedAt,source:sourceNames[id],sourceId:id,availability:['nationwide','regional'].includes(x.availability)?x.availability:'unknown',groupKey:typeof x.groupKey==='string'&&x.groupKey.length<1000?x.groupKey:normalize(x.title)};
+        if(data.schemaVersion===3){
+          if(!/^[a-f0-9]{24}$/.test(x.id||'')||typeof x.bank!=='string'||x.bank.length<2||x.bank.length>80||
+             !['checking','savings','business','combo'].includes(x.product)||!Number.isSafeInteger(x.amount)&&x.amount!==null||
+             x.amount!==null&&(x.amount<=0||x.amount>100000)||typeof x.region!=='string'||x.region.length>40||
+             !Array.isArray(x.links)||!x.links.length||x.links.length>30)continue;
+          const m=x.title.match(/\$\s*([\d,]+)/g)||[];
+          if(x.amount!==null&&(m.length!==1||Number(m[0].replace(/[$,\s]/g,''))!==x.amount))continue;
+          const links=[];
+          for(const l of x.links){
+            try{
+              const v=new URL(l.url),src=sourceHosts[v.hostname];
+              if(!src||v.protocol!=='https:'||v.username||v.password||v.port||v.search||v.hash||v.pathname==='/'||
+                 !sourceNames[l.sourceId]||src!==l.sourceId||typeof l.title!=='string'||l.title.length>300||
+                 !Number.isFinite(Date.parse(l.publishedAt))||Date.parse(l.publishedAt)>now||
+                 now-Date.parse(l.publishedAt)>90*86400000)continue;
+              if(!links.some(z=>z.url===v.href))links.push({url:v.href,source:sourceNames[src],sourceId:src,title:l.title,publishedAt:l.publishedAt});
+            }catch{}
+          }
+          if(!links.length||!links.some(l=>l.url===offer.url&&l.title===offer.title))continue;
+          if(x.expiresAt!==null&&x.expiresAt!==undefined){
+            if(!/^\d{4}-\d{2}-\d{2}$/.test(x.expiresAt)||!Number.isFinite(Date.parse(x.expiresAt+'T00:00:00Z'))||
+               new Date(x.expiresAt+'T00:00:00Z').toISOString().slice(0,10)!==x.expiresAt)continue;
+            const today=new Date(now).toISOString().slice(0,10);if(x.expiresAt<today)continue;
+          }
+          offer.id=x.id;
+          offer.groupKey=x.id;
+          offer.bank=x.bank;offer.product=x.product;offer.amount=x.amount;offer.region=x.region;
+          offer.displayTitle=typeof x.displayTitle==='string'&&x.displayTitle.length<180?x.displayTitle:x.bank+' · '+x.product+' · '+(x.amount===null?'Amount needs review':'$'+x.amount.toLocaleString('en-US'));
+          offer.expiresAt=x.expiresAt||null;offer.links=links;
+          offer.badges=Array.isArray(x.badges)?[...new Set(x.badges.filter(v=>['New','Increased','Decreased','Updated','Ending soon'].includes(v)))]:[];
+          offer.change=x.change&&['Increased','Decreased'].includes(x.change.type)&&Number.isSafeInteger(x.change.from)&&Number.isSafeInteger(x.change.to)?{type:x.change.type,from:x.change.from,to:x.change.to}:null;
+        }
         offer.evidence=evidenceFor(offer,data.verification);offers.push(offer);
       }catch{}
     }
@@ -52,15 +84,18 @@
   function grouped(rows){
     const groups=new Map();
     for(const row of rows){
-      let group=groups.get(row.groupKey);
-      if(!group){group={...row,links:[]};groups.set(row.groupKey,group);}
-      if(!group.links.some(x=>x.url===row.url))group.links.push({url:row.url,source:row.source});
-      // Do not borrow one source's evidence for another title/offer identity.
+      const key=row.id||row.groupKey;
+      let group=groups.get(key);
+      if(!group){group={...row,links:[]};groups.set(key,group);}
+      const links=Array.isArray(row.links)&&row.links.length?row.links:[{url:row.url,source:row.source,title:row.title}];
+      for(const link of links)if(!group.links.some(x=>x.url===link.url))group.links.push({...link});
+      // Uncertain or contradictory geography is never upgraded by a duplicate.
       if(group.availability!==row.availability)group.availability='unknown';
     }
     return [...groups.values()];
   }
   function amountFor(offer){
+    if(Number.isSafeInteger(offer.amount)&&offer.amount>0)return offer.amount;
     const e=offer.evidence;
     if(!e||e.status!=='evidence-found'||e.stale)return null;
     const value=e.fields.bonus&&e.fields.bonus.value;
@@ -71,7 +106,7 @@
       const e=x.evidence,fields=e&&e.fields||{},has=Object.keys(fields).length>0;
       const state=e&&e.stale?'stale':e&&e.checkState==='queued'?'queued':has?'present':'missing';
       const amount=amountFor(x);
-      return (availability==='all'||x.availability===availability)&&(!q||normalize(x.title).includes(normalize(q)))&&
+      return (availability==='all'||x.availability===availability)&&(!q||normalize(x.title+' '+(x.displayTitle||'')).includes(normalize(q)))&&
         (!options.evidence||options.evidence==='all'||options.evidence===state||options.evidence==='changed'&&e&&e.changes.length>0)&&
         (!options.fees||options.fees==='all'||options.fees==='present'&&!!fields.monthly_fee||options.fees==='missing'&&!fields.monthly_fee)&&
         (!options.activity||options.activity==='all'||options.activity==='present'&&!!fields.qualifying_activity||options.activity==='missing'&&!fields.qualifying_activity)&&
@@ -194,6 +229,7 @@
     }).filter(x=>x.geo.kind!=='expired'&&(filter==='all'||filter==='tracker'&&!!x.match||filter==='area'&&x.geo.kind!=='outside'))
       .sort((a,b)=>({ready:0,next:1,explore:2,review:3,outside:4}[a.priorityGroup]-{ready:0,next:1,explore:2,review:3,outside:4}[b.priorityGroup])||
         (a.priorityGroup==='next'?(a.match.date.localeCompare(b.match.date)):0)||
+        (['ready','explore'].includes(a.priorityGroup)?(Number(b.badges?.includes('Increased'))-Number(a.badges?.includes('Increased'))||Number(b.badges?.includes('New'))-Number(a.badges?.includes('New'))):0)||
         ({listed:0,nationwide:0,conditional:1,unknown:1,outside:2}[a.geo.kind]-{listed:0,nationwide:0,conditional:1,unknown:1,outside:2}[b.geo.kind])||
         (Date.parse(b.publishedAt)-Date.parse(a.publishedAt))||a.index-b.index);
   }
