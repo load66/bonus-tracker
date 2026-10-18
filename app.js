@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.31';
+const APP_VERSION='3.6.32';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -178,7 +178,7 @@ function offerSignature(snap){
 function offerSnapshotFromEntry(e,source){
   if(!e||!e.bank)return null;
   const analyzed=String(e.analyzedTC||'');
-  const snap={id:'ofr_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6),bank:e.bank,accountType:normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'personal',entryId:e.id||'',source:source||'entry',savedAt:td(),financialRules:e.financialRules?JSON.parse(JSON.stringify(e.financialRules)):null,feeScheduleRaw:e.feeScheduleRaw||'',opened:e.opened||'',closed:e.closed||'',bonusRecd:e.bonusRecd||'',bonus:e.bonus||0,churn:e.churn||'',reqDays:e.reqDays||0,minHoldDays:e.minHoldDays||0,earlyCloseFee:e.earlyCloseFee||0,closeRuleBasis:normalizeCloseRuleBasis(e.closeRuleBasis),closeBufferDays:closeBufferDaysFor(e),closeRuleText:e.closeRuleText||'',monthlyFeeChecked:!!e.monthlyFeeChecked,fundedDays:e.fundedDays||0,fundingAmount:e.fundingAmount||0,fundingAmountText:e.fundingAmountText||'',payoutTimingText:e.payoutTimingText||'',monthlyFeeYNText:e.monthlyFeeYNText||'',monthlyFeeAmountText:e.monthlyFeeAmountText||'',monthlyFeeFrequency:e.monthlyFeeFrequency||'',monthlyFeeWaiverType:e.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:e.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:e.monthlyFeeWaiverText||'',promoCodeText:e.promoCodeText||'',avoidMonthlyFeeText:e.avoidMonthlyFeeText||'',completeBonusText:e.completeBonusText||'',eligibilityText:e.eligibilityText||'',schemaVersion:parseInt(e.schemaVersion||0,10)||0,eligibilityRules:Array.isArray(e.eligibilityRules)?e.eligibilityRules.map(r=>({...r})):[],couponEnrollmentDate:e.couponEnrollmentDate||'',offerEnrollmentDate:e.offerEnrollmentDate||'',closedWithNegativeBalance:typeof e.closedWithNegativeBalance==='boolean'?e.closedWithNegativeBalance:null,eligibilityScope:e.eligibilityScope||'',sourceEligibilityBasis:e.sourceEligibilityBasis||'',churnPeriodValue:e.churnPeriodValue||0,churnPeriodUnit:e.churnPeriodUnit||'',eligibilityEvidenceText:e.eligibilityEvidenceText||'',eligibilityAnchorEvidenceText:e.eligibilityAnchorEvidenceText||'',currentCustomerEvidenceText:e.currentCustomerEvidenceText||'',eligibilityEvidenceSource:e.eligibilityEvidenceSource||'',eligibilityVerified:!!e.eligibilityVerified,promoSourceUrl:e.promoSourceUrl||'',feeScheduleSourceUrl:e.feeScheduleSourceUrl||'',termsVerifiedAt:e.termsVerifiedAt||'',currentCustomerExcluded:!!e.currentCustomerExcluded,mustCloseBeforeReapply:!!e.mustCloseBeforeReapply,reapplicationAction:e.reapplicationAction||'',expirationDateText:e.expirationDateText||'',requiredDaysText:e.requiredDaysText||'',notes:String(e.notes||'').slice(0,600),analyzedPreview:analyzed.slice(0,900)};
+  const snap={id:'ofr_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6),bank:e.bank,accountType:normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'personal',entryId:e.id||'',source:source||'entry',savedAt:td(),financialRules:e.financialRules?JSON.parse(JSON.stringify(e.financialRules)):null,feeScheduleRaw:e.feeScheduleRaw||'',opened:e.opened||'',closed:e.closed||'',bonusRecd:e.bonusRecd||'',bonus:e.bonus||0,churn:e.churn||'',reqDays:e.reqDays||0,minHoldDays:e.minHoldDays||0,earlyCloseFee:(e.earlyCloseFee===null?null:(e.earlyCloseFee||0)),closeRuleBasis:normalizeCloseRuleBasis(e.closeRuleBasis),closeBufferDays:closeBufferDaysFor(e),closeRuleText:e.closeRuleText||'',monthlyFeeChecked:!!e.monthlyFeeChecked,fundedDays:e.fundedDays||0,fundingAmount:e.fundingAmount||0,fundingAmountText:e.fundingAmountText||'',payoutTimingText:e.payoutTimingText||'',monthlyFeeYNText:e.monthlyFeeYNText||'',monthlyFeeAmountText:e.monthlyFeeAmountText||'',monthlyFeeFrequency:e.monthlyFeeFrequency||'',monthlyFeeWaiverType:e.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:e.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:e.monthlyFeeWaiverText||'',promoCodeText:e.promoCodeText||'',avoidMonthlyFeeText:e.avoidMonthlyFeeText||'',completeBonusText:e.completeBonusText||'',eligibilityText:e.eligibilityText||'',schemaVersion:parseInt(e.schemaVersion||0,10)||0,eligibilityRules:Array.isArray(e.eligibilityRules)?e.eligibilityRules.map(r=>({...r})):[],couponEnrollmentDate:e.couponEnrollmentDate||'',offerEnrollmentDate:e.offerEnrollmentDate||'',closedWithNegativeBalance:typeof e.closedWithNegativeBalance==='boolean'?e.closedWithNegativeBalance:null,eligibilityScope:e.eligibilityScope||'',sourceEligibilityBasis:e.sourceEligibilityBasis||'',churnPeriodValue:e.churnPeriodValue||0,churnPeriodUnit:e.churnPeriodUnit||'',eligibilityEvidenceText:e.eligibilityEvidenceText||'',eligibilityAnchorEvidenceText:e.eligibilityAnchorEvidenceText||'',currentCustomerEvidenceText:e.currentCustomerEvidenceText||'',eligibilityEvidenceSource:e.eligibilityEvidenceSource||'',eligibilityVerified:!!e.eligibilityVerified,promoSourceUrl:e.promoSourceUrl||'',feeScheduleSourceUrl:e.feeScheduleSourceUrl||'',termsVerifiedAt:e.termsVerifiedAt||'',currentCustomerExcluded:!!e.currentCustomerExcluded,mustCloseBeforeReapply:!!e.mustCloseBeforeReapply,reapplicationAction:e.reapplicationAction||'',expirationDateText:e.expirationDateText||'',requiredDaysText:e.requiredDaysText||'',notes:String(e.notes||'').slice(0,600),analyzedPreview:analyzed.slice(0,900)};
   const tier=analyzed.match(/Bonus:\s*([^*]{0,240})/i);
   if(tier)snap.bonusTierText=tier[1].trim();
   snap.signature=offerSignature(snap);
@@ -1634,6 +1634,15 @@ function nextActiveTimer(e){
 }
 
 function status(e){
+  try{
+    if(typeof window.btEvaluateAccount==='function'&&!window.__btStatusEval){
+      window.__btStatusEval=true;
+      try{const d=window.btEvaluateAccount(e);if(d&&typeof d.legacyStatus==='string')return d.legacyStatus}finally{window.__btStatusEval=false}
+    }
+  }catch{}
+  return statusFromSavedFacts(e);
+}
+function statusFromSavedFacts(e){
 
   if(e?.closed&&isNonRepeatableEntry(e))return'ARCHIVED';
 
@@ -2108,7 +2117,6 @@ function normalizeEntryAccountTypeRow(e){
 function migrateEntryAccountTypes(rows){
   let changed=false;
   const next=(rows||[]).map(e=>{const before=e&&e.accountType;const row=normalizeEntryAccountTypeRow(e);if((row&&row.accountType)!==before)changed=true;return row});
-  if(changed)try{sv(SK,next)}catch{}
   return next;
 }
 function syncModalAccountTypeFromBank(){
@@ -3362,9 +3370,9 @@ function syncProfileEventsFromEntry(e){}
 function getProfileEventsForBank(bank){return[]}
 disableProfileEventStorage();
 let entries=migrateEntryAccountTypes(ld(SK,DEF)),tab='tracker',expanded=null,modal=null,cfm=null,search='';
+try{if(localStorage.getItem(SK)===null)localStorage.setItem(SK,'[]')}catch{}
 const __idRepair=repairEntryIds(entries);
 entries=__idRepair.items;
-if(__idRepair.changed)sv(SK,entries);
 syncExistingDatapointsToDB();
 migrateLegacyInlineItems();
 disableProfileEventStorage();
@@ -3420,7 +3428,7 @@ try{window.btRegisterPostRender=btRegisterPostRender;window.btRunPostRenderHooks
 function btCleanStr(v){return String(v==null?'':v).replace(/\s+/g,' ').trim()}
 function btMakeLegacyInlineId(prefix,entryId,i){return prefix+'_'+String(entryId||'entry').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,24)+'_'+Date.now().toString(36)+'_'+i+'_'+Math.random().toString(36).slice(2,7)}
 function normalizeChecklistItemLocal(item,entryId,i){const x=(item&&typeof item==='object')?{...item}:{text:btCleanStr(item)};if(!btCleanStr(x.id))x.id=btMakeLegacyInlineId('ck',entryId,i);if(!btCleanStr(x.text))x.text=btCleanStr(x.label||x.name||x.title||x.description||x.note||'Checklist step');x.done=!!(x.done||x.checked||x.complete||x.completed);return x}
-function migrateLegacyInlineItems(){if(!Array.isArray(entries))return false;let changed=false;entries=entries.map((e,idx)=>{if(!e||typeof e!=='object')return e;const n={...e};const entryId=btCleanStr(n.id)||('row_'+idx);if(Array.isArray(n.customTimers)){const before=JSON.stringify(n.customTimers);n.customTimers=n.customTimers.map((t,i)=>{const x=(t&&typeof t==='object')?{...t}:{text:btCleanStr(t)};if(!btCleanStr(x.id))x.id=btMakeLegacyInlineId('tm',entryId,i);if(!btCleanStr(x.text))x.text=btCleanStr(x.label||x.name||x.title||x.description||'Timer');if(!btCleanStr(x.date))x.date=btCleanStr(x.dueDate||x.due||x.endDate||'');if(!btCleanStr(x.startDate))x.startDate=btCleanStr(x.start||x.opened||'');x.daysRequired=parseInt(x.daysRequired||x.days||x.durationDays||0,10)||0;x.done=!!x.done;return x});if(JSON.stringify(n.customTimers)!==before)changed=true}if(Array.isArray(n.checklist)){const before=JSON.stringify(n.checklist);n.checklist=n.checklist.map((item,i)=>normalizeChecklistItemLocal(item,entryId,i));if(JSON.stringify(n.checklist)!==before)changed=true}return n});if(changed)sv(SK,entries);return changed}
+function migrateLegacyInlineItems(){if(!Array.isArray(entries))return false;let changed=false;entries=entries.map((e,idx)=>{if(!e||typeof e!=='object')return e;const n={...e};const entryId=btCleanStr(n.id)||('row_'+idx);if(Array.isArray(n.customTimers)){const before=JSON.stringify(n.customTimers);n.customTimers=n.customTimers.map((t,i)=>{const x=(t&&typeof t==='object')?{...t}:{text:btCleanStr(t)};if(!btCleanStr(x.id))x.id=btMakeLegacyInlineId('tm',entryId,i);if(!btCleanStr(x.text))x.text=btCleanStr(x.label||x.name||x.title||x.description||'Timer');if(!btCleanStr(x.date))x.date=btCleanStr(x.dueDate||x.due||x.endDate||'');if(!btCleanStr(x.startDate))x.startDate=btCleanStr(x.start||x.opened||'');x.daysRequired=parseInt(x.daysRequired||x.days||x.durationDays||0,10)||0;x.done=!!x.done;return x});if(JSON.stringify(n.customTimers)!==before)changed=true}if(Array.isArray(n.checklist)){const before=JSON.stringify(n.checklist);n.checklist=n.checklist.map((item,i)=>normalizeChecklistItemLocal(item,entryId,i));if(JSON.stringify(n.checklist)!==before)changed=true}return n});return changed}
 function inlineStateFor(id){if(!inlineUiState[id])inlineUiState[id]={checklist:false,timer:false,timerEdit:null,timerKind:'due'};if(!('timerEdit' in inlineUiState[id]))inlineUiState[id].timerEdit=null;if(!('timerKind' in inlineUiState[id]))inlineUiState[id].timerKind='due';return inlineUiState[id]}
 function isInlineOpen(id,type){return !!inlineStateFor(id)[type]}
 let timerChoicePrompt=null;
@@ -3998,11 +4006,9 @@ function normalizeLifecycleEntry(e){
   x.analysis=(x.analysis&&typeof x.analysis==='object')?x.analysis:null;
   x.analyzerHistory=normalizeAnalyzerHistoryList(x.analyzerHistory);
   x.closeRuleBasis=normalizeCloseRuleBasis(x.closeRuleBasis||inferCloseRuleBasisFromText(x));
-  x.closeBufferDays=parseInt(x.closeBufferDays,10);
-  // v3.3.83: default close safety buffer is 5 days.
-  // Migrate old default 3-day buffer entries to 5 unless user explicitly set another value.
-  if(x.closeBufferDays===3)x.closeBufferDays=BUFFER_DAYS;
-  if(!Number.isFinite(x.closeBufferDays)||x.closeBufferDays<0)x.closeBufferDays=BUFFER_DAYS;
+  const configuredBuffer=parseInt(x.closeBufferDays,10);
+  const hadConfiguredBuffer=Object.prototype.hasOwnProperty.call(e||{},'closeBufferDays')&&Number.isFinite(configuredBuffer)&&configuredBuffer>=0;
+  if(hadConfiguredBuffer)x.closeBufferDays=configuredBuffer;
   x.closeRuleText=String(x.closeRuleText||'').trim();
   x.closeRestrictionType=String(x.closeRestrictionType||x.analysis?.closeRestrictionType||'none').trim()||'none';
   repairManualCloseHoldFields(x);
@@ -4021,9 +4027,10 @@ function normalizeLifecycleEntry(e){
     x.monthlyFeeNoMonthlyServiceFee=!!(x.monthlyFeeNoMonthlyServiceFee||feeStruct.monthlyFeeNoMonthlyServiceFee);
   }catch{}
   x.customTimers=normalizeTimerList(x.customTimers||[]);
-  // v3.3.92: planned-close flow was removed. Closed date is actual only.
-  if(x.bonusRecd&&!x.reqMet)x.reqMet=x.bonusRecd;
-  if(x.reqMet&&x.bonusRecd&&dB(x.reqMet,x.bonusRecd)<0)x.reqMet=x.bonusRecd;
+  // Saved requirement and payout dates are separate facts. Never copy one into the other.
+  x.reqMet=(e&&e.reqMet)||'';
+  x.bonusRecd=(e&&e.bonusRecd)||'';
+  if(hadConfiguredBuffer)x.closeBufferDays=configuredBuffer;
   hydrateTimersFromOpened(x);
   applyChurnDecisionFields(x);
   normalizeNonRepeatableEntry(x);
@@ -4206,7 +4213,6 @@ function R(){
   const focusedBeforeRender=document.activeElement;const searchFocus=focusedBeforeRender&&['archive-search','tracker-search','datapoints-search','radar-search','terms-search'].includes(focusedBeforeRender.id)?{id:focusedBeforeRender.id,start:focusedBeforeRender.selectionStart,end:focusedBeforeRender.selectionEnd}:null;if(tab==='finances')tab='tracker';captureProfileSectionState();const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;
   if(typeof window.btCaptureRadarDisclosures==='function')window.btCaptureRadarDisclosures();
   if(tab==='profiles'||tab==='health')tab='tracker';
-  try{if(!window.__btAutoCleanupV384){entries=sortE(normalizeLifecycleEntries(entries));sv(SK,entries);window.__btAutoCleanupV384=true}}catch{}
   sanitizeAllTimers(false);
   const sorted=sortE(entries),thisYr=new Date().getFullYear(),metrics=bonusPipelineMetrics(sorted,dashYear);
   const bt360Detail=!!(expanded&&sorted.some(e=>e.id===expanded)&&(['tracker','archive'].includes(tab)));
@@ -4625,6 +4631,22 @@ function openEdit(id){const e=entries.find(x=>x.id===id);if(e){modal={...e,analy
 function closeModal(){modal=null;showInlineAZ=false;inlineResult=null;R()}
 function clearFields(){if(!modal)return;modal.accountType='personal';['bonus','churn','churnability','churnReason','churnDecisionSource','opened','closed','bonusRecd','reqMet','dataPoint','notes','phoneNum','monthlyFeeYNText','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText','eligibilityText','expirationDateText','requiredDaysText','closeFeeCountdownDays'].forEach(k=>{modal[k]=''});modal.customTimers=[];['reqDays','minHoldDays','earlyCloseFee','referralBonus'].forEach(k=>{modal[k]=0});modal.bonus=0;modal.churnable=null;modal.feeChecked=false;R()}
 function parseCloseFeeAmount(text){const raw=String(text||'').trim();if(!raw)return 0;if(/^(none|no|n\/a)$/i.test(raw))return 0;const m=raw.match(/\$?([\d,]+(?:\.\d+)?)/);return m?parseInt(String(m[1]).replace(/,/g,''),10)||0:0}
+function resolvedModalEarlyCloseFee(source){
+  if(!source)return null;
+  const structured=source.financialRules&&source.financialRules.closure?source.financialRules.closure.earlyCloseFee:undefined;
+  if(structured===null||source.earlyCloseFee===null)return null;
+  const text=String(source.earlyTerminationFeeText??'').trim();
+  if(!text){
+    if(source.earlyCloseFee===0||source.earlyCloseFee==='0')return 0;
+    if(source.earlyCloseFee===undefined||source.earlyCloseFee==='')return 0;
+    const n=Number(source.earlyCloseFee);return Number.isFinite(n)?n:null;
+  }
+  if(/^(none|no|n\/a)$/i.test(text))return 0;
+  const m=text.match(/\$?([\d,]+(?:\.\d+)?)/);
+  if(!m)return null;
+  const n=parseInt(String(m[1]).replace(/,/g,''),10);
+  return Number.isFinite(n)?n:null;
+}
 function parseRequirementDaysText(v){const raw=String(v??'').trim();if(!raw)return 0;const m=raw.match(/(\d{1,4})/);return m?Math.max(0,parseInt(m[1],10)||0):0}
 function syncRequiredDaysFromModal(d){const raw=String(modal.requiredDaysText??'').trim();const parsed=parseRequirementDaysText(raw);if(raw){d.requiredDaysText=raw;d.reqDays=parsed}else if((modal.reqDays||0)>0){d.reqDays=parseInt(modal.reqDays,10)||0;d.requiredDaysText=String(d.reqDays)}else{d.requiredDaysText='';d.reqDays=0}return d.reqDays}
 function applyCountdownFromModal(d){const raw=String(modal.closeFeeCountdownDays??'').trim();if(raw===''){d.minHoldDays=0;d.closeFeeCountdownDays='';d.feeChecked=false;return true}const wanted=Math.max(0,parseInt(raw,10)||0);if(wanted===0){d.minHoldDays=0;d.closeFeeCountdownDays='';d.feeChecked=false;return true}d.minHoldDays=wanted;d.closeFeeCountdownDays=String(wanted);d.feeChecked=false;return true}
@@ -4662,7 +4684,7 @@ function syncModalFromEditDOM(){
   setStr('avoidMonthlyFeeText',/^How to Avoid/i);
   setStr('completeBonusText',/^How to Complete/i);
   setStr('earlyTerminationFeeText',/^Early Close Fee Amount/i);
-  modal.earlyCloseFee=parseCloseFeeAmount(modal.earlyTerminationFeeText);
+  modal.earlyCloseFee=resolvedModalEarlyCloseFee(modal);
   const holdRaw=modalControlValueByLabel(/^Close (Fee Days After Opened|Hold Days)/i);
   if(holdRaw!==null){
     modal.closeFeeCountdownDays=holdRaw;
@@ -4719,7 +4741,7 @@ function collectModalEntryData(){
   const bank=(modal.bank||'').trim();
   if(!bank){alert('Bank name required');return null}
   syncModalAccountTypeFromBank();
-  const d={bank,accountType:normalizeAccountType(modal.accountType)||'personal',bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,closeFeeCountdownDays:modal.closeFeeCountdownDays||'',earlyCloseFee:modal.earlyCloseFee||0,reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',fundedDays:modal.fundedDays||0,fundingAmount:modal.fundingAmount||0,fundingAmountText:modal.fundingAmountText||'',payoutTimingText:modal.payoutTimingText||'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false,monthlyFeeYNText:modal.monthlyFeeYNText||'',monthlyFeeAmountText:modal.monthlyFeeAmountText||'',monthlyFeeFrequency:modal.monthlyFeeFrequency||'',monthlyFeeWaiverType:modal.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:modal.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:modal.monthlyFeeWaiverText||'',promoCodeText:modal.promoCodeText||'',avoidMonthlyFeeText:modal.avoidMonthlyFeeText||'',completeBonusText:modal.completeBonusText||'',earlyTerminationFeeText:modal.earlyTerminationFeeText||'',eligibilityText:modal.eligibilityText||'',expirationDateText:modal.expirationDateText||'',requiredDaysText:modal.requiredDaysText||'',closeRuleBasis:normalizeCloseRuleBasis(modal.closeRuleBasis),closeBufferDays:parseInt(modal.closeBufferDays,10)||BUFFER_DAYS,closeRuleText:modal.closeRuleText||'',closeRestrictionType:modal.closeRestrictionType||'',monthlyFeeChecked:!!modal.monthlyFeeChecked,schemaVersion:parseInt(modal.schemaVersion||0,10)||0,financialRules:modal.financialRules?JSON.parse(JSON.stringify(modal.financialRules)):null,feeScheduleRaw:modal.feeScheduleRaw||'',eligibilityRules:Array.isArray(modal.eligibilityRules)?modal.eligibilityRules.map(r=>({...r})):[],couponEnrollmentDate:modal.couponEnrollmentDate||'',offerEnrollmentDate:modal.offerEnrollmentDate||'',eligibilityScope:modal.eligibilityScope||modal.analysis?.eligibilityScope||'',eligibilityEvidenceText:modal.eligibilityEvidenceText||modal.analysis?.eligibilityEvidenceText||modal.eligibilityText||'',eligibilityAnchorEvidenceText:modal.eligibilityAnchorEvidenceText||modal.analysis?.eligibilityAnchorEvidenceText||'',currentCustomerEvidenceText:modal.currentCustomerEvidenceText||modal.analysis?.currentCustomerEvidenceText||'',reapplicationAction:modal.reapplicationAction||modal.analysis?.reapplicationAction||'',promoSourceUrl:modal.promoSourceUrl||'',feeScheduleSourceUrl:modal.feeScheduleSourceUrl||'',termsVerifiedAt:modal.termsVerifiedAt||'',eligibilityEvidenceSource:modal.eligibilityEvidenceSource||modal.analysis?.eligibilityEvidenceSource||(modal.tcSourceId?'saved-tc':''),churnPeriodValue:parseInt(modal.churnPeriodValue||modal.analysis?.churnPeriodValue||0,10)||0,churnPeriodUnit:modal.churnPeriodUnit||modal.analysis?.churnPeriodUnit||'',tcSourceRaw:modal.tcSourceRaw||'',tcSourceId:modal.tcSourceId||'',tcSourceUpdatedAt:modal.tcSourceUpdatedAt||'',analysis:(modal.analysis&&typeof modal.analysis==='object')?modal.analysis:null,analyzerHistory:normalizeAnalyzerHistoryList(modal.analyzerHistory),history:normalizeEntryHistoryList(modal.history),customTimers:normalizeTimerList(modal.customTimers)};
+  const d={bank,accountType:normalizeAccountType(modal.accountType)||'personal',bonus:modal.bonus||0,churn:modal.churn||'',opened:modal.opened||'',closed:modal.closed||'',bonusRecd:modal.bonusRecd||'',reqMet:modal.reqMet||'',notes:modal.notes||'',analyzedTC:modal.analyzedTC||'',minHoldDays:modal.minHoldDays||0,closeFeeCountdownDays:modal.closeFeeCountdownDays||'',earlyCloseFee:resolvedModalEarlyCloseFee(modal),reqDays:modal.reqDays||0,referralBonus:modal.referralBonus||0,dataPoint:modal.dataPoint||'',fundedDays:modal.fundedDays||0,fundingAmount:modal.fundingAmount||0,fundingAmountText:modal.fundingAmountText||'',payoutTimingText:modal.payoutTimingText||'',phoneNum:modal.phoneNum||'',feeChecked:modal.feeChecked||false,monthlyFeeYNText:modal.monthlyFeeYNText||'',monthlyFeeAmountText:modal.monthlyFeeAmountText||'',monthlyFeeFrequency:modal.monthlyFeeFrequency||'',monthlyFeeWaiverType:modal.monthlyFeeWaiverType||'',monthlyFeeWaiverAmountText:modal.monthlyFeeWaiverAmountText||'',monthlyFeeWaiverText:modal.monthlyFeeWaiverText||'',promoCodeText:modal.promoCodeText||'',avoidMonthlyFeeText:modal.avoidMonthlyFeeText||'',completeBonusText:modal.completeBonusText||'',earlyTerminationFeeText:modal.earlyTerminationFeeText||'',eligibilityText:modal.eligibilityText||'',expirationDateText:modal.expirationDateText||'',requiredDaysText:modal.requiredDaysText||'',closeRuleBasis:normalizeCloseRuleBasis(modal.closeRuleBasis),closeBufferDays:parseInt(modal.closeBufferDays,10)||BUFFER_DAYS,closeRuleText:modal.closeRuleText||'',closeRestrictionType:modal.closeRestrictionType||'',monthlyFeeChecked:!!modal.monthlyFeeChecked,schemaVersion:parseInt(modal.schemaVersion||0,10)||0,financialRules:modal.financialRules?JSON.parse(JSON.stringify(modal.financialRules)):null,feeScheduleRaw:modal.feeScheduleRaw||'',eligibilityRules:Array.isArray(modal.eligibilityRules)?modal.eligibilityRules.map(r=>({...r})):[],couponEnrollmentDate:modal.couponEnrollmentDate||'',offerEnrollmentDate:modal.offerEnrollmentDate||'',eligibilityScope:modal.eligibilityScope||modal.analysis?.eligibilityScope||'',eligibilityEvidenceText:modal.eligibilityEvidenceText||modal.analysis?.eligibilityEvidenceText||modal.eligibilityText||'',eligibilityAnchorEvidenceText:modal.eligibilityAnchorEvidenceText||modal.analysis?.eligibilityAnchorEvidenceText||'',currentCustomerEvidenceText:modal.currentCustomerEvidenceText||modal.analysis?.currentCustomerEvidenceText||'',reapplicationAction:modal.reapplicationAction||modal.analysis?.reapplicationAction||'',promoSourceUrl:modal.promoSourceUrl||'',feeScheduleSourceUrl:modal.feeScheduleSourceUrl||'',termsVerifiedAt:modal.termsVerifiedAt||'',eligibilityEvidenceSource:modal.eligibilityEvidenceSource||modal.analysis?.eligibilityEvidenceSource||(modal.tcSourceId?'saved-tc':''),churnPeriodValue:parseInt(modal.churnPeriodValue||modal.analysis?.churnPeriodValue||0,10)||0,churnPeriodUnit:modal.churnPeriodUnit||modal.analysis?.churnPeriodUnit||'',tcSourceRaw:modal.tcSourceRaw||'',tcSourceId:modal.tcSourceId||'',tcSourceUpdatedAt:modal.tcSourceUpdatedAt||'',analysis:(modal.analysis&&typeof modal.analysis==='object')?modal.analysis:null,analyzerHistory:normalizeAnalyzerHistoryList(modal.analyzerHistory),history:normalizeEntryHistoryList(modal.history),customTimers:normalizeTimerList(modal.customTimers)};
   if(modal.churnable===false||modal.analysis?.churnable===false)d.churnable=false;
   else if(modal.churnable===true||modal.analysis?.churnable===true||modal.churn)d.churnable=true;
   d.churnability=modal.churnability||modal.analysis?.churnability||(d.churnable===false?'not-repeatable':d.churn?'repeatable':'');
@@ -4732,7 +4754,8 @@ function collectModalEntryData(){
   try{if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.stamp==='function')Object.assign(d,window.BTEligibilityGate.stamp(d))}catch{}
   sanitizeCloseFieldsForEntry(d);
   syncRequiredDaysFromModal(d);
-  d.earlyCloseFee=parseCloseFeeAmount(modal.earlyTerminationFeeText);
+  d.earlyCloseFee=resolvedModalEarlyCloseFee(modal);
+  if(String(modal.earlyTerminationFeeText||'').trim())delete d.closeTimerClearedWithoutFeeVerification;
   applyCountdownFromModal(d);
   hydrateTimersFromOpened(d);
   Object.assign(d,normalizeLifecycleEntry(d));
@@ -4798,7 +4821,7 @@ function normalizeNewCycleData(d,existing){
   next.bonusRecd='';
   next.reqMet='';
   next.closeRuleBasis=normalizeCloseRuleBasis(d.closeRuleBasis||existing.closeRuleBasis||inferCloseRuleBasisFromText(next));
-  next.closeBufferDays=parseInt(d.closeBufferDays??existing.closeBufferDays??BUFFER_DAYS,10)||BUFFER_DAYS;
+  const rawBuffer=d.closeBufferDays??existing.closeBufferDays;const parsedBuffer=parseInt(rawBuffer,10);next.closeBufferDays=Number.isFinite(parsedBuffer)&&parsedBuffer>=0?parsedBuffer:BUFFER_DAYS;
   next.closeRuleText=d.closeRuleText||existing.closeRuleText||'';
   next.monthlyFeeChecked=!!d.monthlyFeeChecked;
   next.phoneNum=d.phoneNum||existing.phoneNum||'';
@@ -4816,7 +4839,7 @@ function normalizeNewCycleData(d,existing){
   next.reqDays=d.reqDays||0;
   next.minHoldDays=d.minHoldDays||0;
   next.closeFeeCountdownDays=d.closeFeeCountdownDays||String(next.minHoldDays||'');
-  next.earlyCloseFee=d.earlyCloseFee||0;
+  next.earlyCloseFee=resolvedModalEarlyCloseFee({...existing,...d,earlyTerminationFeeText:d.earlyTerminationFeeText||existing.earlyTerminationFeeText||'',financialRules:d.financialRules||existing.financialRules||null});
   next.analyzedTC=d.analyzedTC||'';
   next.monthlyFeeYNText=d.monthlyFeeYNText||'';
   next.promoCodeText=d.promoCodeText||'';
@@ -4928,7 +4951,7 @@ function feeCheckSkip(){
   feeCheckPrompt=null;
   startCloseFlow(id)
 }
-function feeCheckRemoveTimer(){if(!feeCheckPrompt)return;const id=feeCheckPrompt.entryId;const current=entries.find(e=>e.id===id);entries=entries.map(e=>{if(e.id===id){e.minHoldDays=0;e.earlyCloseFee=0;e.feeChecked=true}return e});entries=sortE(entries);sv(SK,entries);feeCheckPrompt=null;cfm={title:'Timer Removed',msg:(current?current.bank+' ':'')+'early-close timer removed. This bank is now marked Safe to Close.',green:true,action:()=>{cfm=null;R()}};R()}
+function feeCheckRemoveTimer(){if(!feeCheckPrompt)return;const id=feeCheckPrompt.entryId;const current=entries.find(e=>e.id===id);entries=entries.map(e=>{if(e.id!==id)return e;const x={...e,minHoldDays:0,closeFeeCountdownDays:'',feeChecked:false,closeTimerClearedWithoutFeeVerification:true};return x});entries=sortE(entries);sv(SK,entries);feeCheckPrompt=null;cfm={title:'Timer Removed',msg:(current?current.bank+' ':'')+'early-close timer removed. The early-close fee was not changed and the account was not marked safe to close.',green:true,action:()=>{cfm=null;R()}};R()}
 function feeCheckSave(){
   if(!feeCheckPrompt)return;
   const p=feeCheckPrompt;
@@ -5637,7 +5660,7 @@ function normalizeRestoredEntry(e){
   x.notes=x.notes||'';
   x.analyzedTC=x.analyzedTC||'';
   x.minHoldDays=parseInt(x.minHoldDays||0,10)||0;
-  x.earlyCloseFee=parseInt(x.earlyCloseFee||0,10)||0;
+  x.earlyCloseFee=resolvedModalEarlyCloseFee(x);
   x.dataPoint=x.dataPoint||'';
   x.reqDays=parseInt(x.reqDays||0,10)||0;
   x.referralBonus=parseInt(x.referralBonus||0,10)||0;
@@ -5701,8 +5724,6 @@ function backupIntegritySummary(data){
   return r.ok?'Backup integrity: looks complete':('Backup warnings: '+(r.warnings||[]).slice(0,4).join('; '))
 }
 function buildPortableBackupPayload(){
-  entries=sortE(normalizeLifecycleEntries(entries));
-  sv(SK,entries);
   const userDatapoints=loadUserDatapoints();
   const communityDatapoints=loadCommunityDatapoints();
   const phoneEdits=loadPhoneEdits();

@@ -243,6 +243,7 @@
       case STAGES.AWAITING_BONUS:
         return payoutSupport(e,core.timer);
       case STAGES.BONUS_RECEIVED:
+        if(e?.bonusRecd&&!e?.reqMet)return'Bonus received — requirements completion date not recorded.';
         return(e?.bonus?(typeof fM==='function'?fM(e.bonus):String(e.bonus)):'Bonus received')+(e?.bonusRecd?' received '+fmtDate(e.bonusRecd):'')+' · review close rules';
       case STAGES.HOLD_OPEN:{
         if(core.timer){
@@ -304,6 +305,7 @@
   function compactRequirementText(e){return String(e?.dataPoint||'').replace(/^DD\s+/i,'').replace(/\s+/g,' ').trim();}
   function requirementSummarySemantic(e){
     if(!e)return'Pending';
+    if(e.bonusRecd&&!e.reqMet)return'Bonus received — requirements completion date not recorded.';
     if(e.reqMet){try{return'Met '+fD(e.reqMet)}catch{return'Met'}}
     let text=compactRequirementText(e);
     if(!text&&typeof baseRequirementSummary==='function'){
