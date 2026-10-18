@@ -23,7 +23,7 @@ const eligibleInfo=e=>{
    return {eligible,controlling,label,more};
  }catch{return null}
 };
-function scope(e){return String(e?.accountType||'').toLowerCase()===audience}
+function scope(e){const type=typeof entryBankType==='function'?entryBankType(e):String(e?.accountType||'personal').toLowerCase();return (type==='B'||type==='business'?'business':'personal')===audience}
 function segments(){return '<div class="bt360-segments" role="group" aria-label="Account type"><button type="button" aria-pressed="'+(audience==='personal')+'" class="'+(audience==='personal'?'active':'')+'" onclick="BT360.setAudience(\'personal\')">Personal</button><button type="button" aria-pressed="'+(audience==='business')+'" class="'+(audience==='business'?'active':'')+'" onclick="BT360.setAudience(\'business\')">Business</button></div>'}
 function setAudience(v){if(v!=='business'&&v!=='personal')return;audience=v;selectedStage='';try{sessionStorage.setItem(scopeKey,audience)}catch{};R()}
 function setStage(v){selectedStage=selectedStage===v?'':v;expanded=null;R()}
