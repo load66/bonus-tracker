@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="./mobile-ui.css?v=3.5.2-safety1">
 <link rel="stylesheet" href="./cloud-backup.css?v=3.4.74">
 <link rel="stylesheet" href="./research-tabs.css?v=3.4.74">
-<link rel="stylesheet" href="./redesign-v360.css?v=3.6.4-feed2">
+<link rel="stylesheet" href="./redesign-v360.css?v=3.6.5-concern1">
 </head>
 <body>
 <div class="app" id="app"></div>
@@ -30,7 +30,7 @@
     refreshed=true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=3.6.4-feed2',{updateViaCache:'none'}).then(reg=>{
+  navigator.serviceWorker.register('./sw.js?v=3.6.5-concern1',{updateViaCache:'none'}).then(reg=>{
     const activate=worker=>{try{worker&&worker.postMessage({type:'SKIP_WAITING'})}catch{}};
     if(reg.waiting)activate(reg.waiting);
     reg.addEventListener('updatefound',()=>{
@@ -50,11 +50,11 @@
 <script src="./eligibility-gate.js?v=3.4.74"></script>
 <script src="./ui-feedback.js?v=3.4.74-feedback1"></script>
 <script src="./community-reports.js?v=3.4.74"></script>
-<script src="./app.js?v=3.6.4-feed2"></script>
+<script src="./app.js?v=3.6.5-concern1"></script>
 <script src="./source-resolver.js?v=3.4.74"></script>
 <script src="./engine.js?v=3.4.74"></script>
 <script src="./bank-rules.js?v=3.4.74"></script>
-<script src="./bank-rules-wells-consumer.js?v=3.6.4-feed2"></script>
+<script src="./bank-rules-wells-consumer.js?v=3.6.5-concern1"></script>
 <script src="./bank-rules-fourleaf.js?v=3.4.74"></script>
 <script src="./bank-rules-capitalone.js?v=3.4.74"></script>
 <script src="./bank-rules-boa-business.js?v=3.4.74"></script>
@@ -71,17 +71,17 @@
 <script src="./close-rules-integration.js?v=3.4.99-classify1"></script>
 <script src="./wells-professional-runtime.js?v=3.4.74"></script>
 <script src="./eligibility-editor.js?v=3.4.74"></script>
-<script src="./churn-close-policy.js?v=3.6.4-feed2"></script>
+<script src="./churn-close-policy.js?v=3.6.5-concern1"></script>
 <script src="./semantic-status.js?v=3.4.74-status1"></script>
 <script src="./entry-link-import.js?v=3.4.74-conditional1"></script>
 <script src="./fee-review-migration.js?v=3.4.74-feereview1"></script>
 <script src="./smart-attention.js?v=3.4.74-action1"></script>
-<script src="./bank-bonuses.js?v=3.6.4-feed2"></script>
+<script src="./bank-bonuses.js?v=3.6.5-concern1"></script>
 <script src="./bonus-ai-auth.js?v=3.4.74"></script>
 <script src="./cloud-backup-core.js?v=3.4.99-classify1"></script>
 <script src="./cloud-backup.js?v=3.4.74"></script>
 <script src="./bonus-ai.js?v=3.4.74"></script>
-<script src="./redesign-v360.js?v=3.6.4-feed2"></script>
-<script src="./mobile-analyzer.js?v=3.6.4-feed2"></script>
+<script src="./redesign-v360.js?v=3.6.5-concern1"></script>
+<script src="./mobile-analyzer.js?v=3.6.5-concern1"></script>
 </body>
 </html>
