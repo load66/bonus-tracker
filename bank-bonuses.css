@@ -29,3 +29,15 @@
 @media(max-width:330px){.radar-filter-grid{grid-template-columns:minmax(0,1fr)}.radar-priority-tabs button{flex-basis:45%}}
 
 .radar-verification-status{border:1px solid var(--border);border-radius:12px;padding:12px;margin:12px 0;font-size:12px;line-height:1.5;background:var(--card)}.radar-verification-status b,.radar-verification-status span{display:block}.radar-verification-status span,.radar-verification-status p{color:var(--muted)}.radar-verification-status p{margin:6px 0 0}.radar-official-proof{border-top:1px solid var(--border);margin-top:10px;font-size:12px;overflow-wrap:anywhere}.radar-official-proof summary{min-height:44px;display:flex;align-items:center;color:#a8cfff;cursor:pointer}.radar-official-proof blockquote{border-left:2px solid #5286b5;padding-left:10px;margin:8px 0;line-height:1.5}.radar-official-proof a{display:inline-flex;align-items:center;min-height:44px;color:#a8cfff}.radar-geo-conditional{color:#e7cb91;border-color:#766345}
+
+
+/* v3.6.3 canonical offer rows: feed freshness remains internal; no status UI. */
+.bt363-badges{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:5px 0 4px}
+.bt363-badge{font-size:10px;font-weight:800;line-height:1.4;color:#D1F5E4;background:#17392C;border:1px solid #325949;border-radius:99px;padding:4px 7px}
+.bt363-badge:first-child{color:#F3E2BC}
+.bt363-offer-details{min-width:0;margin:5px 0;padding:4px 0;border-top:1px solid #262B36;font-size:11px;line-height:1.5;color:#A0A6B8}
+.bt363-offer-details summary{cursor:pointer;min-height:36px;display:flex;align-items:center;color:#C2C8D8;font-weight:700}
+.bt363-offer-details p{overflow-wrap:anywhere;margin:3px 0!important;font-size:11px!important}
+.bt363-offer-links{display:flex;flex-wrap:wrap;column-gap:14px;row-gap:3px;align-items:center}
+.bt363-offer-links .radar-offer-link{font-size:11px;min-height:35px}
+.radar-card-compact:has(.bt363-offer-details) .bt360-offer-title strong{display:none}
