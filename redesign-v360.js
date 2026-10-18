@@ -187,7 +187,8 @@ function tasks(rows){
   +'<div class="bt360-featured"><div class="bt360-feature-head">'+bankLogo(top.bank,true)
   +'<div class="bt360-grow"><b>'+title(top)+'</b><p>'+safe(top.bank||'Bank')+(entry?.bonus?' · '+amount(entry.bonus)+' bonus':'')+'</p></div>'
   +actionBadge(top,true)+'</div>';
- html+=attentionCardProgress(entry);
+ if(['ACTION_NEEDED','IN_PROGRESS'].includes(top.stageCode))html+=attentionCardProgress(entry);
+ else if(attentionDateNote(top))html+='<small class="bt3719-feature-note">'+safe(attentionDateNote(top))+'</small>';
  html+='<div class="bt360-actions"><button class="bt360-primary" onclick="runNextAccountAction('+id(top)+')">Open task</button>'
   +'<button class="bt360-secondary" onclick="openAccountFromActionCenter('+id(top)+')">Details</button></div></div>';
  if(suggestions.length>1){
