@@ -104,6 +104,13 @@ async function exercise(name,engine,url){
     await page.getByText('No accounts yet',{exact:true}).waitFor();
     check('year selector is a single pill and zero-count stages hidden',await page.locator('#bt362-year').count()===1&&await page.locator('.yr-btn').count()===0&&await page.locator('.bt360-stage').count()===0);
     check('Tracker floating add replaces bulky Quick Add bar',await page.locator('.bt362-add-fab').isVisible()&&await page.locator('.tracker-quick-actions').count()===0);
+    await page.locator('.bt362-add-fab').click();await button('Quick Add').click();
+    check('Quick Add scrolls its real panel into view',await page.locator('#bt-quick-add-panel').evaluate(e=>{const r=e.getBoundingClientRect();return r.top>=0&&r.top<innerHeight&&r.bottom>0}));
+    await page.evaluate(()=>{showTemplates=false;R()});
+    await page.locator('.bt362-add-fab').click();await button('Review promo terms').click();
+    check('Review promo terms scrolls its analyzer into view',await page.locator('#bt-promo-terms-panel').evaluate(e=>{const r=e.getBoundingClientRect();return r.top>=0&&r.top<innerHeight&&r.bottom>0&&!!e.querySelector('#az_input')}));
+    await button('Close').click();
+    check('cloud protection status is compact',await page.locator('#bt-cloud-open').evaluate(e=>e.getBoundingClientRect().width<150&&!e.innerText.includes('Current data verified in the cloud')));
 
     const beforeNotifications=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     await button('Notifications').click();
