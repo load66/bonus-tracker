@@ -204,11 +204,24 @@ function usageCard(){
  return panel('HOSTING & USAGE · '+month,content);
 }
 function setNotice(key){if(!(key in noticePrefs))return;noticePrefs[key]=!noticePrefs[key];try{sessionStorage.setItem(noticeKey,JSON.stringify(noticePrefs))}catch{}R()}
+function cloudSettingsCard(){
+ let cfg={};try{cfg=JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')||'{}')}catch{}
+ const state=window.BTCloudBackup?.protection?.()||{};
+ const time=cfg.lastAt?new Date(cfg.lastAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'No verified backup yet';
+ const on=cfg.enabled===true;
+ return panel('CLOUD PROTECTION','<button type="button" role="switch" aria-checked="'+on+'" class="bt360-settings-row" onclick="BT360.closeSettings();btOpenCloudBackup()"><span><b>Auto-backup</b><small>Change with verified cloud controls</small></span><i class="bt360-toggle '+(on?'checked':'')+'"></i></button><p class="bt360-muted">'+safe(state.title||'Review cloud protection')+' · '+safe(time)+'</p><div class="bt360-actions"><button class="bt360-primary" onclick="BT360.backUpNow()">Back up now</button><button class="bt360-secondary" onclick="BT360.closeSettings();btOpenCloudBackup()">Restore from cloud</button></div>');
+}
+async function backUpNow(){
+ closeSettings();
+ if(!window.BTBonusAuth?.connected?.()||!window.BTCloudBackup?.upload){btOpenCloudBackup();return}
+ try{await window.BTCloudBackup.upload('manual');window.btNotify?.('Cloud backup uploaded and verified.',{title:'Backup verified',tone:'success'})}
+ catch{btOpenCloudBackup()}
+}
 function settings(){
  const toggles=[['deadlines','Deadlines','3 and 1 day before'],['payouts','Payouts and close dates','When ready'],['eligible','Eligible again','7 days before and on the day']];
  const buttons=toggles.map(([k,label,description])=>'<button class="bt360-settings-row" role="switch" aria-checked="'+noticePrefs[k]+'" onclick="BT360.setNotice(\''+k+'\')"><span><b>'+label+'</b><small>'+description+'</small></span><i class="bt360-toggle '+(noticePrefs[k]?'checked':'')+'"></i></button>').join('');
  return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.0</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
- panel('CLOUD PROTECTION','<p>Verify protection status and automatic backup from the existing cloud controls.</p><div class="bt360-actions"><button class="bt360-primary" onclick="BT360.closeSettings();btOpenCloudBackup()">Back up now / settings</button><button class="bt360-secondary" onclick="BT360.closeSettings();btOpenCloudBackup()">Restore from cloud</button></div>')+
+ cloudSettingsCard()+
  usageCard()+
  panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.0. Push delivery is not active.</p>')+
  panel('Data','<button class="bt360-settings-row" onclick="BT360.closeSettings();exportBackup()">Export backup file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.closeSettings();importBackup()">Restore from file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.openPhonebook()">Bank phone numbers <span>›</span></button>')+
@@ -218,6 +231,6 @@ function openPhonebook(){closeSettings();window.bt360PhonebookOpen=true;R()}
 function closePhonebook(){window.bt360PhonebookOpen=false;R()}
 function openSettings(){window.bt360SettingsOpen=true;R();refreshUsage()}
 function closeSettings(){window.bt360SettingsOpen=false;R()}
-window.BT360={get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},scope,segments,setAudience,setStage,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,back,archive,goArchive,showTerms,openArchived,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,refreshUsage,setHostingAmount,hostSettings,usageCard};
+window.BT360={get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},scope,segments,setAudience,setStage,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,back,archive,goArchive,showTerms,openArchived,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard};
 if(typeof R==='function')R();
 })();
