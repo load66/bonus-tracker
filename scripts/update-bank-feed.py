@@ -23,9 +23,32 @@ PUBLISHED = 'https://load66.github.io/bonus-tracker/data/bank-bonuses.json'
 OUTPUT = Path(__file__).resolve().parents[1] / 'data/bank-bonuses.json'
 VERIFICATION_URL = 'https://api-production-00f74.up.railway.app/public/bank-bonus-verification'
 
+def exact_links(payload):
+    # Public source links are kept separate; fingerprints are never inherited
+    # from a different article, amount, region, or account product.
+    for offer in payload.get('offers', []):
+        for link in offer.get('links', [offer]):
+            ident = offer_identity(link.get('title', ''))
+            if (ident and all(ident[k] == offer.get(k, ident[k])
+                              for k in ('bank', 'product', 'amount', 'region'))):
+                yield link
+
+def matching_evidence(records, payload, require_title=False):
+    matched = {}
+    if not isinstance(records, dict):
+        return matched
+    for link in exact_links(payload):
+        r = records.get(link.get('url'))
+        title, url = link.get('title', ''), link.get('url', '')
+        expected = hashlib.sha256((title + '\n' + url).encode()).hexdigest()
+        if isinstance(r, dict) and r.get('offerFingerprint') == expected and (
+                not require_title or r.get('offerTitle') == title and r.get('offerUrl') == url):
+            matched[url] = {**r, 'offerTitle': title, 'offerUrl': url}
+    return matched
+
 def attach_verification(payload, previous):
     last = previous.get('verification', {})
-    snapshot = {'schemaVersion':1,'status':'unavailable','records':last.get('records',{}),'checkedAt':last.get('checkedAt'),'usage':last.get('usage',{}),'coverage':last.get('coverage',[])}
+    snapshot = {'schemaVersion':1,'status':'unavailable','records':matching_evidence(last.get('records',{}),payload),'checkedAt':last.get('checkedAt'),'usage':last.get('usage',{}),'coverage':last.get('coverage',[])}
     try:
         # Fixed public endpoint; no journal credentials or account data are sent.
         for attempt in range(13):
@@ -35,12 +58,7 @@ def attach_verification(payload, previous):
             if result.get('status')!='pending' or attempt==12:break
             time.sleep(10)
         if result.get('status')=='complete':
-            records={}
-            for offer in payload['offers']:
-                record=result['records'].get(offer['url'])
-                expected=hashlib.sha256((offer['title']+'\n'+offer['url']).encode()).hexdigest()
-                if isinstance(record,dict) and record.get('offerFingerprint')==expected:
-                    records[offer['url']]={**record,'offerTitle':offer['title'],'offerUrl':offer['url']}
+            records=matching_evidence(result['records'],payload)
             snapshot={'schemaVersion':1,'status':'complete','records':records,'checkedAt':result.get('checkedAt'),'usage':result.get('usage',{}),'coverage':result.get('coverage',[])}
         else:
             snapshot['status']='pending' if result.get('status')=='pending' else 'unavailable'
@@ -56,15 +74,11 @@ def attach_availability(payload, previous):
     # Preserve timestamps and exact identity; old scope cannot become freshly verified.
     last=previous.get('availability',{})
     last=last if isinstance(last,dict) else {}
-    snapshot={'schemaVersion':1,'status':'unavailable','records':last.get('records',{}),'checkedAt':last.get('checkedAt')}
+    snapshot={'schemaVersion':1,'status':'unavailable','records':matching_evidence(last.get('records',{}),payload,require_title=True),'checkedAt':last.get('checkedAt')}
     try:
         result=json.loads(download(AVAILABILITY_URL))
         if result.get('schemaVersion')!=1 or result.get('status') not in ('complete','pending','unavailable') or not isinstance(result.get('records'),dict):raise ValueError('Invalid availability response')
-        records={}
-        for offer in payload['offers']:
-            r=result['records'].get(offer['url'])
-            expected=hashlib.sha256((offer['title']+'\n'+offer['url']).encode()).hexdigest()
-            if isinstance(r,dict) and r.get('offerFingerprint')==expected and r.get('offerTitle')==offer['title'] and r.get('offerUrl')==offer['url']:records[offer['url']]=r
+        records=matching_evidence(result['records'],payload,require_title=True)
         snapshot={'schemaVersion':1,'status':result['status'],'checkedAt':result.get('checkedAt'),'records':records,'coverage':result.get('coverage',{})}
     except Exception:pass
     payload['availability']=snapshot
