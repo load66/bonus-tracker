@@ -172,6 +172,68 @@ async function exercise(name,engine,url){
     check('Manage is absent; account controls open from header menu',
       await page.getByRole('button',{name:'Manage',exact:true}).count()===0&&await page.getByRole('button',{name:'More account actions'}).count()===1);
     check('fixed bar is outside scrolling card',await page.locator('.bt360-detail-footer').evaluate(e=>e.parentElement?.id==='app'&&!e.closest('.scroll')));
+    // Synthetic Chase v3.6.11 reference — in memory only, never written to storage.
+    await page.evaluate(()=>{
+      const e=entries[0];
+      window.__chaseViewBaseline=JSON.stringify(e);
+      Object.assign(e,{
+        id:'CHA-P-01',bank:'Chase Total Checking',opened:'2026-10-15',
+        reqDays:90,requiredDaysText:'90 calendar days',
+        financialRules:{
+          requirements:[{id:'direct-deposits',kind:'direct-deposit',amount:10000,
+            text:'Qualifying direct deposits totaling $10,000 within 90 days.',
+            timing:{basis:'opened',unit:'calendar-days',value:90}}],
+          accounts:[{role:'primary',fee:{amount:15,waiver:{operator:'any',
+            evidence:{quote:'Original terms: fee waived with electronic deposits, daily balance or linked checking.'},
+            conditions:[{kind:'direct-deposit',amount:500,text:'Electronic deposits'},
+              {kind:'balance-hold',amount:1500,metric:'minimum-daily-balance',text:'Daily balance'},
+              {kind:'relationship',text:'Linked checking'}]}}}],
+          closure:{earlyCloseFee:null}
+        },
+        checklist:[],monthlyFeeAmountText:'$15',
+        monthlyFeeWaiverText:'Original terms: fee waived with electronic deposits, daily balance or linked checking.',
+        earlyTerminationFeeText:'',
+        customTimers:[{id:'bonus-90',text:'Bonus requirement deadline · original reminder to qualify',
+          date:'2027-01-13',startDate:'2026-10-15',daysRequired:90,done:false}],
+        reqMet:'',bonusRecd:'',minHoldDays:0
+      });
+      expanded=e.id;R();
+    });
+    check('Chase synthetic $10,000 DD progress is visible without checklist tasks',
+      await page.locator('.bt3611-requirement').innerText().then(t=>t.includes('Direct deposits totaling $10,000 · due Jan 13, 2027')&&t.includes('$0 of $10,000 · 0 recorded')));
+    check('structured requirement includes checkbox and zero-progress meter',
+      await page.locator('.bt3611-requirement [role="checkbox"]').count()===1&&
+      await page.locator('.bt3611-req-track[role="progressbar"]').getAttribute('aria-valuenow')==='0');
+    check('Chase timer row is one title line with compact countdown',
+      await page.locator('.bt3611-timer-row').first().evaluate(e=>{
+        const b=e.querySelector('.bt3611-timer-body b'),small=e.querySelector('small');
+        const cs=getComputedStyle(b),line=parseFloat(cs.lineHeight)||15;
+        return b.getBoundingClientRect().height<=line+2&&small.textContent.includes('Jan 13, 2027 · 90 days after opening')
+          &&!e.innerText.includes('Start + Days:')&&!e.innerText.includes('Due Date:');
+      }));
+    check('waiver summary has a two-line clamp and original terms are expandable',
+      await page.locator('.bt3611-waiver-summary').evaluate(e=>{
+        const css=getComputedStyle(e);return css.webkitLineClamp==='2'&&e.scrollHeight<=parseFloat(css.lineHeight)*2+2
+      })&&await page.locator('.bt3611-full-terms').count()===1);
+    await page.locator('.bt3611-full-terms > summary').click();
+    check('expanded waiver displays the exact original saved terms',await page.locator('.bt3611-full-terms p').innerText().then(t=>t.includes('Original terms: fee waived with electronic deposits, daily balance or linked checking.')));
+    await page.locator('.bt3611-full-terms > summary').click();
+    check('early close fee is amber without inferred zero',await page.locator('.bt3611-amber').innerText()==='Not stated in terms · Needs review');
+    check('no developer vocabulary is visible anywhere on Chase detail',
+      !/\b(?:null|structured rule|anchor|verified \$0|provenance)\b/i.test(await page.locator('.bt360-detail-card').innerText()));
+    await page.screenshot({path:path.join(output,name+'-chase-bonus-detail-in-progress-390.png'),fullPage:true});
+    await page.getByRole('button',{name:'Set rule'}).first().click();
+    check('Set rule opens existing account rule editor',await page.locator('.modal').isVisible()
+      &&(await page.locator('.modal').innerText()).includes('Fees & Close'));
+    await button('Cancel').click();
+    await page.evaluate(()=>{
+      entries[0]=JSON.parse(window.__chaseViewBaseline);
+      expanded=entries[0].id;
+      delete window.__chaseViewBaseline;
+      R();
+    });
+    check('Chase reference never persists in financial records',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,beforeDisclosure));
+
     await page.screenshot({path:path.join(output,name+'-bonus-detail-in-progress-390.png')});
     check('render never modifies user record',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,beforeDisclosure));
     const id=(await record()).id;
@@ -201,6 +263,7 @@ async function exercise(name,engine,url){
       const content=document.querySelector('.bt360-source').getBoundingClientRect(),footer=document.querySelector('.bt360-detail-footer').getBoundingClientRect();
       return content.bottom<=footer.top+2;
     }));
+    await page.screenshot({path:path.join(output,name+'-bonus-detail-ready-mockup-390.png'),fullPage:true});
     await page.screenshot({path:path.join(output,name+'-bonus-detail-ready-390.png')});
     await page.getByRole('button',{name:'Add bank phone number'}).click();
     check('phone editor carries bank name and account type',await page.locator('#ph_new_bank').inputValue()==='E2E Verification Bank'&&await page.locator('#ph_new_personal').isVisible());
@@ -223,11 +286,11 @@ async function exercise(name,engine,url){
     for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
       check('detail task, timer and waiver remain readable at '+width+'px',await page.evaluate(()=>{
-        const panel=document.querySelector('.bt360-detail-card'),task=panel.querySelector('.bt360-check .bt366-row-edit'),timer=panel.querySelector('.bt360-timer .bt366-row-edit'),fee=panel.querySelector('.bt360-info-long');
+        const panel=document.querySelector('.bt360-detail-card'),task=panel.querySelector('.bt360-check .bt366-row-edit'),timer=panel.querySelector('.bt3611-timer-body'),fee=panel.querySelector('.bt360-info-long');
         if(!task||!timer||!fee)return false;
         const owner=task.parentElement,check=owner.querySelector('[role="checkbox"]'),a=check.getBoundingClientRect(),b=task.getBoundingClientRect();
         return task.clientWidth>=120&&timer.clientWidth>=120&&a.right<=b.left+1&&b.right<=owner.getBoundingClientRect().right+1&&
-          fee.scrollWidth<=fee.clientWidth+1&&panel.scrollWidth<=panel.clientWidth+1&&getComputedStyle(fee.querySelector('div')).textAlign==='left';
+          fee.scrollWidth<=fee.clientWidth+1&&panel.scrollWidth<=panel.clientWidth+1&&getComputedStyle(fee.querySelector('div')).textAlign==='right';
       }));
     }
     await page.evaluate(()=>{const e=entries[0],v=window.__layoutOriginal;e.checklist=v.checklist;e.customTimers=v.customTimers;e.monthlyFeeWaiverText=v.monthlyFeeWaiverText;delete window.__layoutOriginal;R()});
