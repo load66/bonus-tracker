@@ -768,11 +768,14 @@ async function exercise(name,engine,url){
     if(name==='webkit'){
       const offlineShell=await page.evaluate(async()=>{
         try{
-          const response=await caches.match('./index.html',{ignoreSearch:true});
-          return !!navigator.serviceWorker.controller&&response?.ok&&(await response.text()).includes('BonusTracker');
+          const cacheResponse=await caches.match('./index.html',{ignoreSearch:true});
+          const offlineResponse=await fetch('./index.html',{cache:'no-store'});
+          const title='<title>Bank Bonus Tracker</title>';
+          return !!navigator.serviceWorker.controller&&cacheResponse?.ok&&offlineResponse.ok
+            &&(await cacheResponse.text()).includes(title)&&(await offlineResponse.text()).includes(title);
         }catch{return false}
       });
-      check('WebKit service worker controls page and cached shell remains readable while offline',offlineShell);
+      check('WebKit service worker serves the cached HTML shell through offline fetch',offlineShell);
     }else{
       await page.reload();await settleStartup();await page.getByText('BonusTracker',{exact:false}).first().waitFor();
     }
