@@ -6,6 +6,8 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.6.18 cooldown churn reference clarity (`codex/v3.6.18-cooldown-churn-reference`): preserve historical fee display from v3.6.17; show last saved churn wording and bonus identity rather than a generic Review in date-unknown closed accounts. Legacy/unverified estimated dates are not counted as eligible now; canonical eligibility rules and dates are unchanged. Synthetic regression added, unit/Chromium/WebKit/Pages CI gated.
+
 - v3.6.17 historical cooldown fee fallback (`codex/v3.6.17-cooldown-last-saved`): read-only two-row fee display for archived accounts uses exact-cycle T&C first, then clearly labeled latest saved terms or same-audience bank profile; never mutates data, financial/close/churn rules or existing JSON import format. Missing old amounts display 'Not listed in saved terms' (not invented $0). Keeps required share-savings fees distinct from checking and avoids presenting saved bonus clawback as a service fee. Synthetic regression tests added; verify CI and main Pages after merge. Prior October 14 backup is reference-only, never uploaded to public GitHub or production. 
 
 - v3.6.16 legacy-churn archive extension (`codex/v3.6.16-legacy-churn-r2-evidence`): add pre-structured repeat-bonus period, rule text, basis and decision provenance to immutable T&C cloud snapshots and local historical revisions; synthetic browserless coverage added. Preserve JSON v3 schema, all canonical financial/eligibility rules and existing snapshots. Requires backend PR #240 merged and exact Railway SUCCESS before frontend merge, then full bonus/cloud/UI, Chromium/WebKit and main Pages checks.
