@@ -167,6 +167,9 @@ setTimeout(()=>{
     const closed=liveEntries().find(e=>e.id==='EVT-P-01');
     assert(closed&&closed.closed==='2026-10-12'&&closed.reqMet==='','Saving a closure fabricated requirements completion');
 
+    run('openReqMet("EVT-P-01")');
+    assert(run('reqPrompt.date')==='', 'Explicit requirements dialog guessed today instead of asking for the actual date');
+
     const decisionFor=(props)=>sandbox.btEvaluateAccount({bank:'Synthetic Fee Review',opened:'2026-01-01',reqMet:'2026-02-01',bonusRecd:'2026-05-01',customTimers:[],...props});
     const feeWithoutWindow=decisionFor({earlyCloseFee:25,closeRestrictionType:'none',minHoldDays:0});
     assert(feeWithoutWindow.legacyStatus!=='SAFE TO CLOSE'&&feeWithoutWindow.close.status!=='ready','Positive fee without expiry was marked safe to close');
@@ -184,6 +187,17 @@ setTimeout(()=>{
     assert(sandbox.btEvaluateAccount(noReqDate).close.status==='ready','Payout-only term needlessly requires an invented requirements date');
     assert(sandbox.closeReadiness(noReqDate).label!=='Do Not Close Yet','Close Check still demands a non-contractual requirements-completion date');
     assert(sandbox.closeReadiness({...noReqDate,earlyTerminationFeeText:''}).label==='Do Not Close Yet','Close Check overruled the canonical unverified-fee restriction');
+    for(const wording of ['No early closing fee unless the account is restricted.', 'No monthly fee when closing the account.', 'No early closing fee after ninety days.']){
+      const result=decisionFor({...noReqDate,earlyTerminationFeeText:wording});
+      assert(result.close.status!=='ready','Conditional or unrelated fee text was treated as unconditional no-fee evidence: '+wording);
+    }
+    for(const bonusRecd of ['unknown','2026-02-30'])assert(decisionFor({...noReqDate,bonusRecd}).close.status!=='ready','Invalid payout date cleared closure');
+    run('entries.find(e=>e.id==="EVT-P-01").reqMet="2026-10-03";openReqMet("EVT-P-01")');
+    assert(run('reqPrompt.date')==='2026-10-03','Confirmed requirements date was lost when reopening the editor');
+    const unsafeView={...noReqDate,earlyTerminationFeeText:'',earlyCloseFee:null};
+    const safeStep=sandbox.lifecycleSteps(unsafeView).find(x=>x.key==='safe');
+    assert(!safeStep.done,'Lifecycle step marked an unsupported close decision complete');
+    assert(!/close when ready/.test(sandbox.renderBankProfileSummary(unsafeView)),'Summary overruled canonical unresolved closure evidence');
     const zeroBuffer=run('(function(){modal={bank:"Synthetic Zero Buffer",accountType:"personal",closeBufferDays:0,earlyCloseFee:null,customTimers:[],history:[]};return collectModalEntryData()})()');
     assert(zeroBuffer.closeBufferDays===0,'Explicit 0-day close buffer was replaced on edit');
     console.log('Read integrity passed');

@@ -10,8 +10,9 @@
   const AUTO_CLOSE_TIMER_RE=/(?:close check after payout|close hold|early-close safety|safe to close)/i;
   const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
   const sentences=v=>String(v||'').replace(/\r/g,'\n').split(/(?<=[.!?])\s+|\n+|;/).map(clean).filter(Boolean);
-  const isoAddDays=(iso,n)=>{if(!iso)return'';const d=new Date(iso+'T00:00:00Z');if(Number.isNaN(d.getTime()))return'';d.setUTCDate(d.getUTCDate()+Number(n||0));return d.toISOString().slice(0,10)};
-  const isoDiff=(a,b)=>{if(!a||!b)return null;const x=new Date(a+'T00:00:00Z'),y=new Date(b+'T00:00:00Z');if(Number.isNaN(x.getTime())||Number.isNaN(y.getTime()))return null;return Math.floor((y-x)/86400000)};
+  const validDate=iso=>typeof iso==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(iso)&&!Number.isNaN(new Date(iso+'T00:00:00Z').getTime())&&new Date(iso+'T00:00:00Z').toISOString().slice(0,10)===iso;
+  const isoAddDays=(iso,n)=>{if(!validDate(iso))return'';const d=new Date(iso+'T00:00:00Z');if(Number.isNaN(d.getTime()))return'';d.setUTCDate(d.getUTCDate()+Number(n||0));return d.toISOString().slice(0,10)};
+  const isoDiff=(a,b)=>{if(!validDate(a)||!validDate(b))return null;const x=new Date(a+'T00:00:00Z'),y=new Date(b+'T00:00:00Z');if(Number.isNaN(x.getTime())||Number.isNaN(y.getTime()))return null;return Math.floor((y-x)/86400000)};
 
   function normalizeType(v){
     const s=String(v||'').toLowerCase().replace(/[^a-z-]/g,'').trim();
@@ -87,9 +88,9 @@
   function isFixed(e){return FIXED_TYPES.has(typeForEntry(e))}
   function ruleDays(e){const n=parseInt(e?.minHoldDays||e?.closeFeeCountdownDays||0,10)||0;return isFixed(e)&&n>0&&n<=730?n:0}
   function basisFor(e){return String(e?.closeRuleBasis||basisForText(e?.closeRuleText||'')||'opened')}
-  function baseDate(e){const b=basisFor(e);return b==='bonus'?e?.bonusRecd||'':b==='reqmet'?e?.reqMet||'':b==='manual'?'':e?.opened||''}
-  function rawSafeDate(e){if(typeForEntry(e)==='review')return null;const d=ruleDays(e);return d?(baseDate(e)&&isoAddDays(baseDate(e),d)):e?.bonusRecd||null}
-  function safeCloseDate(e){if(typeForEntry(e)==='review')return null;const d=ruleDays(e);const buffer=d?(parseInt(e?.closeBufferDays,10)||0):0;return d?(baseDate(e)&&isoAddDays(baseDate(e),d+buffer)):e?.bonusRecd||null}
+  function baseDate(e){const b=basisFor(e),value=b==='bonus'?e?.bonusRecd:b==='reqmet'?e?.reqMet:b==='opened'?e?.opened:'';return validDate(value)?value:''}
+  function rawSafeDate(e){if(typeForEntry(e)==='review')return null;const d=ruleDays(e);return d?(baseDate(e)?isoAddDays(baseDate(e),d):null):(validDate(e?.bonusRecd)?e.bonusRecd:null)}
+  function safeCloseDate(e){if(typeForEntry(e)==='review')return null;const d=ruleDays(e);const buffer=d?(parseInt(e?.closeBufferDays,10)||0):0;return d?(baseDate(e)?isoAddDays(baseDate(e),d+buffer):null):(validDate(e?.bonusRecd)?e.bonusRecd:null)}
   function daysUntilSafe(e,today){const s=safeCloseDate(e),t=today||new Date().toISOString().slice(0,10);if(!s)return null;const d=isoDiff(t,s);return d===null?null:Math.max(0,d)}
   function isInBuffer(e,today){if(!e?.opened||ruleDays(e)<=0||e.closed)return false;const raw=rawSafeDate(e),safe=safeCloseDate(e),t=today||new Date().toISOString().slice(0,10);if(!raw||!safe)return false;return isoDiff(t,raw)<=0&&isoDiff(t,safe)>0}
   function sourceSentence(e){return clean(e?.closeRuleSourceSentence||explicitRuleText(e)||payoutText([e?.closeRuleText,e?.analyzedTC,e?.completeBonusText].filter(Boolean).join(' '))||e?.closeRuleText||'')}
@@ -165,5 +166,5 @@
     const passed=results.filter(x=>x.ok).length;return{version:VERSION,passed,total:results.length,ok:passed===results.length,results};
   }
 
-  return{VERSION,FIXED_TYPES,AUTO_CLOSE_TIMER_RE,clean,sentences,normalizeType,isLookback,durationDays,moneyAmount,hasMonthlyFeeWording,explicitRuleText,payoutText,basisForText,isChaseBiz,typeForEntry,isFixed,ruleDays,basisFor,baseDate,rawSafeDate,safeCloseDate,daysUntilSafe,isInBuffer,sourceSentence,sanitizeEntry,analyzeText,sanitizeAnalysis,runSelfTests};
+  return{VERSION,validDate,FIXED_TYPES,AUTO_CLOSE_TIMER_RE,clean,sentences,normalizeType,isLookback,durationDays,moneyAmount,hasMonthlyFeeWording,explicitRuleText,payoutText,basisForText,isChaseBiz,typeForEntry,isFixed,ruleDays,basisFor,baseDate,rawSafeDate,safeCloseDate,daysUntilSafe,isInBuffer,sourceSentence,sanitizeEntry,analyzeText,sanitizeAnalysis,runSelfTests};
 });

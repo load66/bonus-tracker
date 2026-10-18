@@ -1,4 +1,4 @@
-/* Release 3.6.32 read integrity. Pure account decisions. This file must not call status() or btLifecycleStageForEntry(). */
+/* Release 3.6.34 read integrity. Pure account decisions. This file must not call status() or btLifecycleStageForEntry(). */
 (function(){
   'use strict';
   function today(){
@@ -39,7 +39,8 @@
     return sources.some(raw=>String(raw).split(/(?<=[.!?])\s+|[\n;]/).some(line=>{
       const sentence=String(line).replace(/\s+/g,' ').trim();
       if(!/(?:early[\s-]*(?:clos|terminat)|account[\s-]*(?:clos|terminat)|clos(?:e|ing|ure)|terminat)/i.test(sentence))return false;
-      if(/\b(?:after|before|within|first|until|unless|if)\b.{0,60}\b(?:\d+|month|day|year)\b/i.test(sentence))return false;
+      if(/\b(?:after|before|within|first|until|unless|if|except|provided|subject to)\b/i.test(sentence))return false;
+      if(/\b(?:monthly|maintenance)\b/i.test(sentence))return false;
       return /(?:\bno\b|\bwithout\b|\bzero\b)[^.]{0,80}\b(?:fee|charge)\b|\$\s*0\b|(?:fee|charge)[\s-]*free/i.test(sentence);
     }));
   }
@@ -48,7 +49,8 @@
     if(e.closeTimerClearedWithoutFeeVerification)return true;
     const structured=e.financialRules?.closure;
     const basis=String(structured?.basis||e.closeRuleBasis||'').toLowerCase();
-    if(basis==='reqmet'&&!e.reqMet)return true;
+    if(basis==='reqmet'&&!closeCore()?.validDate?.(e.reqMet))return true;
+    if(e.bonusRecd&&!closeCore()?.validDate?.(e.bonusRecd))return true;
     let verifiedStructured=false;
     try{
       const financial=window.BTFinancialRules?.validate?.(e);
@@ -172,5 +174,5 @@
   }
   window.btEvaluateAccount=btEvaluateAccount;
   window.btHistoricalIntegrityFindings=btHistoricalIntegrityFindings;
-  window.btAccountDecisionsVersion='3.6.32';
+  window.btAccountDecisionsVersion='3.6.34';
 })();

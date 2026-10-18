@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: Codex — v3.6.34 — codex/v3.6.34-integrity-audit
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.34 integrity audit (`codex/v3.6.34-integrity-audit`): requirements editor starts blank for unknown dates and preserves confirmed dates; invalid or unsupported closure anchors remain unresolved. Conditional or unrelated legacy fee wording cannot certify unconditional no-fee closure. Summary and lifecycle completion use canonical closure decisions. Added failing-before synthetic date, fee and view regressions plus Chromium/WebKit coverage; frontend/cache v3.6.34. No schema, backend, stored-data migration or real-account writes. Local bonus/cloud/UI and release checks required; PR CI, merge and exact Pages/cache verification are release gates.
 
 - v3.6.33 financial integrity (PR #212, `codex/v3.6.33-lifecycle-integrity`): Stop Bonus Received and close-event flows from inferring requirements completion dates; rendered date inputs remain blank when unknown. Enforce evidence-backed early-close fee and bonus-retention clearance, including positive charges with unsupported expiry and fixed holds with missing anchor; keep zero fee and clawback independent. Preserve zero-day custom buffer and prevent startup eligibility stamping or legacy timer persistence. Route Close Check through the canonical closure decision and require no fabricated requirements date for payout-only restrictions. Extend synthetic event, UI, read-only and browser regressions. Frontend/cache v3.6.33, no backend changes or stored-data migrations. Bonus/UI/cloud, Chromium and WebKit PR CI and release verification passed on `072361ccb6a9`. Next: merge this PR and verify main-branch GitHub Pages deploy and cache.
 

@@ -335,13 +335,18 @@ async function exercise(name,engine,url){
       R();
     });
     check('synthetic close rules were expressly saved rather than inferred',await page.evaluate(()=>entries[0].earlyCloseFee===0&&/No early closing fee/.test(entries[0].feeScheduleRaw)));
-    await page.getByRole('button',{name:'Record deposit'}).click();await page.locator('#req_date').fill('2026-04-01');await button('Save').click();await button('OK').click();
+    await page.getByRole('button',{name:'Record deposit'}).click();
+    check('requirements dialog leaves unknown actual date blank',await page.locator('#req_date').inputValue()==='');
+    await page.locator('#req_date').fill('2026-04-01');await button('Save').click();await button('OK').click();
     check('requirements and payout stay separate',(await record()).reqMet==='2026-04-01'&&!(await record()).bonusRecd);
     await page.getByRole('button',{name:/^Confirm received/}).click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('OK').click();
     check('bonus receipt updates close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
     await page.evaluate(()=>{entries[0].earlyCloseFee=null;R();});
     check('unverified fee blocks close readiness even after payout',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='BONUS_RECEIVED');
-    await page.evaluate(()=>{entries[0].earlyCloseFee=0;R();});
+    check('summary does not promise closure from payout alone',await page.evaluate(()=>!renderBankProfileSummary(entries[0]).includes('close when ready')&&!lifecycleSteps(entries[0]).find(s=>s.key==='safe').done));
+    await page.evaluate(()=>{entries[0].earlyCloseFee=0;entries[0].earlyTerminationFeeText='No early closing fee unless the account is restricted.';entries[0].feeScheduleRaw=entries[0].earlyTerminationFeeText;R();});
+    check('conditional no-fee wording blocks readiness',await page.evaluate(()=>btEvaluateAccount(entries[0]).close.status!=='ready'));
+    await page.evaluate(()=>{entries[0].earlyTerminationFeeText='No early closing fee.';entries[0].feeScheduleRaw='No early closing fee.';R();});
     check('restoring proven zero-fee evidence restores close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
     check('ready-to-close highlights Close milestone',await page.locator('.bt360-steps span.current').innerText()==='Close');
     check('close-ready prioritizes checks when no checklist work remains',
