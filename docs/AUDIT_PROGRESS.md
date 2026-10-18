@@ -6,6 +6,9 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.6.27 archived eligibility countdowns (`codex/v3.6.27-archive-countdowns`): every closed account with a calculable saved eligibility date now displays the day count on the right, explicitly marking unverified dates as estimates. A passed unverified estimate stays review-needed; never counted as eligible now. Verified ready rows also retain View offers and details. Only verified dates appear in within-60-days, with unverified estimates in cooling; prevent duplicate rows between groups; missing dates still show Details. Read-only presentation, no storage or canonical eligibility engine changes. Synthetic regressions added; CI and Pages verification pending.
+
+
 - v3.6.26 Bank Offers audience and compact feed (`codex/v3.6.25-offer-audience-ui`, PR #203): Personal/Business tabs use conservative public-offer category projection without altering saved accounts or eligibility, and preserve unknown product classification as unverified. Compact grouped offer rows preserve source URLs, original headlines, filters, availability evidence and refresh actions. Tests avoid asynchronous provider refresh and preserve the existing browser-search locator. Rebased on v3.6.25 Bonus Detail release; unit/Chromium/WebKit and production Pages verification pending.
 
 

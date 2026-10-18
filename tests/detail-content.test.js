@@ -140,6 +140,29 @@ const estimatedPast={...cooldownNoDate,id:'SYNT-P-85',opened:'2020-01-01',closed
  churn:'1',eligibilityText:'Legacy saved one-year rule, no verified supporting source.'};
 const estimatedList=sandbox.BT360.archive([estimatedPast]);
 assert.match(estimatedList,/<b>0<\/b><small>Eligible now<\/small>/,'Unverified historic dates must not certify current eligibility');
+
+/* v3.6.27: all computable saved dates show a countdown, with verification status. */
+assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.6\.27';/,'The on-screen app version reflects this release');
+assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.6\.27-archive1/,'The version label is refreshed on clients');
+const archiveFutureDate='2030-01-01';
+const projectedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,verified:false});
+assert(projectedFuture&&projectedFuture.days>0&&projectedFuture.caption==='days · estimate','Unverified saved future date shows an estimated countdown');
+const verifiedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,verified:true});
+assert(verifiedFuture&&verifiedFuture.days===projectedFuture.days&&verifiedFuture.caption==='days left','Verified saved future dates show the same countdown without estimate label');
+const passedEstimate=sandbox.BT360.archiveCountdown({eligible:'2020-01-01',verified:false});
+assert.equal(passedEstimate.days,0);
+assert.equal(passedEstimate.caption,'Estimate passed','An expired unverified estimate cannot be labeled eligible now');
+assert.equal(sandbox.BT360.archiveCountdown({eligible:'',verified:false}),null,'Missing date still uses Details');
+const previewEstimate=sandbox.BT360.archive([estimatedPast]);
+assert.match(previewEstimate,/class="bt3727-countdown is-estimated"/,'Saved unverified date has prominent right-hand countdown');
+assert.match(previewEstimate,/>0<\/strong><small>Estimate passed<\/small>/,'Expired unverified estimates require review rather than certified eligibility');
+assert.match(previewEstimate,/openArchived\(&quot;SYNT-P-85&quot;\)/,'Countdown remains linked to account details');
+assert.match(previewEstimate,/Unverified dates are estimates/,'The archive explains why dates are provisional');
+assert.equal((previewEstimate.match(/class="bt360-list-row bt3727-archive-row"/g)||[]).length,1,'Each saved estimate appears only once across Archive sections');
+const beforeArchiveCountdown=JSON.stringify([...storage]);
+sandbox.BT360.archive([estimatedPast,cooldownNoDate]);
+assert.equal(JSON.stringify([...storage]),beforeArchiveCountdown,'Countdown presentation cannot mutate stored financial records');
+
 const archiveRecord={...legacy,closed:'2026-10-17',bonusRecd:'2026-10-17'};
 assert.match(sandbox.BT360.detailPanels(archiveRecord),/Fees &amp; waivers|Fees & waivers/,'Churn and closed record details retain fee section');
 assert.match(sandbox.BT360.detailPanels(archiveRecord),/\$25 early-close fee/);

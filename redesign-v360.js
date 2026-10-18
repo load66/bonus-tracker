@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.26 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.27 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt360_audience_session',noticeKey='bt360_notice_session';
@@ -727,6 +727,13 @@ function detailFooter(e){
 function showTerms(bank){archivePane='saved';storageSearch=String(bank||'');expanded=null;tab='archive';R()}
 function back(){expanded=null;window.bt360ArchiveDetailId=null;R();const el=document.querySelector('.scroll');if(el)el.scrollTop=0}
 function goArchive(pane){archivePane=pane==='saved'?'saved':'waiting';expanded=null;tab='archive';R()}
+function archiveCountdown(info){
+ if(!info?.eligible)return null;
+ const remaining=dB(td(),info.eligible);
+ if(!Number.isFinite(remaining))return null;
+ const verified=info.verified===true;
+ return {days:Math.max(0,remaining),verified,caption:remaining<=0?(verified?'Eligible now':'Estimate passed'):verified?'days left':'days · estimate'};
+}
 function archive(rows){
  if(window.bt360ArchiveDetailId&&expanded){return window.rTracker(rows,true)}
  let h=segments()+'<div class="bt360-segments bt360-archive-switch"><button aria-pressed="'+(archivePane==='waiting')+'" class="'+(archivePane==='waiting'?'active':'')+'" onclick="BT360.goArchive(\'waiting\')">Waiting to churn</button><button aria-pressed="'+(archivePane==='saved')+'" class="'+(archivePane==='saved'?'active':'')+'" onclick="BT360.goArchive(\'saved\')">Saved terms</button></div>';
@@ -734,19 +741,22 @@ function archive(rows){
  const closed=rows.filter(e=>e.closed&&scope(e));
  const indexed=closed.map(e=>({e,info:eligibleInfo(e)}));
  const ready=indexed.filter(x=>x.info?.verified&&dB(td(),x.info.eligible)<=0);
- const soon=indexed.filter(x=>x.info&&dB(td(),x.info.eligible)>0&&dB(td(),x.info.eligible)<=60);
- const cooling=indexed.filter(x=>!x.info||!x.info.verified||dB(td(),x.info.eligible)>60).sort((a,b)=>(a.info?.eligible||'9999').localeCompare(b.info?.eligible||'9999'));
+ const soon=indexed.filter(x=>x.info?.verified&&dB(td(),x.info.eligible)>0&&dB(td(),x.info.eligible)<=60);
+ const cooling=indexed.filter(x=>!ready.includes(x)&&!soon.includes(x)).sort((a,b)=>(a.info?.eligible||'9999').localeCompare(b.info?.eligible||'9999'));
  h+='<div class="bt360-archive-stats"><div><b>'+ready.length+'</b><small>Eligible now</small></div><div><b>'+soon.length+'</b><small>Within 60 days</small></div><div><b>'+cooling.length+'</b><small>Cooling down</small></div></div>';
+ h+='<p class="bt3727-archive-note">Unverified dates are estimates, not confirmed eligibility. Tap a countdown to review.</p>';
  const row=(x,offer)=>{
   const historic='Last saved '+(Number(x.e.bonus)>0?amount(x.e.bonus)+' bonus':'bank offer')+
    (x.e.opened?' · opened '+date(x.e.opened):'')+' · '+(savedCooldownChurnExcerpt(x.e)||'eligibility date not recorded');
   const label=x.info?date(x.info.eligible)+' · '+x.info.label:historic;
-  return '<div class="bt360-list-row">'+bankLogo(x.e.bank,true)+'<span class="bt360-grow"><b>'+safe(x.e.bank)+'</b><small>'+safe(label)+'</small></span>'+
-   (offer?'<button class="bt360-chip positive" onclick="BT360.viewOffers('+arg(x.e.bank)+')">View offers</button>':
-   '<button class="bt360-chip" onclick="BT360.openArchived('+arg(x.e.id)+')">'+(x.info?.verified?Math.max(0,dB(td(),x.info.eligible))+' days':'Details')+'</button>')+'</div>';
+  const count=archiveCountdown(x.info);
+  const action=count
+   ?'<div class="bt3727-archive-actions"><button type="button" class="bt3727-countdown '+(count.verified?'is-verified':'is-estimated')+'" onclick="BT360.openArchived('+arg(x.e.id)+')" aria-label="'+safe('Review '+x.e.bank+' eligibility: '+count.days+' days; '+(count.verified?'verified saved rule':'unverified estimate'))+'"><strong>'+count.days+'</strong><small>'+safe(count.caption)+'</small></button>'+(offer?'<button type="button" class="bt3727-view-offers" onclick="BT360.viewOffers('+arg(x.e.bank)+')">View offers</button>':'')+'</div>'
+   :'<button type="button" class="bt360-chip bt3727-no-date" onclick="BT360.openArchived('+arg(x.e.id)+')">Details</button>';
+  return '<div class="bt360-list-row bt3727-archive-row">'+bankLogo(x.e.bank,true)+'<span class="bt360-grow"><b>'+safe(x.e.bank)+'</b><small>'+safe(label)+'</small></span>'+action+'</div>';
  };
  h+=panel('Eligible now',ready.length?'<div class="bt360-list">'+ready.map(x=>row(x,true)).join('')+'</div>':'<p class="bt360-muted">No verified eligibility dates reached.</p>');
- h+=panel('Eligible within 60 days',soon.length?'<div class="bt360-list">'+soon.map(x=>row(x,false)).join('')+'</div>':'<p class="bt360-muted">No verified eligibility dates within 60 days.</p>');
+ h+=panel('Eligible within 60 days',soon.length?'<div class="bt360-list">'+soon.map(x=>row(x,false)).join('')+'</div>':'<p class="bt360-muted">No verified upcoming eligibility dates within 60 days.</p>');
  h+=panel('Cooling down',cooling.length?'<div class="bt360-list">'+cooling.map(x=>row(x,false)).join('')+'</div>':'<p class="bt360-muted">No accounts cooling down.</p>','<span class="bt360-subtitle">soonest first</span>');
  h+='<details class="bt360-archived-tools"'+(legacyArchiveOpen?' open':'')+' ontoggle="BT360.setArchiveToolsOpen(this.open)"><summary>Completed, non-repeatable accounts · edit and review</summary>'+window.rTracker(rows,true)+'</details>';
  return h;
@@ -929,6 +939,6 @@ function openPhonebook(){closeSettings();window.bt360PhonebookOpen=true;R()}
 function closePhonebook(){window.bt360PhonebookOpen=false;R()}
 function openSettings(){window.bt360SettingsOpen=true;R();refreshUsage()}
 function closeSettings(){window.bt360SettingsOpen=false;R()}
-window.BT360={feeSnapshot,closeCheckPresentation,get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
+window.BT360={feeSnapshot,closeCheckPresentation,get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,archiveCountdown,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
 if(typeof R==='function')R();
 })();

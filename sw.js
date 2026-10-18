@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.19: read-only saved fee history across active and archive views.
+// Version 3.6.27: archived countdowns and accurate visible version.
 
-const V = 'bt-v3.6.26-offers1';
+const V = 'bt-v3.6.27-archive1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
