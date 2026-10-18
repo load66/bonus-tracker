@@ -12,7 +12,9 @@ const FIELDS=[
  'churnPeriodUnit','couponEnrollmentDate','offerEnrollmentDate','closeRestrictionType',
  'closeBufferDays','closeFeeCountdownDays','closedWithNegativeBalance','eligibilityScope',
  'eligibilityAnchorEvidenceText','reapplicationAction','monthlyFeeFrequency','monthlyFeeWaiverType',
- 'monthlyFeeWaiverAmountText','monthlyFeeNoMonthlyServiceFee','tcSourceId','tcSourceUpdatedAt'
+ 'monthlyFeeWaiverAmountText','monthlyFeeNoMonthlyServiceFee','tcSourceId','tcSourceUpdatedAt',
+ 'churn','churnability','churnRuleText','churnReason','churnDecisionSource',
+ 'churnDecisionConfidence','churnBasis','eligibilityVerifiedAt'
 ];
 const numeric=new Set(['bonus','schemaVersion','minHoldDays','earlyCloseFee','churnPeriodValue','closeBufferDays','closeFeeCountdownDays']);
 const booleans=new Set(['closedWithNegativeBalance','monthlyFeeNoMonthlyServiceFee']);
