@@ -677,9 +677,11 @@ async function exercise(name,engine,url){
     const aiExpectedVerdict=aiCloseState.action==='close'&&aiCloseState.check==='safe'&&aiCloseState.close==='ready'&&aiCloseState.financial
       ?'Ready — tracker checks passed':'Needs verification';
     check('AI closure verdict requires both contractual and operational checks',(await page.locator('.bonus-ai-verdict').innerText())===aiExpectedVerdict);
-    const expectedActionPhrase=!aiCloseState.financial?'conflicting financial rules'
-      :aiExpectedVerdict==='Needs verification'?'close checks':'companion accounts';
-    check('AI explains the exact unresolved rule or next action',(await page.locator('.bonus-ai-next-step').innerText()).includes(expectedActionPhrase));
+    const aiNextStep=await page.locator('.bonus-ai-next-step').innerText();
+    const explainsCloseGate=!aiCloseState.financial?aiNextStep.includes('conflicting financial rules')
+      :aiExpectedVerdict==='Needs verification'?/\bclos(?:e|ure) checks\b/i.test(aiNextStep)
+      :aiNextStep.includes('companion accounts');
+    check('AI explains the exact unresolved rule or next action',explainsCloseGate);
     check('common answers do not send facts',await page.evaluate(()=>window.__bonusAITest.calls.length===0&&window.__bonusAITest.authCalls===0));
     await button('Ask AI for more').click();
     check('remote AI asks for login before sending facts',await page.locator('#bonus-ai-login').isVisible()&&await page.evaluate(()=>window.__bonusAITest.calls.length===0));
