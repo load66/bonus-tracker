@@ -1,4 +1,4 @@
-/* BonusTracker v3.6.7: presentation only. Canonical calculations and records are untouched. */
+/* BonusTracker v3.6.8: presentation only. Canonical calculations and records are untouched. */
 @font-face{font-family:Manrope;src:url('./fonts/manrope-latin-400-normal.woff2') format('woff2');font-weight:400;font-display:swap}
 @font-face{font-family:Manrope;src:url('./fonts/manrope-latin-600-normal.woff2') format('woff2');font-weight:600 900;font-display:swap}
 :root{color-scheme:dark;--bg:#07080C;--card:#12141C;--card2:#15171F;--border:#1E212C;--text:#F2F3F7;--muted:#A0A6B8;--sub:#A0A6B8;--mint:#5BE3B0;--good:#5BE3B0;--amber:#FFB86B;--bad:#FF8A8A;--blue:#8FB4FF;--violet:#C7A6FF}
@@ -114,15 +114,23 @@ body.bt360-detail-active .scroll{padding-bottom:calc(178px + env(safe-area-inset
 .bt360-steps span.current{color:#F2F3F7;border-top-color:#8FB4FF;font-weight:900;background:linear-gradient(#212C42,transparent);border-radius:4px}
 .bt360-info-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:11px 0;border-bottom:1px solid #1E212C;color:#A0A6B8;font-size:12px}
 .bt360-info-row:last-child{border-bottom:0}
-.bt360-info-row>div{text-align:right;max-width:65%}
+.bt360-info-row>div{text-align:right;max-width:65%;min-width:0}
+.bt360-info-long{display:block}
+.bt360-info-long>span{display:block;margin-bottom:8px}
+.bt360-info-long>div{max-width:none;text-align:left}
 .bt360-info-row b{display:block;color:#F2F3F7;font-size:12px;font-weight:900;overflow-wrap:anywhere}
 .bt360-info-row small{display:block;color:#8A90A3;margin-top:4px;font-size:10px;line-height:1.35}
 .bt360-check{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #1E212C;min-height:44px}
 .bt360-check:last-child{border-bottom:0}
-.bt360-check>span,.bt360-check>button{flex:0 0 30px;width:30px;height:30px;border:1px solid #343743;border-radius:10px;background:#15171F;color:#FFB86B;display:inline-flex;align-items:center;justify-content:center}
-.bt360-check.done>span,.bt360-check.done>button{background:#123327;border-color:#123327;color:#5BE3B0}
+.bt360-check>span:first-child,.bt360-check>button[role="checkbox"]{flex:0 0 30px;width:30px;height:30px;border:1px solid #343743;border-radius:10px;background:#15171F;color:#FFB86B;display:inline-flex;align-items:center;justify-content:center}
+.bt360-check.done>span:first-child,.bt360-check.done>button[role="checkbox"]{background:#123327;border-color:#123327;color:#5BE3B0}
 .bt360-check.danger>span{color:#FF8A8A}
 .bt360-check>div{min-width:0}.bt360-check b{display:block;font-size:12px;color:#F2F3F7;line-height:1.35}.bt360-check small{display:block;font-size:11px;color:#A0A6B8;margin-top:3px}
+.bt360-check>.bt366-row-edit{flex:1 1 auto;width:auto;height:auto;min-width:0;white-space:normal;overflow-wrap:anywhere;display:block;align-self:stretch;border:0;background:transparent;color:#F2F3F7;line-height:1.4;padding:3px 0}
+.bt360-panel-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px}
+.bt360-panel-actions .bt360-link{min-height:44px}
+.bt360-timer{display:grid;grid-template-columns:30px minmax(0,1fr);column-gap:10px;row-gap:3px}
+.bt360-timer>.bt360-chip{grid-column:2;justify-self:start;max-width:100%;white-space:normal;overflow-wrap:anywhere}
 .bt360-muted{font-size:11px;color:#A0A6B8;line-height:1.5}
 .bt360-call{width:100%;text-decoration:none;margin:10px 0}
 .bt360-source{border:0;background:transparent;color:#A0A6B8;min-height:44px;text-align:left;font-size:11px}
@@ -233,7 +241,7 @@ body.bt360-detail-active .scroll{padding-bottom:calc(178px + env(safe-area-inset
 .radar-offer-original p{color:#A0A6B8;font-size:11px;line-height:1.5}
 .radar-card-compact .radar-offer-link{margin-right:12px;min-height:36px;overflow-wrap:anywhere}
 
-/* v3.6.7: safe compact diagnostics, individual reports and clean disclosure labels. */
+/* v3.6.8: safe compact diagnostics, individual reports and clean disclosure labels. */
 .bt360-usage-controls{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin:12px 0}
 .bt360-usage-controls a{color:#8FB4FF;font-size:11px;text-decoration:underline;text-underline-offset:3px;min-height:36px;display:inline-flex;align-items:center}
 .bt360-usage-missing{margin-top:12px;padding:9px 12px;background:#211D20;border:1px solid #44332A;border-radius:12px;color:#FFB86B;font-size:11px;overflow-wrap:anywhere}
@@ -259,7 +267,7 @@ body.bt360-detail-active .scroll{padding-bottom:calc(178px + env(safe-area-inset
 .bt360-detail-footer>.bt360-primary{min-width:0;padding-inline:7px;font-size:11px}
 @media(max-width:390px){.bt360-detail-footer{gap:6px}.bt360-detail-footer>button{font-size:11px}.bt360-detail-footer>.bt360-primary{font-size:10px}}
 
-/* v3.6.7 canonical mobile tracker and single account-detail presentation. */
+/* v3.6.8 canonical mobile tracker and single account-detail presentation. */
 .bt366-compact-account{padding:0!important;margin:0 0 9px!important;border:1px solid #292C38!important;border-radius:16px!important;overflow:hidden;background:#12141C!important}
 .bt366-compact-row{display:flex!important;min-width:0;width:100%;gap:10px;align-items:center;text-align:left;padding:11px 12px!important;min-height:75px;border:0!important;background:transparent!important;color:#F2F3F7;cursor:pointer}
 .bt366-compact-row>.blogo{height:39px!important;width:39px!important;min-width:39px!important;border-radius:12px!important}
@@ -287,7 +295,7 @@ body.bt360-detail-active .scroll{padding-bottom:calc(180px + env(safe-area-inset
 .bt360-detail-card .card-h,.bt360-detail-card .bt-life,.bt360-detail-card .bt-life-step{display:none!important}
 .bt360-detail-footer>button:first-child{min-height:48px}
 
-/* v3.6.7 selectable monthly receipt chart: 44+px hit areas, no zero bars. */
+/* v3.6.8 selectable monthly receipt chart: 44+px hit areas, no zero bars. */
 .bt367-month-chart{display:grid;grid-template-columns:repeat(12,minmax(44px,1fr));gap:4px;margin-top:11px;align-items:stretch;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scrollbar-width:thin}
 .bt367-month-hit{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-height:102px;width:100%;padding:0 0 3px;position:relative;border:1px solid transparent;border-radius:9px;background:transparent;color:#81899C;cursor:pointer;touch-action:manipulation}
 .bt367-month-hit{scroll-snap-align:start}

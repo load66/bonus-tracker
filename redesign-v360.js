@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.7 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.8 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt360_audience_session',noticeKey='bt360_notice_session';
@@ -32,7 +32,7 @@ function segments(){return '<div class="bt360-segments" role="group" aria-label=
 function setAudience(v){if(v!=='business'&&v!=='personal')return;audience=v;selectedStage='';selectedHeroMonth=null;try{sessionStorage.setItem(scopeKey,audience)}catch{};R()}
 function setStage(v){selectedStage=selectedStage===v?'':v;expanded=null;R()}
 function resetStage(){selectedStage=''}
-function infoRow(label,value,detail){return '<div class="bt360-info-row"><span>'+safe(label)+'</span><div><b>'+safe(value)+'</b>'+(detail?'<small>'+safe(detail)+'</small>':'')+'</div></div>'}
+function infoRow(label,value,detail){return '<div class="bt360-info-row'+(String(value).length>80?' bt360-info-long':'')+'"><span>'+safe(label)+'</span><div><b>'+safe(value)+'</b>'+(detail?'<small>'+safe(detail)+'</small>':'')+'</div></div>'}
 function panel(title,html,right){return '<section class="bt360-panel"><div class="bt360-panel-title"><h3>'+safe(title)+'</h3>'+(right||'')+'</div><div class="bt360-panel-body">'+html+'</div></section>'}
 const pills=[
  ['ACTION_NEEDED','Action needed'],['IN_PROGRESS','In progress'],['REQUIREMENTS_MET','Requirements met'],
@@ -171,9 +171,9 @@ function detailPanels(e){
  if(!closed){
   const rows=checks.map((c,i)=>'<div class="bt360-check '+(c.done?'done':'')+'"><button type="button" role="checkbox" aria-label="'+safe(c.text)+'" aria-checked="'+!!c.done+'" onclick="toggleCk('+arg(e.id)+','+i+')">'+(c.done?'✓':'')+'</button><button type="button" class="bt366-row-edit" onclick="runBankAction('+arg(e.id)+',\'checklist\')"><b>'+safe(c.text)+'</b><small>'+(c.done?'Recorded':'Tap to edit task')+'</small></button></div>').join('');
   const due=typeof reqDeadline==='function'?reqDeadline(e):'';
-  h+=panel('Requirements',(!rows?'<p class="bt360-muted">No checklist tasks saved yet.</p>':rows)+(due?'<span class="bt360-chip warning">Due '+safe(date(due))+'</span>':'')+'<button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button>');
+  h+=panel('Requirements',(!rows?'<p class="bt360-muted">No checklist tasks saved yet.</p>':rows)+'<div class="bt360-panel-actions">'+(due?'<span class="bt360-chip warning">Due '+safe(date(due))+'</span>':'')+'<button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></div>');
   const timers=Array.isArray(e.customTimers)?e.customTimers:[];
-  h+=panel('Timers',(!timers.length?'<p class="bt360-muted">No custom timers set.</p>':timers.map(t=>'<div class="bt360-check '+(t.done?'done':'')+'"><button type="button" role="checkbox" aria-checked="'+!!t.done+'" aria-label="'+safe(t.text||'Timer')+'" onclick="toggleTimer('+arg(e.id)+','+arg(t.id)+')">'+(t.done?'✓':'◷')+'</button><button type="button" class="bt366-row-edit" onclick="openTimerEditor('+arg(e.id)+','+arg(t.id)+')"><b>'+safe(t.text||'Timer')+'</b><small>'+safe(timerMetaLine(t))+'</small></button><span class="bt360-chip">'+safe(timerCountdownMeta(t).text)+'</span></div>').join(''))+'<button class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'timer\')">+ Add timer</button>');
+  h+=panel('Timers',(!timers.length?'<p class="bt360-muted">No custom timers set.</p>':timers.map(t=>'<div class="bt360-check bt360-timer '+(t.done?'done':'')+'"><button type="button" role="checkbox" aria-checked="'+!!t.done+'" aria-label="'+safe(t.text||'Timer')+'" onclick="toggleTimer('+arg(e.id)+','+arg(t.id)+')">'+(t.done?'✓':'◷')+'</button><button type="button" class="bt366-row-edit" onclick="openTimerEditor('+arg(e.id)+','+arg(t.id)+')"><b>'+safe(t.text||'Timer')+'</b><small>'+safe(timerMetaLine(t))+'</small></button><span class="bt360-chip">'+safe(timerCountdownMeta(t).text)+'</span></div>').join(''))+'<button class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'timer\')">+ Add timer</button>');
   const fee=e.monthlyFeeAmountText||e.monthlyFeeYNText||'',waiver=e.monthlyFeeWaiverText||e.avoidMonthlyFeeText||'';
   h+=panel('Fees & waivers',infoRow('Monthly fee',fee||'Needs review')+infoRow('Waived if',waiver||'Needs review')+infoRow('Early close fee',e.earlyTerminationFeeText||'Needs review'));
  }
@@ -347,10 +347,10 @@ async function backUpNow(){
 function settings(){
  const toggles=[['deadlines','Deadlines','3 and 1 day before'],['payouts','Payouts and close dates','When ready'],['eligible','Eligible again','7 days before and on the day']];
  const buttons=toggles.map(([k,label,description])=>'<button class="bt360-settings-row" role="switch" aria-checked="'+noticePrefs[k]+'" onclick="BT360.setNotice(\''+k+'\')"><span><b>'+label+'</b><small>'+description+'</small></span><i class="bt360-toggle '+(noticePrefs[k]?'checked':'')+'"></i></button>').join('');
- return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.7</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
+ return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.8</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
  cloudSettingsCard()+
  usageCard()+
- panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.7. Push delivery is not active.</p>')+
+ panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.8. Push delivery is not active.</p>')+
  panel('Data','<button class="bt360-settings-row" onclick="BT360.closeSettings();exportBackup()">Export backup file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.closeSettings();importBackup()">Restore from file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.openPhonebook()">Bank phone numbers <span>›</span></button>')+
  '<button class="bt360-reset" onclick="BT360.closeSettings();resetAllData()">Reset this device <small>Two confirmations and a safety backup</small></button></section></div>';
 }

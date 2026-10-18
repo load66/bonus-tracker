@@ -6,6 +6,8 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.6.8 mobile account-detail layout PR #181 (`codex/v3.6.8-detail-layout-reliability`): checkbox styles no longer shrink task editor text; timer countdown and long fee terms fit narrow screens; due-date controls wrap. Synthetic 320/375/390/430 px regression checks, app and service-worker cache bumped. PR CI https://github.com/load66/bonus-tracker/actions/runs/39116225469 PASS: bonus/cloud/UI units, Chromium, WebKit, release verification. No stored records or backend change. Next: merge, verify exact main CI and Pages publish; hosting usage credential requires owner rotation.
+
 - v3.6.8 browser usage test compatibility on `codex/v3.6.8-usage-test-query-match`: match hosting usage mock requests by path without the `?refresh=1` query, preserving complete Chromium/WebKit assertions and never contacting Railway in tests. No app functionality, canonical rules, or stored financial data changed. CI and PR merge remain release-gated. PR #178 is the separately maintained frontend usage feature.
 
 
