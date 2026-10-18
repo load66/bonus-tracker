@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex — v3.6.27 — codex/v3.6.27-archive-countdowns
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.27 archived eligibility countdowns (`codex/v3.6.27-archive-countdowns`): every closed account with a calculable saved eligibility date now displays the day count on the right, explicitly marking unverified dates as estimates. A passed unverified estimate stays review-needed; never counted as eligible now. Verified ready rows also retain View offers and details. Prevent duplicate rows between within-60-days and cooling groups; missing dates still show Details. Read-only presentation, no storage or canonical eligibility engine changes. Synthetic regressions added; CI and Pages verification pending.
+
 
 - v3.6.25 in-progress Bonus Detail layout parity (`codex/v3.6.25-detail-panel-order`): Fees & waivers now appears between Requirements and Timers, matching the PDF. Ready-to-close close-check priority and closed historical fee display remain intact. Existing Add task, Add timer, timer editing and financial evidence are preserved. Synthetic panel-order and handler regression added. No rule engine or financial record changes; CI/Pages verification pending.
 
