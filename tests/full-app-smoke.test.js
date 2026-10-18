@@ -79,7 +79,7 @@ if(require.main===module)setTimeout(()=>{
       assert(!/CUSTOM TIMER|Custom Timer|Deadline Active|WORKING|WAITING TO CHURN|TIME TO CHURN/.test(html),'Legacy/internal lifecycle status leaked to full app card: '+html);
     }
     assert(app.innerHTML.length>1000,'Tracker did not render meaningful HTML');
-    assert(app.innerHTML.includes('Active bonuses'),'Active bonus summary did not render');
+    assert(app.innerHTML.includes('COLLECTED IN'),'Collected-year summary did not render');
     assert(app.innerHTML.includes('Action Center'),'Lifecycle Action Center did not render');
     sandbox.R();
     for(const retired of ['learning-inbox-conflict.js','profile-library-selftest.js','profile-library-selftest-academy.js','profile-db.js']){
