@@ -53,7 +53,7 @@
       update({lastAt:receipt.createdAt,lastCheck:now,lastHash:sha256,lastDataHash:recordHash,lastId:id,lastCount:receipt.entryCount,retention:receipt.retention,pending:!unchanged,error:unchanged?'':'More changes are waiting to be backed up.',...(showNotice?{lastSuccessNoticeAt:now}:{})});
       phase=unchanged?'Cloud backup · Verified':'Cloud backup · Changes pending';paint();
       // Independent append-only T&C archive: failures cannot negate a verified recovery backup.
-      if(window.BTTermsHistory?.sync){try{await window.BTTermsHistory.sync()}catch{}}
+      if(window.BTTermsHistory?.sync){window.BTTermsHistory.sync().catch(()=>{});}
       if(showNotice)window.btNotify(unchanged?'Your backup was verified in the cloud at '+new Date(receipt.createdAt).toLocaleTimeString()+'. '+accountCount(receipt.entryCount)+' can be recovered.':'A backup was verified. Newer changes are still waiting to upload.',{title:'Backup verified',tone:'success',duration:6500});
       return receipt;
     }catch(e){update({error:e.name==='AbortError'?'Cloud backup timed out. Your local data is retained.':e.message});phase='Cloud backup · Needs attention';paint();throw e;}
