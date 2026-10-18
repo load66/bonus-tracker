@@ -16,6 +16,9 @@ const stored=[{
   id:'OLD-P-01',bank:'Synthetic Oldcopy',accountType:'personal',bonus:50,opened:'2024-01-01',
   bonusRecd:'2024-04-01',reqMet:'2024-04-01',earlyCloseFee:0,closeBufferDays:3,customTimers:[],checklist:[],history:[],
   financialRules:{version:2,closure:{restrictionType:'manual-review',basis:'manual',minHoldDays:0,earlyCloseFee:null,text:'Unknown fee',evidence:'',feeEvidence:null}}
+},{
+  id:'TIM-P-01',bank:'Synthetic Legacy Timer',opened:'2026-01-15',bonus:100,reqMet:'',bonusRecd:'',
+  customTimers:[{text:'Review deadline',date:'2026-11-02',done:false}],checklist:[]
 }];
 const original=JSON.stringify(stored);
 
@@ -147,6 +150,29 @@ setTimeout(()=>{
     assert(cloudWrites===1,'Authorized save did not trigger cloud protection');
     const saved=JSON.parse(localStorage.getItem('bt_e_v4')).find(e=>e.bank==='Synthetic Harbor');
     assert(saved.notes==='Confirmed manual note'&&saved.earlyCloseFee===null&&saved.reqMet==='','Authorized save did not preserve the edited record');
+
+    // Actual user event handlers must not copy payout date to requirements date.
+    run('entries.push('+JSON.stringify({id:'EVT-P-01',bank:'Synthetic Event Bank',opened:'2026-10-01',bonus:200,bonusRecd:'',reqMet:'',earlyCloseFee:null,customTimers:[],checklist:[],history:[]})+')');
+    run('openRcv("EVT-P-01")');
+    assert(run('rcvPrompt.reqDate')==='','Bonus dialog defaulted an unknown requirements date to today');
+    run('rcvPrompt.date="2026-10-10";rcvPrompt.reqDate="";rcvPrompt.bonus=200;rcvSubmit()');
+    const received=liveEntries().find(e=>e.id==='EVT-P-01');
+    assert(received&&received.bonusRecd==='2026-10-10'&&received.reqMet==='','Saving a received bonus fabricated requirements completion');
+    run('closePrompt='+JSON.stringify({entryId:'EVT-P-01',bank:'Synthetic Event Bank',closeDate:'2026-10-12',actualBonus:200,bonusDate:'2026-10-10',reqDate:'',monthlyFeeChecked:false,dp:''})+';finishClose()');
+    const closed=liveEntries().find(e=>e.id==='EVT-P-01');
+    assert(closed&&closed.closed==='2026-10-12'&&closed.reqMet==='','Saving a closure fabricated requirements completion');
+
+    const decisionFor=(props)=>sandbox.btEvaluateAccount({bank:'Synthetic Fee Review',opened:'2026-01-01',reqMet:'2026-02-01',bonusRecd:'2026-05-01',customTimers:[],...props});
+    const feeWithoutWindow=decisionFor({earlyCloseFee:25,closeRestrictionType:'none',minHoldDays:0});
+    assert(feeWithoutWindow.legacyStatus!=='SAFE TO CLOSE'&&feeWithoutWindow.close.status!=='ready','Positive fee without expiry was marked safe to close');
+    const noAnchor=decisionFor({opened:'',earlyCloseFee:25,minHoldDays:90,closeFeeCountdownDays:'90',closeRuleBasis:'opened',closeRestrictionType:'manual-fixed',closeRuleSource:'manual'});
+    assert(noAnchor.close.status!=='ready','A fixed hold with no opening date was marked safe to close');
+    const noProof=decisionFor({earlyCloseFee:0,closeRestrictionType:'payout-only',closeRuleText:'Keep open until bonus posts.'});
+    assert(noProof.close.status!=='ready','An unsupported legacy zero fee was treated as verified no-fee');
+    const verifiedNoFee=decisionFor({earlyCloseFee:0,closeRestrictionType:'payout-only',closeRuleText:'Keep the account open until the bonus posts.',earlyTerminationFeeText:'No early closing fee.'});
+    assert(verifiedNoFee.close.status==='ready','Explicit saved unconditional no-fee wording did not permit a satisfied payout-only hold');
+    const zeroBuffer=run('(function(){modal={bank:"Synthetic Zero Buffer",accountType:"personal",closeBufferDays:0,earlyCloseFee:null,customTimers:[],history:[]};return collectModalEntryData()})()');
+    assert(zeroBuffer.closeBufferDays===0,'Explicit 0-day close buffer was replaced on edit');
     console.log('Read integrity passed');
     process.exit(0);
   }catch(err){console.error(err);process.exit(1)}
