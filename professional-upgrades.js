@@ -227,7 +227,7 @@
       id:old.id,_edit:true,_startingNewCycle:true,_wizardStep:1,bank:old.bank||'',accountType:old.accountType||'personal',churn:old.churn||'',phoneNum:old.phoneNum||'',
       bonus:0,opened:'',closed:'',bonusRecd:'',reqMet:'',promoCodeText:'',expirationDateText:'',requiredDaysText:'',reqDays:0,fundedDays:0,fundingAmount:0,fundingAmountText:'',payoutTimingText:'',completeBonusText:'',eligibilityText:'',
       dataPoint:old.dataPoint||'',monthlyFeeYNText:old.monthlyFeeYNText||'',avoidMonthlyFeeText:old.avoidMonthlyFeeText||'',monthlyFeeAmountText:old.monthlyFeeAmountText||'',monthlyFeeWaiverText:old.monthlyFeeWaiverText||'',monthlyFeeWaiverAmountText:old.monthlyFeeWaiverAmountText||'',monthlyFeeFrequency:old.monthlyFeeFrequency||'',monthlyFeeWaiverType:old.monthlyFeeWaiverType||'',monthlyFeeChecked:false,
-      minHoldDays:0,closeFeeCountdownDays:'',closeRuleBasis:'opened',closeBufferDays:5,closeRuleText:'',earlyTerminationFeeText:'',earlyCloseFee:0,notes:'',analyzedTC:'',analysis:null,analyzerHistory:[],history:normalizeEntryHistoryList(old.history),checklist:[],customTimers:[],fieldSources:priorSources,previousCycles:[archive,...(Array.isArray(old.previousCycles)?old.previousCycles:[])].slice(0,12)
+      minHoldDays:0,closeFeeCountdownDays:'',closeRuleBasis:old.closeRuleBasis||'opened',closeBufferDays:(Number.isFinite(parseInt(old.closeBufferDays,10))?parseInt(old.closeBufferDays,10):5),closeRuleText:old.closeRuleText||'',earlyTerminationFeeText:old.earlyTerminationFeeText||'',earlyCloseFee:(old.earlyCloseFee===null?null:old.earlyCloseFee),notes:'',analyzedTC:'',analysis:null,analyzerHistory:[],history:normalizeEntryHistoryList(old.history),checklist:[],customTimers:[],fieldSources:priorSources,previousCycles:[archive,...(Array.isArray(old.previousCycles)?old.previousCycles:[])].slice(0,12)
     };
     try{applyKnownClosePolicy(modal)}catch{}
     showInlineAZ=false;inlineResult=null;expanded=id;R();
@@ -358,7 +358,6 @@
 
   window.btProfessionalUpgradeVersion=VER;
   setTimeout(()=>{try{
-    entries=(entries||[]).map(normalizeLifecycleEntry);sv(SK,entries);
     initUpdateFlow();const rep=window.btRunFullRegressionTests();if(!rep.ok)console.warn('Bonus Tracker regression warnings',rep);R();
   }catch(err){console.error('Professional upgrade init failed',err)}},0);
 })();

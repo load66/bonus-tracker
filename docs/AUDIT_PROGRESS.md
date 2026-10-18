@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: Grok — 3.6.32 read integrity — branch `grok/v3.6.32-read-integrity`
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 

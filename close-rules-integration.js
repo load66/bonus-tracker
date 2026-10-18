@@ -112,6 +112,12 @@
     return daysLeft(e)===0;
   }
   function statusFixed(e){
+    try{
+      if(typeof window.btEvaluateAccount==='function'&&!window.__btStatusEval){
+        window.__btStatusEval=true;
+        try{const d=window.btEvaluateAccount(e);if(d&&typeof d.legacyStatus==='string')return d.legacyStatus}finally{window.__btStatusEval=false}
+      }
+    }catch{}
     if(!e||!e.bank)return'';
     if(e.closed)return nonRepeatable(e)?'ARCHIVED':(churnReached(e)?'TIME TO CHURN!':'WAITING TO CHURN!');
     const hasBonus=!!e.bonusRecd,hasReq=!!e.reqMet,hasHold=ruleDays(e)>0&&!!baseDate(e);
@@ -212,12 +218,12 @@
       const current=parseInt(localStorage.getItem(SCHEMA_KEY)||'0',10)||0;if(current>=SCHEMA)return false;
       if(typeof entries==='undefined'||!Array.isArray(entries))return false;
       if(!localStorage.getItem(BACKUP_KEY))localStorage.setItem(BACKUP_KEY,JSON.stringify({version:current,createdAt:new Date().toISOString(),entries}));
-      entries=entries.map(normalizeEntry);sv(SK,entries);localStorage.setItem(SCHEMA_KEY,String(SCHEMA));localStorage.setItem('bt_last_migration_report',JSON.stringify({from:current,to:SCHEMA,changedAt:new Date().toISOString(),entries:entries.length}));return true
+      localStorage.setItem(SCHEMA_KEY,String(SCHEMA));localStorage.setItem('bt_last_migration_report',JSON.stringify({from:current,to:SCHEMA,changedAt:new Date().toISOString(),entries:entries.length,rewroteFinancialFacts:false}));return true
     }catch(err){console.error('Close-rule migration failed',err);return false}
   }
 
-  function clearTimer(e){if(!e)return e;e.minHoldDays=0;e.closeFeeCountdownDays='';e.earlyCloseFee=0;e.earlyTerminationFeeText='';e.closeRuleBasis='bonus';e.closeBufferDays=0;e.closeRestrictionType=core.payoutText([e.closeRuleText,e.analyzedTC].filter(Boolean).join(' '))?'payout-only':'none';if(e.closeRestrictionType==='none')e.closeRuleText='';e.closeRuleSource='manual';e.profileRuleOverride='';e.feeChecked=true;return core.sanitizeEntry(e)}
-  window.feeCheckRemoveTimer=function(){const p=typeof feeCheckPrompt!=='undefined'?feeCheckPrompt:window.feeCheckPrompt;if(!p)return;const id=p.entryId,current=entries.find(e=>e.id===id);entries=entries.map(e=>e.id===id?normalizeEntry(clearTimer({...e})):e);entries=sortE(entries);sv(SK,entries);feeCheckPrompt=null;cfm={title:'Timer Removed',msg:(current?current.bank+' ':'')+'early-close timer removed. This bank is now marked Safe to Close.',green:true,action:()=>{cfm=null;R()}};R()};
+  function clearTimer(e){if(!e)return e;e.minHoldDays=0;e.closeFeeCountdownDays='';e.feeChecked=false;e.closeTimerClearedWithoutFeeVerification=true;return e}
+  window.feeCheckRemoveTimer=function(){const p=typeof feeCheckPrompt!=='undefined'?feeCheckPrompt:window.feeCheckPrompt;if(!p)return;const id=p.entryId,current=entries.find(e=>e.id===id);entries=entries.map(e=>e.id===id?clearTimer({...e}):e);entries=sortE(entries);sv(SK,entries);feeCheckPrompt=null;cfm={title:'Timer Removed',msg:(current?current.bank+' ':'')+'early-close timer removed. The early-close fee was not changed and the account was not marked safe to close.',green:true,action:()=>{cfm=null;R()}};R()};
   window.feeCheckSave=function(){const p=typeof feeCheckPrompt!=='undefined'?feeCheckPrompt:window.feeCheckPrompt;if(!p)return;const id=p.entryId,months=Math.max(1,parseInt(p.months,10)||6),feeAmt=Math.max(0,parseFloat(p.feeAmount)||0);entries=entries.map(e=>{if(e.id!==id)return e;const x={...e},end=x.opened?addM(x.opened,months):'',days=x.opened&&end?dB(x.opened,end):months*30;x.minHoldDays=days;x.closeFeeCountdownDays=String(days);x.closeRuleBasis='opened';x.closeBufferDays=5;x.closeRestrictionType='manual-fixed';x.closeRuleSource='manual';x.earlyCloseFee=feeAmt;x.earlyTerminationFeeText=feeAmt?'$'+feeAmt.toLocaleString():'';x.closeRuleText=`Manual early-close hold: keep the account open for ${months} month${months===1?'':'s'} from the opened date${feeAmt?' to avoid a $'+feeAmt.toLocaleString()+' fee':''}.`;x.closeRuleSourceSentence=x.closeRuleText;x.fieldSources=(x.fieldSources&&typeof x.fieldSources==='object')?x.fieldSources:{};const meta={kind:'manual',confidence:'verified',source:'Set manually in the Early Closure Fee timer.',updatedAt:new Date().toISOString()};x.fieldSources.closeFeeCountdownDays=meta;x.fieldSources.closeRuleText=meta;x.fieldSources.closeRuleBasis=meta;return normalizeEntry(x)});entries=sortE(entries);sv(SK,entries);feeCheckPrompt=null;R()};
 
   function analyzerWrappersReady(){
@@ -235,6 +241,6 @@
   window.BT_APP_VERSION=VER;window.btCloseRulesVersion=VER;
   try{if(typeof buildPortableBackupPayload==='function'){const oldPortable=buildPortableBackupPayload;buildPortableBackupPayload=function(){const out=oldPortable();if(out)out.appVersion=VER;return out};window.buildPortableBackupPayload=buildPortableBackupPayload}}catch{}
   migrateOnce();
-  setTimeout(()=>{try{if(typeof entries!=='undefined')entries=entries.map(normalizeEntry);if(typeof R==='function')R()}catch(err){console.error('Close Rules Integration failed',err)}},0);
+  setTimeout(()=>{try{if(typeof R==='function')R()}catch(err){console.error('Close Rules Integration failed',err)}},0);
   setTimeout(()=>{try{const rep=window.btRunFullRegressionTests({force:true});if(!rep.ok)console.warn('Latest-release regression warnings',rep)}catch(err){console.error('Latest-release regression run failed',err)}},1800);
 })();

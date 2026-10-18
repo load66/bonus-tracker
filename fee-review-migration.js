@@ -78,7 +78,4 @@
 
   window.btMigrateImportedFeeReview=migrateImportedFeeReview;
   window.btFeeReviewMigrationVersion=VER;
-  const refresh=()=>{const changed=migrateImportedFeeReview();if(changed){try{R()}catch{}}};
-  setTimeout(refresh,120);
-  setTimeout(refresh,900);
 })();

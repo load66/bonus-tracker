@@ -191,5 +191,5 @@
   });
 
   window.btWellsProfessionalRuntimeVersion=VER;window.BT_APP_VERSION=VER;
-  setTimeout(()=>{try{entries=sortE((entries||[]).map(normalizeEntry));sv(SK,entries);window.__btWellsProfessionalRepairV3419=true;R()}catch{}},120);
+  setTimeout(()=>{try{window.__btWellsProfessionalRepairV3419=true;if(typeof R==='function')R()}catch{}},120);
 })();
