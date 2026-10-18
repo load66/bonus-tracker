@@ -4142,17 +4142,11 @@ function R(){const focusedBeforeRender=document.activeElement;const searchFocus=
   else if(tab==='tips')h+=rTips();
   else if(tab==='storage')h+=rTermsStorage();
   else if(tab==='bonuses')h+=typeof rBankBonuses==='function'?rBankBonuses():'<p>Bank bonus feed is loading.</p>';
-  // Put the fixed detail actions beside, not inside, the scroll viewport.
-  // A fixed button nested in the scroll container can appear correctly yet
-  // lose pointer events to the source/details controls during scrolling.
+  // The action bar is a sibling of .scroll, never inside clipped account content.
   let detailActionBar='';
-  if(bt360Detail){
-    const start=h.indexOf('<div class="bt360-detail-footer"');
-    const end=start<0?-1:h.indexOf('</div>',start);
-    if(start>=0&&end>=0){
-      detailActionBar=h.slice(start,end+6);
-      h=h.slice(0,start)+h.slice(end+6);
-    }
+  if(bt360Detail&&window.BT360?.detailFooter){
+    const record=sorted.find(e=>e.id===expanded);
+    if(record)detailActionBar=window.BT360.detailFooter(record);
   }
   h+='</div>';
   h+=detailActionBar;
