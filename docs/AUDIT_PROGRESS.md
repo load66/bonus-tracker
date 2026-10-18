@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: Codex, v3.6.8, codex/v3.6.8-detail-layout-reliability
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.8 mobile account-detail layout PR #181 (`codex/v3.6.8-detail-layout-reliability`): checkbox styles no longer shrink task editor text; timer countdown and long fee terms fit narrow screens; due-date controls wrap. Synthetic 320/375/390/430 px regression checks, app and service-worker cache bumped. PR CI https://github.com/load66/bonus-tracker/actions/runs/39116225469 PASS: bonus/cloud/UI units, Chromium, WebKit, release verification. No stored records or backend change. Next: merge, verify exact main CI and Pages publish; hosting usage credential requires owner rotation.
 
 - v3.6.7 monthly hero chart PR #177 (`codex/v3.6.7-tappable-hero-months`): tappable and keyboard-accessible month buttons, 44×44px minimum swipeable targets, selected receipt panel with bank/product, received date, amount, account-detail navigation and explicit empty month, single Tax-backed monthly source, filtered by year and Personal/Business. Tests: https://github.com/load66/bonus-tracker/actions/runs/39114463767 PASS (bonus/cloud/UI, Chromium, WebKit, release); selected-month 390px screenshots retained in browser CI artifacts. No backend or financial storage changes. Next: merge PR #177, verify exact main CI and Pages publish commit.
 
