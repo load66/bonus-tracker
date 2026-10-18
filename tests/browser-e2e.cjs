@@ -213,6 +213,24 @@ async function exercise(name,engine,url){
     await page.getByRole('checkbox',{name:'E2E checklist task',exact:true}).click();
     check('checklist completion persists in redesigned Requirements',(await record()).checklist.some(x=>x.text==='E2E checklist task'&&x.done)&&await page.locator('.bt360-panel').filter({hasText:'Requirements'}).count()>0);
     check('checklist exposes accessible completion state',await page.getByRole('checkbox',{name:'E2E checklist task',exact:true}).getAttribute('aria-checked')==='true');
+    await page.evaluate(()=>{
+      const e=entries[0];window.__layoutOriginal={checklist:e.checklist.map(x=>({...x})),customTimers:e.customTimers.map(x=>({...x})),monthlyFeeWaiverText:e.monthlyFeeWaiverText};
+      e.checklist[0].text='Complete qualifying electronic deposits and retain the supporting confirmation for the full statement period';
+      e.customTimers[0].text='Confirm the promotional deposit posted before the closing deadline';
+      e.monthlyFeeWaiverText='The monthly fee is waived when qualifying electronic deposits reach the required amount in each statement period, or when the opening balance threshold is met each day, or when a qualifying linked relationship is maintained.';
+      R();
+    });
+    for(const width of [320,375,390,430]){
+      await page.setViewportSize({width,height:844});
+      check('detail task, timer and waiver remain readable at '+width+'px',await page.evaluate(()=>{
+        const panel=document.querySelector('.bt360-detail-card'),task=panel.querySelector('.bt360-check .bt366-row-edit'),timer=panel.querySelector('.bt360-timer .bt366-row-edit'),fee=panel.querySelector('.bt360-info-long');
+        if(!task||!timer||!fee)return false;
+        const owner=task.parentElement,check=owner.querySelector('[role="checkbox"]'),a=check.getBoundingClientRect(),b=task.getBoundingClientRect();
+        return task.clientWidth>=120&&timer.clientWidth>=120&&a.right<=b.left+1&&b.right<=owner.getBoundingClientRect().right+1&&
+          fee.scrollWidth<=fee.clientWidth+1&&panel.scrollWidth<=panel.clientWidth+1&&getComputedStyle(fee.querySelector('div')).textAlign==='left';
+      }));
+    }
+    await page.evaluate(()=>{const e=entries[0],v=window.__layoutOriginal;e.checklist=v.checklist;e.customTimers=v.customTimers;e.monthlyFeeWaiverText=v.monthlyFeeWaiverText;delete window.__layoutOriginal;R()});
     await button('Tax').click();
     check('tax includes received bonus on open account',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));
     page.once('dialog',dialog=>dialog.accept('2026'));
