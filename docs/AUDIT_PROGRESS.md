@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: codex · v3.6.11 · codex/v3.6.11-detail-content-style
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.11 bonus-detail content presentation PR https://github.com/load66/bonus-tracker/pull/185 (`codex/v3.6.11-detail-content-style`): read-only financial requirement projection, compact countdown and fee summaries with expandable original terms, eligibility editor entry point, simplified lifecycle/closure view and Activity in account actions. Frontend application and service-worker cache bumped; canonical bonus, eligibility and financial engines unchanged, no saved records rewritten. Synthetic unit suites bonus/cloud/UI PASS on release-candidate CI. Chromium and WebKit 390px top/bottom visual screenshots, mobile behavior and source safety checks are release-gated by PR CI. Next: await full PR success, merge, then verify exact main GitHub Pages deployment. No backend release.
 
 - v3.6.10 usage precision PR pending (`codex/v3.6.10-usage-partial-precision`): optional missing memory data no longer hides a verified projection; positive R2 usage below 0.01 GB displays as less than 0.01 GB. Synthetic cloud and browser regressions added; local bonus, cloud, UI and release checks PASS. No backend, stored records or credential changes. Next: Chromium/WebKit PR verification, merge, main CI and Pages; Railway account credential still requires owner rotation.
 
