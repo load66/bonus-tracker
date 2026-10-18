@@ -139,7 +139,7 @@ function detailPanels(e){
 }
 function detailFooter(e){
  const primary=primaryAction(e);
- return '<div class="bt360-detail-footer" role="group" aria-label="Account actions"><button type="button" onclick="btOpenBonusAI('+arg(e.id)+')">Ask AI</button><button type="button" class="bt360-manage" onclick="openBankActions('+arg(e.id)+')">Manage</button><button type="button" class="bt360-primary" aria-label="'+safe(primary.label+' for '+e.bank)+'" onclick="'+primary.command+'">'+safe(primary.label)+'</button></div>';
+ return '<div class="bt360-detail-footer" role="group" aria-label="Account actions"><button type="button" onclick="btOpenBonusAI('+arg(e.id)+')">Ask AI</button><button type="button" class="bt360-primary" aria-label="'+safe(primary.label+' for '+e.bank)+'" onclick="'+primary.command+'">'+safe(primary.label)+'</button></div>';
 }
 function showTerms(bank){archivePane='saved';storageSearch=String(bank||'');expanded=null;tab='archive';R()}
 function back(){expanded=null;window.bt360ArchiveDetailId=null;R();const el=document.querySelector('.scroll');if(el)el.scrollTop=0}
