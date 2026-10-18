@@ -4750,7 +4750,7 @@ function doAddNew(){
   overwritePrompt=null;modal=null;expanded=next.id;tab='tracker';search='';showInlineAZ=false;inlineResult=null;
   R();
 }
-function getBackupStorageKeys(){return[SK,TK,DD_KEY,REQ_KEY,OFFER_HIST_KEY,TC_ARCHIVE_KEY,PHONE_KEY,DP_USER_KEY,COMMUNITY_DP_KEY,COMMUNITY_DP_SEED_KEY,PROFILE_EVT_KEY,BK_KEY,ANALYZER_MEMORY_KEY,ANALYZER_TRAINING_KEY,ANALYZER_RULES_KEY]}
+function getBackupStorageKeys(){return[SK,TK,DD_KEY,REQ_KEY,OFFER_HIST_KEY,TC_ARCHIVE_KEY,PHONE_KEY,DP_USER_KEY,COMMUNITY_DP_KEY,COMMUNITY_DP_SEED_KEY,PROFILE_EVT_KEY,BK_KEY,ANALYZER_MEMORY_KEY,ANALYZER_TRAINING_KEY,ANALYZER_RULES_KEY,'bt_hosting_usage_settings_v1']}
 function parseBackupStorageValue(raw){try{return JSON.parse(raw)}catch{return raw}}
 function storageValueForRestore(val){return typeof val==='string'?val:JSON.stringify(val)}
 function countBackupEntries(d){if(Array.isArray(d?.entries))return d.entries.length;const arr=backupArrayFromStorage(d,SK);return arr.length}
