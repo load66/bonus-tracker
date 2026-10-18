@@ -43,7 +43,7 @@ assert.doesNotMatch(requirements.html,/No checklist tasks saved yet/);
 assert.match(sandbox.BT360.detailPanels(e),/Direct deposits totaling \$10,000/);
 
 const fees=sandbox.BT360.feeDetail(e);
-assert.match(fees,/Monthly fee<\/span><div><b>\$15<\/b>/);
+assert.match(fees,/Monthly fee<\/span><div><b[^>]*>\$15<\/b>/);
 assert.match(fees,/ANY: \$500\+ electronic deposits/);
 assert.match(fees,/View saved fee terms/);
 assert.match(fees,/Fee waived with \$500 electronic deposits/,'Original fee quote stays available');
