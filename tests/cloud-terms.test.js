@@ -56,4 +56,18 @@ assert.equal(JSON.stringify([...storage]),beforeStorage,'Historical display and 
 const index=require('node:fs').readFileSync('index.html','utf8');
 assert(index.indexOf('cloud-terms-core.js')<index.indexOf('cloud-terms-history.js'));
 assert(index.indexOf('cloud-backup.js')<index.indexOf('cloud-terms-history.js'));
-console.log('Immutable historical T&C projection passed: saved quotes/rules, dedupe, source isolation, no account mutation, importer and cloud runtime wiring');
+
+(async()=>{
+ const vm=require('node:vm'),fs=require('node:fs'),local=new Map();let queued=0;
+ const store={getItem:k=>local.get(k)||null,setItem:(k,v)=>local.set(k,v),removeItem:k=>local.delete(k)};
+ const ctx={window:{BTTermsHistory:{queueSync(){queued++}}},localStorage:store,
+ sessionStorage:{getItem:()=>null,setItem(){},removeItem(){}},
+ navigator:{},AbortController,setTimeout,clearTimeout,Date,JSON,
+ fetch:async()=>({ok:true,status:200,json:async()=>({access_token:'test-token',refresh_token:'test-refresh',expires_in:3600})})};
+ vm.createContext(ctx);vm.runInContext(fs.readFileSync('bonus-ai-auth.js','utf8'),ctx);
+ await ctx.window.BTBonusAuth.signIn('synthetic@example.test','synthetic-value');
+ assert.equal(queued,1,'Sign-in must queue immutable cloud T&C upload');
+ assert.equal(ctx.window.BTBonusAuth.connected(),true);
+ console.log('Historical T&C cloud and sign-in tests passed');
+})().catch(err=>{console.error(err);process.exitCode=1});
+

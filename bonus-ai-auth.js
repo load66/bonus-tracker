@@ -39,5 +39,6 @@
     }
     return refreshPromise;
   }
-  window.BTBonusAuth={connected:()=>!!session(),token,signIn:(email,password)=>exchange('password',{email,password}),disconnect:clear};
+  async function signIn(email,password){const access=await exchange('password',{email,password});try{window.BTTermsHistory?.queueSync?.()}catch{}return access;}
+  window.BTBonusAuth={connected:()=>!!session(),token,signIn,disconnect:clear};
 })();
