@@ -1,4 +1,4 @@
-/* BonusTracker v3.6.3: presentation only. Canonical calculations and records are untouched. */
+/* BonusTracker v3.6.4: presentation only. Canonical calculations and records are untouched. */
 @font-face{font-family:Manrope;src:url('./fonts/manrope-latin-400-normal.woff2') format('woff2');font-weight:400;font-display:swap}
 @font-face{font-family:Manrope;src:url('./fonts/manrope-latin-600-normal.woff2') format('woff2');font-weight:600 900;font-display:swap}
 :root{color-scheme:dark;--bg:#07080C;--card:#12141C;--card2:#15171F;--border:#1E212C;--text:#F2F3F7;--muted:#A0A6B8;--sub:#A0A6B8;--mint:#5BE3B0;--good:#5BE3B0;--amber:#FFB86B;--bad:#FF8A8A;--blue:#8FB4FF;--violet:#C7A6FF}
@@ -183,7 +183,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var
 .bt360-data-pills button{flex:none;border:1px solid #1E212C;background:#15171F;color:#A0A6B8;border-radius:99px;min-height:36px;padding:6px 12px;font-weight:800;font-size:11px}
 .bt360-data-pills button.active{background:#123327;color:#5BE3B0;border-color:#234C3E}
 
-/* v3.6.3 mobile refinement — presentation only. */
+/* v3.6.4 mobile refinement — presentation only. */
 .bt362-year-pill{display:inline-flex;align-items:center;gap:7px;background:#15171F;border:1px solid #303443;border-radius:999px;padding:5px 9px;color:#8A90A3;font-size:10px;font-weight:800;min-width:0}
 .bt362-year-pill select{appearance:auto;color:#F2F3F7;background:transparent;border:0;padding:3px 1px;font-size:12px;font-family:inherit;font-weight:800;max-width:82px;cursor:pointer}
 .bt362-year-pill select:focus-visible{outline:2px solid #5BE3B0;outline-offset:3px}
