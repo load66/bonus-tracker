@@ -208,7 +208,9 @@ function loadTermsArchive(){
   return raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{}
 }
 function saveTermsArchive(rows){
-  return sv(TC_ARCHIVE_KEY,rows&&typeof rows==='object'?rows:{});
+  const saved=sv(TC_ARCHIVE_KEY,rows&&typeof rows==='object'?rows:{});
+  if(saved)window.BTTermsHistory?.queueSync?.();
+  return saved;
 }
 function termsArchiveKey(entry){return offerHistoryKey(entry)}
 function termsArchiveSourceText(e){
