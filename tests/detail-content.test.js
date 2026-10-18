@@ -258,7 +258,7 @@ const conditionalClosing={...e,earlyCloseFee:0,earlyTerminationFeeText:'No early
 const feeCheck=entry=>sandbox.BT360.closeCheckPresentation(entry).find(item=>item.label==='Early close fee window cleared');
 assert.equal(feeCheck(conditionalClosing).ok,false,'Conditional fee-free terms are not unconditional clearance');
 assert.match(feeCheck(conditionalClosing).detail,/conditional|Needs review/i);
-const explicitFree={...conditionalClosing,earlyTerminationFeeText:'No early closing fee.'};
+const explicitFree={...conditionalClosing,bonusRecd:'2026-10-12',earlyTerminationFeeText:'No early closing fee.'};
 assert.equal(feeCheck(explicitFree).ok,true,'Explicit unconditional no-fee evidence may be shown as cleared');
 assert.match(feeCheck(explicitFree).detail,/Explicit no-fee terms saved/);
 assert.equal(sandbox.BT360.closeCheckPresentation(explicitFree).find(x=>x.label==='Minimum hold met').ok,true,'Verified payout-only closure with posted bonus must not need a fictitious fixed hold');
