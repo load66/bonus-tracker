@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.10';
+const APP_VERSION='3.6.11';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4881,7 +4881,7 @@ function startCloseFlow(id,preferredMode='actual'){
   if(!e)return;
   const eligibility=churnEligibilityValidation(e);
   if(!eligibility.ok){
-    cfm={title:'T&C Churn Verification Required',msg:'Do not close this account until the tracker has verified how future eligibility works from the saved T&C. '+(eligibility.reason||'Review repeatability, cooldown, and the clock anchor.'),green:true,confirmLabel:'Review Entry',action:()=>{cfm=null;openEdit(id)}};
+    cfm={title:'T&C Churn Verification Required',msg:'Do not close this account until the tracker has verified how future eligibility works from the saved T&C. '+(eligibility.reason||'Review repeatability, cooldown, and the start date.'),green:true,confirmLabel:'Review Entry',action:()=>{cfm=null;openEdit(id)}};
     R();
     return;
   }
@@ -6483,6 +6483,7 @@ entries=sortE(entries);R();
     if(!e){R();return}
     expanded=id;
     if(action==='askai'){R();window.btOpenBonusAI(id);return}
+    if(action==='activity'){window.__btActivityEntry=id;R();return}
     if(action==='edit'){openEdit(id);return}
     if(action==='reqmet'){confirmMarkReqMet(id);return}
     if(action==='received'){confirmMarkReceived(id);return}
@@ -6524,6 +6525,7 @@ entries=sortE(entries);R();
       h+=bankActionSheetButton(e.id,'timer','⏱️','Add timer','Set a reminder or deadline');
     }
     h+=bankActionSheetButton(e.id,'askai','✦','Ask AI','Questions about this bonus');
+    h+=bankActionSheetButton(e.id,'activity','◷','Activity','Saved account history and analysis');
     if(window.BT360)h+='<details class="bt366-advanced-actions"><summary>Advanced tracker tools</summary>'+renderActionCenter()+'</details>';
     h+=bankActionSheetButton(e.id,'delete','🗑️','Delete account','Remove this account record',true);
     h+='<button class="bt-ba-mini cancel" onclick="event.stopPropagation();closeBankActions()"><span><b>Cancel</b></span></button>';
@@ -6632,7 +6634,7 @@ entries=sortE(entries);R();
         historyHtml += renderAnalyzerHistory(e);
         historyHtml += renderOfferHistory(e);
         historyHtml += renderAnalyzedTermsCard(e);
-        if(historyHtml)h += '<details class="profile-section" data-entry-id="'+profileSectionAttr(e.id)+'" data-section-key="history"'+profileSectionOpenAttr(e.id,'history')+' ontoggle="handleProfileSectionToggle(this)"><summary><span>Activity & Analysis</span><em>View</em></summary><div class="profile-section-body">'+historyHtml+'</div></details>';
+        if(historyHtml&&!window.BT360)h += '<details class="profile-section" data-entry-id="'+profileSectionAttr(e.id)+'" data-section-key="history"'+profileSectionOpenAttr(e.id,'history')+' ontoggle="handleProfileSectionToggle(this)"><summary><span>Activity & Analysis</span><em>View</em></summary><div class="profile-section-body">'+historyHtml+'</div></details>';
 
         if(!window.BT360){h += '<div class="card-btns">';
         if(!e.closed&&e.bonusRecd) h += actionBtn('cls',I.lock,'Record closure',`event.stopPropagation();startCloseFlow('${e.id}','actual')`);
@@ -6644,7 +6646,9 @@ entries=sortE(entries);R();
       h += '</div>';
     });
 
-    return h + rBankActions();
+    const activity=entries.find(x=>x.id===window.__btActivityEntry);
+    const activitySheet=activity?'<div class="ov" onclick="window.__btActivityEntry=null;R()"><div class="modal bt371-activity" role="dialog" aria-label="Activity" onclick="event.stopPropagation()"><div class="m-hdr"><h2>Activity</h2><button type="button" onclick="window.__btActivityEntry=null;R()" aria-label="Close activity">×</button></div><div class="profile-section-body">'+renderEntryHistory(activity)+renderAnalyzerHistory(activity)+renderOfferHistory(activity)+renderAnalyzedTermsCard(activity)+'</div></div></div>':'';
+    return h + rBankActions()+activitySheet;
   }
 
   window.confirmMarkReceived=confirmMarkReceived;

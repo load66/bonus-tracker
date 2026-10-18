@@ -162,6 +162,10 @@ async function exercise(name,engine,url){
     const beforeDisclosure=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     check('Tracker no longer displays the legacy Action Center',await page.locator('.bt360-legacy-actions').count()===0);
     check('Tracker shows compact account row, not old full card',await page.locator('.bt366-compact-row').count()===1&&await page.locator('.bt366-compact-row .card-mini-chip').count()===0);
+    for(const section of ['Bonuses','Tax','Data','Archive','Tracker']){
+      await button(section).click();
+      check(section+' rendered text uses customer wording',await page.locator('#app').innerText().then(s=>!/(\bnull\b|structured rule|\banchor\b|verified \$0|\bprovenance\b)/i.test(s)));
+    }
     await page.locator('.bt366-compact-row').first().click();
     await page.setViewportSize({width:390,height:844});
     check('detail has exactly one header and one five-step strip',
@@ -173,6 +177,31 @@ async function exercise(name,engine,url){
       await page.getByRole('button',{name:'Manage',exact:true}).count()===0&&await page.getByRole('button',{name:'More account actions'}).count()===1);
     check('fixed bar is outside scrolling card',await page.locator('.bt360-detail-footer').evaluate(e=>e.parentElement?.id==='app'&&!e.closest('.scroll')));
     await page.screenshot({path:path.join(output,name+'-bonus-detail-in-progress-390.png')});
+    await page.evaluate(()=>{
+      window.__beforeDetailFixture={entries,expanded};
+      entries=[{id:'CHA-P-01',bank:'Chase',accountType:'personal',opened:'2026-10-15',bonus:300,reqDays:90,requiredDaysText:'90 calendar days',checklist:[],customTimers:[{id:'due',text:'Complete qualifying direct deposits during the promotional period',date:'2027-01-13',startDate:'2026-10-15',daysRequired:90,done:false}],monthlyFeeAmountText:'$15',monthlyFeeWaiverText:'Chase Total Checking monthly service fee waived with any ONE of: $500 electronic deposits; $1,500 daily beginning balance; $5,000 average beginning day balance; linked qualifying checking account.',earlyTerminationFeeText:'Fee not stated in terms.',financialRules:{requirements:[{id:'dd',kind:'direct-deposit',text:'Direct deposits totaling $10,000',amount:10000,timing:{basis:'opened',value:90,unit:'calendar-days'}}],accounts:[{role:'primary',fee:{amount:15,waiver:{operator:'any',conditions:[{kind:'direct-deposit',amount:500},{kind:'balance-hold',amount:1500,metric:'minimum-beginning-day-balance'},{kind:'balance-hold',amount:5000,metric:'average-beginning-day-balance'},{kind:'relationship',text:'Linked checking'}]}}}],closure:{earlyCloseFee:null}},churn:'1',notes:'Synthetic screenshot fixture'}];
+      expanded='CHA-P-01';R();
+    });
+    check('Chase structured requirement shows target and exact due date',await page.locator('.bt371-requirement').innerText().then(s=>s.includes('Direct deposits totaling $10,000 · due Jan 13, 2027')&&s.includes('$0 of $10,000 · 0 recorded')));
+    check('Chase requirement has progress and a checkbox with no misleading empty message',await page.locator('.bt371-requirement .bt371-progress').count()===1&&await page.locator('.bt371-requirement [role="checkbox"]').count()===1&&await page.getByText('No checklist tasks saved yet').count()===0);
+    check('timer title fits one line and omits raw editor labels',await page.locator('.bt371-timer summary b').evaluate(e=>e.scrollWidth<=e.clientWidth+1)&&!/(Due Date:|Start \+ Days:)/.test(await page.locator('.bt371-timer summary').innerText()));
+    await page.locator('.bt371-timer summary').click();
+    check('timer detail retains original description',await page.locator('.bt371-timer-detail').innerText().then(s=>s.includes('Complete qualifying direct deposits during the promotional period')));
+    check('waiver summary is clamped to two lines',await page.locator('.bt371-waiver-summary').evaluate(e=>e.getBoundingClientRect().height<=parseFloat(getComputedStyle(e).lineHeight)*2+2));
+    await page.getByText('View full terms').click();
+    check('full saved waiver wording expands unchanged',await page.locator('.bt371-fee-row p').innerText()==='Chase Total Checking monthly service fee waived with any ONE of: $500 electronic deposits; $1,500 daily beginning balance; $5,000 average beginning day balance; linked qualifying checking account.');
+    check('unknown close fee has customer wording',await page.locator('.bt360-detail-card').innerText().then(s=>s.includes('Not stated in terms · Needs review')));
+    check('no internal copy in rendered detail',await page.locator('.bt360-detail-card').innerText().then(s=>!/(\bnull\b|structured rule|\banchor\b|verified \$0|\bprovenance\b)/i.test(s)));
+    await page.screenshot({path:path.join(output,name+'-chase-in-progress-390.png')});
+    await page.getByRole('button',{name:'Set rule'}).first().click();
+    check('Set rule opens this entry editor',await page.evaluate(()=>modal?.id==='CHA-P-01'&&modal?._edit===true));
+    await button('Cancel').click();
+    await page.evaluate(()=>{const previous=window.__beforeDetailFixture;entries=previous.entries;expanded=previous.expanded;delete window.__beforeDetailFixture;R()});
+    check('Activity is absent from detail content',await page.locator('.bt360-detail-card').getByText('Activity & Analysis').count()===0);
+    await page.getByRole('button',{name:'More account actions'}).click();
+    await page.getByRole('button',{name:/Activity Saved account history/}).click();
+    check('Activity opens from account menu',await page.getByRole('dialog',{name:'Activity'}).isVisible());
+    await page.getByRole('button',{name:'Close activity'}).click();
     check('render never modifies user record',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,beforeDisclosure));
     const id=(await record()).id;
     await page.reload();await settleStartup();check('reload preserves identity and notes',(await record()).id===id&&(await record()).notes===payload.entry.notes);
@@ -202,6 +231,16 @@ async function exercise(name,engine,url){
       return content.bottom<=footer.top+2;
     }));
     await page.screenshot({path:path.join(output,name+'-bonus-detail-ready-390.png')});
+    await page.evaluate(()=>{
+      window.__readyScreenshotOriginal={entries,expanded};
+      const source=entries[0];
+      entries=[{...source,id:'WEL-P-01',bank:'Wells Fargo Everyday',bonus:325,opened:'2026-03-02',reqMet:'2026-05-15',bonusRecd:'2026-06-01',checklist:[],customTimers:[],monthlyFeeChecked:true,notes:'Synthetic ready-to-close screenshot fixture'}];
+      expanded='WEL-P-01';R();
+    });
+    check('ready-to-close synthetic entry shows Close stage and checks',await page.locator('.bt360-steps span.current').innerText()==='Close'&&await page.locator('[data-bt-hold] .bt360-check').count()>0);
+    check('ready detail has no internal copy',await page.locator('.bt360-detail-card').innerText().then(s=>!/(\bnull\b|structured rule|\banchor\b|verified \$0|\bprovenance\b)/i.test(s)));
+    await page.screenshot({path:path.join(output,name+'-ready-to-close-390.png')});
+    await page.evaluate(()=>{const previous=window.__readyScreenshotOriginal;entries=previous.entries;expanded=previous.expanded;delete window.__readyScreenshotOriginal;R()});
     await page.getByRole('button',{name:'Add bank phone number'}).click();
     check('phone editor carries bank name and account type',await page.locator('#ph_new_bank').inputValue()==='E2E Verification Bank'&&await page.locator('#ph_new_personal').isVisible());
     await page.getByRole('button',{name:'← Settings'}).click();
@@ -223,11 +262,11 @@ async function exercise(name,engine,url){
     for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
       check('detail task, timer and waiver remain readable at '+width+'px',await page.evaluate(()=>{
-        const panel=document.querySelector('.bt360-detail-card'),task=panel.querySelector('.bt360-check .bt366-row-edit'),timer=panel.querySelector('.bt360-timer .bt366-row-edit'),fee=panel.querySelector('.bt360-info-long');
+        const panel=document.querySelector('.bt360-detail-card'),task=panel.querySelector('.bt360-check .bt366-row-edit'),timer=panel.querySelector('.bt371-timer-main'),fee=panel.querySelector('.bt371-waiver-summary');
         if(!task||!timer||!fee)return false;
         const owner=task.parentElement,check=owner.querySelector('[role="checkbox"]'),a=check.getBoundingClientRect(),b=task.getBoundingClientRect();
-        return task.clientWidth>=120&&timer.clientWidth>=120&&a.right<=b.left+1&&b.right<=owner.getBoundingClientRect().right+1&&
-          fee.scrollWidth<=fee.clientWidth+1&&panel.scrollWidth<=panel.clientWidth+1&&getComputedStyle(fee.querySelector('div')).textAlign==='left';
+        return task.clientWidth>=120&&timer.clientWidth>=100&&a.right<=b.left+1&&b.right<=owner.getBoundingClientRect().right+1&&
+          fee.getBoundingClientRect().height<=parseFloat(getComputedStyle(fee).lineHeight)*2+2&&panel.scrollWidth<=panel.clientWidth+1;
       }));
     }
     await page.evaluate(()=>{const e=entries[0],v=window.__layoutOriginal;e.checklist=v.checklist;e.customTimers=v.customTimers;e.monthlyFeeWaiverText=v.monthlyFeeWaiverText;delete window.__layoutOriginal;R()});
