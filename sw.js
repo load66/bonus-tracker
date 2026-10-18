@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.0: BonusTracker mockup UI and owner-only usage dashboard.
+// Version 3.6.1: fix escaped panel heading markup and badge rendering.
 
-const V = 'bt-v3.6.0-ui1';
+const V = 'bt-v3.6.1-panel1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
