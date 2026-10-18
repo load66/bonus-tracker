@@ -245,7 +245,7 @@ async function refreshUsage(force=false){
  if(!window.BTBonusAuth?.connected?.()){usageError='Sign in to Cloud protection to view hosting usage.';return}
  usageLoading=true;usageError='';if(window.bt360SettingsOpen)R();
  try{
-  const send=async token=>fetch(HOST_API,{method:'GET',credentials:'omit',cache:'no-store',headers:{Authorization:'Bearer '+token}});
+  const send=async token=>fetch(HOST_API+(force?'?refresh=1':''),{method:'GET',credentials:'omit',cache:'no-store',headers:{Authorization:'Bearer '+token}});
   let response=await send(await window.BTBonusAuth.token());
   if(response.status===401)response=await send(await window.BTBonusAuth.token(true));
   if(!response.ok)throw Error('Usage unavailable');
@@ -277,6 +277,7 @@ function saveBannerMonth(month){
 const USAGE_REASONS={
  token_missing:'Add a Railway API token (account token, not project token) to the backend as RAILWAY_API_TOKEN.',
  token_unauthorized:'Railway rejected the token. Create an account token (not a project token) and replace RAILWAY_API_TOKEN.',
+ permission_denied:'Railway accepted the token, but one or more usage fields are not accessible. Check token permissions in Railway.',
  workspace_not_found:'This account token cannot access a Railway workspace.',
  project_not_visible:"This token can't see the trading-journal-ai project.",
  estimate_missing:'Railway did not report a complete billing estimate.',
@@ -287,6 +288,8 @@ const USAGE_REASONS={
  response_changed:"Railway changed its billing data format; usage can't be verified until updated."
 };
 const RAILWAY_USAGE_URL='https://railway.com/workspace/usage';
+const USAGE_STEPS=['me','project','usage','estimatedUsage','metrics'];
+function allowedDeniedFields(railway){return Array.isArray(railway?.deniedFields)?[...new Set(railway.deniedFields.filter(x=>USAGE_STEPS.includes(x)))]:[];}
 function usageCard(){
  const month=new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'});
  const cfg=hostSettings(),railway=usageData?.railway,r2=usageData?.r2;
@@ -301,6 +304,8 @@ function usageCard(){
  else if(!window.BTBonusAuth?.connected?.())content='<p class="bt360-muted">Sign in to Cloud protection to view hosting usage.</p><button class="bt360-link" onclick="BT360.closeSettings();btOpenCloudBackup()">Open Cloud protection</button>';
  else if(ok||partial){
    if(partial)content+='<p class="bt360-usage-warning">Railway provided incomplete usage data. The total is incomplete; missing values are not zero.</p>';
+   const denied=allowedDeniedFields(railway);
+   if(denied.length)content+='<p class="bt360-usage-warning">Railway permission denied for: '+safe(denied.join(', '))+'.</p>';
    if(ok&&current!==null&&projected!==null){
      const ratio=projected/cfg.allowance,label=ratio>1?'Over plan':ratio>=0.8?'Near limit':'Within plan',tone=ratio>1?'bad':ratio>=0.8?'warning':'positive';
      content+='<div class="bt360-usage-top"><div><span>Cost so far</span><strong>Verified '+fmtCost(current)+'</strong><small>Projected '+fmtCost(projected)+' by billing period end</small></div><span class="bt360-chip '+tone+'">'+label+'</span></div>';
@@ -309,6 +314,7 @@ function usageCard(){
      const subtotal=cleanCost(railway?.knownCostSubtotal);
      content+='<div class="bt360-usage-top"><div><span>Complete cost total</span><strong>'+(current===null?missingLabel:'Verified '+fmtCost(current))+'</strong><small>Verified subtotal: '+(subtotal===null?missingLabel:fmtCost(subtotal))+'</small><small>Projected billing usage: '+(projected===null?missingLabel:'Verified '+fmtCost(projected))+'</small></div></div>';
    }
+   if(projected===null)content+='<p class="bt360-muted">Projection not available from Railway</p>';
    const services=Array.isArray(railway.services)?railway.services:[];
    if(services.length)content+='<div class="bt360-usage-services">'+services.map(x=>{
      const value=cleanCost(x.costSoFar);
@@ -322,6 +328,9 @@ function usageCard(){
  }else{
    const code=typeof railway?.reasonCode==='string'?railway.reasonCode:(status==='not_configured'?'token_missing':'response_changed');
    content+='<p class="bt360-usage-warning">'+safe(USAGE_REASONS[code]||USAGE_REASONS.response_changed)+'</p>';
+   const denied=allowedDeniedFields(railway);
+   if(code==='permission_denied'&&denied.length)content+='<p class="bt360-muted">Denied field: '+safe(denied.join(', '))+'</p>';
+   if(USAGE_STEPS.includes(railway?.failedStep))content+='<p class="bt360-muted">Failed check: '+safe(railway.failedStep)+'</p>';
  }
  if(!ok&&!partial&&usageError)content+='<p class="bt360-muted">'+safe(usageError)+'</p>';
  content+='<div class="bt360-usage-controls"><button class="bt360-link" onclick="BT360.refreshUsage(true)">Try again</button><a href="'+RAILWAY_USAGE_URL+'" target="_blank" rel="noopener noreferrer">View Railway usage ↗</a></div>';
@@ -347,10 +356,10 @@ async function backUpNow(){
 function settings(){
  const toggles=[['deadlines','Deadlines','3 and 1 day before'],['payouts','Payouts and close dates','When ready'],['eligible','Eligible again','7 days before and on the day']];
  const buttons=toggles.map(([k,label,description])=>'<button class="bt360-settings-row" role="switch" aria-checked="'+noticePrefs[k]+'" onclick="BT360.setNotice(\''+k+'\')"><span><b>'+label+'</b><small>'+description+'</small></span><i class="bt360-toggle '+(noticePrefs[k]?'checked':'')+'"></i></button>').join('');
- return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.7</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
+ return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.8</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
  cloudSettingsCard()+
  usageCard()+
- panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.7. Push delivery is not active.</p>')+
+ panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.8. Push delivery is not active.</p>')+
  panel('Data','<button class="bt360-settings-row" onclick="BT360.closeSettings();exportBackup()">Export backup file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.closeSettings();importBackup()">Restore from file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.openPhonebook()">Bank phone numbers <span>›</span></button>')+
  '<button class="bt360-reset" onclick="BT360.closeSettings();resetAllData()">Reset this device <small>Two confirmations and a safety backup</small></button></section></div>';
 }
