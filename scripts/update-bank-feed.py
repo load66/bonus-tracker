@@ -251,32 +251,147 @@ def collect_source(source, now, previous):
     for url in source['urls']:
         try:
             rows = parse_feed(download(url), now, source)
-            return rows, {'id': source['id'], 'name': source['name'], 'checkedAt': now.isoformat(), 'status': 'ok'}
+            return rows, {'id': source['id'], 'name': source['name'],
+                          'checkedAt': now.isoformat(), 'status': 'ok'}
         except Exception as exc:
             print(source['name'], 'feed unavailable:', type(exc).__name__, file=sys.stderr)
-    old = next((s for s in previous.get('sources', []) if s.get('id') == source['id']), {})
-    checked = old.get('checkedAt') or (previous.get('checkedAt') if source['id'] == 'doc' and previous.get('schemaVersion') == 1 else None)
-    rows = [r for r in previous.get('offers', []) if r.get('sourceId') == source['id'] or (source['id'] == 'doc' and r.get('source') == source['name'])]
-    kept = []
-    for row in rows:
-        try:
-            if safe_link(str(row.get('url', '')), source) and dt.timedelta(0) <= now - dt.datetime.fromisoformat(row['publishedAt']) <= dt.timedelta(days=90):
-                kept.append(row)
-        except (KeyError, ValueError, TypeError):
-            pass
-    rows = kept
-    return rows, {'id': source['id'], 'name': source['name'], 'checkedAt': checked, 'status': 'unavailable'}
+    old = next((v for v in previous.get('sources', []) if v.get('id') == source['id']), {})
+    return [], {'id': source['id'], 'name': source['name'],
+                'checkedAt': old.get('checkedAt') or previous.get('checkedAt'),
+                'status': 'unavailable'}
+
+def prior_posts(previous, now):
+    rows = []
+    for offer in previous.get('offers', []):
+        links = offer.get('links') if isinstance(offer.get('links'), list) else [offer]
+        for link in links:
+            sid = link.get('sourceId') or offer.get('sourceId')
+            source = next((v for v in SOURCES if v['id'] == sid), None)
+            title = link.get('title') or offer.get('title') or offer.get('headline') or ''
+            url = link.get('url') or offer.get('url') or ''
+            if not source or not safe_link(url, source):
+                continue
+            identity = offer_identity(title)
+            if not identity:
+                continue
+            try:
+                published = dt.datetime.fromisoformat(link.get('publishedAt') or offer['publishedAt'])
+                if not published.tzinfo or not dt.timedelta(0) <= now - published <= dt.timedelta(days=90):
+                    continue
+            except (TypeError, KeyError, ValueError):
+                continue
+            rows.append({'title': title[:300], 'url': url, 'source': source['name'],
+                         'sourceId': sid, 'publishedAt': published.isoformat(),
+                         'availability': link.get('availability') or offer.get('availability', 'unknown'),
+                         'groupKey': title_key(title), **identity,
+                         'expiresAt': link.get('expiresAt') or offer.get('expiresAt'),
+                         'ended': False, 'updated': bool(re.match(r'^\s*(?:\(update\)|\[update\]|update[:\-])', title, re.I))})
+    return rows
 
 def build_payload(now, previous=None):
     previous = previous or {}
     with ThreadPoolExecutor(max_workers=3) as pool:
         results = list(pool.map(lambda source: collect_source(source, now, previous), SOURCES))
-    rows = [r for offers, _ in results for r in offers]
+    fresh = [row for posts, _ in results for row in posts]
     states = [state for _, state in results]
-    checks = [s['checkedAt'] for s in states if s.get('checkedAt')]
+    checks = [v.get('checkedAt') for v in states if v.get('checkedAt')]
     if not checks:
         raise ValueError('No source is available and no last-good snapshot exists')
-    return {'schemaVersion': 2, 'checkedAt': max(checks), 'sources': states, 'offers': sorted(rows, key=lambda x: x['publishedAt'], reverse=True)[:200]}
+    tombstones = {}
+    for row in previous.get('endedOffers', []):
+        if isinstance(row, dict) and isinstance(row.get('family'), str):
+            try:
+                when = dt.datetime.fromisoformat(row['at'])
+                if dt.timedelta(0) <= now - when <= dt.timedelta(days=90):
+                    tombstones[(row['family'], row.get('amount'))] = row['at']
+            except (KeyError, TypeError, ValueError):
+                pass
+    for post in fresh:
+        if post['ended']:
+            key = (family_key(post), post['amount'])
+            tombstones[key] = max(tombstones.get(key, ''), post['publishedAt'])
+    posts_by_url = {}
+    for post in prior_posts(previous, now) + [x for x in fresh if not x['ended']]:
+        key = (post['url'], family_key(post), post['amount'])
+        old = posts_by_url.get(key)
+        if old is None or (post['publishedAt'], post['title']) >= (old['publishedAt'], old['title']):
+            posts_by_url[key] = post
+    families = {}
+    for post in posts_by_url.values():
+        family = family_key(post)
+        marker = max(tombstones.get((family, post['amount']), ''), tombstones.get((family, None), ''))
+        if marker and post['publishedAt'] <= marker:
+            continue
+        families.setdefault(family, []).append(post)
+    previous_by_id = {o.get('id'): o for o in previous.get('offers', []) if o.get('id')}
+    previous_by_family = {}
+    for o in previous.get('offers', []):
+        identity = offer_identity(o.get('title') or o.get('headline') or '')
+        if identity:
+            family = family_key(identity)
+            if family not in previous_by_family or o.get('publishedAt', '') > previous_by_family[family].get('publishedAt', ''):
+                previous_by_family[family] = o
+    merged = []
+    for family, posts in families.items():
+        posts.sort(key=lambda x: (x['publishedAt'], x['url']), reverse=True)
+        primary = posts[0]
+        # Newest amount is authoritative for one bank/product/region family.
+        matching = [p for p in posts if p['amount'] == primary['amount']]
+        identity = {k: primary[k] for k in ('bank', 'product', 'amount', 'region')}
+        canonical_id = offer_id(identity, primary['url'])
+        prior = previous_by_id.get(canonical_id)
+        family_before = previous_by_family.get(family)
+        first = (prior or {}).get('firstSeenAt') or (previous.get('checkedAt') if previous.get('schemaVersion') in (1, 2) and family_before else now.isoformat())
+        expiry = next((p['expiresAt'] for p in matching if p.get('expiresAt')), None)
+        if expiry:
+            try:
+                if dt.date.fromisoformat(expiry) < now.date():
+                    continue
+            except ValueError:
+                expiry = None
+        links = [{'title': p['title'], 'url': p['url'], 'sourceId': p['sourceId'],
+                  'source': p['source'], 'publishedAt': p['publishedAt'],
+                  'availability': p['availability']} for p in matching]
+        change = (prior or {}).get('change')
+        if (family_before and family_before.get('amount') is not None and
+                primary['amount'] is not None and family_before.get('amount') != primary['amount'] and
+                primary['publishedAt'] > family_before.get('publishedAt', '')):
+            change = {'type': 'Increased' if primary['amount'] > family_before['amount'] else 'Decreased',
+                      'from': family_before['amount'], 'to': primary['amount'], 'at': now.isoformat()}
+        elif change:
+            try:
+                if now - dt.datetime.fromisoformat(change['at']) > dt.timedelta(days=7):
+                    change = None
+            except (KeyError, TypeError, ValueError):
+                change = None
+        try:
+            new = now - dt.datetime.fromisoformat(first) <= dt.timedelta(days=7)
+        except (ValueError, TypeError):
+            new = False
+        badges = []
+        if change:
+            badges.append(change['type'])
+        if new and not change:
+            badges.append('New')
+        if primary['updated'] and now - dt.datetime.fromisoformat(primary['publishedAt']) <= dt.timedelta(days=7):
+            badges.append('Updated')
+        if expiry and 0 <= (dt.date.fromisoformat(expiry) - now.date()).days <= 14:
+            badges.append('Ending soon')
+        display_amount = '$' + '{:,.0f}'.format(primary['amount']) if primary['amount'] is not None else 'Amount needs review'
+        merged.append({'id': canonical_id, **identity,
+                       'displayTitle': primary['bank'] + ' · ' + primary['product'].capitalize() + ' · ' + display_amount,
+                       'title': primary['title'], 'headline': primary['title'],
+                       'url': primary['url'], 'sourceId': primary['sourceId'], 'source': primary['source'],
+                       'publishedAt': primary['publishedAt'], 'firstSeenAt': first,
+                       'expiresAt': expiry, 'availability': primary['availability'],
+                       'groupKey': canonical_id, 'links': links, 'badges': badges,
+                       'change': change})
+    merged.sort(key=lambda o: (0 if 'Increased' in o['badges'] else 1 if 'New' in o['badges'] else 2,
+                               -dt.datetime.fromisoformat(o['publishedAt']).timestamp(), o['id']))
+    return {'schemaVersion': 3, 'checkedAt': max(checks), 'sources': states,
+            'endedOffers': [{'family': f, 'amount': a, 'at': when}
+                           for (f, a), when in sorted(tombstones.items())],
+            'offers': merged[:200]}
 
 def main():
     now = dt.datetime.now(dt.timezone.utc)
