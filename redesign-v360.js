@@ -475,8 +475,8 @@ function detailPanels(e){
  }
  const readyWork=ready?h.slice(savedWorkStart):'';
  if(ready)h=h.slice(0,savedWorkStart);
- // Fees are also relevant to held, close-ready, closed, and churn-list records.
- h+=panel('Fees & waivers',feeDetail(e));
+ // Close-ready cards must lead with close checks, while all states keep fee history.
+ if(!ready)h+=panel('Fees & waivers',feeDetail(e));
  if(!closed&&(e.dataPoint||e.completeBonusText||e.notes))h+='<details class="bt366-offer-notes"><summary>Offer notes</summary><p>'+safe([e.dataPoint,e.completeBonusText,e.notes].filter(Boolean).join('\n\n'))+'</p></details>';
  if(ready||code==='HOLD_OPEN'||code==='BONUS_RECEIVED'){
   const check=closeReadiness(e);
@@ -496,6 +496,7 @@ function detailPanels(e){
   ];
   h+='<div data-bt-hold>'+panel(ready?'Close checks':'Hold & close checks',items.map(item=>'<div class="bt360-check '+(item.ok?'done':'unknown')+'"><span class="bt3611-check-icon">'+(item.ok?'✓':'')+'</span><div><b>'+safe(item.label)+'</b><small>'+safe(item.detail)+'</small></div></div>').join(''))+'</div>';
  }
+ if(ready)h+=panel('Fees & waivers',feeDetail(e));
  if(ready){
   const phoneRow=getPhoneBook().find(row=>{try{return bankIdentity(row.bank).family===bankIdentity(e.bank).family}catch{return row.bank===e.bank}});
   const phone=phoneRow?.[audience]||'';
