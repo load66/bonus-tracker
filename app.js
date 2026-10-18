@@ -6535,7 +6535,9 @@ entries=sortE(entries);R();
     const archiveView=arguments[1]===true;
     sorted=sorted.filter(e=>isArchivedTrackerEntry(e)===archiveView || (archiveView&&window.bt360ArchiveDetailId===e.id));
     if(window.BT360)sorted=sorted.filter(e=>window.BT360.scope(e));
-    // Preserve closed but repeatable cooldown accounts in Tracker; canonical archival controls visibility.
+    // Cooldown accounts are kept in Archive > Waiting to churn; the Tracker
+    // lists only open account cards. The eligibility summaries still use all entries.
+    if(window.BT360&&!archiveView)sorted=sorted.filter(e=>!e.closed||e.id===expanded);
     const q=search.toLowerCase();
     const filtered=q?sorted.filter(e=>(e.bank||'').toLowerCase().includes(q)||(e.id||'').toLowerCase().includes(q)):sorted;
     const f=!q&&expanded&&sorted.some(e=>e.id===expanded)?sorted.filter(e=>e.id===expanded):(window.BT360?.selectedStage&&!archiveView?filtered.filter(e=>lifecycleViewForEntry(e).code===window.BT360.selectedStage):filtered);
