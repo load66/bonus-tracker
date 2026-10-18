@@ -64,7 +64,8 @@ assert(sandbox.btSemanticTimerKind({text:'Call bank about debit card'})==='custo
 const normalized=sandbox.normalizeTimerList([{text:'Bonus requirement deadline',date:'2026-11-08'}]);
 assert(normalized[0].kind==='requirement','Normalized timer did not persist semantic kind');
 const citi=sandbox.entries[0];
-assert(citi.customTimers[0].kind==='requirement','Existing Citi timer was not migrated to persisted requirement kind');
+assert(citi.customTimers[0].kind===undefined,'Read-only startup must not rewrite a saved Citi timer');
+assert(sandbox.normalizeTimerList(citi.customTimers)[0].kind==='requirement','Existing Citi timer is not classified correctly in the view projection');
 const state=sandbox.btSemanticStateForEntry(citi);
 assert(state.label==='Requirement Due','Citi current stage is not Requirement Due');
 assert(state.support==='90d left · Due Nov 8, 2026','Requirement support line is inconsistent: '+state.support);
@@ -80,7 +81,7 @@ const collected=sandbox.collectModalEntryData();
 assert(collected.customTimers[0].kind==='requirement','Saving an entry dropped persisted timer kind');
 const suggested=sandbox.tcV3MakeSuggestedTimers({});
 assert(suggested[0].kind==='hold','Analyzer suggested timer did not persist semantic kind');
-assert(storage.length>0,'Migration did not persist upgraded legacy timers');
+assert(storage.length===0,'Rendering or starting the app rewrote legacy timers');
 
 const stage=sandbox.btLifecycleStageForEntry;
 assert(stage(citi).code==='IN_PROGRESS','Long-dated requirement should be In Progress');
