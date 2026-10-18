@@ -89,14 +89,25 @@ function compactRow(e){
 function primaryAction(e){
  const code=stage(e).code,id=arg(e.id),checks=Array.isArray(e.checklist)?e.checklist:[];
  if(code==='IN_PROGRESS'||code==='ACTION_NEEDED'){
-  if(checks.some(x=>x&&!x.done))return {label:'Open next task',command:'runNextAccountAction('+id+')'};
-  return {label:'Record deposit',command:'runNextAccountMilestone('+id+')'};
+  if(checks.some(x=>x&&!x.done))return {label:'Open next task',command:'BT360.openNextTask('+id+')'};
+  return {label:'Record deposit',command:'openReqMet('+id+')'};
  }
  if(code==='REQUIREMENTS_MET'||code==='AWAITING_BONUS')return {label:'Confirm received',command:'openRcv('+id+')'};
  if(code==='HOLD_OPEN'||code==='BONUS_RECEIVED')return {label:'View hold',command:'BT360.showHold()'};
  if(code==='READY_TO_CLOSE')return {label:'Mark account closed',command:'startCloseFlow('+id+',\'actual\')'};
  if(code==='COOLDOWN'||code==='ELIGIBLE')return {label:'View eligibility',command:'BT360.showEligibility()'};
  return {label:'Review account',command:'openBankActions('+id+')'};
+}
+function openNextTask(id){
+ const current=entries.find(e=>e.id===id);
+ if(!current)return;
+ if(expanded!==id){expanded=id;tab='tracker';R()}
+ requestAnimationFrame(()=>{
+  const panel=[...document.querySelectorAll('.bt360-detail-card .bt360-panel')].find(x=>x.querySelector('h3')?.textContent==='Requirements');
+  const next=[...(panel?.querySelectorAll('[role="checkbox"]')||[])].find(x=>x.getAttribute('aria-checked')==='false');
+  (next||panel)?.scrollIntoView({block:'center',behavior:'smooth'});
+  next?.focus({preventScroll:true});
+ });
 }
 function showHold(){document.querySelector('[data-bt-hold]')?.scrollIntoView({behavior:'smooth',block:'center'})}
 function showEligibility(){document.querySelector('[data-bt-eligibility]')?.scrollIntoView({behavior:'smooth',block:'center'})}
@@ -321,6 +332,6 @@ function openPhonebook(){closeSettings();window.bt360PhonebookOpen=true;R()}
 function closePhonebook(){window.bt360PhonebookOpen=false;R()}
 function openSettings(){window.bt360SettingsOpen=true;R();refreshUsage()}
 function closeSettings(){window.bt360SettingsOpen=false;R()}
-window.BT360={get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,segments,setAudience,setStage,compactRow,primaryAction,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,detailFooter,back,archive,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
+window.BT360={get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,segments,setAudience,setStage,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,detailFooter,back,archive,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
 if(typeof R==='function')R();
 })();
