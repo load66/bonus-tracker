@@ -656,7 +656,14 @@ async function exercise(name,engine,url){
     // as the lifecycle reconciles, so positional button clicks could navigate back.
     await page.getByRole('button',{name:'More account actions'}).click();
     await page.locator('.bt-ba-more > summary').click();
-    await page.locator('.bt-ba-more-body .bt-ba-mini').filter({hasText:'Ask AI'}).click();
+    const menuAskAI=page.locator('.bt-ba-more-body .bt-ba-mini').filter({hasText:'Ask AI'});
+    if(await menuAskAI.count())await menuAskAI.click();
+    else{
+      // When the canonical close decision is not ready, Ask AI belongs in
+      // the sticky footer instead of being duplicated inside More.
+      await page.getByRole('button',{name:'Close account actions'}).click();
+      await page.locator('.bt360-detail-footer').getByRole('button',{name:'Ask AI',exact:true}).click();
+    }
     await page.locator('.bonus-ai-heading').waitFor({state:'visible'});
     check('Tracker AI opens for one selected bank',(await page.locator('.bonus-ai-heading').innerText()).includes('E2E Verification Bank')&&await page.evaluate(()=>window.__bonusAITest.calls.length===0));
     check('local answers need no login',await page.locator('#bonus-ai-login').isHidden());
