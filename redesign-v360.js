@@ -425,6 +425,16 @@ function lastFeeSources(e){
   ||String(b.capturedAt||b.termsVerifiedAt||'').localeCompare(String(a.capturedAt||a.termsVerifiedAt||'')));
  return matches;
 }
+function lastSavedChurnText(e){
+ const own=String(e?.churnRuleText||e?.eligibilityEvidenceText||e?.eligibilityText||'').trim();
+ if(own)return own;
+ const found=lastFeeSources(e).find(r=>r.churnRuleText||r.eligibilityEvidenceText||r.eligibilityText);
+ return String(found?.churnRuleText||found?.eligibilityEvidenceText||found?.eligibilityText||'').trim();
+}
+function shortSavedRule(e){
+ const rule=lastSavedChurnText(e).replace(/\\s+/g,' ').trim();
+ return rule.length>160?rule.slice(0,157)+'…':rule;
+}
 function feeSnapshot(e){
  const x=feeSnapshotRaw(e);
  if(!isCooldownRecord(e))return x;
@@ -513,7 +523,7 @@ function eligibilityDateInfo(e,info){
   }
   return {value:'Date not calculable',note:'Eligibility clock needs a start date',action:true};
  }
- if(isCooldownRecord(e))return {value:'No confirmed date',note:'Last saved offer · open archive for original churn wording',action:false};
+ if(isCooldownRecord(e))return {value:'No confirmed date',note:shortSavedRule(e)||'Last saved offer · no applicable start date recorded',action:false};
  return {value:'Eligibility rule missing',note:'No verified repeatability restriction',action:true};
 }
 function dateActionRow(e,label,info,kind){
@@ -611,7 +621,7 @@ function archive(rows){
  h+='<div class="bt360-archive-stats"><div><b>'+ready.length+'</b><small>Eligible now</small></div><div><b>'+soon.length+'</b><small>Within 60 days</small></div><div><b>'+cooling.length+'</b><small>Cooling down</small></div></div>';
  const row=(x,offer)=>{
   const reference='Last saved '+(Number(x.e.bonus)>0?amount(x.e.bonus)+' offer':'bank offer')+
-   (x.e.opened?' · opened '+date(x.e.opened):'')+' · eligibility date not established';
+   (x.e.opened?' · opened '+date(x.e.opened):'')+' · '+(shortSavedRule(x.e)||'eligibility date not established');
   const subtitle=x.info?date(x.info.eligible)+' · '+x.info.label:reference;
   const label=x.info?.verified?Math.max(0,dB(td(),x.info.eligible))+' days':'Details';
   return '<div class="bt360-list-row">'+bankLogo(x.e.bank,true)+'<span class="bt360-grow"><b>'+safe(x.e.bank)+'</b><small>'+safe(subtitle)+'</small></span>'+
