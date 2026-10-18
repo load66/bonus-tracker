@@ -30,6 +30,7 @@ const payload={kind:'BonusTrackerEntry',schemaVersion:2,
     churnPeriodValue:12,churnPeriodUnit:'months',reqDays:90,requiredDaysText:'90 calendar days',
     dataPoint:'Employer DD',payoutTimingText:'Within 30 calendar days after requirements are met',
     closeRestrictionType:'payout-only',closeRuleText:'Keep the account open until the bonus posts.',
+    earlyCloseFee:0,earlyTerminationFeeText:'No early closing fee.',
     notes:'Synthetic verification record only',customTimers:[],
     tcSourceRaw:'E2E Verification Bank checking promotional terms. This offer is for eligible new consumer checking customers. Not eligible if you received a checking bonus within the past 12 months. Complete qualifying deposit requirements within 90 calendar days after opening. Keep the account open until the bonus posts.',
     eligibilityRules:[{id:'bonus-12m',basis:'bonus-received',periodValue:12,periodUnit:'months',scope:'consumer-checking',evidenceText:'Not eligible if you received a checking bonus within the past 12 months.',evidenceSource:'official-promotion-terms'}]
@@ -338,6 +339,10 @@ async function exercise(name,engine,url){
     check('requirements and payout stay separate',(await record()).reqMet==='2026-04-01'&&!(await record()).bonusRecd);
     await page.getByRole('button',{name:/^Confirm received/}).click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('OK').click();
     check('bonus receipt updates close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
+    await page.evaluate(()=>{entries[0].earlyCloseFee=null;R();});
+    check('unverified fee blocks close readiness even after payout',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='BONUS_RECEIVED');
+    await page.evaluate(()=>{entries[0].earlyCloseFee=0;R();});
+    check('restoring proven zero-fee evidence restores close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
     check('ready-to-close highlights Close milestone',await page.locator('.bt360-steps span.current').innerText()==='Close');
     check('close-ready prioritizes checks when no checklist work remains',
       await page.locator('.bt360-detail-card .bt360-panel-title h3').first().innerText()==='Close checks'
