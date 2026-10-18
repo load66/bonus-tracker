@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.17: read-only saved fee history across active and archive views.
+// Version 3.6.18: read-only saved fee history across active and archive views.
 
-const V = 'bt-v3.6.17-cooldownfee1';
+const V = 'bt-v3.6.18-cooldownfee1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
