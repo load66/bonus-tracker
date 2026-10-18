@@ -107,9 +107,13 @@
     try{if(core.typeForEntry(e)==='review')return true}catch{}
     return false;
   }
+  function churnReached(e){
+    try{if(typeof window.btVerifiedApplicationReached==='function')return !!window.btVerifiedApplicationReached(e)}catch{}
+    return daysLeft(e)===0;
+  }
   function statusFixed(e){
     if(!e||!e.bank)return'';
-    if(e.closed)return nonRepeatable(e)?'ARCHIVED':(daysLeft(e)===0?'TIME TO CHURN!':'WAITING TO CHURN!');
+    if(e.closed)return nonRepeatable(e)?'ARCHIVED':(churnReached(e)?'TIME TO CHURN!':'WAITING TO CHURN!');
     const hasBonus=!!e.bonusRecd,hasReq=!!e.reqMet,hasHold=ruleDays(e)>0&&!!baseDate(e);
     if(hasBonus){if(hasHold){if(inBuffer(e))return'3-DAY BUFFER';const d=daysSafe(e);if(d!==null&&d>0)return'WAITING TO CLOSE'}if(closureBlocksSafeStatus(e))return'BONUS RECEIVED';return'SAFE TO CLOSE'}
     const active=typeof nextActiveTimer==='function'?nextActiveTimer(e):null;

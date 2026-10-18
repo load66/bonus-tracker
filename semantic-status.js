@@ -181,7 +181,10 @@
     if(e.closed){
       try{if(typeof isNonRepeatableEntry==='function'&&isNonRepeatableEntry(e))return{code:STAGES.ARCHIVED,raw,timer:null,kind:''}}catch{}
       const dl=safeDaysLeft(e);
-      return{code:dl!==null&&dl<=0?STAGES.ELIGIBLE:STAGES.COOLDOWN,raw,timer:null,kind:''};
+      let reached=null;
+      try{if(typeof window.btVerifiedApplicationReached==='function')reached=!!window.btVerifiedApplicationReached(e)}catch{}
+      if(reached===null)return{code:dl!==null&&dl<=0?STAGES.ELIGIBLE:STAGES.COOLDOWN,raw,timer:null,kind:''};
+      return{code:reached?STAGES.ELIGIBLE:STAGES.COOLDOWN,raw,timer:null,kind:'',estimatePassed:!reached&&dl===0};
     }
     const financial=window.BTFinancialRules?.validate(e);
     if(financial&&!financial.ok)return{code:STAGES.ACTION_NEEDED,raw,timer:null,kind:'review',reviewReason:'Financial rules need review'};
@@ -253,6 +256,7 @@
       case STAGES.READY_TO_CLOSE:
         return(e?.bonusRecd?'Bonus received '+fmtDate(e.bonusRecd)+' · ':'')+'all close restrictions cleared';
       case STAGES.COOLDOWN:{
+        if(core.estimatePassed)return'Estimate passed · eligibility not verified';
         const d=safeDaysLeft(e),ready=churnReadyDateValue(e);
         return(Number.isFinite(d)?d+'d until eligible':'Waiting for eligibility date')+(ready?' · '+fmtDate(ready):'');
       }

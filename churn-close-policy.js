@@ -154,6 +154,14 @@
     return'';
   }
   function ready(e){return next(e)}
+  function verifiedApplicationReached(e){
+    const readyDate=applicationReady(e);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(readyDate||'')))return false;
+    let today='';
+    try{if(typeof td==='function')today=td()}catch{}
+    try{if(!today&&typeof window.td==='function')today=window.td()}catch{}
+    return /^\d{4}-\d{2}-\d{2}$/.test(String(today||''))&&readyDate<=today;
+  }
   function left(e){
     const d=ready(e);if(!d)return null;
     try{if(typeof dB==='function'&&typeof td==='function')return Math.max(0,dB(td(),d))}catch{}
@@ -167,6 +175,7 @@
     window.nextReopen=next;window.churnReadyDate=ready;window.daysLeft=left;
     window.btOfficialEligibilityDate=official;
     window.btApplicationReadyDate=applicationReady;
+    window.btVerifiedApplicationReached=verifiedApplicationReached;
     window.btChurnSafetyBufferDays=SAFETY_BUFFER_DAYS;
     window.btEligibilityBasisFor=sourceBasis;
     window.btEligibilityVerification=verification;

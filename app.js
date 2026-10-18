@@ -1640,6 +1640,7 @@ function status(e){
   if(!e||!e.bank)return'';
 
   if(e.closed){
+    try{if(typeof window.btVerifiedApplicationReached==='function')return window.btVerifiedApplicationReached(e)?'TIME TO CHURN!':'WAITING TO CHURN!'}catch{}
     return daysLeft(e)===0?'TIME TO CHURN!':'WAITING TO CHURN!';
 
   }
@@ -1991,7 +1992,9 @@ function getChurnSuggestions(){
     }catch{}
     if(!ready)return;
     const dl=Math.max(0,dB(td(),ready));
-    sug.push({bank:e.bank,rsn:dl<=0?'Ready to churn now.':dl+'d until churn.',bonus:e.bonus||0,showBonus:false,days:dl,readyDate:ready})
+    let reached=false,checked=false;
+    try{if(typeof window.btVerifiedApplicationReached==='function'){checked=true;reached=!!window.btVerifiedApplicationReached(e)}}catch{}
+    sug.push({bank:e.bank,rsn:reached?'Ready to churn now.':(checked&&dl<=0?'Estimate passed · not verified.':(dl<=0?'Ready to churn now.':dl+'d until churn.')),bonus:e.bonus||0,showBonus:false,days:dl,readyDate:ready})
   });
   return sug.sort((a,b)=>a.days-b.days||(b.bonus||0)-(a.bonus||0)||a.bank.localeCompare(b.bank))
 }

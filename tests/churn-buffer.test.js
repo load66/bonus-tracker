@@ -77,6 +77,11 @@ assert(/12 months after bonus payout received/.test(sandbox.btFutureEligibilityT
 assert(/T&C verification required/.test(sandbox.btFutureEligibilityText({churn:'1',churnable:true,churnability:'repeatable'})),'Missing T&C evidence is not surfaced for review');
 assert(saved.length===0,'Page load must not rewrite stored eligibility stamps');
 
+const pastVerified={bonusRecd:'2024-08-14',closed:'2024-08-18',churn:'1',churnPeriodValue:12,churnPeriodUnit:'months',churnable:true,churnability:'repeatable',sourceEligibilityBasis:'bonus-received',eligibilityEvidenceText:evidence,eligibilityEvidenceSource:'official-promotion-terms'};
+assert(sandbox.btVerifiedApplicationReached(pastVerified)===true,'A verified application-ready date in the past was not treated as reached');
+const legacyPassed={closed:'2020-01-01',churn:'1',churnable:true,churnability:'repeatable'};
+assert(sandbox.daysLeft(legacyPassed)===0&&sandbox.btVerifiedApplicationReached(legacyPassed)===false,'A passed legacy churn estimate was treated as verified eligibility');
+
 const workflow=fs.readFileSync('.github/workflows/close-rules.yml','utf8');
 const index=fs.readFileSync('index.html','utf8');
 const sw=fs.readFileSync('sw.js','utf8');
