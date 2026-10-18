@@ -73,7 +73,7 @@ setTimeout(()=>{
     assert.equal(run('btNextActionForEntry(entries[0]).context.date'),'2026-10-01');
     assert.equal(run('btNextActionForEntry(entries[0]).context.date'),run('btLifecycleStageForEntry(entries[0]).timer.date'));
 
-    run(`entries[0].customTimers=[];entries[0].bonusRecd='2026-09-02';entries[0].closeRestrictionType='payout-only';entries[0].closeRuleText='Keep the account open until the bonus posts.';entries[0].churnable=true;entries[0].churnability='repeatable';entries[0].churn='1';entries[0].churnPeriodValue=12;entries[0].churnPeriodUnit='months';entries[0].sourceEligibilityBasis='bonus-received';entries[0].eligibilityEvidenceText='Not eligible if you received a checking bonus within the past 12 months.';entries[0].eligibilityEvidenceSource='official-promotion-terms';`);
+    run(`entries[0].customTimers=[];entries[0].bonusRecd='2026-09-02';entries[0].closeRestrictionType='payout-only';entries[0].closeRuleText='Keep the account open until the bonus posts.';entries[0].earlyCloseFee=0;entries[0].earlyTerminationFeeText='No early closing fee.';entries[0].churnable=true;entries[0].churnability='repeatable';entries[0].churn='1';entries[0].churnPeriodValue=12;entries[0].churnPeriodUnit='months';entries[0].sourceEligibilityBasis='bonus-received';entries[0].eligibilityEvidenceText='Not eligible if you received a checking bonus within the past 12 months.';entries[0].eligibilityEvidenceSource='official-promotion-terms';`);
     assert.equal(run('btNextActionForEntry(entries[0]).context.date'),run('safeCloseDate(entries[0])'));
     assert.equal(run('btNextActionForEntry(entries[0]).kind'),'close');
     assert.match(run('btNextActionForEntry(entries[0]).explanation'),/companion accounts/);

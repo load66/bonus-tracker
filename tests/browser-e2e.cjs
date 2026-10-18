@@ -30,6 +30,7 @@ const payload={kind:'BonusTrackerEntry',schemaVersion:2,
     churnPeriodValue:12,churnPeriodUnit:'months',reqDays:90,requiredDaysText:'90 calendar days',
     dataPoint:'Employer DD',payoutTimingText:'Within 30 calendar days after requirements are met',
     closeRestrictionType:'payout-only',closeRuleText:'Keep the account open until the bonus posts.',
+    earlyCloseFee:0,earlyTerminationFeeText:'No early closing fee.',
     notes:'Synthetic verification record only',customTimers:[],
     tcSourceRaw:'E2E Verification Bank checking promotional terms. This offer is for eligible new consumer checking customers. Not eligible if you received a checking bonus within the past 12 months. Complete qualifying deposit requirements within 90 calendar days after opening. Keep the account open until the bonus posts.',
     eligibilityRules:[{id:'bonus-12m',basis:'bonus-received',periodValue:12,periodUnit:'months',scope:'consumer-checking',evidenceText:'Not eligible if you received a checking bonus within the past 12 months.',evidenceSource:'official-promotion-terms'}]
@@ -318,10 +319,30 @@ async function exercise(name,engine,url){
     check('edit preserves identity',(await record()).id===id);
     check('notes cannot inject HTML',await page.locator('img[src="x"]').count()===0);
     if(!await page.locator('.bt360-detail-footer .bt360-primary').count())await page.locator('.bt366-compact-row').first().click();
+    // The preceding in-progress mockup intentionally has an unverified close fee.
+    // Simulate a separate explicit terms-review confirmation before expecting the
+    // bonus receipt to advance into Ready to Close. Payout alone is not clearance.
+    check('unknown closing charge blocks readiness before terms review',await page.evaluate(()=>btEvaluateAccount(entries[0]).close.status!=='ready'));
+    await page.evaluate(()=>{
+      const e=entries[0];
+      e.earlyCloseFee=0;
+      e.earlyTerminationFeeText='No early closing fee.';
+      e.feeScheduleRaw='No early closing fee.';
+      e.closeRuleText='Keep the account open until the bonus posts.';
+      e.closeRestrictionType='payout-only';
+      e.closeRuleBasis='bonus';
+      sv(SK,entries);
+      R();
+    });
+    check('synthetic close rules were expressly saved rather than inferred',await page.evaluate(()=>entries[0].earlyCloseFee===0&&/No early closing fee/.test(entries[0].feeScheduleRaw)));
     await page.getByRole('button',{name:'Record deposit'}).click();await page.locator('#req_date').fill('2026-04-01');await button('Save').click();await button('OK').click();
     check('requirements and payout stay separate',(await record()).reqMet==='2026-04-01'&&!(await record()).bonusRecd);
     await page.getByRole('button',{name:/^Confirm received/}).click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('OK').click();
     check('bonus receipt updates close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
+    await page.evaluate(()=>{entries[0].earlyCloseFee=null;R();});
+    check('unverified fee blocks close readiness even after payout',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='BONUS_RECEIVED');
+    await page.evaluate(()=>{entries[0].earlyCloseFee=0;R();});
+    check('restoring proven zero-fee evidence restores close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
     check('ready-to-close highlights Close milestone',await page.locator('.bt360-steps span.current').innerText()==='Close');
     check('close-ready prioritizes checks when no checklist work remains',
       await page.locator('.bt360-detail-card .bt360-panel-title h3').first().innerText()==='Close checks'
@@ -635,15 +656,32 @@ async function exercise(name,engine,url){
     // as the lifecycle reconciles, so positional button clicks could navigate back.
     await page.getByRole('button',{name:'More account actions'}).click();
     await page.locator('.bt-ba-more > summary').click();
-    await page.locator('.bt-ba-more-body .bt-ba-mini').filter({hasText:'Ask AI'}).click();
+    const menuAskAI=page.locator('.bt-ba-more-body .bt-ba-mini').filter({hasText:'Ask AI'});
+    if(await menuAskAI.count())await menuAskAI.click();
+    else{
+      // When the canonical close decision is not ready, Ask AI belongs in
+      // the sticky footer instead of being duplicated inside More.
+      await page.getByRole('button',{name:'Close account actions'}).click();
+      await page.locator('.bt360-detail-footer').getByRole('button',{name:'Ask AI',exact:true}).click();
+    }
     await page.locator('.bonus-ai-heading').waitFor({state:'visible'});
     check('Tracker AI opens for one selected bank',(await page.locator('.bonus-ai-heading').innerText()).includes('E2E Verification Bank')&&await page.evaluate(()=>window.__bonusAITest.calls.length===0));
     check('local answers need no login',await page.locator('#bonus-ai-login').isHidden());
     for(const label of ['Monthly fee','Fee waivers','Direct deposit','Early-close fee','Companion account','Repeat eligibility']){await button(label).click();check('prefill: '+label,(await page.locator('#bonus-ai-question').inputValue()).length>20);}
     await button('Closure rules').click();await page.locator('#bonus-ai-send').click();
     await page.locator('#bonus-ai-answer p').first().waitFor();
-    check('AI closure decision uses tracker gates',(await page.locator('.bonus-ai-verdict').innerText())==='Ready — tracker checks passed');
-    check('AI explains a concrete next step',(await page.locator('.bonus-ai-next-step').innerText()).includes('companion accounts'));
+    const aiCloseState=await page.evaluate(()=>{
+      const e=entries[0],decision=btEvaluateAccount(e),next=btNextActionForEntry(e),readiness=closeReadiness(e),financial=BTFinancialRules?.validate(e);
+      return {close:decision.close.status,action:next.kind,check:readiness.cls,financial:financial?.ok!==false};
+    });
+    const aiExpectedVerdict=aiCloseState.action==='close'&&aiCloseState.check==='safe'&&aiCloseState.close==='ready'&&aiCloseState.financial
+      ?'Ready — tracker checks passed':'Needs verification';
+    check('AI closure verdict requires both contractual and operational checks',(await page.locator('.bonus-ai-verdict').innerText())===aiExpectedVerdict);
+    const aiNextStep=await page.locator('.bonus-ai-next-step').innerText();
+    const explainsCloseGate=!aiCloseState.financial?aiNextStep.includes('conflicting financial rules')
+      :aiExpectedVerdict==='Needs verification'?/\bclos(?:e|ure) checks\b/i.test(aiNextStep)
+      :aiNextStep.includes('companion accounts');
+    check('AI explains the exact unresolved rule or next action',explainsCloseGate);
     check('common answers do not send facts',await page.evaluate(()=>window.__bonusAITest.calls.length===0&&window.__bonusAITest.authCalls===0));
     await button('Ask AI for more').click();
     check('remote AI asks for login before sending facts',await page.locator('#bonus-ai-login').isVisible()&&await page.evaluate(()=>window.__bonusAITest.calls.length===0));
@@ -666,12 +704,12 @@ async function exercise(name,engine,url){
     check('expired access token refreshes without login',await page.evaluate(()=>window.__bonusAITest.authCalls===2&&window.__bonusAITest.calls[1].authorization==='Bearer synthetic-refreshed-token')&&await page.locator('#bonus-ai-login').isHidden());
     await page.evaluate(()=>window.__bonusAITest.response={answer:'Unsupported response',factIds:[],missing:[{text:'Malformed'}]});
     await button('Ask AI for more').click();await page.getByText('AI returned an unsupported answer. Account-detail answer shown below.',{exact:true}).waitFor();
-    check('malformed AI output uses account-detail answer',await page.locator('.bonus-ai-verdict').innerText()==='Ready — tracker checks passed');
+    check('malformed AI output preserves closure gates',await page.locator('.bonus-ai-verdict').innerText()===aiExpectedVerdict);
     await page.evaluate(()=>window.__bonusAITest.fail=true);await button('Ask AI for more').click();await page.getByText('AI is busy. Try again later. Account-detail answer shown below.',{exact:true}).waitFor();
     check('AI rate limit is handled without repeated requests',await page.evaluate(()=>window.__bonusAITest.calls.length===4));
     await page.evaluate(()=>{window.__bonusAITest.fail=false;window.__bonusAITest.response=null;window.__bonusAITest.serverFailure=true;});
     await button('Ask AI for more').click();await page.getByText('AI could not produce a supported answer. Account-detail answer shown below.',{exact:true}).waitFor();
-    check('production-style AI failure preserves a useful closure answer',(await page.locator('.bonus-ai-direct-answer').innerText()).includes('tracker checks passed'));
+    check('production-style AI failure preserves canonical closure warning',(await page.locator('.bonus-ai-direct-answer').innerText()).includes(aiExpectedVerdict));
     await button('Monthly fee').click();await page.locator('#bonus-ai-send').click();
     check('saved-rule answers work after AI failure',await page.getByText('Based on your account details.',{exact:true}).count()===1&&await page.evaluate(()=>window.__bonusAITest.calls.length===5));
     const feeFields=await page.evaluate(()=>{

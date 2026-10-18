@@ -15,6 +15,7 @@ const sandbox={
   console,Date,Math,JSON,parseInt,
   addD,addM,dB,td:()=> '2026-08-18',BTEligibilityGate:G,
   setTimeout:()=>0,
+  normalizeLifecycleEntry:e=>({...e}),
   churnDecisionForEntry:e=>e?.churnable===false||e?.churnability==='not-repeatable'?'nonrepeatable':(e?.churnable===true||e?.churnability==='repeatable'||e?.churn||e?.churnPeriodValue?'repeatable':''),
   entries:[
     {id:'WFB-P-01',bank:'Wells Fargo',bonusRecd:'2026-08-14',closed:'2026-08-18',churn:'1',churnPeriodValue:12,churnPeriodUnit:'months',churnable:true,churnability:'repeatable',churnBasis:'bonus',sourceEligibilityBasis:'bonus-received',eligibilityEvidenceText:evidence,eligibilityEvidenceSource:'official-promotion-terms'},
@@ -70,9 +71,12 @@ assert(sandbox.btApplicationReadyDate(mustClose)==='','Application-ready date ex
 assert(sandbox.btApplicationReadyDate({...mustClose,closed:'2027-08-10'})==='2027-08-16','Required early closure incorrectly moved the safe eligibility date');
 assert(sandbox.btApplicationReadyDate({...mustClose,closed:'2027-08-25'})==='2027-08-25','Later required closure was not respected');
 
-assert(sandbox.entries[0].churnBasis==='bonus'&&sandbox.entries[0].sourceEligibilityBasis==='bonus-received'&&sandbox.entries[0].churnBufferDays===2&&sandbox.entries[0].eligibilityVerified===true,'Existing source-backed entry was not normalized correctly');
-assert(sandbox.entries[0].churnTrackingPolicy==='source-bonus-received-plus-2-day-buffer','Source tracking policy was not persisted');
-assert(sandbox.entries[1].churnBufferDays===0,'Non-repeatable saved entry retained a churn buffer');
+assert(sandbox.entries[0].churnBufferDays===undefined&&sandbox.entries[0].eligibilityVerified===undefined,'Startup stamped source-backed eligibility without an explicit save');
+assert(sandbox.entries[1].churnBufferDays===99,'Startup silently changed a previously saved non-repeatable eligibility buffer');
+const explicitlyReviewed=sandbox.normalizeLifecycleEntry({...sandbox.entries[0]});
+assert(explicitlyReviewed.churnBasis==='bonus'&&explicitlyReviewed.sourceEligibilityBasis==='bonus-received'&&explicitlyReviewed.churnBufferDays===2&&explicitlyReviewed.eligibilityVerified===true,'Explicit normalized save did not apply verified source-backed rules');
+assert(explicitlyReviewed.churnTrackingPolicy==='source-bonus-received-plus-2-day-buffer','Explicitly reviewed source tracking policy was not calculated');
+assert(sandbox.entries[0].eligibilityVerified===undefined,'Explicit review mutated the original saved account object');
 assert(/12 months after bonus payout received/.test(sandbox.btFutureEligibilityText(sandbox.entries[0]))&&/2-day safety buffer/.test(sandbox.btFutureEligibilityText(sandbox.entries[0])),'Future eligibility text does not disclose exact source basis + safety buffer');
 assert(/T&C verification required/.test(sandbox.btFutureEligibilityText({churn:'1',churnable:true,churnability:'repeatable'})),'Missing T&C evidence is not surfaced for review');
 assert(saved.length===0,'Page load must not rewrite stored eligibility stamps');

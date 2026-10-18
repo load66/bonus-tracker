@@ -137,7 +137,8 @@
     const financial=window.BTFinancialRules?.validate(e);
     if(financial&&financial.mode!=='legacy')add(financial.ok,'Financial rules consistent',financial.ok?'Evidence and calculation fields agree':financial.issues.map(x=>x.message).join('; '),'danger');
     if(financial?.rules)add(financial.rules.closure.restrictionType!=='manual-review','Closure terms resolved',financial.rules.closure.restrictionType==='manual-review'?'The closure restriction requires manual review':'The closure restriction is explicit','danger');
-    add(!!e.reqMet,'Requirement met date saved',e.reqMet?fD(e.reqMet):'Save Req Met before closing','danger');
+    const needsRequirementDate=String(financial?.rules?.closure?.basis||basis(e)||'')==='reqmet';
+    if(needsRequirementDate||e.reqMet)add(!!e.reqMet,'Requirement met date saved',e.reqMet?fD(e.reqMet):'Save the actual requirements-completion date before closing','danger');
     add(!!e.bonusRecd,'Bonus received',e.bonusRecd?fD(e.bonusRecd):'Do not close before the bonus posts','danger');
     if(days){add(!!start,'Close-rule start date available',start?fD(start):'Missing','danger');add(!!safe&&dB(target,safe)<=0,'Hold period + buffer complete',safe?'Safe close: '+fD(safe):'Cannot calculate','danger')}
     else add(true,'No fixed post-bonus hold',core.typeForEntry(e)==='payout-only'?'Close after bonus posts':'No countdown found');
@@ -149,6 +150,9 @@
     }
     const hasFee=recurringMonthlyFeeRisk(e)||/(yes|\$|monthly|service fee|maintenance fee)/i.test(String(e.monthlyFeeYNText||'')+' '+String(e.avoidMonthlyFeeText||''));
     add(!hasFee||!!e.monthlyFeeChecked,'Monthly fee checked',hasFee?(e.monthlyFeeChecked?'Confirmed':'Check next statement before close'):'No monthly fee risk','warn');
+    // The canonical financial decision is the final safety gate. Legacy
+    // label calculations must not contradict it or demand a fabricated date.
+    try{const decision=window.btEvaluateAccount?.(e);if(decision&&decision.close.status!=='ready')add(false,'Closure evidence verified','One or more close restrictions or fee conditions remain unresolved','danger')}catch{add(false,'Closure evidence verified','Close decision could not be verified','danger')}
     const warnings=items.filter(x=>!x.ok).map(x=>x.label+(x.detail?': '+x.detail:''));
     const blockers=items.filter(x=>!x.ok&&x.level==='danger'),cautions=items.filter(x=>!x.ok&&x.level!=='danger');
     return{label:blockers.length?'Do Not Close Yet':cautions.length?'Ready — Review Fee':'Safe to Close',cls:blockers.length?'danger':cautions.length?'warn':'safe',items,warnings,safeDate:safe,rawDate:rawDate(e),basis:basis(e)}

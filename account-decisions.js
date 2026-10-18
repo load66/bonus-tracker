@@ -15,8 +15,8 @@
     return parseInt(e?.minHoldDays||e?.closeFeeCountdownDays||0,10)||0;
   }
   function baseDate(e){
-    try{const d=closeCore()?.baseDate?.(e);if(d)return d}catch{}
-    return e?.bonusRecd||e?.opened||'';
+    try{if(typeof closeCore()?.baseDate==='function')return closeCore().baseDate(e)||''}catch{}
+    return e?.closeRuleBasis==='reqmet'?e?.reqMet||'':e?.closeRuleBasis==='opened'?e?.opened||'':e?.bonusRecd||'';
   }
   function daysUntilSafe(e){
     try{const n=closeCore()?.daysUntilSafe?.(e,today());if(n!==undefined)return n}catch{}
@@ -32,28 +32,56 @@
     try{const t=closeCore()?.typeForEntry?.(e);if(t)return t}catch{}
     return stored;
   }
+  function savedZeroFeeEvidence(e){
+    // A legacy 0 is only verified if saved wording explicitly denies an early-close
+    // service fee, not merely because the importer defaulted a missing fee to 0.
+    const sources=[e?.feeScheduleRaw,e?.earlyTerminationFeeText,e?.closeRuleSourceSentence,e?.closeRuleText].filter(Boolean);
+    return sources.some(raw=>String(raw).split(/(?<=[.!?])\s+|[\n;]/).some(line=>{
+      const sentence=String(line).replace(/\s+/g,' ').trim();
+      if(!/(?:early[\s-]*(?:clos|terminat)|account[\s-]*(?:clos|terminat)|clos(?:e|ing|ure)|terminat)/i.test(sentence))return false;
+      if(/\b(?:after|before|within|first|until|unless|if)\b.{0,60}\b(?:\d+|month|day|year)\b/i.test(sentence))return false;
+      return /(?:\bno\b|\bwithout\b|\bzero\b)[^.]{0,80}\b(?:fee|charge)\b|\$\s*0\b|(?:fee|charge)[\s-]*free/i.test(sentence);
+    }));
+  }
   function closureUnresolved(e){
     if(!e)return true;
     if(e.closeTimerClearedWithoutFeeVerification)return true;
-    const basis=String(e.closeRuleBasis||e.financialRules?.closure?.basis||'').toLowerCase();
+    const structured=e.financialRules?.closure;
+    const basis=String(structured?.basis||e.closeRuleBasis||'').toLowerCase();
     if(basis==='reqmet'&&!e.reqMet)return true;
+    let verifiedStructured=false;
     try{
       const financial=window.BTFinancialRules?.validate?.(e);
       if(financial&&financial.mode!=='legacy'){
         if(!financial.ok)return true;
-        const c=financial.rules?.closure;
-        if(c&&(c.restrictionType==='manual-review'||c.earlyCloseFee===null||c.basis==='reqmet'&&!e.reqMet))return true;
+        verifiedStructured=true;
+        if(structured&&(structured.restrictionType==='manual-review'||structured.earlyCloseFee===null||structured.basis==='reqmet'&&!e.reqMet))return true;
       }
-    }catch{}
+    }catch{return true}
     const type=closeType(e);
     if(type==='review'||type==='manual-review')return true;
-    if(type==='explicit-clawback'){
-      const days=ruleDays(e);
+    const savedHold=Number(structured?.minHoldDays??e.minHoldDays??e.closeFeeCountdownDays??0);
+    const fixedType=['explicit-clawback','minimum-open','manual-fixed'].includes(type);
+    const days=ruleDays(e);
+    // A saved fixed hold with an unknown anchor or unsupported legacy source
+    // must not be treated as an absent hold.
+    if(savedHold>0||fixedType){
       if(!(days>0)||!baseDate(e))return true;
       const left=daysUntilSafe(e);
       if(left===null||left>0)return true;
     }
-    if(e.earlyCloseFee===null)return true;
+    const fee=structured?structured.earlyCloseFee:e.earlyCloseFee;
+    if(fee===null||fee===undefined||fee==='')return true;
+    const n=Number(fee);
+    if(!Number.isFinite(n)||n<0)return true;
+    if(n>0&&!(days>0&&baseDate(e)&&daysUntilSafe(e)===0))return true;
+    if(n===0&&!verifiedStructured&&!savedZeroFeeEvidence(e))return true;
+    // Fee proof is not bonus-retention proof. A payout-only close rule must
+    // actually document the requirement to remain open until payout; the
+    // 'none' category needs affirmative saved no-clawback evidence.
+    const retention=String([structured?.evidence?.quote,e.closeRuleText,e.closeRuleSourceSentence].filter(Boolean).join(' '));
+    if(type==='payout-only'&&!/(?:remain|stay|keep)[^.]{0,100}open[^.]{0,150}(?:until|through|after|once|when)[^.]{0,100}(?:bonus|reward|payout|payment|credit)|(?:until|through|after|once|when)[^.]{0,100}(?:bonus|reward|payout|payment|credit)[^.]{0,130}(?:posts?|paid|received|deposited)/i.test(retention))return true;
+    if(type==='none'&&!/(?:no|without|not subject to)[^.]{0,90}(?:bonus|reward)[^.]{0,50}(?:clawback|repayment|forfeiture|reversal)|(?:no|without|not subject to)[^.]{0,90}(?:clawback|repayment|forfeiture|reversal)/i.test(retention))return true;
     return false;
   }
   function qualification(e){
@@ -71,7 +99,7 @@
     try{reached=typeof window.btVerifiedApplicationReached==='function'&&!!window.btVerifiedApplicationReached(e)}catch{}
     try{ready=typeof window.btApplicationReadyDate==='function'?window.btApplicationReadyDate(e)||'':''}catch{}
     try{legacy=typeof window.btLegacyChurnFallbackDate==='function'?window.btLegacyChurnFallbackDate(e)||'':''}catch{}
-    const blockers=rules.map(r=>({code:'eligibility-restriction',basis:r?.basis||'',evidence:r?.evidenceText||''}));
+    let blockers=rules.map(r=>({code:'eligibility-restriction',basis:r?.basis||'',evidence:r?.evidenceText||''}));
     const unresolved=[];
     let status='open';
     if(e?.closed&&nonRepeatable(e))status='archived';
@@ -80,6 +108,7 @@
     else if(legacy){status='unverified';unresolved.push('A legacy cooldown estimate is not a verified application date.');}
     else status='unresolved';
     if(rules.length>1&&!reached)unresolved.push('Multiple eligibility restrictions remain in force.');
+    if(status==='eligible')blockers=[];
     return{status,blockers,unresolved,evidence:rules,dates:{applicationReady:ready,legacyEstimate:legacy}};
   }
   function legacyStatus(e){
@@ -107,9 +136,9 @@
   function closeDecision(e,legacy){
     const unresolved=[];
     if(closureUnresolved(e))unresolved.push(e?.earlyCloseFee===null?'Early-close fee is not verified.':'Closure is not verified.');
-    if(e?.bonusRecd&&!e?.reqMet)unresolved.push('Requirements completion date was not recorded.');
+    const notes=e?.bonusRecd&&!e?.reqMet?['Requirements completion date was not recorded; this is not evidence of the exact date.']:[];
     const status=legacy==='SAFE TO CLOSE'?'ready':legacy==='WAITING TO CLOSE'||legacy==='3-DAY BUFFER'?'hold':legacy==='BONUS RECEIVED'?'received-not-ready':legacy==='ARCHIVED'?'archived':'not-ready';
-    return{status,blockers:unresolved.map(x=>({message:x})),unresolved,evidence:[{field:'earlyCloseFee',value:e?.earlyCloseFee},{field:'closeRestrictionType',value:closeType(e)}],dates:{safe:typeof safeCloseDate==='function'?safeCloseDate(e):''}};
+    return{status,blockers:unresolved.map(x=>({message:x})),unresolved,notes,evidence:[{field:'earlyCloseFee',value:e?.earlyCloseFee},{field:'closeRestrictionType',value:closeType(e)}],dates:{safe:typeof safeCloseDate==='function'?safeCloseDate(e):''}};
   }
   function fingerprint(e){
     if(!e||typeof e!=='object')return'';

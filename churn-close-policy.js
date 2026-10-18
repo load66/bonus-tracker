@@ -1,4 +1,4 @@
-/* Release 3.6.32 read integrity; eligibility stamps are not written on page load. */
+/* Release 3.6.33 read integrity; eligibility stamps are not written on page load. */
 /* BonusTracker v3.5.2 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
 (function(){
   'use strict';
@@ -227,9 +227,8 @@
     }
     window.btFutureEligibilityText=eligibilityText;
     window.btChurnCloseDatePolicyVersion=VER;
-    try{
-      if(typeof entries!=='undefined'&&Array.isArray(entries))entries=entries.map(normalize);
-    }catch{}
+    // Startup and delayed installation must never stamp eligibility metadata
+    // onto live account records. Explicit save/import paths apply verification.
   }
   install();setTimeout(install,300);setTimeout(install,1400);
 })();

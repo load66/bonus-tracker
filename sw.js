@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.32: read-only rendering, backup, and lifecycle decisions.
-const V = 'bt-v3.6.32-read1';
+// Version 3.6.33: confirmed-event dates, closure fee evidence, and read-only timer views.
+const V = 'bt-v3.6.33-integrity1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
