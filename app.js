@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.4';
+const APP_VERSION='3.6.5';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4079,14 +4079,43 @@ function updateViewSearch(kind,value,cursor){
   if(kind==='tracker')search=value;
   else if(kind==='datapoints')dpSearch=value;
   else storageSearch=value;
-  // Keep the actual focused input node attached while rebuilding result rows.
-  // Chromium's fill/keyboard action can blur an input detached in its own
-  // synchronous input event even if a new input receives focus temporarily.
+  // Search results change, but the focused search input must NEVER leave the
+  // live document during its own input event. Replacing the entire app blurs
+  // Chromium's fill/keyboard action even when focus is restored afterwards.
+  // Refresh only siblings AFTER the existing Tracker/Archive search input.
   const active=document.activeElement?.id===id?document.activeElement:null;
+  if(kind==='tracker'&&active&&!expanded&&typeof window.rTracker==='function'){
+    const freshRoot=document.createElement('div');
+    freshRoot.innerHTML=window.rTracker(sortE(entries),tab==='archive');
+    const freshInput=freshRoot.querySelector('#'+id);
+    const parent=active.parentNode;
+    if(freshInput&&parent){
+      for(let node=active.nextSibling;node;){const next=node.nextSibling;node.remove();node=next;}
+      while(freshInput.nextSibling)parent.appendChild(freshInput.nextSibling);
+      active.focus({preventScroll:true});
+      const position=Number.isInteger(cursor)?Math.min(cursor,active.value.length):active.value.length;
+      active.setSelectionRange(position,position);
+      return;
+    }
+  }
   R();
-  let input=document.getElementById(id);
-  if(active&&input&&active!==input&&!active.isConnected){input.replaceWith(active);input=active;}
+  const input=document.getElementById(id);
   if(input){input.focus({preventScroll:true});const position=Number.isInteger(cursor)?Math.min(cursor,input.value.length):input.value.length;input.setSelectionRange(position,position);}
+}
+function openTrackerTool(kind){
+  window.bt362AddOpen=false;
+  expanded=null;
+  showTemplates=kind==='quick-add';
+  showAnalyzer=kind==='promo-terms';
+  R();
+  const id=showTemplates?'bt-quick-add-panel':showAnalyzer?'bt-promo-terms-panel':'';
+  if(!id)return;
+  requestAnimationFrame(()=>{
+    const panel=document.getElementById(id);
+    if(!panel)return;
+    panel.scrollIntoView({behavior:'smooth',block:'start'});
+    panel.focus({preventScroll:true});
+  });
 }
 function R(){const focusedBeforeRender=document.activeElement;const searchFocus=focusedBeforeRender&&['archive-search','tracker-search','datapoints-search','radar-search','terms-search'].includes(focusedBeforeRender.id)?{id:focusedBeforeRender.id,start:focusedBeforeRender.selectionStart,end:focusedBeforeRender.selectionEnd}:null;if(tab==='finances')tab='tracker';captureProfileSectionState();const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;
   if(typeof window.btCaptureRadarDisclosures==='function')window.btCaptureRadarDisclosures();
@@ -4115,7 +4144,7 @@ function R(){const focusedBeforeRender=document.activeElement;const searchFocus=
   else if(tab==='bonuses')h+=typeof rBankBonuses==='function'?rBankBonuses():'<p>Bank bonus feed is loading.</p>';
   h+='</div>';
   if(tab==='tracker'&&!bt360Detail){
-    if(window.bt362AddOpen)h+='<div class="bt362-add-menu" role="group" aria-label="Add bonus actions"><button type="button" onclick="window.bt362AddOpen=false;showTemplates=!showTemplates;showAnalyzer=false;R()">Quick Add</button><button type="button" onclick="window.bt362AddOpen=false;showAnalyzer=!showAnalyzer;showTemplates=false;R()">Review promo terms</button><button type="button" onclick="window.bt362AddOpen=false;openAdd()">Add account manually</button></div>';
+    if(window.bt362AddOpen)h+='<div class="bt362-add-menu" role="group" aria-label="Add bonus actions"><button type="button" onclick="openTrackerTool(\'quick-add\')">Quick Add</button><button type="button" onclick="openTrackerTool(\'promo-terms\')">Review promo terms</button><button type="button" onclick="window.bt362AddOpen=false;openAdd()">Add account manually</button></div>';
     h+='<button class="fab bt362-add-fab" type="button" aria-label="Add bonus" aria-expanded="'+!!window.bt362AddOpen+'" onclick="window.bt362AddOpen=!window.bt362AddOpen;R()">+</button>';
   }
   h+='<div class="tabs">';
@@ -6496,17 +6525,17 @@ entries=sortE(entries);R();
     if(!expanded)h+='<div class="bt360-search-tools"><button class="bt360-link" onclick="BT360.resetStage();R()">All accounts</button></div>';
 
     if(showTemplates&&!expanded){
-      h += '<div class="sec">Quick add templates</div><div class="tgrid">';
+      h += '<section id="bt-quick-add-panel" class="bt362-tool-panel" tabindex="-1"><div class="sec">Quick add templates</div><div class="tgrid">';
       TEMPLATES.forEach((t,i)=>{
         h += `<button class="tbtn" onclick="addFromTpl(${i})">${bankLogo(t.bank,true)}<div class="t-info"><div class="nm">${esc(t.bank)}</div><div class="bn">${fM(t.bonus)}</div></div></button>`;
       });
-      h += '</div>';
+      h += '</div></section>';
     }
 
     }
     if(!expanded)h += `<input class="sinput" type="text" id="${archiveView?'archive-search':'tracker-search'}" aria-label="${archiveView?'Search archived accounts':'Search accounts'}" placeholder="${archiveView?'Search archived accounts...':'Search accounts...'}" value="${esc(search)}" oninput="updateViewSearch('tracker',this.value,this.selectionStart)">`;
     if(!archiveView){
-    if(showAnalyzer&&!expanded) h += rAnalyzer();
+    if(showAnalyzer&&!expanded) h += '<section id="bt-promo-terms-panel" class="bt362-tool-panel" tabindex="-1">'+rAnalyzer()+'</section>';
     h += '<details class="bt360-legacy-actions"'+(legacyActionsOpen?' open':'')+' ontoggle="legacyActionsOpen=this.open"><summary>All Action Center tools</summary>'+renderActionCenter()+'</details>';
     }
 
