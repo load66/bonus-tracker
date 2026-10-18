@@ -361,7 +361,7 @@ async function exercise(name,engine,url){
         const owner=task.parentElement,check=owner.querySelector('[role="checkbox"]'),a=check.getBoundingClientRect(),b=task.getBoundingClientRect();
         const title=timer.querySelector('b'),titleH=title?.getBoundingClientRect().height||0,lh=parseFloat(getComputedStyle(title).lineHeight)||16;
         const metrics={taskWidth:task.clientWidth,timerWidth:timer.clientWidth,titleH,titleLineHeight:lh,checkRight:a.right,taskLeft:b.left,taskRight:b.right,ownerRight:owner.getBoundingClientRect().right,feeScroll:fee.scrollWidth,feeWidth:fee.clientWidth,panelScroll:panel.scrollWidth,panelWidth:panel.clientWidth,feeAlign:getComputedStyle(fee.querySelector('div')).textAlign};
-        const gates={task:task.clientWidth>=120,timer:timer.clientWidth>=120,title:titleH<=lh+2,checkbox:a.right<=b.left+1,taskBounds:b.right<=owner.getBoundingClientRect().right+1,feeOverflow:fee.scrollWidth<=fee.clientWidth+1,panelOverflow:panel.scrollWidth<=panel.clientWidth+1,feeAlign:metrics.feeAlign==='left'};
+        const gates={task:task.clientWidth>=120,timer:timer.clientWidth>=120,title:titleH<=lh+2,checkbox:a.right<=b.left+1,taskBounds:b.right<=owner.getBoundingClientRect().right+1,feeOverflow:fee.scrollWidth<=fee.clientWidth+1,panelOverflow:panel.scrollWidth<=panel.clientWidth+1,feeAlign:metrics.feeAlign==='right'};
         return {ok:Object.values(gates).every(Boolean),gates,metrics};
       });
       if(!layout.ok)console.error('320-430px layout diagnostics:',width,JSON.stringify(layout));
