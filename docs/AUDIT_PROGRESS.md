@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT Codex | v3.6.2 remaining mockup | codex/v3.6.2-remaining-mockup
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- BonusTracker v3.6.2 remaining mockup release: PR pending on `codex/v3.6.2-remaining-mockup`, built on verified v3.6.1; no rework of `panel()` fix. Personal/Business Tracker stage chips hide zero-count states, Needs you task count pluralized, single year selector replaces three buttons, FAB menu exposes Quick Add, promo-term analyzer, and manual entry; data is untouched. Bonuses grouped by supported tracker date and uncertainty (not personal eligibility claims), compact offer rows, About sources disclosure, one amber stale alert; existing official evidence and geography checks retained. Data opens search-first with compact outcome pills, filters and education collapsed below reports. Settings header ellipsis and owner-authenticated hosting endpoint unchanged; live costs display only from valid backend response. Mobile 390px screenshot assertions for Tracker, Bonuses, Data and Settings, synthetic hosting amounts only in tests. Core rules, cloud backups, Finance retirement untouched. Next step: complete bonus/cloud/UI unit suites, Chromium Playwright, deploy verified Pages; report exact commit and screenshot artifacts.
 
 - v3.6.1 panel title rendering patch: `codex/v3.6.1-panel-title-release` based on post-PR166 main. Correct three literal-tag header displays (Needs you count, Eligible soon subtitle and Archive cooling subtitle) without disabling escaped heading titles. App/mobile `3.6.1`, service-worker cache `bt-v3.6.1-panel1`, all affected asset cache tags updated. Added smoke test and Chromium Playwright regression assertion; preserved storage, Finance retirement, rules and backups. Next step: PR CI, merge, verify exact production Pages commit; never claim live user backups were tested.
 
