@@ -90,9 +90,6 @@ jobs:
     steps:
       - name: Checkout exact verified source
         uses: actions/checkout@v4
-      - name: Refresh bank bonus RSS metadata
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        run: python3 scripts/update-bank-feed.py
       - name: Package the exact verified site
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-pages-artifact@v4
