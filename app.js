@@ -6535,7 +6535,7 @@ entries=sortE(entries);R();
     const archiveView=arguments[1]===true;
     sorted=sorted.filter(e=>isArchivedTrackerEntry(e)===archiveView || (archiveView&&window.bt360ArchiveDetailId===e.id));
     if(window.BT360)sorted=sorted.filter(e=>window.BT360.scope(e));
-    if(window.BT360&&!archiveView)sorted=sorted.filter(e=>!e.closed||e.id===expanded);
+    // Preserve closed but repeatable cooldown accounts in Tracker; canonical archival controls visibility.
     const q=search.toLowerCase();
     const filtered=q?sorted.filter(e=>(e.bank||'').toLowerCase().includes(q)||(e.id||'').toLowerCase().includes(q)):sorted;
     const f=!q&&expanded&&sorted.some(e=>e.id===expanded)?sorted.filter(e=>e.id===expanded):(window.BT360?.selectedStage&&!archiveView?filtered.filter(e=>lifecycleViewForEntry(e).code===window.BT360.selectedStage):filtered);
@@ -6559,7 +6559,7 @@ entries=sortE(entries);R();
     if(!expanded)h += `<input class="sinput" type="text" id="${archiveView?'archive-search':'tracker-search'}" aria-label="${archiveView?'Search archived accounts':'Search accounts'}" placeholder="${archiveView?'Search archived accounts...':'Search accounts...'}" value="${esc(search)}" oninput="updateViewSearch('tracker',this.value,this.selectionStart)">`;
     if(!archiveView){
     if(showAnalyzer&&!expanded) h += '<section id="bt-promo-terms-panel" class="bt362-tool-panel" tabindex="-1">'+rAnalyzer()+'</section>';
-    if(!window.BT360)h += '<details class="bt360-legacy-actions"'+(legacyActionsOpen?' open':'')+' ontoggle="legacyActionsOpen=this.open"><summary>All Action Center tools</summary>'+renderActionCenter()+'</details>';
+    if(!expanded)h += '<details class="bt360-legacy-actions"'+(legacyActionsOpen?' open':'')+' ontoggle="legacyActionsOpen=this.open"><summary>All Action Center tools</summary>'+renderActionCenter()+'</details>';
     }
 
     if(!f.length){
