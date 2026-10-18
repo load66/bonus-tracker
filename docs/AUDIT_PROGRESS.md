@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: ChatGPT/Codex · v3.6.8 usage diagnostics UI · codex/v3.6.8-usage-diagnostics-ui
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
