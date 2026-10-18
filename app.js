@@ -6559,7 +6559,7 @@ entries=sortE(entries);R();
     if(!expanded)h += `<input class="sinput" type="text" id="${archiveView?'archive-search':'tracker-search'}" aria-label="${archiveView?'Search archived accounts':'Search accounts'}" placeholder="${archiveView?'Search archived accounts...':'Search accounts...'}" value="${esc(search)}" oninput="updateViewSearch('tracker',this.value,this.selectionStart)">`;
     if(!archiveView){
     if(showAnalyzer&&!expanded) h += '<section id="bt-promo-terms-panel" class="bt362-tool-panel" tabindex="-1">'+rAnalyzer()+'</section>';
-    if(!expanded)h += '<details class="bt360-legacy-actions"'+(legacyActionsOpen?' open':'')+' ontoggle="legacyActionsOpen=this.open"><summary>All Action Center tools</summary>'+renderActionCenter()+'</details>';
+    if(!window.BT360&&!expanded)h += '<details class="bt360-legacy-actions"'+(legacyActionsOpen?' open':'')+' ontoggle="legacyActionsOpen=this.open"><summary>All Action Center tools</summary>'+renderActionCenter()+'</details>';
     }
 
     if(!f.length){
