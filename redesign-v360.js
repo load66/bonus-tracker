@@ -134,9 +134,12 @@ function detailPanels(e){
  const eligibility=eligibleInfo(e),safeClose=typeof safeCloseDate==='function'?safeCloseDate(e):'';
  h+='<div data-bt-eligibility>'+panel(closed?'Eligibility':'Key dates',(!closed?infoRow('Safe to close',safeClose?date(safeClose):'Needs review'):'')+infoRow('Eligible again',eligibility?date(eligibility.eligible):'Needs review',eligibility?.label||'No supported rule or anchor'))+'</div>';
  h+='<button class="bt360-source" onclick="BT360.showTerms('+arg(e.bank)+')">'+(e.termsVerifiedAt?'Official terms verified '+safe(date(String(e.termsVerifiedAt).slice(0,10))):'Terms need review')+' · View saved source ›</button>';
- const primary=primaryAction(e);
- h+='<div class="bt360-detail-footer" role="group" aria-label="Account actions"><button onclick="btOpenBonusAI('+arg(e.id)+')">Ask AI</button><button class="bt360-primary" aria-label="'+safe(primary.label+' for '+e.bank)+'" onclick="'+primary.command+'">'+safe(primary.label)+'</button></div>';
+
  return h;
+}
+function detailFooter(e){
+ const primary=primaryAction(e);
+ return '<div class="bt360-detail-footer" role="group" aria-label="Account actions"><button type="button" onclick="btOpenBonusAI('+arg(e.id)+')">Ask AI</button><button type="button" class="bt360-manage" onclick="openBankActions('+arg(e.id)+')">Manage</button><button type="button" class="bt360-primary" aria-label="'+safe(primary.label+' for '+e.bank)+'" onclick="'+primary.command+'">'+safe(primary.label)+'</button></div>';
 }
 function showTerms(bank){archivePane='saved';storageSearch=String(bank||'');expanded=null;tab='archive';R()}
 function back(){expanded=null;window.bt360ArchiveDetailId=null;R();const el=document.querySelector('.scroll');if(el)el.scrollTop=0}
