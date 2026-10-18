@@ -4083,6 +4083,21 @@ function updateViewSearch(kind,value,cursor){
   const input=document.getElementById(id);
   if(input){input.focus({preventScroll:true});const position=Number.isInteger(cursor)?Math.min(cursor,input.value.length):input.value.length;input.setSelectionRange(position,position);}
 }
+function openTrackerTool(kind){
+  window.bt362AddOpen=false;
+  expanded=null;
+  showTemplates=kind==='quick-add';
+  showAnalyzer=kind==='promo-terms';
+  R();
+  const id=showTemplates?'bt-quick-add-panel':showAnalyzer?'bt-promo-terms-panel':'';
+  if(!id)return;
+  requestAnimationFrame(()=>{
+    const panel=document.getElementById(id);
+    if(!panel)return;
+    panel.scrollIntoView({behavior:'smooth',block:'start'});
+    panel.focus({preventScroll:true});
+  });
+}
 function R(){const focusedBeforeRender=document.activeElement;const searchFocus=focusedBeforeRender&&['archive-search','tracker-search','datapoints-search','radar-search','terms-search'].includes(focusedBeforeRender.id)?{id:focusedBeforeRender.id,start:focusedBeforeRender.selectionStart,end:focusedBeforeRender.selectionEnd}:null;if(tab==='finances')tab='tracker';captureProfileSectionState();const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;
   if(typeof window.btCaptureRadarDisclosures==='function')window.btCaptureRadarDisclosures();
   if(tab==='profiles'||tab==='health')tab='tracker';
@@ -4110,7 +4125,7 @@ function R(){const focusedBeforeRender=document.activeElement;const searchFocus=
   else if(tab==='bonuses')h+=typeof rBankBonuses==='function'?rBankBonuses():'<p>Bank bonus feed is loading.</p>';
   h+='</div>';
   if(tab==='tracker'&&!bt360Detail){
-    if(window.bt362AddOpen)h+='<div class="bt362-add-menu" role="group" aria-label="Add bonus actions"><button type="button" onclick="window.bt362AddOpen=false;showTemplates=!showTemplates;showAnalyzer=false;R()">Quick Add</button><button type="button" onclick="window.bt362AddOpen=false;showAnalyzer=!showAnalyzer;showTemplates=false;R()">Review promo terms</button><button type="button" onclick="window.bt362AddOpen=false;openAdd()">Add account manually</button></div>';
+    if(window.bt362AddOpen)h+='<div class="bt362-add-menu" role="group" aria-label="Add bonus actions"><button type="button" onclick="openTrackerTool(\'quick-add\')">Quick Add</button><button type="button" onclick="openTrackerTool(\'promo-terms\')">Review promo terms</button><button type="button" onclick="window.bt362AddOpen=false;openAdd()">Add account manually</button></div>';
     h+='<button class="fab bt362-add-fab" type="button" aria-label="Add bonus" aria-expanded="'+!!window.bt362AddOpen+'" onclick="window.bt362AddOpen=!window.bt362AddOpen;R()">+</button>';
   }
   h+='<div class="tabs">';
@@ -6491,17 +6506,17 @@ entries=sortE(entries);R();
     if(!expanded)h+='<div class="bt360-search-tools"><button class="bt360-link" onclick="BT360.resetStage();R()">All accounts</button></div>';
 
     if(showTemplates&&!expanded){
-      h += '<div class="sec">Quick add templates</div><div class="tgrid">';
+      h += '<section id="bt-quick-add-panel" class="bt362-tool-panel" tabindex="-1"><div class="sec">Quick add templates</div><div class="tgrid">';
       TEMPLATES.forEach((t,i)=>{
         h += `<button class="tbtn" onclick="addFromTpl(${i})">${bankLogo(t.bank,true)}<div class="t-info"><div class="nm">${esc(t.bank)}</div><div class="bn">${fM(t.bonus)}</div></div></button>`;
       });
-      h += '</div>';
+      h += '</div></section>';
     }
 
     }
     if(!expanded)h += `<input class="sinput" type="text" id="${archiveView?'archive-search':'tracker-search'}" aria-label="${archiveView?'Search archived accounts':'Search accounts'}" placeholder="${archiveView?'Search archived accounts...':'Search accounts...'}" value="${esc(search)}" oninput="updateViewSearch('tracker',this.value,this.selectionStart)">`;
     if(!archiveView){
-    if(showAnalyzer&&!expanded) h += rAnalyzer();
+    if(showAnalyzer&&!expanded) h += '<section id="bt-promo-terms-panel" class="bt362-tool-panel" tabindex="-1">'+rAnalyzer()+'</section>';
     h += '<details class="bt360-legacy-actions"'+(legacyActionsOpen?' open':'')+' ontoggle="legacyActionsOpen=this.open"><summary>All Action Center tools</summary>'+renderActionCenter()+'</details>';
     }
 
