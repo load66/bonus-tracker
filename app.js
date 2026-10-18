@@ -6620,7 +6620,7 @@ entries=sortE(entries);R();
 
         h += '<div class="card-btns">';
         if(!e.closed&&e.bonusRecd) h += actionBtn('cls',I.lock,'Record closure',`event.stopPropagation();startCloseFlow('${e.id}','actual')`);
-        h += actionBtn('edit',I.quick,'Manage',`event.stopPropagation();openBankActions('${e.id}')`);
+        if(!window.BT360) h += actionBtn('edit',I.quick,'Manage',`event.stopPropagation();openBankActions('${e.id}')`);
         h += '</div></div>';
       }
 
