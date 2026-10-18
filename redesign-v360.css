@@ -516,3 +516,7 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
  .bt3613-attention-stage{max-width:91px}
  .bt3611-timer-icon{width:28px;flex-basis:28px;height:28px}
 }
+
+.bt3613-source{display:flex;align-items:center;gap:9px;text-align:left;line-height:1.45;overflow-wrap:anywhere}
+.bt3613-source:before{content:'';width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:#FFB86B}
+.bt3613-source.is-verified:before{background:#5BE3B0}
