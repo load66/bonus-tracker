@@ -234,5 +234,5 @@ function openPhonebook(){closeSettings();window.bt360PhonebookOpen=true;R()}
 function closePhonebook(){window.bt360PhonebookOpen=false;R()}
 function openSettings(){window.bt360SettingsOpen=true;R()}
 function closeSettings(){window.bt360SettingsOpen=false;R()}
-window.BT360={get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},scope,segments,setAudience,setStage,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,back,archive,goArchive,showTerms,openArchived,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook};
+window.BT360={get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},scope,segments,setAudience,setStage,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,back,archive,goArchive,showTerms,openArchived,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,refreshUsage,setHostingAmount,hostSettings,usageCard};
 })();
