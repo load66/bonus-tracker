@@ -209,6 +209,8 @@ async function exercise(name,engine,url){
     check('Delete still uses existing confirmation and does not delete automatically',
       await page.locator('.cbox').isVisible()&&await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,beforeManage));
     await button('Cancel').click();
+    check('Delete confirmation cancels without changing account data',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,beforeManage));
+    await page.getByRole('button',{name:'More account actions'}).click();
     await page.getByRole('button',{name:'Close account actions'}).click();
     check('closing Manage restores sticky footer and unchanged record',
       await page.locator('.bt360-detail-footer').isVisible()&&await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,beforeManage));
