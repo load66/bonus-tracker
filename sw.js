@@ -1,7 +1,7 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.3: working tracker shortcuts, compact protection status, and hosting usage repair.
+// Version 3.6.4: working tracker shortcuts, compact protection status, and hosting usage repair.
 
-const V = 'bt-v3.6.3-ui1';
+const V = 'bt-v3.6.4-ui1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
