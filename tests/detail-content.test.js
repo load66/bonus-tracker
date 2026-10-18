@@ -170,6 +170,22 @@ assert.doesNotMatch(bonusClawbackMarkup,/\$400 early-close fee/,
 
 assert.equal(JSON.stringify([...storage]),before,'Fee projections never write stored records');
 
+
+// A conditional no-fee statement must never yield a green Close check,
+// even if the saved hold clock has elapsed. The fee-summary evidence
+// projection is the single source used for both read-only displays.
+const conditionalClosing={...e,earlyCloseFee:0,earlyTerminationFeeText:'No early close fee after 180 days.',
+  financialRules:{...e.financialRules,closure:{...e.financialRules.closure,earlyCloseFee:null,feeEvidence:null}}};
+const feeCheck=entry=>sandbox.BT360.closeCheckPresentation(entry).find(item=>item.label==='Early close fee window cleared');
+assert.equal(feeCheck(conditionalClosing).ok,false,'Conditional fee-free terms are not unconditional clearance');
+assert.match(feeCheck(conditionalClosing).detail,/conditional|Needs review/i);
+const explicitFree={...conditionalClosing,earlyTerminationFeeText:'No early closing fee.'};
+assert.equal(feeCheck(explicitFree).ok,true,'Explicit unconditional no-fee evidence may be shown as cleared');
+const feeCharged={...conditionalClosing,earlyCloseFee:25,earlyTerminationFeeText:'$25 early closing fee for accounts closed within 180 days.'};
+assert.equal(feeCheck(feeCharged).ok,false,'Positive early-close charges require window review even when a hold timer runs out');
+assert.match(feeCheck(feeCharged).detail,/fee window before closing/);
+assert.equal(JSON.stringify([...storage]),before,'Close checks are pure view projections');
+
 const timers=sandbox.BT360.timerRows(e);
 assert.match(timers,/Requirement due/);
 assert.match(timers,/Jan 13, 2027 · 90 days after opening/);

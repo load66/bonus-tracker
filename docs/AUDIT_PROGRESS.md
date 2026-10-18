@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex — v3.6.22 — codex/v3.6.22-close-fee-display-safety
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.22 closing fee presentation safety (`codex/v3.6.22-close-fee-display-safety`): Close checks now reuses enrolled feeSnapshot evidence and only marks a $0 early-close fee as cleared with explicit, unconditional no-fee wording. A positive/conditional/unknown fee is always flagged for manual window review; an unrelated hold date cannot establish fee clearance. Pure view helper with synthetic regression, no saved record or rule engine changes. PR CI and Pages publication pending.
+
 
 - v3.6.21 bonus detail interaction consistency (PR pending): derived read-only requirement deadline rows from verified stored structured timing when no equivalent manually saved timer exists; explicit Confirm all opens original completion dialog; accurate overdue/due-today labels and empty-state copy. Preserves original evidence, user tasks, stored records, rule engines and chart. Synthetic detail regression added, including checklist-only guard and safe dialog link. CI Chromium/WebKit and main Pages verification pending.
 
