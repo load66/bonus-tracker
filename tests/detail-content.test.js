@@ -77,6 +77,23 @@ assert.match(sandbox.BT360.feeDetail(clawback),/Bonus clawback is separate/);
 assert.doesNotMatch(sandbox.BT360.feeDetail(clawback),/\$900 early-close fee/);
 const conditionalNoFee={...legacy,earlyTerminationFeeText:'No early close fee after 180 days.'};
 assert.match(sandbox.BT360.feeDetail(conditionalNoFee),/Not confirmed/,'Conditional no-fee wording cannot imply a free early closure');
+const cooldownNoDate={
+ id:'SYNT-P-84',bank:'Synthetic Churn Test',accountType:'personal',bonus:400,
+ opened:'2026-01-10',closed:'2026-05-12',churnability:'repeatable',
+ eligibilityText:'A previous checking bonus within 12 months is ineligible.'
+};
+const coolingList=sandbox.BT360.archive([cooldownNoDate]);
+assert.match(coolingList,/Last saved \$400 bonus/);
+assert.match(coolingList,/A previous checking bonus within 12 months is ineligible/);
+assert.match(coolingList,/Details/);
+assert.doesNotMatch(coolingList,/Needs review · verify eligibility rules/);
+const coolingDetail=sandbox.BT360.detailPanels(cooldownNoDate);
+assert.match(coolingDetail,/No confirmed date/);
+assert.match(coolingDetail,/previous checking bonus within 12 months/);
+const estimatedPast={...cooldownNoDate,id:'SYNT-P-85',opened:'2020-01-01',closed:'2021-01-01',
+ churn:'1',eligibilityText:'Legacy saved one-year rule, no verified supporting source.'};
+const estimatedList=sandbox.BT360.archive([estimatedPast]);
+assert.match(estimatedList,/<b>0<\/b><small>Eligible now<\/small>/,'Unverified historic dates must not certify current eligibility');
 const archiveRecord={...legacy,closed:'2026-10-17',bonusRecd:'2026-10-17'};
 assert.match(sandbox.BT360.detailPanels(archiveRecord),/Fees &amp; waivers|Fees & waivers/,'Churn and closed record details retain fee section');
 assert.match(sandbox.BT360.detailPanels(archiveRecord),/\$25 early-close fee/);
