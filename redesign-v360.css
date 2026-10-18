@@ -520,3 +520,7 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
 .bt3613-source{display:flex;align-items:center;gap:9px;text-align:left;line-height:1.45;overflow-wrap:anywhere}
 .bt3613-source:before{content:'';width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:#FFB86B}
 .bt3613-source.is-verified:before{background:#5BE3B0}
+
+/* v3.6.14: fee schedule is an optional source link, not an inferred verification badge. */
+.bt3614-fee-source{display:inline-block;margin-top:4px;min-height:28px;text-decoration:none}
+.bt3613-fee-line .bt3611-full-terms p{white-space:pre-wrap;overflow-wrap:anywhere}
