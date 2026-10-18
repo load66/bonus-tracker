@@ -1,4 +1,4 @@
-/* BonusTracker v3.6.6: presentation only. Canonical calculations and records are untouched. */
+/* BonusTracker v3.6.7: presentation only. Canonical calculations and records are untouched. */
 @font-face{font-family:Manrope;src:url('./fonts/manrope-latin-400-normal.woff2') format('woff2');font-weight:400;font-display:swap}
 @font-face{font-family:Manrope;src:url('./fonts/manrope-latin-600-normal.woff2') format('woff2');font-weight:600 900;font-display:swap}
 :root{color-scheme:dark;--bg:#07080C;--card:#12141C;--card2:#15171F;--border:#1E212C;--text:#F2F3F7;--muted:#A0A6B8;--sub:#A0A6B8;--mint:#5BE3B0;--good:#5BE3B0;--amber:#FFB86B;--bad:#FF8A8A;--blue:#8FB4FF;--violet:#C7A6FF}
@@ -233,7 +233,7 @@ body.bt360-detail-active .scroll{padding-bottom:calc(178px + env(safe-area-inset
 .radar-offer-original p{color:#A0A6B8;font-size:11px;line-height:1.5}
 .radar-card-compact .radar-offer-link{margin-right:12px;min-height:36px;overflow-wrap:anywhere}
 
-/* v3.6.6: safe compact diagnostics, individual reports and clean disclosure labels. */
+/* v3.6.7: safe compact diagnostics, individual reports and clean disclosure labels. */
 .bt360-usage-controls{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin:12px 0}
 .bt360-usage-controls a{color:#8FB4FF;font-size:11px;text-decoration:underline;text-underline-offset:3px;min-height:36px;display:inline-flex;align-items:center}
 .bt360-usage-missing{margin-top:12px;padding:9px 12px;background:#211D20;border:1px solid #44332A;border-radius:12px;color:#FFB86B;font-size:11px;overflow-wrap:anywhere}
@@ -259,7 +259,7 @@ body.bt360-detail-active .scroll{padding-bottom:calc(178px + env(safe-area-inset
 .bt360-detail-footer>.bt360-primary{min-width:0;padding-inline:7px;font-size:11px}
 @media(max-width:390px){.bt360-detail-footer{gap:6px}.bt360-detail-footer>button{font-size:11px}.bt360-detail-footer>.bt360-primary{font-size:10px}}
 
-/* v3.6.6 canonical mobile tracker and single account-detail presentation. */
+/* v3.6.7 canonical mobile tracker and single account-detail presentation. */
 .bt366-compact-account{padding:0!important;margin:0 0 9px!important;border:1px solid #292C38!important;border-radius:16px!important;overflow:hidden;background:#12141C!important}
 .bt366-compact-row{display:flex!important;min-width:0;width:100%;gap:10px;align-items:center;text-align:left;padding:11px 12px!important;min-height:75px;border:0!important;background:transparent!important;color:#F2F3F7;cursor:pointer}
 .bt366-compact-row>.blogo{height:39px!important;width:39px!important;min-width:39px!important;border-radius:12px!important}
@@ -286,3 +286,32 @@ body.bt360-detail-active .scroll{padding-bottom:calc(180px + env(safe-area-inset
 .bt360-detail-card .card-exp{padding:8px 0 calc(215px + env(safe-area-inset-bottom))!important}
 .bt360-detail-card .card-h,.bt360-detail-card .bt-life,.bt360-detail-card .bt-life-step{display:none!important}
 .bt360-detail-footer>button:first-child{min-height:48px}
+
+/* v3.6.7 selectable monthly receipt chart: 44+px hit areas, no zero bars. */
+.bt367-month-chart{display:grid;grid-template-columns:repeat(12,minmax(44px,1fr));gap:4px;margin-top:11px;align-items:stretch;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scrollbar-width:thin}
+.bt367-month-hit{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-height:102px;width:100%;padding:0 0 3px;position:relative;border:1px solid transparent;border-radius:9px;background:transparent;color:#81899C;cursor:pointer;touch-action:manipulation}
+.bt367-month-hit{scroll-snap-align:start}
+.bt367-month-hit:focus-visible{outline:2px solid #8FB4FF;outline-offset:2px}
+.bt367-month-hit.current:not(.selected){background:rgba(91,227,176,.07);border-color:rgba(91,227,176,.16)}
+.bt367-month-hit.selected{background:rgba(91,227,176,.11);border-color:#347A68}
+.bt367-month-track{position:relative;display:flex;align-items:flex-end;justify-content:center;height:76px;width:100%;padding-top:18px}
+.bt367-month-fill{width:min(100%,12px);min-height:2px;max-height:100%;background:#1B4137;border-radius:4px 4px 1px 1px}
+.bt367-month-hit.current .bt367-month-fill{background:#5BE3B0;opacity:.72}
+.bt367-month-hit.selected .bt367-month-fill{background:#5BE3B0;opacity:1}
+.bt367-month-baseline{width:65%;height:1px;background:#26313A;margin-bottom:1px}
+.bt367-month-letter{font-size:10px;line-height:18px;min-height:18px;font-weight:700;color:#8690A4}
+.bt367-month-hit.selected .bt367-month-letter{color:#5BE3B0}
+.bt367-month-value{position:absolute;top:-3px;left:50%;transform:translateX(-50%);color:#5BE3B0;font-size:9px;white-space:nowrap;font-weight:900;z-index:1;font-variant-numeric:tabular-nums}
+.bt367-month-detail{margin:11px 0 0;border:1px solid #264536;background:#101C1A;border-radius:13px;overflow:hidden}
+.bt367-month-detail-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 10px 8px}
+.bt367-month-detail-head>b{font-size:11px;color:#EAF7F1;line-height:1.35}
+.bt367-month-detail-head>button{display:flex;justify-content:center;align-items:center;min-width:44px;min-height:44px;border:0;border-radius:10px;color:#B8C6C2;background:transparent;font-size:22px}
+.bt367-month-list{max-height:275px;overflow-y:auto}
+.bt367-month-row{width:100%;display:flex;align-items:center;gap:9px;text-align:left;background:transparent;color:#F2F3F7;border:0;border-top:1px solid #25352E;padding:10px;min-height:58px}
+.bt367-month-row:focus-visible{outline:2px solid #8FB4FF;outline-offset:-2px}
+.bt367-month-row .blogo{height:38px!important;width:38px!important;min-width:38px!important;border-radius:11px!important}
+.bt367-month-row b{display:block;font-size:12px}
+.bt367-month-row small{display:block;margin-top:4px;color:#A0A6B8;font-size:10px}
+.bt367-month-row>strong{margin-left:auto;white-space:nowrap;font-size:12px;font-variant-numeric:tabular-nums}
+.bt367-month-empty{font-size:12px;color:#A0A6B8;padding:0 11px 13px}
+@media(max-width:390px){.bt367-month-chart{gap:1px}.bt367-month-hit{min-height:102px}.bt367-month-fill{width:min(100%,10px)}.bt367-month-value{font-size:8px}}

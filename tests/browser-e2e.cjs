@@ -307,6 +307,56 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>{entries=window.__designEntries;delete window.__designEntries;expanded=null;R()});
     await button('Tracker').click();
 
+    // Chart drilldown is read-only and uses the Tax source of truth.
+    await page.evaluate(()=>{
+      window.__heroMonthSavedEntries=JSON.parse(JSON.stringify(entries));
+      window.__heroMonthPreviousYear=dashYear;
+      entries=[
+        {id:'hero-month-april-a',bank:'Synthetic First Bank',accountType:'personal',bonus:450,bonusRecd:'2026-04-12',opened:'2026-02-01',checklist:[],customTimers:[]},
+        {id:'hero-month-april-b',bank:'Synthetic Second Bank',accountType:'personal',bonus:400,bonusRecd:'2026-04-22',opened:'2026-03-01',checklist:[],customTimers:[]},
+        {id:'hero-month-business',bank:'Synthetic Business Bank',accountType:'business',bonus:700,bonusRecd:'2026-04-13',opened:'2026-02-01',checklist:[],customTimers:[]}
+      ];
+      dashYear=2026;BT360.clearHeroMonth();R();
+    });
+    check('twelve month buttons start unselected',await page.locator('.bt367-month-hit').count()===12&&await page.locator('.bt367-month-hit[aria-pressed="true"]').count()===0);
+    check('zero months have no bar and full-height tap targets',await page.locator('.bt367-month-hit[data-month="1"] .bt367-month-fill').count()===0
+      &&await page.locator('.bt367-month-hit[data-month="1"] .bt367-month-baseline').count()===1
+      &&await page.locator('.bt367-month-hit[data-month="1"]').evaluate(e=>{const r=e.getBoundingClientRect();return r.height>=44&&r.width>=44;}));
+    check('hero receipt sums equal Tax for same year and audience',await page.evaluate(()=>{
+      const monthly=BT360.heroMonthData(entries,dashYear).reduce((sum,m)=>sum+m.total,0);
+      const tax=taxEntriesForYear(dashYear).filter(BT360.scope).reduce((sum,e)=>sum+Number(e.bonus),0);
+      return monthly===tax&&monthly>=850;
+    }));
+    await page.setViewportSize({width:390,height:844});
+    await page.getByRole('button',{name:'April: $850, 2 bonuses'}).click();
+    check('tapping month opens exact earned rows and highlights bar',await page.locator('.bt367-month-detail').isVisible()
+      &&await page.locator('.bt367-month-row').count()===2
+      &&await page.locator('.bt367-month-hit[data-month="3"]').getAttribute('aria-pressed')==='true'
+      &&(await page.locator('.bt367-month-detail').innerText()).includes('April 2026 · $850 collected · 2 bonuses'));
+    await page.screenshot({path:path.join(output,name+'-v367-hero-month-selected-390.png')});
+    await page.locator('.bt367-month-row').filter({hasText:'Synthetic First Bank'}).click();
+    check('month row opens its actual bonus detail',await page.locator('.bt360-detail-header').innerText().then(t=>t.includes('Synthetic First Bank')));
+    await page.getByRole('button',{name:'Back to accounts'}).click();
+    await page.locator('.bt367-month-hit[data-month="3"]').focus();
+    await page.keyboard.press('Enter');
+    check('keyboard Enter opens selected month',await page.locator('.bt367-month-detail').isVisible());
+    await page.locator('.bt367-month-hit[data-month="3"]').click();
+    check('same bar toggles closed',await page.locator('.bt367-month-detail').count()===0);
+    await page.locator('.bt367-month-hit[data-month="1"]').click();
+    check('zero month says No bonuses',await page.locator('.bt367-month-detail').innerText().then(t=>t.includes('No bonuses')));
+    await page.getByRole('button',{name:'Close month details'}).click();
+    await page.getByRole('button',{name:'Business',exact:true}).click();
+    check('Business filter updates monthly chart using Tax data',await page.getByRole('button',{name:'April: $700, 1 bonus'}).count()===1
+      &&await page.evaluate(()=>BT360.heroMonthData(entries,2026)[3].total===700));
+    await page.getByRole('button',{name:'Personal',exact:true}).click();
+    await page.locator('#bt362-year').selectOption('2025');
+    check('year filter updates bars and clears selection',await page.locator('.bt367-month-hit[aria-pressed="true"]').count()===0
+      &&await page.getByRole('button',{name:'April: $0, 0 bonuses'}).count()===1);
+    await page.evaluate(()=>{
+      entries=window.__heroMonthSavedEntries;delete window.__heroMonthSavedEntries;
+      dashYear=window.__heroMonthPreviousYear;delete window.__heroMonthPreviousYear;
+      BT360.clearHeroMonth();R();
+    });
     await button('Datapoints').click();check('successful method appears in datapoints',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));await button('Archive').click();await button('Saved terms').click();check('terms archive contains original promotion',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));await button('Tracker').click();
     await page.getByPlaceholder('Search accounts...').fill('Does not exist');await page.getByText('No matching accounts',{exact:true}).waitFor();await page.getByPlaceholder('Search accounts...').fill('');
     check('search keeps stored record',(await record()).id===id);
@@ -613,7 +663,7 @@ async function exercise(name,engine,url){
       const summary=await page.locator('.bt360-hero').evaluate(e=>({
         text:e.innerText,scrollWidth:e.scrollWidth,clientWidth:e.clientWidth,
         scrollHeight:e.scrollHeight,clientHeight:e.clientHeight,
-        bars:e.querySelectorAll('.bt360-monthbars>span').length,
+        bars:e.querySelectorAll('.bt367-month-chart>.bt367-month-hit').length,
         amount:e.querySelector('.bt360-hero-amount')?.innerText,
         amountFits:(()=>{const a=e.querySelector('.bt360-hero-amount');return a&&a.scrollWidth<=a.clientWidth+1})()
       }));
