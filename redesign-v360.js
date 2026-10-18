@@ -72,7 +72,7 @@ function eligibleSoon(rows){
  let h='<div class="bt360-list">'+next.map(x=>'<button class="bt360-list-row" onclick="BT360.goArchive(\'waiting\')">'+bankLogo(x.e.bank,true)+'<span class="bt360-grow"><b>'+safe(x.e.bank)+'</b><small>'+safe(date(x.info.eligible))+' · '+safe(x.info.label)+'</small></span><span class="bt360-chip">'+x.days+' days</span></button>').join('')+'</div>';
  return panel('Eligible soon <span class="bt360-subtitle">next 60 days</span>',h,'<button class="bt360-link" onclick="BT360.goArchive(\'waiting\')">Waiting to churn</button>');
 }
-function home(rows,year,metrics){const subset=rows.filter(e=>scope(e));return segments()+hero(rows,year,metrics)+stages(rows)+tasks(rows)+eligibleSoon(rows)}
+function home(rows,year,metrics){if(!usageData&&!usageLoading&&window.BTBonusAuth?.connected?.())setTimeout(()=>refreshUsage(),0);return segments()+usageBanner()+hero(rows,year,metrics)+stages(rows)+tasks(rows)+eligibleSoon(rows)}
 function detailHead(e){
  const s=stage(e),enrolled=e.offerEnrollmentDate||e.couponEnrollmentDate||'';
  return '<div class="bt360-detail-header"><div class="bt360-detail-bar"><button onclick="BT360.back()" aria-label="Back to accounts">‹</button><span>'+safe(audience==='business'?'Business':'Personal')+' · '+safe(s.label)+'</span><button onclick="openBankActions('+arg(e.id)+')" aria-label="More account actions">•••</button></div><div class="bt360-detail-identity">'+bankLogo(e.bank,true)+'<div class="bt360-grow"><h2>'+safe(e.bank)+'</h2><p>Opened '+safe(date(e.opened))+(enrolled?' · enrolled '+safe(date(enrolled)):'')+'</p></div><strong>'+amount(e.bonus)+'</strong></div></div>'
@@ -128,6 +128,98 @@ function archive(rows){
 }
 function openArchived(id){const e=entries.find(x=>x.id===id);if(!e)return;expanded=id;if(isArchivedTrackerEntry(e)){window.bt360ArchiveDetailId=id;tab='archive'}else{tab='tracker'}R()}
 function viewOffers(bank){expanded=null;tab='bonuses';R();const v=document.getElementById('radar-search');if(v&&typeof window.btRadarSearch==='function')window.btRadarSearch(bank)}
+const HOST_SETTINGS='bt_hosting_usage_settings_v1';
+const HOST_API='https://api-production-00f74.up.railway.app/api/bonus-tracker/usage';
+const validLimit=v=>Number.isFinite(Number(v))&&Number(v)>0&&Number(v)<=100000?Math.round(Number(v)*100)/100:null;
+function hostSettings(){
+ try{const v=JSON.parse(localStorage.getItem(HOST_SETTINGS)||'{}');return{
+  allowance:validLimit(v.allowance)??5,alertAt:validLimit(v.alertAt)??4,
+  lastBannerMonth:String(v.lastBannerMonth||'').slice(0,7)
+ }}catch{return{allowance:5,alertAt:4,lastBannerMonth:''}}
+}
+function saveHostSettings(next){
+ const value={...hostSettings(),...next};
+ if(!validLimit(value.allowance)||!validLimit(value.alertAt)){window.btNotify?.('Enter an amount greater than $0.');return false}
+ try{const write={[HOST_SETTINGS]:JSON.stringify(value)};window.BTPersistence.commit(localStorage,write);R();return true}
+ catch{window.btNotify?.('Hosting preferences could not be saved.');return false}
+}
+let usageData=null,usageLoading=false,usageFetchedAt=0,usageError='';
+function cleanCost(v){return typeof v==='number'&&Number.isFinite(v)&&v>=0?v:null}
+function fmtCost(v){return v===null?'Unavailable':'if(!(key in noticePrefs))return;noticePrefs[key]=!noticePrefs[key];try{sessionStorage.setItem(noticeKey,JSON.stringify(noticePrefs))}catch{}R()}
+function settings(){
+ const toggles=[['deadlines','Deadlines','3 and 1 day before'],['payouts','Payouts and close dates','When ready'],['eligible','Eligible again','7 days before and on the day']];
+ const buttons=toggles.map(([k,label,description])=>'<button class="bt360-settings-row" role="switch" aria-checked="'+noticePrefs[k]+'" onclick="BT360.setNotice(\''+k+'\')"><span><b>'+label+'</b><small>'+description+'</small></span><i class="bt360-toggle '+(noticePrefs[k]?'checked':'')+'"></i></button>').join('');
+ return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.0</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
+ panel('CLOUD PROTECTION','<p>Verify protection status and automatic backup from the existing cloud controls.</p><div class="bt360-actions"><button class="bt360-primary" onclick="BT360.closeSettings();btOpenCloudBackup()">Back up now / settings</button><button class="bt360-secondary" onclick="BT360.closeSettings();btOpenCloudBackup()">Restore from cloud</button></div>')+
+ usageCard()+
+ panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.0. Push delivery is not active.</p>')+
+ panel('Data','<button class="bt360-settings-row" onclick="BT360.closeSettings();exportBackup()">Export backup file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.closeSettings();importBackup()">Restore from file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.openPhonebook()">Bank phone numbers <span>›</span></button>')+
+ '<button class="bt360-reset" onclick="BT360.closeSettings();resetAllData()">Reset this device <small>Two confirmations and a safety backup</small></button></section></div>';
+}
+function openPhonebook(){closeSettings();window.bt360PhonebookOpen=true;R()}
+function closePhonebook(){window.bt360PhonebookOpen=false;R()}
+function openSettings(){window.bt360SettingsOpen=true;R();refreshUsage()}
+function closeSettings(){window.bt360SettingsOpen=false;R()}
+window.BT360={get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},scope,segments,setAudience,setStage,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,back,archive,goArchive,showTerms,openArchived,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,refreshUsage,setHostingAmount,hostSettings,usageCard};
+})();
++v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+async function refreshUsage(force=false){
+ if(usageLoading)return;
+ if(!force&&Date.now()-usageFetchedAt<60*60*1000)return;
+ if(!window.BTBonusAuth?.connected?.()){usageError='Sign in to Cloud protection to view hosting usage.';return}
+ usageLoading=true;usageError='';if(window.bt360SettingsOpen)R();
+ try{
+  const send=async token=>fetch(HOST_API,{method:'GET',credentials:'omit',cache:'no-store',headers:{Authorization:'Bearer '+token}});
+  let response=await send(await window.BTBonusAuth.token());
+  if(response.status===401)response=await send(await window.BTBonusAuth.token(true));
+  if(!response.ok)throw Error('Usage unavailable');
+  const payload=await response.json();
+  if(!payload||typeof payload!=='object'||!payload.railway||!payload.r2)throw Error('Usage unavailable');
+  usageData=payload;usageFetchedAt=Date.now();
+ }catch{usageError='Usage unavailable. Check your connection or try again.';usageData=null;usageFetchedAt=Date.now()}
+ finally{usageLoading=false;if(window.bt360SettingsOpen||tab==='tracker')R()}
+}
+function setHostingAmount(which){
+ if(which!=='allowance'&&which!=='alertAt')return;
+ const current=hostSettings();
+ const input=window.prompt(which==='allowance'?'Monthly plan allowance in USD':'Alert threshold in USD',String(current[which]));
+ if(input===null)return;
+ const value=validLimit(input.trim());
+ if(value===null){window.btNotify?.('Enter a dollar amount between $0.01 and $100,000.');return}
+ saveHostSettings({[which]:value});
+}
+function usageBanner(){
+ if(!usageData||usageData.railway.status!=='ok')return'';
+ const projected=cleanCost(usageData.railway.projectedMonthEnd),cfg=hostSettings(),month=String(usageData.month||'');
+ if(projected===null||projected<=cfg.alertAt||cfg.lastBannerMonth===month)return'';
+ if(month&&saveBannerMonth(month))return'<button class="bt360-usage-banner" onclick="BT360.openSettings()">Hosting cost may exceed your plan · View ›</button>';
+ return'';
+}
+function saveBannerMonth(month){
+ try{const settings={...hostSettings(),lastBannerMonth:month};window.BTPersistence.commit(localStorage,{[HOST_SETTINGS]:JSON.stringify(settings)});return true}catch{return false}
+}
+function usageCard(){
+ const month=new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'});
+ const cfg=hostSettings(),railway=usageData?.railway,r2=usageData?.r2;
+ const current=cleanCost(railway?.costSoFar),projected=cleanCost(railway?.projectedMonthEnd);
+ let content='';
+ if(usageLoading)content='<p class="bt360-muted">Checking Railway and R2 usage…</p>';
+ else if(!window.BTBonusAuth?.connected?.())content='<p class="bt360-muted">Sign in to Cloud protection to view hosting usage.</p><button class="bt360-link" onclick="BT360.closeSettings();btOpenCloudBackup()">Open Cloud protection</button>';
+ else if(railway?.status==='not_configured')content='<p class="bt360-usage-warning">Add a Railway API token to see usage.</p><p class="bt360-muted">Create a read-only API token under Railway account settings. Add it to the backend service as RAILWAY_API_TOKEN, then redeploy. Never paste it into BonusTracker.</p>';
+ else if(!railway||railway.status!=='ok'||current===null||projected===null)content='<p class="bt360-usage-warning">Railway usage unavailable. Costs cannot be verified.</p><button class="bt360-link" onclick="BT360.refreshUsage(true)">Try again</button>';
+ else {
+  const ratio=projected/cfg.allowance,label=ratio>1?'Over plan':ratio>=0.8?'Near limit':'Within plan',tone=ratio>1?'bad':ratio>=0.8?'warning':'positive';
+  content='<div class="bt360-usage-top"><div><span>Cost so far</span><strong>'+fmtCost(current)+'</strong><small>about '+fmtCost(projected)+' by month end</small></div><span class="bt360-chip '+tone+'">'+label+'</span></div>';
+  content+='<div class="bt360-usage-plan"><div><span>Projected / allowance</span><b>'+fmtCost(projected)+' / '+fmtCost(cfg.allowance)+'</b></div><div class="bt360-track"><i style="width:'+Math.min(100,ratio*100)+'%;background:'+(ratio>1?'#FF8A8A':ratio>=0.8?'#FFB86B':'#5BE3B0')+'"></i></div></div>';
+  const services=Array.isArray(railway.services)?railway.services:[];
+  content+='<div class="bt360-usage-services">'+services.map(x=>'<div><span>'+safe(x.name)+'</span><span>'+fmtCost(cleanCost(x.costSoFar))+' <small>'+(x.avgMemoryGb!=null?Number(x.avgMemoryGb*1024).toFixed(0)+' MB avg':'Memory unavailable')+'</small></span></div>').join('')+'</div>';
+ }
+ if(!content)content='<p class="bt360-muted">Usage information is not available.</p>';
+ content+='<div class="bt360-usage-config"><button onclick="BT360.setHostingAmount(\'allowance\')">Plan allowance <b>'+fmtCost(cfg.allowance)+'</b> ✎</button><button onclick="BT360.setHostingAmount(\'alertAt\')">Alert at <b>'+fmtCost(cfg.alertAt)+'</b> ✎</button></div>';
+ content+='<div class="bt360-usage-r2"><b>R2 storage</b><span>'+(r2?.status==='ok'&&typeof r2.usedBytes==='number'?Number(r2.usedBytes/1000000000).toFixed(2)+' GB / 10 GB free':'Usage unavailable')+'</span></div>';
+ content+='<p class="bt360-muted">Updated '+(usageData?.checkedAt?new Date(usageData.checkedAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'not yet')+' · estimates from Railway and Cloudflare</p>';
+ return panel('HOSTING & USAGE · '+month,content);
+}
 function setNotice(key){if(!(key in noticePrefs))return;noticePrefs[key]=!noticePrefs[key];try{sessionStorage.setItem(noticeKey,JSON.stringify(noticePrefs))}catch{}R()}
 function settings(){
  const toggles=[['deadlines','Deadlines','3 and 1 day before'],['payouts','Payouts and close dates','When ready'],['eligible','Eligible again','7 days before and on the day']];
