@@ -30,7 +30,7 @@
     refreshed=true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=3.6.14-feehistory1',{updateViaCache:'none'}).then(reg=>{
+  navigator.serviceWorker.register('./sw.js?v=3.6.14-feehistory2',{updateViaCache:'none'}).then(reg=>{
     const activate=worker=>{try{worker&&worker.postMessage({type:'SKIP_WAITING'})}catch{}};
     if(reg.waiting)activate(reg.waiting);
     reg.addEventListener('updatefound',()=>{
@@ -77,7 +77,7 @@
 <script src="./fee-review-migration.js?v=3.4.74-feereview1"></script>
 <script src="./smart-attention.js?v=3.4.74-action1"></script>
 <script src="./bank-bonuses.js?v=3.6.14-feehistory1"></script>
-<script src="./bonus-ai-auth.js?v=3.4.74"></script>
+<script src="./bonus-ai-auth.js?v=3.6.14-termsauth1"></script>
 <script src="./cloud-backup-core.js?v=3.4.99-classify1"></script>
 <script src="./cloud-terms-core.js?v=3.6.14-terms1"></script>
 <script src="./cloud-backup.js?v=3.4.74"></script>
