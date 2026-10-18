@@ -171,3 +171,35 @@ assert fresh_rows[0]['expiresAt']=='2026-10-21'
 assert fresh_rows[0]['firstSeen']==now.isoformat()
 assert 'New' in m.merge_offers([],fresh_rows,now)[0]['badges']
 print('RSS lifecycle passed: persisted ended tombstones, reopen only on newer evidence, first-seen and summary expiry')
+
+
+# Exact problematic headlines: bonus reward is not the required deposit.
+assert m.identity('Chase $900 Checking Bonus ($10,000 Direct Deposit Required)')['amount'] == 900
+assert m.identity('US Bank Business $400 or $1200 Bonus')['amount'] == 1200
+assert m.identity('US Bank Business $400 or $1200 Bonus')['rewardIsUpperBound']
+assert m.identity('Bank of America Business $2,500 Bonus ($25,000 Deposit Required)')['amount'] == 2500
+assert m.identity('BoA Business $2,500 Bonus')['bank'] == 'bank of america'
+assert m.identity('Bank of America Business $2,500 Bonus')['bank'] == 'bank of america'
+
+chase_combo = rss('Chase $900 Checking & Savings Combo Bonus ($10,000 Direct Deposit Required)', m.SOURCES[2], older)
+chase_checking = rss('Chase $900 Checking Bonus ($10,000 Direct Deposit Required)', m.SOURCES[0], newer)
+chase_group = m.merge_offers([], [chase_combo, chase_checking], now)
+assert len(chase_group) == 1, chase_group
+assert len(chase_group[0]['links']) == 2
+assert chase_group[0]['amount'] == 900
+boa_fm = rss('Bank of America Business Checking $2,500 Bonus ($20,000 Deposit Required)', m.SOURCES[1], older)
+boa_hmb = rss('BoA Business Checking $2,500 Bonus', m.SOURCES[2], newer)
+boa_group = m.merge_offers([], [boa_fm, boa_hmb], now)
+assert len(boa_group) == 1 and len(boa_group[0]['links']) == 2, boa_group
+assert boa_group[0]['amount'] == 2500
+assert len(m.merge_offers([], [chase_combo, boa_hmb], now)) == 2, 'Never merge distinct banks'
+assert len(m.merge_offers([], [chase_combo, rss('Chase $900 Business Checking Bonus',m.SOURCES[0],newer)],now)) == 2, 'Never merge consumer/business'
+
+baseline=m.merge_offers([], [chase_combo], now, baseline=True)
+assert not any(b=='New' for b in baseline[0]['badges'])
+assert baseline[0]['firstSeenBaseline'] is True
+continuation=m.merge_offers(baseline, [chase_checking], now)
+assert len(continuation)==1 and 'New' not in continuation[0]['badges']
+actual_new=m.merge_offers(baseline, [boa_hmb], now)
+assert any(x['bank']=='bank of america' and 'New' in x['badges'] for x in actual_new)
+print('Offer rewards, matching promotions and first-snapshot baseline verified')
