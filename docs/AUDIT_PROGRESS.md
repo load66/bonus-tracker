@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex · v3.6.14 fee-history projection · codex/v3.6.14-fee-history-projection
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.14 historical T&C/fee projection frontend release PR pending (`codex/v3.6.14-fee-history-projection`): restores legacy and structured monthly fees, explicit early-close wording, required companion fees, and two-row Fees & waivers panel for active, closed, close-ready and churn records. Captures original offer and fee schedule text, financialRules and independent eligibilityRules in existing cloud-backup allowlisted `bt_tc_archive_v1`; each saved revision retained, old accounts backfilled without editing bank records. Existing JSON v3 importer/schema kept unchanged; synthetic strict importer, archive history and R2-format restore regressions added. No cloud provider/backend, financial engine, real user record or eligibility changes. CI/Pages verification pending; actual private bank T&C portfolio was not read or rewritten. Next: run PR bonus/cloud/UI and Chromium/WebKit release checks; only merge and verify Pages after green.
 
 - v3.6.13 precise account status and mockup-style financial detail PR https://github.com/load66/bonus-tracker/pull/187 (`codex/v3.6.13-clear-status-dates`): canonical lifecycle badges no longer replaced by action-date uncertainty; compact source-bound monthly fees, waiver conditions and current-period evidence status; SVG timer and saved payout context; short Key dates with exact calculation basis or a specific missing-event/missing-rule explanation; terms verification dot; no financial record, rule engine, account transaction or provider changes. Synthetic bonus/cloud/UI and Chromium/WebKit 320/375/390/430px browser tests and screenshots PASS on https://github.com/load66/bonus-tracker/actions/runs/39125260559. Next: merge PR #187, verify exact main GitHub Pages deploy and current app v3.6.13.
 
