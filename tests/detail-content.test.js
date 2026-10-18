@@ -168,6 +168,7 @@ const oldAudience=sandbox.BT360.audience;
 const samplePersonal={...estimatedPast,id:'VIEW-P-01',accountType:'personal'};
 const sampleBusiness={...estimatedPast,id:'VIEW-B-01',accountType:'business'};
 const beforeUnified=JSON.stringify([...storage]);
+const originalViewPreference=storage.get('bt3628_audience_session');
 try{
  sandbox.BT360.setAudience('all');
  assert(sandbox.BT360.scope(samplePersonal)&&sandbox.BT360.scope(sampleBusiness));
@@ -181,7 +182,13 @@ try{
  assert(sandbox.BT360.scope(samplePersonal)&&!sandbox.BT360.scope(sampleBusiness));
  sandbox.BT360.setAudience('business');
  assert(!sandbox.BT360.scope(samplePersonal)&&sandbox.BT360.scope(sampleBusiness));
-}finally{sandbox.BT360.setAudience(oldAudience)}
+}finally{
+ sandbox.BT360.setAudience(oldAudience);
+ // The test sandbox shares its Map between sessionStorage and localStorage.
+ // Restore the legitimate UI-only selection preference before asserting no financial writes.
+ if(originalViewPreference===undefined)storage.delete('bt3628_audience_session');
+ else storage.set('bt3628_audience_session',originalViewPreference);
+}
 assert.equal(JSON.stringify([...storage]),beforeUnified,'View filters cannot mutate records');
 const archiveRecord={...legacy,closed:'2026-10-17',bonusRecd:'2026-10-17'};
 assert.match(sandbox.BT360.detailPanels(archiveRecord),/Fees &amp; waivers|Fees & waivers/,'Churn and closed record details retain fee section');
