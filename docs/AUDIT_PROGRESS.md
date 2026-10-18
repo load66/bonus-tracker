@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex · v3.6.30 import generation and no-fee clarity · codex/v3.6.30-import-research-no-fee
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.30 researched import/no-fee clarity (`codex/v3.6.30-import-research-no-fee`): add required NEW_BANK_IMPORT_PLAYBOOK for each new bank/offer/pasted T&C; update AGENTS.md, import standard and financial rule contract. Enumerate sourced personal/business, churn, companion/maintenance fees, timing, payout and closure evidence without inventing bank terms or user events. Display verified unconditional early-close $0 plainly as 'No early-closing fee'; preserve unknown and conditional window review. When official structured payout-only term is satisfied by recorded bonus and no fixed hold exists, clear the fictitious fixed-hold review; bonus clawback remains a separate check. Frontend/cache 3.6.30; synthetic regressions; no backend or stored data migrations. Next: bonus/cloud/UI, Chromium/WebKit, merge and exact GitHub Pages deployment verification.
 
 - v3.6.29 curated bank-brand marks and bank-first Needs you (`codex/v3.6.29-bank-logo-registry`): nineteen locally stored source-credited vector institution marks, strict name-family matching, initials fallback for unknown banks and failed loads, all existing bankLogo views updated. Needs you cards lead with the bank name, show bonus value only in the right column, task below the bank, account type + saved date underneath. Existing stage/action handlers and canonical records, evidence and financial rules unchanged. Frontend app and SW cache advanced to 3.6.29; read-only synthetic UI regression added. Next: full bonus/cloud/UI, Chromium/WebKit PR CI, merge on green, verify exact main GitHub Pages deployment. No backend changes.
 
