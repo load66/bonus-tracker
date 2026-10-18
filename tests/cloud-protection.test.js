@@ -46,3 +46,64 @@ async function noticeCooldown(){
   console.log('Backup notices passed: 30-minute boundary, refresh, duplicate suppression, manual feedback, error visibility and unchanged records');
 }
 noticeCooldown().catch(e=>{console.error(e);process.exitCode=1});
+
+
+// V3.6.0: mock owner-authenticated Railway/R2 usage and editable threshold state.
+// Mock does not contact Railway, R2, or any financial provider.
+async function hostingUsage(){
+ const vm=require('node:vm'),fs=require('node:fs');
+ const mem=new Map(),store={
+  getItem:key=>mem.get(key)||null,setItem:(key,value)=>mem.set(key,String(value)),removeItem:key=>mem.delete(key)
+ };
+ const localSession={getItem:()=>null,setItem:()=>{}};
+ let payload=null,authorized=[],promptValue=null,writes=0;
+ const fake={
+  window:null,localStorage:store,sessionStorage:localSession,Date,
+  document:{getElementById:()=>null,querySelector:()=>null},
+  setTimeout:()=>0,clearTimeout:()=>{},tab:'tax',
+  R:()=>{},dB:()=>0,td:()=> '2026-10-17',fM:n=>'$'+Number(n).toFixed(2),fD:x=>x,
+  bankLogo:()=>'',esc:x=>String(x),entries:[],
+  prompt:()=>promptValue,
+  BTPersistence:{commit(storage,changes){writes++;for(const [key,value] of Object.entries(changes))storage.setItem(key,value)}},
+  BTBonusAuth:{connected:()=>true,token:async()=> 'synthetic-owner-token'},
+  fetch:async(url,options)=>{
+   assert.match(url,/bonus-tracker\/usage/);
+   authorized.push(options.headers.Authorization);
+   return {ok:true,status:200,json:async()=>payload};
+  }
+ };
+ fake.window=fake;vm.createContext(fake);
+ vm.runInContext(fs.readFileSync('redesign-v360.js','utf8'),fake);
+ const model=fake.BT360;
+ assert.equal(model.hostSettings().allowance,5);
+ assert.equal(model.hostSettings().alertAt,4);
+ const make=(projection,status='ok')=>({month:'2026-10',checkedAt:'2026-10-17T12:00:00Z',
+  railway:{status,costSoFar:status==='ok'?projection/2:null,projectedMonthEnd:status==='ok'?projection:null,
+           services:status==='ok'?[{name:'api',costSoFar:projection/3,avgMemoryGb:0.24},{name:'leaps-alpaca-live',costSoFar:projection/6,avgMemoryGb:0.42}]:[]},
+  r2:{status:'ok',usedBytes:420000000,freeBytes:10000000000}});
+ payload=make(3);await model.refreshUsage(true);
+ assert.match(model.usageCard(),/Within plan/);
+ assert.match(model.usageCard(),/R2 storage/);
+ assert.match(model.usageCard(),/api/);
+ payload=make(4.5);await model.refreshUsage(true);
+ assert.match(model.usageCard(),/Near limit/);
+ assert.match(model.home([],2026,{}),/Hosting cost may exceed your plan/);
+ assert.doesNotMatch(model.home([],2026,{}),/Hosting cost may exceed your plan/,'Banner must show only once per month');
+ payload=make(6);await model.refreshUsage(true);
+ assert.match(model.usageCard(),/Over plan/);
+ payload=make(0,'not_configured');await model.refreshUsage(true);
+ assert.match(model.usageCard(),/Add a Railway API token/);
+ assert.doesNotMatch(model.usageCard(),/Cost so far/);
+ payload=make(0,'unavailable');await model.refreshUsage(true);
+ assert.match(model.usageCard(),/Costs cannot be verified/);
+ assert(!/Cost so far/.test(model.usageCard()));
+ promptValue='7.50';model.setHostingAmount('allowance');
+ assert.equal(model.hostSettings().allowance,7.5);
+ promptValue='6';model.setHostingAmount('alertAt');
+ assert.equal(model.hostSettings().alertAt,6);
+ assert(authorized.every(h=>h==='Bearer synthetic-owner-token'));
+ assert(writes>=3);
+ assert(fs.readFileSync('app.js','utf8').includes("'bt_hosting_usage_settings_v1'"),'Hosting settings must be in backup whitelist');
+ console.log('Hosting usage passed: verified costs, thresholds, unavailable/no-token states, one-per-month alert, owner bearer token and backup key');
+}
+hostingUsage().catch(e=>{console.error(e);process.exitCode=1});
