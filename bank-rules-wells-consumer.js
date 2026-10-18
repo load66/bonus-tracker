@@ -1,4 +1,4 @@
-/* Release 3.6.18 presentation-only; preserved canonical rules and calculations. */
+/* Release 3.6.19 presentation-only; preserved canonical rules and calculations. */
 /*
  * filename: bank-rules-wells-consumer.js
  * version: 3.5.2
