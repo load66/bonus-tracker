@@ -4142,7 +4142,20 @@ function R(){const focusedBeforeRender=document.activeElement;const searchFocus=
   else if(tab==='tips')h+=rTips();
   else if(tab==='storage')h+=rTermsStorage();
   else if(tab==='bonuses')h+=typeof rBankBonuses==='function'?rBankBonuses():'<p>Bank bonus feed is loading.</p>';
+  // Put the fixed detail actions beside, not inside, the scroll viewport.
+  // A fixed button nested in the scroll container can appear correctly yet
+  // lose pointer events to the source/details controls during scrolling.
+  let detailActionBar='';
+  if(bt360Detail){
+    const start=h.indexOf('<div class="bt360-detail-footer"');
+    const end=start<0?-1:h.indexOf('</div>',start);
+    if(start>=0&&end>=0){
+      detailActionBar=h.slice(start,end+6);
+      h=h.slice(0,start)+h.slice(end+6);
+    }
+  }
   h+='</div>';
+  h+=detailActionBar;
   if(tab==='tracker'&&!bt360Detail){
     if(window.bt362AddOpen)h+='<div class="bt362-add-menu" role="group" aria-label="Add bonus actions"><button type="button" onclick="openTrackerTool(\'quick-add\')">Quick Add</button><button type="button" onclick="openTrackerTool(\'promo-terms\')">Review promo terms</button><button type="button" onclick="window.bt362AddOpen=false;openAdd()">Add account manually</button></div>';
     h+='<button class="fab bt362-add-fab" type="button" aria-label="Add bonus" aria-expanded="'+!!window.bt362AddOpen+'" onclick="window.bt362AddOpen=!window.bt362AddOpen;R()">+</button>';
