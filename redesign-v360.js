@@ -300,35 +300,88 @@ function waiverCondition(c){
  if(c?.kind==='transactions')return (c.count||'Qualifying')+' transactions';
  return raw.replace(/^(?:maintain|receive|keep|have|make)\s+/i,'').replace(/[.]$/,'')||'Other condition';
 }
-function feeDetail(e){
- const primary=e.financialRules?.accounts?.find(a=>a?.role==='primary')||null;
- const fee=primary?.fee;
+function feeSnapshot(e){
+ const primary=e.financialRules?.accounts?.find(a=>a?.role==='primary')||null,fee=primary?.fee;
  let monthly=typeof fee?.amount==='number'?amount(fee.amount):String(e.monthlyFeeAmountText||e.monthlyFeeYNText||'').trim();
- const amtMatch=monthly.match(/\$\s*[\d,]+(?:\.\d+)?/);
- if(amtMatch)monthly=amtMatch[0].replace(/\s/g,'');
+ const matched=monthly.match(/\$\s*[\d,]+(?:\.\d+)?/);
+ if(matched)monthly=matched[0].replace(/\s/g,'');
  else if(/^(no|none|fee.free)$/i.test(monthly))monthly='$0';
- else if(!monthly||/yes/i.test(monthly))monthly='Needs review';
+ else monthly='Not confirmed';
  const waiver=fee?.waiver;
- let short='Needs review';
- if(waiver&&Array.isArray(waiver.conditions)){
-  short=waiver.operator.toUpperCase()+': '+waiver.conditions.map(waiverCondition).join(waiver.operator==='all'?' + ':' · ');
+ let summary='Waiver terms not confirmed';
+ if(waiver&&Array.isArray(waiver.conditions)&&waiver.conditions.length){
+  summary=(waiver.operator==='all'?'ALL':'ANY')+': '+waiver.conditions.map(waiverCondition).join(waiver.operator==='all'?' + ':' · ');
  }else if(String(e.monthlyFeeWaiverText||e.avoidMonthlyFeeText||'').trim()){
   const text=String(e.monthlyFeeWaiverText||e.avoidMonthlyFeeText).trim();
-  const joiner=/\bor\b/i.test(text)?'ANY':'ALL';
-  short=joiner+': '+text.replace(/^(?:the\s+)?(?:monthly\s+)?(?:fee|maintenance fee)[^.]{0,35}?(?:waived|avoided)[^.]{0,25}?(?:if|with|when)\s+/i,'').replace(/\s+(?:or)\s+/gi,' · ').replace(/\s+(?:and)\s+/gi,' + ').replace(/[.]$/,'');
+  summary=(/\bor\b/i.test(text)?'ANY':'ALL')+': '+text.replace(/^(?:the\s+)?(?:monthly\s+)?(?:fee|maintenance fee)[^.]{0,35}?(?:waived|avoided)[^.]{0,25}?(?:if|with|when)\s+/i,'').replace(/\s+(?:or)\s+/gi,' · ').replace(/\s+(?:and)\s+/gi,' + ').replace(/[.]$/,'');
  }
- const full=[e.monthlyFeeWaiverText,e.avoidMonthlyFeeText,waiver?.evidence?.quote,primary?.fee?.evidence?.quote,e.feeScheduleRaw].map(x=>String(x||'').trim()).filter(Boolean);
- const terms=[...new Set(full)].join('\n\n');
+ const terms=[e.monthlyFeeWaiverText,e.avoidMonthlyFeeText,waiver?.evidence?.quote,fee?.evidence?.quote,e.feeScheduleRaw].map(v=>String(v||'').trim()).filter(Boolean);
  const closure=e.financialRules?.closure;
- let close='Not stated in terms · Needs review',known=false;
+ const quote=String(closure?.feeEvidence?.quote||e.earlyTerminationFeeText||'').trim();
+ let closeMain='Not confirmed',closeNote='Verify early-close fee schedule',closeKnown=false;
+ const safeDate=typeof safeCloseDate==='function'?safeCloseDate(e):'';
  if(typeof closure?.earlyCloseFee==='number'&&closure.feeEvidence?.quote){
-  if(closure.earlyCloseFee>0){close=amount(closure.earlyCloseFee)+' early close fee';known=true}
-  else if(/no .{0,30}(early|clos|terminat).{0,20}fee|\$0|fee.free/i.test(closure.feeEvidence.quote)){close='No early close fee stated';known=true}
- }else if(Number(e.earlyCloseFee)>0){close=amount(e.earlyCloseFee)+' early close fee';known=true}
- return '<div class="bt3611-fees">'+infoRow('Monthly fee',monthly)+'<div class="bt360-info-row bt360-info-long bt3611-waiver-row"><span>Waived if</span><div><b class="bt3611-waiver-summary">'+safe(short)+'</b>'+(terms?'<details class="bt3611-full-terms"><summary>View full terms</summary><p>'+safe(terms)+'</p></details>':'')+'</div></div>'+'<div class="bt360-info-row"><span>Early close fee</span><div><b class="'+(!known?'bt3611-amber':'')+'">'+safe(close)+'</b></div></div></div>';
+  if(closure.earlyCloseFee>0){closeMain=amount(closure.earlyCloseFee)+' early-close fee';closeNote='From verified fee terms';closeKnown=true}
+  else if(/no .{0,30}(?:early|clos|terminat).{0,20}fee|\$0|fee.free/i.test(quote)){
+   closeMain=safeDate&&Number(closure.minHoldDays)>0?'None after '+date(safeDate):'No early-close fee';
+   closeNote=safeDate&&Number(closure.minHoldDays)>0?(Number(closure.minHoldDays)+' days from '+(closure.basis==='bonus'?'payout':closure.basis==='reqmet'?'requirements':'opening')):'Confirmed by saved fee terms';
+   closeKnown=true;
+  }
+ }else if(Number(e.earlyCloseFee)>0&&quote){
+  closeMain=amount(e.earlyCloseFee)+' early-close fee';closeNote='From saved terms · confirm applicable window';closeKnown=true;
+ }
+ let monthStatus='Waiver not confirmed',monthNote='No verified monthly activity saved';
+ if(monthly==='$0'){monthStatus='No fee to waive';monthNote='Monthly maintenance fee is $0'}
+ else if(e.monthlyFeeChecked){monthStatus='Fee review recorded';monthNote='Manually checked · current period not verified'}
+ return {monthly,summary,terms:[...new Set(terms)].join('\n\n'),closeMain,closeNote,closeKnown,monthStatus,monthNote};
 }
-function dateActionRow(e,label,value,desc,kind){
- return '<div class="bt360-info-row bt3611-date-row"><span>'+safe(label)+'</span><div><b>'+safe(value||'Needs review')+'</b>'+(desc?'<small>'+safe(desc)+'</small>':'')+(!value?'<button type="button" class="bt3611-set-rule" onclick="BT360.openRuleEditor('+arg(e.id)+','+arg(kind)+')">Set rule</button>':'')+'</div></div>';
+function feeDetail(e){
+ const x=feeSnapshot(e);
+ return '<div class="bt3613-fees">'
+  +'<div class="bt3613-fee-line"><span>Monthly fee</span><div><b>'+safe(x.monthly)+'</b><small class="bt3613-waiver-clamp">Waived if '+safe(x.summary)+'</small>'+(x.terms?'<details class="bt3611-full-terms"><summary>View full terms</summary><p>'+safe(x.terms)+'</p></details>':'')+'</div></div>'
+  +'<div class="bt3613-fee-line"><span>This month</span><div><b class="'+(x.monthStatus==='Waiver not confirmed'?'bt3611-amber':'')+'">'+safe(x.monthStatus)+'</b><small>'+safe(x.monthNote)+'</small></div></div>'
+  +'<div class="bt3613-fee-line"><span>Early close fee</span><div><b class="'+(x.closeKnown?'':'bt3611-amber')+'">'+safe(x.closeMain)+'</b><small>'+safe(x.closeNote)+'</small></div></div></div>';
+}
+function closeDateInfo(e){
+ const close=e.financialRules?.closure,source=String(close?.evidence?.quote||e.closeRuleText||e.earlyTerminationFeeText||'').trim();
+ const basis=String(close?.basis||e.closeRuleBasis||'').toLowerCase();
+ const ruleDays=Number(close?.minHoldDays??e.minHoldDays??0);
+ if(close?.restrictionType==='manual-review'||e.closeRestrictionType==='manual-review')return {value:'Close rule unverified',note:'Check early-close restrictions',action:true};
+ if(!source)return {value:'Close terms missing',note:'No supported hold or fee rule saved',action:true};
+ if(basis==='bonus'&&!e.bonusRecd)return {value:'After bonus posts',note:ruleDays?ruleDays+'-day hold starts at payout':'Close timing starts at payout',action:false};
+ if(basis==='reqmet'&&!e.reqMet)return {value:'After requirements',note:ruleDays?ruleDays+'-day hold starts after qualification':'Close timing starts after qualification',action:false};
+ const computed=typeof safeCloseDate==='function'?safeCloseDate(e):'';
+ if(!computed)return {value:'Date not calculable',note:'Review the saved close rule',action:true};
+ const basisLabel=basis==='bonus'?'payout':basis==='reqmet'?'requirements':basis==='opened'?'opening':'saved rule';
+ const delay=ruleDays>0?ruleDays+' days from '+basisLabel:'From saved close restrictions';
+ const feeKnown=close?.earlyCloseFee!==null&&close?.earlyCloseFee!==undefined&&!!close?.feeEvidence?.quote;
+ return {value:date(computed),note:delay+(feeKnown?' · fee terms saved':' · confirm fees'),action:!feeKnown&&!Number(e.earlyCloseFee)};
+}
+function eligibilityDateInfo(e,info){
+ const gate=window.BTEligibilityGate;
+ let validation=null;try{validation=gate?.validate?.(e)}catch{}
+ if(validation?.ok&&validation.decision==='nonrepeatable')return {value:'Not repeatable',note:'Offer permits one bonus only',action:false};
+ if(info?.verified&&info.eligible){
+  const controlling=info.controlling;
+  const p=controlling?.period?gate.periodLabel(controlling.period):'Saved eligibility rules';
+  const basis=controlling?.basis?gate.anchorLabel(controlling.basis):'eligibility start';
+  return {value:date(info.eligible),note:p+' from '+basis+' + 2 days',action:false};
+ }
+ if(info?.eligible)return {value:date(info.eligible),note:'Saved churn estimate · terms not verified',action:true};
+ if(validation?.ok&&validation.decision==='repeatable'){
+  const rules=validation.rules||[];
+  const pending=rules.find(r=>!r.anchorDate&&['account-closed','account-ownership-ended','bonus-received'].includes(r.basis));
+  if(pending){
+   const anchor=pending.basis==='bonus-received'?'bonus payment':'account closure';
+   return {value:'After '+anchor,note:gate.periodLabel(pending.period)+' after '+anchor+' + 2 days',action:false};
+  }
+  return {value:'Date not calculable',note:'Eligibility clock needs a start date',action:true};
+ }
+ return {value:'Eligibility rule missing',note:'No verified repeatability restriction',action:true};
+}
+function dateActionRow(e,label,info,kind){
+ const x=info||{value:'Date unavailable',note:'Rule needs verification',action:true};
+ return '<div class="bt3613-date-row"><span>'+safe(label)+'</span><div><b>'+safe(x.value)+'</b><small>'+safe(x.note)+'</small>'+(x.action?'<button type="button" class="bt3611-set-rule" onclick="BT360.openRuleEditor('+arg(e.id)+','+arg(kind)+')">Set rule</button>':'')+'</div></div>';
 }
 function openRuleEditor(id,kind){
  if(typeof openEdit!=='function')return;
@@ -365,7 +418,7 @@ function detailPanels(e){
   h+=panel('Requirements',(!req.count?'<p class="bt360-muted">No checklist tasks saved yet.</p>':req.html)+'<div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></div>');
   h+=panel('Fees & waivers',feeDetail(e));
   const rows=timerRows(e);
-  h+=panel('Timers',(rows||'<p class="bt360-muted">No custom timers set.</p>')+'<button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'timer\')">+ Add timer</button>');
+  h+=panel('Timers',rows||'<p class="bt360-muted">No saved deadlines.</p>','<button type="button" class="bt360-link bt3613-add-timer" onclick="runBankAction('+arg(e.id)+',\'timer\')">+ Add</button>');
  }
  const readyWork=ready?h.slice(savedWorkStart):'';
  if(ready)h=h.slice(0,savedWorkStart);
@@ -393,9 +446,9 @@ function detailPanels(e){
   const phone=phoneRow?.[audience]||'';
   h+='<section class="bt3611-call"><b>CALL TO CLOSE</b><p>'+safe(audience==='business'?'Business banking line':'Personal banking line')+' · saved for '+safe(e.bank)+'</p>'+(phone?'<a class="bt360-primary bt360-call" href="tel:'+safe(phone.replace(/[^+\d]/g,''))+'">☎ '+safe(phone)+'</a>':'<button type="button" class="bt360-primary" onclick="BT360.openPhoneForClose('+arg(e.bank)+')">Add bank phone number</button>')+'<small>Shown only when an account is ready to close.</small></section>';
  }
- const eligibility=eligibleInfo(e),safeClose=typeof safeCloseDate==='function'?safeCloseDate(e):'';
+ const eligibility=eligibleInfo(e);
  const title=ready?'After closing':closed?'Eligibility':'Key dates';
- h+='<div data-bt-eligibility>'+panel(title,(!closed&&!ready?dateActionRow(e,'Safe to close',safeClose?date(safeClose):'','From saved close restrictions','close'):'')+dateActionRow(e,'Eligible again',eligibility?date(eligibility.eligible):'',eligibility?.label||'Confirm the saved eligibility rule','eligibility')+(eligibility?.more?.length?eligibility.more.filter(r=>r.id!==eligibility.controlling?.id&&r.eligibleDate).map(r=>infoRow('Also checked',date(r.eligibleDate),r.label||'Saved eligibility rule')).join(''):''))+'</div>';
+ h+='<div data-bt-eligibility>'+panel(title,'<div class="bt3613-dates">'+(!closed&&!ready?dateActionRow(e,'Safe to close',closeDateInfo(e),'close'):'')+dateActionRow(e,'Eligible again',eligibilityDateInfo(e,eligibility),'eligibility')+(eligibility?.more?.length?eligibility.more.filter(r=>r.id!==eligibility.controlling?.id&&r.eligibleDate).map(r=>infoRow('Also checked',date(r.eligibleDate),r.label||'Saved eligibility rule')).join(''):'')+'</div>')+'</div>';
  h+='<button class="bt360-source" onclick="BT360.showTerms('+arg(e.bank)+')">'+(e.termsVerifiedAt?'Official terms reviewed '+safe(date(String(e.termsVerifiedAt).slice(0,10))):'Terms need review')+' · View saved source ›</button>';
  if(ready&&readyWork)h+='<details class="bt3611-ready-extras"'+(readyExtrasState.get(e.id)?' open':'')+'><summary onclick="BT360.setReadyExtrasOpen('+arg(e.id)+',!this.parentElement.open)">Review saved tasks, fees and timers</summary>'+readyWork+'</details>';
  return h;
