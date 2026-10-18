@@ -70,7 +70,7 @@ async function exercise(name,engine,url){
     };
   });
   const button=text=>page.getByRole('button',{name:text,exact:true});
-  const openAdvancedActions=async()=>{const detail=page.locator('details.bt360-legacy-actions');if(await detail.count()&&!await detail.evaluate(el=>el.open))await detail.locator('summary').click();};
+  const openAdvancedActions=async()=>{const more=page.getByRole('button',{name:'More account actions'});if(await more.count()){await more.click();return}const row=page.locator('.bt366-compact-row').first();if(await row.count()){await row.click();await page.getByRole('button',{name:'More account actions'}).click();}};
   const wait=async fn=>{await page.waitForFunction(fn,{},{timeout:15000})};
   // Startup wrappers and controller renders are scheduled through 1.8 seconds.
   // Wait beyond that initialization window after navigation; retain all assertions.
@@ -88,13 +88,11 @@ async function exercise(name,engine,url){
     await page.getByRole('heading',{name:'Add account',exact:true}).waitFor();
   };
   const edit=async()=>{
-    const card=page.locator('.card-h').first();
-    if(!await button('Manage').isVisible())await card.click();
-    await button('Manage').click();
+    await openAdvancedActions();
     await page.getByRole('button',{name:'✏️ Edit account Details, dates, bonus, rules',exact:true}).click();
   };
   const close=async()=>{
-    await button('Review closure').click();
+    await page.getByRole('button',{name:'Mark account closed',exact:true}).click();
     await page.locator('#cp_date').fill('2026-05-01');
     await page.locator('#cp_monthly_checked').selectOption('yes');
     await button('Next').click();await button('Next').click();await button('Review').click();await button('Save Closed').click();await button('OK').click();
@@ -159,38 +157,30 @@ async function exercise(name,engine,url){
     check('v3.6.1 panel headings render badges instead of literal HTML',await page.locator('.bt360-panel-title').evaluateAll(rows=>rows.some(e=>e.querySelector('h3')?.textContent==='Needs you'&&e.querySelector('.bt360-count'))&&rows.every(e=>!e.querySelector('h3')?.textContent.includes('<span'))));
     check('90-day deadline is exact',await page.evaluate(()=>reqDeadline(entries[0]))==='2026-05-01');
     const beforeDisclosure=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
-    await openAdvancedActions();await page.locator('#bt-action-center-toggle').click();
-    check('header expands Action Center',await page.locator('#bt-action-center-toggle').getAttribute('aria-expanded')==='true'&&await page.locator('.ops-action-row').first().isVisible());
-    await page.evaluate(()=>R());
-    check('Action Center remains open through render',await page.locator('#bt-action-center-body').isVisible());
-    await openAdvancedActions();await page.locator('#bt-action-center-toggle').press('Enter');
-    check('keyboard collapses Action Center',!await page.locator('#bt-action-center-body').isVisible());
-    await openAdvancedActions();await page.locator('#bt-action-center-toggle').press('Space');
-    check('keyboard expands Action Center without record changes',await page.locator('#bt-action-center-body').isVisible()&&await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===beforeDisclosure);
-    check('compact action tiles omit duplicate explanations',await page.locator('.ops-action-center .ops-action-explanation').count()===0&&await page.locator('.ops-action-center .ops-date-proof').count()===0);
-    await page.locator('.ops-action-row').first().click();
-    check('action tile opens its full account card',await page.locator('.card-exp').isVisible());
-    check('using an action preserves expanded Action Center',await page.locator('#bt-action-center-toggle').getAttribute('aria-expanded')==='true');
+    check('Tracker no longer displays the legacy Action Center',await page.locator('.bt360-legacy-actions').count()===0);
+    check('Tracker shows compact account row, not old full card',await page.locator('.bt366-compact-row').count()===1&&await page.locator('.bt366-compact-row .card-mini-chip').count()===0);
+    await page.locator('.bt366-compact-row').first().click();
     await page.setViewportSize({width:390,height:844});
-    check('in-progress detail has dated identity and sticky actions',await page.locator('.bt360-detail-identity').isVisible()&&await page.locator('.bt360-detail-footer').isVisible());
-    check('fixed action bar is outside the scrolling detail card',await page.locator('.bt360-detail-footer').evaluate(e=>e.parentElement?.id==='app'&&!e.closest('.scroll')));
-    check('Manage resides only in the fixed bottom action bar',await page.locator('.bt360-detail-footer').getByRole('button',{name:'Manage',exact:true}).isVisible()&&await page.getByRole('button',{name:'Manage',exact:true}).count()===1);
-    check('Manage is positioned above bottom navigation',await page.evaluate(()=>{const manage=document.querySelector('.bt360-detail-footer .bt360-manage'),bar=document.querySelector('.bt360-detail-footer'),nav=document.querySelector('.tabs');return !!manage&&getComputedStyle(bar).position==='fixed'&&manage.getBoundingClientRect().bottom<=nav.getBoundingClientRect().top+2;}));
+    check('detail has exactly one header and one five-step strip',
+      await page.locator('.bt360-detail-header').count()===1&&await page.locator('.bt360-steps').count()===1&&await page.locator('.bt360-steps span').count()===5&&await page.locator('.bt360-detail-card .card-h').count()===0);
+    check('legacy LIFECYCLE strip and CHECKLIST label removed',await page.locator('.bt360-detail-card .bt-life').count()===0&&await page.getByText('Checklist',{exact:true}).count()===0);
+    check('stage in progress never suggests bonus received',
+      await page.locator('.bt360-detail-footer .bt360-primary').innerText().then(t=>t==='Record deposit'||t==='Open next task'));
+    check('Manage is absent; account controls open from header menu',
+      await page.getByRole('button',{name:'Manage',exact:true}).count()===0&&await page.getByRole('button',{name:'More account actions'}).count()===1);
+    check('fixed bar is outside scrolling card',await page.locator('.bt360-detail-footer').evaluate(e=>e.parentElement?.id==='app'&&!e.closest('.scroll')));
     await page.screenshot({path:path.join(output,name+'-bonus-detail-in-progress-390.png')});
-
-    check('account omits redundant guidance sections',await page.locator('.ops-action-why,.ops-date-proof').count()===0);
-    check('Action Center shows next task with countdown',await page.locator('.ops-tile-status').first().innerText().then(t=>t.length>0&&!/d left/.test(t))&&await page.locator('.ops-tile-countdown').count()>0);
+    check('render never modifies user record',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,beforeDisclosure));
     const id=(await record()).id;
     await page.reload();await settleStartup();check('reload preserves identity and notes',(await record()).id===id&&(await record()).notes===payload.entry.notes);
-    check('refresh resets Action Center to collapsed',await page.locator('#bt-action-center-toggle').getAttribute('aria-expanded')==='false');
-    await openAdvancedActions();await page.locator('#bt-action-center-toggle').click();
+    check('refresh keeps old Action Center hidden',await page.locator('.bt360-legacy-actions').count()===0);
     await edit();await button('3 Fees & Close').click();
     await page.getByPlaceholder('Personal notes; terms review does not overwrite them').fill('Keep <img src=x onerror=alert(1)> & "quotes"');
     await button('4 Review').click();await button('💾 Save changes').click();
     await wait(()=>modal===null&&!entrySaveBusy);
     check('edit preserves identity',(await record()).id===id);
     check('notes cannot inject HTML',await page.locator('img[src="x"]').count()===0);
-    await button('Review deposits').click();await button('Confirm all requirements').click();await page.locator('#req_date').fill('2026-04-01');await button('Save').click();await button('OK').click();
+    await page.locator('.bt366-compact-row').first().click();await page.getByRole('button',{name:'Record deposit'}).click();await page.locator('#req_date').fill('2026-04-01');await button('Save').click();await button('OK').click();
     check('requirements and payout stay separate',(await record()).reqMet==='2026-04-01'&&!(await record()).bonusRecd);
     await button('Confirm received').click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('OK').click();
     check('bonus receipt updates close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
@@ -212,13 +202,12 @@ async function exercise(name,engine,url){
     check('phone editor carries bank name and account type',await page.locator('#ph_new_bank').inputValue()==='E2E Verification Bank'&&await page.locator('#ph_new_personal').isVisible());
     await page.getByRole('button',{name:'← Settings'}).click();
 
-    await button('Manage').click();await button('⏱️ Add timer Set a reminder or deadline').click();
+    await openAdvancedActions();await button('⏱️ Add timer Set a reminder or deadline').click();
     await button('Start + Days').click();await page.locator('#tem_text').fill('E2E manual reminder');await page.locator('#tem_start').fill('2026-03-08');await page.locator('#tem_days').fill('1');await button('Add timer').click();
     check('timer uses calendar days across DST',(await record()).customTimers.some(t=>t.text==='E2E manual reminder'&&t.date==='2026-03-09'));
-    if(!await page.locator('details[data-section-key="lifecycle"]').evaluate(e=>e.open))await page.locator('details[data-section-key="lifecycle"] summary').click();
-    await button('Manage').click();await button('✅ Add task Track a requirement').click();await page.getByPlaceholder('e.g. Make 1 debit card transaction').fill('E2E checklist task');await button('Save').click();
-    await page.locator('.ck li').filter({hasText:'E2E checklist task'}).locator('.ckb').click();
-    check('checklist completion persists without collapsing section',(await record()).checklist[0].done&&await page.locator('details[data-section-key="lifecycle"]').evaluate(e=>e.open));
+    await openAdvancedActions();await button('✅ Add task Track a requirement').click();await page.getByPlaceholder('e.g. Make 1 debit card transaction').fill('E2E checklist task');await button('Save').click();
+    await page.getByRole('checkbox',{name:'E2E checklist task',exact:true}).click();
+    check('checklist completion persists in redesigned Requirements',(await record()).checklist.some(x=>x.text==='E2E checklist task'&&x.done)&&await page.locator('.bt360-panel').filter({hasText:'Requirements'}).count()>0);
     check('checklist exposes accessible completion state',await page.getByRole('checkbox',{name:'E2E checklist task',exact:true}).getAttribute('aria-checked')==='true');
     await button('Tax').click();
     check('tax includes received bonus on open account',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));
