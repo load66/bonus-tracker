@@ -1412,7 +1412,18 @@ const BT_BANK_LOGO_ASSETS=[
  [/^td bank(?: |$)/,'td-bank'],
  [/^bmo(?: |$)/,'bmo'],
  [/^discover(?: |$)/,'discover'],
- [/^hsbc(?: |$)/,'hsbc']
+ [/^hsbc(?: |$)/,'hsbc'],
+ [/^pnc(?: bank)?(?: |$)/,'pnc'],
+ [/^(?:us bank|u s bank)(?: |$)/,'us-bank'],
+ [/^regions(?: bank)?(?: |$)/,'regions-bank'],
+ [/^huntington(?: national bank| bank)?(?: |$)/,'huntington-bank'],
+ [/^navy federal(?: credit union)?(?: |$)/,'navy-federal-credit-union'],
+ [/^(?:charles schwab|schwab)(?: |$)/,'charles-schwab'],
+ [/^(?:citizens bank|citizens)(?:$| bank(?: |$))/,'citizens-bank'],
+ [/^fidelity(?=$| investments(?: |$)| cma(?: |$))/,'fidelity'],
+ [/^capital one(?: |$)/,'capital-one'],
+ [/^usaa(?: |$)/,'usaa'],
+ [/^first citizens(?: bank)?(?: |$)/,'first-citizens-bank']
 ];
 function bankLogoAsset(name){
   const normalized=String(name||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
