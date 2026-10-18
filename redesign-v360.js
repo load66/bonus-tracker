@@ -236,8 +236,8 @@ function requirementRows(e){
 function timerShortTitle(t){
  const label=String(t.text||'Timer').toLowerCase();
  if(/90|ninety/.test(label)&&/bonus|tier/.test(label))return 'Day 90 bonus tier';
- if(/requirement|qualifying|direct deposit|deposit deadline/.test(label))return 'Requirement due';
  if(/payout|bonus watch|bonus pending/.test(label))return 'Bonus pending';
+ if(/requirement|qualifying|direct deposit|deposit deadline/.test(label))return 'Requirement due';
  if(/close|hold|balance/.test(label))return 'Close review';
  if(/funding|fund new money/.test(label))return 'Funding due';
  return String(t.text||'Reminder').trim().replace(/[:.].*$/,'').slice(0,65)||'Reminder';
