@@ -335,20 +335,23 @@ function cooldownLastSavedTerms(e){
  if(record.monthlyFeeNoMonthlyServiceFee===undefined&&saved.monthlyFeeNoMonthlyServiceFee===true)
   record.monthlyFeeNoMonthlyServiceFee=true;
  // This is display-only: do NOT copy missing churn/eligibility rules into e.
- return {record,origin:sameCycle.length?'same-cycle':'previous-cycle',
+ return {record,ruleSource:saved,origin:sameCycle.length?'same-cycle':'previous-cycle',
   date:saved.termsVerifiedAt||saved.capturedAt||saved.opened||'',sameCycle:!!sameCycle.length};
 }
 function cooldownRuleLabel(e){
- const rules=Array.isArray(e?.eligibilityRules)?e.eligibilityRules:[];
+ const older=cooldownLastSavedTerms(e).ruleSource;
+ const ownRules=Array.isArray(e?.eligibilityRules)?e.eligibilityRules:[];
+ const source=ownRules.length||e?.churnRuleText||e?.churnPeriodValue?e:(older||e);
+ const rules=Array.isArray(source?.eligibilityRules)?source.eligibilityRules:[];
  const first=rules.find(r=>r?.periodValue&&r?.basis)||null;
  if(first){
   const period=first.periodValue+' '+String(first.periodUnit||'').replace(/s?$/,'')+(Number(first.periodValue)===1?'':'s');
   const source=String(first.basis||'').replace(/-/g,' ');
   return period+' after '+source;
  }
- const legacy=String(e.churnRuleText||e.churnReason||'').trim();
+ const legacy=String(source.churnRuleText||source.churnReason||'').trim();
  if(legacy)return legacy.slice(0,155);
- if(e.churnPeriodValue&&e.churnPeriodUnit)return e.churnPeriodValue+' '+e.churnPeriodUnit+' · saved basis '+String(e.sourceEligibilityBasis||e.churnBasis||'not recorded');
+ if(source.churnPeriodValue&&source.churnPeriodUnit)return source.churnPeriodValue+' '+source.churnPeriodUnit+' · saved basis '+String(source.sourceEligibilityBasis||source.churnBasis||'not recorded');
  return '';
 }
 function feeSnapshot(e){
