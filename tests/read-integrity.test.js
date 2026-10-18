@@ -66,11 +66,13 @@ const liveEntries=()=>run('entries');
 const liveFacts=facts(liveEntries());
 assert(liveFacts===facts(JSON.parse(original)),'Startup changed financial facts before the first paint');
 assert(localStorage.getItem('bt_e_v4')===original,'Startup wrote bt_e_v4');
+assert(liveEntries().every(e=>!Object.prototype.hasOwnProperty.call(e,'eligibilityVerificationStatus')&&!Object.prototype.hasOwnProperty.call(e,'eligibilityVerifiedAt')),'Startup stamped eligibility metadata into live records');
 assert(!/2026-10-10/.test(JSON.parse(localStorage.getItem('bt_e_v4'))[0].reqMet||''),'Startup copied the payout date into reqMet');
 
 setTimeout(()=>{
   try{
     assert(localStorage.getItem('bt_e_v4')===original,'Delayed startup migration wrote bt_e_v4');
+    assert(liveEntries().every(e=>!Object.prototype.hasOwnProperty.call(e,'eligibilityVerificationStatus')&&!Object.prototype.hasOwnProperty.call(e,'eligibilityVerifiedAt')),'Delayed initialization stamped eligibility metadata into live records');
     const harbor=liveEntries().find(e=>e.bank==='Synthetic Harbor');
     assert(harbor&&harbor.reqMet==='', 'Live requirements date was fabricated');
     assert(harbor.earlyCloseFee===null,'Live null early-close fee was coerced');
