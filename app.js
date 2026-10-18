@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.5.2';
+const APP_VERSION='3.6.0';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4066,7 +4066,9 @@ function renderActionCenter(){
 function switchMainTab(value){
   if(value==='finances'){tab='tracker';R();window.btNotify?.('Finance has been removed. Your bank-bonus records remain available in Tracker.');return;}
   if(!['tracker','bonuses','tax','tips','storage','archive'].includes(value))return;
-  tab=value;search='';_sp=0;
+  if(value==='storage'&&window.BT360){window.BT360.goArchive('saved');return}
+  if(value==='archive'&&window.BT360){window.BT360.goArchive('waiting');return}
+  expanded=null;tab=value;search='';_sp=0;
   const current=document.querySelector('.scroll');if(current)current.scrollTop=0;
   R();
 }
@@ -4086,20 +4088,22 @@ function R(){if(tab==='finances')tab='tracker';captureProfileSectionState();cons
   try{if(!window.__btAutoCleanupV384){entries=sortE(normalizeLifecycleEntries(entries));sv(SK,entries);window.__btAutoCleanupV384=true}}catch{}
   sanitizeAllTimers(false);
   const sorted=sortE(entries),thisYr=new Date().getFullYear(),metrics=bonusPipelineMetrics(sorted,dashYear);
+  const bt360Detail=!!(expanded&&sorted.some(e=>e.id===expanded)&&(['tracker','archive'].includes(tab)));
+  document.body.classList.toggle('bt360-detail-active',bt360Detail);
   let h='',overview='';
   h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div class="hdr-brand"><h1><em>Bonus</em>Tracker</h1><span class="app-version" aria-label="App version">v'+APP_VERSION+'</span></div>';
   if(tab==='tracker')h+='<div class="yr-pills">';
   if(tab==='tracker')[thisYr-1,thisYr,thisYr+1].forEach(y=>{h+='<button class="yr-btn'+(dashYear===y?' on':'')+'" onclick="dashYear='+y+';R()">'+y+'</button>'});
   h+=tab==='tracker'?'</div>':'<span class="mobile-page-caption">'+esc({bonuses:'Bank offers',tax:'Tax',tips:'Datapoints',storage:'Terms archive',archive:'Account archive'}[tab]||'')+'</span>';
+  h+='<button type="button" class="bt360-header-bell" aria-label="Notifications" onclick="BT360.openSettings()">♧</button><button type="button" class="bt360-header-settings" aria-label="Settings" onclick="BT360.openSettings()">•••</button>';
   h+='<details id="bt-data-menu" class="header-data-menu"><summary aria-label="Data and backup menu" title="Data and backup menu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></summary><div class="header-data-panel" role="group" aria-label="Data and recovery actions"><h3>Data & recovery</h3><button onclick="this.closest(\'details\').open=false;switchMainTab(\'archive\')"><strong>Archived accounts</strong><small>Completed, non-repeatable offers and their history</small></button><button onclick="this.closest(\'details\').open=false;btOpenCloudBackup()"><strong>Cloud backup & recovery</strong><small>Automatic protection and recovery versions</small></button><button onclick="this.closest(\'details\').open=false;exportBackup()"><strong>Export backup file</strong><small>Download an additional recovery copy</small></button><button onclick="this.closest(\'details\').open=false;importBackup()"><strong>Import backup file</strong><small>Review and restore a downloaded copy</small></button><button class="data-menu-danger" onclick="this.closest(\'details\').open=false;resetAllData()"><strong>Reset this device</strong><small>Requires confirmation and a safety backup</small></button></div></details></div>';
 
-  if(tab==='tracker'){
-    overview+='<div class="hero ops-hero"><div class="hero-copy"><div class="hero-kicker">Active bonuses</div><div class="hero-value">'+fM(metrics.active)+'</div><div class="hero-note">'+fM(metrics.collected)+' collected in '+dashYear+' • '+metrics.openCount+' open • '+metrics.cooldownCount+' cooling down</div></div><div class="hero-side"><div class="hero-chip">'+metrics.readyCloseCount+' ready to close</div><div class="hero-chip secondary">'+metrics.actionCount+' urgent'+'</div></div></div>';
-    overview+='<div class="stats ops-stats"><div class="st"><div class="n">'+fM(metrics.collected)+'</div><div class="l">Collected</div></div><div class="st"><div class="n">'+fM(metrics.awaiting)+'</div><div class="l">Awaiting</div></div><div class="st"><div class="n">'+fM(metrics.inProgress)+'</div><div class="l">In Progress</div></div><div class="st"><div class="n">'+fM(metrics.actionNeeded)+'</div><div class="l">Action Needed</div></div></div>'
+  if(tab==='tracker'&&!bt360Detail){
+    overview=window.BT360?window.BT360.home(sorted,dashYear,metrics):'<div class="hero ops-hero"><div class="hero-value">'+fM(metrics.active)+'</div></div>';
   }
   h+='</div></div><div class="scroll">';
   if(tab==='tracker'){h+='<section class="tracker-overview" aria-label="Bonus totals">'+overview+'</section>';const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted)}
-  else if(tab==='archive'){const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted,true)}
+  else if(tab==='archive'){h+=window.BT360?window.BT360.archive(sorted):rTrackerLegacy(sorted,true)}
   else if(tab==='tax')h+=rTax();
   else if(tab==='tips')h+=rTips();
   else if(tab==='storage')h+=rTermsStorage();
@@ -4107,8 +4111,10 @@ function R(){if(tab==='finances')tab='tracker';captureProfileSectionState();cons
   h+='</div>';
   if(tab==='tracker')h+='<button class="fab" onclick="openAdd()">+</button>';
   h+='<div class="tabs">';
-  ['tracker','bonuses','tax','tips','storage'].forEach((t,i)=>{const full=['Tracker','Bank Bonuses','Tax','Datapoints','T&C Archive'][i],short=['Tracker','Bonuses','Tax','Data','Archive'][i];h+='<button class="tb'+(tab===t?' on':'')+'" aria-label="'+full+'" aria-current="'+(tab===t?'page':'false')+'" onclick="switchMainTab(\''+t+'\')">'+[I.grid,I.tips,I.doc,I.tips,I.lock][i]+'<span>'+short+'</span></button>'});
+  ['tracker','bonuses','tax','tips','archive'].forEach((t,i)=>{const full=['Tracker','Bank Bonuses','Tax','Datapoints','Archive · T&C Archive'][i],short=['Tracker','Bonuses','Tax','Data','Archive'][i];h+='<button class="tb'+(tab===t?' on':'')+'" aria-label="'+full+'" aria-current="'+(tab===t?'page':'false')+'" onclick="switchMainTab(\''+t+'\')">'+[I.grid,I.tips,I.doc,I.tips,I.lock][i]+'<span>'+short+'</span></button>'});
   h+='</div>';
+  if(window.bt360PhonebookOpen)h+='<div class="bt360-sheet-backdrop" onclick="BT360.closePhonebook()"><section class="bt360-sheet" onclick="event.stopPropagation()"><button onclick="BT360.closePhonebook()">← Settings</button>'+rPhone()+'</section></div>';
+  if(window.bt360SettingsOpen&&window.BT360)h+=window.BT360.settings();
   if(modal)h+=rModal();if(cfm)h+=rCfm();if(ddPrompt)h+=rDD();if(rcvPrompt)h+=rRcv();if(reqPrompt)h+=rReqMet();if(closePrompt)h+=rClose();if(overwritePrompt)h+=rOverwrite();if(matchPickerPrompt)h+=rMatchPicker();if(replacementPickerPrompt)h+=rReplacementPicker();if(feeCheckPrompt)h+=rFeeCheck();if(timerEditModal)h+=rTimerEdit();if(dpEditor)h+=rDpEditor();if(timerChoicePrompt)h+=rTimerChoicePrompt();
   if(undoState)h+='<div class="undo-bar"><span>'+esc(undoState.undoLabel||('Change saved for '+undoState.bank+' — Undo restores everything for 60 seconds.'))+'</span><button onclick="undoClose()">Undo</button></div>';
   document.getElementById('app').innerHTML=h;
@@ -4242,7 +4248,21 @@ function rTrackerLegacy(sorted){
 
   return h;
 }
-function rTax(){const yrs=[];for(let y=2025;y<=2040;y++)yrs.push(y);const yrE=taxEntriesForYear(taxYear);const yrA=yrE.reduce((s,e)=>s+(e.bonus||0),0);const allA=entries.filter(e=>taxReady(e)).reduce((s,e)=>s+(e.bonus||0),0);let h='<div class="sec">Tax Year</div><div class="ybar">';yrs.forEach(y=>{const a=completedYrTotal(y);h+='<button class="ypill'+(taxYear===y?' on':'')+'" onclick="taxYear='+y+';R()">'+y+(a?' · '+fM(a):'')+'</button>'});h+='</div><div class="ytotal">'+fM(yrA)+'</div><div class="ysub">'+taxYear+' — '+yrE.length+' received bonus'+(yrE.length!==1?'es':'')+'</div>';h+='<button class="export-btn" onclick="promptExportYear()">Export tax CSV</button>';if(!yrE.length)return h+'<div class="empty"><div class="em">📋</div><p>No received bonuses in '+taxYear+'</p></div>';yrE.forEach(e=>{h+='<div class="tax-c"><div class="tax-top"><div class="tax-bank">'+bankLogo(e.bank,true)+' '+esc(e.bank)+'</div><div class="tax-amt">'+fM(e.bonus)+'</div></div><div class="tax-dates">'+(e.opened?'<span>Open: '+fD(e.opened)+'</span>':'')+'<span>Received: '+fD(e.bonusRecd)+'</span>'+(e.closed?'<span>Closed: '+fD(e.closed)+'</span>':'<span>Account: Open</span>')+'</div></div>'});h+='<div class="sec" style="margin-top:16px">All-Time</div><div class="ytotal">'+fM(allA)+'</div>';return h}
+function rTax(){
+ const yrs=[];for(let y=2025;y<=2040;y++)yrs.push(y);
+ const audience=window.BT360?.audience||'personal';
+ const yrE=taxEntriesForYear(taxYear).filter(e=>!window.BT360||window.BT360.scope(e));
+ const yrA=yrE.reduce((sum,e)=>sum+Number(e.bonus||0),0);
+ let h=(window.BT360?.segments()||'')+'<div class="bt360-page-copy">Bonus income by year</div><div class="ybar bt360-tax-years">';
+ yrs.forEach(y=>{h+='<button class="ypill'+(taxYear===y?' on':'')+'" onclick="taxYear='+y+';R()">'+y+'</button>'});
+ h+='</div><section class="bt360-tax-summary"><span>'+audience.toUpperCase()+' · '+taxYear+'</span><strong>'+fM(yrA)+'</strong><small>'+yrE.length+' bonuses received · open and closed accounts</small></section>';
+ h+='<button class="export-btn bt360-primary" onclick="promptExportYear()">Export tax CSV</button><div class="sec">Received in '+taxYear+' <small>by date</small></div>';
+ if(!yrE.length)h+='<div class="bt360-empty">No received bonuses in '+taxYear+'.</div>';
+ yrE.slice().sort((a,b)=>String(b.bonusRecd||'').localeCompare(String(a.bonusRecd||''))).forEach(e=>{
+  h+='<div class="bt360-list-row bt360-tax-row">'+bankLogo(e.bank,true)+'<div class="bt360-grow"><b>'+esc(e.bank)+'</b><small>Received '+fD(e.bonusRecd)+' · '+(e.closed?'closed':'open')+'</small></div><strong>'+fM(e.bonus)+'</strong></div>';
+ });
+ return h+'<p class="bt360-footnote">Bank bonuses are usually reported as interest. Check your 1099 forms.</p>';
+}
 function dpSelect(key,label,options){return '<label class="research-filter">'+esc(label)+'<select aria-label="'+esc(label)+'" onchange="setDPFilter(\''+key+'\',this.value)">'+options.map(([v,t])=>'<option value="'+v+'"'+(dpFilters[key]===v?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select></label>'}
 function renderCommunityReport(item){
  const curated=(window.BTCommunityCatalog?.reports||[]).some(x=>x.id===item.id),link=safeExternalUrl(item.link),date=dpReportDate(item);
