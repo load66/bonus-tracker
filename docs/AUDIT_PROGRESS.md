@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: ChatGPT Codex | Chromium-only Playwright CI | codex/chromium-only-playwright-ci
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
