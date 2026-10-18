@@ -139,7 +139,7 @@ app_source=text('app.js')
 if 'Tools Folder' in app_source or 'bt_tools_folder_btn' in app_source:
     fail('removed Tools popup/floating button is still present')
 # v3.6.0 combines both account history and saved terms under Archive.
-for token in ("['tracker','bonuses','tax','tips','archive']","['Tracker','Bank Bonuses','Tax','Datapoints','Archive · T&C Archive']","function getChurnSuggestions","window.churnReadyDate"):
+for token in ("['tracker','bonuses','tax','tips','archive']","['Tracker','Bank Bonuses','Tax','Datapoints','Archive']","function getChurnSuggestions","window.churnReadyDate"):
     if token not in app_source: fail(f'combined Archive / churn suggestion architecture missing: {token}')
 for token in ('window.BT360','archivePane','function archive(rows)','const eligibleInfo=e=>','function usageCard','function hostSettings'):
     if token not in text('redesign-v360.js'): fail(f'v3.6.0 Archive/usage design missing: {token}')
