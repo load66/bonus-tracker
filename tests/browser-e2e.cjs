@@ -221,7 +221,13 @@ async function exercise(name,engine,url){
     check('early close fee is amber without inferred zero',await page.locator('.bt3611-amber').innerText()==='Not stated in terms · Needs review');
     check('no developer vocabulary is visible anywhere on Chase detail',
       !/\b(?:null|structured rule|anchor|verified \$0|provenance)\b/i.test(await page.locator('.bt360-detail-card').innerText()));
-    await page.screenshot({path:path.join(output,name+'-chase-bonus-detail-in-progress-390.png'),fullPage:true});
+    await page.evaluate(()=>{
+      document.querySelector('.scroll').scrollTop=0;
+      document.querySelectorAll('.bt-toast').forEach(el=>el.style.opacity='0');
+    });
+    await page.screenshot({path:path.join(output,name+'-chase-bonus-detail-in-progress-390.png')});
+    await page.evaluate(()=>document.querySelector('.scroll').scrollTop=document.querySelector('.scroll').scrollHeight);
+    await page.screenshot({path:path.join(output,name+'-chase-bonus-detail-in-progress-bottom-390.png')});
     await page.getByRole('button',{name:'Set rule'}).first().click();
     check('Set rule opens existing account rule editor',await page.locator('.modal').isVisible()
       &&(await page.locator('.modal').innerText()).includes('Fees & Close'));
@@ -263,7 +269,13 @@ async function exercise(name,engine,url){
       const content=document.querySelector('.bt360-source').getBoundingClientRect(),footer=document.querySelector('.bt360-detail-footer').getBoundingClientRect();
       return content.bottom<=footer.top+2;
     }));
-    await page.screenshot({path:path.join(output,name+'-bonus-detail-ready-mockup-390.png'),fullPage:true});
+    await page.evaluate(()=>{
+      document.querySelector('.scroll').scrollTop=0;
+      document.querySelectorAll('.bt-toast').forEach(el=>el.style.opacity='0');
+    });
+    await page.screenshot({path:path.join(output,name+'-bonus-detail-ready-mockup-390.png')});
+    await page.locator('.bt360-source').scrollIntoViewIfNeeded();
+    await page.screenshot({path:path.join(output,name+'-bonus-detail-ready-mockup-bottom-390.png')});
     await page.screenshot({path:path.join(output,name+'-bonus-detail-ready-390.png')});
     await page.getByRole('button',{name:'Add bank phone number'}).click();
     check('phone editor carries bank name and account type',await page.locator('#ph_new_bank').inputValue()==='E2E Verification Bank'&&await page.locator('#ph_new_personal').isVisible());
