@@ -227,9 +227,8 @@
     }
     window.btFutureEligibilityText=eligibilityText;
     window.btChurnCloseDatePolicyVersion=VER;
-    try{
-      if(typeof entries!=='undefined'&&Array.isArray(entries))entries=entries.map(normalize);
-    }catch{}
+    // Startup and delayed installation must never stamp eligibility metadata
+    // onto live account records. Explicit save/import paths apply verification.
   }
   install();setTimeout(install,300);setTimeout(install,1400);
 })();
