@@ -106,7 +106,13 @@
       if(c.minHoldDays>0&&/business days?|statement (?:cycles?|periods?)|calendar months?|years?/i.test(q))fail('closure.minHoldDays','A non-calendar hold cannot be converted to calendar days. Use manual review.');
       if(c.restrictionType==='manual-review'&&c.basis!=='manual')fail('closure.basis','Unresolved closure terms must require manual review.');
       if(Number(e.minHoldDays||0)!==c.minHoldDays||(!unknownFee&&Number(e.earlyCloseFee||0)!==c.earlyCloseFee)||e.closeRuleBasis&&e.closeRuleBasis!==c.basis||e.closeRestrictionType&&e.closeRestrictionType!==c.restrictionType)fail('closure','Structured closure rules conflict with the tracker calculation fields.');
-      if(c.earlyCloseFee===0&&!/no .*?(?:early|clos|terminat).*?fee|\$0|fee.free/i.test(feeQuote))fail('closure.earlyCloseFee','A zero early-close charge requires explicit fee evidence.');
+      function explicitZeroEarlyCloseFee(quote){
+      return clean(quote).split(/(?:\n+|(?<=[.!?])\s+|;\s+)/).some(sentence=>{
+        if(!/(?:early[\s-]*(?:clos|terminat)|account[\s-]*(?:clos|terminat)|clos(?:e|ing|ure)|terminat)/i.test(sentence))return false;
+        return /(?:\bno\b|\bwithout\b|\bwaived\b|\bzero\b)[^.]{0,80}\bfee\b|\$\s*0\b|fee[\s-]*free/i.test(sentence);
+      });
+    }
+      if(c.earlyCloseFee===0&&!explicitZeroEarlyCloseFee(feeQuote))fail('closure.earlyCloseFee','A zero early-close charge requires explicit fee evidence.');
     }
     return{ok:!issues.length,mode:issues.length?'invalid':'structured',issues,warnings,rules:issues.length?null:rules};
   }

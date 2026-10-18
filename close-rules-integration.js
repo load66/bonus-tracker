@@ -95,11 +95,23 @@
   bind('normalizeLifecycleEntry',normalizeEntry);
   bind('normalizeLifecycleEntries',rows=>(rows||[]).map(normalizeEntry));
 
+  function closureBlocksSafeStatus(e){
+    try{
+      const financial=window.BTFinancialRules?.validate?.(e);
+      if(financial&&financial.mode!=='legacy'){
+        if(!financial.ok)return true;
+        const c=financial.rules?.closure;
+        if(c&&(c.restrictionType==='manual-review'||c.earlyCloseFee===null))return true;
+      }
+    }catch{}
+    try{if(core.typeForEntry(e)==='review')return true}catch{}
+    return false;
+  }
   function statusFixed(e){
     if(!e||!e.bank)return'';
     if(e.closed)return nonRepeatable(e)?'ARCHIVED':(daysLeft(e)===0?'TIME TO CHURN!':'WAITING TO CHURN!');
     const hasBonus=!!e.bonusRecd,hasReq=!!e.reqMet,hasHold=ruleDays(e)>0&&!!baseDate(e);
-    if(hasBonus){if(hasHold){if(inBuffer(e))return'3-DAY BUFFER';const d=daysSafe(e);if(d!==null&&d>0)return'WAITING TO CLOSE'}return'SAFE TO CLOSE'}
+    if(hasBonus){if(hasHold){if(inBuffer(e))return'3-DAY BUFFER';const d=daysSafe(e);if(d!==null&&d>0)return'WAITING TO CLOSE'}if(closureBlocksSafeStatus(e))return'BONUS RECEIVED';return'SAFE TO CLOSE'}
     const active=typeof nextActiveTimer==='function'?nextActiveTimer(e):null;
     if(hasReq)return active?'CUSTOM TIMER':'REQ MET';
     return active?'CUSTOM TIMER':'WORKING'
@@ -120,7 +132,11 @@
     if(days){add(!!start,'Close-rule start date available',start?fD(start):'Missing','danger');add(!!safe&&dB(target,safe)<=0,'Hold period + buffer complete',safe?'Safe close: '+fD(safe):'Cannot calculate','danger')}
     else add(true,'No fixed post-bonus hold',core.typeForEntry(e)==='payout-only'?'Close after bonus posts':'No countdown found');
     if(nonRepeatable(e))add(true,'Future eligibility','Non-repeatable offer — archives after closing');
-    else add(!!e.churn,'Churn rule saved',e.churn?(e.churn==='180'?'180 days':e.churn+' year'):'Needed for future churn','warn');
+    else{
+      let churnKnown=!!e.churn;
+      try{const gate=window.BTEligibilityGate?.validate?.(e);if(gate?.ok)churnKnown=true}catch{}
+      add(churnKnown,'Churn rule saved',churnKnown?(e.churn?(e.churn==='180'?'180 days':e.churn+' year'):'Verified eligibility rules'):'Needed for future churn','warn');
+    }
     const hasFee=recurringMonthlyFeeRisk(e)||/(yes|\$|monthly|service fee|maintenance fee)/i.test(String(e.monthlyFeeYNText||'')+' '+String(e.avoidMonthlyFeeText||''));
     add(!hasFee||!!e.monthlyFeeChecked,'Monthly fee checked',hasFee?(e.monthlyFeeChecked?'Confirmed':'Check next statement before close'):'No monthly fee risk','warn');
     const warnings=items.filter(x=>!x.ok).map(x=>x.label+(x.detail?': '+x.detail:''));

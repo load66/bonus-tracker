@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.30';
+const APP_VERSION='3.6.31';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -393,6 +393,7 @@ function isNonRepeatableEntry(e){
   if(!e)return false;
   if(e.churnable===true||/^(?:repeatable|churnable)$/i.test(String(e.churnability||'').trim()))return false;
   if(e.lifecycleState==='archived-nonrepeatable'||e.churnable===false||String(e.churnability||'').toLowerCase()==='not-repeatable')return true;
+  if(window.BTEligibilityGate?.validate?.(e)?.ok&&window.BTEligibilityGate.decision(e)==='repeatable')return false;
   if(/\bfour[\s-]*leaf\b/i.test(String(e.bank||'')))return true;
   const raw=nonRepeatableSourceText(e);
   if(/once per lifetime|lifetime[- ]?like|not repeatable|one[- ]?time bonus only/i.test(raw))return true;
@@ -6037,7 +6038,7 @@ entries=sortE(entries); // First visible render is owned by BT360 at the end of 
     if(/within\s+15|fifteen/i.test(txt)) return 15;
     if(/within\s+30|thirty|up to\s+30/i.test(txt)) return 30;
     if(/within\s+60|sixty/i.test(txt)) return 60;
-    if(/120th day|day\s*120/i.test(txt)) return 30;
+    if(/120th day|day\s*120/i.test(txt)) return 120;
     return 0;
   }
   function timerIdLocal(){

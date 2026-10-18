@@ -65,7 +65,7 @@ for(const value of ['12junk','12.5',12.5,Infinity,'9007199254740992']){
 }
 for(const date of ['2026-02-30','2026-13-01','2026-9-01','not-a-date']){
   assert(G.officialEligibilityDate({...bonusRule,bonusRecd:date},addD,addM)==='','Invalid calendar anchor produced eligibility: '+date);
-  assert(G.applicationReadyDate({...currentCustomerPlaceholder(),closed:date},addD,addM)==='','Invalid closure produced application readiness');
+  assert(G.applicationReadyDate({...currentCustomerPlaceholder(),closed:date},addD,addM)==='2027-09-03','A current-customer sentence must not turn an invalid close date into the eligibility date');
 }
 function currentCustomerPlaceholder(){return {...bonusRule,eligibilityEvidenceText:'New checking customers only. '+bonusRule.eligibilityEvidenceText};}
 assert(G.officialEligibilityDate(bonusRule,()=>'',()=>{throw new Error('out of range')})==='','Calculator exception escaped eligibility evaluation');
@@ -148,13 +148,16 @@ const currentCustomer={
   eligibilityEvidenceText:'New checking customers only. Not eligible if you received a checking bonus within the past 12 months.'
 };
 v=G.validate(currentCustomer);
-assert(v.ok&&v.mustCloseBeforeReapply,'Current-customer exclusion was not captured');
+assert(v.ok&&v.currentCustomerExcluded&&!v.mustCloseBeforeReapply,'Current-customer wording was treated as a close prerequisite');
 const stamped=G.stamp(currentCustomer);
-assert(stamped.currentCustomerEvidenceText&&stamped.reapplicationAction==='close-before-reapply','Current-customer evidence/action was not persisted');
-assert(G.validate(stamped).mustCloseBeforeReapply,'Stamped entry forgot the current-customer closure requirement');
-assert(G.applicationReadyDate(currentCustomer,addD,addM)==='','Application-ready date was shown while a required account closure is missing');
-assert(G.applicationReadyDate({...currentCustomer,closed:'2027-08-15'},addD,addM)==='2027-09-03','Early account close incorrectly moved the cooldown date');
-assert(G.applicationReadyDate({...currentCustomer,closed:'2027-09-10'},addD,addM)==='2027-09-10','Later required account close was not respected');
+assert(stamped.currentCustomerEvidenceText&&stamped.reapplicationAction==='cooldown-only','Current-customer evidence was not kept separate from closure');
+assert(!G.validate(stamped).mustCloseBeforeReapply,'Stamped entry invented a close-before-reapply rule');
+assert(G.applicationReadyDate(currentCustomer,addD,addM)==='2027-09-03','Known cooldown was hidden because the offer is for new customers');
+const mustClose={...currentCustomer,eligibilityEvidenceText:currentCustomer.eligibilityEvidenceText+' You must close the checking account before reapplying.'};
+assert(G.validate(mustClose).mustCloseBeforeReapply,'Explicit close-before-reapply wording was ignored');
+assert(G.applicationReadyDate(mustClose,addD,addM)==='','Application-ready date was shown while a required account closure is missing');
+assert(G.applicationReadyDate({...mustClose,closed:'2027-08-15'},addD,addM)==='2027-09-03','Early account close incorrectly moved the cooldown date');
+assert(G.applicationReadyDate({...mustClose,closed:'2027-09-10'},addD,addM)==='2027-09-10','Later required account close was not respected');
 
 console.log('Eligibility evidence gate passed: single/multi-rule wording, U.S. Bank semantics, Chase conditional/enrollment rules, latest-date control, exact units, and safe dates verified');
 assert(!G.discoverTimedRestrictions('Checking offer is not available to existing Chase checking customers or those whose accounts have been closed within 90 days or closed with a negative balance within the last 3 years.').some(r=>r.basis==='account-ownership-ended'),'Have been closed is a closure rule, not an ownership lookback');

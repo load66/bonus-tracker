@@ -165,6 +165,16 @@
     if(t&&timerCategorySemantic(t)==='payout')return true;
     return !!String(e?.payoutTimingText||e?.analysis?.payoutTimingText||'').trim();
   }
+  function closureUnresolved(e){
+    const financial=window.BTFinancialRules?.validate?.(e);
+    if(financial&&financial.mode!=='legacy'){
+      if(!financial.ok)return true;
+      const c=financial.rules?.closure;
+      if(c&&(c.restrictionType==='manual-review'||c.earlyCloseFee===null))return true;
+    }
+    try{if(window.BTCloseRules?.typeForEntry?.(e)==='review')return true}catch{}
+    return false;
+  }
   function stageCore(e){
     const raw=rawStatusCode(e);
     if(!e||!e.bank)return{code:STAGES.IN_PROGRESS,raw,timer:null,kind:''};
@@ -181,6 +191,7 @@
       if(timer&&kind==='close-review'&&Number.isFinite(d)&&d<=0)return{code:STAGES.ACTION_NEEDED,raw,timer,kind};
       if(timer&&(kind==='hold'||kind==='close-review')&&(!Number.isFinite(d)||d>0))return{code:STAGES.HOLD_OPEN,raw,timer,kind};
       if(raw==='WAITING TO CLOSE'||raw==='3-DAY BUFFER')return{code:STAGES.HOLD_OPEN,raw,timer,kind};
+      if(raw==='SAFE TO CLOSE'&&closureUnresolved(e))return{code:STAGES.BONUS_RECEIVED,raw,timer,kind,reviewReason:'Closure fee or terms are still unresolved'};
       if(raw==='SAFE TO CLOSE')return{code:STAGES.READY_TO_CLOSE,raw,timer,kind};
       return{code:STAGES.BONUS_RECEIVED,raw,timer,kind};
     }

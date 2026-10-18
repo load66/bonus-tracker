@@ -10,6 +10,10 @@ assert.ok(engine.answer(original,'How many deposits qualify?').step.includes('ev
 assert.equal(engine.summarize(original).recurring,true);
 assert.equal(JSON.stringify(original),snapshot,'Evaluation must not mutate records');
 const clone=()=>JSON.parse(snapshot),reject=(change,path)=>{const e=clone();change(e);assert.ok(!engine.validate(e).ok&&engine.validate(e).issues.some(x=>x.path.includes(path)),path);};
+const looseZero=clone();
+looseZero.feeScheduleRaw+=' Monthly fee $0 for the first cycle.';
+looseZero.financialRules.closure.feeEvidence.quote='Monthly fee $0 for the first cycle.';
+assert.equal(engine.validate(looseZero).ok,false,'A monthly $0 is not an early-close fee of zero');
 reject(e=>e.financialRules.version=99,'version');
 reject(e=>e.financialRules.accounts[1].fee.amount=null,'fee.amount');
 reject(e=>e.financialRules.accounts[1].fee.amount=0,'fee.amount');
