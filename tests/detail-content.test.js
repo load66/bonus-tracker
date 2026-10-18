@@ -47,25 +47,35 @@ assert.match(fees,/Monthly fee<\/span><div><b>\$15<\/b>/);
 assert.match(fees,/ANY: \$500\+ electronic deposits/);
 assert.match(fees,/View full terms/);
 assert.match(fees,/Fee waived with \$500 electronic deposits/,'Original fee quote stays available');
-assert.match(fees,/Not stated in terms · Needs review/);
+assert.match(fees,/Early close fee<\/span><div><b class="bt3611-amber">Not confirmed<\/b>/);
+assert.match(fees,/Waiver not confirmed/,'Waiver remains unconfirmed without recorded activity');
+assert.doesNotMatch(fees,/Waiver on track/,'Never claim a monthly waiver from unlinked evidence');
 assert.match(fees,/bt3611-amber/);
 
 const timers=sandbox.BT360.timerRows(e);
 assert.match(timers,/Requirement due/);
 assert.match(timers,/Jan 13, 2027 · 90 days after opening/);
 assert.match(timers,/bt3611-timer-body/);
-assert.match(timers,/Payout review/);
+assert.match(timers,/Bonus pending/);
 assert.doesNotMatch(timers,/Due Date:|Start \+ Days:/);
 assert.match(timers,/Bonus requirement deadline · complete all qualifying direct deposits/,'Full timer text preserved when expanded');
 
 const details=sandbox.BT360.detailPanels(e);
 assert.match(details,/Set rule/);
+assert.match(details,/Close terms missing|Close rule unverified/);
+assert.match(details,/Eligibility rule missing|Date not calculable|After account closure/);
+assert.match(details,/This month/);
+const payoutOnly={...e,customTimers:[],payoutTimingText:'Expected within 15 days after requirements',financialRules:{...e.financialRules,payout:{text:'Expected within 15 days after requirements',timing:{basis:'reqmet',value:15,unit:'calendar-days'}}}};
+assert.match(sandbox.BT360.timerRows(payoutOnly),/Bonus pending/);
+assert.match(sandbox.BT360.timerRows(payoutOnly),/After qualification/);
+assert.doesNotMatch(sandbox.BT360.timerRows(payoutOnly),/Payout on track|Bonus received/);
+
 assert.match(details,/Fees &amp; waivers|Fees & waivers/);
 assert.doesNotMatch(details,/\b(?:null|structured rule|anchor|verified \$0|provenance)\b/i);
 assert.equal(typeof sandbox.BT360.openRuleEditor,'function');
 assert.equal(typeof sandbox.BT360.openActivity,'function');
 assert.equal(JSON.stringify([...storage]),before,'The new detail functions may not write account data');
-console.log('Bonus detail v3.6.12 passed: Chase requirement, due date, zero recorded progress, compact timers, fee summary, unconfirmed close fee, rule editor, read-only data');
+console.log('Bonus detail v3.6.13 passed: Chase requirement, due date, zero recorded progress, compact timers, fee summary, unconfirmed close fee, rule editor, read-only data');
 
 
 /* The Manage sheet must be read-only and use the same underlying action handlers. */
