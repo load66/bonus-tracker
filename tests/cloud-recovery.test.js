@@ -2,7 +2,15 @@
 const assert=require('node:assert/strict'),core=require('../cloud-backup-core.js'),persistence=require('../persistence-transaction.js');
 const keys=['bt_e_v4','bt_t_v4','bt_tc_archive_v1','bt_user_datapoints_v1'];
 class Store{constructor(rows={}){this.data=new Map(Object.entries(rows));}get length(){return this.data.size;}key(i){return [...this.data.keys()][i]??null;}getItem(k){return this.data.get(k)??null;}setItem(k,v){if(this.failKey===k&&v!==this.oldValue)throw Error('Storage full');this.data.set(k,v);}removeItem(k){this.data.delete(k);}}
-const original=new Store({bt_e_v4:JSON.stringify([{id:'one',bank:'Synthetic CU',notes:'Exact notes',financialRules:{version:1},customTimers:[{id:'timer',done:true}],deletedTimerKeys:['id::source-deletion'],closed:'2026-10-14'}]),bt_t_v4:'[2026]',bt_tc_archive_v1:'{"exact":"original terms"}',bt_user_datapoints_v1:'[{"method":"payroll"}]','bonus-ai-auth':'secret','bt_cloud_recovery_v1':'device-state'});
+const historicalTerms={synthetic:{bank:'Synthetic CU',accountType:'personal',current:{
+ entryId:'synthetic-1',opened:'2026-07-01',tcSourceRaw:'Original synthetic promotion.',
+ feeScheduleRaw:'Original synthetic fee schedule with $9 monthly account fee.',
+ financialRules:{version:2,accounts:[{role:'primary',fee:{amount:9}}],closure:{earlyCloseFee:null}},
+ eligibilityRules:[{basis:'bonus-received',periodValue:24,periodUnit:'months'},{basis:'account-closed',periodValue:12,periodUnit:'months'}]
+},versions:[{entryId:'synthetic-1',opened:'2026-07-01',tcSourceRaw:'Prior synthetic offer revision.',
+ feeScheduleRaw:'Prior exact fee wording.',financialRules:{version:1,closure:{earlyCloseFee:25}},
+ eligibilityRules:[{basis:'account-opened',periodValue:12,periodUnit:'months'}]}]}};
+const original=new Store({bt_e_v4:JSON.stringify([{id:'one',bank:'Synthetic CU',notes:'Exact notes',financialRules:{version:1},customTimers:[{id:'timer',done:true}],deletedTimerKeys:['id::source-deletion'],closed:'2026-10-14'}]),bt_t_v4:'[2026]',bt_tc_archive_v1:JSON.stringify(historicalTerms),bt_user_datapoints_v1:'[{"method":"payroll"}]','bonus-ai-auth':'secret','bt_cloud_recovery_v1':'device-state'});
 const raw=core.snapshot(original,keys,{dashYear:2026,taxYear:2027},'3.4.74');
 assert.ok(!raw.includes('secret')&&!raw.includes('device-state'));
 const removedKey='bt_tc_learning_inbox_v320';
@@ -18,6 +26,10 @@ const freshPhone=new Store({'bonus-ai-auth':'new-phone-login','bt_deleted_timer_
 const result=core.restore(freshPhone,raw,keys,persistence);
 assert.equal(result.entryCount,1);for(const k of keys)assert.equal(freshPhone.getItem(k),original.getItem(k));
 assert.equal(freshPhone.getItem('bonus-ai-auth'),'new-phone-login');
+const restoredTerms=JSON.parse(freshPhone.getItem('bt_tc_archive_v1'));
+assert.deepEqual(restoredTerms,historicalTerms,'R2-format snapshot must restore all bank T&C versions, separate churn clocks and fees');
+assert.equal(restoredTerms.synthetic.versions[0].financialRules.closure.earlyCloseFee,25);
+assert.equal(restoredTerms.synthetic.current.eligibilityRules.length,2);
 assert.equal(freshPhone.getItem('bt_deleted_timer_keys_v1:old'),null);
 assert.equal(freshPhone.getItem('bt_deleted_timer_keys_v1:one'),'["id::source-deletion"]');
 const failing=new Store({bt_e_v4:'[{"id":"old","bank":"Old bank"}]',bt_t_v4:'[2025]'});const before=[...failing.data];failing.failKey='bt_t_v4';failing.oldValue='[2025]';
