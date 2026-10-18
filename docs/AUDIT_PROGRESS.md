@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex — v3.6.26 — codex/v3.6.26-offers-merged
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.26 compact Bank Offers audience merge (`codex/v3.6.26-offers-merged`): rebased onto latest v3.6.25 Bonus Detail panel-order release; Personal/Business post separation, checked source/time summary, compact grouped cards, source details persisted during rerenders, all prior search/filters/official links retained. Unknown offer product scopes stay visibly unverified and cannot inherit tracker-ready classification. Regression tests use synthetic offers, no financial data/rules writes. CI/Chromium/WebKit and Pages publication required before release.
+
 
 - v3.6.25 in-progress Bonus Detail layout parity (`codex/v3.6.25-detail-panel-order`): Fees & waivers now appears between Requirements and Timers, matching the PDF. Ready-to-close close-check priority and closed historical fee display remain intact. Existing Add task, Add timer, timer editing and financial evidence are preserved. Synthetic panel-order and handler regression added. No rule engine or financial record changes; CI/Pages verification pending.
 
