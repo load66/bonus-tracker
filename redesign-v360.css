@@ -167,3 +167,13 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var
 /* Keep all existing year choices reachable at every viewport. */
 .yr-btn:not(.on){display:inline-flex!important;align-items:center;justify-content:center}
 @media(max-width:640px){.hdr-row{flex-wrap:wrap!important}.yr-pills{order:3;flex:0 0 100%;display:flex;gap:6px;justify-content:flex-start;overflow-x:auto;scrollbar-width:none}.yr-btn{flex:none;min-width:52px!important;height:34px;min-height:34px!important}}
+
+.bt360-offer-pills{display:flex;gap:7px;margin:9px 0 12px;overflow-x:auto;scrollbar-width:none;mask-image:linear-gradient(90deg,#000 0,#000 92%,transparent 100%)}
+.bt360-offer-pills::-webkit-scrollbar{display:none}
+.bt360-offer-pills button{border:1px solid #1E212C;background:#15171F;border-radius:99px;color:#A0A6B8;font-size:11px;font-weight:800;min-height:35px;min-width:fit-content;padding:8px 12px;white-space:nowrap}
+.bt360-offer-pills button.active{background:#123327;color:#5BE3B0;border-color:#234C3E}
+.bt360-offer-title{display:flex;align-items:center;gap:10px;min-width:0}
+.bt360-offer-title>.blogo{min-width:40px;width:40px;height:40px;border-radius:12px}
+.bt360-offer-title h3{font-size:13px!important;font-weight:900!important;margin:0!important}
+.bt360-offer-title p{font-size:11px;color:#A0A6B8;line-height:1.4;margin:3px 0 0;overflow-wrap:anywhere}
+.bt360-offer-title strong{color:#5BE3B0;font-weight:900;font-size:13px;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
