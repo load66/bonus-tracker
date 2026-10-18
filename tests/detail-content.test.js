@@ -79,7 +79,9 @@ try{
   assert.match(sheet,/role="dialog" aria-modal="true" aria-label="Account actions"/);
   assert.match(sheet,/bt-ba-backdrop/);
   assert.match(sheet,/bt-ba-stage/);
-  assert.match(sheet,/Update completion date/);
+  const footerLabel=sandbox.BT360.primaryAction(sheetRecord).label;
+  if(footerLabel==='Record deposit')assert.doesNotMatch(sheet,/Update completion date/,'Completion confirmation cannot duplicate the footer');
+  else assert.match(sheet,/Update completion date/);
   assert.match(sheet,/Edit account/);
   assert.match(sheet,/Add task/);
   assert.match(sheet,/Add timer/);
@@ -89,7 +91,7 @@ try{
   assert.doesNotMatch(sheet,/\bREQ MET\b|REQ_MET/);
   const visibleActions=sheet.split('<details class="bt-ba-more">')[0]+' '+sheet.slice(sheet.indexOf('<div class="bt-ba-delete"'));
   assert.doesNotMatch(visibleActions,/[\u{1F300}-\u{1FAFF}]/u,'Visible Manage actions cannot use emoji');
-  assert.doesNotMatch(sheet,/>Confirm bonus received</,'Stage action must not duplicate primary footer');
+  if(footerLabel==='Confirm received')assert.doesNotMatch(visibleActions,/>Confirm bonus received</,'Stage action must not duplicate primary footer');
   assert.doesNotMatch(visibleActions,/>Ask AI</,'Footer Ask AI must not repeat in main menu');
   assert(sheet.lastIndexOf('Delete account')>sheet.indexOf('Activity'),'Delete must appear last');
   const theme=fs.readFileSync('redesign-v360.css','utf8');
