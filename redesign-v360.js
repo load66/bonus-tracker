@@ -741,7 +741,7 @@ function archive(rows){
  const closed=rows.filter(e=>e.closed&&scope(e));
  const indexed=closed.map(e=>({e,info:eligibleInfo(e)}));
  const ready=indexed.filter(x=>x.info?.verified&&dB(td(),x.info.eligible)<=0);
- const soon=indexed.filter(x=>x.info&&dB(td(),x.info.eligible)>0&&dB(td(),x.info.eligible)<=60);
+ const soon=indexed.filter(x=>x.info?.verified&&dB(td(),x.info.eligible)>0&&dB(td(),x.info.eligible)<=60);
  const cooling=indexed.filter(x=>!ready.includes(x)&&!soon.includes(x)).sort((a,b)=>(a.info?.eligible||'9999').localeCompare(b.info?.eligible||'9999'));
  h+='<div class="bt360-archive-stats"><div><b>'+ready.length+'</b><small>Eligible now</small></div><div><b>'+soon.length+'</b><small>Within 60 days</small></div><div><b>'+cooling.length+'</b><small>Cooling down</small></div></div>';
  h+='<p class="bt3727-archive-note">Unverified dates are estimates, not confirmed eligibility. Tap a countdown to review.</p>';
@@ -756,7 +756,7 @@ function archive(rows){
   return '<div class="bt360-list-row bt3727-archive-row">'+bankLogo(x.e.bank,true)+'<span class="bt360-grow"><b>'+safe(x.e.bank)+'</b><small>'+safe(label)+'</small></span>'+action+'</div>';
  };
  h+=panel('Eligible now',ready.length?'<div class="bt360-list">'+ready.map(x=>row(x,true)).join('')+'</div>':'<p class="bt360-muted">No verified eligibility dates reached.</p>');
- h+=panel('Eligible within 60 days',soon.length?'<div class="bt360-list">'+soon.map(x=>row(x,false)).join('')+'</div>':'<p class="bt360-muted">No upcoming saved dates within 60 days.</p>');
+ h+=panel('Eligible within 60 days',soon.length?'<div class="bt360-list">'+soon.map(x=>row(x,false)).join('')+'</div>':'<p class="bt360-muted">No verified upcoming eligibility dates within 60 days.</p>');
  h+=panel('Cooling down',cooling.length?'<div class="bt360-list">'+cooling.map(x=>row(x,false)).join('')+'</div>':'<p class="bt360-muted">No accounts cooling down.</p>','<span class="bt360-subtitle">soonest first</span>');
  h+='<details class="bt360-archived-tools"'+(legacyArchiveOpen?' open':'')+' ontoggle="BT360.setArchiveToolsOpen(this.open)"><summary>Completed, non-repeatable accounts · edit and review</summary>'+window.rTracker(rows,true)+'</details>';
  return h;
