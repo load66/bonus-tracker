@@ -80,6 +80,57 @@ assert.match(sandbox.BT360.feeDetail(conditionalNoFee),/Not confirmed/,'Conditio
 const archiveRecord={...legacy,closed:'2026-10-17',bonusRecd:'2026-10-17'};
 assert.match(sandbox.BT360.detailPanels(archiveRecord),/Fees &amp; waivers|Fees & waivers/,'Churn and closed record details retain fee section');
 assert.match(sandbox.BT360.detailPanels(archiveRecord),/\$25 early-close fee/);
+
+// Cooldown display may quote saved T&C, but must never manufacture a new fee,
+// silently mix personal/business products or change canonical eligibility.
+const vmFee=require('node:vm');
+const undatedClosed={...legacy,id:'MOCK-COOLDOWN-01',bank:'Synthetic Archive Bank',accountType:'personal',
+ opened:'2025-03-15',closed:'2026-08-01',bonusRecd:'2025-05-01',churnable:true,
+ financialRules:null,monthlyFeeAmountText:'',monthlyFeeYNText:'',monthlyFeeWaiverText:'',
+ avoidMonthlyFeeText:'',earlyTerminationFeeText:'',closeRuleText:'',
+ feeScheduleSourceUrl:'',feeScheduleRaw:'',churnRuleText:'',churnPeriodValue:0,
+ eligibilityRules:[],eligibilityEvidenceText:'',eligibilityVerified:false,eligibilityVerifiedAt:''};
+const initialRecord=JSON.stringify(undatedClosed);
+sandbox.__cooldownFixture=undatedClosed;
+const archiveKey=vmFee.runInContext('offerHistoryKey(__cooldownFixture)',sandbox);
+const storedBefore=storage.get('bt_tc_archive_v1');
+const lastSaved={bank:undatedClosed.bank,entryId:undatedClosed.id,
+ accountType:'personal',opened:undatedClosed.opened,
+ termsVerifiedAt:'2025-03-10',monthlyFeeAmountText:'$12 per month',
+ monthlyFeeWaiverText:'Waived with $500 electronic deposits or $1,500 beginning-day balance',
+ earlyTerminationFeeText:'Early closing fee $25 within 180 days of opening.',
+ churnRuleText:'No bonus for customers who received a checking bonus in past 12 months.'};
+storage.set('bt_tc_archive_v1',JSON.stringify({[archiveKey]:{bank:undatedClosed.bank,accountType:'personal',current:lastSaved,versions:[]}}));
+try{
+ const display=sandbox.BT360.feeDetail(undatedClosed);
+ assert.match(display,/Last saved bonus terms/);
+ assert.match(display,/\$12<\/b>/,'Monthly charge from the same enrolled cycle is visible');
+ assert.match(display,/\$25 early-close fee/,'Original early-close charge is visible');
+ assert.match(display,/Waived with \$500 electronic deposits/);
+ assert.equal((display.match(/class="bt3613-fee-line"/g)||[]).length,2,'Exactly two fee rows');
+ assert.doesNotMatch(display,/Not confirmed|Needs review|This month/,'Historical view should not have active-account review prompts');
+ const dates=sandbox.BT360.detailPanels(undatedClosed);
+ assert.match(dates,/Last saved rule · No bonus for customers/);
+ assert.match(dates,/Date unavailable/,'No validated eligibility date must be invented');
+ assert.doesNotMatch(dates,/Last saved rule[^<]+<\/small><button[^>]*>Set rule/);
+ const earlierCycle={...undatedClosed,id:'MOCK-COOLDOWN-02',opened:'2024-03-15'};
+ const historical=sandbox.BT360.feeDetail(earlierCycle);
+ assert.match(historical,/earlier offer cycle/,'Cross-cycle fallback clearly labeled');
+ assert.match(historical,/\$12<\/b>/);
+ const wrongAudience={...undatedClosed,accountType:'business'};
+ const business=sandbox.BT360.feeDetail(wrongAudience);
+ assert.match(business,/Not recorded/,'Unrelated business product never borrows a personal fee');
+ assert.doesNotMatch(business,/\$12<\/b>/);
+ assert.equal(JSON.stringify(undatedClosed),initialRecord,'Projection cannot mutate historical account');
+}finally{
+ if(storedBefore===undefined)storage.delete('bt_tc_archive_v1');else storage.set('bt_tc_archive_v1',storedBefore);
+ delete sandbox.__cooldownFixture;
+}
+const unrecorded=sandbox.BT360.feeDetail(undatedClosed);
+assert.match(unrecorded,/Not recorded/);
+assert.doesNotMatch(unrecorded,/\$0 early-close fee/,'Missing fee evidence is not a free fee');
+assert.equal(JSON.stringify([...storage]),before,'Cooldown display never writes stored records');
+
 assert.equal(JSON.stringify([...storage]),before,'Fee projections never write stored records');
 
 const timers=sandbox.BT360.timerRows(e);
