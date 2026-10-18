@@ -173,6 +173,7 @@ async function exercise(name,engine,url){
     check('using an action preserves expanded Action Center',await page.locator('#bt-action-center-toggle').getAttribute('aria-expanded')==='true');
     await page.setViewportSize({width:390,height:844});
     check('in-progress detail has dated identity and sticky actions',await page.locator('.bt360-detail-identity').isVisible()&&await page.locator('.bt360-detail-footer').isVisible());
+    check('fixed action bar is outside the scrolling detail card',await page.locator('.bt360-detail-footer').evaluate(e=>e.parentElement?.id==='app'&&!e.closest('.scroll')));
     check('Manage resides only in the fixed bottom action bar',await page.locator('.bt360-detail-footer').getByRole('button',{name:'Manage',exact:true}).isVisible()&&await page.getByRole('button',{name:'Manage',exact:true}).count()===1);
     check('Manage is positioned above bottom navigation',await page.evaluate(()=>{const manage=document.querySelector('.bt360-detail-footer .bt360-manage'),bar=document.querySelector('.bt360-detail-footer'),nav=document.querySelector('.tabs');return !!manage&&getComputedStyle(bar).position==='fixed'&&manage.getBoundingClientRect().bottom<=nav.getBoundingClientRect().top+2;}));
     await page.screenshot({path:path.join(output,name+'-bonus-detail-in-progress-390.png')});
