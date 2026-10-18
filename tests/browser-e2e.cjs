@@ -321,7 +321,7 @@ async function exercise(name,engine,url){
     check('twelve month buttons start unselected',await page.locator('.bt367-month-hit').count()===12&&await page.locator('.bt367-month-hit[aria-pressed="true"]').count()===0);
     check('zero months have no bar and full-height tap targets',await page.locator('.bt367-month-hit[data-month="1"] .bt367-month-fill').count()===0
       &&await page.locator('.bt367-month-hit[data-month="1"] .bt367-month-baseline').count()===1
-      &&await page.locator('.bt367-month-hit[data-month="1"]').evaluate(e=>e.getBoundingClientRect().height>=44));
+      &&await page.locator('.bt367-month-hit[data-month="1"]').evaluate(e=>{const r=e.getBoundingClientRect();return r.height>=44&&r.width>=44;}));
     check('hero receipt sums equal Tax for same year and audience',await page.evaluate(()=>{
       const monthly=BT360.heroMonthData(entries,dashYear).reduce((sum,m)=>sum+m.total,0);
       const tax=taxEntriesForYear(dashYear).filter(BT360.scope).reduce((sum,e)=>sum+Number(e.bonus),0);
