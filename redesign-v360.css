@@ -1,4 +1,4 @@
-/* BonusTracker v3.6.2: presentation only. Canonical calculations and records are untouched. */
+/* BonusTracker v3.6.3: presentation only. Canonical calculations and records are untouched. */
 @font-face{font-family:Manrope;src:url('./fonts/manrope-latin-400-normal.woff2') format('woff2');font-weight:400;font-display:swap}
 @font-face{font-family:Manrope;src:url('./fonts/manrope-latin-600-normal.woff2') format('woff2');font-weight:600 900;font-display:swap}
 :root{color-scheme:dark;--bg:#07080C;--card:#12141C;--card2:#15171F;--border:#1E212C;--text:#F2F3F7;--muted:#A0A6B8;--sub:#A0A6B8;--mint:#5BE3B0;--good:#5BE3B0;--amber:#FFB86B;--bad:#FF8A8A;--blue:#8FB4FF;--violet:#C7A6FF}
@@ -27,7 +27,8 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var
 .bt360-kicker{color:#5BE3B0;font-size:10px;font-weight:900;letter-spacing:1.35px;white-space:nowrap}
 .bt360-hero-amount{display:block;font-size:clamp(31px,7vw,44px);line-height:1.1;font-variant-numeric:tabular-nums;font-weight:900;letter-spacing:-1px;margin-top:8px}
 .bt360-hero p{color:#A0A6B8;font-size:12px;margin:3px 0 13px}
-.bt360-backup{position:static!important;display:inline-flex!important;background:#103023!important;border:0!important;border-radius:100px!important;padding:5px 8px!important;min-height:30px!important;color:#5BE3B0!important;font-size:10px!important;font-weight:800;max-width:48%;white-space:normal;text-align:right}
+.bt360-backup{position:static!important;display:inline-flex!important;align-items:center;gap:5px;background:transparent!important;border:1px solid #29463D!important;border-radius:100px!important;padding:4px 7px!important;min-height:28px!important;color:#91A79F!important;font-size:9px!important;font-weight:800;max-width:42%;white-space:nowrap;text-align:right}
+.bt360-cloud-icon{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:#173A2F;color:#5BE3B0;font-size:9px;line-height:1;flex:none}
 .bt360-monthbars{height:46px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:5px;align-items:end}
 .bt360-monthbars span{display:block;min-height:4px;border-radius:4px 4px 1px 1px;background:#1B4137}
 .bt360-monthbars span.current{background:#5BE3B0}
@@ -158,10 +159,10 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var
 .bt360-usage-config b{color:#5BE3B0;font-variant-numeric:tabular-nums}
 .bt360-usage-warning{color:#FFB86B;font-size:12px;line-height:1.5}
 .bt360-usage-r2 b{color:#F2F3F7}
-.bt360-backup .cloud-top{display:none!important}
-.bt360-backup .cloud-dashboard-summary{display:inline!important;font-size:10px!important;line-height:1.2!important;max-width:100%;overflow-wrap:anywhere}.bt360-backup .cloud-dashboard-date{display:none!important}
-.bt360-backup[data-state="danger"],.bt360-backup[data-state="warn"]{background:#2F231B!important;color:#FFB86B!important}
-.bt360-backup[data-state="success"],.bt360-backup[data-state="protected"]{background:#123327!important;color:#5BE3B0!important}
+.bt360-backup .cloud-dashboard-summary{display:inline!important;font-size:9px!important;line-height:1!important;overflow:hidden;text-overflow:ellipsis}.bt360-backup .cloud-dashboard-date{display:none!important}
+.bt360-backup[data-state="danger"],.bt360-backup[data-state="warning"]{border-color:#5B472D!important;color:#D6A562!important}.bt360-backup[data-state="danger"] .bt360-cloud-icon,.bt360-backup[data-state="warning"] .bt360-cloud-icon{background:#342819;color:#FFB86B}
+.bt360-backup[data-state="off"]{border-color:#343743!important;color:#8A90A3!important}.bt360-backup[data-state="off"] .bt360-cloud-icon{background:#20232C;color:#8A90A3}
+.bt360-backup[data-state="success"],.bt360-backup[data-state="protected"]{border-color:#29463D!important;color:#91A79F!important}
 @media(max-width:360px){.bt360-usage-config{grid-template-columns:1fr}.bt360-usage-top strong{font-size:26px}}
 
 /* Keep all existing year choices reachable at every viewport. */
@@ -182,7 +183,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var
 .bt360-data-pills button{flex:none;border:1px solid #1E212C;background:#15171F;color:#A0A6B8;border-radius:99px;min-height:36px;padding:6px 12px;font-weight:800;font-size:11px}
 .bt360-data-pills button.active{background:#123327;color:#5BE3B0;border-color:#234C3E}
 
-/* v3.6.2 mobile mockup refinement — presentation only. */
+/* v3.6.3 mobile refinement — presentation only. */
 .bt362-year-pill{display:inline-flex;align-items:center;gap:7px;background:#15171F;border:1px solid #303443;border-radius:999px;padding:5px 9px;color:#8A90A3;font-size:10px;font-weight:800;min-width:0}
 .bt362-year-pill select{appearance:auto;color:#F2F3F7;background:transparent;border:0;padding:3px 1px;font-size:12px;font-family:inherit;font-weight:800;max-width:82px;cursor:pointer}
 .bt362-year-pill select:focus-visible{outline:2px solid #5BE3B0;outline-offset:3px}
@@ -191,6 +192,8 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var
 .bt362-add-menu{position:fixed;right:18px;bottom:calc(156px + env(safe-area-inset-bottom));width:min(255px,calc(100vw - 32px));padding:8px;background:#15171F;border:1px solid #394055;box-shadow:0 10px 26px #0009;border-radius:16px;z-index:17;display:grid;gap:4px}
 .bt362-add-menu button{font-family:inherit;background:transparent;color:#F2F3F7;text-align:left;font-size:13px;font-weight:750;border:0;border-radius:10px;padding:13px 12px;min-height:44px}
 .bt362-add-menu button:hover,.bt362-add-menu button:focus-visible{background:#243347;outline-color:#5BE3B0}
+.bt362-tool-panel{scroll-margin-top:12px;border:1px solid #29463D;border-radius:16px;background:#101A18;padding:10px;margin:0 0 12px;outline:none}
+.bt362-tool-panel:focus{border-color:#5BE3B0;box-shadow:0 0 0 2px #5BE3B01F}
 .bt362-offer-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 4px 4px}
 .bt362-offer-head h2{font-size:17px;margin:0;color:#F2F3F7}
 .bt362-offer-head button,.bt362-offer-stale button{min-height:36px}
@@ -218,11 +221,3 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var
 .bt362-data-actions button{min-height:36px;padding:7px 10px;font-size:11px;max-width:52%;white-space:normal}
 .bt362-data-view .research-help{margin-top:12px}
 @media(max-width:430px){.bt362-year-pill{margin-left:auto}.hdr-row{gap:6px!important}.bt362-offer-head{padding-top:6px}.radar-card-compact .bt360-offer-title{gap:8px}.radar-card-compact .bt360-offer-title strong{font-size:12px;max-width:100px;white-space:normal}}
-
-/* v3.6.3 canonical offer badges and provenance — no feed-status UI. */
-.radar-offer-badges{display:flex;flex-wrap:wrap;gap:5px;margin:5px 0 2px}
-.radar-offer-badges span{border:1px solid #405944;background:#183327;color:#8CF0B8;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:800;white-space:normal}
-.radar-offer-original{border-top:1px solid #272C38;margin-top:8px;font-size:11px;overflow-wrap:anywhere}
-.radar-offer-original summary{color:#A0A6B8;min-height:36px;padding:9px 0;cursor:pointer;font-weight:650}
-.radar-offer-original p{color:#A0A6B8;font-size:11px;line-height:1.5}
-.radar-card-compact .radar-offer-link{margin-right:12px;min-height:36px;overflow-wrap:anywhere}
