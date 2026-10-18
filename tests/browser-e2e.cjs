@@ -352,13 +352,17 @@ async function exercise(name,engine,url){
     if(!await page.locator('.bt3611-ready-extras').evaluate(e=>e.open)) await page.locator('.bt3611-ready-extras > summary').click();
     for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
-      check('detail task, timer and waiver remain readable at '+width+'px',await page.evaluate(()=>{
-        const panel=document.querySelector('.bt360-detail-card'),task=panel.querySelector('.bt360-check .bt366-row-edit'),timer=panel.querySelector('.bt3611-timer-body'),fee=panel.querySelector('.bt360-info-long');
-        if(!task||!timer||!fee)return false;
+      const layout=await page.evaluate(()=>{
+        const panel=document.querySelector('.bt360-detail-card'),task=panel?.querySelector('.bt360-check .bt366-row-edit'),timer=panel?.querySelector('.bt3611-timer-body'),fee=panel?.querySelector('.bt360-info-long');
+        if(!panel||!task||!timer||!fee)return {ok:false,reason:'missing node',panel:!!panel,task:!!task,timer:!!timer,fee:!!fee};
         const owner=task.parentElement,check=owner.querySelector('[role="checkbox"]'),a=check.getBoundingClientRect(),b=task.getBoundingClientRect();
-        return task.clientWidth>=120&&timer.clientWidth>=120&&timer.querySelector('b')?.getBoundingClientRect().height<=(parseFloat(getComputedStyle(timer.querySelector('b')).lineHeight)||16)+2&&a.right<=b.left+1&&b.right<=owner.getBoundingClientRect().right+1&&
-          fee.scrollWidth<=fee.clientWidth+1&&panel.scrollWidth<=panel.clientWidth+1&&getComputedStyle(fee.querySelector('div')).textAlign==='left';
-      }));
+        const title=timer.querySelector('b'),titleH=title?.getBoundingClientRect().height||0,lh=parseFloat(getComputedStyle(title).lineHeight)||16;
+        const metrics={taskWidth:task.clientWidth,timerWidth:timer.clientWidth,titleH,titleLineHeight:lh,checkRight:a.right,taskLeft:b.left,taskRight:b.right,ownerRight:owner.getBoundingClientRect().right,feeScroll:fee.scrollWidth,feeWidth:fee.clientWidth,panelScroll:panel.scrollWidth,panelWidth:panel.clientWidth,feeAlign:getComputedStyle(fee.querySelector('div')).textAlign};
+        const gates={task:task.clientWidth>=120,timer:timer.clientWidth>=120,title:titleH<=lh+2,checkbox:a.right<=b.left+1,taskBounds:b.right<=owner.getBoundingClientRect().right+1,feeOverflow:fee.scrollWidth<=fee.clientWidth+1,panelOverflow:panel.scrollWidth<=panel.clientWidth+1,feeAlign:metrics.feeAlign==='left'};
+        return {ok:Object.values(gates).every(Boolean),gates,metrics};
+      });
+      if(!layout.ok)console.error('320-430px layout diagnostics:',width,JSON.stringify(layout));
+      check('detail task, timer and waiver remain readable at '+width+'px',layout.ok);
     }
     await page.evaluate(()=>{const e=entries[0],v=window.__layoutOriginal;e.checklist=v.checklist;e.customTimers=v.customTimers;e.monthlyFeeWaiverText=v.monthlyFeeWaiverText;delete window.__layoutOriginal;R()});
     await button('Tax').click();
