@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.19 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.20 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt360_audience_session',noticeKey='bt360_notice_session';
@@ -619,7 +619,7 @@ function detailPanels(e){
  const code=stage(e).code,ready=code==='READY_TO_CLOSE',closed=!!e.closed;
  const at=closed?4:ready?4:code==='HOLD_OPEN'||code==='BONUS_RECEIVED'?3:code==='REQUIREMENTS_MET'||code==='AWAITING_BONUS'?2:1;
  const labels=['Opened','Tasks','Payout','Hold','Close'];
- let h='<div class="bt360-steps '+(ready?'bt3611-ready':'')+'" aria-label="Account lifecycle"><div class="bt3611-step-bars">'+labels.map((name,i)=>'<span class="'+(i<at?'done ':'')+(at===i?'current':'')+'"'+(at===i?' aria-current="step"':'')+'>'+name+'</span>').join('')+'</div><div class="bt3611-stage-summary"><b>'+safe(ready?'All close restrictions cleared':code==='IN_PROGRESS'?'Complete offer requirements':stage(e).label)+'</b><em class="bt360-chip '+(ready?'positive':'warning')+'">'+safe(ready?'Ready to close':(!closed&&reqDeadline(e)?Math.max(0,dB(td(),reqDeadline(e)))+' days left':stage(e).label))+'</em></div></div>';
+ let h='<div class="bt360-steps '+(ready?'bt3611-ready':'')+'" aria-label="Account lifecycle"><div class="bt3611-step-bars">'+labels.map((name,i)=>'<span class="'+(i<at?'done ':'')+(at===i?'current':'')+'"'+(at===i?' aria-current="step"':'')+'>'+name+'</span>').join('')+'</div><div class="bt3611-stage-summary"><b>'+safe(ready?'Review closing checks before closing':code==='IN_PROGRESS'?'Complete offer requirements':stage(e).label)+'</b><em class="bt360-chip '+(ready?'positive':'warning')+'">'+safe(ready?'Ready to close':(!closed&&reqDeadline(e)?Math.max(0,dB(td(),reqDeadline(e)))+' days left':stage(e).label))+'</em></div></div>';
  const hasExtraWork=Array.isArray(e.checklist)&&e.checklist.length>0;
  const savedWorkStart=h.length;
  if(!closed&&(!ready||hasExtraWork)){
@@ -679,7 +679,7 @@ function archive(rows){
  const indexed=closed.map(e=>({e,info:eligibleInfo(e)}));
  const ready=indexed.filter(x=>x.info?.verified&&dB(td(),x.info.eligible)<=0);
  const soon=indexed.filter(x=>x.info&&dB(td(),x.info.eligible)>0&&dB(td(),x.info.eligible)<=60);
- const cooling=indexed.filter(x=>!x.info||!x.info.verified||dB(td(),x.info.eligible)>0).sort((a,b)=>(a.info?.eligible||'9999').localeCompare(b.info?.eligible||'9999'));
+ const cooling=indexed.filter(x=>!x.info||!x.info.verified||dB(td(),x.info.eligible)>60).sort((a,b)=>(a.info?.eligible||'9999').localeCompare(b.info?.eligible||'9999'));
  h+='<div class="bt360-archive-stats"><div><b>'+ready.length+'</b><small>Eligible now</small></div><div><b>'+soon.length+'</b><small>Within 60 days</small></div><div><b>'+cooling.length+'</b><small>Cooling down</small></div></div>';
  const row=(x,offer)=>{
   const historic='Last saved '+(Number(x.e.bonus)>0?amount(x.e.bonus)+' bonus':'bank offer')+
@@ -690,6 +690,7 @@ function archive(rows){
    '<button class="bt360-chip" onclick="BT360.openArchived('+arg(x.e.id)+')">'+(x.info?.verified?Math.max(0,dB(td(),x.info.eligible))+' days':'Details')+'</button>')+'</div>';
  };
  h+=panel('Eligible now',ready.length?'<div class="bt360-list">'+ready.map(x=>row(x,true)).join('')+'</div>':'<p class="bt360-muted">No verified eligibility dates reached.</p>');
+ h+=panel('Eligible within 60 days',soon.length?'<div class="bt360-list">'+soon.map(x=>row(x,false)).join('')+'</div>':'<p class="bt360-muted">No verified eligibility dates within 60 days.</p>');
  h+=panel('Cooling down',cooling.length?'<div class="bt360-list">'+cooling.map(x=>row(x,false)).join('')+'</div>':'<p class="bt360-muted">No accounts cooling down.</p>','<span class="bt360-subtitle">soonest first</span>');
  h+='<details class="bt360-archived-tools"'+(legacyArchiveOpen?' open':'')+' ontoggle="BT360.setArchiveToolsOpen(this.open)"><summary>Completed, non-repeatable accounts · edit and review</summary>'+window.rTracker(rows,true)+'</details>';
  return h;
