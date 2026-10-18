@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.22 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.23 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt360_audience_session',noticeKey='bt360_notice_session';
@@ -638,6 +638,20 @@ function setReadyExtrasOpen(id,value){readyExtrasState.set(id,!!value)}
 // Closing checklist is a read-only projection of the same enrolled fee evidence
 // used by Fees & waivers. A hold countdown is never proof that a positive or
 // conditional early-close charge has expired.
+// A posted bonus alone cannot establish that it is safe from repayment.
+// Only saved closure evidence matching the documented restriction can do so.
+function retentionEvidenceCleared(e,holdMet){
+ if(!e?.bonusRecd)return false;
+ const closure=e.financialRules?.closure||{};
+ const type=String(closure.restrictionType||e.closeRestrictionType||'');
+ const evidence=String(closure.evidence?.quote||e.closeRuleSourceSentence||e.closeRuleText||'').trim();
+ if(!evidence)return false;
+ if(type==='payout-only')return /\b(?:until|through|after|once|when|before)\b.{0,90}\bbonus\b/i.test(evidence)
+  &&!/\b(?:clawback|repay|repayment|forfeit|forfeiture)\b/i.test(evidence);
+ if(type==='minimum-open')return !!holdMet&&/\b(?:keep|remain|open|minimum|hold|maintain)\b/i.test(evidence);
+ if(type==='none')return /\b(?:no|without|not subject to)\b.{0,60}\b(?:clawback|repayment|forfeiture)\b/i.test(evidence);
+ return false;
+}
 function closeCheckPresentation(e){
  const financial=e.financialRules?.closure;
  const hold=typeof safeCloseDate==='function'?safeCloseDate(e):'';
@@ -646,11 +660,11 @@ function closeCheckPresentation(e){
  const holdMet=hasHold&&Number.isFinite(remaining)&&remaining<=0;
  const fee=feeSnapshot(e);
  const zeroFeeConfirmed=fee.closeKnown&&fee.closeMain==='$0 early-close fee';
- const retentionSaved=!!e.bonusRecd&&['payout-only','minimum-open','none'].includes(String(financial?.restrictionType||e.closeRestrictionType||''));
+ const retentionSaved=retentionEvidenceCleared(e,holdMet);
  return [
   {ok:holdMet,label:'Minimum hold met',detail:hasHold?(holdMet?'Open '+Number(e.minHoldDays)+' days · cleared '+date(hold):'Hold until '+(hold?date(hold):'Needs review')):'No documented minimum hold · Needs review'},
   {ok:zeroFeeConfirmed,label:'Early close fee window cleared',detail:zeroFeeConfirmed?'Explicit no-fee terms saved':fee.closeKnown?fee.closeMain+' · verify the applicable fee window before closing':fee.closeNote+' · Needs review'},
-  {ok:retentionSaved,label:'Bonus kept after closing',detail:retentionSaved?'Bonus received · saved closure terms reviewed':'Confirm any repayment restriction in saved terms'},
+  {ok:retentionSaved,label:'Bonus kept after closing',detail:retentionSaved?'Bonus received · saved restriction evidence supports closing':'Confirm bonus repayment restrictions in saved terms'},
   {ok:false,label:'Close with $0 balance',detail:'Confirm account balance with the bank before closing'}
  ];
 }

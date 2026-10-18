@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex — v3.6.23 — codex/v3.6.23-bonus-retention-evidence
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.23 bonus-retention close-check presentation (`codex/v3.6.23-bonus-retention-evidence`): bonus paid alone is not proof against clawback. A green retained-bonus check requires saved payout-only closure wording with bonus recorded, supported minimum-open wording with hold elapsed, or explicit no-clawback evidence. No source, missing payout or manual review remains unresolved. Synthetic unit coverage added, full bonus/cloud/UI and Chromium/WebKit CI and main Pages verification pending. No stored data or financial engine changes.
+
 
 - v3.6.22 closing fee presentation safety (`codex/v3.6.22-close-fee-display-safety`): Close checks now reuses enrolled feeSnapshot evidence and only marks a $0 early-close fee as cleared with explicit, unconditional no-fee wording. A positive/conditional/unknown fee is always flagged for manual window review; an unrelated hold date cannot establish fee clearance. Pure view helper with synthetic regression, no saved record or rule engine changes. PR CI and Pages publication pending.
 
