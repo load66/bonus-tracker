@@ -126,7 +126,9 @@ try{
 // noisy "Review" action or an invented reopen clock for a saved past bonus.
 const missingDate={...archiveRecord,id:'SYN-UNDATE-1',bank:'Synthetic Cooling Bank',
  accountType:'personal',opened:'2025-01-01',closed:'2026-08-01',
- churnable:true,eligibilityRules:[],eligibilityEvidenceText:'',churnPeriodValue:0};
+ churn:'',churnable:null,churnability:'',churnBasis:'',sourceEligibilityBasis:'',
+ eligibilityRules:[],eligibilityText:'',eligibilityEvidenceText:'',eligibilityEvidenceSource:'',
+ churnPeriodValue:0,churnPeriodUnit:'',analysis:null};
 const priorInfo=sandbox.eligibleInfo;
 sandbox.eligibleInfo=()=>null;
 try{
