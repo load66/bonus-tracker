@@ -6,7 +6,7 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
-- v3.6.26 Bank Offers audience and compact feed (`codex/v3.6.25-offer-audience-ui`, PR #203): Personal/Business tabs use conservative public-offer category projection without altering saved accounts or eligibility, and preserve unknown product classification as unverified. Compact grouped offer rows preserve source URLs, original headlines, filters, availability evidence and refresh actions. Tests avoid asynchronous provider refresh. Rebased on v3.6.25 Bonus Detail release; unit/Chromium/WebKit and production Pages verification pending.
+- v3.6.26 Bank Offers audience and compact feed (`codex/v3.6.25-offer-audience-ui`, PR #203): Personal/Business tabs use conservative public-offer category projection without altering saved accounts or eligibility, and preserve unknown product classification as unverified. Compact grouped offer rows preserve source URLs, original headlines, filters, availability evidence and refresh actions. Tests avoid asynchronous provider refresh and preserve the existing browser-search locator. Rebased on v3.6.25 Bonus Detail release; unit/Chromium/WebKit and production Pages verification pending.
 
 
 - v3.6.25 in-progress Bonus Detail layout parity (`codex/v3.6.25-detail-panel-order`): Fees & waivers now appears between Requirements and Timers, matching the PDF. Ready-to-close close-check priority and closed historical fee display remain intact. Existing Add task, Add timer, timer editing and financial evidence are preserved. Synthetic panel-order and handler regression added. No rule engine or financial record changes; CI/Pages verification pending.

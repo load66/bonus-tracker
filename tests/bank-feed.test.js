@@ -6,6 +6,8 @@ const before=JSON.stringify([...storage]);
 // Offer discovery uses the selected Personal/Business audience, not the
 // account's unrelated category pill or an old bank-cooldown decision.
 const offersAPI=sandbox.BTBankBonusFeed;
+// Browser regression uses this stable search control while focus and saved filters persist.
+assert(require('node:fs').readFileSync('bank-bonuses.js','utf8').includes('placeholder="Search bank bonuses…"'),'Retain the tested offer-search control text');
 const sampleOffers=[
  {title:'Synthetic Consumer Checking $300',product:'checking',bank:'Synthetic Consumer'},
  {title:'Synthetic Biz Savings $400',product:'savings',bank:'Synthetic Biz'},
