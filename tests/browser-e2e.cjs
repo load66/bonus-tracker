@@ -180,7 +180,8 @@ async function exercise(name,engine,url){
     await wait(()=>modal===null&&!entrySaveBusy);
     check('edit preserves identity',(await record()).id===id);
     check('notes cannot inject HTML',await page.locator('img[src="x"]').count()===0);
-    await page.locator('.bt366-compact-row').first().click();await page.getByRole('button',{name:'Record deposit'}).click();await page.locator('#req_date').fill('2026-04-01');await button('Save').click();await button('OK').click();
+    if(!await page.locator('.bt360-detail-footer .bt360-primary').count())await page.locator('.bt366-compact-row').first().click();
+    await page.getByRole('button',{name:'Record deposit'}).click();await page.locator('#req_date').fill('2026-04-01');await button('Save').click();await button('OK').click();
     check('requirements and payout stay separate',(await record()).reqMet==='2026-04-01'&&!(await record()).bonusRecd);
     await button('Confirm received').click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('OK').click();
     check('bonus receipt updates close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
