@@ -308,12 +308,22 @@ function termsDisplayBuckets(){
 }
 function renderTermsCycle(x,previous=false){
  const raw=termsArchiveSourceText(x),promo=safeExternalUrl(x.promoSourceUrl),fee=safeExternalUrl(x.feeScheduleSourceUrl),rules=Array.isArray(x.eligibilityRules)?x.eligibilityRules:[];
- let h='<div class="archive-cycle"><div class="research-report-top"><span class="research-kind">'+(previous?'Previous offer':'Saved offer')+'</span><b>'+(x.bonus?esc(fM(x.bonus)):'Bonus not saved')+'</b></div><dl class="research-dates"><div><dt>Account opened</dt><dd>'+esc(x.opened?fD(x.opened):'Not saved')+'</dd></div><div><dt>Terms saved / reviewed</dt><dd>'+esc((x.termsVerifiedAt||x.capturedAt)?fD(String(x.termsVerifiedAt||x.capturedAt).slice(0,10)):'Not recorded')+'</dd></div></dl>';
- if(!raw)h+='<p class="research-caveat">Original terms have not been saved for this account. Notes below may be incomplete.</p>';
- const facts=[['Bonus requirements',x.completeBonusText],['Monthly fee',x.monthlyFeeAmountText||x.monthlyFeeYNText],['How to avoid the fee',x.monthlyFeeWaiverText||x.avoidMonthlyFeeText],['Closing the account',x.closeRuleText||x.earlyTerminationFeeText],['Offer deadline',x.expirationDateText]];
- if(facts.some(([,v])=>v)||rules.length){h+='<details class="research-help"><summary>Saved requirements & fees</summary><dl class="archive-facts">';facts.forEach(([k,v])=>{if(v)h+='<div><dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd></div>'});if(rules.length)h+='<div><dt>When another bonus may be available</dt><dd>'+rules.map(r=>esc(eligibilityRuleStorageLabel(r))).join('<br>')+'</dd></div>';h+='</dl><p class="research-caveat">Saved account information; the original offer text controls. Missing details require review.</p></details>'}
- if(promo||fee){h+='<div class="archive-links">';if(promo)h+='<a class="research-source" href="'+esc(promo)+'" target="_blank" rel="noopener noreferrer">Promotion source ↗</a>';if(fee)h+='<a class="research-source" href="'+esc(fee)+'" target="_blank" rel="noopener noreferrer">Fee schedule ↗</a>';h+='</div><p class="research-caveat">Live pages can change. The saved text below belongs to this offer.</p>'}
- if(raw)h+='<details class="research-help archive-original"><summary>Read original saved terms</summary><div class="archive-raw">'+esc(raw)+'</div></details>';
+ const copy=x.financialRules&&typeof x.financialRules==='object'?x.financialRules:null;
+ const feeRaw=String(x.feeScheduleRaw||'').trim();
+ let h='<div class="archive-cycle"><div class="research-report-top"><span class="research-kind">'+(previous?'Previous saved version':'Saved offer')+'</span><b>'+(x.bonus?esc(fM(x.bonus)):'Bonus not saved')+'</b></div><dl class="research-dates"><div><dt>Account opened</dt><dd>'+esc(x.opened?fD(x.opened):'Not saved')+'</dd></div><div><dt>Terms saved / reviewed</dt><dd>'+esc((x.termsVerifiedAt||x.capturedAt)?fD(String(x.termsVerifiedAt||x.capturedAt).slice(0,10)):'Not recorded')+'</dd></div>'
+  +'<div><dt>Evidence status</dt><dd>'+esc(x.evidenceStatus==='eligibility-evidence-validated'?'Saved eligibility evidence validated':'Enrolled source requires review')+'</dd></div></dl>';
+ if(!raw)h+='<p class="research-caveat">Original promotion text is missing for this historical cycle. Saved facts remain available but must not be treated as verified.</p>';
+ const facts=[['Bonus requirements',x.completeBonusText],['Monthly fee',x.monthlyFeeAmountText||x.monthlyFeeYNText],['How to avoid the fee',x.monthlyFeeWaiverText||x.avoidMonthlyFeeText],['Early-close fee wording',x.earlyTerminationFeeText],['Closing / bonus retention',x.closeRuleText],['Payout timing',x.payoutTimingText],['Offer deadline',x.expirationDateText]];
+ if(facts.some(([,v])=>v)||rules.length){
+  h+='<details class="research-help"><summary>Saved requirements & fees</summary><dl class="archive-facts">';
+  facts.forEach(([k,v])=>{if(v)h+='<div><dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd></div>'});
+  if(rules.length)h+='<div><dt>Repeat eligibility · separate clocks</dt><dd>'+rules.map(r=>esc(eligibilityRuleStorageLabel(r))+(r?.evidenceText?'<small>'+esc(r.evidenceText)+'</small>':'')).join('<hr>')+'</dd></div>';
+  h+='</dl><p class="research-caveat">Each rule belongs to this saved cycle. Current bank offers do not change its dates or fees.</p></details>';
+ }
+ if(copy)h+='<details class="research-help archive-original"><summary>Read complete structured terms · accounts, fees and churn</summary><div class="archive-raw">'+esc(JSON.stringify(copy,null,2))+'</div></details>';
+ if(feeRaw)h+='<details class="research-help archive-original"><summary>Read original saved fee schedule</summary><div class="archive-raw">'+esc(feeRaw)+'</div></details>';
+ if(promo||fee){h+='<div class="archive-links">';if(promo)h+='<a class="research-source" href="'+esc(promo)+'" target="_blank" rel="noopener noreferrer">Promotion source ↗</a>';if(fee)h+='<a class="research-source" href="'+esc(fee)+'" target="_blank" rel="noopener noreferrer">Fee schedule ↗</a>';h+='</div><p class="research-caveat">Live pages may change. Only the saved text describes this recorded cycle.</p>'}
+ if(raw)h+='<details class="research-help archive-original"><summary>Read original saved promotion</summary><div class="archive-raw">'+esc(raw)+'</div></details>';
  return h+'</div>';
 }
 function rTermsStorage(){
@@ -324,7 +334,7 @@ function rTermsStorage(){
  rows.forEach(bucket=>{
   const x=bucket.current||{},versions=bucket.versions||[];
   h+='<details class="archive-bank"><summary>'+bankLogo(x.bank||bucket.bank,true)+'<span><b>'+esc(x.bank||bucket.bank)+'</b><small>'+esc(x.accountType==='business'?'Business':'Personal')+' · '+(termsArchiveSourceText(x)?'Terms saved':'Terms not saved')+'</small></span><span class="archive-chevron" aria-hidden="true">⌄</span></summary><div class="archive-bank-body">'+renderTermsCycle(x);
-  if(versions.length){h+='<details class="research-help archive-history"><summary>Previous T&C cycles <span>'+versions.length+'</span></summary>';versions.forEach(v=>h+='<details class="research-help"><summary>'+esc(v.opened?fD(v.opened):'Date not recorded')+(v.bonus?' · '+esc(fM(v.bonus)):'')+'</summary>'+renderTermsCycle(v,true)+'</details>');h+='</details>'}
+  if(versions.length){h+='<details class="research-help archive-history"><summary>Previous T&C cycles and revisions <span>'+versions.length+'</span></summary>';versions.forEach(v=>h+='<details class="research-help"><summary>'+esc(v.opened?fD(v.opened):'Date not recorded')+(v.bonus?' · '+esc(fM(v.bonus)):'')+'</summary>'+renderTermsCycle(v,true)+'</details>');h+='</details>'}
   h+='</div></details>';
  });
  if(!rows.length)h+='<div class="research-empty">'+(q?'No saved terms match your search.':'Your saved offers will appear here after you add an account.')+'</div>';
