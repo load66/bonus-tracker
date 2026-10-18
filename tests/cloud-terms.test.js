@@ -56,4 +56,27 @@ assert.equal(JSON.stringify([...storage]),beforeStorage,'Historical display and 
 const index=require('node:fs').readFileSync('index.html','utf8');
 assert(index.indexOf('cloud-terms-core.js')<index.indexOf('cloud-terms-history.js'));
 assert(index.indexOf('cloud-backup.js')<index.indexOf('cloud-terms-history.js'));
-console.log('Immutable historical T&C projection passed: saved quotes/rules, dedupe, source isolation, no account mutation, importer and cloud runtime wiring');
+
+// Both Ask AI and Cloud recovery use this sign-in. An owner who signs in
+// after app startup must trigger archive upload even when rolling backup is OFF.
+(async()=>{
+ const vm=require('node:vm'),fs=require('node:fs');
+ const values=new Map();
+ const store={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)};
+ let queued=0;
+ const authContext={
+  window:{BTTermsHistory:{queueSync(){queued++}}},
+  localStorage:store,
+  sessionStorage:{getItem:()=>null,setItem(){},removeItem(){}},
+  navigator:{},AbortController,setTimeout,clearTimeout,Date,JSON,
+  fetch:async()=>({ok:true,status:200,json:async()=>({access_token:'synthetic-access',refresh_token:'synthetic-refresh',expires_in:3600})})
+ };
+ vm.createContext(authContext);
+ vm.runInContext(fs.readFileSync('bonus-ai-auth.js','utf8'),authContext);
+ const token=await authContext.window.BTBonusAuth.signIn('synthetic@example.test','synthetic-only');
+ assert.equal(token,'synthetic-access');
+ assert.equal(queued,1,'Successful sign-in queues immutable cloud archive even with rolling backup disabled');
+ assert.equal(authContext.window.BTBonusAuth.connected(),true);
+ console.log('Immutable historical T&C projection passed: saved quotes/rules, dedupe, read-only data, JSON importer, and automatic post-sign-in archival');
+})().catch(e=>{console.error(e);process.exitCode=1});
+
