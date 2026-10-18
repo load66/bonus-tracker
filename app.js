@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.33';
+const APP_VERSION='3.6.34';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -5356,7 +5356,7 @@ function reqMetWarnings(e,date){
   return w
 }
 function confirmMarkReqMet(id){const e=entries.find(x=>x.id===id);if(!e)return;cfm={title:e.reqMet?'Update Requirement Met?':'Mark Requirement Met?',msg:(e.reqMet?'Update the requirement met date for ':'Mark requirements complete for ')+e.bank+'?\n\nThis stops requirement/funding timers from controlling the main card status, but bonus received stays separate.',green:true,action:()=>{cfm=null;openReqMet(id)}};R()}
-function openReqMet(id){const e=entries.find(x=>x.id===id);if(!e)return;reqPrompt={entryId:id,bank:e.bank,date:e.reqMet||td(),hasExisting:!!e.reqMet};R()}
+function openReqMet(id){const e=entries.find(x=>x.id===id);if(!e)return;reqPrompt={entryId:id,bank:e.bank,date:e.reqMet||'',hasExisting:!!e.reqMet};R()}
 function reqSubmit(){
   const p=reqPrompt;
   if(!p)return;
@@ -5391,7 +5391,7 @@ function confirmClearReqMet(){
   const p=reqPrompt;
   if(!p)return;
   const id=p.entryId, bank=p.bank;
-  cfm={title:'Clear Requirement Met?',msg:'Clear the requirement met date for '+bank+'?\n\nIf a bonus is already received, the app may restore this date to keep lifecycle history consistent.',confirmLabel:'Clear',action:()=>{cfm=null;reqPrompt={entryId:id,bank,date:p.date||'',hasExisting:true};clearReqMet()}};
+  cfm={title:'Clear Requirement Met?',msg:'Clear the requirement met date for '+bank+'?\n\nThe date will remain unknown until you explicitly record it. Any timing that depends on it will require review.',confirmLabel:'Clear',action:()=>{cfm=null;reqPrompt={entryId:id,bank,date:p.date||'',hasExisting:true};clearReqMet()}};
   R()
 }
 function clearReqMet(){

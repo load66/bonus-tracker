@@ -326,6 +326,11 @@
       if(st.key==='req')st.label=e?.reqMet?'Requirement Met':'Requirement Due';
       else if(st.key==='bonus')st.label=e?.bonusRecd?'Bonus Received':'Bonus Pending';
       else if(st.key==='funded')st.label=st.done?'Funding Complete':'Funding Due';
+      else if(st.key==='safe'){
+        const decision=window.btEvaluateAccount?.(e);
+        st.done=!!e?.closed||decision?.close?.status==='ready';
+        if(!st.done&&decision?.close?.status!=='hold')st.date='';
+      }
       return st;
     });
   }
@@ -351,10 +356,11 @@
       }else{
         add('Bonus',e.bonusRecd?((e.bonus?fM(e.bonus)+' · ':'')+fD(e.bonusRecd)):(e.bonus?fM(e.bonus)+' pending':'Pending'),e.bonusRecd?'ok':'warn');
         add('Requirement',requirementSummarySemantic(e),e.reqMet?'ok':'warn');
-        const type=String(e.closeRestrictionType||e.analysis?.closeRestrictionType||'');
         const safe=typeof safeCloseDate==='function'?safeCloseDate(e):'';
-        if(type==='payout-only')add('Earliest close',e.bonusRecd?'Bonus posted · close when ready':'After '+fM(e.bonus||0)+' posts',e.bonusRecd?'ok':'warn');
-        else add('Earliest close',safe?fD(safe):'Review terms',safe&&typeof daysUntilSafe==='function'&&daysUntilSafe(e)<=0?'ok':safe?'warn':'bad');
+        const decision=window.btEvaluateAccount?.(e);
+        if(decision?.close?.status==='ready')add('Earliest close',safe?fD(safe):'Close checks passed','ok');
+        else if(decision?.close?.status==='hold'&&safe)add('Earliest close',fD(safe),'warn');
+        else add('Earliest close','Review closure terms and fee evidence','warn');
       }
       return '<div class="profile-summary">'+items.map(x=>'<div class="profile-summary-item '+esc(x.cls||'')+'"><span>'+esc(x.label)+'</span><b>'+esc(x.value)+'</b></div>').join('')+'</div>';
     }catch{return typeof baseRenderBankProfileSummary==='function'?baseRenderBankProfileSummary(e):''}
