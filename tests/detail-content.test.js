@@ -61,9 +61,9 @@ assert.doesNotMatch(timers,/Due Date:|Start \+ Days:/);
 assert.match(timers,/Bonus requirement deadline · complete all qualifying direct deposits/,'Full timer text preserved when expanded');
 
 const details=sandbox.BT360.detailPanels(e);
-assert.match(details,/Set rule/);
-assert.match(details,/Close terms missing|Close rule unverified/);
-assert.match(details,/Eligibility rule missing|Date not calculable|After account closure/);
+assert.match(details,/After bonus posts/,'Close date explains the payout trigger without making up a date');
+assert.match(details,/After bonus payment/,'Eligibility displays the pending known start event');
+assert.doesNotMatch(details,/Set rule/,'Known rules awaiting payout should not require needless editing');
 assert.match(details,/This month/);
 const payoutOnly={...e,customTimers:[],payoutTimingText:'Expected within 15 days after requirements',financialRules:{...e.financialRules,payout:{text:'Expected within 15 days after requirements',timing:{basis:'reqmet',value:15,unit:'calendar-days'}}}};
 assert.match(sandbox.BT360.timerRows(payoutOnly),/Bonus pending/);
