@@ -670,8 +670,12 @@ async function exercise(name,engine,url){
     for(const label of ['Monthly fee','Fee waivers','Direct deposit','Early-close fee','Companion account','Repeat eligibility']){await button(label).click();check('prefill: '+label,(await page.locator('#bonus-ai-question').inputValue()).length>20);}
     await button('Closure rules').click();await page.locator('#bonus-ai-send').click();
     await page.locator('#bonus-ai-answer p').first().waitFor();
-    check('AI closure decision uses tracker gates',(await page.locator('.bonus-ai-verdict').innerText())==='Ready — tracker checks passed');
-    check('AI explains a concrete next step',(await page.locator('.bonus-ai-next-step').innerText()).includes('companion accounts'));
+    check('restored account with unresolved verification is not close-ready',await page.evaluate(()=>{
+      const e=entries[0],decision=btEvaluateAccount(e),next=btNextActionForEntry(e);
+      return decision.close.status!=='ready'&&next.kind!=='close'&&closeReadiness(e).cls!=='safe';
+    }));
+    check('AI closure decision respects blocked tracker gates',(await page.locator('.bonus-ai-verdict').innerText())==='Needs verification');
+    check('AI explains outstanding close checks',(await page.locator('.bonus-ai-next-step').innerText()).includes('close checks'));
     check('common answers do not send facts',await page.evaluate(()=>window.__bonusAITest.calls.length===0&&window.__bonusAITest.authCalls===0));
     await button('Ask AI for more').click();
     check('remote AI asks for login before sending facts',await page.locator('#bonus-ai-login').isVisible()&&await page.evaluate(()=>window.__bonusAITest.calls.length===0));
@@ -694,12 +698,12 @@ async function exercise(name,engine,url){
     check('expired access token refreshes without login',await page.evaluate(()=>window.__bonusAITest.authCalls===2&&window.__bonusAITest.calls[1].authorization==='Bearer synthetic-refreshed-token')&&await page.locator('#bonus-ai-login').isHidden());
     await page.evaluate(()=>window.__bonusAITest.response={answer:'Unsupported response',factIds:[],missing:[{text:'Malformed'}]});
     await button('Ask AI for more').click();await page.getByText('AI returned an unsupported answer. Account-detail answer shown below.',{exact:true}).waitFor();
-    check('malformed AI output uses account-detail answer',await page.locator('.bonus-ai-verdict').innerText()==='Ready — tracker checks passed');
+    check('malformed AI output preserves blocked close decision',await page.locator('.bonus-ai-verdict').innerText()==='Needs verification');
     await page.evaluate(()=>window.__bonusAITest.fail=true);await button('Ask AI for more').click();await page.getByText('AI is busy. Try again later. Account-detail answer shown below.',{exact:true}).waitFor();
     check('AI rate limit is handled without repeated requests',await page.evaluate(()=>window.__bonusAITest.calls.length===4));
     await page.evaluate(()=>{window.__bonusAITest.fail=false;window.__bonusAITest.response=null;window.__bonusAITest.serverFailure=true;});
     await button('Ask AI for more').click();await page.getByText('AI could not produce a supported answer. Account-detail answer shown below.',{exact:true}).waitFor();
-    check('production-style AI failure preserves a useful closure answer',(await page.locator('.bonus-ai-direct-answer').innerText()).includes('tracker checks passed'));
+    check('production-style AI failure preserves a safe closure warning',(await page.locator('.bonus-ai-direct-answer').innerText()).includes('Needs verification'));
     await button('Monthly fee').click();await page.locator('#bonus-ai-send').click();
     check('saved-rule answers work after AI failure',await page.getByText('Based on your account details.',{exact:true}).count()===1&&await page.evaluate(()=>window.__bonusAITest.calls.length===5));
     const feeFields=await page.evaluate(()=>{
