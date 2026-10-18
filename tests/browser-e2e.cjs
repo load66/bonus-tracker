@@ -433,6 +433,8 @@ async function exercise(name,engine,url){
     await button('2025').click();
     await button('2026').click();
     check('expanded Lifecycle & Tasks survives year navigation',await page.locator('.profile-section[data-section-key="lifecycle"]').first().evaluate(e=>e.open));
+    // The focused detail intentionally hides the Tracker list search; navigate back first.
+    await page.getByRole('button',{name:'Back to accounts'}).click();
     await page.getByPlaceholder('Search accounts...').pressSequentially('E2E');
     check('tracker search keeps cursor through consecutive keystrokes',await page.getByPlaceholder('Search accounts...').inputValue()==='E2E'&&await page.evaluate(()=>document.activeElement.id==='tracker-search'));
     await page.getByPlaceholder('Search accounts...').fill('');
