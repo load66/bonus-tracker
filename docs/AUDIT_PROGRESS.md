@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: Codex — v3.6.42 — codex/v3.6.42-dashboard-polish
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.42 dashboard polish (`codex/v3.6.42-dashboard-polish`): Full-width selected task descriptions beneath bank identity, preserved compact rows and exact canonical action routing. Compact counted search shortcut opens and focuses the existing account directory; Escape and Hide close it and restore shortcut focus, including directories opened through stage filters. Read-only UI state; no schema, backend, storage-key or canonical-rule changes. Synthetic search, focus, stage-filter and mobile coverage added. Local unit and release checks required; next: Chromium/WebKit CI, screenshot review, merge on green and exact Pages verification. Previous v3.6.41 PR #220 deployed at `05fc689848c0` with passing main CI and exact live-asset verification.
 
 - v3.6.41 selectable Tracker tasks (`codex/v3.6.41-selectable-attention`): Each attention row expands its own actions on selection, preserves priority order, and collapses the previous selection. Account directory starts collapsed behind All accounts; search, stage filters and account actions remain available. UI state only; no schema, backend, canonical-rule or financial-record changes. Synthetic selection and browser regressions added. Next: full unit and Chromium/WebKit verification, merge on green and exact Pages verification. Previous v3.6.40 PR #219 deployed at `0a46bc88510f` with successful main CI and exact live-file verification.
 

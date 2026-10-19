@@ -19,6 +19,14 @@ sandbox.BT360.toggleAttention(rows[2].id);assert.doesNotMatch(sandbox.BT360.task
 sandbox.BT360.toggleAttention('missing');assert.equal(sandbox.BT360.selectedAttentionId,null);
 sandbox.BT360.toggleAccountList();assert.match(sandbox.rTracker(rows),/bt366-compact-row/);
 sandbox.BT360.toggleAccountList();assert.doesNotMatch(sandbox.rTracker(rows),/bt366-compact-row/);
+assert.match(sandbox.rTracker(rows),/Search 3 accounts/,'Search shortcut includes visible account count');
+sandbox.BT360.openAccountSearch();assert.equal(sandbox.BT360.accountListOpen,true);assert.match(sandbox.rTracker(rows),/id="tracker-search"/);
+run('search="Synthetic B"');assert.equal((sandbox.rTracker(rows).match(/class="card-h bt366-compact-row"/g)||[]).length,1);
+sandbox.BT360.closeAccountSearch();assert.equal(run('search'),'');assert.equal(sandbox.BT360.accountListOpen,false);assert.doesNotMatch(sandbox.rTracker(rows),/bt366-compact-row/);
+assert.match(sandbox.rTracker(rows.slice(0,1)),/Search 1 account<\/span>/,'Singular count stays concise');
+sandbox.BT360.setStage('IN_PROGRESS');assert.match(sandbox.rTracker(rows),/Hide accounts/,'Stage filters still reveal matching records');
+sandbox.BT360.closeAccountSearch();assert.equal(sandbox.BT360.selectedStage,'');assert.doesNotMatch(sandbox.rTracker(rows),/bt366-compact-row/,'Hide closes a directory opened by stage filtering');
+
 assert.equal(JSON.stringify([...storage]),before,'Card and directory selection never write financial data');
 console.log('Tracker selection passed: each bank, single selection, collapse, directory access and no financial writes.');
 process.exit(0);

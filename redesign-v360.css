@@ -794,3 +794,15 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
 .bt3641-directory{margin:18px 0 4px;padding:0 4px}
 .bt3641-directory>button{width:100%;display:flex;align-items:center;gap:10px;min-height:48px;color:var(--mint);text-align:left;font-size:13px}
 .bt3641-directory>button span:first-child{margin-left:auto;color:var(--muted)}
+/* Expanded task copy gets the full card width; compact rows keep their scan order. */
+.bt3719-attention-list .is-selected>.bt3641-attention-toggle{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:8px 10px;align-items:center}
+.bt3641-attention-item.is-selected .bt3729-needs-copy{display:contents}
+.bt3641-attention-item.is-selected .blogo{grid-column:1;grid-row:1}
+.bt3641-attention-item.is-selected .bt3729-bank-name{grid-column:2;grid-row:1}
+.bt3641-attention-item.is-selected .bt3719-task-right{grid-column:3;grid-row:1;max-width:112px;margin:0;align-self:center}
+.bt3719-attention-list .is-selected .bt3729-task-title{grid-column:1/-1;grid-row:2;font-size:14px!important;line-height:1.5!important;font-weight:700;margin:4px 0 0}
+.bt3719-attention-list .is-selected .bt3729-task-meta{grid-column:1/-1;grid-row:3;font-size:11px!important;margin:0}
+.bt3641-directory>.bt3642-search-launcher{border:1px solid #252935;border-radius:16px;background:#12141c;padding:13px 14px;min-height:52px;color:#a0a6b8;gap:10px;font:inherit;font-size:13px;cursor:pointer}
+.bt3642-search-launcher svg{width:18px;height:18px;flex:none}
+.bt3642-search-launcher span:last-child{margin-left:auto}
+.bt3642-search-launcher:focus-visible,.bt3641-attention-toggle:focus-visible{outline:2px solid #5be3b0;outline-offset:3px}
