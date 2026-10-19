@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.44: verified promotion evidence backup and quiet cloud notices.
-const V = 'bt-v3.6.44-recovery1';
+// Version 3.6.45: quiet internal history diagnostics in Settings.
+const V = 'bt-v3.6.45-quiet1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',

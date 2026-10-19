@@ -59,9 +59,14 @@ module.exports={sandbox,document,app,storage,errors};
 if(require.main===module)setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.6.44',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.6.44',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.6.45',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.6.45',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     const trackerRender=sandbox.BT360;
+    const settingsMarkup=trackerRender.settings();
+    assert(!/Historical review|History repair|requirements date matches|Review missing history/i.test(settingsMarkup),'Internal history diagnostics must not clutter Settings');
+    assert(settingsMarkup.includes('Cloud protection')&&settingsMarkup.includes('Notifications'),'Everyday Settings controls must remain visible');
+    assert(typeof sandbox.btHistoricalIntegrityFindings==='function','Internal integrity detection must stay available');
+    assert(typeof sandbox.BTHistoryRepair?.open==='function','Opt-in repair engine must remain installed');
     assert(trackerRender.audience==='all','Fresh installations and migrated personal/business sessions must show all accounts by default');
     assert(trackerRender.segments().includes('All accounts')&&trackerRender.segments().includes('Personal')&&trackerRender.segments().includes('Business'),'Combined view and optional filters must be available');
     assert(trackerRender.stages([]).includes('aria-label="Filter by stage"'),'Stage group missing');
