@@ -468,7 +468,12 @@ async function exercise(name,engine,url){
     // Exercise the real archive menu without changing financial records.
     await page.evaluate(()=>{entries.push({id:'archive-e2e',bank:'Archived E2E Bank',closed:'2026-10-01',bonusRecd:'2026-09-01',bonus:100,churnable:false,churnability:'not-repeatable',notes:'Preserved archive note',history:[],customTimers:[],checklist:[]});R()});
     check('closed nonrepeatable account hidden from tracker',await page.locator('[data-bt-entry-id="archive-e2e"]').count()===0);
-    await button('Archive').click();await page.locator('details.bt360-archived-tools > summary').click();
+    await button('Archive').click();
+    check('temporary Undo action reserves space outside Archive controls',await page.evaluate(()=>{
+      const bar=document.querySelector('.undo-bar'),scroll=document.querySelector('.scroll');
+      return !!bar&&scroll.getBoundingClientRect().bottom<=bar.getBoundingClientRect().top+1;
+    }));
+    await page.locator('details.bt360-archived-tools > summary').click();
     check('archive menu reveals retained account',await page.locator('[data-bt-entry-id="archive-e2e"]').count()===1&&await page.locator('[data-bt-entry-id="'+id+'"]').count()===0);
     await page.locator('#archive-search').fill('Archived E2E');
     check('archive search remains focused after rerender',await page.locator('#archive-search').evaluate(el=>el===document.activeElement));

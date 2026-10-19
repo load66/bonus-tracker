@@ -4638,7 +4638,7 @@ function rClose(){
     h+='<div class="close-ready '+esc(ready.cls)+'"><b>'+esc(ready.label)+'</b><span>'+esc(closeFlowModeReason(e,'actual'))+'</span></div>';
     h+='<div class="close-review-card">'+closeReviewRows(e,p)+'</div>';
     h+=renderArchiveHistoryReview(closeCycleForSave(e,p));
-    h+='<p class="research-caveat">Saving keeps this complete cycle and earlier revisions together on this device. Cloud protection is confirmed separately after upload and readback.</p>';
+    h+='<p class="research-caveat">Saving preserves this cycle’s recorded facts and earlier revisions on this device. Cloud protection is confirmed separately after upload and readback.</p>';
     if((p.opened||e?.opened)&&!e?.couponEnrollmentDate&&!e?.offerEnrollmentDate)h+='<label class="archive-enrollment-choice"><input type="checkbox" id="cp_enrollment_opened" '+(p.enrollmentAtOpening?'checked ':'')+'onchange="if(closePrompt)closePrompt.enrollmentAtOpening=this.checked"> I enrolled in the promotion when this account opened</label>';
     h+=renderCloseReadinessList(e,p);
     if(warnings.length)h+='<div class="close-warnings compact"><b>Review</b>'+warnings.map(x=>'<span>• '+esc(x)+'</span>').join('')+'</div>';

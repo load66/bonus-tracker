@@ -713,5 +713,8 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
 .archive-history-review p{margin:8px 0 0;line-height:1.5}
 .archive-cloud-state{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:12px 0;font-size:12px;color:var(--sub);overflow-wrap:anywhere}
 .archive-cloud-state .btn-s{width:auto;min-height:36px;margin:0;font-size:12px}
-.archive-enrollment-choice{display:flex;gap:8px;align-items:flex-start;white-space:normal;line-height:1.5}
-.archive-enrollment-choice input{width:auto;flex:0 0 auto;margin-top:4px}
+.close-modal .archive-enrollment-choice{display:flex;gap:8px;align-items:flex-start;white-space:normal;line-height:1.5}
+.close-modal .archive-enrollment-choice input{width:18px;height:18px;min-height:18px;flex:0 0 auto;margin-top:4px}
+/* Keep the temporary Undo action outside the scrolling content's hit area. */
+.app>.undo-bar{position:relative;bottom:auto;left:auto;right:auto;flex:0 0 auto;margin:0 12px calc(76px + env(safe-area-inset-bottom));animation:none}
+.app:has(>.undo-bar)>.scroll{min-height:0}
