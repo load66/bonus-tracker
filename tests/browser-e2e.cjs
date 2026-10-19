@@ -1199,7 +1199,9 @@ async function exercise(name,engine,url){
     check('history repair requires explicit confirmation',await page.locator('#history-repair-apply').isDisabled()&&await page.evaluate(()=>entries[0].opened===''));
     for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
-      check('history repair fits '+width+'px',await page.locator('.history-repair-sheet').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+      const repairLayout=await page.locator('.history-repair-sheet').evaluate(e=>({fits:e.scrollWidth<=e.clientWidth+1,width:e.clientWidth,scrollWidth:e.scrollWidth,overflow:[...e.querySelectorAll('*')].filter(n=>n.getClientRects().length&&n.getBoundingClientRect().right>e.getBoundingClientRect().right).map(n=>({tag:n.tagName,id:n.id,class:n.className,width:n.clientWidth,scrollWidth:n.scrollWidth}))}));
+      if(!repairLayout.fits)console.error('Synthetic history layout diagnostics',repairLayout);
+      check('history repair fits '+width+'px',repairLayout.fits);
       if(width===390)await page.screenshot({path:path.join(output,name+'-history-repair-390.png')});
     }
     await page.locator('#history-repair-confirm').check();await page.locator('#history-repair-apply').click();
