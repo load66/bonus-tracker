@@ -69,5 +69,7 @@ run('var recovery=buildPortableBackupPayload();undoState={entriesSnapshot:[]};ap
 assert.equal(run('undoState'),null,'Recovery must invalidate Undo belonging to replaced records');
 const restoredBytes=sandbox.localStorage.getItem('bt_e_v4');run('undoClose()');
 assert.equal(sandbox.localStorage.getItem('bt_e_v4'),restoredBytes,'A stale Undo must never overwrite recovered financial records');
+run('modal={...entries[0],couponEnrollmentDate:"2026-01-02",offerEnrollmentDate:"2026-01-02"};btModalSet("couponEnrollmentDate","");');
+assert.equal(run('modal.couponEnrollmentDate'),'');assert.equal(run('modal.offerEnrollmentDate'),'','Explicitly clearing enrollment must not reveal a stale alias date');
 console.log('Archive integrity passed: complete cycle preservation, atomic saves, closure failure/retry, undo revisions and honest protection status');
 process.exit(0);

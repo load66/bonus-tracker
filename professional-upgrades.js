@@ -97,6 +97,7 @@
     if(type==='number')v=parseInt(value,10)||0;
     if(type==='bool')v=String(value)==='true'||value===true||value==='yes';
     markManual(key,v);
+    if(key==='couponEnrollmentDate')markManual('offerEnrollmentDate',v);
     if(key==='fundingAmountText')modal.fundingAmount=typeof parseCloseFeeAmount==='function'?parseCloseFeeAmount(v):(parseInt(String(v).replace(/[$,]/g,''),10)||0);
     if(key==='requiredDaysText')modal.reqDays=typeof parseRequirementDaysText==='function'?parseRequirementDaysText(v):(parseInt(v,10)||0);
     if(key==='closeFeeCountdownDays')modal.minHoldDays=parseInt(v,10)||0;
