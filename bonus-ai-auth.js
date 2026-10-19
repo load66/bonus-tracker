@@ -1,6 +1,10 @@
 /* Persistent AI sign-in. Passwords are never retained; tracker records are untouched. */
 (function(){
   'use strict';
+  if(window.BTICloudBackup?.isLocalOnly?.()){
+    window.BTBonusAuth={connected:()=>false,token:async()=>{throw Error('Online AI is disabled in iCloud-only mode.')},signIn:async()=>{throw Error('Online sign-in is disabled in iCloud-only mode.')},disconnect:()=>{}};
+    return;
+  }
   const URL='https://ppsljqaaanpkksxbpalk.supabase.co',KEY='sb_publishable_2JLPa7GMpdacVfxBnfCv_w_wl36jn2n',STORE='bonus-ai-auth';
   let refreshPromise=null,revision=0;
   function session(){
