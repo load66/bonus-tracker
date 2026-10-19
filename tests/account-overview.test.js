@@ -16,7 +16,12 @@ sandbox.BT360.setAccountSectionOpen(row.id,'fees',true);
 assert.match(sandbox.BT360.detailPanels(row),/data-section="fees" open ontoggle=/,'Section state survives rerender');
 assert.match(sandbox.BT360.detailPanels({...row,id:'SYN-OVERVIEW-P-02'}),/data-section="fees" ontoggle=/,'Section state belongs to one account');
 assert.match(sandbox.BT360.accountSaveStatus({...row,notes:'Unsaved edit'}),/Local save needs review/,'Unstored changes cannot claim a verified local save');
-assert.match(run('renderTermsCycle(entries[0])'),/bt3640-archive-review/,'Archive gaps use a compact disclosure');
+const archiveMarkup=run('renderTermsCycle(entries[0])');
+assert.match(archiveMarkup,/<dt>Bonus received<\/dt>/,'Archive prominently retains recorded payout date');
+assert.match(archiveMarkup,/<summary>More details<\/summary>/,'Advanced evidence is optional');
+for(const hidden of ['Backup & recovery','Cloud recovery','History review ·','Original promotion text is missing'])
+ assert.doesNotMatch(archiveMarkup,new RegExp(hidden),'Archive cards no longer show technical and recovery controls');
+assert.match(archiveMarkup,/Exact original &lt;promotion&gt;/,'Saved promotion text remains accessible within details');
 assert.match(run('renderArchiveHistoryReview(entries[0])'),/^<section/,'Close review keeps its existing visible warning');
 assert.equal(JSON.stringify([...storage]),before,'Rendering and disclosure preferences do not write financial records');
 assert.equal(run('entries[0].reqMet'),'');
