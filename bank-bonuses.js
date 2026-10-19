@@ -158,6 +158,7 @@
     }catch{lastPriorityAt=Date.now()-240000;}finally{clearTimeout(timeout);}
   }
   async function refreshOfficial(){
+    if(window.BTICloudBackup?.isLocalOnly?.())return;
     if(officialBusy)return;
     officialBusy=true;const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);
     try{
