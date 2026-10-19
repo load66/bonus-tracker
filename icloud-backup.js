@@ -27,6 +27,20 @@ function verifyPayload(data){
   if(key==='bt_last_backup'||key==='bt_hosting_usage_settings_v1')continue;
   if(JSON.stringify(saved[key])!==JSON.stringify(now[key]))throw Error('The backup and this phone differ. Export a new copy before switching.');
  }
+ const counterparts=[
+  ['personal datapoints',data.userDatapoints,loadUserDatapoints()],
+  ['community datapoints',data.communityDatapoints,loadCommunityDatapoints()],
+  ['direct-deposit methods',data.ddMethods,loadDD()],
+  ['bank requirements',data.bankReqs,loadReqs()],
+  ['phone book',data.phoneBook,loadPhoneEdits()],
+  ['activity history',data.profileEvents,loadProfileEvents()],
+  ['offer revisions',data.offerHistory,loadOfferHistory()],
+  ['saved terms',data.termsArchive,loadTermsArchive()]
+ ];
+ for(const [label,archived,live] of counterparts)
+  if(JSON.stringify(archived)!==JSON.stringify(live))throw Error('Saved '+label+' do not match this phone. Export the complete backup again.');
+ if(data.prefs?.dashYear!==dashYear||data.prefs?.taxYear!==taxYear)
+  throw Error('Backup preferences do not match this phone. Export a fresh backup.');
  if(data.entries?.length!==entries.length||plan.entries.length!==entries.length)throw Error('Account count differs. Export an up-to-date full backup.');
  return {verifiedAt:new Date().toISOString(),accounts:entries.length,fingerprint:fingerprint(currentData())};
 }
