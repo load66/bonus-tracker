@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.39';
+const APP_VERSION='3.6.40';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -413,8 +413,9 @@ function archiveHistoryIssues(e){
   if(e?.closed&&Number(e.bonus)>0&&!e.bonusRecd)issues.push('Bonus payment date not recorded');
   return issues;
 }
-function renderArchiveHistoryReview(e){
+function renderArchiveHistoryReview(e,{compact=false}={}){
   const issues=archiveHistoryIssues(e);
+  if(compact)return '<details class="archive-history-review bt3640-archive-review"><summary>History review · '+(issues.length?issues.length+' gaps':'Core records present')+'</summary><div>'+(issues.length?'<ul>'+issues.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul><button type="button" class="bt360-link" onclick="BTHistoryRepair.open()">Find saved evidence</button>':'<p>Saved evidence still needs to match your enrolled offer.</p>')+'</div></details>';
   return '<section class="archive-history-review'+(issues.length?' incomplete':'')+'"><b>History review · '+(issues.length?'Incomplete':'Core records present')+'</b>'
     +(issues.length?'<ul>'+issues.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul><p>Available facts will be preserved. Missing information needs your review; dates and terms are never guessed.</p>':'<p>Opening date, original promotion, fee schedule and source links are present. Saved evidence still needs to match your enrolled offer.</p>')+'</section>';
 }
@@ -438,7 +439,7 @@ function renderTermsCycle(x,previous=false){
  let h='<div class="archive-cycle"><div class="research-report-top"><span class="research-kind">'+(previous?'Previous saved version':'Saved offer')+'</span><b>'+(x.bonus?esc(fM(x.bonus)):'Bonus not saved')+'</b></div><dl class="research-dates"><div><dt>Account opened</dt><dd>'+esc(x.opened?fD(x.opened):'Not saved')+'</dd></div><div><dt>Terms saved / reviewed</dt><dd>'+esc((x.termsVerifiedAt||x.capturedAt)?fD(String(x.termsVerifiedAt||x.capturedAt).slice(0,10)):'Not recorded')+'</dd></div>'
   +'<div><dt>Evidence status</dt><dd>'+esc(x.evidenceStatus==='eligibility-evidence-validated'?'Saved eligibility evidence validated':'Enrolled source requires review')+'</dd></div></dl>';
  h+='<dl class="research-dates">'+[['closed','Closed'],['bonusRecd','Bonus received'],['reqMet','Requirements completed · if recorded'],['couponEnrollmentDate','Coupon enrollment · optional']].map(([key,label])=>{const value=key==='couponEnrollmentDate'?(x.couponEnrollmentDate||x.offerEnrollmentDate):x[key];return '<div><dt>'+label+'</dt><dd>'+esc(value?fD(value):'Not recorded')+'</dd></div>'}).join('')+'</dl>';
- h+=renderArchiveHistoryReview(x)+archiveCloudStatusMarkup();
+ h+=renderArchiveHistoryReview(x,{compact:true})+archiveCloudStatusMarkup();
  if(!raw)h+='<p class="research-caveat">Original promotion text is missing for this historical cycle. Saved facts remain available but must not be treated as verified.</p>';
  const facts=[['Bonus requirements',x.completeBonusText],['Monthly fee',x.monthlyFeeAmountText||x.monthlyFeeYNText],['How to avoid the fee',x.monthlyFeeWaiverText||x.avoidMonthlyFeeText],['Early-close fee wording',x.earlyTerminationFeeText],['Closing / bonus retention',x.closeRuleText],['Payout timing',x.payoutTimingText],['Offer deadline',x.expirationDateText]];
  if(facts.some(([,v])=>v)||rules.length){

@@ -287,6 +287,18 @@ async function exercise(name,engine,url){
     check('structured requirement includes checkbox and zero-progress meter',
       await page.locator('.bt3611-requirement [role="checkbox"]').count()===1&&
       await page.locator('.bt3611-req-track[role="progressbar"]').getAttribute('aria-valuenow')==='0');
+    check('account overview keeps secondary information collapsed',await page.locator('.bt3640-section').evaluateAll(nodes=>nodes.filter(n=>['fees','timers','terms','history','eligibility'].includes(n.dataset.section)).every(n=>!n.open)));
+    check('account dates are compact and unknown dates remain unrecorded',await page.locator('.bt3640-dates').evaluate(e=>e.querySelectorAll('dl>div').length===4&&e.textContent.includes('Not recorded')));
+    const overviewBefore=await page.evaluate(()=>JSON.stringify([localStorage.getItem('bt_e_v4'),localStorage.getItem('bt_tc_archive_v1')]));
+    for(const width of [320,375,390,430]){
+      await page.setViewportSize({width,height:844});
+      check('compact account overview fits '+width+'px',await page.locator('.bt360-detail-card').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&e.querySelectorAll('.bt3640-dates dl>div').length===4));
+      if(width===390){await page.evaluate(()=>document.querySelector('.scroll').scrollTop=0);await page.screenshot({path:path.join(output,name+'-account-overview-390.png')});}
+    }
+    check('account overview leaves saved records unchanged',await page.evaluate(before=>JSON.stringify([localStorage.getItem('bt_e_v4'),localStorage.getItem('bt_tc_archive_v1')])===before,overviewBefore));
+    await page.setViewportSize({width:390,height:844});
+    await page.locator('.bt3640-section[data-section="timers"] > summary').click();
+    await page.locator('.bt3640-section[data-section="fees"] > summary').click();
     check('Chase timer row is one title line with compact countdown',
       await page.locator('.bt3611-timer-row').first().evaluate(e=>{
         const b=e.querySelector('.bt3611-timer-body b'),small=e.querySelector('small');
@@ -314,6 +326,7 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>document.querySelector('.scroll').scrollTop=document.querySelector('.scroll').scrollHeight);
     await page.screenshot({path:path.join(output,name+'-chase-bonus-detail-in-progress-bottom-390.png')});
     await page.screenshot({path:path.join(output,name+'-financial-summary-key-dates-390.png')});
+    await page.locator('.bt3640-section[data-section="eligibility"] > summary').click();
     await page.getByRole('button',{name:'Set rule'}).first().click();
     check('Set rule opens existing account rule editor',await page.locator('.modal').isVisible()
       &&(await page.locator('.modal').innerText()).includes('Fees & Close'));
@@ -383,6 +396,7 @@ async function exercise(name,engine,url){
       return {ok:bar.bottom<=nav.top+2&&bar.top>=0,fixed:getComputedStyle(document.querySelector('.bt360-detail-footer')).position==='fixed'};
     });
     check('sticky detail bar stays above navigation',sticky.ok&&sticky.fixed);
+    if(!await page.locator('.bt3640-section[data-section="terms"]').evaluate(e=>e.open))await page.locator('.bt3640-section[data-section="terms"] > summary').click();
     await page.locator('.bt360-source').scrollIntoViewIfNeeded();
     check('sticky footer never covers last detail content',await page.evaluate(()=>{
       const content=document.querySelector('.bt360-source').getBoundingClientRect(),footer=document.querySelector('.bt360-detail-footer').getBoundingClientRect();
@@ -417,6 +431,8 @@ async function exercise(name,engine,url){
       R();
     });
     if(!await page.locator('.bt3611-ready-extras').evaluate(e=>e.open)) await page.locator('.bt3611-ready-extras > summary').click();
+    if(!await page.locator('.bt3640-section[data-section="timers"]').evaluate(e=>e.open))await page.locator('.bt3640-section[data-section="timers"] > summary').click();
+    if(!await page.locator('.bt3640-section[data-section="fees"]').evaluate(e=>e.open))await page.locator('.bt3640-section[data-section="fees"] > summary').click();
     for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
       const layout=await page.evaluate(()=>{

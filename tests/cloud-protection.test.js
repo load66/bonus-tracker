@@ -21,10 +21,12 @@ async function noticeCooldown(){
   let now=Date.parse('2026-10-14T20:00:00Z'),failure=false,uploads=0;
   const notices=[];
   const statusLabel={textContent:'',dataset:{}};
+  const compactLabel={textContent:'',dataset:{}};
   function runtime(){
     const sandbox={localStorage:storage,crypto,TextEncoder,AbortController,navigator:{onLine:true},dashYear:2026,taxYear:2026,
       Date:class extends Date{constructor(...a){super(...(a.length?a:[now]))}static now(){return now}},
-      document:{getElementById:()=>null,querySelectorAll:()=>[statusLabel],addEventListener:()=>{}},addEventListener:()=>{},
+      document:{getElementById:()=>null,querySelectorAll:selector=>selector==='[data-cycle-cloud]'?[statusLabel]:selector==='[data-account-cloud]'?[compactLabel]:[],addEventListener:()=>{}},addEventListener:()=>{},
+      BT360:{cloudStatusText:state=>state.tone},
       setTimeout:()=>0,clearTimeout:()=>{},setInterval:()=>({unref(){}}),
       getBackupStorageKeys:()=>['bt_e_v4'],BT_APP_VERSION:'3.4.74',BTCloudCore:core,
       BTPersistence:require('../persistence-transaction.js'),BTBonusAuth:{connected:()=>true,token:async()=> 'synthetic-token'},
@@ -35,6 +37,7 @@ async function noticeCooldown(){
   const original=storage.getItem('bt_e_v4');let app=runtime();
   await app.upload('automatic');assert.equal(notices.length,1);
   assert.match(statusLabel.textContent,/Current data verified in the cloud/,'Archive protection must reflect a verified receipt');
+  assert.equal(compactLabel.textContent,'protected','Compact account status receives the verified protection state');
   const stamp=JSON.parse(storage.getItem('bt_cloud_recovery_v1')).lastSuccessNoticeAt;
   await app.upload('automatic');assert.equal(notices.length,1,'Back-to-back uploads must not stack notices');
   app=runtime();await app.upload('automatic');assert.equal(notices.length,1,'Refresh must retain the cooldown');
@@ -42,6 +45,7 @@ async function noticeCooldown(){
   assert.equal(JSON.parse(storage.getItem('bt_cloud_recovery_v1')).lastSuccessNoticeAt,stamp,'Suppressed notices must not extend the cooldown');
   failure=true;await assert.rejects(app.upload('automatic'),/Synthetic cloud outage/);
   assert.match(statusLabel.textContent,/Backup needs attention/,'Archive must visibly lose protection after an upload failure');
+  assert.equal(compactLabel.textContent,'danger','Compact account status loses protection immediately on failure');
   assert.equal(app.protection().tone,'danger','Cooldown must not hide a failure state');assert.equal(notices.length,1);
   failure=false;now=stamp+30*60*1000;await app.upload('automatic');assert.equal(notices.length,2,'Notice becomes eligible at exactly 30 minutes');
   assert.equal(storage.getItem('bt_e_v4'),original,'Notification cooldown must not alter financial records');
