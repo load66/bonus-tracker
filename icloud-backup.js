@@ -16,6 +16,9 @@ function verifyPayload(data){
  // Existing validator checks every account and source before a restore can ever be considered.
  const plan=stagePortableRestore(data);
  if(!plan||!Array.isArray(plan.entries))throw Error('Backup validation failed.');
+ if(JSON.stringify(data.entries)!==JSON.stringify(entries))throw Error('The account records differ from this phone. Export a fresh full backup.');
+ const embedded=normalizeBackupStorageSnapshot(data).bt_e_v4;
+ if(embedded!==undefined&&JSON.stringify(embedded)!==JSON.stringify(data.entries))throw Error('The backup has inconsistent account copies. Export again.');
  const saved=normalizeBackupStorageSnapshot(data),now=currentData();
  for(const key of Object.keys(now)){
   if(JSON.stringify(saved[key])!==JSON.stringify(now[key]))throw Error('This file does not include your latest saved '+(key==='bt_e_v4'?'account records':'tracker information')+'. Export a new backup and try again.');
