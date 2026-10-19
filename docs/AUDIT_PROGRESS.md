@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: Codex — v3.6.39 — codex/v3.6.39-nested-history
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.39 complete saved-cycle projections (`codex/v3.6.39-nested-history`): Reproduced deeper saved cycles missing from Tax and Archive while available to History Repair. Shared read-only traversal now projects every retained depth into Tax, chart, CSV, Archive and exact-cycle reconciliation; inherits account identity only, never event dates or financial facts. Canonical audience and bank identity keep duplicate receipts from inflating totals while distinct accounts remain separate. Archive no longer hides another account merely because its opening date matches. Stored history remains nested and unchanged; no migration, schema, backend or canonical-rule changes. Synthetic recursive-history, duplicate, exact-source, no-write and browser regressions added. Local bonus/cloud/UI and release checks PASS; next: full Chromium/WebKit PR CI, merge on green and verify exact main Pages source/cache. Previous v3.6.38 PR #217 deployed at `f81f9ae91e0e` with passing main CI, both browsers and exact live asset verification.
 
 - v3.6.38 history repair (`codex/v3.6.38-history-repair`): Read-only review finds missing source facts and conflicting saved lifecycle values across current and prior cycles. Conservative account identity, audience and cycle-date matching excludes unrelated records. Preview selected exact values and provenance from existing Archive revisions, checksum-verified retained recovery versions or a user-selected backup file; no automatic date inference or restoration. Explicit confirmation applies selected fields transactionally while retaining original Archive revisions and source fingerprints. Newer account or Archive writes stop stale repairs, including edits during checksum work. Tax preview follows recorded payment year independently of closure. Existing canonical rules, recovery endpoints, storage keys and original source documents remain intact. Synthetic matching, rollback, stale-write, restore and mobile browser regressions added. Local bonus/cloud/UI and release verification PASS; next: full Chromium/WebKit PR CI, merge on green and verify exact main GitHub Pages source/cache. Previous v3.6.37 PR #216 deployed at `74ddf772d88c` with successful post-merge verification.
 

@@ -1178,6 +1178,25 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>{window.fetch=window.__hostingPreviousFetch;delete window.__hostingPreviousFetch;delete window.__hostingUsageFixture});
     await page.setViewportSize({width:1280,height:900});
 
+    // Legacy nested cycles remain visible without migrating saved financial records.
+    await page.evaluate(()=>{
+      window.__beforeDeepHistory={entries:JSON.stringify(entries),archive:localStorage.getItem('bt_tc_archive_v1'),audience:BT360.audience};
+      entries=[{id:'SYN-DEEP-B-01',bank:'Synthetic Deep Browser Bank',accountType:'business',opened:'2026-10-01',closed:'2026-10-15',bonus:0,previousCycles:[{opened:'2026-06-01',bonus:0,previousCycles:[{opened:'2025-12-01',closed:'2026-04-01',bonusRecd:'2026-03-01',bonus:125,tcSourceRaw:'Exact oldest browser cycle promotion.',feeScheduleRaw:'Exact oldest browser cycle fee schedule.'}]}]}];
+      localStorage.setItem('bt_e_v4',JSON.stringify(entries));localStorage.setItem('bt_tc_archive_v1','{}');taxYear=2026;tab='tax';storageSearch='';BT360.setAudience('all');
+    });
+    check('Tax renders a deeply nested paid cycle',await page.locator('.bt360-tax-record').count()===1&&(await page.locator('.bt360-tax-record > summary').innerText()).includes('Prior cycle'));
+    await page.locator('.bt360-tax-record > summary').click();
+    await page.locator('.bt360-tax-record').getByText('Saved terms for this cycle',{exact:true}).click();
+    await page.locator('.bt360-tax-record').getByText('Read original saved promotion',{exact:true}).click();
+    check('deep receipt opens its exact enrolled promotion',(await page.locator('.bt360-tax-record').innerText()).includes('Exact oldest browser cycle promotion.'));
+    await button('Archive').click();
+    const deepArchive=page.locator('.bt-archive-bank').filter({hasText:'Synthetic Deep Browser Bank'}).first();
+    await deepArchive.locator(':scope > summary').click();
+    await deepArchive.locator('.archive-history > summary').click();
+    await deepArchive.getByText('Read original saved promotion',{exact:true}).first().click();
+    check('unified Archive exposes deeply nested original terms',(await deepArchive.innerText()).includes('Exact oldest browser cycle promotion.'));
+    check('recursive history views do not rewrite stored records',await page.evaluate(()=>localStorage.getItem('bt_e_v4')===JSON.stringify(entries)&&localStorage.getItem('bt_tc_archive_v1')==='{}'&&entries[0].previousCycles[0].previousCycles[0].opened==='2025-12-01'));
+    await page.evaluate(()=>{entries=JSON.parse(window.__beforeDeepHistory.entries);localStorage.setItem('bt_e_v4',window.__beforeDeepHistory.entries);const raw=window.__beforeDeepHistory.archive;if(raw===null)localStorage.removeItem('bt_tc_archive_v1');else localStorage.setItem('bt_tc_archive_v1',raw);BT360.setAudience(window.__beforeDeepHistory.audience);delete window.__beforeDeepHistory;});
     // Synthetic history recovery: file evidence, preview, confirmation and stale protection.
     const repairFixture={id:'SYN-REPAIR-P-01',bank:'Synthetic Repair Bank',accountType:'personal',opened:'',closed:'2026-05-01',bonusRecd:'2026-04-15',reqMet:'',bonus:250,tcSourceRaw:'',notes:'Original synthetic history'};
     const repairSource={...repairFixture,opened:'2026-01-02',tcSourceRaw:'Exact synthetic enrolled promotion.\nAll original conditions remain recorded.',feeScheduleRaw:'Exact synthetic fee schedule.'};
