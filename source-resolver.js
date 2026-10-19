@@ -91,6 +91,11 @@
   window.tcV3SaveSourceForCurrentEntry=saveForCurrentEntry;
   window.tcV3CurrentEntry=currentEntry;
   window.tcV3SourceStore=()=>readStore();
-  window.tcV3ClearSourceStore=()=>{localStorage.removeItem(STORE_KEY);return true};
+  window.tcV3ClearSourceStore=()=>{
+    if(window.BTPersistence?.commit)window.BTPersistence.commit(localStorage,{[STORE_KEY]:null});
+    else{localStorage.removeItem(STORE_KEY);if(localStorage.getItem(STORE_KEY)!==null)throw Error('Source record removal verification failed.');}
+    window.btCloudBackupChanged?.();
+    return true;
+  };
   window.tcV3SourceResolverVersion=VER;
 })();
