@@ -90,10 +90,13 @@ async function switchToICloud(){
 }
 let panel=null;
 function openSetup(){
+ // Settings is a separate fixed sheet with a higher stacking layer than the default modal.
+ // Dismiss it first so Safari never hides the iCloud wizard under that sheet.
+ if(window.bt360SettingsOpen&&window.BT360?.closeSettings)window.BT360.closeSettings();
  if(panel){panel.remove();panel=null}
- panel=document.createElement('div');panel.className='ov cloud-overlay';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label','Backup with iCloud Drive');
+ panel=document.createElement('div');panel.className='ov cloud-overlay icloud-backup-overlay';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label','Backup with iCloud Drive');panel.tabIndex=-1;
  const active=isLocalOnly(),receipt=readReceipt();
- panel.innerHTML='<section class="modal cloud-modal"><h2>Back up to iCloud Drive</h2><p>Your tracker stays on this phone. Save a complete file to iCloud Drive whenever you make important changes.</p><p id="icloud-backup-status">'+(receipt?'Last file checked: '+new Date(receipt.verifiedAt).toLocaleString():'No backup file checked yet')+'</p><div class="bt360-actions"><button type="button" class="btn-p" id="icloud-save">1. Save backup file</button><button type="button" class="btn-s" id="icloud-verify">2. Check file from iCloud</button>'+(active?'<button type="button" class="btn-s" id="icloud-restore">Restore from file</button>':'<button type="button" class="btn-p" id="icloud-switch">3. Switch to iCloud only</button>')+'</div><p class="bt360-muted">A website cannot write automatically to iCloud Drive. A saved file is recoverable on a new phone only after it reaches iCloud. This backup file contains private financial notes; keep it private.</p><button class="btn-s" id="icloud-close">Close</button></section>';
+ panel.innerHTML='<section class="modal cloud-modal"><div class="icloud-backup-heading"><h2>Back up to iCloud Drive</h2><button type="button" id="icloud-close" aria-label="Close iCloud backup">×</button></div><p>Your tracker stays on this phone. Save a complete file to iCloud Drive whenever you make important changes.</p><p id="icloud-backup-status">'+(receipt?'Last file checked: '+new Date(receipt.verifiedAt).toLocaleString():'No backup file checked yet')+'</p><div class="bt360-actions"><button type="button" class="btn-p" id="icloud-save">1. Save backup file</button><button type="button" class="btn-s" id="icloud-verify">2. Check file from iCloud</button>'+(active?'<button type="button" class="btn-s" id="icloud-restore">Restore from file</button>':'<button type="button" class="btn-p" id="icloud-switch">3. Switch to iCloud only</button>')+'</div><p class="bt360-muted">A website cannot write automatically to iCloud Drive. A saved file is recoverable on a new phone only after it reaches iCloud. This backup file contains private financial notes; keep it private.</p></section>';
  document.body.append(panel);
  const statusEl=panel.querySelector('#icloud-backup-status');const report=e=>{statusEl.textContent=e.message||String(e)};
  panel.querySelector('#icloud-save').onclick=()=>exportFile().catch(report);
@@ -102,7 +105,7 @@ function openSetup(){
  else panel.querySelector('#icloud-switch').onclick=()=>switchToICloud().catch(report);
  panel.querySelector('#icloud-close').onclick=()=>{panel.remove();panel=null};
  panel.onclick=e=>{if(e.target===panel){panel.remove();panel=null}};
- panel.querySelector('#icloud-close').focus();
+ panel.focus({preventScroll:true});
 }
 window.BTICloudBackup={isLocalOnly,status,verifyPayload,verifyFile,exportFile,switchToICloud,openSetup,beforeDestructive};
 })();

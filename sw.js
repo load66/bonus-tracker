@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.47: opt-in manual iCloud file backup with safe cloud retirement.
-const V = 'bt-v3.6.47-icloud1';
+// Version 3.6.48: iCloud migration wizard above Settings with iOS-safe focus.
+const V = 'bt-v3.6.48-wizard1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
