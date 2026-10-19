@@ -51,11 +51,23 @@ async function verifyFile(){
  window.btNotify?.('Backup contents match your current tracker. Keep this file in iCloud Drive.',{title:'Backup file checked',tone:'success'});
  return receipt;
 }
+async function beforeDestructive(){
+ // An offline iCloud file is the only surviving recovery path once Railway is disabled.
+ // Never erase or replace meaningful local records without a verified matching file.
+ const existing=typeof entries!=='undefined'&&Array.isArray(entries)&&entries.length>0;
+ const other=Object.keys(currentData()).some(key=>key!=='bt_e_v4');
+ if(!existing&&!other)return;
+ const receipt=readReceipt();
+ if(!receipt||receipt.fingerprint!==fingerprint(currentData()))
+  throw Error('Safety backup required: save and reopen an up-to-date full file from iCloud Drive before resetting or replacing this phone\'s records.');
+}
+
 async function switchToICloud(){
  const receipt=readReceipt();
  if(!receipt||fingerprint(currentData())!==receipt.fingerprint)throw Error('First export and verify the latest complete backup file from iCloud Drive.');
  const ok=await window.btConfirmDialog('Switch to manual iCloud Drive backups?\n\nBonusTracker will save changes on this phone; you must export new copies yourself. Online AI, live official-offer checks, and Railway cloud history will no longer update. Your old server backups will not be deleted.',{title:'Use iCloud Drive files',confirmLabel:'Switch to iCloud'});
  if(!ok)return false;
+ if(fingerprint(currentData())!==receipt.fingerprint)throw Error('Records changed during confirmation. Verify a new full backup before switching.');
  const oldCfg=(()=>{try{return JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')||'{}')}catch{return{}}})();
  const nextCfg={...oldCfg,enabled:false,pending:false};
  window.BTPersistence.commit(localStorage,{[MODE]:'icloud',bt_cloud_recovery_v1:JSON.stringify(nextCfg)});
@@ -78,5 +90,5 @@ function openSetup(){
  panel.onclick=e=>{if(e.target===panel){panel.remove();panel=null}};
  panel.querySelector('#icloud-close').focus();
 }
-window.BTICloudBackup={isLocalOnly,status,verifyPayload,verifyFile,exportFile,switchToICloud,openSetup};
+window.BTICloudBackup={isLocalOnly,status,verifyPayload,verifyFile,exportFile,switchToICloud,openSetup,beforeDestructive};
 })();
