@@ -1305,7 +1305,7 @@ async function exercise(name,engine,url){
       entries=[{id:'E2E-TRUST',bank:'E2E Trust Bank',accountType:'business',opened:'2026-01-01',bonus:100,
         completeBonusText:'Receive qualifying direct deposits',checklist:[{text:'Qualifying direct deposit',done:false}],
         customTimers:[{id:'trust-dd',text:'Receive qualifying direct deposits',date:'2027-01-01',done:false}]}];
-      tab='tracker';expanded=null;cfm=null;saveUserDatapoints([]);sv(SK,entries);R();toggleCk('E2E-TRUST',0);
+      tab='tracker';expanded=null;cfm=null;search='';BT360.setAudience('all');BT360.resetStage();saveUserDatapoints([]);sv(SK,entries);R();toggleCk('E2E-TRUST',0);
     });
     check('direct deposit completion prompts for an observed result',await page.getByRole('dialog',{name:'My experience'}).isVisible()&&await page.evaluate(()=>dpEditor.evidenceStage==='requirement'));
     check('completion prompt does not invent an event date or trusted outcome',await page.evaluate(()=>dpEditor.eventDate===''&&!dpEditor.confirmedByUser&&loadUserDatapoints().length===0));
@@ -1313,6 +1313,8 @@ async function exercise(name,engine,url){
       await page.setViewportSize({width,height:844});
       check('experience review fits '+width+'px',await page.locator('.research-editor').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
     }
+    check('optional experience fields start collapsed',await page.locator('.experience-optional').evaluate(e=>!e.open));
+    check('confirmation checkbox is compact with a full touch label',await page.locator('.experience-confirm').evaluate(e=>e.getBoundingClientRect().height>=44&&e.querySelector('input').getBoundingClientRect().width<=24));
     await page.getByLabel('Transfer or activity',{exact:true}).fill('Synthetic payroll');
     await page.getByLabel('Observed result',{exact:true}).selectOption('worked');
     await page.getByLabel('Actual experience date',{exact:true}).fill(await page.evaluate(()=>td()));
@@ -1320,7 +1322,7 @@ async function exercise(name,engine,url){
     await page.screenshot({path:path.join(output,name+'-experience-confirmation.png')});
     await page.getByRole('button',{name:'Save report',exact:true}).click();
     check('explicit experience retains cycle identity and attestation',await page.evaluate(()=>loadUserDatapoints().some(x=>x.entryId==='E2E-TRUST'&&x.accountType==='business'&&x.cycleOpened==='2026-01-01'&&x.confirmedByUser&&x.outcome==='worked')));
-    await page.evaluate(()=>{expanded=null;R();if(BT360.selectedAttentionId!=='E2E-TRUST')BT360.toggleAttention('E2E-TRUST')});
+    await page.evaluate(()=>{expanded=null;search='';BT360.setAudience('all');BT360.resetStage();R();if(BT360.selectedAttentionId!=='E2E-TRUST')BT360.toggleAttention('E2E-TRUST')});
     await page.getByRole('button',{name:'DD datapoints',exact:false}).click();
     check('task research opens exact bank and account type',await page.evaluate(()=>tab==='tips'&&dpTaskBankKey===datapointBankKey(entries[0])));
     check('confirmed experience appears in task research',await page.locator('.bt366-dp-item').innerText().then(t=>t.includes('Synthetic payroll')&&t.includes('You confirmed')));

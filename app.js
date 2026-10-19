@@ -2579,9 +2579,20 @@ function rDpEditor(){
  const field=(key,label,placeholder='',type='text')=>'<div class="fg"><label>'+label+'<input type="'+type+'" value="'+esc(d[key]||'')+'" oninput="dpEditor.'+key+'=this.value" placeholder="'+esc(placeholder)+'"></label></div>';
  const select=(key,label,options)=>'<div class="fg"><label>'+label+'<select aria-label="'+esc(label)+'" onchange="dpEditor.'+key+'=this.value">'+options.map(([v,t])=>'<option value="'+v+'"'+((d[key]||'')===v?' selected':'')+'>'+t+'</option>').join('')+'</select></label></div>';
  let h='<div class="ov" onclick="closeDPEditor()"><section class="modal research-editor" role="dialog" aria-modal="true" aria-labelledby="dp-editor-title" onclick="event.stopPropagation()"><header class="research-editor-header"><h2 id="dp-editor-title">'+(personal?'My experience':'Source report')+'</h2><p>'+(personal?(d.evidenceStage==='requirement'?'Did the bank count this deposit?':'Which method qualified? Choose Cannot isolate if several were used.'):'Save what happened. Leave unknown details blank.')+'</p></header><div class="research-editor-body">';
- h+=field('bank','Bank','e.g. Chase')+field('method','Transfer or activity','e.g. Employer payroll to checking');
- if(personal){h+=select('outcome','Observed result',[['unknown','Not recorded'],['pending','Still waiting'],['worked','Counted'],['failed',"Didn’t count"],['mixed','Cannot isolate one method']])+select('accountType','Account type',[['','Not specified'],['personal','Personal'],['business','Business']])+field('product','Account / offer')+field('depositAmount','Deposit amount (optional)','','number')+'<label class="research-caveat"><input type="checkbox" '+(d.confirmedByUser?'checked':'')+' onchange="dpEditor.confirmedByUser=this.checked"> I confirm this result from my own experience</label>';h+='<div class="fg"><label>What happened?<textarea rows="4" oninput="dpEditor.note=this.value" placeholder="Deposit amount, result, and any useful details">'+esc(d.note||'')+'</textarea></label></div>'+field('eventDate','Actual experience date','','date')}
+ if(personal){
+   h+='<p class="experience-context">'+esc(d.bank||'New experience')+(d.accountType?' · '+esc(d.accountType==='business'?'Business':'Personal'):'')+'</p>';
+   if(!d.bank)h+=field('bank','Bank','e.g. Chase');
+   h+=field('method','Transfer or activity','e.g. Employer payroll to checking');
+   h+=select('outcome','Observed result',[['unknown','Not recorded'],['pending','Still waiting'],['worked','Counted'],['failed',"Didn’t count"],['mixed','Cannot isolate one method']]);
+   h+=field('eventDate','Actual experience date','','date');
+   h+='<label class="experience-confirm"><input type="checkbox" '+(d.confirmedByUser?'checked':'')+' onchange="dpEditor.confirmedByUser=this.checked"><span>I confirm this result from my own experience</span></label>';
+   h+='<details class="experience-optional"><summary>More details</summary>';
+   if(d.bank)h+=field('bank','Bank','e.g. Chase');
+   h+=select('accountType','Account type',[['','Not specified'],['personal','Personal'],['business','Business']])+field('product','Account / offer')+field('depositAmount','Deposit amount (optional)','','number');
+   h+='<div class="fg"><label>What happened?<textarea rows="3" oninput="dpEditor.note=this.value" placeholder="Any useful details">'+esc(d.note||'')+'</textarea></label></div></details>';
+ }
  else{
+ h+=field('bank','Bank','e.g. Chase')+field('method','Transfer or activity','e.g. Employer payroll to checking');
  h+=field('product','Account / offer','e.g. Total Checking · $900 offer');
  h+=select('accountType','Account type',[['','Not specified'],['personal','Personal'],['business','Business']]);
  h+=select('outcome','Result',[['unknown','Not recorded'],['worked','Reported success'],['failed','Reported failure'],['mixed','Mixed reports'],['pending','Still waiting']]);
