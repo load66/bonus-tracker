@@ -1,7 +1,7 @@
 /* Versioned cloud recovery. No AI calls, credential exports or automatic restores. */
 (function(){
   'use strict';
-  const API='https://api-production-00f74.up.railway.app/api/bonus-tracker/backups',CFG='bt_cloud_recovery_v1',HALF_DAY=12*60*60*1000,NOTICE_COOLDOWN=30*60*1000;
+  const API='https://api-production-00f74.up.railway.app/api/bonus-tracker/backups',CFG='bt_cloud_recovery_v1',HALF_DAY=12*60*60*1000,NOTICE_COOLDOWN=60*60*1000;
   let busy=false,panel=null,debounce=null,phase='',paused=false,switching=false,currentVerified=false,checkedSession=false,pending=false,statusError='',retentionPolicy=null;
   const core=window.BTCloudCore;
   const accountCount=n=>n+' account'+(n===1?'':'s');
