@@ -915,12 +915,13 @@ async function exercise(name,engine,url){
     const termsBank=page.locator('.archive-bank').first();
     check('terms bank starts collapsed',!(await termsBank.evaluate(e=>e.open)));
     await termsBank.locator(':scope > summary').click();
-    await termsBank.getByText('Read original saved promotion',{exact:true}).click();
-    check('archive reveals original evidence',(await termsBank.innerText()).includes('E2E Verification Bank checking promotional terms'));
+    const currentTerms=termsBank.locator(':scope > .archive-bank-body > .archive-cycle').first();
+    await currentTerms.getByText('Read original saved promotion',{exact:true}).click();
+    check('archive reveals original evidence for the current saved cycle',(await currentTerms.innerText()).includes('E2E Verification Bank checking promotional terms'));
     for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
       check('archive mobile width '+width,await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&[...document.querySelectorAll('.archive-raw')].every(e=>e.scrollWidth<=e.clientWidth+1)));
-      if(width===390){await termsBank.locator('.archive-raw').last().scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,name+'-terms-archive-mobile.png')})}
+      if(width===390){await currentTerms.locator('.archive-raw').last().scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,name+'-terms-archive-mobile.png')})}
     }
 
     await button('Tracker').click();
