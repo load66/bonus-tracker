@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.48: iCloud migration wizard above Settings with iOS-safe focus.
-const V = 'bt-v3.6.48-wizard1';
+// Version 3.6.49: iCloud migration wizard above Settings with iOS-safe focus.
+const V = 'bt-v3.6.49-switch1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
