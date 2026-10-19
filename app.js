@@ -335,6 +335,15 @@ function termsDisplayBuckets(){
   if(found){if(found.current?.opened!==e.opened&&!found.versions.some(v=>v.opened===e.opened))found.versions.push(x)}
   else rows.push({bank:e.bank,accountType:identity.type,current:x,versions:[]});
  });
+ // Older replacement cycles may predate the dedicated terms archive. Their
+ // saved facts and original text must remain discoverable in the same view.
+ entries.forEach(owner=>(Array.isArray(owner.previousCycles)?owner.previousCycles:[]).forEach(cycle=>{
+  if(!cycle||typeof cycle!=='object')return;
+  const prior={...cycle,bank:cycle.bank||owner.bank,entryId:cycle.entryId||cycle.id||owner.id,accountType:cycle.accountType||owner.accountType};
+  const identity=entryBankIdentity(prior),found=rows.find(b=>entryBankIdentity(b.current||b).key===identity.key);
+  if(found){if(![found.current,...found.versions].some(v=>String(v.entryId||v.id||'')===String(prior.entryId)&&v.opened===prior.opened&&v.bonusRecd===prior.bonusRecd&&v.closed===prior.closed&&Number(v.bonus)===Number(prior.bonus)&&String(v.tcSourceRaw||'')===String(prior.tcSourceRaw||'')))found.versions.push(prior);}
+  else rows.push({bank:prior.bank,accountType:prior.accountType,current:prior,versions:[]});
+ }));
  return rows.sort((a,b)=>String(a.current?.bank||a.bank).localeCompare(String(b.current?.bank||b.bank)));
 }
 function renderTermsCycle(x,previous=false){
@@ -1723,6 +1732,23 @@ function taxReceiptRows(rows=entries){
 }
 function taxEntriesForYear(yr){
   return taxReceiptRows().filter(e=>taxYearOf(e)===Number(yr)&&e.bonusRecd<=td())
+}
+
+function taxArchiveReconciliation(e){
+  const identity=entryBankIdentity(e),ident=String(e.id||e.entryId||e._taxParentId||'');
+  const candidates=termsDisplayBuckets().flatMap(b=>[b.current,...(b.versions||[])]).filter(x=>{
+    if(!ident||String(x.entryId||x.id||'')!==ident||entryBankIdentity(x).key!==identity.key)return false;
+    if(e.opened&&x.opened)return e.opened===x.opened;
+    return !!(e.bonusRecd&&x.bonusRecd===e.bonusRecd);
+  });
+  const issues=[];
+  if(!candidates.length)issues.push('No exact-cycle Archive link');
+  if(!e.opened)issues.push('Opening date not recorded');
+  if(!e.closed)issues.push('No closure recorded');
+  if(!candidates.some(x=>String(x.tcSourceRaw||x.analysis?.rawText||'').trim()))issues.push('Original terms not recorded');
+  for(const field of ['opened','closed','bonusRecd'])if(e[field]&&candidates.some(x=>x[field]&&x[field]!==e[field]))issues.push('Saved versions disagree on '+({opened:'opening',closed:'closing',bonusRecd:'payout'}[field])+' date');
+  if(candidates.some(x=>x.bonusRecd&&x.bonusRecd===e.bonusRecd&&Number(x.bonus)>0&&Number(x.bonus)!==Number(e.bonus)))issues.push('Saved versions disagree on received bonus amount');
+  return {linked:candidates.length>0,issues};
 }
 
 function isEarnedBonus(e){
@@ -4419,6 +4445,8 @@ function rTax(){
  let h=(window.BT360?.segments()||'')+'<div class="bt360-page-copy">Bonus income by year</div><div class="ybar bt360-tax-years">';
  yrs.forEach(y=>{h+='<button class="ypill'+(taxYear===y?' on':'')+'" onclick="taxYear='+y+';R()">'+y+'</button>'});
  h+='</div><section class="bt360-tax-summary"><span>'+(audience==='all'?'PERSONAL + BUSINESS':audience.toUpperCase())+' · '+taxYear+'</span><strong>'+fM(yrA)+'</strong><small>'+yrE.length+' bonuses received · includes saved prior cycles</small></section>';
+ const linkage=yrE.map(taxArchiveReconciliation),linked=linkage.filter(x=>x.linked).length,review=linkage.filter(x=>x.issues.length).length;
+ h+='<p class="bt360-footnote">Archive links: '+linked+' of '+yrE.length+' receipts'+(review?' · '+review+' need date or source review':'. Saved dates and source text are available.')+'</p>';
  h+='<button class="export-btn bt360-primary" onclick="promptExportYear()">Export tax CSV</button><p class="bt360-footnote">CSV includes all Personal and Business bonuses, even when a view filter is active.</p><div class="sec">Received in '+taxYear+' <small>by date</small></div>';
  if(!yrE.length)h+='<div class="bt360-empty">No received bonuses in '+taxYear+'.</div>';
  yrE.slice().sort((a,b)=>String(b.bonusRecd||'').localeCompare(String(a.bonusRecd||''))).forEach(e=>{
@@ -4426,6 +4454,8 @@ function rTax(){
   h+='<div class="bt360-tax-history">'+window.BT360.infoRow('Opened',e.opened?fD(e.opened):'Not recorded')+window.BT360.infoRow('Bonus received',fD(e.bonusRecd))+window.BT360.infoRow('Closed',e.closed?fD(e.closed):'No closure recorded')+window.BT360.infoRow('Account ID',e.id||e._taxParentId||'Not recorded')+window.BT360.infoRow('Record source',e._taxPriorCycle?'Prior cycle · saved history':'Current account record');
   if(!e.opened)h+='<p class="bt360-footnote">Opening date not recorded. Review the account history or bank statement; the bonus date is not its opening date.</p>';
   if(e._taxParentId)h+='<button type="button" class="bt360-secondary" onclick="BT360.openHeroBonus('+profileSectionAttr(JSON.stringify(e._taxParentId))+')">'+(e._taxPriorCycle?'View current account':'View account')+'</button>';
+  const reconciliation=taxArchiveReconciliation(e);
+  h+='<p class="bt360-footnote">'+(reconciliation.linked?'Linked to the same cycle in Archive. ':'Archive link needs review. ')+esc(reconciliation.issues.join(' · '))+'</p>';
   h+='<details class="research-help"><summary>Saved terms for this cycle</summary>'+renderTermsCycle(e)+'</details></div></details>';
  });
  return h+'<p class="bt360-footnote">Bank bonuses are usually reported as interest. Check your 1099 forms.</p>';

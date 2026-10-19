@@ -414,6 +414,7 @@ async function exercise(name,engine,url){
     }
     await page.evaluate(()=>{const e=entries[0],v=window.__layoutOriginal;e.checklist=v.checklist;e.customTimers=v.customTimers;e.monthlyFeeWaiverText=v.monthlyFeeWaiverText;delete window.__layoutOriginal;R()});
     await button('Tax').click();
+    check('tax exposes exact-cycle Archive reconciliation',(await page.locator('#app').innerText()).includes('Archive links:'));
     check('tax includes received bonus on open account',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));
     await page.locator('.bt360-tax-record summary').first().click();
     check('tax receipt exposes account identity and actual lifecycle dates',await page.locator('.bt360-tax-history').first().innerText().then(t=>t.includes('Opened')&&t.includes('Closed')&&t.includes('Account ID')&&t.includes('No closure recorded')));
