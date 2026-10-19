@@ -139,15 +139,15 @@ function addDD(bank,method,bonus,date,meta={}){
   const idx=rows.findIndex(r=>(String(r.bank||'').trim()+'|'+String(r.method||'').trim()).toLowerCase()===sig);
   if(idx>=0){
     // Inferred lifecycle writes never revise an explicitly confirmed report.
-    if(rows[idx].source==='user-confirmed')return;
+    if(rows[idx].source==='user-confirmed'&&!meta.userConfirmed)return;
     rows[idx].note=String(meta.note||rows[idx].note||'').trim();
     rows[idx].lastConfirmedAt=date||rows[idx].lastConfirmedAt||td();
     rows[idx].updatedAt=td();
     if(meta.entryId)rows[idx].entryId=meta.entryId;
-    if(rows[idx].source!=='user-confirmed')rows[idx].source='tracker-inferred'
+    rows[idx].source=meta.userConfirmed?'user-confirmed':'tracker-inferred'
   }
   else{
-    rows.unshift(normalizeUserDatapoint({bank:bankName,method:methodName,note:meta.note||'',date:date||td(),entryId:meta.entryId||'',source:'tracker-inferred',outcome:'unknown'}))
+    rows.unshift(normalizeUserDatapoint({bank:bankName,method:methodName,note:meta.note||'',date:date||td(),entryId:meta.entryId||'',source:meta.userConfirmed?'user-confirmed':'tracker-inferred',outcome:'unknown'}))
   }
   saveUserDatapoints(rows)
 }
@@ -5497,7 +5497,7 @@ function upsertTimer(id){
 }
 function rmTimer(id,timerId){const entry=entries.find(e=>e.id===id);if(!entry)return;const timer=normalizeTimerList(entry.customTimers).find(t=>t.id===timerId);const label=timer?.text?('Delete mini timer “'+timer.text+'”?'):'Delete this mini timer?';cfm={title:'Delete mini timer',msg:label,action:()=>{entries=entries.map(e=>{if(e.id===id){const timers=normalizeTimerList(e.customTimers);const target=timers.find(t=>t.id===timerId);if(target)addDeletedTimerKeys(e,target);e.customTimers=timers.filter(t=>t.id!==timerId)}return e});const st=inlineStateFor(id);if(st.timerEdit===timerId)st.timerEdit=null;sv(SK,entries);cfm=null;R()}};R()}
 function toggleDDChip(m){if(!ddPrompt)return;const i=ddPrompt.sel.indexOf(m);if(i>=0)ddPrompt.sel.splice(i,1);else ddPrompt.sel.push(m);R()}
-function submitDD(){if(!ddPrompt)return;const c=document.getElementById('dd_custom');const all=[...ddPrompt.sel];if(c&&c.value)c.value.split(',').forEach(x=>{const t=x.trim();if(t)all.push(t)});all.forEach(m=>addDD(ddPrompt.bank,m,ddPrompt.bonus,td()));ddPrompt=null;R()}
+function submitDD(){if(!ddPrompt)return;const c=document.getElementById('dd_custom');const all=[...ddPrompt.sel];if(c&&c.value)c.value.split(',').forEach(x=>{const t=x.trim();if(t)all.push(t)});all.forEach(m=>addDD(ddPrompt.bank,m,ddPrompt.bonus,td(),{userConfirmed:true}));ddPrompt=null;R()}
 function skipDD(){ddPrompt=null;R()}
 function hasDirectDepositRequirement(e){
   return !!(e&&(
