@@ -41,16 +41,16 @@ async function noticeCooldown(){
   const stamp=JSON.parse(storage.getItem('bt_cloud_recovery_v1')).lastSuccessNoticeAt;
   await app.upload('automatic');assert.equal(notices.length,1,'Back-to-back uploads must not stack notices');
   app=runtime();await app.upload('automatic');assert.equal(notices.length,1,'Refresh must retain the cooldown');
-  now=stamp+30*60*1000-1;await app.upload('manual');assert.equal(notices.length,1,'Manual uploads respect the same cooldown');
+  now=stamp+60*60*1000-1;await app.upload('manual');assert.equal(notices.length,1,'Manual uploads respect the same cooldown');
   assert.equal(JSON.parse(storage.getItem('bt_cloud_recovery_v1')).lastSuccessNoticeAt,stamp,'Suppressed notices must not extend the cooldown');
   failure=true;await assert.rejects(app.upload('automatic'),/Synthetic cloud outage/);
   assert.match(statusLabel.textContent,/Backup needs attention/,'Archive must visibly lose protection after an upload failure');
   assert.equal(compactLabel.textContent,'danger','Compact account status loses protection immediately on failure');
   assert.equal(app.protection().tone,'danger','Cooldown must not hide a failure state');assert.equal(notices.length,1);
-  failure=false;now=stamp+30*60*1000;await app.upload('automatic');assert.equal(notices.length,2,'Notice becomes eligible at exactly 30 minutes');
+  failure=false;now=stamp+60*60*1000;await app.upload('automatic');assert.equal(notices.length,2,'Notice becomes eligible at exactly one hour');
   assert.equal(storage.getItem('bt_e_v4'),original,'Notification cooldown must not alter financial records');
   assert.equal(uploads,6,'Suppression must not suppress the backups themselves');
-  console.log('Backup notices passed: 30-minute boundary, refresh, duplicate suppression, manual feedback, error visibility and unchanged records');
+  console.log('Backup notices passed: one-hour boundary, refresh, duplicate suppression, manual feedback, error visibility and unchanged records');
 }
 noticeCooldown().catch(e=>{console.error(e);process.exitCode=1});
 

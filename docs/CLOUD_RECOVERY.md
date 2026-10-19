@@ -31,11 +31,11 @@ Changes made offline cannot be recovered from the cloud until uploaded. The stat
 
 ## What is preserved
 
-Exact serialized values for the central backup-storage key list: account records and all embedded fields (terms, financial rules, notes, milestone dates, checklist, timers and cycle history), tax/timer storage, personal and community datapoints, bank requirements, phone contacts, profile events, offer history, T&C archive, analyzer memory/training/rules and backup metadata. Selected tracker/tax years are included separately.
+Exact serialized values for the central backup-storage key list: account records and all embedded fields (terms, financial rules, notes, milestone dates, checklist, timers and cycle history), tax/timer storage, personal and community datapoints, bank requirements, phone contacts, profile events, offer history, T&C archive, entry-scoped source-resolver evidence (`bt_tc_entry_sources_v3`), analyzer memory/training/rules and backup metadata. Selected tracker/tax years are included separately.
 
 Sign-in tokens, passwords, cloud connection state and unrelated browser storage are excluded. A recovered device keeps its own sign-in. The server rejects unknown storage keys or unsupported recovery versions rather than claiming a complete backup.
 
-The recovery envelope is `BonusTrackerCloudBackup`, numeric version `1`, with raw storage strings. Maximum supported snapshot size is 8 MiB; exceeding it produces a visible error. Future persistent fields must extend both the frontend key list and backend allowlist, with a roundtrip test.
+The recovery envelope is `BonusTrackerCloudBackup`, numeric version `1`, with raw storage strings. Maximum supported snapshot size is 8 MiB; exceeding it produces a visible error. Future persistent fields must extend both the frontend key list and backend allowlist, with a roundtrip test. The v3.6.44 frontend depends on the source-resolver allowlist update shipping on Railway first.
 
 ## Verification
 
@@ -43,6 +43,6 @@ Tests cover a fresh device, exact stored-value restoration, credentials staying 
 
 ## Visible protection and data menu
 
-The dashboard has one cloud-protection panel. ON/OFF is the persisted automatic-upload setting; green current-data protection additionally requires authenticated verification and no pending changes or errors. Uploads start after a 350 ms quiet period following a persisted save. Changes during an upload trigger a follow-up upload. Opening the recovery panel does not pause protection. Every successful upload produces a nonblocking verification popup; failed attempts never produce a success popup. Offline, pending and failed states remain visible.
+The dashboard has one cloud-protection panel. ON/OFF is the persisted automatic-upload setting; green current-data protection additionally requires authenticated verification and no pending changes or errors. Uploads start after a 350 ms quiet period following a persisted save. Changes during an upload trigger a follow-up upload. Opening the recovery panel does not pause protection. A successful upload may produce a nonblocking verification notice no more than once per hour, with a refresh-persistent cooldown; the full protection status is always available in the cloud panel. Suppressed notices never suppress uploads. Failed attempts never produce a success popup. Offline, pending and failed states remain visible.
 
 Export/import/reset live in the header Data & recovery menu. The old downloaded-file age warning is removed; file-export history appears separately inside recovery settings and is never described as cloud protection. Turning automatic backup OFF requires confirmation. An older retained restore is uploaded and verified again before current cloud protection is shown.

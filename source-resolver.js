@@ -11,7 +11,16 @@
   const isTerms=raw=>{const s=clean(raw);return s.length>=160&&/(bonus|offer|eligible|qualifying|direct deposit|checking|monthly fee|terms|conditions|promo|deposit period|bonus chart)/i.test(s)};
   const uid=()=>`src_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`;
   function readStore(){try{return JSON.parse(localStorage.getItem(STORE_KEY)||'{}')}catch{return{}}}
-  function writeStore(s){try{localStorage.setItem(STORE_KEY,JSON.stringify(s||{}))}catch{}}
+  function writeStore(s){
+    const raw=JSON.stringify(s||{});
+    // Never report source evidence as saved if the browser rejected the write.
+    if(window.BTPersistence?.commit)window.BTPersistence.commit(localStorage,{[STORE_KEY]:raw});
+    else{
+      localStorage.setItem(STORE_KEY,raw);
+      if(localStorage.getItem(STORE_KEY)!==raw)throw Error('Source record storage verification failed.');
+    }
+    window.btCloudBackupChanged?.();
+  }
   function modalObj(){try{return window.modal||null}catch{return null}}
   function currentEntry(){
     const m=modalObj();
@@ -82,6 +91,11 @@
   window.tcV3SaveSourceForCurrentEntry=saveForCurrentEntry;
   window.tcV3CurrentEntry=currentEntry;
   window.tcV3SourceStore=()=>readStore();
-  window.tcV3ClearSourceStore=()=>{localStorage.removeItem(STORE_KEY);return true};
+  window.tcV3ClearSourceStore=()=>{
+    if(window.BTPersistence?.commit)window.BTPersistence.commit(localStorage,{[STORE_KEY]:null});
+    else{localStorage.removeItem(STORE_KEY);if(localStorage.getItem(STORE_KEY)!==null)throw Error('Source record removal verification failed.');}
+    window.btCloudBackupChanged?.();
+    return true;
+  };
   window.tcV3SourceResolverVersion=VER;
 })();
