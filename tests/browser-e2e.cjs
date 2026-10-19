@@ -1254,6 +1254,7 @@ async function exercise(name,engine,url){
     check('Tax renders a deeply nested paid cycle',await page.locator('.bt360-tax-record').count()===1&&(await page.locator('.bt360-tax-record > summary').innerText()).includes('Prior cycle'));
     await page.locator('.bt360-tax-record > summary').click();
     await page.locator('.bt360-tax-record').getByText('Saved terms for this cycle',{exact:true}).click();
+    await page.locator('.bt360-tax-record').locator('.bt-archive-more > summary').first().click();
     await page.locator('.bt360-tax-record').getByText('Read original saved promotion',{exact:true}).click();
     check('deep receipt opens its exact enrolled promotion',(await page.locator('.bt360-tax-record').innerText()).includes('Exact oldest browser cycle promotion.'));
     await button('Archive').click();
