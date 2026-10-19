@@ -86,7 +86,8 @@ async function exercise(name,engine,url){
     new MutationObserver(inspect).observe(document,{childList:true,subtree:true});
   });
   const button=text=>page.getByRole('button',{name:text,exact:true});
-  const openAdvancedActions=async()=>{const more=page.getByRole('button',{name:'More account actions'});if(await more.count()){await more.click();return}const row=page.locator('.bt366-compact-row').first();if(await row.count()){await row.click();await page.getByRole('button',{name:'More account actions'}).click();}};
+  const openAccounts=async()=>{const reveal=page.locator('.bt3641-directory button');if(await reveal.count())await reveal.click();};
+  const openAdvancedActions=async()=>{await openAccounts();const more=page.getByRole('button',{name:'More account actions'});if(await more.count()){await more.click();return}const row=page.locator('.bt366-compact-row').first();if(await row.count()){await row.click();await page.getByRole('button',{name:'More account actions'}).click();}};
   const wait=async fn=>{await page.waitForFunction(fn,{},{timeout:15000})};
   // Startup wrappers and controller renders are scheduled through 1.8 seconds.
   // Wait beyond that initialization window after navigation; retain all assertions.
@@ -195,13 +196,17 @@ async function exercise(name,engine,url){
     check('deadline wording is visible',await page.locator('input[oninput*="\'requiredDaysText\'"]').inputValue()==='90 calendar days');
     await button('4 Review').click();await button('💾 Add account').click();
     await wait(()=>JSON.parse(localStorage.getItem('bt_e_v4')).length===1);
-    check('Needs you uses unboxed PDF heading and standalone priority card',await page.locator('.bt3719-needs > .bt3719-section-title').count()===1&&await page.locator('.bt3719-needs > .bt360-featured').count()===1&&await page.locator('.bt3719-needs.bt360-panel').count()===0);
+    check('Needs you uses unboxed PDF heading and standalone priority card',await page.locator('.bt3719-needs > .bt3719-section-title').count()===1&&await page.locator('.bt3641-attention-toggle').count()===1&&await page.locator('.bt3641-attention-item.is-selected').count()===0&&await page.locator('.bt3719-needs.bt360-panel').count()===0);
     check('v3.6.1 panel headings render badges instead of literal HTML',await page.locator('.bt360-panel-title').evaluateAll(rows=>rows.some(e=>e.querySelector('h3')?.textContent==='Needs you'&&e.querySelector('.bt360-count'))&&rows.every(e=>!e.querySelector('h3')?.textContent.includes('<span'))));
     check('90-day deadline is exact',await page.evaluate(()=>reqDeadline(entries[0]))==='2026-05-01');
     const beforeDisclosure=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     check('Tracker no longer displays the legacy Action Center',await page.locator('.bt360-legacy-actions').count()===0);
+    check('account directory is collapsed by default',await page.locator('.bt366-compact-row').count()===0);
+    await page.locator('.bt3641-attention-toggle').first().click();
+    check('selected task reveals its own actions',await page.locator('.bt3641-attention-item.is-selected .bt360-actions button:visible').count()===2);
+    await openAccounts();
     check('Tracker shows compact account row, not old full card',await page.locator('.bt366-compact-row').count()===1&&await page.locator('.bt366-compact-row .card-mini-chip').count()===0);
-    await page.locator('.bt366-compact-row').first().click();
+    {await openAccounts();await page.locator('.bt366-compact-row').first().click();}
     await page.setViewportSize({width:390,height:844});
     check('detail has exactly one header and one five-step strip',
       await page.locator('.bt360-detail-header').count()===1&&await page.locator('.bt360-steps').count()===1&&await page.locator('.bt360-steps span').count()===5&&await page.locator('.bt360-detail-card .card-h').count()===0);
@@ -350,7 +355,7 @@ async function exercise(name,engine,url){
     await wait(()=>modal===null&&!entrySaveBusy);
     check('edit preserves identity',(await record()).id===id);
     check('notes cannot inject HTML',await page.locator('img[src="x"]').count()===0);
-    if(!await page.locator('.bt360-detail-footer .bt360-primary').count())await page.locator('.bt366-compact-row').first().click();
+    if(!await page.locator('.bt360-detail-footer .bt360-primary').count()){await openAccounts();await page.locator('.bt366-compact-row').first().click();}
     // The preceding in-progress mockup intentionally has an unverified close fee.
     // Simulate a separate explicit terms-review confirmation before expecting the
     // bonus receipt to advance into Ready to Close. Payout alone is not clearance.
@@ -532,6 +537,7 @@ async function exercise(name,engine,url){
       R();
     });
     check('cooldown records not rendered as full Tracker cards',await page.locator('[data-bt-entry-id^="e2e-legacy-"]').count()===0);
+    await openAccounts();
     check('open Lafayette appears as one compact row',await page.locator('[data-bt-entry-id="e2e-lafayette"] .bt366-compact-row').count()===1);
     await page.setViewportSize({width:390,height:844});
     await page.locator('.scroll').evaluate(el=>el.scrollTop=el.scrollHeight);
@@ -710,7 +716,7 @@ async function exercise(name,engine,url){
         return nativeFetch.call(this,input,options);
       };
     });
-    if(!await page.locator('.bt360-detail-footer button').first().isVisible())await page.locator('.bt366-compact-row').first().click();
+    if(!await page.locator('.bt360-detail-footer button').first().isVisible()){await openAccounts();await page.locator('.bt366-compact-row').first().click();}
     // Use the named account-menu action: the footer can switch from Ask AI to Keep open
     // as the lifecycle reconciles, so positional button clicks could navigate back.
     await page.getByRole('button',{name:'More account actions'}).click();
@@ -886,7 +892,7 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>{window.fetch=window.__bonusAITest.nativeFetch;delete window.__bonusAITest;});
 
     // Reopen detail and prove the compact/expanded views remain stable across years.
-    await page.locator('.bt366-compact-row').first().click();
+    {await openAccounts();await page.locator('.bt366-compact-row').first().click();}
     check('detail contains one lifecycle strip after reload',await page.locator('.bt360-steps').count()===1);
     await page.locator('#bt362-year').selectOption('2025');
     await page.locator('#bt362-year').selectOption('2026');
@@ -985,6 +991,7 @@ async function exercise(name,engine,url){
         check(name+' navigation starts at the top at '+width+'px',await page.locator('.scroll').evaluate(e=>e.scrollTop===0));
         check(name+' shows version at '+width+'px',await page.locator('.hdr .app-version').isVisible());
         if(name==='Tracker'){
+          if(!await page.locator('.bt3641-attention-item.is-selected').count())await page.locator('.bt3641-attention-toggle').first().click();
           check('action tile buttons retain mobile touch area at '+width+'px',await page.locator('.bt360-featured .bt360-actions button').evaluateAll(rows=>rows.length>0&&rows.every(e=>e.getBoundingClientRect().height>=44)));
           check('compact tiles fit at '+width+'px',await page.locator('.bt360-featured').evaluateAll(rows=>rows.every(e=>e.scrollWidth<=e.clientWidth+1)));
         }
@@ -1021,6 +1028,7 @@ async function exercise(name,engine,url){
       e.customTimers=[{id:'long-requirement',text:'Establish $500+ monthly qualified direct deposits and retain the required membership savings balance',startDate:'2026-09-11',date:'2026-10-26',daysRequired:45,done:false}];
       expanded=null;R();
     });
+    await openAccounts();
     for(const width of [320,375,390,1024]){
       await page.setViewportSize({width,height:844});
       const row=page.locator('.bt366-compact-row').first();
@@ -1035,7 +1043,37 @@ async function exercise(name,engine,url){
     check('both pending offers appear as independent compact account rows',await page.locator('.bt366-compact-row').count()===2);
     check('a task row and an awaiting payout row stay distinct',await page.locator('.bt366-compact-row').allInnerTexts().then(t=>t.some(x=>x.includes('Establish $500+'))&&t.some(x=>x.includes('E2E Citi'))));
     const taskStorage=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
-    await page.locator('.bt366-compact-row').first().click();
+    await button('Hide accounts').click();
+    check('duplicate directory collapses on request',await page.locator('.bt366-compact-row').count()===0);
+    const headers=page.locator('[data-attention-toggle]');
+    const attentionOrder=await headers.evaluateAll(rows=>rows.map(e=>e.dataset.attentionToggle));
+    check('each bank has a selectable attention card',attentionOrder.length===2);
+    if(await page.locator('[data-attention-toggle][aria-expanded="true"]').count())await page.locator('[data-attention-toggle][aria-expanded="true"]').click();
+    await headers.nth(0).click();
+    check('first bank selection reveals two actions',await page.locator('.is-selected .bt360-actions button:visible').count()===2);
+    await headers.nth(1).click();
+    check('second bank replaces first selection',await headers.nth(0).getAttribute('aria-expanded')==='false'&&await headers.nth(1).getAttribute('aria-expanded')==='true'&&await page.locator('.is-selected').count()===1);
+    check('selection preserves priority order',JSON.stringify(await headers.evaluateAll(rows=>rows.map(e=>e.dataset.attentionToggle)))===JSON.stringify(attentionOrder));
+    const selectedId=attentionOrder[1];
+    for(const width of [320,375,390,430]){
+      await page.setViewportSize({width,height:844});
+      check('selected second bank fits '+width+'px',await page.locator('.is-selected').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
+      check('selected bank actions retain touch targets at '+width+'px',await page.locator('.is-selected .bt360-actions button').evaluateAll(rows=>rows.length===2&&rows.every(e=>e.getBoundingClientRect().height>=44)));
+    }
+    await page.setViewportSize({width:390,height:844});
+    await page.screenshot({path:path.join(output,name+'-selected-bank.png')});
+    await page.locator('.is-selected').getByRole('button',{name:'Details',exact:true}).click();
+    check('second bank Details opens that exact record',await page.evaluate(id=>expanded===id,selectedId));
+    await page.evaluate(()=>{expanded=null;R()});
+    await page.locator('.is-selected').getByRole('button',{name:'Open task',exact:true}).click();
+    check('second bank Open task routes to its own account',await page.evaluate(id=>expanded===id,selectedId));
+    await page.evaluate(()=>{expanded=null;R()});
+    await page.locator('[data-attention-toggle][aria-expanded="true"]').click();
+    check('selected card can collapse',await page.locator('.is-selected').count()===0);
+    check('selection and directory toggles preserve stored records',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===taskStorage);
+    await openAccounts();
+
+    {await openAccounts();await page.locator('.bt366-compact-row').first().click();}
     check('account has one primary action and no duplicate Manage',await page.locator('.bt360-detail-footer .bt360-primary').count()===1&&await page.getByRole('button',{name:'Manage',exact:true}).count()===0);
     check('opening detail does not change account data',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,taskStorage));
     await page.screenshot({path:path.join(output,name+'-action-tiles.png')});

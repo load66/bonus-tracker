@@ -1,4 +1,4 @@
-/* Release 3.6.40 read integrity; eligibility stamps are not written on page load. */
+/* Release 3.6.41 read integrity; eligibility stamps are not written on page load. */
 /* BonusTracker v3.5.2 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
 (function(){
   'use strict';
