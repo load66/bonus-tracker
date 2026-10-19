@@ -374,9 +374,9 @@ async function exercise(name,engine,url){
     check('synthetic close rules were expressly saved rather than inferred',await page.evaluate(()=>entries[0].earlyCloseFee===0&&/No early closing fee/.test(entries[0].feeScheduleRaw)));
     await page.getByRole('button',{name:'Record deposit'}).click();
     check('requirements dialog leaves unknown actual date blank',await page.locator('#req_date').inputValue()==='');
-    await page.locator('#req_date').fill('2026-04-01');await button('Save').click();await button('OK').click();
+    await page.locator('#req_date').fill('2026-04-01');await button('Save').click();await page.locator('.cbox .c-c').click();
     check('requirements and payout stay separate',(await record()).reqMet==='2026-04-01'&&!(await record()).bonusRecd);
-    await page.getByRole('button',{name:/^Confirm received/}).click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('OK').click();
+    await page.getByRole('button',{name:/^Confirm received/}).click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await page.getByRole('button',{name:'Not now',exact:true}).click();
     check('bonus receipt updates close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
     await page.evaluate(()=>{entries[0].earlyCloseFee=null;R();});
     check('unverified fee blocks close readiness even after payout',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='BONUS_RECEIVED');
