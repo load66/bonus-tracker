@@ -90,8 +90,15 @@ function normalizeUserDatapoint(row){
   const createdAt=x.createdAt||x.date||td();
   const updatedAt=x.updatedAt||createdAt;
   const lastConfirmedAt=x.lastConfirmedAt||x.date||createdAt;
+  // Imported/inferred history is never upgraded to user-confirmed evidence.
+  const validSources=['user-confirmed','tracker-inferred','tracker-imported','legacy-unverified'];
+  const source=validSources.includes(x.source)?x.source:'legacy-unverified';
+  const validOutcomes=['unknown','deposit-posted','bonus-received','not-counted'];
+  const outcome=validOutcomes.includes(x.outcome)?x.outcome:'unknown';
   return{
-    id:String(x.id||dpId()),bank,method,note,createdAt,updatedAt,lastConfirmedAt,entryId:String(x.entryId||''),source:'user-confirmed'
+    id:String(x.id||dpId()),bank,method,note,createdAt,updatedAt,lastConfirmedAt,
+    entryId:String(x.entryId||''),source,outcome,eventDate:String(x.eventDate||''),
+    accountType:String(x.accountType||''),product:String(x.product||'')
   }
   
 }
@@ -134,10 +141,11 @@ function addDD(bank,method,bonus,date,meta={}){
     rows[idx].note=String(meta.note||rows[idx].note||'').trim();
     rows[idx].lastConfirmedAt=date||rows[idx].lastConfirmedAt||td();
     rows[idx].updatedAt=td();
-    if(meta.entryId)rows[idx].entryId=meta.entryId
+    if(meta.entryId)rows[idx].entryId=meta.entryId;
+    if(rows[idx].source!=='user-confirmed')rows[idx].source='tracker-inferred'
   }
   else{
-    rows.unshift(normalizeUserDatapoint({bank:bankName,method:methodName,note:meta.note||'',date:date||td(),entryId:meta.entryId||''}))
+    rows.unshift(normalizeUserDatapoint({bank:bankName,method:methodName,note:meta.note||'',date:date||td(),entryId:meta.entryId||'',source:'tracker-inferred',outcome:'unknown'}))
   }
   saveUserDatapoints(rows)
 }
@@ -2478,7 +2486,7 @@ function beginManualReplaceFromEdit(){
   R()
 }
 function dpSignature(bank,method){return bankKey(bank)+'|'+String(method||'').trim().toLowerCase()}
-function syncExistingDatapointsToDB(){const rows=loadUserDatapoints();const seen=new Set(rows.map(r=>dpSignature(r.bank,r.method)));let changed=false;entries.forEach(e=>{if(!e||!e.bank||!e.dataPoint)return;const sig=dpSignature(e.bank,e.dataPoint);if(seen.has(sig))return;rows.push(normalizeUserDatapoint({bank:e.bank,method:e.dataPoint,note:'Imported from tracker history',date:e.closed||e.bonusRecd||e.opened||td(),entryId:e.id||''}));seen.add(sig);changed=true});if(changed)saveUserDatapoints(rows)}
+function syncExistingDatapointsToDB(){const rows=loadUserDatapoints();const seen=new Set(rows.map(r=>dpSignature(r.bank,r.method)));let changed=false;entries.forEach(e=>{if(!e||!e.bank||!e.dataPoint)return;const sig=dpSignature(e.bank,e.dataPoint);if(seen.has(sig))return;rows.push(normalizeUserDatapoint({bank:e.bank,method:e.dataPoint,note:'Imported from tracker history · outcome not confirmed',date:e.closed||e.bonusRecd||e.opened||td(),entryId:e.id||'',source:'tracker-imported',outcome:'unknown'}));seen.add(sig);changed=true});if(changed)saveUserDatapoints(rows)}
 function normalizeCommunityDatapoint(row,i){
  const x=row&&typeof row==='object'?row:{};
  const out={...x,id:String(x.id||('cdp_'+(i||0)+'_'+Math.random().toString(36).slice(2,6))),bank:String(x.bank||'').trim(),method:String(x.method||'').trim(),result:String(x.result||x.note||'').trim(),link:String(x.link||'').trim()};
@@ -2531,10 +2539,10 @@ function buildDatapointGroups(){
 function toggleDPBank(key){dpExpandedBankKey=dpExpandedBankKey===key?'':key;R()}
 function addUserDPForBank(bankEnc){const bank=decodeURIComponent(bankEnc||'');if(!bank)return;dpEditor={type:'user',mode:'new',id:'',bank,method:'',note:'',lastConfirmedAt:td()};dpExpandedBankKey=bankKey(bank);R()}
 function addCommunityDPForBank(bankEnc){const bank=decodeURIComponent(bankEnc||'');if(!bank)return;dpEditor={type:'community',mode:'new',id:'',bank,method:'',result:'',link:''};dpExpandedBankKey=bankKey(bank);R()}
-function openUserDPEditor(id){const item=loadUserDatapoints().find(r=>r.id===id);if(!item)return;dpEditor={type:'user',mode:'edit',id:item.id,bank:item.bank,method:item.method,note:item.note||'',lastConfirmedAt:item.lastConfirmedAt||td()};R()}
+function openUserDPEditor(id){const item=loadUserDatapoints().find(r=>r.id===id);if(!item)return;dpEditor={...item,type:'user',mode:'edit',id:item.id,bank:item.bank,method:item.method,note:item.note||'',lastConfirmedAt:item.lastConfirmedAt||td()};R()}
 function openCommunityDPEditor(id){const item=loadCommunityDatapoints().find(r=>r.id===id);if(!item)return;dpEditor={...item,type:'community',mode:'edit'};R()}
 function closeDPEditor(){dpEditor=null;R()}
-function saveDPEditor(){if(!dpEditor)return;if(dpEditor.link&&!safeExternalUrl(dpEditor.link)){alert('Use a source link beginning with https:// or http://.');return}const bank=String(dpEditor.bank||'').trim();const method=String(dpEditor.method||'').trim();if(!bank||!method){alert('Bank and datapoint method are required');return}if(dpEditor.type==='user'){const rows=loadUserDatapoints();if(dpEditor.mode==='edit'&&dpEditor.id){const idx=rows.findIndex(r=>r.id===dpEditor.id);if(idx>=0)rows[idx]={...rows[idx],bank,method,note:String(dpEditor.note||'').trim(),lastConfirmedAt:dpEditor.lastConfirmedAt||td(),updatedAt:td()}}else{rows.unshift(normalizeUserDatapoint({bank,method,note:String(dpEditor.note||'').trim(),date:dpEditor.lastConfirmedAt||td()}))}saveUserDatapoints(rows);dpExpandedBankKey=bankKey(bank);dpEditor=null;R();return}const rows=loadCommunityDatapoints();if(dpEditor.mode==='edit'&&dpEditor.id){const idx=rows.findIndex(r=>r.id===dpEditor.id);if(idx>=0)rows[idx]={...rows[idx],bank,method,result:String(dpEditor.result||'').trim(),link:String(dpEditor.link||'').trim(),outcome:dpEditor.outcome||'unknown',reportedAt:dpValidDate(dpEditor.reportedAt),eventDate:dpValidDate(dpEditor.eventDate),product:String(dpEditor.product||'').trim(),accountType:dpEditor.accountType||'',sourceName:String(dpEditor.sourceName||'').trim()}}else{rows.unshift(normalizeCommunityDatapoint({bank,method,result:String(dpEditor.result||'').trim(),link:String(dpEditor.link||'').trim(),outcome:dpEditor.outcome||'unknown',reportedAt:dpValidDate(dpEditor.reportedAt),eventDate:dpValidDate(dpEditor.eventDate),product:String(dpEditor.product||'').trim(),accountType:dpEditor.accountType||'',sourceName:String(dpEditor.sourceName||'').trim()}))}saveCommunityDatapoints(rows);dpExpandedBankKey=bankKey(bank);dpEditor=null;R()}
+function saveDPEditor(){if(!dpEditor)return;if(dpEditor.link&&!safeExternalUrl(dpEditor.link)){alert('Use a source link beginning with https:// or http://.');return}const bank=String(dpEditor.bank||'').trim();const method=String(dpEditor.method||'').trim();if(!bank||!method){alert('Bank and datapoint method are required');return}if(dpEditor.type==='user'){const rows=loadUserDatapoints();if(dpEditor.mode==='edit'&&dpEditor.id){const idx=rows.findIndex(r=>r.id===dpEditor.id);if(idx>=0)rows[idx]={...rows[idx],bank,method,note:String(dpEditor.note||'').trim(),lastConfirmedAt:dpEditor.lastConfirmedAt||td(),eventDate:dpValidDate(dpEditor.eventDate),outcome:dpEditor.outcome||'unknown',updatedAt:td(),source:dpEditor.outcome&&dpEditor.outcome!=='unknown'?'user-confirmed':rows[idx].source}}else{rows.unshift(normalizeUserDatapoint({bank,method,note:String(dpEditor.note||'').trim(),date:dpEditor.lastConfirmedAt||td(),eventDate:dpValidDate(dpEditor.eventDate),accountType:dpEditor.accountType||'',product:dpEditor.product||'',entryId:dpEditor.entryId||'',source:'user-confirmed',outcome:dpEditor.outcome||'unknown'}))}saveUserDatapoints(rows);dpExpandedBankKey=bankKey(bank);dpEditor=null;R();return}const rows=loadCommunityDatapoints();if(dpEditor.mode==='edit'&&dpEditor.id){const idx=rows.findIndex(r=>r.id===dpEditor.id);if(idx>=0)rows[idx]={...rows[idx],bank,method,result:String(dpEditor.result||'').trim(),link:String(dpEditor.link||'').trim(),outcome:dpEditor.outcome||'unknown',reportedAt:dpValidDate(dpEditor.reportedAt),eventDate:dpValidDate(dpEditor.eventDate),product:String(dpEditor.product||'').trim(),accountType:dpEditor.accountType||'',sourceName:String(dpEditor.sourceName||'').trim()}}else{rows.unshift(normalizeCommunityDatapoint({bank,method,result:String(dpEditor.result||'').trim(),link:String(dpEditor.link||'').trim(),outcome:dpEditor.outcome||'unknown',reportedAt:dpValidDate(dpEditor.reportedAt),eventDate:dpValidDate(dpEditor.eventDate),product:String(dpEditor.product||'').trim(),accountType:dpEditor.accountType||'',sourceName:String(dpEditor.sourceName||'').trim()}))}saveCommunityDatapoints(rows);dpExpandedBankKey=bankKey(bank);dpEditor=null;R()}
 function deleteUserDP(id){const rows=loadUserDatapoints();const item=rows.find(r=>r.id===id);if(!item)return;cfm={title:'Delete datapoint',msg:'Remove '+item.method+' from '+item.bank+'?',action:()=>{saveUserDatapoints(rows.filter(r=>r.id!==id));if(dpEditor&&dpEditor.id===id)dpEditor=null;cfm=null;R()}};R()}
 function deleteCommunityDP(id){const rows=loadCommunityDatapoints();const item=rows.find(r=>r.id===id);if(!item)return;cfm={title:'Delete community datapoint',msg:'Remove '+item.method+' from '+item.bank+'?',action:()=>{saveCommunityDatapoints(rows.filter(r=>r.id!==id));if(dpEditor&&dpEditor.id===id)dpEditor=null;cfm=null;R()}};R()}
 function deleteDPBankGroup(groupKey,bankEnc){
@@ -2550,9 +2558,14 @@ function rDpEditor(){
  const personal=d.type==='user';
  const field=(key,label,placeholder='',type='text')=>'<div class="fg"><label>'+label+'<input type="'+type+'" value="'+esc(d[key]||'')+'" oninput="dpEditor.'+key+'=this.value" placeholder="'+esc(placeholder)+'"></label></div>';
  const select=(key,label,options)=>'<div class="fg"><label>'+label+'<select onchange="dpEditor.'+key+'=this.value">'+options.map(([v,t])=>'<option value="'+v+'"'+((d[key]||'')===v?' selected':'')+'>'+t+'</option>').join('')+'</select></label></div>';
- let h='<div class="ov" onclick="closeDPEditor()"><section class="modal research-editor" role="dialog" aria-modal="true" aria-labelledby="dp-editor-title" onclick="event.stopPropagation()"><header class="research-editor-header"><h2 id="dp-editor-title">'+(personal?'My experience':'Source report')+'</h2><p>Save what happened. Leave unknown details blank.</p></header><div class="research-editor-body">';
+ let h='<div class="ov" onclick="closeDPEditor()"><section class="modal research-editor" role="dialog" aria-modal="true" aria-labelledby="dp-editor-title" onclick="event.stopPropagation()"><header class="research-editor-header"><h2 id="dp-editor-title">'+(personal?'Confirm your experience':'Source report')+'</h2><p>Save what happened. Leave unknown details blank.</p></header><div class="research-editor-body">';
  h+=field('bank','Bank','e.g. Chase')+field('method','Transfer or activity','e.g. Employer payroll to checking');
- if(personal){h+='<div class="fg"><label>What happened?<textarea rows="4" oninput="dpEditor.note=this.value" placeholder="Deposit amount, result, and any useful details">'+esc(d.note||'')+'</textarea></label></div>'+field('lastConfirmedAt','Experience date','','date')}
+ if(personal){
+    h+=select('outcome','What can you confirm?',[['unknown','Not confirmed yet'],['deposit-posted','Deposit posted (bonus not yet verified)'],['bonus-received','Bonus paid after this method'],['not-counted','Did not qualify']]);
+    h+='<div class="fg"><label>What happened?<textarea rows="4" oninput="dpEditor.note=this.value" placeholder="Sender, deposit date, amount and how the bank responded">'+esc(d.note||'')+'</textarea></label></div>'
+      +field('eventDate','Deposit or payout date','','date')
+      +'<p class="research-caveat">Only choose Bonus paid if you can tie the payout to this method. Your report is private; it never changes enrolled requirements or eligibility.</p>';
+  }
  else{
  h+=field('product','Account / offer','e.g. Total Checking · $900 offer');
  h+=select('accountType','Account type',[['','Not specified'],['personal','Personal'],['business','Business']]);
@@ -4618,11 +4631,11 @@ function rTips(){
    const items=groups.flatMap(g=>[
      ...g.community.map(x=>({g,x,kind:'community',when:dpReportDate(x)||x.threadDate||''})),
      ...g.user.map(x=>({g,x,kind:'personal',when:x.lastConfirmedAt||''}))
-   ]).sort((a,b)=>String(b.when).localeCompare(String(a.when)));
+   ]).sort((a,b)=>((b.kind==='personal'&&b.x.source==='user-confirmed')?1:0)-((a.kind==='personal'&&a.x.source==='user-confirmed')?1:0)||String(b.when).localeCompare(String(a.when)));
    items.forEach(({g,x,kind})=>{
-     const report=kind==='community',label=!report?'My note':x.outcome==='worked'?'Counted':x.outcome==='failed'?"Didn't count":x.outcome==='mixed'?'Mixed reports':x.outcome==='pending'?'Pending':'Not verified';
-     const desc=report?(x.sourceName||'Community')+' · '+(x.reportedAt||x.threadDate||x.eventDate?fD(x.reportedAt||x.threadDate||x.eventDate):'Date not reported'):'My saved note · '+(x.lastConfirmedAt?fD(x.lastConfirmedAt):'Date unavailable');
-     const detail=report?renderCommunityReport(x):'<article class="research-report personal"><h3>'+esc(x.method||'Saved method')+'</h3><p>'+esc(x.note||'No notes saved.')+'</p><button class="ph-mini" onclick="openUserDPEditor('+profileSectionAttr(JSON.stringify(x.id))+')">Edit note</button></article>';
+     const report=kind==='community',label=!report?(x.source!=='user-confirmed'?'Unverified':x.outcome==='bonus-received'?'Bonus paid':x.outcome==='deposit-posted'?'Deposit posted':x.outcome==='not-counted'?"Didn't count":'My note'):x.outcome==='worked'?'Counted':x.outcome==='failed'?"Didn't count":x.outcome==='mixed'?'Mixed reports':x.outcome==='pending'?'Pending':'Not verified';
+     const desc=report?(x.sourceName||'Community')+' · '+(x.reportedAt||x.threadDate||x.eventDate?fD(x.reportedAt||x.threadDate||x.eventDate):'Date not reported'):(x.source==='user-confirmed'?'Confirmed by you':'Saved history · not verified')+' · '+(x.eventDate?fD(x.eventDate):'Date not recorded');
+     const detail=report?renderCommunityReport(x):'<article class="research-report personal"><h3>'+esc(x.method||'Saved method')+'</h3><p>'+esc(x.note||'No notes saved.')+'</p><p class="research-caveat">'+esc(x.source==='user-confirmed'?'Reported by you · '+(x.outcome==='bonus-received'?'Bonus paid':x.outcome==='deposit-posted'?'Deposit posted':x.outcome==='not-counted'?"Didn't qualify":'Outcome not confirmed'):'Historical or imported note · verify before relying on it')+'</p><button class="ph-mini" onclick="openUserDPEditor('+profileSectionAttr(JSON.stringify(x.id))+')">Edit note</button></article>';
      h+='<details class="bt366-dp-item"><summary>'+bankLogo(g.bank,true)+'<span class="bt366-dp-main"><b>'+esc(g.bank)+'</b><small>'+esc(x.method||'Method not specified')+'</small><small>'+esc(desc)+'</small></span><span class="bt360-chip '+(report&&x.outcome==='worked'?'positive':report&&x.outcome==='failed'?'warning':'')+'">'+esc(label)+'</span></summary>'+detail+'</details>';
    });
  }else{
@@ -5484,6 +5497,30 @@ function rmTimer(id,timerId){const entry=entries.find(e=>e.id===id);if(!entry)re
 function toggleDDChip(m){if(!ddPrompt)return;const i=ddPrompt.sel.indexOf(m);if(i>=0)ddPrompt.sel.splice(i,1);else ddPrompt.sel.push(m);R()}
 function submitDD(){if(!ddPrompt)return;const c=document.getElementById('dd_custom');const all=[...ddPrompt.sel];if(c&&c.value)c.value.split(',').forEach(x=>{const t=x.trim();if(t)all.push(t)});all.forEach(m=>addDD(ddPrompt.bank,m,ddPrompt.bonus,td()));ddPrompt=null;R()}
 function skipDD(){ddPrompt=null;R()}
+function hasDirectDepositRequirement(e){
+  return !!(e&&(
+    (Array.isArray(e.financialRules?.requirements)&&e.financialRules.requirements.some(r=>r?.kind==='direct-deposit'))
+    || /\b(?:direct deposits?|payroll)\b/i.test([e.dataPoint,e.completeBonusText].filter(Boolean).join(' '))
+  ));
+}
+function openMilestoneDatapoint(entryId,kind,eventDate){
+  const e=entries.find(x=>x.id===entryId);
+  if(!e)return;
+  dpEditor={
+    type:'user',mode:'new',id:'',bank:e.bank,method:'',note:'',
+    lastConfirmedAt:td(),eventDate:dpValidDate(eventDate),entryId:e.id,
+    source:'user-confirmed',outcome:'unknown',
+    accountType:entryBankType(e)==='B'?'business':'personal',
+    product:String(e.accountName||e.productName||'').trim()
+  };
+  R();
+}
+function openDatapointsForTask(entryId){
+  const e=entries.find(x=>x.id===entryId);
+  if(!e)return;
+  switchMainTab('tips');dpSearch=e.bank;dpFilters={view:'all',scope:'all',result:'all',type:'all',source:'all',dated:'all'};R();
+  requestAnimationFrame(()=>document.getElementById('datapoints-search')?.focus({preventScroll:true}));
+}
 function confirmMarkReceived(id){const e=entries.find(x=>x.id===id);if(!e)return;cfm={title:e.bonusRecd?'Update Bonus Received?':'Mark Bonus Received?',msg:(e.bonusRecd?'Update the bonus received date for ':'Mark the bonus as received for ')+e.bank+'?\n\nYou can review received date, requirement met date, and the triggering method before saving.',green:true,action:()=>{cfm=null;openRcv(id)}};R()}
 function openRcv(id,candidate=null){const e=entries.find(x=>x.id===id);if(!e)return;const observed=candidate&&Number(candidate.amount)>0&&Number.isFinite(candidate.posted);rcvPrompt={entryId:id,bank:e.bank,date:observed?new Date(candidate.posted*1000).toISOString().slice(0,10):e.bonusRecd||td(),reqDate:e.reqMet||'',dp:e.dataPoint||'',bonus:observed?Number(candidate.amount):e.bonus||0,fromCandidate:!!observed,hasExisting:!!e.bonusRecd};R()}
 window.btReviewBonusCandidate=(id,candidate)=>openRcv(id,candidate);
@@ -5525,11 +5562,11 @@ function rcvSubmit(){
     return e
   });
   const e2=entries.find(e=>e.id===p.entryId);
-  if(e2&&p.dp&&Number(e2.bonus||0)>0)addDD(e2.bank,p.dp,Number(e2.bonus||0),p.date,{entryId:e2.id,accountType:e2.accountType,note:'Auto-saved from bonus received flow'});
+  // A payout is not proof that any prefilled deposit method qualified. Ask instead.
   if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
   entries=sortE(entries);sv(SK,entries);
   rcvPrompt=null;
-  cfm={title:'Bonus Received Saved',msg:(e2?e2.bank:'This bank')+' received date saved for '+fD(p.date)+'.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
+  cfm={title:'Bonus Received Saved',msg:(e2?e2.bank:'This bank')+' received date saved for '+fD(p.date)+'.\n\nIf you know which deposit or transfer method qualified, record that experience. Otherwise choose Cancel.',green:true,confirmLabel:'Add datapoint',action:()=>{cfm=null;openMilestoneDatapoint(p.entryId,'bonus',p.date)}};
   cfm.msg+='\n\nCycle history saved on this device. Cloud recovery: '+(window.BTCloudBackup?.protection?.().title||'Not verified')+'.';
   }catch(error){
     let restored=true;
@@ -5604,7 +5641,7 @@ function reqSubmit(){
   if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
   entries=sortE(entries);sv(SK,entries);
   reqPrompt=null;
-  cfm={title:'Requirement Met Saved',msg:(e2?e2.bank:'This bank')+' requirement met date saved for '+fD(p.date)+'. Bonus received is still tracked separately.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
+  cfm={title:'Requirement Met Saved',msg:(e2?e2.bank:'This bank')+' requirement met date saved for '+fD(p.date)+'. Bonus received is still tracked separately.'+(hasDirectDepositRequirement(e2)?'\n\nIf a direct deposit posted, record your experience. Otherwise choose Cancel.':''),green:true,confirmLabel:hasDirectDepositRequirement(e2)?'Add datapoint':'OK',action:()=>{cfm=null;if(hasDirectDepositRequirement(e2))openMilestoneDatapoint(p.entryId,'requirement',p.date);else R()}};
   R()
 }
 function confirmClearReqMet(){
