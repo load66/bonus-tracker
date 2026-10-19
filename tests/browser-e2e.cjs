@@ -1070,6 +1070,15 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>{expanded=null;R()});
     await page.locator('[data-attention-toggle][aria-expanded="true"]').click();
     check('selected card can collapse',await page.locator('.is-selected').count()===0);
+    const searchShortcut=page.locator('.bt3642-search-launcher');
+    check('compact search shortcut shows account count',await searchShortcut.innerText().then(t=>t.includes('Search 2 accounts')));
+    await searchShortcut.click();
+    await wait(()=>document.activeElement?.id==='tracker-search');
+    await page.locator('#tracker-search').fill('E2E Citi');
+    check('direct search finds the exact account and retains focus',await page.locator('.bt366-compact-row').count()===1&&await page.locator('.bt366-compact-row').innerText().then(t=>t.includes('E2E Citi'))&&await page.locator('#tracker-search').evaluate(e=>document.activeElement===e));
+    await page.locator('#tracker-search').press('Escape');
+    await wait(()=>document.activeElement?.classList.contains('bt3642-search-launcher'));
+    check('Escape collapses search and restores shortcut focus',await page.locator('.bt366-compact-row').count()===0&&await searchShortcut.isVisible()&&await page.evaluate(()=>search===''));
     check('selection and directory toggles preserve stored records',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===taskStorage);
     await openAccounts();
 

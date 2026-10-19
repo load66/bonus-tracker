@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.41';
+const APP_VERSION='3.6.42';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -6883,13 +6883,13 @@ entries=sortE(entries); // First visible render is owned by BT360 at the end of 
     let h='';
     const bkd=daysSinceBk();
     if(window.BT360&&sorted.length&&!archiveView&&!expanded&&!q&&!window.BT360.selectedStage&&!showTemplates&&!showAnalyzer&&!window.BT360.accountListOpen){
-      return '<div class="bt3641-directory"><button type="button" class="bt360-link" aria-expanded="false" aria-controls="bt-tracker-directory" onclick="BT360.toggleAccountList()">All accounts <span>'+sorted.length+'</span><span aria-hidden="true">⌄</span></button></div>'+rBankActions();
+      return '<div class="bt3641-directory"><button type="button" class="bt3642-search-launcher" aria-expanded="false" aria-controls="bt-tracker-directory" onclick="BT360.openAccountSearch()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><span>Search '+sorted.length+' account'+(sorted.length===1?'':'s')+'</span><span aria-hidden="true">⌄</span></button></div>'+rBankActions();
     }
 
     if(archiveView){
       h+='<button type="button" class="btn-s" onclick="BT360.back()">Back to Archive</button><div class="sec">Archived accounts</div><div class="sub">Completed, non-repeatable offers. Records, received bonuses and enrolled terms remain available for history, tax and recovery.</div>';
     }else{
-    if(!expanded)h+='<div class="bt360-search-tools" id="bt-tracker-directory"><button type="button" class="bt360-link" aria-expanded="true" onclick="BT360.toggleAccountList()">Hide accounts</button></div>';
+    if(!expanded)h+='<div class="bt360-search-tools" id="bt-tracker-directory"><button type="button" class="bt360-link" aria-expanded="true" onclick="BT360.closeAccountSearch()">Hide accounts</button></div>';
 
     if(showTemplates&&!expanded){
       h += '<section id="bt-quick-add-panel" class="bt362-tool-panel" tabindex="-1"><div class="sec">Quick add templates</div><div class="tgrid">';
@@ -6900,7 +6900,7 @@ entries=sortE(entries); // First visible render is owned by BT360 at the end of 
     }
 
     }
-    if(!expanded)h += `<input class="sinput" type="text" id="${archiveView?'archive-search':'tracker-search'}" aria-label="${archiveView?'Search archived accounts':'Search accounts'}" placeholder="${archiveView?'Search archived accounts...':'Search accounts...'}" value="${esc(search)}" oninput="updateViewSearch('tracker',this.value,this.selectionStart)">`;
+    if(!expanded)h += `<input class="sinput" type="text" id="${archiveView?'archive-search':'tracker-search'}" aria-label="${archiveView?'Search archived accounts':'Search accounts'}" placeholder="${archiveView?'Search archived accounts...':'Search accounts...'}" value="${esc(search)}" oninput="updateViewSearch('tracker',this.value,this.selectionStart)"${archiveView?'':' onkeydown="if(event.key===\'Escape\'){event.preventDefault();BT360.closeAccountSearch()}"'}>`;
     if(!archiveView){
     if(showAnalyzer&&!expanded) h += '<section id="bt-promo-terms-panel" class="bt362-tool-panel" tabindex="-1">'+rAnalyzer()+'</section>';
     if(!window.BT360&&!expanded)h += '<details class="bt360-legacy-actions"'+(legacyActionsOpen?' open':'')+' ontoggle="legacyActionsOpen=this.open"><summary>All Action Center tools</summary>'+renderActionCenter()+'</details>';
