@@ -1200,7 +1200,7 @@ async function exercise(name,engine,url){
     for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
       const repairLayout=await page.locator('.history-repair-sheet').evaluate(e=>({fits:e.scrollWidth<=e.clientWidth+1,width:e.clientWidth,scrollWidth:e.scrollWidth,overflow:[...e.querySelectorAll('*')].filter(n=>n.getClientRects().length&&n.getBoundingClientRect().right>e.getBoundingClientRect().right).map(n=>({tag:n.tagName,id:n.id,class:n.className,width:n.clientWidth,scrollWidth:n.scrollWidth}))}));
-      if(!repairLayout.fits)console.error('Synthetic history layout diagnostics',repairLayout);
+      if(!repairLayout.fits){console.error('Synthetic history layout diagnostics',repairLayout);console.error('Synthetic internal overflow',await page.locator('.history-repair-sheet').evaluate(e=>[...e.querySelectorAll('*')].filter(n=>n.scrollWidth>n.clientWidth+1).map(n=>({tag:n.tagName,id:n.id,class:n.className,width:n.clientWidth,scrollWidth:n.scrollWidth,display:getComputedStyle(n).display,overflow:getComputedStyle(n).overflow,open:n.open}))));}
       check('history repair fits '+width+'px',repairLayout.fits);
       if(width===390)await page.screenshot({path:path.join(output,name+'-history-repair-390.png')});
     }

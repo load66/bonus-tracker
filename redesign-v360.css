@@ -724,6 +724,7 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
 .history-repair-sheet>*{min-width:0}
 .history-repair-sheet :is(section,details,label,pre,select){min-width:0;max-width:100%}
 .history-repair-sheet :is(p,summary,h3,b,label,pre){overflow-wrap:anywhere;word-break:break-word}
+.history-repair-sheet details:not([open])>:not(summary){display:none}
 .history-repair-sheet header{display:flex;justify-content:space-between;align-items:start;gap:12px}
 .history-repair-sheet h2{margin:0}.history-repair-sheet p{line-height:1.5}
 .history-repair-actions{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}
@@ -735,7 +736,7 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
 .history-repair-field{border-top:1px solid var(--border,#334155);padding:16px 0;min-width:0}
 .history-repair-field h3{font-size:16px;margin:0}
 .history-repair-field label{display:grid;gap:8px;margin:12px 0}
-.history-repair-field select{width:100%;max-width:100%;min-width:0;box-sizing:border-box;padding:10px;color:inherit;background:var(--card,#151c27);border:1px solid var(--border,#334155);border-radius:8px}
+.history-repair-field select{width:100%;max-width:100%;min-width:0;box-sizing:border-box;padding:10px;color:inherit;background:var(--card,#151c27);border:1px solid var(--border,#334155);border-radius:8px;overflow:hidden;text-overflow:ellipsis}
 .history-repair-sheet pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:14px;line-height:1.5;max-height:320px;overflow:auto}
 .history-repair-source{font-size:12px;overflow-wrap:anywhere;color:var(--muted,#94a3b8)}
 .history-repair-ack{display:flex;gap:10px;align-items:start;line-height:1.5;margin:18px 0}
