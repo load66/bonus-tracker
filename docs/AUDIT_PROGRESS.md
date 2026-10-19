@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: ChatGPT/Codex · v3.6.43 · codex/v3.6.43-datapoint-confirmation
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
