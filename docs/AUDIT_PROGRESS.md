@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: none
+Active agent: Codex — v3.6.47 — codex/v3.6.47-icloud-only-migration
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.47 iCloud-only migration (`codex/v3.6.47-icloud-only-migration`): verified portable export to iCloud Drive, read-only backup-file validation before an opt-in local-only switch, disable BonusTracker Railway requests after switch while retaining local records and file restoration. No deletion of shared Railway services or cloud objects. Next: synthetic migration tests, Chromium/WebKit release checks, merge/deploy.
 
 - v3.6.46 simple Archive (`codex/v3.6.46-archive-simple-secure`): hide per-cycle cloud recovery controls and verbose historical warnings, show recorded bonus and key dates with optional collapsed details; retain all underlying backup verification, restore flows and original evidence unchanged. Frontend PR #226; CI run 39266183079 passed bonus, UI and cloud unit suites, Chromium, WebKit and release verifier. Next: merge verified release and confirm GitHub Pages deploy.
 
