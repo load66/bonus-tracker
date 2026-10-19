@@ -1,12 +1,12 @@
 # Audit progress
 
-Active agent: Codex — v3.6.44 — codex/v3.6.44-recovery-coverage
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
 
-- v3.6.44 cloud recovery coverage (`codex/v3.6.44-recovery-coverage`): user-authorized takeover after merged v3.6.43. Cover entry-scoped source records in cloud/file recovery; verify writes, backup-change events and one-hour refresh-persistent success banner cooldown. No private data changes or credential backup. Backend allowlist must ship first. Next: synthetic tests, Chromium/WebKit CI, merge and Pages verification.
+- v3.6.44 cloud recovery coverage (`codex/v3.6.44-recovery-coverage`): user-authorized takeover after merged v3.6.43. Cover entry-scoped source records in cloud/file recovery; verify writes, backup-change events and one-hour refresh-persistent success banner cooldown. No private data changes or credential backup. Backend PR #242 merged and Railway production SUCCESS at d8bbd8b. Frontend PR #224 initial full CI run 39243372179 passed bonus/cloud/UI, Chromium/WebKit and release verification. Next: complete final-head CI, merge and verify Pages deployment.
 
 - v3.6.43 trusted deposit experiences (`codex/v3.6.43-dd-datapoints`): Direct-deposit tasks open exact bank-family/audience research with cleared stale filters. Bonus confirmation and DD requirement completion offer optional observed-result review. Automatic lifecycle notes remain pending; trusted outcomes require explicit attestation and a valid actual event date. Cycle identities, corrections and review provenance survive legacy export and verified recovery; repeated lifecycle saves preserve reviewed evidence. Confirmed personal experiences rank first, newest actual evidence ranks within each tier, and older/unknown dates and conflicting outcomes remain visible. No new storage keys, provider calls, public sharing or financial-rule changes. Local regression suites pass; next: full Chromium/WebKit CI, screenshot review, merge on green and exact production verification.
 
