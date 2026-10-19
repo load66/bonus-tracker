@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: none
+Active agent: Codex — v3.6.49 — codex/v3.6.49-icloud-switch-confirmation
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.49 iCloud switch confirmation (`codex/v3.6.49-icloud-switch-confirmation`): fix confirmation overlay being hidden behind iCloud wizard; make unverified file errors and successful mode switch unmistakable on iPhone. All data/backup safety checks remain intact; add synthetic and mobile browser regression tests. Next: full CI Chromium/WebKit then merge and Pages deployment.
 
 - v3.6.48 iCloud setup overlay fix (`codex/v3.6.48-icloud-modal-visibility`): resolve Settings sheet z-index occluding the iCloud migration modal. Dismiss Settings before opening and use a dedicated accessible top-layer modal. No changes to backup or user data. PR #228; bonus/cloud/UI tests, Chromium/WebKit mobile tap-visibility assertions, and release verifier passed in CI run 39274633924. Next: merge and confirm GitHub Pages deploy; no user records or backup objects modified.
 
