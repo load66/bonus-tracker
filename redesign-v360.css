@@ -718,3 +718,27 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
 /* Keep the temporary Undo action outside the scrolling content's hit area. */
 .app>.undo-bar{position:relative;bottom:auto;left:auto;right:auto;flex:0 0 auto;margin:0 12px calc(76px + env(safe-area-inset-bottom));animation:none}
 .app:has(>.undo-bar)>.scroll{min-height:0}
+/* Source-backed history review; wrapping does not change source bytes. */
+.history-repair-backdrop{z-index:10050!important}
+.history-repair-sheet{width:min(760px,100%)!important;max-width:100vw;box-sizing:border-box}
+.history-repair-sheet>*{min-width:0}
+.history-repair-sheet :is(section,details,label,pre,select){min-width:0;max-width:100%}
+.history-repair-sheet :is(p,summary,h3,b,label,pre){overflow-wrap:anywhere;word-break:break-word}
+.history-repair-sheet details:not([open])>:not(summary){display:none}
+.history-repair-sheet header{display:flex;justify-content:space-between;align-items:start;gap:12px}
+.history-repair-sheet h2{margin:0}.history-repair-sheet p{line-height:1.5}
+.history-repair-actions{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}
+.history-repair-actions label{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;max-width:100%}
+.history-repair-actions input{max-width:100%;width:240px}
+.history-repair-cycle{border:1px solid var(--border,#334155);border-radius:14px;padding:14px;margin:14px 0}
+.history-repair-cycle>summary{cursor:pointer;line-height:1.5;overflow-wrap:anywhere}
+.history-repair-cycle small{display:block;color:var(--muted,#94a3b8)}
+.history-repair-field{border-top:1px solid var(--border,#334155);padding:16px 0;min-width:0}
+.history-repair-field h3{font-size:16px;margin:0}
+.history-repair-field label{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin:12px 0}
+.history-repair-field select{width:100%;max-width:100%;min-width:0;box-sizing:border-box;padding:10px;color:inherit;background:var(--card,#151c27);border:1px solid var(--border,#334155);border-radius:8px;overflow:hidden;text-overflow:ellipsis}
+.history-repair-sheet pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:14px;line-height:1.5;max-height:320px;overflow:auto}
+.history-repair-source{font-size:12px;overflow-wrap:anywhere;color:var(--muted,#94a3b8)}
+.history-repair-ack{display:flex;gap:10px;align-items:start;line-height:1.5;margin:18px 0}
+.history-repair-ack input{flex:0 0 18px;width:18px;height:18px;margin-top:3px}
+.history-repair-sheet button:disabled{opacity:.45;cursor:not-allowed}
