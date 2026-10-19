@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.42 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.43 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt3628_audience_session',noticeKey='bt360_notice_session';
@@ -237,7 +237,9 @@ function tasks(rows){
    +'<span class="bt3719-task-right">'+(item?.bonus?'<strong>'+safe(amount(item.bonus))+'</strong>':'')+actionBadge(x,selected)+'</span></button>'
    +'<div id="'+target+'" class="bt3641-attention-body"'+(selected?'':' hidden')+'>';
   if(['ACTION_NEEDED','IN_PROGRESS'].includes(x.stageCode))html+=attentionCardProgress(item);
-  html+='<div class="bt360-actions"><button type="button" class="bt360-primary" onclick="runNextAccountAction('+arg(x.entryId)+')">Open task</button><button type="button" class="bt360-secondary" onclick="openAccountFromActionCenter('+arg(x.entryId)+')">Details</button></div></div></article>';
+  html+='<div class="bt360-actions"><button type="button" class="bt360-primary" onclick="runNextAccountAction('+arg(x.entryId)+')">Open task</button><button type="button" class="bt360-secondary" onclick="openAccountFromActionCenter('+arg(x.entryId)+')">Details</button></div>';
+  if(item&&['ACTION_NEEDED','IN_PROGRESS'].includes(x.stageCode)&&hasDirectDepositRequirement(item))html+='<button type="button" class="bt360-link bt3643-dp-link" onclick="openDatapointsForTask('+arg(x.entryId)+')">Check deposit datapoints →</button>';
+  html+='</div></article>';
  });
  return html+'</div></section>';
 }
