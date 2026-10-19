@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.38';
+const APP_VERSION='3.6.39';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -362,18 +362,33 @@ function eligibilityRuleStorageLabel(r){
   return (p?(p+' '+u+(p===1?'':'s')+' after '):'')+b+(cond?.type==='closed-with-negative-balance'?' · only if closed negative':'')
 }
 
+// Project all saved cycles without flattening or rewriting the stored history.
+// Only account identity is inherited; event dates and financial facts never are.
+function savedAccountCycles(owner){
+ const result=[],stack=[{raw:owner,parent:null}],seen=new WeakSet();
+ while(stack.length){
+  const {raw,parent}=stack.pop();
+  if(!raw||typeof raw!=='object'||Array.isArray(raw)||seen.has(raw))continue;
+  seen.add(raw);
+  const row={...raw,bank:raw.bank||parent?.bank||'',accountType:raw.accountType||parent?.accountType||'',entryId:raw.entryId||raw.id||parent?.entryId||''};
+  result.push(row);
+  const prior=Array.isArray(raw.previousCycles)?raw.previousCycles:[];
+  for(let i=prior.length-1;i>=0;i--)stack.push({raw:prior[i],parent:row});
+ }
+ return result;
+}
 function termsDisplayBuckets(){
  const rows=termsArchiveRows().map(x=>({...x,current:{...x.current},versions:[...(x.versions||[])]}));
  entries.forEach(e=>{
   if(!e?.bank)return;
   const identity=entryBankIdentity(e),found=rows.find(b=>entryBankIdentity(b.current||b).key===identity.key);
   const x={...e,accountType:identity.type,entryId:e.id,tcSourceRaw:String(e.tcSourceRaw||e.analysis?.rawText||''),_fromEntry:true};
-  if(found){if(found.current?.opened!==e.opened&&!found.versions.some(v=>v.opened===e.opened))found.versions.push(x)}
+  if(found){if(![found.current,...found.versions].some(v=>String(v.entryId||v.id||'')===String(x.entryId)&&v.opened===x.opened&&v.bonusRecd===x.bonusRecd&&v.closed===x.closed&&Number(v.bonus)===Number(x.bonus)&&String(v.tcSourceRaw||v.analysis?.rawText||'')===x.tcSourceRaw&&String(v.feeScheduleRaw||'')===String(x.feeScheduleRaw||'')))found.versions.push(x)}
   else rows.push({bank:e.bank,accountType:identity.type,current:x,versions:[]});
  });
  // Older replacement cycles may predate the dedicated terms archive. Their
  // saved facts and original text must remain discoverable in the same view.
- entries.forEach(owner=>(Array.isArray(owner.previousCycles)?owner.previousCycles:[]).forEach(cycle=>{
+ entries.forEach(owner=>savedAccountCycles(owner).slice(1).forEach(cycle=>{
   if(!cycle||typeof cycle!=='object')return;
   const prior={...cycle,bank:cycle.bank||owner.bank,entryId:cycle.entryId||cycle.id||owner.id,accountType:cycle.accountType||owner.accountType};
   const identity=entryBankIdentity(prior),found=rows.find(b=>entryBankIdentity(b.current||b).key===identity.key);
@@ -414,7 +429,7 @@ function closeCycleForSave(e,p){
   return next;
 }
 function renderTermsCycle(x,previous=false){
-  const originals=entries.flatMap(e=>[e,...(Array.isArray(e.previousCycles)?e.previousCycles:[])]);
+  const originals=entries.flatMap(savedAccountCycles);
   const exact=originals.find(e=>String(e.id||e.entryId||'')===String(x.entryId||x.id||'')&&e.opened&&e.opened===x.opened&&entryBankIdentity(e).key===entryBankIdentity(x).key);
   if(exact){x={...exact,...x,...Object.fromEntries(['closed','bonusRecd','couponEnrollmentDate','offerEnrollmentDate'].map(k=>[k,x[k]||exact[k]||'']))};}
  const raw=String(x.tcSourceRaw||x.analysis?.rawText||'').trim(),promo=safeExternalUrl(x.promoSourceUrl),fee=safeExternalUrl(x.feeScheduleSourceUrl),rules=Array.isArray(x.eligibilityRules)?x.eligibilityRules:[];
@@ -1789,11 +1804,11 @@ function taxReceiptRows(rows=entries){
   return (Array.isArray(rows)?rows:[]).flatMap((owner,index)=>{
     if(!owner||typeof owner!=='object')return[];
     const seen=new Set(),result=[];
-    const cycles=[owner,...(Array.isArray(owner.previousCycles)?owner.previousCycles:[])];
+    const cycles=savedAccountCycles(owner);
     cycles.forEach((cycle,cycleIndex)=>{
       if(!cycle||typeof cycle!=='object'||!taxReady(cycle))return;
       const row={...cycle,bonus:Number(cycle.bonus),bank:cycle.bank||owner.bank||'',accountType:cycle.accountType||owner.accountType||'',_taxParentId:owner.id||'',_taxPriorCycle:cycleIndex>0};
-      const key=JSON.stringify([row.id||owner.id||index,row.accountType,row.opened||'',row.bonusRecd,Number(row.bonus)]);
+      const key=JSON.stringify([row.entryId||row.id||owner.id||index,normalizeBankFamily(row.bank),entryBankType(row),row.opened||'',row.bonusRecd,Number(row.bonus)]);
       if(seen.has(key))return;
       seen.add(key);result.push(row);
     });

@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.38 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.39 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt3628_audience_session',noticeKey='bt360_notice_session';
@@ -781,7 +781,7 @@ function archive(rows){
    ?'<div class="bt3727-archive-actions"><button type="button" class="bt3727-countdown '+(count.verified?'is-verified':'is-estimated')+'" onclick="BT360.openArchived('+arg(x.e.id)+')" aria-label="'+safe('Review '+x.e.bank+' eligibility: '+count.days+' days; '+(count.verified?'verified saved rule':'unverified estimate'))+'"><strong>'+count.days+'</strong><small>'+safe(count.caption)+'</small></button>'+(offer?'<button type="button" class="bt3727-view-offers" onclick="BT360.viewOffers('+arg(x.e.bank)+')">View offers</button>':'')+'</div>'
    :'<button type="button" class="bt360-chip bt3727-no-date" onclick="BT360.openArchived('+arg(x.e.id)+')">Details</button>';
   const bucket=savedBuckets.find(b=>entryBankIdentity(b.current||b).key===entryBankIdentity(x.e).key);
-  const versions=[...(x.e.previousCycles||[]),...(bucket?[bucket.current,...(bucket.versions||[])]:[])].filter(v=>v&&!(String(v.entryId||v.id||'')===String(x.e.id)&&v.opened===x.e.opened));
+  const versions=[...savedAccountCycles(x.e).slice(1),...(bucket?[bucket.current,...(bucket.versions||[])]:[])].filter(v=>v&&!(String(v.entryId||v.id||'')===String(x.e.id)&&v.opened===x.e.opened));
   const history=versions.length?'<details class="research-help archive-history"><summary>Previous cycles and saved terms · '+versions.length+'</summary>'+versions.map(v=>renderTermsCycle(v,true)).join('')+'</details>':'';
   return '<details class="bt-archive-bank"><summary class="bt360-list-row bt3727-archive-row">'+bankLogo(x.e.bank,true)+'<span class="bt360-grow"><b>'+safe(x.e.bank)+'</b><small>'+safe(label)+'</small><small>Dates, saved terms & history ▾</small>'+(audience==='all'?kindTag(x.e):'')+'</span>'+action+'</summary><div class="bt-archive-bank-body">'+renderTermsCycle(x.e)+history+'<button type="button" class="bt360-secondary" onclick="BT360.openArchived('+arg(x.e.id)+')">View account</button></div></details>';
  };
@@ -946,7 +946,7 @@ function historicalReviewCard(){
 function settings(){
  const toggles=[['deadlines','Deadlines','3 and 1 day before'],['payouts','Payouts and close dates','When ready'],['eligible','Eligible again','7 days before and on the day']];
  const buttons=toggles.map(([k,label,description])=>'<button class="bt360-settings-row" role="switch" aria-checked="'+noticePrefs[k]+'" onclick="BT360.setNotice(\''+k+'\')"><span><b>'+label+'</b><small>'+description+'</small></span><i class="bt360-toggle '+(noticePrefs[k]?'checked':'')+'"></i></button>').join('');
- return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.38</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
+ return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.39</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
  cloudSettingsCard()+
  usageCard()+
  historicalReviewCard()+
