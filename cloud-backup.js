@@ -1,6 +1,13 @@
 /* Versioned cloud recovery. No AI calls, credential exports or automatic restores. */
 (function(){
   'use strict';
+  if(window.BTICloudBackup?.isLocalOnly?.()){
+    window.btCloudBackupChanged=()=>{};
+    window.btCloudBeforeDestructive=async()=>{};
+    window.btOpenCloudBackup=()=>window.BTICloudBackup.openSetup();
+    window.BTCloudBackup={protection:()=>({tone:'off',title:'Manual iCloud files',detail:'Save a new file to iCloud Drive after changes.'}),isBusy:()=>false};
+    return;
+  }
   const API='https://api-production-00f74.up.railway.app/api/bonus-tracker/backups',CFG='bt_cloud_recovery_v1',HALF_DAY=12*60*60*1000,NOTICE_COOLDOWN=60*60*1000;
   let busy=false,panel=null,debounce=null,phase='',paused=false,switching=false,currentVerified=false,checkedSession=false,pending=false,statusError='',retentionPolicy=null;
   const core=window.BTCloudCore;
