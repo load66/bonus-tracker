@@ -1269,7 +1269,9 @@ async function exercise(name,engine,url){
       window.__beforeHistoryRepair={entries:JSON.stringify(entries),archive:localStorage.getItem('bt_tc_archive_v1')};
       entries=[row];localStorage.setItem('bt_e_v4',JSON.stringify(entries));localStorage.setItem('bt_tc_archive_v1','{}');storageSearch='';tab='archive';R();
     },repairFixture);
-    await page.getByRole('button',{name:'Review missing history',exact:true}).click();
+    // Technical history repair is intentionally not a top-level Archive button.
+    check('global history repair entry is hidden',await page.getByRole('button',{name:'Review missing history',exact:true}).count()===0);
+    await page.evaluate(()=>window.BTHistoryRepair.open());
     check('history review begins without changing saved financial records',await page.evaluate(row=>localStorage.getItem('bt_e_v4')===JSON.stringify([row])&&localStorage.getItem('bt_tc_archive_v1')==='{}',repairFixture));
     await page.locator('.history-repair-cycle > summary').first().click();
     check('missing cycle facts remain unresolved without evidence',(await page.locator('.history-repair-cycle').innerText()).includes('No exact-cycle evidence found'));
