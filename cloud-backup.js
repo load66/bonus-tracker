@@ -138,6 +138,7 @@
       if(plan.entries.length!==fresh.entryCount)throw Error('Restore validation would drop account records. Restore stopped.');
       const result=core.restore(localStorage,fresh.snapshot,keys(),window.BTPersistence);
       entries=result.entries;dashYear=result.data.prefs.dashYear;taxYear=result.data.prefs.taxYear;
+      window.btClearLifecycleUndo?.();
       currentVerified=false;checkedSession=false;pending=true;
       try{update({enabled:true,lastAt:fresh.backup.createdAt,lastCheck:Date.now(),lastHash:fresh.backup.sha256,lastDataHash:'',lastId:ident,lastCount:fresh.entryCount,pending:true,error:''});}catch{window.btNotify?.('Records were restored, but this browser could not save cloud backup settings.',{tone:'danger'});}
       try{await upload('manual');}catch(e){R();window.btNotify('Records were restored locally. Cloud verification is pending; keep the app open and retry.',{title:'Recovery needs cloud verification',tone:'danger'});throw e;}

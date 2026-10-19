@@ -65,5 +65,9 @@ assert.equal(sandbox.localStorage.getItem('bt_tc_archive_v1'),'{corrupt','Corrup
 sandbox.localStorage.setItem('bt_tc_archive_v1',safeArchive);
 run('entries=JSON.parse(localStorage.getItem(SK));entries=[{...entries[0],opened:"2027-01-01",closed:"",bonusRecd:"",reqMet:"",tcSourceRaw:"New enrolled offer",notes:"New cycle"}];sv(SK,entries);');
 assert(run('loadTermsArchive()[termsArchiveKey(entries[0])].versions.some(v=>v.opened==="2026-01-02"&&v.notes.length===1400&&v.tcSourceRaw.includes("Original enrolled"))'),'Starting a later cycle must preserve the entire earlier cycle independently');
+run('var recovery=buildPortableBackupPayload();undoState={entriesSnapshot:[]};applyPortableRestore(recovery);cfm=null;');
+assert.equal(run('undoState'),null,'Recovery must invalidate Undo belonging to replaced records');
+const restoredBytes=sandbox.localStorage.getItem('bt_e_v4');run('undoClose()');
+assert.equal(sandbox.localStorage.getItem('bt_e_v4'),restoredBytes,'A stale Undo must never overwrite recovered financial records');
 console.log('Archive integrity passed: complete cycle preservation, atomic saves, closure failure/retry, undo revisions and honest protection status');
 process.exit(0);

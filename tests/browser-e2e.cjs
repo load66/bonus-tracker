@@ -130,6 +130,10 @@ async function exercise(name,engine,url){
     }));
     check('closure success states cloud protection separately',await page.evaluate(()=>cfm.msg.includes('Cloud recovery:')));
     await button('OK').click();
+    check('temporary Undo action reserves space outside account controls',await page.evaluate(()=>{
+      const bar=document.querySelector('.undo-bar'),scroll=document.querySelector('.scroll');
+      return !!bar&&scroll.getBoundingClientRect().bottom<=bar.getBoundingClientRect().top+1;
+    }));
   };
   try{
     await page.goto(url);await settleStartup();
@@ -465,14 +469,11 @@ async function exercise(name,engine,url){
     const safetyDownload=page.waitForEvent('download');await button('Restore Backup').click();await safetyDownload;
     await page.getByRole('heading',{name:'Restore Complete'}).waitFor();await button('Confirm').click();
     check('restore recovers open state and saved details',!(await record()).closed&&(await record()).id===id&&(await record()).notes===backup.entries[0].notes);
+    check('restore invalidates Undo from the replaced records',await page.evaluate(()=>undoState===null)&&await page.locator('.undo-bar').count()===0);
     // Exercise the real archive menu without changing financial records.
     await page.evaluate(()=>{entries.push({id:'archive-e2e',bank:'Archived E2E Bank',closed:'2026-10-01',bonusRecd:'2026-09-01',bonus:100,churnable:false,churnability:'not-repeatable',notes:'Preserved archive note',history:[],customTimers:[],checklist:[]});R()});
     check('closed nonrepeatable account hidden from tracker',await page.locator('[data-bt-entry-id="archive-e2e"]').count()===0);
     await button('Archive').click();
-    check('temporary Undo action reserves space outside Archive controls',await page.evaluate(()=>{
-      const bar=document.querySelector('.undo-bar'),scroll=document.querySelector('.scroll');
-      return !!bar&&scroll.getBoundingClientRect().bottom<=bar.getBoundingClientRect().top+1;
-    }));
     await page.locator('details.bt360-archived-tools > summary').click();
     check('archive menu reveals retained account',await page.locator('[data-bt-entry-id="archive-e2e"]').count()===1&&await page.locator('[data-bt-entry-id="'+id+'"]').count()===0);
     await page.locator('#archive-search').fill('Archived E2E');

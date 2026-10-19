@@ -3533,6 +3533,8 @@ let dpEditor=null;
 let ddPrompt=null,rcvPrompt=null,reqPrompt=null,showTemplates=false;
 let feedItems=null,feedLoading=false;
 let undoState=null,undoTimer=null;
+function clearLifecycleUndo(){undoState=null;if(undoTimer)clearTimeout(undoTimer);undoTimer=null;}
+window.btClearLifecycleUndo=clearLifecycleUndo;
 let closePrompt=null;
 let overwritePrompt=null;
 let matchPickerPrompt=null;
@@ -6069,6 +6071,7 @@ function applyPortableRestore(d){
     console.error('Bank Bonus Tracker restore failed and was rolled back',err);
     throw err;
   }
+  clearLifecycleUndo();
   cfm={
     title:'Restore Complete',msg:`${entries.length} entries restored.\n${countBackupUserDatapoints(plan.source)} datapoints restored.\n${countBackupProfileEvents(plan.source)} profile events restored.\n${backupIntegritySummary({entries,backupIntegrity:backupIntegrityReport({entries})})}\n\nAll restore writes were verified before the tracker switched to this backup.`,green:true,action:()=>{
       cfm=null;
