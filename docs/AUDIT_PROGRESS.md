@@ -6,6 +6,8 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.6.46 simple Archive (`codex/v3.6.46-archive-simple-secure`): hide per-cycle cloud recovery controls and verbose historical warnings, show recorded bonus and key dates with optional collapsed details; retain all underlying backup verification, restore flows and original evidence unchanged. Frontend PR #226; CI run 39266183079 passed bonus, UI and cloud unit suites, Chromium, WebKit and release verifier. Next: merge verified release and confirm GitHub Pages deploy.
+
 - v3.6.45 quiet history diagnostics (`codex/v3.6.45-quiet-history-settings`): remove verbose historical integrity findings and global history repair panel from everyday Settings/Archive navigation; preserve non-destructive integrity analysis and opt-in per-account history repair. No financial data writes or migrations. PR #225, v3.6.45. Unit tests pass; browser harness now exercises hidden repair programmatically, preserving full assertions. Next: final-head Chromium/WebKit checks, merge passing PR and verify GitHub Pages production.
 
 - v3.6.44 cloud recovery coverage (`codex/v3.6.44-recovery-coverage`): user-authorized takeover after merged v3.6.43. Cover entry-scoped source records in cloud/file recovery; verify writes, backup-change events and one-hour refresh-persistent success banner cooldown. No private data changes or credential backup. Backend PR #242 merged and Railway production SUCCESS at d8bbd8b. Frontend PR #224 initial full CI run 39243372179 passed bonus/cloud/UI, Chromium/WebKit and release verification. Next: complete final-head CI, merge and verify Pages deployment.

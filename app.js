@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.45';
+const APP_VERSION='3.6.46';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -439,11 +439,17 @@ function renderTermsCycle(x,previous=false){
  const raw=String(x.tcSourceRaw||x.analysis?.rawText||'').trim(),promo=safeExternalUrl(x.promoSourceUrl),fee=safeExternalUrl(x.feeScheduleSourceUrl),rules=Array.isArray(x.eligibilityRules)?x.eligibilityRules:[];
  const copy=x.financialRules&&typeof x.financialRules==='object'?x.financialRules:null;
  const feeRaw=String(x.feeScheduleRaw||'').trim();
- let h='<div class="archive-cycle"><div class="research-report-top"><span class="research-kind">'+(previous?'Previous saved version':'Saved offer')+'</span><b>'+(x.bonus?esc(fM(x.bonus)):'Bonus not saved')+'</b></div><dl class="research-dates"><div><dt>Account opened</dt><dd>'+esc(x.opened?fD(x.opened):'Not saved')+'</dd></div><div><dt>Terms saved / reviewed</dt><dd>'+esc((x.termsVerifiedAt||x.capturedAt)?fD(String(x.termsVerifiedAt||x.capturedAt).slice(0,10)):'Not recorded')+'</dd></div>'
-  +'<div><dt>Evidence status</dt><dd>'+esc(x.evidenceStatus==='eligibility-evidence-validated'?'Saved eligibility evidence validated':'Enrolled source requires review')+'</dd></div></dl>';
- h+='<dl class="research-dates">'+[['closed','Closed'],['bonusRecd','Bonus received'],['reqMet','Requirements completed · if recorded'],['couponEnrollmentDate','Coupon enrollment · optional']].map(([key,label])=>{const value=key==='couponEnrollmentDate'?(x.couponEnrollmentDate||x.offerEnrollmentDate):x[key];return '<div><dt>'+label+'</dt><dd>'+esc(value?fD(value):'Not recorded')+'</dd></div>'}).join('')+'</dl>';
- h+=renderArchiveHistoryReview(x,{compact:true})+archiveCloudStatusMarkup();
- if(!raw)h+='<p class="research-caveat">Original promotion text is missing for this historical cycle. Saved facts remain available but must not be treated as verified.</p>';
+ let h='<div class="archive-cycle"><div class="research-report-top"><span class="research-kind">'+(previous?'Previous saved offer':'Saved offer')+'</span><b>'+(x.bonus?esc(fM(x.bonus)):'Bonus not saved')+'</b></div>';
+ // Show only the two most relevant dates; missing evidence never becomes verified.
+ h+='<dl class="research-dates bt-archive-key-dates">'+[['closed','Closed'],['bonusRecd','Bonus received']].map(([key,label])=>'<div><dt>'+label+'</dt><dd>'+esc(x[key]?fD(x[key]):'Not recorded')+'</dd></div>').join('')+'</dl>';
+ // Advanced evidence remains available on demand, without technical diagnostics or backup controls in each card.
+ h+='<details class="research-help bt-archive-more"><summary>More details</summary><dl class="research-dates">';
+ h+='<div><dt>Account opened</dt><dd>'+esc(x.opened?fD(x.opened):'Not recorded')+'</dd></div>';
+ if(x.reqMet)h+='<div><dt>Requirements completed</dt><dd>'+esc(fD(x.reqMet))+'</dd></div>';
+ if(x.couponEnrollmentDate||x.offerEnrollmentDate)h+='<div><dt>Enrollment date</dt><dd>'+esc(fD(x.couponEnrollmentDate||x.offerEnrollmentDate))+'</dd></div>';
+ h+='<div><dt>Promotion terms</dt><dd>'+esc(raw?'Saved':'Not saved')+'</dd></div>';
+ if(x.termsVerifiedAt||x.capturedAt)h+='<div><dt>Terms reviewed</dt><dd>'+esc(fD(String(x.termsVerifiedAt||x.capturedAt).slice(0,10)))+'</dd></div>';
+ h+='</dl>';
  const facts=[['Bonus requirements',x.completeBonusText],['Monthly fee',x.monthlyFeeAmountText||x.monthlyFeeYNText],['How to avoid the fee',x.monthlyFeeWaiverText||x.avoidMonthlyFeeText],['Early-close fee wording',x.earlyTerminationFeeText],['Closing / bonus retention',x.closeRuleText],['Payout timing',x.payoutTimingText],['Offer deadline',x.expirationDateText]];
  if(facts.some(([,v])=>v)||rules.length){
   h+='<details class="research-help"><summary>Saved requirements & fees</summary><dl class="archive-facts">';
@@ -456,7 +462,7 @@ function renderTermsCycle(x,previous=false){
  if(promo||fee){h+='<div class="archive-links">';if(promo)h+='<a class="research-source" href="'+esc(promo)+'" target="_blank" rel="noopener noreferrer">Promotion source ↗</a>';if(fee)h+='<a class="research-source" href="'+esc(fee)+'" target="_blank" rel="noopener noreferrer">Fee schedule ↗</a>';h+='</div><p class="research-caveat">Live pages may change. Only the saved text describes this recorded cycle.</p>'}
  if(raw)h+='<details class="research-help archive-original"><summary>Read original saved promotion</summary><div class="archive-raw">'+esc(raw)+'</div></details>';
  if(!raw&&x.analyzedTC)h+='<details class="research-help"><summary>Saved analyzer summary · original terms missing</summary><div class="archive-raw">'+esc(x.analyzedTC)+'</div></details>';
- return h+'</div>';
+ return h+'</details></div>';
 }
 function rTermsStorage(options={}){
  const q=String(storageSearch||'').trim().toLowerCase();

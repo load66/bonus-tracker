@@ -947,6 +947,8 @@ async function exercise(name,engine,url){
     check('terms bank starts collapsed',!(await termsBank.evaluate(e=>e.open)));
     await termsBank.locator(':scope > summary').click();
     const currentTerms=termsBank.locator(':scope > .archive-bank-body > .archive-cycle').first();
+    check('archive starts with optional evidence hidden',!(await currentTerms.locator('.bt-archive-more').first().evaluate(e=>e.open)));
+    await currentTerms.locator('.bt-archive-more > summary').first().click();
     await currentTerms.getByText('Read original saved promotion',{exact:true}).click();
     check('archive reveals original evidence for the current saved cycle',(await currentTerms.innerText()).includes('E2E Verification Bank checking promotional terms'));
     for(const width of [320,375,390,430]){
@@ -1252,13 +1254,16 @@ async function exercise(name,engine,url){
     check('Tax renders a deeply nested paid cycle',await page.locator('.bt360-tax-record').count()===1&&(await page.locator('.bt360-tax-record > summary').innerText()).includes('Prior cycle'));
     await page.locator('.bt360-tax-record > summary').click();
     await page.locator('.bt360-tax-record').getByText('Saved terms for this cycle',{exact:true}).click();
+    await page.locator('.bt360-tax-record').locator('.bt-archive-more > summary').first().click();
     await page.locator('.bt360-tax-record').getByText('Read original saved promotion',{exact:true}).click();
     check('deep receipt opens its exact enrolled promotion',(await page.locator('.bt360-tax-record').innerText()).includes('Exact oldest browser cycle promotion.'));
     await button('Archive').click();
     const deepArchive=page.locator('.bt-archive-bank').filter({hasText:'Synthetic Deep Browser Bank'}).first();
     await deepArchive.locator(':scope > summary').click();
     await deepArchive.locator('.archive-history > summary').click();
-    await deepArchive.getByText('Read original saved promotion',{exact:true}).first().click();
+    const deepSource=deepArchive.getByText('Read original saved promotion',{exact:true}).first();
+    await deepSource.locator('xpath=ancestor::details[contains(@class,"bt-archive-more")][1]').locator(':scope > summary').click();
+    await deepSource.click();
     check('unified Archive exposes deeply nested original terms',(await deepArchive.innerText()).includes('Exact oldest browser cycle promotion.'));
     check('recursive history views do not rewrite stored records',await page.evaluate(()=>localStorage.getItem('bt_e_v4')===JSON.stringify(entries)&&localStorage.getItem('bt_tc_archive_v1')==='{}'&&entries[0].previousCycles[0].previousCycles[0].opened==='2025-12-01'));
     await page.evaluate(()=>{entries=JSON.parse(window.__beforeDeepHistory.entries);localStorage.setItem('bt_e_v4',window.__beforeDeepHistory.entries);const raw=window.__beforeDeepHistory.archive;if(raw===null)localStorage.removeItem('bt_tc_archive_v1');else localStorage.setItem('bt_tc_archive_v1',raw);BT360.setAudience(window.__beforeDeepHistory.audience);delete window.__beforeDeepHistory;});
