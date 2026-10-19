@@ -61,6 +61,7 @@ try{
  run('dpEditor.confirmedByUser=true;saveDPEditor()');personal=s.loadUserDatapoints();assert.equal(personal[0].confirmedByUser,true);assert.equal(personal[0].accountType,'business');assert.equal(personal[0].cycleOpened,'2026-01-01');
  s.addDD('Synthetic Trust Bank','Employer payroll',100,'2026-02-02',{entryId:'TRUST',accountType:'business'});
  assert.equal(s.loadUserDatapoints().length,1,'Repeated payout duplicated cycle evidence');assert.equal(s.loadUserDatapoints()[0].eventDate,'2026-02-01');
+ run("entries[0].dataPoint='';reviewCycleExperience('TRUST','bonus')");assert.equal(run('dpEditor.method'),'Employer payroll');assert.equal(run('dpEditor.confirmedByUser'),false);assert.equal(run('dpEditor.eventDate'),'');s.closeDPEditor();
  s.openUserDPEditor(personal[0].id);run("dpEditor.outcome='mixed';dpEditor.note='Several methods used';saveDPEditor()");
  personal=s.loadUserDatapoints();assert.equal(personal[0].outcome,'mixed');assert.equal(personal[0].revisions.at(-1).outcome,'worked');
  s.openUserDPEditor(personal[0].id);const newer=s.loadUserDatapoints();newer[0].note='Another tab correction';s.saveUserDatapoints(newer);run("dpEditor.note='stale correction';saveDPEditor()");assert.equal(s.loadUserDatapoints()[0].note,'Another tab correction');s.closeDPEditor();

@@ -2577,7 +2577,7 @@ function rDpEditor(){
  const d=dpEditor;if(!d)return'';
  const personal=d.type==='user';
  const field=(key,label,placeholder='',type='text')=>'<div class="fg"><label>'+label+'<input type="'+type+'" value="'+esc(d[key]||'')+'" oninput="dpEditor.'+key+'=this.value" placeholder="'+esc(placeholder)+'"></label></div>';
- const select=(key,label,options)=>'<div class="fg"><label>'+label+'<select onchange="dpEditor.'+key+'=this.value">'+options.map(([v,t])=>'<option value="'+v+'"'+((d[key]||'')===v?' selected':'')+'>'+t+'</option>').join('')+'</select></label></div>';
+ const select=(key,label,options)=>'<div class="fg"><label>'+label+'<select aria-label="'+esc(label)+'" onchange="dpEditor.'+key+'=this.value">'+options.map(([v,t])=>'<option value="'+v+'"'+((d[key]||'')===v?' selected':'')+'>'+t+'</option>').join('')+'</select></label></div>';
  let h='<div class="ov" onclick="closeDPEditor()"><section class="modal research-editor" role="dialog" aria-modal="true" aria-labelledby="dp-editor-title" onclick="event.stopPropagation()"><header class="research-editor-header"><h2 id="dp-editor-title">'+(personal?'My experience':'Source report')+'</h2><p>'+(personal?(d.evidenceStage==='requirement'?'Did the bank count this deposit?':'Which method qualified? Choose Cannot isolate if several were used.'):'Save what happened. Leave unknown details blank.')+'</p></header><div class="research-editor-body">';
  h+=field('bank','Bank','e.g. Chase')+field('method','Transfer or activity','e.g. Employer payroll to checking');
  if(personal){h+=select('outcome','Observed result',[['unknown','Not recorded'],['pending','Still waiting'],['worked','Counted'],['failed',"Didn’t count"],['mixed','Cannot isolate one method']])+select('accountType','Account type',[['','Not specified'],['personal','Personal'],['business','Business']])+field('product','Account / offer')+field('depositAmount','Deposit amount (optional)','','number')+'<label class="research-caveat"><input type="checkbox" '+(d.confirmedByUser?'checked':'')+' onchange="dpEditor.confirmedByUser=this.checked"> I confirm this result from my own experience</label>';h+='<div class="fg"><label>What happened?<textarea rows="4" oninput="dpEditor.note=this.value" placeholder="Deposit amount, result, and any useful details">'+esc(d.note||'')+'</textarea></label></div>'+field('eventDate','Actual experience date','','date')}
@@ -3800,10 +3800,12 @@ function hasDirectDepositRequirement(e){
 function reviewCycleExperience(entryId,stage){
  const e=entries.find(x=>x.id===entryId);if(!e)return;
  const identity=entryBankIdentity(e);
- const existing=loadUserDatapoints().find(x=>x.entryId===entryId&&x.cycleOpened===(e.opened||'')&&x.method===(e.dataPoint||'')&&!x.confirmedByUser);
+ const cycleReports=loadUserDatapoints().filter(x=>x.entryId===entryId&&x.cycleOpened===(e.opened||'')&&datapointBankKey(x)===datapointBankKey(e));
+ const existing=cycleReports.find(x=>(!e.dataPoint||x.method===e.dataPoint)&&!x.confirmedByUser);
+ const prior=cycleReports.filter(x=>x.confirmedByUser).sort((a,b)=>dpEvidenceDate(b).localeCompare(dpEvidenceDate(a)))[0];
  dpEditor={...(existing||{}),type:'user',mode:existing?'edit':'new',id:existing?.id||'',
  bank:e.bank,accountType:identity.type==='B'?'business':'personal',entryId:e.id,cycleOpened:e.opened||'',
- product:existing?.product||e.bonusTitle||'',bonusAmount:e.bonus||0,bonusReceivedDate:e.bonusRecd||'',requirementConfirmedDate:e.reqMet||'',method:existing?.method||e.dataPoint||'',
+ product:existing?.product||e.bonusTitle||'',bonusAmount:e.bonus||0,bonusReceivedDate:e.bonusRecd||'',requirementConfirmedDate:e.reqMet||'',method:existing?.method||e.dataPoint||prior?.method||'',
  note:existing?.note||'',eventDate:existing?.eventDate||'',outcome:existing?.outcome||'unknown',
  confirmedByUser:false,evidenceStage:stage,originalFingerprint:existing?JSON.stringify(existing):''};R();
 }
