@@ -48,6 +48,8 @@ assert.equal(snapshots.length,3,'Each distinct historical revision must be prese
 assert(snapshots.some(x=>x.tcSourceRaw===source.tcSourceRaw));
 assert(snapshots.some(x=>x.tcSourceRaw===newer.tcSourceRaw));
 assert.equal(core.collect([source,source],{}).length,1,'Identical version deduplicates');
+const nested=core.collect([{...newer,previousCycles:[{...source,bank:undefined,accountType:undefined,id:undefined}]}],{}).map(JSON.parse);
+assert(nested.some(x=>x.opened===source.opened&&x.tcSourceRaw===source.tcSourceRaw&&x.entryId===source.id),'Legacy prior-cycle terms must upload even without a separate archive bucket');
 assert.equal(core.snapshot({bank:'Unknown Bank',id:'x'}),null,'No saved evidence must not invent a T&C history');
 assert.equal(core.snapshot({id:'x'}),null,'Missing bank identity is not archivable');
 
@@ -77,6 +79,27 @@ assert(index.indexOf('cloud-backup.js')<index.indexOf('cloud-terms-history.js'))
  await ctx.window.BTBonusAuth.signIn('synthetic@example.test','synthetic-value');
  assert.equal(queued,1,'Sign-in must queue immutable cloud T&C upload');
  assert.equal(ctx.window.BTBonusAuth.connected(),true);
+ // A save during an in-flight upload must be revisited without a reload.
+ const timers=new Map(),packets=[];let timerId=0,release,fail=false;
+ const gate=new Promise(resolve=>{release=resolve});
+ const cloud={entries:[source],navigator:{onLine:true},AbortController,
+  document:{addEventListener(){}},addEventListener(){},
+  setTimeout(fn,delay){const id=++timerId;timers.set(id,{fn,delay});return id},clearTimeout(id){timers.delete(id)},
+  BTTermsCore:core,BTCloudCore:{digest:async raw=>require('node:crypto').createHash('sha256').update(raw).digest('hex')},
+  BTBonusAuth:{connected:()=>true,token:async()=> 'synthetic-owner-token'},loadTermsArchive:()=>({}),
+  fetch:async(url,options)=>{const packet=JSON.parse(options.body);packets.push(packet);if(packets.length===1)await gate;if(fail)throw Error('Synthetic upload failure');return{ok:true,status:200,json:async()=>({verified:true,sha256:packet.sha256,id:packet.sha256})}}
+ };
+ cloud.window=cloud;vm.createContext(cloud);vm.runInContext(fs.readFileSync('cloud-terms-history.js','utf8'),cloud);
+ const initial=cloud.BTTermsHistory.sync();await new Promise(setImmediate);
+ cloud.entries.push(newer);cloud.BTTermsHistory.queueSync();release();await initial;
+ const rerun=[...timers.values()].find(x=>x.delay===2000);assert(rerun,'An in-flight edit must queue another pass');
+ rerun.fn();await new Promise(setImmediate);
+ assert(packets.some(x=>JSON.parse(x.snapshot).opened===newer.opened),'New terms must be verified after an in-flight edit');
+ cloud.entries.push({...source,opened:'2029-01-01'});fail=true;
+ const failed=await cloud.BTTermsHistory.sync();assert.equal(failed.failed,1);
+ assert.equal(cloud.BTTermsHistory.status.pending,1,'Unverified versions remain pending');
+ assert([...timers.values()].some(x=>x.delay===30000),'A failed upload must schedule a bounded-delay retry');
+ fail=false;await cloud.BTTermsHistory.sync();assert.equal(cloud.BTTermsHistory.status.pending,0);
  console.log('Historical T&C cloud and sign-in tests passed');
 })().catch(err=>{console.error(err);process.exitCode=1});
 

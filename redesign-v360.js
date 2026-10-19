@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.35 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.36 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt3628_audience_session',noticeKey='bt360_notice_session';

@@ -114,7 +114,26 @@ async function exercise(name,engine,url){
     else{await page.getByRole('button',{name:'More account actions'}).click();await page.getByRole('button',{name:/Record closure/}).click();}
     await page.locator('#cp_date').fill('2026-05-01');
     await page.locator('#cp_monthly_checked').selectOption('yes');
-    await button('Next').click();await button('Next').click();await button('Review').click();await button('Save Closed').click();await button('OK').click();
+    await button('Next').click();await button('Next').click();await button('Review').click();
+    check('closure review exposes cycle history completeness',await page.locator('.close-modal .archive-history-review').isVisible());
+    check('closure review separates cloud verification from local save',(await page.locator('.close-modal').innerText()).includes('Cloud protection is confirmed separately'));
+    for(const width of [320,390,430]){
+      await page.setViewportSize({width,height:844});
+      check('closure history review fits '+width+'px',await page.locator('.close-modal').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+      if(width===390)await page.screenshot({path:path.join(output,name+'-closure-history-review-390.png')});
+    }
+    await page.setViewportSize({width:390,height:844});
+    await button('Save Closed').click();
+    check('closure transaction preserves exact cycle and enrolled sources',await page.evaluate(()=>{
+      const e=entries[0],saved=loadTermsArchive()[termsArchiveKey(e)].current;
+      return saved.entryId===e.id&&['opened','closed','bonusRecd','reqMet','tcSourceRaw','feeScheduleRaw'].every(k=>String(saved[k]||'')===String(e[k]||''));
+    }));
+    check('closure success states cloud protection separately',await page.evaluate(()=>cfm.msg.includes('Cloud recovery:')));
+    await button('OK').click();
+    check('temporary Undo action reserves space outside account controls',await page.evaluate(()=>{
+      const bar=document.querySelector('.undo-bar'),scroll=document.querySelector('.scroll');
+      return !!bar&&scroll.getBoundingClientRect().bottom<=bar.getBoundingClientRect().top+1;
+    }));
   };
   try{
     await page.goto(url);await settleStartup();
@@ -450,10 +469,12 @@ async function exercise(name,engine,url){
     const safetyDownload=page.waitForEvent('download');await button('Restore Backup').click();await safetyDownload;
     await page.getByRole('heading',{name:'Restore Complete'}).waitFor();await button('Confirm').click();
     check('restore recovers open state and saved details',!(await record()).closed&&(await record()).id===id&&(await record()).notes===backup.entries[0].notes);
+    check('restore invalidates Undo from the replaced records',await page.evaluate(()=>undoState===null)&&await page.locator('.undo-bar').count()===0);
     // Exercise the real archive menu without changing financial records.
     await page.evaluate(()=>{entries.push({id:'archive-e2e',bank:'Archived E2E Bank',closed:'2026-10-01',bonusRecd:'2026-09-01',bonus:100,churnable:false,churnability:'not-repeatable',notes:'Preserved archive note',history:[],customTimers:[],checklist:[]});R()});
     check('closed nonrepeatable account hidden from tracker',await page.locator('[data-bt-entry-id="archive-e2e"]').count()===0);
-    await button('Archive').click();await page.locator('details.bt360-archived-tools > summary').click();
+    await button('Archive').click();
+    await page.locator('details.bt360-archived-tools > summary').click();
     check('archive menu reveals retained account',await page.locator('[data-bt-entry-id="archive-e2e"]').count()===1&&await page.locator('[data-bt-entry-id="'+id+'"]').count()===0);
     await page.locator('#archive-search').fill('Archived E2E');
     check('archive search remains focused after rerender',await page.locator('#archive-search').evaluate(el=>el===document.activeElement));
@@ -894,12 +915,13 @@ async function exercise(name,engine,url){
     const termsBank=page.locator('.archive-bank').first();
     check('terms bank starts collapsed',!(await termsBank.evaluate(e=>e.open)));
     await termsBank.locator(':scope > summary').click();
-    await termsBank.getByText('Read original saved promotion',{exact:true}).click();
-    check('archive reveals original evidence',(await termsBank.innerText()).includes('E2E Verification Bank checking promotional terms'));
+    const currentTerms=termsBank.locator(':scope > .archive-bank-body > .archive-cycle').first();
+    await currentTerms.getByText('Read original saved promotion',{exact:true}).click();
+    check('archive reveals original evidence for the current saved cycle',(await currentTerms.innerText()).includes('E2E Verification Bank checking promotional terms'));
     for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
       check('archive mobile width '+width,await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&[...document.querySelectorAll('.archive-raw')].every(e=>e.scrollWidth<=e.clientWidth+1)));
-      if(width===390){await termsBank.locator('.archive-raw').last().scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,name+'-terms-archive-mobile.png')})}
+      if(width===390){await currentTerms.locator('.archive-raw').last().scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,name+'-terms-archive-mobile.png')})}
     }
 
     await button('Tracker').click();

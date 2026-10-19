@@ -12,6 +12,10 @@
   function protection(){const cfg=read();return core.protectionState({...cfg,error:statusError||cfg.error},{connected:window.BTBonusAuth.connected(),busy,currentVerified,pending:pending||cfg.pending,online:navigator.onLine!==false});}
   function paint(){
     const cfg=read(),state=protection(),date=cfg.lastAt?new Date(cfg.lastAt).toLocaleString():'No verified cloud backup yet';
+    (document.querySelectorAll?.('[data-cycle-cloud]')||[]).forEach(el=>{
+      el.textContent='Cloud recovery · '+state.title+((state.tone==='protected'||state.tone==='success')&&cfg.lastAt?' · '+date:'');
+      el.title=state.detail;el.dataset.state=state.tone;
+    });
     const button=document.getElementById('bt-cloud-open');
     if(button){const short=state.tone==='protected'||state.tone==='success'?'Protected':state.tone==='off'?'Backup off':state.tone==='danger'?'Backup alert':'Syncing';button.dataset.state=state.tone;button.innerHTML='<span class="bt360-cloud-icon" aria-hidden="true">'+(state.tone==='protected'||state.tone==='success'?'✓':'!')+'</span><span class="cloud-dashboard-summary"></span>';button.querySelector('.cloud-dashboard-summary').textContent=short;button.setAttribute('aria-label','Cloud backup. Automatic backup '+(cfg.enabled?'on':'off')+'. '+state.title+'. Last verified cloud backup: '+date);}
     if(!panel)return;
@@ -134,6 +138,7 @@
       if(plan.entries.length!==fresh.entryCount)throw Error('Restore validation would drop account records. Restore stopped.');
       const result=core.restore(localStorage,fresh.snapshot,keys(),window.BTPersistence);
       entries=result.entries;dashYear=result.data.prefs.dashYear;taxYear=result.data.prefs.taxYear;
+      window.btClearLifecycleUndo?.();
       currentVerified=false;checkedSession=false;pending=true;
       try{update({enabled:true,lastAt:fresh.backup.createdAt,lastCheck:Date.now(),lastHash:fresh.backup.sha256,lastDataHash:'',lastId:ident,lastCount:fresh.entryCount,pending:true,error:''});}catch{window.btNotify?.('Records were restored, but this browser could not save cloud backup settings.',{tone:'danger'});}
       try{await upload('manual');}catch(e){R();window.btNotify('Records were restored locally. Cloud verification is pending; keep the app open and retry.',{title:'Recovery needs cloud verification',tone:'danger'});throw e;}

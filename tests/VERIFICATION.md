@@ -1,3 +1,7 @@
+# v3.6.36 cycle preservation
+
+Synthetic regression reproduces missing closure dates in dedicated Archive snapshots before the fix. Coverage includes full lifecycle/source/notes retention, unknown opening dates, atomic account/Archive storage failure and exact rollback, closure retry and undo revisions, explicit enrollment-at-opening without overwriting confirmed dates, corrupt-history preservation, exact backup/restore, rollover retention and analyzer-summary provenance. Cloud tests verify live Archive status, in-flight terms edits and retry after upload failure. Chromium/WebKit check the actual closure review at 320/390/430px, saved cycle equality and separate cloud status; full existing assertions remain enabled. No real provider or owner financial-record mutations.
+
 # BonusTracker v3.4.34 verification
 
 Verified on October 11, 2026 with synthetic data. Browser results are recorded in the GitHub Actions `browser-verification` artifact. The test server uses the exact checked-out release; each browser starts with a fresh, isolated storage context.

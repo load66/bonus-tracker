@@ -27,7 +27,7 @@ function snapshot(entry){
   let value=entry[key];
   if(key==='entryId')value=id;
   if(key==='accountType')value=/^(?:b|business)$/i.test(String(entry.accountType||''))?'business':'personal';
-  if(key==='tcSourceRaw')value=entry.tcSourceRaw||entry.analysis?.rawText||entry.analyzedTC||'';
+  if(key==='tcSourceRaw')value=entry.tcSourceRaw||entry.analysis?.rawText||'';
   if(key==='source'&&!value)value='saved-account';
   if(key==='financialRules'&&(!value||typeof value!=='object'||Array.isArray(value)))continue;
   if(key==='eligibilityRules'&&!Array.isArray(value))continue;
@@ -53,7 +53,13 @@ function snapshot(entry){
 }
 function collect(entries,archive){
  const sources=[];
- if(Array.isArray(entries))sources.push(...entries);
+ function add(entry,parent){
+  if(!entry||typeof entry!=='object')return;
+  const source=parent?{...entry,bank:entry.bank||parent.bank,accountType:entry.accountType||parent.accountType,entryId:entry.entryId||entry.id||parent.id||parent.entryId}:entry;
+  sources.push(source);
+  if(Array.isArray(entry.previousCycles))entry.previousCycles.forEach(cycle=>add(cycle,source));
+ }
+ if(Array.isArray(entries))entries.forEach(entry=>add(entry));
  if(archive&&typeof archive==='object'&&!Array.isArray(archive)){
   for(const row of Object.values(archive)){
    if(!row||typeof row!=='object')continue;

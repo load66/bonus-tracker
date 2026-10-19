@@ -97,6 +97,7 @@
     if(type==='number')v=parseInt(value,10)||0;
     if(type==='bool')v=String(value)==='true'||value===true||value==='yes';
     markManual(key,v);
+    if(key==='couponEnrollmentDate')markManual('offerEnrollmentDate',v);
     if(key==='fundingAmountText')modal.fundingAmount=typeof parseCloseFeeAmount==='function'?parseCloseFeeAmount(v):(parseInt(String(v).replace(/[$,]/g,''),10)||0);
     if(key==='requiredDaysText')modal.reqDays=typeof parseRequirementDaysText==='function'?parseRequirementDaysText(v):(parseInt(v,10)||0);
     if(key==='closeFeeCountdownDays')modal.minHoldDays=parseInt(v,10)||0;
@@ -125,10 +126,12 @@
     h+=input('Bonus amount $','bonus',e.bonus,{type:'number',placeholder:'400'});
     h+=select('Churn rule','churn',e.churn||'',[['','Not saved'],['180','180 days'],['1','1 year'],['2','2 years'],['3','3 years']]);
     h+=dateInput('Opened','opened',e.opened);
+    h+=dateInput('Coupon / offer enrollment · optional','couponEnrollmentDate',e.couponEnrollmentDate||e.offerEnrollmentDate);
     h+=dateInput('Requirement met','reqMet',e.reqMet);
     h+=dateInput('Bonus received','bonusRecd',e.bonusRecd);
     if(e._edit&&!e._startingNewCycle)h+=dateInput('Closed','closed',e.closed);
     h+='</div>';
+    if(e.opened&&!e.couponEnrollmentDate&&!e.offerEnrollmentDate)h+='<button type="button" class="btn-s" onclick="btModalSet(\'couponEnrollmentDate\',modal.opened);btModalSet(\'offerEnrollmentDate\',modal.opened);R()">Enrollment happened at opening</button>';
     h+=`<button type="button" class="tc-btn guided-analyze" onclick="showInlineAZ=!showInlineAZ;R()">🧠 ${showInlineAZ?'Hide terms review':'Review terms'}</button>`;
     if(showInlineAZ)h+=`<div class="az-area"><textarea id="inline_tc" placeholder="Paste the complete promotion terms here..."></textarea><button class="az-go" type="button" onclick="event.preventDefault();runInlineAnalyze()">Analyze terms</button></div>`;
     return h;
@@ -190,6 +193,7 @@
     rows.forEach(r=>h+=`<div><span>${html(r[0])}</span><b>${html(r[1])}</b></div>`);h+='</div>';
     if(issues.length)h+=`<div class="guided-issues">${issues.map(x=>`<div class="${x.level}"><i>${x.level==='error'?'!':'•'}</i><span>${html(x.text)}</span></div>`).join('')}</div>`;
     h+=`<details class="guided-details"><summary>Source details</summary><div class="guided-source-grid"><div><b>Close rule</b><span>${html(profile?.close?.source?.kind||'manual review')}</span></div><div><b>Analyzer</b><span>${e.analysis?'Reviewed T&C saved':'No current analysis saved'}</span></div><div><b>Manual edits</b><span>${Object.values(e.fieldSources||{}).filter(x=>sourceKind(x)==='manual').length} field(s)</span></div></div></details>`;
+    if(typeof renderArchiveHistoryReview==='function')h+=renderArchiveHistoryReview(e);
     return h;
   }
 
