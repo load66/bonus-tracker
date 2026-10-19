@@ -59,8 +59,8 @@ module.exports={sandbox,document,app,storage,errors};
 if(require.main===module)setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.6.42',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.6.42',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.6.43',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.6.43',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     const trackerRender=sandbox.BT360;
     assert(trackerRender.audience==='all','Fresh installations and migrated personal/business sessions must show all accounts by default');
     assert(trackerRender.segments().includes('All accounts')&&trackerRender.segments().includes('Personal')&&trackerRender.segments().includes('Business'),'Combined view and optional filters must be available');
@@ -114,8 +114,8 @@ if(require.main===module)setTimeout(()=>{
     const appSource=fs.readFileSync('app.js','utf8');
     const timerClickMatches=appSource.match(/onclick="event\.stopPropagation\(\);toggleTimer\(/g)||[];
     assert(timerClickMatches.length>=2,'Mini timer checkboxes can still bubble to the card header and collapse the expanded entry');
-    assert(appSource.includes("function toggleTimer(id,timerId)")&&appSource.includes("sv(SK,entries);expanded=id;R()}"),'Timer toggle does not explicitly preserve the expanded bank');
-    assert(appSource.includes("function toggleCk(id,i)")&&appSource.includes("sv(SK,entries);expanded=id;R()}"),'Checklist toggle does not explicitly preserve the expanded bank');
+    assert(appSource.includes("function toggleTimer(id,timerId)")&&appSource.includes("sv(SK,entries);expanded=id;R();if(completedDD)reviewCycleExperience(id,'requirement')}"),'Timer toggle does not explicitly preserve the expanded bank');
+    assert(appSource.includes("function toggleCk(id,i)")&&appSource.includes("sv(SK,entries);expanded=id;R();if(completedDD)reviewCycleExperience(id,'requirement')}"),'Checklist toggle does not explicitly preserve the expanded bank');
     const sectionStateRegression=vm.runInContext(`(function(){
       const oldEntries=entries, oldExpanded=expanded, oldSearch=search, oldTab=tab;
       const id='SS01';

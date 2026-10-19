@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.42';
+const APP_VERSION='3.6.43';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -90,8 +90,13 @@ function normalizeUserDatapoint(row){
   const createdAt=x.createdAt||x.date||td();
   const updatedAt=x.updatedAt||createdAt;
   const lastConfirmedAt=x.lastConfirmedAt||x.date||createdAt;
+  const confirmedByUser=x.confirmedByUser===true&&['worked','failed','mixed'].includes(x.outcome)&&!!dpValidDate(x.eventDate)&&x.eventDate<=td();
   return{
-    id:String(x.id||dpId()),bank,method,note,createdAt,updatedAt,lastConfirmedAt,entryId:String(x.entryId||''),source:'user-confirmed'
+    ...x,id:String(x.id||dpId()),bank,method,note,createdAt,updatedAt,lastConfirmedAt,entryId:String(x.entryId||''),source:confirmedByUser?'user-confirmed':'personal-record',
+    outcome:['worked','failed','pending','mixed'].includes(x.outcome)?x.outcome:'unknown',
+    confirmedByUser,eventDate:dpValidDate(x.eventDate),
+    accountType:['personal','business'].includes(x.accountType)?x.accountType:'',
+    cycleOpened:dpValidDate(x.cycleOpened),product:String(x.product||''),confirmedAt:dpValidDate(x.confirmedAt)
   }
   
 }
@@ -110,17 +115,17 @@ function loadUserDatapoints(){
 
 function saveUserDatapoints(rows){
   const clean=(rows||[]).map(normalizeUserDatapoint).filter(x=>x.bank&&x.method);
-  const legacy=clean.map(x=>({id:x.id,bank:x.bank,method:x.method,bonus:0,date:x.lastConfirmedAt||x.updatedAt||x.createdAt,note:x.note||'',entryId:x.entryId||''}));
+  const legacy=clean.map(x=>({...x,id:x.id,bank:x.bank,method:x.method,bonus:0,date:x.lastConfirmedAt||x.updatedAt||x.createdAt,note:x.note||'',entryId:x.entryId||''}));
   window.BTPersistence.commit(localStorage,{[DP_USER_KEY]:JSON.stringify(clean),[DD_KEY]:JSON.stringify(legacy)});
   window.btCloudBackupChanged?.();
 }
 
 function loadDD(){
-  return loadUserDatapoints().map(x=>({id:x.id,bank:x.bank,method:x.method,bonus:0,date:x.lastConfirmedAt||x.updatedAt||x.createdAt,note:x.note||'',entryId:x.entryId||''}))
+  return loadUserDatapoints().map(x=>({...x,id:x.id,bank:x.bank,method:x.method,bonus:0,date:x.lastConfirmedAt||x.updatedAt||x.createdAt,note:x.note||'',entryId:x.entryId||''}))
 }
 
 function saveDD(rows){
-  saveUserDatapoints((rows||[]).map(r=>({id:r.id,bank:r.bank,method:r.method,note:r.note||r.notes||'',date:r.date||td(),entryId:r.entryId||''})))
+  saveUserDatapoints((rows||[]).map(r=>({...r,id:r.id,bank:r.bank,method:r.method,note:r.note||r.notes||'',date:r.date||td(),entryId:r.entryId||''})))
 }
 
 function addDD(bank,method,bonus,date,meta={}){
@@ -128,17 +133,15 @@ function addDD(bank,method,bonus,date,meta={}){
   const methodName=String(method||'').trim();
   if(!bankName||!methodName)return;
   const rows=loadUserDatapoints();
-  const sig=(bankName+'|'+methodName).toLowerCase();
-  const idx=rows.findIndex(r=>(String(r.bank||'').trim()+'|'+String(r.method||'').trim()).toLowerCase()===sig);
-  if(idx>=0){
-    rows[idx].note=String(meta.note||rows[idx].note||'').trim();
-    rows[idx].lastConfirmedAt=date||rows[idx].lastConfirmedAt||td();
-    rows[idx].updatedAt=td();
-    if(meta.entryId)rows[idx].entryId=meta.entryId
-  }
-  else{
-    rows.unshift(normalizeUserDatapoint({bank:bankName,method:methodName,note:meta.note||'',date:date||td(),entryId:meta.entryId||''}))
-  }
+  const carrier=entries.find(e=>e.id===meta.entryId),accountType=meta.accountType||carrier?.accountType||'';
+  const cycleOpened=meta.cycleOpened||carrier?.opened||'';
+  const identity=datapointBankKey({bank:bankName,accountType});
+  const idx=rows.findIndex(r=>datapointBankKey(r)===identity&&r.method.toLowerCase()===methodName.toLowerCase()&&r.entryId===(meta.entryId||'')&&r.cycleOpened===cycleOpened);
+  // Repeated lifecycle saves must not replace a reviewed experience or another cycle.
+  if(idx>=0)return;
+  rows.unshift(normalizeUserDatapoint({bank:bankName,method:methodName,note:meta.note||'',
+    date:date||'',eventDate:'',entryId:meta.entryId||'',accountType,cycleOpened,
+    product:carrier?.bonusTitle||'',outcome:'pending',confirmedByUser:false}));
   saveUserDatapoints(rows)
 }
 
@@ -2500,6 +2503,14 @@ function getCommunityDatapoints(){
  const saved=loadCommunityDatapoints().filter(x=>!untouchedCommunitySeed(x));
  return [...saved,...(window.BTCommunityCatalog?.reports||[]).map(normalizeCommunityDatapoint)];
 }
+function dpEvidenceDate(x){const date=dpValidDate(x.eventDate)||dpValidDate(x.reportedAt)||'';return date<=td()?date:''}
+function dpFreshness(x){const raw=dpValidDate(x.eventDate)||dpValidDate(x.reportedAt);if(raw>td())return 'Future date — review';const date=dpEvidenceDate(x);if(!date)return 'Date unknown';return dB(date,td())>90?'Older than 90 days':'Recent'}
+function dpMethodConflict(group,row){
+ if(!group||!['worked','failed'].includes(row.outcome))return false;
+ const method=String(row.method||'').trim().toLowerCase();
+ return [...group.user.filter(x=>x.confirmedByUser),...group.community].some(x=>x.id!==row.id&&String(x.method||'').trim().toLowerCase()===method&&['worked','failed'].includes(x.outcome)&&x.outcome!==row.outcome);
+}
+function dpTrustRank(x,kind){return kind==='personal'&&x.confirmedByUser&&['worked','failed','mixed'].includes(x.outcome)?0:kind==='personal'?2:1}
 function dpReportDate(x){return dpValidDate(x.eventDate)||dpValidDate(x.reportedAt)||''}
 function dpValidDate(v){const x=String(v||'');if(!/^\d{4}-\d{2}-\d{2}$/.test(x))return'';const d=new Date(x+'T12:00:00Z');return !isNaN(d)&&d.toISOString().slice(0,10)===x?x:''}
 function dpOutcome(x){return {worked:'Reported success',failed:'Reported failure',mixed:'Mixed reports',pending:'Still waiting',unknown:'Result not recorded'}[x.outcome]||'Result not recorded'}
@@ -2510,37 +2521,54 @@ function dpFilterRows(rows){return rows.filter(x=>{
  if(dpFilters.dated==='recent'){const d=dpReportDate(x),today=td();if(!d||d>today||(Date.parse(today+'T12:00:00Z')-Date.parse(d+'T12:00:00Z'))>90*86400000)return false;}
  return true;
 })}
-function resetDPFilters(){dpFilters={view:'all',scope:'all',result:'all',type:'all',source:'all',dated:'all'};R()}
+function resetDPFilters(){dpTaskBankKey='';dpFilters={view:'all',scope:'all',result:'all',type:'all',source:'all',dated:'all'};R()}
 function setDPFilter(key,value){if(Object.prototype.hasOwnProperty.call(dpFilters,key))dpFilters[key]=value;R()}
 function reportSearchMatch(x,q){return [x.method,x.note,x.result,x.product,x.sourceName,x.eventDate,x.reportedAt,x.accountType].join(' ').toLowerCase().includes(q)}
+function datapointBankKey(carrier){const id=typeof carrier==='string'?bankIdentity(carrier):entryBankIdentity(carrier);return id.family+'|'+id.type}
 function buildDatapointGroups(){
- const map=new Map(),ensure=(bank,carrier)=>{const key=carrier?entryBankIdentity(carrier).key:bankKey(bank||'Unknown bank');if(!map.has(key))map.set(key,{key,bank:bank||'Unknown bank',accountType:carrier?entryBankIdentity(carrier).type:bankIdentity(bank).type,user:[],community:[],entryCount:0});return map.get(key)};
+ const map=new Map(),ensure=(bank,carrier)=>{const key=datapointBankKey(carrier||bank||'Unknown bank');if(!map.has(key))map.set(key,{key,bank:bank||'Unknown bank',accountType:(carrier?entryBankIdentity(carrier).type:bankIdentity(bank).type)==='B'?'business':'personal',user:[],community:[],entryCount:0});return map.get(key)};
  entries.forEach(e=>{if(e?.bank)ensure(e.bank,e).entryCount++});
- loadUserDatapoints().forEach(x=>ensure(x.bank).user.push(x));
+ loadUserDatapoints().forEach(x=>ensure(x.bank,x.accountType?x:null).user.push(x));
  getCommunityDatapoints().forEach(x=>ensure(x.bank,x.accountType?x:null).community.push(x));
  const q=dpSearch.trim().toLowerCase();
- return [...map.values()].filter(g=>dpFilters.scope!=='mine'||g.entryCount>0).map(g=>{
-  let community=dpFilterRows(g.community),user=g.user;
+ return [...map.values()].filter(g=>!dpTaskBankKey||g.key===dpTaskBankKey).filter(g=>dpFilters.scope!=='mine'||g.entryCount>0).map(g=>{
+  let community=dpFilterRows(g.community),user=g.user.filter(x=>dpFilters.result==='all'||x.outcome===dpFilters.result);
   if(dpFilters.view==='personal')community=[];
   if(q&&!g.bank.toLowerCase().includes(q)){community=community.filter(x=>reportSearchMatch(x,q));user=user.filter(x=>reportSearchMatch(x,q))}
-  community.sort((a,b)=>dpReportDate(b).localeCompare(dpReportDate(a))||a.method.localeCompare(b.method));
-  user.sort((a,b)=>String(b.lastConfirmedAt||'').localeCompare(String(a.lastConfirmedAt||'')));
+  community.sort((a,b)=>dpEvidenceDate(b).localeCompare(dpEvidenceDate(a))||a.method.localeCompare(b.method));
+  user.sort((a,b)=>Number(b.confirmedByUser)-Number(a.confirmedByUser)||dpEvidenceDate(b).localeCompare(dpEvidenceDate(a)));
   return {...g,community,user};
  }).filter(g=>g.community.length||g.user.length||((!q||g.bank.toLowerCase().includes(q))&&g.entryCount&&dpFilters.result==='all'&&dpFilters.type==='all'&&dpFilters.source==='all'&&dpFilters.dated==='all')).sort((a,b)=>(b.entryCount>0)-(a.entryCount>0)||dpReportDate(b.community[0]||{}).localeCompare(dpReportDate(a.community[0]||{}))||a.bank.localeCompare(b.bank));
 }
 function toggleDPBank(key){dpExpandedBankKey=dpExpandedBankKey===key?'':key;R()}
-function addUserDPForBank(bankEnc){const bank=decodeURIComponent(bankEnc||'');if(!bank)return;dpEditor={type:'user',mode:'new',id:'',bank,method:'',note:'',lastConfirmedAt:td()};dpExpandedBankKey=bankKey(bank);R()}
-function addCommunityDPForBank(bankEnc){const bank=decodeURIComponent(bankEnc||'');if(!bank)return;dpEditor={type:'community',mode:'new',id:'',bank,method:'',result:'',link:''};dpExpandedBankKey=bankKey(bank);R()}
-function openUserDPEditor(id){const item=loadUserDatapoints().find(r=>r.id===id);if(!item)return;dpEditor={type:'user',mode:'edit',id:item.id,bank:item.bank,method:item.method,note:item.note||'',lastConfirmedAt:item.lastConfirmedAt||td()};R()}
+function addUserDPForBank(bankEnc){const bank=decodeURIComponent(bankEnc||'');if(!bank)return;dpEditor={type:'user',mode:'new',id:'',bank,method:'',note:'',lastConfirmedAt:'',eventDate:'',outcome:'unknown',confirmedByUser:false,accountType:dpTaskBankKey?buildDatapointGroups().find(g=>g.key===dpTaskBankKey)?.accountType||'':''};dpExpandedBankKey=datapointBankKey(bank);R()}
+function addCommunityDPForBank(bankEnc){const bank=decodeURIComponent(bankEnc||'');if(!bank)return;dpEditor={type:'community',mode:'new',id:'',bank,method:'',result:'',link:''};dpExpandedBankKey=datapointBankKey(bank);R()}
+function openUserDPEditor(id){const item=loadUserDatapoints().find(r=>r.id===id);if(!item)return;dpEditor={...item,type:'user',mode:'edit',originalFingerprint:JSON.stringify(item)};R()}
 function openCommunityDPEditor(id){const item=loadCommunityDatapoints().find(r=>r.id===id);if(!item)return;dpEditor={...item,type:'community',mode:'edit'};R()}
 function closeDPEditor(){dpEditor=null;R()}
-function saveDPEditor(){if(!dpEditor)return;if(dpEditor.link&&!safeExternalUrl(dpEditor.link)){alert('Use a source link beginning with https:// or http://.');return}const bank=String(dpEditor.bank||'').trim();const method=String(dpEditor.method||'').trim();if(!bank||!method){alert('Bank and datapoint method are required');return}if(dpEditor.type==='user'){const rows=loadUserDatapoints();if(dpEditor.mode==='edit'&&dpEditor.id){const idx=rows.findIndex(r=>r.id===dpEditor.id);if(idx>=0)rows[idx]={...rows[idx],bank,method,note:String(dpEditor.note||'').trim(),lastConfirmedAt:dpEditor.lastConfirmedAt||td(),updatedAt:td()}}else{rows.unshift(normalizeUserDatapoint({bank,method,note:String(dpEditor.note||'').trim(),date:dpEditor.lastConfirmedAt||td()}))}saveUserDatapoints(rows);dpExpandedBankKey=bankKey(bank);dpEditor=null;R();return}const rows=loadCommunityDatapoints();if(dpEditor.mode==='edit'&&dpEditor.id){const idx=rows.findIndex(r=>r.id===dpEditor.id);if(idx>=0)rows[idx]={...rows[idx],bank,method,result:String(dpEditor.result||'').trim(),link:String(dpEditor.link||'').trim(),outcome:dpEditor.outcome||'unknown',reportedAt:dpValidDate(dpEditor.reportedAt),eventDate:dpValidDate(dpEditor.eventDate),product:String(dpEditor.product||'').trim(),accountType:dpEditor.accountType||'',sourceName:String(dpEditor.sourceName||'').trim()}}else{rows.unshift(normalizeCommunityDatapoint({bank,method,result:String(dpEditor.result||'').trim(),link:String(dpEditor.link||'').trim(),outcome:dpEditor.outcome||'unknown',reportedAt:dpValidDate(dpEditor.reportedAt),eventDate:dpValidDate(dpEditor.eventDate),product:String(dpEditor.product||'').trim(),accountType:dpEditor.accountType||'',sourceName:String(dpEditor.sourceName||'').trim()}))}saveCommunityDatapoints(rows);dpExpandedBankKey=bankKey(bank);dpEditor=null;R()}
+function saveDPEditor(){if(!dpEditor)return;if(dpEditor.link&&!safeExternalUrl(dpEditor.link)){alert('Use a source link beginning with https:// or http://.');return}const bank=String(dpEditor.bank||'').trim();const method=String(dpEditor.method||'').trim();if(!bank||!method){alert('Bank and datapoint method are required');return}if(dpEditor.type==='user'){
+ const d=dpEditor,date=dpValidDate(d.eventDate),confirmed=['worked','failed','mixed'].includes(d.outcome);
+ if(d.eventDate&&(!date||date>td())){alert('Use a valid experience date that is not in the future.');return}
+ if(confirmed&&(!date||!d.confirmedByUser)){alert('Confirm the observed result and its actual date.');return}
+ if(d.depositAmount!==undefined&&d.depositAmount!==''&&(!Number.isFinite(Number(d.depositAmount))||Number(d.depositAmount)<=0)){alert('Use the actual positive deposit amount or leave it blank.');return}
+ const rows=loadUserDatapoints(),idx=d.mode==='edit'?rows.findIndex(r=>r.id===d.id):-1;
+ const original=idx>=0?rows[idx]:null;
+ if(d.mode==='edit'&&(!original||(d.originalFingerprint&&d.originalFingerprint!==JSON.stringify(original)))){alert('This experience changed. Reopen it to review the latest version.');return}
+ if(date&&d.cycleOpened&&date<d.cycleOpened){alert('Experience date cannot precede this account opening.');return}
+ const record=normalizeUserDatapoint({...original,...d,bank,method,note:String(d.note||'').trim(),eventDate:date,
+ confirmedByUser:confirmed&&d.confirmedByUser===true,confirmedAt:confirmed?td():'',updatedAt:td(),
+ revisions:original?[...(original.revisions||[]),{...original,revisions:undefined}]:[]});
+ delete record.type;delete record.mode;delete record.originalFingerprint;
+ if(idx>=0)rows[idx]=record;else rows.unshift(record);
+ try{saveUserDatapoints(rows)}catch(error){alert('Report was not saved. Please retry.');return}
+ dpExpandedBankKey=datapointBankKey(record);dpEditor=null;R();return}
+const rows=loadCommunityDatapoints();if(dpEditor.mode==='edit'&&dpEditor.id){const idx=rows.findIndex(r=>r.id===dpEditor.id);if(idx>=0)rows[idx]={...rows[idx],bank,method,result:String(dpEditor.result||'').trim(),link:String(dpEditor.link||'').trim(),outcome:dpEditor.outcome||'unknown',reportedAt:dpValidDate(dpEditor.reportedAt),eventDate:dpValidDate(dpEditor.eventDate),product:String(dpEditor.product||'').trim(),accountType:dpEditor.accountType||'',sourceName:String(dpEditor.sourceName||'').trim()}}else{rows.unshift(normalizeCommunityDatapoint({bank,method,result:String(dpEditor.result||'').trim(),link:String(dpEditor.link||'').trim(),outcome:dpEditor.outcome||'unknown',reportedAt:dpValidDate(dpEditor.reportedAt),eventDate:dpValidDate(dpEditor.eventDate),product:String(dpEditor.product||'').trim(),accountType:dpEditor.accountType||'',sourceName:String(dpEditor.sourceName||'').trim()}))}saveCommunityDatapoints(rows);dpExpandedBankKey=datapointBankKey(bank);dpEditor=null;R()}
 function deleteUserDP(id){const rows=loadUserDatapoints();const item=rows.find(r=>r.id===id);if(!item)return;cfm={title:'Delete datapoint',msg:'Remove '+item.method+' from '+item.bank+'?',action:()=>{saveUserDatapoints(rows.filter(r=>r.id!==id));if(dpEditor&&dpEditor.id===id)dpEditor=null;cfm=null;R()}};R()}
 function deleteCommunityDP(id){const rows=loadCommunityDatapoints();const item=rows.find(r=>r.id===id);if(!item)return;cfm={title:'Delete community datapoint',msg:'Remove '+item.method+' from '+item.bank+'?',action:()=>{saveCommunityDatapoints(rows.filter(r=>r.id!==id));if(dpEditor&&dpEditor.id===id)dpEditor=null;cfm=null;R()}};R()}
 function deleteDPBankGroup(groupKey,bankEnc){
  const bank=decodeURIComponent(bankEnc||'');if(!groupKey)return;
  cfm={title:'Remove saved reports',msg:'Remove your saved reports for '+bank+'? Tracker accounts, saved terms and the public research catalog will stay.',action:()=>btVerifiedMutation(()=>{
- saveUserDatapoints(loadUserDatapoints().filter(x=>bankKey(x.bank)!==groupKey));saveCommunityDatapoints(loadCommunityDatapoints().filter(x=>bankKey(x.bank)!==groupKey));cfm=null;dpEditor=null;R();
+ saveUserDatapoints(loadUserDatapoints().filter(x=>datapointBankKey(x)!==groupKey));saveCommunityDatapoints(loadCommunityDatapoints().filter(x=>datapointBankKey(x)!==groupKey));cfm=null;dpEditor=null;R();
  })};R();
 }
 
@@ -2549,18 +2577,29 @@ function rDpEditor(){
  const d=dpEditor;if(!d)return'';
  const personal=d.type==='user';
  const field=(key,label,placeholder='',type='text')=>'<div class="fg"><label>'+label+'<input type="'+type+'" value="'+esc(d[key]||'')+'" oninput="dpEditor.'+key+'=this.value" placeholder="'+esc(placeholder)+'"></label></div>';
- const select=(key,label,options)=>'<div class="fg"><label>'+label+'<select onchange="dpEditor.'+key+'=this.value">'+options.map(([v,t])=>'<option value="'+v+'"'+((d[key]||'')===v?' selected':'')+'>'+t+'</option>').join('')+'</select></label></div>';
- let h='<div class="ov" onclick="closeDPEditor()"><section class="modal research-editor" role="dialog" aria-modal="true" aria-labelledby="dp-editor-title" onclick="event.stopPropagation()"><header class="research-editor-header"><h2 id="dp-editor-title">'+(personal?'My experience':'Source report')+'</h2><p>Save what happened. Leave unknown details blank.</p></header><div class="research-editor-body">';
- h+=field('bank','Bank','e.g. Chase')+field('method','Transfer or activity','e.g. Employer payroll to checking');
- if(personal){h+='<div class="fg"><label>What happened?<textarea rows="4" oninput="dpEditor.note=this.value" placeholder="Deposit amount, result, and any useful details">'+esc(d.note||'')+'</textarea></label></div>'+field('lastConfirmedAt','Experience date','','date')}
+ const select=(key,label,options)=>'<div class="fg"><label>'+label+'<select aria-label="'+esc(label)+'" onchange="dpEditor.'+key+'=this.value">'+options.map(([v,t])=>'<option value="'+v+'"'+((d[key]||'')===v?' selected':'')+'>'+t+'</option>').join('')+'</select></label></div>';
+ let h='<div class="ov" onclick="closeDPEditor()"><section class="modal research-editor" role="dialog" aria-modal="true" aria-labelledby="dp-editor-title" onclick="event.stopPropagation()"><header class="research-editor-header"><h2 id="dp-editor-title">'+(personal?'My experience':'Source report')+'</h2><p>'+(personal?(d.evidenceStage==='requirement'?'Did the bank count this deposit?':'Which method qualified? Choose Cannot isolate if several were used.'):'Save what happened. Leave unknown details blank.')+'</p></header><div class="research-editor-body">';
+ if(personal){
+   h+='<p class="experience-context">'+esc(d.bank||'New experience')+(d.accountType?' · '+esc(d.accountType==='business'?'Business':'Personal'):'')+'</p>';
+   if(!d.bank)h+=field('bank','Bank','e.g. Chase');
+   h+=field('method','Transfer or activity','e.g. Employer payroll to checking');
+   h+=select('outcome','Observed result',[['unknown','Not recorded'],['pending','Still waiting'],['worked','Counted'],['failed',"Didn’t count"],['mixed','Cannot isolate one method']]);
+   h+=field('eventDate','Actual experience date','','date');
+   h+='<label class="experience-confirm"><input type="checkbox" '+(d.confirmedByUser?'checked':'')+' onchange="dpEditor.confirmedByUser=this.checked"><span>I confirm this result from my own experience</span></label>';
+   h+='<details class="experience-optional"><summary>More details</summary>';
+   if(d.bank)h+=field('bank','Bank','e.g. Chase');
+   h+=select('accountType','Account type',[['','Not specified'],['personal','Personal'],['business','Business']])+field('product','Account / offer')+field('depositAmount','Deposit amount (optional)','','number');
+   h+='<div class="fg"><label>What happened?<textarea rows="3" oninput="dpEditor.note=this.value" placeholder="Any useful details">'+esc(d.note||'')+'</textarea></label></div></details>';
+ }
  else{
+ h+=field('bank','Bank','e.g. Chase')+field('method','Transfer or activity','e.g. Employer payroll to checking');
  h+=field('product','Account / offer','e.g. Total Checking · $900 offer');
  h+=select('accountType','Account type',[['','Not specified'],['personal','Personal'],['business','Business']]);
  h+=select('outcome','Result',[['unknown','Not recorded'],['worked','Reported success'],['failed','Reported failure'],['mixed','Mixed reports'],['pending','Still waiting']]);
  h+='<div class="fg"><label>What happened?<textarea rows="4" oninput="dpEditor.result=this.value" placeholder="Include amounts, dates, and whether the bonus was paid">'+esc(d.result||'')+'</textarea></label></div>';
  h+=field('eventDate','Activity or payout date','','date')+field('reportedAt','Report posted on','','date')+field('sourceName','Source name','e.g. Reddit or Doctor of Credit')+field('link','Source link','https://…','url');
  }
- h+='</div><footer class="research-editor-footer"><button class="btn-p" onclick="saveDPEditor()">Save report</button><button class="btn-s" onclick="closeDPEditor()">Cancel</button></footer></section></div>';return h;
+ h+='</div><footer class="research-editor-footer"><button class="btn-p" onclick="saveDPEditor()">Save report</button><button class="btn-s" onclick="closeDPEditor()">'+(personal?'Skip for now':'Cancel')+'</button></footer></section></div>';return h;
 }
 
 /* -----------------------------
@@ -3516,7 +3555,7 @@ let showAnalyzer=false,analyzerText='',analyzerResult=null,analyzerIsBiz=false;
 let showInlineAZ=false,inlineResult=null;
 let phoneSearch='',showPhoneAdd=false;
 let storageSearch='';
-let dpSearch='',dpExpandedBankKey='',dpFiltersOpen=false;
+let dpSearch='',dpExpandedBankKey='',dpFiltersOpen=false,dpTaskBankKey='';
 let dpFilters={view:'all',scope:'all',result:'all',type:'all',source:'all',dated:'all'};
 let profileSearch='',activeProfileKey='';
 let inlineUiState={};
@@ -3762,11 +3801,34 @@ function profileRuleForBank(bank){const carrier=(bank&&typeof bank==='object')?b
 function profileReqForBank(bank){const reqs=Object.values(loadReqs()||{});const carrier=(bank&&typeof bank==='object')?bank:{bank};const wanted=entryBankIdentity(carrier);const explicit=!!(carrier.accountType&&['personal','business'].includes(normalizeAccountType(carrier.accountType)));const matches=reqs.filter(r=>{const rb=r&&r.bank||'';if(!rb)return false;const ri=entryBankIdentity(r);if(ri.family!==wanted.family)return false;if(explicit||wanted.typeExplicit)return ri.type===wanted.type;return true});return matches.sort((a,b)=>{const ai=entryBankIdentity(a),bi=entryBankIdentity(b);const ae=ai.key===wanted.key?0:1,be=bi.key===wanted.key?0:1;if(ae!==be)return ae-be;return String(b.bank||'').length-String(a.bank||'').length})[0]||null}
 function profilePhoneForBank(bank){const wanted=bankIdentity(bank);const rows=getPhoneBook().filter(r=>{const rb=r&&r.bank||'';if(!rb)return false;const ri=bankIdentity(rb);if(ri.family!==wanted.family)return false;if(wanted.typeExplicit)return ri.type===wanted.type;return true});return rows.sort((a,b)=>{const ai=bankIdentity(a.bank||''),bi=bankIdentity(b.bank||'');const ae=ai.key===wanted.key?0:1,be=bi.key===wanted.key?0:1;if(ae!==be)return ae-be;return String(b.bank||'').length-String(a.bank||'').length})[0]||null}
 function profileMethodFailed(text){return /fail|failed|did not|didn't|didnt|not work|unreliable|rejected|declined|mixed|no longer/i.test(String(text||''))}
-function buildProfileGroups(){const map=new Map();const ensure=(bank)=>{const key=bankKey(bank||'Unknown Bank');if(!map.has(key))map.set(key,{key,bank:bank||'Unknown Bank',entries:[],user:[],community:[],rule:null,req:null,phone:null});const cur=map.get(key);if((cur.bank||'').length<(bank||'').length)cur.bank=bank;return cur};entries.forEach(e=>{if(e&&e.bank&&e.opened)ensure(e.bank).entries.push(e)});const getGroup=bank=>map.get(bankKey(bank||''))||null;loadUserDatapoints().forEach(item=>{const g=item&&item.bank?getGroup(item.bank):null;if(g)g.user.push(item)});getCommunityDatapoints().forEach(item=>{const g=item&&item.bank?getGroup(item.bank):null;if(g)g.community.push(item)});RULES.forEach(row=>{const g=getGroup(row&&row[0]);if(g&&(!g.rule||String(row[0]||'').length>String(g.rule?.[0]||'').length))g.rule=row});Object.values(loadReqs()||{}).forEach(r=>{const g=r&&r.bank?getGroup(r.bank):null;if(g&&(!g.req||String(r.bank||'').length>String(g.req?.bank||'').length))g.req=r});getPhoneBook().forEach(r=>{const g=r&&r.bank?getGroup(r.bank):null;if(g&&(!g.phone||String(r.bank||'').length>String(g.phone?.bank||'').length))g.phone=r});return Array.from(map.values()).map(g=>{g.entries=g.entries.sort((a,b)=>profileTimelineDate(b).localeCompare(profileTimelineDate(a)));g.activeEntry=g.entries.find(e=>e&&e.bank&&!e.closed)||null;g.cooldownEntry=g.entries.find(e=>['WAITING TO CHURN!','TIME TO CHURN!'].includes(status(e)))||null;g.rule=g.rule||profileRuleForBank(g.bank);g.req=g.req||profileReqForBank(g.bank);g.phone=g.phone||profilePhoneForBank(g.bank);g.completedEntries=g.entries.filter(e=>taxReady(e));g.receivedEntries=g.entries.filter(e=>isEarnedBonus(e));g.lifetime=g.completedEntries.reduce((s,e)=>s+(e.bonus||0),0);g.currentStatus=g.activeEntry?status(g.activeEntry):(g.cooldownEntry?status(g.cooldownEntry):(g.completedEntries.length?'ARCHIVED':'NO HISTORY'));g.nextReopen=g.cooldownEntry?nextReopen(g.cooldownEntry):'';g.confirmedWorked=g.user.filter(x=>!profileMethodFailed((x.note||'')+' '+(x.method||'')));g.confirmedFailed=g.user.filter(x=>profileMethodFailed((x.note||'')+' '+(x.method||'')));g.communityWarnings=g.community.filter(x=>x.outcome!=='worked');g.communityHelpful=g.community.filter(x=>x.outcome==='worked');g.activeCount=g.entries.filter(e=>e&&e.bank&&!e.closed).length;return g}).sort((a,b)=>{const aPri=a.activeCount?0:(a.cooldownEntry?1:2);const bPri=b.activeCount?0:(b.cooldownEntry?1:2);return aPri-bPri||b.lifetime-a.lifetime||b.completedEntries.length-a.completedEntries.length||a.bank.localeCompare(b.bank)})}
+function buildProfileGroups(){const map=new Map();const ensure=(bank)=>{const key=bankKey(bank||'Unknown Bank');if(!map.has(key))map.set(key,{key,bank:bank||'Unknown Bank',entries:[],user:[],community:[],rule:null,req:null,phone:null});const cur=map.get(key);if((cur.bank||'').length<(bank||'').length)cur.bank=bank;return cur};entries.forEach(e=>{if(e&&e.bank&&e.opened)ensure(e.bank).entries.push(e)});const getGroup=bank=>map.get(bankKey(bank||''))||null;loadUserDatapoints().forEach(item=>{const g=item&&item.bank?getGroup(item.bank):null;if(g)g.user.push(item)});getCommunityDatapoints().forEach(item=>{const g=item&&item.bank?getGroup(item.bank):null;if(g)g.community.push(item)});RULES.forEach(row=>{const g=getGroup(row&&row[0]);if(g&&(!g.rule||String(row[0]||'').length>String(g.rule?.[0]||'').length))g.rule=row});Object.values(loadReqs()||{}).forEach(r=>{const g=r&&r.bank?getGroup(r.bank):null;if(g&&(!g.req||String(r.bank||'').length>String(g.req?.bank||'').length))g.req=r});getPhoneBook().forEach(r=>{const g=r&&r.bank?getGroup(r.bank):null;if(g&&(!g.phone||String(r.bank||'').length>String(g.phone?.bank||'').length))g.phone=r});return Array.from(map.values()).map(g=>{g.entries=g.entries.sort((a,b)=>profileTimelineDate(b).localeCompare(profileTimelineDate(a)));g.activeEntry=g.entries.find(e=>e&&e.bank&&!e.closed)||null;g.cooldownEntry=g.entries.find(e=>['WAITING TO CHURN!','TIME TO CHURN!'].includes(status(e)))||null;g.rule=g.rule||profileRuleForBank(g.bank);g.req=g.req||profileReqForBank(g.bank);g.phone=g.phone||profilePhoneForBank(g.bank);g.completedEntries=g.entries.filter(e=>taxReady(e));g.receivedEntries=g.entries.filter(e=>isEarnedBonus(e));g.lifetime=g.completedEntries.reduce((s,e)=>s+(e.bonus||0),0);g.currentStatus=g.activeEntry?status(g.activeEntry):(g.cooldownEntry?status(g.cooldownEntry):(g.completedEntries.length?'ARCHIVED':'NO HISTORY'));g.nextReopen=g.cooldownEntry?nextReopen(g.cooldownEntry):'';g.confirmedWorked=g.user.filter(x=>x.confirmedByUser&&x.outcome==='worked');g.confirmedFailed=g.user.filter(x=>x.confirmedByUser&&x.outcome==='failed');g.communityWarnings=g.community.filter(x=>x.outcome!=='worked');g.communityHelpful=g.community.filter(x=>x.outcome==='worked');g.activeCount=g.entries.filter(e=>e&&e.bank&&!e.closed).length;return g}).sort((a,b)=>{const aPri=a.activeCount?0:(a.cooldownEntry?1:2);const bPri=b.activeCount?0:(b.cooldownEntry?1:2);return aPri-bPri||b.lifetime-a.lifetime||b.completedEntries.length-a.completedEntries.length||a.bank.localeCompare(b.bank)})}
 function profileHeadline(group){if(group.activeEntry){const st=status(group.activeEntry);if(st==='WORKING')return 'Currently being worked.';if(st==='SAFE TO CLOSE')return 'Safe to close now.';if(st==='3-DAY BUFFER')return 'Inside close buffer.';if(st==='CUSTOM TIMER')return 'Set a reminder or deadline running.'}if(group.cooldownEntry){const st=status(group.cooldownEntry);if(st==='TIME TO CHURN!')return 'Ready to churn again now.';if(st==='WAITING TO CHURN!'){const dl=daysLeft(group.cooldownEntry);return (dl!==null?dl+' days left':'Cooling down')+' until next churn.'}}return group.completedEntries.length?'No active promo right now.':'No tracked history yet.'}
 function profileRequirements(group){const src=[group.req||{},group.activeEntry||{},group.cooldownEntry||{}];const pick=(...keys)=>{for(const obj of src){for(const key of keys){const v=obj&&obj[key];if(v!==undefined&&v!==null&&v!=='')return v}}return''};const rows=[];const push=(label,value)=>{if(value!==undefined&&value!==null&&String(value).trim()!=='')rows.push([label,String(value)])};push('Promo code',pick('promoCodeText','promoCode'));push('Monthly fee',pick('monthlyFeeYNText','monthlyFee'));push('Avoid fee',pick('avoidMonthlyFeeText','feeWaiver'));push('How to complete',pick('completeBonusText'));push('Required days',pick('requiredDaysText')||((pick('reqDays')&&Number(pick('reqDays'))>0)?(pick('reqDays')+' days'):''));push('Expiration',pick('expirationDateText','openWindow','openBy'));let eligibility=pick('eligibilityText');if(!eligibility&&group.rule)eligibility=group.rule[1]+' churn rule';push('Eligibility',eligibility);let early=pick('earlyTerminationFeeText');if(!early&&group.rule&&group.rule[5])early=group.rule[5];else if(!early&&pick('earlyCloseFee'))early=fM(parseInt(pick('earlyCloseFee'))||0);push('Early close',early);if(group.rule){push('Rule notes',group.rule[7]||'');push('MO availability',group.rule[4]?'Available in MO':'');}return rows.filter(r=>r[1])}
 function profileStatusChip(group){const st=group.currentStatus;if(st==='TIME TO CHURN!')return '<span class="pf-chip red">Ready to churn</span>';if(st==='WAITING TO CHURN!')return '<span class="pf-chip amber">Cooling down</span>';if(st==='SAFE TO CLOSE')return '<span class="pf-chip green">Safe to close</span>';if(st==='3-DAY BUFFER')return '<span class="pf-chip amber">Close buffer</span>';if(st==='CUSTOM TIMER')return '<span class="pf-chip amber">Countdown active</span>';if(st==='WORKING')return '<span class="pf-chip blue">Working</span>';if(st==='ARCHIVED')return '<span class="pf-chip gray">Archived</span>';return '<span class="pf-chip gray">No history</span>'}
-function goToBankDatapoints(bankEnc){const bank=decodeURIComponent(bankEnc||'');if(!bank)return;dpExpandedBankKey=bankKey(bank);dpSearch='';tab='tips';R();setTimeout(()=>{const sc=document.querySelector('.scroll');if(sc)sc.scrollTop=0},0)}
+function hasDirectDepositRequirement(e){
+ try{return (window.BTEligibilityGate?.normalizedRules?.(e)||[]).some(r=>r.kind==='direct-deposit')||/direct[ -]?deposits?|\bpayroll\b|\bq?dd\b/i.test([e?.completeBonusText,...(e?.customTimers||[]).map(t=>t.text),...(e?.checklist||[]).map(t=>t.text)].join(' '))}catch{return false}
+}
+function reviewCycleExperience(entryId,stage){
+ const e=entries.find(x=>x.id===entryId);if(!e)return;
+ const identity=entryBankIdentity(e);
+ const cycleReports=loadUserDatapoints().filter(x=>x.entryId===entryId&&x.cycleOpened===(e.opened||'')&&datapointBankKey(x)===datapointBankKey(e));
+ const existing=cycleReports.find(x=>(!e.dataPoint||x.method===e.dataPoint)&&!x.confirmedByUser);
+ const prior=cycleReports.filter(x=>x.confirmedByUser).sort((a,b)=>dpEvidenceDate(b).localeCompare(dpEvidenceDate(a)))[0];
+ dpEditor={...(existing||{}),type:'user',mode:existing?'edit':'new',id:existing?.id||'',
+ bank:e.bank,accountType:identity.type==='B'?'business':'personal',entryId:e.id,cycleOpened:e.opened||'',
+ product:existing?.product||e.bonusTitle||'',bonusAmount:e.bonus||0,bonusReceivedDate:e.bonusRecd||'',requirementConfirmedDate:e.reqMet||'',method:existing?.method||e.dataPoint||prior?.method||'',
+ note:existing?.note||'',eventDate:existing?.eventDate||'',outcome:existing?.outcome||'unknown',
+ confirmedByUser:false,evidenceStage:stage,originalFingerprint:existing?JSON.stringify(existing):''};R();
+}
+function openTaskDatapoints(entryId){
+ const e=entries.find(x=>x.id===entryId);if(!e)return;
+ const identity=entryBankIdentity(e);
+ dpTaskBankKey=datapointBankKey(e);dpExpandedBankKey=dpTaskBankKey;dpSearch='';
+ dpFilters={view:'all',scope:'all',result:'all',type:'all',source:'all',dated:'all'};
+ dpFiltersOpen=false;window.bt366GroupData=false;tab='tips';R();
+ setTimeout(()=>{const sc=document.querySelector('.scroll');if(sc)sc.scrollTop=0},0);
+}
+function goToBankDatapoints(bankEnc){const bank=decodeURIComponent(bankEnc||'');if(!bank)return;dpTaskBankKey='';dpExpandedBankKey=datapointBankKey(bank);dpSearch='';tab='tips';R();setTimeout(()=>{const sc=document.querySelector('.scroll');if(sc)sc.scrollTop=0},0)}
 function renderProfileDetail(group){
   if(!group)return '<div class="empty"><div class="em">🏦</div><p>Bank profile not found.</p></div>';
   const totalAttempts=group.entries.length;
@@ -3862,7 +3924,7 @@ function renderProfileDetail(group){
           <div class="ph-actions" style="margin:0"><button class="ph-mini ph-save" onclick="addUserDPForBank('${encodeURIComponent(group.bank)}')">Add confirmed</button></div>
         </div>
         ${group.confirmedWorked.length
-          ? `<div class="pf-history">${group.confirmedWorked.map(x=>`<div class="pf-history-card"><div class="pf-history-top"><div><div class="pf-name">${esc(x.method)}</div><div class="pf-history-id">Confirmed user datapoint</div></div><span class="tag b">Worked</span></div><div class="pf-item-note">${esc(x.note||'No notes.')}</div><div class="ph-help" style="margin-top:6px">Last confirmed ${esc(fD(x.lastConfirmedAt||x.updatedAt||x.createdAt))}</div><div class="ph-actions"><button class="ph-mini ph-save" onclick="openUserDPEditor('${x.id}')">Edit</button><button class="ph-mini ph-del" onclick="deleteUserDP('${x.id}')">Remove</button></div></div>`).join('')}</div>`
+          ? `<div class="pf-history">${group.confirmedWorked.map(x=>`<div class="pf-history-card"><div class="pf-history-top"><div><div class="pf-name">${esc(x.method)}</div><div class="pf-history-id">Confirmed user datapoint</div></div><span class="tag b">Worked</span></div><div class="pf-item-note">${esc(x.note||'No notes.')}</div><div class="ph-help" style="margin-top:6px">Confirmed ${esc(fD(x.confirmedAt||x.eventDate))}</div><div class="ph-actions"><button class="ph-mini ph-save" onclick="openUserDPEditor('${x.id}')">Edit</button><button class="ph-mini ph-del" onclick="deleteUserDP('${x.id}')">Remove</button></div></div>`).join('')}</div>`
           : '<div class="pf-empty">No confirmed methods saved.</div>'}
       </div>
 
@@ -4582,9 +4644,10 @@ function rTax(){
  return h+'<p class="bt360-footnote">Bank bonuses are usually reported as interest. Check your 1099 forms.</p>';
 }
 function dpSelect(key,label,options){return '<label class="research-filter">'+esc(label)+'<select aria-label="'+esc(label)+'" onchange="setDPFilter(\''+key+'\',this.value)">'+options.map(([v,t])=>'<option value="'+v+'"'+(dpFilters[key]===v?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select></label>'}
-function renderCommunityReport(item){
+function renderCommunityReport(item,group){
  const curated=(window.BTCommunityCatalog?.reports||[]).some(x=>x.id===item.id),link=safeExternalUrl(item.link),date=dpReportDate(item);
  let h='<article class="research-report"><div class="research-report-top"><span class="research-result '+esc(item.outcome||'unknown')+'">'+esc(dpOutcome(item))+'</span><span class="research-kind">'+(item.evidenceKind==='source-index'?'Source summary':'Community report')+'</span></div><h3>'+esc(item.method)+'</h3><p class="research-product">'+esc(item.product||'Product not specified')+' · '+esc(item.accountType==='business'?'Business':item.accountType==='personal'?'Personal':'Account type not specified')+'</p><p>'+esc(item.result||'Result not recorded.')+'</p>';
+ h+='<p class="research-caveat">'+esc(dpFreshness(item))+(dpMethodConflict(group,item)?' · Conflicting outcomes — review':'')+'</p>';
  h+='<dl class="research-dates"><div><dt>'+(item.eventDate?esc(item.dateLabel||'Activity date'):'Report date')+'</dt><dd>'+esc(date?fD(date):'Not provided')+'</dd></div>';
  if(item.reportedAt&&item.eventDate)h+='<div><dt>Report posted</dt><dd>'+esc(fD(item.reportedAt))+'</dd></div>';
  if(item.threadDate)h+='<div><dt>Thread started</dt><dd>'+esc(fD(item.threadDate))+'</dd></div>';
@@ -4599,10 +4662,13 @@ function rTips(){
  const groups=buildDatapointGroups(),catalog=window.BTCommunityCatalog||{};
  dpFiltersOpen=document.querySelector('.research-filters')?.open??dpFiltersOpen;
  let h='<div class="research-shell dp-shell bt362-data-view">';
+ if(dpTaskBankKey)h+='<button type="button" class="research-text-button" onclick="resetDPFilters()">All banks ‹</button><p class="research-caveat">Community reports do not guarantee a qualifying deposit. Follow your saved offer terms.</p>';
+ if(dpTaskBankKey){const bank=groups[0]?.bank||'';if(bank)h+='<details class="research-help"><summary>Find newer reports</summary><a class="research-source" target="_blank" rel="noopener noreferrer" href="https://www.reddit.com/r/churning/search/?q='+encodeURIComponent(bank+' direct deposit')+'&amp;restrict_sr=1&amp;sort=new">Newest Reddit results ↗</a><a class="research-source" target="_blank" rel="noopener noreferrer" href="https://www.doctorofcredit.com/?s='+encodeURIComponent(bank+' direct deposit')+'">Search Doctor of Credit ↗</a><p>Live search results are external reports, not verified personal experiences.</p></details>';}
  h+='<input class="sinput dp-search" id="datapoints-search" aria-label="Search datapoints" placeholder="Search bank, method, or note..." value="'+esc(dpSearch)+'" oninput="updateViewSearch(\'datapoints\',this.value,this.selectionStart)">';
  h+='<div class="bt360-data-pills" role="group" aria-label="Datapoint outcomes">'+[['all','All reports'],['worked','Counted'],['failed','Didn\'t count']].map(([v,t])=>'<button type="button" aria-pressed="'+(dpFilters.result===v)+'" class="'+(dpFilters.result===v?'active':'')+'" onclick="setDPFilter(\'result\',\''+v+'\')">'+t+'</button>').join('')+'</div>';
  h+='<div class="research-coverage"><b>'+groups.reduce((n,g)=>n+g.community.length,0)+' reports &amp; summaries</b><span>'+groups.length+' bank'+(groups.length===1?'':'s')+' shown · Catalog checked '+esc(catalog.checkedAt?fD(catalog.checkedAt):'date unavailable')+'</span></div>';
  h+='<div class="bt362-data-actions"><button type="button" class="dp-add research-new-report" onclick="newDPReport()">+ Add a report</button><button type="button" class="research-text-button" onclick="switchMainTab(\'storage\')">Saved bank terms ›</button></div>';
+ h+='<p class="research-caveat">Your confirmed experiences first, then dated community reports. Older results may no longer apply.</p>';
  h+='<div class="bt366-dp-toggle"><span class="bt360-muted">'+(window.bt366GroupData?'Grouped by bank':'Individual reports')+'</span><button type="button" aria-pressed="'+!!window.bt366GroupData+'" onclick="window.bt366GroupData=!window.bt366GroupData;R()">'+(window.bt366GroupData?'Show individual reports':'Group by bank')+'</button></div>';
  h+='<details class="research-filters"'+(dpFiltersOpen?' open':'')+'><summary>More filters and saved notes</summary>';
  h+='<div class="research-switch" role="group" aria-label="Report view">'+[['all','All reports'],['personal','My saved notes']].map(([v,t])=>'<button aria-pressed="'+(dpFilters.view===v)+'" onclick="setDPFilter(\'view\',\''+v+'\')">'+t+'</button>').join('')+'</div>';
@@ -4612,18 +4678,19 @@ function rTips(){
  h+=dpSelect('result','Result',[['all','All results'],['worked','Reported success'],['failed','Reported failure'],['mixed','Mixed reports'],['pending','Still waiting'],['unknown','Not recorded']]);
  h+=dpSelect('source','Source',[['all','All sources'],['reddit','Reddit'],['doc','Doctor of Credit']]);
  h+=dpSelect('dated','Dates',[['all','All dates'],['recent','Dated within 90 days']]);
- h+='</div><button class="research-text-button" onclick="resetDPFilters()">Reset filters</button><p class="research-caveat">Filters apply to community reports. Your saved notes stay visible.</p></details>';
+ h+='</div><button class="research-text-button" onclick="resetDPFilters()">Reset filters</button><p class="research-caveat">Result filters include your experiences. Source and date filters apply to community reports.</p></details>';
  if(!groups.length)h+='<div class="research-empty">No matching reports. Try another bank or reset the filters.</div>';
  if(!window.bt366GroupData){
    const items=groups.flatMap(g=>[
      ...g.community.map(x=>({g,x,kind:'community',when:dpReportDate(x)||x.threadDate||''})),
      ...g.user.map(x=>({g,x,kind:'personal',when:x.lastConfirmedAt||''}))
-   ]).sort((a,b)=>String(b.when).localeCompare(String(a.when)));
+   ]).sort((a,b)=>dpTrustRank(a.x,a.kind)-dpTrustRank(b.x,b.kind)||dpEvidenceDate(b.x).localeCompare(dpEvidenceDate(a.x)));
+   if(!items.length)h+='<div class="research-empty">No reports match this view. Add your experience when you have a result to record.</div>';
    items.forEach(({g,x,kind})=>{
-     const report=kind==='community',label=!report?'My note':x.outcome==='worked'?'Counted':x.outcome==='failed'?"Didn't count":x.outcome==='mixed'?'Mixed reports':x.outcome==='pending'?'Pending':'Not verified';
-     const desc=report?(x.sourceName||'Community')+' · '+(x.reportedAt||x.threadDate||x.eventDate?fD(x.reportedAt||x.threadDate||x.eventDate):'Date not reported'):'My saved note · '+(x.lastConfirmedAt?fD(x.lastConfirmedAt):'Date unavailable');
-     const detail=report?renderCommunityReport(x):'<article class="research-report personal"><h3>'+esc(x.method||'Saved method')+'</h3><p>'+esc(x.note||'No notes saved.')+'</p><button class="ph-mini" onclick="openUserDPEditor('+profileSectionAttr(JSON.stringify(x.id))+')">Edit note</button></article>';
-     h+='<details class="bt366-dp-item"><summary>'+bankLogo(g.bank,true)+'<span class="bt366-dp-main"><b>'+esc(g.bank)+'</b><small>'+esc(x.method||'Method not specified')+'</small><small>'+esc(desc)+'</small></span><span class="bt360-chip '+(report&&x.outcome==='worked'?'positive':report&&x.outcome==='failed'?'warning':'')+'">'+esc(label)+'</span></summary>'+detail+'</details>';
+     const report=kind==='community',label=!report?(x.confirmedByUser?dpOutcome(x):'Needs confirmation'):x.outcome==='worked'?'Counted':x.outcome==='failed'?"Didn't count":x.outcome==='mixed'?'Mixed reports':x.outcome==='pending'?'Pending':'Not verified';
+     const desc=report?(x.sourceName||'Community')+' · '+(x.reportedAt||x.threadDate||x.eventDate?fD(x.reportedAt||x.threadDate||x.eventDate):'Date not reported'):(x.confirmedByUser?'You confirmed':'Needs confirmation')+' · '+(dpEvidenceDate(x)?fD(dpEvidenceDate(x)):'Date unavailable')+' · '+dpFreshness(x);
+     const detail=report?renderCommunityReport(x,g):'<article class="research-report personal"><h3>'+esc(x.method||'Saved method')+'</h3><p>'+esc(x.note||'No notes saved.')+'</p><button class="ph-mini" onclick="openUserDPEditor('+profileSectionAttr(JSON.stringify(x.id))+')">Edit note</button></article>';
+     h+='<details class="bt366-dp-item"><summary>'+bankLogo(g.bank,true)+'<span class="bt366-dp-main"><b>'+esc(g.bank)+'</b><small>'+esc(x.method||'Method not specified')+'</small><small>'+esc(desc)+(dpMethodConflict(g,x)?' · Conflicting outcomes':'')+'</small></span><span class="bt360-chip '+(report&&x.outcome==='worked'?'positive':report&&x.outcome==='failed'?'warning':'')+'">'+esc(label)+'</span></summary>'+detail+'</details>';
    });
  }else{
  groups.forEach(g=>{
@@ -4631,8 +4698,8 @@ function rTips(){
  h+='<section class="dp-bank research-bank"><button class="dp-head" type="button" aria-expanded="'+open+'" onclick="toggleDPBank(\''+g.key+'\')">'+bankLogo(g.bank,true)+'<span class="dp-info"><span class="dp-name">'+esc(g.bank)+'</span><span class="dp-meta">'+g.community.length+' community · '+g.user.length+' saved'+(g.accountType==='business'?' · Business':'')+(g.entryCount?' · Tracked':'')+'</span>'+(last?'<span class="research-latest">Latest dated result '+esc(fD(last))+'</span>':'')+'</span><span class="dp-arrow" aria-hidden="true">'+(open?'−':'+')+'</span></button>';
  if(open){
  h+='<div class="dp-body"><div class="research-add"><button class="dp-add" onclick="addUserDPForBank('+profileSectionAttr(JSON.stringify(encodeURIComponent(g.bank)))+')">+ My experience</button><button class="dp-add" onclick="addCommunityDPForBank('+profileSectionAttr(JSON.stringify(encodeURIComponent(g.bank)))+')">+ Source report</button></div>';
- if(g.user.length){h+='<h3 class="research-section-label">My saved notes</h3>';g.user.forEach(x=>{h+='<article class="research-report personal"><span class="research-kind">Personal record</span><h3>'+esc(x.method)+'</h3><p>'+esc(x.note||'No notes saved.')+'</p><p class="research-caveat">Saved date '+esc(x.lastConfirmedAt?fD(x.lastConfirmedAt):'not provided')+(x.entryId?' · From tracker history':'')+'</p><div class="ph-actions"><button class="ph-mini" onclick="openUserDPEditor('+profileSectionAttr(JSON.stringify(x.id))+')">Edit</button><button class="ph-mini" onclick="deleteUserDP('+profileSectionAttr(JSON.stringify(x.id))+')">Remove</button></div></article>'})}
- if(g.community.length){h+='<h3 class="research-section-label">Community reports</h3>';g.community.forEach(x=>h+=renderCommunityReport(x))}else h+='<div class="research-empty">No reports match this view. Add your experience when you have a result to record.</div>';
+ if(g.user.length){h+='<h3 class="research-section-label">Your experiences</h3>';g.user.forEach(x=>{h+='<article class="research-report personal"><span class="research-kind">'+esc(x.confirmedByUser?'You confirmed · '+dpOutcome(x):'Needs confirmation')+'</span><h3>'+esc(x.method)+'</h3><p>'+esc(x.note||'No notes saved.')+'</p><p class="research-caveat">Experience '+esc(dpEvidenceDate(x)?fD(dpEvidenceDate(x)):'date unknown')+' · '+esc(dpFreshness(x))+(x.entryId?' · Linked to bonus cycle':'')+(dpMethodConflict(g,x)?' · Conflicting outcomes — review':'')+'</p><div class="ph-actions"><button class="ph-mini" onclick="openUserDPEditor('+profileSectionAttr(JSON.stringify(x.id))+')">Edit</button><button class="ph-mini" onclick="deleteUserDP('+profileSectionAttr(JSON.stringify(x.id))+')">Remove</button></div></article>'})}
+ if(g.community.length){h+='<h3 class="research-section-label">Community reports</h3>';g.community.forEach(x=>h+=renderCommunityReport(x,g))}else h+='<div class="research-empty">No reports match this view. Add your experience when you have a result to record.</div>';
  h+='</div>';
  }h+='</section>';
  });
@@ -5368,7 +5435,7 @@ function clearCloseDate(id,keepAsPlanned){
 }
 function cancelClose(){closePrompt=null;R()}
 function addFromTpl(i){const t=TEMPLATES[i];const newData={bank:t.bank,bonus:t.bonus,churn:t.churn,opened:td(),closed:'',bonusRecd:'',reqMet:'',notes:t.notes||'',analyzedTC:'',minHoldDays:t.minHoldDays||0,earlyCloseFee:t.earlyCloseFee||0,dataPoint:t.dataPoint||'',reqDays:t.reqDays||0,referralBonus:0,phoneNum:'',feeChecked:false};if(handleDuplicateFlow(newData,'template')){showTemplates=false;R();return}modal=newData;modal.checklist=[];modal.customTimers=[];showTemplates=false;R()}
-function toggleCk(id,i){entries=entries.map(e=>{if(e.id===id&&e.checklist&&e.checklist[i]){e.checklist[i].done=!e.checklist[i].done;appendEntryHistory(e,e.checklist[i].done?'checklist_completed':'checklist_reopened',e.checklist[i].text||'Checklist item')}return e});sv(SK,entries);expanded=id;R()}
+function toggleCk(id,i){let completedDD=false;entries=entries.map(e=>{if(e.id===id&&e.checklist&&e.checklist[i]){e.checklist[i].done=!e.checklist[i].done;if(e.checklist[i].done&&/direct[ -]?deposits?|\bpayroll\b|\bq?dd\b/i.test(e.checklist[i].text))completedDD=true;appendEntryHistory(e,e.checklist[i].done?'checklist_completed':'checklist_reopened',e.checklist[i].text||'Checklist item')}return e});sv(SK,entries);expanded=id;R();if(completedDD)reviewCycleExperience(id,'requirement')}
 function addCk(id){const inp=document.getElementById('ck_'+id);if(!inp||!inp.value.trim())return;const text=inp.value.trim();entries=entries.map(e=>{if(e.id===id){if(!e.checklist)e.checklist=[];e.checklist.push({text,done:false});appendEntryHistory(e,'checklist_added',text)}return e});sv(SK,entries);toggleInlineForm(id,'checklist',false)}
 function rmCk(id,i){entries=entries.map(e=>{if(e.id===id&&e.checklist)e.checklist.splice(i,1);return e});sv(SK,entries);R()}
 function timerId(){return 'tmr_'+Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-5)}
@@ -5466,7 +5533,7 @@ function saveTimerEditor(){
 }
 function rTimerEdit(){if(!timerEditModal)return'';const p=timerEditModal;const isDays=p.mode==='days';const isNew=!!p.isNew||!p.timerId;let h='<div class="cbg" onclick="closeTimerEditor()"><div class="dd-box" onclick="event.stopPropagation()">';h+='<h3>'+(isNew?'Add countdown timer':'Edit countdown timer')+'</h3>';h+='<div class="sub">'+(isNew?'Create a custom countdown. Use an exact due date, or switch to start date + days.':'Keep it as an exact due date, or switch to start date + days.')+'</div>';h+='<div class="dd-chips"><button type="button" class="dd-chip '+(!isDays?'sel':'')+'" onclick="event.stopPropagation();switchTimerEditMode(\'due\')">Due Date</button><button type="button" class="dd-chip '+(isDays?'sel':'')+'" onclick="event.stopPropagation();switchTimerEditMode(\'days\')">Start + Days</button></div>';h+='<div class="fg"><label>Description</label><input id="tem_text" oninput="if(timerEditModal)timerEditModal.text=this.value" value="'+esc(p.text||'')+'" placeholder="e.g. Deposit deadline"></div>';if(isDays){h+='<div class="frow"><div class="fg"><label>Start date</label><input id="tem_start" oninput="if(timerEditModal)timerEditModal.startDate=this.value" type="date" value="'+esc(p.startDate||'')+'"></div><div class="fg"><label>Days</label><input id="tem_days" oninput="if(timerEditModal)timerEditModal.daysRequired=this.value" type="number" inputmode="numeric" min="1" value="'+esc(String(p.daysRequired||''))+'" placeholder="60"></div></div>'}else{h+='<div class="fg"><label>Due date</label><input id="tem_start" oninput="if(timerEditModal)timerEditModal.startDate=this.value" type="date" value="'+esc(p.startDate||'')+'"><input id="tem_days" oninput="if(timerEditModal)timerEditModal.daysRequired=this.value" type="hidden" value=""></div>'}h+='<div class="crow"><button type="button" class="c-c" onclick="closeTimerEditor()">Cancel</button><button type="button" class="c-g" onclick="saveTimerEditor()">'+(isNew?'Add timer':'Save')+'</button></div>';h+='</div></div>';return h}
 
-function toggleTimer(id,timerId){entries=entries.map(e=>{if(e.id===id){let changed=null;e.customTimers=normalizeTimerList(e.customTimers).filter(t=>!isDeletedTimer(e,t)).map(t=>{if(t.id!==timerId)return t;changed={...t,done:!t.done};return changed});if(changed)appendEntryHistory(e,changed.done?'timer_completed':'timer_reopened',changed.text||'Timer')}return e});sv(SK,entries);expanded=id;R()}
+function toggleTimer(id,timerId){let completedDD=false;entries=entries.map(e=>{if(e.id===id){let changed=null;e.customTimers=normalizeTimerList(e.customTimers).filter(t=>!isDeletedTimer(e,t)).map(t=>{if(t.id!==timerId)return t;changed={...t,done:!t.done};if(changed.done&&/direct[ -]?deposits?|\bpayroll\b|\bq?dd\b/i.test(changed.text))completedDD=true;return changed});if(changed)appendEntryHistory(e,changed.done?'timer_completed':'timer_reopened',changed.text||'Timer')}return e});sv(SK,entries);expanded=id;R();if(completedDD)reviewCycleExperience(id,'requirement')}
 function upsertTimer(id){
   const text=document.getElementById('tm_txt_'+id)?.value.trim();
   const start=document.getElementById('tm_start_'+id)?.value;
@@ -5529,7 +5596,7 @@ function rcvSubmit(){
   if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
   entries=sortE(entries);sv(SK,entries);
   rcvPrompt=null;
-  cfm={title:'Bonus Received Saved',msg:(e2?e2.bank:'This bank')+' received date saved for '+fD(p.date)+'.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
+  cfm={title:'Bonus Received Saved',msg:(e2?e2.bank:'This bank')+' received date saved for '+fD(p.date)+'.',green:true,confirmLabel:'Review experience',action:()=>{cfm=null;reviewCycleExperience(p.entryId,'bonus')}};
   cfm.msg+='\n\nCycle history saved on this device. Cloud recovery: '+(window.BTCloudBackup?.protection?.().title||'Not verified')+'.';
   }catch(error){
     let restored=true;
@@ -5604,7 +5671,7 @@ function reqSubmit(){
   if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
   entries=sortE(entries);sv(SK,entries);
   reqPrompt=null;
-  cfm={title:'Requirement Met Saved',msg:(e2?e2.bank:'This bank')+' requirement met date saved for '+fD(p.date)+'. Bonus received is still tracked separately.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
+  cfm={title:'Requirement Met Saved',msg:(e2?e2.bank:'This bank')+' requirement met date saved for '+fD(p.date)+'. Bonus received is still tracked separately.',green:true,confirmLabel:hasDirectDepositRequirement(e2)?'Review deposit result':'OK',action:()=>{cfm=null;if(hasDirectDepositRequirement(e2))reviewCycleExperience(p.entryId,'requirement');else R()}};
   R()
 }
 function confirmClearReqMet(){

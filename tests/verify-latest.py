@@ -178,7 +178,7 @@ for token in ('.cbox,.dd-box,.rcv-box,.ow-box,.fee-box,.close-modal','.dd-input,
     if token not in dark_css: fail(f'dark prompt/checklist contrast coverage missing: {token}')
 if app_source.count('onclick="event.stopPropagation();toggleTimer(') < 2:
     fail('mini timer checkbox clicks can still bubble and collapse expanded cards')
-for token in ('function toggleTimer(id,timerId)','function toggleCk(id,i)','sv(SK,entries);expanded=id;R()}'):
+for token in ('function toggleTimer(id,timerId)','function toggleCk(id,i)',"sv(SK,entries);expanded=id;R();if(completedDD)reviewCycleExperience(id,'requirement')}"):
     if token not in app_source: fail(f'expanded-card state persistence missing: {token}')
 for token in ('let profileSectionUiState={}','function profileSectionStateKey','function setProfileSectionOpen','function profileSectionIsOpen','function profileSectionOpenAttr','function captureProfileSectionState','data-section-key="lifecycle"','data-section-key="history"','const trackerRenderer=(typeof window.rTracker'):
     if token not in app_source: fail(f'centralized tracker/section state architecture missing: {token}')

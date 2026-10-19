@@ -203,6 +203,7 @@
     const title=taskTitle(task.kind,task.amount,task.count,period,task.text,e);
     const cta={'new-money':'Review funding','direct-deposit':'Review deposits','balance-hold':'Review balance hold','transactions':'Review transactions','enrollment':'Review enrollment'}[task.kind]||'View task';
     const result=base(title,cta,'lifecycle',task.text);
+    result.activityKind=task.kind;
     result.timerId=task.linked?.source==='timer'?task.linked.id:'';
     result.checklistIndex=task.linked?.source==='checklist'?task.linked.index:null;
     if(task.linked?.source==='timer')result.context=dateContext(e,{...stage,timer:task.linked,kind:task.kind==='direct-deposit'?'requirement':task.kind});
