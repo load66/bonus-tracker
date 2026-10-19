@@ -423,7 +423,7 @@ async function exercise(name,engine,url){
     const beforeTaxHistory=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     await page.evaluate(()=>{window.__taxEntriesBefore=JSON.stringify(entries);entries[0].previousCycles=[{id:'SYN-B-HIST',bank:'Synthetic Historical Bank',accountType:'business',opened:'2025-11-01',bonusRecd:'2026-01-04',closed:'2026-01-06',bonus:90}];taxYear=2026;R()});
     const historical=page.locator('.bt360-tax-record').filter({hasText:'Synthetic Historical Bank'});
-    await historical.locator('summary').click();
+    await historical.locator(':scope > summary').click();
     check('saved prior cycle retains its own dates and source in Tax',await historical.innerText().then(t=>t.includes('Nov 1, 2025')&&t.includes('Jan 6, 2026')&&t.includes('Prior cycle')&&t.includes('View current account')));
     check('history browsing never rewrites stored accounts',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,beforeTaxHistory));
     await page.screenshot({path:path.join(output,name+'-tax-history-390.png')});
@@ -888,8 +888,8 @@ async function exercise(name,engine,url){
     await button('Save report').click();
     check('source report save preserves activity date',await page.evaluate(()=>loadCommunityDatapoints().some(x=>x.bank==='E2E Report Bank'&&x.eventDate==='2026-09-30'&&x.outcome==='worked')));
     await button('Archive').click();check('archive unifies terms and cooldown',await page.locator('.bt360-archive-switch').count()===0);
-    await page.getByPlaceholder('Search stored T&C...').pressSequentially('E2E');
-    check('terms search keeps focus while typing',await page.getByPlaceholder('Search stored T&C...').inputValue()==='E2E'&&await page.evaluate(()=>document.activeElement.id==='terms-search'));
+    await page.getByPlaceholder('Search banks, dates or saved terms…').pressSequentially('E2E');
+    check('terms search keeps focus while typing',await page.getByPlaceholder('Search banks, dates or saved terms…').inputValue()==='E2E'&&await page.evaluate(()=>document.activeElement.id==='terms-search'));
     const termsBank=page.locator('.archive-bank').first();
     check('terms bank starts collapsed',!(await termsBank.evaluate(e=>e.open)));
     await termsBank.locator(':scope > summary').click();
@@ -898,7 +898,7 @@ async function exercise(name,engine,url){
     for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
       check('archive mobile width '+width,await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&[...document.querySelectorAll('.archive-raw')].every(e=>e.scrollWidth<=e.clientWidth+1)));
-      if(width===390){await page.locator('.archive-raw').first().scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,name+'-terms-archive-mobile.png')})}
+      if(width===390){await termsBank.locator('.archive-raw').last().scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,name+'-terms-archive-mobile.png')})}
     }
 
     await button('Tracker').click();

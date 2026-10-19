@@ -762,7 +762,9 @@ function archive(rows){
  if(window.bt360ArchiveDetailId&&expanded){return window.rTracker(rows,true)}
  let h=segments()+'<div class="bt360-page-copy">Churn history & saved terms</div><input class="sinput" type="search" id="terms-search" aria-label="Search archive banks and terms" placeholder="Search banks, dates or saved terms…" value="'+safe(storageSearch||'')+'" oninput="updateViewSearch(\'terms\',this.value,this.selectionStart)">';
  const query=String(storageSearch||'').trim().toLowerCase();
- const closed=rows.filter(e=>e.closed&&scope(e)&&(!query||[e.bank,e.opened,e.closed,e.tcSourceRaw,e.analyzedTC].join(' ').toLowerCase().includes(query)));
+ const savedBuckets=termsDisplayBuckets();
+ const savedText=e=>{const b=savedBuckets.find(x=>entryBankIdentity(x.current||x).key===entryBankIdentity(e).key);return b?[b.current,...(b.versions||[])].map(x=>[x.tcSourceRaw,x.feeScheduleRaw,x.completeBonusText,x.opened].join(' ')).join(' '):'';};
+ const closed=rows.filter(e=>e.closed&&scope(e)&&(!query||[e.bank,e.opened,e.closed,e.tcSourceRaw,e.analyzedTC,savedText(e)].join(' ').toLowerCase().includes(query)));
  const indexed=closed.map(e=>({e,info:eligibleInfo(e)}));
  const ready=indexed.filter(x=>x.info?.verified&&dB(td(),x.info.eligible)<=0);
  const soon=indexed.filter(x=>x.info?.verified&&dB(td(),x.info.eligible)>0&&dB(td(),x.info.eligible)<=60);
@@ -777,7 +779,7 @@ function archive(rows){
   const action=count
    ?'<div class="bt3727-archive-actions"><button type="button" class="bt3727-countdown '+(count.verified?'is-verified':'is-estimated')+'" onclick="BT360.openArchived('+arg(x.e.id)+')" aria-label="'+safe('Review '+x.e.bank+' eligibility: '+count.days+' days; '+(count.verified?'verified saved rule':'unverified estimate'))+'"><strong>'+count.days+'</strong><small>'+safe(count.caption)+'</small></button>'+(offer?'<button type="button" class="bt3727-view-offers" onclick="BT360.viewOffers('+arg(x.e.bank)+')">View offers</button>':'')+'</div>'
    :'<button type="button" class="bt360-chip bt3727-no-date" onclick="BT360.openArchived('+arg(x.e.id)+')">Details</button>';
-  const bucket=termsDisplayBuckets().find(b=>entryBankIdentity(b.current||b).key===entryBankIdentity(x.e).key);
+  const bucket=savedBuckets.find(b=>entryBankIdentity(b.current||b).key===entryBankIdentity(x.e).key);
   const versions=[...(x.e.previousCycles||[]),...(bucket?[bucket.current,...(bucket.versions||[])]:[])].filter(v=>v&&!(String(v.entryId||v.id||'')===String(x.e.id)&&v.opened===x.e.opened));
   const history=versions.length?'<details class="research-help archive-history"><summary>Previous cycles and saved terms · '+versions.length+'</summary>'+versions.map(v=>renderTermsCycle(v,true)).join('')+'</details>':'';
   return '<details class="bt-archive-bank"><summary class="bt360-list-row bt3727-archive-row">'+bankLogo(x.e.bank,true)+'<span class="bt360-grow"><b>'+safe(x.e.bank)+'</b><small>'+safe(label)+'</small><small>Dates, saved terms & history ▾</small>'+(audience==='all'?kindTag(x.e):'')+'</span>'+action+'</summary><div class="bt-archive-bank-body">'+renderTermsCycle(x.e)+history+'<button type="button" class="bt360-secondary" onclick="BT360.openArchived('+arg(x.e.id)+')">View account</button></div></details>';
