@@ -37,7 +37,13 @@ sandbox.btConfirmDialog=async()=>true;
  assert.match(sandbox.BTCloudBackup.protection().title,/Manual iCloud/);
  assert.equal(typeof sandbox.btCloudBeforeDestructive,'function','File restore safety hook must remain callable without Railway');
  await sandbox.btCloudBeforeDestructive('local-file-restore');
+ run('entries[0].notes="A new change not in iCloud yet";localStorage.setItem(SK,JSON.stringify(entries));');
+ await assert.rejects(sandbox.btCloudBeforeDestructive('pre-reset'),/Safety backup required/,'Unbacked edits must block destructive actions without Railway');
+ run('entries='+JSON.stringify([record])+';localStorage.setItem(SK,JSON.stringify(entries));');
+ await sandbox.btCloudBeforeDestructive('pre-reset');
+ assert.equal(JSON.parse(sandbox.localStorage.getItem('bt_e_v4'))[0].bonus,record.bonus,'Safety guard never writes tracker records');
+
  vm.runInContext(require('node:fs').readFileSync('cloud-terms-history.js','utf8'),sandbox);
  assert.equal(sandbox.BTTermsHistory.status.pending,0);
- console.log('iCloud migration passed: full source preservation, credential exclusion, stale-file rejection, verified opt-in, no data deletion and server-free restore hooks');
+ console.log('iCloud migration passed: full source preservation, credential exclusion, stale-file rejection, verified opt-in, no data deletion and server-free verified recovery safeguards');
 })().catch(e=>{console.error(e);process.exitCode=1});
