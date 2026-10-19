@@ -3,7 +3,7 @@
 'use strict';
 const API='https://api-production-00f74.up.railway.app/api/bonus-tracker/terms';
 const uploaded=new Set();
-let inFlight=null,panel=null,notice='',verified=0,pending=0,debounce=null;
+let inFlight=null,panel=null,notice='',verified=0,pending=0,debounce=null,syncAgain=false;
 const core=window.BTTermsCore;
 function escapeHtml(value){return String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function connected(){return !!window.BTBonusAuth?.connected?.()}
@@ -25,7 +25,7 @@ function sources(){
  return core.collect(rows,archived);
 }
 async function sync(){
- if(inFlight)return inFlight;
+ if(inFlight){syncAgain=true;return inFlight;}
  if(!connected())throw Error('Sign in to cloud recovery to preserve historical terms.');
  if(navigator.onLine===false)throw Error('Historical terms upload needs an internet connection.');
  inFlight=(async()=>{
@@ -42,19 +42,29 @@ async function sync(){
     pending--;
    }
    verified=uploaded.size;
+   pending=failed;
    notice=failed?(failed+' historical terms version'+(failed===1?'':'s')+' could not be verified. Retry while signed in.'):(all.length?'Historical terms verified in Cloudflare R2.':'No saved offer terms available to archive.');
    drawStatus();
    return{verified:count,failed,total:all.length};
-  }finally{inFlight=null}
+  }finally{
+   inFlight=null;
+   if(failed||syncAgain){syncAgain=false;scheduleSync(failed?30000:2000);}
+  }
  })();
  return inFlight;
+}
+function scheduleSync(delay){
+ if(!connected()||navigator.onLine===false)return;
+ clearTimeout(debounce);
+ debounce=setTimeout(()=>{debounce=null;sync().catch(()=>{});},delay);
+ debounce?.unref?.();
 }
 function queueSync(){
  // An authenticated archive upload is independent of optional rolling backups.
  // Coalesce rapid fee/terms edits; offline/unauthenticated changes remain local.
  if(!connected()||navigator.onLine===false)return;
- clearTimeout(debounce);
- debounce=setTimeout(()=>{debounce=null;sync().catch(()=>{});},2000);
+ if(inFlight)syncAgain=true;
+ scheduleSync(2000);
 }
 function drawStatus(){
  if(!panel)return;

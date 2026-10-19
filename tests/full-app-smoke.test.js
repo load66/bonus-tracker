@@ -59,8 +59,8 @@ module.exports={sandbox,document,app,storage,errors};
 if(require.main===module)setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.6.35',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.6.35',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.6.36',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.6.36',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     const trackerRender=sandbox.BT360;
     assert(trackerRender.audience==='all','Fresh installations and migrated personal/business sessions must show all accounts by default');
     assert(trackerRender.segments().includes('All accounts')&&trackerRender.segments().includes('Personal')&&trackerRender.segments().includes('Business'),'Combined view and optional filters must be available');
@@ -277,9 +277,9 @@ if(require.main===module)setTimeout(()=>{
       const bucket=termsArchiveRows()[0];
       return{first,editAttempt,replaced,currentOpened:bucket?.current?.opened,currentBonus:bucket?.current?.bonus,versions:bucket?.versions?.length||0,oldText:bucket?.versions?.[0]?.tcSourceRaw||'',newText:bucket?.current?.tcSourceRaw||'',view:rTermsStorage()};
     })()`,sandbox);
-    assert(tcStorageLifecycle.first===true&&tcStorageLifecycle.editAttempt===false,'Existing-cycle edit incorrectly replaced stored T&C');
+    assert(tcStorageLifecycle.first===true&&tcStorageLifecycle.editAttempt===true,'Existing-cycle correction must preserve a new revision');
     assert(tcStorageLifecycle.replaced===true&&tcStorageLifecycle.currentOpened==='2028-02-01'&&tcStorageLifecycle.currentBonus===300,'New bonus cycle did not replace Current T&C');
-    assert(tcStorageLifecycle.versions===1&&/12 months/.test(tcStorageLifecycle.oldText)&&/24 months/.test(tcStorageLifecycle.newText),'Previous T&C was not preserved after replacement');
+    assert(tcStorageLifecycle.versions===2&&/12 months/.test(tcStorageLifecycle.oldText)&&/24 months/.test(tcStorageLifecycle.newText),'Original terms and corrected cycle must both survive replacement');
     assert(/T&C Archive/.test(tcStorageLifecycle.view)&&/Previous T&C cycles/.test(tcStorageLifecycle.view),'T&C Archive tab did not render current and historical terms');
 
     const report=sandbox.btRunFullRegressionTests();

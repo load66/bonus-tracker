@@ -114,7 +114,22 @@ async function exercise(name,engine,url){
     else{await page.getByRole('button',{name:'More account actions'}).click();await page.getByRole('button',{name:/Record closure/}).click();}
     await page.locator('#cp_date').fill('2026-05-01');
     await page.locator('#cp_monthly_checked').selectOption('yes');
-    await button('Next').click();await button('Next').click();await button('Review').click();await button('Save Closed').click();await button('OK').click();
+    await button('Next').click();await button('Next').click();await button('Review').click();
+    check('closure review exposes cycle history completeness',await page.locator('.close-modal .archive-history-review').isVisible());
+    check('closure review separates cloud verification from local save',(await page.locator('.close-modal').innerText()).includes('Cloud protection is confirmed separately'));
+    for(const width of [320,390,430]){
+      await page.setViewportSize({width,height:844});
+      check('closure history review fits '+width+'px',await page.locator('.close-modal').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+      if(width===390)await page.screenshot({path:path.join(output,name+'-closure-history-review-390.png')});
+    }
+    await page.setViewportSize({width:390,height:844});
+    await button('Save Closed').click();
+    check('closure transaction preserves exact cycle and enrolled sources',await page.evaluate(()=>{
+      const e=entries[0],saved=loadTermsArchive()[termsArchiveKey(e)].current;
+      return saved.entryId===e.id&&['opened','closed','bonusRecd','reqMet','tcSourceRaw','feeScheduleRaw'].every(k=>String(saved[k]||'')===String(e[k]||''));
+    }));
+    check('closure success states cloud protection separately',await page.evaluate(()=>cfm.msg.includes('Cloud recovery:')));
+    await button('OK').click();
   };
   try{
     await page.goto(url);await settleStartup();

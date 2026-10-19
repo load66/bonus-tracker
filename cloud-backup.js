@@ -12,6 +12,10 @@
   function protection(){const cfg=read();return core.protectionState({...cfg,error:statusError||cfg.error},{connected:window.BTBonusAuth.connected(),busy,currentVerified,pending:pending||cfg.pending,online:navigator.onLine!==false});}
   function paint(){
     const cfg=read(),state=protection(),date=cfg.lastAt?new Date(cfg.lastAt).toLocaleString():'No verified cloud backup yet';
+    (document.querySelectorAll?.('[data-cycle-cloud]')||[]).forEach(el=>{
+      el.textContent='Cloud recovery · '+state.title+((state.tone==='protected'||state.tone==='success')&&cfg.lastAt?' · '+date:'');
+      el.title=state.detail;el.dataset.state=state.tone;
+    });
     const button=document.getElementById('bt-cloud-open');
     if(button){const short=state.tone==='protected'||state.tone==='success'?'Protected':state.tone==='off'?'Backup off':state.tone==='danger'?'Backup alert':'Syncing';button.dataset.state=state.tone;button.innerHTML='<span class="bt360-cloud-icon" aria-hidden="true">'+(state.tone==='protected'||state.tone==='success'?'✓':'!')+'</span><span class="cloud-dashboard-summary"></span>';button.querySelector('.cloud-dashboard-summary').textContent=short;button.setAttribute('aria-label','Cloud backup. Automatic backup '+(cfg.enabled?'on':'off')+'. '+state.title+'. Last verified cloud backup: '+date);}
     if(!panel)return;

@@ -705,3 +705,13 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
 .bt-archive-bank{border-bottom:1px solid #1E212C}.bt-archive-bank>summary{list-style:none;cursor:pointer}.bt-archive-bank>summary::-webkit-details-marker{display:none}
 .bt-archive-bank>summary:focus-visible{outline:2px solid #9DB6FF;outline-offset:-2px}
 .bt-archive-bank-body{padding:8px 12px 14px;background:#12141C}.bt-archive-bank-body .archive-cycle{padding:8px 0}
+/* Cycle completeness and cloud protection are independent states. */
+.archive-history-review{margin:12px 0;padding:12px;border:1px solid var(--border);border-radius:12px;color:var(--sub);font-size:12px;overflow-wrap:anywhere}
+.archive-history-review b{display:block;color:var(--text);font-size:13px}
+.archive-history-review.incomplete{border-color:#a67936}
+.archive-history-review ul{padding-left:18px;margin:8px 0}
+.archive-history-review p{margin:8px 0 0;line-height:1.5}
+.archive-cloud-state{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:12px 0;font-size:12px;color:var(--sub);overflow-wrap:anywhere}
+.archive-cloud-state .btn-s{width:auto;min-height:36px;margin:0;font-size:12px}
+.archive-enrollment-choice{display:flex;gap:8px;align-items:flex-start;white-space:normal;line-height:1.5}
+.archive-enrollment-choice input{width:auto;flex:0 0 auto;margin-top:4px}

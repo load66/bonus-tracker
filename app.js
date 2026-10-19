@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.35';
+const APP_VERSION='3.6.36';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -27,7 +27,8 @@ const sv=(k,v)=>{
   try{
     before=localStorage.getItem(k);
     const payload=JSON.stringify(v);
-    if(window.BTPersistence)window.BTPersistence.commit(localStorage,{[k]:payload});
+    if(k===SK)commitEntriesWithArchive(v);
+    else if(window.BTPersistence)window.BTPersistence.commit(localStorage,{[k]:payload});
     else{localStorage.setItem(k,payload);if(localStorage.getItem(k)!==payload)throw Error('Storage verification failed');}
     window.btCloudBackupChanged?.();
     return true;
@@ -217,17 +218,21 @@ function termsArchiveSourceText(e){
   return String(e?.tcSourceRaw||e?.analysis?.rawText||e?.analyzedTC||'').trim()
 }
 function termsArchiveSnapshot(e,source){
-  if(!e||!e.bank||!e.opened)return null;
+  if(!e||!e.bank||!(e.id||e.entryId))return null;
   // An incomplete old T&C is still worth preserving; never invent verification.
-  const raw=termsArchiveSourceText(e);
+  const raw=String(e.tcSourceRaw||e.analysis?.rawText||'').trim();
   let verified=false;
   if(raw.length>=120)try{verified=!!window.BTEligibilityGate?.validate?.({...e,tcSourceRaw:raw})?.ok}catch{}
   const copied=v=>v&&typeof v==='object'?JSON.parse(JSON.stringify(v)):v;
+  // Keep the complete recorded cycle, including notes, tasks and lifecycle
+  // events. Prior cycles are staged individually to avoid recursive copies.
+  const {previousCycles,...cycle}=copied(e);
   return{
+    ...cycle,
     id:'tc_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7),
     bank:e.bank||'',
     accountType:normalizeAccountType(e.accountType)||inferAccountTypeForEntry(e)||'personal',
-    entryId:e.id||'',opened:e.opened||'',bonus:Number(e.bonus||0),
+    entryId:e.entryId||e.id||'',opened:e.opened||'',bonus:Number(e.bonus||0),
     capturedAt:td(),termsVerifiedAt:e.termsVerifiedAt||e.eligibilityVerifiedAt||'',
     evidenceStatus:verified?'eligibility-evidence-validated':'saved-unverified',
     source:source||'account-cycle',schemaVersion:parseInt(e.schemaVersion||0,10)||0,
@@ -266,10 +271,10 @@ function termsArchiveSignature(x){
 function termsCycleToken(x){
   return [String(x?.entryId||''),String(x?.opened||''),termsArchiveSignature(x)].join('|')
 }
-function saveTermsArchiveForNewCycle(e,source){
+function stageTermsArchive(all,e,source){
   const snap=termsArchiveSnapshot(e,source);
   if(!snap)return false;
-  const all=loadTermsArchive(),key=termsArchiveKey(snap);
+  const key=termsArchiveKey(snap);
   const bucket=(all[key]&&typeof all[key]==='object')?all[key]:{bank:snap.bank,accountType:snap.accountType,current:null,versions:[]};
   const cur=bucket.current&&typeof bucket.current==='object'?bucket.current:null;
   if(cur&&cur.entryId===snap.entryId&&cur.opened===snap.opened&&termsArchiveSignature(cur)===termsArchiveSignature(snap))return false;
@@ -282,7 +287,37 @@ function saveTermsArchiveForNewCycle(e,source){
     // explicit save error rather than erasing a past enrolled promotion.
   }
   bucket.bank=snap.bank;bucket.accountType=snap.accountType;bucket.current=snap;bucket.versions=versions;
-  all[key]=bucket;return saveTermsArchive(all);
+  all[key]=bucket;return true;
+}
+function saveTermsArchiveForNewCycle(e,source){
+  const all=loadTermsArchive();
+  return stageTermsArchive(all,e,source)?saveTermsArchive(all):false;
+}
+function commitEntriesWithArchive(rows){
+  if(!Array.isArray(rows))throw Error('Account records must be a list.');
+  // Parse strictly: a damaged archive must never be silently replaced by {}.
+  const archiveRaw=localStorage.getItem(TC_ARCHIVE_KEY),entryRaw=localStorage.getItem(SK);
+  const all=archiveRaw===null?{}:JSON.parse(archiveRaw),before=entryRaw===null?[]:JSON.parse(entryRaw);
+  if(!all||typeof all!=='object'||Array.isArray(all)||!Array.isArray(before))throw Error('Stored history needs recovery before saving.');
+  for(const bucket of Object.values(all))if(!bucket||typeof bucket!=='object'||Array.isArray(bucket)||(bucket.current!=null&&typeof bucket.current!=='object')||(bucket.versions!==undefined&&!Array.isArray(bucket.versions)))throw Error('Stored archive needs recovery before saving.');
+  const identity=e=>String(e.id||e.entryId||'')+'|'+String(e.opened||'');
+  const incoming=new Map(rows.map(e=>[identity(e),e]));
+  let changed=false;
+  const stage=(e,source)=>{
+    if(!e||typeof e!=='object')return;
+    for(const cycle of (Array.isArray(e.previousCycles)?e.previousCycles:[])){
+      if(cycle&&typeof cycle==='object')stage({...cycle,bank:cycle.bank||e.bank,accountType:cycle.accountType||e.accountType,entryId:cycle.entryId||cycle.id||e.id},'retained-prior-cycle');
+    }
+    changed=stageTermsArchive(all,e,source)||changed;
+  };
+  for(const old of before){if(JSON.stringify(old)!==JSON.stringify(incoming.get(identity(old))))stage(old,'before-account-change');}
+  const existing=new Map(before.map(e=>[identity(e),e]));
+  for(const row of rows){if(JSON.stringify(row)!==JSON.stringify(existing.get(identity(row))))stage(row,'account-save');}
+  const writes={[SK]:JSON.stringify(rows)};
+  if(changed)writes[TC_ARCHIVE_KEY]=JSON.stringify(all);
+  window.BTPersistence.commit(localStorage,writes);
+  if(changed)window.BTTermsHistory?.queueSync?.();
+  return true;
 }
 function backfillStoredTermsArchive(){
  // Non-destructive migration: read existing Tracker and churn records, add only
@@ -331,7 +366,7 @@ function termsDisplayBuckets(){
  entries.forEach(e=>{
   if(!e?.bank)return;
   const identity=entryBankIdentity(e),found=rows.find(b=>entryBankIdentity(b.current||b).key===identity.key);
-  const x={...e,accountType:identity.type,entryId:e.id,tcSourceRaw:termsArchiveSourceText(e),_fromEntry:true};
+  const x={...e,accountType:identity.type,entryId:e.id,tcSourceRaw:String(e.tcSourceRaw||e.analysis?.rawText||''),_fromEntry:true};
   if(found){if(found.current?.opened!==e.opened&&!found.versions.some(v=>v.opened===e.opened))found.versions.push(x)}
   else rows.push({bank:e.bank,accountType:identity.type,current:x,versions:[]});
  });
@@ -346,16 +381,48 @@ function termsDisplayBuckets(){
  }));
  return rows.sort((a,b)=>String(a.current?.bank||a.bank).localeCompare(String(b.current?.bank||b.bank)));
 }
+function archiveDateValid(value){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value||'')))return false;
+  const date=new Date(value+'T00:00:00Z');
+  return !Number.isNaN(date.getTime())&&date.toISOString().slice(0,10)===value;
+}
+function archiveHistoryIssues(e){
+  const issues=[];
+  if(!e?.opened)issues.push('Opening date not recorded');
+  for(const [key,label] of [['opened','Opening'],['closed','Closing'],['bonusRecd','Bonus payment'],['reqMet','Requirements completion'],['couponEnrollmentDate','Enrollment']])if(e?.[key]&&!archiveDateValid(e[key]))issues.push(label+' date needs correction');
+  if(!String(e?.tcSourceRaw||e?.analysis?.rawText||'').trim())issues.push('Original promotion text not saved');
+  if(!String(e?.feeScheduleRaw||'').trim())issues.push('Original fee schedule not saved');
+  if(!e?.promoSourceUrl)issues.push('Promotion source link not saved');
+  if(!e?.feeScheduleSourceUrl)issues.push('Fee schedule source link not saved');
+  if(e?.closed&&Number(e.bonus)>0&&!e.bonusRecd)issues.push('Bonus payment date not recorded');
+  return issues;
+}
+function renderArchiveHistoryReview(e){
+  const issues=archiveHistoryIssues(e);
+  return '<section class="archive-history-review'+(issues.length?' incomplete':'')+'"><b>History review · '+(issues.length?'Incomplete':'Core records present')+'</b>'
+    +(issues.length?'<ul>'+issues.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul><p>Available facts will be preserved. Missing information needs your review; dates and terms are never guessed.</p>':'<p>Opening date, original promotion, fee schedule and source links are present. Saved evidence still needs to match your enrolled offer.</p>')+'</section>';
+}
+function archiveCloudStatusMarkup(){
+  const state=window.BTCloudBackup?.protection?.();
+  return '<div class="archive-cloud-state"><span data-cycle-cloud role="status">'+esc(state?'Cloud recovery · '+state.title:'Cloud recovery not yet verified')+'</span><button type="button" class="btn-s" onclick="btOpenCloudBackup()">Backup & recovery</button></div>';
+}
+function closeCycleForSave(e,p){
+  const next={...e,opened:p.opened===undefined?(e.opened||''):p.opened,closed:p.closeDate,bonus:Number(p.actualBonus||0),monthlyFeeChecked:!!p.monthlyFeeChecked,feeChecked:true};
+  if(Number(p.actualBonus||0)>0){next.bonusRecd=p.bonusDate||e.bonusRecd||'';next.reqMet=p.reqDate||e.reqMet||'';}
+  if(p.enrollmentAtOpening&&next.opened&&!e.couponEnrollmentDate&&!e.offerEnrollmentDate){next.couponEnrollmentDate=next.opened;next.offerEnrollmentDate=next.opened;}
+  return next;
+}
 function renderTermsCycle(x,previous=false){
   const originals=entries.flatMap(e=>[e,...(Array.isArray(e.previousCycles)?e.previousCycles:[])]);
   const exact=originals.find(e=>String(e.id||e.entryId||'')===String(x.entryId||x.id||'')&&e.opened&&e.opened===x.opened&&entryBankIdentity(e).key===entryBankIdentity(x).key);
   if(exact){x={...exact,...x,...Object.fromEntries(['closed','bonusRecd','couponEnrollmentDate','offerEnrollmentDate'].map(k=>[k,x[k]||exact[k]||'']))};}
- const raw=termsArchiveSourceText(x),promo=safeExternalUrl(x.promoSourceUrl),fee=safeExternalUrl(x.feeScheduleSourceUrl),rules=Array.isArray(x.eligibilityRules)?x.eligibilityRules:[];
+ const raw=String(x.tcSourceRaw||x.analysis?.rawText||'').trim(),promo=safeExternalUrl(x.promoSourceUrl),fee=safeExternalUrl(x.feeScheduleSourceUrl),rules=Array.isArray(x.eligibilityRules)?x.eligibilityRules:[];
  const copy=x.financialRules&&typeof x.financialRules==='object'?x.financialRules:null;
  const feeRaw=String(x.feeScheduleRaw||'').trim();
  let h='<div class="archive-cycle"><div class="research-report-top"><span class="research-kind">'+(previous?'Previous saved version':'Saved offer')+'</span><b>'+(x.bonus?esc(fM(x.bonus)):'Bonus not saved')+'</b></div><dl class="research-dates"><div><dt>Account opened</dt><dd>'+esc(x.opened?fD(x.opened):'Not saved')+'</dd></div><div><dt>Terms saved / reviewed</dt><dd>'+esc((x.termsVerifiedAt||x.capturedAt)?fD(String(x.termsVerifiedAt||x.capturedAt).slice(0,10)):'Not recorded')+'</dd></div>'
   +'<div><dt>Evidence status</dt><dd>'+esc(x.evidenceStatus==='eligibility-evidence-validated'?'Saved eligibility evidence validated':'Enrolled source requires review')+'</dd></div></dl>';
- h+='<dl class="research-dates">'+[['closed','Closed'],['bonusRecd','Bonus received'],['couponEnrollmentDate','Coupon enrollment · optional']].map(([key,label])=>'<div><dt>'+label+'</dt><dd>'+esc(x[key]?fD(x[key]):'Not recorded')+'</dd></div>').join('')+'</dl>';
+ h+='<dl class="research-dates">'+[['closed','Closed'],['bonusRecd','Bonus received'],['reqMet','Requirements completed · if recorded'],['couponEnrollmentDate','Coupon enrollment · optional']].map(([key,label])=>{const value=key==='couponEnrollmentDate'?(x.couponEnrollmentDate||x.offerEnrollmentDate):x[key];return '<div><dt>'+label+'</dt><dd>'+esc(value?fD(value):'Not recorded')+'</dd></div>'}).join('')+'</dl>';
+ h+=renderArchiveHistoryReview(x)+archiveCloudStatusMarkup();
  if(!raw)h+='<p class="research-caveat">Original promotion text is missing for this historical cycle. Saved facts remain available but must not be treated as verified.</p>';
  const facts=[['Bonus requirements',x.completeBonusText],['Monthly fee',x.monthlyFeeAmountText||x.monthlyFeeYNText],['How to avoid the fee',x.monthlyFeeWaiverText||x.avoidMonthlyFeeText],['Early-close fee wording',x.earlyTerminationFeeText],['Closing / bonus retention',x.closeRuleText],['Payout timing',x.payoutTimingText],['Offer deadline',x.expirationDateText]];
  if(facts.some(([,v])=>v)||rules.length){
@@ -368,6 +435,7 @@ function renderTermsCycle(x,previous=false){
  if(feeRaw)h+='<details class="research-help archive-original"><summary>Read original saved fee schedule</summary><div class="archive-raw">'+esc(feeRaw)+'</div></details>';
  if(promo||fee){h+='<div class="archive-links">';if(promo)h+='<a class="research-source" href="'+esc(promo)+'" target="_blank" rel="noopener noreferrer">Promotion source ↗</a>';if(fee)h+='<a class="research-source" href="'+esc(fee)+'" target="_blank" rel="noopener noreferrer">Fee schedule ↗</a>';h+='</div><p class="research-caveat">Live pages may change. Only the saved text describes this recorded cycle.</p>'}
  if(raw)h+='<details class="research-help archive-original"><summary>Read original saved promotion</summary><div class="archive-raw">'+esc(raw)+'</div></details>';
+ if(!raw&&x.analyzedTC)h+='<details class="research-help"><summary>Saved analyzer summary · original terms missing</summary><div class="archive-raw">'+esc(x.analyzedTC)+'</div></details>';
  return h+'</div>';
 }
 function rTermsStorage(options={}){
@@ -390,7 +458,8 @@ function rTermsStorage(options={}){
 }
 function archivedCycleSnapshot(e){
   if(!e)return null;
-  return{bank:e.bank||'',accountType:e.accountType||'',id:e.id||'',dataPoint:e.dataPoint||'',feeScheduleRaw:e.feeScheduleRaw||'',financialRules:e.financialRules?JSON.parse(JSON.stringify(e.financialRules)):null,archivedAt:td(),opened:e.opened||'',reqMet:e.reqMet||'',bonusRecd:e.bonusRecd||'',closed:e.closed||'',bonus:e.bonus||0,churn:e.churn||'',schemaVersion:parseInt(e.schemaVersion||0,10)||0,sourceEligibilityBasis:e.sourceEligibilityBasis||'',churnPeriodValue:e.churnPeriodValue||0,churnPeriodUnit:e.churnPeriodUnit||'',eligibilityRules:Array.isArray(e.eligibilityRules)?e.eligibilityRules.map(r=>({...r})):[],couponEnrollmentDate:e.couponEnrollmentDate||'',offerEnrollmentDate:e.offerEnrollmentDate||'',closedWithNegativeBalance:typeof e.closedWithNegativeBalance==='boolean'?e.closedWithNegativeBalance:null,eligibilityEvidenceText:e.eligibilityEvidenceText||'',eligibilityEvidenceSource:e.eligibilityEvidenceSource||'',eligibilityVerifiedAt:e.eligibilityVerifiedAt||'',promoSourceUrl:e.promoSourceUrl||'',feeScheduleSourceUrl:e.feeScheduleSourceUrl||'',termsVerifiedAt:e.termsVerifiedAt||'',tcSourceRaw:String(e.tcSourceRaw||e.analysis?.rawText||e.analyzedTC||''),notes:String(e.notes||'').slice(0,900),analyzedPreview:String(e.analyzedTC||'').slice(0,900),timerSummary:normalizeTimerList(e.customTimers||[]).map(t=>({text:t.text||'',date:t.date||'',daysRequired:t.daysRequired||0,done:!!t.done})).slice(0,8)}
+  const {previousCycles,...cycle}=deepCopy(e);
+  return {...cycle,archivedAt:td(),tcSourceRaw:String(e.tcSourceRaw||e.analysis?.rawText||'')};
 }
 
 function nonRepeatableSourceText(e){
@@ -4568,6 +4637,9 @@ function rClose(){
     h+='<h3>🔒 Record closure</h3><div class="sub">Save only after the bank account has closed.</div>';
     h+='<div class="close-ready '+esc(ready.cls)+'"><b>'+esc(ready.label)+'</b><span>'+esc(closeFlowModeReason(e,'actual'))+'</span></div>';
     h+='<div class="close-review-card">'+closeReviewRows(e,p)+'</div>';
+    h+=renderArchiveHistoryReview(closeCycleForSave(e,p));
+    h+='<p class="research-caveat">Saving keeps this complete cycle and earlier revisions together on this device. Cloud protection is confirmed separately after upload and readback.</p>';
+    if((p.opened||e?.opened)&&!e?.couponEnrollmentDate&&!e?.offerEnrollmentDate)h+='<label class="archive-enrollment-choice"><input type="checkbox" id="cp_enrollment_opened" '+(p.enrollmentAtOpening?'checked ':'')+'onchange="if(closePrompt)closePrompt.enrollmentAtOpening=this.checked"> I enrolled in the promotion when this account opened</label>';
     h+=renderCloseReadinessList(e,p);
     if(warnings.length)h+='<div class="close-warnings compact"><b>Review</b>'+warnings.map(x=>'<span>• '+esc(x)+'</span>').join('')+'</div>';
     h+='<div class="close-review-actions"><button class="c-c" onclick="closeBack()">Back</button><button class="c-g" onclick="finishClose()">Save Closed</button></div>';
@@ -4576,6 +4648,7 @@ function rClose(){
     h+='<h3>🔒 Record closure</h3><div class="sub">Record the actual date the bank account was closed.</div>';
     h+='<div class="close-ready '+esc(ready.cls)+'"><b>'+esc(ready.label)+'</b><span>'+esc(ready.warnings[0]||'Closure is recorded separately from the T&C eligibility clock.')+'</span></div>';
     h+='<label>Actual Close Date</label><input type="date" id="cp_date" oninput="if(closePrompt)closePrompt.closeDate=this.value" value="'+esc(p.closeDate||'')+'">';
+    h+='<label>Account opening date</label><input type="date" id="cp_opened" oninput="if(closePrompt)closePrompt.opened=this.value" value="'+esc(p.opened===undefined?(e?.opened||''):p.opened)+'"><div class="sub">Use your actual opening date. Leave unknown dates blank; the history review will flag them.</div>';
     if(entryNeedsNegativeBalanceClosureAnswer(e)){
       h+='<label>Was this account closed with a negative balance?</label><select id="cp_negative_balance"><option value=""'+(typeof p.closedWithNegativeBalance!=='boolean'?' selected':'')+'>Select</option><option value="no"'+(p.closedWithNegativeBalance===false?' selected':'')+'>No</option><option value="yes"'+(p.closedWithNegativeBalance===true?' selected':'')+'>Yes</option></select>';
       h+='<div class="sub">This answer only activates conditional churn restrictions that explicitly depend on a negative-balance closure.</div>';
@@ -4770,8 +4843,7 @@ function syncModalFromEditDOM(){
 }
 function saveEntriesStrict(rows){
   try{
-    const payload=JSON.stringify(rows||[]);
-    window.BTPersistence.commit(localStorage,{[SK]:payload});
+    commitEntriesWithArchive(rows||[]);
     window.btCloudBackupChanged?.();
     return true;
   }catch(err){
@@ -5080,6 +5152,8 @@ function closeCollectDateFields(){
   if(!p)return;
   const d=document.getElementById('cp_date');
   if(d)p.closeDate=d.value;
+  const opened=document.getElementById('cp_opened');
+  if(opened)p.opened=opened.value;
   const mf=document.getElementById('cp_monthly_checked');
   if(mf)p.monthlyFeeChecked=mf.value==='yes';
   const nb=document.getElementById('cp_negative_balance');
@@ -5092,7 +5166,7 @@ function closeNext(){
     closeCollectDateFields();
     if(!p.closeDate){alert('Close date is required.');return}
     const e=entries.find(x=>x.id===p.entryId);
-    if(e?.opened&&dB(e.opened,p.closeDate)<0){alert('Close date cannot be before the opened date.');return}
+    if((p.opened||e?.opened)&&dB(p.opened||e.opened,p.closeDate)<0){alert('Close date cannot be before the opened date.');return}
     if(entryNeedsNegativeBalanceClosureAnswer(e)&&typeof p.closedWithNegativeBalance!=='boolean'){alert('Answer whether the account was closed with a negative balance so conditional churn rules can be calculated correctly.');return}
     p.step='bonus';
     R();
@@ -5134,14 +5208,18 @@ function finishClose(){
   if(!p)return;
   const e=entries.find(x=>x.id===p.entryId);
   if(!e)return;
-  if(!p.closeDate){alert('Close date is required.');return}
-  undoState=closeUndoSnapshot(e);
-  undoState.undoLabel='Closed saved for '+(e.bank||p.bank||'this bank')+' — Undo restores everything for 60 seconds.';
-  if(undoTimer)clearTimeout(undoTimer);
-  undoTimer=setTimeout(()=>{undoState=null;R()},60000);
+  if(!archiveDateValid(p.closeDate)||p.closeDate>td()){alert('Use a valid actual close date, today or earlier.');return}
+  const projected=closeCycleForSave(e,p);
+  if(projected.opened&&!archiveDateValid(projected.opened)){alert('Use the actual opening date or leave it blank if unknown.');return}
+  if(projected.opened&&dB(projected.opened,p.closeDate)<0){alert('Close date cannot be before the opened date.');return}
+  if(projected.bonus>0&&!projected.bonusRecd){alert('Confirm the bonus received date or correct the actual bonus amount.');return}
+  const beforeEntries=deepCopy(entries),beforeStorage=window.BTPersistence.capture(localStorage,getBackupStorageKeys());
+  const nextUndo=closeUndoSnapshot(e),oldUndo=undoState;
+  nextUndo.undoLabel='Closed saved for '+(e.bank||p.bank||'this bank')+' — Undo restores everything for 60 seconds.';
+  try{
   entries=entries.map(x=>{
     if(x.id===p.entryId){
-      x.closed=p.closeDate;
+      x={...x,...projected};
       if(entryNeedsNegativeBalanceClosureAnswer(x))x.closedWithNegativeBalance=!!p.closedWithNegativeBalance;
       x.bonus=Number(p.actualBonus||0);
       if(Number(p.actualBonus||0)>0){
@@ -5171,7 +5249,20 @@ function finishClose(){
     const readyDate=e2&&churnReadyDate(e2)?fD(churnReadyDate(e2)):'not available';
     cfm={title:'Closed Saved',msg:(e2?e2.bank:'This bank')+' closed on '+fD(p.closeDate)+'.\n\nChurn-ready date: '+readyDate+'.\nStatus: '+(e2?status(e2):'Waiting to Churn')+'.\n\nUndo is available for 60 seconds at the bottom of the app.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
   }
-  R()
+  const issues=archiveHistoryIssues(e2);
+  cfm.msg+='\n\nHistory: '+(issues.length?'Incomplete — '+issues.join('; ')+'.':'Core records saved locally.')+'\nCloud recovery: '+(window.BTCloudBackup?.protection?.().title||'Not verified')+'.';
+  undoState=nextUndo;
+  if(undoTimer)clearTimeout(undoTimer);
+  undoTimer=setTimeout(()=>{undoState=null;R()},60000);
+  }catch(error){
+    let restored=true;
+    try{window.BTPersistence.rollback(localStorage,beforeStorage)}catch{restored=false}
+    entries=beforeEntries;undoState=oldUndo;closePrompt=p;cfm=null;
+    window.btCloudBackupChanged?.();
+    alert(restored?'Closure was not saved. The previous records were restored. Keep this review open, export a backup and retry.':'Closure could not be verified and recovery needs attention. Keep this page open and export a backup before retrying.');
+    R();return false;
+  }
+  R();return true;
 }
 function confirmClearCloseDate(id){
   const e=entries.find(x=>x.id===id);
@@ -5358,6 +5449,8 @@ function rcvSubmit(){
     return
   }
   p.warningReviewed=false;
+  const beforeEntries=deepCopy(entries),beforeStorage=window.BTPersistence.capture(localStorage,getBackupStorageKeys());
+  try{
   entries=entries.map(e=>{
     if(e.id===p.entryId){
       e.bonusRecd=p.date;
@@ -5375,7 +5468,15 @@ function rcvSubmit(){
   entries=sortE(entries);sv(SK,entries);
   rcvPrompt=null;
   cfm={title:'Bonus Received Saved',msg:(e2?e2.bank:'This bank')+' received date saved for '+fD(p.date)+'.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
-  R()
+  cfm.msg+='\n\nCycle history saved on this device. Cloud recovery: '+(window.BTCloudBackup?.protection?.().title||'Not verified')+'.';
+  }catch(error){
+    let restored=true;
+    try{window.BTPersistence.rollback(localStorage,beforeStorage)}catch{restored=false}
+    entries=beforeEntries;rcvPrompt=p;cfm=null;window.btCloudBackupChanged?.();
+    alert(restored?'Bonus payment was not saved. Previous records were restored. Keep this review open and retry.':'Bonus payment could not be verified. Keep this page open and export a backup before retrying.');
+    R();return false;
+  }
+  R();return true;
 }
 function confirmClearRcv(){
   const p=rcvPrompt;
