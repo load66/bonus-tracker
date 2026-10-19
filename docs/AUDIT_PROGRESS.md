@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: none
+Active agent: Codex — v3.6.43 — codex/v3.6.43-dd-datapoints
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.43 trusted deposit experiences (`codex/v3.6.43-dd-datapoints`): Direct-deposit tasks open exact bank-family/audience research with cleared stale filters. Bonus confirmation and DD requirement completion offer optional observed-result review. Automatic lifecycle notes remain pending; trusted outcomes require explicit attestation and a valid actual event date. Cycle identities, corrections and review provenance survive legacy export and verified recovery; repeated lifecycle saves preserve reviewed evidence. Confirmed personal experiences rank first, newest actual evidence ranks within each tier, and older/unknown dates and conflicting outcomes remain visible. No new storage keys, provider calls, public sharing or financial-rule changes. Local regression suites pass; next: full Chromium/WebKit CI, screenshot review, merge on green and exact production verification.
 
 - v3.6.42 dashboard polish (`codex/v3.6.42-dashboard-polish`): Full-width selected task descriptions beneath bank identity, preserved compact rows and exact canonical action routing. Compact counted search shortcut opens and focuses the existing account directory; Escape and Hide close it and restore shortcut focus, including directories opened through stage filters. Read-only UI state; no schema, backend, storage-key or canonical-rule changes. Synthetic search, focus, stage-filter and mobile coverage added. Local unit and release checks required; next: Chromium/WebKit CI, screenshot review, merge on green and exact Pages verification. Previous v3.6.41 PR #220 deployed at `05fc689848c0` with passing main CI and exact live-asset verification.
 

@@ -1298,6 +1298,41 @@ async function exercise(name,engine,url){
     check('stale repair cannot overwrite newer account edit',await page.evaluate(()=>entries[0].notes==='A newer synthetic edit'&&!entries[0].feeScheduleRaw));
     await page.getByRole('button',{name:'Close history repair',exact:true}).click();
     await page.evaluate(()=>{entries=JSON.parse(window.__beforeHistoryRepair.entries);localStorage.setItem('bt_e_v4',window.__beforeHistoryRepair.entries);const raw=window.__beforeHistoryRepair.archive;if(raw===null)localStorage.removeItem('bt_tc_archive_v1');else localStorage.setItem('bt_tc_archive_v1',raw);delete window.__beforeHistoryRepair;R();});
+    // v3.6.43: explicit result capture and exact-bank task research.
+    await page.evaluate(()=>{
+      entries=[{id:'E2E-TRUST',bank:'E2E Trust Bank',accountType:'business',opened:'2026-01-01',bonus:100,
+        completeBonusText:'Receive qualifying direct deposits',checklist:[{text:'Qualifying direct deposit',done:false}],
+        customTimers:[{id:'trust-dd',text:'Receive qualifying direct deposits',date:'2027-01-01',done:false}]}];
+      tab='tracker';expanded=null;cfm=null;saveUserDatapoints([]);sv(SK,entries);R();toggleCk('E2E-TRUST',0);
+    });
+    check('direct deposit completion prompts for an observed result',await page.getByRole('dialog',{name:'My experience'}).isVisible()&&await page.evaluate(()=>dpEditor.evidenceStage==='requirement'));
+    check('completion prompt does not invent an event date or trusted outcome',await page.evaluate(()=>dpEditor.eventDate===''&&!dpEditor.confirmedByUser&&loadUserDatapoints().length===0));
+    for(const width of [320,375,390,430]){
+      await page.setViewportSize({width,height:844});
+      check('experience review fits '+width+'px',await page.locator('.research-editor').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
+    }
+    await page.getByLabel('Transfer or activity',{exact:true}).fill('Synthetic payroll');
+    await page.getByLabel('Observed result',{exact:true}).selectOption('worked');
+    await page.getByLabel('Actual experience date',{exact:true}).fill(await page.evaluate(()=>td()));
+    await page.getByLabel('I confirm this result from my own experience',{exact:true}).check();
+    await page.screenshot({path:path.join(output,name+'-experience-confirmation.png')});
+    await page.getByRole('button',{name:'Save report',exact:true}).click();
+    check('explicit experience retains cycle identity and attestation',await page.evaluate(()=>loadUserDatapoints().some(x=>x.entryId==='E2E-TRUST'&&x.accountType==='business'&&x.cycleOpened==='2026-01-01'&&x.confirmedByUser&&x.outcome==='worked')));
+    await page.evaluate(()=>{expanded=null;R();if(BT360.selectedAttentionId!=='E2E-TRUST')BT360.toggleAttention('E2E-TRUST')});
+    await page.getByRole('button',{name:'DD datapoints',exact:false}).click();
+    check('task research opens exact bank and account type',await page.evaluate(()=>tab==='tips'&&dpTaskBankKey===datapointBankKey(entries[0])));
+    check('confirmed experience appears in task research',await page.locator('.bt366-dp-item').innerText().then(t=>t.includes('Synthetic payroll')&&t.includes('You confirmed')));
+    await page.getByRole('button',{name:'All banks',exact:false}).click();
+    check('all banks resets scoped research',await page.evaluate(()=>dpTaskBankKey===''));
+    await page.evaluate(()=>{tab='tracker';expanded=null;openRcv('E2E-TRUST');rcvPrompt.date=td();R()});
+    await page.locator('#rcv_dp').fill('Synthetic payroll');
+    await page.locator('button[onclick="rcvSubmit()"]').click();
+    if(await page.getByRole('button',{name:'Save Anyway',exact:true}).count())await page.getByRole('button',{name:'Save Anyway',exact:true}).click();
+    await page.getByRole('button',{name:'Review experience',exact:true}).click();
+    check('bonus confirmation offers a separate method review',await page.evaluate(()=>dpEditor.evidenceStage==='bonus'&&entries[0].bonusRecd===td()&&!dpEditor.confirmedByUser));
+    const pointsBeforeSkip=await page.evaluate(()=>JSON.stringify(loadUserDatapoints()));
+    await page.getByRole('button',{name:'Skip for now',exact:true}).click();
+    check('skipping experience preserves payment and prior evidence',await page.evaluate(before=>!!entries[0].bonusRecd&&JSON.stringify(loadUserDatapoints())===before,pointsBeforeSkip));
     await page.evaluate(()=>BTBonusAuth.disconnect());
     check('AI sign-out removes remembered session',await page.evaluate(()=>!localStorage.getItem('bonus-ai-auth')&&!BTBonusAuth.connected()));
     check('no uncaught application errors',errors.length===0);
