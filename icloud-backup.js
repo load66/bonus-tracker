@@ -85,7 +85,8 @@ async function switchToICloud(){
  const oldCfg=(()=>{try{return JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')||'{}')}catch{return{}}})();
  const nextCfg={...oldCfg,enabled:false,pending:false};
  window.BTPersistence.commit(localStorage,{[MODE]:'icloud',bt_cloud_recovery_v1:JSON.stringify(nextCfg)});
- if(typeof location?.reload==='function')location.reload();else window.btNotify?.('iCloud-only mode is enabled. Reload BonusTracker.');
+ try{sessionStorage.setItem('bt_icloud_switch_completed_v1','1')}catch{}
+ if(typeof location?.reload==='function')location.reload();else window.btNotify?.('iCloud-only mode is enabled. Save a new file whenever your tracker changes.',{title:'Backup mode updated',tone:'success'});
  return true;
 }
 let panel=null;
@@ -96,16 +97,36 @@ function openSetup(){
  if(panel){panel.remove();panel=null}
  panel=document.createElement('div');panel.className='ov cloud-overlay icloud-backup-overlay';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label','Backup with iCloud Drive');panel.tabIndex=-1;
  const active=isLocalOnly(),receipt=readReceipt();
- panel.innerHTML='<section class="modal cloud-modal"><div class="icloud-backup-heading"><h2>Back up to iCloud Drive</h2><button type="button" id="icloud-close" aria-label="Close iCloud backup">×</button></div><p>Your tracker stays on this phone. Save a complete file to iCloud Drive whenever you make important changes.</p><p id="icloud-backup-status">'+(receipt?'Last file checked: '+new Date(receipt.verifiedAt).toLocaleString():'No backup file checked yet')+'</p><div class="bt360-actions"><button type="button" class="btn-p" id="icloud-save">1. Save backup file</button><button type="button" class="btn-s" id="icloud-verify">2. Check file from iCloud</button>'+(active?'<button type="button" class="btn-s" id="icloud-restore">Restore from file</button>':'<button type="button" class="btn-p" id="icloud-switch">3. Switch to iCloud only</button>')+'</div><p class="bt360-muted">A website cannot write automatically to iCloud Drive. A saved file is recoverable on a new phone only after it reaches iCloud. This backup file contains private financial notes; keep it private.</p></section>';
+ panel.innerHTML='<section class="modal cloud-modal"><div class="icloud-backup-heading"><h2>Back up to iCloud Drive</h2><button type="button" id="icloud-close" aria-label="Close iCloud backup">×</button></div><p>Your tracker stays on this phone. Save a complete file to iCloud Drive whenever you make important changes.</p><p id="icloud-backup-status">'+(receipt?'Last file checked: '+new Date(receipt.verifiedAt).toLocaleString():'No backup file checked yet')+'</p><div class="bt360-actions"><button type="button" class="btn-p" id="icloud-save">1. Save backup file</button><button type="button" class="btn-s" id="icloud-verify">2. Check file from iCloud</button>'+(active?'<button type="button" class="btn-s" id="icloud-restore">Restore from file</button>':'<button type="button" class="btn-p" id="icloud-switch">3. Switch to iCloud only</button>')+'</div><p id="icloud-switch-feedback" role="status" aria-live="assertive" hidden></p><p class="bt360-muted">A website cannot write automatically to iCloud Drive. A saved file is recoverable on a new phone only after it reaches iCloud. This backup file contains private financial notes; keep it private.</p></section>';
  document.body.append(panel);
- const statusEl=panel.querySelector('#icloud-backup-status');const report=e=>{statusEl.textContent=e.message||String(e)};
+ const statusEl=panel.querySelector('#icloud-backup-status'),switchFeedback=panel.querySelector('#icloud-switch-feedback');
+ const feedback=(message,tone='error')=>{
+   switchFeedback.textContent=String(message);switchFeedback.dataset.tone=tone;switchFeedback.hidden=false;
+   switchFeedback.scrollIntoView?.({block:'nearest'});
+ };
+ const report=e=>feedback(e?.message||String(e));
  panel.querySelector('#icloud-save').onclick=()=>exportFile().catch(report);
  panel.querySelector('#icloud-verify').onclick=()=>verifyFile().then(r=>{statusEl.textContent='File checked: '+new Date(r.verifiedAt).toLocaleString()}).catch(report);
  if(active)panel.querySelector('#icloud-restore').onclick=()=>{panel.remove();panel=null;importBackup()};
- else panel.querySelector('#icloud-switch').onclick=()=>switchToICloud().catch(report);
+ else panel.querySelector('#icloud-switch').onclick=async()=>{
+   const button=panel.querySelector('#icloud-switch');switchFeedback.hidden=true;button.disabled=true;
+   try{
+     const switched=await switchToICloud();
+     if(!switched)feedback('Switch cancelled. Railway backup settings were not changed.','neutral');
+   }catch(error){report(error)}
+   finally{button.disabled=false}
+ };
  panel.querySelector('#icloud-close').onclick=()=>{panel.remove();panel=null};
  panel.onclick=e=>{if(e.target===panel){panel.remove();panel=null}};
  panel.focus({preventScroll:true});
 }
-window.BTICloudBackup={isLocalOnly,status,verifyPayload,verifyFile,exportFile,switchToICloud,openSetup,beforeDestructive};
+window.BTICloudBackup={isLocalOnly,status,verifyPayload,verifyFile,switchToICloud,openSetup,beforeDestructive};
+if(isLocalOnly()){
+ try{
+   if(sessionStorage.getItem('bt_icloud_switch_completed_v1')==='1'){
+     sessionStorage.removeItem('bt_icloud_switch_completed_v1');
+     setTimeout(()=>window.btNotify?.('iCloud-only mode is active. New changes require a new backup file.',{title:'Switched to iCloud Drive',tone:'success',duration:6500}),450);
+   }
+ }catch{}
+}
 })();
