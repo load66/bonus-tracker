@@ -1,4 +1,4 @@
-/* Release 3.6.48: preserved unchanged canonical rules during cloud recovery upgrade. */
+/* Release 3.6.49: preserved unchanged canonical rules during cloud recovery upgrade. */
 /*
  * filename: bank-rules-wells-consumer.js
  * version: 3.5.2
