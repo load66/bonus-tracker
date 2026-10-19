@@ -462,7 +462,10 @@ async function exercise(name,engine,url){
     check('backup contains records, history, and terms',backup.entries.length===1&&backup.entries[0].id===id&&Object.keys(backup.termsArchive).length>0&&backup.entries[0].history.length>0);
     await close();check('closure uses actual date',(await record()).closed==='2026-05-01');
     check('eligibility uses payout plus exact months and buffer',await page.evaluate(()=>btOfficialEligibilityDate(entries[0])==='2027-04-15'&&nextReopen(entries[0])==='2027-04-17'));
+    await page.evaluate(()=>{entries.push({id:'synthetic-later-undo',bank:'Synthetic later Undo account',opened:'2026-06-01',bonus:0,notes:'Preserve this newer account'});sv(SK,entries);R()});
     await button('Undo').click();check('undo restores account and notes',!(await record()).closed&&(await record()).notes===backup.entries[0].notes);
+    check('undo retains a different account added after closure',await page.evaluate(()=>entries.some(e=>e.id==='synthetic-later-undo'&&e.notes==='Preserve this newer account')&&JSON.parse(localStorage.getItem(SK)).some(e=>e.id==='synthetic-later-undo')));
+    await page.evaluate(()=>{entries=entries.filter(e=>e.id!=='synthetic-later-undo');sv(SK,entries);R()});
     await close();
     await button('Settings').click();
     const chooser=page.waitForEvent('filechooser');await page.getByRole('button',{name:'Restore from file',exact:false}).click();await (await chooser).setFiles(backupFile);

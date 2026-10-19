@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.36: source-linked Tax receipts and preserved prior-cycle history.
-const V = 'bt-v3.6.36-integrity1';
+// Version 3.6.37: source-linked Tax receipts and preserved prior-cycle history.
+const V = 'bt-v3.6.37-integrity1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',

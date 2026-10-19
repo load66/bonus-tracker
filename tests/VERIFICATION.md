@@ -1,3 +1,7 @@
+# v3.6.37 safe lifecycle Undo
+
+Synthetic failing-before regression demonstrates that a closure Undo discarded a later-created account and reverted another account's newer notes. Coverage retains later accounts and supporting reports, blocks target/supporting conflicts and newer other-tab account writes, verifies exact storage after injected failure and retry, preserves closure revisions in Archive, and covers Undo plus failed saves for open-account corrections. Browser coverage adds a different account after closure and verifies it survives the actual Undo button. Existing release checks remain required on Chromium and WebKit.
+
 # v3.6.36 cycle preservation
 
 Synthetic regression reproduces missing closure dates in dedicated Archive snapshots before the fix. Coverage includes full lifecycle/source/notes retention, unknown opening dates, atomic account/Archive storage failure and exact rollback, closure retry and undo revisions, explicit enrollment-at-opening without overwriting confirmed dates, corrupt-history preservation, exact backup/restore, rollover retention and analyzer-summary provenance. Cloud tests verify live Archive status, in-flight terms edits and retry after upload failure. Chromium/WebKit check the actual closure review at 320/390/430px, saved cycle equality and separate cloud status; full existing assertions remain enabled. No real provider or owner financial-record mutations.

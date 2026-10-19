@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: Codex — v3.6.37 — codex/v3.6.37-safe-undo
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.37 safe lifecycle Undo (`codex/v3.6.37-safe-undo`): Reproduced full-list Undo discarding a later-created account and reverting another account's newer edits. Undo now restores only the affected unchanged account, reverses its unchanged supporting changes while retaining unrelated records, and commits account/Archive/supporting writes together. Conflicts in the account or supporting history and newer account writes from another tab stop the operation without writes. Both closure and open-account correction capture verified before/after states; correction failures restore previous records and keep the review open. Archive revisions remain preserved. Synthetic regression covers later accounts/reports, conflicts, failure/retry, reopen Undo and exact storage preservation; installed-browser workflow also retains a later-created account through Undo. Frontend/cache v3.6.37, no backend, storage-key/schema migration, real-record mutation or financial-rule change. Next: full unit/Chromium/WebKit CI, merge on green and verify exact Pages source/cache. Previous v3.6.36 PR #215 deployed at `6dcf1b4ec98f` with post-merge unit/browser/deployment success and live asset verification.
 
 - v3.6.36 cycle preservation (`codex/v3.6.36-archive-integrity`): Account writes commit the full recorded cycle and Archive revision together with verified local readback and rollback. Capture changed prior states and nested cycles, including records with unknown opening dates; retain full notes, tasks, terms and lifecycle fields without truncation. Closure review exposes missing dates and original sources, allows recording known facts without inventing missing ones, and offers explicit enrollment-at-opening confirmation without replacing a separate saved enrollment date. Closure/payment failures retain the review and restore prior local records. Archive distinguishes history completeness from current full-backup verification, with live pending/error/verified status and a recovery shortcut. Summaries are preserved separately from original promotion evidence. Historical terms uploads revisit in-flight changes and retry failures. Existing R2 endpoints, backup keys, financial rules and Tax payment-year policy remain unchanged; no separate vault, backend migration or real-record writes. Synthetic fault injection, exact restore, rollover, source and pending/retry coverage added. Next: full unit/Chromium/WebKit CI, merge on green and verify exact Pages release/cache.
 
