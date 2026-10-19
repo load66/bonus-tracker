@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: Codex — v3.6.40 — codex/v3.6.40-account-overview
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.40 organized account overview (`codex/v3.6.40-account-overview`): Reference-guided compact recorded-date grid, a short account header, expandable fees/timers/eligibility/original terms/history, per-account disclosure state and separate local/cloud save labels. Active requirements remain visible and canonical closing checks retain priority. Full source text and existing actions remain reachable; unknown dates stay unrecorded, invalid dates need review, and financial facts are not inherited or rewritten. Local-save text requires an exact stored record match; compact cloud status updates from the existing verified recovery state. Archive history gaps collapse without concealing the closure review warning. No backend, rules, import schema or persistent-key changes. Local bonus/cloud/UI and release verification PASS; next: full Chromium/WebKit CI, screenshot review, merge on green and exact Pages verification. Previous v3.6.39 PR #218 deployed at `8be1fa249522` with successful main CI and live-file verification.
 
 - v3.6.39 complete saved-cycle projections (`codex/v3.6.39-nested-history`): Reproduced deeper saved cycles missing from Tax and Archive while available to History Repair. Shared read-only traversal now projects every retained depth into Tax, chart, CSV, Archive and exact-cycle reconciliation; inherits account identity only, never event dates or financial facts. Canonical audience and bank identity keep duplicate receipts from inflating totals while distinct accounts remain separate. Archive no longer hides another account merely because its opening date matches. Stored history remains nested and unchanged; no migration, schema, backend or canonical-rule changes. Synthetic recursive-history, duplicate, exact-source, no-write and browser regressions added. Local bonus/cloud/UI and release checks PASS; next: full Chromium/WebKit PR CI, merge on green and verify exact main Pages source/cache. Previous v3.6.38 PR #217 deployed at `f81f9ae91e0e` with passing main CI, both browsers and exact live asset verification.
 
