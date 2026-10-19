@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.40';
+const APP_VERSION='3.6.41';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -6882,11 +6882,14 @@ entries=sortE(entries); // First visible render is owned by BT360 at the end of 
     const f=!q&&expanded&&sorted.some(e=>e.id===expanded)?sorted.filter(e=>e.id===expanded):(window.BT360?.selectedStage&&!archiveView?filtered.filter(e=>lifecycleViewForEntry(e).code===window.BT360.selectedStage):filtered);
     let h='';
     const bkd=daysSinceBk();
+    if(window.BT360&&sorted.length&&!archiveView&&!expanded&&!q&&!window.BT360.selectedStage&&!showTemplates&&!showAnalyzer&&!window.BT360.accountListOpen){
+      return '<div class="bt3641-directory"><button type="button" class="bt360-link" aria-expanded="false" aria-controls="bt-tracker-directory" onclick="BT360.toggleAccountList()">All accounts <span>'+sorted.length+'</span><span aria-hidden="true">⌄</span></button></div>'+rBankActions();
+    }
 
     if(archiveView){
       h+='<button type="button" class="btn-s" onclick="BT360.back()">Back to Archive</button><div class="sec">Archived accounts</div><div class="sub">Completed, non-repeatable offers. Records, received bonuses and enrolled terms remain available for history, tax and recovery.</div>';
     }else{
-    if(!expanded)h+='<div class="bt360-search-tools"><button class="bt360-link" onclick="BT360.resetStage();R()">All accounts</button></div>';
+    if(!expanded)h+='<div class="bt360-search-tools" id="bt-tracker-directory"><button type="button" class="bt360-link" aria-expanded="true" onclick="BT360.toggleAccountList()">Hide accounts</button></div>';
 
     if(showTemplates&&!expanded){
       h += '<section id="bt-quick-add-panel" class="bt362-tool-panel" tabindex="-1"><div class="sec">Quick add templates</div><div class="tgrid">';

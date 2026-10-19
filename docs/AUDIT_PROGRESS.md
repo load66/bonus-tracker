@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: Codex — v3.6.41 — codex/v3.6.41-selectable-attention
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.41 selectable Tracker tasks (`codex/v3.6.41-selectable-attention`): Each attention row expands its own actions on selection, preserves priority order, and collapses the previous selection. Account directory starts collapsed behind All accounts; search, stage filters and account actions remain available. UI state only; no schema, backend, canonical-rule or financial-record changes. Synthetic selection and browser regressions added. Next: full unit and Chromium/WebKit verification, merge on green and exact Pages verification. Previous v3.6.40 PR #219 deployed at `0a46bc88510f` with successful main CI and exact live-file verification.
 
 - v3.6.40 organized account overview (`codex/v3.6.40-account-overview`): Reference-guided compact recorded-date grid, a short account header, expandable fees/timers/eligibility/original terms/history, per-account disclosure state and separate local/cloud save labels. Active requirements remain visible and canonical closing checks retain priority. Full source text and existing actions remain reachable; unknown dates stay unrecorded, invalid dates need review, and financial facts are not inherited or rewritten. Local-save text requires an exact stored record match; compact cloud status updates from the existing verified recovery state. Archive history gaps collapse without concealing the closure review warning. No backend, rules, import schema or persistent-key changes. Local bonus/cloud/UI and release verification PASS; next: full Chromium/WebKit CI, screenshot review, merge on green and exact Pages verification. Previous v3.6.39 PR #218 deployed at `8be1fa249522` with successful main CI and live-file verification.
 

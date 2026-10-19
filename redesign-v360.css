@@ -773,3 +773,23 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
 .bt3640-archive-review{padding:0 12px}
 .bt3640-archive-review>summary{min-height:44px;padding:12px 0;cursor:pointer;line-height:1.5}
 .bt3640-archive-review:not([open])>:not(summary){display:none}
+/* Selectable Needs you cards; priority order and canonical actions stay intact. */
+.bt3641-attention-stack{margin-top:0}
+.bt3719-needs .bt3641-attention-item.is-selected{margin:8px!important;padding:12px!important}
+.bt3719-attention-list .bt3641-attention-toggle{border-bottom:0!important}
+.bt3719-attention-list .is-selected>.bt3641-attention-toggle{padding:2px 0 10px}
+.bt3641-attention-item{min-width:0;border-bottom:1px solid var(--border);overflow-wrap:anywhere}
+.bt3641-attention-item:last-child{border-bottom:0}
+.bt3641-attention-toggle{width:100%;text-align:left;border:0;border-radius:0;background:transparent;color:inherit;cursor:pointer;min-height:86px}
+.bt3641-attention-toggle[aria-expanded=true]{border-radius:16px}
+.bt3641-attention-item.is-selected{margin:8px;padding:12px;border:1px solid #584046;border-radius:18px;background:var(--card)}
+.bt3641-attention-item.is-selected>.bt3641-attention-toggle{padding:2px 0 10px}
+.bt3641-attention-item .bt3729-bank-name{font-size:14px;line-height:1.35}
+.bt3641-attention-item .bt3729-task-title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.45;font-size:12px}
+.bt3641-attention-item .bt3729-task-meta{font-size:10px;line-height:1.4;margin-top:4px}
+.bt3641-attention-body[hidden]{display:none!important}
+.bt3641-attention-body .bt360-actions{margin-top:12px}
+.bt3641-attention-body .bt360-actions button{min-height:46px}
+.bt3641-directory{margin:18px 0 4px;padding:0 4px}
+.bt3641-directory>button{width:100%;display:flex;align-items:center;gap:10px;min-height:48px;color:var(--mint);text-align:left;font-size:13px}
+.bt3641-directory>button span:first-child{margin-left:auto;color:var(--muted)}
