@@ -3,7 +3,7 @@
   'use strict';
   if(window.BTICloudBackup?.isLocalOnly?.()){
     window.btCloudBackupChanged=()=>{};
-    window.btCloudBeforeDestructive=async()=>{};
+    window.btCloudBeforeDestructive=reason=>window.BTICloudBackup.beforeDestructive(reason);
     window.btOpenCloudBackup=()=>window.BTICloudBackup.openSetup();
     window.BTCloudBackup={protection:()=>({tone:'off',title:'Manual iCloud files',detail:'Save a new file to iCloud Drive after changes.'}),isBusy:()=>false};
     return;
