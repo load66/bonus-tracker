@@ -1,6 +1,10 @@
 /* Owner-only immutable Cloudflare R2 historical T&C archive. No account restores or mutations. */
 (function(){
 'use strict';
+if(window.BTICloudBackup?.isLocalOnly?.()){
+  window.BTTermsHistory={sync:async()=>{},queueSync:()=>{},open:()=>window.BTICloudBackup.openSetup(),get status(){return{verified:0,pending:0,notice:'Manual iCloud backup'}},collect:()=>[]};
+  return;
+}
 const API='https://api-production-00f74.up.railway.app/api/bonus-tracker/terms';
 const uploaded=new Set();
 let inFlight=null,panel=null,notice='',verified=0,pending=0,debounce=null,syncAgain=false;
