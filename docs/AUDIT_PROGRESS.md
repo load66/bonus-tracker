@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: none
+Active agent: Codex — v3.6.45 — codex/v3.6.45-hide-internal-history
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.45 quiet internal diagnostics (`codex/v3.6.45-hide-internal-history`): remove verbose read-only historical-integrity diagnostics and history-repair entry points from everyday Settings/Tracker/Archive UI without modifying underlying checks, data, manual repair API, or financial-action safety guards. User explicitly requested internal-only presentation. Next: complete synthetic tests, Chromium/WebKit, merge and Pages verification.
 
 - v3.6.45 quiet history diagnostics (`codex/v3.6.45-quiet-history-settings`): remove verbose historical integrity findings and global history repair panel from everyday Settings/Archive navigation; preserve non-destructive integrity analysis and opt-in per-account history repair. No financial data writes or migrations. PR #225, v3.6.45. Unit tests pass; browser harness now exercises hidden repair programmatically, preserving full assertions. Next: final-head Chromium/WebKit checks, merge passing PR and verify GitHub Pages production.
 
