@@ -1,12 +1,12 @@
 # Audit progress
 
-Active agent: Codex — v3.6.46 — codex/v3.6.46-archive-simple-secure
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
 
-- v3.6.46 simple Archive (`codex/v3.6.46-archive-simple-secure`): hide per-cycle cloud recovery controls and verbose historical warnings, show recorded bonus and key dates with optional collapsed details; retain all underlying backup verification, restore flows and original evidence unchanged. Automated tests and browser verification required before merge.
+- v3.6.46 simple Archive (`codex/v3.6.46-archive-simple-secure`): hide per-cycle cloud recovery controls and verbose historical warnings, show recorded bonus and key dates with optional collapsed details; retain all underlying backup verification, restore flows and original evidence unchanged. Frontend PR #226; CI run 39266183079 passed bonus, UI and cloud unit suites, Chromium, WebKit and release verifier. Next: merge verified release and confirm GitHub Pages deploy.
 
 - v3.6.45 quiet history diagnostics (`codex/v3.6.45-quiet-history-settings`): remove verbose historical integrity findings and global history repair panel from everyday Settings/Archive navigation; preserve non-destructive integrity analysis and opt-in per-account history repair. No financial data writes or migrations. PR #225, v3.6.45. Unit tests pass; browser harness now exercises hidden repair programmatically, preserving full assertions. Next: final-head Chromium/WebKit checks, merge passing PR and verify GitHub Pages production.
 
