@@ -479,6 +479,28 @@ async function exercise(name,engine,url){
     await button('Tracker').click();
     await button('Settings').click();
     check('data tools are in the header menu',await page.getByRole('button',{name:'Export backup file',exact:false}).isVisible()&&await page.getByRole('button',{name:'Reset this device',exact:false}).isVisible()&&await page.locator('.tracker-quick-actions button').count()===0);
+    // Regression: on iOS the fixed Settings sheet (z-index 999) previously
+    // covered the new iCloud wizard (default .ov z-index 200).
+    const beforeCloudWizard=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
+    const oldViewport=page.viewportSize();
+    for(const width of [375,390]){
+      await page.setViewportSize({width,height:844});
+      await page.getByRole('button',{name:'Move to iCloud Drive'}).click();
+      const wizard=page.getByRole('dialog',{name:'Backup with iCloud Drive'});
+      check('iCloud wizard is visible immediately at '+width+'px',await wizard.isVisible()&&await page.getByRole('dialog',{name:'Settings'}).count()===0);
+      check('iCloud wizard buttons are not obscured at '+width+'px',await wizard.locator('#icloud-save').evaluate(el=>{
+        const r=el.getBoundingClientRect();
+        const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+        return !!hit&&(el===hit||el.contains(hit))&&r.height>30;
+      }));
+      check('iCloud wizard has a visible Close button',await wizard.getByRole('button',{name:'Close iCloud backup'}).isVisible());
+      await wizard.getByRole('button',{name:'Close iCloud backup'}).click();
+      check('closing iCloud wizard removes its overlay',await page.locator('.icloud-backup-overlay').count()===0);
+      await button('Settings').click();
+    }
+    if(oldViewport)await page.setViewportSize(oldViewport);
+    check('opening iCloud migration never rewrites account records',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,beforeCloudWizard));
+
     const backupEvent=page.waitForEvent('download');await page.getByRole('button',{name:'Export backup file',exact:false}).click();
     const backupFile=path.join(output,name+'-backup.json');await (await backupEvent).saveAs(backupFile);
     const backup=JSON.parse(await fs.readFile(backupFile,'utf8'));
