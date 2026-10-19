@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: none
+Active agent: Codex — v3.6.45 — codex/v3.6.45-quiet-history-settings
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.45 quiet history diagnostics (`codex/v3.6.45-quiet-history-settings`): remove verbose historical integrity findings and global history repair panel from everyday Settings/Archive navigation; preserve non-destructive integrity analysis and opt-in per-account history repair. No financial data writes or migrations. Next: UI/cloud tests, Chromium/WebKit, release and Pages verification.
 
 - v3.6.44 cloud recovery coverage (`codex/v3.6.44-recovery-coverage`): user-authorized takeover after merged v3.6.43. Cover entry-scoped source records in cloud/file recovery; verify writes, backup-change events and one-hour refresh-persistent success banner cooldown. No private data changes or credential backup. Backend PR #242 merged and Railway production SUCCESS at d8bbd8b. Frontend PR #224 initial full CI run 39243372179 passed bonus/cloud/UI, Chromium/WebKit and release verification. Next: complete final-head CI, merge and verify Pages deployment.
 
