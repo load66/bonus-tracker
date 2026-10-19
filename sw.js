@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.45: quiet internal history diagnostics in Settings.
-const V = 'bt-v3.6.45-quiet1';
+// Version 3.6.46: concise Archive cards with private automatic cloud recovery.
+const V = 'bt-v3.6.46-archive1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
