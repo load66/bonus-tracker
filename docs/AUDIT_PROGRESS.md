@@ -1,12 +1,12 @@
 # Audit progress
 
-Active agent: Codex — v3.6.48 — codex/v3.6.48-icloud-modal-visibility
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
 
-- v3.6.48 iCloud setup overlay fix (`codex/v3.6.48-icloud-modal-visibility`): resolve Settings sheet z-index occluding the iCloud migration modal. Dismiss Settings before opening and use a dedicated accessible top-layer modal. No changes to backup or user data. Add browser and unit regression coverage, Chromium/WebKit CI, and Pages release verification.
+- v3.6.48 iCloud setup overlay fix (`codex/v3.6.48-icloud-modal-visibility`): resolve Settings sheet z-index occluding the iCloud migration modal. Dismiss Settings before opening and use a dedicated accessible top-layer modal. No changes to backup or user data. PR #228; bonus/cloud/UI tests, Chromium/WebKit mobile tap-visibility assertions, and release verifier passed in CI run 39274633924. Next: merge and confirm GitHub Pages deploy; no user records or backup objects modified.
 
 - v3.6.47 iCloud-only migration (`codex/v3.6.47-icloud-only-migration`): verified portable export to iCloud Drive, read-only backup-file validation before an opt-in local-only switch, disable BonusTracker Railway requests after switch while retaining local records and file restoration. No deletion of shared Railway services or cloud objects. Backend safety tests, full bonus/cloud/UI suites, Chromium, WebKit and release verifier passed on PR #227 (run 39271696124). Next: verify final-head checks, merge PR, confirm GitHub Pages deployment; iCloud selection and verification on the user's iPhone remain required before disabling server backups.
 
