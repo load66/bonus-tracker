@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.34: confirmed-event dates, closure fee evidence, and read-only timer views.
-const V = 'bt-v3.6.34-integrity1';
+// Version 3.6.35: source-linked Tax receipts and preserved prior-cycle history.
+const V = 'bt-v3.6.35-integrity1';
 const ASSETS = [
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',

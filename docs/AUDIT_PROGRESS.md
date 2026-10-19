@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: Codex — v3.6.35 — codex/v3.6.35-tax-history
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.35 Tax and unified Archive (`codex/v3.6.35-tax-history`): Single Archive screen combines cooldown cards with their exact-cycle dates and enrolled terms; cards expand on tap, and the separate Saved terms switch is removed. Existing archive storage and R2 behavior are preserved; the separately proposed vault was cancelled without provision or deployment. Read-only receipt projection includes saved prior cycles in Tax, CSV and the monthly chart without duplicating the same recorded payout within an account. Expandable receipts expose saved lifecycle dates, account identity and current/prior source, with an explicit account link and unknown-date copy. Save review warns about missing opening dates on paid/closed accounts. New-cycle paths preserve all already-saved cycles instead of truncating them. Synthetic history, restore, totals, source-navigation and no-write regressions added. Frontend/cache v3.6.35; no backend, schema migration, real-record changes or automatic historical recovery. Next: full unit/Chromium/WebKit release CI, merge on green and verify exact Pages source/cache.
 
 - v3.6.34 integrity audit (`codex/v3.6.34-integrity-audit`): requirements editor starts blank for unknown dates and preserves confirmed dates; invalid or unsupported closure anchors remain unresolved. Conditional or unrelated legacy fee wording cannot certify unconditional no-fee closure. Summary and lifecycle completion use canonical closure decisions. Added failing-before synthetic date, fee and view regressions plus Chromium/WebKit coverage; frontend/cache v3.6.34. No schema, backend, stored-data migration or real-account writes. Local bonus/cloud/UI and release checks required; PR CI, merge and exact Pages/cache verification are release gates.
 

@@ -415,6 +415,19 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>{const e=entries[0],v=window.__layoutOriginal;e.checklist=v.checklist;e.customTimers=v.customTimers;e.monthlyFeeWaiverText=v.monthlyFeeWaiverText;delete window.__layoutOriginal;R()});
     await button('Tax').click();
     check('tax includes received bonus on open account',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));
+    await page.locator('.bt360-tax-record summary').first().click();
+    check('tax receipt exposes account identity and actual lifecycle dates',await page.locator('.bt360-tax-history').first().innerText().then(t=>t.includes('Opened')&&t.includes('Closed')&&t.includes('Account ID')&&t.includes('No closure recorded')));
+    await page.locator('.bt360-tax-history').getByRole('button',{name:'View account',exact:true}).click();
+    check('tax receipt links to its actual account',await page.locator('.bt360-detail-card').count()===1);
+    await button('Tax').click();
+    const beforeTaxHistory=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
+    await page.evaluate(()=>{window.__taxEntriesBefore=JSON.stringify(entries);entries[0].previousCycles=[{id:'SYN-B-HIST',bank:'Synthetic Historical Bank',accountType:'business',opened:'2025-11-01',bonusRecd:'2026-01-04',closed:'2026-01-06',bonus:90}];taxYear=2026;R()});
+    const historical=page.locator('.bt360-tax-record').filter({hasText:'Synthetic Historical Bank'});
+    await historical.locator('summary').click();
+    check('saved prior cycle retains its own dates and source in Tax',await historical.innerText().then(t=>t.includes('Nov 1, 2025')&&t.includes('Jan 6, 2026')&&t.includes('Prior cycle')&&t.includes('View current account')));
+    check('history browsing never rewrites stored accounts',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,beforeTaxHistory));
+    await page.screenshot({path:path.join(output,name+'-tax-history-390.png')});
+    await page.evaluate(()=>{entries=JSON.parse(window.__taxEntriesBefore);delete window.__taxEntriesBefore;R()});
     page.once('dialog',dialog=>dialog.accept('2026'));
     const taxDownload=page.waitForEvent('download');await button('Export tax CSV').click();
     const taxFile=path.join(output,name+'-tax.csv');await (await taxDownload).saveAs(taxFile);
@@ -569,7 +582,7 @@ async function exercise(name,engine,url){
       dashYear=window.__heroMonthPreviousYear;delete window.__heroMonthPreviousYear;
       BT360.clearHeroMonth();R();
     });
-    await button('Datapoints').click();check('successful method appears in datapoints',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));await button('Archive').click();await button('Saved terms').click();check('terms archive contains original promotion',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));await button('Tracker').click();
+    await button('Datapoints').click();check('successful method appears in datapoints',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));await button('Archive').click();check('archive unifies terms and cooldown',await page.locator('.bt360-archive-switch').count()===0);check('terms archive contains original promotion',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));await button('Tracker').click();
     await page.getByPlaceholder('Search accounts...').fill('Does not exist');await page.getByText('No matching accounts',{exact:true}).waitFor();await page.getByPlaceholder('Search accounts...').fill('');
     check('search keeps stored record',(await record()).id===id);
     await page.setViewportSize({width:390,height:844});
@@ -874,7 +887,7 @@ async function exercise(name,engine,url){
     check('report editor footer stays within mobile viewport',await page.locator('.research-editor-footer').evaluate(e=>{const r=e.getBoundingClientRect();return r.bottom<=innerHeight+1&&r.top>0}));
     await button('Save report').click();
     check('source report save preserves activity date',await page.evaluate(()=>loadCommunityDatapoints().some(x=>x.bank==='E2E Report Bank'&&x.eventDate==='2026-09-30'&&x.outcome==='worked')));
-    await button('Archive').click();await button('Saved terms').click();
+    await button('Archive').click();check('archive unifies terms and cooldown',await page.locator('.bt360-archive-switch').count()===0);
     await page.getByPlaceholder('Search stored T&C...').pressSequentially('E2E');
     check('terms search keeps focus while typing',await page.getByPlaceholder('Search stored T&C...').inputValue()==='E2E'&&await page.evaluate(()=>document.activeElement.id==='terms-search'));
     const termsBank=page.locator('.archive-bank').first();

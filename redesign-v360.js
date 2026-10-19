@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.34 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.35 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt3628_audience_session',noticeKey='bt360_notice_session';
@@ -65,7 +65,7 @@ function heroMonthData(rows,year){
  // Reuse the Tax eligibility/date gates. In particular, future recorded
  // receipts and unearned/zero bonuses must not inflate either view.
  const yr=Number(year);
- const eligible=rows.filter(e=>scope(e)&&taxReady(e)&&taxYearOf(e)===yr&&e.bonusRecd<=td());
+ const eligible=taxReceiptRows(rows).filter(e=>scope(e)&&taxReady(e)&&taxYearOf(e)===yr&&e.bonusRecd<=td());
  return HERO_MONTHS.map((name,i)=>{
   const accounts=eligible.filter(e=>Number(String(e.bonusRecd).slice(5,7))===i+1)
      .sort((a,b)=>String(a.bonusRecd).localeCompare(String(b.bonusRecd))||String(a.bank).localeCompare(String(b.bank)));
@@ -110,7 +110,7 @@ function hero(rows,year,metrics){
  if(selectedHeroMonth!==null){
   const x=monthRows[selectedHeroMonth];
   const rowsHtml=x.accounts.length?x.accounts.map(e=>
-   '<button type="button" class="bt367-month-row" onclick="BT360.openHeroBonus('+arg(e.id)+')">'
+   '<button type="button" class="bt367-month-row" onclick="BT360.openHeroBonus('+arg(e._taxParentId||e.id)+')">'
    +bankLogo(e.bank,true)+'<span class="bt360-grow"><b>'+safe(e.bank)+'</b><small>'+safe(e.accountName||e.accountNickname||e.productName||e.acct||(accountAudience(e)==='business'?'Business account':'Personal account'))+' · '+safe(date(e.bonusRecd))+'</small>'+(audience==='all'?kindTag(e):'')+'</span><strong>'+safe(amount(e.bonus))+'</strong></button>'
   ).join(''):'<p class="bt367-month-empty">No bonuses</p>';
   detail='<section class="bt367-month-detail" aria-label="'+x.name+' '+year+' collected bonuses"><div class="bt367-month-detail-head"><b>'+x.name+' '+year+' · '+amount(x.total)+' collected · '+x.accounts.length+' '+(x.accounts.length===1?'bonus':'bonuses')+'</b><button type="button" aria-label="Close month details" onclick="BT360.closeHeroMonth()">×</button></div><div class="bt367-month-list">'+rowsHtml+'</div></section>';
@@ -748,9 +748,9 @@ function detailFooter(e){
  const primary=primaryAction(e);
  return '<div class="bt360-detail-footer'+(stage(e).code==='READY_TO_CLOSE'?' bt3611-ready-footer':'')+'" role="group" aria-label="Account actions"><button type="button" onclick="'+(stage(e).code==='READY_TO_CLOSE'?'BT360.back()':'btOpenBonusAI('+arg(e.id)+')')+'">'+(stage(e).code==='READY_TO_CLOSE'?'Keep open':'Ask AI')+'</button><button type="button" class="bt360-primary" aria-label="'+safe(primary.label+' for '+e.bank)+'" onclick="'+primary.command+'">'+safe(primary.label)+'</button></div>';
 }
-function showTerms(bank){archivePane='saved';storageSearch=String(bank||'');expanded=null;tab='archive';R()}
+function showTerms(bank){archivePane='waiting';storageSearch=String(bank||'');expanded=null;tab='archive';R()}
 function back(){expanded=null;window.bt360ArchiveDetailId=null;R();const el=document.querySelector('.scroll');if(el)el.scrollTop=0}
-function goArchive(pane){archivePane=pane==='saved'?'saved':'waiting';expanded=null;tab='archive';R()}
+function goArchive(pane){archivePane='waiting';expanded=null;tab='archive';R()}
 function archiveCountdown(info){
  if(!info?.eligible)return null;
  const remaining=dB(td(),info.eligible);
@@ -760,15 +760,15 @@ function archiveCountdown(info){
 }
 function archive(rows){
  if(window.bt360ArchiveDetailId&&expanded){return window.rTracker(rows,true)}
- let h=segments()+'<div class="bt360-segments bt360-archive-switch"><button aria-pressed="'+(archivePane==='waiting')+'" class="'+(archivePane==='waiting'?'active':'')+'" onclick="BT360.goArchive(\'waiting\')">Waiting to churn</button><button aria-pressed="'+(archivePane==='saved')+'" class="'+(archivePane==='saved'?'active':'')+'" onclick="BT360.goArchive(\'saved\')">Saved terms</button></div>';
- if(archivePane==='saved')return h+rTermsStorage();
- const closed=rows.filter(e=>e.closed&&scope(e));
+ let h=segments()+'<div class="bt360-page-copy">Churn history & saved terms</div><input class="sinput" type="search" id="terms-search" aria-label="Search archive banks and terms" placeholder="Search banks, dates or saved terms…" value="'+safe(storageSearch||'')+'" oninput="updateViewSearch(\'terms\',this.value,this.selectionStart)">';
+ const query=String(storageSearch||'').trim().toLowerCase();
+ const closed=rows.filter(e=>e.closed&&scope(e)&&(!query||[e.bank,e.opened,e.closed,e.tcSourceRaw,e.analyzedTC].join(' ').toLowerCase().includes(query)));
  const indexed=closed.map(e=>({e,info:eligibleInfo(e)}));
  const ready=indexed.filter(x=>x.info?.verified&&dB(td(),x.info.eligible)<=0);
  const soon=indexed.filter(x=>x.info?.verified&&dB(td(),x.info.eligible)>0&&dB(td(),x.info.eligible)<=60);
  const cooling=indexed.filter(x=>!ready.includes(x)&&!soon.includes(x)).sort((a,b)=>(a.info?.eligible||'9999').localeCompare(b.info?.eligible||'9999'));
  h+='<div class="bt360-archive-stats"><div><b>'+ready.length+'</b><small>Eligible now</small></div><div><b>'+soon.length+'</b><small>Within 60 days</small></div><div><b>'+cooling.length+'</b><small>Cooling down</small></div></div>';
- h+='<p class="bt3727-archive-note">Unverified dates are estimates, not confirmed eligibility. Tap a countdown to review.</p>';
+ h+='<p class="bt3727-archive-note">Unverified dates are estimates, not confirmed eligibility. Open a bank card for its dates, saved T&C and cycle history.</p>';
  const row=(x,offer)=>{
   const historic='Last saved '+(Number(x.e.bonus)>0?amount(x.e.bonus)+' bonus':'bank offer')+
    (x.e.opened?' · opened '+date(x.e.opened):'')+' · '+(savedCooldownChurnExcerpt(x.e)||'eligibility date not recorded');
@@ -777,11 +777,15 @@ function archive(rows){
   const action=count
    ?'<div class="bt3727-archive-actions"><button type="button" class="bt3727-countdown '+(count.verified?'is-verified':'is-estimated')+'" onclick="BT360.openArchived('+arg(x.e.id)+')" aria-label="'+safe('Review '+x.e.bank+' eligibility: '+count.days+' days; '+(count.verified?'verified saved rule':'unverified estimate'))+'"><strong>'+count.days+'</strong><small>'+safe(count.caption)+'</small></button>'+(offer?'<button type="button" class="bt3727-view-offers" onclick="BT360.viewOffers('+arg(x.e.bank)+')">View offers</button>':'')+'</div>'
    :'<button type="button" class="bt360-chip bt3727-no-date" onclick="BT360.openArchived('+arg(x.e.id)+')">Details</button>';
-  return '<div class="bt360-list-row bt3727-archive-row">'+bankLogo(x.e.bank,true)+'<span class="bt360-grow"><b>'+safe(x.e.bank)+'</b><small>'+safe(label)+'</small>'+(audience==='all'?kindTag(x.e):'')+'</span>'+action+'</div>';
+  const bucket=termsDisplayBuckets().find(b=>entryBankIdentity(b.current||b).key===entryBankIdentity(x.e).key);
+  const versions=[...(x.e.previousCycles||[]),...(bucket?[bucket.current,...(bucket.versions||[])]:[])].filter(v=>v&&!(String(v.entryId||v.id||'')===String(x.e.id)&&v.opened===x.e.opened));
+  const history=versions.length?'<details class="research-help archive-history"><summary>Previous cycles and saved terms · '+versions.length+'</summary>'+versions.map(v=>renderTermsCycle(v,true)).join('')+'</details>':'';
+  return '<details class="bt-archive-bank"><summary class="bt360-list-row bt3727-archive-row">'+bankLogo(x.e.bank,true)+'<span class="bt360-grow"><b>'+safe(x.e.bank)+'</b><small>'+safe(label)+'</small><small>Dates, saved terms & history ▾</small>'+(audience==='all'?kindTag(x.e):'')+'</span>'+action+'</summary><div class="bt-archive-bank-body">'+renderTermsCycle(x.e)+history+'<button type="button" class="bt360-secondary" onclick="BT360.openArchived('+arg(x.e.id)+')">View account</button></div></details>';
  };
  h+=panel('Eligible now',ready.length?'<div class="bt360-list">'+ready.map(x=>row(x,true)).join('')+'</div>':'<p class="bt360-muted">No verified eligibility dates reached.</p>');
  h+=panel('Eligible within 60 days',soon.length?'<div class="bt360-list">'+soon.map(x=>row(x,false)).join('')+'</div>':'<p class="bt360-muted">No verified upcoming eligibility dates within 60 days.</p>');
  h+=panel('Cooling down',cooling.length?'<div class="bt360-list">'+cooling.map(x=>row(x,false)).join('')+'</div>':'<p class="bt360-muted">No accounts cooling down.</p>','<span class="bt360-subtitle">soonest first</span>');
+ h+=rTermsStorage({embedded:true,excludeClosed:true});
  h+='<details class="bt360-archived-tools"'+(legacyArchiveOpen?' open':'')+' ontoggle="BT360.setArchiveToolsOpen(this.open)"><summary>Completed, non-repeatable accounts · edit and review</summary>'+window.rTracker(rows,true)+'</details>';
  return h;
 }
@@ -972,6 +976,6 @@ function openPhonebook(){closeSettings();window.bt360PhonebookOpen=true;R()}
 function closePhonebook(){window.bt360PhonebookOpen=false;R()}
 function openSettings(){window.bt360SettingsOpen=true;R();refreshUsage()}
 function closeSettings(){window.bt360SettingsOpen=false;R()}
-window.BT360={feeSnapshot,closeCheckPresentation,get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,accountAudience,kindTag,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,archiveCountdown,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
+window.BT360={infoRow,feeSnapshot,closeCheckPresentation,get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,accountAudience,kindTag,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,archiveCountdown,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
 if(typeof R==='function')R();
 })();

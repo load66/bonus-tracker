@@ -692,3 +692,16 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
  .bt3719-attention-list .bt3719-task-right strong{font-size:15px}
  .bt3719-needs .bt3729-bonus-meta{max-width:30%}
 }
+
+/* Tax receipts retain a compact summary with source-linked account history. */
+.bt360-tax-record{border-bottom:1px solid #1E212C}
+.bt360-tax-record>summary{list-style:none;cursor:pointer;min-height:72px}
+.bt360-tax-record>summary::-webkit-details-marker{display:none}
+.bt360-tax-record>summary:focus-visible{outline:2px solid #9DB6FF;outline-offset:-2px}
+.bt360-tax-record[open]>summary{background:#1B1E29}
+.bt360-tax-history{padding:0 14px 14px;background:#12141C}
+.bt360-tax-history button{min-height:44px;width:100%;margin-top:10px}
+
+.bt-archive-bank{border-bottom:1px solid #1E212C}.bt-archive-bank>summary{list-style:none;cursor:pointer}.bt-archive-bank>summary::-webkit-details-marker{display:none}
+.bt-archive-bank>summary:focus-visible{outline:2px solid #9DB6FF;outline-offset:-2px}
+.bt-archive-bank-body{padding:8px 12px 14px;background:#12141C}.bt-archive-bank-body .archive-cycle{padding:8px 0}

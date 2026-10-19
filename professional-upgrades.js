@@ -169,6 +169,7 @@
     const pairs=[['opened','reqMet','Requirement met cannot be before opened.'],['opened','bonusRecd','Bonus received cannot be before opened.'],['opened','closed','Closed cannot be before opened.'],['reqMet','bonusRecd','Bonus received is earlier than requirement met—verify the dates.']];
     pairs.forEach(([a,b,msg])=>{if(d?.[a]&&d?.[b]&&dB(d[a],d[b])<0)issues.push({level:a==='reqMet'?'warn':'error',text:msg})});
     if(d?.closed&&d?.closed>td())issues.push({level:'error',text:'Actual closed date cannot be in the future.'});
+    if((d?.bonusRecd||d?.closed)&&!d?.opened)issues.push({level:'warn',text:'Opening date is not recorded. Preserve the actual date from your account history or statement; do not substitute the bonus date.'});
     if(d?.bonusRecd&&!d?.reqMet)issues.push({level:'warn',text:'Requirement met date is blank. The tracker can still save, but history will be less precise.'});
     const hold=parseInt(d?.minHoldDays||d?.closeFeeCountdownDays||0,10)||0;
     if(hold>0&&!/(close|closed|remain open|keep[^.]{0,30}open|early termination|forfeit|clawback)/i.test(String(d?.closeRuleText||''))&&!knownClosePolicy(d))issues.push({level:'warn',text:'Close hold days have no matching close wording. Verify before saving.'});
@@ -227,7 +228,7 @@
       id:old.id,_edit:true,_startingNewCycle:true,_wizardStep:1,bank:old.bank||'',accountType:old.accountType||'personal',churn:old.churn||'',phoneNum:old.phoneNum||'',
       bonus:0,opened:'',closed:'',bonusRecd:'',reqMet:'',promoCodeText:'',expirationDateText:'',requiredDaysText:'',reqDays:0,fundedDays:0,fundingAmount:0,fundingAmountText:'',payoutTimingText:'',completeBonusText:'',eligibilityText:'',
       dataPoint:old.dataPoint||'',monthlyFeeYNText:old.monthlyFeeYNText||'',avoidMonthlyFeeText:old.avoidMonthlyFeeText||'',monthlyFeeAmountText:old.monthlyFeeAmountText||'',monthlyFeeWaiverText:old.monthlyFeeWaiverText||'',monthlyFeeWaiverAmountText:old.monthlyFeeWaiverAmountText||'',monthlyFeeFrequency:old.monthlyFeeFrequency||'',monthlyFeeWaiverType:old.monthlyFeeWaiverType||'',monthlyFeeChecked:false,
-      minHoldDays:0,closeFeeCountdownDays:'',closeRuleBasis:old.closeRuleBasis||'opened',closeBufferDays:(Number.isFinite(parseInt(old.closeBufferDays,10))?parseInt(old.closeBufferDays,10):5),closeRuleText:old.closeRuleText||'',earlyTerminationFeeText:old.earlyTerminationFeeText||'',earlyCloseFee:(old.earlyCloseFee===null?null:old.earlyCloseFee),notes:'',analyzedTC:'',analysis:null,analyzerHistory:[],history:normalizeEntryHistoryList(old.history),checklist:[],customTimers:[],fieldSources:priorSources,previousCycles:[archive,...(Array.isArray(old.previousCycles)?old.previousCycles:[])].slice(0,12)
+      minHoldDays:0,closeFeeCountdownDays:'',closeRuleBasis:old.closeRuleBasis||'opened',closeBufferDays:(Number.isFinite(parseInt(old.closeBufferDays,10))?parseInt(old.closeBufferDays,10):5),closeRuleText:old.closeRuleText||'',earlyTerminationFeeText:old.earlyTerminationFeeText||'',earlyCloseFee:(old.earlyCloseFee===null?null:old.earlyCloseFee),notes:'',analyzedTC:'',analysis:null,analyzerHistory:[],history:normalizeEntryHistoryList(old.history),checklist:[],customTimers:[],fieldSources:priorSources,previousCycles:[archive,...(Array.isArray(old.previousCycles)?old.previousCycles:[])]
     };
     try{applyKnownClosePolicy(modal)}catch{}
     showInlineAZ=false;inlineResult=null;expanded=id;R();
@@ -238,7 +239,7 @@
     collectModalEntryData=function(){
       const d=oldCollect();if(!d)return null;
       d.fieldSources=(modal?.fieldSources&&typeof modal.fieldSources==='object')?modal.fieldSources:{};
-      d.previousCycles=Array.isArray(modal?.previousCycles)?modal.previousCycles.slice(0,12):(Array.isArray(d.previousCycles)?d.previousCycles:[]);
+      d.previousCycles=Array.isArray(modal?.previousCycles)?modal.previousCycles.slice():(Array.isArray(d.previousCycles)?d.previousCycles:[]);
       d.profile=buildResolvedBankProfile(d);d.profileVersion=PROFILE_SCHEMA;
       const issues=validationIssues(d);const errors=issues.filter(x=>x.level==='error');
       if(errors.length){btNotify(errors[0].text,'error',4200);return null;}
