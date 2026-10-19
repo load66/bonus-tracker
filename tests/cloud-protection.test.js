@@ -62,7 +62,7 @@ async function hostingUsage(){
   document:{getElementById:()=>null,querySelector:()=>null},
   setTimeout:()=>0,clearTimeout:()=>{},tab:'tax',
   R:()=>{},dB:()=>0,td:()=> '2026-10-17',fM:n=>'$'+Number(n).toFixed(2),fD:x=>x,
-  bankLogo:()=>'',esc:x=>String(x),entries:[],
+  bankLogo:()=>'',esc:x=>String(x),entries:[],taxReceiptRows:rows=>rows,
   prompt:()=>promptValue,
   BTPersistence:{commit(storage,changes){writes++;for(const [key,value] of Object.entries(changes))storage.setItem(key,value)}},
   BTBonusAuth:{connected:()=>true,token:async()=> 'synthetic-owner-token'},

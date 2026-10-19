@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.34';
+const APP_VERSION='3.6.35';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -335,14 +335,27 @@ function termsDisplayBuckets(){
   if(found){if(found.current?.opened!==e.opened&&!found.versions.some(v=>v.opened===e.opened))found.versions.push(x)}
   else rows.push({bank:e.bank,accountType:identity.type,current:x,versions:[]});
  });
+ // Older replacement cycles may predate the dedicated terms archive. Their
+ // saved facts and original text must remain discoverable in the same view.
+ entries.forEach(owner=>(Array.isArray(owner.previousCycles)?owner.previousCycles:[]).forEach(cycle=>{
+  if(!cycle||typeof cycle!=='object')return;
+  const prior={...cycle,bank:cycle.bank||owner.bank,entryId:cycle.entryId||cycle.id||owner.id,accountType:cycle.accountType||owner.accountType};
+  const identity=entryBankIdentity(prior),found=rows.find(b=>entryBankIdentity(b.current||b).key===identity.key);
+  if(found){if(![found.current,...found.versions].some(v=>String(v.entryId||v.id||'')===String(prior.entryId)&&v.opened===prior.opened&&v.bonusRecd===prior.bonusRecd&&v.closed===prior.closed&&Number(v.bonus)===Number(prior.bonus)&&String(v.tcSourceRaw||'')===String(prior.tcSourceRaw||'')))found.versions.push(prior);}
+  else rows.push({bank:prior.bank,accountType:prior.accountType,current:prior,versions:[]});
+ }));
  return rows.sort((a,b)=>String(a.current?.bank||a.bank).localeCompare(String(b.current?.bank||b.bank)));
 }
 function renderTermsCycle(x,previous=false){
+  const originals=entries.flatMap(e=>[e,...(Array.isArray(e.previousCycles)?e.previousCycles:[])]);
+  const exact=originals.find(e=>String(e.id||e.entryId||'')===String(x.entryId||x.id||'')&&e.opened&&e.opened===x.opened&&entryBankIdentity(e).key===entryBankIdentity(x).key);
+  if(exact){x={...exact,...x,...Object.fromEntries(['closed','bonusRecd','couponEnrollmentDate','offerEnrollmentDate'].map(k=>[k,x[k]||exact[k]||'']))};}
  const raw=termsArchiveSourceText(x),promo=safeExternalUrl(x.promoSourceUrl),fee=safeExternalUrl(x.feeScheduleSourceUrl),rules=Array.isArray(x.eligibilityRules)?x.eligibilityRules:[];
  const copy=x.financialRules&&typeof x.financialRules==='object'?x.financialRules:null;
  const feeRaw=String(x.feeScheduleRaw||'').trim();
  let h='<div class="archive-cycle"><div class="research-report-top"><span class="research-kind">'+(previous?'Previous saved version':'Saved offer')+'</span><b>'+(x.bonus?esc(fM(x.bonus)):'Bonus not saved')+'</b></div><dl class="research-dates"><div><dt>Account opened</dt><dd>'+esc(x.opened?fD(x.opened):'Not saved')+'</dd></div><div><dt>Terms saved / reviewed</dt><dd>'+esc((x.termsVerifiedAt||x.capturedAt)?fD(String(x.termsVerifiedAt||x.capturedAt).slice(0,10)):'Not recorded')+'</dd></div>'
   +'<div><dt>Evidence status</dt><dd>'+esc(x.evidenceStatus==='eligibility-evidence-validated'?'Saved eligibility evidence validated':'Enrolled source requires review')+'</dd></div></dl>';
+ h+='<dl class="research-dates">'+[['closed','Closed'],['bonusRecd','Bonus received'],['couponEnrollmentDate','Coupon enrollment · optional']].map(([key,label])=>'<div><dt>'+label+'</dt><dd>'+esc(x[key]?fD(x[key]):'Not recorded')+'</dd></div>').join('')+'</dl>';
  if(!raw)h+='<p class="research-caveat">Original promotion text is missing for this historical cycle. Saved facts remain available but must not be treated as verified.</p>';
  const facts=[['Bonus requirements',x.completeBonusText],['Monthly fee',x.monthlyFeeAmountText||x.monthlyFeeYNText],['How to avoid the fee',x.monthlyFeeWaiverText||x.avoidMonthlyFeeText],['Early-close fee wording',x.earlyTerminationFeeText],['Closing / bonus retention',x.closeRuleText],['Payout timing',x.payoutTimingText],['Offer deadline',x.expirationDateText]];
  if(facts.some(([,v])=>v)||rules.length){
@@ -357,11 +370,13 @@ function renderTermsCycle(x,previous=false){
  if(raw)h+='<details class="research-help archive-original"><summary>Read original saved promotion</summary><div class="archive-raw">'+esc(raw)+'</div></details>';
  return h+'</div>';
 }
-function rTermsStorage(){
+function rTermsStorage(options={}){
  const q=String(storageSearch||'').trim().toLowerCase();
  const match=x=>[x.bank,x.accountType,x.opened,x.tcSourceRaw,x.completeBonusText,x.closeRuleText,x.avoidMonthlyFeeText].join(' ').toLowerCase().includes(q);
- const rows=termsDisplayBuckets().filter(b=>!q||[b.current,...b.versions].some(match));
+ const closedKeys=new Set(options.excludeClosed?entries.filter(e=>e.closed).map(e=>entryBankIdentity(e).key):[]);
+ const rows=termsDisplayBuckets().filter(b=>!closedKeys.has(entryBankIdentity(b.current||b).key)).filter(b=>!q||[b.current,...b.versions].some(match));
  let h='<div class="research-shell archive-shell"><header class="research-intro"><span class="research-eyebrow">YOUR OFFER RECORDS</span><h2>T&C Archive</h2><p>The bank’s terms for each account and bonus cycle, kept together so you can find them later.</p><button class="research-text-button" onclick="BTTermsHistory.open()">Cloud T&C history ↗</button></header><input class="sinput" type="text" id="terms-search" aria-label="Search stored terms" placeholder="Search stored T&C..." value="'+esc(storageSearch||'')+'" oninput="updateViewSearch(\'terms\',this.value,this.selectionStart)"><div class="research-coverage"><b>'+rows.length+' account group'+(rows.length===1?'':'s')+'</b><span>Original text and previous offers stay saved</span></div><details class="research-help"><summary>About saved terms</summary><p>Terms remain tied to the enrolled offer. Current promotions and community reports do not replace your original terms.</p></details>';
+ if(options.embedded)h='<div class="research-shell archive-shell bt-archive-saved"><h3>Other saved offers</h3>';
  rows.forEach(bucket=>{
   const x=bucket.current||{},versions=bucket.versions||[];
   h+='<details class="archive-bank"><summary>'+bankLogo(x.bank||bucket.bank,true)+'<span><b>'+esc(x.bank||bucket.bank)+'</b><small>'+esc(x.accountType==='business'?'Business':'Personal')+' · '+(termsArchiveSourceText(x)?'Terms saved':'Terms not saved')+'</small></span><span class="archive-chevron" aria-hidden="true">⌄</span></summary><div class="archive-bank-body">'+renderTermsCycle(x);
@@ -375,7 +390,7 @@ function rTermsStorage(){
 }
 function archivedCycleSnapshot(e){
   if(!e)return null;
-  return{bank:e.bank||'',accountType:e.accountType||'',id:e.id||'',archivedAt:td(),opened:e.opened||'',reqMet:e.reqMet||'',bonusRecd:e.bonusRecd||'',closed:e.closed||'',bonus:e.bonus||0,churn:e.churn||'',schemaVersion:parseInt(e.schemaVersion||0,10)||0,sourceEligibilityBasis:e.sourceEligibilityBasis||'',churnPeriodValue:e.churnPeriodValue||0,churnPeriodUnit:e.churnPeriodUnit||'',eligibilityRules:Array.isArray(e.eligibilityRules)?e.eligibilityRules.map(r=>({...r})):[],couponEnrollmentDate:e.couponEnrollmentDate||'',offerEnrollmentDate:e.offerEnrollmentDate||'',closedWithNegativeBalance:typeof e.closedWithNegativeBalance==='boolean'?e.closedWithNegativeBalance:null,eligibilityEvidenceText:e.eligibilityEvidenceText||'',eligibilityEvidenceSource:e.eligibilityEvidenceSource||'',eligibilityVerifiedAt:e.eligibilityVerifiedAt||'',promoSourceUrl:e.promoSourceUrl||'',feeScheduleSourceUrl:e.feeScheduleSourceUrl||'',termsVerifiedAt:e.termsVerifiedAt||'',tcSourceRaw:String(e.tcSourceRaw||e.analysis?.rawText||e.analyzedTC||''),notes:String(e.notes||'').slice(0,900),analyzedPreview:String(e.analyzedTC||'').slice(0,900),timerSummary:normalizeTimerList(e.customTimers||[]).map(t=>({text:t.text||'',date:t.date||'',daysRequired:t.daysRequired||0,done:!!t.done})).slice(0,8)}
+  return{bank:e.bank||'',accountType:e.accountType||'',id:e.id||'',dataPoint:e.dataPoint||'',feeScheduleRaw:e.feeScheduleRaw||'',financialRules:e.financialRules?JSON.parse(JSON.stringify(e.financialRules)):null,archivedAt:td(),opened:e.opened||'',reqMet:e.reqMet||'',bonusRecd:e.bonusRecd||'',closed:e.closed||'',bonus:e.bonus||0,churn:e.churn||'',schemaVersion:parseInt(e.schemaVersion||0,10)||0,sourceEligibilityBasis:e.sourceEligibilityBasis||'',churnPeriodValue:e.churnPeriodValue||0,churnPeriodUnit:e.churnPeriodUnit||'',eligibilityRules:Array.isArray(e.eligibilityRules)?e.eligibilityRules.map(r=>({...r})):[],couponEnrollmentDate:e.couponEnrollmentDate||'',offerEnrollmentDate:e.offerEnrollmentDate||'',closedWithNegativeBalance:typeof e.closedWithNegativeBalance==='boolean'?e.closedWithNegativeBalance:null,eligibilityEvidenceText:e.eligibilityEvidenceText||'',eligibilityEvidenceSource:e.eligibilityEvidenceSource||'',eligibilityVerifiedAt:e.eligibilityVerifiedAt||'',promoSourceUrl:e.promoSourceUrl||'',feeScheduleSourceUrl:e.feeScheduleSourceUrl||'',termsVerifiedAt:e.termsVerifiedAt||'',tcSourceRaw:String(e.tcSourceRaw||e.analysis?.rawText||e.analyzedTC||''),notes:String(e.notes||'').slice(0,900),analyzedPreview:String(e.analyzedTC||'').slice(0,900),timerSummary:normalizeTimerList(e.customTimers||[]).map(t=>({text:t.text||'',date:t.date||'',daysRequired:t.daysRequired||0,done:!!t.done})).slice(0,8)}
 }
 
 function nonRepeatableSourceText(e){
@@ -1698,8 +1713,42 @@ function taxYearOf(e){
   const p=isoParts(e&&e.bonusRecd);return p?p.y:null
 }
 
+function taxReceiptRows(rows=entries){
+  // Read-only receipt projection: a replacement cycle must not hide its history.
+  // Deduplicate only the same recorded payout within one account; never merge banks.
+  return (Array.isArray(rows)?rows:[]).flatMap((owner,index)=>{
+    if(!owner||typeof owner!=='object')return[];
+    const seen=new Set(),result=[];
+    const cycles=[owner,...(Array.isArray(owner.previousCycles)?owner.previousCycles:[])];
+    cycles.forEach((cycle,cycleIndex)=>{
+      if(!cycle||typeof cycle!=='object'||!taxReady(cycle))return;
+      const row={...cycle,bonus:Number(cycle.bonus),bank:cycle.bank||owner.bank||'',accountType:cycle.accountType||owner.accountType||'',_taxParentId:owner.id||'',_taxPriorCycle:cycleIndex>0};
+      const key=JSON.stringify([row.id||owner.id||index,row.accountType,row.opened||'',row.bonusRecd,Number(row.bonus)]);
+      if(seen.has(key))return;
+      seen.add(key);result.push(row);
+    });
+    return result;
+  });
+}
 function taxEntriesForYear(yr){
-  return entries.filter(e=>taxReady(e)&&taxYearOf(e)===yr&&e.bonusRecd<=td())
+  return taxReceiptRows().filter(e=>taxYearOf(e)===Number(yr)&&e.bonusRecd<=td())
+}
+
+function taxArchiveReconciliation(e){
+  const identity=entryBankIdentity(e),ident=String(e.id||e.entryId||e._taxParentId||'');
+  const candidates=termsDisplayBuckets().flatMap(b=>[b.current,...(b.versions||[])]).filter(x=>{
+    if(!ident||String(x.entryId||x.id||'')!==ident||entryBankIdentity(x).key!==identity.key)return false;
+    if(e.opened&&x.opened)return e.opened===x.opened;
+    return !!(e.bonusRecd&&x.bonusRecd===e.bonusRecd);
+  });
+  const issues=[];
+  if(!candidates.length)issues.push('No exact-cycle Archive link');
+  if(!e.opened)issues.push('Opening date not recorded');
+  if(!e.closed)issues.push('No closure recorded');
+  if(!candidates.some(x=>String(x.tcSourceRaw||x.analysis?.rawText||'').trim()))issues.push('Original terms not recorded');
+  for(const field of ['opened','closed','bonusRecd'])if(e[field]&&candidates.some(x=>x[field]&&x[field]!==e[field]))issues.push('Saved versions disagree on '+({opened:'opening',closed:'closing',bonusRecd:'payout'}[field])+' date');
+  if(candidates.some(x=>x.bonusRecd&&x.bonusRecd===e.bonusRecd&&Number(x.bonus)>0&&Number(x.bonus)!==Number(e.bonus)))issues.push('Saved versions disagree on received bonus amount');
+  return {linked:candidates.length>0,issues};
 }
 
 function isEarnedBonus(e){
@@ -4395,11 +4444,19 @@ function rTax(){
  const yrA=yrE.reduce((sum,e)=>sum+Number(e.bonus||0),0);
  let h=(window.BT360?.segments()||'')+'<div class="bt360-page-copy">Bonus income by year</div><div class="ybar bt360-tax-years">';
  yrs.forEach(y=>{h+='<button class="ypill'+(taxYear===y?' on':'')+'" onclick="taxYear='+y+';R()">'+y+'</button>'});
- h+='</div><section class="bt360-tax-summary"><span>'+(audience==='all'?'PERSONAL + BUSINESS':audience.toUpperCase())+' · '+taxYear+'</span><strong>'+fM(yrA)+'</strong><small>'+yrE.length+' bonuses received · open and closed accounts</small></section>';
+ h+='</div><section class="bt360-tax-summary"><span>'+(audience==='all'?'PERSONAL + BUSINESS':audience.toUpperCase())+' · '+taxYear+'</span><strong>'+fM(yrA)+'</strong><small>'+yrE.length+' bonuses received · includes saved prior cycles</small></section>';
+ const linkage=yrE.map(taxArchiveReconciliation),linked=linkage.filter(x=>x.linked).length,review=linkage.filter(x=>x.issues.length).length;
+ h+='<p class="bt360-footnote">Archive links: '+linked+' of '+yrE.length+' receipts'+(review?' · '+review+' need date or source review':'. Saved dates and source text are available.')+'</p>';
  h+='<button class="export-btn bt360-primary" onclick="promptExportYear()">Export tax CSV</button><p class="bt360-footnote">CSV includes all Personal and Business bonuses, even when a view filter is active.</p><div class="sec">Received in '+taxYear+' <small>by date</small></div>';
  if(!yrE.length)h+='<div class="bt360-empty">No received bonuses in '+taxYear+'.</div>';
  yrE.slice().sort((a,b)=>String(b.bonusRecd||'').localeCompare(String(a.bonusRecd||''))).forEach(e=>{
-  h+='<div class="bt360-list-row bt360-tax-row">'+bankLogo(e.bank,true)+'<div class="bt360-grow"><b>'+esc(e.bank)+'</b><small>Received '+fD(e.bonusRecd)+' · '+(e.closed?'closed':'open')+' · '+(entryBankType(e)==='B'?'Business':'Personal')+'</small></div><strong>'+fM(e.bonus)+'</strong></div>';
+  h+='<details class="bt360-tax-record"><summary class="bt360-list-row bt360-tax-row">'+bankLogo(e.bank,true)+'<span class="bt360-grow"><b>'+esc(e.bank)+'</b><small>Received '+fD(e.bonusRecd)+' · '+(entryBankType(e)==='B'?'Business':'Personal')+(e._taxPriorCycle?' · Prior cycle':'')+'</small><small>'+(e.opened?'Opened '+fD(e.opened):'Opening date not recorded')+'</small><small>Account history ▾</small></span><strong>'+fM(e.bonus)+'</strong></summary>';
+  h+='<div class="bt360-tax-history">'+window.BT360.infoRow('Opened',e.opened?fD(e.opened):'Not recorded')+window.BT360.infoRow('Bonus received',fD(e.bonusRecd))+window.BT360.infoRow('Closed',e.closed?fD(e.closed):'No closure recorded')+window.BT360.infoRow('Account ID',e.id||e._taxParentId||'Not recorded')+window.BT360.infoRow('Record source',e._taxPriorCycle?'Prior cycle · saved history':'Current account record');
+  if(!e.opened)h+='<p class="bt360-footnote">Opening date not recorded. Review the account history or bank statement; the bonus date is not its opening date.</p>';
+  if(e._taxParentId)h+='<button type="button" class="bt360-secondary" onclick="BT360.openHeroBonus('+profileSectionAttr(JSON.stringify(e._taxParentId))+')">'+(e._taxPriorCycle?'View current account':'View account')+'</button>';
+  const reconciliation=taxArchiveReconciliation(e);
+  h+='<p class="bt360-footnote">'+(reconciliation.linked?'Linked to the same cycle in Archive. ':'Archive link needs review. ')+esc(reconciliation.issues.join(' · '))+'</p>';
+  h+='<details class="research-help"><summary>Saved terms for this cycle</summary>'+renderTermsCycle(e)+'</details></div></details>';
  });
  return h+'<p class="bt360-footnote">Bank bonuses are usually reported as interest. Check your 1099 forms.</p>';
 }
@@ -4872,7 +4929,7 @@ function normalizeNewCycleData(d,existing){
   next.analysis=(d.analysis&&typeof d.analysis==='object')?d.analysis:((existing.analysis&&typeof existing.analysis==='object')?existing.analysis:null);
   next.analyzerHistory=normalizeAnalyzerHistoryList(d.analyzerHistory&&d.analyzerHistory.length?d.analyzerHistory:existing.analyzerHistory);
   next.history=normalizeEntryHistoryList(d.history&&d.history.length?d.history:existing.history);
-  next.previousCycles=Array.isArray(existing.previousCycles)?existing.previousCycles.slice(0,10):[];
+  next.previousCycles=Array.isArray(existing.previousCycles)?existing.previousCycles.slice():[];
   return normalizeLifecycleEntry(next);
 }
 function chooseMatch(id){
@@ -4905,7 +4962,7 @@ function doOverwrite(){
     const oldCycle=archivedCycleSnapshot(e);
     saveOfferVersionFromEntry(e,'archived-before-replace');
     let next=normalizeNewCycleData(d,e);
-    if(oldCycle)next.previousCycles=[oldCycle,...(Array.isArray(e.previousCycles)?e.previousCycles:[])].slice(0,10);
+    if(oldCycle)next.previousCycles=[oldCycle,...(Array.isArray(e.previousCycles)?e.previousCycles:[])];
     next=promoteDraftEntryId(next,e.id);
     savedId=next.id;
     return next;
@@ -5965,9 +6022,9 @@ function csvCell(value){
 }
 function csvRow(values){return values.map(csvCell).join(',')}
 function buildTaxCSV(yr){
-  const yrE=taxEntriesForYear(yr),rows=[csvRow(['Bank','Bonus','Received','Opened','Closed','Data Point'])];
-  yrE.forEach(e=>rows.push(csvRow([e.bank,e.bonus,fD(e.bonusRecd),fD(e.opened),e.closed?fD(e.closed):'',e.dataPoint||''])));
-  rows.push('',csvRow(['Total',yrE.reduce((sum,e)=>sum+(e.bonus||0),0),'','','','']));
+  const yrE=taxEntriesForYear(yr),rows=[csvRow(['Bank','Bonus','Received','Opened','Closed','Data Point','Account ID','Record source'])];
+  yrE.forEach(e=>rows.push(csvRow([e.bank,e.bonus,fD(e.bonusRecd),fD(e.opened),e.closed?fD(e.closed):'',e.dataPoint||'',e.id||e._taxParentId||'',e._taxPriorCycle?'Prior cycle':'Current account'])));
+  rows.push('',csvRow(['Total',yrE.reduce((sum,e)=>sum+(e.bonus||0),0),'','','','','','']));
   return rows.join('\r\n')+'\r\n'
 }
 function exportCSV(yr){const csv=buildTaxCSV(yr),blob=new Blob([csv],{type:'text/csv;charset=utf-8'});downloadBlob(blob,'BonusTracker_'+yr+'.csv')}
