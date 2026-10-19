@@ -1,7 +1,8 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.37: source-linked Tax receipts and preserved prior-cycle history.
-const V = 'bt-v3.6.37-integrity1';
+// Version 3.6.38: source-linked Tax receipts and preserved prior-cycle history.
+const V = 'bt-v3.6.38-integrity1';
 const ASSETS = [
+  './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
   './fonts/manrope-latin-600-normal.woff2',
   './bank-logos/chase.svg', './bank-logos/citi.svg', './bank-logos/wells-fargo.svg', './bank-logos/bank-of-america.svg', './bank-logos/td-bank.svg', './bank-logos/bmo.svg', './bank-logos/discover.svg', './bank-logos/hsbc.svg', './bank-logos/pnc.svg', './bank-logos/us-bank.svg', './bank-logos/regions-bank.svg', './bank-logos/huntington-bank.svg', './bank-logos/navy-federal-credit-union.svg', './bank-logos/charles-schwab.svg', './bank-logos/citizens-bank.svg', './bank-logos/fidelity.svg', './bank-logos/capital-one.svg', './bank-logos/usaa.svg', './bank-logos/first-citizens-bank.svg',

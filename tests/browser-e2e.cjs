@@ -819,6 +819,10 @@ async function exercise(name,engine,url){
     check('saved changes upload while recovery settings are open',await page.evaluate(()=>Object.values(window.__cloudFixture.objects).some(x=>x.backup.reason==='automatic'&&x.snapshot.includes('Synthetic pending-change verification'))));
     await page.evaluate(raw=>{entries=JSON.parse(raw);localStorage.setItem('bt_e_v4',raw);btCloudBackupChanged();R();},storedBeforeRadar);
     await page.waitForFunction(()=>JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')).pending===false&&document.querySelector('#cloud-protection')?.dataset.state==='protected');
+    check('history evidence lookup verifies backups without writing financial records',await page.evaluate(async()=>{
+      const before=[localStorage.getItem('bt_e_v4'),localStorage.getItem('bt_tc_archive_v1')];
+      const result=await BTCloudBackup.historySources();return result.copies.length>0&&result.copies.length<=4&&result.failures.length===0&&JSON.stringify(before)===JSON.stringify([localStorage.getItem('bt_e_v4'),localStorage.getItem('bt_tc_archive_v1')]);
+    }));
     const cloudRecords=await page.evaluate(()=>window.__cloudFixture.objects);
     await button('Close').click();
     const newPhoneContext=await browser.newContext({viewport:{width:390,height:844},timezoneId:'America/Chicago'});
@@ -1174,6 +1178,42 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>{window.fetch=window.__hostingPreviousFetch;delete window.__hostingPreviousFetch;delete window.__hostingUsageFixture});
     await page.setViewportSize({width:1280,height:900});
 
+    // Synthetic history recovery: file evidence, preview, confirmation and stale protection.
+    const repairFixture={id:'SYN-REPAIR-P-01',bank:'Synthetic Repair Bank',accountType:'personal',opened:'',closed:'2026-05-01',bonusRecd:'2026-04-15',reqMet:'',bonus:250,tcSourceRaw:'',notes:'Original synthetic history'};
+    const repairSource={...repairFixture,opened:'2026-01-02',tcSourceRaw:'Exact synthetic enrolled promotion.\nAll original conditions remain recorded.',feeScheduleRaw:'Exact synthetic fee schedule.'};
+    await page.evaluate(row=>{
+      window.__beforeHistoryRepair={entries:JSON.stringify(entries),archive:localStorage.getItem('bt_tc_archive_v1')};
+      entries=[row];localStorage.setItem('bt_e_v4',JSON.stringify(entries));localStorage.setItem('bt_tc_archive_v1','{}');storageSearch='';tab='archive';R();
+    },repairFixture);
+    await page.getByRole('button',{name:'Review missing history',exact:true}).click();
+    check('history review begins without changing saved financial records',await page.evaluate(row=>localStorage.getItem('bt_e_v4')===JSON.stringify([row])&&localStorage.getItem('bt_tc_archive_v1')==='{}',repairFixture));
+    await page.locator('.history-repair-cycle > summary').first().click();
+    check('missing cycle facts remain unresolved without evidence',(await page.locator('.history-repair-cycle').innerText()).includes('No exact-cycle evidence found'));
+    await page.locator('#history-repair-file').setInputFiles({name:'synthetic-history.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({entries:[repairSource]}))});
+    await page.waitForFunction(()=>document.querySelector('#history-repair-status')?.textContent.includes('Backup file checked'));
+    await page.locator('.history-repair-cycle > summary').first().click();
+    await page.locator('select[data-repair-field="0"]').selectOption('0');
+    await page.locator('select[data-repair-field="7"]').selectOption('0');
+    await page.locator('#history-repair-preview-button').click();
+    check('history preview shows provenance and Tax payment year',(await page.locator('#history-repair-preview').innerText()).includes('not cloud-verified')&&(await page.locator('#history-repair-preview').innerText()).includes('2026:'));
+    check('history repair requires explicit confirmation',await page.locator('#history-repair-apply').isDisabled()&&await page.evaluate(()=>entries[0].opened===''));
+    for(const width of [320,375,390,430]){
+      await page.setViewportSize({width,height:844});
+      check('history repair fits '+width+'px',await page.locator('.history-repair-sheet').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+      if(width===390)await page.screenshot({path:path.join(output,name+'-history-repair-390.png')});
+    }
+    await page.locator('#history-repair-confirm').check();await page.locator('#history-repair-apply').click();
+    await page.waitForFunction(()=>document.querySelector('#history-repair-status')?.textContent.includes('confirmed corrections saved'));
+    check('confirmed repairs preserve unknown requirement date, notes and original revision',await page.evaluate(()=>entries[0].opened==='2026-01-02'&&entries[0].reqMet===''&&entries[0].notes==='Original synthetic history'&&entries[0].historyRepairs.length===2&&Object.values(loadTermsArchive()).some(b=>b.versions.some(v=>v.opened===''))));
+    await page.locator('.history-repair-cycle > summary').first().click();
+    await page.locator('select[data-repair-field="8"]').selectOption('0');await page.locator('#history-repair-preview-button').click();
+    await page.locator('#history-repair-confirm').check();
+    await page.evaluate(()=>{entries[0].notes='A newer synthetic edit';localStorage.setItem('bt_e_v4',JSON.stringify(entries));});
+    await page.locator('#history-repair-apply').click();
+    await page.waitForFunction(()=>document.querySelector('#history-repair-status')?.textContent.includes('Records changed'));
+    check('stale repair cannot overwrite newer account edit',await page.evaluate(()=>entries[0].notes==='A newer synthetic edit'&&!entries[0].feeScheduleRaw));
+    await page.getByRole('button',{name:'Close history repair',exact:true}).click();
+    await page.evaluate(()=>{entries=JSON.parse(window.__beforeHistoryRepair.entries);localStorage.setItem('bt_e_v4',window.__beforeHistoryRepair.entries);const raw=window.__beforeHistoryRepair.archive;if(raw===null)localStorage.removeItem('bt_tc_archive_v1');else localStorage.setItem('bt_tc_archive_v1',raw);delete window.__beforeHistoryRepair;R();});
     await page.evaluate(()=>BTBonusAuth.disconnect());
     check('AI sign-out removes remembered session',await page.evaluate(()=>!localStorage.getItem('bonus-ai-auth')&&!BTBonusAuth.connected()));
     check('no uncaught application errors',errors.length===0);

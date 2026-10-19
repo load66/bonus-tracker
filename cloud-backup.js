@@ -125,6 +125,15 @@
       const file=text('button','Download recovery file',area);file.type='button';file.className='btn-s';file.onclick=()=>downloadBlob(new Blob([recovered.snapshot],{type:'application/json'}),'BonusTracker_CloudRecovery_'+b.id+'.json');
     }catch(e){phase=e.message;paint();}
   }
+  // Evidence lookup only: no restore, preference writes, uploads or retention changes.
+  async function historySources(){
+    const catalog=await request(),copies=[],failures=[];
+    if(!Array.isArray(catalog.backups)||catalog.backups.some(b=>!/^([a-f0-9]{32})$/.test(b.id)))throw Error('Cloud backup catalog is invalid.');
+    for(const item of catalog.backups.slice(0,4)){
+      try{copies.push(await download(item.id));}catch{failures.push(item.id);}
+    }
+    return {copies,failures};
+  }
   async function restoreVersion(ident,expected){
     if(busy)return;paused=true;
     try{
@@ -177,7 +186,7 @@
   };
   window.btCloudBackupChanged=changed;
   window.btCloudBeforeDestructive=async reason=>{if(read().enabled&&core.hasRecords(core.inspect(current(),keys()))){const before=current();await upload(reason);if(current()!==before)throw Error('Records changed during the safety backup. Retry after backup completes.');}};
-  window.BTCloudBackup={current,upload,tick,download,restoreVersion,isBusy:()=>busy||switching,protection};
+  window.BTCloudBackup={current,upload,tick,download,restoreVersion,historySources,isBusy:()=>busy||switching,protection};
   window.btRegisterPostRender?.('cloud-backup-status',paint);
   window.addEventListener('online',()=>{phase='';tick();});
   document.addEventListener('visibilitychange',()=>tick());
