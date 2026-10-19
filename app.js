@@ -90,10 +90,11 @@ function normalizeUserDatapoint(row){
   const createdAt=x.createdAt||x.date||td();
   const updatedAt=x.updatedAt||createdAt;
   const lastConfirmedAt=x.lastConfirmedAt||x.date||createdAt;
+  const confirmedByUser=x.confirmedByUser===true&&['worked','failed','mixed'].includes(x.outcome)&&!!dpValidDate(x.eventDate)&&x.eventDate<=td();
   return{
-    ...x,id:String(x.id||dpId()),bank,method,note,createdAt,updatedAt,lastConfirmedAt,entryId:String(x.entryId||''),source:x.confirmedByUser===true?'user-confirmed':'personal-record',
+    ...x,id:String(x.id||dpId()),bank,method,note,createdAt,updatedAt,lastConfirmedAt,entryId:String(x.entryId||''),source:confirmedByUser?'user-confirmed':'personal-record',
     outcome:['worked','failed','pending','mixed'].includes(x.outcome)?x.outcome:'unknown',
-    confirmedByUser:x.confirmedByUser===true&&['worked','failed','mixed'].includes(x.outcome)&&!!dpValidDate(x.eventDate)&&x.eventDate<=td(),eventDate:dpValidDate(x.eventDate),
+    confirmedByUser,eventDate:dpValidDate(x.eventDate),
     accountType:['personal','business'].includes(x.accountType)?x.accountType:'',
     cycleOpened:dpValidDate(x.cycleOpened),product:String(x.product||''),confirmedAt:dpValidDate(x.confirmedAt)
   }
@@ -3910,7 +3911,7 @@ function renderProfileDetail(group){
           <div class="ph-actions" style="margin:0"><button class="ph-mini ph-save" onclick="addUserDPForBank('${encodeURIComponent(group.bank)}')">Add confirmed</button></div>
         </div>
         ${group.confirmedWorked.length
-          ? `<div class="pf-history">${group.confirmedWorked.map(x=>`<div class="pf-history-card"><div class="pf-history-top"><div><div class="pf-name">${esc(x.method)}</div><div class="pf-history-id">Confirmed user datapoint</div></div><span class="tag b">Worked</span></div><div class="pf-item-note">${esc(x.note||'No notes.')}</div><div class="ph-help" style="margin-top:6px">Last confirmed ${esc(fD(x.lastConfirmedAt||x.updatedAt||x.createdAt))}</div><div class="ph-actions"><button class="ph-mini ph-save" onclick="openUserDPEditor('${x.id}')">Edit</button><button class="ph-mini ph-del" onclick="deleteUserDP('${x.id}')">Remove</button></div></div>`).join('')}</div>`
+          ? `<div class="pf-history">${group.confirmedWorked.map(x=>`<div class="pf-history-card"><div class="pf-history-top"><div><div class="pf-name">${esc(x.method)}</div><div class="pf-history-id">Confirmed user datapoint</div></div><span class="tag b">Worked</span></div><div class="pf-item-note">${esc(x.note||'No notes.')}</div><div class="ph-help" style="margin-top:6px">Confirmed ${esc(fD(x.confirmedAt||x.eventDate))}</div><div class="ph-actions"><button class="ph-mini ph-save" onclick="openUserDPEditor('${x.id}')">Edit</button><button class="ph-mini ph-del" onclick="deleteUserDP('${x.id}')">Remove</button></div></div>`).join('')}</div>`
           : '<div class="pf-empty">No confirmed methods saved.</div>'}
       </div>
 
