@@ -1055,9 +1055,18 @@ async function exercise(name,engine,url){
     check('second bank replaces first selection',await headers.nth(0).getAttribute('aria-expanded')==='false'&&await headers.nth(1).getAttribute('aria-expanded')==='true'&&await page.locator('.is-selected').count()===1);
     check('selection preserves priority order',JSON.stringify(await headers.evaluateAll(rows=>rows.map(e=>e.dataset.attentionToggle)))===JSON.stringify(attentionOrder));
     const selectedId=attentionOrder[1];
+    for(const width of [320,375,390,430]){
+      await page.setViewportSize({width,height:844});
+      check('selected second bank fits '+width+'px',await page.locator('.is-selected').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
+      check('selected bank actions retain touch targets at '+width+'px',await page.locator('.is-selected .bt360-actions button').evaluateAll(rows=>rows.length===2&&rows.every(e=>e.getBoundingClientRect().height>=44)));
+    }
+    await page.setViewportSize({width:390,height:844});
     await page.screenshot({path:path.join(output,name+'-selected-bank.png')});
     await page.locator('.is-selected').getByRole('button',{name:'Details',exact:true}).click();
     check('second bank Details opens that exact record',await page.evaluate(id=>expanded===id,selectedId));
+    await page.evaluate(()=>{expanded=null;R()});
+    await page.locator('.is-selected').getByRole('button',{name:'Open task',exact:true}).click();
+    check('second bank Open task routes to its own account',await page.evaluate(id=>expanded===id,selectedId));
     await page.evaluate(()=>{expanded=null;R()});
     await page.locator('[data-attention-toggle][aria-expanded="true"]').click();
     check('selected card can collapse',await page.locator('.is-selected').count()===0);
