@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.36';
+const APP_VERSION='3.6.37';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -293,8 +293,9 @@ function saveTermsArchiveForNewCycle(e,source){
   const all=loadTermsArchive();
   return stageTermsArchive(all,e,source)?saveTermsArchive(all):false;
 }
-function commitEntriesWithArchive(rows){
+function commitEntriesWithArchive(rows,extraWrites={}){
   if(!Array.isArray(rows))throw Error('Account records must be a list.');
+  if(Object.keys(extraWrites).some(key=>!undoStorageKeys().includes(key)))throw Error('Unsupported supporting history write.');
   // Parse strictly: a damaged archive must never be silently replaced by {}.
   const archiveRaw=localStorage.getItem(TC_ARCHIVE_KEY),entryRaw=localStorage.getItem(SK);
   const all=archiveRaw===null?{}:JSON.parse(archiveRaw),before=entryRaw===null?[]:JSON.parse(entryRaw);
@@ -313,7 +314,7 @@ function commitEntriesWithArchive(rows){
   for(const old of before){if(JSON.stringify(old)!==JSON.stringify(incoming.get(identity(old))))stage(old,'before-account-change');}
   const existing=new Map(before.map(e=>[identity(e),e]));
   for(const row of rows){if(JSON.stringify(row)!==JSON.stringify(existing.get(identity(row))))stage(row,'account-save');}
-  const writes={[SK]:JSON.stringify(rows)};
+  const writes={...extraWrites,[SK]:JSON.stringify(rows)};
   if(changed)writes[TC_ARCHIVE_KEY]=JSON.stringify(all);
   window.BTPersistence.commit(localStorage,writes);
   if(changed)window.BTTermsHistory?.queueSync?.();
@@ -3562,20 +3563,28 @@ function findPhone(bank,eid){if(eid){const ee=entries.find(x=>x.id===eid);if(ee&
 function findPhoneLabel(bank){const bn=bank.toLowerCase();return(bn.includes('biz')||bn.includes('business'))?'Business':'Personal'}
 function callBank(id){const e=entries.find(x=>x.id===id);if(!e)return;const phone=findPhone(e.bank,id);if(phone)window.location.href='tel:'+phone.replace(/[^0-9+]/g,'');else{cfm={title:'No Number Found',msg:'No phone number found for '+e.bank+'. Check the Phone tab.',green:true,action:()=>{cfm=null;R()}};R()}}
 function undoClose(){
-  if(!undoState)return;
-  if(undoState.entriesSnapshot){
-    entries=deepCopy(undoState.entriesSnapshot)||entries;
-    saveUserDatapoints(deepCopy(undoState.userDatapointsSnapshot)||[]);
-    saveReqs(deepCopy(undoState.reqSnapshot)||{});
-    saveOfferHistory(deepCopy(undoState.offerHistorySnapshot)||{});
-    saveProfileEvents(deepCopy(undoState.profileEventsSnapshot)||[]);
-  }else{
-    entries=entries.map(e=>e.id===undoState.id?{...undoState}:e);
+  if(!undoState)return false;
+  try{
+    const current=entries.find(e=>e.id===undoState.id);
+    if(!undoState.afterEntry||!undoEqual(current,undoState.afterEntry)||!undoEqual(entries,JSON.parse(localStorage.getItem(SK)||'[]')))throw undoConflict();
+    const writes={};
+    for(const key of undoStorageKeys()){
+      const before=undoState.supportBefore[key],after=undoState.supportAfter[key];
+      if(before.exists===after.exists&&before.raw===after.raw)continue;
+      const raw=localStorage.getItem(key),value=reverseUndoValue(before.exists?JSON.parse(before.raw):undefined,after.exists?JSON.parse(after.raw):undefined,raw===null?undefined:JSON.parse(raw),true);
+      const next=value===undefined?null:JSON.stringify(value);
+      if(next!==raw)writes[key]=next;
+    }
+    const restored=sortE(entries.map(e=>e.id===undoState.id?deepCopy(undoState.entry):e));
+    commitEntriesWithArchive(restored,writes);
+    entries=restored;
+    clearLifecycleUndo();
+    window.btCloudBackupChanged?.();
+  }catch(error){
+    alert(error.code==='UNDO_CONFLICT'?'Undo stopped because the account or supporting history changed. Your newer records were kept. Review the account to correct its dates.':error.rollbackError?'Undo could not be verified. Keep this page open and export a backup before retrying.':'Undo was not saved. Existing records were retained. Check browser storage and retry.');
+    R();return false;
   }
-  entries=sortE(entries);sv(SK,entries);
-  undoState=null;
-  if(undoTimer)clearTimeout(undoTimer);
-  R()
+  R();return true;
 }
 let _sp=0;
 const I={grid:'<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',doc:'<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',tips:'<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>',phone:'<svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>',info:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>',profile:'<svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 9h.01"/><path d="M15 9h.01"/><path d="M9 13h.01"/><path d="M15 13h.01"/><path d="M12 21v-4"/></svg>',backup:'<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',restore:'<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',quick:'<svg viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>',trash:'<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',spark:'<svg viewBox="0 0 24 24"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.4L12 15l-1.9-4.6L5.5 9l4.6-1.4L12 3z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"/></svg>',edit:'<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>',gift:'<svg viewBox="0 0 24 24"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/></svg>',lock:'<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',clockShield:'<svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z"/><circle cx="12" cy="12" r="3.5"/><path d="M12 10.5v1.8l1.2.7"/></svg>',shieldCheck:'<svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>',refresh:'<svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10M1 14l5.36 4.36A9 9 0 0 0 20.49 15"/></svg>',alert:'<svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',target:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>',calendar:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',feed:'<svg viewBox="0 0 24 24"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>'};
@@ -3963,17 +3972,42 @@ function deepCopy(v){
   try{return JSON.parse(JSON.stringify(v))}
   catch{return v}
 }
-function closeUndoSnapshot(entry){
-  return {
-    id:entry?.id||'',
-    bank:entry?.bank||'',
-    entry:deepCopy(entry||{}),
-    entriesSnapshot:deepCopy(entries||[]),
-    userDatapointsSnapshot:deepCopy(loadUserDatapoints()),
-    reqSnapshot:deepCopy(loadReqs()),
-    offerHistorySnapshot:deepCopy(loadOfferHistory()),
-    profileEventsSnapshot:deepCopy(loadProfileEvents())
+function undoStorageKeys(){return [DP_USER_KEY,DD_KEY,REQ_KEY,OFFER_HIST_KEY,PROFILE_EVT_KEY];}
+function undoEqual(a,b){return JSON.stringify(a)===JSON.stringify(b);}
+function undoConflict(){return Object.assign(new Error('Undo conflicts with newer records.'),{code:'UNDO_CONFLICT'});}
+function reverseUndoValue(before,after,current,root=false){
+  if(undoEqual(before,after)||undoEqual(before,current))return current;
+  if(undoEqual(current,after))return before;
+  const object=x=>x&&typeof x==='object'&&!Array.isArray(x);
+  if(root&&before===undefined){
+    if(Array.isArray(after)&&Array.isArray(current))before=[];
+    else if(object(after)&&object(current))before={};
   }
+  if(object(before)&&object(after)&&object(current)){
+    const out=Object.assign(Object.create(null),current);
+    for(const key of new Set([...Object.keys(before),...Object.keys(after)])){
+      const value=reverseUndoValue(before[key],after[key],current[key]);
+      if(value===undefined)delete out[key];else out[key]=value;
+    }
+    return out;
+  }
+  const identified=rows=>Array.isArray(rows)&&rows.every(x=>object(x)&&typeof x.id==='string'&&x.id)&&new Set(rows.map(x=>x.id)).size===rows.length;
+  if(identified(before)&&identified(after)&&identified(current)){
+    const map=rows=>new Map(rows.map(x=>[x.id,x]));
+    const a=map(before),b=map(after),c=map(current),out=[];
+    for(const id of new Set([...c.keys(),...a.keys(),...b.keys()])){
+      const value=reverseUndoValue(a.get(id),b.get(id),c.get(id));
+      if(value!==undefined)out.push(value);
+    }
+    return out;
+  }
+  throw undoConflict();
+}
+function closeUndoSnapshot(entry){
+  return {id:entry.id,bank:entry.bank||'',entry:deepCopy(entry),supportBefore:window.BTPersistence.capture(localStorage,undoStorageKeys())};
+}
+function sealCloseUndo(snapshot){
+  return {...snapshot,afterEntry:deepCopy(entries.find(e=>e.id===snapshot.id)),supportAfter:window.BTPersistence.capture(localStorage,undoStorageKeys())};
 }
 function isFutureDate(d){
   return !!(d&&dB(td(),d)>0)
@@ -5217,7 +5251,7 @@ function finishClose(){
   if(projected.bonus>0&&!projected.bonusRecd){alert('Confirm the bonus received date or correct the actual bonus amount.');return}
   const beforeEntries=deepCopy(entries),beforeStorage=window.BTPersistence.capture(localStorage,getBackupStorageKeys());
   const nextUndo=closeUndoSnapshot(e),oldUndo=undoState;
-  nextUndo.undoLabel='Closed saved for '+(e.bank||p.bank||'this bank')+' — Undo restores everything for 60 seconds.';
+  nextUndo.undoLabel='Closed saved for '+(e.bank||p.bank||'this bank')+' — Undo this change within 60 seconds.';
   try{
   entries=entries.map(x=>{
     if(x.id===p.entryId){
@@ -5253,7 +5287,7 @@ function finishClose(){
   }
   const issues=archiveHistoryIssues(e2);
   cfm.msg+='\n\nHistory: '+(issues.length?'Incomplete — '+issues.join('; ')+'.':'Core records saved locally.')+'\nCloud recovery: '+(window.BTCloudBackup?.protection?.().title||'Not verified')+'.';
-  undoState=nextUndo;
+  undoState=sealCloseUndo(nextUndo);
   if(undoTimer)clearTimeout(undoTimer);
   undoTimer=setTimeout(()=>{undoState=null;R()},60000);
   }catch(error){
@@ -5278,10 +5312,10 @@ function finishStillOpen(){
   const e=entries.find(x=>x.id===p.entryId);
   if(!e)return;
   const oldClosed=e.closed||p.closeDate||'';
-  undoState=closeUndoSnapshot(e);
-  undoState.undoLabel='Closed date removed for '+(e.bank||'this bank')+' — Undo restores everything for 60 seconds.';
-  if(undoTimer)clearTimeout(undoTimer);
-  undoTimer=setTimeout(()=>{undoState=null;R()},60000);
+  const beforeEntries=deepCopy(entries),beforeStorage=window.BTPersistence.capture(localStorage,getBackupStorageKeys()),oldUndo=undoState;
+  const nextUndo=closeUndoSnapshot(e);
+  nextUndo.undoLabel='Closed date removed for '+(e.bank||'this bank')+' — Undo this change within 60 seconds.';
+  try{
   entries=entries.map(x=>{
     if(x.id===p.entryId){
       x.closed='';
@@ -5294,11 +5328,21 @@ function finishStillOpen(){
   });
   const e2=entries.find(x=>x.id===p.entryId);
   if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
-  entries=sortE(entries);sv(SK,entries);
+  entries=sortE(entries);if(!sv(SK,entries))throw Error('Reopening record save failed.');
+  undoState=sealCloseUndo(nextUndo);
+  if(undoTimer)clearTimeout(undoTimer);
+  undoTimer=setTimeout(()=>{undoState=null;R()},60000);
   closePrompt=null;
   expanded=e2?e2.id:null;
   cfm={title:'Marked Still Open',msg:(e2?e2.bank:'This bank')+' is active/open again. Closed date was cleared completely.'+'\n\nUndo is available for 60 seconds at the bottom of the app.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
-  R()
+  }catch(error){
+    let restored=true;
+    try{window.BTPersistence.rollback(localStorage,beforeStorage)}catch{restored=false}
+    entries=beforeEntries;undoState=oldUndo;closePrompt=p;cfm=null;window.btCloudBackupChanged?.();
+    alert(restored?'The open-account correction was not saved. Previous records were restored; keep this review open and retry.':'The open-account correction could not be verified. Keep this page open and export a backup before retrying.');
+    R();return false;
+  }
+  R();return true;
 }
 function clearCloseDate(id,keepAsPlanned){
   const e=entries.find(x=>x.id===id);
