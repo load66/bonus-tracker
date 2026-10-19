@@ -1,11 +1,13 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex · v3.6.43 · codex/v3.6.43-datapoint-confirmation
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
 
+
+- v3.6.43 user-confirmed datapoints (`codex/v3.6.43-datapoint-confirmation`): After explicit deposit-requirement or bonus milestone saves, optionally collect an activity method/outcome without inferring qualifying activity from saved offer terms. Separate personal confirmation from legacy and inferred reports; do not automatically turn payouts into method successes. Selected direct-deposit attention tasks link to the bank's datapoints. Previously confirmed methods resist inferred updates; original financial rules and account history remain separate. Existing backed-up datapoint key extended additively; no backend migration or provider calls. Focused synthetic tests and existing Chromium/WebKit CI required. Next: pass PR checks, review browser screenshots, merge only on green, and verify exact production Pages assets/cache.
 - v3.6.42 dashboard polish (`codex/v3.6.42-dashboard-polish`): Full-width selected task descriptions beneath bank identity, preserved compact rows and exact canonical action routing. Compact counted search shortcut opens and focuses the existing account directory; Escape and Hide close it and restore shortcut focus, including directories opened through stage filters. Read-only UI state; no schema, backend, storage-key or canonical-rule changes. Synthetic search, focus, stage-filter and mobile coverage added. Local unit and release checks required; next: Chromium/WebKit CI, screenshot review, merge on green and exact Pages verification. Previous v3.6.41 PR #220 deployed at `05fc689848c0` with passing main CI and exact live-asset verification.
 
 - v3.6.41 selectable Tracker tasks (`codex/v3.6.41-selectable-attention`): Each attention row expands its own actions on selection, preserves priority order, and collapses the previous selection. Account directory starts collapsed behind All accounts; search, stage filters and account actions remain available. UI state only; no schema, backend, canonical-rule or financial-record changes. Synthetic selection and browser regressions added. Next: full unit and Chromium/WebKit verification, merge on green and exact Pages verification. Previous v3.6.40 PR #219 deployed at `0a46bc88510f` with successful main CI and exact live-file verification.
