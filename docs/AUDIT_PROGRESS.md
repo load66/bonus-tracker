@@ -6,6 +6,8 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.6.49 iCloud switch confirmation (`codex/v3.6.49-icloud-switch-confirmation`): fix confirmation overlay being hidden behind iCloud wizard; make unverified file errors and successful mode switch unmistakable on iPhone. All data/backup safety checks remain intact; add synthetic and mobile browser regression tests. PR #229: bonus/cloud/UI units passed; WebKit passed and Chromium recorded 467 browser assertions passed in run 39277460967. Next: final-head release verification, merge and Pages deployment. No saved data changed.
+
 - v3.6.48 iCloud setup overlay fix (`codex/v3.6.48-icloud-modal-visibility`): resolve Settings sheet z-index occluding the iCloud migration modal. Dismiss Settings before opening and use a dedicated accessible top-layer modal. No changes to backup or user data. PR #228; bonus/cloud/UI tests, Chromium/WebKit mobile tap-visibility assertions, and release verifier passed in CI run 39274633924. Next: merge and confirm GitHub Pages deploy; no user records or backup objects modified.
 
 - v3.6.47 iCloud-only migration (`codex/v3.6.47-icloud-only-migration`): verified portable export to iCloud Drive, read-only backup-file validation before an opt-in local-only switch, disable BonusTracker Railway requests after switch while retaining local records and file restoration. No deletion of shared Railway services or cloud objects. Backend safety tests, full bonus/cloud/UI suites, Chromium, WebKit and release verifier passed on PR #227 (run 39271696124). Next: verify final-head checks, merge PR, confirm GitHub Pages deployment; iCloud selection and verification on the user's iPhone remain required before disabling server backups.

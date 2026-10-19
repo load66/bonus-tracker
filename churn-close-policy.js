@@ -1,4 +1,4 @@
-/* Release 3.6.48: preserved unchanged canonical rules during cloud recovery upgrade. */
+/* Release 3.6.49: preserved unchanged canonical rules during cloud recovery upgrade. */
 /* BonusTracker v3.5.2 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
 (function(){
   'use strict';

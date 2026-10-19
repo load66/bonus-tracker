@@ -6,10 +6,16 @@
 .bt-notice.success{border-color:#438867;background:#102b22}.bt-notice.success .bt-notice-title{color:#91ecb9}.bt-notice.success .bt-notice-title:before{content:'✓ ';font-size:14px}
 
 /* iOS/iPadOS: wizard must sit above the fixed Settings sheet rather than behind it. */
-.icloud-backup-overlay{z-index:32000!important;box-sizing:border-box}
+.icloud-backup-overlay{z-index:20000!important;box-sizing:border-box}
 .icloud-backup-overlay .cloud-modal{box-sizing:border-box;width:min(580px,calc(100vw - 24px));max-height:calc(100dvh - env(safe-area-inset-top) - 18px);overflow-y:auto;padding-bottom:max(20px,env(safe-area-inset-bottom));}
 .icloud-backup-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
 .icloud-backup-heading h2{margin:4px 0 0;min-width:0}
 .icloud-backup-heading #icloud-close{margin:0;min-width:44px;width:44px;min-height:44px;flex-shrink:0;border:1px solid var(--border);border-radius:12px;background:var(--bg);color:var(--text);font-size:24px;line-height:1}
 .icloud-backup-overlay .bt360-actions{display:grid;gap:8px}
 .icloud-backup-overlay .bt360-actions button{min-height:46px;margin:0;text-align:center}
+
+/* Wizard sits above Settings (999), while safety confirmations (30000) remain interactive above the wizard. */
+.icloud-backup-overlay #icloud-switch-feedback{display:block;margin:10px 0;padding:10px 12px;border-radius:10px;background:#342117;color:#ffe4ca;border:1px solid #9c6543;font-size:13px;font-weight:600;line-height:1.45;overflow-wrap:anywhere}
+.icloud-backup-overlay #icloud-switch-feedback[data-tone="success"]{background:#123428;color:#c4f5d8;border-color:#327c5c}
+.icloud-backup-overlay #icloud-switch-feedback[data-tone="neutral"]{background:#1e2734;color:#d1e2fc;border-color:#46617b}
+.icloud-backup-overlay #icloud-switch-feedback[hidden]{display:none!important}

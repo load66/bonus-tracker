@@ -494,6 +494,29 @@ async function exercise(name,engine,url){
         return !!hit&&(el===hit||el.contains(hit))&&r.height>30;
       }));
       check('iCloud wizard has a visible Close button',await wizard.getByRole('button',{name:'Close iCloud backup'}).isVisible());
+      if(width===375){
+        // The confirmation must appear ABOVE the iCloud wizard on Safari.
+        await page.evaluate(()=>localStorage.removeItem('bt_icloud_file_verified_v1'));
+        await wizard.locator('#icloud-switch').click();
+        check('iCloud switch explains missing verified backup beside button',await wizard.locator('#icloud-switch-feedback').isVisible()
+          &&(await wizard.locator('#icloud-switch-feedback').innerText()).includes('First export and verify')
+          &&await page.evaluate(()=>localStorage.getItem('bt_backup_mode_v1')!=='icloud'));
+        await page.evaluate(()=>{
+          const full=buildPortableBackupPayload(),receipt=BTICloudBackup.verifyPayload(full);
+          localStorage.setItem('bt_icloud_file_verified_v1',JSON.stringify(receipt));
+        });
+        await wizard.locator('#icloud-switch').click();
+        const confirmation=page.getByRole('dialog',{name:'Use iCloud Drive files'});
+        check('iCloud switch confirmation opens above wizard',await confirmation.isVisible()&&await confirmation.getByRole('button',{name:'Switch to iCloud'}).evaluate(el=>{
+          const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+          return !!hit&&(hit===el||el.contains(hit))&&r.height>30;
+        }));
+        await confirmation.getByRole('button',{name:'Cancel'}).click();
+        check('iCloud cancel shows feedback and preserves cloud protection',await wizard.locator('#icloud-switch-feedback').isVisible()
+          &&(await wizard.locator('#icloud-switch-feedback').innerText()).includes('Switch cancelled')
+          &&await page.evaluate(()=>localStorage.getItem('bt_backup_mode_v1')!=='icloud'));
+        await page.evaluate(()=>localStorage.removeItem('bt_icloud_file_verified_v1'));
+      }
       await wizard.getByRole('button',{name:'Close iCloud backup'}).click();
       check('closing iCloud wizard removes its overlay',await page.locator('.icloud-backup-overlay').count()===0);
       await button('Settings').click();

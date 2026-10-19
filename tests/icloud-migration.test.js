@@ -30,6 +30,7 @@ sandbox.btConfirmDialog=async()=>true;
 (async()=>{
  await sandbox.BTICloudBackup.switchToICloud();
  assert.equal(sandbox.localStorage.getItem('bt_backup_mode_v1'),'icloud');
+ assert.equal(sandbox.sessionStorage.getItem('bt_icloud_switch_completed_v1'),'1','After reload a one-time successful switch notice must be ready');
  assert.equal(JSON.parse(sandbox.localStorage.getItem('bt_cloud_recovery_v1')).enabled,false);
  assert.deepEqual(JSON.parse(sandbox.localStorage.getItem('bt_e_v4')),[record],'Switch must preserve exact account records');
  assert.equal(sandbox.localStorage.getItem('bonus-ai-auth'),'private-auth-secret-not-for-export','Switch does not delete tokens or unrelated data');
