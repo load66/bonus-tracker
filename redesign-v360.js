@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.46 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.47 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt3628_audience_session',noticeKey='bt360_notice_session';
@@ -116,7 +116,7 @@ function hero(rows,year,metrics){
   ).join(''):'<p class="bt367-month-empty">No bonuses</p>';
   detail='<section class="bt367-month-detail" aria-label="'+x.name+' '+year+' collected bonuses"><div class="bt367-month-detail-head"><b>'+x.name+' '+year+' · '+amount(x.total)+' collected · '+x.accounts.length+' '+(x.accounts.length===1?'bonus':'bonuses')+'</b><button type="button" aria-label="Close month details" onclick="BT360.closeHeroMonth()">×</button></div><div class="bt367-month-list">'+rowsHtml+'</div></section>';
  }
- return '<section class="bt360-hero"><div class="bt360-hero-top"><div class="bt360-kicker">COLLECTED IN '+year+'</div><button id="bt-cloud-open" class="cloud-status-button bt360-backup" onclick="btOpenCloudBackup()"><span class="bt360-cloud-icon" aria-hidden="true">✓</span><span class="cloud-dashboard-summary">Cloud backup</span></button></div><strong class="bt360-hero-amount">'+amount(total)+'</strong><p>'+amount(progress)+' in progress · '+amount(awaiting)+' awaiting</p><div class="bt367-month-chart" role="group" aria-label="Collected by month in '+year+'">'+bars+'</div>'+detail+'</section>';
+ return '<section class="bt360-hero"><div class="bt360-hero-top"><div class="bt360-kicker">COLLECTED IN '+year+'</div><button id="bt-cloud-open" class="cloud-status-button bt360-backup" onclick="btOpenCloudBackup()"><span class="bt360-cloud-icon" aria-hidden="true">✓</span><span class="cloud-dashboard-summary">'+(window.BTICloudBackup?.isLocalOnly?.()?'iCloud backup':'Cloud backup')+'</span></button></div><strong class="bt360-hero-amount">'+amount(total)+'</strong><p>'+amount(progress)+' in progress · '+amount(awaiting)+' awaiting</p><div class="bt367-month-chart" role="group" aria-label="Collected by month in '+year+'">'+bars+'</div>'+detail+'</section>';
 }
 function attentionStatus(x){
  const code=String(x.stageCode||'IN_PROGRESS');
@@ -315,6 +315,7 @@ function cloudStatusText(state){
 }
 function accountSaveStatus(e){
  let saved=false;try{const stored=JSON.parse(localStorage.getItem(SK)||'[]').find(row=>row.id===e.id);saved=!!stored&&JSON.stringify(stored)===JSON.stringify(e);}catch{}
+ if(window.BTICloudBackup?.isLocalOnly?.())return '<div class="bt3640-save-status" aria-label="Record storage status"><span data-local-save="'+saved+'">'+(saved?'Saved on device':'Local save needs review')+'</span></div>';
  const state=window.BTCloudBackup?.protection?.();
  return '<div class="bt3640-save-status" aria-label="Record storage status"><span data-local-save="'+saved+'">'+(saved?'Saved on device':'Local save needs review')+'</span><button type="button" onclick="btOpenCloudBackup()" data-account-cloud data-state="'+safe(state?.tone||'warning')+'" title="'+safe(state?.detail||'Cloud protection has not been verified.')+'">'+cloudStatusText(state)+'</button></div>';
 }
@@ -859,6 +860,7 @@ function cleanCost(v){return typeof v==='number'&&Number.isFinite(v)&&v>=0?v:nul
 function fmtCost(v){return v===null?'Unavailable':'$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function fmtStorage(bytes){return bytes>0&&bytes<5000000?'Less than 0.01 GB':(bytes/1000000000).toFixed(2)+' GB'}
 async function refreshUsage(force=false){
+ if(window.BTICloudBackup?.isLocalOnly?.())return;
  if(usageLoading)return;
  if(!force&&Date.now()-usageFetchedAt<60*60*1000)return;
  if(!window.BTBonusAuth?.connected?.()){usageError='Sign in to Cloud protection to view hosting usage.';return}
@@ -886,6 +888,7 @@ function setHostingAmount(which){
  saveHostSettings({[which]:value});
 }
 function usageBanner(){
+ if(window.BTICloudBackup?.isLocalOnly?.())return'';
  if(!usageData||usageData.railway.status!=='ok')return'';
  const projected=cleanCost(usageData.railway.projectedMonthEnd),cfg=hostSettings(),month=String(usageData.month||'');
  if(projected===null||projected<=cfg.alertAt||cfg.lastBannerMonth===month)return'';
@@ -967,14 +970,18 @@ function usageCard(){
 }
 function setNotice(key){if(!(key in noticePrefs))return;noticePrefs[key]=!noticePrefs[key];try{sessionStorage.setItem(noticeKey,JSON.stringify(noticePrefs))}catch{}R()}
 function cloudSettingsCard(){
+ const local=window.BTICloudBackup?.isLocalOnly?.(),status=window.BTICloudBackup?.status?.()||{};
+ if(local)return panel('ICLOUD DRIVE BACKUP','<p class="bt360-muted">'+(status.verifiedAt?'Backup file checked '+safe(new Date(status.verifiedAt).toLocaleDateString())+(status.changed?' · New changes need another export':''):'Save a full backup file to iCloud Drive to protect this phone.')+'</p><div class="bt360-actions"><button type="button" class="bt360-primary" onclick="BTICloudBackup.exportFile()">Save backup file</button><button type="button" class="bt360-secondary" onclick="BTICloudBackup.openSetup()">Verify or restore</button></div><p class="bt360-muted">Manual backups only · nothing is uploaded automatically.</p>');
+ const transfer=panel('MOVE TO ICLOUD DRIVE','<p class="bt360-muted">Save a full backup file to iCloud Drive, choose it in Files to verify, then switch off Railway backup safely.</p><button type="button" class="bt360-primary" onclick="BTICloudBackup.openSetup()">Move to iCloud Drive</button>');
  let cfg={};try{cfg=JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')||'{}')}catch{}
  const state=window.BTCloudBackup?.protection?.()||{};
  const time=cfg.lastAt?new Date(cfg.lastAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'No verified backup yet';
  const on=cfg.enabled===true;
- return panel('CLOUD PROTECTION','<button type="button" role="switch" aria-checked="'+on+'" class="bt360-settings-row" onclick="BT360.closeSettings();btOpenCloudBackup()"><span><b>Auto-backup</b><small>Change with verified cloud controls</small></span><i class="bt360-toggle '+(on?'checked':'')+'"></i></button><p class="bt360-muted">'+safe(state.title||'Review cloud protection')+' · '+safe(time)+'</p><div class="bt360-actions"><button class="bt360-primary" onclick="BT360.backUpNow()">Back up now</button><button class="bt360-secondary" onclick="BT360.closeSettings();btOpenCloudBackup()">Restore from cloud</button></div>');
+ return transfer+panel('CLOUD PROTECTION','<button type="button" role="switch" aria-checked="'+on+'" class="bt360-settings-row" onclick="BT360.closeSettings();btOpenCloudBackup()"><span><b>Auto-backup</b><small>Change with verified cloud controls</small></span><i class="bt360-toggle '+(on?'checked':'')+'"></i></button><p class="bt360-muted">'+safe(state.title||'Review cloud protection')+' · '+safe(time)+'</p><div class="bt360-actions"><button class="bt360-primary" onclick="BT360.backUpNow()">Back up now</button><button class="bt360-secondary" onclick="BT360.closeSettings();btOpenCloudBackup()">Restore from cloud</button></div>');
 }
 async function backUpNow(){
  closeSettings();
+ if(window.BTICloudBackup?.isLocalOnly?.())return window.BTICloudBackup.exportFile();
  if(!window.BTBonusAuth?.connected?.()||!window.BTCloudBackup?.upload){btOpenCloudBackup();return}
  try{await window.BTCloudBackup.upload('manual');window.btNotify?.('Cloud backup uploaded and verified.',{title:'Backup verified',tone:'success'})}
  catch{btOpenCloudBackup()}
@@ -982,11 +989,11 @@ async function backUpNow(){
 function settings(){
  const toggles=[['deadlines','Deadlines','3 and 1 day before'],['payouts','Payouts and close dates','When ready'],['eligible','Eligible again','7 days before and on the day']];
  const buttons=toggles.map(([k,label,description])=>'<button class="bt360-settings-row" role="switch" aria-checked="'+noticePrefs[k]+'" onclick="BT360.setNotice(\''+k+'\')"><span><b>'+label+'</b><small>'+description+'</small></span><i class="bt360-toggle '+(noticePrefs[k]?'checked':'')+'"></i></button>').join('');
- return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.46</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
+ return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.47</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
  cloudSettingsCard()+
- usageCard()+
+ (window.BTICloudBackup?.isLocalOnly?.()?'':usageCard())+
  panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.32. Push delivery is not active.</p>')+
- panel('Data','<button class="bt360-settings-row" onclick="BT360.closeSettings();exportBackup()">Export backup file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.closeSettings();importBackup()">Restore from file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.openPhonebook()">Bank phone numbers <span>›</span></button>')+
+ panel('Data','<button class="bt360-settings-row" onclick="BT360.openPhonebook()">Bank phone numbers <span>›</span></button>')+
  '<button class="bt360-reset" onclick="BT360.closeSettings();resetAllData()">Reset this device <small>Two confirmations and a safety backup</small></button></section></div>';
 }
 let notificationPanelOpen=false;
