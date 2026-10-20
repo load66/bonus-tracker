@@ -53,5 +53,8 @@ assert.ok(publisher.includes("cron: '23 */6 * * *'"),'RSS publisher must run onc
 assert.ok(publisher.includes('contents: write')&&publisher.includes('git push origin HEAD:main'),'RSS snapshots must persist in the repository');
 assert.ok(publisher.includes('actions/upload-pages-artifact@v4')&&publisher.includes('actions/deploy-pages@v4'),'RSS changes must reach Pages even when made by GITHUB_TOKEN');
 assert.ok(publisher.includes("github.event.workflow_run.conclusion == 'success'"),'Publish once after green main release');
+assert.ok(publisher.includes('python3 scripts/watch-quick-add-sources.py'),'Official source checks must be scheduled with the bank feed');
+assert.ok(publisher.includes("f.get('records') else 1"),'Release-triggered source watch may seed only an uninitialized snapshot');
+assert.ok(publisher.includes('data/quick-add-source-monitor.json'),'Public monitor results must be committed and published');
 assert.ok(!workflow.includes('python3 scripts/update-bank-feed.py'),'Release verification may not overwrite the packaged site with an uncommitted RSS update');
 console.log('CI coverage passed: all unit areas, parallel Chromium/WebKit, isolated nightly, pinned browser and retries');
