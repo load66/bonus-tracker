@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.58: Quick Add historical examples do not prefill unverified rules.
-const V = 'bt-v3.6.58-trust1';
+// Version 3.6.59: independent official-source reviewed catalog and strict offer status gates.
+const V = 'bt-v3.6.59-catalog1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
