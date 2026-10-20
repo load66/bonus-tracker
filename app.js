@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.56';
+const APP_VERSION='3.6.57';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -5558,7 +5558,7 @@ function clearCloseDate(id,keepAsPlanned){
   finishStillOpen()
 }
 function cancelClose(){closePrompt=null;R()}
-function addFromTpl(i){resetModalValidation();const t=TEMPLATES[i];const newData={bank:t.bank,bonus:t.bonus,churn:t.churn,opened:td(),closed:'',bonusRecd:'',reqMet:'',notes:t.notes||'',analyzedTC:'',minHoldDays:t.minHoldDays||0,earlyCloseFee:t.earlyCloseFee||0,dataPoint:t.dataPoint||'',reqDays:t.reqDays||0,referralBonus:0,phoneNum:'',feeChecked:false};if(handleDuplicateFlow(newData,'template')){showTemplates=false;R();return}modal=newData;modal.checklist=[];modal.customTimers=[];showTemplates=false;R()}
+function addFromTpl(i){resetModalValidation();const t=TEMPLATES[i];if(!t)return;const newData={bank:t.bank,bonus:t.bonus,churn:t.churn,opened:'',_fromTemplate:true,_wizardStep:1,closed:'',bonusRecd:'',reqMet:'',notes:t.notes||'',analyzedTC:'',minHoldDays:t.minHoldDays||0,earlyCloseFee:t.earlyCloseFee||0,dataPoint:t.dataPoint||'',reqDays:t.reqDays||0,referralBonus:0,phoneNum:'',feeChecked:false};if(handleDuplicateFlow(newData,'template')){showTemplates=false;R();return}modal=newData;modal.checklist=[];modal.customTimers=[];showTemplates=false;R()}
 function toggleCk(id,i){let completedDD=false;entries=entries.map(e=>{if(e.id===id&&e.checklist&&e.checklist[i]){e.checklist[i].done=!e.checklist[i].done;if(e.checklist[i].done&&/direct[ -]?deposits?|\bpayroll\b|\bq?dd\b/i.test(e.checklist[i].text))completedDD=true;appendEntryHistory(e,e.checklist[i].done?'checklist_completed':'checklist_reopened',e.checklist[i].text||'Checklist item')}return e});sv(SK,entries);expanded=id;R();if(completedDD)reviewCycleExperience(id,'requirement')}
 function addCk(id){const inp=document.getElementById('ck_'+id);if(!inp||!inp.value.trim())return;const text=inp.value.trim();entries=entries.map(e=>{if(e.id===id){if(!e.checklist)e.checklist=[];e.checklist.push({text,done:false});appendEntryHistory(e,'checklist_added',text)}return e});sv(SK,entries);toggleInlineForm(id,'checklist',false)}
 function rmCk(id,i){entries=entries.map(e=>{if(e.id===id&&e.checklist)e.checklist.splice(i,1);return e});sv(SK,entries);R()}
@@ -7087,7 +7087,7 @@ entries=sortE(entries); // First visible render is owned by BT360 at the end of 
     if(!expanded&&!showTemplates&&!showAnalyzer)h+='<div class="bt360-search-tools" id="bt-tracker-directory"><button type="button" class="bt360-link" aria-expanded="true" onclick="BT360.closeAccountSearch()">Hide accounts</button></div>';
 
     if(showTemplates&&!expanded){
-      h += '<section id="bt-quick-add-panel" class="bt362-tool-panel" tabindex="-1" aria-label="Quick Add" onkeydown="if(event.key===\'Escape\'){event.preventDefault();closeTrackerTool(\'quick-add\')}"><div class="bt3651-tool-head"><div><h2>Quick Add</h2><p>Choose a bank template or import an offer.</p></div><button type="button" class="bt3651-tool-close" aria-label="Close Quick Add" onclick="closeTrackerTool(\'quick-add\')">×</button></div><div class="tgrid">';
+      h += '<section id="bt-quick-add-panel" class="bt362-tool-panel" tabindex="-1" aria-label="Quick Add" onkeydown="if(event.key===\'Escape\'){event.preventDefault();closeTrackerTool(\'quick-add\')}"><div class="bt3651-tool-head"><div><h2>Quick Add</h2><p>Sample offers only. Verify current terms and record your actual opening date.</p></div><button type="button" class="bt3651-tool-close" aria-label="Close Quick Add" onclick="closeTrackerTool(\'quick-add\')">×</button></div><div class="tgrid">';
       TEMPLATES.forEach((t,i)=>{
         h += `<button class="tbtn" onclick="addFromTpl(${i})">${bankLogo(t.bank,true)}<div class="t-info"><div class="nm">${esc(t.bank)}</div><div class="bn">${fM(t.bonus)}</div></div></button>`;
       });
