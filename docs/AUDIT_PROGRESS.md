@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: codex — v3.6.62 — codex/v3.6.62-offer-review-queue
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
