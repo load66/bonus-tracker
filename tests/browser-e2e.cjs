@@ -108,6 +108,12 @@ async function exercise(name,engine,url){
     await openAdvancedActions();
     await page.getByRole('button',{name:'Edit account Details, dates, bonus, rules',exact:true}).click();
   };
+  const cancelEditor=async()=>{
+    await button('Cancel').click();
+    const discard=page.getByRole('button',{name:'Discard changes',exact:true});
+    if(await discard.count())await discard.click();
+    await page.locator('.guided-modal').waitFor({state:'detached'});
+  };
   const close=async()=>{
     const action=page.getByRole('button',{name:/^Mark account closed/});
     if(!await action.count())await page.evaluate(()=>{expanded=entries[0].id;tab='tracker';R()});
@@ -243,11 +249,14 @@ async function exercise(name,engine,url){
     check('customer exclusion wording survives rerender',await page.locator('#elig-customer').inputValue()==='Not eligible for current checking account owners.');
 
     await button('Cancel').click();
+    check('edited account requires explicit discard',await page.getByRole('button',{name:'Discard changes',exact:true}).isVisible());
+    await page.getByRole('button',{name:'Discard changes',exact:true}).click();
+    await page.locator('.guided-modal').waitFor({state:'detached'});
     await page.locator('.bt362-add-fab').click();await button('Quick Add').click();
     check('Quick Add Citi identity uses locally stored bank logo',await page.getByRole('button',{name:'Citi $300',exact:true}).locator('img[src="./bank-logos/citi.svg"]').count()===1);
     await button('Citi $300').click();
     check('Quick Add exposes bank/account/bonus',await page.locator('input[oninput*="\'bank\'"]').isVisible()&&await page.locator('select[onchange*="\'accountType\'"]').isVisible()&&await page.locator('input[oninput*="\'bonus\'"]').isVisible());
-    await button('4 Review').click();check('unverified template cannot be saved',await button('💾 Add account').isDisabled());await button('Cancel').click();
+    await button('4 Review').click();check('unverified template cannot be saved',await button('💾 Add account').isDisabled());await cancelEditor();
     await importEntry(payload);
     check('import stops before saving',await page.evaluate(()=>JSON.parse(localStorage.getItem('bt_e_v4')).length===0));
     await button('2 Requirements').click();
@@ -443,7 +452,7 @@ async function exercise(name,engine,url){
     await page.getByRole('button',{name:'Set rule'}).first().click();
     check('Set rule opens existing account rule editor',await page.locator('.modal').isVisible()
       &&(await page.locator('.modal').innerText()).includes('Fees & Close'));
-    await button('Cancel').click();
+    await cancelEditor();
     await page.evaluate(()=>{
       entries[0]=JSON.parse(window.__chaseViewBaseline);
       expanded=entries[0].id;
@@ -1226,7 +1235,7 @@ async function exercise(name,engine,url){
     await page.screenshot({path:path.join(output,name+'-entry-editor-mobile.png')});
     await page.setViewportSize({width:390,height:844});
     check('mobile editor fits viewport and prevents input zoom',await page.locator('.modal').evaluate(e=>e.getBoundingClientRect().width<=window.innerWidth)&&await page.locator('.modal input').first().evaluate(e=>parseFloat(getComputedStyle(e).fontSize)>=16));
-    await button('Cancel').click();
+    await cancelEditor();
     check('mobile navigation and editor leave saved records unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
     await page.evaluate(()=>{undoState=null;clearTimeout(undoTimer);R()});
     check('mobile Tracker shows no old Action Center disclosure',await page.locator('.bt360-legacy-actions').count()===0);
@@ -1334,14 +1343,14 @@ async function exercise(name,engine,url){
       return {valid:BTFinancialRules.validate(projected).ok,unknown:projected.financialRules.closure.earlyCloseFee===null,manual:projected.closeRestrictionType==='manual-review'&&projected.closeRuleBasis==='manual',blocked:closeReadiness(after).cls==='danger'&&!safeCloseDate(after),draftBlocked,unchanged:before===localStorage.getItem('bt_e_v4')};
     },require('./fixtures/financial-rules.cjs').reviewFixture());
     for(const [key,value] of Object.entries(reviewProbe))check('financial v2 browser '+key,value);
-    await button('Cancel').click();
+    await cancelEditor();
     // Quick Add belongs to the Tracker list, not the focused account detail.
     await page.getByRole('button',{name:'Back to accounts'}).click();
     const fileSource=require('./fixtures/financial-rules.cjs').reviewFixture();
     await importEntry({kind:'BonusTrackerEntry',schemaVersion:3,verification:{promoSourceUrl:fileSource.promoSourceUrl,feeScheduleSourceUrl:fileSource.feeScheduleSourceUrl,termsVerifiedAt:fileSource.termsVerifiedAt},entry:fileSource});
     check('actual v3 file chooser reaches review after confirmation',await page.getByRole('heading',{name:'Add account',exact:true}).isVisible());
     check('actual v3 file review retains exact rules',await page.evaluate(()=>modal.financialRules.version===2&&modal.financialRules.closure.earlyCloseFee===null&&modal.closeRestrictionType==='manual-review'));
-    await button('Cancel').click();
+    await cancelEditor();
     await page.evaluate(()=>{
       window.__replacementSavedEntries=JSON.parse(JSON.stringify(entries));window.__replacementSavedStorage=localStorage.getItem('bt_e_v4');
       entries=[{id:'CHA-P-01',bank:'Chase',accountType:'personal',opened:'2023-01-01',closed:'2025-01-01',bonusRecd:'2023-03-01',bonus:100,churn:'1',churnable:true,notes:'Old personal history',customTimers:[],checklist:[],history:[]},{id:'CHA-B-01',bank:'Chase Biz',accountType:'business',opened:'2023-01-01',closed:'2025-01-01',bonusRecd:'2023-03-01',bonus:500,churn:'1',churnable:true,notes:'Business unchanged',customTimers:[],checklist:[],history:[]},{id:'CIT-P-01',bank:'Citi',accountType:'personal',opened:'2023-01-01',closed:'2025-01-01',bonus:50,churn:'1',churnable:true,notes:'Other unchanged',customTimers:[],checklist:[],history:[]}];sv(SK,entries);R();
