@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.53';
+const APP_VERSION='3.6.54';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4365,12 +4365,24 @@ function openAccountFromActionCenter(id){
   const header=card.querySelector('.card-h');
   if(header){header.setAttribute('tabindex','-1');header.focus({preventScroll:true})}
 }
-function renderAccountEmptyState(query){
-  return query
-    ? '<div class="empty"><div class="em">No matching accounts</div><p>No account matches “'+esc(query)+'”.</p><button type="button" class="btn-s" onclick="search=\'\';R()">Clear search</button></div>'
-    : entries.some(isArchivedTrackerEntry)?'<div class="empty"><div class="em">No active accounts</div><p>Completed, non-repeatable offers are saved in Archived accounts.</p><button type="button" class="btn-s" onclick="switchMainTab(\'archive\')">View archived accounts</button></div>'
-    : '<div class="empty"><div class="em">No accounts yet</div><p>Add an account or restore a backup.</p></div>'
+function clearTrackerSearch(){
+  search='';
+  if(window.BT360){window.BT360.openAccountSearch();return}
+  R();
+  requestAnimationFrame(()=>document.getElementById('tracker-search')?.focus({preventScroll:true}));
 }
+function clearTrackerFilters(){
+  window.BT360?.setAudience('all');
+  clearTrackerSearch();
+}
+function renderAccountEmptyState(query){
+  if(query)return '<div class="empty"><div class="em">No matching accounts</div><p>No account matches “'+esc(query)+'”.</p><button type="button" class="btn-s" onclick="clearTrackerSearch()">Clear search</button></div>';
+  if(entries.length&&(window.BT360?.selectedStage||['personal','business'].includes(window.BT360?.audience)))return '<div class="empty"><div class="em">No accounts in this view</div><p>Try another account type or clear the filters.</p><button type="button" class="btn-s" onclick="clearTrackerFilters()">Show all accounts</button></div>';
+  if(entries.some(isArchivedTrackerEntry))return '<div class="empty"><div class="em">No active accounts</div><p>Completed, non-repeatable offers are saved in Archived accounts.</p><button type="button" class="btn-s" onclick="switchMainTab(\'archive\')">View archived accounts</button></div>';
+  if(entries.length)return '<div class="empty"><div class="em">No open accounts</div><p>Closed accounts and saved terms remain in Archive.</p><button type="button" class="btn-s" onclick="switchMainTab(\'archive\')">View Archive</button></div>';
+  return '<div class="empty"><div class="em">No accounts yet</div><p>Add an account or restore a backup.</p></div>';
+}
+
 function runNextAccountMilestone(id){
   const e=entries.find(e=>e.id===id);if(!e)return;
   const next=window.btNextActionForEntry?.(e);
@@ -4459,6 +4471,19 @@ function updateViewSearch(kind,value,cursor){
   const input=document.getElementById(id);
   if(input){input.focus({preventScroll:true});const position=Number.isInteger(cursor)?Math.min(cursor,input.value.length):input.value.length;input.setSelectionRange(position,position);}
 }
+function toggleTrackerAddMenu(value){
+  const open=typeof value==='boolean'?value:!window.bt362AddOpen;
+  window.bt362AddOpen=open;
+  R();
+  requestAnimationFrame(()=>{
+    if(!!window.bt362AddOpen!==open)return;
+    document.querySelector(open?'#bt-add-actions button':'.bt362-add-fab')?.focus({preventScroll:true});
+  });
+}
+function trackerAddKey(event){
+  if(event.key!=='Escape'||!window.bt362AddOpen)return;
+  event.preventDefault();event.stopPropagation();toggleTrackerAddMenu(false);
+}
 function openTrackerTool(kind){
   window.bt362AddOpen=false;
   expanded=null;
@@ -4523,8 +4548,8 @@ function R(){
   h+='</div>';
   h+=detailActionBar;
   if(tab==='tracker'&&!bt360Detail&&!showTemplates&&!showAnalyzer){
-    if(window.bt362AddOpen)h+='<div class="bt362-add-menu" role="group" aria-label="Add bonus actions"><button type="button" onclick="openTrackerTool(\'quick-add\')">Quick Add</button><button type="button" onclick="openTrackerTool(\'promo-terms\')">Review promo terms</button><button type="button" onclick="window.bt362AddOpen=false;openAdd()">Add account manually</button></div>';
-    h+='<div class="bt3652-add-dock" role="region" aria-label="Add bonus controls"><button class="fab bt362-add-fab" type="button" aria-label="Add bonus" aria-expanded="'+!!window.bt362AddOpen+'" onclick="window.bt362AddOpen=!window.bt362AddOpen;R()"><span aria-hidden="true">＋</span>Add bonus</button></div>';
+    if(window.bt362AddOpen)h+='<div id="bt-add-actions" class="bt362-add-menu" role="group" aria-label="Add bonus actions" onkeydown="trackerAddKey(event)"><button type="button" onclick="openTrackerTool(\'quick-add\')">Quick Add</button><button type="button" onclick="openTrackerTool(\'promo-terms\')">Review promo terms</button><button type="button" onclick="window.bt362AddOpen=false;openAdd()">Add account manually</button></div>';
+    h+='<div class="bt3652-add-dock" role="region" aria-label="Add bonus controls"><button class="fab bt362-add-fab" type="button" aria-label="Add bonus" aria-expanded="'+!!window.bt362AddOpen+'" aria-controls="bt-add-actions" onkeydown="trackerAddKey(event)" onclick="toggleTrackerAddMenu()"><span aria-hidden="true">＋</span>Add bonus</button></div>';
   }
   h+='<div class="tabs">';
   ['tracker','bonuses','tax','tips','archive'].forEach((t,i)=>{const full=['Tracker','Bank Bonuses','Tax','Datapoints','Archive'][i],short=['Tracker','Bonuses','Tax','Data','Archive'][i];h+='<button class="tb'+(tab===t?' on':'')+'" aria-label="'+full+'" aria-current="'+(tab===t?'page':'false')+'" onclick="switchMainTab(\''+t+'\')">'+[I.grid,I.tips,I.doc,I.tips,I.lock][i]+'<span>'+short+'</span></button>'});

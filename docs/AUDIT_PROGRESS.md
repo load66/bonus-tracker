@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: Codex — v3.6.54 keyboard and search polish — codex/v3.6.54-keyboard-search-polish
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.54 keyboard and search polish (`codex/v3.6.54-keyboard-search-polish`): Add disclosure moves focus to its options, Escape dismisses it and restores Add focus, and Clear search keeps the account directory open with input focus. Empty states distinguish first use, filtered views and closed accounts; explicit Show all accounts clears view filters. No financial records, canonical rules, schemas, backend or storage keys changed. Previous v3.6.53 PR #233 deployed at `45f04674a1d7` with full unit/browser CI, inspected mobile screenshots and exact production source/cache verification. Full local bonus/cloud/UI groups, synthetic disclosure/filter regressions and release verification PASS. Next: Chromium/WebKit checks, mobile review, merge on green and exact Pages verification.
 
 - v3.6.53 evidence status labels (`codex/v3.6.53-evidence-status-labels`): replace date-only official verification claim with separate document/link presence, recorded check date and canonical saved-rule validation labels. Preserve exact source text and Archive access; distinguish review text from original promotion. Missing, invalid and future dates remain unresolved; no arbitrary expiry on enrolled historical terms. No record, schema, canonical rule, backend or storage-key changes. Previous v3.6.52 PR #232 deployed at `eaaf59436658` with full passing CI, mobile screenshot review and exact production source/cache verification. Synthetic source-evidence regressions, full local bonus/cloud/UI suites and release verification PASS. Next: Chromium/WebKit checks, screenshot review, merge on green and verify Pages deployment.
 
