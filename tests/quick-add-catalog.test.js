@@ -10,6 +10,8 @@ assert.equal(c.status('Wells Fargo',Date.parse('2026-10-20T12:00:00Z')).kind,'ex
 assert.equal(c.status('Wells Fargo',Date.parse('2026-10-20T12:00:00Z')).checked,'2026-10-20');
 assert.equal(c.status('Capital One',Date.parse('2026-10-20T12:00:00Z')).kind,'changed');
 assert.equal(c.status('Capital One',Date.parse('2026-11-18T12:00:00Z')).kind,'stale');
+assert.equal(c.status('Wells Fargo',Date.parse('2026-10-11T12:00:00Z')).kind,'unverified','A future review must not certify a historical browser state');
+assert.equal(c.status('Capital One',Date.parse('2026-10-11T12:00:00Z')).kind,'unverified','Future source review cannot count as current');
 assert.equal(c.status('Nonexistent Community Bank').kind,'unverified');
 assert.equal(c.reviewedSources(c.records['Capital One']).length,2);
 assert.equal(c.reviewedSources(c.records['Wells Fargo']).length,2);
