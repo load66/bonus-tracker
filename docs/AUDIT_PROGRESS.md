@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: codex — v3.6.57 — codex/v3.6.57-quick-add-truth
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.57 Quick Add sample truth (`codex/v3.6.57-quick-add-truth`, PR #237): sample templates never stamp an account opening as today, instead leaving it unknown until explicitly entered. Focused Quick Add and guided-editor copy distinguishes example amounts/rules from verified current promotions without hiding fields. No saved entries, eligibility/financial rules, import schema, cloud state, backend or keys changed. Added synthetic no-write and mobile browser regression checks; app and service-worker cache updated to v3.6.57. Next: full bonus/cloud/UI plus Chromium/WebKit and release verification, merge on green, confirm exact Pages production assets.
 
 - v3.6.56 mobile editor (codex/v3.6.56-mobile-editor-ux, PR #236): Existing four wizard sections retain all fields and canonical decisions. Mobile navigation now shows four labeled, accessible 44px+ steps, fixed title, separately scrollable content and safe-area actions. Navigation resets scroll and focus; review errors link directly to correction. Unchanged editors close in one tap; changed drafts require explicit discard and remain intact on cancellation, without storing temporary form data. No financial-history, terms, provider, schema or storage-key changes. New synthetic no-write and browser assertions; app/service-worker version v3.6.56. Full bonus/cloud/UI suites and Chromium/WebKit PASS on PR head 2cc28d2 (run 39480199902); 320px editor screenshot inspected. Next: verify final handoff head, merge if green, confirm exact Pages source/cache deployment.
 
