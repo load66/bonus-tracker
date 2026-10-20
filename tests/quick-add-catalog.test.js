@@ -80,3 +80,59 @@ c.refreshWatch().then(()=>{
  assert.equal(c.status('Nonexistent Bank').kind,'unverified');
  console.log('Catalog monitor projection PASS: source changes demote, valid expiration survives and other banks remain unknown');
 }).catch(err=>{console.error(err);process.exitCode=1});
+
+
+// v3.6.62: official-source issue queue is public-only, prioritized, and retry-bounded.
+async function watchQueueRegression(){
+  let calls=0;
+  const checked=new Date(Date.now()-60*1000).toISOString();
+  const record=c.records['Capital One'];
+  const sources=c.reviewedSources(record);
+  const makeRow=(src,status)=>({
+    url:src.url,status,checkedAt:checked,baselineHash:'a'.repeat(64),
+    observedHash:status==='changed'?'b'.repeat(64):'a'.repeat(64),
+    changeAt:status==='changed'?checked:null
+  });
+  const snapshot={schemaVersion:1,generatedAt:checked,records:{
+    'Capital One':{offerKey:record.offerKey,sources:{
+      promotion:makeRow(sources.find(x=>x.role==='promotion'),'changed'),
+      fees:makeRow(sources.find(x=>x.role==='fees'),'unchanged')
+    }},
+    'Wells Fargo':{offerKey:c.records['Wells Fargo'].offerKey,sources:{
+      promotion:{url:c.reviewedSources(c.records['Wells Fargo']).find(x=>x.role==='promotion').url,
+        status:'unavailable',checkedAt:checked,baselineHash:null,observedHash:null,changeAt:null},
+      fees:makeRow(c.reviewedSources(c.records['Wells Fargo']).find(x=>x.role==='fees'),'baseline')
+    }}
+  }};
+  const root={fetch:async()=>{calls++;return{ok:true,json:async()=>snapshot}}};
+  const sandbox=vm.createContext({window:root,URL,Date,Promise});
+  vm.runInContext(fs.readFileSync('quick-add-catalog.js','utf8'),sandbox,{filename:'quick-add-catalog.js'});
+  const api=root.BTQuickAddCatalog;
+  assert.equal(api.reviewQueue().ready,false,'Absent source snapshot cannot imply cleared status');
+  await api.refreshWatch();
+  const review=api.reviewQueue();
+  assert.equal(review.ready,true);
+  assert.equal(review.issues.length,2);
+  assert.equal(review.issues[0].kind,'changed','Material source-page signal leads unavailable source');
+  assert.equal(review.issues[0].bank,'Capital One');
+  assert.equal(review.issues[0].url,sources.find(x=>x.role==='promotion').url);
+  assert.equal(review.issues[1].kind,'unavailable');
+  assert.equal(api.status('Capital One').kind,'stale','Changed official source demotes current offer');
+  assert.equal(api.status('Wells Fargo').kind,'expired','Expired historic promotion stays expired');
+  assert.equal(api.status('Wells Fargo').watchState,'unavailable','Expired offers retain source-check warning');
+  await api.refreshWatch();
+  assert.equal(calls,1,'Ordinary rerenders reuse snapshot for 15 minutes');
+  await api.refreshWatch(true);
+  assert.equal(calls,2,'Explicit refresh may update source snapshot');
+  assert.equal(api.reviewQueue(Date.now()+38*3600000).issues.length,4,
+    'Expired check timestamps cannot be silently treated as current');
+
+  // Untrusted source URLs and offer identifiers must never become official links.
+  snapshot.records['Capital One'].sources.promotion.url='https://www.capitalone.com.attacker.invalid/offer';
+  await api.refreshWatch(true);
+  assert.equal(api.reviewQueue().issues.some(x=>x.url.includes('attacker')),false);
+  assert.equal(api.status('Capital One').kind,'changed',
+    'Untrusted watch payload may not certify activity or alter curated catalog terms');
+  console.log('Source review queue regression PASS: sticky change, unavailable/stale, approved URLs, no auto eligibility');
+}
+watchQueueRegression().catch(e=>{console.error(e);process.exitCode=1});
