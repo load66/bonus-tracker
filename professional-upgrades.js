@@ -176,6 +176,7 @@
   }
   function wizardBasics(e){
     let h='<div class="guided-tip"><b>Account details</b><span>Enter the account and offer details. Review the terms before applying extracted fields.</span></div>';
+    if(e._fromTemplate)h+='<p class="bt3657-template-note" role="note">Sample offer details are not verified. Check the current terms and fees; enter the actual account opening date only when known.</p>';
     h+='<div class="guided-grid">';
     h+=input('Bank name *','bank',e.bank,{placeholder:'e.g. Chase Business'});
     h+=select('Account type','accountType',e.accountType||'personal',[['personal','Personal'],['business','Business']]);
