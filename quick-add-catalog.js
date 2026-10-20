@@ -92,7 +92,11 @@
  }
  function status(bank,now=Date.now()){
    bank=String(bank||'').trim();
-   const old=classify(records[bank],now),fresh=monitored(bank,now);
+   const old=classify(records[bank],now);
+   // A device clock before the catalog review cannot borrow future watch checks.
+   const reviewAt=Date.parse((records[bank]?.reviewedAt||'')+'T00:00:00Z');
+   if(Number.isFinite(reviewAt)&&now<reviewAt)return old;
+   const fresh=monitored(bank,now);
    if(!fresh)return old;
    if(fresh.status==='observed')return{...old,watchNote:fresh.note,watchState:'observed'};
    if(old.kind==='expired')return{...old,watchNote:fresh.note,watchState:fresh.status};
@@ -100,7 +104,9 @@
      short:'Recheck',kind:'stale',watchNote:fresh.note,watchState:fresh.status};
  }
  function reviewQueue(now=Date.now()){
+   const generated=Date.parse(watched?.generatedAt||'');
    const issues=[],banks=Object.keys(records),observed=watched?.schemaVersion===1
+     &&Number.isFinite(generated)&&generated<=now+60000
      &&watched.records&&typeof watched.records==='object'&&Object.keys(watched.records).length>0;
    if(observed)for(const bank of banks){
      const spec=records[bank],watch=watched.records[bank];
