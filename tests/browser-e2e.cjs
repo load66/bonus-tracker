@@ -255,11 +255,13 @@ async function exercise(name,engine,url){
     await page.locator('.bt362-add-fab').click();await button('Quick Add').click();
     check('source catalog keeps reviewed offers scoped and other examples unverified',await page.evaluate(()=>{
       const c=window.BTQuickAddCatalog;
-      return c?.status('Wells Fargo').kind==='expired'&&c?.status('Capital One').kind==='changed'
+      const asOf=Date.parse('2026-10-20T15:00:00Z');
+      return c?.status('Wells Fargo',asOf).kind==='expired'&&c?.status('Capital One',asOf).kind==='changed'
+        &&c?.status('Wells Fargo').kind==='unverified'&&c?.status('Capital One').kind==='unverified'
         &&c?.status('Citi').kind==='unverified'&&c.reviewedSources(c.records['Capital One']).length===2
-        &&c.status('Capital One').sources.every(x=>x.url.startsWith('https://www.capitalone.com/'));
+        &&c.status('Capital One',asOf).sources.every(x=>x.url.startsWith('https://www.capitalone.com/'));
     }));
-    check('expired and alternate-path offers are labeled on Quick Add',await page.locator('#bt-quick-add-panel').innerText().then(t=>t.includes('Wells Fargo')&&t.includes('Past $325 · Expired')&&t.includes('Capital One')&&t.includes('Past $250 · Changed')));
+    check('future-dated reviews remain unverified on a simulated earlier clock',await page.locator('#bt-quick-add-panel').innerText().then(t=>t.includes('Wells Fargo')&&t.includes('Past $325 · Unverified')&&t.includes('Capital One')&&t.includes('Past $250 · Unverified')));
     check('Quick Add Citi identity uses locally stored bank logo',await page.getByRole('button',{name:'Citi historical example, Unverified example',exact:true}).locator('img[src="./bank-logos/citi.svg"]').count()===1);
     await page.getByRole('button',{name:'Citi historical example, Unverified example',exact:true}).click();
     check('historical bonus/fees/requirements never enter a new draft',await page.evaluate(()=>modal?.bonus===0&&modal?.earlyCloseFee===null&&modal?.churn===''&&modal?.dataPoint===''&&modal?.reqDays===0&&modal?.monthlyFeeYNText===''&&modal?.notes===''));
