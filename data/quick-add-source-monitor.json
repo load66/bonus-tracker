@@ -1,5 +1,52 @@
 {
-  "schemaVersion": 1,
-  "generatedAt": null,
-  "records": {}
+  "generatedAt": "2026-10-20T21:44:07Z",
+  "records": {
+    "Capital One": {
+      "offerKey": "360-checking-250-choice-2026",
+      "sources": {
+        "fees": {
+          "baselineHash": "d818f4f779709112539cd7e480d782a3b2275b1c8e2b90a7edb0df50811b10a5",
+          "changeAt": null,
+          "checkedAt": "2026-10-20T21:44:07Z",
+          "observedAt": "2026-10-20T21:44:07Z",
+          "observedHash": "d818f4f779709112539cd7e480d782a3b2275b1c8e2b90a7edb0df50811b10a5",
+          "status": "baseline",
+          "url": "https://www.capitalone.com/bank/disclosures/checking-accounts/online-checking-account/"
+        },
+        "promotion": {
+          "baselineHash": "040cbe382e59adabd97c315f0bfb35cfbd1b390e571dc9085cf342ad2d38805d",
+          "changeAt": null,
+          "checkedAt": "2026-10-20T21:44:07Z",
+          "observedAt": "2026-10-20T21:44:07Z",
+          "observedHash": "040cbe382e59adabd97c315f0bfb35cfbd1b390e571dc9085cf342ad2d38805d",
+          "status": "baseline",
+          "url": "https://www.capitalone.com/bank/choose-your-offer/"
+        }
+      }
+    },
+    "Wells Fargo": {
+      "offerKey": "everyday-checking-325-2026-10-13",
+      "sources": {
+        "fees": {
+          "baselineHash": "f2dd00ad54ff8058b3abe6003f554906d5adc6bd984148b7ea9f6c8923386606",
+          "changeAt": null,
+          "checkedAt": "2026-10-20T21:44:07Z",
+          "observedAt": "2026-10-20T21:44:07Z",
+          "observedHash": "f2dd00ad54ff8058b3abe6003f554906d5adc6bd984148b7ea9f6c8923386606",
+          "status": "baseline",
+          "url": "https://www.wellsfargo.com/mobile-online-banking/consumer-account-fees/"
+        },
+        "promotion": {
+          "baselineHash": "e542479fa91a2a63a9ae96b0340c996c1d119a3d28058296bde735ff689b630f",
+          "changeAt": null,
+          "checkedAt": "2026-10-20T21:44:07Z",
+          "observedAt": "2026-10-20T21:44:07Z",
+          "observedHash": "e542479fa91a2a63a9ae96b0340c996c1d119a3d28058296bde735ff689b630f",
+          "status": "baseline",
+          "url": "https://accountoffers.wellsfargo.com/checkingoffer/"
+        }
+      }
+    }
+  },
+  "schemaVersion": 1
 }
