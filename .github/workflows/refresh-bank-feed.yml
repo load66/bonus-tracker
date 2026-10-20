@@ -37,8 +37,19 @@ jobs:
       - name: Regenerate canonical offers from RSS and retained state
         run: python3 scripts/update-bank-feed.py
       - name: Check official Quick Add pages for unreviewed changes
-        if: github.event_name != 'workflow_run'
-        run: python3 scripts/watch-quick-add-sources.py
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Release-triggered publishing seeds an empty watch once. Regular
+          # six-hour schedules then keep it updated; this avoids a git-push
+          # -> release -> new timestamp -> git-push loop.
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            if python3 -c "import json,sys; f=json.load(open('data/quick-add-source-monitor.json')); sys.exit(0 if f.get('records') else 1)"; then
+              echo "Official watch already initialized; skip release-triggered check."
+              exit 0
+            fi
+          fi
+          python3 scripts/watch-quick-add-sources.py
       - name: Publish updated offer JSON and public source-change flags to main
         shell: bash
         run: |
