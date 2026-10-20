@@ -1179,6 +1179,37 @@ async function exercise(name,engine,url){
     await button('Tracker').click();
     await edit();
     await page.setViewportSize({width:320,height:844});
+    check('editor progress shows all four named accessible steps on iPhone',
+      await page.locator('.guided-progress button').evaluateAll(rows=>rows.length===4&&rows.every((el,i)=>{
+        const label=el.querySelector('span');
+        return el.getAttribute('aria-label')?.startsWith('Step '+(i+1)+':')&&label&&getComputedStyle(label).display!=='none'&&el.getBoundingClientRect().height>=44&&el.getBoundingClientRect().right<=innerWidth+1;
+      })));
+    check('editor has an accessible close and current step',
+      await page.getByRole('button',{name:'Close account editor'}).isVisible()
+      &&await page.locator('.guided-progress button[aria-current="step"]').count()===1);
+    await page.getByRole('button',{name:'Step 2: Requirements'}).click();
+    check('step navigation moves focus to the editor heading',
+      await page.locator('#bt-editor-title').evaluate(el=>document.activeElement===el));
+    const unsavedRequirement='Synthetic mobile draft - not saved';
+    await page.locator('.guided-body input[oninput*="dataPoint"]').fill(unsavedRequirement);
+    await page.getByRole('button',{name:'Step 1: Basics'}).click();
+    await page.getByRole('button',{name:'Step 2: Requirements'}).click();
+    check('returning to an earlier step keeps unsaved edits',
+      await page.locator('.guided-body input[oninput*="dataPoint"]').inputValue()===unsavedRequirement);
+    await button('Cancel').click();
+    check('discarding a changed editor requires an explicit confirmation',
+      await page.getByRole('button',{name:'Keep editing'}).isVisible()
+      &&await page.getByRole('button',{name:'Discard changes'}).isVisible());
+    await page.getByRole('button',{name:'Keep editing'}).click();
+    check('keeping editing retains the exact draft',
+      await page.locator('.guided-body input[oninput*="dataPoint"]').inputValue()===unsavedRequirement);
+    await page.getByRole('button',{name:'Close account editor'}).click();
+    await page.getByRole('button',{name:'Discard changes'}).click();
+    check('confirmed discard exits without editing account records',
+      await page.locator('.guided-modal').count()===0
+      &&await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
+    await edit();
+    await page.setViewportSize({width:320,height:844});
     check('mobile editor content fits 320px',await page.locator('.modal').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
     check('saved rule editing defaults collapsed on mobile',await page.locator('.eligibility-restriction').evaluateAll(rows=>rows.every(e=>!e.open)));
     check('manual rule tools default collapsed on mobile',!await page.locator('#elig-template').isVisible());
