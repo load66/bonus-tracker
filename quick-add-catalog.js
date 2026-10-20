@@ -143,8 +143,10 @@
        if(data?.schemaVersion!==1||!data.records||typeof data.records!=='object'
            ||Array.isArray(data.records)||Object.keys(data.records).length>12)throw Error('Unexpected source watch schema');
        watched=data;
-       try{if((typeof tab!=='undefined'&&tab==='bonuses'||typeof showTemplates!=='undefined'&&showTemplates)
-             &&typeof R==='function')R();}catch{}
+       // Quick Add owns keyboard focus and scroll anchoring. Do not replace
+       // its DOM asynchronously when a public watcher completes: labels refresh
+       // on the next user-driven render. Only Bank Offers needs live queue updates.
+       try{if(typeof tab!=='undefined'&&tab==='bonuses'&&typeof R==='function')R();}catch{}
        return watched;
      }).catch(()=>null).finally(()=>{loading=null;});
    return loading;
