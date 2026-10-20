@@ -3446,6 +3446,7 @@ const TEMPLATES=[{bank:"Chase",bonus:300,churn:"2",notes:"$1,000 DD within 90 da
 function quickAddReviewStatus(t){
   const bank=String(t?.bank||'');
   const catalog=window.BTQuickAddCatalog;
+  catalog?.refreshWatch?.();
   // The catalog is the only authoritative source for CURRENT research labels.
   // Failure to load catalog never falls back to historical claims.
   return catalog?.status?.(bank)||{status:'Unverified example',short:'Unverified',kind:'unverified',note:'No current offer has been verified for this shortcut.',checked:'',url:'',sources:[],changedFields:[]};
