@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: codex — v3.6.60 — codex/v3.6.60-smart-bonus-sorter
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.60 eligibility-safe smart sorter (`codex/v3.6.60-smart-bonus-sorter`): Bonus Offers default to **official geographic source proof + no known tracker blocker** first; within comparable evidence, highest verified fixed bonus amounts lead, with tiered ceilings and unverified source-reported dollars demoted. Open accounts, unsupported product scope, not-yet-reached churn review dates and excluded states cannot outrank a top match merely because the advertised reward is larger. No misleading "Eligible for you" heading: the user must still confirm actual personal eligibility. Read-only, automatically recomputed on existing feed and official availability updates; no bank entries, fee/eligibility canonical rules, cloud records or backend changed. Added unit and Chromium/WebKit rank isolation tests, documentation and v3.6.60 app/cache bump. Next: full PR CI bonus/cloud/UI + both browsers, merge on green and verify main/Pages deployment.
+
 
 - v3.6.59 source-backed Quick Add catalog (`codex/v3.6.59-source-backed-catalog`): dedicated `quick-add-catalog.js` with curated official-source metadata, exact bank/product/offer scope, review date, expiration, changed-fields, and separate promotion/fee links for reviewed examples. Strict classifier distinguishes expired, reviewed changed, stale, complete source-verified and unverified; unsupported dates/domains, expired review or incomplete applicability cannot claim verified-active. All other shortcuts remain unverified. Records never prefill historical fees, bonuses, eligibility, churn or activity; no existing records/cloud/schema/backend changed. Added standalone unit suite, browser source UI check, offline precache, catalog maintenance documentation and v3.6.59 app/cache version. Next: full bonus/cloud/UI + Chromium/WebKit + release verifier; merge green PR; verify Pages deployment and release source.
 
