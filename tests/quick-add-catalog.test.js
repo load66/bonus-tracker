@@ -47,7 +47,7 @@ const manifest=JSON.parse(fs.readFileSync('data/quick-add-source-manifest.json',
 assert.equal(manifest.schemaVersion,1);
 for(const [bank,item] of Object.entries(manifest.records)){
  assert.equal(item.offerKey,c.records[bank].offerKey,'Monitor must match exact enrolled offer scope');
- assert.deepEqual(item.sources.map(x=>x.url).sort(),c.reviewedSources(c.records[bank]).map(x=>x.url).sort(),'Monitored source URLs must equal reviewed catalog URLs');
+ assert.equal(item.sources.map(x=>x.url).sort().join('|'),Array.from(c.reviewedSources(c.records[bank]),x=>x.url).sort().join('|'),'Monitored source URLs must equal reviewed catalog URLs');
 }
 
 assert.match(c.status('Capital One',today).note,/CHECKING250/);
