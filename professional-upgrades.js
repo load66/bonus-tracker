@@ -103,7 +103,63 @@
     if(key==='closeFeeCountdownDays')modal.minHoldDays=parseInt(v,10)||0;
     if(key==='earlyTerminationFeeText')modal.earlyCloseFee=typeof parseCloseFeeAmount==='function'?parseCloseFeeAmount(v):(parseInt(String(v).replace(/[$,]/g,''),10)||0);
   };
-  window.btWizardStep=function(step){if(typeof modal!=='undefined'&&modal){modal._wizardStep=Math.max(1,Math.min(4,parseInt(step,10)||1));R();}};
+  const EDITOR_DRAFT_FIELDS=[
+    'bank','accountType','bonus','churn','churnable','churnability','churnReason','churnBasis','churnDecisionSource',
+    'sourceEligibilityBasis','eligibilityText','eligibilityRules','eligibilityEvidenceText','eligibilityAnchorEvidenceText',
+    'couponEnrollmentDate','offerEnrollmentDate','opened','closed','bonusRecd','reqMet','notes','analyzedTC',
+    'minHoldDays','closeFeeCountdownDays','closeRuleBasis','closeBufferDays','closeRuleText','earlyCloseFee',
+    'dataPoint','reqDays','requiredDaysText','fundedDays','fundingAmount','fundingAmountText','payoutTimingText',
+    'monthlyFeeYNText','avoidMonthlyFeeText','monthlyFeeChecked','promoCodeText','expirationDateText',
+    'completeBonusText','earlyTerminationFeeText','feeScheduleRaw','tcSourceRaw','financialRules','customTimers'
+  ];
+  let editorBaseline=null;
+  function editorDraftSnapshot(e){
+    return JSON.stringify(EDITOR_DRAFT_FIELDS.map(key=>[key,e?.[key]??null]));
+  }
+  function beginEditorDraft(){
+    if(typeof modal==='undefined'||!modal){editorBaseline=null;return}
+    editorBaseline=editorDraftSnapshot(modal);
+  }
+  function ensureEditorDraft(){if(editorBaseline===null)beginEditorDraft()}
+  function editorHasChanges(){
+    return !!(modal&&editorBaseline!==null&&editorDraftSnapshot(modal)!==editorBaseline);
+  }
+  window.btEditorRequestClose=function(){
+    if(!modal)return false;
+    ensureEditorDraft();
+    if(!editorHasChanges()){closeModal();return true}
+    if(window.btEditorExitBusy)return false;
+    window.btEditorExitBusy=true;
+    const pending=modal,atPrompt=editorDraftSnapshot(pending);
+    const confirmation=typeof window.btConfirmDialog==='function'
+      ?window.btConfirmDialog('Discard your unsaved account changes?',{title:'Unsaved account changes',confirmLabel:'Discard changes',cancelLabel:'Keep editing',danger:true})
+      :Promise.resolve(false);
+    Promise.resolve(confirmation).then(discard=>{
+      if(discard&&modal===pending&&editorDraftSnapshot(modal)===atPrompt)closeModal();
+    }).catch(()=>{}).finally(()=>{window.btEditorExitBusy=false});
+    return false;
+  };
+  window.btEditorHasChanges=editorHasChanges;
+  const previousCloseModal=typeof closeModal==='function'?closeModal:null;
+  if(previousCloseModal){
+    closeModal=function(){editorBaseline=null;return previousCloseModal()};
+    window.closeModal=closeModal;
+  }
+  window.btWizardStep=function(step){
+    if(typeof modal==='undefined'||!modal)return;
+    const next=Math.max(1,Math.min(4,parseInt(step,10)||1));
+    if(next===(parseInt(modal._wizardStep,10)||1))return;
+    modal._wizardStep=next;
+    R();
+    requestAnimationFrame(()=>{
+      const panel=document.querySelector('.guided-modal');
+      if(!panel)return;
+      panel.scrollTop=0;
+      const body=panel.querySelector('.guided-body');
+      if(body)body.scrollTop=0;
+      panel.querySelector('#bt-editor-title')?.focus({preventScroll:true});
+    });
+  };
 
   function input(label,key,value,opts={}){
     const type=opts.type||'text';
@@ -116,7 +172,7 @@
   function select(label,key,value,items){return `<div class="fg"><label>${html(label)}</label><select onchange="btModalSet('${key}',this.value)">${items.map(x=>`<option value="${html(x[0])}"${String(value||'')===String(x[0])?' selected':''}>${html(x[1])}</option>`).join('')}</select></div>`;}
   function wizardHeader(e,step){
     const steps=['Basics','Requirements','Fees & Close','Review'];
-    return `<div class="m-bar"></div><div class="m-hdr"><div><h2>${e._startingNewCycle?'Start new cycle':(e._edit?'Edit account':'Add account')}</h2><div class="guided-sub">Step ${step} of 4 · ${steps[step-1]}</div></div>${e._edit?`<span class="m-id">${html(e.id||'')}</span>`:''}</div><div class="guided-progress">${steps.map((s,i)=>`<button type="button" class="${i+1===step?'on':i+1<step?'done':''}" onclick="btWizardStep(${i+1})"><i>${i+1<step?'✓':i+1}</i><span>${html(s)}</span></button>`).join('')}</div>`;
+    return `<div class="m-bar"></div><div class="m-hdr"><div><h2 id="bt-editor-title" tabindex="-1">${e._startingNewCycle?'Start new cycle':(e._edit?'Edit account':'Add account')}</h2><div class="guided-sub">Step ${step} of 4 · ${steps[step-1]}</div></div><button type="button" class="bt3656-close" aria-label="Close account editor" onclick="btEditorRequestClose()">×</button>${e._edit?`<span class="m-id">${html(e.id||'')}</span>`:''}</div><div class="guided-progress">${steps.map((s,i)=>`<button type="button" class="${i+1===step?'on':i+1<step?'done':''}" aria-label="Step ${i+1}: ${html(s)}" ${i+1===step?'aria-current="step"':''} onclick="btWizardStep(${i+1})"><i aria-hidden="true">${i+1<step?'✓':i+1}</i><span>${html(s)}</span></button>`).join('')}</div>`;
   }
   function wizardBasics(e){
     let h='<div class="guided-tip"><b>Account details</b><span>Enter the account and offer details. Review the terms before applying extracted fields.</span></div>';
@@ -191,7 +247,7 @@
     h+='<div class="guided-summary">';
     const rows=[['Bank',e.bank||'Missing'],['Account',String(e.accountType||'personal').replace(/^./,c=>c.toUpperCase())],['Bonus',e.bonus?fM(e.bonus):'Not saved'],['Opened',e.opened?fD(e.opened):'Not saved'],['Requirement',short(e.dataPoint||e.completeBonusText||'Not saved',90)],['Monthly fee',profile?.fee?.noFee?'No monthly fee':(profile?.fee?.amount||'Review terms')],['Earliest close',profile?.close?.safeDate?fD(profile.close.safeDate):'Manual review'],['Churn',e.churn?(e.churn==='180'?'180 days':e.churn+' year'+(e.churn==='1'?'':'s')):'Not saved']];
     rows.forEach(r=>h+=`<div><span>${html(r[0])}</span><b>${html(r[1])}</b></div>`);h+='</div>';
-    if(issues.length)h+=`<div class="guided-issues">${issues.map(x=>`<div class="${x.level}"><i>${x.level==='error'?'!':'•'}</i><span>${html(x.text)}</span></div>`).join('')}</div>`;
+    if(issues.length)h+=`<div class="guided-issues">${issues.map(x=>{const target=/bank name|bonus amount|opened|actual closed/i.test(x.text)?1:/requirement|funding|payout/i.test(x.text)?2:3;return `<div class="${x.level}"><i aria-hidden="true">${x.level==='error'?'!':'•'}</i><span>${html(x.text)}</span>${x.level==='error'?`<button type="button" class="bt3656-fix" onclick="btWizardStep(${target})">Fix</button>`:''}</div>`}).join('')}</div>`;
     h+=`<details class="guided-details"><summary>Source details</summary><div class="guided-source-grid"><div><b>Close rule</b><span>${html(profile?.close?.source?.kind||'manual review')}</span></div><div><b>Analyzer</b><span>${e.analysis?'Reviewed T&C saved':'No current analysis saved'}</span></div><div><b>Manual edits</b><span>${Object.values(e.fieldSources||{}).filter(x=>sourceKind(x)==='manual').length} field(s)</span></div></div></details>`;
     if(typeof renderArchiveHistoryReview==='function')h+=renderArchiveHistoryReview(e);
     return h;
@@ -200,8 +256,9 @@
   const oldRModal=typeof rModal==='function'?rModal:null;
   rModal=function(){
     const e=modal;if(!e)return'';
+    ensureEditorDraft();
     const step=Math.max(1,Math.min(4,parseInt(e._wizardStep,10)||1));
-    let h='<div class="ov" onclick="closeModal()"><div class="modal guided-modal" onclick="event.stopPropagation()">';
+    let h='<div class="ov" onclick="btEditorRequestClose()"><div class="modal guided-modal" role="dialog" aria-modal="true" aria-labelledby="bt-editor-title" onkeydown="if(event.key===\'Escape\'){event.preventDefault();event.stopPropagation();btEditorRequestClose()}" onclick="event.stopPropagation()">';
     h+='<div class="guided-header">'+wizardHeader(e,step)+'</div>';
     h+='<div class="guided-body">'+(step===1?wizardBasics(e):step===2?wizardRequirements(e):step===3?wizardFeesClose(e):wizardReview(e))+(e._edit&&!e._startingNewCycle?'<details class="guided-danger"><summary>Advanced entry actions</summary><button class="btn-d" type="button" onclick="clearFields()">Clear all fields</button></details>':'')+'</div>';
     h+='<div class="guided-actions">';
@@ -211,7 +268,7 @@
       const errors=validationIssues(e).some(x=>x.level==='error');
       h+=`<button type="button" class="btn-p" ${errors?'disabled':''} onclick="saveEntryFromButton(this,event)">💾 ${e._startingNewCycle?'Start new cycle':(e._edit?'Save changes':'Add account')}</button>`;
     }
-    h+='<button type="button" class="btn-s" onclick="closeModal()">Cancel</button>';
+    h+='<button type="button" class="btn-s" onclick="btEditorRequestClose()">Cancel</button>';
     h+='</div>';
 
     h+='</div></div>';return h;
@@ -219,9 +276,9 @@
   window.rModal=rModal;
 
   const oldOpenAdd=typeof openAdd==='function'?openAdd:null;
-  if(oldOpenAdd){openAdd=function(){oldOpenAdd();if(modal)modal._wizardStep=1;};window.openAdd=openAdd;}
+  if(oldOpenAdd){openAdd=function(){editorBaseline=null;oldOpenAdd();if(modal){modal._wizardStep=1;beginEditorDraft()}};window.openAdd=openAdd;}
   const oldOpenEdit=typeof openEdit==='function'?openEdit:null;
-  if(oldOpenEdit){openEdit=function(id){oldOpenEdit(id);if(modal)modal._wizardStep=1;};window.openEdit=openEdit;}
+  if(oldOpenEdit){openEdit=function(id){editorBaseline=null;oldOpenEdit(id);if(modal){modal._wizardStep=1;beginEditorDraft()}};window.openEdit=openEdit;}
 
   window.startNewCycle=function(id){
     const old=(entries||[]).find(x=>x.id===id);if(!old)return;
@@ -235,7 +292,7 @@
       minHoldDays:0,closeFeeCountdownDays:'',closeRuleBasis:old.closeRuleBasis||'opened',closeBufferDays:(Number.isFinite(parseInt(old.closeBufferDays,10))?parseInt(old.closeBufferDays,10):5),closeRuleText:old.closeRuleText||'',earlyTerminationFeeText:old.earlyTerminationFeeText||'',earlyCloseFee:(old.earlyCloseFee===null?null:old.earlyCloseFee),notes:'',analyzedTC:'',analysis:null,analyzerHistory:[],history:normalizeEntryHistoryList(old.history),checklist:[],customTimers:[],fieldSources:priorSources,previousCycles:[archive,...(Array.isArray(old.previousCycles)?old.previousCycles:[])]
     };
     try{applyKnownClosePolicy(modal)}catch{}
-    showInlineAZ=false;inlineResult=null;expanded=id;R();
+    editorBaseline=null;showInlineAZ=false;inlineResult=null;expanded=id;R();
   };
 
   const oldCollect=typeof collectModalEntryData==='function'?collectModalEntryData:null;
