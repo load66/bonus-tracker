@@ -43,3 +43,14 @@ A first successful observation creates a baseline: it is NOT verification. Subse
 Public results live only in data/quick-add-source-monitor.json: offer scope, URL, source status, timestamps, and SHA-256 fingerprints. No customer accounts, transactions, terms archives or tracker details are transmitted. Quick Add fetches this public read-only file and displays recheck notes for changed or unavailable sources. Expired historical offers stay expired. Actual account terms and private data never change.
 
 The monitor runs only on the six-hour schedule or manual workflow dispatch, not on post-deployment workflow_run events, avoiding deployment feedback loops. Manual review of the applicable official promotion and account fee schedule is required before advancing any status; a page hash never establishes personal eligibility.
+
+
+## Official-source review queue — v3.6.62
+
+The six-hour publisher performs bounded HTTPS checks of the two curated promotion and fee disclosure pairs. Its first **source fingerprint is a baseline, not verification**. Subsequent fingerprint differences remain flagged as **Source changed** until separately reviewed. Failed fetches and access challenges show **Unavailable**, never "unchanged"; checks older than 36 hours show **Overdue**. These source changes are public-only observations, not a newly approved promotion or an account eligibility decision.
+
+Bank Offers displays a compact expandable **Official sources · N need review** panel only when such issues exist. Each entry links to the previously approved bank-owned official URL, not a URL from an untrusted watch snapshot. Selecting a link opens the official page for manual confirmation; it does **not** modify the user's saved bonus, cooldown, fee schedule, historical terms or direct-deposit datapoints.
+
+The release-triggered publisher is permitted to **initialize an empty monitoring snapshot exactly once**, then only normal six-hour scheduled/manual executions perform further checks. This avoids publication loops while making the source watch operational without manual setup. Browser refreshes of this public snapshot are throttled to 15 minutes, including repeated UI renders. Snapshot dates in the future or missing official-source evidence never certify an offer.
+
+All new offer terms still require product-specific promotion and fee evidence before import or eligibility determination.
