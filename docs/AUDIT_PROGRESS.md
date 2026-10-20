@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: Codex — v3.6.52 — codex/v3.6.52-dashboard-visual-hierarchy
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
