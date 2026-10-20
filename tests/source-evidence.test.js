@@ -1,0 +1,34 @@
+'use strict';
+const assert=require('node:assert/strict'),vm=require('node:vm');
+const {sandbox:s,storage}=require('./full-app-smoke.test.js');
+const {fixture}=require('./fixtures/financial-rules.cjs');
+const e={...fixture(),id:'SYN-EVIDENCE',termsVerifiedAt:'2026-01-01'};
+const project=x=>s.BT360.sourceEvidenceStatus(x);
+const before=JSON.stringify(e),stored=JSON.stringify([...storage]);
+assert.equal(project(e).label,'Sources saved');
+assert.equal(project(e).rules,'matched');
+assert.equal(project({...e,termsVerifiedAt:'2001-01-01'}).label,'Sources saved','Historical enrolled terms do not expire under an invented freshness rule');
+for(const checked of ['', '2026-02-30','tomorrow','2999-01-01','2026-01-01<script>']){
+ const result=project({...e,termsVerifiedAt:checked});
+ assert.equal(result.complete,false,'Missing, invalid and future dates cannot support complete evidence');
+ assert.equal(result.label,'Evidence incomplete');
+}
+const dateOnly={id:e.id,bank:e.bank,termsVerifiedAt:'2026-01-01'};
+assert.equal(project(dateOnly).label,'Original terms missing');
+assert.equal(project({...dateOnly,analysis:{rawText:'Review text, not an original promotion'}}).rows[0][1],'Review text only');
+for(const missing of ['tcSourceRaw','feeScheduleRaw','promoSourceUrl','feeScheduleSourceUrl'])assert.equal(project({...e,[missing]:'  '}).complete,false);
+for(const url of ['javascript:alert(1)','http://example-bank.test','https://user:secret@example-bank.test'])assert.equal(project({...e,promoSourceUrl:url}).complete,false);
+const broken=structuredClone(e);broken.financialRules.bonus.evidence.quote='This quotation does not exist in the source.';
+assert.equal(project(broken).rules,'review');assert.equal(project(broken).label,'Rules need review');
+const legacy={...e};delete legacy.financialRules;delete legacy.schemaVersion;
+assert.equal(project(legacy).rules,'unavailable');assert.equal(project(legacy).label,'Sources saved');
+const savedEngine=s.BTFinancialRules;s.BTFinancialRules=undefined;
+assert.equal(project(e).rules,'unavailable','Unavailable validator never reports a match');s.BTFinancialRules=savedEngine;
+const html=s.BT360.sourceEvidencePanel({...e,tcSourceRaw:'Exact <original>\nAll lines stay intact.'});
+assert.match(html,/Exact &lt;original&gt;\nAll lines stay intact\./);assert.match(html,/Read fee schedule/);assert.match(html,/View saved sources in Archive/);
+assert.doesNotMatch(html,/Official terms verified|is-verified/);
+assert.match(s.BT360.sourceEvidencePanel({...dateOnly,analysis:{rawText:'Review <only>'}}),/Read saved review text/);
+assert.doesNotMatch(s.BT360.sourceEvidencePanel(dateOnly),/Read original promotion/);
+assert.equal(JSON.stringify(e),before,'Projection never rewrites source evidence or dates');
+assert.equal(JSON.stringify([...storage]),stored,'Projection never writes persistent records');
+console.log('Saved source evidence: document presence, date validity, independent rule validation, exact text and no writes PASS');

@@ -493,7 +493,28 @@ async function exercise(name,engine,url){
     });
     check('sticky detail bar stays above navigation',sticky.ok&&sticky.fixed);
     if(!await page.locator('.bt3640-section[data-section="terms"]').evaluate(e=>e.open))await page.locator('.bt3640-section[data-section="terms"] > summary').click();
-    await page.locator('.bt360-source').scrollIntoViewIfNeeded();
+    const evidenceBefore=await page.evaluate(()=>({entry:JSON.stringify(entries[0]),stored:localStorage.getItem('bt_e_v4')}));
+    await page.evaluate(()=>{
+      Object.assign(entries[0],{tcSourceRaw:'Exact original <promotion>\nSecond original line.',feeScheduleRaw:'Exact saved fee schedule.',promoSourceUrl:'https://example-bank.test/promo',feeScheduleSourceUrl:'https://example-bank.test/fees',termsVerifiedAt:'2026-01-01'});
+      R();BT360.revealAccountSection('terms');
+    });
+    check('source dates never imply official verification',!(await page.locator('[data-section="terms"]').innerText()).includes('Official terms verified'));
+    check('source evidence separates document, date and rule status',await page.locator('.bt3653-evidence>div').count()===4);
+    await page.locator('.bt3640-source-text').first().locator('summary').click();
+    check('original promotion keeps exact source text',await page.locator('.bt3640-source-text pre').first().innerText()==='Exact original <promotion>\nSecond original line.');
+    for(const width of [320,375,390,430]){
+      await page.setViewportSize({width,height:844});
+      await page.locator('.bt3653-evidence').scrollIntoViewIfNeeded();
+      check('source evidence fits '+width+'px',await page.locator('[data-section="terms"]').evaluate(n=>n.scrollWidth<=n.clientWidth+1&&[...n.querySelectorAll('.bt3653-evidence dd')].every(x=>x.scrollWidth<=x.clientWidth+1)));
+      if(width===390)await page.screenshot({path:path.join(output,name+'-source-evidence-390.png')});
+    }
+    await page.evaluate(()=>{entries[0].tcSourceRaw='';entries[0].analysis={rawText:'Review text only'};R();BT360.revealAccountSection('terms')});
+    check('date alone cannot hide missing original terms',(await page.locator('[data-section="terms"] > summary').innerText()).includes('Original terms missing'));
+    check('review text is distinct from original source',await page.locator('[data-section="terms"]').getByText('Read saved review text',{exact:true}).count()===1);
+    check('source review never persists fixture changes',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,evidenceBefore.stored));
+    await page.evaluate(before=>{entries[0]=JSON.parse(before);R();BT360.revealAccountSection('terms')},evidenceBefore.entry);
+    await page.setViewportSize({width:390,height:844});
+    await page.locator('.bt360-source').evaluate(n=>n.scrollIntoView({block:'nearest'}));
     check('sticky footer never covers last detail content',await page.evaluate(()=>{
       const content=document.querySelector('.bt360-source').getBoundingClientRect(),footer=document.querySelector('.bt360-detail-footer').getBoundingClientRect();
       return content.bottom<=footer.top+2;
