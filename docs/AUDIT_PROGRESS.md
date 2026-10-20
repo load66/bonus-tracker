@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: Codex — v3.6.53 evidence labels — codex/v3.6.53-evidence-status-labels
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
