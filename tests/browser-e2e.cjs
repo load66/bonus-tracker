@@ -256,12 +256,12 @@ async function exercise(name,engine,url){
     check('Quick Add Citi identity uses locally stored bank logo',await page.getByRole('button',{name:'Citi $300',exact:true}).locator('img[src="./bank-logos/citi.svg"]').count()===1);
     await button('Citi $300').click();
     check('Quick Add exposes bank/account/bonus',await page.locator('input[oninput*="\'bank\'"]').isVisible()&&await page.locator('select[onchange*="\'accountType\'"]').isVisible()&&await page.locator('input[oninput*="\'bonus\'"]').isVisible());
-    await button('4 Review').click();check('unverified template cannot be saved',await button('💾 Add account').isDisabled());await cancelEditor();
+    await page.getByRole('button',{name:'Step 4: Review',exact:true}).click();check('unverified template cannot be saved',await button('💾 Add account').isDisabled());await cancelEditor();
     await importEntry(payload);
     check('import stops before saving',await page.evaluate(()=>JSON.parse(localStorage.getItem('bt_e_v4')).length===0));
-    await button('2 Requirements').click();
+    await page.getByRole('button',{name:'Step 2: Requirements',exact:true}).click();
     check('deadline wording is visible',await page.locator('input[oninput*="\'requiredDaysText\'"]').inputValue()==='90 calendar days');
-    await button('4 Review').click();await button('💾 Add account').click();
+    await page.getByRole('button',{name:'Step 4: Review',exact:true}).click();await button('💾 Add account').click();
     await wait(()=>JSON.parse(localStorage.getItem('bt_e_v4')).length===1);
     check('Needs you uses unboxed PDF heading and standalone priority card',await page.locator('.bt3719-needs > .bt3719-section-title').count()===1&&await page.locator('.bt3641-attention-toggle').count()===1&&await page.locator('.bt3641-attention-item.is-selected').count()===0&&await page.locator('.bt3719-needs.bt360-panel').count()===0);
     check('v3.6.1 panel headings render badges instead of literal HTML',await page.locator('.bt360-panel-title').evaluateAll(rows=>rows.some(e=>e.querySelector('h3')?.textContent==='Needs you'&&e.querySelector('.bt360-count'))&&rows.every(e=>!e.querySelector('h3')?.textContent.includes('<span'))));
@@ -466,9 +466,9 @@ async function exercise(name,engine,url){
     const id=(await record()).id;
     await page.reload();await settleStartup();check('reload preserves identity and notes',(await record()).id===id&&(await record()).notes===payload.entry.notes);
     check('refresh keeps old Action Center hidden',await page.locator('.bt360-legacy-actions').count()===0);
-    await edit();await button('3 Fees & Close').click();
+    await edit();await page.getByRole('button',{name:'Step 3: Fees & Close',exact:true}).click();
     await page.getByPlaceholder('Personal notes; terms review does not overwrite them').fill('Keep <img src=x onerror=alert(1)> & "quotes"');
-    await button('4 Review').click();await button('💾 Save changes').click();
+    await page.getByRole('button',{name:'Step 4: Review',exact:true}).click();await button('💾 Save changes').click();
     await wait(()=>modal===null&&!entrySaveBusy);
     check('edit preserves identity',(await record()).id===id);
     check('notes cannot inject HTML',await page.locator('img[src="x"]').count()===0);
@@ -1359,7 +1359,7 @@ async function exercise(name,engine,url){
     const chaseSource=require('./fixtures/financial-rules.cjs').reviewFixture();chaseSource.bank='Chase';
     await importEntry({kind:'BonusTrackerEntry',schemaVersion:3,verification:{promoSourceUrl:chaseSource.promoSourceUrl,feeScheduleSourceUrl:chaseSource.feeScheduleSourceUrl,termsVerifiedAt:chaseSource.termsVerifiedAt},entry:chaseSource});
     check('Chase file review does not replace saved records',await page.evaluate(()=>localStorage.getItem('bt_e_v4')===window.__replacementBefore));
-    await button('4 Review').click();await button('💾 Add account').click();
+    await page.getByRole('button',{name:'Step 4: Review',exact:true}).click();await button('💾 Add account').click();
     await page.getByRole('heading',{name:'Replace an old entry?',exact:true}).waitFor();
     check('personal Chase import selects only old personal Chase',await page.evaluate(()=>replacementPickerPrompt.selectedId==='CHA-P-01'&&replacementPickerPrompt.candidates.length===1));
     const originalViewport=page.viewportSize();
