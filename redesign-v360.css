@@ -791,6 +791,41 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
 .bt3641-attention-body[hidden]{display:none!important}
 .bt3641-attention-body .bt360-actions{margin-top:12px}
 .bt3641-attention-body .bt360-actions button{min-height:46px}
+/* Separate actionable work from passive waits and optional offer discovery. */
+.bt3651-queue{margin-bottom:20px;min-width:0}
+.bt3651-queue[data-queue=waiting] .bt3641-attention-item.is-selected,
+.bt3651-queue[data-queue=opportunities] .bt3641-attention-item.is-selected{border-color:#325448!important}
+.bt3651-queue .bt360-actions button{white-space:normal;overflow-wrap:anywhere;line-height:1.35}
+.bt362-tool-panel{background:#12141c;border-color:#282d3c;padding:16px;border-radius:18px}
+.bt3651-tool-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px;min-width:0}
+.bt3651-tool-head h2,.bt3651-tool-head h3{margin:0!important;font-size:18px;line-height:1.35;color:#f2f3f7!important}
+.bt3651-tool-head p{margin:5px 0 0;color:#a0a6b8;font-size:12px;line-height:1.5}
+.bt3651-tool-close{flex:none;display:grid;place-items:center;width:44px;height:44px;min-height:44px;border:1px solid #303646;border-radius:12px;background:#1a1e29;color:#f2f3f7;font:400 26px/1 system-ui;cursor:pointer}
+.bt3651-input-label{display:block;margin-bottom:8px;color:#cdd2df;font-size:12px;font-weight:700}
+.bt3651-terms-input{display:block;box-sizing:border-box;width:100%;min-height:190px;max-height:45dvh;resize:vertical;padding:13px;border:1px solid #363e50;border-radius:12px;background:#0c0e14;color:#f2f3f7;font:400 16px/1.6 Manrope,system-ui,sans-serif;color-scheme:dark}
+.bt3651-terms-input::placeholder{color:#9299aa}
+.bt3651-tool-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:10px;margin-top:14px}
+.bt3651-tool-actions button{min-height:46px;border-radius:12px;font:700 13px/1.4 Manrope,system-ui,sans-serif}
+.bt3651-tool-close:focus-visible,.bt3651-terms-input:focus-visible{outline:2px solid #5be3b0;outline-offset:3px}
+#tca_overlay .tca-box{background:#10131b!important;color:#f2f3f7!important;border-color:#2b3243!important;color-scheme:dark}
+#tca_overlay .sub,#tca_overlay .az-field-note,#tca_overlay .az-help,#tca_overlay .az-footnote,#tca_overlay .az-timer-card em{color:#a0a6b8!important;font-size:12px;line-height:1.5}
+#tca_overlay .az-field-card,#tca_overlay .az-timer-card,#tca_overlay .az-opened,#tca_overlay .az-learn-panel{background:#181d28!important;border-color:#333c50!important;color:#d6dbea!important}
+#tca_overlay .az-field-top b,#tca_overlay .az-field-val,#tca_overlay .az-section-title,#tca_overlay .az-timer-card b{color:#f2f3f7!important;line-height:1.5}
+#tca_overlay .az-field-card.good{background:#10271f!important;border-color:#2c6651!important}
+#tca_overlay .az-field-card.warn,#tca_overlay .az-warnbox{background:#2b2118!important;border-color:#71512e!important}
+#tca_overlay .az-field-card.profile{background:#241e32!important;border-color:#54416e!important}
+#tca_overlay .az-field-top span,#tca_overlay .az-field-card summary,#tca_overlay .az-timer-card span{color:#9fbeff!important}
+#tca_overlay .az-field-card details div{background:#10151e!important;color:#c7d0e3!important;border-color:#333c50!important}
+#tca_overlay .az-beginner,#tca_overlay .az-learn-copy,#tca_overlay .az-verifybar{background:#152537!important;border-color:#334c68!important;color:#cbdcf6!important}
+#tca_overlay .az-beginner b,#tca_overlay .az-beginner span,#tca_overlay .az-learn-copy b{color:#b6d0ff!important}
+#tca_overlay .az-beginner small,#tca_overlay .az-learn-copy span{color:#adbdd5!important}
+#tca_overlay .az-warnbox b,#tca_overlay .az-warnbox span{color:#ffd09a!important}
+#tca_overlay .dd-input{box-sizing:border-box;max-width:100%;background:#0b0e15!important;border-color:#39445a!important;color:#f2f3f7!important;font-size:16px!important}
+#tca_overlay .az-actions{background:linear-gradient(180deg,transparent,#10131b 28%,#10131b)!important}
+#tca_overlay .c-g,#tca_overlay .btn-p{background:#5be3b0!important;color:#062016!important;border-color:#5be3b0!important;box-shadow:none!important}
+#tca_overlay .c-c{background:#1a2230!important;color:#d6dbea!important;border:1px solid #354259!important}
+#tca_overlay .bt3651-tool-head{align-items:center}
+#tca_overlay .bt3651-tool-head h3{display:block}
 .bt3641-directory{margin:18px 0 4px;padding:0 4px}
 .bt3641-directory>button{width:100%;display:flex;align-items:center;gap:10px;min-height:48px;color:var(--mint);text-align:left;font-size:13px}
 .bt3641-directory>button span:first-child{margin-left:auto;color:var(--muted)}
@@ -808,3 +843,4 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
 .bt3642-search-launcher:focus-visible,.bt3641-attention-toggle:focus-visible{outline:2px solid #5be3b0;outline-offset:3px}
 
 .bt3643-datapoints{width:100%;min-height:44px;margin:8px 0;white-space:normal}
+

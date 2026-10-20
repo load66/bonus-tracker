@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.50';
+const APP_VERSION='3.6.51';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4474,6 +4474,16 @@ function openTrackerTool(kind){
     panel.focus({preventScroll:true});
   });
 }
+function closeTrackerTool(kind){
+  if(kind==='quick-add')showTemplates=false;
+  if(kind==='promo-terms'){
+    const input=document.getElementById('az_input');
+    if(input)analyzerText=input.value;
+    showAnalyzer=false;
+  }
+  R();
+  requestAnimationFrame(()=>document.querySelector('.bt362-add-fab')?.focus({preventScroll:true}));
+}
 function R(){
   // Never paint the legacy renderer during script startup. The redesign module
   // initializes after the canonical model and performs the first full render.
@@ -4910,7 +4920,7 @@ function rReplacementPicker(){
   h+='<button type="button" class="replacement-back" onclick="doReplacementPickerBack()">Back to entry</button>';
   return h+'</div></div></div>';
 }
-function rAnalyzer(){let h='<div style="background:var(--card);border-radius:12px;padding:12px;margin-bottom:8px;border:1px solid var(--border)">';h+='<div style="font-size:12px;font-weight:700;margin-bottom:6px">\uD83D\uDD0D Terms review</div>';h+='<textarea class="fg" id="az_input" style="width:100%;min-height:120px;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:11px;outline:none;resize:vertical" placeholder="Paste full terms & conditions here...">'+esc(analyzerText)+'</textarea>';h+='<div style="display:flex;gap:4px;margin-top:4px"><button class="az-go" style="flex:1" onclick="runMainAnalyze()">Review</button><button class="btn-s" style="flex:0;margin:0;padding:8px 12px" onclick="showAnalyzer=false;analyzerText=\'\';analyzerResult=null;R()">Close</button></div>';if(analyzerResult){const r=analyzerResult;h+='<div style="margin-top:8px">';if(r.notesForTracker){h+='<div class="tc-box" style="padding:12px;border-radius:12px"><div class="tc-body" style="font-size:13px;line-height:1.8">'+highlightTC(r.notesForTracker)+'</div></div>'}else{h+='<div style="padding:12px;background:var(--bg);border-radius:12px;font-size:13px;line-height:1.8">';if(r.bonusAmount)h+='<div>* Bonus: '+esc(r.bonusAmount)+'</div>';if(r.ddAmount)h+='<div>* DD: '+esc(r.ddAmount)+(r.ddCount?' (x'+r.ddCount+')':'')+'</div>';if(r.debitTxns)h+='<div>* Debit Txns: '+esc(r.debitTxns)+'</div>';if(r.timeline)h+='<div>* Timeline: '+esc(r.timeline)+'</div>';if(r.monthlyFee)h+='<div>* Monthly Fee: '+esc(r.monthlyFee)+'</div>';if(r.promoCode)h+='<div>* Promo: '+esc(r.promoCode)+'</div>';if(r.churnRule)h+='<div>* Churn: '+esc(r.churnRule)+'</div>';if(r.earlyCloseFee)h+='<div>* Close Fee: '+esc(r.earlyCloseFee)+'</div>';h+='</div>'}h+='<button class="btn-p" style="margin-top:8px;font-size:13px;padding:12px" onclick="fillFromAI()">\u2B07 Review & Create Entry</button>';h+='</div>'}h+='</div>';return h}
+function rAnalyzer(){let h='<div class="bt3651-terms-review"><div class="bt3651-tool-head"><div><h2>Review promo terms</h2><p>Paste the full offer terms to review the requirements.</p></div><button type="button" class="bt3651-tool-close" aria-label="Close promo terms" onclick="closeTrackerTool(\'promo-terms\')">×</button></div><label class="bt3651-input-label" for="az_input">Offer terms</label><textarea id="az_input" class="bt3651-terms-input" oninput="analyzerText=this.value" placeholder="Paste the promotion terms and conditions…">'+esc(analyzerText)+'</textarea><div class="bt3651-tool-actions"><button type="button" class="bt360-secondary" onclick="closeTrackerTool(\'promo-terms\')">Close</button><button type="button" class="bt360-primary" onclick="runMainAnalyze()">Review terms</button></div>';if(analyzerResult){const r=analyzerResult;h+='<div style="margin-top:8px">';if(r.notesForTracker){h+='<div class="tc-box" style="padding:12px;border-radius:12px"><div class="tc-body" style="font-size:13px;line-height:1.8">'+highlightTC(r.notesForTracker)+'</div></div>'}else{h+='<div style="padding:12px;background:var(--bg);border-radius:12px;font-size:13px;line-height:1.8">';if(r.bonusAmount)h+='<div>* Bonus: '+esc(r.bonusAmount)+'</div>';if(r.ddAmount)h+='<div>* DD: '+esc(r.ddAmount)+(r.ddCount?' (x'+r.ddCount+')':'')+'</div>';if(r.debitTxns)h+='<div>* Debit Txns: '+esc(r.debitTxns)+'</div>';if(r.timeline)h+='<div>* Timeline: '+esc(r.timeline)+'</div>';if(r.monthlyFee)h+='<div>* Monthly Fee: '+esc(r.monthlyFee)+'</div>';if(r.promoCode)h+='<div>* Promo: '+esc(r.promoCode)+'</div>';if(r.churnRule)h+='<div>* Churn: '+esc(r.churnRule)+'</div>';if(r.earlyCloseFee)h+='<div>* Close Fee: '+esc(r.earlyCloseFee)+'</div>';h+='</div>'}h+='<button class="btn-p" style="margin-top:8px;font-size:13px;padding:12px" onclick="fillFromAI()">\u2B07 Review & Create Entry</button>';h+='</div>'}h+='</div>';return h}
 function openAdd(){modal={bank:'',accountType:'unknown',bonus:0,churn:'',churnable:null,churnability:'',churnReason:'',churnDecisionSource:'',opened:'',closed:'',bonusRecd:'',reqMet:'',notes:'',analyzedTC:'',minHoldDays:0,earlyCloseFee:null,closeFeeCountdownDays:'',dataPoint:'',reqDays:0,referralBonus:0,checklist:[],phoneNum:'',feeChecked:false,monthlyFeeYNText:'',promoCodeText:'',avoidMonthlyFeeText:'',eligibilityText:'',expirationDateText:'',requiredDaysText:'',completeBonusText:'',earlyTerminationFeeText:'',fundedDays:0,fundingAmount:0,fundingAmountText:'',payoutTimingText:'',customTimers:[],analysis:null,analyzerHistory:[],history:[]};overwritePrompt=null;matchPickerPrompt=null;replacementPickerPrompt=null;showInlineAZ=false;inlineResult=null;R()}
 try{window.openAdd=openAdd}catch{}
 function formatAnalyzedBankName(name,isBiz){let bank=(name||'').trim();if(!bank)return isBiz?'Biz':'';bank=bank.replace(/\s+/g,' ').trim();if(isBiz){if(/\bbiz\b/i.test(bank))return bank;if(/\bbusiness\b/i.test(bank))return bank.replace(/\bbusiness\b/i,'Biz').replace(/\s+/g,' ').trim();return bank+' Biz'}return bank}
@@ -6995,7 +7005,7 @@ entries=sortE(entries); // First visible render is owned by BT360 at the end of 
     if(!expanded)h+='<div class="bt360-search-tools" id="bt-tracker-directory"><button type="button" class="bt360-link" aria-expanded="true" onclick="BT360.closeAccountSearch()">Hide accounts</button></div>';
 
     if(showTemplates&&!expanded){
-      h += '<section id="bt-quick-add-panel" class="bt362-tool-panel" tabindex="-1"><div class="sec">Quick add templates</div><div class="tgrid">';
+      h += '<section id="bt-quick-add-panel" class="bt362-tool-panel" tabindex="-1" aria-label="Quick Add" onkeydown="if(event.key===\'Escape\'){event.preventDefault();closeTrackerTool(\'quick-add\')}"><div class="bt3651-tool-head"><div><h2>Quick Add</h2><p>Choose a bank template or import an offer.</p></div><button type="button" class="bt3651-tool-close" aria-label="Close Quick Add" onclick="closeTrackerTool(\'quick-add\')">×</button></div><div class="tgrid">';
       TEMPLATES.forEach((t,i)=>{
         h += `<button class="tbtn" onclick="addFromTpl(${i})">${bankLogo(t.bank,true)}<div class="t-info"><div class="nm">${esc(t.bank)}</div><div class="bn">${fM(t.bonus)}</div></div></button>`;
       });
@@ -7005,7 +7015,7 @@ entries=sortE(entries); // First visible render is owned by BT360 at the end of 
     }
     if(!expanded)h += `<input class="sinput" type="text" id="${archiveView?'archive-search':'tracker-search'}" aria-label="${archiveView?'Search archived accounts':'Search accounts'}" placeholder="${archiveView?'Search archived accounts...':'Search accounts...'}" value="${esc(search)}" oninput="updateViewSearch('tracker',this.value,this.selectionStart)"${archiveView?'':' onkeydown="if(event.key===\'Escape\'){event.preventDefault();BT360.closeAccountSearch()}"'}>`;
     if(!archiveView){
-    if(showAnalyzer&&!expanded) h += '<section id="bt-promo-terms-panel" class="bt362-tool-panel" tabindex="-1">'+rAnalyzer()+'</section>';
+    if(showAnalyzer&&!expanded) h += '<section id="bt-promo-terms-panel" class="bt362-tool-panel" tabindex="-1" aria-label="Review promo terms" onkeydown="if(event.key===\'Escape\'){event.preventDefault();closeTrackerTool(\'promo-terms\')}">'+rAnalyzer()+'</section>';
     if(!window.BT360&&!expanded)h += '<details class="bt360-legacy-actions"'+(legacyActionsOpen?' open':'')+' ontoggle="legacyActionsOpen=this.open"><summary>All Action Center tools</summary>'+renderActionCenter()+'</details>';
     }
 

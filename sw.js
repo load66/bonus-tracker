@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.50: shared read-only requirement deadline projection.
-const V = 'bt-v3.6.50-dates1';
+// Version 3.6.51: separate actionable work, waiting periods and opportunities.
+const V = 'bt-v3.6.51-queue1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',

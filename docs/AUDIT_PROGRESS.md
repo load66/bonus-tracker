@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: Codex — v3.6.51 — codex/v3.6.51-dashboard-action-queue
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.51 dashboard action queue and add-flow polish (`codex/v3.6.51-dashboard-action-queue`): split required actions, confirmed future payout/hold waits and current-offer opportunities. Missing or reached dates stay actionable; verified upcoming cooldowns appear once in Eligible soon. Preserve cross-group selection, account details, deposit research and canonical actions; primary labels describe the action. Add visible Quick Add/promo-review close controls, retain unsent terms in memory, and align the source-review wizard with the dark interface. No saved records, source evidence, schemas, rule meaning, backend or storage keys changed. Synthetic queue/tool regressions and full local bonus/cloud/UI groups plus release checks PASS; mobile/browser verification pending. Previous v3.6.50 PR #230 deployed at `000c8f3c893f` with passing main CI and exact production runtime/cache verification. Next: exact-head Chromium/WebKit, review mobile screenshots, merge on green and verify Pages source/cache.
 
 - v3.6.50 shared requirement dates (`codex/v3.6.50-shared-requirement-dates`): reproduced disagreement between structured deadlines and legacy day counters. One read-only date projection now supplies lifecycle urgency, action guidance, account headers, individual requirements and derived timers. Exact recorded anchors only; missing/conflicting enrollment, invalid dates, unsupported calendars and untimed structured requirements stay unresolved. Task-specific clocks remain separate from manual reminders. No schema, canonical rule meaning, source evidence, saved financial records, backend or persistent keys changed. Failing-before regression reproduced; full local bonus/cloud/UI groups and release verification PASS. Chromium/WebKit rendered deadline and no-write regressions added. Next: exact-head browser CI, merge on green and verify Pages release/cache.
 

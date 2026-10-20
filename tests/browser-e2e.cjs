@@ -144,10 +144,36 @@ async function exercise(name,engine,url){
     check('Tracker floating add replaces bulky Quick Add bar',await page.locator('.bt362-add-fab').isVisible()&&await page.locator('.tracker-quick-actions').count()===0);
     await page.locator('.bt362-add-fab').click();await button('Quick Add').click();
     check('Quick Add scrolls its real panel into view',await page.locator('#bt-quick-add-panel').evaluate(e=>{const r=e.getBoundingClientRect();return r.top>=0&&r.top<innerHeight&&r.bottom>0}));
-    await page.evaluate(()=>{showTemplates=false;R()});
+    await page.setViewportSize({width:390,height:844});
+    check('Quick Add has a visible touch-sized close button',await page.getByRole('button',{name:'Close Quick Add',exact:true}).evaluate(e=>e.getBoundingClientRect().height>=44));
+    await page.screenshot({path:path.join(output,name+'-quick-add-390.png')});
+    await page.getByRole('button',{name:'Close Quick Add',exact:true}).click();
+    check('Quick Add close returns to dashboard',await page.locator('#bt-quick-add-panel').count()===0);
     await page.locator('.bt362-add-fab').click();await button('Review promo terms').click();
     check('Review promo terms scrolls its analyzer into view',await page.locator('#bt-promo-terms-panel').evaluate(e=>{const r=e.getBoundingClientRect();return r.top>=0&&r.top<innerHeight&&r.bottom>0&&!!e.querySelector('#az_input')}));
+    const termsDraft=require('./fixtures/financial-rules.cjs').fixture().tcSourceRaw;
+    await page.locator('#az_input').fill(termsDraft);
+    for(const width of [320,375,390,430]){
+      await page.setViewportSize({width,height:844});
+      check('promo terms input fits and avoids iPhone zoom at '+width+'px',await page.locator('#az_input').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&parseFloat(getComputedStyle(e).fontSize)>=16&&document.documentElement.scrollWidth<=innerWidth));
+    }
+    await page.setViewportSize({width:390,height:844});
+    await page.screenshot({path:path.join(output,name+'-promo-terms-390.png')});
+    await page.getByRole('button',{name:'Close promo terms',exact:true}).click();
+    await page.locator('.bt362-add-fab').click();await button('Review promo terms').click();
+    check('closing promo terms preserves the pasted draft',await page.locator('#az_input').inputValue()===termsDraft);
+    await button('Review terms').click();
+    check('full terms review has a dark surface and visible header close',await page.locator('#tca_overlay .tca-box').evaluate(e=>getComputedStyle(e).backgroundColor==='rgb(16, 19, 27)')&&await page.getByRole('button',{name:'Close terms review',exact:true}).isVisible());
+    for(const width of [320,375,390,430]){
+      await page.setViewportSize({width,height:844});
+      check('full terms review fits '+width+'px',await page.locator('#tca_overlay .tca-box').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
+    }
+    await page.setViewportSize({width:390,height:844});
+    await page.screenshot({path:path.join(output,name+'-terms-review-390.png')});
+    await page.getByRole('button',{name:'Close terms review',exact:true}).click();
+    check('closing full terms review leaves accounts unchanged',await page.evaluate(()=>entries.length===0&&modal===null));
     await button('Close').click();
+    await page.evaluate(()=>{analyzerText='';analyzerResult=null;});
     check('cloud protection status is compact',await page.locator('#bt-cloud-open').evaluate(e=>{
       const box=e.getBoundingClientRect(),style=getComputedStyle(e);
       return box.height<=32&&style.maxWidth==='42%'&&style.backgroundColor==='rgba(0, 0, 0, 0)'&&!e.innerText.includes('Current data verified in the cloud');
@@ -216,6 +242,36 @@ async function exercise(name,engine,url){
       await page.screenshot({path:path.join(output,name+'-shared-requirement-dates-390.png'),fullPage:true});
       check('shared deadline rendering preserves stored records',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,saved.stored));
       await page.evaluate(previous=>{entries=previous.entries;expanded=previous.expanded;R();},saved);
+    }
+    {
+      const make=require('./fixtures/financial-rules.cjs').fixture;
+      const opportunity=Object.assign(make(),{id:'SYN-QUEUE-OFFER',bank:'Synthetic Opportunity CU',bonusRecd:'2025-07-01',closed:'2025-08-01'});
+      const cooling=Object.assign(make(),{id:'SYN-QUEUE-SOON',bank:'Synthetic Upcoming CU',bonusRecd:'2025-11-01',closed:'2026-08-01'});
+      const rows=[{id:'SYN-QUEUE-ACTION',bank:'Synthetic Action Bank',accountType:'personal',bonus:100,opened:'2026-10-10',reqDays:15,customTimers:[],checklist:[]},
+        {id:'SYN-QUEUE-PAYOUT',bank:'Synthetic Payout Bank',accountType:'personal',bonus:200,opened:'2026-08-01',reqMet:'2026-10-10',payoutTimingText:'Payout review on October 25.',customTimers:[{id:'payout',kind:'payout',text:'Bonus payout',date:'2026-10-25'}],checklist:[]},
+        {id:'SYN-QUEUE-HOLD',bank:'Synthetic Hold Bank',accountType:'personal',bonus:300,opened:'2026-09-01',bonusRecd:'2026-10-10',minHoldDays:90,closeRuleBasis:'opened',closeRuleSource:'manual',closeRestrictionType:'minimum-open',closeRuleText:'Keep the account open for 90 days after opening.',earlyCloseFee:25,earlyTerminationFeeText:'$25 early closing fee within 90 days.',customTimers:[],checklist:[]},opportunity,cooling];
+      const saved=await page.evaluate(rows=>{const old={entries,expanded,tab,stored:localStorage.getItem('bt_e_v4')};entries=rows;expanded=null;tab='tracker';R();return old;},rows);
+      check('Needs you counts actionable work only',await page.locator('[data-queue="needs"] .bt360-count').innerText()==='1 task');
+      check('Waiting separates future payout and hold periods',await page.locator('[data-queue="waiting"] [data-attention-toggle]').count()===2);
+      check('Opportunities is separate from required tasks',await page.locator('[data-queue="opportunities"] [data-attention-toggle]').count()===1);
+      check('upcoming cooldown appears once in Eligible soon',await page.locator('[data-attention-id="SYN-QUEUE-SOON"]').count()===0&&await page.locator('.bt3719-soon').innerText().then(t=>t.includes('Synthetic Upcoming CU')));
+      check('payout and hold dates use precise labels',await page.locator('[data-queue="waiting"]').innerText().then(t=>t.includes('Expected by')&&t.includes('Hold until')));
+      for(const key of ['needs','waiting','opportunities']){
+        await page.locator('[data-queue="'+key+'"] [data-attention-toggle]').first().click();
+        check('selection works across '+key+' group',await page.locator('.is-selected').count()===1);
+        for(const width of [320,375,390,430]){
+          await page.setViewportSize({width,height:844});
+          check(key+' queue fits '+width+'px',await page.locator('[data-queue="'+key+'"]').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
+          check(key+' actions keep touch targets at '+width+'px',await page.locator('.is-selected .bt360-actions button').evaluateAll(rows=>rows.length===2&&rows.every(e=>e.getBoundingClientRect().height>=44)));
+        }
+        await page.setViewportSize({width:390,height:844});
+        await page.locator('[data-queue="'+key+'"]').scrollIntoViewIfNeeded();
+        await page.screenshot({path:path.join(output,name+'-queue-'+key+'-390.png')});
+      }
+      await page.locator('.is-selected').getByRole('button',{name:'View offers',exact:true}).click();
+      check('opportunity routes to offers for that bank',await page.locator('#radar-search').inputValue()==='Synthetic Opportunity CU');
+      check('dashboard grouping leaves stored account records unchanged',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,saved.stored));
+      await page.evaluate(old=>{entries=old.entries;expanded=old.expanded;tab=old.tab;R();},saved);
     }
     const beforeDisclosure=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     check('Tracker no longer displays the legacy Action Center',await page.locator('.bt360-legacy-actions').count()===0);
@@ -1132,8 +1188,8 @@ async function exercise(name,engine,url){
     await page.locator('.is-selected').getByRole('button',{name:'Details',exact:true}).click();
     check('second bank Details opens that exact record',await page.evaluate(id=>expanded===id,selectedId));
     await page.evaluate(()=>{expanded=null;R()});
-    await page.locator('.is-selected').getByRole('button',{name:'Open task',exact:true}).click();
-    check('second bank Open task routes to its own account',await page.evaluate(id=>expanded===id,selectedId));
+    await page.locator('.is-selected .bt360-actions .bt360-primary').click();
+    check('second bank primary task action routes to its own account',await page.evaluate(id=>expanded===id,selectedId));
     await page.evaluate(()=>{expanded=null;R()});
     await page.locator('[data-attention-toggle][aria-expanded="true"]').click();
     check('selected card can collapse',await page.locator('.is-selected').count()===0);

@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict'),vm=require('node:vm');
+const {sandbox:s,storage}=require('./full-app-smoke.test.js');
+const run=code=>vm.runInContext(code,s),before=JSON.stringify([...storage]);
+run("tab='tracker';expanded=null;showTemplates=true;showAnalyzer=false;");
+assert.match(s.rTracker([]),/aria-label="Close Quick Add"/);
+assert.match(s.rTracker([]),/closeTrackerTool\('quick-add'\)/);
+s.closeTrackerTool('quick-add');assert.equal(run('showTemplates'),false);
+run("showAnalyzer=true;analyzerText='Saved unsent terms draft';");
+const html=s.rTracker([]);
+assert.match(html,/aria-label="Close promo terms"/);assert.match(html,/for="az_input"/);
+assert.match(html,/oninput="analyzerText=this.value"/);assert.match(html,/Saved unsent terms draft/);
+assert.match(html,/bt3651-terms-input/);assert.match(html,/>Review terms<\/button>/);
+s.closeTrackerTool('promo-terms');assert.equal(run('showAnalyzer'),false);assert.equal(run('analyzerText'),'Saved unsent terms draft');
+assert.equal(JSON.stringify([...storage]),before,'Closing tools must not change saved records');
+console.log('Tracker tools passed: visible close buttons, labeled dark review input, retained draft and no financial writes.');
+process.exit(0);
