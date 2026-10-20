@@ -115,7 +115,7 @@ const rows=[{bank:'Soon Bank',closed:'2026-01-01',reviewDate:'2026-11-01'}, {ban
 const discovery=['[CA only] Ready Bank $300 Checking Bonus','Later Bank $400 Checking Bonus','New Bank $300 Checking Bonus','Soon Bank $300 Checking Bonus','Ready Bank $500 Checking Bonus','Open Bank $250 Checking Bonus','Once Bank $300 Checking Bonus','Unknown Bank $100 Checking Bonus','Chase Bank $500 Business Checking Bonus'].map((title,i)=>({title,publishedAt:'2026-10-13T12:00:00Z',url:'https://example.test/'+i}));
 const snapshot=JSON.stringify(rows);
 const ordered=priority.prioritize(discovery,rows,'MO',context);
-assert.equal(ordered[0].priorityGroup,'ready');
+assert.equal(ordered[0].priorityGroup,'explore','Tracker review readiness alone is not proof of personal eligibility');
 assert.equal(ordered.at(-1).geo.kind,'outside','Regional mismatch overrides tracker readiness');
 assert.equal(ordered.find(x=>x.title.startsWith('Open')).match.kind,'review');
 assert.equal(ordered.find(x=>x.title.startsWith('Once')).match.kind,'review');
@@ -129,6 +129,94 @@ assert.equal(priority.prioritize(discovery,rows,'MO',context,'area').some(x=>x.g
 assert.equal(priority.prioritize(discovery,rows,'MO',context,'tracker').every(x=>!!x.match),true);
 assert.equal(JSON.stringify(rows),snapshot,'Ranking must not mutate account records');
 assert.equal(JSON.stringify([...storage]),before,'Personal discovery must not change persisted financial data');
+
+// Eligibility-first smart sorter: no current-customer conclusion from a tracker date.
+const sourceProof={status:'verified',rules:[],conditions:[],nationwide:true};
+const officialBonus=v=>({status:'evidence-found',stale:false,fields:{bonus:{value:'
+console.log('Personal discovery passed: state evidence, unknown availability, audience/product separation, latest restriction, stable ordering and read-only records');
+
+assert.equal(priority.match({title:'Soon Bank $300 Checking Bonus'},[{bank:'Soon Bank',closed:'2026-01-01',reviewDate:'2026-02-30'}],context).kind,'review','Invalid dates must not produce readiness');
+
+const scopeOffer={title:'Truist $500 Checking Bonus',url:'https://www.doctorofcredit.com/truist-bonus/'};
+const checkedAt=new Date(Date.now()-60000).toISOString(),expiresAt=new Date(Date.now()+3600000).toISOString();
+const scopeRecord={...scopeOffer,offerTitle:scopeOffer.title,offerUrl:scopeOffer.url,status:'verified',checkState:'checked',checkedAt,expiresAt,sourceUrl:'https://www.truist.com/checking/lp/promos/checking-promo4',sourceHash:'a'.repeat(64),rules:[{mode:'include',states:['AL','AR'],quote:'The client must have a physical address in AL or AR.'}],conditions:[]};
+const catalog={schemaVersion:1,records:{[scopeOffer.url]:scopeRecord}};
+const official=priority.availability(scopeOffer,catalog);
+assert.equal(official.status,'verified');
+assert.equal(priority.geography({...scopeOffer,officialAvailability:official},'MO').kind,'outside');
+assert.equal(priority.availability({...scopeOffer,title:'Truist $300 Checking Bonus'},catalog),null,'Changed offer identity cannot borrow evidence');
+assert.equal(priority.availability(scopeOffer,{...catalog,records:{[scopeOffer.url]:{...scopeRecord,expiresAt:new Date(Date.now()-1000).toISOString()}}}).status,'stale');
+assert.equal(priority.availability(scopeOffer,{...catalog,records:{[scopeOffer.url]:{...scopeRecord,rules:[{mode:'include',states:['BAD'],quote:'Invalid'}]}}}).status,'needs-review');
+assert.equal(priority.availability(scopeOffer,{...catalog,records:{[scopeOffer.url]:{...scopeRecord,sourceUrl:'https://www.truist.com.evil.test/'}}}).status,'needs-review');
+assert.equal(priority.availability(scopeOffer,{...catalog,records:{[scopeOffer.url]:{...scopeRecord,checkedAt:new Date(Date.now()+600000).toISOString()}}}).status,'needs-review');
+const ids=priority.priorityIdentifiers(discovery, {...context,rows},'MO');
+assert.ok(ids.length<=8&&ids.every(id=>typeof id==='string'),'Priority envelope contains only public URLs');
+assert.ok(!JSON.stringify(ids).includes('reviewDate'));
+assert.equal(JSON.stringify([...storage]),before,'Availability verification cannot rewrite saved terms');
+console.log('Official scope projection passed: exact offer identity, source trust, expiry, state constraints and public-only priority identifiers');
+
+const canonicalNow=new Date(Date.now()-120000).toISOString();
+const canonical={schemaVersion:2,checkedAt:canonicalNow,offers:[{
+  title:'Chase $400 Checking Bonus',url:'https://www.doctorofcredit.com/chase-synthetic/',
+  publishedAt:canonicalNow,bank:'chase',product:'checking',amount:400,region:'unknown',
+  offerKey:'chase|checking|400|unknown',groupKey:'chase|checking|400|unknown',
+  firstSeen:canonicalNow,badges:['New','Increased'],changeLabel:'$300 → $400',
+  links:[
+    {url:'https://www.doctorofcredit.com/chase-synthetic/',sourceId:'doc',title:'Chase $400 Checking Bonus'},
+    {url:'https://www.hustlermoneyblog.com/chase-synthetic/',sourceId:'hmb',title:'JPMorgan Chase $400 Checking Bonus'}
+  ]
+}]};
+const canonicalProjection=priority.validate(canonical);
+assert.equal(canonicalProjection.offers.length,1);
+assert.equal(canonicalProjection.offers[0].links.length,2);
+assert.equal(canonicalProjection.offers[0].bank,'chase');
+assert.equal(canonicalProjection.offers[0].amount,400);
+assert.equal(priority.group(canonicalProjection.offers).length,1);
+assert.equal(priority.filter(canonicalProjection.offers,'chase','all',{amount:'300'}).length,1);
+assert.equal(priority.filter(canonicalProjection.offers,'chase','all',{amount:'500'}).length,0);
+const withAlien={...canonicalProjection.offers[0],links:[
+ {url:'https://www.doctorofcredit.com/chase-synthetic/',sourceId:'doc',title:'Chase $400 Checking Bonus'},
+ {url:'javascript:alert(1)',sourceId:'hmb',title:'Bad link'}]};
+assert.equal(priority.validate({...canonical,offers:[{...canonical.offers[0],links:withAlien.links}]}).offers[0].links.length,1,'Unsafe links must not render');
+assert.equal(priority.evidence({...canonical.offers[0],title:'Chase $500 Checking Bonus'},evidence),null,'Different reward may not borrow the same source evidence');
+assert.equal(JSON.stringify([...storage]),before,'Canonical multi-source offers mutated tracker data');
+console.log('Canonical offer UI passed: compact identity, two safe sources, extracted amount filters and data isolation');
++v}}});
+const o=(title,amount,option={})=>({title,product:'checking',bank:title.split(' ')[0],amount,
+  publishedAt:'2026-10-13T12:00:00Z',url:'https://example.test/smart-'+amount+'-'+title.replace(/\s/g,'-'),
+  groupKey:title+amount,availability:'unknown',...option});
+const candidates=[
+  o('SafeA $600 Checking Bonus',600,{evidence:officialBonus(600),officialAvailability:sourceProof}),
+  o('SafeB $900 Checking Bonus',900,{evidence:officialBonus(900),officialAvailability:sourceProof}),
+  o('UnknownA $1200 Checking Bonus',1200,{evidence:officialBonus(1200)}),
+  o('SafeC $1800 Checking Bonus',1800,{officialAvailability:sourceProof}),
+  o('SafeD $950 Checking Bonus',950,{evidence:officialBonus(950),officialAvailability:sourceProof,rewardIsUpperBound:true}),
+  o('Closed Bank $5000 Checking Bonus',5000,{evidence:officialBonus(5000),officialAvailability:sourceProof}),
+  o('Future Bank $4000 Checking Bonus',4000,{evidence:officialBonus(4000),officialAvailability:sourceProof})
+];
+const tracked=[
+ {bank:'Closed Bank',accountType:'personal',closed:'',reviewDate:'2026-01-01'},
+ {bank:'Future Bank',accountType:'personal',closed:'2026-01-01',reviewDate:'2026-11-01'}
+];
+const ranked=priority.prioritize(candidates,tracked,'MO',context);
+assert.deepEqual(ranked.slice(0,3).map(x=>x.bank),['SafeB','SafeA','SafeD'],
+ 'Source-proven exact amounts rank high; tiered upper bounds require review');
+assert.equal(ranked.find(x=>x.bank==='SafeC').priorityGroup,'best','Official state coverage can make a headline amount a review candidate, not a verified bonus');
+assert.ok(ranked.findIndex(x=>x.bank==='SafeC')<ranked.findIndex(x=>x.bank==='UnknownA'),'Official state fit outranks unknown geography');
+assert.equal(ranked.find(x=>x.bank==='Closed Bank').priorityGroup,'review','Open accounts cannot count as eligible, even for a $5000 bonus');
+assert.equal(ranked.find(x=>x.bank==='Future Bank').priorityGroup,'next','Future cooldown cannot count as eligible even for a $4000 bonus');
+assert.equal(ranked[0].fit.kind,'review-first');
+assert.match(ranked[0].fit.reason,/eligibility remains unverified/);
+assert.equal(priority.rankingAmount({amount:1000,rewardIsUpperBound:true}).ceiling,true);
+assert.equal(priority.rankingAmount({amount:500,evidence:officialBonus(500)}).proven,true);
+assert.equal(priority.offerFit(candidates[0],{kind:'outside'},null).kind,'blocked');
+assert.equal(JSON.stringify(tracked),JSON.stringify([
+ {bank:'Closed Bank',accountType:'personal',closed:'',reviewDate:'2026-01-01'},
+ {bank:'Future Bank',accountType:'personal',closed:'2026-01-01',reviewDate:'2026-11-01'}
+]),'Smart sorting cannot mutate the user tracker');
+assert.equal(JSON.stringify([...storage]),before,'Smart ranking cannot persist financial data');
+console.log('Smart sorter PASS: documented high amounts first, no open/cooldown promotion and no eligibility overclaims');
+
 console.log('Personal discovery passed: state evidence, unknown availability, audience/product separation, latest restriction, stable ordering and read-only records');
 
 assert.equal(priority.match({title:'Soon Bank $300 Checking Bonus'},[{bank:'Soon Bank',closed:'2026-01-01',reviewDate:'2026-02-30'}],context).kind,'review','Invalid dates must not produce readiness');
