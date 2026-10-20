@@ -46,6 +46,7 @@
   if(!r||!r.bank||!H[r.bank])return unknown;
   const sources=reviewedSources(r),promo=sources.find(x=>x.role==='promotion'),fees=sources.find(x=>x.role==='fees');
   const checked=dateDay(r.reviewedAt),until=dateDay(r.endsAt);
+  if(checked!==null&&now<checked)return{...unknown,note:'Source review is dated after this device clock. Recheck the promotion and fee schedule.'};
   const recent=checked!==null&&now>=checked&&now-checked<=14*86400000;
   const note=typeof r.note==='string'?r.note.slice(0,700):unknown.note;
   const base={...unknown,note,checked:checked===null?'':r.reviewedAt,url:promo?.url||'',sources,changedFields:Array.isArray(r.changeFields)?r.changeFields.filter(x=>typeof x==='string').slice(0,8):[]};
