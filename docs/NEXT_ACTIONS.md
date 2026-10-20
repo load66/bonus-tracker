@@ -28,3 +28,10 @@ The presentation groups existing canonical suggestions into Needs you, Waiting a
 Quick Add and the inline terms panel have visible close controls; closing returns focus to Add. Terms input changes remain an in-memory draft and closing/reopening does not clear it. The full source-review wizard retains all analysis, evidence, learning, tier and apply controls, with a dark surface and header close button. Analysis and financial rules are unchanged.
 
 Verification: `tests/dashboard-queue.test.js`, `tests/tracker-tools.test.js`, full existing suites and Chromium/WebKit mobile queue/tool tests at 320, 375, 390 and 430 pixels. All financial fixtures are synthetic.
+
+
+## Dashboard space and Add controls (v3.6.52)
+
+The earnings summary retains its original Tax-backed data and all twelve month buttons. A shorter chart reduces unused height; every existing 44px touch-target assertion remains in place. Add bonus uses a reserved bar outside the scrollable account area, with the same menu and actions. The account scroller ends above the bar rather than relying on bottom padding to protect only the last row. Undo sits above Add in the same layout, and focused Quick Add/promo-review forms keep both the summary and Add bar hidden. No business-rule, financial-record or persistent-key changes.
+
+Chromium/WebKit checks cover reserved geometry at 320/375/390/430px and desktop, compact unselected summaries, and actual hit targets for selected action, waiting and opportunity cards. Existing month, navigation, Undo, add/import and record-preservation workflows remain release gates.

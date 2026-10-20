@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.51';
+const APP_VERSION='3.6.52';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4524,7 +4524,7 @@ function R(){
   h+=detailActionBar;
   if(tab==='tracker'&&!bt360Detail&&!showTemplates&&!showAnalyzer){
     if(window.bt362AddOpen)h+='<div class="bt362-add-menu" role="group" aria-label="Add bonus actions"><button type="button" onclick="openTrackerTool(\'quick-add\')">Quick Add</button><button type="button" onclick="openTrackerTool(\'promo-terms\')">Review promo terms</button><button type="button" onclick="window.bt362AddOpen=false;openAdd()">Add account manually</button></div>';
-    h+='<button class="fab bt362-add-fab" type="button" aria-label="Add bonus" aria-expanded="'+!!window.bt362AddOpen+'" onclick="window.bt362AddOpen=!window.bt362AddOpen;R()">+</button>';
+    h+='<div class="bt3652-add-dock" role="region" aria-label="Add bonus controls"><button class="fab bt362-add-fab" type="button" aria-label="Add bonus" aria-expanded="'+!!window.bt362AddOpen+'" onclick="window.bt362AddOpen=!window.bt362AddOpen;R()"><span aria-hidden="true">＋</span>Add bonus</button></div>';
   }
   h+='<div class="tabs">';
   ['tracker','bonuses','tax','tips','archive'].forEach((t,i)=>{const full=['Tracker','Bank Bonuses','Tax','Datapoints','Archive'][i],short=['Tracker','Bonuses','Tax','Data','Archive'][i];h+='<button class="tb'+(tab===t?' on':'')+'" aria-label="'+full+'" aria-current="'+(tab===t?'page':'false')+'" onclick="switchMainTab(\''+t+'\')">'+[I.grid,I.tips,I.doc,I.tips,I.lock][i]+'<span>'+short+'</span></button>'});

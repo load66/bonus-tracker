@@ -142,6 +142,15 @@ async function exercise(name,engine,url){
     await page.getByText('No accounts yet',{exact:true}).waitFor();
     check('year selector is a single pill and zero-count stages hidden',await page.locator('#bt362-year').count()===1&&await page.locator('.yr-btn').count()===0&&await page.locator('.bt360-stage').count()===0);
     check('Tracker floating add replaces bulky Quick Add bar',await page.locator('.bt362-add-fab').isVisible()&&await page.locator('.tracker-quick-actions').count()===0);
+    for(const width of [320,375,390,430,1024]){
+      await page.setViewportSize({width,height:844});
+      check('Add bonus has reserved space outside card scrolling at '+width+'px',await page.evaluate(()=>{
+        const scroll=document.querySelector('.scroll').getBoundingClientRect(),dock=document.querySelector('.bt3652-add-dock').getBoundingClientRect(),add=document.querySelector('.bt362-add-fab').getBoundingClientRect(),tabs=document.querySelector('.tabs').getBoundingClientRect();
+        return scroll.bottom<=dock.top+1&&add.top>=dock.top&&add.bottom<=tabs.top&&add.height>=44&&add.width>=44&&document.documentElement.scrollWidth<=innerWidth;
+      }));
+      check('unselected earnings summary is compact at '+width+'px',await page.locator('.bt360-hero').evaluate(e=>e.getBoundingClientRect().height<=230));
+    }
+    await page.setViewportSize({width:390,height:844});
     await page.locator('.bt362-add-fab').click();await button('Quick Add').click();
     check('Quick Add scrolls its real panel into view',await page.locator('#bt-quick-add-panel').evaluate(e=>{const r=e.getBoundingClientRect();return r.top>=0&&r.top<innerHeight&&r.bottom>0}));
     await page.setViewportSize({width:390,height:844});
@@ -267,6 +276,8 @@ async function exercise(name,engine,url){
           await page.setViewportSize({width,height:844});
           check(key+' queue fits '+width+'px',await page.locator('[data-queue="'+key+'"]').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
           check(key+' actions keep touch targets at '+width+'px',await page.locator('.is-selected .bt360-actions button').evaluateAll(rows=>rows.length===2&&rows.every(e=>e.getBoundingClientRect().height>=44)));
+          await page.locator('.is-selected .bt360-actions').scrollIntoViewIfNeeded();
+          check(key+' actions remain clear of the Add bar at '+width+'px',await page.locator('.is-selected .bt360-actions button').evaluateAll(rows=>rows.every(e=>{const r=e.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return hit===e||e.contains(hit)})));
         }
         await page.setViewportSize({width:390,height:844});
         await page.locator('[data-queue="'+key+'"]').scrollIntoViewIfNeeded();

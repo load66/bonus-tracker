@@ -22,11 +22,11 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var
 .bt360-segments button{border:0;border-radius:100px;min-height:40px;background:transparent;color:#8A90A3;font-weight:800;font-size:12px;white-space:nowrap}
 .bt360-segments button.active{background:#F2F3F7;color:#10121A}
 .bt360-hero,.bt360-panel,.bt360-tax-summary,.bt360-featured,.bt360-archive-stats>div,.bt360-sheet,.bt360-list{background:#12141C!important;border:1px solid #1E212C!important;border-radius:20px;box-shadow:none!important;color:#F2F3F7}
-.bt360-hero{padding:19px 18px 15px;margin:0 0 12px;background:radial-gradient(circle at 97% 0,rgba(91,227,176,.10),transparent 45%),#12141C!important}
+.bt360-hero{padding:14px 16px 12px;margin:0 0 12px;background:radial-gradient(circle at 97% 0,rgba(91,227,176,.10),transparent 45%),#12141C!important}
 .bt360-hero-top{display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0}
 .bt360-kicker{color:#5BE3B0;font-size:10px;font-weight:900;letter-spacing:1.35px;white-space:nowrap}
 .bt360-hero-amount{display:block;font-size:clamp(31px,7vw,44px);line-height:1.1;font-variant-numeric:tabular-nums;font-weight:900;letter-spacing:-1px;margin-top:8px}
-.bt360-hero p{color:#A0A6B8;font-size:12px;margin:3px 0 13px}
+.bt360-hero p{color:#A0A6B8;font-size:12px;margin:3px 0 6px}
 .bt360-backup{position:static!important;display:inline-flex!important;align-items:center;gap:5px;background:transparent!important;border:1px solid #29463D!important;border-radius:100px!important;padding:4px 7px!important;min-height:28px!important;color:#91A79F!important;font-size:9px!important;font-weight:800;max-width:42%;white-space:nowrap;text-align:right}
 .bt360-cloud-icon{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:#173A2F;color:#5BE3B0;font-size:9px;line-height:1;flex:none}
 .bt360-monthbars{height:46px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:5px;align-items:end}
@@ -296,13 +296,13 @@ body.bt360-detail-active .scroll{padding-bottom:calc(180px + env(safe-area-inset
 .bt360-detail-footer>button:first-child{min-height:48px}
 
 /* v3.6.11 selectable monthly receipt chart: 44+px hit areas, no zero bars. */
-.bt367-month-chart{display:grid;grid-template-columns:repeat(12,minmax(44px,1fr));gap:4px;margin-top:11px;align-items:stretch;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scrollbar-width:thin}
-.bt367-month-hit{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-height:102px;width:100%;padding:0 0 3px;position:relative;border:1px solid transparent;border-radius:9px;background:transparent;color:#81899C;cursor:pointer;touch-action:manipulation}
+.bt367-month-chart{display:grid;grid-template-columns:repeat(12,minmax(44px,1fr));gap:4px;margin-top:6px;align-items:stretch;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scrollbar-width:thin}
+.bt367-month-hit{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-height:68px;width:100%;padding:0 0 3px;position:relative;border:1px solid transparent;border-radius:9px;background:transparent;color:#81899C;cursor:pointer;touch-action:manipulation}
 .bt367-month-hit{scroll-snap-align:start}
 .bt367-month-hit:focus-visible{outline:2px solid #8FB4FF;outline-offset:2px}
 .bt367-month-hit.current:not(.selected){background:rgba(91,227,176,.07);border-color:rgba(91,227,176,.16)}
 .bt367-month-hit.selected{background:rgba(91,227,176,.11);border-color:#347A68}
-.bt367-month-track{position:relative;display:flex;align-items:flex-end;justify-content:center;height:76px;width:100%;padding-top:18px}
+.bt367-month-track{position:relative;display:flex;align-items:flex-end;justify-content:center;height:44px;width:100%;padding-top:16px}
 .bt367-month-fill{width:min(100%,12px);min-height:2px;max-height:100%;background:#1B4137;border-radius:4px 4px 1px 1px}
 .bt367-month-hit.current .bt367-month-fill{background:#5BE3B0;opacity:.72}
 .bt367-month-hit.selected .bt367-month-fill{background:#5BE3B0;opacity:1}
@@ -322,7 +322,7 @@ body.bt360-detail-active .scroll{padding-bottom:calc(180px + env(safe-area-inset
 .bt367-month-row small{display:block;margin-top:4px;color:#A0A6B8;font-size:10px}
 .bt367-month-row>strong{margin-left:auto;white-space:nowrap;font-size:12px;font-variant-numeric:tabular-nums}
 .bt367-month-empty{font-size:12px;color:#A0A6B8;padding:0 11px 13px}
-@media(max-width:390px){.bt367-month-chart{gap:1px}.bt367-month-hit{min-height:102px}.bt367-month-fill{width:min(100%,10px)}.bt367-month-value{font-size:8px}}
+@media(max-width:390px){.bt367-month-chart{gap:1px}.bt367-month-hit{min-height:68px}.bt367-month-fill{width:min(100%,10px)}.bt367-month-value{font-size:8px}}
 
 
 /* v3.6.11 bonus detail: mockup hierarchy, read-only financial terms */
@@ -826,6 +826,13 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
 #tca_overlay .c-c{background:#1a2230!important;color:#d6dbea!important;border:1px solid #354259!important}
 #tca_overlay .bt3651-tool-head{align-items:center}
 #tca_overlay .bt3651-tool-head h3{display:block}
+/* Keep Add in its own layout space; account rows never pass beneath it. */
+.bt3652-add-dock{order:10;flex:0 0 auto;align-self:center;display:flex;box-sizing:border-box;width:100%;max-width:1050px;padding:8px clamp(12px,3vw,24px) 6px;margin:0 0 calc(70px + env(safe-area-inset-bottom));background:#07080c;border-top:1px solid #1e212c}
+.bt3652-add-dock .bt362-add-fab{position:static!important;inset:auto!important;width:100%!important;min-width:44px;height:44px!important;min-height:44px!important;gap:8px;border-radius:12px!important;box-shadow:none!important;font-size:13px!important;font-weight:800!important;line-height:1.4}
+.bt3652-add-dock .bt362-add-fab span{font-size:21px;line-height:1}
+body:has(.bt3652-add-dock) .scroll{min-height:0;padding-bottom:20px!important}
+body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
+.app:has(>.bt3652-add-dock)>.bt362-add-menu{bottom:calc(132px + env(safe-area-inset-bottom));right:max(12px,calc((100vw - 1002px)/2))}
 .bt3641-directory{margin:18px 0 4px;padding:0 4px}
 .bt3641-directory>button{width:100%;display:flex;align-items:center;gap:10px;min-height:48px;color:var(--mint);text-align:left;font-size:13px}
 .bt3641-directory>button span:first-child{margin-left:auto;color:var(--muted)}

@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: Codex — v3.6.52 — codex/v3.6.52-dashboard-visual-hierarchy
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.52 dashboard visual hierarchy (`codex/v3.6.52-dashboard-visual-hierarchy`): compact earnings summary while preserving all 12 accessible month buttons, receipt details and exact Tax-backed totals. Reserve Add bonus in a separate layout bar above navigation so card controls never scroll beneath it; retain the add menu, focused forms and Undo flow. No saved records, canonical rules, source evidence, backend or storage keys changed. Full local bonus/cloud/UI groups and release verification PASS. Added cross-width summary-height, reserved-space and real hit-target checks without reducing existing touch-target coverage. Previous v3.6.51 PR #231 deployed at `5522d135ae61` with passing main CI, inspected mobile screenshots and exact production runtime/style/cache verification. Next: Chromium/WebKit, mobile screenshot review, merge on green and exact Pages source/cache verification.
 
 - v3.6.51 dashboard action queue and add-flow polish (`codex/v3.6.51-dashboard-action-queue`): split required actions, confirmed future payout/hold waits and current-offer opportunities. Missing or reached dates stay actionable; verified upcoming cooldowns appear once in Eligible soon. Preserve cross-group selection, account details, deposit research and canonical actions; primary labels describe the action. Add visible Quick Add/promo-review close controls, retain unsent terms in memory, and align the source-review wizard with the dark interface. No saved records, source evidence, schemas, rule meaning, backend or storage keys changed. Synthetic queue/tool regressions and full local bonus/cloud/UI groups plus release checks PASS; mobile/browser verification pending. Previous v3.6.50 PR #230 deployed at `000c8f3c893f` with passing main CI and exact production runtime/cache verification. Next: exact-head Chromium/WebKit, review mobile screenshots, merge on green and verify Pages source/cache.
 

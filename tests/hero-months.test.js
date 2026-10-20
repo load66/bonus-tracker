@@ -28,5 +28,5 @@ assert.equal(stats.inBusiness.selected,false,'Audience filter clears selection')
 assert.deepEqual(JSON.parse(JSON.stringify(stats.inPersonal)),{total:1050,tax:1050,april:850},'Personal filter remains available without affecting combined totals');
 assert.deepEqual(JSON.parse(JSON.stringify(stats.changedYear)),{total:125,jan:125,april:0,selected:false},'Year change refreshes monthly receipts and clears selection');
 const css=fs.readFileSync('redesign-v360.css','utf8');
-assert.match(css,/\.bt367-month-hit\{[^}]*min-height:102px/,'Month target has full-height tap area');
+assert.match(css,/\.bt367-month-hit\{[^}]*min-height:68px/,'Month target has full-height tap area');
 console.log('Hero months passed: Tax sums, audience/year gates, 12 buttons, zero baselines, selected rows and dismiss');
