@@ -113,6 +113,11 @@ async function watchQueueRegression(){
   const review=api.reviewQueue();
   assert.equal(review.ready,true);
   assert.equal(review.issues.length,2);
+  assert.equal(api.reviewQueue(Date.parse('2026-10-11T12:00:00Z')).ready,false,
+    'Future-dated source monitoring cannot appear ready to an earlier viewer');
+  assert.equal(api.status('Capital One',Date.parse('2026-10-11T12:00:00Z')).kind,'unverified',
+    'Future-dated source review cannot be applied as a current material change');
+
   assert.equal(review.issues[0].kind,'changed','Material source-page signal leads unavailable source');
   assert.equal(review.issues[0].bank,'Capital One');
   assert.equal(review.issues[0].url,sources.find(x=>x.role==='promotion').url);
