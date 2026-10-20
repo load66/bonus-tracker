@@ -6,6 +6,9 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.6.59 source-backed Quick Add catalog (`codex/v3.6.59-source-backed-catalog`): dedicated `quick-add-catalog.js` with curated official-source metadata, exact bank/product/offer scope, review date, expiration, changed-fields, and separate promotion/fee links for reviewed examples. Strict classifier distinguishes expired, reviewed changed, stale, complete source-verified and unverified; unsupported dates/domains, expired review or incomplete applicability cannot claim verified-active. All other shortcuts remain unverified. Records never prefill historical fees, bonuses, eligibility, churn or activity; no existing records/cloud/schema/backend changed. Added standalone unit suite, browser source UI check, offline precache, catalog maintenance documentation and v3.6.59 app/cache version. Next: full bonus/cloud/UI + Chromium/WebKit + release verifier; merge green PR; verify Pages deployment and release source.
+
+
 - v3.6.58 Quick Add template trust (`codex/v3.6.58-template-trust`): audited historical sample shortcuts. Bank identity is offered for convenience; sample bonus, DD, fee, closure, churn, hold and opening values never prefill new financial records. All 12 templates stay discoverable with clearly historical labels; official 2026-10-20 source review identified a prior expired Wells offer/changed fee and multiple Capital One reward paths. Remaining sample promotions are explicitly unverified, not presumed current. Editor links bank sources for reviewed examples. No canonical rules, existing records, storage keys or backend changed. Synthetic all-template no-write tests and mobile browser checks added. Next: ensure full bonus/cloud/UI + Chromium/WebKit + release verifier, merge on green, verify Pages production asset/cache.
 
 

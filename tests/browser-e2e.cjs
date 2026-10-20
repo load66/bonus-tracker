@@ -253,12 +253,21 @@ async function exercise(name,engine,url){
     await page.getByRole('button',{name:'Discard changes',exact:true}).click();
     await page.locator('.guided-modal').waitFor({state:'detached'});
     await page.locator('.bt362-add-fab').click();await button('Quick Add').click();
-    check('expired and alternate-path offers are labeled on Quick Add',await page.locator('#bt-quick-add-panel').innerText().then(t=>t.includes('Wells Fargo')&&t.includes('Past $325 · Expired')&&t.includes('Capital One')&&t.includes('Past $250 · Variants')));
+    check('source catalog keeps reviewed offers scoped and other examples unverified',await page.evaluate(()=>{
+      const c=window.BTQuickAddCatalog;
+      const asOf=Date.parse('2026-10-20T15:00:00Z');
+      return c?.status('Wells Fargo',asOf).kind==='expired'&&c?.status('Capital One',asOf).kind==='changed'
+        &&c?.status('Wells Fargo').kind==='unverified'&&c?.status('Capital One').kind==='unverified'
+        &&c?.status('Citi').kind==='unverified'&&c.reviewedSources(c.records['Capital One']).length===2
+        &&c.status('Capital One',asOf).sources.every(x=>x.url.startsWith('https://www.capitalone.com/'));
+    }));
+    check('future-dated reviews remain unverified on a simulated earlier clock',await page.locator('#bt-quick-add-panel').innerText().then(t=>t.includes('Wells Fargo')&&t.includes('Past $325 · Unverified')&&t.includes('Capital One')&&t.includes('Past $250 · Unverified')));
     check('Quick Add Citi identity uses locally stored bank logo',await page.getByRole('button',{name:'Citi historical example, Unverified example',exact:true}).locator('img[src="./bank-logos/citi.svg"]').count()===1);
     await page.getByRole('button',{name:'Citi historical example, Unverified example',exact:true}).click();
     check('historical bonus/fees/requirements never enter a new draft',await page.evaluate(()=>modal?.bonus===0&&modal?.earlyCloseFee===null&&modal?.churn===''&&modal?.dataPoint===''&&modal?.reqDays===0&&modal?.monthlyFeeYNText===''&&modal?.notes===''));
     check('Quick Add never records an unconfirmed account opening date',await page.evaluate(()=>modal?.opened===''&&modal?._fromTemplate===true));
     check('sample offer warning appears before account details',await page.locator('.bt3657-template-note').isVisible()&&await page.locator('.guided-body').innerText().then(t=>t.includes('Historical example — not a verified offer')));
+    check('unverified example does not invent official source links',await page.locator('.bt3659-source-list a').count()===0);
     check('Quick Add exposes bank/account/bonus',await page.locator('input[oninput*="\'bank\'"]').isVisible()&&await page.locator('select[onchange*="\'accountType\'"]').isVisible()&&await page.locator('input[oninput*="\'bonus\'"]').isVisible());
     await page.getByRole('button',{name:'Step 4: Review',exact:true}).click();check('unverified template cannot be saved',await button('💾 Add account').isDisabled());await cancelEditor();
     await importEntry(payload);

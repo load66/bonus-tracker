@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.58';
+const APP_VERSION='3.6.59';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -3443,27 +3443,16 @@ const DEF=[];
 const TEMPLATES=[{bank:"Chase",bonus:300,churn:"2",notes:"$1,000 DD within 90 days. $12/mo waived w/ $500 DD.",minHoldDays:90,earlyCloseFee:0,dataPoint:"Fidelity/Robinhood ACH works",reqDays:90},{bank:"Chase Biz",bonus:500,churn:"2",notes:"$2,000 deposit within 20 biz days.",minHoldDays:0,earlyCloseFee:0,dataPoint:"$2,000 deposit",reqDays:60},{bank:"Bank of America",bonus:300,churn:"1",notes:"$2,000+ DD within 90 days. $12/mo waived w/ $250 DD.",minHoldDays:0,earlyCloseFee:0,dataPoint:"Fidelity ACH works",reqDays:90},{bank:"Wells Fargo",bonus:325,churn:"1",notes:"$1,000+ DD within 90 days. $10/mo waived w/ $500 DD.",minHoldDays:0,earlyCloseFee:0,dataPoint:"Employer DD recommended",reqDays:90},{bank:"U.S. Bank",bonus:450,churn:"1",notes:"$8,000+ DD within 90 days. No early close fee.",minHoldDays:0,earlyCloseFee:0,dataPoint:"Robinhood/Fidelity ACH works",reqDays:90},{bank:"Citi",bonus:300,churn:"1",notes:"Tiered DD. $12/mo fee.",minHoldDays:0,earlyCloseFee:0,dataPoint:"ACH generally works",reqDays:90},{bank:"PNC",bonus:400,churn:"2",notes:"$5,000 DD. $7-25/mo by tier.",minHoldDays:0,earlyCloseFee:0,dataPoint:"Fidelity ACH works",reqDays:60},{bank:"Simmons Bank",bonus:450,churn:"1",notes:"$150x3 cycles. $1k DD + 7 debit txns. $0 fee. MO avail.",minHoldDays:0,earlyCloseFee:0,dataPoint:"$1k DD + 7 debit txns",reqDays:120},{bank:"Equity Bank",bonus:400,churn:"180",notes:"Checking+savings. $1k DD + debit. $400 clawback <180d.",minHoldDays:180,earlyCloseFee:400,dataPoint:"$1k DD + activate debit",reqDays:45},{bank:"Regions",bonus:450,churn:"1",notes:"$1k DD + 10 debit. $25 fee <180d. MO avail.",minHoldDays:180,earlyCloseFee:25,dataPoint:"$1k DD + 10 debit txns",reqDays:90},{bank:"BMO",bonus:600,churn:"1",notes:"$5k+ DD within 90d. CC funding avail.",minHoldDays:0,earlyCloseFee:0,dataPoint:"ACH works + CC funding",reqDays:90},{bank:"Capital One",bonus:250,churn:"1",notes:"2x$500 DD. $0 fee. NOT churnable anymore.",minHoldDays:0,earlyCloseFee:0,dataPoint:"No longer churnable",reqDays:75}];
 // Historical shortcuts only. No current offer, fee, churn or qualifying-activity
 // assertion may be inferred from TEMPLATES without the applicable official sources.
-const QUICK_ADD_SOURCE_REVIEW=Object.freeze({
-  'Wells Fargo':Object.freeze({
-    status:'Expired example',
-    checked:'2026-10-20',
-    note:'The published $325 Everyday Checking promotion ended October 13, 2026. Its $15 monthly fee differs from the historical $10 sample. A new enrollment needs new terms.',
-    url:'https://accountoffers.wellsfargo.com/checkingoffer/'
-  }),
-  'Capital One':Object.freeze({
-    status:'Multiple offer paths',
-    checked:'2026-10-20',
-    note:'The published 360 Checking $250 promotion has separate qualifying direct-deposit and debit-purchase paths. Neither path is selected by this shortcut; eligibility depends on the actual enrolled version.',
-    url:'https://www.capitalone.com/bank/choose-your-offer/'
-  })
-});
 function quickAddReviewStatus(t){
-  const d=QUICK_ADD_SOURCE_REVIEW[t?.bank];
-  return d?{...d}:{status:'Unverified example',checked:'',note:'The current promotion, fees and eligibility have not been source-verified for this shortcut.',url:''};
+  const bank=String(t?.bank||'');
+  const catalog=window.BTQuickAddCatalog;
+  // The catalog is the only authoritative source for CURRENT research labels.
+  // Failure to load catalog never falls back to historical claims.
+  return catalog?.status?.(bank)||{status:'Unverified example',short:'Unverified',kind:'unverified',note:'No current offer has been verified for this shortcut.',checked:'',url:'',sources:[],changedFields:[]};
 }
 function quickAddTemplateCard(t,i){
   const status=quickAddReviewStatus(t);
-  const shortStatus=status.status==='Expired example'?'Expired':status.status==='Multiple offer paths'?'Variants':'Unverified';
+  const shortStatus=status.short||'Unverified';
   return '<button type="button" class="tbtn bt3658-template" onclick="addFromTpl('+i+')" aria-label="'+esc(t.bank)+' historical example, '+esc(status.status)+'">'+bankLogo(t.bank,true)
     +'<div class="t-info"><div class="nm">'+esc(t.bank)+'</div><div class="bn">Past '+fM(t.bonus)+' · '+esc(shortStatus)+'</div></div></button>';
 }
