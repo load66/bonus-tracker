@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.49';
+const APP_VERSION='3.6.50';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -1700,11 +1700,41 @@ function holdProg(e){
   return(base&&e.minHoldDays>0)?Math.min(1,Math.max(0,dB(base,td()))/(e.minHoldDays+closeBufferDaysFor(e))):null
 }
 
-function reqDeadline(e){
-  // An exact statement date or business-day calendar cannot be inferred from a day count.
-  if(/business days?|statement (?:period|cycle)|billing (?:period|cycle)|\bmonths?\b|\byears?\b/i.test(String(e.requiredDaysText||'')))return null;
-  return(e.opened&&e.reqDays>0)?addD(e.opened,e.reqDays):null
+// Read-only date projection shared by lifecycle, action guidance and account detail.
+// Rule validation still gates financial actions; this helper never edits a rule or event.
+function btRequirementDeadlineContext(e,requirement){
+  const unknown=reason=>({date:'',confirmed:false,explanation:'Date not confirmed · '+reason});
+  const valid=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&isRealDateString(value);
+  function project(t){
+    if(!t)return unknown('the saved requirement has no exact deadline');
+    if(t.unit!=='calendar-days')return unknown('the saved requirement needs its applicable calendar or statement dates');
+    if(!Number.isInteger(t.value)||t.value<=0)return unknown('the saved deadline duration needs review');
+    let anchor='',label='';
+    if(t.basis==='opened'){anchor=e.opened;label='Opened';}
+    else if(t.basis==='reqmet'){anchor=e.reqMet;label='Requirements completed';}
+    else if(t.basis==='bonus'){anchor=e.bonusRecd;label='Bonus received';}
+    else if(t.basis==='enrollment'){
+      const dates=[e.offerEnrollmentDate,e.couponEnrollmentDate].filter(Boolean);
+      if(new Set(dates).size>1)return unknown('saved enrollment dates conflict');
+      anchor=dates[0];label='Offer enrollment';
+    }else return unknown('the saved deadline anchor needs review');
+    if(!valid(anchor))return unknown(label.toLowerCase()+' date is missing or invalid');
+    const due=addD(anchor,t.value);
+    return valid(due)?{date:due,confirmed:true,explanation:label+' '+fD(anchor)+' + '+t.value+' calendar days → '+fD(due)}:unknown('the calculated deadline is invalid');
+  }
+  if(!e)return unknown('account is missing');
+  if(requirement!==undefined)return project(requirement?.timing);
+  if(e.financialRules!=null){
+    const rules=Array.isArray(e.financialRules.requirements)?e.financialRules.requirements:[];
+    const contexts=rules.map(r=>project(r?.timing));
+    return contexts.filter(c=>c.confirmed).sort((a,b)=>a.date.localeCompare(b.date))[0]||contexts[0]||unknown('saved requirements need review');
+  }
+  // Legacy calendar-day behavior remains available only without structured rules.
+  if(/business days?|statement (?:period|cycle)|billing (?:period|cycle)|\bmonths?\b|\byears?\b/i.test(String(e.requiredDaysText||'')))return unknown('the legacy requirement needs its applicable calendar or statement dates');
+  const days=Number(e.reqDays);
+  return project({basis:'opened',value:days,unit:'calendar-days'});
 }
+function reqDeadline(e){return btRequirementDeadlineContext(e).date||null}
 
 function daysToDeadline(e){
   const d=reqDeadline(e);
@@ -7106,3 +7136,4 @@ const btOriginalToggleTimer=toggleTimer;
 toggleTimer=function(id,timerId){return btVerifiedMutation(()=>btOriginalToggleTimer(id,timerId));};
 
 /* Finance and provider-linked Tracker evidence have been retired. */
+

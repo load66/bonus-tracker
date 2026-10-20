@@ -11,3 +11,11 @@ From v3.4.72, the Action Center leads with a concrete saved activity instead of 
 - Invalid financial packages lead to rule verification. Closed accounts require eligibility review; closure remains blocked when canonical checks require review. Day-refresh and per-account disclosure state remain unchanged.
 
 Verification: `tests/specific-actions.test.js`, `tests/next-actions.test.js`, `tests/smart-attention.test.js` and three-browser end-to-end coverage. All fixtures are synthetic.
+
+## Shared requirement date projection (v3.6.50)
+
+`btRequirementDeadlineContext` supplies the exact requirement date to `reqDeadline`, lifecycle urgency, action guidance, account headers, requirement rows and derived timers. Structured timing takes precedence over legacy `reqDays`; an individual activity keeps its own clock and the account summary shows the earliest calculable clock. This does not change rule validation or certify that all requirements have known deadlines.
+
+Calendar-day clocks use only the specified recorded opening, enrollment, requirements-completed or bonus-received event. Enrollment never falls back to opening, and conflicting saved enrollment dates remain unresolved. Missing or invalid dates, unsupported calendars, untimed structured requirements and invalid durations never inherit a legacy day count. Manual reminders remain separate saved reminders and are not rewritten as offer deadlines. Existing financial validation continues to gate milestone actions; no financial record, rule schema, source evidence or storage key changes.
+
+Verification: `tests/requirement-deadlines.test.js` and both browser engines cover conflicting legacy days, rendered deadline agreement and no writes; unit coverage also checks missing anchors, enrollment conflicts, unsupported calendars, multiple clocks and legacy compatibility.

@@ -199,6 +199,24 @@ async function exercise(name,engine,url){
     check('Needs you uses unboxed PDF heading and standalone priority card',await page.locator('.bt3719-needs > .bt3719-section-title').count()===1&&await page.locator('.bt3641-attention-toggle').count()===1&&await page.locator('.bt3641-attention-item.is-selected').count()===0&&await page.locator('.bt3719-needs.bt360-panel').count()===0);
     check('v3.6.1 panel headings render badges instead of literal HTML',await page.locator('.bt360-panel-title').evaluateAll(rows=>rows.some(e=>e.querySelector('h3')?.textContent==='Needs you'&&e.querySelector('.bt360-count'))&&rows.every(e=>!e.querySelector('h3')?.textContent.includes('<span'))));
     check('90-day deadline is exact',await page.evaluate(()=>reqDeadline(entries[0]))==='2026-05-01');
+    {
+      const synthetic=require('./fixtures/financial-rules.cjs').fixture();
+      const wording='Receive $1,000 in qualifying direct deposits within 90 calendar days of opening.';
+      Object.assign(synthetic,{id:'SYN-SHARED-DEADLINE',opened:'2026-09-12',reqDays:3,requiredDaysText:'3 calendar days',customTimers:[],checklist:[]});
+      synthetic.tcSourceRaw+=' '+wording;
+      synthetic.financialRules.requirements=[{id:'deposits',accountId:'checking',kind:'direct-deposit',amount:1000,text:wording,timing:{basis:'opened',value:90,unit:'calendar-days'},evidence:{source:'promotion',quote:wording}}];
+      const saved=await page.evaluate(e=>{
+        const previous={entries,expanded,stored:localStorage.getItem('bt_e_v4')};
+        entries=[e];expanded=e.id;R();return previous;
+      },synthetic);
+      check('shared structured deadline overrides legacy day counter',await page.evaluate(()=>reqDeadline(entries[0])==='2026-12-11'&&btNextActionForEntry(entries[0]).task.context.date==='2026-12-11'));
+      check('rendered requirements and header share exact structured deadline',await page.locator('.bt360-detail-card').innerText().then(t=>t.includes('Requirements due Dec 11, 2026')&&t.includes('Direct deposits totaling $1,000 · due Dec 11, 2026')));
+      await page.locator('[data-section="timers"] > summary').click();
+      check('rendered timer uses the same requirement deadline',await page.locator('[data-source="saved-requirement"]').innerText().then(t=>t.includes('Dec 11, 2026')));
+      await page.screenshot({path:path.join(output,name+'-shared-requirement-dates-390.png'),fullPage:true});
+      check('shared deadline rendering preserves stored records',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,saved.stored));
+      await page.evaluate(previous=>{entries=previous.entries;expanded=previous.expanded;R();},saved);
+    }
     const beforeDisclosure=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     check('Tracker no longer displays the legacy Action Center',await page.locator('.bt360-legacy-actions').count()===0);
     check('account directory is collapsed by default',await page.locator('.bt366-compact-row').count()===0);
@@ -1409,3 +1427,4 @@ async function exercise(name,engine,url){
   try{for(const [name,engine] of require('./browser-select.cjs')({chromium,webkit}))await exercise(name,engine,url)}
   finally{server.close()}
 })().catch(err=>{console.error(err);process.exitCode=1});
+

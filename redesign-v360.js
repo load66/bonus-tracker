@@ -1,4 +1,4 @@
-/* BonusTracker 3.6.49 presentation helpers. Pure views; canonical rules are read-only. */
+/* BonusTracker 3.6.50 presentation helpers. Pure views; canonical rules are read-only. */
 (function(){
 'use strict';
 const scopeKey='bt3628_audience_session',noticeKey='bt360_notice_session';
@@ -322,10 +322,7 @@ function accountSaveStatus(e){
 
 /* The detail screen is a read-only projection of saved terms; it never records progress. */
 function detailRequirementDate(e,r){
- const t=r?.timing;
- if(t?.unit==='calendar-days'&&t.basis==='opened'&&e.opened&&Number.isInteger(t.value))return addD(e.opened,t.value);
- if(!t&&e.opened&&Number(e.reqDays)>0&&typeof reqDeadline==='function')return reqDeadline(e);
- return '';
+ return typeof btRequirementDeadlineContext==='function'?btRequirementDeadlineContext(e,r).date:'';
 }
 function requirementTitle(r){
  const kind=r?.kind||'',value=Number(r?.amount),money=Number.isFinite(value)&&value>0?amount(value):'';
@@ -411,8 +408,6 @@ function payoutReminderRow(e){
 // not substitute an apparently exact date from an unrelated legacy field.
 function firstUnmetRequirementDate(e){
  if(e.reqMet||e.bonusRecd||e.closed)return '';
- const rules=Array.isArray(e.financialRules?.requirements)?e.financialRules.requirements:[];
- if(rules.length)return rules.map(r=>detailRequirementDate(e,r)).filter(Boolean).sort()[0]||'';
  return typeof reqDeadline==='function'?(reqDeadline(e)||''):'';
 }
 function requirementCountdown(e){
@@ -989,7 +984,7 @@ async function backUpNow(){
 function settings(){
  const toggles=[['deadlines','Deadlines','3 and 1 day before'],['payouts','Payouts and close dates','When ready'],['eligible','Eligible again','7 days before and on the day']];
  const buttons=toggles.map(([k,label,description])=>'<button class="bt360-settings-row" role="switch" aria-checked="'+noticePrefs[k]+'" onclick="BT360.setNotice(\''+k+'\')"><span><b>'+label+'</b><small>'+description+'</small></span><i class="bt360-toggle '+(noticePrefs[k]?'checked':'')+'"></i></button>').join('');
- return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.49</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
+ return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.50</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
  cloudSettingsCard()+
  (window.BTICloudBackup?.isLocalOnly?.()?'':usageCard())+
  panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.32. Push delivery is not active.</p>')+
@@ -1024,3 +1019,4 @@ function closeSettings(){window.bt360SettingsOpen=false;R()}
 window.BT360={toggleAttention,toggleAccountList,openAccountSearch,closeAccountSearch,get selectedAttentionId(){return selectedAttentionId},get accountListOpen(){return accountListOpen},setAccountSectionOpen,revealAccountSection,cloudStatusText,accountDates,accountSaveStatus,infoRow,feeSnapshot,closeCheckPresentation,get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,accountAudience,kindTag,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,archiveCountdown,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
 if(typeof R==='function')R();
 })();
+
