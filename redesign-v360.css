@@ -952,3 +952,6 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt3659-status{font-weight:700;color:var(--text)!important}
 .bt3659-source-list{display:flex;gap:6px;flex-wrap:wrap;min-width:0}
 .bt3659-source-list a{font-size:11px;line-height:1.4;overflow-wrap:anywhere;max-width:100%;color:var(--mint)}
+
+/* v3.6.61: source-change warnings stay concise and readable on mobile. */
+.bt3661-monitor-note{display:block;color:var(--amber)!important;font-size:12px;line-height:1.5;font-weight:600}
