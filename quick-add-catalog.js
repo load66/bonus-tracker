@@ -99,9 +99,34 @@
    return {...old,status:fresh.status==='changed'?'Source changed · recheck':'Source check pending',
      short:'Recheck',kind:'stale',watchNote:fresh.note,watchState:fresh.status};
  }
- function refreshWatch(){
+ function reviewQueue(now=Date.now()){
+   const issues=[],banks=Object.keys(records),observed=watched?.schemaVersion===1
+     &&watched.records&&typeof watched.records==='object'&&Object.keys(watched.records).length>0;
+   if(observed)for(const bank of banks){
+     const spec=records[bank],watch=watched.records[bank];
+     if(!watch||watch.offerKey!==spec.offerKey||!watch.sources)continue;
+     for(const source of reviewedSources(spec)){
+       const row=watch.sources[source.role];
+       if(!row||row.url!==source.url)continue;
+       const checked=Date.parse(row.checkedAt||'');
+       const stale=!Number.isFinite(checked)||checked>now+60000||now-checked>36*3600000;
+       const kind=stale?'stale':row.status==='changed'&&HEX.test(row.baselineHash||'')
+          &&HEX.test(row.observedHash||'')&&Number.isFinite(Date.parse(row.changeAt||''))?'changed'
+          :row.status==='unavailable'?'unavailable':null;
+       if(kind)issues.push({bank,role:source.role,kind,url:source.url,
+         label:source.label,checkedAt:Number.isFinite(checked)&&checked<=now?row.checkedAt:''});
+     }
+   }
+   const order={changed:0,unavailable:1,stale:2};
+   issues.sort((a,b)=>order[a.kind]-order[b.kind]||a.bank.localeCompare(b.bank)||a.role.localeCompare(b.role));
+   return {ready:!!observed,issues,monitoredBanks:observed?Object.keys(watched.records).length:0};
+ }
+ let nextWatchAt=0;
+ function refreshWatch(force=false){
    if(loading)return loading;
+   if(!force&&Date.now()<nextWatchAt)return Promise.resolve(watched);
    if(typeof root.fetch!=='function')return Promise.resolve(null);
+   nextWatchAt=Date.now()+15*60000;
    const controller=typeof root.AbortController==='function'?new root.AbortController():null;
    loading=root.fetch('./data/quick-add-source-monitor.json',{cache:'no-store',credentials:'omit',
      ...(controller?{signal:controller.signal}:{})}).then(response=>{
@@ -111,11 +136,13 @@
        if(data?.schemaVersion!==1||!data.records||typeof data.records!=='object'
            ||Array.isArray(data.records)||Object.keys(data.records).length>12)throw Error('Unexpected source watch schema');
        watched=data;
-       try{if(typeof showTemplates!=='undefined'&&showTemplates&&typeof modal!=='undefined'&&!modal&&typeof R==='function')R();}catch{}
+       try{if((typeof tab!=='undefined'&&tab==='bonuses'||typeof showTemplates!=='undefined'&&showTemplates)
+             &&typeof R==='function')R();}catch{}
        return watched;
-     }).catch(()=>null);
+     }).catch(()=>null).finally(()=>{loading=null;});
    return loading;
  }
- root.BTQuickAddCatalog=Object.freeze({version:2,status,classify,records,reviewedSources,safeUrl,monitored,refreshWatch});
+ root.BTQuickAddCatalog=Object.freeze({version:2,status,classify,records,reviewedSources,
+   safeUrl,monitored,reviewQueue,refreshWatch});
 
 })(typeof window!=='undefined'?window:globalThis);
