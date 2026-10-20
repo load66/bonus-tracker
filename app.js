@@ -4522,7 +4522,7 @@ function R(){
   }
   h+='</div>';
   h+=detailActionBar;
-  if(tab==='tracker'&&!bt360Detail){
+  if(tab==='tracker'&&!bt360Detail&&!showTemplates&&!showAnalyzer){
     if(window.bt362AddOpen)h+='<div class="bt362-add-menu" role="group" aria-label="Add bonus actions"><button type="button" onclick="openTrackerTool(\'quick-add\')">Quick Add</button><button type="button" onclick="openTrackerTool(\'promo-terms\')">Review promo terms</button><button type="button" onclick="window.bt362AddOpen=false;openAdd()">Add account manually</button></div>';
     h+='<button class="fab bt362-add-fab" type="button" aria-label="Add bonus" aria-expanded="'+!!window.bt362AddOpen+'" onclick="window.bt362AddOpen=!window.bt362AddOpen;R()">+</button>';
   }
