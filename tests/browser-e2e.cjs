@@ -253,7 +253,7 @@ async function exercise(name,engine,url){
     await page.getByRole('button',{name:'Discard changes',exact:true}).click();
     await page.locator('.guided-modal').waitFor({state:'detached'});
     await page.locator('.bt362-add-fab').click();await button('Quick Add').click();
-    check('expired and alternate-path offers are labeled on Quick Add',await page.locator('#bt-quick-add-panel').innerText().then(t=>t.includes('Wells Fargo')&&t.includes('Expired example')&&t.includes('Capital One')&&t.includes('Multiple offer paths')));
+    check('expired and alternate-path offers are labeled on Quick Add',await page.locator('#bt-quick-add-panel').innerText().then(t=>t.includes('Wells Fargo')&&t.includes('Past $325 · Expired')&&t.includes('Capital One')&&t.includes('Past $250 · Variants')));
     check('Quick Add Citi identity uses locally stored bank logo',await page.getByRole('button',{name:'Citi historical example, Unverified example',exact:true}).locator('img[src="./bank-logos/citi.svg"]').count()===1);
     await page.getByRole('button',{name:'Citi historical example, Unverified example',exact:true}).click();
     check('historical bonus/fees/requirements never enter a new draft',await page.evaluate(()=>modal?.bonus===0&&modal?.earlyCloseFee===null&&modal?.churn===''&&modal?.dataPoint===''&&modal?.reqDays===0&&modal?.monthlyFeeYNText===''&&modal?.notes===''));
