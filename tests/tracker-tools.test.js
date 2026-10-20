@@ -48,8 +48,40 @@ s.addFromTpl(5); // Synthetic test of the Citi example; no provider call or pers
 assert.equal(run('modal.bank'),'Citi');
 assert.equal(run('modal.opened'),'','Choosing a template must not invent an account opening date');
 assert.equal(run('modal._fromTemplate'),true);
-assert.match(s.rModal(),/Sample offer details are not verified/,'Wizard explains that sample fields require current-source review');
+assert.match(s.rModal(),/Historical example — not a verified offer/,'Wizard explains historical-only fields');
 assert.equal(JSON.stringify([...storage]),beforeTemplate,'Selecting a template must not write financial records');
 run('closeModal()');
+// Exhaustive historical-sample safety: no old payout/fee/ACH/churn facts enter a new account.
+run('entries=[];tab="tracker";expanded=null;modal=null;showTemplates=true;');
+const templatesCount=run('TEMPLATES.length');
+assert.equal(templatesCount,12,'Intentional sample inventory changed: audit shortcuts before adding one');
+assert.match(s.rTracker([]),/Historical \$325 · Expired example/,'An expired promotion is explicitly labeled');
+assert.match(s.rTracker([]),/Historical \$250 · Multiple offer paths/,'Offer versions cannot be conflated');
+assert.match(s.rTracker([]),/Historical \$300 · Unverified example/);
+assert.equal(s.quickAddReviewStatus({bank:'Wells Fargo'}).checked,'2026-10-20');
+assert.match(s.quickAddReviewStatus({bank:'Capital One'}).note,/separate qualifying/);
+for(let i=0;i<templatesCount;i++){
+  run('modal=null;showTemplates=true');
+  const old=JSON.stringify([...storage]);
+  s.addFromTpl(i);
+  const draft=run('JSON.stringify(modal)');
+  const data=JSON.parse(draft);
+  const bank=run('TEMPLATES['+i+'].bank');
+  assert.equal(data.bank,bank,'Only bank identity may be copied');
+  for(const key of ['bonus','reqDays','minHoldDays','referralBonus']){
+    assert.equal(data[key],0,'Historical numeric term leaked: '+bank+' '+key);
+  }
+  for(const key of ['churn','opened','closed','dataPoint','notes','analyzedTC','monthlyFeeYNText','earlyTerminationFeeText','eligibilityText','promoCodeText','requiredDaysText','completeBonusText']){
+    assert.equal(data[key],'','Historical text/rule leaked: '+bank+' '+key);
+  }
+  assert.equal(data.earlyCloseFee,null,'Unknown early close fee cannot be $0 by default: '+bank);
+  assert.equal(data.churnable,null,'Historical churn rules cannot be certified: '+bank);
+  assert.equal(data.feeChecked,false,'No sample fee can be considered verified');
+  assert.equal(data._fromTemplate,true);
+  assert.equal(JSON.stringify([...storage]),old,'Selection must not persist any historical facts');
+  if(bank==='Wells Fargo')assert.match(s.rModal(),/October 13, 2026/,'Expiry requires an official offer check');
+  s.closeModal();
+}
+console.log('All historical templates are quarantined from new offer financial fields. No write.');
 console.log('Quick Add sample provenance and unknown opening-date regression PASS');
 process.exit(0);
