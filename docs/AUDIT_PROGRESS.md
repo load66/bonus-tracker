@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: Codex — v3.6.51 — codex/v3.6.51-dashboard-action-queue
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
