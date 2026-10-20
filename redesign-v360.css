@@ -862,3 +862,4 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 
 .bt362-tool-panel:focus-visible{outline:2px solid var(--mint);outline-offset:3px}
 .empty .btn-s{min-height:44px}
+.bt3654-account-empty .em{font-size:18px;font-weight:700;line-height:1.4;color:var(--text)}

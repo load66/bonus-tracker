@@ -4376,11 +4376,11 @@ function clearTrackerFilters(){
   clearTrackerSearch();
 }
 function renderAccountEmptyState(query){
-  if(query)return '<div class="empty"><div class="em">No matching accounts</div><p>No account matches “'+esc(query)+'”.</p><button type="button" class="btn-s" onclick="clearTrackerSearch()">Clear search</button></div>';
-  if(entries.length&&(window.BT360?.selectedStage||['personal','business'].includes(window.BT360?.audience)))return '<div class="empty"><div class="em">No accounts in this view</div><p>Try another account type or clear the filters.</p><button type="button" class="btn-s" onclick="clearTrackerFilters()">Show all accounts</button></div>';
-  if(entries.some(isArchivedTrackerEntry))return '<div class="empty"><div class="em">No active accounts</div><p>Completed, non-repeatable offers are saved in Archived accounts.</p><button type="button" class="btn-s" onclick="switchMainTab(\'archive\')">View archived accounts</button></div>';
-  if(entries.length)return '<div class="empty"><div class="em">No open accounts</div><p>Closed accounts and saved terms remain in Archive.</p><button type="button" class="btn-s" onclick="switchMainTab(\'archive\')">View Archive</button></div>';
-  return '<div class="empty"><div class="em">No accounts yet</div><p>Add an account or restore a backup.</p></div>';
+  if(query)return '<div class="empty bt3654-account-empty"><div class="em">No matching accounts</div><p>No account matches “'+esc(query)+'”.</p><button type="button" class="btn-s" onclick="clearTrackerSearch()">Clear search</button></div>';
+  if(entries.length&&(window.BT360?.selectedStage||['personal','business'].includes(window.BT360?.audience)))return '<div class="empty bt3654-account-empty"><div class="em">No accounts in this view</div><p>Try another account type or clear the filters.</p><button type="button" class="btn-s" onclick="clearTrackerFilters()">Show all accounts</button></div>';
+  if(entries.some(isArchivedTrackerEntry))return '<div class="empty bt3654-account-empty"><div class="em">No active accounts</div><p>Completed, non-repeatable offers are saved in Archived accounts.</p><button type="button" class="btn-s" onclick="switchMainTab(\'archive\')">View archived accounts</button></div>';
+  if(entries.length)return '<div class="empty bt3654-account-empty"><div class="em">No open accounts</div><p>Closed accounts and saved terms remain in Archive.</p><button type="button" class="btn-s" onclick="switchMainTab(\'archive\')">View Archive</button></div>';
+  return '<div class="empty bt3654-account-empty"><div class="em">No accounts yet</div><p>Add an account or restore a backup.</p></div>';
 }
 
 function runNextAccountMilestone(id){
