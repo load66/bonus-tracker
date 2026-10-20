@@ -120,7 +120,7 @@
   window.tcAnalyzerTrainingLoad=loadTrainingExamples;
   window.tcAnalyzerTrainingStats=trainingStats;
   window.tcOpenPro=openPro;
-  window.tcClosePro=()=>{const raw=document.getElementById('tca_raw');if(raw){try{analyzerText=raw.value}catch{}}document.getElementById('tca_overlay')?.remove();requestAnimationFrame(()=>document.getElementById('az_input')?.focus({preventScroll:true}));};
+  window.tcClosePro=()=>{const raw=document.getElementById('tca_raw');if(raw){try{analyzerText=raw.value}catch{}const input=document.getElementById('az_input');if(input)input.value=raw.value;}document.getElementById('tca_overlay')?.remove();requestAnimationFrame(()=>document.getElementById('az_input')?.focus({preventScroll:true}));};
   window.tcRunPro=function(){const raw=document.getElementById('tca_raw')?.value||findRaw();const r=analyze(raw);rerenderWizard(r);renderSummary()};
   window.tcV3SelectTier=function(i){const raw=document.getElementById('tca_raw')?.value||findRaw();const r=analyze(raw,{tierIndex:Number(i)});rerenderWizard(r)};
   window.tcApplyReviewed=applyReviewedFields;

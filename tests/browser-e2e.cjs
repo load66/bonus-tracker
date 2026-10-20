@@ -170,7 +170,9 @@ async function exercise(name,engine,url){
     }
     await page.setViewportSize({width:390,height:844});
     await page.screenshot({path:path.join(output,name+'-terms-review-390.png')});
+    await page.locator('#tca_raw').fill(termsDraft+' Edited draft.');
     await page.getByRole('button',{name:'Close terms review',exact:true}).click();
+    check('full review returns edited draft to the terms panel',await page.locator('#az_input').inputValue()===termsDraft+' Edited draft.');
     check('closing full terms review leaves accounts unchanged',await page.evaluate(()=>entries.length===0&&modal===null));
     await button('Close').click();
     await page.evaluate(()=>{analyzerText='';analyzerResult=null;});
