@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.52: compact dashboard summary and reserved Add bonus action bar.
-const V = 'bt-v3.6.52-layout1';
+// Version 3.6.53: accurate saved-source evidence and rule-validation labels.
+const V = 'bt-v3.6.53-evidence1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',

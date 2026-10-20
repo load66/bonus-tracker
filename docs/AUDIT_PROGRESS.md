@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: Codex — v3.6.53 evidence labels — codex/v3.6.53-evidence-status-labels
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.53 evidence status labels (`codex/v3.6.53-evidence-status-labels`): replace date-only official verification claim with separate document/link presence, recorded check date and canonical saved-rule validation labels. Preserve exact source text and Archive access; distinguish review text from original promotion. Missing, invalid and future dates remain unresolved; no arbitrary expiry on enrolled historical terms. No record, schema, canonical rule, backend or storage-key changes. Previous v3.6.52 PR #232 deployed at `eaaf59436658` with full passing CI, mobile screenshot review and exact production source/cache verification. Synthetic source-evidence regressions, full local bonus/cloud/UI suites and release verification PASS. Next: Chromium/WebKit checks, screenshot review, merge on green and verify Pages deployment.
 
 - v3.6.52 dashboard visual hierarchy (`codex/v3.6.52-dashboard-visual-hierarchy`): compact earnings summary while preserving all 12 accessible month buttons, receipt details and exact Tax-backed totals. Reserve Add bonus in a separate layout bar above navigation so card controls never scroll beneath it; retain the add menu, focused forms and Undo flow. No saved records, canonical rules, source evidence, backend or storage keys changed. Full local bonus/cloud/UI groups and release verification PASS. Added cross-width summary-height, reserved-space and real hit-target checks without reducing existing touch-target coverage. Previous v3.6.51 PR #231 deployed at `5522d135ae61` with passing main CI, inspected mobile screenshots and exact production runtime/style/cache verification. Next: Chromium/WebKit, mobile screenshot review, merge on green and exact Pages source/cache verification.
 
