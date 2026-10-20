@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: Codex — v3.6.50 — codex/v3.6.50-shared-requirement-dates
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.50 shared requirement dates (`codex/v3.6.50-shared-requirement-dates`): reproduced disagreement between structured deadlines and legacy day counters. One read-only date projection now supplies lifecycle urgency, action guidance, account headers, individual requirements and derived timers. Exact recorded anchors only; missing/conflicting enrollment, invalid dates, unsupported calendars and untimed structured requirements stay unresolved. Task-specific clocks remain separate from manual reminders. No schema, canonical rule meaning, source evidence, saved financial records, backend or persistent keys changed. Failing-before regression reproduced; full local bonus/cloud/UI groups and release verification PASS. Chromium/WebKit rendered deadline and no-write regressions added. Next: exact-head browser CI, merge on green and verify Pages release/cache.
 
 - v3.6.49 iCloud switch confirmation (`codex/v3.6.49-icloud-switch-confirmation`): fix confirmation overlay being hidden behind iCloud wizard; make unverified file errors and successful mode switch unmistakable on iPhone. All data/backup safety checks remain intact; add synthetic and mobile browser regression tests. PR #229: bonus/cloud/UI units passed; WebKit passed and Chromium recorded 467 browser assertions passed in run 39277460967. Next: final-head release verification, merge and Pages deployment. No saved data changed.
 
@@ -202,3 +204,4 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 - Release: v3.4.99, service worker bt-v3.4.99-classify1, unified classifier asset cache-busted
 - Merge: pending PR, CI and GitHub Pages production audit; preserves merged v3.4.98 zero-click SimpleFIN/Plaid integration
 - Handoff: Active agent none after finished code changes, with final verification still required
+

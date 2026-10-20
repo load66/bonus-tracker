@@ -105,8 +105,8 @@
     if(timer?.startDate&&timer?.daysRequired&&/business days?|statement (?:period|cycle)|\bmonths?\b|\byears?\b/i.test([timer.text,stage.kind==='requirement'?e.requiredDaysText:''].filter(Boolean).join(' ')))return unknown('the saved timer needs an exact calendar or statement date');
     if(timer?.date)return result(timer.date,(timer.startDate&&timer.daysRequired?dateText(timer.startDate)+' + '+timer.daysRequired+' calendar days':'Saved '+(stage.kind||'custom')+' timer')+' → '+dateText(timer.date));
     if(e.reqMet)return unknown('payout deadline is not saved; review the payout wording');
-    const date=typeof reqDeadline==='function'?reqDeadline(e):'';
-    return result(date,date?'Opened '+dateText(e.opened)+' + '+e.reqDays+' calendar days → '+dateText(date):'requirement deadline or opening date is missing')
+    if(typeof window.btRequirementDeadlineContext==='function')return window.btRequirementDeadlineContext(e);
+    return unknown('requirement deadline or opening date is missing')
   }
   function milestoneActionForEntry(e){
     const stage=stageFor(e),context=dateContext(e,stage);
@@ -181,7 +181,7 @@
       candidates=structured.filter(r=>!e.reqMet||r.recurrence).filter(r=>r.recurrence||!trackers.some(t=>t.done&&normalizedTask(t.text)===normalizedTask(r.text))).map(r=>{
         const compatible=trackers.filter(t=>!t.done&&activityKind(t.text)===r.kind);
         const linked=compatible.find(t=>normalizedTask(t.text)===normalizedTask(r.text))||(structured.filter(x=>x.kind===r.kind).length===1?compatible.filter(t=>t.source==='timer').sort((a,b)=>String(a.date||'9999').localeCompare(String(b.date||'9999')))[0]:null);
-        return {kind:r.kind,text:r.text,amount:r.amount,count:r.count,recurring:r.recurrence,linked};
+        return {kind:r.kind,text:r.text,amount:r.amount,count:r.count,recurring:r.recurrence,linked,context:window.btRequirementDeadlineContext?.(e,r)};
       });
     }else{
       candidates=trackers.filter(t=>!t.done&&!['payout','closure'].includes(activityKind(t.text))).map(t=>({kind:activityKind(t.text),text:t.text,linked:t}));
@@ -195,7 +195,7 @@
       }
     }
     const order={'enrollment':0,'new-money':1,'direct-deposit':2,'transactions':3,'balance-hold':4,'other':5};
-    candidates.sort((a,b)=>String(a.linked?.date||'9999').localeCompare(String(b.linked?.date||'9999'))||(order[a.kind]??9)-(order[b.kind]??9));
+    candidates.sort((a,b)=>String(a.linked?.date||a.context?.date||'9999').localeCompare(String(b.linked?.date||b.context?.date||'9999'))||(order[a.kind]??9)-(order[b.kind]??9));
     const task=candidates[0];
     if(!task)return base(next.kind==='requirements'?'Confirm all bonus requirements':'Review saved requirements',next.kind==='requirements'?'Confirm requirements':'View requirements',next.kind==='requirements'?'milestone':'lifecycle');
     const period=task.recurring?({'calendar-month':'monthly','statement-cycle':'per-statement','calendar-quarter':'quarterly','calendar-year':'annual'}[task.recurring.period]||'recurring'):(/monthly|each month|every month|per month/i.test(task.text)?'monthly':'');
@@ -207,6 +207,7 @@
     result.timerId=task.linked?.source==='timer'?task.linked.id:'';
     result.checklistIndex=task.linked?.source==='checklist'?task.linked.index:null;
     if(task.linked?.source==='timer')result.context=dateContext(e,{...stage,timer:task.linked,kind:task.kind==='direct-deposit'?'requirement':task.kind});
+    else if(task.context)result.context=task.context;
     else if(task.kind==='new-money'&&!task.linked)result.context={date:'',confirmed:false,explanation:'Funding deadline needs review in the saved terms.'};
     return result;
   }
@@ -276,3 +277,4 @@
   try{getAttentionSuggestions=smart}catch{}
   window.btSmartAttentionVersion=VER;
 })();
+
