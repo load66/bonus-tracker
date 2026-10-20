@@ -514,7 +514,7 @@ async function exercise(name,engine,url){
     check('source review never persists fixture changes',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,evidenceBefore.stored));
     await page.evaluate(before=>{entries[0]=JSON.parse(before);R();BT360.revealAccountSection('terms')},evidenceBefore.entry);
     await page.setViewportSize({width:390,height:844});
-    await page.locator('.bt360-source').scrollIntoViewIfNeeded();
+    await page.locator('.bt360-source').evaluate(n=>n.scrollIntoView({block:'nearest'}));
     check('sticky footer never covers last detail content',await page.evaluate(()=>{
       const content=document.querySelector('.bt360-source').getBoundingClientRect(),footer=document.querySelector('.bt360-detail-footer').getBoundingClientRect();
       return content.bottom<=footer.top+2;
