@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: codex - v3.6.56 - codex/v3.6.56-mobile-editor-ux
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.56 mobile editor (codex/v3.6.56-mobile-editor-ux, PR #236): Existing four wizard sections retain all fields and canonical decisions. Mobile navigation now shows four labeled, accessible 44px+ steps, fixed title, separately scrollable content and safe-area actions. Navigation resets scroll and focus; review errors link directly to correction. Unchanged editors close in one tap; changed drafts require explicit discard and remain intact on cancellation, without storing temporary form data. No financial-history, terms, provider, schema or storage-key changes. New synthetic no-write and browser assertions; app/service-worker version v3.6.56. Full bonus/cloud/UI suites and Chromium/WebKit PASS on PR head 2cc28d2 (run 39480199902); 320px editor screenshot inspected. Next: verify final handoff head, merge if green, confirm exact Pages source/cache deployment.
+
 
 - v3.6.55 form validation (`codex/v3.6.55-form-validation`, PR #235): existing account-entry guard now presents inline fields or form errors, focuses the error and keeps the draft. Live terms wizard rejects incomplete input with visible retry guidance, preserves the pasted draft, and prevents duplicate review. Save handler prevents repeat clicks and shows saving/retry feedback. New synthetic no-write, duplicate-submit and mobile terms-error regression tests; release/cache v3.6.55. No financial-rule, record/schema, backup provider or storage-key changes. Validation pending: full CI bonus/cloud/UI suites and Chromium/WebKit; merge only on green, then verify exact Pages asset/cache release.
 
