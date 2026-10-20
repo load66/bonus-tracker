@@ -69,6 +69,53 @@
   if(active)return{...base,status:'Official documents checked',short:'Checked',kind:'verified-active'};
   return base;
  }
- function status(bank,now){return classify(records[String(bank||'').trim()],now)}
- root.BTQuickAddCatalog=Object.freeze({version:1,status,classify,records,reviewedSources,safeUrl});
+ let watched=null,loading=null;
+ const HEX=/^[0-9a-f]{64}$/;
+ function monitored(bank,now=Date.now()){
+  const spec=records[bank],v=watched?.records?.[bank];
+  if(!spec||!v||v.offerKey!==spec.offerKey||!v.sources||typeof v.sources!=='object')return null;
+  const reasons=[];
+  for(const source of reviewedSources(spec)){
+   const item=v.sources[source.role];
+   if(!item||item.url!==source.url||!['baseline','unchanged','changed','unavailable'].includes(item.status))return null;
+   const checked=Date.parse(item.checkedAt||'');
+   if(!Number.isFinite(checked)||checked>now+60000||now-checked>36*3600000)return{status:'stale',note:'Scheduled source checks are overdue. Review the official page directly.'};
+   if(item.status==='changed'){
+     if(!HEX.test(item.baselineHash||'')||!HEX.test(item.observedHash||'')||!Number.isFinite(Date.parse(item.changeAt||'')))return null;
+     reasons.push('changed');
+   }else if(item.status==='unavailable')reasons.push('unavailable');
+   else if(!HEX.test(item.baselineHash||'')||!HEX.test(item.observedHash||''))return null;
+  }
+  return reasons.includes('changed')?{status:'changed',note:'An official promotion or fee page changed since the stored baseline. Reverify the exact offer and terms before applying.'}
+    :reasons.includes('unavailable')?{status:'unavailable',note:'An official source could not be checked. Its requirements and fees cannot be treated as current.'}
+    :{status:'observed',note:'Official pages were monitored, but automated fingerprints do not establish eligibility or verify promotion terms.'};
+ }
+ function status(bank,now=Date.now()){
+   bank=String(bank||'').trim();
+   const old=classify(records[bank],now),fresh=monitored(bank,now);
+   if(!fresh)return old;
+   if(fresh.status==='observed')return{...old,watchNote:fresh.note,watchState:'observed'};
+   if(old.kind==='expired')return{...old,watchNote:fresh.note,watchState:fresh.status};
+   return {...old,status:fresh.status==='changed'?'Source changed · recheck':'Source check pending',
+     short:'Recheck',kind:'stale',watchNote:fresh.note,watchState:fresh.status};
+ }
+ function refreshWatch(){
+   if(loading)return loading;
+   if(typeof root.fetch!=='function')return Promise.resolve(null);
+   const controller=typeof root.AbortController==='function'?new root.AbortController():null;
+   loading=root.fetch('./data/quick-add-source-monitor.json',{cache:'no-store',credentials:'omit',
+     ...(controller?{signal:controller.signal}:{})}).then(response=>{
+       if(!response.ok)throw Error('Source watch unavailable');
+       return response.json();
+     }).then(data=>{
+       if(data?.schemaVersion!==1||!data.records||typeof data.records!=='object'
+           ||Array.isArray(data.records)||Object.keys(data.records).length>12)throw Error('Unexpected source watch schema');
+       watched=data;
+       try{if(typeof showTemplates!=='undefined'&&showTemplates&&typeof modal!=='undefined'&&!modal&&typeof R==='function')R();}catch{}
+       return watched;
+     }).catch(()=>null);
+   return loading;
+ }
+ root.BTQuickAddCatalog=Object.freeze({version:2,status,classify,records,reviewedSources,safeUrl,monitored,refreshWatch});
+
 })(typeof window!=='undefined'?window:globalThis);

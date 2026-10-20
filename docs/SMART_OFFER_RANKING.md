@@ -15,3 +15,8 @@ Current-area defaults remain Missouri, with the state selector editable. Officia
 An official document alone cannot establish a user's personal bonus eligibility. Before applying, confirm product/account eligibility, prior/current customer disqualifications, location and membership, promo code, exact qualifying activity and deposit definitions, and the enrolled version. Only exact promotion-specific evidence may justify any such decision.
 
 No automatic offer action, bank application, account migration, or saved-terms override is performed. Unit and browser regression tests include a blocked high-dollar offer, a future-cooldown high-dollar offer, unverified large headlines, fixed versus up-to amounts, and zero personal financial writes.
+
+
+## New or modified offer holdback (v3.6.61)
+
+Offers with New, Increased, or Updated badges, or an evidence change record, remain in Requirements need review until the current exact official fixed bonus, eligibility, qualifying activity, and fee/waiver wording have been independently reviewed. Unverified large headlines and expired evidence cannot leap above stable current top matches. Sorting never writes tracker records.

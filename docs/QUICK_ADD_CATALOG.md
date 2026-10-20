@@ -32,3 +32,14 @@ Update the catalog via reviewed source changes and peer-reviewed releases. Compa
 For complete future imports, continue to follow `AGENTS.md`, `docs/IMPORT_STANDARD.md`, `docs/financial-rules-v1.md` and `docs/NEW_BANK_IMPORT_PLAYBOOK.md`, and run the entry validator. The Quick Add catalog deliberately never auto-generates imports or overwrites enrolled terms.
 
 CI: `node tests/quick-add-catalog.test.js`, full bonus/cloud/UI suites and Chromium/WebKit.
+
+
+## Automated official-page change monitoring (v3.6.61)
+
+The six-hour bank-feed publisher now runs a read-only source check against the curated Quick Add promotion and fee URLs in data/quick-add-source-manifest.json. scripts/watch-quick-add-sources.py allows only explicitly approved HTTPS bank hosts, rejects untrusted redirects, access challenges, and oversized responses, and fingerprints relevant publicly visible terms text rather than volatile scripts.
+
+A first successful observation creates a baseline: it is NOT verification. Subsequent differences raise a potential-change flag that remains until human review, even when an outage or reversion follows. Failed fetches are unavailable, never unchanged. HTML fingerprint changes are review signals, not evidence of a new reward, fee, or eligibility rule.
+
+Public results live only in data/quick-add-source-monitor.json: offer scope, URL, source status, timestamps, and SHA-256 fingerprints. No customer accounts, transactions, terms archives or tracker details are transmitted. Quick Add fetches this public read-only file and displays recheck notes for changed or unavailable sources. Expired historical offers stay expired. Actual account terms and private data never change.
+
+The monitor runs only on the six-hour schedule or manual workflow dispatch, not on post-deployment workflow_run events, avoiding deployment feedback loops. Manual review of the applicable official promotion and account fee schedule is required before advancing any status; a page hash never establishes personal eligibility.

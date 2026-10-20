@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "records": {
+    "Wells Fargo": {
+      "offerKey": "everyday-checking-325-2026-10-13",
+      "sources": [
+        {
+          "role": "promotion",
+          "url": "https://accountoffers.wellsfargo.com/checkingoffer/"
+        },
+        {
+          "role": "fees",
+          "url": "https://www.wellsfargo.com/mobile-online-banking/consumer-account-fees/"
+        }
+      ]
+    },
+    "Capital One": {
+      "offerKey": "360-checking-250-choice-2026",
+      "sources": [
+        {
+          "role": "promotion",
+          "url": "https://www.capitalone.com/bank/choose-your-offer/"
+        },
+        {
+          "role": "fees",
+          "url": "https://www.capitalone.com/bank/disclosures/checking-accounts/online-checking-account/"
+        }
+      ]
+    }
+  }
+}

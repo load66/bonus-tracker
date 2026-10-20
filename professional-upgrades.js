@@ -181,6 +181,7 @@
       h+='<div class="bt3657-template-note bt3658-trust-notice" role="note"><b>Historical example — not a verified offer</b><span>Only the bank and suggested account type were copied. Bonus, deposit requirements, fees, closure and churn eligibility remain unconfirmed. Review the applicable enrolled promotion and account fee schedule.</span>';
       if(status?.status)h+='<span class="bt3659-status">Catalog: '+html(status.status)+(status.checked?' · reviewed '+html(status.checked):' · not verified')+'</span>';
       if(status?.note)h+='<span>'+html(status.note)+'</span>';
+      if(status?.watchNote)h+='<span class="bt3661-monitor-note">'+html(status.watchNote)+'</span>';
       if(status?.sources?.length){
         h+='<div class="bt3659-source-list">';
         for(const source of status.sources)h+='<a href="'+html(source.url)+'" rel="noopener noreferrer" target="_blank">'+html(source.label)+' ↗</a>';

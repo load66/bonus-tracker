@@ -5,7 +5,7 @@ const vm=require('node:vm');
 const context=vm.createContext({window:{},URL,Date});
 vm.runInContext(fs.readFileSync('quick-add-catalog.js','utf8'),context,{filename:'quick-add-catalog.js'});
 const c=context.window.BTQuickAddCatalog;
-assert.equal(c.version,1);
+assert.equal(c.version,2);
 assert.equal(c.status('Wells Fargo',Date.parse('2026-10-20T12:00:00Z')).kind,'expired');
 assert.equal(c.status('Wells Fargo',Date.parse('2026-10-20T12:00:00Z')).checked,'2026-10-20');
 assert.equal(c.status('Capital One',Date.parse('2026-10-20T12:00:00Z')).kind,'changed');
@@ -43,5 +43,40 @@ assert.equal(c.classify({...base,endsAt:'2026-10-19'},today).kind,'expired','Exp
 assert.equal(c.classify({...base,sources:[{role:'promotion',url:'https://www.capitalone.com.evil.invalid'}]},today).kind,'unverified','Unsafe source cannot certify active offer');
 assert.equal(c.classify({...base,bank:'Unknown Bank'},today).kind,'unverified','Unknown brands cannot become sourced');
 assert.equal(Object.keys(c.records).length,2,'The initial sourced catalog has two officially reviewed examples, not twelve invented verifications');
+const manifest=JSON.parse(fs.readFileSync('data/quick-add-source-manifest.json','utf8'));
+assert.equal(manifest.schemaVersion,1);
+for(const [bank,item] of Object.entries(manifest.records)){
+ assert.equal(item.offerKey,c.records[bank].offerKey,'Monitor must match exact enrolled offer scope');
+ assert.equal(item.sources.map(x=>x.url).sort().join('|'),Array.from(c.reviewedSources(c.records[bank]),x=>x.url).sort().join('|'),'Monitored source URLs must equal reviewed catalog URLs');
+}
+
 assert.match(c.status('Capital One',today).note,/CHECKING250/);
 console.log('Source-backed catalog: verified-active strict gate, expiry, changed, stale, host isolation, historical fallback PASS');
+
+
+// The public watch never upgrades an example to active or writes account data.
+const checkedAt=new Date().toISOString();
+const wells=c.records['Wells Fargo'],capital=c.records['Capital One'];
+const records={};
+for(const offer of [wells,capital]){
+ const roles={};
+ for(const link of offer.sources)roles[link.role]={
+   url:link.url,status:'unchanged',baselineHash:'a'.repeat(64),observedHash:'a'.repeat(64),
+   observedAt:checkedAt,checkedAt,changeAt:null
+ };
+ records[offer.bank]={offerKey:offer.offerKey,sources:roles};
+}
+records['Capital One'].sources.promotion={
+ ...records['Capital One'].sources.promotion,
+ status:'changed',observedHash:'b'.repeat(64),changeAt:checkedAt
+};
+context.window.fetch=()=>Promise.resolve({ok:true,json:()=>Promise.resolve({schemaVersion:1,generatedAt:checkedAt,records})});
+c.refreshWatch().then(()=>{
+ assert.equal(c.status('Capital One').watchState,'changed');
+ assert.equal(c.status('Capital One').kind,'stale','Changed official source cannot be verified active');
+ assert.match(c.status('Capital One').watchNote,/official promotion or fee page changed/);
+ assert.equal(c.status('Wells Fargo').kind,'expired','Historical expiry must persist through source watch');
+ assert.equal(c.status('Wells Fargo').watchState,'observed');
+ assert.equal(c.status('Nonexistent Bank').kind,'unverified');
+ console.log('Catalog monitor projection PASS: source changes demote, valid expiration survives and other banks remain unknown');
+}).catch(err=>{console.error(err);process.exitCode=1});

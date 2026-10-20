@@ -241,6 +241,16 @@
       &&['listed','nationwide'].includes(geo.kind);
     if(blocked)return{level:3,kind:'blocked',reason:'Current eligibility or geographic scope requires attention.'};
     if(audience==='unverified')return{level:2,kind:'review',reason:'Product audience is not confirmed.'};
+    const changedOffer=offer.evidence?.changed===true||(offer.evidence?.changes||[]).length>0
+      ||(offer.badges||[]).some(b=>['New','Increased','Updated'].includes(b));
+    if(changedOffer){
+      const fields=offer.evidence?.fields||{};
+      const fullSourceReview=amountFor(offer)!==null&&!offer.evidence?.stale&&!offer.evidence?.changed
+        &&!(offer.evidence?.changes||[]).length&&fields.eligibility&&fields.qualifying_activity
+        &&(fields.monthly_fee||fields.fee_waiver);
+      if(!fullSourceReview)return{level:2,kind:'review',reason:'New or changed promotion: verify current official reward, fees and eligibility before ranking it as a top match.'};
+    }
+
     if(official)return{level:0,kind:'review-first',reason:'Official state coverage matches and no known tracker restriction blocks review. Personal bonus eligibility remains unverified.'};
     return{level:1,kind:'possible',reason:'Review current promotion, location, customer exclusions and qualifying requirements before applying.'};
   }

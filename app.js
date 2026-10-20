@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.60';
+const APP_VERSION='3.6.61';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -3446,6 +3446,7 @@ const TEMPLATES=[{bank:"Chase",bonus:300,churn:"2",notes:"$1,000 DD within 90 da
 function quickAddReviewStatus(t){
   const bank=String(t?.bank||'');
   const catalog=window.BTQuickAddCatalog;
+  catalog?.refreshWatch?.();
   // The catalog is the only authoritative source for CURRENT research labels.
   // Failure to load catalog never falls back to historical claims.
   return catalog?.status?.(bank)||{status:'Unverified example',short:'Unverified',kind:'unverified',note:'No current offer has been verified for this shortcut.',checked:'',url:'',sources:[],changedFields:[]};
