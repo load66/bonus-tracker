@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: codex — v3.6.61 — codex/v3.6.61-offer-source-monitor
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
