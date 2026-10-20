@@ -5144,7 +5144,7 @@ function saveEntry(){
   if(d.schemaVersion===3&&!d.financialRules||financial&&!financial.ok)return modalError('general','Financial rules need verification before saving. '+(financial?.issues.map(x=>x.message).join(' ')||'Structured rules are missing.'))
   const eligibility=churnEligibilityValidation(d);
   if(!modal._edit&&!eligibility.ok){
-    return modalError(churnDecisionForEntry(d)==='repeatable'&&!d.churn?'churn':'eligibility','Verify eligibility using the saved promotion terms. '+(eligibility.reason||'Review the repeatability, cooldown, and eligibility clock.'))
+    return modalError(churnDecisionForEntry(d)==='repeatable'&&!d.churn?'churn':'eligibility','Cannot open/save this bonus yet. Churn eligibility must be proven by the T&C. '+(eligibility.reason||'Review the repeatability, cooldown, and eligibility clock.'))
   }
   if(modal._edit){
     const existing=entries.find(e=>e.id===modal.id);
