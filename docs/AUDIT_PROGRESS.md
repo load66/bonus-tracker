@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: codex — v3.6.63 — codex/v3.6.63-quick-add-scroll
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.63 Quick Add reliable navigation (`codex/v3.6.63-quick-add-scroll`): post-merge Chromium regression after source monitor public feed changes identified a transient Quick Add visibility issue; opening Quick Add or Review promo terms now positions and focuses the actual panel synchronously with instant scroll and one frame reconciliation, instead of starting a smooth async scroll that may still be outside the viewport when the user begins interaction. Preserves existing browser visible-panel assertion, mobile editor controls, records, backups and source monitor. Bumps app + service-worker cache. Next: all unit suites, Chromium/WebKit full checks, release verifier, merge, verify main deployment.
+
 
 - v3.6.62 source review queue (`codex/v3.6.62-offer-review-queue`): fixes uninitialized public official-source watch by seeding once on the first verified release while preventing workflow-triggered update loops; scheduled six-hour checks continue normally. Adds bounded 15-minute read-only refresh and a compact expandable Bank Offers review queue for changed, unavailable, or overdue official promotion/fee URLs; links are always from curated bank-approved sources, never remote snapshot URLs. Future-dated snapshots cannot certify a source review; no historical entries, fee or churn rules, eligibility engine, persistent user keys or backend are touched. Added mocked public source/TTL/future-clock regressions, workflow safety tests, docs and v3.6.62 app/service-worker cache. Next: full bonus/cloud/UI unit and Chromium/WebKit browser verification, merge on green, confirm verified GitHub Pages and source watch initialization after release.
 
