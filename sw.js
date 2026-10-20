@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.60: eligibility-safe highest bonus sorting.
-const V = 'bt-v3.6.60-sort1';
+// Version 3.6.61: official source page change watcher and verified ranking guard.
+const V = 'bt-v3.6.61-watch1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
