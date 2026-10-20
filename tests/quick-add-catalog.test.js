@@ -108,8 +108,12 @@ async function watchQueueRegression(){
   const sandbox=vm.createContext({window:root,URL,Date,Promise});
   vm.runInContext(fs.readFileSync('quick-add-catalog.js','utf8'),sandbox,{filename:'quick-add-catalog.js'});
   const api=root.BTQuickAddCatalog;
+  let rerenders=0;
+  sandbox.tab='tracker';sandbox.showTemplates=true;
+  sandbox.R=()=>{rerenders++};
   assert.equal(api.reviewQueue().ready,false,'Absent source snapshot cannot imply cleared status');
   await api.refreshWatch();
+  assert.equal(rerenders,0,'Source monitoring may not redraw Quick Add asynchronously');
   const review=api.reviewQueue();
   assert.equal(review.ready,true);
   assert.equal(review.issues.length,2);
@@ -129,7 +133,9 @@ async function watchQueueRegression(){
   assert.equal(api.status('Wells Fargo').watchState,'unavailable','Expired offers retain source-check warning');
   await api.refreshWatch();
   assert.equal(calls,1,'Ordinary rerenders reuse snapshot for 15 minutes');
+  sandbox.tab='bonuses';sandbox.showTemplates=false;
   await api.refreshWatch(true);
+  assert.equal(rerenders,1,'Bank Offers may refresh its source queue live');
   assert.equal(calls,2,'Explicit refresh may update source snapshot');
   assert.equal(api.reviewQueue(Date.now()+38*3600000).issues.length,4,
     'Expired check timestamps cannot be silently treated as current');
