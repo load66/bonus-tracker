@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.61: official source page change watcher and verified ranking guard.
-const V = 'bt-v3.6.61-watch1';
+// Version 3.6.62: official source review queue and one-time watch initialization.
+const V = 'bt-v3.6.62-queue1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
