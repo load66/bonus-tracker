@@ -79,7 +79,8 @@
    const item=v.sources[source.role];
    if(!item||item.url!==source.url||!['baseline','unchanged','changed','unavailable'].includes(item.status))return null;
    const checked=Date.parse(item.checkedAt||'');
-   if(!Number.isFinite(checked)||checked>now+60000||now-checked>36*3600000)return{status:'stale',note:'Scheduled source checks are overdue. Review the official page directly.'};
+   if(Number.isFinite(checked)&&checked>now+60000)return null; // Future snapshot is not current monitoring evidence.
+   if(!Number.isFinite(checked)||now-checked>36*3600000)return{status:'stale',note:'Scheduled source checks are overdue. Review the official page directly.'};
    if(item.status==='changed'){
      if(!HEX.test(item.baselineHash||'')||!HEX.test(item.observedHash||'')||!Number.isFinite(Date.parse(item.changeAt||'')))return null;
      reasons.push('changed');
