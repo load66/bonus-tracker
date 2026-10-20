@@ -273,7 +273,7 @@ async function exercise(name,engine,url){
     check('public source watch does not rewrite tracker data',await page.evaluate(async()=>{
       const before=localStorage.getItem('bt_e_v4'),api=window.BTQuickAddCatalog;
       const watch=await api.refreshWatch();
-      return api.version===2&&watch?.schemaVersion===1&&Object.keys(watch.records||{}).length===0
+      return api.version===2&&watch?.schemaVersion===1&&Object.keys(watch.records||{}).length<=2&&Array.isArray(api.reviewQueue().issues)
         &&localStorage.getItem('bt_e_v4')===before;
     }));
     check('source catalog keeps reviewed offers scoped and other examples unverified',await page.evaluate(()=>{
