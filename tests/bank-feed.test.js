@@ -115,7 +115,7 @@ const rows=[{bank:'Soon Bank',closed:'2026-01-01',reviewDate:'2026-11-01'}, {ban
 const discovery=['[CA only] Ready Bank $300 Checking Bonus','Later Bank $400 Checking Bonus','New Bank $300 Checking Bonus','Soon Bank $300 Checking Bonus','Ready Bank $500 Checking Bonus','Open Bank $250 Checking Bonus','Once Bank $300 Checking Bonus','Unknown Bank $100 Checking Bonus','Chase Bank $500 Business Checking Bonus'].map((title,i)=>({title,publishedAt:'2026-10-13T12:00:00Z',url:'https://example.test/'+i}));
 const snapshot=JSON.stringify(rows);
 const ordered=priority.prioritize(discovery,rows,'MO',context);
-assert.equal(ordered[0].priorityGroup,'ready');
+assert.equal(ordered[0].priorityGroup,'explore','Tracker review readiness alone is not proof of personal eligibility');
 assert.equal(ordered.at(-1).geo.kind,'outside','Regional mismatch overrides tracker readiness');
 assert.equal(ordered.find(x=>x.title.startsWith('Open')).match.kind,'review');
 assert.equal(ordered.find(x=>x.title.startsWith('Once')).match.kind,'review');
@@ -129,6 +129,32 @@ assert.equal(priority.prioritize(discovery,rows,'MO',context,'area').some(x=>x.g
 assert.equal(priority.prioritize(discovery,rows,'MO',context,'tracker').every(x=>!!x.match),true);
 assert.equal(JSON.stringify(rows),snapshot,'Ranking must not mutate account records');
 assert.equal(JSON.stringify([...storage]),before,'Personal discovery must not change persisted financial data');
+
+// Eligibility-first smart sorter: bonus amount cannot override blockers.
+const dollar=String.fromCharCode(36);
+const smartProof={status:'verified',rules:[],conditions:[],nationwide:true};
+const smartBonus=n=>({status:'evidence-found',stale:false,fields:{bonus:{value:dollar+n}}});
+const smartOffer=(bank,amount,scope=true,opts={})=>({title:bank+' '+dollar+amount+' Checking Bonus',bank,product:'checking',amount,groupKey:'sort-'+bank,
+  publishedAt:'2026-10-13T12:00:00Z',url:'https://example.test/smart-'+bank,availability:'unknown',
+  evidence:smartBonus(amount),...(scope?{officialAvailability:smartProof}:{}),...opts});
+const smartRows=[{bank:'Closed Bank',accountType:'personal',closed:'',reviewDate:'2026-01-01'},
+ {bank:'Future Bank',accountType:'personal',closed:'2026-01-01',reviewDate:'2026-11-01'}];
+const smartBefore=JSON.stringify(smartRows);
+const smartSorted=priority.prioritize([
+ smartOffer('SafeA',600),smartOffer('SafeB',900),smartOffer('SafeC',950,true,{rewardIsUpperBound:true}),
+ smartOffer('NoScope',1200,false),smartOffer('Closed Bank',5000),smartOffer('Future Bank',4000)
+],smartRows,'MO',context);
+assert.deepEqual(smartSorted.slice(0,3).map(x=>x.bank),['SafeB','SafeA','SafeC'],
+ 'Largest proven fixed bonus leads above tiered up-to offers');
+assert.equal(smartSorted.find(x=>x.bank==='NoScope').priorityGroup,'explore');
+assert.equal(smartSorted.find(x=>x.bank==='Closed Bank').priorityGroup,'review');
+assert.equal(smartSorted.find(x=>x.bank==='Future Bank').priorityGroup,'next');
+assert.equal(smartSorted[0].priorityGroup,'best');
+assert.match(smartSorted[0].fit.reason,/eligibility remains unverified/);
+assert.equal(priority.offerFit(smartOffer('Test',1500),{kind:'outside'},null).kind,'blocked');
+assert.equal(JSON.stringify(smartRows),smartBefore,'Ranking must not mutate account history');
+assert.equal(JSON.stringify([...storage]),before,'Sorting must not write financial records');
+console.log('Smart sorter PASS: highest proven bonus first, blocked high offers demoted, no writes');
 console.log('Personal discovery passed: state evidence, unknown availability, audience/product separation, latest restriction, stable ordering and read-only records');
 
 assert.equal(priority.match({title:'Soon Bank $300 Checking Bonus'},[{bank:'Soon Bank',closed:'2026-01-01',reviewDate:'2026-02-30'}],context).kind,'review','Invalid dates must not produce readiness');

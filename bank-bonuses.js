@@ -224,17 +224,54 @@
     const ready=date<=context.today;
     return{kind:ready?'ready':'next',bank,date,label:ready?'Tracker date reached':'Next tracker review',detail:'Tracker review date '+date+'. Confirm the new offer’s terms, account type and eligibility before applying.'};
   }
+  // Conservative ranking: no source supports claiming PERSONAL bonus eligibility.
+  // A confirmed tracker review date only clears one potential lookback blocker.
+  // Strong official state coverage + no known blockers leads, then monetary value.
+  function rankingAmount(offer){
+    const verified=amountFor(offer);
+    if(Number.isFinite(verified)&&verified>0)return{value:verified,proven:true,ceiling:!!offer?.rewardIsUpperBound};
+    const sourceReported=Number.isSafeInteger(offer?.amount)&&offer.amount>0?offer.amount:null;
+    return{value:sourceReported,proven:false,ceiling:!!offer?.rewardIsUpperBound};
+  }
+  function offerFit(offer,geo,match){
+    const audience=offerAudience(offer);
+    const blocked=geo.kind==='outside'||geo.kind==='expired'
+      ||match?.kind==='next'||match?.kind==='review';
+    const official=geo.proof?.status==='verified'&&geo.proof?.conditions?.length===0
+      &&['listed','nationwide'].includes(geo.kind);
+    if(blocked)return{level:3,kind:'blocked',reason:'Current eligibility or geographic scope requires attention.'};
+    if(audience==='unverified')return{level:2,kind:'review',reason:'Product audience is not confirmed.'};
+    if(official)return{level:0,kind:'review-first',reason:'Official state coverage matches and no known tracker restriction blocks review. Personal bonus eligibility remains unverified.'};
+    return{level:1,kind:'possible',reason:'Review current promotion, location, customer exclusions and qualifying requirements before applying.'};
+  }
   function prioritize(rows,tracker,selected,context,filter='all'){
     return rows.map((offer,index)=>{
       const geo=geography(offer,selected),match=trackerMatch(offer,tracker,context);
-      const group=geo.kind==='outside'?'outside':match?.kind==='ready'?'ready':match?.kind==='next'?'next':match?'review':'explore';
-      return{...offer,geo,match,priorityGroup:group,index};
+      const fit=offerFit(offer,geo,match),reward=rankingAmount(offer);
+      const group=geo.kind==='outside'?'outside':
+        match?.kind==='next'?'next':match?.kind==='review'?'review':
+        fit.kind==='review-first'?'best':fit.kind==='review'?'review':'explore';
+      return{...offer,geo,match,fit,reward,priorityGroup:group,index};
     }).filter(x=>x.geo.kind!=='expired'&&(filter==='all'||filter==='tracker'&&!!x.match||filter==='area'&&x.geo.kind!=='outside'))
-      .sort((a,b)=>({ready:0,next:1,explore:2,review:3,outside:4}[a.priorityGroup]-{ready:0,next:1,explore:2,review:3,outside:4}[b.priorityGroup])||
-        (['ready','explore'].includes(a.priorityGroup)?(Number(b.badges?.includes('Increased'))-Number(a.badges?.includes('Increased'))||Number(b.badges?.includes('New'))-Number(a.badges?.includes('New'))):0)||
-        (a.priorityGroup==='next'?(a.match.date.localeCompare(b.match.date)):0)||
-        ({listed:0,nationwide:0,conditional:1,unknown:1,outside:2}[a.geo.kind]-{listed:0,nationwide:0,conditional:1,unknown:1,outside:2}[b.geo.kind])||
-        (Date.parse(b.publishedAt)-Date.parse(a.publishedAt))||a.index-b.index);
+      .sort((a,b)=>{
+        const groupOrder={best:0,explore:1,next:2,review:3,outside:4};
+        const g=groupOrder[a.priorityGroup]-groupOrder[b.priorityGroup];
+        if(g)return g;
+        if(a.priorityGroup==='next'){
+          const dateCompare=(a.match?.date||'9999').localeCompare(b.match?.date||'9999');
+          if(dateCompare)return dateCompare;
+        }
+        // Exact official reward proof outranks an unverified headline; within
+        // comparable evidence, higher bonus dollars always come first.
+        if(a.reward.proven!==b.reward.proven)return Number(b.reward.proven)-Number(a.reward.proven);
+        if(a.reward.ceiling!==b.reward.ceiling)return Number(a.reward.ceiling)-Number(b.reward.ceiling);
+        if(a.reward.value===null&&b.reward.value!==null)return 1;
+        if(b.reward.value===null&&a.reward.value!==null)return -1;
+        if(a.reward.value!==b.reward.value)return (b.reward.value||0)-(a.reward.value||0);
+        if(a.priorityGroup==='best'&&a.match?.kind!==b.match?.kind)return a.match?.kind==='ready'?-1:b.match?.kind==='ready'?1:0;
+        const recency=(Date.parse(b.publishedAt)||0)-(Date.parse(a.publishedAt)||0);
+        return recency||a.index-b.index;
+      });
   }
   function trackerContext(){
     try{return {rows:typeof entries!=='undefined'?entries:[],family:name=>typeof normalizeBankFamily==='function'?normalizeBankFamily(name):normalize(name),audience:e=>typeof entryBankType==='function'&&entryBankType(e)==='B'?'business':'personal',nonrepeat:e=>typeof isNonRepeatableEntry==='function'&&isNonRepeatableEntry(e),ready:e=>typeof window.churnReadyDate==='function'?window.churnReadyDate(e):'',today:typeof td==='function'?td():new Date().toISOString().slice(0,10)};}catch{return{rows:[]};}
@@ -304,7 +341,7 @@
     h+='</div></details>';
     h+='<input id="radar-search" class="sinput bt362-search" aria-label="Search banks and offers" placeholder="Search bank bonuses…" value="'+escape(query)+'" oninput="btRadarSearch(this.value,this.selectionStart)">';
     h+='<div class="bt360-offer-pills" role="group" aria-label="Offer types">'+[['all','All'],['checking','Checking'],['savings','Savings'],['business','Business'],['near','Near me']].map(([v,label])=>'<button type="button" aria-pressed="'+(categoryFilter===v)+'" class="'+(categoryFilter===v?'active':'')+'" onclick="btRadarOfferPill(\''+v+'\')">'+label+'</button>').join('')+'</div>';
-    h+='<details class="bt362-offer-filter-disclosure"'+(filtersExpanded?' open':'')+'><summary>Offer filters</summary><section class="radar-filters radar-personal-filters" aria-label="Offer preferences"><div class="radar-filter-grid"><div><label for="radar-area">Your area</label><select id="radar-area" onchange="btRadarArea(this.value)"><option value=""'+(!area?' selected':'')+'>Choose a state</option>'+Object.entries(states).map(([code,name])=>'<option value="'+code+'"'+(area===code?' selected':'')+'>'+name+'</option>').join('')+'</select></div><div><label for="radar-availability">Availability</label><select id="radar-availability" onchange="btRadarAvailability(this.value)">'+[['all','All bank offers'],['nationwide','Reported nationwide'],['regional','Reported regional'],['unknown','Availability unclear']].map(([v,l])=>'<option value="'+v+'"'+(availabilityFilter===v?' selected':'')+'>'+l+'</option>').join('')+'</select></div></div><div class="radar-priority-tabs" role="group" aria-label="Offer priority">'+[['all','For you'],['tracker','Churn matches'],['area','Hide out-of-area']].map(([v,l])=>'<button type="button" aria-pressed="'+(priorityFilter===v)+'" onclick="btRadarPriority(\''+v+'\')">'+l+'</button>').join('')+'</div><p>Sorted by tracker review dates and reported availability. Verify eligibility before applying.</p></section></details>';
+    h+='<details class="bt362-offer-filter-disclosure"'+(filtersExpanded?' open':'')+'><summary>Offer filters</summary><section class="radar-filters radar-personal-filters" aria-label="Offer preferences"><div class="radar-filter-grid"><div><label for="radar-area">Your area</label><select id="radar-area" onchange="btRadarArea(this.value)"><option value=""'+(!area?' selected':'')+'>Choose a state</option>'+Object.entries(states).map(([code,name])=>'<option value="'+code+'"'+(area===code?' selected':'')+'>'+name+'</option>').join('')+'</select></div><div><label for="radar-availability">Availability</label><select id="radar-availability" onchange="btRadarAvailability(this.value)">'+[['all','All bank offers'],['nationwide','Reported nationwide'],['regional','Reported regional'],['unknown','Availability unclear']].map(([v,l])=>'<option value="'+v+'"'+(availabilityFilter===v?' selected':'')+'>'+l+'</option>').join('')+'</select></div></div><div class="radar-priority-tabs" role="group" aria-label="Offer priority">'+[['all','For you'],['tracker','Churn matches'],['area','Hide out-of-area']].map(([v,l])=>'<button type="button" aria-pressed="'+(priorityFilter===v)+'" onclick="btRadarPriority(\''+v+'\')">'+l+'</button>').join('')+'</div><p>Smart default: official area match, no known tracker blocker, then highest documented bonus. Personal eligibility must be confirmed.</p></section></details>';
     const context=trackerContext();
     if(window.BT360)context.rows=context.rows.filter(e=>window.BT360.scope(e));
     const upcoming=context.rows.filter(e=>e.closed&&!context.nonrepeat(e)&&context.ready(e)).sort((a,b)=>context.ready(a).localeCompare(context.ready(b)));
@@ -318,14 +355,14 @@
     const visible=prioritize(matches,context.rows,area,context,priorityFilter);
     h+='<div class="radar-count">'+visible.length+' matching offers · '+escape(audience==='all'?'Personal + Business':audience)+' view · '+feed.offers.length+' source posts checked <button type="button" class="bt362-filter-jump" onclick="btRadarOpenFilters()">Filters</button></div>';
     if(!visible.length)h+='<p>No offers match these filters. Adjust your search or filters.</p>';
-    const groupLabels={ready:'Eligible for you',next:'Not eligible yet',explore:'Other offers · eligibility unverified',review:'Needs eligibility review',outside:'Outside your selected area'};
+    const groupLabels={best:'Top matches · highest bonus first',next:'Tracker cooldown pending',explore:'More bonuses · eligibility unverified',review:'Requirements need review',outside:'Outside your selected area'};
     let lastGroup='';
     const counts={};visible.forEach(offer=>{counts[offer.priorityGroup]=(counts[offer.priorityGroup]||0)+1});
     visible.forEach(x=>{
       if(x.priorityGroup!==lastGroup){
         if(lastGroup)h+='</div>';
         lastGroup=x.priorityGroup;
-        h+='<div class="bt362-group-title"><h2 class="radar-group-heading">'+groupLabels[lastGroup]+'</h2><span>'+counts[lastGroup]+'</span></div>'+(lastGroup==='ready'?'<p class="bt362-group-note">Tracker review date reached · personal eligibility requires verifying current terms.</p>':lastGroup==='next'?'<p class="bt362-group-note">Your tracker shows a future review date, not an approved application date.</p>':'');
+        h+='<div class="bt362-group-title"><h2 class="radar-group-heading">'+groupLabels[lastGroup]+'</h2><span>'+counts[lastGroup]+'</span></div>'+(lastGroup==='best'?'<p class="bt362-group-note">Official state coverage checked · no known tracker blocker. These are not confirmed personal eligibility; verify the exact terms.</p>':lastGroup==='next'?'<p class="bt362-group-note">Your tracker review date is still in the future. This is not a new offer approval.</p>':lastGroup==='explore'?'<p class="bt362-group-note">Source-reported amounts and availability are not yet enough to confirm eligibility.</p>':'');
         h+='<div class="bt362-offer-group" role="list">';
       }
       const link=x.links[0],date=x.match?.date;
@@ -349,7 +386,7 @@
     if(lastGroup)h+='</div>';
     return h;
   };
-  window.BTBankBonusFeed={validate:valid,group:grouped,filter:filtered,offerAudience,offersForAudience,matchesCategory,checkedAge,evidence:evidenceFor,amount:amountFor,geography,match:trackerMatch,prioritize,availability:availabilityFor,priorityIdentifiers};
+  window.BTBankBonusFeed={validate:valid,group:grouped,filter:filtered,offerAudience,offersForAudience,matchesCategory,checkedAge,evidence:evidenceFor,amount:amountFor,rankingAmount,offerFit,geography,match:trackerMatch,prioritize,availability:availabilityFor,priorityIdentifiers};
   // While the tab stays open, refresh the published snapshot without re-entering anything.
   const officialPoll=setInterval(()=>{if(typeof tab!=='undefined'&&tab==='bonuses')refreshOfficial();},60000);
   if(officialPoll&&typeof officialPoll.unref==='function')officialPoll.unref();

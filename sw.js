@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.59: independent official-source reviewed catalog and strict offer status gates.
-const V = 'bt-v3.6.59-catalog1';
+// Version 3.6.60: eligibility-safe highest bonus sorting.
+const V = 'bt-v3.6.60-sort1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',

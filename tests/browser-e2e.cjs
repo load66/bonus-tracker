@@ -252,6 +252,23 @@ async function exercise(name,engine,url){
     check('edited account requires explicit discard',await page.getByRole('button',{name:'Discard changes',exact:true}).isVisible());
     await page.getByRole('button',{name:'Discard changes',exact:true}).click();
     await page.locator('.guided-modal').waitFor({state:'detached'});
+    const smartStoredBefore=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
+    check('smart sorter places highest supported candidate before known blockers',await page.evaluate(()=>{
+      const api=window.BTBankBonusFeed;
+      const proof={status:'verified',rules:[],conditions:[],nationwide:true};
+      const cash=String.fromCharCode(36);
+      const make=(bank,amount,scoped=true)=>({bank,title:bank+' '+cash+amount+' Checking Bonus',product:'checking',amount,
+        groupKey:'test-smart-'+bank,publishedAt:'2026-10-09T12:00:00Z',availability:'unknown',
+        ...(scoped?{officialAvailability:proof}:{})});
+      const context={today:'2026-10-11',family:x=>x.toLowerCase(),audience:x=>x.accountType||'personal',
+        nonrepeat:x=>false,ready:x=>x.reviewDate||''};
+      const result=api.prioritize([make('Alpha',400),make('Beta',900),make('Gamma',2000,false),make('Delta',5000)],
+        [{bank:'Delta',accountType:'personal',closed:'',reviewDate:'2026-01-01'}],'MO',context);
+      return result[0].bank==='Beta'&&result[0].priorityGroup==='best'&&result[1].bank==='Alpha'
+        &&result.find(x=>x.bank==='Delta').priorityGroup==='review'
+        &&result.find(x=>x.bank==='Gamma').priorityGroup==='explore';
+    }));
+    check('smart sort never updates saved financial records',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,smartStoredBefore));
     await page.locator('.bt362-add-fab').click();await button('Quick Add').click();
     check('source catalog keeps reviewed offers scoped and other examples unverified',await page.evaluate(()=>{
       const c=window.BTQuickAddCatalog;
@@ -863,7 +880,11 @@ async function exercise(name,engine,url){
     await page.getByPlaceholder('Search bank bonuses…').fill('Wells Fargo');
     check('search preserves typed input and focus',await page.getByPlaceholder('Search bank bonuses…').inputValue()==='Wells Fargo'&&await page.evaluate(()=>document.activeElement.id==='radar-search'));
     await page.getByRole('button',{name:'All banks',exact:true}).click();
-    check('tracker churn match ranks above discovery posts',(await page.locator('.radar-card').first().innerText()).includes('U.S. Bank'));
+    check('fresh official state match leads over a pending churn review',
+      (await page.locator('.radar-card').first().innerText()).includes('Wells Fargo'));
+    check('tracked pending churn stays visible below an applicable officially scoped offer',
+      await page.locator('.radar-card').filter({hasText:'U.S. Bank'}).count()===1
+      &&(await page.locator('.radar-card').filter({hasText:'U.S. Bank'}).first().innerText()).includes('Next tracker review'));
     check('known regional mismatch ranks last',(await page.locator('.radar-card').last().innerText()).includes('Regional E2E Bank')&&(await page.locator('.radar-card').last().innerText()).includes('Outside your area'));
     await page.getByRole('button',{name:'Churn matches',exact:true}).click();
     check('churn filter uses read-only tracker match',await page.locator('.radar-card').count()===1&&(await page.locator('.radar-card').innerText()).includes('Next tracker review'));
