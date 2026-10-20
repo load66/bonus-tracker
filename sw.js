@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.56: protected editor drafts and touch-sized mobile steps.
-const V = 'bt-v3.6.56-mobile1';
+// Version 3.6.57: Quick Add templates leave unconfirmed opening dates blank.
+const V = 'bt-v3.6.57-template1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',

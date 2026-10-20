@@ -41,4 +41,15 @@ assert.match(s.renderAccountEmptyState(''),/No open accounts/);
 run('entries=[]');assert.match(s.renderAccountEmptyState(''),/No accounts yet/);
 assert.equal(JSON.stringify([storage.get('bt_e_v4'),storage.get('bt_tc_archive_v1')]),financialBefore,'Disclosure and filters never write financial records');
 console.log('Keyboard/search polish passed: dismissible disclosure, honest empty views and read-only recovery.');
+// Quick Add templates contain sample offers, never verified lifecycle events.
+run('entries=[];tab="tracker";expanded=null;modal=null;showTemplates=true;');
+const beforeTemplate=JSON.stringify([...storage]);
+s.addFromTpl(5); // Synthetic test of the Citi example; no provider call or persisted record.
+assert.equal(run('modal.bank'),'Citi');
+assert.equal(run('modal.opened'),'','Choosing a template must not invent an account opening date');
+assert.equal(run('modal._fromTemplate'),true);
+assert.match(s.rModal(),/Sample offer details are not verified/,'Wizard explains that sample fields require current-source review');
+assert.equal(JSON.stringify([...storage]),beforeTemplate,'Selecting a template must not write financial records');
+run('closeModal()');
+console.log('Quick Add sample provenance and unknown opening-date regression PASS');
 process.exit(0);

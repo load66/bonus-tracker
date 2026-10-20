@@ -935,3 +935,7 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
   .guided-progress{gap:4px}
   .guided-header .m-id{display:none}
 }
+
+/* v3.6.57: accurate Quick Add previews without adding modal clutter. */
+.bt3657-template-note{margin:0 0 12px;padding:10px 12px;border-left:3px solid var(--amber);border-radius:8px;background:#1b1b20;color:var(--text);font-size:12px;line-height:1.55}
+.bt362-tool-panel .bt3651-tool-head p{max-width:36ch}
