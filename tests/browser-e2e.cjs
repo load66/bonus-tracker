@@ -176,8 +176,13 @@ async function exercise(name,engine,url){
     await page.locator('.bt362-add-fab').click();await button('Review promo terms').click();
     check('Review promo terms scrolls its analyzer into view',await page.locator('#bt-promo-terms-panel').evaluate(e=>{const r=e.getBoundingClientRect();return r.top>=0&&r.top<innerHeight&&r.bottom>0&&!!e.querySelector('#az_input')}));
     check('promo terms is a focused view without overlapping Add or account search',await page.locator('.bt362-add-fab,.tracker-overview,#tracker-search').count()===0);
+    const storageBeforeInvalidTerms=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
+    await button('Review terms').click();
+    check('invalid promo terms shows inline error and focuses the textarea',await page.locator('#bt3655-terms-feedback.is-error').isVisible()&&await page.locator('#az_input').evaluate(e=>document.activeElement===e&&e.getAttribute('aria-invalid')==='true'));
+    check('invalid promo terms keeps accounts unchanged',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,storageBeforeInvalidTerms));
     const termsDraft=require('./fixtures/financial-rules.cjs').fixture().tcSourceRaw;
     await page.locator('#az_input').fill(termsDraft);
+    check('editing pasted terms clears inline error without losing the draft',await page.locator('#az_input').inputValue()===termsDraft&&await page.locator('#bt3655-terms-feedback.is-error').count()===0);
     for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
       check('promo terms input fits and avoids iPhone zoom at '+width+'px',await page.locator('#az_input').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&parseFloat(getComputedStyle(e).fontSize)>=16&&document.documentElement.scrollWidth<=innerWidth));
