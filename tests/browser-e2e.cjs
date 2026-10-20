@@ -151,6 +151,20 @@ async function exercise(name,engine,url){
       check('unselected earnings summary is compact at '+width+'px',await page.locator('.bt360-hero').evaluate(e=>e.getBoundingClientRect().height<=230));
     }
     await page.setViewportSize({width:390,height:844});
+    await page.locator('.bt362-add-fab').focus();
+    await page.keyboard.press('Enter');
+    await wait(()=>document.activeElement?.textContent==='Quick Add');
+    check('keyboard Add opens focused options with expanded disclosure',await page.locator('.bt362-add-fab').getAttribute('aria-expanded')==='true'&&await page.locator('#bt-add-actions').isVisible());
+    await page.keyboard.press('Tab');
+    check('Add options follow normal Tab order',await page.evaluate(()=>document.activeElement?.textContent==='Review promo terms'));
+    await page.keyboard.press('Escape');
+    await wait(()=>document.activeElement?.classList.contains('bt362-add-fab'));
+    check('Escape dismisses Add options and restores its trigger',await page.locator('#bt-add-actions').count()===0&&await page.locator('.bt362-add-fab').getAttribute('aria-expanded')==='false');
+    await page.keyboard.press('Space');
+    await wait(()=>document.activeElement?.textContent==='Quick Add');
+    await page.locator('.bt362-add-fab').focus();await page.keyboard.press('Escape');
+    await wait(()=>document.activeElement?.classList.contains('bt362-add-fab'));
+    check('Escape also closes disclosure from the Add trigger',await page.locator('#bt-add-actions').count()===0);
     await page.locator('.bt362-add-fab').click();await button('Quick Add').click();
     check('Quick Add scrolls its real panel into view',await page.locator('#bt-quick-add-panel').evaluate(e=>{const r=e.getBoundingClientRect();return r.top>=0&&r.top<innerHeight&&r.bottom>0}));
     await page.setViewportSize({width:390,height:844});
@@ -1235,6 +1249,20 @@ async function exercise(name,engine,url){
     await wait(()=>document.activeElement?.id==='tracker-search');
     await page.locator('#tracker-search').fill('E2E Citi');
     check('direct search finds the exact account and retains focus',await page.locator('.bt366-compact-row').count()===1&&await page.locator('.bt366-compact-row').innerText().then(t=>t.includes('E2E Citi'))&&await page.locator('#tracker-search').evaluate(e=>document.activeElement===e));
+    await page.locator('#tracker-search').fill('No synthetic match');
+    await button('Clear search').click();
+    await wait(()=>document.activeElement?.id==='tracker-search');
+    check('Clear search returns usable focused results',await page.locator('#tracker-search').inputValue()===''&&await page.locator('.bt366-compact-row').count()===2);
+    await page.evaluate(()=>BT360.setAudience(BT360.accountAudience(entries[0])==='personal'?'business':'personal'));
+    check('empty audience does not claim the user has no accounts',await page.getByText('No accounts in this view',{exact:true}).isVisible()&&await page.getByText('No accounts yet',{exact:true}).count()===0);
+    for(const width of [320,375,390,430]){
+      await page.setViewportSize({width,height:844});
+      check('empty-view recovery fits '+width+'px',await page.getByRole('button',{name:'Show all accounts',exact:true}).evaluate(e=>{const r=e.getBoundingClientRect();return r.height>=44&&r.left>=0&&r.right<=innerWidth}));
+      if(width===390)await page.screenshot({path:path.join(output,name+'-empty-filter-recovery-390.png')});
+    }
+    await page.setViewportSize({width:390,height:844});await button('Show all accounts').click();
+    await wait(()=>document.activeElement?.id==='tracker-search');
+    check('Show all accounts clears view filters and returns results',await page.locator('.bt366-compact-row').count()===2&&await page.evaluate(()=>BT360.audience==='all'&&search===''));
     await page.locator('#tracker-search').press('Escape');
     await wait(()=>document.activeElement?.classList.contains('bt3642-search-launcher'));
     check('Escape collapses search and restores shortcut focus',await page.locator('.bt366-compact-row').count()===0&&await searchShortcut.isVisible()&&await page.evaluate(()=>search===''));

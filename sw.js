@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.53: accurate saved-source evidence and rule-validation labels.
-const V = 'bt-v3.6.53-evidence1';
+// Version 3.6.54: keyboard focus, dismissible Add actions and accurate empty views.
+const V = 'bt-v3.6.54-access1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
