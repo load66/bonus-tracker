@@ -863,3 +863,11 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt362-tool-panel:focus-visible{outline:2px solid var(--mint);outline-offset:3px}
 .empty .btn-s{min-height:44px}
 .bt3654-account-empty .em{font-size:18px;font-weight:700;line-height:1.4;color:var(--text)}
+
+/* v3.6.55 — accessible, non-destructive validation for entry and terms forms. */
+.bt3655-field-error,.bt3655-terms-feedback.is-error{margin:7px 0 0;color:#FFADAD;font-size:12px;font-weight:600;line-height:1.55}
+.bt3655-form-alert{margin:12px 16px;padding:12px 14px;border:1px solid #91434A;border-radius:12px;background:#321C23;color:#FFD1D1;font-size:12px;line-height:1.6}
+.bt3655-terms-feedback{margin:7px 0 0;font-size:12px;line-height:1.5}
+.bt3655-terms-feedback:empty{display:none}
+.modal .fg [aria-invalid="true"],.bt3651-terms-input[aria-invalid="true"]{border-color:#F17D84!important;outline-offset:2px}
+.bt3651-tool-actions button[aria-busy="true"],.modal button[aria-busy="true"]{opacity:.75;cursor:progress}
