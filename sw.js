@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.54: keyboard focus, dismissible Add actions and accurate empty views.
-const V = 'bt-v3.6.54-access1';
+// Version 3.6.55: inline validation and retry-safe forms.
+const V = 'bt-v3.6.55-form1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
