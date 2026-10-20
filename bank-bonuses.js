@@ -229,7 +229,7 @@
   // Strong official state coverage + no known blockers leads, then monetary value.
   function rankingAmount(offer){
     const verified=amountFor(offer);
-    if(Number.isFinite(verified)&&verified>0)return{value:verified,proven:true,ceiling:false};
+    if(Number.isFinite(verified)&&verified>0)return{value:verified,proven:true,ceiling:!!offer?.rewardIsUpperBound};
     const sourceReported=Number.isSafeInteger(offer?.amount)&&offer.amount>0?offer.amount:null;
     return{value:sourceReported,proven:false,ceiling:!!offer?.rewardIsUpperBound};
   }
