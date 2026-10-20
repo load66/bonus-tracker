@@ -15,7 +15,7 @@
    note:'The $325 Everyday Checking promotion required enrollment by October 13, 2026. The published $15 monthly fee differs from the historical $10 shortcut. Look for a new, applicable promotion before opening.',
    sources:Object.freeze([
     Object.freeze({role:'promotion',label:'Published $325 offer and deadline',url:'https://accountoffers.wellsfargo.com/checkingoffer/'}),
-    Object.freeze({role:'fees',label:'Wells Fargo account disclosures',url:'https://www.wellsfargo.com/online-banking/consumer-account-fees/'})
+    Object.freeze({role:'fees',label:'Wells Fargo account disclosures',url:'https://www.wellsfargo.com/mobile-online-banking/consumer-account-fees/'})
    ])
   }),
   'Capital One':Object.freeze({
