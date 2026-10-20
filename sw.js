@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.57: Quick Add templates leave unconfirmed opening dates blank.
-const V = 'bt-v3.6.57-template1';
+// Version 3.6.58: Quick Add historical examples do not prefill unverified rules.
+const V = 'bt-v3.6.58-trust1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',

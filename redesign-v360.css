@@ -939,3 +939,11 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 /* v3.6.57: accurate Quick Add previews without adding modal clutter. */
 .bt3657-template-note{margin:0 0 12px;padding:10px 12px;border-left:3px solid var(--amber);border-radius:8px;background:#1b1b20;color:var(--text);font-size:12px;line-height:1.55}
 .bt362-tool-panel .bt3651-tool-head p{max-width:36ch}
+
+/* v3.6.58 — provenance-first Quick Add shortcuts. */
+.bt3658-template .bn{font-size:11px;line-height:1.45;color:var(--amber);font-weight:600;overflow-wrap:anywhere}
+.bt3658-trust-notice{display:flex;flex-direction:column;gap:5px;line-height:1.5}
+.bt3658-trust-notice b{color:var(--text);font-size:12px}
+.bt3658-trust-notice span{display:block;color:var(--muted);font-size:12px}
+.bt3658-trust-notice a{color:var(--mint);font-size:12px;text-decoration:underline;text-underline-offset:2px;width:fit-content}
+.bt3658-trust-notice a:focus-visible{outline:2px solid var(--mint);outline-offset:3px}

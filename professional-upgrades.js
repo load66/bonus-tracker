@@ -176,7 +176,13 @@
   }
   function wizardBasics(e){
     let h='<div class="guided-tip"><b>Account details</b><span>Enter the account and offer details. Review the terms before applying extracted fields.</span></div>';
-    if(e._fromTemplate)h+='<p class="bt3657-template-note" role="note">Sample offer details are not verified. Check the current terms and fees; enter the actual account opening date only when known.</p>';
+    if(e._fromTemplate){
+      const status=typeof quickAddReviewStatus==='function'?quickAddReviewStatus({bank:e.bank}):null;
+      h+='<div class="bt3657-template-note bt3658-trust-notice" role="note"><b>Historical example — not a verified offer</b><span>Only the bank and suggested account type were copied. Bonus, deposit requirements, fees, closure and churn eligibility remain unconfirmed. Review the applicable enrolled promotion and account fee schedule.</span>';
+      if(status?.note)h+='<span>'+html(status.note)+'</span>';
+      if(status?.url)h+='<a href="'+html(status.url)+'" rel="noopener noreferrer" target="_blank">Bank promotion source'+(status.checked?' · checked '+html(status.checked):'')+'</a>';
+      h+='</div>';
+    }
     h+='<div class="guided-grid">';
     h+=input('Bank name *','bank',e.bank,{placeholder:'e.g. Chase Business'});
     h+=select('Account type','accountType',e.accountType||'personal',[['personal','Personal'],['business','Business']]);

@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.57';
+const APP_VERSION='3.6.58';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -3441,6 +3441,32 @@ function analyzeTCSection(text){
 }
 const DEF=[];
 const TEMPLATES=[{bank:"Chase",bonus:300,churn:"2",notes:"$1,000 DD within 90 days. $12/mo waived w/ $500 DD.",minHoldDays:90,earlyCloseFee:0,dataPoint:"Fidelity/Robinhood ACH works",reqDays:90},{bank:"Chase Biz",bonus:500,churn:"2",notes:"$2,000 deposit within 20 biz days.",minHoldDays:0,earlyCloseFee:0,dataPoint:"$2,000 deposit",reqDays:60},{bank:"Bank of America",bonus:300,churn:"1",notes:"$2,000+ DD within 90 days. $12/mo waived w/ $250 DD.",minHoldDays:0,earlyCloseFee:0,dataPoint:"Fidelity ACH works",reqDays:90},{bank:"Wells Fargo",bonus:325,churn:"1",notes:"$1,000+ DD within 90 days. $10/mo waived w/ $500 DD.",minHoldDays:0,earlyCloseFee:0,dataPoint:"Employer DD recommended",reqDays:90},{bank:"U.S. Bank",bonus:450,churn:"1",notes:"$8,000+ DD within 90 days. No early close fee.",minHoldDays:0,earlyCloseFee:0,dataPoint:"Robinhood/Fidelity ACH works",reqDays:90},{bank:"Citi",bonus:300,churn:"1",notes:"Tiered DD. $12/mo fee.",minHoldDays:0,earlyCloseFee:0,dataPoint:"ACH generally works",reqDays:90},{bank:"PNC",bonus:400,churn:"2",notes:"$5,000 DD. $7-25/mo by tier.",minHoldDays:0,earlyCloseFee:0,dataPoint:"Fidelity ACH works",reqDays:60},{bank:"Simmons Bank",bonus:450,churn:"1",notes:"$150x3 cycles. $1k DD + 7 debit txns. $0 fee. MO avail.",minHoldDays:0,earlyCloseFee:0,dataPoint:"$1k DD + 7 debit txns",reqDays:120},{bank:"Equity Bank",bonus:400,churn:"180",notes:"Checking+savings. $1k DD + debit. $400 clawback <180d.",minHoldDays:180,earlyCloseFee:400,dataPoint:"$1k DD + activate debit",reqDays:45},{bank:"Regions",bonus:450,churn:"1",notes:"$1k DD + 10 debit. $25 fee <180d. MO avail.",minHoldDays:180,earlyCloseFee:25,dataPoint:"$1k DD + 10 debit txns",reqDays:90},{bank:"BMO",bonus:600,churn:"1",notes:"$5k+ DD within 90d. CC funding avail.",minHoldDays:0,earlyCloseFee:0,dataPoint:"ACH works + CC funding",reqDays:90},{bank:"Capital One",bonus:250,churn:"1",notes:"2x$500 DD. $0 fee. NOT churnable anymore.",minHoldDays:0,earlyCloseFee:0,dataPoint:"No longer churnable",reqDays:75}];
+// Historical shortcuts only. No current offer, fee, churn or qualifying-activity
+// assertion may be inferred from TEMPLATES without the applicable official sources.
+const QUICK_ADD_SOURCE_REVIEW=Object.freeze({
+  'Wells Fargo':Object.freeze({
+    status:'Expired example',
+    checked:'2026-10-20',
+    note:'The published $325 Everyday Checking promotion ended October 13, 2026. Its $15 monthly fee differs from the historical $10 sample. A new enrollment needs new terms.',
+    url:'https://accountoffers.wellsfargo.com/checkingoffer/'
+  }),
+  'Capital One':Object.freeze({
+    status:'Multiple offer paths',
+    checked:'2026-10-20',
+    note:'The published 360 Checking $250 promotion has separate qualifying direct-deposit and debit-purchase paths. Neither path is selected by this shortcut; eligibility depends on the actual enrolled version.',
+    url:'https://www.capitalone.com/bank/choose-your-offer/'
+  })
+});
+function quickAddReviewStatus(t){
+  const d=QUICK_ADD_SOURCE_REVIEW[t?.bank];
+  return d?{...d}:{status:'Unverified example',checked:'',note:'The current promotion, fees and eligibility have not been source-verified for this shortcut.',url:''};
+}
+function quickAddTemplateCard(t,i){
+  const status=quickAddReviewStatus(t);
+  const shortStatus=status.status==='Expired example'?'Expired':status.status==='Multiple offer paths'?'Variants':'Unverified';
+  return '<button type="button" class="tbtn bt3658-template" onclick="addFromTpl('+i+')" aria-label="'+esc(t.bank)+' historical example, '+esc(status.status)+'">'+bankLogo(t.bank,true)
+    +'<div class="t-info"><div class="nm">'+esc(t.bank)+'</div><div class="bn">Past '+fM(t.bonus)+' · '+esc(shortStatus)+'</div></div></button>';
+}
 const PHONE_DEFAULTS=[["Ally Bank","1-877-247-2559","1-877-247-2559"],["Bank of America","1-800-432-1000","1-888-287-4637"],["BMO (US)","1-888-340-2265","1-888-340-2265"],["Capital One","1-877-383-4802","1-888-755-2172"],["Central Bank","1-800-876-5500","1-800-876-5500"],["Chase","1-800-935-9935","1-800-242-7338"],["Citibank","1-800-374-9700","1-800-945-4000"],["Citizens","1-888-500-1478","1-888-307-4568"],["Comerica","1-800-266-3742","1-800-266-3742"],["Community America CU","816-656-4700","816-656-4700"],["E-Trade","1-800-387-2331","1-800-387-2331"],["Equity Bank","1-844-611-0777","1-844-611-0777"],["Fifth Third","1-800-972-3030","1-877-534-2264"],["Huntington","1-800-480-2265","1-800-480-2001"],["KeyBank","1-800-539-2968","1-888-539-4249"],["M&T Bank","1-800-724-2440","1-800-724-6070"],["Navy Federal","1-888-842-6328","1-888-842-6328"],["PNC","1-888-762-2265","1-877-287-2654"],["Regions","1-800-734-4667","1-800-787-3905"],["Santander","1-877-768-2265","1-800-493-8219"],["Simmons Bank","1-866-246-2400","1-866-246-2400"],["TD Bank","1-888-751-9000","1-800-450-7318"],["Truist","1-844-487-8478","1-877-495-1044"],["U.S. Bank","1-800-872-2657","1-800-673-3555"],["Vantage CU","314-298-0055","314-298-0055"],["Wells Fargo","1-800-869-3557","1-800-225-5935"]];
 function normalizePhoneRow(row){const x=Array.isArray(row)?{bank:row[0],personal:row[1],business:row[2],custom:false}:(row&&typeof row==='object'?row:{});return{bank:String(x.bank||'').trim(),personal:String(x.personal||'').trim(),business:String(x.business||'').trim(),custom:!!x.custom}}
 function phoneKey(name){return String(name||'').trim().toLowerCase()}
@@ -4583,7 +4609,7 @@ function rTrackerLegacy(sorted){
   if(showTemplates){
     h += '<div class="sec">Quick add templates</div><div class="tgrid">';
     TEMPLATES.forEach((t,i)=>{
-      h += `<button class="tbtn" onclick="addFromTpl(${i})">${bankLogo(t.bank,true)}<div class="t-info"><div class="nm">${esc(t.bank)}</div><div class="bn">${fM(t.bonus)}</div></div></button>`;
+      h += quickAddTemplateCard(t,i);
     });
     h += '</div>';
   }
@@ -5558,7 +5584,26 @@ function clearCloseDate(id,keepAsPlanned){
   finishStillOpen()
 }
 function cancelClose(){closePrompt=null;R()}
-function addFromTpl(i){resetModalValidation();const t=TEMPLATES[i];if(!t)return;const newData={bank:t.bank,bonus:t.bonus,churn:t.churn,opened:'',_fromTemplate:true,_wizardStep:1,closed:'',bonusRecd:'',reqMet:'',notes:t.notes||'',analyzedTC:'',minHoldDays:t.minHoldDays||0,earlyCloseFee:t.earlyCloseFee||0,dataPoint:t.dataPoint||'',reqDays:t.reqDays||0,referralBonus:0,phoneNum:'',feeChecked:false};if(handleDuplicateFlow(newData,'template')){showTemplates=false;R();return}modal=newData;modal.checklist=[];modal.customTimers=[];showTemplates=false;R()}
+function addFromTpl(i){
+  const t=TEMPLATES[i];if(!t)return false;
+  resetModalValidation();
+  // The historical example is never an authoritative source for enrollment,
+  // fee, closing, eligibility or qualifying-deposit rules.
+  const newData={
+    bank:t.bank,accountType:/\bBiz\b/i.test(t.bank)?'business':'personal',
+    bonus:0,churn:'',churnable:null,churnability:'',opened:'',closed:'',
+    bonusRecd:'',reqMet:'',notes:'',analyzedTC:'',
+    minHoldDays:0,earlyCloseFee:null,closeFeeCountdownDays:'',
+    dataPoint:'',reqDays:0,requiredDaysText:'',referralBonus:0,
+    phoneNum:'',feeChecked:false,monthlyFeeChecked:false,
+    monthlyFeeYNText:'',monthlyFeeAmountText:'',avoidMonthlyFeeText:'',
+    earlyTerminationFeeText:'',eligibilityText:'',promoCodeText:'',
+    completeBonusText:'',payoutTimingText:'',customTimers:[],checklist:[],
+    _fromTemplate:true,_wizardStep:1
+  };
+  if(handleDuplicateFlow(newData,'template')){showTemplates=false;R();return true}
+  modal=newData;showTemplates=false;R();return true
+}
 function toggleCk(id,i){let completedDD=false;entries=entries.map(e=>{if(e.id===id&&e.checklist&&e.checklist[i]){e.checklist[i].done=!e.checklist[i].done;if(e.checklist[i].done&&/direct[ -]?deposits?|\bpayroll\b|\bq?dd\b/i.test(e.checklist[i].text))completedDD=true;appendEntryHistory(e,e.checklist[i].done?'checklist_completed':'checklist_reopened',e.checklist[i].text||'Checklist item')}return e});sv(SK,entries);expanded=id;R();if(completedDD)reviewCycleExperience(id,'requirement')}
 function addCk(id){const inp=document.getElementById('ck_'+id);if(!inp||!inp.value.trim())return;const text=inp.value.trim();entries=entries.map(e=>{if(e.id===id){if(!e.checklist)e.checklist=[];e.checklist.push({text,done:false});appendEntryHistory(e,'checklist_added',text)}return e});sv(SK,entries);toggleInlineForm(id,'checklist',false)}
 function rmCk(id,i){entries=entries.map(e=>{if(e.id===id&&e.checklist)e.checklist.splice(i,1);return e});sv(SK,entries);R()}
@@ -7089,7 +7134,7 @@ entries=sortE(entries); // First visible render is owned by BT360 at the end of 
     if(showTemplates&&!expanded){
       h += '<section id="bt-quick-add-panel" class="bt362-tool-panel" tabindex="-1" aria-label="Quick Add" onkeydown="if(event.key===\'Escape\'){event.preventDefault();closeTrackerTool(\'quick-add\')}"><div class="bt3651-tool-head"><div><h2>Quick Add</h2><p>Sample offers only. Verify current terms and record your actual opening date.</p></div><button type="button" class="bt3651-tool-close" aria-label="Close Quick Add" onclick="closeTrackerTool(\'quick-add\')">×</button></div><div class="tgrid">';
       TEMPLATES.forEach((t,i)=>{
-        h += `<button class="tbtn" onclick="addFromTpl(${i})">${bankLogo(t.bank,true)}<div class="t-info"><div class="nm">${esc(t.bank)}</div><div class="bn">${fM(t.bonus)}</div></div></button>`;
+        h += quickAddTemplateCard(t,i);
       });
       h += '</div></section>';
     }
