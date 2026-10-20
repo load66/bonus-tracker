@@ -4367,7 +4367,7 @@ function openAccountFromActionCenter(id){
 }
 function clearTrackerSearch(){
   search='';
-  if(window.BT360){window.BT360.openAccountSearch();return}
+  if(window.BT360){window.BT360.openAccountSearch(true);return}
   R();
   requestAnimationFrame(()=>document.getElementById('tracker-search')?.focus({preventScroll:true}));
 }

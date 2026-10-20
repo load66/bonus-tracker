@@ -231,8 +231,8 @@ function focusAccountSearch(open){
   if(open)target?.scrollIntoView({block:'nearest',behavior:'auto'});
  });
 }
-function openAccountSearch(){
- accountListOpen=true;selectedStage='';search='';expanded=null;R();focusAccountSearch(true);
+function openAccountSearch(preserveStage=false){
+ accountListOpen=true;if(!preserveStage)selectedStage='';search='';expanded=null;R();focusAccountSearch(true);
 }
 function closeAccountSearch(){
  accountListOpen=false;selectedStage='';search='';expanded=null;R();focusAccountSearch(false);

@@ -34,7 +34,7 @@ s.clearTrackerSearch();assert.equal(run('search'),'');assert.equal(s.BT360.accou
 s.BT360.setAudience('business');assert.match(s.renderAccountEmptyState(''),/No accounts in this view/);
 assert.doesNotMatch(s.renderAccountEmptyState(''),/No accounts yet/);
 s.clearTrackerFilters();assert.equal(s.BT360.audience,'all');assert.equal(s.BT360.accountListOpen,true);
-s.BT360.setStage('READY_TO_CLOSE');assert.match(s.renderAccountEmptyState(''),/Show all accounts/);s.clearTrackerFilters();
+s.BT360.setStage('READY_TO_CLOSE');assert.match(s.renderAccountEmptyState(''),/Show all accounts/);s.clearTrackerSearch();assert.equal(s.BT360.selectedStage,'READY_TO_CLOSE','Clearing text preserves the chosen stage');s.clearTrackerFilters();assert.equal(s.BT360.selectedStage,'','Explicit Show all accounts resets the stage');
 assert.equal(run('JSON.stringify(entries)'),entryBefore,'Filter recovery does not edit entries');
 run("entries[0].closed='2026-09-01';entries[0].churnable=true;entries[0].churnability='repeatable';");
 assert.match(s.renderAccountEmptyState(''),/No open accounts/);
