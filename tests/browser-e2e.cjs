@@ -880,7 +880,11 @@ async function exercise(name,engine,url){
     await page.getByPlaceholder('Search bank bonuses…').fill('Wells Fargo');
     check('search preserves typed input and focus',await page.getByPlaceholder('Search bank bonuses…').inputValue()==='Wells Fargo'&&await page.evaluate(()=>document.activeElement.id==='radar-search'));
     await page.getByRole('button',{name:'All banks',exact:true}).click();
-    check('tracker churn match ranks above discovery posts',(await page.locator('.radar-card').first().innerText()).includes('U.S. Bank'));
+    check('fresh official state match leads over a pending churn review',
+      (await page.locator('.radar-card').first().innerText()).includes('Wells Fargo'));
+    check('tracked pending churn stays visible below an applicable officially scoped offer',
+      await page.locator('.radar-card').filter({hasText:'U.S. Bank'}).count()===1
+      &&(await page.locator('.radar-card').filter({hasText:'U.S. Bank'}).first().innerText()).includes('Next tracker review'));
     check('known regional mismatch ranks last',(await page.locator('.radar-card').last().innerText()).includes('Regional E2E Bank')&&(await page.locator('.radar-card').last().innerText()).includes('Outside your area'));
     await page.getByRole('button',{name:'Churn matches',exact:true}).click();
     check('churn filter uses read-only tracker match',await page.locator('.radar-card').count()===1&&(await page.locator('.radar-card').innerText()).includes('Next tracker review'));
