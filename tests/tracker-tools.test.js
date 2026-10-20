@@ -56,7 +56,7 @@ run('entries=[];tab="tracker";expanded=null;modal=null;showTemplates=true;');
 const templatesCount=run('TEMPLATES.length');
 assert.equal(templatesCount,12,'Intentional sample inventory changed: audit shortcuts before adding one');
 assert.match(s.rTracker([]),/Past \$325 · Expired/,'An expired promotion is explicitly labeled');
-assert.match(s.rTracker([]),/Past \$250 · Variants/,'Offer versions cannot be conflated');
+assert.match(s.rTracker([]),/Past \$250 · Changed/,'Offer versions cannot be conflated');
 assert.match(s.rTracker([]),/Past \$300 · Unverified/);
 assert.equal(s.quickAddReviewStatus({bank:'Wells Fargo'}).checked,'2026-10-20');
 assert.match(s.quickAddReviewStatus({bank:'Capital One'}).note,/separate qualifying/);
