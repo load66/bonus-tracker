@@ -275,7 +275,7 @@ async function exercise(name,engine,url){
       await page.locator('.is-selected').getByRole('button',{name:'View offers',exact:true}).click();
       check('opportunity routes to offers for that bank',await page.locator('#radar-search').inputValue()==='Synthetic Opportunity CU');
       check('dashboard grouping leaves stored account records unchanged',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,saved.stored));
-      await page.evaluate(old=>{entries=old.entries;expanded=old.expanded;tab=old.tab;R();},saved);
+      await page.evaluate(old=>{btRadarSearch('');entries=old.entries;expanded=old.expanded;tab=old.tab;R();},saved);
     }
     const beforeDisclosure=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     check('Tracker no longer displays the legacy Action Center',await page.locator('.bt360-legacy-actions').count()===0);
