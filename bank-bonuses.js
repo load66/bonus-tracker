@@ -339,15 +339,27 @@
     const scoped=feed?offersForAudience(feed.offers,audience):[];
     const audienceCount=feed?grouped(scoped).length:0;
     let h='<div class="bt362-offer-head"><div class="bt362-offer-headline"><h2>Bank offers</h2><p>'+escape(states[area]||'Location not selected')+(feed?' · '+audienceCount+' offer'+(audienceCount===1?'':'s')+' · '+checkedAge(feed.checkedAt):' · update pending')+'</p></div><button type="button" class="ph-mini ph-save" onclick="btRefreshBankBonuses()" '+(loading?'disabled':'')+'>'+(loading?'Checking…':'Check updates')+'</button></div>'+(window.BT360?.segments()||'');
+    const quickSources=window.BTQuickAddCatalog;
+    quickSources?.refreshWatch?.();
+    const watchReview=quickSources?.reviewQueue?.()||{ready:false,issues:[]};
     const sourceStale=!!(feed&&(!Number.isFinite(Date.parse(feed.checkedAt))||Date.now()-Date.parse(feed.checkedAt)>86400000));
     const sourceFailed=!!(feed?.sources?.some(s=>s.status!=='ok'));
     if(sourceStale||sourceFailed||error||officialError)h+='<div class="bt362-offer-stale" role="status"><span>'+escape(error||officialError||(sourceStale?'Source information is stale. Review dates before applying.':'Some source updates are unavailable.'))+'</span><button type="button" onclick="btRefreshBankBonuses()">Refresh</button></div>';
+    if(watchReview.issues.length){
+      const issueText={changed:'Page changed · recheck terms',unavailable:'Check unavailable',stale:'Check overdue'};
+      h+='<details class="bt3662-source-queue"><summary>Official sources · '+watchReview.issues.length+' need review</summary><div class="bt3662-source-items">';
+      for(const item of watchReview.issues.slice(0,12)){
+        h+='<div class="bt3662-source-item"><div><b>'+escape(item.bank)+'</b><span>'+escape(item.role==='fees'?'Fee disclosures':'Promotion terms')+' · '+escape(issueText[item.kind]||'Review source')+'</span></div><a href="'+escape(item.url)+'" target="_blank" rel="noopener noreferrer">Review official page ↗</a></div>';
+      }
+      h+='</div><p>Changes are source-page signals, not confirmed eligibility or updated account rules. Saved offer terms remain unchanged.</p></details>';
+    }
     if(!feed)return h+'<p role="status">'+(loading?'Loading offers…':'Offers are unavailable.')+'</p>';
     const proofs=feed.offers.map(o=>availabilityFor(o,officialCatalog));
     const checked=proofs.filter(p=>p&&['verified','conditional','expired'].includes(p.status)).length;
     h+='<details class="bt362-about-sources"'+(sourceExpanded?' open':'')+'><summary>About sources</summary><div class="bt362-about-body"><p>'+checked+' of '+feed.offers.length+' posts have current official scope evidence'+(officialCatalog?.status==='pending'?' · checking…':'')+'. Checks run hourly and evidence expires after 24 hours. Verify your own eligibility before applying.</p><p>Priority checks submit public offer links only, never private tracker records.</p>';
     if(feed.sources.length)h+='<div class="radar-sources">'+feed.sources.map(s=>'<p>'+escape(s.name)+' · '+(s.status==='ok'?'Checked':'Update unavailable')+(s.checkedAt?' '+escape(new Date(s.checkedAt).toLocaleString()):' · no successful check yet')+'</p>').join('')+'</div>';
     if(officialError)h+='<p>'+escape(officialError)+'</p>';
+    if(!watchReview.ready)h+='<p>Official promotion and fee monitoring is awaiting its first completed check.</p>';
     h+='</div></details>';
     h+='<input id="radar-search" class="sinput bt362-search" aria-label="Search banks and offers" placeholder="Search bank bonuses…" value="'+escape(query)+'" oninput="btRadarSearch(this.value,this.selectionStart)">';
     h+='<div class="bt360-offer-pills" role="group" aria-label="Offer types">'+[['all','All'],['checking','Checking'],['savings','Savings'],['business','Business'],['near','Near me']].map(([v,label])=>'<button type="button" aria-pressed="'+(categoryFilter===v)+'" class="'+(categoryFilter===v?'active':'')+'" onclick="btRadarOfferPill(\''+v+'\')">'+label+'</button>').join('')+'</div>';
