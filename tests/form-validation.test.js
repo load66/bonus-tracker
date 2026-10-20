@@ -5,7 +5,7 @@ const {sandbox:s,storage}=require('./full-app-smoke.test.js');
 const run=code=>vm.runInContext(code,s);
 run('openAdd()');
 const afterOpen=JSON.stringify([...storage]);
-assert.equal(run('collectModalEntryData()'),false,'Blank bank cannot produce a savable record');
+assert.ok(!run('collectModalEntryData()'),'Blank bank cannot produce a savable record');
 assert.match(run('modalValidationErrors.bank'),/Enter the bank/);
 assert.equal(JSON.stringify([...storage]),afterOpen,'Inline validation is read-only');
 run('modal.bank="Synthetic Validation Bank"');
