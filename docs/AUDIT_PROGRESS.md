@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: codex — v3.6.58 — codex/v3.6.58-template-trust
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.58 Quick Add template trust (`codex/v3.6.58-template-trust`): audited historical sample shortcuts. Bank identity is offered for convenience; sample bonus, DD, fee, closure, churn, hold and opening values never prefill new financial records. All 12 templates stay discoverable with clearly historical labels; official 2026-10-20 source review identified a prior expired Wells offer/changed fee and multiple Capital One reward paths. Remaining sample promotions are explicitly unverified, not presumed current. Editor links bank sources for reviewed examples. No canonical rules, existing records, storage keys or backend changed. Synthetic all-template no-write tests and mobile browser checks added. Next: ensure full bonus/cloud/UI + Chromium/WebKit + release verifier, merge on green, verify Pages production asset/cache.
+
 
 - v3.6.57 Quick Add sample truth (`codex/v3.6.57-quick-add-truth`, PR #237): sample templates never stamp an account opening as today, instead leaving it unknown until explicitly entered. Focused Quick Add and guided-editor copy distinguishes example amounts/rules from verified current promotions without hiding fields. No saved entries, eligibility/financial rules, import schema, cloud state, backend or keys changed. Added synthetic no-write and mobile browser regression checks; app and service-worker cache updated to v3.6.57. Next: full bonus/cloud/UI plus Chromium/WebKit and release verification, merge on green, confirm exact Pages production assets.
 
