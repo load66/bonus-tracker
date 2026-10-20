@@ -36,6 +36,7 @@ try{
  s.getAttentionSuggestions=()=>suggestions.filter(x=>['payout','hold'].some(k=>x.entryId.endsWith(k)));
  const onlyWaiting=s.BT360.tasks(rows);
  assert.match(section(onlyWaiting,'needs'),/>0 tasks<\/span>/);assert.match(onlyWaiting,/No immediate tasks/);assert.match(onlyWaiting,/<h3>Waiting<\/h3>/);
+ const priorSearch=s.btRadarSearch;let searched='';s.btRadarSearch=value=>{searched=value};s.BT360.viewOffers('Synthetic Offer Bank');assert.equal(searched,'Synthetic Offer Bank','Offer search must be set even before its input or feed has loaded');s.btRadarSearch=priorSearch;
  assert.equal(JSON.stringify(rows),facts);assert.equal(JSON.stringify([...storage]),before,'Grouping or selection wrote financial data');
  console.log('Dashboard queue passed: accurate action counts, waiting dates, opportunities, reached/unknown date review, no cooldown duplicates, selection and no writes.');
  process.exit(0);

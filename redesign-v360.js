@@ -860,7 +860,7 @@ function archive(rows){
 }
 function setArchiveToolsOpen(value){legacyArchiveOpen=!!value}
 function openArchived(id){const e=entries.find(x=>x.id===id);if(!e)return;expanded=id;if(e.closed){window.bt360ArchiveDetailId=id;tab='archive'}else{tab='tracker'}R()}
-function viewOffers(bank){expanded=null;tab='bonuses';R();const v=document.getElementById('radar-search');if(v&&typeof window.btRadarSearch==='function')window.btRadarSearch(bank)}
+function viewOffers(bank){expanded=null;tab='bonuses';if(typeof window.btRadarSearch==='function')window.btRadarSearch(bank);else R()}
 const HOST_SETTINGS='bt_hosting_usage_settings_v1';
 const HOST_API='https://api-production-00f74.up.railway.app/api/bonus-tracker/usage';
 const validLimit=v=>Number.isFinite(Number(v))&&Number(v)>0&&Number(v)<=100000?Math.round(Number(v)*100)/100:null;
