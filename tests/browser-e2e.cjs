@@ -145,12 +145,14 @@ async function exercise(name,engine,url){
     await page.locator('.bt362-add-fab').click();await button('Quick Add').click();
     check('Quick Add scrolls its real panel into view',await page.locator('#bt-quick-add-panel').evaluate(e=>{const r=e.getBoundingClientRect();return r.top>=0&&r.top<innerHeight&&r.bottom>0}));
     await page.setViewportSize({width:390,height:844});
+    check('Quick Add is a focused view without overlapping Add or dashboard summary',await page.locator('.bt362-add-fab,.tracker-overview,#tracker-search').count()===0);
     check('Quick Add has a visible touch-sized close button',await page.getByRole('button',{name:'Close Quick Add',exact:true}).evaluate(e=>e.getBoundingClientRect().height>=44));
     await page.screenshot({path:path.join(output,name+'-quick-add-390.png')});
     await page.getByRole('button',{name:'Close Quick Add',exact:true}).click();
-    check('Quick Add close returns to dashboard',await page.locator('#bt-quick-add-panel').count()===0);
+    check('Quick Add close returns to dashboard',await page.locator('#bt-quick-add-panel').count()===0&&await page.locator('.bt362-add-fab').isVisible());
     await page.locator('.bt362-add-fab').click();await button('Review promo terms').click();
     check('Review promo terms scrolls its analyzer into view',await page.locator('#bt-promo-terms-panel').evaluate(e=>{const r=e.getBoundingClientRect();return r.top>=0&&r.top<innerHeight&&r.bottom>0&&!!e.querySelector('#az_input')}));
+    check('promo terms is a focused view without overlapping Add or account search',await page.locator('.bt362-add-fab,.tracker-overview,#tracker-search').count()===0);
     const termsDraft=require('./fixtures/financial-rules.cjs').fixture().tcSourceRaw;
     await page.locator('#az_input').fill(termsDraft);
     for(const width of [320,375,390,430]){

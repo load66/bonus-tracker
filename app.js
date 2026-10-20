@@ -4504,11 +4504,11 @@ function R(){
   h+='<button type="button" class="bt360-header-bell" aria-label="Notifications" onclick="BT360.openNotifications()"><svg width="19" height="19" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></button><button type="button" class="bt360-header-settings" aria-label="Settings" onclick="BT360.openSettings()">•••</button>';
   h+='<details id="bt-data-menu" class="header-data-menu"><summary aria-label="Data and backup menu" title="Data and backup menu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></summary><div class="header-data-panel" role="group" aria-label="Data and recovery actions"><h3>Data & recovery</h3><button onclick="this.closest(\'details\').open=false;switchMainTab(\'archive\')"><strong>Archived accounts</strong><small>Completed, non-repeatable offers and their history</small></button><button onclick="this.closest(\'details\').open=false;btOpenCloudBackup()"><strong>'+(window.BTICloudBackup?.isLocalOnly?.()?'iCloud Drive backup':'Cloud backup & recovery')+'</strong><small>'+(window.BTICloudBackup?.isLocalOnly?.()?'Save or restore a full backup file':'Automatic protection and recovery versions')+'</small></button><button onclick="this.closest(\'details\').open=false;exportBackup()"><strong>Export backup file</strong><small>Save a dated full copy to iCloud Drive</small></button><button onclick="this.closest(\'details\').open=false;importBackup()"><strong>Import backup file</strong><small>Review and restore a downloaded copy</small></button><button class="data-menu-danger" onclick="this.closest(\'details\').open=false;resetAllData()"><strong>Reset this device</strong><small>Requires confirmation and a safety backup</small></button></div></details></div>';
 
-  if(tab==='tracker'&&!bt360Detail){
+  if(tab==='tracker'&&!bt360Detail&&!showTemplates&&!showAnalyzer){
     overview=window.BT360?window.BT360.home(sorted,dashYear,metrics):'<div class="hero ops-hero"><div class="hero-value">'+fM(metrics.active)+'</div></div>';
   }
   h+='</div></div><div class="scroll">';
-  if(tab==='tracker'){h+='<section class="tracker-overview" aria-label="Bonus totals">'+overview+'</section>';const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted)}
+  if(tab==='tracker'){if(!showTemplates&&!showAnalyzer)h+='<section class="tracker-overview" aria-label="Bonus totals">'+overview+'</section>';const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted)}
   else if(tab==='archive'){h+=window.BT360?window.BT360.archive(sorted):rTrackerLegacy(sorted,true)}
   else if(tab==='tax')h+=rTax();
   else if(tab==='tips')h+=rTips();
@@ -7002,7 +7002,7 @@ entries=sortE(entries); // First visible render is owned by BT360 at the end of 
     if(archiveView){
       h+='<button type="button" class="btn-s" onclick="BT360.back()">Back to Archive</button><div class="sec">Archived accounts</div><div class="sub">Completed, non-repeatable offers. Records, received bonuses and enrolled terms remain available for history, tax and recovery.</div>';
     }else{
-    if(!expanded)h+='<div class="bt360-search-tools" id="bt-tracker-directory"><button type="button" class="bt360-link" aria-expanded="true" onclick="BT360.closeAccountSearch()">Hide accounts</button></div>';
+    if(!expanded&&!showTemplates&&!showAnalyzer)h+='<div class="bt360-search-tools" id="bt-tracker-directory"><button type="button" class="bt360-link" aria-expanded="true" onclick="BT360.closeAccountSearch()">Hide accounts</button></div>';
 
     if(showTemplates&&!expanded){
       h += '<section id="bt-quick-add-panel" class="bt362-tool-panel" tabindex="-1" aria-label="Quick Add" onkeydown="if(event.key===\'Escape\'){event.preventDefault();closeTrackerTool(\'quick-add\')}"><div class="bt3651-tool-head"><div><h2>Quick Add</h2><p>Choose a bank template or import an offer.</p></div><button type="button" class="bt3651-tool-close" aria-label="Close Quick Add" onclick="closeTrackerTool(\'quick-add\')">×</button></div><div class="tgrid">';
@@ -7013,9 +7013,10 @@ entries=sortE(entries); // First visible render is owned by BT360 at the end of 
     }
 
     }
-    if(!expanded)h += `<input class="sinput" type="text" id="${archiveView?'archive-search':'tracker-search'}" aria-label="${archiveView?'Search archived accounts':'Search accounts'}" placeholder="${archiveView?'Search archived accounts...':'Search accounts...'}" value="${esc(search)}" oninput="updateViewSearch('tracker',this.value,this.selectionStart)"${archiveView?'':' onkeydown="if(event.key===\'Escape\'){event.preventDefault();BT360.closeAccountSearch()}"'}>`;
+    if(!expanded&&(archiveView||!showTemplates&&!showAnalyzer))h += `<input class="sinput" type="text" id="${archiveView?'archive-search':'tracker-search'}" aria-label="${archiveView?'Search archived accounts':'Search accounts'}" placeholder="${archiveView?'Search archived accounts...':'Search accounts...'}" value="${esc(search)}" oninput="updateViewSearch('tracker',this.value,this.selectionStart)"${archiveView?'':' onkeydown="if(event.key===\'Escape\'){event.preventDefault();BT360.closeAccountSearch()}"'}>`;
     if(!archiveView){
     if(showAnalyzer&&!expanded) h += '<section id="bt-promo-terms-panel" class="bt362-tool-panel" tabindex="-1" aria-label="Review promo terms" onkeydown="if(event.key===\'Escape\'){event.preventDefault();closeTrackerTool(\'promo-terms\')}">'+rAnalyzer()+'</section>';
+    if(!archiveView&&!expanded&&(showTemplates||showAnalyzer))return h+rBankActions();
     if(!window.BT360&&!expanded)h += '<details class="bt360-legacy-actions"'+(legacyActionsOpen?' open':'')+' ontoggle="legacyActionsOpen=this.open"><summary>All Action Center tools</summary>'+renderActionCenter()+'</details>';
     }
 
