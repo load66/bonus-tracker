@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.55: inline validation and retry-safe forms.
-const V = 'bt-v3.6.55-form1';
+// Version 3.6.56: protected editor drafts and touch-sized mobile steps.
+const V = 'bt-v3.6.56-mobile1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
