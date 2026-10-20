@@ -14,6 +14,8 @@ const saved=JSON.stringify([...storage]);
   s.btWizardStep(2);
   assert.equal(run('modal._wizardStep'),2,'Step 2 is selected');
   assert.equal(s.btEditorHasChanges(),false,'Navigation alone cannot trigger discard warning');
+  s.btWizardStep(4);
+  assert.match(s.rModal(),/class="bt3656-fix"/,'Review validation gives a direct correction link');
   assert.equal(JSON.stringify([...storage]),saved,'Step changes cannot write records');
   s.btWizardStep(1);
   s.btModalSet('bank','Synthetic Draft Example');
