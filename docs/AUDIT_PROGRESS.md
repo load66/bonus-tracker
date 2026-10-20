@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: Codex — v3.6.54 keyboard and search polish — codex/v3.6.54-keyboard-search-polish
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
