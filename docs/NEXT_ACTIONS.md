@@ -19,3 +19,12 @@ Verification: `tests/specific-actions.test.js`, `tests/next-actions.test.js`, `t
 Calendar-day clocks use only the specified recorded opening, enrollment, requirements-completed or bonus-received event. Enrollment never falls back to opening, and conflicting saved enrollment dates remain unresolved. Missing or invalid dates, unsupported calendars, untimed structured requirements and invalid durations never inherit a legacy day count. Manual reminders remain separate saved reminders and are not rewritten as offer deadlines. Existing financial validation continues to gate milestone actions; no financial record, rule schema, source evidence or storage key changes.
 
 Verification: `tests/requirement-deadlines.test.js` and both browser engines cover conflicting legacy days, rendered deadline agreement and no writes; unit coverage also checks missing anchors, enrollment conflicts, unsupported calendars, multiple clocks and legacy compatibility.
+
+
+## Dashboard queues and add tools (v3.6.51)
+
+The presentation groups existing canonical suggestions into Needs you, Waiting and Opportunities. Only confirmed future payout or hold dates are passive waits; missing, invalid, unconfirmed or reached dates stay in review. Current-offer opportunities remain separate from required task counts and open bank-filtered offer discovery without changing eligibility. Verified future cooldowns within 60 days use the existing Eligible soon row once. Every group retains independent card selection, details, source-specific deposit research and the applicable canonical action. No new financial status or persisted state is introduced.
+
+Quick Add and the inline terms panel have visible close controls; closing returns focus to Add. Terms input changes remain an in-memory draft and closing/reopening does not clear it. The full source-review wizard retains all analysis, evidence, learning, tier and apply controls, with a dark surface and header close button. Analysis and financial rules are unchanged.
+
+Verification: `tests/dashboard-queue.test.js`, `tests/tracker-tools.test.js`, full existing suites and Chromium/WebKit mobile queue/tool tests at 320, 375, 390 and 430 pixels. All financial fixtures are synthetic.
