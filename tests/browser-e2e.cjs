@@ -255,6 +255,8 @@ async function exercise(name,engine,url){
     await page.locator('.bt362-add-fab').click();await button('Quick Add').click();
     check('Quick Add Citi identity uses locally stored bank logo',await page.getByRole('button',{name:'Citi $300',exact:true}).locator('img[src="./bank-logos/citi.svg"]').count()===1);
     await button('Citi $300').click();
+    check('Quick Add never records an unconfirmed account opening date',await page.evaluate(()=>modal?.opened===''&&modal?._fromTemplate===true));
+    check('sample offer warning appears before account details',await page.locator('.bt3657-template-note').isVisible()&&await page.locator('.guided-body').innerText().then(t=>t.includes('Sample offer details are not verified')));
     check('Quick Add exposes bank/account/bonus',await page.locator('input[oninput*="\'bank\'"]').isVisible()&&await page.locator('select[onchange*="\'accountType\'"]').isVisible()&&await page.locator('input[oninput*="\'bonus\'"]').isVisible());
     await page.getByRole('button',{name:'Step 4: Review',exact:true}).click();check('unverified template cannot be saved',await button('💾 Add account').isDisabled());await cancelEditor();
     await importEntry(payload);
