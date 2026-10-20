@@ -270,6 +270,12 @@ async function exercise(name,engine,url){
     }));
     check('smart sort never updates saved financial records',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,smartStoredBefore));
     await page.locator('.bt362-add-fab').click();await button('Quick Add').click();
+    check('public source watch does not rewrite tracker data',await page.evaluate(async()=>{
+      const before=localStorage.getItem('bt_e_v4'),api=window.BTQuickAddCatalog;
+      const watch=await api.refreshWatch();
+      return api.version===2&&watch?.schemaVersion===1&&Object.keys(watch.records||{}).length===0
+        &&localStorage.getItem('bt_e_v4')===before;
+    }));
     check('source catalog keeps reviewed offers scoped and other examples unverified',await page.evaluate(()=>{
       const c=window.BTQuickAddCatalog;
       const asOf=Date.parse('2026-10-20T15:00:00Z');
