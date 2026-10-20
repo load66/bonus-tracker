@@ -132,7 +132,30 @@
   window.tcV3ApplyToModal=function(r){if(!r)return false;openPro(r.raw||findRaw());return true};
   window.tcV3CreateTimers=function(r){const m=modalObj();if(!m||!r)return 0;const before=(m.customTimers||[]).length;m.customTimers=mergeSuggestedTimers(m.customTimers,r,m.opened||'');return m.customTimers.length-before};
   window.fillFromAI=function(){const raw=document.getElementById('az_input')?.value||findRaw();if(!isTerms(raw)){alert('Paste the full terms first.');return}openPro(raw)};
-  window.runMainAnalyze=function(){const el=document.getElementById('az_input');const raw=el?.value||findRaw();if(!isTerms(raw)){alert('Paste more full terms and conditions first.');return}try{analyzerText=raw}catch{}openPro(raw)};
+  window.runMainAnalyze=function(){
+    if(typeof termsReviewBusy!=='undefined'&&termsReviewBusy)return false;
+    const el=document.getElementById('az_input');
+    const raw=el?el.value:findRaw();
+    try{analyzerText=raw}catch{}
+    if(!isTerms(raw)){
+      if(typeof termsError==='function')return termsError('Paste the complete promotion terms (at least 20 characters) to continue.');
+      return false;
+    }
+    try{
+      if(typeof termsReviewBusy!=='undefined')termsReviewBusy=true;
+      if(typeof termsReviewError!=='undefined')termsReviewError='';
+      if(typeof renderTermsReviewFeedback==='function')renderTermsReviewFeedback();
+      openPro(raw);
+      return true;
+    }catch(error){
+      console.error('Terms wizard failed',error);
+      if(typeof termsError==='function')termsError('Unable to review these terms. Your draft is preserved; retry.');
+      return false;
+    }finally{
+      if(typeof termsReviewBusy!=='undefined')termsReviewBusy=false;
+      if(typeof renderTermsReviewFeedback==='function')renderTermsReviewFeedback();
+    }
+  };
   window.runInlineAnalyze=function(){const el=document.getElementById('inline_tc');const raw=el?.value||findRaw();if(!isTerms(raw)){alert('Paste more full terms and conditions first.');return}openPro(raw)};
   document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const txt=clean(b.textContent||'');if(/analyz|hide analyzer|show analyzer/i.test(txt))setTimeout(renderSummary,250)},true);
   document.addEventListener('input',e=>{if(e.target?.tagName==='TEXTAREA'&&!e.target.id?.startsWith('tca_'))setTimeout(renderSummary,350)},true);
