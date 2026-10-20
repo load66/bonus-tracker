@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
 // Version 3.6.62: official source review queue and one-time watch initialization.
-const V = 'bt-v3.6.62-queue1';
+const V = 'bt-v3.6.63-scroll1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
