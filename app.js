@@ -4977,7 +4977,7 @@ function applyCountdownFromModal(d){const raw=String(modal.closeFeeCountdownDays
 let modalValidationErrors=Object.create(null),termsReviewBusy=false,termsReviewError='';
 function resetModalValidation(){modalValidationErrors=Object.create(null)}
 function modalErrorRow(field){
- const labels={bank:/^Bank Name/,eligibility:/^Can this bonus be earned again/,churn:/^Eligibility Reset \/ Churn Rule/};
+ const labels={bank:/^Bank Name/i,eligibility:/^Can this bonus be earned again/i,churn:/^Eligibility Reset \/ Churn Rule/i};
  return Array.from(document.querySelectorAll('.modal .fg')).find(row=>labels[field]?.test((row.querySelector('label')?.textContent||'').trim()))||null;
 }
 function renderModalErrors(){
@@ -5021,7 +5021,7 @@ function onFormInput(event){
  }
  const row=input?.closest?.('.modal .fg');if(!row)return;
  const label=(row.querySelector('label')?.textContent||'').trim();
- const field=/^Bank Name/.test(label)?'bank':/^Can this bonus be earned again/.test(label)?'eligibility':/^Eligibility Reset \/ Churn Rule/.test(label)?'churn':'';
+ const field=/^Bank Name/i.test(label)?'bank':/^Can this bonus be earned again/.test(label)?'eligibility':/^Eligibility Reset \/ Churn Rule/.test(label)?'churn':'';
  if(field){delete modalValidationErrors[field];row.querySelector('#bt3655-error-'+field)?.remove();const el=row.querySelector('input,select,textarea');el?.removeAttribute('aria-invalid');el?.removeAttribute('aria-describedby')}
  if(modalValidationErrors.general){delete modalValidationErrors.general;document.getElementById('bt3655-error-general')?.remove()}
 }
