@@ -947,3 +947,8 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt3658-trust-notice span{display:block;color:var(--muted);font-size:12px}
 .bt3658-trust-notice a{color:var(--mint);font-size:12px;text-decoration:underline;text-underline-offset:2px;width:fit-content}
 .bt3658-trust-notice a:focus-visible{outline:2px solid var(--mint);outline-offset:3px}
+
+/* v3.6.59: source provenance stays compact inside iPhone editor. */
+.bt3659-status{font-weight:700;color:var(--text)!important}
+.bt3659-source-list{display:flex;gap:6px;flex-wrap:wrap;min-width:0}
+.bt3659-source-list a{font-size:11px;line-height:1.4;overflow-wrap:anywhere;max-width:100%;color:var(--mint)}
