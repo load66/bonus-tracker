@@ -1188,6 +1188,7 @@ async function exercise(name,engine,url){
       await page.getByRole('button',{name:'Close account editor'}).isVisible()
       &&await page.locator('.guided-progress button[aria-current="step"]').count()===1);
     await page.getByRole('button',{name:'Step 2: Requirements'}).click();
+    await page.waitForFunction(()=>document.activeElement?.id==='bt-editor-title');
     check('step navigation moves focus to the editor heading',
       await page.locator('#bt-editor-title').evaluate(el=>document.activeElement===el));
     const unsavedRequirement='Synthetic mobile draft - not saved';
