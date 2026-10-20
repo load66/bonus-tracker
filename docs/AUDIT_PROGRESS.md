@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: codex - v3.6.56 - codex/v3.6.56-mobile-editor-ux
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
