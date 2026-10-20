@@ -172,7 +172,8 @@ async function exercise(name,engine,url){
     await wait(()=>document.activeElement?.classList.contains('bt362-add-fab'));
     check('Escape also closes disclosure from the Add trigger',await page.locator('#bt-add-actions').count()===0);
     await page.locator('.bt362-add-fab').click();await button('Quick Add').click();
-    check('Quick Add scrolls its real panel into view',await page.locator('#bt-quick-add-panel').evaluate(e=>{const r=e.getBoundingClientRect();return r.top>=0&&r.top<innerHeight&&r.bottom>0}));
+    await wait(()=>{const e=document.getElementById('bt-quick-add-panel');if(!e)return false;const r=e.getBoundingClientRect();return r.top>=0&&r.top<innerHeight&&r.bottom>0&&document.activeElement===e;});
+    check('Quick Add scrolls its real panel into view',await page.locator('#bt-quick-add-panel').evaluate(e=>{const r=e.getBoundingClientRect();return r.top>=0&&r.top<innerHeight&&r.bottom>0&&document.activeElement===e}));
     await page.setViewportSize({width:390,height:844});
     check('Quick Add is a focused view without overlapping Add or dashboard summary',await page.locator('.bt362-add-fab,.tracker-overview,#tracker-search').count()===0);
     check('Quick Add has a visible touch-sized close button',await page.getByRole('button',{name:'Close Quick Add',exact:true}).evaluate(e=>e.getBoundingClientRect().height>=44));
