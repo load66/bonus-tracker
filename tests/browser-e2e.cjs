@@ -108,6 +108,12 @@ async function exercise(name,engine,url){
     await openAdvancedActions();
     await page.getByRole('button',{name:'Edit account Details, dates, bonus, rules',exact:true}).click();
   };
+  const cancelEditor=async()=>{
+    await button('Cancel').click();
+    const discard=page.getByRole('button',{name:'Discard changes',exact:true});
+    if(await discard.count())await discard.click();
+    await page.locator('.guided-modal').waitFor({state:'detached'});
+  };
   const close=async()=>{
     const action=page.getByRole('button',{name:/^Mark account closed/});
     if(!await action.count())await page.evaluate(()=>{expanded=entries[0].id;tab='tracker';R()});
@@ -243,16 +249,19 @@ async function exercise(name,engine,url){
     check('customer exclusion wording survives rerender',await page.locator('#elig-customer').inputValue()==='Not eligible for current checking account owners.');
 
     await button('Cancel').click();
+    check('edited account requires explicit discard',await page.getByRole('button',{name:'Discard changes',exact:true}).isVisible());
+    await page.getByRole('button',{name:'Discard changes',exact:true}).click();
+    await page.locator('.guided-modal').waitFor({state:'detached'});
     await page.locator('.bt362-add-fab').click();await button('Quick Add').click();
     check('Quick Add Citi identity uses locally stored bank logo',await page.getByRole('button',{name:'Citi $300',exact:true}).locator('img[src="./bank-logos/citi.svg"]').count()===1);
     await button('Citi $300').click();
     check('Quick Add exposes bank/account/bonus',await page.locator('input[oninput*="\'bank\'"]').isVisible()&&await page.locator('select[onchange*="\'accountType\'"]').isVisible()&&await page.locator('input[oninput*="\'bonus\'"]').isVisible());
-    await button('4 Review').click();check('unverified template cannot be saved',await button('💾 Add account').isDisabled());await button('Cancel').click();
+    await page.getByRole('button',{name:'Step 4: Review',exact:true}).click();check('unverified template cannot be saved',await button('💾 Add account').isDisabled());await cancelEditor();
     await importEntry(payload);
     check('import stops before saving',await page.evaluate(()=>JSON.parse(localStorage.getItem('bt_e_v4')).length===0));
-    await button('2 Requirements').click();
+    await page.getByRole('button',{name:'Step 2: Requirements',exact:true}).click();
     check('deadline wording is visible',await page.locator('input[oninput*="\'requiredDaysText\'"]').inputValue()==='90 calendar days');
-    await button('4 Review').click();await button('💾 Add account').click();
+    await page.getByRole('button',{name:'Step 4: Review',exact:true}).click();await button('💾 Add account').click();
     await wait(()=>JSON.parse(localStorage.getItem('bt_e_v4')).length===1);
     check('Needs you uses unboxed PDF heading and standalone priority card',await page.locator('.bt3719-needs > .bt3719-section-title').count()===1&&await page.locator('.bt3641-attention-toggle').count()===1&&await page.locator('.bt3641-attention-item.is-selected').count()===0&&await page.locator('.bt3719-needs.bt360-panel').count()===0);
     check('v3.6.1 panel headings render badges instead of literal HTML',await page.locator('.bt360-panel-title').evaluateAll(rows=>rows.some(e=>e.querySelector('h3')?.textContent==='Needs you'&&e.querySelector('.bt360-count'))&&rows.every(e=>!e.querySelector('h3')?.textContent.includes('<span'))));
@@ -443,7 +452,7 @@ async function exercise(name,engine,url){
     await page.getByRole('button',{name:'Set rule'}).first().click();
     check('Set rule opens existing account rule editor',await page.locator('.modal').isVisible()
       &&(await page.locator('.modal').innerText()).includes('Fees & Close'));
-    await button('Cancel').click();
+    await cancelEditor();
     await page.evaluate(()=>{
       entries[0]=JSON.parse(window.__chaseViewBaseline);
       expanded=entries[0].id;
@@ -457,9 +466,9 @@ async function exercise(name,engine,url){
     const id=(await record()).id;
     await page.reload();await settleStartup();check('reload preserves identity and notes',(await record()).id===id&&(await record()).notes===payload.entry.notes);
     check('refresh keeps old Action Center hidden',await page.locator('.bt360-legacy-actions').count()===0);
-    await edit();await button('3 Fees & Close').click();
+    await edit();await page.getByRole('button',{name:'Step 3: Fees & Close',exact:true}).click();
     await page.getByPlaceholder('Personal notes; terms review does not overwrite them').fill('Keep <img src=x onerror=alert(1)> & "quotes"');
-    await button('4 Review').click();await button('💾 Save changes').click();
+    await page.getByRole('button',{name:'Step 4: Review',exact:true}).click();await button('💾 Save changes').click();
     await wait(()=>modal===null&&!entrySaveBusy);
     check('edit preserves identity',(await record()).id===id);
     check('notes cannot inject HTML',await page.locator('img[src="x"]').count()===0);
@@ -1179,6 +1188,38 @@ async function exercise(name,engine,url){
     await button('Tracker').click();
     await edit();
     await page.setViewportSize({width:320,height:844});
+    check('editor progress shows all four named accessible steps on iPhone',
+      await page.locator('.guided-progress button').evaluateAll(rows=>rows.length===4&&rows.every((el,i)=>{
+        const label=el.querySelector('span');
+        return el.getAttribute('aria-label')?.startsWith('Step '+(i+1)+':')&&label&&getComputedStyle(label).display!=='none'&&el.getBoundingClientRect().height>=44&&el.getBoundingClientRect().right<=innerWidth+1;
+      })));
+    check('editor has an accessible close and current step',
+      await page.getByRole('button',{name:'Close account editor'}).isVisible()
+      &&await page.locator('.guided-progress button[aria-current="step"]').count()===1);
+    await page.getByRole('button',{name:'Step 2: Requirements'}).click();
+    await page.waitForFunction(()=>document.activeElement?.id==='bt-editor-title');
+    check('step navigation moves focus to the editor heading',
+      await page.locator('#bt-editor-title').evaluate(el=>document.activeElement===el));
+    const unsavedRequirement='Synthetic mobile draft - not saved';
+    await page.locator('.guided-body input[oninput*="dataPoint"]').fill(unsavedRequirement);
+    await page.getByRole('button',{name:'Step 1: Basics'}).click();
+    await page.getByRole('button',{name:'Step 2: Requirements'}).click();
+    check('returning to an earlier step keeps unsaved edits',
+      await page.locator('.guided-body input[oninput*="dataPoint"]').inputValue()===unsavedRequirement);
+    await button('Cancel').click();
+    check('discarding a changed editor requires an explicit confirmation',
+      await page.getByRole('button',{name:'Keep editing'}).isVisible()
+      &&await page.getByRole('button',{name:'Discard changes'}).isVisible());
+    await page.getByRole('button',{name:'Keep editing'}).click();
+    check('keeping editing retains the exact draft',
+      await page.locator('.guided-body input[oninput*="dataPoint"]').inputValue()===unsavedRequirement);
+    await page.getByRole('button',{name:'Close account editor'}).click();
+    await page.getByRole('button',{name:'Discard changes'}).click();
+    check('confirmed discard exits without editing account records',
+      await page.locator('.guided-modal').count()===0
+      &&await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
+    await edit();
+    await page.setViewportSize({width:320,height:844});
     check('mobile editor content fits 320px',await page.locator('.modal').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
     check('saved rule editing defaults collapsed on mobile',await page.locator('.eligibility-restriction').evaluateAll(rows=>rows.every(e=>!e.open)));
     check('manual rule tools default collapsed on mobile',!await page.locator('#elig-template').isVisible());
@@ -1194,7 +1235,7 @@ async function exercise(name,engine,url){
     await page.screenshot({path:path.join(output,name+'-entry-editor-mobile.png')});
     await page.setViewportSize({width:390,height:844});
     check('mobile editor fits viewport and prevents input zoom',await page.locator('.modal').evaluate(e=>e.getBoundingClientRect().width<=window.innerWidth)&&await page.locator('.modal input').first().evaluate(e=>parseFloat(getComputedStyle(e).fontSize)>=16));
-    await button('Cancel').click();
+    await cancelEditor();
     check('mobile navigation and editor leave saved records unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
     await page.evaluate(()=>{undoState=null;clearTimeout(undoTimer);R()});
     check('mobile Tracker shows no old Action Center disclosure',await page.locator('.bt360-legacy-actions').count()===0);
@@ -1302,14 +1343,14 @@ async function exercise(name,engine,url){
       return {valid:BTFinancialRules.validate(projected).ok,unknown:projected.financialRules.closure.earlyCloseFee===null,manual:projected.closeRestrictionType==='manual-review'&&projected.closeRuleBasis==='manual',blocked:closeReadiness(after).cls==='danger'&&!safeCloseDate(after),draftBlocked,unchanged:before===localStorage.getItem('bt_e_v4')};
     },require('./fixtures/financial-rules.cjs').reviewFixture());
     for(const [key,value] of Object.entries(reviewProbe))check('financial v2 browser '+key,value);
-    await button('Cancel').click();
+    await cancelEditor();
     // Quick Add belongs to the Tracker list, not the focused account detail.
     await page.getByRole('button',{name:'Back to accounts'}).click();
     const fileSource=require('./fixtures/financial-rules.cjs').reviewFixture();
     await importEntry({kind:'BonusTrackerEntry',schemaVersion:3,verification:{promoSourceUrl:fileSource.promoSourceUrl,feeScheduleSourceUrl:fileSource.feeScheduleSourceUrl,termsVerifiedAt:fileSource.termsVerifiedAt},entry:fileSource});
     check('actual v3 file chooser reaches review after confirmation',await page.getByRole('heading',{name:'Add account',exact:true}).isVisible());
     check('actual v3 file review retains exact rules',await page.evaluate(()=>modal.financialRules.version===2&&modal.financialRules.closure.earlyCloseFee===null&&modal.closeRestrictionType==='manual-review'));
-    await button('Cancel').click();
+    await cancelEditor();
     await page.evaluate(()=>{
       window.__replacementSavedEntries=JSON.parse(JSON.stringify(entries));window.__replacementSavedStorage=localStorage.getItem('bt_e_v4');
       entries=[{id:'CHA-P-01',bank:'Chase',accountType:'personal',opened:'2023-01-01',closed:'2025-01-01',bonusRecd:'2023-03-01',bonus:100,churn:'1',churnable:true,notes:'Old personal history',customTimers:[],checklist:[],history:[]},{id:'CHA-B-01',bank:'Chase Biz',accountType:'business',opened:'2023-01-01',closed:'2025-01-01',bonusRecd:'2023-03-01',bonus:500,churn:'1',churnable:true,notes:'Business unchanged',customTimers:[],checklist:[],history:[]},{id:'CIT-P-01',bank:'Citi',accountType:'personal',opened:'2023-01-01',closed:'2025-01-01',bonus:50,churn:'1',churnable:true,notes:'Other unchanged',customTimers:[],checklist:[],history:[]}];sv(SK,entries);R();
@@ -1318,7 +1359,7 @@ async function exercise(name,engine,url){
     const chaseSource=require('./fixtures/financial-rules.cjs').reviewFixture();chaseSource.bank='Chase';
     await importEntry({kind:'BonusTrackerEntry',schemaVersion:3,verification:{promoSourceUrl:chaseSource.promoSourceUrl,feeScheduleSourceUrl:chaseSource.feeScheduleSourceUrl,termsVerifiedAt:chaseSource.termsVerifiedAt},entry:chaseSource});
     check('Chase file review does not replace saved records',await page.evaluate(()=>localStorage.getItem('bt_e_v4')===window.__replacementBefore));
-    await button('4 Review').click();await button('💾 Add account').click();
+    await page.getByRole('button',{name:'Step 4: Review',exact:true}).click();await button('💾 Add account').click();
     await page.getByRole('heading',{name:'Replace an old entry?',exact:true}).waitFor();
     check('personal Chase import selects only old personal Chase',await page.evaluate(()=>replacementPickerPrompt.selectedId==='CHA-P-01'&&replacementPickerPrompt.candidates.length===1));
     const originalViewport=page.viewportSize();

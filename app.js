@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.55';
+const APP_VERSION='3.6.56';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4977,7 +4977,7 @@ function applyCountdownFromModal(d){const raw=String(modal.closeFeeCountdownDays
 let modalValidationErrors=Object.create(null),termsReviewBusy=false,termsReviewError='';
 function resetModalValidation(){modalValidationErrors=Object.create(null)}
 function modalErrorRow(field){
- const labels={bank:/^Bank Name/,eligibility:/^Can this bonus be earned again/,churn:/^Eligibility Reset \/ Churn Rule/};
+ const labels={bank:/^Bank Name/i,eligibility:/^Can this bonus be earned again/i,churn:/^Eligibility Reset \/ Churn Rule/i};
  return Array.from(document.querySelectorAll('.modal .fg')).find(row=>labels[field]?.test((row.querySelector('label')?.textContent||'').trim()))||null;
 }
 function renderModalErrors(){
@@ -5021,7 +5021,7 @@ function onFormInput(event){
  }
  const row=input?.closest?.('.modal .fg');if(!row)return;
  const label=(row.querySelector('label')?.textContent||'').trim();
- const field=/^Bank Name/.test(label)?'bank':/^Can this bonus be earned again/.test(label)?'eligibility':/^Eligibility Reset \/ Churn Rule/.test(label)?'churn':'';
+ const field=/^Bank Name/i.test(label)?'bank':/^Can this bonus be earned again/.test(label)?'eligibility':/^Eligibility Reset \/ Churn Rule/.test(label)?'churn':'';
  if(field){delete modalValidationErrors[field];row.querySelector('#bt3655-error-'+field)?.remove();const el=row.querySelector('input,select,textarea');el?.removeAttribute('aria-invalid');el?.removeAttribute('aria-describedby')}
  if(modalValidationErrors.general){delete modalValidationErrors.general;document.getElementById('bt3655-error-general')?.remove()}
 }
