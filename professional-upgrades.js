@@ -179,8 +179,13 @@
     if(e._fromTemplate){
       const status=typeof quickAddReviewStatus==='function'?quickAddReviewStatus({bank:e.bank}):null;
       h+='<div class="bt3657-template-note bt3658-trust-notice" role="note"><b>Historical example — not a verified offer</b><span>Only the bank and suggested account type were copied. Bonus, deposit requirements, fees, closure and churn eligibility remain unconfirmed. Review the applicable enrolled promotion and account fee schedule.</span>';
+      if(status?.status)h+='<span class="bt3659-status">Catalog: '+html(status.status)+(status.checked?' · reviewed '+html(status.checked):' · not verified')+'</span>';
       if(status?.note)h+='<span>'+html(status.note)+'</span>';
-      if(status?.url)h+='<a href="'+html(status.url)+'" rel="noopener noreferrer" target="_blank">Bank promotion source'+(status.checked?' · checked '+html(status.checked):'')+'</a>';
+      if(status?.sources?.length){
+        h+='<div class="bt3659-source-list">';
+        for(const source of status.sources)h+='<a href="'+html(source.url)+'" rel="noopener noreferrer" target="_blank">'+html(source.label)+' ↗</a>';
+        h+='</div>';
+      }
       h+='</div>';
     }
     h+='<div class="guided-grid">';
