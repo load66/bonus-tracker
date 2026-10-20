@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: codex — v3.6.58 — codex/v3.6.58-template-trust
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
