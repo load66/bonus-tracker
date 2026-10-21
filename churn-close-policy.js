@@ -1,4 +1,4 @@
-/* Release 3.6.72: canonical bank rules unchanged; cloud backup UI only. */
+/* Release 3.6.73: canonical bank rules unchanged; atomic requirement completion UI only. */
 /* BonusTracker v3.5.2 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
 (function(){
   'use strict';
