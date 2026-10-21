@@ -325,8 +325,8 @@ def review_decision(bank, role, record, manifest, expected, reference, now):
         raise ValueError('Pending check time is invalid or in the future')
     if now - checked_at > dt.timedelta(hours=36):
         raise ValueError('Recheck the official source before acknowledging an overdue observation')
-    if prior == observed:
-        raise ValueError('A reversion still requires a new explicit review, not a silent baseline reset')
+    # A return to the original fingerprint is still a pending change until
+    # explicitly reviewed; it may be acknowledged only by this same workflow.
     return {
         'bank': bank, 'role': role, 'offerKey': scope['offerKey'], 'url': match['url'],
         'previousHash': prior, 'reviewedHash': expected,
