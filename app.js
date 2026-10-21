@@ -5813,7 +5813,7 @@ function reqSubmit(){
   const d=document.getElementById('req_date');
   if(d)p.date=d.value;
   if(!p.date){
-    p.error='Enter the actual requirement completion date.';
+    p.error='Requirement completion date is required. Enter the actual date.';
     R();document.getElementById('req_date')?.focus?.({preventScroll:true});
     return false
   }
@@ -5837,7 +5837,8 @@ function reqSubmit(){
     });
     const e2=entries.find(x=>x.id===p.entryId);
     if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
-    entries=sortE(entries);sv(SK,entries);
+    entries=sortE(entries);
+    if(sv(SK,entries)!==true)throw Error('Requirement persistence not verified');
     p.warningReviewed=false;
     reqPrompt=null;
     cfm={title:'Requirement Met Saved',msg:(e2?e2.bank:'This bank')+' requirement met date saved for '+fD(p.date)+'. Bonus received is still tracked separately.',green:true,confirmLabel:hasDirectDepositRequirement(e2)?'Review deposit result':'OK',action:()=>{cfm=null;if(hasDirectDepositRequirement(e2))reviewCycleExperience(p.entryId,'requirement');else R()}};
