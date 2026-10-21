@@ -869,6 +869,7 @@ async function exercise(name,engine,url){
     const beforeWatchCheck=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     await page.evaluate(async()=>{
       const catalog=window.BTQuickAddCatalog,record=catalog.records['Capital One'];
+      await catalog.refreshWatch(); // Drain any startup fetch before forcing the synthetic snapshot.
       const now=new Date(Date.now()).toISOString();
       const sources={};
       for(const x of record.sources)sources[x.role]={url:x.url,status:x.role==='fees'?'unchanged':'changed',
