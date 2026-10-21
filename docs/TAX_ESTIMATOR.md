@@ -1,4 +1,4 @@
-# Federal bonus tax estimate — v3.6.76
+# Federal bonus tax estimate — v3.6.77
 
 ## Purpose and boundaries
 The Tax tab retains the existing read-only receipt ledger, source reconciliation, Personal/Business filters, prior cycles, and full-year CSV export. It adds a **planning estimate**, not a tax return, tax filing, or a verified IRS balance. Do not represent a calculated result as an IRS bill.
@@ -58,3 +58,19 @@ When the pay screenshot has an explicit YTD **federal taxable wages** amount, us
 **No banking modifications:** Only the existing in-memory `taxEstimateDrafts` is updated when the user approves. `clear` removes the pay projection and manually entered values for the selected year. The Tax history, CSV, privacy guarantees, original federal ordinary-income brackets and years remain unchanged.
 
 **Regression coverage:** strict parsing/no inferred withholding, gross vs proxy wage basis, estimated calendar projection, invalid/future year and bad JSON, preview-only, user-approved apply, no-write to tracked/backup keys, reset, and Chromium/WebKit mobile widths.
+
+## v3.6.77: qualified overtime and exact taxable-wage review
+
+**Overtime is never inferred from gross pay, a paystub without a qualified premium, overtime hours, or an AI guess.** The user optionally enters the eligible FLSA premium (for example, the extra half of legally mandated time-and-a-half overtime), supported by their employer statement or, in 2026, W-2 box 12 code TT. It is not total overtime wages. For 2025, employer disclosure differs; use the official 2025 Schedule 1-A guidance. Married filing separately cannot claim the deduction; maximum annual deduction is $12,500 for single/head of household and $25,000 for married joint returns (2025–2026). The tax engine applies the deduction *in addition* to the standard/custom deduction, both to the no-bonus baseline and to the with-bonus tax projection; applying the deduction only after bonuses would overstate or understate the bonus increment.
+
+A provisional phaseout uses **$100 per completed $1,000** of estimated modified adjusted gross income above $150,000 ($300,000 if filing jointly), as instructed by IRS Schedule 1-A Part III; because the app does not calculate a complete return, it uses other ordinary income and taxable bank-bonus receipts as a **MAGI proxy** and flags above-threshold results for further review. No adjusted gross income tax-liability certainty is claimed. Qualified overtime is not automatically eligible merely because a taxpayer worked overtime: statutory qualification, valid SSN, employer reporting and the filing-status rule must be confirmed.
+
+When previewing a reviewed pay-screenshot JSON, the user can expand **Have exact federal taxable wages?** and enter the separately labeled year-to-date amount when actually shown by the payroll app. The parser validates the number and recomputes the annual wage projection; pressing **Use this estimate** is still required. Invalid amounts prevent use, and canceling/removing the temporary pay review never alters existing financial records. No field is persisted or synced. Otherwise the tax estimate continues using the clearly labeled gross-minus-pre-tax proxy, not an unverified W-2 box 1 fact.
+
+IRS authority:
+- Updated August 2026 IRS qualified overtime FAQs (FS-2026-13), including W-2 code TT requirements: https://www.irs.gov/newsroom/irs-updates-faqs-on-qualified-overtime-deduction
+- IRS Form W-2 instructions for 2026, box 12 code TT: https://www.irs.gov/instructions/iw2w3
+- IRS Schedule 1-A Part III, 2025 line 19 rounding rule: https://www.irs.gov/pub/irs-prior/f1040s1a--2025.pdf
+- IRS overtime overview and MAGI phaseout limits: https://www.irs.gov/newsroom/what-to-know-about-the-no-tax-on-overtime-deduction
+
+Scope limitations remain: no credits, qualified tips, car loan interest, senior-specific deductions, ACA or other year-end tax adjustments are modeled. Eligibility and final W-2 Box 1 / Box 12 values must be confirmed at filing. On-screen figures remain illustrative, not actual IRS balance due.

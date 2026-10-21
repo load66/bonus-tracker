@@ -16,6 +16,31 @@ assert.equal(base.marginalRate,.22);
 const withheld=estimate({withholding:'9000'});
 assert.equal(withheld.balance,-158.5,'Projected withholding yields potential refund, not automatically bill');
 assert.equal(estimate({withholding:'8000',payments:'100'}).balance,741.5,'Estimated payments reduce outstanding projected income tax');
+// Qualified overtime is explicitly entered FLSA premium, not automatically
+// assumed from an overtime paycheck. 2026 W-2 box 12 code TT is authoritative.
+const withOT=estimate({qualifiedOvertime:2000,withholding:9000});
+assert.equal(withOT.qualifiedOvertime,2000);
+assert.equal(withOT.overtimeDeduction,2000);
+assert.equal(withOT.federalTax,8401.50);
+assert.equal(withOT.bonusTax,71.50,'OT deduction applies both with and without existing bank bonuses');
+assert.equal(withOT.balance,-598.50,'OT deduction reduces the estimated balance due');
+assert.equal(estimate({qualifiedOvertime:20000}).overtimeDeduction,12500,'Single cap is $12,500');
+assert.equal(estimate({filingStatus:'mfj',qualifiedOvertime:26000}).overtimeDeduction,25000,'Joint cap is $25,000');
+assert.equal(estimate({filingStatus:'mfs',qualifiedOvertime:100}).reason,'overtime-filing-status','MFS cannot claim the deduction');
+assert.equal(estimate({qualifiedOvertime:-1}).reason,'qualified-overtime');
+assert.equal(estimate({qualifiedOvertime:'1000.123'}).reason,'qualified-overtime');
+assert.equal(estimate({qualifiedOvertime:''}).overtimeDeduction,0);
+const phaseout=estimate({otherIncome:151200,bonusAmount:0,qualifiedOvertime:2000});
+assert.equal(phaseout.overtimeDeduction,1900,'IRS schedule phases out $100 per completed $1k over MAGI threshold');
+assert(phaseout.overtimePhaseoutEstimated,'Estimated MAGI must be labeled as a proxy');
+assert.equal(estimate({otherIncome:150999,bonusAmount:0,qualifiedOvertime:2000}).overtimeDeduction,2000,'Partial $1000 above threshold does not phase out');
+const phaseoutBonus=estimate({otherIncome:151500,bonusAmount:700,qualifiedOvertime:2000});
+assert.equal(phaseoutBonus.overtimeDeductionBefore,1900);
+assert.equal(phaseoutBonus.overtimeDeduction,1800);
+assert.equal(phaseoutBonus.bonusTax,192,'Bonus-induced MAGI phaseout increases the bonus tax increment');
+assert.equal(estimate({year:2025,qualifiedOvertime:1000}).overtimeDeduction,1000);
+assert.equal(estimate({year:2026,filingStatus:'mfj',otherIncome:302300,bonusAmount:0,qualifiedOvertime:2000}).overtimeDeduction,1800,'Married joint $300k threshold');
+
 const crossing=estimate({otherIncome:66000,bonusAmount:1000});
 assert.equal(crossing.bonusTax,170,'Marginal bracket crossing must calculate progressive rates, not apply 22% to all bonuses');
 assert.equal(estimate({otherIncome:0,bonusAmount:325}).bonusTax,0,'Standard deduction shields bonus when other income is zero');

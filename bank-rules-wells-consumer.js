@@ -1,4 +1,4 @@
-/* Release 3.6.76: canonical bank and closure rules unchanged; Tax JSON import only. */
+/* Release 3.6.77: canonical bank and closure rules unchanged; Tax estimator accuracy only. */
 /*
  * filename: bank-rules-wells-consumer.js
  * version: 3.5.2

@@ -792,6 +792,22 @@ async function exercise(name,engine,url){
       await page.locator('.bt-tax-pay-review').innerText().then(t=>t.includes('$58,244.68')&&t.includes('Gross less reported pre-tax deductions')));
     check('file preview leaves unconfirmed filing status and existing scenario untouched',
       await page.locator('#bt-tax-other').inputValue()===''&&await page.locator('#bt-tax-status').inputValue()==='');
+    await page.locator('.bt-tax-wage-review > summary').click();
+    await page.locator('#bt-tax-wage-ytd').fill('44500');
+    await page.locator('#bt-tax-wage-ytd').press('Tab');
+    check('optional exact federal taxable wages override changes preview only',
+      await page.locator('.bt-tax-pay-review').innerText().then(t=>t.includes('$57,597.52')&&t.includes('Federal taxable wages on pay file'))&&
+      await page.locator('#bt-tax-other').inputValue()==='');
+    await page.locator('.bt-tax-wage-review > summary').click();
+    await page.locator('#bt-tax-wage-ytd').fill('52000');
+    await page.locator('#bt-tax-wage-ytd').press('Tab');
+    check('invalid taxable wage override blocks apply and exposes the problem',
+      await page.locator('.bt-tax-pay-error').isVisible()&&await page.locator('.bt-tax-pay-apply').count()===0);
+    await page.locator('#bt-tax-wage-ytd').fill('');
+    await page.locator('#bt-tax-wage-ytd').press('Tab');
+    check('clearing optional wage override restores disclosed gross-minus-pre-tax projection',
+      await page.locator('.bt-tax-pay-review').innerText().then(t=>t.includes('$58,244.68')&&t.includes('Gross less reported pre-tax deductions'))&&
+      await page.locator('.bt-tax-pay-apply').isVisible());
     for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
       const fit=await page.locator('.bt-tax-pay').evaluate(el=>({
@@ -825,6 +841,19 @@ async function exercise(name,engine,url){
     await page.locator('#bt-tax-withheld').fill('9000');
     check('projected withholding computes possible refund separately from bonus tax',
       await page.locator('#bt-tax-live').innerText().then(t=>t.includes('Possible federal refund')&&t.includes('$158.50')));
+    await page.locator('#bt-tax-ot').fill('2000');
+    check('qualified overtime reduces IRS estimate without incorrectly exempting full overtime',
+      await page.locator('#bt-tax-live').innerText().then(t=>t.includes('Estimated qualified overtime deduction')&&t.includes('$2,000.00')&&t.includes('$8,401.50')&&t.includes('$598.50')));
+    await page.locator('#bt-tax-ot').fill('20000');
+    check('single filer overtime premium is capped at the federal $12,500 limit',
+      await page.locator('#bt-tax-live').innerText().then(t=>t.includes('Estimated qualified overtime deduction')&&t.includes('$12,500.00')));
+    await page.locator('#bt-tax-status').selectOption('mfs');
+    check('married filing separately cannot silently receive overtime tax relief',
+      await page.locator('#bt-tax-live').innerText().then(t=>t.includes('Married filing separately cannot claim')));
+    await page.locator('#bt-tax-status').selectOption('single');
+    await page.locator('#bt-tax-ot').fill('');
+    check('clearing overtime restores original estimate without creating a saved deduction',
+      await page.locator('#bt-tax-live').innerText().then(t=>t.includes('$158.50')&&!t.includes('Estimated qualified overtime deduction')));
     await page.locator('#bt-tax-exclude').fill('125');
     check('excluded receipt amount reduces taxable bonus estimate',
       await page.locator('#bt-tax-live').innerText().then(t=>t.includes('$44.00')));

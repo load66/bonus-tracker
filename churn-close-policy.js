@@ -1,4 +1,4 @@
-/* Release 3.6.76: canonical bank and closure rules unchanged; Tax JSON import only. */
+/* Release 3.6.77: canonical bank and closure rules unchanged; Tax estimator accuracy only. */
 /* BonusTracker v3.5.2 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
 (function(){
   'use strict';
