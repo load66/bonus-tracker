@@ -91,7 +91,8 @@ async function watchQueueRegression(){
   const makeRow=(src,status)=>({
     url:src.url,status,checkedAt:checked,baselineHash:'a'.repeat(64),
     observedHash:status==='changed'?'b'.repeat(64):'a'.repeat(64),
-    changeAt:status==='changed'?checked:null
+    changeAt:status==='changed'?checked:null,
+    reviewSignals:status==='changed'?['deadlines','monthly_fees','<script>alert(1)</script>']:[]
   });
   const snapshot={schemaVersion:1,generatedAt:checked,records:{
     'Capital One':{offerKey:record.offerKey,sources:{
@@ -126,6 +127,7 @@ async function watchQueueRegression(){
 
   assert.equal(review.issues[0].kind,'changed','Material source-page signal leads unavailable source');
   assert.equal(review.issues[0].bank,'Capital One');
+  assert.deepEqual(Array.from(review.issues[0].signals),['deadlines','monthly_fees'], 'Only approved bounded category names may enter review queue');
   assert.equal(review.issues[0].url,sources.find(x=>x.role==='promotion').url);
   assert.equal(review.issues[1].kind,'unavailable');
   assert.equal(api.status('Capital One').kind,'stale','Changed official source demotes current offer');

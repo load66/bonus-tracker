@@ -347,11 +347,13 @@
     if(sourceStale||sourceFailed||error||officialError)h+='<div class="bt362-offer-stale" role="status"><span>'+escape(error||officialError||(sourceStale?'Source information is stale. Review dates before applying.':'Some source updates are unavailable.'))+'</span><button type="button" onclick="btRefreshBankBonuses()">Refresh</button></div>';
     if(watchReview.issues.length){
       const issueText={changed:'Page changed · recheck terms',unavailable:'Check unavailable',stale:'Check overdue'};
+      const signalName={bonus_amount:'Bonus wording',monthly_fees:'Fee wording',direct_deposit:'Deposit wording',deadlines:'Deadlines',eligibility:'Eligibility',closure_rules:'Closing rules',other_terms:'Other terms'};
       h+='<details class="bt3662-source-queue"><summary>Official sources · '+watchReview.issues.length+' need review</summary><div class="bt3662-source-items">';
       for(const item of watchReview.issues.slice(0,12)){
-        h+='<div class="bt3662-source-item"><div><b>'+escape(item.bank)+'</b><span>'+escape(item.role==='fees'?'Fee disclosures':'Promotion terms')+' · '+escape(issueText[item.kind]||'Review source')+'</span></div><a href="'+escape(item.url)+'" target="_blank" rel="noopener noreferrer">Review official page ↗</a></div>';
+        const hints=item.kind==='changed'&&item.signals?.length?' · Possible: '+item.signals.map(k=>signalName[k]).filter(Boolean).join(', '):'';
+        h+='<div class="bt3662-source-item"><div><b>'+escape(item.bank)+'</b><span>'+escape(item.role==='fees'?'Fee disclosures':'Promotion terms')+' · '+escape(issueText[item.kind]||'Review source')+escape(hints)+'</span></div><a href="'+escape(item.url)+'" target="_blank" rel="noopener noreferrer">Review official page ↗</a></div>';
       }
-      h+='</div><p>Changes are source-page signals, not confirmed eligibility or updated account rules. Saved offer terms remain unchanged.</p></details>';
+      h+='</div><p>Possible topic labels are automated text-difference clues, not verified changes to amounts, fees, or eligibility. Saved offer terms remain unchanged.</p></details>';
     }
     if(!feed)return h+'<p role="status">'+(loading?'Loading offers…':'Offers are unavailable.')+'</p>';
     const proofs=feed.offers.map(o=>availabilityFor(o,officialCatalog));

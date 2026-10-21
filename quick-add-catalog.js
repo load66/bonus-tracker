@@ -120,8 +120,13 @@
        const kind=stale?'stale':row.status==='changed'&&HEX.test(row.baselineHash||'')
           &&HEX.test(row.observedHash||'')&&Number.isFinite(Date.parse(row.changeAt||''))?'changed'
           :row.status==='unavailable'?'unavailable':null;
-       if(kind)issues.push({bank,role:source.role,kind,url:source.url,
-         label:source.label,checkedAt:Number.isFinite(checked)&&checked<=now?row.checkedAt:''});
+       if(kind){
+         const approved=['bonus_amount','monthly_fees','direct_deposit','deadlines','eligibility','closure_rules','other_terms'];
+         const signals=kind==='changed'&&Array.isArray(row.reviewSignals)
+           ?row.reviewSignals.filter(x=>approved.includes(x)).slice(0,7):[];
+         issues.push({bank,role:source.role,kind,url:source.url,
+           label:source.label,checkedAt:Number.isFinite(checked)&&checked<=now?row.checkedAt:'',signals});
+       }
      }
    }
    const order={changed:0,unavailable:1,stale:2};

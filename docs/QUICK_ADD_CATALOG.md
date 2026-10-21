@@ -54,3 +54,12 @@ Bank Offers displays a compact expandable **Official sources · N need review** 
 The release-triggered publisher is permitted to **initialize an empty monitoring snapshot exactly once**, then only normal six-hour scheduled/manual executions perform further checks. This avoids publication loops while making the source watch operational without manual setup. Browser refreshes of this public snapshot are throttled to 15 minutes, including repeated UI renders. Snapshot dates in the future or missing official-source evidence never certify an offer.
 
 All new offer terms still require product-specific promotion and fee evidence before import or eligibility determination.
+
+
+## Source-change categories — v3.6.64
+
+The scheduled public official-page monitor records separate SHA-256 digests for wording associated with bonus/reward amounts, monthly fees, direct deposits, deadlines, customer eligibility, and closure rules. These **category names are search clues, not extracted or verified rules**. No page text, credentials, customer records or private bonus terms are stored in the public snapshot. When a page's relevant text changes, the review queue shows compact *Possible: …* category hints and links to approved official sources.
+
+A legacy, hash-only baseline cannot retrospectively identify which rules changed. Until a full document hash matches the saved baseline, its category is **Other terms**, rather than an invented fee/deposit change. A matching historical fingerprint can safely add category digests for future comparisons. Outages, redirects, or subsequent page reversion cannot silently clear existing review flags. Changes remain pending until separately reviewed. An official page may change for editorial reasons, so no category observation independently establishes a new bonus, exact fee, closure rule, direct-deposit qualification, or user eligibility.
+
+The application never automatically imports a watched change, modifies an enrolled promotion, or changes the canonical eligibility and fee engines. Browser UI shows only bounded, allowlisted category names from the public snapshot; bank URLs come from the approved catalog, not from remote JSON.
