@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex — v3.6.77 — codex/v3.6.77-tax-overtime-wage-basis
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.77 federal Tax accuracy and qualified overtime review (`codex/v3.6.77-tax-overtime-wage-basis`): Tax tab now supports an optional *qualified FLSA overtime premium* (never infers eligibility or total overtime), handles federal caps, 2025/2026 Schedule 1-A phaseout using a disclosed ordinary-income MAGI proxy, and applies an eligible deduction to both bonus and baseline comparisons. MFS eligible amount is rejected. Optional pay-file review permits actual YTD federal taxable wages with validation, explicit subsequent approval and original gross-minus-pre-tax fallback. All inputs are memory-only; no bank records, source evidence, fee rules, backup schema, business rules, cloud state or provider calls altered. Browser tests cover wage validation, narrow phone widths, overtime tax results and no persistent writes; IRS deduction tests cover caps, brackets, MAGI proxy and filing exclusions. Runtime/service-worker v3.6.77. Next: pass PR Bonus/Cloud/UI, Chromium/WebKit, release verifier; squash merge then verify GitHub Pages deployment on merge SHA.
+
 
 - v3.6.76 reviewed payroll JSON Tax input (`codex/v3.6.76-tax-json-import`): Tax tab gains a compact Choose JSON → review exactly labeled year-to-date gross/pre-tax/federal withholding → explicit Use this estimate flow. Strict versioned local JSON reader rejects malformed/future records and misleading withholding totals. Federal taxable wages, if absent, are transparently approximated using stated pre-tax deductions rather than assumed from gross; year-end income and withholding are time-based projections, never actual W-2 facts. Inputs are local memory only, no network, OCR, new persistent keys, cloud backups, account changes, or private file contents committed. Adds importer unit suite and both browser engines/mobile/backup-no-write checks; v3.6.76 release/cache. No canonical eligibility, payment, bank fee, lifecycle or provider code modified. Next: PR CI unit/browser and verifier, squash merge on green, confirm GitHub Pages/main run succeeds.
 
