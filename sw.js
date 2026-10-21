@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.70: reviewed source fields stage a safe, unsaved automation draft.
-const V = 'bt-v3.6.70-autodraft1';
+// Version 3.6.71: reanalysis required after editing approved promotion terms.
+const V = 'bt-v3.6.71-reanalysis1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
