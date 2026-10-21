@@ -6,6 +6,9 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.6.69 mobile requirement-date reliability (`codex/v3.6.69-requirement-date-validation`, PR #252): completion confirmation rejects invalid or future calendar dates with an accessible inline error, retains the correction draft and gives the date field focus; the dialog clarifies that all requirements are being marked completed and bonus receipt is separate. Strict synthetic no-write regression, Chromium and WebKit mobile browser assertions, release/cache bump v3.6.69. No account records, terms, provider state, schemas, canonical rules, backup objects or backend changed. Initial failing-before test reproduced invalid-date prompt loss; corrected bonus/cloud/UI units and Chromium/WebKit PASS on run 39554625128. Next: exact final-commit checks, merge green PR, verify Pages release and cache.
+
+
 - v3.6.68 Datapoints account-type isolation (`codex/v3.6.68-datapoint-audience-filter`, PR #250): Personal/Business filtering now applies to saved user experiences as well as public reports; unknown-audience notes remain available under All. Failing-before synthetic regression, account-type browser assertions and changed UI help copy included. No account data, terms, stored keys, canonical rules, cloud recovery, backend or provider calls changed. Release/cache v3.6.68. PR bonus/cloud/UI unit suites, Chromium, WebKit, and verifier PASS on run 39548141911. Next: verify final handoff-head CI, merge on green, confirm main GitHub Pages deployment and exact cache version.
 
 

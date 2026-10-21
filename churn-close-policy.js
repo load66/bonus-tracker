@@ -1,4 +1,4 @@
-/* Release 3.6.68: canonical bank rules retained unchanged; datapoint filtering only. */
+/* Release 3.6.69: canonical bank rules remain unchanged; requirement dialog validation only. */
 /* BonusTracker v3.5.2 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
 (function(){
   'use strict';

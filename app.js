@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.68';
+const APP_VERSION='3.6.69';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4904,10 +4904,11 @@ function rRcv(){
 function rReqMet(){
   const p=reqPrompt;
   if(!p)return'';
-  let h='<div class="cbg" onclick="skipReq()"><div class="rcv-box" onclick="event.stopPropagation()">';
-  h+='<h3>✅ Requirement Met</h3><div class="sub">This stops the requirement countdown for '+esc(p.bank)+'. Bonus received still stays separate for tax and close tracking.</div>';
-  h+='<label>Requirement Met Date</label><input class="dd-input" type="date" id="req_date" oninput="if(reqPrompt)reqPrompt.date=this.value" value="'+(p.date||'')+'" onclick="event.stopPropagation()">';
-  h+='<div class="crow"><button class="c-c" onclick="skipReq()">Cancel</button>'+(p.hasExisting?'<button class="c-r" onclick="confirmClearReqMet()">Clear</button>':'')+'<button class="c-g" onclick="reqSubmit()">Save</button></div>';
+  let h='<div class="cbg" onclick="skipReq()"><div class="rcv-box" role="dialog" aria-modal="true" aria-labelledby="req-title" onclick="event.stopPropagation()">';
+  h+='<h3 id="req-title">Requirement completed</h3><div class="sub" id="req-help">Enter the actual date all requirements were met for '+esc(p.bank)+'. Bonus received stays separate.</div>';
+  h+='<label for="req_date">Completion date</label><input class="dd-input" type="date" id="req_date" max="'+td()+'" aria-describedby="req-help'+(p.error?' req-date-error':'')+'"'+(p.error?' aria-invalid="true"':'')+' oninput="if(reqPrompt){reqPrompt.date=this.value;reqPrompt.error=\'\';reqPrompt.warningReviewed=false;this.removeAttribute?.(\'aria-invalid\');this.setAttribute?.(\'aria-describedby\',\'req-help\');document.getElementById(\'req-date-error\')?.remove?.()}" value="'+esc(p.date||'')+'" onclick="event.stopPropagation()">';
+  if(p.error)h+='<p class="bt3655-field-error" role="alert" id="req-date-error">'+esc(p.error)+'</p>';
+  h+='<div class="crow"><button type="button" class="c-c" onclick="skipReq()">Cancel</button>'+(p.hasExisting?'<button type="button" class="c-r" onclick="confirmClearReqMet()">Clear</button>':'')+'<button type="button" class="c-g" onclick="reqSubmit()">Save date</button></div>';
   h+='</div></div>';
   return h
 }
@@ -5794,6 +5795,25 @@ function clearRcv(){
   R()
 }
 function skipRcv(){rcvPrompt=null;R()}
+function reqMetInputError(value){
+  const raw=String(value||'').trim();
+  if(!raw)return 'Enter the actual date all requirements were completed.';
+  if(dpValidDate(raw)!==raw)return 'Enter a valid calendar date.';
+  if(isFutureDate(raw))return 'The completion date cannot be in the future.';
+  return '';
+}
+function showReqMetInputError(message){
+  if(!reqPrompt)return false;
+  reqPrompt.error=message;
+  reqPrompt.warningReviewed=false;
+  R();
+  requestAnimationFrame(()=>{
+    const field=document.getElementById('req_date');
+    field?.focus?.({preventScroll:true});
+    field?.scrollIntoView?.({block:'nearest'});
+  });
+  return false;
+}
 function reqMetWarnings(e,date){
   const w=[];
   if(!date)w.push('Requirement met date is blank.');
@@ -5810,7 +5830,9 @@ function reqSubmit(){
   if(!p)return;
   const d=document.getElementById('req_date');
   if(d)p.date=d.value;
-  if(!p.date){alert('Requirement met date required');return}
+  const inputError=reqMetInputError(p.date);
+  if(inputError)return showReqMetInputError(inputError);
+  p.error='';
   const e=entries.find(x=>x.id===p.entryId);
   const warnings=reqMetWarnings(e,p.date);
   if(warnings.length&&!p.warningReviewed){

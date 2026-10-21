@@ -1,4 +1,4 @@
-/* Release 3.6.68: canonical bank rules retained unchanged; datapoint filtering only. */
+/* Release 3.6.69: canonical bank rules remain unchanged; requirement dialog validation only. */
 /*
  * filename: bank-rules-wells-consumer.js
  * version: 3.5.2
