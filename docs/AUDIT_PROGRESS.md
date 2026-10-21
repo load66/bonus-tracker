@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: ChatGPT/Codex — v3.6.76 — codex/v3.6.76-tax-json-import
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
