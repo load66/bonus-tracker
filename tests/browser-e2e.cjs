@@ -882,6 +882,7 @@ async function exercise(name,engine,url){
         :previous(url,opts);
       try{await catalog.refreshWatch(true)}finally{window.fetch=previous}
     });
+    await page.locator('.bt3662-source-queue summary').click();
     check('mobile review queue shows possible changed terms without unsafe text',await page.locator('.bt3662-source-queue').innerText().then(t=>
       t.includes('Possible: Deadlines, Fee wording')&&!t.includes('<script>')&&!t.includes('confirmed eligibility')));
     check('public monitoring cannot mutate financial records',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,beforeWatchCheck));
