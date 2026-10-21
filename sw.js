@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.76: reviewed paycheck JSON import.
-const V = 'bt-v3.6.76-taxjson1';
+// Version 3.6.77: qualified overtime deduction and exact taxable-wage review.
+const V = 'bt-v3.6.77-overtime1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
