@@ -611,8 +611,73 @@ async function exercise(name,engine,url){
       await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before&&entries[0].reqMet!=='2026-04-01',beforeInvalidRequirement));
     await button('Save date').click();await button('OK').click();
     check('requirements and payout stay separate',(await record()).reqMet==='2026-04-01'&&!(await record()).bonusRecd);
+
+    // A failed requirement clear must restore byte-identical saved records and preserve the review date.
+    const requirementClearBefore=await page.evaluate(()=>getBackupStorageKeys().map(key=>[key,localStorage.getItem(key)]));
+    await page.evaluate(()=>openReqMet(entries[0].id));
+    await page.locator('.rcv-box button.c-r').click();
+    check('clear confirmation is sole active overlay',await page.locator('.cbox').isVisible()&&await page.locator('.rcv-box').count()===0);
+    await page.locator('.cbox button.c-c').click();
+    check('cancel clearing requirements restores original editor',await page.locator('#req_date').inputValue()==='2026-04-01'&&await page.locator('.cbox').count()===0);
+
+    await page.evaluate(()=>{
+      openReqMet(entries[0].id);
+      window.__milestoneOriginalCommit=window.BTPersistence.commit;
+      window.BTPersistence.commit=function(storage,writes,...args){
+        if(Object.prototype.hasOwnProperty.call(writes,'bt_e_v4'))throw Error('Synthetic clear requirement failure');
+        return window.__milestoneOriginalCommit.call(this,storage,writes,...args);
+      };
+    });
+    await page.locator('.rcv-box button.c-r').click();
+    await page.locator('.cbox button.c-r').click();
+    await page.evaluate(()=>{window.BTPersistence.commit=window.__milestoneOriginalCommit;delete window.__milestoneOriginalCommit;});
+    check('failed requirement clear shows inline retry and preserves date',
+      await page.locator('#req-date-error').innerText().then(x=>x.includes('not cleared'))&&await page.locator('#req_date').inputValue()==='2026-04-01');
+    check('failed requirement clear restores exact storage',await page.evaluate(before=>JSON.stringify(getBackupStorageKeys().map(key=>[key,localStorage.getItem(key)]))===JSON.stringify(before),requirementClearBefore));
+    await page.locator('.rcv-box button.c-r').click();
+    await page.locator('.cbox button.c-r').click();
+    await button('OK').click();
+    check('requirement clear retry succeeds without altering payout',(await record()).reqMet===''&&!(await record()).bonusRecd);
+    await page.evaluate(()=>openReqMet(entries[0].id));
+    await page.locator('#req_date').fill('2026-04-01');
+    await button('Save date').click();await button('OK').click();
+    check('requirement may be explicitly restored after clear',(await record()).reqMet==='2026-04-01');
+
     await page.getByRole('button',{name:/^Confirm received/}).click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('Review experience').click();
     check('payment success offers optional evidence review without assuming a method result',await page.evaluate(()=>dpEditor.evidenceStage==='bonus'&&!dpEditor.confirmedByUser));
+    await button('Skip for now').click();
+    // A payout clear must preserve tax data, account history and all companion keys after failure.
+    const payoutClearBefore=await page.evaluate(()=>getBackupStorageKeys().map(key=>[key,localStorage.getItem(key)]));
+    await page.evaluate(()=>openRcv(entries[0].id));
+    await page.locator('.rcv-box button.c-r').click();
+    check('payout clear confirmation has no competing editor',await page.locator('.cbox').isVisible()&&await page.locator('.rcv-box').count()===0);
+    await page.locator('.cbox button.c-c').click();
+    check('cancel clearing payout restores actual amount and date',await page.locator('#rcv_date').inputValue()==='2026-04-15'&&Number(await page.locator('#rcv_amount').inputValue())===(await record()).bonus);
+
+    await page.evaluate(()=>{
+      openRcv(entries[0].id);
+      window.__milestoneOriginalCommit=window.BTPersistence.commit;
+      window.BTPersistence.commit=function(storage,writes,...args){
+        if(Object.prototype.hasOwnProperty.call(writes,'bt_e_v4'))throw Error('Synthetic clear payout failure');
+        return window.__milestoneOriginalCommit.call(this,storage,writes,...args);
+      };
+    });
+    await page.locator('.rcv-box button.c-r').click();
+    await page.locator('.cbox button.c-r').click();
+    await page.evaluate(()=>{window.BTPersistence.commit=window.__milestoneOriginalCommit;delete window.__milestoneOriginalCommit;});
+    check('failed payout clear displays inline error without discarding original details',
+      await page.locator('#rcv-clear-error').innerText().then(x=>x.includes('not cleared'))&&
+      await page.locator('#rcv_date').inputValue()==='2026-04-15'&&
+      Number(await page.locator('#rcv_amount').inputValue())===(await record()).bonus);
+    check('failed payout clear preserves exact stored data',await page.evaluate(before=>JSON.stringify(getBackupStorageKeys().map(key=>[key,localStorage.getItem(key)]))===JSON.stringify(before),payoutClearBefore));
+    await page.locator('.rcv-box button.c-r').click();
+    await page.locator('.cbox button.c-r').click();
+    await button('OK').click();
+    check('payout clear retry succeeds and keeps requirement date',(await record()).bonusRecd===''&&(await record()).reqMet==='2026-04-01');
+    await page.evaluate(()=>openRcv(entries[0].id));
+    await page.locator('#rcv_date').fill('2026-04-15');
+    await button('Save').click();
+    await button('Review experience').click();
     await button('Skip for now').click();
     check('bonus receipt updates close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
     await page.evaluate(()=>{entries[0].earlyCloseFee=null;R();});

@@ -139,6 +139,60 @@ setTimeout(()=>{
     assert.equal(JSON.parse(storage.get('bt_e_v4'))[0].reqMet,'2026-04-12','Confirmed retry must be durable');
     run('reqPrompt=null;cfm=null;');
 
+    // Both destructive milestone clears must roll back all companion writes and keep retry context.
+    run("entries=[{id:'SYN-CLEAR-01',bank:'Synthetic Clear Audit',accountType:'personal',opened:'2026-01-01',reqMet:'2026-04-01',bonusRecd:'2026-04-15',bonus:200,notes:'Keep this',history:[{at:'2026-04-15',type:'bonus_received',detail:'Paid'}],checklist:[],customTimers:[]}];sv(SK,entries);syncProfileEventsFromEntry(entries[0]);refreshSavedReqFromEntry(entries[0]);reqPrompt={entryId:'SYN-CLEAR-01',bank:'Synthetic Clear Audit',date:'2026-04-01',hasExisting:true};");
+    run('confirmClearReqMet()');
+    assert.equal(run('reqPrompt'),null,'Requirement editor must yield to confirmation overlay');
+    run('cancelCfm()');
+    assert.equal(run('reqPrompt.date'),'2026-04-01','Cancel must restore requirement editor without writing');
+    const clearBefore=run('JSON.stringify(entries)');
+    const storageBeforeClear=JSON.stringify([...storage].sort((a,b)=>a[0].localeCompare(b[0])));
+    const commitBeforeClear=sandbox.BTPersistence.commit;
+    sandbox.BTPersistence.commit=function(store,writes,...args){
+      if(Object.prototype.hasOwnProperty.call(writes,'bt_e_v4'))throw Error('Injected lifecycle clear failure');
+      return commitBeforeClear.call(this,store,writes,...args);
+    };
+    try{
+      assert.equal(run('clearReqMet()'),false,'Failed requirement clear must return false');
+    }finally{
+      sandbox.BTPersistence.commit=commitBeforeClear;
+    }
+    assert.equal(run('JSON.stringify(entries)'),clearBefore,'Failed requirement clear must restore in-memory account and its history');
+    assert.equal(JSON.stringify([...storage].sort((a,b)=>a[0].localeCompare(b[0]))),storageBeforeClear,'Failed requirement clear must restore all companion history and archive bytes');
+    assert.equal(run('reqPrompt.date'),'2026-04-01','Failed requirement clear must retain original date');
+    assert.match(run('reqPrompt.error'),/not cleared/i,'Failed requirement clear must show inline retry');
+    assert.equal(run('cfm'),null,'Failed clear must never report success');
+    assert.equal(run('clearReqMet()'),true,'Requirement clear should save successfully on retry');
+    assert.equal(run('entries[0].reqMet'),'','Requirement date is cleared only on verified save');
+    assert.equal(run('entries[0].bonusRecd'),'2026-04-15','Clearing requirement must not clear bonus payment');
+    assert.equal(run("entries[0].history.filter(h=>h.type==='req_met_cleared').length"),1,'Only successful requirement clear adds history once');
+    run("cfm=null;rcvPrompt={entryId:'SYN-CLEAR-01',bank:'Synthetic Clear Audit',date:'2026-04-15',reqDate:'',dp:'Employer payroll',bonus:200,hasExisting:true};");
+    run('confirmClearRcv()');
+    assert.equal(run('rcvPrompt'),null,'Payout editor must yield to confirmation overlay');
+    run('cancelCfm()');
+    assert.equal(run('rcvPrompt.bonus'),200,'Cancel must restore exact payout review');
+    const beforeBonusClear=run('JSON.stringify(entries)');
+    const storageBeforeBonusClear=JSON.stringify([...storage].sort((a,b)=>a[0].localeCompare(b[0])));
+    sandbox.BTPersistence.commit=function(store,writes,...args){
+      if(Object.prototype.hasOwnProperty.call(writes,'bt_e_v4'))throw Error('Injected bonus clear failure');
+      return commitBeforeClear.call(this,store,writes,...args);
+    };
+    try{
+      assert.equal(run('clearRcv()'),false,'Failed payout clear must return false');
+    }finally{
+      sandbox.BTPersistence.commit=commitBeforeClear;
+    }
+    assert.equal(run('JSON.stringify(entries)'),beforeBonusClear,'Failed payout clear must restore account and tax event date');
+    assert.equal(JSON.stringify([...storage].sort((a,b)=>a[0].localeCompare(b[0]))),storageBeforeBonusClear,'Failed payout clear must restore all companion account and profile bytes');
+    assert.equal(run('rcvPrompt.date'),'2026-04-15','Payout review date remains available on retry');
+    assert.equal(run('rcvPrompt.bonus'),200,'Payout amount remains available on retry');
+    assert.equal(run('rcvPrompt.dp'),'Employer payroll','Payout method remains available on retry');
+    assert.match(run('rcvPrompt.error'),/not cleared/i,'Failed payout clear has visible retry error');
+    assert.equal(run('cfm'),null,'Failed payout clear cannot show success');
+    assert.equal(run('clearRcv()'),true,'Payout clear should save on retry');
+    assert.equal(run('entries[0].bonusRecd'),'','Payout date clears only on verified save');
+    assert.equal(run("entries[0].history.filter(h=>h.type==='bonus_received_cleared').length"),1,'Successful payout clear adds history exactly once');
+    run('cfm=null;reqPrompt=null;rcvPrompt=null;');
     console.log('Next actions passed: direct confirmations, stale-action protection, recurring review, shared dates, missing anchors/units, calendar boundaries, day refresh, and stored-data preservation');
     process.exit(0);
   }catch(err){console.error(err);process.exit(1)}

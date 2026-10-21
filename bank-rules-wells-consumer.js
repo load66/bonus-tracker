@@ -1,4 +1,4 @@
-/* Release 3.6.73: canonical bank rules unchanged; atomic requirement completion UI only. */
+/* Release 3.6.74: canonical bank rules unchanged; milestone clear safety only. */
 /*
  * filename: bank-rules-wells-consumer.js
  * version: 3.5.2
