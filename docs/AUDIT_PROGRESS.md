@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex — v3.6.76 — codex/v3.6.76-tax-json-import
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.76 reviewed payroll JSON Tax input (`codex/v3.6.76-tax-json-import`): Tax tab gains a compact Choose JSON → review exactly labeled year-to-date gross/pre-tax/federal withholding → explicit Use this estimate flow. Strict versioned local JSON reader rejects malformed/future records and misleading withholding totals. Federal taxable wages, if absent, are transparently approximated using stated pre-tax deductions rather than assumed from gross; year-end income and withholding are time-based projections, never actual W-2 facts. Inputs are local memory only, no network, OCR, new persistent keys, cloud backups, account changes, or private file contents committed. Adds importer unit suite and both browser engines/mobile/backup-no-write checks; v3.6.76 release/cache. No canonical eligibility, payment, bank fee, lifecycle or provider code modified. Next: PR CI unit/browser and verifier, squash merge on green, confirm GitHub Pages/main run succeeds.
+
 
 - v3.6.75 professional Tax tab and federal estimate (`codex/v3.6.75-tax-estimator`): adds a compact, session-private 2025/2026 IRS progressive-income calculator on top of the preserved Tax ledger, old cycles, reconciliation and CSV. Only recorded real payouts are included; user explicitly selects filing status and other annual ordinary income. Separates incremental bonus-related tax, projected total ordinary federal income tax and optional withholding/payment-adjusted potential balance/refund. Custom deduction and non-taxable receipt exclusion are opt-in; unsupported years never infer brackets. Includes precise cents, narrow-screen layout, authoritative IRS links, no Form 1040 / tax advice claims, no persistent new personal income keys or cloud writes, unit and Chromium/WebKit tests, v3.6.75 assets/cache. No account mutation, bank rule, provider, cloud backup schema or financial records changed. Next: complete Bonus/Cloud/UI and browser CI, release verifier, squash merge if green and verify GitHub Pages deployment.
 
