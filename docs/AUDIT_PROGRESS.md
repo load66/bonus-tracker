@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: codex (v3.6.70, codex/v3.6.70-requirement-atomic-save)
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.70 requirement save rollback and retry (`codex/v3.6.70-requirement-atomic-save`, PR #253): preserve deployed v3.6.69 inline past-date validation while making requirement completion saves atomic across entry history, companion requirements and profile events. Failed/false-return persistence restores all prior data, keeps the selected date and displays an inline retry error; successful retry commits exact completion date. No schema, eligibility/fee rules, provider integrations, backend, cloud storage keys or existing owner records changed. PR #251 superseded after concurrent v3.6.69 release. Synthetic failure/retry test and Chromium/WebKit browser failure/retry checks passed with bonus/cloud/UI units and release verifier on run 39555942737. Release/cache v3.6.70. Next: verify final handoff-head CI, merge PR #253 on green, verify Pages deployment and source/cache version.
+
 
 - v3.6.69 mobile requirement-date reliability (`codex/v3.6.69-requirement-date-validation`, PR #252): completion confirmation rejects invalid or future calendar dates with an accessible inline error, retains the correction draft and gives the date field focus; the dialog clarifies that all requirements are being marked completed and bonus receipt is separate. Strict synthetic no-write regression, Chromium and WebKit mobile browser assertions, release/cache bump v3.6.69. No account records, terms, provider state, schemas, canonical rules, backup objects or backend changed. Initial failing-before test reproduced invalid-date prompt loss; corrected bonus/cloud/UI units and Chromium/WebKit PASS on run 39554625128. Next: exact final-commit checks, merge green PR, verify Pages release and cache.
 
