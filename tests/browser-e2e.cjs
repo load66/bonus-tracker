@@ -614,6 +614,12 @@ async function exercise(name,engine,url){
 
     // A failed requirement clear must restore byte-identical saved records and preserve the review date.
     const requirementClearBefore=await page.evaluate(()=>getBackupStorageKeys().map(key=>[key,localStorage.getItem(key)]));
+    await page.evaluate(()=>openReqMet(entries[0].id));
+    await page.locator('.rcv-box button.c-r').click();
+    check('clear confirmation is sole active overlay',await page.locator('.cbox').isVisible()&&await page.locator('.rcv-box').count()===0);
+    await page.locator('.cbox button.c-c').click();
+    check('cancel clearing requirements restores original editor',await page.locator('#req_date').inputValue()==='2026-04-01'&&await page.locator('.cbox').count()===0);
+
     await page.evaluate(()=>{
       openReqMet(entries[0].id);
       window.__milestoneOriginalCommit=window.BTPersistence.commit;
@@ -642,6 +648,12 @@ async function exercise(name,engine,url){
     await button('Skip for now').click();
     // A payout clear must preserve tax data, account history and all companion keys after failure.
     const payoutClearBefore=await page.evaluate(()=>getBackupStorageKeys().map(key=>[key,localStorage.getItem(key)]));
+    await page.evaluate(()=>openRcv(entries[0].id));
+    await page.locator('.rcv-box button.c-r').click();
+    check('payout clear confirmation has no competing editor',await page.locator('.cbox').isVisible()&&await page.locator('.rcv-box').count()===0);
+    await page.locator('.cbox button.c-c').click();
+    check('cancel clearing payout restores actual amount and date',await page.locator('#rcv_date').inputValue()==='2026-04-15'&&Number(await page.locator('#rcv_amount').inputValue())===(await record()).bonus);
+
     await page.evaluate(()=>{
       openRcv(entries[0].id);
       window.__milestoneOriginalCommit=window.BTPersistence.commit;
