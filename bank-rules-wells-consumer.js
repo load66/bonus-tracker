@@ -1,4 +1,4 @@
-/* Release 3.6.71: canonical rules unchanged; stale terms approval guard only. */
+/* Release 3.6.72: canonical bank rules unchanged; cloud backup UI only. */
 /*
  * filename: bank-rules-wells-consumer.js
  * version: 3.5.2
