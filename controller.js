@@ -50,7 +50,7 @@
   function applyUserLearningRules(r,raw){if(!r)return r;const rules=loadUserRules();let used=0;rules.forEach(rule=>{const phrase=clean(rule.phrase);if(!phrase)return;const src=sentenceForPhrase(raw||r.raw||'',phrase);if(!src)return;if(setFromUserRule(r,rule.field,rule.value,src,phrase)){used++;rule.hits=(rule.hits||0)+1;rule.lastHitAt=new Date().toISOString()}});if(used){r.learningRulesApplied={count:used};saveUserRules(rules)}return r}
   function analyze(raw,opts){let r=window.tcV3Analyze?window.tcV3Analyze(raw,opts):null;try{if(r)r=applyUserLearningRules(r,raw)||r}catch{}try{if(r&&window.tcApplyAnalyzerAdaptiveLearning)r=window.tcApplyAnalyzerAdaptiveLearning(r)||r}catch{}return r}
   function currentResult(raw){return analyze(raw)||window.__tcV3AnalysisResult||null}
-  function modalObj(){try{return window.modal||modal||null}catch{return window.modal||null}}
+  function modalObj(){try{return typeof modal!=='undefined'?modal:(window.modal||null)}catch{return window.modal||null}}
   function setModalObj(value){try{window.modal=value;modal=value}catch{window.modal=value}}
   function normalizeAccountType(v){v=String(v||'').toLowerCase().trim();if(/^(business|biz|b|commercial)$/.test(v))return'business';if(/^(personal|consumer|individual|p)$/.test(v))return'personal';return''}
   function detectAccountType(r){const direct=normalizeAccountType(r?.accountType);if(direct)return direct;const text=[r?.bank,r?.acct,r?.raw,r?.actionPlan,r?.eligibilityText].filter(Boolean).join(' ');if(/\b(biz|business|commercial|merchant|llc|ein|dba|sole proprietor|business checking|small business)\b/i.test(text))return'business';return'personal'}
