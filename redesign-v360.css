@@ -969,3 +969,14 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt3662-source-item a{color:var(--mint);font-size:11px;font-weight:650;text-decoration:underline;text-underline-offset:2px;flex-shrink:0}
 .bt3662-source-item a:focus-visible,.bt3662-source-queue>summary:focus-visible{outline:2px solid var(--mint);outline-offset:3px}
 @media(max-width:390px){.bt3662-source-item{align-items:flex-start;flex-direction:column;gap:5px}}
+
+/* v3.6.69 — calm inline validation in requirement confirmation on small screens. */
+.bt3669-req-sheet{box-sizing:border-box;width:min(100% - 24px,440px);max-height:calc(100dvh - 32px);overflow-y:auto;overflow-x:hidden}
+.bt3669-req-sheet #req_date{display:block;width:100%;max-width:100%;box-sizing:border-box;min-height:44px;font-size:16px;color-scheme:dark}
+.bt3669-req-sheet #req_date[aria-invalid="true"]{border-color:#f17d84!important;outline-offset:2px}
+.bt3669-req-sheet #req_date:focus-visible{outline:2px solid #5be3b0;outline-offset:3px}
+.bt3669-req-sheet .bt3669-req-help{font-size:12px;line-height:1.5;margin:7px 0 0;color:#aab6ca!important}
+.bt3669-req-sheet .bt3669-req-error{font-size:12px;line-height:1.5;margin:8px 0 0;color:#ffadb7!important;font-weight:700;overflow-wrap:anywhere}
+.bt3669-req-sheet .bt3669-req-error:empty{display:none}
+.bt3669-req-sheet .crow{gap:8px;align-items:stretch}
+.bt3669-req-sheet .crow button{min-height:44px;white-space:normal;overflow-wrap:anywhere}
