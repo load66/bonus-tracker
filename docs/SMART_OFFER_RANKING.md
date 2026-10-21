@@ -20,3 +20,12 @@ No automatic offer action, bank application, account migration, or saved-terms o
 ## New or modified offer holdback (v3.6.61)
 
 Offers with New, Increased, or Updated badges, or an evidence change record, remain in Requirements need review until the current exact official fixed bonus, eligibility, qualifying activity, and fee/waiver wording have been independently reviewed. Unverified large headlines and expired evidence cannot leap above stable current top matches. Sorting never writes tracker records.
+
+
+## v3.6.65 — proof-backed Top matches
+
+Official state availability is necessary but no longer sufficient for the Top matches group. Its reward must have a current (maximum 24-hour-old), offer-scoped official promotion source and exact fixed bonus amount, plus sourced eligibility and qualifying-activity wording. An official fee source must have applicable monthly-fee or waiver wording. The offer must not have pending changed evidence, an unsupported upper-bound tier, or a source-monitor warning for that same exact official URL.
+
+When any evidence is missing, otherwise-applicable offers remain discoverable under **More bonuses · eligibility unverified**. New or increased offers with incomplete evidence remain in **Requirements need review**. They do not leap above documented fixed-value bonuses. Unresolved source-change warnings demote only matching official document URLs, never other offers from the same bank based on a broad name match.
+
+Fresh page checks and document quotes do not prove that a user personally qualifies. The tracker does not write, replace, or migrate saved offers as a result of source evidence or ranking.
