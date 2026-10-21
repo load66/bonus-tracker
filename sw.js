@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.72: compact cloud backup and recovery workflow on phones.
-const V = 'bt-v3.6.72-cloudpanel1';
+// Version 3.6.73: transactional completion dates with rollback and retry.
+const V = 'bt-v3.6.73-reqatomic1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',

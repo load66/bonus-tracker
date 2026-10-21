@@ -6,6 +6,9 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.6.73 requirement completion atomic-save fix (`codex/v3.6.73-requirement-save-atomicity`): rebased the verified rollback/retry behavior from stale PR #253 onto production v3.6.72 without downgrading source review, cloud recovery or styling. Failed or false-return requirement saves restore exact entry history and companion profile/requirements storage, keep the original selected date, and surface an inline retry error; successful retry saves date separately from bonus receipt. Synthetic unit and Chromium/WebKit failed-write regression checks included. No bank/fee/canonical eligibility rules, personal account contents, persistence keys, backend provider calls or R2 objects changed. Version and service-worker cache v3.6.73. Next: pass PR unit/browser CI, verify release, squash merge only if green, verify Pages and exact assets.
+
+
 - v3.6.72 mobile cloud recovery layout (`codex/v3.6.72-cloud-backup-ux`, PR #257): compact verified protection card and timestamp; clearly styled manual backup/recovery buttons; header Close action; expandable retention, downloaded-file, and offline/checkpoint explanations. Readback proof and explicit pending/offline states remain visible. No changes to backup upload, storage, retention, restore confirmation, snapshots, credentials, R2, backend, eligibility, tracker records or canonical bank rules. Chromium/WebKit assertions for 390px card, accessible close/primary actions, and retention visibility; Bonus/Cloud/UI, browsers and release verifier PASS on PR run 39571326181. Version/cache v3.6.72. Next: verify final handoff commit CI, squash merge on green, confirm main Pages deployment and exact cache.
 
 

@@ -593,6 +593,22 @@ async function exercise(name,engine,url){
     check('future completion date does not write records',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,beforeInvalidRequirement));
     await page.locator('#req_date').fill('2026-04-01');
     check('correcting the date clears the inline error',await page.locator('#req-date-error').count()===0&&await page.locator('#req_date').getAttribute('aria-invalid')===null);
+    // A failed tracker write must leave the date and earlier account history in place.
+    await page.evaluate(()=>{
+      window.__reqTestCommit=window.BTPersistence.commit;
+      window.BTPersistence.commit=function(storage,writes,...args){
+        if(Object.prototype.hasOwnProperty.call(writes,'bt_e_v4'))throw Error('Synthetic tracker save failure');
+        return window.__reqTestCommit.call(this,storage,writes,...args);
+      };
+    });
+    await button('Save date').click();
+    await page.evaluate(()=>{window.BTPersistence.commit=window.__reqTestCommit;delete window.__reqTestCommit});
+    check('failed requirement save keeps date and inline retry message',
+      await page.getByRole('dialog',{name:'Requirement completed'}).isVisible()&&
+      await page.locator('#req_date').inputValue()==='2026-04-01'&&
+      await page.locator('#req-date-error').innerText().then(t=>t.includes('not saved')));
+    check('failed requirement save restores exact tracker storage and in-memory state',
+      await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before&&entries[0].reqMet!=='2026-04-01',beforeInvalidRequirement));
     await button('Save date').click();await button('OK').click();
     check('requirements and payout stay separate',(await record()).reqMet==='2026-04-01'&&!(await record()).bonusRecd);
     await page.getByRole('button',{name:/^Confirm received/}).click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('Review experience').click();
