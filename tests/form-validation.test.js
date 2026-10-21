@@ -68,7 +68,7 @@ assert.equal(s.saveEntryFromButton(fakeButton,{preventDefault(){},stopPropagatio
    suggestedTimers:[]
  });
  s.tcV3SaveSourceForCurrentEntry=()=>{prematureSourceWrites++;return true};
- const activeReview={querySelectorAll:selector=>selector==='[data-tcf-field]:checked'?
+ const activeReview={remove(){},querySelectorAll:selector=>selector==='[data-tcf-field]:checked'?
    [{getAttribute:key=>key==='data-tcf-field'?'bank':null}]:[]};
  s.document.getElementById=id=>id==='tca_overlay'?activeReview:
    id==='tca_raw'?{value:syntheticRaw}:
