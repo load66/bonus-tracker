@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex — v3.6.75 — codex/v3.6.75-tax-estimator
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.75 professional Tax tab and federal estimate (`codex/v3.6.75-tax-estimator`): adds a compact, session-private 2025/2026 IRS progressive-income calculator on top of the preserved Tax ledger, old cycles, reconciliation and CSV. Only recorded real payouts are included; user explicitly selects filing status and other annual ordinary income. Separates incremental bonus-related tax, projected total ordinary federal income tax and optional withholding/payment-adjusted potential balance/refund. Custom deduction and non-taxable receipt exclusion are opt-in; unsupported years never infer brackets. Includes precise cents, narrow-screen layout, authoritative IRS links, no Form 1040 / tax advice claims, no persistent new personal income keys or cloud writes, unit and Chromium/WebKit tests, v3.6.75 assets/cache. No account mutation, bank rule, provider, cloud backup schema or financial records changed. Next: complete Bonus/Cloud/UI and browser CI, release verifier, squash merge if green and verify GitHub Pages deployment.
+
 
 - v3.6.74 atomic clear of requirement/payout milestones (`codex/v3.6.74-atomic-milestone-clear`): clearing either recorded requirement-completed or bonus-received date now snapshots all existing authorized user keys, verifies account and companion writes, rolls back incomplete storage/history and restores the original in-memory entry on failure. The mobile dialog retains the date and, for bonus payments, the amount and method; inline failure guidance allows explicit Clear retry without false success. Existing separate bonus/requirements state and confirmation remain intact. Injected-write rollback, successful retry and Chromium/WebKit browser regressions added. No provider calls, bank rules, schemas, backend, R2 settings or actual stored records modified. App assets/cache v3.6.74. Next: PR unit/browser verification and release verifier, squash-merge on green, then verify GitHub Pages/main release and cache.
 
