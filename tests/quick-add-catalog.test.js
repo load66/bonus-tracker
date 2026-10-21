@@ -142,6 +142,40 @@ async function watchQueueRegression(){
   assert.equal(api.reviewQueue(Date.now()+38*3600000).issues.length,4,
     'Expired check timestamps cannot be silently treated as current');
 
+  // Partial official-source snapshots must never be presented as fully checked.
+  const originalWells=snapshot.records['Wells Fargo'];
+  delete snapshot.records['Wells Fargo'];
+  await api.refreshWatch(true);
+  const incomplete=api.reviewQueue();
+  assert.equal(incomplete.ready,true,'One returned bank observation initializes monitoring');
+  assert.equal(incomplete.complete,false,'One missing bank must not look fully monitored');
+  assert.equal(incomplete.issues.filter(x=>x.bank==='Wells Fargo').length,2,
+    'Missing promotion and fee rows both demand review');
+  assert.equal(incomplete.issues.some(x=>x.url.includes('attacker')),false);
+  assert.equal(api.status('Wells Fargo').watchState,'unavailable',
+    'Missing official observations fail closed without overriding known expired status');
+  snapshot.records['Wells Fargo']=originalWells;
+  await api.refreshWatch(true);
+  assert.equal(api.reviewQueue().complete,true,'Restoring both pinned bank source records completes coverage');
+
+  // Change flags stay sticky even when the next source check is late.
+  const historic=new Date(Date.now()-40*3600000).toISOString();
+  const capitalPromo=snapshot.records['Capital One'].sources.promotion;
+  const originalCapitalChecked=capitalPromo.checkedAt;
+  capitalPromo.checkedAt=historic;
+  snapshot.records['Wells Fargo'].sources.fees.checkedAt=historic;
+  await api.refreshWatch(true);
+  const overdue=api.reviewQueue();
+  const pending=overdue.issues.find(x=>x.bank==='Capital One'&&x.role==='promotion');
+  assert.equal(pending.kind,'changed','Overdue source checks must not conceal sticky material changes');
+  assert.equal(pending.overdue,true,'Changed source also identifies overdue monitoring');
+  assert.equal(api.status('Capital One').watchState,'changed');
+  assert.match(api.status('Capital One').watchNote,/overdue source checks/);
+  assert.equal(overdue.issues.find(x=>x.bank==='Wells Fargo'&&x.role==='fees').kind,'stale');
+  capitalPromo.checkedAt=originalCapitalChecked;
+  snapshot.records['Wells Fargo'].sources.fees.checkedAt=checked;
+  await api.refreshWatch(true);
+
   // Untrusted source URLs and offer identifiers must never become official links.
   snapshot.records['Capital One'].sources.promotion.url='https://www.capitalone.com.attacker.invalid/offer';
   await api.refreshWatch(true);
