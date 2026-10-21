@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.68: audience-correct read-only Datapoints filters.
-const V = 'bt-v3.6.68-audience1';
+// Version 3.6.69: atomic and accessible requirement confirmation.
+const V = 'bt-v3.6.69-reqsafe1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
