@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.75';
+const APP_VERSION='3.6.76';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4715,6 +4715,72 @@ function rTrackerLegacy(sorted){
  * Personal income and withholding never enter tracker storage, backups or sync.
  */
 const taxEstimateDrafts=Object.create(null);
+/* Paycheck JSON imports are temporary, review-first and never written to
+ * tracker, archive, financial history, localStorage or R2. */
+let taxPayImportState=null;
+function taxPayMoney(n){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:2}).format(n)}
+function taxPayImportError(message){
+ taxPayImportState={error:String(message||'Could not read this pay file.')};
+ const el=document.getElementById('bt-tax-pay-upload');
+ if(el)el.innerHTML=renderTaxJsonPanel();
+}
+function taxLoadJsonFile(input){
+ const file=input?.files?.[0];
+ if(input)input.value='';
+ if(!file)return;
+ if(file.size>16384||file.size===0){taxPayImportError('Choose a small JSON file created for this Tax tab (16 KB maximum).');return}
+ if(!/\.json$/i.test(file.name)){taxPayImportError('Choose a .json pay snapshot file.');return}
+ const reader=new FileReader();
+ reader.onload=()=>{
+  try{
+   const row=window.BTTaxPayImport.read(JSON.parse(reader.result));
+   const projection=window.BTTaxPayImport.project(row);
+   taxPayImportState={row,projection};
+   const el=document.getElementById('bt-tax-pay-upload');
+   if(el)el.innerHTML=renderTaxJsonPanel();
+  }catch(error){taxPayImportError(error?.message||'Invalid pay JSON.')}
+ };
+ reader.onerror=()=>taxPayImportError('Could not open that file. Try selecting it again.');
+ reader.readAsText(file);
+}
+function taxPayApply(){
+ if(!taxPayImportState?.row||!taxPayImportState?.projection)return false;
+ const {row,projection}=taxPayImportState;
+ // User approval is required; do not silently replace existing typed tax inputs.
+ const d=taxEstimateDrafts[row.taxYear]||(taxEstimateDrafts[row.taxYear]={filingStatus:'',otherIncome:'',excludedBonus:'',deduction:'',withholding:'',payments:''});
+ d.otherIncome=String(projection.annualIncome);
+ d.withholding=projection.annualFederalWithholding===null?'':String(projection.annualFederalWithholding);
+ taxPayImportState={row,projection,applied:true};
+ taxYear=row.taxYear;
+ R();
+ return true;
+}
+function taxPayRemove(){
+ taxPayImportState=null;
+ const el=document.getElementById('bt-tax-pay-upload');
+ if(el)el.innerHTML=renderTaxJsonPanel();
+}
+function renderTaxJsonPanel(){
+ const st=taxPayImportState||{};
+ let h='<div class="bt-tax-pay"><div class="bt-tax-pay-head"><div><strong>Import paycheck JSON</strong><small>Send your pay screenshot to ChatGPT, then import the reviewed JSON here.</small></div></div>';
+ h+='<input type="file" id="bt-tax-file" accept=".json,application/json" aria-label="Choose pay snapshot JSON" hidden onchange="taxLoadJsonFile(this)">';
+ h+='<button type="button" class="bt-tax-pay-choose" onclick="document.getElementById(\'bt-tax-file\').click()">Choose JSON file</button>';
+ if(st.error)h+='<p class="bt-tax-pay-error" role="alert">'+esc(st.error)+'</p>';
+ if(st.row&&st.projection){
+  const x=st.row,p=st.projection;
+  const basis=p.wageBasis==='federal-taxable-wages'?'Federal taxable wages on pay file':p.wageBasis==='gross-less-pretax-proxy'?'Gross less reported pre-tax deductions (approximation)':'Gross pay only (rough proxy)';
+  h+='<div class="bt-tax-pay-review"><div class="bt-tax-pay-date"><b>Pay snapshot · '+esc(x.asOfDate)+'</b><span>'+esc(String(x.taxYear))+' YTD</span></div><dl>';
+  h+='<div><dt>Gross pay YTD</dt><dd>'+taxPayMoney(x.grossPayYtd)+'</dd></div>';
+  if(x.preTaxDeductionsYtd!==null)h+='<div><dt>Pre-tax deductions YTD</dt><dd>'+taxPayMoney(x.preTaxDeductionsYtd)+'</dd></div>';
+  h+='<div><dt>Federal withholding YTD</dt><dd>'+(x.federalIncomeTaxWithheldYtd===null?'Not shown':taxPayMoney(x.federalIncomeTaxWithheldYtd))+'</dd></div>';
+  h+='</dl><p><b>Projected annual wages:</b> '+taxPayMoney(p.annualIncome)+'<br><b>Projected annual federal withholding:</b> '+(p.annualFederalWithholding===null?'Not available':taxPayMoney(p.annualFederalWithholding))+'</p>';
+  h+='<p class="bt-tax-pay-note">Income basis: '+esc(basis)+'. Projected from '+p.daysElapsed+' elapsed days of '+p.daysInYear+'. Assumes the same pay and withholding rate through year-end; overtime and deductions may change. Check W-2 Box 1 or your pay details for exact federal taxable wages.</p>';
+  if(!st.applied)h+='<button class="bt-tax-pay-apply" type="button" onclick="taxPayApply()">Use this estimate</button>';
+  else h+='<p class="bt-tax-pay-success" role="status">Pay snapshot applied. Your filing status and other adjustments remain editable below.</p>';
+  h+='<button type="button" class="bt-tax-pay-remove" onclick="taxPayRemove()">Dismiss pay snapshot</button></div>';
+ }
+ return h+'</div>';
+}
 function taxEstimateDraft(){return taxEstimateDrafts[taxYear]||(taxEstimateDrafts[taxYear]={filingStatus:'',otherIncome:'',excludedBonus:'',deduction:'',withholding:'',payments:''})}
 function taxEstimateSet(field,value){
  if(!['filingStatus','otherIncome','excludedBonus','deduction','withholding','payments'].includes(field))return false;
@@ -4723,7 +4789,7 @@ function taxEstimateSet(field,value){
  if(node)node.innerHTML=renderTaxEstimateResult();
  return true;
 }
-function taxEstimateReset(){delete taxEstimateDrafts[taxYear];R()}
+function taxEstimateReset(){delete taxEstimateDrafts[taxYear];taxPayImportState=null;R()}
 function taxEstimateInputs(yrE){
  const d=taxEstimateDraft(),income=yrE.reduce((sum,e)=>sum+Number(e.bonus||0),0);
  return window.BTFederalTax?.estimate({year:taxYear,filingStatus:d.filingStatus,otherIncome:d.otherIncome,
@@ -4749,6 +4815,7 @@ function renderTaxEstimator(yrE,audience){
  const d=taxEstimateDraft(),supports=window.BTFederalTax?.years.includes(Number(taxYear));
  const field=(id,label,desc,value)=>'<label class="bt-tax-field" for="'+id+'"><span>'+label+'</span><input id="'+id+'" type="number" min="0" max="1000000000" step="0.01" inputmode="decimal" placeholder="0.00" value="'+esc(value)+'" '+(desc?'aria-describedby="'+desc+'" ':'')+'oninput="taxEstimateSet(\''+({ 'bt-tax-other':'otherIncome','bt-tax-exclude':'excludedBonus','bt-tax-deduct':'deduction','bt-tax-withheld':'withholding','bt-tax-paid':'payments'}[id])+'\',this.value)"></label>';
  let h='<section class="bt-tax-estimator" aria-label="Federal tax estimate"><div class="bt-tax-title"><div><span class="bt-tax-eyebrow">FEDERAL · '+taxYear+'</span><h2>IRS tax estimate</h2></div><span class="bt-tax-chip">Estimate only</span></div>';
+ h+='<div id="bt-tax-pay-upload">'+renderTaxJsonPanel()+'</div>';
  h+='<p class="bt-tax-lead">Automatically uses your recorded '+(audience==='all'?'personal and business':audience)+' bonus receipts. Add your income to estimate the extra federal tax—not just a flat percentage.</p>';
  h+='<div class="bt-tax-config"><label class="bt-tax-field" for="bt-tax-status"><span>Filing status</span><select id="bt-tax-status" onchange="taxEstimateSet(\'filingStatus\',this.value)"><option value="">Choose status</option>'+Object.entries(window.BTFederalTax?.status||{}).map(([v,label])=>'<option value="'+v+'"'+(d.filingStatus===v?' selected':'')+'>'+esc(label)+'</option>').join('')+'</select></label>';
  h+=field('bt-tax-other','Other annual ordinary income','bt-tax-income-help',d.otherIncome)+'</div>';
