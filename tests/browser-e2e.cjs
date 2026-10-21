@@ -261,16 +261,24 @@ async function exercise(name,engine,url){
       const api=window.BTBankBonusFeed;
       const proof={status:'verified',rules:[],conditions:[],nationwide:true};
       const cash=String.fromCharCode(36);
+      const p='https://www.chase.com/synthetic-offer',f='https://www.chase.com/synthetic-fees';
+      const full=n=>({status:'evidence-found',stale:false,checkedAt:new Date(Date.now()).toISOString(),
+        sources:[{role:'promotion',url:p,hash:'a'.repeat(64)},{role:'fees',url:f,hash:'b'.repeat(64)}],
+        fields:{bonus:{value:cash+n,sourceUrl:p},eligibility:{value:'new customers only',sourceUrl:p},
+          qualifying_activity:{value:'qualifying activity',sourceUrl:p},
+          monthly_fee:{value:'monthly fee applies',sourceUrl:f}}});
       const make=(bank,amount,scoped=true)=>({bank,title:bank+' '+cash+amount+' Checking Bonus',product:'checking',amount,
         groupKey:'test-smart-'+bank,publishedAt:'2026-10-09T12:00:00Z',availability:'unknown',
-        ...(scoped?{officialAvailability:proof}:{})});
+        evidence:full(amount),...(scoped?{officialAvailability:proof}:{})});
       const context={today:'2026-10-11',family:x=>x.toLowerCase(),audience:x=>x.accountType||'personal',
         nonrepeat:x=>false,ready:x=>x.reviewDate||''};
       const result=api.prioritize([make('Alpha',400),make('Beta',900),make('Gamma',2000,false),make('Delta',5000)],
         [{bank:'Delta',accountType:'personal',closed:'',reviewDate:'2026-01-01'}],'MO',context);
       return result[0].bank==='Beta'&&result[0].priorityGroup==='best'&&result[1].bank==='Alpha'
         &&result.find(x=>x.bank==='Delta').priorityGroup==='review'
-        &&result.find(x=>x.bank==='Gamma').priorityGroup==='explore';
+        &&result.find(x=>x.bank==='Gamma').priorityGroup==='explore'
+        &&api.completeOfferProof(make('Good',800))===true
+        &&api.prioritize([ {...make('Missing',900),evidence:null} ],[],'MO',context)[0].priorityGroup==='explore';
     }));
     check('smart sort never updates saved financial records',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,smartStoredBefore));
     await page.locator('.bt362-add-fab').click();await button('Quick Add').click();
