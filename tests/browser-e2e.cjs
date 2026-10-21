@@ -1162,6 +1162,28 @@ async function exercise(name,engine,url){
     check('tracker search keeps cursor through consecutive keystrokes',await page.getByPlaceholder('Search accounts...').inputValue()==='E2E'&&await page.evaluate(()=>document.activeElement.id==='tracker-search'));
     await page.getByPlaceholder('Search accounts...').fill('');
     await button('Datapoints').click();
+    // Browser-level trust check: do not mix saved personal/business evidence.
+    await page.evaluate(()=>{
+      window.__audienceFixtureBackup=loadUserDatapoints();
+      saveUserDatapoints([
+        {id:'e2e-personal-audience',bank:'E2E Personal Evidence',method:'Payroll',accountType:'personal',outcome:'pending'},
+        {id:'e2e-business-audience',bank:'E2E Business Evidence',method:'Payroll',accountType:'business',outcome:'pending'},
+        {id:'e2e-unknown-audience',bank:'E2E Unknown Evidence',method:'ACH',accountType:'',outcome:'pending'}
+      ]);
+      dpTaskBankKey='';dpSearch='';dpFilters.view='personal';dpFilters.type='business';window.bt366GroupData=false;R();
+    });
+    check('business datapoint filter excludes personal and unclassified saved notes',
+      await page.locator('.bt366-dp-item').allInnerTexts().then(rows=>rows.some(t=>t.includes('E2E Business Evidence'))&&rows.every(t=>!t.includes('E2E Personal Evidence')&&!t.includes('E2E Unknown Evidence'))));
+    await page.evaluate(()=>{dpFilters.type='personal';R()});
+    check('personal datapoint filter excludes business saved notes',
+      await page.locator('.bt366-dp-item').allInnerTexts().then(rows=>rows.some(t=>t.includes('E2E Personal Evidence'))&&rows.every(t=>!t.includes('E2E Business Evidence')&&!t.includes('E2E Unknown Evidence'))));
+    await page.evaluate(()=>{dpFilters.type='all';R()});
+    check('all-audience datapoints retain unclassified notes',
+      await page.locator('.bt366-dp-item').allInnerTexts().then(rows=>rows.some(t=>t.includes('E2E Unknown Evidence'))));
+    await page.evaluate(()=>{
+      saveUserDatapoints(window.__audienceFixtureBackup||[]);delete window.__audienceFixtureBackup;
+      dpFilters={view:'all',scope:'all',result:'all',type:'all',source:'all',dated:'all'};R();
+    });
     await page.setViewportSize({width:390,height:844});
     await page.screenshot({path:path.join(output,name+'-v362-data-390.png')});
     check('Data defaults to individual community report rows',await page.locator('.bt366-dp-item').count()>0&&await page.getByRole('button',{name:'Group by bank'}).isVisible());

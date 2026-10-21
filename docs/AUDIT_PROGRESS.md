@@ -6,6 +6,9 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.6.68 Datapoints account-type isolation (`codex/v3.6.68-datapoint-audience-filter`, PR #250): Personal/Business filtering now applies to saved user experiences as well as public reports; unknown-audience notes remain available under All. Failing-before synthetic regression, account-type browser assertions and changed UI help copy included. No account data, terms, stored keys, canonical rules, cloud recovery, backend or provider calls changed. Release/cache v3.6.68. PR bonus/cloud/UI unit suites, Chromium, WebKit, and verifier PASS on run 39548141911. Next: verify final handoff-head CI, merge on green, confirm main GitHub Pages deployment and exact cache version.
+
+
 - v3.6.67 source-watch integrity (`codex/v3.6.67-source-watch-integrity`): partial public official-source snapshots now flag each missing catalogued bank promotion/fee source, rather than suggesting full coverage. A sticky material source change keeps its review priority when subsequent checks are overdue; the review UI also labels overdue monitoring. Preserves the v3.6.66 public reviewed-source approval workflow and all previously stored financial records, imports, canonical eligibility, service keys and backend behavior. Includes synthetic source integrity and browser tests; app/service-worker v3.6.67. Next: full bonus/cloud/UI and Chromium/WebKit PR validation, release verifier, merge on green and verify Pages deployment.
 
 
