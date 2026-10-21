@@ -215,7 +215,7 @@
     window.tcUnifiedAnalyze=window.tcV3Analyze;window.tcStrictAnalyze=window.tcV3Analyze;window.tcV3EngineVersion=VER;
   }
   const oldApply=window.tcApplyReviewed;
-  if(typeof oldApply==='function')window.tcApplyReviewed=function(){const raw=document.getElementById('tca_raw')?.value||'';const result=window.tcV3Analyze?window.tcV3Analyze(raw):null;const out=oldApply.apply(this,arguments);setTimeout(()=>{try{if(typeof modal!=='undefined'&&modal){if(result){modal.closeRestrictionType=result.closeRestrictionType||'none';modal.closeRuleSourceSentence=result.closeRuleSourceSentence||'';modal.closeRuleSource='current-tc'}core.sanitizeEntry(modal)}if(typeof R==='function')R()}catch{}},0);return out};
+  if(typeof oldApply==='function')window.tcApplyReviewed=function(){const raw=document.getElementById('tca_raw')?.value||'';const result=window.tcV3Analyze?window.tcV3Analyze(raw):null;const approved=new Set(Array.from(document.getElementById('tca_overlay')?.querySelectorAll('[data-tcf-field]:checked')||[]).map(x=>x.getAttribute('data-tcf-field')));const closureApproved=['closeText','closeDays','closeBasis'].some(id=>approved.has(id));const out=oldApply.apply(this,arguments);setTimeout(()=>{try{if(typeof modal!=='undefined'&&modal){if(result&&closureApproved&&['payout-only','minimum-open','explicit-clawback','manual-review'].includes(result.closeRestrictionType)){modal.closeRestrictionType=result.closeRestrictionType;modal.closeRuleSourceSentence=result.closeRuleSourceSentence||'';modal.closeRuleSource='current-tc'}core.sanitizeEntry(modal)}if(typeof R==='function')R()}catch{}},0);return out};
 
   function migrateOnce(){
     try{
