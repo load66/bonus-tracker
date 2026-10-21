@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: codex (v3.6.70, codex/v3.6.70-safe-draft-automation)
+Active agent: codex (v3.6.71, codex/v3.6.71-terms-reanalysis-guard)
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
