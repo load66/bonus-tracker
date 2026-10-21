@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.65: Quick Add scroll stability during public source-watch refresh.
-const V = 'bt-v3.6.65-proof1';
+// Version 3.6.66: auditable human confirmation for public source-monitor changes.
+const V = 'bt-v3.6.66-review1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
