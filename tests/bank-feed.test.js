@@ -133,7 +133,15 @@ assert.equal(JSON.stringify([...storage]),before,'Personal discovery must not ch
 // Eligibility-first smart sorter: bonus amount cannot override blockers.
 const dollar=String.fromCharCode(36);
 const smartProof={status:'verified',rules:[],conditions:[],nationwide:true};
-const smartBonus=n=>({status:'evidence-found',stale:false,fields:{bonus:{value:dollar+n}}});
+const pURL='https://www.chase.com/synthetic-promotion',fURL='https://www.chase.com/synthetic-fees';
+const smartBonus=n=>({status:'evidence-found',stale:false,changed:false,checkedAt:new Date().toISOString(),
+ sources:[{role:'promotion',url:pURL,hash:'a'.repeat(64)},{role:'fees',url:fURL,hash:'b'.repeat(64)}],
+ fields:{
+  bonus:{value:dollar+n,sourceUrl:pURL},eligibility:{value:'New customer only',sourceUrl:pURL},
+  qualifying_activity:{value:'Qualifying activity required',sourceUrl:pURL},
+  monthly_fee:{value:dollar+'10 monthly',sourceUrl:fURL}
+ }});
+
 const smartOffer=(bank,amount,scope=true,opts={})=>({title:bank+' '+dollar+amount+' Checking Bonus',bank,product:'checking',amount,groupKey:'sort-'+bank,
   publishedAt:'2026-10-13T12:00:00Z',url:'https://example.test/smart-'+bank,availability:'unknown',
   evidence:smartBonus(amount),...(scope?{officialAvailability:smartProof}:{}),...opts});
@@ -144,22 +152,33 @@ const smartSorted=priority.prioritize([
  smartOffer('SafeA',600),smartOffer('SafeB',900),smartOffer('SafeC',950,true,{rewardIsUpperBound:true}),
  smartOffer('NoScope',1200,false),smartOffer('Closed Bank',5000),smartOffer('Future Bank',4000)
 ],smartRows,'MO',context);
-assert.deepEqual(smartSorted.slice(0,3).map(x=>x.bank),['SafeB','SafeA','SafeC'],
- 'Largest proven fixed bonus leads above tiered up-to offers');
+assert.deepEqual(smartSorted.slice(0,2).map(x=>x.bank),['SafeB','SafeA'],
+ 'Only proven fixed bonuses with complete current sources qualify for Top matches');
+assert.equal(smartSorted.find(x=>x.bank==='SafeC').priorityGroup,'explore',
+ 'Upper-bound tier cannot become a top recommendation without exact fixed value');
 assert.equal(smartSorted.find(x=>x.bank==='NoScope').priorityGroup,'explore');
 assert.equal(smartSorted.find(x=>x.bank==='Closed Bank').priorityGroup,'review');
 assert.equal(smartSorted.find(x=>x.bank==='Future Bank').priorityGroup,'next');
 assert.equal(smartSorted[0].priorityGroup,'best');
-assert.match(smartSorted[0].fit.reason,/eligibility remains unverified/);
+assert.match(smartSorted[0].fit.reason,/personal customer eligibility/);
 assert.equal(priority.offerFit(smartOffer('Test',1500),{kind:'outside'},null).kind,'blocked');
-const newer=smartOffer('Newer',2500,true,{badges:['New']});
+const newer=smartOffer('Newer',2500,true,{badges:['New'],evidence:{...smartBonus(2500),sources:[]}});
 const newResult=priority.prioritize([smartOffer('Stable',400),newer],[],'MO',context);
 assert.equal(newResult[0].bank,'Stable','A new high-dollar headline must not outrank an unchanged applicable offer without full source review');
 assert.equal(newResult.find(x=>x.bank==='Newer').priorityGroup,'review','New offer requires source verification before top ranking');
-const revised=smartOffer('Revised',1500,true,{badges:['Increased']});
+const revised=smartOffer('Revised',1500,true,{badges:['Increased'],evidence:{...smartBonus(1500),fields:{bonus:{value:dollar+1500,sourceUrl:pURL}}}});
 assert.equal(priority.prioritize([revised],[],'MO',context)[0].priorityGroup,'review','Increased headline requires current terms review');
 const changed=smartOffer('Changed',1600,true,{evidence:{...smartBonus(1600),changed:true}});
 assert.equal(priority.prioritize([changed],[],'MO',context)[0].priorityGroup,'review','Changed official evidence must be reviewed');
+assert.equal(priority.completeOfferProof(smartOffer('Fully',1200)),true,'All exact scoped official terms permit evidence-ready rank');
+const noEligibility=smartOffer('Incomplete',3200,true,{evidence:{...smartBonus(3200),fields:{bonus:{value:dollar+3200,sourceUrl:pURL}}}});
+assert.equal(priority.completeOfferProof(noEligibility),false,'Headline/bonus quote alone does not prove eligibility');
+assert.equal(priority.prioritize([noEligibility],[],'MO',context)[0].priorityGroup,'explore',
+ 'State coverage without official fee/customer/activity evidence is not a top match');
+const staleEvidence=smartOffer('Stale',2100,true,{evidence:{...smartBonus(2100),checkedAt:'2020-01-01T00:00:00Z'}});
+assert.equal(priority.completeOfferProof(staleEvidence),false,'An old promotion review cannot establish current top rank');
+const weakFee=smartOffer('FeeMissing',2100,true,{evidence:{...smartBonus(2100),sources:[{role:'promotion',url:pURL,hash:'a'.repeat(64)}]}});
+assert.equal(priority.completeOfferProof(weakFee),false,'The applicable fee schedule source must exist');
 assert.equal(JSON.stringify(smartRows),smartBefore,'Ranking must not mutate account history');
 assert.equal(JSON.stringify([...storage]),before,'Sorting must not write financial records');
 console.log('Smart sorter PASS: highest proven bonus first, blocked high offers demoted, no writes');
