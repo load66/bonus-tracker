@@ -72,4 +72,35 @@ try:
     raise AssertionError('Unsafe manifest allowed')
 except ValueError:
     pass
+# Category fingerprints are review hints only; the result stores no page excerpts.
+o1 = m.material_observation(page1)
+o2 = m.material_observation(page2)
+assert o1['digest'] == hash1
+assert o2['digest'] == hash2
+assert o1['signals']['monthly_fees'] == o2['signals']['monthly_fees'], 'Unrelated fee content should not change'
+assert o1['signals']['deadlines'] != o2['signals']['deadlines'], 'Deadline change not isolated'
+categorized = m.build(manifest, {}, now, lambda url, bank: o1)
+edited = m.build(manifest, categorized, next_time, lambda url, bank: o2 if url == live_url else o1)
+record = edited['records']['Capital One']['sources']['promotion']
+assert record['status'] == 'changed'
+assert 'deadlines' in record['reviewSignals']
+assert record['baselineSignals']['deadlines'] == o1['signals']['deadlines']
+assert record['observedSignals']['deadlines'] == o2['signals']['deadlines']
+assert 'monthly_fees' not in record['reviewSignals'], 'No fabricated fee change'
+assert not any('75 days' in json.dumps(record) for _ in [0]), 'No extracted page text stored'
+reverted_categories = m.build(manifest, edited, now + dt.timedelta(hours=13), lambda url, bank: o1)
+assert 'deadlines' in reverted_categories['records']['Capital One']['sources']['promotion']['reviewSignals'], 'Unreviewed risk must remain flagged after reversion'
+lost = m.build(manifest, edited, now + dt.timedelta(hours=13),
+               lambda url, bank: None if url == live_url else o1)
+assert 'deadlines' in lost['records']['Capital One']['sources']['promotion']['reviewSignals'], 'Outage cannot erase review signals'
+legacy = m.build(manifest, baseline, next_time, lambda url, bank: o2 if url == live_url else o1)
+assert legacy['records']['Capital One']['sources']['promotion']['reviewSignals'] == ['other_terms'], 'Old hash-only baseline cannot claim exact field changes'
+legacy_equal = m.build(manifest, baseline, next_time, lambda url, bank: o1)
+assert legacy_equal['records']['Capital One']['sources']['promotion']['baselineSignals'], 'Matching legacy fingerprint may safely initialize categorized baseline'
+try:
+    m.valid_signals({'untrusted_category': 'a'*64})
+    assert m.valid_signals({'untrusted_category': 'a'*64}) is None
+except AssertionError:
+    raise
+
 print('Public source monitor PASS: strict hosts, meaningful terms changes, sticky warning, outages, no writes to enrolled terms')
