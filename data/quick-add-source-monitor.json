@@ -1,25 +1,55 @@
 {
-  "generatedAt": "2026-10-20T21:44:07Z",
+  "generatedAt": "2026-10-21T05:01:19Z",
   "records": {
     "Capital One": {
       "offerKey": "360-checking-250-choice-2026",
       "sources": {
         "fees": {
           "baselineHash": "d818f4f779709112539cd7e480d782a3b2275b1c8e2b90a7edb0df50811b10a5",
+          "baselineSignals": {
+            "bonus_amount": "3c4b5070a73a993ef04dfd0f52fea837e77ec68efa05c139c06b6e9e4fdfd1bc",
+            "direct_deposit": "2cbed837d90f2c14d56b8cbc7466c38acf12b0886fdab333c35fae7c86451cb8",
+            "eligibility": "adc54c653eb5e45d46068a91e4618fbf78f3d2a724e4a1a4d2d54733c54b64b4",
+            "monthly_fees": "8d2425462760d1d9389dc56534f67d0c434184974965ce13234610d2cdfe9a8b"
+          },
           "changeAt": null,
-          "checkedAt": "2026-10-20T21:44:07Z",
-          "observedAt": "2026-10-20T21:44:07Z",
+          "checkedAt": "2026-10-21T05:01:19Z",
+          "lastReviewRef": null,
+          "lastReviewedAt": null,
+          "observedAt": "2026-10-21T05:01:19Z",
           "observedHash": "d818f4f779709112539cd7e480d782a3b2275b1c8e2b90a7edb0df50811b10a5",
-          "status": "baseline",
+          "observedSignals": {
+            "bonus_amount": "3c4b5070a73a993ef04dfd0f52fea837e77ec68efa05c139c06b6e9e4fdfd1bc",
+            "direct_deposit": "2cbed837d90f2c14d56b8cbc7466c38acf12b0886fdab333c35fae7c86451cb8",
+            "eligibility": "adc54c653eb5e45d46068a91e4618fbf78f3d2a724e4a1a4d2d54733c54b64b4",
+            "monthly_fees": "8d2425462760d1d9389dc56534f67d0c434184974965ce13234610d2cdfe9a8b"
+          },
+          "reviewSignals": [],
+          "status": "unchanged",
           "url": "https://www.capitalone.com/bank/disclosures/checking-accounts/online-checking-account/"
         },
         "promotion": {
           "baselineHash": "040cbe382e59adabd97c315f0bfb35cfbd1b390e571dc9085cf342ad2d38805d",
+          "baselineSignals": {
+            "bonus_amount": "d96e0b72a84c93f175a8400a3e4ee4e3990104d8a3b7743745bf5fa98b40eba3",
+            "deadlines": "52cfd09bb51d2a17455d1d35c2eb2ed0a34a1279700aff5b024c9caf95872944",
+            "direct_deposit": "67c2ff8f3c82df16baf05ed591502d829cbdabdbaed2ce21c3cca84c83dbb70e",
+            "monthly_fees": "c60e63c1df67da3245bbcbcd9a71f5e4b322f7b93c4d2f9bbe1afc1e9da76893"
+          },
           "changeAt": null,
-          "checkedAt": "2026-10-20T21:44:07Z",
-          "observedAt": "2026-10-20T21:44:07Z",
+          "checkedAt": "2026-10-21T05:01:19Z",
+          "lastReviewRef": null,
+          "lastReviewedAt": null,
+          "observedAt": "2026-10-21T05:01:19Z",
           "observedHash": "040cbe382e59adabd97c315f0bfb35cfbd1b390e571dc9085cf342ad2d38805d",
-          "status": "baseline",
+          "observedSignals": {
+            "bonus_amount": "d96e0b72a84c93f175a8400a3e4ee4e3990104d8a3b7743745bf5fa98b40eba3",
+            "deadlines": "52cfd09bb51d2a17455d1d35c2eb2ed0a34a1279700aff5b024c9caf95872944",
+            "direct_deposit": "67c2ff8f3c82df16baf05ed591502d829cbdabdbaed2ce21c3cca84c83dbb70e",
+            "monthly_fees": "c60e63c1df67da3245bbcbcd9a71f5e4b322f7b93c4d2f9bbe1afc1e9da76893"
+          },
+          "reviewSignals": [],
+          "status": "unchanged",
           "url": "https://www.capitalone.com/bank/choose-your-offer/"
         }
       }
@@ -29,20 +59,48 @@
       "sources": {
         "fees": {
           "baselineHash": "f2dd00ad54ff8058b3abe6003f554906d5adc6bd984148b7ea9f6c8923386606",
+          "baselineSignals": {
+            "eligibility": "4559d9ff5fd2c8526fabbf4f89657a932b41a5ed4010edd816c7028ebf5e215e",
+            "monthly_fees": "73520279705ed02c1ec76d7eeb43b5a6bf55ee9d5f44d318e20a56e76b6d5aff"
+          },
           "changeAt": null,
-          "checkedAt": "2026-10-20T21:44:07Z",
-          "observedAt": "2026-10-20T21:44:07Z",
+          "checkedAt": "2026-10-21T05:01:19Z",
+          "lastReviewRef": null,
+          "lastReviewedAt": null,
+          "observedAt": "2026-10-21T05:01:19Z",
           "observedHash": "f2dd00ad54ff8058b3abe6003f554906d5adc6bd984148b7ea9f6c8923386606",
-          "status": "baseline",
+          "observedSignals": {
+            "eligibility": "4559d9ff5fd2c8526fabbf4f89657a932b41a5ed4010edd816c7028ebf5e215e",
+            "monthly_fees": "73520279705ed02c1ec76d7eeb43b5a6bf55ee9d5f44d318e20a56e76b6d5aff"
+          },
+          "reviewSignals": [],
+          "status": "unchanged",
           "url": "https://www.wellsfargo.com/mobile-online-banking/consumer-account-fees/"
         },
         "promotion": {
           "baselineHash": "e542479fa91a2a63a9ae96b0340c996c1d119a3d28058296bde735ff689b630f",
+          "baselineSignals": {
+            "bonus_amount": "004cf274d64ce676f50f39259d5b7a2763d2341306674c97f4c84d4e9c163668",
+            "deadlines": "aa03634ded5a202a1b1392cffe3eb0eccdcd26195776cc5d10c01e53e7546714",
+            "direct_deposit": "82d506ac1b30a3ce16a5f1f5919f89f8d80014ed857895fe36918da81e1ceb10",
+            "eligibility": "23e9f340a9f636deb418a185d7416c0ec13a56a841a6e778bfb0679892214171",
+            "monthly_fees": "aabd312c8313e10a660b825643620ac3a0b4baf134e7a9e18087182c44bb8da2"
+          },
           "changeAt": null,
-          "checkedAt": "2026-10-20T21:44:07Z",
-          "observedAt": "2026-10-20T21:44:07Z",
+          "checkedAt": "2026-10-21T05:01:19Z",
+          "lastReviewRef": null,
+          "lastReviewedAt": null,
+          "observedAt": "2026-10-21T05:01:19Z",
           "observedHash": "e542479fa91a2a63a9ae96b0340c996c1d119a3d28058296bde735ff689b630f",
-          "status": "baseline",
+          "observedSignals": {
+            "bonus_amount": "004cf274d64ce676f50f39259d5b7a2763d2341306674c97f4c84d4e9c163668",
+            "deadlines": "aa03634ded5a202a1b1392cffe3eb0eccdcd26195776cc5d10c01e53e7546714",
+            "direct_deposit": "82d506ac1b30a3ce16a5f1f5919f89f8d80014ed857895fe36918da81e1ceb10",
+            "eligibility": "23e9f340a9f636deb418a185d7416c0ec13a56a841a6e778bfb0679892214171",
+            "monthly_fees": "aabd312c8313e10a660b825643620ac3a0b4baf134e7a9e18087182c44bb8da2"
+          },
+          "reviewSignals": [],
+          "status": "unchanged",
           "url": "https://accountoffers.wellsfargo.com/checkingoffer/"
         }
       }
