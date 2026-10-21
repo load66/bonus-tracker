@@ -152,8 +152,10 @@ const smartSorted=priority.prioritize([
  smartOffer('SafeA',600),smartOffer('SafeB',900),smartOffer('SafeC',950,true,{rewardIsUpperBound:true}),
  smartOffer('NoScope',1200,false),smartOffer('Closed Bank',5000),smartOffer('Future Bank',4000)
 ],smartRows,'MO',context);
-assert.deepEqual(smartSorted.slice(0,3).map(x=>x.bank),['SafeB','SafeA','SafeC'],
- 'Largest proven fixed bonus leads above tiered up-to offers');
+assert.deepEqual(smartSorted.slice(0,2).map(x=>x.bank),['SafeB','SafeA'],
+ 'Only proven fixed bonuses with complete current sources qualify for Top matches');
+assert.equal(smartSorted.find(x=>x.bank==='SafeC').priorityGroup,'explore',
+ 'Upper-bound tier cannot become a top recommendation without exact fixed value');
 assert.equal(smartSorted.find(x=>x.bank==='NoScope').priorityGroup,'explore');
 assert.equal(smartSorted.find(x=>x.bank==='Closed Bank').priorityGroup,'review');
 assert.equal(smartSorted.find(x=>x.bank==='Future Bank').priorityGroup,'next');
