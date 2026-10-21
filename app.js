@@ -4761,7 +4761,7 @@ function taxPayWageOverride(value){
  return !state.wageError;
 }
 function taxPayApply(){
- if(!taxPayImportState?.row||!taxPayImportState?.projection)return false;
+ if(!taxPayImportState?.row||!taxPayImportState?.projection||taxPayImportState?.wageError)return false;
  const {row,projection}=taxPayImportState;
  // User approval is required; do not silently replace existing typed tax inputs.
  const d=taxEstimateDrafts[row.taxYear]||(taxEstimateDrafts[row.taxYear]={filingStatus:'',otherIncome:'',excludedBonus:'',deduction:'',withholding:'',payments:'',qualifiedOvertime:''});
@@ -4790,10 +4790,10 @@ function renderTaxJsonPanel(){
   h+='<div><dt>Gross pay YTD</dt><dd>'+taxPayMoney(x.grossPayYtd)+'</dd></div>';
   if(x.preTaxDeductionsYtd!==null)h+='<div><dt>Pre-tax deductions YTD</dt><dd>'+taxPayMoney(x.preTaxDeductionsYtd)+'</dd></div>';
   h+='<div><dt>Federal withholding YTD</dt><dd>'+(x.federalIncomeTaxWithheldYtd===null?'Not shown':taxPayMoney(x.federalIncomeTaxWithheldYtd))+'</dd></div>';
-  h+='</dl><details class="bt-tax-wage-review"><summary>Have exact federal taxable wages? <small>Optional</small></summary><label for="bt-tax-wage-ytd">Federal taxable wages YTD (from paystub)<input id="bt-tax-wage-ytd" aria-label="Federal taxable wages year to date" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Leave blank for estimated wages" value="'+(x.federalTaxableWagesYtd??'')+'" onchange="taxPayWageOverride(this.value)"></label><small>Use this only if your paystub explicitly lists federal taxable wages. It can differ from gross less pre-tax deductions.</small>'+(st.wageError?'<p class="bt-tax-pay-error" role="alert">'+esc(st.wageError)+'</p>':'')+'</details>';
+  h+='</dl><details class="bt-tax-wage-review"'+(st.wageError?' open':'')+'><summary>Have exact federal taxable wages? <small>Optional</small></summary><label for="bt-tax-wage-ytd">Federal taxable wages YTD (from paystub)<input id="bt-tax-wage-ytd" aria-label="Federal taxable wages year to date" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Leave blank for estimated wages" value="'+(x.federalTaxableWagesYtd??'')+'" onchange="taxPayWageOverride(this.value)"></label><small>Use this only if your paystub explicitly lists federal taxable wages. It can differ from gross less pre-tax deductions.</small>'+(st.wageError?'<p class="bt-tax-pay-error" role="alert">'+esc(st.wageError)+'</p>':'')+'</details>';
   h+='<p><b>Projected annual wages:</b> '+taxPayMoney(p.annualIncome)+'<br><b>Projected annual federal withholding:</b> '+(p.annualFederalWithholding===null?'Not available':taxPayMoney(p.annualFederalWithholding))+'</p>';
   h+='<p class="bt-tax-pay-note">Income basis: '+esc(basis)+'. Projected from '+p.daysElapsed+' elapsed days of '+p.daysInYear+'. Assumes the same pay and withholding rate through year-end; overtime and deductions may change. Check W-2 Box 1 or your pay details for exact federal taxable wages.</p>';
-  if(!st.applied)h+='<button class="bt-tax-pay-apply" type="button" onclick="taxPayApply()">Use this estimate</button>';
+  if(!st.applied&&!st.wageError)h+='<button class="bt-tax-pay-apply" type="button" onclick="taxPayApply()">Use this estimate</button>';
   else h+='<p class="bt-tax-pay-success" role="status">Pay snapshot applied. Your filing status and other adjustments remain editable below.</p>';
   h+='<button type="button" class="bt-tax-pay-remove" onclick="taxPayRemove()">Dismiss pay snapshot</button></div>';
  }
@@ -4844,7 +4844,7 @@ function renderTaxEstimator(yrE,audience){
  h+='<details class="bt-tax-options"><summary>Withholding & adjustments <span>Optional</span></summary><div class="bt-tax-option-body"><p>Enter projected <b>full-year</b> federal withholding to estimate a potential balance or refund, not just tax on bonuses.</p>';
  h+='<div class="bt-tax-config">'+field('bt-tax-withheld','Federal income tax withheld','',d.withholding)+field('bt-tax-paid','Estimated payments','',d.payments)+field('bt-tax-exclude','Exclude receipts ($)','',d.excludedBonus)+field('bt-tax-deduct','Custom deduction ($)','',d.deduction)+'</div>';
  h+='<p>Leave exclusions blank to include all recorded bonuses. Exclude only amounts you have determined are not taxable to you. Leave deduction blank to use the IRS standard deduction; itemizing or special deductions may require professional review.</p></div></details>';
- h+='<p class="bt-tax-caveat">Planning estimate for ordinary income, assuming standard deduction unless changed. Does not model credits, FICA, self-employment tax, investment gains, NIIT, AMT, qualified deductions, other tax items or state taxes. Business bonuses may have different reporting treatment. Reconcile with 1099 forms and your actual return. Inputs stay in this open session and are not saved or backed up.</p>';
+ h+='<p class="bt-tax-caveat">Planning estimate for ordinary income, assuming standard deduction unless changed. Does not model credits, FICA, self-employment tax, investment gains, NIIT, AMT, other special deductions, other tax items or state taxes. Business bonuses may have different reporting treatment. Reconcile with 1099 forms and your actual return. Inputs stay in this open session and are not saved or backed up.</p>';
  h+='<div class="bt-tax-foot"><a href="https://www.irs.gov/filing/federal-income-tax-rates-and-brackets" target="_blank" rel="noopener noreferrer">IRS tax brackets ↗</a><a href="https://www.irs.gov/taxtopics/tc403" target="_blank" rel="noopener noreferrer">Interest reporting ↗</a><button type="button" onclick="taxEstimateReset()">Clear tax inputs</button></div></section>';
  return h;
 }
