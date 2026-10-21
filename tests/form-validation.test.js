@@ -63,15 +63,19 @@ assert.equal(s.saveEntryFromButton(fakeButton,{preventDefault(){},stopPropagatio
  let prematureSourceWrites=0;
  s.tcV3Analyze=()=>({
    raw:syntheticRaw,bank:'Synthetic Automation Bank',accountType:'business',
-   bonus:350,closeRestrictionType:'none',sourceKind:'pasted text',
+   bonus:350,closeRestrictionType:'payout-only',closeRuleText:'Keep account open until the bonus posts.',sourceKind:'pasted text',
    sourceSnippets:[{field:'Bank',kind:'extracted',confidence:'high',source:'Synthetic Automation Bank checking promotion'}],
    suggestedTimers:[]
  });
  s.tcV3SaveSourceForCurrentEntry=()=>{prematureSourceWrites++;return true};
- s.document.getElementById=id=>id==='tca_raw'?{value:syntheticRaw}:
+ const activeReview={querySelectorAll:selector=>selector==='[data-tcf-field]:checked'?
+   [{getAttribute:key=>key==='data-tcf-field'?'bank':null}]:[]};
+ s.document.getElementById=id=>id==='tca_overlay'?activeReview:
+   id==='tca_raw'?{value:syntheticRaw}:
    id==='az_opened_today'?{checked:false}:originalGetElement(id);
+ // Underlying pages may contain selected stale fields; the live dialog must win.
  s.document.querySelectorAll=selector=>selector==='[data-tcf-field]:checked'?
-   [{getAttribute:key=>key==='data-tcf-field'?'bank':null}]:
+   [{getAttribute:key=>key==='data-tcf-field'?'closeText':null}]:
    selector==='[data-tcf-timer]:checked'?[]:originalQueryAll(selector);
  run("modal={bank:'Original Bank',accountType:'business',bonus:999,opened:'2026-01-01',closeRestrictionType:'minimum-open',closeRuleBasis:'opened',minHoldDays:180,earlyCloseFee:25,tcSourceRaw:'Original enrolled terms',customTimers:[]};showAnalyzer=true");
  const beforeAutomation=JSON.stringify([...storage]);
