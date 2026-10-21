@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.67';
+const APP_VERSION='3.6.68';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -2568,7 +2568,9 @@ function buildDatapointGroups(){
  getCommunityDatapoints().forEach(x=>ensure(x.bank,x.accountType?x:null).community.push(x));
  const q=dpSearch.trim().toLowerCase();
  return [...map.values()].filter(g=>!dpTaskBankKey||g.key===dpTaskBankKey).filter(g=>dpFilters.scope!=='mine'||g.entryCount>0).map(g=>{
-  let community=dpFilterRows(g.community),user=g.user.filter(x=>dpFilters.result==='all'||x.outcome===dpFilters.result);
+  let community=dpFilterRows(g.community),user=g.user.filter(x=>
+   (dpFilters.result==='all'||x.outcome===dpFilters.result)
+   &&(dpFilters.type==='all'||x.accountType===dpFilters.type));
   if(dpFilters.view==='personal')community=[];
   if(q&&!g.bank.toLowerCase().includes(q)){community=community.filter(x=>reportSearchMatch(x,q));user=user.filter(x=>reportSearchMatch(x,q))}
   community.sort((a,b)=>dpEvidenceDate(b).localeCompare(dpEvidenceDate(a))||a.method.localeCompare(b.method));
@@ -4766,7 +4768,7 @@ function rTips(){
  h+=dpSelect('result','Result',[['all','All results'],['worked','Reported success'],['failed','Reported failure'],['mixed','Mixed reports'],['pending','Still waiting'],['unknown','Not recorded']]);
  h+=dpSelect('source','Source',[['all','All sources'],['reddit','Reddit'],['doc','Doctor of Credit']]);
  h+=dpSelect('dated','Dates',[['all','All dates'],['recent','Dated within 90 days']]);
- h+='</div><button class="research-text-button" onclick="resetDPFilters()">Reset filters</button><p class="research-caveat">Result filters include your experiences. Source and date filters apply to community reports.</p></details>';
+ h+='</div><button class="research-text-button" onclick="resetDPFilters()">Reset filters</button><p class="research-caveat">Result and account-type filters include your experiences. Source and date filters apply to community reports.</p></details>';
  if(!groups.length)h+='<div class="research-empty">No matching reports. Try another bank or reset the filters.</div>';
  if(!window.bt366GroupData){
    const items=groups.flatMap(g=>[
