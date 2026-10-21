@@ -19,3 +19,47 @@
 .icloud-backup-overlay #icloud-switch-feedback[data-tone="success"]{background:#123428;color:#c4f5d8;border-color:#327c5c}
 .icloud-backup-overlay #icloud-switch-feedback[data-tone="neutral"]{background:#1e2734;color:#d1e2fc;border-color:#46617b}
 .icloud-backup-overlay #icloud-switch-feedback[hidden]{display:none!important}
+
+
+/* v3.6.72 — compact and accessible cloud recovery on phones. Visual-only. */
+.cloud-modal .cloud-dialog-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.cloud-modal .cloud-dialog-head h2{font-size:clamp(20px,5.2vw,24px);line-height:1.18;letter-spacing:-.025em;margin:0 0 5px}
+.cloud-modal .cloud-dialog-head p{font-size:12px;line-height:1.4;margin:0}
+.cloud-modal .cloud-dialog-close{flex:0 0 44px;min-width:44px;height:44px;min-height:44px;margin:0;padding:0;display:grid;place-items:center;border:1px solid var(--border);border-radius:12px;background:#1d293b;color:#eaf1fb;font-size:25px;line-height:1;cursor:pointer}
+.cloud-modal .cloud-dialog-close:focus-visible{outline:3px solid #8cc9ff;outline-offset:3px}
+.cloud-modal .cloud-protection-card{padding:12px 14px;margin:12px 0 10px}
+.cloud-modal .cloud-card-heading{display:flex;align-items:flex-start;flex-wrap:wrap;justify-content:space-between;gap:3px 12px}
+.cloud-modal .cloud-card-heading strong:first-child{font-size:13px}
+.cloud-modal .cloud-card-heading #cloud-state{font-size:12px;max-width:100%;font-weight:700}
+.cloud-modal #cloud-summary{font-size:12.5px;line-height:1.4;margin:7px 0 10px}
+.cloud-modal .cloud-details{margin:0;padding-top:9px;border-top:1px solid #ffffff20}
+.cloud-modal .cloud-details dt{font-size:11px}
+.cloud-modal .cloud-details dd{font-size:13px;font-weight:700;margin:3px 0 0}
+.cloud-modal #cloud-proof{font-size:11px;line-height:1.4;margin:6px 0 0}
+.cloud-modal .cloud-help-details{margin-top:8px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+.cloud-modal .cloud-help-details summary{display:list-item;cursor:pointer;margin-left:16px;padding:9px 0;line-height:1.35;color:#c5d7ee;font-size:12px;font-weight:650}
+.cloud-modal .cloud-help-details summary:focus-visible{outline:2px solid #8cc9ff;outline-offset:3px;border-radius:4px}
+.cloud-modal .cloud-help-details[open] p{margin:0 0 10px;font-size:12px;line-height:1.5}
+.cloud-modal #cloud-retention-details{border-top:1px solid #ffffff20;margin-top:8px}
+.cloud-modal #cloud-retention-status{font-size:11.5px;line-height:1.5}
+.cloud-modal .cloud-switch-row{margin:6px 0 12px;padding:11px 0;gap:12px}
+.cloud-modal .cloud-switch-row strong{font-size:13px}
+.cloud-modal .cloud-switch-row small{line-height:1.4;font-size:11px;max-width:240px}
+.cloud-modal .cloud-primary-actions{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin:8px 0 2px}
+.cloud-modal .cloud-primary-actions button{width:100%;min-height:44px;margin:0;font-size:13px;font-weight:700;border-radius:10px;cursor:pointer}
+.cloud-modal #cloud-now{color:#fff;background:#255fbc;border:1px solid #629dff}
+.cloud-modal #cloud-list{color:#dfebfa;background:#18283f;border:1px solid #536d8f}
+.cloud-modal #cloud-now:disabled,.cloud-modal #cloud-list:disabled{opacity:.6;cursor:wait}
+.cloud-modal #cloud-now:focus-visible,.cloud-modal #cloud-list:focus-visible{outline:3px solid #8cc9ff;outline-offset:2px}
+.cloud-modal #cloud-versions:empty,.cloud-modal #cloud-preview:empty{display:none}
+.cloud-modal #cloud-preview{margin-top:12px}
+.cloud-modal .cloud-file-details{margin-top:10px}
+.cloud-modal .cloud-file-note{margin:0 0 10px;padding:0;border:0}
+.cloud-modal .cloud-close-footer{display:block;width:100%;min-height:44px;margin-top:10px;color:#d4e1f4;background:#202c40;border:1px solid #4d607e}
+@media(max-width:420px){
+ .cloud-modal .cloud-card-heading{display:flex}
+ .cloud-modal .cloud-card-heading #cloud-state{display:inline;margin:0}
+ .cloud-modal .cloud-switch-row{gap:8px}
+ .cloud-modal .cloud-switch-row strong{font-size:12.5px}
+ .cloud-modal .cloud-switch-control{gap:6px}
+}
