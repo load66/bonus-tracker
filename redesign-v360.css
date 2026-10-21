@@ -1032,3 +1032,17 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt-tax-pay-review .bt-tax-pay-success{color:#5BE3B0;font-size:11px;font-weight:720}
 .bt-tax-pay-remove{display:block;margin:9px auto 0;min-height:40px;padding:6px 11px;background:transparent;color:#AEC1BF;border:0;text-decoration:underline;text-underline-offset:3px;font-size:11px;cursor:pointer}
 @media(max-width:360px){.bt-tax-pay-review dl>div{flex-wrap:wrap}.bt-tax-pay-review dd{white-space:normal}}
+
+/* v3.6.77: compact, accessible overtime and optional exact taxable-pay inputs. */
+.bt-tax-overtime-field{margin:12px 0 0}
+.bt-tax-overtime-field .bt-tax-field{max-width:100%}
+.bt-tax-overtime-field .bt-tax-field input{max-width:100%}
+.bt-tax-overtime-result{font-size:11px;line-height:1.6;padding:10px 12px;margin:12px 0 0;border-radius:10px;color:#BDEBD9;background:#183027;border:1px solid #2D5946}
+.bt-tax-overtime-result b{color:#5BE3B0}
+.bt-tax-wage-review{padding:7px 0 12px;margin:2px 0;border-top:1px solid #2D4541;border-bottom:1px solid #2D4541}
+.bt-tax-wage-review>summary{cursor:pointer;min-height:42px;display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:780;gap:10px;color:#D2ECE1}
+.bt-tax-wage-review>summary small{color:#B8C9C3;font-size:10px;font-weight:500}
+.bt-tax-wage-review>label{display:flex;flex-direction:column;gap:7px;margin:5px 0 8px;font-size:11px;font-weight:700;color:#CCD5DC}
+.bt-tax-wage-review input{box-sizing:border-box;width:100%;min-height:44px;border:1px solid #45615C;background:#0E1E1E;border-radius:10px;padding:10px 12px;color:#F2F5F6;font-size:14px;font-variant-numeric:tabular-nums}
+.bt-tax-wage-review>small{display:block;font-size:10px;line-height:1.55;color:#A9B7BD}
+.bt-tax-wage-review input:focus-visible{outline:2px solid #5BE3B0;outline-offset:2px}
