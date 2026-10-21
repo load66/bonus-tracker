@@ -85,3 +85,9 @@ Use the **actual** changed-bank name, document role, observed SHA-256, and revie
 The next scheduled/manual monitoring run accepts the decision only if its bank, product-offer key, exact role and approved HTTPS URL, previous baseline and newly observed document hash still agree, and the source is successfully fetched again. The proposed review expires after 30 days and cannot approve later document revisions. The monitor then updates **only the public source baseline**, records a bounded review receipt, and clears that particular source's pending wording-change hints. Every other source and all financial/tracker records remain unchanged.
 
 If the website is unavailable or has a new hash, the flag persists. If the webpage reverts after approval, it is treated as another change. The decision ledger is intentionally independent of the frequently refreshed monitoring snapshot so a scheduled feed update cannot silently erase or override the human review. This is human-reviewed **monitor baseline maintenance**, not an automated eligibility or bonus-term update.
+
+## Partial watch coverage and overdue source changes (v3.6.67)
+
+A published official-source watch snapshot is **complete** only when every curated institution has an exact matching promotion and fee URL, offer key, and supported observation status. Missing bank/source records become explicit review items with pinned official links; an incomplete feed cannot imply that all promotions or fees were checked.
+
+A pending source-page change remains flagged even if its follow-up check is overdue or another monitored disclosure cannot be fetched. The review queue presents the change warning and an overdue qualifier rather than silently downgrading it to an ordinary stale warning. Human-reviewed acknowledgments from v3.6.66 still control source-baseline approval; this read-only display change does not clear a warning or modify enrolled user terms.
