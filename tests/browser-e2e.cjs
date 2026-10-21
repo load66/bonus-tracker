@@ -866,6 +866,24 @@ async function exercise(name,engine,url){
     await button('Bank Bonuses').click();
     await page.locator('.radar-card h3').filter({hasText:'Synthetic Checking'}).first().waitFor();
     await page.screenshot({path:path.join(output,name+'-v362-bonuses-390.png')});
+    const beforeWatchCheck=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
+    await page.evaluate(async()=>{
+      const catalog=window.BTQuickAddCatalog,record=catalog.records['Capital One'];
+      const now=new Date(Date.now()).toISOString();
+      const sources={};
+      for(const x of record.sources)sources[x.role]={url:x.url,status:x.role==='fees'?'unchanged':'changed',
+        checkedAt:now,baselineHash:'a'.repeat(64),observedHash:x.role==='fees'?'a'.repeat(64):'b'.repeat(64),
+        changeAt:x.role==='fees'?null:now,reviewSignals:x.role==='fees'?[]:['deadlines','monthly_fees','<script>x</script>']};
+      const snapshot={schemaVersion:1,generatedAt:now,records:{'Capital One':{offerKey:record.offerKey,sources}}};
+      const previous=window.fetch;
+      window.fetch=(url,opts)=>String(url).includes('quick-add-source-monitor.json')
+        ?Promise.resolve(new Response(JSON.stringify(snapshot),{status:200,headers:{'Content-Type':'application/json'}}))
+        :previous(url,opts);
+      try{await catalog.refreshWatch(true)}finally{window.fetch=previous}
+    });
+    check('mobile review queue shows possible changed terms without unsafe text',await page.locator('.bt3662-source-queue').innerText().then(t=>
+      t.includes('Possible: Deadlines, Fee wording')&&!t.includes('<script>')&&!t.includes('confirmed eligibility')));
+    check('public monitoring cannot mutate financial records',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,beforeWatchCheck));
     check('offers group by verified tracker review status without assuming personal eligibility',await page.locator('.radar-group-heading').count()>0&&(await page.getByText('About sources',{exact:true}).count())===1);
     check('bank feed renders escaped discovery title and permits only bundled bank logos',
       (await page.locator('.radar-card img').evaluateAll(images=>images.every(img=>/^\.\/bank-logos\/[a-z0-9-]+\.svg$/.test(img.getAttribute('src')||''))))
