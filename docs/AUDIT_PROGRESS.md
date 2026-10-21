@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: codex (v3.6.69, codex/v3.6.69-requirement-save-safety)
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.69 mobile requirement confirmation reliability (`codex/v3.6.69-requirement-save-safety`, PR #251): requirement completion date is entered in an accessible, responsive dialog with inline missing-date validation instead of disruptive alerts; cancellation is read-only. Failed persistence, including false-return saves, rolls back tracker and companion history/requirements and preserves the selected date for retry. Canonical eligibility/fee rules, provider links, cloud storage keys and bank records unchanged. Includes injected storage-failure/retry unit test and Chromium/WebKit mobile validation assertions. Release/cache v3.6.69. PR bonus/cloud/UI suites, Chromium/WebKit and release verifier PASS on run 39554698246. Next: verify final-head CI, squash merge, confirm Pages deploy and source release marker.
+
 
 - v3.6.68 Datapoints account-type isolation (`codex/v3.6.68-datapoint-audience-filter`, PR #250): Personal/Business filtering now applies to saved user experiences as well as public reports; unknown-audience notes remain available under All. Failing-before synthetic regression, account-type browser assertions and changed UI help copy included. No account data, terms, stored keys, canonical rules, cloud recovery, backend or provider calls changed. Release/cache v3.6.68. PR bonus/cloud/UI unit suites, Chromium, WebKit, and verifier PASS on run 39548141911. Next: verify final handoff-head CI, merge on green, confirm main GitHub Pages deployment and exact cache version.
 
