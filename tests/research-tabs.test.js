@@ -41,6 +41,28 @@ try{
  assert(!s.buildDatapointGroups().some(g=>g.community.some(x=>x.accountType==='personal')),'Business account matched personal reports');
  run("dpFilters.scope='all';dpFilters.result='mixed'");assert(s.buildDatapointGroups().every(g=>g.community.every(x=>x.outcome==='mixed')));
  run("dpFilters.result='all';dpFilters.dated='recent'");assert(s.buildDatapointGroups().every(g=>g.community.every(x=>!!s.dpReportDate(x))));run("resetDPFilters()");
+
+ // Account-type filters must apply to the user's reports as well as public evidence.
+ // Unknown audience may not be silently represented as personal or business.
+ const audienceBackup=s.loadUserDatapoints();
+ s.saveUserDatapoints([
+  {id:'synthetic-audience-personal',bank:'Synthetic Personal Records',method:'Payroll',accountType:'personal',outcome:'pending'},
+  {id:'synthetic-audience-business',bank:'Synthetic Business Records',method:'Payroll',accountType:'business',outcome:'pending'},
+  {id:'synthetic-audience-unknown',bank:'Synthetic Unclassified Records',method:'ACH',accountType:'',outcome:'pending'}
+ ]);
+ run("dpFilters.type='business';dpFilters.view='personal';dpFilters.scope='all'");
+ const businessReports=s.buildDatapointGroups().flatMap(g=>g.user);
+ assert(businessReports.some(x=>x.id==='synthetic-audience-business'),'Business evidence was hidden');
+ assert(businessReports.every(x=>x.accountType==='business'),'Personal or unknown user evidence leaked into Business filter');
+ run("dpFilters.type='personal'");
+ const personalReports=s.buildDatapointGroups().flatMap(g=>g.user);
+ assert(personalReports.some(x=>x.id==='synthetic-audience-personal'),'Personal evidence was hidden');
+ assert(personalReports.every(x=>x.accountType==='personal'),'Business or unknown user evidence leaked into Personal filter');
+ run("dpFilters.type='all'");
+ assert.equal(s.buildDatapointGroups().flatMap(g=>g.user).length,3,'All results lost unknown-audience evidence');
+ run("resetDPFilters()");
+ s.saveUserDatapoints(audienceBackup);
+
  s.saveCommunityDatapoints([custom]);
  run("entries=[{id:'CHASE-P',bank:'Chase',opened:'2026-01-01',notes:'Keep financial record'}];saveReq('Chase',{completeBonusText:'Keep requirement'})");
  const protectedBefore=run('JSON.stringify({entries,reqs:loadReqs(),terms:loadTermsArchive()})');
