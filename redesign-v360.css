@@ -1011,3 +1011,24 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt-tax-foot a{color:#5BE3B0;text-underline-offset:3px;min-height:33px;display:inline-flex;align-items:center}
 .bt-tax-foot button{background:none;border:1px solid #394155;border-radius:10px;min-height:36px;padding:7px 10px;color:#C8D0DD;font-size:11px;cursor:pointer;margin-left:auto}
 @media(max-width:370px){.bt-tax-estimator{padding:13px}.bt-tax-config{grid-template-columns:1fr}.bt-tax-calc-grid strong{font-size:20px}.bt-tax-chip{font-size:9px;padding:5px 7px}}
+
+/* v3.6.76: optional pay JSON import, reviewed before changing tax estimates. */
+.bt-tax-pay{padding:13px;margin:0 0 14px;background:#0C151A;border:1px solid #28483F;border-radius:14px;color:#F0F4F6}
+.bt-tax-pay-head strong{display:block;font-size:13px;font-weight:850;letter-spacing:-.1px}
+.bt-tax-pay-head small{display:block;font-size:11px;line-height:1.5;color:#ACB7C3;margin-top:4px}
+.bt-tax-pay-choose,.bt-tax-pay-apply{display:flex;justify-content:center;align-items:center;min-height:44px;width:100%;margin-top:12px;background:#5BE3B0;color:#092419;font-size:12px;font-weight:850;border:0;border-radius:11px;cursor:pointer}
+.bt-tax-pay-choose{background:#1E382F;border:1px solid #487D69;color:#C1F6DD}
+.bt-tax-pay-choose:focus-visible,.bt-tax-pay-apply:focus-visible,.bt-tax-pay-remove:focus-visible{outline:2px solid #9DDDC7;outline-offset:2px}
+.bt-tax-pay-error{color:#FFC5C5;background:#321A23;border:1px solid #6E3140;padding:10px;border-radius:9px;font-size:11px;line-height:1.5;margin:10px 0 0}
+.bt-tax-pay-review{margin-top:12px;padding-top:12px;border-top:1px solid #2D4541}
+.bt-tax-pay-date{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px}
+.bt-tax-pay-date span{color:#A3B4AE;font-size:10px}
+.bt-tax-pay-review dl{margin:12px 0;display:grid;gap:9px}
+.bt-tax-pay-review dl>div{display:flex;justify-content:space-between;gap:9px;align-items:start}
+.bt-tax-pay-review dt{font-size:11px;color:#AAB7BE;min-width:0}
+.bt-tax-pay-review dd{font-size:12px;color:#F2F5F6;font-weight:780;margin:0;white-space:nowrap;font-variant-numeric:tabular-nums}
+.bt-tax-pay-review p{font-size:11px;line-height:1.6;margin:10px 0;color:#CCD5DC}
+.bt-tax-pay-review .bt-tax-pay-note{font-size:10px;color:#AAB5C2}
+.bt-tax-pay-review .bt-tax-pay-success{color:#5BE3B0;font-size:11px;font-weight:720}
+.bt-tax-pay-remove{display:block;margin:9px auto 0;min-height:40px;padding:6px 11px;background:transparent;color:#AEC1BF;border:0;text-decoration:underline;text-underline-offset:3px;font-size:11px;cursor:pointer}
+@media(max-width:360px){.bt-tax-pay-review dl>div{flex-wrap:wrap}.bt-tax-pay-review dd{white-space:normal}}
