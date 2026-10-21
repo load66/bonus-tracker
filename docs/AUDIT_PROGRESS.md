@@ -6,6 +6,9 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.6.66 audited official-source review acknowledgements (`codex/v3.6.66-source-review-approvals`): adds public-only, human-reviewed ledger `data/quick-add-source-review-decisions.json` and `scripts/acknowledge-source-review.py`. Only an exact institution/product offer key, approved source role and URL, baseline hash, current observed SHA-256, fresh timestamp and linked repo issue/PR can propose clearing a watch flag. Next scheduled official source check must successfully re-observe the same digest; unavailable, changed, expired approvals and old unrelated sources cannot clear warnings. Source reverts remain sticky until explicit review. Keeps bounded last-review receipt for audit; no promotions declared eligible, no canonical rules, bank records, cloud state, user keys or backend changed. Expanded synthetic Python watcher tests and docs; app/SW cache v3.6.66. Next: full unit/Chromium/WebKit verification and Pages deployment.
+
+
 - v3.6.65 complete-source Top matches gate (`codex/v3.6.65-top-match-proof-gate`): official *geographic* applicability alone no longer makes a high-dollar source post a top match. Top ranking requires current official promotion amount and customer qualification/activity proof plus official fee/waiver evidence, correct source role/url alignment, and no unresolved monitored source change for the same exact URL. Stale, upper-bound, incomplete or unverified offers remain discoverable but no longer falsely occupy top-ranked recommendations. Synthetic bonus and browser checks cover freshness, incomplete fees/eligibility and read-only tracker invariants. Frontend/service-worker bumped v3.6.65; no backend, records, canonical rules, storage keys or imports changed. Next: pass unit and Chromium/WebKit CI, release verifier, then merge and verify Pages production deployment.
 
 

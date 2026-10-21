@@ -63,3 +63,25 @@ The scheduled public official-page monitor records separate SHA-256 digests for 
 A legacy, hash-only baseline cannot retrospectively identify which rules changed. Until a full document hash matches the saved baseline, its category is **Other terms**, rather than an invented fee/deposit change. A matching historical fingerprint can safely add category digests for future comparisons. Outages, redirects, or subsequent page reversion cannot silently clear existing review flags. Changes remain pending until separately reviewed. An official page may change for editorial reasons, so no category observation independently establishes a new bonus, exact fee, closure rule, direct-deposit qualification, or user eligibility.
 
 The application never automatically imports a watched change, modifies an enrolled promotion, or changes the canonical eligibility and fee engines. Browser UI shows only bounded, allowlisted category names from the public snapshot; bank URLs come from the approved catalog, not from remote JSON.
+
+
+## Human-reviewed source-change acknowledgement — v3.6.66
+
+The automated watcher deliberately retains potential changes until a human reads the **exact currently observed official promotion or fee disclosure**. An approved source fingerprint is **not** certification that the offer is active or that any particular customer qualifies. Never use this procedure as an alternative to the official promotion and fee-schedule verification required for imports.
+
+After comparing the exact URL and applicable offer scope against the current official terms, record the review in a BonusTracker GitHub issue or pull request. Then create a proposed acknowledgement in a development branch:
+
+\`\`\`bash
+python3 scripts/acknowledge-source-review.py \
+  --bank "Capital One" \
+  --role promotion \
+  --observed-hash ACTUAL_64_CHARACTER_SHA256_FROM_SOURCE_WATCH \
+  --review-ref https://github.com/load66/bonus-tracker/issues/123 \
+  --confirm-reviewed
+\`\`\`
+
+Use the **actual** changed-bank name, document role, observed SHA-256, and review issue/PR; the values above are illustrative. Do not use the example hash placeholder as a valid fingerprint. The command refuses unreviewed, incomplete, incorrect, stale, or already-cleared records. Commit \`data/quick-add-source-review-decisions.json\` via ordinary code review. Do not edit the published monitoring snapshot to dismiss a flag.
+
+The next scheduled/manual monitoring run accepts the decision only if its bank, product-offer key, exact role and approved HTTPS URL, previous baseline and newly observed document hash still agree, and the source is successfully fetched again. The proposed review expires after 30 days and cannot approve later document revisions. The monitor then updates **only the public source baseline**, records a bounded review receipt, and clears that particular source's pending wording-change hints. Every other source and all financial/tracker records remain unchanged.
+
+If the website is unavailable or has a new hash, the flag persists. If the webpage reverts after approval, it is treated as another change. The decision ledger is intentionally independent of the frequently refreshed monitoring snapshot so a scheduled feed update cannot silently erase or override the human review. This is human-reviewed **monitor baseline maintenance**, not an automated eligibility or bonus-term update.

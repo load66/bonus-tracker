@@ -103,4 +103,95 @@ try:
 except AssertionError:
     raise
 
+
+# Review acknowledgement must be a PR-audited, exact document decision.
+review_time = next_time + dt.timedelta(minutes=10)
+ref = 'https://github.com/load66/bonus-tracker/issues/123'
+decision = m.review_decision('Capital One', 'promotion',
+    changed['records']['Capital One']['sources']['promotion'],
+    manifest, hash2, ref, review_time)
+assert decision['previousHash'] == hash1
+assert decision['reviewedHash'] == hash2
+assert decision['offerKey'] == manifest['records']['Capital One']['offerKey']
+approved_at = next_time + dt.timedelta(hours=6)
+ledger = {'schemaVersion': 1, 'decisions': [decision]}
+approved = m.build(manifest, changed, approved_at,
+    lambda url, bank: hash2 if url == live_url else hash1, ledger)
+reviewed = approved['records']['Capital One']['sources']['promotion']
+assert reviewed['status'] == 'unchanged', 'Matching, re-fetched source can be acknowledged'
+assert reviewed['baselineHash'] == hash2 and reviewed['changeAt'] is None
+assert reviewed['reviewSignals'] == []
+assert reviewed['lastReviewRef'] == ref
+assert reviewed['lastReviewedAt'] == decision['reviewedAt']
+assert approved['records']['Capital One']['sources']['fees']['baselineHash'] == hash1, 'Fee source must stay independent'
+assert approved['records']['Wells Fargo']['offerKey'] == manifest['records']['Wells Fargo']['offerKey']
+assert approved['schemaVersion'] == 1
+after = m.build(manifest, approved, approved_at + dt.timedelta(hours=6),
+    lambda url, bank: hash1 if url == live_url else hash1, ledger)
+assert after['records']['Capital One']['sources']['promotion']['status'] == 'changed', (
+    'A subsequent reversion after review is a NEW change, never silently approved again')
+assert after['records']['Capital One']['sources']['promotion']['lastReviewRef'] == ref
+
+# A reversion remains a pending change until a human checks the restored text.
+revert_review = m.review_decision(
+    'Capital One', 'promotion',
+    reverted['records']['Capital One']['sources']['promotion'],
+    manifest, hash1, ref, approved_at)
+reverted_ok = m.build(manifest, reverted, approved_at + dt.timedelta(minutes=10),
+    lambda url, bank: hash1, {'schemaVersion':1,'decisions':[revert_review]})
+assert reverted_ok['records']['Capital One']['sources']['promotion']['status'] == 'unchanged'
+assert reverted_ok['records']['Capital One']['sources']['promotion']['changeAt'] is None
+
+wrong_hash = {'schemaVersion': 1, 'decisions': [{**decision, 'reviewedHash': 'a'*64}]}
+wrong = m.build(manifest, changed, approved_at, lambda url, bank: hash2 if url == live_url else hash1, wrong_hash)
+assert wrong['records']['Capital One']['sources']['promotion']['status'] == 'changed'
+old_review = {'schemaVersion': 1, 'decisions': [{**decision, 'reviewedAt':'2026-01-01T00:00:00Z'}]}
+assert m.build(manifest, changed, approved_at,
+    lambda url, bank: hash2 if url == live_url else hash1, old_review
+)['records']['Capital One']['sources']['promotion']['status'] == 'changed'
+lost_review = m.build(manifest, changed, approved_at,
+    lambda url, bank: None if url == live_url else hash1, ledger)
+assert lost_review['records']['Capital One']['sources']['promotion']['status'] == 'unavailable'
+assert lost_review['records']['Capital One']['sources']['promotion']['changeAt'], 'An outage cannot clear a pending decision'
+for bad in [
+  ('Wells Fargo','promotion',hash2,ref),
+  ('Capital One','fees',hash2,ref),
+  ('Capital One','promotion','0'*64,ref),
+  ('Capital One','promotion',hash2,'https://github.com/evil/repo/issues/123'),
+]:
+    try:
+        m.review_decision(bad[0],bad[1],changed['records']['Capital One']['sources']['promotion'],
+                         manifest,bad[2],bad[3],review_time)
+        raise AssertionError('Wrong scope, hash, or review link accepted')
+    except ValueError:
+        pass
+try:
+    m.review_decision('Capital One','promotion',
+        changed['records']['Capital One']['sources']['promotion'],
+        manifest,hash2,ref,next_time + dt.timedelta(hours=40))
+    raise AssertionError('Overdue observation can be acknowledged without recheck')
+except ValueError:
+    pass
+assert m.approved_change(
+    {'url':live_url},
+    changed['records']['Capital One']['sources']['promotion'],
+    {'status':'changed','observedHash':hash2,'checkedAt':'2026-10-21T00:00:00Z','observedAt':'old'},
+    decision,approved_at) is False, 'Never trust approval without a new successful observation'
+# Ledger creation is additive, scoped, and never a public-page or financial write.
+review_spec = importlib.util.spec_from_file_location(
+    'ack_review', root / 'scripts/acknowledge-source-review.py')
+ack = importlib.util.module_from_spec(review_spec)
+review_spec.loader.exec_module(ack)
+assert ack.add_decision({'schemaVersion':1,'decisions':[]}, decision)['decisions'] == [decision]
+replaced = ack.add_decision({'schemaVersion':1,'decisions':[decision]},
+    {**decision, 'reviewedHash':'d'*64})
+assert len(replaced['decisions']) == 1 and replaced['decisions'][0]['reviewedHash'] == 'd'*64
+try:
+    ack.add_decision({'schemaVersion':999,'decisions':[]},decision)
+    raise AssertionError('Unrecognized ledger format accepted')
+except ValueError:
+    pass
+
+print('Scoped source review acknowledgements PASS: explicit review reference, current digest, no stale/outage or cross-role approval')
+
 print('Public source monitor PASS: strict hosts, meaningful terms changes, sticky warning, outages, no writes to enrolled terms')
