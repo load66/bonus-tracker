@@ -63,3 +63,9 @@ The scheduled public official-page monitor records separate SHA-256 digests for 
 A legacy, hash-only baseline cannot retrospectively identify which rules changed. Until a full document hash matches the saved baseline, its category is **Other terms**, rather than an invented fee/deposit change. A matching historical fingerprint can safely add category digests for future comparisons. Outages, redirects, or subsequent page reversion cannot silently clear existing review flags. Changes remain pending until separately reviewed. An official page may change for editorial reasons, so no category observation independently establishes a new bonus, exact fee, closure rule, direct-deposit qualification, or user eligibility.
 
 The application never automatically imports a watched change, modifies an enrolled promotion, or changes the canonical eligibility and fee engines. Browser UI shows only bounded, allowlisted category names from the public snapshot; bank URLs come from the approved catalog, not from remote JSON.
+
+## Missing source coverage and overdue changes (v3.6.66)
+
+The public review queue is **not considered complete** unless every curated bank's promotion and fee source has its own matching, recognized status and exact pinned URL. Incomplete published snapshots are reported as unavailable for each missing source; they never imply that the offer was reviewed or that existing tracker entries should change.
+
+A previously detected page change remains first-priority when a subsequent scheduled check becomes overdue. Its row also identifies the overdue check instead of silently downgrading the change to a generic stale status. Fingerprints are change-detection signals only: use the original promotion and fee pages to verify the exact affected terms. New and historical bonus records are never rewritten by this process.
