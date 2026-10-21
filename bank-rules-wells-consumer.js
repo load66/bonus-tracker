@@ -1,4 +1,4 @@
-/* Release 3.6.74: canonical bank rules unchanged; milestone clear safety only. */
+/* Release 3.6.75: canonical bank and closure rules unchanged; federal Tax UI only. */
 /*
  * filename: bank-rules-wells-consumer.js
  * version: 3.5.2
