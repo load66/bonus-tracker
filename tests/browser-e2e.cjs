@@ -215,6 +215,25 @@ async function exercise(name,engine,url){
     check('full review returns edited draft to the terms panel',await page.locator('#az_input').inputValue()===termsDraft+' Edited draft.');
     check('closing full terms review leaves accounts unchanged',await page.evaluate(()=>entries.length===0&&modal===null));
     await button('Close').click();
+    // Applying source-backed fields stages an editable account but must not persist
+    // sources, change canonical closure rules or save an account prematurely.
+    await page.locator('.bt362-add-fab').click();await button('Review promo terms').click();
+    await page.locator('#az_input').fill(termsDraft);
+    await button('Review terms').click();
+    check('automation explains source-backed preselection and draft-only behavior',
+      await page.locator('.az-verifybar').innerText().then(t=>t.includes('preselected from source text'))
+      &&await page.getByRole('button',{name:'Apply selected to draft'}).isVisible());
+    await page.locator('[data-tcf-field]').evaluateAll(items=>items.forEach(el=>{el.checked=el.getAttribute('data-tcf-field')==='bank'}));
+    await page.locator('[data-tcf-timer]').evaluateAll(items=>items.forEach(el=>{el.checked=false}));
+    const priorAutomatedData=await page.evaluate(()=>JSON.stringify([...Array(localStorage.length).keys()].map(i=>[localStorage.key(i),localStorage.getItem(localStorage.key(i))]).sort((a,b)=>a[0].localeCompare(b[0]))));
+    await page.getByRole('button',{name:'Apply selected to draft'}).click();
+    check('approved fields open an editable draft without inferred fee or closure clearance',
+      await page.evaluate(()=>!!modal&&!!modal.tcSourceRaw&&!modal.opened&&modal.earlyCloseFee===null&&modal.closeRestrictionType==='manual-review'&&entries.length===0));
+    check('automated review does not commit account data or source archive before Save',
+      await page.evaluate(before=>JSON.stringify([...Array(localStorage.length).keys()].map(i=>[localStorage.key(i),localStorage.getItem(localStorage.key(i))]).sort((a,b)=>a[0].localeCompare(b[0])))===before,priorAutomatedData));
+    await page.getByRole('button',{name:'Close account editor'}).click();
+    if(await page.getByRole('button',{name:'Discard changes'}).count())await page.getByRole('button',{name:'Discard changes'}).click();
+    check('discarding automated draft preserves zero account records',await page.evaluate(()=>entries.length===0&&modal===null));
     await page.evaluate(()=>{analyzerText='';analyzerResult=null;});
     check('cloud protection status is compact',await page.locator('#bt-cloud-open').evaluate(e=>{
       const box=e.getBoundingClientRect(),style=getComputedStyle(e);
