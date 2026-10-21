@@ -781,6 +781,40 @@ async function exercise(name,engine,url){
       await page.locator('.bt-tax-estimator').isVisible()&&
       await page.locator('#bt-tax-live').innerText().then(t=>t.includes('Choose a filing status')&&!t.includes('Possible federal balance to pay')));
     const beforeEstimatorStorage=await page.evaluate(()=>getBackupStorageKeys().map(k=>[k,localStorage.getItem(k)]));
+    const syntheticPay={format:'BonusTrackerTaxPayYTD',schemaVersion:1,taxYear:2026,asOfDate:'2026-10-09',
+      grossPayYtd:50000,preTaxDeductionsYtd:5000,federalTaxableWagesYtd:null,
+      federalIncomeTaxWithheldYtd:4000,totalEmployeeTaxesYtd:9000,postTaxDeductionsYtd:750,netPayYtd:38000};
+    await page.locator('#bt-tax-file').setInputFiles({name:'synthetic-pay.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(syntheticPay))});
+    await page.locator('.bt-tax-pay-review').waitFor();
+    check('uploaded JSON previews verified YTD federal withholding distinctly from all employee taxes',
+      await page.locator('.bt-tax-pay-review').innerText().then(t=>t.includes('Federal withholding YTD')&&t.includes('$4,000.00')&&!t.includes('$9,000.00')));
+    check('annualized taxable wage preview accounts for stated pre-tax deductions rather than gross wages',
+      await page.locator('.bt-tax-pay-review').innerText().then(t=>t.includes('$58,244.68')&&t.includes('Gross less reported pre-tax deductions')));
+    check('file preview leaves unconfirmed filing status and existing scenario untouched',
+      await page.locator('#bt-tax-other').inputValue()===''&&await page.locator('#bt-tax-status').inputValue()==='');
+    for(const width of [320,375,390,430]){
+      await page.setViewportSize({width,height:844});
+      const fit=await page.locator('.bt-tax-pay').evaluate(el=>({
+        scroll:el.scrollWidth,client:el.clientWidth,review:[...el.querySelectorAll('button')].every(x=>x.getBoundingClientRect().right<=window.innerWidth+1)
+      }));
+      check('pay JSON review fits narrow viewport '+width+'px',fit.scroll<=fit.client+1&&fit.review);
+    }
+    await page.setViewportSize({width:390,height:844});
+    await page.getByRole('button',{name:'Use this estimate'}).click();
+    check('confirmed JSON import updates only session tax scenario, not filing status',
+      await page.locator('#bt-tax-other').inputValue()==='58244.68'&&
+      await page.locator('#bt-tax-withheld').inputValue()==='5177.3'&&
+      await page.locator('#bt-tax-status').inputValue()==='');
+    check('confirmed import never changes saved banking data or cloud backup fields',
+      await page.evaluate(before=>JSON.stringify(getBackupStorageKeys().map(k=>[k,localStorage.getItem(k)]))===JSON.stringify(before),beforeEstimatorStorage));
+    await page.getByRole('button',{name:'Clear tax inputs'}).click();
+    check('clearing imported scenario removes projected income and pay preview',
+      await page.locator('#bt-tax-other').inputValue()===''&&await page.locator('.bt-tax-pay-review').count()===0);
+    await page.locator('#bt-tax-file').setInputFiles({name:'invalid-pay.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({...syntheticPay,federalIncomeTaxWithheldYtd:9200}))});
+    check('inconsistent federal withholding is rejected without a silently applied IRS balance',
+      await page.locator('.bt-tax-pay-error').isVisible()&&
+      await page.locator('#bt-tax-other').inputValue()===''&&
+      await page.locator('#bt-tax-live').innerText().then(t=>t.includes('Choose a filing status')));
     await page.locator('#bt-tax-status').selectOption('single');
     await page.locator('#bt-tax-other').fill('80000');
     check('tax estimates bonus increment using IRS 2026 progressive rates',
