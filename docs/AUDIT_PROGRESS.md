@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: codex (v3.6.70, codex/v3.6.70-safe-draft-automation)
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.70 safe reviewed-terms automation (`codex/v3.6.70-safe-draft-automation`, PR #254): Applying selected source-backed fields stages an editable account draft, preserves previously saved source and account data until explicit Save, and never changes an unselected closure policy through either analyzer or downstream closure integration. Analyzer-started drafts retain unknown early-close fees and manual closure review; existing source-backed selection and optional timers are preserved. Clearer mobile wizard copy. Synthetic no-write, stale-editor, closure-selection regressions plus full Bonus/Cloud/UI and Chromium/WebKit validation PASS on PR run 39557879480; exact app/service-worker cache v3.6.70. No provider calls, backend, schemas, persistent keys or real records modified. Next: verify handoff commit, merge on green, confirm Pages deployment and production cache.
+
 
 - v3.6.69 mobile requirement-date reliability (`codex/v3.6.69-requirement-date-validation`, PR #252): completion confirmation rejects invalid or future calendar dates with an accessible inline error, retains the correction draft and gives the date field focus; the dialog clarifies that all requirements are being marked completed and bonus receipt is separate. Strict synthetic no-write regression, Chromium and WebKit mobile browser assertions, release/cache bump v3.6.69. No account records, terms, provider state, schemas, canonical rules, backup objects or backend changed. Initial failing-before test reproduced invalid-date prompt loss; corrected bonus/cloud/UI units and Chromium/WebKit PASS on run 39554625128. Next: exact final-commit checks, merge green PR, verify Pages release and cache.
 
