@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.73: transactional completion dates with rollback and retry.
-const V = 'bt-v3.6.73-reqatomic1';
+// Version 3.6.74: atomic milestone clearing and safe retry.
+const V = 'bt-v3.6.74-clearatomic1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
