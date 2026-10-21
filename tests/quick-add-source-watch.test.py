@@ -132,6 +132,16 @@ assert after['records']['Capital One']['sources']['promotion']['status'] == 'cha
     'A subsequent reversion after review is a NEW change, never silently approved again')
 assert after['records']['Capital One']['sources']['promotion']['lastReviewRef'] == ref
 
+# A reversion remains a pending change until a human checks the restored text.
+revert_review = m.review_decision(
+    'Capital One', 'promotion',
+    reverted['records']['Capital One']['sources']['promotion'],
+    manifest, hash1, ref, approved_at)
+reverted_ok = m.build(manifest, reverted, approved_at + dt.timedelta(minutes=10),
+    lambda url, bank: hash1, {'schemaVersion':1,'decisions':[revert_review]})
+assert reverted_ok['records']['Capital One']['sources']['promotion']['status'] == 'unchanged'
+assert reverted_ok['records']['Capital One']['sources']['promotion']['changeAt'] is None
+
 wrong_hash = {'schemaVersion': 1, 'decisions': [{**decision, 'reviewedHash': 'a'*64}]}
 wrong = m.build(manifest, changed, approved_at, lambda url, bank: hash2 if url == live_url else hash1, wrong_hash)
 assert wrong['records']['Capital One']['sources']['promotion']['status'] == 'changed'
