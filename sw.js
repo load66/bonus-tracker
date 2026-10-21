@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.67: auditable human confirmation for public source-monitor changes.
-const V = 'bt-v3.6.67-integrity1';
+// Version 3.6.68: audience-correct read-only Datapoints filters.
+const V = 'bt-v3.6.68-audience1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
