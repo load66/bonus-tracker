@@ -777,6 +777,45 @@ async function exercise(name,engine,url){
     }
     await page.evaluate(()=>{const e=entries[0],v=window.__layoutOriginal;e.checklist=v.checklist;e.customTimers=v.customTimers;e.monthlyFeeWaiverText=v.monthlyFeeWaiverText;delete window.__layoutOriginal;R()});
     await button('Tax').click();
+    check('IRS estimate starts without guessed personal income or a false tax balance',
+      await page.locator('.bt-tax-estimator').isVisible()&&
+      await page.locator('#bt-tax-live').innerText().then(t=>t.includes('Choose a filing status')&&!t.includes('Possible federal balance to pay')));
+    const beforeEstimatorStorage=await page.evaluate(()=>getBackupStorageKeys().map(k=>[k,localStorage.getItem(k)]));
+    await page.locator('#bt-tax-status').selectOption('single');
+    await page.locator('#bt-tax-other').fill('80000');
+    check('tax estimates bonus increment using IRS 2026 progressive rates',
+      await page.locator('#bt-tax-live').innerText().then(t=>t.includes('Additional tax on tracked bonuses')&&t.includes('$71.50')&&t.includes('Estimated total federal income tax')));
+    check('IRS balance not guessed without annual withholding',
+      await page.locator('#bt-tax-live').innerText().then(t=>t.includes('Enter projected withholding')&&!t.includes('Possible federal balance to pay')));
+    await page.locator('.bt-tax-options > summary').click();
+    await page.locator('#bt-tax-withheld').fill('9000');
+    check('projected withholding computes possible refund separately from bonus tax',
+      await page.locator('#bt-tax-live').innerText().then(t=>t.includes('Possible federal refund')&&t.includes('$158.50')));
+    await page.locator('#bt-tax-exclude').fill('125');
+    check('excluded receipt amount reduces taxable bonus estimate',
+      await page.locator('#bt-tax-live').innerText().then(t=>t.includes('$44.00')));
+    await page.locator('#bt-tax-exclude').fill('400');
+    check('tax excludes greater than bonus rejected rather than inferred',
+      await page.locator('#bt-tax-live').innerText().then(t=>t.includes('Excluded bonus amount')));
+    await page.locator('#bt-tax-exclude').fill('');
+    check('income, withholding and exclusion edits never write backup or tracker keys',
+      await page.evaluate(before=>JSON.stringify(getBackupStorageKeys().map(k=>[k,localStorage.getItem(k)]))===JSON.stringify(before),beforeEstimatorStorage));
+    for(const width of [320,375,390,430]){
+      await page.setViewportSize({width,height:844});
+      const fit=await page.locator('.bt-tax-estimator').evaluate(el=>({
+        scroll:el.scrollWidth,client:el.clientWidth,inputs:[...el.querySelectorAll('input,select')].every(x=>x.getBoundingClientRect().right<=window.innerWidth+1)
+      }));
+      check('tax estimate remains usable at '+width+'px',fit.scroll<=fit.client+1&&fit.inputs);
+    }
+    await page.setViewportSize({width:390,height:844});
+    await page.screenshot({path:path.join(output,name+'-tax-estimator-390.png')});
+    await page.getByRole('button',{name:'Clear tax inputs'}).click();
+    check('reset clears session-only inputs and never displays stale IRS balance',
+      await page.locator('#bt-tax-other').inputValue()===''&&await page.locator('#bt-tax-live').innerText().then(t=>t.includes('Choose a filing status')));
+    await page.evaluate(()=>{taxYear=2027;R()});
+    check('future tax years never use unverified brackets',
+      await page.locator('#bt-tax-live').innerText().then(t=>t.includes('No IRS calculator for 2027')));
+    await page.evaluate(()=>{taxYear=2026;R()});
     check('tax exposes exact-cycle Archive reconciliation',(await page.locator('#app').innerText()).includes('Archive links:'));
     check('tax includes received bonus on open account',(await page.locator('#app').innerText()).includes('E2E Verification Bank'));
     await page.locator('.bt360-tax-record summary').first().click();
