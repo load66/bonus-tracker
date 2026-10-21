@@ -218,7 +218,7 @@
     wrap('normalizeNewCycleData',out=>normalize(out));
     wrap('tcV3Analyze',out=>normalize(out));
     if(window.tcV3Analyze){window.tcUnifiedAnalyze=window.tcV3Analyze;window.tcStrictAnalyze=window.tcV3Analyze;}
-    wrap('tcApplyReviewed',out=>{try{if(typeof modal!=='undefined'&&modal)normalize(modal)}catch{}return out});
+    wrap('tcApplyReviewed',out=>{if(out===false)return false;try{if(typeof modal!=='undefined'&&modal)normalize(modal)}catch{}return out});
     wrap('setModalChurnability',out=>{try{if(typeof modal!=='undefined'&&modal)normalize(modal)}catch{}return out});
     wrap('setModalChurnRule',out=>{try{if(typeof modal!=='undefined'&&modal)normalize(modal)}catch{}return out});
     wrap('setModalChurnBasis',out=>{try{if(typeof modal!=='undefined'&&modal)normalize(modal)}catch{}return out});
