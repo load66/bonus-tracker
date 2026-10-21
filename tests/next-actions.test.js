@@ -113,6 +113,35 @@ setTimeout(()=>{
     assert.equal(sandbox.btRefreshActionDay(),false,'Same-day refresh should not rerender');
     assert.equal(JSON.stringify([...storage]),saved,'Day refresh must preserve stored data');
     sandbox.Date=NativeDate;
+    // Requirement confirmation must be retryable and atomic if storage fails.
+    run("entries=[{id:'SYN-REQ-1',bank:'Synthetic Requirements',accountType:'personal',opened:'2026-01-01',bonus:200,notes:'Do not lose',checklist:[],customTimers:[]}];sv(SK,entries);openReqMet('SYN-REQ-1')");
+    const beforeEmptyReq=JSON.stringify([...storage].sort((a,b)=>a[0].localeCompare(b[0])));
+    assert.equal(run('reqSubmit()'),false,'Blank date must fail inline without advancing the workflow');
+    assert.match(run('reqPrompt.error'),/date.*required/i,'Missing date should have a visible error');
+    assert.match(run('rReqMet()'),/role="alert"/,'Requirement validation must be announced within the sheet');
+    assert.equal(JSON.stringify([...storage].sort((a,b)=>a[0].localeCompare(b[0]))),beforeEmptyReq,'Empty form must not touch financial records');
+
+    run("reqPrompt.date='2026-04-12'");
+    const beforeFailure=run('JSON.stringify(entries)');
+    const beforeStorage=JSON.stringify([...storage].sort((a,b)=>a[0].localeCompare(b[0])));
+    const originalCommit=sandbox.BTPersistence.commit;
+    sandbox.BTPersistence.commit=function(store,writes,...args){
+      if(Object.prototype.hasOwnProperty.call(writes,'bt_e_v4'))throw Error('Synthetic requirement save outage');
+      return originalCommit.call(this,store,writes,...args);
+    };
+    try{
+      assert.equal(run('reqSubmit()'),false,'A failed write cannot confirm completion');
+    }finally{sandbox.BTPersistence.commit=originalCommit}
+    assert.equal(run('JSON.stringify(entries)'),beforeFailure,'Failed save must restore exact in-memory entry');
+    assert.equal(JSON.stringify([...storage].sort((a,b)=>a[0].localeCompare(b[0]))),beforeStorage,'Failed save must restore companion history and terms');
+    assert.equal(run('reqPrompt.date'),'2026-04-12','Failed save must retain the selected date');
+    assert.match(run('reqPrompt.error'),/not saved/i,'Failed save should explain retry inline');
+    assert.equal(run('cfm'),null,'Failed save must not show a success confirmation');
+    assert.equal(run('reqSubmit()'),true,'Retry must succeed with preserved date');
+    assert.equal(run('entries[0].reqMet'),'2026-04-12');
+    assert.equal(JSON.parse(storage.get('bt_e_v4'))[0].reqMet,'2026-04-12','Successful retry must persist completion');
+    run('reqPrompt=null;cfm=null;');
+
     console.log('Next actions passed: direct confirmations, stale-action protection, recurring review, shared dates, missing anchors/units, calendar boundaries, day refresh, and stored-data preservation');
     process.exit(0);
   }catch(err){console.error(err);process.exit(1)}
