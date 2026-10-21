@@ -54,5 +54,37 @@ assert.equal(s.saveEntryFromButton(fakeButton,{preventDefault(){},stopPropagatio
  assert.match(run('reqPrompt.error'),/actual date/i,'Blank completion date needs inline guidance');
  assert.equal(JSON.stringify([...storage]),trackerBeforeReq,'Blank requirement date changed persisted tracker state');
  run('reqPrompt=null');
+
+ // Automation may populate the unsaved editor, but cannot change closure policy or
+ // persist original terms until the user explicitly saves the account.
+ const originalAnalyze=s.tcV3Analyze,originalSourceWrite=s.tcV3SaveSourceForCurrentEntry;
+ const originalGetElement=s.document.getElementById,originalQueryAll=s.document.querySelectorAll;
+ const syntheticRaw='Synthetic bank bonus promotion requires payroll deposits within 90 days; exact closure terms are unconfirmed.';
+ let prematureSourceWrites=0;
+ s.tcV3Analyze=()=>({
+   raw:syntheticRaw,bank:'Synthetic Automation Bank',accountType:'business',
+   bonus:350,closeRestrictionType:'none',sourceKind:'pasted text',
+   sourceSnippets:[{field:'Bank',kind:'extracted',confidence:'high',source:'Synthetic Automation Bank checking promotion'}],
+   suggestedTimers:[]
+ });
+ s.tcV3SaveSourceForCurrentEntry=()=>{prematureSourceWrites++;return true};
+ s.document.getElementById=id=>id==='tca_raw'?{value:syntheticRaw}:
+   id==='az_opened_today'?{checked:false}:originalGetElement(id);
+ s.document.querySelectorAll=selector=>selector==='[data-tcf-field]:checked'?
+   [{getAttribute:key=>key==='data-tcf-field'?'bank':null}]:
+   selector==='[data-tcf-timer]:checked'?[]:originalQueryAll(selector);
+ run("modal={bank:'Original Bank',accountType:'business',bonus:999,opened:'2026-01-01',closeRestrictionType:'minimum-open',closeRuleBasis:'opened',minHoldDays:180,earlyCloseFee:25,tcSourceRaw:'Original enrolled terms',customTimers:[]};showAnalyzer=true");
+ const beforeAutomation=JSON.stringify([...storage]);
+ s.tcApplyReviewed();
+ assert.equal(run('modal.bank'),'Synthetic Automation Bank','Approved source-backed identity should transfer to draft');
+ assert.equal(run('modal.closeRestrictionType'),'minimum-open','Unselected closure policy was overwritten');
+ assert.equal(run('modal.minHoldDays'),180,'Unselected hold period was overwritten');
+ assert.equal(run('modal.earlyCloseFee'),25,'Unselected fee was overwritten');
+ assert.equal(run('modal.tcSourceRaw'),syntheticRaw,'Reviewed terms must be attached to draft for final save');
+ assert.equal(prematureSourceWrites,0,'Applying fields wrote terms to persistent source store before account save');
+ assert.equal(JSON.stringify([...storage]),beforeAutomation,'Applying draft fields changed persisted data');
+ s.tcV3Analyze=originalAnalyze;s.tcV3SaveSourceForCurrentEntry=originalSourceWrite;
+ s.document.getElementById=originalGetElement;s.document.querySelectorAll=originalQueryAll;
+ run('closeModal()');
  console.log('Form reliability: inline errors, draft retention, no invalid writes, single-submit guard, terms recovery PASS');
 })().catch(e=>{console.error(e);process.exitCode=1});
