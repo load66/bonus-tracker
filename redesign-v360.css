@@ -969,3 +969,45 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt3662-source-item a{color:var(--mint);font-size:11px;font-weight:650;text-decoration:underline;text-underline-offset:2px;flex-shrink:0}
 .bt3662-source-item a:focus-visible,.bt3662-source-queue>summary:focus-visible{outline:2px solid var(--mint);outline-offset:3px}
 @media(max-width:390px){.bt3662-source-item{align-items:flex-start;flex-direction:column;gap:5px}}
+
+
+/* 3.6.75: compact, legible federal income-tax planning, not a return preparer. */
+.bt-tax-estimator{margin:0 0 13px;padding:16px;border:1px solid #2B3040;border-radius:20px;background:linear-gradient(145deg,#151B23,#12141C 68%);color:#F2F3F7}
+.bt-tax-title{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.bt-tax-title h2{font-size:18px;font-weight:850;letter-spacing:-.3px;margin:4px 0 0;color:#F2F3F7}
+.bt-tax-eyebrow{font-size:10px;font-weight:850;letter-spacing:1px;color:#5BE3B0}
+.bt-tax-chip{background:#1E332E;border:1px solid #2C5043;color:#A7E1C8;border-radius:30px;font-size:10px;font-weight:750;padding:5px 9px;white-space:nowrap}
+.bt-tax-lead{font-size:12px;line-height:1.55;color:#B1B6C5;margin:12px 0 15px}
+.bt-tax-config{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.bt-tax-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.bt-tax-field span{font-size:11px;line-height:1.3;font-weight:750;color:#D5D9E2}
+.bt-tax-field input,.bt-tax-field select{width:100%;box-sizing:border-box;min-width:0;min-height:44px;padding:10px 12px;background:#0D1119;border:1px solid #343B4D;border-radius:11px;color:#F2F3F7;font-size:14px;line-height:1.2;font-variant-numeric:tabular-nums}
+.bt-tax-field select{appearance:auto}
+.bt-tax-field :is(input,select):focus-visible,.bt-tax-foot button:focus-visible{outline:2px solid #5BE3B0;outline-offset:2px}
+.bt-tax-help{font-size:11px;line-height:1.55;color:#969FB0;margin:10px 0 13px}
+.bt-tax-wait{background:#1E242E;border:1px solid #30394A;border-radius:13px;color:#C7D0DC;padding:16px 13px;line-height:1.5;font-size:12px}
+.bt-tax-calc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.bt-tax-calc-grid>div{padding:14px 12px;background:#1D2927;border:1px solid #2C4C40;border-radius:14px;min-width:0}
+.bt-tax-calc-grid>div+div{background:#191E28;border-color:#313A4E}
+.bt-tax-calc-grid span,.bt-tax-balance span{font-size:10px;font-weight:700;line-height:1.45;color:#BED0C8;display:block}
+.bt-tax-calc-grid strong{display:block;font-size:clamp(20px,5vw,26px);font-weight:850;margin:6px 0;font-variant-numeric:tabular-nums;color:#5BE3B0;word-break:break-word}
+.bt-tax-calc-grid>div+div strong{color:#F2F3F7}
+.bt-tax-calc-grid small,.bt-tax-balance small{display:block;font-size:10px;color:#A6B3B2;line-height:1.5}
+.bt-tax-balance{margin-top:9px;padding:13px 12px;background:#151A24;border:1px solid #363D4E;border-radius:13px}
+.bt-tax-balance b{display:block;font-size:23px;line-height:1.3;margin:5px 0;color:#F2F3F7;font-variant-numeric:tabular-nums}
+.bt-tax-balance.muted b{font-size:12px;font-weight:650;color:#AAB3C3}
+.bt-tax-method{font-size:10px;color:#A9B4C3;line-height:1.65;margin:10px 1px 0}
+.bt-tax-options{border-top:1px solid #303749;margin-top:14px}
+.bt-tax-options>summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:6px;min-height:46px;font-size:12px;font-weight:800;cursor:pointer;color:#F2F3F7}
+.bt-tax-options>summary::-webkit-details-marker{display:none}
+.bt-tax-options>summary:after{content:'⌄';font-size:19px;color:#B6C0CE}
+.bt-tax-options[open]>summary:after{content:'⌃'}
+.bt-tax-options>summary span{margin-left:auto;font-size:10px;font-weight:500;color:#AAB2C1}
+.bt-tax-option-body{padding-bottom:12px}
+.bt-tax-option-body p{font-size:11px;color:#A9B2C1;line-height:1.6;margin:0 0 12px}
+.bt-tax-option-body p:last-child{margin:12px 0 0}
+.bt-tax-caveat{font-size:11px;line-height:1.65;color:#A8B2C2;margin:12px 0}
+.bt-tax-foot{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:11px}
+.bt-tax-foot a{color:#5BE3B0;text-underline-offset:3px;min-height:33px;display:inline-flex;align-items:center}
+.bt-tax-foot button{background:none;border:1px solid #394155;border-radius:10px;min-height:36px;padding:7px 10px;color:#C8D0DD;font-size:11px;cursor:pointer;margin-left:auto}
+@media(max-width:370px){.bt-tax-estimator{padding:13px}.bt-tax-config{grid-template-columns:1fr}.bt-tax-calc-grid strong{font-size:20px}.bt-tax-chip{font-size:9px;padding:5px 7px}}
