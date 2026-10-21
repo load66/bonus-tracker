@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.68';
+const APP_VERSION='3.6.69';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4904,10 +4904,12 @@ function rRcv(){
 function rReqMet(){
   const p=reqPrompt;
   if(!p)return'';
-  let h='<div class="cbg" onclick="skipReq()"><div class="rcv-box" onclick="event.stopPropagation()">';
-  h+='<h3>✅ Requirement Met</h3><div class="sub">This stops the requirement countdown for '+esc(p.bank)+'. Bonus received still stays separate for tax and close tracking.</div>';
-  h+='<label>Requirement Met Date</label><input class="dd-input" type="date" id="req_date" oninput="if(reqPrompt)reqPrompt.date=this.value" value="'+(p.date||'')+'" onclick="event.stopPropagation()">';
-  h+='<div class="crow"><button class="c-c" onclick="skipReq()">Cancel</button>'+(p.hasExisting?'<button class="c-r" onclick="confirmClearReqMet()">Clear</button>':'')+'<button class="c-g" onclick="reqSubmit()">Save</button></div>';
+  let h='<div class="cbg" onclick="skipReq()"><div class="rcv-box bt3669-req-sheet" role="dialog" aria-modal="true" aria-labelledby="bt3669-req-title" onclick="event.stopPropagation()">';
+  h+='<h3 id="bt3669-req-title">Confirm requirements</h3><div class="sub">Record when all offer requirements were actually completed for '+esc(p.bank)+'. Bonus payment is tracked separately.</div>';
+  h+='<label for="req_date">Requirement met date</label><input class="dd-input" type="date" id="req_date" required aria-describedby="bt3669-req-help bt3669-req-error"'+(p.error?' aria-invalid="true"':'')+' oninput="if(reqPrompt){reqPrompt.date=this.value;reqPrompt.error=&#39;&#39;;this.removeAttribute(&#39;aria-invalid&#39;);const err=document.getElementById(&#39;bt3669-req-error&#39;);if(err)err.textContent=&#39;&#39;}" value="'+esc(p.date||'')+'" onclick="event.stopPropagation()">';
+  h+='<p class="bt3669-req-help" id="bt3669-req-help">Use the actual completion date. Do not mark a single deposit as the full requirement.</p>';
+  h+='<p class="bt3669-req-error" id="bt3669-req-error" role="alert" aria-live="polite">'+esc(p.error||'')+'</p>';
+  h+='<div class="crow"><button type="button" class="c-c" onclick="skipReq()">Cancel</button>'+(p.hasExisting?'<button type="button" class="c-r" onclick="confirmClearReqMet()">Clear</button>':'')+'<button type="button" class="c-g" onclick="reqSubmit()">Confirm date</button></div>';
   h+='</div></div>';
   return h
 }
@@ -5807,33 +5809,47 @@ function confirmMarkReqMet(id){const e=entries.find(x=>x.id===id);if(!e)return;c
 function openReqMet(id){const e=entries.find(x=>x.id===id);if(!e)return;reqPrompt={entryId:id,bank:e.bank,date:e.reqMet||'',hasExisting:!!e.reqMet};R()}
 function reqSubmit(){
   const p=reqPrompt;
-  if(!p)return;
+  if(!p)return false;
   const d=document.getElementById('req_date');
   if(d)p.date=d.value;
-  if(!p.date){alert('Requirement met date required');return}
+  if(!p.date){
+    p.error='Enter the actual requirement completion date.';
+    R();document.getElementById('req_date')?.focus?.({preventScroll:true});
+    return false
+  }
   const e=entries.find(x=>x.id===p.entryId);
+  if(!e){p.error='This account could not be found. Close this review and reopen the account.';R();return false}
+  p.error='';
   const warnings=reqMetWarnings(e,p.date);
   if(warnings.length&&!p.warningReviewed){
     reqPrompt=null;
     cfm={title:'Review Requirement Met',msg:'Review these notes before saving:\n\n- '+warnings.join('\n- '),green:true,confirmLabel:'Save Anyway',action:()=>{cfm=null;reqPrompt=p;p.warningReviewed=true;reqSubmit()}};
     R();
-    return
+    return false
   }
-  p.warningReviewed=false;
-  entries=entries.map(e=>{
-    if(e.id===p.entryId){
-      e.reqMet=p.date;
-      appendEntryHistory(e,'req_met','Requirement met '+fD(p.date)+'.');
-      return normalizeLifecycleEntry(e)
-    }
-    return e
-  });
-  const e2=entries.find(e=>e.id===p.entryId);
-  if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
-  entries=sortE(entries);sv(SK,entries);
-  reqPrompt=null;
-  cfm={title:'Requirement Met Saved',msg:(e2?e2.bank:'This bank')+' requirement met date saved for '+fD(p.date)+'. Bonus received is still tracked separately.',green:true,confirmLabel:hasDirectDepositRequirement(e2)?'Review deposit result':'OK',action:()=>{cfm=null;if(hasDirectDepositRequirement(e2))reviewCycleExperience(p.entryId,'requirement');else R()}};
-  R()
+  const beforeEntries=deepCopy(entries),beforeStorage=window.BTPersistence.capture(localStorage,getBackupStorageKeys());
+  try{
+    entries=entries.map(item=>{
+      if(item.id!==p.entryId)return item;
+      item.reqMet=p.date;
+      appendEntryHistory(item,'req_met','Requirement met '+fD(p.date)+'.');
+      return normalizeLifecycleEntry(item)
+    });
+    const e2=entries.find(x=>x.id===p.entryId);
+    if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
+    entries=sortE(entries);sv(SK,entries);
+    p.warningReviewed=false;
+    reqPrompt=null;
+    cfm={title:'Requirement Met Saved',msg:(e2?e2.bank:'This bank')+' requirement met date saved for '+fD(p.date)+'. Bonus received is still tracked separately.',green:true,confirmLabel:hasDirectDepositRequirement(e2)?'Review deposit result':'OK',action:()=>{cfm=null;if(hasDirectDepositRequirement(e2))reviewCycleExperience(p.entryId,'requirement');else R()}};
+  }catch(error){
+    let restored=true;
+    try{window.BTPersistence.rollback(localStorage,beforeStorage)}catch{restored=false}
+    entries=beforeEntries;reqPrompt=p;cfm=null;window.btCloudBackupChanged?.();
+    p.error=restored?'Requirement date not saved. Your previous records were restored. Check storage and retry.':'Requirement date could not be verified. Keep this review open and export a backup before retrying.';
+    R();document.getElementById('req_date')?.focus?.({preventScroll:true});
+    return false
+  }
+  R();return true
 }
 function confirmClearReqMet(){
   const p=reqPrompt;
