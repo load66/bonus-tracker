@@ -4901,12 +4901,18 @@ function rRcv(){
   h+='</div></div>';
   return h
 }
+function reqDateInputChanged(value){
+  if(!reqPrompt)return;
+  reqPrompt.date=value;reqPrompt.error='';reqPrompt.warningReviewed=false;
+  document.getElementById('req_date')?.removeAttribute?.('aria-invalid');
+  const feedback=document.getElementById('bt3669-req-error');if(feedback)feedback.textContent='';
+}
 function rReqMet(){
   const p=reqPrompt;
   if(!p)return'';
   let h='<div class="cbg" onclick="skipReq()"><div class="rcv-box bt3669-req-sheet" role="dialog" aria-modal="true" aria-labelledby="bt3669-req-title" onclick="event.stopPropagation()">';
   h+='<h3 id="bt3669-req-title">Confirm requirements</h3><div class="sub">Record when all offer requirements were actually completed for '+esc(p.bank)+'. Bonus payment is tracked separately.</div>';
-  h+='<label for="req_date">Requirement met date</label><input class="dd-input" type="date" id="req_date" required aria-describedby="bt3669-req-help bt3669-req-error"'+(p.error?' aria-invalid="true"':'')+' oninput="if(reqPrompt){reqPrompt.date=this.value;reqPrompt.error=&#39;&#39;;this.removeAttribute(&#39;aria-invalid&#39;);const err=document.getElementById(&#39;bt3669-req-error&#39;);if(err)err.textContent=&#39;&#39;}" value="'+esc(p.date||'')+'" onclick="event.stopPropagation()">';
+  h+='<label for="req_date">Requirement met date</label><input class="dd-input" type="date" id="req_date" required aria-describedby="bt3669-req-help bt3669-req-error"'+(p.error?' aria-invalid="true"':'')+' oninput="reqDateInputChanged(this.value)" value="'+esc(p.date||'')+'" onclick="event.stopPropagation()">';
   h+='<p class="bt3669-req-help" id="bt3669-req-help">Use the actual completion date. Do not mark a single deposit as the full requirement.</p>';
   h+='<p class="bt3669-req-error" id="bt3669-req-error" role="alert" aria-live="polite">'+esc(p.error||'')+'</p>';
   h+='<div class="crow"><button type="button" class="c-c" onclick="skipReq()">Cancel</button>'+(p.hasExisting?'<button type="button" class="c-r" onclick="confirmClearReqMet()">Clear</button>':'')+'<button type="button" class="c-g" onclick="reqSubmit()">Confirm date</button></div>';
