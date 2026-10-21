@@ -161,7 +161,71 @@ def valid_old(row, url):
     return row if isinstance(row.get('baselineHash'), str) and HEX.fullmatch(row['baselineHash']) else {}
 
 
-REVIEW_REF = re.compile(r'^https://github\.com/load66/bonus-tracker/(?:pull|issues)/[1-9]\d{0,8}
+REVIEW_REF = re.compile(r'^https://github[.]com/load66/bonus-tracker/(?:pull|issues)/[1-9][0-9]{0,8}$')
+
+def utc_stamp(value):
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = dt.datetime.fromisoformat(value.replace('Z', '+00:00'))
+        return parsed.astimezone(dt.timezone.utc) if parsed.tzinfo else None
+    except ValueError:
+        return None
+
+
+def review_decision(bank, role, record, manifest, expected, reference, now):
+    scope = manifest.get('records', {}).get(bank)
+    if bank not in HOSTS or not isinstance(scope, dict) or role not in ROLES:
+        raise ValueError('Unrecognized bank or document role')
+    match = next((x for x in scope.get('sources', []) if x.get('role') == role), None)
+    if not match or not safe(match.get('url', ''), bank):
+        raise ValueError('Source is not a pinned official bank document')
+    if not REVIEW_REF.fullmatch(reference or ''):
+        raise ValueError('Review must link a BonusTracker issue or pull request')
+    if record.get('status') != 'changed' or record.get('url') != match['url']:
+        raise ValueError('Only a pending change of this exact bank source can be acknowledged')
+    prior, observed = record.get('baselineHash'), record.get('observedHash')
+    if not all(isinstance(v, str) and HEX.fullmatch(v) for v in (prior, observed, expected)):
+        raise ValueError('Missing document fingerprint')
+    if observed != expected:
+        raise ValueError('Document has changed since proposed review')
+    changed_at, checked_at = utc_stamp(record.get('changeAt')), utc_stamp(record.get('checkedAt'))
+    if not changed_at or not checked_at or checked_at < changed_at or checked_at > now:
+        raise ValueError('Pending source check has invalid or future timestamp')
+    if now - checked_at > dt.timedelta(hours=36):
+        raise ValueError('Source must be rechecked before acknowledging an overdue observation')
+    # Reverts remain pending until an explicit human review.
+    return {
+        'bank': bank, 'role': role, 'offerKey': scope['offerKey'], 'url': match['url'],
+        'previousHash': prior, 'reviewedHash': expected,
+        'reviewedAt': now.strftime('%Y-%m-%dT%H:%M:%SZ'), 'reviewRef': reference,
+    }
+
+
+def approved_change(source, previous, row, decision, now):
+    if not isinstance(decision, dict) or row.get('status') != 'changed':
+        return False
+    if not isinstance(previous, dict) or not previous.get('changeAt'):
+        return False
+    if not REVIEW_REF.fullmatch(str(decision.get('reviewRef', ''))):
+        return False
+    when = utc_stamp(decision.get('reviewedAt'))
+    change = utc_stamp(previous.get('changeAt'))
+    if not when or not change or when < change or when > now:
+        return False
+    if now - when > dt.timedelta(days=30):
+        return False
+    if previous.get('lastReviewRef') == decision['reviewRef']:
+        return False
+    return (decision.get('url') == source['url']
+            and decision.get('previousHash') == previous.get('baselineHash')
+            and decision.get('reviewedHash') == row.get('observedHash')
+            and isinstance(row.get('observedHash'), str)
+            and HEX.fullmatch(row['observedHash']) is not None
+            and row.get('observedAt') == row.get('checkedAt'))
+
+
+def update_row(url, prev, observed, timestamp):
     base = prev.get('baselineHash')
     pending = bool(prev.get('changeAt'))
     baseline_signals = valid_signals(prev.get('baselineSignals'))
