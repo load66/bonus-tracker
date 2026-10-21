@@ -160,7 +160,7 @@ assert.equal(smartSorted.find(x=>x.bank==='NoScope').priorityGroup,'explore');
 assert.equal(smartSorted.find(x=>x.bank==='Closed Bank').priorityGroup,'review');
 assert.equal(smartSorted.find(x=>x.bank==='Future Bank').priorityGroup,'next');
 assert.equal(smartSorted[0].priorityGroup,'best');
-assert.match(smartSorted[0].fit.reason,/eligibility remains unverified/);
+assert.match(smartSorted[0].fit.reason,/personal customer eligibility/);
 assert.equal(priority.offerFit(smartOffer('Test',1500),{kind:'outside'},null).kind,'blocked');
 const newer=smartOffer('Newer',2500,true,{badges:['New'],evidence:{...smartBonus(2500),sources:[]}});
 const newResult=priority.prioritize([smartOffer('Stable',400),newer],[],'MO',context);
