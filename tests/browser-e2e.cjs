@@ -227,8 +227,13 @@ async function exercise(name,engine,url){
     await page.locator('[data-tcf-timer]').evaluateAll(items=>items.forEach(el=>{el.checked=false}));
     const priorAutomatedData=await page.evaluate(()=>JSON.stringify([...Array(localStorage.length).keys()].map(i=>[localStorage.key(i),localStorage.getItem(localStorage.key(i))]).sort((a,b)=>a[0].localeCompare(b[0]))));
     await page.getByRole('button',{name:'Apply selected to draft'}).click();
-    check('approved fields open an editable draft without inferred fee or closure clearance',
-      await page.evaluate(()=>!!modal&&!!modal.tcSourceRaw&&!modal.opened&&modal.earlyCloseFee===null&&modal.closeRestrictionType==='manual-review'&&entries.length===0));
+    const stagedDraftState=await page.evaluate(()=>({
+      hasModal:!!modal,hasSource:!!modal?.tcSourceRaw,opened:modal?.opened,
+      closeFee:modal?.earlyCloseFee,closePolicy:modal?.closeRestrictionType,
+      entriesLength:entries.length,bank:modal?.bank,hasAnalysis:!!modal?.analysis
+    }));
+    check('approved fields open an editable draft without inferred fee or closure clearance: '+JSON.stringify(stagedDraftState),
+      stagedDraftState.hasModal&&stagedDraftState.hasSource&&!stagedDraftState.opened&&stagedDraftState.closeFee===null&&stagedDraftState.closePolicy==='manual-review'&&stagedDraftState.entriesLength===0);
     check('automated review does not commit account data or source archive before Save',
       await page.evaluate(before=>JSON.stringify([...Array(localStorage.length).keys()].map(i=>[localStorage.key(i),localStorage.getItem(localStorage.key(i))]).sort((a,b)=>a[0].localeCompare(b[0])))===before,priorAutomatedData));
     await page.getByRole('button',{name:'Close account editor'}).click();
