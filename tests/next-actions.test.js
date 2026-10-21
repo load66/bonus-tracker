@@ -113,6 +113,32 @@ setTimeout(()=>{
     assert.equal(sandbox.btRefreshActionDay(),false,'Same-day refresh should not rerender');
     assert.equal(JSON.stringify([...storage]),saved,'Day refresh must preserve stored data');
     sandbox.Date=NativeDate;
+    // A failed requirement save must not strand a completed account or write partial profile history.
+    run("entries=[{id:'SYN-REQ-ROLLBACK',bank:'Synthetic Requirement Safety',accountType:'personal',opened:'2026-01-01',bonus:200,notes:'Preserve this',checklist:[],customTimers:[]}];sv(SK,entries);openReqMet('SYN-REQ-ROLLBACK');reqPrompt.date='2026-04-12'");
+    const requirementBefore=run('JSON.stringify(entries)');
+    const storageBefore=JSON.stringify([...storage].sort((a,b)=>a[0].localeCompare(b[0])));
+    const originalCommit=sandbox.BTPersistence.commit,wasReady=sandbox.btStorageWritesReady;
+    sandbox.btStorageWritesReady=true;
+    sandbox.BTPersistence.commit=function(store,writes,...args){
+      if(Object.prototype.hasOwnProperty.call(writes,'bt_e_v4'))throw Error('Synthetic requirement persistence failure');
+      return originalCommit.call(this,store,writes,...args);
+    };
+    try{
+      assert.equal(run('reqSubmit()'),false,'Uncommitted requirement cannot return success');
+    }finally{
+      sandbox.BTPersistence.commit=originalCommit;
+      sandbox.btStorageWritesReady=wasReady;
+    }
+    assert.equal(run('JSON.stringify(entries)'),requirementBefore,'Failed milestone must restore entry and history');
+    assert.equal(JSON.stringify([...storage].sort((a,b)=>a[0].localeCompare(b[0]))),storageBefore,'Failed milestone must restore companion requirements, events and source history');
+    assert.equal(run('reqPrompt.date'),'2026-04-12','Failed save must retain the actual selected date');
+    assert.match(run('reqPrompt.error'),/not saved/i,'Failure must be visible inline with retry guidance');
+    assert.equal(run('cfm'),null,'Failed milestone cannot show a success confirmation');
+    assert.equal(run('reqSubmit()'),true,'Reattempt must succeed without reentering date');
+    assert.equal(run('entries[0].reqMet'),'2026-04-12','Retry must preserve exact completion date');
+    assert.equal(JSON.parse(storage.get('bt_e_v4'))[0].reqMet,'2026-04-12','Confirmed retry must be durable');
+    run('reqPrompt=null;cfm=null;');
+
     console.log('Next actions passed: direct confirmations, stale-action protection, recurring review, shared dates, missing anchors/units, calendar boundaries, day refresh, and stored-data preservation');
     process.exit(0);
   }catch(err){console.error(err);process.exit(1)}
