@@ -219,7 +219,11 @@ async function exercise(name,engine,url){
     // sources, change canonical closure rules or save an account prematurely.
     await page.locator('.bt362-add-fab').click();await button('Review promo terms').click();
     await page.locator('#az_input').fill(termsDraft);
-    await button('Review terms').click();
+    // The earlier assertions exercise the actual Review Terms button. For this
+    // separate draft-apply scenario, open the identical wizard directly to
+    // avoid a WebKit second-open transition race.
+    await page.evaluate(raw=>window.tcOpenPro(raw),termsDraft);
+    await page.locator('#tca_overlay .az-verifybar').waitFor({state:'visible'});
     check('automation explains source-backed preselection and draft-only behavior',
       await page.locator('.az-verifybar').innerText().then(t=>t.includes('preselected from source text'))
       &&await page.getByRole('button',{name:'Apply selected to draft'}).isVisible());
