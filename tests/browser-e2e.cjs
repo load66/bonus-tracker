@@ -227,6 +227,20 @@ async function exercise(name,engine,url){
     check('automation explains source-backed preselection and draft-only behavior',
       await page.locator('.az-verifybar').innerText().then(t=>t.includes('preselected from source text'))
       &&await page.getByRole('button',{name:'Apply selected to draft'}).isVisible());
+    const preEditedReviewStorage=await page.evaluate(()=>JSON.stringify([...Array(localStorage.length).keys()].map(i=>[localStorage.key(i),localStorage.getItem(localStorage.key(i))]).sort((a,b)=>a[0].localeCompare(b[0]))));
+    await page.locator('#tca_raw').fill(termsDraft+' Updated qualification wording must be analyzed again.');
+    check('editing reviewed source disables stale field and timer approval',
+      await page.locator('#tc_apply_btn').isDisabled()&&await page.locator('#tc_timer_btn').isDisabled()
+      &&await page.locator('#az_apply_status').innerText().then(t=>t.includes('Analyze terms again')));
+    check('stale apply guard cannot create an account or write source archives',
+      await page.evaluate(before=>{
+        const out=tcApplyReviewed();
+        return out===false&&modal===null&&entries.length===0
+          &&JSON.stringify([...Array(localStorage.length).keys()].map(i=>[localStorage.key(i),localStorage.getItem(localStorage.key(i))]).sort((a,b)=>a[0].localeCompare(b[0])))===before;
+      },preEditedReviewStorage));
+    await page.getByRole('button',{name:'Analyze terms'}).click();
+    check('fresh analysis re-enables reviewed field and timer actions',
+      await page.locator('#tc_apply_btn').isEnabled()&&await page.locator('#tc_timer_btn').isEnabled());
     const originalAutomationPolicy=await page.evaluate(()=>modal?.closeRestrictionType??'manual-review');
     check('review starts without an active account edit',await page.evaluate(()=>modal===null));
     await page.locator('[data-tcf-field]').evaluateAll(items=>items.forEach(el=>{el.checked=el.getAttribute('data-tcf-field')==='bank'}));

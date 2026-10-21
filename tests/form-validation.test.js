@@ -68,10 +68,14 @@ assert.equal(s.saveEntryFromButton(fakeButton,{preventDefault(){},stopPropagatio
    suggestedTimers:[]
  });
  s.tcV3SaveSourceForCurrentEntry=()=>{prematureSourceWrites++;return true};
- const activeReview={remove(){},querySelectorAll:selector=>selector==='[data-tcf-field]:checked'?
+ const reviewTextarea={value:syntheticRaw};
+ const applyButton={disabled:false},timerButton={disabled:false},reviewStatus={textContent:''};
+ const activeReview={__tcReviewedRaw:syntheticRaw,remove(){},
+   querySelector:selector=>selector==='#tc_apply_btn'?applyButton:selector==='#tc_timer_btn'?timerButton:selector==='#az_apply_status'?reviewStatus:null,
+   querySelectorAll:selector=>selector==='[data-tcf-field]:checked'?
    [{getAttribute:key=>key==='data-tcf-field'?'bank':null}]:[]};
  s.document.getElementById=id=>id==='tca_overlay'?activeReview:
-   id==='tca_raw'?{value:syntheticRaw}:
+   id==='tca_raw'?reviewTextarea:
    id==='az_opened_today'?{checked:false}:originalGetElement(id);
  // Underlying pages may contain selected stale fields; the live dialog must win.
  s.document.querySelectorAll=selector=>selector==='[data-tcf-field]:checked'?
@@ -94,6 +98,19 @@ assert.equal(s.saveEntryFromButton(fakeButton,{preventDefault(){},stopPropagatio
  assert.equal(run('modal.earlyCloseFee'),null,'Reopened automated draft inherited an old early-close fee');
  assert.equal(run('modal.closeRestrictionType'),'manual-review','Reopened automated draft inherited an old closure policy');
  assert.equal(JSON.stringify([...storage]),beforeAutomation,'New automated draft persisted records before Save');
+ // Stale checkboxes cannot silently approve revised promotion terms.
+ reviewTextarea.value=syntheticRaw+' This revised promotion has changed requirements.';
+ s.tcV3ReviewInputChanged();
+ assert.equal(applyButton.disabled,true,'Modified terms should disable Apply');
+ assert.equal(timerButton.disabled,true,'Modified terms should disable timer apply');
+ assert.match(reviewStatus.textContent,/Analyze terms again/i,'Edited source should give clear next action');
+ assert.equal(s.tcApplyReviewed(),false,'Stale source approval must reject instead of staging a draft');
+ assert.equal(s.tcCreateSelectedTimers(),false,'Stale timer proposal must reject');
+ assert.equal(JSON.stringify([...storage]),beforeAutomation,'Stale analysis attempt changed stored records');
+ s.tcRunPro();
+ assert.equal(activeReview.__tcReviewedRaw,reviewTextarea.value,'Reanalysis must update approved source snapshot');
+ assert.equal(applyButton.disabled,false,'Reanalysis should restore Apply');
+ assert.equal(timerButton.disabled,false,'Reanalysis should restore timer action');
  s.tcV3Analyze=originalAnalyze;s.tcV3SaveSourceForCurrentEntry=originalSourceWrite;
  s.document.getElementById=originalGetElement;s.document.querySelectorAll=originalQueryAll;
  run('closeModal()');

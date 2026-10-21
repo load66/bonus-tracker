@@ -1,4 +1,4 @@
-/* Release 3.6.70: canonical rules unchanged; reviewed automation draft safety only. */
+/* Release 3.6.71: canonical rules unchanged; stale terms approval guard only. */
 /*
  * filename: bank-rules-wells-consumer.js
  * version: 3.5.2

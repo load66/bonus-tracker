@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: codex (v3.6.70, codex/v3.6.70-safe-draft-automation)
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.71 promo-term reanalysis safety (`codex/v3.6.71-terms-reanalysis-guard`, PR #256): when pasted promotion terms are edited after the review, Apply selected to draft and Add selected timers are disabled; direct stale attempts return false without saving or modifying a draft. Analyze terms refreshes the reviewed source and re-enables actions. Downstream close-rule, Wells and eligibility wrappers honor rejection. Synthetic draft/storage no-write checks and Chromium/WebKit regression tests added. No bank records, fee or eligibility logic, provider calls, backend, storage schema, R2 data, or credentials changed. Version/cache v3.6.71. PR run 39568598934 passed Bonus/Cloud/UI, Chromium, WebKit, release verifier. Next: final handoff-head CI, merge only on green, confirm GitHub Pages deployment.
+
 
 - v3.6.70 safe reviewed-terms automation (`codex/v3.6.70-safe-draft-automation`, PR #254): Applying selected source-backed fields stages an editable account draft, preserves previously saved source and account data until explicit Save, and never changes an unselected closure policy through either analyzer or downstream closure integration. Analyzer-started drafts retain unknown early-close fees and manual closure review; existing source-backed selection and optional timers are preserved. Clearer mobile wizard copy. Synthetic no-write, stale-editor, closure-selection regressions plus full Bonus/Cloud/UI and Chromium/WebKit validation PASS on PR run 39557879480; exact app/service-worker cache v3.6.70. No provider calls, backend, schemas, persistent keys or real records modified. Next: verify handoff commit, merge on green, confirm Pages deployment and production cache.
 

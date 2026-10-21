@@ -1,4 +1,4 @@
-/* Release 3.6.70: canonical rules unchanged; reviewed automation draft safety only. */
+/* Release 3.6.71: canonical rules unchanged; stale terms approval guard only. */
 /* BonusTracker v3.5.2 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
 (function(){
   'use strict';
@@ -218,7 +218,7 @@
     wrap('normalizeNewCycleData',out=>normalize(out));
     wrap('tcV3Analyze',out=>normalize(out));
     if(window.tcV3Analyze){window.tcUnifiedAnalyze=window.tcV3Analyze;window.tcStrictAnalyze=window.tcV3Analyze;}
-    wrap('tcApplyReviewed',out=>{try{if(typeof modal!=='undefined'&&modal)normalize(modal)}catch{}return out});
+    wrap('tcApplyReviewed',out=>{if(out===false)return false;try{if(typeof modal!=='undefined'&&modal)normalize(modal)}catch{}return out});
     wrap('setModalChurnability',out=>{try{if(typeof modal!=='undefined'&&modal)normalize(modal)}catch{}return out});
     wrap('setModalChurnRule',out=>{try{if(typeof modal!=='undefined'&&modal)normalize(modal)}catch{}return out});
     wrap('setModalChurnBasis',out=>{try{if(typeof modal!=='undefined'&&modal)normalize(modal)}catch{}return out});
