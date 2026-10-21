@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.72';
+const APP_VERSION='3.6.73';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -5827,35 +5827,46 @@ function confirmMarkReqMet(id){const e=entries.find(x=>x.id===id);if(!e)return;c
 function openReqMet(id){const e=entries.find(x=>x.id===id);if(!e)return;reqPrompt={entryId:id,bank:e.bank,date:e.reqMet||'',hasExisting:!!e.reqMet};R()}
 function reqSubmit(){
   const p=reqPrompt;
-  if(!p)return;
+  if(!p)return false;
   const d=document.getElementById('req_date');
   if(d)p.date=d.value;
   const inputError=reqMetInputError(p.date);
   if(inputError)return showReqMetInputError(inputError);
   p.error='';
   const e=entries.find(x=>x.id===p.entryId);
+  if(!e)return showReqMetInputError('This account was not found. Close the review and reopen the account.');
   const warnings=reqMetWarnings(e,p.date);
   if(warnings.length&&!p.warningReviewed){
     reqPrompt=null;
     cfm={title:'Review Requirement Met',msg:'Review these notes before saving:\n\n- '+warnings.join('\n- '),green:true,confirmLabel:'Save Anyway',action:()=>{cfm=null;reqPrompt=p;p.warningReviewed=true;reqSubmit()}};
-    R();
-    return
+    R();return false;
   }
-  p.warningReviewed=false;
-  entries=entries.map(e=>{
-    if(e.id===p.entryId){
-      e.reqMet=p.date;
-      appendEntryHistory(e,'req_met','Requirement met '+fD(p.date)+'.');
-      return normalizeLifecycleEntry(e)
-    }
-    return e
-  });
-  const e2=entries.find(e=>e.id===p.entryId);
-  if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
-  entries=sortE(entries);sv(SK,entries);
-  reqPrompt=null;
-  cfm={title:'Requirement Met Saved',msg:(e2?e2.bank:'This bank')+' requirement met date saved for '+fD(p.date)+'. Bonus received is still tracked separately.',green:true,confirmLabel:hasDirectDepositRequirement(e2)?'Review deposit result':'OK',action:()=>{cfm=null;if(hasDirectDepositRequirement(e2))reviewCycleExperience(p.entryId,'requirement');else R()}};
-  R()
+  const beforeEntries=deepCopy(entries);
+  let beforeStorage=null;
+  try{
+    beforeStorage=window.BTPersistence.capture(localStorage,getBackupStorageKeys());
+    entries=entries.map(item=>{
+      if(item.id!==p.entryId)return item;
+      item.reqMet=p.date;
+      appendEntryHistory(item,'req_met','Requirement met '+fD(p.date)+'.');
+      return normalizeLifecycleEntry(item);
+    });
+    const e2=entries.find(item=>item.id===p.entryId);
+    if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
+    entries=sortE(entries);
+    if(sv(SK,entries)!==true)throw Error('Requirement persistence not verified');
+    p.warningReviewed=false;
+    reqPrompt=null;
+    cfm={title:'Requirement Met Saved',msg:(e2?e2.bank:'This bank')+' requirement met date saved for '+fD(p.date)+'. Bonus received is still tracked separately.',green:true,confirmLabel:hasDirectDepositRequirement(e2)?'Review deposit result':'OK',action:()=>{cfm=null;if(hasDirectDepositRequirement(e2))reviewCycleExperience(p.entryId,'requirement');else R()}};
+    R();return true;
+  }catch(error){
+    let restored=!!beforeStorage;
+    if(beforeStorage){try{window.BTPersistence.rollback(localStorage,beforeStorage)}catch{restored=false}}
+    entries=beforeEntries;reqPrompt=p;cfm=null;window.btCloudBackupChanged?.();
+    return showReqMetInputError(restored
+      ?'Requirement date not saved. Previous records were restored. Check storage and retry.'
+      :'Requirement date not saved or recovery could not be verified. Keep this review open and export a backup before retrying.');
+  }
 }
 function confirmClearReqMet(){
   const p=reqPrompt;
