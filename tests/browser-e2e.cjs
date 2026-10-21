@@ -1660,6 +1660,30 @@ async function exercise(name,engine,url){
     check('confirmed experience appears in task research',await page.locator('.bt366-dp-item').innerText().then(t=>t.includes('Synthetic payroll')&&t.includes('You confirmed')));
     await page.getByRole('button',{name:'All banks',exact:false}).click();
     check('all banks resets scoped research',await page.evaluate(()=>dpTaskBankKey===''));
+    // Requirement confirmation is a date-specific, non-destructive mobile workflow.
+    const requirementBefore=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
+    await page.evaluate(()=>{tab='tracker';expanded=null;openReqMet('E2E-TRUST')});
+    check('requirement confirmation opens an accessible dialog with an explicit date',
+      await page.getByRole('dialog',{name:'Confirm requirements'}).isVisible()&&await page.locator('#req_date').count()===1);
+    for(const width of [320,390,430]){
+      await page.setViewportSize({width,height:844});
+      check('requirement confirmation fits '+width+'px',
+        await page.locator('.bt3669-req-sheet').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
+    }
+    await page.locator('button[onclick="reqSubmit()"]').click();
+    check('missing requirement date shows an inline error and focuses its input',
+      await page.locator('#bt3669-req-error').isVisible()&&
+      await page.locator('#req_date').evaluate(e=>document.activeElement===e&&e.getAttribute('aria-invalid')==='true'));
+    check('missing requirement date leaves every saved entry unchanged',
+      await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,requirementBefore));
+    await page.locator('#req_date').fill('2026-04-12');
+    check('entering a date clears the inline error and retains the date',
+      await page.locator('#req_date').inputValue()==='2026-04-12'&&
+      await page.locator('#bt3669-req-error').textContent()==='');
+    await page.getByRole('dialog',{name:'Confirm requirements'}).getByRole('button',{name:'Cancel'}).click();
+    check('cancelling requirement review never records completion',
+      await page.evaluate(before=>entries[0].reqMet===undefined&&localStorage.getItem('bt_e_v4')===before,requirementBefore));
+    await page.setViewportSize({width:390,height:844});
     await page.evaluate(()=>{tab='tracker';expanded=null;openRcv('E2E-TRUST');rcvPrompt.date=td();R()});
     await page.locator('#rcv_dp').fill('Synthetic payroll');
     await page.locator('button[onclick="rcvSubmit()"]').click();
