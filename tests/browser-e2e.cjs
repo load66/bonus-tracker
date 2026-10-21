@@ -223,6 +223,8 @@ async function exercise(name,engine,url){
     check('automation explains source-backed preselection and draft-only behavior',
       await page.locator('.az-verifybar').innerText().then(t=>t.includes('preselected from source text'))
       &&await page.getByRole('button',{name:'Apply selected to draft'}).isVisible());
+    const originalAutomationPolicy=await page.evaluate(()=>modal?.closeRestrictionType??'manual-review');
+    check('review starts without an active account edit',await page.evaluate(()=>modal===null));
     await page.locator('[data-tcf-field]').evaluateAll(items=>items.forEach(el=>{el.checked=el.getAttribute('data-tcf-field')==='bank'}));
     await page.locator('[data-tcf-timer]').evaluateAll(items=>items.forEach(el=>{el.checked=false}));
     const priorAutomatedData=await page.evaluate(()=>JSON.stringify([...Array(localStorage.length).keys()].map(i=>[localStorage.key(i),localStorage.getItem(localStorage.key(i))]).sort((a,b)=>a[0].localeCompare(b[0]))));
@@ -233,7 +235,7 @@ async function exercise(name,engine,url){
       entriesLength:entries.length,bank:modal?.bank,hasAnalysis:!!modal?.analysis
     }));
     check('approved fields open an editable draft without inferred fee or closure clearance: '+JSON.stringify(stagedDraftState),
-      stagedDraftState.hasModal&&stagedDraftState.hasSource&&!stagedDraftState.opened&&stagedDraftState.closeFee===null&&stagedDraftState.closePolicy==='manual-review'&&stagedDraftState.entriesLength===0);
+      stagedDraftState.hasModal&&stagedDraftState.hasSource&&!stagedDraftState.opened&&stagedDraftState.closeFee===null&&stagedDraftState.closePolicy===originalAutomationPolicy&&stagedDraftState.entriesLength===0);
     check('automated review does not commit account data or source archive before Save',
       await page.evaluate(before=>JSON.stringify([...Array(localStorage.length).keys()].map(i=>[localStorage.key(i),localStorage.getItem(localStorage.key(i))]).sort((a,b)=>a[0].localeCompare(b[0])))===before,priorAutomatedData));
     await page.getByRole('button',{name:'Close account editor'}).click();
