@@ -38,5 +38,21 @@ assert.equal(s.saveEntryFromButton(fakeButton,{preventDefault(){},stopPropagatio
  assert.equal(run('termsReviewError'),'','Editing clears the previous invalid state');
  assert.equal(run('analyzerResult'),null);
  assert.equal(JSON.stringify([...storage]),before);
+ // Requirement confirmation is an actual historical date, not a reminder.
+ // Invalid dates must not write the tracker or dismiss the on-screen prompt.
+ const trackerBeforeReq=JSON.stringify([...storage]);
+ run("reqPrompt={entryId:'NO-SUCH-ENTRY',bank:'Synthetic Date Bank',date:'2099-01-01',hasExisting:false};reqSubmit()");
+ assert.equal(run('reqPrompt.date'),'2099-01-01','Future date draft must remain available to correct');
+ assert.match(run('reqPrompt.error'),/future/i,'Future completion must show actionable inline guidance');
+ assert.match(s.rReqMet(),/id="req-date-error"/,'Date error must be visible inside the requirement dialog');
+ assert.equal(JSON.stringify([...storage]),trackerBeforeReq,'Future requirement date changed persisted tracker state');
+ run("reqPrompt={entryId:'NO-SUCH-ENTRY',bank:'Synthetic Date Bank',date:'2026-02-31',hasExisting:false};reqSubmit()");
+ assert.equal(run('reqPrompt.date'),'2026-02-31','Impossible calendar date draft must remain');
+ assert.match(run('reqPrompt.error'),/valid calendar date/i);
+ assert.equal(JSON.stringify([...storage]),trackerBeforeReq,'Impossible calendar date changed persisted tracker state');
+ run("reqPrompt={entryId:'NO-SUCH-ENTRY',bank:'Synthetic Date Bank',date:'',hasExisting:false};reqSubmit()");
+ assert.match(run('reqPrompt.error'),/actual date/i,'Blank completion date needs inline guidance');
+ assert.equal(JSON.stringify([...storage]),trackerBeforeReq,'Blank requirement date changed persisted tracker state');
+ run('reqPrompt=null');
  console.log('Form reliability: inline errors, draft retention, no invalid writes, single-submit guard, terms recovery PASS');
 })().catch(e=>{console.error(e);process.exitCode=1});
