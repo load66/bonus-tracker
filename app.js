@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.74';
+const APP_VERSION='3.6.75';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4710,17 +4710,69 @@ function rTrackerLegacy(sorted){
 
   return h;
 }
+
+/* Tax inputs are intentionally memory-only; the bonus ledger stays read-only.
+ * Personal income and withholding never enter tracker storage, backups or sync.
+ */
+const taxEstimateDrafts=Object.create(null);
+function taxEstimateDraft(){return taxEstimateDrafts[taxYear]||(taxEstimateDrafts[taxYear]={filingStatus:'',otherIncome:'',excludedBonus:'',deduction:'',withholding:'',payments:''})}
+function taxEstimateSet(field,value){
+ if(!['filingStatus','otherIncome','excludedBonus','deduction','withholding','payments'].includes(field))return false;
+ taxEstimateDraft()[field]=String(value||'');
+ const node=document.getElementById('bt-tax-live');
+ if(node)node.innerHTML=renderTaxEstimateResult();
+ return true;
+}
+function taxEstimateReset(){delete taxEstimateDrafts[taxYear];R()}
+function taxEstimateInputs(yrE){
+ const d=taxEstimateDraft(),income=yrE.reduce((sum,e)=>sum+Number(e.bonus||0),0);
+ return window.BTFederalTax?.estimate({year:taxYear,filingStatus:d.filingStatus,otherIncome:d.otherIncome,
+  bonusAmount:income,excludedBonus:d.excludedBonus,deduction:d.deduction,withholding:d.withholding,payments:d.payments})||{ok:false,reason:'unavailable'};
+}
+function renderTaxEstimateResult(){
+ const yrE=taxEntriesForYear(taxYear).filter(e=>!window.BT360||window.BT360.scope(e));
+ const result=taxEstimateInputs(yrE),money=x=>fM(x);
+ if(!window.BTFederalTax?.years.includes(Number(taxYear)))return '<div class="bt-tax-wait">No IRS calculator for '+esc(taxYear)+' yet. Your bonus receipts remain available below; no future-year rates are assumed.</div>';
+ if(!result.ok){
+  const need={'filing-status':'Choose a filing status to begin.','other-income':'Enter your estimated full-year non-bonus ordinary income to calculate.','excluded-bonus':'Excluded bonus amount must be between $0 and recorded bonuses.','deduction':'Enter a valid deduction amount.','prepayments':'Check the withholding and payment amounts.','bonus-amount':'Check recorded bonus amounts.'};
+  return '<div class="bt-tax-wait" role="status">'+esc(need[result.reason]||'Add the inputs above to calculate.')+'</div>';
+ }
+ const refund=result.balance!==null&&result.balance<0;
+ const resultLine=result.balance===null
+  ?'<div class="bt-tax-balance muted"><span>Possible IRS balance or refund</span><b>Enter projected withholding</b><small>Actual balance depends on federal withholding, payments, credits and other tax items.</small></div>'
+  :'<div class="bt-tax-balance"><span>'+(refund?'Possible federal refund':'Possible federal balance to pay')+'</span><b>'+money(Math.abs(result.balance))+'</b><small>Federal income tax minus entered annual federal withholding and estimated payments. This is not an IRS bill or guaranteed refund.</small></div>';
+ return '<div class="bt-tax-calc-grid"><div><span>Additional tax on tracked bonuses</span><strong>'+money(result.bonusTax)+'</strong><small>Estimated amount to set aside for these receipts</small></div><div><span>Estimated total federal income tax</span><strong>'+money(result.federalTax)+'</strong><small>Before withholding or payments</small></div></div>'
+  +resultLine
+  +'<p class="bt-tax-method">Ordinary taxable income: '+money(result.taxable)+' · Deduction: '+money(result.deduction)+(result.usedStandard?' (standard)':' (custom)')+' · Top ordinary bracket reached: '+Math.round(result.marginalRate*100)+'%. Bonus increment compares tax with and without '+money(result.taxableBonus)+' of included bonuses.</p>';
+}
+function renderTaxEstimator(yrE,audience){
+ const d=taxEstimateDraft(),supports=window.BTFederalTax?.years.includes(Number(taxYear));
+ const field=(id,label,desc,value)=>'<label class="bt-tax-field" for="'+id+'"><span>'+label+'</span><input id="'+id+'" type="number" min="0" max="1000000000" step="0.01" inputmode="decimal" placeholder="0.00" value="'+esc(value)+'" '+(desc?'aria-describedby="'+desc+'" ':'')+'oninput="taxEstimateSet(\''+({ 'bt-tax-other':'otherIncome','bt-tax-exclude':'excludedBonus','bt-tax-deduct':'deduction','bt-tax-withheld':'withholding','bt-tax-paid':'payments'}[id])+'\',this.value)"></label>';
+ let h='<section class="bt-tax-estimator" aria-label="Federal tax estimate"><div class="bt-tax-title"><div><span class="bt-tax-eyebrow">FEDERAL · '+taxYear+'</span><h2>IRS tax estimate</h2></div><span class="bt-tax-chip">Estimate only</span></div>';
+ h+='<p class="bt-tax-lead">Automatically uses your recorded '+(audience==='all'?'personal and business':audience)+' bonus receipts. Add your income to estimate the extra federal tax—not just a flat percentage.</p>';
+ h+='<div class="bt-tax-config"><label class="bt-tax-field" for="bt-tax-status"><span>Filing status</span><select id="bt-tax-status" onchange="taxEstimateSet(\'filingStatus\',this.value)"><option value="">Choose status</option>'+Object.entries(window.BTFederalTax?.status||{}).map(([v,label])=>'<option value="'+v+'"'+(d.filingStatus===v?' selected':'')+'>'+esc(label)+'</option>').join('')+'</select></label>';
+ h+=field('bt-tax-other','Other annual ordinary income','bt-tax-income-help',d.otherIncome)+'</div>';
+ h+='<p class="bt-tax-help" id="bt-tax-income-help">Expected full-year wages and other ordinary income before the standard deduction, excluding bonuses listed here. Not just take-home pay. Leave out preferentially taxed capital gains.</p>';
+ h+='<div id="bt-tax-live" aria-live="polite">'+renderTaxEstimateResult()+'</div>';
+ h+='<details class="bt-tax-options"><summary>Withholding & adjustments <span>Optional</span></summary><div class="bt-tax-option-body"><p>Enter projected <b>full-year</b> federal withholding to estimate a potential balance or refund, not just tax on bonuses.</p>';
+ h+='<div class="bt-tax-config">'+field('bt-tax-withheld','Federal income tax withheld','',d.withholding)+field('bt-tax-paid','Estimated payments','',d.payments)+field('bt-tax-exclude','Exclude receipts ($)','',d.excludedBonus)+field('bt-tax-deduct','Custom deduction ($)','',d.deduction)+'</div>';
+ h+='<p>Leave exclusions blank to include all recorded bonuses. Exclude only amounts you have determined are not taxable to you. Leave deduction blank to use the IRS standard deduction; itemizing or special deductions may require professional review.</p></div></details>';
+ h+='<p class="bt-tax-caveat">Planning estimate for ordinary income, assuming standard deduction unless changed. Does not model credits, FICA, self-employment tax, investment gains, NIIT, AMT, qualified deductions, other tax items or state taxes. Business bonuses may have different reporting treatment. Reconcile with 1099 forms and your actual return. Inputs stay in this open session and are not saved or backed up.</p>';
+ h+='<div class="bt-tax-foot"><a href="https://www.irs.gov/filing/federal-income-tax-rates-and-brackets" target="_blank" rel="noopener noreferrer">IRS tax brackets ↗</a><a href="https://www.irs.gov/taxtopics/tc403" target="_blank" rel="noopener noreferrer">Interest reporting ↗</a><button type="button" onclick="taxEstimateReset()">Clear tax inputs</button></div></section>';
+ return h;
+}
 function rTax(){
  const yrs=[];for(let y=2025;y<=2040;y++)yrs.push(y);
  const audience=window.BT360?.audience||'all';
  const yrE=taxEntriesForYear(taxYear).filter(e=>!window.BT360||window.BT360.scope(e));
  const yrA=yrE.reduce((sum,e)=>sum+Number(e.bonus||0),0);
- let h=(window.BT360?.segments()||'')+'<div class="bt360-page-copy">Bonus income by year</div><div class="ybar bt360-tax-years">';
+ let h=(window.BT360?.segments()||'')+'<div class="bt360-page-copy">Bonus income and federal tax planning</div><div class="ybar bt360-tax-years">';
  yrs.forEach(y=>{h+='<button class="ypill'+(taxYear===y?' on':'')+'" onclick="taxYear='+y+';R()">'+y+'</button>'});
- h+='</div><section class="bt360-tax-summary"><span>'+(audience==='all'?'PERSONAL + BUSINESS':audience.toUpperCase())+' · '+taxYear+'</span><strong>'+fM(yrA)+'</strong><small>'+yrE.length+' bonuses received · includes saved prior cycles</small></section>';
+ h+='</div><section class="bt360-tax-summary"><span>'+(audience==='all'?'PERSONAL + BUSINESS':audience.toUpperCase())+' · '+taxYear+'</span><strong>'+fM(yrA)+'</strong><small>'+yrE.length+' recorded payouts · includes saved prior cycles, excludes future dates</small></section>';
+ h+=renderTaxEstimator(yrE,audience);
  const linkage=yrE.map(taxArchiveReconciliation),linked=linkage.filter(x=>x.linked).length,review=linkage.filter(x=>x.issues.length).length;
  h+='<p class="bt360-footnote">Archive links: '+linked+' of '+yrE.length+' receipts'+(review?' · '+review+' need date or source review':'. Saved dates and source text are available.')+'</p>';
- h+='<button class="export-btn bt360-primary" onclick="promptExportYear()">Export tax CSV</button><p class="bt360-footnote">CSV includes all Personal and Business bonuses, even when a view filter is active.</p><div class="sec">Received in '+taxYear+' <small>by date</small></div>';
+ h+='<button class="export-btn bt360-primary" onclick="promptExportYear()">Export tax CSV</button><p class="bt360-footnote">CSV includes all Personal and Business bonuses, even when a view filter is active. Estimator inputs are not included.</p><div class="sec">Received in '+taxYear+' <small>by date</small></div>';
  if(!yrE.length)h+='<div class="bt360-empty">No received bonuses in '+taxYear+'.</div>';
  yrE.slice().sort((a,b)=>String(b.bonusRecd||'').localeCompare(String(a.bonusRecd||''))).forEach(e=>{
   h+='<details class="bt360-tax-record"><summary class="bt360-list-row bt360-tax-row">'+bankLogo(e.bank,true)+'<span class="bt360-grow"><b>'+esc(e.bank)+'</b><small>Received '+fD(e.bonusRecd)+' · '+(entryBankType(e)==='B'?'Business':'Personal')+(e._taxPriorCycle?' · Prior cycle':'')+'</small><small>'+(e.opened?'Opened '+fD(e.opened):'Opening date not recorded')+'</small><small>Account history ▾</small></span><strong>'+fM(e.bonus)+'</strong></summary>';
@@ -4731,7 +4783,7 @@ function rTax(){
   h+='<p class="bt360-footnote">'+(reconciliation.linked?'Linked to the same cycle in Archive. ':'Archive link needs review. ')+esc(reconciliation.issues.join(' · '))+'</p>';
   h+='<details class="research-help"><summary>Saved terms for this cycle</summary>'+renderTermsCycle(e)+'</details></div></details>';
  });
- return h+'<p class="bt360-footnote">Bank bonuses are usually reported as interest. Check your 1099 forms.</p>';
+ return h+'<p class="bt360-footnote">Bank-account rewards are often taxable interest; reporting varies. Check 1099-INT/1099-MISC and your actual records. A form threshold is not a tax exemption.</p>';
 }
 function dpSelect(key,label,options){return '<label class="research-filter">'+esc(label)+'<select aria-label="'+esc(label)+'" onchange="setDPFilter(\''+key+'\',this.value)">'+options.map(([v,t])=>'<option value="'+v+'"'+(dpFilters[key]===v?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select></label>'}
 function renderCommunityReport(item,group){
