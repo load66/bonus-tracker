@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.73';
+const APP_VERSION='3.6.74';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4890,13 +4890,14 @@ function rDD(){const p=ddPrompt;const common=['Employer DD','Robinhood ACH','Fid
 function rRcv(){
   const p=rcvPrompt;
   if(!p)return'';
-  let h='<div class="cbg" onclick="skipRcv()"><div class="rcv-box" onclick="event.stopPropagation()">';
-  h+='<h3>🎉 Bonus Received</h3><div class="sub">This marks '+esc(p.bank)+' as received. Requirement met and closing stay tracked as separate lifecycle steps.</div>';
+  let h='<div class="cbg" onclick="skipRcv()"><div class="rcv-box" role="dialog" aria-modal="true" aria-labelledby="rcv-title" onclick="event.stopPropagation()">';
+  h+='<h3 id="rcv-title">🎉 Bonus Received</h3><div class="sub">This marks '+esc(p.bank)+' as received. Requirement met and closing stay tracked as separate lifecycle steps.</div>';
   h+='<label>Actual bonus amount ($)</label><input class="dd-input" type="number" min="0" step="0.01" id="rcv_amount" oninput="if(rcvPrompt)rcvPrompt.bonus=Number(this.value)" value="'+esc(String(p.bonus||0))+'" onclick="event.stopPropagation()">';
   if(p.fromCandidate)h+='<p class="sub">Possible payout only. Review before confirming. The Tax tab will display the confirmed amount and date for review.</p>';
   h+='<label>Bonus Received Date</label><input class="dd-input" type="date" id="rcv_date" oninput="if(rcvPrompt)rcvPrompt.date=this.value" value="'+(p.date||'')+'" onclick="event.stopPropagation()">';
   h+='<label>Requirement Met Date</label><input class="dd-input" type="date" id="rcv_req_date" oninput="if(rcvPrompt)rcvPrompt.reqDate=this.value" value="'+(p.reqDate||'')+'" onclick="event.stopPropagation()">';
   h+='<label>Triggering DD / Method</label><input class="dd-input" id="rcv_dp" oninput="if(rcvPrompt)rcvPrompt.dp=this.value" value="'+esc(p.dp||'')+'" placeholder="e.g. Employer DD, ACH push, debit transactions" onclick="event.stopPropagation()">';
+  if(p.error)h+='<p class="bt3655-field-error" role="alert" id="rcv-clear-error" tabindex="-1">'+esc(p.error)+'</p>';
   h+='<div class="crow"><button class="c-c" onclick="skipRcv()">Cancel</button>'+(p.hasExisting?'<button class="c-r" onclick="confirmClearRcv()">Clear</button>':'')+'<button class="c-g" onclick="rcvSubmit()">Save</button></div>';
   h+='</div></div>';
   return h
@@ -5769,30 +5770,58 @@ function rcvSubmit(){
   }
   R();return true;
 }
+// Keep milestone clearing transactional across account, archived terms and companion history.
+function atomicClearMilestone(p,field){
+  if(!['reqMet','bonusRecd'].includes(field))throw Error('Unsupported milestone');
+  const prior=entries.find(item=>item.id===p?.entryId);
+  if(!prior)return{ok:false,error:'Account not found. Close this review and reopen the account.'};
+  if(!prior[field])return{ok:false,error:'This date has already changed. Close this review and reopen the account before clearing.'};
+  const beforeEntries=deepCopy(entries);
+  let beforeStorage=null;
+  try{
+    beforeStorage=window.BTPersistence.capture(localStorage,getBackupStorageKeys());
+    entries=entries.map(item=>{
+      if(item.id!==p.entryId)return item;
+      item[field]='';
+      appendEntryHistory(item,field==='reqMet'?'req_met_cleared':'bonus_received_cleared',
+        field==='reqMet'?'Cleared requirement met date.':'Cleared bonus received date.');
+      return normalizeLifecycleEntry(item);
+    });
+    const updated=entries.find(item=>item.id===p.entryId);
+    syncProfileEventsFromEntry(updated);
+    refreshSavedReqFromEntry(updated);
+    entries=sortE(entries);
+    if(sv(SK,entries)!==true)throw Error('Milestone clear persistence not verified');
+    return{ok:true,entry:updated};
+  }catch(error){
+    let restored=!!beforeStorage;
+    if(beforeStorage){try{window.BTPersistence.rollback(localStorage,beforeStorage)}catch{restored=false}}
+    entries=beforeEntries;
+    window.btCloudBackupChanged?.();
+    return{ok:false,error:restored
+      ?'Date was not cleared. Previous records were restored. Review storage and retry Clear.'
+      :'Date was not cleared and recovery could not be verified. Keep this review open and export a backup before retrying.'};
+  }
+}
 function confirmClearRcv(){
   const p=rcvPrompt;
   if(!p)return;
   const id=p.entryId, bank=p.bank;
-  cfm={title:'Clear Bonus Received?',msg:'Clear the bonus received date for '+bank+'?\n\nThis can change status, tax tracking, and close timing. Requirement Met date will stay unless you clear it separately.',confirmLabel:'Clear',action:()=>{cfm=null;rcvPrompt={entryId:id,bank,date:p.date||'',reqDate:p.reqDate||'',dp:p.dp||'',hasExisting:true};clearRcv()}};
+  cfm={title:'Clear Bonus Received?',msg:'Clear the bonus received date for '+bank+'?\n\nThis can change status, tax tracking, and close timing. Requirement Met date will stay unless you clear it separately.',confirmLabel:'Clear',action:()=>{cfm=null;rcvPrompt={...p,entryId:id,bank,hasExisting:true,error:''};clearRcv()}};
   R()
 }
 function clearRcv(){
   const p=rcvPrompt;
-  if(!p)return;
-  entries=entries.map(e=>{
-    if(e.id===p.entryId){
-      e.bonusRecd='';
-      appendEntryHistory(e,'bonus_received_cleared','Cleared bonus received date.');
-      return normalizeLifecycleEntry(e)
-    }
-    return e
-  });
-  const e2=entries.find(e=>e.id===p.entryId);
-  if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
-  entries=sortE(entries);sv(SK,entries);
+  if(!p)return false;
+  const result=atomicClearMilestone(p,'bonusRecd');
+  if(!result.ok){
+    p.error=result.error;rcvPrompt=p;cfm=null;R();
+    requestAnimationFrame(()=>document.getElementById('rcv-clear-error')?.focus?.({preventScroll:true}));
+    return false;
+  }
   rcvPrompt=null;
-  cfm={title:'Bonus Received Cleared',msg:(e2?e2.bank:'This bank')+' no longer has a bonus received date.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
-  R()
+  cfm={title:'Bonus Received Cleared',msg:result.entry.bank+' no longer has a bonus received date.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
+  R();return true;
 }
 function skipRcv(){rcvPrompt=null;R()}
 function reqMetInputError(value){
@@ -5872,26 +5901,20 @@ function confirmClearReqMet(){
   const p=reqPrompt;
   if(!p)return;
   const id=p.entryId, bank=p.bank;
-  cfm={title:'Clear Requirement Met?',msg:'Clear the requirement met date for '+bank+'?\n\nThe date will remain unknown until you explicitly record it. Any timing that depends on it will require review.',confirmLabel:'Clear',action:()=>{cfm=null;reqPrompt={entryId:id,bank,date:p.date||'',hasExisting:true};clearReqMet()}};
+  cfm={title:'Clear Requirement Met?',msg:'Clear the requirement met date for '+bank+'?\n\nThe date will remain unknown until you explicitly record it. Any timing that depends on it will require review.',confirmLabel:'Clear',action:()=>{cfm=null;reqPrompt={...p,entryId:id,bank,hasExisting:true,error:''};clearReqMet()}};
   R()
 }
 function clearReqMet(){
   const p=reqPrompt;
-  if(!p)return;
-  entries=entries.map(e=>{
-    if(e.id===p.entryId){
-      e.reqMet='';
-      appendEntryHistory(e,'req_met_cleared','Cleared requirement met date.');
-      return normalizeLifecycleEntry(e)
-    }
-    return e
-  });
-  const e2=entries.find(e=>e.id===p.entryId);
-  if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
-  entries=sortE(entries);sv(SK,entries);
+  if(!p)return false;
+  const result=atomicClearMilestone(p,'reqMet');
+  if(!result.ok){
+    reqPrompt=p;cfm=null;
+    return showReqMetInputError(result.error);
+  }
   reqPrompt=null;
-  cfm={title:'Requirement Met Cleared',msg:(e2?e2.bank:'This bank')+' requirement met date was cleared.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
-  R()
+  cfm={title:'Requirement Met Cleared',msg:result.entry.bank+' requirement met date was cleared.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
+  R();return true;
 }
 function skipReq(){reqPrompt=null;R()}
 function looksLikeActualDateText(s){
