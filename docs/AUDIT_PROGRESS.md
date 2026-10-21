@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: codex — v3.6.67 — codex/v3.6.67-source-watch-integrity
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.67 source-watch integrity (`codex/v3.6.67-source-watch-integrity`): partial public official-source snapshots now flag each missing catalogued bank promotion/fee source, rather than suggesting full coverage. A sticky material source change keeps its review priority when subsequent checks are overdue; the review UI also labels overdue monitoring. Preserves the v3.6.66 public reviewed-source approval workflow and all previously stored financial records, imports, canonical eligibility, service keys and backend behavior. Includes synthetic source integrity and browser tests; app/service-worker v3.6.67. Next: full bonus/cloud/UI and Chromium/WebKit PR validation, release verifier, merge on green and verify Pages deployment.
+
 
 - v3.6.66 audited official-source review acknowledgements (`codex/v3.6.66-source-review-approvals`): adds public-only, human-reviewed ledger `data/quick-add-source-review-decisions.json` and `scripts/acknowledge-source-review.py`. Only an exact institution/product offer key, approved source role and URL, baseline hash, current observed SHA-256, fresh timestamp and linked repo issue/PR can propose clearing a watch flag. Next scheduled official source check must successfully re-observe the same digest; unavailable, changed, expired approvals and old unrelated sources cannot clear warnings. Source reverts remain sticky until explicit review. Keeps bounded last-review receipt for audit; no promotions declared eligible, no canonical rules, bank records, cloud state, user keys or backend changed. Expanded synthetic Python watcher tests and docs; app/SW cache v3.6.66. Next: full unit/Chromium/WebKit verification and Pages deployment.
 
