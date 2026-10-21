@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: codex (v3.6.72, codex/v3.6.72-cloud-backup-ux)
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.72 mobile cloud recovery layout (`codex/v3.6.72-cloud-backup-ux`, PR #257): compact verified protection card and timestamp; clearly styled manual backup/recovery buttons; header Close action; expandable retention, downloaded-file, and offline/checkpoint explanations. Readback proof and explicit pending/offline states remain visible. No changes to backup upload, storage, retention, restore confirmation, snapshots, credentials, R2, backend, eligibility, tracker records or canonical bank rules. Chromium/WebKit assertions for 390px card, accessible close/primary actions, and retention visibility; Bonus/Cloud/UI, browsers and release verifier PASS on PR run 39571326181. Version/cache v3.6.72. Next: verify final handoff commit CI, squash merge on green, confirm main Pages deployment and exact cache.
+
 
 - v3.6.71 promo-term reanalysis safety (`codex/v3.6.71-terms-reanalysis-guard`, PR #256): when pasted promotion terms are edited after the review, Apply selected to draft and Add selected timers are disabled; direct stale attempts return false without saving or modifying a draft. Analyze terms refreshes the reviewed source and re-enables actions. Downstream close-rule, Wells and eligibility wrappers honor rejection. Synthetic draft/storage no-write checks and Chromium/WebKit regression tests added. No bank records, fee or eligibility logic, provider calls, backend, storage schema, R2 data, or credentials changed. Version/cache v3.6.71. PR run 39568598934 passed Bonus/Cloud/UI, Chromium, WebKit, release verifier. Next: final handoff-head CI, merge only on green, confirm GitHub Pages deployment.
 
