@@ -167,6 +167,21 @@ assert m.approved_change(
     changed['records']['Capital One']['sources']['promotion'],
     {'status':'changed','observedHash':hash2,'checkedAt':'2026-10-21T00:00:00Z','observedAt':'old'},
     decision,approved_at) is False, 'Never trust approval without a new successful observation'
+# Ledger creation is additive, scoped, and never a public-page or financial write.
+review_spec = importlib.util.spec_from_file_location(
+    'ack_review', root / 'scripts/acknowledge-source-review.py')
+ack = importlib.util.module_from_spec(review_spec)
+review_spec.loader.exec_module(ack)
+assert ack.add_decision({'schemaVersion':1,'decisions':[]}, decision)['decisions'] == [decision]
+replaced = ack.add_decision({'schemaVersion':1,'decisions':[decision]},
+    {**decision, 'reviewedHash':'d'*64})
+assert len(replaced['decisions']) == 1 and replaced['decisions'][0]['reviewedHash'] == 'd'*64
+try:
+    ack.add_decision({'schemaVersion':999,'decisions':[]},decision)
+    raise AssertionError('Unrecognized ledger format accepted')
+except ValueError:
+    pass
+
 print('Scoped source review acknowledgements PASS: explicit review reference, current digest, no stale/outage or cross-role approval')
 
 print('Public source monitor PASS: strict hosts, meaningful terms changes, sticky warning, outages, no writes to enrolled terms')
