@@ -1,23 +1,23 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-10-21T04:05:13.620463+00:00",
+  "checkedAt": "2026-10-21T04:42:05.580740+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-10-21T04:05:13.620463+00:00",
+      "checkedAt": "2026-10-21T04:42:05.580740+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-10-21T04:05:13.620463+00:00",
+      "checkedAt": "2026-10-21T04:42:05.580740+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-10-21T04:05:13.620463+00:00",
+      "checkedAt": "2026-10-21T04:42:05.580740+00:00",
       "status": "ok"
     }
   ],
