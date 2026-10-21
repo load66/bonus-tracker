@@ -1130,12 +1130,24 @@ async function exercise(name,engine,url){
       };
     });
     await page.locator('#bt-cloud-open').click();
+    check('cloud dialog has a prominent, accessible close and collapsed safety details',
+      await page.getByRole('button',{name:'Close cloud backup'}).isVisible()
+      &&await page.locator('#cloud-retention-details').evaluate(e=>!e.open)
+      &&await page.locator('.cloud-how-details').evaluate(e=>!e.open));
+    check('cloud backup actions remain accessible and legible at phone width',
+      await page.locator('#cloud-now').evaluate(e=>{const css=getComputedStyle(e);return e.getBoundingClientRect().height>=44&&css.color==='rgb(255, 255, 255)'&&e.getBoundingClientRect().width<=document.documentElement.clientWidth}));
+    await page.getByRole('button',{name:'Close cloud backup'}).click();
+    check('top close dismisses only cloud settings',await page.locator('.cloud-overlay').count()===0);
+    await page.locator('#bt-cloud-open').click();
     check('automatic backup switch begins off',!(await page.locator('#cloud-auto-toggle').isChecked()));
     await page.locator('#cloud-enable-ack').check();await button('Enable automatic backup').click();
     check('enabling requires explicit confirmation',await page.locator('#bt_confirm_overlay').isVisible()&&!(await page.locator('#cloud-auto-toggle').isChecked()));
     await page.locator('#bt_confirm_overlay').getByRole('button',{name:'Enable and verify',exact:true}).click();
     await page.getByText('Preview recovery',{exact:true}).waitFor();
     check('enabled switch reflects verified protection',await page.locator('#cloud-auto-toggle').isChecked()&&await page.locator('#cloud-protection').getAttribute('data-state')==='protected');
+    check('verified protection summary fits a compact mobile card without hiding retention help',
+      await page.locator('#cloud-protection').evaluate(e=>e.getBoundingClientRect().height<280&&e.scrollWidth<=e.clientWidth+1)
+      &&await page.locator('#cloud-retention-status').innerText().then(t=>t.includes('latest backup')));
     check('legacy export reminder is removed',await page.locator('.bk-remind').count()===0);
     await page.locator('#cloud-auto-toggle').click();await page.locator('#bt_confirm_overlay').getByRole('button',{name:'Cancel',exact:true}).click();
     check('canceling disable keeps automatic backup on',await page.locator('#cloud-auto-toggle').isChecked());
