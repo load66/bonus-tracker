@@ -891,6 +891,8 @@ async function exercise(name,engine,url){
       try{await catalog.refreshWatch(true)}finally{window.fetch=previous}
     });
     await page.locator('.bt3662-source-queue summary').click();
+    check('partial official watch shows missing bank promotion and fee sources',await page.locator('.bt3662-source-queue').innerText().then(t=>t.includes('Wells Fargo')&&t.includes('Check unavailable')));
+    check('missing-source review links remain pinned to official bank hosts',await page.locator('.bt3662-source-item a').evaluateAll(links=>links.every(a=>{try{const u=new URL(a.href);return u.protocol==='https:'&&['www.wellsfargo.com','accountoffers.wellsfargo.com','www.capitalone.com'].includes(u.hostname)}catch{return false}})));
     check('mobile review queue shows possible changed terms without unsafe text',await page.locator('.bt3662-source-queue').innerText().then(t=>
       t.includes('Possible: Deadlines, Fee wording')&&!t.includes('<script>')&&!t.includes('confirmed eligibility')));
     check('public monitoring cannot mutate financial records',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,beforeWatchCheck));

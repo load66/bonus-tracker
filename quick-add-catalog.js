@@ -72,24 +72,36 @@
  let watched=null,loading=null;
  const HEX=/^[0-9a-f]{64}$/;
  function monitored(bank,now=Date.now()){
-  const spec=records[bank],v=watched?.records?.[bank];
-  if(!spec||!v||v.offerKey!==spec.offerKey||!v.sources||typeof v.sources!=='object')return null;
-  const reasons=[];
-  for(const source of reviewedSources(spec)){
-   const item=v.sources[source.role];
-   if(!item||item.url!==source.url||!['baseline','unchanged','changed','unavailable'].includes(item.status))return null;
-   const checked=Date.parse(item.checkedAt||'');
-   if(Number.isFinite(checked)&&checked>now+60000)return null; // Future snapshot is not current monitoring evidence.
-   if(!Number.isFinite(checked)||now-checked>36*3600000)return{status:'stale',note:'Scheduled source checks are overdue. Review the official page directly.'};
-   if(item.status==='changed'){
-     if(!HEX.test(item.baselineHash||'')||!HEX.test(item.observedHash||'')||!Number.isFinite(Date.parse(item.changeAt||'')))return null;
-     reasons.push('changed');
-   }else if(item.status==='unavailable')reasons.push('unavailable');
-   else if(!HEX.test(item.baselineHash||'')||!HEX.test(item.observedHash||''))return null;
-  }
-  return reasons.includes('changed')?{status:'changed',note:'An official promotion or fee page changed since the stored baseline. Reverify the exact offer and terms before applying.'}
-    :reasons.includes('unavailable')?{status:'unavailable',note:'An official source could not be checked. Its requirements and fees cannot be treated as current.'}
-    :{status:'observed',note:'Official pages were monitored, but automated fingerprints do not establish eligibility or verify promotion terms.'};
+   const spec=records[bank];
+   const generated=Date.parse(watched?.generatedAt||'');
+   if(!spec||!watched||watched.schemaVersion!==1||!Number.isFinite(generated)||generated>now+60000)return null;
+   const record=watched.records?.[bank];
+   if(!record||record.offerKey!==spec.offerKey||!record.sources||typeof record.sources!=='object')
+     return{status:'unavailable',note:'This bank has no complete official-source check. Reverify the promotion and fees.'};
+   const reasons=[];
+   for(const source of reviewedSources(spec)){
+     const item=record.sources[source.role];
+     if(!item||item.url!==source.url||!['baseline','unchanged','changed','unavailable'].includes(item.status)){
+       reasons.push('unavailable');
+       continue;
+     }
+     const checked=Date.parse(item.checkedAt||'');
+     if(Number.isFinite(checked)&&checked>now+60000){reasons.push('unavailable');continue;}
+     const stale=!Number.isFinite(checked)||now-checked>36*3600000;
+     // A previously observed difference is a sticky review requirement even
+     // when another official page or the next scheduled run is overdue.
+     if(item.status==='changed'&&HEX.test(item.baselineHash||'')
+        &&HEX.test(item.observedHash||'')&&Number.isFinite(Date.parse(item.changeAt||''))){
+       reasons.push('changed');
+       if(stale)reasons.push('stale');
+     }else if(stale)reasons.push('stale');
+     else if(item.status==='unavailable')reasons.push('unavailable');
+     else if(!HEX.test(item.baselineHash||'')||!HEX.test(item.observedHash||''))reasons.push('unavailable');
+   }
+   return reasons.includes('changed')?{status:'changed',note:'An official promotion or fee page changed since its reviewed baseline. Reverify its terms'+(reasons.includes('stale')?' and overdue source checks':'')+' before applying.'}
+     :reasons.includes('unavailable')?{status:'unavailable',note:'An official promotion or fee source is missing or unavailable. Recheck before applying.'}
+     :reasons.includes('stale')?{status:'stale',note:'Scheduled source checks are overdue. Review the official pages directly.'}
+     :{status:'observed',note:'Official pages were monitored, but automated fingerprints do not establish eligibility or verify promotion terms.'};
  }
  function status(bank,now=Date.now()){
    bank=String(bank||'').trim();
@@ -108,30 +120,43 @@
    const generated=Date.parse(watched?.generatedAt||'');
    const issues=[],banks=Object.keys(records),observed=watched?.schemaVersion===1
      &&Number.isFinite(generated)&&generated<=now+60000
-     &&watched.records&&typeof watched.records==='object'&&Object.keys(watched.records).length>0;
+     &&watched.records&&typeof watched.records==='object'
+     &&Object.keys(watched.records).length>0;
+   let complete=!!observed;
    if(observed)for(const bank of banks){
      const spec=records[bank],watch=watched.records[bank];
-     if(!watch||watch.offerKey!==spec.offerKey||!watch.sources)continue;
+     const hasBank=watch&&watch.offerKey===spec.offerKey&&watch.sources&&typeof watch.sources==='object';
      for(const source of reviewedSources(spec)){
-       const row=watch.sources[source.role];
-       if(!row||row.url!==source.url)continue;
+       const row=hasBank?watch.sources[source.role]:null;
+       // Every catalogued promotion/fee URL must have its own recognized
+       // observation. Partial publisher results must never look all-clear.
+       const valid=row&&row.url===source.url
+         &&['baseline','unchanged','changed','unavailable'].includes(row.status);
+       if(!valid){
+         complete=false;
+         issues.push({bank,role:source.role,kind:'unavailable',url:source.url,
+           label:source.label,checkedAt:'',signals:[],overdue:false});
+         continue;
+       }
        const checked=Date.parse(row.checkedAt||'');
-       const stale=!Number.isFinite(checked)||checked>now+60000||now-checked>36*3600000;
-       const kind=stale?'stale':row.status==='changed'&&HEX.test(row.baselineHash||'')
-          &&HEX.test(row.observedHash||'')&&Number.isFinite(Date.parse(row.changeAt||''))?'changed'
-          :row.status==='unavailable'?'unavailable':null;
+       const future=Number.isFinite(checked)&&checked>now+60000;
+       const stale=!Number.isFinite(checked)||future||now-checked>36*3600000;
+       const changed=row.status==='changed'&&HEX.test(row.baselineHash||'')
+         &&HEX.test(row.observedHash||'')&&Number.isFinite(Date.parse(row.changeAt||''))
+         &&Date.parse(row.changeAt)<=now+60000;
+       const kind=future?'unavailable':changed?'changed':stale?'stale':row.status==='unavailable'?'unavailable':null;
        if(kind){
          const approved=['bonus_amount','monthly_fees','direct_deposit','deadlines','eligibility','closure_rules','other_terms'];
          const signals=kind==='changed'&&Array.isArray(row.reviewSignals)
            ?row.reviewSignals.filter(x=>approved.includes(x)).slice(0,7):[];
          issues.push({bank,role:source.role,kind,url:source.url,
-           label:source.label,checkedAt:Number.isFinite(checked)&&checked<=now?row.checkedAt:'',signals});
+           label:source.label,checkedAt:Number.isFinite(checked)&&!future?row.checkedAt:'',signals,overdue:stale&&!future});
        }
      }
    }
    const order={changed:0,unavailable:1,stale:2};
    issues.sort((a,b)=>order[a.kind]-order[b.kind]||a.bank.localeCompare(b.bank)||a.role.localeCompare(b.role));
-   return {ready:!!observed,issues,monitoredBanks:observed?Object.keys(watched.records).length:0};
+   return {ready:!!observed,complete,issues,monitoredBanks:observed?Object.keys(watched.records).length:0};
  }
  let nextWatchAt=0;
  function refreshWatch(force=false){
