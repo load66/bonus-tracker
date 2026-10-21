@@ -4731,7 +4731,7 @@ function taxEstimateInputs(yrE){
 }
 function renderTaxEstimateResult(){
  const yrE=taxEntriesForYear(taxYear).filter(e=>!window.BT360||window.BT360.scope(e));
- const result=taxEstimateInputs(yrE),money=x=>fM(x);
+ const result=taxEstimateInputs(yrE),money=x=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:2}).format(x);
  if(!window.BTFederalTax?.years.includes(Number(taxYear)))return '<div class="bt-tax-wait">No IRS calculator for '+esc(taxYear)+' yet. Your bonus receipts remain available below; no future-year rates are assumed.</div>';
  if(!result.ok){
   const need={'filing-status':'Choose a filing status to begin.','other-income':'Enter your estimated full-year non-bonus ordinary income to calculate.','excluded-bonus':'Excluded bonus amount must be between $0 and recorded bonuses.','deduction':'Enter a valid deduction amount.','prepayments':'Check the withholding and payment amounts.','bonus-amount':'Check recorded bonus amounts.'};
