@@ -45,16 +45,32 @@
   const withholding=input?.withholding===''||input?.withholding==null?null:money(input.withholding);
   const payments=input?.payments===''||input?.payments==null?0:money(input.payments);
   if((input?.withholding!==''&&input?.withholding!=null&&withholding===null)||payments===null)return{ok:false,reason:'prepayments'};
+  const overtime=input?.qualifiedOvertime===''||input?.qualifiedOvertime==null?0:money(input.qualifiedOvertime);
+  if(overtime===null)return{ok:false,reason:'qualified-overtime'};
+  // IRS Schedule 1-A: married individuals must file jointly; qualified
+  // overtime is the FLSA premium, not the full overtime compensation.
+  if(overtime>0&&filingStatus==='mfs')return{ok:false,reason:'overtime-filing-status'};
   const ordinaryBonus=Math.round((grossBonus-excluded)*100)/100;
-  const baselineTaxable=Math.max(0,otherIncome-deduction);
-  const taxable=Math.max(0,otherIncome+ordinaryBonus-deduction);
+  const otCap=filingStatus==='mfj'?25000:12500;
+  const phaseoutThreshold=filingStatus==='mfj'?300000:150000;
+  const overtimeFor=grossIncome=>{
+   const capped=Math.min(overtime,otCap);
+   // Schedule 1-A Part III uses *completed* $1,000 increments.
+   // Ordinary gross-income is used as the MAGI proxy in this planning tool.
+   const reduction=Math.floor(Math.max(0,grossIncome-phaseoutThreshold)/1000)*100;
+   return Math.max(0,Math.round((capped-reduction)*100)/100);
+  };
+  const overtimeDeductionBefore=overtimeFor(otherIncome);
+  const overtimeDeduction=overtimeFor(otherIncome+ordinaryBonus);
+  const baselineTaxable=Math.max(0,otherIncome-deduction-overtimeDeductionBefore);
+  const taxable=Math.max(0,otherIncome+ordinaryBonus-deduction-overtimeDeduction);
   const before=taxOnOrdinary(baselineTaxable,schedule.limits[filingStatus]);
   const total=taxOnOrdinary(taxable,schedule.limits[filingStatus]);
   const added=Math.round((total-before)*100)/100;
   const marginalRate=RATES[schedule.limits[filingStatus].filter(v=>taxable>v).length];
   const delta=withholding===null?null:Math.round((total-withholding-payments)*100)/100;
   return{ok:true,year,filingStatus,otherIncome,grossBonus,excludedBonus:excluded,taxableBonus:ordinaryBonus,
-    deduction,usedStandard:input?.deduction===''||input?.deduction==null,baselineTaxable,taxable,
+    deduction,qualifiedOvertime:overtime,overtimeDeduction,overtimeDeductionBefore,overtimeLimit:otCap,overtimePhaseoutEstimated:otherIncome+ordinaryBonus>phaseoutThreshold,usedStandard:input?.deduction===''||input?.deduction==null,baselineTaxable,taxable,
     baselineTax:before,federalTax:total,bonusTax:added,marginalRate,withholding,payments,
     balance:delta,standardDeduction:schedule.standard[filingStatus]};
  }
