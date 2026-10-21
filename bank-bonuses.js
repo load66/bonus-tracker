@@ -382,7 +382,7 @@
       h+='<details class="bt3662-source-queue"><summary>Official sources · '+watchReview.issues.length+' need review</summary><div class="bt3662-source-items">';
       for(const item of watchReview.issues.slice(0,12)){
         const hints=item.kind==='changed'&&item.signals?.length?' · Possible: '+item.signals.map(k=>signalName[k]).filter(Boolean).join(', '):'';
-        h+='<div class="bt3662-source-item"><div><b>'+escape(item.bank)+'</b><span>'+escape(item.role==='fees'?'Fee disclosures':'Promotion terms')+' · '+escape(issueText[item.kind]||'Review source')+escape(hints)+'</span></div><a href="'+escape(item.url)+'" target="_blank" rel="noopener noreferrer">Review official page ↗</a></div>';
+        h+='<div class="bt3662-source-item"><div><b>'+escape(item.bank)+'</b><span>'+escape(item.role==='fees'?'Fee disclosures':'Promotion terms')+' · '+escape(issueText[item.kind]||'Review source')+escape(item.overdue?' · Watch overdue':'')+escape(hints)+'</span></div><a href="'+escape(item.url)+'" target="_blank" rel="noopener noreferrer">Review official page ↗</a></div>';
       }
       h+='</div><p>Possible topic labels are automated text-difference clues, not verified changes to amounts, fees, or eligibility. Saved offer terms remain unchanged.</p></details>';
     }
@@ -393,6 +393,7 @@
     if(feed.sources.length)h+='<div class="radar-sources">'+feed.sources.map(s=>'<p>'+escape(s.name)+' · '+(s.status==='ok'?'Checked':'Update unavailable')+(s.checkedAt?' '+escape(new Date(s.checkedAt).toLocaleString()):' · no successful check yet')+'</p>').join('')+'</div>';
     if(officialError)h+='<p>'+escape(officialError)+'</p>';
     if(!watchReview.ready)h+='<p>Official promotion and fee monitoring is awaiting its first completed check.</p>';
+    else if(watchReview.complete===false)h+='<p>Source monitoring is incomplete for some reviewed banks. Missing official checks are flagged for review.</p>';
     h+='</div></details>';
     h+='<input id="radar-search" class="sinput bt362-search" aria-label="Search banks and offers" placeholder="Search bank bonuses…" value="'+escape(query)+'" oninput="btRadarSearch(this.value,this.selectionStart)">';
     h+='<div class="bt360-offer-pills" role="group" aria-label="Offer types">'+[['all','All'],['checking','Checking'],['savings','Savings'],['business','Business'],['near','Near me']].map(([v,label])=>'<button type="button" aria-pressed="'+(categoryFilter===v)+'" class="'+(categoryFilter===v?'active':'')+'" onclick="btRadarOfferPill(\''+v+'\')">'+label+'</button>').join('')+'</div>';
