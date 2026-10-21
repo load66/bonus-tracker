@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.76';
+const APP_VERSION='3.6.77';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4743,11 +4743,28 @@ function taxLoadJsonFile(input){
  reader.onerror=()=>taxPayImportError('Could not open that file. Try selecting it again.');
  reader.readAsText(file);
 }
+function taxPayWageOverride(value){
+ const state=taxPayImportState;
+ if(!state?.row)return false;
+ try{
+  const raw=String(value??'').trim();
+  if(raw&&!/^(?:\d+(?:\.\d{1,2})?|\.\d{1,2})$/.test(raw))
+   throw Error('Enter federal taxable wages as a nonnegative dollar amount.');
+  const updated=window.BTTaxPayImport.read({...state.row,federalTaxableWagesYtd:raw?Number(raw):null});
+  state.row=updated;
+  state.projection=window.BTTaxPayImport.project(updated);
+  state.wageError='';
+  state.applied=false; // Always require a new explicit Use this estimate.
+ }catch(err){state.wageError=String(err?.message||'Check federal taxable wages.');}
+ const el=document.getElementById('bt-tax-pay-upload');
+ if(el)el.innerHTML=renderTaxJsonPanel();
+ return !state.wageError;
+}
 function taxPayApply(){
  if(!taxPayImportState?.row||!taxPayImportState?.projection)return false;
  const {row,projection}=taxPayImportState;
  // User approval is required; do not silently replace existing typed tax inputs.
- const d=taxEstimateDrafts[row.taxYear]||(taxEstimateDrafts[row.taxYear]={filingStatus:'',otherIncome:'',excludedBonus:'',deduction:'',withholding:'',payments:''});
+ const d=taxEstimateDrafts[row.taxYear]||(taxEstimateDrafts[row.taxYear]={filingStatus:'',otherIncome:'',excludedBonus:'',deduction:'',withholding:'',payments:'',qualifiedOvertime:''});
  d.otherIncome=String(projection.annualIncome);
  d.withholding=projection.annualFederalWithholding===null?'':String(projection.annualFederalWithholding);
  taxPayImportState={row,projection,applied:true};
@@ -4773,7 +4790,8 @@ function renderTaxJsonPanel(){
   h+='<div><dt>Gross pay YTD</dt><dd>'+taxPayMoney(x.grossPayYtd)+'</dd></div>';
   if(x.preTaxDeductionsYtd!==null)h+='<div><dt>Pre-tax deductions YTD</dt><dd>'+taxPayMoney(x.preTaxDeductionsYtd)+'</dd></div>';
   h+='<div><dt>Federal withholding YTD</dt><dd>'+(x.federalIncomeTaxWithheldYtd===null?'Not shown':taxPayMoney(x.federalIncomeTaxWithheldYtd))+'</dd></div>';
-  h+='</dl><p><b>Projected annual wages:</b> '+taxPayMoney(p.annualIncome)+'<br><b>Projected annual federal withholding:</b> '+(p.annualFederalWithholding===null?'Not available':taxPayMoney(p.annualFederalWithholding))+'</p>';
+  h+='</dl><details class="bt-tax-wage-review"><summary>Have exact federal taxable wages? <small>Optional</small></summary><label for="bt-tax-wage-ytd">Federal taxable wages YTD (from paystub)<input id="bt-tax-wage-ytd" aria-label="Federal taxable wages year to date" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Leave blank for estimated wages" value="'+(x.federalTaxableWagesYtd??'')+'" onchange="taxPayWageOverride(this.value)"></label><small>Use this only if your paystub explicitly lists federal taxable wages. It can differ from gross less pre-tax deductions.</small>'+(st.wageError?'<p class="bt-tax-pay-error" role="alert">'+esc(st.wageError)+'</p>':'')+'</details>';
+  h+='<p><b>Projected annual wages:</b> '+taxPayMoney(p.annualIncome)+'<br><b>Projected annual federal withholding:</b> '+(p.annualFederalWithholding===null?'Not available':taxPayMoney(p.annualFederalWithholding))+'</p>';
   h+='<p class="bt-tax-pay-note">Income basis: '+esc(basis)+'. Projected from '+p.daysElapsed+' elapsed days of '+p.daysInYear+'. Assumes the same pay and withholding rate through year-end; overtime and deductions may change. Check W-2 Box 1 or your pay details for exact federal taxable wages.</p>';
   if(!st.applied)h+='<button class="bt-tax-pay-apply" type="button" onclick="taxPayApply()">Use this estimate</button>';
   else h+='<p class="bt-tax-pay-success" role="status">Pay snapshot applied. Your filing status and other adjustments remain editable below.</p>';
@@ -4781,9 +4799,9 @@ function renderTaxJsonPanel(){
  }
  return h+'</div>';
 }
-function taxEstimateDraft(){return taxEstimateDrafts[taxYear]||(taxEstimateDrafts[taxYear]={filingStatus:'',otherIncome:'',excludedBonus:'',deduction:'',withholding:'',payments:''})}
+function taxEstimateDraft(){return taxEstimateDrafts[taxYear]||(taxEstimateDrafts[taxYear]={filingStatus:'',otherIncome:'',excludedBonus:'',deduction:'',withholding:'',payments:'',qualifiedOvertime:''})}
 function taxEstimateSet(field,value){
- if(!['filingStatus','otherIncome','excludedBonus','deduction','withholding','payments'].includes(field))return false;
+ if(!['filingStatus','otherIncome','excludedBonus','deduction','withholding','payments','qualifiedOvertime'].includes(field))return false;
  taxEstimateDraft()[field]=String(value||'');
  const node=document.getElementById('bt-tax-live');
  if(node)node.innerHTML=renderTaxEstimateResult();
@@ -4793,14 +4811,14 @@ function taxEstimateReset(){delete taxEstimateDrafts[taxYear];taxPayImportState=
 function taxEstimateInputs(yrE){
  const d=taxEstimateDraft(),income=yrE.reduce((sum,e)=>sum+Number(e.bonus||0),0);
  return window.BTFederalTax?.estimate({year:taxYear,filingStatus:d.filingStatus,otherIncome:d.otherIncome,
-  bonusAmount:income,excludedBonus:d.excludedBonus,deduction:d.deduction,withholding:d.withholding,payments:d.payments})||{ok:false,reason:'unavailable'};
+  bonusAmount:income,excludedBonus:d.excludedBonus,deduction:d.deduction,withholding:d.withholding,payments:d.payments,qualifiedOvertime:d.qualifiedOvertime})||{ok:false,reason:'unavailable'};
 }
 function renderTaxEstimateResult(){
  const yrE=taxEntriesForYear(taxYear).filter(e=>!window.BT360||window.BT360.scope(e));
  const result=taxEstimateInputs(yrE),money=x=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:2}).format(x);
  if(!window.BTFederalTax?.years.includes(Number(taxYear)))return '<div class="bt-tax-wait">No IRS calculator for '+esc(taxYear)+' yet. Your bonus receipts remain available below; no future-year rates are assumed.</div>';
  if(!result.ok){
-  const need={'filing-status':'Choose a filing status to begin.','other-income':'Enter your estimated full-year non-bonus ordinary income to calculate.','excluded-bonus':'Excluded bonus amount must be between $0 and recorded bonuses.','deduction':'Enter a valid deduction amount.','prepayments':'Check the withholding and payment amounts.','bonus-amount':'Check recorded bonus amounts.'};
+  const need={'filing-status':'Choose a filing status to begin.','other-income':'Enter your estimated full-year non-bonus ordinary income to calculate.','excluded-bonus':'Excluded bonus amount must be between $0 and recorded bonuses.','deduction':'Enter a valid deduction amount.','prepayments':'Check the withholding and payment amounts.','bonus-amount':'Check recorded bonus amounts.','qualified-overtime':'Enter a valid qualified overtime premium amount.','overtime-filing-status':'Married filing separately cannot claim this overtime deduction.'};
   return '<div class="bt-tax-wait" role="status">'+esc(need[result.reason]||'Add the inputs above to calculate.')+'</div>';
  }
  const refund=result.balance!==null&&result.balance<0;
@@ -4809,17 +4827,19 @@ function renderTaxEstimateResult(){
   :'<div class="bt-tax-balance"><span>'+(refund?'Possible federal refund':'Possible federal balance to pay')+'</span><b>'+money(Math.abs(result.balance))+'</b><small>Federal income tax minus entered annual federal withholding and estimated payments. This is not an IRS bill or guaranteed refund.</small></div>';
  return '<div class="bt-tax-calc-grid"><div><span>Additional tax on tracked bonuses</span><strong>'+money(result.bonusTax)+'</strong><small>Estimated amount to set aside for these receipts</small></div><div><span>Estimated total federal income tax</span><strong>'+money(result.federalTax)+'</strong><small>Before withholding or payments</small></div></div>'
   +resultLine
+  +(result.qualifiedOvertime>0?'<p class="bt-tax-overtime-result">Estimated qualified overtime deduction: <b>'+money(result.overtimeDeduction)+'</b> from '+money(result.qualifiedOvertime)+' of reported eligible premium.'+(result.overtimePhaseoutEstimated?' Income exceeds the phaseout threshold; the reduction uses an approximate MAGI and needs review.':'')+'</p>':'')
   +'<p class="bt-tax-method">Ordinary taxable income: '+money(result.taxable)+' · Deduction: '+money(result.deduction)+(result.usedStandard?' (standard)':' (custom)')+' · Top ordinary bracket reached: '+Math.round(result.marginalRate*100)+'%. Bonus increment compares tax with and without '+money(result.taxableBonus)+' of included bonuses.</p>';
 }
 function renderTaxEstimator(yrE,audience){
  const d=taxEstimateDraft(),supports=window.BTFederalTax?.years.includes(Number(taxYear));
- const field=(id,label,desc,value)=>'<label class="bt-tax-field" for="'+id+'"><span>'+label+'</span><input id="'+id+'" type="number" min="0" max="1000000000" step="0.01" inputmode="decimal" placeholder="0.00" value="'+esc(value)+'" '+(desc?'aria-describedby="'+desc+'" ':'')+'oninput="taxEstimateSet(\''+({ 'bt-tax-other':'otherIncome','bt-tax-exclude':'excludedBonus','bt-tax-deduct':'deduction','bt-tax-withheld':'withholding','bt-tax-paid':'payments'}[id])+'\',this.value)"></label>';
+ const field=(id,label,desc,value)=>'<label class="bt-tax-field" for="'+id+'"><span>'+label+'</span><input id="'+id+'" type="number" min="0" max="1000000000" step="0.01" inputmode="decimal" placeholder="0.00" value="'+esc(value)+'" '+(desc?'aria-describedby="'+desc+'" ':'')+'oninput="taxEstimateSet(\''+({ 'bt-tax-other':'otherIncome','bt-tax-exclude':'excludedBonus','bt-tax-deduct':'deduction','bt-tax-withheld':'withholding','bt-tax-paid':'payments','bt-tax-ot':'qualifiedOvertime'}[id])+'\',this.value)"></label>';
  let h='<section class="bt-tax-estimator" aria-label="Federal tax estimate"><div class="bt-tax-title"><div><span class="bt-tax-eyebrow">FEDERAL · '+taxYear+'</span><h2>IRS tax estimate</h2></div><span class="bt-tax-chip">Estimate only</span></div>';
  h+='<div id="bt-tax-pay-upload">'+renderTaxJsonPanel()+'</div>';
  h+='<p class="bt-tax-lead">Automatically uses your recorded '+(audience==='all'?'personal and business':audience)+' bonus receipts. Add your income to estimate the extra federal tax—not just a flat percentage.</p>';
  h+='<div class="bt-tax-config"><label class="bt-tax-field" for="bt-tax-status"><span>Filing status</span><select id="bt-tax-status" onchange="taxEstimateSet(\'filingStatus\',this.value)"><option value="">Choose status</option>'+Object.entries(window.BTFederalTax?.status||{}).map(([v,label])=>'<option value="'+v+'"'+(d.filingStatus===v?' selected':'')+'>'+esc(label)+'</option>').join('')+'</select></label>';
  h+=field('bt-tax-other','Other annual ordinary income','bt-tax-income-help',d.otherIncome)+'</div>';
  h+='<p class="bt-tax-help" id="bt-tax-income-help">Expected full-year wages and other ordinary income before the standard deduction, excluding bonuses listed here. Not just take-home pay. Leave out preferentially taxed capital gains.</p>';
+ h+='<div class="bt-tax-overtime-field">'+field('bt-tax-ot','Qualified overtime premium ($) · optional','bt-tax-ot-help',d.qualifiedOvertime)+'</div><p class="bt-tax-help" id="bt-tax-ot-help">Only eligible overtime pay above your regular rate (usually the extra 0.5×), <b>not</b> the whole overtime paycheck. For 2026, check W-2 box 12 code TT or your employer\'s qualified overtime statement. Leave blank if unknown.</p>';
  h+='<div id="bt-tax-live" aria-live="polite">'+renderTaxEstimateResult()+'</div>';
  h+='<details class="bt-tax-options"><summary>Withholding & adjustments <span>Optional</span></summary><div class="bt-tax-option-body"><p>Enter projected <b>full-year</b> federal withholding to estimate a potential balance or refund, not just tax on bonuses.</p>';
  h+='<div class="bt-tax-config">'+field('bt-tax-withheld','Federal income tax withheld','',d.withholding)+field('bt-tax-paid','Estimated payments','',d.payments)+field('bt-tax-exclude','Exclude receipts ($)','',d.excludedBonus)+field('bt-tax-deduct','Custom deduction ($)','',d.deduction)+'</div>';
