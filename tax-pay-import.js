@@ -42,8 +42,15 @@
   const daysElapsed=Math.floor((day-Date.UTC(year,0,1))/86400000)+1;
   const daysInYear=(Date.UTC(year+1,0,1)-Date.UTC(year,0,1))/86400000;
   const factor=daysInYear/daysElapsed;
-  const wageBasis=data.federalTaxableWagesYtd===null?'gross-pay-proxy':'federal-taxable-wages';
-  const wageYtd=data.federalTaxableWagesYtd===null?data.grossPayYtd:data.federalTaxableWagesYtd;
+  // Federal taxable pay often excludes 401(k) deferrals and qualifying
+  // health premiums. These YTD categories form a PROXY, not verified W-2 Box 1.
+  const hasTaxable=data.federalTaxableWagesYtd!==null;
+  const hasPretax=data.preTaxDeductionsYtd!==null;
+  if(!hasTaxable&&hasPretax&&data.preTaxDeductionsYtd>data.grossPayYtd)
+   throw Error('Pre-tax deductions exceed gross pay. Check the screenshot values.');
+  const wageBasis=hasTaxable?'federal-taxable-wages':hasPretax?'gross-less-pretax-proxy':'gross-pay-proxy';
+  const wageYtd=hasTaxable?data.federalTaxableWagesYtd:hasPretax?
+   cents(data.grossPayYtd-data.preTaxDeductionsYtd):data.grossPayYtd;
   return {taxYear:year,asOfDate:data.asOfDate,daysElapsed,daysInYear,wageBasis,
    wageYtd,annualIncome:cents(wageYtd*factor),
    federalWithheldYtd:data.federalIncomeTaxWithheldYtd,
