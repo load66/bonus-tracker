@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: codex — v3.6.67 — codex/v3.6.67-source-watch-integrity
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
