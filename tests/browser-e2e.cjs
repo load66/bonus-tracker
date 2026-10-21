@@ -1145,9 +1145,14 @@ async function exercise(name,engine,url){
     await page.locator('#bt_confirm_overlay').getByRole('button',{name:'Enable and verify',exact:true}).click();
     await page.getByText('Preview recovery',{exact:true}).waitFor();
     check('enabled switch reflects verified protection',await page.locator('#cloud-auto-toggle').isChecked()&&await page.locator('#cloud-protection').getAttribute('data-state')==='protected');
-    check('verified protection summary fits a compact mobile card without hiding retention help',
-      await page.locator('#cloud-protection').evaluate(e=>e.getBoundingClientRect().height<280&&e.scrollWidth<=e.clientWidth+1)
-      &&await page.locator('#cloud-retention-status').innerText().then(t=>t.includes('latest backup')));
+    const cloudCardLayout=await page.locator('#cloud-protection').evaluate(e=>({
+      height:e.getBoundingClientRect().height,scrollWidth:e.scrollWidth,clientWidth:e.clientWidth,
+      retentionHelpAvailable:!!e.querySelector('#cloud-retention-status')?.textContent?.trim(),
+      retentionCollapsed:!e.querySelector('#cloud-retention-details')?.open
+    }));
+    check('verified protection summary fits a compact mobile card with truthful retention detail: '+JSON.stringify(cloudCardLayout),
+      cloudCardLayout.height<280&&cloudCardLayout.scrollWidth<=cloudCardLayout.clientWidth+1
+      &&cloudCardLayout.retentionCollapsed&&cloudCardLayout.retentionHelpAvailable);
     check('legacy export reminder is removed',await page.locator('.bk-remind').count()===0);
     await page.locator('#cloud-auto-toggle').click();await page.locator('#bt_confirm_overlay').getByRole('button',{name:'Cancel',exact:true}).click();
     check('canceling disable keeps automatic backup on',await page.locator('#cloud-auto-toggle').isChecked());
