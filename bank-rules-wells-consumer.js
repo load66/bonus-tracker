@@ -1,4 +1,4 @@
-/* Release 3.6.69: canonical bank rules remain unchanged; requirement dialog validation only. */
+/* Release 3.6.70: canonical rules remain unchanged; requirement save rollback only. */
 /*
  * filename: bank-rules-wells-consumer.js
  * version: 3.5.2
