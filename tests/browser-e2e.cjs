@@ -539,7 +539,17 @@ async function exercise(name,engine,url){
     check('synthetic close rules were expressly saved rather than inferred',await page.evaluate(()=>entries[0].earlyCloseFee===0&&/No early closing fee/.test(entries[0].feeScheduleRaw)));
     await page.getByRole('button',{name:'Record deposit'}).click();
     check('requirements dialog leaves unknown actual date blank',await page.locator('#req_date').inputValue()==='');
-    await page.locator('#req_date').fill('2026-04-01');await button('Save').click();await button('OK').click();
+    check('requirements dialog explicitly asks for an actual past date',await page.getByRole('dialog',{name:'Requirement completed'}).isVisible()&&await page.locator('#req_date').getAttribute('max')!==null);
+    const beforeInvalidRequirement=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
+    await button('Save date').click();
+    check('blank requirement date keeps dialog and shows focused inline error',await page.locator('#req-date-error').isVisible()&&await page.locator('#req_date').evaluate(e=>document.activeElement===e&&e.getAttribute('aria-invalid')==='true'));
+    check('missing completion date does not write records',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,beforeInvalidRequirement));
+    await page.locator('#req_date').fill('2099-01-01');await button('Save date').click();
+    check('future requirement date is rejected with preserved draft',await page.locator('#req-date-error').innerText().then(t=>t.includes('future'))&&await page.locator('#req_date').inputValue()==='2099-01-01');
+    check('future completion date does not write records',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,beforeInvalidRequirement));
+    await page.locator('#req_date').fill('2026-04-01');
+    check('correcting the date clears the inline error',await page.locator('#req-date-error').count()===0&&await page.locator('#req_date').getAttribute('aria-invalid')===null);
+    await button('Save date').click();await button('OK').click();
     check('requirements and payout stay separate',(await record()).reqMet==='2026-04-01'&&!(await record()).bonusRecd);
     await page.getByRole('button',{name:/^Confirm received/}).click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('Review experience').click();
     check('payment success offers optional evidence review without assuming a method result',await page.evaluate(()=>dpEditor.evidenceStage==='bonus'&&!dpEditor.confirmedByUser));
