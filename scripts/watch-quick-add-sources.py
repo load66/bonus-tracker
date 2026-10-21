@@ -33,6 +33,18 @@ BLOCK = re.compile(r'(access denied|request blocked|verify you are human|captcha
                    r'error\s*403|please enable javascript to continue|bot detection)', re.I)
 
 
+# These are *review hints*, not verified changes to a promotion's terms.
+# Store only SHA-256 fingerprints of public clauses; never copy bank page text.
+REVIEW_CATEGORIES = {
+    'bonus_amount': re.compile(r'(?:\bbonus\b|\bearn\b|\breward\b|cash offer)', re.I),
+    'monthly_fees': re.compile(r'(?:\bfee\b|\bmonthly\b|\bwaiv\w*\b|\bmaintenance\b)', re.I),
+    'direct_deposit': re.compile(r'(?:\bdirect deposits?\b|\bqualifying deposits?\b|\bpayroll\b)', re.I),
+    'deadlines': re.compile(r'(?:\bwithin\s+\d+\s+days?\b|\bdeadline\b|\bexpires?\b|\bexpiration\b|\bby\s+\w+\s+\d{1,2}\b)', re.I),
+    'eligibility': re.compile(r'(?:\beligib\w*\b|\bnew customers?\b|\bprevious customers?\b|\bresiden\w*\b|\bmember\w*\b)', re.I),
+    'closure_rules': re.compile(r'(?:\bearly clos\w*\b|\bclose account\b|\bclawback\b|\bforfeit\b)', re.I),
+}
+
+
 class VisibleText(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
@@ -78,8 +90,8 @@ class BankRedirect(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(request, fp, code, msg, headers, newurl)
 
 
-def material_hash(raw):
-    """Fingerprint relevant rendered page text, NOT volatile raw HTML assets."""
+def material_lines(raw):
+    """Keep source text in process; never retain public page excerpts in JSON."""
     parser = VisibleText()
     parser.feed(raw.decode('utf-8', errors='replace'))
     body = html.unescape(''.join(parser.fragments))
@@ -91,10 +103,35 @@ def material_hash(raw):
         if FOCUS.search(normalized) and 24 <= len(normalized) <= 700:
             lines.append(normalized)
     unique = sorted(set(lines))
-    # Empty/blocked pages cannot establish a document fingerprint.
     if len(unique) < 3 or sum(map(len, unique)) < 150:
         raise ValueError('Not enough relevant official terms to monitor')
-    return hashlib.sha256('\n'.join(unique).encode('utf-8')).hexdigest()
+    return unique
+
+
+def material_hash(raw):
+    """Fingerprint relevant rendered text, independent of volatile HTML."""
+    lines = material_lines(raw)
+    return hashlib.sha256('\n'.join(lines).encode('utf-8')).hexdigest()
+
+
+def material_observation(raw):
+    """Bounded category digests allow review hints without retaining page copy."""
+    lines = material_lines(raw)
+    signals = {}
+    for category, pattern in REVIEW_CATEGORIES.items():
+        matching = [line for line in lines if pattern.search(line)]
+        if matching:
+            signals[category] = hashlib.sha256('\n'.join(matching).encode('utf-8')).hexdigest()
+    return {'digest': hashlib.sha256('\n'.join(lines).encode('utf-8')).hexdigest(), 'signals': signals}
+
+
+def valid_signals(value):
+    if not isinstance(value, dict) or len(value) > len(REVIEW_CATEGORIES):
+        return None
+    if any(category not in REVIEW_CATEGORIES or not isinstance(digest, str) or not HEX.fullmatch(digest)
+           for category, digest in value.items()):
+        return None
+    return dict(value)
 
 
 def fetch_hash(url, bank):
@@ -114,7 +151,7 @@ def fetch_hash(url, bank):
         raw = response.read(1_250_001)
         if len(raw) > 1_250_000:
             raise ValueError('Official page exceeds safe bounded size')
-    return material_hash(raw)
+    return material_observation(raw)
 
 
 def valid_old(row, url):
@@ -126,27 +163,56 @@ def valid_old(row, url):
 def update_row(url, prev, observed, timestamp):
     base = prev.get('baselineHash')
     pending = bool(prev.get('changeAt'))
+    baseline_signals = valid_signals(prev.get('baselineSignals'))
+    observed_signals = valid_signals(prev.get('observedSignals'))
+    sticky = prev.get('reviewSignals') if isinstance(prev.get('reviewSignals'), list) else []
+    sticky = [x for x in sticky if x in REVIEW_CATEGORIES or x == 'other_terms'][:7]
     row = {
         'url': url,
         'status': 'unavailable',
         'baselineHash': base if base else None,
-        'observedHash': prev.get('observedHash') if prev.get('observedHash') and HEX.fullmatch(prev['observedHash']) else None,
+        'observedHash': prev.get('observedHash') if isinstance(prev.get('observedHash'), str) and HEX.fullmatch(prev['observedHash']) else None,
         'observedAt': prev.get('observedAt') if prev.get('observedAt') else None,
         'checkedAt': timestamp,
         'changeAt': prev.get('changeAt') if pending else None,
+        'baselineSignals': baseline_signals,
+        'observedSignals': observed_signals,
+        'reviewSignals': sticky,
     }
     if observed is None:
         return row
-    row['observedHash'] = observed
+    # Preserve legacy hash-only observers used in the original synthetic tests.
+    if isinstance(observed, dict):
+        digest = observed.get('digest')
+        signals = valid_signals(observed.get('signals'))
+    else:
+        digest, signals = observed, None
+    if not isinstance(digest, str) or not HEX.fullmatch(digest):
+        return row
+    row['observedHash'] = digest
     row['observedAt'] = timestamp
+    row['observedSignals'] = signals
     if not base:
-        row['baselineHash'] = observed
-        row['status'] = 'baseline'  # first observation is NOT source verification
-    elif observed != base or pending:
+        row['baselineHash'] = digest
+        row['baselineSignals'] = signals
+        row['status'] = 'baseline'  # baseline is NOT source approval
+    elif digest != base or pending:
         row['status'] = 'changed'
-        row['changeAt'] = row['changeAt'] or timestamp  # sticky until human review
+        row['changeAt'] = row['changeAt'] or timestamp
+        if digest != base:
+            if baseline_signals is not None and signals is not None:
+                changed = [k for k in REVIEW_CATEGORIES if baseline_signals.get(k) != signals.get(k)]
+            else:
+                changed = ['other_terms']  # Do not invent specific changes.
+            if not changed:
+                changed = ['other_terms']
+            row['reviewSignals'] = list(dict.fromkeys(sticky + changed))[:7]
     else:
         row['status'] = 'unchanged'
+        # A legacy baseline can safely adopt category digests only while its
+        # ENTIRE material fingerprint still matches the original baseline.
+        if baseline_signals is None and signals is not None:
+            row['baselineSignals'] = signals
     return row
 
 
