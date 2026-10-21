@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.69: inline validation of actual requirement completion dates.
-const V = 'bt-v3.6.69-reqdate1';
+// Version 3.6.70: atomic requirement completion saving and safe retry.
+const V = 'bt-v3.6.70-reqatomic1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
