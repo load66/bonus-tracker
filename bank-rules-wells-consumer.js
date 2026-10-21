@@ -1,4 +1,4 @@
-/* Release 3.6.67: preserved unchanged canonical rules during cloud recovery upgrade. */
+/* Release 3.6.68: canonical bank rules retained unchanged; datapoint filtering only. */
 /*
  * filename: bank-rules-wells-consumer.js
  * version: 3.5.2
