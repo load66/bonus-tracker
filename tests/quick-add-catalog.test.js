@@ -180,8 +180,8 @@ async function watchQueueRegression(){
   snapshot.records['Capital One'].sources.promotion.url='https://www.capitalone.com.attacker.invalid/offer';
   await api.refreshWatch(true);
   assert.equal(api.reviewQueue().issues.some(x=>x.url.includes('attacker')),false);
-  assert.equal(api.status('Capital One').kind,'changed',
-    'Untrusted watch payload may not certify activity or alter curated catalog terms');
+  assert.equal(api.status('Capital One').kind,'stale',
+    'Wrong-host watch rows must fail closed and never borrow earlier change evidence');
   console.log('Source review queue regression PASS: sticky change, unavailable/stale, approved URLs, no auto eligibility');
 }
 watchQueueRegression().catch(e=>{console.error(e);process.exitCode=1});
