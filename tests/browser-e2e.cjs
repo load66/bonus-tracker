@@ -539,7 +539,7 @@ async function exercise(name,engine,url){
     check('synthetic close rules were expressly saved rather than inferred',await page.evaluate(()=>entries[0].earlyCloseFee===0&&/No early closing fee/.test(entries[0].feeScheduleRaw)));
     await page.getByRole('button',{name:'Record deposit'}).click();
     check('requirements dialog leaves unknown actual date blank',await page.locator('#req_date').inputValue()==='');
-    await page.locator('#req_date').fill('2026-04-01');await button('Save').click();await button('OK').click();
+    await page.locator('#req_date').fill('2026-04-01');await button('Confirm date').click();await button('OK').click();
     check('requirements and payout stay separate',(await record()).reqMet==='2026-04-01'&&!(await record()).bonusRecd);
     await page.getByRole('button',{name:/^Confirm received/}).click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('Review experience').click();
     check('payment success offers optional evidence review without assuming a method result',await page.evaluate(()=>dpEditor.evidenceStage==='bonus'&&!dpEditor.confirmedByUser));
