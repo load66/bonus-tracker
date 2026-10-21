@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex — v3.6.74 — codex/v3.6.74-atomic-milestone-clear
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.74 atomic clear of requirement/payout milestones (`codex/v3.6.74-atomic-milestone-clear`): clearing either recorded requirement-completed or bonus-received date now snapshots all existing authorized user keys, verifies account and companion writes, rolls back incomplete storage/history and restores the original in-memory entry on failure. The mobile dialog retains the date and, for bonus payments, the amount and method; inline failure guidance allows explicit Clear retry without false success. Existing separate bonus/requirements state and confirmation remain intact. Injected-write rollback, successful retry and Chromium/WebKit browser regressions added. No provider calls, bank rules, schemas, backend, R2 settings or actual stored records modified. App assets/cache v3.6.74. Next: PR unit/browser verification and release verifier, squash-merge on green, then verify GitHub Pages/main release and cache.
+
 
 - v3.6.73 requirement completion atomic-save fix (`codex/v3.6.73-requirement-save-atomicity`): rebased the verified rollback/retry behavior from stale PR #253 onto production v3.6.72 without downgrading source review, cloud recovery or styling. Failed or false-return requirement saves restore exact entry history and companion profile/requirements storage, keep the original selected date, and surface an inline retry error; successful retry saves date separately from bonus receipt. Synthetic unit and Chromium/WebKit failed-write regression checks included. No bank/fee/canonical eligibility rules, personal account contents, persistence keys, backend provider calls or R2 objects changed. Version and service-worker cache v3.6.73. Next: pass PR unit/browser CI, verify release, squash merge only if green, verify Pages and exact assets.
 
