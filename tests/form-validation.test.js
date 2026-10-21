@@ -83,6 +83,13 @@ assert.equal(s.saveEntryFromButton(fakeButton,{preventDefault(){},stopPropagatio
  assert.equal(run('modal.tcSourceRaw'),syntheticRaw,'Reviewed terms must be attached to draft for final save');
  assert.equal(prematureSourceWrites,0,'Applying fields wrote terms to persistent source store before account save');
  assert.equal(JSON.stringify([...storage]),beforeAutomation,'Applying draft fields changed persisted data');
+ // A discarded editor must not be reused through the global window mirror.
+ run('closeModal()');
+ assert.equal(run('modal'),null,'Discarded editor must be cleared from the active model');
+ s.tcApplyReviewed();
+ assert.equal(run('modal.earlyCloseFee'),null,'Reopened automated draft inherited an old early-close fee');
+ assert.equal(run('modal.closeRestrictionType'),'manual-review','Reopened automated draft inherited an old closure policy');
+ assert.equal(JSON.stringify([...storage]),beforeAutomation,'New automated draft persisted records before Save');
  s.tcV3Analyze=originalAnalyze;s.tcV3SaveSourceForCurrentEntry=originalSourceWrite;
  s.document.getElementById=originalGetElement;s.document.querySelectorAll=originalQueryAll;
  run('closeModal()');
