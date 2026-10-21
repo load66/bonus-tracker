@@ -141,6 +141,10 @@ setTimeout(()=>{
 
     // Both destructive milestone clears must roll back all companion writes and keep retry context.
     run("entries=[{id:'SYN-CLEAR-01',bank:'Synthetic Clear Audit',accountType:'personal',opened:'2026-01-01',reqMet:'2026-04-01',bonusRecd:'2026-04-15',bonus:200,notes:'Keep this',history:[{at:'2026-04-15',type:'bonus_received',detail:'Paid'}],checklist:[],customTimers:[]}];sv(SK,entries);syncProfileEventsFromEntry(entries[0]);refreshSavedReqFromEntry(entries[0]);reqPrompt={entryId:'SYN-CLEAR-01',bank:'Synthetic Clear Audit',date:'2026-04-01',hasExisting:true};");
+    run('confirmClearReqMet()');
+    assert.equal(run('reqPrompt'),null,'Requirement editor must yield to confirmation overlay');
+    run('cancelCfm()');
+    assert.equal(run('reqPrompt.date'),'2026-04-01','Cancel must restore requirement editor without writing');
     const clearBefore=run('JSON.stringify(entries)');
     const storageBeforeClear=JSON.stringify([...storage].sort((a,b)=>a[0].localeCompare(b[0])));
     const commitBeforeClear=sandbox.BTPersistence.commit;
@@ -163,6 +167,10 @@ setTimeout(()=>{
     assert.equal(run('entries[0].bonusRecd'),'2026-04-15','Clearing requirement must not clear bonus payment');
     assert.equal(run("entries[0].history.filter(h=>h.type==='req_met_cleared').length"),1,'Only successful requirement clear adds history once');
     run("cfm=null;rcvPrompt={entryId:'SYN-CLEAR-01',bank:'Synthetic Clear Audit',date:'2026-04-15',reqDate:'',dp:'Employer payroll',bonus:200,hasExisting:true};");
+    run('confirmClearRcv()');
+    assert.equal(run('rcvPrompt'),null,'Payout editor must yield to confirmation overlay');
+    run('cancelCfm()');
+    assert.equal(run('rcvPrompt.bonus'),200,'Cancel must restore exact payout review');
     const beforeBonusClear=run('JSON.stringify(entries)');
     const storageBeforeBonusClear=JSON.stringify([...storage].sort((a,b)=>a[0].localeCompare(b[0])));
     sandbox.BTPersistence.commit=function(store,writes,...args){
