@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: codex — v3.6.64 — codex/v3.6.64-source-change-categories
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.64 public offer text-category review signals (`codex/v3.6.64-source-change-categories`): scheduled official bank-page monitor now fingerprints bounded bonus/fee/deposit/deadline/eligibility/closure wording separately while retaining its whole-page material hash. Public JSON stores category digests and sticky affected categories only, never extracted legal page text or account data. Legacy hash-only baselines migrate only upon unchanged full hash; otherwise a changed page is classified conservatively as other terms. Bank Offers review queue displays allowlisted "Possible:" labels instead of claiming confirmed changes, with only pinned official URLs. Failed site checks and reverts preserve original review flags; no users' enrolled terms, financial records, eligibility engines, backend, backups or persistent user keys changed. Added pure mock Python, JS allowlist, Chromium/WebKit source review and no-write regressions. App/SW release v3.6.64. Next: full bonus/cloud/UI, browser matrix, release verifier and Pages deployment.
+
 
 - v3.6.63 Quick Add scroll stability (`codex/v3.6.63-quick-add-scroll-stability`): restores focused Quick Add navigation against a production-only race where newly published source watch JSON can arrive during the panel's scroll-to-view and trigger asynchronous global rerender. The read-only source monitor updates its in-memory snapshot without replacing Quick Add; Bank Offers alone rerenders its source review queue. No bank records, canonical eligibility/fee terms, account data, storage schema, or backend altered. Added deterministic no-rerender unit and Chromium/WebKit DOM/scroll browser test; app and SW cache v3.6.63. Next: full PR and main verification, Pages deploy, ensure seeded source watch remains public and user data unchanged.
 
