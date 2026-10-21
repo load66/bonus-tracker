@@ -1,10 +1,13 @@
 # Audit progress
 
-Active agent: codex — v3.6.66 — codex/v3.6.66-source-watch-integrity
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.66 public official-source watch integrity (`codex/v3.6.66-source-watch-integrity`): incomplete source-watch snapshots now flag every missing approved promotion or fee page instead of appearing complete; source-only changed status remains visible even if scheduled checks are late or another source has an outage. Public review queue shows both partial coverage and overdue material change without borrowing a different source's terms or URLs. No saved financial records, enrolled terms, canonical rules, storage keys, backend or bank providers changed. Added mock unit and Chromium/WebKit browser checks; version/cache v3.6.66. Next: full bonus/cloud/UI + browser matrix and latest-release verifier, merge green PR, verify Pages production deployment.
+
 
 - v3.6.65 complete-source Top matches gate (`codex/v3.6.65-top-match-proof-gate`): official *geographic* applicability alone no longer makes a high-dollar source post a top match. Top ranking requires current official promotion amount and customer qualification/activity proof plus official fee/waiver evidence, correct source role/url alignment, and no unresolved monitored source change for the same exact URL. Stale, upper-bound, incomplete or unverified offers remain discoverable but no longer falsely occupy top-ranked recommendations. Synthetic bonus and browser checks cover freshness, incomplete fees/eligibility and read-only tracker invariants. Frontend/service-worker bumped v3.6.65; no backend, records, canonical rules, storage keys or imports changed. Next: pass unit and Chromium/WebKit CI, release verifier, then merge and verify Pages production deployment.
 
