@@ -74,7 +74,7 @@ assert.match(sandbox.BT360.detailPanels(e),/Direct deposits totaling \$10,000/);
   const matchMarkup=sandbox.BT360.churnReviewMarkup(rows);
   assert.match(matchMarkup,/New bonus matches/);
   assert.match(matchMarkup,/\$325 potential signup bonus/);
-  assert.match(matchMarkup,/Official offer reward, fees and location checked/);
+  assert.match(matchMarkup,/Current official reward, fees and location checked/);
   assert.doesNotMatch(matchMarkup,/Next reopening reviews|Rule review needed|Review in/);
   assert(sandbox.BT360.upcomingReminders(rows).some(x=>x.kind==='offer'),'Source-verified potential new offer must produce notification');
  }finally{sandbox.BTBankBonusFeed.automaticChurnMatches=oldMatcher;}
