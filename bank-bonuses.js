@@ -404,6 +404,8 @@
   }
   let lastAutomaticScanAt=0;
   function ensureAutomaticChurnScan(){
+    // Browser-only network check; Node/restore test sandboxes expose no fetch.
+    if(typeof fetch!=='function'||typeof AbortController!=='function')return;
     const now=Date.now();
     if(loading||now-lastAutomaticScanAt<15*60000)return;
     lastAutomaticScanAt=now;
