@@ -334,8 +334,8 @@ try{
   assert.match(sheet,/bt-ba-backdrop/);
   assert.match(sheet,/bt-ba-stage/);
   const footerLabel=sandbox.BT360.primaryAction(sheetRecord).label;
-  if(footerLabel==='Confirm requirements')assert.doesNotMatch(sheet,/Update completion date/,'Completion confirmation cannot duplicate the footer');
-  else assert.match(sheet,/Update completion date/);
+  assert.match(sheet,/Update completion date/,'A recorded milestone must remain editable in account actions');
+  assert.notEqual(footerLabel,'Record deposit','The primary action must never mislabel whole-offer completion as one deposit');
   assert.match(sheet,/Edit account/);
   assert.match(sheet,/Add task/);
   assert.match(sheet,/Add timer/);
