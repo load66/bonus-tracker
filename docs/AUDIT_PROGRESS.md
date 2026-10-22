@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex · v3.6.83 · codex/v3.6.83-automated-churn
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.83 automation-first churn (`codex/v3.6.83-automated-churn`): remove the bulky Archive “Next reopening reviews” and manual “Rule review needed” task cards. Load existing public offer/official-availability data automatically on app startup and refresh it while Archive is open, with 15-minute throttle and read-only account matching. Only surface potential current signup offers where canonical saved repeatability, all matching closed account cycles, current official reward, promotion and fee sources, state scope, and unexpired check evidence all agree; otherwise silently omit offers without declaring eligibility. Replace churn-date-only reminder alerts with potential-offer signals; link to the verified bank promotion without auto-applying or rewriting tracker state. Mobile card reuses compact UI, hidden when empty. Synthetic unit/browser tests require source/fee/geographic proof, reject unknown/open/future/stale/conditional cases, validate mobile widths, and show no record writes. Existing archived records and eligibility/fee/payout rules stay unchanged. App and service-worker cache v3.6.83. Next: verify Bonus/Cloud/UI, Chromium/WebKit and release CI; squash-merge only when green, then verify Pages and post-merge.
 
 - v3.6.82 actionable in-app reminders, churn/reopening review planner, and mobile UI (`codex/v3.6.82-alerts-churn-mobile`): derive per-category reminder actions from saved verified date contexts or explicit dated saved reminders, suppress completed requirements and payouts, avoid duplicate reminders by account+kind and unverified churn eligibility, preserve safe close checks. Add review-only planner to Archive with next review order, explicit uncertainty and a Check offers action only after a verified saved date has been reached. Upgrade mobile reminder/reopening cards, 44px targets, responsive 320/375/390/430px layouts, no duplicate CTA. Settings now describe working in-app, session-only preferences; **push/background delivery remains unavailable**. Canonical bank rules, actual eligibility and closed/receipt records remain unchanged. New synthetic unit/browser regressions for date prioritization, no false eligibility, no data writes and mobile fit. Release app+cache v3.6.82. Next: pass all Bonus/Cloud/UI, Chromium/WebKit and release verification; merge then verify main/Pages commit.
 
