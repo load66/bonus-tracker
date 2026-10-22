@@ -2581,9 +2581,23 @@ function buildDatapointGroups(){
 function toggleDPBank(key){dpExpandedBankKey=dpExpandedBankKey===key?'':key;R()}
 function addUserDPForBank(bankEnc){const bank=decodeURIComponent(bankEnc||'');if(!bank)return;dpEditor={type:'user',mode:'new',id:'',bank,method:'',note:'',lastConfirmedAt:'',eventDate:'',outcome:'unknown',confirmedByUser:false,accountType:dpTaskBankKey?buildDatapointGroups().find(g=>g.key===dpTaskBankKey)?.accountType||'':''};dpExpandedBankKey=datapointBankKey(bank);R()}
 function addCommunityDPForBank(bankEnc){const bank=decodeURIComponent(bankEnc||'');if(!bank)return;dpEditor={type:'community',mode:'new',id:'',bank,method:'',result:'',link:''};dpExpandedBankKey=datapointBankKey(bank);R()}
-function openUserDPEditor(id){const item=loadUserDatapoints().find(r=>r.id===id);if(!item)return;dpEditor={...item,type:'user',mode:'edit',originalFingerprint:JSON.stringify(item)};R()}
+function openUserDPEditor(id){const item=loadUserDatapoints().find(r=>r.id===id);if(!item)return;dpEditor={...item,type:'user',mode:'edit',reconfirmed:false,originalFingerprint:JSON.stringify(item)};R()}
 function openCommunityDPEditor(id){const item=loadCommunityDatapoints().find(r=>r.id===id);if(!item)return;dpEditor={...item,type:'community',mode:'edit'};R()}
 function closeDPEditor(){dpEditor=null;R()}
+function dpEvidenceChanged(a,b){
+ return ['bank','method','outcome','eventDate','accountType','product','depositAmount'].some(key=>String(a?.[key]??'')!==String(b?.[key]??''));
+}
+function dpEditorMaterialChange(key,value){
+ if(!dpEditor)return;
+ const d=dpEditor,changed=String(d[key]??'')!==String(value);
+ d[key]=value;
+ if(changed&&d.type==='user'&&d.mode==='edit'){
+  d.reconfirmed=false;
+  d.confirmedByUser=false;
+  const checkbox=document.querySelector('.research-editor .experience-confirm input');
+  if(checkbox)checkbox.checked=false;
+ }
+}
 function saveDPEditor(){if(!dpEditor)return;if(dpEditor.link&&!safeExternalUrl(dpEditor.link)){alert('Use a source link beginning with https:// or http://.');return}const bank=String(dpEditor.bank||'').trim();const method=String(dpEditor.method||'').trim();if(!bank||!method){alert('Bank and datapoint method are required');return}if(dpEditor.type==='user'){
  const d=dpEditor,date=dpValidDate(d.eventDate),confirmed=['worked','failed','mixed'].includes(d.outcome);
  if(d.eventDate&&(!date||date>td())){alert('Use a valid experience date that is not in the future.');return}
@@ -2593,10 +2607,15 @@ function saveDPEditor(){if(!dpEditor)return;if(dpEditor.link&&!safeExternalUrl(d
  const original=idx>=0?rows[idx]:null;
  if(d.mode==='edit'&&(!original||(d.originalFingerprint&&d.originalFingerprint!==JSON.stringify(original)))){alert('This experience changed. Reopen it to review the latest version.');return}
  if(date&&d.cycleOpened&&date<d.cycleOpened){alert('Experience date cannot precede this account opening.');return}
+ const materialChange=!!original&&dpEvidenceChanged(original,{...d,bank,method,eventDate:date});
+ if(materialChange&&original.confirmedByUser&&d.reconfirmed!==true){alert('Confirm the changed result again before saving.');return}
+ const attested=confirmed&&d.confirmedByUser===true;
+ const newAttestation=attested&&(!original||!original.confirmedByUser||materialChange);
  const record=normalizeUserDatapoint({...original,...d,bank,method,note:String(d.note||'').trim(),eventDate:date,
- confirmedByUser:confirmed&&d.confirmedByUser===true,confirmedAt:confirmed?td():'',updatedAt:td(),
+ confirmedByUser:attested,confirmedAt:attested?(newAttestation?td():original?.confirmedAt||''):'',
+ lastConfirmedAt:newAttestation?td():original?.lastConfirmedAt||d.lastConfirmedAt||'',updatedAt:td(),
  revisions:original?[...(original.revisions||[]),{...original,revisions:undefined}]:[]});
- delete record.type;delete record.mode;delete record.originalFingerprint;
+ delete record.type;delete record.mode;delete record.originalFingerprint;delete record.reconfirmed;
  if(idx>=0)rows[idx]=record;else rows.unshift(record);
  try{saveUserDatapoints(rows)}catch(error){alert('Report was not saved. Please retry.');return}
  dpExpandedBankKey=datapointBankKey(record);dpEditor=null;R();return}
@@ -2614,8 +2633,8 @@ function newDPReport(){dpEditor={type:'community',mode:'new',bank:'',method:'',r
 function rDpEditor(){
  const d=dpEditor;if(!d)return'';
  const personal=d.type==='user';
- const field=(key,label,placeholder='',type='text')=>'<div class="fg"><label>'+label+'<input type="'+type+'" value="'+esc(d[key]||'')+'" oninput="dpEditor.'+key+'=this.value" placeholder="'+esc(placeholder)+'"></label></div>';
- const select=(key,label,options)=>'<div class="fg"><label>'+label+'<select aria-label="'+esc(label)+'" onchange="dpEditor.'+key+'=this.value">'+options.map(([v,t])=>'<option value="'+v+'"'+((d[key]||'')===v?' selected':'')+'>'+t+'</option>').join('')+'</select></label></div>';
+ const field=(key,label,placeholder='',type='text')=>{const material=personal&&['bank','method','product','eventDate','depositAmount'].includes(key);const handler=material?"dpEditorMaterialChange('"+key+"',this.value)":'dpEditor.'+key+'=this.value';return '<div class="fg"><label>'+label+'<input type="'+type+'" value="'+esc(d[key]||'')+'" oninput="'+handler+'" placeholder="'+esc(placeholder)+'"></label></div>'};
+ const select=(key,label,options)=>{const material=personal&&['outcome','accountType'].includes(key);const handler=material?"dpEditorMaterialChange('"+key+"',this.value)":'dpEditor.'+key+'=this.value';return '<div class="fg"><label>'+label+'<select aria-label="'+esc(label)+'" onchange="'+handler+'">'+options.map(([v,t])=>'<option value="'+v+'"'+((d[key]||'')===v?' selected':'')+'>'+t+'</option>').join('')+'</select></label></div>'};
  let h='<div class="ov" onclick="closeDPEditor()"><section class="modal research-editor" role="dialog" aria-modal="true" aria-labelledby="dp-editor-title" onclick="event.stopPropagation()"><header class="research-editor-header"><h2 id="dp-editor-title">'+(personal?'My experience':'Source report')+'</h2><p>'+(personal?(d.evidenceStage==='requirement'?'Did the bank count this deposit?':'Which method qualified? Choose Cannot isolate if several were used.'):'Save what happened. Leave unknown details blank.')+'</p></header><div class="research-editor-body">';
  if(personal){
    h+='<p class="experience-context">'+esc(d.bank||'New experience')+(d.accountType?' · '+esc(d.accountType==='business'?'Business':'Personal'):'')+'</p>';
@@ -2623,7 +2642,7 @@ function rDpEditor(){
    h+=field('method','Transfer or activity','e.g. Employer payroll to checking');
    h+=select('outcome','Observed result',[['unknown','Not recorded'],['pending','Still waiting'],['worked','Counted'],['failed',"Didn’t count"],['mixed','Cannot isolate one method']]);
    h+=field('eventDate','Actual experience date','','date');
-   h+='<label class="experience-confirm"><input type="checkbox" '+(d.confirmedByUser?'checked':'')+' onchange="dpEditor.confirmedByUser=this.checked"><span>I confirm this result from my own experience</span></label>';
+   h+='<label class="experience-confirm"><input type="checkbox" '+(d.confirmedByUser?'checked':'')+' onchange="dpEditor.confirmedByUser=this.checked;dpEditor.reconfirmed=this.checked"><span>I confirm this result from my own experience</span></label><p class="research-caveat">Changing a saved method, outcome, or date requires a new confirmation.</p>';
    h+='<details class="experience-optional"><summary>More details</summary>';
    if(d.bank)h+=field('bank','Bank','e.g. Chase');
    h+=select('accountType','Account type',[['','Not specified'],['personal','Personal'],['business','Business']])+field('product','Account / offer')+field('depositAmount','Deposit amount (optional)','','number');
