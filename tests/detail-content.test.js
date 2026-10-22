@@ -334,7 +334,7 @@ try{
   assert.match(sheet,/bt-ba-backdrop/);
   assert.match(sheet,/bt-ba-stage/);
   const footerLabel=sandbox.BT360.primaryAction(sheetRecord).label;
-  if(footerLabel==='Record deposit')assert.doesNotMatch(sheet,/Update completion date/,'Completion confirmation cannot duplicate the footer');
+  if(footerLabel==='Confirm requirements')assert.doesNotMatch(sheet,/Update completion date/,'Completion confirmation cannot duplicate the footer');
   else assert.match(sheet,/Update completion date/);
   assert.match(sheet,/Edit account/);
   assert.match(sheet,/Add task/);
