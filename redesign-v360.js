@@ -843,13 +843,14 @@ function detailPanels(e){
  // Closed records retain saved historical fee presentation, while open
  // in-progress accounts already showed their fee card before Timers.
  if(closed&&!ready)h+=accountSection(e,'fees','Fees & waivers',feeDetail(e),'Saved fees');
- if(closed||ready){const savedDepositHistory=depositLedgerHtml(e,true);if(savedDepositHistory)h+=accountSection(e,'deposits','Deposit activity',savedDepositHistory,'Saved evidence');}
+ if(closed&&!ready){const savedDepositHistory=depositLedgerHtml(e,true);if(savedDepositHistory)h+=accountSection(e,'deposits','Deposit activity',savedDepositHistory,'Saved evidence');}
  if(!closed&&(e.dataPoint||e.completeBonusText||e.notes))h+='<details class="bt366-offer-notes"><summary>Offer notes</summary><p>'+safe([e.dataPoint,e.completeBonusText,e.notes].filter(Boolean).join('\n\n'))+'</p></details>';
  if(ready||code==='HOLD_OPEN'||code==='BONUS_RECEIVED'){
   const items=closeCheckPresentation(e);
   h+='<div data-bt-hold>'+panel(ready?'Close checks':'Hold & close checks',items.map(item=>'<div class="bt360-check '+(item.ok?'done':'unknown')+'"><span class="bt3611-check-icon">'+(item.ok?'✓':'')+'</span><div><b>'+safe(item.label)+'</b><small>'+safe(item.detail)+'</small></div></div>').join(''))+'</div>';
  }
  if(ready)h+=accountDates(e)+accountSection(e,'fees','Fees & waivers',feeDetail(e),'Review saved fees');
+ if(ready){const savedDepositHistory=depositLedgerHtml(e,true);if(savedDepositHistory)h+=accountSection(e,'deposits','Deposit activity',savedDepositHistory,'Saved evidence');}
  if(ready){
   const phoneRow=getPhoneBook().find(row=>{try{return bankIdentity(row.bank).family===bankIdentity(e.bank).family}catch{return row.bank===e.bank}});
   const phone=phoneRow?.[accountAudience(e)]||'';
