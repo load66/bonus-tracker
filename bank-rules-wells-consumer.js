@@ -1,4 +1,4 @@
-/* Release 3.6.82: canonical bank and closure rules unchanged; Read-only alerts and UI only. */
+/* Release 3.6.83: canonical bank and closure rules unchanged; Automatic offer discovery UI only. */
 /*
  * filename: bank-rules-wells-consumer.js
  * version: 3.5.2
