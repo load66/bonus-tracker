@@ -355,6 +355,93 @@ async function exercise(name,engine,url){
     check('deadline wording is visible',await page.locator('input[oninput*="\'requiredDaysText\'"]').inputValue()==='90 calendar days');
     await page.getByRole('button',{name:'Step 4: Review',exact:true}).click();await button('💾 Add account').click();
     await wait(()=>JSON.parse(localStorage.getItem('bt_e_v4')).length===1);
+    // v3.6.80: real click-through journey, fully isolated from stored account data.
+    // A requirement-completed date is not an individual deposit or a paid bonus.
+    const journeyRestore=await page.evaluate(()=>{
+      const backup={
+        entries:JSON.stringify(entries),expanded,tab,
+        keys:getBackupStorageKeys().map(k=>[k,localStorage.getItem(k)]),
+        tracker:localStorage.getItem('bt_e_v4')
+      };
+      const primary={
+        id:'SYN-JOURNEY-DD',bank:'Synthetic Journey DD Bank',accountType:'personal',
+        bonus:250,opened:'2026-09-12',reqDays:90,
+        requiredDaysText:'90 calendar days',
+        completeBonusText:'Receive $1,000 in qualifying direct deposits.',
+        payoutTimingText:'Within 15 calendar days after requirements are met.',
+        customTimers:[{id:'payout-journey',kind:'payout',text:'Bonus payout review',date:'2026-10-25',done:false}],
+        checklist:[]
+      };
+      entries=[primary,{...primary,id:'SYN-JOURNEY-OTHER',bank:'Synthetic Journey Other Bank',
+        completeBonusText:'Complete other qualifying deposits.',customTimers:[]}];
+      tab='tracker';expanded=null;R();
+      return backup;
+    });
+    check('journey starts with two independent banks in Needs you',
+      await page.locator('[data-queue="needs"] [data-attention-id^="SYN-JOURNEY"]').count()===2);
+    await page.locator('[data-attention-toggle="SYN-JOURNEY-OTHER"]').click();
+    check('journey selects the second bank rather than the first',
+      await page.locator('[data-attention-id="SYN-JOURNEY-OTHER"].is-selected').count()===1&&
+      await page.locator('[data-attention-id="SYN-JOURNEY-DD"].is-selected').count()===0);
+    await page.locator('[data-attention-toggle="SYN-JOURNEY-DD"]').click();
+    check('journey switches selection without exposing the other bank actions',
+      await page.locator('[data-attention-id="SYN-JOURNEY-DD"].is-selected .bt360-actions button:visible').count()===2&&
+      await page.locator('[data-attention-id="SYN-JOURNEY-OTHER"] .bt360-actions button:visible').count()===0);
+    check('journey selection never writes bank records',
+      await page.evaluate(backup=>localStorage.getItem('bt_e_v4')===backup.tracker,journeyRestore));
+    await page.locator('[data-attention-id="SYN-JOURNEY-DD"] .bt3643-datapoints').click();
+    check('journey datapoint shortcut is restricted to the selected bank',
+      await page.evaluate(()=>tab==='tips'&&dpTaskBankKey===datapointBankKey(entries[0])));
+    check('journey research does not impersonate a verified personal deposit',
+      await page.locator('.research-caveat').first().innerText().then(t=>t.includes('do not guarantee')));
+    check('journey research is read-only for financial records',
+      await page.evaluate(backup=>localStorage.getItem('bt_e_v4')===backup.tracker,journeyRestore));
+    await page.evaluate(()=>{tab='tracker';R()});
+    await page.locator('[data-attention-id="SYN-JOURNEY-DD"] .bt360-actions .bt360-secondary').click();
+    check('journey opens the precise bank details',
+      await page.locator('.bt360-detail-header h2').innerText()==='Synthetic Journey DD Bank');
+    check('journey requires an all-requirements confirmation, never a single deposit',
+      await page.locator('.bt360-detail-footer .bt360-primary').innerText()==='Confirm requirements');
+    await page.locator('.bt360-detail-footer .bt360-primary').click();
+    check('journey confirmation describes the actual milestone',
+      await page.getByRole('dialog',{name:'Requirement completed'}).innerText().then(t=>t.includes('all requirements were met')));
+    check('journey opening confirmation makes no financial changes',
+      await page.evaluate(backup=>localStorage.getItem('bt_e_v4')===backup.tracker&&entries[0].reqMet===undefined,journeyRestore));
+    await page.getByRole('button',{name:'Cancel',exact:true}).click();
+    check('journey cancellation does not claim a completed requirement',
+      await page.evaluate(()=>!entries[0].reqMet&&!entries[0].bonusRecd));
+    await page.locator('.bt360-detail-footer .bt360-primary').click();
+    await page.locator('#req_date').fill('2026-10-10');
+    await page.getByRole('button',{name:'Save date',exact:true}).click();
+    if(await page.getByRole('button',{name:'Save Anyway',exact:true}).count())
+      await page.getByRole('button',{name:'Save Anyway',exact:true}).click();
+    check('journey records only the explicitly approved requirements-met date',
+      await page.evaluate(()=>entries[0].reqMet==='2026-10-10'&&
+        !entries[0].bonusRecd&&
+        JSON.parse(localStorage.getItem('bt_e_v4')||'[]').find(x=>x.id==='SYN-JOURNEY-DD')?.reqMet==='2026-10-10'));
+    if(await page.getByRole('button',{name:'Review deposit result',exact:true}).count()){
+      await page.getByRole('button',{name:'Review deposit result',exact:true}).click();
+      check('journey optional datapoint review never assumes observed success',
+        await page.evaluate(()=>dpEditor?.evidenceStage==='requirement'&&!dpEditor?.confirmedByUser));
+      await page.getByRole('button',{name:'Skip for now',exact:true}).click();
+    }else if(await page.getByRole('button',{name:'OK',exact:true}).count()){
+      await page.getByRole('button',{name:'OK',exact:true}).click();
+    }
+    await page.getByRole('button',{name:'Back to accounts'}).click();
+    check('journey moves the completed bank from requirements to waiting for payment',
+      await page.locator('[data-queue="waiting"] [data-attention-id="SYN-JOURNEY-DD"]').count()===1&&
+      await page.locator('[data-queue="needs"] [data-attention-id="SYN-JOURNEY-OTHER"]').count()===1&&
+      await page.locator('[data-queue="needs"] [data-attention-id="SYN-JOURNEY-DD"]').count()===0);
+    check('journey never invents a bonus payment',
+      await page.evaluate(()=>!entries[0].bonusRecd&&btNextActionForEntry(entries[0]).kind==='bonus'));
+    await page.evaluate(backup=>{
+      getBackupStorageKeys().forEach(k=>{if(!backup.keys.some(pair=>pair[0]===k))localStorage.removeItem(k)});
+      backup.keys.forEach(([k,v])=>{if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)});
+      entries=JSON.parse(backup.entries);expanded=backup.expanded;tab=backup.tab;
+      dpTaskBankKey='';dpEditor=null;reqPrompt=null;cfm=null;R();
+    },journeyRestore);
+    check('journey restores prior test records byte-for-byte',
+      await page.evaluate(backup=>localStorage.getItem('bt_e_v4')===backup.tracker,journeyRestore));
     check('Needs you uses unboxed PDF heading and standalone priority card',await page.locator('.bt3719-needs > .bt3719-section-title').count()===1&&await page.locator('.bt3641-attention-toggle').count()===1&&await page.locator('.bt3641-attention-item.is-selected').count()===0&&await page.locator('.bt3719-needs.bt360-panel').count()===0);
     check('v3.6.1 panel headings render badges instead of literal HTML',await page.locator('.bt360-panel-title').evaluateAll(rows=>rows.some(e=>e.querySelector('h3')?.textContent==='Needs you'&&e.querySelector('.bt360-count'))&&rows.every(e=>!e.querySelector('h3')?.textContent.includes('<span'))));
     check('90-day deadline is exact',await page.evaluate(()=>reqDeadline(entries[0]))==='2026-05-01');
