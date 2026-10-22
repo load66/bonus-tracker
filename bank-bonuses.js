@@ -363,9 +363,10 @@
   // A match requires a current offer, official promotion AND fee evidence,
   // current official location scope, and a date from the canonical eligibility
   // gate for *every* matching closed cycle. Unknown facts silently fail closed.
-  function automaticChurnMatches(trackerRows){
-    if(!feed||!Array.isArray(trackerRows)||!Array.isArray(feed.offers))return[];
-    const lastChecked=Date.parse(feed.checkedAt),now=Date.now();
+  function automaticChurnMatches(trackerRows,feedOverride=null,officialOverride=null){
+    const catalog=feedOverride||feed,official=officialOverride||officialCatalog;
+    if(!catalog||!Array.isArray(trackerRows)||!Array.isArray(catalog.offers))return[];
+    const lastChecked=Date.parse(catalog.checkedAt),now=Date.now();
     if(!Number.isFinite(lastChecked)||lastChecked>now+60000||now-lastChecked>24*3600000)return[];
     const core=window.BTEligibilityGate;
     if(!core?.validate||!core?.safeEligibilityDate)return[];
@@ -379,7 +380,8 @@
           return core.safeEligibilityDate(e,addD,addM)||'';
         }catch{return''}
       }};
-    const candidates=prioritize(grouped(feed.offers),trackerRows,area,context,'tracker')
+    const groundedOffers=grouped(catalog.offers).map(x=>({...x,officialAvailability:availabilityFor(x,official)}));
+    const candidates=prioritize(groundedOffers,trackerRows,area,context,'tracker')
       .filter(x=>x.match?.kind==='ready'&&x.fit?.kind==='review-first'
         &&x.geo?.proof?.status==='verified'
         &&x.geo.proof.conditions?.length===0
