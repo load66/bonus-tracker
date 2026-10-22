@@ -1,4 +1,4 @@
-/* Release 3.6.79: canonical bank and closure rules unchanged; Datapoint UI only. */
+/* Release 3.6.80: canonical bank and closure rules unchanged; Requirement workflow label only. */
 /*
  * filename: bank-rules-wells-consumer.js
  * version: 3.5.2
