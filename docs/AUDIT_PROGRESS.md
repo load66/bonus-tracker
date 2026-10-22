@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex · v3.6.80 · codex/v3.6.80-workflow-journey
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.80 user-facing requirement completion accuracy and real selected-bank journey (`codex/v3.6.80-workflow-journey`): renamed the footer's ambiguous “Record deposit” command to “Confirm requirements” because it opens the existing **all requirements met** date milestone, not an individual transaction entry. Adds a synthetic Chromium/WebKit end-to-end journey across two bank cards: independent selection, scoped direct-deposit research, unchanged storage for navigation, exact account details, cancel/no-write confirmation, explicit dated requirements-met save, optional unconfirmed observed-result review, transition to waiting-for-payout without falsely marking payment received, and byte-identical tracker restoration. Existing requirement and payout persistence, canonical policy, cloud data, and bonus records unchanged. Release, app assets and service worker v3.6.80. Next: pass PR Bonus/Cloud/UI and browser CI plus release verifier, merge only if green, verify main and GitHub Pages.
 
 - v3.6.79 confirmed Datapoint edit integrity (`codex/v3.6.79-datapoint-reconfirmation`): editing a user's confirmed method, outcome, experience date, bank/account audience, product or deposit amount clears the existing editor attestation. A changed material report requires a fresh user check before saving, including programmatic/stale editor state. Note-only corrections preserve the original confirmation timestamps, while deliberate reconfirmation records the new attestation date; UI-only acknowledgement does not persist to cloud or portable backups. Existing per-cycle history, transactional persistence and Terms/Tracker remain intact. Unit regression covers note-only provenance, unconfirmed edits, stale checkbox bypass, explicit reconfirmation and earlier revision retention. App/JS and service-worker cache v3.6.79. Next: CI Bonus/Cloud/UI, Chromium/WebKit, release verifier; merge only after green and confirm GitHub Pages/main deployment.
 
