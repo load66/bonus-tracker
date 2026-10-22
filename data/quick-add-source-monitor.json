@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-22T05:03:39Z",
+  "generatedAt": "2026-10-22T12:06:30Z",
   "records": {
     "Capital One": {
       "offerKey": "360-checking-250-choice-2026",
@@ -13,10 +13,10 @@
             "monthly_fees": "8d2425462760d1d9389dc56534f67d0c434184974965ce13234610d2cdfe9a8b"
           },
           "changeAt": null,
-          "checkedAt": "2026-10-22T05:03:39Z",
+          "checkedAt": "2026-10-22T12:06:30Z",
           "lastReviewRef": null,
           "lastReviewedAt": null,
-          "observedAt": "2026-10-22T05:03:39Z",
+          "observedAt": "2026-10-22T12:06:30Z",
           "observedHash": "d818f4f779709112539cd7e480d782a3b2275b1c8e2b90a7edb0df50811b10a5",
           "observedSignals": {
             "bonus_amount": "3c4b5070a73a993ef04dfd0f52fea837e77ec68efa05c139c06b6e9e4fdfd1bc",
@@ -37,10 +37,10 @@
             "monthly_fees": "c60e63c1df67da3245bbcbcd9a71f5e4b322f7b93c4d2f9bbe1afc1e9da76893"
           },
           "changeAt": "2026-10-21T17:23:11Z",
-          "checkedAt": "2026-10-22T05:03:39Z",
+          "checkedAt": "2026-10-22T12:06:30Z",
           "lastReviewRef": null,
           "lastReviewedAt": null,
-          "observedAt": "2026-10-22T05:03:39Z",
+          "observedAt": "2026-10-22T12:06:30Z",
           "observedHash": "8ed6fd756a549a38e1d0018751d2b0602092207eead51b29bb15ae6219bf4811",
           "observedSignals": {
             "bonus_amount": "d96e0b72a84c93f175a8400a3e4ee4e3990104d8a3b7743745bf5fa98b40eba3",
@@ -66,10 +66,10 @@
             "monthly_fees": "73520279705ed02c1ec76d7eeb43b5a6bf55ee9d5f44d318e20a56e76b6d5aff"
           },
           "changeAt": null,
-          "checkedAt": "2026-10-22T05:03:39Z",
+          "checkedAt": "2026-10-22T12:06:30Z",
           "lastReviewRef": null,
           "lastReviewedAt": null,
-          "observedAt": "2026-10-22T05:03:39Z",
+          "observedAt": "2026-10-22T12:06:30Z",
           "observedHash": "f2dd00ad54ff8058b3abe6003f554906d5adc6bd984148b7ea9f6c8923386606",
           "observedSignals": {
             "eligibility": "4559d9ff5fd2c8526fabbf4f89657a932b41a5ed4010edd816c7028ebf5e215e",
@@ -89,10 +89,10 @@
             "monthly_fees": "aabd312c8313e10a660b825643620ac3a0b4baf134e7a9e18087182c44bb8da2"
           },
           "changeAt": null,
-          "checkedAt": "2026-10-22T05:03:39Z",
+          "checkedAt": "2026-10-22T12:06:30Z",
           "lastReviewRef": null,
           "lastReviewedAt": null,
-          "observedAt": "2026-10-22T05:03:39Z",
+          "observedAt": "2026-10-22T12:06:30Z",
           "observedHash": "e542479fa91a2a63a9ae96b0340c996c1d119a3d28058296bde735ff689b630f",
           "observedSignals": {
             "bonus_amount": "004cf274d64ce676f50f39259d5b7a2763d2341306674c97f4c84d4e9c163668",
