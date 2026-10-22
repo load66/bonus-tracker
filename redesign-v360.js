@@ -890,6 +890,7 @@ function archive(rows){
  const ready=indexed.filter(x=>x.info?.verified&&dB(td(),x.info.eligible)<=0);
  const soon=indexed.filter(x=>x.info?.verified&&dB(td(),x.info.eligible)>0&&dB(td(),x.info.eligible)<=60);
  const cooling=indexed.filter(x=>!ready.includes(x)&&!soon.includes(x)).sort((a,b)=>(a.info?.eligible||'9999').localeCompare(b.info?.eligible||'9999'));
+ window.BTBankBonusFeed?.ensureAutomaticChurnScan?.();
  h+=churnReviewMarkup(rows);
  h+='<div class="bt360-archive-stats"><div><b>'+ready.length+'</b><small>Eligible now</small></div><div><b>'+soon.length+'</b><small>Within 60 days</small></div><div><b>'+cooling.length+'</b><small>Cooling down</small></div></div>';
  h+='<p class="bt3727-archive-note">Unverified dates are estimates, not confirmed eligibility. Open a bank card for its dates, saved T&C and cycle history.</p>';
@@ -1123,33 +1124,27 @@ function upcomingReminders(rows){
    String(a.bank).localeCompare(String(b.bank))||a.kind.localeCompare(b.kind));
 }
 function churnReviewPlan(rows){
- const plan=rows.filter(e=>e?.closed&&scope(e)).map(e=>{
-  const info=eligibleInfo(e),verified=!!(info?.verified&&info.eligible);
-  const days=info?.eligible?dB(td(),info.eligible):null;
-  return {entryId:e.id,bank:e.bank,verified,date:info?.eligible||'',days:Number.isFinite(days)?days:null,
-    detail:verified?info.label:'Check enrolled eligibility rules and actual event dates'};
- });
- const rank=x=>!x.verified?3:x.days>0?0:x.days>=-30?1:2;
- return plan.sort((a,b)=>rank(a)-rank(b)||
-  (rank(a)===0?a.days-b.days:rank(a)===1?b.days-a.days:0)||a.bank.localeCompare(b.bank));
+ const offers=window.BTBankBonusFeed?.automaticChurnMatches?.(rows)||[];
+ return offers.filter(x=>rows.some(e=>e.closed&&e.bank===x.bank&&accountAudience(e)===x.audience&&scope(e)));
 }
 function churnReviewMarkup(rows){
- const plan=churnReviewPlan(rows);if(!plan.length)return'';
- const cards=plan.slice(0,5).map(x=>{
-  const status=!x.verified?'Rule review needed':x.days<=0?'Saved date reached':'Review in '+x.days+' days';
-  return '<article class="bt3682-plan-row"><span class="bt3682-plan-copy"><b>'+safe(x.bank)+'</b>'+
-    '<small>'+safe(status)+'</small><small>'+safe(x.verified?date(x.date)+' · '+x.detail:x.detail)+'</small></span>'+
-    '<span class="bt3682-plan-actions"><button type="button" class="bt360-secondary" onclick="BT360.openArchived('+arg(x.entryId)+')">Details</button>'+
-    (x.verified&&x.days<=0?'<button type="button" class="bt360-primary" onclick="BT360.viewOffers('+arg(x.bank)+')">Check offers</button>':'')+
-    '</span></article>';
- }).join('');
- return '<section class="bt3682-plan" aria-label="Reopening review planner"><header><h3>Next reopening reviews</h3><small>'+plan.length+' saved cycles</small></header>'+
-  '<p>Review dates come from saved offer terms. They do not prove eligibility for a new offer.</p>'+
+ // No verified offer means no UI card. Never nag for unknown rules or dates.
+ const matches=churnReviewPlan(rows);
+ if(!matches.length)return'';
+ const cards=matches.slice(0,3).map(x=>
+  '<article class="bt3682-plan-row"><span class="bt3682-plan-copy"><b>'+safe(x.bank)+'</b>'+
+  '<small>'+safe(Number.isFinite(x.bonus)?amount(x.bonus)+' potential signup bonus':'Potential signup bonus')+'</small>'+
+  '<small>Current official reward, fees and location checked · personal eligibility not guaranteed</small></span>'+
+  '<span class="bt3682-plan-actions"><a class="bt360-primary bt3683-offer-link" href="'+safe(x.officialUrl)+'" target="_blank" rel="noopener noreferrer">Offer ↗</a></span></article>'
+ ).join('');
+ return '<section class="bt3682-plan bt3683-auto-offers" aria-label="Automated signup bonus matches"><header><h3>New bonus matches</h3><small>'+matches.length+' automatically screened</small></header>'+
+  '<p>Matched to saved churn dates and fresh official sources. The bank must still confirm your eligibility.</p>'+
   '<div class="bt3682-plan-list">'+cards+'</div>'+
-  (plan.length>5?'<p class="bt3682-plan-more">'+(plan.length-5)+' more saved cycles appear in the archive below.</p>':'')+'</section>';
+  (matches.length>3?'<small>Showing the three highest-ranked source-verified matches.</small>':'')+
+  '</section>';
 }
 function settings(){
- const toggles=[['deadlines','Requirements and fee checks','Saved due dates and overdue'],['payouts','Payouts and closing','Dates and verified close checks'],['eligible','Reopening reviews','7 days before and after saved date']];
+ const toggles=[['deadlines','Requirements and fee checks','Saved due dates and overdue'],['payouts','Payouts and closing','Dates and verified close checks'],['eligible','New bonus matches','Only when a current offer is source-verified']];
  const buttons=toggles.map(([k,label,description])=>'<button class="bt360-settings-row" role="switch" aria-checked="'+noticePrefs[k]+'" onclick="BT360.setNotice(\''+k+'\')"><span><b>'+label+'</b><small>'+description+'</small></span><i class="bt360-toggle '+(noticePrefs[k]?'checked':'')+'"></i></button>').join('');
  return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v'+safe(window.BT_APP_VERSION||'3.6.82')+'</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
  cloudSettingsCard()+
