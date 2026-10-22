@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.81: per-cycle direct deposit evidence ledger.
-const V = 'bt-v3.6.81-ledger1';
+// Version 3.6.82: in-app deadline reminders, churn reviews and mobile UX.
+const V = 'bt-v3.6.82-alertplan1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',

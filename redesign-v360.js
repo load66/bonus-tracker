@@ -5,9 +5,9 @@ const scopeKey='bt3628_audience_session',noticeKey='bt360_notice_session';
 const readyExtrasState=new Map();
 const accountSections=new Map();
 let legacyArchiveOpen=false;
-let audience='all', archivePane='waiting', selectedHeroMonth=null, lastHeroYear=null, noticePrefs={deadlines:false,payouts:false,eligible:false}, selectedStage='';
+let audience='all', archivePane='waiting', selectedHeroMonth=null, lastHeroYear=null, noticePrefs={deadlines:true,payouts:true,eligible:true}, selectedStage='';
 try{const saved=sessionStorage.getItem(scopeKey);if(['all','personal','business'].includes(saved))audience=saved}catch{}
-try{const v=JSON.parse(sessionStorage.getItem(noticeKey)||'{}');for(const k of Object.keys(noticePrefs))noticePrefs[k]=v[k]===true}catch{}
+try{const v=JSON.parse(sessionStorage.getItem(noticeKey)||'{}');for(const k of Object.keys(noticePrefs))if(Object.prototype.hasOwnProperty.call(v,k))noticePrefs[k]=v[k]===true}catch{}
 const safe=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 const arg=v=>JSON.stringify(String(v??'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
 const stage=e=>{try{return lifecycleViewForEntry(e)}catch{return {code:'IN_PROGRESS',label:'In progress'}}};
@@ -890,6 +890,7 @@ function archive(rows){
  const ready=indexed.filter(x=>x.info?.verified&&dB(td(),x.info.eligible)<=0);
  const soon=indexed.filter(x=>x.info?.verified&&dB(td(),x.info.eligible)>0&&dB(td(),x.info.eligible)<=60);
  const cooling=indexed.filter(x=>!ready.includes(x)&&!soon.includes(x)).sort((a,b)=>(a.info?.eligible||'9999').localeCompare(b.info?.eligible||'9999'));
+ h+=churnReviewMarkup(rows);
  h+='<div class="bt360-archive-stats"><div><b>'+ready.length+'</b><small>Eligible now</small></div><div><b>'+soon.length+'</b><small>Within 60 days</small></div><div><b>'+cooling.length+'</b><small>Cooling down</small></div></div>';
  h+='<p class="bt3727-archive-note">Unverified dates are estimates, not confirmed eligibility. Open a bank card for its dates, saved T&C and cycle history.</p>';
  const row=(x,offer)=>{
@@ -1061,26 +1062,122 @@ async function backUpNow(){
  try{await window.BTCloudBackup.upload('manual');window.btNotify?.('Cloud backup uploaded and verified.',{title:'Backup verified',tone:'success'})}
  catch{btOpenCloudBackup()}
 }
+
+function validReminderDate(v){
+ const date=String(v||'');
+ return typeof archiveDateValid==='function'&&archiveDateValid(date)&&Number.isFinite(dB(td(),date))?date:'';
+}
+// Read-only and de-duplicated by bank cycle, reminder category and ID.
+// Reminders never confer new-offer eligibility or alter financial records.
+function upcomingReminders(rows){
+ const results=[],seen=new Set();
+ const push=(e,kind,title,detail,due,priority)=>{
+  const id=String(e.id)+'|'+kind;if(seen.has(id))return;
+  seen.add(id);results.push({entryId:e.id,bank:e.bank,kind,title,detail,due:due||'',
+   days:due?dB(td(),due):null,priority});
+ };
+ rows.filter(e=>e?.id&&scope(e)).forEach(e=>{
+  const code=stage(e).code;
+  if(!e.closed){
+   if(noticePrefs.deadlines&&!e.bonusRecd&&['ACTION_NEEDED','IN_PROGRESS'].includes(code)){
+    let next;try{next=window.btNextActionForEntry?.(e)}catch{}
+    const current=next?.task?.context?.confirmed?validReminderDate(next.task.context.date):'';
+    const legacy=!e.reqMet&&typeof reqDeadline==='function'?validReminderDate(reqDeadline(e)):'';
+    const due=current||legacy,days=due?dB(td(),due):null;
+    if(days!==null&&days<=7)push(e,'requirement',days<0?'Review overdue requirement':days===0?'Requirement due today':'Requirement due soon',
+      'Saved requirement deadline · verify qualifying activity',due,days<0?0:1);
+    else if(code==='ACTION_NEEDED'&&!due)push(e,'terms','Review requirement or terms',
+      'Action needed; exact deadline is not confirmed','',2);
+   }
+   if(noticePrefs.payouts&&e.reqMet&&!e.bonusRecd){
+    const due=(Array.isArray(e.customTimers)?e.customTimers:[]).filter(t=>t&&!t.done&&
+      (t.kind==='payout'||/\bbonus (?:payment|payout|expected|pending)\b/i.test(String(t.text||''))))
+      .map(t=>validReminderDate(t.date)).filter(Boolean).sort()[0];
+    if(due&&dB(td(),due)<=7)push(e,'payout',dB(td(),due)<0?'Review delayed bonus':'Review expected payout',
+      'Saved payout reminder; no payment is assumed',due,dB(td(),due)<0?0:2);
+   }
+   if(noticePrefs.payouts&&code==='READY_TO_CLOSE')push(e,'close','Review closing checks',
+     'Confirm actual holds, fees and pending transactions before closing','',1);
+   if(noticePrefs.payouts&&code==='HOLD_OPEN'){
+    const due=(Array.isArray(e.customTimers)?e.customTimers:[]).filter(t=>t&&!t.done&&
+      (['hold','close-review'].includes(t.kind)||/\b(?:hold|close review)\b/i.test(String(t.text||''))))
+      .map(t=>validReminderDate(t.date)).filter(Boolean).sort()[0];
+    if(due&&dB(td(),due)<=7)push(e,'hold','Review saved hold period',
+      'Do not close until all bank-specific restrictions are checked',due,2);
+   }
+   if(noticePrefs.deadlines){
+    const due=(Array.isArray(e.customTimers)?e.customTimers:[]).filter(t=>t&&!t.done&&
+      /\b(?:monthly|maintenance|service) fee\b|\bfee (?:check|review|due)\b/i.test(String(t.text||'')))
+      .map(t=>validReminderDate(t.date)).filter(Boolean).sort()[0];
+    if(due&&dB(td(),due)<=7)push(e,'fee','Review scheduled fee',
+      'Saved fee-check date; verify waiver terms',due,2);
+   }
+  }else if(noticePrefs.eligible){
+   const info=eligibleInfo(e);if(!info?.verified)return;
+   const days=dB(td(),info.eligible);
+   if(days>=-7&&days<=7)push(e,'reopen',days<=0?'Review new bank offer':'Reopening review approaching',
+    'Saved churn date only; check new offer, fees and personal eligibility',info.eligible,days<=0?2:3);
+  }
+ });
+ return results.sort((a,b)=>a.priority-b.priority||(a.days??999)-(b.days??999)||
+   String(a.bank).localeCompare(String(b.bank))||a.kind.localeCompare(b.kind));
+}
+function churnReviewPlan(rows){
+ const plan=rows.filter(e=>e?.closed&&scope(e)).map(e=>{
+  const info=eligibleInfo(e),verified=!!(info?.verified&&info.eligible);
+  const days=info?.eligible?dB(td(),info.eligible):null;
+  return {entryId:e.id,bank:e.bank,verified,date:info?.eligible||'',days:Number.isFinite(days)?days:null,
+    detail:verified?info.label:'Check enrolled eligibility rules and actual event dates'};
+ });
+ const rank=x=>!x.verified?3:x.days>0?0:x.days>=-30?1:2;
+ return plan.sort((a,b)=>rank(a)-rank(b)||
+  (rank(a)===0?a.days-b.days:rank(a)===1?b.days-a.days:0)||a.bank.localeCompare(b.bank));
+}
+function churnReviewMarkup(rows){
+ const plan=churnReviewPlan(rows);if(!plan.length)return'';
+ const cards=plan.slice(0,5).map(x=>{
+  const status=!x.verified?'Rule review needed':x.days<=0?'Saved date reached':'Review in '+x.days+' days';
+  return '<article class="bt3682-plan-row"><span class="bt3682-plan-copy"><b>'+safe(x.bank)+'</b>'+
+    '<small>'+safe(status)+'</small><small>'+safe(x.verified?date(x.date)+' · '+x.detail:x.detail)+'</small></span>'+
+    '<span class="bt3682-plan-actions"><button type="button" class="bt360-secondary" onclick="BT360.openArchived('+arg(x.entryId)+')">Details</button>'+
+    (x.verified&&x.days<=0?'<button type="button" class="bt360-primary" onclick="BT360.viewOffers('+arg(x.bank)+')">Check offers</button>':'')+
+    '</span></article>';
+ }).join('');
+ return '<section class="bt3682-plan" aria-label="Reopening review planner"><header><h3>Next reopening reviews</h3><small>'+plan.length+' saved cycles</small></header>'+
+  '<p>Review dates come from saved offer terms. They do not prove eligibility for a new offer.</p>'+
+  '<div class="bt3682-plan-list">'+cards+'</div>'+
+  (plan.length>5?'<p class="bt3682-plan-more">'+(plan.length-5)+' more saved cycles appear in the archive below.</p>':'')+'</section>';
+}
 function settings(){
- const toggles=[['deadlines','Deadlines','3 and 1 day before'],['payouts','Payouts and close dates','When ready'],['eligible','Eligible again','7 days before and on the day']];
+ const toggles=[['deadlines','Requirements and fee checks','Saved due dates and overdue'],['payouts','Payouts and closing','Dates and verified close checks'],['eligible','Reopening reviews','7 days before and after saved date']];
  const buttons=toggles.map(([k,label,description])=>'<button class="bt360-settings-row" role="switch" aria-checked="'+noticePrefs[k]+'" onclick="BT360.setNotice(\''+k+'\')"><span><b>'+label+'</b><small>'+description+'</small></span><i class="bt360-toggle '+(noticePrefs[k]?'checked':'')+'"></i></button>').join('');
- return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v3.6.54</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
+ return '<div class="bt360-sheet-backdrop" onclick="BT360.closeSettings()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Settings" onclick="event.stopPropagation()"><header><div><h2>Settings</h2><p>BonusTracker v'+safe(window.BT_APP_VERSION||'3.6.82')+'</p></div><button aria-label="Close settings" onclick="BT360.closeSettings()">×</button></header>'+
  cloudSettingsCard()+
  (window.BTICloudBackup?.isLocalOnly?.()?'':usageCard())+
- panel('Notifications',buttons+'<p class="bt360-muted">Preferences are UI-only in v3.6.32. Push delivery is not active.</p>')+
+ panel('Notifications',buttons+'<p class="bt360-muted">These preferences control in-app reminders for this session. No push notifications are sent.</p>')+
  panel('Data',(window.BTICloudBackup?.isLocalOnly?.()?'':'<button class="bt360-settings-row" onclick="BT360.closeSettings();exportBackup()">Export backup file <span>›</span></button><button class="bt360-settings-row" onclick="BT360.closeSettings();importBackup()">Restore from file <span>›</span></button>')+'<button class="bt360-settings-row" onclick="BT360.openPhonebook()">Bank phone numbers <span>›</span></button>')+
  '<button class="bt360-reset" onclick="BT360.closeSettings();resetAllData()">Reset this device <small>Two confirmations and a safety backup</small></button></section></div>';
 }
 let notificationPanelOpen=false;
 function notifications(rows){
- let data=[];try{data=window.getAttentionSuggestions?.()||[]}catch{}
- const scoped=data.filter(x=>rows.some(e=>e.id===x.entryId&&scope(e)));
- const items=scoped.map(x=>'<button class="bt360-list-row" onclick="BT360.openNotification('+arg(x.entryId)+')">'+bankLogo(x.bank,true)+'<span class="bt360-grow"><b>'+safe(x.task?.title||x.stageLabel||'Review account')+'</b><small>' +safe(x.bank||'Bank')+' · '+safe((rows.find(e=>e.id===x.entryId)&&accountAudience(rows.find(e=>e.id===x.entryId))==='business')?'Business':'Personal')+' · '+safe(x.stageLabel||'Review')+'</small></span><span class="bt360-chip '+(x.stageCode==='READY_TO_CLOSE'?'positive':'warning')+'">'+safe(x.dateContext?.confirmed&&x.dateContext.date?date(x.dateContext.date):'Review')+'</span></button>').join('');
- return '<div class="bt360-sheet-backdrop" onclick="BT360.closeNotifications()"><section class="bt360-sheet" role="dialog" aria-modal="true" aria-label="Notification center" onclick="event.stopPropagation()"><header><div><h2>Notifications</h2><p>'+safe(audience==='all'?'All accounts':audience==='personal'?'Personal':'Business')+' · Tracker reminders</p></div><button aria-label="Close notifications" onclick="BT360.closeNotifications()">×</button></header>'+panel('Needs you',items?'<div class="bt360-list">'+items+'</div>':'<p class="bt360-muted">No current tasks needing attention.</p>')+'<p class="bt360-muted">These are tracker reminders, not push notifications. Push delivery will be enabled in a later release.</p></section></div>';
+ const alerts=upcomingReminders(rows);
+ const cards=alerts.map(x=>{
+  const period=x.days===null?'Review':x.days<0?Math.abs(x.days)+'d overdue':x.days===0?'Today':'In '+x.days+'d';
+  return '<button type="button" class="bt360-list-row bt3682-alert-row" onclick="BT360.openNotification('+arg(x.entryId)+')">'+
+    '<span class="bt3682-alert-icon" aria-hidden="true">'+(x.kind==='reopen'?'↻':x.kind==='fee'?'$':x.kind==='payout'?'✓':'!')+'</span>'+
+    '<span class="bt360-grow"><b>'+safe(x.title)+'</b><small>'+safe(x.bank)+' · '+safe(x.detail)+'</small></span>'+
+    '<span class="bt360-chip">'+safe(period)+'</span></button>';
+ }).join('');
+ return '<div class="bt360-sheet-backdrop" onclick="BT360.closeNotifications()"><section class="bt360-sheet bt3682-reminders" role="dialog" aria-modal="true" aria-label="Notification center" onclick="event.stopPropagation()">'+
+ '<header><div><h2>Reminders</h2><p>'+safe(audience==='all'?'All accounts':audience==='personal'?'Personal':'Business')+' · '+alerts.length+' currently actionable</p></div>'+
+ '<button aria-label="Close notifications" onclick="BT360.closeNotifications()">×</button></header>'+
+ panel('Upcoming and due',cards?'<div class="bt360-list bt3682-alert-list">'+cards+'</div>':'<p class="bt360-muted">No upcoming reminders in the selected categories.</p>')+
+ '<p class="bt360-muted">Calculated from saved dates when you open BonusTracker. No background or push delivery. Dates are not bank confirmation.</p>'+
+ '</section></div>';
 }
 function openNotifications(){notificationPanelOpen=true;window.bt360SettingsOpen=false;R()}
 function closeNotifications(){notificationPanelOpen=false;R()}
-function openNotification(id){notificationPanelOpen=false;openAccountFromActionCenter(id)}
+function openNotification(id){notificationPanelOpen=false;const e=entries.find(x=>x.id===id);if(e?.closed)openArchived(id);else openAccountFromActionCenter(id)}
 function openPhoneForClose(bank,accountType){
  window.bt360SettingsOpen=false;
  window.bt360PhonebookOpen=true;
@@ -1096,7 +1193,7 @@ function openPhonebook(){closeSettings();window.bt360PhonebookOpen=true;R()}
 function closePhonebook(){window.bt360PhonebookOpen=false;R()}
 function openSettings(){window.bt360SettingsOpen=true;R();refreshUsage()}
 function closeSettings(){window.bt360SettingsOpen=false;R()}
-window.BT360={sourceEvidenceStatus,sourceEvidencePanel,dashboardQueueFor,toggleAttention,toggleAccountList,openAccountSearch,closeAccountSearch,get selectedAttentionId(){return selectedAttentionId},get accountListOpen(){return accountListOpen},setAccountSectionOpen,revealAccountSection,cloudStatusText,accountDates,accountSaveStatus,infoRow,feeSnapshot,closeCheckPresentation,get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,accountAudience,kindTag,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,archiveCountdown,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
+window.BT360={sourceEvidenceStatus,sourceEvidencePanel,dashboardQueueFor,toggleAttention,toggleAccountList,openAccountSearch,closeAccountSearch,get selectedAttentionId(){return selectedAttentionId},get accountListOpen(){return accountListOpen},setAccountSectionOpen,revealAccountSection,cloudStatusText,accountDates,accountSaveStatus,infoRow,feeSnapshot,closeCheckPresentation,get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,accountAudience,kindTag,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,upcomingReminders,churnReviewPlan,churnReviewMarkup,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,archiveCountdown,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
 if(typeof R==='function')R();
 })();
 

@@ -267,9 +267,56 @@ async function exercise(name,engine,url){
 
     const beforeNotifications=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     await button('Notifications').click();
-    check('header bell opens read-only notification center',await page.getByRole('dialog',{name:'Notification center'}).isVisible()&&await page.getByText('No current tasks needing attention.').isVisible());
+    check('header bell opens read-only notification center',await page.getByRole('dialog',{name:'Notification center'}).isVisible()&&await page.getByText('No upcoming reminders in the selected categories.').isVisible());
     await page.getByRole('button',{name:'Close notifications'}).click();
     check('notification center leaves records unchanged',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,beforeNotifications));
+    // v3.6.82 real DOM test: prioritization, exact bank navigation and
+    // review-only churn plan, without touching the saved account database.
+    {
+      const prior=await page.evaluate(()=>{
+        const old={entries,expanded,tab,stored:localStorage.getItem('bt_e_v4')},today=td();
+        const tomorrow=addD(today,1),second=addD(today,2);
+        const entriesForTest=[
+         {id:'SYN-ALERT-DD',bank:'Synthetic Deadline Bank',accountType:'personal',opened:addD(today,-2),
+          reqDays:3,completeBonusText:'Receive qualifying direct deposits.',customTimers:[],checklist:[]},
+         {id:'SYN-ALERT-BONUS',bank:'Synthetic Bonus Bank',accountType:'business',opened:addD(today,-20),
+          reqMet:addD(today,-3),payoutTimingText:'Bonus review',
+          customTimers:[{id:'pay',kind:'payout',text:'Bonus payout review',date:second,done:false}],checklist:[]},
+         {id:'SYN-ALERT-HISTORY',bank:'Synthetic History Bank',closed:addD(today,-15),
+          opened:addD(today,-50),bonusRecd:addD(today,-30),customTimers:[],checklist:[]}];
+        entries=entriesForTest;expanded=null;tab='tracker';R();return old;
+      });
+      await button('Notifications').click();
+      const alerts=page.getByRole('dialog',{name:'Notification center'});
+      check('reminder center uses calculated due and payout review',
+        await alerts.getByText('Requirement due soon',{exact:true}).count()===1&&
+        await alerts.getByText('Review expected payout',{exact:true}).count()===1);
+      check('reminder center excludes unverified churn eligibility',
+        !(await alerts.innerText()).includes('Synthetic History Bank'));
+      check('reminders explicitly avoid promising push notifications',
+        (await alerts.innerText()).includes('No background or push delivery'));
+      for(const width of [320,375,390,430]){
+        await page.setViewportSize({width,height:844});
+        check('reminders fit mobile '+width+'px',
+          await alerts.evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
+        if(width===390)await page.screenshot({path:path.join(output,name+'-reminder-center-390.png')});
+      }
+      await page.getByRole('button',{name:'Close notifications'}).click();
+      await page.evaluate(()=>{tab='archive';R()});
+      check('churn plan flags an unverified cycle instead of declaring eligibility',
+        await page.locator('.bt3682-plan').innerText().then(t=>t.includes('Synthetic History Bank')&&t.includes('Rule review needed')));
+      check('unverified cycle has no Check offers shortcut',
+        await page.locator('.bt3682-plan-actions .bt360-primary').count()===0);
+      for(const width of [320,375,390,430]){
+        await page.setViewportSize({width,height:844});
+        check('reopening planner fits mobile '+width+'px',
+          await page.locator('.bt3682-plan').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
+      }
+      check('reminders and churn planning do not persist account records',
+        await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x.stored,prior));
+      await page.evaluate(old=>{entries=old.entries;expanded=old.expanded;tab=old.tab;R()},prior);
+      await page.setViewportSize({width:1280,height:900});
+    }
     check('Tracker loads without redundant Action Center disclosure',await page.locator('.bt360-legacy-actions').count()===0);
     await page.waitForFunction(()=>window.__btFullRegressionReport&&!window.__btFullRegressionReport.pending&&window.__btFullRegressionReport.total===8);
     const diagnostics=await page.evaluate(()=>window.btRunFullRegressionTests({force:true}));

@@ -43,6 +43,37 @@ assert.doesNotMatch(requirements.html,/No checklist tasks saved yet/);
 assert.match(sandbox.BT360.detailPanels(e),/Direct deposits totaling \$10,000/);
 
 
+// v3.6.82: derived reminders and churn planner are read-only and cycle aware.
+{
+ const now=sandbox.td(),add=sandbox.addD;
+ const requirement={id:'SYN-ALERT-REQUIREMENT',bank:'Synthetic Urgent Bank',accountType:'personal',
+  opened:add(now,-2),reqDays:3,completeBonusText:'Receive qualifying direct deposits.',customTimers:[],checklist:[]};
+ const waiting={id:'SYN-ALERT-PAYOUT',bank:'Synthetic Waiting Bank',accountType:'business',
+  opened:add(now,-10),reqMet:add(now,-2),payoutTimingText:'Review scheduled bonus payout.',
+  customTimers:[{id:'pay',kind:'payout',text:'Bonus payout review',date:add(now,2),done:false}],checklist:[]};
+ const ended={...requirement,id:'SYN-ALERT-DONE',bank:'Synthetic Finished Bank',reqMet:now,bonusRecd:now};
+ const fee={id:'SYN-ALERT-FEE',bank:'Synthetic Fee Bank',opened:add(now,-1),
+  reqMet:now,customTimers:[{id:'fee',text:'Monthly fee review',date:add(now,2),done:false}],checklist:[]};
+ const unknown={id:'SYN-ALERT-UNKNOWN',bank:'Synthetic Unknown Reopening',closed:now,bonusRecd:add(now,-20),
+  opened:add(now,-50),eligibilityRules:[],customTimers:[],checklist:[]};
+ const rows=[requirement,waiting,ended,fee,unknown],beforeRows=JSON.stringify(rows),beforeStorage=JSON.stringify([...storage]);
+ const alerts=sandbox.BT360.upcomingReminders(rows);
+ assert(alerts.some(x=>x.entryId===requirement.id&&x.kind==='requirement'), 'Upcoming confirmed requirement date missing');
+ assert(alerts.some(x=>x.entryId===waiting.id&&x.kind==='payout'), 'Pending payout review missing');
+ assert(alerts.some(x=>x.entryId===fee.id&&x.kind==='fee'), 'Saved fee-check reminder missing');
+ assert(!alerts.some(x=>x.entryId===ended.id), 'Completed milestones still generated a reminder');
+ assert(!alerts.some(x=>x.entryId===unknown.id&&x.kind==='reopen'), 'Unverified churn became an eligible alert');
+ assert.equal(new Set(alerts.map(x=>x.entryId+'|'+x.kind)).size,alerts.length,'Duplicate reminder created');
+ const plan=sandbox.BT360.churnReviewPlan(rows);
+ assert.equal(plan.length,1);assert.equal(plan[0].verified,false);
+ const markup=sandbox.BT360.churnReviewMarkup(rows);
+ assert.match(markup,/Next reopening reviews/);assert.match(markup,/Rule review needed/);
+ assert.doesNotMatch(markup,/Check offers/,'Unverified reopening gained direct offer CTA');
+ assert.match(sandbox.BT360.notifications(rows),/No background or push delivery/);
+ assert.equal(JSON.stringify(rows),beforeRows,'Reminder or churn planner mutated financial records');
+ assert.equal(JSON.stringify([...storage]),beforeStorage,'Reminder or churn planner persisted data');
+}
+
 // v3.6.21: projection-only derived deadlines and explicit global confirmation.
 const syntheticDerived={...e,customTimers:[]};
 const generated=sandbox.BT360.timerRows(syntheticDerived);
@@ -142,8 +173,8 @@ const estimatedList=sandbox.BT360.archive([estimatedPast]);
 assert.match(estimatedList,/<b>0<\/b><small>Eligible now<\/small>/,'Unverified historic dates must not certify current eligibility');
 
 /* v3.6.27: all computable saved dates show a countdown, with verification status. */
-assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.6\.81';/,'The on-screen app version reflects this release');
-assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.6\.81-ledger1/,'The version label is refreshed on clients');
+assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.6\.82';/,'The on-screen app version reflects this release');
+assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.6\.82-alertplan1/,'The version label is refreshed on clients');
 const archiveFutureDate='2030-01-01';
 const projectedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,verified:false});
 assert(projectedFuture&&projectedFuture.days>0&&projectedFuture.caption==='days · estimate','Unverified saved future date shows an estimated countdown');
