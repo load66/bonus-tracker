@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: ChatGPT/Codex · v3.6.81 · codex/v3.6.81-dd-evidence-ledger
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
