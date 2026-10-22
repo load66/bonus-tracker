@@ -81,10 +81,20 @@ try{
  run("dpEditor.outcome='worked';dpEditor.eventDate='2026-02-01';dpEditor.confirmedByUser=false;saveDPEditor()");
  assert.equal(s.loadUserDatapoints()[0].confirmedByUser,false,'Unchecked attestation became trusted');
  run('dpEditor.confirmedByUser=true;saveDPEditor()');personal=s.loadUserDatapoints();assert.equal(personal[0].confirmedByUser,true);assert.equal(personal[0].accountType,'business');assert.equal(personal[0].cycleOpened,'2026-01-01');
+ // Editing a note must not fabricate a newer confirmation date.
+ const dated=s.loadUserDatapoints();dated[0].confirmedAt='2026-02-03';dated[0].lastConfirmedAt='2026-02-03';s.saveUserDatapoints(dated);
+ s.openUserDPEditor(dated[0].id);run("dpEditor.note='Clarified deposit note';saveDPEditor()");
+ assert.equal(s.loadUserDatapoints()[0].confirmedAt,'2026-02-03','Note-only edit rewrote confirmation provenance');
+ assert.equal(s.loadUserDatapoints()[0].lastConfirmedAt,'2026-02-03','Note-only edit advanced confirmation recency');
  s.addDD('Synthetic Trust Bank','Employer payroll',100,'2026-02-02',{entryId:'TRUST',accountType:'business'});
  assert.equal(s.loadUserDatapoints().length,1,'Repeated payout duplicated cycle evidence');assert.equal(s.loadUserDatapoints()[0].eventDate,'2026-02-01');
  run("entries[0].dataPoint='';reviewCycleExperience('TRUST','bonus')");assert.equal(run('dpEditor.method'),'Employer payroll');assert.equal(run('dpEditor.confirmedByUser'),false);assert.equal(run('dpEditor.eventDate'),'');s.closeDPEditor();
- s.openUserDPEditor(personal[0].id);run("dpEditor.outcome='mixed';dpEditor.note='Several methods used';saveDPEditor()");
+ s.openUserDPEditor(personal[0].id);assert.match(s.rDpEditor(),/Changing a saved method, outcome, or date requires a new confirmation/);
+ run("dpEditorMaterialChange('outcome','mixed');dpEditor.note='Several methods used'");
+ assert.equal(run('dpEditor.confirmedByUser'),false,'Changing verified evidence retained the old attestation');
+ run('saveDPEditor()');assert.equal(s.loadUserDatapoints()[0].outcome,'worked','Unconfirmed edit changed trusted outcome');
+ run('dpEditor.confirmedByUser=true;saveDPEditor()');assert.equal(s.loadUserDatapoints()[0].outcome,'worked','Stale confirmation bypassed explicit re-attestation');
+ run('dpEditor.confirmedByUser=true;dpEditor.reconfirmed=true;saveDPEditor()');
  personal=s.loadUserDatapoints();assert.equal(personal[0].outcome,'mixed');assert.equal(personal[0].revisions.at(-1).outcome,'worked');
  s.openUserDPEditor(personal[0].id);const newer=s.loadUserDatapoints();newer[0].note='Another tab correction';s.saveUserDatapoints(newer);run("dpEditor.note='stale correction';saveDPEditor()");assert.equal(s.loadUserDatapoints()[0].note,'Another tab correction');s.closeDPEditor();
  run("entries[0].opened='2026-05-01'");s.addDD('Synthetic Trust Bank','Employer payroll',100,'2026-06-01',{entryId:'TRUST',accountType:'business'});assert.equal(s.loadUserDatapoints().length,2,'New churn cycle replaced old evidence');
