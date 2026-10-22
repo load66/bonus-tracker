@@ -275,7 +275,7 @@ console.log('Canonical offer UI passed: compact identity, two safe sources, extr
  assert.equal(match({...closed,closed:''}).length,0,'Open account was shown as churnable');
  assert.equal(match({...closed,eligibilityEvidenceText:''}).length,0,'Unknown eligibility rule produced automated match');
  assert.equal(match({...closed,bonusRecd:new Date().toISOString().slice(0,10)}).length,0,'Future cooldown generated a match');
- assert.equal(match(closed,processed,{...geo,records:{[link]:{...geo.records[link],conditions:['County membership required']}}).length,0,'Conditional location was approved');
+ assert.equal(match(closed,processed,{...geo,records:{[link]:{...geo.records[link],conditions:['County membership required']}}}).length,0,'Conditional location was approved');
  assert.equal(match(closed,processed,{...geo,records:{[link]:{...geo.records[link],expiresAt:new Date(Date.now()-1000).toISOString()}}}).length,0,'Expired official location check accepted');
  const unproven={...processed,offers:processed.offers.map(x=>({...x,evidence:{...x.evidence,sources:x.evidence.sources.filter(s=>s.role!=='fees')}}))};
  assert.equal(match(closed,unproven).length,0,'Missing fee evidence was treated as validated');
