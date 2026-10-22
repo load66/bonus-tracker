@@ -1,4 +1,4 @@
-/* Release 3.6.81: canonical bank and closure rules unchanged; Transaction evidence only. */
+/* Release 3.6.82: canonical bank and closure rules unchanged; Read-only alerts and UI only. */
 /*
  * filename: bank-rules-wells-consumer.js
  * version: 3.5.2
