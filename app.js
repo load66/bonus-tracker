@@ -4889,7 +4889,7 @@ function renderTaxEstimateResult(){
  const hasBalance=result.balance!==null,refund=hasBalance&&result.balance<0;
  let h='<div class="bt-tax-result" aria-label="Estimated federal tax summary"><div class="bt-tax-primary-balance">';
  h+='<span>'+(hasBalance?(refund?'Possible federal refund':'Possible federal balance to pay'):'Possible IRS balance or refund')+'</span>';
- h+='<strong>'+(hasBalance?money(Math.abs(result.balance)):'Add annual federal withholding')+'</strong>';
+ h+='<strong>'+(hasBalance?money(Math.abs(result.balance)):'Enter projected withholding')+'</strong>';
  h+='<small>'+(hasBalance?'Estimated federal income tax less projected withholding and tax payments. Not an IRS bill or guaranteed refund.':'A balance or refund estimate requires federal withholding; total employee taxes are not a substitute.')+'</small></div>';
  h+='<div class="bt-tax-calc-grid"><div><span>Additional tax on tracked bonuses</span><strong>'+money(result.bonusTax)+'</strong><small>Estimated incremental tax on recorded bonus receipts</small></div>';
  h+='<div><span>Estimated total federal income tax</span><strong>'+money(result.federalTax)+'</strong><small>Before withholding or payments</small></div></div>';
