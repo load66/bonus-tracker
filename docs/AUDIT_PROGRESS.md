@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex · v3.6.81 · codex/v3.6.81-dd-evidence-ledger
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.81 direct-deposit evidence ledger (`codex/v3.6.81-dd-evidence-ledger`): add optional manually entered dated deposit amounts, source/method, note and explicitly attested bank-counted status to the existing saved bank-cycle entry. The recorded totals and confirmed-counted portion remain distinct; a progress percentage appears only for a single unambiguous nonrecurring structured direct-deposit target. Add correction revision history, void-with-history, opening-cycle isolation, strict dated/positive amount validation, readback-verified atomic storage with rollback, and compact mobile Requirements UI. Never derive completion, bonus receipt, bank acceptance, or legal eligibility automatically from recorded deposits; recurring offer periods do not combine into a false target. No new storage keys, bank-rule changes, provider API calls, or backend changes. Synthetic unit and full Chromium/WebKit browser journeys cover create/edit/attest/void, backup key preservation, and 320/390/430 widths. App and offline cache v3.6.81. Next: all unit/browser/release checks, squash merge only if green, verify production Pages on exact merge commit.
 
 - v3.6.80 user-facing requirement completion accuracy and real selected-bank journey (`codex/v3.6.80-workflow-journey`): renamed the footer's ambiguous “Record deposit” command to “Confirm requirements” because it opens the existing **all requirements met** date milestone, not an individual transaction entry. Fixed legacy task discovery where a payout-only or closure-only reminder suppressed an independently saved qualifying direct-deposit task and its DD datapoints shortcut; added synthetic source-isolated unit regression. Adds a synthetic Chromium/WebKit end-to-end journey across two bank cards: independent selection, scoped direct-deposit research, unchanged storage for navigation, exact account details, cancel/no-write confirmation, explicit dated requirements-met save, optional unconfirmed observed-result review, transition to waiting-for-payout without falsely marking payment received, and byte-identical tracker restoration. Existing requirement and payout persistence, canonical policy, cloud data, and bonus records unchanged. Release, app assets and service worker v3.6.80. Next: pass PR Bonus/Cloud/UI and browser CI plus release verifier, merge only if green, verify main and GitHub Pages.
 
