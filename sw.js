@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.78: pay-period tax projection and YTD comparison.
-const V = 'bt-v3.6.78-paytrend1';
+// Version 3.6.79: datapoint material-edit confirmation integrity.
+const V = 'bt-v3.6.79-dptrust1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
