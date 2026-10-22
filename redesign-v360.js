@@ -1107,7 +1107,7 @@ function upcomingReminders(rows){
    }
    if(noticePrefs.deadlines){
     const due=(Array.isArray(e.customTimers)?e.customTimers:[]).filter(t=>t&&!t.done&&
-      /\b(?:monthly|maintenance|service) fee\b|\bfee (?:check|review|due)\b/i.test(String(t.text||''))))
+      /\b(?:monthly|maintenance|service) fee\b|\bfee (?:check|review|due)\b/i.test(String(t.text||'')))
       .map(t=>validReminderDate(t.date)).filter(Boolean).sort()[0];
     if(due&&dB(td(),due)<=7)push(e,'fee','Review scheduled fee',
       'Saved fee-check date; verify waiver terms',due,2);
