@@ -3659,7 +3659,7 @@ try{
   window.handleProfileSectionToggle=handleProfileSectionToggle;
 }catch{}
 let dpEditor=null;
-let ddPrompt=null,rcvPrompt=null,reqPrompt=null,showTemplates=false;
+let ddPrompt=null,rcvPrompt=null,reqPrompt=null,depositPrompt=null,showTemplates=false;
 let feedItems=null,feedLoading=false;
 let undoState=null,undoTimer=null;
 function clearLifecycleUndo(){undoState=null;if(undoTimer)clearTimeout(undoTimer);undoTimer=null;}
@@ -4594,7 +4594,7 @@ function R(){
   if(window.bt360PhonebookOpen)h+='<div class="bt360-sheet-backdrop" onclick="BT360.closePhonebook()"><section class="bt360-sheet" onclick="event.stopPropagation()"><button onclick="BT360.closePhonebook()">← Settings</button>'+rPhone()+'</section></div>';
   if(window.bt360SettingsOpen&&window.BT360)h+=window.BT360.settings();
   if(window.BT360?.notificationsOpen)h+=window.BT360.notifications(sorted);
-  if(modal)h+=rModal();if(cfm)h+=rCfm();if(ddPrompt)h+=rDD();if(rcvPrompt)h+=rRcv();if(reqPrompt)h+=rReqMet();if(closePrompt)h+=rClose();if(overwritePrompt)h+=rOverwrite();if(matchPickerPrompt)h+=rMatchPicker();if(replacementPickerPrompt)h+=rReplacementPicker();if(feeCheckPrompt)h+=rFeeCheck();if(timerEditModal)h+=rTimerEdit();if(dpEditor)h+=rDpEditor();if(timerChoicePrompt)h+=rTimerChoicePrompt();
+  if(modal)h+=rModal();if(cfm)h+=rCfm();if(ddPrompt)h+=rDD();if(rcvPrompt)h+=rRcv();if(reqPrompt)h+=rReqMet();if(depositPrompt)h+=rDepositRecord();if(closePrompt)h+=rClose();if(overwritePrompt)h+=rOverwrite();if(matchPickerPrompt)h+=rMatchPicker();if(replacementPickerPrompt)h+=rReplacementPicker();if(feeCheckPrompt)h+=rFeeCheck();if(timerEditModal)h+=rTimerEdit();if(dpEditor)h+=rDpEditor();if(timerChoicePrompt)h+=rTimerChoicePrompt();
   if(undoState)h+='<div class="undo-bar"><span>'+esc(undoState.undoLabel||('Change saved for '+undoState.bank+' — Undo restores everything for 60 seconds.'))+'</span><button onclick="undoClose()">Undo</button></div>';
   document.getElementById('app').innerHTML=h;
   const ns=document.querySelector('.scroll');if(ns)ns.scrollTop=_sp;
@@ -5129,6 +5129,133 @@ function rRcv(){
   h+='</div></div>';
   return h
 }
+
+// Per-cycle direct-deposit evidence lives inside the existing backed-up entry.
+// Neither a recorded transaction nor a user assertion changes reqMet or bonusRecd.
+function depositLedgerRows(e,includeVoided=false){
+ if(!e||!e.opened||!Array.isArray(e.depositEvidence))return [];
+ return e.depositEvidence.filter(x=>x&&x.cycleOpened===e.opened&&
+   Number.isSafeInteger(x.amountCents)&&x.amountCents>0&&archiveDateValid(x.date)&&
+   (includeVoided||!x.voidedAt));
+}
+function depositProgress(e){
+ const rows=depositLedgerRows(e);
+ const totalCents=rows.reduce((n,x)=>n+x.amountCents,0);
+ const confirmedCents=rows.filter(x=>x.bankConfirmed===true).reduce((n,x)=>n+x.amountCents,0);
+ const rules=Array.isArray(e?.financialRules?.requirements)?e.financialRules.requirements.filter(r=>r?.kind==='direct-deposit'):[];
+ const rule=rules.length===1?rules[0]:null;
+ const target=Number(rule?.amount);
+ const hasSimpleTarget=!!rule&&!rule.recurrence&&!(Number(rule.count)>1)&&Number.isFinite(target)&&target>0;
+ const targetCents=hasSimpleTarget?Math.round(target*100):0;
+ return {rows,totalCents,confirmedCents,recordedCount:rows.length,confirmedCount:rows.filter(x=>x.bankConfirmed===true).length,
+   targetCents,percent:targetCents?Math.min(100,Math.round(100*confirmedCents/targetCents)):0};
+}
+function openDepositRecord(entryId,recordId=''){
+ const e=entries.find(x=>x.id===entryId);
+ if(!e||!e.opened){if(window.btNotify)btNotify('Record the actual account opening date first.',{title:'Opening date required',tone:'warning'});return false}
+ const original=recordId?depositLedgerRows(e).find(x=>x.id===recordId):null;
+ if(recordId&&!original)return false;
+ depositPrompt={entryId,recordId:original?.id||'',bank:e.bank,cycleOpened:e.opened,
+   date:original?.date||'',amount:original?String(original.amountCents/100):'',
+   method:original?.method||'',note:original?.note||'',bankConfirmed:original?.bankConfirmed===true,
+   reconfirmed:false,originalFingerprint:original?JSON.stringify(original):'',error:''};
+ R();return true;
+}
+function depositRecordChanged(key,value){
+ if(!depositPrompt)return;
+ const p=depositPrompt,changed=String(p[key]??'')!==String(value);
+ p[key]=value;
+ if(changed&&p.recordId&&['date','amount','method'].includes(key)){
+   p.bankConfirmed=false;p.reconfirmed=false;
+   const checkbox=document.getElementById('dep_confirmed');
+   if(checkbox)checkbox.checked=false;
+ }
+}
+function closeDepositRecord(){depositPrompt=null;R()}
+function depositError(message){
+ if(!depositPrompt)return false;
+ depositPrompt.error=message;R();
+ requestAnimationFrame(()=>document.getElementById('dep_amount')?.focus?.({preventScroll:true}));
+ return false;
+}
+function depositMutate(entryId,mutator){
+ const original=deepCopy(entries);
+ let snapshot=null;
+ try{
+   snapshot=window.BTPersistence.capture(localStorage,getBackupStorageKeys());
+   entries=entries.map(e=>{
+     if(e.id!==entryId)return e;
+     const replacement={...e,depositEvidence:mutator(Array.isArray(e.depositEvidence)?deepCopy(e.depositEvidence):[],e)};
+     return replacement;
+   });
+   if(sv(SK,entries)!==true)throw Error('Deposit evidence could not be committed');
+   if(!Array.isArray(JSON.parse(localStorage.getItem(SK)||'[]').find(x=>x.id===entryId)?.depositEvidence))
+     throw Error('Deposit evidence could not be read back');
+   return {ok:true};
+ }catch(error){
+   let recovered=false;
+   if(snapshot){try{window.BTPersistence.rollback(localStorage,snapshot);recovered=true}catch{}}
+   entries=original;window.btCloudBackupChanged?.();
+   return {ok:false,error:recovered?'Deposit not saved; earlier records were restored. Retry.':'Deposit save/recovery could not be verified. Export a backup before retrying.'};
+ }
+}
+function saveDepositRecord(){
+ const p=depositPrompt;if(!p)return false;
+ for(const [key,id] of [['date','dep_date'],['amount','dep_amount'],['method','dep_method'],['note','dep_note']]){
+   const el=document.getElementById(id);if(el)p[key]=el.value;
+ }
+ const checkbox=document.getElementById('dep_confirmed');if(checkbox)p.bankConfirmed=checkbox.checked;
+ const e=entries.find(x=>x.id===p.entryId);
+ if(!e||e.opened!==p.cycleOpened)return depositError('Account opening cycle changed. Reopen this form.');
+ if(!archiveDateValid(p.date)||p.date>td())return depositError('Enter a valid deposit date that is not in the future.');
+ if(p.date<e.opened)return depositError('Deposit date cannot precede the account opening date.');
+ const amount=String(p.amount).trim();
+ if(!/^(?:[0-9]+)(?:\.[0-9]{1,2})?$/.test(amount))return depositError('Enter a positive dollar amount with up to two decimals.');
+ const cents=Math.round(Number(amount)*100);
+ if(!Number.isSafeInteger(cents)||cents<=0||cents>100000000)return depositError('Deposit amount must be between $0.01 and $1,000,000.');
+ const method=String(p.method||'').trim().slice(0,100),note=String(p.note||'').trim().slice(0,300);
+ if(!method)return depositError('Identify the deposit source or method.');
+ const original=p.recordId?depositLedgerRows(e).find(x=>x.id===p.recordId):null;
+ if(p.recordId&&(!original||JSON.stringify(original)!==p.originalFingerprint))return depositError('This deposit changed. Reopen it before editing.');
+ const materiallyChanged=!!original&&(original.date!==p.date||original.amountCents!==cents||original.method!==method);
+ if(materiallyChanged&&original.bankConfirmed&&!p.reconfirmed)return depositError('Confirm again if the bank counted this revised deposit.');
+ const id=original?.id||'de_'+dpId(),now=td();
+ const record={...original,id,cycleOpened:e.opened,date:p.date,amountCents:cents,method,note,
+   bankConfirmed:p.bankConfirmed===true,confirmedAt:p.bankConfirmed?(original?.bankConfirmed&&!materiallyChanged?original.confirmedAt:now):'',
+   recordedAt:original?.recordedAt||now,updatedAt:now,
+   revisions:original?[...(original.revisions||[]),{...original,revisions:undefined}]:[]};
+ const result=depositMutate(e.id,rows=>{
+   const index=rows.findIndex(x=>x.id===id);
+   if(index>=0)rows[index]=record;else rows.push(record);
+   return rows;
+ });
+ if(!result.ok)return depositError(result.error);
+ depositPrompt=null;R();return true;
+}
+function voidDepositRecord(entryId,recordId){
+ const e=entries.find(x=>x.id===entryId),row=depositLedgerRows(e).find(x=>x.id===recordId);
+ if(!row)return false;
+ cfm={title:'Void deposit record?',msg:'Mark this deposit record as void? It will stop counting toward progress, but its evidence history remains saved.',confirmLabel:'Void record',action:()=>{
+   const result=depositMutate(entryId,rows=>rows.map(x=>x.id!==recordId?x:{
+     ...x,voidedAt:td(),revisions:[...(x.revisions||[]),{...x,revisions:undefined}]}));
+   cfm=null;if(!result.ok){if(window.btNotify)btNotify(result.error,{title:'Save failed',tone:'danger'})}
+   R();
+ }};R();return true;
+}
+function rDepositRecord(){
+ const p=depositPrompt;if(!p)return'';
+ return '<div class="ov" onclick="closeDepositRecord()"><section class="modal research-editor" role="dialog" aria-modal="true" aria-labelledby="deposit-record-title" onclick="event.stopPropagation()">'+
+ '<header class="research-editor-header"><h2 id="deposit-record-title">'+(p.recordId?'Correct recorded deposit':'Record direct deposit')+'</h2><p>'+esc(p.bank)+' · opened '+esc(fD(p.cycleOpened))+'</p></header>'+
+ '<div class="research-editor-body"><p class="research-caveat">A recorded deposit is not proof of qualification. Bank-counted status is based only on your explicit confirmation; completing bonus requirements is a separate action.</p>'+
+ '<div class="fg"><label for="dep_date">Actual deposit date</label><input class="dd-input" type="date" id="dep_date" max="'+td()+'" min="'+esc(p.cycleOpened)+'" value="'+esc(p.date)+'" oninput="depositRecordChanged(\'date\',this.value)"></div>'+
+ '<div class="fg"><label for="dep_amount">Amount ($)</label><input class="dd-input" id="dep_amount" type="number" inputmode="decimal" min="0.01" max="1000000" step="0.01" value="'+esc(p.amount)+'" oninput="depositRecordChanged(\'amount\',this.value)"></div>'+
+ '<div class="fg"><label for="dep_method">Source / method</label><input class="dd-input" id="dep_method" maxlength="100" value="'+esc(p.method)+'" placeholder="e.g. Employer payroll" oninput="depositRecordChanged(\'method\',this.value)"></div>'+
+ '<div class="fg"><label for="dep_note">Notes (optional)</label><textarea class="dd-input" id="dep_note" maxlength="300" rows="2" oninput="depositRecordChanged(\'note\',this.value)">'+esc(p.note)+'</textarea></div>'+
+ '<label class="experience-confirm"><input type="checkbox" id="dep_confirmed" '+(p.bankConfirmed?'checked':'')+' onchange="depositPrompt.bankConfirmed=this.checked;depositPrompt.reconfirmed=this.checked"><span>I verified the bank counted this deposit</span></label>'+
+ (p.error?'<p class="bt3655-field-error" role="alert" id="dep-error">'+esc(p.error)+'</p>':'')+
+ '</div><footer class="research-editor-footer"><button type="button" class="btn-p" onclick="saveDepositRecord()">Save deposit</button><button type="button" class="btn-s" onclick="closeDepositRecord()">Cancel</button></footer></section></div>';
+}
+
 function rReqMet(){
   const p=reqPrompt;
   if(!p)return'';
