@@ -5,7 +5,7 @@ const scopeKey='bt3628_audience_session',noticeKey='bt360_notice_session';
 const readyExtrasState=new Map();
 const accountSections=new Map();
 let legacyArchiveOpen=false;
-let audience='all', archivePane='waiting', selectedHeroMonth=null, lastHeroYear=null, noticePrefs={deadlines:false,payouts:false,eligible:false}, selectedStage='';
+let audience='all', archivePane='waiting', selectedHeroMonth=null, lastHeroYear=null, noticePrefs={deadlines:true,payouts:true,eligible:true}, selectedStage='';
 try{const saved=sessionStorage.getItem(scopeKey);if(['all','personal','business'].includes(saved))audience=saved}catch{}
 try{const v=JSON.parse(sessionStorage.getItem(noticeKey)||'{}');for(const k of Object.keys(noticePrefs))noticePrefs[k]=v[k]===true}catch{}
 const safe=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -1060,6 +1060,92 @@ async function backUpNow(){
  if(!window.BTBonusAuth?.connected?.()||!window.BTCloudBackup?.upload){btOpenCloudBackup();return}
  try{await window.BTCloudBackup.upload('manual');window.btNotify?.('Cloud backup uploaded and verified.',{title:'Backup verified',tone:'success'})}
  catch{btOpenCloudBackup()}
+}
+
+function validReminderDate(v){
+ const date=String(v||'');
+ return /^\d{4}-\d{2}-\d{2}$/.test(date)&&Number.isFinite(dB(td(),date))?date:'';
+}
+// Read-only and de-duplicated by bank cycle, reminder category and ID.
+// Reminders never confer new-offer eligibility or alter financial records.
+function upcomingReminders(rows){
+ const results=[],seen=new Set();
+ const push=(e,kind,title,detail,due,priority)=>{
+  const id=String(e.id)+'|'+kind;if(seen.has(id))return;
+  seen.add(id);results.push({entryId:e.id,bank:e.bank,kind,title,detail,due:due||'',
+   days:due?dB(td(),due):null,priority});
+ };
+ rows.filter(e=>e?.id&&scope(e)).forEach(e=>{
+  const code=stage(e).code;
+  if(!e.closed){
+   if(noticePrefs.deadlines&&!e.bonusRecd&&['ACTION_NEEDED','IN_PROGRESS'].includes(code)){
+    let next;try{next=window.btNextActionForEntry?.(e)}catch{}
+    const current=next?.task?.context?.confirmed?validReminderDate(next.task.context.date):'';
+    const legacy=!e.reqMet&&typeof reqDeadline==='function'?validReminderDate(reqDeadline(e)):'';
+    const due=current||legacy,days=due?dB(td(),due):null;
+    if(days!==null&&days<=7)push(e,'requirement',days<0?'Review overdue requirement':days===0?'Requirement due today':'Requirement due soon',
+      'Saved requirement deadline · verify qualifying activity',due,days<0?0:1);
+    else if(code==='ACTION_NEEDED'&&!due)push(e,'terms','Review requirement or terms',
+      'Action needed; exact deadline is not confirmed','',2);
+   }
+   if(noticePrefs.payouts&&e.reqMet&&!e.bonusRecd){
+    const due=(Array.isArray(e.customTimers)?e.customTimers:[]).filter(t=>t&&!t.done&&
+      (t.kind==='payout'||/\bbonus (?:payment|payout|expected|pending)\b/i.test(String(t.text||''))))
+      .map(t=>validReminderDate(t.date)).filter(Boolean).sort()[0];
+    if(due&&dB(td(),due)<=7)push(e,'payout',dB(td(),due)<0?'Review delayed bonus':'Review expected payout',
+      'Saved payout reminder; no payment is assumed',due,dB(td(),due)<0?0:2);
+   }
+   if(noticePrefs.payouts&&code==='READY_TO_CLOSE')push(e,'close','Review closing checks',
+     'Confirm actual holds, fees and pending transactions before closing','',1);
+   if(noticePrefs.payouts&&code==='HOLD_OPEN'){
+    const due=(Array.isArray(e.customTimers)?e.customTimers:[]).filter(t=>t&&!t.done&&
+      (['hold','close-review'].includes(t.kind)||/\b(?:hold|close review)\b/i.test(String(t.text||''))))
+      .map(t=>validReminderDate(t.date)).filter(Boolean).sort()[0];
+    if(due&&dB(td(),due)<=7)push(e,'hold','Review saved hold period',
+      'Do not close until all bank-specific restrictions are checked',due,2);
+   }
+   if(noticePrefs.deadlines){
+    const due=(Array.isArray(e.customTimers)?e.customTimers:[]).filter(t=>t&&!t.done&&
+      /\b(?:monthly|maintenance|service) fee\b|\bfee (?:check|review|due)\b/i.test(String(t.text||''))))
+      .map(t=>validReminderDate(t.date)).filter(Boolean).sort()[0];
+    if(due&&dB(td(),due)<=7)push(e,'fee','Review scheduled fee',
+      'Saved fee-check date; verify waiver terms',due,2);
+   }
+  }else if(noticePrefs.eligible){
+   const info=eligibleInfo(e);if(!info?.verified)return;
+   const days=dB(td(),info.eligible);
+   if(days>=-7&&days<=7)push(e,'reopen',days<=0?'Review new bank offer':'Reopening review approaching',
+    'Saved churn date only; check new offer, fees and personal eligibility',info.eligible,days<=0?2:3);
+  }
+ });
+ return results.sort((a,b)=>a.priority-b.priority||(a.days??999)-(b.days??999)||
+   String(a.bank).localeCompare(String(b.bank))||a.kind.localeCompare(b.kind));
+}
+function churnReviewPlan(rows){
+ const plan=rows.filter(e=>e?.closed&&scope(e)).map(e=>{
+  const info=eligibleInfo(e),verified=!!(info?.verified&&info.eligible);
+  const days=info?.eligible?dB(td(),info.eligible):null;
+  return {entryId:e.id,bank:e.bank,verified,date:info?.eligible||'',days:Number.isFinite(days)?days:null,
+    detail:verified?info.label:'Check enrolled eligibility rules and actual event dates'};
+ });
+ const rank=x=>!x.verified?3:x.days>0?0:x.days>=-30?1:2;
+ return plan.sort((a,b)=>rank(a)-rank(b)||
+  (rank(a)===0?a.days-b.days:rank(a)===1?b.days-a.days:0)||a.bank.localeCompare(b.bank));
+}
+function churnReviewMarkup(rows){
+ const plan=churnReviewPlan(rows);if(!plan.length)return'';
+ const cards=plan.slice(0,5).map(x=>{
+  const status=!x.verified?'Rule review needed':x.days<=0?'Saved date reached':'Review in '+x.days+' days';
+  return '<article class="bt3682-plan-row"><span class="bt3682-plan-copy"><b>'+safe(x.bank)+'</b>'+
+    '<small>'+safe(status)+'</small><small>'+safe(x.verified?date(x.date)+' · '+x.detail:x.detail)+'</small></span>'+
+    '<span class="bt3682-plan-actions"><button type="button" class="bt360-secondary" onclick="BT360.openArchived('+arg(x.entryId)+')">Details</button>'+
+    (x.verified&&x.days<=0?'<button type="button" class="bt360-primary" onclick="BT360.viewOffers('+arg(x.bank)+')">Check offers</button>':'')+
+    '</span></article>';
+ }).join('');
+ return '<section class="bt3682-plan" aria-label="Reopening review planner"><header><h3>Next reopening reviews</h3><small>'+plan.length+' saved cycles</small></header>'+
+  '<p>Review dates come from saved offer terms. They do not prove eligibility for a new offer.</p>'+
+  '<div class="bt3682-plan-list">'+cards+'</div>'+
+  (plan.length>5?'<p class="bt3682-plan-more">'+(plan.length-5)+' more saved cycles appear in the archive below.</p>':'')+'</section>';
 }
 function settings(){
  const toggles=[['deadlines','Deadlines','3 and 1 day before'],['payouts','Payouts and close dates','When ready'],['eligible','Eligible again','7 days before and on the day']];
