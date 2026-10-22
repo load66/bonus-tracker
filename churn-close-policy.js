@@ -1,4 +1,4 @@
-/* Release 3.6.79: canonical bank and closure rules unchanged; Datapoint UI only. */
+/* Release 3.6.80: canonical bank and closure rules unchanged; Requirement workflow label only. */
 /* BonusTracker v3.5.2 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
 (function(){
   'use strict';
