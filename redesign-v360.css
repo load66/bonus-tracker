@@ -1080,3 +1080,18 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt-tax-pay-compare>div>strong{font-size:11px;font-variant-numeric:tabular-nums;color:#EAF7F1;white-space:nowrap}
 .bt-tax-pay-compare>small{font-size:10px;line-height:1.5;color:#AEC0C9;display:block;margin-top:9px}
 @media(max-width:370px){.bt-tax-pay-fields{grid-template-columns:1fr}.bt-tax-primary-balance{padding:15px 12px}}
+
+/* v3.6.81: readable per-cycle deposit evidence within the canonical Requirements panel. */
+.bt3681-deposit-ledger{margin:15px 0 4px;padding:13px;border:1px solid var(--border, #313644);border-radius:14px;background:var(--surface, #12141c);min-width:0;overflow-wrap:anywhere}
+.bt3681-ledger-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.bt3681-ledger-head>b{font-size:14px;font-weight:750}
+.bt3681-ledger-total{font-size:13px;line-height:1.5;margin:12px 0 7px;font-weight:700}
+.bt3681-deposit-ledger small{display:block;font-size:11.5px;line-height:1.6;color:var(--muted,#9ca5b5)}
+.bt3681-deposit-ledger .research-caveat{font-size:11.5px;line-height:1.5;margin:10px 0;color:var(--muted,#9ca5b5)}
+.bt3681-ledger-track{height:7px;background:#272d39;border-radius:999px;overflow:hidden;margin:8px 0 5px}.bt3681-ledger-track i{display:block;height:100%;background:var(--accent,#54d5a3);border-radius:inherit}
+.bt3681-ledger-rows{margin-top:10px;display:grid;gap:9px}
+.bt3681-ledger-row{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid var(--border,#303542);min-width:0}
+.bt3681-ledger-row>span:first-child{min-width:0;flex:1}.bt3681-ledger-row b{font-size:13px}
+.bt3681-ledger-actions{display:flex;gap:7px;flex-shrink:0}
+.bt3681-ledger-actions button,.bt3681-ledger-head button{min-height:40px;touch-action:manipulation}
+@media(max-width:390px){.bt3681-deposit-ledger{padding:11px}.bt3681-ledger-row{flex-wrap:wrap}.bt3681-ledger-actions{margin-left:auto}}

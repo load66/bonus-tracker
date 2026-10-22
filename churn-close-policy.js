@@ -1,4 +1,4 @@
-/* Release 3.6.80: canonical bank and closure rules unchanged; Requirement workflow label only. */
+/* Release 3.6.81: canonical bank and closure rules unchanged; Transaction evidence only. */
 /* BonusTracker v3.5.2 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
 (function(){
   'use strict';

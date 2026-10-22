@@ -365,6 +365,34 @@ function requirementTitle(r){
  if(kind==='relationship')return 'Linked account requirement';
  return raw||'Complete offer requirement';
 }
+
+function depositLedgerHtml(e,readonly=false){
+ const progress=typeof depositProgress==='function'?depositProgress(e):{rows:[],totalCents:0,confirmedCents:0,recordedCount:0,confirmedCount:0,targetCents:0,percent:0};
+ const hasDD=Array.isArray(e?.financialRules?.requirements)&&e.financialRules.requirements.some(r=>r?.kind==='direct-deposit')||
+  /direct[ -]?deposits?|\bpayroll\b|\bq?dd\b/i.test([e?.completeBonusText,e?.dataPoint,...(e?.checklist||[]).map(x=>x.text)].join(' '));
+ if(!hasDD&&!progress.recordedCount)return'';
+ const dollars=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:n%100===0?0:2,maximumFractionDigits:2}).format(n/100);
+ const total=progress.totalCents,confirmed=progress.confirmedCents;
+ let h='<div class="bt3681-deposit-ledger" aria-label="Recorded direct deposits"><div class="bt3681-ledger-head"><b>Deposit activity</b>';
+ if(!readonly&&e.opened)h+='<button type="button" class="bt360-link" onclick="openDepositRecord('+arg(e.id)+')">+ Record deposit</button>';
+ h+='</div>';
+ if(!e.opened)h+='<p class="bt360-muted">Save the actual opening date to start recording deposits for this bonus cycle.</p>';
+ else{
+  h+='<p class="bt3681-ledger-total">'+dollars(total)+' recorded · '+dollars(confirmed)+' user-confirmed as counted</p>';
+  if(progress.targetCents){
+   h+='<div class="bt3681-ledger-track" role="progressbar" aria-label="User-confirmed counted deposit amount" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+progress.percent+'"><i style="width:'+progress.percent+'%"></i></div>';
+   h+='<small>'+dollars(confirmed)+' of '+dollars(progress.targetCents)+' user-confirmed counted · '+progress.percent+'% of single saved target</small>';
+  }else h+='<small>No single nonrecurring deposit target is verified in structured terms. Amounts are not combined into a qualification percentage.</small>';
+  h+='<p class="research-caveat">Manually recorded activity only. Never automatically marks requirements met or the bonus received.</p>';
+  if(progress.rows.length){
+   h+='<div class="bt3681-ledger-rows">'+progress.rows.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(x=>
+    '<div class="bt3681-ledger-row"><span><b>'+safe(dollars(x.amountCents))+'</b><small>'+safe(date(x.date))+' · '+safe(x.method)+' · '+(x.bankConfirmed?'You confirmed counted':'Not confirmed counted')+'</small>'+(x.note?'<small>'+safe(x.note)+'</small>':'')+'</span>'+
+    (!readonly?'<span class="bt3681-ledger-actions"><button type="button" class="bt360-link" onclick="openDepositRecord('+arg(e.id)+','+arg(x.id)+')">Edit</button><button type="button" class="bt360-link" onclick="voidDepositRecord('+arg(e.id)+','+arg(x.id)+')">Void</button></span>':'')+'</div>'
+   ).join('')+'</div>';
+  }else h+='<p class="bt360-muted">No deposits recorded for this account cycle.</p>';
+ }
+ return h+'</div>';
+}
 function requirementRows(e){
  const list=Array.isArray(e.financialRules?.requirements)?e.financialRules.requirements:[];
  const done=!!e.reqMet,legacy=!list.length?String(e.completeBonusText||'').trim():'';
@@ -803,7 +831,7 @@ function detailPanels(e){
  const savedWorkStart=h.length;
  if(!closed&&(!ready||hasExtraWork)){
   const req=requirementRows(e);
-  h+=accountSection(e,'requirements','Requirements',(!req.count?'<p class="bt360-muted">No requirements saved.</p>':req.html)+'<div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></div>',e.reqMet?'Confirmed':req.count+' saved',(Array.isArray(e.financialRules?.requirements)&&e.financialRules.requirements.length>0||!!String(e.completeBonusText||'').trim()||Number(e.reqDays)>0)?'<button type="button" class="bt360-link bt3621-confirm-all" onclick="openReqMet('+arg(e.id)+')">'+(e.reqMet?'Review confirmation':hasExtraWork?'Confirm requirements':'Confirm all')+'</button>':'',true);
+  h+=accountSection(e,'requirements','Requirements',(!req.count?'<p class="bt360-muted">No requirements saved.</p>':req.html)+depositLedgerHtml(e)+'<div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></div>',e.reqMet?'Confirmed':req.count+' saved',(Array.isArray(e.financialRules?.requirements)&&e.financialRules.requirements.length>0||!!String(e.completeBonusText||'').trim()||Number(e.reqDays)>0)?'<button type="button" class="bt360-link bt3621-confirm-all" onclick="openReqMet('+arg(e.id)+')">'+(e.reqMet?'Review confirmation':hasExtraWork?'Confirm requirements':'Confirm all')+'</button>':'',true);
   // Mockup order: Requirements, Fees & waivers, Timers. Read-only panel;
   // no fee, timer, task or lifecycle handler is replaced.
   if(!ready)h+=accountSection(e,'fees','Fees & waivers',feeDetail(e),'Review saved fees');
@@ -815,12 +843,14 @@ function detailPanels(e){
  // Closed records retain saved historical fee presentation, while open
  // in-progress accounts already showed their fee card before Timers.
  if(closed&&!ready)h+=accountSection(e,'fees','Fees & waivers',feeDetail(e),'Saved fees');
+ if(closed&&!ready){const savedDepositHistory=depositLedgerHtml(e,true);if(savedDepositHistory)h+=accountSection(e,'deposits','Deposit activity',savedDepositHistory,'Saved evidence');}
  if(!closed&&(e.dataPoint||e.completeBonusText||e.notes))h+='<details class="bt366-offer-notes"><summary>Offer notes</summary><p>'+safe([e.dataPoint,e.completeBonusText,e.notes].filter(Boolean).join('\n\n'))+'</p></details>';
  if(ready||code==='HOLD_OPEN'||code==='BONUS_RECEIVED'){
   const items=closeCheckPresentation(e);
   h+='<div data-bt-hold>'+panel(ready?'Close checks':'Hold & close checks',items.map(item=>'<div class="bt360-check '+(item.ok?'done':'unknown')+'"><span class="bt3611-check-icon">'+(item.ok?'✓':'')+'</span><div><b>'+safe(item.label)+'</b><small>'+safe(item.detail)+'</small></div></div>').join(''))+'</div>';
  }
  if(ready)h+=accountDates(e)+accountSection(e,'fees','Fees & waivers',feeDetail(e),'Review saved fees');
+ if(ready){const savedDepositHistory=depositLedgerHtml(e,true);if(savedDepositHistory)h+=accountSection(e,'deposits','Deposit activity',savedDepositHistory,'Saved evidence');}
  if(ready){
   const phoneRow=getPhoneBook().find(row=>{try{return bankIdentity(row.bank).family===bankIdentity(e.bank).family}catch{return row.bank===e.bank}});
   const phone=phoneRow?.[accountAudience(e)]||'';

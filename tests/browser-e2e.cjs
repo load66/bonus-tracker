@@ -442,6 +442,74 @@ async function exercise(name,engine,url){
     },journeyRestore);
     check('journey restores prior test records byte-for-byte',
       await page.evaluate(backup=>localStorage.getItem('bt_e_v4')===backup.tracker,journeyRestore));
+    // v3.6.81: real mobile deposit evidence journey, not a synthetic payment or bank API.
+    {
+      const entry=require('./fixtures/financial-rules.cjs').fixture();
+      const wording='Receive qualifying direct deposits totaling $1,000.';
+      entry.id='SYN-LEDGER-BROWSER';entry.bank='Synthetic Ledger Bank';
+      entry.tcSourceRaw+=' '+wording;
+      entry.financialRules.requirements=[{id:'dd-ledger',accountId:'checking',kind:'direct-deposit',
+        amount:1000,text:wording,evidence:{source:'promotion',quote:wording}}];
+      entry.customTimers=[];entry.checklist=[];entry.reqMet='';entry.bonusRecd='';
+      const saved=await page.evaluate(e=>{
+        const previous={entries,expanded,tab,keys:getBackupStorageKeys().map(k=>[k,localStorage.getItem(k)])};
+        entries=[e];expanded=e.id;tab='tracker';R();return previous;
+      },entry);
+      check('unrecorded direct deposits start at zero without a fake qualifying result',
+        await page.locator('.bt3681-ledger-total').innerText().then(x=>x.includes('$0 recorded')&&x.includes('$0 user-confirmed')));
+      await page.setViewportSize({width:390,height:844});
+      await page.getByRole('button',{name:'+ Record deposit'}).click();
+      check('new deposit dialog does not invent an amount or date',
+        await page.getByRole('dialog',{name:'Record direct deposit'}).isVisible()&&
+        await page.locator('#dep_amount').inputValue()===''&&await page.locator('#dep_date').inputValue()==='');
+      await page.locator('#dep_date').fill('2026-02-01');
+      await page.locator('#dep_amount').fill('200.50');
+      await page.locator('#dep_method').fill('Synthetic employer payroll');
+      await page.getByRole('button',{name:'Save deposit',exact:true}).click();
+      check('observed deposit records dollars without auto-confirmation',
+        await page.evaluate(()=>depositProgress(entries[0]).totalCents===20050&&
+          depositProgress(entries[0]).confirmedCents===0&&!entries[0].reqMet&&!entries[0].bonusRecd));
+      check('recorded amount is presented without claiming qualifying progress',
+        await page.locator('.bt3681-ledger-total').innerText().then(x=>x.includes('$200.50 recorded')&&x.includes('$0 user-confirmed')));
+      await page.locator('.bt3681-ledger-actions button').first().click();
+      check('editing evidence requires explicit counted confirmation',
+        await page.getByRole('dialog',{name:'Correct recorded deposit'}).isVisible()&&
+        !await page.locator('#dep_confirmed').isChecked());
+      await page.locator('#dep_confirmed').check();await page.getByRole('button',{name:'Save deposit'}).click();
+      check('user-confirmed counted amount updates only the ledger',
+        await page.evaluate(()=>depositProgress(entries[0]).confirmedCents===20050&&
+          depositProgress(entries[0]).percent===20&&!entries[0].reqMet&&!entries[0].bonusRecd));
+      check('single verified cumulative target has truthful percent and label',
+        await page.locator('.bt3681-deposit-ledger [role="progressbar"]').getAttribute('aria-valuenow')==='20'&&
+        await page.locator('.bt3681-deposit-ledger').innerText().then(t=>t.includes('20% of single saved target')));
+      await page.locator('.bt3681-ledger-actions button').first().click();
+      await page.locator('#dep_amount').fill('300');
+      check('material edit clears prior counted attestation',
+        !await page.locator('#dep_confirmed').isChecked());
+      await page.getByRole('button',{name:'Save deposit'}).click();
+      check('correcting a deposit does not retain stale accepted status',
+        await page.evaluate(()=>depositProgress(entries[0]).totalCents===30000&&depositProgress(entries[0]).confirmedCents===0));
+      await page.locator('.bt3681-ledger-actions button').nth(1).click();
+      check('void asks for explicit approval',await page.locator('.cbox').isVisible());
+      await page.locator('.cbox button.c-g,.cbox button.c-r').first().click();
+      check('void excludes deposit from totals without deleting its history',
+        await page.evaluate(()=>depositProgress(entries[0]).recordedCount===0&&
+          entries[0].depositEvidence.length===1&&!!entries[0].depositEvidence[0].voidedAt));
+      for(const width of [320,390,430]){
+        await page.setViewportSize({width,height:844});
+        check('deposit ledger fits '+width+'px',
+          await page.locator('.bt3681-deposit-ledger').evaluate(el=>el.scrollWidth<=el.clientWidth+1&&
+            document.documentElement.scrollWidth<=innerWidth));
+      }
+      await page.evaluate(previous=>{
+        const valid=new Set(previous.keys.map(([k])=>k));
+        getBackupStorageKeys().forEach(k=>{if(!valid.has(k))localStorage.removeItem(k)});
+        previous.keys.forEach(([k,v])=>{if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)});
+        entries=previous.entries;expanded=previous.expanded;tab=previous.tab;depositPrompt=null;cfm=null;R();
+      },saved);
+      check('deposit journey restores all previous test storage',
+        await page.evaluate(previous=>previous.keys.every(([k,v])=>localStorage.getItem(k)===v),saved));
+    }
     check('Needs you uses unboxed PDF heading and standalone priority card',await page.locator('.bt3719-needs > .bt3719-section-title').count()===1&&await page.locator('.bt3641-attention-toggle').count()===1&&await page.locator('.bt3641-attention-item.is-selected').count()===0&&await page.locator('.bt3719-needs.bt360-panel').count()===0);
     check('v3.6.1 panel headings render badges instead of literal HTML',await page.locator('.bt360-panel-title').evaluateAll(rows=>rows.some(e=>e.querySelector('h3')?.textContent==='Needs you'&&e.querySelector('.bt360-count'))&&rows.every(e=>!e.querySelector('h3')?.textContent.includes('<span'))));
     check('90-day deadline is exact',await page.evaluate(()=>reqDeadline(entries[0]))==='2026-05-01');
