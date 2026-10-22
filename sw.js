@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.82: in-app deadline reminders, churn reviews and mobile UX.
-const V = 'bt-v3.6.82-alertplan1';
+// Version 3.6.83: automatic current-offer screening with no manual churn-review chores.
+const V = 'bt-v3.6.83-autochurn1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
