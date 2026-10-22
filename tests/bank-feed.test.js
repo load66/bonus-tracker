@@ -230,3 +230,56 @@ assert.equal(priority.validate({...canonical,offers:[{...canonical.offers[0],lin
 assert.equal(priority.evidence({...canonical.offers[0],title:'Chase $500 Checking Bonus'},evidence),null,'Different reward may not borrow the same source evidence');
 assert.equal(JSON.stringify([...storage]),before,'Canonical multi-source offers mutated tracker data');
 console.log('Canonical offer UI passed: compact identity, two safe sources, extracted amount filters and data isolation');
+
+
+// v3.6.83: automatic candidates require BOTH a verified saved churn date
+// and current attributable official promotion, fee and geographic evidence.
+{
+ const now=new Date().toISOString(),expires=new Date(Date.now()+12*3600000).toISOString();
+ const promo='https://accountoffers.wellsfargo.com/checkingoffer/';
+ const fees='https://www.wellsfargo.com/help/checking-fees/';
+ const link='https://www.hustlermoneyblog.com/wells-fargo-auto-offer/';
+ const headline='Wells Fargo $325 Checking Bonus';
+ const record={
+  offerTitle:headline,offerUrl:link,status:'evidence-found',
+  officialCheckedAt:now,aiCheckedAt:now,changed:false,
+  sources:[{role:'promotion',url:promo,hash:'a'.repeat(64)},{role:'fees',url:fees,hash:'b'.repeat(64)}],
+  fields:{
+   bonus:{value:'$325',quote:'Receive a $325 bonus.',sourceUrl:promo,sourceHash:'a'.repeat(64)},
+   eligibility:{value:'New checking customers',quote:'New checking customers may qualify.',sourceUrl:promo,sourceHash:'a'.repeat(64)},
+   qualifying_activity:{value:'$1,000 qualifying deposits',quote:'Complete $1,000 qualifying deposits.',sourceUrl:promo,sourceHash:'a'.repeat(64)},
+   monthly_fee:{value:'$10 monthly fee',quote:'A $10 monthly fee may apply.',sourceUrl:fees,sourceHash:'b'.repeat(64)}
+  }
+ };
+ const raw={schemaVersion:2,checkedAt:now,
+  offers:[{title:headline,url:link,publishedAt:now,product:'checking',bank:'Wells Fargo',amount:325,region:'nationwide',offerKey:'wells-auto-325'}],
+  verification:{schemaVersion:1,status:'complete',records:{[link]:record}}};
+ const processed=priority.validate(raw);
+ const geo={schemaVersion:1,status:'complete',records:{[link]:{
+  offerTitle:headline,offerUrl:link,status:'verified',checkedAt:now,expiresAt:expires,
+  sourceUrl:promo,sourceHash:'a'.repeat(64),nationwide:true,
+  nationwideQuote:'This offer is available nationwide.',rules:[],conditions:[]
+ }}};
+ const closed={id:'synthetic-auto-cycle',bank:'Wells Fargo',accountType:'personal',
+  opened:'2025-01-02',closed:'2025-09-02',bonusRecd:'2025-02-01',
+  churnable:true,churnability:'repeatable',churnPeriodValue:12,churnPeriodUnit:'months',
+  sourceEligibilityBasis:'bonus-received',
+  eligibilityEvidenceText:'Not eligible if you received a Wells Fargo consumer checking bonus within the past 12 months.',
+  eligibilityEvidenceSource:'official-promotion-terms'};
+ const match=(row=closed,source=processed,catalog=geo)=>Array.from(priority.automaticChurnMatches([row],source,catalog));
+ const found=match();
+ assert.equal(found.length,1,'Fully grounded date+official offer was not surfaced');
+ assert.equal(found[0].bonus,325);
+ assert.equal(found[0].officialUrl,promo,'Only a trusted official promotion link may be displayed');
+ assert.equal(found[0].bank,'Wells Fargo');
+ assert.equal(match({...closed,closed:''}).length,0,'Open account was shown as churnable');
+ assert.equal(match({...closed,eligibilityEvidenceText:''}).length,0,'Unknown eligibility rule produced automated match');
+ assert.equal(match({...closed,bonusRecd:new Date().toISOString().slice(0,10)}).length,0,'Future cooldown generated a match');
+ assert.equal(match(closed,processed,{...geo,records:{[link]:{...geo.records[link],conditions:['County membership required']}}}).length,0,'Conditional location was approved');
+ assert.equal(match(closed,processed,{...geo,records:{[link]:{...geo.records[link],expiresAt:new Date(Date.now()-1000).toISOString()}}}).length,0,'Expired official location check accepted');
+ const unproven={...processed,offers:processed.offers.map(x=>({...x,evidence:{...x.evidence,sources:x.evidence.sources.filter(s=>s.role!=='fees')}}))};
+ assert.equal(match(closed,unproven).length,0,'Missing fee evidence was treated as validated');
+ assert.equal(priority.automaticChurnMatches([closed,closed],processed,geo).length,1,'Cycle duplicates generated repeated offers');
+ assert.equal(JSON.stringify([...storage]),before,'Automated discovery changed stored bank data');
+ console.log('Automated churn matches passed: verified rules, official offer/fee/geography, conservative suppression and no writes');
+}

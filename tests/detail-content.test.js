@@ -65,10 +65,19 @@ assert.match(sandbox.BT360.detailPanels(e),/Direct deposits totaling \$10,000/);
  assert(!alerts.some(x=>x.entryId===unknown.id&&x.kind==='reopen'), 'Unverified churn became an eligible alert');
  assert.equal(new Set(alerts.map(x=>x.entryId+'|'+x.kind)).size,alerts.length,'Duplicate reminder created');
  const plan=sandbox.BT360.churnReviewPlan(rows);
- assert.equal(plan.length,1);assert.equal(plan[0].verified,false);
+ assert.equal(plan.length,0,'Unverified closed account must not enter automation results');
  const markup=sandbox.BT360.churnReviewMarkup(rows);
- assert.match(markup,/Next reopening reviews/);assert.match(markup,/Rule review needed/);
- assert.doesNotMatch(markup,/Check offers/,'Unverified reopening gained direct offer CTA');
+ assert.equal(markup,'','Automation-first Archive must not render any review chores without a verified offer');
+ const oldMatcher=sandbox.BTBankBonusFeed.automaticChurnMatches;
+ try{
+  sandbox.BTBankBonusFeed.automaticChurnMatches=()=>[{bank:unknown.bank,audience:'personal',bonus:325,officialUrl:'https://accountoffers.wellsfargo.com/checkingoffer/'}];
+  const matchMarkup=sandbox.BT360.churnReviewMarkup(rows);
+  assert.match(matchMarkup,/New bonus matches/);
+  assert.match(matchMarkup,/\$325 potential signup bonus/);
+  assert.match(matchMarkup,/Current official reward, fees and location checked/);
+  assert.doesNotMatch(matchMarkup,/Next reopening reviews|Rule review needed|Review in/);
+  assert(sandbox.BT360.upcomingReminders(rows).some(x=>x.kind==='offer'),'Source-verified potential new offer must produce notification');
+ }finally{sandbox.BTBankBonusFeed.automaticChurnMatches=oldMatcher;}
  assert.match(sandbox.BT360.notifications(rows),/No background or push delivery/);
  assert.equal(JSON.stringify(rows),beforeRows,'Reminder or churn planner mutated financial records');
  assert.equal(JSON.stringify([...storage]),beforeStorage,'Reminder or churn planner persisted data');
@@ -173,8 +182,8 @@ const estimatedList=sandbox.BT360.archive([estimatedPast]);
 assert.match(estimatedList,/<b>0<\/b><small>Eligible now<\/small>/,'Unverified historic dates must not certify current eligibility');
 
 /* v3.6.27: all computable saved dates show a countdown, with verification status. */
-assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.6\.82';/,'The on-screen app version reflects this release');
-assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.6\.82-alertplan1/,'The version label is refreshed on clients');
+assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.6\.83';/,'The on-screen app version reflects this release');
+assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.6\.83-autochurn1/,'The version label is refreshed on clients');
 const archiveFutureDate='2030-01-01';
 const projectedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,verified:false});
 assert(projectedFuture&&projectedFuture.days>0&&projectedFuture.caption==='days · estimate','Unverified saved future date shows an estimated countdown');
