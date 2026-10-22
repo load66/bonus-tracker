@@ -421,7 +421,7 @@ async function exercise(name,engine,url){
       await page.locator('.bt360-detail-header').count()===1&&await page.locator('.bt360-steps').count()===1&&await page.locator('.bt360-steps span').count()===5&&await page.locator('.bt360-detail-card .card-h').count()===0);
     check('legacy LIFECYCLE strip and CHECKLIST label removed',await page.locator('.bt360-detail-card .bt-life').count()===0&&await page.getByText('Checklist',{exact:true}).count()===0);
     check('stage in progress never suggests bonus received',
-      await page.locator('.bt360-detail-footer .bt360-primary').innerText().then(t=>t==='Record deposit'||t==='Open next task'));
+      await page.locator('.bt360-detail-footer .bt360-primary').innerText().then(t=>t==='Confirm requirements'||t==='Open next task'));
     check('Manage is absent; account controls open from header menu',
       await page.getByRole('button',{name:'Manage',exact:true}).count()===0&&await page.getByRole('button',{name:'More account actions'}).count()===1);
     check('fixed bar is outside scrolling card',await page.locator('.bt360-detail-footer').evaluate(e=>e.parentElement?.id==='app'&&!e.closest('.scroll')));
@@ -581,7 +581,7 @@ async function exercise(name,engine,url){
       R();
     });
     check('synthetic close rules were expressly saved rather than inferred',await page.evaluate(()=>entries[0].earlyCloseFee===0&&/No early closing fee/.test(entries[0].feeScheduleRaw)));
-    await page.getByRole('button',{name:'Record deposit'}).click();
+    await page.getByRole('button',{name:'Confirm requirements'}).click();
     check('requirements dialog leaves unknown actual date blank',await page.locator('#req_date').inputValue()==='');
     check('requirements dialog explicitly asks for an actual past date',await page.getByRole('dialog',{name:'Requirement completed'}).isVisible()&&await page.locator('#req_date').getAttribute('max')!==null);
     const beforeInvalidRequirement=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
