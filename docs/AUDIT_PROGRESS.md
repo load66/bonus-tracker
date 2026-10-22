@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex · v3.6.82 · codex/v3.6.82-alerts-churn-mobile
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.82 actionable in-app reminders, churn/reopening review planner, and mobile UI (`codex/v3.6.82-alerts-churn-mobile`): derive per-category reminder actions from saved verified date contexts or explicit dated saved reminders, suppress completed requirements and payouts, avoid duplicate reminders by account+kind and unverified churn eligibility, preserve safe close checks. Add review-only planner to Archive with next review order, explicit uncertainty and a Check offers action only after a verified saved date has been reached. Upgrade mobile reminder/reopening cards, 44px targets, responsive 320/375/390/430px layouts, no duplicate CTA. Settings now describe working in-app, session-only preferences; **push/background delivery remains unavailable**. Canonical bank rules, actual eligibility and closed/receipt records remain unchanged. New synthetic unit/browser regressions for date prioritization, no false eligibility, no data writes and mobile fit. Release app+cache v3.6.82. Next: pass all Bonus/Cloud/UI, Chromium/WebKit and release verification; merge then verify main/Pages commit.
 
 - v3.6.81 direct-deposit evidence ledger (`codex/v3.6.81-dd-evidence-ledger`): add optional manually entered dated deposit amounts, source/method, note and explicitly attested bank-counted status to the existing saved bank-cycle entry. The recorded totals and confirmed-counted portion remain distinct; a progress percentage appears only for a single unambiguous nonrecurring structured direct-deposit target. Add correction revision history, void-with-history, opening-cycle isolation, strict dated/positive amount validation, readback-verified atomic storage with rollback, and compact mobile Requirements UI. Never derive completion, bonus receipt, bank acceptance, or legal eligibility automatically from recorded deposits; recurring offer periods do not combine into a false target. No new storage keys, bank-rule changes, provider API calls, or backend changes. Synthetic unit and full Chromium/WebKit browser journeys cover create/edit/attest/void, backup key preservation, and 320/390/430 widths. App and offline cache v3.6.81. Next: all unit/browser/release checks, squash merge only if green, verify production Pages on exact merge commit.
 
