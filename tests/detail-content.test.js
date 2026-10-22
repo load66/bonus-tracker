@@ -142,8 +142,8 @@ const estimatedList=sandbox.BT360.archive([estimatedPast]);
 assert.match(estimatedList,/<b>0<\/b><small>Eligible now<\/small>/,'Unverified historic dates must not certify current eligibility');
 
 /* v3.6.27: all computable saved dates show a countdown, with verification status. */
-assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.6\.79';/,'The on-screen app version reflects this release');
-assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.6\.79-dptrust1/,'The version label is refreshed on clients');
+assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.6\.80';/,'The on-screen app version reflects this release');
+assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.6\.80-journey1/,'The version label is refreshed on clients');
 const archiveFutureDate='2030-01-01';
 const projectedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,verified:false});
 assert(projectedFuture&&projectedFuture.days>0&&projectedFuture.caption==='days · estimate','Unverified saved future date shows an estimated countdown');
@@ -334,8 +334,8 @@ try{
   assert.match(sheet,/bt-ba-backdrop/);
   assert.match(sheet,/bt-ba-stage/);
   const footerLabel=sandbox.BT360.primaryAction(sheetRecord).label;
-  if(footerLabel==='Record deposit')assert.doesNotMatch(sheet,/Update completion date/,'Completion confirmation cannot duplicate the footer');
-  else assert.match(sheet,/Update completion date/);
+  assert.match(sheet,/Update completion date/,'A recorded milestone must remain editable in account actions');
+  assert.notEqual(footerLabel,'Record deposit','The primary action must never mislabel whole-offer completion as one deposit');
   assert.match(sheet,/Edit account/);
   assert.match(sheet,/Add task/);
   assert.match(sheet,/Add timer/);

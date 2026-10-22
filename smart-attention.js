@@ -188,7 +188,9 @@
       // Explicit legacy funding fields are used only when funding has no saved task.
       if(!e.reqMet&&e.fundingAmount>0&&!trackers.some(t=>activityKind(t.text)==='new-money')&&!(e.fundedDate||e.fundedAt||e.fundingCompleted||e.fundedDone))candidates.push({kind:'new-money',text:e.fundingAmountText||'Saved account funding requirement',amount:e.fundingAmount});
       if(!candidates.length&&recurring(e,stage)){const recurringTask=trackers.find(t=>/monthly|each month|every month|per month/i.test(t.text)&&!['payout','closure'].includes(activityKind(t.text)));if(recurringTask)candidates.push({kind:activityKind(recurringTask.text),text:recurringTask.text});}
-      if(!candidates.length&&!trackers.length&&(!e.reqMet||recurring(e,stage))){
+      // Payout and closure reminders are not qualifying activity tasks.
+      // Preserve the saved legacy requirement even when those future reminders exist.
+      if(!candidates.length&&!trackers.some(t=>!['payout','closure'].includes(activityKind(t.text)))&&(!e.reqMet||recurring(e,stage))){
         const lines=String(e.completeBonusText||e.dataPoint||'').split(/\n|[;]+/).filter(t=>!/^\s*(?:no |not |exclude|wait |do not)/i.test(t.replace(/^\s*\d+[.)]\s*/,'')));
         const line=lines.find(t=>['direct-deposit','new-money','balance-hold','transactions','enrollment'].includes(activityKind(t))&&!trackers.some(x=>x.done&&normalizedTask(x.text)===normalizedTask(t)));
         if(line)candidates.push({kind:activityKind(line),text:line});

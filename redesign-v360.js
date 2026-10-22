@@ -294,7 +294,7 @@ function primaryAction(e){
  const code=stage(e).code,id=arg(e.id),checks=Array.isArray(e.checklist)?e.checklist:[];
  if(code==='IN_PROGRESS'||code==='ACTION_NEEDED'){
   if(checks.some(x=>x&&!x.done))return {label:'Open next task',command:'BT360.openNextTask('+id+')'};
-  return {label:'Record deposit',command:'openReqMet('+id+')'};
+  return {label:'Confirm requirements',command:'openReqMet('+id+')'};
  }
  if(code==='REQUIREMENTS_MET'||code==='AWAITING_BONUS')return {label:'Confirm received',command:'openRcv('+id+')'};
  if(code==='HOLD_OPEN'||code==='BONUS_RECEIVED')return {label:'View hold',command:'BT360.showHold()'};
