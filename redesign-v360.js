@@ -380,7 +380,7 @@ function depositLedgerHtml(e,readonly=false){
  else{
   h+='<p class="bt3681-ledger-total">'+dollars(total)+' recorded · '+dollars(confirmed)+' user-confirmed as counted</p>';
   if(progress.targetCents){
-   h+='<div class="bt3611-req-track" role="progressbar" aria-label="User-confirmed counted deposit amount" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+progress.percent+'"><i style="width:'+progress.percent+'%"></i></div>';
+   h+='<div class="bt3681-ledger-track" role="progressbar" aria-label="User-confirmed counted deposit amount" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+progress.percent+'"><i style="width:'+progress.percent+'%"></i></div>';
    h+='<small>'+dollars(confirmed)+' of '+dollars(progress.targetCents)+' user-confirmed counted · '+progress.percent+'% of single saved target</small>';
   }else h+='<small>No single nonrecurring deposit target is verified in structured terms. Amounts are not combined into a qualification percentage.</small>';
   h+='<p class="research-caveat">Manually recorded activity only. Never automatically marks requirements met or the bonus received.</p>';
