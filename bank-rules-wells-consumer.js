@@ -1,4 +1,4 @@
-/* Release 3.6.78: canonical bank and closure rules unchanged; Tax UI only. */
+/* Release 3.6.79: canonical bank and closure rules unchanged; Datapoint UI only. */
 /*
  * filename: bank-rules-wells-consumer.js
  * version: 3.5.2
