@@ -5218,7 +5218,7 @@ function saveDepositRecord(){
  const original=p.recordId?depositLedgerRows(e).find(x=>x.id===p.recordId):null;
  if(p.recordId&&(!original||JSON.stringify(original)!==p.originalFingerprint))return depositError('This deposit changed. Reopen it before editing.');
  const materiallyChanged=!!original&&(original.date!==p.date||original.amountCents!==cents||original.method!==method);
- if(materiallyChanged&&original.bankConfirmed&&!p.reconfirmed)return depositError('Confirm again if the bank counted this revised deposit.');
+ if(materiallyChanged&&original.bankConfirmed&&p.bankConfirmed&&!p.reconfirmed)return depositError('Confirm again if the bank counted this revised deposit.');
  const id=original?.id||'de_'+dpId(),now=td();
  const record={...original,id,cycleOpened:e.opened,date:p.date,amountCents:cents,method,note,
    bankConfirmed:p.bankConfirmed===true,confirmedAt:p.bankConfirmed?(original?.bankConfirmed&&!materiallyChanged?original.confirmedAt:now):'',
