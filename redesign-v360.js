@@ -1065,7 +1065,7 @@ async function backUpNow(){
 
 function validReminderDate(v){
  const date=String(v||'');
- return /^\d{4}-\d{2}-\d{2}$/.test(date)&&Number.isFinite(dB(td(),date))?date:'';
+ return typeof archiveDateValid==='function'&&archiveDateValid(date)&&Number.isFinite(dB(td(),date))?date:'';
 }
 // Read-only and de-duplicated by bank cycle, reminder category and ID.
 // Reminders never confer new-offer eligibility or alter financial records.
