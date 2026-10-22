@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.77';
+const APP_VERSION='3.6.78';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4718,83 +4718,146 @@ const taxEstimateDrafts=Object.create(null);
 /* Paycheck JSON imports are temporary, review-first and never written to
  * tracker, archive, financial history, localStorage or R2. */
 let taxPayImportState=null;
+const taxPayAccepted=Object.create(null); // session-only: no storage or cloud sync
 function taxPayMoney(n){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:2}).format(n)}
+function taxPayDelta(value){return (value>=0?'+':'−')+taxPayMoney(Math.abs(value))}
+function taxPayCurrentPrevious(year){return taxPayAccepted[year]||null}
+function taxPayProjection(row){
+ return window.BTTaxPayImport.project(row,{previous:taxPayCurrentPrevious(row.taxYear)?.row});
+}
+function taxPayRender(){
+ const node=document.getElementById('bt-tax-pay-upload');
+ if(node)node.innerHTML=renderTaxJsonPanel();
+}
 function taxPayImportError(message){
  taxPayImportState={error:String(message||'Could not read this pay file.')};
- const el=document.getElementById('bt-tax-pay-upload');
- if(el)el.innerHTML=renderTaxJsonPanel();
+ taxPayRender();
 }
 function taxLoadJsonFile(input){
  const file=input?.files?.[0];
  if(input)input.value='';
  if(!file)return;
- if(file.size>16384||file.size===0){taxPayImportError('Choose a small JSON file created for this Tax tab (16 KB maximum).');return}
+ if(file.size>16384||file.size===0){taxPayImportError('Choose a JSON pay snapshot file under 16 KB.');return}
  if(!/\.json$/i.test(file.name)){taxPayImportError('Choose a .json pay snapshot file.');return}
  const reader=new FileReader();
  reader.onload=()=>{
   try{
    const row=window.BTTaxPayImport.read(JSON.parse(reader.result));
-   const projection=window.BTTaxPayImport.project(row);
-   taxPayImportState={row,projection};
-   const el=document.getElementById('bt-tax-pay-upload');
-   if(el)el.innerHTML=renderTaxJsonPanel();
+   const previous=taxPayCurrentPrevious(row.taxYear);
+   const projection=taxPayProjection(row);
+   taxPayImportState={row,projection,previous,stale:!!(previous&&row.asOfDate<previous.row.asOfDate),
+    scheduleDraft:{payFrequency:row.payFrequency||'',nextPayDate:row.nextPayDate||'',
+     federalTaxableWagesPerPaycheck:row.federalTaxableWagesPerPaycheck??'',
+     federalIncomeTaxWithheldPerPaycheck:row.federalIncomeTaxWithheldPerPaycheck??''}};
+   taxPayRender();
   }catch(error){taxPayImportError(error?.message||'Invalid pay JSON.')}
  };
- reader.onerror=()=>taxPayImportError('Could not open that file. Try selecting it again.');
+ reader.onerror=()=>taxPayImportError('Could not open the file. Please select it again.');
  reader.readAsText(file);
+}
+function taxPayUpdateRow(fields){
+ const state=taxPayImportState;
+ const row=window.BTTaxPayImport.read({...state.row,...fields});
+ state.row=row;state.projection=taxPayProjection(row);state.applied=false;
+ state.stale=!!(state.previous&&row.asOfDate<state.previous.row.asOfDate);
+ return row;
 }
 function taxPayWageOverride(value){
  const state=taxPayImportState;
  if(!state?.row)return false;
  try{
   const raw=String(value??'').trim();
-  if(raw&&!/^(?:\d+(?:\.\d{1,2})?|\.\d{1,2})$/.test(raw))
-   throw Error('Enter federal taxable wages as a nonnegative dollar amount.');
-  const updated=window.BTTaxPayImport.read({...state.row,federalTaxableWagesYtd:raw?Number(raw):null});
-  state.row=updated;
-  state.projection=window.BTTaxPayImport.project(updated);
+  if(raw&&!/^(?:\d+(?:\.\d{1,2})?|\.\d{1,2})$/.test(raw))throw Error('Enter nonnegative dollars and cents.');
+  taxPayUpdateRow({federalTaxableWagesYtd:raw?Number(raw):null});
   state.wageError='';
-  state.applied=false; // Always require a new explicit Use this estimate.
- }catch(err){state.wageError=String(err?.message||'Check federal taxable wages.');}
- const el=document.getElementById('bt-tax-pay-upload');
- if(el)el.innerHTML=renderTaxJsonPanel();
+ }catch(err){state.wageError=String(err?.message||'Check the wages amount.');}
+ taxPayRender();
  return !state.wageError;
 }
+function taxPayScheduleField(field,value){
+ const state=taxPayImportState;
+ if(!state?.row||!['payFrequency','nextPayDate','federalTaxableWagesPerPaycheck','federalIncomeTaxWithheldPerPaycheck'].includes(field))return false;
+ const d=state.scheduleDraft||(state.scheduleDraft={payFrequency:'',nextPayDate:'',federalTaxableWagesPerPaycheck:'',federalIncomeTaxWithheldPerPaycheck:''});
+ d[field]=String(value??'').trim();
+ state.applied=false;
+ try{
+  const hasFreq=!!d.payFrequency,hasDate=!!d.nextPayDate;
+  if(hasFreq!==hasDate){
+   state.scheduleError='Add both pay frequency and your next payday, or clear both.';
+  }else{
+   const fields={payFrequency:hasFreq?d.payFrequency:null,nextPayDate:hasDate?d.nextPayDate:null};
+   for(const key of ['federalTaxableWagesPerPaycheck','federalIncomeTaxWithheldPerPaycheck']){
+    const v=d[key];
+    if(v&&!/^(?:\d+(?:\.\d{1,2})?|\.\d{1,2})$/.test(v))throw Error('Per-paycheck amounts must be nonnegative dollars and cents.');
+    fields[key]=v?Number(v):null;
+   }
+   taxPayUpdateRow(fields);state.scheduleError='';
+  }
+ }catch(err){state.scheduleError=String(err?.message||'Check the pay schedule.');}
+ taxPayRender();
+ return !state.scheduleError;
+}
+function taxPayEstimateFor(projection,year){
+ const d=taxEstimateDrafts[year]||{},yrE=taxEntriesForYear(year).filter(e=>!window.BT360||window.BT360.scope(e));
+ return window.BTFederalTax?.estimate({year,filingStatus:d.filingStatus||'',otherIncome:projection.annualIncome,
+   bonusAmount:yrE.reduce((sum,e)=>sum+Number(e.bonus||0),0),
+   excludedBonus:d.excludedBonus,deduction:d.deduction,qualifiedOvertime:d.qualifiedOvertime,
+   withholding:projection.annualFederalWithholding===null?'':projection.annualFederalWithholding,
+   payments:d.payments})||{ok:false};
+}
 function taxPayApply(){
- if(!taxPayImportState?.row||!taxPayImportState?.projection||taxPayImportState?.wageError)return false;
- const {row,projection}=taxPayImportState;
- // User approval is required; do not silently replace existing typed tax inputs.
+ const st=taxPayImportState;
+ if(!st?.row||!st.projection||st.wageError||st.scheduleError||st.stale)return false;
+ const {row,projection}=st;
  const d=taxEstimateDrafts[row.taxYear]||(taxEstimateDrafts[row.taxYear]={filingStatus:'',otherIncome:'',excludedBonus:'',deduction:'',withholding:'',payments:'',qualifiedOvertime:''});
  d.otherIncome=String(projection.annualIncome);
  d.withholding=projection.annualFederalWithholding===null?'':String(projection.annualFederalWithholding);
- taxPayImportState={row,projection,applied:true};
+ taxPayAccepted[row.taxYear]={row,projection};
+ taxPayImportState={...st,applied:true};
  taxYear=row.taxYear;
  R();
  return true;
 }
-function taxPayRemove(){
- taxPayImportState=null;
- const el=document.getElementById('bt-tax-pay-upload');
- if(el)el.innerHTML=renderTaxJsonPanel();
-}
+function taxPayRemove(){taxPayImportState=null;taxPayRender()}
 function renderTaxJsonPanel(){
  const st=taxPayImportState||{};
- let h='<div class="bt-tax-pay"><div class="bt-tax-pay-head"><div><strong>Import paycheck JSON</strong><small>Send your pay screenshot to ChatGPT, then import the reviewed JSON here.</small></div></div>';
+ let h='<div class="bt-tax-pay"><div class="bt-tax-pay-head"><div><strong>Update paycheck estimate</strong><small>Send a pay screenshot to ChatGPT, then import its reviewed JSON.</small></div></div>';
  h+='<input type="file" id="bt-tax-file" accept=".json,application/json" aria-label="Choose pay snapshot JSON" hidden onchange="taxLoadJsonFile(this)">';
  h+='<button type="button" class="bt-tax-pay-choose" onclick="document.getElementById(\'bt-tax-file\').click()">Choose JSON file</button>';
  if(st.error)h+='<p class="bt-tax-pay-error" role="alert">'+esc(st.error)+'</p>';
  if(st.row&&st.projection){
-  const x=st.row,p=st.projection;
+  const x=st.row,p=st.projection,d=st.scheduleDraft||{};
   const basis=p.wageBasis==='federal-taxable-wages'?'Federal taxable wages on pay file':p.wageBasis==='gross-less-pretax-proxy'?'Gross less reported pre-tax deductions (approximation)':'Gross pay only (rough proxy)';
   h+='<div class="bt-tax-pay-review"><div class="bt-tax-pay-date"><b>Pay snapshot · '+esc(x.asOfDate)+'</b><span>'+esc(String(x.taxYear))+' YTD</span></div><dl>';
   h+='<div><dt>Gross pay YTD</dt><dd>'+taxPayMoney(x.grossPayYtd)+'</dd></div>';
   if(x.preTaxDeductionsYtd!==null)h+='<div><dt>Pre-tax deductions YTD</dt><dd>'+taxPayMoney(x.preTaxDeductionsYtd)+'</dd></div>';
-  h+='<div><dt>Federal withholding YTD</dt><dd>'+(x.federalIncomeTaxWithheldYtd===null?'Not shown':taxPayMoney(x.federalIncomeTaxWithheldYtd))+'</dd></div>';
-  h+='</dl><details class="bt-tax-wage-review"'+(st.wageError?' open':'')+'><summary>Have exact federal taxable wages? <small>Optional</small></summary><label for="bt-tax-wage-ytd">Federal taxable wages YTD (from paystub)<input id="bt-tax-wage-ytd" aria-label="Federal taxable wages year to date" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Leave blank for estimated wages" value="'+(x.federalTaxableWagesYtd??'')+'" onchange="taxPayWageOverride(this.value)"></label><small>Use this only if your paystub explicitly lists federal taxable wages. It can differ from gross less pre-tax deductions.</small>'+(st.wageError?'<p class="bt-tax-pay-error" role="alert">'+esc(st.wageError)+'</p>':'')+'</details>';
-  h+='<p><b>Projected annual wages:</b> '+taxPayMoney(p.annualIncome)+'<br><b>Projected annual federal withholding:</b> '+(p.annualFederalWithholding===null?'Not available':taxPayMoney(p.annualFederalWithholding))+'</p>';
-  h+='<p class="bt-tax-pay-note">Income basis: '+esc(basis)+'. Projected from '+p.daysElapsed+' elapsed days of '+p.daysInYear+'. Assumes the same pay and withholding rate through year-end; overtime and deductions may change. Check W-2 Box 1 or your pay details for exact federal taxable wages.</p>';
-  if(!st.applied&&!st.wageError)h+='<button class="bt-tax-pay-apply" type="button" onclick="taxPayApply()">Use this estimate</button>';
-  else h+='<p class="bt-tax-pay-success" role="status">Pay snapshot applied. Your filing status and other adjustments remain editable below.</p>';
+  h+='<div><dt>Federal withholding YTD</dt><dd>'+(x.federalIncomeTaxWithheldYtd===null?'Not shown':taxPayMoney(x.federalIncomeTaxWithheldYtd))+'</dd></div></dl>';
+  h+='<details class="bt-tax-wage-review"'+(st.wageError?' open':'')+'><summary>Have exact federal taxable wages? <small>Optional</small></summary><label for="bt-tax-wage-ytd">Federal taxable wages YTD (from paystub)<input id="bt-tax-wage-ytd" aria-label="Federal taxable wages year to date" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Leave blank for estimated wages" value="'+(x.federalTaxableWagesYtd??'')+'" onchange="taxPayWageOverride(this.value)"></label><small>Enter this only when your paystub lists it separately. It can differ from gross less pre-tax deductions.</small>'+(st.wageError?'<p class="bt-tax-pay-error" role="alert">'+esc(st.wageError)+'</p>':'')+'</details>';
+  h+='<details class="bt-tax-pay-schedule"'+(st.scheduleError?' open':'')+'><summary>Improve year-end projection <small>Optional</small></summary><p>For a pay-period estimate, enter your schedule and next payday. Exact per-paycheck amounts can be entered if your stub shows them. Otherwise, a newer snapshot can establish a recent trend.</p>';
+  h+='<div class="bt-tax-pay-fields"><label>Pay frequency<select id="bt-tax-frequency" aria-label="Pay frequency" onchange="taxPayScheduleField(\'payFrequency\',this.value)"><option value="">Not provided</option>'+[['weekly','Every week'],['biweekly','Every two weeks'],['monthly','Once a month']].map(([v,n])=>'<option value="'+v+'"'+(d.payFrequency===v?' selected':'')+'>'+n+'</option>').join('')+'</select></label>';
+  h+='<label>Next payday<input id="bt-tax-next-pay" aria-label="Next payday" type="date" value="'+esc(d.nextPayDate||'')+'" onchange="taxPayScheduleField(\'nextPayDate\',this.value)"></label>';
+  h+='<label>Expected taxable wages / paycheck<input type="number" id="bt-tax-pay-wage" aria-label="Expected taxable wages per paycheck" min="0" step="0.01" inputmode="decimal" placeholder="Optional" value="'+esc(d.federalTaxableWagesPerPaycheck??'')+'" onchange="taxPayScheduleField(\'federalTaxableWagesPerPaycheck\',this.value)"></label>';
+  h+='<label>Expected federal withholding / paycheck<input type="number" id="bt-tax-pay-fed" aria-label="Expected federal withholding per paycheck" min="0" step="0.01" inputmode="decimal" placeholder="Optional" value="'+esc(d.federalIncomeTaxWithheldPerPaycheck??'')+'" onchange="taxPayScheduleField(\'federalIncomeTaxWithheldPerPaycheck\',this.value)"></label></div>';
+  if(st.scheduleError)h+='<p class="bt-tax-pay-error" role="alert">'+esc(st.scheduleError)+'</p>';
+  h+='</details>';
+  const method=p.projectionMethod==='pay-period-entered'?'Paycheck-based · amounts provided':p.projectionMethod==='pay-period-trend'?'Paycheck-based · recent YTD trend':p.projectionMethod==='pay-period-withholding-only'?'Calendar wage average; paycheck withholding':'Calendar-day average';
+  h+='<div class="bt-tax-pay-projection"><strong>Year-end projection</strong><span>'+esc(method)+'</span><p><b>Annual wages:</b> '+taxPayMoney(p.annualIncome)+'<br><b>Annual federal withholding:</b> '+(p.annualFederalWithholding===null?'Not available':taxPayMoney(p.annualFederalWithholding))+'</p></div>';
+  h+='<p class="bt-tax-pay-note">Income basis: '+esc(basis)+'. '+(p.remainingPaychecks!==null?p.remainingPaychecks+' scheduled paycheck(s) remain in '+x.taxYear+'. ':'')+(p.projectionMethod==='calendar-average'?'Estimated using '+p.daysElapsed+' elapsed days of '+p.daysInYear+'. ':'')+'Future wages, bonuses, payroll changes and withholding may differ. Exact W-2 wages are not confirmed by this projection.</p>';
+  if(st.previous){
+   const o=st.previous;
+   if(st.stale)h+='<p class="bt-tax-pay-error" role="alert">This is older than the last accepted snapshot ('+esc(o.row.asOfDate)+'). Import a newer or same-date correction instead.</p>';
+   else {
+    h+='<div class="bt-tax-pay-compare"><b>Change since '+esc(o.row.asOfDate)+'</b><div><span>YTD wages</span><strong>'+taxPayDelta(p.wageYtd-o.projection.wageYtd)+'</strong></div>';
+    if(p.federalWithheldYtd!==null&&o.projection.federalWithheldYtd!==null)h+='<div><span>YTD federal withholding</span><strong>'+taxPayDelta(p.federalWithheldYtd-o.projection.federalWithheldYtd)+'</strong></div>';
+    h+='<div><span>Projected annual wages</span><strong>'+taxPayDelta(p.annualIncome-o.projection.annualIncome)+'</strong></div>';
+    if(p.annualFederalWithholding!==null&&o.projection.annualFederalWithholding!==null)h+='<div><span>Projected annual withholding</span><strong>'+taxPayDelta(p.annualFederalWithholding-o.projection.annualFederalWithholding)+'</strong></div>';
+    const before=taxPayEstimateFor(o.projection,x.taxYear),after=taxPayEstimateFor(p,x.taxYear);
+    if(before.ok&&after.ok&&before.balance!==null&&after.balance!==null)h+='<div><span>Potential federal balance change</span><strong>'+taxPayDelta(after.balance-before.balance)+'</strong></div>';
+    h+='<small>YTD changes are differences, not additional income to add to earlier snapshots. Projected balance uses your current tax inputs and recorded bonuses.</small></div>';
+   }
+  }
+  if(!st.applied&&!st.wageError&&!st.scheduleError&&!st.stale)h+='<button class="bt-tax-pay-apply" type="button" onclick="taxPayApply()">Use this estimate</button>';
+  else if(st.applied)h+='<p class="bt-tax-pay-success" role="status">Pay snapshot applied. Your tax settings remain editable below.</p>';
   h+='<button type="button" class="bt-tax-pay-remove" onclick="taxPayRemove()">Dismiss pay snapshot</button></div>';
  }
  return h+'</div>';
@@ -4807,7 +4870,7 @@ function taxEstimateSet(field,value){
  if(node)node.innerHTML=renderTaxEstimateResult();
  return true;
 }
-function taxEstimateReset(){delete taxEstimateDrafts[taxYear];taxPayImportState=null;R()}
+function taxEstimateReset(){delete taxEstimateDrafts[taxYear];delete taxPayAccepted[taxYear];taxPayImportState=null;R()}
 function taxEstimateInputs(yrE){
  const d=taxEstimateDraft(),income=yrE.reduce((sum,e)=>sum+Number(e.bonus||0),0);
  return window.BTFederalTax?.estimate({year:taxYear,filingStatus:d.filingStatus,otherIncome:d.otherIncome,
@@ -4815,20 +4878,25 @@ function taxEstimateInputs(yrE){
 }
 function renderTaxEstimateResult(){
  const yrE=taxEntriesForYear(taxYear).filter(e=>!window.BT360||window.BT360.scope(e));
- const result=taxEstimateInputs(yrE),money=x=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:2}).format(x);
+ const result=taxEstimateInputs(yrE),money=taxPayMoney;
  if(!window.BTFederalTax?.years.includes(Number(taxYear)))return '<div class="bt-tax-wait">No IRS calculator for '+esc(taxYear)+' yet. Your bonus receipts remain available below; no future-year rates are assumed.</div>';
  if(!result.ok){
   const need={'filing-status':'Choose a filing status to begin.','other-income':'Enter your estimated full-year non-bonus ordinary income to calculate.','excluded-bonus':'Excluded bonus amount must be between $0 and recorded bonuses.','deduction':'Enter a valid deduction amount.','prepayments':'Check the withholding and payment amounts.','bonus-amount':'Check recorded bonus amounts.','qualified-overtime':'Enter a valid qualified overtime premium amount.','overtime-filing-status':'Married filing separately cannot claim this overtime deduction.'};
   return '<div class="bt-tax-wait" role="status">'+esc(need[result.reason]||'Add the inputs above to calculate.')+'</div>';
  }
- const refund=result.balance!==null&&result.balance<0;
- const resultLine=result.balance===null
-  ?'<div class="bt-tax-balance muted"><span>Possible IRS balance or refund</span><b>Enter projected withholding</b><small>Actual balance depends on federal withholding, payments, credits and other tax items.</small></div>'
-  :'<div class="bt-tax-balance"><span>'+(refund?'Possible federal refund':'Possible federal balance to pay')+'</span><b>'+money(Math.abs(result.balance))+'</b><small>Federal income tax minus entered annual federal withholding and estimated payments. This is not an IRS bill or guaranteed refund.</small></div>';
- return '<div class="bt-tax-calc-grid"><div><span>Additional tax on tracked bonuses</span><strong>'+money(result.bonusTax)+'</strong><small>Estimated amount to set aside for these receipts</small></div><div><span>Estimated total federal income tax</span><strong>'+money(result.federalTax)+'</strong><small>Before withholding or payments</small></div></div>'
-  +resultLine
-  +(result.qualifiedOvertime>0?'<p class="bt-tax-overtime-result">Estimated qualified overtime deduction: <b>'+money(result.overtimeDeduction)+'</b> from '+money(result.qualifiedOvertime)+' of reported eligible premium.'+(result.overtimePhaseoutEstimated?' Income exceeds the phaseout threshold; the reduction uses an approximate MAGI and needs review.':'')+'</p>':'')
-  +'<p class="bt-tax-method">Ordinary taxable income: '+money(result.taxable)+' · Deduction: '+money(result.deduction)+(result.usedStandard?' (standard)':' (custom)')+' · Top ordinary bracket reached: '+Math.round(result.marginalRate*100)+'%. Bonus increment compares tax with and without '+money(result.taxableBonus)+' of included bonuses.</p>';
+ const accepted=taxPayAccepted[taxYear],p=accepted?.projection;
+ const payrollSource=p?(p.projectionMethod==='pay-period-trend'?'Recent paycheck trend':p.projectionMethod==='pay-period-entered'?'Paycheck amounts':p.projectionMethod==='pay-period-withholding-only'?'Paycheck withholding + calendar wages':'Calendar-average projection'):'Manual scenario';
+ const hasBalance=result.balance!==null,refund=hasBalance&&result.balance<0;
+ let h='<div class="bt-tax-result" aria-label="Estimated federal tax summary"><div class="bt-tax-primary-balance">';
+ h+='<span>'+(hasBalance?(refund?'Possible federal refund':'Possible federal balance to pay'):'Possible IRS balance or refund')+'</span>';
+ h+='<strong>'+(hasBalance?money(Math.abs(result.balance)):'Enter projected withholding')+'</strong>';
+ h+='<small>'+(hasBalance?'Estimated federal income tax less projected withholding and tax payments. Not an IRS bill or guaranteed refund.':'A balance or refund estimate requires federal withholding; total employee taxes are not a substitute.')+'</small></div>';
+ h+='<div class="bt-tax-calc-grid"><div><span>Additional tax on tracked bonuses</span><strong>'+money(result.bonusTax)+'</strong><small>Estimated incremental tax on recorded bonus receipts</small></div>';
+ h+='<div><span>Estimated total federal income tax</span><strong>'+money(result.federalTax)+'</strong><small>Before withholding or payments</small></div></div>';
+ h+='<div class="bt-tax-result-trust"><span>Basis: '+esc(payrollSource)+(accepted?' · YTD '+esc(accepted.row.asOfDate):'')+'</span><small>Estimates exclude unentered investment or self-employment income, tax credits, state taxes, and other return adjustments.</small></div>';
+ if(result.qualifiedOvertime>0)h+='<p class="bt-tax-overtime-result">Estimated qualified overtime deduction: <b>'+money(result.overtimeDeduction)+'</b> from '+money(result.qualifiedOvertime)+' of reported eligible premium.'+(result.overtimePhaseoutEstimated?' Income exceeds the phaseout threshold; approximate MAGI needs review.':'')+'</p>';
+ h+='<details class="bt-tax-math"><summary>How was this calculated?</summary><div>Estimated ordinary taxable income: '+money(result.taxable)+'. Deduction: '+money(result.deduction)+(result.usedStandard?' (standard)':' (custom)')+'. Top ordinary bracket reached: '+Math.round(result.marginalRate*100)+'%. Bonus tax compares your estimated federal income tax with and without '+money(result.taxableBonus)+' of recorded taxable bonuses. This simplified calculation does not prepare Form 1040.</div></details></div>';
+ return h;
 }
 function renderTaxEstimator(yrE,audience){
  const d=taxEstimateDraft(),supports=window.BTFederalTax?.years.includes(Number(taxYear));

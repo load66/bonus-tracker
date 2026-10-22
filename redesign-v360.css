@@ -1046,3 +1046,37 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt-tax-wage-review input{box-sizing:border-box;width:100%;min-height:44px;border:1px solid #45615C;background:#0E1E1E;border-radius:10px;padding:10px 12px;color:#F2F5F6;font-size:14px;font-variant-numeric:tabular-nums}
 .bt-tax-wage-review>small{display:block;font-size:10px;line-height:1.55;color:#A9B7BD}
 .bt-tax-wage-review input:focus-visible{outline:2px solid #5BE3B0;outline-offset:2px}
+
+/* v3.6.78: concise mobile tax summary and session-only YTD paycheck comparisons. */
+.bt-tax-result{display:grid;gap:10px}
+.bt-tax-primary-balance{padding:18px 16px;border-radius:16px;background:linear-gradient(130deg,#142C26,#182328);border:1px solid #3F6556;min-width:0}
+.bt-tax-primary-balance>span{display:block;color:#B5DACA;font-size:12px;font-weight:720;line-height:1.45}
+.bt-tax-primary-balance>strong{display:block;color:#E9FFF2;font-size:clamp(22px,6vw,32px);font-weight:850;line-height:1.25;margin:6px 0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.bt-tax-primary-balance>small{display:block;color:#A8C6BB;font-size:10px;line-height:1.5}
+.bt-tax-result .bt-tax-calc-grid>div{padding:12px 11px}
+.bt-tax-result .bt-tax-calc-grid strong{font-size:clamp(17px,4.2vw,23px)}
+.bt-tax-result-trust{font-size:10px;color:#BAC5D2;line-height:1.55;margin:0 2px}
+.bt-tax-result-trust span{display:block;font-weight:800;color:#5BE3B0}
+.bt-tax-result-trust small{display:block;font-size:10px;margin-top:3px;color:#AAB3C3}
+.bt-tax-math{font-size:11px;border-top:1px solid #323A4A;padding-top:10px;color:#AEB9C7}
+.bt-tax-math summary{cursor:pointer;min-height:36px;display:flex;align-items:center;font-weight:750;color:#E1E9EE}
+.bt-tax-math>div{line-height:1.65;margin:3px 0 8px}
+.bt-tax-pay-projection{margin-top:9px;padding:12px 10px;border-radius:11px;background:#192A27;border:1px solid #355547}
+.bt-tax-pay-projection>strong{font-size:12px;display:block;color:#C5F0DA}
+.bt-tax-pay-projection>span{font-size:10px;display:block;color:#9EBBB3;margin:3px 0}
+.bt-tax-pay-projection p{margin:8px 0 0}
+.bt-tax-pay-schedule{padding:6px 0 10px;margin:5px 0;border-top:1px solid #2D4541;border-bottom:1px solid #2D4541}
+.bt-tax-pay-schedule>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;min-height:43px;font-size:11px;font-weight:770;color:#D0E7DA}
+.bt-tax-pay-schedule>summary small{font-size:10px;font-weight:500;color:#A7B9B2}
+.bt-tax-pay-schedule p{font-size:11px;line-height:1.6;color:#B0C0BD;margin:7px 0 11px}
+.bt-tax-pay-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.bt-tax-pay-fields label{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:10px;font-weight:770;color:#CCDAD6}
+.bt-tax-pay-fields select,.bt-tax-pay-fields input{box-sizing:border-box;min-width:0;width:100%;min-height:42px;color:#F0F7F2;background:#101C1B;border:1px solid #426359;border-radius:9px;padding:9px;font-size:12px;font-variant-numeric:tabular-nums}
+.bt-tax-pay-fields :is(select,input):focus-visible{outline:2px solid #5BE3B0;outline-offset:2px}
+.bt-tax-pay-compare{margin:12px 0 8px;padding:10px;border-radius:11px;background:#1C262F;border:1px solid #394E58}
+.bt-tax-pay-compare>b{font-size:11px;display:block;color:#ECF3F8;margin-bottom:9px}
+.bt-tax-pay-compare>div{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:6px 0;border-bottom:1px solid #34434D}
+.bt-tax-pay-compare>div>span{font-size:10px;color:#BECBD4}
+.bt-tax-pay-compare>div>strong{font-size:11px;font-variant-numeric:tabular-nums;color:#EAF7F1;white-space:nowrap}
+.bt-tax-pay-compare>small{font-size:10px;line-height:1.5;color:#AEC0C9;display:block;margin-top:9px}
+@media(max-width:370px){.bt-tax-pay-fields{grid-template-columns:1fr}.bt-tax-primary-balance{padding:15px 12px}}

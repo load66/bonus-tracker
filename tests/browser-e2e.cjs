@@ -823,6 +823,37 @@ async function exercise(name,engine,url){
       await page.locator('#bt-tax-status').inputValue()==='');
     check('confirmed import never changes saved banking data or cloud backup fields',
       await page.evaluate(before=>JSON.stringify(getBackupStorageKeys().map(k=>[k,localStorage.getItem(k)]))===JSON.stringify(before),beforeEstimatorStorage));
+    await page.locator('#bt-tax-status').selectOption('single');
+    const updatedPay={...syntheticPay,asOfDate:'2026-10-11',grossPayYtd:52000,
+      federalIncomeTaxWithheldYtd:4200,totalEmployeeTaxesYtd:9400,payFrequency:'weekly',nextPayDate:'2026-10-17'};
+    await page.locator('#bt-tax-file').setInputFiles({name:'newer-synthetic.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(updatedPay))});
+    await page.locator('.bt-tax-pay-compare').waitFor();
+    check('new YTD snapshot compares two statements instead of summing totals',
+      await page.locator('.bt-tax-pay-compare').innerText().then(t=>t.includes('Change since 2026-10-09')&&t.includes('+$2,000.00')&&t.includes('+$200.00')&&t.includes('Potential federal balance change')));
+    check('weekly projection infers recent per-check amounts from actual YTD changes',
+      await page.locator('.bt-tax-pay-review').innerText().then(t=>t.includes('$69,000.00')&&t.includes('$6,400.00')&&t.includes('Paycheck-based · recent YTD trend')&&t.includes('11 scheduled paycheck(s)')));
+    check('preview is still read-only and retains previous accepted estimate until approved',
+      await page.locator('#bt-tax-other').inputValue()==='58244.68');
+    await page.locator('.bt-tax-pay-schedule > summary').click();
+    await page.locator('#bt-tax-pay-wage').fill('2100');
+    await page.locator('#bt-tax-pay-wage').press('Tab');
+    check('explicit per-paycheck amount overrides the observed trend only on review',
+      await page.locator('.bt-tax-pay-review').innerText().then(t=>t.includes('$70,100.00')&&t.includes('Paycheck-based · amounts provided')));
+    await page.locator('.bt-tax-pay-schedule > summary').click();
+    await page.locator('#bt-tax-pay-wage').fill('');
+    await page.locator('#bt-tax-pay-wage').press('Tab');
+    check('clearing explicit amount restores observed trend',
+      await page.locator('.bt-tax-pay-review').innerText().then(t=>t.includes('$69,000.00')&&t.includes('Paycheck-based · recent YTD trend')));
+    await page.getByRole('button',{name:'Use this estimate'}).click();
+    check('newer snapshot replaces annual scenario instead of double counting older YTD totals',
+      await page.locator('#bt-tax-other').inputValue()==='69000'&&
+      await page.locator('#bt-tax-withheld').inputValue()==='6400');
+    check('tax overview prioritizes estimated IRS balance and payroll calculation disclosure',
+      await page.locator('.bt-tax-primary-balance').isVisible()&&
+      await page.locator('.bt-tax-result-trust').innerText().then(t=>t.includes('Recent paycheck trend')));
+    check('new comparison and scenario remain session-only, leaving all financial and backup keys unchanged',
+      await page.evaluate(before=>JSON.stringify(getBackupStorageKeys().map(k=>[k,localStorage.getItem(k)]))===JSON.stringify(before),beforeEstimatorStorage));
+
     await page.getByRole('button',{name:'Clear tax inputs'}).click();
     check('clearing imported scenario removes projected income and pay preview',
       await page.locator('#bt-tax-other').inputValue()===''&&await page.locator('.bt-tax-pay-review').count()===0);
