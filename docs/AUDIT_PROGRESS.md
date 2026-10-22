@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: ChatGPT/Codex — v3.6.78 — codex/v3.6.78-tax-payroll-projection
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
