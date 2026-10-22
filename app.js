@@ -4878,20 +4878,25 @@ function taxEstimateInputs(yrE){
 }
 function renderTaxEstimateResult(){
  const yrE=taxEntriesForYear(taxYear).filter(e=>!window.BT360||window.BT360.scope(e));
- const result=taxEstimateInputs(yrE),money=x=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:2}).format(x);
+ const result=taxEstimateInputs(yrE),money=taxPayMoney;
  if(!window.BTFederalTax?.years.includes(Number(taxYear)))return '<div class="bt-tax-wait">No IRS calculator for '+esc(taxYear)+' yet. Your bonus receipts remain available below; no future-year rates are assumed.</div>';
  if(!result.ok){
   const need={'filing-status':'Choose a filing status to begin.','other-income':'Enter your estimated full-year non-bonus ordinary income to calculate.','excluded-bonus':'Excluded bonus amount must be between $0 and recorded bonuses.','deduction':'Enter a valid deduction amount.','prepayments':'Check the withholding and payment amounts.','bonus-amount':'Check recorded bonus amounts.','qualified-overtime':'Enter a valid qualified overtime premium amount.','overtime-filing-status':'Married filing separately cannot claim this overtime deduction.'};
   return '<div class="bt-tax-wait" role="status">'+esc(need[result.reason]||'Add the inputs above to calculate.')+'</div>';
  }
- const refund=result.balance!==null&&result.balance<0;
- const resultLine=result.balance===null
-  ?'<div class="bt-tax-balance muted"><span>Possible IRS balance or refund</span><b>Enter projected withholding</b><small>Actual balance depends on federal withholding, payments, credits and other tax items.</small></div>'
-  :'<div class="bt-tax-balance"><span>'+(refund?'Possible federal refund':'Possible federal balance to pay')+'</span><b>'+money(Math.abs(result.balance))+'</b><small>Federal income tax minus entered annual federal withholding and estimated payments. This is not an IRS bill or guaranteed refund.</small></div>';
- return '<div class="bt-tax-calc-grid"><div><span>Additional tax on tracked bonuses</span><strong>'+money(result.bonusTax)+'</strong><small>Estimated amount to set aside for these receipts</small></div><div><span>Estimated total federal income tax</span><strong>'+money(result.federalTax)+'</strong><small>Before withholding or payments</small></div></div>'
-  +resultLine
-  +(result.qualifiedOvertime>0?'<p class="bt-tax-overtime-result">Estimated qualified overtime deduction: <b>'+money(result.overtimeDeduction)+'</b> from '+money(result.qualifiedOvertime)+' of reported eligible premium.'+(result.overtimePhaseoutEstimated?' Income exceeds the phaseout threshold; the reduction uses an approximate MAGI and needs review.':'')+'</p>':'')
-  +'<p class="bt-tax-method">Ordinary taxable income: '+money(result.taxable)+' · Deduction: '+money(result.deduction)+(result.usedStandard?' (standard)':' (custom)')+' · Top ordinary bracket reached: '+Math.round(result.marginalRate*100)+'%. Bonus increment compares tax with and without '+money(result.taxableBonus)+' of included bonuses.</p>';
+ const accepted=taxPayAccepted[taxYear],p=accepted?.projection;
+ const payrollSource=p?(p.projectionMethod==='pay-period-trend'?'Recent paycheck trend':p.projectionMethod==='pay-period-entered'?'Paycheck amounts':p.projectionMethod==='pay-period-withholding-only'?'Paycheck withholding + calendar wages':'Calendar-average projection'):'Manual scenario';
+ const hasBalance=result.balance!==null,refund=hasBalance&&result.balance<0;
+ let h='<div class="bt-tax-result" aria-label="Estimated federal tax summary"><div class="bt-tax-primary-balance">';
+ h+='<span>'+(hasBalance?(refund?'Possible federal refund':'Possible federal balance to pay'):'Possible IRS balance or refund')+'</span>';
+ h+='<strong>'+(hasBalance?money(Math.abs(result.balance)):'Add annual federal withholding')+'</strong>';
+ h+='<small>'+(hasBalance?'Estimated federal income tax less projected withholding and tax payments. Not an IRS bill or guaranteed refund.':'A balance or refund estimate requires federal withholding; total employee taxes are not a substitute.')+'</small></div>';
+ h+='<div class="bt-tax-calc-grid"><div><span>Additional tax on tracked bonuses</span><strong>'+money(result.bonusTax)+'</strong><small>Estimated incremental tax on recorded bonus receipts</small></div>';
+ h+='<div><span>Estimated total federal income tax</span><strong>'+money(result.federalTax)+'</strong><small>Before withholding or payments</small></div></div>';
+ h+='<div class="bt-tax-result-trust"><span>Basis: '+esc(payrollSource)+(accepted?' · YTD '+esc(accepted.row.asOfDate):'')+'</span><small>Estimates exclude unentered investment or self-employment income, tax credits, state taxes, and other return adjustments.</small></div>';
+ if(result.qualifiedOvertime>0)h+='<p class="bt-tax-overtime-result">Estimated qualified overtime deduction: <b>'+money(result.overtimeDeduction)+'</b> from '+money(result.qualifiedOvertime)+' of reported eligible premium.'+(result.overtimePhaseoutEstimated?' Income exceeds the phaseout threshold; approximate MAGI needs review.':'')+'</p>';
+ h+='<details class="bt-tax-math"><summary>How was this calculated?</summary><div>Estimated ordinary taxable income: '+money(result.taxable)+'. Deduction: '+money(result.deduction)+(result.usedStandard?' (standard)':' (custom)')+'. Top ordinary bracket reached: '+Math.round(result.marginalRate*100)+'%. Bonus tax compares your estimated federal income tax with and without '+money(result.taxableBonus)+' of recorded taxable bonuses. This simplified calculation does not prepare Form 1040.</div></details></div>';
+ return h;
 }
 function renderTaxEstimator(yrE,audience){
  const d=taxEstimateDraft(),supports=window.BTFederalTax?.years.includes(Number(taxYear));
