@@ -1095,3 +1095,35 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt3681-ledger-actions{display:flex;gap:7px;flex-shrink:0}
 .bt3681-ledger-actions button,.bt3681-ledger-head button{min-height:40px;touch-action:manipulation}
 @media(max-width:390px){.bt3681-deposit-ledger{padding:11px}.bt3681-ledger-row{flex-wrap:wrap}.bt3681-ledger-actions{margin-left:auto}}
+
+
+/* v3.6.82 — unified, compact mobile information hierarchy. These are
+   presentation-only selectors: existing forms and account actions remain. */
+.bt3682-plan{border:1px solid rgba(130,148,178,.18);border-radius:16px;padding:14px;margin:12px 0;background:var(--card,#171b23);min-width:0;overflow-wrap:anywhere}
+.bt3682-plan header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:5px}
+.bt3682-plan h3{margin:0;font-size:15px;line-height:1.35;font-weight:750;letter-spacing:-.01em}
+.bt3682-plan header small{font-size:11px;color:var(--muted,#a0aabb)}
+.bt3682-plan>p{font-size:12px;line-height:1.5;color:var(--muted,#a0aabb);margin:5px 0 11px}
+.bt3682-plan-list{display:grid;gap:0;min-width:0}
+.bt3682-plan-row{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:11px 0;border-top:1px solid rgba(130,148,178,.15);min-width:0}
+.bt3682-plan-copy{display:grid;gap:3px;flex:1 1 170px;min-width:0}
+.bt3682-plan-copy>b{font-size:13px;line-height:1.4;overflow-wrap:anywhere}
+.bt3682-plan-copy>small{font-size:11.5px;line-height:1.4;color:var(--muted,#a0aabb);overflow-wrap:anywhere}
+.bt3682-plan-actions{display:flex;gap:6px;align-items:center;flex:0 1 auto;flex-wrap:wrap;justify-content:flex-end}
+.bt3682-plan-actions button{min-height:44px;min-width:72px;padding:8px 12px;white-space:nowrap;font-size:12px;border-radius:10px}
+.bt3682-plan-more{border-top:1px solid rgba(130,148,178,.15);padding-top:10px}
+.bt3682-reminders{max-width:560px;overflow-y:auto;overscroll-behavior:contain}
+.bt3682-alert-list{display:grid;min-width:0}
+.bt3682-alert-row{width:100%;min-height:60px;display:flex;align-items:center;gap:10px;text-align:left;overflow-wrap:anywhere}
+.bt3682-alert-row>.bt360-grow{min-width:0;flex:1 1 auto}
+.bt3682-alert-row .bt360-grow b{display:block;font-size:13px;line-height:1.35;white-space:normal}
+.bt3682-alert-row .bt360-grow small{display:block;font-size:11.5px;line-height:1.45;white-space:normal}
+.bt3682-alert-row .bt360-chip{flex:0 0 auto;font-size:10px;max-width:84px;white-space:normal;text-align:center}
+.bt3682-alert-icon{width:28px;height:28px;flex:none;border-radius:9px;display:grid;place-items:center;color:var(--muted,#bbc6d8);background:rgba(130,148,178,.14);font-size:15px;font-weight:700}
+@media(max-width:390px){
+ .bt3682-plan{padding:11px;margin:10px 0}
+ .bt3682-plan-row{flex-wrap:wrap;gap:7px}
+ .bt3682-plan-copy{flex-basis:100%}
+ .bt3682-plan-actions{width:100%;justify-content:flex-start}
+ .bt3682-alert-row .bt360-chip{max-width:68px;padding:4px 6px}
+}
