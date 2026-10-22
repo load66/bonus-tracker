@@ -1113,13 +1113,17 @@ function upcomingReminders(rows){
     if(due&&dB(td(),due)<=7)push(e,'fee','Review scheduled fee',
       'Saved fee-check date; verify waiver terms',due,2);
    }
-  }else if(noticePrefs.eligible){
-   const info=eligibleInfo(e);if(!info?.verified)return;
-   const days=dB(td(),info.eligible);
-   if(days>=-7&&days<=7)push(e,'reopen',days<=0?'Review new bank offer':'Reopening review approaching',
-    'Saved churn date only; check new offer, fees and personal eligibility',info.eligible,days<=0?2:3);
   }
  });
+ // No overdue or soon-to-expire cooldown alert without a current offer.
+ if(noticePrefs.eligible){
+  const found=window.BTBankBonusFeed?.automaticChurnMatches?.(rows)||[];
+  found.forEach(x=>{
+   const e=rows.find(e=>e.closed&&e.bank===x.bank&&accountAudience(e)===x.audience);
+   if(e&&scope(e))push(e,'offer','Potential new signup bonus',
+    'Fresh official offer evidence found; personal eligibility not confirmed','',2);
+  });
+ }
  return results.sort((a,b)=>a.priority-b.priority||(a.days??999)-(b.days??999)||
    String(a.bank).localeCompare(String(b.bank))||a.kind.localeCompare(b.kind));
 }
