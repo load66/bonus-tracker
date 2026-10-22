@@ -65,10 +65,19 @@ assert.match(sandbox.BT360.detailPanels(e),/Direct deposits totaling \$10,000/);
  assert(!alerts.some(x=>x.entryId===unknown.id&&x.kind==='reopen'), 'Unverified churn became an eligible alert');
  assert.equal(new Set(alerts.map(x=>x.entryId+'|'+x.kind)).size,alerts.length,'Duplicate reminder created');
  const plan=sandbox.BT360.churnReviewPlan(rows);
- assert.equal(plan.length,1);assert.equal(plan[0].verified,false);
+ assert.equal(plan.length,0,'Unverified closed account must not enter automation results');
  const markup=sandbox.BT360.churnReviewMarkup(rows);
- assert.match(markup,/Next reopening reviews/);assert.match(markup,/Rule review needed/);
- assert.doesNotMatch(markup,/Check offers/,'Unverified reopening gained direct offer CTA');
+ assert.equal(markup,'','Automation-first Archive must not render any review chores without a verified offer');
+ const oldMatcher=sandbox.BTBankBonusFeed.automaticChurnMatches;
+ try{
+  sandbox.BTBankBonusFeed.automaticChurnMatches=()=>[{bank:unknown.bank,audience:'personal',bonus:325,officialUrl:'https://accountoffers.wellsfargo.com/checkingoffer/'}];
+  const matchMarkup=sandbox.BT360.churnReviewMarkup(rows);
+  assert.match(matchMarkup,/New bonus matches/);
+  assert.match(matchMarkup,/\\$325 potential signup bonus/);
+  assert.match(matchMarkup,/Official offer reward, fees and location checked/);
+  assert.doesNotMatch(matchMarkup,/Next reopening reviews|Rule review needed|Review in/);
+  assert(sandbox.BT360.upcomingReminders(rows).some(x=>x.kind==='offer'),'Source-verified potential new offer must produce notification');
+ }finally{sandbox.BTBankBonusFeed.automaticChurnMatches=oldMatcher;}
  assert.match(sandbox.BT360.notifications(rows),/No background or push delivery/);
  assert.equal(JSON.stringify(rows),beforeRows,'Reminder or churn planner mutated financial records');
  assert.equal(JSON.stringify([...storage]),beforeStorage,'Reminder or churn planner persisted data');
