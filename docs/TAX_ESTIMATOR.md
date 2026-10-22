@@ -1,4 +1,4 @@
-# Federal bonus tax estimate — v3.6.77
+# Federal bonus tax estimate — v3.6.78
 
 ## Purpose and boundaries
 The Tax tab retains the existing read-only receipt ledger, source reconciliation, Personal/Business filters, prior cycles, and full-year CSV export. It adds a **planning estimate**, not a tax return, tax filing, or a verified IRS balance. Do not represent a calculated result as an IRS bill.
@@ -74,3 +74,21 @@ IRS authority:
 - IRS overtime overview and MAGI phaseout limits: https://www.irs.gov/newsroom/what-to-know-about-the-no-tax-on-overtime-deduction
 
 Scope limitations remain: no credits, qualified tips, car loan interest, senior-specific deductions, ACA or other year-end tax adjustments are modeled. Eligibility and final W-2 Box 1 / Box 12 values must be confirmed at filing. On-screen figures remain illustrative, not actual IRS balance due.
+
+## v3.6.78 — pay-period forecasting, repeat imports, and concise tax summary
+
+The **BonusTrackerTaxPayYTD** JSON format remains **schemaVersion 1** for backwards compatibility with every prior imported file. Four new *optional*, strictly validated fields are supported: `payFrequency` (`weekly`, `biweekly`, or `monthly`), `nextPayDate` (YYYY-MM-DD, strictly after the as-of date), `federalTaxableWagesPerPaycheck`, and `federalIncomeTaxWithheldPerPaycheck`. The last two fields, if provided, must be amounts directly confirmed from the payroll source, not guessed by the image model. A pay frequency requires a next payday, and vice versa. Semi-monthly is deliberately not inferred from monthly because the rules for its two days may differ. Missing payroll details never cause invented paychecks.
+
+Projection modes:
+- **Calendar-average fallback:** existing annual projection (YTD × calendar-year-days / elapsed days) is retained for older JSON files or missing pay-period amounts. It stays explicitly labeled a rough projection, not a confirmed annual wage.
+- **Pay-period explicit:** count dated, remaining paydays in the tax year based on the next confirmed payday and weekly, biweekly or monthly recurrence. Calculate total annual *estimated* wages = current YTD wage basis + remaining paychecks × confirmed taxable wages per paycheck. Do likewise for federal withholding if the per-check federal amount is known. When only one per-check amount is known, the other projection retains the calendar method.
+- **Observed pay-period trend:** two *accepted*, increasing-date YTD screenshots of the same year and wage-basis category, with weekly or biweekly schedule, determine recent average per paycheck as the difference in YTD values divided by counted past paydays. This is applied forward only for projected future paychecks. No two YTD totals are added together. Negative YTD deltas, incomparable wage sources and missing actual paydays never infer a trend. Monthly schedules require a confirmed per-check amount, not a YTD-derived trend.
+- With just a cadence and next date and no verified per-check value or comparable second snapshot, the engine correctly remains in calendar-average mode. Remaining paydates can be shown to explain the schedule without claiming improved accuracy.
+
+The existing Tax JSON review now adds an optional **Improve year-end projection** disclosure with a schedule and pay amount fields. Each change is preview-only and requires an explicit **Use this estimate** to update the temporary Tax calculation. An incomplete or invalid schedule disables approval; it never silently drops values or overwrites the last applied estimate.
+
+A second screenshot of the same tax year is compared with the last accepted one held **only in page memory**, showing *differences* in observed YTD wages and actual federal withholding, differences in projected annual wages and withholding, and (only when filing status plus annual withholding are available) the possible change in projected federal balance with the current bonus ledger and user tax settings. Older-dated imports are blocked from replacing newer accepted YTD snapshots, while same-date corrections are permitted without creating a new pay period. No snapshots are written to localStorage, cloud backups, CSV exports, sync endpoints, or account history; reloading the tab retains them within the open session only, while restarting/refreshing the page does not.
+
+The Tax summary now prioritizes the potential IRS balance (or refund) above two smaller cards for incremental bonus tax and total ordinary-income tax. A short provenance line distinguishes paycheck-trend, explicit paycheck, calendar-average, and manual projections. Calculation details and assumptions are in an accessible expandable section. If no federal withholding is provided, no IRS balance is shown. It is still a simplified federal tax planning estimate, not a Form 1040 or actual IRS bill.
+
+The recognized JSON file should contain only reviewed facts supplied by the user. No bank bonus, payroll, financial or identity data is committed into the public repo as a fixture. Synthetic tests cover weekly/biweekly/monthly payday counts, recent YTD comparisons, explicit override preference, calendar fallback, strict file validation, no double counting, privacy and mobile browser regressions.
