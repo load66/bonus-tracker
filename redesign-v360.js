@@ -1162,8 +1162,8 @@ function notifications(rows){
  const alerts=upcomingReminders(rows);
  const cards=alerts.map(x=>{
   const period=x.days===null?'Review':x.days<0?Math.abs(x.days)+'d overdue':x.days===0?'Today':'In '+x.days+'d';
-  return '<button type="button" class="bt360-list-row bt3682-alert-row" onclick="BT360.openNotification('+arg(x.entryId)+')">'+
-    '<span class="bt3682-alert-icon" aria-hidden="true">'+(x.kind==='reopen'?'↻':x.kind==='fee'?'$':x.kind==='payout'?'✓':'!')+'</span>'+
+  return '<button type="button" class="bt360-list-row bt3682-alert-row" onclick="BT360.openNotification('+arg(x.entryId)+','+arg(x.kind)+')">'+
+    '<span class="bt3682-alert-icon" aria-hidden="true">'+(x.kind==='offer'?'↗':x.kind==='fee'?'$':x.kind==='payout'?'✓':'!')+'</span>'+
     '<span class="bt360-grow"><b>'+safe(x.title)+'</b><small>'+safe(x.bank)+' · '+safe(x.detail)+'</small></span>'+
     '<span class="bt360-chip">'+safe(period)+'</span></button>';
  }).join('');
@@ -1174,9 +1174,9 @@ function notifications(rows){
  '<p class="bt360-muted">Calculated from saved dates when you open BonusTracker. No background or push delivery. Dates are not bank confirmation.</p>'+
  '</section></div>';
 }
-function openNotifications(){notificationPanelOpen=true;window.bt360SettingsOpen=false;R()}
+function openNotifications(){notificationPanelOpen=true;window.bt360SettingsOpen=false;window.BTBankBonusFeed?.ensureAutomaticChurnScan?.();R()}
 function closeNotifications(){notificationPanelOpen=false;R()}
-function openNotification(id){notificationPanelOpen=false;const e=entries.find(x=>x.id===id);if(e?.closed)openArchived(id);else openAccountFromActionCenter(id)}
+function openNotification(id,kind){notificationPanelOpen=false;const e=entries.find(x=>x.id===id);if(!e)return;if(kind==='offer'){viewOffers(e.bank);return;}if(e.closed)openArchived(id);else openAccountFromActionCenter(id)}
 function openPhoneForClose(bank,accountType){
  window.bt360SettingsOpen=false;
  window.bt360PhonebookOpen=true;
