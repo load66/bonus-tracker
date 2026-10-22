@@ -371,7 +371,7 @@ function depositLedgerHtml(e,readonly=false){
  const hasDD=Array.isArray(e?.financialRules?.requirements)&&e.financialRules.requirements.some(r=>r?.kind==='direct-deposit')||
   /direct[ -]?deposits?|\bpayroll\b|\bq?dd\b/i.test([e?.completeBonusText,e?.dataPoint,...(e?.checklist||[]).map(x=>x.text)].join(' '));
  if(!hasDD&&!progress.recordedCount)return'';
- const dollars=n=>amount(n/100);
+ const dollars=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:n%100===0?0:2,maximumFractionDigits:2}).format(n/100);
  const total=progress.totalCents,confirmed=progress.confirmedCents;
  let h='<div class="bt3681-deposit-ledger" aria-label="Recorded direct deposits"><div class="bt3681-ledger-head"><b>Deposit activity</b>';
  if(!readonly&&e.opened)h+='<button type="button" class="bt360-link" onclick="openDepositRecord('+arg(e.id)+')">+ Record deposit</button>';
