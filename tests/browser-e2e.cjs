@@ -303,15 +303,36 @@ async function exercise(name,engine,url){
       }
       await page.getByRole('button',{name:'Close notifications'}).click();
       await page.evaluate(()=>{tab='archive';R()});
-      check('churn plan flags an unverified cycle instead of declaring eligibility',
-        await page.locator('.bt3682-plan').innerText().then(t=>t.includes('Synthetic History Bank')&&t.includes('Rule review needed')));
-      check('unverified cycle has no Check offers shortcut',
-        await page.locator('.bt3682-plan-actions .bt360-primary').count()===0);
+      check('Archive contains no manual churn review list when there are no official-source matches',
+        await page.locator('.bt3682-plan').count()===0&&
+        !(await page.locator('#app').innerText()).includes('Next reopening reviews'));
+      // Mock only the last UI projection. Separate unit tests verify all
+      // official-source, audience, churn, expiry and fee gates.
+      await page.evaluate(()=>{
+        window.__savedAutoMatcher=window.BTBankBonusFeed.automaticChurnMatches;
+        window.BTBankBonusFeed.automaticChurnMatches=()=>[{
+          bank:'Synthetic History Bank',audience:'personal',bonus:325,
+          officialUrl:'https://accountoffers.wellsfargo.com/checkingoffer/'
+        }];R();
+      });
+      check('automation surfaces an offer, never a review task',
+        await page.locator('.bt3683-auto-offers').innerText().then(t=>
+          t.includes('New bonus matches')&&t.includes('Synthetic History Bank')&&
+          t.includes('potential signup bonus')&&!t.includes('Rule review needed')));
+      check('automatic offer uses a safe official link',
+        await page.locator('.bt3683-auto-offers a.bt3683-offer-link').getAttribute('href')===
+        'https://accountoffers.wellsfargo.com/checkingoffer/');
       for(const width of [320,375,390,430]){
         await page.setViewportSize({width,height:844});
-        check('reopening planner fits mobile '+width+'px',
-          await page.locator('.bt3682-plan').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
+        check('auto-matched offers fit mobile '+width+'px',
+          await page.locator('.bt3683-auto-offers').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
       }
+      await page.evaluate(()=>{
+        window.BTBankBonusFeed.automaticChurnMatches=window.__savedAutoMatcher;
+        delete window.__savedAutoMatcher;R();
+      });
+      check('auto-offer card disappears when verification cannot substantiate a match',
+        await page.locator('.bt3683-auto-offers').count()===0);
       check('reminders and churn planning do not persist account records',
         await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x.stored,prior));
       await page.evaluate(old=>{entries=old.entries;expanded=old.expanded;tab=old.tab;R()},prior);
