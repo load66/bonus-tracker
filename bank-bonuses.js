@@ -168,7 +168,7 @@
       officialCatalog=data.status==='pending'?{...data,records:{...(officialCatalog?.records||{}),...data.records}}:data;officialError=data.status==='unavailable'?'Official availability checks are unavailable; personal eligibility remains unconfirmed.':'';
       await submitPriorities();
     }catch{officialError='Official availability could not update. Expired evidence will not be shown as verified.';}
-    finally{clearTimeout(timeout);officialBusy=false;if(typeof tab!=='undefined'&&tab==='bonuses')R();}
+    finally{clearTimeout(timeout);officialBusy=false;if(typeof tab!=='undefined'&&(tab==='bonuses'||tab==='archive'||window.BT360?.notificationsOpen))R();}
   }
 
   function geography(offer,selected){
@@ -355,7 +355,57 @@
       if(!response.ok)throw Error('Feed unavailable');
       const data=await response.json();feed=valid(data);if(data.availability?.schemaVersion===1&&(!officialCatalog||officialCatalog.status==='pending'))officialCatalog={...data.availability,...(officialCatalog||{}),records:{...(data.availability.records||{}),...(officialCatalog?.records||{})}};submitPriorities();
     }catch{error='Could not check for updates. '+(feed?'Showing the last loaded feed.':'Reconnect to load the bank bonus feed.');}
-    finally{clearTimeout(timeout);loading=false;if(typeof R==='function'&&typeof tab!=='undefined'&&tab==='bonuses')R();}
+    finally{clearTimeout(timeout);loading=false;if(typeof R==='function'&&typeof tab!=='undefined'&&(tab==='bonuses'||tab==='archive'||window.BT360?.notificationsOpen))R();}
+  }
+
+  // The public catalog can identify potential reapplication opportunities,
+  // never establish personal eligibility or update any saved tracker records.
+  // A match requires a current offer, official promotion AND fee evidence,
+  // current official location scope, and a date from the canonical eligibility
+  // gate for *every* matching closed cycle. Unknown facts silently fail closed.
+  function automaticChurnMatches(trackerRows){
+    if(!feed||!Array.isArray(trackerRows)||!Array.isArray(feed.offers))return[];
+    const lastChecked=Date.parse(feed.checkedAt),now=Date.now();
+    if(!Number.isFinite(lastChecked)||lastChecked>now+60000||now-lastChecked>24*3600000)return[];
+    const core=window.BTEligibilityGate;
+    if(!core?.validate||!core?.safeEligibilityDate)return[];
+    const base=trackerContext();
+    const context={...base,rows:trackerRows,
+      ready:e=>{
+        if(!e?.closed)return'';
+        try{
+          const validation=core.validate(e);
+          if(!validation?.ok||validation.decision!=='repeatable')return'';
+          return core.safeEligibilityDate(e,addD,addM)||'';
+        }catch{return''}
+      }};
+    const candidates=prioritize(grouped(feed.offers),trackerRows,area,context,'tracker')
+      .filter(x=>x.match?.kind==='ready'&&x.fit?.kind==='review-first'
+        &&x.geo?.proof?.status==='verified'
+        &&x.geo.proof.conditions?.length===0
+        &&['listed','nationwide'].includes(x.geo.kind)
+        &&completeOfferProof(x,now)
+        &&!unresolvedOfficialSource(x));
+    const seen=new Set();
+    return candidates.filter(x=>{
+      const family=context.family(x.match.bank);
+      const id=family+'|'+offerAudience(x);
+      if(!family||seen.has(id))return false;
+      seen.add(id);return true;
+    }).map(x=>({
+      bank:x.match.bank,audience:offerAudience(x),
+      title:x.title,bonus:amountFor(x),reviewDate:x.match.date,
+      checkedAt:x.evidence.checkedAt,
+      officialUrl:x.evidence.sources.find(src=>src.role==='promotion')?.url||'',
+      sourceUrl:x.url
+    })).filter(x=>x.officialUrl);
+  }
+  let lastAutomaticScanAt=0;
+  function ensureAutomaticChurnScan(){
+    const now=Date.now();
+    if(loading||now-lastAutomaticScanAt<15*60000)return;
+    lastAutomaticScanAt=now;
+    setTimeout(()=>{if(!loading)refresh();},0);
   }
   window.btRefreshBankBonuses=refresh;
   window.btRadarOfferPill=function(value){
@@ -442,10 +492,11 @@
     if(lastGroup)h+='</div>';
     return h;
   };
-  window.BTBankBonusFeed={validate:valid,group:grouped,filter:filtered,offerAudience,offersForAudience,matchesCategory,checkedAge,evidence:evidenceFor,amount:amountFor,rankingAmount,completeOfferProof,unresolvedOfficialSource,offerFit,geography,match:trackerMatch,prioritize,availability:availabilityFor,priorityIdentifiers};
+  window.BTBankBonusFeed={validate:valid,group:grouped,filter:filtered,offerAudience,offersForAudience,matchesCategory,checkedAge,evidence:evidenceFor,amount:amountFor,rankingAmount,completeOfferProof,unresolvedOfficialSource,offerFit,geography,match:trackerMatch,prioritize,availability:availabilityFor,priorityIdentifiers,automaticChurnMatches,ensureAutomaticChurnScan};
+  setTimeout(ensureAutomaticChurnScan,1300);
   // While the tab stays open, refresh the published snapshot without re-entering anything.
   const officialPoll=setInterval(()=>{if(typeof tab!=='undefined'&&tab==='bonuses')refreshOfficial();},60000);
   if(officialPoll&&typeof officialPoll.unref==='function')officialPoll.unref();
-  const poll=setInterval(()=>{if(typeof tab!=='undefined'&&tab==='bonuses')refresh();},15*60*1000);
+  const poll=setInterval(()=>{if(typeof tab!=='undefined'&&tab==='bonuses')refresh();else if(typeof tab!=='undefined'&&tab==='archive')ensureAutomaticChurnScan();},15*60*1000);
   if(poll&&typeof poll.unref==='function')poll.unref();
 })();
