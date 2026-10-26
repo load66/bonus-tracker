@@ -1,23 +1,23 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-10-26T05:00:00.219089+00:00",
+  "checkedAt": "2026-10-26T13:19:28.095977+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-10-26T05:00:00.219089+00:00",
+      "checkedAt": "2026-10-26T13:19:28.095977+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-10-26T05:00:00.219089+00:00",
+      "checkedAt": "2026-10-26T13:19:28.095977+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-10-26T05:00:00.219089+00:00",
+      "checkedAt": "2026-10-26T13:19:28.095977+00:00",
       "status": "ok"
     }
   ],
@@ -43,8 +43,8 @@
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/wells-fargo-checking-bonus/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "Wells Fargo $325 Checking Bonus (Nationwide) – Ends 1/13/27",
           "publishedAt": "2026-10-26T03:22:44+00:00"
         }
@@ -75,8 +75,8 @@
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/crystal-lake-bank-trust-promotions/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "Crystal Lake Bank & Trust Promotions: $300, $500 Checking Bonuses (IL) – Ends 11/9/27",
           "publishedAt": "2026-10-26T01:59:11+00:00"
         }
@@ -107,8 +107,8 @@
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/beverly-bank-trust-promotions/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "Beverly Bank & Trust Promotions: $300, $500 Checking Bonuses (IL) – Ends 11/9/27",
           "publishedAt": "2026-10-26T01:20:15+00:00"
         }
@@ -139,8 +139,8 @@
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/barrington-bank-trust-promotions/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "Barrington Bank & Trust Promotions: $300, $500 Checking Bonuses (IL) – Ends 11/9/27",
           "publishedAt": "2026-10-26T00:57:57+00:00"
         }
@@ -171,15 +171,18 @@
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/a-federal-credit-union-promotions/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "A+ Federal Credit Union Promotions: $50, $250 Checking Bonuses (TX) – Ends 12/31/26",
           "publishedAt": "2026-10-26T00:32:59+00:00"
         }
       ],
       "firstSeenBaseline": false,
+      "previousAmount": 250,
+      "change": "Decreased",
+      "changeLabel": "$250 → $50",
       "badges": [
-        "New"
+        "Decreased"
       ]
     },
     {
@@ -203,10 +206,42 @@
       "links": [
         {
           "url": "https://www.doctorofcredit.com/ca-in-branch-columbia-bank-250-checking-bonus/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "[CA, UT, CO In Branch] Columbia Bank $250 Checking Bonus",
           "publishedAt": "2026-10-25T21:45:08+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "[MA Only] Liberty Bay Credit Union (lbcu.org) $100 Checking Bonus",
+      "url": "https://www.doctorofcredit.com/ma-only-liberty-bank-lbcu-org-100-checking-bonus/",
+      "publishedAt": "2026-10-25T21:00:39+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "liberty bay credit union lbcu org|checking|100|MA",
+      "bank": "liberty bay credit union lbcu org",
+      "product": "checking",
+      "amount": 100,
+      "region": "MA",
+      "offerKey": "liberty bay credit union lbcu org|checking|100|MA",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-26T13:19:28.095977+00:00",
+      "lastSeen": "2026-10-25T21:00:39+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/ma-only-liberty-bank-lbcu-org-100-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[MA Only] Liberty Bay Credit Union (lbcu.org) $100 Checking Bonus",
+          "publishedAt": "2026-10-25T21:00:39+00:00"
         }
       ],
       "firstSeenBaseline": false,
@@ -1072,9 +1107,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "[WI only] Summit Credit Union $200/$300 Checking Bonus",
@@ -1770,7 +1803,7 @@
   "availability": {
     "schemaVersion": 1,
     "status": "complete",
-    "checkedAt": "2026-10-26T04:52:07.435389+00:00",
+    "checkedAt": "2026-10-26T12:52:08.092430+00:00",
     "records": {
       "https://www.hustlermoneyblog.com/wells-fargo-checking-bonus/": {
         "offerTitle": "Wells Fargo $325 Checking Bonus (Nationwide) – Ends 1/13/27",
@@ -1778,11 +1811,55 @@
         "offerFingerprint": "1682b9aeff0ccf9c7f6b1a69fb1434119ab9130a7a84b20842f3e310b2e91dda",
         "status": "needs-review",
         "checkState": "failed",
-        "attemptedAt": "2026-10-26T04:52:04.481230+00:00",
+        "attemptedAt": "2026-10-26T12:52:04.590237+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Official promotion could not be reached; no eligibility is assumed.",
         "institution": "wells"
+      },
+      "https://www.hustlermoneyblog.com/crystal-lake-bank-trust-promotions/": {
+        "offerTitle": "Crystal Lake Bank & Trust Promotions: $300, $500 Checking Bonuses (IL) – Ends 11/9/27",
+        "offerUrl": "https://www.hustlermoneyblog.com/crystal-lake-bank-trust-promotions/",
+        "offerFingerprint": "0817edbfa991f37f30f5f9479acde0137933bc006ea54fc5e79321cb8c173e23",
+        "status": "needs-review",
+        "checkState": "unsupported",
+        "attemptedAt": "2026-10-26T12:52:05.881239+00:00",
+        "rules": [],
+        "conditions": [],
+        "reason": "Institution identity requires official-source onboarding."
+      },
+      "https://www.hustlermoneyblog.com/beverly-bank-trust-promotions/": {
+        "offerTitle": "Beverly Bank & Trust Promotions: $300, $500 Checking Bonuses (IL) – Ends 11/9/27",
+        "offerUrl": "https://www.hustlermoneyblog.com/beverly-bank-trust-promotions/",
+        "offerFingerprint": "b9c3d63ff26591cca0ad5384a65f7f2a74d3f36e75503ed0de9eeb884cc6f4c3",
+        "status": "needs-review",
+        "checkState": "unsupported",
+        "attemptedAt": "2026-10-26T12:52:05.881218+00:00",
+        "rules": [],
+        "conditions": [],
+        "reason": "Institution identity requires official-source onboarding."
+      },
+      "https://www.hustlermoneyblog.com/barrington-bank-trust-promotions/": {
+        "offerTitle": "Barrington Bank & Trust Promotions: $300, $500 Checking Bonuses (IL) – Ends 11/9/27",
+        "offerUrl": "https://www.hustlermoneyblog.com/barrington-bank-trust-promotions/",
+        "offerFingerprint": "cfee2c58b01afee085cdc7dd1c78cde256d2bc5db56b08a187a7156500f43d63",
+        "status": "needs-review",
+        "checkState": "unsupported",
+        "attemptedAt": "2026-10-26T12:52:05.881197+00:00",
+        "rules": [],
+        "conditions": [],
+        "reason": "Institution identity requires official-source onboarding."
+      },
+      "https://www.hustlermoneyblog.com/a-federal-credit-union-promotions/": {
+        "offerTitle": "A+ Federal Credit Union Promotions: $50, $250 Checking Bonuses (TX) – Ends 12/31/26",
+        "offerUrl": "https://www.hustlermoneyblog.com/a-federal-credit-union-promotions/",
+        "offerFingerprint": "5c5165421ddd59541d6d3073a79c8ad0b6f6a05c6e1d128ac77fcb9062872946",
+        "status": "needs-review",
+        "checkState": "unsupported",
+        "attemptedAt": "2026-10-26T12:52:05.881172+00:00",
+        "rules": [],
+        "conditions": [],
+        "reason": "Institution identity requires official-source onboarding."
       },
       "https://www.doctorofcredit.com/ct-ri-only-centreville-bank-200-checking-bonus/": {
         "offerTitle": "[CT, RI only] Centreville Bank $200 Checking Bonus",
@@ -1790,7 +1867,7 @@
         "offerFingerprint": "ef717da62b8797a4d455f9e02d73a339da3bc1116b968b175c6f5c800703c736",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T03:52:06.293236+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.881302+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -1801,7 +1878,7 @@
         "offerFingerprint": "caecbaa77b1a63c5230d04a293416b08d4579b45adc193211816f300db1ec3af",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:05.978108+00:00",
+        "attemptedAt": "2026-10-26T11:52:04.912138+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -1812,7 +1889,7 @@
         "offerFingerprint": "6b75090ce785ea6b9aff608c1b146a6eaff499912684bdf37db58f6c513b9973",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T03:52:06.293254+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.881320+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -1823,7 +1900,7 @@
         "offerFingerprint": "3dd8f7af3079c0329780541634a0ddc6dd4e53325a8b97bdda2b0a28d89ed659",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T03:52:06.293390+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.881460+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -1834,7 +1911,7 @@
         "offerFingerprint": "c963e139bf7742a24ffe6895019607d8c4bdb7ede4cc0e25bb2e8ba244d248a3",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T03:52:06.293356+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.881426+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -1845,7 +1922,7 @@
         "offerFingerprint": "1a13f798c77bf950ca701dd94372b2674885ff89440a3ecc80c4ce448b6e6800",
         "status": "verified",
         "checkState": "checked",
-        "attemptedAt": "2026-10-26T04:52:05.356515+00:00",
+        "attemptedAt": "2026-10-26T11:52:04.582629+00:00",
         "rules": [
           {
             "mode": "include",
@@ -1877,8 +1954,8 @@
         "institution": "truist",
         "nationwide": false,
         "nationwideQuote": "",
-        "checkedAt": "2026-10-26T04:52:05.765790+00:00",
-        "expiresAt": "2026-10-27T04:52:05.765790+00:00",
+        "checkedAt": "2026-10-26T11:52:04.691449+00:00",
+        "expiresAt": "2026-10-27T11:52:04.691449+00:00",
         "sourceUrl": "https://www.truist.com/checking/lp/promos/checking-promo4",
         "sourceHash": "fb7afea5fce33006093ecc48c01068eabb83cdcc238ad5efd44b03be5c4a73ca"
       },
@@ -1888,7 +1965,7 @@
         "offerFingerprint": "79a6b7a0aa0343a48d22eb0ae53b3ba7524c7a8ea234acd28c388e36f729aa54",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:05.964335+00:00",
+        "attemptedAt": "2026-10-26T11:52:04.904270+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -1899,7 +1976,7 @@
         "offerFingerprint": "d7f8f35c073f3b06d6bd7aca594d81d209d0ccf40ab84ace787794ee651e5c0a",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:06.285698+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.881148+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -1910,7 +1987,7 @@
         "offerFingerprint": "ee156bfd924a7fc191d7eda8140192003692a600d974425df085bcf6b71cc39b",
         "status": "needs-review",
         "checkState": "failed",
-        "attemptedAt": "2026-10-26T04:52:04.479359+00:00",
+        "attemptedAt": "2026-10-26T12:52:04.587576+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Official promotion could not be reached; no eligibility is assumed.",
@@ -1922,7 +1999,7 @@
         "offerFingerprint": "64e9f2f8266eb1f39af73443fadd6662075acd21f9ebcf5e6bb746077cc9a865",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T03:52:06.293333+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.881402+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -1933,7 +2010,7 @@
         "offerFingerprint": "88f161e25728092cdbd6a11c4d7c9436c69f1b62e0f02674ba5ad9fa51d44382",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:05.356360+00:00",
+        "attemptedAt": "2026-10-26T11:52:04.582500+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -1944,7 +2021,7 @@
         "offerFingerprint": "8c5ea882448d70e80e72cf585a6f197a586463d123f8a8bbab84dad41616c77a",
         "status": "needs-review",
         "checkState": "failed",
-        "attemptedAt": "2026-10-26T04:52:04.849836+00:00",
+        "attemptedAt": "2026-10-26T11:52:04.559709+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Official promotion could not be reached; no eligibility is assumed.",
@@ -1956,7 +2033,7 @@
         "offerFingerprint": "cd6496fcfec1e0c69b5a72f18b20beae783c0ce93f6cf66894fa1c1de45c2224",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:05.356426+00:00",
+        "attemptedAt": "2026-10-26T11:52:04.582547+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -1967,7 +2044,7 @@
         "offerFingerprint": "ae743156d256bbf6c076d66c7bb7899eaf51b1954af0182ec72e946ed82dabcb",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:04.479999+00:00",
+        "attemptedAt": "2026-10-26T12:52:04.588158+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -1978,7 +2055,7 @@
         "offerFingerprint": "39ead32bc32977808852f5dbbf425832d0dc7b5f9369ca558a53c4d20ecf803c",
         "status": "needs-review",
         "checkState": "failed",
-        "attemptedAt": "2026-10-26T04:52:04.480710+00:00",
+        "attemptedAt": "2026-10-26T12:52:04.588817+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Official promotion could not be reached; no eligibility is assumed.",
@@ -1990,7 +2067,7 @@
         "offerFingerprint": "00a2ed4f97f041ec23362e4ca585e01e35a5087fcf187f408c446a8e13301a8a",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:06.051623+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.444162+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2001,7 +2078,7 @@
         "offerFingerprint": "7574a3040632e87cd8e6c0eda829412e6dca7e45a2147c2fc6cd8380f9b2c371",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:05.978087+00:00",
+        "attemptedAt": "2026-10-26T11:52:04.912116+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2012,7 +2089,7 @@
         "offerFingerprint": "530f2734ebd36d371033b03c450d87ef8f0488926d1102a523239925a7649651",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:05.356495+00:00",
+        "attemptedAt": "2026-10-26T11:52:04.582610+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2023,7 +2100,7 @@
         "offerFingerprint": "25d9ada95d4f93d28f66c4de5a52b6e596fbfc892b1ac00bb6b8c9eb607e6810",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:04.483201+00:00",
+        "attemptedAt": "2026-10-26T12:52:04.591386+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2034,7 +2111,7 @@
         "offerFingerprint": "1f58736b14a8624036bd76ec91068ad3b517e8421659a79b8b36cd7cb1905622",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:05.356470+00:00",
+        "attemptedAt": "2026-10-26T11:52:04.582587+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2045,7 +2122,7 @@
         "offerFingerprint": "4903b57930379939b8b6f66a0d90c515aff198831a52dbd7d989f3165a144577",
         "status": "needs-review",
         "checkState": "failed",
-        "attemptedAt": "2026-10-26T04:52:05.691340+00:00",
+        "attemptedAt": "2026-10-26T11:52:04.625160+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Official promotion could not be reached; no eligibility is assumed.",
@@ -2057,7 +2134,7 @@
         "offerFingerprint": "aee69047c1dd4377e915fef8af79ec2d0c81c6c11d338083e6919c3d05694ec2",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:05.978126+00:00",
+        "attemptedAt": "2026-10-26T12:52:04.591658+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2068,7 +2145,7 @@
         "offerFingerprint": "1c727da4bd8547a08f656883dcbaf9f244e896e0c7ceebda4d4955d3c8b8ccef",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:06.051705+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.444249+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2079,7 +2156,7 @@
         "offerFingerprint": "23258a44a4168fe4a51c2016bee69a1f0d16946c7809db8cb8c05d5590fea10f",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:04.483799+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.881496+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2090,7 +2167,7 @@
         "offerFingerprint": "b1ef400f03ac0e77519ee2e2717453cd0d3175933382e4873be8b3224c67b06b",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T03:52:06.293289+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.881356+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2101,7 +2178,7 @@
         "offerFingerprint": "8e8cc7fe431ff4d385a94279f2b001dd65df377ca67ee7d79e2a8a3ec94cfd15",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:06.285660+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.881075+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2112,7 +2189,7 @@
         "offerFingerprint": "4609f9578992e37d64c6b9bbcf03f1baa9b8c02de4589450f36033f83382eab5",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T03:52:06.293196+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.881261+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2123,7 +2200,7 @@
         "offerFingerprint": "33d2fbff845280761f9078c4b48b4a18439199195e7a88f49dfa57271d1c94db",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:04.849795+00:00",
+        "attemptedAt": "2026-10-26T12:52:06.038199+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2134,7 +2211,7 @@
         "offerFingerprint": "9d74761b258e12dc8e44c05a77745d11ce058d886d1e2dfdc53361aa3f208238",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:04.483761+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.881477+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2145,7 +2222,7 @@
         "offerFingerprint": "927977e9ec483d8d4da49992bc131f73359f7a60de1de18e28617d266ca6cd23",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T03:52:06.293215+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.881280+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2156,7 +2233,7 @@
         "offerFingerprint": "d1185e9f370abb1be09035bf8840030235715592ea004464e8d0eb157bfe800a",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:06.051648+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.444189+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2167,7 +2244,7 @@
         "offerFingerprint": "eb1b19b01bbca3810e89073768431a042912b27838d1f86e06a9bd8c6ce34077",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T03:52:06.293271+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.881337+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2178,7 +2255,7 @@
         "offerFingerprint": "f0ad43302a36fa0abfe56052eb10b0dac4eadc9826b3d13c34a32370d1e27da6",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T03:52:06.293374+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.881444+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2189,7 +2266,7 @@
         "offerFingerprint": "cfbd83838d96ca1252b368ac3170a10b105705da572e3f0097cb0196f73e1d8b",
         "status": "needs-review",
         "checkState": "failed",
-        "attemptedAt": "2026-10-26T04:52:05.978166+00:00",
+        "attemptedAt": "2026-10-26T12:52:04.591703+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Official promotion could not be reached; no eligibility is assumed.",
@@ -2201,7 +2278,7 @@
         "offerFingerprint": "7b46d94aa95e4703e0e26dcecf3626c8002c3e8f66b7ebafb5bc8dc22d780fc9",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:05.978029+00:00",
+        "attemptedAt": "2026-10-26T11:52:04.912067+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2212,7 +2289,7 @@
         "offerFingerprint": "b5899a6b53bfae8f25709298206ceea9a8ad32f5e7d2fb9bfd25474ecee496c5",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T03:52:06.293312+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.881381+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2223,7 +2300,7 @@
         "offerFingerprint": "be2f9336b2f6c059573bf6ea265e934f8fc077ef3b79bf336988a9ea249553ac",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:06.051567+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.444086+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2234,7 +2311,7 @@
         "offerFingerprint": "4f7d7efa358710a3ea670584510602a72bdb88a086bb321561a7802db7efc755",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:04.849815+00:00",
+        "attemptedAt": "2026-10-26T11:52:04.559689+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2245,7 +2322,7 @@
         "offerFingerprint": "6baf1fc45008d0b18e35e851ad1e276816b1386c26c19c3eab743688ed76e741",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:05.356445+00:00",
+        "attemptedAt": "2026-10-26T11:52:04.582565+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2256,7 +2333,7 @@
         "offerFingerprint": "6b376d7ee624b52ae88665addc3cda756eb552298857a34ba8c60a25e60f0b73",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:06.051686+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.444230+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2267,7 +2344,7 @@
         "offerFingerprint": "1308e30a1f991f5093a90705e43d8fbb9cc511d5d02edb507d280178f687c2a5",
         "status": "needs-review",
         "checkState": "checked",
-        "attemptedAt": "2026-10-26T04:52:04.483826+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.881513+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Official pages did not establish this exact promotion.",
@@ -2279,7 +2356,7 @@
         "offerFingerprint": "2a15efc4fdf65dc22060a08622107bd48255c9dc5e6c45f6c5f4a77b67969c3b",
         "status": "needs-review",
         "checkState": "checked",
-        "attemptedAt": "2026-10-26T04:52:05.728620+00:00",
+        "attemptedAt": "2026-10-26T11:52:04.903245+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Official pages did not establish this exact promotion.",
@@ -2291,7 +2368,7 @@
         "offerFingerprint": "25da1fd18510ae9c8222648f3149de009a594385d98b87800b5cb3c0208d798b",
         "status": "needs-review",
         "checkState": "checked",
-        "attemptedAt": "2026-10-26T04:52:05.964419+00:00",
+        "attemptedAt": "2026-10-26T11:52:04.904353+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Official pages did not establish this exact promotion.",
@@ -2303,7 +2380,7 @@
         "offerFingerprint": "c01b91c9e4ba975d6b7c0740ad68efef2e26ffc923479585354e57d032bf6d9a",
         "status": "needs-review",
         "checkState": "checked",
-        "attemptedAt": "2026-10-26T04:52:06.051724+00:00",
+        "attemptedAt": "2026-10-26T12:52:05.444269+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Official pages did not establish this exact promotion.",
@@ -2315,7 +2392,7 @@
         "offerFingerprint": "e578ceaa2de887a8ad3b51287c69594762815932759028a3349231b1db5f6750",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:04.479666+00:00",
+        "attemptedAt": "2026-10-26T12:52:04.587828+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2326,13 +2403,13 @@
         "offerFingerprint": "41bd413a48d538af35cefe98c744f3f91c7f667a77e9e6b56d2f072dcd4549b9",
         "status": "needs-review",
         "checkState": "checked",
-        "attemptedAt": "2026-10-26T04:52:04.480088+00:00",
+        "attemptedAt": "2026-10-26T12:52:04.588186+00:00",
         "rules": [],
         "conditions": [],
         "reason": "No explicit promotional geographic scope was found.",
         "institution": "wells",
-        "checkedAt": "2026-10-26T04:52:05.365380+00:00",
-        "expiresAt": "2026-10-27T04:52:05.365380+00:00",
+        "checkedAt": "2026-10-26T12:52:05.556552+00:00",
+        "expiresAt": "2026-10-27T12:52:05.556552+00:00",
         "sourceUrl": "https://accountoffers.wellsfargo.com/business-checking-bonus/",
         "sourceHash": "e9fdf259f81bd7d71a2c80a88c90667474ba3cd1cd67244736444c233e9650fc"
       },
@@ -2342,7 +2419,7 @@
         "offerFingerprint": "3c1b658772c55eb06b4b487bc347f20bb857ac8dd79cb4382182f58299c63e93",
         "status": "needs-review",
         "checkState": "unsupported",
-        "attemptedAt": "2026-10-26T04:52:05.978145+00:00",
+        "attemptedAt": "2026-10-26T12:52:04.591682+00:00",
         "rules": [],
         "conditions": [],
         "reason": "Institution identity requires official-source onboarding."
@@ -2353,23 +2430,23 @@
         "offerFingerprint": "a2128e4da26996e6b201a00d4dc24f2ddded876eba84d1124ed814ba0f5738cb",
         "status": "needs-review",
         "checkState": "checked",
-        "attemptedAt": "2026-10-26T04:52:04.480858+00:00",
+        "attemptedAt": "2026-10-26T12:52:04.589004+00:00",
         "rules": [],
         "conditions": [],
         "reason": "No explicit promotional geographic scope was found.",
         "institution": "wells",
-        "checkedAt": "2026-10-26T04:52:05.259033+00:00",
-        "expiresAt": "2026-10-27T04:52:05.259033+00:00",
+        "checkedAt": "2026-10-26T12:52:05.347880+00:00",
+        "expiresAt": "2026-10-27T12:52:05.347880+00:00",
         "sourceUrl": "https://accountoffers.wellsfargo.com/welcomebonus/",
         "sourceHash": "6b1d0d4362bdf90f812d5d79952ee1e110fc136976549c14f06842998429d30d"
       }
     },
     "coverage": {
-      "total": 51,
+      "total": 55,
       "checked": 7,
       "verified": 1,
       "failed": 6,
-      "unsupported": 36,
+      "unsupported": 40,
       "queued": 0
     }
   }
