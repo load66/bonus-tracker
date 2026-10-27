@@ -1,27 +1,89 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-10-27T12:27:23.822146+00:00",
+  "checkedAt": "2026-10-27T22:25:24.786702+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-10-27T12:27:23.822146+00:00",
+      "checkedAt": "2026-10-27T22:25:24.786702+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-10-27T12:27:23.822146+00:00",
+      "checkedAt": "2026-10-27T22:25:24.786702+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-10-27T12:27:23.822146+00:00",
+      "checkedAt": "2026-10-27T22:25:24.786702+00:00",
       "status": "ok"
     }
   ],
   "offers": [
+    {
+      "title": "U.S. Bank Business Checking Bonus: $400 or $1200 Offer (Nationwide) – Ends 1/13/27",
+      "url": "https://www.hustlermoneyblog.com/us-bank-business-checking-bonus/",
+      "publishedAt": "2026-10-27T17:26:11+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "nationwide",
+      "groupKey": "us bank|business|1200|nationwide",
+      "bank": "us bank",
+      "product": "business",
+      "amount": 1200,
+      "region": "nationwide",
+      "offerKey": "us bank|business|1200|nationwide",
+      "rewardIsUpperBound": true,
+      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
+      "lastSeen": "2026-10-27T17:26:11+00:00",
+      "expiresAt": "2027-01-13",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/us-bank-business-checking-bonus/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "U.S. Bank Business Checking Bonus: $400 or $1200 Offer (Nationwide) – Ends 1/13/27",
+          "publishedAt": "2026-10-27T17:26:11+00:00"
+        }
+      ],
+      "firstSeenBaseline": true,
+      "badges": []
+    },
+    {
+      "title": "Connexus Credit Union $300 Checking Bonus, Direct Deposit Not Required",
+      "url": "https://www.doctorofcredit.com/connexus-credit-union-300-checking-bonus/",
+      "publishedAt": "2026-10-27T15:00:11+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "nationwide",
+      "groupKey": "connexus credit union|checking|300|unknown",
+      "bank": "connexus credit union",
+      "product": "checking",
+      "amount": 300,
+      "region": "unknown",
+      "offerKey": "connexus credit union|checking|300|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-27T22:25:24.786702+00:00",
+      "lastSeen": "2026-10-27T15:00:11+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/connexus-credit-union-300-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "Connexus Credit Union $300 Checking Bonus, Direct Deposit Not Required",
+          "publishedAt": "2026-10-27T15:00:11+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
     {
       "title": "Rakuten: $100/10,000 when opening Synchrony Savings Account (Must Deposit $1,000)",
       "url": "https://www.doctorofcredit.com/rakuten-100-10000-when-opening-synchrony-savings-account-must-deposit-1000/",
@@ -373,9 +435,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "[PA In Branch] Mid Penn Bank $250 Checking Bonus",
@@ -768,36 +828,6 @@
       "badges": [
         "New"
       ]
-    },
-    {
-      "title": "U.S. Bank Business Checking Bonus: $400 or $1200 Offer (Nationwide) – Ends 1/13/27",
-      "url": "https://www.hustlermoneyblog.com/us-bank-business-checking-bonus/",
-      "publishedAt": "2026-10-22T15:27:11+00:00",
-      "source": "Hustler Money Blog",
-      "sourceId": "hmb",
-      "availability": "nationwide",
-      "groupKey": "us bank|business|1200|nationwide",
-      "bank": "us bank",
-      "product": "business",
-      "amount": 1200,
-      "region": "nationwide",
-      "offerKey": "us bank|business|1200|nationwide",
-      "rewardIsUpperBound": true,
-      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
-      "lastSeen": "2026-10-22T15:27:11+00:00",
-      "expiresAt": "2027-01-13",
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.hustlermoneyblog.com/us-bank-business-checking-bonus/",
-          "sourceId": "hmb",
-          "source": "Hustler Money Blog",
-          "title": "U.S. Bank Business Checking Bonus: $400 or $1200 Offer (Nationwide) – Ends 1/13/27",
-          "publishedAt": "2026-10-22T15:27:11+00:00"
-        }
-      ],
-      "firstSeenBaseline": true,
-      "badges": []
     },
     {
       "title": "HSBC Bank Promotions: Up to $3000 Checking Bonus – October 2026",
@@ -1856,8 +1886,7 @@
   ],
   "availability": {
     "schemaVersion": 1,
-    "status": "complete",
-    "checkedAt": "2026-10-27T11:52:06.865014+00:00",
+    "status": "unavailable",
     "records": {
       "https://www.doctorofcredit.com/rakuten-100-10000-when-opening-synchrony-savings-account-must-deposit-1000/": {
         "offerTitle": "Rakuten: $100/10,000 when opening Synchrony Savings Account (Must Deposit $1,000)",
@@ -2528,13 +2557,6 @@
         "sourceHash": "6b1d0d4362bdf90f812d5d79952ee1e110fc136976549c14f06842998429d30d"
       }
     },
-    "coverage": {
-      "total": 58,
-      "checked": 7,
-      "verified": 1,
-      "failed": 6,
-      "unsupported": 43,
-      "queued": 0
-    }
+    "checkedAt": "2026-10-27T11:52:06.865014+00:00"
   }
 }
