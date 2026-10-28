@@ -527,6 +527,23 @@ async function exercise(name,engine,url){
         t==='Record bonus payment'||t==='View remaining tasks'||t==='Review account rules')&&
       await page.locator('.bt3640-section[data-section="requirements"]').innerText().then(t=>
         t.includes('Requirements completed')&&!t.includes('No single nonrecurring deposit target')));
+    // Saving the same confirmed date must not silently rewrite history.
+    const savedCompletion=await page.evaluate(()=>{
+      const e=entries.find(x=>x.id==='SYN-JOURNEY-DD');
+      return {stored:localStorage.getItem('bt_e_v4'),history:JSON.stringify(e?.history||e?.activity||[])};
+    });
+    await page.getByRole('button',{name:'Edit date',exact:true}).click();
+    check('completed account opens its existing saved date, not a blank confirmation',
+      await page.locator('#req_date').inputValue()==='2026-10-10');
+    await page.getByRole('button',{name:'Save date',exact:true}).click();
+    check('saving unchanged date shows a clear Already saved response',
+      await page.getByText('Already saved',{exact:true}).isVisible());
+    await page.getByRole('button',{name:'OK',exact:true}).click();
+    check('unchanged confirmation preserves saved records without a duplicate write',
+      await page.evaluate(before=>{
+        const e=entries.find(x=>x.id==='SYN-JOURNEY-DD');
+        return localStorage.getItem('bt_e_v4')===before.stored&&JSON.stringify(e?.history||e?.activity||[])===before.history;
+      },savedCompletion));
     await page.getByRole('button',{name:'Back to accounts'}).click();
     check('journey moves the completed bank from requirements to waiting for payment',
       await page.locator('[data-queue="waiting"] [data-attention-id="SYN-JOURNEY-DD"]').count()===1&&
@@ -1277,6 +1294,30 @@ async function exercise(name,engine,url){
       }finally{window.btLifecycleStageForEntry=previous}
       return results;
     });
+    // Explicit milestones override an urgent stage that still contains an
+    // ongoing timer. Never display Confirm requirements after it is saved.
+    const completedActions=await page.evaluate(()=>{
+      const original=window.btLifecycleStageForEntry,results={};
+      try{
+        const sample={id:'SYN-ALREADY-CONFIRMED',bank:'Synthetic Completed',
+          reqMet:'2026-10-20',bonusRecd:'',closed:'',checklist:[]};
+        for(const [key,stage] of Object.entries({
+          payout:{code:'ACTION_NEEDED',label:'Action needed',kind:'payout'},
+          recurring:{code:'ACTION_NEEDED',label:'Action needed',kind:'requirement'},
+          review:{code:'ACTION_NEEDED',label:'Action needed',kind:'review',reviewReason:'Saved rules need review'},
+          normal:{code:'IN_PROGRESS',label:'In progress',kind:''}})){
+          window.btLifecycleStageForEntry=()=>stage;
+          results[key]=BT360.primaryAction(sample);
+        }
+      }finally{window.btLifecycleStageForEntry=original}
+      return results;
+    });
+    check('all confirmed-account actions route forward without restarting confirmation',
+      completedActions.payout.label==='Record bonus payment'&&
+      completedActions.normal.label==='Record bonus payment'&&
+      completedActions.recurring.label==='View remaining tasks'&&
+      completedActions.review.label==='Review account rules'&&
+      Object.values(completedActions).every(x=>!x.command.includes('openReqMet')));
     check('stage action mapping never confirms payout during In progress',
       mappedActions.IN_PROGRESS==='Open next task'&&mappedActions.ACTION_NEEDED==='Open next task'
       &&mappedActions.REQUIREMENTS_MET==='Record bonus payment'&&mappedActions.AWAITING_BONUS==='Record bonus payment'
