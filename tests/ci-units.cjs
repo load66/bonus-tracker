@@ -2,7 +2,7 @@
 const fs=require('node:fs'),path=require('node:path'),{spawnSync}=require('node:child_process');
 const groups={
 
- bonus:['requirement-deadlines.test.js','close-rules.test.js','financial-rules.test.js','structured-import.test.js','entry-file-import.test.js','eligibility-gate.test.js','churn-buffer.test.js','countdown-options.test.js','fee-review-migration.test.js','bonus-ai.test.js','bonus-ai-auth.test.js','bank-feed.test.js','bank-feed.test.py','quick-add-source-watch.test.py'],
+ bonus:['bonus-arrival.test.js','requirement-deadlines.test.js','close-rules.test.js','financial-rules.test.js','structured-import.test.js','entry-file-import.test.js','eligibility-gate.test.js','churn-buffer.test.js','countdown-options.test.js','fee-review-migration.test.js','bonus-ai.test.js','bonus-ai-auth.test.js','bank-feed.test.js','bank-feed.test.py','quick-add-source-watch.test.py'],
  cloud:['persistence-transaction.test.js','cloud-recovery.test.js','icloud-migration.test.js','cloud-terms.test.js','cloud-protection.test.js','restore-reset-safety.test.js','archive-integrity.test.js','undo-integrity.test.js','history-repair.test.js'],
  ui:['source-evidence.test.js','quick-add-catalog.test.js','form-validation.test.js','mobile-editor-ux.test.js','tracker-tools.test.js','dashboard-queue.test.js','tracker-selection.test.js','full-app-smoke.test.js','detail-content.test.js','hero-months.test.js','semantic-status.test.js','smart-attention.test.js','professional-ops.test.js','end-to-end.test.js','operations-interactions.test.js','next-actions.test.js','specific-actions.test.js','research-tabs.test.js','hardening-regression.test.js','ci-workflow.test.js','read-integrity.test.js','federal-tax-estimator.test.js','tax-pay-import.test.js','tax-history.test.js','account-overview.test.js']
 };
@@ -25,4 +25,5 @@ function run(area){
 }
 module.exports={groups,inventory,run};
 if(require.main===module)process.exitCode=run(process.argv[2]);
+
 

@@ -47,3 +47,8 @@ None of these fee findings alone decides bonus retention, closure readiness, or 
 | Provenance and event status | Official URLs, exact quotations, verification date; distinguish actual user events from bank rules |
 
 Research is complete only when every applicable row is sourced or explicitly identified as unsupported/unverified, never silently fabricated. Machine validation checks supported values and saved quotations; it cannot prove the bank's external site or the user's enrollment by itself.
+
+
+## Arrival-range generation
+
+For runtime v3.6.84, follow the source-backed financialRules v3 payout.window contract in IMPORT_STANDARD.md. Research the exact enrolled payout interval and trigger, preserve all conditions, and generate only supported fields. Never invent a completion date, lower bound, bank calendar or single combined clock for distinct components. Validate import/review/save and AI arrival facts; an unknown clock stays unresolved. The visible presentation is only “Estimated bonus arrival: [start]–[end]”, without confidence badges or extra status labels.

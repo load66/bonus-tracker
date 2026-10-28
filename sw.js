@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.83: automatic current-offer screening with no manual churn-review chores.
-const V = 'bt-v3.6.83-autochurn1';
+// Version 3.6.84: source-backed estimated bonus arrival ranges.
+const V = 'bt-v3.6.84-arrival1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
@@ -73,4 +73,5 @@ self.addEventListener('fetch',event=>{
     return res;
   })));
 });
+
 

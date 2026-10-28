@@ -1,7 +1,7 @@
-/* Evidence-backed, bank-independent rules. Pure functions; no tracker writes or new date arithmetic. */
+/* Evidence-backed, bank-independent rules and exact payout ranges. Pure functions; no tracker writes. */
 (function(root){
   'use strict';
-  const VERSION=2,clean=v=>String(v??'').replace(/\s+/g,' ').trim();
+  const VERSION=3,clean=v=>String(v??'').replace(/\s+/g,' ').trim();
   const object=v=>!!v&&typeof v==='object'&&!Array.isArray(v);
   const money=n=>'$'+Number(n).toLocaleString('en-US',{maximumFractionDigits:2});
   const number=n=>typeof n==='number'&&Number.isFinite(n)&&n>=0&&n<=100000000;
@@ -16,7 +16,7 @@
     const fail=(path,message)=>issues.push({path,message});
     const warn=(path,message)=>warnings.push({path,message});
     if(rules==null)return Number(e?.schemaVersion)>=3?{ok:false,mode:'invalid',issues:[{path:'financialRules',message:'Structured financial rules are missing.'}],warnings,rules:null}:{ok:true,mode:'legacy',issues,warnings,rules:null};
-    if(!object(rules)||![1,VERSION].includes(rules.version))return{ok:false,mode:'invalid',issues:[{path:'financialRules.version',message:'The financial-rule version is unsupported.'}],warnings,rules:null};
+    if(!object(rules)||![1,2,VERSION].includes(rules.version))return{ok:false,mode:'invalid',issues:[{path:'financialRules.version',message:'The financial-rule version is unsupported.'}],warnings,rules:null};
     if(JSON.stringify(rules).length>60000)fail('financialRules','The financial-rule package is too large.');
     function keys(value,allowed,path){if(!object(value)){fail(path,'An object is required.');return false;}for(const k of Object.keys(value))if(!allowed.includes(k))fail(path+'.'+k,'This rule field is unsupported.');return true;}
     function evidence(value,path,expected){
@@ -94,7 +94,17 @@
       if(r.recurrence!==undefined){if(keys(r.recurrence,['period','count'],p+'.recurrence')){if(!periods.has(r.recurrence.period)||r.recurrence.period==='one-time'||!integer(r.recurrence.count))fail(p+'.recurrence','Every recurring period and period count must be explicit.');supportedValue(r.recurrence.count,quote,p+'.recurrence.count');unitEvidence(r.recurrence.period,quote,p+'.recurrence.period');}}
       if(r.timing!==undefined){if(keys(r.timing,['basis','value','unit'],p+'.timing')){if(!['opened','reqmet','bonus','enrollment'].includes(r.timing.basis)||!integer(r.timing.value)||!units.has(r.timing.unit))fail(p+'.timing','The exact deadline anchor and unit are required.');supportedValue(r.timing.value,quote,p+'.timing.value');unitEvidence(r.timing.unit,quote,p+'.timing.unit');if(r.timing.unit!=='calendar-days'){warn(p+'.timing','An exact '+r.timing.unit+' deadline requires its applicable calendar or statement dates; no day-count approximation is used.');if(Number(e.reqDays||0)>0)fail(p+'.timing','Non-calendar deadlines cannot be projected into the calendar-day reqDays field.');}}}
     });
-    if(keys(rules.payout,['text','timing','evidence'],'payout')){if(!clean(rules.payout.text))fail('payout.text','Payout conditions are required.');evidence(rules.payout.evidence,'payout.evidence','promotion');if(e.payoutTimingText&&clean(rules.payout.text)!==clean(e.payoutTimingText))fail('payout.text','Structured payout wording conflicts with the tracker wording.');if(rules.payout.timing!==undefined){const t=rules.payout.timing;if(!keys(t,['basis','value','unit'],'payout.timing')||!['opened','reqmet','bonus','qualifying-period-end'].includes(t.basis)||!integer(t.value)||!units.has(t.unit))fail('payout.timing','Payout timing must retain its exact trigger and unit.');else{supportedValue(t.value,rules.payout.evidence?.quote||'','payout.timing.value');unitEvidence(t.unit,rules.payout.evidence?.quote||'','payout.timing.unit');}}}
+    if(keys(rules.payout,['text','timing','evidence',...(rules.version>=3?['window']:[])],'payout')){if(!clean(rules.payout.text))fail('payout.text','Payout conditions are required.');evidence(rules.payout.evidence,'payout.evidence','promotion');if(e.payoutTimingText&&clean(rules.payout.text)!==clean(e.payoutTimingText))fail('payout.text','Structured payout wording conflicts with the tracker wording.');if(rules.payout.timing!==undefined){const t=rules.payout.timing;if(!keys(t,['basis','value','unit'],'payout.timing')||!['opened','reqmet','bonus','qualifying-period-end'].includes(t.basis)||!integer(t.value)||!units.has(t.unit))fail('payout.timing','Payout timing must retain its exact trigger and unit.');else{supportedValue(t.value,rules.payout.evidence?.quote||'','payout.timing.value');unitEvidence(t.unit,rules.payout.evidence?.quote||'','payout.timing.unit');}}}
+    if(rules.version>=3&&rules.payout?.window!==undefined){
+      const w=rules.payout.window;
+      if(keys(w,['basis','unit','min','max'],'payout.window')){
+        if(!['opened','reqmet','enrollment','qualifying-period-end'].includes(w.basis)||!units.has(w.unit)||!Number.isInteger(w.min)||w.min<0||!integer(w.max)||w.min>w.max)fail('payout.window','An ordered payout window with an exact trigger and unit is required.');
+        const supported=payoutWindowFromText(rules.payout.evidence?.quote);
+        if(!supported||['basis','unit','min','max'].some(k=>supported[k]!==w[k]))fail('payout.window','The original quotation must explicitly support the payout window and its trigger.');
+        const t=rules.payout.timing;
+        if(t&&(t.basis!==w.basis||t.unit!==w.unit||t.value!==w.max))fail('payout.window','Payout timing conflicts with the arrival window.');
+      }
+    }
     if(keys(rules.closure,['restrictionType','basis','minHoldDays','earlyCloseFee','text','evidence','feeEvidence'],'closure')){
       const c=rules.closure,q=evidence(c.evidence,'closure.evidence','promotion');
       const unknownFee=rules.version>=2&&c.earlyCloseFee===null;
@@ -115,6 +125,74 @@
       if(c.earlyCloseFee===0&&!explicitZeroEarlyCloseFee(feeQuote))fail('closure.earlyCloseFee','A zero early-close charge requires explicit fee evidence.');
     }
     return{ok:!issues.length,mode:issues.length?'invalid':'structured',issues,warnings,rules:issues.length?null:rules};
+  }
+  // Strict read-only adaptation of saved payout wording. No bank-name defaults.
+  function payoutWindowFromText(text){
+    const s=clean(text).toLowerCase().replace(/[–—]/g,'-');
+    const n='(\\d{1,4})(?:st|nd|rd|th)?';
+    const u='(business days?|calendar days?|days?|calendar months?|months?|statement cycles?)';
+    const intervals=s.match(new RegExp('(?:between (?:the )?'+n+' (?:and|to) (?:the )?'+n+' '+u+'|'+n+'\\s*-\\s*'+n+' '+u+'|(?:within|up to) '+n+' '+u+')','g'));
+    if(intervals?.length!==1)return null;
+    const range=s.match(new RegExp('between (?:the )?'+n+' (?:and|to) (?:the )?'+n+' '+u))||s.match(new RegExp(n+'\\s*-\\s*'+n+' '+u));
+    const within=!range&&s.match(new RegExp('(?:within|up to) '+n+' '+u));
+    if(!range&&!within)return null;
+    const unitText=range?range[3]:within[2];
+    const unit=/business/.test(unitText)?'business-days':/month/.test(unitText)?'calendar-months':/statement/.test(unitText)?'statement-cycles':'calendar-days';
+    const anchors=[];
+    if(/(?:after|from|of|following) (?:the )?(?:account )?open(?:ing|ed)|after (?:you )?open(?:ing)? (?:the |your |a )?(?:new )?account/.test(s))anchors.push('opened');
+    if(/after (?:all |the )?requirements (?:are |have been )?(?:met|completed|satisfied)|after (?:meeting|completing|satisfying) (?:all |the )?requirements|of (?:meeting|completing|satisfying) (?:all |the )?requirements/.test(s))anchors.push('reqmet');
+    if(/(?:after|from|of|following) (?:offer |coupon )?enrollment/.test(s))anchors.push('enrollment');
+    if(/(?:after|following) (?:the )?(?:qualification|qualifying|requirement|deposit) period (?:ends|has ended)|after (?:the )?end of (?:the )?(?:qualification|qualifying|requirement|deposit) period/.test(s))anchors.push('qualifying-period-end');
+    if(anchors.length!==1)return null;
+    const min=range?Number(range[1]):0,max=Number(range?range[2]:within[1]);
+    if(max<min||max<=0)return null;
+    return {basis:anchors[0],unit,min,max};
+  }
+  function shiftPayoutDate(base,value,unit){
+    if(!date(base)||!Number.isInteger(value)||value<0)return '';
+    const d=new Date(base+'T00:00:00Z');
+    if(unit==='calendar-days')d.setUTCDate(d.getUTCDate()+value);
+    else if(unit==='calendar-months'){
+      const day=d.getUTCDate();d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+value);
+      const last=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate();d.setUTCDate(Math.min(day,last));
+    }else return ''; // Business/statement calendars require exact bank dates.
+    if(isNaN(d))return '';
+    const result=d.toISOString().slice(0,10);return date(result)?result:'';
+  }
+  function estimatedArrival(e){
+    if(!e||e.closed||e.bonusRecd)return null;
+    let w=null;
+    if(e.financialRules||Number(e.schemaVersion)>=3){
+      const v=validate(e);if(!v.ok||!v.rules)return null;
+      const p=v.rules.payout;
+      w=p.window||payoutWindowFromText(p.evidence?.quote);
+      if(w&&p.timing&&(p.timing.basis!==w.basis||p.timing.unit!==w.unit||p.timing.value!==w.max))return null;
+    }else w=payoutWindowFromText(e.payoutTimingText);
+    if(!w)return null;
+    let base=w.basis==='opened'?e.opened:w.basis==='reqmet'?e.reqMet:w.basis==='enrollment'?(e.offerEnrollmentDate||e.couponEnrollmentDate):'';
+    if(w.basis==='enrollment'&&e.offerEnrollmentDate&&e.couponEnrollmentDate&&e.offerEnrollmentDate!==e.couponEnrollmentDate)return null;
+    if(w.basis==='qualifying-period-end'){
+      const req=e.financialRules?.requirements;
+      if(req?.length){
+        // Every requirement's exact deadline must be known; a DD checkbox is not an anchor.
+        const ends=req.map(r=>{
+          const t=r.timing;if(!t||!['opened','enrollment'].includes(t.basis))return '';
+          const b=t.basis==='opened'?e.opened:(e.offerEnrollmentDate||e.couponEnrollmentDate);
+          return shiftPayoutDate(b,t.value,t.unit);
+        });
+        if(ends.some(x=>!x))return null;
+        base=ends.sort().at(-1);
+      }else return null;
+    }
+    if(!date(base)||w.basis==='reqmet'&&date(e.opened)&&base<e.opened)return null;
+    const start=shiftPayoutDate(base,w.min,w.unit),end=shiftPayoutDate(base,w.max,w.unit);
+    return start&&end?{start,end,basis:w.basis,anchor:base}:null;
+  }
+  function arrivalLabel(range){
+    if(!range||!date(range.start)||!date(range.end))return '';
+    const fmt=(d,year)=>new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',...(year?{year:'numeric'}:{}),timeZone:'UTC'}).format(new Date(d+'T00:00:00Z'));
+    const crossYear=range.start.slice(0,4)!==range.end.slice(0,4);
+    return 'Estimated bonus arrival: '+fmt(range.start,crossYear)+'–'+fmt(range.end,true);
   }
   function waiverText(w){
     if(w===null)return 'Fee-waiver conditions have not been confirmed.';
@@ -154,13 +232,14 @@
     else if(intent==='waiver'){text=s.waivers.join('\n\n')||'These accounts have no recurring maintenance fee under the verified terms.';step='Check that your balance and activity meet the applicable waiver conditions in every required period.';}
     else if(intent==='companion'){const a=validate(e).rules.accounts.filter(a=>a.role==='companion');text=a.length?a.map(a=>a.label+(a.required?' is required.':' is optional.')+(a.minimumBalance?' '+a.minimumBalance.text:'')).join('\n\n'):'No companion account is listed in the verified rule package.';step=s.waivers.concat(s.minimums).join('\n')||'Confirm membership and account requirements before withdrawing funds.';}
     else if(intent==='requirements'){text=s.requirements.join('\n\n');step=s.recurring?'Verify qualifying activity for every specified period; one completed task does not confirm all periods.':'Verify actual qualifying activity with the bank before marking requirements complete.';missing=s.warnings;}
-    else if(intent==='payout'){text=s.payout;step=e.bonusRecd?'Receipt is recorded. Review the closure checks next.':'Record receipt only after the bonus actually posts.';}
+    else if(intent==='payout'){text=[arrivalLabel(estimatedArrival(e)),s.payout].filter(Boolean).join('\n\n');step=e.bonusRecd?'Receipt is recorded. Review the closure checks next.':'Record receipt only after the bonus actually posts.';}
     else if(intent==='closure-fee'){text=s.closure;step='Use the tracker closure checks before closing or withdrawing a required balance.';}
     else return null;
     if(['fees','waiver','companion'].includes(intent))missing=s.warnings.filter(x=>/fee|waiv/i.test(x));
     return{answer:text,step,missing,factIds:['financialrules'],local:true};
   }
-  const api=Object.freeze({VERSION,validate,summarize,answer,intentFor,waiverText});
+  const api=Object.freeze({VERSION,validate,summarize,answer,intentFor,waiverText,estimatedArrival,arrivalLabel,payoutWindowFromText});
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.BTFinancialRules=api;
 })(typeof window!=='undefined'?window:globalThis);
+

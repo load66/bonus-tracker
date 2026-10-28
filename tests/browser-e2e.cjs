@@ -36,11 +36,38 @@ const payload={kind:'BonusTrackerEntry',schemaVersion:2,
     eligibilityRules:[{id:'bonus-12m',basis:'bonus-received',periodValue:12,periodUnit:'months',scope:'consumer-checking',evidenceText:'Not eligible if you received a checking bonus within the past 12 months.',evidenceSource:'official-promotion-terms'}]
   }};
 
+// Every authenticated terms request stays in the synthetic browser context.
+// Keep real hash/readback semantics instead of suppressing console failures.
+function installTermsFixture(){
+  const prior=window.fetch.bind(window),objects=new Map();
+  window.__termsFixture={uploads:0,hashVerified:0};
+  window.fetch=async(input,options={})=>{
+    const url=String(typeof input==='string'?input:input?.url||input);
+    const endpoint='https://api-production-00f74.up.railway.app/api/bonus-tracker/terms';
+    if(!url.startsWith(endpoint))return prior(input,options);
+    const response=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json'}});
+    if(options.method==='POST'){
+      const packet=JSON.parse(options.body);
+      const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(packet.snapshot));
+      const digest=Array.from(new Uint8Array(bytes),n=>n.toString(16).padStart(2,'0')).join('');
+      window.__termsFixture.uploads++;
+      if(digest!==packet.sha256)return response({detail:'Synthetic hash mismatch'},400);
+      window.__termsFixture.hashVerified++;
+      const saved={id:digest,sha256:digest,verified:true,snapshot:packet.snapshot};
+      objects.set(digest,saved);return response(saved);
+    }
+    const id=url.slice(endpoint.length).split('?')[0].replace(/^\//,'');
+    if(id)return response(objects.get(id)||{detail:'Synthetic snapshot missing'},objects.has(id)?200:404);
+    return response({terms:Array.from(objects.values(),item=>({id:item.id,...JSON.parse(item.snapshot)})),nextOffset:null});
+  };
+}
+
 async function exercise(name,engine,url){
   const browser=await engine.launch();
   const context=await browser.newContext({acceptDownloads:true,timezoneId:'America/Chicago',viewport:{width:1280,height:900}});
   await context.tracing.start({screenshots:true,snapshots:true});
   const page=await context.newPage(),errors=[],warnings=[],checks=[];
+  await page.addInitScript(installTermsFixture);
   page.on('pageerror',err=>errors.push(String(err)));
   page.on('console',msg=>{if(msg.type()==='warning')warnings.push(msg.text());if(msg.type()==='error'&&!/Failed to load resource|net::ERR|404 \(Not Found\)/i.test(msg.text()))errors.push(msg.text())});
   await page.addInitScript(()=>{const RealDate=Date;const now=Date.parse('2026-10-11T17:00:00Z');window.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[now]))}static now(){return now}}});
@@ -1615,6 +1642,7 @@ async function exercise(name,engine,url){
     const cloudRecords=await page.evaluate(()=>window.__cloudFixture.objects);
     await button('Close').click();
     const newPhoneContext=await browser.newContext({viewport:{width:390,height:844},timezoneId:'America/Chicago'});
+    await newPhoneContext.addInitScript(installTermsFixture);
     const newPhone=await newPhoneContext.newPage();
     await newPhone.goto(url);await newPhone.waitForFunction(()=>navigator.serviceWorker.controller&&window.__btFullRegressionReport?.total===8&&!window.__btFullRegressionReport.pending);
     const installRecoveryFixture=objects=>{
@@ -1926,6 +1954,29 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>{entries=window.__cardTextOriginal;delete window.__cardTextOriginal;R();});
     await page.setViewportSize({width:390,height:844});
     check('card layout leaves saved records unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
+    // Source-backed arrival range: actual card/detail DOM on both browser engines.
+    await page.evaluate(source=>{
+      window.__arrivalOriginal=entries;window.__arrivalExpanded=expanded;window.__arrivalStored=localStorage.getItem('bt_e_v4');
+      entries=[{...source,id:'SYN-ARRIVAL',checklist:[],customTimers:[]}];
+      tab='tracker';expanded='';R();
+    },require('./fixtures/financial-rules.cjs').arrivalFixture());
+    await openAccounts();
+    check('arrival range is visible on account card',await page.locator('.bt3684-arrival-compact').innerText()==='Estimated bonus arrival: Nov 8–Dec 8, 2026');
+    await page.locator('.bt366-compact-row').first().click();
+    check('arrival detail shows one plain range',await page.locator('.bt3684-arrival').count()===1&&await page.locator('.bt3684-arrival').innerText()==='Estimated bonus arrival: Nov 8–Dec 8, 2026');
+    for(const width of [320,375,390,430,1280]){
+      await page.setViewportSize({width,height:844});
+      check('arrival fits width '+width,await page.locator('.bt3684-arrival').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
+    }
+    await page.setViewportSize({width:390,height:844});
+    await page.screenshot({path:path.join(output,name+'-estimated-arrival.png')});
+    await page.evaluate(()=>{entries[0].opened='2026-08-11';R();});
+    check('arrival recomputes when opening changes',await page.locator('.bt3684-arrival').innerText()==='Estimated bonus arrival: Nov 9–Dec 9, 2026');
+    await page.evaluate(()=>{entries[0].bonusRecd='2026-10-10';R();});
+    check('arrival disappears after recorded payment',await page.locator('.bt3684-arrival').count()===0);
+    check('arrival rendering never writes stored records',await page.evaluate(()=>localStorage.getItem('bt_e_v4')===window.__arrivalStored));
+    await page.evaluate(()=>{entries=window.__arrivalOriginal;expanded=window.__arrivalExpanded;delete window.__arrivalOriginal;delete window.__arrivalExpanded;delete window.__arrivalStored;R();});
+    await page.setViewportSize({width:390,height:844});
     const structuredProbe=await page.evaluate(source=>{
       const before=localStorage.getItem('bt_e_v4');
       const payload={kind:'BonusTrackerEntry',schemaVersion:3,verification:{promoSourceUrl:source.promoSourceUrl,feeScheduleSourceUrl:source.feeScheduleSourceUrl,termsVerifiedAt:source.termsVerifiedAt},entry:source};
@@ -2177,6 +2228,8 @@ async function exercise(name,engine,url){
     const pointsBeforeSkip=await page.evaluate(()=>JSON.stringify(loadUserDatapoints()));
     await page.getByRole('button',{name:'Skip for now',exact:true}).click();
     check('skipping experience preserves payment and prior evidence',await page.evaluate(before=>!!entries[0].bonusRecd&&JSON.stringify(loadUserDatapoints())===before,pointsBeforeSkip));
+    const termsReceipt=await page.evaluate(async()=>{await BTTermsHistory.sync();return {...window.__termsFixture};});
+    check('historical terms stay in hash-verified synthetic storage: '+JSON.stringify(termsReceipt),termsReceipt.uploads>0&&termsReceipt.uploads===termsReceipt.hashVerified);
     await page.evaluate(()=>BTBonusAuth.disconnect());
     check('AI sign-out removes remembered session',await page.evaluate(()=>!localStorage.getItem('bonus-ai-auth')&&!BTBonusAuth.connected()));
     check('no uncaught application errors',errors.length===0);
@@ -2197,4 +2250,5 @@ async function exercise(name,engine,url){
   try{for(const [name,engine] of require('./browser-select.cjs')({chromium,webkit}))await exercise(name,engine,url)}
   finally{server.close()}
 })().catch(err=>{console.error(err);process.exitCode=1});
+
 
