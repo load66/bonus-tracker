@@ -327,7 +327,7 @@ function detailHead(e){
 function setAccountSectionOpen(id,key,value){accountSections.set(String(id)+'|'+key,!!value)}
 function revealAccountSection(key){
  const node=[...document.querySelectorAll('.bt3640-section')].find(n=>n.dataset.section===key);
- if(node){node.open=true;setAccountSectionOpen(node.dataset.entryId,key,true);}
+ if(node){const extras=node.closest('.bt3686-account-extras');if(extras){extras.open=true;setAccountSectionOpen(node.dataset.entryId,'extras',true);}node.open=true;setAccountSectionOpen(node.dataset.entryId,key,true);}
  return node;
 }
 function accountSection(e,key,title,html,meta='',actions='',defaultOpen=false){
@@ -449,10 +449,16 @@ function timerSvg(kind){
 }
 function payoutReminderRow(e){
  if(e.bonusRecd||e.closed)return '';
- const estimate=window.BTFinancialRules?.estimatedArrival?.(e);
- const label=window.BTFinancialRules?.arrivalLabel?.(estimate);
- if(!label)return '';
- return '<p class="bt3684-arrival" data-source="saved-payout">'+safe(label)+'</p>';
+ const engine=window.BTFinancialRules;
+ const estimate=engine?.estimatedArrival?.(e),label=engine?.arrivalLabel?.(estimate);
+ if(label)return '<p class="bt3684-arrival" data-source="saved-payout">'+safe(label)+'</p>';
+ const payout=e.financialRules?.payout;
+ const rule=payout?.window||payout?.timing||engine?.payoutWindowFromText?.(payout?.evidence?.quote||payout?.text||e.payoutTimingText);
+ let help='A date range is not available from the saved offer details yet.';
+ if(rule?.basis==='reqmet'&&!e.reqMet)help='Finish the requirements and record the completion date to see your date range.';
+ else if(rule?.basis==='opened'&&!archiveDateValid(e.opened))help='Add your account opening date to see your date range.';
+ else if(rule?.basis==='enrollment'&&!e.offerEnrollmentDate&&!e.couponEnrollmentDate)help='Add your offer enrollment date to see your date range.';
+ return '<section class="bt3684-arrival bt3686-arrival-help" aria-label="Estimated bonus arrival"><b>Estimated bonus arrival</b><p>'+safe(help)+'</p></section>';
 }
 // The enrolled structured rule is authoritative over a legacy day counter.
 // If its clock is not calculable (business days, cycles, unknown start), do
@@ -821,8 +827,8 @@ function detailPanels(e){
  const due=firstUnmetRequirementDate(e);
  const stageSummary=ready?'Review closing checks before closing':due?'Requirements due '+date(due):code==='IN_PROGRESS'?'Complete offer requirements':stage(e).label;
  const stageChip=ready?'Ready to close':due?requirementCountdown(e):stage(e).label;
- let h='<div class="bt360-steps '+(ready?'bt3611-ready':'')+'" aria-label="Account lifecycle"><div class="bt3611-step-bars">'+labels.map((name,i)=>'<span class="'+(i<at?'done ':'')+(at===i?'current':'')+'"'+(at===i?' aria-current="step"':'')+'>'+name+'</span>').join('')+'</div><div class="bt3611-stage-summary"><b>'+safe(stageSummary)+'</b><em class="bt360-chip '+(ready?'positive':'warning')+'">'+safe(stageChip)+'</em></div></div>';
- if(!ready)h+=accountDates(e)+payoutReminderRow(e);
+ let h=payoutReminderRow(e)+'<div class="bt360-steps '+(ready?'bt3611-ready':'')+'" aria-label="Account lifecycle"><div class="bt3611-step-bars">'+labels.map((name,i)=>'<span class="'+(i<at?'done ':'')+(at===i?'current':'')+'"'+(at===i?' aria-current="step"':'')+'>'+name+'</span>').join('')+'</div><div class="bt3611-stage-summary"><b>'+safe(stageSummary)+'</b><em class="bt360-chip '+(ready?'positive':'warning')+'">'+safe(stageChip)+'</em></div></div>';
+ if(!ready)h+=accountDates(e);
  const hasExtraWork=Array.isArray(e.checklist)&&e.checklist.length>0;
  const savedWorkStart=h.length;
  if(!closed&&(!ready||hasExtraWork)){
@@ -855,11 +861,11 @@ function detailPanels(e){
  const eligibility=eligibleInfo(e);
  const title=ready?'After closing':closed?'Eligibility':'Key dates';
  h+='<div data-bt-eligibility>'+accountSection(e,'eligibility',title==='Key dates'?'Closing & eligibility':title,'<div class="bt3613-dates">'+(!closed&&!ready?dateActionRow(e,'Safe to close',closeDateInfo(e),'close'):'')+dateActionRow(e,'Eligible again',eligibilityDateInfo(e,eligibility),'eligibility')+(eligibility?.more?.length?eligibility.more.filter(r=>r.id!==eligibility.controlling?.id&&r.eligibleDate).map(r=>infoRow('Also checked',date(r.eligibleDate),r.label||'Saved eligibility rule')).join(''):'')+'</div>','Rules & dates')+'</div>';
- h+=sourceEvidencePanel(e);
+ let extra=sourceEvidencePanel(e);
  const issues=archiveHistoryIssues(e);
- h+=accountSection(e,'history','History',(issues.length?'<ul class="bt3640-gaps">'+issues.map(text=>'<li>'+safe(text)+'</li>').join('')+'</ul><div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="openEdit('+arg(e.id)+')">Update account</button><button type="button" class="bt360-link" onclick="BTHistoryRepair.open()">Find saved evidence</button></div>':'<p class="bt360-muted">Core records present.</p>')+'<button type="button" class="bt360-link" onclick="BT360.openActivity('+arg(e.id)+')">View activity</button>',issues.length?issues.length+' gaps':'Core records present');
+ extra+=accountSection(e,'history','Activity',(issues.length?'<ul class="bt3640-gaps">'+issues.map(text=>'<li>'+safe(text)+'</li>').join('')+'</ul><div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="openEdit('+arg(e.id)+')">Update account</button><button type="button" class="bt360-link" onclick="BTHistoryRepair.open()">Find saved evidence</button></div>':'<p class="bt360-muted">Core records present.</p>')+'<button type="button" class="bt360-link" onclick="BT360.openActivity('+arg(e.id)+')">View activity</button>','Saved records');
  if(ready&&readyWork)h+='<details class="bt3611-ready-extras"'+(readyExtrasState.get(e.id)?' open':'')+'><summary onclick="BT360.setReadyExtrasOpen('+arg(e.id)+',!this.parentElement.open)">Review saved tasks, fees and timers</summary>'+readyWork+'</details>';
- return h+accountSaveStatus(e);
+ return h+'<details class="bt3686-account-extras"'+(accountSections.get(String(e.id)+'|extras')?' open':'')+' ontoggle="BT360.setAccountSectionOpen('+arg(e.id)+',\'extras\',this.open)"><summary>Documents &amp; activity</summary><div>'+extra+'</div></details>';
 }
 function detailFooter(e){
  const primary=primaryAction(e);
@@ -1191,5 +1197,3 @@ function closeSettings(){window.bt360SettingsOpen=false;R()}
 window.BT360={sourceEvidenceStatus,sourceEvidencePanel,dashboardQueueFor,toggleAttention,toggleAccountList,openAccountSearch,closeAccountSearch,get selectedAttentionId(){return selectedAttentionId},get accountListOpen(){return accountListOpen},setAccountSectionOpen,revealAccountSection,cloudStatusText,accountDates,accountSaveStatus,infoRow,feeSnapshot,closeCheckPresentation,get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,accountAudience,kindTag,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,upcomingReminders,churnReviewPlan,churnReviewMarkup,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,archiveCountdown,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
 if(typeof R==='function')R();
 })();
-
-

@@ -1138,3 +1138,15 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt3684-arrival{margin:0 0 12px;padding:12px 14px;border-radius:12px;background:#171B25;color:#DCE4F4;font-size:12px;font-weight:700;line-height:1.5;overflow-wrap:anywhere}
 
 .bt366-compact-row .bt3684-arrival-compact{white-space:normal;overflow-wrap:anywhere;line-height:1.45}
+
+
+/* Beginner account view: payout first, supporting records on demand. */
+.bt3684-arrival{font-size:14px;padding:16px;margin-bottom:16px;color:#D5F6E7;border:1px solid #254638;background:#13241D}
+.bt3686-arrival-help b{font-size:14px;display:block}
+.bt3686-arrival-help p{font-size:12px;font-weight:500;line-height:1.5;color:#B0C4BA;margin:7px 0 0}
+.bt3686-account-extras{margin:16px 0 24px;border-top:1px solid #242732}
+.bt3686-account-extras>summary{padding:16px 2px;min-height:48px;box-sizing:border-box;color:#A0A6B8;font-size:13px;cursor:pointer}
+.bt3686-account-extras>div{padding-top:4px}
+
+/* WebKit must also hide nested summary rows in a closed outer disclosure. */
+.bt3686-account-extras:not([open])>div{display:none}
