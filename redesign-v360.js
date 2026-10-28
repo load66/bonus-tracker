@@ -837,7 +837,7 @@ function detailPanels(e){
  const at=closed?4:ready?4:code==='HOLD_OPEN'||code==='BONUS_RECEIVED'?3:code==='REQUIREMENTS_MET'||code==='AWAITING_BONUS'?2:1;
  const labels=['Opened','Tasks','Payout','Hold','Close'];
  const due=firstUnmetRequirementDate(e);
- const stageSummary=ready?'Review closing checks before closing':e.reqMet&&!e.bonusRecd&&!['ACTION_NEEDED','IN_PROGRESS'].includes(code)?'Requirements done · waiting for bonus':due?'Requirements due '+date(due):code==='IN_PROGRESS'?'Complete offer requirements':stage(e).label;
+ const stageSummary=ready?'Review closing checks before closing':e.reqMet&&!e.bonusRecd?(['ACTION_NEEDED','IN_PROGRESS'].includes(code)?'Completion saved · check remaining tasks':'Requirements done · waiting for bonus'):due?'Requirements due '+date(due):code==='IN_PROGRESS'?'Complete offer requirements':stage(e).label;
  const stageChip=ready?'Ready to close':e.reqMet&&!e.bonusRecd&&!['ACTION_NEEDED','IN_PROGRESS'].includes(code)?'Waiting for payment':due?requirementCountdown(e):stage(e).label;
  let h='<div class="bt360-steps '+(ready?'bt3611-ready':'')+'" aria-label="Account lifecycle"><div class="bt3611-step-bars">'+labels.map((name,i)=>'<span class="'+(i<at?'done ':'')+(at===i?'current':'')+'"'+(at===i?' aria-current="step"':'')+'>'+name+'</span>').join('')+'</div><div class="bt3611-stage-summary"><b>'+safe(stageSummary)+'</b><em class="bt360-chip '+(ready?'positive':'warning')+'">'+safe(stageChip)+'</em></div></div>';
  if(!ready)h+=accountDates(e)+payoutReminderRow(e);
