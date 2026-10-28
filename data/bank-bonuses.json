@@ -1,27 +1,154 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-10-28T13:14:26.738642+00:00",
+  "checkedAt": "2026-10-28T22:42:13.893611+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-10-28T13:14:26.738642+00:00",
+      "checkedAt": "2026-10-28T22:42:13.893611+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-10-28T13:14:26.738642+00:00",
+      "checkedAt": "2026-10-28T22:42:13.893611+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-10-28T13:14:26.738642+00:00",
+      "checkedAt": "2026-10-28T22:42:13.893611+00:00",
       "status": "ok"
     }
   ],
   "offers": [
+    {
+      "title": "Chase Bank Business Checking Bonus: $500 Offer Coupon – Ends 1/21/27",
+      "url": "https://www.hustlermoneyblog.com/chase-business-checking-bonus/",
+      "publishedAt": "2026-10-28T17:25:35+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "chase|business|500|unknown",
+      "bank": "chase",
+      "product": "business",
+      "amount": 500,
+      "region": "unknown",
+      "offerKey": "chase|business|500|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-11T23:35:15+00:00",
+      "lastSeen": "2026-10-28T17:25:35+00:00",
+      "expiresAt": "2027-01-21",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/chase-business-checking-bonus/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Chase Bank Business Checking Bonus: $500 Offer Coupon – Ends 1/21/27",
+          "publishedAt": "2026-10-28T17:25:35+00:00"
+        }
+      ],
+      "firstSeenBaseline": true,
+      "badges": []
+    },
+    {
+      "title": "Our Credit Union Promotions: $100 Checking Bonus (MI) – Ends 10/31/26",
+      "url": "https://www.hustlermoneyblog.com/our-credit-union-promotions/",
+      "publishedAt": "2026-10-28T16:53:25+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "our credit union|checking|100|MI",
+      "bank": "our credit union",
+      "product": "checking",
+      "amount": 100,
+      "region": "MI",
+      "offerKey": "our credit union|checking|100|MI",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-28T22:42:13.893611+00:00",
+      "lastSeen": "2026-10-28T16:53:25+00:00",
+      "expiresAt": "2026-10-31",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/our-credit-union-promotions/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Our Credit Union Promotions: $100 Checking Bonus (MI) – Ends 10/31/26",
+          "publishedAt": "2026-10-28T16:53:25+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New",
+        "Ending soon"
+      ]
+    },
+    {
+      "title": "Citi $325/$500/$2,000/$4,000 Checking Bonus",
+      "url": "https://www.doctorofcredit.com/citi-300-checking-bonus/",
+      "publishedAt": "2026-10-28T15:00:02+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "nationwide",
+      "groupKey": "citi|checking|500|unknown",
+      "bank": "citi",
+      "product": "checking",
+      "amount": 500,
+      "region": "unknown",
+      "offerKey": "citi|checking|500|unknown",
+      "rewardIsUpperBound": true,
+      "firstSeen": "2026-10-28T22:42:13.893611+00:00",
+      "lastSeen": "2026-10-28T15:00:02+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/citi-300-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "Citi $325/$500/$2,000/$4,000 Checking Bonus",
+          "publishedAt": "2026-10-28T15:00:02+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "Axos Bank $300 Checking Bonus",
+      "url": "https://www.doctorofcredit.com/axos-bank-300-checking-bonus/",
+      "publishedAt": "2026-10-28T14:00:54+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "nationwide",
+      "groupKey": "axos bank|checking|300|unknown",
+      "bank": "axos bank",
+      "product": "checking",
+      "amount": 300,
+      "region": "unknown",
+      "offerKey": "axos bank|checking|300|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-28T22:42:13.893611+00:00",
+      "lastSeen": "2026-10-28T14:00:54+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/axos-bank-300-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "Axos Bank $300 Checking Bonus",
+          "publishedAt": "2026-10-28T14:00:54+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
     {
       "title": "U.S. Bank Business Checking Bonus: $400 or $1200 Offer (Nationwide) – Ends 1/13/27",
       "url": "https://www.hustlermoneyblog.com/us-bank-business-checking-bonus/",
@@ -949,9 +1076,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "Huntington Bank Promotions for October 2026: $400, $1,000 Checking Bonuses – Ends 2/11/27",
@@ -1398,36 +1523,6 @@
           "source": "Doctor of Credit",
           "title": "[MN, WI] Royal Credit Union $400 Checking Bonus",
           "publishedAt": "2026-10-17T16:15:18+00:00"
-        }
-      ],
-      "firstSeenBaseline": true,
-      "badges": []
-    },
-    {
-      "title": "Chase Bank Business Checking Bonus: $500 Offer Coupon – Ends 1/21/27",
-      "url": "https://www.hustlermoneyblog.com/chase-business-checking-bonus/",
-      "publishedAt": "2026-10-16T17:23:35+00:00",
-      "source": "Hustler Money Blog",
-      "sourceId": "hmb",
-      "availability": "unknown",
-      "groupKey": "chase|business|500|unknown",
-      "bank": "chase",
-      "product": "business",
-      "amount": 500,
-      "region": "unknown",
-      "offerKey": "chase|business|500|unknown",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-10-11T23:35:15+00:00",
-      "lastSeen": "2026-10-16T17:23:35+00:00",
-      "expiresAt": "2027-01-21",
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.hustlermoneyblog.com/chase-business-checking-bonus/",
-          "sourceId": "hmb",
-          "source": "Hustler Money Blog",
-          "title": "Chase Bank Business Checking Bonus: $500 Offer Coupon – Ends 1/21/27",
-          "publishedAt": "2026-10-16T17:23:35+00:00"
         }
       ],
       "firstSeenBaseline": true,
