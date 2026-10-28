@@ -296,6 +296,7 @@ function compactRow(e){
 }
 function primaryAction(e){
  const state=stage(e),code=state.code,id=arg(e.id),checks=Array.isArray(e.checklist)?e.checklist:[];
+ if(!e.closed&&e.bonusRecd&&['ACTION_NEEDED','IN_PROGRESS'].includes(code))return {label:'Review closing checks',command:'BT360.showHold()'};
  // A saved milestone is not an unfinished milestone, regardless of stage urgency.
  if(!e.closed&&e.reqMet&&!e.bonusRecd){
   if(['ACTION_NEEDED','IN_PROGRESS'].includes(code)){
