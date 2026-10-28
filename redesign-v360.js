@@ -380,30 +380,28 @@ function requirementTitle(r){
 }
 
 function depositLedgerHtml(e,readonly=false){
- const progress=typeof depositProgress==='function'?depositProgress(e):{rows:[],totalCents:0,confirmedCents:0,recordedCount:0,confirmedCount:0,targetCents:0,percent:0};
+ const p=typeof depositProgress==='function'?depositProgress(e):{rows:[],totalCents:0,confirmedCents:0,recordedCount:0,confirmedCount:0,targetCents:0,percent:0};
  const hasDD=Array.isArray(e?.financialRules?.requirements)&&e.financialRules.requirements.some(r=>r?.kind==='direct-deposit')||
   /direct[ -]?deposits?|\bpayroll\b|\bq?dd\b/i.test([e?.completeBonusText,e?.dataPoint,...(e?.checklist||[]).map(x=>x.text)].join(' '));
- if(!hasDD&&!progress.recordedCount)return'';
+ if(!hasDD&&!p.recordedCount)return'';
+ if(e.reqMet&&!p.recordedCount)return'';
  const dollars=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:n%100===0?0:2,maximumFractionDigits:2}).format(n/100);
- const total=progress.totalCents,confirmed=progress.confirmedCents;
- let h='<div class="bt3681-deposit-ledger" aria-label="Recorded direct deposits"><div class="bt3681-ledger-head"><b>Deposit activity</b>';
- if(!readonly&&e.opened)h+='<button type="button" class="bt360-link" onclick="openDepositRecord('+arg(e.id)+')">+ Record deposit</button>';
- h+='</div>';
- if(!e.opened)h+='<p class="bt360-muted">Save the actual opening date to start recording deposits for this bonus cycle.</p>';
- else{
-  h+='<p class="bt3681-ledger-total">'+dollars(total)+' recorded · '+dollars(confirmed)+' user-confirmed as counted</p>';
-  if(progress.targetCents){
-   h+='<div class="bt3681-ledger-track" role="progressbar" aria-label="User-confirmed counted deposit amount" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+progress.percent+'"><i style="width:'+progress.percent+'%"></i></div>';
-   h+='<small>'+dollars(confirmed)+' of '+dollars(progress.targetCents)+' user-confirmed counted · '+progress.percent+'% of single saved target</small>';
-  }else h+='<small>No single nonrecurring deposit target is verified in structured terms. Amounts are not combined into a qualification percentage.</small>';
-  h+='<p class="research-caveat">Manually recorded activity only. Never automatically marks requirements met or the bonus received.</p>';
-  if(progress.rows.length){
-   h+='<div class="bt3681-ledger-rows">'+progress.rows.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(x=>
-    '<div class="bt3681-ledger-row"><span><b>'+safe(dollars(x.amountCents))+'</b><small>'+safe(date(x.date))+' · '+safe(x.method)+' · '+(x.bankConfirmed?'You confirmed counted':'Not confirmed counted')+'</small>'+(x.note?'<small>'+safe(x.note)+'</small>':'')+'</span>'+
-    (!readonly?'<span class="bt3681-ledger-actions"><button type="button" class="bt360-link" onclick="openDepositRecord('+arg(e.id)+','+arg(x.id)+')">Edit</button><button type="button" class="bt360-link" onclick="voidDepositRecord('+arg(e.id)+','+arg(x.id)+')">Void</button></span>':'')+'</div>'
-   ).join('')+'</div>';
-  }else h+='<p class="bt360-muted">No deposits recorded for this account cycle.</p>';
+ const add=(!readonly&&e.opened)?'<button type="button" class="bt360-link bt3686-deposit-add" onclick="openDepositRecord('+arg(e.id)+')">+ Add deposit</button>':'';
+ if(!p.recordedCount){
+  return '<div class="bt3681-deposit-ledger bt3686-deposit-empty" aria-label="Direct deposit history">'+
+    '<span><b>Direct deposits</b><small>'+safe(e.opened?'No deposits tracked yet':'Add the opening date to track deposits')+'</small></span>'+
+    (e.opened?add:!readonly?'<button type="button" class="bt360-link" onclick="openEdit('+arg(e.id)+')">Add opening date</button>':'')+'</div>';
  }
+ let h='<div class="bt3681-deposit-ledger bt3686-deposit-active" aria-label="Recorded direct deposits"><div class="bt3681-ledger-head"><b>Direct deposits</b>'+add+'</div>'+
+  '<p class="bt3681-ledger-total">'+dollars(p.totalCents)+' recorded · '+dollars(p.confirmedCents)+' confirmed by you</p>';
+ if(p.targetCents){
+  h+='<div class="bt3681-ledger-track" role="progressbar" aria-label="User-confirmed counted deposit amount" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+p.percent+'"><i style="width:'+p.percent+'%"></i></div>'+
+   '<small>'+dollars(p.confirmedCents)+' of '+dollars(p.targetCents)+' confirmed · '+p.percent+'% tracked</small>';
+ }else h+='<small>Check your bank offer for which deposits qualify.</small>';
+ h+='<details class="bt3686-deposit-help"><summary>How does this work?</summary><p>Only confirm a deposit if your bank counted it. Adding deposits does not mark the bonus requirements or payment complete.</p></details>';
+ h+='<div class="bt3681-ledger-rows">'+p.rows.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(x=>
+  '<div class="bt3681-ledger-row"><span><b>'+safe(dollars(x.amountCents))+'</b><small>'+safe(date(x.date))+' · '+safe(x.method)+' · '+(x.bankConfirmed?'Counted (you confirmed)':'Not confirmed')+'</small>'+(x.note?'<small>'+safe(x.note)+'</small>':'')+'</span>'+
+  (!readonly?'<span class="bt3681-ledger-actions"><button type="button" class="bt360-link" onclick="openDepositRecord('+arg(e.id)+','+arg(x.id)+')">Edit</button><button type="button" class="bt360-link" onclick="voidDepositRecord('+arg(e.id)+','+arg(x.id)+')">Void</button></span>':'')+'</div>').join('')+'</div>';
  return h+'</div>';
 }
 function requirementRows(e){
