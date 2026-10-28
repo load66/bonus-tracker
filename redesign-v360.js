@@ -407,17 +407,28 @@ function depositLedgerHtml(e,readonly=false){
 function requirementRows(e){
  const list=Array.isArray(e.financialRules?.requirements)?e.financialRules.requirements:[];
  const done=!!e.reqMet,legacy=!list.length?String(e.completeBonusText||'').trim():'';
- let rows=list.map((r,i)=>{
-  const due=detailRequirementDate(e,r),value=Number(r.amount);
-  const isMoney=['direct-deposit','new-money'].includes(r.kind)&&Number.isFinite(value)&&value>0;
-  const heading=requirementTitle(r)+(due?' · due '+date(due):'');
-  const stat=isMoney?(done?'Confirmed · transaction amounts not recorded':amount(0)+' of '+amount(value)+' · 0 recorded'):(done?'Requirement confirmed':due?'Due '+date(due):'Review saved offer terms');
-  const meter=isMoney?'<div class="bt3611-req-track" role="progressbar" aria-label="Recorded requirement amount" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i style="width:0%"></i></div>':'';
-  return '<div class="bt360-check bt3611-requirement '+(done?'done':'')+'"><button type="button" role="checkbox" aria-label="Confirm '+safe(requirementTitle(r))+'" aria-checked="'+done+'" onclick="openReqMet('+arg(e.id)+')">'+(done?'✓':'')+'</button><div class="bt3611-req-body"><b>'+safe(heading)+'</b>'+meter+'<small>'+safe(stat)+'</small><details class="bt3611-evidence"><summary>Requirement details</summary><p>'+safe(r.text||'')+'</p></details></div></div>';
- }).join('');
- if(!list.length&&(legacy||Number(e.reqDays)>0)){
-  const due=typeof reqDeadline==='function'?reqDeadline(e):'';
-  rows='<div class="bt360-check bt3611-requirement '+(done?'done':'')+'"><button role="checkbox" type="button" aria-label="Confirm saved requirements" aria-checked="'+done+'" onclick="openReqMet('+arg(e.id)+')">'+(done?'✓':'')+'</button><div class="bt3611-req-body"><b>Complete bonus requirements'+(due?' · due '+safe(date(due)):'')+'</b><small>'+safe(done?'Requirement confirmed':legacy||'Review the saved requirement deadline')+'</small></div></div>';
+ let rows='';
+ if(done){
+  const completionDate=archiveDateValid(e.reqMet)?date(e.reqMet):'Saved date needs correction';
+  rows='<div class="bt360-check bt3611-requirement bt3686-complete done">'+
+   '<button type="button" role="checkbox" aria-label="Edit requirements completion date" aria-checked="true" onclick="openReqMet('+arg(e.id)+')">✓</button>'+
+   '<div class="bt3611-req-body"><b>Requirements completed</b><small>Saved on '+safe(completionDate)+'</small></div></div>';
+  if(list.length||legacy){
+   const descriptions=list.length?list.map(r=>'<li>'+safe(requirementTitle(r))+(r.text&&r.text!==requirementTitle(r)?'<small>'+safe(r.text)+'</small>':'')+'</li>').join(''):'<li>'+safe(legacy)+'</li>';
+   rows+='<details class="bt3686-saved-reqs"><summary>See saved requirements</summary><ul>'+descriptions+'</ul></details>';
+  }
+ }else{
+  rows=list.map(r=>{
+   const due=detailRequirementDate(e,r),name=requirementTitle(r);
+   return '<div class="bt360-check bt3611-requirement"><button type="button" role="checkbox" aria-label="Mark all requirements completed" aria-checked="false" onclick="openReqMet('+arg(e.id)+')"></button>'+
+    '<div class="bt3611-req-body"><b>'+safe(name)+'</b><small>'+safe(due?'Due '+date(due):'Not completed yet')+'</small>'+
+    (r.text?'<details class="bt3611-evidence"><summary>Offer details</summary><p>'+safe(r.text)+'</p></details>':'')+'</div></div>';
+  }).join('');
+  if(!list.length&&(legacy||Number(e.reqDays)>0)){
+   const due=typeof reqDeadline==='function'?reqDeadline(e):'';
+   rows='<div class="bt360-check bt3611-requirement"><button type="button" role="checkbox" aria-label="Mark all requirements completed" aria-checked="false" onclick="openReqMet('+arg(e.id)+')"></button>'+
+    '<div class="bt3611-req-body"><b>Complete bonus requirements</b><small>'+safe(due?'Due '+date(due):legacy||'Not completed yet')+'</small></div></div>';
+  }
  }
  const tasks=Array.isArray(e.checklist)?e.checklist:[];
  rows+=tasks.map((c,i)=>'<div class="bt360-check bt3611-task '+(c.done?'done':'')+'"><button type="button" role="checkbox" aria-label="'+safe(c.text||'Task')+'" aria-checked="'+!!c.done+'" onclick="toggleCk('+arg(e.id)+','+i+')">'+(c.done?'✓':'')+'</button><button type="button" class="bt366-row-edit" onclick="runBankAction('+arg(e.id)+',\'checklist\')"><b>'+safe(c.text||'Task')+'</b><small>'+(c.done?'Done':'Checklist task')+'</small></button></div>').join('');
