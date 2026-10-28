@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: Codex — v3.6.85 — codex/v3.6.85-arrival-anchor-guard
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
