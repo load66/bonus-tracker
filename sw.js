@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.84: source-backed estimated bonus arrival ranges.
-const V = 'bt-v3.6.84-arrival1';
+// Version 3.6.85: source-backed estimated bonus arrival ranges.
+const V = 'bt-v3.6.85-arrival2';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
