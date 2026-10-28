@@ -5260,7 +5260,7 @@ function rReqMet(){
   const p=reqPrompt;
   if(!p)return'';
   let h='<div class="cbg" onclick="skipReq()"><div class="rcv-box" role="dialog" aria-modal="true" aria-labelledby="req-title" onclick="event.stopPropagation()">';
-  h+='<h3 id="req-title">Requirement completed</h3><div class="sub" id="req-help">Enter the actual date all requirements were met for '+esc(p.bank)+'. Bonus received stays separate.</div>';
+  h+='<h3 id="req-title">Requirement completed</h3><div class="sub" id="req-help">When did you finish every requirement for '+esc(p.bank)+'? This will not mark the bonus as paid.</div>';
   h+='<label for="req_date">Completion date</label><input class="dd-input" type="date" id="req_date" max="'+td()+'" aria-describedby="req-help'+(p.error?' req-date-error':'')+'"'+(p.error?' aria-invalid="true"':'')+' oninput="if(reqPrompt){reqPrompt.date=this.value;reqPrompt.error=\'\';reqPrompt.warningReviewed=false;this.removeAttribute?.(\'aria-invalid\');this.setAttribute?.(\'aria-describedby\',\'req-help\');document.getElementById(\'req-date-error\')?.remove?.()}" value="'+esc(p.date||'')+'" onclick="event.stopPropagation()">';
   if(p.error)h+='<p class="bt3655-field-error" role="alert" id="req-date-error">'+esc(p.error)+'</p>';
   h+='<div class="crow"><button type="button" class="c-c" onclick="skipReq()">Cancel</button>'+(p.hasExisting?'<button type="button" class="c-r" onclick="confirmClearReqMet()">Clear</button>':'')+'<button type="button" class="c-g" onclick="reqSubmit()">Save date</button></div>';
@@ -6219,6 +6219,13 @@ function reqSubmit(){
   p.error='';
   const e=entries.find(x=>x.id===p.entryId);
   if(!e)return showReqMetInputError('This account was not found. Close the review and reopen the account.');
+  // Editing an already-confirmed date must not create duplicate history or
+  // re-save an unchanged bank record. Give a visible, actionable response.
+  if(e.reqMet===p.date){
+    reqPrompt=null;
+    cfm={title:'Already saved',msg:'Requirements were already marked complete on '+fD(p.date)+'. You can record the bonus when it reaches your account.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
+    R();return true;
+  }
   const warnings=reqMetWarnings(e,p.date);
   if(warnings.length&&!p.warningReviewed){
     reqPrompt=null;
@@ -6241,7 +6248,7 @@ function reqSubmit(){
     if(sv(SK,entries)!==true)throw Error('Requirement persistence not verified');
     p.warningReviewed=false;
     reqPrompt=null;
-    cfm={title:'Requirement Met Saved',msg:(e2?e2.bank:'This bank')+' requirement met date saved for '+fD(p.date)+'. Bonus received is still tracked separately.',green:true,confirmLabel:hasDirectDepositRequirement(e2)?'Review deposit result':'OK',action:()=>{cfm=null;if(hasDirectDepositRequirement(e2))reviewCycleExperience(p.entryId,'requirement');else R()}};
+    cfm={title:'Requirements saved',msg:'Requirements completed on '+fD(p.date)+'. Your bonus is not marked as paid. Next: record the payment when it arrives.',green:true,confirmLabel:hasDirectDepositRequirement(e2)?'Review deposit result':'OK',action:()=>{cfm=null;if(hasDirectDepositRequirement(e2))reviewCycleExperience(p.entryId,'requirement');else R()}};
     R();return true;
   }catch(error){
     let restored=!!beforeStorage;
