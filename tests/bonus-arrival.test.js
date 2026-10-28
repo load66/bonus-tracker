@@ -46,6 +46,12 @@ period.financialRules.requirements[0].evidence.quote+=' Complete 90 calendar day
 // Keep the original requirement quotation contiguous for evidence validation.
 period.tcSourceRaw=period.tcSourceRaw.replace('months. Bonus','months. Complete 90 calendar days after account opening. Bonus');
 assert.equal(rules.estimatedArrival(period)?.end,'2026-05-31');
+const conflictingPeriod=JSON.parse(JSON.stringify(period));
+conflictingPeriod.financialRules.requirements[0].timing.basis='enrollment';
+conflictingPeriod.tcSourceRaw=conflictingPeriod.tcSourceRaw.replaceAll('Complete 90 calendar days after account opening.','Complete 90 calendar days after offer enrollment.');
+conflictingPeriod.financialRules.requirements[0].evidence.quote=conflictingPeriod.financialRules.requirements[0].evidence.quote.replace('account opening','offer enrollment');
+conflictingPeriod.offerEnrollmentDate='2026-09-01';conflictingPeriod.couponEnrollmentDate='2026-09-02';
+assert.equal(rules.estimatedArrival(conflictingPeriod),null,'Conflicting enrollment dates also block a qualification-period clock');
 console.log('Bonus arrival: source-backed bounds, exact anchors, recalculation, missing data, calendar boundaries, ambiguous rules and no mutation passed');
 const {sandbox,storage}=require('./full-app-smoke.test.js');
 const before=JSON.stringify([...storage]);

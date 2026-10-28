@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: none
+Active agent: Codex — v3.6.85 — codex/v3.6.85-arrival-anchor-guard
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.85 payout enrollment-anchor guard (`codex/v3.6.85-arrival-anchor-guard`): conflicting recorded offer/coupon enrollment dates now also block a qualification-period-based payout projection. Failing-before synthetic regression, no guessed date or record mutation, and existing v3.6.84 JSON window contract preserved. v3.6.84 unit and Chromium/WebKit checks passed and live header verified; generator skill and saved generation standard aligned. Next: final patch unit/browser/release checks, merge green, verify Pages/cache. No account/provider state modified.
 
 - v3.6.84 estimated bonus arrival (`codex/v3.6.84-bonus-arrival`, PR #269): read-only payout ranges on account cards/details and shared AI facts, financialRules v3 payout.window with exact source-backed bounds/triggers, preserved schemaVersion 3 and v1/v2 support. Missing/ambiguous anchors and business/statement calendars never become guessed dates. Payment/closure removes the range; corrected dates recalculate. Strict validator, full Bonus/Cloud/UI units and release-file verification pass locally. Added Chromium/WebKit range, mobile fit, correction, receipt and no-write checks. Generator documentation and skill alignment prepared. Next: pass final-head CI, squash-merge only when green, verify exact Pages release, and finish generator/standard alignment. No account records or provider APIs modified.
 

@@ -177,6 +177,7 @@
         // Every requirement's exact deadline must be known; a DD checkbox is not an anchor.
         const ends=req.map(r=>{
           const t=r.timing;if(!t||!['opened','enrollment'].includes(t.basis))return '';
+          if(t.basis==='enrollment'&&e.offerEnrollmentDate&&e.couponEnrollmentDate&&e.offerEnrollmentDate!==e.couponEnrollmentDate)return '';
           const b=t.basis==='opened'?e.opened:(e.offerEnrollmentDate||e.couponEnrollmentDate);
           return shiftPayoutDate(b,t.value,t.unit);
         });
