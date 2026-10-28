@@ -9,10 +9,14 @@ assert.match(html,/aria-label="Recorded account dates"/);assert.match(html,/Requ
 for(const key of ['fees','eligibility','terms','history'])assert.match(html,new RegExp('data-section="'+key+'" ontoggle='),'Secondary sections start closed');
 assert.match(html,/Exact original &lt;promotion&gt;/,'Original terms remain complete and escaped');
 assert.match(html,/Exact original fees/);
+sandbox.BT360.setAccountSectionOpen(row.id,'extras',true);
+assert.match(sandbox.BT360.detailPanels(row),/bt3686-account-extras" open ontoggle=/,'Optional records stay open through rerender for this account');
+assert.doesNotMatch(sandbox.BT360.detailPanels({...row,id:'SYN-OTHER'}),/bt3686-account-extras" open/,'Disclosure state is account-specific');
+sandbox.BT360.setAccountSectionOpen(row.id,'extras',false);
 assert.match(sandbox.BT360.accountDates({...row,opened:'2026-02-30'}),/Needs review/,'Invalid dates are not rendered as confirmed calendar events');
 assert.match(sandbox.BT360.accountSaveStatus(row),/data-local-save="true">Saved on device/,'Local status requires a matching stored record');
 assert.doesNotMatch(html,/bt3640-save-status|Saved on device|Backup needs attention/,'Storage diagnostics belong in the backup area');
-assert.match(html,/<details class="bt3686-account-extras"><summary>Documents &amp; activity/,'Supporting records are behind one closed disclosure');
+assert.match(html,/<details class="bt3686-account-extras" ontoggle=[^>]+><summary>Documents &amp; activity/,'Supporting records are behind one closed disclosure');
 assert.doesNotMatch(html,/\d+ gaps/,'No technical gap count in the account view');
 const pending=sandbox.BT360.detailPanels({...row,bonusRecd:'',payoutTimingText:'Bonus paid within 60 calendar days after requirements are met.'});
 assert.match(pending,/Estimated bonus arrival/,'The arrival area remains discoverable when dates are missing');

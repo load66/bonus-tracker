@@ -327,7 +327,7 @@ function detailHead(e){
 function setAccountSectionOpen(id,key,value){accountSections.set(String(id)+'|'+key,!!value)}
 function revealAccountSection(key){
  const node=[...document.querySelectorAll('.bt3640-section')].find(n=>n.dataset.section===key);
- if(node){const extras=node.closest('.bt3686-account-extras');if(extras)extras.open=true;node.open=true;setAccountSectionOpen(node.dataset.entryId,key,true);}
+ if(node){const extras=node.closest('.bt3686-account-extras');if(extras){extras.open=true;setAccountSectionOpen(node.dataset.entryId,'extras',true);}node.open=true;setAccountSectionOpen(node.dataset.entryId,key,true);}
  return node;
 }
 function accountSection(e,key,title,html,meta='',actions='',defaultOpen=false){
@@ -865,7 +865,7 @@ function detailPanels(e){
  const issues=archiveHistoryIssues(e);
  extra+=accountSection(e,'history','Activity',(issues.length?'<ul class="bt3640-gaps">'+issues.map(text=>'<li>'+safe(text)+'</li>').join('')+'</ul><div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="openEdit('+arg(e.id)+')">Update account</button><button type="button" class="bt360-link" onclick="BTHistoryRepair.open()">Find saved evidence</button></div>':'<p class="bt360-muted">Core records present.</p>')+'<button type="button" class="bt360-link" onclick="BT360.openActivity('+arg(e.id)+')">View activity</button>','Saved records');
  if(ready&&readyWork)h+='<details class="bt3611-ready-extras"'+(readyExtrasState.get(e.id)?' open':'')+'><summary onclick="BT360.setReadyExtrasOpen('+arg(e.id)+',!this.parentElement.open)">Review saved tasks, fees and timers</summary>'+readyWork+'</details>';
- return h+'<details class="bt3686-account-extras"><summary>Documents &amp; activity</summary><div>'+extra+'</div></details>';
+ return h+'<details class="bt3686-account-extras"'+(accountSections.get(String(e.id)+'|extras')?' open':'')+' ontoggle="BT360.setAccountSectionOpen('+arg(e.id)+',\'extras\',this.open)"><summary>Documents &amp; activity</summary><div>'+extra+'</div></details>';
 }
 function detailFooter(e){
  const primary=primaryAction(e);
