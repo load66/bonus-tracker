@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: none
+Active agent: Codex — v3.6.87 — codex/v3.6.87-payout-wording
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.87 legacy payout wording (`codex/v3.6.87-payout-wording`): recognize ordinary possessive completion wording while retaining the exact waiting interval and recorded completion anchor. Failing-before legacy regression plus equivalent structured evidence, missing/ambiguous/recurring-trigger rejection and browser/AI agreement checks. No bank-name defaults, schema changes, record rewrites or automatic completion. Next: full unit/Chromium/WebKit/release checks, merge green and verify Pages/cache.
 
 - v3.6.86 beginner account view (`codex/v3.6.86-simple-account-view`): arrival range appears first below account identity; missing-date/rule cases keep a visible plain-language arrival section without invented dates. Supporting source/history records sit inside one optional Documents & activity disclosure; backup state remains in existing backup/Settings surfaces rather than each account footer. Original records, warnings in their dedicated review surfaces, source access, canonical payout rules and JSON contract remain intact. Next: full unit/Chromium/WebKit/release checks, merge green and verify Pages/cache.
 

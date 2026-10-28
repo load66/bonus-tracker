@@ -1981,6 +1981,10 @@ async function exercise(name,engine,url){
     await page.screenshot({path:path.join(output,name+'-estimated-arrival.png')});
     await page.evaluate(()=>{entries[0].opened='2026-08-11';R();});
     check('arrival recomputes when opening changes',await page.locator('.bt3684-arrival').innerText()==='Estimated bonus arrival: Nov 9–Dec 9, 2026');
+    await page.evaluate(source=>{window.__beforeLegacyArrival=entries[0];entries[0]={...source,id:'SYN-ARRIVAL'};R();},require('./fixtures/financial-rules.cjs').legacyArrivalFixture());
+    check('legacy completion wording renders its recorded payout range',await page.locator('.bt3684-arrival').innerText()==='Estimated bonus arrival: Jan 10–Mar 11, 2026');
+    check('legacy arrival uses the same facts in AI',await page.evaluate(()=>BTBonusAI.contextFor(entries[0]).some(f=>f.id==='arrival'&&f.text.includes('Jan 10–Mar 11, 2026'))));
+    await page.evaluate(()=>{entries[0]=window.__beforeLegacyArrival;delete window.__beforeLegacyArrival;R();});
     await page.evaluate(()=>{entries[0].bonusRecd='2026-10-10';R();});
     check('arrival disappears after recorded payment',await page.locator('.bt3684-arrival').count()===0);
     check('arrival rendering never writes stored records',await page.evaluate(()=>localStorage.getItem('bt_e_v4')===window.__arrivalStored));

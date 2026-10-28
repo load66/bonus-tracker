@@ -27,3 +27,9 @@ function arrivalFixture(){
 }
 module.exports.arrivalFixture=arrivalFixture;
 
+
+// Saved legacy completion wording, isolated from any real account identity or dates.
+function legacyArrivalFixture(){
+ return {schemaVersion:1,bank:'Synthetic Legacy CU',accountType:'personal',bonus:100,opened:'2026-01-01',reqMet:'2026-01-10',bonusRecd:'',closed:'',analysis:null,analyzerHistory:[],fieldSources:{},payoutTimingText:'Each tracked bonus pays within 60 days after its requirements are met.',customTimers:[],checklist:[]};
+}
+module.exports.legacyArrivalFixture=legacyArrivalFixture;
