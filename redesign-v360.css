@@ -1138,3 +1138,32 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt3684-arrival{margin:0 0 12px;padding:12px 14px;border-radius:12px;background:#171B25;color:#DCE4F4;font-size:12px;font-weight:700;line-height:1.5;overflow-wrap:anywhere}
 
 .bt366-compact-row .bt3684-arrival-compact{white-space:normal;overflow-wrap:anywhere;line-height:1.45}
+
+
+/* v3.6.86 — beginner-first per-bank requirement and deposit presentation. */
+.bt3686-complete .bt3611-req-body b{font-size:14px;line-height:1.4}
+.bt3686-complete .bt3611-req-body small{color:var(--muted,#a0aabb);line-height:1.5}
+.bt3686-saved-reqs{margin:2px 0 9px 60px;font-size:12px;line-height:1.5;color:var(--muted,#a0aabb)}
+.bt3686-saved-reqs summary{display:list-item;min-height:36px;cursor:pointer;padding:8px 0;font-weight:650}
+.bt3686-saved-reqs ul{padding-left:15px;margin:4px 0 9px}
+.bt3686-saved-reqs li{margin:5px 0;overflow-wrap:anywhere}
+.bt3686-saved-reqs li small{display:block;line-height:1.5}
+.bt3686-deposit-empty{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:transparent;border:1px solid rgba(130,148,178,.16);margin:9px 0 3px;padding:12px 14px}
+.bt3686-deposit-empty>span{display:grid;gap:2px;min-width:0;flex:1}
+.bt3686-deposit-empty b{font-size:13px}
+.bt3686-deposit-empty small{font-size:11.5px;line-height:1.5}
+.bt3686-deposit-empty button{min-width:104px;min-height:44px;white-space:normal;text-align:center}
+.bt3686-deposit-active .bt3681-ledger-head>b{font-size:13px}
+.bt3686-deposit-help{margin:8px 0;color:var(--muted,#a0aabb);font-size:11.5px}
+.bt3686-deposit-help summary{cursor:pointer;min-height:36px;padding:5px 0;font-weight:650}
+.bt3686-deposit-help p{line-height:1.5;margin:4px 0 6px}
+.bt3686-next-step{font-size:12px;line-height:1.55;margin:10px 0 2px;color:var(--muted,#a0aabb);padding:10px 12px;border-radius:9px;background:rgba(87,221,177,.07);border:1px solid rgba(87,221,177,.13)}
+.bt360-detail-footer>.bt360-primary{font-size:13px;line-height:1.3;font-weight:750;padding:10px 12px;min-height:49px}
+.bt360-detail-footer>button:first-child{font-size:13px;line-height:1.3;min-height:49px}
+@media(max-width:390px){
+ .bt3686-saved-reqs{margin-left:12px}
+ .bt3686-deposit-empty{padding:10px 11px}
+ .bt360-detail-footer{grid-template-columns:minmax(0,1fr) minmax(0,1.8fr);gap:8px}
+ .bt360-detail-footer>.bt360-primary{font-size:12px;padding-inline:8px}
+ .bt360-detail-footer>button:first-child{font-size:12px}
+}
