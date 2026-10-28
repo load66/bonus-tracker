@@ -1928,7 +1928,7 @@ async function exercise(name,engine,url){
     check('card layout leaves saved records unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
     // Source-backed arrival range: actual card/detail DOM on both browser engines.
     await page.evaluate(source=>{
-      window.__arrivalOriginal=entries;window.__arrivalStored=localStorage.getItem('bt_e_v4');
+      window.__arrivalOriginal=entries;window.__arrivalExpanded=expanded;window.__arrivalStored=localStorage.getItem('bt_e_v4');
       entries=[{...source,id:'SYN-ARRIVAL',checklist:[],customTimers:[]}];
       tab='tracker';expanded='';R();
     },require('./fixtures/financial-rules.cjs').arrivalFixture());
@@ -1940,12 +1940,14 @@ async function exercise(name,engine,url){
       await page.setViewportSize({width,height:844});
       check('arrival fits width '+width,await page.locator('.bt3684-arrival').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
     }
+    await page.setViewportSize({width:390,height:844});
+    await page.screenshot({path:path.join(output,name+'-estimated-arrival.png')});
     await page.evaluate(()=>{entries[0].opened='2026-08-11';R();});
     check('arrival recomputes when opening changes',await page.locator('.bt3684-arrival').innerText()==='Estimated bonus arrival: Nov 9–Dec 9, 2026');
     await page.evaluate(()=>{entries[0].bonusRecd='2026-10-10';R();});
     check('arrival disappears after recorded payment',await page.locator('.bt3684-arrival').count()===0);
     check('arrival rendering never writes stored records',await page.evaluate(()=>localStorage.getItem('bt_e_v4')===window.__arrivalStored));
-    await page.evaluate(()=>{entries=window.__arrivalOriginal;delete window.__arrivalOriginal;delete window.__arrivalStored;R();});
+    await page.evaluate(()=>{entries=window.__arrivalOriginal;expanded=window.__arrivalExpanded;delete window.__arrivalOriginal;delete window.__arrivalExpanded;delete window.__arrivalStored;R();});
     await page.setViewportSize({width:390,height:844});
     const structuredProbe=await page.evaluate(source=>{
       const before=localStorage.getItem('bt_e_v4');
