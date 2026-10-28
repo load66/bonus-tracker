@@ -641,7 +641,7 @@ async function exercise(name,engine,url){
         entries=[e];expanded=e.id;R();return previous;
       },synthetic);
       check('shared structured deadline overrides legacy day counter',await page.evaluate(()=>reqDeadline(entries[0])==='2026-12-11'&&btNextActionForEntry(entries[0]).task.context.date==='2026-12-11'));
-      check('rendered requirements and header share exact structured deadline',await page.locator('.bt360-detail-card').innerText().then(t=>t.includes('Requirements due Dec 11, 2026')&&t.includes('Direct deposits totaling $1,000 · due Dec 11, 2026')));
+      check('rendered requirements and header share exact structured deadline',await page.locator('.bt360-detail-card').innerText().then(t=>t.includes('Requirements due Dec 11, 2026')&&t.includes('Direct deposits totaling $1,000')&&t.includes('Due Dec 11, 2026')));
       await page.locator('[data-section="timers"] > summary').click();
       check('rendered timer uses the same requirement deadline',await page.locator('[data-source="saved-requirement"]').innerText().then(t=>t.includes('Dec 11, 2026')));
       await page.screenshot({path:path.join(output,name+'-shared-requirement-dates-390.png'),fullPage:true});
