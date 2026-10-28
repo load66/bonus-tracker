@@ -2228,9 +2228,10 @@ async function exercise(name,engine,url){
     const pointsBeforeSkip=await page.evaluate(()=>JSON.stringify(loadUserDatapoints()));
     await page.getByRole('button',{name:'Skip for now',exact:true}).click();
     check('skipping experience preserves payment and prior evidence',await page.evaluate(before=>!!entries[0].bonusRecd&&JSON.stringify(loadUserDatapoints())===before,pointsBeforeSkip));
+    const termsReceipt=await page.evaluate(async()=>{await BTTermsHistory.sync();return {...window.__termsFixture};});
+    check('historical terms stay in hash-verified synthetic storage: '+JSON.stringify(termsReceipt),termsReceipt.uploads>0&&termsReceipt.uploads===termsReceipt.hashVerified);
     await page.evaluate(()=>BTBonusAuth.disconnect());
     check('AI sign-out removes remembered session',await page.evaluate(()=>!localStorage.getItem('bonus-ai-auth')&&!BTBonusAuth.connected()));
-    check('historical terms stay in hash-verified synthetic storage',await page.evaluate(()=>window.__termsFixture.uploads>0&&window.__termsFixture.uploads===window.__termsFixture.hashVerified));
     check('no uncaught application errors',errors.length===0);
     await page.screenshot({path:path.join(output,name+'-verified.png')});
     await context.tracing.stop();
