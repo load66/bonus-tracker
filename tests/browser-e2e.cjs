@@ -953,6 +953,9 @@ async function exercise(name,engine,url){
       return {ok:bar.bottom<=nav.top+2&&bar.top>=0,fixed:getComputedStyle(document.querySelector('.bt360-detail-footer')).position==='fixed'};
     });
     check('sticky detail bar stays above navigation',sticky.ok&&sticky.fixed);
+    check('account details hide supporting records by default',!await page.locator('.bt3686-account-extras').evaluate(e=>e.open));
+    check('account details omit storage diagnostics',await page.locator('.bt3640-save-status').count()===0);
+    await page.locator('.bt3686-account-extras > summary').click();
     if(!await page.locator('.bt3640-section[data-section="terms"]').evaluate(e=>e.open))await page.locator('.bt3640-section[data-section="terms"] > summary').click();
     const evidenceBefore=await page.evaluate(()=>({entry:JSON.stringify(entries[0]),stored:localStorage.getItem('bt_e_v4')}));
     await page.evaluate(()=>{
@@ -1964,11 +1967,17 @@ async function exercise(name,engine,url){
     check('arrival range is visible on account card',await page.locator('.bt3684-arrival-compact').innerText()==='Estimated bonus arrival: Nov 8–Dec 8, 2026');
     await page.locator('.bt366-compact-row').first().click();
     check('arrival detail shows one plain range',await page.locator('.bt3684-arrival').count()===1&&await page.locator('.bt3684-arrival').innerText()==='Estimated bonus arrival: Nov 8–Dec 8, 2026');
+    check('arrival is the first account detail content',await page.locator('.bt3684-arrival').evaluate(el=>el.compareDocumentPosition(document.querySelector('.bt360-steps'))&Node.DOCUMENT_POSITION_FOLLOWING));
+    check('saved terms and history stay out of the main view',!await page.locator('[data-section="terms"] > summary').isVisible()&&!await page.locator('[data-section="history"] > summary').isVisible());
+    await page.evaluate(()=>{entries[0].financialRules=null;entries[0].schemaVersion=1;entries[0].payoutTimingText='Bonus paid within 60 calendar days after requirements are met.';R();});
+    check('missing completion date explains the visible arrival area',await page.locator('.bt3686-arrival-help').innerText().then(t=>t.includes('Estimated bonus arrival')&&t.includes('record the completion date')));
+    await page.evaluate(source=>{entries[0]={...source,id:'SYN-ARRIVAL',checklist:[],customTimers:[]};R();},require('./fixtures/financial-rules.cjs').arrivalFixture());
     for(const width of [320,375,390,430,1280]){
       await page.setViewportSize({width,height:844});
       check('arrival fits width '+width,await page.locator('.bt3684-arrival').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
     }
     await page.setViewportSize({width:390,height:844});
+    await page.evaluate(()=>{document.querySelector('.scroll').scrollTop=0;document.querySelectorAll('.bt-toast,.bt-notice').forEach(el=>el.style.opacity='0')});
     await page.screenshot({path:path.join(output,name+'-estimated-arrival.png')});
     await page.evaluate(()=>{entries[0].opened='2026-08-11';R();});
     check('arrival recomputes when opening changes',await page.locator('.bt3684-arrival').innerText()==='Estimated bonus arrival: Nov 9–Dec 9, 2026');
@@ -2250,5 +2259,3 @@ async function exercise(name,engine,url){
   try{for(const [name,engine] of require('./browser-select.cjs')({chromium,webkit}))await exercise(name,engine,url)}
   finally{server.close()}
 })().catch(err=>{console.error(err);process.exitCode=1});
-
-

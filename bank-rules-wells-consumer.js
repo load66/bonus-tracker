@@ -1,4 +1,4 @@
-/* Release 3.6.85: canonical bank and closure rules unchanged; Automatic offer discovery UI only. */
+/* Release 3.6.86: canonical bank and closure rules unchanged; Automatic offer discovery UI only. */
 /*
  * filename: bank-rules-wells-consumer.js
  * version: 3.5.2
@@ -149,5 +149,3 @@
   window.tcV3WellsConsumerRulesVersion=VER;
   wrap();setTimeout(wrap,120);setTimeout(wrap,700);
 })();
-
-

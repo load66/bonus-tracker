@@ -10,7 +10,14 @@ for(const key of ['fees','eligibility','terms','history'])assert.match(html,new 
 assert.match(html,/Exact original &lt;promotion&gt;/,'Original terms remain complete and escaped');
 assert.match(html,/Exact original fees/);
 assert.match(sandbox.BT360.accountDates({...row,opened:'2026-02-30'}),/Needs review/,'Invalid dates are not rendered as confirmed calendar events');
-assert.match(html,/data-local-save="true">Saved on device/,'Local status requires a matching stored record');
+assert.match(sandbox.BT360.accountSaveStatus(row),/data-local-save="true">Saved on device/,'Local status requires a matching stored record');
+assert.doesNotMatch(html,/bt3640-save-status|Saved on device|Backup needs attention/,'Storage diagnostics belong in the backup area');
+assert.match(html,/<details class="bt3686-account-extras"><summary>Documents &amp; activity/,'Supporting records are behind one closed disclosure');
+assert.doesNotMatch(html,/\d+ gaps/,'No technical gap count in the account view');
+const pending=sandbox.BT360.detailPanels({...row,bonusRecd:'',payoutTimingText:'Bonus paid within 60 calendar days after requirements are met.'});
+assert.match(pending,/Estimated bonus arrival/,'The arrival area remains discoverable when dates are missing');
+assert.match(pending,/Finish the requirements and record the completion date/);
+assert(pending.indexOf('Estimated bonus arrival')<pending.indexOf('Account lifecycle'),'Arrival is first, below the account identity');
 assert.equal(sandbox.BT360.cloudStatusText({tone:'off'}),'Cloud off');assert.equal(sandbox.BT360.cloudStatusText({tone:'warning'}),'Backup pending');assert.equal(sandbox.BT360.cloudStatusText({tone:'danger'}),'Backup needs attention');assert.equal(sandbox.BT360.cloudStatusText({tone:'protected'}),'Cloud verified');
 sandbox.BT360.setAccountSectionOpen(row.id,'fees',true);
 assert.match(sandbox.BT360.detailPanels(row),/data-section="fees" open ontoggle=/,'Section state survives rerender');

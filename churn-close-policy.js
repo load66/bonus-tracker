@@ -1,4 +1,4 @@
-/* Release 3.6.85: canonical bank and closure rules unchanged; Automatic offer discovery UI only. */
+/* Release 3.6.86: canonical bank and closure rules unchanged; Automatic offer discovery UI only. */
 /* BonusTracker v3.5.2 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
 (function(){
   'use strict';
@@ -232,5 +232,3 @@
   }
   install();setTimeout(install,300);setTimeout(install,1400);
 })();
-
-
