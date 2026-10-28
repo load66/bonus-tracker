@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: Codex — v3.6.87 — codex/v3.6.87-payout-wording
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
