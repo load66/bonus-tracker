@@ -1309,6 +1309,8 @@ async function exercise(name,engine,url){
           window.btLifecycleStageForEntry=()=>stage;
           results[key]=BT360.primaryAction(sample);
         }
+        window.btLifecycleStageForEntry=()=>({code:'ACTION_NEEDED',label:'Action needed',kind:'close-review'});
+        results.paid=BT360.primaryAction({...sample,bonusRecd:'2026-10-22'});
       }finally{window.btLifecycleStageForEntry=original}
       return results;
     });
@@ -1317,6 +1319,7 @@ async function exercise(name,engine,url){
       completedActions.normal.label==='Record bonus payment'&&
       completedActions.recurring.label==='View remaining tasks'&&
       completedActions.review.label==='Review account rules'&&
+      completedActions.paid.label==='Review closing checks'&&
       Object.values(completedActions).every(x=>!x.command.includes('openReqMet')));
     check('stage action mapping never confirms payout during In progress',
       mappedActions.IN_PROGRESS==='Open next task'&&mappedActions.ACTION_NEEDED==='Open next task'
