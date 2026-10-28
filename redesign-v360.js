@@ -295,12 +295,21 @@ function compactRow(e){
   +'</span><span class="bt366-compact-right"><strong>'+amount(e.bonus)+'</strong><em class="bt360-chip">'+safe(s.label)+'</em></span></button></div>';
 }
 function primaryAction(e){
- const code=stage(e).code,id=arg(e.id),checks=Array.isArray(e.checklist)?e.checklist:[];
- if(code==='IN_PROGRESS'||code==='ACTION_NEEDED'){
-  if(checks.some(x=>x&&!x.done))return {label:'Open next task',command:'BT360.openNextTask('+id+')'};
-  return {label:'Confirm requirements',command:'openReqMet('+id+')'};
+ const state=stage(e),code=state.code,id=arg(e.id),checks=Array.isArray(e.checklist)?e.checklist:[];
+ // A saved milestone is not an unfinished milestone, regardless of stage urgency.
+ if(!e.closed&&e.reqMet&&!e.bonusRecd){
+  if(['ACTION_NEEDED','IN_PROGRESS'].includes(code)){
+   if(state.kind==='review'||state.reviewReason)return {label:'Review account rules',command:'openBankActions('+id+')'};
+   if(state.kind==='requirement'||checks.some(x=>!x.done))return {label:'View remaining tasks',command:'BT360.openNextTask('+id+')'};
+  }
+  return {label:'Record bonus payment',command:'openRcv('+id+')'};
  }
- if(code==='REQUIREMENTS_MET'||code==='AWAITING_BONUS')return {label:'Confirm received',command:'openRcv('+id+')'};
+ if(code==='IN_PROGRESS'||code==='ACTION_NEEDED'){
+  if(state.kind==='review'||state.reviewReason)return {label:'Review account rules',command:'openBankActions('+id+')'};
+  if(checks.some(x=>x&&!x.done))return {label:'Open next task',command:'BT360.openNextTask('+id+')'};
+  return {label:'Mark requirements done',command:'openReqMet('+id+')'};
+ }
+ if(code==='REQUIREMENTS_MET'||code==='AWAITING_BONUS')return {label:'Record bonus payment',command:'openRcv('+id+')'};
  if(code==='HOLD_OPEN'||code==='BONUS_RECEIVED')return {label:'View hold',command:'BT360.showHold()'};
  if(code==='READY_TO_CLOSE')return {label:'Mark account closed',command:'startCloseFlow('+id+',\'actual\')'};
  if(code==='COOLDOWN'||code==='ELIGIBLE')return {label:'View eligibility',command:'BT360.showEligibility()'};
