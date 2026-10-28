@@ -452,7 +452,7 @@ function payoutReminderRow(e){
  const estimate=window.BTFinancialRules?.estimatedArrival?.(e);
  const label=window.BTFinancialRules?.arrivalLabel?.(estimate);
  if(!label)return '';
- return '<div class="bt3611-timer-row bt3684-arrival" data-source="saved-payout"><span class="bt3611-timer-icon" aria-hidden="true">'+timerSvg('payout')+'</span><span class="bt3611-timer-body"><b>'+safe(label)+'</b></span></div>';
+ return '<p class="bt3684-arrival" data-source="saved-payout">'+safe(label)+'</p>';
 }
 // The enrolled structured rule is authoritative over a legacy day counter.
 // If its clock is not calculable (business days, cycles, unknown start), do

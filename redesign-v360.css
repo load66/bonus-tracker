@@ -1135,7 +1135,6 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 
 
 /* Source-backed payout range; wrap naturally on small phones. */
-.bt3684-arrival .bt3611-timer-body{min-width:0;white-space:normal;overflow-wrap:anywhere}
-.bt3684-arrival .bt3611-timer-body b{white-space:normal;line-height:1.5}
+.bt3684-arrival{margin:0 0 12px;padding:12px 14px;border-radius:12px;background:#171B25;color:#DCE4F4;font-size:12px;font-weight:700;line-height:1.5;overflow-wrap:anywhere}
 
 .bt366-compact-row .bt3684-arrival-compact{white-space:normal;overflow-wrap:anywhere;line-height:1.45}
