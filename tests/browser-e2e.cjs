@@ -36,11 +36,38 @@ const payload={kind:'BonusTrackerEntry',schemaVersion:2,
     eligibilityRules:[{id:'bonus-12m',basis:'bonus-received',periodValue:12,periodUnit:'months',scope:'consumer-checking',evidenceText:'Not eligible if you received a checking bonus within the past 12 months.',evidenceSource:'official-promotion-terms'}]
   }};
 
+// Every authenticated terms request stays in the synthetic browser context.
+// Keep real hash/readback semantics instead of suppressing console failures.
+function installTermsFixture(){
+  const prior=window.fetch.bind(window),objects=new Map();
+  window.__termsFixture={uploads:0,hashVerified:0};
+  window.fetch=async(input,options={})=>{
+    const url=String(typeof input==='string'?input:input?.url||input);
+    const endpoint='https://api-production-00f74.up.railway.app/api/bonus-tracker/terms';
+    if(!url.startsWith(endpoint))return prior(input,options);
+    const response=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json'}});
+    if(options.method==='POST'){
+      const packet=JSON.parse(options.body);
+      const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(packet.snapshot));
+      const digest=Array.from(new Uint8Array(bytes),n=>n.toString(16).padStart(2,'0')).join('');
+      window.__termsFixture.uploads++;
+      if(digest!==packet.sha256)return response({detail:'Synthetic hash mismatch'},400);
+      window.__termsFixture.hashVerified++;
+      const saved={id:digest,sha256:digest,verified:true,snapshot:packet.snapshot};
+      objects.set(digest,saved);return response(saved);
+    }
+    const id=url.slice(endpoint.length).split('?')[0].replace(/^\//,'');
+    if(id)return response(objects.get(id)||{detail:'Synthetic snapshot missing'},objects.has(id)?200:404);
+    return response({terms:Array.from(objects.values(),item=>({id:item.id,...JSON.parse(item.snapshot)})),nextOffset:null});
+  };
+}
+
 async function exercise(name,engine,url){
   const browser=await engine.launch();
   const context=await browser.newContext({acceptDownloads:true,timezoneId:'America/Chicago',viewport:{width:1280,height:900}});
   await context.tracing.start({screenshots:true,snapshots:true});
   const page=await context.newPage(),errors=[],warnings=[],checks=[];
+  await page.addInitScript(installTermsFixture);
   page.on('pageerror',err=>errors.push(String(err)));
   page.on('console',msg=>{if(msg.type()==='warning')warnings.push(msg.text());if(msg.type()==='error'&&!/Failed to load resource|net::ERR|404 \(Not Found\)/i.test(msg.text()))errors.push(msg.text())});
   await page.addInitScript(()=>{const RealDate=Date;const now=Date.parse('2026-10-11T17:00:00Z');window.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[now]))}static now(){return now}}});
@@ -1615,6 +1642,7 @@ async function exercise(name,engine,url){
     const cloudRecords=await page.evaluate(()=>window.__cloudFixture.objects);
     await button('Close').click();
     const newPhoneContext=await browser.newContext({viewport:{width:390,height:844},timezoneId:'America/Chicago'});
+    await newPhoneContext.addInitScript(installTermsFixture);
     const newPhone=await newPhoneContext.newPage();
     await newPhone.goto(url);await newPhone.waitForFunction(()=>navigator.serviceWorker.controller&&window.__btFullRegressionReport?.total===8&&!window.__btFullRegressionReport.pending);
     const installRecoveryFixture=objects=>{
@@ -2202,6 +2230,7 @@ async function exercise(name,engine,url){
     check('skipping experience preserves payment and prior evidence',await page.evaluate(before=>!!entries[0].bonusRecd&&JSON.stringify(loadUserDatapoints())===before,pointsBeforeSkip));
     await page.evaluate(()=>BTBonusAuth.disconnect());
     check('AI sign-out removes remembered session',await page.evaluate(()=>!localStorage.getItem('bonus-ai-auth')&&!BTBonusAuth.connected()));
+    check('historical terms stay in hash-verified synthetic storage',await page.evaluate(()=>window.__termsFixture.uploads>0&&window.__termsFixture.uploads===window.__termsFixture.hashVerified));
     check('no uncaught application errors',errors.length===0);
     await page.screenshot({path:path.join(output,name+'-verified.png')});
     await context.tracing.stop();
