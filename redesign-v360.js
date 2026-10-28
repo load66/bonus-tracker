@@ -480,7 +480,7 @@ function firstUnmetRequirementDate(e){
  return typeof reqDeadline==='function'?(reqDeadline(e)||''):'';
 }
 function requirementCountdown(e){
- const due=firstUnmetRequirementDate(e);
+ const due=e.reqMet?'':firstUnmetRequirementDate(e);
  if(!due)return '';
  const days=dB(td(),due);
  return days<0?'Overdue '+Math.abs(days)+' days':days===0?'Due today':days+' days left';
@@ -837,15 +837,20 @@ function detailPanels(e){
  const at=closed?4:ready?4:code==='HOLD_OPEN'||code==='BONUS_RECEIVED'?3:code==='REQUIREMENTS_MET'||code==='AWAITING_BONUS'?2:1;
  const labels=['Opened','Tasks','Payout','Hold','Close'];
  const due=firstUnmetRequirementDate(e);
- const stageSummary=ready?'Review closing checks before closing':due?'Requirements due '+date(due):code==='IN_PROGRESS'?'Complete offer requirements':stage(e).label;
- const stageChip=ready?'Ready to close':due?requirementCountdown(e):stage(e).label;
+ const stageSummary=ready?'Review closing checks before closing':e.reqMet&&!e.bonusRecd&&!['ACTION_NEEDED','IN_PROGRESS'].includes(code)?'Requirements done · waiting for bonus':due?'Requirements due '+date(due):code==='IN_PROGRESS'?'Complete offer requirements':stage(e).label;
+ const stageChip=ready?'Ready to close':e.reqMet&&!e.bonusRecd&&!['ACTION_NEEDED','IN_PROGRESS'].includes(code)?'Waiting for payment':due?requirementCountdown(e):stage(e).label;
  let h='<div class="bt360-steps '+(ready?'bt3611-ready':'')+'" aria-label="Account lifecycle"><div class="bt3611-step-bars">'+labels.map((name,i)=>'<span class="'+(i<at?'done ':'')+(at===i?'current':'')+'"'+(at===i?' aria-current="step"':'')+'>'+name+'</span>').join('')+'</div><div class="bt3611-stage-summary"><b>'+safe(stageSummary)+'</b><em class="bt360-chip '+(ready?'positive':'warning')+'">'+safe(stageChip)+'</em></div></div>';
  if(!ready)h+=accountDates(e)+payoutReminderRow(e);
  const hasExtraWork=Array.isArray(e.checklist)&&e.checklist.length>0;
  const savedWorkStart=h.length;
  if(!closed&&(!ready||hasExtraWork)){
   const req=requirementRows(e);
-  h+=accountSection(e,'requirements','Requirements',(!req.count?'<p class="bt360-muted">No requirements saved.</p>':req.html)+depositLedgerHtml(e)+'<div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></div>',e.reqMet?'Confirmed':req.count+' saved',(Array.isArray(e.financialRules?.requirements)&&e.financialRules.requirements.length>0||!!String(e.completeBonusText||'').trim()||Number(e.reqDays)>0)?'<button type="button" class="bt360-link bt3621-confirm-all" onclick="openReqMet('+arg(e.id)+')">'+(e.reqMet?'Review confirmation':hasExtraWork?'Confirm requirements':'Confirm all')+'</button>':'',true);
+  const pendingTasks=Array.isArray(e.checklist)&&e.checklist.some(x=>x&&!x.done);
+  const workNote=e.reqMet&&!e.bonusRecd?'<p class="bt3686-next-step">'+(pendingTasks||['ACTION_NEEDED','IN_PROGRESS'].includes(code)?'Next: Keep tracking any ongoing requirements.':'Next: Record the bonus when it arrives.')+'</p>':'';
+  const addTask=(!e.reqMet||pendingTasks)?'<div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></div>':'';
+  h+=accountSection(e,'requirements','Requirements',(!req.count?'<p class="bt360-muted">No requirements saved.</p>':req.html)+depositLedgerHtml(e)+workNote+addTask,
+    e.reqMet?'Done · '+date(e.reqMet):req.count+' to complete',
+    e.reqMet?'<button type="button" class="bt360-link bt3621-confirm-all" onclick="openReqMet('+arg(e.id)+')">Edit date</button>':'',true);
   // Mockup order: Requirements, Fees & waivers, Timers. Read-only panel;
   // no fee, timer, task or lifecycle handler is replaced.
   if(!ready)h+=accountSection(e,'fees','Fees & waivers',feeDetail(e),'Review saved fees');
