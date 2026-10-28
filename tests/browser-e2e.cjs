@@ -496,10 +496,10 @@ async function exercise(name,engine,url){
     check('journey opens the precise bank details',
       await page.locator('.bt360-detail-header h2').innerText()==='Synthetic Journey DD Bank');
     check('journey requires an all-requirements confirmation, never a single deposit',
-      await page.locator('.bt360-detail-footer .bt360-primary').innerText()==='Confirm requirements');
+      await page.locator('.bt360-detail-footer .bt360-primary').innerText()==='Mark requirements done');
     await page.locator('.bt360-detail-footer .bt360-primary').click();
     check('journey confirmation describes the actual milestone',
-      await page.getByRole('dialog',{name:'Requirement completed'}).innerText().then(t=>t.includes('all requirements were met')));
+      await page.getByRole('dialog',{name:'Requirement completed'}).innerText().then(t=>t.includes('finish every requirement')));
     check('journey opening confirmation makes no financial changes',
       await page.evaluate(backup=>localStorage.getItem('bt_e_v4')===backup.tracker&&entries[0].reqMet===undefined,journeyRestore));
     await page.getByRole('button',{name:'Cancel',exact:true}).click();
@@ -522,6 +522,28 @@ async function exercise(name,engine,url){
     }else if(await page.getByRole('button',{name:'OK',exact:true}).count()){
       await page.getByRole('button',{name:'OK',exact:true}).click();
     }
+    check('completed requirement switches to an actual next step, never repeats confirmation',
+      await page.locator('.bt360-detail-footer .bt360-primary').innerText().then(t=>
+        t==='Record bonus payment'||t==='View remaining tasks'||t==='Review account rules')&&
+      await page.locator('.bt3640-section[data-section="requirements"]').innerText().then(t=>
+        t.includes('Requirements completed')&&!t.includes('No single nonrecurring deposit target')));
+    // Saving the same confirmed date must not silently rewrite history.
+    const savedCompletion=await page.evaluate(()=>{
+      const e=entries.find(x=>x.id==='SYN-JOURNEY-DD');
+      return {stored:localStorage.getItem('bt_e_v4'),history:JSON.stringify(e?.history||e?.activity||[])};
+    });
+    await page.getByRole('button',{name:'Edit date',exact:true}).click();
+    check('completed account opens its existing saved date, not a blank confirmation',
+      await page.locator('#req_date').inputValue()==='2026-10-10');
+    await page.getByRole('button',{name:'Save date',exact:true}).click();
+    check('saving unchanged date shows a clear Already saved response',
+      await page.getByText('Already saved',{exact:true}).isVisible());
+    await page.getByRole('button',{name:'OK',exact:true}).click();
+    check('unchanged confirmation preserves saved records without a duplicate write',
+      await page.evaluate(before=>{
+        const e=entries.find(x=>x.id==='SYN-JOURNEY-DD');
+        return localStorage.getItem('bt_e_v4')===before.stored&&JSON.stringify(e?.history||e?.activity||[])===before.history;
+      },savedCompletion));
     await page.getByRole('button',{name:'Back to accounts'}).click();
     check('journey moves the completed bank from requirements to waiting for payment',
       await page.locator('[data-queue="waiting"] [data-attention-id="SYN-JOURNEY-DD"]').count()===1&&
@@ -551,9 +573,9 @@ async function exercise(name,engine,url){
         entries=[e];expanded=e.id;tab='tracker';R();return previous;
       },entry);
       check('unrecorded direct deposits start at zero without a fake qualifying result',
-        await page.locator('.bt3681-ledger-total').innerText().then(x=>x.includes('$0 recorded')&&x.includes('$0 user-confirmed')));
+        await page.locator('.bt3686-deposit-empty').innerText().then(x=>x.includes('No deposits tracked yet')));
       await page.setViewportSize({width:390,height:844});
-      await page.getByRole('button',{name:'+ Record deposit'}).click();
+      await page.getByRole('button',{name:'+ Add deposit'}).click();
       check('new deposit dialog does not invent an amount or date',
         await page.getByRole('dialog',{name:'Record direct deposit'}).isVisible()&&
         await page.locator('#dep_amount').inputValue()===''&&await page.locator('#dep_date').inputValue()==='');
@@ -565,7 +587,7 @@ async function exercise(name,engine,url){
         await page.evaluate(()=>depositProgress(entries[0]).totalCents===20050&&
           depositProgress(entries[0]).confirmedCents===0&&!entries[0].reqMet&&!entries[0].bonusRecd));
       check('recorded amount is presented without claiming qualifying progress',
-        await page.locator('.bt3681-ledger-total').innerText().then(x=>x.includes('$200.50 recorded')&&x.includes('$0 user-confirmed')));
+        await page.locator('.bt3681-ledger-total').innerText().then(x=>x.includes('$200.50 recorded')&&x.includes('$0 confirmed by you')));
       await page.locator('.bt3681-ledger-actions button').first().click();
       check('editing evidence requires explicit counted confirmation',
         await page.getByRole('dialog',{name:'Correct recorded deposit'}).isVisible()&&
@@ -576,7 +598,7 @@ async function exercise(name,engine,url){
           depositProgress(entries[0]).percent===20&&!entries[0].reqMet&&!entries[0].bonusRecd));
       check('single verified cumulative target has truthful percent and label',
         await page.locator('.bt3681-deposit-ledger [role="progressbar"]').getAttribute('aria-valuenow')==='20'&&
-        await page.locator('.bt3681-deposit-ledger').innerText().then(t=>t.includes('20% of single saved target')));
+        await page.locator('.bt3681-deposit-ledger').innerText().then(t=>t.includes('20% tracked')));
       await page.locator('.bt3681-ledger-actions button').first().click();
       await page.locator('#dep_amount').fill('300');
       check('material edit clears prior counted attestation',
@@ -619,7 +641,7 @@ async function exercise(name,engine,url){
         entries=[e];expanded=e.id;R();return previous;
       },synthetic);
       check('shared structured deadline overrides legacy day counter',await page.evaluate(()=>reqDeadline(entries[0])==='2026-12-11'&&btNextActionForEntry(entries[0]).task.context.date==='2026-12-11'));
-      check('rendered requirements and header share exact structured deadline',await page.locator('.bt360-detail-card').innerText().then(t=>t.includes('Requirements due Dec 11, 2026')&&t.includes('Direct deposits totaling $1,000 · due Dec 11, 2026')));
+      check('rendered requirements and header share exact structured deadline',await page.locator('.bt360-detail-card').innerText().then(t=>t.includes('Requirements due Dec 11, 2026')&&t.includes('Direct deposits totaling $1,000')&&t.includes('Due Dec 11, 2026')));
       await page.locator('[data-section="timers"] > summary').click();
       check('rendered timer uses the same requirement deadline',await page.locator('[data-source="saved-requirement"]').innerText().then(t=>t.includes('Dec 11, 2026')));
       await page.screenshot({path:path.join(output,name+'-shared-requirement-dates-390.png'),fullPage:true});
@@ -671,7 +693,7 @@ async function exercise(name,engine,url){
       await page.locator('.bt360-detail-header').count()===1&&await page.locator('.bt360-steps').count()===1&&await page.locator('.bt360-steps span').count()===5&&await page.locator('.bt360-detail-card .card-h').count()===0);
     check('legacy LIFECYCLE strip and CHECKLIST label removed',await page.locator('.bt360-detail-card .bt-life').count()===0&&await page.getByText('Checklist',{exact:true}).count()===0);
     check('stage in progress never suggests bonus received',
-      await page.locator('.bt360-detail-footer .bt360-primary').innerText().then(t=>t==='Confirm requirements'||t==='Open next task'));
+      await page.locator('.bt360-detail-footer .bt360-primary').innerText().then(t=>t==='Mark requirements done'||t==='Open next task'||t==='Review account rules'));
     check('Manage is absent; account controls open from header menu',
       await page.getByRole('button',{name:'Manage',exact:true}).count()===0&&await page.getByRole('button',{name:'More account actions'}).count()===1);
     check('fixed bar is outside scrolling card',await page.locator('.bt360-detail-footer').evaluate(e=>e.parentElement?.id==='app'&&!e.closest('.scroll')));
@@ -747,10 +769,10 @@ async function exercise(name,engine,url){
       expanded=e.id;R();
     });
     check('Chase synthetic $10,000 DD progress is visible without checklist tasks',
-      await page.locator('.bt3611-requirement').innerText().then(t=>t.includes('Direct deposits totaling $10,000 · due Jan 13, 2027')&&t.includes('$0 of $10,000 · 0 recorded')));
-    check('structured requirement includes checkbox and zero-progress meter',
+      await page.locator('.bt3611-requirement').innerText().then(t=>t.includes('Direct deposits totaling $10,000')&&t.includes('Due Jan 13, 2027')&&!t.includes('$0 of $10,000')));
+    check('structured requirement shows an actionable checkbox without fabricated payment progress',
       await page.locator('.bt3611-requirement [role="checkbox"]').count()===1&&
-      await page.locator('.bt3611-req-track[role="progressbar"]').getAttribute('aria-valuenow')==='0');
+      await page.locator('.bt3611-req-track[role="progressbar"]').count()===0);
     check('account overview keeps secondary information collapsed',await page.locator('.bt3640-section').evaluateAll(nodes=>nodes.filter(n=>['fees','timers','terms','history','eligibility'].includes(n.dataset.section)).every(n=>!n.open)));
     check('account dates are compact and unknown dates remain unrecorded',await page.locator('.bt3640-dates').evaluate(e=>e.querySelectorAll('dl>div').length===4&&e.textContent.includes('Not recorded')));
     const overviewBefore=await page.evaluate(()=>JSON.stringify([localStorage.getItem('bt_e_v4'),localStorage.getItem('bt_tc_archive_v1')]));
@@ -831,7 +853,7 @@ async function exercise(name,engine,url){
       R();
     });
     check('synthetic close rules were expressly saved rather than inferred',await page.evaluate(()=>entries[0].earlyCloseFee===0&&/No early closing fee/.test(entries[0].feeScheduleRaw)));
-    await page.getByRole('button',{name:'Confirm requirements'}).click();
+    await page.getByRole('button',{name:'Mark requirements done'}).click();
     check('requirements dialog leaves unknown actual date blank',await page.locator('#req_date').inputValue()==='');
     check('requirements dialog explicitly asks for an actual past date',await page.getByRole('dialog',{name:'Requirement completed'}).isVisible()&&await page.locator('#req_date').getAttribute('max')!==null);
     const beforeInvalidRequirement=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
@@ -893,7 +915,7 @@ async function exercise(name,engine,url){
     await button('Save date').click();await button('OK').click();
     check('requirement may be explicitly restored after clear',(await record()).reqMet==='2026-04-01');
 
-    await page.getByRole('button',{name:/^Confirm received/}).click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('Review experience').click();
+    await page.getByRole('button',{name:/^Record bonus payment/}).click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('Review experience').click();
     check('payment success offers optional evidence review without assuming a method result',await page.evaluate(()=>dpEditor.evidenceStage==='bonus'&&!dpEditor.confirmedByUser));
     await button('Skip for now').click();
     // A payout clear must preserve tax data, account history and all companion keys after failure.
@@ -1275,9 +1297,36 @@ async function exercise(name,engine,url){
       }finally{window.btLifecycleStageForEntry=previous}
       return results;
     });
+    // Explicit milestones override an urgent stage that still contains an
+    // ongoing timer. Never display Confirm requirements after it is saved.
+    const completedActions=await page.evaluate(()=>{
+      const original=window.btLifecycleStageForEntry,results={};
+      try{
+        const sample={id:'SYN-ALREADY-CONFIRMED',bank:'Synthetic Completed',
+          reqMet:'2026-10-20',bonusRecd:'',closed:'',checklist:[]};
+        for(const [key,stage] of Object.entries({
+          payout:{code:'ACTION_NEEDED',label:'Action needed',kind:'payout'},
+          recurring:{code:'ACTION_NEEDED',label:'Action needed',kind:'requirement'},
+          review:{code:'ACTION_NEEDED',label:'Action needed',kind:'review',reviewReason:'Saved rules need review'},
+          normal:{code:'IN_PROGRESS',label:'In progress',kind:''}})){
+          window.btLifecycleStageForEntry=()=>stage;
+          results[key]=BT360.primaryAction(sample);
+        }
+        window.btLifecycleStageForEntry=()=>({code:'ACTION_NEEDED',label:'Action needed',kind:'close-review'});
+        results.paid=BT360.primaryAction({...sample,bonusRecd:'2026-10-22'});
+      }finally{window.btLifecycleStageForEntry=original}
+      return results;
+    });
+    check('all confirmed-account actions route forward without restarting confirmation',
+      completedActions.payout.label==='Record bonus payment'&&
+      completedActions.normal.label==='Record bonus payment'&&
+      completedActions.recurring.label==='View remaining tasks'&&
+      completedActions.review.label==='Review account rules'&&
+      completedActions.paid.label==='Review closing checks'&&
+      Object.values(completedActions).every(x=>!x.command.includes('openReqMet')));
     check('stage action mapping never confirms payout during In progress',
       mappedActions.IN_PROGRESS==='Open next task'&&mappedActions.ACTION_NEEDED==='Open next task'
-      &&mappedActions.REQUIREMENTS_MET==='Confirm received'&&mappedActions.AWAITING_BONUS==='Confirm received'
+      &&mappedActions.REQUIREMENTS_MET==='Record bonus payment'&&mappedActions.AWAITING_BONUS==='Record bonus payment'
       &&mappedActions.HOLD_OPEN==='View hold'&&mappedActions.BONUS_RECEIVED==='View hold'
       &&mappedActions.READY_TO_CLOSE==='Mark account closed');
     await page.evaluate(()=>{

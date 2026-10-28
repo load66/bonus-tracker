@@ -295,12 +295,22 @@ function compactRow(e){
   +'</span><span class="bt366-compact-right"><strong>'+amount(e.bonus)+'</strong><em class="bt360-chip">'+safe(s.label)+'</em></span></button></div>';
 }
 function primaryAction(e){
- const code=stage(e).code,id=arg(e.id),checks=Array.isArray(e.checklist)?e.checklist:[];
- if(code==='IN_PROGRESS'||code==='ACTION_NEEDED'){
-  if(checks.some(x=>x&&!x.done))return {label:'Open next task',command:'BT360.openNextTask('+id+')'};
-  return {label:'Confirm requirements',command:'openReqMet('+id+')'};
+ const state=stage(e),code=state.code,id=arg(e.id),checks=Array.isArray(e.checklist)?e.checklist:[];
+ if(!e.closed&&e.bonusRecd&&['ACTION_NEEDED','IN_PROGRESS'].includes(code))return {label:'Review closing checks',command:'BT360.showHold()'};
+ // A saved milestone is not an unfinished milestone, regardless of stage urgency.
+ if(!e.closed&&e.reqMet&&!e.bonusRecd){
+  if(['ACTION_NEEDED','IN_PROGRESS'].includes(code)){
+   if(state.kind==='review'||state.reviewReason)return {label:'Review account rules',command:'openBankActions('+id+')'};
+   if(state.kind==='requirement'||checks.some(x=>!x.done))return {label:'View remaining tasks',command:'BT360.openNextTask('+id+')'};
+  }
+  return {label:'Record bonus payment',command:'openRcv('+id+')'};
  }
- if(code==='REQUIREMENTS_MET'||code==='AWAITING_BONUS')return {label:'Confirm received',command:'openRcv('+id+')'};
+ if(code==='IN_PROGRESS'||code==='ACTION_NEEDED'){
+  if(state.kind==='review'||state.reviewReason)return {label:'Review account rules',command:'openBankActions('+id+')'};
+  if(checks.some(x=>x&&!x.done))return {label:'Open next task',command:'BT360.openNextTask('+id+')'};
+  return {label:'Mark requirements done',command:'openReqMet('+id+')'};
+ }
+ if(code==='REQUIREMENTS_MET'||code==='AWAITING_BONUS')return {label:'Record bonus payment',command:'openRcv('+id+')'};
  if(code==='HOLD_OPEN'||code==='BONUS_RECEIVED')return {label:'View hold',command:'BT360.showHold()'};
  if(code==='READY_TO_CLOSE')return {label:'Mark account closed',command:'startCloseFlow('+id+',\'actual\')'};
  if(code==='COOLDOWN'||code==='ELIGIBLE')return {label:'View eligibility',command:'BT360.showEligibility()'};
@@ -371,46 +381,55 @@ function requirementTitle(r){
 }
 
 function depositLedgerHtml(e,readonly=false){
- const progress=typeof depositProgress==='function'?depositProgress(e):{rows:[],totalCents:0,confirmedCents:0,recordedCount:0,confirmedCount:0,targetCents:0,percent:0};
+ const p=typeof depositProgress==='function'?depositProgress(e):{rows:[],totalCents:0,confirmedCents:0,recordedCount:0,confirmedCount:0,targetCents:0,percent:0};
  const hasDD=Array.isArray(e?.financialRules?.requirements)&&e.financialRules.requirements.some(r=>r?.kind==='direct-deposit')||
   /direct[ -]?deposits?|\bpayroll\b|\bq?dd\b/i.test([e?.completeBonusText,e?.dataPoint,...(e?.checklist||[]).map(x=>x.text)].join(' '));
- if(!hasDD&&!progress.recordedCount)return'';
+ if(!hasDD&&!p.recordedCount)return'';
+ if(e.reqMet&&!p.recordedCount)return'';
  const dollars=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:n%100===0?0:2,maximumFractionDigits:2}).format(n/100);
- const total=progress.totalCents,confirmed=progress.confirmedCents;
- let h='<div class="bt3681-deposit-ledger" aria-label="Recorded direct deposits"><div class="bt3681-ledger-head"><b>Deposit activity</b>';
- if(!readonly&&e.opened)h+='<button type="button" class="bt360-link" onclick="openDepositRecord('+arg(e.id)+')">+ Record deposit</button>';
- h+='</div>';
- if(!e.opened)h+='<p class="bt360-muted">Save the actual opening date to start recording deposits for this bonus cycle.</p>';
- else{
-  h+='<p class="bt3681-ledger-total">'+dollars(total)+' recorded · '+dollars(confirmed)+' user-confirmed as counted</p>';
-  if(progress.targetCents){
-   h+='<div class="bt3681-ledger-track" role="progressbar" aria-label="User-confirmed counted deposit amount" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+progress.percent+'"><i style="width:'+progress.percent+'%"></i></div>';
-   h+='<small>'+dollars(confirmed)+' of '+dollars(progress.targetCents)+' user-confirmed counted · '+progress.percent+'% of single saved target</small>';
-  }else h+='<small>No single nonrecurring deposit target is verified in structured terms. Amounts are not combined into a qualification percentage.</small>';
-  h+='<p class="research-caveat">Manually recorded activity only. Never automatically marks requirements met or the bonus received.</p>';
-  if(progress.rows.length){
-   h+='<div class="bt3681-ledger-rows">'+progress.rows.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(x=>
-    '<div class="bt3681-ledger-row"><span><b>'+safe(dollars(x.amountCents))+'</b><small>'+safe(date(x.date))+' · '+safe(x.method)+' · '+(x.bankConfirmed?'You confirmed counted':'Not confirmed counted')+'</small>'+(x.note?'<small>'+safe(x.note)+'</small>':'')+'</span>'+
-    (!readonly?'<span class="bt3681-ledger-actions"><button type="button" class="bt360-link" onclick="openDepositRecord('+arg(e.id)+','+arg(x.id)+')">Edit</button><button type="button" class="bt360-link" onclick="voidDepositRecord('+arg(e.id)+','+arg(x.id)+')">Void</button></span>':'')+'</div>'
-   ).join('')+'</div>';
-  }else h+='<p class="bt360-muted">No deposits recorded for this account cycle.</p>';
+ const add=(!readonly&&e.opened)?'<button type="button" class="bt360-link bt3686-deposit-add" onclick="openDepositRecord('+arg(e.id)+')">+ Add deposit</button>':'';
+ if(!p.recordedCount){
+  return '<div class="bt3681-deposit-ledger bt3686-deposit-empty" aria-label="Direct deposit history">'+
+    '<span><b>Direct deposits</b><small>'+safe(e.opened?'No deposits tracked yet':'Add the opening date to track deposits')+'</small></span>'+
+    (e.opened?add:!readonly?'<button type="button" class="bt360-link" onclick="openEdit('+arg(e.id)+')">Add opening date</button>':'')+'</div>';
  }
+ let h='<div class="bt3681-deposit-ledger bt3686-deposit-active" aria-label="Recorded direct deposits"><div class="bt3681-ledger-head"><b>Direct deposits</b>'+add+'</div>'+
+  '<p class="bt3681-ledger-total">'+dollars(p.totalCents)+' recorded · '+dollars(p.confirmedCents)+' confirmed by you</p>';
+ if(p.targetCents){
+  h+='<div class="bt3681-ledger-track" role="progressbar" aria-label="User-confirmed counted deposit amount" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+p.percent+'"><i style="width:'+p.percent+'%"></i></div>'+
+   '<small>'+dollars(p.confirmedCents)+' of '+dollars(p.targetCents)+' confirmed · '+p.percent+'% tracked</small>';
+ }else h+='<small>Check your bank offer for which deposits qualify.</small>';
+ h+='<details class="bt3686-deposit-help"><summary>How does this work?</summary><p>Only confirm a deposit if your bank counted it. Adding deposits does not mark the bonus requirements or payment complete.</p></details>';
+ h+='<div class="bt3681-ledger-rows">'+p.rows.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(x=>
+  '<div class="bt3681-ledger-row"><span><b>'+safe(dollars(x.amountCents))+'</b><small>'+safe(date(x.date))+' · '+safe(x.method)+' · '+(x.bankConfirmed?'Counted (you confirmed)':'Not confirmed')+'</small>'+(x.note?'<small>'+safe(x.note)+'</small>':'')+'</span>'+
+  (!readonly?'<span class="bt3681-ledger-actions"><button type="button" class="bt360-link" onclick="openDepositRecord('+arg(e.id)+','+arg(x.id)+')">Edit</button><button type="button" class="bt360-link" onclick="voidDepositRecord('+arg(e.id)+','+arg(x.id)+')">Void</button></span>':'')+'</div>').join('')+'</div>';
  return h+'</div>';
 }
 function requirementRows(e){
  const list=Array.isArray(e.financialRules?.requirements)?e.financialRules.requirements:[];
  const done=!!e.reqMet,legacy=!list.length?String(e.completeBonusText||'').trim():'';
- let rows=list.map((r,i)=>{
-  const due=detailRequirementDate(e,r),value=Number(r.amount);
-  const isMoney=['direct-deposit','new-money'].includes(r.kind)&&Number.isFinite(value)&&value>0;
-  const heading=requirementTitle(r)+(due?' · due '+date(due):'');
-  const stat=isMoney?(done?'Confirmed · transaction amounts not recorded':amount(0)+' of '+amount(value)+' · 0 recorded'):(done?'Requirement confirmed':due?'Due '+date(due):'Review saved offer terms');
-  const meter=isMoney?'<div class="bt3611-req-track" role="progressbar" aria-label="Recorded requirement amount" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i style="width:0%"></i></div>':'';
-  return '<div class="bt360-check bt3611-requirement '+(done?'done':'')+'"><button type="button" role="checkbox" aria-label="Confirm '+safe(requirementTitle(r))+'" aria-checked="'+done+'" onclick="openReqMet('+arg(e.id)+')">'+(done?'✓':'')+'</button><div class="bt3611-req-body"><b>'+safe(heading)+'</b>'+meter+'<small>'+safe(stat)+'</small><details class="bt3611-evidence"><summary>Requirement details</summary><p>'+safe(r.text||'')+'</p></details></div></div>';
- }).join('');
- if(!list.length&&(legacy||Number(e.reqDays)>0)){
-  const due=typeof reqDeadline==='function'?reqDeadline(e):'';
-  rows='<div class="bt360-check bt3611-requirement '+(done?'done':'')+'"><button role="checkbox" type="button" aria-label="Confirm saved requirements" aria-checked="'+done+'" onclick="openReqMet('+arg(e.id)+')">'+(done?'✓':'')+'</button><div class="bt3611-req-body"><b>Complete bonus requirements'+(due?' · due '+safe(date(due)):'')+'</b><small>'+safe(done?'Requirement confirmed':legacy||'Review the saved requirement deadline')+'</small></div></div>';
+ let rows='';
+ if(done){
+  const completionDate=archiveDateValid(e.reqMet)?date(e.reqMet):'Saved date needs correction';
+  rows='<div class="bt360-check bt3611-requirement bt3686-complete done">'+
+   '<button type="button" role="checkbox" aria-label="Edit requirements completion date" aria-checked="true" onclick="openReqMet('+arg(e.id)+')">✓</button>'+
+   '<div class="bt3611-req-body"><b>Requirements completed</b><small>Saved on '+safe(completionDate)+'</small></div></div>';
+  if(list.length||legacy){
+   const descriptions=list.length?list.map(r=>'<li>'+safe(requirementTitle(r))+(r.text&&r.text!==requirementTitle(r)?'<small>'+safe(r.text)+'</small>':'')+'</li>').join(''):'<li>'+safe(legacy)+'</li>';
+   rows+='<details class="bt3686-saved-reqs"><summary>See saved requirements</summary><ul>'+descriptions+'</ul></details>';
+  }
+ }else{
+  rows=list.map(r=>{
+   const due=detailRequirementDate(e,r),name=requirementTitle(r);
+   return '<div class="bt360-check bt3611-requirement"><button type="button" role="checkbox" aria-label="Mark all requirements completed" aria-checked="false" onclick="openReqMet('+arg(e.id)+')"></button>'+
+    '<div class="bt3611-req-body"><b>'+safe(name)+'</b><small>'+safe(due?'Due '+date(due):'Not completed yet')+'</small>'+
+    (r.text?'<details class="bt3611-evidence"><summary>Offer details</summary><p>'+safe(r.text)+'</p></details>':'')+'</div></div>';
+  }).join('');
+  if(!list.length&&(legacy||Number(e.reqDays)>0)){
+   const due=typeof reqDeadline==='function'?reqDeadline(e):'';
+   rows='<div class="bt360-check bt3611-requirement"><button type="button" role="checkbox" aria-label="Mark all requirements completed" aria-checked="false" onclick="openReqMet('+arg(e.id)+')"></button>'+
+    '<div class="bt3611-req-body"><b>Complete bonus requirements</b><small>'+safe(due?'Due '+date(due):legacy||'Not completed yet')+'</small></div></div>';
+  }
  }
  const tasks=Array.isArray(e.checklist)?e.checklist:[];
  rows+=tasks.map((c,i)=>'<div class="bt360-check bt3611-task '+(c.done?'done':'')+'"><button type="button" role="checkbox" aria-label="'+safe(c.text||'Task')+'" aria-checked="'+!!c.done+'" onclick="toggleCk('+arg(e.id)+','+i+')">'+(c.done?'✓':'')+'</button><button type="button" class="bt366-row-edit" onclick="runBankAction('+arg(e.id)+',\'checklist\')"><b>'+safe(c.text||'Task')+'</b><small>'+(c.done?'Done':'Checklist task')+'</small></button></div>').join('');
@@ -468,7 +487,7 @@ function firstUnmetRequirementDate(e){
  return typeof reqDeadline==='function'?(reqDeadline(e)||''):'';
 }
 function requirementCountdown(e){
- const due=firstUnmetRequirementDate(e);
+ const due=e.reqMet?'':firstUnmetRequirementDate(e);
  if(!due)return '';
  const days=dB(td(),due);
  return days<0?'Overdue '+Math.abs(days)+' days':days===0?'Due today':days+' days left';
@@ -824,16 +843,21 @@ function detailPanels(e){
  const code=stage(e).code,ready=code==='READY_TO_CLOSE',closed=!!e.closed;
  const at=closed?4:ready?4:code==='HOLD_OPEN'||code==='BONUS_RECEIVED'?3:code==='REQUIREMENTS_MET'||code==='AWAITING_BONUS'?2:1;
  const labels=['Opened','Tasks','Payout','Hold','Close'];
- const due=firstUnmetRequirementDate(e);
- const stageSummary=ready?'Review closing checks before closing':due?'Requirements due '+date(due):code==='IN_PROGRESS'?'Complete offer requirements':stage(e).label;
- const stageChip=ready?'Ready to close':due?requirementCountdown(e):stage(e).label;
+ const due=e.reqMet?'':firstUnmetRequirementDate(e);
+ const stageSummary=ready?'Review closing checks before closing':e.reqMet&&!e.bonusRecd?(['ACTION_NEEDED','IN_PROGRESS'].includes(code)?'Completion saved · check remaining tasks':'Requirements done · waiting for bonus'):due?'Requirements due '+date(due):code==='IN_PROGRESS'?'Complete offer requirements':stage(e).label;
+ const stageChip=ready?'Ready to close':e.reqMet&&!e.bonusRecd&&!['ACTION_NEEDED','IN_PROGRESS'].includes(code)?'Waiting for payment':due?requirementCountdown(e):stage(e).label;
  let h=payoutReminderRow(e)+'<div class="bt360-steps '+(ready?'bt3611-ready':'')+'" aria-label="Account lifecycle"><div class="bt3611-step-bars">'+labels.map((name,i)=>'<span class="'+(i<at?'done ':'')+(at===i?'current':'')+'"'+(at===i?' aria-current="step"':'')+'>'+name+'</span>').join('')+'</div><div class="bt3611-stage-summary"><b>'+safe(stageSummary)+'</b><em class="bt360-chip '+(ready?'positive':'warning')+'">'+safe(stageChip)+'</em></div></div>';
  if(!ready)h+=accountDates(e);
  const hasExtraWork=Array.isArray(e.checklist)&&e.checklist.length>0;
  const savedWorkStart=h.length;
  if(!closed&&(!ready||hasExtraWork)){
   const req=requirementRows(e);
-  h+=accountSection(e,'requirements','Requirements',(!req.count?'<p class="bt360-muted">No requirements saved.</p>':req.html)+depositLedgerHtml(e)+'<div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></div>',e.reqMet?'Confirmed':req.count+' saved',(Array.isArray(e.financialRules?.requirements)&&e.financialRules.requirements.length>0||!!String(e.completeBonusText||'').trim()||Number(e.reqDays)>0)?'<button type="button" class="bt360-link bt3621-confirm-all" onclick="openReqMet('+arg(e.id)+')">'+(e.reqMet?'Review confirmation':hasExtraWork?'Confirm requirements':'Confirm all')+'</button>':'',true);
+  const pendingTasks=Array.isArray(e.checklist)&&e.checklist.some(x=>x&&!x.done);
+  const workNote=e.reqMet&&!e.bonusRecd?'<p class="bt3686-next-step">'+(pendingTasks||['ACTION_NEEDED','IN_PROGRESS'].includes(code)?'Next: Keep tracking any ongoing requirements.':'Next: Record the bonus when it arrives.')+'</p>':'';
+  const addTask=(!e.reqMet||pendingTasks)?'<div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></div>':'';
+  h+=accountSection(e,'requirements','Requirements',(!req.count?'<p class="bt360-muted">No requirements saved.</p>':req.html)+depositLedgerHtml(e)+workNote+addTask,
+    e.reqMet?'Done · '+date(e.reqMet):req.count+' to complete',
+    e.reqMet?'<button type="button" class="bt360-link bt3621-confirm-all" onclick="openReqMet('+arg(e.id)+')">Edit date</button>':'',true);
   // Mockup order: Requirements, Fees & waivers, Timers. Read-only panel;
   // no fee, timer, task or lifecycle handler is replaced.
   if(!ready)h+=accountSection(e,'fees','Fees & waivers',feeDetail(e),'Review saved fees');

@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.86: source-backed estimated bonus arrival ranges.
-const V = 'bt-v3.6.86-simple1';
+// Version 3.6.87: combined beginner account layout and correct bank milestone flow.
+const V = 'bt-v3.6.87-cardflow1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
