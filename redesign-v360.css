@@ -1147,3 +1147,6 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt3686-account-extras{margin:16px 0 24px;border-top:1px solid #242732}
 .bt3686-account-extras>summary{padding:16px 2px;min-height:48px;box-sizing:border-box;color:#A0A6B8;font-size:13px;cursor:pointer}
 .bt3686-account-extras>div{padding-top:4px}
+
+/* WebKit must also hide nested summary rows in a closed outer disclosure. */
+.bt3686-account-extras:not([open])>div{display:none}
