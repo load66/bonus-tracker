@@ -47,7 +47,7 @@ try{
  s.__syntheticLedger=ledger;
  vm.runInContext('entries=[__syntheticLedger];sv(SK,entries)',s);
  assert.equal(s.depositProgress(ledger).recordedCount,0);
- assert.match(s.BT360.detailPanels(ledger),/Record deposit/);
+ assert.match(s.BT360.detailPanels(ledger),/Add deposit/,'Unconfirmed bank shows a compact deposit action');
  assert.equal(s.openDepositRecord('SYN-LEDGER'),true);
  assert.equal(vm.runInContext('depositPrompt.date',s),'','No invented deposit date');
  assert.equal(vm.runInContext('depositPrompt.bankConfirmed',s),false);
