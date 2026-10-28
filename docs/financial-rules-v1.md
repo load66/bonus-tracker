@@ -89,3 +89,25 @@ SchemaVersion remains 3. financialRules version 1 remains supported unchanged; u
 - An unconfirmed early-close charge uses `closure.earlyCloseFee: null` only with `restrictionType: "manual-review"` and `basis: "manual"`. Retain the applicable official closure condition, original fee source evidence and an explicit explanation that the charge is unconfirmed. No zero-fee claim is made. Legacy numeric `earlyCloseFee: 0` is only a compatibility projection, never the authoritative charge. The structured null remains authoritative through import, review, save, backup and AI context.
 - Such an account can be imported for tracking known requirements, but closure remains blocked and no safe-close date may be shown, including after payout. This is a validated tracking import with an explicit unresolved closure check, not certification of complete closure terms or personal bonus eligibility. New offers still require exact bonus, activity, fee and waiver terms. Other unresolved material rules must not be finalized.
 - Research drafts are rejected with a draft-specific error before eligibility parsing. Generate a proper BonusTrackerEntry envelope with every applicable eligibility rule. Ordinary account closure wording does not create an additional account-ownership lookback.
+
+
+
+## Estimated bonus arrival (runtime v3.6.84)
+
+Keep numeric `schemaVersion: 3`. Use `financialRules.version: 3` for an optional source-backed `payout.window`; rule versions 1 and 2 remain supported unchanged. Do not add a top-level estimated date, confidence field or display status. Generate original payout wording and exact evidence as before. For an explicit numeric range or a “within/up to” interval with a clear supported trigger, add:
+
+```json
+"payout": {
+  "text": "Bonus is paid between the 90th and 120th calendar day after account opening.",
+  "evidence": {"source": "promotion", "quote": "Bonus is paid between the 90th and 120th calendar day after account opening."},
+  "window": {"basis": "opened", "unit": "calendar-days", "min": 90, "max": 120}
+}
+```
+
+This is a synthetic rule shape, not a verified bank promotion. `window` contains only `basis`, `unit`, `min` and `max`. Bounds are nonnegative ordered whole numbers with a positive maximum. Bases are `opened`, `reqmet`, `enrollment` and `qualifying-period-end`; units are `calendar-days`, `business-days`, `calendar-months` and `statement-cycles`. The validator must recognize the original quotation's exact interval and trigger. An optional existing `payout.timing` must agree with the window's basis, unit and maximum. For “within 60 days after requirements are met,” encode min 0/max 60; do not manufacture a narrower earliest date. Retain conditions in payout text and original evidence. Distinct reward components with different clocks must not be combined into one fabricated window; preserve their separate wording and leave a single arrival range unresolved when it cannot faithfully represent them.
+
+The canonical read-only `BTFinancialRules.estimatedArrival(entry)` derives start/end from confirmed saved account events. Display only **Estimated bonus arrival: [start]–[end]** on account cards/details. No confidence badge, new status label, automatic milestone completion or stored derived display string. Recalculate on every render after changed/cleared dates, restore or import. Remove the estimate after recorded payment or closure. Missing/invalid anchors, conflicting rules and ambiguous multiple clocks produce no range. A requirement checkbox or deposit ledger total never substitutes for confirmed all-requirements completion.
+
+Calendar-day addition is date-only and timezone-safe; calendar months retain exact end-of-month clamping. Business days and statement cycles are retained exactly in JSON but remain unresolved without applicable bank calendars; never approximate them as fixed days. Qualification-period-end requires every scoped requirement to have an exact supported opening/enrollment deadline; use the latest deadline. Do not substitute the actual requirements-met date. Enrollment requires a recorded enrollment date and conflicting enrollment dates block the estimate.
+
+Existing structured v1/v2 or legacy records may be adapted read-only from a single unambiguous saved payout interval/trigger. Invalid structured rules never fall back to legacy text, bank names or generic averages. Do not rewrite or upgrade historical records. Preserve the nested rule in import/review/save, portable/cloud backups, historical terms and AI context. Test strict import validation, both bounds and anchors, missing dates, corrected/cleared dates, month/year/leap boundaries, multi-clock rejection, no financial writes, receipt suppression and mobile Chromium/WebKit rendering before release.

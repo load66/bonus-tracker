@@ -18,3 +18,12 @@ function reviewFixture(){
  return e;
 }
 module.exports.reviewFixture=reviewFixture;
+
+function arrivalFixture(){
+ const e=fixture(),text='Bonus is paid between the 90th and 120th calendar day after account opening, provided the account stays open and in good standing.';
+ e.opened='2026-08-10';e.financialRules.version=3;e.tcSourceRaw+=' '+text;e.payoutTimingText=text;
+ e.financialRules.payout={text,evidence:{source:'promotion',quote:text},window:{basis:'opened',unit:'calendar-days',min:90,max:120}};
+ return e;
+}
+module.exports.arrivalFixture=arrivalFixture;
+

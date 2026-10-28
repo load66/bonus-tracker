@@ -1926,6 +1926,27 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>{entries=window.__cardTextOriginal;delete window.__cardTextOriginal;R();});
     await page.setViewportSize({width:390,height:844});
     check('card layout leaves saved records unchanged',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
+    // Source-backed arrival range: actual card/detail DOM on both browser engines.
+    await page.evaluate(source=>{
+      window.__arrivalOriginal=entries;window.__arrivalStored=localStorage.getItem('bt_e_v4');
+      entries=[{...source,id:'SYN-ARRIVAL',checklist:[],customTimers:[]}];
+      tab='tracker';expanded='';R();
+    },require('./fixtures/financial-rules.cjs').arrivalFixture());
+    await openAccounts();
+    check('arrival range is visible on account card',await page.locator('.bt3684-arrival-compact').innerText()==='Estimated bonus arrival: Nov 8–Dec 8, 2026');
+    await page.locator('.bt366-compact-row').first().click();
+    check('arrival detail shows one plain range',await page.locator('.bt3684-arrival').count()===1&&await page.locator('.bt3684-arrival').innerText()==='Estimated bonus arrival: Nov 8–Dec 8, 2026');
+    for(const width of [320,375,390,430,1280]){
+      await page.setViewportSize({width,height:844});
+      check('arrival fits width '+width,await page.locator('.bt3684-arrival').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
+    }
+    await page.evaluate(()=>{entries[0].opened='2026-08-11';R();});
+    check('arrival recomputes when opening changes',await page.locator('.bt3684-arrival').innerText()==='Estimated bonus arrival: Nov 9–Dec 9, 2026');
+    await page.evaluate(()=>{entries[0].bonusRecd='2026-10-10';R();});
+    check('arrival disappears after recorded payment',await page.locator('.bt3684-arrival').count()===0);
+    check('arrival rendering never writes stored records',await page.evaluate(()=>localStorage.getItem('bt_e_v4')===window.__arrivalStored));
+    await page.evaluate(()=>{entries=window.__arrivalOriginal;delete window.__arrivalOriginal;delete window.__arrivalStored;R();});
+    await page.setViewportSize({width:390,height:844});
     const structuredProbe=await page.evaluate(source=>{
       const before=localStorage.getItem('bt_e_v4');
       const payload={kind:'BonusTrackerEntry',schemaVersion:3,verification:{promoSourceUrl:source.promoSourceUrl,feeScheduleSourceUrl:source.feeScheduleSourceUrl,termsVerifiedAt:source.termsVerifiedAt},entry:source};
@@ -2197,4 +2218,5 @@ async function exercise(name,engine,url){
   try{for(const [name,engine] of require('./browser-select.cjs')({chromium,webkit}))await exercise(name,engine,url)}
   finally{server.close()}
 })().catch(err=>{console.error(err);process.exitCode=1});
+
 

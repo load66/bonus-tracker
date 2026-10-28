@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: Codex — v3.6.84 — codex/v3.6.84-bonus-arrival
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
@@ -292,4 +292,5 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 - Release: v3.4.99, service worker bt-v3.4.99-classify1, unified classifier asset cache-busted
 - Merge: pending PR, CI and GitHub Pages production audit; preserves merged v3.4.98 zero-click SimpleFIN/Plaid integration
 - Handoff: Active agent none after finished code changes, with final verification still required
+
 

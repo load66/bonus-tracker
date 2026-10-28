@@ -1132,3 +1132,10 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt3683-auto-offers .bt3683-offer-link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:78px;padding:8px 12px;border-radius:10px;text-decoration:none;white-space:nowrap;font-size:12px;font-weight:700}
 .bt3683-auto-offers .bt3682-plan-actions{align-items:center}
 @media(max-width:390px){.bt3683-auto-offers .bt3683-offer-link{width:auto;max-width:100%}}
+
+
+/* Source-backed payout range; wrap naturally on small phones. */
+.bt3684-arrival .bt3611-timer-body{min-width:0;white-space:normal;overflow-wrap:anywhere}
+.bt3684-arrival .bt3611-timer-body b{white-space:normal;line-height:1.5}
+
+.bt366-compact-row .bt3684-arrival-compact{white-space:normal;overflow-wrap:anywhere;line-height:1.45}
