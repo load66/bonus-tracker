@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: Codex — v3.6.86 — codex/v3.6.86-simple-account-view
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
