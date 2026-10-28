@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex · v3.6.86 · codex/v3.6.86-bank-card-flow
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.86 per-bank beginner flow (`codex/v3.6.86-bank-card-flow`): regression fix for saved requirements completed but sticky footer still incorrectly offering Confirm requirements. The primary action now considers actual reqMet and bonusRecd milestones before stage urgency; opens bonus payment if complete, remaining tasks if recurring, or rules review if saved rules unresolved. Completed requirements have one dated completion summary, editable saved date, collapsed original rule text and no expired due or fake zero-progress meter. Completed accounts with no deposits no longer show an empty technical ledger; unfinished cards show compact Add deposit instead. Deposit evidence history and payment/requirements remain separate. Unchanged date save displays Already saved without rewriting history. Mobile sticky actions are 12–13px readable at narrow viewport widths. All existing canonical financial, tax, history, closing, direct-deposit confirmation and cloud operations are preserved. Synthetic Chromium/WebKit regression covers completed card state, idempotent date edit, task/payment routing, original data integrity and widths 320/375/390/430. Release and SW cache v3.6.86. Next: require all Bonus/Cloud/UI suites, Chromium and WebKit, release verifier, then squash merge and verify Pages.
 
 - v3.6.85 payout enrollment-anchor guard (`codex/v3.6.85-arrival-anchor-guard`): conflicting recorded offer/coupon enrollment dates now also block a qualification-period-based payout projection. Failing-before synthetic regression, no guessed date or record mutation, and existing v3.6.84 JSON window contract preserved. v3.6.84 unit and Chromium/WebKit checks passed and live header verified; generator skill and saved generation standard aligned. Next: final patch unit/browser/release checks, merge green, verify Pages/cache. No account/provider state modified.
 
