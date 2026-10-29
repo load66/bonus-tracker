@@ -130,23 +130,38 @@
     if(/closed\s+with\s+(?:a\s+)?negative\s+balance|negative\s+balance[^.;]{0,60}closed/.test(before))return{type:'closed-with-negative-balance',expected:true};
     return null;
   }
+  // A single eligibility sentence can contain separate clocks joined by "and".
+  // Pair each period with the account event in its own clause; never cross-product
+  // a bonus-received clock with an account-ownership clock.
+  function scopedEligibilityClauses(sentence){
+    const parts=String(sentence||'').split(/\s+and\s+/i).map(clean).filter(Boolean);
+    if(parts.length<2)return[sentence];
+    const bases=['offer-enrollment','bonus-offer-received','bonus-received','account-ownership-ended','account-opened','account-closed'];
+    const scoped=parts.map(part=>({part,periods:extractDurations(part),bases:bases.filter(b=>basisContext(part,b))}));
+    if(scoped.some(part=>!part.periods.length||!part.bases.length))return[sentence];
+    if(new Set(scoped.flatMap(part=>part.bases)).size<2)return[sentence];
+    return parts;
+  }
   function matchingTimedSentence(text,basis,period){
-    return splitEvidence(text).find(s=>eligibilityContext(s)&&basisContext(s,basis)&&extractDurations(s).some(x=>equivalentPeriod(x,period)))||'';
+    return splitEvidence(text).find(sentence=>eligibilityContext(sentence)&&scopedEligibilityClauses(sentence).some(clause=>
+      basisContext(clause,basis)&&extractDurations(clause).some(x=>equivalentPeriod(x,period))
+    ))||'';
   }
   function discoverTimedRestrictions(text){
     const out=[],seen=new Set(),bases=['offer-enrollment','bonus-offer-received','bonus-received','account-ownership-ended','account-opened','account-closed'];
     splitEvidence(text).forEach(sentence=>{
-      const eligible=eligibilityContext(sentence);
-      if(!eligible)return;
-      bases.forEach(basis=>{
-        if(!basisContext(sentence,basis))return;
-        extractDurations(sentence).forEach(period=>{
-          const timedLookback=/past|previous|preceding|prior|previously|last\s+\d|within|every\b|from\s+the\s+last/i.test(sentence);
-          if(!timedLookback)return;
-          const condition=inferConditionForDuration(sentence,basis,period);
-          const key=basis+'|'+period.value+'|'+period.unit+'|'+(condition?.type||'always');
-          if(seen.has(key))return;seen.add(key);
-          out.push({basis,period:{value:period.value,unit:period.unit,source:'discovered'},condition,evidenceSentence:sentence});
+      if(!eligibilityContext(sentence))return;
+      scopedEligibilityClauses(sentence).forEach(clause=>{
+        bases.forEach(basis=>{
+          if(!basisContext(clause,basis))return;
+          extractDurations(clause).forEach(period=>{
+            const timedLookback=/past|previous|preceding|prior|previously|last\s+\d|within|every\b|from\s+the\s+last/i.test(clause);
+            if(!timedLookback)return;
+            const condition=inferConditionForDuration(clause,basis,period);
+            const key=basis+'|'+period.value+'|'+period.unit+'|'+(condition?.type||'always');
+            if(seen.has(key))return;seen.add(key);
+            out.push({basis,period:{value:period.value,unit:period.unit,source:'discovered'},condition,evidenceSentence:sentence});
+          });
         });
       });
     });
@@ -192,7 +207,8 @@
       const q=stripAbbreviationDots(s);
       return /new [^.]{0,80}(?:customer|checking|savings|account)[^.]{0,80}only/i.test(q)||
         /(?:not eligible|ineligible|not available|cannot|can't|may not)[^.]{0,160}(?:current|existing)[^.]{0,100}(?:customer|owner|account|checking|savings)/i.test(q)||
-        /(?:current|existing)[^.]{0,100}(?:customer|owner|account|checking|savings)[^.]{0,160}(?:not eligible|ineligible|not available|cannot|can't|may not)/i.test(q)
+        /(?:current|existing)[^.]{0,100}(?:customer|owner|account|checking|savings)[^.]{0,160}(?:not eligible|ineligible|not available|cannot|can't|may not)/i.test(q)||
+        /(?:not eligible|ineligible|not available|cannot|can't|may not)[^.]{0,300}\b(?:have|has)\s+or\s+(?:have|has)\s+had\b[^.]{0,120}\b(?:checking|account)\b/i.test(q)
     })||'';
     return{excluded:!!sentence,sentence};
   }
@@ -298,7 +314,7 @@
       basis:single?.basis||'',period:single?.period||null,
       evidenceSentence:single?.evidenceSentence||'',evidenceText:single?.evidenceText||evidenceText(e),
       evidenceSource:single?.evidenceSource||evidenceSource(e),
-      currentCustomerExcluded:current.excluded,currentCustomerSentence:current.sentence,mustCloseBeforeReapply:explicitClosePrerequisite(scope)
+      currentCustomerExcluded:current.excluded,currentCustomerSentence:current.sentence,mustCloseBeforeReapply:explicitClosePrerequisite(scope)||verifiedRules.some(r=>r.basis==='account-ownership-ended')
     };
   }
   function applyPeriod(date,period,addD,addM){
