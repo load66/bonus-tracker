@@ -6,7 +6,7 @@ function parts(date){const m=String(date||'').match(/^(\d{4})-(\d{2})-(\d{2})$/)
 function addD(date,days){const p=parts(date);if(!p)return'';const d=new Date(Date.UTC(p.y,p.mo-1,p.d));d.setUTCDate(d.getUTCDate()+Number(days||0));return d.toISOString().slice(0,10)}
 function addM(date,months){const p=parts(date);if(!p)return'';const total=p.y*12+(p.mo-1)+Number(months||0),y=Math.floor(total/12),mo=((total%12)+12)%12,last=new Date(Date.UTC(y,mo+1,0)).getUTCDate();return `${y}-${String(mo+1).padStart(2,'0')}-${String(Math.min(p.d,last)).padStart(2,'0')}`}
 
-assert(G.VERSION==='1.3.0','Unexpected eligibility gate version');
+assert(G.VERSION==='1.3.1','Unexpected eligibility gate version');
 
 const bonusRule={
   churnable:true,churnability:'repeatable',churn:'1',churnPeriodValue:12,churnPeriodUnit:'months',
