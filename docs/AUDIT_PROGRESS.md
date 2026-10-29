@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: Codex — exact calendar closure hold / v3.6.94 — codex/v3.6.94-exact-calendar-close-hold
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.94 calendar-month closure reviews (`codex/v3.6.94-exact-calendar-close-hold`, PR #283): financialRules v4 records source-backed exact account-open month retention separately from an unconfirmed closing service fee; zero day approximations. Canonical hold anniversary, optional planning buffer and closure-review date are projected read-only. Close checks, action queue, semantic status and mobile details avoid premature Safe to Close. Exact month/leap regression and structured import review tests added. Bonus, UI, cloud unit suites and Chromium/WebKit PR checks PASS on run 40938645655; release verification pending final CI, merge and Pages verification. No user records or credentials stored in repo or modified. Next: verify final PR-head run, merge green, confirm deployed Pages commit, then validate private import in user-controlled tracker.
 
 - v3.6.93 compound eligibility evidence (`codex/v3.6.93-compound-churn-evidence`): scope distinct source-event lookbacks within a single conjunction sentence to the corresponding period; reject false bonus/ownership cross-product clocks. Recognize present/previous checking ownership as a current-customer restriction; do not treat an ownership-ended cooldown as satisfied before closure. Adds synthetic regression for correct 24-month bonus and 12-month ownership clocks, missing dates, controlling later anchor and two-day app cushion. No real bank/account records committed or modified; no change to import schema, financial rules, payouts or storage. Next: PR unit, Chromium/WebKit and release CI; merge only if green, verify Pages deployment before declaring runtime updated.
 
