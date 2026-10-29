@@ -27,6 +27,19 @@ const changed=JSON.parse(JSON.stringify(c));changed.financialRules.payout.window
 assert.equal(rules.validate(changed).ok,false,'Unquoted lower bound rejected');
 assert.equal(rules.estimatedArrival(changed),null,'Invalid structured rules never fall back to legacy wording');
 for(const version of [1,2]){const e=fixture();e.financialRules.version=version;e.reqMet='2026-09-24';assert.equal(rules.estimatedArrival(e).end,'2026-11-23','Existing supported rules remain read-only compatible');}
+// Legacy imports retain ordinary human wording, without structured rule metadata.
+const legacyCompletion={bank:'Synthetic Legacy CU',opened:'2026-01-01',reqMet:'2026-01-10',analysis:null,payoutTimingText:'Each tracked bonus pays within 60 days after its requirements are met.'};
+assert.deepEqual(rules.estimatedArrival(legacyCompletion),{start:'2026-01-10',end:'2026-03-11',basis:'reqmet',anchor:'2026-01-10'},'Possessive completion wording must retain the confirmed completion clock');
+for(const determiner of ['its','their','your','all of its','all their']){
+ const wording='Each tracked bonus pays within 60 days after '+determiner+' requirements are met.';
+ assert.equal(rules.estimatedArrival({...legacyCompletion,payoutTimingText:wording}).end,'2026-03-11');
+ const structured=make(wording,{basis:'reqmet',unit:'calendar-days',min:0,max:60});structured.opened='2026-01-01';structured.reqMet='2026-01-10';
+ assert.equal(rules.validate(structured).ok,true);assert.equal(rules.estimatedArrival(structured).end,'2026-03-11');
+}
+assert.equal(rules.estimatedArrival({...legacyCompletion,reqMet:''}),null,'Wording never supplies an actual completion date');
+assert.equal(rules.estimatedArrival({...legacyCompletion,payoutTimingText:'Within 60 days'}),null,'A missing trigger stays unresolved');
+assert.equal(rules.estimatedArrival({...legacyCompletion,payoutTimingText:'Within 60 days after its requirements are met or after account opening.'}),null,'Conflicting triggers stay unresolved');
+assert.equal(rules.estimatedArrival({...legacyCompletion,payoutTimingText:'Within 60 days after its monthly requirements are met.'}),null,'Do not flatten recurring requirement periods');
 const legacy={opened:'2026-08-10',payoutTimingText:text};
 assert.equal(rules.estimatedArrival(legacy).end,'2026-12-08');
 assert.equal(rules.estimatedArrival({opened:'2026-01-01',payoutTimingText:'Payout after bank review.'}),null);
@@ -76,3 +89,4 @@ const portable=vm.runInContext('JSON.stringify(buildPortableBackupPayload())',sa
 assert(portable.includes('"min":90')&&portable.includes('"max":120'),'Backup preserves typed bounds');
 assert.equal(sandbox.BTFinancialRules.estimatedArrival(saved).end,'2026-12-08');
 console.log('Arrival JSON import/review/save/backup, AI context and single-line display passed');
+

@@ -140,7 +140,7 @@
     const unit=/business/.test(unitText)?'business-days':/month/.test(unitText)?'calendar-months':/statement/.test(unitText)?'statement-cycles':'calendar-days';
     const anchors=[];
     if(/(?:after|from|of|following) (?:the )?(?:account )?open(?:ing|ed)|after (?:you )?open(?:ing)? (?:the |your |a )?(?:new )?account/.test(s))anchors.push('opened');
-    if(/after (?:all |the )?requirements (?:are |have been )?(?:met|completed|satisfied)|after (?:meeting|completing|satisfying) (?:all |the )?requirements|of (?:meeting|completing|satisfying) (?:all |the )?requirements/.test(s))anchors.push('reqmet');
+    if(/after (?:all (?:of )?)?(?:(?:the|its|their|your) )?requirements (?:are |have been )?(?:met|completed|satisfied)|after (?:meeting|completing|satisfying) (?:all (?:of )?)?(?:(?:the|its|their|your) )?requirements|of (?:meeting|completing|satisfying) (?:all (?:of )?)?(?:(?:the|its|their|your) )?requirements/.test(s))anchors.push('reqmet');
     if(/(?:after|from|of|following) (?:offer |coupon )?enrollment/.test(s))anchors.push('enrollment');
     if(/(?:after|following) (?:the )?(?:qualification|qualifying|requirement|deposit) period (?:ends|has ended)|after (?:the )?end of (?:the )?(?:qualification|qualifying|requirement|deposit) period/.test(s))anchors.push('qualifying-period-end');
     if(anchors.length!==1)return null;
@@ -243,4 +243,3 @@
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.BTFinancialRules=api;
 })(typeof window!=='undefined'?window:globalThis);
-
