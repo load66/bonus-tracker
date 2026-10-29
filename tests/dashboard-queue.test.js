@@ -25,6 +25,14 @@ try{
  assert.equal(s.BT360.dashboardQueueFor(suggestion('payout','AWAITING_BONUS',today),rows[1]),'needs','Payout date reached needs review');
  assert.equal(s.BT360.dashboardQueueFor(suggestion('hold','HOLD_OPEN','2026-02-30'),rows[2]),'needs','Invalid date cannot hide an account in waiting');
  assert.equal(s.BT360.dashboardQueueFor(suggestion('hold','HOLD_OPEN',future,false),rows[2]),'needs');
+ const clockEntry={bank:'Synthetic clock',opened:run('addD(td(),-100)'),reqMet:past,payoutTimingText:'Bonus is paid between the 90th and 120th calendar day after account opening.'};
+ const clockBefore=JSON.stringify(clockEntry);
+ for(const oldDate of ['',past,today,future])assert.equal(s.BT360.dashboardQueueFor(suggestion('payout','AWAITING_BONUS',oldDate),clockEntry),'waiting','Canonical payout end overrides missing/stale timers');
+ assert.equal(s.BT360.dashboardQueueFor(suggestion('payout','AWAITING_BONUS',past),{...clockEntry,opened:run('addD(td(),-30)')}),'waiting','Before the arrival window remains waiting');
+ assert.equal(s.BT360.dashboardQueueFor(suggestion('payout','AWAITING_BONUS',past),{...clockEntry,opened:run('addD(td(),-120)')}),'waiting','The bank retains the full last calendar day');
+ assert.equal(s.BT360.dashboardQueueFor(suggestion('payout','AWAITING_BONUS',future),{...clockEntry,opened:run('addD(td(),-121)')}),'needs','After the window ends payment needs review');
+ assert.equal(s.BT360.dashboardQueueFor(suggestion('action','ACTION_NEEDED',past),clockEntry),'needs','Recurring/action stages must not be hidden by a payout projection');
+ assert.equal(JSON.stringify(clockEntry),clockBefore);
  const cooling=fixture();Object.assign(cooling,{id:'SYN-Q-cooling',closed:run('addD(td(),-10)'),bonusRecd:run('addD(addM(td(),-12),18)')});
  const c={entryId:cooling.id,bank:cooling.bank,stageCode:'COOLDOWN',task:{title:'Wait for eligibility'},dateContext:{date:future,confirmed:true}};
  assert.equal(s.BT360.dashboardQueueFor(c,cooling),'upcoming','Verified upcoming cooldown should use the existing Eligible soon section');
@@ -41,3 +49,4 @@ try{
  console.log('Dashboard queue passed: accurate action counts, waiting dates, opportunities, reached/unknown date review, no cooldown duplicates, selection and no writes.');
  process.exit(0);
 }catch(error){console.error(error);process.exit(1)}
+
