@@ -706,6 +706,8 @@ function feeDetail(e){
   +'</div></div></div>';
 }
 function closeDateInfo(e){
+ const calendarHold=window.BTFinancialRules?.closeHoldInfo(e);
+ if(calendarHold)return {value:date(calendarHold.reviewOn),note:calendarHold.months+' calendar months from opening · hold through '+date(calendarHold.holdUntil)+(calendarHold.feeUnconfirmed?' · fee confirmation required':''),action:calendarHold.feeUnconfirmed};
  const close=e.financialRules?.closure,source=String(close?.evidence?.quote||e.closeRuleText||e.earlyTerminationFeeText||'').trim();
  const basis=String(close?.basis||e.closeRuleBasis||'').toLowerCase();
  const ruleDays=Number(close?.minHoldDays??e.minHoldDays??0);
@@ -800,6 +802,16 @@ function retentionEvidenceCleared(e,holdMet){
  return false;
 }
 function closeCheckPresentation(e){
+ const calendarHold=window.BTFinancialRules?.closeHoldInfo(e);
+ if(calendarHold){
+  const met=dB(td(),calendarHold.reviewOn)<=0;
+  return [
+    {ok:met,label:'12-month retention period',detail:(met?'Hold completed · ':'Hold through ')+date(calendarHold.holdUntil)+' · closure review '+date(calendarHold.reviewOn)},
+    {ok:!calendarHold.feeUnconfirmed,label:'Early close service fee',detail:calendarHold.feeUnconfirmed?'Fee not expressly confirmed in saved disclosures · verify with bank':'Saved fee evidence verified'},
+    {ok:met&&!!e.bonusRecd,label:'Bonus retention check',detail:!e.bonusRecd?'Wait for actual bonus payment':met?'Required hold elapsed · review repayment terms':'Do not close before the hold expires'},
+    {ok:false,label:'Closing balance',detail:'Confirm pending charges, transfers and final balance with the bank'}
+  ];
+ }
  const financial=e.financialRules?.closure;
  const hold=typeof safeCloseDate==='function'?safeCloseDate(e):'';
  const remaining=hold?dB(td(),hold):null;
@@ -890,7 +902,7 @@ function detailPanels(e){
  }
  const eligibility=eligibleInfo(e);
  const title=ready?'After closing':closed?'Eligibility':'Key dates';
- h+='<div data-bt-eligibility>'+accountSection(e,'eligibility',title==='Key dates'?'Closing & eligibility':title,'<div class="bt3613-dates">'+(!closed&&!ready?dateActionRow(e,'Safe to close',closeDateInfo(e),'close'):'')+dateActionRow(e,'Eligible again',eligibilityDateInfo(e,eligibility),'eligibility')+(eligibility?.more?.length?eligibility.more.filter(r=>r.id!==eligibility.controlling?.id&&r.eligibleDate).map(r=>infoRow('Also checked',date(r.eligibleDate),r.label||'Saved eligibility rule')).join(''):'')+'</div>','Rules & dates')+'</div>';
+ h+='<div data-bt-eligibility>'+accountSection(e,'eligibility',title==='Key dates'?'Closing & eligibility':title,'<div class="bt3613-dates">'+(!closed&&!ready?dateActionRow(e,window.BTFinancialRules?.closeHoldInfo?.(e)?'Closing review':'Safe to close',closeDateInfo(e),'close'):'')+dateActionRow(e,'Eligible again',eligibilityDateInfo(e,eligibility),'eligibility')+(eligibility?.more?.length?eligibility.more.filter(r=>r.id!==eligibility.controlling?.id&&r.eligibleDate).map(r=>infoRow('Also checked',date(r.eligibleDate),r.label||'Saved eligibility rule')).join(''):'')+'</div>','Rules & dates')+'</div>';
  let extra=sourceEvidencePanel(e);
  const issues=archiveHistoryIssues(e);
  extra+=accountSection(e,'history','Activity',(issues.length?'<ul class="bt3640-gaps">'+issues.map(text=>'<li>'+safe(text)+'</li>').join('')+'</ul><div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="openEdit('+arg(e.id)+')">Update account</button><button type="button" class="bt360-link" onclick="BTHistoryRepair.open()">Find saved evidence</button></div>':'<p class="bt360-muted">Core records present.</p>')+'<button type="button" class="bt360-link" onclick="BT360.openActivity('+arg(e.id)+')">View activity</button>','Saved records');

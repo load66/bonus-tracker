@@ -123,6 +123,12 @@
     }
     const active=typeof nextActiveTimer==='function'?nextActiveTimer(e):null;
     if(e.bonusRecd){
+      const calendar=window.BTFinancialRules?.closeHoldInfo(e);
+      if(calendar){
+        // An elapsed anniversary is not a verified closing fee or an actual payout.
+        if(today()<calendar.reviewOn)return'WAITING TO CLOSE';
+        return closureUnresolved(e)?'BONUS RECEIVED':'SAFE TO CLOSE';
+      }
       const days=ruleDays(e),hold=days>0&&!!baseDate(e);
       if(hold){
         if(inBuffer(e))return'3-DAY BUFFER';

@@ -122,3 +122,27 @@ The mandatory scripts/validate-entry.cjs command now verifies identity, original
 New JSON must carry its own payout rule and source evidence; do not depend on public reference recovery. The read-only legacy recovery is limited to an immutable, officially verified enrollment-version fingerprint, including institution/audience, tier, opening period, offer expiration, explicit enrollment identity and exact qualification wording. Bank name/amount alone never match. Saved numeric clocks, source text and structured rules take precedence; invalid structured rules never use recovery. Partial matches and different offers stay unresolved. Recovery supplies only a conditional payout calculation and visible/AI provenance; it never upgrades an entry, rewrites saved terms or milestones, confirms deposits, receipt, eligibility or closure readiness. There is no general bank-name default or live-offer substitution.
 
 Before delivery, test the actual source shape (including long quotations with qualification and payout clocks) and actual import receipt, not only permutations of a simplified fixture. Keep historical source evidence and all user records unchanged. Do not claim all phone records were audited from an older backup; state the backup scope and any unavailable newer records.
+
+ 
+## Exact calendar-month closure hold (financialRules v4)
+
+Numeric `schemaVersion: 3` remains unchanged. `financialRules.version: 4` adds an optional source-backed `closure.hold` for **opened-date calendar-month** retention periods. The form is:
+
+```json
+"closure": {
+  "restrictionType": "manual-review",
+  "basis": "manual",
+  "minHoldDays": 0,
+  "earlyCloseFee": null,
+  "hold": {"basis": "opened", "value": 12, "unit": "calendar-months"},
+  "text": "Exact applicable enrolled retention clause",
+  "evidence": {"source": "promotion", "quote": "Exact supporting source wording with the hold length"},
+  "feeEvidence": {"source": "fee-schedule", "quote": "Exact applicable fee schedule text"}
+}
+```
+
+Only use the v4 `hold` when the source explicitly establishes the account-open retention duration in months. Do not set `minHoldDays` to an approximation such as 365 or 360. This v4 initial implementation recognizes `basis: opened` and `unit: calendar-months`. `closeBufferDays` remains an **optional planning buffer** separate from the contractual hold; preserve the bank's actual anniversary independently. The canonical `BTFinancialRules.closeHoldInfo(entry)` derives the anniversary with end-of-month clamping and returns the review date and independently unconfirmed fee status, with no record writes.
+
+The absence of an explicit closing-fee provision does **not** prove a $0 fee. Keep `earlyCloseFee: null`, `restrictionType: manual-review`, `basis: manual` and a supported generic fee quotation when the closing fee is unconfirmed; this does not prevent showing the **hold anniversary** and **review date**, but it must block a Safe to Close verdict. Never imply that holding time alone satisfies the payout, fee or lifecycle checks. The account must actually receive the bonus and confirm closure conditions before a safe-closing verdict. Do not automatically mark activities complete, or store derived dates as actual events.
+
+Older financialRules v1/v2/v3 and older day-based close policies retain their existing semantics. New generation files can use v4 only once the target runtime supports it; run the strict `scripts/validate-entry.cjs` full read/review/AI receipt and Chromium/WebKit checks before release.

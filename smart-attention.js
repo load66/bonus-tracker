@@ -87,6 +87,8 @@
       return result(ready,gate.anchorLabel(rule.basis)+' '+dateText(rule.anchorDate)+' + '+gate.periodLabel(rule.period)+' → official '+dateText(official)+' · safe reapply '+dateText(ready)+' (includes eligibility safety buffer)');
     }
     if(e.bonusRecd){
+      const exactHold=window.BTFinancialRules?.closeHoldInfo(e);
+      if(exactHold)return result(exactHold.reviewOn,exactHold.months+' calendar months from account opening · hold anniversary '+dateText(exactHold.holdUntil)+' · review '+dateText(exactHold.reviewOn)+(exactHold.feeUnconfirmed?' · closing service fee still requires confirmation':''));
       const core=window.BTCloseRules;
       const proof=core?.sourceSentence(e)||e.closeRuleText||e.earlyTerminationFeeText||'';
       if(!proof.trim())return unknown('close-rule wording is missing');

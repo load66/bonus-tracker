@@ -246,6 +246,12 @@
         if(e?.bonusRecd&&!e?.reqMet)return'Bonus received — requirements completion date not recorded.';
         return(e?.bonus?(typeof fM==='function'?fM(e.bonus):String(e.bonus)):'Bonus received')+(e?.bonusRecd?' received '+fmtDate(e.bonusRecd):'')+' · review close rules';
       case STAGES.HOLD_OPEN:{
+        const calendarHold=window.BTFinancialRules?.closeHoldInfo(e);
+        if(calendarHold){
+          const days=typeof dB==='function'?dB(td(),calendarHold.reviewOn):null;
+          if(Number.isFinite(days)&&days>0)return'Hold through '+fmtDate(calendarHold.holdUntil)+' · review in '+days+'d';
+          return'Closure review due · confirm service fee and final balance';
+        }
         if(core.timer){
           const d=timerDays(core.timer),due=fmtDate(core.timer.date);
           if(Number.isFinite(d)&&d>0)return'Keep open · '+d+'d remaining'+(due?' · '+due:'');
