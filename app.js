@@ -608,13 +608,17 @@ function closeReadiness(e,closeDate=''){
   const base=closeBasisDate(e);
   const basis=closeRuleBasisFor(e);
   const ruleDays=closeRuleDaysFor(e);
+  const calendarHold=window.BTFinancialRules?.closeHoldInfo(e);
   const target=closeDate||td();
   const warnings=[];
   const financial=window.BTFinancialRules?.validate(e);
   if(financial?.mode!=='legacy'&&financial)add(financial.ok,'Financial rules consistent',financial.ok?'Evidence and calculation fields agree':financial.issues.map(x=>x.message).join('; '),'danger');
   add(!!e.reqMet,'Requirement met date saved',e.reqMet?fD(e.reqMet):'Save Req Met before closing','danger');
   add(!!e.bonusRecd,'Bonus received',e.bonusRecd?fD(e.bonusRecd):'Do not close before the bonus posts','danger');
-  if(ruleDays>0){
+  if(calendarHold){
+    add(dB(target,calendarHold.reviewOn)<=0,'Calendar-month hold + safety buffer complete','Review on '+fD(calendarHold.reviewOn)+' · 12-month anniversary '+fD(calendarHold.holdUntil),'danger');
+    add(!calendarHold.feeUnconfirmed,'Early-close service fee verified',calendarHold.feeUnconfirmed?'The fee schedule does not establish a $0 closing fee; confirm directly before closure':'Verified in saved terms','warn');
+  }else if(ruleDays>0){
     add(!!base,'Close-rule start date available',base?closeRuleBasisLabel(basis)+' · '+fD(base):closeRuleBasisLabel(basis)+' is blank','danger');
     add(!!safe&&dB(target,safe)<=0,'Hold period + buffer complete',safe?('Safe close: '+fD(safe)+' · basis: '+closeRuleBasisLabel(basis)):'Safe-close date cannot be calculated','danger');
   }else{
@@ -626,7 +630,7 @@ function closeReadiness(e,closeDate=''){
   add(!hasMonthlyFee||!!e.monthlyFeeChecked,'Monthly fee checked',hasMonthlyFee?(e.monthlyFeeChecked?'Confirmed before close':'Check next fee/statement timing before close'):'No monthly fee risk detected from saved fields','warn');
   items.forEach(x=>{if(!x.ok)warnings.push(x.label+(x.detail?': '+x.detail:''))});
   let label='Safe to Close',cls='safe';
-  if(warnings.some(w=>/bonus received|requirement met|hold period|start date/i.test(w))){label='Do Not Close Yet';cls='danger'}
+  if(warnings.some(w=>/bonus received|requirement met|hold period|calendar-month hold|start date/i.test(w))){label='Do Not Close Yet';cls='danger'}
   else if(warnings.length){label='Close Soon';cls='warn'}
   return{label,cls,items,warnings,safeDate:safe,rawDate:raw,basis}
 }
@@ -659,6 +663,7 @@ function closePlanForEntry(e){
   if(!e||!e.bank)return null;
   const ready=closeReadiness(e);
   const safe=safeCloseDate(e);
+  const calendarHold=window.BTFinancialRules?.closeHoldInfo(e);
   const rows=[];
   const notes=[];
   const row=(label,value,cls='')=>rows.push({label,value,cls});
@@ -675,8 +680,13 @@ function closePlanForEntry(e){
   const basis=closeRuleBasisFor(e);
   const buffer=closeBufferDaysFor(e);
   const verifiedPolicy=knownClosePolicy(e);
-  row('Earliest close',safe?fD(safe):'Review terms',safe&&daysUntilSafe(e)<=0?'ok':safe?'warn':'bad');
-  if(ruleDays>0){
+  if(calendarHold){
+    row('12-month hold until',fD(calendarHold.holdUntil));
+    row('Closure review',fD(calendarHold.reviewOn),daysUntilSafe(e)===0?'ok':'warn');
+    row('Closing fee',calendarHold.feeUnconfirmed?'Confirm with bank':'Verified in saved terms',calendarHold.feeUnconfirmed?'bad':'ok');
+  }else row('Earliest close',safe?fD(safe):'Review terms',safe&&daysUntilSafe(e)<=0?'ok':safe?'warn':'bad');
+  if(calendarHold){row('Rule',calendarHold.months+' calendar months from opening + '+calendarHold.bufferDays+'-day planning buffer');}
+  else if(ruleDays>0){
     if(verifiedPolicy&&basis==='opened')row('Rule','Day '+(ruleDays+buffer)+' from opening');
     else row('Rule',ruleDays+' days from '+closeRuleBasisLabel(basis)+(buffer?' + '+buffer+' day safety':''));
   }else row('Rule',e.closeRestrictionType==='payout-only'?'Keep open until bonus posts':'No close restriction found','ok');
@@ -1657,19 +1667,24 @@ function closeBasisDate(e){
   return e.opened||''
 }
 function rawSafeDate(e){
+  const hold=window.BTFinancialRules?.closeHoldInfo(e);
+  if(hold)return hold.holdUntil;
   const base=closeBasisDate(e);
   const days=closeRuleDaysFor(e);
   return(base&&days>0)?addD(base,days):null
 }
 
 function safeCloseDate(e){
+  const hold=window.BTFinancialRules?.closeHoldInfo(e);
+  // Unknown early-closing service fees are NEVER silently cleared by the date.
+  if(hold)return hold.feeUnconfirmed?null:hold.reviewOn;
   const base=closeBasisDate(e);
   const days=closeRuleDaysFor(e);
   return(base&&days>0)?addD(base,days+closeBufferDaysFor(e)):null
 }
 
 function daysUntilSafe(e){
-  const s=safeCloseDate(e);
+  const s=window.BTFinancialRules?.closeHoldInfo(e)?.reviewOn||safeCloseDate(e);
   return s?Math.max(0,dB(td(),s)):null
 }
 
@@ -1774,6 +1789,9 @@ function nextActiveTimer(e){
 }
 
 function status(e){
+  // A completed calendar-month hold does not override an unverified service fee.
+  const c=e&&!e.closed&&window.BTFinancialRules?.closeHoldInfo(e);
+  if(c&&e.bonusRecd)return'WAITING TO CLOSE';
   try{
     if(typeof window.btEvaluateAccount==='function'&&!window.__btStatusEval){
       window.__btStatusEval=true;
@@ -2057,6 +2075,14 @@ function getAttentionSuggestions(){
     }
 
     const st=status(e);
+    const calendarHold=window.BTFinancialRules?.closeHoldInfo(e);
+    if(calendarHold&&e.bonusRecd){
+      const d=dB(td(),calendarHold.reviewOn);
+      if(d<=0)push(e,'Review closure: confirm bank closing fee and conditions.',0.9,0,{category:'close'});
+      else if(d<=7)push(e,d+'d until closure review.',2.1,d,{category:'close'});
+      else if(d<=30)push(e,d+'d until closure review.',3.2,d,{category:'close'});
+      return;
+    }
 
     if(st==='SAFE TO CLOSE'){
       push(e,'Safe to close now.',0.6,0,{category:'close'});
@@ -4169,6 +4195,9 @@ function closeRiskDate(e){
 function closeRiskWarnings(e,closeDate){
   const w=[];
   if(!e)return w;
+  const calendarHold=window.BTFinancialRules?.closeHoldInfo(e);
+  if(calendarHold&&closeDate&&dB(closeDate,calendarHold.reviewOn)>0)w.push('Closing before the 12-month retention period and safety buffer finishes can forfeit the bonus. Review on '+fD(calendarHold.reviewOn)+'.');
+  if(calendarHold?.feeUnconfirmed)w.push('Early-closing service fee is unconfirmed; verify before closing.');
   if(!e.opened)w.push('Opened date is blank, so hold/churn history may be less reliable.');
   const safe=closeRiskDate(e);
   if(safe&&closeDate&&dB(closeDate,safe)>0){
@@ -4655,6 +4684,11 @@ function rTrackerLegacy(sorted){
       if(e.reqMet) h += `<div class="cf"><div class="k">Req Met</div><div class="v">${fD(e.reqMet)}</div></div>`;
       if(isCompleted(e)) h += '<div class="cf"><div class="k">Tax</div><div class="v ok">Logged</div></div>';
       if(e.referralBonus) h += `<div class="cf"><div class="k">Referral</div><div class="v"><span class="ref-b">+${fM(e.referralBonus)}</span></div></div>`;
+      const calendarHold=window.BTFinancialRules?.closeHoldInfo(e);
+      if(calendarHold&&!e.closed){
+        h += `<div class="cf"><div class="k">Hold Until</div><div class="v warn">${fD(calendarHold.holdUntil)}</div></div>`;
+        h += `<div class="cf"><div class="k">Closure Review</div><div class="v warn">${fD(calendarHold.reviewOn)}</div></div>`;
+      }
       if(e.minHoldDays>0&&!e.closed){
         const scd=rawSafeDate(e);
         const safeDays=daysUntilSafe(e);
