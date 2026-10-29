@@ -5,7 +5,7 @@
   if(root)root.BTEligibilityGate=api;
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
-  const VERSION='1.3.0';
+  const VERSION='1.3.1';
   const SAFETY_BUFFER_DAYS=2;
   const NUMBER_WORDS={
     one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,
