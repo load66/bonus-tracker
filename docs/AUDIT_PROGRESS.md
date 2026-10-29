@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: Codex — v3.6.91 — codex/v3.6.91-offer-arrival
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.91 source-complete arrival recovery (`codex/v3.6.91-offer-arrival`): immutable verified enrollment-version payout evidence for an exact legacy fingerprint, never a bank-name/amount default. Conflicting saved sources/rules, partial fingerprints and different enrollment versions stay unresolved; no account writes or upgrades. Optional source provenance remains separate from original saved terms and reaches UI/AI. Mandatory generator validation now rejects missing/ambiguous payout clocks and verifies source text, provenance, material-field and eligibility roundtrip with a completeness receipt. Actual missing events/calendars remain unresolved. Synthetic fingerprint rejection, original-source honesty, no-write, CLI rejection and Chromium/WebKit coverage. App/cache v3.6.91; generation standard/skill synchronization prepared. Next: full unit/browser/release CI, merge green, verify Pages and finish saved generator instructions.
 
 - v3.6.90 saved payout-clock regression (`codex/v3.6.90-payout-clock`): isolate the actual payment clause in broad source quotations and recognize completion-first wording. Retain validated typed qualification-period-end timing only with explicit fixed-tier determination and matching enrollment deadlines. Early completion does not accelerate the payout clock. No bank-name defaults, schema changes or account-record rewrites. Adds failing-before synthetic unit and Chromium/WebKit UI/AI agreement coverage plus missing-proof, conflicting-anchor and multiple-payment rejection. Next: all unit/browser/release checks, merge green and verify Pages.
 

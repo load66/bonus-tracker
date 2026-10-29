@@ -49,7 +49,8 @@ assert.throws(()=>check({...sandbox,BT360:{detailPanels:()=>''}},e,e,facts),/det
 assert.throws(()=>check({...sandbox,BT360:{...sandbox.BT360,compactRow:()=>''}},e,e,facts),/card omitted/);
 for(const text of ['Bonus paid after review.','Within 30 business days after account opening.','Within 2 statement cycles after account opening.','Within 60 days after requirements are met or after account opening.','Within 30 days after account opening and within 60 days after requirements are met.']){
  const unknown=entry({text},2,'Future Institution C','business');
- assert.equal(check(sandbox,unknown,unknown,sandbox.BTBonusAI.contextFor(unknown)).range,null,'Unsupported clocks never inherit another bank estimate');
+ if(sandbox.BTFinancialRules.arrivalRule(unknown))assert.equal(check(sandbox,unknown,unknown,sandbox.BTBonusAI.contextFor(unknown)).range,null,'Business/statement calendars never become guessed dates');
+ else assert.throws(()=>check(sandbox,unknown,unknown,sandbox.BTBonusAI.contextFor(unknown)),/no supported source-backed clock/,'Vague and conflicting payout rules must block generator delivery');
 }
 const noDate={...e,reqMet:''};assert.equal(check(sandbox,noDate,noDate,sandbox.BTBonusAI.contextFor(noDate)).range,null);
 // Run the mandatory generator command and inspect its real receipt.
@@ -60,5 +61,9 @@ try{
  assert.equal(run.status,0,run.stderr);
  const receipt=JSON.parse(run.stdout.slice(run.stdout.lastIndexOf('{\n  "ok": true')));
  assert.equal(receipt.arrival.range.end,'2026-03-11');assert.equal(receipt.arrival.aiContext,true);assert.equal(receipt.arrival.detailView,true);assert.equal(receipt.arrival.cardView,true);
+ assert.equal(receipt.sourceCharacters.promotion,e.tcSourceRaw.length);assert(receipt.retainedFields.includes('tcSourceRaw'));
+ const vague=entry({text:'Bonus paid after review.'},2,'Future Institution C','personal');fs.writeFileSync(file,JSON.stringify(envelope(vague)));
+ const rejected=spawnSync(process.execPath,['scripts/validate-entry.cjs',file],{cwd:path.resolve(__dirname,'..'),encoding:'utf8',timeout:30000});
+ assert.equal(rejected.status,1);assert.match(rejected.stderr,/no supported source-backed clock/);
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
 console.log('Cross-bank arrival: '+count+' identity/scope/version import journeys, legacy compatibility, generator receipt, mismatch rejection and no writes passed');

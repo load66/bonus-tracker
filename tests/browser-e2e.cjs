@@ -2079,6 +2079,11 @@ async function exercise(name,engine,url){
     await page.evaluate(source=>{entries[0]={...source,id:'SYN-ARRIVAL'};R();},require('./fixtures/financial-rules.cjs').tierArrivalFixture());
     check('broad saved quotation resolves the fixed tier clock',await page.locator('.bt3684-arrival').innerText()==='Estimated bonus arrival: Apr 1–Apr 16, 2026');
     check('tier clock and AI agree',await page.evaluate(()=>BTBonusAI.contextFor(entries[0]).some(f=>f.id==='arrival'&&f.text==='Estimated bonus arrival: Apr 1–Apr 16, 2026')));
+    await page.evaluate(source=>{entries[0]={...source,id:'SYN-ARRIVAL'};R();},require('./fixtures/financial-rules.cjs').legacyPublicOfferFixture());
+    check('exact enrolled offer recovers missing legacy payout',await page.locator('.bt3684-arrival').innerText()==='Estimated bonus arrival: Jul 30–Aug 29, 2026');
+    check('recovered rule has distinct provenance',await page.locator('.bt3684-arrival').getAttribute('data-source')==='matched-offer-payout');
+    check('recovered rule reaches AI with official source',await page.evaluate(()=>BTBonusAI.contextFor(entries[0]).some(f=>f.id==='arrivalsource'&&f.text.includes('https://banking.citi.com/'))));
+    check('recovery never writes a payout date or upgrades legacy rules',await page.evaluate(()=>!entries[0].financialRules&&!entries[0].bonusRecd&&entries[0].reqMet==='2026-05-25'&&!entries[0].tcSourceRaw));
     await page.evaluate(()=>{entries[0]=window.__beforeLegacyArrival;delete window.__beforeLegacyArrival;R();});
     await page.evaluate(()=>{entries[0].bonusRecd='2026-10-10';R();});
     check('arrival disappears after recorded payment',await page.locator('.bt3684-arrival').count()===0);

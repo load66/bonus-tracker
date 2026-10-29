@@ -43,3 +43,9 @@ function tierArrivalFixture(){
  return e;
 }
 module.exports.tierArrivalFixture=tierArrivalFixture;
+
+// Public offer fingerprint with synthetic event dates; no user account identifiers.
+function legacyPublicOfferFixture(){
+ return {id:'SYN-PUBLIC-OFFER',bank:'Citi',accountType:'personal',bonus:325,opened:'2026-05-01',reqMet:'2026-05-25',reqDays:90,analysis:null,analyzedTC:'',promoCodeText:'Opened through Citi $325 Enhanced Direct Deposit offer link',expirationDateText:'October 26, 2026',completeBonusText:'Open an eligible Citi checking account and receive at least 2 Enhanced Direct Deposits totaling $3,000 or more within 90 calendar days of account opening.',payoutTimingText:'Bonus expected after requirements are completed; keep the account open and in good standing until the bonus posts.',customTimers:[],checklist:[]};
+}
+module.exports.legacyPublicOfferFixture=legacyPublicOfferFixture;

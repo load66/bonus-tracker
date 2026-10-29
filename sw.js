@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.90: nonblocking official source recovery and safe cached evidence.
-const V = 'bt-v3.6.90-clock1';
+// Version 3.6.91: nonblocking official source recovery and safe cached evidence.
+const V = 'bt-v3.6.91-offer1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
