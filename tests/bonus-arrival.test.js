@@ -10,6 +10,7 @@ for(const reqMet of ['','2026-01-10','2026-02-15'])assert.equal(rules.estimatedA
 assert.equal(rules.estimatedArrival({...tier,offerEnrollmentDate:'' ,couponEnrollmentDate:''}),null);
 assert.equal(rules.estimatedArrival({...tier,couponEnrollmentDate:'2026-01-02'}),null);
 const noProof=JSON.parse(JSON.stringify(tier));noProof.financialRules.payout.evidence.quote=noProof.tcSourceRaw=noProof.tcSourceRaw.replace('At day 90, the bonus tier will be determined','The bonus tier will be determined');
+noProof.financialRules.requirements[0].evidence.quote=noProof.tcSourceRaw;assert.equal(rules.validate(noProof).ok,true);
 assert.equal(rules.estimatedArrival(noProof),null,'A typed period-end trigger without matching source proof stays unresolved');
 const multiple=JSON.parse(JSON.stringify(tier));multiple.tcSourceRaw+=' The bonus is paid within 30 days after account opening.';multiple.financialRules.payout.evidence.quote=multiple.tcSourceRaw;
 assert.equal(rules.estimatedArrival(multiple),null,'Distinct payout clauses must not be collapsed');
