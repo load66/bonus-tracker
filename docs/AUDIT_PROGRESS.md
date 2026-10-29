@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: Codex — v3.6.93 scoped eligibility parser — codex/v3.6.93-scoped-churn-eligibility
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.93 scoped multi-clock eligibility parsing (codex/v3.6.93-scoped-churn-eligibility): source-preserving clause scoping prevents false cross-product restrictions; isolated existing eligibility suite and synthetic compound-rule regression PASS. Full CI/browser matrix, version/cache release integration, and Pages verification PENDING; not deployed. Next: run required CI, integrate release bump, then merge only after all checks pass.
 
 - v3.6.92 canonical payout queue (`codex/v3.6.92-payout-queue`): use the shared arrival window end for unpaid awaiting-payment queue placement and action date context. Missing/stale timers no longer turn a future/in-window payout into a user task; retain the full final calendar day and review only afterward. Action/recurring stages stay visible, unknown clocks retain existing review behavior, and no records/timers/milestones are rewritten. Synthetic regression covers before/during/end/after windows, stale contexts and recurring/action preservation. Next: full unit/Chromium/WebKit/release checks, merge green and verify Pages.
 
