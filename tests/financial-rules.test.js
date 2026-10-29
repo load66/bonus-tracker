@@ -53,3 +53,40 @@ assert(engine.summarize(review).closure.includes('fee unconfirmed'));
 const invalidReview=JSON.parse(JSON.stringify(review));invalidReview.financialRules.closure.restrictionType='payout-only';assert(!engine.validate(invalidReview).ok,'Unknown charge must not become automatic closure readiness');
 const v1=JSON.parse(JSON.stringify(review));v1.financialRules.version=1;assert(!engine.validate(v1).ok,'v1 cannot silently acquire new metric or unknown-fee semantics');
 const wrongMetric=JSON.parse(JSON.stringify(review));wrongMetric.financialRules.accounts[1].fee.waiver.conditions[0].metric='average-beginning-day-balance';wrongMetric.financialRules.accounts[1].fee.waiver.conditions[0].evidence.quote='The Share Savings fee is waived by maintaining a $50 minimum daily balance.';assert(!engine.validate(wrongMetric).ok,'A daily balance cannot stand in for a beginning-day average');
+
+
+// v4: Exact 12-calendar-month bonus hold with separately unconfirmed service fee.
+// These are synthetic terms; never infer a 365-day approximation or safe closure.
+const calendarHold=clone();
+const holdText='Account must remain open for a minimum of 12 months from account opening. If closed within 12 months the bonus may be deducted.';
+const feeText='Fees may apply to account services; early-closing service charges are not specified in this schedule.';
+calendarHold.opened='2026-10-29';
+calendarHold.tcSourceRaw+=' '+holdText;
+calendarHold.feeScheduleRaw=calendarHold.feeScheduleRaw.replace('No early account-closure fee applies.',feeText);
+calendarHold.financialRules.version=4;
+calendarHold.financialRules.closure={
+  restrictionType:'manual-review',basis:'manual',minHoldDays:0,earlyCloseFee:null,
+  hold:{basis:'opened',value:12,unit:'calendar-months'},text:holdText,
+  evidence:{source:'promotion',quote:holdText},feeEvidence:{source:'fee-schedule',quote:feeText}
+};
+calendarHold.closeRuleBasis='manual';calendarHold.closeRestrictionType='manual-review';
+calendarHold.minHoldDays=0;calendarHold.earlyCloseFee=null;calendarHold.closeBufferDays=3;
+assert.equal(engine.validate(calendarHold).ok,true);
+assert.ok(engine.validate(calendarHold).warnings.some(w=>/unconfirmed/i.test(w.message)));
+assert.deepEqual(engine.closeHoldInfo(calendarHold),{
+ holdUntil:'2027-10-29',reviewOn:'2027-11-01',
+ basis:'opened',months:12,bufferDays:3,feeUnconfirmed:true,bonusReceived:false
+});
+const endFeb=JSON.parse(JSON.stringify(calendarHold));endFeb.opened='2024-02-29';
+assert.equal(engine.closeHoldInfo(endFeb).holdUntil,'2025-02-28','Leap-year anniversary must clamp correctly');
+const absent=JSON.parse(JSON.stringify(calendarHold));absent.opened='';
+assert.equal(engine.closeHoldInfo(absent),null,'Unconfirmed opening date cannot generate hold date');
+const noFeeProof=JSON.parse(JSON.stringify(calendarHold));noFeeProof.financialRules.closure.earlyCloseFee=0;
+assert.equal(engine.validate(noFeeProof).ok,false,'Unknown closing charge cannot become $0');
+const falseDays=JSON.parse(JSON.stringify(calendarHold));
+falseDays.minHoldDays=365;falseDays.financialRules.closure.minHoldDays=365;
+assert.equal(engine.validate(falseDays).ok,false,'Month-based hold cannot be approximated by days');
+const wrongMonth=JSON.parse(JSON.stringify(calendarHold));wrongMonth.financialRules.closure.hold.value=11;
+assert.equal(engine.validate(wrongMonth).ok,false,'Unsupported 11-month hold must be rejected');
+const originalCalendar=JSON.stringify(calendarHold);
+engine.closeHoldInfo(calendarHold);assert.equal(JSON.stringify(calendarHold),originalCalendar,'Closure projection must be read-only');
