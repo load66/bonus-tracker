@@ -1460,7 +1460,10 @@ async function exercise(name,engine,url){
         :previous(url,opts);
       try{await catalog.refreshWatch(true)}finally{window.fetch=previous}
     });
-    await page.locator('.bt3662-source-queue summary').click();
+    await page.locator('.bt362-about-sources > summary').click();
+    check('automated source diagnostics are inside About sources, not main tasks',
+      await page.locator('.bt3662-source-queue').evaluate(el=>!!el.closest('.bt362-about-sources')));
+    await page.locator('.bt3662-source-queue > summary').click();
     check('partial official watch shows missing bank promotion and fee sources',await page.locator('.bt3662-source-queue').innerText().then(t=>t.includes('Wells Fargo')&&t.includes('Check unavailable')));
     check('missing-source review links remain pinned to official bank hosts',await page.locator('.bt3662-source-item a').evaluateAll(links=>links.every(a=>{try{const u=new URL(a.href);return u.protocol==='https:'&&['www.wellsfargo.com','accountoffers.wellsfargo.com','www.capitalone.com'].includes(u.hostname)}catch{return false}})));
     check('mobile review queue shows possible changed terms without unsafe text',await page.locator('.bt3662-source-queue').innerText().then(t=>
@@ -1471,7 +1474,6 @@ async function exercise(name,engine,url){
       (await page.locator('.radar-card img').evaluateAll(images=>images.every(img=>/^\.\/bank-logos\/[a-z0-9-]+\.svg$/.test(img.getAttribute('src')||''))))
       &&(await page.locator('.radar-card').filter({hasText:'Synthetic Checking'}).innerText()).includes('<img'));
     check('bank feed warns when source check is stale',await page.locator('.bt362-offer-stale').isVisible());
-    await page.locator('.bt362-about-sources summary').click();
     check('bank bonus tab fits mobile viewport',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
     check('partial source outage is disclosed',(await page.locator('.bt362-about-sources').innerText()).includes('Update unavailable'));
     await page.locator('.bt362-offer-filter-disclosure summary').click();
@@ -1535,7 +1537,7 @@ async function exercise(name,engine,url){
       await page.locator('.radar-card').count()===4);
     check('official outage never appears as a blocking manual refresh warning',
       !(await page.locator('.bt362-offer-stale').allInnerTexts()).some(x=>/Official checks|Official availability could not update/i.test(x))&&
-      await page.locator('.bt3662-source-queue').count()===0);
+      await page.locator('.bt3662-source-queue').evaluate(el=>!!el.closest('.bt362-about-sources')));
     check('official verification error does not invent personal eligibility',
       await page.getByText(/unverified terms cannot establish eligibility/).isVisible());
     for(const width of [320,390,430]){
