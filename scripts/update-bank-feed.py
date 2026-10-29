@@ -66,7 +66,10 @@ def attach_availability(payload, previous):
             expected=hashlib.sha256((offer['title']+'\n'+offer['url']).encode()).hexdigest()
             if isinstance(r,dict) and r.get('offerFingerprint')==expected and r.get('offerTitle')==offer['title'] and r.get('offerUrl')==offer['url']:records[offer['url']]=r
         snapshot={'schemaVersion':1,'status':result['status'],'checkedAt':result.get('checkedAt'),'records':records,'coverage':result.get('coverage',{})}
-    except Exception:pass
+    except Exception as exc:
+        # The URL is fixed/public. Log only its exception class so scheduled
+        # publishing can diagnose outages without leaking response bodies.
+        print('Official availability check unavailable:', type(exc).__name__, file=sys.stderr)
     payload['availability']=snapshot
     return payload
 
