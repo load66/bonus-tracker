@@ -116,6 +116,8 @@
       return /(?:receiv(?:e|ed|ing)|paid|payment|payout|earn(?:ed|ing)?)\b[^.;]{0,100}\bbonus\b|\bbonus\b[^.;]{0,100}\b(?:receiv(?:e|ed|ing)|paid|payment|payout|earn(?:ed|ing)?)\b/i.test(t);
     }
     if(basis==='account-ownership-ended'&&/\bhave\s+been\s+closed\b/i.test(t)&&!/\b(?:had|owned|owners?)\b/i.test(t))return false;
+    // Receiving a checking-account bonus does not prove ownership of that account.
+    if(basis==='account-ownership-ended' && /\b(?:have|has|had)\s+received\b[^.;]{0,120}\bbonus\b/i.test(t) && !/\b(?:have|has|had)\s+(?:or\s+have\s+)?had\b/i.test(t) && !/\b(?:have|has|had|own|owned)\s+(?:an?|any|the|existing|previous)\b/i.test(t))return false;
     if(basis==='account-ownership-ended')return /\b(?:had|have|owned|owner(?:s)?)\b[^.;]{0,140}\b(?:account|checking|savings)\b|\b(?:account|checking|savings)\b[^.;]{0,140}\b(?:had|have|owned|owner(?:s)?)\b/i.test(t);
     if(basis==='account-opened')return /\b(?:opened|opening)\b[^.;]{0,50}\b(?:an?\s+|the\s+|your\s+)?(?:account|checking|savings)\b|\b(?:account|checking|savings)\b[^.;]{0,50}\b(?:was\s+)?opened\b|\b(?:after|from|since|of|within)\s+(?:the\s+)?(?:account|checking|savings)\s+opening\b/i.test(t);
     if(basis==='account-closed')return /\b(?:closed|closing|closure)\b[^.;]{0,120}\b(?:account|accounts?|checking|savings)\b|\b(?:account|accounts?|checking|savings)\b[^.;]{0,120}\b(?:closed|closing|closure)\b/i.test(t);
@@ -130,24 +132,32 @@
     if(/closed\s+with\s+(?:a\s+)?negative\s+balance|negative\s+balance[^.;]{0,60}closed/.test(before))return{type:'closed-with-negative-balance',expected:true};
     return null;
   }
+
+  // Pair each distinct lookback period with its own clause. A compound eligibility
+  // sentence must not accidentally create every anchor x duration combination.
+  function scopedTimedClauses(sentence){
+    if(extractDurations(sentence).length<2)return[sentence];
+    return sentence.replace(/\b(days?|months?|years?)\s+(and|or)\s+(?=(?:have|has|had|received|owned)\b)/gi,'$1\n$2 ').split('\n');
+  }
   function matchingTimedSentence(text,basis,period){
-    return splitEvidence(text).find(s=>eligibilityContext(s)&&basisContext(s,basis)&&extractDurations(s).some(x=>equivalentPeriod(x,period)))||'';
+    return splitEvidence(text).find(s=>eligibilityContext(s)&&scopedTimedClauses(s).some(part=>basisContext(part,basis)&&extractDurations(part).some(x=>equivalentPeriod(x,period))))||'';
   }
   function discoverTimedRestrictions(text){
     const out=[],seen=new Set(),bases=['offer-enrollment','bonus-offer-received','bonus-received','account-ownership-ended','account-opened','account-closed'];
     splitEvidence(text).forEach(sentence=>{
-      const eligible=eligibilityContext(sentence);
-      if(!eligible)return;
+      if(!eligibilityContext(sentence))return;
+      scopedTimedClauses(sentence).forEach(part=>{
       bases.forEach(basis=>{
-        if(!basisContext(sentence,basis))return;
-        extractDurations(sentence).forEach(period=>{
-          const timedLookback=/past|previous|preceding|prior|previously|last\s+\d|within|every\b|from\s+the\s+last/i.test(sentence);
+        if(!basisContext(part,basis))return;
+        extractDurations(part).forEach(period=>{
+          const timedLookback=/past|previous|preceding|prior|previously|last\s+\d|within|every\b|from\s+the\s+last/i.test(part);
           if(!timedLookback)return;
-          const condition=inferConditionForDuration(sentence,basis,period);
+          const condition=inferConditionForDuration(part,basis,period);
           const key=basis+'|'+period.value+'|'+period.unit+'|'+(condition?.type||'always');
           if(seen.has(key))return;seen.add(key);
           out.push({basis,period:{value:period.value,unit:period.unit,source:'discovered'},condition,evidenceSentence:sentence});
         });
+      });
       });
     });
     return out;
