@@ -99,6 +99,18 @@ assert.equal(rules.estimatedArrival(openedOnly).end,'2027-02-26');
 assert.equal(rules.arrivalLabel(rules.estimatedArrival(openedOnly)),'Bonus due by Feb 26, 2027 · earliest payment date not specified');
 console.log('Bonus arrival: sourced bounds, honest lower limits, exact anchors, recalculation, missing data and no mutation passed');
 const {sandbox,storage}=require('./full-app-smoke.test.js');
+// Synthetic bank-independent UX: only sourced day ranges become displayed dates.
+const avgText='The account average daily balance is measured on days 31–90 after opening.';
+const avgQuote='The reward is determined from the average daily balances for days 31-90.';
+const avgEntry={bank:'Synthetic Bank',opened:'2026-10-29',financialRules:{requirements:[{id:'balance',kind:'balance-hold',amount:10000,text:avgText,evidence:{source:'promotion',quote:avgQuote}}]}};
+const avgHtml=sandbox.BT360.requirementRows(avgEntry).html;
+assert.match(avgHtml,/Average-balance window: Nov 29, 2026–Jan 27, 2027/,'The day 31–90 window must be visible beside the selected balance tier');
+const noQuotedDays=JSON.parse(JSON.stringify(avgEntry));noQuotedDays.financialRules.requirements[0].evidence.quote='Average daily balance is required.';
+assert.doesNotMatch(sandbox.BT360.requirementRows(noQuotedDays).html,/Average-balance window:/,'Unsupported balance dates must not be inferred');
+const seenFunding={bank:'Synthetic Bank',opened:'2026-10-29',financialRules:{requirements:[{id:'fund',kind:'new-money',amount:25,text:'The opening $25 account balance observed in digital banking is not proof of a posted funding transaction.'}]}};
+const seenMarkup=sandbox.BT360.requirementRows(seenFunding).html;
+assert.match(seenMarkup,/Balance observed · opening deposit not confirmed/,'A visible balance must not be mislabeled as a posted deposit');
+assert.doesNotMatch(seenMarkup,/aria-checked="true"/,'A balance screenshot must not automatically complete the opening funding task');
 assert.equal(sandbox.BT360.sourceEvidenceStatus(publicOffer).promotion,false,'A matched public reference never masquerades as saved original terms');
 assert.match(sandbox.BT360.sourceEvidencePanel(publicOffer),/Read matched offer payout rule/);
 assert(sandbox.BTBonusAI.contextFor(publicOffer).some(f=>f.id==='arrivalsource'&&f.text.includes('https://banking.citi.com/')));
