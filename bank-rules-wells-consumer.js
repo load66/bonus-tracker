@@ -1,4 +1,4 @@
-/* Release 3.6.92: canonical bank and closure rules unchanged; Automatic offer discovery UI only. */
+/* Release 3.6.93: bank-specific rules unchanged; shared churn evidence parsing fixed in eligibility-gate.js. */
 /*
  * filename: bank-rules-wells-consumer.js
  * version: 3.5.2
