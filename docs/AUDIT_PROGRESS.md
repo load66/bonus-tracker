@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex — v3.6.93, branch codex/v3.6.93-compound-churn-evidence
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.93 compound eligibility evidence (`codex/v3.6.93-compound-churn-evidence`): scope distinct source-event lookbacks within a single conjunction sentence to the corresponding period; reject false bonus/ownership cross-product clocks. Recognize present/previous checking ownership as a current-customer restriction; do not treat an ownership-ended cooldown as satisfied before closure. Adds synthetic regression for correct 24-month bonus and 12-month ownership clocks, missing dates, controlling later anchor and two-day app cushion. No real bank/account records committed or modified; no change to import schema, financial rules, payouts or storage. Next: PR unit, Chromium/WebKit and release CI; merge only if green, verify Pages deployment before declaring runtime updated.
 
 - v3.6.92 canonical payout queue (`codex/v3.6.92-payout-queue`): use the shared arrival window end for unpaid awaiting-payment queue placement and action date context. Missing/stale timers no longer turn a future/in-window payout into a user task; retain the full final calendar day and review only afterward. Action/recurring stages stay visible, unknown clocks retain existing review behavior, and no records/timers/milestones are rewritten. Synthetic regression covers before/during/end/after windows, stale contexts and recurring/action preservation. Next: full unit/Chromium/WebKit/release checks, merge green and verify Pages.
 
