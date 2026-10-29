@@ -2076,6 +2076,9 @@ async function exercise(name,engine,url){
     await page.evaluate(source=>{window.__beforeLegacyArrival=entries[0];entries[0]={...source,id:'SYN-ARRIVAL'};R();},require('./fixtures/financial-rules.cjs').legacyArrivalFixture());
     check('legacy completion wording renders its recorded payout range',await page.locator('.bt3684-arrival').innerText()==='Estimated bonus arrival: Jan 10–Mar 11, 2026');
     check('legacy arrival uses the same facts in AI',await page.evaluate(()=>BTBonusAI.contextFor(entries[0]).some(f=>f.id==='arrival'&&f.text.includes('Jan 10–Mar 11, 2026'))));
+    await page.evaluate(source=>{entries[0]={...source,id:'SYN-ARRIVAL'};R();},require('./fixtures/financial-rules.cjs').tierArrivalFixture());
+    check('broad saved quotation resolves the fixed tier clock',await page.locator('.bt3684-arrival').innerText()==='Estimated bonus arrival: Apr 1–Apr 16, 2026');
+    check('tier clock and AI agree',await page.evaluate(()=>BTBonusAI.contextFor(entries[0]).some(f=>f.id==='arrival'&&f.text==='Estimated bonus arrival: Apr 1–Apr 16, 2026')));
     await page.evaluate(()=>{entries[0]=window.__beforeLegacyArrival;delete window.__beforeLegacyArrival;R();});
     await page.evaluate(()=>{entries[0].bonusRecd='2026-10-10';R();});
     check('arrival disappears after recorded payment',await page.locator('.bt3684-arrival').count()===0);

@@ -33,3 +33,13 @@ function legacyArrivalFixture(){
  return {schemaVersion:1,bank:'Synthetic Legacy CU',accountType:'personal',bonus:100,opened:'2026-01-01',reqMet:'2026-01-10',bonusRecd:'',closed:'',analysis:null,analyzerHistory:[],fieldSources:{},payoutTimingText:'Each tracked bonus pays within 60 days after its requirements are met.',customTimers:[],checklist:[]};
 }
 module.exports.legacyArrivalFixture=legacyArrivalFixture;
+
+function tierArrivalFixture(){
+ const e=fixture(),text='After you have completed all requirements, we will deposit the bonus in your new checking account within 15 days.';
+ e.financialRules.version=2;e.opened='2026-01-01';e.reqMet='2026-01-10';e.offerEnrollmentDate=e.couponEnrollmentDate='2026-01-01';
+ e.tcSourceRaw=e.tcSourceRaw.replace(e.payoutTimingText,text)+' Receive qualifying deposits within 90 days of coupon enrollment. At day 90, the bonus tier will be determined based on qualifying deposits during the 90 days from coupon enrollment.';
+ e.payoutTimingText=text;e.financialRules.requirements[0].timing={basis:'enrollment',value:90,unit:'calendar-days'};e.financialRules.requirements[0].evidence.quote=e.tcSourceRaw;
+ e.financialRules.payout={text,timing:{basis:'qualifying-period-end',value:15,unit:'calendar-days'},evidence:{source:'promotion',quote:e.tcSourceRaw}};
+ return e;
+}
+module.exports.tierArrivalFixture=tierArrivalFixture;

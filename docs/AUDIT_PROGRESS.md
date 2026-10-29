@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: Codex — v3.6.90 — codex/v3.6.90-payout-clock
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.90 saved payout-clock regression (`codex/v3.6.90-payout-clock`): isolate the actual payment clause in broad source quotations and recognize completion-first wording. Retain validated typed qualification-period-end timing only with explicit fixed-tier determination and matching enrollment deadlines. Early completion does not accelerate the payout clock. No bank-name defaults, schema changes or account-record rewrites. Adds failing-before synthetic unit and Chromium/WebKit UI/AI agreement coverage plus missing-proof, conflicting-anchor and multiple-payment rejection. Next: all unit/browser/release checks, merge green and verify Pages.
 
 - v3.6.89 Bank Offers degraded-verifier recovery (`codex/v3.6.89-availability-rebased`): source directories remain available when the public official availability endpoint returns HTTP errors or a valid `unavailable` response. Frontend retains only original timestamped official records, which the existing 24-hour validator still rejects when stale; successful later checks clear the delay state automatically. Remove the large manual Refresh error banner for official verification failures, replace it with one nonblocking explanatory line, and suppress standalone “Official sources · N need review” chores while retaining the unresolved monitored-source count under About sources. Publisher logs only sanitized public-check failure exception type for actionable infrastructure diagnostics; no credentials or private account data. Mobile Bank Offers CSS cache updated; v3.6.89 app/sw/assets. Browser regression covers synthetic 503, valid unavailable payload, successful retry recovery, unchanged bank data, and 320/390/430px layout. Does not claim backend service was repaired or new offer eligibility verified. Next: full Bonus/Cloud/UI + Chromium/WebKit + release verifier, squash merge and verify Pages, then inspect public publisher diagnostics if source verification is still unavailable.
 
