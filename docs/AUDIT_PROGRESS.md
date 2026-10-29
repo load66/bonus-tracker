@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: Codex /root — v3.6.97 — codex/v3.6.97-consistent-progress
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 

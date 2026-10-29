@@ -15,6 +15,10 @@ assert.equal(first.checklist.length,1);assert.equal(first.checklist[0].done,true
 assert.equal(first.reqMet,'');assert.equal(first.bonusRecd,'');assert.equal(first.closed,'');
 assert.equal(JSON.stringify(first.financialRules),originalRules);assert.equal(JSON.stringify(read()[1]),unrelated);
 assert.equal(s.BT360.requirementRows(first).remaining,1);
+assert.deepEqual(JSON.parse(JSON.stringify(s.BT360.requirementProgress(first))),{total:2,done:1,remaining:1,percent:50,next:'Direct deposits of $500 · 3 required'});
+assert.match(s.BT360.compactRow(first),/1 of 2 steps/,'Account list counts unchecked source requirements too');
+assert.match(s.BT360.attentionCardProgress(first),/1 of 2 steps/,'Attention agrees with bank details');
+assert.doesNotMatch(s.BT360.compactRow(first),/1 of 1/,'One click must not imply all requirements are checked');
 assert.equal((s.BT360.requirementRows(first).html.match(/aria-label="Deposit \$25"/g)||[]).length,1,'No duplicate checkbox task');
 assert.match(s.BT360.requirementRows(first).html,/Confirmed by you/);
 assert.equal(s.BT360.toggleRequirement(e.id,'payroll'),true);
@@ -40,3 +44,17 @@ assert.equal(s.BT360.toggleRequirement(e.id,'missing'),false);
 run("entries[0].reqMet='2026-05-01'");
 assert.equal(s.BT360.toggleRequirement(e.id,'opening-deposit'),false,'The explicit completed lifecycle remains authoritative');
 console.log('Individual requirements PASS: isolated toggle, undo, remaining count, no duplicate, no automatic dates/payments, exact source identity, backup/restore, reload and failed-save safety.');
+
+const mixed={...first,checklist:[...first.checklist,{text:'User-added follow-up',done:false}]};
+assert.equal(s.BT360.requirementProgress(mixed).total,3,'Manual tasks count once beside saved requirements');
+assert.equal(s.BT360.requirementProgress(mixed).done,2);
+assert.equal(s.BT360.requirementProgress(mixed).remaining,1);
+const legacy={completeBonusText:'Complete the original saved offer',checklist:[{text:'User-added task',done:true}]};
+assert.equal(s.BT360.requirementProgress(legacy).total,2,'Legacy grouped requirements stay distinct from custom tasks');
+assert.equal(s.BT360.requirementProgress(legacy).remaining,1);
+const complete={...first,reqMet:'2026-05-01',checklist:[]};
+assert.equal(s.BT360.requirementProgress(complete).done,2,'An actual completion date remains authoritative without rewriting individual states');
+assert.equal(s.BT360.attentionCardProgress(complete),'');
+assert.doesNotMatch(s.BT360.attentionCardProgress({...e,checklist:[]}),/\$0 of|Recorded requirement deposits/,'Checklist progress must not invent monetary deposit progress');
+const projectionBefore=JSON.stringify(first);s.BT360.requirementProgress(first);s.BT360.compactRow(first);s.BT360.attentionCardProgress(first);s.BT360.requirementRows(first);
+assert.equal(JSON.stringify(first),projectionBefore,'Shared progress remains read-only');
