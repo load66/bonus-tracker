@@ -770,10 +770,10 @@ async function exercise(name,engine,url){
     });
     check('Chase synthetic $10,000 DD progress is visible without checklist tasks',
       await page.locator('.bt3611-requirement').innerText().then(t=>t.includes('Direct deposits totaling $10,000')&&t.includes('Due Jan 13, 2027')&&!t.includes('$0 of $10,000')));
-    check('structured requirement displays read-only evidence with separate completion action and no fabricated progress',
+    check('structured requirement displays read-only evidence and retains canonical rules-review action for incomplete terms',
       await page.locator('.bt3611-requirement .bt3695-readonly-rule').count()===1&&
       await page.locator('.bt3611-requirement [role="checkbox"]').count()===0&&
-      await page.getByRole('button',{name:/Mark requirements done/i}).count()===1&&
+      await page.getByRole('button',{name:'Review account rules',exact:true}).count()===1&&
       await page.locator('.bt3611-req-track[role="progressbar"]').count()===0);
     check('account overview keeps secondary information collapsed',await page.locator('.bt3640-section').evaluateAll(nodes=>nodes.filter(n=>['fees','timers','terms','history','eligibility'].includes(n.dataset.section)).every(n=>!n.open)));
     check('account dates are compact and unknown dates remain unrecorded',await page.locator('.bt3640-dates').evaluate(e=>e.querySelectorAll('dl>div').length===4&&e.textContent.includes('Not recorded')));
