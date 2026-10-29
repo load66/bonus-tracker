@@ -178,23 +178,13 @@ function actionBadge(x,featured=false){
  return attentionChip(x);
 }
 function attentionCardProgress(entry){
- if(!entry||entry.reqMet)return '';
- const tasks=Array.isArray(entry.checklist)?entry.checklist.filter(t=>t&&String(t.text||'').trim()):[];
- if(tasks.length){
-  const done=tasks.filter(t=>t.done).length;
-  const pct=Math.max(0,Math.min(100,Math.round(done/tasks.length*100)));
-  return '<div class="bt3719-progress"><div class="bt3719-progress-label"><span>Recorded so far</span><b>'+done+' of '+tasks.length+' tasks</b></div>'
-   +'<div class="bt360-track" role="progressbar" aria-label="Recorded checklist completion" aria-valuemin="0" aria-valuemax="'+tasks.length+'" aria-valuenow="'+done+'"><i style="width:'+pct+'%"></i></div></div>';
- }
- const financial=entry.financialRules?.requirements||[];
- const requirement=financial.find(r=>['direct-deposit','new-money'].includes(r?.kind)&&Number.isFinite(Number(r.amount))&&Number(r.amount)>0);
- if(!requirement)return '';
- // There is no account-linked payment evidence in the Tracker. Zero means
- // recorded in this Tracker, not that no deposit reached the bank.
- const target=Number(requirement.amount);
- return '<div class="bt3719-progress"><div class="bt3719-progress-label"><span>Recorded so far</span><b>$0 of '+safe(amount(target))+' · 0 recorded</b></div>'
-  +'<div class="bt360-track" role="progressbar" aria-label="Recorded requirement deposits" aria-valuemin="0" aria-valuemax="'+target+'" aria-valuenow="0"><i style="width:0%"></i></div></div>';
+ if(!entry||entry.reqMet||entry.bonusRecd||entry.closed)return '';
+ const p=requirementProgress(entry);
+ if(!p.total)return '';
+ return '<div class="bt3719-progress"><div class="bt3719-progress-label"><span>Recorded so far</span><b>'+p.done+' of '+p.total+' steps</b></div>'
+  +'<div class="bt360-track" role="progressbar" aria-label="Recorded requirement and task checks" aria-valuemin="0" aria-valuemax="'+p.total+'" aria-valuenow="'+p.done+'"><i style="width:'+p.percent+'%"></i></div></div>';
 }
+
 function dashboardAttentionOrder(a,b){
  // Only display ordering changes. The canonical actions and their dates
  // come directly from smart-attention.js and remain untouched.
@@ -289,13 +279,12 @@ function eligibleSoon(rows){
 }
 function home(rows,year,metrics){if(!usageData&&!usageLoading&&window.BTBonusAuth?.connected?.())setTimeout(()=>refreshUsage(),0);return segments()+usageBanner()+hero(rows,year,metrics)+stages(rows)+tasks(rows)+eligibleSoon(rows)}
 function compactRow(e){
- const s=stage(e),checks=Array.isArray(e.checklist)?e.checklist.filter(x=>x&&String(x.text||'').trim()):[];
+ const s=stage(e),progress=requirementProgress(e);
  const arrival=window.BTFinancialRules?.arrivalLabel?.(window.BTFinancialRules?.estimatedArrival?.(e));
- const done=checks.filter(x=>x.done).length;
- const next=checks.find(x=>!x.done)?.text||s.support||s.label;
+ const next=(!e.closed&&!e.bonusRecd&&(progress.next||(!e.reqMet&&progress.total?'All checked · confirm completion':'')))||s.support||s.label;
  return '<div class="card bt366-compact-account" data-bt-entry-id="'+safe(e.id)+'"><button type="button" class="card-h bt366-compact-row" onclick="openAccountFromActionCenter('+arg(e.id)+')">'
   +bankLogo(e.bank,true)+'<span class="bt360-grow"><b>'+safe(e.bank)+'</b>'+(audience==='all'?kindTag(e):'')+'<small>'+safe(next)+'</small>'+(arrival?'<small class="bt3684-arrival-compact">'+safe(arrival)+'</small>':'')
-  +(checks.length?'<span class="bt366-compact-track"><i style="width:'+Math.round(done/checks.length*100)+'%"></i></span><small>'+done+' of '+checks.length+' tasks</small>':'')
+  +(progress.total&&!e.closed&&!e.bonusRecd?'<span class="bt366-compact-track" role="progressbar" aria-label="Recorded requirement and task checks" aria-valuemin="0" aria-valuemax="'+progress.total+'" aria-valuenow="'+progress.done+'"><i style="width:'+progress.percent+'%"></i></span><small>'+progress.done+' of '+progress.total+' steps</small>':'')
   +'</span><span class="bt366-compact-right"><strong>'+amount(e.bonus)+'</strong><em class="bt360-chip">'+safe(s.label)+'</em></span></button></div>';
 }
 function primaryAction(e){
@@ -414,6 +403,18 @@ function depositLedgerHtml(e,readonly=false){
 function requirementRecord(e,r){
  return (Array.isArray(e.checklist)?e.checklist:[]).find(c=>c&&c.structuredRequirementId===r.id&&c.structuredRequirementSource===JSON.stringify(r))||null;
 }
+// One read-only count for details, compact cards and the attention panel.
+function requirementProgress(e){
+ const list=Array.isArray(e?.financialRules?.requirements)?e.financialRules.requirements:[];
+ const linked=new Set(list.map(r=>requirementRecord(e,r)).filter(Boolean));
+ const extra=(Array.isArray(e?.checklist)?e.checklist:[]).filter(c=>c&&String(c.text||'').trim()&&!linked.has(c));
+ const fallback=!list.length&&(String(e?.completeBonusText||'').trim()||Number(e?.reqDays)>0)?1:0;
+ const pending=e?.reqMet?[]:list.filter(r=>!requirementRecord(e,r)?.done);
+ const total=list.length+extra.length+fallback;
+ const done=(e?.reqMet?list.length+fallback:list.length-pending.length)+extra.filter(c=>c.done).length;
+ const next=pending.length?requirementTitle(pending[0]):!e?.reqMet&&fallback?'Complete bonus requirements':extra.find(c=>!c.done)?.text||'';
+ return {total,done,remaining:total-done,percent:total?Math.round(done/total*100):0,next};
+}
 function toggleRequirement(id,ruleId){
  const current=entries.find(e=>e.id===id);
  if(!current||current.closed||current.reqMet||current.bonusRecd)return false;
@@ -468,8 +469,8 @@ function requirementRows(e){
  const linked=new Set(list.map(r=>requirementRecord(e,r)).filter(Boolean));
  const tasks=Array.isArray(e.checklist)?e.checklist:[];
  rows+=tasks.map((c,i)=>linked.has(c)?'':'<div class="bt360-check bt3611-task '+(c.done?'done':'')+'"><button type="button" role="checkbox" aria-label="'+safe(c.text||'Task')+'" aria-checked="'+!!c.done+'" onclick="toggleCk('+arg(e.id)+','+i+')">'+(c.done?'✓':'')+'</button><button type="button" class="bt366-row-edit" onclick="runBankAction('+arg(e.id)+',\'checklist\')"><b>'+safe(c.text||'Task')+'</b><small>'+(c.done?'Done':'Checklist task')+'</small></button></div>').join('');
- const extra=tasks.filter(c=>!linked.has(c)),fallback=!list.length&&(legacy||Number(e.reqDays)>0)?1:0;
- return {html:rows,count:list.length+extra.length+fallback,remaining:list.filter(r=>!requirementRecord(e,r)?.done).length+extra.filter(c=>!c.done).length+fallback};
+ const progress=requirementProgress(e);
+ return {html:rows,count:progress.total,remaining:progress.remaining};
 }
 function timerShortTitle(t){
  const label=String(t.text||'Timer').toLowerCase();
@@ -1281,6 +1282,6 @@ function openPhonebook(){closeSettings();window.bt360PhonebookOpen=true;R()}
 function closePhonebook(){window.bt360PhonebookOpen=false;R()}
 function openSettings(){window.bt360SettingsOpen=true;R();refreshUsage()}
 function closeSettings(){window.bt360SettingsOpen=false;R()}
-window.BT360={toggleRequirement,requirementRecord,sourceEvidenceStatus,sourceEvidencePanel,dashboardQueueFor,toggleAttention,toggleAccountList,openAccountSearch,closeAccountSearch,get selectedAttentionId(){return selectedAttentionId},get accountListOpen(){return accountListOpen},setAccountSectionOpen,revealAccountSection,cloudStatusText,accountDates,accountSaveStatus,infoRow,feeSnapshot,closeCheckPresentation,get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,accountAudience,kindTag,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,upcomingReminders,churnReviewPlan,churnReviewMarkup,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,archiveCountdown,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
+window.BT360={requirementProgress,attentionCardProgress,toggleRequirement,requirementRecord,sourceEvidenceStatus,sourceEvidencePanel,dashboardQueueFor,toggleAttention,toggleAccountList,openAccountSearch,closeAccountSearch,get selectedAttentionId(){return selectedAttentionId},get accountListOpen(){return accountListOpen},setAccountSectionOpen,revealAccountSection,cloudStatusText,accountDates,accountSaveStatus,infoRow,feeSnapshot,closeCheckPresentation,get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,accountAudience,kindTag,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,upcomingReminders,churnReviewPlan,churnReviewMarkup,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,archiveCountdown,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
 if(typeof R==='function')R();
 })();

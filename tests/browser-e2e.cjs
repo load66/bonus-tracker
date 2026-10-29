@@ -2360,6 +2360,7 @@ async function exercise(name,engine,url){
     check('one checkbox confirms only one requirement and no financial milestones',await page.evaluate(()=>{
       const e=entries[0];return e.checklist.length===1&&e.checklist[0].done&&!e.reqMet&&!e.bonusRecd&&!e.closed&&BT360.requirementRows(e).remaining===2;
     }));
+    check('progress agrees across account list, attention and details after one of three checks',await page.evaluate(()=>{const e=entries[0],p=BT360.requirementProgress(e);return p.total===3&&p.done===1&&p.remaining===2&&BT360.compactRow(e).includes('1 of 3 steps')&&BT360.attentionCardProgress(e).includes('1 of 3 steps')&&BT360.requirementRows(e).remaining===2}));
     check('selected requirement is visibly checked with no duplicate task',await openingCheck().getAttribute('aria-checked')==='true'&&await page.locator('.bt3611-task').count()===0);
     await page.reload();await settleStartup();await page.evaluate(()=>{tab='tracker';expanded=entries[0].id;R()});
     check('individual confirmation survives a real reload',await openingCheck().getAttribute('aria-checked')==='true');
