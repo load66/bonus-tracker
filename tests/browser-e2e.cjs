@@ -1460,7 +1460,10 @@ async function exercise(name,engine,url){
         :previous(url,opts);
       try{await catalog.refreshWatch(true)}finally{window.fetch=previous}
     });
-    await page.locator('.bt3662-source-queue summary').click();
+    await page.locator('.bt362-about-sources > summary').click();
+    check('automated source diagnostics are inside About sources, not main tasks',
+      await page.locator('.bt3662-source-queue').evaluate(el=>!!el.closest('.bt362-about-sources')));
+    await page.locator('.bt3662-source-queue > summary').click();
     check('partial official watch shows missing bank promotion and fee sources',await page.locator('.bt3662-source-queue').innerText().then(t=>t.includes('Wells Fargo')&&t.includes('Check unavailable')));
     check('missing-source review links remain pinned to official bank hosts',await page.locator('.bt3662-source-item a').evaluateAll(links=>links.every(a=>{try{const u=new URL(a.href);return u.protocol==='https:'&&['www.wellsfargo.com','accountoffers.wellsfargo.com','www.capitalone.com'].includes(u.hostname)}catch{return false}})));
     check('mobile review queue shows possible changed terms without unsafe text',await page.locator('.bt3662-source-queue').innerText().then(t=>
@@ -1471,7 +1474,6 @@ async function exercise(name,engine,url){
       (await page.locator('.radar-card img').evaluateAll(images=>images.every(img=>/^\.\/bank-logos\/[a-z0-9-]+\.svg$/.test(img.getAttribute('src')||''))))
       &&(await page.locator('.radar-card').filter({hasText:'Synthetic Checking'}).innerText()).includes('<img'));
     check('bank feed warns when source check is stale',await page.locator('.bt362-offer-stale').isVisible());
-    await page.locator('.bt362-about-sources summary').click();
     check('bank bonus tab fits mobile viewport',await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
     check('partial source outage is disclosed',(await page.locator('.bt362-about-sources').innerText()).includes('Update unavailable'));
     await page.locator('.bt362-offer-filter-disclosure summary').click();
@@ -1520,6 +1522,47 @@ async function exercise(name,engine,url){
     }
     await page.screenshot({path:path.join(output,name+'-offers-compact.png')});
     await page.getByRole('button',{name:'All banks',exact:true}).click();
+    // v3.6.88: failure of the *separate* official verifier must never
+    // replace usable public listings with a manual retry chore.
+    await page.evaluate(()=>{
+      window.__originalAvailabilityFetch=window.fetch;
+      window.fetch=(input,options={})=>
+        String(typeof input==='string'?input:input?.url||'').includes('/public/bank-bonus-availability')
+        ?Promise.resolve(new Response(JSON.stringify({detail:'unavailable'}),{status:503,headers:{'Content-Type':'application/json'}}))
+        :window.__originalAvailabilityFetch(input,options);
+      return btRefreshBankBonuses();
+    });
+    await page.getByText(/Official verification delayed · automatic retry/).waitFor();
+    check('official verifier outage leaves the source-post directory usable',
+      await page.locator('.radar-card').count()===4);
+    check('official outage never appears as a blocking manual refresh warning',
+      !(await page.locator('.bt362-offer-stale').allInnerTexts()).some(x=>/Official checks|Official availability could not update/i.test(x))&&
+      await page.locator('.bt3662-source-queue').evaluate(el=>!!el.closest('.bt362-about-sources')));
+    check('official verification error does not invent personal eligibility',
+      await page.getByText(/unverified terms cannot establish eligibility/).isVisible());
+    for(const width of [320,390,430]){
+      await page.setViewportSize({width,height:844});
+      check('automatic verification delay status fits mobile '+width+'px',
+        await page.locator('.bt3688-auto-status').evaluate(el=>el.scrollWidth<=el.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
+    }
+    await page.setViewportSize({width:390,height:844});
+    await page.evaluate(()=>{
+      const original=window.__originalAvailabilityFetch;
+      window.fetch=(input,options={})=>
+        String(typeof input==='string'?input:input?.url||'').includes('/public/bank-bonus-availability')
+        ?Promise.resolve(new Response(JSON.stringify({schemaVersion:1,status:'unavailable',records:{}}),
+          {status:200,headers:{'Content-Type':'application/json'}}))
+        :original(input,options);
+      return btRefreshBankBonuses();
+    });
+    check('unavailable service payload also degrades safely instead of claiming verified',
+      await page.locator('.bt3688-auto-status').count()===1&&
+      await page.locator('.radar-card').count()===4);
+    await page.evaluate(()=>{window.fetch=window.__originalAvailabilityFetch;delete window.__originalAvailabilityFetch;return btRefreshBankBonuses()});
+    await page.getByText(/Official verification delayed · automatic retry/).waitFor({state:'detached'});
+    check('successful official response clears delayed status without changing accounts',
+      await page.locator('.bt3688-auto-status').count()===0&&
+      await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedDuringRadar);
     feedInvalid=true;await button('Check updates').click();
     await page.getByText(/Could not check for updates/).waitFor();
     check('failed feed refresh retains loaded results',await page.locator('.radar-card').count()===4);
