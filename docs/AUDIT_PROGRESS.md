@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT/Codex · v3.6.89 · codex/v3.6.89-availability-rebased
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.89 Bank Offers degraded-verifier recovery (`codex/v3.6.89-availability-rebased`): source directories remain available when the public official availability endpoint returns HTTP errors or a valid `unavailable` response. Frontend retains only original timestamped official records, which the existing 24-hour validator still rejects when stale; successful later checks clear the delay state automatically. Remove the large manual Refresh error banner for official verification failures, replace it with one nonblocking explanatory line, and suppress standalone “Official sources · N need review” chores while retaining the unresolved monitored-source count under About sources. Publisher logs only sanitized public-check failure exception type for actionable infrastructure diagnostics; no credentials or private account data. Mobile Bank Offers CSS cache updated; v3.6.89 app/sw/assets. Browser regression covers synthetic 503, valid unavailable payload, successful retry recovery, unchanged bank data, and 320/390/430px layout. Does not claim backend service was repaired or new offer eligibility verified. Next: full Bonus/Cloud/UI + Chromium/WebKit + release verifier, squash merge and verify Pages, then inspect public publisher diagnostics if source verification is still unavailable.
 
 - Arrival cross-bank validation (`codex/arrival-cross-bank-validation`): mandatory generator command now checks canonical range preservation through review, exact AI-fact agreement and account-detail presentation, and includes the computed range in its validation receipt. Preserves completion/payment/closure dates and payout wording. Adds 90 synthetic bank-identity, personal/business, rule-version and trigger import journeys, legacy compatibility, unsupported/missing/ambiguous-clock rejection, no-write and generator-command tests. Existing runtime/schema, UI and financial records unchanged; frontend remains verified v3.6.88. Next: full PR/main CI including Chromium/WebKit; merge green and verify Pages.
 
