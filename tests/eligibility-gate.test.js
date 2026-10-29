@@ -161,3 +161,18 @@ assert(G.applicationReadyDate({...mustClose,closed:'2027-09-10'},addD,addM)==='2
 
 console.log('Eligibility evidence gate passed: single/multi-rule wording, U.S. Bank semantics, Chase conditional/enrollment rules, latest-date control, exact units, and safe dates verified');
 assert(!G.discoverTimedRestrictions('Checking offer is not available to existing Chase checking customers or those whose accounts have been closed within 90 days or closed with a negative balance within the last 3 years.').some(r=>r.basis==='account-ownership-ended'),'Have been closed is a closure rule, not an ownership lookback');
+
+
+ 
+// Compound eligibility: two different historical clocks in one legally
+// operative sentence are not four cross-paired restrictions.
+const twoClockText='Offer not available for customers who have received a new personal checking account monetary bonus within the last 24 months and have or have had a checking account within the last 12 months.';
+const twoClockRules=[
+  {id:'received-24m',basis:'bonus-received',periodValue:24,periodUnit:'months',scope:'synthetic-personal-checking-bonuses',evidenceText:twoClockText,evidenceSource:'official-promotion-terms'},
+  {id:'ownership-12m',basis:'account-ownership-ended',periodValue:12,periodUnit:'months',scope:'synthetic-personal-checking-ownership',evidenceText:twoClockText,evidenceSource:'official-promotion-terms'}
+];
+const compound={churnable:true,churnability:'repeatable',tcSourceRaw:twoClockText,eligibilityRules:twoClockRules};
+assert(G.validate(compound).ok,'Compound 24-month bonus and 12-month ownership sentence rejected');
+const paired=G.discoverTimedRestrictions(twoClockText);
+assert(paired.length===2&&paired.some(r=>r.basis==='bonus-received'&&r.period.value===24)&&paired.some(r=>r.basis==='account-ownership-ended'&&r.period.value===12),'Compound clause falsely cross-paired duration and eligibility basis');
+assert(!G.validate({...compound,eligibilityRules:[...twoClockRules,{...twoClockRules[0],id:'invented-12m-bonus',periodValue:12}]}).ok,'An invented twelve-month bonus-received clock was accepted');
