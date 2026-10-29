@@ -255,10 +255,33 @@
     const start=shiftPayoutDate(base,w.min,w.unit),end=shiftPayoutDate(base,w.max,w.unit);
     return start&&end?{start,end,basis:w.basis,anchor:base}:null;
   }
+  // A dated measurement range is only shown when the saved promotion itself
+  // explicitly states numbered DAYS from the actual account opening.
+  // This does not assert that money has posted, or that the requirement is met.
+  function balanceMeasurementWindow(e,requirement){
+    if(!e||!requirement||requirement.kind!=='balance-hold'||!date(e.opened))return null;
+    const verified=validate(e);
+    if(!verified.ok)return null;
+    const saved=verified.rules?.requirements?.find(r=>r.id===requirement.id&&r.kind==='balance-hold');
+    if(!saved||!saved.evidence||saved.evidence.source!=='promotion')return null;
+    const q=clean(saved.evidence.quote).replace(/[–—]/g,'-');
+    if(!/\bafter (?:account |your |the )?opening\b|\bafter opening (?:your |the )?(?:checking )?account\b|\bafter (?:opening|the opening) (?:your |the )?(?:checking )?account\b|\bafter (?:you )?open(?:ing|ed)? (?:your |the )?(?:checking )?account\b/i.test(q))return null;
+    const windows=[...q.matchAll(/\bdays?\s+(\d{1,3})\s*(?:-|to|through)\s*(\d{1,3})\b/gi)];
+    if(windows.length!==1)return null;
+    const first=Number(windows[0][1]),last=Number(windows[0][2]);
+    if(first<1||last<=first||last>366)return null;
+    const start=shiftPayoutDate(e.opened,first,'calendar-days');
+    const end=shiftPayoutDate(e.opened,last,'calendar-days');
+    const beforeStart=shiftPayoutDate(e.opened,first-1,'calendar-days');
+    if(!start||!end||!beforeStart)return null;
+    return {start,end,firstDay:first,lastDay:last,fundsBefore:start,lastPreWindowDate:beforeStart,metric:'average-daily-balance',source:'official-promotion-terms'};
+  }
   function arrivalLabel(range){
     if(!range||!date(range.start)||!date(range.end))return '';
     const fmt=(d,year)=>new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',...(year?{year:'numeric'}:{}),timeZone:'UTC'}).format(new Date(d+'T00:00:00Z'));
     const crossYear=range.start.slice(0,4)!==range.end.slice(0,4);
+    if(range.basis==='opened'&&range.start===range.anchor)
+      return 'Bonus payable by '+fmt(range.end,true)+' · earliest payment date not specified';
     return 'Estimated bonus arrival: '+fmt(range.start,crossYear)+'–'+fmt(range.end,true);
   }
   // Returns a calendar-exact retention and review date, not permission to close.
@@ -319,7 +342,7 @@
     if(['fees','waiver','companion'].includes(intent))missing=s.warnings.filter(x=>/fee|waiv/i.test(x));
     return{answer:text,step,missing,factIds:['financialrules'],local:true};
   }
-  const api=Object.freeze({VERSION,validate,summarize,answer,intentFor,waiverText,estimatedArrival,arrivalLabel,payoutWindowFromText,arrivalRule,arrivalSource,closeHoldInfo});
+  const api=Object.freeze({VERSION,validate,summarize,answer,intentFor,waiverText,estimatedArrival,arrivalLabel,payoutWindowFromText,arrivalRule,arrivalSource,closeHoldInfo,balanceMeasurementWindow});
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.BTFinancialRules=api;
 })(typeof window!=='undefined'?window:globalThis);
