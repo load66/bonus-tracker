@@ -134,7 +134,7 @@ assert.equal(reviewedCalendar.reqMet,'');assert.equal(reviewedCalendar.bonusRecd
 assert.equal(sandbox.safeCloseDate(reviewedCalendar),null,'Unverified closing fee must not produce safe date');
 const postBonus={...reviewedCalendar,bonusRecd:'2027-02-01',reqMet:'2027-01-27'};
 assert.notEqual(sandbox.closeReadiness(postBonus,'2027-11-01').cls,'safe','Elapsed hold cannot clear unknown fee');
-assert.ok(sandbox.closeReadiness(postBonus,'2027-11-01').warnings.some(w=>/service fee/i.test(w)));
+assert.ok(sandbox.closeReadiness(postBonus,'2027-11-01').warnings.some(w=>/service fee/i.test(w)),JSON.stringify({warnings:sandbox.closeReadiness(postBonus,'2027-11-01').warnings,calendar:sandbox.BTFinancialRules.closeHoldInfo(postBonus)}));
 assert.ok(sandbox.closeReadiness(postBonus,'2027-10-28').warnings.some(w=>/calendar-month hold/i.test(w)));
 assert.ok(sandbox.closeRiskWarnings(postBonus,'2027-10-28').some(w=>/retention period/i.test(w)));
 assert.equal(sandbox.status(postBonus),'WAITING TO CLOSE','Unconfirmed closing fee cannot produce safe status');
