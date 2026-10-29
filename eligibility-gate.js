@@ -115,6 +115,7 @@
       if(basisContext(t,'offer-enrollment')&&/\bonly\s+one\b[^.;]{0,180}\bbonus\b[^.;]{0,100}\bevery\b/i.test(t))return false;
       return /(?:receiv(?:e|ed|ing)|paid|payment|payout|earn(?:ed|ing)?)\b[^.;]{0,100}\bbonus\b|\bbonus\b[^.;]{0,100}\b(?:receiv(?:e|ed|ing)|paid|payment|payout|earn(?:ed|ing)?)\b/i.test(t);
     }
+    if(basis==='account-ownership-ended'&&/\b(?:have|has)\s+received\b[^.;]{0,120}\bbonus\b/i.test(t)&&!/\b(?:have|has)\s+or\s+(?:have|has)\s+had\b|\b(?:owned|ownership|held)\b/i.test(t))return false;
     if(basis==='account-ownership-ended'&&/\bhave\s+been\s+closed\b/i.test(t)&&!/\b(?:had|owned|owners?)\b/i.test(t))return false;
     if(basis==='account-ownership-ended')return /\b(?:had|have|owned|owner(?:s)?)\b[^.;]{0,140}\b(?:account|checking|savings)\b|\b(?:account|checking|savings)\b[^.;]{0,140}\b(?:had|have|owned|owner(?:s)?)\b/i.test(t);
     if(basis==='account-opened')return /\b(?:opened|opening)\b[^.;]{0,50}\b(?:an?\s+|the\s+|your\s+)?(?:account|checking|savings)\b|\b(?:account|checking|savings)\b[^.;]{0,50}\b(?:was\s+)?opened\b|\b(?:after|from|since|of|within)\s+(?:the\s+)?(?:account|checking|savings)\s+opening\b/i.test(t);
