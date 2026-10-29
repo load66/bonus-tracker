@@ -706,6 +706,8 @@ function feeDetail(e){
   +'</div></div></div>';
 }
 function closeDateInfo(e){
+ const calendarHold=window.BTFinancialRules?.closeHoldInfo(e);
+ if(calendarHold)return {value:date(calendarHold.reviewOn),note:calendarHold.months+' calendar months from opening · hold through '+date(calendarHold.holdUntil)+(calendarHold.feeUnconfirmed?' · fee confirmation required':''),action:calendarHold.feeUnconfirmed};
  const close=e.financialRules?.closure,source=String(close?.evidence?.quote||e.closeRuleText||e.earlyTerminationFeeText||'').trim();
  const basis=String(close?.basis||e.closeRuleBasis||'').toLowerCase();
  const ruleDays=Number(close?.minHoldDays??e.minHoldDays??0);
@@ -800,6 +802,16 @@ function retentionEvidenceCleared(e,holdMet){
  return false;
 }
 function closeCheckPresentation(e){
+ const calendarHold=window.BTFinancialRules?.closeHoldInfo(e);
+ if(calendarHold){
+  const met=dB(td(),calendarHold.reviewOn)<=0;
+  return [
+    {ok:met,label:'12-month retention period',detail:(met?'Hold completed · ':'Hold through ')+date(calendarHold.holdUntil)+' · closure review '+date(calendarHold.reviewOn)},
+    {ok:!calendarHold.feeUnconfirmed,label:'Early close service fee',detail:calendarHold.feeUnconfirmed?'Fee not expressly confirmed in saved disclosures · verify with bank':'Saved fee evidence verified'},
+    {ok:met&&!!e.bonusRecd,label:'Bonus retention check',detail:!e.bonusRecd?'Wait for actual bonus payment':met?'Required hold elapsed · review repayment terms':'Do not close before the hold expires'},
+    {ok:false,label:'Closing balance',detail:'Confirm pending charges, transfers and final balance with the bank'}
+  ];
+ }
  const financial=e.financialRules?.closure;
  const hold=typeof safeCloseDate==='function'?safeCloseDate(e):'';
  const remaining=hold?dB(td(),hold):null;
