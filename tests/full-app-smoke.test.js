@@ -59,8 +59,8 @@ module.exports={sandbox,document,app,storage,errors};
 if(require.main===module)setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.6.92',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.6.92',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.6.93',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.6.93',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     const trackerRender=sandbox.BT360;
     const settingsMarkup=trackerRender.settings();
     assert(!/Historical review|History repair|requirements date matches|Review missing history/i.test(settingsMarkup),'Internal history diagnostics must not clutter Settings');
@@ -93,7 +93,7 @@ if(require.main===module)setTimeout(()=>{
     assert(sandbox.tcV3WellsConsumerRulesVersion==='3.5.2',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
     assert(sandbox.btChurnCloseDatePolicyVersion==='3.5.2',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.13',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
-    assert(sandbox.BTEligibilityGate?.VERSION==='1.3.0',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
+    assert(sandbox.BTEligibilityGate?.VERSION==='1.3.1',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
     assert(sandbox.btLifecycleStatusVersion==='3.4.74-status1',`Unexpected lifecycle status version ${sandbox.btLifecycleStatusVersion}`);
     assert(sandbox.btSmartAttentionVersion==='3.4.74-action1',`Unexpected Action Center version ${sandbox.btSmartAttentionVersion}`);
     assert(sandbox.btUiFeedbackVersion==='3.4.74-feedback1',`Unexpected UI feedback version ${sandbox.btUiFeedbackVersion}`);
