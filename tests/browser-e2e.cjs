@@ -447,7 +447,8 @@ async function exercise(name,engine,url){
     await importEntry(payload);
     check('import stops before saving',await page.evaluate(()=>JSON.parse(localStorage.getItem('bt_e_v4')).length===0));
     await page.getByRole('button',{name:'Step 2: Requirements',exact:true}).click();
-    check('deadline wording is visible',await page.locator('input[oninput*="\'requiredDaysText\'"]').inputValue()==='90 calendar days');
+    check('deadline wording is visible',await page.locator('input[oninput*="\'requiredDaysText\'"]').inputValue()===payload.entry.requiredDaysText);
+    check('amount-first requirement description preserves 90-day deadline through review',await page.evaluate(()=>collectModalEntryData().reqDays===90));
     await page.getByRole('button',{name:'Step 4: Review',exact:true}).click();await button('💾 Add account').click();
     await wait(()=>JSON.parse(localStorage.getItem('bt_e_v4')).length===1);
     // v3.6.80: real click-through journey, fully isolated from stored account data.
