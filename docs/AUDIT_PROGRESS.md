@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: Codex /root — v3.6.97 — codex/v3.6.97-consistent-progress
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.97 consistent progress (`codex/v3.6.97-consistent-progress`): one read-only requirement/task projection drives account details, compact cards and attention summaries. Include unchecked saved requirements, deduplicate linked checklist confirmations, retain separate manual tasks and legacy grouped requirements, and honor explicit overall completion without rewriting state. Remove unsupported cash-progress fallback from attention; retain the actual deposit ledger. Local bonus/UI/cloud units and release verifier PASS, including partial/all completion, mixed tasks, legacy and no-write regression. Chromium/WebKit consistency assertions added to the existing real-click journey. Next: require full green CI, merge and verify Pages. v3.6.96 was deployed and verified at commit 494817a1 (PR #287). No user records, financial terms or canonical lifecycle rules changed.
 
 - v3.6.96 individual requirement controls (`codex/v3.6.96-individual-requirements`): restore independent, persistent, reversible per-rule checkboxes in the shared bank renderer. Use existing checklist storage with exact saved-rule identity, avoid duplicate rows, show remaining count, and retain separate explicit overall completion. Shared 44px controls and keyboard focus apply to every bank. No automatic lifecycle, payment, deposit or financial-rule changes. Local bonus/UI/cloud units and release verifier PASS; added isolation, changed-source, failed-save, backup/restore and Chromium/WebKit reload/mobile coverage. Next: require full green CI, merge and verify Pages v3.6.96. No private records committed or modified.
 
