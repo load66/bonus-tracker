@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: codex — v3.6.93 mixed eligibility clocks — codex/v3.6.93-multiclock-eligibility
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.93 mixed-duration eligibility scanner (`codex/v3.6.93-multiclock-eligibility`): split timed evidence by local clause instead of cross-combining unrelated customer/bonus clocks; preserve trailing coupon enrollment and conditional account-close wording. Synthetic regression covers two independently anchored periods, unknown event dates and existing Chase/U.S. Bank rules. Updated app, gate, service-worker cache and developer import docs. Local eligibility gate suite passed. Next: run full Bonus/Cloud/UI, Chromium/WebKit and release verifier in PR CI; merge only green and verify Pages; no personal bonus records or credentials committed.
 
 - v3.6.92 canonical payout queue (`codex/v3.6.92-payout-queue`): use the shared arrival window end for unpaid awaiting-payment queue placement and action date context. Missing/stale timers no longer turn a future/in-window payout into a user task; retain the full final calendar day and review only afterward. Action/recurring stages stay visible, unknown clocks retain existing review behavior, and no records/timers/milestones are rewritten. Synthetic regression covers before/during/end/after windows, stale contexts and recurring/action preservation. Next: full unit/Chromium/WebKit/release checks, merge green and verify Pages.
 
