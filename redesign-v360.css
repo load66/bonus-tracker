@@ -1179,3 +1179,7 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 
 /* WebKit must also hide nested summary rows in a closed outer disclosure. */
 .bt3686-account-extras:not([open])>div{display:none}
+
+/* Shared requirement/task interaction for every institution. */
+.bt360-check>button[role="checkbox"]{flex-basis:44px;width:44px;height:44px;min-height:44px;cursor:pointer;touch-action:manipulation}
+.bt360-check>button[role="checkbox"]:focus-visible{outline:2px solid #5BE3B0;outline-offset:3px}
