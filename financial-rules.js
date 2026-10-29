@@ -140,7 +140,7 @@
     const unit=/business/.test(unitText)?'business-days':/month/.test(unitText)?'calendar-months':/statement/.test(unitText)?'statement-cycles':'calendar-days';
     const anchors=[];
     if(/(?:after|from|of|following) (?:the )?(?:account )?open(?:ing|ed)|after (?:you )?open(?:ing)? (?:the |your |a )?(?:new )?account/.test(s))anchors.push('opened');
-    if(/after (?:all (?:of )?)?(?:(?:the|its|their|your) )?requirements (?:are |have been )?(?:met|completed|satisfied)|after (?:meeting|completing|satisfying) (?:all (?:of )?)?(?:(?:the|its|their|your) )?requirements|of (?:meeting|completing|satisfying) (?:all (?:of )?)?(?:(?:the|its|their|your) )?requirements/.test(s))anchors.push('reqmet');
+    if(/after you have (?:completed|met|satisfied) all requirements|after (?:all (?:of )?)?(?:(?:the|its|their|your) )?requirements (?:are |have been )?(?:met|completed|satisfied)|after (?:meeting|completing|satisfying) (?:all (?:of )?)?(?:(?:the|its|their|your) )?requirements|of (?:meeting|completing|satisfying) (?:all (?:of )?)?(?:(?:the|its|their|your) )?requirements/.test(s))anchors.push('reqmet');
     if(/(?:after|from|of|following) (?:offer |coupon )?enrollment/.test(s))anchors.push('enrollment');
     if(/(?:after|following) (?:the )?(?:qualification|qualifying|requirement|deposit) period (?:ends|has ended)|after (?:the )?end of (?:the )?(?:qualification|qualifying|requirement|deposit) period/.test(s))anchors.push('qualifying-period-end');
     if(anchors.length!==1)return null;
@@ -159,13 +159,36 @@
     if(isNaN(d))return '';
     const result=d.toISOString().slice(0,10);return date(result)?result:'';
   }
+  // Scope a long source quotation to its actual payment clause, not deposit deadlines.
+  // The saved typed trigger remains authoritative only when its source proves it.
+  function savedPayoutWindow(rules){
+    const p=rules.payout,q=clean(p.evidence?.quote);
+    let w=p.window||payoutWindowFromText(q);
+    if(!w){
+      const clauses=q.split(/(?<=[.!?])\s+/).filter(s=>/deposit (?:the |your )?(?:bonus|reward)|(?:bonus|reward) (?:will be |is |will |shall be )?(?:paid|deposited|credited|posted)/i.test(s));
+      const windows=clauses.map(payoutWindowFromText);
+      if(windows.length!==1||!windows[0])return null;
+      w=windows[0];
+    }
+    const t=p.timing;
+    if(t&&t.basis==='qualifying-period-end'&&w.basis==='reqmet'){
+      // Some tiered offers determine the reward at a fixed enrollment-period end.
+      // Early completion must never move that clock forward.
+      const req=rules.requirements,days=[...q.matchAll(/at day (\d+),? (?:the )?(?:bonus )?tier will be determined/gi)].map(m=>Number(m[1]));
+      if(days.length!==1||!req?.length||req.some(r=>r.timing?.basis!=='enrollment'||r.timing.unit!=='calendar-days'||r.timing.value!==days[0]))return null;
+      if(!new RegExp('during the '+days[0]+' days from (?:coupon |offer )?enrollment','i').test(q))return null;
+      w={...w,basis:'qualifying-period-end'};
+    }
+    if(t&&(t.basis!==w.basis||t.unit!==w.unit||t.value!==w.max))return null;
+    return w;
+  }
   function estimatedArrival(e){
     if(!e||e.closed||e.bonusRecd)return null;
     let w=null;
     if(e.financialRules||Number(e.schemaVersion)>=3){
       const v=validate(e);if(!v.ok||!v.rules)return null;
       const p=v.rules.payout;
-      w=p.window||payoutWindowFromText(p.evidence?.quote);
+      w=savedPayoutWindow(v.rules);
       if(w&&p.timing&&(p.timing.basis!==w.basis||p.timing.unit!==w.unit||p.timing.value!==w.max))return null;
     }else w=payoutWindowFromText(e.payoutTimingText);
     if(!w)return null;

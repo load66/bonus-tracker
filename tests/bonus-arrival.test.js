@@ -2,6 +2,19 @@
 const assert=require('node:assert/strict');
 const rules=require('../financial-rules.js');
 const {fixture}=require('./fixtures/financial-rules.cjs');
+const {tierArrivalFixture}=require('./fixtures/financial-rules.cjs');
+const tier=tierArrivalFixture(),tierBefore=JSON.stringify(tier);
+assert.equal(rules.validate(tier).ok,true);
+assert.deepEqual(rules.estimatedArrival(tier),{start:'2026-04-01',end:'2026-04-16',basis:'qualifying-period-end',anchor:'2026-04-01'});
+for(const reqMet of ['','2026-01-10','2026-02-15'])assert.equal(rules.estimatedArrival({...tier,reqMet}).end,'2026-04-16','Early activity never accelerates the source-backed tier determination');
+assert.equal(rules.estimatedArrival({...tier,offerEnrollmentDate:'' ,couponEnrollmentDate:''}),null);
+assert.equal(rules.estimatedArrival({...tier,couponEnrollmentDate:'2026-01-02'}),null);
+const noProof=JSON.parse(JSON.stringify(tier));noProof.financialRules.payout.evidence.quote=noProof.tcSourceRaw=noProof.tcSourceRaw.replace('At day 90, the bonus tier will be determined','The bonus tier will be determined');
+noProof.financialRules.requirements[0].evidence.quote=noProof.tcSourceRaw;assert.equal(rules.validate(noProof).ok,true);
+assert.equal(rules.estimatedArrival(noProof),null,'A typed period-end trigger without matching source proof stays unresolved');
+const multiple=JSON.parse(JSON.stringify(tier));multiple.tcSourceRaw+=' The bonus is paid within 30 days after account opening.';multiple.financialRules.payout.evidence.quote=multiple.tcSourceRaw;
+assert.equal(rules.estimatedArrival(multiple),null,'Distinct payout clauses must not be collapsed');
+assert.equal(JSON.stringify(tier),tierBefore,'Saved terms and user dates are never rewritten');
 const make=(text,window)=>{
  const e=fixture();e.financialRules.version=3;e.tcSourceRaw+=' '+text;e.payoutTimingText=text;
  e.financialRules.payout={text,evidence:{source:'promotion',quote:text},...(window?{window}:{})};return e;
