@@ -11,9 +11,11 @@
   const ruleDays=e=>core.ruleDays(e);
   const basis=e=>normalizeBasis(core.basisFor(e));
   const baseDate=e=>core.baseDate(e);
-  const rawDate=e=>core.rawSafeDate(e);
-  const safeDate=e=>core.safeCloseDate(e);
-  const daysSafe=e=>core.daysUntilSafe(e,typeof td==='function'?td():new Date().toISOString().slice(0,10));
+  const calendarHold=e=>window.BTFinancialRules?.closeHoldInfo(e)||null;
+  const rawDate=e=>calendarHold(e)?.holdUntil||core.rawSafeDate(e);
+  // A date does not clear a fee-review requirement. Remain fail-closed.
+  const safeDate=e=>{const h=calendarHold(e);return h?(h.feeUnconfirmed?null:h.reviewOn):core.safeCloseDate(e)};
+  const daysSafe=e=>{const h=calendarHold(e);return h&&typeof dB==='function'&&typeof td==='function'?Math.max(0,dB(td(),h.reviewOn)):core.daysUntilSafe(e,typeof td==='function'?td():new Date().toISOString().slice(0,10))};
   const inBuffer=e=>core.isInBuffer(e,typeof td==='function'?td():new Date().toISOString().slice(0,10));
   const nonRepeatable=e=>{try{return typeof isNonRepeatableEntry==='function'&&isNonRepeatableEntry(e)}catch{return false}};
 
@@ -121,7 +123,7 @@
     if(!e||!e.bank)return'';
     if(e.closed)return nonRepeatable(e)?'ARCHIVED':(churnReached(e)?'TIME TO CHURN!':'WAITING TO CHURN!');
     const hasBonus=!!e.bonusRecd,hasReq=!!e.reqMet,hasHold=ruleDays(e)>0&&!!baseDate(e);
-    if(hasBonus){if(hasHold){if(inBuffer(e))return'3-DAY BUFFER';const d=daysSafe(e);if(d!==null&&d>0)return'WAITING TO CLOSE'}if(closureBlocksSafeStatus(e))return'BONUS RECEIVED';return'SAFE TO CLOSE'}
+    if(hasBonus){if(calendarHold(e))return'WAITING TO CLOSE';if(hasHold){if(inBuffer(e))return'3-DAY BUFFER';const d=daysSafe(e);if(d!==null&&d>0)return'WAITING TO CLOSE'}if(closureBlocksSafeStatus(e))return'BONUS RECEIVED';return'SAFE TO CLOSE'}
     const active=typeof nextActiveTimer==='function'?nextActiveTimer(e):null;
     if(hasReq)return active?'CUSTOM TIMER':'REQ MET';
     return active?'CUSTOM TIMER':'WORKING'
@@ -133,6 +135,7 @@
     if(!e||!e.bank)return{label:'Manual Review',cls:'warn',items:[],warnings:['Entry missing']};
     if(e.closed&&nonRepeatable(e))return{label:'Closed / Archived',cls:'done',archived:true,items:[{ok:true,label:'Closed date saved',detail:fD(e.closed)},{ok:true,label:'Archive status',detail:'Non-repeatable offer'}],warnings:[]};
     if(e.closed)return{label:'Closed / Waiting to Churn',cls:'done',items:[{ok:true,label:'Closed date saved',detail:fD(e.closed)}],warnings:[]};
+    const hold=calendarHold(e);
     const safe=safeDate(e),target=closeDate||(typeof td==='function'?td():new Date().toISOString().slice(0,10)),days=ruleDays(e),start=baseDate(e);
     const financial=window.BTFinancialRules?.validate(e);
     if(financial&&financial.mode!=='legacy')add(financial.ok,'Financial rules consistent',financial.ok?'Evidence and calculation fields agree':financial.issues.map(x=>x.message).join('; '),'danger');
@@ -140,7 +143,10 @@
     const needsRequirementDate=String(financial?.rules?.closure?.basis||basis(e)||'')==='reqmet';
     if(needsRequirementDate||e.reqMet)add(!!e.reqMet,'Requirement met date saved',e.reqMet?fD(e.reqMet):'Save the actual requirements-completion date before closing','danger');
     add(!!e.bonusRecd,'Bonus received',e.bonusRecd?fD(e.bonusRecd):'Do not close before the bonus posts','danger');
-    if(days){add(!!start,'Close-rule start date available',start?fD(start):'Missing','danger');add(!!safe&&dB(target,safe)<=0,'Hold period + buffer complete',safe?'Safe close: '+fD(safe):'Cannot calculate','danger')}
+    if(hold){
+      add(dB(target,hold.reviewOn)<=0,'Calendar-month hold + planning buffer complete','12-month anniversary '+fD(hold.holdUntil)+' · closure review '+fD(hold.reviewOn),'danger');
+      add(!hold.feeUnconfirmed,'Early-close service fee verified',hold.feeUnconfirmed?'Unlisted closing fee remains unconfirmed · contact bank before closure':'Fee supported by saved terms','warn');
+    }else if(days){add(!!start,'Close-rule start date available',start?fD(start):'Missing','danger');add(!!safe&&dB(target,safe)<=0,'Hold period + buffer complete',safe?'Safe close: '+fD(safe):'Cannot calculate','danger')}
     else add(true,'No fixed post-bonus hold',core.typeForEntry(e)==='payout-only'?'Close after bonus posts':'No countdown found');
     if(nonRepeatable(e))add(true,'Future eligibility','Non-repeatable offer — archives after closing');
     else{
@@ -167,7 +173,15 @@
       const cr=churnReadyDate(e);if(cr)rows.push({label:'Churn ready',value:fD(cr)});
       return{title:'Close Check',sub:'Closure saved',chip:ready.label,cls:ready.cls,rows,notes:[],compact:true}
     }
+    const hold=calendarHold(e);
     const safe=safeDate(e),days=ruleDays(e),buffer=days?(parseInt(e.closeBufferDays,10)||0):0,type=core.typeForEntry(e);
+    if(hold){
+      rows.push({label:'12-month hold until',value:fD(hold.holdUntil),cls:'warn'});
+      rows.push({label:'Closure review',value:fD(hold.reviewOn),cls:'warn'});
+      rows.push({label:'Closing fee',value:hold.feeUnconfirmed?'Confirmation required':'Verified in saved terms',cls:hold.feeUnconfirmed?'bad':'ok'});
+      rows.push({label:'Final check',value:e.bonusRecd?'Bonus posted · confirm pending activity':'Wait for bonus to post',cls:e.bonusRecd?'':'bad'});
+      return{title:'Close Check',sub:'Calendar-month retention',chip:ready.label,cls:ready.cls,rows,notes:[],proof:core.sourceSentence(e),compact:true};
+    }
     rows.push({label:'Earliest close',value:safe?fD(safe):(type==='review'?'Manual review required':type==='payout-only'&&e.bonus?'After '+fM(e.bonus)+' posts':e.bonusRecd?'Close after bonus posts':'Wait for bonus'),cls:safe&&daysSafe(e)<=0?'ok':safe?'warn':type==='payout-only'?'warn':'bad'});
     rows.push({label:'Rule',value:days?(e.closeRuleDisplayText||`${days} days from ${closeRuleBasisLabel(basis(e)).toLowerCase()}${buffer?' + '+buffer+' day safety':''}`):(type==='review'?'Closure terms need review':type==='payout-only'?'Close after bonus posts':'No fixed post-bonus hold'),cls:type==='review'?'bad':days?'':'ok'});
     rows.push({label:'Final check',value:e.bonusRecd?'Bonus posted · no pending activity':'Wait for bonus to post',cls:e.bonusRecd?'':'bad'});
