@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: Codex /root — v3.6.96 — codex/v3.6.96-individual-requirements
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.96 individual requirement controls (`codex/v3.6.96-individual-requirements`): restore independent, persistent, reversible per-rule checkboxes in the shared bank renderer. Use existing checklist storage with exact saved-rule identity, avoid duplicate rows, show remaining count, and retain separate explicit overall completion. Shared 44px controls and keyboard focus apply to every bank. No automatic lifecycle, payment, deposit or financial-rule changes. Local bonus/UI/cloud units and release verifier PASS; added isolation, changed-source, failed-save, backup/restore and Chromium/WebKit reload/mobile coverage. Next: require full green CI, merge and verify Pages v3.6.96. No private records committed or modified.
 
 - v3.6.95 requirement-day parser (`codex/v3.6.95-requirement-day-parser`): requirement descriptions parse explicit calendar-day durations instead of currency amounts or years; ambiguous ranges and conflicting durations remain unresolved. Regression covers amount-first import review without record writes. Combined with source-backed measurement dates, truthful payout upper-bound presentation, read-only requirement rows and compound eligibility explanation from PR #284 under user-authorized takeover. Actual import/review/AI validation, local unit areas and release-file verifier PASS. Full Chromium/WebKit CI required before squash merge; then verify GitHub Pages v3.6.95. No private records committed or modified. Next: finish green release CI, merge PR #285 and confirm Pages; PR #284 is superseded.
 
