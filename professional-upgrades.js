@@ -178,7 +178,7 @@
     let h='<div class="guided-tip"><b>Account details</b><span>Enter the account and offer details. Review the terms before applying extracted fields.</span></div>';
     if(e._fromTemplate){
       const status=typeof quickAddReviewStatus==='function'?quickAddReviewStatus({bank:e.bank}):null;
-      h+='<div class="bt3657-template-note bt3658-trust-notice" role="note"><b>Historical example — not a verified offer</b><span>Only the bank and suggested account type were copied. Bonus, deposit requirements, fees, closure and churn eligibility remain unconfirmed. Review the applicable enrolled promotion and account fee schedule.</span>';
+      h+='<div class="bt3657-template-note bt3658-trust-notice" role="note"><b>Historical example — not a verified offer</b><span>Only the bank and suggested account type were copied. Bonus, deposit requirements, fees, closing rules and eligibility for another bonus remain unconfirmed. Review the applicable enrolled promotion and account fee schedule.</span>';
       if(status?.status)h+='<span class="bt3659-status">Catalog: '+html(status.status)+(status.checked?' · reviewed '+html(status.checked):' · not verified')+'</span>';
       if(status?.note)h+='<span>'+html(status.note)+'</span>';
       if(status?.watchNote)h+='<span class="bt3661-monitor-note">'+html(status.watchNote)+'</span>';
@@ -193,10 +193,10 @@
     h+=input('Bank name *','bank',e.bank,{placeholder:'e.g. Chase Business'});
     h+=select('Account type','accountType',e.accountType||'personal',[['personal','Personal'],['business','Business']]);
     h+=input('Bonus amount $','bonus',e.bonus,{type:'number',placeholder:'400'});
-    h+=select('Churn rule','churn',e.churn||'',[['','Not saved'],['180','180 days'],['1','1 year'],['2','2 years'],['3','3 years']]);
+    h+=select('Waiting period before another bonus','churn',e.churn||'',[['','Not saved'],['180','180 days'],['1','1 year'],['2','2 years'],['3','3 years']]);
     h+=dateInput('Opened','opened',e.opened);
     h+=dateInput('Coupon / offer enrollment · optional','couponEnrollmentDate',e.couponEnrollmentDate||e.offerEnrollmentDate);
-    h+=dateInput('Requirement met','reqMet',e.reqMet);
+    h+=dateInput('Requirements completed','reqMet',e.reqMet);
     h+=dateInput('Bonus received','bonusRecd',e.bonusRecd);
     if(e._edit&&!e._startingNewCycle)h+=dateInput('Closed','closed',e.closed);
     h+='</div>';
@@ -209,26 +209,26 @@
     let h='<div class="guided-tip"><b>Bonus requirements</b><span>Record the qualifying activity and deadlines from the terms.</span></div><div class="guided-grid">';
     h+=input('Main requirement','dataPoint',e.dataPoint,{full:true,placeholder:'e.g. $5,000 new money or $1,000 direct deposit'});
     h+=input('Days to complete','requiredDaysText',e.requiredDaysText||(e.reqDays||''),{placeholder:'e.g. 90 calendar days'});
-    h+=input('Funding deadline days','fundedDays',e.fundedDays,{type:'number',placeholder:'30'});
-    h+=input('Funding amount / target tier','fundingAmountText',e.fundingAmountText||(e.fundingAmount?fM(e.fundingAmount):''),{placeholder:'$5,000'});
+    h+=input('Days allowed to add money','fundedDays',e.fundedDays,{type:'number',placeholder:'30'});
+    h+=input('Deposit amount / bonus tier','fundingAmountText',e.fundingAmountText||(e.fundingAmount?fM(e.fundingAmount):''),{placeholder:'$5,000'});
     h+=input('Promo code','promoCodeText',e.promoCodeText,{placeholder:'Leave blank if none'});
-    h+=input('Open-by / expiration','expirationDateText',e.expirationDateText,{placeholder:'May 31, 2026'});
+    h+=input('Offer ends / open account by','expirationDateText',e.expirationDateText,{placeholder:'May 31, 2026'});
     h+=input('Payout timing','payoutTimingText',e.payoutTimingText,{full:true,placeholder:'Within 15 days after requirements are met'});
     h+=textarea('How to complete the bonus','completeBonusText',e.completeBonusText,'Short, plain-English steps',3);
     h+='</div>';
     return h;
   }
   function wizardFeesClose(e){
-    let h='<div class="guided-tip"><b>Fees and closure</b><span>Use a fixed hold period only when required by the terms.</span></div><div class="guided-grid">';
+    let h='<div class="guided-tip"><b>Fees and closure</b><span>Enter how long the bank requires you to keep the account open. Extra days are your own precaution.</span></div><div class="guided-grid">';
     h+=input('Monthly fee','monthlyFeeYNText',e.monthlyFeeYNText,{placeholder:'No fee or $15 monthly'});
     h+=input('How to avoid the fee','avoidMonthlyFeeText',e.avoidMonthlyFeeText,{full:true,placeholder:'$2,000 balance or eligible relationship'});
     h+=`<div class="fg"><label>Fee timing checked</label><select onchange="btModalSet('monthlyFeeChecked',this.value==='yes','bool')"><option value="no"${!e.monthlyFeeChecked?' selected':''}>Not yet</option><option value="yes"${e.monthlyFeeChecked?' selected':''}>Yes</option></select></div>`;
-    h+=input('Close hold days','closeFeeCountdownDays',e.closeFeeCountdownDays||e.minHoldDays||'',{type:'number',placeholder:'Only when terms say a fixed hold'});
-    h+=select('Close rule starts from','closeRuleBasis',e.closeRuleBasis||'opened',[['opened','Opened date'],['bonus','Bonus received date'],['reqmet','Requirement met date'],['manual','Manual review']]);
-    h+=input('Safety buffer days','closeBufferDays',e.closeBufferDays??5,{type:'number',placeholder:'5'});
-    h+=input('Early-close fee','earlyTerminationFeeText',e.earlyTerminationFeeText,{placeholder:'None or $25'});
+    h+=input('Days to keep the account open','closeFeeCountdownDays',e.closeFeeCountdownDays||e.minHoldDays||'',{type:'number',placeholder:'Only when terms say a fixed hold'});
+    h+=select('When the waiting period starts','closeRuleBasis',e.closeRuleBasis||'opened',[['opened','Opened date'],['bonus','Bonus received date'],['reqmet','Requirement met date'],['manual','Manual review']]);
+    h+=input('Extra days before closing','closeBufferDays',e.closeBufferDays??5,{type:'number',placeholder:'5'});
+    h+=input('Early closing fee','earlyTerminationFeeText',e.earlyTerminationFeeText,{placeholder:'None or $25'});
     h+=input('Close rule wording','closeRuleText',e.closeRuleText,{full:true,placeholder:'Exact close/keep-open wording'});
-    h+=textarea('Eligibility / churn notes','eligibilityText',e.eligibilityText,'Who qualifies again and when',2);
+    h+=textarea('Rules for earning another bonus','eligibilityText',e.eligibilityText,'Who qualifies again and when',2);
     h+=textarea('Your notes','notes',e.notes,'Personal notes; terms review does not overwrite them',3);
     h+='</div>';
     if(e.analyzedTC)h+=`<details class="guided-details"><summary>Analyzer summary</summary><div class="guided-readonly">${html(short(e.analyzedTC,1400)).replace(/\n/g,'<br>')}</div></details>`;
@@ -244,7 +244,7 @@
     if((d?.bonusRecd||d?.closed)&&!d?.opened)issues.push({level:'warn',text:'Opening date is not recorded. Preserve the actual date from your account history or statement; do not substitute the bonus date.'});
     if(d?.bonusRecd&&!d?.reqMet)issues.push({level:'warn',text:'Requirement met date is blank. The tracker can still save, but history will be less precise.'});
     const hold=parseInt(d?.minHoldDays||d?.closeFeeCountdownDays||0,10)||0;
-    if(hold>0&&!/(close|closed|remain open|keep[^.]{0,30}open|early termination|forfeit|clawback)/i.test(String(d?.closeRuleText||''))&&!knownClosePolicy(d))issues.push({level:'warn',text:'Close hold days have no matching close wording. Verify before saving.'});
+    if(hold>0&&!/(close|closed|remain open|keep[^.]{0,30}open|early termination|forfeit|clawback)/i.test(String(d?.closeRuleText||''))&&!knownClosePolicy(d))issues.push({level:'warn',text:'The saved terms do not confirm how long to keep the account open. Check before saving.'});
     const identity=String([d?.bank,d?.accountType].join(' '));
     const terms=String([d?.analyzedTC,d?.completeBonusText,d?.eligibilityText].join(' '));
     if(/business|biz/i.test(identity)&&/chase total checking|consumer checking|personal checking/i.test(terms)&&!/business complete/i.test(terms))issues.push({level:'warn',text:'Personal-account wording appears inside this business entry. Re-analyze the current offer.'});
@@ -258,7 +258,7 @@
     const errorCount=issues.filter(x=>x.level==='error').length;
     let h=`<div class="guided-review-head ${errorCount?'bad':'good'}"><b>${errorCount?'Fix '+errorCount+' item'+(errorCount!==1?'s':''):'Ready to save'}</b><span>${errorCount?'Required items are highlighted below.':'Review this compact summary, then save.'}</span></div>`;
     h+='<div class="guided-summary">';
-    const rows=[['Bank',e.bank||'Missing'],['Account',String(e.accountType||'personal').replace(/^./,c=>c.toUpperCase())],['Bonus',e.bonus?fM(e.bonus):'Not saved'],['Opened',e.opened?fD(e.opened):'Not saved'],['Requirement',short(e.dataPoint||e.completeBonusText||'Not saved',90)],['Monthly fee',profile?.fee?.noFee?'No monthly fee':(profile?.fee?.amount||'Review terms')],['Earliest close',profile?.close?.safeDate?fD(profile.close.safeDate):'Manual review'],['Churn',e.churn?(e.churn==='180'?'180 days':e.churn+' year'+(e.churn==='1'?'':'s')):'Not saved']];
+    const rows=[['Bank',e.bank||'Missing'],['Account',String(e.accountType||'personal').replace(/^./,c=>c.toUpperCase())],['Bonus',e.bonus?fM(e.bonus):'Not saved'],['Opened',e.opened?fD(e.opened):'Not saved'],['Requirement',short(e.dataPoint||e.completeBonusText||'Not saved',90)],['Monthly fee',profile?.fee?.noFee?'No monthly fee':(profile?.fee?.amount||'Review terms')],['Earliest close',profile?.close?.safeDate?fD(profile.close.safeDate):'Manual review'],['Waiting period',e.churn?(e.churn==='180'?'180 days':e.churn+' year'+(e.churn==='1'?'':'s')):'Not saved']];
     rows.forEach(r=>h+=`<div><span>${html(r[0])}</span><b>${html(r[1])}</b></div>`);h+='</div>';
     if(issues.length)h+=`<div class="guided-issues">${issues.map(x=>{const target=/bank name|bonus amount|opened|actual closed/i.test(x.text)?1:/requirement|funding|payout/i.test(x.text)?2:3;return `<div class="${x.level}"><i aria-hidden="true">${x.level==='error'?'!':'•'}</i><span>${html(x.text)}</span>${x.level==='error'?`<button type="button" class="bt3656-fix" onclick="btWizardStep(${target})">Fix</button>`:''}</div>`}).join('')}</div>`;
     h+=`<details class="guided-details"><summary>Source details</summary><div class="guided-source-grid"><div><b>Close rule</b><span>${html(profile?.close?.source?.kind||'manual review')}</span></div><div><b>Analyzer</b><span>${e.analysis?'Reviewed T&C saved':'No current analysis saved'}</span></div><div><b>Manual edits</b><span>${Object.values(e.fieldSources||{}).filter(x=>sourceKind(x)==='manual').length} field(s)</span></div></div></details>`;

@@ -137,11 +137,11 @@ assert.match(inProgressLayout,/runBankAction\(&quot;CHA-P-01&quot;,'timer'\)/,'A
 
 const fees=sandbox.BT360.feeDetail(e);
 assert.match(fees,/Monthly fee<\/span><div><b[^>]*>\$15<\/b>/);
-assert.match(fees,/ANY: \$500\+ electronic deposits/);
+assert.match(fees,/Meet any one: \$500\+ electronic deposits/);
 assert.match(fees,/View saved fee terms/);
 assert.match(fees,/Fee waived with \$500 electronic deposits/,'Original fee quote stays available');
-assert.match(sandbox.BT360.feeDetail(require('./fixtures/financial-rules.cjs').fixture()),/Required companion: Share Savings: \$10 · membership minimum \$50/,'Companion account costs remain distinct from primary checking fee');
-assert.match(fees,/Early close fee<\/span><div><b class="bt3611-amber">Not confirmed<\/b>/);
+assert.match(sandbox.BT360.feeDetail(require('./fixtures/financial-rules.cjs').fixture()),/Also required: Share Savings: \$10 · membership minimum \$50/,'Companion account costs remain distinct from primary checking fee');
+assert.match(fees,/Early closing fee<\/span><div><b class="bt3611-amber">Not confirmed<\/b>/);
 assert.doesNotMatch(fees,/>This month<|Waiver not confirmed/,'Only the two requested fee rows appear');
 assert.doesNotMatch(fees,/Waiver on track/,'Never claim a monthly waiver from unlinked evidence');
 assert.match(fees,/bt3611-amber/);
@@ -154,9 +154,9 @@ const legacy={...e,financialRules:{accounts:[{role:'primary'}],closure:{}},
  closeRuleText:'',feeScheduleSourceUrl:'https://www.regions.com/personal-banking/checking/lifegreen-checking-account'};
 const legacyMarkup=sandbox.BT360.feeDetail(legacy);
 assert.match(legacyMarkup,/Monthly fee<\/span><div><b[^>]*>\$8<\/b>/);
-assert.match(legacyMarkup,/ANY: Waived with \$500 ACH direct deposits · \$1,500 average balance/);
+assert.match(legacyMarkup,/Meet any one: Waived with \$500 ACH direct deposits · \$1,500 average balance/);
 assert.match(legacyMarkup,/\$25 early-close fee/,'Explicit old close-fee text is recovered');
-assert.match(legacyMarkup,/View saved close terms/);
+assert.match(legacyMarkup,/View saved closing terms/);
 assert.match(legacyMarkup,/Fee schedule/);
 assert.doesNotMatch(legacyMarkup,/>This month<|Waiver on track/);
 assert.equal((legacyMarkup.match(/class="bt3613-fee-line"/g)||[]).length,2);
@@ -166,7 +166,7 @@ assert.match(sandbox.BT360.feeDetail(savedZero),/No early-closing fee/);
 assert.match(sandbox.BT360.feeDetail(savedZero),/>Monthly fee<\/span><div><b[^>]*>\$0<\/b>/);
 const clawback={...legacy,earlyTerminationFeeText:'If the account is closed within six months, the bank will deduct the $900 bonus at closing.'};
 assert.match(sandbox.BT360.feeDetail(clawback),/Not confirmed/,'Clawback is not fabricated as a fee');
-assert.match(sandbox.BT360.feeDetail(clawback),/Bonus clawback is separate/);
+assert.match(sandbox.BT360.feeDetail(clawback),/The bank may also take back the bonus/);
 assert.doesNotMatch(sandbox.BT360.feeDetail(clawback),/\$900 early-close fee/);
 const conditionalNoFee={...legacy,earlyTerminationFeeText:'No early close fee after 180 days.'};
 assert.match(sandbox.BT360.feeDetail(conditionalNoFee),/Not confirmed/,'Conditional no-fee wording cannot imply a free early closure');
@@ -186,11 +186,11 @@ assert.match(coolingDetail,/previous checking bonus within 12 months/);
 const estimatedPast={...cooldownNoDate,id:'SYNT-P-85',opened:'2020-01-01',closed:'2021-01-01',
  churn:'1',eligibilityText:'Legacy saved one-year rule, no verified supporting source.'};
 const estimatedList=sandbox.BT360.archive([estimatedPast]);
-assert.match(estimatedList,/<b>0<\/b><small>Eligible now<\/small>/,'Unverified historic dates must not certify current eligibility');
+assert.match(estimatedList,/<b>0<\/b><small>Ready for review<\/small>/,'Unverified historic dates must not certify current eligibility');
 
 /* v3.6.27: all computable saved dates show a countdown, with verification status. */
-assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.6\.98';/,'The on-screen app version reflects this release');
-assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.6\.98-plain1/,'The version label is refreshed on clients');
+assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.6\.99';/,'The on-screen app version reflects this release');
+assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.6\.99-copy1/,'The version label is refreshed on clients');
 const archiveFutureDate='2030-01-01';
 const projectedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,verified:false});
 assert(projectedFuture&&projectedFuture.days>0&&projectedFuture.caption==='days · estimate','Unverified saved future date shows an estimated countdown');
@@ -286,11 +286,11 @@ const legacyCompanion={...legacy,financialRules:null,monthlyFeeAmountText:'$10',
  monthlyFeeWaiverText:'Keep $50 in Share Savings to avoid the fee.'};
 const shareMarkup=sandbox.BT360.feeDetail(legacyCompanion);
 assert.match(shareMarkup,/>Monthly fee<\/span><div><b[^>]*>\$0<\/b>/,'Checking fee stays $0');
-assert.match(shareMarkup,/Required companion: Share Savings: \$10\/month/,'Share Savings fee remains separate');
+assert.match(shareMarkup,/Also required: Share Savings: \$10\/month/,'Share Savings fee remains separate');
 const bonusClawback={...legacy,bank:'Synthetic Equity',bonus:400,earlyCloseFee:400,
  earlyTerminationFeeText:'400',notes:'180 day clawback',closed:'2026-09-16'};
 const bonusClawbackMarkup=sandbox.BT360.feeDetail(bonusClawback);
-assert.match(bonusClawbackMarkup,/Saved bonus clawback: up to \$400/);
+assert.match(bonusClawbackMarkup,/The bank may take back up to \$400/);
 assert.doesNotMatch(bonusClawbackMarkup,/\$400 early-close fee/,
  'A clawback is not a bank early-closing service charge');
 
@@ -343,9 +343,9 @@ assert.doesNotMatch(timers,/Due Date:|Start \+ Days:/);
 assert.match(timers,/Bonus requirement deadline · complete all qualifying direct deposits/,'Full timer text preserved when expanded');
 
 const details=sandbox.BT360.detailPanels(e);
-assert.match(details,/After bonus posts/,'Close date explains the payout trigger without making up a date');
+assert.match(details,/After bonus arrives/,'Close date explains the payout trigger without making up a date');
 assert.match(details,/After bonus payment/,'Eligibility displays the pending known start event');
-assert.doesNotMatch(details,/Set rule/,'Known rules awaiting payout should not require needless editing');
+assert.doesNotMatch(details,/Review rule/,'Known rules awaiting payout should not require needless editing');
 assert.doesNotMatch(details,/>This month</);
 const payoutOnly={...e,customTimers:[],payoutTimingText:'Expected within 15 days after requirements',financialRules:{...e.financialRules,payout:{text:'Expected within 15 days after requirements',timing:{basis:'reqmet',value:15,unit:'calendar-days'}}}};
 assert.doesNotMatch(sandbox.BT360.timerRows(payoutOnly),/Estimated bonus arrival/,'Incomplete structured evidence must not generate a range');
