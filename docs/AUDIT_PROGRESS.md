@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: Codex — v3.6.93 scoped eligibility parser — codex/v3.6.93-scoped-churn-eligibility
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
