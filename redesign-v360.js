@@ -161,6 +161,10 @@ function dashboardQueueFor(x,entry){
   // The same canonical record is already rendered in Eligible soon.
   if(Number.isFinite(days)&&days>0&&days<=60)return 'upcoming';
  }
+ if(['AWAITING_BONUS','REQUIREMENTS_MET'].includes(x.stageCode)&&entry&&!entry.closed&&!entry.bonusRecd){
+  const arrival=window.BTFinancialRules?.estimatedArrival?.(entry);
+  if(arrival)return dB(td(),arrival.end)>=0?'waiting':'needs';
+ }
  const days=attentionDateDays(x);
  if(['AWAITING_BONUS','HOLD_OPEN'].includes(x.stageCode)&&days!==null&&days>0)return 'waiting';
  return 'needs';

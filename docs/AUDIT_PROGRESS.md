@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: Codex — v3.6.92 — codex/v3.6.92-payout-queue
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.92 canonical payout queue (`codex/v3.6.92-payout-queue`): use the shared arrival window end for unpaid awaiting-payment queue placement and action date context. Missing/stale timers no longer turn a future/in-window payout into a user task; retain the full final calendar day and review only afterward. Action/recurring stages stay visible, unknown clocks retain existing review behavior, and no records/timers/milestones are rewritten. Synthetic regression covers before/during/end/after windows, stale contexts and recurring/action preservation. Next: full unit/Chromium/WebKit/release checks, merge green and verify Pages.
 
 - v3.6.91 source-complete arrival recovery (`codex/v3.6.91-offer-arrival`): immutable verified enrollment-version payout evidence for an exact legacy fingerprint, never a bank-name/amount default. Conflicting saved sources/rules, partial fingerprints and different enrollment versions stay unresolved; no account writes or upgrades. Optional source provenance remains separate from original saved terms and reaches UI/AI. Mandatory generator validation now rejects missing/ambiguous payout clocks and verifies source text, provenance, material-field and eligibility roundtrip with a completeness receipt. Actual missing events/calendars remain unresolved. Synthetic fingerprint rejection, original-source honesty, no-write, CLI rejection and Chromium/WebKit coverage. App/cache v3.6.91; generation standard/skill synchronization prepared. Next: full unit/browser/release CI, merge green, verify Pages and finish saved generator instructions.
 

@@ -101,6 +101,10 @@
       const buffer=closeBufferDaysFor(e);
       return result(date,basis+' '+dateText(anchor)+' + '+days+' days → hold ends '+dateText(raw)+(buffer?' · safety '+buffer+' days → '+dateText(date):''));
     }
+    if(['AWAITING_BONUS','REQUIREMENTS_MET'].includes(stage.code)){
+      const arrival=window.BTFinancialRules?.estimatedArrival?.(e);
+      if(arrival)return result(arrival.end,window.BTFinancialRules.arrivalLabel(arrival)+' · review payment after the window ends');
+    }
     const timer=stage.timer;
     if(timer?.startDate&&timer?.daysRequired&&/business days?|statement (?:period|cycle)|\bmonths?\b|\byears?\b/i.test([timer.text,stage.kind==='requirement'?e.requiredDaysText:''].filter(Boolean).join(' ')))return unknown('the saved timer needs an exact calendar or statement date');
     if(timer?.date)return result(timer.date,(timer.startDate&&timer.daysRequired?dateText(timer.startDate)+' + '+timer.daysRequired+' calendar days':'Saved '+(stage.kind||'custom')+' timer')+' → '+dateText(timer.date));
@@ -279,4 +283,5 @@
   try{getAttentionSuggestions=smart}catch{}
   window.btSmartAttentionVersion=VER;
 })();
+
 
