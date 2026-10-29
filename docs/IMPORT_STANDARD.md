@@ -1,6 +1,6 @@
 # BonusTracker JSON generation standard
 
-Adopted October 13, 2026; revised October 14, 2026. Applies to every future BonusTracker import for Philip, including new conversations. Compatibility baseline: BonusTracker v3.4.50, strict numeric schemaVersion 3, and financialRules version 1, 2, 3 or 4. Existing schema v1/v2 records remain compatible; they are not the standard for new generated files. This document is a generation standard, not an importable offer or a claim that any bank's terms have been verified today.
+Adopted October 13, 2026; revised October 29, 2026. Applies to every future BonusTracker import for Philip, including new conversations. Compatibility baseline: BonusTracker v3.6.95, strict numeric schemaVersion 3, and financialRules version 1, 2, 3 or 4. Existing schema v1/v2 records remain compatible; they are not the standard for new generated files. This document is a generation standard, not an importable offer or a claim that any bank's terms have been verified today.
 
 ## Mandatory per-bank research and autofill
 
@@ -139,3 +139,7 @@ For a tier whose official enrolled source expressly defines numbered days from o
 
 If the enrolled payout term merely says *within N days of opening*, preserve that contractual upper limit; do **not** label the account-opening day as a meaningful expected payment date. Display the payment deadline and state that the earliest day is unspecified. Keep independently documented churn lookback periods visible, including both payment-receipt and account-closure clocks when the offer requires both. No invented user events, daily balance history, bank holidays or automated completion stamps.
 
+
+## Requirement-day review integrity (v3.6.95)
+
+Keep `reqDays` equal to the supported calendar-day requirement duration. A descriptive `requiredDaysText` can begin with a currency amount or contain a year; neither is a duration. Review/save must preserve the explicit day count and original text. Numeric-only input and one unambiguous explicit calendar-day duration are supported; ranges, conflicting durations, business days and calendar months must not become a guessed calendar-day count. Run the strict validator against the actual generated file, not just a simplified fixture.
