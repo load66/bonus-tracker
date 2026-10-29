@@ -1791,7 +1791,10 @@ function nextActiveTimer(e){
 function status(e){
   // A completed calendar-month hold does not override an unverified service fee.
   const c=e&&!e.closed&&window.BTFinancialRules?.closeHoldInfo(e);
-  if(c&&e.bonusRecd)return'WAITING TO CLOSE';
+  if(c&&e.bonusRecd){
+    const ready=closeReadiness(e);
+    return ready.cls==='safe'?'SAFE TO CLOSE':'WAITING TO CLOSE';
+  }
   try{
     if(typeof window.btEvaluateAccount==='function'&&!window.__btStatusEval){
       window.__btStatusEval=true;
