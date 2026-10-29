@@ -803,7 +803,7 @@ async function exercise(name,engine,url){
     check('expanded waiver displays the exact original saved terms',await page.locator('.bt3611-full-terms p').innerText().then(t=>t.includes('Original terms: fee waived with electronic deposits, daily balance or linked checking.')));
     await page.locator('.bt3611-full-terms > summary').click();
     check('early close fee is amber without inferred zero',await page.locator('.bt3613-fee-line').last().locator('.bt3611-amber').innerText()==='Not confirmed');
-    check('only monthly fee and early close fee; no invented waiver confirmation',await page.locator('.bt3613-fee-line').allInnerTexts().then(rows=>rows.length===2&&rows[0].includes('Monthly fee')&&rows[1].includes('Early close fee')&&!rows.join(' ').includes('Waiver on track')&&!rows.join(' ').includes('Waiver confirmed')));
+    check('only monthly fee and early close fee; no invented waiver confirmation',await page.locator('.bt3613-fee-line').allInnerTexts().then(rows=>rows.length===2&&rows[0].includes('Monthly fee')&&rows[1].includes('Early closing fee')&&!rows.join(' ').includes('Waiver on track')&&!rows.join(' ').includes('Waiver confirmed')));
     check('each key date explains a specific uncertainty',await page.locator('.bt3613-date-row').evaluateAll(rows=>rows.length===2&&rows.every(x=>!x.textContent.trim().startsWith('Needs review'))));
     check('no developer vocabulary is visible in the rendered app',
       !/\b(?:null|structured rule|anchor|verified \$0|provenance)\b/i.test(await page.locator('#app').innerText()));
@@ -816,9 +816,17 @@ async function exercise(name,engine,url){
     await page.screenshot({path:path.join(output,name+'-chase-bonus-detail-in-progress-bottom-390.png')});
     await page.screenshot({path:path.join(output,name+'-financial-summary-key-dates-390.png')});
     await page.locator('.bt3640-section[data-section="eligibility"] > summary').click();
-    await page.getByRole('button',{name:'Set rule'}).first().click();
-    check('Set rule opens existing account rule editor',await page.locator('.modal').isVisible()
-      &&(await page.locator('.modal').innerText()).includes('Fees & Close'));
+    await page.getByRole('button',{name:'Review rule'}).first().click();
+    check('Review rule opens existing account rule editor',await page.locator('.modal').isVisible()
+      &&(await page.locator('.modal .guided-sub').innerText()).includes('Step 3 of 4 · Fees & Close'));
+    check('plain-language editor fields keep the existing save wiring',await page.evaluate(()=>{
+      const before=JSON.parse(JSON.stringify(modal)),stored=localStorage.getItem('bt_e_v4');
+      const row=[...document.querySelectorAll('.modal .fg')].find(x=>x.querySelector('label')?.textContent==='Extra days before closing');
+      const field=row?.querySelector('input');if(!field)return false;
+      const previous=field.value;field.value='7';syncModalFromEditDOM();
+      const result=modal.closeBufferDays===7&&localStorage.getItem('bt_e_v4')===stored;
+      modal=before;field.value=previous;return result;
+    }));
     await cancelEditor();
     await page.evaluate(()=>{
       entries[0]=JSON.parse(window.__chaseViewBaseline);
@@ -2330,7 +2338,7 @@ async function exercise(name,engine,url){
     await page.getByRole('button',{name:'Save report',exact:true}).click();
     check('explicit experience retains cycle identity and attestation',await page.evaluate(()=>loadUserDatapoints().some(x=>x.entryId==='E2E-TRUST'&&x.accountType==='business'&&x.cycleOpened==='2026-01-01'&&x.confirmedByUser&&x.outcome==='worked')));
     await page.evaluate(()=>{expanded=null;search='';BT360.setAudience('all');BT360.resetStage();R();if(BT360.selectedAttentionId!=='E2E-TRUST')BT360.toggleAttention('E2E-TRUST')});
-    await page.getByRole('button',{name:'DD datapoints',exact:false}).click();
+    await page.getByRole('button',{name:'Deposit reports',exact:false}).click();
     check('task research opens exact bank and account type',await page.evaluate(()=>tab==='tips'&&dpTaskBankKey===datapointBankKey(entries[0])));
     check('confirmed experience appears in task research',await page.locator('.bt366-dp-item').innerText().then(t=>t.includes('Synthetic payroll')&&t.includes('You confirmed')));
     await page.getByRole('button',{name:'All banks',exact:false}).click();

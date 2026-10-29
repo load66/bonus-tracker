@@ -31,7 +31,7 @@ assert.equal(JSON.stringify([...storage]),before,'Card and directory selection n
 console.log('Tracker selection passed: each bank, single selection, collapse, directory access and no financial writes.');
 // Task shortcuts scope exact bank identity and discard stale research filters.
 sandbox.getAttentionSuggestions=()=>rows.map((e,i)=>({entryId:e.id,bank:e.bank,stageCode:'IN_PROGRESS',task:{title:'Saved task',activityKind:i===1?'direct-deposit':'new-money'}}));
-assert.equal((sandbox.BT360.tasks(rows).match(/DD datapoints/g)||[]).length,1);
+assert.equal((sandbox.BT360.tasks(rows).match(/Deposit reports/g)||[]).length,1);
 assert.match(sandbox.BT360.tasks(rows),/openTaskDatapoints\(&quot;SYN-B&quot;\)/);
 run("dpFilters.result='failed';dpFilters.source='reddit';dpSearch='old search';openTaskDatapoints('SYN-B')");
 assert.equal(run('dpTaskBankKey'),run('datapointBankKey(entries[1])'));

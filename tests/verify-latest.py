@@ -115,7 +115,7 @@ for token in ('profileKey:keyFor(r)','accountType:typeFor(r)','compatibleProduct
 app_js=text('app.js')
 for token in ('isNonRepeatableEntry','archived-nonrepeatable',"return'ARCHIVED'",'Closed & Archived','Non-repeatable offer'):
     if token not in app_js: fail(f'archive lifecycle missing from app.js: {token}')
-for token in ('Repeat eligibility *','Can this bonus be earned again? *','hasSavedChurnDecision','churnEligibilityValidation','Cannot open/save this bonus yet. Churn eligibility must be proven by the T&C.','Eligibility Reset / Churn Rule *'):
+for token in ('Repeat eligibility *','Can this bonus be earned again? *','hasSavedChurnDecision','churnEligibilityValidation','Cannot open/save this bonus yet. Churn eligibility must be proven by the T&C.','Waiting period before another bonus *'):
     if token not in app_js: fail(f'churnability intake gate missing from app.js: {token}')
 
 runtime_fix=text('wells-professional-runtime.js')
