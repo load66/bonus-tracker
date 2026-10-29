@@ -508,7 +508,7 @@ function derivedRequirementTimers(e,timers){
  if(e.reqMet||e.bonusRecd||e.closed)return '';
  const requirements=Array.isArray(e.financialRules?.requirements)?e.financialRules.requirements:[];
  const dueDates=new Set();
- return requirements.map(rule=>{
+ const rows=requirements.map(rule=>{
   const due=detailRequirementDate(e,rule);
   if(!due||dueDates.has(due))return '';
   // A saved manual reminder already represents this deadline: do not double-display it.
