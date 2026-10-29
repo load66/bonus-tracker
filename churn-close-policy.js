@@ -1,4 +1,4 @@
-/* Release 3.6.94: bank-specific rules unchanged; calendar-month close reviews are handled by shared financial rules. */
+/* Release 3.6.95: bank-specific rules unchanged; calendar-month close reviews are handled by shared financial rules. */
 /* BonusTracker v3.5.2 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
 (function(){
   'use strict';

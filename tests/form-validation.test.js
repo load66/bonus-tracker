@@ -116,3 +116,12 @@ assert.equal(s.saveEntryFromButton(fakeButton,{preventDefault(){},stopPropagatio
  run('closeModal()');
  console.log('Form reliability: inline errors, draft retention, no invalid writes, single-submit guard, terms recovery PASS');
 })().catch(e=>{console.error(e);process.exitCode=1});
+
+// Dollar amounts and year numbers must never become requirement-day counts.
+for(const [text,expected] of [
+ ['90',90],['90 days',90],['$500 or more in direct deposits within 90 days after opening (by January 27, 2027).',90],
+ ['2026 promotion: $1,000 deposit within 90 calendar days.',90],
+ ['Within 90 days; qualification is assessed at 90 days.',90],
+ ['$500 deposit',0],['January 27, 2027',0],['30 business days',0],['12 calendar months',0],
+ ['90–120 days',0],['90-120 calendar days',0],['90 days to qualify; payout within 30 days.',0]
+])assert.equal(s.parseRequirementDaysText(text),expected,text);

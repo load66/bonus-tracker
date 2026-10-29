@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.94';
+const APP_VERSION='3.6.95';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -5381,7 +5381,18 @@ function resolvedModalEarlyCloseFee(source){
   const n=parseInt(String(m[1]).replace(/,/g,''),10);
   return Number.isFinite(n)?n:null;
 }
-function parseRequirementDaysText(v){const raw=String(v??'').trim();if(!raw)return 0;const m=raw.match(/(\d{1,4})/);return m?Math.max(0,parseInt(m[1],10)||0):0}
+function parseRequirementDaysText(v){
+  const raw=String(v??'').trim();
+  if(/^\d{1,4}$/.test(raw))return parseInt(raw,10);
+  // Amounts, dates, business days and calendar months are not calendar-day counts.
+  // A range or competing durations needs explicit review rather than its first number.
+  if(/\d\s*[-–—]\s*\d+\s*(?:calendar\s+)?days?\b/i.test(raw))return 0;
+  const counts=[...raw.matchAll(/\b(\d{1,4})\s+(?:calendar\s+)?days?\b/gi)]
+    .filter(m=>!/[\d,$.]$/.test(raw.slice(0,m.index)))
+    .map(m=>parseInt(m[1],10));
+  const unique=[...new Set(counts)];
+  return unique.length===1?unique[0]:0;
+}
 function syncRequiredDaysFromModal(d){const raw=String(modal.requiredDaysText??'').trim();const parsed=parseRequirementDaysText(raw);if(raw){d.requiredDaysText=raw;d.reqDays=parsed}else if((modal.reqDays||0)>0){d.reqDays=parseInt(modal.reqDays,10)||0;d.requiredDaysText=String(d.reqDays)}else{d.requiredDaysText='';d.reqDays=0}return d.reqDays}
 function applyCountdownFromModal(d){const raw=String(modal.closeFeeCountdownDays??'').trim();if(raw===''){d.minHoldDays=0;d.closeFeeCountdownDays='';d.feeChecked=false;return true}const wanted=Math.max(0,parseInt(raw,10)||0);if(wanted===0){d.minHoldDays=0;d.closeFeeCountdownDays='';d.feeChecked=false;return true}d.minHoldDays=wanted;d.closeFeeCountdownDays=String(wanted);d.feeChecked=false;return true}
 

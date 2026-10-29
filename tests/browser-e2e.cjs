@@ -27,7 +27,7 @@ const payload={kind:'BonusTrackerEntry',schemaVersion:2,
   verification:{promoSourceUrl:'https://example-bank.test/promo',feeScheduleSourceUrl:'https://example-bank.test/fees',termsVerifiedAt:'2026-09-25'},
   entry:{bank:'E2E Verification Bank',accountType:'personal',bonus:325,opened:'2026-01-31',
     churn:'1',churnable:true,churnability:'repeatable',churnBasis:'bonus',sourceEligibilityBasis:'bonus-received',
-    churnPeriodValue:12,churnPeriodUnit:'months',reqDays:90,requiredDaysText:'90 calendar days',
+    churnPeriodValue:12,churnPeriodUnit:'months',reqDays:90,requiredDaysText:'$500 in qualifying deposits within 90 calendar days after opening',
     dataPoint:'Employer DD',payoutTimingText:'Within 30 calendar days after requirements are met',
     closeRestrictionType:'payout-only',closeRuleText:'Keep the account open until the bonus posts.',
     earlyCloseFee:0,earlyTerminationFeeText:'No early closing fee.',
@@ -747,7 +747,7 @@ async function exercise(name,engine,url){
       window.__chaseViewBaseline=JSON.stringify(e);
       Object.assign(e,{
         id:'CHA-P-01',bank:'Chase Total Checking',bonus:300,opened:'2026-10-15',
-        reqDays:90,requiredDaysText:'90 calendar days',
+        reqDays:90,requiredDaysText:'$500 in qualifying deposits within 90 calendar days after opening',
         financialRules:{
           requirements:[{id:'direct-deposits',kind:'direct-deposit',amount:10000,
             text:'Qualifying direct deposits totaling $10,000 within 90 days.',

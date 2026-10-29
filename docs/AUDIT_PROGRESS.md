@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: none
+Active agent: Codex — v3.6.95 — codex/v3.6.95-requirement-day-parser
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.95 requirement-day parser (`codex/v3.6.95-requirement-day-parser`): requirement descriptions parse explicit calendar-day durations instead of currency amounts or years; ambiguous ranges and conflicting durations remain unresolved. Regression covers amount-first import review without record writes. Local and release verification in progress; no private records committed or modified.
 
 - v3.6.94 calendar-month closure reviews (`codex/v3.6.94-exact-calendar-close-hold`, PR #283): financialRules v4 records source-backed exact account-open month retention separately from an unconfirmed closing service fee; zero day approximations. Canonical hold anniversary, optional planning buffer and closure-review date are projected read-only. Close checks, action queue, semantic status and mobile details avoid premature Safe to Close. Exact month/leap regression and structured import review tests added. Bonus, UI, cloud unit suites and Chromium/WebKit PR checks PASS on run 40938645655; release verification pending final CI, merge and Pages verification. No user records or credentials stored in repo or modified. Next: verify final PR-head run, merge green, confirm deployed Pages commit, then validate private import in user-controlled tracker.
 

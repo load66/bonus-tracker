@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.94: calendar-month hold review without false safe-to-close.
-const V = 'bt-v3.6.94-hold1';
+// Version 3.6.95: calendar-month hold review without false safe-to-close.
+const V = 'bt-v3.6.95-reqdays1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
