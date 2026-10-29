@@ -1,7 +1,7 @@
 /* Evidence-backed, bank-independent rules and exact payout ranges. Pure functions; no tracker writes. */
 (function(root){
   'use strict';
-  const VERSION=3,clean=v=>String(v??'').replace(/\s+/g,' ').trim();
+  const VERSION=4,clean=v=>String(v??'').replace(/\s+/g,' ').trim();
   const object=v=>!!v&&typeof v==='object'&&!Array.isArray(v);
   const money=n=>'$'+Number(n).toLocaleString('en-US',{maximumFractionDigits:2});
   const number=n=>typeof n==='number'&&Number.isFinite(n)&&n>=0&&n<=100000000;
@@ -16,7 +16,7 @@
     const fail=(path,message)=>issues.push({path,message});
     const warn=(path,message)=>warnings.push({path,message});
     if(rules==null)return Number(e?.schemaVersion)>=3?{ok:false,mode:'invalid',issues:[{path:'financialRules',message:'Structured financial rules are missing.'}],warnings,rules:null}:{ok:true,mode:'legacy',issues,warnings,rules:null};
-    if(!object(rules)||![1,2,VERSION].includes(rules.version))return{ok:false,mode:'invalid',issues:[{path:'financialRules.version',message:'The financial-rule version is unsupported.'}],warnings,rules:null};
+    if(!object(rules)||![1,2,3,VERSION].includes(rules.version))return{ok:false,mode:'invalid',issues:[{path:'financialRules.version',message:'The financial-rule version is unsupported.'}],warnings,rules:null};
     if(JSON.stringify(rules).length>60000)fail('financialRules','The financial-rule package is too large.');
     function keys(value,allowed,path){if(!object(value)){fail(path,'An object is required.');return false;}for(const k of Object.keys(value))if(!allowed.includes(k))fail(path+'.'+k,'This rule field is unsupported.');return true;}
     function evidence(value,path,expected){
@@ -105,8 +105,24 @@
         if(t&&(t.basis!==w.basis||t.unit!==w.unit||t.value!==w.max))fail('payout.window','Payout timing conflicts with the arrival window.');
       }
     }
-    if(keys(rules.closure,['restrictionType','basis','minHoldDays','earlyCloseFee','text','evidence','feeEvidence'],'closure')){
+    if(keys(rules.closure,['restrictionType','basis','minHoldDays','earlyCloseFee','text','evidence','feeEvidence',...(rules.version>=4?['hold']:[])],'closure')){
       const c=rules.closure,q=evidence(c.evidence,'closure.evidence','promotion');
+      // A contractually required calendar-month hold can be tracked without
+      // misrepresenting it as 365 days or asserting that an unknown closing fee is $0.
+      if(c.hold!==undefined){
+        if(rules.version<4)fail('closure.hold','Calendar-month holds require financialRules version 4.');
+        else if(keys(c.hold,['basis','value','unit'],'closure.hold')){
+          if(c.hold.basis!=='opened'||c.hold.unit!=='calendar-months'||!integer(c.hold.value))
+            fail('closure.hold','An exact opened-date calendar-month hold is required.');
+          else{
+            supportedValue(c.hold.value,q,'closure.hold.value');
+            unitEvidence(c.hold.unit,q,'closure.hold.unit');
+            if(!/account.{0,90}(?:open|remain open)|(?:open|remain open).{0,90}account/i.test(q))
+              fail('closure.hold','The original promotion must establish an account-open retention rule.');
+            if(c.minHoldDays!==0)fail('closure.hold','A calendar-month hold cannot also be approximated as minHoldDays.');
+          }
+        }
+      }
       const unknownFee=rules.version>=2&&c.earlyCloseFee===null;
       const feeQuote=evidence(c.feeEvidence,'closure.feeEvidence');
       if(unknownFee){if(c.restrictionType!=='manual-review'||c.basis!=='manual')fail('closure.earlyCloseFee','An unconfirmed early-close fee must block closure through manual review.');warn('closure.earlyCloseFee','Early-close fee unconfirmed. Verify the applicable fee before closing; no zero-fee claim is made.');}
@@ -245,6 +261,20 @@
     const crossYear=range.start.slice(0,4)!==range.end.slice(0,4);
     return 'Estimated bonus arrival: '+fmt(range.start,crossYear)+'–'+fmt(range.end,true);
   }
+  // Returns a calendar-exact retention and review date, not permission to close.
+  // Service-fee verification and bonus receipt remain independent safety gates.
+  function closeHoldInfo(e){
+    const checked=validate(e),c=checked.ok?checked.rules?.closure:null;
+    if(!c||checked.rules.version<4||!c.hold)return null;
+    const h=c.hold;
+    if(h.basis!=='opened'||h.unit!=='calendar-months'||!date(e.opened))return null;
+    const holdUntil=shiftPayoutDate(e.opened,h.value,h.unit);
+    const buffer=Number(e.closeBufferDays);
+    if(!holdUntil||!Number.isInteger(buffer)||buffer<0||buffer>365)return null;
+    const reviewOn=shiftPayoutDate(holdUntil,buffer,'calendar-days');
+    if(!reviewOn)return null;
+    return {holdUntil,reviewOn,basis:'opened',months:h.value,bufferDays:buffer,feeUnconfirmed:c.earlyCloseFee===null,bonusReceived:!!e.bonusRecd};
+  }
   function waiverText(w){
     if(w===null)return 'Fee-waiver conditions have not been confirmed.';
     if(w.operator==='none')return 'No fee waiver is offered under these terms.';
@@ -259,7 +289,7 @@
     const minimums=r.accounts.filter(a=>a.minimumBalance).map(a=>a.label+': '+a.minimumBalance.text);
     const evidence=[],seen=new Set();
     const walk=v=>{if(!object(v)&&!Array.isArray(v))return;if(v.source&&v.quote){const key=v.source+': '+v.quote;if(!seen.has(key)){seen.add(key);evidence.push(key);}}for(const child of Object.values(v))if(object(child)||Array.isArray(child))walk(child);};walk(r);
-    return{mode:'structured',fees,waivers,minimums,requirements:r.requirements.map(x=>x.text),payout:r.payout.text,closure:r.closure.text+(r.closure.earlyCloseFee===null?' Early-close fee unconfirmed; manual closure review required.':''),recurring:r.requirements.some(x=>x.recurrence),feeRisk:r.accounts.some(a=>a.required&&a.fee.amount!==0),issues:[],warnings:v.warnings.map(x=>x.message),evidence};
+    return{mode:'structured',fees,waivers,minimums,requirements:r.requirements.map(x=>x.text),payout:r.payout.text,closure:r.closure.text+(closeHoldInfo(e)?' Exact account-open retention through '+closeHoldInfo(e).holdUntil+'; closing review on '+closeHoldInfo(e).reviewOn+'.':'')+(r.closure.earlyCloseFee===null?' Early-close fee unconfirmed; manual closure review required.':''),recurring:r.requirements.some(x=>x.recurrence),feeRisk:r.accounts.some(a=>a.required&&a.fee.amount!==0),issues:[],warnings:v.warnings.map(x=>x.message),evidence};
   }
   function intentFor(question){
     const q=clean(question).toLowerCase();
