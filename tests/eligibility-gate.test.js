@@ -161,3 +161,37 @@ assert(G.applicationReadyDate({...mustClose,closed:'2027-09-10'},addD,addM)==='2
 
 console.log('Eligibility evidence gate passed: single/multi-rule wording, U.S. Bank semantics, Chase conditional/enrollment rules, latest-date control, exact units, and safe dates verified');
 assert(!G.discoverTimedRestrictions('Checking offer is not available to existing Chase checking customers or those whose accounts have been closed within 90 days or closed with a negative balance within the last 3 years.').some(r=>r.basis==='account-ownership-ended'),'Have been closed is a closure rule, not an ownership lookback');
+
+
+
+// Compound official-style lookback: two distinct clocks in one sentence must not
+// be mixed into four invented cooldown rules. All names/events here are synthetic.
+const compoundText='Offer not available for customers who have received a new consumer checking account monetary bonus within the last 24 months and have or have had a Synthetic Community Bank checking account within the last 12 months.';
+const discoveredCompound=G.discoverTimedRestrictions(compoundText);
+assert(discoveredCompound.length===2,'A compound lookback produced spurious cross-product restrictions');
+assert(discoveredCompound.some(x=>x.basis==='bonus-received'&&x.period.value===24&&x.period.unit==='months'),'Bonus-received 24-month lookback lost');
+assert(discoveredCompound.some(x=>x.basis==='account-ownership-ended'&&x.period.value===12&&x.period.unit==='months'),'Ownership-ended 12-month lookback lost');
+const compound={
+  churnable:true,churnability:'repeatable',opened:'2026-10-29',tcSourceRaw:compoundText,
+  eligibilityEvidenceText:compoundText,eligibilityEvidenceSource:'official-promotion-terms',
+  bonusRecd:'',closed:'',
+  eligibilityRules:[
+    {id:'bonus-24',basis:'bonus-received',periodValue:24,periodUnit:'months',scope:'consumer checking bonus',evidenceText:compoundText,evidenceSource:'official-promotion-terms'},
+    {id:'ownership-12',basis:'account-ownership-ended',periodValue:12,periodUnit:'months',scope:'consumer checking ownership',evidenceText:compoundText,evidenceSource:'official-promotion-terms'}
+  ]
+};
+const compoundVerdict=G.validate(compound);
+assert(compoundVerdict.ok&&compoundVerdict.rules.length===2,'Valid separate lookbacks did not verify');
+assert(compoundVerdict.currentCustomerExcluded===true,'Current-account restriction omitted by compound wording');
+assert(compoundVerdict.mustCloseBeforeReapply===true,'Ownership cooldown did not require an account closure');
+assert(G.officialEligibilityDate(compound,addD,addM)==='', 'A future churn date was fabricated without payout and closure dates');
+const compoundPaidClosed={...compound,bonusRecd:'2027-01-19',closed:'2027-11-04'};
+assert(G.officialEligibilityDate(compoundPaidClosed,addD,addM)==='2029-01-19','Bonus 24-month clock should control in this scenario');
+assert(G.safeEligibilityDate(compoundPaidClosed,addD,addM)==='2029-01-21','Two-calendar-day eligibility cushion should be separate from bank rule');
+const compoundLaterClosed={...compound,bonusRecd:'2027-01-19',closed:'2028-08-04'};
+assert(G.officialEligibilityDate(compoundLaterClosed,addD,addM)==='2029-08-04','Ownership-ended 12-month clock should control after later closure');
+const wrongCompound={...compound,eligibilityRules:[
+  {id:'wrong-12',basis:'bonus-received',periodValue:12,periodUnit:'months',scope:'consumer checking bonus',evidenceText:compoundText,evidenceSource:'official-promotion-terms'},
+  compound.eligibilityRules[1]
+]};
+assert(!G.validate(wrongCompound).ok,'Incorrectly cross-paired bonus cooldown was accepted');
