@@ -3,6 +3,19 @@ const assert=require('node:assert/strict');
 const rules=require('../financial-rules.js');
 const {fixture}=require('./fixtures/financial-rules.cjs');
 const {tierArrivalFixture}=require('./fixtures/financial-rules.cjs');
+const {legacyPublicOfferFixture}=require('./fixtures/financial-rules.cjs');
+const publicOffer=legacyPublicOfferFixture(),publicBefore=JSON.stringify(publicOffer);
+assert.deepEqual(rules.estimatedArrival(publicOffer),{start:'2026-07-30',end:'2026-08-29',basis:'opened',anchor:'2026-05-01'});
+assert.match(rules.arrivalSource(publicOffer).sourceUrl,/^https:\/\/banking\.citi\.com\//);
+for(const reqMet of ['','2026-05-01','2026-06-20'])assert.equal(rules.estimatedArrival({...publicOffer,reqMet}).end,'2026-08-29','Opening-based payment does not depend on a completion checkbox');
+for(const changes of [{bank:'Unrelated Bank'},{accountType:'business'},{bonus:300},{reqDays:60},{opened:'2026-04-13'},{opened:'2026-10-27'},{opened:'2026-02-30'},{expirationDateText:''},{promoCodeText:''},{completeBonusText:publicOffer.completeBonusText.replace('2 Enhanced','1 Enhanced')},{completeBonusText:publicOffer.completeBonusText.replace('$3,000','$5,000')},{promoSourceUrl:'https://unrelated.example/promo'},{tcSourceRaw:'Original terms conflict with the recovered offer.'},{financialRules:{version:999}},{schemaVersion:3},{payoutTimingText:'Payment occurs 120 business days from an unsupported event.'}]){
+ assert.equal(rules.estimatedArrival({...publicOffer,...changes}),null,'A partial, different, conflicting or unsupported offer never inherits the public rule');
+}
+assert.equal(rules.estimatedArrival({bank:'Citi',accountType:'personal',bonus:325,opened:'2026-05-01'}),null,'A bank name and amount alone are never a payout rule');
+const ownClock={...publicOffer,reqMet:'2026-05-25',payoutTimingText:'Bonus is paid within 15 days after requirements are met.'};
+assert.equal(rules.estimatedArrival(ownClock).end,'2026-06-09');assert.equal(rules.arrivalSource(ownClock),null,'Saved exact terms take precedence');
+for(const field of ['closed','bonusRecd'])assert.equal(rules.estimatedArrival({...publicOffer,[field]:'2026-07-30'}),null);
+assert.equal(JSON.stringify(publicOffer),publicBefore,'Source recovery never upgrades or rewrites legacy records');
 const tier=tierArrivalFixture(),tierBefore=JSON.stringify(tier);
 assert.equal(rules.validate(tier).ok,true);
 assert.deepEqual(rules.estimatedArrival(tier),{start:'2026-04-01',end:'2026-04-16',basis:'qualifying-period-end',anchor:'2026-04-01'});
@@ -80,6 +93,9 @@ conflictingPeriod.offerEnrollmentDate='2026-09-01';conflictingPeriod.couponEnrol
 assert.equal(rules.estimatedArrival(conflictingPeriod),null,'Conflicting enrollment dates also block a qualification-period clock');
 console.log('Bonus arrival: source-backed bounds, exact anchors, recalculation, missing data, calendar boundaries, ambiguous rules and no mutation passed');
 const {sandbox,storage}=require('./full-app-smoke.test.js');
+assert.equal(sandbox.BT360.sourceEvidenceStatus(publicOffer).promotion,false,'A matched public reference never masquerades as saved original terms');
+assert.match(sandbox.BT360.sourceEvidencePanel(publicOffer),/Read matched offer payout rule/);
+assert(sandbox.BTBonusAI.contextFor(publicOffer).some(f=>f.id==='arrivalsource'&&f.text.includes('https://banking.citi.com/')));
 const before=JSON.stringify([...storage]);
 const envelope={kind:'BonusTrackerEntry',schemaVersion:3,verification:{promoSourceUrl:c.promoSourceUrl,feeScheduleSourceUrl:c.feeScheduleSourceUrl,termsVerifiedAt:c.termsVerifiedAt},entry:c};
 sandbox.btStageEntryPayload(envelope);

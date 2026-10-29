@@ -470,11 +470,12 @@ function payoutReminderRow(e){
  if(e.bonusRecd||e.closed)return '';
  const engine=window.BTFinancialRules;
  const estimate=engine?.estimatedArrival?.(e),label=engine?.arrivalLabel?.(estimate);
- if(label)return '<p class="bt3684-arrival" data-source="saved-payout">'+safe(label)+'</p>';
+ if(label)return '<p class="bt3684-arrival" data-source="'+(engine?.arrivalSource?.(e)?'matched-offer-payout':'saved-payout')+'">'+safe(label)+'</p>';
  const payout=e.financialRules?.payout;
  const rule=payout?.window||payout?.timing||engine?.payoutWindowFromText?.(payout?.evidence?.quote||payout?.text||e.payoutTimingText);
- let help='A date range is not available from the saved offer details yet.';
- if(rule?.basis==='reqmet'&&!e.reqMet)help='Finish the requirements and record the completion date to see your date range.';
+ let help=rule?'The saved payout rule needs additional dates or calendar details before a range can be calculated.':'The saved offer is missing its payment timing. Add the original payout terms to calculate a date range.';
+ if((e.financialRules||Number(e.schemaVersion)>=3)&&!engine?.validate?.(e)?.ok)help='The saved offer rules need correction before a date range can be calculated.';
+ else if(rule?.basis==='reqmet'&&!e.reqMet)help='Finish the requirements and record the completion date to see your date range.';
  else if(rule?.basis==='opened'&&!archiveDateValid(e.opened))help='Add your account opening date to see your date range.';
  else if(rule?.basis==='enrollment'&&!e.offerEnrollmentDate&&!e.couponEnrollmentDate)help='Add your offer enrollment date to see your date range.';
  return '<section class="bt3684-arrival bt3686-arrival-help" aria-label="Estimated bonus arrival"><b>Estimated bonus arrival</b><p>'+safe(help)+'</p></section>';
@@ -836,8 +837,9 @@ function sourceEvidenceStatus(e){
 }
 function sourceEvidencePanel(e){
  const status=sourceEvidenceStatus(e),raw=String(e.tcSourceRaw||''),review=String(e.analysis?.rawText||''),fees=String(e.feeScheduleRaw||'');
+ const arrivalSource=window.BTFinancialRules?.arrivalSource?.(e);
  const text=(label,value)=>value.trim()?'<details class="bt3640-source-text"><summary>'+label+'</summary><pre>'+safe(value)+'</pre></details>':'';
- return accountSection(e,'terms','Saved terms','<dl class="bt3653-evidence" aria-label="Saved source evidence">'+status.rows.map(([label,value])=>'<div><dt>'+safe(label)+'</dt><dd>'+safe(value)+'</dd></div>').join('')+'</dl><p class="bt360-muted">Saved evidence describes this record. Current offer availability and personal eligibility require a separate check.</p>'+text('Read original promotion',raw)+(!raw.trim()?text('Read saved review text',review):'')+text('Read fee schedule',fees)+'<button type="button" class="bt360-source bt3613-source" onclick="BT360.showTerms('+arg(e.bank)+')">View saved sources in Archive ›</button>',status.label);
+ return accountSection(e,'terms','Saved terms','<dl class="bt3653-evidence" aria-label="Saved source evidence">'+status.rows.map(([label,value])=>'<div><dt>'+safe(label)+'</dt><dd>'+safe(value)+'</dd></div>').join('')+'</dl><p class="bt360-muted">Saved evidence describes this record. Current offer availability and personal eligibility require a separate check.</p>'+text('Read original promotion',raw)+(!raw.trim()?text('Read saved review text',review):'')+text('Read fee schedule',fees)+(arrivalSource?text('Read matched offer payout rule',arrivalSource.quote+'\nOfficial source: '+arrivalSource.sourceUrl+'\nChecked: '+arrivalSource.verifiedAt+'\nThis reference does not replace saved terms or confirm qualification.'):'')+'<button type="button" class="bt360-source bt3613-source" onclick="BT360.showTerms('+arg(e.bank)+')">View saved sources in Archive ›</button>',status.label);
 }
 function detailPanels(e){
  const code=stage(e).code,ready=code==='READY_TO_CLOSE',closed=!!e.closed;

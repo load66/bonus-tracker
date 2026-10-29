@@ -182,16 +182,43 @@
     if(t&&(t.basis!==w.basis||t.unit!==w.unit||t.value!==w.max))return null;
     return w;
   }
+  // Public offer evidence is an immutable enrollment-version record, not a bank default.
+  // Recovery requires the whole legacy fingerprint; saved source/rules always win.
+  const legacyOfferEvidence=Object.freeze({
+    id:'citi-regular-325-edd-20260414-20261026',version:1,
+    sourceUrl:'https://banking.citi.com/cbol/OM/checking/enhanced-direct-deposit-offer/default.htm?venue=Extra1',
+    verifiedAt:'2026-10-29',enrollFrom:'2026-04-14',enrollThrough:'2026-10-26',
+    quote:'You’ll receive the bonus as a credit to your eligible, Regular Checking Account between the 90th and 120th calendar day after account opening, provided you keep your account open and in good standing.'
+  });
+  function matchedLegacyOffer(e){
+    if(!e||e.financialRules||Number(e.schemaVersion)>=3||e.tcSourceRaw||e.analyzedTC||e.analysis)return null;
+    if(!/^(?:citi|citibank|citi bank)$/i.test(clean(e.bank))||e.accountType!=='personal'||Number(e.bonus)!==325||Number(e.reqDays)!==90)return null;
+    if(!date(e.opened)||e.opened<legacyOfferEvidence.enrollFrom||e.opened>legacyOfferEvidence.enrollThrough)return null;
+    if(!/^(?:October 26, 2026|2026-10-26)$/i.test(clean(e.expirationDateText)))return null;
+    if(!/^Opened through Citi \$325 Enhanced Direct Deposit offer link$/i.test(clean(e.promoCodeText)))return null;
+    if(!/^Open an eligible Citi checking account and receive at least 2 Enhanced Direct Deposits totaling \$3,000 or more within 90 calendar days of account opening\.$/i.test(clean(e.completeBonusText)))return null;
+    if(clean(e.payoutTimingText)!=='Bonus expected after requirements are completed; keep the account open and in good standing until the bonus posts.')return null;
+    // Never override a saved numeric clock, even if its wording is unsupported.
+    if(/\d.{0,15}(?:days?|months?|cycles?)/i.test(clean(e.payoutTimingText)))return null;
+    if(e.promoSourceUrl){try{const u=new URL(e.promoSourceUrl);if(u.protocol!=='https:'||u.username||u.password||u.hostname!=='banking.citi.com'||u.pathname!=='/cbol/OM/checking/enhanced-direct-deposit-offer/default.htm')return null;}catch{return null;}}
+    return legacyOfferEvidence;
+  }
+  function arrivalRule(e){
+    if(!e)return null;
+    if(e.financialRules||Number(e.schemaVersion)>=3){
+      const v=validate(e);return v.ok&&v.rules?savedPayoutWindow(v.rules):null;
+    }
+    const saved=payoutWindowFromText(e.payoutTimingText);if(saved)return saved;
+    const offer=matchedLegacyOffer(e);return offer?payoutWindowFromText(offer.quote):null;
+  }
+  function arrivalSource(e){
+    if(!e||e.closed||e.bonusRecd)return null;
+    if(payoutWindowFromText(e?.payoutTimingText))return null;
+    const offer=matchedLegacyOffer(e);return offer?{...offer}:null;
+  }
   function estimatedArrival(e){
     if(!e||e.closed||e.bonusRecd)return null;
-    let w=null;
-    if(e.financialRules||Number(e.schemaVersion)>=3){
-      const v=validate(e);if(!v.ok||!v.rules)return null;
-      const p=v.rules.payout;
-      w=savedPayoutWindow(v.rules);
-      if(w&&p.timing&&(p.timing.basis!==w.basis||p.timing.unit!==w.unit||p.timing.value!==w.max))return null;
-    }else w=payoutWindowFromText(e.payoutTimingText);
-    if(!w)return null;
+    const w=arrivalRule(e);if(!w)return null;
     let base=w.basis==='opened'?e.opened:w.basis==='reqmet'?e.reqMet:w.basis==='enrollment'?(e.offerEnrollmentDate||e.couponEnrollmentDate):'';
     if(w.basis==='enrollment'&&e.offerEnrollmentDate&&e.couponEnrollmentDate&&e.offerEnrollmentDate!==e.couponEnrollmentDate)return null;
     if(w.basis==='qualifying-period-end'){
@@ -262,7 +289,7 @@
     if(['fees','waiver','companion'].includes(intent))missing=s.warnings.filter(x=>/fee|waiv/i.test(x));
     return{answer:text,step,missing,factIds:['financialrules'],local:true};
   }
-  const api=Object.freeze({VERSION,validate,summarize,answer,intentFor,waiverText,estimatedArrival,arrivalLabel,payoutWindowFromText});
+  const api=Object.freeze({VERSION,validate,summarize,answer,intentFor,waiverText,estimatedArrival,arrivalLabel,payoutWindowFromText,arrivalRule,arrivalSource});
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.BTFinancialRules=api;
 })(typeof window!=='undefined'?window:globalThis);
