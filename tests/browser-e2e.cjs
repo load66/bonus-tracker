@@ -2348,7 +2348,7 @@ async function exercise(name,engine,url){
     const individualRestore=await page.evaluate(source=>{
       const saved={entries:JSON.parse(JSON.stringify(entries)),storage:Object.fromEntries(Object.entries(localStorage))};
       Object.assign(source,{id:'E2E-INDIVIDUAL',bank:'Synthetic Requirement Bank',reqMet:'',bonusRecd:'',closed:'',checklist:[],history:[]});
-      for(const [id,kind,amount,text] of [['opening-funds','new-money',25,'Deposit $25 at opening.'],['activity','transactions',5,'Complete 5 qualifying transactions.']]){
+      for(const [id,kind,amount,text] of [['opening-funds','new-money',25,'Deposit $25 at opening.'],['activity','balance-hold',10000,'For days 31-90 after opening your checking account, keep a combined average daily balance of $10,000.']]){
         source.tcSourceRaw+=' '+text;
         source.financialRules.requirements.push({id,accountId:'checking',kind,amount,text,evidence:{source:'promotion',quote:text}});
       }
@@ -2356,6 +2356,7 @@ async function exercise(name,engine,url){
     },require('./fixtures/financial-rules.cjs').fixture());
     const openingCheck=()=>page.getByRole('checkbox',{name:'Deposit $25',exact:true});
     check('three structured requirements each have a checkbox',await page.locator('.bt3611-requirement [role="checkbox"]').count()===3);
+    check('balance requirement uses plain instructions with the opening-day range and duration',await page.locator('.bt3611-requirement').filter({has:page.getByRole('checkbox',{name:'Keep a $10,000 average balance',exact:true})}).innerText().then(t=>t.includes('Days 31–90 after opening · 60 days')&&!t.includes('Measured')&&!t.includes('daily-minimum rule')));
     await openingCheck().click();
     check('one checkbox confirms only one requirement and no financial milestones',await page.evaluate(()=>{
       const e=entries[0];return e.checklist.length===1&&e.checklist[0].done&&!e.reqMet&&!e.bonusRecd&&!e.closed&&BT360.requirementRows(e).remaining===2;

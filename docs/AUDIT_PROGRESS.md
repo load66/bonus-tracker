@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: Codex /root — v3.6.98 — codex/v3.6.98-plain-requirements
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 

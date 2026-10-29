@@ -357,7 +357,7 @@ function accountSaveStatus(e){
 function detailRequirementDate(e,r){
  return typeof btRequirementDeadlineContext==='function'?btRequirementDeadlineContext(e,r).date:'';
 }
-function requirementTitle(r){
+function requirementTitle(r,e,balance){
  const kind=r?.kind||'',value=Number(r?.amount),money=Number.isFinite(value)&&value>0?amount(value):'';
  const raw=String(r?.text||'').trim();
  if(kind==='direct-deposit'){
@@ -366,7 +366,10 @@ function requirementTitle(r){
   return 'Qualifying direct deposits'+(r.count?' · '+r.count+' required':'');
  }
  if(kind==='new-money')return 'Deposit '+(money||'new money');
- if(kind==='balance-hold')return 'Qualifying balance '+(money||'required');
+ if(kind==='balance-hold'){
+  const period=balance===undefined&&e?window.BTFinancialRules?.balanceMeasurementWindow?.(e,r):balance;
+  return period?'Keep '+(money?'a '+money:'the required')+' average balance':'Qualifying balance '+(money||'required');
+ }
  if(kind==='transactions')return 'Qualifying transactions'+(r.count?' · '+r.count+' required':'');
  if(kind==='enrollment')return 'Enrollment requirement';
  if(kind==='relationship')return 'Linked account requirement';
@@ -412,7 +415,7 @@ function requirementProgress(e){
  const pending=e?.reqMet?[]:list.filter(r=>!requirementRecord(e,r)?.done);
  const total=list.length+extra.length+fallback;
  const done=(e?.reqMet?list.length+fallback:list.length-pending.length)+extra.filter(c=>c.done).length;
- const next=pending.length?requirementTitle(pending[0]):!e?.reqMet&&fallback?'Complete bonus requirements':extra.find(c=>!c.done)?.text||'';
+ const next=pending.length?requirementTitle(pending[0],e):!e?.reqMet&&fallback?'Complete bonus requirements':extra.find(c=>!c.done)?.text||'';
  return {total,done,remaining:total-done,percent:total?Math.round(done/total*100):0,next};
 }
 function toggleRequirement(id,ruleId){
@@ -424,7 +427,7 @@ function toggleRequirement(id,ruleId){
   if(e.id!==id)return e;
   const copy={...e,checklist:(e.checklist||[]).map(c=>({...c}))};
   let record=requirementRecord(copy,rule);
-  if(!record){record={id:btMakeLegacyInlineId('ck',id,copy.checklist.length),text:requirementTitle(rule),done:false,structuredRequirementId:rule.id,structuredRequirementSource:JSON.stringify(rule)};copy.checklist.push(record)}
+  if(!record){record={id:btMakeLegacyInlineId('ck',id,copy.checklist.length),text:requirementTitle(rule,e),done:false,structuredRequirementId:rule.id,structuredRequirementSource:JSON.stringify(rule)};copy.checklist.push(record)}
   record.done=!record.done;
   appendEntryHistory(copy,record.done?'checklist_completed':'checklist_reopened',record.text);
   return copy;
@@ -442,22 +445,21 @@ function requirementRows(e){
    '<button type="button" role="checkbox" aria-label="Edit requirements completion date" aria-checked="true" onclick="openReqMet('+arg(e.id)+')">✓</button>'+
    '<div class="bt3611-req-body"><b>Requirements completed</b><small>Saved on '+safe(completionDate)+'</small></div></div>';
   if(list.length||legacy){
-   const descriptions=list.length?list.map(r=>'<li>'+safe(requirementTitle(r))+(r.text&&r.text!==requirementTitle(r)?'<small>'+safe(r.text)+'</small>':'')+'</li>').join(''):'<li>'+safe(legacy)+'</li>';
+   const descriptions=list.length?list.map(r=>'<li>'+safe(requirementTitle(r,e))+(r.text&&r.text!==requirementTitle(r,e)?'<small>'+safe(r.text)+'</small>':'')+'</li>').join(''):'<li>'+safe(legacy)+'</li>';
    rows+='<details class="bt3686-saved-reqs"><summary>See saved requirements</summary><ul>'+descriptions+'</ul></details>';
   }
  }else{
   rows=list.map(r=>{
-   const due=detailRequirementDate(e,r),name=requirementTitle(r);
+   const due=detailRequirementDate(e,r),balance=window.BTFinancialRules?.balanceMeasurementWindow?.(e,r),name=requirementTitle(r,e,balance);
    const checked=!!requirementRecord(e,r)?.done;
-   const balance=window.BTFinancialRules?.balanceMeasurementWindow?.(e,r);
    const target=balance?new Date(balance.start+'T00:00:00Z'):null;
    if(target)target.setUTCDate(target.getUTCDate()-4);
    const fundTarget=target?target.toISOString().slice(0,10):'';
    const isObservedFunding=r.kind==='new-money'&&/\b(?:observed|displayed)\b/i.test(String(r.text||''))&&Number(e.fundingAmount)>=Number(r.amount)&&Number(r.amount)>0;
-   const note=balance?'Measured '+date(balance.start)+' – '+date(balance.end):isObservedFunding?'Opening balance displayed; funding posting not independently confirmed':due?'Due '+date(due):'Not confirmed yet';
-   const balanceInfo=balance?'<small class="bt3695-balance-period"><b>Funds counted: '+safe(date(balance.start))+' – '+safe(date(balance.end))+'</b></small><small>Have qualifying funds credited before '+safe(date(balance.start))+'. Aim for '+safe(date(fundTarget))+' (planning buffer, not bank deadline).</small><small>Combined qualifying account average; holding '+safe(amount(r.amount))+' throughout is a sufficient strategy, not a separate daily-minimum rule.</small>':'';
+   const note=balance?'Days '+balance.firstDay+'–'+balance.lastDay+' after opening · '+(balance.lastDay-balance.firstDay+1)+' days':isObservedFunding?(checked?'':'Confirm when your opening deposit has arrived'):due?'Due '+date(due):checked?'':'Not checked yet';
+   const balanceInfo=balance?'<small class="bt3695-balance-period"><b>'+safe(date(balance.start))+' – '+safe(date(balance.end))+'</b></small><small>The bank uses your average balance across the accounts that qualify for this offer.</small><small>Suggested: have the money arrive by '+safe(date(fundTarget))+' to allow extra time for transfers.</small>':'';
    return '<div class="bt360-check bt3611-requirement '+(checked?'done':'')+'"><button type="button" role="checkbox" aria-label="'+safe(name)+'" aria-checked="'+checked+'" onclick="BT360.toggleRequirement('+arg(e.id)+','+arg(r.id)+')">'+(checked?'✓':'')+'</button>'+
-    '<div class="bt3611-req-body"><b>'+safe(name)+'</b>'+(checked?'<small>Confirmed by you</small>':'')+'<small>'+safe(note)+'</small>'+balanceInfo+
+    '<div class="bt3611-req-body"><b>'+safe(name)+'</b>'+(checked?'<small>Confirmed by you</small>':'')+(note?'<small>'+safe(note)+'</small>':'')+balanceInfo+
     (r.text?'<details class="bt3611-evidence"><summary>Offer details</summary><p>'+safe(r.text)+'</p></details>':'')+'</div></div>';
   }).join('');
   if(!list.length&&(legacy||Number(e.reqDays)>0)){
@@ -540,7 +542,7 @@ function derivedRequirementTimers(e,timers){
   // A saved manual reminder already represents this deadline: do not double-display it.
   if(timers.some(t=>String(t.date||'')===due&&/requirement|deposit|qualify|funding/i.test(String(t.text||''))))return '';
   dueDates.add(due);
-  const heading=requirementTitle(rule);
+  const heading=requirementTitle(rule,e);
   const elapsed=dB(td(),due),chip=elapsed<0?'Overdue '+Math.abs(elapsed)+'d':elapsed===0?'Today':elapsed+' days';
   return '<details class="bt3611-timer-row bt3621-derived" data-source="saved-requirement"><summary><span class="bt3611-timer-icon" aria-hidden="true">'+timerSvg('date')+'</span><span class="bt3611-timer-body"><b>Requirement due</b><small>'+safe(date(due))+' · from saved offer terms</small></span><span class="bt360-chip '+(elapsed<0?'warning':'')+'">'+safe(chip)+'</span></summary><div class="bt3611-timer-full">'+safe(heading)+(rule.text?'<p>'+safe(rule.text)+'</p>':'')+'<p>Derived from saved requirements · not an added reminder</p></div></details>';
  }).join('');
@@ -549,8 +551,8 @@ function derivedRequirementTimers(e,timers){
    if(!w)return '';
    const recommended=new Date(w.start+'T00:00:00Z');recommended.setUTCDate(recommended.getUTCDate()-4);
    const target=recommended.toISOString().slice(0,10);
-   return '<details class="bt3611-timer-row bt3621-derived" data-source="official-balance-window"><summary><span class="bt3611-timer-icon" aria-hidden="true">'+timerSvg('date')+'</span><span class="bt3611-timer-body"><b>Balance measurement</b><small>'+safe(date(w.start))+' – '+safe(date(w.end))+' · saved terms</small></span><span class="bt360-chip">Period</span></summary><div class="bt3611-timer-full">Average qualifying balance '+safe(amount(rule.amount))+'+ across eligible accounts for this period. This date range is computed from the official enrolled terms; a requirement is not automatically marked complete.</div></details>'+
-   '<details class="bt3611-timer-row bt3621-derived" data-source="funding-plan"><summary><span class="bt3611-timer-icon" aria-hidden="true">'+timerSvg('date')+'</span><span class="bt3611-timer-body"><b>Funds credited target</b><small>'+safe(date(target))+' · 4-day planning buffer</small></span><span class="bt360-chip">Suggested</span></summary><div class="bt3611-timer-full">Aim for qualifying funds to post by '+safe(date(target))+', before the counted balance window opens '+safe(date(w.start))+'. This is a planning target, not an official bank deadline. Transfer processing and holidays can delay crediting.</div></details>';
+   return '<details class="bt3611-timer-row bt3621-derived" data-source="official-balance-window"><summary><span class="bt3611-timer-icon" aria-hidden="true">'+timerSvg('date')+'</span><span class="bt3611-timer-body"><b>Keep your balance</b><small>Days '+w.firstDay+'–'+w.lastDay+' · '+safe(date(w.start))+' – '+safe(date(w.end))+'</small></span><span class="bt360-chip">'+(w.lastDay-w.firstDay+1)+' days</span></summary><div class="bt3611-timer-full">Keep an average balance of '+safe(amount(rule.amount))+' across your qualifying accounts from day '+w.firstDay+' through day '+w.lastDay+' after opening. Check this requirement when you have finished the full period.</div></details>'+
+   '<details class="bt3611-timer-row bt3621-derived" data-source="funding-plan"><summary><span class="bt3611-timer-icon" aria-hidden="true">'+timerSvg('date')+'</span><span class="bt3611-timer-body"><b>Suggested deposit date</b><small>'+safe(date(target))+' · extra time for transfers</small></span><span class="bt360-chip">Suggested</span></summary><div class="bt3611-timer-full">Try to have the money arrive by '+safe(date(target))+'. The bank starts counting your balance on '+safe(date(w.start))+'. This suggested date allows extra time for transfers; weekends and holidays can cause delays.</div></details>';
  }).join('');
  return rows+balance;
 }
