@@ -771,9 +771,9 @@ async function exercise(name,engine,url){
     });
     check('Chase synthetic $10,000 DD progress is visible without checklist tasks',
       await page.locator('.bt3611-requirement').innerText().then(t=>t.includes('Direct deposits totaling $10,000')&&t.includes('Due Jan 13, 2027')&&!t.includes('$0 of $10,000')));
-    check('structured requirement displays read-only evidence and retains canonical rules-review action for incomplete terms',
-      await page.locator('.bt3611-requirement .bt3695-readonly-rule').count()===1&&
-      await page.locator('.bt3611-requirement [role="checkbox"]').count()===0&&
+    check('structured requirement exposes one individual checkbox and retains canonical rules-review action for incomplete terms',
+      await page.locator('.bt3611-requirement [role="checkbox"]').count()===1&&
+      await page.locator('.bt3611-requirement [role="checkbox"]').getAttribute('aria-checked')==='false'&&
       await page.getByRole('button',{name:'Review account rules for Chase Total Checking',exact:true}).count()===1&&
       await page.locator('.bt3611-req-track[role="progressbar"]').count()===0);
     check('account overview keeps secondary information collapsed',await page.locator('.bt3640-section').evaluateAll(nodes=>nodes.filter(n=>['fees','timers','terms','history','eligibility'].includes(n.dataset.section)).every(n=>!n.open)));
@@ -2344,6 +2344,44 @@ async function exercise(name,engine,url){
     const pointsBeforeSkip=await page.evaluate(()=>JSON.stringify(loadUserDatapoints()));
     await page.getByRole('button',{name:'Skip for now',exact:true}).click();
     check('skipping experience preserves payment and prior evidence',await page.evaluate(before=>!!entries[0].bonusRecd&&JSON.stringify(loadUserDatapoints())===before,pointsBeforeSkip));
+    // Individual requirement clicks are user checklist confirmations, never lifecycle events.
+    const individualRestore=await page.evaluate(source=>{
+      const saved={entries:JSON.parse(JSON.stringify(entries)),storage:Object.fromEntries(Object.entries(localStorage))};
+      Object.assign(source,{id:'E2E-INDIVIDUAL',bank:'Synthetic Requirement Bank',reqMet:'',bonusRecd:'',closed:'',checklist:[],history:[]});
+      for(const [id,kind,amount,text] of [['opening-funds','new-money',25,'Deposit $25 at opening.'],['activity','transactions',5,'Complete 5 qualifying transactions.']]){
+        source.tcSourceRaw+=' '+text;
+        source.financialRules.requirements.push({id,accountId:'checking',kind,amount,text,evidence:{source:'promotion',quote:text}});
+      }
+      entries=[source];sv(SK,entries);tab='tracker';expanded=source.id;modal=null;cfm=null;dpEditor=null;search='';BT360.setAudience('all');BT360.resetStage();R();return saved;
+    },require('./fixtures/financial-rules.cjs').fixture());
+    const openingCheck=()=>page.getByRole('checkbox',{name:'Deposit $25',exact:true});
+    check('three structured requirements each have a checkbox',await page.locator('.bt3611-requirement [role="checkbox"]').count()===3);
+    await openingCheck().click();
+    check('one checkbox confirms only one requirement and no financial milestones',await page.evaluate(()=>{
+      const e=entries[0];return e.checklist.length===1&&e.checklist[0].done&&!e.reqMet&&!e.bonusRecd&&!e.closed&&BT360.requirementRows(e).remaining===2;
+    }));
+    check('selected requirement is visibly checked with no duplicate task',await openingCheck().getAttribute('aria-checked')==='true'&&await page.locator('.bt3611-task').count()===0);
+    await page.reload();await settleStartup();await page.evaluate(()=>{tab='tracker';expanded='E2E-INDIVIDUAL';R()});
+    check('individual confirmation survives a real reload',await openingCheck().getAttribute('aria-checked')==='true');
+    for(const width of [320,375,390,430,1280]){
+      await page.setViewportSize({width,height:900});
+      check('shared requirement controls fit '+width+'px with touch targets',await page.locator('.bt3611-requirement').evaluateAll(rows=>rows.every(row=>{
+        const control=row.querySelector('[role="checkbox"]'),rect=control.getBoundingClientRect();
+        return rect.width>=44&&rect.height>=44&&row.scrollWidth<=row.clientWidth+1;
+      })));
+    }
+    await openingCheck().focus();await page.keyboard.press('Space');
+    check('keyboard can reopen only the selected requirement',await openingCheck().getAttribute('aria-checked')==='false'&&await page.evaluate(()=>entries[0].checklist.length===1&&!entries[0].reqMet));
+    const remainingChecks=page.locator('.bt3611-requirement [role="checkbox"]');
+    for(let i=0;i<3;i++)await remainingChecks.nth(i).click();
+    check('all individual checks still require an explicit overall completion date',await page.evaluate(()=>BT360.requirementRows(entries[0]).remaining===0&&!entries[0].reqMet&&!entries[0].bonusRecd)&&await page.locator('[data-section="requirements"]').innerText().then(t=>t.includes('All checked · confirm completion')));
+    check('portable backup preserves the exact linked checklist confirmations',await page.evaluate(()=>JSON.stringify(buildPortableBackupPayload().entries[0].checklist)===JSON.stringify(entries[0].checklist)));
+    await page.evaluate(saved=>{
+      for(const key of Object.keys(localStorage))if(!Object.hasOwn(saved.storage,key))localStorage.removeItem(key);
+      for(const [key,value] of Object.entries(saved.storage))localStorage.setItem(key,value);
+      entries=saved.entries;expanded=null;tab='tracker';R();
+    },individualRestore);
+    await page.setViewportSize({width:390,height:844});
     const termsReceipt=await page.evaluate(async()=>{await BTTermsHistory.sync();return {...window.__termsFixture};});
     check('historical terms stay in hash-verified synthetic storage: '+JSON.stringify(termsReceipt),termsReceipt.uploads>0&&termsReceipt.uploads===termsReceipt.hashVerified);
     await page.evaluate(()=>BTBonusAuth.disconnect());

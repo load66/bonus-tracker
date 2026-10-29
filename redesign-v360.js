@@ -409,6 +409,28 @@ function depositLedgerHtml(e,readonly=false){
   (!readonly?'<span class="bt3681-ledger-actions"><button type="button" class="bt360-link" onclick="openDepositRecord('+arg(e.id)+','+arg(x.id)+')">Edit</button><button type="button" class="bt360-link" onclick="voidDepositRecord('+arg(e.id)+','+arg(x.id)+')">Void</button></span>':'')+'</div>').join('')+'</div>';
  return h+'</div>';
 }
+// Store user confirmations in the existing checklist, keyed to the exact saved rule.
+// Changed rules never inherit confirmation from a different source version.
+function requirementRecord(e,r){
+ return (Array.isArray(e.checklist)?e.checklist:[]).find(c=>c&&c.structuredRequirementId===r.id&&c.structuredRequirementSource===JSON.stringify(r))||null;
+}
+function toggleRequirement(id,ruleId){
+ const current=entries.find(e=>e.id===id);
+ if(!current||current.closed||current.reqMet||current.bonusRecd)return false;
+ const rule=current.financialRules?.requirements?.find(r=>r.id===ruleId);
+ if(!rule||!String(rule.id||'').trim())return false;
+ const next=entries.map(e=>{
+  if(e.id!==id)return e;
+  const copy={...e,checklist:(e.checklist||[]).map(c=>({...c}))};
+  let record=requirementRecord(copy,rule);
+  if(!record){record={id:btMakeLegacyInlineId('ck',id,copy.checklist.length),text:requirementTitle(rule),done:false,structuredRequirementId:rule.id,structuredRequirementSource:JSON.stringify(rule)};copy.checklist.push(record)}
+  record.done=!record.done;
+  appendEntryHistory(copy,record.done?'checklist_completed':'checklist_reopened',record.text);
+  return copy;
+ });
+ if(!saveEntriesStrict(next))return false;
+ entries=next;expanded=id;R();return true;
+}
 function requirementRows(e){
  const list=Array.isArray(e.financialRules?.requirements)?e.financialRules.requirements:[];
  const done=!!e.reqMet,legacy=!list.length?String(e.completeBonusText||'').trim():'';
@@ -425,6 +447,7 @@ function requirementRows(e){
  }else{
   rows=list.map(r=>{
    const due=detailRequirementDate(e,r),name=requirementTitle(r);
+   const checked=!!requirementRecord(e,r)?.done;
    const balance=window.BTFinancialRules?.balanceMeasurementWindow?.(e,r);
    const target=balance?new Date(balance.start+'T00:00:00Z'):null;
    if(target)target.setUTCDate(target.getUTCDate()-4);
@@ -432,8 +455,8 @@ function requirementRows(e){
    const isObservedFunding=r.kind==='new-money'&&/\b(?:observed|displayed)\b/i.test(String(r.text||''))&&Number(e.fundingAmount)>=Number(r.amount)&&Number(r.amount)>0;
    const note=balance?'Measured '+date(balance.start)+' – '+date(balance.end):isObservedFunding?'Opening balance displayed; funding posting not independently confirmed':due?'Due '+date(due):'Not confirmed yet';
    const balanceInfo=balance?'<small class="bt3695-balance-period"><b>Funds counted: '+safe(date(balance.start))+' – '+safe(date(balance.end))+'</b></small><small>Have qualifying funds credited before '+safe(date(balance.start))+'. Aim for '+safe(date(fundTarget))+' (planning buffer, not bank deadline).</small><small>Combined qualifying account average; holding '+safe(amount(r.amount))+' throughout is a sufficient strategy, not a separate daily-minimum rule.</small>':'';
-   return '<div class="bt360-check bt3611-requirement"><span class="bt3695-readonly-rule" aria-hidden="true">○</span>'+
-    '<div class="bt3611-req-body"><b>'+safe(name)+'</b><small>'+safe(note)+'</small>'+balanceInfo+
+   return '<div class="bt360-check bt3611-requirement '+(checked?'done':'')+'"><button type="button" role="checkbox" aria-label="'+safe(name)+'" aria-checked="'+checked+'" onclick="BT360.toggleRequirement('+arg(e.id)+','+arg(r.id)+')">'+(checked?'✓':'')+'</button>'+
+    '<div class="bt3611-req-body"><b>'+safe(name)+'</b>'+(checked?'<small>Confirmed by you</small>':'')+'<small>'+safe(note)+'</small>'+balanceInfo+
     (r.text?'<details class="bt3611-evidence"><summary>Offer details</summary><p>'+safe(r.text)+'</p></details>':'')+'</div></div>';
   }).join('');
   if(!list.length&&(legacy||Number(e.reqDays)>0)){
@@ -442,9 +465,11 @@ function requirementRows(e){
     '<div class="bt3611-req-body"><b>Complete bonus requirements</b><small>'+safe(due?'Due '+date(due):legacy||'Not completed yet')+'</small></div></div>';
   }
  }
+ const linked=new Set(list.map(r=>requirementRecord(e,r)).filter(Boolean));
  const tasks=Array.isArray(e.checklist)?e.checklist:[];
- rows+=tasks.map((c,i)=>'<div class="bt360-check bt3611-task '+(c.done?'done':'')+'"><button type="button" role="checkbox" aria-label="'+safe(c.text||'Task')+'" aria-checked="'+!!c.done+'" onclick="toggleCk('+arg(e.id)+','+i+')">'+(c.done?'✓':'')+'</button><button type="button" class="bt366-row-edit" onclick="runBankAction('+arg(e.id)+',\'checklist\')"><b>'+safe(c.text||'Task')+'</b><small>'+(c.done?'Done':'Checklist task')+'</small></button></div>').join('');
- return {html:rows,count:list.length+tasks.length+(!list.length&&(legacy||Number(e.reqDays)>0)?1:0)};
+ rows+=tasks.map((c,i)=>linked.has(c)?'':'<div class="bt360-check bt3611-task '+(c.done?'done':'')+'"><button type="button" role="checkbox" aria-label="'+safe(c.text||'Task')+'" aria-checked="'+!!c.done+'" onclick="toggleCk('+arg(e.id)+','+i+')">'+(c.done?'✓':'')+'</button><button type="button" class="bt366-row-edit" onclick="runBankAction('+arg(e.id)+',\'checklist\')"><b>'+safe(c.text||'Task')+'</b><small>'+(c.done?'Done':'Checklist task')+'</small></button></div>').join('');
+ const extra=tasks.filter(c=>!linked.has(c)),fallback=!list.length&&(legacy||Number(e.reqDays)>0)?1:0;
+ return {html:rows,count:list.length+extra.length+fallback,remaining:list.filter(r=>!requirementRecord(e,r)?.done).length+extra.filter(c=>!c.done).length+fallback};
 }
 function timerShortTitle(t){
  const label=String(t.text||'Timer').toLowerCase();
@@ -894,7 +919,7 @@ function detailPanels(e){
   const workNote=e.reqMet&&!e.bonusRecd?'<p class="bt3686-next-step">'+(pendingTasks||['ACTION_NEEDED','IN_PROGRESS'].includes(code)?'Next: Keep tracking any ongoing requirements.':'Next: Record the bonus when it arrives.')+'</p>':'';
   const addTask=(!e.reqMet||pendingTasks)?'<div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></div>':'';
   h+=accountSection(e,'requirements','Requirements',(!req.count?'<p class="bt360-muted">No requirements saved.</p>':req.html)+depositLedgerHtml(e)+workNote+addTask,
-    e.reqMet?'Done · '+date(e.reqMet):req.count+' to complete',
+    e.reqMet?'Done · '+date(e.reqMet):req.remaining===0&&req.count?'All checked · confirm completion':req.remaining+' to complete',
     e.reqMet?'<button type="button" class="bt360-link bt3621-confirm-all" onclick="openReqMet('+arg(e.id)+')">Edit date</button>':'',true);
   // Mockup order: Requirements, Fees & waivers, Timers. Read-only panel;
   // no fee, timer, task or lifecycle handler is replaced.
@@ -1256,6 +1281,6 @@ function openPhonebook(){closeSettings();window.bt360PhonebookOpen=true;R()}
 function closePhonebook(){window.bt360PhonebookOpen=false;R()}
 function openSettings(){window.bt360SettingsOpen=true;R();refreshUsage()}
 function closeSettings(){window.bt360SettingsOpen=false;R()}
-window.BT360={sourceEvidenceStatus,sourceEvidencePanel,dashboardQueueFor,toggleAttention,toggleAccountList,openAccountSearch,closeAccountSearch,get selectedAttentionId(){return selectedAttentionId},get accountListOpen(){return accountListOpen},setAccountSectionOpen,revealAccountSection,cloudStatusText,accountDates,accountSaveStatus,infoRow,feeSnapshot,closeCheckPresentation,get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,accountAudience,kindTag,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,upcomingReminders,churnReviewPlan,churnReviewMarkup,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,archiveCountdown,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
+window.BT360={toggleRequirement,requirementRecord,sourceEvidenceStatus,sourceEvidencePanel,dashboardQueueFor,toggleAttention,toggleAccountList,openAccountSearch,closeAccountSearch,get selectedAttentionId(){return selectedAttentionId},get accountListOpen(){return accountListOpen},setAccountSectionOpen,revealAccountSection,cloudStatusText,accountDates,accountSaveStatus,infoRow,feeSnapshot,closeCheckPresentation,get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,accountAudience,kindTag,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,upcomingReminders,churnReviewPlan,churnReviewMarkup,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,archiveCountdown,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
 if(typeof R==='function')R();
 })();
