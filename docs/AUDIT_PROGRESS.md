@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: Codex — v3.6.95 payout certainty / eligibility clarity — codex/v3.6.95-associated-audit-clarity
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
