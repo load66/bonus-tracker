@@ -161,3 +161,24 @@ assert(G.applicationReadyDate({...mustClose,closed:'2027-09-10'},addD,addM)==='2
 
 console.log('Eligibility evidence gate passed: single/multi-rule wording, U.S. Bank semantics, Chase conditional/enrollment rules, latest-date control, exact units, and safe dates verified');
 assert(!G.discoverTimedRestrictions('Checking offer is not available to existing Chase checking customers or those whose accounts have been closed within 90 days or closed with a negative balance within the last 3 years.').some(r=>r.basis==='account-ownership-ended'),'Have been closed is a closure rule, not an ownership lookback');
+
+// Compound disqualification sentence: different lookback periods must attach to their
+// own evidence anchors, not multiply across bonus receipt and checking ownership.
+const compoundTerms='Offer not available for customers who have received a new personal checking account monetary bonus within the last 24 months and have or have had an Associated checking account within the last 12 months.';
+const compoundRules={
+  churnable:true,churnability:'repeatable',bonusRecd:'2026-05-01',closed:'2026-11-01',tcSourceRaw:compoundTerms,
+  eligibilityRules:[
+    {id:'synthetic-bonus-24m',basis:'bonus-received',periodValue:24,periodUnit:'months',scope:'personal-checking-bonus',evidenceText:compoundTerms,evidenceSource:'official-promotion-terms'},
+    {id:'synthetic-ownership-12m',basis:'account-ownership-ended',periodValue:12,periodUnit:'months',scope:'personal-checking-ownership',evidenceText:compoundTerms,evidenceSource:'official-promotion-terms'}
+  ]
+};
+const discoveredCompound=G.discoverTimedRestrictions(compoundTerms);
+assert(discoveredCompound.length===2,'Compound disqualification fabricated cross-product lookback clocks');
+assert(discoveredCompound.some(r=>r.basis==='bonus-received'&&r.period.value===24&&r.period.unit==='months'),'24-month bonus receipt was missed');
+assert(discoveredCompound.some(r=>r.basis==='account-ownership-ended'&&r.period.value===12&&r.period.unit==='months'),'12-month checking ownership was missed');
+assert(G.validate(compoundRules).ok,'Two genuine compound lookbacks must verify without fabricated rules');
+assert(G.officialEligibilityDate(compoundRules,addD,addM)==='2028-05-01','Later of real bonus and ownership clocks was not selected');
+assert(G.safeEligibilityDate(compoundRules,addD,addM)==='2028-05-03','Exact calendar-month churn and two-day safety cushion changed');
+assert(G.officialEligibilityDate({...compoundRules,bonusRecd:''},addD,addM)==='','Missing bonus-paid event generated a future application date');
+assert(G.officialEligibilityDate({...compoundRules,closed:''},addD,addM)==='','Still-open checking account generated a future application date');
+assert(!G.validate({...compoundRules,eligibilityRules:[compoundRules.eligibilityRules[0]]}).ok,'Missing ownership lookback slipped through evidence gate');
