@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: Codex /root — v3.6.98 — codex/v3.6.98-plain-requirements
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.6.98 plain-language balance steps (`codex/v3.6.98-plain-requirements`): show source-backed day ranges, total days and calendar dates with concise instructions; replace technical balance/funding labels in shared requirement rows and timers. Keep source terms available separately and remove the stale unconfirmed-funding note after a user check. Adapt wording to each saved amount/range; no bank hardcoding, financial-rule, date, checkbox-state or source-record changes. Local bonus/UI/cloud units and release verifier PASS. Added alternate-range/no-write regressions and Chromium/WebKit plain-language mobile coverage. Next: green CI, merge and verify Pages. v3.6.97 was deployed and verified at commit 21ab6fb3 (PR #288).
 
 - v3.6.97 consistent progress (`codex/v3.6.97-consistent-progress`): one read-only requirement/task projection drives account details, compact cards and attention summaries. Include unchecked saved requirements, deduplicate linked checklist confirmations, retain separate manual tasks and legacy grouped requirements, and honor explicit overall completion without rewriting state. Remove unsupported cash-progress fallback from attention; retain the actual deposit ledger. Local bonus/UI/cloud units and release verifier PASS, including partial/all completion, mixed tasks, legacy and no-write regression. Chromium/WebKit consistency assertions added to the existing real-click journey. Next: require full green CI, merge and verify Pages. v3.6.96 was deployed and verified at commit 494817a1 (PR #287). No user records, financial terms or canonical lifecycle rules changed.
 
