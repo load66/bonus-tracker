@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: Codex — exact calendar closure hold / v3.6.94 — codex/v3.6.94-exact-calendar-close-hold
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
