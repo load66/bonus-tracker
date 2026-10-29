@@ -138,9 +138,20 @@
     splitEvidence(text).forEach(sentence=>{
       const eligible=eligibilityContext(sentence);
       if(!eligible)return;
+      // Associate each duration with its local clause, not every event mentioned anywhere
+      // in a combined eligibility sentence. Post-duration coupon anchors are explicit.
+      const durations=extractDurations(sentence);
       bases.forEach(basis=>{
-        if(!basisContext(sentence,basis))return;
-        extractDurations(sentence).forEach(period=>{
+        durations.forEach((period,i)=>{
+          const segment=sentence.slice(i?durations[i-1].index+durations[i-1].text.length:0,period.index+period.text.length);
+          const tail=sentence.slice(period.index+period.text.length);
+          const trailingEnrollment=/^\s+(?:from|after|since)\s+(?:the\s+)?(?:last\s+)?(?:coupon|offer)\s+enrollment\b/i.test(tail);
+          // 'Have received a ... checking bonus' is not evidence of holding a checking account.
+          // Likewise, 'accounts have been closed' is a closure rule, not an ownership lookback.
+          const ownership=/\b(?:have|has|had|owned|held|hold)\b(?:(?!\breceived\b|\bearned\b|\bbeen\s+closed\b)[\s\S]){0,150}\b(?:checking|account)\b/i.test(segment);
+          let local=(basis==='account-ownership-ended'?ownership:basisContext(segment,basis))||basis==='account-closed'&&/\bclos(?:e|ed|ing|ure)\b/i.test(segment)&&basisContext(sentence,basis);
+          if(trailingEnrollment){if(basis==='offer-enrollment')local=true;if(basis==='bonus-received')local=false;}
+          if(!local)return;
           const timedLookback=/past|previous|preceding|prior|previously|last\s+\d|within|every\b|from\s+the\s+last/i.test(sentence);
           if(!timedLookback)return;
           const condition=inferConditionForDuration(sentence,basis,period);
