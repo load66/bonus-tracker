@@ -122,7 +122,7 @@ console.log('Arrival JSON import/review/save/backup, AI context and single-line 
 
  
 // Synthetic average-daily-balance offer; no real account data is committed.
-const measurementText='Determining your bonus: 90 days (or the previous business day) after opening your checking account, we calculate the average daily balances for days 31-90.';
+const measurementText='Determining your bonus: 90 days (or the previous business day) after opening your checking account, we calculate the average daily balances for days 31-90. A combined average daily balance of $10,000 or more earns the selected bonus tier.';
 const balanceOffer=fixture();
 balanceOffer.opened='2026-10-29';
 balanceOffer.financialRules.version=4;
