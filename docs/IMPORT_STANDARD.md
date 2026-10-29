@@ -1,6 +1,6 @@
 # BonusTracker JSON generation standard
 
-Adopted October 13, 2026; revised October 14, 2026. Applies to every future BonusTracker import for Philip, including new conversations. Compatibility baseline: BonusTracker v3.4.50, strict numeric schemaVersion 3, and financialRules version 1, 2 or 3. Existing schema v1/v2 records remain compatible; they are not the standard for new generated files. This document is a generation standard, not an importable offer or a claim that any bank's terms have been verified today.
+Adopted October 13, 2026; revised October 14, 2026. Applies to every future BonusTracker import for Philip, including new conversations. Compatibility baseline: BonusTracker v3.4.50, strict numeric schemaVersion 3, and financialRules version 1, 2, 3 or 4. Existing schema v1/v2 records remain compatible; they are not the standard for new generated files. This document is a generation standard, not an importable offer or a claim that any bank's terms have been verified today.
 
 ## Mandatory per-bank research and autofill
 
@@ -26,7 +26,7 @@ Do not hand over a finalized import when an unresolved term could change the bon
 | Closure | Early-close charge, bonus forfeiture, hold period, exact anchor, contractual keep-open condition and separately identified safety buffer | `earlyCloseFee`, `earlyTerminationFeeText`, `closeRestrictionType`, `closeRuleBasis`, `minHoldDays`, `closeBufferDays`, `closeRuleText` |
 | Repeat eligibility | Every applicable restriction with its scope, exact basis, period/unit, evidence and any closure prerequisite | `eligibilityRules`, `churnability`, `churnable`, `sourceEligibilityBasis`, `churnPeriodValue`, `churnPeriodUnit`, `currentCustomerExcluded`, `mustCloseBeforeReapply`, evidence text fields |
 
-Use only the deployed runtime's recognized fields and values. New generated files must use numeric schemaVersion 3 and financialRules version 1, 2 or 3. Include feeScheduleRaw and the complete financialRules package. Do not invent top-level properties or silently downgrade to bypass a failed validation. Checklist and arbitrary AI metadata remain unsupported import fields. Account-scoped companion objects are supported only inside financialRules.accounts, with explicit required status, charge, waiver logic and original evidence.
+Use only the deployed runtime's recognized fields and values. New generated files must use numeric schemaVersion 3 and financialRules version 1, 2, 3 or 4. Include feeScheduleRaw and the complete financialRules package. Do not invent top-level properties or silently downgrade to bypass a failed validation. Checklist and arbitrary AI metadata remain unsupported import fields. Account-scoped companion objects are supported only inside financialRules.accounts, with explicit required status, charge, waiver logic and original evidence.
 
 Preserve the enrolled promotion when current public wording differs. Identify the relevant version and enrollment period. Source URLs and dates alone do not prove the chosen product or offer applies.
 
@@ -63,7 +63,7 @@ AI explains saved facts, cites its supporting fields and identifies missing info
 ## Verification before delivery
 
 1. Recheck official source applicability and the promotion/fee version.
-2. Generate schemaVersion 3 with financialRules version 1, 2 or 3, exact promotion/fee source text and only supported entry fields; run the current strict validator.
+2. Generate schemaVersion 3 with financialRules version 1, 2, 3 or 4, exact promotion/fee source text and only supported entry fields; run the current strict validator.
 3. Test the review-and-save round trip in an isolated context; compare important fields after saving.
 4. Test each deadline anchor, repeat rule and applicable closure/fee restriction against the canonical engine. Include end-of-month/calendar-month behavior, missing anchors and recurring-period cases when relevant.
 5. Confirm timers, requirement wording, closure readiness, fee review and repeat countdown agree. Do not let a generic buffer replace the bank's verified restriction.
@@ -125,3 +125,10 @@ The mandatory scripts/validate-entry.cjs command now verifies identity, original
 New JSON must carry its own payout rule and source evidence; do not depend on public reference recovery. The read-only legacy recovery is limited to an immutable, officially verified enrollment-version fingerprint, including institution/audience, tier, opening period, offer expiration, explicit enrollment identity and exact qualification wording. Bank name/amount alone never match. Saved numeric clocks, source text and structured rules take precedence; invalid structured rules never use recovery. Partial matches and different offers stay unresolved. Recovery supplies only a conditional payout calculation and visible/AI provenance; it never upgrades an entry, rewrites saved terms or milestones, confirms deposits, receipt, eligibility or closure readiness. There is no general bank-name default or live-offer substitution.
 
 Before delivery, test the actual source shape (including long quotations with qualification and payout clocks) and actual import receipt, not only permutations of a simplified fixture. Keep historical source evidence and all user records unchanged. Do not claim all phone records were audited from an older backup; state the backup scope and any unavailable newer records.
+
+ 
+## Calendar-exact bonus retention for future imports (financialRules v4)
+
+When enrolled official terms require a fixed number of **calendar months** the account must remain open, generate `financialRules.version: 4` and `financialRules.closure.hold: {"basis":"opened","value":12,"unit":"calendar-months"}` with a direct supporting exact promotion quotation. Keep `minHoldDays: 0`: never approximate twelve months as 365 days. Preserve the `closeBufferDays` assistant cushion separately from the contract. The tracker derives anniversary and closure-review dates from the actual opening date and recalculates after record edits. A review date is not a Safe to Close decision.
+
+Where the applicable fee schedule does not explicitly confirm no closing service charge, keep `financialRules.closure.earlyCloseFee: null`, `restrictionType: "manual-review"`, `basis: "manual"` and a source-backed fee disclosure quotation. Preserve bonus clawback separately in closure wording. A manual fee review must block Safe to Close even after the 12-month hold and bonus receipt. The calculation must not invent observed deposits, account activity, bonus receipt or eligibility dates. The bank's 12-month retention clock is separate from its 24-month bonus-received and 12-month account-ownership lookbacks for future churn. Run the current strict import validator and both browser engines before declaring an import ready.
