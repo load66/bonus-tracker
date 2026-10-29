@@ -319,7 +319,7 @@
     if(['fees','waiver','companion'].includes(intent))missing=s.warnings.filter(x=>/fee|waiv/i.test(x));
     return{answer:text,step,missing,factIds:['financialrules'],local:true};
   }
-  const api=Object.freeze({VERSION,validate,summarize,answer,intentFor,waiverText,estimatedArrival,arrivalLabel,payoutWindowFromText,arrivalRule,arrivalSource});
+  const api=Object.freeze({VERSION,validate,summarize,answer,intentFor,waiverText,estimatedArrival,arrivalLabel,payoutWindowFromText,arrivalRule,arrivalSource,closeHoldInfo});
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.BTFinancialRules=api;
 })(typeof window!=='undefined'?window:globalThis);
