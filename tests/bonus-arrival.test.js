@@ -119,3 +119,29 @@ assert(portable.includes('"min":90')&&portable.includes('"max":120'),'Backup pre
 assert.equal(sandbox.BTFinancialRules.estimatedArrival(saved).end,'2026-12-08');
 console.log('Arrival JSON import/review/save/backup, AI context and single-line display passed');
 
+
+ 
+// Synthetic average-daily-balance offer; no real account data is committed.
+const measurementText='Determining your bonus: 90 days (or the previous business day) after opening your checking account, we calculate the average daily balances for days 31-90.';
+const balanceOffer=fixture();
+balanceOffer.opened='2026-10-29';
+balanceOffer.financialRules.version=4;
+balanceOffer.tcSourceRaw+=' '+measurementText;
+const balanceCondition={id:'synthetic-average-balance',accountId:'checking',kind:'balance-hold',amount:10000,text:measurementText,evidence:{source:'promotion',quote:measurementText}};
+balanceOffer.financialRules.requirements.push(balanceCondition);
+assert.equal(rules.validate(balanceOffer).ok,true,'Synthetic tiered offer must validate without inventing other account terms.');
+assert.deepEqual(rules.balanceMeasurementWindow(balanceOffer,balanceCondition),{start:'2026-11-29',end:'2027-01-27',firstDay:31,lastDay:90,fundsBefore:'2026-11-29',lastPreWindowDate:'2026-11-28',metric:'average-daily-balance',source:'official-promotion-terms'});
+const balanceBefore=JSON.stringify(balanceOffer);
+assert.match(sandbox.BT360.detailPanels(balanceOffer),/Measured Nov 29, 2026 – Jan 27, 2027/,'Mobile detail must show BOTH measurement dates');
+assert.match(sandbox.BT360.detailPanels(balanceOffer),/Aim for Nov 25, 2026/,'Suggested credit date must be labeled as a planning buffer');
+assert.doesNotMatch(sandbox.BT360.detailPanels(balanceOffer),/Mark all requirements completed" aria-checked="false"/,'Individual informational rows must not mark every requirement complete');
+assert.equal(JSON.stringify(balanceOffer),balanceBefore,'Read-only dates must not rewrite user data');
+const changedOpening=JSON.parse(JSON.stringify(balanceOffer));changedOpening.opened='2026-11-01';
+assert.deepEqual([rules.balanceMeasurementWindow(changedOpening,balanceCondition).start,rules.balanceMeasurementWindow(changedOpening,balanceCondition).end],['2026-12-02','2027-01-30'],'Dates must recompute from actual opening, not use hardcoded bank dates');
+const noSource=JSON.parse(JSON.stringify(balanceOffer));noSource.tcSourceRaw=noSource.tcSourceRaw.replace(measurementText,'');noSource.financialRules.requirements[1].evidence.quote='An unsupported estimate for days 31-90.';
+assert.equal(rules.balanceMeasurementWindow(noSource,noSource.financialRules.requirements[1]),null,'Unverified source must never receive fabricated dates');
+const withinOpening=make('Bonus is paid within 120 calendar days after account opening.',{basis:'opened',unit:'calendar-days',min:0,max:120});
+withinOpening.opened='2026-10-29';
+assert.equal(rules.validate(withinOpening).ok,true);
+assert.equal(rules.arrivalLabel(rules.estimatedArrival(withinOpening)),'Bonus payable by Feb 26, 2027 · earliest payment date not specified','Within-120 days must not present opening day as an actual likely payment date');
+console.log('Source-backed balance measurement and honest payout upper-bound presentation passed');
