@@ -377,7 +377,7 @@ function requirementTitle(r){
   return 'Qualifying direct deposits'+(r.count?' · '+r.count+' required':'');
  }
  if(kind==='new-money')return 'Deposit '+(money||'new money');
- if(kind==='balance-hold')return 'Maintain '+(money||'required balance');
+ if(kind==='balance-hold')return 'Average qualifying balance '+(money?money+'+':'required');
  if(kind==='transactions')return 'Qualifying transactions'+(r.count?' · '+r.count+' required':'');
  if(kind==='enrollment')return 'Enrollment requirement';
  if(kind==='relationship')return 'Linked account requirement';
@@ -425,8 +425,15 @@ function requirementRows(e){
  }else{
   rows=list.map(r=>{
    const due=detailRequirementDate(e,r),name=requirementTitle(r);
-   return '<div class="bt360-check bt3611-requirement"><button type="button" role="checkbox" aria-label="Mark all requirements completed" aria-checked="false" onclick="openReqMet('+arg(e.id)+')"></button>'+
-    '<div class="bt3611-req-body"><b>'+safe(name)+'</b><small>'+safe(due?'Due '+date(due):'Not completed yet')+'</small>'+
+   const balance=window.BTFinancialRules?.balanceMeasurementWindow?.(e,r);
+   const target=balance?new Date(balance.start+'T00:00:00Z'):null;
+   if(target)target.setUTCDate(target.getUTCDate()-4);
+   const fundTarget=target?target.toISOString().slice(0,10):'';
+   const isObservedFunding=r.kind==='new-money'&&/\\b(?:observed|displayed)\\b/i.test(String(r.text||''))&&Number(e.fundingAmount)>=Number(r.amount)&&Number(r.amount)>0;
+   const note=balance?'Measured '+date(balance.start)+' – '+date(balance.end):isObservedFunding?'Opening balance displayed; funding posting not independently confirmed':due?'Due '+date(due):'Not confirmed yet';
+   const balanceInfo=balance?'<small class="bt3695-balance-period"><b>Funds counted: '+safe(date(balance.start))+' – '+safe(date(balance.end))+'</b></small><small>Have qualifying funds credited before '+safe(date(balance.start))+'. Aim for '+safe(date(fundTarget))+' (planning buffer, not bank deadline).</small><small>Combined qualifying account average; holding '+safe(amount(r.amount))+' throughout is a sufficient strategy, not a separate daily-minimum rule.</small>':'';
+   return '<div class="bt360-check bt3611-requirement"><span class="bt3695-readonly-rule" aria-hidden="true">○</span>'+
+    '<div class="bt3611-req-body"><b>'+safe(name)+'</b><small>'+safe(note)+'</small>'+balanceInfo+
     (r.text?'<details class="bt3611-evidence"><summary>Offer details</summary><p>'+safe(r.text)+'</p></details>':'')+'</div></div>';
   }).join('');
   if(!list.length&&(legacy||Number(e.reqDays)>0)){
@@ -749,8 +756,12 @@ function eligibilityDateInfo(e,info){
   const rules=validation.rules||[];
   const pending=rules.find(r=>!r.anchorDate&&['account-closed','account-ownership-ended','bonus-received'].includes(r.basis));
   if(pending){
-   const anchor=pending.basis==='bonus-received'?'bonus payment':'account closure';
-   return {value:'After '+anchor,note:gate.periodLabel(pending.period)+' after '+anchor+' + 2 days',action:false};
+   const clocks=rules.filter(r=>['account-closed','account-ownership-ended','bonus-received'].includes(r.basis));
+   const hasBonus=clocks.some(r=>r.basis==='bonus-received');
+   const hasClosure=clocks.some(r=>r.basis==='account-closed'||r.basis==='account-ownership-ended');
+   const anchor=hasBonus&&hasClosure?'bonus payment and account closure':hasBonus?'bonus payment':'account closure';
+   const proof=clocks.map(r=>gate.periodLabel(r.period)+' after '+(r.basis==='bonus-received'?'bonus payment':'account closure')).join(' · ');
+   return {value:'After '+anchor,note:proof+' · all rules must clear + 2-day buffer',action:false};
   }
   return {value:'Date not calculable',note:'Eligibility clock needs a start date',action:true};
  }
