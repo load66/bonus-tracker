@@ -812,6 +812,7 @@ function dateActionRow(e,label,info,kind){
 function openRuleEditor(id,kind){
  if(typeof openEdit!=='function')return;
  openEdit(id);
+ if(kind==='close'&&typeof window.btWizardStep==='function')window.btWizardStep(3);
  requestAnimationFrame(()=>{
   const root=document.querySelector('.modal');if(!root)return;
   const selector=kind==='close'?'[oninput*="closeFeeCountdownDays"], [name*="close"], #close-rule-basis':'#elig-clock, #future_churn_rule, .eligibility-tools';

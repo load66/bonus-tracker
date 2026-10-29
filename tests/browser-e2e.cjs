@@ -818,7 +818,7 @@ async function exercise(name,engine,url){
     await page.locator('.bt3640-section[data-section="eligibility"] > summary').click();
     await page.getByRole('button',{name:'Review rule'}).first().click();
     check('Review rule opens existing account rule editor',await page.locator('.modal').isVisible()
-      &&(await page.locator('.modal').innerText()).includes('Fees & Close'));
+      &&(await page.locator('.modal .guided-sub').innerText()).includes('Step 3 of 4 · Fees & Close'));
     check('plain-language editor fields keep the existing save wiring',await page.evaluate(()=>{
       const before=JSON.parse(JSON.stringify(modal)),stored=localStorage.getItem('bt_e_v4');
       const row=[...document.querySelectorAll('.modal .fg')].find(x=>x.querySelector('label')?.textContent==='Extra days before closing');
