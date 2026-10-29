@@ -8,5 +8,6 @@ module.exports=function validateArrival(sandbox,parsed,reviewed,facts){
  if(arrivalFacts.length!==(label?1:0)||label&&arrivalFacts[0].text!==label)throw Error('AI arrival facts disagree with the canonical estimate.');
  const detail=sandbox.BT360.detailPanels(reviewed);
  if(label&&!detail.includes(label))throw Error('Account detail omitted the canonical arrival range.');
- return {range,label,reviewRoundtrip:true,aiContext:true,detailView:true};
+ if(label&&!sandbox.BT360.compactRow(reviewed).includes(label))throw Error('Account card omitted the canonical arrival range.');
+ return {range,label,reviewRoundtrip:true,aiContext:true,detailView:true,cardView:true};
 };

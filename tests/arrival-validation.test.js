@@ -46,6 +46,7 @@ assert.throws(()=>check(sandbox,e,{...e,reqMet:'2026-01-11'},facts),/projection 
 assert.throws(()=>check(sandbox,e,e,facts.filter(f=>f.id!=='arrival')),/AI arrival/);
 assert.throws(()=>check(sandbox,e,e,facts.map(f=>f.id==='arrival'?{...f,text:'Stale range'}:f)),/AI arrival/);
 assert.throws(()=>check({...sandbox,BT360:{detailPanels:()=>''}},e,e,facts),/detail omitted/);
+assert.throws(()=>check({...sandbox,BT360:{...sandbox.BT360,compactRow:()=>''}},e,e,facts),/card omitted/);
 for(const text of ['Bonus paid after review.','Within 30 business days after account opening.','Within 2 statement cycles after account opening.','Within 60 days after requirements are met or after account opening.','Within 30 days after account opening and within 60 days after requirements are met.']){
  const unknown=entry({text},2,'Future Institution C','business');
  assert.equal(check(sandbox,unknown,unknown,sandbox.BTBonusAI.contextFor(unknown)).range,null,'Unsupported clocks never inherit another bank estimate');
@@ -58,6 +59,6 @@ try{
  const run=spawnSync(process.execPath,['scripts/validate-entry.cjs',file],{cwd:path.resolve(__dirname,'..'),encoding:'utf8',timeout:30000});
  assert.equal(run.status,0,run.stderr);
  const receipt=JSON.parse(run.stdout.slice(run.stdout.lastIndexOf('{\n  "ok": true')));
- assert.equal(receipt.arrival.range.end,'2026-03-11');assert.equal(receipt.arrival.aiContext,true);assert.equal(receipt.arrival.detailView,true);
+ assert.equal(receipt.arrival.range.end,'2026-03-11');assert.equal(receipt.arrival.aiContext,true);assert.equal(receipt.arrival.detailView,true);assert.equal(receipt.arrival.cardView,true);
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
 console.log('Cross-bank arrival: '+count+' identity/scope/version import journeys, legacy compatibility, generator receipt, mismatch rejection and no writes passed');
