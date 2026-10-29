@@ -14,11 +14,13 @@ const input=process.argv[2];if(!input){console.error('Usage: node scripts/valida
  await sandbox.btImportEntryFileObject({name:path.basename(input),text:async()=>raw});
  const roundtrip=sandbox.collectModalEntryData();
  if(!roundtrip)throw Error('Entry review did not produce a valid record.');
- for(const key of ['bonus','opened','reqDays','couponEnrollmentDate','offerEnrollmentDate','closeRuleBasis','closeRestrictionType'])if(parsed[key]!==undefined&&roundtrip[key]!==parsed[key])throw Error('Review/save projection changed '+key+'; correct the import wording or projection before delivery.');
+ for(const key of ['bonus','opened','reqMet','bonusRecd','closed','payoutTimingText','reqDays','couponEnrollmentDate','offerEnrollmentDate','closeRuleBasis','closeRestrictionType'])if(parsed[key]!==undefined&&roundtrip[key]!==parsed[key])throw Error('Review/save projection changed '+key+'; correct the import wording or projection before delivery.');
  if(JSON.stringify(roundtrip.financialRules)!==JSON.stringify(parsed.financialRules)||roundtrip.feeScheduleRaw!==parsed.feeScheduleRaw)throw Error('Review/save projection lost rule or fee-source data.');
  const verdict=sandbox.BTFinancialRules.validate(roundtrip);if(!verdict.ok)throw Error(verdict.issues.map(x=>x.message).join('; '));
  const facts=sandbox.BTBonusAI.contextFor(roundtrip);if(!facts.some(f=>f.id==='financialrules'))throw Error('AI context omitted the validated rule evaluation.');
  if(JSON.stringify({question:'x'.repeat(500),facts}).length>17500||facts.length>30)throw Error('AI context exceeds its input budget.');
- console.log(JSON.stringify({ok:true,schemaVersion:parsed.schemaVersion,ruleVersion:parsed.financialRules.version,bank:parsed.bank,accounts:parsed.financialRules.accounts.length,requirements:parsed.financialRules.requirements.length,warnings:verdict.warnings.map(x=>x.message),reviewRoundtrip:true,aiFacts: facts.length},null,2));
+ const arrival=require('./validate-arrival.cjs')(sandbox,parsed,roundtrip,facts);
+ console.log(JSON.stringify({ok:true,schemaVersion:parsed.schemaVersion,ruleVersion:parsed.financialRules.version,bank:parsed.bank,accounts:parsed.financialRules.accounts.length,requirements:parsed.financialRules.requirements.length,warnings:verdict.warnings.map(x=>x.message),reviewRoundtrip:true,aiFacts: facts.length,arrival},null,2));
 }catch(error){console.error('INVALID IMPORT: '+error.message);process.exitCode=1;}
 })();
+
