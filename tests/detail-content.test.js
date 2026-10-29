@@ -39,7 +39,8 @@ assert.match(requirements.html,/Direct deposits totaling \$10,000/);
 assert.match(requirements.html,/Due Jan 13, 2027/);
 assert.doesNotMatch(requirements.html,/\$0 of \$10,000 · 0 recorded/,'Unknown actual deposit amount must not be fabricated');
 assert.doesNotMatch(requirements.html,/role="progressbar"/,'Only actual deposit records may drive a progress meter');
-assert.match(requirements.html,/role="checkbox"/);
+assert.match(requirements.html,/bt3695-readonly-rule/,'Structured requirement list is informational; the explicit completion action remains separate');
+assert.doesNotMatch(requirements.html,/Mark all requirements completed/,'One requirement cannot record all requirements done');
 assert.doesNotMatch(requirements.html,/No checklist tasks saved yet/);
 assert.match(sandbox.BT360.detailPanels(e),/Direct deposits totaling \$10,000/);
 
