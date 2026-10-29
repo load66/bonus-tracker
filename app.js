@@ -625,7 +625,7 @@ function closeReadiness(e,closeDate=''){
     add(true,'No fixed close hold timer',e.closeRuleText?'Review close wording saved below':'No early-close countdown is set');
   }
   if(isNonRepeatableEntry(e))add(true,'Future eligibility','Non-repeatable offer — it will archive after closing');
-  else add(!!e.churn,'Churn rule saved',e.churn?((e.churn==='180'?'180 days':e.churn+' year')+' churn rule'):'Needed for future reopen countdown','warn');
+  else{const verifiedChurn=window.BTEligibilityGate?.validate(e);add(!!e.churn||!!verifiedChurn?.ok,'Churn rules saved',verifiedChurn?.ok?(verifiedChurn.rules.length+' verified lookback rule(s) · eligibility requires actual closing and bonus dates'):e.churn?((e.churn==='180'?'180 days':e.churn+' year')+' legacy churn rule'):'Churn terms require verification','warn');}
   const hasMonthlyFee=(window.BTFinancialRules?.summarize(e).feeRisk===true)||/(yes|\$|monthly|service fee|maintenance fee)/i.test(String(e.monthlyFeeYNText||'')+' '+String(e.avoidMonthlyFeeText||''));
   add(!hasMonthlyFee||!!e.monthlyFeeChecked,'Monthly fee checked',hasMonthlyFee?(e.monthlyFeeChecked?'Confirmed before close':'Check next fee/statement timing before close'):'No monthly fee risk detected from saved fields','warn');
   items.forEach(x=>{if(!x.ok)warnings.push(x.label+(x.detail?': '+x.detail:''))});
@@ -4241,7 +4241,7 @@ function closeSafetyWarnings(e,p){
   if(e?.bonus&&Number(p.actualBonus||0)===0)w.push('Expected bonus is '+fM(e.bonus)+' but actual bonus is $0.');
   if((p.actualBonus||0)>0&&!e?.bank)w.push('Bank name is missing.');
   if((p.actualBonus||0)>0&&!p.closeDate)w.push('Bonus cannot be tax-ready without a close date.');
-  if(e&&!e.churn&&!isNonRepeatableEntry(e))w.push('Churn rule is blank, so reopen countdown will not be reliable.');
+  if(e&&!e.churn&&!window.BTEligibilityGate?.validate(e)?.ok&&!isNonRepeatableEntry(e))w.push('Churn rules are not verified, so reopen countdown will not be reliable.');
   return w;
 }
 
