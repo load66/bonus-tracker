@@ -107,3 +107,34 @@ assert.throws(()=>sandbox.btParseEntryFileText(JSON.stringify({kind:'BonusTracke
  assert.equal(run('entries.length'),3);assert.equal(run(`entries.find(e=>e.id==='CHA-P-01').financialRules.version`),2);assert.equal(run(`entries.find(e=>e.id==='CHA-P-01').closed`),'');assert.equal(run(`entries.find(e=>e.id==='CHA-P-01').previousCycles[0].closed`),'2025-01-01');assert.equal(run(`JSON.stringify(entries.find(e=>e.id==='CHA-B-01'))`),businessBefore);assert.equal(run(`JSON.stringify(entries.find(e=>e.id==='CIT-P-01'))`),otherBefore);
  console.log('Actual v3 file-import path passed: confirmation, runtime metadata, JSON/HTML, cancellation, strict untrusted fields, confirmed replacement, history retention and business-account isolation.');
 })().catch(e=>{console.error(e);process.exitCode=1});
+
+
+// v4 structured source-backed calendar hold must survive the exact import
+// review/save projection without implying completion, safe closure or $0 fee.
+const calendar=JSON.parse(JSON.stringify(e));
+const holdText='Keep this account open for 12 months from opening. Closing within 12 months may forfeit the bonus.';
+const unknownFeeText='Fees for other account services may apply; account closure charge is not specified.';
+calendar.opened='2026-10-29';
+calendar.tcSourceRaw+=' '+holdText;
+calendar.feeScheduleRaw=calendar.feeScheduleRaw.replace('No early account-closure fee applies.',unknownFeeText);
+calendar.financialRules.version=4;
+calendar.financialRules.closure={restrictionType:'manual-review',basis:'manual',minHoldDays:0,earlyCloseFee:null,hold:{basis:'opened',value:12,unit:'calendar-months'},text:holdText,evidence:{source:'promotion',quote:holdText},feeEvidence:{source:'fee-schedule',quote:unknownFeeText}};
+calendar.closeRestrictionType='manual-review';calendar.closeRuleBasis='manual';calendar.minHoldDays=0;calendar.earlyCloseFee=null;calendar.closeBufferDays=3;
+const envelope={kind:'BonusTrackerEntry',schemaVersion:3,verification:{promoSourceUrl:calendar.promoSourceUrl,feeScheduleSourceUrl:calendar.feeScheduleSourceUrl,termsVerifiedAt:calendar.termsVerifiedAt},entry:calendar};
+const storageBeforeCalendar=JSON.stringify([...storage]);
+const parsedCalendar=sandbox.btParseEntryFileText(JSON.stringify(envelope),'Calendar-v4.json');
+assert.equal(JSON.stringify(parsedCalendar.financialRules),JSON.stringify(calendar.financialRules));
+assert.equal(JSON.stringify([...storage]),storageBeforeCalendar,'Calendar import parse must not write storage');
+sandbox.btStageEntryPayload(envelope);
+const reviewedCalendar=sandbox.collectModalEntryData();
+assert.equal(JSON.stringify(reviewedCalendar.financialRules),JSON.stringify(calendar.financialRules),'Calendar hold lost during review');
+assert.equal(sandbox.BTFinancialRules.closeHoldInfo(reviewedCalendar).holdUntil,'2027-10-29');
+assert.equal(sandbox.BTFinancialRules.closeHoldInfo(reviewedCalendar).reviewOn,'2027-11-01');
+assert.equal(reviewedCalendar.reqMet,'');assert.equal(reviewedCalendar.bonusRecd,'');
+assert.equal(sandbox.safeCloseDate(reviewedCalendar),null,'Unverified closing fee must not produce safe date');
+const postBonus={...reviewedCalendar,bonusRecd:'2027-02-01',reqMet:'2027-01-27'};
+assert.notEqual(sandbox.closeReadiness(postBonus,'2027-11-01').cls,'safe','Elapsed hold cannot clear unknown fee');
+assert.ok(sandbox.closeReadiness(postBonus,'2027-11-01').warnings.some(w=>/service fee/i.test(w)));
+assert.ok(sandbox.closeReadiness(postBonus,'2027-10-28').warnings.some(w=>/calendar-month hold/i.test(w)));
+assert.ok(sandbox.closeRiskWarnings(postBonus,'2027-10-28').some(w=>/retention period/i.test(w)));
+assert.equal(sandbox.status(postBonus),'WAITING TO CLOSE','Unconfirmed closing fee cannot produce safe status');
