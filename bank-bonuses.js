@@ -165,9 +165,12 @@
       const response=await fetch(AVAILABILITY_API+'/public/bank-bonus-availability',{credentials:'omit',cache:'no-store',signal:controller.signal});
       if(!response.ok)throw Error('Unavailable');const data=await response.json();
       if(data.schemaVersion!==1||!['pending','complete','unavailable'].includes(data.status)||!data.records||typeof data.records!=='object'||Array.isArray(data.records)||Object.keys(data.records).length>200)throw Error('Invalid catalog');
-      officialCatalog=data.status==='pending'?{...data,records:{...(officialCatalog?.records||{}),...data.records}}:data;officialError=data.status==='unavailable'?'Official availability checks are unavailable; personal eligibility remains unconfirmed.':'';
+      officialCatalog=['pending','unavailable'].includes(data.status)?{...data,records:{...(officialCatalog?.records||{}),...data.records}}:data;
+      // A degraded response may carry no records. Retain only original dated
+      // evidence so expired checks cannot silently become current again.
+      officialError=data.status==='unavailable'?'Official checks temporarily unavailable. Retrying automatically while the app is open.':'';
       await submitPriorities();
-    }catch{officialError='Official availability could not update. Expired evidence will not be shown as verified.';}
+    }catch{officialError='Official checks temporarily unavailable. Retrying automatically while the app is open.';}
     finally{clearTimeout(timeout);officialBusy=false;if(typeof tab!=='undefined'&&(tab==='bonuses'||tab==='archive'||window.BT360?.notificationsOpen))R();}
   }
 
@@ -353,7 +356,7 @@
     try{
       const response=await fetch('./data/bank-bonuses.json',{cache:'no-store',signal:controller.signal});
       if(!response.ok)throw Error('Feed unavailable');
-      const data=await response.json();feed=valid(data);if(data.availability?.schemaVersion===1&&(!officialCatalog||officialCatalog.status==='pending'))officialCatalog={...data.availability,...(officialCatalog||{}),records:{...(data.availability.records||{}),...(officialCatalog?.records||{})}};submitPriorities();
+      const data=await response.json();feed=valid(data);if(data.availability?.schemaVersion===1&&(!officialCatalog||officialCatalog.status!=='complete'))officialCatalog={...data.availability,...(officialCatalog||{}),records:{...(data.availability.records||{}),...(officialCatalog?.records||{})}};submitPriorities();
     }catch{error='Could not check for updates. '+(feed?'Showing the last loaded feed.':'Reconnect to load the bank bonus feed.');}
     finally{clearTimeout(timeout);loading=false;if(typeof R==='function'&&typeof tab!=='undefined'&&(tab==='bonuses'||tab==='archive'||window.BT360?.notificationsOpen))R();}
   }
@@ -429,23 +432,21 @@
     const watchReview=quickSources?.reviewQueue?.()||{ready:false,issues:[]};
     const sourceStale=!!(feed&&(!Number.isFinite(Date.parse(feed.checkedAt))||Date.now()-Date.parse(feed.checkedAt)>86400000));
     const sourceFailed=!!(feed?.sources?.some(s=>s.status!=='ok'));
-    if(sourceStale||sourceFailed||error||officialError)h+='<div class="bt362-offer-stale" role="status"><span>'+escape(error||officialError||(sourceStale?'Source information is stale. Review dates before applying.':'Some source updates are unavailable.'))+'</span><button type="button" onclick="btRefreshBankBonuses()">Refresh</button></div>';
-    if(watchReview.issues.length){
-      const issueText={changed:'Page changed · recheck terms',unavailable:'Check unavailable',stale:'Check overdue'};
-      const signalName={bonus_amount:'Bonus wording',monthly_fees:'Fee wording',direct_deposit:'Deposit wording',deadlines:'Deadlines',eligibility:'Eligibility',closure_rules:'Closing rules',other_terms:'Other terms'};
-      h+='<details class="bt3662-source-queue"><summary>Official sources · '+watchReview.issues.length+' need review</summary><div class="bt3662-source-items">';
-      for(const item of watchReview.issues.slice(0,12)){
-        const hints=item.kind==='changed'&&item.signals?.length?' · Possible: '+item.signals.map(k=>signalName[k]).filter(Boolean).join(', '):'';
-        h+='<div class="bt3662-source-item"><div><b>'+escape(item.bank)+'</b><span>'+escape(item.role==='fees'?'Fee disclosures':'Promotion terms')+' · '+escape(issueText[item.kind]||'Review source')+escape(item.overdue?' · Watch overdue':'')+escape(hints)+'</span></div><a href="'+escape(item.url)+'" target="_blank" rel="noopener noreferrer">Review official page ↗</a></div>';
-      }
-      h+='</div><p>Possible topic labels are automated text-difference clues, not verified changes to amounts, fees, or eligibility. Saved offer terms remain unchanged.</p></details>';
-    }
+    if(sourceStale||sourceFailed||error)h+='<div class="bt362-offer-stale" role="status"><span>'+escape(error||(sourceStale?'Source listings are older than one day. The app checks for new posts automatically.':'Some publisher updates are delayed; the app keeps checking automatically.'))+'</span></div>';
+    // Keep upstream service problems visible but non-blocking. A manual
+    // Refresh button cannot repair the official verifier, and stale receipts
+    // must never receive a new verified timestamp.
+    const degraded=!!officialError||officialCatalog?.status==='unavailable'||
+      (!officialCatalog&&feed?.availability?.status==='unavailable');
+    if(feed&&degraded)h+='<p class="bt3688-auto-status" role="status">Official verification delayed · automatic retry. Offers are still listed, but unverified terms cannot establish eligibility.</p>';
+
     if(!feed)return h+'<p role="status">'+(loading?'Loading offers…':'Offers are unavailable.')+'</p>';
     const proofs=feed.offers.map(o=>availabilityFor(o,officialCatalog));
     const checked=proofs.filter(p=>p&&['verified','conditional','expired'].includes(p.status)).length;
     h+='<details class="bt362-about-sources"'+(sourceExpanded?' open':'')+'><summary>About sources</summary><div class="bt362-about-body"><p>'+checked+' of '+feed.offers.length+' posts have current official scope evidence'+(officialCatalog?.status==='pending'?' · checking…':'')+'. Checks run hourly and evidence expires after 24 hours. Verify your own eligibility before applying.</p><p>Priority checks submit public offer links only, never private tracker records.</p>';
     if(feed.sources.length)h+='<div class="radar-sources">'+feed.sources.map(s=>'<p>'+escape(s.name)+' · '+(s.status==='ok'?'Checked':'Update unavailable')+(s.checkedAt?' '+escape(new Date(s.checkedAt).toLocaleString()):' · no successful check yet')+'</p>').join('')+'</div>';
     if(officialError)h+='<p>'+escape(officialError)+'</p>';
+    if(watchReview.issues.length)h+='<p>'+watchReview.issues.length+' source '+(watchReview.issues.length===1?'check is':'checks are')+' unresolved. Source monitoring runs automatically; no saved terms are changed by these checks.</p>';
     if(!watchReview.ready)h+='<p>Official promotion and fee monitoring is awaiting its first completed check.</p>';
     else if(watchReview.complete===false)h+='<p>Source monitoring is incomplete for some reviewed banks. Missing official checks are flagged for review.</p>';
     h+='</div></details>';
