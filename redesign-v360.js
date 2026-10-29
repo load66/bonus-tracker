@@ -425,8 +425,10 @@ function requirementRows(e){
  }else{
   rows=list.map(r=>{
    const due=detailRequirementDate(e,r),name=requirementTitle(r);
-   return '<div class="bt360-check bt3611-requirement"><button type="button" role="checkbox" aria-label="Mark all requirements completed" aria-checked="false" onclick="openReqMet('+arg(e.id)+')"></button>'+
-    '<div class="bt3611-req-body"><b>'+safe(name)+'</b><small>'+safe(due?'Due '+date(due):'Not completed yet')+'</small>'+
+   const balanceObserved=r.kind==='new-money'&&/\b(?:balance observed|observed (?:account )?balance)\b/i.test(String(r.text||''));
+   const status=due?'Due '+date(due):balanceObserved?'Balance observed · opening deposit not confirmed':'Completion not recorded';
+   return '<div class="bt360-check bt3611-requirement"><button type="button" role="checkbox" aria-label="Review completion of all requirements" aria-checked="false" onclick="openReqMet('+arg(e.id)+')"></button>'+
+    '<div class="bt3611-req-body"><b>'+safe(name)+'</b><small>'+safe(status)+'</small>'+
     (r.text?'<details class="bt3611-evidence"><summary>Offer details</summary><p>'+safe(r.text)+'</p></details>':'')+'</div></div>';
   }).join('');
   if(!list.length&&(legacy||Number(e.reqDays)>0)){
@@ -738,15 +740,22 @@ function eligibilityDateInfo(e,info){
  const gate=window.BTEligibilityGate;
  let validation=null;try{validation=gate?.validate?.(e)}catch{}
  if(validation?.ok&&validation.decision==='nonrepeatable')return {value:'Not repeatable',note:'Offer permits one bonus only',action:false};
+ const rules=validation?.ok&&validation.decision==='repeatable'?(validation.rules||[]):[];
+ const allClocks=rules.length>1?rules.map(r=>gate.periodLabel(r.period)+' after '+gate.anchorLabel(r.basis)):[];
  if(info?.verified&&info.eligible){
   const controlling=info.controlling;
   const p=controlling?.period?gate.periodLabel(controlling.period):'Saved eligibility rules';
   const basis=controlling?.basis?gate.anchorLabel(controlling.basis):'eligibility start';
-  return {value:date(info.eligible),note:p+' from '+basis+' + 2 days',action:false};
+  return {value:date(info.eligible),note:(allClocks.length?'Both clocks cleared · ':'')+p+' from '+basis+' + 2 days',action:false};
+ }
+ // Do not collapse a compound bonus/ownership restriction into the first clock:
+ // each saved official lookback must be met independently before reapplication.
+ if(allClocks.length){
+  const missing=rules.filter(r=>(r.basis==='bonus-received'&&!e?.bonusRecd)||(['account-closed','account-ownership-ended'].includes(r.basis)&&!e?.closed));
+  return {value:missing.length?'After required events':'Review both clock dates',note:allClocks.join(' · ')+' · +2-day safety buffer',action:false};
  }
  if(info?.eligible)return {value:date(info.eligible),note:'Last saved churn estimate · not verified for a new bonus',action:false};
- if(validation?.ok&&validation.decision==='repeatable'){
-  const rules=validation.rules||[];
+ if(rules.length){
   const pending=rules.find(r=>!r.anchorDate&&['account-closed','account-ownership-ended','bonus-received'].includes(r.basis));
   if(pending){
    const anchor=pending.basis==='bonus-received'?'bonus payment':'account closure';
