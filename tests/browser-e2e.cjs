@@ -2352,7 +2352,7 @@ async function exercise(name,engine,url){
         source.tcSourceRaw+=' '+text;
         source.financialRules.requirements.push({id,accountId:'checking',kind,amount,text,evidence:{source:'promotion',quote:text}});
       }
-      entries=[source];sv(SK,entries);tab='tracker';expanded=source.id;modal=null;cfm=null;dpEditor=null;search='';BT360.setAudience('all');BT360.resetStage();R();return saved;
+      entries=[assignEntryIdForCreate(source)];sv(SK,entries);tab='tracker';expanded=entries[0].id;modal=null;cfm=null;dpEditor=null;search='';BT360.setAudience('all');BT360.resetStage();R();return saved;
     },require('./fixtures/financial-rules.cjs').fixture());
     const openingCheck=()=>page.getByRole('checkbox',{name:'Deposit $25',exact:true});
     check('three structured requirements each have a checkbox',await page.locator('.bt3611-requirement [role="checkbox"]').count()===3);
@@ -2361,7 +2361,7 @@ async function exercise(name,engine,url){
       const e=entries[0];return e.checklist.length===1&&e.checklist[0].done&&!e.reqMet&&!e.bonusRecd&&!e.closed&&BT360.requirementRows(e).remaining===2;
     }));
     check('selected requirement is visibly checked with no duplicate task',await openingCheck().getAttribute('aria-checked')==='true'&&await page.locator('.bt3611-task').count()===0);
-    await page.reload();await settleStartup();await page.evaluate(()=>{tab='tracker';expanded='E2E-INDIVIDUAL';R()});
+    await page.reload();await settleStartup();await page.evaluate(()=>{tab='tracker';expanded=entries[0].id;R()});
     check('individual confirmation survives a real reload',await openingCheck().getAttribute('aria-checked')==='true');
     for(const width of [320,375,390,430,1280]){
       await page.setViewportSize({width,height:900});
