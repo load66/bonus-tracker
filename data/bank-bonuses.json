@@ -1,27 +1,121 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-10-29T16:09:03.152360+00:00",
+  "checkedAt": "2026-10-29T18:55:54.618022+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-10-29T16:09:03.152360+00:00",
+      "checkedAt": "2026-10-29T18:55:54.618022+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-10-29T16:09:03.152360+00:00",
+      "checkedAt": "2026-10-29T18:55:54.618022+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-10-29T16:09:03.152360+00:00",
+      "checkedAt": "2026-10-29T18:55:54.618022+00:00",
       "status": "ok"
     }
   ],
   "offers": [
+    {
+      "title": "Huntington Bank Promotions for October 2026: $400, $1,000 Checking Bonuses – Ends 2/11/27",
+      "url": "https://www.hustlermoneyblog.com/huntington-bank-promotions/",
+      "publishedAt": "2026-10-29T17:24:14+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "huntington bank|checking|400|unknown",
+      "bank": "huntington bank",
+      "product": "checking",
+      "amount": 400,
+      "region": "unknown",
+      "offerKey": "huntington bank|checking|400|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
+      "lastSeen": "2026-10-29T17:24:14+00:00",
+      "expiresAt": "2027-02-11",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/huntington-bank-promotions/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Huntington Bank Promotions for October 2026: $400, $1,000 Checking Bonuses – Ends 2/11/27",
+          "publishedAt": "2026-10-29T17:24:14+00:00"
+        }
+      ],
+      "firstSeenBaseline": true,
+      "badges": []
+    },
+    {
+      "title": "Alliant Credit Union Promotions: $100 Savings Bonuses (Nationwide) – Ends 12/31/26",
+      "url": "https://www.hustlermoneyblog.com/alliant-credit-union-promotions/",
+      "publishedAt": "2026-10-29T16:50:20+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "nationwide",
+      "groupKey": "alliant credit union|savings|100|nationwide",
+      "bank": "alliant credit union",
+      "product": "savings",
+      "amount": 100,
+      "region": "nationwide",
+      "offerKey": "alliant credit union|savings|100|nationwide",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-29T18:55:54.618022+00:00",
+      "lastSeen": "2026-10-29T16:50:20+00:00",
+      "expiresAt": "2026-12-31",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/alliant-credit-union-promotions/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Alliant Credit Union Promotions: $100 Savings Bonuses (Nationwide) – Ends 12/31/26",
+          "publishedAt": "2026-10-29T16:50:20+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "Connexus Credit Union Promotions: $300 Checking Bonus (Nationwide) – Ends 12/20/26",
+      "url": "https://www.hustlermoneyblog.com/connexus-credit-union-promotions/",
+      "publishedAt": "2026-10-29T16:15:39+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "nationwide",
+      "groupKey": "connexus credit union|checking|300|nationwide",
+      "bank": "connexus credit union",
+      "product": "checking",
+      "amount": 300,
+      "region": "nationwide",
+      "offerKey": "connexus credit union|checking|300|nationwide",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-29T18:55:54.618022+00:00",
+      "lastSeen": "2026-10-29T16:15:39+00:00",
+      "expiresAt": "2026-12-20",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/connexus-credit-union-promotions/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Connexus Credit Union Promotions: $300 Checking Bonus (Nationwide) – Ends 12/20/26",
+          "publishedAt": "2026-10-29T16:15:39+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
     {
       "title": "Citi Checking Bonus: Up to $4000 Cash Bonus Offer – Ends 1/11/27",
       "url": "https://www.hustlermoneyblog.com/citibank-checking-bonus/",
@@ -43,8 +137,8 @@
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/citibank-checking-bonus/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "Citi Checking Bonus: Up to $4000 Cash Bonus Offer – Ends 1/11/27",
           "publishedAt": "2026-10-29T15:29:16+00:00"
         }
@@ -78,8 +172,8 @@
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/bank-of-america-business-checking-bonus/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "Bank of America® Business Advantage Banking Cash Bonus Offer",
           "publishedAt": "2026-10-29T14:34:04+00:00"
         }
@@ -1107,36 +1201,6 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": []
-    },
-    {
-      "title": "Huntington Bank Promotions for October 2026: $400, $1,000 Checking Bonuses – Ends 2/11/27",
-      "url": "https://www.hustlermoneyblog.com/huntington-bank-promotions/",
-      "publishedAt": "2026-10-20T17:24:14+00:00",
-      "source": "Hustler Money Blog",
-      "sourceId": "hmb",
-      "availability": "unknown",
-      "groupKey": "huntington bank|checking|400|unknown",
-      "bank": "huntington bank",
-      "product": "checking",
-      "amount": 400,
-      "region": "unknown",
-      "offerKey": "huntington bank|checking|400|unknown",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
-      "lastSeen": "2026-10-20T17:24:14+00:00",
-      "expiresAt": "2027-02-11",
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.hustlermoneyblog.com/huntington-bank-promotions/",
-          "sourceId": "hmb",
-          "source": "Hustler Money Blog",
-          "title": "Huntington Bank Promotions for October 2026: $400, $1,000 Checking Bonuses – Ends 2/11/27",
-          "publishedAt": "2026-10-20T17:24:14+00:00"
-        }
-      ],
-      "firstSeenBaseline": true,
       "badges": []
     },
     {
