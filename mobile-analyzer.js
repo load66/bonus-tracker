@@ -1,4 +1,5 @@
-/* Bonus Tracker v3.6.95 — mobile analyzer viewport and scroll guard. */
+/* Release marker v3.6.95 — unchanged source logic; cache coherence only. */
+/* Bonus Tracker v3.6.94 — mobile analyzer viewport and scroll guard. */
 (function(){
   'use strict';
   const VER='3.6.95';

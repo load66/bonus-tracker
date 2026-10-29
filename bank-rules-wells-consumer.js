@@ -1,4 +1,5 @@
-/* Release 3.6.95: bank-specific rules unchanged; calendar-month close reviews are handled by shared financial rules. */
+/* Release marker v3.6.95 — unchanged source logic; cache coherence only. */
+/* Release 3.6.94: bank-specific rules unchanged; calendar-month close reviews are handled by shared financial rules. */
 /*
  * filename: bank-rules-wells-consumer.js
  * version: 3.5.2
