@@ -259,6 +259,9 @@
     if(!range||!date(range.start)||!date(range.end))return '';
     const fmt=(d,year)=>new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',...(year?{year:'numeric'}:{}),timeZone:'UTC'}).format(new Date(d+'T00:00:00Z'));
     const crossYear=range.start.slice(0,4)!==range.end.slice(0,4);
+    // "Within N days" establishes a latest payout date, not an earliest one.
+    // Showing the anchor date as an estimate implies immediate payment.
+    if(range.start===range.anchor)return 'Bonus due by '+fmt(range.end,true)+' · earliest payment date not specified';
     return 'Estimated bonus arrival: '+fmt(range.start,crossYear)+'–'+fmt(range.end,true);
   }
   // Returns a calendar-exact retention and review date, not permission to close.
