@@ -1,6 +1,6 @@
 # BonusTracker JSON generation standard
 
-Adopted October 13, 2026; revised October 14, 2026. Applies to every future BonusTracker import for Philip, including new conversations. Compatibility baseline: BonusTracker v3.4.50, strict numeric schemaVersion 3, and financialRules version 1, 2, 3 or 4. Existing schema v1/v2 records remain compatible; they are not the standard for new generated files. This document is a generation standard, not an importable offer or a claim that any bank's terms have been verified today.
+Adopted October 13, 2026; revised October 29, 2026. Applies to every future BonusTracker import for Philip, including new conversations. Compatibility baseline: BonusTracker v3.6.95, strict numeric schemaVersion 3, and financialRules version 1, 2, 3 or 4. Existing schema v1/v2 records remain compatible; they are not the standard for new generated files. This document is a generation standard, not an importable offer or a claim that any bank's terms have been verified today.
 
 ## Mandatory per-bank research and autofill
 
@@ -132,3 +132,14 @@ Before delivery, test the actual source shape (including long quotations with qu
 When enrolled official terms require a fixed number of **calendar months** the account must remain open, generate `financialRules.version: 4` and `financialRules.closure.hold: {"basis":"opened","value":12,"unit":"calendar-months"}` with a direct supporting exact promotion quotation. Keep `minHoldDays: 0`: never approximate twelve months as 365 days. Preserve the `closeBufferDays` assistant cushion separately from the contract. The tracker derives anniversary and closure-review dates from the actual opening date and recalculates after record edits. A review date is not a Safe to Close decision.
 
 Where the applicable fee schedule does not explicitly confirm no closing service charge, keep `financialRules.closure.earlyCloseFee: null`, `restrictionType: "manual-review"`, `basis: "manual"` and a source-backed fee disclosure quotation. Preserve bonus clawback separately in closure wording. A manual fee review must block Safe to Close even after the 12-month hold and bonus receipt. The calculation must not invent observed deposits, account activity, bonus receipt or eligibility dates. The bank's 12-month retention clock is separate from its 24-month bonus-received and 12-month account-ownership lookbacks for future churn. Run the current strict import validator and both browser engines before declaring an import ready.
+
+## Source-backed balance measurement and payout presentation (v3.6.95)
+
+For a tier whose official enrolled source expressly defines numbered days from opening (for example, days N–M), preserve the original quotation in `financialRules.requirements[].evidence.quote` with `kind: "balance-hold"` and the selected qualifying average-balance amount. The reader derives both window endpoints from the confirmed account opening date; never hardcode a bank-specific schedule or assume an unstated start. Display both dates, clearly distinguish the *official* measurement window from an *advisory* pre-funding buffer, and never mark a deposit, tier or requirement complete from a calculated date alone. The amount is a **combined average** when the offer says so, not an independent daily minimum or a mandatory single-account threshold. A displayed account balance without posted funding evidence is only an observation.
+
+If the enrolled payout term merely says *within N days of opening*, preserve that contractual upper limit; do **not** label the account-opening day as a meaningful expected payment date. Display the payment deadline and state that the earliest day is unspecified. Keep independently documented churn lookback periods visible, including both payment-receipt and account-closure clocks when the offer requires both. No invented user events, daily balance history, bank holidays or automated completion stamps.
+
+
+## Requirement-day review integrity (v3.6.95)
+
+Keep `reqDays` equal to the supported calendar-day requirement duration. A descriptive `requiredDaysText` can begin with a currency amount or contain a year; neither is a duration. Review/save must preserve the explicit day count and original text. Numeric-only input and one unambiguous explicit calendar-day duration are supported; ranges, conflicting durations, business days and calendar months must not become a guessed calendar-day count. Run the strict validator against the actual generated file, not just a simplified fixture.

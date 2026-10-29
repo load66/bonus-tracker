@@ -27,7 +27,7 @@ const payload={kind:'BonusTrackerEntry',schemaVersion:2,
   verification:{promoSourceUrl:'https://example-bank.test/promo',feeScheduleSourceUrl:'https://example-bank.test/fees',termsVerifiedAt:'2026-09-25'},
   entry:{bank:'E2E Verification Bank',accountType:'personal',bonus:325,opened:'2026-01-31',
     churn:'1',churnable:true,churnability:'repeatable',churnBasis:'bonus',sourceEligibilityBasis:'bonus-received',
-    churnPeriodValue:12,churnPeriodUnit:'months',reqDays:90,requiredDaysText:'90 calendar days',
+    churnPeriodValue:12,churnPeriodUnit:'months',reqDays:90,requiredDaysText:'$500 in qualifying deposits within 90 calendar days after opening',
     dataPoint:'Employer DD',payoutTimingText:'Within 30 calendar days after requirements are met',
     closeRestrictionType:'payout-only',closeRuleText:'Keep the account open until the bonus posts.',
     earlyCloseFee:0,earlyTerminationFeeText:'No early closing fee.',
@@ -447,7 +447,8 @@ async function exercise(name,engine,url){
     await importEntry(payload);
     check('import stops before saving',await page.evaluate(()=>JSON.parse(localStorage.getItem('bt_e_v4')).length===0));
     await page.getByRole('button',{name:'Step 2: Requirements',exact:true}).click();
-    check('deadline wording is visible',await page.locator('input[oninput*="\'requiredDaysText\'"]').inputValue()==='90 calendar days');
+    check('deadline wording is visible',await page.locator('input[oninput*="\'requiredDaysText\'"]').inputValue()===payload.entry.requiredDaysText);
+    check('amount-first requirement description preserves 90-day deadline through review',await page.evaluate(()=>collectModalEntryData().reqDays===90));
     await page.getByRole('button',{name:'Step 4: Review',exact:true}).click();await button('💾 Add account').click();
     await wait(()=>JSON.parse(localStorage.getItem('bt_e_v4')).length===1);
     // v3.6.80: real click-through journey, fully isolated from stored account data.
@@ -747,7 +748,7 @@ async function exercise(name,engine,url){
       window.__chaseViewBaseline=JSON.stringify(e);
       Object.assign(e,{
         id:'CHA-P-01',bank:'Chase Total Checking',bonus:300,opened:'2026-10-15',
-        reqDays:90,requiredDaysText:'90 calendar days',
+        reqDays:90,requiredDaysText:'$500 in qualifying deposits within 90 calendar days after opening',
         financialRules:{
           requirements:[{id:'direct-deposits',kind:'direct-deposit',amount:10000,
             text:'Qualifying direct deposits totaling $10,000 within 90 days.',
@@ -770,8 +771,10 @@ async function exercise(name,engine,url){
     });
     check('Chase synthetic $10,000 DD progress is visible without checklist tasks',
       await page.locator('.bt3611-requirement').innerText().then(t=>t.includes('Direct deposits totaling $10,000')&&t.includes('Due Jan 13, 2027')&&!t.includes('$0 of $10,000')));
-    check('structured requirement shows an actionable checkbox without fabricated payment progress',
-      await page.locator('.bt3611-requirement [role="checkbox"]').count()===1&&
+    check('structured requirement displays read-only evidence and retains canonical rules-review action for incomplete terms',
+      await page.locator('.bt3611-requirement .bt3695-readonly-rule').count()===1&&
+      await page.locator('.bt3611-requirement [role="checkbox"]').count()===0&&
+      await page.getByRole('button',{name:'Review account rules for Chase Total Checking',exact:true}).count()===1&&
       await page.locator('.bt3611-req-track[role="progressbar"]').count()===0);
     check('account overview keeps secondary information collapsed',await page.locator('.bt3640-section').evaluateAll(nodes=>nodes.filter(n=>['fees','timers','terms','history','eligibility'].includes(n.dataset.section)).every(n=>!n.open)));
     check('account dates are compact and unknown dates remain unrecorded',await page.locator('.bt3640-dates').evaluate(e=>e.querySelectorAll('dl>div').length===4&&e.textContent.includes('Not recorded')));

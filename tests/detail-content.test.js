@@ -39,7 +39,8 @@ assert.match(requirements.html,/Direct deposits totaling \$10,000/);
 assert.match(requirements.html,/Due Jan 13, 2027/);
 assert.doesNotMatch(requirements.html,/\$0 of \$10,000 · 0 recorded/,'Unknown actual deposit amount must not be fabricated');
 assert.doesNotMatch(requirements.html,/role="progressbar"/,'Only actual deposit records may drive a progress meter');
-assert.match(requirements.html,/role="checkbox"/);
+assert.match(requirements.html,/bt3695-readonly-rule/,'Structured requirement list is informational; the explicit completion action remains separate');
+assert.doesNotMatch(requirements.html,/Mark all requirements completed/,'One requirement cannot record all requirements done');
 assert.doesNotMatch(requirements.html,/No checklist tasks saved yet/);
 assert.match(sandbox.BT360.detailPanels(e),/Direct deposits totaling \$10,000/);
 
@@ -94,7 +95,8 @@ assert.match(generated,/not an added reminder/);
 assert.match(generated,/Receive qualifying direct deposits totaling \$10,000/,'Original evidence text remains accessible');
 const manual=sandbox.BT360.timerRows(e);
 assert.doesNotMatch(manual,/data-source="saved-requirement"/,'Manually scheduled matching requirement deadline is not duplicated');
-assert.match(sandbox.BT360.detailPanels(e),/aria-label="Mark all requirements completed"[^>]*onclick="openReqMet\(&quot;CHA-P-01&quot;\)"/,'Requirements checkbox opens the canonical completion dialog');
+assert.match(sandbox.BT360.detailPanels(e),/bt3695-readonly-rule/,'Independent requirements display read-only until the user explicitly confirms completion');
+assert.doesNotMatch(sandbox.BT360.detailPanels(e),/aria-label="Mark all requirements completed"/,'Individual evidence rows cannot mark all conditions complete');
 const tasksOnly={...e,reqDays:0,completeBonusText:'',checklist:[{text:'Call bank',done:false}],financialRules:{...e.financialRules,requirements:[]}};
 assert.doesNotMatch(sandbox.BT360.detailPanels(tasksOnly),/bt3621-confirm-all/,'Checklist-only records must not expose the offer-level completion action');
 assert.match(sandbox.BT360.detailPanels(tasksOnly),/Call bank/,'Standalone checklist tasks remain fully accessible');
@@ -187,8 +189,8 @@ const estimatedList=sandbox.BT360.archive([estimatedPast]);
 assert.match(estimatedList,/<b>0<\/b><small>Eligible now<\/small>/,'Unverified historic dates must not certify current eligibility');
 
 /* v3.6.27: all computable saved dates show a countdown, with verification status. */
-assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.6\.94';/,'The on-screen app version reflects this release');
-assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.6\.94-hold1/,'The version label is refreshed on clients');
+assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.6\.95';/,'The on-screen app version reflects this release');
+assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.6\.95-accuracy1/,'The version label is refreshed on clients');
 const archiveFutureDate='2030-01-01';
 const projectedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,verified:false});
 assert(projectedFuture&&projectedFuture.days>0&&projectedFuture.caption==='days · estimate','Unverified saved future date shows an estimated countdown');
