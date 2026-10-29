@@ -518,6 +518,15 @@ function derivedRequirementTimers(e,timers){
   const elapsed=dB(td(),due),chip=elapsed<0?'Overdue '+Math.abs(elapsed)+'d':elapsed===0?'Today':elapsed+' days';
   return '<details class="bt3611-timer-row bt3621-derived" data-source="saved-requirement"><summary><span class="bt3611-timer-icon" aria-hidden="true">'+timerSvg('date')+'</span><span class="bt3611-timer-body"><b>Requirement due</b><small>'+safe(date(due))+' · from saved offer terms</small></span><span class="bt360-chip '+(elapsed<0?'warning':'')+'">'+safe(chip)+'</span></summary><div class="bt3611-timer-full">'+safe(heading)+(rule.text?'<p>'+safe(rule.text)+'</p>':'')+'<p>Derived from saved requirements · not an added reminder</p></div></details>';
  }).join('');
+ const balance= requirements.map(rule=>{
+   const w=window.BTFinancialRules?.balanceMeasurementWindow?.(e,rule);
+   if(!w)return '';
+   const recommended=new Date(w.start+'T00:00:00Z');recommended.setUTCDate(recommended.getUTCDate()-4);
+   const target=recommended.toISOString().slice(0,10);
+   return '<details class="bt3611-timer-row bt3621-derived" data-source="official-balance-window"><summary><span class="bt3611-timer-icon" aria-hidden="true">'+timerSvg('date')+'</span><span class="bt3611-timer-body"><b>Balance measurement</b><small>'+safe(date(w.start))+' – '+safe(date(w.end))+' · saved terms</small></span><span class="bt360-chip">Period</span></summary><div class="bt3611-timer-full">Average qualifying balance '+safe(amount(rule.amount))+'+ across eligible accounts for this period. This date range is computed from the official enrolled terms; a requirement is not automatically marked complete.</div></details>'+
+   '<details class="bt3611-timer-row bt3621-derived" data-source="funding-plan"><summary><span class="bt3611-timer-icon" aria-hidden="true">'+timerSvg('date')+'</span><span class="bt3611-timer-body"><b>Funds credited target</b><small>'+safe(date(target))+' · 4-day planning buffer</small></span><span class="bt360-chip">Suggested</span></summary><div class="bt3611-timer-full">Aim for qualifying funds to post by '+safe(date(target))+', before the counted balance window opens '+safe(date(w.start))+'. This is a planning target, not an official bank deadline. Transfer processing and holidays can delay crediting.</div></details>';
+ }).join('');
+ return rows+balance;
 }
 function timerRows(e){
  const timers=Array.isArray(e.customTimers)?e.customTimers:[];
