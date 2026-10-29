@@ -1544,6 +1544,18 @@ async function exercise(name,engine,url){
         await page.locator('.bt3688-auto-status').evaluate(el=>el.scrollWidth<=el.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
     }
     await page.setViewportSize({width:390,height:844});
+    await page.evaluate(()=>{
+      const original=window.__originalAvailabilityFetch;
+      window.fetch=(input,options={})=>
+        String(typeof input==='string'?input:input?.url||'').includes('/public/bank-bonus-availability')
+        ?Promise.resolve(new Response(JSON.stringify({schemaVersion:1,status:'unavailable',records:{}}),
+          {status:200,headers:{'Content-Type':'application/json'}}))
+        :original(input,options);
+      return btRefreshBankBonuses();
+    });
+    check('unavailable service payload also degrades safely instead of claiming verified',
+      await page.locator('.bt3688-auto-status').count()===1&&
+      await page.locator('.radar-card').count()===4);
     await page.evaluate(()=>{window.fetch=window.__originalAvailabilityFetch;delete window.__originalAvailabilityFetch;return btRefreshBankBonuses()});
     await page.getByText(/Official verification delayed · automatic retry/).waitFor({state:'detached'});
     check('successful official response clears delayed status without changing accounts',
