@@ -1,27 +1,92 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-10-29T13:21:09.756489+00:00",
+  "checkedAt": "2026-10-29T16:09:03.152360+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-10-29T13:21:09.756489+00:00",
+      "checkedAt": "2026-10-29T16:09:03.152360+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-10-29T13:21:09.756489+00:00",
+      "checkedAt": "2026-10-29T16:09:03.152360+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-10-29T13:21:09.756489+00:00",
+      "checkedAt": "2026-10-29T16:09:03.152360+00:00",
       "status": "ok"
     }
   ],
   "offers": [
+    {
+      "title": "Citi Checking Bonus: Up to $4000 Cash Bonus Offer – Ends 1/11/27",
+      "url": "https://www.hustlermoneyblog.com/citibank-checking-bonus/",
+      "publishedAt": "2026-10-29T15:29:16+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "citi|checking|4000|unknown",
+      "bank": "citi",
+      "product": "checking",
+      "amount": 4000,
+      "region": "unknown",
+      "offerKey": "citi|checking|4000|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-28T22:42:13.893611+00:00",
+      "lastSeen": "2026-10-29T15:29:16+00:00",
+      "expiresAt": "2027-01-11",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/citibank-checking-bonus/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Citi Checking Bonus: Up to $4000 Cash Bonus Offer – Ends 1/11/27",
+          "publishedAt": "2026-10-29T15:29:16+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "previousAmount": 500,
+      "change": "Increased",
+      "changeLabel": "$500 → $4000",
+      "badges": [
+        "Increased"
+      ]
+    },
+    {
+      "title": "Bank of America® Business Advantage Banking Cash Bonus Offer",
+      "url": "https://www.hustlermoneyblog.com/bank-of-america-business-checking-bonus/",
+      "publishedAt": "2026-10-29T14:34:04+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "bank of america|business|?|unknown|f025c18f3729",
+      "bank": "bank of america",
+      "product": "business",
+      "amount": null,
+      "region": "unknown",
+      "offerKey": "bank of america|business|?|unknown|f025c18f3729",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-14T17:04:04+00:00",
+      "lastSeen": "2026-10-29T14:34:04+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/bank-of-america-business-checking-bonus/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Bank of America® Business Advantage Banking Cash Bonus Offer",
+          "publishedAt": "2026-10-29T14:34:04+00:00"
+        }
+      ],
+      "firstSeenBaseline": true,
+      "badges": []
+    },
     {
       "title": "Chase Bank Business Checking Bonus: $500 Offer Coupon – Ends 1/21/27",
       "url": "https://www.hustlermoneyblog.com/chase-business-checking-bonus/",
@@ -83,38 +148,6 @@
       "badges": [
         "New",
         "Ending soon"
-      ]
-    },
-    {
-      "title": "Citi $325/$500/$2,000/$4,000 Checking Bonus",
-      "url": "https://www.doctorofcredit.com/citi-300-checking-bonus/",
-      "publishedAt": "2026-10-28T15:00:02+00:00",
-      "source": "Doctor of Credit",
-      "sourceId": "doc",
-      "availability": "nationwide",
-      "groupKey": "citi|checking|500|unknown",
-      "bank": "citi",
-      "product": "checking",
-      "amount": 500,
-      "region": "unknown",
-      "offerKey": "citi|checking|500|unknown",
-      "rewardIsUpperBound": true,
-      "firstSeen": "2026-10-28T22:42:13.893611+00:00",
-      "lastSeen": "2026-10-28T15:00:02+00:00",
-      "expiresAt": null,
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.doctorofcredit.com/citi-300-checking-bonus/",
-          "sourceId": "doc",
-          "source": "Doctor of Credit",
-          "title": "Citi $325/$500/$2,000/$4,000 Checking Bonus",
-          "publishedAt": "2026-10-28T15:00:02+00:00"
-        }
-      ],
-      "firstSeenBaseline": false,
-      "badges": [
-        "New"
       ]
     },
     {
@@ -335,9 +368,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "Crystal Lake Bank & Trust Promotions: $300, $500 Checking Bonuses (IL) – Ends 11/9/27",
@@ -1613,36 +1644,6 @@
           "source": "Frequent Miler",
           "title": "Bank of America Business Checking: Up to a $2500 bonus (no direct deposit required)",
           "publishedAt": "2026-10-16T14:45:41+00:00"
-        }
-      ],
-      "firstSeenBaseline": true,
-      "badges": []
-    },
-    {
-      "title": "Bank of America® Business Advantage Banking Cash Bonus Offer",
-      "url": "https://www.hustlermoneyblog.com/bank-of-america-business-checking-bonus/",
-      "publishedAt": "2026-10-14T17:04:04+00:00",
-      "source": "Hustler Money Blog",
-      "sourceId": "hmb",
-      "availability": "unknown",
-      "groupKey": "bank of america|business|?|unknown|f025c18f3729",
-      "bank": "bank of america",
-      "product": "business",
-      "amount": null,
-      "region": "unknown",
-      "offerKey": "bank of america|business|?|unknown|f025c18f3729",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-10-14T17:04:04+00:00",
-      "lastSeen": "2026-10-14T17:04:04+00:00",
-      "expiresAt": null,
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.hustlermoneyblog.com/bank-of-america-business-checking-bonus/",
-          "sourceId": "hmb",
-          "source": "Hustler Money Blog",
-          "title": "Bank of America® Business Advantage Banking Cash Bonus Offer",
-          "publishedAt": "2026-10-14T17:04:04+00:00"
         }
       ],
       "firstSeenBaseline": true,
