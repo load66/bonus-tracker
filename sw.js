@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.6.88: combined beginner account layout and correct bank milestone flow.
-const V = 'bt-v3.6.88-wording1';
+// Version 3.6.89: nonblocking official source recovery and safe cached evidence.
+const V = 'bt-v3.6.89-verify1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
