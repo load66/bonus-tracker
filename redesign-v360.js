@@ -409,6 +409,19 @@ function depositLedgerHtml(e,readonly=false){
   (!readonly?'<span class="bt3681-ledger-actions"><button type="button" class="bt360-link" onclick="openDepositRecord('+arg(e.id)+','+arg(x.id)+')">Edit</button><button type="button" class="bt360-link" onclick="voidDepositRecord('+arg(e.id)+','+arg(x.id)+')">Void</button></span>':'')+'</div>').join('')+'</div>';
  return h+'</div>';
 }
+// Read-only display for an evidenced average-balance measurement window.
+// Never derive a start/end day from a bank name, tier amount or legacy default.
+function verifiedBalanceWindow(e,r){
+ if(r?.kind!=='balance-hold'||!/^\d{4}-\d{2}-\d{2}$/.test(String(e?.opened||'')))return '';
+ const raw=String(r.text||''),quote=String(r.evidence?.quote||'');
+ const m=raw.match(/\bdays?\s+(\d{1,3})\s*[-–—]\s*(\d{1,3})\b/i);
+ const quoted=quote.match(/\bdays?\s+(\d{1,3})\s*[-–—]\s*(\d{1,3})\b/i);
+ if(!m||!quoted||m[1]!==quoted[1]||m[2]!==quoted[2]||!/after (?:account )?opening/i.test(raw))return '';
+ const a=Number(m[1]),b=Number(m[2]),base=new Date(e.opened+'T00:00:00Z');
+ if(!Number.isFinite(base.getTime())||a<1||b<a||b>365)return '';
+ const add=n=>{const d=new Date(base.getTime());d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
+ return 'Average-balance window: '+date(add(a))+'–'+date(add(b));
+}
 function requirementRows(e){
  const list=Array.isArray(e.financialRules?.requirements)?e.financialRules.requirements:[];
  const done=!!e.reqMet,legacy=!list.length?String(e.completeBonusText||'').trim():'';
@@ -426,7 +439,8 @@ function requirementRows(e){
   rows=list.map(r=>{
    const due=detailRequirementDate(e,r),name=requirementTitle(r);
    const balanceObserved=r.kind==='new-money'&&/\b(?:balance observed|observed (?:account )?balance)\b/i.test(String(r.text||''));
-   const status=due?'Due '+date(due):balanceObserved?'Balance observed · opening deposit not confirmed':'Completion not recorded';
+   const balanceWindow=verifiedBalanceWindow(e,r);
+   const status=due?'Due '+date(due):balanceWindow|| (balanceObserved?'Balance observed · opening deposit not confirmed':'Completion not recorded');
    return '<div class="bt360-check bt3611-requirement"><button type="button" role="checkbox" aria-label="Review completion of all requirements" aria-checked="false" onclick="openReqMet('+arg(e.id)+')"></button>'+
     '<div class="bt3611-req-body"><b>'+safe(name)+'</b><small>'+safe(status)+'</small>'+
     (r.text?'<details class="bt3611-evidence"><summary>Offer details</summary><p>'+safe(r.text)+'</p></details>':'')+'</div></div>';
