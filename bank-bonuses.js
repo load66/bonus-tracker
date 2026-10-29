@@ -440,13 +440,24 @@
       (!officialCatalog&&feed?.availability?.status==='unavailable');
     if(feed&&degraded)h+='<p class="bt3688-auto-status" role="status">Official verification delayed · automatic retry. Offers are still listed, but unverified terms cannot establish eligibility.</p>';
 
+    let watchDetails='';
+    if(watchReview.issues.length){
+      const issueText={changed:'Page changed · recheck terms',unavailable:'Check unavailable',stale:'Check overdue'};
+      const signalName={bonus_amount:'Bonus wording',monthly_fees:'Fee wording',direct_deposit:'Deposit wording',deadlines:'Deadlines',eligibility:'Eligibility',closure_rules:'Closing rules',other_terms:'Other terms'};
+      watchDetails+='<details class="bt3662-source-queue"><summary>Automated source diagnostics · '+watchReview.issues.length+' unresolved</summary><div class="bt3662-source-items">';
+      for(const item of watchReview.issues.slice(0,12)){
+        const hints=item.kind==='changed'&&item.signals?.length?' · Possible: '+item.signals.map(k=>signalName[k]).filter(Boolean).join(', '):'';
+        watchDetails+='<div class="bt3662-source-item"><div><b>'+escape(item.bank)+'</b><span>'+escape(item.role==='fees'?'Fee disclosures':'Promotion terms')+' · '+escape(issueText[item.kind]||'Review source')+escape(item.overdue?' · Watch overdue':'')+escape(hints)+'</span></div><a href="'+escape(item.url)+'" target="_blank" rel="noopener noreferrer">Official page ↗</a></div>';
+      }
+      watchDetails+='</div><p>Possible topic labels are automated text-difference clues, not verified changes to amounts, fees, or eligibility. Saved offer terms remain unchanged.</p></details>';
+    }
     if(!feed)return h+'<p role="status">'+(loading?'Loading offers…':'Offers are unavailable.')+'</p>';
     const proofs=feed.offers.map(o=>availabilityFor(o,officialCatalog));
     const checked=proofs.filter(p=>p&&['verified','conditional','expired'].includes(p.status)).length;
     h+='<details class="bt362-about-sources"'+(sourceExpanded?' open':'')+'><summary>About sources</summary><div class="bt362-about-body"><p>'+checked+' of '+feed.offers.length+' posts have current official scope evidence'+(officialCatalog?.status==='pending'?' · checking…':'')+'. Checks run hourly and evidence expires after 24 hours. Verify your own eligibility before applying.</p><p>Priority checks submit public offer links only, never private tracker records.</p>';
     if(feed.sources.length)h+='<div class="radar-sources">'+feed.sources.map(s=>'<p>'+escape(s.name)+' · '+(s.status==='ok'?'Checked':'Update unavailable')+(s.checkedAt?' '+escape(new Date(s.checkedAt).toLocaleString()):' · no successful check yet')+'</p>').join('')+'</div>';
     if(officialError)h+='<p>'+escape(officialError)+'</p>';
-    if(watchReview.issues.length)h+='<p>'+watchReview.issues.length+' source '+(watchReview.issues.length===1?'check is':'checks are')+' unresolved. Source monitoring runs automatically; no saved terms are changed by these checks.</p>';
+    if(watchDetails)h+=watchDetails;
     if(!watchReview.ready)h+='<p>Official promotion and fee monitoring is awaiting its first completed check.</p>';
     else if(watchReview.complete===false)h+='<p>Source monitoring is incomplete for some reviewed banks. Missing official checks are flagged for review.</p>';
     h+='</div></details>';
