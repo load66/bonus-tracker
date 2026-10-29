@@ -123,6 +123,7 @@
     }
     const active=typeof nextActiveTimer==='function'?nextActiveTimer(e):null;
     if(e.bonusRecd){
+      if(window.BTFinancialRules?.closeHoldInfo(e))return'WAITING TO CLOSE';
       const days=ruleDays(e),hold=days>0&&!!baseDate(e);
       if(hold){
         if(inBuffer(e))return'3-DAY BUFFER';
