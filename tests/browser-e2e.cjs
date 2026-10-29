@@ -1520,6 +1520,35 @@ async function exercise(name,engine,url){
     }
     await page.screenshot({path:path.join(output,name+'-offers-compact.png')});
     await page.getByRole('button',{name:'All banks',exact:true}).click();
+    // v3.6.88: failure of the *separate* official verifier must never
+    // replace usable public listings with a manual retry chore.
+    await page.evaluate(()=>{
+      window.__originalAvailabilityFetch=window.fetch;
+      window.fetch=(input,options={})=>
+        String(typeof input==='string'?input:input?.url||'').includes('/public/bank-bonus-availability')
+        ?Promise.resolve(new Response(JSON.stringify({detail:'unavailable'}),{status:503,headers:{'Content-Type':'application/json'}}))
+        :window.__originalAvailabilityFetch(input,options);
+      return btRefreshBankBonuses();
+    });
+    await page.getByText(/Official verification delayed · automatic retry/).waitFor();
+    check('official verifier outage leaves the source-post directory usable',
+      await page.locator('.radar-card').count()===4);
+    check('official outage never appears as a blocking manual refresh warning',
+      !(await page.locator('.bt362-offer-stale').allInnerTexts()).some(x=>/Official checks|Official availability could not update/i.test(x))&&
+      await page.locator('.bt3662-source-queue').count()===0);
+    check('official verification error does not invent personal eligibility',
+      await page.getByText(/unverified terms cannot establish eligibility/).isVisible());
+    for(const width of [320,390,430]){
+      await page.setViewportSize({width,height:844});
+      check('automatic verification delay status fits mobile '+width+'px',
+        await page.locator('.bt3688-auto-status').evaluate(el=>el.scrollWidth<=el.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
+    }
+    await page.setViewportSize({width:390,height:844});
+    await page.evaluate(()=>{window.fetch=window.__originalAvailabilityFetch;delete window.__originalAvailabilityFetch;return btRefreshBankBonuses()});
+    await page.getByText(/Official verification delayed · automatic retry/).waitFor({state:'detached'});
+    check('successful official response clears delayed status without changing accounts',
+      await page.locator('.bt3688-auto-status').count()===0&&
+      await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedDuringRadar);
     feedInvalid=true;await button('Check updates').click();
     await page.getByText(/Could not check for updates/).waitFor();
     check('failed feed refresh retains loaded results',await page.locator('.radar-card').count()===4);
