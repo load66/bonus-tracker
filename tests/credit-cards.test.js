@@ -20,3 +20,24 @@ core.restore(target,raw,keys,persistence);assert.equal(target.getItem(s.BTCards.
 const onlyCards=JSON.parse(raw);onlyCards.storageSnapshot.bt_e_v4='[]';assert(core.hasRecords(core.inspect(JSON.stringify(onlyCards),keys)),'Card-only devices have records to protect');
 s.BTCards.prepare(c);const original=store.setItem;store.setItem=()=>{throw Error('Quota')};assert.equal(s.BTCards.commit(),false);store.setItem=original;assert.equal(store.getItem(s.BTCards.KEY),saved,'Failed saves keep original plans');
 console.log('Credit-card plans PASS: read-only preview, isolated save, history, stale-write and quota protection, safe text/URLs, dates and exact recovery.');
+
+// Reported month-boundary estimate: retained closed accounts, excluded business
+// cards, unknown dates and simultaneous drop-offs must not imply approval.
+{
+ const base=clone().card;
+ const counted=(id,opened,extra={})=>({...base,id,opened,five24:'counts',accountType:'personal',...extra});
+ const rows=[counted('oldest','2024-10-26'),counted('second','2024-12-08'),counted('third','2025-09-18'),counted('fourth','2026-09-04'),counted('fifth','2026-10-29'),counted('closed','2025-01-01',{closed:'2026-01-01'}),counted('business','2026-01-01',{five24:'excluded',five24Reason:'Does not report to personal report',accountType:'business'})];
+ let p=s.BTCards.five24(rows,'2026-10-30');assert.equal(p.count,6);assert.equal(p.nextUnder,'2027-01-01');
+ assert.equal(s.BTCards.planningDrop('2024-10-26'),'2026-11-01');
+ assert.equal(s.BTCards.planningDrop('2024-02-29'),'2026-03-01');
+ assert.equal(s.BTCards.five24(rows,'2026-11-01').count,5);
+ assert.equal(s.BTCards.five24([...rows,counted('unknown',null)],'2026-10-30').unknown,1);
+ assert.equal(s.BTCards.five24([...rows,counted('au','2026-01-01',{five24:'unknown',role:'authorized'})],'2026-10-30').unknown,1);
+ const sameMonth=Array.from({length:5},(_,i)=>counted('same'+i,'2024-10-'+String(i+1).padStart(2,'0')));
+ assert.equal(s.BTCards.five24(sameMonth,'2026-10-31').nextUnder,'2026-11-01');
+ assert.equal(s.BTCards.five24(sameMonth,'2026-11-01').count,0);
+ assert.equal(s.BTCards.five24([...rows,rows[0]],'2026-10-30').count,6,'Same record ID cannot count twice');
+ const bankBefore=store.getItem('bt_e_v4');s.BTCards.prepare({format:'BonusTrackerCreditCards',version:1,cards:[counted('batch1','2026-01-01'),counted('batch2','2026-02-01')]});assert(s.BTCards.commit());assert.equal(s.BTCards.load().cards.length,3);assert.equal(store.getItem('bt_e_v4'),bankBefore);
+ const before=store.getItem(s.BTCards.KEY);assert.throws(()=>s.BTCards.prepare({format:'BonusTrackerCreditCards',version:1,cards:[counted('bad','2026-01-01'),{...base,id:'invalid',opened:'2026-02-30'}]}));assert.equal(store.getItem(s.BTCards.KEY),before,'Invalid collections cannot partially import');
+}
+console.log('5/24 planning and atomic collections PASS: month boundary, closed/business/AU/unknown accounts, duplicates, grouped drop-offs and no bank writes.');
