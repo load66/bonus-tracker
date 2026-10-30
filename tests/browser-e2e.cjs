@@ -2442,6 +2442,19 @@ async function exercise(name,engine,url){
     check('personal card filter is display-only',await page.locator('.cc-account').count()===1);
     await page.locator('.cc-list-tools select').selectOption('all');
     check('all cards restores both saved accounts',await page.locator('.cc-account').count()===2);
+    check('open-card header is visible and counts the saved list',await page.locator('.cc-overview').innerText().then(t=>t.includes('Open cards')&&t.includes('2')&&t.includes('Personal')));
+    const correctionBefore=await page.evaluate(()=>localStorage.getItem(BTCards.KEY));
+    const correctionChooser=page.waitForEvent('filechooser');
+    await page.getByRole('button',{name:'Open a prepared card plan',exact:true}).click();
+    await (await correctionChooser).setFiles({name:'synthetic-correction.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({format:'BonusTrackerCreditCards',version:1,cards:[secondCard],removeCardIds:[cardFixture.card.id]}))});
+    await page.locator('.cc-removal-preview').waitFor({state:'visible'});
+    check('correction preview names removed card without changing storage',await page.locator('.cc-removal-preview').innerText().then(t=>t.includes('Travel Card'))&&await page.evaluate(before=>localStorage.getItem(BTCards.KEY)===before,correctionBefore));
+    await page.getByRole('button',{name:'Save this plan',exact:true}).click();
+    check('corrected directory counts only retained cards and keeps removed history',await page.locator('.cc-account').count()===1&&await page.evaluate(()=>BTCards.load().removedCards.some(x=>x.current.id==='synthetic-browser-card'))&&await page.locator('.cc-total strong').innerText()==='1');
+    for(const width of [320,375,390,430,1280]){await page.setViewportSize({width,height:900});check('card totals and countdown fit '+width+'px',await page.locator('.cc-dashboard').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));}
+    await page.setViewportSize({width:390,height:844});
+    await page.locator('.scroll').evaluate(e=>e.scrollTop=0);
+    await page.screenshot({path:path.join(output,name+'-credit-overview-390.png')});
     await page.getByRole('button',{name:'Bank bonuses',exact:true}).click();
     check('credit-card monitoring never rewrites bank records',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before.banks,cardsBefore));
     await page.evaluate(before=>{if(before.cards===null)localStorage.removeItem(BTCards.KEY);else localStorage.setItem(BTCards.KEY,before.cards);R()},cardsBefore);

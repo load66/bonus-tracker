@@ -6,6 +6,8 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.8.1 prominent card overview (`codex/v3.8.1-card-overview`): open/personal/business totals, visible reported-policy countdown, and recoverable explicit collection corrections with named no-write preview. Removed records retain revisions in full backups; unrelated records and bank history remain untouched. Local UI units and release verifier PASS; full Chromium/WebKit correction and mobile-size coverage added. Next: require green release CI, merge and verify exact Pages assets. v3.8.0 deployed at 408f5d7c (PR #293).
+
 - v3.8.0 organized credit-card dashboard (`codex/v3.8.0-card-dashboard`): compact expandable directory, search/category filters, read-only reported-policy counter and drop-off timeline, unresolved-account states, separately labeled fee forecasts and recorded bonus deadlines. Atomic collection imports preserve existing plans and revisions. No personal data in source, no bank/tax/eligibility writes and no server dependency. Synthetic month-boundary, grouped drop-off, closed/business/AU/unknown, collection and recovery coverage added; full mobile/browser journey retained. Next: pass release CI, merge and verify Pages. v3.7.1 deployed at 45ee3500 (PR #292).
 
 - v3.7.1 card file import feedback: attach mobile file input, support FileReader fallback, reveal/focus preview or visible error after asynchronous reads, and retain explicit save. Replace programmatic browser preparation with actual file chooser, malformed-file feedback and retry checks. No record/schema/financial-rule changes. Next: green release CI, merge and verify Pages. v3.7.0 deployed at 5de26dea (PR #291).
