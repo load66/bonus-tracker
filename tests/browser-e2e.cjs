@@ -2396,8 +2396,22 @@ async function exercise(name,engine,url){
     const cardsBefore=await page.evaluate(()=>({cards:localStorage.getItem(BTCards.KEY),banks:localStorage.getItem('bt_e_v4')}));
     await page.getByRole('button',{name:'Credit cards',exact:true}).click();
     check('credit-card category is separate from bank totals and add controls',await page.locator('.cc-page').isVisible()&&await page.getByRole('button',{name:'Add bonus',exact:true}).count()===0);
-    await page.evaluate(p=>{BTCards.prepare(p);R()},cardFixture);
+    await page.locator('.scroll').evaluate(e=>e.scrollTop=e.scrollHeight);
+    const cardChooser=page.waitForEvent('filechooser');
+    await page.getByRole('button',{name:'Open a prepared card plan',exact:true}).click();
+    await (await cardChooser).setFiles({name:'synthetic-card.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(cardFixture))});
+    await page.getByRole('button',{name:'Save this plan',exact:true}).waitFor({state:'visible'});
+    check('actual card file chooser reveals and focuses the preview',await page.locator('.cc-import').evaluate(e=>document.activeElement===e&&e.getBoundingClientRect().top>=0&&e.getBoundingClientRect().top<innerHeight));
     check('card preview does not write financial records',await page.evaluate(before=>localStorage.getItem(BTCards.KEY)===before.cards&&localStorage.getItem('bt_e_v4')===before.banks,cardsBefore));
+    const invalidCardChooser=page.waitForEvent('filechooser');
+    await page.getByRole('button',{name:'Open a prepared card plan',exact:true}).click();
+    await (await invalidCardChooser).setFiles({name:'invalid-card.json',mimeType:'application/json',buffer:Buffer.from('{broken')});
+    await page.getByRole('alert').filter({hasText:'not valid JSON'}).waitFor({state:'visible'});
+    check('invalid card file gives visible feedback without saving',await page.evaluate(before=>localStorage.getItem(BTCards.KEY)===before.cards,cardsBefore));
+    const retryCardChooser=page.waitForEvent('filechooser');
+    await page.getByRole('button',{name:'Open a prepared card plan',exact:true}).click();
+    await (await retryCardChooser).setFiles({name:'synthetic-card.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(cardFixture))});
+    await page.getByRole('button',{name:'Save this plan',exact:true}).waitFor({state:'visible'});
     await page.getByRole('button',{name:'Save this plan',exact:true}).click();
     check('saved card has no editing or bank milestone controls',await page.locator('.cc-card').count()===1&&await page.locator('.cc-card input,.cc-card [role=checkbox],.cc-card button').count()===0);
     for(const width of [320,375,390,430,1280]){
