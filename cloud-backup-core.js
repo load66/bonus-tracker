@@ -19,7 +19,7 @@
   }
   function hasRecords(result){
     if(result.entryCount)return true;
-    const meaningful=['bt_t_v4','bt_user_datapoints_v1','bt_dd_methods','bt_bank_reqs','bt_offer_history_v1','bt_tc_archive_v1','bt_tc_entry_sources_v3','bt_phone_book_v1','bt_profile_events_v1','bt_analyzer_user_rules_v1'];
+    const meaningful=['bt_credit_cards_v1','bt_t_v4','bt_user_datapoints_v1','bt_dd_methods','bt_bank_reqs','bt_offer_history_v1','bt_tc_archive_v1','bt_tc_entry_sources_v3','bt_phone_book_v1','bt_profile_events_v1','bt_analyzer_user_rules_v1'];
     return meaningful.some(k=>{try{const v=JSON.parse(result.data.storageSnapshot[k]||'null');return Array.isArray(v)?v.length>0:v&&typeof v==='object'&&Object.keys(v).length>0;}catch{return false;}});
   }
   async function digest(raw){const bytes=await globalThis.crypto.subtle.digest('SHA-256',new TextEncoder().encode(raw));return [...new Uint8Array(bytes)].map(x=>x.toString(16).padStart(2,'0')).join('');}

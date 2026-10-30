@@ -2392,6 +2392,26 @@ async function exercise(name,engine,url){
       entries=saved.entries;expanded=null;tab='tracker';R();
     },individualRestore);
     await page.setViewportSize({width:390,height:844});
+    const cardFixture={format:'BonusTrackerCreditCard',version:1,card:{id:'synthetic-browser-card',issuer:'Synthetic Issuer',name:'Travel Card',opened:'2026-01-01',closed:null,reviewedOn:'2026-10-29',annualFee:95,nextFeeOn:null,welcomeOffer:'Earn the enrolled offer after qualifying purchases.',benefits:[{title:'Travel credit',detail:'Payment recorded; reimbursement not confirmed.',status:'Pending'}],reviews:[{title:'Review next year',on:'2027-01-01',kind:'suggested',detail:'Confirm available product changes with the issuer.'}],sources:[{label:'Official terms',url:'https://example.test/card',note:'Synthetic test only'}]}};
+    const cardsBefore=await page.evaluate(()=>({cards:localStorage.getItem(BTCards.KEY),banks:localStorage.getItem('bt_e_v4')}));
+    await page.getByRole('button',{name:'Credit cards',exact:true}).click();
+    check('credit-card category is separate from bank totals and add controls',await page.locator('.cc-page').isVisible()&&await page.getByRole('button',{name:'Add bonus',exact:true}).count()===0);
+    await page.evaluate(p=>{BTCards.prepare(p);R()},cardFixture);
+    check('card preview does not write financial records',await page.evaluate(before=>localStorage.getItem(BTCards.KEY)===before.cards&&localStorage.getItem('bt_e_v4')===before.banks,cardsBefore));
+    await page.getByRole('button',{name:'Save this plan',exact:true}).click();
+    check('saved card has no editing or bank milestone controls',await page.locator('.cc-card').count()===1&&await page.locator('.cc-card input,.cc-card [role=checkbox],.cc-card button').count()===0);
+    for(const width of [320,375,390,430,1280]){
+      await page.setViewportSize({width,height:900});
+      check('read-only credit-card plan fits '+width+'px',await page.locator('.cc-page').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
+    }
+    await page.screenshot({path:path.join(output,name+'-credit-card-plan-390.png')});
+    await page.reload();await settleStartup();await page.getByRole('button',{name:'Credit cards',exact:true}).click();
+    check('card survives reload with review-only date and unknown fee date',await page.locator('.cc-page').innerText().then(t=>t.includes('Travel Card')&&t.includes('Date not confirmed')&&t.includes('Suggested review')));
+    check('card storage is included in portable recovery',await page.evaluate(()=>getBackupStorageKeys().includes(BTCards.KEY)&&!!buildStorageSnapshot()[BTCards.KEY]));
+    await page.getByRole('button',{name:'Bank bonuses',exact:true}).click();
+    check('credit-card monitoring never rewrites bank records',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before.banks,cardsBefore));
+    await page.evaluate(before=>{if(before.cards===null)localStorage.removeItem(BTCards.KEY);else localStorage.setItem(BTCards.KEY,before.cards);R()},cardsBefore);
+    await page.setViewportSize({width:390,height:844});
     const termsReceipt=await page.evaluate(async()=>{await BTTermsHistory.sync();return {...window.__termsFixture};});
     check('historical terms stay in hash-verified synthetic storage: '+JSON.stringify(termsReceipt),termsReceipt.uploads>0&&termsReceipt.uploads===termsReceipt.hashVerified);
     await page.evaluate(()=>BTBonusAuth.disconnect());
