@@ -66,9 +66,29 @@ function render(){
  (!data.cards.length&&!pending?'<div class="cc-empty"><h3>Your first card starts here</h3><p>Ask me to prepare a card plan from your enrollment offer. Open the prepared file, review the details, then save it here.</p><p>No card number, security code or bank password is needed.</p></div>':'')+
  data.cards.map(x=>card(x.current,x.history)).join('')+'<div class="cc-import-help"><p>Saved on this device. Keep a full backup in Files or iCloud Drive; changes do not sync automatically.</p><button type="button" class="bt360-secondary" onclick="BTCards.choose()">Open a prepared card plan</button> <button type="button" class="bt360-secondary" onclick="exportBackup()">Save a backup file</button><p>Cards are read-only. To update a benefit, payment or closing date, ask for an updated plan. Earlier saved plans are kept.</p></div></div>';
 }
-function choose(){const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.onchange=async()=>{try{const f=input.files[0];if(!f)return;if(f.size>150000)throw Error('Choose a smaller card-plan file.');prepare(JSON.parse(await f.text()));root.R?.();}catch(e){error=e.message;root.R?.();}};input.click();}
+function reveal(){
+ root.R?.();
+ const focus=()=>{const panel=document.querySelector('.cc-import')||document.querySelector('.cc-error');if(panel){panel.tabIndex=-1;panel.scrollIntoView({block:'start',behavior:'auto'});panel.focus({preventScroll:true});}};
+ if(root.requestAnimationFrame)root.requestAnimationFrame(focus);else focus();
+}
+async function importFile(f){
+ if(!f)return false;
+ try{
+  if(f.size>150000)throw Error('Choose a smaller card-plan file.');
+  const raw=typeof f.text==='function'?await f.text():await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(Error('The file could not be read. Download it to Files and try again.'));reader.readAsText(f);});
+  let value;try{value=JSON.parse(raw)}catch{throw Error('This file is not valid JSON. Choose the prepared credit-card plan.');}
+  prepare(value);reveal();return true;
+ }catch(e){pending=null;baseline=null;selected=true;error=e.message||'The file could not be opened. Try again.';reveal();return false;}
+}
+function choose(){
+ const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.hidden=true;
+ document.body.appendChild(input);
+ input.onchange=async()=>{try{await importFile(input.files?.[0])}finally{input.remove();}};
+ input.oncancel=()=>input.remove();
+ input.click();
+}
 function readLink(){if(!root.location?.hash?.startsWith('#btcard='))return;try{prepare(JSON.parse(decodeURIComponent(root.location.hash.slice(8))));if(typeof tab!=='undefined')tab='tracker';root.history?.replaceState(null,'',root.location.pathname+root.location.search);root.R?.();}catch(e){error=e.message;selected=true;root.R?.();}}
-root.BTCards={KEY,validate,load,prepare,commit,navigation,render,card,choose,open,get selected(){return selected},cancel(){pending=null;baseline=null;error='';root.R?.();},readLink};
+root.BTCards={KEY,validate,load,prepare,commit,navigation,render,card,choose,importFile,open,get selected(){return selected},cancel(){pending=null;baseline=null;error='';root.R?.();},readLink};
 if(root.addEventListener){root.addEventListener('hashchange',readLink);root.addEventListener('load',readLink);}
 if(typeof module==='object'&&module.exports)module.exports=root.BTCards;
 })(typeof window!=='undefined'?window:globalThis);
