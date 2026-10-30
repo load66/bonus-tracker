@@ -2428,7 +2428,7 @@ async function exercise(name,engine,url){
     await page.locator('.cc-account > summary').filter({hasText:'Travel Card'}).click();
     check('card survives reload with review-only date and unknown fee date',await page.locator('.cc-page').innerText().then(t=>t.includes('Travel Card')&&t.includes('Date not confirmed')&&t.includes('Suggested review')));
     check('card storage is included in portable recovery',await page.evaluate(()=>getBackupStorageKeys().includes(BTCards.KEY)&&!!buildStorageSnapshot()[BTCards.KEY]));
-    check('card dashboard shows uncertainty instead of automatic eligibility',await page.locator('.cc-dashboard').innerText().then(t=>t.includes('5/24 estimate')&&t.includes('need review')));
+    check('card dashboard shows uncertainty instead of automatic eligibility',await page.locator('.cc-dashboard').innerText().then(t=>t.includes('5/24 estimate')&&/needs? review/.test(t)));
     const secondCard={...cardFixture.card,id:'synthetic-collection-second',name:'Second Travel Card',opened:'2026-02-01',accountType:'personal',role:'primary',five24:'counts'};
     const collectionBefore=await page.evaluate(()=>localStorage.getItem(BTCards.KEY));
     const collectionChooser=page.waitForEvent('filechooser');
