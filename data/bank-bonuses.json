@@ -1,27 +1,225 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-10-30T13:12:40.663873+00:00",
+  "checkedAt": "2026-10-30T22:29:34.474953+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-10-30T13:12:40.663873+00:00",
+      "checkedAt": "2026-10-30T22:29:34.474953+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-10-30T13:12:40.663873+00:00",
+      "checkedAt": "2026-10-30T22:29:34.474953+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-10-30T13:12:40.663873+00:00",
+      "checkedAt": "2026-10-30T22:29:34.474953+00:00",
       "status": "ok"
     }
   ],
   "offers": [
+    {
+      "title": "HSBC Premier Checking Bonus: Up to $3,000 Offer",
+      "url": "https://www.hustlermoneyblog.com/hsbc-premier-checking-bonus/",
+      "publishedAt": "2026-10-30T17:22:51+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "hsbc premier|checking|3000|unknown",
+      "bank": "hsbc premier",
+      "product": "checking",
+      "amount": 3000,
+      "region": "unknown",
+      "offerKey": "hsbc premier|checking|3000|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-19T22:29:10.978712+00:00",
+      "lastSeen": "2026-10-30T17:22:51+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/hsbc-premier-checking-bonus/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "HSBC Premier Checking Bonus: Up to $3,000 Offer",
+          "publishedAt": "2026-10-30T17:22:51+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": []
+    },
+    {
+      "title": "Bank of America Checking Account Bonus Offer",
+      "url": "https://www.hustlermoneyblog.com/bank-of-america-checking-bonus/",
+      "publishedAt": "2026-10-30T16:35:36+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "bank of america|checking|?|unknown|85d1c1e0b519",
+      "bank": "bank of america",
+      "product": "checking",
+      "amount": null,
+      "region": "unknown",
+      "offerKey": "bank of america|checking|?|unknown|85d1c1e0b519",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-22T17:20:24.689243+00:00",
+      "lastSeen": "2026-10-30T16:35:36+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/bank-of-america-checking-bonus/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Bank of America Checking Account Bonus Offer",
+          "publishedAt": "2026-10-30T16:35:36+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": []
+    },
+    {
+      "title": "U.S. Bank Smartly Checking Up to $450 Bonus – Ends 11/10/26",
+      "url": "https://www.hustlermoneyblog.com/us-bank-checking-bonus/",
+      "publishedAt": "2026-10-30T16:04:21+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "us bank|checking|450|unknown",
+      "bank": "us bank",
+      "product": "checking",
+      "amount": 450,
+      "region": "unknown",
+      "offerKey": "us bank|checking|450|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-09-11T20:45:04+00:00",
+      "lastSeen": "2026-10-30T16:04:21+00:00",
+      "expiresAt": "2026-11-10",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/us-bank-checking-bonus/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "U.S. Bank Smartly Checking Up to $450 Bonus – Ends 11/10/26",
+          "publishedAt": "2026-10-30T16:04:21+00:00"
+        },
+        {
+          "url": "https://frequentmiler.com/earn-450-bonus-with-a-new-us-bank-checking-account/",
+          "sourceId": "fm",
+          "source": "Frequent Miler",
+          "title": "Earn $450 bonus with a new US Bank checking account",
+          "publishedAt": "2026-09-11T20:45:04+00:00"
+        }
+      ],
+      "firstSeenBaseline": true,
+      "badges": [
+        "Ending soon"
+      ]
+    },
+    {
+      "title": "KeyBank Promotions: $300, $500, $1000 Checking, Business Bonuses – Ends 12/11/26",
+      "url": "https://www.hustlermoneyblog.com/keybank-promotions/",
+      "publishedAt": "2026-10-30T15:04:12+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "keybank|business|300|unknown",
+      "bank": "keybank",
+      "product": "business",
+      "amount": 300,
+      "region": "unknown",
+      "offerKey": "keybank|business|300|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-30T22:29:34.474953+00:00",
+      "lastSeen": "2026-10-30T15:04:12+00:00",
+      "expiresAt": "2026-12-11",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/keybank-promotions/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "KeyBank Promotions: $300, $500, $1000 Checking, Business Bonuses – Ends 12/11/26",
+          "publishedAt": "2026-10-30T15:04:12+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "Wings Credit Union Promotions: $200, $500 Checking Bonuses (Nationwide) – Ends 12/31/26",
+      "url": "https://www.hustlermoneyblog.com/wings-credit-union-promotions/",
+      "publishedAt": "2026-10-30T13:51:19+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "nationwide",
+      "groupKey": "wings credit union|checking|200|nationwide",
+      "bank": "wings credit union",
+      "product": "checking",
+      "amount": 200,
+      "region": "nationwide",
+      "offerKey": "wings credit union|checking|200|nationwide",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
+      "lastSeen": "2026-10-30T13:51:19+00:00",
+      "expiresAt": "2026-12-31",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/wings-credit-union-promotions/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Wings Credit Union Promotions: $200, $500 Checking Bonuses (Nationwide) – Ends 12/31/26",
+          "publishedAt": "2026-10-30T13:51:19+00:00"
+        }
+      ],
+      "firstSeenBaseline": true,
+      "previousAmount": 500,
+      "change": "Decreased",
+      "changeLabel": "$500 → $200",
+      "badges": [
+        "Decreased"
+      ]
+    },
+    {
+      "title": "Wings Credit Union $200 Checking Bonus, Direct Deposit Not Required",
+      "url": "https://www.doctorofcredit.com/wings-credit-union-200-checking-bonus-direct-deposit-not-required/",
+      "publishedAt": "2026-10-30T13:00:09+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "nationwide",
+      "groupKey": "wings credit union|checking|200|unknown",
+      "bank": "wings credit union",
+      "product": "checking",
+      "amount": 200,
+      "region": "unknown",
+      "offerKey": "wings credit union|checking|200|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-30T22:29:34.474953+00:00",
+      "lastSeen": "2026-10-30T13:00:09+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/wings-credit-union-200-checking-bonus-direct-deposit-not-required/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "Wings Credit Union $200 Checking Bonus, Direct Deposit Not Required",
+          "publishedAt": "2026-10-30T13:00:09+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
     {
       "title": "Citi $325/$475/$500/$2,000/$4,000 Checking Bonus",
       "url": "https://www.doctorofcredit.com/citi-300-checking-bonus/",
@@ -43,8 +241,8 @@
       "links": [
         {
           "url": "https://www.doctorofcredit.com/citi-300-checking-bonus/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "Citi $325/$475/$500/$2,000/$4,000 Checking Bonus",
           "publishedAt": "2026-10-30T11:00:02+00:00"
         }
@@ -877,45 +1075,6 @@
       ]
     },
     {
-      "title": "U.S. Bank Smartly Checking Up to $450 Bonus – Ends 11/10/26",
-      "url": "https://www.hustlermoneyblog.com/us-bank-checking-bonus/",
-      "publishedAt": "2026-10-23T17:28:21+00:00",
-      "source": "Hustler Money Blog",
-      "sourceId": "hmb",
-      "availability": "unknown",
-      "groupKey": "us bank|checking|450|unknown",
-      "bank": "us bank",
-      "product": "checking",
-      "amount": 450,
-      "region": "unknown",
-      "offerKey": "us bank|checking|450|unknown",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-09-11T20:45:04+00:00",
-      "lastSeen": "2026-10-23T17:28:21+00:00",
-      "expiresAt": "2026-11-10",
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.hustlermoneyblog.com/us-bank-checking-bonus/",
-          "sourceId": "hmb",
-          "source": "Hustler Money Blog",
-          "title": "U.S. Bank Smartly Checking Up to $450 Bonus – Ends 11/10/26",
-          "publishedAt": "2026-10-23T17:28:21+00:00"
-        },
-        {
-          "url": "https://frequentmiler.com/earn-450-bonus-with-a-new-us-bank-checking-account/",
-          "sourceId": "fm",
-          "source": "Frequent Miler",
-          "title": "Earn $450 bonus with a new US Bank checking account",
-          "publishedAt": "2026-09-11T20:45:04+00:00"
-        }
-      ],
-      "firstSeenBaseline": true,
-      "badges": [
-        "Ending soon"
-      ]
-    },
-    {
       "title": "Eastern Bank Promotions: $250, $350, $750 Checking, Savings Bonus (MA, NH, ME, RI) – Ends 11/20/26",
       "url": "https://www.hustlermoneyblog.com/eastern-bank-promotions/",
       "publishedAt": "2026-10-23T15:07:11+00:00",
@@ -975,9 +1134,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "Chase Total Checking Account $400 Bonus Coupon – Ends 1/27/27",
@@ -1042,41 +1199,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
-    },
-    {
-      "title": "Bank of America Checking Account Bonus Offer",
-      "url": "https://www.hustlermoneyblog.com/bank-of-america-checking-bonus/",
-      "publishedAt": "2026-10-22T16:11:36+00:00",
-      "source": "Hustler Money Blog",
-      "sourceId": "hmb",
-      "availability": "unknown",
-      "groupKey": "bank of america|checking|?|unknown|85d1c1e0b519",
-      "bank": "bank of america",
-      "product": "checking",
-      "amount": null,
-      "region": "unknown",
-      "offerKey": "bank of america|checking|?|unknown|85d1c1e0b519",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-10-22T17:20:24.689243+00:00",
-      "lastSeen": "2026-10-22T16:11:36+00:00",
-      "expiresAt": null,
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.hustlermoneyblog.com/bank-of-america-checking-bonus/",
-          "sourceId": "hmb",
-          "source": "Hustler Money Blog",
-          "title": "Bank of America Checking Account Bonus Offer",
-          "publishedAt": "2026-10-22T16:11:36+00:00"
-        }
-      ],
-      "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "HSBC Bank Promotions: Up to $3000 Checking Bonus – October 2026",
@@ -1103,38 +1226,6 @@
           "source": "Hustler Money Blog",
           "title": "HSBC Bank Promotions: Up to $3000 Checking Bonus – October 2026",
           "publishedAt": "2026-10-22T15:04:17+00:00"
-        }
-      ],
-      "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
-    },
-    {
-      "title": "HSBC Premier Checking Bonus: Up to $3,000 Offer",
-      "url": "https://www.hustlermoneyblog.com/hsbc-premier-checking-bonus/",
-      "publishedAt": "2026-10-22T14:41:51+00:00",
-      "source": "Hustler Money Blog",
-      "sourceId": "hmb",
-      "availability": "unknown",
-      "groupKey": "hsbc premier|checking|3000|unknown",
-      "bank": "hsbc premier",
-      "product": "checking",
-      "amount": 3000,
-      "region": "unknown",
-      "offerKey": "hsbc premier|checking|3000|unknown",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-10-19T22:29:10.978712+00:00",
-      "lastSeen": "2026-10-22T14:41:51+00:00",
-      "expiresAt": null,
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.hustlermoneyblog.com/hsbc-premier-checking-bonus/",
-          "sourceId": "hmb",
-          "source": "Hustler Money Blog",
-          "title": "HSBC Premier Checking Bonus: Up to $3,000 Offer",
-          "publishedAt": "2026-10-22T14:41:51+00:00"
         }
       ],
       "firstSeenBaseline": false,
@@ -1615,36 +1706,6 @@
           "source": "Doctor of Credit",
           "title": "[MN, WI] Royal Credit Union $400 Checking Bonus",
           "publishedAt": "2026-10-17T16:15:18+00:00"
-        }
-      ],
-      "firstSeenBaseline": true,
-      "badges": []
-    },
-    {
-      "title": "Wings Credit Union Promotions: $500 Checking Bonus (Nationwide) – Ends 12/31/26",
-      "url": "https://www.hustlermoneyblog.com/wings-credit-union-promotions/",
-      "publishedAt": "2026-10-16T16:35:19+00:00",
-      "source": "Hustler Money Blog",
-      "sourceId": "hmb",
-      "availability": "nationwide",
-      "groupKey": "wings credit union|checking|500|nationwide",
-      "bank": "wings credit union",
-      "product": "checking",
-      "amount": 500,
-      "region": "nationwide",
-      "offerKey": "wings credit union|checking|500|nationwide",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
-      "lastSeen": "2026-10-16T16:35:19+00:00",
-      "expiresAt": "2026-12-31",
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.hustlermoneyblog.com/wings-credit-union-promotions/",
-          "sourceId": "hmb",
-          "source": "Hustler Money Blog",
-          "title": "Wings Credit Union Promotions: $500 Checking Bonus (Nationwide) – Ends 12/31/26",
-          "publishedAt": "2026-10-16T16:35:19+00:00"
         }
       ],
       "firstSeenBaseline": true,
