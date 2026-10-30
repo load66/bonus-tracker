@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.6.99';
+const APP_VERSION='3.7.0';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4589,20 +4589,23 @@ function R(){
   // rewrite that a subsequent unrelated save could accidentally persist.
   const viewEntries=entries.map(e=>({...e,customTimers:Array.isArray(e.customTimers)?normalizeTimerList(e.customTimers).filter(t=>!isDeletedTimer(e,t)):[]}));
   const sorted=sortE(viewEntries),thisYr=new Date().getFullYear(),metrics=bonusPipelineMetrics(sorted,dashYear);
-  const bt360Detail=!!(expanded&&sorted.some(e=>e.id===expanded)&&(['tracker','archive'].includes(tab)));
+  const creditView=tab==='tracker'&&window.BTCards?.selected===true;
+  const bt360Detail=!creditView&&!!(expanded&&sorted.some(e=>e.id===expanded)&&(['tracker','archive'].includes(tab)));
   document.body.classList.toggle('bt360-detail-active',bt360Detail);
   let h='',overview='';
   h+='<div class="hdr"><div class="hdr-shell"><div class="hdr-row"><div class="hdr-brand"><h1><em>Bonus</em>Tracker</h1><span class="app-version" aria-label="App version">v'+APP_VERSION+'</span></div>';
-  if(tab==='tracker')h+='<label class="bt362-year-pill">Year <select id="bt362-year" aria-label="Collected year" onchange="dashYear=Number(this.value);BT360.clearHeroMonth();R()">'+[thisYr-1,thisYr,thisYr+1].map(y=>'<option value="'+y+'"'+(dashYear===y?' selected':'')+'>'+y+'</option>').join('')+'</select></label>';
-  else h+='<span class="mobile-page-caption">'+esc({bonuses:'Bank offers',tax:'Tax',tips:'Datapoints',storage:'Terms archive',archive:'Account archive'}[tab]||'')+'</span>';
+  if(tab==='tracker'&&!creditView)h+='<label class="bt362-year-pill">Year <select id="bt362-year" aria-label="Collected year" onchange="dashYear=Number(this.value);BT360.clearHeroMonth();R()">'+[thisYr-1,thisYr,thisYr+1].map(y=>'<option value="'+y+'"'+(dashYear===y?' selected':'')+'>'+y+'</option>').join('')+'</select></label>';
+  else h+='<span class="mobile-page-caption">'+esc({tracker:'Credit cards',bonuses:'Bank offers',tax:'Tax',tips:'Datapoints',storage:'Terms archive',archive:'Account archive'}[tab]||'')+'</span>';
   h+='<button type="button" class="bt360-header-bell" aria-label="Notifications" onclick="BT360.openNotifications()"><svg width="19" height="19" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></button><button type="button" class="bt360-header-settings" aria-label="Settings" onclick="BT360.openSettings()">•••</button>';
   h+='<details id="bt-data-menu" class="header-data-menu"><summary aria-label="Data and backup menu" title="Data and backup menu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></summary><div class="header-data-panel" role="group" aria-label="Data and recovery actions"><h3>Data & recovery</h3><button onclick="this.closest(\'details\').open=false;switchMainTab(\'archive\')"><strong>Archived accounts</strong><small>Completed, non-repeatable offers and their history</small></button><button onclick="this.closest(\'details\').open=false;btOpenCloudBackup()"><strong>'+(window.BTICloudBackup?.isLocalOnly?.()?'iCloud Drive backup':'Cloud backup & recovery')+'</strong><small>'+(window.BTICloudBackup?.isLocalOnly?.()?'Save or restore a full backup file':'Automatic protection and recovery versions')+'</small></button><button onclick="this.closest(\'details\').open=false;exportBackup()"><strong>Export backup file</strong><small>Save a dated full copy to iCloud Drive</small></button><button onclick="this.closest(\'details\').open=false;importBackup()"><strong>Import backup file</strong><small>Review and restore a downloaded copy</small></button><button class="data-menu-danger" onclick="this.closest(\'details\').open=false;resetAllData()"><strong>Reset this device</strong><small>Requires confirmation and a safety backup</small></button></div></details></div>';
 
-  if(tab==='tracker'&&!bt360Detail&&!showTemplates&&!showAnalyzer){
+  if(tab==='tracker'&&!creditView&&!bt360Detail&&!showTemplates&&!showAnalyzer){
     overview=window.BT360?window.BT360.home(sorted,dashYear,metrics):'<div class="hero ops-hero"><div class="hero-value">'+fM(metrics.active)+'</div></div>';
   }
   h+='</div></div><div class="scroll">';
-  if(tab==='tracker'){if(!showTemplates&&!showAnalyzer)h+='<section class="tracker-overview" aria-label="Bonus totals">'+overview+'</section>';const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted)}
+  if(tab==='tracker'&&!bt360Detail&&window.BTCards)h+=window.BTCards.navigation();
+  if(creditView){h+=window.BTCards.render()}
+  else if(tab==='tracker'){if(!showTemplates&&!showAnalyzer)h+='<section class="tracker-overview" aria-label="Bonus totals">'+overview+'</section>';const trackerRenderer=(typeof window.rTracker==='function'?window.rTracker:rTrackerLegacy);h+=trackerRenderer(sorted)}
   else if(tab==='archive'){h+=window.BT360?window.BT360.archive(sorted):rTrackerLegacy(sorted,true)}
   else if(tab==='tax')h+=rTax();
   else if(tab==='tips')h+=rTips();
@@ -4616,7 +4619,7 @@ function R(){
   }
   h+='</div>';
   h+=detailActionBar;
-  if(tab==='tracker'&&!bt360Detail&&!showTemplates&&!showAnalyzer){
+  if(tab==='tracker'&&!creditView&&!bt360Detail&&!showTemplates&&!showAnalyzer){
     if(window.bt362AddOpen)h+='<div id="bt-add-actions" class="bt362-add-menu" role="group" aria-label="Add bonus actions" onkeydown="trackerAddKey(event)"><button type="button" onclick="openTrackerTool(\'quick-add\')">Quick Add</button><button type="button" onclick="openTrackerTool(\'promo-terms\')">Review promo terms</button><button type="button" onclick="window.bt362AddOpen=false;openAdd()">Add account manually</button></div>';
     h+='<div class="bt3652-add-dock" role="region" aria-label="Add bonus controls"><button class="fab bt362-add-fab" type="button" aria-label="Add bonus" aria-expanded="'+!!window.bt362AddOpen+'" aria-controls="bt-add-actions" onkeydown="trackerAddKey(event)" onclick="toggleTrackerAddMenu()"><span aria-hidden="true">＋</span>Add bonus</button></div>';
   }
@@ -5720,7 +5723,7 @@ function doAddNew(){
   overwritePrompt=null;modal=null;expanded=next.id;tab='tracker';search='';showInlineAZ=false;inlineResult=null;
   R();
 }
-function getBackupStorageKeys(){return[SK,TK,DD_KEY,REQ_KEY,OFFER_HIST_KEY,TC_ARCHIVE_KEY,PHONE_KEY,DP_USER_KEY,COMMUNITY_DP_KEY,COMMUNITY_DP_SEED_KEY,PROFILE_EVT_KEY,BK_KEY,ANALYZER_MEMORY_KEY,ANALYZER_TRAINING_KEY,ANALYZER_RULES_KEY,'bt_hosting_usage_settings_v1','bt_tc_entry_sources_v3']}
+function getBackupStorageKeys(){return[SK,TK,DD_KEY,REQ_KEY,OFFER_HIST_KEY,TC_ARCHIVE_KEY,PHONE_KEY,DP_USER_KEY,COMMUNITY_DP_KEY,COMMUNITY_DP_SEED_KEY,PROFILE_EVT_KEY,BK_KEY,ANALYZER_MEMORY_KEY,ANALYZER_TRAINING_KEY,ANALYZER_RULES_KEY,'bt_hosting_usage_settings_v1','bt_tc_entry_sources_v3','bt_credit_cards_v1']}
 function parseBackupStorageValue(raw){try{return JSON.parse(raw)}catch{return raw}}
 function storageValueForRestore(val){return typeof val==='string'?val:JSON.stringify(val)}
 function countBackupEntries(d){if(Array.isArray(d?.entries))return d.entries.length;const arr=backupArrayFromStorage(d,SK);return arr.length}
