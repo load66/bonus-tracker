@@ -2,7 +2,7 @@
 (function(root){
 'use strict';
 const KEY='bt_credit_cards_v1',FORMAT='BonusTrackerCreditCard',VERSION=1;
-let selected=false,pending=null,baseline=null,error='',query='',category='all';
+let selected=false,pending=null,removals=[],baseline=null,error='',query='',category='all';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date=v=>v?new Date(v+'T12:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}):'Not recorded';
 const validDate=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&!Number.isNaN(Date.parse(v+'T12:00:00Z'))&&new Date(v+'T12:00:00Z').toISOString().slice(0,10)===v;
@@ -44,7 +44,9 @@ function prepare(p){
  const cards=items.map(card=>validate({format:FORMAT,version:VERSION,card}));
  if(new Set(cards.map(c=>c.id)).size!==cards.length)throw Error('The collection contains duplicate card IDs.');
  if(JSON.stringify(p).length>1000000)throw Error('This card collection is too large.');
- load();baseline=root.localStorage.getItem(KEY);pending=cards;error='';selected=true;return p?.format==='BonusTrackerCreditCards'?cards:cards[0];
+ const remove=p.removeCardIds===undefined?[]:p.removeCardIds;
+ if(!Array.isArray(remove)||remove.length>100||remove.some(id=>typeof id!=='string'||!/^[a-zA-Z0-9_-]{1,120}$/.test(id))||new Set(remove).size!==remove.length||remove.some(id=>cards.some(c=>c.id===id)))throw Error('Check the cards selected for removal.');
+ load();baseline=root.localStorage.getItem(KEY);pending=cards;removals=remove.slice();error='';selected=true;return p?.format==='BonusTrackerCreditCards'?cards:cards[0];
 }
 function commit(){
  if(!pending)return false;
@@ -56,8 +58,14 @@ function commit(){
    if(index>=0){const old=data.cards[index];if(old.current.issuer!==incoming.issuer||(old.current.opened&&old.current.opened!==incoming.opened))throw Error('This record ID belongs to a different issuer or opening date.');if(incoming.reviewedOn<old.current.reviewedOn)throw Error('This plan is older than your saved review.');data.cards[index]={current:incoming,history:[...old.history,old.current]};}
    else data.cards.push({current:incoming,history:[]});
   }
+  if(removals.length){
+   if(data.removedCards!==undefined&&!Array.isArray(data.removedCards))throw Error('Saved removed-card history could not be read.');
+   const removed=data.cards.filter(x=>removals.includes(x.current.id));
+   data.removedCards=[...(data.removedCards||[]),...removed];
+   data.cards=data.cards.filter(x=>!removals.includes(x.current.id));
+  }
   root.BTPersistence.commit(root.localStorage,{[KEY]:JSON.stringify(data)});
-  pending=null;baseline=null;error='';root.btCloudBackupChanged?.();root.R?.();return true;
+  pending=null;removals=[];baseline=null;error='';root.btCloudBackupChanged?.();root.R?.();return true;
  }catch(e){error=e.message;root.R?.();return false;}
 }
 function open(value){selected=!!value;if(typeof expanded!=='undefined')expanded=null;root.bt362AddOpen=false;root.R?.();}
@@ -101,7 +109,9 @@ function dashboard(cards){
  const unknownFees=open.filter(c=>c.annualFee===undefined||c.annualFee===null||c.annualFee>0&&!c.nextFeeOn);
  const bonuses=open.filter(c=>!c.bonusReceived&&c.bonusDeadline&&daysUntil(c.bonusDeadline,today)>=0&&daysUntil(c.bonusDeadline,today)<=30);
  const missingBonus=open.filter(c=>!c.bonusReceived&&!c.bonusDeadline);
- return '<section class="cc-dashboard" aria-label="Card stats"><div class="cc-stats-grid"><div class="'+(p.count>=5||p.unknown?'is-caution':'')+'"><span>5/24 estimate</span><strong>'+p.count+' known</strong><small>'+(p.unknown?(p.unknown===1?'1 needs review':p.unknown+' need review'):'From saved cards only')+'</small></div><div><span>Annual fees · 45 days</span><strong>'+fees.length+'</strong><small>'+(unknownFees.length?(unknownFees.length===1?'1 needs review':unknownFees.length+' need review'):'Saved dates only')+'</small></div><div><span>Bonus deadlines · 30 days</span><strong>'+bonuses.length+'</strong><small>'+(missingBonus.length?'Some dates missing':'Saved dates only')+'</small></div></div>'+
+ const personal=open.filter(c=>c.accountType==='personal').length,business=open.filter(c=>c.accountType==='business').length,other=open.length-personal-business;
+ const next=p.nextUnder?'Under 5/24 in '+daysUntil(p.nextUnder,today)+' days':p.count<5?'Below 5/24 in this list':'At or above 5/24';
+ return '<section class="cc-dashboard" aria-label="Card stats"><div class="cc-overview" aria-label="Open card totals"><div class="cc-total"><span>Open cards</span><strong>'+open.length+'</strong><small>In your saved list</small></div><div class="cc-type-totals"><span><b>'+personal+'</b> Personal</span><span><b>'+business+'</b> Business</span>'+(other?'<span><b>'+other+'</b> Type to review</span>':'')+'</div></div><div class="cc-five24-head"><div><span>Chase 5/24 estimate</span><strong>'+p.count+' <small>/ 24 months</small></strong></div><div class="cc-next-drop"><b>'+esc(next)+'</b><span>'+(p.nextUnder?esc(date(p.nextUnder)):'Based on saved opening dates')+'</span>'+(p.unknown?'<small>'+p.unknown+' need review · date not confirmed</small>':'<small>Planning estimate · approval not guaranteed</small>')+'</div></div><div class="cc-stats-grid"><div><span>Annual fees · 45 days</span><strong>'+fees.length+'</strong><small>'+(unknownFees.length?(unknownFees.length===1?'1 needs review':unknownFees.length+' need review'):'Saved dates only')+'</small></div><div><span>Bonus deadlines · 30 days</span><strong>'+bonuses.length+'</strong><small>'+(missingBonus.length?'Some dates missing':'Saved dates only')+'</small></div></div>'+
  '<details class="cc-stats-details"><summary>View 5/24 timeline & upcoming dates</summary><div class="cc-stat-note"><b>'+(p.nextUnder?'Listed cards fall below five on '+date(p.nextUnder):p.count<5?'Fewer than five known cards':'Check your listed accounts')+'</b><p>'+(p.unknown?'Opening dates or counting details are missing. Your full total and below-five date are not confirmed.':'This is an estimate from saved accounts, not a complete credit report or Chase approval.')+'</p></div><h3>Cards in the estimate</h3>'+p.known.map(x=>'<div class="cc-timeline-row"><span>'+esc(x.card.name)+'<small>Opened '+esc(date(x.card.opened))+(x.card.closed?' · closed, still counted':'')+'</small></span><b>Stops counting<br>'+esc(date(x.drop))+'</b></div>').join('')+(p.known.length?'':'<p>No confirmed counting records yet.</p>')+
  (p.unresolved.length?'<h3>Needs review</h3>'+p.unresolved.map(x=>'<p>'+esc(x.card.name)+' · '+esc(!x.card.opened?'Opening date needed':'Check whether it counts')+'</p>').join(''):'')+
  '<h3>Annual fees in the next 45 days</h3>'+(fees.length?fees.map(c=>'<p>'+esc(c.name)+' · '+esc(feeDate(c))+'</p>').join(''):'<p>No saved fee dates in this period.'+(unknownFees.length?' Some dates or amounts are still unknown.':'')+'</p>')+
@@ -117,7 +127,7 @@ function navigation(){return '<div class="cc-switch" role="group" aria-label="Tr
 function render(){
  let data;try{data=load()}catch(e){return '<div class="cc-empty" role="alert">'+esc(e.message)+'</div>';}
  return '<div class="cc-page"><div class="cc-intro"><h2>My cards</h2><p>See what needs attention. Open a card for its offer, benefits and dates.</p></div>'+dashboard(data.cards.map(x=>x.current))+(error?'<p class="cc-error" role="alert">'+esc(error)+'</p>':'')+
- (pending?'<section class="cc-import" aria-label="Review credit-card plan"><h3>Review your prepared plan</h3><p>'+(pending.length===1&&data.cards.some(x=>x.current.id===pending[0].id)?'This updates the same card and preserves the previous plan.':pending.length+' card plan'+(pending.length===1?'':'s')+' ready to review. Existing cards keep their earlier plans.')+'</p><button type="button" class="bt360-primary" onclick="BTCards.commit()">Save this plan</button><button type="button" class="bt360-secondary" onclick="BTCards.cancel()">Cancel</button>'+pending.map(c=>card(c)).join('')+'</section>':'')+
+ (pending?'<section class="cc-import" aria-label="Review credit-card plan"><h3>Review your prepared plan</h3>'+(removals.length?'<div class="cc-removal-preview"><b>Remove from My cards</b><p>'+removals.map(id=>esc(data.cards.find(x=>x.current.id===id)?.current.name||id)).join(' · ')+'</p><p>These records leave your card list and counts. Their saved history stays in your full backup.</p></div>':'')+'<p>'+(pending.length===1&&data.cards.some(x=>x.current.id===pending[0].id)?'This updates the same card and preserves the previous plan.':pending.length+' card plan'+(pending.length===1?'':'s')+' ready to review. Existing cards keep their earlier plans.')+'</p><button type="button" class="bt360-primary" onclick="BTCards.commit()">Save this plan</button><button type="button" class="bt360-secondary" onclick="BTCards.cancel()">Cancel</button>'+pending.map(c=>card(c)).join('')+'</section>':'')+
  (!data.cards.length&&!pending?'<div class="cc-empty"><h3>Your first card starts here</h3><p>Ask me to prepare a card plan from your enrollment offer. Open the prepared file, review the details, then save it here.</p><p>No card number, security code or bank password is needed.</p></div>':'')+
  cardList(data.cards)+'<div class="cc-import-help"><p>Saved on this device. Keep a full backup in Files or iCloud Drive; changes do not sync automatically.</p><button type="button" class="bt360-secondary" onclick="BTCards.choose()">Open a prepared card plan</button> <button type="button" class="bt360-secondary" onclick="exportBackup()">Save a backup file</button><p>Cards are read-only. To update a benefit, payment or closing date, ask for an updated plan. Earlier saved plans are kept.</p></div></div>';
 }
@@ -133,7 +143,7 @@ async function importFile(f){
   const raw=typeof f.text==='function'?await f.text():await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(Error('The file could not be read. Download it to Files and try again.'));reader.readAsText(f);});
   let value;try{value=JSON.parse(raw)}catch{throw Error('This file is not valid JSON. Choose the prepared credit-card plan.');}
   prepare(value);reveal();return true;
- }catch(e){pending=null;baseline=null;selected=true;error=e.message||'The file could not be opened. Try again.';reveal();return false;}
+ }catch(e){pending=null;removals=[];baseline=null;selected=true;error=e.message||'The file could not be opened. Try again.';reveal();return false;}
 }
 function choose(){
  const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.hidden=true;
@@ -143,7 +153,7 @@ function choose(){
  input.click();
 }
 function readLink(){if(!root.location?.hash?.startsWith('#btcard='))return;try{prepare(JSON.parse(decodeURIComponent(root.location.hash.slice(8))));if(typeof tab!=='undefined')tab='tracker';root.history?.replaceState(null,'',root.location.pathname+root.location.search);root.R?.();}catch(e){error=e.message;selected=true;root.R?.();}}
-root.BTCards={KEY,validate,load,prepare,commit,five24,planningDrop,dashboard,navigation,render,card,choose,importFile,open,get selected(){return selected},search(value){query=value;const start=document.querySelector('#cc-search')?.selectionStart;root.R?.();const input=document.querySelector('#cc-search');input?.focus({preventScroll:true});try{input?.setSelectionRange(start,start)}catch{}},filter(value){category=['all','personal','business'].includes(value)?value:'all';root.R?.();},cancel(){pending=null;baseline=null;error='';root.R?.();},readLink};
+root.BTCards={KEY,validate,load,prepare,commit,five24,planningDrop,dashboard,navigation,render,card,choose,importFile,open,get selected(){return selected},search(value){query=value;const start=document.querySelector('#cc-search')?.selectionStart;root.R?.();const input=document.querySelector('#cc-search');input?.focus({preventScroll:true});try{input?.setSelectionRange(start,start)}catch{}},filter(value){category=['all','personal','business'].includes(value)?value:'all';root.R?.();},cancel(){pending=null;removals=[];baseline=null;error='';root.R?.();},readLink};
 if(root.addEventListener){root.addEventListener('hashchange',readLink);root.addEventListener('load',readLink);}
 if(typeof module==='object'&&module.exports)module.exports=root.BTCards;
 })(typeof window!=='undefined'?window:globalThis);

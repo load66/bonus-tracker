@@ -41,3 +41,18 @@ console.log('Credit-card plans PASS: read-only preview, isolated save, history, 
  const before=store.getItem(s.BTCards.KEY);assert.throws(()=>s.BTCards.prepare({format:'BonusTrackerCreditCards',version:1,cards:[counted('bad','2026-01-01'),{...base,id:'invalid',opened:'2026-02-30'}]}));assert.equal(store.getItem(s.BTCards.KEY),before,'Invalid collections cannot partially import');
 }
 console.log('5/24 planning and atomic collections PASS: month boundary, closed/business/AU/unknown accounts, duplicates, grouped drop-offs and no bank writes.');
+
+// Explicit, recoverable collection corrections never remove unrelated records.
+{
+ const original=s.BTCards.load(),extra={...clone().card,id:'correction-extra',name:'Not in selected collection'},keep={...clone().card,id:'correction-keep',accountType:'personal',five24:'counts'};
+ s.BTCards.prepare({format:'BonusTrackerCreditCards',version:1,cards:[extra,keep]});assert(s.BTCards.commit());
+ const before=store.getItem(s.BTCards.KEY),banks=store.getItem('bt_e_v4');
+ const correction={format:'BonusTrackerCreditCards',version:1,cards:[keep],removeCardIds:[extra.id]};
+ s.BTCards.prepare(correction);assert.equal(store.getItem(s.BTCards.KEY),before);assert(s.BTCards.render().includes('Remove from My cards'));assert(s.BTCards.render().includes(extra.name));
+ const writer=store.setItem;store.setItem=()=>{throw Error('Quota')};assert.equal(s.BTCards.commit(),false);store.setItem=writer;assert.equal(store.getItem(s.BTCards.KEY),before);
+ assert(s.BTCards.commit());const after=s.BTCards.load();assert(!after.cards.some(x=>x.current.id===extra.id));assert(after.cards.some(x=>x.current.id===keep.id));assert.equal(after.removedCards[0].current.id,extra.id);assert.equal(after.cards.length,original.cards.length+1);assert.equal(store.getItem('bt_e_v4'),banks);
+ const snapshot=core.snapshot(store,keys,{dashYear:2026,taxYear:2026},'3.8.1');core.restore(target,snapshot,keys,persistence);assert.equal(target.getItem(s.BTCards.KEY),store.getItem(s.BTCards.KEY),'Correction history round-trips exactly');
+ for(const removeCardIds of [[keep.id],['bad id'],[extra.id,extra.id],'all'])assert.throws(()=>s.BTCards.prepare({...correction,removeCardIds}));
+ const html=s.BTCards.dashboard([{...keep,closed:null},{...keep,id:'business-total',accountType:'business',five24:'excluded'},{...keep,id:'closed-total',closed:'2026-01-01'}]);assert(html.includes('aria-label="Open card totals"'));assert(html.includes('<span>Open cards</span><strong>2</strong>'));assert(html.includes('<b>1</b> Personal'));assert(html.includes('<b>1</b> Business'));assert(html.includes('Chase 5/24 estimate'));
+}
+console.log('Card overview/correction PASS: separate open totals, explicit preview, recoverable removal, unrelated record isolation, quota rollback and exact backup.');
