@@ -2455,6 +2455,27 @@ async function exercise(name,engine,url){
     await page.setViewportSize({width:390,height:844});
     await page.locator('.scroll').evaluate(e=>e.scrollTop=0);
     await page.screenshot({path:path.join(output,name+'-credit-overview-390.png')});
+    const removalBefore=await page.evaluate(()=>localStorage.getItem(BTCards.KEY));
+    await page.locator('.cc-remove-button').click();
+    await page.getByRole('region',{name:'Review card removal'}).waitFor({state:'visible'});
+    check('individual remove is visible from a collapsed card and previews without writes',await page.locator('.cc-remove-review').innerText().then(t=>t.includes('Second Travel Card'))&&await page.evaluate(before=>localStorage.getItem(BTCards.KEY)===before,removalBefore));
+    await page.getByRole('button',{name:'Keep cards',exact:true}).click();
+    check('keeping a card cancels removal',await page.locator('.cc-account').count()===1&&await page.evaluate(before=>localStorage.getItem(BTCards.KEY)===before,removalBefore));
+    await page.locator('.cc-remove-button').click();await page.getByRole('button',{name:'Confirm removal',exact:true}).click();
+    check('individual removal updates the directory and count',await page.locator('.cc-account').count()===0&&await page.locator('.cc-total strong').innerText()==='0');
+    await page.evaluate(card=>{const data=BTCards.load();data.cards=[{current:card,history:[]},...Array.from({length:4},(_,i)=>({current:{...card,id:'legacy-missing-'+i,name:'Legacy undated '+i,opened:null},history:[]}))];localStorage.setItem(BTCards.KEY,JSON.stringify(data));R()},secondCard);
+    const bulkBefore=await page.evaluate(()=>localStorage.getItem(BTCards.KEY));
+    for(const width of [320,375,390,430,1280]){await page.setViewportSize({width,height:900});check('missing-date removal controls fit '+width+'px',await page.locator('.cc-page').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));}
+    await page.setViewportSize({width:390,height:844});
+    await page.getByRole('button',{name:'Remove cards without opening dates',exact:true}).click();
+    check('bulk removal names all four missing-date records and preserves the dated card',await page.locator('.cc-remove-review li').count()===4&&await page.evaluate(before=>localStorage.getItem(BTCards.KEY)===before,bulkBefore));
+    await page.getByRole('button',{name:'Confirm removal',exact:true}).click();
+    await page.reload();await settleStartup();await page.getByRole('button',{name:'Credit cards',exact:true}).click();
+    check('bulk removal survives reload and keeps history and the dated card',await page.locator('.cc-account').count()===1&&await page.locator('.cc-missing-dates').count()===0&&await page.evaluate(()=>BTCards.load().removedCards.filter(x=>x.current.id.startsWith('legacy-missing-')).length===4&&BTCards.load().cards[0].current.id==='synthetic-collection-second'));
+    const datedBefore=await page.evaluate(()=>localStorage.getItem(BTCards.KEY));
+    const undatedChooser=page.waitForEvent('filechooser');await page.getByRole('button',{name:'Open a prepared card plan',exact:true}).click();await (await undatedChooser).setFiles({name:'undated-card.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({format:'BonusTrackerCreditCards',version:1,cards:[secondCard,{...secondCard,id:'rejected-undated',opened:null}]}))});
+    await page.getByRole('alert').filter({hasText:'actual opening date'}).waitFor({state:'visible'});
+    check('undated collection is rejected atomically with visible feedback',await page.evaluate(before=>localStorage.getItem(BTCards.KEY)===before,datedBefore));
     await page.getByRole('button',{name:'Bank bonuses',exact:true}).click();
     check('credit-card monitoring never rewrites bank records',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before.banks,cardsBefore));
     await page.evaluate(before=>{if(before.cards===null)localStorage.removeItem(BTCards.KEY);else localStorage.setItem(BTCards.KEY,before.cards);R()},cardsBefore);
