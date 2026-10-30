@@ -1,8 +1,8 @@
-/* Release marker v3.8.2 — unchanged source logic; cache coherence only. */
+/* Release marker v3.8.3 — unchanged source logic; cache coherence only. */
 /* Bonus Tracker v3.6.94 — mobile analyzer viewport and scroll guard. */
 (function(){
   'use strict';
-  const VER='3.8.2';
+  const VER='3.8.3';
   let lastOverlay=null;
   function syncVisualViewport(){
     const vv=window.visualViewport;

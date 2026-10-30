@@ -1,4 +1,4 @@
-/* Release marker v3.8.2 — unchanged source logic; cache coherence only. */
+/* Release marker v3.8.3 — unchanged source logic; cache coherence only. */
 /* Release 3.6.94: bank-specific rules unchanged; calendar-month close reviews are handled by shared financial rules. */
 /* BonusTracker v3.5.2 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
 (function(){

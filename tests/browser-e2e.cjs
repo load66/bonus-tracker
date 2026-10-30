@@ -2456,11 +2456,27 @@ async function exercise(name,engine,url){
     await page.locator('.scroll').evaluate(e=>e.scrollTop=0);
     await page.screenshot({path:path.join(output,name+'-credit-overview-390.png')});
     const removalBefore=await page.evaluate(()=>localStorage.getItem(BTCards.KEY));
+    check('remove action stays hidden while browsing collapsed cards',!await page.locator('.cc-remove-button').isVisible());
+    await page.locator('.cc-account > summary').click();
+    check('opening card details still hides destructive actions',!await page.locator('.cc-remove-button').isVisible());
+    await page.locator('.cc-card-options > summary').click();
+    check('opening card options reveals removal without changing records',await page.locator('.cc-remove-button').isVisible()&&await page.evaluate(before=>localStorage.getItem(BTCards.KEY)===before,removalBefore));
+    for(const width of [320,375,390,430,1280]){await page.setViewportSize({width,height:900});check('card options remain readable with touch targets at '+width+'px',await page.locator('.cc-card-options').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&e.querySelector('button').getBoundingClientRect().height>=44));}
+    await page.setViewportSize({width:390,height:844});await page.locator('.cc-card-options').scrollIntoViewIfNeeded();
+    await page.screenshot({path:path.join(output,name+'-card-options-390.png')});
+
     await page.locator('.cc-remove-button').click();
     await page.getByRole('region',{name:'Review card removal'}).waitFor({state:'visible'});
-    check('individual remove is visible from a collapsed card and previews without writes',await page.locator('.cc-remove-review').innerText().then(t=>t.includes('Second Travel Card'))&&await page.evaluate(before=>localStorage.getItem(BTCards.KEY)===before,removalBefore));
+    check('card options lead to a named removal preview without writes',await page.locator('.cc-remove-review').innerText().then(t=>t.includes('Second Travel Card'))&&await page.evaluate(before=>localStorage.getItem(BTCards.KEY)===before,removalBefore));
     await page.getByRole('button',{name:'Keep cards',exact:true}).click();
     check('keeping a card cancels removal',await page.locator('.cc-account').count()===1&&await page.evaluate(before=>localStorage.getItem(BTCards.KEY)===before,removalBefore));
+    check('cancelled removal returns to browsing with removal hidden',!await page.locator('.cc-remove-button').isVisible());
+    await page.locator('.cc-account > summary').click();
+    await page.locator('.cc-card-options > summary').focus();await page.keyboard.press('Enter');
+    check('card options support keyboard access',await page.locator('.cc-remove-button').isVisible());
+    await page.locator('.cc-card-options > summary').click();
+    check('card options can close again without writes',!await page.locator('.cc-remove-button').isVisible()&&await page.evaluate(before=>localStorage.getItem(BTCards.KEY)===before,removalBefore));
+    await page.locator('.cc-card-options > summary').click();
     await page.locator('.cc-remove-button').click();await page.getByRole('button',{name:'Confirm removal',exact:true}).click();
     check('individual removal updates the directory and count',await page.locator('.cc-account').count()===0&&await page.locator('.cc-total strong').innerText()==='0');
     await page.evaluate(card=>{const data=BTCards.load();data.cards=[{current:card,history:[]},...Array.from({length:4},(_,i)=>({current:{...card,id:'legacy-missing-'+i,name:'Legacy undated '+i,opened:null},history:[]}))];localStorage.setItem(BTCards.KEY,JSON.stringify(data));R()},secondCard);

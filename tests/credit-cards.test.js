@@ -74,3 +74,13 @@ console.log('Card overview/correction PASS: separate open totals, explicit previ
  assert(s.BTCards.requestRemove(keep.current.id));assert(s.BTCards.confirmRemove());assert.equal(s.BTCards.load().cards.length,0);assert.equal(s.BTCards.load().removedCards.length,5);
 }
 console.log('On-device removal PASS: legacy reads, opening-date import gate, named/cancelled previews, stale/quota protection, individual/bulk isolation and exact history recovery.');
+
+// Removal belongs to a secondary disclosure inside card details, not the list.
+{
+ const sample=clone().card;store.setItem(s.BTCards.KEY,JSON.stringify({version:1,cards:[{current:sample,history:[]}]}));
+ const before=store.getItem(s.BTCards.KEY),html=s.BTCards.render();
+ assert.match(html,/class="cc-account-body">[\s\S]*class="cc-card-options"><summary/);
+ assert.match(html,/Card options for Synthetic Issuer Travel Card/);assert(!html.includes('class="cc-card-options" open'));
+ assert.equal(store.getItem(s.BTCards.KEY),before);
+}
+console.log('Discreet card options PASS: secondary closed disclosure inside details, accessible name and read-only rendering.');
