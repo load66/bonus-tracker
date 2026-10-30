@@ -2,7 +2,7 @@
 (function(root){
 'use strict';
 const KEY='bt_credit_cards_v1',FORMAT='BonusTrackerCreditCard',VERSION=1;
-let selected=false,pending=null,removals=[],baseline=null,error='',query='',category='all';
+let selected=false,pending=null,removals=[],baseline=null,error='',query='',category='all',removeReview=null;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date=v=>v?new Date(v+'T12:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}):'Not recorded';
 const validDate=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&!Number.isNaN(Date.parse(v+'T12:00:00Z'))&&new Date(v+'T12:00:00Z').toISOString().slice(0,10)===v;
@@ -42,11 +42,12 @@ function prepare(p){
  const items=p?.format==='BonusTrackerCreditCards'&&p.version===1?p.cards:[p?.card];
  if(!Array.isArray(items)||!items.length||items.length>100)throw Error('Choose a prepared card plan or collection.');
  const cards=items.map(card=>validate({format:FORMAT,version:VERSION,card}));
+ if(cards.some(c=>!validDate(c.opened)))throw Error('Every card needs its actual opening date before it can be added. Existing cards have not changed.');
  if(new Set(cards.map(c=>c.id)).size!==cards.length)throw Error('The collection contains duplicate card IDs.');
  if(JSON.stringify(p).length>1000000)throw Error('This card collection is too large.');
  const remove=p.removeCardIds===undefined?[]:p.removeCardIds;
  if(!Array.isArray(remove)||remove.length>100||remove.some(id=>typeof id!=='string'||!/^[a-zA-Z0-9_-]{1,120}$/.test(id))||new Set(remove).size!==remove.length||remove.some(id=>cards.some(c=>c.id===id)))throw Error('Check the cards selected for removal.');
- load();baseline=root.localStorage.getItem(KEY);pending=cards;removals=remove.slice();error='';selected=true;return p?.format==='BonusTrackerCreditCards'?cards:cards[0];
+ load();removeReview=null;baseline=root.localStorage.getItem(KEY);pending=cards;removals=remove.slice();error='';selected=true;return p?.format==='BonusTrackerCreditCards'?cards:cards[0];
 }
 function commit(){
  if(!pending)return false;
@@ -67,6 +68,30 @@ function commit(){
   root.BTPersistence.commit(root.localStorage,{[KEY]:JSON.stringify(data)});
   pending=null;removals=[];baseline=null;error='';root.btCloudBackupChanged?.();root.R?.();return true;
  }catch(e){error=e.message;root.R?.();return false;}
+}
+function requestRemove(id){
+ try{
+  const data=load(),ids=id===undefined?data.cards.filter(x=>!x.current.opened).map(x=>x.current.id):[id];
+  if(!ids.length||ids.some(key=>!data.cards.some(x=>x.current.id===key)))throw Error('That card is no longer in your list.');
+  pending=null;removals=[];baseline=null;error='';removeReview={ids,baseline:root.localStorage.getItem(KEY)};reveal();return true;
+ }catch(e){error=e.message;reveal();return false;}
+}
+function confirmRemove(){
+ if(!removeReview)return false;
+ try{
+  if(root.localStorage.getItem(KEY)!==removeReview.baseline)throw Error('Your card list changed. Cancel and review the cards again.');
+  const data=load(),removed=data.cards.filter(x=>removeReview.ids.includes(x.current.id));
+  if(removed.length!==removeReview.ids.length)throw Error('Your card list changed. Cancel and review the cards again.');
+  if(data.removedCards!==undefined&&!Array.isArray(data.removedCards))throw Error('Saved removed-card history could not be read.');
+  data.removedCards=[...(data.removedCards||[]),...removed];data.cards=data.cards.filter(x=>!removeReview.ids.includes(x.current.id));
+  root.BTPersistence.commit(root.localStorage,{[KEY]:JSON.stringify(data)});
+  removeReview=null;error='';root.btCloudBackupChanged?.();root.R?.();return true;
+ }catch(e){error=e.message;reveal();return false;}
+}
+function removalPanel(data){
+ if(!removeReview)return '';
+ const cards=data.cards.filter(x=>removeReview.ids.includes(x.current.id));
+ return '<section class="cc-remove-review cc-empty" aria-label="Review card removal"><h3>Remove '+cards.length+' card'+(cards.length===1?'':'s')+' from your tracker?</h3><ul>'+cards.map(x=>'<li>'+esc(x.current.issuer)+' · '+esc(x.current.name)+'</li>').join('')+'</ul><p>This only removes the saved tracker entries. It does not close your credit-card accounts. Earlier records stay in your full backup.</p><button type="button" class="bt360-secondary" onclick="BTCards.confirmRemove()">Confirm removal</button> <button type="button" class="bt360-secondary" onclick="BTCards.cancelRemoval()">Keep cards</button></section>';
 }
 function open(value){selected=!!value;if(typeof expanded!=='undefined')expanded=null;root.bt362AddOpen=false;root.R?.();}
 function countdown(on){if(!on)return '';const today=typeof td==='function'?td():new Date().toISOString().slice(0,10);const days=Math.round((Date.parse(on+'T12:00:00Z')-Date.parse(today+'T12:00:00Z'))/86400000);return days===0?'Review today':days<0?'Review date passed':days+' days until review';}
@@ -121,19 +146,21 @@ function dashboard(cards){
 function cardList(records){
  const filtered=records.filter(x=>(category==='all'||x.current.accountType===category)&&[x.current.name,x.current.issuer].join(' ').toLowerCase().includes(query.toLowerCase())).sort((a,b)=>(b.current.opened||'').localeCompare(a.current.opened||''));
  return '<div class="cc-list-tools"><label>Search cards<input id="cc-search" type="search" placeholder="Card or issuer" value="'+esc(query)+'" oninput="BTCards.search(this.value)"></label><label>Show<select onchange="BTCards.filter(this.value)">'+[['all','All cards'],['personal','Personal'],['business','Business']].map(([k,t])=>'<option value="'+k+'"'+(category===k?' selected':'')+'>'+t+'</option>').join('')+'</select></label></div><p class="cc-list-count">'+filtered.length+' saved card'+(filtered.length===1?'':'s')+' · newest first</p>'+
- filtered.map(x=>{const c=x.current,brand=c.issuer==='Chase'?'chase':c.issuer==='Capital One'?'capital':c.issuer==='Robinhood'?'gold':'other';return '<details class="cc-account"><summary><span class="cc-card-art '+brand+'" aria-hidden="true">'+esc(c.issuer.split(' ').map(x=>x[0]).join('').slice(0,3))+'</span><span class="cc-account-copy"><b>'+esc(c.name)+'</b><small>'+esc(c.accountType==='business'?'Business':c.accountType==='personal'?'Personal':'Account type needs review')+(c.closed?' · Closed':'')+'</small><span>Opened <strong>'+esc(date(c.opened))+'</strong></span><span>Annual fee <strong>'+esc(c.annualFee==null?'Not confirmed':'$'+c.annualFee.toLocaleString('en-US'))+'</strong></span><small>'+esc(feeDate(c))+'</small></span><span aria-hidden="true">⌄</span></summary><div class="cc-account-body">'+card(c,x.history)+'</div></details>';}).join('')+(filtered.length?'':'<p class="cc-empty">No cards match this view.</p>');
+ filtered.map(x=>{const c=x.current,brand=c.issuer==='Chase'?'chase':c.issuer==='Capital One'?'capital':c.issuer==='Robinhood'?'gold':'other';return '<div class="cc-account-wrap"><details class="cc-account"><summary><span class="cc-card-art '+brand+'" aria-hidden="true">'+esc(c.issuer.split(' ').map(x=>x[0]).join('').slice(0,3))+'</span><span class="cc-account-copy"><b>'+esc(c.name)+'</b><small>'+esc(c.accountType==='business'?'Business':c.accountType==='personal'?'Personal':'Account type needs review')+(c.closed?' · Closed':'')+'</small><span>Opened <strong>'+esc(date(c.opened))+'</strong></span><span>Annual fee <strong>'+esc(c.annualFee==null?'Not confirmed':'$'+c.annualFee.toLocaleString('en-US'))+'</strong></span><small>'+esc(feeDate(c))+'</small></span><span aria-hidden="true">⌄</span></summary><div class="cc-account-body">'+card(c,x.history)+'</div></details><button type="button" class="cc-remove-button" aria-label="Remove '+esc(c.issuer+' '+c.name)+'" onclick="BTCards.requestRemove(\''+esc(c.id)+'\')">Remove card</button></div>';}).join('')+(filtered.length?'':'<p class="cc-empty">No cards match this view.</p>');
 }
 function navigation(){return '<div class="cc-switch" role="group" aria-label="Tracker account category"><button type="button" aria-pressed="'+!selected+'" onclick="BTCards.open(false)">Bank bonuses</button><button type="button" aria-pressed="'+selected+'" onclick="BTCards.open(true)">Credit cards</button></div>';}
 function render(){
  let data;try{data=load()}catch(e){return '<div class="cc-empty" role="alert">'+esc(e.message)+'</div>';}
- return '<div class="cc-page"><div class="cc-intro"><h2>My cards</h2><p>See what needs attention. Open a card for its offer, benefits and dates.</p></div>'+dashboard(data.cards.map(x=>x.current))+(error?'<p class="cc-error" role="alert">'+esc(error)+'</p>':'')+
- (pending?'<section class="cc-import" aria-label="Review credit-card plan"><h3>Review your prepared plan</h3>'+(removals.length?'<div class="cc-removal-preview"><b>Remove from My cards</b><p>'+removals.map(id=>esc(data.cards.find(x=>x.current.id===id)?.current.name||id)).join(' · ')+'</p><p>These records leave your card list and counts. Their saved history stays in your full backup.</p></div>':'')+'<p>'+(pending.length===1&&data.cards.some(x=>x.current.id===pending[0].id)?'This updates the same card and preserves the previous plan.':pending.length+' card plan'+(pending.length===1?'':'s')+' ready to review. Existing cards keep their earlier plans.')+'</p><button type="button" class="bt360-primary" onclick="BTCards.commit()">Save this plan</button><button type="button" class="bt360-secondary" onclick="BTCards.cancel()">Cancel</button>'+pending.map(c=>card(c)).join('')+'</section>':'')+
+ const missing=data.cards.filter(x=>!x.current.opened).length;
+ return '<div class="cc-page"><div class="cc-intro"><h2>My cards</h2><p>See what needs attention. Open a card for its offer, benefits and dates.</p></div>'+(missing?'<section class="cc-missing-dates cc-empty"><b>'+missing+' card'+(missing===1?' has':'s have')+' no opening date</b><p>Keep only the cards you meant to track.</p><button type="button" class="bt360-secondary" onclick="BTCards.requestRemove()">Remove cards without opening dates</button></section>':'')+dashboard(data.cards.map(x=>x.current))+(error?'<p class="cc-error" role="alert">'+esc(error)+'</p>':'')+
+ removalPanel(data)+(pending?'<section class="cc-import" aria-label="Review credit-card plan"><h3>Review your prepared plan</h3>'+(removals.length?'<div class="cc-removal-preview"><b>Remove from My cards</b><p>'+removals.map(id=>esc(data.cards.find(x=>x.current.id===id)?.current.name||id)).join(' · ')+'</p><p>These records leave your card list and counts. Their saved history stays in your full backup.</p></div>':'')+'<p>'+(pending.length===1&&data.cards.some(x=>x.current.id===pending[0].id)?'This updates the same card and preserves the previous plan.':pending.length+' card plan'+(pending.length===1?'':'s')+' ready to review. Existing cards keep their earlier plans.')+'</p><button type="button" class="bt360-primary" onclick="BTCards.commit()">Save this plan</button><button type="button" class="bt360-secondary" onclick="BTCards.cancel()">Cancel</button>'+pending.map(c=>card(c)).join('')+'</section>':'')+
  (!data.cards.length&&!pending?'<div class="cc-empty"><h3>Your first card starts here</h3><p>Ask me to prepare a card plan from your enrollment offer. Open the prepared file, review the details, then save it here.</p><p>No card number, security code or bank password is needed.</p></div>':'')+
  cardList(data.cards)+'<div class="cc-import-help"><p>Saved on this device. Keep a full backup in Files or iCloud Drive; changes do not sync automatically.</p><button type="button" class="bt360-secondary" onclick="BTCards.choose()">Open a prepared card plan</button> <button type="button" class="bt360-secondary" onclick="exportBackup()">Save a backup file</button><p>Cards are read-only. To update a benefit, payment or closing date, ask for an updated plan. Earlier saved plans are kept.</p></div></div>';
 }
 function reveal(){
  root.R?.();
- const focus=()=>{const panel=document.querySelector('.cc-import')||document.querySelector('.cc-error');if(panel){panel.tabIndex=-1;panel.scrollIntoView({block:'start',behavior:'auto'});panel.focus({preventScroll:true});}};
+ if(typeof document==='undefined')return;
+ const focus=()=>{const panel=document.querySelector('.cc-error')||document.querySelector('.cc-remove-review')||document.querySelector('.cc-import');if(panel){panel.tabIndex=-1;panel.scrollIntoView({block:'start',behavior:'auto'});panel.focus({preventScroll:true});}};
  if(root.requestAnimationFrame)root.requestAnimationFrame(focus);else focus();
 }
 async function importFile(f){
@@ -153,7 +180,7 @@ function choose(){
  input.click();
 }
 function readLink(){if(!root.location?.hash?.startsWith('#btcard='))return;try{prepare(JSON.parse(decodeURIComponent(root.location.hash.slice(8))));if(typeof tab!=='undefined')tab='tracker';root.history?.replaceState(null,'',root.location.pathname+root.location.search);root.R?.();}catch(e){error=e.message;selected=true;root.R?.();}}
-root.BTCards={KEY,validate,load,prepare,commit,five24,planningDrop,dashboard,navigation,render,card,choose,importFile,open,get selected(){return selected},search(value){query=value;const start=document.querySelector('#cc-search')?.selectionStart;root.R?.();const input=document.querySelector('#cc-search');input?.focus({preventScroll:true});try{input?.setSelectionRange(start,start)}catch{}},filter(value){category=['all','personal','business'].includes(value)?value:'all';root.R?.();},cancel(){pending=null;removals=[];baseline=null;error='';root.R?.();},readLink};
+root.BTCards={KEY,validate,load,prepare,commit,requestRemove,confirmRemove,cancelRemoval(){removeReview=null;error='';root.R?.();},five24,planningDrop,dashboard,navigation,render,card,choose,importFile,open,get selected(){return selected},search(value){query=value;const start=document.querySelector('#cc-search')?.selectionStart;root.R?.();const input=document.querySelector('#cc-search');input?.focus({preventScroll:true});try{input?.setSelectionRange(start,start)}catch{}},filter(value){category=['all','personal','business'].includes(value)?value:'all';root.R?.();},cancel(){pending=null;removals=[];baseline=null;error='';root.R?.();},readLink};
 if(root.addEventListener){root.addEventListener('hashchange',readLink);root.addEventListener('load',readLink);}
 if(typeof module==='object'&&module.exports)module.exports=root.BTCards;
 })(typeof window!=='undefined'?window:globalThis);

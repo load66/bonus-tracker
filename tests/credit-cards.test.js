@@ -56,3 +56,21 @@ console.log('5/24 planning and atomic collections PASS: month boundary, closed/b
  const html=s.BTCards.dashboard([{...keep,closed:null},{...keep,id:'business-total',accountType:'business',five24:'excluded'},{...keep,id:'closed-total',closed:'2026-01-01'}]);assert(html.includes('aria-label="Open card totals"'));assert(html.includes('<span>Open cards</span><strong>2</strong>'));assert(html.includes('<b>1</b> Personal'));assert(html.includes('<b>1</b> Business'));assert(html.includes('Chase 5/24 estimate'));
 }
 console.log('Card overview/correction PASS: separate open totals, explicit preview, recoverable removal, unrelated record isolation, quota rollback and exact backup.');
+
+// Legacy records remain readable/removable, but new imports require open dates.
+{
+ const keep={current:{...clone().card,id:'dated-kept',accountType:'personal',five24:'counts'},history:[]};
+ const legacy=Array.from({length:4},(_,i)=>({current:{...clone().card,id:'legacy-undated-'+i,name:'Legacy card '+i,opened:null},history:[clone().card]}));
+ store.setItem(s.BTCards.KEY,JSON.stringify({version:1,cards:[keep,...legacy]}));
+ const before=store.getItem(s.BTCards.KEY),banks=store.getItem('bt_e_v4');
+ assert.equal(s.BTCards.load().cards.length,5);assert(s.BTCards.render().includes('Remove cards without opening dates'));
+ assert.throws(()=>s.BTCards.prepare({...clone(),card:legacy[0].current}),/opening date/);
+ assert.throws(()=>s.BTCards.prepare({format:'BonusTrackerCreditCards',version:1,cards:[keep.current,legacy[0].current]}),/opening date/);assert.equal(store.getItem(s.BTCards.KEY),before);
+ assert(s.BTCards.requestRemove());assert.equal(store.getItem(s.BTCards.KEY),before);assert(s.BTCards.render().includes('Legacy card 3'));s.BTCards.cancelRemoval();assert.equal(s.BTCards.confirmRemove(),false);assert.equal(store.getItem(s.BTCards.KEY),before);
+ s.BTCards.requestRemove();store.setItem(s.BTCards.KEY,before+' ');assert.equal(s.BTCards.confirmRemove(),false);assert.equal(store.getItem(s.BTCards.KEY),before+' ');store.setItem(s.BTCards.KEY,before);
+ s.BTCards.requestRemove();const writer=store.setItem;store.setItem=()=>{throw Error('Quota')};assert.equal(s.BTCards.confirmRemove(),false);store.setItem=writer;assert.equal(store.getItem(s.BTCards.KEY),before);assert(s.BTCards.confirmRemove());
+ const after=s.BTCards.load();assert.equal(after.cards.length,1);assert.equal(after.cards[0].current.id,keep.current.id);assert.equal(after.removedCards.length,4);assert.equal(after.removedCards[0].history.length,1);assert.equal(store.getItem('bt_e_v4'),banks);
+ const snapshot=core.snapshot(store,keys,{dashYear:2026,taxYear:2026},'3.8.2');core.restore(target,snapshot,keys,persistence);assert.equal(target.getItem(s.BTCards.KEY),store.getItem(s.BTCards.KEY));
+ assert(s.BTCards.requestRemove(keep.current.id));assert(s.BTCards.confirmRemove());assert.equal(s.BTCards.load().cards.length,0);assert.equal(s.BTCards.load().removedCards.length,5);
+}
+console.log('On-device removal PASS: legacy reads, opening-date import gate, named/cancelled previews, stale/quota protection, individual/bulk isolation and exact history recovery.');
