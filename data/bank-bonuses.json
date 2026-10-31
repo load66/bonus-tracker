@@ -1,27 +1,187 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-10-31T12:49:04.142564+00:00",
+  "checkedAt": "2026-10-31T21:44:30.222052+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-10-31T12:49:04.142564+00:00",
+      "checkedAt": "2026-10-31T21:44:30.222052+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-10-31T12:49:04.142564+00:00",
+      "checkedAt": "2026-10-31T21:44:30.222052+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-10-31T12:49:04.142564+00:00",
+      "checkedAt": "2026-10-31T21:44:30.222052+00:00",
       "status": "ok"
     }
   ],
   "offers": [
+    {
+      "title": "[MI, NV, TX, VA] InTouch Credit Union $100 Referral Bonus",
+      "url": "https://www.doctorofcredit.com/mi-nv-tx-va-intouch-credit-union-100-referral-bonus-direct-deposit-optional/",
+      "publishedAt": "2026-10-31T17:00:25+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "intouch credit union|unknown|100|MI,NV,TX,VA|f3b4f216e44a",
+      "bank": "intouch credit union",
+      "product": "unknown",
+      "amount": 100,
+      "region": "MI,NV,TX,VA",
+      "offerKey": "intouch credit union|unknown|100|MI,NV,TX,VA|f3b4f216e44a",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-31T21:44:30.222052+00:00",
+      "lastSeen": "2026-10-31T17:00:25+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/mi-nv-tx-va-intouch-credit-union-100-referral-bonus-direct-deposit-optional/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[MI, NV, TX, VA] InTouch Credit Union $100 Referral Bonus",
+          "publishedAt": "2026-10-31T17:00:25+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "[ID only] Cap Ed Credit Union $200 Checking Bonus – No Direct Deposit Required",
+      "url": "https://www.doctorofcredit.com/in-only-cap-ed-credit-union-100-checking-bonus-no-direct-deposit-required/",
+      "publishedAt": "2026-10-31T16:00:19+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "cap ed credit union|checking|200|ID",
+      "bank": "cap ed credit union",
+      "product": "checking",
+      "amount": 200,
+      "region": "ID",
+      "offerKey": "cap ed credit union|checking|200|ID",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-31T21:44:30.222052+00:00",
+      "lastSeen": "2026-10-31T16:00:19+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/in-only-cap-ed-credit-union-100-checking-bonus-no-direct-deposit-required/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[ID only] Cap Ed Credit Union $200 Checking Bonus – No Direct Deposit Required",
+          "publishedAt": "2026-10-31T16:00:19+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "[IN, OH, MI] First Merchants Bank $300/$600 Checking Promotion",
+      "url": "https://www.doctorofcredit.com/in-oh-mi-first-merchants-bank-300-500-checking-promotion/",
+      "publishedAt": "2026-10-31T16:00:13+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "first merchants bank|checking|600|IN,MI,OH",
+      "bank": "first merchants bank",
+      "product": "checking",
+      "amount": 600,
+      "region": "IN,MI,OH",
+      "offerKey": "first merchants bank|checking|600|IN,MI,OH",
+      "rewardIsUpperBound": true,
+      "firstSeen": "2026-10-31T21:44:30.222052+00:00",
+      "lastSeen": "2026-10-31T16:00:13+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/in-oh-mi-first-merchants-bank-300-500-checking-promotion/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[IN, OH, MI] First Merchants Bank $300/$600 Checking Promotion",
+          "publishedAt": "2026-10-31T16:00:13+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "[PA & MD only] ACNB $1,000-$3,000 Business Checking bonus",
+      "url": "https://www.doctorofcredit.com/pa-md-only-acnb-1000-2000-checking-bonus/",
+      "publishedAt": "2026-10-31T15:00:46+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "acnb|business|1000|MD,PA",
+      "bank": "acnb",
+      "product": "business",
+      "amount": 1000,
+      "region": "MD,PA",
+      "offerKey": "acnb|business|1000|MD,PA",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-31T21:44:30.222052+00:00",
+      "lastSeen": "2026-10-31T15:00:46+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/pa-md-only-acnb-1000-2000-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[PA & MD only] ACNB $1,000-$3,000 Business Checking bonus",
+          "publishedAt": "2026-10-31T15:00:46+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "[GA, Select Counties] Robins Financial Credit Union $300 Checking Bonus",
+      "url": "https://www.doctorofcredit.com/ga-select-counties-robins-financial-credit-union-200-checking-bonus/",
+      "publishedAt": "2026-10-31T14:30:55+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "robins financial credit union|checking|300|GA",
+      "bank": "robins financial credit union",
+      "product": "checking",
+      "amount": 300,
+      "region": "GA",
+      "offerKey": "robins financial credit union|checking|300|GA",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-31T21:44:30.222052+00:00",
+      "lastSeen": "2026-10-31T14:30:55+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/ga-select-counties-robins-financial-credit-union-200-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[GA, Select Counties] Robins Financial Credit Union $300 Checking Bonus",
+          "publishedAt": "2026-10-31T14:30:55+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
     {
       "title": "Mercury (Fintech) $500 Business Checking Bonus",
       "url": "https://www.doctorofcredit.com/mercury-fintech-500-business-checking-bonus/",
@@ -1161,9 +1321,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "[MA, NH, ME, RI] Eastern Bank $750 Checking/Savings Bonus",
