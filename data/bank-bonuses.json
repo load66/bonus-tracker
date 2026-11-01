@@ -1,23 +1,23 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-10-31T21:44:30.222052+00:00",
+  "checkedAt": "2026-11-01T06:26:43.558829+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-10-31T21:44:30.222052+00:00",
+      "checkedAt": "2026-11-01T06:26:43.558829+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-10-31T21:44:30.222052+00:00",
+      "checkedAt": "2026-11-01T06:26:43.558829+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-10-31T21:44:30.222052+00:00",
+      "checkedAt": "2026-11-01T06:26:43.558829+00:00",
       "status": "ok"
     }
   ],
@@ -43,8 +43,8 @@
       "links": [
         {
           "url": "https://www.doctorofcredit.com/mi-nv-tx-va-intouch-credit-union-100-referral-bonus-direct-deposit-optional/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "[MI, NV, TX, VA] InTouch Credit Union $100 Referral Bonus",
           "publishedAt": "2026-10-31T17:00:25+00:00"
         }
@@ -75,8 +75,8 @@
       "links": [
         {
           "url": "https://www.doctorofcredit.com/in-only-cap-ed-credit-union-100-checking-bonus-no-direct-deposit-required/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "[ID only] Cap Ed Credit Union $200 Checking Bonus – No Direct Deposit Required",
           "publishedAt": "2026-10-31T16:00:19+00:00"
         }
@@ -107,8 +107,8 @@
       "links": [
         {
           "url": "https://www.doctorofcredit.com/in-oh-mi-first-merchants-bank-300-500-checking-promotion/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "[IN, OH, MI] First Merchants Bank $300/$600 Checking Promotion",
           "publishedAt": "2026-10-31T16:00:13+00:00"
         }
@@ -139,8 +139,8 @@
       "links": [
         {
           "url": "https://www.doctorofcredit.com/pa-md-only-acnb-1000-2000-checking-bonus/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "[PA & MD only] ACNB $1,000-$3,000 Business Checking bonus",
           "publishedAt": "2026-10-31T15:00:46+00:00"
         }
@@ -171,8 +171,8 @@
       "links": [
         {
           "url": "https://www.doctorofcredit.com/ga-select-counties-robins-financial-credit-union-200-checking-bonus/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "[GA, Select Counties] Robins Financial Credit Union $300 Checking Bonus",
           "publishedAt": "2026-10-31T14:30:55+00:00"
         }
@@ -627,39 +627,6 @@
       ],
       "firstSeenBaseline": true,
       "badges": []
-    },
-    {
-      "title": "Our Credit Union Promotions: $100 Checking Bonus (MI) – Ends 10/31/26",
-      "url": "https://www.hustlermoneyblog.com/our-credit-union-promotions/",
-      "publishedAt": "2026-10-28T16:53:25+00:00",
-      "source": "Hustler Money Blog",
-      "sourceId": "hmb",
-      "availability": "unknown",
-      "groupKey": "our credit union|checking|100|MI",
-      "bank": "our credit union",
-      "product": "checking",
-      "amount": 100,
-      "region": "MI",
-      "offerKey": "our credit union|checking|100|MI",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-10-28T22:42:13.893611+00:00",
-      "lastSeen": "2026-10-28T16:53:25+00:00",
-      "expiresAt": "2026-10-31",
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.hustlermoneyblog.com/our-credit-union-promotions/",
-          "sourceId": "hmb",
-          "source": "Hustler Money Blog",
-          "title": "Our Credit Union Promotions: $100 Checking Bonus (MI) – Ends 10/31/26",
-          "publishedAt": "2026-10-28T16:53:25+00:00"
-        }
-      ],
-      "firstSeenBaseline": false,
-      "badges": [
-        "New",
-        "Ending soon"
-      ]
     },
     {
       "title": "Axos Bank $300 Checking Bonus",
@@ -2123,38 +2090,6 @@
       ],
       "firstSeenBaseline": true,
       "badges": []
-    },
-    {
-      "title": "Westerra Credit Union Promotions: $25, $100 Checking, Referral Bonuses (CO) – Ends 10/31/26",
-      "url": "https://www.hustlermoneyblog.com/westerra-credit-union-promotions/",
-      "publishedAt": "2026-10-13T13:54:58+00:00",
-      "source": "Hustler Money Blog",
-      "sourceId": "hmb",
-      "availability": "unknown",
-      "groupKey": "westerra credit union|checking|25|CO",
-      "bank": "westerra credit union",
-      "product": "checking",
-      "amount": 25,
-      "region": "CO",
-      "offerKey": "westerra credit union|checking|25|CO",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-10-11T23:15:12+00:00",
-      "lastSeen": "2026-10-13T13:54:58+00:00",
-      "expiresAt": "2026-10-31",
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.hustlermoneyblog.com/westerra-credit-union-promotions/",
-          "sourceId": "hmb",
-          "source": "Hustler Money Blog",
-          "title": "Westerra Credit Union Promotions: $25, $100 Checking, Referral Bonuses (CO) – Ends 10/31/26",
-          "publishedAt": "2026-10-13T13:54:58+00:00"
-        }
-      ],
-      "firstSeenBaseline": true,
-      "badges": [
-        "Ending soon"
-      ]
     },
     {
       "title": "[AZ, CO, FL, IL, IN, KS, MO, OK, TX] Busey Bank $200-$500 Checking Bonus",
