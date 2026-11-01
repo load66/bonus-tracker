@@ -281,7 +281,9 @@
     if(!range||!date(range.start)||!date(range.end))return '';
     const fmt=(d,year)=>new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',...(year?{year:'numeric'}:{}),timeZone:'UTC'}).format(new Date(d+'T00:00:00Z'));
     const crossYear=range.start.slice(0,4)!==range.end.slice(0,4);
-    if(range.basis==='opened'&&range.start===range.anchor)
+    // An upper-only "within N days" rule establishes a latest payment date,
+    // not a predicted day-zero arrival. This applies to all supported anchors.
+    if(range.start===range.anchor)
       return 'Bonus payable by '+fmt(range.end,true)+' · earliest payment date not specified';
     return 'Estimated bonus arrival: '+fmt(range.start,crossYear)+'–'+fmt(range.end,true);
   }
