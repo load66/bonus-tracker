@@ -2086,11 +2086,11 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>{entries[0].opened='2026-08-11';R();});
     check('arrival recomputes when opening changes',await page.locator('.bt3684-arrival').innerText()==='Estimated bonus arrival: Nov 9–Dec 9, 2026');
     await page.evaluate(source=>{window.__beforeLegacyArrival=entries[0];entries[0]={...source,id:'SYN-ARRIVAL'};R();},require('./fixtures/financial-rules.cjs').legacyArrivalFixture());
-    check('legacy completion wording renders its recorded payout range',await page.locator('.bt3684-arrival').innerText()==='Estimated bonus arrival: Jan 10–Mar 11, 2026');
-    check('legacy arrival uses the same facts in AI',await page.evaluate(()=>BTBonusAI.contextFor(entries[0]).some(f=>f.id==='arrival'&&f.text.includes('Jan 10–Mar 11, 2026'))));
+    check('legacy completion wording displays only the contractual payment deadline',await page.locator('.bt3684-arrival').innerText()==='Bonus payable by Mar 11, 2026 · earliest payment date not specified');
+    check('legacy arrival uses the same deadline in AI',await page.evaluate(()=>BTBonusAI.contextFor(entries[0]).some(f=>f.id==='arrival'&&f.text.includes('Bonus payable by Mar 11, 2026'))));
     await page.evaluate(source=>{entries[0]={...source,id:'SYN-ARRIVAL'};R();},require('./fixtures/financial-rules.cjs').tierArrivalFixture());
-    check('broad saved quotation resolves the fixed tier clock',await page.locator('.bt3684-arrival').innerText()==='Estimated bonus arrival: Apr 1–Apr 16, 2026');
-    check('tier clock and AI agree',await page.evaluate(()=>BTBonusAI.contextFor(entries[0]).some(f=>f.id==='arrival'&&f.text==='Estimated bonus arrival: Apr 1–Apr 16, 2026')));
+    check('broad saved quotation resolves the fixed tier deadline',await page.locator('.bt3684-arrival').innerText()==='Bonus payable by Apr 16, 2026 · earliest payment date not specified');
+    check('tier deadline and AI agree',await page.evaluate(()=>BTBonusAI.contextFor(entries[0]).some(f=>f.id==='arrival'&&f.text==='Bonus payable by Apr 16, 2026 · earliest payment date not specified')));
     await page.evaluate(source=>{entries[0]={...source,id:'SYN-ARRIVAL'};R();},require('./fixtures/financial-rules.cjs').legacyPublicOfferFixture());
     check('exact enrolled offer recovers missing legacy payout',await page.locator('.bt3684-arrival').innerText()==='Estimated bonus arrival: Jul 30–Aug 29, 2026');
     check('recovered rule has distinct provenance',await page.locator('.bt3684-arrival').getAttribute('data-source')==='matched-offer-payout');
