@@ -84,7 +84,7 @@ assert.equal(rules.estimatedArrival({opened:'2026-01-31',payoutTimingText:'Withi
 assert.equal(rules.estimatedArrival({opened:'2026-02-30',payoutTimingText:text}),null);
 const enrollment=make('Bonus is paid within 30 calendar days after offer enrollment.');enrollment.offerEnrollmentDate='2026-12-15';
 assert.equal(rules.estimatedArrival(enrollment).end,'2027-01-14');
-assert.match(rules.arrivalLabel(rules.estimatedArrival(enrollment)),/Dec 15, 2026–Jan 14, 2027/);
+assert.equal(rules.arrivalLabel(rules.estimatedArrival(enrollment)),'Bonus payable by Jan 14, 2027 · earliest payment date not specified','Enrollment-based within-N terms must not predict payment on enrollment day');
 const period=make('Bonus is paid within 30 calendar days after the qualifying period ends.');
 assert.equal(rules.estimatedArrival(period),null,'Qualification-end cannot be assumed to be opening or completion');
 period.tcSourceRaw+=' Complete 90 calendar days after account opening.';
