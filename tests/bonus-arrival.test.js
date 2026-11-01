@@ -101,6 +101,9 @@ conflictingPeriod.offerEnrollmentDate='2026-09-01';conflictingPeriod.couponEnrol
 assert.equal(rules.estimatedArrival(conflictingPeriod),null,'Conflicting enrollment dates also block a qualification-period clock');
 console.log('Bonus arrival: source-backed bounds, exact anchors, recalculation, missing data, calendar boundaries, ambiguous rules and no mutation passed');
 const {sandbox,storage}=require('./full-app-smoke.test.js');
+assert.match(sandbox.BT360.detailPanels(bankWithin),/Bonus payment due by Feb 26, 2027 if qualified/,'Detail must display due-by date rather than a fictitious opening-day arrival');
+assert.doesNotMatch(sandbox.BT360.detailPanels(bankWithin),/Oct 29, 2026–Feb 26, 2027/);
+
 assert.equal(sandbox.BT360.sourceEvidenceStatus(publicOffer).promotion,false,'A matched public reference never masquerades as saved original terms');
 assert.match(sandbox.BT360.sourceEvidencePanel(publicOffer),/Read matched offer payout rule/);
 assert(sandbox.BTBonusAI.contextFor(publicOffer).some(f=>f.id==='arrivalsource'&&f.text.includes('https://banking.citi.com/')));
