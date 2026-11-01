@@ -1,23 +1,23 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-11-01T17:58:53.176814+00:00",
+  "checkedAt": "2026-11-01T22:11:56.231968+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-11-01T17:58:53.176814+00:00",
+      "checkedAt": "2026-11-01T22:11:56.231968+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-11-01T17:58:53.176814+00:00",
+      "checkedAt": "2026-11-01T22:11:56.231968+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-11-01T17:58:53.176814+00:00",
+      "checkedAt": "2026-11-01T22:11:56.231968+00:00",
       "status": "ok"
     }
   ],
@@ -814,9 +814,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "Wells Fargo $325 Checking Bonus (Nationwide) – Ends 1/13/27",
@@ -1130,9 +1128,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "[GA only] Georgia’s Own Credit Union $300 Checking Bonus",
