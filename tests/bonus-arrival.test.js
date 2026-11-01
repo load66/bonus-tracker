@@ -47,12 +47,12 @@ f.reqMet='2026-09-24';
 assert.equal(rules.estimatedArrival(f).end,'2026-11-23');
 assert.equal(rules.estimatedArrival(f).start,'2026-09-24','Within gives the full possible range, never a made-up narrower lower bound');
 assert.equal(rules.arrivalLabel(rules.estimatedArrival(f)),
-  'Bonus payment due by Nov 23, 2026 if qualified · no earlier payment date guaranteed',
+  'Bonus payable by Nov 23, 2026 · earliest payment date not specified',
   'Within-N wording provides an upper deadline, not an opening-day payout prediction');
 const bankWithin=make('The bonus will be deposited within 120 days of account opening.',{basis:'opened',unit:'calendar-days',min:0,max:120});
 bankWithin.opened='2026-10-29';
 assert.equal(rules.arrivalLabel(rules.estimatedArrival(bankWithin)),
-  'Bonus payment due by Feb 26, 2027 if qualified · no earlier payment date guaranteed',
+  'Bonus payable by Feb 26, 2027 · earliest payment date not specified',
   'A 120-day opening-based payout must not present October 29 as a predicted arrival date');
 assert.equal(rules.estimatedArrival({...f,reqMet:'2026-10-26'}).end,'2026-12-25','Changing completion recomputes both bounds');
 assert.equal(rules.estimatedArrival({...f,reqMet:''}),null,'Clearing completion clears projection');
@@ -101,7 +101,7 @@ conflictingPeriod.offerEnrollmentDate='2026-09-01';conflictingPeriod.couponEnrol
 assert.equal(rules.estimatedArrival(conflictingPeriod),null,'Conflicting enrollment dates also block a qualification-period clock');
 console.log('Bonus arrival: source-backed bounds, exact anchors, recalculation, missing data, calendar boundaries, ambiguous rules and no mutation passed');
 const {sandbox,storage}=require('./full-app-smoke.test.js');
-assert.match(sandbox.BT360.detailPanels(bankWithin),/Bonus payment due by Feb 26, 2027 if qualified/,'Detail must display due-by date rather than a fictitious opening-day arrival');
+assert.match(sandbox.BT360.detailPanels(bankWithin),/Bonus payable by Feb 26, 2027/,'Detail must display due-by date rather than a fictitious opening-day arrival');
 assert.doesNotMatch(sandbox.BT360.detailPanels(bankWithin),/Oct 29, 2026–Feb 26, 2027/);
 
 assert.equal(sandbox.BT360.sourceEvidenceStatus(publicOffer).promotion,false,'A matched public reference never masquerades as saved original terms');
