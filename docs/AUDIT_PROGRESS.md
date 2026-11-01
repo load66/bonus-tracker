@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: Codex — v3.8.5 browser regression correction — codex/v3.8.5-payout-deadline-clarity
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
