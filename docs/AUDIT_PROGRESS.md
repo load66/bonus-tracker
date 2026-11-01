@@ -6,6 +6,8 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.8.4 completed-requirement next step: expose actual payment recording alongside recurring tasks and rule-review actions; keep original task actions and canonical lifecycle decisions. Payment remains an explicit recorded event, never automatic. Local UI/release checks passed. Full Chromium/WebKit coverage retained with completed-stage action reachability regression. Next: green release CI, merge and verify Pages. v3.8.3 deployed at 06f81e04 (PR #296).
+
 - v3.8.3 discreet card options (`codex/v3.8.3-card-options`): remove list-level destructive buttons; require expanded card details, secondary Card options disclosure, and existing named removal confirmation. Preserve transactional removal, history, missing-date import gate and bank data. Local card/UI units and release verifier PASS; full Chromium/WebKit journey retains removal assertions and adds hidden-by-default, keyboard, touch target and viewport checks. Next: green release CI, merge and verify exact Pages assets. v3.8.2 deployed at c2ee580c (PR #295).
 
 - v3.8.2 on-device card removal (`codex/v3.8.2-card-removal`): visible per-card controls and a named bulk review for legacy missing-date entries; recoverable transactional removal, cancellation and stale-write protection. New imports require opening dates; existing undated records remain readable for correction/removal. No bank, tax, issuer-account or server changes. Local card/UI units and release verifier PASS; retained full browser journey adds actual individual/bulk removal, reload, import rejection and mobile coverage. Next: require full green release CI, merge and verify exact Pages assets. v3.8.1 deployed at e6a3c3a7 (PR #294).

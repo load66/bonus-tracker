@@ -920,7 +920,7 @@ function detailPanels(e){
  if(!closed&&(!ready||hasExtraWork)){
   const req=requirementRows(e);
   const pendingTasks=Array.isArray(e.checklist)&&e.checklist.some(x=>x&&!x.done);
-  const workNote=e.reqMet&&!e.bonusRecd?'<p class="bt3686-next-step">'+(pendingTasks||['ACTION_NEEDED','IN_PROGRESS'].includes(code)?'Next: Keep tracking any ongoing requirements.':'Next: Record the bonus when it arrives.')+'</p>':'';
+  const workNote=e.reqMet&&!e.bonusRecd?'<p class="bt3686-next-step">'+(pendingTasks||['ACTION_NEEDED','IN_PROGRESS'].includes(code)?'Keep tracking ongoing requirements. Record the payment once the bonus posts.':'Record the payment once the bonus posts.')+'<br><button type="button" class="bt360-link" onclick="openRcv('+arg(e.id)+')">Record bonus payment</button></p>':'';
   const addTask=(!e.reqMet||pendingTasks)?'<div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></div>':'';
   h+=accountSection(e,'requirements','Requirements',(!req.count?'<p class="bt360-muted">No requirements saved.</p>':req.html)+depositLedgerHtml(e)+workNote+addTask,
     e.reqMet?'Done · '+date(e.reqMet):req.remaining===0&&req.count?'All checked · confirm completion':req.remaining+' to complete',
@@ -960,7 +960,10 @@ function detailPanels(e){
 }
 function detailFooter(e){
  const primary=primaryAction(e);
- return '<div class="bt360-detail-footer'+(stage(e).code==='READY_TO_CLOSE'?' bt3611-ready-footer':'')+'" role="group" aria-label="Account actions"><button type="button" onclick="'+(stage(e).code==='READY_TO_CLOSE'?'BT360.back()':'btOpenBonusAI('+arg(e.id)+')')+'">'+(stage(e).code==='READY_TO_CLOSE'?'Keep open':'Ask AI')+'</button><button type="button" class="bt360-primary" aria-label="'+safe(primary.label+' for '+e.bank)+'" onclick="'+primary.command+'">'+safe(primary.label)+'</button></div>';
+ const paymentAlternative=!e.closed&&e.reqMet&&!e.bonusRecd&&primary.label!=='Record bonus payment';
+ const secondaryCommand=paymentAlternative?'openRcv('+arg(e.id)+')':stage(e).code==='READY_TO_CLOSE'?'BT360.back()':'btOpenBonusAI('+arg(e.id)+')';
+ const secondaryLabel=paymentAlternative?'Record bonus payment':stage(e).code==='READY_TO_CLOSE'?'Keep open':'Ask AI';
+ return '<div class="bt360-detail-footer'+(stage(e).code==='READY_TO_CLOSE'?' bt3611-ready-footer':'')+'" role="group" aria-label="Account actions"><button type="button" onclick="'+secondaryCommand+'">'+secondaryLabel+'</button><button type="button" class="bt360-primary" aria-label="'+safe(primary.label+' for '+e.bank)+'" onclick="'+primary.command+'">'+safe(primary.label)+'</button></div>';
 }
 function showTerms(bank){archivePane='waiting';storageSearch=String(bank||'');expanded=null;tab='archive';R()}
 function back(){expanded=null;window.bt360ArchiveDetailId=null;R();const el=document.querySelector('.scroll');if(el)el.scrollTop=0}

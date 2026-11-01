@@ -1321,7 +1321,7 @@ async function exercise(name,engine,url){
           review:{code:'ACTION_NEEDED',label:'Action needed',kind:'review',reviewReason:'Saved rules need review'},
           normal:{code:'IN_PROGRESS',label:'In progress',kind:''}})){
           window.btLifecycleStageForEntry=()=>stage;
-          results[key]=BT360.primaryAction(sample);
+          results[key]={...BT360.primaryAction(sample),footer:BT360.detailFooter(sample)};
         }
         window.btLifecycleStageForEntry=()=>({code:'ACTION_NEEDED',label:'Action needed',kind:'close-review'});
         results.paid=BT360.primaryAction({...sample,bonusRecd:'2026-10-22'});
@@ -1335,6 +1335,7 @@ async function exercise(name,engine,url){
       completedActions.review.label==='Review account rules'&&
       completedActions.paid.label==='Review closing checks'&&
       Object.values(completedActions).every(x=>!x.command.includes('openReqMet')));
+    check('payment recording remains reachable alongside recurring tasks and rule reviews',['payout','recurring','review','normal'].every(k=>completedActions[k].footer.includes('Record bonus payment')&&completedActions[k].footer.includes('openRcv(')));
     check('stage action mapping never confirms payout during In progress',
       mappedActions.IN_PROGRESS==='Open next task'&&mappedActions.ACTION_NEEDED==='Open next task'
       &&mappedActions.REQUIREMENTS_MET==='Record bonus payment'&&mappedActions.AWAITING_BONUS==='Record bonus payment'
