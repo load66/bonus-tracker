@@ -46,6 +46,14 @@ assert.equal(rules.estimatedArrival(f),null,'Terms do not confirm activity');
 f.reqMet='2026-09-24';
 assert.equal(rules.estimatedArrival(f).end,'2026-11-23');
 assert.equal(rules.estimatedArrival(f).start,'2026-09-24','Within gives the full possible range, never a made-up narrower lower bound');
+assert.equal(rules.arrivalLabel(rules.estimatedArrival(f)),
+  'Bonus payment due by Nov 23, 2026 if qualified · no earlier payment date guaranteed',
+  'Within-N wording provides an upper deadline, not an opening-day payout prediction');
+const bankWithin=make('The bonus will be deposited within 120 days of account opening.',{basis:'opened',unit:'calendar-days',min:0,max:120});
+bankWithin.opened='2026-10-29';
+assert.equal(rules.arrivalLabel(rules.estimatedArrival(bankWithin)),
+  'Bonus payment due by Feb 26, 2027 if qualified · no earlier payment date guaranteed',
+  'A 120-day opening-based payout must not present October 29 as a predicted arrival date');
 assert.equal(rules.estimatedArrival({...f,reqMet:'2026-10-26'}).end,'2026-12-25','Changing completion recomputes both bounds');
 assert.equal(rules.estimatedArrival({...f,reqMet:''}),null,'Clearing completion clears projection');
 for(const e of [{...f,bonusRecd:'2026-10-28'},{...f,closed:'2026-10-28'},{...f,reqMet:'2026-02-30'}])assert.equal(rules.estimatedArrival(e),null);
