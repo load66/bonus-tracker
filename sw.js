@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.8.4: source-backed balance dates, accurate payout limit and calendar-month hold review without false safe-to-close.
-const V = 'bt-v3.8.4-nextstep1';
+// Version 3.8.5: source-backed balance dates, accurate payout limit and calendar-month hold review without false safe-to-close.
+const V = 'bt-v3.8.5-experience1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
