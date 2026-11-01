@@ -2331,12 +2331,12 @@ async function exercise(name,engine,url){
     }
     check('optional experience fields start collapsed',await page.locator('.experience-optional').evaluate(e=>!e.open));
     check('confirmation checkbox is compact with a full touch label',await page.locator('.experience-confirm').evaluate(e=>e.getBoundingClientRect().height>=44&&e.querySelector('input').getBoundingClientRect().width<=24));
-    await page.getByLabel('Transfer or activity',{exact:true}).fill('Synthetic payroll');
-    await page.getByLabel('Observed result',{exact:true}).selectOption('worked');
-    await page.getByLabel('Actual experience date',{exact:true}).fill(await page.evaluate(()=>td()));
-    await page.getByLabel('I confirm this result from my own experience',{exact:true}).check();
+    await page.getByLabel('Deposit method',{exact:true}).fill('Synthetic payroll');
+    await page.getByLabel('Did it work?',{exact:true}).selectOption('worked');
+    await page.getByLabel('Date it happened',{exact:true}).fill(await page.evaluate(()=>td()));
+    await page.getByLabel('This is my own experience',{exact:true}).check();
     await page.screenshot({path:path.join(output,name+'-experience-confirmation.png')});
-    await page.getByRole('button',{name:'Save report',exact:true}).click();
+    await page.locator('.research-editor-footer').getByRole('button',{name:'Save',exact:true}).click();
     check('explicit experience retains cycle identity and attestation',await page.evaluate(()=>loadUserDatapoints().some(x=>x.entryId==='E2E-TRUST'&&x.accountType==='business'&&x.cycleOpened==='2026-01-01'&&x.confirmedByUser&&x.outcome==='worked')));
     await page.evaluate(()=>{expanded=null;search='';BT360.setAudience('all');BT360.resetStage();R();if(BT360.selectedAttentionId!=='E2E-TRUST')BT360.toggleAttention('E2E-TRUST')});
     await page.getByRole('button',{name:'Deposit reports',exact:false}).click();

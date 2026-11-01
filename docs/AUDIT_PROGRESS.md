@@ -6,6 +6,8 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.8.5 experience form copy: plain deposit/result/date labels, one personal confirmation, optional details disclosure and shorter personal save action. Remove repetitive confirmation warning while preserving reconfirmation handlers, source-report fields, stored outcome values and evidence requirements. Existing browser interactions updated to the visible labels; all save/attestation assertions retained. Local release verifier PASS; full UI and Chromium/WebKit CI required before merge and exact Pages verification. v3.8.4 deployed at c46e0622 (PR #297).
+
 - v3.8.4 completed-requirement next step: expose actual payment recording alongside recurring tasks and rule-review actions; keep original task actions and canonical lifecycle decisions. Payment remains an explicit recorded event, never automatic. Local UI/release checks passed. Full Chromium/WebKit coverage retained with completed-stage action reachability regression. Next: green release CI, merge and verify Pages. v3.8.3 deployed at 06f81e04 (PR #296).
 
 - v3.8.3 discreet card options (`codex/v3.8.3-card-options`): remove list-level destructive buttons; require expanded card details, secondary Card options disclosure, and existing named removal confirmation. Preserve transactional removal, history, missing-date import gate and bank data. Local card/UI units and release verifier PASS; full Chromium/WebKit journey retains removal assertions and adds hidden-by-default, keyboard, touch target and viewport checks. Next: green release CI, merge and verify exact Pages assets. v3.8.2 deployed at c2ee580c (PR #295).

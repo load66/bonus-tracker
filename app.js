@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.8.4';
+const APP_VERSION='3.8.5';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -2664,15 +2664,15 @@ function rDpEditor(){
  const personal=d.type==='user';
  const field=(key,label,placeholder='',type='text')=>{const material=personal&&['bank','method','product','eventDate','depositAmount'].includes(key);const handler=material?"dpEditorMaterialChange('"+key+"',this.value)":'dpEditor.'+key+'=this.value';return '<div class="fg"><label>'+label+'<input type="'+type+'" value="'+esc(d[key]||'')+'" oninput="'+handler+'" placeholder="'+esc(placeholder)+'"></label></div>'};
  const select=(key,label,options)=>{const material=personal&&['outcome','accountType'].includes(key);const handler=material?"dpEditorMaterialChange('"+key+"',this.value)":'dpEditor.'+key+'=this.value';return '<div class="fg"><label>'+label+'<select aria-label="'+esc(label)+'" onchange="'+handler+'">'+options.map(([v,t])=>'<option value="'+v+'"'+((d[key]||'')===v?' selected':'')+'>'+t+'</option>').join('')+'</select></label></div>'};
- let h='<div class="ov" onclick="closeDPEditor()"><section class="modal research-editor" role="dialog" aria-modal="true" aria-labelledby="dp-editor-title" onclick="event.stopPropagation()"><header class="research-editor-header"><h2 id="dp-editor-title">'+(personal?'My experience':'Source report')+'</h2><p>'+(personal?(d.evidenceStage==='requirement'?'Did the bank count this deposit?':'Which method qualified? Choose Cannot isolate if several were used.'):'Save what happened. Leave unknown details blank.')+'</p></header><div class="research-editor-body">';
+ let h='<div class="ov" onclick="closeDPEditor()"><section class="modal research-editor" role="dialog" aria-modal="true" aria-labelledby="dp-editor-title" onclick="event.stopPropagation()"><header class="research-editor-header"><h2 id="dp-editor-title">'+(personal?'My experience':'Source report')+'</h2><p>'+(personal?(d.evidenceStage==='requirement'?'Did the bank count this deposit?':'Did your deposit help you earn the bonus?'):'Save what happened. Leave unknown details blank.')+'</p></header><div class="research-editor-body">';
  if(personal){
    h+='<p class="experience-context">'+esc(d.bank||'New experience')+(d.accountType?' · '+esc(d.accountType==='business'?'Business':'Personal'):'')+'</p>';
    if(!d.bank)h+=field('bank','Bank','e.g. Chase');
-   h+=field('method','Transfer or activity','e.g. Employer payroll to checking');
-   h+=select('outcome','Observed result',[['unknown','Not recorded'],['pending','Still waiting'],['worked','Counted'],['failed',"Didn’t count"],['mixed','Cannot isolate one method']]);
-   h+=field('eventDate','Actual experience date','','date');
-   h+='<label class="experience-confirm"><input type="checkbox" '+(d.confirmedByUser?'checked':'')+' onchange="dpEditor.confirmedByUser=this.checked;dpEditor.reconfirmed=this.checked"><span>I confirm this result from my own experience</span></label><p class="research-caveat">Changing a saved method, outcome, or date requires a new confirmation.</p>';
-   h+='<details class="experience-optional"><summary>More details</summary>';
+   h+=field('method','Deposit method','e.g. Direct deposit from work');
+   h+=select('outcome','Did it work?',[['unknown','Not sure yet'],['pending','Still waiting'],['worked','Yes, it worked'],['failed',"No, it didn’t work"],['mixed','Not sure which method worked']]);
+   h+=field('eventDate','Date it happened','','date');
+   h+='<label class="experience-confirm"><input type="checkbox" '+(d.confirmedByUser?'checked':'')+' onchange="dpEditor.confirmedByUser=this.checked;dpEditor.reconfirmed=this.checked"><span>This is my own experience</span></label>';
+   h+='<details class="experience-optional"><summary>Optional details</summary>';
    if(d.bank)h+=field('bank','Bank','e.g. Chase');
    h+=select('accountType','Account type',[['','Not specified'],['personal','Personal'],['business','Business']])+field('product','Account / offer')+field('depositAmount','Deposit amount (optional)','','number');
    h+='<div class="fg"><label>What happened?<textarea rows="3" oninput="dpEditor.note=this.value" placeholder="Any useful details">'+esc(d.note||'')+'</textarea></label></div></details>';
@@ -2685,7 +2685,7 @@ function rDpEditor(){
  h+='<div class="fg"><label>What happened?<textarea rows="4" oninput="dpEditor.result=this.value" placeholder="Include amounts, dates, and whether the bonus was paid">'+esc(d.result||'')+'</textarea></label></div>';
  h+=field('eventDate','Activity or payout date','','date')+field('reportedAt','Report posted on','','date')+field('sourceName','Source name','e.g. Reddit or Doctor of Credit')+field('link','Source link','https://…','url');
  }
- h+='</div><footer class="research-editor-footer"><button class="btn-p" onclick="saveDPEditor()">Save report</button><button class="btn-s" onclick="closeDPEditor()">'+(personal?'Skip for now':'Cancel')+'</button></footer></section></div>';return h;
+ h+='</div><footer class="research-editor-footer"><button class="btn-p" onclick="saveDPEditor()">'+(personal?'Save':'Save report')+'</button><button class="btn-s" onclick="closeDPEditor()">'+(personal?'Skip for now':'Cancel')+'</button></footer></section></div>';return h;
 }
 
 /* -----------------------------
