@@ -926,7 +926,7 @@ async function exercise(name,engine,url){
     await button('Save date').click();await button('OK').click();
     check('requirement may be explicitly restored after clear',(await record()).reqMet==='2026-04-01');
 
-    await page.getByRole('button',{name:/^Record bonus payment/}).click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('Review experience').click();
+    await page.locator('.bt360-detail-footer').getByRole('button',{name:/^Record bonus payment/}).click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('Review experience').click();
     check('payment success offers optional evidence review without assuming a method result',await page.evaluate(()=>dpEditor.evidenceStage==='bonus'&&!dpEditor.confirmedByUser));
     await button('Skip for now').click();
     // A payout clear must preserve tax data, account history and all companion keys after failure.
