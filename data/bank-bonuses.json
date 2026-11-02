@@ -1,27 +1,187 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-11-01T22:11:56.231968+00:00",
+  "checkedAt": "2026-11-02T06:27:30.727962+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-11-01T22:11:56.231968+00:00",
+      "checkedAt": "2026-11-02T06:27:30.727962+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-11-01T22:11:56.231968+00:00",
+      "checkedAt": "2026-11-02T06:27:30.727962+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-11-01T22:11:56.231968+00:00",
+      "checkedAt": "2026-11-02T06:27:30.727962+00:00",
       "status": "ok"
     }
   ],
   "offers": [
+    {
+      "title": "[TX] Firstmark Credit Union $100 Referral Checking Bonus, Direct Deposit Not Required",
+      "url": "https://www.doctorofcredit.com/tx-firstmark-credit-union-100-referral-checking-bonus-direct-deposit-not-required/",
+      "publishedAt": "2026-11-01T21:15:46+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "firstmark credit union|checking|100|TX",
+      "bank": "firstmark credit union",
+      "product": "checking",
+      "amount": 100,
+      "region": "TX",
+      "offerKey": "firstmark credit union|checking|100|TX",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-02T06:27:30.727962+00:00",
+      "lastSeen": "2026-11-01T21:15:46+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/tx-firstmark-credit-union-100-referral-checking-bonus-direct-deposit-not-required/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[TX] Firstmark Credit Union $100 Referral Checking Bonus, Direct Deposit Not Required",
+          "publishedAt": "2026-11-01T21:15:46+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "[WA] Northwest Plus Credit Union $200 Checking Bonus",
+      "url": "https://www.doctorofcredit.com/wa-northwest-plus-credit-union-200-checking-bonus/",
+      "publishedAt": "2026-11-01T21:00:45+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "northwest plus credit union|checking|200|WA",
+      "bank": "northwest plus credit union",
+      "product": "checking",
+      "amount": 200,
+      "region": "WA",
+      "offerKey": "northwest plus credit union|checking|200|WA",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-02T06:27:30.727962+00:00",
+      "lastSeen": "2026-11-01T21:00:45+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/wa-northwest-plus-credit-union-200-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[WA] Northwest Plus Credit Union $200 Checking Bonus",
+          "publishedAt": "2026-11-01T21:00:45+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "[NC] Acclaim Federal Credit Union $100 Checking Bonus, Direct Deposit Not Required",
+      "url": "https://www.doctorofcredit.com/nc-acclaim-federal-credit-union-100-checking-bonus-direct-deposit-not-required/",
+      "publishedAt": "2026-11-01T20:45:42+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "acclaim federal credit union|checking|100|NC",
+      "bank": "acclaim federal credit union",
+      "product": "checking",
+      "amount": 100,
+      "region": "NC",
+      "offerKey": "acclaim federal credit union|checking|100|NC",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-02T06:27:30.727962+00:00",
+      "lastSeen": "2026-11-01T20:45:42+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/nc-acclaim-federal-credit-union-100-checking-bonus-direct-deposit-not-required/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[NC] Acclaim Federal Credit Union $100 Checking Bonus, Direct Deposit Not Required",
+          "publishedAt": "2026-11-01T20:45:42+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "[IL, In Branch?] United Trust Bank $350 Checking Bonus",
+      "url": "https://www.doctorofcredit.com/il-in-branch-united-trust-bank-350-checking-bonus/",
+      "publishedAt": "2026-11-01T20:30:40+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "united trust bank|checking|350|IL",
+      "bank": "united trust bank",
+      "product": "checking",
+      "amount": 350,
+      "region": "IL",
+      "offerKey": "united trust bank|checking|350|IL",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-02T06:27:30.727962+00:00",
+      "lastSeen": "2026-11-01T20:30:40+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/il-in-branch-united-trust-bank-350-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[IL, In Branch?] United Trust Bank $350 Checking Bonus",
+          "publishedAt": "2026-11-01T20:30:40+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "Quorum Federal Credit Union Up To $1,000 Savings Bonus",
+      "url": "https://www.doctorofcredit.com/quorum-federal-credit-union-up-to-1000-savings-bonus/",
+      "publishedAt": "2026-11-01T20:00:39+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "nationwide",
+      "groupKey": "quorum federal credit union up to|savings|1000|unknown",
+      "bank": "quorum federal credit union up to",
+      "product": "savings",
+      "amount": 1000,
+      "region": "unknown",
+      "offerKey": "quorum federal credit union up to|savings|1000|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-02T06:27:30.727962+00:00",
+      "lastSeen": "2026-11-01T20:00:39+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/quorum-federal-credit-union-up-to-1000-savings-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "Quorum Federal Credit Union Up To $1,000 Savings Bonus",
+          "publishedAt": "2026-11-01T20:00:39+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
     {
       "title": "[MI, NV, TX, VA] InTouch Credit Union $100 Referral Bonus",
       "url": "https://www.doctorofcredit.com/mi-nv-tx-va-intouch-credit-union-100-referral-bonus-direct-deposit-optional/",
@@ -1220,9 +1380,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "[MI, FL] Lake Michigan Credit Union $193 Referral Checking Bonus",
