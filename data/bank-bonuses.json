@@ -1,23 +1,23 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-11-03T06:59:47.003435+00:00",
+  "checkedAt": "2026-11-03T19:38:28.256206+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-11-03T06:59:47.003435+00:00",
+      "checkedAt": "2026-11-03T19:38:28.256206+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-11-03T06:59:47.003435+00:00",
+      "checkedAt": "2026-11-03T19:38:28.256206+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-11-03T06:59:47.003435+00:00",
+      "checkedAt": "2026-11-03T19:38:28.256206+00:00",
       "status": "ok"
     }
   ],
@@ -1154,9 +1154,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "[CT, RI only] Centreville Bank $200 Checking Bonus",
