@@ -1,27 +1,123 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-11-05T07:01:50.953235+00:00",
+  "checkedAt": "2026-11-05T20:07:03.644405+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-11-05T07:01:50.953235+00:00",
+      "checkedAt": "2026-11-05T20:07:03.644405+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-11-05T07:01:50.953235+00:00",
+      "checkedAt": "2026-11-05T20:07:03.644405+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-11-05T07:01:50.953235+00:00",
+      "checkedAt": "2026-11-05T20:07:03.644405+00:00",
       "status": "ok"
     }
   ],
   "offers": [
+    {
+      "title": "Farmers Insurance Federal Credit Union (FIGFCU) Up To $1,500 Business Checking Bonus",
+      "url": "https://www.doctorofcredit.com/farmers-insurance-federal-credit-union-figfcu-up-to-1500-business-checking-bonus/",
+      "publishedAt": "2026-11-05T17:00:57+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "nationwide",
+      "groupKey": "farmers insurance federal credit union figfcu up to|business|1500|unknown",
+      "bank": "farmers insurance federal credit union figfcu up to",
+      "product": "business",
+      "amount": 1500,
+      "region": "unknown",
+      "offerKey": "farmers insurance federal credit union figfcu up to|business|1500|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-05T20:07:03.644405+00:00",
+      "lastSeen": "2026-11-05T17:00:57+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/farmers-insurance-federal-credit-union-figfcu-up-to-1500-business-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "Farmers Insurance Federal Credit Union (FIGFCU) Up To $1,500 Business Checking Bonus",
+          "publishedAt": "2026-11-05T17:00:57+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "[Targeted] American Express High Yield Savings Account $400-$500 Bonus",
+      "url": "https://www.doctorofcredit.com/targeted-american-express-high-yield-savings-account-350-bonus/",
+      "publishedAt": "2026-11-05T16:00:02+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "unknown",
+      "groupKey": "american express|savings|400|unknown",
+      "bank": "american express",
+      "product": "savings",
+      "amount": 400,
+      "region": "unknown",
+      "offerKey": "american express|savings|400|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-05T20:07:03.644405+00:00",
+      "lastSeen": "2026-11-05T16:00:02+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/targeted-american-express-high-yield-savings-account-350-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[Targeted] American Express High Yield Savings Account $400-$500 Bonus",
+          "publishedAt": "2026-11-05T16:00:02+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "Barclays $200-$400 Savings Bonus",
+      "url": "https://www.doctorofcredit.com/barclays-200-savings-bonus/",
+      "publishedAt": "2026-11-05T15:00:33+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "nationwide",
+      "groupKey": "barclays|savings|200|unknown",
+      "bank": "barclays",
+      "product": "savings",
+      "amount": 200,
+      "region": "unknown",
+      "offerKey": "barclays|savings|200|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-05T20:07:03.644405+00:00",
+      "lastSeen": "2026-11-05T15:00:33+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/barclays-200-savings-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "Barclays $200-$400 Savings Bonus",
+          "publishedAt": "2026-11-05T15:00:33+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
     {
       "title": "[Select Unknown States] 2UFI $400 Business Checking Bonus",
       "url": "https://www.doctorofcredit.com/select-unknown-states-2ufi-300-business-checking-bonus/",
