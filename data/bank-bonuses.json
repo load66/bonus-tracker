@@ -1,23 +1,23 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-11-04T19:54:40.960928+00:00",
+  "checkedAt": "2026-11-05T07:01:50.953235+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-11-04T19:54:40.960928+00:00",
+      "checkedAt": "2026-11-05T07:01:50.953235+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-11-04T19:54:40.960928+00:00",
+      "checkedAt": "2026-11-05T07:01:50.953235+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-11-04T19:54:40.960928+00:00",
+      "checkedAt": "2026-11-05T07:01:50.953235+00:00",
       "status": "ok"
     }
   ],
@@ -939,9 +939,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "Rakuten: $100/10,000 when opening Synchrony Savings Account (Must Deposit $1,000)",
