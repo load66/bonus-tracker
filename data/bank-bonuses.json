@@ -1,27 +1,155 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-11-07T22:01:49.289667+00:00",
+  "checkedAt": "2026-11-08T06:20:21.496280+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-11-07T22:01:49.289667+00:00",
+      "checkedAt": "2026-11-08T06:20:21.496280+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-11-07T22:01:49.289667+00:00",
+      "checkedAt": "2026-11-08T06:20:21.496280+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-11-07T22:01:49.289667+00:00",
+      "checkedAt": "2026-11-08T06:20:21.496280+00:00",
       "status": "ok"
     }
   ],
   "offers": [
+    {
+      "title": "[FL, NJ, NY] Popular Bank $600 Business Checking Bonus",
+      "url": "https://www.doctorofcredit.com/fl-nj-ny-popular-bank-400-business-checking-bonus/",
+      "publishedAt": "2026-11-07T22:10:02+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "popular bank|business|600|FL,NJ,NY",
+      "bank": "popular bank",
+      "product": "business",
+      "amount": 600,
+      "region": "FL,NJ,NY",
+      "offerKey": "popular bank|business|600|FL,NJ,NY",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-08T06:20:21.496280+00:00",
+      "lastSeen": "2026-11-07T22:10:02+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/fl-nj-ny-popular-bank-400-business-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[FL, NJ, NY] Popular Bank $600 Business Checking Bonus",
+          "publishedAt": "2026-11-07T22:10:02+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "[CO only] On Tap Credit Union $150 Checking Bonus",
+      "url": "https://www.doctorofcredit.com/co-only-on-tap-credit-union-150-checking-bonus/",
+      "publishedAt": "2026-11-07T21:15:00+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "on tap credit union|checking|150|CO",
+      "bank": "on tap credit union",
+      "product": "checking",
+      "amount": 150,
+      "region": "CO",
+      "offerKey": "on tap credit union|checking|150|CO",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-08T06:20:21.496280+00:00",
+      "lastSeen": "2026-11-07T21:15:00+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/co-only-on-tap-credit-union-150-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[CO only] On Tap Credit Union $150 Checking Bonus",
+          "publishedAt": "2026-11-07T21:15:00+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "[UT, ID] Goldenwest Credit Union $250 Checking Bonus (Ages 13-25, No Direct Deposit Required)",
+      "url": "https://www.doctorofcredit.com/ut-goldenwest-credit-union-250-checking-bonus-ages-13-25-no-direct-deposit-required/",
+      "publishedAt": "2026-11-07T20:05:02+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "goldenwest credit union|checking|250|ID,UT",
+      "bank": "goldenwest credit union",
+      "product": "checking",
+      "amount": 250,
+      "region": "ID,UT",
+      "offerKey": "goldenwest credit union|checking|250|ID,UT",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-08T06:20:21.496280+00:00",
+      "lastSeen": "2026-11-07T20:05:02+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/ut-goldenwest-credit-union-250-checking-bonus-ages-13-25-no-direct-deposit-required/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[UT, ID] Goldenwest Credit Union $250 Checking Bonus (Ages 13-25, No Direct Deposit Required)",
+          "publishedAt": "2026-11-07T20:05:02+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "[FL, MA, NJ, NY, VT, In Branch] Trustco Bank $300 Checking + $200 Savings",
+      "url": "https://www.doctorofcredit.com/fl-ma-nj-ny-vt-trustco-bank-250-stanley-cup-checking-bonus/",
+      "publishedAt": "2026-11-07T20:00:43+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "trustco bank|savings|300|FL,MA,NJ,NY,VT",
+      "bank": "trustco bank",
+      "product": "savings",
+      "amount": 300,
+      "region": "FL,MA,NJ,NY,VT",
+      "offerKey": "trustco bank|savings|300|FL,MA,NJ,NY,VT",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-08T06:20:21.496280+00:00",
+      "lastSeen": "2026-11-07T20:00:43+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/fl-ma-nj-ny-vt-trustco-bank-250-stanley-cup-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[FL, MA, NJ, NY, VT, In Branch] Trustco Bank $300 Checking + $200 Savings",
+          "publishedAt": "2026-11-07T20:00:43+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
     {
       "title": "[NY] Hudson Valley Credit Union $500 Checking Bonus, Direct Deposit Not Required",
       "url": "https://www.doctorofcredit.com/ny-hudson-valley-federal-credit-union-400-checking-bonus-direct-deposit-not-required/",
@@ -43,8 +171,8 @@
       "links": [
         {
           "url": "https://www.doctorofcredit.com/ny-hudson-valley-federal-credit-union-400-checking-bonus-direct-deposit-not-required/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "[NY] Hudson Valley Credit Union $500 Checking Bonus, Direct Deposit Not Required",
           "publishedAt": "2026-11-07T19:00:44+00:00"
         }
@@ -75,8 +203,8 @@
       "links": [
         {
           "url": "https://www.doctorofcredit.com/ny-heritage-financial-credit-union-300-checking-bonus-direct-deposit-not-required/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "[NY, PA] Heritage Financial Credit Union $300 Checking Bonus, Direct Deposit Not Required",
           "publishedAt": "2026-11-07T16:00:02+00:00"
         }
@@ -107,8 +235,8 @@
       "links": [
         {
           "url": "https://www.doctorofcredit.com/al-avadian-credit-union-600-checking-bonus/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "[AL] Avadian Credit Union $300 Checking Bonus",
           "publishedAt": "2026-11-07T15:00:11+00:00"
         }
@@ -658,9 +786,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "HSBC Premier Checking Bonus: Up to $3,000 Offer",
@@ -789,9 +915,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "Wings Credit Union Promotions: $200, $500 Checking Bonuses (Nationwide) – Ends 12/31/26",
@@ -851,9 +975,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "[CO Only] Wings Credit Union $200 Checking Bonus, Direct Deposit Not Required",
@@ -883,9 +1005,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "Citi $325/$475/$500/$2,000/$4,000 Checking Bonus",
