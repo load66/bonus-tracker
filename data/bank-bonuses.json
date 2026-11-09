@@ -1,27 +1,91 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-11-08T22:16:34.637993+00:00",
+  "checkedAt": "2026-11-09T06:53:47.337221+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-11-08T22:16:34.637993+00:00",
+      "checkedAt": "2026-11-09T06:53:47.337221+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-11-08T22:16:34.637993+00:00",
+      "checkedAt": "2026-11-09T06:53:47.337221+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-11-08T22:16:34.637993+00:00",
+      "checkedAt": "2026-11-09T06:53:47.337221+00:00",
       "status": "ok"
     }
   ],
   "offers": [
+    {
+      "title": "[TN only] Pinnacle Financial Partners $200 Mastercard Checking Bonus",
+      "url": "https://www.doctorofcredit.com/tn-only-pinnacle-financial-partners-200-mastercard-checking-bonus/",
+      "publishedAt": "2026-11-09T00:21:18+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "pinnacle financial partners|checking|200|TN",
+      "bank": "pinnacle financial partners",
+      "product": "checking",
+      "amount": 200,
+      "region": "TN",
+      "offerKey": "pinnacle financial partners|checking|200|TN",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-09T06:53:47.337221+00:00",
+      "lastSeen": "2026-11-09T00:21:18+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/tn-only-pinnacle-financial-partners-200-mastercard-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[TN only] Pinnacle Financial Partners $200 Mastercard Checking Bonus",
+          "publishedAt": "2026-11-09T00:21:18+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "[CO Only] Zing Credit Union $300 Checking Bonus",
+      "url": "https://www.doctorofcredit.com/co-only-zing-credit-union-300-checking-bonus/",
+      "publishedAt": "2026-11-08T20:00:58+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "zing credit union|checking|300|CO",
+      "bank": "zing credit union",
+      "product": "checking",
+      "amount": 300,
+      "region": "CO",
+      "offerKey": "zing credit union|checking|300|CO",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-09T06:53:47.337221+00:00",
+      "lastSeen": "2026-11-08T20:00:58+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/co-only-zing-credit-union-300-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[CO Only] Zing Credit Union $300 Checking Bonus",
+          "publishedAt": "2026-11-08T20:00:58+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
     {
       "title": "Capital One 360 Promotions: $300, $500, $1500 Checking, Savings, Business Bonuses (Nationwide)",
       "url": "https://www.hustlermoneyblog.com/capital-one-360-promotions/",
@@ -43,8 +107,8 @@
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/capital-one-360-promotions/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "Capital One 360 Promotions: $300, $500, $1500 Checking, Savings, Business Bonuses (Nationwide)",
           "publishedAt": "2026-11-08T19:40:34+00:00"
         }
@@ -75,8 +139,8 @@
       "links": [
         {
           "url": "https://www.doctorofcredit.com/sd-mn-american-bank-trust-250-checking-bonus/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "[SD & MN, In Branch Only] American Bank & Trust $600 Checking Bonus + $150 Savings Bonus",
           "publishedAt": "2026-11-08T15:00:38+00:00"
         }
