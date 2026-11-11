@@ -457,3 +457,42 @@ console.log('Bank logo and attention hierarchy regression passed');
   assert.equal(JSON.stringify(sample),before,'Showing payment action cannot complete tasks or create payment dates');
  }finally{sandbox.btLifecycleStageForEntry=original}
 }
+
+// Fee badge projection uses real evidence validation and never mutates records.
+{
+ const fs=require('node:fs'),vm=require('node:vm');
+ const source=fs.readFileSync(require.resolve('../redesign-v360.js'),'utf8');
+ const model=source.slice(source.indexOf('function accountFeeWarnings'),source.indexOf('function monthlyFeeBadge'));
+ const engine=require('../financial-rules.js');
+ const ctx={window:{BTFinancialRules:engine},amount:n=>'$'+n,feeSnapshot:()=>({monthly:'$0',monthlyKnown:true,companions:[],closeMain:'Not confirmed',closeNote:'Review',noEarlyCloseFee:false})};
+ vm.createContext(ctx);vm.runInContext(model,ctx);
+ const evaluate=entry=>JSON.parse(JSON.stringify(ctx.accountFeeWarnings(entry)));
+ const sample=fixture(),saved=JSON.stringify(sample);
+ assert.deepEqual(evaluate(sample).map(x=>x.label),['Share Savings: $10/mo fee']);
+ assert.equal(JSON.stringify(sample),saved);
+ for(const [frequency,word,label] of [['statement-cycle','per statement period','/statement fee'],['quarterly','quarterly','/quarter fee'],['annually','annually','/year fee']]){
+  const f=fixture(),a=f.financialRules.accounts[1];
+  a.fee.frequency=frequency;a.fee.evidence.quote='Share Savings has a $10 '+word+' maintenance fee.';f.feeScheduleRaw+=' '+a.fee.evidence.quote;
+  assert(evaluate(f).some(x=>x.label==='Share Savings: $10'+label));
+ }
+ const conflict=fixture();conflict.financialRules.accounts[1].fee.frequency='annually';
+ assert(evaluate(conflict).some(x=>x.label==='Share Savings: Check fee'));
+ const unsupported=fixture();unsupported.financialRules.accounts[1].fee.amount=50;
+ assert(evaluate(unsupported).some(x=>x.label==='Share Savings: Check fee'));
+ const missing=fixture();missing.financialRules.accounts[1].fee.amount=null;
+ assert(evaluate(missing).some(x=>x.label==='Share Savings: Check fee'));
+ const badEvidence=fixture();badEvidence.financialRules.accounts[1].fee.evidence.quote='Unsupported $10 monthly fee.';
+ assert(evaluate(badEvidence).some(x=>x.label==='Share Savings: Check fee'));
+ const close=fixture();close.earlyCloseFee=25;close.financialRules.closure.earlyCloseFee=25;
+ close.financialRules.closure.feeEvidence.quote='An early closing fee of $25 applies within 90 days.';
+ close.feeScheduleRaw+=' '+close.financialRules.closure.feeEvidence.quote;
+ assert(evaluate(close).some(x=>x.label==='$25 early-close fee'));
+ close.financialRules.closure.earlyCloseFee=null;
+ assert(evaluate(close).some(x=>x.label==='Check closing fee'));
+ const optional=fixture();optional.financialRules.accounts[1].required=false;
+ assert.deepEqual(evaluate(optional),[]);
+ assert.deepEqual(evaluate({...sample,closed:'2026-10-01'}),[]);
+ const unrelated=fixture();unrelated.financialRules.payout.text='Conflicting payout';
+ assert(evaluate(unrelated).some(x=>x.label==='Share Savings: $10/mo fee'));
+ console.log('Fee warning regressions passed: evidence, frequencies, optional scope, unknown closing, zero fees, unrelated errors, no mutation');
+}
