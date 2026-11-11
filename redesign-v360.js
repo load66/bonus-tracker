@@ -280,20 +280,20 @@ function eligibleSoon(rows){
 function home(rows,year,metrics){if(!usageData&&!usageLoading&&window.BTBonusAuth?.connected?.())setTimeout(()=>refreshUsage(),0);return segments()+usageBanner()+hero(rows,year,metrics)+stages(rows)+tasks(rows)+eligibleSoon(rows)}
 function monthlyFeeBadge(e){
  if(!e||e.closed)return '';
- const x=feeSnapshot(e);
+ const x=feeSnapshot(e),labels=[];
  const numeric=v=>Number(String(v).replace(/[^\d.]/g,''));
  const primary=x.monthlyKnown?numeric(x.monthly):null;
  const companionFees=x.companions.map(v=>({text:v,amount:numeric(v.match(/:\s*(\$[\d,.]+)/)?.[1]||'')})).filter(v=>v.amount>0);
- const charged=primary>0||companionFees.length>0;
- if(!charged&&x.monthlyKnown&&!companionFees.length&&!x.companions.some(v=>v.includes('Fee not confirmed')))return '';
- const otherLabel=companionFees.map(v=>(/savings/i.test(v.text)?'Savings':'Required account')+': '+amount(v.amount)+'/mo').join(' · ');
- const label=charged?[primary>0?x.monthly+'/mo fee':'',otherLabel].filter(Boolean).join(' · '):'Check fee';
- const detail=charged?[
-  primary>0?'Monthly fee: '+x.monthly+'. '+x.summary:'',
-  ...companionFees.map(v=>v.text),
-  'Review fee waiver requirements for each statement period.'
- ].filter(Boolean).join(' '):'Monthly fee information is incomplete. Open account details to review saved fee terms.';
- return '<span class="bt-monthly-fee-badge" title="'+safe(detail)+'" aria-label="'+safe(label+'. '+detail)+'" style="display:inline-flex;align-items:center;grid-column:1/-1;justify-self:start;flex-shrink:0;width:fit-content;max-width:100%;box-sizing:border-box;margin-top:6px;padding:3px 7px;border:1px solid #826035;border-radius:999px;background:#332515;color:#ffd294;font-size:11px;font-weight:700;line-height:1.35;white-space:normal;overflow-wrap:normal;word-break:normal;text-align:left;">'+safe(label)+'</span>';
+ if(primary>0)labels.push({label:x.monthly+'/mo fee',detail:'Monthly fee: '+x.monthly+'. '+x.summary+'. Review waiver requirements each statement period.'});
+ companionFees.forEach(v=>labels.push({label:(/savings/i.test(v.text)?'Savings':'Required account')+': '+amount(v.amount)+'/mo',detail:v.text+'. Review waiver requirements each statement period.'}));
+ if(!x.monthlyKnown||x.companions.some(v=>v.includes('Fee not confirmed')))labels.push({label:'Check monthly fee',detail:'Monthly fee information is incomplete. Review saved fee terms in Details.'});
+ const closeAmount=x.closeMain.match(/^\$[\d,.]+(?= early-close fee)/)?.[0];
+ if(closeAmount)labels.push({label:closeAmount+' early-close fee',detail:x.closeNote+'. Check saved closing terms in Details for when this fee applies.'});
+ if(x.explicitClawback)labels.push({label:'Bonus clawback',detail:'Saved terms indicate the bank may take back the bonus. Review closing restrictions in Details.'});
+ if(!labels.length)return '';
+ return '<span class="bt-account-fee-badges" style="display:flex;flex-wrap:wrap;gap:5px;grid-column:1/-1;justify-self:start;min-width:0;max-width:100%;margin-top:6px;">'+labels.map(x=>
+  '<span class="bt-monthly-fee-badge" title="'+safe(x.detail)+'" aria-label="'+safe(x.label+'. '+x.detail)+'" style="display:inline-flex;align-items:center;flex:0 0 auto;width:fit-content;max-width:100%;box-sizing:border-box;padding:3px 7px;border:1px solid #826035;border-radius:999px;background:#332515;color:#ffd294;font-size:11px;font-weight:700;line-height:1.35;white-space:normal;overflow-wrap:normal;word-break:normal;text-align:left;">'+safe(x.label)+'</span>'
+ ).join('')+'</span>';
 }
 function compactRow(e){
  const s=stage(e),progress=requirementProgress(e);
