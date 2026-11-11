@@ -286,13 +286,14 @@ function monthlyFeeBadge(e){
  const companionFees=x.companions.map(v=>({text:v,amount:numeric(v.match(/:\s*(\$[\d,.]+)/)?.[1]||'')})).filter(v=>v.amount>0);
  const charged=primary>0||companionFees.length>0;
  if(!charged&&x.monthlyKnown&&!companionFees.length&&!x.companions.some(v=>v.includes('Fee not confirmed')))return '';
- const label=charged?(primary>0?x.monthly+'/mo fee':'Companion fee'):'Check fee';
+ const otherLabel=companionFees.map(v=>(/savings/i.test(v.text)?'Savings':'Required account')+': '+amount(v.amount)+'/mo').join(' · ');
+ const label=charged?[primary>0?x.monthly+'/mo fee':'',otherLabel].filter(Boolean).join(' · '):'Check fee';
  const detail=charged?[
   primary>0?'Monthly fee: '+x.monthly+'. '+x.summary:'',
   ...companionFees.map(v=>v.text),
   'Review fee waiver requirements for each statement period.'
  ].filter(Boolean).join(' '):'Monthly fee information is incomplete. Open account details to review saved fee terms.';
- return '<span class="bt-monthly-fee-badge" title="'+safe(detail)+'" aria-label="'+safe(label+'. '+detail)+'" style="display:inline-flex;align-items:center;max-width:100%;box-sizing:border-box;margin-top:6px;padding:3px 7px;border:1px solid #826035;border-radius:999px;background:#332515;color:#ffd294;font-size:11px;font-weight:700;line-height:1.35;white-space:normal;text-align:left;">'+safe(label)+'</span>';
+ return '<span class="bt-monthly-fee-badge" title="'+safe(detail)+'" aria-label="'+safe(label+'. '+detail)+'" style="display:inline-flex;align-items:center;grid-column:1/-1;justify-self:start;flex-shrink:0;width:fit-content;max-width:100%;box-sizing:border-box;margin-top:6px;padding:3px 7px;border:1px solid #826035;border-radius:999px;background:#332515;color:#ffd294;font-size:11px;font-weight:700;line-height:1.35;white-space:normal;overflow-wrap:normal;word-break:normal;text-align:left;">'+safe(label)+'</span>';
 }
 function compactRow(e){
  const s=stage(e),progress=requirementProgress(e);
