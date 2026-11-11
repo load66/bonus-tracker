@@ -31,7 +31,7 @@
     refreshed=true;
     location.reload();
   });
-  navigator.serviceWorker.register('./sw.js?v=3.8.5-feebadge2',{updateViaCache:'none'}).then(reg=>{
+  navigator.serviceWorker.register('./sw.js?v=3.8.5-feebadge3',{updateViaCache:'none'}).then(reg=>{
     const activate=worker=>{try{worker&&worker.postMessage({type:'SKIP_WAITING'})}catch{}};
     if(reg.waiting)activate(reg.waiting);
     reg.addEventListener('updatefound',()=>{
@@ -92,7 +92,7 @@
 <script src="./history-repair-core.js?v=3.6.43"></script>
 <script src="./history-repair.js?v=3.6.43"></script>
 <script src="./credit-cards.js?v=3.8.5-payout1"></script>
-<script src="./redesign-v360.js?v=3.8.5-feebadge2"></script>
+<script src="./redesign-v360.js?v=3.8.5-feebadge3"></script>
 <script src="./mobile-analyzer.js?v=3.8.5-payout1"></script>
 </body>
 </html>
