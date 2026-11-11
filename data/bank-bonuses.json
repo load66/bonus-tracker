@@ -1,27 +1,138 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-11-10T19:51:59.670633+00:00",
+  "checkedAt": "2026-11-11T06:47:17.537615+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-11-10T19:51:59.670633+00:00",
+      "checkedAt": "2026-11-11T06:47:17.537615+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-11-10T19:51:59.670633+00:00",
+      "checkedAt": "2026-11-11T06:47:17.537615+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-11-10T19:51:59.670633+00:00",
+      "checkedAt": "2026-11-11T06:47:17.537615+00:00",
       "status": "ok"
     }
   ],
   "offers": [
+    {
+      "title": "(Update) Wells Fargo Premier $2,500 Bank or Investing Bonus (Requires $250k In Cash/Assets)",
+      "url": "https://www.doctorofcredit.com/wells-fargo-premier-2500-bank-or-investing-bonus-requires-250000-in-cash-assets/",
+      "publishedAt": "2026-11-10T20:04:37+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "nationwide",
+      "groupKey": "wells fargo|unknown|2500|unknown|3decf9cf0bc4",
+      "bank": "wells fargo",
+      "product": "unknown",
+      "amount": 2500,
+      "region": "unknown",
+      "offerKey": "wells fargo|unknown|2500|unknown|3decf9cf0bc4",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-13T20:00:37+00:00",
+      "lastSeen": "2026-11-10T20:04:37+00:00",
+      "expiresAt": null,
+      "isUpdate": true,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/wells-fargo-premier-2500-bank-or-investing-bonus-requires-250000-in-cash-assets/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "(Update) Wells Fargo Premier $2,500 Bank or Investing Bonus (Requires $250k In Cash/Assets)",
+          "publishedAt": "2026-11-10T20:04:37+00:00"
+        }
+      ],
+      "firstSeenBaseline": true,
+      "badges": [
+        "Updated"
+      ]
+    },
+    {
+      "title": "Wells Fargo $500 Checking Bonus",
+      "url": "https://www.doctorofcredit.com/wells-fargo-500-checking-bonus/",
+      "publishedAt": "2026-11-10T19:48:09+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "nationwide",
+      "groupKey": "wells fargo|checking|500|unknown",
+      "bank": "wells fargo",
+      "product": "checking",
+      "amount": 500,
+      "region": "unknown",
+      "offerKey": "wells fargo|checking|500|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-08-21T23:45:47+00:00",
+      "lastSeen": "2026-11-10T19:48:09+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/wells-fargo-500-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "Wells Fargo $500 Checking Bonus",
+          "publishedAt": "2026-11-10T19:48:09+00:00"
+        },
+        {
+          "url": "https://frequentmiler.com/earn-a-500-bonus-with-a-new-wells-fargo-checking-account/",
+          "source": "Frequent Miler",
+          "sourceId": "fm",
+          "title": "(EXPIRED) Earn a $500 bonus with a new Wells Fargo checking account",
+          "publishedAt": "2026-08-27T13:45:09+00:00"
+        }
+      ],
+      "firstSeenBaseline": true,
+      "previousAmount": 400,
+      "change": "Increased",
+      "changeLabel": "$400 → $500",
+      "badges": [
+        "Increased"
+      ]
+    },
+    {
+      "title": "Wells Fargo $400/$550/$825 Business Checking Bonus",
+      "url": "https://www.doctorofcredit.com/wells-fargo-400-825-business-checking-bonus/",
+      "publishedAt": "2026-11-10T19:36:58+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "nationwide",
+      "groupKey": "wells fargo|business|550|unknown",
+      "bank": "wells fargo",
+      "product": "business",
+      "amount": 550,
+      "region": "unknown",
+      "offerKey": "wells fargo|business|550|unknown",
+      "rewardIsUpperBound": true,
+      "firstSeen": "2026-09-11T15:45:30+00:00",
+      "lastSeen": "2026-11-10T19:36:58+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/wells-fargo-400-825-business-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "Wells Fargo $400/$550/$825 Business Checking Bonus",
+          "publishedAt": "2026-11-10T19:36:58+00:00"
+        },
+        {
+          "url": "https://frequentmiler.com/wells-fargo-400-825-bonus-for-new-business-checking-account-no-direct-deposit-required/",
+          "sourceId": "fm",
+          "source": "Frequent Miler",
+          "title": "Wells Fargo: $400 / $550 / $825 bonus for new business checking account (no direct deposit required)",
+          "publishedAt": "2026-09-11T15:45:30+00:00"
+        }
+      ],
+      "firstSeenBaseline": true,
+      "badges": []
+    },
     {
       "title": "U.S. Bank Business Checking Bonus: $400 or $1200 Offer (Nationwide) – Ends 1/13/27",
       "url": "https://www.hustlermoneyblog.com/us-bank-business-checking-bonus/",
@@ -43,8 +154,8 @@
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/us-bank-business-checking-bonus/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "U.S. Bank Business Checking Bonus: $400 or $1200 Offer (Nationwide) – Ends 1/13/27",
           "publishedAt": "2026-11-10T18:20:11+00:00"
         }
@@ -73,8 +184,8 @@
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/truist-bank-checking-bonus/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "Truist Bank $500 Checking Bonus – Ends 2/2/27",
           "publishedAt": "2026-11-10T15:42:01+00:00"
         }
@@ -786,38 +897,6 @@
       "firstSeenBaseline": false,
       "badges": [
         "New"
-      ]
-    },
-    {
-      "title": "(Update) Wells Fargo Premier $2,500 Bank or Investing Bonus (Requires $250k In Cash/Assets)",
-      "url": "https://www.doctorofcredit.com/wells-fargo-premier-2500-bank-or-investing-bonus-requires-250000-in-cash-assets/",
-      "publishedAt": "2026-11-03T20:15:37+00:00",
-      "source": "Doctor of Credit",
-      "sourceId": "doc",
-      "availability": "nationwide",
-      "groupKey": "wells fargo|unknown|2500|unknown|3decf9cf0bc4",
-      "bank": "wells fargo",
-      "product": "unknown",
-      "amount": 2500,
-      "region": "unknown",
-      "offerKey": "wells fargo|unknown|2500|unknown|3decf9cf0bc4",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-10-13T20:00:37+00:00",
-      "lastSeen": "2026-11-03T20:15:37+00:00",
-      "expiresAt": null,
-      "isUpdate": true,
-      "links": [
-        {
-          "url": "https://www.doctorofcredit.com/wells-fargo-premier-2500-bank-or-investing-bonus-requires-250000-in-cash-assets/",
-          "sourceId": "doc",
-          "source": "Doctor of Credit",
-          "title": "(Update) Wells Fargo Premier $2,500 Bank or Investing Bonus (Requires $250k In Cash/Assets)",
-          "publishedAt": "2026-11-03T20:15:37+00:00"
-        }
-      ],
-      "firstSeenBaseline": true,
-      "badges": [
-        "Updated"
       ]
     },
     {
@@ -2787,36 +2866,6 @@
       "badges": []
     },
     {
-      "title": "Wells Fargo: $400 / $550 / $825 bonus for new business checking account (no direct deposit required)",
-      "url": "https://frequentmiler.com/wells-fargo-400-825-bonus-for-new-business-checking-account-no-direct-deposit-required/",
-      "publishedAt": "2026-09-11T15:45:30+00:00",
-      "source": "Frequent Miler",
-      "sourceId": "fm",
-      "availability": "unknown",
-      "groupKey": "wells fargo|business|550|unknown",
-      "bank": "wells fargo",
-      "product": "business",
-      "amount": 550,
-      "region": "unknown",
-      "offerKey": "wells fargo|business|550|unknown",
-      "rewardIsUpperBound": true,
-      "firstSeen": "2026-09-11T15:45:30+00:00",
-      "lastSeen": "2026-09-11T15:45:30+00:00",
-      "expiresAt": null,
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://frequentmiler.com/wells-fargo-400-825-bonus-for-new-business-checking-account-no-direct-deposit-required/",
-          "sourceId": "fm",
-          "source": "Frequent Miler",
-          "title": "Wells Fargo: $400 / $550 / $825 bonus for new business checking account (no direct deposit required)",
-          "publishedAt": "2026-09-11T15:45:30+00:00"
-        }
-      ],
-      "firstSeenBaseline": true,
-      "badges": []
-    },
-    {
       "title": "American Express Rewards Checking: $300 bonus for new customers",
       "url": "https://frequentmiler.com/ameircan-express-rewards-checking-bonus-for-new-customers/",
       "publishedAt": "2026-09-03T21:45:23+00:00",
@@ -2841,36 +2890,6 @@
           "source": "Frequent Miler",
           "title": "American Express Rewards Checking: $300 bonus for new customers",
           "publishedAt": "2026-09-03T21:45:23+00:00"
-        }
-      ],
-      "firstSeenBaseline": true,
-      "badges": []
-    },
-    {
-      "title": "Easy $400 bonus with a new Wells Fargo checking account",
-      "url": "https://frequentmiler.com/easy-400-bonus-with-a-new-wells-fargo-checking-account-july-2025/",
-      "publishedAt": "2026-08-21T23:45:47+00:00",
-      "source": "Frequent Miler",
-      "sourceId": "fm",
-      "availability": "unknown",
-      "groupKey": "wells fargo|checking|400|unknown",
-      "bank": "wells fargo",
-      "product": "checking",
-      "amount": 400,
-      "region": "unknown",
-      "offerKey": "wells fargo|checking|400|unknown",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-08-21T23:45:47+00:00",
-      "lastSeen": "2026-08-21T23:45:47+00:00",
-      "expiresAt": null,
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://frequentmiler.com/easy-400-bonus-with-a-new-wells-fargo-checking-account-july-2025/",
-          "sourceId": "fm",
-          "source": "Frequent Miler",
-          "title": "Easy $400 bonus with a new Wells Fargo checking account",
-          "publishedAt": "2026-08-21T23:45:47+00:00"
         }
       ],
       "firstSeenBaseline": true,
