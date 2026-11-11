@@ -278,18 +278,65 @@ function eligibleSoon(rows){
  return '<section class="bt3719-soon">'+heading+list+'</section>';
 }
 function home(rows,year,metrics){if(!usageData&&!usageLoading&&window.BTBonusAuth?.connected?.())setTimeout(()=>refreshUsage(),0);return segments()+usageBanner()+hero(rows,year,metrics)+stages(rows)+tasks(rows)+eligibleSoon(rows)}
+// Read-only, bank-independent projection. Never infer a waiver from bonus progress.
+function accountFeeWarnings(e){
+ if(!e||e.closed)return [];
+ const x=feeSnapshot(e),rows=[],rules=e.financialRules;
+ const add=(label,detail)=>rows.push({label,detail});
+ const validMoney=n=>typeof n==='number'&&Number.isFinite(n)&&n>=0;
+ let validation=null;
+ if(rules){try{validation=window.BTFinancialRules?.validate?.(e)}catch{}}
+ const issues=validation?.issues||[];
+ const supported=path=>!!validation&&!issues.some(i=>i.path==='financialRules'||i.path==='financialRules.version'||i.path===path||i.path.startsWith(path+'.')||i.path.startsWith(path+'['));
+ const frequencyEvidence={monthly:/monthly|per month|each month|every month|\/month/i,'statement-cycle':/statement (?:cycle|period)/i,quarterly:/quarterly|per quarter|each quarter/i,annually:/annually|annual|per year|each year/i};
+ const frequencies={monthly:'/mo fee','statement-cycle':'/statement fee',quarterly:'/quarter fee',annually:'/year fee'};
+ if(rules){
+  const accounts=Array.isArray(rules.accounts)?rules.accounts:[];
+  if(accounts.filter(a=>a?.role==='primary').length!==1)add('Check monthly fee','Primary account fee information is incomplete. Review saved fee terms.');
+  accounts.forEach((a,i)=>{
+   if(!a||!(a.role==='primary'||a.required===true))return;
+   const fee=a.fee,name=a.role==='primary'?'':String(a.label||'Required account')+': ';
+   if(!fee||!validMoney(fee.amount)||!supported('accounts['+i+']')||!['USD'].includes(fee.currency)||!(fee.frequency==='none'&&fee.amount===0||frequencies[fee.frequency])){
+    add(name+'Check fee','Fee amount, frequency or supporting evidence needs review in Details.');return;
+   }
+   if(fee.amount>0&&!frequencyEvidence[fee.frequency]?.test(String(fee.evidence?.quote||''))){add(name+'Check fee','Saved fee frequency conflicts with its supporting wording. Review fee terms.');return;}
+   if(fee.amount>0)add(name+amount(fee.amount)+frequencies[fee.frequency],
+    String(fee.evidence?.quote||'')+' '+(fee.waiver?.evidence?.quote||'Waiver terms not confirmed.')+' Check each applicable fee period; bonus completion does not prove a waiver.');
+  });
+ }else{
+  const n=x.monthlyKnown?Number(String(x.monthly).replace(/[$,\s]/g,'')):null;
+  if(n>0)add(x.monthly+'/mo fee','Saved monthly fee. '+x.summary+'. Review the waiver for each fee period.');
+  if(n===null||!Number.isFinite(n))add('Check monthly fee','Monthly fee is not confirmed in saved terms.');
+  // Legacy required-account summaries retain only an amount immediately after
+  // the product separator, never a membership or waiver balance threshold.
+  x.companions.forEach(text=>{
+   const m=text.match(/^([^:]+):\s*\$\s*([\d,]+(?:\.\d{1,2})?)(.*)$/);
+   if(!m){add('Required account: check fee',text);return;}
+   const value=Number(m[2].replace(/,/g,''));
+   if(value<=0)return;
+   const period=/\/\s*(?:month|mo)\b|monthly/i.test(m[3])?'/mo fee':
+    /\/\s*(?:year|yr)\b|annually/i.test(m[3])?'/year fee':' fee · check period';
+   add(m[1].trim()+': '+amount(value)+period,text);
+  });
+ }
+ const closure=rules?.closure;
+ if(rules){
+  if(!closure||!supported('closure')||!validMoney(closure.earlyCloseFee)){
+   add('Check closing fee','Closing fee or its evidence is incomplete. Review saved closing terms before closing.');
+  }else if(closure.earlyCloseFee>0){
+   add(amount(closure.earlyCloseFee)+' early-close fee',String(closure.feeEvidence?.quote||'')+' Check when the charge applies in Details.');
+  }
+  if(supported('closure')&&closure?.restrictionType==='explicit-clawback')add('Bonus clawback',String(closure.text||'Review bonus repayment restrictions in Details.'));
+ }else{
+  const close=x.closeMain.match(/^\$[\d,.]+(?= early-close fee)/)?.[0];
+  if(close)add(close+' early-close fee',x.closeNote+'. Review saved timing conditions in Details.');
+  else if(!x.noEarlyCloseFee)add('Check closing fee',x.closeNote+'. Review saved closing terms before closing.');
+ }
+ return rows;
+}
 function monthlyFeeBadge(e){
  if(!e||e.closed)return '';
- const x=feeSnapshot(e),labels=[];
- const numeric=v=>Number(String(v).replace(/[^\d.]/g,''));
- const primary=x.monthlyKnown?numeric(x.monthly):null;
- const companionFees=x.companions.map(v=>({text:v,amount:numeric(v.match(/:\s*(\$[\d,.]+)/)?.[1]||'')})).filter(v=>v.amount>0);
- if(primary>0)labels.push({label:x.monthly+'/mo fee',detail:'Monthly fee: '+x.monthly+'. '+x.summary+'. Review waiver requirements each statement period.'});
- companionFees.forEach(v=>labels.push({label:(/savings/i.test(v.text)?'Savings':'Required account')+': '+amount(v.amount)+'/mo',detail:v.text+'. Review waiver requirements each statement period.'}));
- if(!x.monthlyKnown||x.companions.some(v=>v.includes('Fee not confirmed')))labels.push({label:'Check monthly fee',detail:'Monthly fee information is incomplete. Review saved fee terms in Details.'});
- const closeAmount=x.closeMain.match(/^\$[\d,.]+(?= early-close fee)/)?.[0];
- if(closeAmount)labels.push({label:closeAmount+' early-close fee',detail:x.closeNote+'. Check saved closing terms in Details for when this fee applies.'});
- if(x.explicitClawback)labels.push({label:'Bonus clawback',detail:'Saved terms indicate the bank may take back the bonus. Review closing restrictions in Details.'});
+ const labels=accountFeeWarnings(e);
  if(!labels.length)return '';
  return '<span class="bt-account-fee-badges" style="display:flex;flex-wrap:wrap;gap:5px;grid-column:1/-1;justify-self:start;min-width:0;max-width:100%;margin-top:6px;">'+labels.map(x=>
   '<span class="bt-monthly-fee-badge" title="'+safe(x.detail)+'" aria-label="'+safe(x.label+'. '+x.detail)+'" style="display:inline-flex;align-items:center;flex:0 0 auto;width:fit-content;max-width:100%;box-sizing:border-box;padding:3px 7px;border:1px solid #826035;border-radius:999px;background:#332515;color:#ffd294;font-size:11px;font-weight:700;line-height:1.35;white-space:normal;overflow-wrap:normal;word-break:normal;text-align:left;">'+safe(x.label)+'</span>'
@@ -1305,6 +1352,6 @@ function openPhonebook(){closeSettings();window.bt360PhonebookOpen=true;R()}
 function closePhonebook(){window.bt360PhonebookOpen=false;R()}
 function openSettings(){window.bt360SettingsOpen=true;R();refreshUsage()}
 function closeSettings(){window.bt360SettingsOpen=false;R()}
-window.BT360={monthlyFeeBadge,requirementProgress,attentionCardProgress,toggleRequirement,requirementRecord,sourceEvidenceStatus,sourceEvidencePanel,dashboardQueueFor,toggleAttention,toggleAccountList,openAccountSearch,closeAccountSearch,get selectedAttentionId(){return selectedAttentionId},get accountListOpen(){return accountListOpen},setAccountSectionOpen,revealAccountSection,cloudStatusText,accountDates,accountSaveStatus,infoRow,feeSnapshot,closeCheckPresentation,get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,accountAudience,kindTag,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,upcomingReminders,churnReviewPlan,churnReviewMarkup,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,archiveCountdown,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
+window.BT360={accountFeeWarnings,monthlyFeeBadge,requirementProgress,attentionCardProgress,toggleRequirement,requirementRecord,sourceEvidenceStatus,sourceEvidencePanel,dashboardQueueFor,toggleAttention,toggleAccountList,openAccountSearch,closeAccountSearch,get selectedAttentionId(){return selectedAttentionId},get accountListOpen(){return accountListOpen},setAccountSectionOpen,revealAccountSection,cloudStatusText,accountDates,accountSaveStatus,infoRow,feeSnapshot,closeCheckPresentation,get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,accountAudience,kindTag,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,upcomingReminders,churnReviewPlan,churnReviewMarkup,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,archiveCountdown,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
 if(typeof R==='function')R();
 })();
