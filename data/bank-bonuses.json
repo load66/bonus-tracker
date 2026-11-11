@@ -1,27 +1,159 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-11-11T12:59:10.387341+00:00",
+  "checkedAt": "2026-11-11T19:43:42.119922+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-11-11T12:59:10.387341+00:00",
+      "checkedAt": "2026-11-11T19:43:42.119922+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-11-11T12:59:10.387341+00:00",
+      "checkedAt": "2026-11-11T19:43:42.119922+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-11-11T12:59:10.387341+00:00",
+      "checkedAt": "2026-11-11T19:43:42.119922+00:00",
       "status": "ok"
     }
   ],
   "offers": [
+    {
+      "title": "Chase Total Checking Account $400 Bonus Coupon – Ends 1/27/27",
+      "url": "https://www.hustlermoneyblog.com/chase-total-checking-bonus/",
+      "publishedAt": "2026-11-11T18:23:04+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "chase|checking|400|unknown",
+      "bank": "chase",
+      "product": "checking",
+      "amount": 400,
+      "region": "unknown",
+      "offerKey": "chase|checking|400|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-11T22:04:05+00:00",
+      "lastSeen": "2026-11-11T18:23:04+00:00",
+      "expiresAt": "2027-01-27",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/chase-total-checking-bonus/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Chase Total Checking Account $400 Bonus Coupon – Ends 1/27/27",
+          "publishedAt": "2026-11-11T18:23:04+00:00"
+        }
+      ],
+      "firstSeenBaseline": true,
+      "previousAmount": 125,
+      "change": "Increased",
+      "changeLabel": "$125 → $400",
+      "badges": [
+        "Increased"
+      ]
+    },
+    {
+      "title": "KeyBank Checking Account Bonus: $300 or $500 Offer – Ends 12/11/26",
+      "url": "https://www.hustlermoneyblog.com/keybank-checking-account-bonus/",
+      "publishedAt": "2026-11-11T18:10:49+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "keybank|checking|500|unknown",
+      "bank": "keybank",
+      "product": "checking",
+      "amount": 500,
+      "region": "unknown",
+      "offerKey": "keybank|checking|500|unknown",
+      "rewardIsUpperBound": true,
+      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
+      "lastSeen": "2026-11-11T18:10:49+00:00",
+      "expiresAt": "2026-12-11",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/keybank-checking-account-bonus/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "KeyBank Checking Account Bonus: $300 or $500 Offer – Ends 12/11/26",
+          "publishedAt": "2026-11-11T18:10:49+00:00"
+        }
+      ],
+      "firstSeenBaseline": true,
+      "badges": []
+    },
+    {
+      "title": "Wells Fargo Promotions: $125, $325, $500, $825, $2000, $3500 Checking, Savings, Business Bonuses (Nationwide) – Ends 1/13/27",
+      "url": "https://www.hustlermoneyblog.com/wells-fargo-promotions/",
+      "publishedAt": "2026-11-11T15:51:34+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "nationwide",
+      "groupKey": "wells fargo|business|125|nationwide",
+      "bank": "wells fargo",
+      "product": "business",
+      "amount": 125,
+      "region": "nationwide",
+      "offerKey": "wells fargo|business|125|nationwide",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-11T19:43:42.119922+00:00",
+      "lastSeen": "2026-11-11T15:51:34+00:00",
+      "expiresAt": "2027-01-13",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/wells-fargo-promotions/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Wells Fargo Promotions: $125, $325, $500, $825, $2000, $3500 Checking, Savings, Business Bonuses (Nationwide) – Ends 1/13/27",
+          "publishedAt": "2026-11-11T15:51:34+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "Wells Fargo Premier Checking Bonus: $3,500 Offer (Nationwide) – Ends 1/12/27",
+      "url": "https://www.hustlermoneyblog.com/wells-fargo-premier-checking-bonus/",
+      "publishedAt": "2026-11-11T15:16:22+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "nationwide",
+      "groupKey": "wells fargo|checking|3500|nationwide",
+      "bank": "wells fargo",
+      "product": "checking",
+      "amount": 3500,
+      "region": "nationwide",
+      "offerKey": "wells fargo|checking|3500|nationwide",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-21T14:38:04.538055+00:00",
+      "lastSeen": "2026-11-11T15:16:22+00:00",
+      "expiresAt": "2027-01-12",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/wells-fargo-premier-checking-bonus/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Wells Fargo Premier Checking Bonus: $3,500 Offer (Nationwide) – Ends 1/12/27",
+          "publishedAt": "2026-11-11T15:16:22+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "previousAmount": 325,
+      "change": "Increased",
+      "changeLabel": "$325 → $3500",
+      "badges": [
+        "Increased"
+      ]
+    },
     {
       "title": "(Update) Wells Fargo Premier $2,500/$3,500 Bank or Investing Bonus (Requires $250k/$500k In Cash/Assets)",
       "url": "https://www.doctorofcredit.com/wells-fargo-premier-2500-bank-or-investing-bonus-requires-250000-in-cash-assets/",
@@ -43,8 +175,8 @@
       "links": [
         {
           "url": "https://www.doctorofcredit.com/wells-fargo-premier-2500-bank-or-investing-bonus-requires-250000-in-cash-assets/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "(Update) Wells Fargo Premier $2,500/$3,500 Bank or Investing Bonus (Requires $250k/$500k In Cash/Assets)",
           "publishedAt": "2026-11-11T00:32:37+00:00"
         }
@@ -324,41 +456,6 @@
       ],
       "firstSeenBaseline": false,
       "badges": []
-    },
-    {
-      "title": "Chase Bank Coupon Codes: $125, $300, $400, $500, $1000, $3000 Checking Bonuses (November 2026)",
-      "url": "https://www.hustlermoneyblog.com/chase-coupons/",
-      "publishedAt": "2026-11-09T14:00:23+00:00",
-      "source": "Hustler Money Blog",
-      "sourceId": "hmb",
-      "availability": "unknown",
-      "groupKey": "chase|checking|125|unknown",
-      "bank": "chase",
-      "product": "checking",
-      "amount": 125,
-      "region": "unknown",
-      "offerKey": "chase|checking|125|unknown",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-10-11T22:04:05+00:00",
-      "lastSeen": "2026-11-09T14:00:23+00:00",
-      "expiresAt": null,
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.hustlermoneyblog.com/chase-coupons/",
-          "sourceId": "hmb",
-          "source": "Hustler Money Blog",
-          "title": "Chase Bank Coupon Codes: $125, $300, $400, $500, $1000, $3000 Checking Bonuses (November 2026)",
-          "publishedAt": "2026-11-09T14:00:23+00:00"
-        }
-      ],
-      "firstSeenBaseline": true,
-      "previousAmount": 900,
-      "change": "Decreased",
-      "changeLabel": "$900 → $125",
-      "badges": [
-        "Decreased"
-      ]
     },
     {
       "title": "HSBC Bank Promotions: Up to $3000 Checking Bonus – November 2026",
@@ -1713,36 +1810,6 @@
       "badges": []
     },
     {
-      "title": "Wells Fargo $325 Checking Bonus (Nationwide) – Ends 1/13/27",
-      "url": "https://www.hustlermoneyblog.com/wells-fargo-checking-bonus/",
-      "publishedAt": "2026-10-26T03:22:44+00:00",
-      "source": "Hustler Money Blog",
-      "sourceId": "hmb",
-      "availability": "nationwide",
-      "groupKey": "wells fargo|checking|325|nationwide",
-      "bank": "wells fargo",
-      "product": "checking",
-      "amount": 325,
-      "region": "nationwide",
-      "offerKey": "wells fargo|checking|325|nationwide",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-10-21T14:38:04.538055+00:00",
-      "lastSeen": "2026-10-26T03:22:44+00:00",
-      "expiresAt": "2027-01-13",
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.hustlermoneyblog.com/wells-fargo-checking-bonus/",
-          "sourceId": "hmb",
-          "source": "Hustler Money Blog",
-          "title": "Wells Fargo $325 Checking Bonus (Nationwide) – Ends 1/13/27",
-          "publishedAt": "2026-10-26T03:22:44+00:00"
-        }
-      ],
-      "firstSeenBaseline": false,
-      "badges": []
-    },
-    {
       "title": "Crystal Lake Bank & Trust Promotions: $300, $500 Checking Bonuses (IL) – Ends 11/9/27",
       "url": "https://www.hustlermoneyblog.com/crystal-lake-bank-trust-promotions/",
       "publishedAt": "2026-10-26T01:59:11+00:00",
@@ -2192,36 +2259,6 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": []
-    },
-    {
-      "title": "KeyBank Checking Account Bonus: $300 or $500 Offer – Ends 12/11/26",
-      "url": "https://www.hustlermoneyblog.com/keybank-checking-account-bonus/",
-      "publishedAt": "2026-10-21T15:33:49+00:00",
-      "source": "Hustler Money Blog",
-      "sourceId": "hmb",
-      "availability": "unknown",
-      "groupKey": "keybank|checking|500|unknown",
-      "bank": "keybank",
-      "product": "checking",
-      "amount": 500,
-      "region": "unknown",
-      "offerKey": "keybank|checking|500|unknown",
-      "rewardIsUpperBound": true,
-      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
-      "lastSeen": "2026-10-21T15:33:49+00:00",
-      "expiresAt": "2026-12-11",
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.hustlermoneyblog.com/keybank-checking-account-bonus/",
-          "sourceId": "hmb",
-          "source": "Hustler Money Blog",
-          "title": "KeyBank Checking Account Bonus: $300 or $500 Offer – Ends 12/11/26",
-          "publishedAt": "2026-10-21T15:33:49+00:00"
-        }
-      ],
-      "firstSeenBaseline": true,
       "badges": []
     },
     {
