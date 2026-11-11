@@ -496,3 +496,18 @@ console.log('Bank logo and attention hierarchy regression passed');
  assert(evaluate(unrelated).some(x=>x.label==='Share Savings: $10/mo fee'));
  console.log('Fee warning regressions passed: evidence, frequencies, optional scope, unknown closing, zero fees, unrelated errors, no mutation');
 }
+
+{
+ const fs=require('node:fs'),vm=require('node:vm');
+ const code=fs.readFileSync(require.resolve('../redesign-v360.js'),'utf8');
+ const env={window:{BTFinancialRules:require('../financial-rules.js')},amount:n=>'$'+n,
+ feeSnapshot:()=>({monthly:'$0',monthlyKnown:true,companions:[],closeMain:'No early-closing fee',noEarlyCloseFee:true,explicitClawback:true})};
+ vm.createContext(env);vm.runInContext(code.slice(code.indexOf('function accountFeeWarnings'),code.indexOf('function monthlyFeeBadge')),env);
+ assert(!env.accountFeeWarnings({}).some(x=>/clawback/i.test(x.label)),'Unconfirmed legacy clawback stays blank');
+ const e=fixture(),q='We will reclaim the bonus if the account is closed within 90 days.';
+ e.tcSourceRaw+=' '+q;e.financialRules.closure.restrictionType=e.closeRestrictionType='explicit-clawback';
+ e.financialRules.closure.text=q;e.financialRules.closure.evidence.quote=q;
+ assert(env.accountFeeWarnings(e).some(x=>x.label==='Bonus clawback'),'Explicit validated clawback appears');
+ e.financialRules.closure.evidence.quote='Unsupported clawback terms';
+ assert(!env.accountFeeWarnings(e).some(x=>/clawback/i.test(x.label)),'Unconfirmed structured clawback stays blank');
+}
