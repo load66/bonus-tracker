@@ -6,6 +6,8 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.8.6 fee evidence badges (PR #300): source-validated fee scope and periods; unresolved clawback hidden. Fee regressions, financial rules, structured imports passed locally. Next: final release CI including Chromium/WebKit, merge, and Pages verification.
+
 - v3.8.5 payout upper-bound clarity (`codex/v3.8.5-payout-deadline-clarity`, PR #299): preserve source-backed payout calculations; distinguish upper-only *within N days* deadlines from actual bounded arrival estimates for all supported anchors, not just opening. Add synthetic independent-clock and browser detail/AI deadline regressions and update contract/import guidance; preserve all private local records and existing interval presentation. Bonus/UI/Cloud suites PASS on CI run 41324778783; browser assertions for upper-only legacy and tier payout clocks corrected on PR branch; final Chromium/WebKit and release verification required before merge and Pages confirmation. No private account records committed. Next: green final-head release CI, merge, verify deployed asset revision.
 
 - v3.8.4 completed-requirement next step: expose actual payment recording alongside recurring tasks and rule-review actions; keep original task actions and canonical lifecycle decisions. Payment remains an explicit recorded event, never automatic. Local UI/release checks passed. Full Chromium/WebKit coverage retained with completed-stage action reachability regression. Next: green release CI, merge and verify Pages. v3.8.3 deployed at 06f81e04 (PR #296).

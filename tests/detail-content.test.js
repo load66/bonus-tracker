@@ -189,8 +189,8 @@ const estimatedList=sandbox.BT360.archive([estimatedPast]);
 assert.match(estimatedList,/<b>0<\/b><small>Ready for review<\/small>/,'Unverified historic dates must not certify current eligibility');
 
 /* v3.6.27: all computable saved dates show a countdown, with verification status. */
-assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.5';/,'The on-screen app version reflects this release');
-assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.5-payout1/,'The version label is refreshed on clients');
+assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.6';/,'The on-screen app version reflects this release');
+assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.6-fees1/,'The version label is refreshed on clients');
 const archiveFutureDate='2030-01-01';
 const projectedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,verified:false});
 assert(projectedFuture&&projectedFuture.days>0&&projectedFuture.caption==='days · estimate','Unverified saved future date shows an estimated countdown');
@@ -456,4 +456,58 @@ console.log('Bank logo and attention hierarchy regression passed');
   assert.match(sandbox.BT360.detailPanels(sample),/Record the payment once the bonus posts/);
   assert.equal(JSON.stringify(sample),before,'Showing payment action cannot complete tasks or create payment dates');
  }finally{sandbox.btLifecycleStageForEntry=original}
+}
+
+// Fee badge projection uses real evidence validation and never mutates records.
+{
+ const fs=require('node:fs'),vm=require('node:vm');
+ const source=fs.readFileSync(require.resolve('../redesign-v360.js'),'utf8');
+ const model=source.slice(source.indexOf('function accountFeeWarnings'),source.indexOf('function monthlyFeeBadge'));
+ const engine=require('../financial-rules.js');
+ const ctx={window:{BTFinancialRules:engine},amount:n=>'$'+n,feeSnapshot:()=>({monthly:'$0',monthlyKnown:true,companions:[],closeMain:'Not confirmed',closeNote:'Review',noEarlyCloseFee:false})};
+ vm.createContext(ctx);vm.runInContext(model,ctx);
+ const evaluate=entry=>JSON.parse(JSON.stringify(ctx.accountFeeWarnings(entry)));
+ const sample=fixture(),saved=JSON.stringify(sample);
+ assert.deepEqual(evaluate(sample).map(x=>x.label),['Share Savings: $10/mo fee']);
+ assert.equal(JSON.stringify(sample),saved);
+ for(const [frequency,word,label] of [['statement-cycle','per statement period','/statement fee'],['quarterly','quarterly','/quarter fee'],['annually','annually','/year fee']]){
+  const f=fixture(),a=f.financialRules.accounts[1];
+  a.fee.frequency=frequency;a.fee.evidence.quote='Share Savings has a $10 '+word+' maintenance fee.';f.feeScheduleRaw+=' '+a.fee.evidence.quote;
+  assert(evaluate(f).some(x=>x.label==='Share Savings: $10'+label));
+ }
+ const conflict=fixture();conflict.financialRules.accounts[1].fee.frequency='annually';
+ assert(evaluate(conflict).some(x=>x.label==='Share Savings: Check fee'));
+ const unsupported=fixture();unsupported.financialRules.accounts[1].fee.amount=50;
+ assert(evaluate(unsupported).some(x=>x.label==='Share Savings: Check fee'));
+ const missing=fixture();missing.financialRules.accounts[1].fee.amount=null;
+ assert(evaluate(missing).some(x=>x.label==='Share Savings: Check fee'));
+ const badEvidence=fixture();badEvidence.financialRules.accounts[1].fee.evidence.quote='Unsupported $10 monthly fee.';
+ assert(evaluate(badEvidence).some(x=>x.label==='Share Savings: Check fee'));
+ const close=fixture();close.earlyCloseFee=25;close.financialRules.closure.earlyCloseFee=25;
+ close.financialRules.closure.feeEvidence.quote='An early closing fee of $25 applies within 90 days.';
+ close.feeScheduleRaw+=' '+close.financialRules.closure.feeEvidence.quote;
+ assert(evaluate(close).some(x=>x.label==='$25 early-close fee'));
+ close.financialRules.closure.earlyCloseFee=null;
+ assert(evaluate(close).some(x=>x.label==='Check closing fee'));
+ const optional=fixture();optional.financialRules.accounts[1].required=false;
+ assert.deepEqual(evaluate(optional),[]);
+ assert.deepEqual(evaluate({...sample,closed:'2026-10-01'}),[]);
+ const unrelated=fixture();unrelated.financialRules.payout.text='Conflicting payout';
+ assert(evaluate(unrelated).some(x=>x.label==='Share Savings: $10/mo fee'));
+ console.log('Fee warning regressions passed: evidence, frequencies, optional scope, unknown closing, zero fees, unrelated errors, no mutation');
+}
+
+{
+ const fs=require('node:fs'),vm=require('node:vm');
+ const code=fs.readFileSync(require.resolve('../redesign-v360.js'),'utf8');
+ const env={window:{BTFinancialRules:require('../financial-rules.js')},amount:n=>'$'+n,
+ feeSnapshot:()=>({monthly:'$0',monthlyKnown:true,companions:[],closeMain:'No early-closing fee',noEarlyCloseFee:true,explicitClawback:true})};
+ vm.createContext(env);vm.runInContext(code.slice(code.indexOf('function accountFeeWarnings'),code.indexOf('function monthlyFeeBadge')),env);
+ assert(!env.accountFeeWarnings({}).some(x=>/clawback/i.test(x.label)),'Unconfirmed legacy clawback stays blank');
+ const e=fixture(),q='We will reclaim the bonus if the account is closed within 90 days.';
+ e.tcSourceRaw+=' '+q;e.financialRules.closure.restrictionType=e.closeRestrictionType='explicit-clawback';
+ e.financialRules.closure.text=q;e.financialRules.closure.evidence.quote=q;
+ assert(env.accountFeeWarnings(e).some(x=>x.label==='Bonus clawback'),'Explicit validated clawback appears');
+ e.financialRules.closure.evidence.quote='Unsupported clawback terms';
+ assert(!env.accountFeeWarnings(e).some(x=>/clawback/i.test(x.label)),'Unconfirmed structured clawback stays blank');
 }
