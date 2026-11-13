@@ -1,27 +1,193 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-11-13T06:57:31.912548+00:00",
+  "checkedAt": "2026-11-13T19:52:57.400344+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-11-13T06:57:31.912548+00:00",
+      "checkedAt": "2026-11-13T19:52:57.400344+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-11-13T06:57:31.912548+00:00",
+      "checkedAt": "2026-11-13T19:52:57.400344+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-11-13T06:57:31.912548+00:00",
+      "checkedAt": "2026-11-13T19:52:57.400344+00:00",
       "status": "ok"
     }
   ],
   "offers": [
+    {
+      "title": "Wells Fargo: $400 / $550 / $825 bonus for new business checking account (no direct deposit required)",
+      "url": "https://frequentmiler.com/wells-fargo-400-825-bonus-for-new-business-checking-account-no-direct-deposit-required/",
+      "publishedAt": "2026-11-13T18:46:01+00:00",
+      "source": "Frequent Miler",
+      "sourceId": "fm",
+      "availability": "unknown",
+      "groupKey": "wells fargo|business|550|unknown",
+      "bank": "wells fargo",
+      "product": "business",
+      "amount": 550,
+      "region": "unknown",
+      "offerKey": "wells fargo|business|550|unknown",
+      "rewardIsUpperBound": true,
+      "firstSeen": "2026-09-11T15:45:30+00:00",
+      "lastSeen": "2026-11-13T18:46:01+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://frequentmiler.com/wells-fargo-400-825-bonus-for-new-business-checking-account-no-direct-deposit-required/",
+          "source": "Frequent Miler",
+          "sourceId": "fm",
+          "title": "Wells Fargo: $400 / $550 / $825 bonus for new business checking account (no direct deposit required)",
+          "publishedAt": "2026-11-13T18:46:01+00:00"
+        },
+        {
+          "url": "https://www.doctorofcredit.com/wells-fargo-400-825-business-checking-bonus/",
+          "sourceId": "doc",
+          "source": "Doctor of Credit",
+          "title": "Wells Fargo $400/$550/$825 Business Checking Bonus",
+          "publishedAt": "2026-11-10T19:36:58+00:00"
+        }
+      ],
+      "firstSeenBaseline": true,
+      "badges": []
+    },
+    {
+      "title": "HSBC Premier Checking Bonus: Up to $3,000 Offer",
+      "url": "https://www.hustlermoneyblog.com/hsbc-premier-checking-bonus/",
+      "publishedAt": "2026-11-13T18:24:51+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "hsbc premier|checking|3000|unknown",
+      "bank": "hsbc premier",
+      "product": "checking",
+      "amount": 3000,
+      "region": "unknown",
+      "offerKey": "hsbc premier|checking|3000|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-19T22:29:10.978712+00:00",
+      "lastSeen": "2026-11-13T18:24:51+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/hsbc-premier-checking-bonus/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "HSBC Premier Checking Bonus: Up to $3,000 Offer",
+          "publishedAt": "2026-11-13T18:24:51+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": []
+    },
+    {
+      "title": "Popular Bank Promotions: $600 Business Checking Bonus (FL, NJ, NY) – Ends 11/30/26",
+      "url": "https://www.hustlermoneyblog.com/popular-community-bank-promotions/",
+      "publishedAt": "2026-11-13T17:32:29+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "popular bank|business|600|FL,NJ,NY",
+      "bank": "popular bank",
+      "product": "business",
+      "amount": 600,
+      "region": "FL,NJ,NY",
+      "offerKey": "popular bank|business|600|FL,NJ,NY",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-08T06:20:21.496280+00:00",
+      "lastSeen": "2026-11-13T17:32:29+00:00",
+      "expiresAt": "2026-11-30",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/popular-community-bank-promotions/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Popular Bank Promotions: $600 Business Checking Bonus (FL, NJ, NY) – Ends 11/30/26",
+          "publishedAt": "2026-11-13T17:32:29+00:00"
+        },
+        {
+          "url": "https://www.doctorofcredit.com/fl-nj-ny-popular-bank-400-business-checking-bonus/",
+          "sourceId": "doc",
+          "source": "Doctor of Credit",
+          "title": "[FL, NJ, NY] Popular Bank $600 Business Checking Bonus",
+          "publishedAt": "2026-11-07T22:10:02+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "KeyBank Promotions: $300, $500, $1000 Checking, Business Bonuses – Ends 12/11/26",
+      "url": "https://www.hustlermoneyblog.com/keybank-promotions/",
+      "publishedAt": "2026-11-13T16:44:12+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "keybank|business|300|unknown",
+      "bank": "keybank",
+      "product": "business",
+      "amount": 300,
+      "region": "unknown",
+      "offerKey": "keybank|business|300|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-30T22:29:34.474953+00:00",
+      "lastSeen": "2026-11-13T16:44:12+00:00",
+      "expiresAt": "2026-12-11",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/keybank-promotions/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "KeyBank Promotions: $300, $500, $1000 Checking, Business Bonuses – Ends 12/11/26",
+          "publishedAt": "2026-11-13T16:44:12+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": []
+    },
+    {
+      "title": "Upgrade Premier Savings $200 Bonus + 3.30% APY",
+      "url": "https://www.hustlermoneyblog.com/upgrade-savings-referral-bonus/",
+      "publishedAt": "2026-11-13T15:48:11+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "upgrade premier|savings|200|unknown",
+      "bank": "upgrade premier",
+      "product": "savings",
+      "amount": 200,
+      "region": "unknown",
+      "offerKey": "upgrade premier|savings|200|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-12T16:56:11+00:00",
+      "lastSeen": "2026-11-13T15:48:11+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/upgrade-savings-referral-bonus/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Upgrade Premier Savings $200 Bonus + 3.30% APY",
+          "publishedAt": "2026-11-13T15:48:11+00:00"
+        }
+      ],
+      "firstSeenBaseline": true,
+      "badges": []
+    },
     {
       "title": "Earn a $500 bonus with a new Wells Fargo checking account",
       "url": "https://frequentmiler.com/earn-a-500-bonus-with-a-new-wells-fargo-checking-account/",
@@ -43,8 +209,8 @@
       "links": [
         {
           "url": "https://frequentmiler.com/earn-a-500-bonus-with-a-new-wells-fargo-checking-account/",
-          "source": "Frequent Miler",
           "sourceId": "fm",
+          "source": "Frequent Miler",
           "title": "Earn a $500 bonus with a new Wells Fargo checking account",
           "publishedAt": "2026-11-12T23:45:38+00:00"
         },
@@ -387,12 +553,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "previousAmount": 325,
-      "change": "Increased",
-      "changeLabel": "$325 → $3500",
-      "badges": [
-        "Increased"
-      ]
+      "badges": []
     },
     {
       "title": "(Update) Wells Fargo Premier $2,500/$3,500 Bank or Investing Bonus (Requires $250k/$500k In Cash/Assets)",
@@ -458,43 +619,6 @@
       "badges": [
         "Updated"
       ]
-    },
-    {
-      "title": "Wells Fargo $400/$550/$825 Business Checking Bonus",
-      "url": "https://www.doctorofcredit.com/wells-fargo-400-825-business-checking-bonus/",
-      "publishedAt": "2026-11-10T19:36:58+00:00",
-      "source": "Doctor of Credit",
-      "sourceId": "doc",
-      "availability": "nationwide",
-      "groupKey": "wells fargo|business|550|unknown",
-      "bank": "wells fargo",
-      "product": "business",
-      "amount": 550,
-      "region": "unknown",
-      "offerKey": "wells fargo|business|550|unknown",
-      "rewardIsUpperBound": true,
-      "firstSeen": "2026-09-11T15:45:30+00:00",
-      "lastSeen": "2026-11-10T19:36:58+00:00",
-      "expiresAt": null,
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.doctorofcredit.com/wells-fargo-400-825-business-checking-bonus/",
-          "sourceId": "doc",
-          "source": "Doctor of Credit",
-          "title": "Wells Fargo $400/$550/$825 Business Checking Bonus",
-          "publishedAt": "2026-11-10T19:36:58+00:00"
-        },
-        {
-          "url": "https://frequentmiler.com/wells-fargo-400-825-bonus-for-new-business-checking-account-no-direct-deposit-required/",
-          "sourceId": "fm",
-          "source": "Frequent Miler",
-          "title": "Wells Fargo: $400 / $550 / $825 bonus for new business checking account (no direct deposit required)",
-          "publishedAt": "2026-09-11T15:45:30+00:00"
-        }
-      ],
-      "firstSeenBaseline": true,
-      "badges": []
     },
     {
       "title": "U.S. Bank Business Checking Bonus: $400 or $1200 Offer (Nationwide) – Ends 1/13/27",
@@ -771,38 +895,6 @@
           "source": "Doctor of Credit",
           "title": "[SD & MN, In Branch Only] American Bank & Trust $600 Checking Bonus + $150 Savings Bonus",
           "publishedAt": "2026-11-08T15:00:38+00:00"
-        }
-      ],
-      "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
-    },
-    {
-      "title": "[FL, NJ, NY] Popular Bank $600 Business Checking Bonus",
-      "url": "https://www.doctorofcredit.com/fl-nj-ny-popular-bank-400-business-checking-bonus/",
-      "publishedAt": "2026-11-07T22:10:02+00:00",
-      "source": "Doctor of Credit",
-      "sourceId": "doc",
-      "availability": "regional",
-      "groupKey": "popular bank|business|600|FL,NJ,NY",
-      "bank": "popular bank",
-      "product": "business",
-      "amount": 600,
-      "region": "FL,NJ,NY",
-      "offerKey": "popular bank|business|600|FL,NJ,NY",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-11-08T06:20:21.496280+00:00",
-      "lastSeen": "2026-11-07T22:10:02+00:00",
-      "expiresAt": null,
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.doctorofcredit.com/fl-nj-ny-popular-bank-400-business-checking-bonus/",
-          "sourceId": "doc",
-          "source": "Doctor of Credit",
-          "title": "[FL, NJ, NY] Popular Bank $600 Business Checking Bonus",
-          "publishedAt": "2026-11-07T22:10:02+00:00"
         }
       ],
       "firstSeenBaseline": false,
@@ -1485,66 +1577,6 @@
           "source": "Doctor of Credit",
           "title": "Mercury (Fintech) $500 Business Checking Bonus",
           "publishedAt": "2026-10-30T20:05:38+00:00"
-        }
-      ],
-      "firstSeenBaseline": false,
-      "badges": []
-    },
-    {
-      "title": "HSBC Premier Checking Bonus: Up to $3,000 Offer",
-      "url": "https://www.hustlermoneyblog.com/hsbc-premier-checking-bonus/",
-      "publishedAt": "2026-10-30T17:22:51+00:00",
-      "source": "Hustler Money Blog",
-      "sourceId": "hmb",
-      "availability": "unknown",
-      "groupKey": "hsbc premier|checking|3000|unknown",
-      "bank": "hsbc premier",
-      "product": "checking",
-      "amount": 3000,
-      "region": "unknown",
-      "offerKey": "hsbc premier|checking|3000|unknown",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-10-19T22:29:10.978712+00:00",
-      "lastSeen": "2026-10-30T17:22:51+00:00",
-      "expiresAt": null,
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.hustlermoneyblog.com/hsbc-premier-checking-bonus/",
-          "sourceId": "hmb",
-          "source": "Hustler Money Blog",
-          "title": "HSBC Premier Checking Bonus: Up to $3,000 Offer",
-          "publishedAt": "2026-10-30T17:22:51+00:00"
-        }
-      ],
-      "firstSeenBaseline": false,
-      "badges": []
-    },
-    {
-      "title": "KeyBank Promotions: $300, $500, $1000 Checking, Business Bonuses – Ends 12/11/26",
-      "url": "https://www.hustlermoneyblog.com/keybank-promotions/",
-      "publishedAt": "2026-10-30T15:04:12+00:00",
-      "source": "Hustler Money Blog",
-      "sourceId": "hmb",
-      "availability": "unknown",
-      "groupKey": "keybank|business|300|unknown",
-      "bank": "keybank",
-      "product": "business",
-      "amount": 300,
-      "region": "unknown",
-      "offerKey": "keybank|business|300|unknown",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-10-30T22:29:34.474953+00:00",
-      "lastSeen": "2026-10-30T15:04:12+00:00",
-      "expiresAt": "2026-12-11",
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.hustlermoneyblog.com/keybank-promotions/",
-          "sourceId": "hmb",
-          "source": "Hustler Money Blog",
-          "title": "KeyBank Promotions: $300, $500, $1000 Checking, Business Bonuses – Ends 12/11/26",
-          "publishedAt": "2026-10-30T15:04:12+00:00"
         }
       ],
       "firstSeenBaseline": false,
@@ -2390,36 +2422,6 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": []
-    },
-    {
-      "title": "Upgrade Premier Savings $200 Bonus + 3.30% APY",
-      "url": "https://www.hustlermoneyblog.com/upgrade-savings-referral-bonus/",
-      "publishedAt": "2026-10-20T17:19:11+00:00",
-      "source": "Hustler Money Blog",
-      "sourceId": "hmb",
-      "availability": "unknown",
-      "groupKey": "upgrade premier|savings|200|unknown",
-      "bank": "upgrade premier",
-      "product": "savings",
-      "amount": 200,
-      "region": "unknown",
-      "offerKey": "upgrade premier|savings|200|unknown",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-10-12T16:56:11+00:00",
-      "lastSeen": "2026-10-20T17:19:11+00:00",
-      "expiresAt": null,
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.hustlermoneyblog.com/upgrade-savings-referral-bonus/",
-          "sourceId": "hmb",
-          "source": "Hustler Money Blog",
-          "title": "Upgrade Premier Savings $200 Bonus + 3.30% APY",
-          "publishedAt": "2026-10-20T17:19:11+00:00"
-        }
-      ],
-      "firstSeenBaseline": true,
       "badges": []
     },
     {
