@@ -1,23 +1,23 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-11-14T06:44:37.186662+00:00",
+  "checkedAt": "2026-11-14T18:18:44.689765+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-11-14T06:44:37.186662+00:00",
+      "checkedAt": "2026-11-14T18:18:44.689765+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-11-14T06:44:37.186662+00:00",
+      "checkedAt": "2026-11-14T18:18:44.689765+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-11-14T06:44:37.186662+00:00",
+      "checkedAt": "2026-11-14T18:18:44.689765+00:00",
       "status": "ok"
     }
   ],
@@ -223,7 +223,12 @@
         }
       ],
       "firstSeenBaseline": true,
-      "badges": []
+      "previousAmount": 400,
+      "change": "Increased",
+      "changeLabel": "$400 → $500",
+      "badges": [
+        "Increased"
+      ]
     },
     {
       "title": "Huntington Bank Promotions for November 2026: $400, $1,000 Checking Bonuses – Ends 2/11/27",
@@ -1117,9 +1122,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "Farmers Insurance Federal Credit Union (FIGFCU) Up To $1,500 Business Checking Bonus",
@@ -3070,6 +3073,10 @@
     {
       "offerKey": "liberty bank for|savings|350|IL",
       "endedAt": "2026-11-02T02:38:44+00:00"
+    },
+    {
+      "offerKey": "us bank|checking|450|unknown",
+      "endedAt": "2026-09-11T20:45:04+00:00"
     }
   ],
   "availability": {
