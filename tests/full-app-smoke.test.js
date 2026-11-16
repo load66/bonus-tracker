@@ -256,7 +256,7 @@ if(require.main===module)setTimeout(()=>{
     assert(multiRuleDate.official==='2028-08-01'&&multiRuleDate.safe==='2028-08-03'&&/multi-rule/.test(multiRuleDate.policy),'Multi-rule churn countdown did not use the latest actual clearing date');
 
     const lafBuffer=sandbox.normalizeLifecycleEntry({bank:'Lafayette Federal Credit Union',opened:'2026-10-31',bonus:250,analyzedTC:'Boost300 qualified direct deposit'});
-    assert(sandbox.safeCloseDate(lafBuffer)==='2027-05-02','Lafayette close date must preserve six calendar months and a separate two-day cushion');
+    assert(sandbox.safeCloseDate(lafBuffer)===null,'Fee-only Lafayette timer must no longer generate a contractual hold date');
 
     const replacementIds=vm.runInContext(`(function(){
       const keep=entries;
