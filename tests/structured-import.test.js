@@ -4,6 +4,26 @@ const {sandbox,storage}=require('./full-app-smoke.test.js');
 const {fixture}=require('./fixtures/financial-rules.cjs');
 const e=fixture(),payload={kind:'BonusTrackerEntry',schemaVersion:3,verification:{promoSourceUrl:e.promoSourceUrl,feeScheduleSourceUrl:e.feeScheduleSourceUrl,termsVerifiedAt:e.termsVerifiedAt},entry:e};
 const before=JSON.stringify([...storage]);
+
+/* v3.8.15: only independent keep-open and bonus-forfeiture wording may
+   generate a retention hold. A service-charge-only window never does. */
+{
+ const vm=require('node:vm'),beforeProbe=JSON.stringify([...storage]);
+ const cases=[
+  ['A $25 early account closing fee applies if closed within 90 days of opening.',0],
+  ['A $25 charge applies if you terminate this account before 180 days.',0],
+  ['No early closing fee applies after 120 days.',0],
+  ['The bonus is forfeited if the account is closed within 90 days.',90],
+  ['Keep the account open for 180 days after opening to retain the bonus.',180]
+ ];
+ for(const [closeRuleText,expected] of cases){
+   sandbox.__retentionProbe={closeRuleText};
+   assert.equal(vm.runInContext('inferCloseHoldDaysFromEntry(__retentionProbe)',sandbox),expected,closeRuleText);
+ }
+ delete sandbox.__retentionProbe;
+ assert.equal(JSON.stringify([...storage]),beforeProbe,'Retention extraction cannot write account records');
+}
+
 const parsed=sandbox.btParseEntryFileText(JSON.stringify(payload),'Synthetic.json');
 assert.equal(JSON.stringify(parsed.financialRules),JSON.stringify(e.financialRules));
 assert.equal(JSON.stringify([...storage]),before,'Reading an import must not write account data');
