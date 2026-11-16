@@ -74,7 +74,7 @@ console.log('Structured import passed: strict intake, full review projection, ac
 const review=require('./fixtures/financial-rules.cjs').reviewFixture();const reviewPayload={kind:'BonusTrackerEntry',schemaVersion:3,verification:{promoSourceUrl:review.promoSourceUrl,feeScheduleSourceUrl:review.feeScheduleSourceUrl,termsVerifiedAt:review.termsVerifiedAt},entry:review};
 sandbox.btStageEntryPayload(reviewPayload);const reviewed=sandbox.collectModalEntryData();
 assert.equal(reviewed.financialRules.closure.earlyCloseFee,null);assert.equal(reviewed.closeRuleBasis,'manual');assert.equal(reviewed.closeRestrictionType,'manual-review');assert.equal(sandbox.BTFinancialRules.validate(reviewed).ok,true);
-const afterPayout={...reviewed,reqMet:'2026-04-01',bonusRecd:'2026-04-15',monthlyFeeChecked:true};assert.equal(sandbox.closeReadiness(afterPayout).cls,'danger');assert(!sandbox.safeCloseDate(afterPayout),'Manual review cannot show a safe close date');assert.notEqual(sandbox.status(afterPayout),'SAFE TO CLOSE','Unresolved closure fee must not be marked safe to close');assert(sandbox.BTBonusAI.contextFor(afterPayout).some(f=>f.id==='financialrules'&&/fee unconfirmed/.test(f.text)));
+const afterPayout={...reviewed,reqMet:'2026-04-01',bonusRecd:'2026-04-15',monthlyFeeChecked:true};assert.equal(sandbox.closeReadiness(afterPayout).cls,'danger');assert(!sandbox.safeCloseDate(afterPayout),'Manual review cannot show a safe close date');assert.notEqual(sandbox.status(afterPayout),'SAFE TO CLOSE','Unresolved contractual retention still requires review');assert(sandbox.BTBonusAI.contextFor(afterPayout).some(f=>f.id==='financialrules'&&!/early.close fee unconfirmed/i.test(f.text)),'AI context no longer adds retired fee warnings');
 assert.throws(()=>sandbox.btParseEntryFileText(JSON.stringify({kind:'BonusTrackerResearchDraft',importable:false,bank:'Synthetic'}),'draft.json'),/review draft/);
 
 (async()=>{
@@ -131,10 +131,10 @@ assert.equal(JSON.stringify(reviewedCalendar.financialRules),JSON.stringify(cale
 assert.equal(sandbox.BTFinancialRules.closeHoldInfo(reviewedCalendar).holdUntil,'2027-10-29');
 assert.equal(sandbox.BTFinancialRules.closeHoldInfo(reviewedCalendar).reviewOn,'2027-11-01');
 assert.equal(reviewedCalendar.reqMet,'');assert.equal(reviewedCalendar.bonusRecd,'');
-assert.equal(sandbox.safeCloseDate(reviewedCalendar),null,'Unverified closing fee must not produce safe date');
+assert.equal(sandbox.safeCloseDate(reviewedCalendar),'2027-11-01','Exact hold date must not depend on retired fee field');
 const postBonus={...reviewedCalendar,bonusRecd:'2027-02-01',reqMet:'2027-01-27'};
-assert.notEqual(sandbox.closeReadiness(postBonus,'2027-11-01').cls,'safe','Elapsed hold cannot clear unknown fee');
-assert.ok(sandbox.closeReadiness(postBonus,'2027-11-01').warnings.some(w=>/service fee/i.test(w)),JSON.stringify({warnings:sandbox.closeReadiness(postBonus,'2027-11-01').warnings,calendar:sandbox.BTFinancialRules.closeHoldInfo(postBonus)}));
+assert(!sandbox.closeReadiness(postBonus,'2027-10-28').items.find(x=>x.label==='Early-close service fee verified'),'Retired fee check must be absent');
+assert(!sandbox.closeReadiness(postBonus,'2027-11-01').warnings.some(w=>/early.close|closing fee|service fee/i.test(w)),'Legacy fee data cannot block a completed hold');
 assert.ok(sandbox.closeReadiness(postBonus,'2027-10-28').warnings.some(w=>/calendar-month hold/i.test(w)));
 assert.ok(sandbox.closeRiskWarnings(postBonus,'2027-10-28').some(w=>/retention period/i.test(w)));
-assert.equal(sandbox.status(postBonus),'WAITING TO CLOSE','Unconfirmed closing fee cannot produce safe status');
+assert.equal(sandbox.status(postBonus),'WAITING TO CLOSE','Future contractual hold still prevents a ready status');
