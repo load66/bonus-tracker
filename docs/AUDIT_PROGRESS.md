@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: codex — v3.8.14 early-close fee clarity — codex/v3.8.14-early-close-fee-clarity
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.8.14 early-close fee clarity (`codex/v3.8.14-early-close-fee-clarity`): remove the unhelpful unknown early-closing fee row from everyday open-bank details. Display positive early-close charges or explicit no-fee only when saved evidence supports them. Canonical close safety, fee uncertainty, saved rule text, Archive, fee education and financial records remain unchanged. Add synthetic bank and browser read-only regressions for positive/zero/conditional/unknown fee evidence, and bump app/cache to v3.8.14. Next: require UI/bonus/cloud unit and Chromium/WebKit PR CI, squash merge on green, verify main/Pages.
 
 - v3.8.13 account detail cleanup (`codex/v3.8.13-active-date-clarity`): active bank Key dates omit the blank Closed row; closed/historical records retain actual closure dates. Current bank details omit redundant Next bonus / Add eligibility rule projection, while Archive eligibility projections and saved rules remain untouched. Closing reminder is shortened. Added unit and browser regressions; CI validation pending.
 
