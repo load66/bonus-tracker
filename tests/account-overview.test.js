@@ -36,5 +36,24 @@ assert.match(archiveMarkup,/Exact original &lt;promotion&gt;/,'Saved promotion t
 assert.match(run('renderArchiveHistoryReview(entries[0])'),/^<section/,'Close review keeps its existing visible warning');
 assert.equal(JSON.stringify([...storage]),before,'Rendering and disclosure preferences do not write financial records');
 assert.equal(run('entries[0].reqMet'),'');
+// v3.8.8: bank identity cannot change section order, copy or default controls.
+const sectionKeys=markup=>[...markup.matchAll(/data-section="([^"]+)"/g)].map(m=>m[1]);
+const expected=['requirements','fees','closing','timers','eligibility','terms','history'];
+const untouched=JSON.stringify([...storage]);
+for(const bank of ['Synthetic National Bank','Synthetic Credit Union','Synthetic Future Bank']){
+ for(const state of [{reqMet:'',bonusRecd:''},{reqMet:'2026-03-01',bonusRecd:''},{reqMet:'2026-03-01',bonusRecd:'2026-04-01'}]){
+  const account={...row,...state,id:'SYN-CONSISTENT-'+bank,bank};
+  const saved=JSON.stringify(account),markup=sandbox.BT360.detailPanels(account);
+  assert.deepEqual(sectionKeys(markup),expected,'All open banks and milestones share section order');
+  assert.doesNotMatch(markup,/Safe to close|Hold &amp; close checks|Bonus kept after closing|Bonus retention check/,'No unsupported closing promise or duplicate checklist');
+  assert.match(markup,/<span>Review date<\/span>/,'Closing is a review, not a guarantee');
+  assert.equal((markup.match(/data-section="closing"/g)||[]).length,1);
+  assert.equal(JSON.stringify(account),saved);
+ }
+}
+const closedView=sandbox.BT360.detailPanels({...row,id:'SYN-CLOSED-VIEW',closed:'2026-05-01'});
+assert.doesNotMatch(closedView,/data-section="closing"/,'Closed records do not ask users to close again');
+assert.deepEqual(sectionKeys(closedView).filter(k=>k!=='deposits'),expected.filter(k=>k!=='closing'));
+assert.equal(JSON.stringify([...storage]),untouched,'Shared presentation does not migrate account data');
 console.log('Organized account overview passed: compact recorded dates, preserved sources, per-account disclosures, truthful save labels and no financial writes.');
 process.exit(0);
