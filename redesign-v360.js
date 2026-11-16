@@ -344,12 +344,15 @@ function monthlyFeeBadge(e){
 }
 function compactRow(e){
  const s=stage(e),progress=requirementProgress(e);
- const arrival=window.BTFinancialRules?.arrivalLabel?.(window.BTFinancialRules?.estimatedArrival?.(e));
- const next=(!e.closed&&!e.bonusRecd&&(progress.next||(!e.reqMet&&progress.total?'All checked · confirm completion':'')))||s.support||s.label;
+ const arrival=!e.closed&&!e.bonusRecd?window.BTFinancialRules?.arrivalLabel?.(window.BTFinancialRules?.estimatedArrival?.(e)):'';
+ // The recorded lifecycle takes precedence over any stale task/timer.
+ const next=e.closed?'Closed':e.bonusRecd?'Bonus received':e.reqMet?'Waiting for bonus':
+  (progress.next||(progress.total?'All checked · confirm completion':'')||s.support||s.label);
+ const shownStage=e.closed?'Closed':e.bonusRecd?'Bonus received':e.reqMet?'Waiting for bonus':s.label;
  return '<div class="card bt366-compact-account" data-bt-entry-id="'+safe(e.id)+'"><button type="button" class="card-h bt366-compact-row" onclick="openAccountFromActionCenter('+arg(e.id)+')">'
   +bankLogo(e.bank,true)+'<span class="bt360-grow"><b>'+safe(e.bank)+'</b>'+(audience==='all'?kindTag(e):'')+monthlyFeeBadge(e)+'<small>'+safe(next)+'</small>'+(arrival?'<small class="bt3684-arrival-compact">'+safe(arrival)+'</small>':'')
-  +(progress.total&&!e.closed&&!e.bonusRecd?'<span class="bt366-compact-track" role="progressbar" aria-label="Recorded requirement and task checks" aria-valuemin="0" aria-valuemax="'+progress.total+'" aria-valuenow="'+progress.done+'"><i style="width:'+progress.percent+'%"></i></span><small>'+progress.done+' of '+progress.total+' steps</small>':'')
-  +'</span><span class="bt366-compact-right"><strong>'+amount(e.bonus)+'</strong><em class="bt360-chip">'+safe(s.label)+'</em></span></button></div>';
+  +(progress.total&&!e.closed&&!e.bonusRecd&&!e.reqMet?'<span class="bt366-compact-track" role="progressbar" aria-label="Recorded requirement and task checks" aria-valuemin="0" aria-valuemax="'+progress.total+'" aria-valuenow="'+progress.done+'"><i style="width:'+progress.percent+'%"></i></span><small>'+progress.done+' of '+progress.total+' steps</small>':'')
+  +'</span><span class="bt366-compact-right"><strong>'+amount(e.bonus)+'</strong><em class="bt360-chip">'+safe(shownStage)+'</em></span></button></div>';
 }
 function primaryAction(e){
  const id=arg(e.id);
