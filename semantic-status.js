@@ -170,7 +170,7 @@
     if(financial&&financial.mode!=='legacy'){
       if(!financial.ok)return true;
       const c=financial.rules?.closure;
-      if(c&&c.restrictionType==='manual-review'&&!c.hold)return true;
+      if(window.BTFinancialRules?.retentionNeedsReview?.(e))return true;
     }
     try{if(window.BTCloseRules?.typeForEntry?.(e)==='review')return true}catch{}
     return false;
