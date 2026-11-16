@@ -327,7 +327,7 @@ body.bt360-detail-active .scroll{padding-bottom:calc(180px + env(safe-area-inset
 
 /* v3.6.11 bonus detail: mockup hierarchy, read-only financial terms */
 .bt360-detail-identity .bt366-detail-id{display:none}
-.bt360-detail-card .bt360-panel{background:transparent!important;border:0!important;padding:0!important;border-radius:0!important;margin:0 0 19px!important}
+.bt360-detail-card .bt360-panel{background:transparent;border:0;padding:0;border-radius:0;margin:0 0 19px}
 .bt360-detail-card .bt360-panel-title{margin:0 6px 9px}
 .bt360-detail-card .bt360-panel-title h3{font-size:16px;letter-spacing:-.2px}
 .bt360-detail-card .bt360-panel-body{padding:10px 16px;background:#12141C;border:1px solid #242732;border-radius:20px;overflow:hidden}
@@ -551,7 +551,7 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
 .bt3719-section-title{display:flex;align-items:baseline;justify-content:flex-start;gap:9px;margin:8px 4px 11px;min-width:0}
 .bt3719-section-title h3{font-size:17px;line-height:1.25;font-weight:900;letter-spacing:-.35px;flex:none}
 .bt3719-section-title .bt360-count,.bt3719-section-title .bt360-subtitle{font-size:12px;font-weight:600;color:#9da3b4}
-.bt3719-needs .bt360-featured{
+.bt3719-needs .bt360-featured:not(.bt3641-attention-item){
  background:#12141c!important;
  border:1px solid #513238!important;
  border-radius:19px!important;
@@ -774,7 +774,7 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
 .bt3640-archive-review:not([open])>:not(summary){display:none}
 /* Selectable Needs you cards; priority order and canonical actions stay intact. */
 .bt3641-attention-stack{margin-top:0}
-.bt3719-needs .bt3641-attention-item.is-selected{margin:8px!important;padding:12px!important}
+
 .bt3719-attention-list .bt3641-attention-toggle{border-bottom:0!important}
 .bt3719-attention-list .is-selected>.bt3641-attention-toggle{padding:2px 0 10px}
 .bt3641-attention-item{min-width:0;border-bottom:1px solid var(--border);overflow-wrap:anywhere}
@@ -1212,7 +1212,7 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt360-detail-card .bt3640-section{border:1px solid #2b303d;border-radius:16px;background:#10151e;margin:12px 0;overflow:hidden}
 .bt360-detail-card .bt3640-section>.bt360-panel-title{padding:16px;margin:0;min-height:56px;gap:8px}
 .bt360-detail-card .bt3640-section>.bt360-panel-title h3{font-size:15px;line-height:1.4}
-.bt360-detail-card .bt3640-section>.bt360-panel-body{padding:0 16px 16px}
+.bt360-detail-card .bt3640-section>.bt360-panel-body{padding:0 16px 16px;border:0;border-radius:0;background:transparent}
 .bt360-detail-card .bt3640-section-meta{font-size:11px;max-width:45%;line-height:1.4;text-align:right}
 .bt360-detail-card .bt3613-fee-line,.bt360-detail-card .bt3613-date-row{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;padding:14px 0}
 .bt360-detail-card .bt3613-fee-line>div,.bt360-detail-card .bt3613-date-row>div{max-width:none;text-align:left}

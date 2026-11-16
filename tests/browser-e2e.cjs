@@ -781,6 +781,7 @@ async function exercise(name,engine,url){
     const overviewBefore=await page.evaluate(()=>JSON.stringify([localStorage.getItem('bt_e_v4'),localStorage.getItem('bt_tc_archive_v1')]));
     for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
+      check('shared section frame applies at '+width+'px',await page.locator('[data-section=requirements]').evaluate(e=>getComputedStyle(e).borderRadius==='16px'&&getComputedStyle(e).borderTopWidth==='1px'));
       check('compact account overview fits '+width+'px',await page.locator('.bt360-detail-card').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&e.querySelectorAll('.bt3640-dates dl>div').length===4));
       if(width===390){await page.evaluate(()=>document.querySelector('.scroll').scrollTop=0);await page.screenshot({path:path.join(output,name+'-account-overview-390.png')});}
     }
@@ -2030,6 +2031,7 @@ async function exercise(name,engine,url){
     const selectedId=attentionOrder[1];
     for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
+      check('selection keeps card spacing consistent at '+width+'px',await page.locator('.is-selected').evaluate(e=>getComputedStyle(e).marginLeft==='0px'&&getComputedStyle(e).paddingLeft==='0px'&&getComputedStyle(e).borderRadius==='0px'));
       check('selected second bank fits '+width+'px',await page.locator('.is-selected').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
       check('selected bank actions retain touch targets at '+width+'px',await page.locator('.is-selected .bt360-actions button').evaluateAll(rows=>rows.length===2&&rows.every(e=>e.getBoundingClientRect().height>=44)));
     }
