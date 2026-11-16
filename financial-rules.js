@@ -302,6 +302,14 @@
     if(!reviewOn)return null;
     return {holdUntil,reviewOn,basis:'opened',months:h.value,bufferDays:buffer,bonusReceived:!!e.bonusRecd};
   }
+  // A legacy manual review solely about a service charge is no longer a
+  // closure gate. Unresolved bonus forfeiture or required retention still is.
+  function retentionNeedsReview(e){
+    const c=e?.financialRules?.closure;
+    if(!c||c.restrictionType!=='manual-review'||c.hold)return false;
+    const wording=clean([c.text,c.evidence?.quote,e.closeRuleText,e.closeRuleSourceSentence].filter(Boolean).join(' '));
+    return /\b(?:bonus|reward|clawback|forfeit|forfeiture|repay|repayment|retention|remain open|keep[^.]{0,45}open|maintain[^.]{0,45}open|must[^.]{0,50}open|hold period)\b/i.test(wording);
+  }
   function waiverText(w){
     if(w===null)return 'Fee-waiver conditions have not been confirmed.';
     if(w.operator==='none')return 'No fee waiver is offered under these terms.';
@@ -346,7 +354,7 @@
     if(['fees','waiver','companion'].includes(intent))missing=s.warnings.filter(x=>/fee|waiv/i.test(x));
     return{answer:text,step,missing,factIds:['financialrules'],local:true};
   }
-  const api=Object.freeze({VERSION,validate,summarize,answer,intentFor,waiverText,estimatedArrival,arrivalLabel,payoutWindowFromText,arrivalRule,arrivalSource,closeHoldInfo,balanceMeasurementWindow});
+  const api=Object.freeze({VERSION,validate,summarize,answer,intentFor,waiverText,estimatedArrival,arrivalLabel,payoutWindowFromText,arrivalRule,arrivalSource,closeHoldInfo,retentionNeedsReview,balanceMeasurementWindow});
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.BTFinancialRules=api;
 })(typeof window!=='undefined'?window:globalThis);
