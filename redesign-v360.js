@@ -1005,7 +1005,8 @@ function closingPanel(e){
  rows.push({label:'Before you close',detail:'Check pending payments and transfers. Confirm the final balance with the bank.'});
  return '<div data-bt-hold>'+accountSection(e,'closing','Closing the account',
   '<div class="bt3613-dates">'+dateActionRow(e,'Review date',closing,'close')+'</div>'
-  +'<div class="bt388-close-notes">'+rows.map(row=>'<div class="bt388-close-note"><b>'+safe(row.label)+'</b><p>'+safe(row.detail)+'</p></div>').join('')+'</div>',
+  +'<div class="bt388-close-notes">'+rows.map(row=>'<div class="bt388-close-note"><b>'+safe(row.label)+'</b><p>'+safe(row.detail)+'</p></div>').join('')+'</div>'
+  +(e.bonusRecd&&!e.closed?'<div class="bt389-record-closure"><button type="button" class="bt360-link" onclick="startCloseFlow('+arg(e.id)+',\'actual\')">Already closed at the bank? Save closure date</button></div>':''),
   e.closed?'Closed '+date(e.closed):'Check before closing','',!e.closed&&!!e.bonusRecd)+'</div>';
 }
 function nextCyclePanel(e){
