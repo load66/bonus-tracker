@@ -1061,11 +1061,16 @@ function simpleFees(e){
  if(e.closed)return '';
  const x=feeSnapshot(e);
  const monthly=x.monthlyKnown?x.monthly:'Not confirmed';
- const early=x.closeKnown?x.closeMain:'Not confirmed';
+ // An unknown closing charge is not a fee. Keep the missing evidence in the
+ // canonical closing review, but do not place a speculative warning on every
+ // current bank's everyday fee card. Show only evidence-backed terms.
+ const closingRow=x.closeKnown
+  ?'<div class="bt3810-pair"><span>Closing early</span><b>'+safe(x.closeMain)+'</b></div>'
+  :'';
  return '<section class="bt3810-card bt3810-fees"><h3>Fees</h3><div class="bt3810-pair"><span>Monthly</span><b>'+safe(monthly)+'</b></div>'
   +(x.monthly!=='$0'&&x.summary&&x.summary!=='Waiver conditions not confirmed'?'<div class="bt3810-fee-note">Avoid fee: '+safe(x.summary)+'</div>':'')
   +(x.companions.length?'<div class="bt3810-fee-note">Other required accounts may have fees.</div>':'')
-  +'<div class="bt3810-pair"><span>Closing early</span><b class="'+(!x.closeKnown?'bt3810-caution':'')+'">'+safe(early)+'</b></div></section>';
+  +closingRow+'</section>';
 }
 function simpleNextCycle(e){
  if(!e.bonusRecd&&!e.closed)return '';

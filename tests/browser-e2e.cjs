@@ -770,8 +770,22 @@ async function exercise(name,engine,url){
        el.querySelectorAll('dt').length===3&&
        !Array.from(el.querySelectorAll('dt')).some(dt=>dt.textContent.trim()==='Closed')));
 
-    check('fee warning stays visible but unknown closing fee is never treated as $0',
-      await page.locator('.bt3810-fees').innerText().then(t=>t.includes('$15')&&t.includes('Not confirmed')));
+    check('unknown closing fees are hidden without changing the monthly fee',
+      await page.locator('.bt3810-fees').innerText().then(t=>t.includes('$15')&&!t.includes('Closing early')&&!t.includes('Not confirmed')));
+    check('supported early-close fee and explicit no-fee still render in shared bank details',
+      await page.evaluate(()=>{
+        const before=JSON.stringify(entries[0]),stored=localStorage.getItem(SK),original=entries[0];
+        const paid={...original,financialRules:{...original.financialRules,
+          closure:{earlyCloseFee:25,feeEvidence:{quote:'$25 early closing fee within 180 days.'}}}};
+        const exempt={...original,financialRules:{...original.financialRules,
+          closure:{earlyCloseFee:0,feeEvidence:{quote:'No early closing fee.'}}}};
+        const conditional={...original,financialRules:{...original.financialRules,
+          closure:{earlyCloseFee:0,feeEvidence:{quote:'No early closing fee after 180 days.'}}}};
+        return BT360.detailPanels(paid).includes('$25 early-close fee')&&
+          BT360.detailPanels(exempt).includes('No early-closing fee')&&
+          !BT360.detailPanels(conditional).includes('Closing early')&&
+          JSON.stringify(entries[0])===before&&localStorage.getItem(SK)===stored;
+      }));
     check('no advanced, notes, previous reminders or source disclosures on the main screen',
       await page.locator('.bt360-detail-card details').count()===0&&
       !(await page.locator('.bt360-detail-card').innerText()).includes('Original terms:'));
