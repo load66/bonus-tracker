@@ -1009,13 +1009,16 @@ function closingPanel(e){
   e.closed?'Closed '+date(e.closed):'Check before closing','',!e.closed&&!!e.bonusRecd)+'</div>';
 }
 function nextCyclePanel(e){
- const info=eligibilityDateInfo(e,eligibleInfo(e));
  const complete=!!e.bonusRecd,closed=!!e.closed;
+ const projected=eligibilityDateInfo(e,eligibleInfo(e));
+ const info=!complete&&!closed&&projected.value==='Next date not confirmed'
+  ?{value:'After this bonus',note:'Complete the current bonus before reviewing the next offer',action:false}
+  :projected;
  const intro=complete?'<p class="bt389-cycle-status">Bonus received '+safe(date(e.bonusRecd))+' · '+(closed?'Account closed '+safe(date(e.closed)):'Account still open')+'</p>':'';
  const label=complete||closed?'Next bonus review':'Future bonus review';
  return accountSection(e,'eligibility','Next bonus cycle',intro+
   '<div class="bt3613-dates">'+dateActionRow(e,label,info,'eligibility')+'</div>',
-  info.value==='Not repeatable'?'One-time offer':info.action?'Rule review needed':info.value);
+  info.value==='Not repeatable'?'One-time offer':info.action?'Rule review needed':info.value,'',complete||closed);
 }
 function detailPanels(e){
  const code=stage(e).code,ready=code==='READY_TO_CLOSE',closed=!!e.closed;
