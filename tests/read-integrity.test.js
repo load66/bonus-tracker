@@ -140,7 +140,7 @@ setTimeout(()=>{
     assert(localStorage.getItem('bt_e_v4')===beforeReview,'Historical review rewrote stored accounts');
 
     // The retired termination-fee timer modal must no longer exist.
-    assert.equal(typeof sandbox.feeCheckRemoveTimer,'undefined','Fee-specific timer removal action was not retired');
+    assert(typeof sandbox.feeCheckRemoveTimer==='undefined','Fee-specific timer removal action was not retired');
     const removed=liveEntries().find(e=>e.bank==='Synthetic Harbor');
     assert(removed&&removed.earlyCloseFee===null,'Historic unknown fee field was altered');
     assert(sandbox.status(removed)!=='SAFE TO CLOSE','Unresolved documented retention was marked safe');
