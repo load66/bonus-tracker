@@ -762,6 +762,7 @@ function feeSnapshot(e){
  }
  const terms=[monthlyQuote,waiverSource,e.monthlyFeeWaiverText,e.avoidMonthlyFeeText,fee?.evidence?.quote,e.feeScheduleRaw]
   .map(v=>String(v||'').trim()).filter(Boolean);
+ if(historicalProjection.historical&&monthly==='Not confirmed')monthly='Not listed in saved terms';
  const source=String(e.feeScheduleSourceUrl||'').trim();
  return {monthly,monthlyKnown,companions,summary:summary||'Waiver conditions not confirmed',terms:[...new Set(terms)].join('\n\n'),
   historical:historicalProjection.historical,historicalSource:historicalProjection.source,source:/^https:\/\/[^<>"'\s]+$/i.test(source)?source:''};
