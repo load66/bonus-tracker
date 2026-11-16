@@ -153,3 +153,9 @@ For a tier whose official enrolled source expressly defines numbered days from o
 
 If the enrolled payout term merely says *within N days of opening*, preserve that contractual upper limit; do **not** label the account-opening day as a meaningful expected payment date. Display the payment deadline and state that the earliest day is unspecified. Keep independently documented churn lookback periods visible, including both payment-receipt and account-closure clocks when the offer requires both. No invented user events, daily balance history, bank holidays or automated completion stamps.
 
+## Latest recorded eligibility rule (v3.8.11)
+
+The eligibility planner uses one centralized, read-only policy selector for Tracker, detail, Archive, lifecycle status, closing follow-up and future entries. It matches the canonical bank family plus personal/business audience, selects the newest policy-specific timestamp or account-opening vintage, and materializes that rule in a temporary projection. It does not alter historical records or copy later lifecycle dates into earlier cycles.
+
+The planner accepts a structurally complete recorded rule without a separate UI verification state. Exact recorded wording outranks a stale legacy duration; all supported restrictions must clear; missing or conditional inputs remain unresolved. The displayed date includes the separately disclosed two-day planning buffer and leads to **Review offer**, never a promise of eligibility. Strict source/provenance validation remains mandatory for generated imports and is not weakened by this runtime behavior.
+

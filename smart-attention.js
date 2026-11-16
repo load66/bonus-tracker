@@ -174,7 +174,7 @@
   function specificTask(e,next){
     const {stage}=next,base=(title,cta,target='lifecycle',detail=next.explanation)=>({title,cta,target,detail,context:next.context});
     if(next.label==='Review financial rules')return base('Verify saved offer rules','Review terms');
-    if(e.closed)return base(next.context.confirmed?(stage.code==='ELIGIBLE'?'Review a new offer':'Wait for eligibility'):'Verify eligibility dates','Review eligibility');
+    if(e.closed)return base(next.context.confirmed?(stage.code==='ELIGIBLE'?'Review a new offer':'Wait for eligibility'):'Add eligibility date','Review eligibility');
     if(e.bonusRecd){
       if(next.kind==='close')return base('Review and close the account','Review closure','milestone');
       return base(stage.code==='HOLD_OPEN'?'Keep the account open':'Verify closure terms','Review close checks');

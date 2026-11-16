@@ -71,7 +71,7 @@ const parsedJson=sandbox.btParseEntryFileText(JSON.stringify({kind:'BonusTracker
 assert(parsedJson.bank==='Citi'&&parsedJson.bonus===325,'JSON entry file did not parse');
 assert(parsedJson.churnBasis==='bonus'&&parsedJson.eligibilityVerified===true&&parsedJson.churnPeriodValue===12&&parsedJson.churnPeriodUnit==='months','Imported repeatable entry did not preserve verified T&C churn evidence');
 let rejected=false;
-try{sandbox.btParseEntryFileText(JSON.stringify({kind:'BonusTrackerEntry',entry:{...payload,eligibilityEvidenceText:'',eligibilityEvidenceSource:''}}),'MissingEvidence.json')}catch(e){rejected=/Churn eligibility is not verified/.test(String(e.message))}
+try{sandbox.btParseEntryFileText(JSON.stringify({kind:'BonusTrackerEntry',entry:{...payload,eligibilityEvidenceText:'',eligibilityEvidenceSource:''}}),'MissingEvidence.json')}catch(e){rejected=/Strict JSON eligibility source validation failed/.test(String(e.message))}
 assert(rejected,'Import accepted a repeatable bonus with no T&C churn evidence');
 
 rejected=false;

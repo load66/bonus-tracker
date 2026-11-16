@@ -1305,7 +1305,7 @@ async function exercise(name,engine,url){
       return entries.filter(e=>e.id.startsWith('e2e-legacy-')).map(e=>({bank:e.bank,tracker:window.churnReadyDate?.(e),archive:BT360.eligibleInfo(e)?.eligible,label:BT360.eligibleInfo(e)?.label}));
     });
     check('Archive and Tracker reuse identical supported legacy dates',
-      legacyDates.every(x=>x.tracker&&x.tracker===x.archive&&x.label.includes('not verified'))
+      legacyDates.every(x=>x.tracker&&x.tracker===x.archive&&x.label.includes('saved waiting period'))
       &&legacyDates.find(x=>x.bank==='Bank of America')?.archive==='2027-01-18'
       &&legacyDates.find(x=>x.bank==='Spruce')?.archive==='2027-04-25'
       &&legacyDates.find(x=>x.bank==='Simmons')?.archive==='2027-05-01');

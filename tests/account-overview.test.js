@@ -17,7 +17,7 @@ assert.match(html,/<dt>Requirements met<\/dt><dd class="is-missing">—<\/dd>/,'
 assert.match(html,/Apr 1, 2026/,'Saved payout date remains visible');
 assert.match(html,/<h3>Fees<\/h3>/,'Relevant fee warnings remain compact');
 assert.match(html,/Next bonus/);
-assert.match(html,/Not confirmed/,'Unknown eligibility never becomes an invented date');
+assert.match(html,/Add eligibility rule/,'Unknown eligibility must request a rule instead of inventing a date');
 assert.match(sandbox.BT360.detailFooter(row),/Record closure/,'Paid account can record an actual bank closure');
 assert.match(sandbox.BT360.detailFooter(row),/>Edit<\/button>/,'Saved information stays editable');
 assert.doesNotMatch(html,/<details\b|Documents &amp; activity|See saved requirements|Saved terms|Activity|Previous cycle reminders|Review rule|Advanced|Original terms missing/i,
@@ -62,5 +62,16 @@ assert.match(sandbox.BT360.accountSaveStatus(row),/data-local-save="true">Saved 
 assert.match(sandbox.BT360.accountSaveStatus({...row,notes:'Unsaved edit'}),/Local save needs review/);
 assert.equal(JSON.stringify([...storage]),before,'Detail, history and backup previews must not write financial data');
 assert.equal(run('entries[0].reqMet'),'','Payout cannot fill an unknown completion date');
-console.log('Simple account overview passed: four lifecycle states, verified-only next cycle, no advanced UI, unchanged data, archived terms and portable backup.');
+
+const oldCiti={id:'CIT-P-OLD',bank:'Citi',accountType:'personal',opened:'2025-01-01',closed:'2026-11-16',churnable:true,churnability:'repeatable',
+ eligibilityRules:[{id:'old-rule',basis:'account-closed',periodValue:1,periodUnit:'years'}]};
+const latestCiti={id:'CIT-P-LATEST',bank:'Citibank',accountType:'personal',opened:'2026-08-10',churn:'1',churnable:true,churnability:'repeatable',
+ sourceEligibilityBasis:'account-closed',eligibilityText:'Must not have owned a Citi checking account in the last 365 days.'};
+run('entries='+JSON.stringify([oldCiti,latestCiti]));
+assert.equal(run('btEligibilityPolicyEntry(entries[0]).eligibilityPolicySourceEntryId'),'CIT-P-LATEST','A later account-opening rule did not replace an older rule from the same bank family');
+assert.equal(run('btEligibilityPolicyEntry(entries[0]).eligibilityRules[0].periodValue'),365,'The latest Citi 365-day rule was not materialized in the policy overlay');
+assert.equal(run('btEligibilityPolicyEntry(entries[0]).eligibilityRules[0].basis'),'account-ownership-ended','The latest Citi ownership rule kept the stale closure basis');
+assert.equal(run('churnReadyDate(entries[0])'),'2027-11-18','Citi did not use exact 365 days plus the two-day planning buffer');
+assert.equal(oldCiti.eligibilityRules[0].periodValue,1,'Latest-policy projection mutated historical account data');
+console.log('Simple account overview passed: four lifecycle states, recorded-rule next cycle, no advanced UI, unchanged data, archived terms and portable backup.');
 process.exit(0);

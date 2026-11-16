@@ -30,8 +30,8 @@ vm.runInContext(fs.readFileSync('churn-close-policy.js','utf8'),sandbox,{filenam
 const verified={bonusRecd:'2026-08-14',closed:'2026-08-18',churn:'1',churnPeriodValue:12,churnPeriodUnit:'months',churnable:true,churnability:'repeatable',sourceEligibilityBasis:'bonus-received',eligibilityEvidenceText:evidence,eligibilityEvidenceSource:'official-promotion-terms'};
 assert(sandbox.btChurnSafetyBufferDays===2,'Global churn safety buffer is not 2 days');
 assert(sandbox.churnBufferDaysFor(verified)===2,'Verified repeatable bank did not receive 2-day buffer');
-assert(sandbox.churnBufferDaysFor({churnable:true,churnability:'repeatable',churn:'1',sourceEligibilityBasis:'bonus-received'})===0,'Unverified T&C rule incorrectly received a buffer');
-assert(sandbox.churnBufferDaysFor({churnable:false,churnability:'not-repeatable'})===0,'Unverified non-repeatable offer incorrectly received churn buffer');
+assert(sandbox.churnBufferDaysFor({churnable:true,churnability:'repeatable',churn:'1',sourceEligibilityBasis:'bonus-received'})===2,'A complete recorded rule did not receive the standard buffer');
+assert(sandbox.churnBufferDaysFor({churnable:false,churnability:'not-repeatable'})===0,'A non-repeatable offer incorrectly received churn buffer');
 
 assert(sandbox.btOfficialEligibilityDate(verified)==='2027-08-14','Official eligibility date is not the exact source date + cooldown');
 assert(sandbox.nextReopen(verified)==='2027-08-16','Bonus-received rule is not source date + 12 months + 2 days');
@@ -45,7 +45,7 @@ assert(sandbox.nextReopen(closed)==='2028-03-07','Closed-date source rule did no
 const sixMonths={opened:'2026-01-31',churnPeriodValue:6,churnPeriodUnit:'months',churnable:true,churnability:'repeatable',sourceEligibilityBasis:'account-opened',eligibilityEvidenceText:'Not eligible if you opened a checking account within the past 6 months.',eligibilityEvidenceSource:'official-promotion-terms'};
 assert(sandbox.nextReopen(sixMonths)==='2026-08-02','Six calendar months was incorrectly treated as a day count');
 
-assert(sandbox.nextReopen({bonusRecd:'2026-08-14',churn:'1',churnable:true,churnability:'repeatable',sourceEligibilityBasis:'bonus-received'})==='','Countdown was created without T&C evidence');
+assert(sandbox.nextReopen({bonusRecd:'2026-08-14',churn:'1',churnable:true,churnability:'repeatable',sourceEligibilityBasis:'bonus-received'})==='2027-08-16','A complete recorded rule did not calculate without a verification stamp');
 
 const legacyClosed={closed:'2026-01-15',churn:'2',churnable:true,churnability:'repeatable'};
 assert(sandbox.nextReopen(legacyClosed)==='2028-01-17','Closed legacy 2-year record did not regain its cooldown countdown');
@@ -62,7 +62,7 @@ const conditionalText='Not available if an account was closed with a negative ba
 const unresolvedStructured={closed:'2026-08-01',churn:'2',churnable:true,churnability:'repeatable',tcSourceRaw:conditionalText,eligibilityRules:[{id:'negative-close-3y',basis:'account-closed',periodValue:3,periodUnit:'years',condition:{type:'closed-with-negative-balance',expected:true},evidenceText:conditionalText,evidenceSource:'official-promotion-terms'}]};
 assert(sandbox.btHasStructuredEligibilityEvidence(unresolvedStructured)===true,'Structured T&C was not detected');
 assert(sandbox.nextReopen(unresolvedStructured)==='','Structured unresolved T&C incorrectly fell back to a legacy churn date');
-assert(sandbox.nextReopen({...sixMonths,churnPeriodValue:180,churnPeriodUnit:'days'})==='','Mismatched 180-day period passed a 6-month T&C rule');
+assert(sandbox.nextReopen({...sixMonths,churnPeriodValue:180,churnPeriodUnit:'days'})==='2026-08-02','Recorded eligibility wording did not take priority over a stale legacy period');
 
 const current={...verified,closed:'',eligibilityEvidenceText:'New checking customers only. '+evidence};
 assert(sandbox.btApplicationReadyDate(current)==='2027-08-16','New-customer wording hid a verified cooldown');
@@ -78,13 +78,28 @@ assert(explicitlyReviewed.churnBasis==='bonus'&&explicitlyReviewed.sourceEligibi
 assert(explicitlyReviewed.churnTrackingPolicy==='source-bonus-received-plus-2-day-buffer','Explicitly reviewed source tracking policy was not calculated');
 assert(sandbox.entries[0].eligibilityVerified===undefined,'Explicit review mutated the original saved account object');
 assert(/12 months after bonus payout received/.test(sandbox.btFutureEligibilityText(sandbox.entries[0]))&&/2-day safety buffer/.test(sandbox.btFutureEligibilityText(sandbox.entries[0])),'Future eligibility text does not disclose exact source basis + safety buffer');
-assert(/T&C verification required/.test(sandbox.btFutureEligibilityText({churn:'1',churnable:true,churnability:'repeatable'})),'Missing T&C evidence is not surfaced for review');
+assert(/Add eligibility rule/.test(sandbox.btFutureEligibilityText({churn:'1',churnable:true,churnability:'repeatable'})),'An incomplete recorded rule is not surfaced for correction');
 assert(saved.length===0,'Page load must not rewrite stored eligibility stamps');
 
 const pastVerified={bonusRecd:'2024-08-14',closed:'2024-08-18',churn:'1',churnPeriodValue:12,churnPeriodUnit:'months',churnable:true,churnability:'repeatable',sourceEligibilityBasis:'bonus-received',eligibilityEvidenceText:evidence,eligibilityEvidenceSource:'official-promotion-terms'};
-assert(sandbox.btVerifiedApplicationReached(pastVerified)===true,'A verified application-ready date in the past was not treated as reached');
+assert(sandbox.btRecordedApplicationReached(pastVerified)===true,'A recorded application-ready date in the past was not treated as reached');
 const legacyPassed={closed:'2020-01-01',churn:'1',churnable:true,churnability:'repeatable'};
-assert(sandbox.daysLeft(legacyPassed)===0&&sandbox.btVerifiedApplicationReached(legacyPassed)===false,'A passed legacy churn estimate was treated as verified eligibility');
+assert(sandbox.daysLeft(legacyPassed)===0&&sandbox.btRecordedApplicationReached(legacyPassed)===true,'A complete legacy recorded rule did not become ready for offer review');
+
+const citiRecorded={bank:'Citi',closed:'2026-11-16',churn:'1',churnable:true,churnability:'repeatable',
+  sourceEligibilityBasis:'account-closed',eligibilityText:'Must not have owned a Citi checking account in the last 365 days.'};
+assert(G.recorded(citiRecorded).rules[0].basis==='account-ownership-ended','Citi ownership wording did not choose the ownership-ended clock');
+assert(G.recorded(citiRecorded).rules[0].period.value===365&&G.recorded(citiRecorded).rules[0].period.unit==='days','Citi exact 365-day rule did not override the generic one-year field');
+assert(sandbox.btOfficialEligibilityDate(citiRecorded)==='2027-11-16','Citi official date is not closure plus exactly 365 days');
+assert(sandbox.nextReopen(citiRecorded)==='2027-11-18','Citi review date did not add the separate two-day safety buffer');
+assert(!G.validate(citiRecorded).ok,'Runtime recorded-policy planning must not weaken strict import source validation');
+
+const chaseBusinessRecorded={bank:'Chase Biz',closed:'2026-07-18',offerEnrollmentDate:'2026-05-07',churn:'2',churnable:true,churnability:'repeatable',sourceEligibilityBasis:'offer-enrollment',closedWithNegativeBalance:false,
+ eligibilityText:'Not eligible if account closed within 90 days or closed with a negative balance within the last 3 years. Signers can receive only one business checking offer every two years from last offer enrollment date.'};
+const chaseRules=G.recorded(chaseBusinessRecorded).rules;
+assert(chaseRules.some(r=>r.basis==='offer-enrollment'&&r.period.value===2&&r.period.unit==='years'),'Chase business enrollment restriction was dropped when other recorded restrictions were present');
+assert(chaseRules.some(r=>r.basis==='account-closed'&&r.period.value===90&&r.period.unit==='days'),'Chase business 90-day closure restriction was dropped');
+assert(chaseRules.some(r=>r.basis==='account-closed'&&r.period.value===3&&r.period.unit==='years'&&r.condition?.type==='closed-with-negative-balance'),'Chase business conditional negative-balance restriction was dropped');
 
 const workflow=fs.readFileSync('.github/workflows/close-rules.yml','utf8');
 const index=fs.readFileSync('index.html','utf8');
@@ -98,4 +113,4 @@ assert(swVersion&&index.includes('./sw.js?v='+swVersion),'Index does not force-r
 assert(!index.includes('finance-page.js')&&!sw.includes('finance-page.js'),'Retired Finance assets cannot return through PWA cache');
 assert(sw.includes("'./eligibility-gate.js'"),'Eligibility gate is missing from the offline cache');
 
-console.log('Eligibility countdown passed: T&C evidence chooses the exact clock and unit, unverified rules fail closed, and the 2-day safety buffer is separate from official eligibility');
+console.log('Eligibility countdown passed: latest recorded wording chooses the exact clock and unit, missing rules stay unresolved, strict import validation remains separate, and the 2-day safety buffer is preserved');

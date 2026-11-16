@@ -110,7 +110,7 @@
     return false;
   }
   function churnReached(e){
-    try{if(typeof window.btVerifiedApplicationReached==='function')return !!window.btVerifiedApplicationReached(e)}catch{}
+    try{if(typeof window.btRecordedApplicationReached==='function')return !!window.btRecordedApplicationReached(e)}catch{}
     return daysLeft(e)===0;
   }
   function statusFixed(e){

@@ -59,8 +59,8 @@ module.exports={sandbox,document,app,storage,errors};
 if(require.main===module)setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.8.10',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.8.10',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.8.11',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.8.11',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     const trackerRender=sandbox.BT360;
     const settingsMarkup=trackerRender.settings();
     assert(!/Historical review|History repair|requirements date matches|Review missing history/i.test(settingsMarkup),'Internal history diagnostics must not clutter Settings');
@@ -91,9 +91,9 @@ if(require.main===module)setTimeout(()=>{
     assert(!archiveMarkup.includes('Still waiting &lt;span'),'Archive heading exposes escaped HTML');
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.13',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
     assert(sandbox.tcV3WellsConsumerRulesVersion==='3.5.2',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
-    assert(sandbox.btChurnCloseDatePolicyVersion==='3.5.2',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
+    assert(sandbox.btChurnCloseDatePolicyVersion==='3.8.11',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.13',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
-    assert(sandbox.BTEligibilityGate?.VERSION==='1.3.0',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
+    assert(sandbox.BTEligibilityGate?.VERSION==='1.4.0',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
     assert(sandbox.btLifecycleStatusVersion==='3.4.74-status1',`Unexpected lifecycle status version ${sandbox.btLifecycleStatusVersion}`);
     assert(sandbox.btSmartAttentionVersion==='3.4.74-action1',`Unexpected Action Center version ${sandbox.btSmartAttentionVersion}`);
     assert(sandbox.btUiFeedbackVersion==='3.4.74-feedback1',`Unexpected UI feedback version ${sandbox.btUiFeedbackVersion}`);
@@ -344,10 +344,10 @@ if(require.main===module)setTimeout(()=>{
     sandbox.btModalSet('bank','Wells Fargo');sandbox.btModalSet('accountType','personal');sandbox.btModalSet('bonus','400','number');sandbox.setModalChurnability('repeatable');sandbox.setModalChurnRule('1');sandbox.setModalChurnBasis('bonus');sandbox.btModalSet('opened','2026-08-10');sandbox.btModalSet('monthlyFeeYNText','Not stated in bonus disclosure — separate Wells Fargo fee schedule applies');sandbox.btModalSet('avoidMonthlyFeeText','Review the Wells Fargo Consumer Account Fee and Information Schedule.');vm.runInContext("modal.churnPeriodValue=12;modal.churnPeriodUnit='months';modal.eligibilityEvidenceText='Not eligible if you received a Wells Fargo consumer checking bonus within the past 12 months.';modal.eligibilityEvidenceSource='official-promotion-terms'",sandbox);
     sandbox.btWizardStep(1);
     const wizardBasics=sandbox.rModal();
-    assert(/Can this bonus be earned again\? \*/.test(wizardBasics)&&/(?:Eligibility clock starts from|Restriction 1 clock)/.test(wizardBasics)&&/Edit eligibility rules/.test(wizardBasics)&&/Churn T&C verified/.test(wizardBasics),'Guided editor did not show verified T&C churn evidence');
+    assert(/Can this bonus be earned again\? \*/.test(wizardBasics)&&/(?:Eligibility clock starts from|Restriction 1 clock)/.test(wizardBasics)&&/Edit eligibility rules/.test(wizardBasics)&&/Eligibility rule/.test(wizardBasics)&&!/Churn T&C (?:verified|not verified)/.test(wizardBasics),'Guided editor did not show the recorded eligibility rule cleanly');
     sandbox.btWizardStep(4);
     const wizardReview=sandbox.rModal();
-    assert(/Future eligibility/.test(wizardReview)&&/12 months after bonus payout received \+ 2-day safety buffer/.test(wizardReview),'Guided review did not show the T&C-verified source-based eligibility policy');
+    assert(/Future eligibility/.test(wizardReview)&&/12 months after bonus payout received \+ 2-day safety buffer/.test(wizardReview),'Guided review did not show the recorded source-based eligibility policy');
 
     const fourLeaf='FourLeaf Checking Up to $550 Bonus Offer. Open a Free Checking, Smart Checking, or Student Checking account between February 2, 2026 and December 31, 2026. Have a Qualifying Direct Deposit post within ninety (90) calendar days of account opening. A Qualifying Direct Deposit is a recurring electronic deposit of a paycheck, pension, or government benefits of $500.00 or more. The First Direct Deposit Bonus of $350 will be deposited within sixty (60) calendar days following the initial Qualifying Direct Deposit. Continue to have a Qualifying Direct Deposit for twelve (12) consecutive months for an additional $100 and twenty-four (24) consecutive months for another $100. The checking account must remain open and in good standing up to and including the date each bonus is deposited. You must not have previously received a new checking account opening related bonus from FourLeaf.';
     const fr=sandbox.tcV3Analyze(fourLeaf,{noGlobalFallback:true});
@@ -359,29 +359,20 @@ if(require.main===module)setTimeout(()=>{
     assert(/24 consecutive/i.test(fr.actionPlan||''),'FourLeaf 24-month milestone plan missing');
     assert(typeof sandbox.churnDecisionForEntry==='function'&&typeof sandbox.hasSavedChurnDecision==='function','Churnability intake helpers missing');
     assert(sandbox.hasSavedChurnDecision({bank:'Repeat Bank',churnable:true,churnability:'repeatable',churn:'2',churnPeriodValue:24,churnPeriodUnit:'months',sourceEligibilityBasis:'bonus-received',eligibilityEvidenceText:'Not eligible if you received a Repeat Bank checking bonus within the past 24 months.',eligibilityEvidenceSource:'official-promotion-terms'})===true,'T&C-backed repeatable decision was not recognized');
-    assert(sandbox.hasSavedChurnDecision({bank:'Repeat Bank',churnable:true,churnability:'repeatable',churn:'2',sourceEligibilityBasis:'bonus-received'})===false,'Repeatable decision without T&C evidence was incorrectly accepted');
+    assert(sandbox.hasSavedChurnDecision({bank:'Repeat Bank',churnable:true,churnability:'repeatable',churn:'2',sourceEligibilityBasis:'bonus-received'})===true,'A structurally complete recorded rule still required separate verification evidence');
     assert(sandbox.hasSavedChurnDecision({bank:'Unknown Bank',churn:'',churnability:''})===false,'Unknown churnability was incorrectly accepted');
     const gate=vm.runInContext(`(function(){
       const before=entries.length;
-      openAdd();modal.bank='Gate Test Bank';modal.bonus=100;
-      const blocked=saveEntry();
-      const afterBlocked=entries.length;
-      modal.churnable=true;modal.churnability='repeatable';modal.churn='2';modal.churnPeriodValue=24;modal.churnPeriodUnit='months';
-      const missingBasis=saveEntry();
-      const afterMissingBasis=entries.length;
-      setModalChurnBasis('bonus');
-      const missingEvidence=saveEntry();
-      const afterMissingEvidence=entries.length;
-      modal.eligibilityEvidenceText='Not eligible if you received a Gate Test Bank checking bonus within the past 24 months.';
-      modal.eligibilityEvidenceSource='official-promotion-terms';
-      const saved=saveEntry();
-      const created=entries.find(x=>x.bank==='Gate Test Bank');
-      return{before,blocked,afterBlocked,missingBasis,afterMissingBasis,missingEvidence,afterMissingEvidence,saved,created};
+      openAdd();modal.bank='Gate No Rule Bank';modal.bonus=100;modal._skipDuplicateCheck=true;modal._skipManualReplacePrompt=true;
+      const noRuleSaved=saveEntry();const noRule=entries.find(x=>x.bank==='Gate No Rule Bank');
+      openAdd();modal.bank='Gate Recorded Bank';modal.bonus=100;modal.opened='2026-01-01';modal.bonusRecd='2026-02-01';modal._skipDuplicateCheck=true;modal._skipManualReplacePrompt=true;
+      modal.churnable=true;modal.churnability='repeatable';modal.churn='2';modal.churnPeriodValue=24;modal.churnPeriodUnit='months';setModalChurnBasis('bonus');
+      const recordedSaved=saveEntry();const recorded=entries.find(x=>x.bank==='Gate Recorded Bank');
+      return{before,noRuleSaved,noRule,recordedSaved,recorded,noRuleDate:churnReadyDate(noRule),recordedDate:churnReadyDate(recorded)};
     })()`,sandbox);
-    assert(gate.blocked===false&&gate.afterBlocked===gate.before,'New bank saved without a churnability decision');
-    assert(gate.missingBasis===false&&gate.afterMissingBasis===gate.before,'Repeatable bank saved without an eligibility start basis');
-    assert(gate.missingEvidence===false&&gate.afterMissingEvidence===gate.before,'Repeatable bank saved from dropdown choices without T&C evidence');
-    assert(gate.saved===true&&gate.created?.churnability==='repeatable'&&gate.created?.churnBasis==='bonus'&&gate.created?.eligibilityVerified===true,'T&C-verified repeatable churn decision was not saved');
+    assert(gate.noRuleSaved===true&&gate.noRule&&gate.noRuleDate==='','A bank without an eligibility rule was blocked or received an invented date');
+    assert(gate.recordedSaved===true&&gate.recorded?.churnability==='repeatable'&&gate.recorded?.churnBasis==='bonus','A complete recorded repeatable rule was not saved');
+    assert(gate.recordedDate==='2028-02-03','A complete recorded rule did not calculate without a separate verification step');
     const nonrepeat=vm.runInContext(`(function(){
       openAdd();modal.bank='Lifetime Unique Credit Union';modal.bonus=50;modal._skipDuplicateCheck=true;modal._skipManualReplacePrompt=true;modal.churnable=false;modal.churnability='not-repeatable';modal.churnReason='One-time offer';modal.eligibilityEvidenceText='This bonus is available once per lifetime and is not repeatable.';modal.eligibilityEvidenceSource='official-promotion-terms';
       const saved=saveEntry();const created=entries.find(x=>x.bank==='Lifetime Unique Credit Union');return{saved,created};
@@ -409,7 +400,7 @@ if(require.main===module)setTimeout(()=>{
     if(typeof sandbox.R==='function')sandbox.R();
     assert(app.innerHTML.length>1000,'Tracker failed to render after regression run');
     assert(!errors.some(x=>x.startsWith('ERROR ')),`Runtime console errors: ${errors.join(' | ')}`);
-    console.log(`Full app smoke passed: ${scripts.length} runtime scripts · ${report.passed}/${report.total} regression checks · transactional restore, T&C-evidence-gated eligibility, Wells consumer accuracy, FourLeaf archive, and mobile Safari release verified`);
+    console.log(`Full app smoke passed: ${scripts.length} runtime scripts · ${report.passed}/${report.total} regression checks · transactional restore, recorded eligibility policy, Wells consumer accuracy, FourLeaf archive, and mobile Safari release verified`);
   }catch(err){console.error(err.stack||err);process.exitCode=1}
 },2200);
 

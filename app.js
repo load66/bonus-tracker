@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.8.10';
+const APP_VERSION='3.8.11';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -542,14 +542,65 @@ function churnDecisionForEntry(e){
   if(e.churnable===true||/^(?:repeatable|churnable)$/i.test(String(e.churnability||'').trim())||['180','1','2','3'].includes(churn)||parseInt(e.churnPeriodValue||0,10)>0)return'repeatable';
   return'';
 }
+const ELIGIBILITY_POLICY_FIELDS=[
+  'churn','churnable','churnability','churnBasis','sourceEligibilityBasis','churnPeriodValue','churnPeriodUnit',
+  'eligibilityRules','eligibilityScope','eligibilityText','eligibilityEvidenceText','eligibilityAnchorEvidenceText',
+  'eligibilityEvidenceSource','currentCustomerExcluded','currentCustomerEvidenceText','mustCloseBeforeReapply',
+  'reapplicationAction','churnReason','churnDecisionSource','churnDecisionConfirmedAt','termsVerifiedAt','tcSourceUpdatedAt'
+];
+function eligibilityPolicyIdentity(e){
+  try{return entryBankIdentity(e).key}catch{}
+  const bank=String(e?.bank||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  const audience=normalizeAccountType(e?.accountType)||inferAccountTypeForEntry(e)||'personal';
+  return bank+'|'+audience;
+}
+function eligibilityPolicyRecordedAt(e){
+  const policyStamp=[e?.eligibilityPolicyRecordedAt,e?.termsVerifiedAt,e?.churnDecisionConfirmedAt,e?.tcSourceUpdatedAt,e?.updated]
+    .map(x=>String(x||'').trim()).filter(Boolean).sort().at(-1);
+  // Lifecycle activity does not make an old offer's eligibility rule newer.
+  // When no policy-specific stamp exists, account opening is the offer vintage;
+  // payout/closure are only last-resort dates for older imported records.
+  return policyStamp||String(e?.opened||e?.bonusRecd||e?.closed||'').trim();
+}
+function eligibilityPolicyEntry(e){
+  if(!e)return e;
+  const gate=window.BTEligibilityGate;
+  if(!gate?.recorded)return e;
+  const identity=eligibilityPolicyIdentity(e);
+  const candidates=[e,...(Array.isArray(entries)?entries:[])]
+    .filter((x,i,all)=>x&&eligibilityPolicyIdentity(x)===identity&&all.indexOf(x)===i)
+    .map((x,index)=>({entry:x,index,resolved:gate.recorded(x),recordedAt:eligibilityPolicyRecordedAt(x)}))
+    .filter(x=>x.resolved?.ok)
+    .sort((a,b)=>b.recordedAt.localeCompare(a.recordedAt)||a.index-b.index);
+  const selectedRow=candidates[0],selected=selectedRow?.entry;
+  if(!selected||selected===e)return e;
+  const out={...e};
+  ELIGIBILITY_POLICY_FIELDS.forEach(key=>{
+    if(!Object.prototype.hasOwnProperty.call(selected,key))return;
+    const value=selected[key];
+    out[key]=Array.isArray(value)?value.map(x=>x&&typeof x==='object'?{...x}:x):value;
+  });
+  // Always materialize the selected policy's resolved rules in this read-only
+  // overlay. Otherwise stale rules on an older account could outrank newer
+  // recorded wording that did not yet have an eligibilityRules array.
+  out.eligibilityRules=(selectedRow.resolved.rules||[]).map(rule=>({
+    id:rule.id||'',basis:rule.basis||'',periodValue:Number(rule.period?.value||0),periodUnit:rule.period?.unit||'',
+    evidenceText:rule.evidenceText||rule.evidenceSentence||'',evidenceSource:rule.evidenceSource||'',
+    scope:rule.scope||'',anchorDate:rule.anchorDate||'',anchorFallback:rule.anchorFallback||'',condition:rule.condition||null
+  }));
+  out.eligibilityPolicyRecordedAt=eligibilityPolicyRecordedAt(selected);
+  out.eligibilityPolicySourceEntryId=selected.id||'';
+  return out;
+}
 function churnEligibilityValidation(e){
-  try{if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.validate==='function')return window.BTEligibilityGate.validate(e)}catch{}
+  try{if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.recorded==='function')return window.BTEligibilityGate.recorded(eligibilityPolicyEntry(e))}catch{}
   const decision=churnDecisionForEntry(e);
   if(decision==='nonrepeatable')return{ok:true,status:'legacy',decision};
   const basis=String(e?.sourceEligibilityBasis||e?.churnBasis||e?.analysis?.sourceEligibilityBasis||e?.analysis?.churnBasis||'').toLowerCase();
   const hasBasis=/bonus|open|clos/.test(basis);
   return{ok:decision==='repeatable'&&['180','1','2','3'].includes(String(e?.churn||'').trim())&&hasBasis,status:'legacy',decision};
 }
+try{window.btEligibilityPolicyEntry=eligibilityPolicyEntry;window.btRecordedEligibility=churnEligibilityValidation}catch{}
 function hasSavedChurnDecision(e){
   return !!churnEligibilityValidation(e).ok;
 }
@@ -627,7 +678,7 @@ function closeReadiness(e,closeDate=''){
     add(true,'No fixed close hold timer',e.closeRuleText?'Review close wording saved below':'No early-close countdown is set');
   }
   if(isNonRepeatableEntry(e))add(true,'Future eligibility','Non-repeatable offer — it will archive after closing');
-  else{const verifiedChurn=window.BTEligibilityGate?.validate(e);add(!!e.churn||!!verifiedChurn?.ok,'Churn rules saved',verifiedChurn?.ok?(verifiedChurn.rules.length+' verified lookback rule(s) · eligibility requires actual closing and bonus dates'):e.churn?((e.churn==='180'?'180 days':e.churn+' year')+' legacy churn rule'):'Churn terms require verification','warn');}
+  else{const recordedChurn=churnEligibilityValidation(e);add(!!e.churn||!!recordedChurn?.ok,'Eligibility rule saved',recordedChurn?.ok?(recordedChurn.rules.length+' recorded waiting period'+(recordedChurn.rules.length===1?'':'s')+' · actual event dates control the countdown'):e.churn?((e.churn==='180'?'180 days':e.churn+' year')+' saved waiting period'):'Add an eligibility rule','warn');}
   const hasMonthlyFee=(window.BTFinancialRules?.summarize(e).feeRisk===true)||/(yes|\$|monthly|service fee|maintenance fee)/i.test(String(e.monthlyFeeYNText||'')+' '+String(e.avoidMonthlyFeeText||''));
   add(!hasMonthlyFee||!!e.monthlyFeeChecked,'Monthly fee checked',hasMonthlyFee?(e.monthlyFeeChecked?'Confirmed before close':'Check next fee/statement timing before close'):'No monthly fee risk detected from saved fields','warn');
   items.forEach(x=>{if(!x.ok)warnings.push(x.label+(x.detail?': '+x.detail:''))});
@@ -1812,7 +1863,7 @@ function statusFromSavedFacts(e){
   if(!e||!e.bank)return'';
 
   if(e.closed){
-    try{if(typeof window.btVerifiedApplicationReached==='function')return window.btVerifiedApplicationReached(e)?'TIME TO CHURN!':'WAITING TO CHURN!'}catch{}
+    try{if(typeof window.btRecordedApplicationReached==='function')return window.btRecordedApplicationReached(e)?'TIME TO CHURN!':'WAITING TO CHURN!'}catch{}
     return daysLeft(e)===0?'TIME TO CHURN!':'WAITING TO CHURN!';
 
   }
@@ -2207,8 +2258,8 @@ function getChurnSuggestions(){
     if(!ready)return;
     const dl=Math.max(0,dB(td(),ready));
     let reached=false,checked=false;
-    try{if(typeof window.btVerifiedApplicationReached==='function'){checked=true;reached=!!window.btVerifiedApplicationReached(e)}}catch{}
-    sug.push({bank:e.bank,rsn:reached?'Ready to churn now.':(checked&&dl<=0?'Estimate passed · not verified.':(dl<=0?'Ready to churn now.':dl+'d until churn.')),bonus:e.bonus||0,showBonus:false,days:dl,readyDate:ready})
+    try{if(typeof window.btRecordedApplicationReached==='function'){checked=true;reached=!!window.btRecordedApplicationReached(e)}}catch{}
+    sug.push({bank:e.bank,rsn:reached||dl<=0?'Ready to review a new offer.':dl+'d until the next bonus review.',bonus:e.bonus||0,showBonus:false,days:dl,readyDate:ready})
   });
   return sug.sort((a,b)=>a.days-b.days||(b.bonus||0)-(a.bonus||0)||a.bank.localeCompare(b.bank))
 }
@@ -4269,7 +4320,7 @@ function closeSafetyWarnings(e,p){
   if(e?.bonus&&Number(p.actualBonus||0)===0)w.push('Expected bonus is '+fM(e.bonus)+' but actual bonus is $0.');
   if((p.actualBonus||0)>0&&!e?.bank)w.push('Bank name is missing.');
   if((p.actualBonus||0)>0&&!p.closeDate)w.push('Bonus cannot be tax-ready without a close date.');
-  if(e&&!e.churn&&!window.BTEligibilityGate?.validate(e)?.ok&&!isNonRepeatableEntry(e))w.push('Churn rules are not verified, so reopen countdown will not be reliable.');
+  if(e&&!churnEligibilityValidation(e)?.ok&&!isNonRepeatableEntry(e))w.push('No repeat-bonus waiting period is recorded, so the next review date is unavailable.');
   return w;
 }
 
@@ -5137,7 +5188,6 @@ function rClose(){
     h+='<h3>🔒 Record closure</h3><div class="sub">Save only after the bank account has closed.</div>';
     h+='<div class="close-ready '+esc(ready.cls)+'"><b>'+esc(ready.label)+'</b><span>'+esc(closeFlowModeReason(e,'actual'))+'</span></div>';
     h+='<div class="close-review-card">'+closeReviewRows(e,p)+'</div>';
-    if(!churnEligibilityValidation(e).ok)h+='<p class="research-caveat">Next bonus eligibility is not confirmed. Recording a closure will not establish a new eligible date.</p>';
     h+=renderArchiveHistoryReview(closeCycleForSave(e,p));
     h+='<p class="research-caveat">Saving preserves this cycle’s recorded facts and earlier revisions on this device. Cloud protection is confirmed separately after upload and readback.</p>';
     if((p.opened||e?.opened)&&!e?.couponEnrollmentDate&&!e?.offerEnrollmentDate)h+='<label class="archive-enrollment-choice"><input type="checkbox" id="cp_enrollment_opened" '+(p.enrollmentAtOpening?'checked ':'')+'onchange="if(closePrompt)closePrompt.enrollmentAtOpening=this.checked"> I enrolled in the promotion when this account opened</label>';
@@ -5597,6 +5647,10 @@ function collectModalEntryData(){
   d.churnReason=modal.churnReason||modal.analysis?.churnReason||'';
   d.churnDecisionSource=modal.churnDecisionSource||modal.analysis?.churnDecisionSource||(modal.analysis?'analyzer-reviewed':'user-confirmed');
   d.churnDecisionConfirmedAt=modal.churnDecisionConfirmedAt||td();
+  const inheritedPolicy=eligibilityPolicyEntry(d);
+  if(inheritedPolicy!==d)ELIGIBILITY_POLICY_FIELDS.forEach(key=>{
+    if(Object.prototype.hasOwnProperty.call(inheritedPolicy,key))d[key]=inheritedPolicy[key];
+  });
   applyChurnDecisionFields(d);
   try{if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.stamp==='function')Object.assign(d,window.BTEligibilityGate.stamp(d))}catch{}
   sanitizeCloseFieldsForEntry(d);
@@ -5613,19 +5667,9 @@ function saveEntry(){
   if(!d)return false;
   const financial=window.BTFinancialRules?.validate(d);
   if(d.schemaVersion===3&&!d.financialRules||financial&&!financial.ok)return modalError('general','Financial rules need verification before saving. '+(financial?.issues.map(x=>x.message).join(' ')||'Structured rules are missing.'))
-  const eligibility=churnEligibilityValidation(d);
-  if(!modal._edit&&!eligibility.ok){
-    return modalError(churnDecisionForEntry(d)==='repeatable'&&!d.churn?'churn':'eligibility','Cannot open/save this bonus yet. Churn eligibility must be proven by the T&C. '+(eligibility.reason||'Review the repeatability, cooldown, and eligibility clock.'))
-  }
-  if(modal._edit){
-    const existing=entries.find(e=>e.id===modal.id);
-    if(existing&&!existing.opened&&d.opened&&!eligibility.ok){
-      return modalError('eligibility','Verify the promotion terms before recording an opening date. '+(eligibility.reason||''))
-    }
-  }
   if(!modal._edit){
     d.churnDecisionConfirmedAt=d.churnDecisionConfirmedAt||td();
-    d.churnDecisionSource=d.churnDecisionSource||'verified-tc';
+    d.churnDecisionSource=d.churnDecisionSource||'recorded-rule';
   }
   if(!modal._edit&&!modal._skipManualReplacePrompt&&handleManualReplacementPicker(d,'manual','')){closeModal();R();return 'duplicate-prompt'}
   if(!modal._edit&&!modal._skipDuplicateCheck&&handleDuplicateFlow(d,'manual')){closeModal();R();return 'duplicate-prompt'}
@@ -5973,12 +6017,12 @@ function finishClose(){
     sv(SK,entries);
     cfm={title:'Closed & Archived',msg:e2.bank+' closed on '+fD(p.closeDate)+'.\n\nArchive status: Non-repeatable offer.\nNo churn countdown or reopen date was created.\n\nUndo is available for 60 seconds at the bottom of the app.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
   }else{
-    const verifiedNextCycle=e2&&churnEligibilityValidation(e2).ok?churnReadyDate(e2):'';
-    const nextCycleLabel=verifiedNextCycle?fD(verifiedNextCycle):'Not confirmed';
+    const recordedNextCycle=e2&&churnEligibilityValidation(e2).ok?churnReadyDate(e2):'';
+    const nextCycleLabel=recordedNextCycle?fD(recordedNextCycle):'Add eligibility rule';
     cfm={title:'Closed Saved',msg:(e2?e2.bank:'This bank')+' closed on '+fD(p.closeDate)+'.\n\nNext bonus review: '+nextCycleLabel+'.\nStatus: '+(e2?status(e2):'Waiting to Churn')+'.\n\nUndo is available for 60 seconds at the bottom of the app.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
   }
   const issues=archiveHistoryIssues(e2);
-  if(p.simpleCloseConfirmed)cfm.msg=(e2?.bank||'Account')+' closed on '+fD(p.closeDate)+'.'+(e2&&churnEligibilityValidation(e2).ok&&churnReadyDate(e2)?'\nNext bonus review: '+fD(churnReadyDate(e2))+'.':'\nNext bonus review: Not confirmed.')+'\nYou can undo this change for 60 seconds.';
+  if(p.simpleCloseConfirmed)cfm.msg=(e2?.bank||'Account')+' closed on '+fD(p.closeDate)+'.'+(e2&&churnEligibilityValidation(e2).ok&&churnReadyDate(e2)?'\nNext bonus review: '+fD(churnReadyDate(e2))+'.':'\nNext bonus review: Add eligibility rule.')+'\nYou can undo this change for 60 seconds.';
   else cfm.msg+='\n\nHistory: '+(issues.length?'Incomplete — '+issues.join('; ')+'.':'Core records saved locally.')+'\nCloud recovery: '+(window.BTCloudBackup?.protection?.().title||'Not verified')+'.';
   undoState=sealCloseUndo(nextUndo);
   if(undoTimer)clearTimeout(undoTimer);

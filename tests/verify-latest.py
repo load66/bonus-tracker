@@ -115,8 +115,8 @@ for token in ('profileKey:keyFor(r)','accountType:typeFor(r)','compatibleProduct
 app_js=text('app.js')
 for token in ('isNonRepeatableEntry','archived-nonrepeatable',"return'ARCHIVED'",'Closed & Archived','Non-repeatable offer'):
     if token not in app_js: fail(f'archive lifecycle missing from app.js: {token}')
-for token in ('Repeat eligibility *','Can this bonus be earned again? *','hasSavedChurnDecision','churnEligibilityValidation','Cannot open/save this bonus yet. Churn eligibility must be proven by the T&C.','Waiting period before another bonus *'):
-    if token not in app_js: fail(f'churnability intake gate missing from app.js: {token}')
+for token in ('Repeat eligibility *','Can this bonus be earned again? *','hasSavedChurnDecision','churnEligibilityValidation','eligibilityPolicyEntry','btRecordedEligibility','Waiting period before another bonus *'):
+    if token not in app_js: fail(f'recorded eligibility intake policy missing from app.js: {token}')
 
 runtime_fix=text('wells-professional-runtime.js')
 for token in ('repairWellsConsumer400Entry','Requirement Due','requirementSummaryForEntry','churnBasisDate','Key Deadlines','Lifecycle & Deadlines','btWellsProfessionalRuntimeVersion','normalizeLifecycleEntry'):
@@ -132,8 +132,8 @@ for token in ('wellsSuggestedTimers','Can this bonus be earned again? *','Future
     if token not in runtime_fix: fail(f'professional Wells runtime behavior missing: {token}')
 
 eligibility_gate=text('eligibility-gate.js')
-for token in ('conditional eligibility rules plus coupon/offer-enrollment cooldown anchors','offer-enrollment','bonus-offer-received','account-ownership-ended','closed-with-negative-balance','normalizeCondition','ruleConditionState','eligibilityRules','discoverTimedRestrictions','officialEligibilityDates','officialEligibilityDate','controllingRule','safeEligibilityDate','applicationReadyDate'):
-    if token not in eligibility_gate: fail(f'churn eligibility evidence gate missing: {token}')
+for token in ('offer-enrollment','bonus-offer-received','account-ownership-ended','closed-with-negative-balance','normalizeCondition','ruleConditionState','eligibilityRules','discoverTimedRestrictions','recordedRules','recordedEligibilityDates','recordedEligibilityDate','recordedApplicationReadyDate','officialEligibilityDates','officialEligibilityDate','controllingRule','safeEligibilityDate','applicationReadyDate'):
+    if token not in eligibility_gate: fail(f'eligibility policy engine missing: {token}')
 
 app_source=text('app.js')
 if 'Tools Folder' in app_source or 'bt_tools_folder_btn' in app_source:
@@ -246,4 +246,4 @@ if issues:
     print(f'LATEST RELEASE VERIFY FAILED v{release}: {len(issues)} issue(s)')
     for issue in issues: print('FAIL',issue)
     sys.exit(1)
-print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, Wells accuracy, analyzer isolation, archive lifecycle, conditional churn semantics, coupon enrollment anchors, T&C Storage, multi-rule churn intake, strict JSON provenance, safe re-churn replacement, professional UI, and verify-before-deploy checks passed')
+print(f'LATEST RELEASE VERIFIED v{release}: {len(files)} files · all asset, format, cache, Wells accuracy, analyzer isolation, archive lifecycle, latest-recorded eligibility semantics, coupon enrollment anchors, T&C Storage, multi-rule churn intake, strict JSON provenance, safe re-churn replacement, professional UI, and verify-before-deploy checks passed')
