@@ -1256,6 +1256,9 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt3810-dates dl>div{min-width:0;padding:13px 10px;border-bottom:1px solid #252a36}
 .bt3810-dates dl>div:nth-child(2n){border-left:1px solid #252a36}
 .bt3810-dates dl>div:nth-last-child(-n+2){border-bottom:0}
+/* Open accounts have three dates: keep the third date full-width and the row dividers aligned. */
+.bt3810-dates--open dl>div:nth-child(2){border-bottom:1px solid #252a36}
+.bt3810-dates--open dl>div:last-child{grid-column:1/-1;border-left:0}
 .bt3810-dates dt{color:#929bac;font-size:11px;margin-bottom:5px}
 .bt3810-dates dd{color:#f2f3f7;font-size:13px;font-weight:700;margin:0;overflow-wrap:anywhere}
 .bt3810-dates dd.is-missing{color:#929bac}

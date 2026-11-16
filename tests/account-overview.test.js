@@ -16,8 +16,7 @@ assert.match(html,/aria-label="Recorded account dates"/);
 assert.match(html,/<dt>Requirements met<\/dt><dd class="is-missing">—<\/dd>/,'Missing completion date stays missing');
 assert.match(html,/Apr 1, 2026/,'Saved payout date remains visible');
 assert.match(html,/<h3>Fees<\/h3>/,'Relevant fee warnings remain compact');
-assert.match(html,/Next bonus/);
-assert.match(html,/Add eligibility rule/,'Unknown eligibility must request a rule instead of inventing a date');
+assert.doesNotMatch(html,/Next bonus|Add eligibility rule|bt3810-cycle/,'Future eligibility remains in Archive rather than active account details');
 assert.match(sandbox.BT360.detailFooter(row),/Record closure/,'Paid account can record an actual bank closure');
 assert.match(sandbox.BT360.detailFooter(row),/>Edit<\/button>/,'Saved information stays editable');
 assert.doesNotMatch(html,/<details\b|Documents &amp; activity|See saved requirements|Saved terms|Activity|Previous cycle reminders|Review rule|Advanced|Original terms missing/i,

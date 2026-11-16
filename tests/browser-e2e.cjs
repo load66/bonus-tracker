@@ -764,6 +764,12 @@ async function exercise(name,engine,url){
       await page.locator('.bt3810-task [role="checkbox"]').getAttribute('aria-checked')==='false');
     check('simple dates preserve unknown milestones',
       await page.locator('.bt3810-dates').innerText().then(t=>t.includes('Key dates')&&t.includes('—')));
+    check('active bank hides the empty Closed field and keeps three dates',
+      await page.locator('.bt3810-dates').evaluate(el=>
+       el.classList.contains('bt3810-dates--open')&&
+       el.querySelectorAll('dt').length===3&&
+       !Array.from(el.querySelectorAll('dt')).some(dt=>dt.textContent.trim()==='Closed')));
+
     check('fee warning stays visible but unknown closing fee is never treated as $0',
       await page.locator('.bt3810-fees').innerText().then(t=>t.includes('$15')&&t.includes('Not confirmed')));
     check('no advanced, notes, previous reminders or source disclosures on the main screen',
@@ -776,6 +782,7 @@ async function exercise(name,engine,url){
         await page.locator('.bt360-detail-card').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
       if(width===390)await page.screenshot({path:path.join(output,name+'-account-overview-390.png')});
     }
+    check('current bank detail has no duplicate Next bonus section',await page.locator('.bt3810-cycle').count()===0);
     check('simple bank detail never changes saved terms or record bytes',
       await page.evaluate(x=>JSON.stringify([localStorage.getItem('bt_e_v4'),localStorage.getItem('bt_tc_archive_v1')])===x,overviewBefore));
     await page.locator('.bt360-detail-footer').getByRole('button',{name:'Edit',exact:true}).click();
@@ -936,6 +943,14 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>{entries[0].earlyTerminationFeeText='No early closing fee.';entries[0].feeScheduleRaw='No early closing fee.';R();});
     check('restoring proven zero-fee evidence restores close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
     check('received bonus offers recording a real closure',await page.locator('.bt3810-status h3').innerText()==='Bonus received'&&await page.locator('.bt360-detail-footer .bt360-primary').innerText()==='Record closure');
+    check('closed account retains its actual date without writing to storage',
+      await page.evaluate(()=>{
+        const account=entries[0],before=JSON.stringify(account);
+        const view=BT360.detailPanels({...account,closed:'2026-11-10'});
+        const match=view.match(/<section class="bt3810-card bt3810-dates[^"]*"[^>]*>[\s\S]*?<\/section>/);
+        return !!match&&match[0].includes('<dt>Closed</dt>')&&match[0].includes('Nov 10, 2026')&&
+          JSON.stringify(account)===before;
+      }));
     check('received bonus shows concise dates and fee warnings without extra panels',
       await page.locator('.bt3810-dates').count()===1
       &&await page.locator('.bt3810-fees').count()===1

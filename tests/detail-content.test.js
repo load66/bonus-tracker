@@ -43,6 +43,32 @@ assert.match(requirements.html,/BT360.toggleRequirement/,'Structured requirement
 assert.doesNotMatch(requirements.html,/Mark all requirements completed/,'One requirement cannot record all requirements done');
 assert.doesNotMatch(requirements.html,/No checklist tasks saved yet/);
 assert.match(sandbox.BT360.detailPanels(e),/Direct deposits totaling \$10,000/);
+assert.doesNotMatch(sandbox.BT360.detailPanels(e),/bt3810-cycle|Add eligibility rule|Next bonus<\/span>/,'Active bank details must not duplicate Archive future eligibility');
+assert.doesNotMatch(sandbox.BT360.detailPanels({...e,bonusRecd:'2026-11-01'}),/bt3810-cycle|Next bonus<\/span>/,'Paid but still open accounts do not show the next cycle');
+
+// v3.8.13: open-account Key dates never shows a permanently empty Closed cell.
+// Closed/cooling-down records still expose the actual date in historical details.
+{
+ const storedBefore=JSON.stringify([...storage]);
+ const original=JSON.stringify(e);
+ const dateBlock=entry=>{
+  const match=sandbox.BT360.detailPanels(entry).match(/<section class="bt3810-card bt3810-dates[^"]*"[^>]*>[\s\S]*?<\/section>/);
+  assert(match,'Shared Key dates card must render');
+  return match[0];
+ };
+ const open=dateBlock({...e,closed:''});
+ assert.equal((open.match(/<dt>/g)||[]).length,3,'Open account should show only opening, requirements and payment dates');
+ assert.match(open,/bt3810-dates--open/,'Three-date styling is applied only to open accounts');
+ assert.doesNotMatch(open,/<dt>Closed<\/dt>/,'Do not render an empty Closed date for an open bank');
+ const closed=dateBlock({...e,closed:'2026-11-10'});
+ assert.equal((closed.match(/<dt>/g)||[]).length,4,'Closed account keeps all four actual milestones');
+ assert.match(closed,/<dt>Closed<\/dt><dd[^>]*>Nov 10, 2026<\/dd>/);
+ assert.doesNotMatch(closed,/bt3810-dates--open/);
+ assert.doesNotMatch(dateBlock({...e,closed:''}),/<dt>Closed<\/dt>/,'Correcting a closure restores the active display');
+ assert.equal(JSON.stringify(e),original,'Date projection must not alter account history');
+ assert.equal(JSON.stringify([...storage]),storedBefore,'Reading account dates must not persist any changes');
+}
+
 
 
 // v3.6.82: derived reminders and churn planner are read-only and cycle aware.
@@ -140,9 +166,9 @@ assert.doesNotMatch(sandbox.BT360.timerRows(paidRequirement),/data-source="saved
  assert.doesNotMatch(timers,/Nov 8, 2026|Overdue|Nov 18, 2026|Requirement due|Bonus pending/);
  assert.match(timers,/Monthly service fee review/,'Recurring fee check is still available');
  const detail=sandbox.BT360.detailPanels(paid);
- assert.match(detail,/Next bonus/);
+ assert.doesNotMatch(detail,/Next bonus|Add eligibility rule/,'Current details defer next-cycle projections to Archive');
  assert.match(detail,/Oct 28, 2026/,'Payment milestone stays recorded');
- assert.match(detail,/Oct 30, 2027/,'Only a verified saved repeat rule displays an eligible date');
+ assert.doesNotMatch(detail,/Oct 30, 2027/,'Future eligibility date belongs only in Archive');
  assert.match(detail,/Closing early/,'Closing fee warning remains');
  assert.doesNotMatch(detail,/Documents &amp; activity|Previous cycle reminders|See saved requirements|Review rule|Saved terms|Activity|Advanced/);
  assert.match(sandbox.BT360.detailFooter(paid),/Record closure/);
@@ -229,16 +255,16 @@ assert.match(coolingList,/A previous checking bonus within 12 months is ineligib
 assert.match(coolingList,/Details/);
 assert.doesNotMatch(coolingList,/Needs review · verify eligibility rules/);
 const coolingDetail=sandbox.BT360.detailPanels(cooldownNoDate);
-assert.match(coolingDetail,/Add eligibility rule/);
+assert.doesNotMatch(coolingDetail,/Add eligibility rule|Next bonus/,'Historical detail must not duplicate Archive eligibility');
 assert.doesNotMatch(coolingDetail,/previous checking bonus within 12 months/,'Long rule excerpts stay in Archive, not the everyday detail');
 const estimatedPast={...cooldownNoDate,id:'SYNT-P-85',opened:'2020-01-01',closed:'2021-01-01',
  churn:'1',eligibilityText:'Legacy saved one-year rule, no verified supporting source.'};
 const estimatedList=sandbox.BT360.archive([estimatedPast]);
 assert.match(estimatedList,/<strong>0<\/strong><small>Review offer<\/small>/,'A completed recorded waiting period must be ready for current-offer review');
 
-/* v3.8.12: direct account details retain recorded-date countdowns. */
-assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.12';/,'The on-screen app version reflects this release');
-assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.12-directdetails1/,'The version label is refreshed on clients');
+/* v3.8.13: direct account details retain recorded-date countdowns. */
+assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.13';/,'The on-screen app version reflects this release');
+assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.13-detailcleanup1/,'The version label is refreshed on clients');
 const archiveFutureDate='2030-01-01';
 const recordedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,recorded:true});
 assert(recordedFuture&&recordedFuture.days>0&&recordedFuture.caption==='days left','A recorded future date must show its countdown');
