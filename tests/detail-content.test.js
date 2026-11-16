@@ -140,16 +140,16 @@ assert.doesNotMatch(sandbox.BT360.timerRows(paidRequirement),/data-source="saved
  assert.doesNotMatch(timers,/Nov 8, 2026|Overdue|Nov 18, 2026|Requirement due|Bonus pending/);
  assert.match(timers,/Monthly service fee review/,'Recurring fee check is still available');
  const detail=sandbox.BT360.detailPanels(paid);
- assert.match(detail,/Next bonus/);
  assert.match(detail,/Oct 28, 2026/,'Payment milestone stays recorded');
- assert.match(detail,/Oct 30, 2027/,'Only a verified saved repeat rule displays an eligible date');
  assert.match(detail,/Closing early/,'Closing fee warning remains');
+ assert.doesNotMatch(detail,/<dt>Closed<\/dt>|Next bonus|Oct 30, 2027|bt3810-closing-note|Check closing fees|Recording closure/,
+  'Open details omit empty closure, closing reminders and future-cycle planning');
  assert.doesNotMatch(detail,/Documents &amp; activity|Previous cycle reminders|See saved requirements|Review rule|Saved terms|Activity|Advanced/);
  assert.match(sandbox.BT360.detailFooter(paid),/Record closure/);
  const unverified={id:'SYN-UNVERIFIED-PAID',bank:'Unverified Synthetic Bank',opened:'2026-10-15',
   reqMet:'2026-10-20',bonusRecd:'2026-10-28',customTimers:[],checklist:[]};
  const uncertain=sandbox.BT360.detailPanels(unverified);
- assert.match(uncertain,/Not confirmed/,'Unknown next cycle must remain unconfirmed');
+ assert.match(uncertain,/Not confirmed/,'Unknown fee evidence must remain unconfirmed');
  assert.doesNotMatch(uncertain,/Oct 30, 2027|Rule review needed|Eligibility rule missing/);
  assert.match(sandbox.BT360.detailFooter(unverified),/startCloseFlow\(&quot;SYN-UNVERIFIED-PAID&quot;,'actual'\)/,
   'An unknown future bonus rule cannot block recording an actual closure');
@@ -229,16 +229,16 @@ assert.match(coolingList,/A previous checking bonus within 12 months is ineligib
 assert.match(coolingList,/Details/);
 assert.doesNotMatch(coolingList,/Needs review · verify eligibility rules/);
 const coolingDetail=sandbox.BT360.detailPanels(cooldownNoDate);
-assert.match(coolingDetail,/Add eligibility rule/);
+assert.doesNotMatch(coolingDetail,/Next bonus|Add eligibility rule/,'Next-cycle planning stays in Archive');
 assert.doesNotMatch(coolingDetail,/previous checking bonus within 12 months/,'Long rule excerpts stay in Archive, not the everyday detail');
 const estimatedPast={...cooldownNoDate,id:'SYNT-P-85',opened:'2020-01-01',closed:'2021-01-01',
  churn:'1',eligibilityText:'Legacy saved one-year rule, no verified supporting source.'};
 const estimatedList=sandbox.BT360.archive([estimatedPast]);
 assert.match(estimatedList,/<strong>0<\/strong><small>Review offer<\/small>/,'A completed recorded waiting period must be ready for current-offer review');
 
-/* v3.8.12: direct account details retain recorded-date countdowns. */
-assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.12';/,'The on-screen app version reflects this release');
-assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.12-directdetails1/,'The version label is refreshed on clients');
+/* v3.8.13: next-cycle planning stays in Archive after closure. */
+assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.13';/,'The on-screen app version reflects this release');
+assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.13-archivenext1/,'The version label is refreshed on clients');
 const archiveFutureDate='2030-01-01';
 const recordedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,recorded:true});
 assert(recordedFuture&&recordedFuture.days>0&&recordedFuture.caption==='days left','A recorded future date must show its countdown');
