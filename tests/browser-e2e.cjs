@@ -1294,8 +1294,8 @@ async function exercise(name,engine,url){
     await page.locator('[data-bt-entry-id="e2e-lafayette"] .bt366-compact-row').click();
     check('Lafayette has one simple detail header and requirements card',
       await page.locator('.bt360-detail-header').count()===1&&await page.locator('.bt3810-detail').count()===1&&await page.locator('.bt3810-requirements').count()===1);
-    check('Lafayette with 1 of 2 tasks opens next task instead of confirming payout',
-      await page.locator('.bt360-detail-footer .bt360-primary').innerText()==='Open next task');
+    check('Lafayette exposes whole-requirements confirmation without inventing payout',
+      await page.locator('.bt360-detail-footer .bt360-primary').innerText()==='Mark requirements done'&&await page.locator('.bt3810-requirements').getByRole('checkbox').count()===2);
     await page.screenshot({path:path.join(output,name+'-v366-lafayette-detail-390.png')});
     await page.getByRole('button',{name:'Back to accounts'}).click();
     const legacyDates=await page.evaluate(()=>{
