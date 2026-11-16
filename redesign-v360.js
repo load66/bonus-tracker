@@ -317,8 +317,6 @@ function accountFeeWarnings(e){
  }
  return rows;
 }
-function monthlyFeeBadge(e){ return rows;
-}
 function monthlyFeeBadge(e){
  if(!e||e.closed)return '';
  const labels=accountFeeWarnings(e);
@@ -780,7 +778,7 @@ function feeDetail(e){
   +'</div></div>'
   +'</div>';
 }
-function closeDateInfo(e){function closeDateInfo(e){
+function closeDateInfo(e){
  const calendarHold=window.BTFinancialRules?.closeHoldInfo(e);
  if(calendarHold)return {value:date(calendarHold.reviewOn),note:calendarHold.months+' calendar months from opening · hold through '+date(calendarHold.holdUntil),action:false};
  const close=e.financialRules?.closure,source=String(close?.evidence?.quote||e.closeRuleText||e.earlyTerminationFeeText||'').trim();
