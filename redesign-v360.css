@@ -1282,3 +1282,11 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt3810-deposit{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid #252a36;margin-top:9px;padding-top:10px;min-height:44px}
 .bt3810-deposit span{color:#abb3c1;font-size:11px;line-height:1.4}
 .bt3810-deposit button{color:#78e7bf;min-height:38px;padding:8px;font-size:12px;white-space:nowrap}
+
+/* Simple task and deposit corrections remain reachable without an advanced page. */
+.bt3810-add-task{display:inline-flex;margin-top:10px;min-height:36px;align-items:center;color:#78e7bf;font-size:12px}
+.bt3810-recorded-deposits{border-top:1px solid #262a36;margin-top:10px;padding-top:8px;min-width:0}
+.bt3810-recorded-deposits>summary{cursor:pointer;color:#78e7bf;font-size:12px;min-height:40px;display:flex;align-items:center}
+.bt3810-recorded-deposits .bt3681-deposit-ledger{margin-top:6px;max-width:100%;min-width:0}
+.bt-simple-check{display:flex;gap:10px;align-items:center;min-height:44px;font-size:13px;line-height:1.4;color:#f0f2f5;cursor:pointer}
+.bt-simple-check input{flex:0 0 20px;width:20px;height:20px;accent-color:#5be3b0}
