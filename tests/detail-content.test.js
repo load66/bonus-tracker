@@ -43,6 +43,8 @@ assert.match(requirements.html,/BT360.toggleRequirement/,'Structured requirement
 assert.doesNotMatch(requirements.html,/Mark all requirements completed/,'One requirement cannot record all requirements done');
 assert.doesNotMatch(requirements.html,/No checklist tasks saved yet/);
 assert.match(sandbox.BT360.detailPanels(e),/Direct deposits totaling \$10,000/);
+assert.doesNotMatch(sandbox.BT360.detailPanels(e),/bt3810-cycle|Add eligibility rule|Next bonus<\/span>/,'Active bank details must not duplicate Archive future eligibility');
+assert.doesNotMatch(sandbox.BT360.detailPanels({...e,bonusRecd:'2026-11-01'}),/bt3810-cycle|Next bonus<\/span>/,'Paid but still open accounts do not show the next cycle');
 
 // v3.8.13: open-account Key dates never shows a permanently empty Closed cell.
 // Closed/cooling-down records still expose the actual date in historical details.
