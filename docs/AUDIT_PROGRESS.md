@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: ChatGPT Codex — v3.8.9 next bonus cycle — codex/v3.8.9-next-bonus-cycle
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
