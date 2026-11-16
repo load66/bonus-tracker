@@ -1466,10 +1466,9 @@ function applyModalBankMemory(){
   syncModalAccountTypeFromBank();
   const mem=bankMemoryFor(modal||'');
   if(!mem)return;
-  ['churn','dataPoint','monthlyFeeYNText','promoCodeText','avoidMonthlyFeeText','completeBonusText','earlyTerminationFeeText','eligibilityText','expirationDateText','requiredDaysText'].forEach(k=>{if(!modal[k]&&mem[k])modal[k]=mem[k]});
+  ['churn','dataPoint','monthlyFeeYNText','promoCodeText','avoidMonthlyFeeText','completeBonusText','eligibilityText','expirationDateText','requiredDaysText'].forEach(k=>{if(!modal[k]&&mem[k])modal[k]=mem[k]});
   if(!(modal.reqDays>0)&&mem.reqDays)modal.reqDays=mem.reqDays;
   if(!(modal.minHoldDays>0)&&mem.minHoldDays)modal.minHoldDays=mem.minHoldDays;
-  if(!(modal.earlyCloseFee>0)&&mem.earlyCloseFee)modal.earlyCloseFee=mem.earlyCloseFee;
   if(!(modal.bonus>0)&&mem.bonus)modal.bonus=mem.bonus;
   R()
 }
@@ -3382,14 +3381,6 @@ function analyzeTCSection(text){
     {pattern:/close.*?(?:less\s+than|within|before)\s+(\d+)\s+days/i,value:m=>parseInt(m[1],10),base:18}
   ],{keywords:['close','termination','early close'],negativeKeywords:['bonus posts','calendar day of the month']});
   if(closeDaysHit)r.earlyCloseDays=closeDaysHit.value;
-  const noEarlyFee=/no early termination|no termination fee/.test(t);
-  const closeFeeHit=tcPickBest(segments,[
-    {pattern:/(?:early\s+)?(?:termination|close|closing)\s+fee\s+(?:of\s+)?\$([\d.]+)/i,value:m=>'$'+m[1],base:22},
-    {pattern:/\$([\d,]+)\s+(?:early\s+)?(?:termination|close)/i,value:m=>tcMoney(m[1]),base:18},
-    {pattern:/(?:deduct|collect|charge|clawback|forfeit).*?\$([\d,]+).*?(?:bonus|incentive)/i,value:m=>tcMoney(m[1]),base:20}
-  ],{keywords:['termination fee','close fee','clawback','forfeit','penalty'],negativeKeywords:['monthly fee']});
-  if(noEarlyFee)r.earlyCloseFee='None';else if(closeFeeHit)r.earlyCloseFee=closeFeeHit.value;else if(/collect the bonus|forfeit the bonus|bonus will be reversed|bonus may be collected/.test(t))r.earlyCloseFee='Bonus clawback';
-
   /* ---------- churn / eligibility ---------- */
   if(/one per lifetime|once per lifetime/.test(t))r.churnRule='Once per lifetime';
   const churnHit=tcPickBest(segments,[
@@ -6478,21 +6469,6 @@ function buildSimpleAutoFill(r){
     
   }
   
-  let earlyTerm='';
-  
-  if(r.earlyCloseFee && String(r.earlyCloseFee).trim()!=='None'){
-    
-    earlyTerm=String(r.earlyCloseFee).trim();
-    
-    if(r.earlyCloseDays) earlyTerm+=' if closed within '+r.earlyCloseDays+' days';
-    
-  }
-   else if(r.earlyCloseDays){
-    
-    earlyTerm='Fee applies if closed within '+r.earlyCloseDays+' days';
-    
-  }
-  
   const requiredDays=Math.max(parseInt(r.timelineDays||0,10)||0,parseInt(r.newMoneyDays||0,10)||0,parseInt(r.maintainDays||0,10)||0,parseInt(r.activityDays||0,10)||0,parseInt(r.minDaysOpen||0,10)||0);
   
   return {
@@ -6501,7 +6477,6 @@ function buildSimpleAutoFill(r){
     promoCodeText: r.promoCode || '',
     avoidMonthlyFeeText: r.feeWaiver || '',
     completeBonusText: steps.map((s,i)=>(i+1)+'. '+s).join('\\n'),
-    earlyTerminationFeeText: earlyTerm,
     eligibilityText: elig.join(' | '),
     expirationDateText: normalizePromoWindowText(r.openBy || r.openWindow || ''),
     requiredDaysText: requiredDays ? String(requiredDays) : ''
@@ -6627,7 +6602,6 @@ function runInlineAnalyze(){
     if(__simple.promoCodeText&&!modal.promoCodeText)modal.promoCodeText=__simple.promoCodeText;
     if(__simple.avoidMonthlyFeeText&&!modal.avoidMonthlyFeeText)modal.avoidMonthlyFeeText=__simple.avoidMonthlyFeeText;
     if(__simple.completeBonusText&&!modal.completeBonusText)modal.completeBonusText=__simple.completeBonusText;
-    if(__simple.earlyTerminationFeeText&&!modal.earlyTerminationFeeText)modal.earlyTerminationFeeText=__simple.earlyTerminationFeeText;
     if(__simple.eligibilityText&&!modal.eligibilityText)modal.eligibilityText=__simple.eligibilityText;
     if(__simple.expirationDateText&&!modal.expirationDateText)modal.expirationDateText=__simple.expirationDateText;
     if(__simple.requiredDaysText&&!modal.requiredDaysText)modal.requiredDaysText=__simple.requiredDaysText;
