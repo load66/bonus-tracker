@@ -784,7 +784,7 @@ function closeDateInfo(e){
  const close=e.financialRules?.closure,source=String(close?.evidence?.quote||e.closeRuleText||e.earlyTerminationFeeText||'').trim();
  const basis=String(close?.basis||e.closeRuleBasis||'').toLowerCase();
  const ruleDays=Number(close?.minHoldDays??e.minHoldDays??0);
- if(close?.restrictionType==='manual-review'||e.closeRestrictionType==='manual-review')return {value:'Closing rule needs review',note:'Check early-close restrictions',action:true};
+ if(window.BTFinancialRules?.retentionNeedsReview?.(e))return {value:'Closing rule needs review',note:'Check bonus-retention restrictions',action:true};
  if(!source)return {value:'Close terms missing',note:'Save the keep-open or bonus-retention restriction',action:true};
  if(basis==='bonus'&&!e.bonusRecd)return {value:'After bonus arrives',note:ruleDays?ruleDays+'-day hold starts at payout':'Close timing starts at payout',action:false};
  if(basis==='reqmet'&&!e.reqMet)return {value:'After requirements',note:ruleDays?ruleDays+'-day hold starts after qualification':'Close timing starts after qualification',action:false};
