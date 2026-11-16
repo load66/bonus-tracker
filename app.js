@@ -7602,19 +7602,22 @@ entries=sortE(entries); // First visible render is owned by BT360 at the end of 
     const e=entries.find(x=>x.id===window.__btBankActionPrompt);
     if(!e)return'';
     let h='<div class="bt-ba-backdrop" role="presentation" onclick="closeBankActions()"><section class="modal bt-ba-compact" role="dialog" aria-modal="true" aria-label="Account actions" onclick="event.stopPropagation()">';
-    h+='<div class="m-bar" aria-hidden="true"></div>';
-    h+='<div class="bt-ba-head"><div class="bt-ba-identity">'+bankLogo(e.bank,true)
-     +'<div class="bt-ba-bank"><div class="bt-ba-name">'+esc(e.bank||'Account')+'</div></div></div>'
-     +'<button class="bt-ba-close" type="button" aria-label="Close account actions" onclick="closeBankActions()">×</button></div>';
+    h+='<div class="m-bar" aria-hidden="true"></div><div class="bt-ba-head"><div class="bt-ba-identity">'+bankLogo(e.bank,true)+'<div class="bt-ba-bank"><div class="bt-ba-name">'+esc(e.bank||'Account')+'</div><span class="bt-ba-stage">'+esc(bankActionsHumanStage(e))+'</span></div></div><button class="bt-ba-close" type="button" aria-label="Close account actions" onclick="closeBankActions()">×</button></div>';
     h+='<div class="bt-ba-list" role="group" aria-label="Account tools">';
-    h+=bankActionSheetButton(e.id,'edit',bankActionIcon('edit'),'Edit account','Update your saved information');
-    if(!e.closed&&!e.reqMet){
-      h+=bankActionSheetButton(e.id,'checklist',bankActionIcon('task'),'Add requirement','Track another step');
-      h+=bankActionSheetButton(e.id,'timer',bankActionIcon('timer'),'Add reminder','Optional date reminder');
+    h+=bankActionSheetButton(e.id,'edit',bankActionIcon('edit'),'Edit account','Dates and saved bonus information');
+    if(!e.closed&&!e.reqMet&&!e.bonusRecd){
+      h+=bankActionSheetButton(e.id,'checklist',bankActionIcon('task'),'Add task','Track a requirement');
+      h+=bankActionSheetButton(e.id,'timer',bankActionIcon('timer'),'Add reminder','Save a reminder');
     }
-    if(e.closed)h+=bankActionSheetButton(e.id,'clearclose',bankActionIcon('reopen'),'Correct closed date','Only if the saved closure is wrong');
+    if(!e.closed&&e.reqMet)h+=bankActionSheetButton(e.id,'reqmet',bankActionIcon('check'),'Edit completion date','Correct the saved date');
+    if(!e.closed&&e.bonusRecd){
+      h+=bankActionSheetButton(e.id,'recordclose',bankActionIcon('close'),'Record closure','Only after the bank closes it');
+      h+=bankActionSheetButton(e.id,'received',bankActionIcon('receipt'),'Edit bonus payment','Correct the amount or date');
+    }else if(!e.closed)h+=bankActionSheetButton(e.id,'received',bankActionIcon('receipt'),'Record bonus payment','Only after it is paid');
+    if(e.closed)h+=bankActionSheetButton(e.id,'clearclose',bankActionIcon('reopen'),'Correct closure','Remove a wrongly saved closed date');
+    h+=bankActionSheetButton(e.id,'activity',bankActionIcon('activity'),'History','View saved activity');
     h+='</div><div class="bt-ba-delete" role="group" aria-label="Delete account action">';
-    h+=bankActionSheetButton(e.id,'delete',bankActionIcon('trash'),'Delete account','Delete this record after confirmation',true);
+    h+=bankActionSheetButton(e.id,'delete',bankActionIcon('trash'),'Delete account','Remove the saved record',true);
     h+='</div></section></div>';
     return h;
   }
