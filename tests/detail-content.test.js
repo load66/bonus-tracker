@@ -44,6 +44,30 @@ assert.doesNotMatch(requirements.html,/Mark all requirements completed/,'One req
 assert.doesNotMatch(requirements.html,/No checklist tasks saved yet/);
 assert.match(sandbox.BT360.detailPanels(e),/Direct deposits totaling \$10,000/);
 
+// v3.8.13: open-account Key dates never shows a permanently empty Closed cell.
+// Closed/cooling-down records still expose the actual date in historical details.
+{
+ const storedBefore=JSON.stringify([...storage]);
+ const original=JSON.stringify(e);
+ const dateBlock=entry=>{
+  const match=sandbox.BT360.detailPanels(entry).match(/<section class="bt3810-card bt3810-dates[^"]*"[^>]*>[\s\S]*?<\/section>/);
+  assert(match,'Shared Key dates card must render');
+  return match[0];
+ };
+ const open=dateBlock({...e,closed:''});
+ assert.equal((open.match(/<dt>/g)||[]).length,3,'Open account should show only opening, requirements and payment dates');
+ assert.match(open,/bt3810-dates--open/,'Three-date styling is applied only to open accounts');
+ assert.doesNotMatch(open,/<dt>Closed<\/dt>/,'Do not render an empty Closed date for an open bank');
+ const closed=dateBlock({...e,closed:'2026-11-10'});
+ assert.equal((closed.match(/<dt>/g)||[]).length,4,'Closed account keeps all four actual milestones');
+ assert.match(closed,/<dt>Closed<\/dt><dd[^>]*>Nov 10, 2026<\/dd>/);
+ assert.doesNotMatch(closed,/bt3810-dates--open/);
+ assert.doesNotMatch(dateBlock({...e,closed:''}),/<dt>Closed<\/dt>/,'Correcting a closure restores the active display');
+ assert.equal(JSON.stringify(e),original,'Date projection must not alter account history');
+ assert.equal(JSON.stringify([...storage]),storedBefore,'Reading account dates must not persist any changes');
+}
+
+
 
 // v3.6.82: derived reminders and churn planner are read-only and cycle aware.
 {
