@@ -175,7 +175,7 @@ setTimeout(()=>{
 
     const noReqDate={bank:'Synthetic Paid Payout Only',opened:'2026-01-01',bonusRecd:'2026-05-01',reqMet:'',closeRestrictionType:'payout-only',closeRuleBasis:'bonus',closeRuleText:'Keep the account open until the bonus posts.',customTimers:[]};
     const recorded=sandbox.btEvaluateAccount(noReqDate);
-    assert.equal(recorded.close.status,'ready','Source-backed payout-only retention should finish when bonus posts');
+    assert(recorded.close.status==='ready','Source-backed payout-only retention should finish when bonus posts');
     const decisions=[null,0,25].map(earlyCloseFee=>sandbox.btEvaluateAccount({...noReqDate,earlyCloseFee,earlyTerminationFeeText:earlyCloseFee===25?'$25 early account-closing fee.':'No early closing fee.'}));
     assert(decisions.every(d=>d.close.status===recorded.close.status),'Retired fee values changed readiness');
     assert(sandbox.closeReadiness(noReqDate).label!=='Do Not Close Yet','Payout-only rule cannot be blocked by an unknown service fee');
