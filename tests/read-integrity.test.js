@@ -139,8 +139,8 @@ setTimeout(()=>{
     assert(findings.some(row=>row.bank==='Synthetic Oldcopy'&&row.issues.some(x=>x.proposed===null)),'Historical review did not report the suspect row without inventing a replacement');
     assert(localStorage.getItem('bt_e_v4')===beforeReview,'Historical review rewrote stored accounts');
 
-    assert.equal(typeof sandbox.feeCheckRemoveTimer,'undefined','Early-closing-fee timer editor must be retired');
-    assert.equal(typeof sandbox.feeCheckSave,'undefined','Fee-only save handler must be retired');
+    assert(typeof sandbox.feeCheckRemoveTimer==='undefined','Early-closing-fee timer editor must be retired');
+    assert(typeof sandbox.feeCheckSave==='undefined','Fee-only save handler must be retired');
     const removed=liveEntries().find(e=>e.bank==='Synthetic Harbor');
     assert(removed.earlyCloseFee===null,'Historical unknown fee data must not be overwritten');
     assert(sandbox.status(removed)!=='SAFE TO CLOSE','A missing independent retention rule is not proven by a fee record');
