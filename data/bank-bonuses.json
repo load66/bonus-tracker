@@ -1,27 +1,91 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-11-16T12:31:16.132583+00:00",
+  "checkedAt": "2026-11-16T17:02:10.973426+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-11-16T12:31:16.132583+00:00",
+      "checkedAt": "2026-11-16T17:02:10.973426+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-11-16T12:31:16.132583+00:00",
+      "checkedAt": "2026-11-16T17:02:10.973426+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-11-16T12:31:16.132583+00:00",
+      "checkedAt": "2026-11-16T17:02:10.973426+00:00",
       "status": "ok"
     }
   ],
   "offers": [
+    {
+      "title": "Santander Bank Promotions: $300 or $500 Checking Bonus (Many States) – Ends 12/18/26",
+      "url": "https://www.hustlermoneyblog.com/santander-bank-promotions/",
+      "publishedAt": "2026-11-16T16:20:10+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "santander bank|checking|500|unknown",
+      "bank": "santander bank",
+      "product": "checking",
+      "amount": 500,
+      "region": "unknown",
+      "offerKey": "santander bank|checking|500|unknown",
+      "rewardIsUpperBound": true,
+      "firstSeen": "2026-11-16T17:02:10.973426+00:00",
+      "lastSeen": "2026-11-16T16:20:10+00:00",
+      "expiresAt": "2026-12-18",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/santander-bank-promotions/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Santander Bank Promotions: $300 or $500 Checking Bonus (Many States) – Ends 12/18/26",
+          "publishedAt": "2026-11-16T16:20:10+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "Lafayette Federal Credit Union Promotions: $100, $150, $300 Checking Bonuses (DC, MD, VA) – Ends 12/31/26",
+      "url": "https://www.hustlermoneyblog.com/lafayette-federal-credit-union-promotions/",
+      "publishedAt": "2026-11-16T14:55:23+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "lafayette federal credit union|checking|100|DC,MD,VA",
+      "bank": "lafayette federal credit union",
+      "product": "checking",
+      "amount": 100,
+      "region": "DC,MD,VA",
+      "offerKey": "lafayette federal credit union|checking|100|DC,MD,VA",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-16T17:02:10.973426+00:00",
+      "lastSeen": "2026-11-16T14:55:23+00:00",
+      "expiresAt": "2026-12-31",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/lafayette-federal-credit-union-promotions/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Lafayette Federal Credit Union Promotions: $100, $150, $300 Checking Bonuses (DC, MD, VA) – Ends 12/31/26",
+          "publishedAt": "2026-11-16T14:55:23+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
     {
       "title": "[MD, D.C., VA] Lafayette Federal Credit Union $300 Checking Bonus",
       "url": "https://www.doctorofcredit.com/md-d-c-va-lafayette-federal-credit-union-100-checking-bonus-2/",
@@ -412,9 +476,9 @@
         }
       ],
       "firstSeenBaseline": true,
-      "previousAmount": 400,
+      "previousAmount": 900,
       "change": "Decreased",
-      "changeLabel": "$400 → $125",
+      "changeLabel": "$900 → $125",
       "badges": [
         "Decreased"
       ]
