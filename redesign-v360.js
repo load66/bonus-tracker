@@ -317,8 +317,6 @@ function accountFeeWarnings(e){
  }
  return rows;
 }
-function monthlyFeeBadge(e){ return rows;
-}
 function monthlyFeeBadge(e){
  if(!e||e.closed)return '';
  const labels=accountFeeWarnings(e);
@@ -712,7 +710,7 @@ function feeSnapshot(e){
  // Read-only view of each enrolled record, including pre-financialRules imports.
  // A current bank product page is not evidence of a historical account's terms.
  const primary=e.financialRules?.accounts?.find(a=>a?.role==='primary')||null;
- const fee=primary?.fee,closure=e.financialRules?.closure||{};
+ const fee=primary?.fee;
  const original=(...items)=>items.map(x=>String(x??'').trim()).find(Boolean)||'';
  const monthlyRaw=original(e.monthlyFeeAmountText,e.analysis?.monthlyFeeAmountText,e.monthlyFeeYNText,e.analysis?.monthlyFeeYNText);
  const monthlyQuote=original(fee?.evidence?.quote,monthlyRaw);
@@ -780,7 +778,7 @@ function feeDetail(e){
   +'</div></div>'
   +'</div>';
 }
-function closeDateInfo(e){function closeDateInfo(e){
+function closeDateInfo(e){
  const calendarHold=window.BTFinancialRules?.closeHoldInfo(e);
  if(calendarHold)return {value:date(calendarHold.reviewOn),note:calendarHold.months+' calendar months from opening · hold through '+date(calendarHold.holdUntil),action:false};
  const close=e.financialRules?.closure,source=String(close?.evidence?.quote||e.closeRuleText||e.earlyTerminationFeeText||'').trim();
