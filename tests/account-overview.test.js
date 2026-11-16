@@ -6,7 +6,8 @@ run('entries='+JSON.stringify([row])+';localStorage.setItem(SK,JSON.stringify(en
 const before=JSON.stringify([...storage]);
 const html=sandbox.BT360.detailPanels(row);
 assert.match(html,/aria-label="Recorded account dates"/);assert.match(html,/Requirements met<\/dt><dd class="is-missing">Not recorded/,'Payment never fills requirements date');
-for(const key of ['fees','eligibility','terms','history'])assert.match(html,new RegExp('data-section="'+key+'" ontoggle='),'Secondary sections start closed');
+for(const key of ['fees','terms','history'])assert.match(html,new RegExp('data-section="'+key+'" ontoggle='),'Supporting sections start closed');
+assert.match(html,/data-section="eligibility" open ontoggle=/,'Received bonus opens next-cycle review by default');
 assert.match(html,/Exact original &lt;promotion&gt;/,'Original terms remain complete and escaped');
 assert.match(html,/Exact original fees/);
 sandbox.BT360.setAccountSectionOpen(row.id,'extras',true);
@@ -21,6 +22,7 @@ assert.doesNotMatch(html,/\d+ gaps/,'No technical gap count in the account view'
 const pending=sandbox.BT360.detailPanels({...row,bonusRecd:'',payoutTimingText:'Bonus paid within 60 calendar days after requirements are met.'});
 assert.match(pending,/Estimated bonus arrival/,'The arrival area remains discoverable when dates are missing');
 assert.match(pending,/Finish the requirements and record the completion date/);
+assert.match(pending,/data-section="eligibility" ontoggle=/,'Active bonus keeps future cycle collapsed');
 assert(pending.indexOf('Estimated bonus arrival')<pending.indexOf('Account lifecycle'),'Arrival is first, below the account identity');
 assert.equal(sandbox.BT360.cloudStatusText({tone:'off'}),'Cloud off');assert.equal(sandbox.BT360.cloudStatusText({tone:'warning'}),'Backup pending');assert.equal(sandbox.BT360.cloudStatusText({tone:'danger'}),'Backup needs attention');assert.equal(sandbox.BT360.cloudStatusText({tone:'protected'}),'Cloud verified');
 sandbox.BT360.setAccountSectionOpen(row.id,'fees',true);
