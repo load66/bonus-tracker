@@ -371,7 +371,7 @@ async function exercise(name,engine,url){
       await page.setViewportSize({width:1280,height:900});
     }
     check('Tracker loads without redundant Action Center disclosure',await page.locator('.bt360-legacy-actions').count()===0);
-    await page.waitForFunction(()=>window.__btFullRegressionReport&&!window.__btFullRegressionReport.pending&&window.__btFullRegressionReport.total===8);
+    await page.waitForFunction(()=>window.__btFullRegressionReport&&!window.__btFullRegressionReport.pending&&window.__btFullRegressionReport.total>=9&&window.__btFullRegressionReport.ok);
     const diagnostics=await page.evaluate(()=>window.btRunFullRegressionTests({force:true}));
     await fs.writeFile(path.join(output,name+'-diagnostics.json'),JSON.stringify(diagnostics,null,2));
     check('runtime self-tests pass',diagnostics.ok);
@@ -1693,7 +1693,7 @@ async function exercise(name,engine,url){
     const newPhoneContext=await browser.newContext({viewport:{width:390,height:844},timezoneId:'America/Chicago'});
     await newPhoneContext.addInitScript(installTermsFixture);
     const newPhone=await newPhoneContext.newPage();
-    await newPhone.goto(url);await newPhone.waitForFunction(()=>navigator.serviceWorker.controller&&window.__btFullRegressionReport?.total===8&&!window.__btFullRegressionReport.pending);
+    await newPhone.goto(url);await newPhone.waitForFunction(()=>navigator.serviceWorker.controller&&window.__btFullRegressionReport?.total>=9&&window.__btFullRegressionReport.ok&&!window.__btFullRegressionReport.pending);
     const installRecoveryFixture=objects=>{
       localStorage.setItem('bonus-ai-auth',JSON.stringify({access_token:'synthetic-owner-token',refresh_token:'synthetic-refresh',expires_at:Date.now()/1000+3600}));
       const prior=window.fetch;
@@ -1711,7 +1711,7 @@ async function exercise(name,engine,url){
     try{await newPhone.evaluate(installRecoveryFixture,cloudRecords);}
     catch(e){
       if(!/Execution context was destroyed/.test(String(e)))throw e;
-      await newPhone.waitForFunction(()=>navigator.serviceWorker.controller&&window.__btFullRegressionReport?.total===8&&!window.__btFullRegressionReport.pending);
+      await newPhone.waitForFunction(()=>navigator.serviceWorker.controller&&window.__btFullRegressionReport?.total>=9&&window.__btFullRegressionReport.ok&&!window.__btFullRegressionReport.pending);
     }
     check('new phone begins without account records',await newPhone.evaluate(()=>entries.length===0));
     await newPhone.locator('#bt-cloud-open').click();try{await newPhone.getByRole('button',{name:'Preview recovery',exact:true}).first().click();}catch(e){console.error(name+' catalog diagnostics:',await newPhone.evaluate(()=>({status:document.querySelector('#cloud-status')?.textContent,connected:BTBonusAuth.connected(),version:BT_APP_VERSION,body:document.querySelector('.cloud-modal')?.innerText})));throw e;}
