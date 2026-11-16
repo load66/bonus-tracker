@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: codex — v3.8.13 active-date clarity — codex/v3.8.13-active-date-clarity
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.8.13 account detail cleanup (`codex/v3.8.13-active-date-clarity`): active bank Key dates omit the blank Closed row; closed/historical records retain actual closure dates. Current bank details omit redundant Next bonus / Add eligibility rule projection, while Archive eligibility projections and saved rules remain untouched. Closing reminder is shortened. Added unit and browser regressions; CI validation pending.
 
 - v3.8.12 direct bank details (`codex/v3.8.12-direct-bank-details`, PR #306): every current/open dashboard bank card routes directly to its standardized account details; the inconsistent dashboard action-button row is removed and account-specific actions remain inside the shared detail footer. Recorded eligibility policy projections are cached per render/save cycle so card navigation does not repeatedly rescan and reparse every account. Bank records, financial rules, eligibility decisions, history and primary action behavior remain unchanged. UI/bonus/cloud units, Chromium, WebKit and release verification passed in run 43917120515. Next: squash merge PR #306 and verify GitHub Pages v3.8.12.
 
