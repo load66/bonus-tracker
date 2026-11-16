@@ -1,9 +1,9 @@
-/* Release marker v3.8.11 — latest-recorded eligibility policy. */
+/* Release marker v3.8.12 — latest-recorded eligibility policy with cached projections. */
 /* Release 3.6.94: bank-specific rules unchanged; calendar-month close reviews are handled by shared financial rules. */
-/* BonusTracker v3.8.11 — latest-recorded eligibility policy with legacy compatibility. */
+/* BonusTracker v3.8.12 — latest-recorded eligibility policy with legacy compatibility. */
 (function(){
   'use strict';
-  const VER='3.8.11';
+  const VER='3.8.12';
   const SAFETY_BUFFER_DAYS=2;
 
   function decision(e){
