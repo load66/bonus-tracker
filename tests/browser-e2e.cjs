@@ -642,9 +642,11 @@ async function exercise(name,engine,url){
         entries=[e];expanded=e.id;R();return previous;
       },synthetic);
       check('shared structured deadline overrides legacy day counter',await page.evaluate(()=>reqDeadline(entries[0])==='2026-12-11'&&btNextActionForEntry(entries[0]).task.context.date==='2026-12-11'));
-      check('rendered requirements and header share exact structured deadline',await page.locator('.bt360-detail-card').innerText().then(t=>t.includes('Requirements due Dec 11, 2026')&&t.includes('Direct deposits totaling $1,000')&&t.includes('Due Dec 11, 2026')));
-      await page.locator('[data-section="timers"] > summary').click();
-      check('rendered timer uses the same requirement deadline',await page.locator('[data-source="saved-requirement"]').innerText().then(t=>t.includes('Dec 11, 2026')));
+      check('simple requirement shows the exact structured deadline once',
+        await page.locator('.bt3810-requirements').innerText().then(t=>t.includes('Direct deposits totaling $1,000')&&t.includes('Due Dec 11, 2026')));
+      check('derived reminder remains correct but is not duplicated on the main screen',
+        await page.evaluate(()=>BT360.timerRows(entries[0]).includes('Dec 11, 2026'))&&
+        await page.locator('[data-source="saved-requirement"]').count()===0);
       await page.screenshot({path:path.join(output,name+'-shared-requirement-dates-390.png'),fullPage:true});
       check('shared deadline rendering preserves stored records',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,saved.stored));
       await page.evaluate(previous=>{entries=previous.entries;expanded=previous.expanded;R();},saved);
