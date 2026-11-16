@@ -1042,11 +1042,13 @@ function simpleRequirements(e){
  const fallback=!rows&&!extras?'<p class="bt3810-muted">'+(e.completeBonusText?'Complete the saved bonus requirements.':'Add your bonus requirements to start tracking.')+'</p>':'';
  const hasDeposit=list.some(r=>r?.kind==='direct-deposit')||/direct[ -]?deposits?|\bpayroll\b|\bq?dd\b/i.test(String(e.completeBonusText||''));
  const progressDD=typeof depositProgress==='function'?depositProgress(e):null;
+ const cents=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:Number(n)%100===0?0:2,maximumFractionDigits:2}).format(Number(n||0)/100);
  const deposit=hasDeposit||progressDD?.recordedCount?
-  '<div class="bt3810-deposit"><span>'+(progressDD?.recordedCount?amount(Number(progressDD.totalCents||0)/100)+' recorded · '+amount(Number(progressDD.confirmedCents||0)/100)+' confirmed':'')+'</span>'
+  '<div class="bt3810-deposit"><span>'+(progressDD?.recordedCount?cents(progressDD.totalCents)+' recorded · '+cents(progressDD.confirmedCents)+' confirmed':'')+'</span>'
   +'<button type="button" class="bt360-link" onclick="openDepositRecord('+arg(e.id)+')">Add deposit</button></div>':'';
  return '<section class="bt3810-card bt3810-requirements" aria-label="Requirements"><div class="bt3810-heading"><h3>Requirements</h3>'
-  +(progress.total?'<span>'+progress.done+' of '+progress.total+' done</span>':'')+'</div>'+rows+extras+fallback+deposit+'</section>';
+  +(progress.total?'<span>'+progress.done+' of '+progress.total+' done</span>':'')+'</div>'+rows+extras+fallback+deposit
+  +'<button type="button" class="bt360-link bt3810-add-task" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></section>';
 }
 function simpleFees(e){
  if(e.closed)return '';
