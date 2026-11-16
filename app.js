@@ -7562,7 +7562,11 @@ entries=sortE(entries); // First visible render is owned by BT360 at the end of 
       return;
     }
     if(action==='timer'){
-      openNewTimerModal(id);
+      // Route to the canonical editor that owns timer persistence. The old
+      // source-menu wrapper can be unavailable after the lightweight detail
+      // navigation mounts, but saved timers must remain editable.
+      if(typeof openNewTimerEditor==='function')openNewTimerEditor(id,'due');
+      else {R();window.btNotify?.('Reminder editor is unavailable. Try again.');}
       return;
     }
     R();
