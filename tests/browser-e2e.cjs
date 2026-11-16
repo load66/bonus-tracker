@@ -934,11 +934,11 @@ async function exercise(name,engine,url){
     check('conditional no-fee wording blocks readiness',await page.evaluate(()=>btEvaluateAccount(entries[0]).close.status!=='ready'));
     await page.evaluate(()=>{entries[0].earlyTerminationFeeText='No early closing fee.';entries[0].feeScheduleRaw='No early closing fee.';R();});
     check('restoring proven zero-fee evidence restores close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
-    check('ready-to-close highlights Close milestone',await page.locator('.bt360-steps span.current').innerText()==='Close');
-    check('close-ready keeps shared section order and opens closing checks',
-      await page.locator('.bt360-detail-card .bt360-panel-title h3').first().innerText()==='Requirements'
-      &&await page.locator('[data-section=closing]').evaluate(e=>e.open)
-      &&await page.locator('.bt3611-ready-extras').count()===0);
+    check('received bonus offers recording a real closure',await page.locator('.bt3810-status h3').innerText()==='Bonus received'&&await page.locator('.bt360-detail-footer .bt360-primary').innerText()==='Record closure');
+    check('received bonus shows concise dates and fee warnings without extra panels',
+      await page.locator('.bt3810-dates').count()===1
+      &&await page.locator('.bt3810-fees').count()===1
+      &&await page.locator('.bt3611-ready-extras,.bt3686-account-extras').count()===0);
     await page.getByRole('button',{name:'More account actions'}).click();
     await page.locator('.bt-ba-mini').filter({hasText:'Activity'}).click();
     check('Activity opens from the header menu without a detail section',await page.getByRole('dialog',{name:'Activity'}).isVisible()
@@ -1327,8 +1327,8 @@ async function exercise(name,engine,url){
     }));
     await page.screenshot({path:path.join(output,name+'-v366-tracker-390.png')});
     await page.locator('[data-bt-entry-id="e2e-lafayette"] .bt366-compact-row').click();
-    check('Lafayette has one new detail header and one progress strip',
-      await page.locator('.bt360-detail-header').count()===1&&await page.locator('.bt360-steps').count()===1&&await page.locator('.bt360-steps span').count()===5);
+    check('Lafayette has one simple detail header and requirements card',
+      await page.locator('.bt360-detail-header').count()===1&&await page.locator('.bt3810-detail').count()===1&&await page.locator('.bt3810-requirements').count()===1);
     check('Lafayette with 1 of 2 tasks opens next task instead of confirming payout',
       await page.locator('.bt360-detail-footer .bt360-primary').innerText()==='Open next task');
     await page.screenshot({path:path.join(output,name+'-v366-lafayette-detail-390.png')});
@@ -1760,10 +1760,10 @@ async function exercise(name,engine,url){
 
     // Reopen detail and prove the compact/expanded views remain stable across years.
     {await openAccounts();await page.locator('.bt366-compact-row').first().click();}
-    check('detail contains one lifecycle strip after reload',await page.locator('.bt360-steps').count()===1);
+    check('detail retains one simple status after reload',await page.locator('.bt3810-status').count()===1);
     await page.locator('#bt362-year').selectOption('2025');
     await page.locator('#bt362-year').selectOption('2026');
-    check('year navigation preserves focused detail',await page.locator('.bt360-detail-header').count()===1&&await page.locator('.bt360-steps').count()===1);
+    check('year navigation preserves focused detail',await page.locator('.bt360-detail-header').count()===1&&await page.locator('.bt3810-detail').count()===1);
     // The focused detail intentionally hides the Tracker list search; navigate back first.
     await page.getByRole('button',{name:'Back to accounts'}).click();
     await page.getByPlaceholder('Search accounts...').pressSequentially('E2E');
