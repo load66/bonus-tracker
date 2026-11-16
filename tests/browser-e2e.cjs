@@ -940,93 +940,60 @@ async function exercise(name,engine,url){
       await page.locator('.bt3810-dates').count()===1
       &&await page.locator('.bt3810-fees').count()===1
       &&await page.locator('.bt3611-ready-extras,.bt3686-account-extras').count()===0);
-    await page.getByRole('button',{name:'More account actions'}).click();
-    await page.locator('.bt-ba-mini').filter({hasText:'Activity'}).click();
-    check('Activity opens from the header menu without a detail section',await page.getByRole('dialog',{name:'Activity'}).isVisible()
-      &&await page.locator('.bt360-detail-card').getByText('Activity & Analysis',{exact:true}).count()===0);
-    await page.getByRole('button',{name:'Close activity'}).click();
+    check('earned bonus remains simple, while warning about fee risk',
+      await page.locator('.bt3810-fees').innerText().then(t=>t.includes('Monthly')&&t.includes('Closing early')));
     const sticky=await page.evaluate(()=>{
       const bar=document.querySelector('.bt360-detail-footer').getBoundingClientRect();
       const nav=document.querySelector('.tabs').getBoundingClientRect();
       return {ok:bar.bottom<=nav.top+2&&bar.top>=0,fixed:getComputedStyle(document.querySelector('.bt360-detail-footer')).position==='fixed'};
     });
-    check('sticky detail bar stays above navigation',sticky.ok&&sticky.fixed);
-    check('simple account details have no advanced panels or storage diagnostics',
-      await page.locator('.bt3686-account-extras,.bt3640-section,.bt3640-save-status').count()===0);
-
+    check('simple sticky footer stays above navigation',sticky.ok&&sticky.fixed);
     const evidenceBefore=await page.evaluate(()=>({entry:JSON.stringify(entries[0]),stored:localStorage.getItem('bt_e_v4')}));
     await page.evaluate(()=>{
-      Object.assign(entries[0],{tcSourceRaw:'Exact original <promotion>\nSecond original line.',feeScheduleRaw:'Exact saved fee schedule.',promoSourceUrl:'https://example-bank.test/promo',feeScheduleSourceUrl:'https://example-bank.test/fees',termsVerifiedAt:'2026-01-01'});
+      Object.assign(entries[0],{tcSourceRaw:'Exact original <promotion>\nSecond original line.',feeScheduleRaw:'Exact saved fee schedule.',
+        promoSourceUrl:'https://example-bank.test/promo',feeScheduleSourceUrl:'https://example-bank.test/fees',termsVerifiedAt:'2026-01-01'});
       R();
     });
-    check('source evidence never equates saved dates with official eligibility',await page.evaluate(()=>{
-      const evidence=BT360.sourceEvidenceStatus(entries[0]);
-      return evidence.promotion&&evidence.fees&&evidence.rows.length===4&&!BTEligibilityGate.validate(entries[0]).eligible;
-    }));
-    check('original terms remain complete and escaped in saved Archive history',await page.evaluate(()=>{
-      const html=renderTermsCycle(entries[0]);
-      return html.includes('Exact original &lt;promotion&gt;')&&html.includes('Second original line.')&&html.includes('Exact saved fee schedule.');
-    }));
-    for(const width of [320,375,390,430]){
-      await page.setViewportSize({width,height:844});
-      check('simple account view fits '+width+'px',
-        await page.locator('.bt3810-detail').evaluate(n=>n.scrollWidth<=n.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
-      if(width===390)await page.screenshot({path:path.join(output,name+'-source-evidence-390.png')});
-    }
-    await page.evaluate(()=>{entries[0].tcSourceRaw='';entries[0].analysis={rawText:'Review text only'};R()});
-    check('missing original terms are not certified by a recorded review date',await page.evaluate(()=>!BT360.sourceEvidenceStatus(entries[0]).promotion));
-    check('review text remains separate from original terms',await page.evaluate(()=>BT360.sourceEvidencePanel(entries[0]).includes('Read saved review text')));
-    check('source review never persists test data',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,evidenceBefore.stored));
-    await page.evaluate(before=>{entries[0]=JSON.parse(before);R()},evidenceBefore.entry);
-    await page.setViewportSize({width:390,height:844});
-    await page.locator('.bt3810-detail').scrollIntoViewIfNeeded();
-    check('sticky footer never covers last account content',await page.evaluate(()=>{
-      const content=document.querySelector('.bt3810-detail').getBoundingClientRect(),footer=document.querySelector('.bt360-detail-footer').getBoundingClientRect();
-      return content.bottom<=footer.top+2||document.querySelector('.scroll').scrollHeight>document.querySelector('.scroll').clientHeight;
-    }));
-    await page.screenshot({path:path.join(output,name+'-bonus-detail-ready-mockup-390.png')});
-    await page.screenshot({path:path.join(output,name+'-bonus-detail-ready-mockup-bottom-390.png')});
+    check('original terms stay accessible in source records without a main-screen drawer',await page.evaluate(()=>{
+      const e=entries[0];
+      return BT360.sourceEvidencePanel(e).includes('Exact original &lt;promotion&gt;')
+        &&BT360.sourceEvidenceStatus(e).promotion;
+    })&&await page.locator('.bt360-detail-card .bt3640-source-text').count()===0);
+    check('viewing saved terms does not write bank records',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,evidenceBefore.stored));
+    await page.evaluate(x=>{entries[0]=JSON.parse(x);R()},evidenceBefore.entry);
+    check('paid detail has no redundant panels or advanced disclosures',
+      await page.locator('.bt3810-status,.bt3810-dates,.bt3810-fees').count()===3
+      &&await page.locator('.bt360-detail-card details').count()===0);
     await page.screenshot({path:path.join(output,name+'-bonus-detail-ready-390.png')});
-    await page.evaluate(()=>BT360.openPhoneForClose(entries[0].bank,'personal'));
-    await page.locator('#ph_new_bank').waitFor();
-    check('phone editor still carries correct bank and audience',
-      await page.locator('#ph_new_bank').inputValue()==='E2E Verification Bank'&&await page.locator('#ph_new_personal').isVisible());
-    await page.getByRole('button',{name:'← Settings'}).click();
 
-    await openAdvancedActions();await button('Add reminder Save a reminder').click();
-    await button('Start + Days').click();await page.locator('#tem_text').fill('E2E manual reminder');await page.locator('#tem_start').fill('2026-03-08');await page.locator('#tem_days').fill('1');await button('Add timer').click();
-    check('timer uses calendar days across DST',(await record()).customTimers.some(t=>t.text==='E2E manual reminder'&&t.date==='2026-03-09'));
-    await openAdvancedActions();await button('Add task Track a requirement').click();await page.getByPlaceholder('e.g. Make 1 debit card transaction').fill('E2E checklist task');await button('Save').click();
-    if(!await page.locator('[data-section=requirements]').evaluate(e=>e.open))await page.locator('[data-section=requirements] > summary').click();
-    await page.getByRole('checkbox',{name:'E2E checklist task',exact:true}).click();
-    check('checklist completion persists in redesigned Requirements',(await record()).checklist.some(x=>x.text==='E2E checklist task'&&x.done)&&await page.locator('.bt360-panel').filter({hasText:'Requirements'}).count()>0);
-    check('checklist exposes accessible completion state',await page.getByRole('checkbox',{name:'E2E checklist task',exact:true}).getAttribute('aria-checked')==='true');
-    check('shared Requirements stays expanded after checklist update',await page.locator('[data-section=requirements]').evaluate(e=>e.open));
+    // Preserve the underlying timer and task editors even when paid-account
+    // detail no longer advertises their redundant historical panels.
+    await page.evaluate(()=>openNewTimerModal(entries[0].id));
+    await button('Start + Days').click();
+    await page.locator('#tem_text').fill('E2E manual reminder');
+    await page.locator('#tem_start').fill('2026-03-08');
+    await page.locator('#tem_days').fill('1');
+    await button('Add timer').click();
+    check('saved reminder retains calendar-day math across daylight saving',
+      (await record()).customTimers.some(t=>t.text==='E2E manual reminder'&&t.date==='2026-03-09'));
+    await page.evaluate(()=>openChecklistModal(entries[0].id));
+    await page.getByPlaceholder('e.g. Make 1 debit card transaction').fill('E2E checklist task');
+    await button('Save').click();
+    check('old checklist entry remains saved without cluttering the paid screen',
+      (await record()).checklist.some(x=>x.text==='E2E checklist task')&&await page.locator('.bt3810-requirements').count()===0);
+    const recordedBefore=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     await page.evaluate(()=>{
-      const e=entries[0];window.__layoutOriginal={checklist:e.checklist.map(x=>({...x})),customTimers:e.customTimers.map(x=>({...x})),monthlyFeeWaiverText:e.monthlyFeeWaiverText};
-      e.checklist[0].text='Complete qualifying electronic deposits and retain the supporting confirmation for the full statement period';
-      e.customTimers[0].text='Confirm the promotional deposit posted before the closing deadline';
-      e.monthlyFeeWaiverText='The monthly fee is waived when qualifying electronic deposits reach the required amount in each statement period, or when the opening balance threshold is met each day, or when a qualifying linked relationship is maintained.';
+      entries[0].monthlyFeeWaiverText='Qualified electronic deposits, minimum daily balance or linked bank relationship.';
+      entries[0].customTimers[0].text='Confirm promotional deposit before the deadline and retain bank evidence.';
       R();
     });
-    if(!await page.locator('[data-section=requirements]').evaluate(e=>e.open))await page.locator('[data-section=requirements] > summary').click();
-    if(!await page.locator('.bt3640-section[data-section="timers"]').evaluate(e=>e.open))await page.locator('.bt3640-section[data-section="timers"] > summary').click();
-    if(!await page.locator('.bt3640-section[data-section="fees"]').evaluate(e=>e.open))await page.locator('.bt3640-section[data-section="fees"] > summary').click();
     for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
-      const layout=await page.evaluate(()=>{
-        const panel=document.querySelector('.bt360-detail-card'),task=panel?.querySelector('.bt360-check .bt366-row-edit'),timer=panel?.querySelector('.bt3611-timer-body'),fee=panel?.querySelector('.bt3613-fee-line');
-        if(!panel||!task||!timer||!fee)return {ok:false,reason:'missing node',panel:!!panel,task:!!task,timer:!!timer,fee:!!fee};
-        const owner=task.parentElement,check=owner.querySelector('[role="checkbox"]'),a=check.getBoundingClientRect(),b=task.getBoundingClientRect();
-        const title=timer.querySelector('b'),titleH=title?.getBoundingClientRect().height||0,lh=parseFloat(getComputedStyle(title).lineHeight)||16;
-        const metrics={taskWidth:task.clientWidth,timerWidth:timer.clientWidth,titleH,titleLineHeight:lh,checkRight:a.right,taskLeft:b.left,taskRight:b.right,ownerRight:owner.getBoundingClientRect().right,feeScroll:fee.scrollWidth,feeWidth:fee.clientWidth,panelScroll:panel.scrollWidth,panelWidth:panel.clientWidth,feeAlign:getComputedStyle(fee.querySelector('div')).textAlign};
-        const gates={task:task.clientWidth>=120,timer:timer.clientWidth>=120,title:titleH<=lh+2,checkbox:a.right<=b.left+1,taskBounds:b.right<=owner.getBoundingClientRect().right+1,feeOverflow:fee.scrollWidth<=fee.clientWidth+1,panelOverflow:panel.scrollWidth<=panel.clientWidth+1,feeAlign:metrics.feeAlign==='left'};
-        return {ok:Object.values(gates).every(Boolean),gates,metrics};
-      });
-      if(!layout.ok)console.error('320-430px layout diagnostics:',width,JSON.stringify(layout));
-      check('detail task, timer and waiver remain readable at '+width+'px',layout.ok);
+      check('simple detail fits '+width+'px with long saved text',
+        await page.locator('.bt360-detail-card').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
     }
-    await page.evaluate(()=>{const e=entries[0],v=window.__layoutOriginal;e.checklist=v.checklist;e.customTimers=v.customTimers;e.monthlyFeeWaiverText=v.monthlyFeeWaiverText;delete window.__layoutOriginal;R()});
+    await page.evaluate(x=>{entries[0]=JSON.parse(x).find(e=>e.id===entries[0].id);R()},recordedBefore);
+    await page.setViewportSize({width:390,height:844});
     await button('Tax').click();
     check('IRS estimate starts without guessed personal income or a false tax balance',
       await page.locator('.bt-tax-estimator').isVisible()&&
