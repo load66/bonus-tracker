@@ -1277,3 +1277,8 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
  .bt3810-dates dd,.bt3810-pair{font-size:12px}
  .bt3810-footer>button:first-child{flex-basis:27%!important}
 }
+
+
+.bt3810-deposit{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid #252a36;margin-top:9px;padding-top:10px;min-height:44px}
+.bt3810-deposit span{color:#abb3c1;font-size:11px;line-height:1.4}
+.bt3810-deposit button{color:#78e7bf;min-height:38px;padding:8px;font-size:12px;white-space:nowrap}
