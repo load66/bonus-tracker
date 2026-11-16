@@ -1270,11 +1270,8 @@ async function exercise(name,engine,url){
       &&Object.values(completedActions).every(x=>!x.command.includes('openReqMet')));
     check('payment remains reachable whenever requirements were confirmed',
       ['payout','recurring','review','normal'].every(k=>completedActions[k].footer.includes('Record bonus payment')&&completedActions[k].footer.includes('openRcv(')));
-    check('stage action mapping never confirms payout during In progress',
-      mappedActions.IN_PROGRESS==='Open next task'&&mappedActions.ACTION_NEEDED==='Open next task'
-      &&mappedActions.REQUIREMENTS_MET==='Record bonus payment'&&mappedActions.AWAITING_BONUS==='Record bonus payment'
-      &&mappedActions.HOLD_OPEN==='Review closing'&&mappedActions.BONUS_RECEIVED==='Review closing'
-      &&mappedActions.READY_TO_CLOSE==='Mark account closed');
+    check('stale stage labels never advance milestones without recorded evidence',
+      Object.values(mappedActions).every(label=>label==='Mark requirements done'));
     await page.evaluate(()=>{
       window.__designEntries=JSON.parse(JSON.stringify(entries));
       entries.push({id:'e2e-lafayette',bank:'Lafayette FCU',accountType:'personal',bonus:250,opened:'2026-10-01',closed:'',reqMet:'',bonusRecd:'',churn:'1',
