@@ -136,8 +136,13 @@ assert.doesNotMatch(sandbox.BT360.timerRows(paidRequirement),/data-source="saved
  const detail=sandbox.BT360.detailPanels(paid);
  assert.match(detail,/Next bonus cycle/,'Next bonus cycle is visible after payout');
  assert.match(detail,/Bonus received Oct 28, 2026/,'Recorded payment is the cycle milestone');
- assert.match(detail,/Next date not confirmed/,'Unknown eligibility never becomes a fabricated date');
- assert.match(detail,/Rule review needed/,'Unverified next-cycle rule can be reviewed');
+ assert.match(detail,/Oct 30, 2027/,'Verified saved repeat-bonus rule remains visible after payment');
+ const unverified={id:'SYN-UNVERIFIED-PAID',bank:'Unverified Synthetic Bank',opened:'2026-10-15',
+  reqMet:'2026-10-20',bonusRecd:'2026-10-28',customTimers:[],checklist:[]};
+ const uncertain=sandbox.BT360.detailPanels(unverified);
+ assert.match(uncertain,/Next date not confirmed/,'Unknown eligibility never becomes a fabricated date');
+ assert.match(uncertain,/Rule review needed/,'Unverified next-cycle rule can be reviewed');
+ assert.doesNotMatch(uncertain,/20\d\d-\d\d-\d\d.*Next bonus review/,'Unknown cycles cannot invent a next date');
  assert.match(detail,/Previous cycle reminders \(2\)/,'Old due reminders remain editable in collapsed history');
  assert.match(detail,/Closing the account/,'Closing review remains available without falsely authorizing closure');
  assert.doesNotMatch(detail,/Overdue|Eligibility rule missing/,'Completed cycle has no stale overdue banner or harsh missing-rule message');
