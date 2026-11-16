@@ -1039,7 +1039,7 @@ function detailPanels(e){
   h+='<section class="bt3611-call"><b>Contact the bank</b><p>Confirm closing details before you close.</p>'+(phone?'<a class="bt360-primary bt360-call" href="tel:'+safe(phone.replace(/[^+\d]/g,''))+'">☎ '+safe(phone)+'</a>':'<button type="button" class="bt360-primary" onclick="BT360.openPhoneForClose('+arg(e.bank)+','+arg(accountAudience(e))+')">Add bank phone number</button>')+'</section>';
  }
  const reminders=timerRows(e);
- h+=accountSection(e,'timers','Reminders',reminders||'<p class="bt360-muted">No reminders saved.</p>','',!closed?'<button type="button" class="bt360-link bt3613-add-timer" onclick="runBankAction('+arg(e.id)+',\'timer\')">+ Add</button>':'');
+ h+=accountSection(e,'timers','Reminders',reminders||'<p class="bt360-muted">'+(e.reqMet||e.bonusRecd||e.closed?'No active reminders for this bonus cycle.':'No reminders saved.')+'</p>','',!closed?'<button type="button" class="bt360-link bt3613-add-timer" onclick="runBankAction('+arg(e.id)+',\'timer\')">+ Add</button>':'');
  const eligibility=eligibleInfo(e);
  h+='<div data-bt-eligibility>'+nextCyclePanel(e)+'</div>';
  let extra=accountDates(e)+pastCycleReminderHistory(e);
