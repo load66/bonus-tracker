@@ -427,6 +427,8 @@ function archiveCloudStatusMarkup(){
   return '<div class="archive-cloud-state"><span data-cycle-cloud role="status">'+esc(state?'Cloud recovery · '+state.title:'Cloud recovery not yet verified')+'</span><button type="button" class="btn-s" onclick="btOpenCloudBackup()">Backup & recovery</button></div>';
 }
 function closeCycleForSave(e,p){
+  // A factual closure must never rewrite a previously recorded bonus or payment.
+  if(p?.simpleCloseConfirmed)return {...e,closed:p.closeDate,monthlyFeeChecked:!!p.monthlyFeeChecked,feeChecked:true};
   const next={...e,opened:p.opened===undefined?(e.opened||''):p.opened,closed:p.closeDate,bonus:Number(p.actualBonus||0),monthlyFeeChecked:!!p.monthlyFeeChecked,feeChecked:true};
   if(Number(p.actualBonus||0)>0){next.bonusRecd=p.bonusDate||e.bonusRecd||'';next.reqMet=p.reqDate||e.reqMet||'';}
   if(p.enrollmentAtOpening&&next.opened&&!e.couponEnrollmentDate&&!e.offerEnrollmentDate){next.couponEnrollmentDate=next.opened;next.offerEnrollmentDate=next.opened;}
@@ -5143,6 +5145,25 @@ function rClose(){
     if(warnings.length)h+='<div class="close-warnings compact"><b>Review</b>'+warnings.map(x=>'<span>• '+esc(x)+'</span>').join('')+'</div>';
     h+='<div class="close-review-actions"><button class="c-c" onclick="closeBack()">Back</button><button class="c-g" onclick="finishClose()">Save Closed</button></div>';
   }else if(p.step==='date'){
+    if(e?.bonusRecd){
+      const hold=window.BTFinancialRules?.closeHoldInfo(e);
+      const fee=window.BT360?.feeSnapshot?.(e);
+      const rule=window.btEvaluateAccount?.(e)?.close;
+      const risks=[];
+      if(hold&&p.closeDate<hold.reviewOn)risks.push('The saved offer has a hold through '+fD(hold.holdUntil)+'. Confirm with the bank whether closing could affect the bonus.');
+      else if(!hold&&daysUntilSafe(e)>0)risks.push('The saved offer may still have a waiting period. Confirm the bonus will not be taken back.');
+      if(!fee?.closeKnown||rule?.status!=='ready')risks.push('Closing fees or bonus repayment terms are not fully confirmed.');
+      h+='<h3>Record account closed</h3><div class="sub">Only use this after the bank confirms the account is closed. This updates BonusTracker, not your bank.</div>';
+      h+='<label for="cp_date">Date the bank closed it</label><input type="date" id="cp_date" value="'+esc(p.closeDate||'')+'" oninput="if(closePrompt)closePrompt.closeDate=this.value">';
+      if(entryNeedsNegativeBalanceClosureAnswer(e)){
+        h+='<label for="cp_negative_balance">Was there a negative balance at closing?</label><select id="cp_negative_balance" onchange="if(closePrompt)closePrompt.closedWithNegativeBalance=this.value===\'yes\'?true:this.value===\'no\'?false:null"><option value=""'+(typeof p.closedWithNegativeBalance!=='boolean'?' selected':'')+'>Choose</option><option value="no"'+(p.closedWithNegativeBalance===false?' selected':'')+'>No</option><option value="yes"'+(p.closedWithNegativeBalance===true?' selected':'')+'>Yes</option></select>';
+      }
+      if(risks.length)h+='<div class="close-warnings compact" role="note"><b>Check before closing</b>'+risks.slice(0,2).map(x=>'<span>'+esc(x)+'</span>').join('')+'</div>';
+      h+='<label class="bt-simple-check"><input type="checkbox" id="cp_monthly_checked" '+(p.monthlyFeeChecked?'checked ':'')+'onchange="if(closePrompt)closePrompt.monthlyFeeChecked=this.checked"> I checked fees and pending transactions</label>';
+      h+='<label class="bt-simple-check"><input type="checkbox" id="cp_closed_confirm" '+(p.simpleCloseConfirmed?'checked ':'')+'onchange="if(closePrompt){closePrompt.simpleCloseConfirmed=this.checked;closePrompt.error=\'\'}"> The bank confirmed this account is closed</label>';
+      if(p.error)h+='<p role="alert" class="close-warnings compact">'+esc(p.error)+'</p>';
+      h+='<div class="close-review-actions"><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="saveSimpleClose()">Save closure</button></div>';
+    }else{
     const ready=closeReadiness(e,p.closeDate);
     h+='<h3>🔒 Record closure</h3><div class="sub">Record the actual date the bank account was closed.</div>';
     h+='<div class="close-ready '+esc(ready.cls)+'"><b>'+esc(ready.label)+'</b><span>'+esc(ready.warnings[0]||'Closure is recorded separately from the T&C eligibility clock.')+'</span></div>';
@@ -5154,6 +5175,7 @@ function rClose(){
     }
     h+='<label>Monthly Fee Checked?</label><select id="cp_monthly_checked"><option value="no"'+(!p.monthlyFeeChecked?' selected':'')+'>No</option><option value="yes"'+(p.monthlyFeeChecked?' selected':'')+'>Yes</option></select>';
     h+='<div style="display:flex;gap:6px;margin-top:12px"><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="closeNext()">Next</button></div>';
+    }
   }else if(p.step==='bonus'){
     h+='<h3>💰 Bonus Check</h3><div class="sub">Confirm payout details before closing '+esc(p.bank)+'.</div>';
     h+='<div class="bonus-row"><button class="bonus-opt'+(p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=true;closePrompt.actualBonus=closePrompt.bonus;R()">Full '+fM(p.bonus)+'</button><button class="bonus-opt'+(!p.gotFull?' sel':'')+'" onclick="closePrompt.gotFull=false;R()">Partial / none</button></div>';
@@ -5882,6 +5904,22 @@ function closeNext(){
     R()
   }
 }
+function saveSimpleClose(){
+  const p=closePrompt;
+  if(!p||p.step!=='date')return;
+  const e=entries.find(x=>x.id===p.entryId);
+  if(!e||!e.bonusRecd)return;
+  closeCollectDateFields();
+  if(!archiveDateValid(p.closeDate)||p.closeDate>td()||(e.opened&&p.closeDate<e.opened)){
+    p.error='Enter the actual closing date, between opening and today.';R();return;
+  }
+  if(entryNeedsNegativeBalanceClosureAnswer(e)&&typeof p.closedWithNegativeBalance!=='boolean'){
+    p.error='Select whether the account closed with a negative balance.';R();return;
+  }
+  if(!p.simpleCloseConfirmed){p.error='Confirm that the bank actually closed this account.';R();return;}
+  p.error='';
+  finishClose();
+}
 function closeBack(){
   const p=closePrompt;
   if(!p)return;
@@ -5910,12 +5948,12 @@ function finishClose(){
     if(x.id===p.entryId){
       x={...x,...projected};
       if(entryNeedsNegativeBalanceClosureAnswer(x))x.closedWithNegativeBalance=!!p.closedWithNegativeBalance;
-      x.bonus=Number(p.actualBonus||0);
-      if(Number(p.actualBonus||0)>0){
+      if(!p.simpleCloseConfirmed)x.bonus=Number(p.actualBonus||0);
+      if(!p.simpleCloseConfirmed&&Number(p.actualBonus||0)>0){
         x.bonusRecd=p.bonusDate||x.bonusRecd||'';
         x.reqMet=p.reqDate||x.reqMet||'';
       }
-      if(p.dp)x.dataPoint=p.dp;
+      if(!p.simpleCloseConfirmed&&p.dp)x.dataPoint=p.dp;
       x.monthlyFeeChecked=!!p.monthlyFeeChecked;
       x.feeChecked=true;
       appendEntryHistory(x,'actual_close','Closed '+fD(p.closeDate)+(x.bonusRecd?' · bonus received '+fD(x.bonusRecd):'')+(entryNeedsNegativeBalanceClosureAnswer(x)?(' · negative balance: '+(x.closedWithNegativeBalance?'yes':'no')):'')+'.');
@@ -5925,7 +5963,7 @@ function finishClose(){
   });
   const e2=entries.find(x=>x.id===p.entryId);
   const autoMethod=(p.dp||e2?.dataPoint||'').trim();
-  if(e2&&Number(p.actualBonus||0)>0&&autoMethod&&p.bonusDate)addDD(p.bank,autoMethod,Number(p.actualBonus||0),p.bonusDate,{entryId:p.entryId,accountType:e2.accountType,note:'Auto-saved from successful close'});
+  if(!p.simpleCloseConfirmed&&e2&&Number(p.actualBonus||0)>0&&autoMethod&&p.bonusDate)addDD(p.bank,autoMethod,Number(p.actualBonus||0),p.bonusDate,{entryId:p.entryId,accountType:e2.accountType,note:'Auto-saved from successful close'});
   if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
   entries=sortE(entries);sv(SK,entries);
   closePrompt=null;
@@ -5940,7 +5978,8 @@ function finishClose(){
     cfm={title:'Closed Saved',msg:(e2?e2.bank:'This bank')+' closed on '+fD(p.closeDate)+'.\n\nNext bonus review: '+nextCycleLabel+'.\nStatus: '+(e2?status(e2):'Waiting to Churn')+'.\n\nUndo is available for 60 seconds at the bottom of the app.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
   }
   const issues=archiveHistoryIssues(e2);
-  cfm.msg+='\n\nHistory: '+(issues.length?'Incomplete — '+issues.join('; ')+'.':'Core records saved locally.')+'\nCloud recovery: '+(window.BTCloudBackup?.protection?.().title||'Not verified')+'.';
+  if(p.simpleCloseConfirmed)cfm.msg=(e2?.bank||'Account')+' closed on '+fD(p.closeDate)+'.'+(e2&&churnEligibilityValidation(e2).ok&&churnReadyDate(e2)?'\nNext bonus review: '+fD(churnReadyDate(e2))+'.':'\nNext bonus review: Not confirmed.')+'\nYou can undo this change for 60 seconds.';
+  else cfm.msg+='\n\nHistory: '+(issues.length?'Incomplete — '+issues.join('; ')+'.':'Core records saved locally.')+'\nCloud recovery: '+(window.BTCloudBackup?.protection?.().title||'Not verified')+'.';
   undoState=sealCloseUndo(nextUndo);
   if(undoTimer)clearTimeout(undoTimer);
   undoTimer=setTimeout(()=>{undoState=null;R()},60000);
