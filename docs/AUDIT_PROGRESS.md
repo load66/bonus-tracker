@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: codex — v3.8.14 remove early-closing-fee feature — codex/v3.8.14-early-close-fee-clarity
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
