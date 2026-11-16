@@ -574,9 +574,10 @@ async function exercise(name,engine,url){
         entries=[e];expanded=e.id;tab='tracker';R();return previous;
       },entry);
       check('unrecorded direct deposits start at zero without a fake qualifying result',
-        await page.locator('.bt3686-deposit-empty').innerText().then(x=>x.includes('No deposits tracked yet')));
+        await page.evaluate(()=>depositProgress(entries[0]).recordedCount===0&&!entries[0].reqMet&&!entries[0].bonusRecd)
+        &&await page.locator('.bt3810-deposit').isVisible());
       await page.setViewportSize({width:390,height:844});
-      await page.getByRole('button',{name:'+ Add deposit'}).click();
+      await page.getByRole('button',{name:'Add deposit',exact:true}).click();
       check('new deposit dialog does not invent an amount or date',
         await page.getByRole('dialog',{name:'Record direct deposit'}).isVisible()&&
         await page.locator('#dep_amount').inputValue()===''&&await page.locator('#dep_date').inputValue()==='');
@@ -587,6 +588,7 @@ async function exercise(name,engine,url){
       check('observed deposit records dollars without auto-confirmation',
         await page.evaluate(()=>depositProgress(entries[0]).totalCents===20050&&
           depositProgress(entries[0]).confirmedCents===0&&!entries[0].reqMet&&!entries[0].bonusRecd));
+      await page.locator('.bt3810-recorded-deposits > summary').click();
       check('recorded amount is presented without claiming qualifying progress',
         await page.locator('.bt3681-ledger-total').innerText().then(x=>x.includes('$200.50 recorded')&&x.includes('$0 confirmed by you')));
       await page.locator('.bt3681-ledger-actions button').first().click();
