@@ -49,7 +49,7 @@
     const patterns=[
       new RegExp(String.raw`(?:closed?|closing|close|terminate|terminated|termination|early\s+(?:close|closing|termination))[^.]{0,150}(?:within|before|less\s+than|during\s+the\s+first)\s*(?:the\s+)?${duration}`,'i'),
       new RegExp(String.raw`(?:remain|keep|maintain)[^.]{0,80}open[^.]{0,120}(?:for|through|until)\s*(?:the\s+)?${duration}`,'i'),
-      new RegExp(String.raw`(?:fee|penalty|charge)[^.]{0,110}(?:if|when)[^.]{0,110}closed?[^.]{0,110}${duration}`,'i'),
+      // Fee-only windows do not create a hold or a reminder.
       new RegExp(String.raw`${duration}[^.]{0,120}(?:from|after)\s+(?:account\s+opening|opened\s+date|opening\s+date)[^.]{0,120}(?:close|closed|fee|penalty|forfeit)`,'i')
     ];
     return sentences(text).find(s=>!isLookback(s)&&patterns.some(re=>re.test(s))&&!( /\b(?:fee|penalty|charge)\b/i.test(s)&&!/(?:bonus|reward|clawback|forfeit|repay|remain open|keep[^.]{0,50}open|maintain[^.]{0,50}open)/i.test(s)))||'';
@@ -73,7 +73,15 @@
   function typeForEntry(e){
     if(!e)return'none';
     const saved=normalizeType(e.closeRestrictionType||e.analysis?.closeRestrictionType);
-    if(saved==='payout-only'||saved==='review')return saved;
+    if(saved==='payout-only')return saved;
+    if(saved==='review'){
+      const wording=String([e.closeRuleText,e.closeRuleSourceSentence].filter(Boolean).join(' '));
+      // Old fee-only manual reviews are retired. An independent unresolved
+      // retention/bonus restriction must still block automatic close advice.
+      if(!/\b(?:fee|charge|penalty)\b/i.test(wording)
+        ||/\b(?:bonus|reward|clawback|forfeit|repay|hold|retention|remain open|keep[^.]{0,35}open)\b/i.test(wording))
+        return saved;
+    }
     const n=parseInt(e.minHoldDays||e.closeFeeCountdownDays||0,10)||0;
     const proof=explicitRuleText(e);
     if(n>0&&sourceIsManual(e))return'manual-fixed';
