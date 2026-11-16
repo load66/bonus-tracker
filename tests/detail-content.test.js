@@ -117,6 +117,39 @@ assert.doesNotMatch(sandbox.BT360.timerRows(doneRequirement),/data-source="saved
 assert.doesNotMatch(sandbox.BT360.detailPanels(doneRequirement),/Requirements due Jan 13, 2027/,'Completed requirement does not show as pending in lifecycle header');
 const paidRequirement={...structuredOnly,bonusRecd:'2026-10-17'};
 assert.doesNotMatch(sandbox.BT360.timerRows(paidRequirement),/data-source="saved-requirement"/,'Received bonus suppresses derived requirement reminders');
+
+// v3.8.9: No past-cycle deadlines can nag paid/closed accounts. Historical
+// reminders stay accessible in Documents & activity without altering records.
+{
+ const oldTimers=[
+  {id:'old-requirement',text:'Bonus requirement deadline · complete all direct deposits',date:'2026-11-08',done:false},
+  {id:'old-payout',kind:'payout',text:'Bonus payout review',date:'2026-11-18',done:false},
+  {id:'fee',kind:'fee',text:'Monthly service fee review',date:'2026-11-20',done:false}
+ ];
+ const paid={...structuredOnly,id:'SYN-PAID-CYCLE',bank:'Synthetic Checking',reqMet:'2026-10-20',
+   bonusRecd:'2026-10-28',customTimers:oldTimers,eligibilityRules:[],churn:'',churnable:undefined};
+ const saved=JSON.stringify(paid),beforeStorage=JSON.stringify([...storage]);
+ const timers=sandbox.BT360.timerRows(paid);
+ assert.doesNotMatch(timers,/Nov 8, 2026|Overdue|Nov 18, 2026|Requirement due|Bonus pending/,
+   'Paid cycle must not show old qualification or payout reminders');
+ assert.match(timers,/Monthly fee/,'Recurring fee review survives cycle completion');
+ const detail=sandbox.BT360.detailPanels(paid);
+ assert.match(detail,/Next bonus cycle/,'Next bonus cycle is visible after payout');
+ assert.match(detail,/Bonus received Oct 28, 2026/,'Recorded payment is the cycle milestone');
+ assert.match(detail,/Next date not confirmed/,'Unknown eligibility never becomes a fabricated date');
+ assert.match(detail,/Rule review needed/,'Unverified next-cycle rule can be reviewed');
+ assert.match(detail,/Previous cycle reminders \(2\)/,'Old due reminders remain editable in collapsed history');
+ assert.match(detail,/Review closing/,'Closing review remains available without falsely authorizing closure');
+ assert.doesNotMatch(detail,/Overdue|Eligibility rule missing/,'Completed cycle has no stale overdue banner or harsh missing-rule message');
+ assert.equal(sandbox.BT360.primaryAction(paid).label,'Review closing','Paid account action prioritizes closing review');
+ const closed={...paid,closed:'2026-11-10'};
+ assert.match(sandbox.BT360.detailPanels(closed),/Account closed Nov 10, 2026/,'Closed cycle records the actual closure');
+ assert.doesNotMatch(sandbox.BT360.timerRows(closed),/Requirement due/,'Closing does not resurrect old deadlines');
+ const pending={...paid,reqMet:'',bonusRecd:'',closed:''};
+ assert.match(sandbox.BT360.timerRows(pending),/Requirement due/,'Pending cycle still shows legitimate deadlines');
+ assert.equal(JSON.stringify(paid),saved,'Cycle projection must not change saved bank data');
+ assert.equal(JSON.stringify([...storage]),beforeStorage,'Cycle projection must not write persistent data');
+}
 const unanchoredTiming={...e,reqDays:90,requiredDaysText:'90 days',financialRules:{...e.financialRules,requirements:[{...e.financialRules.requirements[0],timing:{basis:'opened',unit:'business-days',value:90}}]}};
 assert.doesNotMatch(sandbox.BT360.detailPanels(unanchoredTiming),/Requirements due Jan 13, 2027/,'Do not invent calendar date from unsupported structured business-day clock');
 assert.doesNotMatch(sandbox.BT360.timerRows({...unanchoredTiming,customTimers:[]}),/data-source="saved-requirement"/,'Unsupported clock never generates a dated timer');
