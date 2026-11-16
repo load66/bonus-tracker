@@ -197,7 +197,7 @@ setTimeout(()=>{
     for(const bonusRecd of ['unknown','2026-02-30'])assert(decisionFor({...noReqDate,bonusRecd}).close.status!=='ready','Invalid payout date cleared closure');
     run('entries.find(e=>e.id==="EVT-P-01").reqMet="2026-10-03";openReqMet("EVT-P-01")');
     assert(run('reqPrompt.date')==='2026-10-03','Confirmed requirements date was lost when reopening the editor');
-    const independentHold={...noReqDate,earlyTerminationFeeText:'',earlyCloseFee:null,closeRestrictionType:'manual-fixed',closeRuleSource:'manual',minHoldDays:90,closeFeeCountdownDays:'90',closeRuleBasis:'opened'};
+    const independentHold={...noReqDate,earlyTerminationFeeText:'',earlyCloseFee:null,closeRestrictionType:'manual-fixed',closeRuleSource:'manual',minHoldDays:730,closeFeeCountdownDays:'730',closeRuleBasis:'opened'};
     const holdStep=sandbox.lifecycleSteps(independentHold).find(x=>x.key==='safe');
     assert(!holdStep.done,'Unelapsed independent hold remains a blocker even when fee logic is retired');
     const zeroBuffer=run('(function(){modal={bank:"Synthetic Zero Buffer",accountType:"personal",closeBufferDays:0,earlyCloseFee:null,customTimers:[],history:[]};return collectModalEntryData()})()');
