@@ -73,5 +73,14 @@ assert.equal(run('btEligibilityPolicyEntry(entries[0]).eligibilityRules[0].perio
 assert.equal(run('btEligibilityPolicyEntry(entries[0]).eligibilityRules[0].basis'),'account-ownership-ended','The latest Citi ownership rule kept the stale closure basis');
 assert.equal(run('churnReadyDate(entries[0])'),'2027-11-18','Citi did not use exact 365 days plus the two-day planning buffer');
 assert.equal(oldCiti.eligibilityRules[0].periodValue,1,'Latest-policy projection mutated historical account data');
-console.log('Simple account overview passed: four lifecycle states, recorded-rule next cycle, no advanced UI, unchanged data, archived terms and portable backup.');
+const performanceRows=Array.from({length:20},(_,i)=>({id:'PERF-'+i,bank:'Performance Bank '+i,accountType:'personal',opened:'2026-01-01',churnable:true,churnability:'repeatable',
+ eligibilityRules:[{id:'rule-'+i,basis:'account-closed',periodValue:365,periodUnit:'days'}]}));
+const performanceBefore=JSON.stringify(performanceRows),originalRecorded=sandbox.BTEligibilityGate.recorded;let recordedCalls=0;
+sandbox.BTEligibilityGate.recorded=function(){recordedCalls++;return originalRecorded.apply(this,arguments)};
+try{
+ run('entries='+JSON.stringify(performanceRows)+';invalidateEligibilityPolicyCache();entries.forEach(e=>{btEligibilityPolicyEntry(e);churnEligibilityValidation(e);btEligibilityPolicyEntry(e)})');
+ assert(recordedCalls<=performanceRows.length+1,'Eligibility policy reparsed the full account list for each card: '+recordedCalls+' calls');
+ assert.equal(JSON.stringify(performanceRows),performanceBefore,'Cached eligibility projections changed source records');
+}finally{sandbox.BTEligibilityGate.recorded=originalRecorded}
+console.log('Simple account overview passed: four lifecycle states, cached recorded-rule projection, no advanced UI, unchanged data, archived terms and portable backup.');
 process.exit(0);
