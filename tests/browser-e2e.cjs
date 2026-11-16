@@ -972,7 +972,7 @@ async function exercise(name,engine,url){
 
     // Preserve the underlying timer and task editors even when paid-account
     // detail no longer advertises their redundant historical panels.
-    await page.evaluate(()=>openNewTimerModal(entries[0].id));
+    await page.evaluate(()=>runBankAction(entries[0].id,'timer'));
     await button('Start + Days').click();
     await page.locator('#tem_text').fill('E2E manual reminder');
     await page.locator('#tem_start').fill('2026-03-08');
@@ -980,7 +980,7 @@ async function exercise(name,engine,url){
     await button('Add timer').click();
     check('saved reminder retains calendar-day math across daylight saving',
       (await record()).customTimers.some(t=>t.text==='E2E manual reminder'&&t.date==='2026-03-09'));
-    await page.evaluate(()=>openChecklistModal(entries[0].id));
+    await page.evaluate(()=>runBankAction(entries[0].id,'checklist'));
     await page.getByPlaceholder('e.g. Make 1 debit card transaction').fill('E2E checklist task');
     await button('Save').click();
     check('old checklist entry remains saved without cluttering the paid screen',
