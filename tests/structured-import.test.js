@@ -131,10 +131,10 @@ assert.equal(JSON.stringify(reviewedCalendar.financialRules),JSON.stringify(cale
 assert.equal(sandbox.BTFinancialRules.closeHoldInfo(reviewedCalendar).holdUntil,'2027-10-29');
 assert.equal(sandbox.BTFinancialRules.closeHoldInfo(reviewedCalendar).reviewOn,'2027-11-01');
 assert.equal(reviewedCalendar.reqMet,'');assert.equal(reviewedCalendar.bonusRecd,'');
-assert.equal(sandbox.safeCloseDate(reviewedCalendar),null,'Unverified closing fee must not produce safe date');
+assert.equal(sandbox.safeCloseDate(reviewedCalendar),'2027-11-01','Documented account-retention anniversary remains available independently of legacy service-fee fields');
 const postBonus={...reviewedCalendar,bonusRecd:'2027-02-01',reqMet:'2027-01-27'};
-assert.notEqual(sandbox.closeReadiness(postBonus,'2027-11-01').cls,'safe','Elapsed hold cannot clear unknown fee');
-assert.ok(sandbox.closeReadiness(postBonus,'2027-11-01').warnings.some(w=>/service fee/i.test(w)),JSON.stringify({warnings:sandbox.closeReadiness(postBonus,'2027-11-01').warnings,calendar:sandbox.BTFinancialRules.closeHoldInfo(postBonus)}));
+assert(sandbox.closeReadiness(postBonus,'2027-11-01').items.some(x=>x.label==='Calendar-month hold + planning buffer complete'&&x.ok),'Documented hold must clear on the review date');
+assert(!sandbox.closeReadiness(postBonus,'2027-11-01').warnings.some(w=>/service fee|closing fee/i.test(w)),'Retired fee-only uncertainty cannot become a blocker');
 assert.ok(sandbox.closeReadiness(postBonus,'2027-10-28').warnings.some(w=>/calendar-month hold/i.test(w)));
 assert.ok(sandbox.closeRiskWarnings(postBonus,'2027-10-28').some(w=>/retention period/i.test(w)));
-assert.equal(sandbox.status(postBonus),'WAITING TO CLOSE','Unconfirmed closing fee cannot produce safe status');
+assert.equal(sandbox.status(postBonus),'WAITING TO CLOSE','A future contractual hold must remain active until its anniversary');
