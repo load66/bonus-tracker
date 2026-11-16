@@ -1040,11 +1040,13 @@ function simpleRequirements(e){
  const extras=checks.map((c,i)=>({c,i})).filter(({c})=>c&&String(c.text||'').trim()&&!linked.has(c))
   .map(({c,i})=>'<div class="bt3810-task"><button type="button" role="checkbox" aria-label="'+safe(c.text||'Task')+'" aria-checked="'+!!c.done+'" onclick="toggleCk('+arg(e.id)+','+i+')">'+(c.done?'✓':'')+'</button><span><b>'+safe(c.text||'Task')+'</b></span></div>').join('');
  const fallback=!rows&&!extras?'<p class="bt3810-muted">'+(e.completeBonusText?'Complete the saved bonus requirements.':'Add your bonus requirements to start tracking.')+'</p>':'';
+ const hasDeposit=list.some(r=>r?.kind==='direct-deposit')||/direct[ -]?deposits?|\bpayroll\b|\bq?dd\b/i.test(String(e.completeBonusText||''));
+ const progressDD=typeof depositProgress==='function'?depositProgress(e):null;
+ const deposit=hasDeposit||progressDD?.recordedCount?
+  '<div class="bt3810-deposit"><span>'+(progressDD?.recordedCount?amount(Number(progressDD.totalCents||0)/100)+' recorded · '+amount(Number(progressDD.confirmedCents||0)/100)+' confirmed':'')+'</span>'
+  +'<button type="button" class="bt360-link" onclick="openDepositRecord('+arg(e.id)+')">Add deposit</button></div>':'';
  return '<section class="bt3810-card bt3810-requirements" aria-label="Requirements"><div class="bt3810-heading"><h3>Requirements</h3>'
-  +(progress.total?'<span>'+progress.done+' of '+progress.total+' done</span>':'')+'</div>'+rows+extras+fallback
-  +'<div class="bt3810-actions"><button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button>'
-  +((depositLedgerHtml(e)&&e.opened)?'<button type="button" class="bt360-link" onclick="openDepositRecord('+arg(e.id)+')">+ Add deposit</button>':'')+'</div>'
-  +(depositLedgerHtml(e)?'<details class="bt3810-deposits"><summary>Recorded deposits</summary>'+depositLedgerHtml(e)+'</details>':'')+'</section>';
+  +(progress.total?'<span>'+progress.done+' of '+progress.total+' done</span>':'')+'</div>'+rows+extras+fallback+deposit+'</section>';
 }
 function simpleFees(e){
  if(e.closed)return '';
