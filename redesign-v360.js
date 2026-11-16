@@ -1047,6 +1047,7 @@ function simpleRequirements(e){
   +'<button type="button" class="bt360-link" onclick="openDepositRecord('+arg(e.id)+')">Add deposit</button></div>':'';
  return '<section class="bt3810-card bt3810-requirements" aria-label="Requirements"><div class="bt3810-heading"><h3>Requirements</h3>'
   +(progress.total?'<span>'+progress.done+' of '+progress.total+' done</span>':'')+'</div>'+rows+extras+fallback+deposit
+  +(progressDD?.recordedCount?'<details class="bt3810-recorded-deposits"><summary>View recorded deposits</summary>'+depositLedgerHtml(e)+'</details>':'')
   +'<button type="button" class="bt360-link bt3810-add-task" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></section>';
 }
 function simpleFees(e){
