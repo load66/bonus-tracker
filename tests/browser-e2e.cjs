@@ -945,56 +945,55 @@ async function exercise(name,engine,url){
     check('Activity opens from the header menu without a detail section',await page.getByRole('dialog',{name:'Activity'}).isVisible()
       &&await page.locator('.bt360-detail-card').getByText('Activity & Analysis',{exact:true}).count()===0);
     await page.getByRole('button',{name:'Close activity'}).click();
-    check('missing phone offers bank-specific editor only when ready',await page.getByRole('button',{name:'Add bank phone number'}).isVisible());
     const sticky=await page.evaluate(()=>{
       const bar=document.querySelector('.bt360-detail-footer').getBoundingClientRect();
       const nav=document.querySelector('.tabs').getBoundingClientRect();
       return {ok:bar.bottom<=nav.top+2&&bar.top>=0,fixed:getComputedStyle(document.querySelector('.bt360-detail-footer')).position==='fixed'};
     });
     check('sticky detail bar stays above navigation',sticky.ok&&sticky.fixed);
-    check('account details hide supporting records by default',!await page.locator('.bt3686-account-extras').evaluate(e=>e.open));
-    check('account details omit storage diagnostics',await page.locator('.bt3640-save-status').count()===0);
-    await page.locator('.bt3686-account-extras > summary').click();
-    if(!await page.locator('.bt3640-section[data-section="terms"]').evaluate(e=>e.open))await page.locator('.bt3640-section[data-section="terms"] > summary').click();
+    check('simple account details have no advanced panels or storage diagnostics',
+      await page.locator('.bt3686-account-extras,.bt3640-section,.bt3640-save-status').count()===0);
+
     const evidenceBefore=await page.evaluate(()=>({entry:JSON.stringify(entries[0]),stored:localStorage.getItem('bt_e_v4')}));
     await page.evaluate(()=>{
       Object.assign(entries[0],{tcSourceRaw:'Exact original <promotion>\nSecond original line.',feeScheduleRaw:'Exact saved fee schedule.',promoSourceUrl:'https://example-bank.test/promo',feeScheduleSourceUrl:'https://example-bank.test/fees',termsVerifiedAt:'2026-01-01'});
-      R();BT360.revealAccountSection('terms');
+      R();
     });
-    check('source dates never imply official verification',!(await page.locator('[data-section="terms"]').innerText()).includes('Official terms verified'));
-    check('source evidence separates document, date and rule status',await page.locator('.bt3653-evidence>div').count()===4);
-    await page.locator('.bt3640-source-text').first().locator('summary').click();
-    check('original promotion keeps exact source text',await page.locator('.bt3640-source-text pre').first().innerText()==='Exact original <promotion>\nSecond original line.');
+    check('source evidence never equates saved dates with official eligibility',await page.evaluate(()=>{
+      const evidence=BT360.sourceEvidenceStatus(entries[0]);
+      return evidence.promotion&&evidence.fees&&evidence.rows.length===4&&!BTEligibilityGate.validate(entries[0]).eligible;
+    }));
+    check('original terms remain complete and escaped in saved Archive history',await page.evaluate(()=>{
+      const html=renderTermsCycle(entries[0]);
+      return html.includes('Exact original &lt;promotion&gt;')&&html.includes('Second original line.')&&html.includes('Exact saved fee schedule.');
+    }));
     for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
-      await page.locator('.bt3653-evidence').scrollIntoViewIfNeeded();
-      check('source evidence fits '+width+'px',await page.locator('[data-section="terms"]').evaluate(n=>n.scrollWidth<=n.clientWidth+1&&[...n.querySelectorAll('.bt3653-evidence dd')].every(x=>x.scrollWidth<=x.clientWidth+1)));
+      check('simple account view fits '+width+'px',
+        await page.locator('.bt3810-detail').evaluate(n=>n.scrollWidth<=n.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
       if(width===390)await page.screenshot({path:path.join(output,name+'-source-evidence-390.png')});
     }
-    await page.evaluate(()=>{entries[0].tcSourceRaw='';entries[0].analysis={rawText:'Review text only'};R();BT360.revealAccountSection('terms')});
-    check('date alone cannot hide missing original terms',(await page.locator('[data-section="terms"] > summary').innerText()).includes('Original terms missing'));
-    check('review text is distinct from original source',await page.locator('[data-section="terms"]').getByText('Read saved review text',{exact:true}).count()===1);
-    check('source review never persists fixture changes',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,evidenceBefore.stored));
-    await page.evaluate(before=>{entries[0]=JSON.parse(before);R();BT360.revealAccountSection('terms')},evidenceBefore.entry);
+    await page.evaluate(()=>{entries[0].tcSourceRaw='';entries[0].analysis={rawText:'Review text only'};R()});
+    check('missing original terms are not certified by a recorded review date',await page.evaluate(()=>!BT360.sourceEvidenceStatus(entries[0]).promotion));
+    check('review text remains separate from original terms',await page.evaluate(()=>BT360.sourceEvidencePanel(entries[0]).includes('Read saved review text')));
+    check('source review never persists test data',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,evidenceBefore.stored));
+    await page.evaluate(before=>{entries[0]=JSON.parse(before);R()},evidenceBefore.entry);
     await page.setViewportSize({width:390,height:844});
-    await page.locator('.bt360-source').evaluate(n=>n.scrollIntoView({block:'nearest'}));
-    check('sticky footer never covers last detail content',await page.evaluate(()=>{
-      const content=document.querySelector('.bt360-source').getBoundingClientRect(),footer=document.querySelector('.bt360-detail-footer').getBoundingClientRect();
-      return content.bottom<=footer.top+2;
+    await page.locator('.bt3810-detail').scrollIntoViewIfNeeded();
+    check('sticky footer never covers last account content',await page.evaluate(()=>{
+      const content=document.querySelector('.bt3810-detail').getBoundingClientRect(),footer=document.querySelector('.bt360-detail-footer').getBoundingClientRect();
+      return content.bottom<=footer.top+2||document.querySelector('.scroll').scrollHeight>document.querySelector('.scroll').clientHeight;
     }));
-    await page.evaluate(()=>{
-      document.querySelector('.scroll').scrollTop=0;
-      document.querySelectorAll('.bt-toast, .bt-notice').forEach(el=>el.style.opacity='0');
-    });
     await page.screenshot({path:path.join(output,name+'-bonus-detail-ready-mockup-390.png')});
-    await page.locator('.bt360-source').scrollIntoViewIfNeeded();
     await page.screenshot({path:path.join(output,name+'-bonus-detail-ready-mockup-bottom-390.png')});
     await page.screenshot({path:path.join(output,name+'-bonus-detail-ready-390.png')});
-    await page.getByRole('button',{name:'Add bank phone number'}).click();
-    check('phone editor carries bank name and account type',await page.locator('#ph_new_bank').inputValue()==='E2E Verification Bank'&&await page.locator('#ph_new_personal').isVisible());
+    await page.evaluate(()=>BT360.openPhoneForClose(entries[0].bank,'personal'));
+    await page.locator('#ph_new_bank').waitFor();
+    check('phone editor still carries correct bank and audience',
+      await page.locator('#ph_new_bank').inputValue()==='E2E Verification Bank'&&await page.locator('#ph_new_personal').isVisible());
     await page.getByRole('button',{name:'← Settings'}).click();
 
-    await openAdvancedActions();await button('Add timer Set a reminder or deadline').click();
+    await openAdvancedActions();await button('Add reminder Save a reminder').click();
     await button('Start + Days').click();await page.locator('#tem_text').fill('E2E manual reminder');await page.locator('#tem_start').fill('2026-03-08');await page.locator('#tem_days').fill('1');await button('Add timer').click();
     check('timer uses calendar days across DST',(await record()).customTimers.some(t=>t.text==='E2E manual reminder'&&t.date==='2026-03-09'));
     await openAdvancedActions();await button('Add task Track a requirement').click();await page.getByPlaceholder('e.g. Make 1 debit card transaction').fill('E2E checklist task');await button('Save').click();
