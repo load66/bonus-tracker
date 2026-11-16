@@ -7601,34 +7601,20 @@ entries=sortE(entries); // First visible render is owned by BT360 at the end of 
   function rBankActions(){
     const e=entries.find(x=>x.id===window.__btBankActionPrompt);
     if(!e)return'';
-    const primary=window.BT360?.primaryAction?.(e);
-    const label=String(primary?.label||'');
-    const footerDeposit=label==='Record deposit';
-    const footerReceived=label==='Confirm received';
-    const footerClose=label==='Mark account closed';
-    const footerAI=!e.closed&&!footerClose&&window.BT360?.detailFooter
-      &&String(window.BT360.detailFooter(e)).includes('>Ask AI</button>');
     let h='<div class="bt-ba-backdrop" role="presentation" onclick="closeBankActions()"><section class="modal bt-ba-compact" role="dialog" aria-modal="true" aria-label="Account actions" onclick="event.stopPropagation()">';
-    h+='<div class="m-bar" aria-hidden="true"></div><div class="bt-ba-head"><div class="bt-ba-identity">'+bankLogo(e.bank,true)+'<div class="bt-ba-bank"><div class="bt-ba-name">'+esc(e.bank||'Account')+'</div><span class="bt-ba-stage">'+esc(bankActionsHumanStage(e))+'</span></div></div><button class="bt-ba-close" type="button" aria-label="Close account actions" onclick="closeBankActions()">×</button></div>';
+    h+='<div class="m-bar" aria-hidden="true"></div>';
+    h+='<div class="bt-ba-head"><div class="bt-ba-identity">'+bankLogo(e.bank,true)
+     +'<div class="bt-ba-bank"><div class="bt-ba-name">'+esc(e.bank||'Account')+'</div></div></div>'
+     +'<button class="bt-ba-close" type="button" aria-label="Close account actions" onclick="closeBankActions()">×</button></div>';
     h+='<div class="bt-ba-list" role="group" aria-label="Account tools">';
-    if(!e.closed&&!footerDeposit)h+=bankActionSheetButton(e.id,'reqmet',bankActionIcon('check'),'Update completion date','Record the completion date');
-    h+=bankActionSheetButton(e.id,'edit',bankActionIcon('edit'),'Edit account','Details, dates, bonus, rules');
-    if(!e.closed){
-      h+=bankActionSheetButton(e.id,'checklist',bankActionIcon('task'),'Add task','Track a requirement');
-      h+=bankActionSheetButton(e.id,'timer',bankActionIcon('timer'),'Add timer','Set a reminder or deadline');
+    h+=bankActionSheetButton(e.id,'edit',bankActionIcon('edit'),'Edit account','Update your saved information');
+    if(!e.closed&&!e.reqMet){
+      h+=bankActionSheetButton(e.id,'checklist',bankActionIcon('task'),'Add requirement','Track another step');
+      h+=bankActionSheetButton(e.id,'timer',bankActionIcon('timer'),'Add reminder','Optional date reminder');
     }
-    h+=bankActionSheetButton(e.id,'activity',bankActionIcon('activity'),'Activity','History, reviews and saved evidence');
-    let extras='';
-    if(e.closed)extras+=bankActionSheetButton(e.id,'clearclose',bankActionIcon('reopen'),'Reopen account record','Clear the recorded closure date');
-    if(!e.closed&&e.bonusRecd){
-      if(!footerClose)extras+=bankActionSheetButton(e.id,'recordclose',bankActionIcon('close'),'Record closure','Record actual closure');
-      extras+=bankActionSheetButton(e.id,'received',bankActionIcon('receipt'),'Update bonus receipt','Amount, date and deposit method');
-    }else if(!e.closed&&!footerReceived)extras+=bankActionSheetButton(e.id,'received',bankActionIcon('receipt'),'Confirm bonus received','Bonus received date');
-    if(!footerAI)extras+=bankActionSheetButton(e.id,'askai',bankActionIcon('ai'),'Ask AI','Questions about this bonus');
-    h+='<details class="bt-ba-more"><summary>More account controls</summary><div class="bt-ba-more-body">'+extras
-      +'<details class="bt366-advanced-actions"><summary>Advanced tracker tools</summary>'+renderActionCenter()+'</details></div></details>';
+    if(e.closed)h+=bankActionSheetButton(e.id,'clearclose',bankActionIcon('reopen'),'Correct closed date','Only if the saved closure is wrong');
     h+='</div><div class="bt-ba-delete" role="group" aria-label="Delete account action">';
-    h+=bankActionSheetButton(e.id,'delete',bankActionIcon('trash'),'Delete account','Remove this account record',true);
+    h+=bankActionSheetButton(e.id,'delete',bankActionIcon('trash'),'Delete account','Delete this record after confirmation',true);
     h+='</div></section></div>';
     return h;
   }
