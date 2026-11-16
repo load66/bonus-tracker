@@ -523,17 +523,17 @@ async function exercise(name,engine,url){
     }else if(await page.getByRole('button',{name:'OK',exact:true}).count()){
       await page.getByRole('button',{name:'OK',exact:true}).click();
     }
-    check('completed requirement switches to an actual next step, never repeats confirmation',
-      await page.locator('.bt360-detail-footer .bt360-primary').innerText().then(t=>
-        t==='Record bonus payment'||t==='View remaining tasks'||t==='Review account rules')&&
-      await page.locator('.bt3640-section[data-section="requirements"]').innerText().then(t=>
-        t.includes('Requirements completed')&&!t.includes('No single nonrecurring deposit target')));
+    check('completed requirement switches directly to payout without repeating confirmation',
+      await page.locator('.bt360-detail-footer .bt360-primary').innerText()==='Record bonus payment'&&
+      await page.locator('.bt3810-status').innerText().then(t=>t.includes('Waiting for bonus'))&&
+      await page.locator('.bt3810-dates').innerText().then(t=>t.includes('Oct 10, 2026')));
     // Saving the same confirmed date must not silently rewrite history.
     const savedCompletion=await page.evaluate(()=>{
       const e=entries.find(x=>x.id==='SYN-JOURNEY-DD');
       return {stored:localStorage.getItem('bt_e_v4'),history:JSON.stringify(e?.history||e?.activity||[])};
     });
-    await page.getByRole('button',{name:'Edit date',exact:true}).click();
+    check('simple detail preserves Edit action',await page.locator('.bt360-detail-footer').getByRole('button',{name:'Edit',exact:true}).isVisible());
+    await page.evaluate(()=>openReqMet('SYN-JOURNEY-DD'));
     check('completed account opens its existing saved date, not a blank confirmation',
       await page.locator('#req_date').inputValue()==='2026-10-10');
     await page.getByRole('button',{name:'Save date',exact:true}).click();
