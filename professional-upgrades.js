@@ -413,7 +413,7 @@
   }
   const oldR=typeof R==='function'?R:null;
   if(oldR){
-    R=function(){oldR();document.body.classList.toggle('bt-entry-expanded',!!expanded);document.body.classList.toggle('bt-modal-open',!!modal||!!closePrompt||!!overwritePrompt||!!matchPickerPrompt||!!replacementPickerPrompt||!!feeCheckPrompt||!!timerEditModal||!!dpEditor);renderUpdateBanner();injectStartCycleAction();};window.R=R;
+    R=function(){oldR();document.body.classList.toggle('bt-entry-expanded',!!expanded);document.body.classList.toggle('bt-modal-open',!!modal||!!closePrompt||!!overwritePrompt||!!matchPickerPrompt||!!replacementPickerPrompt||!!timerEditModal||!!dpEditor);renderUpdateBanner();injectStartCycleAction();};window.R=R;
   }
 
   window.btRunFullRegressionTests=function(){
