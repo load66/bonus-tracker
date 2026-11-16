@@ -143,8 +143,8 @@ balanceOffer.financialRules.requirements.push(balanceCondition);
 assert.equal(rules.validate(balanceOffer).ok,true,'Synthetic tiered offer must validate without inventing other account terms.');
 assert.deepEqual(rules.balanceMeasurementWindow(balanceOffer,balanceCondition),{start:'2026-11-29',end:'2027-01-27',firstDay:31,lastDay:90,fundsBefore:'2026-11-29',lastPreWindowDate:'2026-11-28',metric:'average-daily-balance',source:'official-promotion-terms'});
 const balanceBefore=JSON.stringify(balanceOffer);
-assert.match(sandbox.BT360.detailPanels(balanceOffer),/Nov 29, 2026 – Jan 27, 2027/,'Mobile detail must show BOTH measurement dates');
-assert.match(sandbox.BT360.detailPanels(balanceOffer),/Suggested: have the money arrive by Nov 25, 2026/,'Suggested credit date must be labeled as a planning buffer');
+assert.match(sandbox.BT360.detailPanels(balanceOffer),/Nov 29, 2026 – Jan 27, 2027/,'Simple requirement retains BOTH verified balance dates');
+assert.doesNotMatch(sandbox.BT360.detailPanels(balanceOffer),/Suggested deposit date|planning buffer/,'Simple tracker omits speculative suggested reminders');
 assert.doesNotMatch(sandbox.BT360.detailPanels(balanceOffer),/Mark all requirements completed" aria-checked="false"/,'Individual informational rows must not mark every requirement complete');
 assert.equal(JSON.stringify(balanceOffer),balanceBefore,'Read-only dates must not rewrite user data');
 const changedOpening=JSON.parse(JSON.stringify(balanceOffer));changedOpening.opened='2026-11-01';
@@ -172,9 +172,9 @@ assert.equal(rules.balanceMeasurementWindow(businessMeasurement,businessRule),nu
 
 const plainBalance=sandbox.BT360.detailPanels(balanceOffer);
 assert.match(plainBalance,/Keep a \$10,000 average balance/);
-assert.match(plainBalance,/Days 31–90 after opening · 60 days/);
-assert.match(plainBalance,/Keep your balance/);
-assert.match(plainBalance,/Suggested deposit date/);
+assert.match(plainBalance,/Days 31–90/,'Simple tracker retains the official measurement window');
+assert.match(plainBalance,/Requirements/,'Official balance condition remains an actionable requirement');
+assert.doesNotMatch(plainBalance,/Suggested deposit date/,'Removed redundant suggested-date card');
 assert.doesNotMatch(plainBalance,/>Measured |Balance measurement|planning buffer|daily-minimum rule|funding posting not independently confirmed/);
 assert.equal(JSON.stringify(balanceOffer),balanceBefore,'Plain-language display must preserve original rules and dates');
 
@@ -184,4 +184,4 @@ otherPeriod.tcSourceRaw=otherPeriod.tcSourceRaw.replace(otherRule.evidence.quote
 assert.equal(rules.validate(otherPeriod).ok,true);
 const otherPanel=sandbox.BT360.detailPanels(otherPeriod);
 assert.match(otherPanel,/Keep a \$5,000 average balance/);
-assert.match(otherPanel,/Days 15–45 after opening · 31 days/,'Plain instructions must adapt to each saved offer, never hardcode a bank range');
+assert.match(otherPanel,/Days 15–45/,'Date instructions must adapt to each saved offer, never hardcode a range');
