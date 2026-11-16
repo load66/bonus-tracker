@@ -782,6 +782,7 @@ async function exercise(name,engine,url){
         await page.locator('.bt360-detail-card').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
       if(width===390)await page.screenshot({path:path.join(output,name+'-account-overview-390.png')});
     }
+    check('current bank detail has no duplicate Next bonus section',await page.locator('.bt3810-cycle').count()===0);
     check('simple bank detail never changes saved terms or record bytes',
       await page.evaluate(x=>JSON.stringify([localStorage.getItem('bt_e_v4'),localStorage.getItem('bt_tc_archive_v1')])===x,overviewBefore));
     await page.locator('.bt360-detail-footer').getByRole('button',{name:'Edit',exact:true}).click();
