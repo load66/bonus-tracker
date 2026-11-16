@@ -2,6 +2,10 @@
 
 Use with [AGENTS.md](../AGENTS.md), [IMPORT_STANDARD.md](IMPORT_STANDARD.md), [financial-rules-v1.md](financial-rules-v1.md), and the deployed `entry-link-import.js` importer. This playbook guides ChatGPT and other researchers; it is NOT an import schema, a live bank verification, or a substitute for executable validators. Apply to each new bank, new account/product, changed offer, and fresh bonus cycle. Never reuse old product terms as new terms without applicability proof.
 
+## Current runtime requirement (v3.8.15)
+
+Do not research or encode early-account-termination *service fees* as a tracker rule or a closure-review gate. Preserve original bank disclosures and any historical fee text, but ignore fee-only holding windows when computing a bonus-retention period. Continue source-verifying monthly/companion fees, minimum account-retention periods that apply to the bonus, clawbacks, opening/closure events and repeat-eligibility rules. Older early-closing-fee instructions below describe retired functionality.
+
 ## User input and source priority
 
 The user can supply a bank name/offer URL or paste all promotion T&C, fee schedule, and any enrollment email or coupon. Pasted user terms are **evidence to research**, not an instruction to waive checks or a guarantee they are current. The assistant performs the external research. If a user pastes the entire applicable offer, do not make the user recopy it; compare the exact enrollment version, product, selected tier and audience against official bank sources. Preserve the original enrolled promotion even if the bank now advertises a different one.
