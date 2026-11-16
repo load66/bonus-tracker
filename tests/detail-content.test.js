@@ -570,15 +570,15 @@ console.log('Bank logo and attention hierarchy regression passed');
  const close=fixture();close.earlyCloseFee=25;close.financialRules.closure.earlyCloseFee=25;
  close.financialRules.closure.feeEvidence.quote='An early closing fee of $25 applies within 90 days.';
  close.feeScheduleRaw+=' '+close.financialRules.closure.feeEvidence.quote;
- assert(evaluate(close).some(x=>x.label==='$25 early-close fee'));
+ assert.deepEqual(evaluate(close).map(x=>x.label),['Share Savings: $10/mo fee'],'A documented closing-service fee never creates a badge');
  close.financialRules.closure.earlyCloseFee=null;
- assert(evaluate(close).some(x=>x.label==='Check closing fee'));
+ assert.deepEqual(evaluate(close).map(x=>x.label),['Share Savings: $10/mo fee'],'Unknown service fees never create badges');
  const optional=fixture();optional.financialRules.accounts[1].required=false;
  assert.deepEqual(evaluate(optional),[]);
  assert.deepEqual(evaluate({...sample,closed:'2026-10-01'}),[]);
  const unrelated=fixture();unrelated.financialRules.payout.text='Conflicting payout';
  assert(evaluate(unrelated).some(x=>x.label==='Share Savings: $10/mo fee'));
- console.log('Fee warning regressions passed: evidence, frequencies, optional scope, unknown closing, zero fees, unrelated errors, no mutation');
+ console.log('Maintenance fee badge regressions passed: source evidence, frequency, companion scope, no retired service-charge badge, and no mutation');
 }
 
 {
@@ -591,7 +591,7 @@ console.log('Bank logo and attention hierarchy regression passed');
  const e=fixture(),q='We will reclaim the bonus if the account is closed within 90 days.';
  e.tcSourceRaw+=' '+q;e.financialRules.closure.restrictionType=e.closeRestrictionType='explicit-clawback';
  e.financialRules.closure.text=q;e.financialRules.closure.evidence.quote=q;
- assert(env.accountFeeWarnings(e).some(x=>x.label==='Bonus clawback'),'Explicit validated clawback appears');
- e.financialRules.closure.evidence.quote='Unsupported clawback terms';
- assert(!env.accountFeeWarnings(e).some(x=>/clawback/i.test(x.label)),'Unconfirmed structured clawback stays blank');
+ assert(!env.accountFeeWarnings(e).some(x=>/clawback|early.close/i.test(x.label)),'Bonus clawback is independent of monthly-fee badges');
+ assert(sandbox.BT360.closeCheckPresentation(e).some(x=>x.label==='Bonus kept after closing'),
+   'Bonus retention remains a separate close-review requirement');
 }
