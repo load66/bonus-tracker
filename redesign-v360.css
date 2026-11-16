@@ -1261,7 +1261,7 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt3810-fee-note{color:#a7afbf;font-size:11px;line-height:1.4;margin:5px 0 0}
 .bt3810-task{display:flex;gap:12px;align-items:center;padding:13px 0;border-bottom:1px solid #252a36}
 .bt3810-task:last-child{border:0;padding-bottom:0}
-.bt3810-task button[role=checkbox]{flex:0 0 28px;width:28px;height:28px;border:1.5px solid #586373;border-radius:8px;background:#171a23;color:#081410;font-weight:900;cursor:pointer}
+.bt3810-task button[role=checkbox]{flex:0 0 44px;width:44px;height:44px;border:1.5px solid #586373;border-radius:8px;background:#171a23;color:#081410;font-weight:900;cursor:pointer}
 .bt3810-task button[role=checkbox][aria-checked=true]{background:#5be3b0;border-color:#5be3b0}
 .bt3810-task span{min-width:0}
 .bt3810-task b{font-size:13px;font-weight:700;line-height:1.35;display:block}
