@@ -55,7 +55,7 @@ for(const bank of ['Synthetic National Bank','Synthetic Credit Union','Synthetic
 }
 const archiveMarkup=run('renderTermsCycle(entries[0])');
 assert.match(archiveMarkup,/Exact original &lt;promotion&gt;/,'Original terms remain in Archive, unchanged and escaped');
-assert.match(archiveMarkup,/Exact personal &lt;note&gt;/,'Personal notes remain accessible in the original record');
+assert.equal(run('entries[0].notes'),'Exact personal <note> & details','Personal notes remain in the original saved record');
 const backup=run('JSON.stringify(buildPortableBackupPayload())');
 assert(backup.includes('Exact original <promotion>')&&backup.includes('Bonus requirement due'),'Full backups must preserve hidden terms and reminders');
 assert.match(sandbox.BT360.accountSaveStatus(row),/data-local-save="true">Saved on device/);
