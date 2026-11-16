@@ -128,7 +128,7 @@ assert.equal(JSON.stringify(structuredOnly),beforeBannerEntry,'Rendering deadlin
 // v3.6.25: match in-progress PDF section ordering without hiding existing actions.
 const inProgressLayout=sandbox.BT360.detailPanels(e);
 const sectionHeadings=[...inProgressLayout.matchAll(/<h3>([^<]+)<\/h3>/g)].map(match=>match[1]);
-const reqIndex=sectionHeadings.indexOf('Requirements'),feeIndex=sectionHeadings.indexOf('Fees &amp; waivers'),timerIndex=sectionHeadings.indexOf('Timers');
+const reqIndex=sectionHeadings.indexOf('Requirements'),feeIndex=sectionHeadings.indexOf('Fees &amp; waivers'),timerIndex=sectionHeadings.indexOf('Reminders');
 assert(reqIndex>=0&&feeIndex>reqIndex&&timerIndex>feeIndex,'In-progress detail order must be Requirements, Fees & waivers, Timers');
 assert.equal(sectionHeadings.filter(title=>title==='Fees &amp; waivers').length,1,'Monthly and early-close evidence must have exactly one fee section');
 assert.match(inProgressLayout,/\+ Add task/,'Task editor link survives panel reordering');
@@ -189,8 +189,8 @@ const estimatedList=sandbox.BT360.archive([estimatedPast]);
 assert.match(estimatedList,/<b>0<\/b><small>Ready for review<\/small>/,'Unverified historic dates must not certify current eligibility');
 
 /* v3.6.27: all computable saved dates show a countdown, with verification status. */
-assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.7';/,'The on-screen app version reflects this release');
-assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.7-experience1/,'The version label is refreshed on clients');
+assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.8';/,'The on-screen app version reflects this release');
+assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.8-consistency1/,'The version label is refreshed on clients');
 const archiveFutureDate='2030-01-01';
 const projectedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,verified:false});
 assert(projectedFuture&&projectedFuture.days>0&&projectedFuture.caption==='days · estimate','Unverified saved future date shows an estimated countdown');

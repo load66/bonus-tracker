@@ -6,6 +6,8 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.8.8 consistent bank details (`codex/v3.8.8-consistent-banks`): shared section order, stable selected-card layout, unified fee badges, one closing review section, and optional supporting records. No financial rules or saved records changed. Local UI, bonus, cloud and release checks passed; cross-bank/no-write coverage added and mobile browser assertions retained. Next: Chromium/WebKit release CI, merge green and verify Pages.
+
 - v3.8.7 deposit experience redesign (`codex/v3.8.7-deposit-report`): blank observed facts for new reports, explicit edit preservation, concise fields, inline validation, and fresh confirmation after material edits. Local UI, bonus, cloud and release validation passed. Publication authorized. Next: run Chromium/WebKit release CI, merge and verify Pages. Browser binaries unavailable locally.
 
 - v3.8.6 fee evidence badges (PR #300): source-validated fee scope and periods; unresolved clawback hidden. Fee regressions, financial rules, structured imports passed locally. Next: final release CI including Chromium/WebKit, merge, and Pages verification.

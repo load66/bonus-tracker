@@ -784,6 +784,18 @@ async function exercise(name,engine,url){
       check('compact account overview fits '+width+'px',await page.locator('.bt360-detail-card').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&e.querySelectorAll('.bt3640-dates dl>div').length===4));
       if(width===390){await page.evaluate(()=>document.querySelector('.scroll').scrollTop=0);await page.screenshot({path:path.join(output,name+'-account-overview-390.png')});}
     }
+    check('all bank identities and lifecycle milestones use the same section order',await page.evaluate(()=>{
+      const expected='requirements,fees,closing,timers,eligibility,terms,history';
+      const original=JSON.stringify(entries);
+      const good=['Synthetic Bank','Synthetic Credit Union','Synthetic Future Bank'].every(bank=>
+        [{reqMet:'',bonusRecd:''},{reqMet:'2026-10-16',bonusRecd:''},{reqMet:'2026-10-16',bonusRecd:'2026-10-17'}].every(state=>{
+          const row={...entries[0],...state,id:'SYN-LAYOUT-'+bank,bank,closed:''};
+          const html=BT360.detailPanels(row);
+          return [...html.matchAll(/data-section="([^"]+)"/g)].map(m=>m[1]).join(',')===expected
+            &&!html.includes('Safe to close')&&!html.includes('Bonus kept after closing');
+        }));
+      return good&&JSON.stringify(entries)===original;
+    }));
     check('account overview leaves saved records unchanged',await page.evaluate(before=>JSON.stringify([localStorage.getItem('bt_e_v4'),localStorage.getItem('bt_tc_archive_v1')])===before,overviewBefore));
     await page.setViewportSize({width:390,height:844});
     await page.locator('.bt3640-section[data-section="timers"] > summary').click();
@@ -816,7 +828,8 @@ async function exercise(name,engine,url){
     await page.screenshot({path:path.join(output,name+'-chase-bonus-detail-in-progress-bottom-390.png')});
     await page.screenshot({path:path.join(output,name+'-financial-summary-key-dates-390.png')});
     await page.locator('.bt3640-section[data-section="eligibility"] > summary').click();
-    await page.getByRole('button',{name:'Review rule'}).first().click();
+    if(!await page.locator('[data-section=closing]').evaluate(e=>e.open))await page.locator('[data-section=closing] > summary').click();
+    await page.locator('[data-section=closing]').getByRole('button',{name:'Review rule'}).click();
     check('Review rule opens existing account rule editor',await page.locator('.modal').isVisible()
       &&(await page.locator('.modal .guided-sub').innerText()).includes('Step 3 of 4 · Fees & Close'));
     check('plain-language editor fields keep the existing save wiring',await page.evaluate(()=>{
@@ -971,8 +984,9 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>{entries[0].earlyTerminationFeeText='No early closing fee.';entries[0].feeScheduleRaw='No early closing fee.';R();});
     check('restoring proven zero-fee evidence restores close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
     check('ready-to-close highlights Close milestone',await page.locator('.bt360-steps span.current').innerText()==='Close');
-    check('close-ready prioritizes checks when no checklist work remains',
-      await page.locator('.bt360-detail-card .bt360-panel-title h3').first().innerText()==='Close checks'
+    check('close-ready keeps shared section order and opens closing checks',
+      await page.locator('.bt360-detail-card .bt360-panel-title h3').first().innerText()==='Requirements'
+      &&await page.locator('[data-section=closing]').evaluate(e=>e.open)
       &&await page.locator('.bt3611-ready-extras').count()===0);
     await page.getByRole('button',{name:'More account actions'}).click();
     await page.locator('.bt-ba-mini').filter({hasText:'Activity'}).click();
@@ -1032,11 +1046,11 @@ async function exercise(name,engine,url){
     await button('Start + Days').click();await page.locator('#tem_text').fill('E2E manual reminder');await page.locator('#tem_start').fill('2026-03-08');await page.locator('#tem_days').fill('1');await button('Add timer').click();
     check('timer uses calendar days across DST',(await record()).customTimers.some(t=>t.text==='E2E manual reminder'&&t.date==='2026-03-09'));
     await openAdvancedActions();await button('Add task Track a requirement').click();await page.getByPlaceholder('e.g. Make 1 debit card transaction').fill('E2E checklist task');await button('Save').click();
-    await page.locator('.bt3611-ready-extras > summary').click();
+    if(!await page.locator('[data-section=requirements]').evaluate(e=>e.open))await page.locator('[data-section=requirements] > summary').click();
     await page.getByRole('checkbox',{name:'E2E checklist task',exact:true}).click();
     check('checklist completion persists in redesigned Requirements',(await record()).checklist.some(x=>x.text==='E2E checklist task'&&x.done)&&await page.locator('.bt360-panel').filter({hasText:'Requirements'}).count()>0);
     check('checklist exposes accessible completion state',await page.getByRole('checkbox',{name:'E2E checklist task',exact:true}).getAttribute('aria-checked')==='true');
-    check('ready saved-work disclosure stays expanded after checklist update',await page.locator('.bt3611-ready-extras').evaluate(e=>e.open));
+    check('shared Requirements stays expanded after checklist update',await page.locator('[data-section=requirements]').evaluate(e=>e.open));
     await page.evaluate(()=>{
       const e=entries[0];window.__layoutOriginal={checklist:e.checklist.map(x=>({...x})),customTimers:e.customTimers.map(x=>({...x})),monthlyFeeWaiverText:e.monthlyFeeWaiverText};
       e.checklist[0].text='Complete qualifying electronic deposits and retain the supporting confirmation for the full statement period';
@@ -1044,7 +1058,7 @@ async function exercise(name,engine,url){
       e.monthlyFeeWaiverText='The monthly fee is waived when qualifying electronic deposits reach the required amount in each statement period, or when the opening balance threshold is met each day, or when a qualifying linked relationship is maintained.';
       R();
     });
-    if(!await page.locator('.bt3611-ready-extras').evaluate(e=>e.open)) await page.locator('.bt3611-ready-extras > summary').click();
+    if(!await page.locator('[data-section=requirements]').evaluate(e=>e.open))await page.locator('[data-section=requirements] > summary').click();
     if(!await page.locator('.bt3640-section[data-section="timers"]').evaluate(e=>e.open))await page.locator('.bt3640-section[data-section="timers"] > summary').click();
     if(!await page.locator('.bt3640-section[data-section="fees"]').evaluate(e=>e.open))await page.locator('.bt3640-section[data-section="fees"] > summary').click();
     for(const width of [320,375,390,430]){
@@ -1055,7 +1069,7 @@ async function exercise(name,engine,url){
         const owner=task.parentElement,check=owner.querySelector('[role="checkbox"]'),a=check.getBoundingClientRect(),b=task.getBoundingClientRect();
         const title=timer.querySelector('b'),titleH=title?.getBoundingClientRect().height||0,lh=parseFloat(getComputedStyle(title).lineHeight)||16;
         const metrics={taskWidth:task.clientWidth,timerWidth:timer.clientWidth,titleH,titleLineHeight:lh,checkRight:a.right,taskLeft:b.left,taskRight:b.right,ownerRight:owner.getBoundingClientRect().right,feeScroll:fee.scrollWidth,feeWidth:fee.clientWidth,panelScroll:panel.scrollWidth,panelWidth:panel.clientWidth,feeAlign:getComputedStyle(fee.querySelector('div')).textAlign};
-        const gates={task:task.clientWidth>=120,timer:timer.clientWidth>=120,title:titleH<=lh+2,checkbox:a.right<=b.left+1,taskBounds:b.right<=owner.getBoundingClientRect().right+1,feeOverflow:fee.scrollWidth<=fee.clientWidth+1,panelOverflow:panel.scrollWidth<=panel.clientWidth+1,feeAlign:metrics.feeAlign==='right'};
+        const gates={task:task.clientWidth>=120,timer:timer.clientWidth>=120,title:titleH<=lh+2,checkbox:a.right<=b.left+1,taskBounds:b.right<=owner.getBoundingClientRect().right+1,feeOverflow:fee.scrollWidth<=fee.clientWidth+1,panelOverflow:panel.scrollWidth<=panel.clientWidth+1,feeAlign:metrics.feeAlign==='left'};
         return {ok:Object.values(gates).every(Boolean),gates,metrics};
       });
       if(!layout.ok)console.error('320-430px layout diagnostics:',width,JSON.stringify(layout));
@@ -1339,7 +1353,7 @@ async function exercise(name,engine,url){
     check('stage action mapping never confirms payout during In progress',
       mappedActions.IN_PROGRESS==='Open next task'&&mappedActions.ACTION_NEEDED==='Open next task'
       &&mappedActions.REQUIREMENTS_MET==='Record bonus payment'&&mappedActions.AWAITING_BONUS==='Record bonus payment'
-      &&mappedActions.HOLD_OPEN==='View hold'&&mappedActions.BONUS_RECEIVED==='View hold'
+      &&mappedActions.HOLD_OPEN==='Review closing'&&mappedActions.BONUS_RECEIVED==='Review closing'
       &&mappedActions.READY_TO_CLOSE==='Mark account closed');
     await page.evaluate(()=>{
       window.__designEntries=JSON.parse(JSON.stringify(entries));
