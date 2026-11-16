@@ -947,7 +947,7 @@ async function exercise(name,engine,url){
       await page.evaluate(()=>{
         const account=entries[0],before=JSON.stringify(account);
         const view=BT360.detailPanels({...account,closed:'2026-11-10'});
-        const match=view.match(/<section class="bt3810-card bt3810-dates[^"]*"[^>]*>[\\s\\S]*?<\\/section>/);
+        const match=view.match(/<section class="bt3810-card bt3810-dates[^"]*"[^>]*>[\s\S]*?<\/section>/);
         return !!match&&match[0].includes('<dt>Closed</dt>')&&match[0].includes('Nov 10, 2026')&&
           JSON.stringify(account)===before;
       }));
