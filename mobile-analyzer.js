@@ -1,8 +1,8 @@
-/* Release marker v3.8.12 — direct bank details and cached eligibility projections. */
+/* Release marker v3.8.13 — archive-only closure and next-cycle lifecycle. */
 /* Bonus Tracker v3.6.94 — mobile analyzer viewport and scroll guard. */
 (function(){
   'use strict';
-  const VER='3.8.12';
+  const VER='3.8.13';
   let lastOverlay=null;
   function syncVisualViewport(){
     const vv=window.visualViewport;
