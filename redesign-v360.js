@@ -1032,8 +1032,10 @@ function simpleRequirements(e){
  const rows=list.map(r=>{
   const label=requirementTitle(r,e),checked=!!requirementRecord(e,r)?.done;
   const due=checked?'':detailRequirementDate(e,r);
+  const balance=window.BTFinancialRules?.balanceMeasurementWindow?.(e,r);
+  const when=balance?date(balance.start)+' – '+date(balance.end)+' · Days '+balance.firstDay+'–'+balance.lastDay:due?'Due '+date(due):'';
   return '<div class="bt3810-task"><button type="button" role="checkbox" aria-label="'+safe(label)+'" aria-checked="'+checked+'" onclick="BT360.toggleRequirement('+arg(e.id)+','+arg(r.id)+')">'+(checked?'✓':'')+'</button>'
-   +'<span><b>'+safe(label)+'</b>'+(due?'<small>By '+safe(date(due))+'</small>':'')+'</span></div>';
+   +'<span><b>'+safe(label)+'</b>'+(when?'<small>'+safe(when)+'</small>':'')+'</span></div>';
  }).join('');
  const extras=checks.map((c,i)=>({c,i})).filter(({c})=>c&&String(c.text||'').trim()&&!linked.has(c))
   .map(({c,i})=>'<div class="bt3810-task"><button type="button" role="checkbox" aria-label="'+safe(c.text||'Task')+'" aria-checked="'+!!c.done+'" onclick="toggleCk('+arg(e.id)+','+i+')">'+(c.done?'✓':'')+'</button><span><b>'+safe(c.text||'Task')+'</b></span></div>').join('');
@@ -1070,9 +1072,9 @@ function detailPanels(e){
  // panels on the everyday screen; the complete data remains in storage/Archive.
  let html='<div class="bt3810-detail">'+simpleState(e);
  if(!e.reqMet&&!e.bonusRecd&&!e.closed)html+=simpleRequirements(e);
- if(!e.closed&&e.reqMet&&!e.bonusRecd){
+ if(!e.closed&&!e.bonusRecd){
   const arrival=window.BTFinancialRules?.arrivalLabel?.(window.BTFinancialRules?.estimatedArrival?.(e));
-  if(arrival)html+='<section class="bt3810-card"><div class="bt3810-pair"><span>Bonus payment</span><b>'+safe(arrival)+'</b></div></section>';
+  if(arrival)html+='<section class="bt3810-card bt3810-arrival"><div class="bt3810-pair"><span>Bonus payment</span><b>'+safe(arrival)+'</b></div></section>';
  }
  html+=simpleDates(e);
  html+=simpleFees(e);
