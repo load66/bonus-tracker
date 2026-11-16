@@ -142,6 +142,8 @@ assert.doesNotMatch(sandbox.BT360.timerRows(paidRequirement),/data-source="saved
  const uncertain=sandbox.BT360.detailPanels(unverified);
  assert.match(uncertain,/Next date not confirmed/,'Unknown eligibility never becomes a fabricated date');
  assert.match(uncertain,/Rule review needed/,'Unverified next-cycle rule can be reviewed');
+ assert.match(uncertain,/Already closed at the bank\? Save closure date/,'Paid account exposes actual-closure recording without requiring a verified future cycle');
+ assert.match(uncertain,/startCloseFlow\(&quot;SYN-UNVERIFIED-PAID&quot;,'actual'\)/,'Actual-closure action is wired to the bank-specific flow');
  assert.doesNotMatch(uncertain,/20\d\d-\d\d-\d\d.*Next bonus review/,'Unknown cycles cannot invent a next date');
  assert.match(detail,/Previous cycle reminders \(2\)/,'Old due reminders remain editable in collapsed history');
  assert.match(detail,/Closing the account/,'Closing review remains available without falsely authorizing closure');
@@ -152,6 +154,8 @@ assert.doesNotMatch(sandbox.BT360.timerRows(paidRequirement),/data-source="saved
  assert.doesNotMatch(sandbox.BT360.timerRows(closed),/Requirement due/,'Closing does not resurrect old deadlines');
  const pending={...paid,reqMet:'',bonusRecd:'',closed:''};
  assert.match(sandbox.BT360.timerRows(pending),/Requirement due/,'Pending cycle still shows legitimate deadlines');
+ assert.doesNotMatch(sandbox.BT360.detailPanels(pending),/Already closed at the bank\? Save closure date/,'Unpaid accounts cannot prematurely show the paid-account closure shortcut');
+ assert.doesNotMatch(sandbox.BT360.detailPanels(closed),/Already closed at the bank\? Save closure date/,'Closed accounts do not offer a redundant closure action');
  assert.equal(JSON.stringify(paid),saved,'Cycle projection must not change saved bank data');
  assert.equal(JSON.stringify([...storage]),beforeStorage,'Cycle projection must not write persistent data');
 }
