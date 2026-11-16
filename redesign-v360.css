@@ -772,7 +772,7 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
 .bt3640-archive-review{padding:0 12px}
 .bt3640-archive-review>summary{min-height:44px;padding:12px 0;cursor:pointer;line-height:1.5}
 .bt3640-archive-review:not([open])>:not(summary){display:none}
-/* Selectable Needs you cards; priority order and canonical actions stay intact. */
+/* Dashboard bank cards navigate directly to the shared account detail. */
 .bt3641-attention-stack{margin-top:0}
 
 .bt3719-attention-list .bt3641-attention-toggle{border-bottom:0!important}
@@ -780,6 +780,11 @@ body:has(.bt-ba-backdrop) .bt360-detail-footer{display:none!important}
 .bt3641-attention-item{min-width:0;border-bottom:1px solid var(--border);overflow-wrap:anywhere}
 .bt3641-attention-item:last-child{border-bottom:0}
 .bt3641-attention-toggle{width:100%;text-align:left;border:0;border-radius:0;background:transparent;color:inherit;cursor:pointer;min-height:86px}
+.bt3812-bank-detail-link{display:flex;flex-wrap:wrap;align-items:center;gap:10px;touch-action:manipulation}
+.bt3812-bank-detail-link .bt360-grow{flex:1;min-width:0}
+.bt3812-bank-detail-link .bt3719-task-right{flex:none}
+.bt3812-bank-detail-link .bt3719-progress{display:block;flex:0 0 100%;margin:4px 0 2px}
+.bt3812-bank-detail-link:active{background:#171b24}
 .bt3641-attention-toggle[aria-expanded=true]{border-radius:16px}
 .bt3641-attention-item.is-selected{margin:8px;padding:12px;border:1px solid #584046;border-radius:18px;background:var(--card)}
 .bt3641-attention-item.is-selected>.bt3641-attention-toggle{padding:2px 0 10px}
