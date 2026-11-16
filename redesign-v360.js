@@ -1016,7 +1016,8 @@ function nextCyclePanel(e){
 // Simple, stage-driven presentation. This is read-only: old notes, offer terms,
 // reports, timers, archive history, eligibility evidence and fee rules stay saved.
 function simpleDates(e){
- const rows=[['opened','Opened'],['reqMet','Requirements met'],['bonusRecd','Bonus paid'],['closed','Closed']];
+ const rows=[['opened','Opened'],['reqMet','Requirements met'],['bonusRecd','Bonus paid']];
+ if(e.closed)rows.push(['closed','Closed']);
  return '<section class="bt3810-card bt3810-dates" aria-label="Recorded account dates"><h3>Key dates</h3><dl>'
   +rows.map(([key,label])=>'<div><dt>'+label+'</dt><dd class="'+(archiveDateValid(e[key])?'':'is-missing')+'">'
    +safe(archiveDateValid(e[key])?date(e[key]):e[key]?'Needs review':'—')+'</dd></div>').join('')
@@ -1060,15 +1061,6 @@ function simpleFees(e){
   +(x.companions.length?'<div class="bt3810-fee-note">Other required accounts may have fees.</div>':'')
   +'<div class="bt3810-pair"><span>Closing early</span><b class="'+(!x.closeKnown?'bt3810-caution':'')+'">'+safe(early)+'</b></div></section>';
 }
-function simpleNextCycle(e){
- if(!e.bonusRecd&&!e.closed)return '';
- const info=eligibleInfo(e);
- const policy=window.btEligibilityPolicyEntry?.(e)||e;
- const check=window.BTEligibilityGate?.recorded?.(policy);
- const nonrepeatable=check?.ok&&check.decision==='nonrepeatable';
- const value=nonrepeatable?'One-time bonus':info?.recorded&&info.eligible?date(info.eligible):'Add eligibility rule';
- return '<section class="bt3810-cycle bt3810-card"><div class="bt3810-pair"><span>Next bonus</span><b>'+safe(value)+'</b></div></section>';
-}
 function simpleState(e){
  const paid=!!e.bonusRecd,closed=!!e.closed,complete=!!e.reqMet;
  const name=closed?'Closed':paid?'Bonus received':complete?'Waiting for bonus':'In progress';
@@ -1087,14 +1079,6 @@ function detailPanels(e){
  }
  html+=simpleDates(e);
  html+=simpleFees(e);
- if(!e.closed&&e.bonusRecd){
-  const calendar=window.BTFinancialRules?.closeHoldInfo?.(e);
-  const hold=calendar?.reviewOn||(typeof safeCloseDate==='function'?safeCloseDate(e):'');
-  const future=archiveDateValid(hold)&&hold>td();
-  html+='<p class="bt3810-closing-note">'+(future?'Review closing restrictions through '+safe(date(hold))+'. ':'')
-   +'Check closing fees and pending transfers before contacting the bank. Recording closure does not close the bank account.</p>';
- }
- html+=simpleNextCycle(e);
  return html+'</div>';
 }
 function detailFooter(e){
