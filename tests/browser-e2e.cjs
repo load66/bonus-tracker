@@ -2018,7 +2018,7 @@ async function exercise(name,engine,url){
     check('tier deadline and AI agree',await page.evaluate(()=>BTBonusAI.contextFor(entries[0]).some(f=>f.id==='arrival'&&f.text==='Bonus payable by Apr 16, 2026 · earliest payment date not specified')));
     await page.evaluate(source=>{entries[0]={...source,id:'SYN-ARRIVAL'};R();},require('./fixtures/financial-rules.cjs').legacyPublicOfferFixture());
     check('exact enrolled offer recovers missing legacy payout',await page.locator('.bt3810-arrival .bt3810-pair b').innerText()==='Estimated bonus arrival: Jul 30–Aug 29, 2026');
-    check('recovered rule retains original source provenance',await page.evaluate(()=>BTFinancialRules.arrivalSource(entries[0])?.sourceUrl==='https://banking.citi.com/'));
+    check('recovered rule retains full official source provenance',await page.evaluate(()=>BTFinancialRules.arrivalSource(entries[0])?.sourceUrl==='https://banking.citi.com/cbol/OM/checking/enhanced-direct-deposit-offer/default.htm?venue=Extra1'));
     check('recovered rule reaches AI with official source',await page.evaluate(()=>BTBonusAI.contextFor(entries[0]).some(f=>f.id==='arrivalsource'&&f.text.includes('https://banking.citi.com/'))));
     check('recovery never writes a payout date or upgrades legacy rules',await page.evaluate(()=>!entries[0].financialRules&&!entries[0].bonusRecd&&entries[0].reqMet==='2026-05-25'&&!entries[0].tcSourceRaw));
     await page.evaluate(()=>{entries[0]=window.__beforeLegacyArrival;delete window.__beforeLegacyArrival;R();});
