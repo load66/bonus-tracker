@@ -132,8 +132,12 @@ async function exercise(name,engine,url){
     await page.getByRole('heading',{name:'Add account',exact:true}).waitFor();
   };
   const edit=async()=>{
-    await openAdvancedActions();
-    await page.getByRole('button',{name:'Edit account Details, dates, bonus, rules',exact:true}).click();
+    // The simplified bank detail has a direct Edit action. Opening the old
+    // secondary-action sheet is no longer part of the everyday workflow.
+    if(!await page.locator('.bt360-detail-footer').getByRole('button',{name:'Edit',exact:true}).count()){
+      await page.evaluate(()=>{if(entries.length){expanded=entries[0].id;tab=entries[0].closed?'archive':'tracker';R()}});
+    }
+    await page.locator('.bt360-detail-footer').getByRole('button',{name:'Edit',exact:true}).click();
   };
   const cancelEditor=async()=>{
     await button('Cancel').click();
