@@ -1229,3 +1229,10 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
  .bt360-detail-card .bt3640-section>.bt360-panel-title{padding:14px}
  .bt360-detail-card .bt3640-section>.bt360-panel-body{padding:0 14px 14px}
 }
+
+/* v3.8.9: paid cycles show a calm next-review summary, with completed reminders in history. */
+.bt389-cycle-status{font-size:12px;line-height:1.55;color:#aab3bf;margin:0 0 10px}
+.bt389-past-reminders{border-top:1px solid #272c38;padding:12px 0}
+.bt389-past-reminders>summary{cursor:pointer;color:#aab3bf;font-size:12px}
+.bt389-history-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:9px 0;font-size:12px;color:#aab3bf}
+.bt389-history-row span{min-width:0;overflow-wrap:anywhere}
