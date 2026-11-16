@@ -838,7 +838,9 @@ async function exercise(name,engine,url){
     check('requirements dialog explicitly asks for an actual past date',await page.getByRole('dialog',{name:'Requirement completed'}).isVisible()&&await page.locator('#req_date').getAttribute('max')!==null);
     const beforeInvalidRequirement=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     await button('Save date').click();
-    check('blank requirement date keeps dialog and shows focused inline error',await page.locator('#req-date-error').isVisible()&&await page.locator('#req_date').evaluate(e=>document.activeElement===e&&e.getAttribute('aria-invalid')==='true'));
+    await page.locator('#req-date-error').waitFor({state:'visible'});
+    await page.waitForFunction(()=>{const e=document.getElementById('req_date');return !!e&&e.getAttribute('aria-invalid')==='true'&&document.activeElement===e;},{},{timeout:5000});
+    check('blank requirement date keeps dialog and shows focused inline error',await page.getByRole('dialog',{name:'Requirement completed'}).isVisible()&&await page.locator('#req-date-error').isVisible());
     check('missing completion date does not write records',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,beforeInvalidRequirement));
     await page.locator('#req_date').fill('2099-01-01');await button('Save date').click();
     check('future requirement date is rejected with preserved draft',await page.locator('#req-date-error').innerText().then(t=>t.includes('future'))&&await page.locator('#req_date').inputValue()==='2099-01-01');
