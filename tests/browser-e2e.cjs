@@ -928,7 +928,7 @@ async function exercise(name,engine,url){
 
     await page.locator('.bt360-detail-footer').getByRole('button',{name:/^Record bonus payment/}).click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('Review experience').click();
     check('payment success offers optional evidence review without assuming a method result',await page.evaluate(()=>dpEditor.evidenceStage==='bonus'&&!dpEditor.confirmedByUser));
-    await button('Skip for now').click();
+    await button('Not now').click();
     // A payout clear must preserve tax data, account history and all companion keys after failure.
     const payoutClearBefore=await page.evaluate(()=>getBackupStorageKeys().map(key=>[key,localStorage.getItem(key)]));
     await page.evaluate(()=>openRcv(entries[0].id));
@@ -961,7 +961,7 @@ async function exercise(name,engine,url){
     await page.locator('#rcv_date').fill('2026-04-15');
     await button('Save').click();
     await button('Review experience').click();
-    await button('Skip for now').click();
+    await button('Not now').click();
     check('bonus receipt updates close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
     await page.evaluate(()=>{entries[0].earlyCloseFee=null;R();});
     check('unverified fee blocks close readiness even after payout',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='BONUS_RECEIVED');
