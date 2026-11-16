@@ -142,27 +142,28 @@ async function exercise(name,engine,url){
     await page.locator('.guided-modal').waitFor({state:'detached'});
   };
   const close=async()=>{
-    const action=page.getByRole('button',{name:/^Mark account closed/});
+    const action=page.getByRole('button',{name:/^Record closure/});
     if(!await action.count())await page.evaluate(()=>{expanded=entries[0].id;tab='tracker';R()});
     if(await action.count())await action.click();
     else{await page.getByRole('button',{name:'More account actions'}).click();await page.getByRole('button',{name:/Record closure/}).click();}
+    check('closure records facts in one simple modal',await page.locator('.close-modal #cp_date').isVisible()&&await page.locator('.close-modal #cp_closed_confirm').isVisible()&&await page.getByRole('button',{name:'Save closure'}).isVisible());
     await page.locator('#cp_date').fill('2026-05-01');
-    await page.locator('#cp_monthly_checked').selectOption('yes');
-    await button('Next').click();await button('Next').click();await button('Review').click();
-    check('closure review exposes cycle history completeness',await page.locator('.close-modal .archive-history-review').isVisible());
-    check('closure review separates cloud verification from local save',(await page.locator('.close-modal').innerText()).includes('Cloud protection is confirmed separately'));
+    await page.locator('#cp_monthly_checked').check();
+    await page.locator('#cp_closed_confirm').check();
+    check('closure history stays available without crowding the modal',await page.evaluate(()=>renderArchiveHistoryReview(closeCycleForSave(entries[0],closePrompt)).includes('archive-history-review')));
+    check('closure screen does not claim cloud protection',(await page.locator('.close-modal').innerText()).includes('updates BonusTracker, not your bank'));
     for(const width of [320,390,430]){
       await page.setViewportSize({width,height:844});
-      check('closure history review fits '+width+'px',await page.locator('.close-modal').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+      check('simple closure fits '+width+'px',await page.locator('.close-modal').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
       if(width===390)await page.screenshot({path:path.join(output,name+'-closure-history-review-390.png')});
     }
     await page.setViewportSize({width:390,height:844});
-    await button('Save Closed').click();
+    await button('Save closure').click();
     check('closure transaction preserves exact cycle and enrolled sources',await page.evaluate(()=>{
       const e=entries[0],saved=loadTermsArchive()[termsArchiveKey(e)].current;
       return saved.entryId===e.id&&['opened','closed','bonusRecd','reqMet','tcSourceRaw','feeScheduleRaw'].every(k=>String(saved[k]||'')===String(e[k]||''));
     }));
-    check('closure success states cloud protection separately',await page.evaluate(()=>cfm.msg.includes('Cloud recovery:')));
+    check('closure success avoids false cloud assurance',await page.evaluate(()=>!cfm.msg.includes('Cloud verified')&&!cfm.msg.includes('Core records saved locally.')));
     await button('OK').click();
     check('temporary Undo action reserves space outside account controls',await page.evaluate(()=>{
       const bar=document.querySelector('.undo-bar'),scroll=document.querySelector('.scroll');
