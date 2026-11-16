@@ -5,17 +5,17 @@ const rows=['A','B','C'].map(id=>({id:'SYN-'+id,bank:'Synthetic '+id,accountType
 run('entries='+JSON.stringify(rows)+';expanded=null;search="";localStorage.setItem(SK,JSON.stringify(entries));');
 sandbox.getAttentionSuggestions=()=>rows.map(e=>({entryId:e.id,bank:e.bank,stageCode:'IN_PROGRESS',stageLabel:'In progress',task:{title:'Review saved requirement'},dateContext:{confirmed:false}}));
 const before=JSON.stringify([...storage]);
-assert.doesNotMatch(sandbox.BT360.tasks(rows),/is-selected/);
+const taskCards=sandbox.BT360.tasks(rows);
+assert.doesNotMatch(taskCards,/is-selected|bt360-actions|>Details<|Deposit reports/);
+assert.equal((taskCards.match(/data-attention-link=/g)||[]).length,3);
 assert.match(sandbox.rTracker(rows),/bt3641-directory/);assert.doesNotMatch(sandbox.rTracker(rows),/bt366-compact-row/);
 for(const row of rows){
  sandbox.BT360.toggleAttention(row.id);
- const html=sandbox.BT360.tasks(rows);
- assert.equal((html.match(/is-selected/g)||[]).length,1);
- assert.match(html,new RegExp('data-attention-toggle="'+row.id+'" aria-expanded="true"'));
- assert.equal(sandbox.BT360.selectedAttentionId,row.id);
- assert.equal((html.match(/class="bt3641-attention-body" hidden/g)||[]).length,2);
+ assert.equal(run('expanded'),row.id);
+ assert.equal(run('tab'),'tracker');
+ assert.equal(sandbox.BT360.selectedAttentionId,null);
+ run('expanded=null');
 }
-sandbox.BT360.toggleAttention(rows[2].id);assert.doesNotMatch(sandbox.BT360.tasks(rows),/is-selected/);
 sandbox.BT360.toggleAttention('missing');assert.equal(sandbox.BT360.selectedAttentionId,null);
 sandbox.BT360.toggleAccountList();assert.match(sandbox.rTracker(rows),/bt366-compact-row/);
 sandbox.BT360.toggleAccountList();assert.doesNotMatch(sandbox.rTracker(rows),/bt366-compact-row/);
@@ -28,11 +28,10 @@ sandbox.BT360.setStage('IN_PROGRESS');assert.match(sandbox.rTracker(rows),/Hide 
 sandbox.BT360.closeAccountSearch();assert.equal(sandbox.BT360.selectedStage,'');assert.doesNotMatch(sandbox.rTracker(rows),/bt366-compact-row/,'Hide closes a directory opened by stage filtering');
 
 assert.equal(JSON.stringify([...storage]),before,'Card and directory selection never write financial data');
-console.log('Tracker selection passed: each bank, single selection, collapse, directory access and no financial writes.');
+console.log('Tracker selection passed: each bank opens direct details, directory access remains and navigation makes no financial writes.');
 // Task shortcuts scope exact bank identity and discard stale research filters.
 sandbox.getAttentionSuggestions=()=>rows.map((e,i)=>({entryId:e.id,bank:e.bank,stageCode:'IN_PROGRESS',task:{title:'Saved task',activityKind:i===1?'direct-deposit':'new-money'}}));
-assert.equal((sandbox.BT360.tasks(rows).match(/Deposit reports/g)||[]).length,1);
-assert.match(sandbox.BT360.tasks(rows),/openTaskDatapoints\(&quot;SYN-B&quot;\)/);
+assert.doesNotMatch(sandbox.BT360.tasks(rows),/Deposit reports|openTaskDatapoints/,'Dashboard has no task-specific buttons');
 run("dpFilters.result='failed';dpFilters.source='reddit';dpSearch='old search';openTaskDatapoints('SYN-B')");
 assert.equal(run('dpTaskBankKey'),run('datapointBankKey(entries[1])'));
 assert.equal(run('tab'),'tips');assert.equal(run('dpSearch'),'');assert.equal(run('dpFilters.result'),'all');

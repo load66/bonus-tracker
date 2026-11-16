@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT Codex — v3.8.11 recorded eligibility policy — codex/v3.8.11-recorded-eligibility
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.8.12 direct bank details (`codex/v3.8.12-direct-bank-details`, PR #306): every current/open dashboard bank card routes directly to its standardized account details; the inconsistent dashboard action-button row is removed and account-specific actions remain inside the shared detail footer. Recorded eligibility policy projections are cached per render/save cycle so card navigation does not repeatedly rescan and reparse every account. Bank records, financial rules, eligibility decisions, history and primary action behavior remain unchanged. UI/bonus/cloud units, Chromium, WebKit and release verification passed in run 43917120515. Next: squash merge PR #306 and verify GitHub Pages v3.8.12.
 
 - v3.8.11 centralized recorded eligibility policy (`codex/v3.8.11-recorded-eligibility`): remove user-facing eligibility verification/confirmation gates; calculate every bank from the latest structurally complete recorded rule for the same canonical bank family and personal/business audience. Exact recorded wording outranks stale legacy shortcuts, so Citi's recorded 365-day ownership rule remains exactly 365 days; multiple/conditional rules still fail safely when inputs are missing. Apply the same read-only policy to details, Archive, lifecycle status, closing follow-up, editors and future entries without rewriting historical data. Strict source validation remains mandatory for generated imports. Release app/cache v3.8.11; require all unit areas, Chromium/WebKit and deployment verification. No private account records committed.
 

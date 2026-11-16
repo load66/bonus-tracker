@@ -236,9 +236,9 @@ const estimatedPast={...cooldownNoDate,id:'SYNT-P-85',opened:'2020-01-01',closed
 const estimatedList=sandbox.BT360.archive([estimatedPast]);
 assert.match(estimatedList,/<strong>0<\/strong><small>Review offer<\/small>/,'A completed recorded waiting period must be ready for current-offer review');
 
-/* v3.8.11: all computable recorded dates share the same professional countdown. */
-assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.11';/,'The on-screen app version reflects this release');
-assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.11-eligibility1/,'The version label is refreshed on clients');
+/* v3.8.12: direct account details retain recorded-date countdowns. */
+assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.12';/,'The on-screen app version reflects this release');
+assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.12-directdetails1/,'The version label is refreshed on clients');
 const archiveFutureDate='2030-01-01';
 const recordedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,recorded:true});
 assert(recordedFuture&&recordedFuture.days>0&&recordedFuture.caption==='days left','A recorded future date must show its countdown');
@@ -481,8 +481,8 @@ try{
  assert.match(attention,/Personal · Due Oct 22, 2026/,'Account type and due date share the metadata line');
  assert.equal((attention.match(/\$900/g)||[]).length,1,'Featured bonus amount must not repeat in subtitles');
  assert.equal((attention.match(/\$325/g)||[]).length,1,'Regular bonus amount must not repeat in subtitles');
- assert.match(attention,/onclick="runNextAccountAction/,'Existing action handler retained');
- assert.match(attention,/onclick="openAccountFromActionCenter/,'Existing detail handler retained');
+ assert.doesNotMatch(attention,/bt360-actions|>Details<|runNextAccountAction/,'Dashboard bank cards contain no separate action buttons');
+ assert.equal((attention.match(/onclick="openAccountFromActionCenter/g)||[]).length,2,'Every current bank card opens the same detail route');
 }finally{sandbox.getAttentionSuggestions=originalAttention;}
 assert.equal(JSON.stringify([...storage]),before,'Logo and attention projections are read-only');
 console.log('Bank logo and attention hierarchy regression passed');

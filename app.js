@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.8.11';
+const APP_VERSION='3.8.12';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -25,6 +25,7 @@ const ld=(k,d)=>{
 const sv=(k,v)=>{
   let before=null;
   try{
+    if(k===SK)invalidateEligibilityPolicyCache();
     before=localStorage.getItem(k);
     const payload=JSON.stringify(v);
     if(k===SK)commitEntriesWithArchive(v);
@@ -548,6 +549,23 @@ const ELIGIBILITY_POLICY_FIELDS=[
   'eligibilityEvidenceSource','currentCustomerExcluded','currentCustomerEvidenceText','mustCloseBeforeReapply',
   'reapplicationAction','churnReason','churnDecisionSource','churnDecisionConfirmedAt','termsVerifiedAt','tcSourceUpdatedAt'
 ];
+let eligibilityPolicyRegistryCache=null;
+let eligibilityPolicyEntriesRef=null;
+let eligibilityRecordedCache=new WeakMap();
+let eligibilityPolicyEntryCache=new WeakMap();
+function invalidateEligibilityPolicyCache(){
+  eligibilityPolicyRegistryCache=null;
+  eligibilityPolicyEntriesRef=null;
+  eligibilityRecordedCache=new WeakMap();
+  eligibilityPolicyEntryCache=new WeakMap();
+}
+function recordedEligibilityForEntry(e){
+  if(!e||typeof e!=='object')return null;
+  if(eligibilityRecordedCache.has(e))return eligibilityRecordedCache.get(e);
+  const result=window.BTEligibilityGate?.recorded?.(e)||null;
+  eligibilityRecordedCache.set(e,result);
+  return result;
+}
 function eligibilityPolicyIdentity(e){
   try{return entryBankIdentity(e).key}catch{}
   const bank=String(e?.bank||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
@@ -562,18 +580,35 @@ function eligibilityPolicyRecordedAt(e){
   // payout/closure are only last-resort dates for older imported records.
   return policyStamp||String(e?.opened||e?.bonusRecd||e?.closed||'').trim();
 }
+function eligibilityPolicyRegistry(){
+  if(eligibilityPolicyRegistryCache&&eligibilityPolicyEntriesRef===entries)return eligibilityPolicyRegistryCache;
+  const registry=new Map();
+  (Array.isArray(entries)?entries:[]).forEach((entry,index)=>{
+    if(!entry)return;
+    const resolved=recordedEligibilityForEntry(entry);
+    if(!resolved?.ok)return;
+    const identity=eligibilityPolicyIdentity(entry),recordedAt=eligibilityPolicyRecordedAt(entry);
+    const current=registry.get(identity);
+    if(!current||recordedAt>current.recordedAt)registry.set(identity,{entry,index,resolved,recordedAt});
+  });
+  eligibilityPolicyRegistryCache=registry;
+  eligibilityPolicyEntriesRef=entries;
+  return registry;
+}
 function eligibilityPolicyEntry(e){
   if(!e)return e;
   const gate=window.BTEligibilityGate;
   if(!gate?.recorded)return e;
+  if(eligibilityPolicyEntriesRef!==null&&eligibilityPolicyEntriesRef!==entries)invalidateEligibilityPolicyCache();
+  if(typeof e==='object'&&eligibilityPolicyEntryCache.has(e))return eligibilityPolicyEntryCache.get(e);
   const identity=eligibilityPolicyIdentity(e);
-  const candidates=[e,...(Array.isArray(entries)?entries:[])]
-    .filter((x,i,all)=>x&&eligibilityPolicyIdentity(x)===identity&&all.indexOf(x)===i)
-    .map((x,index)=>({entry:x,index,resolved:gate.recorded(x),recordedAt:eligibilityPolicyRecordedAt(x)}))
-    .filter(x=>x.resolved?.ok)
-    .sort((a,b)=>b.recordedAt.localeCompare(a.recordedAt)||a.index-b.index);
-  const selectedRow=candidates[0],selected=selectedRow?.entry;
-  if(!selected||selected===e)return e;
+  const localResolved=recordedEligibilityForEntry(e),localRecordedAt=eligibilityPolicyRecordedAt(e);
+  let selectedRow=eligibilityPolicyRegistry().get(identity)||null;
+  // Preserve the caller's own rule when timestamps tie, matching the former
+  // per-call sort without rescanning every account.
+  if(localResolved?.ok&&(!selectedRow||localRecordedAt>=selectedRow.recordedAt))selectedRow={entry:e,index:-1,resolved:localResolved,recordedAt:localRecordedAt};
+  const selected=selectedRow?.entry;
+  if(!selected||selected===e){if(typeof e==='object')eligibilityPolicyEntryCache.set(e,e);return e;}
   const out={...e};
   ELIGIBILITY_POLICY_FIELDS.forEach(key=>{
     if(!Object.prototype.hasOwnProperty.call(selected,key))return;
@@ -590,10 +625,12 @@ function eligibilityPolicyEntry(e){
   }));
   out.eligibilityPolicyRecordedAt=eligibilityPolicyRecordedAt(selected);
   out.eligibilityPolicySourceEntryId=selected.id||'';
+  eligibilityRecordedCache.set(out,selectedRow.resolved);
+  eligibilityPolicyEntryCache.set(e,out);
   return out;
 }
 function churnEligibilityValidation(e){
-  try{if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.recorded==='function')return window.BTEligibilityGate.recorded(eligibilityPolicyEntry(e))}catch{}
+  try{if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.recorded==='function')return recordedEligibilityForEntry(eligibilityPolicyEntry(e))}catch{}
   const decision=churnDecisionForEntry(e);
   if(decision==='nonrepeatable')return{ok:true,status:'legacy',decision};
   const basis=String(e?.sourceEligibilityBasis||e?.churnBasis||e?.analysis?.sourceEligibilityBasis||e?.analysis?.churnBasis||'').toLowerCase();
@@ -4658,6 +4695,9 @@ function R(){
   // Never paint the legacy renderer during script startup. The redesign module
   // initializes after the canonical model and performs the first full render.
   if(!window.BT360)return;
+  // Entries may have been edited in place by legacy flows. Rebuild the small
+  // policy index once for this render, then reuse it for every card and date.
+  invalidateEligibilityPolicyCache();
   const focusedBeforeRender=document.activeElement;const searchFocus=focusedBeforeRender&&['archive-search','tracker-search','datapoints-search','radar-search','terms-search'].includes(focusedBeforeRender.id)?{id:focusedBeforeRender.id,start:focusedBeforeRender.selectionStart,end:focusedBeforeRender.selectionEnd}:null;if(tab==='finances')tab='tracker';captureProfileSectionState();const el=document.querySelector('.scroll');if(el)_sp=el.scrollTop;
   if(typeof window.btCaptureRadarDisclosures==='function')window.btCaptureRadarDisclosures();
   if(tab==='profiles'||tab==='health')tab='tracker';
