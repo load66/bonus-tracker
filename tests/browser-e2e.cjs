@@ -480,27 +480,23 @@ async function exercise(name,engine,url){
     });
     check('journey starts with two independent banks in Needs you',
       await page.locator('[data-queue="needs"] [data-attention-id^="SYN-JOURNEY"]').count()===2);
-    await page.locator('[data-attention-toggle="SYN-JOURNEY-OTHER"]').click();
-    check('journey selects the second bank rather than the first',
-      await page.locator('[data-attention-id="SYN-JOURNEY-OTHER"].is-selected').count()===1&&
-      await page.locator('[data-attention-id="SYN-JOURNEY-DD"].is-selected').count()===0);
-    await page.locator('[data-attention-toggle="SYN-JOURNEY-DD"]').click();
-    check('journey switches selection without exposing the other bank actions',
-      await page.locator('[data-attention-id="SYN-JOURNEY-DD"].is-selected .bt360-actions button:visible').count()===2&&
-      await page.locator('[data-attention-id="SYN-JOURNEY-OTHER"] .bt360-actions button:visible').count()===0);
-    check('journey selection never writes bank records',
+    await page.locator('[data-attention-link="SYN-JOURNEY-OTHER"]').click();
+    check('journey opens the selected bank directly',await page.locator('.bt360-detail-header h2').innerText()==='Synthetic Journey Other Bank');
+    await page.evaluate(()=>BT360.back());
+    await page.locator('[data-attention-link="SYN-JOURNEY-DD"]').click();
+    check('journey opens the precise bank details without dashboard actions',
+      await page.locator('.bt360-detail-header h2').innerText()==='Synthetic Journey DD Bank'&&
+      await page.locator('[data-queue] .bt360-actions').count()===0);
+    check('journey navigation never writes bank records',
       await page.evaluate(backup=>localStorage.getItem('bt_e_v4')===backup.tracker,journeyRestore));
-    await page.locator('[data-attention-id="SYN-JOURNEY-DD"] .bt3643-datapoints').click();
+    await page.evaluate(()=>openTaskDatapoints('SYN-JOURNEY-DD'));
     check('journey datapoint shortcut is restricted to the selected bank',
       await page.evaluate(()=>tab==='tips'&&dpTaskBankKey===datapointBankKey(entries[0])));
     check('journey research does not impersonate a verified personal deposit',
       await page.locator('.research-caveat').first().innerText().then(t=>t.includes('do not guarantee')));
     check('journey research is read-only for financial records',
       await page.evaluate(backup=>localStorage.getItem('bt_e_v4')===backup.tracker,journeyRestore));
-    await page.evaluate(()=>{tab='tracker';R()});
-    await page.locator('[data-attention-id="SYN-JOURNEY-DD"] .bt360-actions .bt360-secondary').click();
-    check('journey opens the precise bank details',
-      await page.locator('.bt360-detail-header h2').innerText()==='Synthetic Journey DD Bank');
+    await page.evaluate(()=>{tab='tracker';expanded='SYN-JOURNEY-DD';R()});
     check('journey requires an all-requirements confirmation, never a single deposit',
       await page.locator('.bt360-detail-footer .bt360-primary').innerText()==='Mark requirements done');
     await page.locator('.bt360-detail-footer .bt360-primary').click();
@@ -667,34 +663,32 @@ async function exercise(name,engine,url){
         {id:'SYN-QUEUE-HOLD',bank:'Synthetic Hold Bank',accountType:'personal',bonus:300,opened:'2026-09-01',bonusRecd:'2026-10-10',minHoldDays:90,closeRuleBasis:'opened',closeRuleSource:'manual',closeRestrictionType:'minimum-open',closeRuleText:'Keep the account open for 90 days after opening.',earlyCloseFee:25,earlyTerminationFeeText:'$25 early closing fee within 90 days.',customTimers:[],checklist:[]},opportunity,cooling];
       const saved=await page.evaluate(rows=>{const old={entries,expanded,tab,stored:localStorage.getItem('bt_e_v4')};entries=rows;expanded=null;tab='tracker';R();return old;},rows);
       check('Needs you counts actionable work only',await page.locator('[data-queue="needs"] .bt360-count').innerText()==='1 task');
-      check('Waiting separates future payout and hold periods',await page.locator('[data-queue="waiting"] [data-attention-toggle]').count()===2);
-      check('Opportunities is separate from required tasks',await page.locator('[data-queue="opportunities"] [data-attention-toggle]').count()===1);
+      check('Waiting separates future payout and hold periods',await page.locator('[data-queue="waiting"] [data-attention-link]').count()===2);
+      check('Opportunities is separate from required tasks',await page.locator('[data-queue="opportunities"] [data-attention-link]').count()===1);
       check('upcoming cooldown appears once in Eligible soon',await page.locator('[data-attention-id="SYN-QUEUE-SOON"]').count()===0&&await page.locator('.bt3719-soon').innerText().then(t=>t.includes('Synthetic Upcoming CU')));
       check('payout and hold dates use precise labels',await page.locator('[data-queue="waiting"]').innerText().then(t=>t.includes('Expected by')&&t.includes('Hold until')));
       for(const key of ['needs','waiting','opportunities']){
-        await page.locator('[data-queue="'+key+'"] [data-attention-toggle]').first().click();
-        check('selection works across '+key+' group',await page.locator('.is-selected').count()===1);
         for(const width of [320,375,390,430]){
           await page.setViewportSize({width,height:844});
           check(key+' queue fits '+width+'px',await page.locator('[data-queue="'+key+'"]').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
-          check(key+' actions keep touch targets at '+width+'px',await page.locator('.is-selected .bt360-actions button').evaluateAll(rows=>rows.length===2&&rows.every(e=>e.getBoundingClientRect().height>=44)));
-          await page.locator('.is-selected .bt360-actions').scrollIntoViewIfNeeded();
-          check(key+' actions remain clear of the Add bar at '+width+'px',await page.locator('.is-selected .bt360-actions button').evaluateAll(rows=>rows.every(e=>{const r=e.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return hit===e||e.contains(hit)})));
+          check(key+' bank cards retain full touch targets at '+width+'px',await page.locator('[data-queue="'+key+'"] [data-attention-link]').evaluateAll(rows=>rows.length>0&&rows.every(e=>e.getBoundingClientRect().height>=44)));
+          check(key+' bank cards contain no action buttons at '+width+'px',await page.locator('[data-queue="'+key+'"] .bt360-actions').count()===0);
         }
         await page.setViewportSize({width:390,height:844});
         await page.locator('[data-queue="'+key+'"]').scrollIntoViewIfNeeded();
         await page.screenshot({path:path.join(output,name+'-queue-'+key+'-390.png')});
+        const target=await page.locator('[data-queue="'+key+'"] [data-attention-link]').first().getAttribute('data-attention-link');
+        await page.locator('[data-queue="'+key+'"] [data-attention-link]').first().click();
+        check('bank card opens exact details across '+key+' group',await page.evaluate(id=>expanded===id,target));
+        await page.evaluate(()=>BT360.back());
       }
-      await page.locator('.is-selected').getByRole('button',{name:'View offers',exact:true}).click();
-      check('opportunity routes to offers for that bank',await page.locator('#radar-search').inputValue()==='Synthetic Opportunity CU');
       check('dashboard grouping leaves stored account records unchanged',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,saved.stored));
-      await page.evaluate(old=>{btRadarSearch('');entries=old.entries;expanded=old.expanded;tab=old.tab;R();},saved);
+      await page.evaluate(old=>{entries=old.entries;expanded=old.expanded;tab=old.tab;R();},saved);
     }
     const beforeDisclosure=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     check('Tracker no longer displays the legacy Action Center',await page.locator('.bt360-legacy-actions').count()===0);
     check('account directory is collapsed by default',await page.locator('.bt366-compact-row').count()===0);
-    await page.locator('.bt3641-attention-toggle').first().click();
-    check('selected task reveals its own actions',await page.locator('.bt3641-attention-item.is-selected .bt360-actions button:visible').count()===2);
+    check('dashboard bank cards expose no separate action buttons',await page.locator('[data-queue] .bt360-actions').count()===0);
     await openAccounts();
     check('Tracker shows compact account row, not old full card',await page.locator('.bt366-compact-row').count()===1&&await page.locator('.bt366-compact-row .card-mini-chip').count()===0);
     {await openAccounts();await page.locator('.bt366-compact-row').first().click();}
@@ -1841,9 +1835,8 @@ async function exercise(name,engine,url){
         check(name+' navigation starts at the top at '+width+'px',await page.locator('.scroll').evaluate(e=>e.scrollTop===0));
         check(name+' shows version at '+width+'px',await page.locator('.hdr .app-version').isVisible());
         if(name==='Tracker'){
-          if(!await page.locator('.bt3641-attention-item.is-selected').count())await page.locator('.bt3641-attention-toggle').first().click();
-          check('action tile buttons retain mobile touch area at '+width+'px',await page.locator('.bt360-featured .bt360-actions button').evaluateAll(rows=>rows.length>0&&rows.every(e=>e.getBoundingClientRect().height>=44)));
-          check('compact tiles fit at '+width+'px',await page.locator('.bt360-featured').evaluateAll(rows=>rows.every(e=>e.scrollWidth<=e.clientWidth+1)));
+          check('bank cards retain mobile touch area at '+width+'px',await page.locator('[data-attention-link]').evaluateAll(rows=>rows.length>0&&rows.every(e=>e.getBoundingClientRect().height>=44)));
+          check('bank cards fit without dashboard buttons at '+width+'px',await page.locator('.bt3641-attention-item').evaluateAll(rows=>rows.every(e=>e.scrollWidth<=e.clientWidth+1&&!e.querySelector('.bt360-actions'))));
         }
       }
     }
@@ -1929,32 +1922,23 @@ async function exercise(name,engine,url){
     const taskStorage=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     await button('Hide accounts').click();
     check('duplicate directory collapses on request',await page.locator('.bt366-compact-row').count()===0);
-    const headers=page.locator('[data-attention-toggle]');
-    const attentionOrder=await headers.evaluateAll(rows=>rows.map(e=>e.dataset.attentionToggle));
-    check('each bank has a selectable attention card',attentionOrder.length===2);
-    if(await page.locator('[data-attention-toggle][aria-expanded="true"]').count())await page.locator('[data-attention-toggle][aria-expanded="true"]').click();
-    await headers.nth(0).click();
-    check('first bank selection reveals two actions',await page.locator('.is-selected .bt360-actions button:visible').count()===2);
-    await headers.nth(1).click();
-    check('second bank replaces first selection',await headers.nth(0).getAttribute('aria-expanded')==='false'&&await headers.nth(1).getAttribute('aria-expanded')==='true'&&await page.locator('.is-selected').count()===1);
-    check('selection preserves priority order',JSON.stringify(await headers.evaluateAll(rows=>rows.map(e=>e.dataset.attentionToggle)))===JSON.stringify(attentionOrder));
+    const headers=page.locator('[data-attention-link]');
+    const attentionOrder=await headers.evaluateAll(rows=>rows.map(e=>e.dataset.attentionLink));
+    check('each bank has one direct details card',attentionOrder.length===2);
+    check('dashboard cards have no visible action buttons',await page.locator('[data-queue] .bt360-actions').count()===0);
+    check('direct cards preserve priority order',JSON.stringify(await headers.evaluateAll(rows=>rows.map(e=>e.dataset.attentionLink)))===JSON.stringify(attentionOrder));
     const selectedId=attentionOrder[1];
     for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
-      check('selection keeps card spacing consistent at '+width+'px',await page.locator('.is-selected').evaluate(e=>getComputedStyle(e).marginLeft==='0px'&&getComputedStyle(e).paddingLeft==='0px'&&getComputedStyle(e).borderRadius==='0px'));
-      check('selected second bank fits '+width+'px',await page.locator('.is-selected').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
-      check('selected bank actions retain touch targets at '+width+'px',await page.locator('.is-selected .bt360-actions button').evaluateAll(rows=>rows.length===2&&rows.every(e=>e.getBoundingClientRect().height>=44)));
+      check('direct bank cards fit '+width+'px',await headers.evaluateAll(rows=>rows.every(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth)));
+      check('direct bank cards retain touch targets at '+width+'px',await headers.evaluateAll(rows=>rows.every(e=>e.getBoundingClientRect().height>=44)));
     }
     await page.setViewportSize({width:390,height:844});
-    await page.screenshot({path:path.join(output,name+'-selected-bank.png')});
-    await page.locator('.is-selected').getByRole('button',{name:'Details',exact:true}).click();
-    check('second bank Details opens that exact record',await page.evaluate(id=>expanded===id,selectedId));
-    await page.evaluate(()=>{expanded=null;R()});
-    await page.locator('.is-selected .bt360-actions .bt360-primary').click();
-    check('second bank primary task action routes to its own account',await page.evaluate(id=>expanded===id,selectedId));
-    await page.evaluate(()=>{expanded=null;R()});
-    await page.locator('[data-attention-toggle][aria-expanded="true"]').click();
-    check('selected card can collapse',await page.locator('.is-selected').count()===0);
+    await page.screenshot({path:path.join(output,name+'-direct-bank-cards.png')});
+    await headers.nth(1).click();
+    check('selecting the second bank opens that exact record',await page.evaluate(id=>expanded===id,selectedId));
+    check('bank actions exist only inside details',await page.locator('.bt360-detail-footer button').count()===2&&await page.locator('[data-queue] .bt360-actions').count()===0);
+    await page.evaluate(()=>BT360.back());
     const searchShortcut=page.locator('.bt3642-search-launcher');
     check('compact search shortcut shows account count',await searchShortcut.innerText().then(t=>t.includes('Search 2 accounts')));
     await searchShortcut.click();
@@ -2267,8 +2251,7 @@ async function exercise(name,engine,url){
     await page.screenshot({path:path.join(output,name+'-experience-confirmation.png')});
     await page.getByRole('button',{name:'Save experience',exact:true}).click();
     check('explicit experience retains cycle identity and attestation',await page.evaluate(()=>loadUserDatapoints().some(x=>x.entryId==='E2E-TRUST'&&x.accountType==='business'&&x.cycleOpened==='2026-01-01'&&x.confirmedByUser&&x.outcome==='worked')));
-    await page.evaluate(()=>{expanded=null;search='';BT360.setAudience('all');BT360.resetStage();R();if(BT360.selectedAttentionId!=='E2E-TRUST')BT360.toggleAttention('E2E-TRUST')});
-    await page.getByRole('button',{name:'Deposit reports',exact:false}).click();
+    await page.evaluate(()=>{expanded=null;search='';BT360.setAudience('all');BT360.resetStage();R();openTaskDatapoints('E2E-TRUST')});
     check('task research opens exact bank and account type',await page.evaluate(()=>tab==='tips'&&dpTaskBankKey===datapointBankKey(entries[0])));
     check('confirmed experience appears in task research',await page.locator('.bt366-dp-item').innerText().then(t=>t.includes('Synthetic payroll')&&t.includes('You confirmed')));
     await page.getByRole('button',{name:'All banks',exact:false}).click();
