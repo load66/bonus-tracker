@@ -197,9 +197,9 @@ if(require.main===module)setTimeout(()=>{
       const sample={id:'UI-STATE-3',bank:'State Bank',accountType:'personal',opened:'2026-09-01',closed:'',bonus:100,checklist:[{text:'Test requirement',done:false}],customTimers:[],notes:'',churnable:true};
       entries=[sample];expanded=sample.id;search='';
       setProfileSectionOpen(sample.id,'lifecycle',true);
-      const before=window.rTracker(entries).includes('bt360-steps')&&!window.rTracker(entries).includes('data-section-key="lifecycle" open');
+      const before=window.rTracker(entries).includes('bt3810-detail')&&!window.rTracker(entries).includes('data-section-key="lifecycle" open');
       toggleCk(sample.id,0);
-      const after=expanded===sample.id&&profileSectionIsOpen(sample.id,'lifecycle')&&document.getElementById('app').innerHTML.includes('bt360-steps')&&document.getElementById('app').innerHTML.includes('aria-checked="true"');
+      const after=expanded===sample.id&&profileSectionIsOpen(sample.id,'lifecycle')&&document.getElementById('app').innerHTML.includes('bt3810-detail')&&document.getElementById('app').innerHTML.includes('aria-checked="true"');
       entries=oldEntries;expanded=oldExpanded;search=oldSearch;
       return before&&after;
     })()`,sandbox);
