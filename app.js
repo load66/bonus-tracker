@@ -453,7 +453,7 @@ function renderTermsCycle(x,previous=false){
  h+='<div><dt>Promotion terms</dt><dd>'+esc(raw?'Saved':'Not saved')+'</dd></div>';
  if(x.termsVerifiedAt||x.capturedAt)h+='<div><dt>Terms reviewed</dt><dd>'+esc(fD(String(x.termsVerifiedAt||x.capturedAt).slice(0,10)))+'</dd></div>';
  h+='</dl>';
- const facts=[['Bonus requirements',x.completeBonusText],['Monthly fee',x.monthlyFeeAmountText||x.monthlyFeeYNText],['How to avoid the fee',x.monthlyFeeWaiverText||x.avoidMonthlyFeeText],['Early-close fee wording',x.earlyTerminationFeeText],['Closing / bonus retention',x.closeRuleText],['Payout timing',x.payoutTimingText],['Offer deadline',x.expirationDateText]];
+ const facts=[['Bonus requirements',x.completeBonusText],['Monthly fee',x.monthlyFeeAmountText||x.monthlyFeeYNText],['How to avoid the fee',x.monthlyFeeWaiverText||x.avoidMonthlyFeeText],['Closing / bonus retention',x.closeRuleText],['Payout timing',x.payoutTimingText],['Offer deadline',x.expirationDateText]];
  if(facts.some(([,v])=>v)||rules.length){
   h+='<details class="research-help"><summary>Saved requirements & fees</summary><dl class="archive-facts">';
   facts.forEach(([k,v])=>{if(v)h+='<div><dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd></div>'});
