@@ -84,7 +84,7 @@
       if(financial&&financial.mode!=='legacy'){
         if(!financial.ok)return true;
         const c=financial.rules?.closure;
-        if(c&&c.restrictionType==='manual-review'&&!c.hold)return true;
+        if(window.BTFinancialRules?.retentionNeedsReview?.(e))return true;
       }
     }catch{}
     try{if(core.typeForEntry(e)==='review')return true}catch{}
@@ -120,7 +120,7 @@
     const safe=safeDate(e),target=closeDate||(typeof td==='function'?td():new Date().toISOString().slice(0,10)),days=ruleDays(e),start=baseDate(e);
     const financial=window.BTFinancialRules?.validate(e);
     if(financial&&financial.mode!=='legacy')add(financial.ok,'Financial rules consistent',financial.ok?'Evidence and calculation fields agree':financial.issues.map(x=>x.message).join('; '),'danger');
-    if(financial?.rules)add(!!hold||financial.rules.closure.restrictionType!=='manual-review','Closure retention terms recorded',hold?'Exact calendar-month retention is documented':financial.rules.closure.restrictionType==='manual-review'?'The retention or bonus-forfeiture restriction requires review':'The closure restriction is explicit','danger');
+    if(financial?.rules)add(!window.BTFinancialRules?.retentionNeedsReview?.(e),'Closure retention terms recorded',hold?'Exact calendar-month retention is documented':window.BTFinancialRules?.retentionNeedsReview?.(e)?'The bonus-retention restriction requires review':'No unresolved retention rule','danger');
     const needsRequirementDate=String(financial?.rules?.closure?.basis||basis(e)||'')==='reqmet';
     if(needsRequirementDate||e.reqMet)add(!!e.reqMet,'Requirement met date saved',e.reqMet?fD(e.reqMet):'Save the actual requirements-completion date before closing','danger');
     add(!!e.bonusRecd,'Bonus received',e.bonusRecd?fD(e.bonusRecd):'Do not close before the bonus posts','danger');
