@@ -5866,7 +5866,7 @@ function closeCollectDateFields(){
   const opened=document.getElementById('cp_opened');
   if(opened)p.opened=opened.value;
   const mf=document.getElementById('cp_monthly_checked');
-  if(mf)p.monthlyFeeChecked=mf.value==='yes';
+  if(mf)p.monthlyFeeChecked=mf.type==='checkbox'?mf.checked:mf.value==='yes';
   const nb=document.getElementById('cp_negative_balance');
   if(nb)p.closedWithNegativeBalance=nb.value==='yes'?true:nb.value==='no'?false:null;
 }
