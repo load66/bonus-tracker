@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.8.9';
+const APP_VERSION='3.8.10';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -5135,6 +5135,7 @@ function rClose(){
     h+='<h3>🔒 Record closure</h3><div class="sub">Save only after the bank account has closed.</div>';
     h+='<div class="close-ready '+esc(ready.cls)+'"><b>'+esc(ready.label)+'</b><span>'+esc(closeFlowModeReason(e,'actual'))+'</span></div>';
     h+='<div class="close-review-card">'+closeReviewRows(e,p)+'</div>';
+    if(!churnEligibilityValidation(e).ok)h+='<p class="research-caveat">Next bonus eligibility is not confirmed. Recording a closure will not establish a new eligible date.</p>';
     h+=renderArchiveHistoryReview(closeCycleForSave(e,p));
     h+='<p class="research-caveat">Saving preserves this cycle’s recorded facts and earlier revisions on this device. Cloud protection is confirmed separately after upload and readback.</p>';
     if((p.opened||e?.opened)&&!e?.couponEnrollmentDate&&!e?.offerEnrollmentDate)h+='<label class="archive-enrollment-choice"><input type="checkbox" id="cp_enrollment_opened" '+(p.enrollmentAtOpening?'checked ':'')+'onchange="if(closePrompt)closePrompt.enrollmentAtOpening=this.checked"> I enrolled in the promotion when this account opened</label>';
@@ -5810,12 +5811,9 @@ function feeCheckCancel(){feeCheckPrompt=null;R()}
 function startCloseFlow(id,preferredMode='actual'){
   const e=entries.find(x=>x.id===id);
   if(!e)return;
-  const eligibility=churnEligibilityValidation(e);
-  if(!eligibility.ok){
-    cfm={title:'T&C Churn Verification Required',msg:'Do not close this account until the tracker has verified how future eligibility works from the saved T&C. '+(eligibility.reason||'Review repeatability, cooldown, and the clock anchor.'),green:true,confirmLabel:'Review Entry',action:()=>{cfm=null;openEdit(id)}};
-    R();
-    return;
-  }
+  // Recording an ACTUAL bank closure is independent of proving a future bonus
+  // eligibility date. The latter must remain unconfirmed until supported.
+  // Closing risks and account dates are reviewed separately in this flow.
   closePrompt={
     entryId:id,
     bank:e.bank,
@@ -5937,8 +5935,9 @@ function finishClose(){
     sv(SK,entries);
     cfm={title:'Closed & Archived',msg:e2.bank+' closed on '+fD(p.closeDate)+'.\n\nArchive status: Non-repeatable offer.\nNo churn countdown or reopen date was created.\n\nUndo is available for 60 seconds at the bottom of the app.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
   }else{
-    const readyDate=e2&&churnReadyDate(e2)?fD(churnReadyDate(e2)):'not available';
-    cfm={title:'Closed Saved',msg:(e2?e2.bank:'This bank')+' closed on '+fD(p.closeDate)+'.\n\nChurn-ready date: '+readyDate+'.\nStatus: '+(e2?status(e2):'Waiting to Churn')+'.\n\nUndo is available for 60 seconds at the bottom of the app.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
+    const verifiedNextCycle=e2&&churnEligibilityValidation(e2).ok?churnReadyDate(e2):'';
+    const nextCycleLabel=verifiedNextCycle?fD(verifiedNextCycle):'Not confirmed';
+    cfm={title:'Closed Saved',msg:(e2?e2.bank:'This bank')+' closed on '+fD(p.closeDate)+'.\n\nNext bonus review: '+nextCycleLabel+'.\nStatus: '+(e2?status(e2):'Waiting to Churn')+'.\n\nUndo is available for 60 seconds at the bottom of the app.',green:true,confirmLabel:'OK',action:()=>{cfm=null;R()}};
   }
   const issues=archiveHistoryIssues(e2);
   cfm.msg+='\n\nHistory: '+(issues.length?'Incomplete — '+issues.join('; ')+'.':'Core records saved locally.')+'\nCloud recovery: '+(window.BTCloudBackup?.protection?.().title||'Not verified')+'.';
