@@ -1558,7 +1558,7 @@ async function exercise(name,engine,url){
     await page.locator('.bonus-ai-heading').waitFor({state:'visible'});
     check('Tracker AI opens for one selected bank',(await page.locator('.bonus-ai-heading').innerText()).includes('E2E Verification Bank')&&await page.evaluate(()=>window.__bonusAITest.calls.length===0));
     check('local answers need no login',await page.locator('#bonus-ai-login').isHidden());
-    for(const label of ['Monthly fee','Fee waivers','Direct deposit','Early-close fee','Companion account','Repeat eligibility']){await button(label).click();check('prefill: '+label,(await page.locator('#bonus-ai-question').inputValue()).length>20);}
+    for(const label of ['Monthly fee','Fee waivers','Direct deposit','Closing rules','Companion account','Repeat eligibility']){await button(label).click();check('prefill: '+label,(await page.locator('#bonus-ai-question').inputValue()).length>20);}
     await button('Closure rules').click();await page.locator('#bonus-ai-send').click();
     await page.locator('#bonus-ai-answer p').first().waitFor();
     const aiCloseState=await page.evaluate(()=>{
