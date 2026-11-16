@@ -166,9 +166,9 @@ assert.doesNotMatch(sandbox.BT360.timerRows(paidRequirement),/data-source="saved
  assert.doesNotMatch(timers,/Nov 8, 2026|Overdue|Nov 18, 2026|Requirement due|Bonus pending/);
  assert.match(timers,/Monthly service fee review/,'Recurring fee check is still available');
  const detail=sandbox.BT360.detailPanels(paid);
- assert.match(detail,/Next bonus/);
+ assert.doesNotMatch(detail,/Next bonus|Add eligibility rule/,'Current details defer next-cycle projections to Archive');
  assert.match(detail,/Oct 28, 2026/,'Payment milestone stays recorded');
- assert.match(detail,/Oct 30, 2027/,'Only a verified saved repeat rule displays an eligible date');
+ assert.doesNotMatch(detail,/Oct 30, 2027/,'Future eligibility date belongs only in Archive');
  assert.match(detail,/Closing early/,'Closing fee warning remains');
  assert.doesNotMatch(detail,/Documents &amp; activity|Previous cycle reminders|See saved requirements|Review rule|Saved terms|Activity|Advanced/);
  assert.match(sandbox.BT360.detailFooter(paid),/Record closure/);
@@ -255,7 +255,7 @@ assert.match(coolingList,/A previous checking bonus within 12 months is ineligib
 assert.match(coolingList,/Details/);
 assert.doesNotMatch(coolingList,/Needs review · verify eligibility rules/);
 const coolingDetail=sandbox.BT360.detailPanels(cooldownNoDate);
-assert.match(coolingDetail,/Add eligibility rule/);
+assert.doesNotMatch(coolingDetail,/Add eligibility rule|Next bonus/,'Historical detail must not duplicate Archive eligibility');
 assert.doesNotMatch(coolingDetail,/previous checking bonus within 12 months/,'Long rule excerpts stay in Archive, not the everyday detail');
 const estimatedPast={...cooldownNoDate,id:'SYNT-P-85',opened:'2020-01-01',closed:'2021-01-01',
  churn:'1',eligibilityText:'Legacy saved one-year rule, no verified supporting source.'};
