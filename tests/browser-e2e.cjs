@@ -772,19 +772,16 @@ async function exercise(name,engine,url){
 
     check('unknown closing fees are hidden without changing the monthly fee',
       await page.locator('.bt3810-fees').innerText().then(t=>t.includes('$15')&&!t.includes('Closing early')&&!t.includes('Not confirmed')));
-    check('supported early-close fee and explicit no-fee still render in shared bank details',
+    check('documented, zero, conditional and unknown closing fees create no bank-detail row',
       await page.evaluate(()=>{
-        const before=JSON.stringify(entries[0]),stored=localStorage.getItem(SK),original=entries[0];
-        const paid={...original,financialRules:{...original.financialRules,
-          closure:{earlyCloseFee:25,feeEvidence:{quote:'$25 early closing fee within 180 days.'}}}};
-        const exempt={...original,financialRules:{...original.financialRules,
-          closure:{earlyCloseFee:0,feeEvidence:{quote:'No early closing fee.'}}}};
-        const conditional={...original,financialRules:{...original.financialRules,
-          closure:{earlyCloseFee:0,feeEvidence:{quote:'No early closing fee after 180 days.'}}}};
-        return BT360.detailPanels(paid).includes('$25 early-close fee')&&
-          BT360.detailPanels(exempt).includes('No early-closing fee')&&
-          !BT360.detailPanels(conditional).includes('Closing early')&&
-          JSON.stringify(entries[0])===before&&localStorage.getItem(SK)===stored;
+        const original=entries[0],saved=JSON.stringify(original),stored=localStorage.getItem(SK);
+        const cases=[null,0,25,400].map(fee=>({...original,earlyCloseFee:fee,
+          financialRules:{...original.financialRules,closure:{...original.financialRules?.closure,earlyCloseFee:fee,
+            feeEvidence:{quote:fee===0?'No early closing fee.':'$'+fee+' early closing fee.'}}}}));
+        return cases.every(e=>{
+          const panel=BT360.detailPanels(e);
+          return panel.includes('<span>Monthly</span>')&&!/Closing early|Early closing fee|early-close fee/.test(panel);
+        })&&JSON.stringify(original)===saved&&localStorage.getItem(SK)===stored;
       }));
     check('no advanced, notes, previous reminders or source disclosures on the main screen',
       await page.locator('.bt360-detail-card details').count()===0&&
@@ -950,12 +947,11 @@ async function exercise(name,engine,url){
     await button('Not now').click();
     check('bonus receipt updates close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
     await page.evaluate(()=>{entries[0].earlyCloseFee=null;R();});
-    check('unverified fee blocks close readiness even after payout',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='BONUS_RECEIVED');
-    check('summary does not promise closure from payout alone',await page.evaluate(()=>!renderBankProfileSummary(entries[0]).includes('close when ready')&&!lifecycleSteps(entries[0]).find(s=>s.key==='safe').done));
-    await page.evaluate(()=>{entries[0].earlyCloseFee=0;entries[0].earlyTerminationFeeText='No early closing fee unless the account is restricted.';entries[0].feeScheduleRaw=entries[0].earlyTerminationFeeText;R();});
-    check('conditional no-fee wording blocks readiness',await page.evaluate(()=>btEvaluateAccount(entries[0]).close.status!=='ready'));
-    await page.evaluate(()=>{entries[0].earlyTerminationFeeText='No early closing fee.';entries[0].feeScheduleRaw='No early closing fee.';R();});
-    check('restoring proven zero-fee evidence restores close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
+    check('legacy missing termination fee does not block documented payout-only readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
+    await page.evaluate(()=>{entries[0].earlyCloseFee=0;entries[0].earlyTerminationFeeText='No early closing fee unless the account is restricted.';R();});
+    check('conditional service-fee wording cannot change independent bonus-retention readiness',await page.evaluate(()=>btEvaluateAccount(entries[0]).close.status==='ready'));
+    await page.evaluate(()=>{entries[0].earlyTerminationFeeText='No early closing fee.';R();});
+    check('service-fee evidence does not change canonical account readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
     check('received bonus offers recording a real closure',await page.locator('.bt3810-status h3').innerText()==='Bonus received'&&await page.locator('.bt360-detail-footer .bt360-primary').innerText()==='Record closure');
     check('closed account retains its actual date without writing to storage',
       await page.evaluate(()=>{
@@ -969,8 +965,8 @@ async function exercise(name,engine,url){
       await page.locator('.bt3810-dates').count()===1
       &&await page.locator('.bt3810-fees').count()===1
       &&await page.locator('.bt3611-ready-extras,.bt3686-account-extras').count()===0);
-    check('earned bonus remains simple, while warning about fee risk',
-      await page.locator('.bt3810-fees').innerText().then(t=>t.includes('Monthly')&&t.includes('Closing early')));
+    check('earned bonus shows only recurring account fees, not an early-close fee',
+      await page.locator('.bt3810-fees').innerText().then(t=>t.includes('Monthly')&&!t.includes('Closing early')));
     const sticky=await page.evaluate(()=>{
       const bar=document.querySelector('.bt360-detail-footer').getBoundingClientRect();
       const nav=document.querySelector('.tabs').getBoundingClientRect();
