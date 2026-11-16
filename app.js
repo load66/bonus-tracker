@@ -1734,7 +1734,7 @@ function closeRuleBasisLabel(v){
   return b==='bonus'?'Bonus received date':b==='reqmet'?'Requirement met date':b==='manual'?'Manual review':'Opened date'
 }
 function inferCloseRuleBasisFromText(e){
-  const txt=String([e?.closeRuleText,e?.earlyTerminationFeeText,e?.eligibilityText,e?.completeBonusText,e?.analyzedTC].filter(Boolean).join(' ')).toLowerCase();
+  const txt=String([e?.closeRuleText,e?.eligibilityText,e?.completeBonusText,e?.analyzedTC].filter(Boolean).join(' ')).toLowerCase();
   if(/after[^.]{0,80}(bonus|cash reward|payout|payment)|bonus[^.]{0,80}(posts|posted|received|paid|payment)/i.test(txt))return'bonus';
   if(/after[^.]{0,80}(requirement|qualif|deposit period)|requirement[^.]{0,80}(met|complete|satisfied)/i.test(txt))return'reqmet';
   return'opened'
@@ -4366,7 +4366,6 @@ function closeHoldDisplayValue(e){
 function closeHoldRelevantText(e){
   return String([
     e?.closeRuleText,
-    e?.earlyTerminationFeeText,
     e?.notes,
     e?.dataPoint,
     e?.analyzedTC,
@@ -4378,16 +4377,19 @@ function inferCloseHoldDaysFromEntry(e){
   const txt=closeHoldRelevantText(e);
   if(!txt)return 0;
   if(/monthly account fee|monthly service fee|monthly maintenance fee|monthly fee|service charge|maintenance fee|average monthly balance|fee waived|waived with|avoid monthly|paper statement fee|statement fee/i.test(txt)&&!/closed?|closing|close|early termination|early close|forfeit|clawback/i.test(txt))return 0;
+  // A fee-only waiting window is not a contractual keep-open or bonus
+  // repayment restriction. Only derive a hold when the same sentence actually
+  // describes open-account retention or bonus forfeiture.
+  const evidence=txt.split(/[.!?;\n]+/).filter(line=>
+    /(?:keep|remain|stay|maintain)[^.]{0,75}open|(?:bonus|reward)[^.]{0,90}(?:forfeit|clawback|reclaim|repay|reverse|deduct|return|taken back)|(?:forfeit|clawback|reclaim|repay|reverse|deduct|return)[^.]{0,90}(?:bonus|reward)/i.test(line)
+  ).join('\n');
   const patterns=[
     /(?:closed?|closing|close)[^.]{0,100}(?:<|less than|within|before)\s*(\d{2,4})\s*days?/i,
-    /\$?\s*\d+(?:\.\d{1,2})?[^.]{0,80}(?:fee|penalty|charge)[^.]{0,80}(?:closed?|closing|close)[^.]{0,80}(?:<|less than|within|before)\s*(\d{2,4})\s*days?/i,
-    /(?:fee|penalty|charge)[^.]{0,80}(?:if|when)[^.]{0,80}(?:closed?|closing|close)[^.]{0,80}(?:<|less than|within|before)\s*(\d{2,4})\s*days?/i,
-    /(?:keep|remain|maintain)[^.]{0,80}open[^.]{0,80}(\d{2,4})\s*days?/i,
-    /(\d{2,4})\s*days?[^.]{0,80}(?:after|from)[^.]{0,80}(?:opened|opening|account opening|open date)/i,
-    /(?:early termination|early close|close fee)[^.]{0,120}(\d{2,4})\s*days?/i
+    /(?:keep|remain|stay|maintain)[^.]{0,80}open[^.]{0,80}(\d{2,4})\s*days?/i,
+    /(\d{2,4})\s*days?[^.]{0,80}(?:after|from)[^.]{0,80}(?:opened|opening|account opening|open date)/i
   ];
   for(const re of patterns){
-    const m=txt.match(re);
+    const m=evidence.match(re);
     if(m){
       const n=parseInt(m[1],10)||0;
       if(n>0&&n<=730)return n;
@@ -4412,7 +4414,7 @@ function sanitizeCloseFieldsForEntry(x){
   repairManualCloseHoldFields(x);
   const n=parseInt(x.minHoldDays||x.closeFeeCountdownDays||0,10)||0;
   const txt=String(x.closeRuleText||'');
-  const hasCloseWording=/(close|closed|closing|remain open|keep[^.]{0,40}open|maintain[^.]{0,40}open|forfeit|clawback|good standing|restricted|default|early termination|early close|fee if closed)/i.test(txt+' '+closeHoldRelevantText(x));
+  const hasCloseWording=/(close|closed|closing|remain open|keep[^.]{0,40}open|maintain[^.]{0,40}open|forfeit|clawback|good standing|restricted|default)/i.test(txt+' '+closeHoldRelevantText(x));
   if(n&&(n>730||closeRuleLooksLikeMonthlyFee(x)&&!hasCloseWording)){
     x.minHoldDays=0;
     x.closeFeeCountdownDays='';
