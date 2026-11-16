@@ -16,8 +16,8 @@ assert.match(html,/aria-label="Recorded account dates"/);
 assert.match(html,/<dt>Requirements met<\/dt><dd class="is-missing">—<\/dd>/,'Missing completion date stays missing');
 assert.match(html,/Apr 1, 2026/,'Saved payout date remains visible');
 assert.match(html,/<h3>Fees<\/h3>/,'Relevant fee warnings remain compact');
-assert.match(html,/Next bonus/);
-assert.match(html,/Add eligibility rule/,'Unknown eligibility must request a rule instead of inventing a date');
+assert.doesNotMatch(html,/<dt>Closed<\/dt>|Next bonus|Add eligibility rule|Check closing fees|Recording closure/,
+ 'Open account details must not show an empty closure or future-cycle planning');
 assert.match(sandbox.BT360.detailFooter(row),/Record closure/,'Paid account can record an actual bank closure');
 assert.match(sandbox.BT360.detailFooter(row),/>Edit<\/button>/,'Saved information stays editable');
 assert.doesNotMatch(html,/<details\b|Documents &amp; activity|See saved requirements|Saved terms|Activity|Previous cycle reminders|Review rule|Advanced|Original terms missing/i,
@@ -39,6 +39,7 @@ assert.match(sandbox.BT360.detailFooter({...row,reqMet:'',bonusRecd:''}),/Mark r
 const closed=render({...row,closed:'2026-05-01'});
 assert.match(closed,/Closed/);
 assert.match(closed,/May 1, 2026/);
+assert.doesNotMatch(closed,/Next bonus|Add eligibility rule/,'Next-cycle planning belongs to Archive, not account details');
 assert.doesNotMatch(closed,/bt3810-fees|bt3810-requirements/,'Completed cycles do not show active fee or requirement panels');
 assert.doesNotMatch(sandbox.BT360.detailFooter({...row,closed:'2026-05-01'}),/Record closure/);
 

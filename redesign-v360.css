@@ -1271,7 +1271,7 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt3810-task span{min-width:0}
 .bt3810-task b{font-size:13px;font-weight:700;line-height:1.35;display:block}
 .bt3810-task small{display:block;color:#a7afbf;font-size:11px;margin-top:3px}
-.bt3810-muted,.bt3810-closing-note{font-size:12px;line-height:1.55;color:#a7afbf;margin:10px 3px}
+.bt3810-muted{font-size:12px;line-height:1.55;color:#a7afbf;margin:10px 3px}
 .bt3810-footer{gap:10px}
 .bt3810-footer>button{min-height:50px;font-size:13px}
 .bt3810-footer>button:first-child{flex:0 0 29%!important}

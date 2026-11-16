@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: Codex — v3.8.13 archive-only closure lifecycle — `codex/v3.8.13-archive-next-bonus`
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 

@@ -940,6 +940,8 @@ async function exercise(name,engine,url){
       await page.locator('.bt3810-dates').count()===1
       &&await page.locator('.bt3810-fees').count()===1
       &&await page.locator('.bt3611-ready-extras,.bt3686-account-extras').count()===0);
+    check('open details omit closure placeholders and archived next-cycle planning',
+      !/Closed|Next bonus|Add eligibility rule|Check closing fees|Recording closure/.test(await page.locator('.bt3810-detail').innerText()));
     check('earned bonus remains simple, while warning about fee risk',
       await page.locator('.bt3810-fees').innerText().then(t=>t.includes('Monthly')&&t.includes('Closing early')));
     const sticky=await page.evaluate(()=>{
