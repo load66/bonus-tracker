@@ -448,7 +448,7 @@ async function exercise(name,engine,url){
     check('sample offer warning appears before account details',await page.locator('.bt3657-template-note').isVisible()&&await page.locator('.guided-body').innerText().then(t=>t.includes('Historical example — not a verified offer')));
     check('unverified example does not invent official source links',await page.locator('.bt3659-source-list a').count()===0);
     check('Quick Add exposes bank/account/bonus',await page.locator('input[oninput*="\'bank\'"]').isVisible()&&await page.locator('select[onchange*="\'accountType\'"]').isVisible()&&await page.locator('input[oninput*="\'bonus\'"]').isVisible());
-    await page.getByRole('button',{name:'Step 4: Review',exact:true}).click();check('unverified template cannot be saved',await button('💾 Add account').isDisabled());await cancelEditor();
+    await page.getByRole('button',{name:'Step 4: Review',exact:true}).click();check('historical template is not blocked by an eligibility verification gate',await button('💾 Add account').isEnabled());await cancelEditor();
     await importEntry(payload);
     check('import stops before saving',await page.evaluate(()=>JSON.parse(localStorage.getItem('bt_e_v4')).length===0));
     await page.getByRole('button',{name:'Step 2: Requirements',exact:true}).click();
