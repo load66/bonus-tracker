@@ -1099,9 +1099,9 @@ function detailPanels(e){
   const hold=calendar?.reviewOn||(typeof safeCloseDate==='function'?safeCloseDate(e):'');
   const future=archiveDateValid(hold)&&hold>td();
   html+='<p class="bt3810-closing-note">'+(future?'Review closing restrictions through '+safe(date(hold))+'. ':'')
-   +'Check closing fees and pending transfers before contacting the bank. Recording closure does not close the bank account.</p>';
+   +'Before closing, check fees, pending transfers, and your account balance. Recording closure only updates this tracker.</p>';
  }
- html+=simpleNextCycle(e);
+ // Future eligibility belongs in Archive, not the current bank detail.
  return html+'</div>';
 }
 function detailFooter(e){
