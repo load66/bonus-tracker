@@ -129,6 +129,13 @@ assert.doesNotMatch(sandbox.BT360.timerRows(paidRequirement),/data-source="saved
  const paid={...structuredOnly,id:'SYN-PAID-CYCLE',bank:'Synthetic Checking',reqMet:'2026-10-20',
   bonusRecd:'2026-10-28',customTimers:oldTimers,eligibilityRules:[],churn:'',churnable:undefined};
  const saved=JSON.stringify(paid),beforeStorage=JSON.stringify([...storage]);
+ const awaitingPayment={...paid,bonusRecd:''};
+ const awaitingTile=sandbox.BT360.compactRow(awaitingPayment);
+ assert.match(awaitingTile,/Waiting for bonus/,'Completed bonus shows payment as its next step');
+ assert.doesNotMatch(awaitingTile,/Bonus requirement deadline|Nov 8, 2026|Overdue/,'Saved old requirement timer is not a new action');
+ const paidTile=sandbox.BT360.compactRow(paid);
+ assert.match(paidTile,/Bonus received/,'Paid account visibly shows its saved milestone');
+ assert.doesNotMatch(paidTile,/Bonus requirement deadline|Overdue/,'Paid account has no stale requirement prompt');
  const timers=sandbox.BT360.timerRows(paid);
  assert.doesNotMatch(timers,/Nov 8, 2026|Overdue|Nov 18, 2026|Requirement due|Bonus pending/);
  assert.match(timers,/Monthly service fee review/,'Recurring fee check is still available');
