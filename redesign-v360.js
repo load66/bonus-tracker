@@ -620,8 +620,34 @@ function derivedRequirementTimers(e,timers){
  }).join('');
  return rows+balance;
 }
+// Saved one-off qualification reminders belong to the previous cycle once
+// requirements or payout are recorded. This is presentation-only: never
+// delete or complete the user's timer, and preserve ongoing fee reminders.
+function pastCycleReminder(e,t){
+ if(!e?.reqMet&&!e?.bonusRecd&&!e?.closed)return false;
+ const kind=String(t?.kind||'').toLowerCase();
+ const label=timerShortTitle(t);
+ const words=String(t?.text||'').toLowerCase();
+ const feeOrHold=/monthly|recurring|service fee|maintenance fee|fee review|waiver|hold|closing|close review|minimum balance/.test(words)
+  ||/^(?:fee|monthly-fee|hold|close|close-review)$/.test(kind);
+ if(feeOrHold)return false;
+ if(e.bonusRecd||e.closed){
+  if(kind==='payout'||label==='Bonus pending'||/bonus (?:payment|payout|watch|pending)/.test(words))return true;
+ }
+ return /^(?:requirement|qualifying-deposit|deposit-deadline|funding-deadline|bonus-tier)$/.test(kind)
+  ||['Requirement due','Funding due','Day 90 bonus tier'].includes(label)
+  ||/\b(?:qualifying deposits?|direct deposit deadline|deposit requirement|requirement deadline|bonus requirement|funding deadline)\b/.test(words);
+}
+function pastCycleReminderHistory(e){
+ const past=(Array.isArray(e.customTimers)?e.customTimers:[]).filter(t=>pastCycleReminder(e,t));
+ if(!past.length)return '';
+ return '<details class="bt389-past-reminders"><summary>Previous cycle reminders ('+past.length+')</summary>'
+  +past.map(t=>'<div class="bt389-history-row"><span>'+safe(String(t.text||'Saved reminder'))+' · '+safe(t.date?date(t.date):'No date')+'</span>'
+   +'<button type="button" class="bt360-link" onclick="openTimerEditor('+arg(e.id)+','+arg(t.id)+')">Edit</button></div>').join('')
+  +'</details>';
+}
 function timerRows(e){
- const timers=Array.isArray(e.customTimers)?e.customTimers:[];
+ const timers=(Array.isArray(e.customTimers)?e.customTimers:[]).filter(t=>!pastCycleReminder(e,t));
  const rows=timers.map(t=>{
   const title=timerShortTitle(t),detail=String(t.text||'Timer'),kind=/payout|bonus/i.test(title)?'payout':/close|hold/i.test(title)?'close':'date';
   return '<details class="bt3611-timer-row"><summary><span class="bt3611-timer-icon" aria-hidden="true">'+timerSvg(kind)+'</span><span class="bt3611-timer-body"><b>'+safe(title)+'</b><small>'+safe(timerFriendlyDate(t,e))+'</small></span><span class="bt360-chip '+(!t.date?'warning':'')+'">'+safe(timerChip(t))+'</span></summary><div class="bt3611-timer-full">'+safe(detail)+(t.startDate&&t.daysRequired?'<p>Started '+safe(date(t.startDate))+' · '+Number(t.daysRequired)+' days · due '+safe(date(t.date))+'</p>':'')+'<button class="bt360-link" type="button" onclick="openTimerEditor('+arg(e.id)+','+arg(t.id)+')">Edit timer</button></div></details>';
@@ -866,8 +892,8 @@ function eligibilityDateInfo(e,info){
   }
   return {value:'Date not available yet',note:'Record the date that starts the waiting period',action:true};
  }
- if(e?.closed)return {value:'No confirmed date',note:savedCooldownChurnExcerpt(e)||'Last saved offer · eligibility date not recorded',action:false};
- return {value:'Eligibility rule missing',note:'Check whether this offer allows another bonus',action:true};
+ if(e?.closed)return {value:'Next date not confirmed',note:savedCooldownChurnExcerpt(e)||'Review saved repeat-bonus terms before applying again',action:true};
+ return {value:'Next date not confirmed',note:'Review the repeat-bonus rule to plan your next cycle',action:true};
 }
 function dateActionRow(e,label,info,kind){
  const x=info||{value:'Date unavailable',note:'Rule needs verification',action:true};
@@ -982,6 +1008,18 @@ function closingPanel(e){
   +'<div class="bt388-close-notes">'+rows.map(row=>'<div class="bt388-close-note"><b>'+safe(row.label)+'</b><p>'+safe(row.detail)+'</p></div>').join('')+'</div>',
   e.closed?'Closed '+date(e.closed):'Check before closing','',!e.closed&&!!e.bonusRecd)+'</div>';
 }
+function nextCyclePanel(e){
+ const complete=!!e.bonusRecd,closed=!!e.closed;
+ const projected=eligibilityDateInfo(e,eligibleInfo(e));
+ const info=!complete&&!closed&&projected.value==='Next date not confirmed'
+  ?{value:'After this bonus',note:'Complete the current bonus before reviewing the next offer',action:false}
+  :projected;
+ const intro=complete?'<p class="bt389-cycle-status">Bonus received '+safe(date(e.bonusRecd))+' · '+(closed?'Account closed '+safe(date(e.closed)):'Account still open')+'</p>':'';
+ const label=complete||closed?'Next bonus review':'Future bonus review';
+ return accountSection(e,'eligibility','Next bonus cycle',intro+
+  '<div class="bt3613-dates">'+dateActionRow(e,label,info,'eligibility')+'</div>',
+  info.value==='Not repeatable'?'One-time offer':info.action?'Rule review needed':info.value,'',complete||closed);
+}
 function detailPanels(e){
  const code=stage(e).code,ready=code==='READY_TO_CLOSE',closed=!!e.closed;
  const at=closed?4:ready?4:code==='HOLD_OPEN'||code==='BONUS_RECEIVED'?3:code==='REQUIREMENTS_MET'||code==='AWAITING_BONUS'?2:1;
@@ -1004,10 +1042,9 @@ function detailPanels(e){
   h+='<section class="bt3611-call"><b>Contact the bank</b><p>Confirm closing details before you close.</p>'+(phone?'<a class="bt360-primary bt360-call" href="tel:'+safe(phone.replace(/[^+\d]/g,''))+'">☎ '+safe(phone)+'</a>':'<button type="button" class="bt360-primary" onclick="BT360.openPhoneForClose('+arg(e.bank)+','+arg(accountAudience(e))+')">Add bank phone number</button>')+'</section>';
  }
  const reminders=timerRows(e);
- h+=accountSection(e,'timers','Reminders',reminders||'<p class="bt360-muted">No reminders saved.</p>','',!closed?'<button type="button" class="bt360-link bt3613-add-timer" onclick="runBankAction('+arg(e.id)+',\'timer\')">+ Add</button>':'');
- const eligibility=eligibleInfo(e);
- h+='<div data-bt-eligibility>'+accountSection(e,'eligibility','Future bonus','<div class="bt3613-dates">'+dateActionRow(e,'Check again',eligibilityDateInfo(e,eligibility),'eligibility')+(eligibility?.more?.length?eligibility.more.filter(r=>r.id!==eligibility.controlling?.id&&r.eligibleDate).map(r=>infoRow('Also checked',date(r.eligibleDate),r.label||'Saved eligibility rule')).join(''):'')+'</div>','Reopening rules')+'</div>';
- let extra=accountDates(e);
+ h+=accountSection(e,'timers','Reminders',reminders||'<p class="bt360-muted">'+(e.reqMet||e.bonusRecd||e.closed?'No active reminders for this bonus cycle.':'No reminders saved.')+'</p>','',!closed?'<button type="button" class="bt360-link bt3613-add-timer" onclick="runBankAction('+arg(e.id)+',\'timer\')">+ Add</button>':'');
+ h+='<div data-bt-eligibility>'+nextCyclePanel(e)+'</div>';
+ let extra=accountDates(e)+pastCycleReminderHistory(e);
  if(closed){const history=depositLedgerHtml(e,true);if(history)extra+=accountSection(e,'deposits','Deposit activity',history,'Saved evidence');}
  if(e.dataPoint||e.completeBonusText||e.notes)extra+='<details class="bt366-offer-notes"><summary>Offer notes</summary><p>'+safe([e.dataPoint,e.completeBonusText,e.notes].filter(Boolean).join('\n\n'))+'</p></details>';
  extra+=sourceEvidencePanel(e);

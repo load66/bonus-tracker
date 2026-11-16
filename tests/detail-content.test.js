@@ -117,6 +117,44 @@ assert.doesNotMatch(sandbox.BT360.timerRows(doneRequirement),/data-source="saved
 assert.doesNotMatch(sandbox.BT360.detailPanels(doneRequirement),/Requirements due Jan 13, 2027/,'Completed requirement does not show as pending in lifecycle header');
 const paidRequirement={...structuredOnly,bonusRecd:'2026-10-17'};
 assert.doesNotMatch(sandbox.BT360.timerRows(paidRequirement),/data-source="saved-requirement"/,'Received bonus suppresses derived requirement reminders');
+
+// v3.8.9: No past-cycle deadlines can nag paid/closed accounts. Historical
+// reminders stay accessible in Documents & activity without altering records.
+{
+ const oldTimers=[
+  {id:'old-requirement',text:'Bonus requirement deadline · complete all direct deposits',date:'2026-11-08',done:false},
+  {id:'old-payout',kind:'payout',text:'Bonus payout review',date:'2026-11-18',done:false},
+  {id:'fee',kind:'fee',text:'Monthly service fee review',date:'2026-11-20',done:false}
+ ];
+ const paid={...structuredOnly,id:'SYN-PAID-CYCLE',bank:'Synthetic Checking',reqMet:'2026-10-20',
+   bonusRecd:'2026-10-28',customTimers:oldTimers,eligibilityRules:[],churn:'',churnable:undefined};
+ const saved=JSON.stringify(paid),beforeStorage=JSON.stringify([...storage]);
+ const timers=sandbox.BT360.timerRows(paid);
+ assert.doesNotMatch(timers,/Nov 8, 2026|Overdue|Nov 18, 2026|Requirement due|Bonus pending/,
+   'Paid cycle must not show old qualification or payout reminders');
+ assert.match(timers,/Monthly service fee review/,'Recurring fee review survives cycle completion');
+ const detail=sandbox.BT360.detailPanels(paid);
+ assert.match(detail,/Next bonus cycle/,'Next bonus cycle is visible after payout');
+ assert.match(detail,/Bonus received Oct 28, 2026/,'Recorded payment is the cycle milestone');
+ assert.match(detail,/Oct 30, 2027/,'Verified saved repeat-bonus rule remains visible after payment');
+ const unverified={id:'SYN-UNVERIFIED-PAID',bank:'Unverified Synthetic Bank',opened:'2026-10-15',
+  reqMet:'2026-10-20',bonusRecd:'2026-10-28',customTimers:[],checklist:[]};
+ const uncertain=sandbox.BT360.detailPanels(unverified);
+ assert.match(uncertain,/Next date not confirmed/,'Unknown eligibility never becomes a fabricated date');
+ assert.match(uncertain,/Rule review needed/,'Unverified next-cycle rule can be reviewed');
+ assert.doesNotMatch(uncertain,/20\d\d-\d\d-\d\d.*Next bonus review/,'Unknown cycles cannot invent a next date');
+ assert.match(detail,/Previous cycle reminders \(2\)/,'Old due reminders remain editable in collapsed history');
+ assert.match(detail,/Closing the account/,'Closing review remains available without falsely authorizing closure');
+ assert.doesNotMatch(detail,/Overdue|Eligibility rule missing/,'Completed cycle has no stale overdue banner or harsh missing-rule message');
+ assert.match(sandbox.BT360.primaryAction(paid).label,/^Review closing(?: checks)?$/,'Paid account action prioritizes closing review');
+ const closed={...paid,closed:'2026-11-10'};
+ assert.match(sandbox.BT360.detailPanels(closed),/Account closed Nov 10, 2026/,'Closed cycle records the actual closure');
+ assert.doesNotMatch(sandbox.BT360.timerRows(closed),/Requirement due/,'Closing does not resurrect old deadlines');
+ const pending={...paid,reqMet:'',bonusRecd:'',closed:''};
+ assert.match(sandbox.BT360.timerRows(pending),/Requirement due/,'Pending cycle still shows legitimate deadlines');
+ assert.equal(JSON.stringify(paid),saved,'Cycle projection must not change saved bank data');
+ assert.equal(JSON.stringify([...storage]),beforeStorage,'Cycle projection must not write persistent data');
+}
 const unanchoredTiming={...e,reqDays:90,requiredDaysText:'90 days',financialRules:{...e.financialRules,requirements:[{...e.financialRules.requirements[0],timing:{basis:'opened',unit:'business-days',value:90}}]}};
 assert.doesNotMatch(sandbox.BT360.detailPanels(unanchoredTiming),/Requirements due Jan 13, 2027/,'Do not invent calendar date from unsupported structured business-day clock');
 assert.doesNotMatch(sandbox.BT360.timerRows({...unanchoredTiming,customTimers:[]}),/data-source="saved-requirement"/,'Unsupported clock never generates a dated timer');
@@ -181,7 +219,7 @@ assert.match(coolingList,/A previous checking bonus within 12 months is ineligib
 assert.match(coolingList,/Details/);
 assert.doesNotMatch(coolingList,/Needs review · verify eligibility rules/);
 const coolingDetail=sandbox.BT360.detailPanels(cooldownNoDate);
-assert.match(coolingDetail,/No confirmed date/);
+assert.match(coolingDetail,/Next date not confirmed/);
 assert.match(coolingDetail,/previous checking bonus within 12 months/);
 const estimatedPast={...cooldownNoDate,id:'SYNT-P-85',opened:'2020-01-01',closed:'2021-01-01',
  churn:'1',eligibilityText:'Legacy saved one-year rule, no verified supporting source.'};
@@ -189,8 +227,8 @@ const estimatedList=sandbox.BT360.archive([estimatedPast]);
 assert.match(estimatedList,/<b>0<\/b><small>Ready for review<\/small>/,'Unverified historic dates must not certify current eligibility');
 
 /* v3.6.27: all computable saved dates show a countdown, with verification status. */
-assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.8';/,'The on-screen app version reflects this release');
-assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.8-consistency1/,'The version label is refreshed on clients');
+assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.9';/,'The on-screen app version reflects this release');
+assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.9-cycle1/,'The version label is refreshed on clients');
 const archiveFutureDate='2030-01-01';
 const projectedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,verified:false});
 assert(projectedFuture&&projectedFuture.days>0&&projectedFuture.caption==='days · estimate','Unverified saved future date shows an estimated countdown');
