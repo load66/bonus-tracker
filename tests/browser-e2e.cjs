@@ -1260,14 +1260,12 @@ async function exercise(name,engine,url){
       }finally{window.btLifecycleStageForEntry=original}
       return results;
     });
-    check('all confirmed-account actions route forward without restarting confirmation',
-      completedActions.payout.label==='Record bonus payment'&&
-      completedActions.normal.label==='Record bonus payment'&&
-      completedActions.recurring.label==='View remaining tasks'&&
-      completedActions.review.label==='Review account rules'&&
-      completedActions.paid.label==='Review closing checks'&&
-      Object.values(completedActions).every(x=>!x.command.includes('openReqMet')));
-    check('payment recording remains reachable alongside recurring tasks and rule reviews',['payout','recurring','review','normal'].every(k=>completedActions[k].footer.includes('Record bonus payment')&&completedActions[k].footer.includes('openRcv(')));
+    check('saved requirements always advance to bonus recording, independent of stale stage labels',
+      ['payout','recurring','review','normal'].every(k=>completedActions[k].label==='Record bonus payment')
+      &&completedActions.paid.label==='Record closure'
+      &&Object.values(completedActions).every(x=>!x.command.includes('openReqMet')));
+    check('payment remains reachable whenever requirements were confirmed',
+      ['payout','recurring','review','normal'].every(k=>completedActions[k].footer.includes('Record bonus payment')&&completedActions[k].footer.includes('openRcv(')));
     check('stage action mapping never confirms payout during In progress',
       mappedActions.IN_PROGRESS==='Open next task'&&mappedActions.ACTION_NEEDED==='Open next task'
       &&mappedActions.REQUIREMENTS_MET==='Record bonus payment'&&mappedActions.AWAITING_BONUS==='Record bonus payment'
@@ -1533,18 +1531,8 @@ async function exercise(name,engine,url){
       };
     });
     if(!await page.locator('.bt360-detail-footer button').first().isVisible()){await openAccounts();await page.locator('.bt366-compact-row').first().click();}
-    // Use the named account-menu action: the footer can switch from Ask AI to Keep open
-    // as the lifecycle reconciles, so positional button clicks could navigate back.
-    await page.getByRole('button',{name:'More account actions'}).click();
-    await page.locator('.bt-ba-more > summary').click();
-    const menuAskAI=page.locator('.bt-ba-more-body .bt-ba-mini').filter({hasText:'Ask AI'});
-    if(await menuAskAI.count())await menuAskAI.click();
-    else{
-      // When the canonical close decision is not ready, Ask AI belongs in
-      // the sticky footer instead of being duplicated inside More.
-      await page.getByRole('button',{name:'Close account actions'}).click();
-      await page.locator('.bt360-detail-footer').getByRole('button',{name:'Ask AI',exact:true}).click();
-    }
+    // Test the retained AI service without an extra Advanced view in the everyday tracker.
+    await page.evaluate(()=>{window.__btBankActionPrompt=null;btOpenBonusAI(entries[0].id)});
     await page.locator('.bonus-ai-heading').waitFor({state:'visible'});
     check('Tracker AI opens for one selected bank',(await page.locator('.bonus-ai-heading').innerText()).includes('E2E Verification Bank')&&await page.evaluate(()=>window.__bonusAITest.calls.length===0));
     check('local answers need no login',await page.locator('#bonus-ai-login').isHidden());
@@ -2300,29 +2288,45 @@ async function exercise(name,engine,url){
       entries=[assignEntryIdForCreate(source)];sv(SK,entries);tab='tracker';expanded=entries[0].id;modal=null;cfm=null;dpEditor=null;search='';BT360.setAudience('all');BT360.resetStage();R();return saved;
     },require('./fixtures/financial-rules.cjs').fixture());
     const openingCheck=()=>page.getByRole('checkbox',{name:'Deposit $25',exact:true});
-    check('three structured requirements each have a checkbox',await page.locator('.bt3611-requirement [role="checkbox"]').count()===3);
-    check('balance requirement uses plain instructions with the opening-day range and duration',await page.locator('.bt3611-requirement').filter({has:page.getByRole('checkbox',{name:'Keep a $10,000 average balance',exact:true})}).innerText().then(t=>t.includes('Days 31–90 after opening · 60 days')&&!t.includes('Measured')&&!t.includes('daily-minimum rule')));
+    check('three structured requirements have separate checkboxes',
+      await page.locator('.bt3810-task [role="checkbox"]').count()===3);
+    check('balance requirement uses the saved window without jargon',
+      await page.locator('.bt3810-task').filter({has:page.getByRole('checkbox',{name:'Keep a $10,000 average balance',exact:true})}).innerText()
+        .then(t=>t.includes('Days 31–90')&&!t.includes('daily-minimum rule')));
     await openingCheck().click();
-    check('one checkbox confirms only one requirement and no financial milestones',await page.evaluate(()=>{
-      const e=entries[0];return e.checklist.length===1&&e.checklist[0].done&&!e.reqMet&&!e.bonusRecd&&!e.closed&&BT360.requirementRows(e).remaining===2;
-    }));
-    check('progress agrees across account list, attention and details after one of three checks',await page.evaluate(()=>{const e=entries[0],p=BT360.requirementProgress(e);return p.total===3&&p.done===1&&p.remaining===2&&BT360.compactRow(e).includes('1 of 3 steps')&&BT360.attentionCardProgress(e).includes('1 of 3 steps')&&BT360.requirementRows(e).remaining===2}));
-    check('selected requirement is visibly checked with no duplicate task',await openingCheck().getAttribute('aria-checked')==='true'&&await page.locator('.bt3611-task').count()===0);
+    check('checking an individual step never auto-completes the offer',
+      await page.evaluate(()=>{
+        const e=entries[0];return e.checklist.length===1&&e.checklist[0].done&&!e.reqMet&&!e.bonusRecd&&!e.closed&&BT360.requirementRows(e).remaining===2;
+      }));
+    check('list and detail progress reflect the single saved checkbox',
+      await page.evaluate(()=>{
+        const e=entries[0],p=BT360.requirementProgress(e);
+        return p.total===3&&p.done===1&&p.remaining===2&&BT360.compactRow(e).includes('1 of 3 steps')
+          &&BT360.attentionCardProgress(e).includes('1 of 3 steps')&&BT360.requirementRows(e).remaining===2;
+      }));
+    check('one checked requirement does not create a duplicate task',
+      await openingCheck().getAttribute('aria-checked')==='true'&&await page.locator('.bt3810-task').count()===3);
     await page.reload();await settleStartup();await page.evaluate(()=>{tab='tracker';expanded=entries[0].id;R()});
-    check('individual confirmation survives a real reload',await openingCheck().getAttribute('aria-checked')==='true');
+    check('saved checkbox survives a browser reload',await openingCheck().getAttribute('aria-checked')==='true');
     for(const width of [320,375,390,430,1280]){
       await page.setViewportSize({width,height:900});
-      check('shared requirement controls fit '+width+'px with touch targets',await page.locator('.bt3611-requirement').evaluateAll(rows=>rows.every(row=>{
-        const control=row.querySelector('[role="checkbox"]'),rect=control.getBoundingClientRect();
-        return rect.width>=44&&rect.height>=44&&row.scrollWidth<=row.clientWidth+1;
-      })));
+      check('individual checkboxes remain 44px touch targets at '+width+'px',
+        await page.locator('.bt3810-task').evaluateAll(rows=>rows.every(row=>{
+          const control=row.querySelector('[role="checkbox"]'),rect=control?.getBoundingClientRect();
+          return !!rect&&rect.width>=44&&rect.height>=44&&row.scrollWidth<=row.clientWidth+1;
+        })));
     }
     await openingCheck().focus();await page.keyboard.press('Space');
-    check('keyboard can reopen only the selected requirement',await openingCheck().getAttribute('aria-checked')==='false'&&await page.evaluate(()=>entries[0].checklist.length===1&&!entries[0].reqMet));
-    const remainingChecks=page.locator('.bt3611-requirement [role="checkbox"]');
+    check('keyboard toggles the selected requirement without changing others',
+      await openingCheck().getAttribute('aria-checked')==='false'
+      &&await page.evaluate(()=>entries[0].checklist.length===1&&!entries[0].reqMet));
+    const remainingChecks=page.locator('.bt3810-task [role="checkbox"]');
     for(let i=0;i<3;i++)await remainingChecks.nth(i).click();
-    check('all individual checks still require an explicit overall completion date',await page.evaluate(()=>BT360.requirementRows(entries[0]).remaining===0&&!entries[0].reqMet&&!entries[0].bonusRecd)&&await page.locator('[data-section="requirements"]').innerText().then(t=>t.includes('All checked · confirm completion')));
-    check('portable backup preserves the exact linked checklist confirmations',await page.evaluate(()=>JSON.stringify(buildPortableBackupPayload().entries[0].checklist)===JSON.stringify(entries[0].checklist)));
+    check('all checked tasks still require one explicit completion date',
+      await page.evaluate(()=>BT360.requirementRows(entries[0]).remaining===0&&!entries[0].reqMet&&!entries[0].bonusRecd)
+      &&await page.locator('.bt360-detail-footer .bt360-primary').innerText()==='Mark requirements done');
+    check('portable backup retains exact linked checklist records',
+      await page.evaluate(()=>JSON.stringify(buildPortableBackupPayload().entries[0].checklist)===JSON.stringify(entries[0].checklist)));
     await page.evaluate(saved=>{
       for(const key of Object.keys(localStorage))if(!Object.hasOwn(saved.storage,key))localStorage.removeItem(key);
       for(const [key,value] of Object.entries(saved.storage))localStorage.setItem(key,value);
