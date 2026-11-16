@@ -3375,7 +3375,9 @@ function analyzeTCSection(text){
   ],{keywords:['waive','avoid','fee']});
   if(waiverHit)r.feeWaiver=waiverHit.value;
 
-  const closeDaysHit=tcPickBest(segments,[
+  // Fee-only closure service charges cannot generate a bonus hold.
+  const retentionSegments=segments.filter(line=>/(?:remain|keep|stay|maintain)[^.]{0,80}\bopen\b|(?:bonus|reward)[^.]{0,90}(?:forfeit|repay|clawback|reclaim|deduct|reverse)|(?:forfeit|repay|clawback|reclaim|deduct|reverse)[^.]{0,90}(?:bonus|reward)/i.test(line));
+  const closeDaysHit=tcPickBest(retentionSegments,[
     {pattern:/(?:closed?|termination|closing)\s+(?:the\s+)?(?:account\s+)?within\s+(?:the\s+)?(?:first\s+)?(\d+)\s+days/i,value:m=>parseInt(m[1],10),base:20},
     {pattern:/(\d+)\s+days?\s+(?:of|after|from)\s+(?:account\s+)?open.*?(?:close|terminat)/i,value:m=>parseInt(m[1],10),base:18},
     {pattern:/close.*?(?:less\s+than|within|before)\s+(\d+)\s+days/i,value:m=>parseInt(m[1],10),base:18}
@@ -4375,25 +4377,25 @@ function closeHoldRelevantText(e){
   ].filter(Boolean).join(' ')).replace(/\s+/g,' ').trim()
 }
 function inferCloseHoldDaysFromEntry(e){
-  const txt=closeHoldRelevantText(e);
-  if(!txt)return 0;
-  if(/monthly account fee|monthly service fee|monthly maintenance fee|monthly fee|service charge|maintenance fee|average monthly balance|fee waived|waived with|avoid monthly|paper statement fee|statement fee/i.test(txt)&&!/closed?|closing|close|early termination|early close|forfeit|clawback/i.test(txt))return 0;
-  const patterns=[
-    /(?:closed?|closing|close)[^.]{0,100}(?:<|less than|within|before)\s*(\d{2,4})\s*days?/i,
-    /\$?\s*\d+(?:\.\d{1,2})?[^.]{0,80}(?:fee|penalty|charge)[^.]{0,80}(?:closed?|closing|close)[^.]{0,80}(?:<|less than|within|before)\s*(\d{2,4})\s*days?/i,
-    /(?:fee|penalty|charge)[^.]{0,80}(?:if|when)[^.]{0,80}(?:closed?|closing|close)[^.]{0,80}(?:<|less than|within|before)\s*(\d{2,4})\s*days?/i,
-    /(?:keep|remain|maintain)[^.]{0,80}open[^.]{0,80}(\d{2,4})\s*days?/i,
-    /(\d{2,4})\s*days?[^.]{0,80}(?:after|from)[^.]{0,80}(?:opened|opening|account opening|open date)/i,
-    /(?:early termination|early close|close fee)[^.]{0,120}(\d{2,4})\s*days?/i
-  ];
-  for(const re of patterns){
-    const m=txt.match(re);
-    if(m){
-      const n=parseInt(m[1],10)||0;
-      if(n>0&&n<=730)return n;
-    }
+  // A termination-service-fee window is not a bonus-retention period.
+  // Only explicit keep-open or bonus-forfeiture days can generate a hold.
+  const source=String([e?.closeRuleText,e?.closeRuleSourceSentence,
+    e?.completeBonusText,e?.earlyTerminationFeeText,e?.analyzedTC].filter(Boolean).join('\n'));
+  const lines=source.split(/(?<=[.!?])\s+|\n+|;/).map(s=>s.trim()).filter(Boolean);
+  const keepOpen=/(?:remain|keep|stay|maintain)[^.]{0,65}\bopen\b|\baccount\b[^.]{0,65}\bmust\b[^.]{0,45}\bopen\b/i;
+  const forfeit=/(?:bonus|reward)[^.]{0,90}(?:forfeit|clawback|repay|reclaim|deduct|reverse|taken back)|(?:forfeit|clawback|repay|reclaim|deduct|reverse|taken back)[^.]{0,90}(?:bonus|reward)/i;
+  for(const line of lines){
+    if(/(?:not eligible|ineligible|prior bonus|previously received)/i.test(line)&&!forfeit.test(line))continue;
+    const keep=keepOpen.test(line),clawback=forfeit.test(line);
+    if(!keep&&!clawback)continue;
+    const matched=keep
+      ?line.match(/(?:remain|keep|stay|maintain)[^.]{0,95}\bopen\b[^.]{0,55}(?:for|at least|through|until)?\s*(\d{1,3})\s*(?:calendar\s*)?days?\b/i)
+       ||line.match(/(?:at least|for)\s*(\d{1,3})\s*(?:calendar\s*)?days?[^.]{0,65}(?:remain|keep|stay|maintain)[^.]{0,30}\bopen\b/i)
+      :line.match(/(?:close|closed|closing|terminate)[^.]{0,80}(?:within|before|first|less than)[^.]{0,25}(\d{1,3})\s*(?:calendar\s*)?days?/i);
+    const n=matched?parseInt(matched[1],10)||0:0;
+    if(n>0&&n<=730)return n;
   }
-  return 0
+  return 0;
 }
 function repairManualCloseHoldFields(x){
   if(!x||typeof x!=='object')return x;
