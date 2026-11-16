@@ -782,7 +782,8 @@ function feeDetail(e){
 function closeDateInfo(e){
  const calendarHold=window.BTFinancialRules?.closeHoldInfo(e);
  if(calendarHold)return {value:date(calendarHold.reviewOn),note:calendarHold.months+' calendar months from opening · hold through '+date(calendarHold.holdUntil),action:false};
- const close=e.financialRules?.closure,source=String(close?.evidence?.quote||e.closeRuleText||e.earlyTerminationFeeText||'').trim();
+ const close=e.financialRules?.closure,rawSource=String(close?.evidence?.quote||e.closeRuleText||'').trim();
+ const source=/(?:remain|keep|stay|maintain)[^.]{0,75}\bopen\b|(?:bonus|reward)[^.]{0,100}(?:forfeit|repay|clawback|reclaim|deduct|reverse)|(?:forfeit|repay|clawback|reclaim|deduct|reverse)[^.]{0,100}(?:bonus|reward)/i.test(rawSource)?rawSource:'';
  const basis=String(close?.basis||e.closeRuleBasis||'').toLowerCase();
  const ruleDays=Number(close?.minHoldDays??e.minHoldDays??0);
  if(window.BTFinancialRules?.retentionNeedsReview?.(e))return {value:'Closing rule needs review',note:'Check bonus-retention restrictions',action:true};
