@@ -249,21 +249,21 @@ const legacy={...e,financialRules:{accounts:[{role:'primary'}],closure:{}},
 const legacyMarkup=sandbox.BT360.feeDetail(legacy);
 assert.match(legacyMarkup,/Monthly fee<\/span><div><b[^>]*>\$8<\/b>/);
 assert.match(legacyMarkup,/Meet any one: Waived with \$500 ACH direct deposits · \$1,500 average balance/);
-assert.match(legacyMarkup,/\$25 early-close fee/,'Explicit old close-fee text is recovered');
-assert.match(legacyMarkup,/View saved closing terms/);
+assert.doesNotMatch(legacyMarkup,/early-close fee|Early closing fee/,'Historical service charges do not return as current fee rows');
+assert.doesNotMatch(legacyMarkup,/View saved closing terms/,'Original source text remains in Archive instead');
 assert.match(legacyMarkup,/Fee schedule/);
 assert.doesNotMatch(legacyMarkup,/>This month<|Waiver on track/);
-assert.equal((legacyMarkup.match(/class="bt3613-fee-line"/g)||[]).length,2);
+assert.equal((legacyMarkup.match(/class="bt3613-fee-line"/g)||[]).length,1);
 const savedZero={...legacy,earlyTerminationFeeText:'No early closing fee.',monthlyFeeAmountText:'No monthly service fee',
   monthlyFeeNoMonthlyServiceFee:true,avoidMonthlyFeeText:''};
-assert.match(sandbox.BT360.feeDetail(savedZero),/No early-closing fee/);
+assert.doesNotMatch(sandbox.BT360.feeDetail(savedZero),/No early-closing fee/);
 assert.match(sandbox.BT360.feeDetail(savedZero),/>Monthly fee<\/span><div><b[^>]*>\$0<\/b>/);
 const clawback={...legacy,earlyTerminationFeeText:'If the account is closed within six months, the bank will deduct the $900 bonus at closing.'};
-assert.match(sandbox.BT360.feeDetail(clawback),/Not confirmed/,'Clawback is not fabricated as a fee');
-assert.match(sandbox.BT360.feeDetail(clawback),/The bank may also take back the bonus/);
+assert.doesNotMatch(sandbox.BT360.feeDetail(clawback),/Early closing fee/,'Clawback is not a service fee');
+assert.doesNotMatch(sandbox.BT360.feeDetail(clawback),/The bank may also take back the bonus/,'Clawback is evaluated in retention rules, not a monthly-fee panel');
 assert.doesNotMatch(sandbox.BT360.feeDetail(clawback),/\$900 early-close fee/);
 const conditionalNoFee={...legacy,earlyTerminationFeeText:'No early close fee after 180 days.'};
-assert.match(sandbox.BT360.feeDetail(conditionalNoFee),/Not confirmed/,'Conditional no-fee wording cannot imply a free early closure');
+assert.doesNotMatch(sandbox.BT360.feeDetail(conditionalNoFee),/No early close fee|Early closing fee/,'Conditional fee-only wording is not tracked');
 const cooldownNoDate={
  id:'SYNT-P-84',bank:'Synthetic Churn Test',accountType:'personal',bonus:400,
  opened:'2026-01-10',closed:'2026-05-12',churnability:'repeatable',
@@ -331,7 +331,7 @@ try{
 assert.equal(JSON.stringify([...storage]),beforeUnified,'View filters cannot mutate records');
 const archiveRecord={...legacy,closed:'2026-10-17',bonusRecd:'2026-10-17'};
 assert.doesNotMatch(sandbox.BT360.detailPanels(archiveRecord),/bt3810-fees/,'Closed records omit current-cycle fee actions');
-assert.match(sandbox.BT360.feeDetail(archiveRecord),/\$25 early-close fee/,'Historical fee remains intact in stored fee projection');
+assert.doesNotMatch(sandbox.BT360.feeDetail(archiveRecord),/\$25 early-close fee/,'Archive keeps underlying terms without a fee-service projection');
 
 // Cooldown history uses account-specific archived evidence before newer bank
 // versions, shows last-saved provenance, and never upgrades live enrolled data.
@@ -353,10 +353,10 @@ try{
  const cooldown=sandbox.BT360.feeDetail(closed);
  assert.match(cooldown,/Last saved · saved enrolled terms/,'Historical sources must be labeled');
  assert.match(cooldown,/>Monthly fee<\/span><div><b[^>]*>\$8<\/b>/,'Exact-cycle fee wins over newer version');
- assert.match(cooldown,/\$25 early-close fee/);
+ assert.doesNotMatch(cooldown,/\$25 early-close fee/,'Historical source may be retained without a closing-charge UI row');
  assert.doesNotMatch(cooldown,/\$14|\$35|\$99|Not confirmed|Waiver not confirmed/,
   'Newer-cycle and business fees must not leak into the historical offer');
- assert.equal((cooldown.match(/class="bt3613-fee-line"/g)||[]).length,2);
+ assert.equal((cooldown.match(/class="bt3613-fee-line"/g)||[]).length,1);
  const latestOnly={...closed,id:'SYN-OLDER-0',opened:'2025-01-01'};
  assert.match(sandbox.BT360.feeDetail(latestOnly),/Last saved · last saved bank terms/);
  assert.match(sandbox.BT360.feeDetail(latestOnly),/\$14/,'No cycle-specific terms: use labeled last saved bank info');
@@ -382,7 +382,7 @@ assert.match(shareMarkup,/Also required: Share Savings: \$10\/month/,'Share Savi
 const bonusClawback={...legacy,bank:'Synthetic Equity',bonus:400,earlyCloseFee:400,
  earlyTerminationFeeText:'400',notes:'180 day clawback',closed:'2026-09-16'};
 const bonusClawbackMarkup=sandbox.BT360.feeDetail(bonusClawback);
-assert.match(bonusClawbackMarkup,/The bank may take back up to \$400/);
+assert.doesNotMatch(bonusClawbackMarkup,/The bank may take back up to \$400/,'Bonus clawback is separate from monthly/companion fees');
 assert.doesNotMatch(bonusClawbackMarkup,/\$400 early-close fee/,
  'A clawback is not a bank early-closing service charge');
 
