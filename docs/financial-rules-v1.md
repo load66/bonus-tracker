@@ -2,6 +2,10 @@
 
 Runtime: `financial-rules.js` (`BTFinancialRules`). Import envelope: `BonusTrackerEntry`, numeric `schemaVersion: 3`. This contract is supported from v3.4.50. Rules supplement existing eligibility and date calculations; they do not confirm account activity or calculate business/statement dates.
 
+## Current policy (v3.8.15)
+
+Legacy `closure.earlyCloseFee`, `closure.feeEvidence`, `earlyCloseFee`, and `earlyTerminationFeeText` are accepted for lossless historical compatibility only. Do not derive an early-termination service-fee charge, timer, validation error, close-readiness blocker or zero-fee assertion from them. Fee-only time windows do not create a minimum bonus-retention hold. Independent documented retention periods, payout conditions and bonus clawback/forfeiture remain enforced. Existing source text, historical records, archive and backups are preserved.
+
 ## Required entry fields
 
 Retain the schema v2 identity, provenance, original promotion text, eligibility evidence and applicable legacy calculation/display fields. Add `feeScheduleRaw` containing the applicable original fee/membership wording, and `financialRules` below. Use only fields in the importer allowlist. Verification URLs must use HTTPS; `termsVerifiedAt` must be a real ISO date. Every quotation must occur in its designated original text after whitespace normalization.
