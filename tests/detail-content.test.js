@@ -233,7 +233,7 @@ assert.doesNotMatch(fees,/Waiver on track/,'Never claim a monthly waiver from un
   assert.doesNotMatch(sandbox.BT360.feeDetail(x),/Early closing fee|Closing early/);
   assert(!sandbox.BT360.closeCheckPresentation(x).some(item=>/early.close fee|termination fee|service fee verified/i.test(item.label)));
  }
- assert.match(baseline,/<span>Monthly<\\/span><b>\\$15<\\/b>/);
+ assert.match(baseline,/<span>Monthly<\/span><b>\$15<\/b>/);
  assert.equal(JSON.stringify(fresh),snapshot,'Projection never changes original rules');
  assert.equal(JSON.stringify([...storage]),beforeStorage,'Projection makes no storage writes');
 }
@@ -244,13 +244,13 @@ const legacy={...e,financialRules:{accounts:[{role:'primary'}],closure:{}},
  earlyCloseFee:25,earlyTerminationFeeText:'Early account closing: $25 fee if closed within 180 days of opening.',
  closeRuleText:'',feeScheduleSourceUrl:'https://www.regions.com/personal-banking/checking/lifegreen-checking-account'};
 const legacyMarkup=sandbox.BT360.feeDetail(legacy);
-assert.match(legacyMarkup,/Monthly fee<\\/span><div><b[^>]*>\\$8<\\/b>/);
-assert.match(legacyMarkup,/Meet any one: Waived with \\$500 ACH direct deposits/);
+assert.match(legacyMarkup,/Monthly fee<\/span><div><b[^>]*>\$8<\/b>/);
+assert.match(legacyMarkup,/Meet any one: Waived with \$500 ACH direct deposits/);
 assert.match(legacyMarkup,/Fee schedule/);
-assert.doesNotMatch(legacyMarkup,/Early closing fee|Closing early|\\$25 early-close fee/);
+assert.doesNotMatch(legacyMarkup,/Early closing fee|Closing early|\$25 early-close fee/);
 assert.equal((legacyMarkup.match(/class="bt3613-fee-line"/g)||[]).length,1);
 const savedZero={...legacy,monthlyFeeAmountText:'No monthly service fee',monthlyFeeNoMonthlyServiceFee:true,avoidMonthlyFeeText:''};
-assert.match(sandbox.BT360.feeDetail(savedZero),/>Monthly fee<\\/span><div><b[^>]*>\\$0<\\/b>/);
+assert.match(sandbox.BT360.feeDetail(savedZero),/>Monthly fee<\/span><div><b[^>]*>\$0<\/b>/);
 const cooldownNoDate={
  id:'SYNT-P-84',bank:'Synthetic Churn Test',accountType:'personal',bonus:400,
  opened:'2026-01-10',closed:'2026-05-12',churnability:'repeatable',
