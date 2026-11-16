@@ -122,8 +122,8 @@ setTimeout(()=>{
     const claw=sandbox.btEvaluateAccount({bank:'Synthetic Claw',bonusRecd:'2026-10-10',reqMet:'2026-09-01',opened:'2026-08-01',earlyCloseFee:40,closeRestrictionType:'explicit-clawback',minHoldDays:0,closeBufferDays:3});
     assert(claw.legacyStatus!=='SAFE TO CLOSE','Payout did not leave an unresolved clawback blocked');
     const legacy=liveEntries().find(e=>e.bank==='Synthetic Northline');
-    assert(sandbox.status(legacy)==='WAITING TO CHURN!','Expired legacy cooldown was treated as verified eligibility');
-    assert(sandbox.btLifecycleStageForEntry(legacy).code!=='ELIGIBLE','Expired legacy cooldown sorted or staged as eligible');
+    assert(sandbox.status(legacy)==='TIME TO CHURN!','A completed recorded legacy waiting period did not become ready for offer review');
+    assert(sandbox.btLifecycleStageForEntry(legacy).code==='ELIGIBLE','A completed recorded legacy waiting period was not staged for offer review');
     const multi=sandbox.btEvaluateAccount({bank:'Synthetic Multi',closed:'2026-01-01',bonusRecd:'2025-06-01',churnable:true,churnability:'repeatable',eligibilityRules:[
       {id:'a',basis:'bonus-received',periodValue:24,periodUnit:'months',evidenceText:'No bonus within 24 months.',evidenceSource:'official-promotion-terms'},
       {id:'b',basis:'account-closed',periodValue:12,periodUnit:'months',evidenceText:'No closure within 12 months.',evidenceSource:'official-promotion-terms'}

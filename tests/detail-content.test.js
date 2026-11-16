@@ -118,7 +118,7 @@ assert.doesNotMatch(sandbox.BT360.detailPanels(doneRequirement),/Due Jan 13, 202
 const paidRequirement={...structuredOnly,bonusRecd:'2026-10-17'};
 assert.doesNotMatch(sandbox.BT360.timerRows(paidRequirement),/data-source="saved-requirement"/,'Received bonus suppresses derived requirement reminders');
 
-// v3.8.10: A completed bonus displays one simple next action and no
+// v3.8.11: A completed bonus displays one simple next action and no
 // previous-cycle clutter. All old timer facts remain available in storage.
 {
  const oldTimers=[
@@ -229,31 +229,29 @@ assert.match(coolingList,/A previous checking bonus within 12 months is ineligib
 assert.match(coolingList,/Details/);
 assert.doesNotMatch(coolingList,/Needs review · verify eligibility rules/);
 const coolingDetail=sandbox.BT360.detailPanels(cooldownNoDate);
-assert.match(coolingDetail,/Not confirmed/);
+assert.match(coolingDetail,/Add eligibility rule/);
 assert.doesNotMatch(coolingDetail,/previous checking bonus within 12 months/,'Long rule excerpts stay in Archive, not the everyday detail');
 const estimatedPast={...cooldownNoDate,id:'SYNT-P-85',opened:'2020-01-01',closed:'2021-01-01',
  churn:'1',eligibilityText:'Legacy saved one-year rule, no verified supporting source.'};
 const estimatedList=sandbox.BT360.archive([estimatedPast]);
-assert.match(estimatedList,/<b>0<\/b><small>Ready for review<\/small>/,'Unverified historic dates must not certify current eligibility');
+assert.match(estimatedList,/<strong>0<\/strong><small>Review offer<\/small>/,'A completed recorded waiting period must be ready for current-offer review');
 
-/* v3.6.27: all computable saved dates show a countdown, with verification status. */
-assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.10';/,'The on-screen app version reflects this release');
-assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.10-closure1/,'The version label is refreshed on clients');
+/* v3.8.11: all computable recorded dates share the same professional countdown. */
+assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.11';/,'The on-screen app version reflects this release');
+assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.11-eligibility1/,'The version label is refreshed on clients');
 const archiveFutureDate='2030-01-01';
-const projectedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,verified:false});
-assert(projectedFuture&&projectedFuture.days>0&&projectedFuture.caption==='days · estimate','Unverified saved future date shows an estimated countdown');
-const verifiedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,verified:true});
-assert(verifiedFuture&&verifiedFuture.days===projectedFuture.days&&verifiedFuture.caption==='days left','Verified saved future dates show the same countdown without estimate label');
-const passedEstimate=sandbox.BT360.archiveCountdown({eligible:'2020-01-01',verified:false});
-assert.equal(passedEstimate.days,0);
-assert.equal(passedEstimate.caption,'Estimate passed','An expired unverified estimate cannot be labeled eligible now');
-assert.equal(sandbox.BT360.archiveCountdown({eligible:'',verified:false}),null,'Missing date still uses Details');
+const recordedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,recorded:true});
+assert(recordedFuture&&recordedFuture.days>0&&recordedFuture.caption==='days left','A recorded future date must show its countdown');
+const passedRecorded=sandbox.BT360.archiveCountdown({eligible:'2020-01-01',recorded:true});
+assert.equal(passedRecorded.days,0);
+assert.equal(passedRecorded.caption,'Review offer','A completed waiting period must lead to a current-offer review');
+assert.equal(sandbox.BT360.archiveCountdown({eligible:'',recorded:false}),null,'Missing date still uses Details');
 const previewEstimate=sandbox.BT360.archive([estimatedPast]);
-assert.match(previewEstimate,/class="bt3727-countdown is-estimated"/,'Saved unverified date has prominent right-hand countdown');
-assert.match(previewEstimate,/>0<\/strong><small>Estimate passed<\/small>/,'Expired unverified estimates require review rather than certified eligibility');
+assert.match(previewEstimate,/class="bt3727-countdown is-recorded"/,'Saved recorded date has a prominent right-hand countdown');
+assert.match(previewEstimate,/>0<\/strong><small>Review offer<\/small>/,'A completed recorded period requires review of the current offer');
 assert.match(previewEstimate,/openArchived\(&quot;SYNT-P-85&quot;\)/,'Countdown remains linked to account details');
-assert.match(previewEstimate,/Unverified dates are estimates/,'The archive explains why dates are provisional');
-assert.equal((previewEstimate.match(/class="bt360-list-row bt3727-archive-row"/g)||[]).length,1,'Each saved estimate appears only once across Archive sections');
+assert.match(previewEstimate,/latest eligibility rule recorded for each bank/,'The archive explains the centralized policy');
+assert.equal((previewEstimate.match(/class="bt360-list-row bt3727-archive-row"/g)||[]).length,1,'Each recorded date appears only once across Archive sections');
 const beforeArchiveCountdown=JSON.stringify([...storage]);
 sandbox.BT360.archive([estimatedPast,cooldownNoDate]);
 assert.equal(JSON.stringify([...storage]),beforeArchiveCountdown,'Countdown presentation cannot mutate stored financial records');

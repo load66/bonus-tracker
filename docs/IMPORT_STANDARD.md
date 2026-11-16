@@ -126,6 +126,14 @@ New JSON must carry its own payout rule and source evidence; do not depend on pu
 
 Before delivery, test the actual source shape (including long quotations with qualification and payout clocks) and actual import receipt, not only permutations of a simplified fixture. Keep historical source evidence and all user records unchanged. Do not claim all phone records were audited from an older backup; state the backup scope and any unavailable newer records.
 
+## Recorded eligibility planning policy (runtime v3.8.11)
+
+Runtime planning and import validation are separate responsibilities. The app calculates the next-offer review date from the latest structurally complete eligibility rule recorded for the same canonical bank family and personal/business audience. The newest policy-specific timestamp wins; otherwise the newest account-opening date identifies the offer vintage. A later payout or closure does not make an older offer rule newer. The projection is read-only and never rewrites an older account.
+
+Exact recorded eligibility wording is parsed before a legacy year shortcut. For example, a recorded 365-day ownership lookback remains 365 days rather than being silently converted to one calendar year. Multiple recorded restrictions must all clear, conditional rules remain unresolved until their condition is known, and the existing two-day planning buffer remains separate from the bank's period. A missing basis, duration, anchor date, or supported condition produces **Add eligibility rule** and no date.
+
+Future generated imports must still pass strict source validation and retain exact quotations and provenance. That gate protects import quality; it no longer creates a separate user-facing verification or confirmation requirement for ordinary app calculations. A reached date means review the current offer before applying, not guaranteed personal eligibility.
+
  
 ## Calendar-exact bonus retention for future imports (financialRules v4)
 

@@ -1,9 +1,9 @@
-/* Release marker v3.8.10 — unchanged source logic; cache coherence only. */
+/* Release marker v3.8.11 — latest-recorded eligibility policy. */
 /* Release 3.6.94: bank-specific rules unchanged; calendar-month close reviews are handled by shared financial rules. */
-/* BonusTracker v3.5.2 — verified eligibility first, with safe legacy churn fallback for pre-v2 records. */
+/* BonusTracker v3.8.11 — latest-recorded eligibility policy with legacy compatibility. */
 (function(){
   'use strict';
-  const VER='3.5.2';
+  const VER='3.8.11';
   const SAFETY_BUFFER_DAYS=2;
 
   function decision(e){
@@ -31,8 +31,9 @@
       b==='closed'?'account-closed':''
   }
   function verification(e){
-    try{if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.validate==='function')return window.BTEligibilityGate.validate(e)}catch{}
-    return{ok:false,status:'unresolved',reason:'Eligibility evidence validator unavailable'};
+    const policy=typeof window.btEligibilityPolicyEntry==='function'?window.btEligibilityPolicyEntry(e):e;
+    try{if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.recorded==='function')return window.BTEligibilityGate.recorded(policy)}catch{}
+    return{ok:false,status:'missing',reason:'Eligibility policy engine unavailable'};
   }
   function hasStructuredEligibilityEvidence(e){
     if(!e)return false;
@@ -131,31 +132,36 @@
     return b==='offer'?(e?.bonusOfferReceived||e?.offerReceivedDate||''):b==='ownership-ended'?(e?.closed||''):b==='bonus'?(e?.bonusRecd||''):b==='opened'?(e?.opened||''):b==='closed'?(e?.closed||''):'';
   }
   function official(e){
+    const policy=typeof window.btEligibilityPolicyEntry==='function'?window.btEligibilityPolicyEntry(e):e;
     try{
-      if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.officialEligibilityDate==='function')
-        return window.BTEligibilityGate.officialEligibilityDate(e,addDLocal,addMLocal);
+      if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.recordedEligibilityDate==='function')
+        return window.BTEligibilityGate.recordedEligibilityDate(policy,addDLocal,addMLocal);
     }catch{}
     return'';
   }
   function next(e){
+    const policy=typeof window.btEligibilityPolicyEntry==='function'?window.btEligibilityPolicyEntry(e):e;
     try{
-      if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.safeEligibilityDate==='function'){
-        const verified=window.BTEligibilityGate.safeEligibilityDate(e,addDLocal,addMLocal);
-        if(verified)return verified;
+      if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.recordedSafeEligibilityDate==='function'){
+        const recorded=window.BTEligibilityGate.recordedSafeEligibilityDate(policy,addDLocal,addMLocal);
+        if(recorded)return recorded;
       }
     }catch{}
     const base=official(e);if(base)return addDLocal(base,SAFETY_BUFFER_DAYS);
     return legacyFallbackReadyDate(e);
   }
   function applicationReady(e){
+    const policy=typeof window.btEligibilityPolicyEntry==='function'?window.btEligibilityPolicyEntry(e):e;
     try{
-      if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.applicationReadyDate==='function')
-        return window.BTEligibilityGate.applicationReadyDate(e,addDLocal,addMLocal);
+      if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.recordedApplicationReadyDate==='function'){
+        const recorded=window.BTEligibilityGate.recordedApplicationReadyDate(policy,addDLocal,addMLocal);
+        if(recorded)return recorded;
+      }
     }catch{}
-    return'';
+    return legacyFallbackReadyDate(policy);
   }
   function ready(e){return next(e)}
-  function verifiedApplicationReached(e){
+  function recordedApplicationReached(e){
     const readyDate=applicationReady(e);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(String(readyDate||'')))return false;
     let today='';
@@ -176,7 +182,8 @@
     window.nextReopen=next;window.churnReadyDate=ready;window.daysLeft=left;
     window.btOfficialEligibilityDate=official;
     window.btApplicationReadyDate=applicationReady;
-    window.btVerifiedApplicationReached=verifiedApplicationReached;
+    window.btRecordedApplicationReached=recordedApplicationReached;
+    window.btVerifiedApplicationReached=recordedApplicationReached;
     window.btChurnSafetyBufferDays=SAFETY_BUFFER_DAYS;
     window.btEligibilityBasisFor=sourceBasis;
     window.btEligibilityVerification=verification;
@@ -192,12 +199,16 @@
     try{if(window.BTEligibilityGate&&typeof window.BTEligibilityGate.summary==='function')return window.BTEligibilityGate.summary(e)}catch{}
     const d=decision(e);
     if(d==='nonrepeatable')return'Non-repeatable · archives after closing';
-    return'T&C verification required';
+    return'Add eligibility rule';
   }
   function polishModalHtml(h){
     h=String(h||'');
     h=h.replace(/Saved now so the next-eligible date is automatic later\./g,'Use the exact eligibility wording from the offer. BonusTracker adds a 2-day safety buffer after the saved source date.');
     h=h.replace(/After closing, the countdown will start automatically from the actual close date\./g,'Choose the eligibility start date from the offer terms; the tracker will not invent one.');
+    h=h.replace(/(?:✓ Churn T&C verified|⚠ Churn T&C not verified)/g,'Eligibility rule');
+    h=h.replace(/T&C churn verification required/g,'Eligibility rule');
+    h=h.replace(/The bonus cannot be opened\/saved until the T&C proves repeatability, exact cooldown, and the eligibility clock\.\s*/g,'Add or edit the bank’s waiting period when it is available. ');
+    h=h.replace(/<button type="button" class="btn-p" disabled /g,'<button type="button" class="btn-p" ');
     return h;
   }
   function wrap(name,after){

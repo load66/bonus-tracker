@@ -15,20 +15,21 @@ const amount=v=>fM(Number(v||0)), date=v=>v?fD(v):'Needs review';
 const eligibleInfo=e=>{
  if(!e)return null;
  const gate=window.BTEligibilityGate;
- const verifiedProjected=gate?.safeEligibilityDate?.(e,addD,addM)||'';
- const eligible=verifiedProjected||(e.closed?window.churnReadyDate?.(e)||'':'');
+ const policy=window.btEligibilityPolicyEntry?.(e)||e;
+ const recordedProjected=gate?.recordedSafeEligibilityDate?.(policy,addD,addM)||'';
+ const eligible=recordedProjected||(e.closed?window.churnReadyDate?.(e)||'':'');
  if(!/^\d{4}-\d{2}-\d{2}$/.test(eligible))return null;
  try{
-  const check=gate?.validate?.(e);
-  if(check?.ok&&check.decision==='repeatable'&&eligible===verifiedProjected){
-   const controlling=gate.controllingRule(e,addD,addM);
-   const more=gate.officialEligibilityDates(e,addD,addM).filter(r=>r.conditionState==='active');
-   return {eligible,controlling,more,verified:true,label:controlling?gate.periodLabel(controlling.period)+' from '+gate.anchorLabel(controlling.basis)+' + '+gate.SAFETY_BUFFER_DAYS+' days':'verified saved waiting period'};
+  const check=gate?.recorded?.(policy);
+  if(check?.ok&&check.decision==='repeatable'&&eligible===recordedProjected){
+   const controlling=gate.recordedControllingRule(policy,addD,addM);
+   const more=gate.recordedEligibilityDates(policy,addD,addM).filter(r=>r.conditionState==='active');
+   return {eligible,controlling,more,recorded:true,label:controlling?gate.periodLabel(controlling.period)+' from '+gate.anchorLabel(controlling.basis)+' + '+gate.SAFETY_BUFFER_DAYS+' days':'saved waiting period'};
   }
  }catch{}
  const fallback=e.closed?window.btLegacyChurnFallbackDate?.(e):'';
- if(e.closed&&fallback===eligible)return {eligible,controlling:null,more:[],verified:false,label:'from saved waiting period · not verified'};
- return {eligible,controlling:null,more:[],verified:false,label:'from saved waiting period · not verified'};
+ if(e.closed&&fallback===eligible)return {eligible,controlling:null,more:[],recorded:true,label:'from saved waiting period'};
+ return {eligible,controlling:null,more:[],recorded:true,label:'from saved waiting period'};
 };
 function accountAudience(e){
  const type=typeof entryBankType==='function'?entryBankType(e):String(e?.accountType||'personal').toLowerCase();
@@ -157,7 +158,7 @@ function attentionDateDays(x){
 function dashboardQueueFor(x,entry){
  if(x.stageCode==='ELIGIBLE')return 'opportunities';
  if(x.stageCode==='COOLDOWN'&&entry?.closed){
-  const info=eligibleInfo(entry),days=info?.verified?dB(td(),info.eligible):null;
+  const info=eligibleInfo(entry),days=info?.recorded?dB(td(),info.eligible):null;
   // The same canonical record is already rendered in Eligible soon.
   if(Number.isFinite(days)&&days>0&&days<=60)return 'upcoming';
  }
@@ -267,7 +268,7 @@ function tasks(rows){
 }
 function eligibleSoon(rows){
  const next=rows.filter(e=>e.closed&&scope(e)).map(e=>({e,info:eligibleInfo(e)}))
-  .filter(x=>x.info?.verified).map(x=>({...x,days:dB(td(),x.info.eligible)}))
+  .filter(x=>x.info?.recorded).map(x=>({...x,days:dB(td(),x.info.eligible)}))
   .filter(x=>x.days>0&&x.days<=60).sort((a,b)=>a.days-b.days);
  if(!next.length)return'';
  const heading='<div class="bt360-panel-title bt3719-section-title"><h3>Reopening reviews soon</h3><span class="bt360-subtitle">next 60 days</span><button class="bt360-link" onclick="BT360.goArchive(\'waiting\')">View waiting accounts</button></div>';
@@ -865,17 +866,18 @@ function savedCooldownChurnExcerpt(e){
 }
 function eligibilityDateInfo(e,info){
  const gate=window.BTEligibilityGate;
- let validation=null;try{validation=gate?.validate?.(e)}catch{}
- if(validation?.ok&&validation.decision==='nonrepeatable')return {value:'Not repeatable',note:'Offer permits one bonus only',action:false};
- if(info?.verified&&info.eligible){
+ const policy=window.btEligibilityPolicyEntry?.(e)||e;
+ let recorded=null;try{recorded=gate?.recorded?.(policy)}catch{}
+ if(recorded?.ok&&recorded.decision==='nonrepeatable')return {value:'Not repeatable',note:'Offer permits one bonus only',action:false};
+ if(info?.recorded&&info.eligible){
   const controlling=info.controlling;
   const p=controlling?.period?gate.periodLabel(controlling.period):'Saved eligibility rules';
   const basis=controlling?.basis?gate.anchorLabel(controlling.basis):'eligibility start';
   return {value:date(info.eligible),note:p+' from '+basis+' · app adds 2 extra days',action:false};
  }
- if(info?.eligible)return {value:date(info.eligible),note:'Saved estimate · new-offer eligibility still needs checking',action:false};
- if(validation?.ok&&validation.decision==='repeatable'){
-  const rules=validation.rules||[];
+ if(info?.eligible)return {value:date(info.eligible),note:'Using the saved waiting period',action:false};
+ if(recorded?.ok&&recorded.decision==='repeatable'){
+  const rules=recorded.rules||[];
   const pending=rules.find(r=>!r.anchorDate&&['account-closed','account-ownership-ended','bonus-received'].includes(r.basis));
   if(pending){
    const clocks=rules.filter(r=>['account-closed','account-ownership-ended','bonus-received'].includes(r.basis));
@@ -887,11 +889,11 @@ function eligibilityDateInfo(e,info){
   }
   return {value:'Date not available yet',note:'Record the date that starts the waiting period',action:true};
  }
- if(e?.closed)return {value:'Next date not confirmed',note:savedCooldownChurnExcerpt(e)||'Review saved repeat-bonus terms before applying again',action:true};
- return {value:'Next date not confirmed',note:'Review the repeat-bonus rule to plan your next cycle',action:true};
+ if(e?.closed)return {value:'Add eligibility rule',note:savedCooldownChurnExcerpt(e)||'Add the bank’s waiting period and starting event',action:true};
+ return {value:'Add eligibility rule',note:'Add the repeat-bonus rule to plan your next cycle',action:true};
 }
 function dateActionRow(e,label,info,kind){
- const x=info||{value:'Date unavailable',note:'Rule needs verification',action:true};
+ const x=info||{value:'Date unavailable',note:'Add the bank’s eligibility rule',action:true};
  return '<div class="bt3613-date-row"><span>'+safe(label)+'</span><div><b>'+safe(x.value)+'</b><small>'+safe(x.note)+'</small>'+(x.action?'<button type="button" class="bt3611-set-rule" onclick="BT360.openRuleEditor('+arg(e.id)+','+arg(kind)+')">Review rule</button>':'')+'</div></div>';
 }
 function openRuleEditor(id,kind){
@@ -1007,7 +1009,7 @@ function closingPanel(e){
 function nextCyclePanel(e){
  const complete=!!e.bonusRecd,closed=!!e.closed;
  const projected=eligibilityDateInfo(e,eligibleInfo(e));
- const info=!complete&&!closed&&projected.value==='Next date not confirmed'
+ const info=!complete&&!closed&&projected.value==='Add eligibility rule'
   ?{value:'After this bonus',note:'Complete the current bonus before reviewing the next offer',action:false}
   :projected;
  const intro=complete?'<p class="bt389-cycle-status">Bonus received '+safe(date(e.bonusRecd))+' · '+(closed?'Account closed '+safe(date(e.closed)):'Account still open')+'</p>':'';
@@ -1066,9 +1068,10 @@ function simpleFees(e){
 function simpleNextCycle(e){
  if(!e.bonusRecd&&!e.closed)return '';
  const info=eligibleInfo(e);
- const check=window.BTEligibilityGate?.validate?.(e);
+ const policy=window.btEligibilityPolicyEntry?.(e)||e;
+ const check=window.BTEligibilityGate?.recorded?.(policy);
  const nonrepeatable=check?.ok&&check.decision==='nonrepeatable';
- const value=nonrepeatable?'One-time bonus':info?.verified&&info.eligible?date(info.eligible):'Not confirmed';
+ const value=nonrepeatable?'One-time bonus':info?.recorded&&info.eligible?date(info.eligible):'Add eligibility rule';
  return '<section class="bt3810-cycle bt3810-card"><div class="bt3810-pair"><span>Next bonus</span><b>'+safe(value)+'</b></div></section>';
 }
 function simpleState(e){
@@ -1112,8 +1115,8 @@ function archiveCountdown(info){
  if(!info?.eligible)return null;
  const remaining=dB(td(),info.eligible);
  if(!Number.isFinite(remaining))return null;
- const verified=info.verified===true;
- return {days:Math.max(0,remaining),verified,caption:remaining<=0?(verified?'Review offer':'Estimate passed'):verified?'days left':'days · estimate'};
+ const recorded=info.recorded===true;
+ return {days:Math.max(0,remaining),recorded,caption:remaining<=0?'Review offer':'days left'};
 }
 function archive(rows){
  if(window.bt360ArchiveDetailId&&expanded){return window.rTracker(rows,true)}
@@ -1123,20 +1126,20 @@ function archive(rows){
  const savedText=e=>{const b=savedBuckets.find(x=>entryBankIdentity(x.current||x).key===entryBankIdentity(e).key);return b?[b.current,...(b.versions||[])].map(x=>[x.tcSourceRaw,x.feeScheduleRaw,x.completeBonusText,x.opened].join(' ')).join(' '):'';};
  const closed=rows.filter(e=>e.closed&&scope(e)&&(!query||[e.bank,e.opened,e.closed,e.tcSourceRaw,e.analyzedTC,savedText(e)].join(' ').toLowerCase().includes(query)));
  const indexed=closed.map(e=>({e,info:eligibleInfo(e)}));
- const ready=indexed.filter(x=>x.info?.verified&&dB(td(),x.info.eligible)<=0);
- const soon=indexed.filter(x=>x.info?.verified&&dB(td(),x.info.eligible)>0&&dB(td(),x.info.eligible)<=60);
+ const ready=indexed.filter(x=>x.info?.recorded&&dB(td(),x.info.eligible)<=0);
+ const soon=indexed.filter(x=>x.info?.recorded&&dB(td(),x.info.eligible)>0&&dB(td(),x.info.eligible)<=60);
  const cooling=indexed.filter(x=>!ready.includes(x)&&!soon.includes(x)).sort((a,b)=>(a.info?.eligible||'9999').localeCompare(b.info?.eligible||'9999'));
  window.BTBankBonusFeed?.ensureAutomaticChurnScan?.();
  h+=churnReviewMarkup(rows);
  h+='<div class="bt360-archive-stats"><div><b>'+ready.length+'</b><small>Ready for review</small></div><div><b>'+soon.length+'</b><small>Within 60 days</small></div><div><b>'+cooling.length+'</b><small>Still waiting</small></div></div>';
- h+='<p class="bt3727-archive-note">Review dates come from saved offer terms. Unverified dates are estimates. Check the current offer before applying again. Open an account for its dates, original terms and history.</p>';
+ h+='<p class="bt3727-archive-note">Review dates use the latest eligibility rule recorded for each bank. Check the current offer for rule changes before applying again.</p>';
  const row=(x,offer)=>{
   const historic='Last saved '+(Number(x.e.bonus)>0?amount(x.e.bonus)+' bonus':'bank offer')+
    (x.e.opened?' · opened '+date(x.e.opened):'')+' · '+(savedCooldownChurnExcerpt(x.e)||'eligibility date not recorded');
   const label=x.info?date(x.info.eligible)+' · '+x.info.label:historic;
   const count=archiveCountdown(x.info);
   const action=count
-   ?'<div class="bt3727-archive-actions"><button type="button" class="bt3727-countdown '+(count.verified?'is-verified':'is-estimated')+'" onclick="BT360.openArchived('+arg(x.e.id)+')" aria-label="'+safe('Review '+x.e.bank+' eligibility: '+count.days+' days; '+(count.verified?'verified saved rule':'unverified estimate'))+'"><strong>'+count.days+'</strong><small>'+safe(count.caption)+'</small></button>'+(offer?'<button type="button" class="bt3727-view-offers" onclick="BT360.viewOffers('+arg(x.e.bank)+')">View offers</button>':'')+'</div>'
+   ?'<div class="bt3727-archive-actions"><button type="button" class="bt3727-countdown is-recorded" onclick="BT360.openArchived('+arg(x.e.id)+')" aria-label="'+safe('Review '+x.e.bank+' eligibility in '+count.days+' days using the saved rule')+'"><strong>'+count.days+'</strong><small>'+safe(count.caption)+'</small></button>'+(offer?'<button type="button" class="bt3727-view-offers" onclick="BT360.viewOffers('+arg(x.e.bank)+')">View offers</button>':'')+'</div>'
    :'<button type="button" class="bt360-chip bt3727-no-date" onclick="BT360.openArchived('+arg(x.e.id)+')">Details</button>';
   const bucket=savedBuckets.find(b=>entryBankIdentity(b.current||b).key===entryBankIdentity(x.e).key);
   const versions=[...savedAccountCycles(x.e).slice(1),...(bucket?[bucket.current,...(bucket.versions||[])]:[])].filter(v=>v&&!(String(v.entryId||v.id||'')===String(x.e.id)&&v.opened===x.e.opened));

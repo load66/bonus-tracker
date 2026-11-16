@@ -1,10 +1,12 @@
 # Audit progress
 
-Active agent: ChatGPT Codex — v3.8.10 actual-closure recording — codex/v3.8.10-record-actual-closure
+Active agent: ChatGPT Codex — v3.8.11 recorded eligibility policy — codex/v3.8.11-recorded-eligibility
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
+
+- v3.8.11 centralized recorded eligibility policy (`codex/v3.8.11-recorded-eligibility`): remove user-facing eligibility verification/confirmation gates; calculate every bank from the latest structurally complete recorded rule for the same canonical bank family and personal/business audience. Exact recorded wording outranks stale legacy shortcuts, so Citi's recorded 365-day ownership rule remains exactly 365 days; multiple/conditional rules still fail safely when inputs are missing. Apply the same read-only policy to details, Archive, lifecycle status, closing follow-up, editors and future entries without rewriting historical data. Strict source validation remains mandatory for generated imports. Release app/cache v3.8.11; require all unit areas, Chromium/WebKit and deployment verification. No private account records committed.
 
 - v3.8.10 simple tracker + actual closure (`codex/v3.8.10-record-actual-closure`): one stage-driven bank detail with plain requirements, dates, monthly and early-close fee summary, optional single-line verified next cycle, and Edit + next-action buttons; remove all redundant saved-document/requirement/history/advanced disclosures from the everyday detail view. Existing terms, reminders, deposit reports, credit cards, tax, archived cycles, settings and backups remain persisted unchanged. Recording actual bank closure is not gated by unknown future eligibility; safety warnings still shown. Require all UI/bonus/cloud tests, Chromium/WebKit, and release deployment checks. Never auto-fill missing dates or infer safe closure from lack of evidence. Browser regression verification now checks Citi's exact original enrolled-offer source URL instead of its homepage; all bank data and source details remain unmodified. UI/bonus/cloud and Chromium/WebKit passed on c3e5671a (PR run 43864443939); revalidate this final-head source-URL assertion before merge, then confirm Pages deployment.
 

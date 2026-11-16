@@ -39,8 +39,8 @@ try{
  s.getAttentionSuggestions=()=>[c];
  assert.doesNotMatch(s.BT360.tasks([cooling]),/data-attention-id=/);
  assert.match(s.BT360.eligibleSoon([cooling]),/Synthetic Community CU/,'Excluded cooldown must remain visible in Eligible soon');
- const unverified={...cooling,financialRules:null,eligibilityRules:[],eligibilityEvidenceText:'',eligibilityEvidenceSource:'',sourceEligibilityBasis:'',churnBasis:'',churn:''};
- assert.equal(s.BT360.dashboardQueueFor(c,unverified),'needs','Unknown eligibility must remain a review item');
+ const unknown={...cooling,financialRules:null,eligibilityRules:[],eligibilityEvidenceText:'',eligibilityEvidenceSource:'',sourceEligibilityBasis:'',churnBasis:'',churn:'',churnPeriodValue:0,churnPeriodUnit:'',churnable:null,churnability:''};
+ assert.equal(s.BT360.dashboardQueueFor(c,unknown),'needs','An entry with no recorded eligibility rule must remain a review item');
  s.getAttentionSuggestions=()=>suggestions.filter(x=>['payout','hold'].some(k=>x.entryId.endsWith(k)));
  const onlyWaiting=s.BT360.tasks(rows);
  assert.match(section(onlyWaiting,'needs'),/>0 tasks<\/span>/);assert.match(onlyWaiting,/No immediate tasks/);assert.match(onlyWaiting,/<h3>Waiting<\/h3>/);

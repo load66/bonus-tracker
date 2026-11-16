@@ -93,12 +93,13 @@
   }
   function repeatDecision(e){
     let gate=null;
-    try{gate=window.BTEligibilityGate?.validate?.(e)||null}catch{}
+    const policy=window.btEligibilityPolicyEntry?.(e)||e;
+    try{gate=window.BTEligibilityGate?.recorded?.(policy)||null}catch{}
     const saved=Array.isArray(e?.eligibilityRules)?e.eligibilityRules:[];
     const validated=Array.isArray(gate?.rules)?gate.rules:[];
-    const rules=validated.length>=saved.length?validated:saved;
+    const rules=gate?.ok?validated:saved;
     let reached=false,ready='',legacy='';
-    try{reached=typeof window.btVerifiedApplicationReached==='function'&&!!window.btVerifiedApplicationReached(e)}catch{}
+    try{reached=typeof window.btRecordedApplicationReached==='function'&&!!window.btRecordedApplicationReached(e)}catch{}
     try{ready=typeof window.btApplicationReadyDate==='function'?window.btApplicationReadyDate(e)||'':''}catch{}
     try{legacy=typeof window.btLegacyChurnFallbackDate==='function'?window.btLegacyChurnFallbackDate(e)||'':''}catch{}
     let blockers=rules.map(r=>({code:'eligibility-restriction',basis:r?.basis||'',evidence:r?.evidenceText||''}));
@@ -107,7 +108,7 @@
     if(e?.closed&&nonRepeatable(e))status='archived';
     else if(!e?.closed)status='not-closed';
     else if(reached)status='eligible';
-    else if(legacy){status='unverified';unresolved.push('A legacy cooldown estimate is not a verified application date.');}
+    else if(legacy){status='cooldown';}
     else status='unresolved';
     if(rules.length>1&&!reached)unresolved.push('Multiple eligibility restrictions remain in force.');
     if(status==='eligible')blockers=[];
@@ -118,7 +119,7 @@
     if(e.closed){
       if(nonRepeatable(e))return'ARCHIVED';
       let reached=false;
-      try{reached=typeof window.btVerifiedApplicationReached==='function'&&!!window.btVerifiedApplicationReached(e)}catch{}
+      try{reached=typeof window.btRecordedApplicationReached==='function'&&!!window.btRecordedApplicationReached(e)}catch{}
       return reached?'TIME TO CHURN!':'WAITING TO CHURN!';
     }
     const active=typeof nextActiveTimer==='function'?nextActiveTimer(e):null;

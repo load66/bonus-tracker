@@ -85,7 +85,7 @@
     }
     if(!window.BTEligibilityGate||typeof window.BTEligibilityGate.validate!=='function')throw new Error('Churn eligibility validator is unavailable.');
     const verified=window.BTEligibilityGate.validate(next);
-    if(!verified.ok)throw new Error('Churn eligibility is not verified from the T&C: '+verified.reason);
+    if(!verified.ok)throw new Error('Strict JSON eligibility source validation failed: '+verified.reason);
     next=window.BTEligibilityGate.stamp(next);
     if(typeof normalizeLifecycleEntry==='function')next=normalizeLifecycleEntry(next)||next;
     if(next.financialRules){const result=window.BTFinancialRules.validate(next);if(!result.ok)throw new Error('Normalized tracker fields conflict with financial rules: '+result.issues.map(x=>x.message).join('; '));}

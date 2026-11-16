@@ -182,9 +182,9 @@
       try{if(typeof isNonRepeatableEntry==='function'&&isNonRepeatableEntry(e))return{code:STAGES.ARCHIVED,raw,timer:null,kind:''}}catch{}
       const dl=safeDaysLeft(e);
       let reached=null;
-      try{if(typeof window.btVerifiedApplicationReached==='function')reached=!!window.btVerifiedApplicationReached(e)}catch{}
+      try{if(typeof window.btRecordedApplicationReached==='function')reached=!!window.btRecordedApplicationReached(e)}catch{}
       if(reached===null)return{code:dl!==null&&dl<=0?STAGES.ELIGIBLE:STAGES.COOLDOWN,raw,timer:null,kind:''};
-      return{code:reached?STAGES.ELIGIBLE:STAGES.COOLDOWN,raw,timer:null,kind:'',estimatePassed:!reached&&dl===0};
+      return{code:reached?STAGES.ELIGIBLE:STAGES.COOLDOWN,raw,timer:null,kind:''};
     }
     const financial=window.BTFinancialRules?.validate(e);
     if(financial&&!financial.ok)return{code:STAGES.ACTION_NEEDED,raw,timer:null,kind:'review',reviewReason:'Financial rules need review'};
@@ -263,13 +263,12 @@
       case STAGES.READY_TO_CLOSE:
         return(e?.bonusRecd?'Bonus received '+fmtDate(e.bonusRecd)+' · ':'')+'all close restrictions cleared';
       case STAGES.COOLDOWN:{
-        if(core.estimatePassed)return'Estimate passed · eligibility not verified';
         const d=safeDaysLeft(e),ready=churnReadyDateValue(e);
-        return(Number.isFinite(d)?d+'d until eligible':'Waiting for eligibility date')+(ready?' · '+fmtDate(ready):'');
+        return(Number.isFinite(d)?d+'d until next bonus review':'Waiting for the next bonus date')+(ready?' · '+fmtDate(ready):'');
       }
       case STAGES.ELIGIBLE:{
         const ready=churnReadyDateValue(e);
-        return'Eligible to reapply'+(ready?' · '+fmtDate(ready):'');
+        return'Review a new offer'+(ready?' · '+fmtDate(ready):'');
       }
       case STAGES.ARCHIVED:return'Completed · non-repeatable offer';
       default:return'';

@@ -77,3 +77,9 @@ For a tier whose official enrolled source expressly defines numbered days from o
 
 If the enrolled payout term merely says *within N days of opening*, preserve that contractual upper limit; do **not** label the account-opening day as a meaningful expected payment date. Display the payment deadline and state that the earliest day is unspecified. Keep independently documented churn lookback periods visible, including both payment-receipt and account-closure clocks when the offer requires both. No invented user events, daily balance history, bank holidays or automated completion stamps.
 
+## Eligibility handoff to the app (v3.8.11)
+
+Generate every applicable eligibility restriction with its exact basis, period value/unit, scope, condition, quotation and source. After import, the app treats the newest recorded rule for that canonical bank family and personal/business audience as the planning policy for its past and future cycles. A newer account-opening vintage can replace an older rule; payout and closure activity cannot. Never flatten 365 days into one calendar year, omit a second concurrent restriction, or use a current public offer to overwrite a historical enrolled record.
+
+The app does not ask for a second verification or confirmation before using a complete recorded rule. Missing structure still produces no date. Import generation remains source-gated, and a completed waiting period means review the current offer before applying rather than assume qualification.
+

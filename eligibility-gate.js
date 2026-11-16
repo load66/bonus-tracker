@@ -1,11 +1,11 @@
-/* BonusTracker churn eligibility evidence gate v1.3.0 — conditional eligibility rules plus coupon/offer-enrollment cooldown anchors. */
+/* BonusTracker eligibility policy engine v1.4.0 — strict source validation plus latest-recorded rule calculations. */
 (function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.BTEligibilityGate=api;
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
-  const VERSION='1.3.0';
+  const VERSION='1.4.0';
   const SAFETY_BUFFER_DAYS=2;
   const NUMBER_WORDS={
     one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,
@@ -104,7 +104,7 @@
     return protectedText.split(/(?:\n+|(?<=[.!?])\s+|;\s+)/).map(x=>clean(x.replace(/\uE000/g,'.'))).filter(Boolean);
   }
   function eligibilityContext(s){
-    return /not eligible|ineligible|not available|cannot|can't|may not|must not|have not|has not|new (?:[^.]{0,40})?customers? only|new (?:[^.]{0,40})?accounts? only|previously received|received [^.]{0,80}bonus|only one [^.]{0,180}bonus|bonus [^.]{0,100}every|to be eligible[^.]{0,220}(?:cannot|must not|have not|has not)/i.test(s);
+    return /not eligible|ineligible|not available|cannot|can't|may not|must not|have not|has not|new (?:[^.]{0,40})?customers? only|new (?:[^.]{0,40})?accounts? only|previously received|received [^.]{0,80}bonus|only one [^.]{0,180}(?:bonus|offer)|(?:bonus|offer) [^.]{0,100}every|to be eligible[^.]{0,220}(?:cannot|must not|have not|has not)/i.test(s);
   }
   function basisContext(s,basis){
     const t=stripAbbreviationDots(clean(s));
@@ -264,6 +264,34 @@
       scope:clean(e?.eligibilityScope||e?.analysis?.eligibilityScope||'')
     }];
   }
+  function recordedRules(e){
+    const explicit=Array.isArray(e?.eligibilityRules)?e.eligibilityRules.filter(r=>r&&typeof r==='object'):[];
+    if(explicit.length)return explicit.map((r,i)=>normalizeRule(r,e,i));
+    const discovered=discoverTimedRestrictions(rawTerms(e));
+    if(discovered.length)return discovered.map((r,i)=>({
+      id:'recorded-rule-'+(i+1),basis:r.basis,period:r.period,
+      evidenceText:r.evidenceSentence||evidenceText(e),evidenceSource:evidenceSource(e),
+      scope:clean(e?.eligibilityScope||e?.analysis?.eligibilityScope||''),
+      anchorDate:'',anchorFallback:'',condition:r.condition||null,
+      evidenceSentence:r.evidenceSentence||''
+    }));
+    return normalizedRules(e);
+  }
+  function recorded(e){
+    const d=decision(e),scope=rawTerms(e),current=currentCustomerRestriction(scope);
+    if(!d)return{ok:false,status:'missing',decision:'',reason:'No repeat-bonus rule is recorded.',rules:[],currentCustomerExcluded:current.excluded,currentCustomerSentence:current.sentence};
+    if(d==='nonrepeatable')return{ok:true,status:'recorded',decision:d,rules:[],currentCustomerExcluded:current.excluded,currentCustomerSentence:current.sentence,mustCloseBeforeReapply:false};
+    const rules=recordedRules(e);
+    if(!rules.length)return{ok:false,status:'missing',decision:d,reason:'No waiting period is recorded.',rules:[],currentCustomerExcluded:current.excluded,currentCustomerSentence:current.sentence};
+    const bad=rules.find(r=>!r.basis||!r.period||(r.condition&&!normalizeCondition(r.condition)));
+    if(bad)return{ok:false,status:'incomplete',decision:d,reason:!bad.basis?'The recorded rule is missing its start date type.':!bad.period?'The recorded rule is missing its waiting period.':'The recorded rule contains an unsupported condition.',rules,currentCustomerExcluded:current.excluded,currentCustomerSentence:current.sentence};
+    return{
+      ok:true,status:'recorded',decision:d,rules,
+      basis:rules.length===1?rules[0].basis:'multiple',period:rules.length===1?rules[0].period:null,
+      currentCustomerExcluded:current.excluded,currentCustomerSentence:current.sentence,
+      mustCloseBeforeReapply:explicitClosePrerequisite(scope)||rules.some(r=>r.basis==='account-ownership-ended')
+    };
+  }
   function validateRule(rule,index){
     if(rule.condition&&!normalizeCondition(rule.condition))return{ok:false,status:'unresolved',reason:'Eligibility rule '+(index+1)+' contains an unsupported condition that requires review.'};
     if(!rule.basis)return{ok:false,status:'unresolved',reason:'Eligibility rule '+(index+1)+' is missing its clock anchor.'};
@@ -366,6 +394,38 @@
     const closed=clean(e?.closed);if(!validDate(closed))return'';
     return closed>safe?closed:safe;
   }
+  function recordedEligibilityDates(e,addD,addM){
+    const v=recorded(e);if(!v.ok||v.decision!=='repeatable')return[];
+    return v.rules.map(rule=>{
+      const conditionState=ruleConditionState(e,rule);
+      const anchorDate=conditionState==='active'?basisDate(e,rule.basis,rule):'';
+      const eligibleDate=conditionState==='active'&&anchorDate?applyPeriod(anchorDate,rule.period,addD,addM):'';
+      return{...rule,conditionState,anchorDate,eligibleDate};
+    });
+  }
+  function recordedEligibilityDate(e,addD,addM){
+    const rows=recordedEligibilityDates(e,addD,addM);
+    if(!rows.length||rows.some(r=>r.conditionState==='unknown'))return'';
+    const active=rows.filter(r=>r.conditionState==='active');
+    if(!active.length||active.some(r=>!r.eligibleDate))return'';
+    return active.map(r=>r.eligibleDate).sort().at(-1)||'';
+  }
+  function recordedControllingRule(e,addD,addM){
+    if(!recordedEligibilityDate(e,addD,addM))return null;
+    return recordedEligibilityDates(e,addD,addM).filter(r=>r.conditionState==='active'&&r.eligibleDate)
+      .sort((a,b)=>b.eligibleDate.localeCompare(a.eligibleDate))[0]||null;
+  }
+  function recordedSafeEligibilityDate(e,addD,addM){
+    const official=recordedEligibilityDate(e,addD,addM);
+    return official?applyPeriod(official,{value:SAFETY_BUFFER_DAYS,unit:'days'},addD,addM):'';
+  }
+  function recordedApplicationReadyDate(e,addD,addM){
+    const v=recorded(e);if(!v.ok||v.decision!=='repeatable')return'';
+    const safe=recordedSafeEligibilityDate(e,addD,addM);if(!safe)return'';
+    if(!v.mustCloseBeforeReapply)return safe;
+    const closed=clean(e?.closed);if(!validDate(closed))return'';
+    return closed>safe?closed:safe;
+  }
   function periodLabel(period){
     if(!period)return'';
     return period.value+' '+period.unit.replace(/s$/,'')+(period.value===1?'':'s');
@@ -379,9 +439,9 @@
       basis==='account-closed'?'account closed':'';
   }
   function summary(e){
-    const v=validate(e);
-    if(!v.ok)return'T&C verification required — '+v.reason;
-    if(v.decision==='nonrepeatable')return'Non-repeatable — source T&C verified';
+    const v=recorded(e);
+    if(!v.ok)return'Add eligibility rule — '+v.reason;
+    if(v.decision==='nonrepeatable')return'One-time bonus';
     let s=v.rules.length===1
       ?periodLabel(v.rules[0].period)+' after '+anchorLabel(v.rules[0].basis)
       :(v.rules.length+' eligibility rules · all must clear');
@@ -428,7 +488,7 @@
 
   return{
     VERSION,SAFETY_BUFFER_DAYS,normalizeBasis,normalizeUnit,normalizeCondition,legacyBasisKey,decision,periodFromEntry,periodFromRule,extractDurations,equivalentPeriod,
-    evidenceText,evidenceSource,rawTerms,currentCustomerRestriction,explicitClosePrerequisite,discoverTimedRestrictions,ruleConditionState,normalizedRules,validate,stamp,officialEligibilityDates,
-    officialEligibilityDate,controllingRule,safeEligibilityDate,applicationReadyDate,periodLabel,anchorLabel,summary
+    evidenceText,evidenceSource,rawTerms,currentCustomerRestriction,explicitClosePrerequisite,discoverTimedRestrictions,ruleConditionState,normalizedRules,recordedRules,recorded,validate,stamp,officialEligibilityDates,
+    officialEligibilityDate,controllingRule,safeEligibilityDate,applicationReadyDate,recordedEligibilityDates,recordedEligibilityDate,recordedControllingRule,recordedSafeEligibilityDate,recordedApplicationReadyDate,periodLabel,anchorLabel,summary
   };
 });

@@ -9,9 +9,9 @@ assert.ok(!run('collectModalEntryData()'),'Blank bank cannot produce a savable r
 assert.match(run('modalValidationErrors.bank'),/Enter the bank/);
 assert.equal(JSON.stringify([...storage]),afterOpen,'Inline validation is read-only');
 run('modal.bank="Synthetic Validation Bank"');
-assert.equal(run('saveEntry()'),false,'Unverified churn/terms cannot be saved by modal');
-assert.equal(JSON.stringify([...storage]),afterOpen,'Failed eligibility validation must not write records');
-assert.ok(run('Object.keys(modalValidationErrors).length')>0,'Failure stays visible for correction');
+assert.equal(run('saveEntry()'),true,'Eligibility verification still blocks saving a bank account');
+assert.equal(run('entries.some(e=>e.bank==="Synthetic Validation Bank")'),true,'Allowed account save did not persist');
+assert.equal(run('churnReadyDate(entries.find(e=>e.bank==="Synthetic Validation Bank"))'),'','A missing eligibility rule invented a date');
 run('closeModal()');
 assert.equal(run('Object.keys(modalValidationErrors).length'),0,'A dismissed form clears only its UI errors');
 run('openAdd()');
