@@ -4389,9 +4389,9 @@ function inferCloseHoldDaysFromEntry(e){
     const keep=keepOpen.test(line),clawback=forfeit.test(line);
     if(!keep&&!clawback)continue;
     const matched=keep
-      ?line.match(/(?:remain|keep|stay|maintain)[^.]{0,95}\bopen\b[^.]{0,55}(?:for|at least|through|until)?\s*(\d{1,3})\s*(?:calendar\s*)?days?\b/i)
+      ?line.match(/(?:remain|keep|stay|maintain)[^.]{0,95}\bopen\b[^0-9.]{0,55}(\d{1,3})\s*(?:calendar\s*)?days?\b/i)
        ||line.match(/(?:at least|for)\s*(\d{1,3})\s*(?:calendar\s*)?days?[^.]{0,65}(?:remain|keep|stay|maintain)[^.]{0,30}\bopen\b/i)
-      :line.match(/(?:close|closed|closing|terminate)[^.]{0,80}(?:within|before|first|less than)[^.]{0,25}(\d{1,3})\s*(?:calendar\s*)?days?/i);
+      :line.match(/(?:close|closed|closing|terminate)[^.]{0,80}(?:within|before|first|less than)[^0-9.]{0,25}(\d{1,3})\s*(?:calendar\s*)?days?/i);
     const n=matched?parseInt(matched[1],10)||0:0;
     if(n>0&&n<=730)return n;
   }
