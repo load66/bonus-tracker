@@ -17,7 +17,7 @@ try{
  assert.match(s.btNextActionForEntry(e).context.explanation,/90 calendar days/);
  assert.match(s.BT360.requirementRows(e).html,/Dec 11, 2026/);
  assert.match(s.BT360.timerRows(e),/Dec 11, 2026/);
- assert.match(s.BT360.detailPanels(e),/Requirements due Dec 11, 2026/);
+ assert.match(s.BT360.detailPanels(e),/Due Dec 11, 2026/,'Simple active requirement must retain the verified due date');
  const enroll=entry({basis:'enrollment',value:90,unit:'calendar-days'});
  assert.equal(s.reqDeadline(enroll),'2026-12-09','Enrollment timing must not use opening date');
  assert.match(s.btRequirementDeadlineContext(enroll).explanation,/enrollment/i);

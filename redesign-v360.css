@@ -1236,3 +1236,57 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt389-past-reminders>summary{cursor:pointer;color:#aab3bf;font-size:12px}
 .bt389-history-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:9px 0;font-size:12px;color:#aab3bf}
 .bt389-history-row span{min-width:0;overflow-wrap:anywhere}
+
+
+/* v3.8.10 — one-screen bonus tracking. Presentation only; no data migrations. */
+.bt3810-detail{display:flex;flex-direction:column;gap:12px;padding-bottom:15px}
+.bt3810-card{background:#12141c;border:1px solid #262a36;border-radius:18px;padding:17px 16px;min-width:0}
+.bt3810-card h3{font-size:15px;line-height:1.35;font-weight:800;letter-spacing:-.015em;margin:0;color:#f2f3f7}
+.bt3810-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.bt3810-heading>span{font-size:12px;color:#9da5b6;white-space:nowrap}
+.bt3810-status{border-color:#2b4a41;background:#12211e}
+.bt3810-status h3{color:#73e0b8}
+.bt3810-status p{margin:7px 0 0;color:#b8c3c7;font-size:13px;line-height:1.55}
+.bt3810-dates dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;margin:13px 0 0;border:1px solid #252a36;border-radius:12px;overflow:hidden}
+.bt3810-dates dl>div{min-width:0;padding:13px 10px;border-bottom:1px solid #252a36}
+.bt3810-dates dl>div:nth-child(2n){border-left:1px solid #252a36}
+.bt3810-dates dl>div:nth-last-child(-n+2){border-bottom:0}
+.bt3810-dates dt{color:#929bac;font-size:11px;margin-bottom:5px}
+.bt3810-dates dd{color:#f2f3f7;font-size:13px;font-weight:700;margin:0;overflow-wrap:anywhere}
+.bt3810-dates dd.is-missing{color:#929bac}
+.bt3810-pair{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font-size:13px;padding-top:12px}
+.bt3810-pair span{color:#a7afbf}
+.bt3810-pair b{max-width:60%;color:#f2f3f7;text-align:right;font-weight:700;overflow-wrap:anywhere}
+.bt3810-caution{color:#ffbd80!important}
+.bt3810-fee-note{color:#a7afbf;font-size:11px;line-height:1.4;margin:5px 0 0}
+.bt3810-task{display:flex;gap:12px;align-items:center;padding:13px 0;border-bottom:1px solid #252a36}
+.bt3810-task:last-child{border:0;padding-bottom:0}
+.bt3810-task button[role=checkbox]{flex:0 0 44px;width:44px;height:44px;border:1.5px solid #586373;border-radius:8px;background:#171a23;color:#081410;font-weight:900;cursor:pointer}
+.bt3810-task button[role=checkbox][aria-checked=true]{background:#5be3b0;border-color:#5be3b0}
+.bt3810-task span{min-width:0}
+.bt3810-task b{font-size:13px;font-weight:700;line-height:1.35;display:block}
+.bt3810-task small{display:block;color:#a7afbf;font-size:11px;margin-top:3px}
+.bt3810-muted,.bt3810-closing-note{font-size:12px;line-height:1.55;color:#a7afbf;margin:10px 3px}
+.bt3810-footer{gap:10px}
+.bt3810-footer>button{min-height:50px;font-size:13px}
+.bt3810-footer>button:first-child{flex:0 0 29%!important}
+.bt3810-footer>button.bt360-primary{flex:1!important}
+@media(max-width:360px){
+ .bt3810-card{padding:14px 12px}
+ .bt3810-dates dl>div{padding:11px 8px}
+ .bt3810-dates dd,.bt3810-pair{font-size:12px}
+ .bt3810-footer>button:first-child{flex-basis:27%!important}
+}
+
+
+.bt3810-deposit{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid #252a36;margin-top:9px;padding-top:10px;min-height:44px}
+.bt3810-deposit span{color:#abb3c1;font-size:11px;line-height:1.4}
+.bt3810-deposit button{color:#78e7bf;min-height:38px;padding:8px;font-size:12px;white-space:nowrap}
+
+/* Simple task and deposit corrections remain reachable without an advanced page. */
+.bt3810-add-task{display:inline-flex;margin-top:10px;min-height:36px;align-items:center;color:#78e7bf;font-size:12px}
+.bt3810-recorded-deposits{border-top:1px solid #262a36;margin-top:10px;padding-top:8px;min-width:0}
+.bt3810-recorded-deposits>summary{cursor:pointer;color:#78e7bf;font-size:12px;min-height:40px;display:flex;align-items:center}
+.bt3810-recorded-deposits .bt3681-deposit-ledger{margin-top:6px;max-width:100%;min-width:0}
+.bt-simple-check{display:flex;gap:10px;align-items:center;min-height:44px;font-size:13px;line-height:1.4;color:#f0f2f5;cursor:pointer}
+.bt-simple-check input{flex:0 0 20px;width:20px;height:20px;accent-color:#5be3b0}

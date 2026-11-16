@@ -100,26 +100,26 @@ assert.doesNotMatch(sandbox.BT360.detailPanels(e),/aria-label="Mark all requirem
 const tasksOnly={...e,reqDays:0,completeBonusText:'',checklist:[{text:'Call bank',done:false}],financialRules:{...e.financialRules,requirements:[]}};
 assert.doesNotMatch(sandbox.BT360.detailPanels(tasksOnly),/bt3621-confirm-all/,'Checklist-only records must not expose the offer-level completion action');
 assert.match(sandbox.BT360.detailPanels(tasksOnly),/Call bank/,'Standalone checklist tasks remain fully accessible');
-assert.match(sandbox.BT360.detailPanels(e),/\+ Add task/,'Existing checklist action remains available');
+assert.equal(typeof sandbox.runBankAction,'function','Checklist edit handler remains installed');
 
 /* v3.6.24: anchored requirement deadlines appear in the lifecycle banner
    without overriding unsupported clocks or completed milestones. */
 const structuredOnly={...e,reqDays:0,requiredDaysText:'',customTimers:[]};
 const structuredBanner=sandbox.BT360.detailPanels(structuredOnly);
-assert.match(structuredBanner,/Requirements due Jan 13, 2027/,'Structured deadline drives the lifecycle summary without legacy reqDays');
-assert.match(structuredBanner,/\d+ days left/,'Deadline badge uses the anchored countdown');
+assert.match(structuredBanner,/Due Jan 13, 2027/,'Structured deadline stays visible on the active requirement');
+assert.doesNotMatch(structuredBanner,/\d+ days left/,'Simple view omits redundant countdown badges');
 const doneRequirement={...structuredOnly,reqMet:'2026-10-17'};
-assert.match(sandbox.BT360.detailPanels(doneRequirement),/Requirements completed/);
-assert.match(sandbox.BT360.detailPanels(doneRequirement),/Edit date/);
+assert.match(sandbox.BT360.detailPanels(doneRequirement),/Waiting for bonus/);
+assert.match(sandbox.BT360.detailFooter(doneRequirement),/>Edit<\/button>/,'Edit retains date correction');
 assert.doesNotMatch(sandbox.BT360.detailPanels(doneRequirement),/No single nonrecurring deposit target|No deposits recorded for this account cycle/);
 assert.notEqual(sandbox.BT360.primaryAction(doneRequirement).label,'Mark requirements done','Already saved requirement must never ask to save again');
 assert.doesNotMatch(sandbox.BT360.timerRows(doneRequirement),/data-source="saved-requirement"/,'Completed requirements cannot generate overdue pending reminders');
-assert.doesNotMatch(sandbox.BT360.detailPanels(doneRequirement),/Requirements due Jan 13, 2027/,'Completed requirement does not show as pending in lifecycle header');
+assert.doesNotMatch(sandbox.BT360.detailPanels(doneRequirement),/Due Jan 13, 2027/,'Completed requirement cannot appear pending');
 const paidRequirement={...structuredOnly,bonusRecd:'2026-10-17'};
 assert.doesNotMatch(sandbox.BT360.timerRows(paidRequirement),/data-source="saved-requirement"/,'Received bonus suppresses derived requirement reminders');
 
-// v3.8.9: No past-cycle deadlines can nag paid/closed accounts. Historical
-// reminders stay accessible in Documents & activity without altering records.
+// v3.8.10: A completed bonus displays one simple next action and no
+// previous-cycle clutter. All old timer facts remain available in storage.
 {
  const oldTimers=[
   {id:'old-requirement',text:'Bonus requirement deadline · complete all direct deposits',date:'2026-11-08',done:false},
@@ -127,36 +127,46 @@ assert.doesNotMatch(sandbox.BT360.timerRows(paidRequirement),/data-source="saved
   {id:'fee',kind:'fee',text:'Monthly service fee review',date:'2026-11-20',done:false}
  ];
  const paid={...structuredOnly,id:'SYN-PAID-CYCLE',bank:'Synthetic Checking',reqMet:'2026-10-20',
-   bonusRecd:'2026-10-28',customTimers:oldTimers,eligibilityRules:[],churn:'',churnable:undefined};
+  bonusRecd:'2026-10-28',customTimers:oldTimers,eligibilityRules:[],churn:'',churnable:undefined};
  const saved=JSON.stringify(paid),beforeStorage=JSON.stringify([...storage]);
+ const awaitingPayment={...paid,bonusRecd:''};
+ const awaitingTile=sandbox.BT360.compactRow(awaitingPayment);
+ assert.match(awaitingTile,/Waiting for bonus/,'Completed bonus shows payment as its next step');
+ assert.doesNotMatch(awaitingTile,/Bonus requirement deadline|Nov 8, 2026|Overdue/,'Saved old requirement timer is not a new action');
+ const paidTile=sandbox.BT360.compactRow(paid);
+ assert.match(paidTile,/Bonus received/,'Paid account visibly shows its saved milestone');
+ assert.doesNotMatch(paidTile,/Bonus requirement deadline|Overdue/,'Paid account has no stale requirement prompt');
  const timers=sandbox.BT360.timerRows(paid);
- assert.doesNotMatch(timers,/Nov 8, 2026|Overdue|Nov 18, 2026|Requirement due|Bonus pending/,
-   'Paid cycle must not show old qualification or payout reminders');
- assert.match(timers,/Monthly service fee review/,'Recurring fee review survives cycle completion');
+ assert.doesNotMatch(timers,/Nov 8, 2026|Overdue|Nov 18, 2026|Requirement due|Bonus pending/);
+ assert.match(timers,/Monthly service fee review/,'Recurring fee check is still available');
  const detail=sandbox.BT360.detailPanels(paid);
- assert.match(detail,/Next bonus cycle/,'Next bonus cycle is visible after payout');
- assert.match(detail,/Bonus received Oct 28, 2026/,'Recorded payment is the cycle milestone');
- assert.match(detail,/Oct 30, 2027/,'Verified saved repeat-bonus rule remains visible after payment');
+ assert.match(detail,/Next bonus/);
+ assert.match(detail,/Oct 28, 2026/,'Payment milestone stays recorded');
+ assert.match(detail,/Oct 30, 2027/,'Only a verified saved repeat rule displays an eligible date');
+ assert.match(detail,/Closing early/,'Closing fee warning remains');
+ assert.doesNotMatch(detail,/Documents &amp; activity|Previous cycle reminders|See saved requirements|Review rule|Saved terms|Activity|Advanced/);
+ assert.match(sandbox.BT360.detailFooter(paid),/Record closure/);
  const unverified={id:'SYN-UNVERIFIED-PAID',bank:'Unverified Synthetic Bank',opened:'2026-10-15',
   reqMet:'2026-10-20',bonusRecd:'2026-10-28',customTimers:[],checklist:[]};
  const uncertain=sandbox.BT360.detailPanels(unverified);
- assert.match(uncertain,/Next date not confirmed/,'Unknown eligibility never becomes a fabricated date');
- assert.match(uncertain,/Rule review needed/,'Unverified next-cycle rule can be reviewed');
- assert.doesNotMatch(uncertain,/20\d\d-\d\d-\d\d.*Next bonus review/,'Unknown cycles cannot invent a next date');
- assert.match(detail,/Previous cycle reminders \(2\)/,'Old due reminders remain editable in collapsed history');
- assert.match(detail,/Closing the account/,'Closing review remains available without falsely authorizing closure');
- assert.doesNotMatch(detail,/Overdue|Eligibility rule missing/,'Completed cycle has no stale overdue banner or harsh missing-rule message');
- assert.match(sandbox.BT360.primaryAction(paid).label,/^Review closing(?: checks)?$/,'Paid account action prioritizes closing review');
+ assert.match(uncertain,/Not confirmed/,'Unknown next cycle must remain unconfirmed');
+ assert.doesNotMatch(uncertain,/Oct 30, 2027|Rule review needed|Eligibility rule missing/);
+ assert.match(sandbox.BT360.detailFooter(unverified),/startCloseFlow\(&quot;SYN-UNVERIFIED-PAID&quot;,'actual'\)/,
+  'An unknown future bonus rule cannot block recording an actual closure');
+ assert.equal(sandbox.BT360.primaryAction(paid).label,'Record closure');
  const closed={...paid,closed:'2026-11-10'};
- assert.match(sandbox.BT360.detailPanels(closed),/Account closed Nov 10, 2026/,'Closed cycle records the actual closure');
- assert.doesNotMatch(sandbox.BT360.timerRows(closed),/Requirement due/,'Closing does not resurrect old deadlines');
+ assert.match(sandbox.BT360.detailPanels(closed),/Nov 10, 2026/);
+ assert.doesNotMatch(sandbox.BT360.detailPanels(closed),/bt3810-fees|bt3810-requirements/);
+ assert.doesNotMatch(sandbox.BT360.timerRows(closed),/Requirement due/);
  const pending={...paid,reqMet:'',bonusRecd:'',closed:''};
- assert.match(sandbox.BT360.timerRows(pending),/Requirement due/,'Pending cycle still shows legitimate deadlines');
- assert.equal(JSON.stringify(paid),saved,'Cycle projection must not change saved bank data');
- assert.equal(JSON.stringify([...storage]),beforeStorage,'Cycle projection must not write persistent data');
+ assert.match(sandbox.BT360.timerRows(pending),/Requirement due/);
+ assert.doesNotMatch(sandbox.BT360.detailFooter(pending),/Record closure/);
+ assert.deepEqual(paid.customTimers,oldTimers,'The UI must not delete any old timers');
+ assert.equal(JSON.stringify(paid),saved,'View projection must not change bank data');
+ assert.equal(JSON.stringify([...storage]),beforeStorage,'View projection must not write storage');
 }
 const unanchoredTiming={...e,reqDays:90,requiredDaysText:'90 days',financialRules:{...e.financialRules,requirements:[{...e.financialRules.requirements[0],timing:{basis:'opened',unit:'business-days',value:90}}]}};
-assert.doesNotMatch(sandbox.BT360.detailPanels(unanchoredTiming),/Requirements due Jan 13, 2027/,'Do not invent calendar date from unsupported structured business-day clock');
+assert.doesNotMatch(sandbox.BT360.detailPanels(unanchoredTiming),/Due Jan 13, 2027/,'Do not invent a due date from an unsupported business-day clock');
 assert.doesNotMatch(sandbox.BT360.timerRows({...unanchoredTiming,customTimers:[]}),/data-source="saved-requirement"/,'Unsupported clock never generates a dated timer');
 const beforeBannerEntry=JSON.stringify(structuredOnly);
 sandbox.BT360.detailPanels(structuredOnly);
@@ -166,12 +176,12 @@ assert.equal(JSON.stringify(structuredOnly),beforeBannerEntry,'Rendering deadlin
 // v3.6.25: match in-progress PDF section ordering without hiding existing actions.
 const inProgressLayout=sandbox.BT360.detailPanels(e);
 const sectionHeadings=[...inProgressLayout.matchAll(/<h3>([^<]+)<\/h3>/g)].map(match=>match[1]);
-const reqIndex=sectionHeadings.indexOf('Requirements'),feeIndex=sectionHeadings.indexOf('Fees &amp; waivers'),timerIndex=sectionHeadings.indexOf('Reminders');
-assert(reqIndex>=0&&feeIndex>reqIndex&&timerIndex>feeIndex,'In-progress detail order must be Requirements, Fees & waivers, Timers');
-assert.equal(sectionHeadings.filter(title=>title==='Fees &amp; waivers').length,1,'Monthly and early-close evidence must have exactly one fee section');
-assert.match(inProgressLayout,/\+ Add task/,'Task editor link survives panel reordering');
-assert.match(inProgressLayout,/openTimerEditor/,'Saved timer editing remains available after panel reordering');
-assert.match(inProgressLayout,/runBankAction\(&quot;CHA-P-01&quot;,'timer'\)/,'Add timer still opens the saved timer handler');
+const reqIndex=sectionHeadings.indexOf('Requirements'),feeIndex=sectionHeadings.indexOf('Fees');
+assert(reqIndex>=0&&feeIndex>reqIndex,'Simple detail must show active requirements before fees');
+assert.equal(sectionHeadings.filter(title=>title==='Fees').length,1,'Monthly and early-close evidence share one concise fees card');
+assert.match(inProgressLayout,/Add deposit/,'Direct-deposit recorder remains available for active offers');
+assert.doesNotMatch(inProgressLayout,/openTimerEditor|Previous cycle reminders/,'Old timer links no longer clutter the main detail');
+assert.equal(typeof sandbox.runBankAction,'function','Existing reminder handler remains intact');
 
 const fees=sandbox.BT360.feeDetail(e);
 assert.match(fees,/Monthly fee<\/span><div><b[^>]*>\$15<\/b>/);
@@ -219,16 +229,16 @@ assert.match(coolingList,/A previous checking bonus within 12 months is ineligib
 assert.match(coolingList,/Details/);
 assert.doesNotMatch(coolingList,/Needs review · verify eligibility rules/);
 const coolingDetail=sandbox.BT360.detailPanels(cooldownNoDate);
-assert.match(coolingDetail,/Next date not confirmed/);
-assert.match(coolingDetail,/previous checking bonus within 12 months/);
+assert.match(coolingDetail,/Not confirmed/);
+assert.doesNotMatch(coolingDetail,/previous checking bonus within 12 months/,'Long rule excerpts stay in Archive, not the everyday detail');
 const estimatedPast={...cooldownNoDate,id:'SYNT-P-85',opened:'2020-01-01',closed:'2021-01-01',
  churn:'1',eligibilityText:'Legacy saved one-year rule, no verified supporting source.'};
 const estimatedList=sandbox.BT360.archive([estimatedPast]);
 assert.match(estimatedList,/<b>0<\/b><small>Ready for review<\/small>/,'Unverified historic dates must not certify current eligibility');
 
 /* v3.6.27: all computable saved dates show a countdown, with verification status. */
-assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.9';/,'The on-screen app version reflects this release');
-assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.9-cycle1/,'The version label is refreshed on clients');
+assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.10';/,'The on-screen app version reflects this release');
+assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.10-closure1/,'The version label is refreshed on clients');
 const archiveFutureDate='2030-01-01';
 const projectedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,verified:false});
 assert(projectedFuture&&projectedFuture.days>0&&projectedFuture.caption==='days · estimate','Unverified saved future date shows an estimated countdown');
@@ -258,8 +268,8 @@ try{
  sandbox.BT360.setAudience('all');
  assert(sandbox.BT360.scope(samplePersonal)&&sandbox.BT360.scope(sampleBusiness));
  assert.match(sandbox.BT360.compactRow(sampleBusiness),/bt3628-kind business/);
- assert.match(sandbox.BT360.detailHead(sampleBusiness),/Business ·/);
- assert.match(sandbox.BT360.detailHead(samplePersonal),/Personal ·/);
+ assert.match(sandbox.BT360.detailHead(sampleBusiness),/Business account/);
+ assert.match(sandbox.BT360.detailHead(samplePersonal),/Personal account/);
  const both=sandbox.BT360.archive([samplePersonal,sampleBusiness]);
  assert.match(both,/bt3628-kind personal/);
  assert.match(both,/bt3628-kind business/);
@@ -276,8 +286,8 @@ try{
 }
 assert.equal(JSON.stringify([...storage]),beforeUnified,'View filters cannot mutate records');
 const archiveRecord={...legacy,closed:'2026-10-17',bonusRecd:'2026-10-17'};
-assert.match(sandbox.BT360.detailPanels(archiveRecord),/Fees &amp; waivers|Fees & waivers/,'Churn and closed record details retain fee section');
-assert.match(sandbox.BT360.detailPanels(archiveRecord),/\$25 early-close fee/);
+assert.doesNotMatch(sandbox.BT360.detailPanels(archiveRecord),/bt3810-fees/,'Closed records omit current-cycle fee actions');
+assert.match(sandbox.BT360.feeDetail(archiveRecord),/\$25 early-close fee/,'Historical fee remains intact in stored fee projection');
 
 // Cooldown history uses account-specific archived evidence before newer bank
 // versions, shows last-saved provenance, and never upgrades live enrolled data.
@@ -381,8 +391,8 @@ assert.doesNotMatch(timers,/Due Date:|Start \+ Days:/);
 assert.match(timers,/Bonus requirement deadline · complete all qualifying direct deposits/,'Full timer text preserved when expanded');
 
 const details=sandbox.BT360.detailPanels(e);
-assert.match(details,/After bonus arrives/,'Close date explains the payout trigger without making up a date');
-assert.match(details,/After bonus payment/,'Eligibility displays the pending known start event');
+assert.match(details,/Requirements/,'Active requirements remain visible without closure speculation');
+assert.doesNotMatch(details,/After bonus payment/,'Future cycle does not crowd an active bonus');
 assert.doesNotMatch(details,/Review rule/,'Known rules awaiting payout should not require needless editing');
 assert.doesNotMatch(details,/>This month</);
 const payoutOnly={...e,customTimers:[],payoutTimingText:'Expected within 15 days after requirements',financialRules:{...e.financialRules,payout:{text:'Expected within 15 days after requirements',timing:{basis:'reqmet',value:15,unit:'calendar-days'}}}};
@@ -390,7 +400,7 @@ assert.doesNotMatch(sandbox.BT360.timerRows(payoutOnly),/Estimated bonus arrival
 assert.doesNotMatch(sandbox.BT360.timerRows(payoutOnly),/After qualification/,'Do not add a placeholder status label');
 assert.doesNotMatch(sandbox.BT360.timerRows(payoutOnly),/Payout on track|Bonus received/);
 
-assert.match(details,/Fees &amp; waivers|Fees & waivers/);
+assert.match(details,/<h3>Fees<\/h3>/);
 assert.doesNotMatch(details,/\b(?:null|structured rule|anchor|verified \$0|provenance)\b/i);
 assert.equal(typeof sandbox.BT360.openRuleEditor,'function');
 assert.equal(typeof sandbox.BT360.openActivity,'function');
@@ -417,22 +427,18 @@ try{
   const sheet=sandbox.rBankActions();
   assert.match(sheet,/role="dialog" aria-modal="true" aria-label="Account actions"/);
   assert.match(sheet,/bt-ba-backdrop/);
-  assert.match(sheet,/bt-ba-stage/);
+  assert.match(sheet,/bt-ba-bank/);
   const footerLabel=sandbox.BT360.primaryAction(sheetRecord).label;
-  assert.match(sheet,/Update completion date/,'A recorded milestone must remain editable in account actions');
-  assert.notEqual(footerLabel,'Record deposit','The primary action must never mislabel whole-offer completion as one deposit');
-  assert.match(sheet,/Edit account/);
-  assert.match(sheet,/Add task/);
-  assert.match(sheet,/Add timer/);
-  assert.match(sheet,/Activity/);
-  assert.match(sheet,/Delete account/);
+  assert.equal(footerLabel,'Record bonus payment','Completed requirements advance straight to the payout action');
+  assert.match(sheet,/Edit account/,'Saved facts remain editable');
+  assert.match(sheet,/Delete account/,'Protected deletion remains available');
+  assert.doesNotMatch(sheet,/Activity|Advanced tracker tools|More account controls|<details class="bt-ba-more"/,
+   'Account actions must not contain nested advanced or redundant menus');
+  assert.doesNotMatch(sheet,/Add requirement|Add reminder/,'Completed bonuses should not ask for more tasks');
   assert.match(sheet,/<svg viewBox="0 0 24 24"/);
   assert.doesNotMatch(sheet,/\bREQ MET\b|REQ_MET/);
-  const visibleActions=sheet.split('<details class="bt-ba-more">')[0]+' '+sheet.slice(sheet.indexOf('<div class="bt-ba-delete"'));
-  assert.doesNotMatch(visibleActions,/[\u{1F300}-\u{1FAFF}]/u,'Visible Manage actions cannot use emoji');
-  if(footerLabel==='Confirm received')assert.doesNotMatch(visibleActions,/>Confirm bonus received</,'Stage action must not duplicate primary footer');
-  assert.doesNotMatch(visibleActions,/>Ask AI</,'Footer Ask AI must not repeat in main menu');
-  assert(sheet.lastIndexOf('Delete account')>sheet.indexOf('Activity'),'Delete must appear last');
+  assert.doesNotMatch(sheet,/[\u{1F300}-\u{1FAFF}]/u,'Simple account actions cannot use emoji');
+  assert(sheet.lastIndexOf('Delete account')>sheet.indexOf('Edit account'),'Delete must remain separate and last');
   const theme=fs.readFileSync('redesign-v360.css','utf8');
   assert(theme.includes('#12141C')&&theme.includes('.bt-ba-delete'),'Dark manage sheet style absent');
   assert(theme.includes('env(safe-area-inset-bottom'),'iPhone safe-area inset missing');
@@ -490,8 +496,8 @@ console.log('Bank logo and attention hierarchy regression passed');
   const before=JSON.stringify(sample);
   sandbox.btLifecycleStageForEntry=()=>({code:'ACTION_NEEDED',kind:'requirement',label:'Action needed'});
   const footer=sandbox.BT360.detailFooter(sample);
-  assert.match(footer,/Record bonus payment/);assert.match(footer,/openRcv\(/);assert.match(footer,/View remaining tasks/);
-  assert.match(sandbox.BT360.detailPanels(sample),/Record the payment once the bonus posts/);
+  assert.match(footer,/Record bonus payment/);assert.match(footer,/openRcv\(/);assert.doesNotMatch(footer,/View remaining tasks/);
+  assert.match(sandbox.BT360.detailPanels(sample),/Record your bonus when it appears in your account/);
   assert.equal(JSON.stringify(sample),before,'Showing payment action cannot complete tasks or create payment dates');
  }finally{sandbox.btLifecycleStageForEntry=original}
 }

@@ -59,8 +59,8 @@ module.exports={sandbox,document,app,storage,errors};
 if(require.main===module)setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.8.9',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.8.9',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.8.10',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.8.10',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     const trackerRender=sandbox.BT360;
     const settingsMarkup=trackerRender.settings();
     assert(!/Historical review|History repair|requirements date matches|Review missing history/i.test(settingsMarkup),'Internal history diagnostics must not clutter Settings');
@@ -156,8 +156,8 @@ if(require.main===module)setTimeout(()=>{
         beforeOpen:lifecycleTagOpen(before),
         afterOpen:lifecycleTagOpen(after),
         stateAfter:profileSectionIsOpen(id,'lifecycle'),
-        beforeModern:before.includes('bt360-steps')&&before.includes('Requirements'),
-        afterModern:after.includes('bt360-steps')&&after.includes('Requirements')&&after.includes('aria-checked="true"'),
+        beforeModern:before.includes('bt3810-status')&&before.includes('bt3810-requirements'),
+        afterModern:after.includes('bt3810-status')&&after.includes('bt3810-requirements')&&after.includes('aria-checked="true"'),
         checked:!!entries[0].checklist[0].done,
         expandedStill:expanded===id
       };
@@ -168,9 +168,9 @@ if(require.main===module)setTimeout(()=>{
     assert(sectionStateRegression.rendererHasSectionState,'Registered window.rTracker is not the section-state-aware renderer');
     assert(sectionStateRegression.stateBefore,'Centralized lifecycle state was not open before toggle');
     assert(!sectionStateRegression.directOpen,'Removed 7-step lifecycle must not render even when its saved section state is open');
-    assert(sectionStateRegression.beforeModern,'R() must render the single 5-step strip and Requirements section');
+    assert(sectionStateRegression.beforeModern,'R() must render the simple status and Requirements card');
     assert(sectionStateRegression.stateAfter,'Centralized lifecycle state was lost after checklist toggle/full render cycle');
-    assert(sectionStateRegression.afterModern,'Requirements checkbox and 5-step strip must remain after checklist toggle');
+    assert(sectionStateRegression.afterModern,'Requirements checkbox and simple status must remain after checklist toggle');
     assert(sectionStateRegression.checked,'Checklist state did not toggle during lifecycle persistence regression');
     assert(sectionStateRegression.expandedStill,'Bank card did not remain expanded during lifecycle persistence regression');
     assert(appSource.split('function rTracker(sorted)').length-1===1,'Active tracker renderer count is not exactly one');
@@ -197,9 +197,9 @@ if(require.main===module)setTimeout(()=>{
       const sample={id:'UI-STATE-3',bank:'State Bank',accountType:'personal',opened:'2026-09-01',closed:'',bonus:100,checklist:[{text:'Test requirement',done:false}],customTimers:[],notes:'',churnable:true};
       entries=[sample];expanded=sample.id;search='';
       setProfileSectionOpen(sample.id,'lifecycle',true);
-      const before=window.rTracker(entries).includes('bt360-steps')&&!window.rTracker(entries).includes('data-section-key="lifecycle" open');
+      const before=window.rTracker(entries).includes('bt3810-detail')&&!window.rTracker(entries).includes('data-section-key="lifecycle" open');
       toggleCk(sample.id,0);
-      const after=expanded===sample.id&&profileSectionIsOpen(sample.id,'lifecycle')&&document.getElementById('app').innerHTML.includes('bt360-steps')&&document.getElementById('app').innerHTML.includes('aria-checked="true"');
+      const after=expanded===sample.id&&profileSectionIsOpen(sample.id,'lifecycle')&&document.getElementById('app').innerHTML.includes('bt3810-detail')&&document.getElementById('app').innerHTML.includes('aria-checked="true"');
       entries=oldEntries;expanded=oldExpanded;search=oldSearch;
       return before&&after;
     })()`,sandbox);

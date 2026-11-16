@@ -51,7 +51,8 @@ setTimeout(()=>{
     assert.equal(run('entries[0].id'),id);
     assert.equal(run('entries.length'),1,'Editing must not create a duplicate');
     run('expanded=testId');
-    assert.match(run('rTracker(entries)'),/&lt;tags&gt;/,'Personal notes must be escaped');
+    assert.doesNotMatch(run('rTracker(entries)'),/<tags>/,'User notes must never render as raw HTML in the simple tracker');
+    assert.equal(run('entries[0].notes'),'Updated note with <tags> & quotes','Simplification must preserve saved notes verbatim');
     run('openReqMet(testId)');
     const reqInput=run('rReqMet()').match(/<input[^>]*id="req_date"[^>]*>/)[0];
     const reqHandler=reqInput.match(/oninput="([^"]+)"/)[1];

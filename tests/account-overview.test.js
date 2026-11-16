@@ -1,61 +1,66 @@
 'use strict';
 const assert=require('node:assert/strict'),vm=require('node:vm');
 const {sandbox,storage}=require('./full-app-smoke.test.js'),run=s=>vm.runInContext(s,sandbox);
-const row={id:'SYN-OVERVIEW-P-01',bank:'Synthetic Overview Bank',accountType:'personal',opened:'2026-01-02',reqMet:'',bonusRecd:'2026-04-01',closed:'',bonus:125,tcSourceRaw:'Exact original <promotion>\nDo not replace with a summary.',feeScheduleRaw:'Exact original fees',checklist:[],customTimers:[]};
+const row={id:'SYN-OVERVIEW-P-01',bank:'Synthetic Overview Bank',accountType:'personal',opened:'2026-01-02',
+ reqMet:'',bonusRecd:'2026-04-01',closed:'',bonus:125,notes:'Exact personal <note> & details',
+ tcSourceRaw:'Exact original <promotion>\nDo not replace with a summary.',
+ feeScheduleRaw:'Exact original fees',checklist:[],
+ customTimers:[{id:'old',text:'Bonus requirement due',date:'2026-03-01',done:false}]};
 run('entries='+JSON.stringify([row])+';localStorage.setItem(SK,JSON.stringify(entries));');
-const before=JSON.stringify([...storage]);
-const html=sandbox.BT360.detailPanels(row);
-assert.match(html,/aria-label="Recorded account dates"/);assert.match(html,/Requirements met<\/dt><dd class="is-missing">Not recorded/,'Payment never fills requirements date');
-for(const key of ['fees','terms','history'])assert.match(html,new RegExp('data-section="'+key+'" ontoggle='),'Supporting sections start closed');
-assert.match(html,/data-section="eligibility" open ontoggle=/,'Received bonus opens next-cycle review by default');
-assert.match(html,/Exact original &lt;promotion&gt;/,'Original terms remain complete and escaped');
-assert.match(html,/Exact original fees/);
-sandbox.BT360.setAccountSectionOpen(row.id,'extras',true);
-assert.match(sandbox.BT360.detailPanels(row),/bt3686-account-extras" open ontoggle=/,'Optional records stay open through rerender for this account');
-assert.doesNotMatch(sandbox.BT360.detailPanels({...row,id:'SYN-OTHER'}),/bt3686-account-extras" open/,'Disclosure state is account-specific');
-sandbox.BT360.setAccountSectionOpen(row.id,'extras',false);
-assert.match(sandbox.BT360.accountDates({...row,opened:'2026-02-30'}),/Needs review/,'Invalid dates are not rendered as confirmed calendar events');
-assert.match(sandbox.BT360.accountSaveStatus(row),/data-local-save="true">Saved on device/,'Local status requires a matching stored record');
-assert.doesNotMatch(html,/bt3640-save-status|Saved on device|Backup needs attention/,'Storage diagnostics belong in the backup area');
-assert.match(html,/<details class="bt3686-account-extras" ontoggle=[^>]+><summary>Documents &amp; activity/,'Supporting records are behind one closed disclosure');
-assert.doesNotMatch(html,/\d+ gaps/,'No technical gap count in the account view');
-const pending=sandbox.BT360.detailPanels({...row,bonusRecd:'',payoutTimingText:'Bonus paid within 60 calendar days after requirements are met.'});
-assert.match(pending,/Estimated bonus arrival/,'The arrival area remains discoverable when dates are missing');
-assert.match(pending,/Finish the requirements and record the completion date/);
-assert.match(pending,/data-section="eligibility" ontoggle=/,'Active bonus keeps future cycle collapsed');
-assert(pending.indexOf('Estimated bonus arrival')<pending.indexOf('Account lifecycle'),'Arrival is first, below the account identity');
-assert.equal(sandbox.BT360.cloudStatusText({tone:'off'}),'Cloud off');assert.equal(sandbox.BT360.cloudStatusText({tone:'warning'}),'Backup pending');assert.equal(sandbox.BT360.cloudStatusText({tone:'danger'}),'Backup needs attention');assert.equal(sandbox.BT360.cloudStatusText({tone:'protected'}),'Cloud verified');
-sandbox.BT360.setAccountSectionOpen(row.id,'fees',true);
-assert.match(sandbox.BT360.detailPanels(row),/data-section="fees" open ontoggle=/,'Section state survives rerender');
-assert.match(sandbox.BT360.detailPanels({...row,id:'SYN-OVERVIEW-P-02'}),/data-section="fees" ontoggle=/,'Section state belongs to one account');
-assert.match(sandbox.BT360.accountSaveStatus({...row,notes:'Unsaved edit'}),/Local save needs review/,'Unstored changes cannot claim a verified local save');
-const archiveMarkup=run('renderTermsCycle(entries[0])');
-assert.match(archiveMarkup,/<dt>Bonus received<\/dt>/,'Archive prominently retains recorded payout date');
-assert.match(archiveMarkup,/<summary>More details<\/summary>/,'Advanced evidence is optional');
-for(const hidden of ['Backup & recovery','Cloud recovery','History review ·','Original promotion text is missing'])
- assert.doesNotMatch(archiveMarkup,new RegExp(hidden),'Archive cards no longer show technical and recovery controls');
-assert.match(archiveMarkup,/Exact original &lt;promotion&gt;/,'Saved promotion text remains accessible within details');
-assert.match(run('renderArchiveHistoryReview(entries[0])'),/^<section/,'Close review keeps its existing visible warning');
-assert.equal(JSON.stringify([...storage]),before,'Rendering and disclosure preferences do not write financial records');
-assert.equal(run('entries[0].reqMet'),'');
-// v3.8.8: bank identity cannot change section order, copy or default controls.
-const sectionKeys=markup=>[...markup.matchAll(/data-section="([^"]+)"/g)].map(m=>m[1]);
-const expected=['requirements','fees','closing','timers','eligibility','terms','history'];
-const untouched=JSON.stringify([...storage]);
+const before=JSON.stringify([...storage]),saved=JSON.stringify(row);
+const render=account=>sandbox.BT360.detailPanels(account),html=render(row);
+
+assert.match(html,/bt3810-status/);
+assert.match(html,/Bonus received/);
+assert.match(html,/aria-label="Recorded account dates"/);
+assert.match(html,/<dt>Requirements met<\/dt><dd class="is-missing">—<\/dd>/,'Missing completion date stays missing');
+assert.match(html,/Apr 1, 2026/,'Saved payout date remains visible');
+assert.match(html,/<h3>Fees<\/h3>/,'Relevant fee warnings remain compact');
+assert.match(html,/Next bonus/);
+assert.match(html,/Not confirmed/,'Unknown eligibility never becomes an invented date');
+assert.match(sandbox.BT360.detailFooter(row),/Record closure/,'Paid account can record an actual bank closure');
+assert.match(sandbox.BT360.detailFooter(row),/>Edit<\/button>/,'Saved information stays editable');
+assert.doesNotMatch(html,/<details\b|Documents &amp; activity|See saved requirements|Saved terms|Activity|Previous cycle reminders|Review rule|Advanced|Original terms missing/i,
+ 'Everyday bank detail cannot reintroduce advanced or redundant drawers');
+assert.doesNotMatch(html,/<promotion>|<note>/,'Raw saved text must not inject into UI');
+assert.equal(JSON.stringify(row),saved,'Rendering must not alter current account data');
+
+const pending=render({...row,reqMet:'2026-03-10',bonusRecd:''});
+assert.match(pending,/Waiting for bonus/);
+assert.doesNotMatch(pending,/Record closure|Next bonus/,'Unpaid accounts must not skip to closure or a future cycle');
+assert.match(sandbox.BT360.detailFooter({...row,reqMet:'2026-03-10',bonusRecd:''}),/Record bonus payment/);
+
+const working=render({...row,reqMet:'',bonusRecd:'',checklist:[{id:'task',text:'Complete an actual bank task',done:false}]});
+assert.match(working,/Requirements/);
+assert.match(working,/Complete an actual bank task/);
+assert.doesNotMatch(working,/Next bonus|Record closure/);
+assert.match(sandbox.BT360.detailFooter({...row,reqMet:'',bonusRecd:''}),/Mark requirements done|Review requirements/);
+
+const closed=render({...row,closed:'2026-05-01'});
+assert.match(closed,/Closed/);
+assert.match(closed,/May 1, 2026/);
+assert.doesNotMatch(closed,/bt3810-fees|bt3810-requirements/,'Completed cycles do not show active fee or requirement panels');
+assert.doesNotMatch(sandbox.BT360.detailFooter({...row,closed:'2026-05-01'}),/Record closure/);
+
 for(const bank of ['Synthetic National Bank','Synthetic Credit Union','Synthetic Future Bank']){
  for(const state of [{reqMet:'',bonusRecd:''},{reqMet:'2026-03-01',bonusRecd:''},{reqMet:'2026-03-01',bonusRecd:'2026-04-01'}]){
   const account={...row,...state,id:'SYN-CONSISTENT-'+bank,bank};
-  const saved=JSON.stringify(account),markup=sandbox.BT360.detailPanels(account);
-  assert.deepEqual(sectionKeys(markup),expected,'All open banks and milestones share section order');
-  assert.doesNotMatch(markup,/Safe to close|Hold &amp; close checks|Bonus kept after closing|Bonus retention check/,'No unsupported closing promise or duplicate checklist');
-  assert.match(markup,/<span>Review date<\/span>/,'Closing is a review, not a guarantee');
-  assert.equal((markup.match(/data-section="closing"/g)||[]).length,1);
-  assert.equal(JSON.stringify(account),saved);
+  const copy=JSON.stringify(account),markup=render(account);
+  assert.match(markup,/bt3810-status/);
+  assert.match(markup,/aria-label="Recorded account dates"/);
+  assert.doesNotMatch(markup,/Documents &amp; activity|Advanced|See saved requirements|Original terms missing/);
+  assert.equal((markup.match(/class="bt3810-status/g)||[]).length,0,'Status is a standard card class, not a separate duplicate stage');
+  assert.equal(JSON.stringify(account),copy,'Cross-bank rendering changed a saved account');
  }
 }
-const closedView=sandbox.BT360.detailPanels({...row,id:'SYN-CLOSED-VIEW',closed:'2026-05-01'});
-assert.doesNotMatch(closedView,/data-section="closing"/,'Closed records do not ask users to close again');
-assert.deepEqual(sectionKeys(closedView).filter(k=>k!=='deposits'),expected.filter(k=>k!=='closing'));
-assert.equal(JSON.stringify([...storage]),untouched,'Shared presentation does not migrate account data');
-console.log('Organized account overview passed: compact recorded dates, preserved sources, per-account disclosures, truthful save labels and no financial writes.');
+const archiveMarkup=run('renderTermsCycle(entries[0])');
+assert.match(archiveMarkup,/Exact original &lt;promotion&gt;/,'Original terms remain in Archive, unchanged and escaped');
+assert.equal(run('entries[0].notes'),'Exact personal <note> & details','Personal notes remain in the original saved record');
+const backup=run('JSON.stringify(buildPortableBackupPayload())');
+assert(backup.includes('Exact original <promotion>')&&backup.includes('Bonus requirement due'),'Full backups must preserve hidden terms and reminders');
+assert.match(sandbox.BT360.accountSaveStatus(row),/data-local-save="true">Saved on device/);
+assert.match(sandbox.BT360.accountSaveStatus({...row,notes:'Unsaved edit'}),/Local save needs review/);
+assert.equal(JSON.stringify([...storage]),before,'Detail, history and backup previews must not write financial data');
+assert.equal(run('entries[0].reqMet'),'','Payout cannot fill an unknown completion date');
+console.log('Simple account overview passed: four lifecycle states, verified-only next cycle, no advanced UI, unchanged data, archived terms and portable backup.');
 process.exit(0);
