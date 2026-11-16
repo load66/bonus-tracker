@@ -352,44 +352,37 @@ function compactRow(e){
   +'</span><span class="bt366-compact-right"><strong>'+amount(e.bonus)+'</strong><em class="bt360-chip">'+safe(s.label)+'</em></span></button></div>';
 }
 function primaryAction(e){
- const state=stage(e),code=state.code,id=arg(e.id),checks=Array.isArray(e.checklist)?e.checklist:[];
- if(!e.closed&&e.bonusRecd&&['ACTION_NEEDED','IN_PROGRESS'].includes(code))return {label:'Review closing checks',command:'BT360.showHold()'};
- // A saved milestone is not an unfinished milestone, regardless of stage urgency.
- if(!e.closed&&e.reqMet&&!e.bonusRecd){
-  if(['ACTION_NEEDED','IN_PROGRESS'].includes(code)){
-   if(state.kind==='review'||state.reviewReason)return {label:'Review account rules',command:'openBankActions('+id+')'};
-   if(state.kind==='requirement'||checks.some(x=>!x.done))return {label:'View remaining tasks',command:'BT360.openNextTask('+id+')'};
-  }
-  return {label:'Record bonus payment',command:'openRcv('+id+')'};
- }
- if(code==='IN_PROGRESS'||code==='ACTION_NEEDED'){
-  if(state.kind==='review'||state.reviewReason)return {label:'Review account rules',command:'openBankActions('+id+')'};
-  if(checks.some(x=>x&&!x.done))return {label:'Open next task',command:'BT360.openNextTask('+id+')'};
-  return {label:'Mark requirements done',command:'openReqMet('+id+')'};
- }
- if(code==='REQUIREMENTS_MET'||code==='AWAITING_BONUS')return {label:'Record bonus payment',command:'openRcv('+id+')'};
- if(code==='HOLD_OPEN'||code==='BONUS_RECEIVED')return {label:'Review closing',command:'BT360.showHold()'};
- if(code==='READY_TO_CLOSE')return {label:'Mark account closed',command:'startCloseFlow('+id+',\'actual\')'};
- if(code==='COOLDOWN'||code==='ELIGIBLE')return {label:'View eligibility',command:'BT360.showEligibility()'};
- return {label:'Review account',command:'openBankActions('+id+')'};
+ const id=arg(e.id);
+ // The recorded milestone, not a stale task/fee warning, selects the next action.
+ if(e.closed)return {label:'Back to accounts',command:'BT360.back()'};
+ if(e.bonusRecd)return {label:'Record closure',command:'startCloseFlow('+id+',\'actual\')'};
+ if(e.reqMet)return {label:'Record bonus payment',command:'openRcv('+id+')'};
+ const progress=requirementProgress(e);
+ if(progress.remaining>0&&progress.count!==0)return {label:'Review requirements',command:'BT360.openNextTask('+id+')'};
+ if(progress.remaining>0)return {label:'Review requirements',command:'BT360.openNextTask('+id+')'};
+ return {label:'Mark requirements done',command:'openReqMet('+id+')'};
 }
 function openNextTask(id){
  const current=entries.find(e=>e.id===id);
  if(!current)return;
  if(expanded!==id){expanded=id;tab='tracker';R()}
  requestAnimationFrame(()=>{
-  revealAccountSection('requirements');
-  const panel=[...document.querySelectorAll('.bt360-detail-card .bt360-panel')].find(x=>x.querySelector('h3')?.textContent==='Requirements');
-  const next=[...(panel?.querySelectorAll('[role="checkbox"]')||[])].find(x=>x.getAttribute('aria-checked')==='false');
-  (next||panel)?.scrollIntoView({block:'center',behavior:'smooth'});
+  const box=document.querySelector('.bt3810-requirements');
+  const next=box?.querySelector('[role="checkbox"][aria-checked="false"]');
+  (next||box)?.scrollIntoView({block:'center',behavior:'smooth'});
   next?.focus({preventScroll:true});
  });
 }
-function showHold(){revealAccountSection('closing');document.querySelector('[data-bt-hold]')?.scrollIntoView({behavior:'smooth',block:'center'})}
-function showEligibility(){revealAccountSection('eligibility');document.querySelector('[data-bt-eligibility]')?.scrollIntoView({behavior:'smooth',block:'center'})}
+function showHold(){document.querySelector('.bt3810-fees,.bt3810-status')?.scrollIntoView({behavior:'smooth',block:'center'})}
+function showEligibility(){document.querySelector('.bt3810-cycle')?.scrollIntoView({behavior:'smooth',block:'center'})}
 function detailHead(e){
- const s=stage(e),enrolled=e.offerEnrollmentDate||e.couponEnrollmentDate||'';
- return '<div class="bt360-detail-header"><div class="bt360-detail-bar"><button onclick="BT360.back()" aria-label="Back to accounts">‹</button><span>'+safe(accountAudience(e)==='business'?'Business':'Personal')+' · '+safe(s.label)+'</span><button onclick="openBankActions('+arg(e.id)+')" aria-label="More account actions">•••</button></div><div class="bt360-detail-identity">'+bankLogo(e.bank,true)+'<div class="bt360-grow"><h2>'+safe(e.bank)+'</h2><p>'+safe(accountAudience(e)==='business'?'Business account':'Personal account')+'</p>'+monthlyFeeBadge(e)+'</div><strong>'+amount(e.bonus)+'</strong></div></div>';
+ const label=e.closed?'Closed':e.bonusRecd?'Bonus received':e.reqMet?'Waiting for bonus':'In progress';
+ return '<div class="bt360-detail-header"><div class="bt360-detail-bar">'
+  +'<button onclick="BT360.back()" aria-label="Back to accounts">‹</button><span>'+safe(label)+'</span>'
+  +'<button onclick="openBankActions('+arg(e.id)+')" aria-label="More account actions">•••</button></div>'
+  +'<div class="bt360-detail-identity">'+bankLogo(e.bank,true)
+  +'<div class="bt360-grow"><h2>'+safe(e.bank)+'</h2><p>'+safe(accountAudience(e)==='business'?'Business':'Personal')+' account</p></div>'
+  +'<strong>'+amount(e.bonus)+'</strong></div></div>';
 }
 function setAccountSectionOpen(id,key,value){accountSections.set(String(id)+'|'+key,!!value)}
 function revealAccountSection(key){
@@ -1021,44 +1014,83 @@ function nextCyclePanel(e){
   '<div class="bt3613-dates">'+dateActionRow(e,label,info,'eligibility')+'</div>',
   info.value==='Not repeatable'?'One-time offer':info.action?'Rule review needed':info.value,'',complete||closed);
 }
+// Simple, stage-driven presentation. This is read-only: old notes, offer terms,
+// reports, timers, archive history, eligibility evidence and fee rules stay saved.
+function simpleDates(e){
+ const rows=[['opened','Opened'],['reqMet','Requirements met'],['bonusRecd','Bonus paid'],['closed','Closed']];
+ return '<section class="bt3810-card bt3810-dates" aria-label="Recorded account dates"><h3>Key dates</h3><dl>'
+  +rows.map(([key,label])=>'<div><dt>'+label+'</dt><dd class="'+(archiveDateValid(e[key])?'':'is-missing')+'">'
+   +safe(archiveDateValid(e[key])?date(e[key]):e[key]?'Needs review':'—')+'</dd></div>').join('')
+  +'</dl></section>';
+}
+function simpleRequirements(e){
+ if(e.reqMet||e.bonusRecd||e.closed)return '';
+ const list=Array.isArray(e.financialRules?.requirements)?e.financialRules.requirements:[];
+ const checks=Array.isArray(e.checklist)?e.checklist:[];
+ const progress=requirementProgress(e);
+ const linked=new Set(list.map(r=>requirementRecord(e,r)).filter(Boolean));
+ const rows=list.map(r=>{
+  const label=requirementTitle(r,e),checked=!!requirementRecord(e,r)?.done;
+  const due=checked?'':detailRequirementDate(e,r);
+  return '<div class="bt3810-task"><button type="button" role="checkbox" aria-label="'+safe(label)+'" aria-checked="'+checked+'" onclick="BT360.toggleRequirement('+arg(e.id)+','+arg(r.id)+')">'+(checked?'✓':'')+'</button>'
+   +'<span><b>'+safe(label)+'</b>'+(due?'<small>By '+safe(date(due))+'</small>':'')+'</span></div>';
+ }).join('');
+ const extras=checks.map((c,i)=>({c,i})).filter(({c})=>c&&String(c.text||'').trim()&&!linked.has(c))
+  .map(({c,i})=>'<div class="bt3810-task"><button type="button" role="checkbox" aria-label="'+safe(c.text||'Task')+'" aria-checked="'+!!c.done+'" onclick="toggleCk('+arg(e.id)+','+i+')">'+(c.done?'✓':'')+'</button><span><b>'+safe(c.text||'Task')+'</b></span></div>').join('');
+ const fallback=!rows&&!extras?'<p class="bt3810-muted">'+(e.completeBonusText?'Complete the saved bonus requirements.':'Add your bonus requirements to start tracking.')+'</p>':'';
+ return '<section class="bt3810-card bt3810-requirements" aria-label="Requirements"><div class="bt3810-heading"><h3>Requirements</h3>'
+  +(progress.total?'<span>'+progress.done+' of '+progress.total+' done</span>':'')+'</div>'+rows+extras+fallback+'</section>';
+}
+function simpleFees(e){
+ if(e.closed)return '';
+ const x=feeSnapshot(e);
+ const monthly=x.monthlyKnown?x.monthly:'Not confirmed';
+ const early=x.closeKnown?x.closeMain:'Not confirmed';
+ return '<section class="bt3810-card bt3810-fees"><h3>Fees</h3><div class="bt3810-pair"><span>Monthly</span><b>'+safe(monthly)+'</b></div>'
+  +(x.companions.length?'<div class="bt3810-fee-note">Other required accounts may have fees.</div>':'')
+  +'<div class="bt3810-pair"><span>Closing early</span><b class="'+(!x.closeKnown?'bt3810-caution':'')+'">'+safe(early)+'</b></div></section>';
+}
+function simpleNextCycle(e){
+ if(!e.bonusRecd&&!e.closed)return '';
+ const info=eligibleInfo(e);
+ const check=window.BTEligibilityGate?.validate?.(e);
+ const nonrepeatable=check?.ok&&check.decision==='nonrepeatable';
+ const value=nonrepeatable?'One-time bonus':info?.verified&&info.eligible?date(info.eligible):'Not confirmed';
+ return '<section class="bt3810-cycle bt3810-card"><div class="bt3810-pair"><span>Next bonus</span><b>'+safe(value)+'</b></div></section>';
+}
+function simpleState(e){
+ const paid=!!e.bonusRecd,closed=!!e.closed,complete=!!e.reqMet;
+ const name=closed?'Closed':paid?'Bonus received':complete?'Waiting for bonus':'In progress';
+ const next=closed?'Account history is saved.':paid?'Record the closure date after the bank confirms the account is closed.':
+  complete?'Record your bonus when it appears in your account.':'Complete the requirements to earn this bonus.';
+ return '<section class="bt3810-card bt3810-status"><div class="bt3810-heading"><h3>'+safe(name)+'</h3></div><p>'+safe(next)+'</p></section>';
+}
 function detailPanels(e){
- const code=stage(e).code,ready=code==='READY_TO_CLOSE',closed=!!e.closed;
- const at=closed?4:ready?4:code==='HOLD_OPEN'||code==='BONUS_RECEIVED'?3:code==='REQUIREMENTS_MET'||code==='AWAITING_BONUS'?2:1;
- const labels=['Opened','Tasks','Payout','Hold','Close'];
- const due=e.reqMet?'':firstUnmetRequirementDate(e);
- const stageSummary=closed?'Account closed':ready?'Review closing checks before closing':e.reqMet&&!e.bonusRecd?(['ACTION_NEEDED','IN_PROGRESS'].includes(code)?'Completion saved · check remaining tasks':'Requirements done · waiting for bonus'):due?'Requirements due '+date(due):code==='IN_PROGRESS'?'Complete offer requirements':stage(e).label;
- const stageChip=ready?'Ready to close':e.reqMet&&!e.bonusRecd&&!['ACTION_NEEDED','IN_PROGRESS'].includes(code)?'Waiting for payment':due?requirementCountdown(e):stage(e).label;
- let h=payoutReminderRow(e)+'<div class="bt360-steps '+(ready?'bt3611-ready':'')+'" aria-label="Account lifecycle"><div class="bt3611-step-bars">'+labels.map((name,i)=>'<span class="'+(i<at?'done ':'')+(at===i?'current':'')+'"'+(at===i?' aria-current="step"':'')+'>'+name+'</span>').join('')+'</div><div class="bt3611-stage-summary"><b>'+safe(stageSummary)+'</b><em class="bt360-chip '+(ready?'positive':'warning')+'">'+safe(stageChip)+'</em></div></div>';
- const pendingTasks=Array.isArray(e.checklist)&&e.checklist.some(x=>x&&!x.done);
- const req=requirementRows(e);
- const workNote=!closed&&e.reqMet&&!e.bonusRecd?'<p class="bt3686-next-step">'+(pendingTasks?'Keep tracking ongoing requirements. ':'')+'Record the payment once the bonus posts.<br><button type="button" class="bt360-link" onclick="openRcv('+arg(e.id)+')">Record bonus payment</button></p>':'';
- const addTask=!closed&&(!e.reqMet||pendingTasks)?'<div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></div>':'';
- const work=closed?'<p class="bt360-muted">'+(e.reqMet?'Completed '+date(e.reqMet):'Completion date not recorded')+'</p>':(!req.count?'<p class="bt360-muted">No requirements saved.</p>':req.html)+depositLedgerHtml(e)+workNote+addTask;
- h+=accountSection(e,'requirements','Requirements',work,e.reqMet?'Done · '+date(e.reqMet):req.remaining===0&&req.count?'All checked · confirm completion':req.remaining+' to complete',!closed&&e.reqMet?'<button type="button" class="bt360-link bt3621-confirm-all" onclick="openReqMet('+arg(e.id)+')">Edit date</button>':'',!closed);
- h+=accountSection(e,'fees','Fees & waivers',feeDetail(e),closed?'Saved fees':'Monthly & early closing');
- if(!closed)h+=closingPanel(e);
- if(ready){
-  const phoneRow=getPhoneBook().find(row=>{try{return bankIdentity(row.bank).family===bankIdentity(e.bank).family}catch{return row.bank===e.bank}});
-  const phone=phoneRow?.[accountAudience(e)]||'';
-  h+='<section class="bt3611-call"><b>Contact the bank</b><p>Confirm closing details before you close.</p>'+(phone?'<a class="bt360-primary bt360-call" href="tel:'+safe(phone.replace(/[^+\d]/g,''))+'">☎ '+safe(phone)+'</a>':'<button type="button" class="bt360-primary" onclick="BT360.openPhoneForClose('+arg(e.bank)+','+arg(accountAudience(e))+')">Add bank phone number</button>')+'</section>';
+ // No expandable saved terms, history, redundant reminders or technical rule
+ // panels on the everyday screen; the complete data remains in storage/Archive.
+ let html='<div class="bt3810-detail">'+simpleState(e);
+ if(!e.reqMet&&!e.bonusRecd&&!e.closed)html+=simpleRequirements(e);
+ if(!e.closed&&e.reqMet&&!e.bonusRecd){
+  const arrival=window.BTFinancialRules?.arrivalLabel?.(window.BTFinancialRules?.estimatedArrival?.(e));
+  if(arrival)html+='<section class="bt3810-card"><div class="bt3810-pair"><span>Bonus payment</span><b>'+safe(arrival)+'</b></div></section>';
  }
- const reminders=timerRows(e);
- h+=accountSection(e,'timers','Reminders',reminders||'<p class="bt360-muted">'+(e.reqMet||e.bonusRecd||e.closed?'No active reminders for this bonus cycle.':'No reminders saved.')+'</p>','',!closed?'<button type="button" class="bt360-link bt3613-add-timer" onclick="runBankAction('+arg(e.id)+',\'timer\')">+ Add</button>':'');
- h+='<div data-bt-eligibility>'+nextCyclePanel(e)+'</div>';
- let extra=accountDates(e)+pastCycleReminderHistory(e);
- if(closed){const history=depositLedgerHtml(e,true);if(history)extra+=accountSection(e,'deposits','Deposit activity',history,'Saved evidence');}
- if(e.dataPoint||e.completeBonusText||e.notes)extra+='<details class="bt366-offer-notes"><summary>Offer notes</summary><p>'+safe([e.dataPoint,e.completeBonusText,e.notes].filter(Boolean).join('\n\n'))+'</p></details>';
- extra+=sourceEvidencePanel(e);
- const issues=archiveHistoryIssues(e);
- extra+=accountSection(e,'history','Activity',(issues.length?'<ul class="bt3640-gaps">'+issues.map(text=>'<li>'+safe(text)+'</li>').join('')+'</ul><div class="bt360-panel-actions"><button type="button" class="bt360-link" onclick="openEdit('+arg(e.id)+')">Update account</button><button type="button" class="bt360-link" onclick="BTHistoryRepair.open()">Find saved evidence</button></div>':'')+'<button type="button" class="bt360-link" onclick="BT360.openActivity('+arg(e.id)+')">View activity</button>','Saved records');
- return h+'<details class="bt3686-account-extras"'+(accountSections.get(String(e.id)+'|extras')?' open':'')+' ontoggle="BT360.setAccountSectionOpen('+arg(e.id)+',\'extras\',this.open)"><summary>Documents &amp; activity</summary><div>'+extra+'</div></details>';
+ html+=simpleDates(e);
+ html+=simpleFees(e);
+ if(!e.closed&&e.bonusRecd){
+  const calendar=window.BTFinancialRules?.closeHoldInfo?.(e);
+  const hold=calendar?.reviewOn||(typeof safeCloseDate==='function'?safeCloseDate(e):'');
+  const future=archiveDateValid(hold)&&hold>td();
+  html+='<p class="bt3810-closing-note">'+(future?'Review closing restrictions through '+safe(date(hold))+'. ':'')
+   +'Check closing fees and pending transfers before contacting the bank. Recording closure does not close the bank account.</p>';
+ }
+ html+=simpleNextCycle(e);
+ return html+'</div>';
 }
 function detailFooter(e){
- const primary=primaryAction(e);
- const paymentAlternative=!e.closed&&e.reqMet&&!e.bonusRecd&&primary.label!=='Record bonus payment';
- const secondaryCommand=paymentAlternative?'openRcv('+arg(e.id)+')':stage(e).code==='READY_TO_CLOSE'?'BT360.back()':'btOpenBonusAI('+arg(e.id)+')';
- const secondaryLabel=paymentAlternative?'Record bonus payment':stage(e).code==='READY_TO_CLOSE'?'Keep open':'Ask AI';
- return '<div class="bt360-detail-footer'+(stage(e).code==='READY_TO_CLOSE'?' bt3611-ready-footer':'')+'" role="group" aria-label="Account actions"><button type="button" onclick="'+secondaryCommand+'">'+secondaryLabel+'</button><button type="button" class="bt360-primary" aria-label="'+safe(primary.label+' for '+e.bank)+'" onclick="'+primary.command+'">'+safe(primary.label)+'</button></div>';
+ const primary=primaryAction(e),secondary='openEdit('+arg(e.id)+')';
+ return '<div class="bt360-detail-footer bt3810-footer" role="group" aria-label="Account actions">'
+  +'<button type="button" onclick="'+secondary+'">Edit</button>'
+  +'<button type="button" class="bt360-primary" aria-label="'+safe(primary.label+' for '+e.bank)+'" onclick="'+primary.command+'">'+safe(primary.label)+'</button></div>';
 }
 function showTerms(bank){archivePane='waiting';storageSearch=String(bank||'');expanded=null;tab='archive';R()}
 function back(){expanded=null;window.bt360ArchiveDetailId=null;R();const el=document.querySelector('.scroll');if(el)el.scrollTop=0}
