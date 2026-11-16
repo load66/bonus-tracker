@@ -132,14 +132,14 @@ assert.doesNotMatch(sandbox.BT360.timerRows(paidRequirement),/data-source="saved
  const timers=sandbox.BT360.timerRows(paid);
  assert.doesNotMatch(timers,/Nov 8, 2026|Overdue|Nov 18, 2026|Requirement due|Bonus pending/,
    'Paid cycle must not show old qualification or payout reminders');
- assert.match(timers,/Monthly fee/,'Recurring fee review survives cycle completion');
+ assert.match(timers,/Monthly service fee review/,'Recurring fee review survives cycle completion');
  const detail=sandbox.BT360.detailPanels(paid);
  assert.match(detail,/Next bonus cycle/,'Next bonus cycle is visible after payout');
  assert.match(detail,/Bonus received Oct 28, 2026/,'Recorded payment is the cycle milestone');
  assert.match(detail,/Next date not confirmed/,'Unknown eligibility never becomes a fabricated date');
  assert.match(detail,/Rule review needed/,'Unverified next-cycle rule can be reviewed');
  assert.match(detail,/Previous cycle reminders \(2\)/,'Old due reminders remain editable in collapsed history');
- assert.match(detail,/Review closing/,'Closing review remains available without falsely authorizing closure');
+ assert.match(detail,/Closing the account/,'Closing review remains available without falsely authorizing closure');
  assert.doesNotMatch(detail,/Overdue|Eligibility rule missing/,'Completed cycle has no stale overdue banner or harsh missing-rule message');
  assert.equal(sandbox.BT360.primaryAction(paid).label,'Review closing','Paid account action prioritizes closing review');
  const closed={...paid,closed:'2026-11-10'};
