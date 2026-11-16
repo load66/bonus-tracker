@@ -268,7 +268,7 @@
     if(!today||today===renderedDay||typeof R!=='function')return false;
     const editing=typeof document!=='undefined'&&(/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName||'')||document.activeElement?.isContentEditable);
     let busy=false;
-    try{busy=!!(modal||cfm||reqPrompt||rcvPrompt||closePrompt||timerEditModal||ddPrompt||overwritePrompt||matchPickerPrompt||replacementPickerPrompt||feeCheckPrompt||dpEditor||timerChoicePrompt||window.__btBankActionPrompt)}catch{}
+    try{busy=!!(modal||cfm||reqPrompt||rcvPrompt||closePrompt||timerEditModal||ddPrompt||overwritePrompt||matchPickerPrompt||replacementPickerPrompt||dpEditor||timerChoicePrompt||window.__btBankActionPrompt)}catch{}
     const openEditor=typeof document!=='undefined'&&document.querySelector('.inline-form');
     if(editing||busy||openEditor||(typeof document!=='undefined'&&document.getElementById('bt_confirm_overlay')))return false;
     R();renderedDay=today;return true;

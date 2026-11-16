@@ -101,7 +101,6 @@
     if(key==='fundingAmountText')modal.fundingAmount=typeof parseCloseFeeAmount==='function'?parseCloseFeeAmount(v):(parseInt(String(v).replace(/[$,]/g,''),10)||0);
     if(key==='requiredDaysText')modal.reqDays=typeof parseRequirementDaysText==='function'?parseRequirementDaysText(v):(parseInt(v,10)||0);
     if(key==='closeFeeCountdownDays')modal.minHoldDays=parseInt(v,10)||0;
-    if(key==='earlyTerminationFeeText')modal.earlyCloseFee=typeof parseCloseFeeAmount==='function'?parseCloseFeeAmount(v):(parseInt(String(v).replace(/[$,]/g,''),10)||0);
   };
   const EDITOR_DRAFT_FIELDS=[
     'bank','accountType','bonus','churn','churnable','churnability','churnReason','churnBasis','churnDecisionSource',
@@ -226,7 +225,6 @@
     h+=input('Days to keep the account open','closeFeeCountdownDays',e.closeFeeCountdownDays||e.minHoldDays||'',{type:'number',placeholder:'Only when terms say a fixed hold'});
     h+=select('When the waiting period starts','closeRuleBasis',e.closeRuleBasis||'opened',[['opened','Opened date'],['bonus','Bonus received date'],['reqmet','Requirement met date'],['manual','Manual review']]);
     h+=input('Extra days before closing','closeBufferDays',e.closeBufferDays??5,{type:'number',placeholder:'5'});
-    h+=input('Early closing fee','earlyTerminationFeeText',e.earlyTerminationFeeText,{placeholder:'None or $25'});
     h+=input('Close rule wording','closeRuleText',e.closeRuleText,{full:true,placeholder:'Exact close/keep-open wording'});
     h+=textarea('Rules for earning another bonus','eligibilityText',e.eligibilityText,'Who qualifies again and when',2);
     h+=textarea('Your notes','notes',e.notes,'Personal notes; terms review does not overwrite them',3);
@@ -415,7 +413,7 @@
   }
   const oldR=typeof R==='function'?R:null;
   if(oldR){
-    R=function(){oldR();document.body.classList.toggle('bt-entry-expanded',!!expanded);document.body.classList.toggle('bt-modal-open',!!modal||!!closePrompt||!!overwritePrompt||!!matchPickerPrompt||!!replacementPickerPrompt||!!feeCheckPrompt||!!timerEditModal||!!dpEditor);renderUpdateBanner();injectStartCycleAction();};window.R=R;
+    R=function(){oldR();document.body.classList.toggle('bt-entry-expanded',!!expanded);document.body.classList.toggle('bt-modal-open',!!modal||!!closePrompt||!!overwritePrompt||!!matchPickerPrompt||!!replacementPickerPrompt||!!timerEditModal||!!dpEditor);renderUpdateBanner();injectStartCycleAction();};window.R=R;
   }
 
   window.btRunFullRegressionTests=function(){

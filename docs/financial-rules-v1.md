@@ -51,19 +51,19 @@ Use complete `text` for conditional branches, tier-specific definitions and bank
 
 `payout`: `{text, evidence, timing?}`. Text must agree with `payoutTimingText`. Timing uses the same value/units, with basis `opened`, `reqmet`, `bonus`, or `qualifying-period-end`. Preserve keep-open/good-standing conditions and exact trigger. A timing window is not a guaranteed payment date.
 
-`closure`: `{restrictionType, basis, minHoldDays, earlyCloseFee, text, evidence, feeEvidence}`.
+`closure`: `{restrictionType, basis, minHoldDays, text, evidence, hold?}`. Historical imports may contain `earlyCloseFee` and `feeEvidence`; these are accepted but not interpreted for eligibility, retention or closing review.
 
 - Restriction types: `payout-only`, `minimum-open`, `explicit-clawback`, `manual-review`, `none`.
 - Basis: `opened`, `reqmet`, `bonus`, `manual`. Manual-review requires manual basis and blocks a ready-to-close verdict.
-- minHoldDays: non-negative integer calendar days; earlyCloseFee: non-negative number. Match the existing `minHoldDays`, `earlyCloseFee`, `closeRuleBasis` and `closeRestrictionType` fields exactly. Positive holds must be supported by calendar-day source wording; business/statement/month-based holds require manual review or implemented exact-date support. Never silently convert them.
-- `evidence` comes from the promotion and establishes the closure/forfeiture condition. `feeEvidence` uses the applicable promotion or fee schedule and proves the charge. Zero early-close fees require explicit no-fee/zero-fee evidence.
+- `minHoldDays`: non-negative integer calendar days. Match `minHoldDays`, `closeRuleBasis` and `closeRestrictionType`. Positive holds must be supported by calendar-day source wording; business/statement/month-based holds require manual review or implemented exact-date support. Never silently convert them.
+- `evidence` comes from the promotion and establishes bonus-forfeiture and keep-open conditions. No early-termination fee fields are generated.
 - Keep the app safety buffer separate from the contractual hold; do not introduce a second buffer in this object.
 
 Repeat eligibility remains in the existing `eligibilityRules` contract and evidence gate. Do not duplicate or recalculate its clock here. Multiple applicable restrictions and closure prerequisites remain authoritative in the existing engine.
 
-## Fee-free closure presentation and source completeness
+## Early-closing service fee retirement (runtime v3.8.15)
 
-A verified unconditional early-closing fee of $0 is stored as `closure.earlyCloseFee: 0` only when the applicable official fee-schedule excerpt explicitly supports no fee. The user-facing display is **No early-closing fee**, not a generic fee-review warning. Positive or conditional fees keep their source-backed window. A schedule's silence does not prove zero and must follow the supported financialRules v2 manual-review/unknown pathway; use **No early-closing fee listed in verified terms** rather than presenting a source omission as a bank promise. A no-fee finding does not clear bonus forfeiture, keep-open requirements or other closure checks. See [NEW_BANK_IMPORT_PLAYBOOK.md](NEW_BANK_IMPORT_PLAYBOOK.md) for the required bank-specific research and JSON field coverage workflow.
+The tracker no longer parses, displays, checks, or infers early account-termination service fees. New generated offers must omit `closure.earlyCloseFee`, `closure.feeEvidence`, entry `earlyCloseFee` and `earlyTerminationFeeText`. Historical values remain intact for portability and audit but have no effect on runtime qualification, retention dates, status, closing review, or Ask AI. Do not silently turn an unknown fee into $0. Keep actual monthly/companion account fees and waiver evidence, minimum holding periods, and source-backed bonus forfeiture/clawback rules fully enforced.
 
 ## Validation and maintenance
 
@@ -75,13 +75,13 @@ Changing financial meaning requires a versioned contract change, fixtures and an
 
 ## Optional date cushion
 
-From runtime v3.4.64, the app adds a two-calendar-day optional cushion after the latest supported repeat-eligibility restriction. Keep the bank restriction and its exact anchor unchanged. This does not extend qualification or payout deadlines, verify an unresolved legacy rule, or replace a separately saved account-closure buffer. Legacy Lafayette Boost300 closure uses six calendar months plus two days; structured closure terms continue to control their own saved buffer.
+From runtime v3.4.64, the app adds a two-calendar-day optional cushion after the latest supported repeat-eligibility restriction. Keep the bank restriction and its exact anchor unchanged. This does not extend qualification or payout deadlines, verify an unresolved legacy rule, or replace a separately saved account-closure buffer. Fee-only legacy Lafayette Boost300 holds are no longer generated; source-backed bonus-retention terms continue to control their own saved buffer.
 
 ## Per-offer eligibility editor
 
 From v3.4.65, the account editor exposes all six existing eligibility anchors, exact calendar days/months/years, multiple saved restrictions, source wording, product/customer scope and negative-balance closure conditions. It uses the same eligibility engine as imports. A user can explicitly copy a known opening date into enrollment; missing dates remain unresolved. Changing a rule's anchor clears its old explicit anchor date. Preserve every applicable restriction and select the latest clearing date; a bank name alone never establishes the applicable rule. These controls do not create new schema fields or make unverified legacy terms verified.
 
-## Financial rule version 2 (runtime v3.4.67)
+## Financial rule version 2 — historical semantics before v3.8.15
 
 SchemaVersion remains 3. financialRules version 1 remains supported unchanged; use version 2 for the following additions.
 

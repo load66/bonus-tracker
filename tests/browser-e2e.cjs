@@ -772,19 +772,13 @@ async function exercise(name,engine,url){
 
     check('unknown closing fees are hidden without changing the monthly fee',
       await page.locator('.bt3810-fees').innerText().then(t=>t.includes('$15')&&!t.includes('Closing early')&&!t.includes('Not confirmed')));
-    check('supported early-close fee and explicit no-fee still render in shared bank details',
+    check('early-termination service fee values never reappear in bank details',
       await page.evaluate(()=>{
-        const before=JSON.stringify(entries[0]),stored=localStorage.getItem(SK),original=entries[0];
-        const paid={...original,financialRules:{...original.financialRules,
-          closure:{earlyCloseFee:25,feeEvidence:{quote:'$25 early closing fee within 180 days.'}}}};
-        const exempt={...original,financialRules:{...original.financialRules,
-          closure:{earlyCloseFee:0,feeEvidence:{quote:'No early closing fee.'}}}};
-        const conditional={...original,financialRules:{...original.financialRules,
-          closure:{earlyCloseFee:0,feeEvidence:{quote:'No early closing fee after 180 days.'}}}};
-        return BT360.detailPanels(paid).includes('$25 early-close fee')&&
-          BT360.detailPanels(exempt).includes('No early-closing fee')&&
-          !BT360.detailPanels(conditional).includes('Closing early')&&
-          JSON.stringify(entries[0])===before&&localStorage.getItem(SK)===stored;
+        const original=entries[0],before=JSON.stringify(original),stored=localStorage.getItem(SK);
+        const variants=[{earlyCloseFee:25,earlyTerminationFeeText:'$25 early closing fee.'},{earlyCloseFee:0,earlyTerminationFeeText:'No early closing fee.'},{earlyCloseFee:null,earlyTerminationFeeText:''}];
+        const html=variants.map(v=>BT360.detailPanels({...original,...v}));
+        return html.every(v=>!v.includes('Closing early')&&!v.includes('early-close fee'))&&
+          html.every(v=>v===html[0])&&JSON.stringify(original)===before&&localStorage.getItem(SK)===stored;
       }));
     check('no advanced, notes, previous reminders or source disclosures on the main screen',
       await page.locator('.bt360-detail-card details').count()===0&&
@@ -949,13 +943,18 @@ async function exercise(name,engine,url){
     await button('Review experience').click();
     await button('Not now').click();
     check('bonus receipt updates close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
-    await page.evaluate(()=>{entries[0].earlyCloseFee=null;R();});
-    check('unverified fee blocks close readiness even after payout',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='BONUS_RECEIVED');
-    check('summary does not promise closure from payout alone',await page.evaluate(()=>!renderBankProfileSummary(entries[0]).includes('close when ready')&&!lifecycleSteps(entries[0]).find(s=>s.key==='safe').done));
-    await page.evaluate(()=>{entries[0].earlyCloseFee=0;entries[0].earlyTerminationFeeText='No early closing fee unless the account is restricted.';entries[0].feeScheduleRaw=entries[0].earlyTerminationFeeText;R();});
-    check('conditional no-fee wording blocks readiness',await page.evaluate(()=>btEvaluateAccount(entries[0]).close.status!=='ready'));
-    await page.evaluate(()=>{entries[0].earlyTerminationFeeText='No early closing fee.';entries[0].feeScheduleRaw='No early closing fee.';R();});
-    check('restoring proven zero-fee evidence restores close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
+    check('historical fee values cannot change closure readiness',
+      await page.evaluate(()=>{
+        const e=entries[0],old=JSON.stringify(e),baseline=btLifecycleStageForEntry(e).code;
+        const variants=[null,0,25];
+        const unchanged=variants.every(v=>{
+          e.earlyCloseFee=v;
+          e.earlyTerminationFeeText=v===null?'':'$25 early closing fee.';
+          return btLifecycleStageForEntry(e).code===baseline;
+        });
+        Object.assign(e,JSON.parse(old));R();
+        return unchanged&&btLifecycleStageForEntry(e).code===baseline;
+      }));
     check('received bonus offers recording a real closure',await page.locator('.bt3810-status h3').innerText()==='Bonus received'&&await page.locator('.bt360-detail-footer .bt360-primary').innerText()==='Record closure');
     check('closed account retains its actual date without writing to storage',
       await page.evaluate(()=>{
@@ -969,8 +968,8 @@ async function exercise(name,engine,url){
       await page.locator('.bt3810-dates').count()===1
       &&await page.locator('.bt3810-fees').count()===1
       &&await page.locator('.bt3611-ready-extras,.bt3686-account-extras').count()===0);
-    check('earned bonus remains simple, while warning about fee risk',
-      await page.locator('.bt3810-fees').innerText().then(t=>t.includes('Monthly')&&t.includes('Closing early')));
+    check('earned bonus retains monthly fees without a retired closing-fee row',
+      await page.locator('.bt3810-fees').innerText().then(t=>t.includes('Monthly')&&!t.includes('Closing early')));
     const sticky=await page.evaluate(()=>{
       const bar=document.querySelector('.bt360-detail-footer').getBoundingClientRect();
       const nav=document.querySelector('.tabs').getBoundingClientRect();
@@ -1562,7 +1561,7 @@ async function exercise(name,engine,url){
     await page.locator('.bonus-ai-heading').waitFor({state:'visible'});
     check('Tracker AI opens for one selected bank',(await page.locator('.bonus-ai-heading').innerText()).includes('E2E Verification Bank')&&await page.evaluate(()=>window.__bonusAITest.calls.length===0));
     check('local answers need no login',await page.locator('#bonus-ai-login').isHidden());
-    for(const label of ['Monthly fee','Fee waivers','Direct deposit','Early-close fee','Companion account','Repeat eligibility']){await button(label).click();check('prefill: '+label,(await page.locator('#bonus-ai-question').inputValue()).length>20);}
+    for(const label of ['Monthly fee','Fee waivers','Direct deposit','Closing rules','Companion account','Repeat eligibility']){await button(label).click();check('prefill: '+label,(await page.locator('#bonus-ai-question').inputValue()).length>20);}
     await button('Closure rules').click();await page.locator('#bonus-ai-send').click();
     await page.locator('#bonus-ai-answer p').first().waitFor();
     const aiCloseState=await page.evaluate(()=>{

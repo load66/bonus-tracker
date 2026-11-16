@@ -13,7 +13,7 @@ const clone=()=>JSON.parse(snapshot),reject=(change,path)=>{const e=clone();chan
 const looseZero=clone();
 looseZero.feeScheduleRaw+=' Monthly fee $0 for the first cycle.';
 looseZero.financialRules.closure.feeEvidence.quote='Monthly fee $0 for the first cycle.';
-assert.equal(engine.validate(looseZero).ok,false,'A monthly $0 is not an early-close fee of zero');
+assert.equal(engine.validate(looseZero).ok,true,'Legacy termination-fee evidence does not alter valid monthly rules');
 reject(e=>e.financialRules.version=99,'version');
 reject(e=>e.financialRules.accounts[1].fee.amount=null,'fee.amount');
 reject(e=>e.financialRules.accounts[1].fee.amount=0,'fee.amount');
@@ -24,7 +24,7 @@ reject(e=>e.financialRules.accounts[0].fee.evidence.quote='An invented fee waive
 reject(e=>e.financialRules.accounts[1].fee.evidence.source='promotion','source');
 reject(e=>e.financialRules.closure.minHoldDays=60,'closure');
 reject(e=>e.financialRules.bonus.amount=500,'bonus');
-reject(e=>e.financialRules.closure.feeEvidence.quote='No closing fees invented here.','quote');
+const legacyFeeConflict=clone();legacyFeeConflict.financialRules.closure.feeEvidence.quote='Unmatched historical fee wording';assert.equal(engine.validate(legacyFeeConflict).ok,true,'Retired fee evidence is not a validation gate');
 reject(e=>e.termsVerifiedAt='2026-02-30','source');
 reject(e=>e.financialRules.accounts[1].fee.frequency='none','frequency');
 reject(e=>e.financialRules.payout.text='Paid immediately.','payout.text');
@@ -48,9 +48,9 @@ assert.ok(engine.answer(broken,'Monthly fee').answer.includes('conflicting'));as
 assert.ok(engine.answer(broken,'Tell me about this offer').answer.includes('conflicting'),'An unfamiliar question cannot bypass invalid rule protection');
 console.log('Financial rule contract passed: product scope, companion fees, ALL/ANY waivers, recurring periods, source evidence, conflicting numbers, unknowns, unsupported versions, calendar boundaries and legacy preservation');
 const review=require('./fixtures/financial-rules.cjs').reviewFixture();
-assert.equal(engine.validate(review).ok,true);assert(engine.validate(review).warnings.some(w=>/unconfirmed/.test(w.message)));
-assert(engine.summarize(review).closure.includes('fee unconfirmed'));
-const invalidReview=JSON.parse(JSON.stringify(review));invalidReview.financialRules.closure.restrictionType='payout-only';assert(!engine.validate(invalidReview).ok,'Unknown charge must not become automatic closure readiness');
+assert.equal(engine.validate(review).ok,true);assert(!engine.validate(review).warnings.some(w=>/early.close|closing fee/i.test(w.message)),'Retired fee warnings are suppressed');
+assert.equal(engine.summarize(review).mode,'structured','Historical closure wording remains readable without a termination-fee gate');
+const invalidReview=JSON.parse(JSON.stringify(review));invalidReview.financialRules.closure.restrictionType='payout-only';assert(!engine.validate(invalidReview).ok,'Mismatched retention type must not silently override saved legacy fields');
 const v1=JSON.parse(JSON.stringify(review));v1.financialRules.version=1;assert(!engine.validate(v1).ok,'v1 cannot silently acquire new metric or unknown-fee semantics');
 const wrongMetric=JSON.parse(JSON.stringify(review));wrongMetric.financialRules.accounts[1].fee.waiver.conditions[0].metric='average-beginning-day-balance';wrongMetric.financialRules.accounts[1].fee.waiver.conditions[0].evidence.quote='The Share Savings fee is waived by maintaining a $50 minimum daily balance.';assert(!engine.validate(wrongMetric).ok,'A daily balance cannot stand in for a beginning-day average');
 
@@ -72,17 +72,17 @@ calendarHold.financialRules.closure={
 calendarHold.closeRuleBasis='manual';calendarHold.closeRestrictionType='manual-review';
 calendarHold.minHoldDays=0;calendarHold.earlyCloseFee=null;calendarHold.closeBufferDays=3;
 assert.equal(engine.validate(calendarHold).ok,true);
-assert.ok(engine.validate(calendarHold).warnings.some(w=>/unconfirmed/i.test(w.message)));
+assert(!engine.validate(calendarHold).warnings.some(w=>/closing fee|early.close/i.test(w.message)),'Calendar hold has no termination-fee warning');
 assert.deepEqual(engine.closeHoldInfo(calendarHold),{
  holdUntil:'2027-10-29',reviewOn:'2027-11-01',
- basis:'opened',months:12,bufferDays:3,feeUnconfirmed:true,bonusReceived:false
+ basis:'opened',months:12,bufferDays:3,bonusReceived:false
 });
 const endFeb=JSON.parse(JSON.stringify(calendarHold));endFeb.opened='2024-02-29';
 assert.equal(engine.closeHoldInfo(endFeb).holdUntil,'2025-02-28','Leap-year anniversary must clamp correctly');
 const absent=JSON.parse(JSON.stringify(calendarHold));absent.opened='';
 assert.equal(engine.closeHoldInfo(absent),null,'Unconfirmed opening date cannot generate hold date');
 const noFeeProof=JSON.parse(JSON.stringify(calendarHold));noFeeProof.financialRules.closure.earlyCloseFee=0;
-assert.equal(engine.validate(noFeeProof).ok,false,'Unknown closing charge cannot become $0');
+assert.equal(engine.validate(noFeeProof).ok,true,'Historical termination-fee fields no longer affect hold validation');
 const falseDays=JSON.parse(JSON.stringify(calendarHold));
 falseDays.minHoldDays=365;falseDays.financialRules.closure.minHoldDays=365;
 assert.equal(engine.validate(falseDays).ok,false,'Month-based hold cannot be approximated by days');

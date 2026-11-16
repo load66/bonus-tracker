@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: codex — v3.8.15 retire termination fees — codex/v3.8.15-retire-fees-clean
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 

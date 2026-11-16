@@ -13,8 +13,8 @@
   const baseDate=e=>core.baseDate(e);
   const calendarHold=e=>window.BTFinancialRules?.closeHoldInfo(e)||null;
   const rawDate=e=>calendarHold(e)?.holdUntil||core.rawSafeDate(e);
-  // A date does not clear a fee-review requirement. Remain fail-closed.
-  const safeDate=e=>{const h=calendarHold(e);return h?(h.feeUnconfirmed?null:h.reviewOn):core.safeCloseDate(e)};
+  // Source-backed retention periods determine the review date independently of legacy closing-fee fields.
+  const safeDate=e=>calendarHold(e)?.reviewOn||core.safeCloseDate(e);
   const daysSafe=e=>{const h=calendarHold(e);return h&&typeof dB==='function'&&typeof td==='function'?Math.max(0,dB(td(),h.reviewOn)):core.daysUntilSafe(e,typeof td==='function'?td():new Date().toISOString().slice(0,10))};
   const inBuffer=e=>core.isInBuffer(e,typeof td==='function'?td():new Date().toISOString().slice(0,10));
   const nonRepeatable=e=>{try{return typeof isNonRepeatableEntry==='function'&&isNonRepeatableEntry(e)}catch{return false}};
@@ -58,26 +58,7 @@
     const looksLikeBoost300=/boost300|one[- ]time use per membership|qualified direct deposit|preferred or premier savings/i.test(detail)||Number(x.bonus||0)===250;
     if(!looksLikeBoost300)return x;
 
-    // Official Personal Fee Schedule: $25 if the account is closed within 6 months.
-    // Use two calendar days after the six-month anniversary as the conservative no-fee date.
-    if(x.opened&&typeof addM==='function'&&typeof addD==='function'&&typeof dB==='function'){
-      const sixMonthAnniversary=addM(x.opened,6);
-      const conservativeDate=addD(sixMonthAnniversary,2);
-      const holdDays=dB(x.opened,conservativeDate);
-      if(Number.isFinite(holdDays)&&holdDays>0){
-        x.minHoldDays=holdDays;
-        x.closeFeeCountdownDays=String(holdDays);
-        x.closeRuleBasis='opened';
-        x.closeBufferDays=0;
-        x.closeRestrictionType='explicit-clawback';
-        x.closeRuleSource='verified-bank-rule';
-        x.earlyCloseFee=25;
-        x.earlyTerminationFeeText='$25 account-closure fee if closed within 6 months of account opening.';
-        x.closeRuleText='A $25 account-closure fee applies if the account is closed within 6 months of account opening. Conservative safe-close date is two calendar days after the 6-month anniversary.';
-        x.closeRuleSourceSentence='$25 if closed within 6 months of account opening';
-        x.closeRuleDisplayText='6 months + 2 days from opened date';
-      }
-    }
+    // The former fee-only six-month timer is retired; bonus/retention rules remain separate.
 
     // Personal checking is fee-free, but the required membership Share Savings has a recurring fee risk
     // if its $50 minimum is not maintained. Track the relationship-level risk so Fee Check is not "No Fee".
@@ -103,7 +84,7 @@
       if(financial&&financial.mode!=='legacy'){
         if(!financial.ok)return true;
         const c=financial.rules?.closure;
-        if(c&&(c.restrictionType==='manual-review'||c.earlyCloseFee===null))return true;
+        if(c&&c.restrictionType==='manual-review'&&!c.hold)return true;
       }
     }catch{}
     try{if(core.typeForEntry(e)==='review')return true}catch{}
@@ -139,13 +120,12 @@
     const safe=safeDate(e),target=closeDate||(typeof td==='function'?td():new Date().toISOString().slice(0,10)),days=ruleDays(e),start=baseDate(e);
     const financial=window.BTFinancialRules?.validate(e);
     if(financial&&financial.mode!=='legacy')add(financial.ok,'Financial rules consistent',financial.ok?'Evidence and calculation fields agree':financial.issues.map(x=>x.message).join('; '),'danger');
-    if(financial?.rules)add(!!hold||financial.rules.closure.restrictionType!=='manual-review','Closure retention terms recorded',hold?'Exact calendar-month retention is documented; the separate fee remains under review':financial.rules.closure.restrictionType==='manual-review'?'The closure restriction requires manual review':'The closure restriction is explicit','danger');
+    if(financial?.rules)add(!!hold||financial.rules.closure.restrictionType!=='manual-review','Closure retention terms recorded',hold?'Exact calendar-month retention is documented':financial.rules.closure.restrictionType==='manual-review'?'The retention or bonus-forfeiture restriction requires review':'The closure restriction is explicit','danger');
     const needsRequirementDate=String(financial?.rules?.closure?.basis||basis(e)||'')==='reqmet';
     if(needsRequirementDate||e.reqMet)add(!!e.reqMet,'Requirement met date saved',e.reqMet?fD(e.reqMet):'Save the actual requirements-completion date before closing','danger');
     add(!!e.bonusRecd,'Bonus received',e.bonusRecd?fD(e.bonusRecd):'Do not close before the bonus posts','danger');
     if(hold){
       add(dB(target,hold.reviewOn)<=0,'Calendar-month hold + planning buffer complete','12-month anniversary '+fD(hold.holdUntil)+' · closure review '+fD(hold.reviewOn),'danger');
-      add(!hold.feeUnconfirmed,'Early-close service fee verified',hold.feeUnconfirmed?'Unlisted closing fee remains unconfirmed · contact bank before closure':'Fee supported by saved terms','warn');
     }else if(days){add(!!start,'Close-rule start date available',start?fD(start):'Missing','danger');add(!!safe&&dB(target,safe)<=0,'Hold period + buffer complete',safe?'Safe close: '+fD(safe):'Cannot calculate','danger')}
     else add(true,'No fixed post-bonus hold',core.typeForEntry(e)==='payout-only'?'Close after bonus posts':'No countdown found');
     if(nonRepeatable(e))add(true,'Future eligibility','Non-repeatable offer — archives after closing');
@@ -158,10 +138,10 @@
     add(!hasFee||!!e.monthlyFeeChecked,'Monthly fee checked',hasFee?(e.monthlyFeeChecked?'Confirmed':'Check next statement before close'):'No monthly fee risk','warn');
     // The canonical financial decision is the final safety gate. Legacy
     // label calculations must not contradict it or demand a fabricated date.
-    try{const decision=window.btEvaluateAccount?.(e);if(decision&&decision.close.status!=='ready')add(false,'Closure evidence verified','One or more close restrictions or fee conditions remain unresolved','danger')}catch{add(false,'Closure evidence verified','Close decision could not be verified','danger')}
+    try{const decision=window.btEvaluateAccount?.(e);if(decision&&decision.close.status!=='ready')add(false,'Closure evidence verified','One or more retention or bonus-forfeiture restrictions remain unresolved','danger')}catch{add(false,'Closure evidence verified','Close decision could not be verified','danger')}
     const warnings=items.filter(x=>!x.ok).map(x=>x.label+(x.detail?': '+x.detail:''));
     const blockers=items.filter(x=>!x.ok&&x.level==='danger'),cautions=items.filter(x=>!x.ok&&x.level!=='danger');
-    return{label:blockers.length?'Do Not Close Yet':cautions.length?'Ready — Review Fee':'Safe to Close',cls:blockers.length?'danger':cautions.length?'warn':'safe',items,warnings,safeDate:safe,rawDate:rawDate(e),basis:basis(e)}
+    return{label:blockers.length?'Do Not Close Yet':cautions.length?'Review Before Closing':'Safe to Close',cls:blockers.length?'danger':cautions.length?'warn':'safe',items,warnings,safeDate:safe,rawDate:rawDate(e),basis:basis(e)}
   }
   bind('closeReadiness',readiness);
 
@@ -178,7 +158,6 @@
     if(hold){
       rows.push({label:'12-month hold until',value:fD(hold.holdUntil),cls:'warn'});
       rows.push({label:'Closure review',value:fD(hold.reviewOn),cls:'warn'});
-      rows.push({label:'Closing fee',value:hold.feeUnconfirmed?'Confirmation required':'Verified in saved terms',cls:hold.feeUnconfirmed?'bad':'ok'});
       rows.push({label:'Final check',value:e.bonusRecd?'Bonus posted · confirm pending activity':'Wait for bonus to post',cls:e.bonusRecd?'':'bad'});
       return{title:'Close Check',sub:'Calendar-month retention',chip:ready.label,cls:ready.cls,rows,notes:[],proof:core.sourceSentence(e),compact:true};
     }
@@ -239,10 +218,6 @@
       localStorage.setItem(SCHEMA_KEY,String(SCHEMA));localStorage.setItem('bt_last_migration_report',JSON.stringify({from:current,to:SCHEMA,changedAt:new Date().toISOString(),entries:entries.length,rewroteFinancialFacts:false}));return true
     }catch(err){console.error('Close-rule migration failed',err);return false}
   }
-
-  function clearTimer(e){if(!e)return e;e.minHoldDays=0;e.closeFeeCountdownDays='';e.feeChecked=false;e.closeTimerClearedWithoutFeeVerification=true;return e}
-  window.feeCheckRemoveTimer=function(){const p=typeof feeCheckPrompt!=='undefined'?feeCheckPrompt:window.feeCheckPrompt;if(!p)return;const id=p.entryId,current=entries.find(e=>e.id===id);entries=entries.map(e=>e.id===id?clearTimer({...e}):e);entries=sortE(entries);sv(SK,entries);feeCheckPrompt=null;cfm={title:'Timer Removed',msg:(current?current.bank+' ':'')+'early-close timer removed. The early-close fee was not changed and the account was not marked safe to close.',green:true,action:()=>{cfm=null;R()}};R()};
-  window.feeCheckSave=function(){const p=typeof feeCheckPrompt!=='undefined'?feeCheckPrompt:window.feeCheckPrompt;if(!p)return;const id=p.entryId,months=Math.max(1,parseInt(p.months,10)||6),feeAmt=Math.max(0,parseFloat(p.feeAmount)||0);entries=entries.map(e=>{if(e.id!==id)return e;const x={...e},end=x.opened?addM(x.opened,months):'',days=x.opened&&end?dB(x.opened,end):months*30;x.minHoldDays=days;x.closeFeeCountdownDays=String(days);x.closeRuleBasis='opened';x.closeBufferDays=5;x.closeRestrictionType='manual-fixed';x.closeRuleSource='manual';x.earlyCloseFee=feeAmt;x.earlyTerminationFeeText=feeAmt?'$'+feeAmt.toLocaleString():'';x.closeRuleText=`Manual early-close hold: keep the account open for ${months} month${months===1?'':'s'} from the opened date${feeAmt?' to avoid a $'+feeAmt.toLocaleString()+' fee':''}.`;x.closeRuleSourceSentence=x.closeRuleText;x.fieldSources=(x.fieldSources&&typeof x.fieldSources==='object')?x.fieldSources:{};const meta={kind:'manual',confidence:'verified',source:'Set manually in the Early Closure Fee timer.',updatedAt:new Date().toISOString()};x.fieldSources.closeFeeCountdownDays=meta;x.fieldSources.closeRuleText=meta;x.fieldSources.closeRuleBasis=meta;return normalizeEntry(x)});entries=sortE(entries);sv(SK,entries);feeCheckPrompt=null;R()};
 
   function analyzerWrappersReady(){
     return ['__tcV3BankRulesWrapped','__tcV3WellsConsumerRulesWrapped','__tcV3CapitalOneRulesWrapped','__tcV3BoaBusinessRulesWrapped','__tcV3PncRulesWrapped','__tcV3RegionsRulesWrapped','__tcV3EquityRulesWrapped','__tcV3BuseyRulesWrapped','__tcV3AcademyRulesWrapped','__tcV3ProfileRegistryWrapped','__tcV3AcademyRegistryWrapped'].every(k=>!!window[k])
