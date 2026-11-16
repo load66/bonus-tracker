@@ -215,68 +215,42 @@ assert.match(fees,/Meet any one: \$500\+ electronic deposits/);
 assert.match(fees,/View saved fee terms/);
 assert.match(fees,/Fee waived with \$500 electronic deposits/,'Original fee quote stays available');
 assert.match(sandbox.BT360.feeDetail(require('./fixtures/financial-rules.cjs').fixture()),/Also required: Share Savings: \$10 · membership minimum \$50/,'Companion account costs remain distinct from primary checking fee');
-assert.match(fees,/Early closing fee<\/span><div><b class="bt3611-amber">Not confirmed<\/b>/);
-assert.doesNotMatch(fees,/>This month<|Waiver not confirmed/,'Only the two requested fee rows appear');
+assert.doesNotMatch(fees,/Early closing fee|Closing early/,'Retired termination-fee fields do not render');
+assert.doesNotMatch(fees,/>This month<|Waiver not confirmed/,'Only monthly and companion charges remain');
 assert.doesNotMatch(fees,/Waiver on track/,'Never claim a monthly waiver from unlinked evidence');
-assert.match(fees,/bt3611-amber/);
 
-/* v3.8.14: Only documented early-closing fees or documented no-fee terms
-   belong on the everyday detail. Unknown data stays unknown in feeSnapshot. */
+// v3.8.15: termination-service fees do not affect account fee display,
+// while original saved entries and monthly fees remain unchanged.
 {
- const beforeFeesStorage=JSON.stringify([...storage]);
- const fresh={...e,closed:'',bonusRecd:'',financialRules:{...e.financialRules,
-  closure:{earlyCloseFee:null,feeEvidence:null}},earlyCloseFee:null,earlyTerminationFeeText:''};
+ const beforeStorage=JSON.stringify([...storage]);
+ const fresh={...e,closed:'',bonusRecd:'',financialRules:{...e.financialRules,closure:{...e.financialRules.closure}},earlyCloseFee:null,earlyTerminationFeeText:''};
  const snapshot=JSON.stringify(fresh);
- const openDetail=sandbox.BT360.detailPanels(fresh);
- assert.match(openDetail,/<h3>Fees<\/h3>/,'Normal monthly-fee details remain');
- assert.match(openDetail,/<span>Monthly<\/span><b>\$15<\/b>/);
- assert.doesNotMatch(openDetail,/Closing early|bt3810-caution/,'No speculative amber closing fee without evidence');
- assert.equal(sandbox.BT360.feeSnapshot(fresh).closeKnown,false,'Fee evidence remains unresolved in canonical data');
-
- const charge={...fresh,financialRules:{...fresh.financialRules,
-  closure:{earlyCloseFee:25,feeEvidence:{quote:'$25 early account closing fee within 180 days.'}}}};
- assert.match(sandbox.BT360.detailPanels(charge),/<span>Closing early<\/span><b>\$25 early-close fee<\/b>/,'Documented positive charge is shown');
-
- const noCharge={...fresh,financialRules:{...fresh.financialRules,
-  closure:{earlyCloseFee:0,feeEvidence:{quote:'No early closing fee.'}}}};
- assert.match(sandbox.BT360.detailPanels(noCharge),/<span>Closing early<\/span><b>No early-closing fee<\/b>/,'Explicit no-fee evidence is shown');
-
- const condition={...fresh,financialRules:{...fresh.financialRules,
-  closure:{earlyCloseFee:0,feeEvidence:{quote:'No early closing fee after 180 days.'}}}};
- assert.doesNotMatch(sandbox.BT360.detailPanels(condition),/Closing early/,'Conditional no-fee language is not presented as unconditional');
-
- const clawbackOnly={...fresh,financialRules:{...fresh.financialRules,closure:{earlyCloseFee:null}},
-  earlyTerminationFeeText:'If closed within 90 days, bank may take back the $300 bonus.'};
- assert.doesNotMatch(sandbox.BT360.detailPanels(clawbackOnly),/Closing early/,'Bonus clawback is not mislabeled as a fee');
- assert.equal(JSON.stringify(fresh),snapshot,'Fee rendering must not alter enrolled rules');
- assert.equal(JSON.stringify([...storage]),beforeFeesStorage,'Fee rendering must not persist account data');
+ const variants=[{earlyCloseFee:25,earlyTerminationFeeText:'$25 early closing fee.'},{earlyCloseFee:0,earlyTerminationFeeText:'No early closing fee.'},{earlyCloseFee:null,earlyTerminationFeeText:''}];
+ const baseline=sandbox.BT360.detailPanels(fresh);
+ for(const variant of variants){
+  const x={...fresh,...variant,financialRules:{...fresh.financialRules,closure:{...fresh.financialRules.closure,earlyCloseFee:variant.earlyCloseFee}}};
+  assert.equal(sandbox.BT360.detailPanels(x),baseline,'Termination service fee never changes account details');
+  assert.doesNotMatch(sandbox.BT360.feeDetail(x),/Early closing fee|Closing early/);
+  assert(!sandbox.BT360.closeCheckPresentation(x).some(item=>/early.close fee|termination fee|service fee verified/i.test(item.label)));
+ }
+ assert.match(baseline,/<span>Monthly<\\/span><b>\\$15<\\/b>/);
+ assert.equal(JSON.stringify(fresh),snapshot,'Projection never changes original rules');
+ assert.equal(JSON.stringify([...storage]),beforeStorage,'Projection makes no storage writes');
 }
 
-
-// Legacy imported terms must still render after migrating to v3.6.14.
 const legacy={...e,financialRules:{accounts:[{role:'primary'}],closure:{}},
  monthlyFeeAmountText:'$8 per month',monthlyFeeWaiverText:'',
  avoidMonthlyFeeText:'Waived with $500 ACH direct deposits or $1,500 average balance',
- earlyCloseFee:0,earlyTerminationFeeText:'Early account closing: $25 fee if closed within 180 days of opening.',
+ earlyCloseFee:25,earlyTerminationFeeText:'Early account closing: $25 fee if closed within 180 days of opening.',
  closeRuleText:'',feeScheduleSourceUrl:'https://www.regions.com/personal-banking/checking/lifegreen-checking-account'};
 const legacyMarkup=sandbox.BT360.feeDetail(legacy);
-assert.match(legacyMarkup,/Monthly fee<\/span><div><b[^>]*>\$8<\/b>/);
-assert.match(legacyMarkup,/Meet any one: Waived with \$500 ACH direct deposits · \$1,500 average balance/);
-assert.match(legacyMarkup,/\$25 early-close fee/,'Explicit old close-fee text is recovered');
-assert.match(legacyMarkup,/View saved closing terms/);
+assert.match(legacyMarkup,/Monthly fee<\\/span><div><b[^>]*>\\$8<\\/b>/);
+assert.match(legacyMarkup,/Meet any one: Waived with \\$500 ACH direct deposits/);
 assert.match(legacyMarkup,/Fee schedule/);
-assert.doesNotMatch(legacyMarkup,/>This month<|Waiver on track/);
-assert.equal((legacyMarkup.match(/class="bt3613-fee-line"/g)||[]).length,2);
-const savedZero={...legacy,earlyTerminationFeeText:'No early closing fee.',monthlyFeeAmountText:'No monthly service fee',
-  monthlyFeeNoMonthlyServiceFee:true,avoidMonthlyFeeText:''};
-assert.match(sandbox.BT360.feeDetail(savedZero),/No early-closing fee/);
-assert.match(sandbox.BT360.feeDetail(savedZero),/>Monthly fee<\/span><div><b[^>]*>\$0<\/b>/);
-const clawback={...legacy,earlyTerminationFeeText:'If the account is closed within six months, the bank will deduct the $900 bonus at closing.'};
-assert.match(sandbox.BT360.feeDetail(clawback),/Not confirmed/,'Clawback is not fabricated as a fee');
-assert.match(sandbox.BT360.feeDetail(clawback),/The bank may also take back the bonus/);
-assert.doesNotMatch(sandbox.BT360.feeDetail(clawback),/\$900 early-close fee/);
-const conditionalNoFee={...legacy,earlyTerminationFeeText:'No early close fee after 180 days.'};
-assert.match(sandbox.BT360.feeDetail(conditionalNoFee),/Not confirmed/,'Conditional no-fee wording cannot imply a free early closure');
+assert.doesNotMatch(legacyMarkup,/Early closing fee|Closing early|\\$25 early-close fee/);
+assert.equal((legacyMarkup.match(/class="bt3613-fee-line"/g)||[]).length,1);
+const savedZero={...legacy,monthlyFeeAmountText:'No monthly service fee',monthlyFeeNoMonthlyServiceFee:true,avoidMonthlyFeeText:''};
+assert.match(sandbox.BT360.feeDetail(savedZero),/>Monthly fee<\\/span><div><b[^>]*>\\$0<\\/b>/);
 const cooldownNoDate={
  id:'SYNT-P-84',bank:'Synthetic Churn Test',accountType:'personal',bonus:400,
  opened:'2026-01-10',closed:'2026-05-12',churnability:'repeatable',
