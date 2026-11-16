@@ -2347,7 +2347,8 @@ async function exercise(name,engine,url){
     await page.getByRole('button',{name:'Open a prepared card plan',exact:true}).click();
     await (await cardChooser).setFiles({name:'synthetic-card.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(cardFixture))});
     await page.getByRole('button',{name:'Save this plan',exact:true}).waitFor({state:'visible'});
-    check('actual card file chooser reveals and focuses the preview',await page.locator('.cc-import').evaluate(e=>document.activeElement===e&&e.getBoundingClientRect().top>=0&&e.getBoundingClientRect().top<innerHeight));
+    await page.waitForFunction(()=>{const e=document.querySelector('.cc-import');return !!e&&document.activeElement===e&&e.getBoundingClientRect().top>=0&&e.getBoundingClientRect().top<innerHeight;},{},{timeout:5000});
+    check('actual card file chooser reveals and focuses the preview',await page.locator('.cc-import').isVisible());
     check('card preview does not write financial records',await page.evaluate(before=>localStorage.getItem(BTCards.KEY)===before.cards&&localStorage.getItem('bt_e_v4')===before.banks,cardsBefore));
     const invalidCardChooser=page.waitForEvent('filechooser');
     await page.getByRole('button',{name:'Open a prepared card plan',exact:true}).click();
