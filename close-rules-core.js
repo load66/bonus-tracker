@@ -52,7 +52,7 @@
       // Fee-only windows do not create a hold or a reminder.
       new RegExp(String.raw`${duration}[^.]{0,120}(?:from|after)\s+(?:account\s+opening|opened\s+date|opening\s+date)[^.]{0,120}(?:close|closed|fee|penalty|forfeit)`,'i')
     ];
-    return sentences(text).find(s=>!isLookback(s)&&patterns.some(re=>re.test(s))&&!( /\b(?:fee|penalty|charge)\b/i.test(s)&&!/(?:bonus|reward|clawback|forfeit|repay|remain open|keep[^.]{0,50}open|maintain[^.]{0,50}open)/i.test(s)))||'';
+    return sentences(text).find(s=>!isLookback(s)&&patterns.some(re=>re.test(s))&&!( /\b(?:fee|penalty|charge)\b/i.test(s)&&!/(?:bonus|reward|clawback|forfeit|repay|remain open|keep[^.]{0,50}open|maintain[^.]{0,50}open)/i.test(s))&&!(/\b(?:avoid|waive|waived)\b.{0,85}\b(?:fee|charge)\b/i.test(s)&&!/\b(?:bonus|reward|clawback|forfeit|repay)\b/i.test(s)))||'';
   }
   function payoutText(v){
     return sentences(v).find(s=>/(?:remain[^.]{0,35}open|stay[^.]{0,35}open|keep[^.]{0,45}open|good standing|unrestricted)[^.]{0,140}(?:until|through)[^.]{0,100}(?:bonus|reward|payout|payment|credit|deposit)|(?:account[^.]{0,40})?must[^.]{0,50}(?:remain|stay|keep)[^.]{0,35}open[^.]{0,120}(?:bonus|deposit|payout)|(?:bonus|reward|payout|payment|credit)[^.]{0,90}(?:post|posts|posted|paid|credited|received)/i.test(s))||'';
@@ -84,7 +84,10 @@
     }
     const n=parseInt(e.minHoldDays||e.closeFeeCountdownDays||0,10)||0;
     const proof=explicitRuleText(e);
-    if(n>0&&sourceIsManual(e))return'manual-fixed';
+    const oldFeeTimer=/Early Closure Fee timer/i.test(String(e.fieldSources?.closeRuleText?.source||e.fieldSources?.closeFeeCountdownDays?.source||''));
+    // Manual retention rules remain; the former fee-only timer does not.
+    if(n>0&&sourceIsManual(e)&&!oldFeeTimer)return'manual-fixed';
+    if(oldFeeTimer)return payoutText([e.closeRuleText,e.analyzedTC,e.completeBonusText].filter(Boolean).join(' '))?'payout-only':'none';
     if(n>0&&proof)return /deduct|reverse|reclaim|clawback|forfeit/i.test(proof)?'explicit-clawback':'minimum-open';
     const p=payoutText([e.closeRuleText,e.earlyTerminationFeeText,e.analyzedTC,e.completeBonusText].filter(Boolean).join(' '));
     return p?'payout-only':'none';
