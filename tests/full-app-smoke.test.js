@@ -59,8 +59,8 @@ module.exports={sandbox,document,app,storage,errors};
 if(require.main===module)setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.8.14',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.8.14',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.8.15',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.8.15',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     const trackerRender=sandbox.BT360;
     const settingsMarkup=trackerRender.settings();
     assert(!/Historical review|History repair|requirements date matches|Review missing history/i.test(settingsMarkup),'Internal history diagnostics must not clutter Settings');
@@ -91,7 +91,7 @@ if(require.main===module)setTimeout(()=>{
     assert(!archiveMarkup.includes('Still waiting &lt;span'),'Archive heading exposes escaped HTML');
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.13',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
     assert(sandbox.tcV3WellsConsumerRulesVersion==='3.5.2',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
-    assert(sandbox.btChurnCloseDatePolicyVersion==='3.8.14',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
+    assert(sandbox.btChurnCloseDatePolicyVersion==='3.8.15',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.13',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
     assert(sandbox.BTEligibilityGate?.VERSION==='1.4.0',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
     assert(sandbox.btLifecycleStatusVersion==='3.4.74-status1',`Unexpected lifecycle status version ${sandbox.btLifecycleStatusVersion}`);
@@ -256,7 +256,7 @@ if(require.main===module)setTimeout(()=>{
     assert(multiRuleDate.official==='2028-08-01'&&multiRuleDate.safe==='2028-08-03'&&/multi-rule/.test(multiRuleDate.policy),'Multi-rule churn countdown did not use the latest actual clearing date');
 
     const lafBuffer=sandbox.normalizeLifecycleEntry({bank:'Lafayette Federal Credit Union',opened:'2026-10-31',bonus:250,analyzedTC:'Boost300 qualified direct deposit'});
-    assert(sandbox.safeCloseDate(lafBuffer)==='2027-05-02','Lafayette close date must preserve six calendar months and a separate two-day cushion');
+    assert(sandbox.BTCloseRules.ruleDays(lafBuffer)===0&&!sandbox.safeCloseDate(lafBuffer),'Lafayette fee-only terms must not generate a contractual bonus-retention hold');
 
     const replacementIds=vm.runInContext(`(function(){
       const keep=entries;
@@ -289,7 +289,7 @@ if(require.main===module)setTimeout(()=>{
 
     const report=sandbox.btRunFullRegressionTests();
     assert(report.ok,`Full regression failed: ${JSON.stringify(report)}`);
-    assert(report.total===8,`Core close-rule checks must remain complete: ${report.total}`);
+    assert(report.total>=9,`Core close-rule checks must include fee-only retirement and genuine clawback coverage: ${report.total}`);
     const academyValid='Academy Bank Elite Investment Checking. $100 opening balance required. To receive $500 bonus, open a new Elite Investment Checking Account, make at least four direct deposits totaling $10,000 and enroll in Online Banking within 90 days of account opening. The bonus will be deposited within 60 days. Offer expires May 15, 2026.';
     const academyOk=sandbox.tcV3Analyze(academyValid,{noGlobalFallback:true});
     assert(academyOk.bank==='Academy Bank'&&academyOk.bonus===500&&(academyOk.bankRulesApplied||[]).includes('Academy Bank Elite Investment Checking'),'Valid Academy saved offer did not match');

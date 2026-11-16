@@ -127,7 +127,7 @@ setTimeout(()=>{
     assert.equal(richSaved.customTimers[0].date,'2026-07-31');
     assert.equal(richSaved.feeScheduleSourceUrl,'https://example-bank.test/fees');
     const aiFacts=JSON.stringify(sandbox.BTBonusAI.contextFor(richSaved));
-    for(const value of ['$15','OR receive','Required savings','three monthly periods','early-close fee','consumer-checking','Deposit period 2','example-bank.test/fees'])assert.ok(aiFacts.includes(value),'Saved JSON missing from AI context: '+value);
+    for(const value of ['$15','OR receive','Required savings','three monthly periods','consumer-checking','Deposit period 2','example-bank.test/fees'])assert.ok(aiFacts.includes(value),'Saved JSON missing from AI context: '+value);
     assert.equal(run('entries.find(e=>e.id===testId).notes'),restored.notes,'Rich JSON must preserve other accounts');
     run('if(undoTimer)clearTimeout(undoTimer);undoState=null;R()');
     assert.equal(errors.length,0,'Integrated flow emitted a runtime error');

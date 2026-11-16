@@ -4,6 +4,26 @@ const {sandbox,storage}=require('./full-app-smoke.test.js');
 const {fixture}=require('./fixtures/financial-rules.cjs');
 const e=fixture(),payload={kind:'BonusTrackerEntry',schemaVersion:3,verification:{promoSourceUrl:e.promoSourceUrl,feeScheduleSourceUrl:e.feeScheduleSourceUrl,termsVerifiedAt:e.termsVerifiedAt},entry:e};
 const before=JSON.stringify([...storage]);
+
+/* v3.8.15: only independent keep-open and bonus-forfeiture wording may
+   generate a retention hold. A service-charge-only window never does. */
+{
+ const vm=require('node:vm'),beforeProbe=JSON.stringify([...storage]);
+ const cases=[
+  ['A $25 early account closing fee applies if closed within 90 days of opening.',0],
+  ['A $25 charge applies if you terminate this account before 180 days.',0],
+  ['No early closing fee applies after 120 days.',0],
+  ['The bonus is forfeited if the account is closed within 90 days.',90],
+  ['Keep the account open for 180 days after opening to retain the bonus.',180]
+ ];
+ for(const [closeRuleText,expected] of cases){
+   sandbox.__retentionProbe={closeRuleText};
+   assert.equal(vm.runInContext('inferCloseHoldDaysFromEntry(__retentionProbe)',sandbox),expected,closeRuleText);
+ }
+ delete sandbox.__retentionProbe;
+ assert.equal(JSON.stringify([...storage]),beforeProbe,'Retention extraction cannot write account records');
+}
+
 const parsed=sandbox.btParseEntryFileText(JSON.stringify(payload),'Synthetic.json');
 assert.equal(JSON.stringify(parsed.financialRules),JSON.stringify(e.financialRules));
 assert.equal(JSON.stringify([...storage]),before,'Reading an import must not write account data');
@@ -131,10 +151,10 @@ assert.equal(JSON.stringify(reviewedCalendar.financialRules),JSON.stringify(cale
 assert.equal(sandbox.BTFinancialRules.closeHoldInfo(reviewedCalendar).holdUntil,'2027-10-29');
 assert.equal(sandbox.BTFinancialRules.closeHoldInfo(reviewedCalendar).reviewOn,'2027-11-01');
 assert.equal(reviewedCalendar.reqMet,'');assert.equal(reviewedCalendar.bonusRecd,'');
-assert.equal(sandbox.safeCloseDate(reviewedCalendar),null,'Unverified closing fee must not produce safe date');
+assert.equal(sandbox.safeCloseDate(reviewedCalendar),'2027-11-01','Documented account-retention anniversary remains available independently of legacy service-fee fields');
 const postBonus={...reviewedCalendar,bonusRecd:'2027-02-01',reqMet:'2027-01-27'};
-assert.notEqual(sandbox.closeReadiness(postBonus,'2027-11-01').cls,'safe','Elapsed hold cannot clear unknown fee');
-assert.ok(sandbox.closeReadiness(postBonus,'2027-11-01').warnings.some(w=>/service fee/i.test(w)),JSON.stringify({warnings:sandbox.closeReadiness(postBonus,'2027-11-01').warnings,calendar:sandbox.BTFinancialRules.closeHoldInfo(postBonus)}));
+assert(sandbox.closeReadiness(postBonus,'2027-11-01').items.some(x=>x.label==='Calendar-month hold + planning buffer complete'&&x.ok),'Documented hold must clear on the review date');
+assert(!sandbox.closeReadiness(postBonus,'2027-11-01').warnings.some(w=>/service fee|closing fee/i.test(w)),'Retired fee-only uncertainty cannot become a blocker');
 assert.ok(sandbox.closeReadiness(postBonus,'2027-10-28').warnings.some(w=>/calendar-month hold/i.test(w)));
 assert.ok(sandbox.closeRiskWarnings(postBonus,'2027-10-28').some(w=>/retention period/i.test(w)));
-assert.equal(sandbox.status(postBonus),'WAITING TO CLOSE','Unconfirmed closing fee cannot produce safe status');
+assert.equal(sandbox.status(postBonus),'WAITING TO CLOSE','A future contractual hold must remain active until its anniversary');

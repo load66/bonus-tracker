@@ -16,7 +16,7 @@
 
   function normalizeType(v){
     const s=String(v||'').toLowerCase().replace(/[^a-z-]/g,'').trim();
-    if(['explicit-clawback','clawback','early-close-fee','penalty'].includes(s))return'explicit-clawback';
+    if(['explicit-clawback','clawback'].includes(s))return'explicit-clawback';
     if(['minimum-open','minimumopen','fixed-hold','fixedhold'].includes(s))return'minimum-open';
     if(['manual-fixed','manualfixed'].includes(s))return'manual-fixed';
     if(['payout-only','payoutonly','until-payout','untilpayout'].includes(s))return'payout-only';
@@ -40,23 +40,19 @@
     if(n&&/month/i.test(unit))n*=30;
     return n>0&&n<=730?n:0;
   }
-  function moneyAmount(v){
-    const m=String(v||'').match(/\$\s*([0-9][0-9,]*(?:\.\d{1,2})?)/);if(!m)return 0;
-    const n=parseFloat(m[1].replace(/,/g,''));return Number.isFinite(n)&&n>0?n:0;
-  }
   function hasMonthlyFeeWording(v){
     return /(?:monthly|per month|each month)[^.]{0,70}(?:fee|charge)|(?:monthly service fee|monthly maintenance fee|monthly account fee)/i.test(String(v||''));
   }
   function explicitRuleText(eOrText){
-    const text=typeof eOrText==='string'?eOrText:String([eOrText?.closeRuleText,eOrText?.earlyTerminationFeeText,eOrText?.closeRuleSourceSentence].filter(Boolean).join(' '));
+    const text=typeof eOrText==='string'?eOrText:String([eOrText?.closeRuleText,eOrText?.closeRuleSourceSentence].filter(Boolean).join(' '));
     const duration=String.raw`(?:\d{1,3}|thirty|sixty|ninety|thirtieth|sixtieth|ninetieth|one\s+hundred\s+eighty)\s*(?:\(\s*\d{1,3}\s*\))?\s*(?:calendar\s*)?(?:days?|months?)`;
     const patterns=[
       new RegExp(String.raw`(?:closed?|closing|close|terminate|terminated|termination|early\s+(?:close|closing|termination))[^.]{0,150}(?:within|before|less\s+than|during\s+the\s+first)\s*(?:the\s+)?${duration}`,'i'),
       new RegExp(String.raw`(?:remain|keep|maintain)[^.]{0,80}open[^.]{0,120}(?:for|through|until)\s*(?:the\s+)?${duration}`,'i'),
-      new RegExp(String.raw`(?:fee|penalty|charge)[^.]{0,110}(?:if|when)[^.]{0,110}closed?[^.]{0,110}${duration}`,'i'),
+      // Fee-only windows do not create a hold or a reminder.
       new RegExp(String.raw`${duration}[^.]{0,120}(?:from|after)\s+(?:account\s+opening|opened\s+date|opening\s+date)[^.]{0,120}(?:close|closed|fee|penalty|forfeit)`,'i')
     ];
-    return sentences(text).find(s=>!isLookback(s)&&patterns.some(re=>re.test(s)))||'';
+    return sentences(text).find(s=>!isLookback(s)&&patterns.some(re=>re.test(s))&&!( /\b(?:fee|penalty|charge)\b/i.test(s)&&!/(?:bonus|reward|clawback|forfeit|repay|remain open|keep[^.]{0,50}open|maintain[^.]{0,50}open)/i.test(s))&&!(/\b(?:avoid|waive|waived)\b.{0,85}\b(?:fee|charge)\b/i.test(s)&&!/\b(?:bonus|reward|clawback|forfeit|repay)\b/i.test(s)))||'';
   }
   function payoutText(v){
     return sentences(v).find(s=>/(?:remain[^.]{0,35}open|stay[^.]{0,35}open|keep[^.]{0,45}open|good standing|unrestricted)[^.]{0,140}(?:until|through)[^.]{0,100}(?:bonus|reward|payout|payment|credit|deposit)|(?:account[^.]{0,40})?must[^.]{0,50}(?:remain|stay|keep)[^.]{0,35}open[^.]{0,120}(?:bonus|deposit|payout)|(?:bonus|reward|payout|payment|credit)[^.]{0,90}(?:post|posts|posted|paid|credited|received)/i.test(s))||'';
@@ -77,11 +73,22 @@
   function typeForEntry(e){
     if(!e)return'none';
     const saved=normalizeType(e.closeRestrictionType||e.analysis?.closeRestrictionType);
-    if(saved==='payout-only'||saved==='review')return saved;
+    if(saved==='payout-only')return saved;
+    if(saved==='review'){
+      const wording=String([e.closeRuleText,e.closeRuleSourceSentence].filter(Boolean).join(' '));
+      // Old fee-only manual reviews are retired. An independent unresolved
+      // retention/bonus restriction must still block automatic close advice.
+      if(!/\b(?:fee|charge|penalty)\b/i.test(wording)
+        ||/\b(?:bonus|reward|clawback|forfeit|repay|hold|retention|remain open|keep[^.]{0,35}open)\b/i.test(wording))
+        return saved;
+    }
     const n=parseInt(e.minHoldDays||e.closeFeeCountdownDays||0,10)||0;
     const proof=explicitRuleText(e);
-    if(n>0&&sourceIsManual(e))return'manual-fixed';
-    if(n>0&&proof)return /deduct|reverse|reclaim|clawback|forfeit|fee|penalty|charge/i.test(proof)?'explicit-clawback':'minimum-open';
+    const oldFeeTimer=/Early Closure Fee timer/i.test(String(e.fieldSources?.closeRuleText?.source||e.fieldSources?.closeFeeCountdownDays?.source||''));
+    // Manual retention rules remain; the former fee-only timer does not.
+    if(n>0&&sourceIsManual(e)&&!oldFeeTimer)return'manual-fixed';
+    if(oldFeeTimer)return payoutText([e.closeRuleText,e.analyzedTC,e.completeBonusText].filter(Boolean).join(' '))?'payout-only':'none';
+    if(n>0&&proof)return /deduct|reverse|reclaim|clawback|forfeit/i.test(proof)?'explicit-clawback':'minimum-open';
     const p=payoutText([e.closeRuleText,e.earlyTerminationFeeText,e.analyzedTC,e.completeBonusText].filter(Boolean).join(' '));
     return p?'payout-only':'none';
   }
@@ -128,16 +135,15 @@
     const proof=explicitRuleText(raw),payout=payoutText(raw);
     if(proof){
       const days=durationDays(proof);
-      return{basis:basisForText(proof),days,text:proof,sourceSentence:proof,confidence:'high',type:/deduct|reverse|reclaim|clawback|forfeit|fee|penalty|charge/i.test(proof)?'explicit-clawback':'minimum-open',earlyCloseFee:moneyAmount(proof)};
+      return{basis:basisForText(proof),days,text:proof,sourceSentence:proof,confidence:'high',type:/deduct|reverse|reclaim|clawback|forfeit/i.test(proof)?'explicit-clawback':'minimum-open'};
     }
-    return{basis:'bonus',days:0,text:payout||'',sourceSentence:payout||'',confidence:payout?'high':'low',type:payout?'payout-only':'none',earlyCloseFee:0};
+    return{basis:'bonus',days:0,text:payout||'',sourceSentence:payout||'',confidence:payout?'high':'low',type:payout?'payout-only':'none'};
   }
   function sanitizeAnalysis(r,raw){
     if(!r)return r;
     const cr=analyzeText(raw||r.raw||r.normalizedRaw||'');
     r.closeRuleDays=cr.days;r.minHoldDays=cr.days;r.closeRuleBasis=cr.basis;r.closeBufferDays=cr.days?(Number.isFinite(parseInt(r.closeBufferDays,10))?parseInt(r.closeBufferDays,10):5):0;
     r.closeRuleText=cr.text;r.closeRuleSourceSentence=cr.sourceSentence;r.closeRuleConfidence=cr.confidence;r.closeRestrictionType=cr.type;
-    if(cr.earlyCloseFee){r.earlyCloseFee=cr.earlyCloseFee;r.earlyTerminationFee=cr.earlyCloseFee;r.earlyTerminationFeeText='$'+cr.earlyCloseFee.toLocaleString()}
     r.suggestedTimers=(Array.isArray(r.suggestedTimers)?r.suggestedTimers:[]).filter(t=>!AUTO_CLOSE_TIMER_RE.test(String(t?.text||'')));
     r.actionPlan=String(r.actionPlan||'').split('\n').filter(line=>!/close safety|close check after payout/i.test(line)).join('\n');
     r.reviewFlags=(Array.isArray(r.reviewFlags)?r.reviewFlags:[]).filter(x=>!(cr.type==='payout-only'&&/close rule wording needs manual review/i.test(String(x))));
@@ -157,14 +163,15 @@
     const chase={bank:'Chase Biz',accountType:'business',opened:'2026-05-07',bonusRecd:'2026-07-14',reqMet:'2026-05-29',minHoldDays:90,closeFeeCountdownDays:'90',closeRuleBasis:'bonus',closeBufferDays:5,closeRuleText:'Keep the account open until the bonus posts.',closeRestrictionType:'payout-only',monthlyFeeYNText:'$15 monthly fee'};
     test('Chase stale countdown clears',()=>{const x=sanitizeEntry({...chase});return x.minHoldDays===0&&ruleDays(x)===0&&safeCloseDate(x)==='2026-07-14'});
     test('Eligibility lookback ignored',()=>{const x=sanitizeEntry({bank:'Example',opened:'2026-01-01',bonusRecd:'2026-02-01',minHoldDays:90,closeRuleText:'Not eligible if an account was closed within the previous 90 days.'});return ruleDays(x)===0&&safeCloseDate(x)==='2026-02-01'});
-    test('Explicit fee remains fixed',()=>{const x=sanitizeEntry({bank:'Example',opened:'2026-01-01',bonusRecd:'2026-02-01',minHoldDays:90,closeRuleText:'A $25 fee applies if the account is closed within 90 days of opening.'});return ruleDays(x)===90&&safeCloseDate(x)==='2026-04-06'});
+    test('Fee-only closing window no longer creates a hold',()=>{const x=sanitizeEntry({bank:'Example',opened:'2026-01-01',bonusRecd:'2026-02-01',minHoldDays:90,closeRuleText:'A $25 fee applies if the account is closed within 90 days of opening.'});return ruleDays(x)===0&&safeCloseDate(x)==='2026-02-01'});
     test('Requirement window is not close hold',()=>{const r=analyzeText('Complete 5 qualifying transactions within 90 days. Bonus paid within 15 days after requirements are met. Keep the account open until the bonus posts.');return r.days===0&&r.type==='payout-only'});
-    test('Weird termination wording parsed',()=>{const r=analyzeText('If you terminate the account before the ninetieth calendar day following account opening, a $25 charge will be deducted.');return r.days===90&&r.type==='explicit-clawback'&&r.earlyCloseFee===25});
+    test('Termination service fee does not masquerade as bonus clawback',()=>{const r=analyzeText('If you terminate the account before the ninetieth calendar day following account opening, a $25 charge will be deducted.');return r.days===0&&r.type==='none'&&r.earlyCloseFee===undefined});
+    test('Documented bonus-forfeiture hold remains enforceable',()=>{const r=analyzeText('If the account is closed within 90 days of opening, the bonus will be reclaimed.');return r.days===90&&r.type==='explicit-clawback'});
     test('Manual close timer remains authoritative',()=>{const x=sanitizeEntry({bank:'Example',opened:'2026-01-01',bonusRecd:'2026-02-01',minHoldDays:180,closeFeeCountdownDays:'180',closeRestrictionType:'manual-fixed',closeRuleSource:'manual',closeRuleBasis:'opened',closeBufferDays:5,closeRuleText:'Manual early-close hold: keep the account open for 6 months.'});return ruleDays(x)===180&&safeCloseDate(x)==='2026-07-05'});
     test('Payout-only source sentence retained',()=>{const x=sanitizeEntry({bank:'Example',bonusRecd:'2026-02-01',closeRuleText:'Keep the account open until the bonus posts.'});return x.closeRuleSourceSentence==='Keep the account open until the bonus posts.'});
     test('Payout attempt wording recognized',()=>{const r=analyzeText('Your new account must stay open through the time we attempt to deposit the bonus.');return r.type==='payout-only'&&r.basis==='bonus'&&r.days===0});
     const passed=results.filter(x=>x.ok).length;return{version:VERSION,passed,total:results.length,ok:passed===results.length,results};
   }
 
-  return{VERSION,validDate,FIXED_TYPES,AUTO_CLOSE_TIMER_RE,clean,sentences,normalizeType,isLookback,durationDays,moneyAmount,hasMonthlyFeeWording,explicitRuleText,payoutText,basisForText,isChaseBiz,typeForEntry,isFixed,ruleDays,basisFor,baseDate,rawSafeDate,safeCloseDate,daysUntilSafe,isInBuffer,sourceSentence,sanitizeEntry,analyzeText,sanitizeAnalysis,runSelfTests};
+  return{VERSION,validDate,FIXED_TYPES,AUTO_CLOSE_TIMER_RE,clean,sentences,normalizeType,isLookback,durationDays,hasMonthlyFeeWording,explicitRuleText,payoutText,basisForText,isChaseBiz,typeForEntry,isFixed,ruleDays,basisFor,baseDate,rawSafeDate,safeCloseDate,daysUntilSafe,isInBuffer,sourceSentence,sanitizeEntry,analyzeText,sanitizeAnalysis,runSelfTests};
 });

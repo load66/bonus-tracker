@@ -27,63 +27,38 @@
     try{return !!closeCore()?.isInBuffer?.(e,today())}catch{return false}
   }
   function closeType(e){
-    const stored=String(e?.closeRestrictionType||e?.analysis?.closeRestrictionType||'');
-    if(stored==='explicit-clawback'||stored==='manual-review'||stored==='review')return stored;
-    try{const t=closeCore()?.typeForEntry?.(e);if(t)return t}catch{}
-    return stored;
-  }
-  function savedZeroFeeEvidence(e){
-    // A legacy 0 is only verified if saved wording explicitly denies an early-close
-    // service fee, not merely because the importer defaulted a missing fee to 0.
-    const sources=[e?.feeScheduleRaw,e?.earlyTerminationFeeText,e?.closeRuleSourceSentence,e?.closeRuleText].filter(Boolean);
-    return sources.some(raw=>String(raw).split(/(?<=[.!?])\s+|[\n;]/).some(line=>{
-      const sentence=String(line).replace(/\s+/g,' ').trim();
-      if(!/(?:early[\s-]*(?:clos|terminat)|account[\s-]*(?:clos|terminat)|clos(?:e|ing|ure)|terminat)/i.test(sentence))return false;
-      if(/\b(?:after|before|within|first|until|unless|if|except|provided|subject to)\b/i.test(sentence))return false;
-      if(/\b(?:monthly|maintenance)\b/i.test(sentence))return false;
-      return /(?:\bno\b|\bwithout\b|\bzero\b)[^.]{0,80}\b(?:fee|charge)\b|\$\s*0\b|(?:fee|charge)[\s-]*free/i.test(sentence);
-    }));
+    // Legacy fee-only review flags are not retention restrictions.
+    try{const type=closeCore()?.typeForEntry?.(e);if(type)return type}catch{}
+    return String(e?.closeRestrictionType||'none');
   }
   function closureUnresolved(e){
     if(!e)return true;
-    if(e.closeTimerClearedWithoutFeeVerification)return true;
     const structured=e.financialRules?.closure;
+    const financial=window.BTFinancialRules?.validate?.(e);
+    if(financial&&financial.mode!=='legacy'&&!financial.ok)return true;
+    const typed=closeType(e);
+    const calendar=window.BTFinancialRules?.closeHoldInfo?.(e)||null;
+    if(window.BTFinancialRules?.retentionNeedsReview?.(e)&&!calendar)return true;
+    if((typed==='review'||typed==='manual-review')&&!calendar)return true;
+    if(!e.bonusRecd||!closeCore()?.validDate?.(e.bonusRecd))return true;
     const basis=String(structured?.basis||e.closeRuleBasis||'').toLowerCase();
     if(basis==='reqmet'&&!closeCore()?.validDate?.(e.reqMet))return true;
-    if(e.bonusRecd&&!closeCore()?.validDate?.(e.bonusRecd))return true;
-    let verifiedStructured=false;
-    try{
-      const financial=window.BTFinancialRules?.validate?.(e);
-      if(financial&&financial.mode!=='legacy'){
-        if(!financial.ok)return true;
-        verifiedStructured=true;
-        if(structured&&(structured.restrictionType==='manual-review'||structured.earlyCloseFee===null||structured.basis==='reqmet'&&!e.reqMet))return true;
-      }
-    }catch{return true}
-    const type=closeType(e);
-    if(type==='review'||type==='manual-review')return true;
-    const savedHold=Number(structured?.minHoldDays??e.minHoldDays??e.closeFeeCountdownDays??0);
-    const fixedType=['explicit-clawback','minimum-open','manual-fixed'].includes(type);
-    const days=ruleDays(e);
-    // A saved fixed hold with an unknown anchor or unsupported legacy source
-    // must not be treated as an absent hold.
-    if(savedHold>0||fixedType){
-      if(!(days>0)||!baseDate(e))return true;
-      const left=daysUntilSafe(e);
-      if(left===null||left>0)return true;
+    if(calendar){
+      if(today()<calendar.reviewOn)return true;
+      return !/\b(?:bonus|reward|remain open|keep[^.]{0,35}open|must[^.]{0,35}open|retention)\b/i.test(String([structured?.text,structured?.evidence?.quote].join(' ')));
     }
-    const fee=structured?structured.earlyCloseFee:e.earlyCloseFee;
-    if(fee===null||fee===undefined||fee==='')return true;
-    const n=Number(fee);
-    if(!Number.isFinite(n)||n<0)return true;
-    if(n>0&&!(days>0&&baseDate(e)&&daysUntilSafe(e)===0))return true;
-    if(n===0&&!verifiedStructured&&!savedZeroFeeEvidence(e))return true;
-    // Fee proof is not bonus-retention proof. A payout-only close rule must
-    // actually document the requirement to remain open until payout; the
-    // 'none' category needs affirmative saved no-clawback evidence.
-    const retention=String([structured?.evidence?.quote,e.closeRuleText,e.closeRuleSourceSentence].filter(Boolean).join(' '));
-    if(type==='payout-only'&&!/(?:remain|stay|keep)[^.]{0,100}open[^.]{0,150}(?:until|through|after|once|when)[^.]{0,100}(?:bonus|reward|payout|payment|credit)|(?:until|through|after|once|when)[^.]{0,100}(?:bonus|reward|payout|payment|credit)[^.]{0,130}(?:posts?|paid|received|deposited)/i.test(retention))return true;
-    if(type==='none'&&!/(?:no|without|not subject to)[^.]{0,90}(?:bonus|reward)[^.]{0,50}(?:clawback|repayment|forfeiture|reversal)|(?:no|without|not subject to)[^.]{0,90}(?:clawback|repayment|forfeiture|reversal)/i.test(retention))return true;
+    const days=ruleDays(e);
+    const declaredHold=Number(structured?.minHoldDays||0);
+    if(days>0||declaredHold>0){
+      if(!(days>0)||!baseDate(e))return true;
+      if(daysUntilSafe(e)!==0)return true;
+    }
+    // Service fees are not evidence of forfeiture. A payout-only clause
+    // must establish actual open-until-payout terms; an otherwise unrestricted
+    // cycle needs affirmative bonus-retention evidence before "ready".
+    const evidence=String([structured?.evidence?.quote,e.closeRuleText,e.closeRuleSourceSentence].filter(Boolean).join(' '));
+    if(typed==='payout-only')return !/(?:remain|stay|keep)[^.]{0,100}open[^.]{0,150}(?:until|through|after|once|when)[^.]{0,100}(?:bonus|reward|payout|payment|credit)|(?:until|through|after|once|when)[^.]{0,100}(?:bonus|reward|payout|payment|credit)[^.]{0,130}(?:posts?|paid|received|deposited)/i.test(evidence);
+    if(typed==='none')return !/(?:no|without|not subject to)[^.]{0,90}(?:bonus|reward)[^.]{0,50}(?:clawback|repayment|forfeiture|reversal)|(?:no|without|not subject to)[^.]{0,90}(?:clawback|repayment|forfeiture|reversal)/i.test(evidence);
     return false;
   }
   function qualification(e){
@@ -126,7 +101,7 @@
     if(e.bonusRecd){
       const calendar=window.BTFinancialRules?.closeHoldInfo(e);
       if(calendar){
-        // An elapsed anniversary is not a verified closing fee or an actual payout.
+        // A hold anniversary is not evidence of a posted bonus.
         if(today()<calendar.reviewOn)return'WAITING TO CLOSE';
         return closureUnresolved(e)?'BONUS RECEIVED':'SAFE TO CLOSE';
       }
@@ -144,14 +119,14 @@
   }
   function closeDecision(e,legacy){
     const unresolved=[];
-    if(closureUnresolved(e))unresolved.push(e?.earlyCloseFee===null?'Early-close fee is not verified.':'Closure is not verified.');
+    if(closureUnresolved(e))unresolved.push('Bonus-retention or holding terms require review.');
     const notes=e?.bonusRecd&&!e?.reqMet?['Requirements completion date was not recorded; this is not evidence of the exact date.']:[];
     const status=legacy==='SAFE TO CLOSE'?'ready':legacy==='WAITING TO CLOSE'||legacy==='3-DAY BUFFER'?'hold':legacy==='BONUS RECEIVED'?'received-not-ready':legacy==='ARCHIVED'?'archived':'not-ready';
-    return{status,blockers:unresolved.map(x=>({message:x})),unresolved,notes,evidence:[{field:'earlyCloseFee',value:e?.earlyCloseFee},{field:'closeRestrictionType',value:closeType(e)}],dates:{safe:typeof safeCloseDate==='function'?safeCloseDate(e):''}};
+    return{status,blockers:unresolved.map(x=>({message:x})),unresolved,notes,evidence:[{field:'closeRuleText',value:e?.closeRuleText||''},{field:'closeRestrictionType',value:closeType(e)}],dates:{safe:typeof safeCloseDate==='function'?safeCloseDate(e):''}};
   }
   function fingerprint(e){
     if(!e||typeof e!=='object')return'';
-    return JSON.stringify([e.reqMet,e.bonusRecd,e.earlyCloseFee,e.closeBufferDays,e.closed,e.opened]);
+    return JSON.stringify([e.reqMet,e.bonusRecd,e.closeBufferDays,e.closed,e.opened,e.closeRuleText]);
   }
   function btEvaluateAccount(e){
     const before=fingerprint(e);
@@ -174,8 +149,7 @@
         const separate=history.some(h=>h&&(h.field==='reqMet'||/req(uirement)?s?\s*met/i.test(String(h.type||h.kind||h.label||'')))&&h.value&&h.value!==e.bonusRecd);
         if(!separate)issues.push({code:'req-met-matches-payout',field:'reqMet',detail:'The requirements date matches the bonus received date and no separate confirmation was found. This can be a real same-day event or an older automatic copy. It was not changed.',proposed:null});
       }
-      const structured=e.financialRules&&e.financialRules.closure?e.financialRules.closure.earlyCloseFee:undefined;
-      if(structured===null&&e.earlyCloseFee===0)issues.push({code:'unverified-fee-stored-as-zero',field:'earlyCloseFee',detail:'Structured terms say the early-close fee is unknown, but the legacy field is $0. $0 was not treated as verified and the stored value was not rewritten.',proposed:null});
+      // Legacy fee fields are retained in saved history but no longer require a repair prompt.
       return issues.length?{id:e.id||'',bank:e.bank||'',issues}:null;
     }).filter(Boolean);
   }

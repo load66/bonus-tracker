@@ -88,7 +88,7 @@
     }
     if(e.bonusRecd){
       const exactHold=window.BTFinancialRules?.closeHoldInfo(e);
-      if(exactHold)return result(exactHold.reviewOn,exactHold.months+' calendar months from account opening · hold anniversary '+dateText(exactHold.holdUntil)+' · review '+dateText(exactHold.reviewOn)+(exactHold.feeUnconfirmed?' · closing service fee still requires confirmation':''));
+      if(exactHold)return result(exactHold.reviewOn,exactHold.months+' calendar months from account opening · hold anniversary '+dateText(exactHold.holdUntil)+' · review '+dateText(exactHold.reviewOn));
       const core=window.BTCloseRules;
       const proof=core?.sourceSentence(e)||e.closeRuleText||e.earlyTerminationFeeText||'';
       if(!proof.trim())return unknown('close-rule wording is missing');
@@ -268,7 +268,7 @@
     if(!today||today===renderedDay||typeof R!=='function')return false;
     const editing=typeof document!=='undefined'&&(/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName||'')||document.activeElement?.isContentEditable);
     let busy=false;
-    try{busy=!!(modal||cfm||reqPrompt||rcvPrompt||closePrompt||timerEditModal||ddPrompt||overwritePrompt||matchPickerPrompt||replacementPickerPrompt||feeCheckPrompt||dpEditor||timerChoicePrompt||window.__btBankActionPrompt)}catch{}
+    try{busy=!!(modal||cfm||reqPrompt||rcvPrompt||closePrompt||timerEditModal||ddPrompt||overwritePrompt||matchPickerPrompt||replacementPickerPrompt||dpEditor||timerChoicePrompt||window.__btBankActionPrompt)}catch{}
     const openEditor=typeof document!=='undefined'&&document.querySelector('.inline-form');
     if(editing||busy||openEditor||(typeof document!=='undefined'&&document.getElementById('bt_confirm_overlay')))return false;
     R();renderedDay=today;return true;

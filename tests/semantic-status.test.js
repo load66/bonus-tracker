@@ -108,9 +108,12 @@ const hold={bank:'Hold Bank',bonus:250,bonusRecd:'2026-08-10',_rawStatus:'WAITIN
 assert(stage(hold).code==='HOLD_OPEN','Waiting-to-close state did not map to Hold Open');
 const ready={bank:'Ready Bank',bonus:250,bonusRecd:'2026-08-10',_rawStatus:'SAFE TO CLOSE',customTimers:[]};
 assert(stage(ready).code==='READY_TO_CLOSE','Safe-to-close state did not map to Ready to Close');
-sandbox.BTFinancialRules={validate:()=>({ok:true,mode:'structured',rules:{closure:{restrictionType:'manual-review',earlyCloseFee:null}}})};
-const unresolved={...ready,bank:'Unresolved Fee Bank'};
-assert(stage(unresolved).code==='BONUS_RECEIVED','Unconfirmed early-close fee was shown as Ready to Close');
+sandbox.BTFinancialRules={validate:()=>({ok:true,mode:'structured',rules:{closure:{restrictionType:'manual-review',earlyCloseFee:null}}}),retentionNeedsReview:()=>false};
+const feeOnly={...ready,bank:'Legacy Fee-only Bank'};
+assert(stage(feeOnly).code==='READY_TO_CLOSE','Retired closing fee must not block a paid account with no independent hold');
+sandbox.BTFinancialRules.retentionNeedsReview=()=>true;
+const retentionPending={...ready,bank:'Unresolved Bonus Hold Bank'};
+assert(stage(retentionPending).code==='BONUS_RECEIVED','Unresolved bonus-retention restriction still blocks Ready to Close');
 delete sandbox.BTFinancialRules;
 
 const cooldown={bank:'Cooldown Bank',closed:'2026-08-01',_daysLeft:120,_churnReadyDate:'2026-12-08'};

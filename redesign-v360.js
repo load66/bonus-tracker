@@ -315,19 +315,6 @@ function accountFeeWarnings(e){
    add(m[1].trim()+': '+amount(value)+period,text);
   });
  }
- const closure=rules?.closure;
- if(rules){
-  if(!closure||!supported('closure')||!validMoney(closure.earlyCloseFee)){
-   add('Check closing fee','Closing fee or its evidence is incomplete. Review saved closing terms before closing.');
-  }else if(closure.earlyCloseFee>0){
-   add(amount(closure.earlyCloseFee)+' early-close fee',String(closure.feeEvidence?.quote||'')+' Check when the charge applies in Details.');
-  }
-  if(supported('closure')&&closure?.restrictionType==='explicit-clawback')add('Bonus clawback',String(closure.text||'Review bonus repayment restrictions in Details.'));
- }else{
-  const close=x.closeMain.match(/^\$[\d,.]+(?= early-close fee)/)?.[0];
-  if(close)add(close+' early-close fee',x.closeNote+'. Review saved timing conditions in Details.');
-  else if(!x.noEarlyCloseFee)add('Check closing fee',x.closeNote+'. Review saved closing terms before closing.');
- }
  return rows;
 }
 function monthlyFeeBadge(e){
@@ -715,8 +702,6 @@ function lastSavedCooldownFeeRecord(entry){
  // Structured rules must always come from this enrollment; a new offer's
  // closure or churn rules cannot be applied to a different cycle.
  if(!record.financialRules&&sameCycle?.financialRules)record.financialRules=sameCycle.financialRules;
- if(Number(record.earlyCloseFee||0)===0&&Number(sameCycle?.earlyCloseFee)>0)
-  record.earlyCloseFee=Number(sameCycle.earlyCloseFee);
  return {record,historical:true,source:source||'saved account terms'};
 }
 function feeSnapshot(e){
@@ -725,7 +710,7 @@ function feeSnapshot(e){
  // Read-only view of each enrolled record, including pre-financialRules imports.
  // A current bank product page is not evidence of a historical account's terms.
  const primary=e.financialRules?.accounts?.find(a=>a?.role==='primary')||null;
- const fee=primary?.fee,closure=e.financialRules?.closure||{};
+ const fee=primary?.fee;
  const original=(...items)=>items.map(x=>String(x??'').trim()).find(Boolean)||'';
  const monthlyRaw=original(e.monthlyFeeAmountText,e.analysis?.monthlyFeeAmountText,e.monthlyFeeYNText,e.analysis?.monthlyFeeYNText);
  const monthlyQuote=original(fee?.evidence?.quote,monthlyRaw);
@@ -777,51 +762,10 @@ function feeSnapshot(e){
  }
  const terms=[monthlyQuote,waiverSource,e.monthlyFeeWaiverText,e.avoidMonthlyFeeText,fee?.evidence?.quote,e.feeScheduleRaw]
   .map(v=>String(v||'').trim()).filter(Boolean);
- const quote=original(closure.feeEvidence?.quote,e.earlyTerminationFeeText,e.analysis?.earlyTerminationFeeText,
-   e.closeRuleText,e.analysis?.closeRuleText);
- const savedCloseTerms=[closure.feeEvidence?.quote,e.earlyTerminationFeeText,e.analysis?.earlyTerminationFeeText,e.closeRuleText,e.analysis?.closeRuleText]
-  .map(v=>String(v||'').trim()).filter(Boolean);
- let closeMain='Not confirmed',closeNote='Closing fee not confirmed in saved terms',closeKnown=false,noEarlyCloseFee=false;
- const legacyFee=original(e.earlyTerminationFeeText,e.analysis?.earlyTerminationFeeText,e.closeRuleText,e.analysis?.closeRuleText);
- const isNoFee=v=>/no (?:early[- ]?)?(?:account[- ]?)?(?:clos(?:e|ing|ure)|terminat(?:ion|ing)) fee|(?:early[- ]?)?(?:closing|termination) fee\s*(?::|is)?\s*(?:none|\$0\b|waived)/i.test(v);
- const hasConditionalWindow=v=>/\b(?:after|only if|unless|until|before|within|first \d+)\b/i.test(v);
- const clawbackEvidence=[...savedCloseTerms,e.financialRules?.closure?.text,e.notes].filter(Boolean).join(' ');
- const explicitClawback=/\b(?:clawback|forfeit|forfeiture|deduct|repay|return)\b.{0,80}\bbonus\b|\bbonus\b.{0,80}\b(?:clawback|forfeit|deduct|repay|return)\b|\b\d+\s*(?:day|month|year)s?\s+clawback\b/i.test(clawbackEvidence);
- const positiveLegacy=Number(e.earlyCloseFee)>0&&Number.isFinite(Number(e.earlyCloseFee));
- const appearsBonusClawback=explicitClawback&&positiveLegacy&&Number(e.earlyCloseFee)===Number(e.bonus)
-  &&!/(?:early[- ]?|account[- ]?)?(?:clos(?:ing|ure)|terminat(?:ion|ing))\s+fee\s*(?:is|of|:)?\s*\$|(?:clos(?:ing|ure))\s+\$\s*[\d,]+\s+fee/i.test(savedCloseTerms.join(' '));
- const typedFee=typeof closure.earlyCloseFee==='number'&&Number.isFinite(closure.earlyCloseFee)?closure.earlyCloseFee:null;
- if(typedFee!==null&&typedFee>0&&closure.feeEvidence?.quote){
-  closeMain=amount(typedFee)+' early-close fee';closeNote='From your saved fee terms';closeKnown=true;
- }else if(typedFee===0&&isNoFee(closure.feeEvidence?.quote||'')&&!hasConditionalWindow(closure.feeEvidence.quote)){
-  closeMain='No early-closing fee';closeNote='Confirmed in saved fee schedule';closeKnown=true;noEarlyCloseFee=true;
- }else if(appearsBonusClawback){
-  closeMain='Not separately stated';closeNote='The bank may take back up to '+amount(Number(e.earlyCloseFee))+' of your bonus; any closing fee is separate';closeKnown=false;
- }else if(positiveLegacy){
-  closeMain=amount(Number(e.earlyCloseFee))+' early-close fee';
-  closeNote=legacyFee?'From older saved terms · check when the fee applies':'Saved fee · check when it applies';
-  closeKnown=!!legacyFee;
- }else if(legacyFee){
-  // Old imports may have exact fee text without a structured rule. Accept
-  // only amounts explicitly tied to closing, never promotion dollar amounts.
-  const match=legacyFee.match(/(?:early[- ]?|account[- ]?)?(?:clos(?:ing|ure)|terminat(?:ion|ing))\s+fee\s*(?:is|of|:)?\s*(\$\s*[\d,]+(?:\.\d{1,2})?)/i)
-   ||legacyFee.match(/(?:early[- ]?|account[- ]?)?(?:clos(?:e|ing|ure)|terminat(?:ion|ing))[^.;\n]{0,45}?(\$\s*[\d,]+(?:\.\d{1,2})?)\s*fee/i)
-   ||legacyFee.match(/(\$\s*[\d,]+(?:\.\d{1,2})?)\s*(?:early[- ]?|account[- ]?)?(?:clos(?:ing|ure)|terminat(?:ion|ing))\s+fee/i)
-   ||legacyFee.match(/(\$\s*[\d,]+(?:\.\d{1,2})?)\s*(?:early\s+)?fee\s+if\s+(?:the\s+)?(?:account\s+)?clos(?:ed|ing)/i);
-  if(match){closeMain=match[1].replace(/\s/g,'')+' early-close fee';closeNote='From older saved terms · check when the fee applies';closeKnown=true}
-  else if(isNoFee(legacyFee)&&!hasConditionalWindow(legacyFee)){closeMain='No early-closing fee';closeNote='Confirmed by saved no-fee terms';closeKnown=true;noEarlyCloseFee=true}
-  else if(isNoFee(legacyFee)){closeNote='Fee exemption has conditions · check your closing date'}
- }
- if(explicitClawback&&!appearsBonusClawback)closeNote+=' · The bank may also take back the bonus';
- if(historicalProjection.historical){
-  if(monthly==='Not confirmed')monthly='Not listed in saved terms';
-  if(closeMain==='Not confirmed')closeMain='Not listed in saved terms';
-  if(closeNote==='Closing fee not confirmed in saved terms')closeNote='Historical offer · no separate charge recorded';
- }
- const closeTerms=[...new Set(savedCloseTerms)].join('\n\n');
+ if(historicalProjection.historical&&monthly==='Not confirmed')monthly='Not listed in saved terms';
  const source=String(e.feeScheduleSourceUrl||'').trim();
  return {monthly,monthlyKnown,companions,summary:summary||'Waiver conditions not confirmed',terms:[...new Set(terms)].join('\n\n'),
-  closeMain,closeNote,closeKnown,noEarlyCloseFee,closeTerms,historical:historicalProjection.historical,historicalSource:historicalProjection.source,source:/^https:\/\/[^<>"'\s]+$/i.test(source)?source:'',explicitClawback};
+  historical:historicalProjection.historical,historicalSource:historicalProjection.source,source:/^https:\/\/[^<>"'\s]+$/i.test(source)?source:''};
 }
 function feeDetail(e){
  const x=feeSnapshot(e);
@@ -833,26 +777,24 @@ function feeDetail(e){
   +(x.terms?'<details class="bt3611-full-terms"><summary>View saved fee terms</summary><p>'+safe(x.terms)+'</p></details>':'')
   +(x.source?'<a class="bt360-link bt3614-fee-source" href="'+safe(x.source)+'" target="_blank" rel="noopener noreferrer">Fee schedule ↗</a>':'')
   +'</div></div>'
-  +'<div class="bt3613-fee-line"><span>Early closing fee</span><div><b class="'+(x.closeKnown||x.historical?'':'bt3611-amber')+'">'+safe(x.closeMain)+'</b><small>'+safe(x.closeNote)+'</small>'
-  +(x.closeTerms?'<details class="bt3611-full-terms"><summary>View saved closing terms</summary><p>'+safe(x.closeTerms)+'</p></details>':'')
-  +'</div></div></div>';
+  +'</div>';
 }
 function closeDateInfo(e){
  const calendarHold=window.BTFinancialRules?.closeHoldInfo(e);
- if(calendarHold)return {value:date(calendarHold.reviewOn),note:calendarHold.months+' calendar months from opening · hold through '+date(calendarHold.holdUntil)+(calendarHold.feeUnconfirmed?' · check closing fees':''),action:calendarHold.feeUnconfirmed};
- const close=e.financialRules?.closure,source=String(close?.evidence?.quote||e.closeRuleText||e.earlyTerminationFeeText||'').trim();
+ if(calendarHold)return {value:date(calendarHold.reviewOn),note:calendarHold.months+' calendar months from opening · hold through '+date(calendarHold.holdUntil),action:false};
+ const close=e.financialRules?.closure,rawSource=String(close?.evidence?.quote||e.closeRuleText||'').trim();
+ const source=/(?:remain|keep|stay|maintain)[^.]{0,75}\bopen\b|(?:bonus|reward)[^.]{0,100}(?:forfeit|repay|clawback|reclaim|deduct|reverse)|(?:forfeit|repay|clawback|reclaim|deduct|reverse)[^.]{0,100}(?:bonus|reward)/i.test(rawSource)?rawSource:'';
  const basis=String(close?.basis||e.closeRuleBasis||'').toLowerCase();
  const ruleDays=Number(close?.minHoldDays??e.minHoldDays??0);
- if(close?.restrictionType==='manual-review'||e.closeRestrictionType==='manual-review')return {value:'Closing rule needs review',note:'Check early-close restrictions',action:true};
- if(!source)return {value:'Close terms missing',note:'Save how long to keep the account open and any closing fees',action:true};
+ if(window.BTFinancialRules?.retentionNeedsReview?.(e))return {value:'Closing rule needs review',note:'Check bonus-retention restrictions',action:true};
+ if(!source)return {value:'Close terms missing',note:'Save the keep-open or bonus-retention restriction',action:true};
  if(basis==='bonus'&&!e.bonusRecd)return {value:'After bonus arrives',note:ruleDays?ruleDays+'-day hold starts at payout':'Close timing starts at payout',action:false};
  if(basis==='reqmet'&&!e.reqMet)return {value:'After requirements',note:ruleDays?ruleDays+'-day hold starts after qualification':'Close timing starts after qualification',action:false};
  const computed=typeof safeCloseDate==='function'?safeCloseDate(e):'';
  if(!computed)return {value:'Date not available yet',note:'Review the saved close rule',action:true};
  const basisLabel=basis==='bonus'?'payout':basis==='reqmet'?'requirements':basis==='opened'?'opening':'saved rule';
  const delay=ruleDays>0?ruleDays+' days from '+basisLabel:'From saved close restrictions';
- const feeKnown=close?.earlyCloseFee!==null&&close?.earlyCloseFee!==undefined&&!!close?.feeEvidence?.quote;
- return {value:date(computed),note:delay+(feeKnown?' · fee terms saved':' · confirm fees'),action:!feeKnown&&!Number(e.earlyCloseFee)};
+ return {value:date(computed),note:delay,action:false};
 }
 function savedCooldownChurnExcerpt(e){
  const current=String(e?.churnRuleText||e?.eligibilityEvidenceText||e?.eligibilityText||e?.churnReason||'').trim();
@@ -922,9 +864,7 @@ function openActivity(id){
 function closeActivity(){document.querySelector('.bt3611-activity-overlay')?.remove()}
 function setReadyExtrasOpen(id,value){readyExtrasState.set(id,!!value)}
 
-// Closing checklist is a read-only projection of the same enrolled fee evidence
-// used by Fees & waivers. A hold countdown is never proof that a positive or
-// conditional early-close charge has expired.
+// Closing checklist is a read-only projection of documented retention rules.
 // A posted bonus alone cannot establish that it is safe from repayment.
 // Only saved closure evidence matching the documented restriction can do so.
 function retentionEvidenceCleared(e,holdMet){
@@ -945,7 +885,6 @@ function closeCheckPresentation(e){
   const met=dB(td(),calendarHold.reviewOn)<=0;
   return [
     {ok:met,label:'12-month retention period',detail:(met?'Hold completed · ':'Hold through ')+date(calendarHold.holdUntil)+' · closure review '+date(calendarHold.reviewOn)},
-    {ok:!calendarHold.feeUnconfirmed,label:'Early close service fee',detail:calendarHold.feeUnconfirmed?'Fee not expressly confirmed in saved disclosures · verify with bank':'Saved fee evidence verified'},
     {ok:met&&!!e.bonusRecd,label:'Bonus retention check',detail:!e.bonusRecd?'Wait for actual bonus payment':met?'Required hold elapsed · review repayment terms':'Do not close before the hold expires'},
     {ok:false,label:'Closing balance',detail:'Confirm pending charges, transfers and final balance with the bank'}
   ];
@@ -959,12 +898,9 @@ function closeCheckPresentation(e){
  const paidPayoutOnly=!hasHold&&!!e.bonusRecd&&closure?.restrictionType==='payout-only'
   &&closure?.minHoldDays===0&&/\b(?:until|through|after|once|when|before)\b.{0,90}\bbonus\b/i.test(String(closure?.evidence?.quote||''))
   &&/\bbonus\b/i.test(String(e.closeRuleText||closure?.text||''));
- const fee=feeSnapshot(e);
- const zeroFeeConfirmed=fee.closeKnown&&fee.noEarlyCloseFee;
  const retentionSaved=retentionEvidenceCleared(e,holdMet);
  return [
   {ok:holdMet||paidPayoutOnly,label:'Minimum hold met',detail:hasHold?(holdMet?'Open '+Number(e.minHoldDays)+' days · cleared '+date(hold):'Hold until '+(hold?date(hold):'Needs review')):paidPayoutOnly?'No separate fixed hold · payout-only condition satisfied':'No documented minimum hold · Needs review'},
-  {ok:zeroFeeConfirmed,label:'Early close fee window cleared',detail:zeroFeeConfirmed?'Explicit no-fee terms saved':fee.closeKnown?fee.closeMain+' · verify the applicable fee window before closing':fee.closeNote+' · Needs review'},
   {ok:retentionSaved,label:'Bonus kept after closing',detail:retentionSaved?'Bonus received · saved restriction evidence supports closing':'Confirm bonus repayment restrictions in saved terms'},
   {ok:false,label:'Close with $0 balance',detail:'Confirm account balance with the bank before closing'}
  ];
@@ -1061,16 +997,10 @@ function simpleFees(e){
  if(e.closed)return '';
  const x=feeSnapshot(e);
  const monthly=x.monthlyKnown?x.monthly:'Not confirmed';
- // An unknown closing charge is not a fee. Keep the missing evidence in the
- // canonical closing review, but do not place a speculative warning on every
- // current bank's everyday fee card. Show only evidence-backed terms.
- const closingRow=x.closeKnown
-  ?'<div class="bt3810-pair"><span>Closing early</span><b>'+safe(x.closeMain)+'</b></div>'
-  :'';
  return '<section class="bt3810-card bt3810-fees"><h3>Fees</h3><div class="bt3810-pair"><span>Monthly</span><b>'+safe(monthly)+'</b></div>'
   +(x.monthly!=='$0'&&x.summary&&x.summary!=='Waiver conditions not confirmed'?'<div class="bt3810-fee-note">Avoid fee: '+safe(x.summary)+'</div>':'')
   +(x.companions.length?'<div class="bt3810-fee-note">Other required accounts may have fees.</div>':'')
-  +closingRow+'</section>';
+  +'</section>';
 }
 function simpleNextCycle(e){
  if(!e.bonusRecd&&!e.closed)return '';
