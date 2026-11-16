@@ -519,7 +519,7 @@ async function exercise(name,engine,url){
       await page.getByRole('button',{name:'Review deposit result',exact:true}).click();
       check('journey optional datapoint review never assumes observed success',
         await page.evaluate(()=>dpEditor?.evidenceStage==='requirement'&&!dpEditor?.confirmedByUser));
-      await page.getByRole('button',{name:'Skip for now',exact:true}).click();
+      await page.getByRole('button',{name:'Not now',exact:true}).click();
     }else if(await page.getByRole('button',{name:'OK',exact:true}).count()){
       await page.getByRole('button',{name:'OK',exact:true}).click();
     }
@@ -928,7 +928,7 @@ async function exercise(name,engine,url){
 
     await page.locator('.bt360-detail-footer').getByRole('button',{name:/^Record bonus payment/}).click();await page.locator('#rcv_date').fill('2026-04-15');await button('Save').click();await button('Review experience').click();
     check('payment success offers optional evidence review without assuming a method result',await page.evaluate(()=>dpEditor.evidenceStage==='bonus'&&!dpEditor.confirmedByUser));
-    await button('Skip for now').click();
+    await button('Not now').click();
     // A payout clear must preserve tax data, account history and all companion keys after failure.
     const payoutClearBefore=await page.evaluate(()=>getBackupStorageKeys().map(key=>[key,localStorage.getItem(key)]));
     await page.evaluate(()=>openRcv(entries[0].id));
@@ -961,7 +961,7 @@ async function exercise(name,engine,url){
     await page.locator('#rcv_date').fill('2026-04-15');
     await button('Save').click();
     await button('Review experience').click();
-    await button('Skip for now').click();
+    await button('Not now').click();
     check('bonus receipt updates close readiness',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='READY_TO_CLOSE');
     await page.evaluate(()=>{entries[0].earlyCloseFee=null;R();});
     check('unverified fee blocks close readiness even after payout',await page.evaluate(()=>btLifecycleStageForEntry(entries[0]).code)==='BONUS_RECEIVED');
@@ -1855,9 +1855,10 @@ async function exercise(name,engine,url){
     await button('+ Add a report').click();
     await page.locator('.research-editor-body input').first().fill('E2E Report Bank');
     await page.locator('.research-editor-body input').nth(1).fill('Synthetic employer payroll');
-    await page.locator('.research-editor-body select').nth(1).selectOption('worked');
+    await page.getByLabel('Reported result',{exact:true}).selectOption('worked');
     await page.locator('.research-editor-body textarea').fill('Synthetic report for browser verification');
-    await page.locator('.research-editor-body input[type=date]').first().fill('2026-09-30');
+    await page.locator('.experience-optional > summary').click();
+    await page.getByLabel('Deposit or payout date',{exact:true}).fill('2026-09-30');
     await page.locator('.research-editor-body input[type=url]').fill('https://example.test/report');
     check('report editor footer stays within mobile viewport',await page.locator('.research-editor-footer').evaluate(e=>{const r=e.getBoundingClientRect();return r.bottom<=innerHeight+1&&r.top>0}));
     await button('Save report').click();
@@ -2319,24 +2320,26 @@ async function exercise(name,engine,url){
     // v3.6.43: explicit result capture and exact-bank task research.
     await page.evaluate(()=>{
       entries=[{id:'E2E-TRUST',bank:'E2E Trust Bank',accountType:'business',opened:'2026-01-01',bonus:100,
-        completeBonusText:'Receive qualifying direct deposits',checklist:[{text:'Qualifying direct deposit',done:false}],
+        dataPoint:'At least 2 Enhanced Direct Deposits totaling $3,000',completeBonusText:'Receive qualifying direct deposits',checklist:[{text:'Qualifying direct deposit',done:false}],
         customTimers:[{id:'trust-dd',text:'Receive qualifying direct deposits',date:'2027-01-01',done:false}]}];
       tab='tracker';expanded=null;cfm=null;search='';BT360.setAudience('all');BT360.resetStage();saveUserDatapoints([]);sv(SK,entries);R();toggleCk('E2E-TRUST',0);
     });
-    check('direct deposit completion prompts for an observed result',await page.getByRole('dialog',{name:'My experience'}).isVisible()&&await page.evaluate(()=>dpEditor.evidenceStage==='requirement'));
-    check('completion prompt does not invent an event date or trusted outcome',await page.evaluate(()=>dpEditor.eventDate===''&&!dpEditor.confirmedByUser&&loadUserDatapoints().length===0));
+    check('direct deposit completion prompts for an observed result',await page.getByRole('dialog',{name:'Deposit experience'}).isVisible()&&await page.evaluate(()=>dpEditor.evidenceStage==='requirement'));
+    check('completion prompt does not invent an event date or trusted outcome',await page.evaluate(()=>dpEditor.method===''&&dpEditor.outcome===''&&dpEditor.eventDate===''&&dpEditor.depositAmount===''&&!dpEditor.confirmedByUser&&loadUserDatapoints().length===0));
     for(const width of [320,375,390,430]){
       await page.setViewportSize({width,height:844});
       check('experience review fits '+width+'px',await page.locator('.research-editor').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
     }
     check('optional experience fields start collapsed',await page.locator('.experience-optional').evaluate(e=>!e.open));
     check('confirmation checkbox is compact with a full touch label',await page.locator('.experience-confirm').evaluate(e=>e.getBoundingClientRect().height>=44&&e.querySelector('input').getBoundingClientRect().width<=24));
-    await page.getByLabel('Transfer or activity',{exact:true}).fill('Synthetic payroll');
-    await page.getByLabel('Observed result',{exact:true}).selectOption('worked');
-    await page.getByLabel('Actual experience date',{exact:true}).fill(await page.evaluate(()=>td()));
-    await page.getByLabel('I confirm this result from my own experience',{exact:true}).check();
+    await page.getByRole('button',{name:'Save experience',exact:true}).click();
+    check('missing source shows inline error and leaves report unsaved',await page.locator('#dp-experience-error').isVisible()&&await page.evaluate(()=>loadUserDatapoints().length===0));
+    await page.getByLabel('Where did the money come from?',{exact:true}).fill('Synthetic payroll');
+    await page.getByLabel('Did the bank count it?',{exact:true}).selectOption('worked');
+    await page.getByLabel('Result date',{exact:true}).fill(await page.evaluate(()=>td()));
+    await page.getByLabel('I checked this result myself',{exact:true}).check();
     await page.screenshot({path:path.join(output,name+'-experience-confirmation.png')});
-    await page.getByRole('button',{name:'Save report',exact:true}).click();
+    await page.getByRole('button',{name:'Save experience',exact:true}).click();
     check('explicit experience retains cycle identity and attestation',await page.evaluate(()=>loadUserDatapoints().some(x=>x.entryId==='E2E-TRUST'&&x.accountType==='business'&&x.cycleOpened==='2026-01-01'&&x.confirmedByUser&&x.outcome==='worked')));
     await page.evaluate(()=>{expanded=null;search='';BT360.setAudience('all');BT360.resetStage();R();if(BT360.selectedAttentionId!=='E2E-TRUST')BT360.toggleAttention('E2E-TRUST')});
     await page.getByRole('button',{name:'Deposit reports',exact:false}).click();
@@ -2351,7 +2354,7 @@ async function exercise(name,engine,url){
     await page.getByRole('button',{name:'Review experience',exact:true}).click();
     check('bonus confirmation offers a separate method review',await page.evaluate(()=>dpEditor.evidenceStage==='bonus'&&entries[0].bonusRecd===td()&&!dpEditor.confirmedByUser));
     const pointsBeforeSkip=await page.evaluate(()=>JSON.stringify(loadUserDatapoints()));
-    await page.getByRole('button',{name:'Skip for now',exact:true}).click();
+    await page.getByRole('button',{name:'Not now',exact:true}).click();
     check('skipping experience preserves payment and prior evidence',await page.evaluate(before=>!!entries[0].bonusRecd&&JSON.stringify(loadUserDatapoints())===before,pointsBeforeSkip));
     // Individual requirement clicks are user checklist confirmations, never lifecycle events.
     const individualRestore=await page.evaluate(source=>{

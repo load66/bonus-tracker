@@ -78,7 +78,7 @@ try{
  s.addDD('Synthetic Trust Bank','Employer payroll',100,'2026-02-01',{entryId:'TRUST',accountType:'business'});
  let personal=s.loadUserDatapoints();assert.equal(personal.length,1);assert.equal(personal[0].outcome,'pending');assert.equal(personal[0].confirmedByUser,false);
  s.toggleCk('TRUST',0);assert.equal(run('dpEditor.evidenceStage'),'requirement');assert.equal(run('dpEditor.eventDate'),'');
- run("dpEditor.outcome='worked';dpEditor.eventDate='2026-02-01';dpEditor.confirmedByUser=false;saveDPEditor()");
+ run("dpEditor.method='Employer payroll';dpEditor.outcome='worked';dpEditor.eventDate='2026-02-01';dpEditor.confirmedByUser=false;saveDPEditor()");
  assert.equal(s.loadUserDatapoints()[0].confirmedByUser,false,'Unchecked attestation became trusted');
  run('dpEditor.confirmedByUser=true;saveDPEditor()');personal=s.loadUserDatapoints();assert.equal(personal[0].confirmedByUser,true);assert.equal(personal[0].accountType,'business');assert.equal(personal[0].cycleOpened,'2026-01-01');
  // Editing a note must not fabricate a newer confirmation date.
@@ -87,9 +87,9 @@ try{
  assert.equal(s.loadUserDatapoints()[0].confirmedAt,'2026-02-03','Note-only edit rewrote confirmation provenance');
  assert.equal(s.loadUserDatapoints()[0].lastConfirmedAt,'2026-02-03','Note-only edit advanced confirmation recency');
  s.addDD('Synthetic Trust Bank','Employer payroll',100,'2026-02-02',{entryId:'TRUST',accountType:'business'});
- assert.equal(s.loadUserDatapoints().length,1,'Repeated payout duplicated cycle evidence');assert.equal(s.loadUserDatapoints()[0].eventDate,'2026-02-01');
- run("entries[0].dataPoint='';reviewCycleExperience('TRUST','bonus')");assert.equal(run('dpEditor.method'),'Employer payroll');assert.equal(run('dpEditor.confirmedByUser'),false);assert.equal(run('dpEditor.eventDate'),'');s.closeDPEditor();
- s.openUserDPEditor(personal[0].id);assert.match(s.rDpEditor(),/Changing a saved method, outcome, or date requires a new confirmation/);
+ assert.equal(s.loadUserDatapoints().length,2,'Repeated payout duplicated cycle evidence');assert.equal(s.loadUserDatapoints()[1].confirmedByUser,false,'Fresh report overwrote imported evidence');assert.equal(s.loadUserDatapoints()[0].eventDate,'2026-02-01');
+ run("entries[0].dataPoint='';reviewCycleExperience('TRUST','bonus')");assert.equal(run('dpEditor.method'),'','A new report must not copy a prior deposit source');assert.equal(run('dpEditor.confirmedByUser'),false);assert.equal(run('dpEditor.eventDate'),'');s.closeDPEditor();
+ s.openUserDPEditor(personal[0].id);assert.match(s.rDpEditor(),/If you change the source, result, date, or amount, confirm it again/);
  run("dpEditorMaterialChange('outcome','mixed');dpEditor.note='Several methods used'");
  assert.equal(run('dpEditor.confirmedByUser'),false,'Changing verified evidence retained the old attestation');
  run('saveDPEditor()');assert.equal(s.loadUserDatapoints()[0].outcome,'worked','Unconfirmed edit changed trusted outcome');
@@ -97,7 +97,7 @@ try{
  run('dpEditor.confirmedByUser=true;dpEditor.reconfirmed=true;saveDPEditor()');
  personal=s.loadUserDatapoints();assert.equal(personal[0].outcome,'mixed');assert.equal(personal[0].revisions.at(-1).outcome,'worked');
  s.openUserDPEditor(personal[0].id);const newer=s.loadUserDatapoints();newer[0].note='Another tab correction';s.saveUserDatapoints(newer);run("dpEditor.note='stale correction';saveDPEditor()");assert.equal(s.loadUserDatapoints()[0].note,'Another tab correction');s.closeDPEditor();
- run("entries[0].opened='2026-05-01'");s.addDD('Synthetic Trust Bank','Employer payroll',100,'2026-06-01',{entryId:'TRUST',accountType:'business'});assert.equal(s.loadUserDatapoints().length,2,'New churn cycle replaced old evidence');
+ run("entries[0].opened='2026-05-01'");s.addDD('Synthetic Trust Bank','Employer payroll',100,'2026-06-01',{entryId:'TRUST',accountType:'business'});assert.equal(s.loadUserDatapoints().length,3,'New churn cycle replaced old evidence');
  s.toggleTimer('TRUST','dd');assert.equal(run('dpEditor.evidenceStage'),'requirement');s.closeDPEditor();
  const savedPoints=s.loadUserDatapoints();const recovery=s.stagePortableRestore({entries:[],userDatapoints:savedPoints,communityDatapoints:[],bankReqs:{},phoneBook:[],profileEvents:[],offerHistory:{}});
  assert.deepEqual(JSON.parse(recovery.writes.bt_user_datapoints_v1),JSON.parse(JSON.stringify(savedPoints)),'Recovery lost trust metadata or revisions');
@@ -109,6 +109,24 @@ try{
  const reportBeforeFailure=JSON.stringify(s.loadUserDatapoints());s.openUserDPEditor(s.loadUserDatapoints()[0].id);run("dpEditor.note='Must not survive failure'");
  const setItem=s.localStorage.setItem;let blocked=false;s.localStorage.setItem=function(k,v){if(k==='bt_user_datapoints_v1'&&!blocked){blocked=true;throw Error('Synthetic write failure')}return setItem.call(this,k,v)};
  s.saveDPEditor();s.localStorage.setItem=setItem;assert.equal(JSON.stringify(s.loadUserDatapoints()),reportBeforeFailure,'Failed report save changed evidence');assert(run('!!dpEditor'),'Failed save dismissed review');s.closeDPEditor();
+ // Regression: an imported requirement and unconfirmed success must never autofill a new experience.
+ run("entries=[{id:'BLANK-REPORT',bank:'Synthetic Report Bank',accountType:'personal',opened:'2026-01-01',dataPoint:'At least 2 Enhanced Direct Deposits totaling $3,000',bonusTitle:'Receive $325'}];saveUserDatapoints([{id:'bad-draft',entryId:'BLANK-REPORT',bank:'Synthetic Report Bank',accountType:'personal',cycleOpened:'2026-01-01',method:entries[0].dataPoint,outcome:'worked',eventDate:'2026-02-01',depositAmount:3000,confirmedByUser:false}])");
+ const untouched=JSON.stringify(s.loadUserDatapoints());
+ s.reviewCycleExperience('BLANK-REPORT','bonus');
+ for(const key of ['method','outcome','eventDate','depositAmount','product','note'])assert.equal(run('dpEditor.'+key),'','Invented autofill: '+key);
+ assert.equal(run('dpEditor.mode'),'new');assert.equal(run('dpEditor.confirmedByUser'),false);
+ assert.equal(JSON.stringify(s.loadUserDatapoints()),untouched,'Opening review changed saved reports');
+ const cleanForm=s.rDpEditor();assert.match(cleanForm,/Where did the money come from/);assert(!cleanForm.includes('At least 2 Enhanced'));assert.match(cleanForm,/autocomplete="off"/);assert.match(cleanForm,/Close report/);
+ s.saveDPEditor();assert.equal(run('dpEditor.errorField'),'method');assert.equal(JSON.stringify(s.loadUserDatapoints()),untouched);
+ run("dpEditorMaterialChange('method','Synthetic ACH')");s.saveDPEditor();assert.equal(run('dpEditor.errorField'),'outcome');
+ run("dpEditorMaterialChange('outcome','worked')");s.saveDPEditor();assert.equal(run('dpEditor.errorField'),'eventDate');
+ run("dpEditorMaterialChange('eventDate','2026-02-01');dpEditor.confirmedByUser=true;dpEditorMaterialChange('depositAmount','250.005')");
+ assert.equal(run('dpEditor.confirmedByUser'),false,'Changed amount retained new-report attestation');
+ run('dpEditor.confirmedByUser=true');s.saveDPEditor();assert.equal(run('dpEditor.errorField'),'depositAmount');
+ run("dpEditorMaterialChange('depositAmount','250.00');dpEditor.confirmedByUser=true");s.saveDPEditor();
+ assert.equal(s.loadUserDatapoints()[0].method,'Synthetic ACH');assert.equal(s.loadUserDatapoints()[0].confirmedByUser,true);assert(!('error' in s.loadUserDatapoints()[0]));
+ s.reviewCycleExperience('BLANK-REPORT','requirement');const cancelBefore=JSON.stringify(s.loadUserDatapoints());s.closeDPEditor();assert.equal(JSON.stringify(s.loadUserDatapoints()),cancelBefore);
+ s.openUserDPEditor('bad-draft');assert.equal(run('dpEditor.method'),'At least 2 Enhanced Direct Deposits totaling $3,000','Explicit edit must preserve original text for correction');s.closeDPEditor();
  console.log('Research tabs passed: catalog dates/provenance, non-destructive legacy routing, metadata restore/edit, historical search, identity filters, XSS and report-only deletion');
  process.exit(0);
 }catch(e){console.error(e.stack);process.exit(1)}
