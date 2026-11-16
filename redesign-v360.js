@@ -182,8 +182,8 @@ function attentionCardProgress(entry){
  if(!entry||entry.reqMet||entry.bonusRecd||entry.closed)return '';
  const p=requirementProgress(entry);
  if(!p.total)return '';
- return '<div class="bt3719-progress"><div class="bt3719-progress-label"><span>Recorded so far</span><b>'+p.done+' of '+p.total+' steps</b></div>'
-  +'<div class="bt360-track" role="progressbar" aria-label="Recorded requirement and task checks" aria-valuemin="0" aria-valuemax="'+p.total+'" aria-valuenow="'+p.done+'"><i style="width:'+p.percent+'%"></i></div></div>';
+ return '<span class="bt3719-progress"><span class="bt3719-progress-label"><span>Recorded so far</span><b>'+p.done+' of '+p.total+' steps</b></span>'
+  +'<span class="bt360-track" role="progressbar" aria-label="Recorded requirement and task checks" aria-valuemin="0" aria-valuemax="'+p.total+'" aria-valuenow="'+p.done+'"><i style="width:'+p.percent+'%"></i></span></span>';
 }
 
 function dashboardAttentionOrder(a,b){
@@ -211,12 +211,13 @@ function attentionAccountMeta(x,entry){
   ?'Eligible since '+date(x.dateContext.date):attentionDateNote(x);
  return [kind,context].filter(Boolean).join(' · ');
 }
+// Dashboard account cards are navigation surfaces, not expandable action
+// menus. Bank-specific actions live in the shared account detail footer.
 let selectedAttentionId=null,accountListOpen=false;
 function toggleAttention(id){
  if(!entries.some(e=>e.id===id))return;
- selectedAttentionId=selectedAttentionId===id?null:id;
- R();
- requestAnimationFrame(()=>{[...document.querySelectorAll('[data-attention-toggle]')].find(el=>el.dataset.attentionToggle===String(id))?.focus({preventScroll:true});});
+ selectedAttentionId=null;
+ openAccountFromActionCenter(id);
 }
 function toggleAccountList(){
  accountListOpen=!accountListOpen;selectedStage='';search='';expanded=null;R();
@@ -247,21 +248,15 @@ function tasks(rows){
  const heading='<div class="bt360-panel-title bt3719-section-title"><h3>'+titles[key]+'</h3><span class="bt360-count">'+count+' '+noun+'</span></div>';
  if(!count)return key==='needs'?'<section class="bt3719-needs bt3651-queue" data-queue="needs">'+heading+'<div class="bt360-empty">No immediate tasks for '+(audience==='all'?'your':audience)+' accounts.</div></section>':'';
  let html='<section class="bt3719-needs bt3651-queue" data-queue="'+key+'">'+heading+'<div class="bt360-list bt3719-attention-list bt3641-attention-stack">';
- list.forEach((x,index)=>{
-  const item=rows.find(e=>e.id===x.entryId),selected=selectedAttentionId===x.entryId;
+ list.forEach(x=>{
+  const item=rows.find(e=>e.id===x.entryId);
   const label=key==='waiting'?(x.stageCode==='HOLD_OPEN'?'Keep account open':'Waiting for bonus payment'):x.task?.title||x.stageLabel||'Review account';
-  const title=safe(label),target='bt-attention-actions-'+key+'-'+index;
-  const meta=selected&&attentionUrgency(x)!==null&&attentionUrgency(x)<=30?(accountAudience(item)==='business'?'Business':'Personal'):attentionAccountMeta(x,item);
-  html+='<article class="bt3641-attention-item'+(selected?' bt360-featured is-selected':'')+'" data-attention-id="'+safe(x.entryId)+'">'
-   +'<button type="button" class="bt360-list-row bt3641-attention-toggle" data-attention-toggle="'+safe(x.entryId)+'" aria-expanded="'+selected+'" aria-controls="'+target+'" onclick="BT360.toggleAttention('+arg(x.entryId)+')">'
+  const title=safe(label),meta=attentionAccountMeta(x,item);
+  html+='<article class="bt3641-attention-item" data-attention-id="'+safe(x.entryId)+'">'
+   +'<button type="button" class="bt360-list-row bt3641-attention-toggle bt3812-bank-detail-link" data-attention-link="'+safe(x.entryId)+'" aria-label="Open '+safe(x.bank||'bank')+' details" onclick="openAccountFromActionCenter('+arg(x.entryId)+')">'
    +bankLogo(x.bank,true)+'<span class="bt360-grow bt3729-needs-copy"><b class="bt3729-bank-name">'+safe(x.bank||'Bank')+'</b><small class="bt3729-task-title">'+title+'</small><small class="bt3729-task-meta">'+safe(meta)+'</small>'+monthlyFeeBadge(item)+'</span>'
-   +'<span class="bt3719-task-right">'+(item?.bonus?'<strong>'+safe(amount(item.bonus))+'</strong>':'')+actionBadge(x,selected)+'</span></button>'
-   +'<div id="'+target+'" class="bt3641-attention-body"'+(selected?'':' hidden')+'>';
-  if(['ACTION_NEEDED','IN_PROGRESS'].includes(x.stageCode))html+=attentionCardProgress(item);
-  if(x.task?.activityKind==='direct-deposit')html+='<button type="button" class="bt360-secondary bt3643-datapoints" onclick="openTaskDatapoints('+arg(x.entryId)+')">Deposit reports ›</button>';
-  const primary=key==='opportunities'?'View offers':x.task?.cta||'Open task';
-  const command=key==='opportunities'?'BT360.viewOffers('+arg(x.bank)+')':'runNextAccountAction('+arg(x.entryId)+')';
-  html+='<div class="bt360-actions"><button type="button" class="bt360-primary" onclick="'+command+'">'+safe(primary)+'</button><button type="button" class="bt360-secondary" onclick="openAccountFromActionCenter('+arg(x.entryId)+')">Details</button></div></div></article>';
+   +'<span class="bt3719-task-right">'+(item?.bonus?'<strong>'+safe(amount(item.bonus))+'</strong>':'')+actionBadge(x,false)+'</span>'
+   +(['ACTION_NEEDED','IN_PROGRESS'].includes(x.stageCode)?attentionCardProgress(item):'')+'</button></article>';
  });
  return html+'</div></section>';
  }).join('');
