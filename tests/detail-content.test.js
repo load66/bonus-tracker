@@ -389,25 +389,19 @@ assert.doesNotMatch(bonusClawbackMarkup,/\$400 early-close fee/,
 assert.equal(JSON.stringify([...storage]),before,'Fee projections never write stored records');
 
 
-// A conditional no-fee statement must never yield a green Close check,
-// even if the saved hold clock has elapsed. The fee-summary evidence
-// projection is the single source used for both read-only displays.
-const conditionalClosing={...e,earlyCloseFee:0,earlyTerminationFeeText:'No early close fee after 180 days.',
-  financialRules:{...e.financialRules,closure:{...e.financialRules.closure,earlyCloseFee:null,feeEvidence:null}}};
-const feeCheck=entry=>sandbox.BT360.closeCheckPresentation(entry).find(item=>item.label==='Early close fee window cleared');
-assert.equal(feeCheck(conditionalClosing).ok,false,'Conditional fee-free terms are not unconditional clearance');
-assert.match(feeCheck(conditionalClosing).detail,/conditional|Needs review/i);
-const explicitFree={...conditionalClosing,bonusRecd:'2026-10-12',earlyTerminationFeeText:'No early closing fee.'};
-assert.equal(feeCheck(explicitFree).ok,true,'Explicit unconditional no-fee evidence may be shown as cleared');
-assert.match(feeCheck(explicitFree).detail,/Explicit no-fee terms saved/);
-assert.equal(sandbox.BT360.closeCheckPresentation(explicitFree).find(x=>x.label==='Minimum hold met').ok,true,'Verified payout-only closure with posted bonus must not need a fictitious fixed hold');
-const pendingPayout={...explicitFree,bonusRecd:''};
-assert.equal(sandbox.BT360.closeCheckPresentation(pendingPayout).find(x=>x.label==='Minimum hold met').ok,false,'Payout-only restriction stays pending until confirmed receipt');
-const feeCharged={...conditionalClosing,earlyCloseFee:25,earlyTerminationFeeText:'$25 early closing fee for accounts closed within 180 days.'};
-assert.equal(feeCheck(feeCharged).ok,false,'Positive early-close charges require window review even when a hold timer runs out');
-assert.match(feeCheck(feeCharged).detail,/fee window before closing/);
-assert.equal(JSON.stringify([...storage]),before,'Close checks are pure view projections');
-
+// Retired service fees cannot change hold or bonus-retention checks.
+{
+ const beforeServiceFees=JSON.stringify([...storage]);
+ const base={...e,bonusRecd:'2026-10-12',closeRuleText:'Keep the account open until the bonus posts.'};
+ const view=entry=>sandbox.BT360.closeCheckPresentation(entry);
+ const free=view({...base,earlyCloseFee:0,earlyTerminationFeeText:'No early closing fee.'});
+ const charged=view({...base,earlyCloseFee:25,earlyTerminationFeeText:'$25 closing service fee within 180 days.'});
+ const unknown=view({...base,earlyCloseFee:null,earlyTerminationFeeText:''});
+ for(const rows of [free,charged,unknown])assert(!rows.some(x=>/early.close fee|closing fee|service fee/i.test(x.label)),'No service-fee readiness check may reappear');
+ assert.deepEqual(free.map(x=>x.ok),charged.map(x=>x.ok),'A service charge must not alter retained holding or clawback checks');
+ assert.deepEqual(free.map(x=>x.ok),unknown.map(x=>x.ok),'Missing service-charge evidence must not block independently supported closure checks');
+ assert.equal(JSON.stringify([...storage]),beforeServiceFees,'Service-fee retirement is read-only');
+}
 
 // A payout must not silently clear the bonus-retention check without evidence.
 const payoutForRetention={...e,bonusRecd:'2026-10-12',
@@ -425,6 +419,8 @@ const explicitRetention={...noRetentionEvidence,closeRuleText:'No bonus clawback
 assert.equal(retained(explicitRetention).ok,true,'Explicit saved no-clawback evidence may confirm retention');
 assert.equal(retained({...payoutForRetention,bonusRecd:''}).ok,false,'Without received payout the retention check stays open');
 assert.equal(JSON.stringify([...storage]),before,'Retention evidence review does not write stored data');
+assert(!sandbox.BT360.closeCheckPresentation(noRetentionEvidence).some(x=>/closing fee|early.close fee/i.test(x.label)));
+
 
 const timers=sandbox.BT360.timerRows(e);
 assert.match(timers,/Requirement due/);
