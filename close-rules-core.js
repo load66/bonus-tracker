@@ -78,7 +78,7 @@
     const proof=explicitRuleText(e);
     if(n>0&&sourceIsManual(e))return'manual-fixed';
     if(n>0&&proof)return /deduct|reverse|reclaim|clawback|forfeit/i.test(proof)?'explicit-clawback':'minimum-open';
-    const p=payoutText([e.closeRuleText,e.earlyTerminationFeeText,e.analyzedTC,e.completeBonusText].filter(Boolean).join(' '));
+    const p=payoutText([e.closeRuleText,e.analyzedTC,e.completeBonusText].filter(Boolean).join(' '));
     return p?'payout-only':'none';
   }
   function isFixed(e){return FIXED_TYPES.has(typeForEntry(e))}
