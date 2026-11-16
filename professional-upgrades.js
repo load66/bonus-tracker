@@ -499,7 +499,9 @@
     }
 
     const eligibilityLookback=s=>/(not eligible|ineligible|eligibility|previously|prior|past) [^.]{0,90}(closed|close)|closed [^.]{0,60}(within|in the past|during the previous)/i.test(s)&&!/(deduct|reverse|forfeit|clawback|early termination fee|must remain open|keep the account open)/i.test(s);
-    const explicitClose=closeLines.filter(s=>!eligibilityLookback(s)).map(s=>({s,ds:days(s)})).filter(x=>x.ds.length);
+    const retentionSentence=s=>/(?:remain|keep|stay|maintain)[^.]{0,65}\bopen\b|(?:bonus|reward)[^.]{0,100}(?:forfeit|repay|clawback|reclaim|deduct|reverse)|(?:forfeit|repay|clawback|reclaim|deduct|reverse)[^.]{0,100}(?:bonus|reward)/i.test(s);
+    // A fee-only termination window is never a contractual bonus hold.
+    const explicitClose=closeLines.filter(s=>!eligibilityLookback(s)&&retentionSentence(s)).map(s=>({s,ds:days(s)})).filter(x=>x.ds.length);
     if(explicitClose.length){
       const best=explicitClose.sort((a,b)=>{
         const score=x=>(/remain open|keep[^.]{0,35}open|close within|closed within|early termination|forfeit|clawback/i.test(x.s)?10:0)+(/after opening|from opening|after account opening/i.test(x.s)?4:0)+(/after bonus|after payout|after payment/i.test(x.s)?4:0);
@@ -508,7 +510,7 @@
       const n=best.ds[0];
       r.closeRuleDays=n;r.minHoldDays=n;r.closeRuleText=best.s;
       r.closeRuleBasis=/after[^.]{0,40}(bonus|payout|payment)|bonus[^.]{0,40}(paid|posted|received)/i.test(best.s)?'bonus':/after[^.]{0,40}(requirement|qualif)|requirements?[^.]{0,30}(met|complete)/i.test(best.s)?'reqmet':'opened';
-      r.closeRuleConfidence='high';r.closeRestrictionType=/(deduct|reverse|forfeit|clawback|fee|penalty)/i.test(best.s)?'explicit-clawback':'minimum-open';setSource(r,'Early close / payout risk',best.s,'high','extracted');
+      r.closeRuleConfidence='high';r.closeRestrictionType=/(?:bonus|reward)[^.]{0,100}(?:deduct|reverse|forfeit|clawback|repay|reclaim)|(?:deduct|reverse|forfeit|clawback|repay|reclaim)[^.]{0,100}(?:bonus|reward)/i.test(best.s)?'explicit-clawback':'minimum-open';setSource(r,'Early close / payout risk',best.s,'high','extracted');
     }else if(r.closeRuleDays||r.minHoldDays){
       const existing=String(r.closeRuleText||r.fieldSources?.['Early close / payout risk']?.source||'');
       if(!/(close|closed|remain open|keep[^.]{0,35}open|early termination|forfeit|clawback)/i.test(existing)){
