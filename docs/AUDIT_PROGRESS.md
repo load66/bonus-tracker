@@ -1,6 +1,6 @@
 # Audit progress
 
-Active agent: none
+Active agent: ChatGPT Codex — v3.8.10 actual-closure recording — codex/v3.8.10-record-actual-closure
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
