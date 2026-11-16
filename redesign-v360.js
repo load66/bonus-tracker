@@ -392,8 +392,15 @@ function accountSection(e,key,title,html,meta='',actions='',defaultOpen=false){
  const open=accountSections.get(String(e.id)+'|'+key)??defaultOpen;
  return '<details class="bt360-panel bt3640-section" data-entry-id="'+safe(e.id)+'" data-section="'+safe(key)+'"'+(open?' open':'')+' ontoggle="BT360.setAccountSectionOpen('+arg(e.id)+','+arg(key)+',this.open)"><summary class="bt360-panel-title"><h3>'+safe(title)+'</h3><span class="bt3640-section-meta">'+safe(meta)+'</span><span class="bt3640-chevron" aria-hidden="true">⌄</span></summary><div class="bt360-panel-body">'+(actions?'<div class="bt3640-section-actions">'+actions+'</div>':'')+html+'</div></details>';
 }
+// The active account view has no closing date until a real closure is recorded.
+// Historical/closed records retain the date in this same shared date projection.
+function recordedAccountDateRows(e){
+ const rows=[['opened','Opened'],['reqMet','Requirements met'],['bonusRecd','Bonus paid']];
+ if(e?.closed)rows.push(['closed','Closed']);
+ return rows;
+}
 function accountDates(e){
- return '<section class="bt3640-dates" aria-label="Recorded account dates"><div class="bt3640-key-title"><h3>Key dates</h3><button type="button" class="bt360-link" aria-label="Edit account dates" onclick="openEdit('+arg(e.id)+')">Edit</button></div><dl>'+[['opened','Opened'],['reqMet','Requirements met'],['bonusRecd','Bonus paid'],['closed','Closed']].map(([key,label])=>'<div><dt>'+label+'</dt><dd class="'+(archiveDateValid(e[key])?'':'is-missing')+'">'+safe(archiveDateValid(e[key])?date(e[key]):e[key]?'Needs review':'Not recorded')+'</dd></div>').join('')+'</dl></section>';
+ return '<section class="bt3640-dates" aria-label="Recorded account dates"><div class="bt3640-key-title"><h3>Key dates</h3><button type="button" class="bt360-link" aria-label="Edit account dates" onclick="openEdit('+arg(e.id)+')">Edit</button></div><dl>'+recordedAccountDateRows(e).map(([key,label])=>'<div><dt>'+label+'</dt><dd class="'+(archiveDateValid(e[key])?'':'is-missing')+'">'+safe(archiveDateValid(e[key])?date(e[key]):e[key]?'Needs review':'Not recorded')+'</dd></div>').join('')+'</dl></section>';
 }
 function cloudStatusText(state){
  if(['protected','success'].includes(state?.tone))return 'Cloud verified';
@@ -1016,8 +1023,8 @@ function nextCyclePanel(e){
 // Simple, stage-driven presentation. This is read-only: old notes, offer terms,
 // reports, timers, archive history, eligibility evidence and fee rules stay saved.
 function simpleDates(e){
- const rows=[['opened','Opened'],['reqMet','Requirements met'],['bonusRecd','Bonus paid'],['closed','Closed']];
- return '<section class="bt3810-card bt3810-dates" aria-label="Recorded account dates"><h3>Key dates</h3><dl>'
+ const rows=recordedAccountDateRows(e);
+ return '<section class="bt3810-card bt3810-dates'+(e.closed?'':' bt3810-dates--open')+'" aria-label="Recorded account dates"><h3>Key dates</h3><dl>'
   +rows.map(([key,label])=>'<div><dt>'+label+'</dt><dd class="'+(archiveDateValid(e[key])?'':'is-missing')+'">'
    +safe(archiveDateValid(e[key])?date(e[key]):e[key]?'Needs review':'—')+'</dd></div>').join('')
   +'</dl></section>';
