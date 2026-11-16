@@ -704,8 +704,6 @@ function lastSavedCooldownFeeRecord(entry){
  // Structured rules must always come from this enrollment; a new offer's
  // closure or churn rules cannot be applied to a different cycle.
  if(!record.financialRules&&sameCycle?.financialRules)record.financialRules=sameCycle.financialRules;
- if(Number(record.earlyCloseFee||0)===0&&Number(sameCycle?.earlyCloseFee)>0)
-  record.earlyCloseFee=Number(sameCycle.earlyCloseFee);
  return {record,historical:true,source:source||'saved account terms'};
 }
 function feeSnapshot(e){
@@ -768,7 +766,7 @@ function feeSnapshot(e){
   .map(v=>String(v||'').trim()).filter(Boolean);
  const source=String(e.feeScheduleSourceUrl||'').trim();
  return {monthly,monthlyKnown,companions,summary:summary||'Waiver conditions not confirmed',terms:[...new Set(terms)].join('\n\n'),
-  historical:historicalProjection.historical,historicalSource:historicalProjection.source,source:/^https:\/\/[^<>"'\s]+$/i.test(source)?source:'',explicitClawback};
+  historical:historicalProjection.historical,historicalSource:historicalProjection.source,source:/^https:\/\/[^<>"'\s]+$/i.test(source)?source:''};
 }
 function feeDetail(e){
  const x=feeSnapshot(e);
