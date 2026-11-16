@@ -357,9 +357,9 @@ function primaryAction(e){
  if(e.closed)return {label:'Back to accounts',command:'BT360.back()'};
  if(e.bonusRecd)return {label:'Record closure',command:'startCloseFlow('+id+',\'actual\')'};
  if(e.reqMet)return {label:'Record bonus payment',command:'openRcv('+id+')'};
- const progress=requirementProgress(e);
- if(progress.remaining>0&&progress.count!==0)return {label:'Review requirements',command:'BT360.openNextTask('+id+')'};
- if(progress.remaining>0)return {label:'Review requirements',command:'BT360.openNextTask('+id+')'};
+ const unfinished=(Array.isArray(e.financialRules?.requirements)?e.financialRules.requirements:[]).some(r=>!requirementRecord(e,r)?.done)
+  ||(Array.isArray(e.checklist)?e.checklist:[]).some(c=>c&&!c.done);
+ if(unfinished)return {label:'Review requirements',command:'BT360.openNextTask('+id+')'};
  return {label:'Mark requirements done',command:'openReqMet('+id+')'};
 }
 function openNextTask(id){
