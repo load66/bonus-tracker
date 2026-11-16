@@ -1052,6 +1052,7 @@ function simpleFees(e){
  const monthly=x.monthlyKnown?x.monthly:'Not confirmed';
  const early=x.closeKnown?x.closeMain:'Not confirmed';
  return '<section class="bt3810-card bt3810-fees"><h3>Fees</h3><div class="bt3810-pair"><span>Monthly</span><b>'+safe(monthly)+'</b></div>'
+  +(x.monthly!=='$0'&&x.summary&&x.summary!=='Waiver conditions not confirmed'?'<div class="bt3810-fee-note">Avoid fee: '+safe(x.summary)+'</div>':'')
   +(x.companions.length?'<div class="bt3810-fee-note">Other required accounts may have fees.</div>':'')
   +'<div class="bt3810-pair"><span>Closing early</span><b class="'+(!x.closeKnown?'bt3810-caution':'')+'">'+safe(early)+'</b></div></section>';
 }
