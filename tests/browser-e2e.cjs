@@ -968,8 +968,8 @@ async function exercise(name,engine,url){
       await page.locator('.bt3810-dates').count()===1
       &&await page.locator('.bt3810-fees').count()===1
       &&await page.locator('.bt3611-ready-extras,.bt3686-account-extras').count()===0);
-    check('earned bonus remains simple, while warning about fee risk',
-      await page.locator('.bt3810-fees').innerText().then(t=>t.includes('Monthly')&&t.includes('Closing early')));
+    check('earned bonus retains monthly fees without a retired closing-fee row',
+      await page.locator('.bt3810-fees').innerText().then(t=>t.includes('Monthly')&&!t.includes('Closing early')));
     const sticky=await page.evaluate(()=>{
       const bar=document.querySelector('.bt360-detail-footer').getBoundingClientRect();
       const nav=document.querySelector('.tabs').getBoundingClientRect();
