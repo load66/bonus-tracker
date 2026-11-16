@@ -169,5 +169,5 @@
     const passed=results.filter(x=>x.ok).length;return{version:VERSION,passed,total:results.length,ok:passed===results.length,results};
   }
 
-  return{VERSION,validDate,FIXED_TYPES,AUTO_CLOSE_TIMER_RE,clean,sentences,normalizeType,isLookback,durationDays,moneyAmount,hasMonthlyFeeWording,explicitRuleText,payoutText,basisForText,isChaseBiz,typeForEntry,isFixed,ruleDays,basisFor,baseDate,rawSafeDate,safeCloseDate,daysUntilSafe,isInBuffer,sourceSentence,sanitizeEntry,analyzeText,sanitizeAnalysis,runSelfTests};
+  return{VERSION,validDate,FIXED_TYPES,AUTO_CLOSE_TIMER_RE,clean,sentences,normalizeType,isLookback,durationDays,hasMonthlyFeeWording,explicitRuleText,payoutText,basisForText,isChaseBiz,typeForEntry,isFixed,ruleDays,basisFor,baseDate,rawSafeDate,safeCloseDate,daysUntilSafe,isInBuffer,sourceSentence,sanitizeEntry,analyzeText,sanitizeAnalysis,runSelfTests};
 });
