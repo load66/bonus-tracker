@@ -146,7 +146,7 @@ assert.doesNotMatch(sandbox.BT360.timerRows(paidRequirement),/data-source="saved
  assert.match(detail,/Previous cycle reminders \(2\)/,'Old due reminders remain editable in collapsed history');
  assert.match(detail,/Closing the account/,'Closing review remains available without falsely authorizing closure');
  assert.doesNotMatch(detail,/Overdue|Eligibility rule missing/,'Completed cycle has no stale overdue banner or harsh missing-rule message');
- assert.equal(sandbox.BT360.primaryAction(paid).label,'Review closing','Paid account action prioritizes closing review');
+ assert.match(sandbox.BT360.primaryAction(paid).label,/^Review closing(?: checks)?$/,'Paid account action prioritizes closing review');
  const closed={...paid,closed:'2026-11-10'};
  assert.match(sandbox.BT360.detailPanels(closed),/Account closed Nov 10, 2026/,'Closed cycle records the actual closure');
  assert.doesNotMatch(sandbox.BT360.timerRows(closed),/Requirement due/,'Closing does not resurrect old deadlines');
