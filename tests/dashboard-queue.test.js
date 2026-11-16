@@ -20,8 +20,9 @@ try{
  assert.match(section(html,'opportunities'),/SYN-Q-opportunity/);
  assert.match(html,/Expected by/);assert.match(html,/Hold until/);
  assert.equal((html.match(/data-attention-id=/g)||[]).length,rows.length,'Every action remains reachable exactly once');
- assert.match(html,/>Review saved task<\/button>/,'Primary action names its actual purpose');
- for(const row of rows){s.BT360.toggleAttention(row.id);assert.equal((s.BT360.tasks(rows).match(/is-selected/g)||[]).length,1,'Selection must work across groups');}
+ assert.doesNotMatch(html,/bt360-actions|>Details<|>Review saved task<\/button>/,'Dashboard bank cards must not contain action buttons');
+ assert.equal((html.match(/data-attention-link=/g)||[]).length,rows.length,'Every dashboard bank is one direct details target');
+ for(const row of rows){s.BT360.toggleAttention(row.id);assert.equal(run('expanded'),row.id,'Selecting any dashboard bank opens its details');run('expanded=null');}
  assert.equal(s.BT360.dashboardQueueFor(suggestion('payout','AWAITING_BONUS',today),rows[1]),'needs','Payout date reached needs review');
  assert.equal(s.BT360.dashboardQueueFor(suggestion('hold','HOLD_OPEN','2026-02-30'),rows[2]),'needs','Invalid date cannot hide an account in waiting');
  assert.equal(s.BT360.dashboardQueueFor(suggestion('hold','HOLD_OPEN',future,false),rows[2]),'needs');
@@ -45,8 +46,8 @@ try{
  const onlyWaiting=s.BT360.tasks(rows);
  assert.match(section(onlyWaiting,'needs'),/>0 tasks<\/span>/);assert.match(onlyWaiting,/No immediate tasks/);assert.match(onlyWaiting,/<h3>Waiting<\/h3>/);
  const priorSearch=s.btRadarSearch;let searched='';s.btRadarSearch=value=>{searched=value};s.BT360.viewOffers('Synthetic Offer Bank');assert.equal(searched,'Synthetic Offer Bank','Offer search must be set even before its input or feed has loaded');s.btRadarSearch=priorSearch;
- assert.equal(JSON.stringify(rows),facts);assert.equal(JSON.stringify([...storage]),before,'Grouping or selection wrote financial data');
- console.log('Dashboard queue passed: accurate action counts, waiting dates, opportunities, reached/unknown date review, no cooldown duplicates, selection and no writes.');
+ assert.equal(JSON.stringify(rows),facts);assert.equal(JSON.stringify([...storage]),before,'Grouping or direct navigation wrote financial data');
+ console.log('Dashboard queue passed: accurate groups, direct bank details, no dashboard action buttons, no cooldown duplicates and no writes.');
  process.exit(0);
 }catch(error){console.error(error);process.exit(1)}
 
