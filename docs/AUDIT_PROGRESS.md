@@ -1,12 +1,12 @@
 # Audit progress
 
-Active agent: codex — v3.8.15 retire early-closing-fee feature — codex/v3.8.15-remove-early-fee-clean
+Active agent: none
 
 Public-safe fields only: versions, commit hashes, PR links, sanitized issue titles, test status.
 
 ## Handoff
 
-- v3.8.15 retire early-closing service fees (`codex/v3.8.15-retire-early-close-fee`): remove fee-only alerts, fee fields in account editors, fee prompts, closing-charge checks, fee-based hold countdowns, and unknown-fee closure blocks. Preserve monthly/companion maintenance fees, independent bonus-retention and clawback conditions, saved disclosure text, Archive, back-ups and actual closure. CI validation pending.
+- v3.8.15 retire early-closing service fees (`codex/v3.8.15-remove-early-fee-clean`, PR #313): service-fee feature removed from bank detail/fee badges, closure safety, read-only account decisions, AI, editor, notifications, import validation, manual fee popups/timers and new-bank generation. Preserve monthly/companion fees, separately documented bonus-retention/clawback holds, actual closure, eligibility, historical records and backups without rewriting existing account data. Added/updated unit and Chromium/WebKit browser regression coverage. Require green PR UI/bonus/cloud, Chromium/WebKit and latest-release checks before merge; then verify GitHub Pages deployment.
 
 - v3.8.14 early-close fee clarity (`codex/v3.8.14-early-close-fee-clarity`): remove the unhelpful unknown early-closing fee row from everyday open-bank details. Display positive early-close charges or explicit no-fee only when saved evidence supports them. Canonical close safety, fee uncertainty, saved rule text, Archive, fee education and financial records remain unchanged. Add synthetic bank and browser read-only regressions for positive/zero/conditional/unknown fee evidence, and bump app/cache to v3.8.14. Next: require UI/bonus/cloud unit and Chromium/WebKit PR CI, squash merge on green, verify main/Pages.
 
