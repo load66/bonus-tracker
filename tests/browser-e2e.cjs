@@ -618,8 +618,8 @@ async function exercise(name,engine,url){
           entries[0].depositEvidence.length===1&&!!entries[0].depositEvidence[0].voidedAt));
       for(const width of [320,390,430]){
         await page.setViewportSize({width,height:844});
-        check('deposit ledger fits '+width+'px',
-          await page.locator('.bt3681-deposit-ledger').evaluate(el=>el.scrollWidth<=el.clientWidth+1&&
+        check('deposit history and compact requirements fit '+width+'px',
+          await page.locator('.bt3810-requirements').evaluate(el=>el.scrollWidth<=el.clientWidth+1&&
             document.documentElement.scrollWidth<=innerWidth));
       }
       await page.evaluate(previous=>{
