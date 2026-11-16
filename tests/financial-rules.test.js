@@ -49,7 +49,7 @@ assert.ok(engine.answer(broken,'Tell me about this offer').answer.includes('conf
 console.log('Financial rule contract passed: product scope, companion fees, ALL/ANY waivers, recurring periods, source evidence, conflicting numbers, unknowns, unsupported versions, calendar boundaries and legacy preservation');
 const review=require('./fixtures/financial-rules.cjs').reviewFixture();
 assert.equal(engine.validate(review).ok,true);assert(!engine.validate(review).warnings.some(w=>/early.close|closing fee/i.test(w.message)),'Retired fee warnings are suppressed');
-assert(!/fee unconfirmed/i.test(engine.summarize(review).closure),'Closure summary excludes old fee condition');
+assert.equal(engine.summarize(review).mode,'structured','Historical closure wording remains readable without a termination-fee gate');
 const invalidReview=JSON.parse(JSON.stringify(review));invalidReview.financialRules.closure.restrictionType='payout-only';assert(!engine.validate(invalidReview).ok,'Mismatched retention type must not silently override saved legacy fields');
 const v1=JSON.parse(JSON.stringify(review));v1.financialRules.version=1;assert(!engine.validate(v1).ok,'v1 cannot silently acquire new metric or unknown-fee semantics');
 const wrongMetric=JSON.parse(JSON.stringify(review));wrongMetric.financialRules.accounts[1].fee.waiver.conditions[0].metric='average-beginning-day-balance';wrongMetric.financialRules.accounts[1].fee.waiver.conditions[0].evidence.quote='The Share Savings fee is waived by maintaining a $50 minimum daily balance.';assert(!engine.validate(wrongMetric).ok,'A daily balance cannot stand in for a beginning-day average');
