@@ -1040,7 +1040,6 @@ function detailPanels(e){
  }
  const reminders=timerRows(e);
  h+=accountSection(e,'timers','Reminders',reminders||'<p class="bt360-muted">'+(e.reqMet||e.bonusRecd||e.closed?'No active reminders for this bonus cycle.':'No reminders saved.')+'</p>','',!closed?'<button type="button" class="bt360-link bt3613-add-timer" onclick="runBankAction('+arg(e.id)+',\'timer\')">+ Add</button>':'');
- const eligibility=eligibleInfo(e);
  h+='<div data-bt-eligibility>'+nextCyclePanel(e)+'</div>';
  let extra=accountDates(e)+pastCycleReminderHistory(e);
  if(closed){const history=depositLedgerHtml(e,true);if(history)extra+=accountSection(e,'deposits','Deposit activity',history,'Saved evidence');}
