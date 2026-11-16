@@ -1,27 +1,91 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-11-15T18:58:26.788242+00:00",
+  "checkedAt": "2026-11-16T06:49:27.922775+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-11-15T18:58:26.788242+00:00",
+      "checkedAt": "2026-11-16T06:49:27.922775+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-11-15T18:58:26.788242+00:00",
+      "checkedAt": "2026-11-16T06:49:27.922775+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-11-15T18:58:26.788242+00:00",
+      "checkedAt": "2026-11-16T06:49:27.922775+00:00",
       "status": "ok"
     }
   ],
   "offers": [
+    {
+      "title": "[MD, D.C., VA] Lafayette Federal Credit Union $300 Checking Bonus",
+      "url": "https://www.doctorofcredit.com/md-d-c-va-lafayette-federal-credit-union-100-checking-bonus-2/",
+      "publishedAt": "2026-11-15T23:35:28+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "lafayette federal credit union|checking|300|MD,VA",
+      "bank": "lafayette federal credit union",
+      "product": "checking",
+      "amount": 300,
+      "region": "MD,VA",
+      "offerKey": "lafayette federal credit union|checking|300|MD,VA",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-16T06:49:27.922775+00:00",
+      "lastSeen": "2026-11-15T23:35:28+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/md-d-c-va-lafayette-federal-credit-union-100-checking-bonus-2/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[MD, D.C., VA] Lafayette Federal Credit Union $300 Checking Bonus",
+          "publishedAt": "2026-11-15T23:35:28+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "[NH, MA, RI, CT, DE, NY, NJ, PA, or FL, Inbranch] Santander $300-$500 Checking Bonus",
+      "url": "https://www.doctorofcredit.com/nh-ma-ri-ct-de-ny-nj-pa-or-fl-in-branch-santander-400-checking-bonus/",
+      "publishedAt": "2026-11-15T23:30:49+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "santander|checking|300|CT,DE,FL,MA,NH,NJ,NY,PA,RI",
+      "bank": "santander",
+      "product": "checking",
+      "amount": 300,
+      "region": "CT,DE,FL,MA,NH,NJ,NY,PA,RI",
+      "offerKey": "santander|checking|300|CT,DE,FL,MA,NH,NJ,NY,PA,RI",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-16T06:49:27.922775+00:00",
+      "lastSeen": "2026-11-15T23:30:49+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/nh-ma-ri-ct-de-ny-nj-pa-or-fl-in-branch-santander-400-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[NH, MA, RI, CT, DE, NY, NJ, PA, or FL, Inbranch] Santander $300-$500 Checking Bonus",
+          "publishedAt": "2026-11-15T23:30:49+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
     {
       "title": "Wells Fargo: $400 / $550 / $825 bonus for new business checking account (no direct deposit required)",
       "url": "https://frequentmiler.com/wells-fargo-400-825-bonus-for-new-business-checking-account-no-direct-deposit-required/",
@@ -125,7 +189,7 @@
       ],
       "firstSeenBaseline": false,
       "badges": [
-        "New"
+        "Ending soon"
       ]
     },
     {
@@ -223,7 +287,12 @@
         }
       ],
       "firstSeenBaseline": true,
-      "badges": []
+      "previousAmount": 400,
+      "change": "Increased",
+      "changeLabel": "$400 → $500",
+      "badges": [
+        "Increased"
+      ]
     },
     {
       "title": "Huntington Bank Promotions for November 2026: $400, $1,000 Checking Bonuses – Ends 2/11/27",
@@ -925,9 +994,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "[UT, ID] Goldenwest Credit Union $250 Checking Bonus (Ages 13-25, No Direct Deposit Required)",
@@ -957,9 +1024,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "[FL, MA, NJ, NY, VT, In Branch] Trustco Bank $300 Checking + $200 Savings",
@@ -989,9 +1054,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "[NY] Hudson Valley Credit Union $500 Checking Bonus, Direct Deposit Not Required",
@@ -1021,9 +1084,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "[NY, PA] Heritage Financial Credit Union $300 Checking Bonus, Direct Deposit Not Required",
@@ -1053,9 +1114,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "[AL] Avadian Credit Union $300 Checking Bonus",
@@ -1085,9 +1144,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "[Targeted, VA, MD NC, D.C.] Atlantic Union Bank $400-$800 Checking Bonus",
@@ -2257,7 +2314,9 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": []
+      "badges": [
+        "Ending soon"
+      ]
     },
     {
       "title": "[MI, FL] Lake Michigan Credit Union $193 Referral Checking Bonus",
