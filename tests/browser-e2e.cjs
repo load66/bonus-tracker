@@ -1921,7 +1921,9 @@ async function exercise(name,engine,url){
       entries.push({...entries[0],id:'E2E-TILE-02',bank:'E2E Citi',bonus:325,reqMet:'2026-08-10',payoutTimingText:'Bonus expected after requirements are completed',customTimers:[]});R();
     });
     check('both pending offers appear as independent compact account rows',await page.locator('.bt366-compact-row').count()===2);
-    check('a task row and an awaiting payout row stay distinct',await page.locator('.bt366-compact-row').allInnerTexts().then(t=>t.some(x=>x.includes('Establish $500+'))&&t.some(x=>x.includes('E2E Citi'))));
+    check('separate bank rows preserve saved timers without displaying past-cycle noise',
+      await page.locator('.bt366-compact-row').allInnerTexts().then(t=>t.some(x=>x.includes('Lafayette Federal Credit Union'))&&t.some(x=>x.includes('E2E Citi'))&&!t.some(x=>x.includes('Establish $500+')))
+      &&await page.evaluate(()=>entries.some(x=>x.bank==='E2E Lafayette Federal Credit Union'&&x.customTimers.some(t=>t.text.startsWith('Establish $500+')))));
     const taskStorage=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
     await button('Hide accounts').click();
     check('duplicate directory collapses on request',await page.locator('.bt366-compact-row').count()===0);
