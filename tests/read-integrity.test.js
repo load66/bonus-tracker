@@ -139,12 +139,12 @@ setTimeout(()=>{
     assert(findings.some(row=>row.bank==='Synthetic Oldcopy'&&row.issues.some(x=>x.proposed===null)),'Historical review did not report the suspect row without inventing a replacement');
     assert(localStorage.getItem('bt_e_v4')===beforeReview,'Historical review rewrote stored accounts');
 
-    run('feeCheckPrompt='+JSON.stringify({entryId:harbor.id,bank:harbor.bank,step:'ask',months:6,feeAmount:null}));
-    sandbox.feeCheckRemoveTimer();
+    assert.equal(typeof sandbox.feeCheckRemoveTimer,'undefined','Early-closing-fee timer editor must be retired');
+    assert.equal(typeof sandbox.feeCheckSave,'undefined','Fee-only save handler must be retired');
     const removed=liveEntries().find(e=>e.bank==='Synthetic Harbor');
-    assert(removed.earlyCloseFee===null,'Removing a timer stored a $0 early-close fee');
-    assert(sandbox.status(removed)!=='SAFE TO CLOSE','Removing a timer marked the account safe to close');
-    assert(!/Safe to Close/.test(run('cfm&&cfm.msg')||''),'Timer removal confirmation claims the account is safe to close');
+    assert(removed.earlyCloseFee===null,'Historical unknown fee data must not be overwritten');
+    assert(sandbox.status(removed)!=='SAFE TO CLOSE','A missing independent retention rule is not proven by a fee record');
+    assert(localStorage.getItem('bt_e_v4')===beforeReview,'Retired fee workflow must not change account history');
 
     cloudWrites=0;
     removed.notes='Confirmed manual note';
@@ -171,33 +171,35 @@ setTimeout(()=>{
     assert(run('reqPrompt.date')==='', 'Explicit requirements dialog guessed today instead of asking for the actual date');
 
     const decisionFor=(props)=>sandbox.btEvaluateAccount({bank:'Synthetic Fee Review',opened:'2026-01-01',reqMet:'2026-02-01',bonusRecd:'2026-05-01',customTimers:[],...props});
-    const feeWithoutWindow=decisionFor({earlyCloseFee:25,closeRestrictionType:'none',minHoldDays:0});
-    assert(feeWithoutWindow.legacyStatus!=='SAFE TO CLOSE'&&feeWithoutWindow.close.status!=='ready','Positive fee without expiry was marked safe to close');
-    const noAnchor=decisionFor({opened:'',earlyCloseFee:25,minHoldDays:90,closeFeeCountdownDays:'90',closeRuleBasis:'opened',closeRestrictionType:'manual-fixed',closeRuleSource:'manual'});
-    assert(noAnchor.close.status!=='ready','A fixed hold with no opening date was marked safe to close');
-    const noProof=decisionFor({earlyCloseFee:0,closeRestrictionType:'payout-only',closeRuleText:'Keep open until bonus posts.'});
-    assert(noProof.close.status!=='ready','An unsupported legacy zero fee was treated as verified no-fee');
-    const verifiedNoFee=decisionFor({earlyCloseFee:0,closeRestrictionType:'payout-only',closeRuleText:'Keep the account open until the bonus posts.',earlyTerminationFeeText:'No early closing fee.'});
-    assert(verifiedNoFee.close.status==='ready','Explicit saved unconditional no-fee wording did not permit a satisfied payout-only hold');
+    const noRetention=decisionFor({earlyCloseFee:25,closeRestrictionType:'none',minHoldDays:0});
+    assert(noRetention.close.status!=='ready','No saved clawback evidence cannot establish a ready-to-close verdict');
+    const noAnchor=decisionFor({opened:'',minHoldDays:90,closeFeeCountdownDays:'90',closeRuleBasis:'opened',closeRestrictionType:'manual-fixed',closeRuleSource:'manual'});
+    assert(noAnchor.close.status!=='ready','A contractual hold with no opening date remains unresolved');
+    const payoutOnly=decisionFor({earlyCloseFee:0,closeRestrictionType:'payout-only',closeRuleText:'Keep the account open until the bonus posts.'});
+    assert(payoutOnly.close.status==='ready','A satisfied payout-only retention rule does not require independent termination-fee confirmation');
+    for(const charge of [null,0,25,400]){
+      const variant=decisionFor({earlyCloseFee:charge,closeRestrictionType:'payout-only',closeRuleText:'Keep the account open until the bonus posts.',earlyTerminationFeeText:charge===null?'':charge===0?'No early closing fee.':'$'+charge+' closing charge.'});
+      assert(variant.close.status===payoutOnly.close.status,'Legacy service-charge values cannot change readiness');
+    }
     const feeOnly=decisionFor({earlyCloseFee:0,closeRestrictionType:'none',earlyTerminationFeeText:'No early closing fee.',closeRuleText:''});
-    assert(feeOnly.close.status!=='ready','No service fee was mistaken for no bonus clawback');
+    assert(feeOnly.close.status!=='ready','Service-fee-free does not mean bonus clawback-free');
     const noPayoutHoldProof=decisionFor({earlyCloseFee:0,closeRestrictionType:'payout-only',earlyTerminationFeeText:'No early closing fee.',closeRuleText:''});
-    assert(noPayoutHoldProof.close.status!=='ready','Payout-only claim without source wording was treated as a verified close rule');
+    assert(noPayoutHoldProof.close.status!=='ready','Payout-only claim without source wording is not verified');
     const noReqDate={bank:'Synthetic Paid Payout Only',opened:'2026-01-01',bonusRecd:'2026-05-01',reqMet:'',earlyCloseFee:0,closeRestrictionType:'payout-only',closeRuleBasis:'bonus',closeRuleText:'Keep the account open until the bonus posts.',earlyTerminationFeeText:'No early closing fee.',customTimers:[]};
-    assert(sandbox.btEvaluateAccount(noReqDate).close.status==='ready','Payout-only term needlessly requires an invented requirements date');
-    assert(sandbox.closeReadiness(noReqDate).label!=='Do Not Close Yet','Close Check still demands a non-contractual requirements-completion date');
-    assert(sandbox.closeReadiness({...noReqDate,earlyTerminationFeeText:''}).label==='Do Not Close Yet','Close Check overruled the canonical unverified-fee restriction');
-    for(const wording of ['No early closing fee unless the account is restricted.', 'No monthly fee when closing the account.', 'No early closing fee after ninety days.']){
+    assert(sandbox.btEvaluateAccount(noReqDate).close.status==='ready','Do not invent a requirements date for a payout-only rule');
+    assert(sandbox.closeReadiness(noReqDate).label!=='Do Not Close Yet','Payout-only closure rule cannot require a nonexistent fee confirmation');
+    assert(sandbox.closeReadiness({...noReqDate,earlyTerminationFeeText:''}).label===sandbox.closeReadiness(noReqDate).label,
+       'Deleting only the historical fee wording cannot change closure readiness');
+    for(const wording of ['No early closing fee unless restricted.', 'No monthly fee when closing.', 'No early closing fee after ninety days.']){
       const result=decisionFor({...noReqDate,earlyTerminationFeeText:wording});
-      assert(result.close.status!=='ready','Conditional or unrelated fee text was treated as unconditional no-fee evidence: '+wording);
+      assert(result.close.status==='ready','Fee-only wording cannot alter otherwise documented retention readiness: '+wording);
     }
     for(const bonusRecd of ['unknown','2026-02-30'])assert(decisionFor({...noReqDate,bonusRecd}).close.status!=='ready','Invalid payout date cleared closure');
     run('entries.find(e=>e.id==="EVT-P-01").reqMet="2026-10-03";openReqMet("EVT-P-01")');
     assert(run('reqPrompt.date')==='2026-10-03','Confirmed requirements date was lost when reopening the editor');
-    const unsafeView={...noReqDate,earlyTerminationFeeText:'',earlyCloseFee:null};
-    const safeStep=sandbox.lifecycleSteps(unsafeView).find(x=>x.key==='safe');
-    assert(!safeStep.done,'Lifecycle step marked an unsupported close decision complete');
-    assert(!/close when ready/.test(sandbox.renderBankProfileSummary(unsafeView)),'Summary overruled canonical unresolved closure evidence');
+    const independentHold={...noReqDate,earlyTerminationFeeText:'',earlyCloseFee:null,closeRestrictionType:'manual-fixed',closeRuleSource:'manual',minHoldDays:90,closeFeeCountdownDays:'90',closeRuleBasis:'opened'};
+    const holdStep=sandbox.lifecycleSteps(independentHold).find(x=>x.key==='safe');
+    assert(!holdStep.done,'Unelapsed independent hold remains a blocker even when fee logic is retired');
     const zeroBuffer=run('(function(){modal={bank:"Synthetic Zero Buffer",accountType:"personal",closeBufferDays:0,earlyCloseFee:null,customTimers:[],history:[]};return collectModalEntryData()})()');
     assert(zeroBuffer.closeBufferDays===0,'Explicit 0-day close buffer was replaced on edit');
     console.log('Read integrity passed');
