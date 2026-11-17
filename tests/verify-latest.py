@@ -50,7 +50,7 @@ if root_css!=index_css: fail('root CSS files and index stylesheets differ')
 if not index_css or 'mobile-analyzer.css' not in index_css: fail('mobile analyzer stylesheet is not loaded')
 
 sw=text('sw.js')
-for retired in ('learning-inbox-conflict.js','profile-library-selftest.js','profile-library-selftest-academy.js','profile-db.js'):
+for retired in ('credit-cards.js','learning-inbox-conflict.js','profile-library-selftest.js','profile-library-selftest-academy.js','profile-db.js'):
     if (ROOT/retired).exists(): fail('retired add-on script still shipped: '+retired)
     if retired in html or retired in sw: fail('retired add-on still referenced by app or offline cache: '+retired)
 m=re.search(r'const ASSETS\s*=\s*\[(.*?)\];',sw,re.S)
