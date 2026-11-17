@@ -232,7 +232,7 @@ assert.equal((fees.match(/class="bt3613-fee-line"/g)||[]).length,1,'Only recurri
    earlyTerminationFeeText:fee===null?'':fee===0?'No early closing fee.':'$'+fee+' early closing service fee.',
    financialRules:{...base.financialRules,closure:{...base.financialRules.closure,earlyCloseFee:fee,
     feeEvidence:{quote:fee===0?'No early closing fee.':'$'+fee+' early closing service fee.'}}}};
-  assert.match(feesFor(record),/<span>Monthly<\/span><b>\$15<\/b>/,'Monthly fee must remain visible');
+  assert.match(feesFor(record),/<span>Monthly fee<\/span><b>\$15<\/b>/,'Monthly fee must remain visible');
   assert.doesNotMatch(feesFor(record),/Closing early|Early closing fee|early-close fee|bt3810-caution/,'No closing-service-fee row for any historic charge');
   assert.doesNotMatch(sandbox.BT360.feeDetail(record),/Early closing fee|early-close fee/);
  }
@@ -283,8 +283,8 @@ const estimatedList=sandbox.BT360.archive([estimatedPast]);
 assert.match(estimatedList,/<strong>0<\/strong><small>Review offer<\/small>/,'A completed recorded waiting period must be ready for current-offer review');
 
 /* v3.8.14: direct account details retain recorded-date countdowns. */
-assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.16';/,'The on-screen app version reflects this release');
-assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.16-bankonly1/,'The version label is refreshed on clients');
+assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.17';/,'The on-screen app version reflects this release');
+assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.17-simple1/,'The version label is refreshed on clients');
 const archiveFutureDate='2030-01-01';
 const recordedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,recorded:true});
 assert(recordedFuture&&recordedFuture.days>0&&recordedFuture.caption==='days left','A recorded future date must show its countdown');
@@ -449,8 +449,8 @@ const priorSuggestions=sandbox.getAttentionSuggestions;
 sandbox.getAttentionSuggestions=()=>[{entryId:e.id,bank:e.bank,stageCode:'AWAITING_BONUS',stageLabel:'Awaiting Bonus',task:{title:'Confirm bonus payment'},dateContext:{date:'',confirmed:false}}];
 try{
  const needs=sandbox.BT360.tasks([e]);
- assert.match(needs,/Awaiting bonus/,'Show actual lifecycle stage instead of missing-date status');
- assert.match(needs,/Payout date not confirmed/,'Missing payout clock must be separately explained');
+ assert.match(needs,/Waiting for bonus/,'Show actual lifecycle stage instead of missing-date status');
+ assert.match(needs,/Payment date not saved/,'Missing payout clock must be separately explained');
  assert.doesNotMatch(needs,/>Needs review<\/span>/,'No generic review badge replacing lifecycle stage');
 }finally{sandbox.getAttentionSuggestions=priorSuggestions}
 
@@ -520,7 +520,7 @@ try{
  assert.match(attention,/bt3729-bank-name">Chase<\/b>/,'Bank name leads the featured card');
  assert.match(attention,/bt3729-bank-name">Citi<\/b>/,'Bank name leads regular card');
  assert.match(attention,/Receive \$10,000 in qualifying direct deposits/,'Requirement remains under bank');
- assert.match(attention,/Personal · Due Oct 22, 2026/,'Account type and due date share the metadata line');
+ assert.match(attention,/Personal · Requirement deadline: Oct 22, 2026/,'Account type and due date share the metadata line');
  assert.equal((attention.match(/\$900/g)||[]).length,1,'Featured bonus amount must not repeat in subtitles');
  assert.equal((attention.match(/\$325/g)||[]).length,1,'Regular bonus amount must not repeat in subtitles');
  assert.doesNotMatch(attention,/bt360-actions|>Details<|runNextAccountAction/,'Dashboard bank cards contain no separate action buttons');
@@ -552,9 +552,9 @@ console.log('Bank logo and attention hierarchy regression passed');
  vm.createContext(ctx);vm.runInContext(model,ctx);
  const evaluate=entry=>JSON.parse(JSON.stringify(ctx.accountFeeWarnings(entry)));
  const sample=fixture(),saved=JSON.stringify(sample);
- assert.deepEqual(evaluate(sample).map(x=>x.label),['Share Savings: $10/mo fee']);
+ assert.deepEqual(evaluate(sample).map(x=>x.label),['Share Savings: $10/month']);
  assert.equal(JSON.stringify(sample),saved);
- for(const [frequency,word,label] of [['statement-cycle','per statement period','/statement fee'],['quarterly','quarterly','/quarter fee'],['annually','annually','/year fee']]){
+ for(const [frequency,word,label] of [['statement-cycle','per statement period','/statement'],['quarterly','quarterly','/quarter'],['annually','annually','/year']]){
   const f=fixture(),a=f.financialRules.accounts[1];
   a.fee.frequency=frequency;a.fee.evidence.quote='Share Savings has a $10 '+word+' maintenance fee.';f.feeScheduleRaw+=' '+a.fee.evidence.quote;
   assert(evaluate(f).some(x=>x.label==='Share Savings: $10'+label));
@@ -570,14 +570,14 @@ console.log('Bank logo and attention hierarchy regression passed');
  const close=fixture();close.earlyCloseFee=25;close.financialRules.closure.earlyCloseFee=25;
  close.financialRules.closure.feeEvidence.quote='An early closing fee of $25 applies within 90 days.';
  close.feeScheduleRaw+=' '+close.financialRules.closure.feeEvidence.quote;
- assert.deepEqual(evaluate(close).map(x=>x.label),['Share Savings: $10/mo fee'],'A documented closing-service fee never creates a badge');
+ assert.deepEqual(evaluate(close).map(x=>x.label),['Share Savings: $10/month'],'A documented closing-service fee never creates a badge');
  close.financialRules.closure.earlyCloseFee=null;
- assert.deepEqual(evaluate(close).map(x=>x.label),['Share Savings: $10/mo fee'],'Unknown service fees never create badges');
+ assert.deepEqual(evaluate(close).map(x=>x.label),['Share Savings: $10/month'],'Unknown service fees never create badges');
  const optional=fixture();optional.financialRules.accounts[1].required=false;
  assert.deepEqual(evaluate(optional),[]);
  assert.deepEqual(evaluate({...sample,closed:'2026-10-01'}),[]);
  const unrelated=fixture();unrelated.financialRules.payout.text='Conflicting payout';
- assert(evaluate(unrelated).some(x=>x.label==='Share Savings: $10/mo fee'));
+ assert(evaluate(unrelated).some(x=>x.label==='Share Savings: $10/month'));
  console.log('Maintenance fee badge regressions passed: source evidence, frequency, companion scope, no retired service-charge badge, and no mutation');
 }
 

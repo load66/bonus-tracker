@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.8.16';
+const APP_VERSION='3.8.17';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -7619,7 +7619,7 @@ entries=sortE(entries); // First visible render is owned by BT360 at the end of 
     if(window.BT360&&!archiveView)sorted=sorted.filter(e=>!e.closed||e.id===expanded);
     const q=search.toLowerCase();
     const filtered=q?sorted.filter(e=>(e.bank||'').toLowerCase().includes(q)||(e.id||'').toLowerCase().includes(q)):sorted;
-    const f=!q&&expanded&&sorted.some(e=>e.id===expanded)?sorted.filter(e=>e.id===expanded):(window.BT360?.selectedStage&&!archiveView?filtered.filter(e=>lifecycleViewForEntry(e).code===window.BT360.selectedStage):filtered);
+    const f=!q&&expanded&&sorted.some(e=>e.id===expanded)?sorted.filter(e=>e.id===expanded):(window.BT360?.selectedStage&&!archiveView?filtered.filter(e=>(window.BT360.dashboardStage?.(e)||lifecycleViewForEntry(e)).code===window.BT360.selectedStage):filtered);
     let h='';
     const bkd=daysSinceBk();
     if(window.BT360&&sorted.length&&!archiveView&&!expanded&&!q&&!window.BT360.selectedStage&&!showTemplates&&!showAnalyzer&&!window.BT360.accountListOpen){

@@ -53,12 +53,22 @@ function setStage(v){selectedStage=selectedStage===v?'':v;expanded=null;R()}
 function resetStage(){selectedStage=''}
 function infoRow(label,value,detail){return '<div class="bt360-info-row'+(String(value).length>80?' bt360-info-long':'')+'"><span>'+safe(label)+'</span><div><b>'+safe(value)+'</b>'+(detail?'<small>'+safe(detail)+'</small>':'')+'</div></div>'}
 function panel(title,html,right){return '<section class="bt360-panel"><div class="bt360-panel-title"><h3>'+safe(title)+'</h3>'+(right||'')+'</div><div class="bt360-panel-body">'+html+'</div></section>'}
-const pills=[
- ['ACTION_NEEDED','Action needed'],['IN_PROGRESS','In progress'],['REQUIREMENTS_MET','Requirements met'],
- ['AWAITING_BONUS','Awaiting'],['BONUS_RECEIVED','Bonus received'],['HOLD_OPEN','Hold open'],['READY_TO_CLOSE','Ready to close']
-];
+const dashboardLabels={ACTION_NEEDED:'Action needed',IN_PROGRESS:'In progress',REQUIREMENTS_MET:'Steps completed',AWAITING_BONUS:'Waiting for bonus',BONUS_RECEIVED:'Bonus received',HOLD_OPEN:'Keep open',READY_TO_CLOSE:'Ready to close',COOLDOWN:'Waiting period',ELIGIBLE:'Review new offer',ARCHIVED:'Archived'};
+const pills=['ACTION_NEEDED','IN_PROGRESS','REQUIREMENTS_MET','AWAITING_BONUS','BONUS_RECEIVED','HOLD_OPEN','READY_TO_CLOSE'].map(code=>[code,dashboardLabels[code]]);
+// A presentation projection only: never rewrite the canonical lifecycle or dates.
+// A paid account cannot advertise readiness while its next action still needs review.
+function dashboardStage(entry,suggestion){
+ const raw=suggestion?{code:suggestion.stageCode,label:suggestion.stageLabel}:stage(entry);
+ let code=raw.code;
+ if(code==='READY_TO_CLOSE'){
+  let kind=suggestion?.actionKind;
+  if(!kind){try{kind=window.btNextActionForEntry?.(entry)?.kind}catch{}}
+  if(kind!=='close')code='BONUS_RECEIVED';
+ }
+ return {...raw,code,label:dashboardLabels[code]||raw.label||'Review account'};
+}
 function stages(rows){
- const counts={};rows.filter(e=>!e.closed&&scope(e)).forEach(e=>{const code=stage(e).code;counts[code]=(counts[code]||0)+1});
+ const counts={};rows.filter(e=>!e.closed&&scope(e)).forEach(e=>{const code=dashboardStage(e).code;counts[code]=(counts[code]||0)+1});
  return '<div class="bt360-stage-scroller" role="group" aria-label="Filter by stage">'+pills.filter(([code])=>counts[code]>0).map(([code,label])=>'<button type="button" class="bt360-stage stage-'+code.toLowerCase()+(selectedStage===code?' active':'')+'" aria-pressed="'+(selectedStage===code)+'" onclick="BT360.setStage(\''+code+'\')">'+(counts[code]||0)+' '+label+'</button>').join('')+'</div>';
 }
 const HERO_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -120,24 +130,37 @@ function hero(rows,year,metrics){
  return '<section class="bt360-hero"><div class="bt360-hero-top"><div class="bt360-kicker">COLLECTED IN '+year+'</div><button id="bt-cloud-open" class="cloud-status-button bt360-backup" onclick="btOpenCloudBackup()"><span class="bt360-cloud-icon" aria-hidden="true">✓</span><span class="cloud-dashboard-summary">'+(window.BTICloudBackup?.isLocalOnly?.()?'iCloud backup':'Cloud backup')+'</span></button></div><strong class="bt360-hero-amount">'+amount(total)+'</strong><p>'+amount(progress)+' in progress · '+amount(awaiting)+' awaiting</p><div class="bt367-month-chart" role="group" aria-label="Collected by month in '+year+'">'+bars+'</div>'+detail+'</section>';
 }
 function attentionStatus(x){
- const code=String(x.stageCode||'IN_PROGRESS');
- const labels={ACTION_NEEDED:'Action needed',IN_PROGRESS:'In progress',REQUIREMENTS_MET:'Requirements met',AWAITING_BONUS:'Awaiting bonus',BONUS_RECEIVED:'Bonus received',HOLD_OPEN:'Hold open',READY_TO_CLOSE:'Ready to close',COOLDOWN:'Cooldown',ELIGIBLE:'Eligible again',ARCHIVED:'Archived'};
- return {code,label:labels[code]||String(x.stageLabel||'Review account')};
+ const entry=typeof entries!=='undefined'?entries.find(e=>e.id===x.entryId):null;
+ return dashboardStage(entry,x);
 }
 function attentionDateNote(x){
  const c=x?.dateContext||{};
  const entry=typeof entries!=='undefined'?entries.find(e=>e.id===x.entryId):null;
  const arrival=window.BTFinancialRules?.arrivalLabel?.(window.BTFinancialRules?.estimatedArrival?.(entry));
  if(arrival&&['AWAITING_BONUS','REQUIREMENTS_MET'].includes(x.stageCode))return arrival;
- if(c.confirmed&&attentionDateDays(x)!==null){
-  const prefix=['AWAITING_BONUS','REQUIREMENTS_MET'].includes(x.stageCode)?'Expected by ':x.stageCode==='HOLD_OPEN'?'Hold until ':['COOLDOWN','ELIGIBLE'].includes(x.stageCode)?'Review from ':'Due ';
-  return prefix+date(c.date);
+ const days=attentionDateDays(x),paid=['BONUS_RECEIVED','READY_TO_CLOSE'].includes(x.stageCode);
+ const type=x.task?.activityKind;
+ const deadline={'direct-deposit':'Deposit deadline','new-money':'Funding deadline','balance-hold':'Balance review','transactions':'Purchase deadline','enrollment':'Sign-up deadline'}[type]||'Requirement deadline';
+ if(c.confirmed&&days!==null){
+  const prefix=['AWAITING_BONUS','REQUIREMENTS_MET'].includes(x.stageCode)?'Expected by ':x.stageCode==='HOLD_OPEN'?'Keep open until ':paid?'Closing review: ':['COOLDOWN','ELIGIBLE'].includes(x.stageCode)?'New offer review: ':deadline+': ';
+  const urgent=attentionUrgency(x);
+  const late=urgent!==null&&urgent<0?' · '+Math.abs(urgent)+' day'+(urgent===-1?'':'s')+' overdue':urgent===0?' · Today':'';
+  return prefix+date(c.date)+late;
  }
- if(x.stageCode==='AWAITING_BONUS'||x.stageCode==='REQUIREMENTS_MET')return 'Payout date not confirmed';
- if(x.stageCode==='HOLD_OPEN'||x.stageCode==='BONUS_RECEIVED'||x.stageCode==='READY_TO_CLOSE')return 'Review close date';
- if(x.stageCode==='COOLDOWN'||x.stageCode==='ELIGIBLE')return 'Review eligibility date';
- if(x.stageCode==='IN_PROGRESS'||x.stageCode==='ACTION_NEEDED')return 'Requirement date not confirmed';
- return 'Date not confirmed';
+ if(['AWAITING_BONUS','REQUIREMENTS_MET'].includes(x.stageCode))return 'Payment date not saved';
+ if(x.stageCode==='HOLD_OPEN'||paid)return 'Check closing date';
+ if(['COOLDOWN','ELIGIBLE'].includes(x.stageCode))return 'Check next offer date';
+ return 'Check '+deadline.toLowerCase();
+}
+function dashboardTaskTitle(x,entry,queue){
+ if(x.task?.title==='Verify saved offer rules')return 'Check saved offer details';
+ if(['ELIGIBLE','COOLDOWN'].includes(x.stageCode))return x.stageCode==='ELIGIBLE'?'Review a new offer':'Wait before applying again';
+ if(x.stageCode==='HOLD_OPEN')return 'Keep this account open';
+ if(entry?.bonusRecd||['BONUS_RECEIVED','READY_TO_CLOSE'].includes(x.stageCode))return dashboardStage(entry,x).code==='READY_TO_CLOSE'?'Close account when ready':'Check when you can close';
+ if(['AWAITING_BONUS','REQUIREMENTS_MET'].includes(x.stageCode))return queue==='waiting'?'Watch for bonus payment':'Check bonus payment';
+ const title=String(x.task?.title||x.stageLabel||'Check account details');
+ const simple={'Verify saved offer rules':'Check saved offer details','Confirm all bonus requirements':'Check bonus requirements','Review saved requirements':'Check bonus requirements','Confirm bonus payment':'Record bonus when paid'};
+ return simple[title]||title.replace(/^Receive (\$[\d,.]+) in monthly qualifying direct deposits$/,'Get $1 in qualifying direct deposits each month');
 }
 function attentionChip(x){
  const stage=attentionStatus(x);
@@ -182,7 +205,7 @@ function attentionCardProgress(entry){
  if(!entry||entry.reqMet||entry.bonusRecd||entry.closed)return '';
  const p=requirementProgress(entry);
  if(!p.total)return '';
- return '<span class="bt3719-progress"><span class="bt3719-progress-label"><span>Recorded so far</span><b>'+p.done+' of '+p.total+' steps</b></span>'
+ return '<span class="bt3719-progress"><span class="bt3719-progress-label"><b>'+p.done+' of '+p.total+' '+(p.total===1?'step':'steps')+' checked</b></span>'
   +'<span class="bt360-track" role="progressbar" aria-label="Recorded requirement and task checks" aria-valuemin="0" aria-valuemax="'+p.total+'" aria-valuenow="'+p.done+'"><i style="width:'+p.percent+'%"></i></span></span>';
 }
 
@@ -207,8 +230,7 @@ function dashboardAttentionOrder(a,b){
 }
 function attentionAccountMeta(x,entry){
  const kind=entry?(accountAudience(entry)==='business'?'Business':'Personal'):'';
- const context=x?.dateContext?.confirmed&&x.dateContext.date&&x.stageCode==='ELIGIBLE'
-  ?'Eligible since '+date(x.dateContext.date):attentionDateNote(x);
+ const context=attentionDateNote(x);
  return [kind,context].filter(Boolean).join(' · ');
 }
 // Dashboard account cards are navigation surfaces, not expandable action
@@ -250,11 +272,11 @@ function tasks(rows){
  let html='<section class="bt3719-needs bt3651-queue" data-queue="'+key+'">'+heading+'<div class="bt360-list bt3719-attention-list bt3641-attention-stack">';
  list.forEach(x=>{
   const item=rows.find(e=>e.id===x.entryId);
-  const label=key==='waiting'?(x.stageCode==='HOLD_OPEN'?'Keep account open':'Waiting for bonus payment'):x.task?.title||x.stageLabel||'Review account';
+  const label=dashboardTaskTitle(x,item,key);
   const title=safe(label),meta=attentionAccountMeta(x,item);
   html+='<article class="bt3641-attention-item" data-attention-id="'+safe(x.entryId)+'">'
    +'<button type="button" class="bt360-list-row bt3641-attention-toggle bt3812-bank-detail-link" data-attention-link="'+safe(x.entryId)+'" aria-label="Open '+safe(x.bank||'bank')+' details" onclick="openAccountFromActionCenter('+arg(x.entryId)+')">'
-   +bankLogo(x.bank,true)+'<span class="bt360-grow bt3729-needs-copy"><b class="bt3729-bank-name">'+safe(x.bank||'Bank')+'</b><small class="bt3729-task-title">'+title+'</small><small class="bt3729-task-meta">'+safe(meta)+'</small>'+monthlyFeeBadge(item)+'</span>'
+   +bankLogo(x.bank,true)+'<span class="bt360-grow bt3729-needs-copy"><b class="bt3729-bank-name">'+safe(x.bank||'Bank')+'</b><small class="bt3729-task-title">'+title+'</small><small class="bt3729-task-meta'+(attentionUrgency(x)!==null&&attentionUrgency(x)<0?' is-overdue':'')+'">'+safe(meta)+'</small>'+monthlyFeeBadge(item)+'</span>'
    +'<span class="bt3719-task-right">'+(item?.bonus?'<strong>'+safe(amount(item.bonus))+'</strong>':'')+actionBadge(x,false)+'</span>'
    +(['ACTION_NEEDED','IN_PROGRESS'].includes(x.stageCode)?attentionCardProgress(item):'')+'</button></article>';
  });
@@ -285,7 +307,8 @@ function accountFeeWarnings(e){
  const issues=validation?.issues||[];
  const supported=path=>!!validation&&!issues.some(i=>i.path==='financialRules'||i.path==='financialRules.version'||i.path===path||i.path.startsWith(path+'.')||i.path.startsWith(path+'['));
  const frequencyEvidence={monthly:/monthly|per month|each month|every month|\/month/i,'statement-cycle':/statement (?:cycle|period)/i,quarterly:/quarterly|per quarter|each quarter/i,annually:/annually|annual|per year|each year/i};
- const frequencies={monthly:'/mo fee','statement-cycle':'/statement fee',quarterly:'/quarter fee',annually:'/year fee'};
+ const frequencies={monthly:'/month','statement-cycle':'/statement',quarterly:'/quarter',annually:'/year'};
+ const feeLabels={monthly:'Monthly fee','statement-cycle':'Fee per statement',quarterly:'Quarterly fee',annually:'Annual fee'};
  if(rules){
   const accounts=Array.isArray(rules.accounts)?rules.accounts:[];
   if(accounts.filter(a=>a?.role==='primary').length!==1)add('Check monthly fee','Primary account fee information is incomplete. Review saved fee terms.');
@@ -296,12 +319,12 @@ function accountFeeWarnings(e){
     add(name+'Check fee','Fee amount, frequency or supporting evidence needs review in Details.');return;
    }
    if(fee.amount>0&&!frequencyEvidence[fee.frequency]?.test(String(fee.evidence?.quote||''))){add(name+'Check fee','Saved fee frequency conflicts with its supporting wording. Review fee terms.');return;}
-   if(fee.amount>0)add(name+amount(fee.amount)+frequencies[fee.frequency],
+   if(fee.amount>0)add(a.role==='primary'?feeLabels[fee.frequency]+': '+amount(fee.amount):name+amount(fee.amount)+frequencies[fee.frequency],
     String(fee.evidence?.quote||'')+' '+(fee.waiver?.evidence?.quote||'Waiver terms not confirmed.')+' Check each applicable fee period; bonus completion does not prove a waiver.');
   });
  }else{
   const n=x.monthlyKnown?Number(String(x.monthly).replace(/[$,\s]/g,'')):null;
-  if(n>0)add(x.monthly+'/mo fee','Saved monthly fee. '+x.summary+'. Review the waiver for each fee period.');
+  if(n>0)add('Monthly fee: '+x.monthly,'Saved monthly fee. '+x.summary+'. Review the waiver for each fee period.');
   if(n===null||!Number.isFinite(n))add('Check monthly fee','Monthly fee is not confirmed in saved terms.');
   // Legacy required-account summaries retain only an amount immediately after
   // the product separator, never a membership or waiver balance threshold.
@@ -310,8 +333,8 @@ function accountFeeWarnings(e){
    if(!m){add('Required account: check fee',text);return;}
    const value=Number(m[2].replace(/,/g,''));
    if(value<=0)return;
-   const period=/\/\s*(?:month|mo)\b|monthly/i.test(m[3])?'/mo fee':
-    /\/\s*(?:year|yr)\b|annually/i.test(m[3])?'/year fee':' fee · check period';
+   const period=/\/\s*(?:month|mo)\b|monthly/i.test(m[3])?'/month':
+    /\/\s*(?:year|yr)\b|annually/i.test(m[3])?'/year':' fee · check period';
    add(m[1].trim()+': '+amount(value)+period,text);
   });
  }
@@ -326,7 +349,7 @@ function monthlyFeeBadge(e){
  ).join('')+'</span>';
 }
 function compactRow(e){
- const s=stage(e),progress=requirementProgress(e);
+ const s=dashboardStage(e),progress=requirementProgress(e);
  const arrival=!e.closed&&!e.bonusRecd?window.BTFinancialRules?.arrivalLabel?.(window.BTFinancialRules?.estimatedArrival?.(e)):'';
  // The recorded lifecycle takes precedence over any stale task/timer.
  const next=e.closed?'Closed':e.bonusRecd?'Bonus received':e.reqMet?'Waiting for bonus':
@@ -334,7 +357,7 @@ function compactRow(e){
  const shownStage=e.closed?'Closed':e.bonusRecd?'Bonus received':e.reqMet?'Waiting for bonus':s.label;
  return '<div class="card bt366-compact-account" data-bt-entry-id="'+safe(e.id)+'"><button type="button" class="card-h bt366-compact-row" onclick="openAccountFromActionCenter('+arg(e.id)+')">'
   +bankLogo(e.bank,true)+'<span class="bt360-grow"><b>'+safe(e.bank)+'</b>'+(audience==='all'?kindTag(e):'')+monthlyFeeBadge(e)+'<small>'+safe(next)+'</small>'+(arrival?'<small class="bt3684-arrival-compact">'+safe(arrival)+'</small>':'')
-  +(progress.total&&!e.closed&&!e.bonusRecd&&!e.reqMet?'<span class="bt366-compact-track" role="progressbar" aria-label="Recorded requirement and task checks" aria-valuemin="0" aria-valuemax="'+progress.total+'" aria-valuenow="'+progress.done+'"><i style="width:'+progress.percent+'%"></i></span><small>'+progress.done+' of '+progress.total+' steps</small>':'')
+  +(progress.total&&!e.closed&&!e.bonusRecd&&!e.reqMet?'<span class="bt366-compact-track" role="progressbar" aria-label="Recorded requirement and task checks" aria-valuemin="0" aria-valuemax="'+progress.total+'" aria-valuenow="'+progress.done+'"><i style="width:'+progress.percent+'%"></i></span><small>'+progress.done+' of '+progress.total+' '+(progress.total===1?'step':'steps')+' checked</small>':'')
   +'</span><span class="bt366-compact-right"><strong>'+amount(e.bonus)+'</strong><em class="bt360-chip">'+safe(shownStage)+'</em></span></button></div>';
 }
 function primaryAction(e){
@@ -997,9 +1020,9 @@ function simpleFees(e){
  if(e.closed)return '';
  const x=feeSnapshot(e);
  const monthly=x.monthlyKnown?x.monthly:'Not confirmed';
- return '<section class="bt3810-card bt3810-fees"><h3>Fees</h3><div class="bt3810-pair"><span>Monthly</span><b>'+safe(monthly)+'</b></div>'
+ return '<section class="bt3810-card bt3810-fees"><h3>Fees</h3><div class="bt3810-pair"><span>Monthly fee</span><b>'+safe(monthly)+'</b></div>'
   +(x.monthly!=='$0'&&x.summary&&x.summary!=='Waiver conditions not confirmed'?'<div class="bt3810-fee-note">Avoid fee: '+safe(x.summary)+'</div>':'')
-  +(x.companions.length?'<div class="bt3810-fee-note">Other required accounts may have fees.</div>':'')
+  +x.companions.map(text=>'<div class="bt3810-fee-note">'+safe(text)+'</div>').join('')
   +'</section>';
 }
 function simpleNextCycle(e){
@@ -1368,6 +1391,6 @@ function openPhonebook(){closeSettings();window.bt360PhonebookOpen=true;R()}
 function closePhonebook(){window.bt360PhonebookOpen=false;R()}
 function openSettings(){window.bt360SettingsOpen=true;R();refreshUsage()}
 function closeSettings(){window.bt360SettingsOpen=false;R()}
-window.BT360={accountFeeWarnings,monthlyFeeBadge,requirementProgress,attentionCardProgress,toggleRequirement,requirementRecord,sourceEvidenceStatus,sourceEvidencePanel,dashboardQueueFor,toggleAttention,toggleAccountList,openAccountSearch,closeAccountSearch,get selectedAttentionId(){return selectedAttentionId},get accountListOpen(){return accountListOpen},setAccountSectionOpen,revealAccountSection,cloudStatusText,accountDates,accountSaveStatus,infoRow,feeSnapshot,closeCheckPresentation,get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,accountAudience,kindTag,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,upcomingReminders,churnReviewPlan,churnReviewMarkup,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,archiveCountdown,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
+window.BT360={dashboardStage,dashboardTaskTitle,attentionDateNote,accountFeeWarnings,monthlyFeeBadge,requirementProgress,attentionCardProgress,toggleRequirement,requirementRecord,sourceEvidenceStatus,sourceEvidencePanel,dashboardQueueFor,toggleAttention,toggleAccountList,openAccountSearch,closeAccountSearch,get selectedAttentionId(){return selectedAttentionId},get accountListOpen(){return accountListOpen},setAccountSectionOpen,revealAccountSection,cloudStatusText,accountDates,accountSaveStatus,infoRow,feeSnapshot,closeCheckPresentation,get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,accountAudience,kindTag,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,upcomingReminders,churnReviewPlan,churnReviewMarkup,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,archiveCountdown,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
 if(typeof R==='function')R();
 })();
