@@ -2352,7 +2352,7 @@ async function exercise(name,engine,url){
       const common={accountType:'personal',bonus:250,opened:'2026-01-01',customTimers:[],checklist:[]};
       entries=[{...common,id:'SYN-SIMPLE-REVIEW',bank:'Synthetic Review Bank',reqMet:addD(td(),-20),bonusRecd:addD(td(),-10)},
         {...common,id:'SYN-SIMPLE-READY',bank:'Synthetic Ready Bank',reqMet:addD(td(),-20),bonusRecd:addD(td(),-10)},
-        {...common,id:'SYN-SIMPLE-DEPOSIT',bank:'Synthetic Deposit Bank',reqDays:90,completeBonusText:'Receive $500 in qualifying direct deposits each month.',checklist:[{text:'Sign up',done:true},{text:'First deposit',done:true},{text:'Next deposit',done:false}]}];
+        {...common,id:'SYN-SIMPLE-DEPOSIT',bank:'Synthetic Deposit Bank',reqDays:90,completeBonusText:'Receive $500 in qualifying direct deposits each month.',checklist:[{text:'Sign up',done:true},{text:'First deposit',done:true}]}];
       window.__btSimpleDashboardFacts=JSON.stringify(entries);
       window.btLifecycleStageForEntry=e=>({code:e.id==='SYN-SIMPLE-DEPOSIT'?'IN_PROGRESS':'READY_TO_CLOSE',label:'Saved stage'});
       window.btNextActionForEntry=e=>({kind:e.id==='SYN-SIMPLE-READY'?'close':'review'});
