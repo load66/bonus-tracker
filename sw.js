@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.8.16: bank-only tracker; retired card assets no longer load or cache.
-const V = 'bt-v3.8.16-bankonly1';
+// Version 3.8.17: simpler dashboard guidance, precise dates and consistent fee labels.
+const V = 'bt-v3.8.17-simple1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',

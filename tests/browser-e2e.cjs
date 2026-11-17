@@ -666,7 +666,7 @@ async function exercise(name,engine,url){
       check('Waiting separates future payout and hold periods',await page.locator('[data-queue="waiting"] [data-attention-link]').count()===2);
       check('Opportunities is separate from required tasks',await page.locator('[data-queue="opportunities"] [data-attention-link]').count()===1);
       check('upcoming cooldown appears once in Eligible soon',await page.locator('[data-attention-id="SYN-QUEUE-SOON"]').count()===0&&await page.locator('.bt3719-soon').innerText().then(t=>t.includes('Synthetic Upcoming CU')));
-      check('payout and hold dates use precise labels',await page.locator('[data-queue="waiting"]').innerText().then(t=>t.includes('Expected by')&&t.includes('Hold until')));
+      check('payout and hold dates use precise labels',await page.locator('[data-queue="waiting"]').innerText().then(t=>t.includes('Expected by')&&t.includes('Keep open until')));
       for(const key of ['needs','waiting','opportunities']){
         for(const width of [320,375,390,430]){
           await page.setViewportSize({width,height:844});
@@ -780,7 +780,7 @@ async function exercise(name,engine,url){
             feeEvidence:{quote:fee===0?'No early closing fee.':'$'+fee+' early closing fee.'}}}}));
         return cases.every(e=>{
           const panel=BT360.detailPanels(e);
-          return panel.includes('<span>Monthly</span>')&&!/Closing early|Early closing fee|early-close fee/.test(panel);
+          return panel.includes('<span>Monthly fee</span>')&&!/Closing early|Early closing fee|early-close fee/.test(panel);
         })&&JSON.stringify(original)===saved&&localStorage.getItem(SK)===stored;
       }));
     check('no advanced, notes, previous reminders or source disclosures on the main screen',
@@ -2346,6 +2346,42 @@ async function exercise(name,engine,url){
       entries=saved.entries;expanded=null;tab='tracker';R();
     },individualRestore);
     await page.setViewportSize({width:390,height:844});
+    // Beginner wording uses the same readiness projection for badges, counts and filters.
+    await page.evaluate(()=>{
+      window.__btSimpleDashboardRestore={entries,expanded,tab,suggestions:window.getAttentionSuggestions,next:window.btNextActionForEntry,stage:window.btLifecycleStageForEntry,stored:localStorage.getItem('bt_e_v4')};
+      const common={accountType:'personal',bonus:250,opened:'2026-01-01',customTimers:[],checklist:[]};
+      entries=[{...common,id:'SYN-SIMPLE-REVIEW',bank:'Synthetic Review Bank',reqMet:addD(td(),-20),bonusRecd:addD(td(),-10)},
+        {...common,id:'SYN-SIMPLE-READY',bank:'Synthetic Ready Bank',reqMet:addD(td(),-20),bonusRecd:addD(td(),-10)},
+        {...common,id:'SYN-SIMPLE-DEPOSIT',bank:'Synthetic Deposit Bank',reqDays:90,completeBonusText:'Receive $500 in qualifying direct deposits each month.',checklist:[{text:'Sign up',done:true},{text:'First deposit',done:true}]}];
+      window.__btSimpleDashboardFacts=JSON.stringify(entries);
+      window.btLifecycleStageForEntry=e=>({code:e.id==='SYN-SIMPLE-DEPOSIT'?'IN_PROGRESS':'READY_TO_CLOSE',label:'Saved stage'});
+      window.btNextActionForEntry=e=>({kind:e.id==='SYN-SIMPLE-READY'?'close':'review'});
+      window.getAttentionSuggestions=()=>entries.map(e=>({entryId:e.id,bank:e.bank,stageCode:e.id==='SYN-SIMPLE-DEPOSIT'?'IN_PROGRESS':'READY_TO_CLOSE',actionKind:e.id==='SYN-SIMPLE-READY'?'close':'review',task:{title:e.id==='SYN-SIMPLE-DEPOSIT'?'Receive $500 in monthly qualifying direct deposits':'Verify closure terms',activityKind:e.id==='SYN-SIMPLE-DEPOSIT'?'direct-deposit':undefined},dateContext:{date:addD(td(),-2),confirmed:true}}));
+      expanded=null;tab='tracker';BT360.setAudience('all');BT360.resetStage();R();
+    });
+    const simpleReview=page.locator('[data-attention-id="SYN-SIMPLE-REVIEW"]');
+    check('unresolved closing review never advertises Ready to close',await simpleReview.innerText().then(t=>t.includes('Check when you can close')&&t.includes('Bonus received')&&!t.includes('Ready to close')&&!t.includes('overdue')));
+    check('supported readiness has matching action and badge',await page.locator('[data-attention-id="SYN-SIMPLE-READY"]').innerText().then(t=>t.includes('Close account when ready')&&t.includes('Ready to close')));
+    check('deposit has plain action, specific deadline and honest progress',await page.locator('[data-attention-id="SYN-SIMPLE-DEPOSIT"]').innerText().then(t=>t.includes('Get $500 in qualifying direct deposits each month')&&t.includes('Deposit deadline:')&&t.includes('2 days overdue')&&t.includes('2 of 3 steps checked')&&!t.includes('Recorded so far')));
+    await page.getByRole('button',{name:'1 Bonus received',exact:true}).click();
+    check('bonus-received filter agrees with its projected count',await page.locator('.bt366-compact-account').count()===1&&await page.locator('.bt366-compact-account').innerText().then(t=>t.includes('Synthetic Review Bank')));
+    await page.getByRole('button',{name:'1 Ready to close',exact:true}).click();
+    check('ready-to-close filter contains only the supported account',await page.locator('.bt366-compact-account').count()===1&&await page.locator('.bt366-compact-account').innerText().then(t=>t.includes('Synthetic Ready Bank')));
+    await page.evaluate(()=>{BT360.resetStage();R()});
+    for(const width of [320,375,390,430,1280]){
+      await page.setViewportSize({width,height:900});
+      check('plain dashboard remains readable at '+width+'px',await page.locator('[data-queue="needs"]').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
+      check('compact Add keeps its label and touch target at '+width+'px',await page.locator('.bt362-add-fab').evaluate(e=>{const r=e.getBoundingClientRect();return r.height>=44&&r.width>=44&&r.width<=200&&e.textContent.includes('Add bonus')}));
+    }
+    await page.setViewportSize({width:390,height:844});
+    await page.locator('[data-queue="needs"]').scrollIntoViewIfNeeded();
+    await page.screenshot({path:path.join(output,name+'-simple-dashboard-390.png')});
+    check('plain dashboard rendering and filtering never change recorded facts',await page.evaluate(()=>JSON.stringify(entries)===window.__btSimpleDashboardFacts&&localStorage.getItem('bt_e_v4')===window.__btSimpleDashboardRestore.stored));
+    await page.evaluate(()=>{
+      const old=window.__btSimpleDashboardRestore;entries=old.entries;expanded=old.expanded;tab=old.tab;
+      window.getAttentionSuggestions=old.suggestions;window.btNextActionForEntry=old.next;window.btLifecycleStageForEntry=old.stage;
+      delete window.__btSimpleDashboardRestore;delete window.__btSimpleDashboardFacts;R();
+    });
     // Retired card records remain recoverable, but never mount a second tracker.
     const retiredCards=JSON.stringify({version:1,cards:[{current:{id:'retired-synthetic',name:'Retired plan',opened:'2026-01-01'},history:[]}]});
     const retirementBefore=await page.evaluate(()=>({cards:localStorage.getItem('bt_credit_cards_v1'),banks:localStorage.getItem('bt_e_v4')}));
