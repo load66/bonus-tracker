@@ -1286,3 +1286,6 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt3641-attention-item .bt3729-task-meta.is-overdue{color:#ffb0a4!important}
 .bt3719-progress-label{justify-content:flex-start}
 .bt3719-progress-label b{font-size:11px;font-weight:600;color:#aab3c2}
+
+/* Next-task dates stay readable without adding controls to bank details. */
+.bt3818-task-date{font-size:12px;line-height:1.5;color:#aab3c2;margin:12px 0 4px;overflow-wrap:anywhere}

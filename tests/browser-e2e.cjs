@@ -655,6 +655,30 @@ async function exercise(name,engine,url){
       await page.evaluate(previous=>{entries=previous.entries;expanded=previous.expanded;R();},saved);
     }
     {
+      const recurring=require('./fixtures/financial-rules.cjs').fixture();
+      Object.assign(recurring,{id:'SYN-DETAIL-SCHEDULE',bank:'Synthetic Schedule Bank',opened:'2026-09-12',customTimers:[],checklist:[]});
+      const saved=await page.evaluate(e=>{
+        const old={entries,expanded,tab,stored:localStorage.getItem('bt_e_v4')};
+        e.customTimers=[{id:'next-deposit',kind:'requirement',text:e.financialRules.requirements[0].text,date:addD(td(),10),done:false}];
+        entries=[e];tab='tracker';expanded=e.id;R();return old;
+      },recurring);
+      const schedule=recurring.financialRules.requirements[0].text;
+      check('bank detail retains the complete recurring schedule',await page.locator('.bt3810-requirements').innerText().then(t=>t.includes(schedule)&&t.includes('consecutive calendar months')));
+      const detailDate=await page.locator('.bt3818-task-date').innerText();
+      check('bank detail shows a confirmed next-deposit deadline',detailDate.startsWith('Deposit deadline: '));
+      check('bank detail calls checkbox progress checked',await page.locator('.bt3810-requirements .bt3810-heading').innerText().then(t=>t.includes('0 of 1 checked')));
+      for(const width of [320,375,390,430,1280]){
+        await page.setViewportSize({width,height:900});
+        check('full recurring wording and date fit '+width+'px',await page.locator('.bt3810-requirements').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
+      }
+      await page.setViewportSize({width:390,height:844});
+      await page.screenshot({path:path.join(output,name+'-detail-schedule-390.png')});
+      await page.getByRole('button',{name:'Back to accounts',exact:true}).click();
+      check('dashboard and bank details show the same next-deposit deadline',await page.locator('[data-attention-id="SYN-DETAIL-SCHEDULE"] .bt3729-task-meta').innerText().then(t=>t.endsWith(detailDate)));
+      check('viewing schedule and navigating makes no storage writes',await page.evaluate(old=>localStorage.getItem('bt_e_v4')===old.stored,saved));
+      await page.evaluate(old=>{entries=old.entries;expanded=old.expanded;tab=old.tab;R()},saved);
+    }
+    {
       const make=require('./fixtures/financial-rules.cjs').fixture;
       const opportunity=Object.assign(make(),{id:'SYN-QUEUE-OFFER',bank:'Synthetic Opportunity CU',bonusRecd:'2025-07-01',closed:'2025-08-01'});
       const cooling=Object.assign(make(),{id:'SYN-QUEUE-SOON',bank:'Synthetic Upcoming CU',bonusRecd:'2025-11-01',closed:'2026-08-01'});
@@ -680,6 +704,7 @@ async function exercise(name,engine,url){
         const target=await page.locator('[data-queue="'+key+'"] [data-attention-link]').first().getAttribute('data-attention-link');
         await page.locator('[data-queue="'+key+'"] [data-attention-link]').first().click();
         check('bank card opens exact details across '+key+' group',await page.evaluate(id=>expanded===id,target));
+        check('bank details begin at the bank heading across '+key+' group',await page.evaluate(()=>document.querySelector('.scroll').scrollTop<=1&&document.activeElement===document.querySelector('.bt360-detail-header h2')));
         await page.evaluate(()=>BT360.back());
       }
       check('dashboard grouping leaves stored account records unchanged',await page.evaluate(x=>localStorage.getItem('bt_e_v4')===x,saved.stored));
@@ -2366,7 +2391,7 @@ async function exercise(name,engine,url){
     await page.getByRole('button',{name:'1 Bonus received',exact:true}).click();
     check('bonus-received filter agrees with its projected count',await page.locator('.bt366-compact-account').count()===1&&await page.locator('.bt366-compact-account').innerText().then(t=>t.includes('Synthetic Review Bank')));
     await page.getByRole('button',{name:'1 Ready to close',exact:true}).click();
-    check('ready-to-close filter contains only the supported account',await page.locator('.bt366-compact-account').count()===1&&await page.locator('.bt366-compact-account').innerText().then(t=>t.includes('Synthetic Ready Bank')));
+    check('ready-to-close filter contains only the supported account',await page.locator('.bt366-compact-account').count()===1&&await page.locator('.bt366-compact-account').innerText().then(t=>t.includes('Synthetic Ready Bank')&&t.includes('Ready to close')&&t.includes('Close account when ready')));
     await page.evaluate(()=>{BT360.resetStage();R()});
     for(const width of [320,375,390,430,1280]){
       await page.setViewportSize({width,height:900});

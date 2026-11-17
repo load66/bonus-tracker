@@ -46,6 +46,23 @@ try{
  assert.equal(s.btRequirementDeadlineContext(multi,multi.financialRules.requirements[0]).date,'2026-12-11','Individual requirement must retain its own date');
  const legacy={bank:'Synthetic Legacy',opened:'2026-09-12',reqDays:90};
  assert.equal(s.reqDeadline(legacy),'2026-12-11');legacy.requiredDaysText='90 business days';assert.equal(s.reqDeadline(legacy),null);
+ const originalNext=s.btNextActionForEntry;
+ try{
+  const recurring=fixture();Object.assign(recurring,{id:'SYN-NEXT-DEPOSIT',checklist:[],customTimers:[{id:'next-deposit',text:'Next qualifying direct deposit',date:'2026-12-15',done:false}]});
+  const savedRecurring=JSON.stringify(recurring);
+  s.btNextActionForEntry=()=>({stage:{code:'IN_PROGRESS'},task:{activityKind:'direct-deposit',context:{date:'2026-12-15',confirmed:true}}});
+  let detail=s.BT360.detailPanels(recurring);
+  assert(detail.includes(recurring.financialRules.requirements[0].text),'Recurring wording retains consecutive-month schedule and original conditions');
+  assert.match(detail,/Deposit deadline: Dec 15, 2026/,'Bank detail carries the same next-deposit date as the dashboard');
+  assert.match(detail,/0 of 1 checked/,'Checkbox counts do not claim the offer is complete');
+  s.btNextActionForEntry=()=>({stage:{code:'IN_PROGRESS'},task:{activityKind:'direct-deposit',context:{date:'2026-02-30',confirmed:true}}});
+  assert.doesNotMatch(s.BT360.detailPanels(recurring),/bt3818-task-date/,'Invalid next-task dates stay hidden');
+  s.btNextActionForEntry=()=>({stage:{code:'IN_PROGRESS'},task:{activityKind:'direct-deposit',context:{date:'2026-12-15',confirmed:false}}});
+  assert.doesNotMatch(s.BT360.detailPanels(recurring),/bt3818-task-date/,'An unconfirmed task must not become a deadline');
+  s.btNextActionForEntry=()=>({stage:{code:'IN_PROGRESS'},task:{activityKind:'direct-deposit',context:{date:'2026-12-11',confirmed:true}}});
+  assert.equal((s.BT360.detailPanels(e).match(/Dec 11, 2026/g)||[]).length,1,'A date already shown on its requirement is not repeated');
+  assert.equal(JSON.stringify(recurring),savedRecurring);
+ }finally{s.btNextActionForEntry=originalNext}
  assert.equal(JSON.stringify(e),original,'Date projection changed saved facts');
  assert.equal(JSON.stringify([...storage]),saved,'Date projection wrote storage');
  console.log('Shared requirement dates passed: structured precedence, cross-view parity, exact anchors, unresolved calendars, invalid dates, legacy compatibility and no writes.');

@@ -352,9 +352,10 @@ function compactRow(e){
  const s=dashboardStage(e),progress=requirementProgress(e);
  const arrival=!e.closed&&!e.bonusRecd?window.BTFinancialRules?.arrivalLabel?.(window.BTFinancialRules?.estimatedArrival?.(e)):'';
  // The recorded lifecycle takes precedence over any stale task/timer.
- const next=e.closed?'Closed':e.bonusRecd?'Bonus received':e.reqMet?'Waiting for bonus':
+ const next=e.closed?'Closed':e.bonusRecd?dashboardTaskTitle({stageCode:s.code,actionKind:s.code==='READY_TO_CLOSE'?'close':'review'},e,'needs'):
+  e.reqMet?'Waiting for bonus':
   (progress.next||(progress.total?'All checked · confirm completion':'')||s.support||s.label);
- const shownStage=e.closed?'Closed':e.bonusRecd?'Bonus received':e.reqMet?'Waiting for bonus':s.label;
+ const shownStage=e.closed?'Closed':e.bonusRecd?(['READY_TO_CLOSE','HOLD_OPEN','BONUS_RECEIVED'].includes(s.code)?s.label:'Bonus received'):e.reqMet?'Waiting for bonus':s.label;
  return '<div class="card bt366-compact-account" data-bt-entry-id="'+safe(e.id)+'"><button type="button" class="card-h bt366-compact-row" onclick="openAccountFromActionCenter('+arg(e.id)+')">'
   +bankLogo(e.bank,true)+'<span class="bt360-grow"><b>'+safe(e.bank)+'</b>'+(audience==='all'?kindTag(e):'')+monthlyFeeBadge(e)+'<small>'+safe(next)+'</small>'+(arrival?'<small class="bt3684-arrival-compact">'+safe(arrival)+'</small>':'')
   +(progress.total&&!e.closed&&!e.bonusRecd&&!e.reqMet?'<span class="bt366-compact-track" role="progressbar" aria-label="Recorded requirement and task checks" aria-valuemin="0" aria-valuemax="'+progress.total+'" aria-valuenow="'+progress.done+'"><i style="width:'+progress.percent+'%"></i></span><small>'+progress.done+' of '+progress.total+' '+(progress.total===1?'step':'steps')+' checked</small>':'')
@@ -994,16 +995,28 @@ function simpleRequirements(e){
  const checks=Array.isArray(e.checklist)?e.checklist:[];
  const progress=requirementProgress(e);
  const linked=new Set(list.map(r=>requirementRecord(e,r)).filter(Boolean));
+ const shownDates=new Set();
  const rows=list.map(r=>{
-  const label=requirementTitle(r,e),checked=!!requirementRecord(e,r)?.done;
+  // Recurring offers keep their exact schedule and conditions visible.
+  const label=r.recurrence&&String(r.text||'').trim()?String(r.text).replace(/\s+/g,' ').trim():requirementTitle(r,e),checked=!!requirementRecord(e,r)?.done;
   const due=checked?'':detailRequirementDate(e,r);
   const balance=window.BTFinancialRules?.balanceMeasurementWindow?.(e,r);
   const when=balance?date(balance.start)+' – '+date(balance.end)+' · Days '+balance.firstDay+'–'+balance.lastDay:due?'Due '+date(due):'';
+  if(balance){shownDates.add(balance.start);shownDates.add(balance.end)}else if(due)shownDates.add(due);
   return '<div class="bt3810-task"><button type="button" role="checkbox" aria-label="'+safe(label)+'" aria-checked="'+checked+'" onclick="BT360.toggleRequirement('+arg(e.id)+','+arg(r.id)+')">'+(checked?'✓':'')+'</button>'
    +'<span><b>'+safe(label)+'</b>'+(when?'<small>'+safe(when)+'</small>':'')+'</span></div>';
  }).join('');
  const extras=checks.map((c,i)=>({c,i})).filter(({c})=>c&&String(c.text||'').trim()&&!linked.has(c))
   .map(({c,i})=>'<div class="bt3810-task"><button type="button" role="checkbox" aria-label="'+safe(c.text||'Task')+'" aria-checked="'+!!c.done+'" onclick="toggleCk('+arg(e.id)+','+i+')">'+(c.done?'✓':'')+'</button><span><b>'+safe(c.text||'Task')+'</b></span></div>').join('');
+ let nextDate='';
+ try{
+  const next=window.btNextActionForEntry?.(e),context=next?.task?.context;
+  const valid=context?.confirmed&&archiveDateValid(context.date);
+  if(valid&&!shownDates.has(context.date)){
+   const note=attentionDateNote({entryId:e.id,stageCode:next.stage?.code||'IN_PROGRESS',task:next.task,dateContext:context});
+   nextDate='<p class="bt3818-task-date">'+safe(note)+'</p>';
+  }
+ }catch{}
  const fallback=!rows&&!extras?'<p class="bt3810-muted">'+(e.completeBonusText?'Complete the saved bonus requirements.':'Add your bonus requirements to start tracking.')+'</p>':'';
  const hasDeposit=list.some(r=>r?.kind==='direct-deposit')||/direct[ -]?deposits?|\bpayroll\b|\bq?dd\b/i.test(String(e.completeBonusText||''));
  const progressDD=typeof depositProgress==='function'?depositProgress(e):null;
@@ -1012,7 +1025,7 @@ function simpleRequirements(e){
   '<div class="bt3810-deposit"><span>'+(progressDD?.recordedCount?cents(progressDD.totalCents)+' recorded · '+cents(progressDD.confirmedCents)+' confirmed':'')+'</span>'
   +'<button type="button" class="bt360-link" onclick="openDepositRecord('+arg(e.id)+')">Add deposit</button></div>':'';
  return '<section class="bt3810-card bt3810-requirements" aria-label="Requirements"><div class="bt3810-heading"><h3>Requirements</h3>'
-  +(progress.total?'<span>'+progress.done+' of '+progress.total+' done</span>':'')+'</div>'+rows+extras+fallback+deposit
+  +(progress.total?'<span>'+progress.done+' of '+progress.total+' checked</span>':'')+'</div>'+nextDate+rows+extras+fallback+deposit
   +(progressDD?.recordedCount?'<details class="bt3810-recorded-deposits"'+(accountSections.get(String(e.id)+'|deposits')?' open':'')+' ontoggle="BT360.setAccountSectionOpen('+arg(e.id)+',\'deposits\',this.open)"><summary>View recorded deposits</summary>'+depositLedgerHtml(e)+'</details>':'')
   +'<button type="button" class="bt360-link bt3810-add-task" onclick="runBankAction('+arg(e.id)+',\'checklist\')">+ Add task</button></section>';
 }
