@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.8.17';
+const APP_VERSION='3.8.18';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -4525,6 +4525,15 @@ function openAccountFromActionCenter(id){
   search='';
   tab='tracker';
   R();
+  const identity=document.querySelector('.bt360-detail-header h2');
+  if(identity){
+    const scroller=document.querySelector('.scroll');
+    if(scroller)scroller.scrollTop=0;
+    _sp=0;
+    identity.setAttribute('tabindex','-1');
+    identity.focus({preventScroll:true});
+    return;
+  }
   const card=Array.from(document.querySelectorAll('.card[data-bt-entry-id]')).find(el=>el.getAttribute('data-bt-entry-id')===id);
   if(!card)return;
   card.scrollIntoView({block:'start',behavior:'auto'});

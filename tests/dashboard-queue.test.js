@@ -65,6 +65,10 @@ try{
  const readyRow=simple.match(/data-attention-id="SYN-SIMPLE-READY"[\s\S]*?<\/article>/)[0];
  assert.match(reviewRow,/Check when you can close/);assert.match(reviewRow,/>Bonus received</);assert.doesNotMatch(reviewRow,/Ready to close|overdue| · Due /);
  assert.match(readyRow,/Close account when ready/);assert.match(readyRow,/>Ready to close</);
+ assert.match(s.BT360.compactRow(ready),/Close account when ready/);
+ assert.match(s.BT360.compactRow(ready),/<em class="bt360-chip">Ready to close<\/em>/,'Directory badge agrees with readiness filter');
+ assert.match(s.BT360.compactRow(review),/Check when you can close/);
+ assert.match(s.BT360.compactRow(review),/<em class="bt360-chip">Bonus received<\/em>/);
  assert.match(pills,/1 Bonus received/);assert.match(pills,/1 Ready to close/);
  s.BT360.setStage('BONUS_RECEIVED');assert.match(s.rTracker(simpleRows),/Synthetic Review Bank/);assert.doesNotMatch(s.rTracker(simpleRows),/Synthetic Ready Bank/);
  s.BT360.setStage('READY_TO_CLOSE');assert.match(s.rTracker(simpleRows),/Synthetic Ready Bank/);assert.doesNotMatch(s.rTracker(simpleRows),/Synthetic Review Bank/);

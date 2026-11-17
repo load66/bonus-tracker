@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.8.17: simpler dashboard guidance, precise dates and consistent fee labels.
-const V = 'bt-v3.8.17-simple1';
+// Version 3.8.18: consistent account-list stages, recurring schedules and bank-detail dates.
+const V = 'bt-v3.8.18-detail1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
