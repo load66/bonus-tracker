@@ -1,27 +1,181 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-11-18T12:05:34.535515+00:00",
+  "checkedAt": "2026-11-18T20:42:49.202682+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-11-18T12:05:34.535515+00:00",
+      "checkedAt": "2026-11-18T20:42:49.202682+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-11-18T12:05:34.535515+00:00",
+      "checkedAt": "2026-11-18T20:42:49.202682+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-11-18T12:05:34.535515+00:00",
+      "checkedAt": "2026-11-18T20:42:49.202682+00:00",
       "status": "ok"
     }
   ],
   "offers": [
+    {
+      "title": "Truist Bank $500 Checking Bonus – Ends 2/2/27",
+      "url": "https://www.hustlermoneyblog.com/truist-bank-checking-bonus/",
+      "publishedAt": "2026-11-18T18:21:01+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "truist bank|checking|500|unknown",
+      "bank": "truist bank",
+      "product": "checking",
+      "amount": 500,
+      "region": "unknown",
+      "offerKey": "truist bank|checking|500|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-12T17:27:01+00:00",
+      "lastSeen": "2026-11-18T18:21:01+00:00",
+      "expiresAt": "2027-02-02",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/truist-bank-checking-bonus/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Truist Bank $500 Checking Bonus – Ends 2/2/27",
+          "publishedAt": "2026-11-18T18:21:01+00:00"
+        }
+      ],
+      "firstSeenBaseline": true,
+      "badges": []
+    },
+    {
+      "title": "SoFi Checking & Savings $425 Bonus + Up to 4.40% APY – Ends 12/31/26",
+      "url": "https://www.hustlermoneyblog.com/sofi-checking-savings-bonus/",
+      "publishedAt": "2026-11-18T17:50:21+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "sofi|checking|425|unknown",
+      "bank": "sofi",
+      "product": "checking",
+      "amount": 425,
+      "region": "unknown",
+      "offerKey": "sofi|checking|425|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-18T20:42:49.202682+00:00",
+      "lastSeen": "2026-11-18T17:50:21+00:00",
+      "expiresAt": "2026-12-31",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/sofi-checking-savings-bonus/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "SoFi Checking & Savings $425 Bonus + Up to 4.40% APY – Ends 12/31/26",
+          "publishedAt": "2026-11-18T17:50:21+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "Bank of America® Business Advantage Banking Cash Bonus Offer",
+      "url": "https://www.hustlermoneyblog.com/bank-of-america-business-checking-bonus/",
+      "publishedAt": "2026-11-18T17:24:04+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "bank of america|business|?|unknown|f025c18f3729",
+      "bank": "bank of america",
+      "product": "business",
+      "amount": null,
+      "region": "unknown",
+      "offerKey": "bank of america|business|?|unknown|f025c18f3729",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-14T17:04:04+00:00",
+      "lastSeen": "2026-11-18T17:24:04+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/bank-of-america-business-checking-bonus/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Bank of America® Business Advantage Banking Cash Bonus Offer",
+          "publishedAt": "2026-11-18T17:24:04+00:00"
+        }
+      ],
+      "firstSeenBaseline": true,
+      "badges": []
+    },
+    {
+      "title": "Upgrade Premier Savings $200 Bonus + 3.30% APY",
+      "url": "https://www.hustlermoneyblog.com/upgrade-savings-referral-bonus/",
+      "publishedAt": "2026-11-18T16:59:11+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "upgrade premier|savings|200|unknown",
+      "bank": "upgrade premier",
+      "product": "savings",
+      "amount": 200,
+      "region": "unknown",
+      "offerKey": "upgrade premier|savings|200|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-12T16:56:11+00:00",
+      "lastSeen": "2026-11-18T16:59:11+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/upgrade-savings-referral-bonus/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Upgrade Premier Savings $200 Bonus + 3.30% APY",
+          "publishedAt": "2026-11-18T16:59:11+00:00"
+        }
+      ],
+      "firstSeenBaseline": true,
+      "badges": []
+    },
+    {
+      "title": "Rakuten: Earn $200 Cash Back with Alliant Credit Union Checking Account Sign-Up",
+      "url": "https://www.hustlermoneyblog.com/rakuten-alliant-credit-union-checking/",
+      "publishedAt": "2026-11-18T14:29:30+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "rakuten earn|checking|200|unknown",
+      "bank": "rakuten earn",
+      "product": "checking",
+      "amount": 200,
+      "region": "unknown",
+      "offerKey": "rakuten earn|checking|200|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-18T20:42:49.202682+00:00",
+      "lastSeen": "2026-11-18T14:29:30+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/rakuten-alliant-credit-union-checking/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Rakuten: Earn $200 Cash Back with Alliant Credit Union Checking Account Sign-Up",
+          "publishedAt": "2026-11-18T14:29:30+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
     {
       "title": "Alliant Credit Union $200 Checking Bonus",
       "url": "https://www.doctorofcredit.com/rakuten-alliant-credit-union-100-10000-checking-bonus/",
@@ -379,36 +533,6 @@
       "badges": []
     },
     {
-      "title": "Upgrade Premier Savings $200 Bonus + 3.30% APY",
-      "url": "https://www.hustlermoneyblog.com/upgrade-savings-referral-bonus/",
-      "publishedAt": "2026-11-13T15:48:11+00:00",
-      "source": "Hustler Money Blog",
-      "sourceId": "hmb",
-      "availability": "unknown",
-      "groupKey": "upgrade premier|savings|200|unknown",
-      "bank": "upgrade premier",
-      "product": "savings",
-      "amount": 200,
-      "region": "unknown",
-      "offerKey": "upgrade premier|savings|200|unknown",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-10-12T16:56:11+00:00",
-      "lastSeen": "2026-11-13T15:48:11+00:00",
-      "expiresAt": null,
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.hustlermoneyblog.com/upgrade-savings-referral-bonus/",
-          "sourceId": "hmb",
-          "source": "Hustler Money Blog",
-          "title": "Upgrade Premier Savings $200 Bonus + 3.30% APY",
-          "publishedAt": "2026-11-13T15:48:11+00:00"
-        }
-      ],
-      "firstSeenBaseline": true,
-      "badges": []
-    },
-    {
       "title": "Earn a $500 bonus with a new Wells Fargo checking account",
       "url": "https://frequentmiler.com/earn-a-500-bonus-with-a-new-wells-fargo-checking-account/",
       "publishedAt": "2026-11-12T23:45:38+00:00",
@@ -443,7 +567,12 @@
         }
       ],
       "firstSeenBaseline": true,
-      "badges": []
+      "previousAmount": 400,
+      "change": "Increased",
+      "changeLabel": "$400 → $500",
+      "badges": [
+        "Increased"
+      ]
     },
     {
       "title": "Huntington Bank Promotions for November 2026: $400, $1,000 Checking Bonuses – Ends 2/11/27",
@@ -563,7 +692,12 @@
         }
       ],
       "firstSeenBaseline": true,
-      "badges": []
+      "previousAmount": 900,
+      "change": "Decreased",
+      "changeLabel": "$900 → $125",
+      "badges": [
+        "Decreased"
+      ]
     },
     {
       "title": "American Bank & Trust Promotions: $750 Checking & Savings Bonus (SD, MN) – Ends 12/31/26",
@@ -825,36 +959,6 @@
           "source": "Hustler Money Blog",
           "title": "U.S. Bank Business Checking Bonus: $400 or $1200 Offer (Nationwide) – Ends 1/13/27",
           "publishedAt": "2026-11-10T18:20:11+00:00"
-        }
-      ],
-      "firstSeenBaseline": true,
-      "badges": []
-    },
-    {
-      "title": "Truist Bank $500 Checking Bonus – Ends 2/2/27",
-      "url": "https://www.hustlermoneyblog.com/truist-bank-checking-bonus/",
-      "publishedAt": "2026-11-10T15:42:01+00:00",
-      "source": "Hustler Money Blog",
-      "sourceId": "hmb",
-      "availability": "unknown",
-      "groupKey": "truist bank|checking|500|unknown",
-      "bank": "truist bank",
-      "product": "checking",
-      "amount": 500,
-      "region": "unknown",
-      "offerKey": "truist bank|checking|500|unknown",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-10-12T17:27:01+00:00",
-      "lastSeen": "2026-11-10T15:42:01+00:00",
-      "expiresAt": "2027-02-02",
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.hustlermoneyblog.com/truist-bank-checking-bonus/",
-          "sourceId": "hmb",
-          "source": "Hustler Money Blog",
-          "title": "Truist Bank $500 Checking Bonus – Ends 2/2/27",
-          "publishedAt": "2026-11-10T15:42:01+00:00"
         }
       ],
       "firstSeenBaseline": true,
@@ -1910,36 +2014,6 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": []
-    },
-    {
-      "title": "Bank of America® Business Advantage Banking Cash Bonus Offer",
-      "url": "https://www.hustlermoneyblog.com/bank-of-america-business-checking-bonus/",
-      "publishedAt": "2026-10-29T14:34:04+00:00",
-      "source": "Hustler Money Blog",
-      "sourceId": "hmb",
-      "availability": "unknown",
-      "groupKey": "bank of america|business|?|unknown|f025c18f3729",
-      "bank": "bank of america",
-      "product": "business",
-      "amount": null,
-      "region": "unknown",
-      "offerKey": "bank of america|business|?|unknown|f025c18f3729",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-10-14T17:04:04+00:00",
-      "lastSeen": "2026-10-29T14:34:04+00:00",
-      "expiresAt": null,
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.hustlermoneyblog.com/bank-of-america-business-checking-bonus/",
-          "sourceId": "hmb",
-          "source": "Hustler Money Blog",
-          "title": "Bank of America® Business Advantage Banking Cash Bonus Offer",
-          "publishedAt": "2026-10-29T14:34:04+00:00"
-        }
-      ],
-      "firstSeenBaseline": true,
       "badges": []
     },
     {
