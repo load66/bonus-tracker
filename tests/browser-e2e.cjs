@@ -1208,7 +1208,7 @@ async function exercise(name,engine,url){
     check('tax CSV downloads with correct amount and dates',taxCSV.includes('E2E Verification Bank')&&taxCSV.includes('"325"')&&taxCSV.includes('Apr 15, 2026'));
     await button('Tracker').click();
     await button('Settings').click();
-    check('data tools are in the header menu',await page.getByRole('button',{name:'Export backup file',exact:false}).isVisible()&&await page.getByRole('button',{name:'Reset this device',exact:false}).isVisible()&&await page.locator('.tracker-quick-actions button').count()===0);
+    check('manual backup and device tools are available in Settings',await page.getByRole('button',{name:'Save backup file',exact:true}).isVisible()&&await page.getByRole('button',{name:'Reset this device',exact:false}).isVisible()&&await page.locator('.tracker-quick-actions button').count()===0);
     // Regression: on iOS the fixed Settings sheet (z-index 999) previously
     // covered the new iCloud wizard (default .ov z-index 200).
     const beforeCloudWizard=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
@@ -1241,10 +1241,11 @@ async function exercise(name,engine,url){
     if(oldViewport)await page.setViewportSize(oldViewport);
     check('opening iCloud migration never rewrites account records',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,beforeCloudWizard));
 
-    const backupEvent=page.waitForEvent('download');await page.getByRole('button',{name:'Export backup file',exact:false}).click();
+    const backupEvent=page.waitForEvent('download');await page.getByRole('button',{name:'Save backup file',exact:true}).click();
     const backupFile=path.join(output,name+'-backup.json');await (await backupEvent).saveAs(backupFile);
     const backup=JSON.parse(await fs.readFile(backupFile,'utf8'));
     check('backup contains records, history, and terms',backup.entries.length===1&&backup.entries[0].id===id&&Object.keys(backup.termsArchive).length>0&&backup.entries[0].history.length>0);
+    await page.getByRole('button',{name:'Close settings'}).click();
     await close();check('closure uses actual date',(await record()).closed==='2026-05-01');
     check('eligibility uses payout plus exact months and buffer',await page.evaluate(()=>btOfficialEligibilityDate(entries[0])==='2027-04-15'&&nextReopen(entries[0])==='2027-04-17'));
     await page.evaluate(()=>{entries.push({id:'synthetic-later-undo',bank:'Synthetic later Undo account',opened:'2026-06-01',bonus:0,notes:'Preserve this newer account'});sv(SK,entries);R()});
