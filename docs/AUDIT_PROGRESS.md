@@ -6,7 +6,7 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
-- v3.8.20 manual file backups (`codex/v3.8.20-manual-icloud`): default server-free backup/terms recovery, direct iCloud file save and restore, optional exact file check, honest file-created status, cancellation handling, no migration or hosting controls. Existing records and legacy recovery metadata remain intact; full portable backups and atomic restore retain source history. Next: require unit and Chromium/WebKit release CI, merge on green and verify Pages.
+- v3.8.20 manual file backups (`codex/v3.8.20-manual-icloud`): default server-free backup/terms recovery, direct iCloud file save and restore, optional exact file check, honest file-created status, cancellation handling, no migration or hosting controls. Existing records and legacy recovery metadata remain intact; complete files restore exact stored records without legacy normalization; atomic restore retains source history and rejects conflicting account copies. Next: require unit and Chromium/WebKit release CI, merge on green and verify Pages.
 
 - v3.8.19 closure checkbox alignment (`codex/v3.8.19-close-alignment`): scoped flex rows override generic modal labels; fixed checkbox dimensions and wrapped text preserve alignment and label taps. App/cache updated. Local unit checks and release verifier PASS. Chromium/WebKit geometry coverage checks both rows at 320, 390 and 430px. Next: require green release CI, merge and verify Pages.
 

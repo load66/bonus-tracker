@@ -6817,6 +6817,25 @@ function normalizedRestoreProfileEvents(rows){
 }
 function stagePortableRestore(d){
   d=normalizePortableBackupInput(d);
+  // Complete app-generated files restore their saved values; legacy files retain
+  // the conversion path below. Never round money or refresh historical profiles.
+  if(d.backupType==='full-fidelity-portable'&&d.manifest?.includesStorageSnapshot===true){
+    const snapshot=normalizeBackupStorageSnapshot(d),saved=snapshot[SK];
+    if(!Array.isArray(saved)||!Array.isArray(d.entries)||JSON.stringify(saved)!==JSON.stringify(d.entries))throw Error('Backup account copies do not match. Choose a consistent full backup.');
+    const ids=new Set();
+    for(const e of saved){
+      if(!e||typeof e!=='object'||Array.isArray(e)||typeof e.bank!=='string'||!e.bank.trim()||typeof e.id!=='string'||!e.id.trim()||ids.has(e.id))throw Error('Full backup contains invalid or duplicate account identities.');
+      ids.add(e.id);
+    }
+    const writes=Object.fromEntries(getBackupStorageKeys().map(key=>[key,null]));
+    Object.entries(snapshot).forEach(([key,value])=>{writes[key]=storageValueForRestore(value)});
+    writes[BK_KEY]=td();writes.bt_last_restore=new Date().toISOString();
+    const nowYear=new Date().getFullYear();
+    return{source:d,entries:deepCopy(saved),writes,prefs:{
+      dashYear:Number.isFinite(Number(d.prefs?.dashYear))?Number(d.prefs.dashYear):nowYear,
+      taxYear:Number.isFinite(Number(d.prefs?.taxYear))?Number(d.prefs.taxYear):nowYear
+    },idRepairs:0};
+  }
   const restoredEntries=Array.isArray(d.entries)?d.entries:(Array.isArray(d?.storageSnapshot?.[SK])?d.storageSnapshot[SK]:null);
   if(!Array.isArray(restoredEntries))throw new Error('Backup file is missing entries.');
   const cleaned=restoredEntries.map(normalizeRestoredEntry).filter(e=>e.bank);
