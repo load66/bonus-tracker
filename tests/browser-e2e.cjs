@@ -159,6 +159,7 @@ async function exercise(name,engine,url){
     for(const width of [320,390,430]){
       await page.setViewportSize({width,height:844});
       check('simple closure fits '+width+'px',await page.locator('.close-modal').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+      check('closure checkboxes align beside wrapped text '+width+'px',await page.locator('.close-modal .bt-simple-check').evaluateAll(rows=>rows.length===2&&rows.every(row=>{const input=row.querySelector('input'),text=row.querySelector('span');if(!input||!text)return false;const a=input.getBoundingClientRect(),b=text.getBoundingClientRect();return a.width===20&&a.height===20&&b.left>=a.right+8&&Math.abs((a.top+a.height/2)-(b.top+b.height/2))<=1})));
       if(width===390)await page.screenshot({path:path.join(output,name+'-closure-history-review-390.png')});
     }
     await page.setViewportSize({width:390,height:844});

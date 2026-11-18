@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.8.18';
+const APP_VERSION='3.8.19';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -5235,8 +5235,8 @@ function rClose(){
         h+='<label for="cp_negative_balance">Was there a negative balance at closing?</label><select id="cp_negative_balance" onchange="if(closePrompt)closePrompt.closedWithNegativeBalance=this.value===\'yes\'?true:this.value===\'no\'?false:null"><option value=""'+(typeof p.closedWithNegativeBalance!=='boolean'?' selected':'')+'>Choose</option><option value="no"'+(p.closedWithNegativeBalance===false?' selected':'')+'>No</option><option value="yes"'+(p.closedWithNegativeBalance===true?' selected':'')+'>Yes</option></select>';
       }
       if(risks.length)h+='<div class="close-warnings compact" role="note"><b>Check before closing</b>'+risks.slice(0,2).map(x=>'<span>'+esc(x)+'</span>').join('')+'</div>';
-      h+='<label class="bt-simple-check"><input type="checkbox" id="cp_monthly_checked" '+(p.monthlyFeeChecked?'checked ':'')+'onchange="if(closePrompt)closePrompt.monthlyFeeChecked=this.checked"> I checked fees and pending transactions</label>';
-      h+='<label class="bt-simple-check"><input type="checkbox" id="cp_closed_confirm" '+(p.simpleCloseConfirmed?'checked ':'')+'onchange="if(closePrompt){closePrompt.simpleCloseConfirmed=this.checked;closePrompt.error=\'\'}"> The bank confirmed this account is closed</label>';
+      h+='<label class="bt-simple-check"><input type="checkbox" id="cp_monthly_checked" '+(p.monthlyFeeChecked?'checked ':'')+'onchange="if(closePrompt)closePrompt.monthlyFeeChecked=this.checked"><span>I checked fees and pending transactions</span></label>';
+      h+='<label class="bt-simple-check"><input type="checkbox" id="cp_closed_confirm" '+(p.simpleCloseConfirmed?'checked ':'')+'onchange="if(closePrompt){closePrompt.simpleCloseConfirmed=this.checked;closePrompt.error=\'\'}"><span>The bank confirmed this account is closed</span></label>';
       if(p.error)h+='<p role="alert" class="close-warnings compact">'+esc(p.error)+'</p>';
       h+='<div class="close-review-actions"><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="saveSimpleClose()">Save closure</button></div>';
     }else{
