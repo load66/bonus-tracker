@@ -158,3 +158,12 @@ assert(!sandbox.closeReadiness(postBonus,'2027-11-01').warnings.some(w=>/service
 assert.ok(sandbox.closeReadiness(postBonus,'2027-10-28').warnings.some(w=>/calendar-month hold/i.test(w)));
 assert.ok(sandbox.closeRiskWarnings(postBonus,'2027-10-28').some(w=>/retention period/i.test(w)));
 assert.equal(sandbox.status(postBonus),'WAITING TO CLOSE','A future contractual hold must remain active until its anniversary');
+
+{
+ const one=fixture(),cap='The offer is limited to one $250 Welcome Bonus per member.';
+ Object.assign(one,{churnable:false,churnability:'not-repeatable',churn:'',eligibilityRules:[],eligibilityEvidenceText:cap,tcSourceRaw:one.tcSourceRaw+' '+cap,eligibilityScope:'This enrolled offer only'});
+ const value=sandbox.btParseEntryFileText(JSON.stringify({kind:'BonusTrackerEntry',schemaVersion:3,verification:payload.verification,entry:one}),'OneUse.json');
+ assert.equal(sandbox.BTEligibilityGate.validate(value).decision,'nonrepeatable');
+ assert.equal(value.eligibilityEvidenceText,cap);
+ assert.equal(sandbox.churnReadyDate({...value,closed:'2026-11-18'}),'','A one-use offer cannot receive an automatic repeat date');
+}

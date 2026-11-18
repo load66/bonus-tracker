@@ -195,3 +195,13 @@ const wrongCompound={...compound,eligibilityRules:[
   compound.eligibilityRules[1]
 ]};
 assert(!G.validate(wrongCompound).ok,'Incorrectly cross-paired bonus cooldown was accepted');
+
+// Exact per-member offer caps cannot be turned into a recurring/lifetime rule.
+for(const wording of ['The offer is limited to one $300 Welcome Bonus per member.','The promotion offer is limited to one $200 bonus per customer.']){
+ const e={churnable:false,churnability:'not-repeatable',eligibilityEvidenceText:wording,eligibilityEvidenceSource:'official-promotion-terms',tcSourceRaw:wording};
+ assert(G.validate(e).ok,'An explicit one-use-per-member offer was rejected');
+ assert(G.recorded(e).decision==='nonrepeatable','An offer cap became a repeatable cooldown');
+}
+for(const wording of ['The offer is limited to one $300 Welcome Bonus per member per calendar year.','The offer is limited to one $300 Welcome Bonus per member every 24 months.','The offer is limited to one checking account per member.']){
+ assert(!G.validate({churnable:false,churnability:'not-repeatable',eligibilityEvidenceText:wording,eligibilityEvidenceSource:'official-promotion-terms',tcSourceRaw:wording}).ok,'A recurring or non-bonus cap was treated as one-time');
+}

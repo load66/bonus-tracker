@@ -2295,6 +2295,7 @@ async function exercise(name,engine,url){
     check('manual backup keeps terms local without server uploads',termsReceipt.uploads===0&&termsReceipt.hashVerified===0);
     await page.evaluate(()=>BTBonusAuth.disconnect());
     check('AI sign-out removes remembered session',await page.evaluate(()=>!localStorage.getItem('bonus-ai-auth')&&!BTBonusAuth.connected()));
+    check('one-use member offer retains its source without inventing churn',await page.evaluate(()=>{const text='The offer is limited to one $300 Welcome Bonus per member.';const e={bank:'Synthetic Member Cap Bank',churnable:false,churnability:'not-repeatable',eligibilityEvidenceText:text,eligibilityEvidenceSource:'official-promotion-terms',tcSourceRaw:text,closed:'2026-10-01'};return BTEligibilityGate.validate(e).ok&&BTEligibilityGate.recorded(e).decision==='nonrepeatable'&&!churnReadyDate(e)}));
     check('retired backup, terms and hosting endpoints are never requested',await page.evaluate(()=>window.__retiredBackupRequests.length===0));
     check('no uncaught application errors',errors.length===0);
     await page.screenshot({path:path.join(output,name+'-verified.png')});

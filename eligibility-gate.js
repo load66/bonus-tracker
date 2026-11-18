@@ -172,6 +172,10 @@
     return splitEvidence(text).find(s=>{
       if(/once per lifetime|one[- ]time bonus only|not repeatable|lifetime[- ]?like/i.test(s))return true;
       if(extractDurations(s).length)return false;
+      // A per-member cap is one use of this offer, not a bank-wide lifetime ban.
+      // Recurring caps must retain their own clock and cannot be called one-time.
+      if(/\b(?:offer|bonus|reward)\b[^.;]{0,100}\blimited\s+to\s+(?:only\s+)?one\b[^.;]{0,100}\b(?:bonus|reward)\b[^.;]{0,50}\bper\s+(?:member|customer|person)\b/i.test(s)
+        &&!/\b(?:per|each|every)\s+(?:(?:calendar|statement)\s+)?(?:year|month|quarter|cycle|period|day|week)\b/i.test(s))return true;
       return /(?:not eligible|ineligible|not available|cannot|can't|may not)[^.;]{0,180}(?:ever|previously)[^.;]{0,120}(?:received|earned)[^.;]{0,100}bonus|(?:ever|previously)[^.;]{0,120}(?:received|earned)[^.;]{0,100}bonus[^.;]{0,120}(?:not eligible|ineligible|not available)/i.test(s);
     })||'';
   }

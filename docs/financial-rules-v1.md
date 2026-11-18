@@ -163,3 +163,8 @@ The eligibility planner uses one centralized, read-only policy selector for Trac
 
 The planner accepts a structurally complete recorded rule without a separate UI verification state. Exact recorded wording outranks a stale legacy duration; all supported restrictions must clear; missing or conditional inputs remain unresolved. The displayed date includes the separately disclosed two-day planning buffer and leads to **Review offer**, never a promise of eligibility. Strict source/provenance validation remains mandatory for generated imports and is not weakened by this runtime behavior.
 
+
+
+## One-use-per-member offer caps (runtime v3.8.21)
+
+Treat an exact offer clause limiting one stated bonus per member, customer or person as non-repeatable for that enrolled offer. Retain its source wording and offer scope; do not turn it into a bank-wide lifetime ban. A separate prior-account-closure lookback governs initial eligibility and does not override the one-bonus cap. A per-year, per-month or other recurring cap is not non-repeatable. Keep numeric schemaVersion 3 and existing financialRules versions unchanged; validate the actual import against the compatible deployed gate. Do not manufacture lifetime wording to pass validation.
