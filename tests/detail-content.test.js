@@ -283,8 +283,8 @@ const estimatedList=sandbox.BT360.archive([estimatedPast]);
 assert.match(estimatedList,/<strong>0<\/strong><small>Review offer<\/small>/,'A completed recorded waiting period must be ready for current-offer review');
 
 /* v3.8.14: direct account details retain recorded-date countdowns. */
-assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.19';/,'The on-screen app version reflects this release');
-assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.19-close1/,'The version label is refreshed on clients');
+assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.20';/,'The on-screen app version reflects this release');
+assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.20-files1/,'The version label is refreshed on clients');
 const archiveFutureDate='2030-01-01';
 const recordedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,recorded:true});
 assert(recordedFuture&&recordedFuture.days>0&&recordedFuture.caption==='days left','A recorded future date must show its countdown');

@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.8.19';
+const APP_VERSION='3.8.20';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -424,8 +424,7 @@ function renderArchiveHistoryReview(e,{compact=false}={}){
     +(issues.length?'<ul>'+issues.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul><p>Available facts will be preserved. Missing information needs your review; dates and terms are never guessed.</p>':'<p>Opening date, original promotion, fee schedule and source links are present. Saved evidence still needs to match your enrolled offer.</p>')+'</section>';
 }
 function archiveCloudStatusMarkup(){
-  const state=window.BTCloudBackup?.protection?.();
-  return '<div class="archive-cloud-state"><span data-cycle-cloud role="status">'+esc(state?'Cloud recovery · '+state.title:'Cloud recovery not yet verified')+'</span><button type="button" class="btn-s" onclick="btOpenCloudBackup()">Backup & recovery</button></div>';
+  return '<div class="archive-cloud-state"><span data-cycle-cloud role="status">'+esc('Saved on this device · Manual iCloud files')+'</span><button type="button" class="btn-s" onclick="btOpenCloudBackup()">Backup & recovery</button></div>';
 }
 function closeCycleForSave(e,p){
   // A factual closure must never rewrite a previously recorded bonus or payment.
@@ -472,7 +471,7 @@ function rTermsStorage(options={}){
  const match=x=>[x.bank,x.accountType,x.opened,x.tcSourceRaw,x.completeBonusText,x.closeRuleText,x.avoidMonthlyFeeText].join(' ').toLowerCase().includes(q);
  const closedKeys=new Set(options.excludeClosed?entries.filter(e=>e.closed).map(e=>entryBankIdentity(e).key):[]);
  const rows=termsDisplayBuckets().filter(b=>!closedKeys.has(entryBankIdentity(b.current||b).key)).filter(b=>!q||[b.current,...b.versions].some(match));
- let h='<div class="research-shell archive-shell"><header class="research-intro"><span class="research-eyebrow">YOUR OFFER RECORDS</span><h2>T&C Archive</h2><p>The bank’s terms for each account and bonus cycle, kept together so you can find them later.</p>'+(window.BTICloudBackup?.isLocalOnly?.()?'':'<button class="research-text-button" onclick="BTTermsHistory.open()">Cloud T&C history ↗</button>')+'</header><input class="sinput" type="text" id="terms-search" aria-label="Search stored terms" placeholder="Search stored T&C..." value="'+esc(storageSearch||'')+'" oninput="updateViewSearch(\'terms\',this.value,this.selectionStart)"><div class="research-coverage"><b>'+rows.length+' account group'+(rows.length===1?'':'s')+'</b><span>Original text and previous offers stay saved</span></div><details class="research-help"><summary>About saved terms</summary><p>Terms remain tied to the enrolled offer. Current promotions and community reports do not replace your original terms.</p></details>';
+ let h='<div class="research-shell archive-shell"><header class="research-intro"><span class="research-eyebrow">YOUR OFFER RECORDS</span><h2>T&C Archive</h2><p>The bank’s terms for each account and bonus cycle, kept together so you can find them later.</p>'+(window.BTICloudBackup?.isManualBackup?.()?'':'<button class="research-text-button" onclick="BTTermsHistory.open()">Cloud T&C history ↗</button>')+'</header><input class="sinput" type="text" id="terms-search" aria-label="Search stored terms" placeholder="Search stored T&C..." value="'+esc(storageSearch||'')+'" oninput="updateViewSearch(\'terms\',this.value,this.selectionStart)"><div class="research-coverage"><b>'+rows.length+' account group'+(rows.length===1?'':'s')+'</b><span>Original text and previous offers stay saved</span></div><details class="research-help"><summary>About saved terms</summary><p>Terms remain tied to the enrolled offer. Current promotions and community reports do not replace your original terms.</p></details>';
  if(options.embedded)h='<div class="research-shell archive-shell bt-archive-saved"><h3>Other saved offers</h3>';
  rows.forEach(bucket=>{
   const x=bucket.current||{},versions=bucket.versions||[];
@@ -4705,7 +4704,7 @@ function R(){
   if(tab==='tracker')h+='<label class="bt362-year-pill">Year <select id="bt362-year" aria-label="Collected year" onchange="dashYear=Number(this.value);BT360.clearHeroMonth();R()">'+[thisYr-1,thisYr,thisYr+1].map(y=>'<option value="'+y+'"'+(dashYear===y?' selected':'')+'>'+y+'</option>').join('')+'</select></label>';
   else h+='<span class="mobile-page-caption">'+esc({bonuses:'Bank offers',tax:'Tax',tips:'Datapoints',storage:'Terms archive',archive:'Account archive'}[tab]||'')+'</span>';
   h+='<button type="button" class="bt360-header-bell" aria-label="Notifications" onclick="BT360.openNotifications()"><svg width="19" height="19" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></button><button type="button" class="bt360-header-settings" aria-label="Settings" onclick="BT360.openSettings()">•••</button>';
-  h+='<details id="bt-data-menu" class="header-data-menu"><summary aria-label="Data and backup menu" title="Data and backup menu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></summary><div class="header-data-panel" role="group" aria-label="Data and recovery actions"><h3>Data & recovery</h3><button onclick="this.closest(\'details\').open=false;switchMainTab(\'archive\')"><strong>Archived accounts</strong><small>Completed, non-repeatable offers and their history</small></button><button onclick="this.closest(\'details\').open=false;btOpenCloudBackup()"><strong>'+(window.BTICloudBackup?.isLocalOnly?.()?'iCloud Drive backup':'Cloud backup & recovery')+'</strong><small>'+(window.BTICloudBackup?.isLocalOnly?.()?'Save or restore a full backup file':'Automatic protection and recovery versions')+'</small></button><button onclick="this.closest(\'details\').open=false;exportBackup()"><strong>Export backup file</strong><small>Save a dated full copy to iCloud Drive</small></button><button onclick="this.closest(\'details\').open=false;importBackup()"><strong>Import backup file</strong><small>Review and restore a downloaded copy</small></button><button class="data-menu-danger" onclick="this.closest(\'details\').open=false;resetAllData()"><strong>Reset this device</strong><small>Requires confirmation and a safety backup</small></button></div></details></div>';
+  h+='<details id="bt-data-menu" class="header-data-menu"><summary aria-label="Data and backup menu" title="Data and backup menu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></summary><div class="header-data-panel" role="group" aria-label="Data and recovery actions"><h3>Data & recovery</h3><button onclick="this.closest(\'details\').open=false;switchMainTab(\'archive\')"><strong>Archived accounts</strong><small>Completed, non-repeatable offers and their history</small></button><button onclick="this.closest(\'details\').open=false;btOpenCloudBackup()"><strong>'+(window.BTICloudBackup?.isManualBackup?.()?'iCloud Drive backup':'Cloud backup & recovery')+'</strong><small>'+(window.BTICloudBackup?.isManualBackup?.()?'Save or restore a full backup file':'Automatic protection and recovery versions')+'</small></button><button onclick="this.closest(\'details\').open=false;exportBackup()"><strong>Export backup file</strong><small>Save a dated full copy to iCloud Drive</small></button><button onclick="this.closest(\'details\').open=false;importBackup()"><strong>Import backup file</strong><small>Review and restore a downloaded copy</small></button><button class="data-menu-danger" onclick="this.closest(\'details\').open=false;resetAllData()"><strong>Reset this device</strong><small>Requires confirmation and a safety backup</small></button></div></details></div>';
 
   if(tab==='tracker'&&!bt360Detail&&!showTemplates&&!showAnalyzer){
     overview=window.BT360?window.BT360.home(sorted,dashYear,metrics):'<div class="hero ops-hero"><div class="hero-value">'+fM(metrics.active)+'</div></div>';
@@ -5216,7 +5215,7 @@ function rClose(){
     h+='<div class="close-ready '+esc(ready.cls)+'"><b>'+esc(ready.label)+'</b><span>'+esc(closeFlowModeReason(e,'actual'))+'</span></div>';
     h+='<div class="close-review-card">'+closeReviewRows(e,p)+'</div>';
     h+=renderArchiveHistoryReview(closeCycleForSave(e,p));
-    h+='<p class="research-caveat">Saving preserves this cycle’s recorded facts and earlier revisions on this device. Cloud protection is confirmed separately after upload and readback.</p>';
+    h+='<p class="research-caveat">Saving preserves this cycle’s recorded facts and earlier revisions on this device. Save a backup file to iCloud Drive after important changes.</p>';
     if((p.opened||e?.opened)&&!e?.couponEnrollmentDate&&!e?.offerEnrollmentDate)h+='<label class="archive-enrollment-choice"><input type="checkbox" id="cp_enrollment_opened" '+(p.enrollmentAtOpening?'checked ':'')+'onchange="if(closePrompt)closePrompt.enrollmentAtOpening=this.checked"> I enrolled in the promotion when this account opened</label>';
     h+=renderCloseReadinessList(e,p);
     if(warnings.length)h+='<div class="close-warnings compact"><b>Review</b>'+warnings.map(x=>'<span>• '+esc(x)+'</span>').join('')+'</div>';
@@ -5832,7 +5831,7 @@ function buildStorageSnapshot(){const snap={};getBackupStorageKeys().forEach(key
 function restoreStorageSnapshot(snapshot){if(!snapshot||typeof snapshot!=='object')return;Object.entries(snapshot).forEach(([key,val])=>{if(!getBackupStorageKeys().includes(key))return;try{localStorage.setItem(key,storageValueForRestore(val))}catch{}})}
 function backupTimestamp(){const dt=new Date();const pad=n=>String(n).padStart(2,'0');return dt.getFullYear()+pad(dt.getMonth()+1)+pad(dt.getDate())+'_'+pad(dt.getHours())+pad(dt.getMinutes())+pad(dt.getSeconds())}
 function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
-async function deliverBackupFile(blob,filename,preferShare){if(preferShare&&typeof File!=='undefined'&&navigator?.share){try{const file=new File([blob],filename,{type:'application/json'});if(!navigator.canShare||navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Bank Bonus Tracker backup',text:'Save this full backup to Files, iCloud Drive, Google Drive, or email so you can restore later on any device.'});return 'shared'}}catch(err){}}downloadBlob(blob,filename);return 'downloaded'}
+async function deliverBackupFile(blob,filename,preferShare){if(preferShare&&typeof File!=='undefined'&&navigator?.share){try{const file=new File([blob],filename,{type:'application/json'});if(!navigator.canShare||navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Bank Bonus Tracker backup',text:'Save this full backup to Files, iCloud Drive, Google Drive, or email so you can restore later on any device.'});return 'shared'}}catch(err){if(err?.name==='AbortError')throw err;}}downloadBlob(blob,filename);return 'downloaded'}
 function buildResetSafetyBackupPayload(){const data=buildPortableBackupPayload();data.reason='pre-reset-safety-backup';return data}
 async function exportBackup(preferShare=true,customData=null,customFilename=''){const data=customData||buildPortableBackupPayload();const filename=customFilename||('BankBonusTracker_FullBackup_'+backupTimestamp()+'.json');const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const mode=await deliverBackupFile(blob,filename,preferShare);setLastBk();return{mode,filename,data}}
 function performHardReset(){entries=[];profileSectionUiState={};sv(SK,[]);try{getBackupStorageKeys().forEach(k=>localStorage.removeItem(k));localStorage.removeItem(PROFILE_EVT_KEY);localStorage.removeItem(BK_KEY);localStorage.removeItem('bt_cloud_recovery_v1')}catch{}dashYear=new Date().getFullYear();taxYear=new Date().getFullYear();expanded=null;modal=null;search='';showTemplates=false;showAnalyzer=false;analyzerText='';analyzerResult=null;inlineResult=null;showInlineAZ=false;phoneSearch='';showPhoneAdd=false;storageSearch='';dpSearch='';dpExpandedBankKey='';dpEditor=null;profileSearch='';activeProfileKey='';overwritePrompt=null;matchPickerPrompt=null;ddPrompt=null;rcvPrompt=null;closePrompt=null;undoState=null;if(undoTimer)clearTimeout(undoTimer);R()}
@@ -5988,7 +5987,7 @@ function finishClose(){
   }
   const issues=archiveHistoryIssues(e2);
   if(p.simpleCloseConfirmed)cfm.msg=(e2?.bank||'Account')+' closed on '+fD(p.closeDate)+'.'+(e2&&churnEligibilityValidation(e2).ok&&churnReadyDate(e2)?'\nNext bonus review: '+fD(churnReadyDate(e2))+'.':'\nNext bonus review: Add eligibility rule.')+'\nYou can undo this change for 60 seconds.';
-  else cfm.msg+='\n\nHistory: '+(issues.length?'Incomplete — '+issues.join('; ')+'.':'Core records saved locally.')+'\nCloud recovery: '+(window.BTCloudBackup?.protection?.().title||'Not verified')+'.';
+  else cfm.msg+='\n\nHistory: '+(issues.length?'Incomplete — '+issues.join('; ')+'.':'Core records saved locally.')+'\nSave a new backup file to iCloud Drive to keep this update.';
   undoState=sealCloseUndo(nextUndo);
   if(undoTimer)clearTimeout(undoTimer);
   undoTimer=setTimeout(()=>{undoState=null;R()},60000);
@@ -6235,7 +6234,7 @@ function rcvSubmit(){
   entries=sortE(entries);sv(SK,entries);
   rcvPrompt=null;
   cfm={title:'Bonus Received Saved',msg:(e2?e2.bank:'This bank')+' received date saved for '+fD(p.date)+'.',green:true,confirmLabel:'Review experience',action:()=>{cfm=null;reviewCycleExperience(p.entryId,'bonus')}};
-  cfm.msg+='\n\nCycle history saved on this device. Cloud recovery: '+(window.BTCloudBackup?.protection?.().title||'Not verified')+'.';
+  cfm.msg+='\n\nCycle history saved on this device. Save a new backup file to iCloud Drive to keep this update.';
   }catch(error){
     let restored=true;
     try{window.BTPersistence.rollback(localStorage,beforeStorage)}catch{restored=false}
@@ -6914,7 +6913,7 @@ function importBackup(){
           await window.btCloudBeforeDestructive?.('pre-restore');
           await exportBackup(false,buildPortableBackupPayload(),'BankBonusTracker_PreRestore_'+backupTimestamp()+'.json');
         }catch(err){
-          alert('Restore stopped: the safety backup could not be completed. Your existing data was not replaced.');
+          alert('Restore stopped. '+(err.message||'The safety backup could not be completed.')+' Your existing data was not replaced.');
           return;
         }
         applyPortableRestore(data)

@@ -26,14 +26,13 @@ run('entries[0].notes="";delete entries[0].notes;localStorage.setItem(SK,JSON.st
 run('entries='+JSON.stringify([record])+';localStorage.setItem(SK,JSON.stringify(entries));');
 const valid=sandbox.BTICloudBackup.verifyPayload(backup);
 sandbox.BTPersistence.commit(sandbox.localStorage,{bt_icloud_file_verified_v1:JSON.stringify(valid)});
-sandbox.btConfirmDialog=async()=>true;
+assert.equal(sandbox.BTICloudBackup.isManualBackup(),true,'Manual backup is the default without a migration or stored mode');
+assert.equal(sandbox.BTICloudBackup.status().mode,'icloud');
+assert.equal(typeof sandbox.BTICloudBackup.exportFile,'function','Settings export action must exist');
+sandbox.localStorage.setItem('bt_cloud_recovery_v1',JSON.stringify({enabled:true,error:'Load failed'}));
 (async()=>{
- await sandbox.BTICloudBackup.switchToICloud();
- assert.equal(sandbox.localStorage.getItem('bt_backup_mode_v1'),'icloud');
- assert.equal(sandbox.sessionStorage.getItem('bt_icloud_switch_completed_v1'),'1','After reload a one-time successful switch notice must be ready');
- assert.equal(JSON.parse(sandbox.localStorage.getItem('bt_cloud_recovery_v1')).enabled,false);
- assert.deepEqual(JSON.parse(sandbox.localStorage.getItem('bt_e_v4')),[record],'Switch must preserve exact account records');
- assert.equal(sandbox.localStorage.getItem('bonus-ai-auth'),'private-auth-secret-not-for-export','Switch does not delete tokens or unrelated data');
+ assert.deepEqual(JSON.parse(sandbox.localStorage.getItem('bt_e_v4')),[record],'Manual backup must preserve exact account records');
+ assert.equal(sandbox.localStorage.getItem('bonus-ai-auth'),'private-auth-secret-not-for-export','Manual backup does not delete unrelated data');
  vm.runInContext(require('node:fs').readFileSync('cloud-backup.js','utf8'),sandbox);
  assert.match(sandbox.BTCloudBackup.protection().title,/Manual iCloud/);
  assert.equal(typeof sandbox.btCloudBeforeDestructive,'function','File restore safety hook must remain callable without Railway');
@@ -46,5 +45,15 @@ sandbox.btConfirmDialog=async()=>true;
 
  vm.runInContext(require('node:fs').readFileSync('cloud-terms-history.js','utf8'),sandbox);
  assert.equal(sandbox.BTTermsHistory.status.pending,0);
- console.log('iCloud migration passed: full source preservation, credential exclusion, stale-file rejection, verified opt-in, no data deletion and server-free verified recovery safeguards');
+ // Cancellation cannot fall through to a download or report a new backup.
+ const previousShare=sandbox.navigator.share,previousFile=sandbox.File,previousDownload=sandbox.downloadBlob;
+ let downloads=0;sandbox.File=class{constructor(){}};
+ sandbox.navigator.share=async()=>{throw Object.assign(Error('Cancelled'),{name:'AbortError'})};
+ sandbox.downloadBlob=()=>{downloads++};
+ const priorBackup=sandbox.localStorage.getItem('bt_last_backup');
+ await assert.rejects(sandbox.BTICloudBackup.exportFile(),{name:'AbortError'});
+ assert.equal(downloads,0,'Cancelled sharing must not create an unwanted fallback download');
+ assert.equal(sandbox.localStorage.getItem('bt_last_backup'),priorBackup,'Cancelled sharing cannot claim a file was created');
+ sandbox.navigator.share=previousShare;sandbox.File=previousFile;sandbox.downloadBlob=previousDownload;
+ console.log('Manual iCloud backup passed: default files, exact source preservation, credential exclusion, stale-file rejection, cancellation, unchanged records and server-free recovery safeguards');
 })().catch(e=>{console.error(e);process.exitCode=1});

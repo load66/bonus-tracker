@@ -97,6 +97,13 @@ async function exercise(name,engine,url){
       return native(input,options);
     };
   });
+  await page.addInitScript(()=>{
+    const native=window.fetch.bind(window);window.__retiredBackupRequests=[];
+    window.fetch=(input,options)=>{const url=String(typeof input==='string'?input:input?.url||input);
+      if(/\/api\/bonus-tracker\/(?:backups|terms|usage)(?:[/?]|$)/.test(url)){window.__retiredBackupRequests.push(url);return Promise.resolve(new Response('{}',{status:503}));}
+      return native(input,options);
+    };
+  });
   // Observe every app DOM replacement, including the instant before BT360
   // exists; a snapshot after load alone cannot catch a legacy first-paint flash.
   await page.addInitScript(()=>{
@@ -1208,7 +1215,7 @@ async function exercise(name,engine,url){
     const oldViewport=page.viewportSize();
     for(const width of [375,390]){
       await page.setViewportSize({width,height:844});
-      await page.getByRole('button',{name:'Move to iCloud Drive'}).click();
+      await page.getByRole('button',{name:'Backup details',exact:true}).click();
       const wizard=page.getByRole('dialog',{name:'Backup with iCloud Drive'});
       check('iCloud wizard is visible immediately at '+width+'px',await wizard.isVisible()&&await page.getByRole('dialog',{name:'Settings'}).count()===0);
       check('iCloud wizard buttons are not obscured at '+width+'px',await wizard.locator('#icloud-save').evaluate(el=>{
@@ -1217,28 +1224,15 @@ async function exercise(name,engine,url){
         return !!hit&&(el===hit||el.contains(hit))&&r.height>30;
       }));
       check('iCloud wizard has a visible Close button',await wizard.getByRole('button',{name:'Close iCloud backup'}).isVisible());
+      check('manual backups need no migration or server controls',await wizard.locator('#icloud-switch,#cloud-auto-toggle,#cloud-now').count()===0);
       if(width===375){
-        // The confirmation must appear ABOVE the iCloud wizard on Safari.
-        await page.evaluate(()=>localStorage.removeItem('bt_icloud_file_verified_v1'));
-        await wizard.locator('#icloud-switch').click();
-        check('iCloud switch explains missing verified backup beside button',await wizard.locator('#icloud-switch-feedback').isVisible()
-          &&(await wizard.locator('#icloud-switch-feedback').innerText()).includes('First export and verify')
-          &&await page.evaluate(()=>localStorage.getItem('bt_backup_mode_v1')!=='icloud'));
-        await page.evaluate(()=>{
-          const full=buildPortableBackupPayload(),receipt=BTICloudBackup.verifyPayload(full);
-          localStorage.setItem('bt_icloud_file_verified_v1',JSON.stringify(receipt));
-        });
-        await wizard.locator('#icloud-switch').click();
-        const confirmation=page.getByRole('dialog',{name:'Use iCloud Drive files'});
-        check('iCloud switch confirmation opens above wizard',await confirmation.isVisible()&&await confirmation.getByRole('button',{name:'Switch to iCloud'}).evaluate(el=>{
-          const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
-          return !!hit&&(hit===el||el.contains(hit))&&r.height>30;
-        }));
-        await confirmation.getByRole('button',{name:'Cancel'}).click();
-        check('iCloud cancel shows feedback and preserves cloud protection',await wizard.locator('#icloud-switch-feedback').isVisible()
-          &&(await wizard.locator('#icloud-switch-feedback').innerText()).includes('Switch cancelled')
-          &&await page.evaluate(()=>localStorage.getItem('bt_backup_mode_v1')!=='icloud'));
-        await page.evaluate(()=>localStorage.removeItem('bt_icloud_file_verified_v1'));
+        const download=page.waitForEvent('download');await wizard.locator('#icloud-save').click();
+        const savedFile=path.join(output,name+'-manual-icloud.json');await (await download).saveAs(savedFile);
+        check('manual export reports file creation without claiming iCloud upload',(await wizard.locator('#icloud-backup-status').innerText()).includes('Last file created:'));
+        await wizard.locator('.icloud-file-check > summary').click();
+        const choose=page.waitForEvent('filechooser');await wizard.locator('#icloud-verify').click();await (await choose).setFiles(savedFile);
+        await page.waitForFunction(()=>!!localStorage.getItem('bt_icloud_file_verified_v1'));
+        check('a reopened exported file matches the tracker',(await wizard.locator('#icloud-file-status').innerText()).includes('File checked:'));
       }
       await wizard.getByRole('button',{name:'Close iCloud backup'}).click();
       check('closing iCloud wizard removes its overlay',await page.locator('.icloud-backup-overlay').count()===0);
@@ -1259,6 +1253,14 @@ async function exercise(name,engine,url){
     await page.evaluate(()=>{entries=entries.filter(e=>e.id!=='synthetic-later-undo');sv(SK,entries);R()});
     await close();
     await button('Settings').click();
+    await page.getByRole('button',{name:'Backup details',exact:true}).click();
+    const safetyWizard=page.getByRole('dialog',{name:'Backup with iCloud Drive'});
+    const currentDownload=page.waitForEvent('download');await safetyWizard.locator('#icloud-save').click();
+    const currentFile=path.join(output,name+'-pre-restore-current.json');await (await currentDownload).saveAs(currentFile);
+    await safetyWizard.locator('.icloud-file-check > summary').click();
+    const currentChooser=page.waitForEvent('filechooser');await safetyWizard.locator('#icloud-verify').click();await (await currentChooser).setFiles(currentFile);
+    await page.waitForFunction(()=>document.querySelector('#icloud-file-status')?.textContent.startsWith('File checked:'));
+    await safetyWizard.getByRole('button',{name:'Close iCloud backup'}).click();await button('Settings').click();
     const chooser=page.waitForEvent('filechooser');await page.getByRole('button',{name:'Restore from file',exact:false}).click();await (await chooser).setFiles(backupFile);
     const safetyDownload=page.waitForEvent('download');await button('Restore Backup').click();await safetyDownload;
     await page.getByRole('heading',{name:'Restore Complete'}).waitFor();await button('Confirm').click();
@@ -1647,117 +1649,25 @@ async function exercise(name,engine,url){
     // Cloud protection remains on the Tracker hero after entering and leaving a focused detail.
     await page.getByRole('button',{name:'Back to accounts'}).click();
     check('returning from account detail reveals cloud backup controls',await page.locator('#bt-cloud-open').isVisible());
-    // Test cloud recovery in two independent browser profiles; no production records are contacted.
-    await page.evaluate(()=>{
-      window.__cloudFixture={objects:{},calls:[],failure:false};
-      const prior=window.fetch;
-      window.fetch=async(input,options={})=>{
-        const url=String(input);
-        if(!url.startsWith('https://api-production-00f74.up.railway.app/api/bonus-tracker/backups'))return prior(input,options);
-        const db=window.__cloudFixture;db.calls.push({url,method:options.method||'GET',authorization:options.headers.Authorization});
-        if(db.failure)return new Response(JSON.stringify({detail:'Synthetic cloud outage'}),{status:503,headers:{'Content-Type':'application/json'}});
-        if(url.endsWith('/health'))return new Response(JSON.stringify({readWriteVerified:true}),{headers:{'Content-Type':'application/json'}});
-        if(options.method==='POST'){
-          if(db.holdNext){db.holdNext=false;await new Promise(resolve=>{db.releaseUpload=resolve;});}
-          const packet=JSON.parse(options.body),count=JSON.parse(JSON.parse(packet.snapshot).storageSnapshot.bt_e_v4).length;
-          const backup={id:packet.id,createdAt:new Date().toISOString(),sha256:packet.sha256,entryCount:count,bytes:packet.snapshot.length,reason:packet.reason,verified:true};
-          db.objects[packet.id]={backup,snapshot:packet.snapshot};return new Response(JSON.stringify(backup),{headers:{'Content-Type':'application/json'}});
-        }
-        const ident=url.split('/').pop();
-        const body=db.objects[ident]||{backups:Object.values(db.objects).map(x=>x.backup),total:Object.keys(db.objects).length,nextOffset:null};
-        return new Response(JSON.stringify(body),{headers:{'Content-Type':'application/json'}});
-      };
-    });
-    await page.locator('#bt-cloud-open').click();
-    check('cloud dialog has a prominent, accessible close and collapsed safety details',
-      await page.getByRole('button',{name:'Close cloud backup'}).isVisible()
-      &&await page.locator('#cloud-retention-details').evaluate(e=>!e.open)
-      &&await page.locator('.cloud-how-details').evaluate(e=>!e.open));
-    check('cloud backup actions remain accessible and legible at phone width',
-      await page.locator('#cloud-now').evaluate(e=>{const css=getComputedStyle(e);return e.getBoundingClientRect().height>=44&&css.color==='rgb(255, 255, 255)'&&e.getBoundingClientRect().width<=document.documentElement.clientWidth}));
-    await page.getByRole('button',{name:'Close cloud backup'}).click();
-    check('top close dismisses only cloud settings',await page.locator('.cloud-overlay').count()===0);
-    await page.locator('#bt-cloud-open').click();
-    check('automatic backup switch begins off',!(await page.locator('#cloud-auto-toggle').isChecked()));
-    await page.locator('#cloud-enable-ack').check();await button('Enable automatic backup').click();
-    check('enabling requires explicit confirmation',await page.locator('#bt_confirm_overlay').isVisible()&&!(await page.locator('#cloud-auto-toggle').isChecked()));
-    await page.locator('#bt_confirm_overlay').getByRole('button',{name:'Enable and verify',exact:true}).click();
-    await page.getByText('Preview recovery',{exact:true}).waitFor();
-    check('enabled switch reflects verified protection',await page.locator('#cloud-auto-toggle').isChecked()&&await page.locator('#cloud-protection').getAttribute('data-state')==='protected');
-    const cloudCardLayout=await page.locator('#cloud-protection').evaluate(e=>({
-      height:e.getBoundingClientRect().height,scrollWidth:e.scrollWidth,clientWidth:e.clientWidth,
-      retentionHelpAvailable:!!e.querySelector('#cloud-retention-status')?.textContent?.trim(),
-      retentionCollapsed:!e.querySelector('#cloud-retention-details')?.open
-    }));
-    check('verified protection summary fits a compact mobile card with truthful retention detail: '+JSON.stringify(cloudCardLayout),
-      cloudCardLayout.height<280&&cloudCardLayout.scrollWidth<=cloudCardLayout.clientWidth+1
-      &&cloudCardLayout.retentionCollapsed&&cloudCardLayout.retentionHelpAvailable);
-    check('legacy export reminder is removed',await page.locator('.bk-remind').count()===0);
-    await page.locator('#cloud-auto-toggle').click();await page.locator('#bt_confirm_overlay').getByRole('button',{name:'Cancel',exact:true}).click();
-    check('canceling disable keeps automatic backup on',await page.locator('#cloud-auto-toggle').isChecked());
-    check('cloud upload is readback-verified and authenticated',await page.evaluate(()=>JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')).lastHash?.length===64&&window.__cloudFixture.calls.every(c=>c.authorization?.startsWith('Bearer '))));
-    await page.evaluate(()=>{window.__cloudFixture.holdNext=true;const changed=JSON.parse(localStorage.getItem('bt_e_v4'));changed[0].notes+=' Synthetic pending-change verification';entries=changed;localStorage.setItem('bt_e_v4',JSON.stringify(changed));btCloudBackupChanged();R();});
-    await page.waitForFunction(()=>typeof window.__cloudFixture.releaseUpload==='function');
-    check('pending upload never shows current-data protection',await page.locator('#cloud-protection').getAttribute('data-state')==='warning'&&await page.locator('#cloud-auto-toggle').isChecked());
-    await page.evaluate(()=>{window.__cloudFixture.releaseUpload();delete window.__cloudFixture.releaseUpload;});
-    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')).pending===false&&document.querySelector('#cloud-protection')?.dataset.state==='protected');
-    await page.getByText('Backup verified',{exact:true}).first().waitFor();
-    const noticeStamp=await page.evaluate(()=>JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')).lastSuccessNoticeAt);
-    await page.evaluate(()=>document.getElementById('bt_notice_host')?.replaceChildren());
-    await page.evaluate(()=>BTCloudBackup.upload('manual'));
-    check('verified backup notice has a persistent 30-minute cooldown',await page.getByText('Backup verified',{exact:true}).count()===0&&await page.evaluate(()=>JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')).lastSuccessNoticeAt)===noticeStamp);
-    check('cooldown still verifies current records',await page.locator('#cloud-protection').getAttribute('data-state')==='protected');
-    check('saved changes upload while recovery settings are open',await page.evaluate(()=>Object.values(window.__cloudFixture.objects).some(x=>x.backup.reason==='automatic'&&x.snapshot.includes('Synthetic pending-change verification'))));
-    await page.evaluate(raw=>{entries=JSON.parse(raw);localStorage.setItem('bt_e_v4',raw);btCloudBackupChanged();R();},storedBeforeRadar);
-    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('bt_cloud_recovery_v1')).pending===false&&document.querySelector('#cloud-protection')?.dataset.state==='protected');
-    check('history evidence lookup verifies backups without writing financial records',await page.evaluate(async()=>{
-      const before=[localStorage.getItem('bt_e_v4'),localStorage.getItem('bt_tc_archive_v1')];
-      const result=await BTCloudBackup.historySources();return result.copies.length>0&&result.copies.length<=4&&result.failures.length===0&&JSON.stringify(before)===JSON.stringify([localStorage.getItem('bt_e_v4'),localStorage.getItem('bt_tc_archive_v1')]);
-    }));
-    const cloudRecords=await page.evaluate(()=>window.__cloudFixture.objects);
-    await button('Close').click();
-    const newPhoneContext=await browser.newContext({viewport:{width:390,height:844},timezoneId:'America/Chicago'});
-    await newPhoneContext.addInitScript(installTermsFixture);
+    // Manual recovery uses a real downloaded file and an independent browser profile.
+    const manualDownload=page.waitForEvent('download');await page.evaluate(()=>BTICloudBackup.exportFile());
+    const recoveryFile=path.join(output,name+'-manual-recovery.json');await (await manualDownload).saveAs(recoveryFile);
+    const recoveryPayload=JSON.parse(await fs.readFile(recoveryFile,'utf8'));
+    check('manual recovery file includes exact current records',JSON.stringify(recoveryPayload.entries)===storedBeforeRadar);
+    check('manual file excludes remembered credentials',!JSON.stringify(recoveryPayload).includes('synthetic-owner-token')&&!JSON.stringify(recoveryPayload).includes('synthetic-refresh-token'));
+    const newPhoneContext=await browser.newContext({acceptDownloads:true,viewport:{width:390,height:844},timezoneId:'America/Chicago'});
     const newPhone=await newPhoneContext.newPage();
-    await newPhone.goto(url);await newPhone.waitForFunction(()=>navigator.serviceWorker.controller&&window.__btFullRegressionReport?.total>=9&&window.__btFullRegressionReport.ok&&!window.__btFullRegressionReport.pending);
-    const installRecoveryFixture=objects=>{
-      localStorage.setItem('bonus-ai-auth',JSON.stringify({access_token:'synthetic-owner-token',refresh_token:'synthetic-refresh',expires_at:Date.now()/1000+3600}));
-      const prior=window.fetch;
-      window.fetch=async(input,options={})=>{
-        const url=String(input);if(!url.startsWith('https://api-production-00f74.up.railway.app/api/bonus-tracker/backups'))return prior(input,options);
-        if(options.method==='POST'){const p=JSON.parse(options.body),count=JSON.parse(JSON.parse(p.snapshot).storageSnapshot.bt_e_v4).length;const backup={id:p.id,createdAt:new Date().toISOString(),sha256:p.sha256,entryCount:count,bytes:p.snapshot.length,reason:p.reason,verified:true};objects[p.id]={backup,snapshot:p.snapshot};return new Response(JSON.stringify(backup),{headers:{'Content-Type':'application/json'}});}
-        const ident=url.split('/').pop();const body=objects[ident]||{backups:Object.values(objects).map(x=>x.backup),total:Object.keys(objects).length,nextOffset:null};
-        return new Response(JSON.stringify(body),{headers:{'Content-Type':'application/json'}});
-      };
-    };
-    // A service-worker controllerchange may reload a newly opened phone between
-    // the readiness check and evaluate(). Install the fixture for every document,
-    // then initialize the current one; never waive any recovery assertions.
-    await newPhone.addInitScript(installRecoveryFixture,cloudRecords);
-    try{await newPhone.evaluate(installRecoveryFixture,cloudRecords);}
-    catch(e){
-      if(!/Execution context was destroyed/.test(String(e)))throw e;
-      await newPhone.waitForFunction(()=>navigator.serviceWorker.controller&&window.__btFullRegressionReport?.total>=9&&window.__btFullRegressionReport.ok&&!window.__btFullRegressionReport.pending);
-    }
-    check('new phone begins without account records',await newPhone.evaluate(()=>entries.length===0));
-    await newPhone.locator('#bt-cloud-open').click();try{await newPhone.getByRole('button',{name:'Preview recovery',exact:true}).first().click();}catch(e){console.error(name+' catalog diagnostics:',await newPhone.evaluate(()=>({status:document.querySelector('#cloud-status')?.textContent,connected:BTBonusAuth.connected(),version:BT_APP_VERSION,body:document.querySelector('.cloud-modal')?.innerText})));throw e;}
-    await newPhone.getByRole('button',{name:'Restore this version',exact:true}).waitFor();
-    check('recovery preview fits a new-phone viewport',await newPhone.locator('.cloud-modal').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&e.getBoundingClientRect().width<=innerWidth));
-    await newPhone.screenshot({path:path.join(output,name+'-cloud-recovery-preview.png')});
-    await newPhone.getByRole('button',{name:'Restore this version',exact:true}).click();
-    await newPhone.locator('#bt_confirm_overlay').getByRole('button',{name:'Restore',exact:true}).click();
-    try{await newPhone.getByText('Recovery complete. Your restored records were verified.',{exact:true}).waitFor();}catch(e){console.error('Recovery diagnostics:',await newPhone.evaluate(()=>({status:document.querySelector('#cloud-status')?.textContent,accounts:entries.length,storage:getBackupStorageKeys().map(k=>[k,localStorage.getItem(k)?.length])})));throw e;}
-    check('new-phone recovery preserves exact stored tracker data',await newPhone.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
-    check('new-phone recovery retains its own login',await newPhone.evaluate(()=>BTBonusAuth.connected()));
+    await newPhone.goto(url);await newPhone.waitForFunction(()=>window.BTICloudBackup&&window.BT360);
+    await newPhone.waitForTimeout(2200);
+    await newPhone.locator('#bt-cloud-open').click();
+    const newWizard=newPhone.getByRole('dialog',{name:'Backup with iCloud Drive'});
+    check('new phone opens manual backup without sign-in',await newWizard.isVisible()&&await newPhone.locator('#cloud-auto-toggle,#cloud-now').count()===0);
+    const fileChooser=newPhone.waitForEvent('filechooser');await newWizard.locator('#icloud-restore').click();await (await fileChooser).setFiles(recoveryFile);
+    const safetyCopy=newPhone.waitForEvent('download');await newPhone.getByRole('button',{name:'Restore Backup',exact:true}).click();await safetyCopy;
+    await newPhone.getByRole('heading',{name:'Restore Complete'}).waitFor();
+    check('new-phone manual restore preserves exact stored tracker data',await newPhone.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
     await newPhoneContext.close();
-    await page.evaluate(()=>{document.getElementById('bt_notice_host')?.replaceChildren();window.__cloudFixture.failure=true;});
-    await page.locator('#bt-cloud-open').click();await button('Back up now').click();
-    await page.locator('#cloud-status').getByText('Synthetic cloud outage',{exact:true}).waitFor();
-    check('failed upload never shows a success popup',await page.getByText('Backup verified',{exact:true}).count()===0);
-    check('cloud outage never shows protected status',await page.locator('#cloud-protection').getAttribute('data-state')==='danger'&&await page.locator('#cloud-auto-toggle').isChecked());
-    check('cloud outage leaves original records untouched',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
-    await button('Close').click();
-    await page.evaluate(()=>{localStorage.removeItem('bt_cloud_recovery_v1');delete window.__cloudFixture;});
+    check('manual export never changes original account records',await page.evaluate(()=>localStorage.getItem('bt_e_v4'))===storedBeforeRadar);
     // Restore native fetch before verifying real service-worker offline navigation.
     await page.evaluate(()=>{window.fetch=window.__bonusAITest.nativeFetch;delete window.__bonusAITest;});
 
@@ -2160,60 +2070,17 @@ async function exercise(name,engine,url){
     serverUnavailable=false;await context.setOffline(false);
     check('AI login persists across browser reload',await page.evaluate(()=>BTBonusAuth.connected()));
 
-    // Synthetic-only owner usage response: assert the live Settings visual at
-    // 320/375/390/430 and desktop without contacting Railway or R2.
-    const bankingBeforeHosting=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
-    const syntheticUsage={month:'2026-10',checkedAt:'2026-10-17T19:10:00Z',railway:{
-      status:'ok',verifiedAt:'2026-10-17T19:10:00Z',basis:'Railway resource-minutes before credit',costSoFar:2.31,projectedMonthEnd:4.50,
-      services:[{name:'api',costSoFar:1.25,avgMemoryGb:0.235},{name:'leaps-alpaca-live',costSoFar:1.06,avgMemoryGb:0.318}]
-    },r2:{status:'ok',usedBytes:240000000,freeBytes:10000000000}};
-    // Stub fetch inside the page because a controlling service worker may bypass
-    // Playwright routing under a controlling service worker. No real provider request is sent.
-    await page.evaluate(fixture=>{
-      window.__hostingPreviousFetch=window.fetch;
-      window.__hostingUsageFixture=fixture;
-      window.fetch=async (input,options)=>String(typeof input==='string'?input:input.url).split('?')[0].endsWith('/api/bonus-tracker/usage')
-        ?new Response(JSON.stringify(window.__hostingUsageFixture),{status:200,headers:{'Content-Type':'application/json'}})
-        :window.__hostingPreviousFetch(input,options);
-    },syntheticUsage);
-    await button('Settings').click();
-    check('header ellipsis opens actual Settings',await page.getByRole('dialog',{name:'Settings'}).isVisible());
-    await page.evaluate(async()=>BT360.refreshUsage(true));
-    await page.getByText('Near limit',{exact:true}).waitFor();
-    check('hosting usage card uses mocked nonzero Railway estimate',(await page.locator('.bt360-sheet').innerText()).includes('HOSTING & USAGE')&&
-      (await page.locator('.bt360-sheet').innerText()).includes('leaps-alpaca-live'));
-    check('verified amount includes observed time and excludes billing credits',await page.locator('.bt360-sheet').innerText().then(t=>t.includes('Verified $2.31')&&t.includes('Verified from Railway')&&t.includes('before plan credit and base fee')));
-    const partialUsage={...syntheticUsage,railway:{status:'partial',verifiedAt:syntheticUsage.railway.verifiedAt,basis:syntheticUsage.railway.basis,
-      costSoFar:null,knownCostSubtotal:1.25,projectedMonthEnd:4.50,services:[
-        {name:'api',costSoFar:1.25,avgMemoryGb:0.235},
-        {name:'leaps-alpaca-live',costSoFar:null,avgMemoryGb:null}],
-      missing:[{service:'leaps-alpaca-live',metric:'NETWORK_TX_GB',kind:'usage'}]}};
-    await page.evaluate(x=>{window.__hostingUsageFixture=x},partialUsage);
-    await page.evaluate(async()=>BT360.refreshUsage(true));
-    check('partial usage never presents incomplete total as zero',await page.locator('.bt360-sheet').innerText().then(t=>t.includes('Total is incomplete')||t.toLowerCase().includes('total is incomplete'))&&await page.locator('.bt360-sheet').innerText().then(t=>t.includes('Not reported by Railway')&&t.includes('leaps-alpaca-live')&&!t.includes('$0.00')));
-    await page.evaluate(x=>{window.__hostingUsageFixture={...x,r2:{status:'ok',usedBytes:1200000},railway:{status:'partial',verifiedAt:x.railway.verifiedAt,costSoFar:2.31,knownCostSubtotal:2.31,projectedMonthEnd:3.47,reasonCode:'measurement_missing',services:[{name:'api',costSoFar:2.31,avgMemoryGb:null}],missing:[{service:'project',metric:'average_memory',kind:'measurement_missing'}]}}},syntheticUsage);
-    await page.evaluate(async()=>BT360.refreshUsage(true));
-    check('optional usage gap preserves projection and positive R2 storage',await page.locator('.bt360-sheet').innerText().then(t=>t.includes('Verified $2.31')&&t.includes('Projected billing usage: Verified $3.47')&&t.includes('Less than 0.01 GB')&&!t.includes('Projection not available')));
-    const reasonCodes=['token_missing','token_unauthorized','workspace_not_found','project_not_visible','estimate_missing','measurement_missing','rate_limited','timeout','railway_unreachable','response_changed'];
-    for(const code of reasonCodes){
-      await page.evaluate(([x,c])=>{window.__hostingUsageFixture={...x,railway:{status:'unavailable',reasonCode:c,reason:'REMOTE-SENSITIVE-RESPONSE'}}},[syntheticUsage,code]);
-      await page.evaluate(async()=>BT360.refreshUsage(true));
-      check('unavailable '+code+' is safe and never becomes $0.00',await page.locator('.bt360-sheet').innerText().then(t=>!t.includes('$0.00')&&!t.includes('REMOTE-SENSITIVE-RESPONSE')&&t.includes('View Railway usage')));
-    }
-    await page.evaluate(x=>{window.__hostingUsageFixture={...x,railway:{...x.railway,costSoFar:0,projectedMonthEnd:0,services:x.railway.services.map(a=>({...a,costSoFar:0}))}}},syntheticUsage);
-    await page.evaluate(async()=>BT360.refreshUsage(true));
-    check('genuine verified zero is not hidden',await page.locator('.bt360-sheet').innerText().then(t=>t.includes('Verified $0.00')));
-    await page.evaluate(x=>{window.__hostingUsageFixture=x},syntheticUsage);
-    await page.evaluate(async()=>BT360.refreshUsage(true));
-
+    // Stale server configuration must not re-enable the retired backup/hosting UI.
+    const bankingBeforeSettings=await page.evaluate(()=>localStorage.getItem('bt_e_v4'));
+    await page.evaluate(()=>{localStorage.setItem('bt_cloud_recovery_v1',JSON.stringify({enabled:true,lastAt:'2026-10-25T19:01:46Z',error:'Load failed'}));BT360.openSettings()});
+    check('settings use manual files even with old server backup enabled',await page.locator('.bt360-sheet').innerText().then(t=>t.includes('ICLOUD DRIVE BACKUP')&&t.includes('Save backup file')&&t.includes('Restore from file')&&!/Railway|R2 storage|CLOUD PROTECTION|Auto-backup|Load failed|HOSTING/.test(t)));
     for(const width of [320,375,390,430,1024]){
       await page.setViewportSize({width,height:844});
-      check('hosting and Settings fit '+width+'px',await page.locator('.bt360-sheet').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&[...e.querySelectorAll('.bt360-panel,.bt360-usage-top,.bt360-usage-r2')].every(n=>n.scrollWidth<=n.clientWidth+1)));
-      if(width===390){await page.screenshot({path:path.join(output,name+'-hosting-settings-390.png')});await page.screenshot({path:path.join(output,name+'-v362-settings-390.png')});}
+      check('manual backup Settings fit '+width+'px',await page.locator('.bt360-sheet').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&[...e.querySelectorAll('.bt360-panel')].every(n=>n.scrollWidth<=n.clientWidth+1)));
+      if(width===390)await page.screenshot({path:path.join(output,name+'-manual-icloud-settings-390.png')});
     }
-    check('hosting usage views leave bank records unchanged',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,bankingBeforeHosting));
+    check('manual backup views leave bank records unchanged',await page.evaluate(before=>localStorage.getItem('bt_e_v4')===before,bankingBeforeSettings));
     await page.getByRole('button',{name:'Close settings'}).click();
-    await page.evaluate(()=>{window.fetch=window.__hostingPreviousFetch;delete window.__hostingPreviousFetch;delete window.__hostingUsageFixture});
     await page.setViewportSize({width:1280,height:900});
 
     // Legacy nested cycles remain visible without migrating saved financial records.
@@ -2424,9 +2291,10 @@ async function exercise(name,engine,url){
     await page.evaluate(before=>{if(before.cards===null)localStorage.removeItem('bt_credit_cards_v1');else localStorage.setItem('bt_credit_cards_v1',before.cards);R()},retirementBefore);
     await page.setViewportSize({width:390,height:844});
     const termsReceipt=await page.evaluate(async()=>{await BTTermsHistory.sync();return {...window.__termsFixture};});
-    check('historical terms stay in hash-verified synthetic storage: '+JSON.stringify(termsReceipt),termsReceipt.uploads>0&&termsReceipt.uploads===termsReceipt.hashVerified);
+    check('manual backup keeps terms local without server uploads',termsReceipt.uploads===0&&termsReceipt.hashVerified===0);
     await page.evaluate(()=>BTBonusAuth.disconnect());
     check('AI sign-out removes remembered session',await page.evaluate(()=>!localStorage.getItem('bonus-ai-auth')&&!BTBonusAuth.connected()));
+    check('retired backup, terms and hosting endpoints are never requested',await page.evaluate(()=>window.__retiredBackupRequests.length===0));
     check('no uncaught application errors',errors.length===0);
     await page.screenshot({path:path.join(output,name+'-verified.png')});
     await context.tracing.stop();

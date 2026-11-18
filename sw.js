@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.8.19: aligned closure checkboxes and wrapped mobile labels.
-const V = 'bt-v3.8.19-close1';
+// Version 3.8.20: manual iCloud file backups without Railway backup or hosting controls.
+const V = 'bt-v3.8.20-files1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',

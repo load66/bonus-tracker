@@ -59,12 +59,12 @@ module.exports={sandbox,document,app,storage,errors};
 if(require.main===module)setTimeout(()=>{
   try{
     assert(loaded.length===scripts.length,'Not every index script loaded');
-    assert(sandbox.BT_APP_VERSION==='3.8.19',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
-    assert(sandbox.btReleaseVersion==='3.8.19',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
+    assert(sandbox.BT_APP_VERSION==='3.8.20',`Unexpected app version ${sandbox.BT_APP_VERSION}`);
+    assert(sandbox.btReleaseVersion==='3.8.20',`Unexpected mobile release version ${sandbox.btReleaseVersion}`);
     const trackerRender=sandbox.BT360;
     const settingsMarkup=trackerRender.settings();
     assert(!/Historical review|History repair|requirements date matches|Review missing history/i.test(settingsMarkup),'Internal history diagnostics must not clutter Settings');
-    assert(settingsMarkup.includes('Cloud protection')&&settingsMarkup.includes('Notifications'),'Everyday Settings controls must remain visible');
+    assert(settingsMarkup.includes('ICLOUD DRIVE BACKUP')&&settingsMarkup.includes('Notifications')&&!/CLOUD PROTECTION|HOSTING & USAGE|MOVE TO ICLOUD/.test(settingsMarkup),'Everyday Settings controls must remain visible');
     assert(typeof sandbox.btHistoricalIntegrityFindings==='function','Internal integrity detection must stay available');
     assert(typeof sandbox.BTHistoryRepair?.open==='function','Opt-in repair engine must remain installed');
     assert(trackerRender.audience==='all','Fresh installations and migrated personal/business sessions must show all accounts by default');
@@ -91,7 +91,7 @@ if(require.main===module)setTimeout(()=>{
     assert(!archiveMarkup.includes('Still waiting &lt;span'),'Archive heading exposes escaped HTML');
     assert(sandbox.tcV3FourLeafRulesVersion==='3.4.13',`Unexpected FourLeaf rule version ${sandbox.tcV3FourLeafRulesVersion}`);
     assert(sandbox.tcV3WellsConsumerRulesVersion==='3.5.2',`Unexpected Wells consumer rule version ${sandbox.tcV3WellsConsumerRulesVersion}`);
-    assert(sandbox.btChurnCloseDatePolicyVersion==='3.8.19',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
+    assert(sandbox.btChurnCloseDatePolicyVersion==='3.8.20',`Unexpected churn close-date policy version ${sandbox.btChurnCloseDatePolicyVersion}`);
     assert(sandbox.BTCloseRules?.VERSION==='3.4.13',`Unexpected close-rule core version ${sandbox.BTCloseRules?.VERSION}`);
     assert(sandbox.BTEligibilityGate?.VERSION==='1.4.0',`Unexpected eligibility gate version ${sandbox.BTEligibilityGate?.VERSION}`);
     assert(sandbox.btLifecycleStatusVersion==='3.4.74-status1',`Unexpected lifecycle status version ${sandbox.btLifecycleStatusVersion}`);

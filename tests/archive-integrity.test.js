@@ -34,7 +34,7 @@ sandbox.localStorage.setItem=adapter;
 run('finishClose()');
 assert.equal(run('entries[0].closed'),fixture.closed);
 assert.equal(run('loadTermsArchive()[termsArchiveKey(entries[0])].current.closed'),fixture.closed);
-assert.match(run('cfm.msg'),/Cloud/,'Local closure success must distinguish cloud protection');
+assert.match(run('cfm.msg'),/backup file to iCloud Drive/,'Local closure success must explain manual file backup');
 run('undoClose();');
 assert.equal(run('entries[0].closed'),'','Undo must restore the live record');
 assert(run('loadTermsArchive()[termsArchiveKey(entries[0])].versions.some(v=>v.closed==="2026-04-20")'),'Undo must preserve the earlier closure revision as history');
