@@ -1,7 +1,7 @@
 /* Owner-only immutable Cloudflare R2 historical T&C archive. No account restores or mutations. */
 (function(){
 'use strict';
-if(window.BTICloudBackup?.isLocalOnly?.()){
+if(window.BTICloudBackup?.isManualBackup?.()){
   window.BTTermsHistory={sync:async()=>{},queueSync:()=>{},open:()=>window.BTICloudBackup.openSetup(),get status(){return{verified:0,pending:0,notice:'Manual iCloud backup'}},collect:()=>[]};
   return;
 }

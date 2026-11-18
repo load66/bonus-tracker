@@ -1,7 +1,7 @@
 /* Versioned cloud recovery. No AI calls, credential exports or automatic restores. */
 (function(){
   'use strict';
-  if(window.BTICloudBackup?.isLocalOnly?.()){
+  if(window.BTICloudBackup?.isManualBackup?.()){
     window.btCloudBackupChanged=()=>{};
     window.btCloudBeforeDestructive=reason=>window.BTICloudBackup.beforeDestructive(reason);
     window.btOpenCloudBackup=()=>window.BTICloudBackup.openSetup();
