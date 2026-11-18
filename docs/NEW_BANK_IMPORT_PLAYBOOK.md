@@ -87,3 +87,8 @@ Generate every applicable eligibility restriction with its exact basis, period v
 
 The app does not ask for a second verification or confirmation before using a complete recorded rule. Missing structure still produces no date. Import generation remains source-gated, and a completed waiting period means review the current offer before applying rather than assume qualification.
 
+
+
+## One-use-per-member offer caps (runtime v3.8.21)
+
+Treat an exact offer clause limiting one stated bonus per member, customer or person as non-repeatable for that enrolled offer. Retain its source wording and offer scope; do not turn it into a bank-wide lifetime ban. A separate prior-account-closure lookback governs initial eligibility and does not override the one-bonus cap. A per-year, per-month or other recurring cap is not non-repeatable. Keep numeric schemaVersion 3 and existing financialRules versions unchanged; validate the actual import against the compatible deployed gate. Do not manufacture lifetime wording to pass validation.

@@ -155,3 +155,8 @@ If the enrolled payout term merely says *within N days of opening*, preserve tha
 ## Requirement-day review integrity (v3.6.95)
 
 Keep `reqDays` equal to the supported calendar-day requirement duration. A descriptive `requiredDaysText` can begin with a currency amount or contain a year; neither is a duration. Review/save must preserve the explicit day count and original text. Numeric-only input and one unambiguous explicit calendar-day duration are supported; ranges, conflicting durations, business days and calendar months must not become a guessed calendar-day count. Run the strict validator against the actual generated file, not just a simplified fixture.
+
+
+## One-use-per-member offer caps (runtime v3.8.21)
+
+Treat an exact offer clause limiting one stated bonus per member, customer or person as non-repeatable for that enrolled offer. Retain its source wording and offer scope; do not turn it into a bank-wide lifetime ban. A separate prior-account-closure lookback governs initial eligibility and does not override the one-bonus cap. A per-year, per-month or other recurring cap is not non-repeatable. Keep numeric schemaVersion 3 and existing financialRules versions unchanged; validate the actual import against the compatible deployed gate. Do not manufacture lifetime wording to pass validation.
