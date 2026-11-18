@@ -164,6 +164,8 @@
   function taskTitle(kind,amount,count,period,text,e){
     const a=money(amount),n=Number.isInteger(count)&&count>0?count:0;
     if(!a&&kind!=='other'&&text)return String(text).replace(/\s+/g,' ').trim().slice(0,100);
+    const action=window.BTFinancialRules?.requirementActionLabel?.({kind,amount,count,text});
+    if(action&&!period)return action;
     if(kind==='direct-deposit')return (period&&e.reqMet?'Maintain ':'Receive ')+(a?a+' in ':'')+(period?period+' ':'')+'qualifying direct deposits';
     if(kind==='new-money')return 'Fund '+(a?a+' into ':'')+'the account';
     if(kind==='balance-hold')return 'Maintain '+(a?a+' ':'')+'required balance';
@@ -184,7 +186,7 @@
     const valid=window.BTFinancialRules?.validate(e),structured=valid?.ok&&valid.rules?valid.rules.requirements:null;
     let candidates=[];
     if(Array.isArray(structured)){
-      candidates=structured.filter(r=>!e.reqMet||r.recurrence).filter(r=>r.recurrence||!trackers.some(t=>t.done&&normalizedTask(t.text)===normalizedTask(r.text))).map(r=>{
+      candidates=structured.filter(r=>!window.BTFinancialRules?.waitingRequirementPeriod?.(e,r)).filter(r=>!e.reqMet||r.recurrence).filter(r=>r.recurrence||!trackers.some(t=>t.done&&(t.structuredRequirementId?t.structuredRequirementId===r.id&&t.structuredRequirementSource===JSON.stringify(r):normalizedTask(t.text)===normalizedTask(r.text)))).map(r=>{
         const compatible=trackers.filter(t=>!t.done&&activityKind(t.text)===r.kind);
         const linked=compatible.find(t=>normalizedTask(t.text)===normalizedTask(r.text))||(structured.filter(x=>x.kind===r.kind).length===1?compatible.filter(t=>t.source==='timer').sort((a,b)=>String(a.date||'9999').localeCompare(String(b.date||'9999')))[0]:null);
         return {kind:r.kind,text:r.text,amount:r.amount,count:r.count,recurring:r.recurrence,linked,context:window.btRequirementDeadlineContext?.(e,r)};
@@ -205,6 +207,10 @@
     const order={'enrollment':0,'new-money':1,'direct-deposit':2,'transactions':3,'balance-hold':4,'other':5};
     candidates.sort((a,b)=>String(a.linked?.date||a.context?.date||'9999').localeCompare(String(b.linked?.date||b.context?.date||'9999'))||(order[a.kind]??9)-(order[b.kind]??9));
     const task=candidates[0];
+    if(!task){
+      const periods=(e.financialRules?.requirements||[]).map(r=>window.BTFinancialRules?.waitingRequirementPeriod?.(e,r)).filter(p=>p?.until&&daysTo(p.until)>0).sort((a,b)=>b.until.localeCompare(a.until));
+      if(periods.length){const p=periods[0],result=base(/good standing/i.test(p.text)?'Keep the account in good standing':'Keep the account open','View waiting period','lifecycle',p.text);result.activityKind='waiting-period';result.context={date:p.until,confirmed:true,explanation:'Source-backed minimum account-standing period; qualification is not automatically recorded.'};return result;}
+    }
     if(!task)return base(next.kind==='requirements'?'Confirm all bonus requirements':'Review saved requirements',next.kind==='requirements'?'Confirm requirements':'View requirements',next.kind==='requirements'?'milestone':'lifecycle');
     const period=task.recurring?({'calendar-month':'monthly','statement-cycle':'per-statement','calendar-quarter':'quarterly','calendar-year':'annual'}[task.recurring.period]||'recurring'):(/monthly|each month|every month|per month/i.test(task.text)?'monthly':'');
     // Dollar/count values for legacy records stay in exact saved text; never parse a balance from an exclusion.

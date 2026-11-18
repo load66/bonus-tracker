@@ -1291,3 +1291,23 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 
 /* Next-task dates stay readable without adding controls to bank details. */
 .bt3818-task-date{font-size:12px;line-height:1.5;color:#aab3c2;margin:12px 0 4px;overflow-wrap:anywhere}
+
+/* Clear applicant actions with compact visuals and full touch targets. */
+.bt3810-task{gap:8px;padding:10px 0}
+.bt3810-task>button[role=checkbox]{position:relative;box-sizing:border-box;flex:0 0 44px;width:44px;min-width:44px;height:44px;min-height:44px;margin:0;padding:0;border:0;background:transparent;font-size:0;color:transparent}
+.bt3810-task>button[role=checkbox]::before{content:'';position:absolute;inset:11px;border:1.5px solid #697588;border-radius:6px;background:#171a23;box-sizing:border-box;font-size:15px;font-weight:850;line-height:19px;color:#081410;text-align:center}
+.bt3810-task>button[role=checkbox][aria-checked=true]{background:transparent;border:0}
+.bt3810-task>button[role=checkbox][aria-checked=true]::before{content:'✓';background:#5be3b0;border-color:#5be3b0}
+.bt3810-task>button[role=checkbox]:focus-visible{outline:2px solid #5be3b0;outline-offset:1px;border-radius:9px}
+.bt3810-deposit.bt3822-task-actions{justify-content:flex-start;flex-wrap:wrap;gap:8px;border-top:0;margin-top:4px;padding-top:0;min-height:44px}
+.bt3822-task-actions>span{flex:1 0 100%}
+.bt3822-task-actions .bt3810-add-task{margin:0;min-height:44px}
+.bt3822-task-actions button{padding:8px 10px;min-height:44px}
+.bt3822-waiting-period{padding:12px;border-radius:10px;background:#111e22;border:1px solid #293c43;margin-top:12px;color:#b9c8ce;font-size:12px;line-height:1.5}
+.bt3822-waiting-period>b{color:#d5e3e6;font-size:12px}
+.bt3822-waiting-period p{margin:5px 0 0}
+.bt3822-waiting-period p span{display:block;color:#a3b3bd;margin-top:3px}
+.bt3822-companion-fee{margin-top:13px;padding-top:12px;border-top:1px solid #252a36}
+.bt3822-companion-fee h4{margin:0;font-size:13px;color:#e3e8ee;font-weight:700}
+.bt3822-companion-fee .bt3810-pair{padding-top:8px}
+.bt3822-companion-fee p{margin:6px 0 0;color:#a7afbf;font-size:12px;line-height:1.5}

@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.8.21';
+const APP_VERSION='3.8.22';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -6323,6 +6323,7 @@ function reqMetWarnings(e,date){
   if(!date)w.push('Requirement met date is blank.');
   if(date&&isFutureDate(date))w.push('Requirement met date is in the future.');
   if(e?.opened&&date&&dB(e.opened,date)<0)w.push('Requirement met date is before the opened date.');
+  for(const r of e?.financialRules?.requirements||[]){const period=window.BTFinancialRules?.waitingRequirementPeriod?.(e,r);if(period?.until&&date&&date<period.until)w.push('The saved '+period.days+'-day account-standing period ends '+fD(period.until)+'. Confirm the bank allowed completion before that date.');}
   if(e?.bonusRecd&&date&&dB(date,e.bonusRecd)<0)w.push('Requirement met date is after the bonus received date.');
   if(e?.closed&&date&&dB(date,e.closed)<0)w.push('Requirement met date is after the closed date.');
   return w
