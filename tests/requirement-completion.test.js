@@ -58,3 +58,26 @@ assert.equal(s.BT360.attentionCardProgress(complete),'');
 assert.doesNotMatch(s.BT360.attentionCardProgress({...e,checklist:[]}),/\$0 of|Recorded requirement deposits/,'Checklist progress must not invent monetary deposit progress');
 const projectionBefore=JSON.stringify(first);s.BT360.requirementProgress(first);s.BT360.compactRow(first);s.BT360.attentionCardProgress(first);s.BT360.requirementRows(first);
 assert.equal(JSON.stringify(first),projectionBefore,'Shared progress remains read-only');
+
+{
+ const sample=require('./fixtures/financial-rules.cjs').clearActionsFixture(),before=JSON.stringify(sample);
+ assert.equal(s.BT360.requirementProgress(sample).total,2,'Standing period is not an applicant checkbox');
+ const html=s.BT360.detailPanels(sample);
+ assert.equal((html.match(/role="checkbox"/g)||[]).length,2);
+ assert.match(html,/Enroll in Digital Banking/);assert.match(html,/Receive one qualifying direct deposit of \$250 or more/);
+ assert.match(html,/Waiting period/);assert.match(html,/Jan 17, 2027/);
+ assert.doesNotMatch(html,/Enrollment requirement|Passing the date alone|completion is not yet confirmed|meet all/i);
+ assert.match(html,/Only if the balance is below \$250 and there has been no activity for 12 months/);
+ assert.equal(s.BT360.inactiveFeePresentation(sample.financialRules.accounts[1]).label,'Share Savings');
+ assert.deepEqual(JSON.parse(JSON.stringify(s.BT360.accountFeeWarnings(sample))).map(x=>x.label),['Inactivity fee: $5/month']);
+ assert.equal(JSON.stringify(sample),before,'Improved labels never replace original imported wording');
+ run('entries='+JSON.stringify([sample]));
+ assert.equal(s.BT360.toggleRequirement(sample.id,'standing'),false,'A standing condition cannot become a checked action');
+ assert.equal(s.BT360.toggleRequirement(sample.id,'digital'),true);
+ assert.equal(s.btNextActionForEntry(run('entries[0]')).task.activityKind,'direct-deposit','Checked enrollment must not remain the next task');
+ assert.equal(s.BT360.toggleRequirement(sample.id,'deposit'),true);
+ assert.equal(run('entries[0].reqMet'),'');assert.equal(run('entries[0].bonusRecd'),'');
+ assert.equal(s.btNextActionForEntry(run('entries[0]')).task.activityKind,'waiting-period');
+ assert.match(s.BT360.detailFooter(run('entries[0]')),/View waiting period/);
+ assert(run('reqMetWarnings(entries[0],"2026-11-18")').some(x=>x.includes('60-day')),'An early completion date must disclose the standing period');
+}

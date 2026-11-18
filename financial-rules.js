@@ -290,6 +290,32 @@
   }
   // Returns a calendar-exact retention and review date, not permission to close.
   // Bonus receipt and contractual retention remain independent safety gates.
+  // Separate user actions from an explicit minimum account-standing period.
+  // This recognizes source-backed periods, never elapsed time as qualification.
+  function isWaitingRequirement(r){
+    if(r?.kind!=='other'||r.recurrence||r.amount!==undefined||r.count!==undefined||r.timing?.basis!=='opened'||r.timing?.unit!=='calendar-days'||!integer(r.timing?.value))return false;
+    const q=clean(r.evidence?.quote);
+    if(/\b(?:after|following|from)\b[^.;]{0,80}\b(?:deposit|qualification|requirements?|bonus|payout|enroll)/i.test(q))return false;
+    const m=q.match(/\b(?:maintain|keep)\b[^.;]{0,120}\b(?:account|checking|savings)\b[^.;]{0,80}\b(?:open|good standing)\b[^.;]{0,40}\bfor\s+(?:at least\s+|a minimum of\s+)?(\d+)\s+(?:calendar\s+)?days\b/i);
+    return !!m&&Number(m[1])===r.timing.value;
+  }
+  function waitingRequirementPeriod(e,r){
+    if(![1,2,3,4].includes(e?.financialRules?.version)||!isWaitingRequirement(r)||r.evidence?.source!=='promotion'||!clean(e?.tcSourceRaw).includes(clean(r.evidence?.quote)))return null;
+    return {id:r.id,days:r.timing.value,until:date(e?.opened)?shiftPayoutDate(e.opened,r.timing.value,'calendar-days'):'',text:'Keep the account '+(/good standing/i.test(r.evidence.quote)?'in good standing':'open')+' for at least '+r.timing.value+' days.'};
+  }
+  function requirementActionLabel(r){
+    const raw=clean(r?.text).replace(/;?\s*completion is not yet confirmed[.]?$/i,'').trim();
+    if(r?.kind==='enrollment'){
+      if(raw&&!/^(?:enrollment requirement|complete required enrollment)[.!]?$/i.test(raw))return raw;
+      const q=clean(r.evidence?.quote);
+      return q.match(/\benroll\s+(?:in|for)\s+[^.;]+/i)?.[0].replace(/^enroll/i,'Enroll')||raw||'Review enrollment details';
+    }
+    if(r?.kind==='direct-deposit'&&r.count===1&&!r.recurrence&&number(r.amount)&&r.amount>0&&!/total|cumulat|aggregat|combin/i.test(raw)){
+      const minimum=/or more|at least|\$[\d,.]+\s*\+|≥/i.test(raw);
+      return 'Receive one qualifying direct deposit of '+money(r.amount)+(minimum?' or more':'');
+    }
+    return '';
+  }
   function closeHoldInfo(e){
     const checked=validate(e),c=checked.ok?checked.rules?.closure:null;
     if(!c||checked.rules.version<4||!c.hold)return null;
@@ -354,7 +380,7 @@
     if(['fees','waiver','companion'].includes(intent))missing=s.warnings.filter(x=>/fee|waiv/i.test(x));
     return{answer:text,step,missing,factIds:['financialrules'],local:true};
   }
-  const api=Object.freeze({VERSION,validate,summarize,answer,intentFor,waiverText,estimatedArrival,arrivalLabel,payoutWindowFromText,arrivalRule,arrivalSource,closeHoldInfo,retentionNeedsReview,balanceMeasurementWindow});
+  const api=Object.freeze({VERSION,validate,summarize,answer,intentFor,waiverText,estimatedArrival,arrivalLabel,payoutWindowFromText,arrivalRule,arrivalSource,closeHoldInfo,retentionNeedsReview,balanceMeasurementWindow,isWaitingRequirement,waitingRequirementPeriod,requirementActionLabel});
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.BTFinancialRules=api;
 })(typeof window!=='undefined'?window:globalThis);

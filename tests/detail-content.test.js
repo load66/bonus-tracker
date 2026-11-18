@@ -283,8 +283,8 @@ const estimatedList=sandbox.BT360.archive([estimatedPast]);
 assert.match(estimatedList,/<strong>0<\/strong><small>Review offer<\/small>/,'A completed recorded waiting period must be ready for current-offer review');
 
 /* v3.8.14: direct account details retain recorded-date countdowns. */
-assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.21';/,'The on-screen app version reflects this release');
-assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.21-cap1/,'The version label is refreshed on clients');
+assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.22';/,'The on-screen app version reflects this release');
+assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.22-clear1/,'The version label is refreshed on clients');
 const archiveFutureDate='2030-01-01';
 const recordedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,recorded:true});
 assert(recordedFuture&&recordedFuture.days>0&&recordedFuture.caption==='days left','A recorded future date must show its countdown');
@@ -546,7 +546,7 @@ console.log('Bank logo and attention hierarchy regression passed');
 {
  const fs=require('node:fs'),vm=require('node:vm');
  const source=fs.readFileSync(require.resolve('../redesign-v360.js'),'utf8');
- const model=source.slice(source.indexOf('function accountFeeWarnings'),source.indexOf('function monthlyFeeBadge'));
+ const model=source.slice(source.indexOf('function inactiveFeePresentation'),source.indexOf('function monthlyFeeBadge'));
  const engine=require('../financial-rules.js');
  const ctx={window:{BTFinancialRules:engine},amount:n=>'$'+n,feeSnapshot:()=>({monthly:'$0',monthlyKnown:true,companions:[],closeMain:'Not confirmed',closeNote:'Review',noEarlyCloseFee:false})};
  vm.createContext(ctx);vm.runInContext(model,ctx);
@@ -586,7 +586,7 @@ console.log('Bank logo and attention hierarchy regression passed');
  const code=fs.readFileSync(require.resolve('../redesign-v360.js'),'utf8');
  const env={window:{BTFinancialRules:require('../financial-rules.js')},amount:n=>'$'+n,
  feeSnapshot:()=>({monthly:'$0',monthlyKnown:true,companions:[],closeMain:'No early-closing fee',noEarlyCloseFee:true,explicitClawback:true})};
- vm.createContext(env);vm.runInContext(code.slice(code.indexOf('function accountFeeWarnings'),code.indexOf('function monthlyFeeBadge')),env);
+ vm.createContext(env);vm.runInContext(code.slice(code.indexOf('function inactiveFeePresentation'),code.indexOf('function monthlyFeeBadge')),env);
  assert(!env.accountFeeWarnings({}).some(x=>/clawback/i.test(x.label)),'Unconfirmed legacy clawback stays blank');
  const e=fixture(),q='We will reclaim the bonus if the account is closed within 90 days.';
  e.tcSourceRaw+=' '+q;e.financialRules.closure.restrictionType=e.closeRestrictionType='explicit-clawback';

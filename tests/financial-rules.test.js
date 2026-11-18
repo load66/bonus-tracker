@@ -90,3 +90,24 @@ const wrongMonth=JSON.parse(JSON.stringify(calendarHold));wrongMonth.financialRu
 assert.equal(engine.validate(wrongMonth).ok,false,'Unsupported 11-month hold must be rejected');
 const originalCalendar=JSON.stringify(calendarHold);
 engine.closeHoldInfo(calendarHold);assert.equal(JSON.stringify(calendarHold),originalCalendar,'Closure projection must be read-only');
+
+{
+ const rules=require('../financial-rules.js'),e=require('./fixtures/financial-rules.cjs').clearActionsFixture();
+ assert(rules.validate(e).ok,'Clear action fixture must use supported rules');
+ const r=e.financialRules.requirements[2],before=JSON.stringify(e);
+ assert.deepEqual(rules.waitingRequirementPeriod(e,r),{id:'standing',days:60,until:'2027-01-17',text:'Keep the account in good standing for at least 60 days.'});
+ assert.equal(rules.requirementActionLabel(e.financialRules.requirements[0]),'Enroll in Digital Banking');
+ assert.equal(rules.requirementActionLabel(e.financialRules.requirements[1]),'Receive one qualifying direct deposit of $250 or more');
+ assert.equal(rules.waitingRequirementPeriod({...e,opened:''},r).until,'');
+ assert.equal(rules.waitingRequirementPeriod({...e,tcSourceRaw:''},r),null);
+ for(const change of [{kind:'balance-hold'},{amount:250},{count:1},{recurrence:{period:'calendar-month',count:3}},{timing:{basis:'opened',value:61,unit:'calendar-days'}},{timing:{basis:'opened',value:60,unit:'business-days'}}])assert.equal(rules.waitingRequirementPeriod(e,{...r,...change}),null,'Applicant or unsupported timing rules must not become passive periods');
+ assert.equal(JSON.stringify(e),before,'Action/period projection must not write any source record');
+}
+
+{
+ const f=require('../financial-rules.js');
+ assert.equal(f.requirementActionLabel({kind:'enrollment',text:'Enroll in Digital Banking; choose electronic statements.'}),'Enroll in Digital Banking; choose electronic statements.','Enrollment labels must keep every actual condition');
+ const e=require('./fixtures/financial-rules.cjs').clearActionsFixture(),r=e.financialRules.requirements[2];
+ const q='Maintain the checking account in good standing for at least 60 days after the first deposit.';
+ assert.equal(f.waitingRequirementPeriod({...e,tcSourceRaw:e.tcSourceRaw+' '+q},{...r,evidence:{source:'promotion',quote:q}}),null,'A deposit-based period cannot be moved to the opening date');
+}

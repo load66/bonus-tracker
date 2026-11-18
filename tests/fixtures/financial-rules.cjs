@@ -49,3 +49,24 @@ function legacyPublicOfferFixture(){
  return {id:'SYN-PUBLIC-OFFER',bank:'Citi',accountType:'personal',bonus:325,opened:'2026-05-01',reqMet:'2026-05-25',reqDays:90,analysis:null,analyzedTC:'',promoCodeText:'Opened through Citi $325 Enhanced Direct Deposit offer link',expirationDateText:'October 26, 2026',completeBonusText:'Open an eligible Citi checking account and receive at least 2 Enhanced Direct Deposits totaling $3,000 or more within 90 calendar days of account opening.',payoutTimingText:'Bonus expected after requirements are completed; keep the account open and in good standing until the bonus posts.',customTimers:[],checklist:[]};
 }
 module.exports.legacyPublicOfferFixture=legacyPublicOfferFixture;
+
+// Generic applicant actions plus a passive minimum standing period.
+function clearActionsFixture(){
+ const e=fixture();e.id='SYN-CLEAR-P-01';e.bank='Synthetic Clear Bank';e.opened='2026-11-18';e.checklist=[];e.customTimers=[];e.reqMet='';e.bonusRecd='';e.closed='';
+ const digital='Enroll in Digital Banking; completion is not yet confirmed.';
+ const dd='Receive at least one qualifying direct deposit of $250 or more within 60 days of account opening.';
+ const standing='Maintain the checking account in good standing for at least 60 days.';
+ const fee='Inactive Account Fee $5.00 per month. Share accounts with balances less than $250 and no activity within the last 12 months.';
+ const share='Make a $5 minimum deposit to open your Share Savings account.';
+ const zero='Checking has no monthly maintenance fee.';
+ e.tcSourceRaw+=' '+digital+' '+dd+' '+standing;e.feeScheduleRaw=zero+' '+fee+' '+share;
+ e.reqDays=60;e.minHoldDays=60;e.closeRuleBasis='opened';e.closeRestrictionType='minimum-open';e.closeBufferDays=0;
+ e.financialRules.requirements=[{id:'digital',accountId:'checking',kind:'enrollment',text:digital,evidence:{source:'promotion',quote:digital}},
+ {id:'deposit',accountId:'checking',kind:'direct-deposit',amount:250,count:1,timing:{basis:'opened',value:60,unit:'calendar-days'},text:dd,evidence:{source:'promotion',quote:dd}},
+ {id:'standing',accountId:'checking',kind:'other',timing:{basis:'opened',value:60,unit:'calendar-days'},text:standing+' Passing the date alone does not confirm good standing.',evidence:{source:'promotion',quote:standing}}];
+ e.financialRules.accounts[0].fee.evidence.quote=zero;
+ e.financialRules.accounts[1]={id:'share',label:'Share Savings — conditional inactivity charge',role:'companion',required:true,minimumBalance:{amount:5,text:'Opening share deposit',evidence:{source:'fee-schedule',quote:share}},fee:{amount:5,currency:'USD',frequency:'monthly',evidence:{source:'fee-schedule',quote:fee},waiver:{operator:'all',evidence:{source:'fee-schedule',quote:fee},conditions:[{id:'activity',kind:'other',text:'Stay outside the combined low-balance AND inactivity trigger.',evidence:{source:'fee-schedule',quote:fee}}]}}};
+ e.financialRules.closure={restrictionType:'minimum-open',basis:'opened',minHoldDays:60,text:standing,evidence:{source:'promotion',quote:standing}};
+ return e;
+}
+module.exports.clearActionsFixture=clearActionsFixture;

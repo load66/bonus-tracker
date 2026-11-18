@@ -2295,6 +2295,31 @@ async function exercise(name,engine,url){
     check('manual backup keeps terms local without server uploads',termsReceipt.uploads===0&&termsReceipt.hashVerified===0);
     await page.evaluate(()=>BTBonusAuth.disconnect());
     check('AI sign-out removes remembered session',await page.evaluate(()=>!localStorage.getItem('bonus-ai-auth')&&!BTBonusAuth.connected()));
+    // Clear applicant actions, passive standing period and conditional fees use one read-only projection.
+    {
+      const fixture=require('./fixtures/financial-rules.cjs').clearActionsFixture();fixture.opened='2026-09-01';
+      const prior=await page.evaluate(e=>{const before={entries:JSON.stringify(entries),expanded,tab,keys:getBackupStorageKeys().map(k=>[k,localStorage.getItem(k)])};entries=[e];expanded=e.id;tab='tracker';R();return before},fixture);
+      const source=JSON.stringify(fixture.financialRules);
+      check('standing period is a note rather than a third action',await page.locator('.bt3810-requirements [role=checkbox]').count()===2&&await page.locator('.bt3822-waiting-period').innerText().then(t=>t.includes('Oct 31, 2026')));
+      check('enrollment names the actual service',await page.getByRole('checkbox',{name:'Enroll in Digital Banking',exact:true}).count()===1);
+      check('single deposit retains minimum and count',await page.getByRole('checkbox',{name:'Receive one qualifying direct deposit of $250 or more',exact:true}).count()===1);
+      check('inactivity fee is conditional and separate from the opening share',await page.locator('.bt3810-fees').innerText().then(t=>t.includes('Inactivity fee')&&t.includes('below $250')&&t.includes('no activity for 12 months')&&t.includes('Opening deposit')&&!/meet all|conditional inactivity charge/i.test(t)));
+      for(const width of [320,375,390,430]){
+        await page.setViewportSize({width,height:844});
+        check('compact checkbox has a full touch target '+width+'px',await page.locator('.bt3810-task>button[role=checkbox]').evaluateAll(nodes=>nodes.length===2&&nodes.every(e=>{const r=e.getBoundingClientRect(),v=getComputedStyle(e,'::before');return r.width===44&&r.height===44&&parseFloat(v.width)===22&&parseFloat(v.height)===22})));
+        check('task tools share a row without an empty placeholder '+width+'px',await page.locator('.bt3822-task-actions').evaluate(e=>{const buttons=e.querySelectorAll('button');return buttons.length===2&&e.querySelectorAll('span').length===0&&Math.abs(buttons[0].getBoundingClientRect().top-buttons[1].getBoundingClientRect().top)<=1&&e.scrollWidth<=e.clientWidth+1}));
+        check('clear requirement and fee cards fit '+width+'px',await page.locator('.bt3810-detail').evaluate(e=>e.scrollWidth<=e.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth));
+        if(width===390)await page.screenshot({path:path.join(output,name+'-clear-actions-390.png')});
+      }
+      await page.getByRole('checkbox',{name:'Enroll in Digital Banking',exact:true}).click();
+      check('checked enrollment advances to the deposit',await page.evaluate(()=>btNextActionForEntry(entries[0]).task.activityKind==='direct-deposit'));
+      await page.getByRole('checkbox',{name:'Receive one qualifying direct deposit of $250 or more',exact:true}).click();
+      check('two checked actions do not invent qualification or payout',await page.evaluate(()=>BT360.requirementProgress(entries[0]).total===2&&BT360.requirementProgress(entries[0]).done===2&&!entries[0].reqMet&&!entries[0].bonusRecd&&btNextActionForEntry(entries[0]).task.activityKind==='waiting-period'));
+      check('waiting period stays reachable after actions are checked',await page.getByRole('button',{name:/^View waiting period for/}).isVisible());
+      check('action clarity preserves every original financial rule',await page.evaluate(before=>JSON.stringify(entries[0].financialRules)===before,source));
+      await page.evaluate(before=>{before.keys.forEach(([k,v])=>{if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)});entries=JSON.parse(before.entries);expanded=before.expanded;tab=before.tab;R()},prior);
+      await page.setViewportSize({width:390,height:844});
+    }
     check('one-use member offer retains its source without inventing churn',await page.evaluate(()=>{const text='The offer is limited to one $300 Welcome Bonus per member.';const e={bank:'Synthetic Member Cap Bank',churnable:false,churnability:'not-repeatable',eligibilityEvidenceText:text,eligibilityEvidenceSource:'official-promotion-terms',tcSourceRaw:text,closed:'2026-10-01'};return BTEligibilityGate.validate(e).ok&&BTEligibilityGate.recorded(e).decision==='nonrepeatable'&&!churnReadyDate(e)}));
     check('retired backup, terms and hosting endpoints are never requested',await page.evaluate(()=>window.__retiredBackupRequests.length===0));
     check('no uncaught application errors',errors.length===0);

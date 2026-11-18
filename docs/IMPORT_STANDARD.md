@@ -160,3 +160,8 @@ Keep `reqDays` equal to the supported calendar-day requirement duration. A descr
 ## One-use-per-member offer caps (runtime v3.8.21)
 
 Treat an exact offer clause limiting one stated bonus per member, customer or person as non-repeatable for that enrolled offer. Retain its source wording and offer scope; do not turn it into a bank-wide lifetime ban. A separate prior-account-closure lookback governs initial eligibility and does not override the one-bonus cap. A per-year, per-month or other recurring cap is not non-repeatable. Keep numeric schemaVersion 3 and existing financialRules versions unchanged; validate the actual import against the compatible deployed gate. Do not manufacture lifetime wording to pass validation.
+
+
+## Applicant actions and minimum standing periods (runtime v3.8.22)
+
+Keep explicit minimum account-open/good-standing periods in the source-backed financial requirements and closure rules. Show these as waiting-period notes, separate from applicant action checkboxes; elapsed time or checked actions never confirms qualification or payout. For an other-kind requirement, recognize only an exact source-backed opening-based calendar-day standing/open period with no amount, transaction count or recurrence. Preserve unsupported conditions as unresolved rather than guessing dates. Name the enrollment service and retain single-deposit minimums versus aggregate deposits. Keep concise action wording separate from raw terms and explanatory warnings. Conditional inactivity charges remain distinct from ordinary monthly maintenance fees and opening share deposits. Existing schema versions and stored records remain unchanged.
