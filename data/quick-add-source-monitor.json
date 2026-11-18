@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-17T21:06:02Z",
+  "generatedAt": "2026-11-18T07:43:10Z",
   "records": {
     "Capital One": {
       "offerKey": "360-checking-250-choice-2026",
@@ -12,20 +12,26 @@
             "eligibility": "adc54c653eb5e45d46068a91e4618fbf78f3d2a724e4a1a4d2d54733c54b64b4",
             "monthly_fees": "8d2425462760d1d9389dc56534f67d0c434184974965ce13234610d2cdfe9a8b"
           },
-          "changeAt": null,
-          "checkedAt": "2026-11-17T21:06:02Z",
+          "changeAt": "2026-11-18T07:43:10Z",
+          "checkedAt": "2026-11-18T07:43:10Z",
           "lastReviewRef": null,
           "lastReviewedAt": null,
-          "observedAt": "2026-11-17T21:06:02Z",
-          "observedHash": "d818f4f779709112539cd7e480d782a3b2275b1c8e2b90a7edb0df50811b10a5",
+          "observedAt": "2026-11-18T07:43:10Z",
+          "observedHash": "9fe8f926c10805d899de0e4730e9d487bddf5eae0b20b77152be707cef7e2492",
           "observedSignals": {
-            "bonus_amount": "3c4b5070a73a993ef04dfd0f52fea837e77ec68efa05c139c06b6e9e4fdfd1bc",
+            "bonus_amount": "1daaacfd93afbfa56d22e295bfbc3406b8edc4c7c6a95057bcd9298c00776291",
+            "deadlines": "1b6f2579ea061471edf8bda30e578bdc60b8b29844401fd446ff829637747eb7",
             "direct_deposit": "2cbed837d90f2c14d56b8cbc7466c38acf12b0886fdab333c35fae7c86451cb8",
-            "eligibility": "adc54c653eb5e45d46068a91e4618fbf78f3d2a724e4a1a4d2d54733c54b64b4",
-            "monthly_fees": "8d2425462760d1d9389dc56534f67d0c434184974965ce13234610d2cdfe9a8b"
+            "eligibility": "a58c2dd85da30e69d1e0afb91e7f2a111cf837b36f010c7200c52256f17059e3",
+            "monthly_fees": "1ccb542c32932fc9025ccdbe3cf48881c86c745047ece60810c4ac76fa709d39"
           },
-          "reviewSignals": [],
-          "status": "unchanged",
+          "reviewSignals": [
+            "bonus_amount",
+            "monthly_fees",
+            "deadlines",
+            "eligibility"
+          ],
+          "status": "changed",
           "url": "https://www.capitalone.com/bank/disclosures/checking-accounts/online-checking-account/"
         },
         "promotion": {
@@ -37,11 +43,11 @@
             "monthly_fees": "c60e63c1df67da3245bbcbcd9a71f5e4b322f7b93c4d2f9bbe1afc1e9da76893"
           },
           "changeAt": "2026-10-21T17:23:11Z",
-          "checkedAt": "2026-11-17T21:06:02Z",
+          "checkedAt": "2026-11-18T07:43:10Z",
           "lastReviewRef": null,
           "lastReviewedAt": null,
-          "observedAt": "2026-11-17T21:06:02Z",
-          "observedHash": "10c1ec017c6ab684a735257b3b17116f89ae6e2072c872aece300f28a6a5fed0",
+          "observedAt": "2026-11-18T07:43:10Z",
+          "observedHash": "123073f500a40a5933efddd67ce0325c671ed0f7a8e2af8e4ae6eab8da5b2f40",
           "observedSignals": {
             "bonus_amount": "d96e0b72a84c93f175a8400a3e4ee4e3990104d8a3b7743745bf5fa98b40eba3",
             "deadlines": "52cfd09bb51d2a17455d1d35c2eb2ed0a34a1279700aff5b024c9caf95872944",
@@ -66,10 +72,10 @@
             "monthly_fees": "73520279705ed02c1ec76d7eeb43b5a6bf55ee9d5f44d318e20a56e76b6d5aff"
           },
           "changeAt": null,
-          "checkedAt": "2026-11-17T21:06:02Z",
+          "checkedAt": "2026-11-18T07:43:10Z",
           "lastReviewRef": null,
           "lastReviewedAt": null,
-          "observedAt": "2026-11-17T21:06:02Z",
+          "observedAt": "2026-11-18T07:43:10Z",
           "observedHash": "f2dd00ad54ff8058b3abe6003f554906d5adc6bd984148b7ea9f6c8923386606",
           "observedSignals": {
             "eligibility": "4559d9ff5fd2c8526fabbf4f89657a932b41a5ed4010edd816c7028ebf5e215e",
@@ -89,10 +95,10 @@
             "monthly_fees": "aabd312c8313e10a660b825643620ac3a0b4baf134e7a9e18087182c44bb8da2"
           },
           "changeAt": null,
-          "checkedAt": "2026-11-17T21:06:02Z",
+          "checkedAt": "2026-11-18T07:43:10Z",
           "lastReviewRef": null,
           "lastReviewedAt": null,
-          "observedAt": "2026-11-17T21:06:02Z",
+          "observedAt": "2026-11-18T07:43:10Z",
           "observedHash": "e542479fa91a2a63a9ae96b0340c996c1d119a3d28058296bde735ff689b630f",
           "observedSignals": {
             "bonus_amount": "004cf274d64ce676f50f39259d5b7a2763d2341306674c97f4c84d4e9c163668",
