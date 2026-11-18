@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.8.18: consistent account-list stages, recurring schedules and bank-detail dates.
-const V = 'bt-v3.8.18-detail1';
+// Version 3.8.19: aligned closure checkboxes and wrapped mobile labels.
+const V = 'bt-v3.8.19-close1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',
