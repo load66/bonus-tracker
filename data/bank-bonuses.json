@@ -1,27 +1,57 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-11-19T10:01:06.980709+00:00",
+  "checkedAt": "2026-11-19T20:48:45.526787+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-11-19T10:01:06.980709+00:00",
+      "checkedAt": "2026-11-19T20:48:45.526787+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-11-19T10:01:06.980709+00:00",
+      "checkedAt": "2026-11-19T20:48:45.526787+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-11-19T10:01:06.980709+00:00",
+      "checkedAt": "2026-11-19T20:48:45.526787+00:00",
       "status": "ok"
     }
   ],
   "offers": [
+    {
+      "title": "Huntington Bank Promotions for November 2026: $400, $1,000 Checking Bonuses – Ends 2/11/27",
+      "url": "https://www.hustlermoneyblog.com/huntington-bank-promotions/",
+      "publishedAt": "2026-11-19T18:24:14+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "huntington bank|checking|400|unknown",
+      "bank": "huntington bank",
+      "product": "checking",
+      "amount": 400,
+      "region": "unknown",
+      "offerKey": "huntington bank|checking|400|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
+      "lastSeen": "2026-11-19T18:24:14+00:00",
+      "expiresAt": "2027-02-11",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/huntington-bank-promotions/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Huntington Bank Promotions for November 2026: $400, $1,000 Checking Bonuses – Ends 2/11/27",
+          "publishedAt": "2026-11-19T18:24:14+00:00"
+        }
+      ],
+      "firstSeenBaseline": true,
+      "badges": []
+    },
     {
       "title": "Truist Bank $500 Checking Bonus – Ends 2/2/27",
       "url": "https://www.hustlermoneyblog.com/truist-bank-checking-bonus/",
@@ -575,36 +605,6 @@
       ]
     },
     {
-      "title": "Huntington Bank Promotions for November 2026: $400, $1,000 Checking Bonuses – Ends 2/11/27",
-      "url": "https://www.hustlermoneyblog.com/huntington-bank-promotions/",
-      "publishedAt": "2026-11-12T18:24:14+00:00",
-      "source": "Hustler Money Blog",
-      "sourceId": "hmb",
-      "availability": "unknown",
-      "groupKey": "huntington bank|checking|400|unknown",
-      "bank": "huntington bank",
-      "product": "checking",
-      "amount": 400,
-      "region": "unknown",
-      "offerKey": "huntington bank|checking|400|unknown",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-10-18T02:59:25.708925+00:00",
-      "lastSeen": "2026-11-12T18:24:14+00:00",
-      "expiresAt": "2027-02-11",
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.hustlermoneyblog.com/huntington-bank-promotions/",
-          "sourceId": "hmb",
-          "source": "Hustler Money Blog",
-          "title": "Huntington Bank Promotions for November 2026: $400, $1,000 Checking Bonuses – Ends 2/11/27",
-          "publishedAt": "2026-11-12T18:24:14+00:00"
-        }
-      ],
-      "firstSeenBaseline": true,
-      "badges": []
-    },
-    {
       "title": "Bank of America Promotions: $400, $500, $750 for Checking, Business Bonuses (Nationwide)",
       "url": "https://www.hustlermoneyblog.com/bank-of-america-promotions/",
       "publishedAt": "2026-11-12T18:02:29+00:00",
@@ -835,9 +835,7 @@
         }
       ],
       "firstSeenBaseline": false,
-      "badges": [
-        "New"
-      ]
+      "badges": []
     },
     {
       "title": "Wells Fargo Premier Checking Bonus: $3,500 Offer (Nationwide) – Ends 1/12/27",
@@ -898,7 +896,6 @@
       ],
       "firstSeenBaseline": false,
       "badges": [
-        "New",
         "Updated"
       ]
     },
