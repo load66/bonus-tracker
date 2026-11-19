@@ -170,13 +170,19 @@ async function exercise(name,engine,url){
       if(width===390)await page.screenshot({path:path.join(output,name+'-closure-history-review-390.png')});
     }
     await page.setViewportSize({width:390,height:844});
+    await page.locator('.close-deposit-result > summary').click();
+    await page.getByLabel('Deposit method',{exact:true}).fill('Synthetic closure payroll');
+    await page.getByLabel('Did it count?',{exact:true}).selectOption('worked');
+    await page.getByLabel('Result date (optional)',{exact:true}).fill(await page.evaluate(()=>entries[0].bonusRecd));
     await button('Save closure').click();
     check('closure transaction preserves exact cycle and enrolled sources',await page.evaluate(()=>{
       const e=entries[0],saved=loadTermsArchive()[termsArchiveKey(e)].current;
       return saved.entryId===e.id&&['opened','closed','bonusRecd','reqMet','tcSourceRaw','feeScheduleRaw'].every(k=>String(saved[k]||'')===String(e[k]||''));
     }));
     check('closure success avoids false cloud assurance',await page.evaluate(()=>!cfm.msg.includes('Cloud verified')&&!cfm.msg.includes('Core records saved locally.')));
-    await button('OK').click();
+    await button('View datapoint').click();
+    check('closure deposit result is saved in Data with its cycle',await page.evaluate(()=>tab==='tips'&&loadUserDatapoints().some(x=>x.entryId===entries[0].id&&x.method==='Synthetic closure payroll'&&x.outcome==='worked')));
+    await button('Tracker').click();
     check('temporary Undo action reserves space outside account controls',await page.evaluate(()=>{
       const bar=document.querySelector('.undo-bar'),scroll=document.querySelector('.scroll');
       return !!bar&&scroll.getBoundingClientRect().bottom<=bar.getBoundingClientRect().top+1;

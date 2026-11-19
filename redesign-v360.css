@@ -1322,3 +1322,7 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .dp-report-manage>summary{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;cursor:pointer;list-style:none;color:#aab4c8}
 .research-report-top h3{margin:0;flex:1;min-width:0;overflow-wrap:anywhere}
 .research-report-top{gap:12px;align-items:center}
+
+.close-deposit-result{border-top:1px solid #303746;margin-top:12px;padding-top:8px}
+.close-deposit-result>summary{cursor:pointer;min-height:44px;align-content:center;color:#b6f4df;font-size:14px}
+.close-deposit-result .fg{margin:10px 0}

@@ -147,6 +147,19 @@ try{
  assert.equal(s.loadUserDatapoints()[0].method,'Synthetic ACH');assert.equal(s.loadUserDatapoints()[0].confirmedByUser,true);assert(!('error' in s.loadUserDatapoints()[0]));
  s.reviewCycleExperience('BLANK-REPORT','requirement');const cancelBefore=JSON.stringify(s.loadUserDatapoints());s.closeDPEditor();assert.equal(JSON.stringify(s.loadUserDatapoints()),cancelBefore);
  s.openUserDPEditor('bad-draft');assert.equal(run('dpEditor.method'),'At least 2 Enhanced Direct Deposits totaling $3,000','Explicit edit must preserve original text for correction');s.closeDPEditor();
+ // Closure reports save with their bank cycle, and roll back together with closure.
+ run("clearLifecycleUndo();entries=[{id:'CLOSE-DP',bank:'Synthetic Closure Report Bank',accountType:'business',opened:'2026-01-01',bonusRecd:'2026-02-01',bonus:100,closed:'',checklist:[],customTimers:[]}];saveUserDatapoints([]);sv(SK,entries);closePrompt={entryId:'CLOSE-DP',closeDate:td(),simpleCloseConfirmed:true,reportmethod:'Synthetic payroll',reportoutcome:'worked',reportdate:'2026-02-01',reportlink:'https://example.test/closure'}");
+ assert(s.renderCloseDepositResult(run('closePrompt')).includes('Deposit result (optional)'));
+ assert.equal(s.finishClose(),true);
+ let closureReport=s.loadUserDatapoints()[0];assert.equal(closureReport.entryId,'CLOSE-DP');assert.equal(closureReport.cycleOpened,'2026-01-01');assert.equal(closureReport.accountType,'business');assert.equal(closureReport.confirmedByUser,true);assert.equal(closureReport.method,'Synthetic payroll');assert.equal(closureReport.depositAmount,undefined);assert.equal(closureReport.eventDate,'2026-02-01');
+ run('cfm.action()');assert.equal(run('tab'),'tips');assert(s.rTips().includes('Synthetic payroll'));
+ assert.equal(s.undoClose(),true);assert.equal(s.loadUserDatapoints().length,0);assert.equal(run('entries[0].closed'),'');
+ run("closePrompt={entryId:'CLOSE-DP',closeDate:td(),simpleCloseConfirmed:true,reportmethod:'Synthetic payroll',reportoutcome:'worked',reportdate:''}");
+ const originalSet=s.localStorage.setItem;let failReport=true;
+ s.localStorage.setItem=(key,value)=>{if(key==='bt_user_datapoints_v1'&&failReport){failReport=false;throw Error('Synthetic report write failure')}return originalSet(key,value)};
+ const closureBefore=JSON.stringify([...storage].sort(([a],[b])=>a.localeCompare(b))); assert.equal(s.finishClose(),false);assert.equal(JSON.stringify([...storage].sort(([a],[b])=>a.localeCompare(b))),closureBefore);assert.equal(run('entries[0].closed'),'');
+ s.localStorage.setItem=originalSet;assert.equal(s.finishClose(),true);assert.equal(s.loadUserDatapoints()[0].eventDate,'');assert.equal(s.loadUserDatapoints()[0].confirmedByUser,false);
+ assert(s.closeDepositResult(run('entries[0]'),{reportoutcome:'worked'}).error);assert(s.closeDepositResult(run('entries[0]'),{reportmethod:'Payroll',reportoutcome:'worked',reportlink:'javascript:alert(1)'}).error);
  console.log('Research tabs passed: catalog dates/provenance, non-destructive legacy routing, metadata restore/edit, historical search, identity filters, XSS and report-only deletion');
  process.exit(0);
 }catch(e){console.error(e.stack);process.exit(1)}

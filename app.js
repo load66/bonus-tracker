@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.8.25';
+const APP_VERSION='3.8.26';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -5219,6 +5219,20 @@ function renderCloseReadinessList(e,p){
   h+='</div>';
   return h
 }
+function renderCloseDepositResult(p){
+ const input=(key,label,type='text',placeholder='')=>'<div class="fg"><label for="close-dp-'+key+'">'+label+'</label><input id="close-dp-'+key+'" type="'+type+'" '+(type==='date'?'max="'+td()+'"':'maxlength="'+(key==='method'?160:300)+'"')+' value="'+esc(p['report'+key]||'')+'" placeholder="'+esc(placeholder)+'" oninput="if(closePrompt)closePrompt.report'+key+'=this.value"></div>';
+ return '<details class="close-deposit-result"><summary>Deposit result (optional)</summary><p class="experience-help">Save your experience in Data for next time.</p>'+input('method','Deposit method','text','e.g. Robinhood ACH or employer payroll')+'<div class="fg"><label for="close-dp-outcome">Did it count?</label><select id="close-dp-outcome" onchange="if(closePrompt)closePrompt.reportoutcome=this.value">'+[['','Choose a result'],['worked','Counted'],['failed',"Didn’t count"],['mixed','Mixed results'],['pending','Still waiting'],['unknown','Not sure']].map(([value,label])=>'<option value="'+value+'"'+(p.reportoutcome===value?' selected':'')+'>'+label+'</option>').join('')+'</select></div>'+input('date','Result date (optional)','date')+input('link','Source link (optional)','url','https://…')+'</details>';
+}
+function closeDepositResult(e,p){
+ const method=String(p.reportmethod||'').trim(),outcome=p.reportoutcome||'',date=String(p.reportdate||''),link=String(p.reportlink||'').trim();
+ if(!method&&!outcome&&!date&&!link)return {};
+ if(!method||method.length>160)return {error:'Enter a deposit method, up to 160 characters, or clear the deposit result section.'};
+ if(!['worked','failed','mixed','pending','unknown'].includes(outcome))return {error:'Choose whether the deposit counted.'};
+ if(date&&(!dpValidDate(date)||date>td()||(e.opened&&date<e.opened)))return {error:'Use the actual result date, between account opening and today, or leave it blank.'};
+ if(link&&!safeExternalUrl(link))return {error:'Use a source link beginning with https:// or http://.'};
+ const identity=entryBankIdentity(e),confirmed=!!date&&['worked','failed','mixed'].includes(outcome);
+ return {record:normalizeUserDatapoint({id:p.reportId||(p.reportId=dpId()),bank:e.bank,entryId:e.id,cycleOpened:e.opened||'',accountType:['personal','business'].includes(e.accountType)?e.accountType:identity.typeExplicit?(identity.type==='B'?'business':'personal'):'',method,outcome,eventDate:date,link,confirmedByUser:confirmed,confirmedAt:confirmed?td():'',createdAt:td(),updatedAt:td(),evidenceStage:'closure'})};
+}
 function rClose(){
   if(!closePrompt)return'';
   const p=closePrompt;
@@ -5239,6 +5253,8 @@ function rClose(){
     if((p.opened||e?.opened)&&!e?.couponEnrollmentDate&&!e?.offerEnrollmentDate)h+='<label class="archive-enrollment-choice"><input type="checkbox" id="cp_enrollment_opened" '+(p.enrollmentAtOpening?'checked ':'')+'onchange="if(closePrompt)closePrompt.enrollmentAtOpening=this.checked"> I enrolled in the promotion when this account opened</label>';
     h+=renderCloseReadinessList(e,p);
     if(warnings.length)h+='<div class="close-warnings compact"><b>Review</b>'+warnings.map(x=>'<span>• '+esc(x)+'</span>').join('')+'</div>';
+    h+=renderCloseDepositResult(p);
+    if(p.error)h+='<p role="alert" class="close-warnings compact">'+esc(p.error)+'</p>';
     h+='<div class="close-review-actions"><button class="c-c" onclick="closeBack()">Back</button><button class="c-g" onclick="finishClose()">Save Closed</button></div>';
   }else if(p.step==='date'){
     if(e?.bonusRecd){
@@ -5256,6 +5272,7 @@ function rClose(){
       if(risks.length)h+='<div class="close-warnings compact" role="note"><b>Check before closing</b>'+risks.slice(0,2).map(x=>'<span>'+esc(x)+'</span>').join('')+'</div>';
       h+='<label class="bt-simple-check"><input type="checkbox" id="cp_monthly_checked" '+(p.monthlyFeeChecked?'checked ':'')+'onchange="if(closePrompt)closePrompt.monthlyFeeChecked=this.checked"><span>I checked fees and pending transactions</span></label>';
       h+='<label class="bt-simple-check"><input type="checkbox" id="cp_closed_confirm" '+(p.simpleCloseConfirmed?'checked ':'')+'onchange="if(closePrompt){closePrompt.simpleCloseConfirmed=this.checked;closePrompt.error=\'\'}"><span>The bank confirmed this account is closed</span></label>';
+      h+=renderCloseDepositResult(p);
       if(p.error)h+='<p role="alert" class="close-warnings compact">'+esc(p.error)+'</p>';
       h+='<div class="close-review-actions"><button class="c-c" onclick="cancelClose()">Cancel</button><button class="c-g" onclick="saveSimpleClose()">Save closure</button></div>';
     }else{
@@ -5968,6 +5985,8 @@ function finishClose(){
   if(projected.opened&&!archiveDateValid(projected.opened)){alert('Use the actual opening date or leave it blank if unknown.');return}
   if(projected.opened&&dB(projected.opened,p.closeDate)<0){alert('Close date cannot be before the opened date.');return}
   if(projected.bonus>0&&!projected.bonusRecd){alert('Confirm the bonus received date or correct the actual bonus amount.');return}
+  const report=closeDepositResult(e,p);
+  if(report.error){p.error=report.error;R();return false;}
   const beforeEntries=deepCopy(entries),beforeStorage=window.BTPersistence.capture(localStorage,getBackupStorageKeys());
   const nextUndo=closeUndoSnapshot(e),oldUndo=undoState;
   nextUndo.undoLabel='Closed saved for '+(e.bank||p.bank||'this bank')+' — Undo this change within 60 seconds.';
@@ -5991,7 +6010,7 @@ function finishClose(){
   });
   const e2=entries.find(x=>x.id===p.entryId);
   const autoMethod=(p.dp||e2?.dataPoint||'').trim();
-  if(!p.simpleCloseConfirmed&&e2&&Number(p.actualBonus||0)>0&&autoMethod&&p.bonusDate)addDD(p.bank,autoMethod,Number(p.actualBonus||0),p.bonusDate,{entryId:p.entryId,accountType:e2.accountType,note:'Auto-saved from successful close'});
+  if(!report.record&&!p.simpleCloseConfirmed&&e2&&Number(p.actualBonus||0)>0&&autoMethod&&p.bonusDate)addDD(p.bank,autoMethod,Number(p.actualBonus||0),p.bonusDate,{entryId:p.entryId,accountType:e2.accountType,note:'Auto-saved from successful close'});
   if(e2){syncProfileEventsFromEntry(e2);refreshSavedReqFromEntry(e2)}
   entries=sortE(entries);sv(SK,entries);
   closePrompt=null;
@@ -6008,6 +6027,13 @@ function finishClose(){
   const issues=archiveHistoryIssues(e2);
   if(p.simpleCloseConfirmed)cfm.msg=(e2?.bank||'Account')+' closed on '+fD(p.closeDate)+'.'+(e2&&churnEligibilityValidation(e2).ok&&churnReadyDate(e2)?'\nNext bonus review: '+fD(churnReadyDate(e2))+'.':'\nNext bonus review: Add eligibility rule.')+'\nYou can undo this change for 60 seconds.';
   else cfm.msg+='\n\nHistory: '+(issues.length?'Incomplete — '+issues.join('; ')+'.':'Core records saved locally.')+'\nSave a new backup file to iCloud Drive to keep this update.';
+  if(report.record){
+    saveUserDatapoints([report.record,...loadUserDatapoints().filter(x=>x.id!==report.record.id)]);
+    cfm.msg+='\nDeposit result saved in Data.';
+    cfm.confirmLabel='View datapoint';
+    const bank=report.record.bank;
+    cfm.action=()=>{cfm=null;dpSearch=bank;dpTaskBankKey='';dpExpandedBankKey=datapointBankKey(bank);dpFilters={view:'all',scope:'all',result:'all',type:'all',source:'all',dated:'all'};window.bt366GroupData=true;tab='tips';R()};
+  }
   undoState=sealCloseUndo(nextUndo);
   if(undoTimer)clearTimeout(undoTimer);
   undoTimer=setTimeout(()=>{undoState=null;R()},60000);
