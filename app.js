@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.8.23';
+const APP_VERSION='3.8.24';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -5107,20 +5107,18 @@ function rTax(){
  return h+'<p class="bt360-footnote">Bank-account rewards are often taxable interest; reporting varies. Check 1099-INT/1099-MISC and your actual records. A form threshold is not a tax exemption.</p>';
 }
 function dpSelect(key,label,options){return '<label class="research-filter">'+esc(label)+'<select aria-label="'+esc(label)+'" onchange="setDPFilter(\''+key+'\',this.value)">'+options.map(([v,t])=>'<option value="'+v+'"'+(dpFilters[key]===v?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select></label>'}
-function renderCommunityReport(item,group){
- const curated=(window.BTCommunityCatalog?.reports||[]).some(x=>x.id===item.id),link=safeExternalUrl(item.link),date=dpReportDate(item);
- let h='<article class="research-report"><div class="research-report-top"><span class="research-result '+esc(item.outcome||'unknown')+'">'+esc(dpOutcome(item))+'</span><span class="research-kind">'+(item.evidenceKind==='source-index'?'Source summary':'Community report')+'</span></div><h3>'+esc(item.method)+'</h3><p class="research-product">'+esc(item.product||'Product not specified')+' · '+esc(dpAccountLabel(item.accountType))+'</p><p>'+esc(item.result||'Result not recorded.')+'</p>';
- h+='<p class="research-caveat">'+esc(dpFreshness(item))+(dpMethodConflict(group,item)?' · Conflicting outcomes — review':'')+'</p>';
- h+='<dl class="research-dates"><div><dt>'+(item.eventDate?esc(item.dateLabel||'Activity date'):'Report date')+'</dt><dd>'+esc(date?fD(date):'Not provided')+'</dd></div>';
- if(item.reportedAt&&item.eventDate)h+='<div><dt>Report posted</dt><dd>'+esc(fD(item.reportedAt))+'</dd></div>';
- if(item.threadDate)h+='<div><dt>Thread started</dt><dd>'+esc(fD(item.threadDate))+'</dd></div>';
- if(item.checkedAt)h+='<div><dt>Source checked</dt><dd>'+esc(fD(item.checkedAt))+'</dd></div>';
- h+='</dl>';
- if(item.evidenceKind==='source-index')h+='<p class="research-caveat">Historical list; individual report dates and offer versions are not established.</p>';
- if(link)h+='<a class="research-source" href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">Read '+esc(item.sourceName||'original source')+' ↗</a>';else h+='<p class="research-caveat">No source link saved.</p>';
- if(!curated)h+='<div class="ph-actions"><button class="ph-mini" onclick="openCommunityDPEditor('+profileSectionAttr(JSON.stringify(item.id))+')">Edit report</button><button class="ph-mini" onclick="deleteCommunityDP('+profileSectionAttr(JSON.stringify(item.id))+')">Remove</button></div>';
+function dpSimpleOutcome(item,personal=false){
+ if(personal&&!item.confirmedByUser)return 'Not confirmed';
+ return {worked:'Counted',failed:"Didn't count",mixed:'Mixed results',pending:'Pending'}[item.outcome]||'Not confirmed';
+}
+function renderSimpleReport(item,personal=false){
+ const link=safeExternalUrl(item.link),curated=!personal&&(window.BTCommunityCatalog?.reports||[]).some(x=>x.id===item.id);
+ let h='<article class="research-report'+(personal?' personal':'')+'"><div class="research-report-top"><h3>'+esc(item.method||'Deposit method not specified')+'</h3><span class="research-result '+esc(item.outcome||'unknown')+'">'+esc(dpSimpleOutcome(item,personal))+'</span></div>';
+ if(link)h+='<a class="research-source" href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">View source ↗</a>';
+ if(!curated)h+='<details class="dp-report-manage"><summary aria-label="Manage report">⋯</summary><div class="ph-actions"><button class="ph-mini" onclick="'+(personal?'openUserDPEditor':'openCommunityDPEditor')+'('+profileSectionAttr(JSON.stringify(item.id))+')">Edit</button><button class="ph-mini" onclick="'+(personal?'deleteUserDP':'deleteCommunityDP')+'('+profileSectionAttr(JSON.stringify(item.id))+')">Remove</button></div></details>';
  return h+'</article>';
 }
+function renderCommunityReport(item,group){return renderSimpleReport(item)}
 function dpBankSections(groups){
  const banks=new Map();
  groups.forEach(g=>{
@@ -5129,6 +5127,7 @@ function dpBankSections(groups){
   const bank=banks.get(key);bank.community.push(...g.community);bank.user.push(...g.user);bank.entryCount+=g.entryCount;
   if(!bank.types.includes(g.accountType))bank.types.push(g.accountType);
  });
+ banks.forEach(g=>{g.community.sort((a,b)=>dpEvidenceDate(b).localeCompare(dpEvidenceDate(a)));g.user.sort((a,b)=>Number(b.confirmedByUser)-Number(a.confirmedByUser)||dpEvidenceDate(b).localeCompare(dpEvidenceDate(a)))});
  return [...banks.values()].sort((a,b)=>a.bank.localeCompare(b.bank));
 }
 function rTips(){
@@ -5162,18 +5161,18 @@ function rTips(){
    ]).sort((a,b)=>dpTrustRank(a.x,a.kind)-dpTrustRank(b.x,b.kind)||dpEvidenceDate(b.x).localeCompare(dpEvidenceDate(a.x)));
    if(!items.length)h+='<div class="research-empty">No reports match this view. Add your experience when you have a result to record.</div>';
    items.forEach(({g,x,kind})=>{
-     const report=kind==='community',label=!report?(x.confirmedByUser?dpOutcome(x):'Needs confirmation'):x.outcome==='worked'?'Counted':x.outcome==='failed'?"Didn't count":x.outcome==='mixed'?'Mixed reports':x.outcome==='pending'?'Pending':'Not verified';
-     const desc=report?(x.sourceName||'Community')+' · '+(x.reportedAt||x.threadDate||x.eventDate?fD(x.reportedAt||x.threadDate||x.eventDate):'Date not reported'):(x.confirmedByUser?'You confirmed':'Needs confirmation')+' · '+(dpEvidenceDate(x)?fD(dpEvidenceDate(x)):'Date unavailable')+' · '+dpFreshness(x);
-     const detail=report?renderCommunityReport(x,g):'<article class="research-report personal"><h3>'+esc(x.method||'Saved method')+'</h3><p>'+esc(x.note||'No notes saved.')+'</p><button class="ph-mini" onclick="openUserDPEditor('+profileSectionAttr(JSON.stringify(x.id))+')">Edit note</button></article>';
-     h+='<details class="bt366-dp-item"><summary>'+bankLogo(g.bank,true)+'<span class="bt366-dp-main"><b>'+esc(g.bank)+'</b><span class="dp-account-type">'+esc(dpAccountLabel(x.accountType))+'</span><small>'+esc(x.method||'Method not specified')+'</small><small>'+esc(desc)+(dpMethodConflict(g,x)?' · Conflicting outcomes':'')+'</small></span><span class="bt360-chip '+(report&&x.outcome==='worked'?'positive':report&&x.outcome==='failed'?'warning':'')+'">'+esc(label)+'</span></summary>'+detail+'</details>';
+     const report=kind==='community',label=dpSimpleOutcome(x,!report);
+     h+='<details class="bt366-dp-item"><summary>'+bankLogo(g.bank,true)+'<span class="bt366-dp-main"><b>'+esc(g.bank)+'</b><small>'+esc(x.method||'Deposit method not specified')+'</small></span><span class="bt360-chip">'+esc(label)+'</span></summary>'+renderSimpleReport(x,!report)+'</details>';
+
    });
  }else{
  dpBankSections(groups).forEach(g=>{
  const open=dpExpandedBankKey.split('|')[0]===g.key,last=dpReportDate(g.community[0]||{});
- h+='<section class="dp-bank research-bank"><button class="dp-head" type="button" aria-expanded="'+open+'" onclick="toggleDPBank(\''+g.key+'\')">'+bankLogo(g.bank,true)+'<span class="dp-info"><span class="dp-name">'+esc(g.bank)+'</span><span class="dp-account-type">'+esc(g.types.map(dpAccountLabel).join(' · '))+'</span><span class="dp-meta">'+g.community.length+' community · '+g.user.length+' saved'+(g.entryCount?' · Tracked':'')+'</span>'+(last?'<span class="research-latest">Latest dated result '+esc(fD(last))+'</span>':'')+'</span><span class="dp-arrow" aria-hidden="true">'+(open?'−':'+')+'</span></button>';
+ h+='<section class="dp-bank research-bank"><button class="dp-head" type="button" aria-expanded="'+open+'" onclick="toggleDPBank(\''+g.key+'\')">'+bankLogo(g.bank,true)+'<span class="dp-info"><span class="dp-name">'+esc(g.bank)+'</span><span class="dp-meta">'+g.community.length+' community · '+g.user.length+' saved'+(g.entryCount?' · Tracked':'')+'</span>'+'</span><span class="dp-arrow" aria-hidden="true">'+(open?'−':'+')+'</span></button>';
  if(open){
  h+='<div class="dp-body"><div class="research-add"><button class="dp-add" onclick="addUserDPForBank('+profileSectionAttr(JSON.stringify(encodeURIComponent(g.bank)))+','+profileSectionAttr(JSON.stringify(g.accountType))+')">+ My experience</button><button class="dp-add" onclick="addCommunityDPForBank('+profileSectionAttr(JSON.stringify(encodeURIComponent(g.bank)))+','+profileSectionAttr(JSON.stringify(g.accountType))+')">+ Source report</button></div>';
- if(g.user.length){h+='<h3 class="research-section-label">Your experiences</h3>';g.user.forEach(x=>{h+='<article class="research-report personal"><span class="dp-account-type">'+esc(dpAccountLabel(x.accountType))+'</span><span class="research-kind">'+esc(x.confirmedByUser?'You confirmed · '+dpOutcome(x):'Needs confirmation')+'</span><h3>'+esc(x.method)+'</h3><p>'+esc(x.note||'No notes saved.')+'</p><p class="research-caveat">Experience '+esc(dpEvidenceDate(x)?fD(dpEvidenceDate(x)):'date unknown')+' · '+esc(dpFreshness(x))+(x.entryId?' · Linked to bonus cycle':'')+(dpMethodConflict(g,x)?' · Conflicting outcomes — review':'')+'</p><div class="ph-actions"><button class="ph-mini" onclick="openUserDPEditor('+profileSectionAttr(JSON.stringify(x.id))+')">Edit</button><button class="ph-mini" onclick="deleteUserDP('+profileSectionAttr(JSON.stringify(x.id))+')">Remove</button></div></article>'})}
+ if(g.user.length){h+='<h3 class="research-section-label">Your experiences</h3>';g.user.forEach(x=>h+=renderSimpleReport(x,true))}
+
  if(g.community.length){h+='<h3 class="research-section-label">Community reports</h3>';g.community.forEach(x=>h+=renderCommunityReport(x,g))}else h+='<div class="research-empty">No reports match this view. Add your experience when you have a result to record.</div>';
  h+='</div>';
  }h+='</section>';

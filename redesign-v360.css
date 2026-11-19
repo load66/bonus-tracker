@@ -1317,3 +1317,8 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .research-bank .dp-name{overflow-wrap:anywhere}
 .research-bank .dp-info{min-width:0}
 .research-bank .dp-head{min-height:64px}
+
+.dp-report-manage{margin-top:8px;text-align:right}
+.dp-report-manage>summary{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;cursor:pointer;list-style:none;color:#aab4c8}
+.research-report-top h3{margin:0;flex:1;min-width:0;overflow-wrap:anywhere}
+.research-report-top{gap:12px;align-items:center}
