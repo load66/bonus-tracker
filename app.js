@@ -5113,7 +5113,7 @@ function dpSimpleOutcome(item,personal=false){
 }
 function renderSimpleReport(item,personal=false){
  const link=safeExternalUrl(item.link),curated=!personal&&(window.BTCommunityCatalog?.reports||[]).some(x=>x.id===item.id);
- let h='<article class="research-report'+(personal?' personal':'')+'"><div class="research-report-top"><h3>'+esc(item.method||'Deposit method not specified')+'</h3><span class="research-result '+esc(item.outcome||'unknown')+'">'+esc(dpSimpleOutcome(item,personal))+'</span></div>';
+ let h='<article class="research-report'+(personal?' personal':'')+'"><div class="research-report-top"><h3>'+esc(item.method||'Deposit method not specified')+'</h3><span class="research-result '+esc(personal&&!item.confirmedByUser?'unknown':item.outcome||'unknown')+'">'+esc(dpSimpleOutcome(item,personal))+'</span></div>';
  if(link)h+='<a class="research-source" href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">View source ↗</a>';
  if(!curated)h+='<details class="dp-report-manage"><summary aria-label="Manage report">⋯</summary><div class="ph-actions"><button class="ph-mini" onclick="'+(personal?'openUserDPEditor':'openCommunityDPEditor')+'('+profileSectionAttr(JSON.stringify(item.id))+')">Edit</button><button class="ph-mini" onclick="'+(personal?'deleteUserDP':'deleteCommunityDP')+'('+profileSectionAttr(JSON.stringify(item.id))+')">Remove</button></div></details>';
  return h+'</article>';
