@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.8.22';
+const APP_VERSION='3.8.23';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -2666,7 +2666,7 @@ function dpValidDate(v){const x=String(v||'');if(!/^\d{4}-\d{2}-\d{2}$/.test(x))
 function dpOutcome(x){return {worked:'Reported success',failed:'Reported failure',mixed:'Mixed reports',pending:'Still waiting',unknown:'Result not recorded'}[x.outcome]||'Result not recorded'}
 function dpFilterRows(rows){return rows.filter(x=>{
  if(dpFilters.result!=='all'&&x.outcome!==dpFilters.result)return false;
- if(dpFilters.type!=='all'&&x.accountType!==dpFilters.type)return false;
+ if(dpFilters.type!=='all'&&(x.accountType||'unknown')!==dpFilters.type)return false;
  if(dpFilters.source!=='all'&&(dpFilters.source==='reddit'?!/reddit/i.test(x.sourceName):!/doctor of credit/i.test(x.sourceName)))return false;
  if(dpFilters.dated==='recent'){const d=dpReportDate(x),today=td();if(!d||d>today||(Date.parse(today+'T12:00:00Z')-Date.parse(d+'T12:00:00Z'))>90*86400000)return false;}
  return true;
@@ -2675,26 +2675,31 @@ function resetDPFilters(){dpTaskBankKey='';dpFilters={view:'all',scope:'all',res
 function setDPFilter(key,value){if(Object.prototype.hasOwnProperty.call(dpFilters,key))dpFilters[key]=value;R()}
 function reportSearchMatch(x,q){return [x.method,x.note,x.result,x.product,x.sourceName,x.eventDate,x.reportedAt,x.accountType].join(' ').toLowerCase().includes(q)}
 function datapointBankKey(carrier){const id=typeof carrier==='string'?bankIdentity(carrier):entryBankIdentity(carrier);return id.family+'|'+id.type}
+function dpAccountLabel(type){return type==='business'?'Business':type==='personal'?'Personal':'Type not specified'}
 function buildDatapointGroups(){
- const map=new Map(),ensure=(bank,carrier)=>{const key=datapointBankKey(carrier||bank||'Unknown bank');if(!map.has(key))map.set(key,{key,bank:bank||'Unknown bank',accountType:(carrier?entryBankIdentity(carrier).type:bankIdentity(bank).type)==='B'?'business':'personal',user:[],community:[],entryCount:0});return map.get(key)};
+ const map=new Map(),ensure=(bank,carrier,isReport=false)=>{
+  const identity=carrier?entryBankIdentity(carrier):bankIdentity(bank),type=isReport?(carrier?.accountType==='business'?'business':carrier?.accountType==='personal'?'personal':'unknown'):(identity.type==='B'?'business':'personal');
+  const key=identity.family+'|'+(type==='business'?'B':type==='personal'?'P':'U');
+  if(!map.has(key))map.set(key,{key,bank:bank||'Unknown bank',accountType:type,user:[],community:[],entryCount:0});return map.get(key);
+ };
  entries.forEach(e=>{if(e?.bank)ensure(e.bank,e).entryCount++});
- loadUserDatapoints().forEach(x=>ensure(x.bank,x.accountType?x:null).user.push(x));
- getCommunityDatapoints().forEach(x=>ensure(x.bank,x.accountType?x:null).community.push(x));
+ loadUserDatapoints().forEach(x=>ensure(x.bank,x,true).user.push(x));
+ getCommunityDatapoints().forEach(x=>ensure(x.bank,x,true).community.push(x));
  const q=dpSearch.trim().toLowerCase();
  return [...map.values()].filter(g=>!dpTaskBankKey||g.key===dpTaskBankKey).filter(g=>dpFilters.scope!=='mine'||g.entryCount>0).map(g=>{
   let community=dpFilterRows(g.community),user=g.user.filter(x=>
    (dpFilters.result==='all'||x.outcome===dpFilters.result)
-   &&(dpFilters.type==='all'||x.accountType===dpFilters.type));
+   &&(dpFilters.type==='all'||(x.accountType||'unknown')===dpFilters.type));
   if(dpFilters.view==='personal')community=[];
   if(q&&!g.bank.toLowerCase().includes(q)){community=community.filter(x=>reportSearchMatch(x,q));user=user.filter(x=>reportSearchMatch(x,q))}
   community.sort((a,b)=>dpEvidenceDate(b).localeCompare(dpEvidenceDate(a))||a.method.localeCompare(b.method));
   user.sort((a,b)=>Number(b.confirmedByUser)-Number(a.confirmedByUser)||dpEvidenceDate(b).localeCompare(dpEvidenceDate(a)));
   return {...g,community,user};
- }).filter(g=>g.community.length||g.user.length||((!q||g.bank.toLowerCase().includes(q))&&g.entryCount&&dpFilters.result==='all'&&dpFilters.type==='all'&&dpFilters.source==='all'&&dpFilters.dated==='all')).sort((a,b)=>(b.entryCount>0)-(a.entryCount>0)||dpReportDate(b.community[0]||{}).localeCompare(dpReportDate(a.community[0]||{}))||a.bank.localeCompare(b.bank));
+ }).filter(g=>g.community.length||g.user.length||((!q||g.bank.toLowerCase().includes(q))&&g.entryCount&&dpFilters.result==='all'&&dpFilters.type==='all'&&dpFilters.source==='all'&&dpFilters.dated==='all')).sort((a,b)=>(b.entryCount>0)-(a.entryCount>0)||a.bank.localeCompare(b.bank)||a.accountType.localeCompare(b.accountType));
 }
 function toggleDPBank(key){dpExpandedBankKey=dpExpandedBankKey===key?'':key;R()}
-function addUserDPForBank(bankEnc){const bank=decodeURIComponent(bankEnc||'');if(!bank)return;dpEditor={type:'user',mode:'new',id:'',bank,method:'',note:'',lastConfirmedAt:'',eventDate:'',outcome:'',confirmedByUser:false,accountType:dpTaskBankKey?buildDatapointGroups().find(g=>g.key===dpTaskBankKey)?.accountType||'':''};dpExpandedBankKey=datapointBankKey(bank);R()}
-function addCommunityDPForBank(bankEnc){const bank=decodeURIComponent(bankEnc||'');if(!bank)return;dpEditor={type:'community',mode:'new',id:'',bank,method:'',result:'',link:''};dpExpandedBankKey=datapointBankKey(bank);R()}
+function addUserDPForBank(bankEnc,accountType){const bank=decodeURIComponent(bankEnc||'');if(!bank)return;dpEditor={type:'user',mode:'new',id:'',bank,method:'',note:'',lastConfirmedAt:'',eventDate:'',outcome:'',confirmedByUser:false,accountType:accountType|| (dpTaskBankKey?buildDatapointGroups().find(g=>g.key===dpTaskBankKey)?.accountType||'':'')};dpExpandedBankKey=datapointBankKey(bank);R()}
+function addCommunityDPForBank(bankEnc,accountType){const bank=decodeURIComponent(bankEnc||'');if(!bank)return;dpEditor={type:'community',mode:'new',id:'',bank,method:'',result:'',link:'',accountType:accountType||''};dpExpandedBankKey=datapointBankKey(bank);R()}
 function openUserDPEditor(id){const item=loadUserDatapoints().find(r=>r.id===id);if(!item)return;dpEditor={...item,type:'user',mode:'edit',reconfirmed:false,originalFingerprint:JSON.stringify(item)};R()}
 function openCommunityDPEditor(id){const item=loadCommunityDatapoints().find(r=>r.id===id);if(!item)return;dpEditor={...item,type:'community',mode:'edit'};R()}
 function closeDPEditor(){dpEditor=null;R()}
@@ -5104,7 +5109,7 @@ function rTax(){
 function dpSelect(key,label,options){return '<label class="research-filter">'+esc(label)+'<select aria-label="'+esc(label)+'" onchange="setDPFilter(\''+key+'\',this.value)">'+options.map(([v,t])=>'<option value="'+v+'"'+(dpFilters[key]===v?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select></label>'}
 function renderCommunityReport(item,group){
  const curated=(window.BTCommunityCatalog?.reports||[]).some(x=>x.id===item.id),link=safeExternalUrl(item.link),date=dpReportDate(item);
- let h='<article class="research-report"><div class="research-report-top"><span class="research-result '+esc(item.outcome||'unknown')+'">'+esc(dpOutcome(item))+'</span><span class="research-kind">'+(item.evidenceKind==='source-index'?'Source summary':'Community report')+'</span></div><h3>'+esc(item.method)+'</h3><p class="research-product">'+esc(item.product||'Product not specified')+' · '+esc(item.accountType==='business'?'Business':item.accountType==='personal'?'Personal':'Account type not specified')+'</p><p>'+esc(item.result||'Result not recorded.')+'</p>';
+ let h='<article class="research-report"><div class="research-report-top"><span class="research-result '+esc(item.outcome||'unknown')+'">'+esc(dpOutcome(item))+'</span><span class="research-kind">'+(item.evidenceKind==='source-index'?'Source summary':'Community report')+'</span></div><h3>'+esc(item.method)+'</h3><p class="research-product">'+esc(item.product||'Product not specified')+' · '+esc(dpAccountLabel(item.accountType))+'</p><p>'+esc(item.result||'Result not recorded.')+'</p>';
  h+='<p class="research-caveat">'+esc(dpFreshness(item))+(dpMethodConflict(group,item)?' · Conflicting outcomes — review':'')+'</p>';
  h+='<dl class="research-dates"><div><dt>'+(item.eventDate?esc(item.dateLabel||'Activity date'):'Report date')+'</dt><dd>'+esc(date?fD(date):'Not provided')+'</dd></div>';
  if(item.reportedAt&&item.eventDate)h+='<div><dt>Report posted</dt><dd>'+esc(fD(item.reportedAt))+'</dd></div>';
@@ -5116,23 +5121,35 @@ function renderCommunityReport(item,group){
  if(!curated)h+='<div class="ph-actions"><button class="ph-mini" onclick="openCommunityDPEditor('+profileSectionAttr(JSON.stringify(item.id))+')">Edit report</button><button class="ph-mini" onclick="deleteCommunityDP('+profileSectionAttr(JSON.stringify(item.id))+')">Remove</button></div>';
  return h+'</article>';
 }
+function dpBankSections(groups){
+ const banks=new Map();
+ groups.forEach(g=>{
+  const key=g.key.split('|')[0];
+  if(!banks.has(key))banks.set(key,{...g,key,accountType:'',types:[],community:[],user:[],entryCount:0});
+  const bank=banks.get(key);bank.community.push(...g.community);bank.user.push(...g.user);bank.entryCount+=g.entryCount;
+  if(!bank.types.includes(g.accountType))bank.types.push(g.accountType);
+ });
+ return [...banks.values()].sort((a,b)=>a.bank.localeCompare(b.bank));
+}
 function rTips(){
  const groups=buildDatapointGroups(),catalog=window.BTCommunityCatalog||{};
+ if(window.bt366GroupData===undefined)window.bt366GroupData=true;
  dpFiltersOpen=document.querySelector('.research-filters')?.open??dpFiltersOpen;
  let h='<div class="research-shell dp-shell bt362-data-view">';
  if(dpTaskBankKey)h+='<button type="button" class="research-text-button" onclick="resetDPFilters()">All banks ‹</button><p class="research-caveat">Community reports do not guarantee a qualifying deposit. Follow your saved offer terms.</p>';
  if(dpTaskBankKey){const bank=groups[0]?.bank||'';if(bank)h+='<details class="research-help"><summary>Find newer reports</summary><a class="research-source" target="_blank" rel="noopener noreferrer" href="https://www.reddit.com/r/churning/search/?q='+encodeURIComponent(bank+' direct deposit')+'&amp;restrict_sr=1&amp;sort=new">Newest Reddit results ↗</a><a class="research-source" target="_blank" rel="noopener noreferrer" href="https://www.doctorofcredit.com/?s='+encodeURIComponent(bank+' direct deposit')+'">Search Doctor of Credit ↗</a><p>Live search results are external reports, not verified personal experiences.</p></details>';}
  h+='<input class="sinput dp-search" id="datapoints-search" aria-label="Search datapoints" placeholder="Search bank, method, or note..." value="'+esc(dpSearch)+'" oninput="updateViewSearch(\'datapoints\',this.value,this.selectionStart)">';
  h+='<div class="bt360-data-pills" role="group" aria-label="Datapoint outcomes">'+[['all','All reports'],['worked','Counted'],['failed','Didn\'t count']].map(([v,t])=>'<button type="button" aria-pressed="'+(dpFilters.result===v)+'" class="'+(dpFilters.result===v?'active':'')+'" onclick="setDPFilter(\'result\',\''+v+'\')">'+t+'</button>').join('')+'</div>';
+
  h+='<div class="research-coverage"><b>'+groups.reduce((n,g)=>n+g.community.length,0)+' reports &amp; summaries</b><span>'+groups.length+' bank'+(groups.length===1?'':'s')+' shown · Catalog checked '+esc(catalog.checkedAt?fD(catalog.checkedAt):'date unavailable')+'</span></div>';
  h+='<div class="bt362-data-actions"><button type="button" class="dp-add research-new-report" onclick="newDPReport()">+ Add a report</button><button type="button" class="research-text-button" onclick="switchMainTab(\'storage\')">Saved bank terms ›</button></div>';
  h+='<p class="research-caveat">Your confirmed experiences first, then dated community reports. Older results may no longer apply.</p>';
- h+='<div class="bt366-dp-toggle"><span class="bt360-muted">'+(window.bt366GroupData?'Grouped by bank':'Individual reports')+'</span><button type="button" aria-pressed="'+!!window.bt366GroupData+'" onclick="window.bt366GroupData=!window.bt366GroupData;R()">'+(window.bt366GroupData?'Show individual reports':'Group by bank')+'</button></div>';
+
  h+='<details class="research-filters"'+(dpFiltersOpen?' open':'')+'><summary>More filters and saved notes</summary>';
+ h+='<div class="bt366-dp-toggle"><span class="bt360-muted">'+(window.bt366GroupData?'Grouped by bank':'Individual reports')+'</span><button type="button" aria-pressed="'+!!window.bt366GroupData+'" onclick="window.bt366GroupData=!window.bt366GroupData;R()">'+(window.bt366GroupData?'Show individual reports':'Group by bank')+'</button></div>';
  h+='<div class="research-switch" role="group" aria-label="Report view">'+[['all','All reports'],['personal','My saved notes']].map(([v,t])=>'<button aria-pressed="'+(dpFilters.view===v)+'" onclick="setDPFilter(\'view\',\''+v+'\')">'+t+'</button>').join('')+'</div>';
  h+='<div class="research-filter-grid">';
  h+=dpSelect('scope','Banks',[['all','All banks'],['mine','My tracked banks']]);
- h+=dpSelect('type','Account type',[['all','All account types'],['personal','Personal'],['business','Business']]);
  h+=dpSelect('result','Result',[['all','All results'],['worked','Reported success'],['failed','Reported failure'],['mixed','Mixed reports'],['pending','Still waiting'],['unknown','Not recorded']]);
  h+=dpSelect('source','Source',[['all','All sources'],['reddit','Reddit'],['doc','Doctor of Credit']]);
  h+=dpSelect('dated','Dates',[['all','All dates'],['recent','Dated within 90 days']]);
@@ -5148,15 +5165,15 @@ function rTips(){
      const report=kind==='community',label=!report?(x.confirmedByUser?dpOutcome(x):'Needs confirmation'):x.outcome==='worked'?'Counted':x.outcome==='failed'?"Didn't count":x.outcome==='mixed'?'Mixed reports':x.outcome==='pending'?'Pending':'Not verified';
      const desc=report?(x.sourceName||'Community')+' · '+(x.reportedAt||x.threadDate||x.eventDate?fD(x.reportedAt||x.threadDate||x.eventDate):'Date not reported'):(x.confirmedByUser?'You confirmed':'Needs confirmation')+' · '+(dpEvidenceDate(x)?fD(dpEvidenceDate(x)):'Date unavailable')+' · '+dpFreshness(x);
      const detail=report?renderCommunityReport(x,g):'<article class="research-report personal"><h3>'+esc(x.method||'Saved method')+'</h3><p>'+esc(x.note||'No notes saved.')+'</p><button class="ph-mini" onclick="openUserDPEditor('+profileSectionAttr(JSON.stringify(x.id))+')">Edit note</button></article>';
-     h+='<details class="bt366-dp-item"><summary>'+bankLogo(g.bank,true)+'<span class="bt366-dp-main"><b>'+esc(g.bank)+'</b><small>'+esc(x.method||'Method not specified')+'</small><small>'+esc(desc)+(dpMethodConflict(g,x)?' · Conflicting outcomes':'')+'</small></span><span class="bt360-chip '+(report&&x.outcome==='worked'?'positive':report&&x.outcome==='failed'?'warning':'')+'">'+esc(label)+'</span></summary>'+detail+'</details>';
+     h+='<details class="bt366-dp-item"><summary>'+bankLogo(g.bank,true)+'<span class="bt366-dp-main"><b>'+esc(g.bank)+'</b><span class="dp-account-type">'+esc(dpAccountLabel(x.accountType))+'</span><small>'+esc(x.method||'Method not specified')+'</small><small>'+esc(desc)+(dpMethodConflict(g,x)?' · Conflicting outcomes':'')+'</small></span><span class="bt360-chip '+(report&&x.outcome==='worked'?'positive':report&&x.outcome==='failed'?'warning':'')+'">'+esc(label)+'</span></summary>'+detail+'</details>';
    });
  }else{
- groups.forEach(g=>{
- const open=dpExpandedBankKey===g.key,last=dpReportDate(g.community[0]||{});
- h+='<section class="dp-bank research-bank"><button class="dp-head" type="button" aria-expanded="'+open+'" onclick="toggleDPBank(\''+g.key+'\')">'+bankLogo(g.bank,true)+'<span class="dp-info"><span class="dp-name">'+esc(g.bank)+'</span><span class="dp-meta">'+g.community.length+' community · '+g.user.length+' saved'+(g.accountType==='business'?' · Business':'')+(g.entryCount?' · Tracked':'')+'</span>'+(last?'<span class="research-latest">Latest dated result '+esc(fD(last))+'</span>':'')+'</span><span class="dp-arrow" aria-hidden="true">'+(open?'−':'+')+'</span></button>';
+ dpBankSections(groups).forEach(g=>{
+ const open=dpExpandedBankKey.split('|')[0]===g.key,last=dpReportDate(g.community[0]||{});
+ h+='<section class="dp-bank research-bank"><button class="dp-head" type="button" aria-expanded="'+open+'" onclick="toggleDPBank(\''+g.key+'\')">'+bankLogo(g.bank,true)+'<span class="dp-info"><span class="dp-name">'+esc(g.bank)+'</span><span class="dp-account-type">'+esc(g.types.map(dpAccountLabel).join(' · '))+'</span><span class="dp-meta">'+g.community.length+' community · '+g.user.length+' saved'+(g.entryCount?' · Tracked':'')+'</span>'+(last?'<span class="research-latest">Latest dated result '+esc(fD(last))+'</span>':'')+'</span><span class="dp-arrow" aria-hidden="true">'+(open?'−':'+')+'</span></button>';
  if(open){
- h+='<div class="dp-body"><div class="research-add"><button class="dp-add" onclick="addUserDPForBank('+profileSectionAttr(JSON.stringify(encodeURIComponent(g.bank)))+')">+ My experience</button><button class="dp-add" onclick="addCommunityDPForBank('+profileSectionAttr(JSON.stringify(encodeURIComponent(g.bank)))+')">+ Source report</button></div>';
- if(g.user.length){h+='<h3 class="research-section-label">Your experiences</h3>';g.user.forEach(x=>{h+='<article class="research-report personal"><span class="research-kind">'+esc(x.confirmedByUser?'You confirmed · '+dpOutcome(x):'Needs confirmation')+'</span><h3>'+esc(x.method)+'</h3><p>'+esc(x.note||'No notes saved.')+'</p><p class="research-caveat">Experience '+esc(dpEvidenceDate(x)?fD(dpEvidenceDate(x)):'date unknown')+' · '+esc(dpFreshness(x))+(x.entryId?' · Linked to bonus cycle':'')+(dpMethodConflict(g,x)?' · Conflicting outcomes — review':'')+'</p><div class="ph-actions"><button class="ph-mini" onclick="openUserDPEditor('+profileSectionAttr(JSON.stringify(x.id))+')">Edit</button><button class="ph-mini" onclick="deleteUserDP('+profileSectionAttr(JSON.stringify(x.id))+')">Remove</button></div></article>'})}
+ h+='<div class="dp-body"><div class="research-add"><button class="dp-add" onclick="addUserDPForBank('+profileSectionAttr(JSON.stringify(encodeURIComponent(g.bank)))+','+profileSectionAttr(JSON.stringify(g.accountType))+')">+ My experience</button><button class="dp-add" onclick="addCommunityDPForBank('+profileSectionAttr(JSON.stringify(encodeURIComponent(g.bank)))+','+profileSectionAttr(JSON.stringify(g.accountType))+')">+ Source report</button></div>';
+ if(g.user.length){h+='<h3 class="research-section-label">Your experiences</h3>';g.user.forEach(x=>{h+='<article class="research-report personal"><span class="dp-account-type">'+esc(dpAccountLabel(x.accountType))+'</span><span class="research-kind">'+esc(x.confirmedByUser?'You confirmed · '+dpOutcome(x):'Needs confirmation')+'</span><h3>'+esc(x.method)+'</h3><p>'+esc(x.note||'No notes saved.')+'</p><p class="research-caveat">Experience '+esc(dpEvidenceDate(x)?fD(dpEvidenceDate(x)):'date unknown')+' · '+esc(dpFreshness(x))+(x.entryId?' · Linked to bonus cycle':'')+(dpMethodConflict(g,x)?' · Conflicting outcomes — review':'')+'</p><div class="ph-actions"><button class="ph-mini" onclick="openUserDPEditor('+profileSectionAttr(JSON.stringify(x.id))+')">Edit</button><button class="ph-mini" onclick="deleteUserDP('+profileSectionAttr(JSON.stringify(x.id))+')">Remove</button></div></article>'})}
  if(g.community.length){h+='<h3 class="research-section-label">Community reports</h3>';g.community.forEach(x=>h+=renderCommunityReport(x,g))}else h+='<div class="research-empty">No reports match this view. Add your experience when you have a result to record.</div>';
  h+='</div>';
  }h+='</section>';

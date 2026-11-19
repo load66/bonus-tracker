@@ -1311,3 +1311,9 @@ body:has(.bt3652-add-dock) .app>.undo-bar{margin-bottom:0}
 .bt3822-companion-fee h4{margin:0;font-size:13px;color:#e3e8ee;font-weight:700}
 .bt3822-companion-fee .bt3810-pair{padding-top:8px}
 .bt3822-companion-fee p{margin:6px 0 0;color:#a7afbf;font-size:12px;line-height:1.5}
+
+/* Visible account audience in both datapoint views. */
+.dp-account-type{display:inline-block;width:fit-content;margin:5px 0;padding:3px 8px;border:1px solid #46516a;border-radius:6px;color:#d9e5ff;background:#202938;font-size:12px;font-weight:600;line-height:1.4}
+.research-bank .dp-name{overflow-wrap:anywhere}
+.research-bank .dp-info{min-width:0}
+.research-bank .dp-head{min-height:64px}

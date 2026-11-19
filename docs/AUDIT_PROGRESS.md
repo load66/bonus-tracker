@@ -6,6 +6,9 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.8.23 datapoint sections (`codex/v3.8.23-datapoint-sections`): one section per bank by default; personal/business/unspecified report labels remain visible inside each bank; extra view controls stay in collapsed filters; unknown report types retain their evidence identity; report creation retains section audience. No stored evidence or financial history migration. UI units and release verifier pass. Require full Chromium/WebKit and unit CI before merge, then verify Pages.
+
+
 - v3.8.22 clear requirements (`codex/v3.8.22-clear-requirements`): shared source-backed action labels; applicant progress excludes passive minimum-standing periods while retaining explicit source/date notes and early-date review. Advance checked source-linked tasks correctly. Compact checkbox visuals retain touch targets; merge task tools; distinguish conditional inactivity charges and opening deposits. No stored-rule or event migration. Next: require full unit and Chromium/WebKit CI, merge on green and verify Pages.
 
 - v3.8.21 offer member caps (`codex/v3.8.21-offer-member-limit`): strict evidence accepts explicit one-bonus-per-member/customer/person offer caps while rejecting recurring and non-bonus limits. Keep enrollment scope distinct from lifetime bank eligibility and preserve recorded terms. Add unit, import and Chromium/WebKit checks; synchronize generation instructions. Next: green full CI, merge and verify Pages before delivering imports that depend on this recognition.
