@@ -45,6 +45,15 @@ try{
  // Account-type filters must apply to the user's reports as well as public evidence.
  // Unknown audience may not be silently represented as personal or business.
  const audienceBackup=s.loadUserDatapoints();
+ const communityBackup=s.loadCommunityDatapoints();
+ s.saveCommunityDatapoints(['personal','business',''].map((type,i)=>({id:'audience-chase-'+i,bank:'Chase',accountType:type,method:'Synthetic payroll',outcome:'worked'})));
+ const chaseGroups=s.buildDatapointGroups().filter(g=>g.bank==='Chase');
+ assert(chaseGroups.some(g=>g.accountType==='unknown'&&g.community.some(x=>x.id==='audience-chase-2')));
+ assert(chaseGroups.some(g=>g.accountType==='business'&&g.community.some(x=>x.id==='audience-chase-1')));
+ assert(chaseGroups.some(g=>g.accountType==='personal'&&g.community.some(x=>x.id==='audience-chase-0')));
+ const oneChase=s.dpBankSections(chaseGroups);assert.equal(oneChase.length,1);assert.equal(oneChase[0].types.length,3);assert(oneChase[0].community.some(x=>x.id==='audience-chase-2'));
+ s.saveCommunityDatapoints(communityBackup);
+
  s.saveUserDatapoints([
   {id:'synthetic-audience-personal',bank:'Synthetic Personal Records',method:'Payroll',accountType:'personal',outcome:'pending'},
   {id:'synthetic-audience-business',bank:'Synthetic Business Records',method:'Payroll',accountType:'business',outcome:'pending'},
@@ -60,6 +69,15 @@ try{
  assert(personalReports.every(x=>x.accountType==='personal'),'Business or unknown user evidence leaked into Personal filter');
  run("dpFilters.type='all'");
  assert.equal(s.buildDatapointGroups().flatMap(g=>g.user).length,3,'All results lost unknown-audience evidence');
+ run("resetDPFilters()");
+ run("dpFilters.type='unknown'");
+ assert.equal(s.buildDatapointGroups().flatMap(g=>g.user).length,1);
+ assert(s.buildDatapointGroups().every(g=>g.accountType==='unknown'));
+ run("dpFilters.type='all';window.bt366GroupData=undefined");
+ const grouped=s.rTips();assert.equal(s.bt366GroupData,true);
+ assert(grouped.includes('dp-account-type'));assert(grouped.includes('Type not specified'));
+ assert(grouped.includes('Business'));assert(grouped.includes('Personal'));
+ assert.equal(s.dpAccountLabel(''),'Type not specified');
  run("resetDPFilters()");
  s.saveUserDatapoints(audienceBackup);
 
