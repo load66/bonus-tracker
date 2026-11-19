@@ -1709,10 +1709,10 @@ async function exercise(name,engine,url){
     await page.setViewportSize({width:390,height:844});
     await page.screenshot({path:path.join(output,name+'-v362-data-390.png')});
     await page.evaluate(()=>{window.bt366GroupData=undefined;R()});
-    check('Data defaults to labeled bank sections',await page.locator('button.dp-head').count()>0&&await page.locator('.dp-head .dp-account-type').count()===await page.locator('button.dp-head').count());
+    check('Data defaults to simple bank sections',await page.locator('button.dp-head').count()>0&&await page.locator('.dp-head .dp-account-type').count()===0);
     if(!await page.locator('.research-filters').evaluate(x=>x.open))await page.locator('.research-filters > summary').click();
     await button('Show individual reports').click();
-    check('individual reports retain visible account labels',await page.locator('.bt366-dp-item').count()>0&&await page.locator('.bt366-dp-item .dp-account-type').count()===await page.locator('.bt366-dp-item').count());
+    check('individual reports show only method and outcome',await page.locator('.bt366-dp-item').count()>0&&await page.locator('.bt366-dp-item .dp-account-type').count()===0);
     await button('Group by bank').click();
     check('bank grouping remains available',await page.locator('button.dp-head').count()>0);
     await page.locator('.research-filters > summary').click();
@@ -1723,7 +1723,7 @@ async function exercise(name,engine,url){
     check('datapoint bank is keyboard accessible',await page.locator('button.dp-head').getAttribute('aria-expanded')!==null);
     await page.getByPlaceholder('Search bank, method, or note...').fill('Wells Fargo');
     await page.locator('button.dp-head').first().click();
-    check('community report shows event and checked dates',await page.locator('.research-report').first().innerText().then(t=>t.includes('Bonus paid')&&t.includes('Source checked')&&t.includes('Reported success')));
+    check('community report shows method outcome and source without metadata',await page.locator('.research-report').first().innerText().then(t=>t.includes('Counted')&&t.includes('View source')&&!t.includes('Source checked')&&!t.includes('Bonus paid'))&&await page.locator('.research-dates').count()===0);
     check('datapoints no longer offers account deletion',await page.getByRole('button',{name:'Delete bank',exact:true}).count()===0);
     await page.getByText('More filters and saved notes',{exact:true}).click();
     await page.getByLabel('Result',{exact:true}).selectOption('worked');
@@ -2177,7 +2177,7 @@ async function exercise(name,engine,url){
     check('explicit experience retains cycle identity and attestation',await page.evaluate(()=>loadUserDatapoints().some(x=>x.entryId==='E2E-TRUST'&&x.accountType==='business'&&x.cycleOpened==='2026-01-01'&&x.confirmedByUser&&x.outcome==='worked')));
     await page.evaluate(()=>{expanded=null;search='';BT360.setAudience('all');BT360.resetStage();R();openTaskDatapoints('E2E-TRUST')});
     check('task research opens exact bank and account type',await page.evaluate(()=>tab==='tips'&&dpTaskBankKey===datapointBankKey(entries[0])));
-    check('confirmed experience appears in task research',await page.locator('.bt366-dp-item').innerText().then(t=>t.includes('Synthetic payroll')&&t.includes('You confirmed')));
+    check('confirmed experience appears in task research',await page.locator('.bt366-dp-item').innerText().then(t=>t.includes('Synthetic payroll')&&t.includes('Counted')));
     await page.getByRole('button',{name:'All banks',exact:false}).click();
     check('all banks resets scoped research',await page.evaluate(()=>dpTaskBankKey===''));
     await page.evaluate(()=>{tab='tracker';expanded=null;openRcv('E2E-TRUST');rcvPrompt.date=td();R()});

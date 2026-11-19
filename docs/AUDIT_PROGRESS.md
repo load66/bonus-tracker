@@ -6,6 +6,9 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.8.24 simple reports (`codex/v3.8.24-simple-reports`): shared report cards show deposit method, explicit outcome and safe source link only; omit empty metadata and keep management in a collapsed menu. Preserve evidence, source dates, unknown outcomes, personal confirmation and financial records. Combined bank evidence keeps date/trust ordering. Require full unit and Chromium/WebKit CI, then merge and verify Pages.
+
+
 - v3.8.23 datapoint sections (`codex/v3.8.23-datapoint-sections`): one section per bank by default; personal/business/unspecified report labels remain visible inside each bank; extra view controls stay in collapsed filters; unknown report types retain their evidence identity; report creation retains section audience. No stored evidence or financial history migration. UI units and release verifier pass. Require full Chromium/WebKit and unit CI before merge, then verify Pages.
 
 

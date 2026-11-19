@@ -75,8 +75,8 @@ try{
  assert(s.buildDatapointGroups().every(g=>g.accountType==='unknown'));
  run("dpFilters.type='all';window.bt366GroupData=undefined");
  const grouped=s.rTips();assert.equal(s.bt366GroupData,true);
- assert(grouped.includes('dp-account-type'));assert(grouped.includes('Type not specified'));
- assert(grouped.includes('Business'));assert(grouped.includes('Personal'));
+ assert(!grouped.includes('dp-account-type'));assert(!grouped.includes('Type not specified'));
+ assert(grouped.includes('dp-bank'));
  assert.equal(s.dpAccountLabel(''),'Type not specified');
  run("resetDPFilters()");
  s.saveUserDatapoints(audienceBackup);
@@ -88,7 +88,9 @@ try{
  assert.equal(run('JSON.stringify({entries,reqs:loadReqs(),terms:loadTermsArchive()})'),protectedBefore,'Deleting reports changed account or terms');
  assert.equal(s.loadCommunityDatapoints().length,0);
  const malicious=s.renderCommunityReport({id:'x\");window.pwned=true;//',method:'<img src=x onerror=alert(1)>',result:'<script>bad</script>',link:'javascript:alert(1)',outcome:'unknown'});
- assert(!malicious.includes('href="javascript:'));assert(malicious.includes('&lt;img'));assert(malicious.includes('&lt;script&gt;'));
+ assert(!malicious.includes('href="javascript:'));assert(malicious.includes('&lt;img'));assert(!malicious.includes('<script>'));assert(!malicious.includes('Result not recorded'));assert(!malicious.includes('research-dates'));
+ const minimal=s.renderCommunityReport({id:'minimal',method:'Payroll',outcome:'worked',link:'https://example.test/source',product:'Hidden product',result:'Hidden note',eventDate:'2026-01-01'});assert(minimal.includes('Counted'));assert(minimal.includes('https://example.test/source'));assert(!minimal.includes('Hidden product'));assert(!minimal.includes('Hidden note'));assert(!minimal.includes('2026-01-01'));
+ assert.equal(s.dpSimpleOutcome({outcome:'failed'}),"Didn't count");assert.equal(s.dpSimpleOutcome({outcome:'worked'},true),'Not confirmed');assert.equal(s.dpSimpleOutcome({outcome:'mixed'}),'Mixed results');
  // Personal outcomes are explicit, dated, cycle-specific and independently recoverable.
  run("entries=[{id:'TRUST',bank:'Synthetic Trust Bank',accountType:'business',opened:'2026-01-01',dataPoint:'Employer payroll',checklist:[{text:'Qualifying direct deposit',done:false}],customTimers:[{id:'dd',text:'Direct deposit received',date:'2026-10-01',done:false}]}];saveUserDatapoints([])");
  const legacy=s.normalizeUserDatapoint({bank:'Synthetic Trust Bank',method:'Legacy method',date:'2026-01-01'});
