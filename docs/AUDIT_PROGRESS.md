@@ -6,6 +6,9 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.8.25 simple report editor (`codex/v3.8.25-simple-report-editor`): source editor uses bank context, deposit method, outcome, optional result date and source link; remove unused descriptions and metadata fields. Show known result dates without inventing unknown ones; preserve hidden source metadata on edits. Personal attestation flow unchanged. Require full unit and Chromium/WebKit CI, merge on green and verify Pages.
+
+
 - v3.8.24 simple reports (`codex/v3.8.24-simple-reports`): shared report cards show deposit method, explicit outcome and safe source link only; omit empty metadata and keep management in a collapsed menu. Preserve evidence, source dates, unknown outcomes, personal confirmation and financial records. Combined bank evidence keeps date/trust ordering. Require full unit and Chromium/WebKit CI, then merge and verify Pages.
 
 
