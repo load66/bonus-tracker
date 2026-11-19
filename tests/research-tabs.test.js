@@ -24,8 +24,8 @@ try{
  const plan=s.stagePortableRestore({entries:[],communityDatapoints:s.loadCommunityDatapoints(),userDatapoints:[],bankReqs:{},phoneBook:[],profileEvents:[],offerHistory:{}});
  assert(plan,'Restore plan not created');
  const restored=JSON.parse(plan.writes.bt_community_datapoints_v1)[0];assert.equal(restored.eventDate,custom.eventDate);assert.equal(restored.reportedAt,custom.reportedAt);assert.equal(restored.extraProvenance,custom.extraProvenance);
- s.openCommunityDPEditor(custom.id);run("dpEditor.result='Updated result';saveDPEditor()");
- const edited=s.loadCommunityDatapoints()[0];assert.equal(edited.result,'Updated result');assert.equal(edited.eventDate,custom.eventDate);assert.equal(edited.extraProvenance,custom.extraProvenance);
+ s.openCommunityDPEditor(custom.id);const editor=s.rDpEditor();assert(!editor.includes('textarea'));assert(!editor.includes('experience-optional'));assert(editor.includes('Result date (optional)'));assert(editor.includes('Deposit method'));assert(!editor.includes('dp-exp-product'));assert(!editor.includes('dp-exp-sourceName'));run("dpEditor.result='Updated result';saveDPEditor()");
+ const edited=s.loadCommunityDatapoints()[0];assert.equal(edited.result,custom.result);assert.equal(edited.eventDate,custom.eventDate);assert.equal(edited.extraProvenance,custom.extraProvenance);
  const seed=run('defaultCommunityRows().find(isOfferReference)');
  assert(!s.untouchedCommunitySeed({...seed,privateNote:'My saved evidence'}),'Custom provenance treated as built-in seed');assert(!s.untouchedCommunitySeed({...seed,eventDate:'2026-09-29'}),'Dated personal edit treated as unchanged default');assert(!s.untouchedCommunitySeed({...seed,id:'my-own-report'}),'Personal report treated as built-in seed');
  s.saveCommunityDatapoints([seed,{...seed,id:'edited-seed',result:'My edited note'}]);
@@ -89,7 +89,7 @@ try{
  assert.equal(s.loadCommunityDatapoints().length,0);
  const malicious=s.renderCommunityReport({id:'x\");window.pwned=true;//',method:'<img src=x onerror=alert(1)>',result:'<script>bad</script>',link:'javascript:alert(1)',outcome:'unknown'});
  assert(!malicious.includes('href="javascript:'));assert(malicious.includes('&lt;img'));assert(!malicious.includes('<script>'));assert(!malicious.includes('Result not recorded'));assert(!malicious.includes('research-dates'));
- const minimal=s.renderCommunityReport({id:'minimal',method:'Payroll',outcome:'worked',link:'https://example.test/source',product:'Hidden product',result:'Hidden note',eventDate:'2026-01-01'});assert(minimal.includes('Counted'));assert(minimal.includes('https://example.test/source'));assert(!minimal.includes('Hidden product'));assert(!minimal.includes('Hidden note'));assert(!minimal.includes('2026-01-01'));
+ const minimal=s.renderCommunityReport({id:'minimal',method:'Payroll',outcome:'worked',link:'https://example.test/source',product:'Hidden product',result:'Hidden note',eventDate:'2026-01-01'});assert(minimal.includes('Counted'));assert(minimal.includes('https://example.test/source'));assert(!minimal.includes('Hidden product'));assert(!minimal.includes('Hidden note'));assert(minimal.includes('datetime="2026-01-01"'));
  assert.equal(s.dpSimpleOutcome({outcome:'failed'}),"Didn't count");assert.equal(s.dpSimpleOutcome({outcome:'worked'},true),'Not confirmed');assert.equal(s.dpSimpleOutcome({outcome:'mixed'}),'Mixed results');
  // Personal outcomes are explicit, dated, cycle-specific and independently recoverable.
  run("entries=[{id:'TRUST',bank:'Synthetic Trust Bank',accountType:'business',opened:'2026-01-01',dataPoint:'Employer payroll',checklist:[{text:'Qualifying direct deposit',done:false}],customTimers:[{id:'dd',text:'Direct deposit received',date:'2026-10-01',done:false}]}];saveUserDatapoints([])");

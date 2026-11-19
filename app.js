@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.8.24';
+const APP_VERSION='3.8.25';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -2746,7 +2746,8 @@ function saveDPEditor(){if(!dpEditor)return;if(dpEditor.link&&!safeExternalUrl(d
  if(idx>=0)rows[idx]=record;else rows.unshift(record);
  try{saveUserDatapoints(rows)}catch(error){return dpEditorError('Your report could not be saved. Please try again.')}
  dpExpandedBankKey=datapointBankKey(record);dpEditor=null;R();return}
-const rows=loadCommunityDatapoints();if(dpEditor.mode==='edit'&&dpEditor.id){const idx=rows.findIndex(r=>r.id===dpEditor.id);if(idx>=0)rows[idx]={...rows[idx],bank,method,result:String(dpEditor.result||'').trim(),link:String(dpEditor.link||'').trim(),outcome:dpEditor.outcome||'unknown',reportedAt:dpValidDate(dpEditor.reportedAt),eventDate:dpValidDate(dpEditor.eventDate),product:String(dpEditor.product||'').trim(),accountType:dpEditor.accountType||'',sourceName:String(dpEditor.sourceName||'').trim()}}else{rows.unshift(normalizeCommunityDatapoint({bank,method,result:String(dpEditor.result||'').trim(),link:String(dpEditor.link||'').trim(),outcome:dpEditor.outcome||'unknown',reportedAt:dpValidDate(dpEditor.reportedAt),eventDate:dpValidDate(dpEditor.eventDate),product:String(dpEditor.product||'').trim(),accountType:dpEditor.accountType||'',sourceName:String(dpEditor.sourceName||'').trim()}))}saveCommunityDatapoints(rows);dpExpandedBankKey=datapointBankKey(bank);dpEditor=null;R()}
+if(dpEditor.eventDate&&(!dpValidDate(dpEditor.eventDate)||dpEditor.eventDate>td()))return dpEditorError('Choose a valid result date that is not in the future.','eventDate');
+const rows=loadCommunityDatapoints();if(dpEditor.mode==='edit'&&dpEditor.id){const idx=rows.findIndex(r=>r.id===dpEditor.id);if(idx>=0)rows[idx]={...rows[idx],bank,method,link:String(dpEditor.link||'').trim(),outcome:dpEditor.outcome||'unknown',eventDate:dpValidDate(dpEditor.eventDate)}}else{rows.unshift(normalizeCommunityDatapoint({bank,method,result:String(dpEditor.result||'').trim(),link:String(dpEditor.link||'').trim(),outcome:dpEditor.outcome||'unknown',reportedAt:dpValidDate(dpEditor.reportedAt),eventDate:dpValidDate(dpEditor.eventDate),product:String(dpEditor.product||'').trim(),accountType:dpEditor.accountType||'',sourceName:String(dpEditor.sourceName||'').trim()}))}saveCommunityDatapoints(rows);dpExpandedBankKey=datapointBankKey(bank);dpEditor=null;R()}
 function deleteUserDP(id){const rows=loadUserDatapoints();const item=rows.find(r=>r.id===id);if(!item)return;cfm={title:'Delete datapoint',msg:'Remove '+item.method+' from '+item.bank+'?',action:()=>{saveUserDatapoints(rows.filter(r=>r.id!==id));if(dpEditor&&dpEditor.id===id)dpEditor=null;cfm=null;R()}};R()}
 function deleteCommunityDP(id){const rows=loadCommunityDatapoints();const item=rows.find(r=>r.id===id);if(!item)return;cfm={title:'Delete community datapoint',msg:'Remove '+item.method+' from '+item.bank+'?',action:()=>{saveCommunityDatapoints(rows.filter(r=>r.id!==id));if(dpEditor&&dpEditor.id===id)dpEditor=null;cfm=null;R()}};R()}
 function deleteDPBankGroup(groupKey,bankEnc){
@@ -2777,7 +2778,7 @@ function rDpEditor(){
   const handler=personal&&['outcome','accountType'].includes(key)?"dpEditorMaterialChange('"+key+"',this.value)":'dpEditor.'+key+'=this.value';
   return '<div class="fg"><label for="dp-exp-'+key+'">'+label+'</label><select id="dp-exp-'+key+'" name="experience-'+key+'" autocomplete="off" onchange="'+handler+'"'+(d.errorField===key?' aria-invalid="true"':'')+'>'+options.map(([v,t])=>'<option value="'+v+'"'+((d[key]||'')===v?' selected':'')+'>'+t+'</option>').join('')+'</select></div>';
  };
- let h='<div class="ov" onclick="closeDPEditor()"><section class="modal research-editor" role="dialog" aria-modal="true" aria-labelledby="dp-editor-title" onclick="event.stopPropagation()" onkeydown="if(event.key===\'Escape\'){event.preventDefault();closeDPEditor()}"><header class="research-editor-header"><div><h2 id="dp-editor-title">'+(personal?'Deposit experience':'Source report')+'</h2><p>'+(personal?'Record what actually happened. Leave details you don’t know blank.':'Save what the source reported. Leave unknown details blank.')+'</p></div><button type="button" class="experience-close" aria-label="Close report" onclick="closeDPEditor()">×</button></header><div class="research-editor-body">';
+ let h='<div class="ov" onclick="closeDPEditor()"><section class="modal research-editor" role="dialog" aria-modal="true" aria-labelledby="dp-editor-title" onclick="event.stopPropagation()" onkeydown="if(event.key===\'Escape\'){event.preventDefault();closeDPEditor()}"><header class="research-editor-header"><div><h2 id="dp-editor-title">'+(personal?'Deposit experience':'Source report')+'</h2><p>'+(personal?'Record what actually happened. Leave details you don’t know blank.':'Save the deposit method and result.')+'</p></div><button type="button" class="experience-close" aria-label="Close report" onclick="closeDPEditor()">×</button></header><div class="research-editor-body">';
  if(personal){
   if(d.bank)h+='<p class="experience-context"><span>Receiving bank</span><strong>'+esc(d.bank)+'</strong>'+(d.accountType?'<small>'+esc(d.accountType==='business'?'Business account':'Personal account')+'</small>':'')+'</p>';
   else h+=field('bank','Receiving bank','Bank that received the deposit');
@@ -2792,11 +2793,13 @@ function rDpEditor(){
   h+=field('product','Account or offer name','e.g. Regular Checking');
   h+='<div class="fg"><label for="dp-exp-note">Notes</label><textarea id="dp-exp-note" name="experience-note" autocomplete="off" rows="3" maxlength="2000" oninput="dpEditor.note=this.value" placeholder="Anything useful about this deposit">'+esc(d.note||'')+'</textarea></div></details>';
  }else{
-  h+=field('bank','Receiving bank','Bank that received the deposit')+field('method','Deposit source or method','e.g. Employer payroll or bank ACH');
-  h+=select('outcome','Reported result',[['unknown','Not specified'],['worked','Counted'],['failed','Did not count'],['mixed','Mixed results'],['pending','Still waiting']]);
-  h+='<div class="fg"><label for="dp-exp-result">What did the source report?</label><textarea id="dp-exp-result" autocomplete="off" rows="3" oninput="dpEditor.result=this.value" placeholder="Describe the deposit and what happened">'+esc(d.result||'')+'</textarea></div>';
-  h+=field('link','Source link','https://…','url')+field('sourceName','Source name','e.g. Reddit or Doctor of Credit');
-  h+='<details class="experience-optional"><summary>Optional details</summary>'+field('product','Account or offer name','e.g. Regular Checking')+select('accountType','Account type',[['','Not specified'],['personal','Personal'],['business','Business']])+field('eventDate','Deposit or payout date','','date')+field('reportedAt','Report publication date','','date')+'</details>';
+  if(d.bank)h+='<p class="experience-context"><span>Bank</span><strong>'+esc(d.bank)+'</strong></p>';
+  else h+=field('bank','Bank','Bank that received the deposit');
+  h+=field('method','Deposit method','e.g. Robinhood ACH or employer payroll');
+  h+=select('outcome','Did it count?',[['unknown','Not confirmed'],['worked','Counted'],['failed',"Didn’t count"],['mixed','Mixed results'],['pending','Still waiting']]);
+  h+=field('eventDate','Result date (optional)','','date');
+  h+=field('link','Source link (optional)','https://…','url');
+
  }
  if(d.error)h+='<p class="experience-error" role="alert" id="dp-experience-error" tabindex="-1">'+esc(d.error)+'</p>';
  h+='</div><footer class="research-editor-footer"><button type="button" class="btn-p" onclick="saveDPEditor()">'+(personal?'Save experience':'Save report')+'</button><button type="button" class="btn-s" onclick="closeDPEditor()">'+(personal&&!edit?'Not now':'Cancel')+'</button></footer></section></div>';return h;
@@ -5114,6 +5117,7 @@ function dpSimpleOutcome(item,personal=false){
 function renderSimpleReport(item,personal=false){
  const link=safeExternalUrl(item.link),curated=!personal&&(window.BTCommunityCatalog?.reports||[]).some(x=>x.id===item.id);
  let h='<article class="research-report'+(personal?' personal':'')+'"><div class="research-report-top"><h3>'+esc(item.method||'Deposit method not specified')+'</h3><span class="research-result '+esc(personal&&!item.confirmedByUser?'unknown':item.outcome||'unknown')+'">'+esc(dpSimpleOutcome(item,personal))+'</span></div>';
+ if(dpValidDate(item.eventDate))h+='<time class="experience-help" datetime="'+esc(item.eventDate)+'">'+esc(fD(item.eventDate))+'</time>';
  if(link)h+='<a class="research-source" href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">View source ↗</a>';
  if(!curated)h+='<details class="dp-report-manage"><summary aria-label="Manage report">⋯</summary><div class="ph-actions"><button class="ph-mini" onclick="'+(personal?'openUserDPEditor':'openCommunityDPEditor')+'('+profileSectionAttr(JSON.stringify(item.id))+')">Edit</button><button class="ph-mini" onclick="'+(personal?'deleteUserDP':'deleteCommunityDP')+'('+profileSectionAttr(JSON.stringify(item.id))+')">Remove</button></div></details>';
  return h+'</article>';

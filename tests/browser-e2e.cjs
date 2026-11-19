@@ -1739,10 +1739,9 @@ async function exercise(name,engine,url){
     await button('+ Add a report').click();
     await page.locator('.research-editor-body input').first().fill('E2E Report Bank');
     await page.locator('.research-editor-body input').nth(1).fill('Synthetic employer payroll');
-    await page.getByLabel('Reported result',{exact:true}).selectOption('worked');
-    await page.locator('.research-editor-body textarea').fill('Synthetic report for browser verification');
-    await page.locator('.experience-optional > summary').click();
-    await page.getByLabel('Deposit or payout date',{exact:true}).fill('2026-09-30');
+    await page.getByLabel('Did it count?',{exact:true}).selectOption('worked');
+    check('source editor omits unused metadata',await page.locator('.research-editor-body textarea').count()===0&&await page.locator('.experience-optional').count()===0);
+    await page.getByLabel('Result date (optional)',{exact:true}).fill('2026-09-30');
     await page.locator('.research-editor-body input[type=url]').fill('https://example.test/report');
     check('report editor footer stays within mobile viewport',await page.locator('.research-editor-footer').evaluate(e=>{const r=e.getBoundingClientRect();return r.bottom<=innerHeight+1&&r.top>0}));
     await button('Save report').click();
