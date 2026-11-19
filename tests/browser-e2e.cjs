@@ -1710,11 +1710,12 @@ async function exercise(name,engine,url){
     await page.screenshot({path:path.join(output,name+'-v362-data-390.png')});
     await page.evaluate(()=>{window.bt366GroupData=undefined;R()});
     check('Data defaults to labeled bank sections',await page.locator('button.dp-head').count()>0&&await page.locator('.dp-head .dp-account-type').count()===await page.locator('button.dp-head').count());
-    await page.locator('.research-filters > summary').click();
+    if(!await page.locator('.research-filters').evaluate(x=>x.open))await page.locator('.research-filters > summary').click();
     await button('Show individual reports').click();
     check('individual reports retain visible account labels',await page.locator('.bt366-dp-item').count()>0&&await page.locator('.bt366-dp-item .dp-account-type').count()===await page.locator('.bt366-dp-item').count());
     await button('Group by bank').click();
     check('bank grouping remains available',await page.locator('button.dp-head').count()>0);
+    await page.locator('.research-filters > summary').click();
 
     check('Data starts with search and collapses reading help after report list',await page.locator('.dp-summary').count()===0&&await page.locator('.bt362-data-view > .dp-search').count()===1&&await page.locator('.research-help').filter({hasText:'How to read these reports'}).evaluate(x=>!x.open));
     await page.getByPlaceholder('Search bank, method, or note...').pressSequentially('E2E');
