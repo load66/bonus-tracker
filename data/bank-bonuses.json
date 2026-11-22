@@ -1,23 +1,23 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-11-21T19:29:55.249994+00:00",
+  "checkedAt": "2026-11-22T07:07:03.565160+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-11-21T19:29:55.249994+00:00",
+      "checkedAt": "2026-11-22T07:07:03.565160+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-11-21T19:29:55.249994+00:00",
+      "checkedAt": "2026-11-22T07:07:03.565160+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-11-21T19:29:55.249994+00:00",
+      "checkedAt": "2026-11-22T07:07:03.565160+00:00",
       "status": "ok"
     }
   ],
@@ -43,8 +43,8 @@
       "links": [
         {
           "url": "https://www.doctorofcredit.com/ca-only-heritage-community-credit-union-500-checking-bonus/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "[CA Only] Heritage Community Credit Union $500 Checking Bonus",
           "publishedAt": "2026-11-21T17:00:27+00:00"
         }
