@@ -1,27 +1,91 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-11-22T19:51:00.930115+00:00",
+  "checkedAt": "2026-11-23T07:54:12.274902+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-11-22T19:51:00.930115+00:00",
+      "checkedAt": "2026-11-23T07:54:12.274902+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-11-22T19:51:00.930115+00:00",
+      "checkedAt": "2026-11-23T07:54:12.274902+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
       "checkedAt": "2026-11-22T19:51:00.930115+00:00",
-      "status": "ok"
+      "status": "unavailable"
     }
   ],
   "offers": [
+    {
+      "title": "[CA only] KeyPoint Credit Union $300 Checking Bonus",
+      "url": "https://www.doctorofcredit.com/ca-only-keypoint-credit-union-200-checking-bonus/",
+      "publishedAt": "2026-11-23T02:10:41+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "keypoint credit union|checking|300|CA",
+      "bank": "keypoint credit union",
+      "product": "checking",
+      "amount": 300,
+      "region": "CA",
+      "offerKey": "keypoint credit union|checking|300|CA",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-23T07:54:12.274902+00:00",
+      "lastSeen": "2026-11-23T02:10:41+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/ca-only-keypoint-credit-union-200-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[CA only] KeyPoint Credit Union $300 Checking Bonus",
+          "publishedAt": "2026-11-23T02:10:41+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "[WI, MN Only] Westconsin Credit Union $500 Checking Bonus, Direct Deposit Not Required",
+      "url": "https://www.doctorofcredit.com/wi-mn-only-westconsin-credit-union-400-checking-bonus-100-charity-donation-direct-deposit-not-required/",
+      "publishedAt": "2026-11-23T01:48:48+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "regional",
+      "groupKey": "westconsin credit union|checking|500|MN,WI",
+      "bank": "westconsin credit union",
+      "product": "checking",
+      "amount": 500,
+      "region": "MN,WI",
+      "offerKey": "westconsin credit union|checking|500|MN,WI",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-23T07:54:12.274902+00:00",
+      "lastSeen": "2026-11-23T01:48:48+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/wi-mn-only-westconsin-credit-union-400-checking-bonus-100-charity-donation-direct-deposit-not-required/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "[WI, MN Only] Westconsin Credit Union $500 Checking Bonus, Direct Deposit Not Required",
+          "publishedAt": "2026-11-23T01:48:48+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
     {
       "title": "[CA Only] Heritage Community Credit Union $500 Checking Bonus",
       "url": "https://www.doctorofcredit.com/ca-only-heritage-community-credit-union-500-checking-bonus/",
