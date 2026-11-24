@@ -1,27 +1,133 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-11-23T07:54:12.274902+00:00",
+  "checkedAt": "2026-11-24T00:04:42.655242+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-11-23T07:54:12.274902+00:00",
+      "checkedAt": "2026-11-24T00:04:42.655242+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-11-23T07:54:12.274902+00:00",
+      "checkedAt": "2026-11-24T00:04:42.655242+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-11-22T19:51:00.930115+00:00",
-      "status": "unavailable"
+      "checkedAt": "2026-11-24T00:04:42.655242+00:00",
+      "status": "ok"
     }
   ],
   "offers": [
+    {
+      "title": "Chase Bank Coupon Codes: $125, $300, $400, $500, $1000, $3000 Checking Bonuses (November 2026)",
+      "url": "https://www.hustlermoneyblog.com/chase-coupons/",
+      "publishedAt": "2026-11-23T18:24:23+00:00",
+      "source": "Hustler Money Blog",
+      "sourceId": "hmb",
+      "availability": "unknown",
+      "groupKey": "chase|checking|125|unknown",
+      "bank": "chase",
+      "product": "checking",
+      "amount": 125,
+      "region": "unknown",
+      "offerKey": "chase|checking|125|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-10-11T22:04:05+00:00",
+      "lastSeen": "2026-11-23T18:24:23+00:00",
+      "expiresAt": "2027-01-27",
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.hustlermoneyblog.com/chase-coupons/",
+          "source": "Hustler Money Blog",
+          "sourceId": "hmb",
+          "title": "Chase Bank Coupon Codes: $125, $300, $400, $500, $1000, $3000 Checking Bonuses (November 2026)",
+          "publishedAt": "2026-11-23T18:24:23+00:00"
+        },
+        {
+          "url": "https://www.hustlermoneyblog.com/chase-high-school-checking-bonus/",
+          "sourceId": "hmb",
+          "source": "Hustler Money Blog",
+          "title": "Chase High School Checking $125 Sign-Up Bonus Coupon – Ends 1/27/27",
+          "publishedAt": "2026-11-12T17:41:52+00:00"
+        }
+      ],
+      "firstSeenBaseline": true,
+      "previousAmount": 900,
+      "change": "Decreased",
+      "changeLabel": "$900 → $125",
+      "badges": [
+        "Decreased"
+      ]
+    },
+    {
+      "title": "Netspend $200 Checking Bonus",
+      "url": "https://www.doctorofcredit.com/netspend-200-checking-bonus/",
+      "publishedAt": "2026-11-23T16:00:19+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "nationwide",
+      "groupKey": "netspend|checking|200|unknown",
+      "bank": "netspend",
+      "product": "checking",
+      "amount": 200,
+      "region": "unknown",
+      "offerKey": "netspend|checking|200|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-24T00:04:42.655242+00:00",
+      "lastSeen": "2026-11-23T16:00:19+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/netspend-200-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "Netspend $200 Checking Bonus",
+          "publishedAt": "2026-11-23T16:00:19+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "title": "Lili (Fintech) $300 Business Checking Bonus",
+      "url": "https://www.doctorofcredit.com/lili-fintech-300-business-checking-bonus/",
+      "publishedAt": "2026-11-23T15:00:03+00:00",
+      "source": "Doctor of Credit",
+      "sourceId": "doc",
+      "availability": "nationwide",
+      "groupKey": "lili fintech|business|300|unknown",
+      "bank": "lili fintech",
+      "product": "business",
+      "amount": 300,
+      "region": "unknown",
+      "offerKey": "lili fintech|business|300|unknown",
+      "rewardIsUpperBound": false,
+      "firstSeen": "2026-11-24T00:04:42.655242+00:00",
+      "lastSeen": "2026-11-23T15:00:03+00:00",
+      "expiresAt": null,
+      "isUpdate": false,
+      "links": [
+        {
+          "url": "https://www.doctorofcredit.com/lili-fintech-300-business-checking-bonus/",
+          "source": "Doctor of Credit",
+          "sourceId": "doc",
+          "title": "Lili (Fintech) $300 Business Checking Bonus",
+          "publishedAt": "2026-11-23T15:00:03+00:00"
+        }
+      ],
+      "firstSeenBaseline": false,
+      "badges": [
+        "New"
+      ]
+    },
     {
       "title": "[CA only] KeyPoint Credit Union $300 Checking Bonus",
       "url": "https://www.doctorofcredit.com/ca-only-keypoint-credit-union-200-checking-bonus/",
@@ -43,8 +149,8 @@
       "links": [
         {
           "url": "https://www.doctorofcredit.com/ca-only-keypoint-credit-union-200-checking-bonus/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "[CA only] KeyPoint Credit Union $300 Checking Bonus",
           "publishedAt": "2026-11-23T02:10:41+00:00"
         }
@@ -75,8 +181,8 @@
       "links": [
         {
           "url": "https://www.doctorofcredit.com/wi-mn-only-westconsin-credit-union-400-checking-bonus-100-charity-donation-direct-deposit-not-required/",
-          "source": "Doctor of Credit",
           "sourceId": "doc",
+          "source": "Doctor of Credit",
           "title": "[WI, MN Only] Westconsin Credit Union $500 Checking Bonus, Direct Deposit Not Required",
           "publishedAt": "2026-11-23T01:48:48+00:00"
         }
@@ -814,41 +920,6 @@
       ],
       "firstSeenBaseline": false,
       "badges": []
-    },
-    {
-      "title": "Chase High School Checking $125 Sign-Up Bonus Coupon – Ends 1/27/27",
-      "url": "https://www.hustlermoneyblog.com/chase-high-school-checking-bonus/",
-      "publishedAt": "2026-11-12T17:41:52+00:00",
-      "source": "Hustler Money Blog",
-      "sourceId": "hmb",
-      "availability": "unknown",
-      "groupKey": "chase|checking|125|unknown",
-      "bank": "chase",
-      "product": "checking",
-      "amount": 125,
-      "region": "unknown",
-      "offerKey": "chase|checking|125|unknown",
-      "rewardIsUpperBound": false,
-      "firstSeen": "2026-10-11T22:04:05+00:00",
-      "lastSeen": "2026-11-12T17:41:52+00:00",
-      "expiresAt": "2027-01-27",
-      "isUpdate": false,
-      "links": [
-        {
-          "url": "https://www.hustlermoneyblog.com/chase-high-school-checking-bonus/",
-          "sourceId": "hmb",
-          "source": "Hustler Money Blog",
-          "title": "Chase High School Checking $125 Sign-Up Bonus Coupon – Ends 1/27/27",
-          "publishedAt": "2026-11-12T17:41:52+00:00"
-        }
-      ],
-      "firstSeenBaseline": true,
-      "previousAmount": 900,
-      "change": "Decreased",
-      "changeLabel": "$900 → $125",
-      "badges": [
-        "Decreased"
-      ]
     },
     {
       "title": "American Bank & Trust Promotions: $750 Checking & Savings Bonus (SD, MN) – Ends 12/31/26",
