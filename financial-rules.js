@@ -278,6 +278,33 @@
     if(!start||!end||!beforeStart)return null;
     return {start,end,firstDay:first,lastDay:last,fundsBefore:start,lastPreWindowDate:beforeStart,metric:'average-daily-balance',source:'official-promotion-terms'};
   }
+  function depositHoldDuration(e,requirement){
+    if(requirement?.kind!=='balance-hold'||requirement.recurrence||!(requirement.amount>0))return null;
+    const verified=validate(e);
+    const saved=verified.ok&&verified.rules?.requirements?.find(r=>r.id===requirement.id&&r.kind==='balance-hold');
+    const quote=saved?.evidence?.source==='promotion'?clean(saved.evidence.quote):'';
+    // Require an explicit calendar-day hold tied to a qualifying deposit.
+    const match=quote.match(/\b(?:maintain|hold|keep)\b[^.;]{0,140}\bfor (?:at least )?(\d{1,3}) (?:consecutive |calendar )?days? (?:after|from) (?:the |your )?qualifying deposit\b/i);
+    if(!match||/business days|statement|average|whichever|earlier|later/i.test(quote))return null;
+    const days=Number(match[1]);
+    return days>=1&&days<=366?days:null;
+  }
+  function bonusBalancePeriods(e,today){
+    if(e?.closed||e?.bonusRecd)return [];
+    return (e?.financialRules?.requirements||[]).flatMap(requirement=>{
+      const fixed=balanceMeasurementWindow(e,requirement);
+      if(fixed)return [{...fixed,amount:requirement.amount}];
+      const days=depositHoldDuration(e,requirement);
+      if(!days)return [];
+      const funding=(e.depositEvidence||[]).filter(x=>x.purpose==='balance-funding'&&x.requirementId===requirement.id&&
+        !x.voidedAt&&x.cycleOpened===e.opened&&date(x.date)&&x.date>=e.opened&&x.date<=today&&
+        x.bankConfirmed===true&&x.amountCents>=Math.round(requirement.amount*100));
+      // Multiple different dates need review rather than an arbitrary start.
+      const dates=[...new Set(funding.map(x=>x.date))];
+      const start=dates.length===1?dates[0]:'';
+      return [{start,end:start?shiftPayoutDate(start,days,'calendar-days'):'',days,amount:requirement.amount,requirementId:requirement.id}];
+    });
+  }
   function arrivalLabel(range){
     if(!range||!date(range.start)||!date(range.end))return '';
     const fmt=(d,year)=>new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',...(year?{year:'numeric'}:{}),timeZone:'UTC'}).format(new Date(d+'T00:00:00Z'));
@@ -380,7 +407,7 @@
     if(['fees','waiver','companion'].includes(intent))missing=s.warnings.filter(x=>/fee|waiv/i.test(x));
     return{answer:text,step,missing,factIds:['financialrules'],local:true};
   }
-  const api=Object.freeze({VERSION,validate,summarize,answer,intentFor,waiverText,estimatedArrival,arrivalLabel,payoutWindowFromText,arrivalRule,arrivalSource,closeHoldInfo,retentionNeedsReview,balanceMeasurementWindow,isWaitingRequirement,waitingRequirementPeriod,requirementActionLabel});
+  const api=Object.freeze({VERSION,validate,summarize,answer,intentFor,waiverText,estimatedArrival,arrivalLabel,payoutWindowFromText,arrivalRule,arrivalSource,closeHoldInfo,retentionNeedsReview,balanceMeasurementWindow,bonusBalancePeriods,isWaitingRequirement,waitingRequirementPeriod,requirementActionLabel});
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.BTFinancialRules=api;
 })(typeof window!=='undefined'?window:globalThis);

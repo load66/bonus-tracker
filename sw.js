@@ -1,6 +1,6 @@
 // Bank Bonus Tracker Service Worker
-// Version 3.8.26: clear applicant actions, standing-period notes and conditional fees.
-const V = 'bt-v3.8.26-close1';
+// Version 3.8.27: clear applicant actions, standing-period notes and conditional fees.
+const V = 'bt-v3.8.27-balance1';
 const ASSETS = [
   './history-repair-core.js', './history-repair.js',
   './fonts/manrope-latin-400-normal.woff2',

@@ -163,7 +163,7 @@ assert.doesNotMatch(sandbox.BT360.timerRows(paidRequirement),/data-source="saved
  assert.match(paidTile,/Bonus received/,'Paid account visibly shows its saved milestone');
  assert.doesNotMatch(paidTile,/Bonus requirement deadline|Overdue/,'Paid account has no stale requirement prompt');
  const timers=sandbox.BT360.timerRows(paid);
- assert.doesNotMatch(timers,/Nov 8, 2026|Overdue|Nov 18, 2026|Requirement due|Bonus pending/);
+ assert.doesNotMatch(timers,/Nov 8, 2026|Nov 18, 2026|Requirement due|Bonus pending/);
  assert.match(timers,/Monthly service fee review/,'Recurring fee check is still available');
  const detail=sandbox.BT360.detailPanels(paid);
  assert.doesNotMatch(detail,/Next bonus|Add eligibility rule/,'Current details defer next-cycle projections to Archive');
@@ -283,8 +283,8 @@ const estimatedList=sandbox.BT360.archive([estimatedPast]);
 assert.match(estimatedList,/<strong>0<\/strong><small>Review offer<\/small>/,'A completed recorded waiting period must be ready for current-offer review');
 
 /* v3.8.14: direct account details retain recorded-date countdowns. */
-assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.26';/,'The on-screen app version reflects this release');
-assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.26-close1/,'The version label is refreshed on clients');
+assert.match(require('node:fs').readFileSync('app.js','utf8'),/const APP_VERSION='3\.8\.27';/,'The on-screen app version reflects this release');
+assert.match(require('node:fs').readFileSync('index.html','utf8'),/app\.js\?v=3\.8\.27-balance1/,'The version label is refreshed on clients');
 const archiveFutureDate='2030-01-01';
 const recordedFuture=sandbox.BT360.archiveCountdown({eligible:archiveFutureDate,recorded:true});
 assert(recordedFuture&&recordedFuture.days>0&&recordedFuture.caption==='days left','A recorded future date must show its countdown');

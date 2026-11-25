@@ -279,8 +279,10 @@ function tasks(rows){
  let html='<section class="bt3719-needs bt3651-queue" data-queue="'+key+'">'+heading+'<div class="bt360-list bt3719-attention-list bt3641-attention-stack">';
  list.forEach(x=>{
   const item=rows.find(e=>e.id===x.entryId);
-  const label=dashboardTaskTitle(x,item,key);
-  const title=safe(label),meta=attentionAccountMeta(x,item);
+  const period=balancePeriods(item).find(p=>!p.end||p.end>=td());
+  const showBalance=period&&(item.reqMet||requirementProgress(item).remaining===0);
+  const label=showBalance?balancePeriodStatus(period):dashboardTaskTitle(x,item,key);
+  const title=safe(label),meta=showBalance&&period.end?'Balance period ends '+date(period.end):attentionAccountMeta(x,item);
   html+='<article class="bt3641-attention-item" data-attention-id="'+safe(x.entryId)+'">'
    +'<button type="button" class="bt360-list-row bt3641-attention-toggle bt3812-bank-detail-link" data-attention-link="'+safe(x.entryId)+'" aria-label="Open '+safe(x.bank||'bank')+' details" onclick="openAccountFromActionCenter('+arg(x.entryId)+')">'
    +bankLogo(x.bank,true)+'<span class="bt360-grow bt3729-needs-copy"><b class="bt3729-bank-name">'+safe(x.bank||'Bank')+'</b><small class="bt3729-task-title">'+title+'</small><small class="bt3729-task-meta'+(attentionUrgency(x)!==null&&attentionUrgency(x)<0?' is-overdue':'')+'">'+safe(meta)+'</small>'+monthlyFeeBadge(item)+'</span>'
@@ -371,14 +373,47 @@ function monthlyFeeBadge(e){
   '<span class="bt-monthly-fee-badge" title="'+safe(x.detail)+'" aria-label="'+safe(x.label+'. '+x.detail)+'" style="display:inline-flex;align-items:center;flex:0 0 auto;width:fit-content;max-width:100%;box-sizing:border-box;padding:3px 7px;border:1px solid #826035;border-radius:999px;background:#332515;color:#ffd294;font-size:11px;font-weight:700;line-height:1.35;white-space:normal;overflow-wrap:normal;word-break:normal;text-align:left;">'+safe(x.label)+'</span>'
  ).join('')+'</span>';
 }
+function balancePeriods(e){
+ return window.BTFinancialRules?.bonusBalancePeriods?.(e,td())||[];
+}
+function balancePeriodStatus(period){
+ if(!period.start||!period.end)return 'Record qualifying funding';
+ if(td()<period.start){
+  const days=dB(td(),period.start);
+  return 'Starts in '+days+' '+(days===1?'day':'days');
+ }
+ if(td()===period.end)return 'Last day of balance period';
+ if(td()>period.end)return 'Balance period ended';
+ const days=dB(td(),period.end);
+ return days+' '+(days===1?'day':'days')+' until the last day';
+}
+function balanceCountdown(e,periods){
+ if(!periods.length)return '';
+ return '<section class="bt3810-card bt-balance-countdown" tabindex="-1" aria-label="Balance countdown"><div class="bt3810-heading"><h3>Balance countdown</h3></div>'+
+  periods.map(period=>{
+   const target=period.amount>0?amount(period.amount)+(period.metric==='average-daily-balance'?' average balance':' balance'):'Required balance';
+   const range=period.start&&period.end?date(period.start)+' – '+date(period.end):'';
+   const days=period.metric==='average-daily-balance'?' · Days '+period.firstDay+'–'+period.lastDay:'';
+   const funding=period.requirementId?depositLedgerRows(e).filter(x=>x.purpose==='balance-funding'&&x.requirementId===period.requirementId):[];
+   const add=period.requirementId&&!period.start?'<button type="button" class="bt360-link" onclick="openDepositRecord('+arg(e.id)+','+arg('')+','+arg(period.requirementId)+')">Record funding</button>':'';
+   return '<div class="bt3822-waiting-period"><b>'+safe(target)+'</b><p>'+safe(range+days)+'</p><p>'+safe(balancePeriodStatus(period))+'</p>'+add+
+    (funding.length?'<details><summary>Funding records</summary>'+funding.map(row=>'<p>'+safe(date(row.date))+' · '+safe(amount(row.amountCents/100))+' <button type="button" class="bt360-link" onclick="openDepositRecord('+arg(e.id)+','+arg(row.id)+')">Edit</button> <button type="button" class="bt360-link" onclick="voidDepositRecord('+arg(e.id)+','+arg(row.id)+')">Void</button></p>').join('')+'</details>':'')+'</div>';
+  }).join('')+'</section>';
+}
+function focusBalanceCountdown(){
+ const card=document.querySelector('.bt-balance-countdown');
+ card?.focus({preventScroll:true});
+ card?.scrollIntoView({block:'center',behavior:'smooth'});
+}
 function compactRow(e){
  const s=dashboardStage(e),progress=requirementProgress(e);
- const arrival=!e.closed&&!e.bonusRecd?window.BTFinancialRules?.arrivalLabel?.(window.BTFinancialRules?.estimatedArrival?.(e)):'';
+ const balance=balancePeriods(e).find(p=>!p.end||p.end>=td());
+ const arrival=!balance&&!balancePeriods(e).some(p=>p.end&&e.reqMet&&e.reqMet<=p.end)&&!e.closed&&!e.bonusRecd?window.BTFinancialRules?.arrivalLabel?.(window.BTFinancialRules?.estimatedArrival?.(e)):'';
  // The recorded lifecycle takes precedence over any stale task/timer.
  const next=e.closed?'Closed':e.bonusRecd?dashboardTaskTitle({stageCode:s.code,actionKind:s.code==='READY_TO_CLOSE'?'close':'review'},e,'needs'):
-  e.reqMet?'Waiting for bonus':
+  balance?balancePeriodStatus(balance)+(balance.end?' · '+date(balance.end):''):e.reqMet?'Waiting for bonus':
   (progress.next||(progress.total?'All checked · confirm completion':'')||s.support||s.label);
- const shownStage=e.closed?'Closed':e.bonusRecd?(['READY_TO_CLOSE','HOLD_OPEN','BONUS_RECEIVED'].includes(s.code)?s.label:'Bonus received'):e.reqMet?'Waiting for bonus':s.label;
+ const shownStage=e.closed?'Closed':e.bonusRecd?(['READY_TO_CLOSE','HOLD_OPEN','BONUS_RECEIVED'].includes(s.code)?s.label:'Bonus received'):balance?'Balance period':e.reqMet?'Waiting for bonus':s.label;
  return '<div class="card bt366-compact-account" data-bt-entry-id="'+safe(e.id)+'"><button type="button" class="card-h bt366-compact-row" onclick="openAccountFromActionCenter('+arg(e.id)+')">'
   +bankLogo(e.bank,true)+'<span class="bt360-grow"><b>'+safe(e.bank)+'</b>'+(audience==='all'?kindTag(e):'')+monthlyFeeBadge(e)+'<small>'+safe(next)+'</small>'+(arrival?'<small class="bt3684-arrival-compact">'+safe(arrival)+'</small>':'')
   +(progress.total&&!e.closed&&!e.bonusRecd&&!e.reqMet?'<span class="bt366-compact-track" role="progressbar" aria-label="Recorded requirement and task checks" aria-valuemin="0" aria-valuemax="'+progress.total+'" aria-valuenow="'+progress.done+'"><i style="width:'+progress.percent+'%"></i></span><small>'+progress.done+' of '+progress.total+' '+(progress.total===1?'step':'steps')+' checked</small>':'')
@@ -389,6 +424,11 @@ function primaryAction(e){
  // The recorded milestone, not a stale task/fee warning, selects the next action.
  if(e.closed)return {label:'Back to accounts',command:'BT360.back()'};
  if(e.bonusRecd)return {label:'Record closure',command:'startCloseFlow('+id+',\'actual\')'};
+ const periods=balancePeriods(e);
+ const missing=periods.find(p=>p.requirementId&&!p.start);
+ if(missing)return {label:'Review funding',command:'BT360.focusBalanceCountdown()'};
+ if(periods.some(p=>p.end>=td())&&(e.reqMet||requirementProgress(e).remaining===0))return {label:'View balance countdown',command:'BT360.focusBalanceCountdown()'};
+ if(e.reqMet&&periods.some(p=>p.end&&e.reqMet<=p.end))return {label:'Review requirements',command:'openReqMet('+id+')'};
  if(e.reqMet)return {label:'Record bonus payment',command:'openRcv('+id+')'};
  const waiting=(e.financialRules?.requirements||[]).map(r=>window.BTFinancialRules?.waitingRequirementPeriod?.(e,r)).filter(w=>w?.until&&dB(td(),w.until)>0);
  if(waiting.length&&requirementProgress(e).remaining===0)return {label:'View waiting period',command:'BT360.openNextTask('+id+')'};
@@ -1095,19 +1135,21 @@ function simpleNextCycle(e){
 }
 function simpleState(e){
  const paid=!!e.bonusRecd,closed=!!e.closed,complete=!!e.reqMet;
- const name=closed?'Closed':paid?'Bonus received':complete?'Waiting for bonus':'In progress';
+ const balance=balancePeriods(e).some(p=>!p.end||p.end>=td());
+ const name=closed?'Closed':paid?'Bonus received':balance?'Balance requirement':complete?'Waiting for bonus':'In progress';
  const next=closed?'Account history is saved.':paid?'Record the closure date after the bank confirms the account is closed.':
-  complete?'Record your bonus when it appears in your account.':'Complete the requirements to earn this bonus.';
+  balance?'Check your balance period below.':complete?'Record your bonus when it appears in your account.':'Complete the requirements to earn this bonus.';
  return '<section class="bt3810-card bt3810-status"><div class="bt3810-heading"><h3>'+safe(name)+'</h3></div><p>'+safe(next)+'</p></section>';
 }
 function detailPanels(e){
+ const periods=balancePeriods(e);
  // No expandable saved terms, history, redundant reminders or technical rule
  // panels on the everyday screen; the complete data remains in storage/Archive.
- let html='<div class="bt3810-detail">'+simpleState(e);
+ let html='<div class="bt3810-detail">'+simpleState(e)+balanceCountdown(e,periods);
  if(!e.reqMet&&!e.bonusRecd&&!e.closed)html+=simpleRequirements(e);
  if(!e.closed&&!e.bonusRecd){
   const arrival=window.BTFinancialRules?.arrivalLabel?.(window.BTFinancialRules?.estimatedArrival?.(e));
-  if(arrival)html+='<section class="bt3810-card bt3810-arrival"><div class="bt3810-pair"><span>Bonus payment</span><b>'+safe(arrival)+'</b></div></section>';
+  if(arrival&&!periods.some(p=>!p.end||p.end>=td()||e.reqMet&&e.reqMet<=p.end))html+='<section class="bt3810-card bt3810-arrival"><div class="bt3810-pair"><span>Bonus payment</span><b>'+safe(arrival)+'</b></div></section>';
  }
  html+=simpleDates(e);
  html+=simpleFees(e);
@@ -1441,6 +1483,6 @@ function openPhonebook(){closeSettings();window.bt360PhonebookOpen=true;R()}
 function closePhonebook(){window.bt360PhonebookOpen=false;R()}
 function openSettings(){window.bt360SettingsOpen=true;R()}
 function closeSettings(){window.bt360SettingsOpen=false;R()}
-window.BT360={inactiveFeePresentation,dashboardStage,dashboardTaskTitle,attentionDateNote,accountFeeWarnings,monthlyFeeBadge,requirementProgress,attentionCardProgress,toggleRequirement,requirementRecord,sourceEvidenceStatus,sourceEvidencePanel,dashboardQueueFor,toggleAttention,toggleAccountList,openAccountSearch,closeAccountSearch,get selectedAttentionId(){return selectedAttentionId},get accountListOpen(){return accountListOpen},setAccountSectionOpen,revealAccountSection,cloudStatusText,accountDates,accountSaveStatus,infoRow,feeSnapshot,closeCheckPresentation,get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,accountAudience,kindTag,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,upcomingReminders,churnReviewPlan,churnReviewMarkup,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,archiveCountdown,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
+window.BT360={focusBalanceCountdown,inactiveFeePresentation,dashboardStage,dashboardTaskTitle,attentionDateNote,accountFeeWarnings,monthlyFeeBadge,requirementProgress,attentionCardProgress,toggleRequirement,requirementRecord,sourceEvidenceStatus,sourceEvidencePanel,dashboardQueueFor,toggleAttention,toggleAccountList,openAccountSearch,closeAccountSearch,get selectedAttentionId(){return selectedAttentionId},get accountListOpen(){return accountListOpen},setAccountSectionOpen,revealAccountSection,cloudStatusText,accountDates,accountSaveStatus,infoRow,feeSnapshot,closeCheckPresentation,get audience(){return audience},get selectedStage(){return selectedStage},get archivePane(){return archivePane},get notificationsOpen(){return notificationPanelOpen},scope,accountAudience,kindTag,segments,setAudience,setStage,heroMonthData,toggleHeroMonth,closeHeroMonth,clearHeroMonth,openHeroBonus,compactRow,primaryAction,openNextTask,showHold,showEligibility,resetStage,stages,hero,home,tasks,eligibleSoon,eligibleInfo,upcomingReminders,churnReviewPlan,churnReviewMarkup,detailHead,detailPanels,detailFooter,openRuleEditor,openActivity,closeActivity,setReadyExtrasOpen,requirementRows,timerRows,feeDetail,back,archive,archiveCountdown,goArchive,showTerms,openArchived,setArchiveToolsOpen,viewOffers,settings,openSettings,closeSettings,setNotice,openPhonebook,closePhonebook,openPhoneForClose,refreshUsage,setHostingAmount,hostSettings,usageCard,backUpNow,cloudSettingsCard,notifications,openNotifications,closeNotifications,openNotification};
 if(typeof R==='function')R();
 })();

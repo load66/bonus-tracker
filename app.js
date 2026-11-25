@@ -1,7 +1,7 @@
 /* Version 3.5.2: retired Finance, preserved canonical BonusTracker. */
 const SK='bt_e_v4',TK='bt_t_v4',DD_KEY='bt_dd_methods',REQ_KEY='bt_bank_reqs',BK_KEY='bt_last_backup',PHONE_KEY='bt_phone_book_v1',DP_USER_KEY='bt_user_datapoints_v1',COMMUNITY_DP_KEY='bt_community_datapoints_v1',COMMUNITY_DP_SEED_KEY='bt_community_datapoints_seed_v2',PROFILE_EVT_KEY='bt_profile_events_v1';
 
-const APP_VERSION='3.8.26';
+const APP_VERSION='3.8.27';
 // Remove only obsolete Finance UI preferences; never clear Tracker or backups.
 try{localStorage.removeItem('bt_finance_hide_v2');localStorage.removeItem('bt_finance_tx_filter')}catch{}
 try{window.BT_APP_VERSION=APP_VERSION}catch{}
@@ -5336,7 +5336,7 @@ function depositLedgerRows(e,includeVoided=false){
    (includeVoided||!x.voidedAt));
 }
 function depositProgress(e){
- const rows=depositLedgerRows(e);
+ const rows=depositLedgerRows(e).filter(x=>x.purpose!=='balance-funding');
  const totalCents=rows.reduce((n,x)=>n+x.amountCents,0);
  const confirmedCents=rows.filter(x=>x.bankConfirmed===true).reduce((n,x)=>n+x.amountCents,0);
  const rules=Array.isArray(e?.financialRules?.requirements)?e.financialRules.requirements.filter(r=>r?.kind==='direct-deposit'):[];
@@ -5347,12 +5347,14 @@ function depositProgress(e){
  return {rows,totalCents,confirmedCents,recordedCount:rows.length,confirmedCount:rows.filter(x=>x.bankConfirmed===true).length,
    targetCents,percent:targetCents?Math.min(100,Math.round(100*confirmedCents/targetCents)):0};
 }
-function openDepositRecord(entryId,recordId=''){
+function openDepositRecord(entryId,recordId='',requirementId=''){
  const e=entries.find(x=>x.id===entryId);
  if(!e||!e.opened){if(window.btNotify)btNotify('Record the actual account opening date first.',{title:'Opening date required',tone:'warning'});return false}
  const original=recordId?depositLedgerRows(e).find(x=>x.id===recordId):null;
  if(recordId&&!original)return false;
- depositPrompt={entryId,recordId:original?.id||'',bank:e.bank,cycleOpened:e.opened,
+ const fundingId=original?.purpose==='balance-funding'?original.requirementId:requirementId;
+ if(fundingId&&!original&&!window.BTFinancialRules?.bonusBalancePeriods(e,td()).some(x=>x.requirementId===fundingId))return false;
+ depositPrompt={entryId,fundingId,recordId:original?.id||'',bank:e.bank,cycleOpened:e.opened,
    date:original?.date||'',amount:original?String(original.amountCents/100):'',
    method:original?.method||'',note:original?.note||'',bankConfirmed:original?.bankConfirmed===true,
    reconfirmed:false,originalFingerprint:original?JSON.stringify(original):'',error:''};
@@ -5418,6 +5420,7 @@ function saveDepositRecord(){
  if(materiallyChanged&&original.bankConfirmed&&p.bankConfirmed&&!p.reconfirmed)return depositError('Confirm again if the bank counted this revised deposit.');
  const id=original?.id||'de_'+dpId(),now=td();
  const record={...original,id,cycleOpened:e.opened,date:p.date,amountCents:cents,method,note,
+   ...(p.fundingId?{purpose:'balance-funding',requirementId:p.fundingId}:{}),
    bankConfirmed:p.bankConfirmed===true,confirmedAt:p.bankConfirmed?(original?.bankConfirmed&&!materiallyChanged?original.confirmedAt:now):'',
    recordedAt:original?.recordedAt||now,updatedAt:now,
    revisions:original?[...(original.revisions||[]),{...original,revisions:undefined}]:[]};
@@ -5442,13 +5445,13 @@ function voidDepositRecord(entryId,recordId){
 function rDepositRecord(){
  const p=depositPrompt;if(!p)return'';
  return '<div class="ov" onclick="closeDepositRecord()"><section class="modal research-editor" role="dialog" aria-modal="true" aria-labelledby="deposit-record-title" onclick="event.stopPropagation()">'+
- '<header class="research-editor-header"><h2 id="deposit-record-title">'+(p.recordId?'Correct recorded deposit':'Record direct deposit')+'</h2><p>'+esc(p.bank)+' · opened '+esc(fD(p.cycleOpened))+'</p></header>'+
+ '<header class="research-editor-header"><h2 id="deposit-record-title">'+(p.recordId?'Correct recorded deposit':p.fundingId?'Record qualifying funding':'Record direct deposit')+'</h2><p>'+esc(p.bank)+' · opened '+esc(fD(p.cycleOpened))+'</p></header>'+
  '<div class="research-editor-body"><p class="research-caveat">A recorded deposit is not proof of qualification. Bank-counted status is based only on your explicit confirmation; completing bonus requirements is a separate action.</p>'+
  '<div class="fg"><label for="dep_date">Actual deposit date</label><input class="dd-input" type="date" id="dep_date" max="'+td()+'" min="'+esc(p.cycleOpened)+'" value="'+esc(p.date)+'" oninput="depositRecordChanged(\'date\',this.value)"></div>'+
  '<div class="fg"><label for="dep_amount">Amount ($)</label><input class="dd-input" id="dep_amount" type="number" inputmode="decimal" min="0.01" max="1000000" step="0.01" value="'+esc(p.amount)+'" oninput="depositRecordChanged(\'amount\',this.value)"></div>'+
  '<div class="fg"><label for="dep_method">Source / method</label><input class="dd-input" id="dep_method" maxlength="100" value="'+esc(p.method)+'" placeholder="e.g. Employer payroll" oninput="depositRecordChanged(\'method\',this.value)"></div>'+
  '<div class="fg"><label for="dep_note">Notes (optional)</label><textarea class="dd-input" id="dep_note" maxlength="300" rows="2" oninput="depositRecordChanged(\'note\',this.value)">'+esc(p.note)+'</textarea></div>'+
- '<label class="experience-confirm"><input type="checkbox" id="dep_confirmed" '+(p.bankConfirmed?'checked':'')+' onchange="depositPrompt.bankConfirmed=this.checked;depositPrompt.reconfirmed=this.checked"><span>I verified the bank counted this deposit</span></label>'+
+ '<label class="experience-confirm"><input type="checkbox" id="dep_confirmed" '+(p.bankConfirmed?'checked':'')+' onchange="depositPrompt.bankConfirmed=this.checked;depositPrompt.reconfirmed=this.checked"><span>'+(p.fundingId?'I verified this deposit qualifies to start the balance period':'I verified the bank counted this deposit')+'</span></label>'+
  (p.error?'<p class="bt3655-field-error" role="alert" id="dep-error">'+esc(p.error)+'</p>':'')+
  '</div><footer class="research-editor-footer"><button type="button" class="btn-p" onclick="saveDepositRecord()">Save deposit</button><button type="button" class="btn-s" onclick="closeDepositRecord()">Cancel</button></footer></section></div>';
 }
@@ -6370,6 +6373,9 @@ function reqMetWarnings(e,date){
   if(date&&isFutureDate(date))w.push('Requirement met date is in the future.');
   if(e?.opened&&date&&dB(e.opened,date)<0)w.push('Requirement met date is before the opened date.');
   for(const r of e?.financialRules?.requirements||[]){const period=window.BTFinancialRules?.waitingRequirementPeriod?.(e,r);if(period?.until&&date&&date<period.until)w.push('The saved '+period.days+'-day account-standing period ends '+fD(period.until)+'. Confirm the bank allowed completion before that date.');}
+  for(const period of window.BTFinancialRules?.bonusBalancePeriods(e,td())||[]){
+    if(date&&(!period.end||date<=period.end))w.push(period.end?'The saved balance period runs through '+fD(period.end)+'. Verify completion with the bank.':'Record the qualifying funding date to calculate the balance period.');
+  }
   if(e?.bonusRecd&&date&&dB(date,e.bonusRecd)<0)w.push('Requirement met date is after the bonus received date.');
   if(e?.closed&&date&&dB(date,e.closed)<0)w.push('Requirement met date is after the closed date.');
   return w
