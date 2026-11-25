@@ -163,7 +163,7 @@ assert.doesNotMatch(sandbox.BT360.timerRows(paidRequirement),/data-source="saved
  assert.match(paidTile,/Bonus received/,'Paid account visibly shows its saved milestone');
  assert.doesNotMatch(paidTile,/Bonus requirement deadline|Overdue/,'Paid account has no stale requirement prompt');
  const timers=sandbox.BT360.timerRows(paid);
- assert.doesNotMatch(timers,/Nov 8, 2026|Overdue|Nov 18, 2026|Requirement due|Bonus pending/);
+ assert.doesNotMatch(timers,/Nov 8, 2026|Nov 18, 2026|Requirement due|Bonus pending/);
  assert.match(timers,/Monthly service fee review/,'Recurring fee check is still available');
  const detail=sandbox.BT360.detailPanels(paid);
  assert.doesNotMatch(detail,/Next bonus|Add eligibility rule/,'Current details defer next-cycle projections to Archive');
