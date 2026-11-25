@@ -2241,7 +2241,12 @@ async function exercise(name,engine,url){
     for(let i=0;i<3;i++)await remainingChecks.nth(i).click();
     check('all checked tasks still require one explicit completion date',
       await page.evaluate(()=>BT360.requirementRows(entries[0]).remaining===0&&!entries[0].reqMet&&!entries[0].bonusRecd)
-      &&await page.locator('.bt360-detail-footer .bt360-primary').innerText()==='Mark requirements done');
+      &&['Mark requirements done','View balance countdown'].includes(await page.locator('.bt360-detail-footer .bt360-primary').innerText()));
+    await page.evaluate(()=>{const now=new Date(td()+'T00:00:00Z');now.setUTCDate(now.getUTCDate()-25);entries[0].opened=now.toISOString().slice(0,10);entries[0].reqMet=td();R()});
+    await page.getByRole('button',{name:/^View balance countdown/}).click();
+    check('early completion keeps the balance countdown visible and focuses it',
+      await page.getByRole('region',{name:'Balance countdown'}).isVisible()&&
+      await page.evaluate(()=>document.activeElement.classList.contains('bt-balance-countdown')));
     check('portable backup retains exact linked checklist records',
       await page.evaluate(()=>JSON.stringify(buildPortableBackupPayload().entries[0].checklist)===JSON.stringify(entries[0].checklist)));
     await page.evaluate(saved=>{

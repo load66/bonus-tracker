@@ -185,3 +185,22 @@ assert.equal(rules.validate(otherPeriod).ok,true);
 const otherPanel=sandbox.BT360.detailPanels(otherPeriod);
 assert.match(otherPanel,/Keep a \$5,000 average balance/);
 assert.match(otherPanel,/Days 15–45/,'Date instructions must adapt to each saved offer, never hardcode a range');
+
+// A saved milestone must not conceal an active balance requirement.
+const earlyBalance={...balanceOffer,opened:sandbox.td(),reqMet:sandbox.td()};
+assert.match(sandbox.BT360.detailPanels(earlyBalance),/Balance countdown/);
+assert.match(sandbox.BT360.detailPanels(earlyBalance),/Starts in 31 days/);
+assert.equal(sandbox.BT360.primaryAction(earlyBalance).label,'View balance countdown');
+assert.match(sandbox.BT360.primaryAction(earlyBalance).command,/focusBalanceCountdown/);
+const depositOffer=JSON.parse(JSON.stringify(balanceOffer));
+const depositRule=depositOffer.financialRules.requirements.at(-1);
+const depositQuote='Maintain a $10,000 balance for 60 calendar days after the qualifying deposit.';
+depositOffer.tcSourceRaw=depositOffer.tcSourceRaw.replace(measurementText,depositQuote);
+depositRule.text=depositRule.evidence.quote=depositQuote;
+assert.equal(rules.bonusBalancePeriods(depositOffer,'2026-11-25')[0].end,'');
+const fundingRow={purpose:'balance-funding',requirementId:depositRule.id,date:'2026-11-25',cycleOpened:depositOffer.opened,bankConfirmed:true,amountCents:1000000};
+depositOffer.depositEvidence=[fundingRow];
+assert.equal(rules.bonusBalancePeriods(depositOffer,'2026-11-25')[0].end,'2027-01-24');
+assert.equal(sandbox.depositProgress(depositOffer).confirmedCents,0);
+fundingRow.voidedAt='2026-11-25';
+assert.equal(rules.bonusBalancePeriods(depositOffer,'2026-11-25')[0].end,'');

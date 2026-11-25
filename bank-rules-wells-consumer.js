@@ -1,4 +1,4 @@
-/* Release marker v3.8.26 — unchanged source logic; direct-details cache coherence. */
+/* Release marker v3.8.27 — unchanged source logic; direct-details cache coherence. */
 /* Release 3.6.94: bank-specific rules unchanged; calendar-month close reviews are handled by shared financial rules. */
 /*
  * filename: bank-rules-wells-consumer.js

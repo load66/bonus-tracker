@@ -6,6 +6,8 @@ Public-safe fields only: versions, commit hashes, PR links, sanitized issue titl
 
 ## Handoff
 
+- v3.8.27 balance countdown (codex/balance-countdown): show verified balance periods through early completion; differentiate funding and direct deposits; route next action through balance, review, payout and closure. Verify unit suites, browser checks and production.
+
 - v3.8.26 closure deposit result (`codex/v3.8.26-close-experience`): optional compact deposit result inside the closing form; save cycle-linked evidence in the same rollback transaction; validate source, result and dates without inferring success or copying bonus amounts. Blank report section leaves Data unchanged. Keep undated results unconfirmed; preserve Undo and existing history. Require full unit and Chromium/WebKit CI, merge on green and verify Pages.
 
 
