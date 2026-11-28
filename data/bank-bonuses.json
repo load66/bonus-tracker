@@ -1,23 +1,23 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-11-27T21:27:56.902801+00:00",
+  "checkedAt": "2026-11-28T08:05:49.174006+00:00",
   "sources": [
     {
       "id": "doc",
       "name": "Doctor of Credit",
-      "checkedAt": "2026-11-27T21:27:56.902801+00:00",
+      "checkedAt": "2026-11-28T08:05:49.174006+00:00",
       "status": "ok"
     },
     {
       "id": "fm",
       "name": "Frequent Miler",
-      "checkedAt": "2026-11-27T21:27:56.902801+00:00",
+      "checkedAt": "2026-11-28T08:05:49.174006+00:00",
       "status": "ok"
     },
     {
       "id": "hmb",
       "name": "Hustler Money Blog",
-      "checkedAt": "2026-11-27T21:27:56.902801+00:00",
+      "checkedAt": "2026-11-28T08:05:49.174006+00:00",
       "status": "ok"
     }
   ],
@@ -43,8 +43,8 @@
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/chase-business-checking-bonus/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "Chase Bank Business Checking Bonus: $500 Offer Coupon – Ends 1/21/27",
           "publishedAt": "2026-11-27T18:25:35+00:00"
         }
@@ -73,8 +73,8 @@
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/bank-of-colorado-promotions/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "Bank of Colorado Promotions: $500, $750 Checking, Business Bonuses (AZ, CO) – Ends 11/30/26",
           "publishedAt": "2026-11-27T17:12:54+00:00"
         }
@@ -106,8 +106,8 @@
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/associated-bank-promotions/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "Associated Bank Promotions: $300, $400, $600, $750 Checking, Business, Bonuses (IA, IL, IN, KS, MI, MN, MO, OH, WI) – Ends 12/31/26",
           "publishedAt": "2026-11-27T16:44:20+00:00"
         }
@@ -138,8 +138,8 @@
       "links": [
         {
           "url": "https://www.hustlermoneyblog.com/bank-of-america-business-checking-bonus/",
-          "source": "Hustler Money Blog",
           "sourceId": "hmb",
+          "source": "Hustler Money Blog",
           "title": "Bank of America® Business Advantage Banking Cash Bonus Offer",
           "publishedAt": "2026-11-27T15:55:04+00:00"
         }
